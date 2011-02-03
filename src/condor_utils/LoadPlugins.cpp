@@ -16,7 +16,7 @@
 
 #include "condor_common.h"
 
-#include "LoadPlugins.unix.h"
+#include "LoadPlugins.h"
 
 #include "condor_config.h"
 #include "directory.h"
@@ -89,8 +89,13 @@ LoadPlugins()
 			// XXX: When Jim's safe path checking code is available
 			//      more generally in Condor the path to the
 			//      plugin_file here MUST be checked!
+#ifdef WIN32
+        if( LoadLibrary(plugin_file) ) {
+            error = getSystemErrorString(GetLastError());
+#else
 		if (!dlopen(plugin_file, RTLD_NOW)) {
 			error = dlerror();
+#endif
 			if (error) {
 				dprintf(D_ALWAYS,
 						"Failed to load plugin: %s reason: %s\n",
@@ -106,6 +111,7 @@ LoadPlugins()
 		}
 	}
 
-		// NOTE: The handle returned by dlopen is currently ignored,
-		// which means dlclose() is not possible.
+		// NOTE: The handle returned is currently ignored,
+		// which means closing is not possible.  This is due in part
+		// to the uber scary nature of the linkage to daemon-core
 }
