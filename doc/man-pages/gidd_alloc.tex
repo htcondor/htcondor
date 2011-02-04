@@ -1,27 +1,25 @@
 \begin{ManPage}{\label{man-gidd-alloc}gidd\_alloc}{1}
-{Find a gid in the specified range which is not used by any process.}
+{find a GID within the specified range which is not used by any process}
 \Synopsis \SynProg{gidd\_alloc}
-\Opt{min-gid}
-\Opt{max-gid}
+\Arg{min-gid}
+\Arg{max-gid}
 
 \index{Condor commands!gidd\_alloc}
 \index{gidd\_alloc command}
 
 \Description 
 
-This program will scan the alive pids looking for which GID is unused in
-in the supplied range. Upon finding one it will add it to its own supplementary
-group list and then scan the pids again expecting to find only itself using
-the GID. If no collision has occurred, the program exists, otherwise it
-retries.
+This program will scan the alive PIDs, looking for which GID is unused in
+the supplied, inclusive range specified by the required arguments
+\Arg{min-gid} and \Arg{max-gid}. 
+Upon finding one,
+it will add the GID to its own supplementary group list,
+and then scan the PIDs again expecting to find only itself using the GID. 
+If no collision has occurred, the program exits, otherwise it retries.
 
-\begin{Options}
-
-	\OptItem{\Opt{min-gid max-gid}}{
-		The minimum and maximum gids out of which one is allocated if 
-		possible.}
-	
-\end{Options}
+% No options for this command
+%\begin{Options}
+%\end{Options}
 	
 \GenRem
 
