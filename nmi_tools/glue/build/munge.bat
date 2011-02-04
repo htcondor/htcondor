@@ -7,4 +7,4 @@ dir /b/s *.tar.gz
 which tar
 for %%I in (tar.exe) do echo %%~f$PATH:I
 
-if "~%2"=="~cleanup" cacls "%BASE_DIR%" /T /C /E /G SYSTEM:F 
+if "~%2"=="~cleanup" cacls "%~dp1" /T /C /E /G SYSTEM:F 
