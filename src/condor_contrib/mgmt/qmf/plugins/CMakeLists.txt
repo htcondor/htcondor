@@ -64,18 +64,27 @@ add_custom_command( OUTPUT ${QMF_GEN_SRCS}
                     COMMAND python
                     ARGS ${QMF_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/condor-management-schema.xml && cd com/redhat/grid && mv * ../../.. )
 
-# used for selective compilation differences only otherwise 
-# just link the library
+# used for selective compilation differences only otherwise just link the library
 src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
 src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
 condor_static_lib( qmf_utils "Utils.h;Utils.cpp;PoolUtils.cpp;PoolUtils.h" )
 
-file( GLOB SchedSrcs JobUtils.* SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* JobServerObject.* MgmtScheddPlugin* )
-condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "qmf_utils" "${C_LIBEXEC}" ON)
+# NOTE: Still need to update linkage deps
 
-#condor_plugin( MgmtCollectorPlugin-plugin ";" "${C_LIBEXEC}")
-#condor_plugin( MgmtStartdPlugin-plugin ";" "${C_LIBEXEC}")
-#condor_plugin( MgmtNegotiatorPlugin-plugin ";" "${C_LIBEXEC}")
-#condor_plugin( MgmtMasterPlugin-plugin "utils;" "${C_LIBEXEC}")
+file( GLOB SchedSrcs JobUtils.* SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* JobServerObject.* MgmtScheddPlugin* )
+condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "qmf_utils" ON)
+
+file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* CollectorObject.* SlotObject.*)
+condor_plugin( MgmtCollectorPlugin-plugin "${CollectorSrcs};Grid.cpp;Collector.cpp" "${C_LIBEXEC}" "qmf_utils;${QPID_FOUND}" ON)
+
+file( GLOB StartdSrcs MgmtStartdPlugin.* SlotObject.*)
+condor_plugin( MgmtStartdPlugin-plugin "${COLLECTOR_REF};${StartdSrcs};Slot.cpp" "${C_LIBEXEC}" "qmf_utils;${QPID_FOUND}" ON)
+
+file( GLOB NegotiatorSrcs MgmtNegotiatorPlugin.* NegotiatorObject.* )
+condor_plugin( MgmtNegotiatorPlugin-plugin "${NegotiatorSrcs};Negotiator.cpp" "${C_LIBEXEC}" "qmf_utils;${QPID_FOUND}" ON)
+
+file( GLOB MasterSrcs MgmtMasterPlugin.* MasterObject.* )
+condor_plugin( MgmtMasterPlugin-plugin "${MasterSrcs};Master.cpp" "${C_LIBEXEC}" "qmf_utils;${QPID_FOUND}" ON)
+
 
