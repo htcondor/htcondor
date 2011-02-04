@@ -1760,6 +1760,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// Update info from the current Claim object, if it exists.
 	if( r_cur ) {
 		r_cur->publish( cap, mask );
+        if (state() == claimed_state)  cap->Assign(ATTR_PUBLIC_CLAIM_ID, r_cur->publicClaimId());
 	}
 	if( r_pre ) {
 		r_pre->publishPreemptingClaim( cap, mask );
