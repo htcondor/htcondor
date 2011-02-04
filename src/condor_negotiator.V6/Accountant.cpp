@@ -116,7 +116,7 @@ void Accountant::Initialize(GroupEntry* root_group)
       GroupEntry* group = grpq.front();
       grpq.pop_front();
       hgq_submitter_group_map[group->name] = group;
-      for (typeof(group->children.end()) j(group->children.begin());  j != group->children.end();  ++j) {
+      for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
           grpq.push_back(*j);
       }
   }
@@ -317,7 +317,7 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName) {
     string subname = t.Value();
 
     // cache results from previous invocations
-    typeof(hgq_submitter_group_map.end()) fs(hgq_submitter_group_map.find(subname));
+    map<string, GroupEntry*>::iterator fs(hgq_submitter_group_map.find(subname));
     if (fs != hgq_submitter_group_map.end()) return fs->second;
 
     ASSERT(NULL != hgq_root_group);
@@ -350,8 +350,8 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName) {
     parse_group_name(gname, gpath);
 
     // walk down the tree using the group path
-    for (typeof(gpath.end()) j(gpath.begin());  j != gpath.end();  ++j) {
-        typeof(group->chmap.end()) f(group->chmap.find(*j));
+    for (vector<string>::iterator j(gpath.begin());  j != gpath.end();  ++j) {
+        map<string, GroupEntry::size_type>::iterator f(group->chmap.find(*j));
         if (f == group->chmap.end()) {
             if (hgq_root_group->children.size() > 0) {
                 // I only want to log a warning if an HGQ configuration exists

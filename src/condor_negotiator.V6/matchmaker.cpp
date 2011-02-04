@@ -1059,7 +1059,7 @@ negotiationTime ()
 
         // Fill in latest usage/prio info for the groups.
         // While we're at it, reset fields prior to reloading from submitter ads.
-        for (typeof(hgq_groups.end()) j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
             GroupEntry* group = *j;
 
             group->quota = 0;
@@ -1120,7 +1120,7 @@ negotiationTime ()
                 (accountant.UsingWeightedSlots()) ? " weighted" : "");
         hgq_assign_quotas(hgq_root_group, hgq_total_quota);
 
-        for (typeof(hgq_groups.end()) j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
             GroupEntry* group = *j;
             dprintf(D_FULLDEBUG, "group quotas: group= %s  cquota= %g  static= %d  accept= %d  quota= %g  req= %g  usage= %g\n",
                     group->name.c_str(), group->config_quota, int(group->static_quota), int(group->accept_surplus), group->quota, 
@@ -1152,7 +1152,7 @@ negotiationTime ()
 
             // make sure working values are reset for this iteration
             groupQuotasHash->clear();
-            for (typeof(hgq_groups.end()) j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
                 GroupEntry* group = *j;
                 group->allocated = 0;
                 group->subtree_requested = 0;
@@ -1175,7 +1175,7 @@ negotiationTime ()
             double allocated_total = 0;
             unsigned long served_groups = 0;
             unsigned long unserved_groups = 0;
-            for (typeof(hgq_groups.end()) j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
                 GroupEntry* group = *j;
                 dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
                         group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
@@ -1213,7 +1213,7 @@ negotiationTime ()
                 dprintf(D_FULLDEBUG, "group quotas: entering RR iteration n= %g\n", n);
 
                 // Do the negotiations
-                for (typeof(hgq_groups.end()) j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
                     GroupEntry* group = *j;
 
                     if (group->allocated <= 0) {
@@ -1249,7 +1249,7 @@ negotiationTime ()
 
             // After round robin, assess where we are relative to HGQ allocation goals
             double usage_total = 0;
-            for (typeof(hgq_groups.end()) j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
                 GroupEntry* group = *j;
 
                 double usage = accountant.GetWeightedResourcesUsed(group->name.c_str());
@@ -1278,7 +1278,7 @@ negotiationTime ()
         }
 
         // For the purposes of RR consistency I want to update these after all allocation rounds are completed.
-        for (typeof(hgq_groups.end()) j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
             GroupEntry* group = *j;
             // If we were served by RR this cycle, then update timestamp of most recent round-robin.  
             // I also update when requested is zero because I want to favor groups that have been actually
@@ -1373,7 +1373,7 @@ void Matchmaker::hgq_construct_tree() {
         bool missing_parent = false;
         for (unsigned long k = 0;  k < gpath.size()-1;  ++k) {
             // chmap is mostly a structure to avoid n^2 behavior in groups with many children
-            typeof(group->chmap.end()) f(group->chmap.find(gpath[k]));
+            map<string, GroupEntry::size_type>::iterator f(group->chmap.find(gpath[k]));
             if (f == group->chmap.end()) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: ignoring group name %s with missing parent %s\n", gname.c_str(), gpath[k].c_str());
                 missing_parent = true;
@@ -1446,7 +1446,7 @@ void Matchmaker::hgq_construct_tree() {
         GroupEntry* group = grpq.front();
         grpq.pop_front();
         hgq_groups.push_back(group);
-        for (typeof(group->children.end()) j(group->children.begin());  j != group->children.end();  ++j) {
+        for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
             grpq.push_back(*j);
         }
     }
