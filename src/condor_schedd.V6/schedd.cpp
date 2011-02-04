@@ -11123,7 +11123,7 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 			// re-associate match with the original job cluster
 		SetMrecJobID(mrec,mrec->origcluster,-1);
 		if( mrec->is_dedicated ) {
-			DelMrec( mrec );
+			deallocMatchRec( mrec );
 		}
 	}
 }
