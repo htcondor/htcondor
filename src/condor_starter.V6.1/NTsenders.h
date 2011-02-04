@@ -53,6 +53,8 @@ extern "C" {
 	int REMOTE_CONDOR_constrain( char *expr );
 	int REMOTE_CONDOR_pread( int fd, void *data, size_t length, size_t offset );
 	int REMOTE_CONDOR_pwrite( int fd , void* buf ,size_t len, size_t offset );
+	int REMOTE_CONDOR_sread(int fd , void* buf , size_t len, size_t offset,
+		size_t stride_length, size_t stride_skip );
 	int REMOTE_CONDOR_swrite( int fd , void* buf ,size_t len, size_t offset,
 		size_t stride_length, size_t stride_skip );
 	int REMOTE_CONDOR_rmall( char *path );

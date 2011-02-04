@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -94,7 +94,10 @@ DECL_SUBSYSTEM( "STARTD", SUBSYSTEM_TYPE_STARTD );
 int main_reaper = 0;
 
 // Cron stuff
-StartdCronMgr	*Cronmgr;
+StartdCronJobMgr	*cron_job_mgr;
+
+// Benchmark stuff
+StartdBenchJobMgr	*bench_job_mgr;
 
 /*
  * Prototypes of static functions.
@@ -129,8 +132,9 @@ main_init( int, char* argv[] )
 	char*	tmp = NULL;
 	char**	ptr; 
 
-	// Reset the cron manager to a known state
-	Cronmgr = NULL;
+	// Reset the cron & benchmark managers to a known state
+	cron_job_mgr = NULL;
+	bench_job_mgr = NULL;
 
 		// Process command line args.
 	for(ptr = argv + 1; *ptr; ptr++) {
@@ -202,26 +206,15 @@ main_init( int, char* argv[] )
 		// Compute all attributes
 	resmgr->compute( A_ALL );
 
-	if( (tmp = param("RunBenchmarks")) ) {
-		if( (!skip_benchmarks) &&
-			(*tmp != 'F' && *tmp != 'f') ) {
-			// There's an expression defined to have us periodically
-			// run benchmarks, so run them once here at the start.
-			// Added check so if people want no benchmarks at all,
-			// they just comment RunBenchmarks out of their config
-			// file, or set it to "False". -Derek Wright 10/20/98
-			dprintf( D_ALWAYS, "About to run initial benchmarks.\n" ); 
-			resmgr->force_benchmark();
-			dprintf( D_ALWAYS, "Completed initial benchmarks.\n" );
-		}
-		free( tmp );
-	}
-
 	resmgr->walk( &Resource::init_classad );
 
-	// Startup Cron
-	Cronmgr = new StartdCronMgr( );
-	Cronmgr->Initialize( );
+		// Startup Cron
+	cron_job_mgr = new StartdCronJobMgr( );
+	cron_job_mgr->Initialize( "startd" );
+
+		// Startup benchmarking
+	bench_job_mgr = new StartdBenchJobMgr( );
+	bench_job_mgr->Initialize( "benchmarks" );
 
 		// Now that we have our classads, we can compute things that
 		// need to be evaluated
@@ -441,7 +434,8 @@ finish_main_config( void )
 	resmgr->reset_timers();
 
 	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
-	Cronmgr->Reconfig(  );
+	cron_job_mgr->Reconfig(  );
+	bench_job_mgr->Reconfig(  );
 	resmgr->starter_mgr.init();
 
 #if HAVE_HIBERNATION
@@ -593,10 +587,17 @@ void
 startd_exit() 
 {
 	// Shut down the cron logic
-	if( Cronmgr ) {
-		dprintf( D_ALWAYS, "Deleting Cronmgr\n" );
-		Cronmgr->Shutdown( true );
-		delete Cronmgr;
+	if( cron_job_mgr ) {
+		dprintf( D_ALWAYS, "Deleting cron job manager\n" );
+		cron_job_mgr->Shutdown( true );
+		delete cron_job_mgr;
+	}
+
+	// Shut down the benchmark job manager
+	if( bench_job_mgr ) {
+		dprintf( D_ALWAYS, "Deleting benchmark job mgr\n" );
+		bench_job_mgr->Shutdown( true );
+		delete bench_job_mgr;
 	}
 
 	// Cleanup the resource manager
@@ -646,9 +647,14 @@ main_shutdown_fast()
 {
 	dprintf( D_ALWAYS, "shutdown fast\n" );
 
-	// Shut down the cron logic
-	if( Cronmgr ) {
-		Cronmgr->Shutdown( true );
+		// Shut down the cron logic
+	if( cron_job_mgr ) {
+		cron_job_mgr->Shutdown( true );
+	}
+
+		// Shut down the benchmark logic
+	if( bench_job_mgr ) {
+		bench_job_mgr->Shutdown( true );
 	}
 
 		// If the machine is free, we can just exit right away.
@@ -676,9 +682,14 @@ main_shutdown_graceful()
 {
 	dprintf( D_ALWAYS, "shutdown graceful\n" );
 
-	// Shut down the cron logic
-	if( Cronmgr ) {
-		Cronmgr->Shutdown( false );
+		// Shut down the cron logic
+	if( cron_job_mgr ) {
+		cron_job_mgr->Shutdown( false );
+	}
+
+		// Shut down the benchmark logic
+	if( bench_job_mgr ) {
+		bench_job_mgr->Shutdown( false );
 	}
 
 		// If the machine is free, we can just exit right away.
@@ -755,7 +766,10 @@ do_cleanup(int,int,char*)
 void
 startd_check_free()
 {	
-	if ( Cronmgr && ( ! Cronmgr->ShutdownOk() ) ) {
+	if ( cron_job_mgr && ( ! cron_job_mgr->ShutdownOk() ) ) {
+		return;
+	}
+	if ( bench_job_mgr && ( ! bench_job_mgr->ShutdownOk() ) ) {
 		return;
 	}
 	if ( ! resmgr ) {

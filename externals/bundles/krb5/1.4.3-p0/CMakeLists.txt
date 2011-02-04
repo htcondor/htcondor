@@ -36,7 +36,7 @@ if (WITH_KRB5)
 			set (KRB5_CONFIGURE cp ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.in src/appl/gssftp/ftp/Makefile.in )
 			set (KRB5_MAKE cd src \r\n
 						   nmake -f Makefile.in prep-windows \r\n 
-			               nmake )
+			               nmake NODEBUG=1)
 
 			# Something is wrong with the default install (make install suck-o)
 			set (KRB5_INSTALL cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${EXTERNAL_STAGE}/include/win-mac.h \r\n
@@ -81,6 +81,8 @@ if (WITH_KRB5)
 							${EXTERNAL_STAGE}/lib/krb5_32.dll
 							${EXTERNAL_STAGE}/lib/xpprof32.dll
 					  DESTINATION ${C_LIB} )
+					  
+			set_property( TARGET krb5 PROPERTY FOLDER "externals" )
 
 		else()
 			set(KRB5_FOUND "${EXTERNAL_STAGE}/lib/libkrb5.a;${EXTERNAL_STAGE}/lib/libk5crypto.a;${EXTERNAL_STAGE}/lib/libcom_err.a;${EXTERNAL_STAGE}/lib/libkrb5support.a")

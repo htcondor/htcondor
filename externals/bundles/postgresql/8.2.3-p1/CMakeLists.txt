@@ -67,6 +67,9 @@ if (WITH_POSTGRESQL)
 			#this may become the common case.
 			install ( FILES ${EXTERNAL_STAGE}/lib/libpq.dll
 					  DESTINATION ${C_LIB})
+			
+			set_property( TARGET postgresql PROPERTY FOLDER "externals" )
+			
 		else()
 			set(POSTGRESQL_FOUND "${EXTERNAL_STAGE}/lib/libpq.a")
 		endif()

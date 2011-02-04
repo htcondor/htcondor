@@ -62,9 +62,10 @@
 			set(PCRE_FOUND "${EXTERNAL_STAGE}/lib/libpcre.lib")
 
 			#this may become the common case.
-			install ( FILES ${EXTERNAL_STAGE}/lib/libpcre.dll
-					  DESTINATION ${C_LIB} )
-
+			install ( FILES ${EXTERNAL_STAGE}/lib/libpcre.dll DESTINATION ${C_LIB} )
+			
+			set_property( TARGET pcre PROPERTY FOLDER "externals" )
+			
 		else()
 			set(PCRE_FOUND "${EXTERNAL_STAGE}/lib/libpcre.a")
 			if ( AIX )
