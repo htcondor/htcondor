@@ -159,6 +159,24 @@ Triggerd::init()
 
    dprintf(D_FULLDEBUG, "Triggerd::init called\n");
 
+   char* name = param("TRIGGERD_NAME");
+   if(name)
+   {
+      char* valid_name = build_valid_daemon_name(name);
+      daemonName = valid_name;
+      delete[] name;
+      delete[] valid_name;
+   }
+   else
+   {
+      char* default_name = build_valid_daemon_name("triggerd");
+      if(default_name)
+      {
+         daemonName = default_name;
+         delete[] default_name;
+      }
+   }
+
    port = param_integer("QMF_BROKER_PORT", 5672);
    if (NULL == (host = param("QMF_BROKER_HOST")))
    {
@@ -186,8 +204,6 @@ Triggerd::init()
    triggerCollection = new ClassAdCollection(trigger_log.c_str());
    free(dataDir);
 
-   singleton = new ManagementAgent::Singleton();
-
    // Initialize the triggers if any already exist
    triggerCollection->StartIterateAllClassAds();
    while(true == triggerCollection->IterateAllClassAds(ad, key))
@@ -204,6 +220,7 @@ Triggerd::init()
       }
    }
 
+   singleton = new ManagementAgent::Singleton();
    ManagementAgent* agent = singleton->getInstance();
 
    CondorTriggerService::registerSelf(agent);
@@ -213,6 +230,8 @@ Triggerd::init()
    mgmtObject = new CondorTriggerService(agent, this);
 //   console = new TriggerConsole();
 
+   agent->setName("com.redhat.grid","condortriggerservice", daemonName.c_str());
+
    qpid::management::ConnectionSettings settings;
    settings.host = std::string(host);
    settings.port = port;
@@ -220,6 +239,9 @@ Triggerd::init()
    agent->init(settings, interval, true, storefile);
 //   console->config(host, port, "guest", "guest");
    free(host);
+
+   bool _lifetime = param_boolean("QMF_IS_PERSISTENT", true);
+   agent->addObject(mgmtObject, daemonName.c_str(), _lifetime);
 
    // Create a socket to handle management method calls
    sock = new ReliSock;
@@ -240,9 +262,6 @@ Triggerd::init()
       EXCEPT("Failed to register Management socket");
    }
 
-   // The CondorTriggerService object is always 1
-   agent->addObject(mgmtObject, 1);
-
    config();
 }
 
@@ -257,24 +276,6 @@ Triggerd::config()
       triggerEvalPeriod = param_integer("TRIGGERD_DEFAULT_EVAL_PERIOD", 10);
       SetInterval(triggerEvalPeriod);
       initialized = true;
-   }
-
-   char* name = param("TRIGGERD_NAME");
-   if(name)
-   {
-      char* valid_name = build_valid_daemon_name(name);
-      daemonName = valid_name;
-      delete[] name;
-      delete[] valid_name;
-   }
-   else
-   {
-      char* default_name = build_valid_daemon_name("triggerd");
-      if(default_name)
-      {
-         daemonName = default_name;
-         delete[] default_name;
-      }
    }
 
    InitPublicAd();
