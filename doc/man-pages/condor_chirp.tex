@@ -22,6 +22,59 @@
 \SynProg{\Condor{chirp}}
 \Opt{ulog} \Arg{Message}
 
+\SynProg{\Condor{chirp}}
+\Opt{read} \oOptArg{-offset}{offset} \mbox{[\mbox{\textbf{-stride}}
+\mbox{\textit{length}} \mbox{\textit{skip}}]} \Arg{RemoteFile} \Arg{Length}
+
+\SynProg{\Condor{chirp}}
+\Opt{write} \oOptArg{-offset}{offset} \mbox{[\mbox{\textbf{-stride}}
+\mbox{\textit{length}} \mbox{\textit{skip}}]} \Arg{RemoteFile} \Arg{LocalFile}
+
+\SynProg{\Condor{chirp}}
+\Opt{rmdir} \oOpt{-r} \Arg{RemotePath}
+
+\SynProg{\Condor{chirp}}
+\Opt{getdir} \oOpt{-l} \Arg{RemotePath}
+
+\SynProg{\Condor{chirp}}
+\Opt{whoami}
+
+\SynProg{\Condor{chirp}}
+\Opt{whoareyou} \Arg{RemoteHost}
+
+\SynProg{\Condor{chirp}}
+\Opt{link} \oOpt{-s} \Arg{OldRemotePath} \Arg{NewRemotePath}
+
+\SynProg{\Condor{chirp}}
+\Opt{readlink} \Arg{RemoteFile}
+
+\SynProg{\Condor{chirp}}
+\Opt{stat} \Arg{RemotePath}
+
+\SynProg{\Condor{chirp}}
+\Opt{lstat} \Arg{RemotePath}
+
+\SynProg{\Condor{chirp}}
+\Opt{statfs} \Arg{RemotePath}
+
+\SynProg{\Condor{chirp}}
+\Opt{access} \Arg{RemotePath} \Arg{Mode}
+
+\SynProg{\Condor{chirp}}
+\Opt{chmod} \Arg{RemotePath} \Arg{UnixPerm}
+
+\SynProg{\Condor{chirp}}
+\Opt{chown} \Arg{RemotePath} \Arg{UserID} \Arg{GroupID}
+
+\SynProg{\Condor{chirp}}
+\Opt{lchown} \Arg{RemotePath} \Arg{UserID} \Arg{GroupID}
+
+\SynProg{\Condor{chirp}}
+\Opt{truncate} \Arg{RemoteFileName} \Arg{Length}
+
+\SynProg{\Condor{chirp}}
+\Opt{utime} \Arg{RemotePath} \Arg{AccessTime} \Arg{ModifyTime}
+
 \Description 
 \index{Condor commands!condor\_chirp}
 \index{condor\_chirp command}
@@ -33,7 +86,7 @@ Job attributes can be read, and most attributes can be updated.
 Descriptions using the terms \Term{local} and \Term{remote}
 are given from the point of view of the executing program.
 
-If the input file name for \Opt{put} is a dash,
+If the input file name for \Opt{put} or \Opt{write} is a dash,
 \Condor{chirp} uses standard input as the source.
 If the output file name for \Opt{fetch} is a dash,
 \Condor{chirp} writes to standard output instead of a local file.
@@ -49,7 +102,7 @@ in the submit description file for the job.
 \Condor{chirp} only works for jobs run in the
 vanilla, parallel and java universes.
 
-The optional \OptArg{-mode}{mode} argument
+The optional \OptArg{-mode}{mode} argument for \Opt{put}
 is one or more of the following characters describing the
 \Arg{RemoteFileName} file.
   \begin{itemize}
@@ -60,9 +113,9 @@ is one or more of the following characters describing the
     \item{x:  fail if 'c' is given, and the file already exists}
   \end{itemize}
 
-The optional \OptArg{-perm}{UnixPerm} argument
-describes the file access permissions in a Unix format
-(for example, 660).
+The optional \OptArg{-perm}{UnixPerm} argument for \Opt{put} as well as the
+\Arg{UnixPerm} argument for \Opt{chmod} describes the file access permissions
+in a Unix format(for example, 660).
 
 \begin{Options}
   \OptItem{\Opt{-help}}{Display usage information and exit.}
@@ -77,6 +130,38 @@ describes the file access permissions in a Unix format
   \OptItem{set\_job\_attr}{Sets the named job ClassAd attribute with
     the given attribute value.}
   \OptItem{ulog}{Appends a message to the job's user log.}
+  \OptItem{read}{Read \Arg{Length} bytes from \Arg{RemoteFile}. Optionally,
+    start the read at \Arg{Offset} and read stride length bytes every stride
+	skip bytes.}
+  \OptItem{write}{Write the contents of \Arg{LocalFile} to \Arg{RemoteFile}.
+    Optionally, start writing to the remote file at \Arg{Offset} and write
+	stride length bytes every stride skip bytes.}
+  \OptItem{rmdir}{Delete the directory specified by \Arg{RemotePath}. If
+    \Arg{-r} is specified, recursively delete the entire directory.}
+  \OptItem{getdir}{List the contents of the directory specified by
+    \Arg{RemotePath}. If \Arg{-l} is specified, list all metadata as well.}
+  \OptItem{whoami}{Get the user's current identity.}
+  \OptItem{whoareyou}{Get the identity of \Arg{RemoteHost}.}
+  \OptItem{link}{Create a hard link from \Arg{OldRemotePath} to
+    \Arg{NewRemotePath}. If \Arg{-s} is specified, create a symlink instead.}
+  \OptItem{readlink}{Read the contents of the symlink \Arg{RemoteFile}.}
+  \OptItem{stat}{Get metadata for \Arg{RemotePath}. Examines the target of
+    \Arg{RemoteFileName} if it is a symbolic link.}
+  \OptItem{lstat}{Get metadata for \Arg{RemotePath}. Examines the link if
+    \Arg{RemoteFileName} is a symbolic link.}
+  \OptItem{statfs}{Get filesystem metadata for \Arg{RemotePath}.}
+  \OptItem{access}{Check access permissions for \Arg{RemotePath}. \Arg{Mode}
+    should be one or more of 'r', 'w', 'x', or 'f' representing read, write,
+	execute, and existence respectively.}
+  \OptItem{chmod}{Change the permissions of \Arg{RemotePath} to \Arg{UnixPerm}.}
+  \OptItem{chown}{Change the ownership of \Arg{RemotePath} to \Arg{UserID} and
+    \Arg{GroupID}. Changes the target of \Arg{RemotePath} if it is a symbolic
+	link.}
+  \OptItem{lchown}{Change the ownership of \Arg{RemotePath} to \Arg{UserID} and
+    \Arg{GroupID}. Changes the link if \Arg{RemotePath} is a symbolic
+	link.}
+  \OptItem{truncate}{Truncates \Arg{RemoteFileName} to \Arg{Length} bytes.}
+  \OptItem{utime}{Change the access and modification times of \Arg{RemotePath}.}
 \end{Options}
 
 \Examples
