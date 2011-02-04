@@ -1,7 +1,11 @@
-\begin{ManPage}{\label{man-procd-ctl}procd\_ctl}{1}
-{A command line interface to the \Condor{procd}.}
-\Synopsis \SynProg{procd\_ctl}
-\oOpt{options}
+\begin{ManPage}
+{\label{man-procd-ctl}procd\_ctl}{1}
+{command line interface to the \Condor{procd}}
+\Synopsis \SynProg{procd\_ctl} 
+\Opt{-h}
+
+\SynProg{procd\_ctl} 
+\OptArg{-A}{address-file}
 \oOpt{command}
 
 \index{Condor commands!procd\_ctl}
@@ -9,54 +13,77 @@
 
 \Description 
 
-This is a programmatic interface to the \Condor{procd} daemon. It may be
-used to track new process families, send signals to 
+This is a programmatic interface to the \Condor{procd} daemon. 
+It may be used to 
+cause the \Condor{procd} to do anything that the \Condor{procd}
+is capable of doing,
+such as tracking and managing process families.
 
 This is a program only available for the Linux ports of Condor.
 
+\Prog{procd\_ctl} honors the discovery algorithm for Condor's configuration
+files, which specify debugging information.
+As such, if Condor is not installed or the configuration files are
+unavailable,
+then set the environment variable \Env{CONDOR\_CONFIG} 
+to \File{/dev/null} to be utilized by the discovery algorithm.
+
+The \Opt{-h} option prints out usage information and exits.
+The  \Arg{address-file} specification within the \Opt{-A} argument
+specifies the path and file name of the address file
+which the named pipe clients must use to speak with the \Condor{procd}.
+
+One command is given to the \Condor{procd}. 
+The choices for the command are defined by the Options. 
+
 \begin{Options}
 
-	\OptItem{\Opt{-h}}{Print out usage information.}
-	
-	\OptItem{\OptArg{-A}{address-file}}{The path to the address file
-		which is the named pipe clients must use to speak with the
-		\Condor{procd}.}
+  \OptItem{\Opt{TRACK\_BY\_ASSOCIATED\_GID} \Arg{GID} \oArg{PID}}
+  {Use the specified \Arg{GID} to track the specified family rooted at 
+  \Arg{PID}.  
+  If the optional \Arg{PID} is not specified, 
+  then the PID used is the one given or assumed by \Condor{procd}.}
 
-	These are the available commands.
+  \OptItem{\Opt{GET\_USAGE} \oArg{PID}}
+  {Get the total usage information about the PID family at \Arg{PID}.
+  If the optional \Arg{PID} is not specified, 
+  then the PID used is the one given or assumed by \Condor{procd}.}
 
-	\OptItem{\Opt{TRACK\_BY\_ASSOCIATED\_GID} \Arg{gid} \oArg{pid}}
-		{Use the specified gid to track the specified family rooted at pid.}
+  \OptItem{\Opt{DUMP} \oArg{PID}}
+  {Print out information about both the root \Arg{PID} being watched 
+  and the tree of processes under this root \Arg{PID}.
+  If the optional \Arg{PID} is not specified, 
+  then the PID used is the one given or assumed by \Condor{procd}.}
 
-	\OptItem{\Opt{GET\_USAGE} \oArg{pid}}
-		{Get the total usage information about the pid family at pid.}
+  \OptItem{\Opt{LIST} \oArg{PID}}
+  {With no \Arg{PID} given, print out information about all 
+  the watched processes.  
+  If the optional \Arg{PID} is specified,
+  print out information about the process specified by \Arg{PID} 
+  and all its child processes.}
 
-	\OptItem{\Opt{DUMP} \oArg{pid}}
-		{Print out information about the root pid being watched and information
-		about the tree of process under the root pid.}
+  \OptItem{\Opt{SIGNAL\_PROCESS} \Arg{signal} \oArg{PID}}
+  {Send the \Arg{signal} to the process specified by \Arg{PID}.
+  If the optional \Arg{PID} is not specified, 
+  then the PID used is the one given or assumed by \Condor{procd}.}
 
-	\OptItem{\Opt{LIST} \oArg{pid}}
-		{Print out information about all the watched processes.}
+  \OptItem{\Opt{SUSPEND\_FAMILY} \Arg{PID}}
+  {Suspend the process family rooted at \Arg{PID}.}
 
-	\OptItem{\Opt{SIGNAL\_PROCESS} \Arg{signal} \oArg{pid}}
-		{Send the signal to the process at the specified pid.}
+  \OptItem{\Opt{CONTINUE\_FAMILY} \Arg{PID}}
+  {Continue execution of the process family rooted at \Arg{PID}.}
 
-	\OptItem{\Opt{SUSPEND\_FAMILY} \Arg{pid}}
-		{Suspend the process family rooted at pid.}
+  \OptItem{\Opt{KILL\_FAMILY} \Arg{PID}}
+  {Kill the process family rooted at \Arg{PID}.}
 
-	\OptItem{\Opt{CONTINUE\_FAMILY} \Arg{pid}}
-		{Suspend the process family rooted at pid.}
+  \OptItem{\Opt{UNREGISTER\_FAMILY} \Arg{PID}}
+  {Stop tracking the process family rooted at \Arg{PID}.}
 
-	\OptItem{\Opt{KILL\_FAMILY} \Arg{pid}}
-		{Kill the process family rooted at pid.}
+  \OptItem{\Opt{SNAPSHOT}}
+  {Perform a snapshot of the tracked family tree.}
 
-	\OptItem{\Opt{UNREGISTER\_FAMILY} \Arg{pid}}
-		{Stop tracking the process family rooted at pid.}
-
-	\OptItem{\Opt{SNAPSHOT}}
-		{Perform a snapshot of the tracked family tree.}
-
-	\OptItem{\Opt{QUIT}}
-		{Disconnect from the \Condor{procd} and exit.}
+  \OptItem{\Opt{QUIT}}
+  {Disconnect from the \Condor{procd} and exit.}
 
 \end{Options}
 	
