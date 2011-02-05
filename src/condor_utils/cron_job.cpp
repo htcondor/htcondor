@@ -131,7 +131,7 @@ int
 CronJob::HandleReconfig( void )
 {
 	// Handle "one shot" jobs
-	if (  Params().OptReconfigRerun()  ) {
+	if (  Params().OptReconfigRerun()  &&  m_num_runs ) {
 		SetState( CRON_READY );
 		return 0;
 	}

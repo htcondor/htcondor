@@ -51,6 +51,14 @@ StartdBenchJobParams::Initialize( void )
 		return false;
 	}
 
+	// Dis-allow rerun-on-reconfig
+	if ( m_optReconfigRerun ) {
+		dprintf( D_ALWAYS,
+				 "Warning: Benchmark job '%s' has option '%s' enabled -- disabling!\n",
+				 GetName(), "RECONFIG_RERUN" );
+		m_optReconfigRerun = false;
+	}
+
 	// Done
 	return true;
 };
