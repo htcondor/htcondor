@@ -117,6 +117,7 @@ public:
 	static void init_classad(int interval);
 	static void sendCollectorAd();
 
+	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *ad);
 	static void send_classad_to_sock( int cmd, Daemon * d, ClassAd* theAd);	
 
 	// A get method to support SOAP

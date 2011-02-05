@@ -3668,6 +3668,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,collector
 id=197
 
+[CONDOR_VIEW_CLASSAD_TYPES]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Condor View Classad Types
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=collector,collector
+id=197
+
 [COLLECTOR_STATS_SWEEP]
 aliases=
 default=14400
