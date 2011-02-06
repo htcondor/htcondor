@@ -1251,7 +1251,7 @@ handle_config( Service *, int cmd, Stream *stream )
 		return FALSE;
 	}
 	if( config && config[0] ) {
-		to_check = parse_param_name_from_config(to_check);
+		to_check = parse_param_name_from_config(config);
 	} else {
 		to_check = strdup(admin);
 	}
