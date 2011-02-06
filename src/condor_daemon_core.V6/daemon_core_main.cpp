@@ -1250,11 +1250,10 @@ handle_config( Service *, int cmd, Stream *stream )
 		dprintf( D_ALWAYS, "handle_config: failed to read end of message\n");
 		return FALSE;
 	}
-
 	if( config && config[0] ) {
-		to_check = config;
+		to_check = parse_param_name_from_config(to_check);
 	} else {
-		to_check = admin;
+		to_check = strdup(admin);
 	}
 	if (!is_valid_param_name(to_check)) {
 		dprintf( D_ALWAYS, "Rejecting attempt to set param with invalid name (%s)\n", to_check);
@@ -1270,6 +1269,7 @@ handle_config( Service *, int cmd, Stream *stream )
 		rval = -1;
 		failed = true;
 	} 
+	free(to_check);
 
 		// If we haven't hit an error yet, try to process the command  
 	if( ! failed ) {
