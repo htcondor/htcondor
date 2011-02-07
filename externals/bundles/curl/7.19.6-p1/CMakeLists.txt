@@ -65,6 +65,7 @@ if (WITH_CURL)
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)
 			set(CURL_FOUND "${EXTERNAL_STAGE}/lib/libcurl.lib")
+			set_property( TARGET curl PROPERTY FOLDER "externals" )
 		else()
 			# libcurl is dependent on these libraries on some
 			# platforms.

@@ -53,6 +53,10 @@ if ( HAVE_EXT_GSOAP )
 	if (NOT PROPER)
 		add_dependencies( gen_${_DAEMON}_soapfiles gsoap )
 	endif()
+	
+	if (WINDOWS)
+		set_property( TARGET gen_${_DAEMON}_soapfiles PROPERTY FOLDER "executables" )
+	endif()	
 
 	# now append the header and srcs to incoming vars
 	if ( NOT ${_SRCS} MATCHES "soap_${_DAEMON}C.cpp" )

@@ -44,6 +44,7 @@ if (WITH_BOOST )
 		else()
 		  set(BOOST_PATCH echo "nothing")
 		endif()
+		
 
 		# so the idea of privately staging boost is silly.
 		set (BOOST_VER 1_39_0)
@@ -60,19 +61,24 @@ if (WITH_BOOST )
 				    	./bootstrap.${JAM_EXT} --prefix=${EXTERNAL_STAGE}
 				    #--Build Step ----------
 				    BUILD_COMMAND cd boost_${BOOST_VER} &&
-				    ${EXEC}bjam --with-thread --prefix=${EXTERNAL_STAGE} --libdir=${EXTERNAL_STAGE}/lib --layout=system link=static define=BOOST_HAS_THREADS variant=release toolset=${TOOLSET} install
+				    ${EXEC}bjam --with-thread --with-program_options --with-system --with-regex --with-filesystem --with-date_time --build-type=complete --prefix=${EXTERNAL_STAGE} --libdir=${EXTERNAL_STAGE}/lib define=BOOST_HAS_THREADS variant=release toolset=${TOOLSET} install
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${EXTERNAL_STAGE}
 				    INSTALL_COMMAND echo "Nothing to do" )
 
 	append_var(CONDOR_EXTERNALS boost)
+	
+	if (WINDOWS)
+		set_property( TARGET boost PROPERTY FOLDER "externals" )
+		set(BOOST_ROOT ${EXTERNAL_STAGE} PARENT_SCOPE)
+	endif()
 
   else(NOT PROPER)
 
 	# For proper builds use the .so/.dll's .
 	set(Boost_USE_MULTITHREADED ON)
-	find_package( Boost 1.33.1 COMPONENTS thread program_options)
+	find_package( Boost 1.33.1 COMPONENTS thread program_options system regex filesystem)
 	if(Boost_FOUND)
 		append_var (EXTERNAL_INCLUDES ${Boost_INCLUDE_DIRS})
 		set (BOOST_VER ${Boost_VERSION})

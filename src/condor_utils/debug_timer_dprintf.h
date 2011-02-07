@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -20,7 +20,7 @@
 #ifndef __DEBUG_TIMER_DPRINTF_H__
 #define __DEBUG_TIMER_DPRINTF_H__
 
-#include "debug_timer.unix.h"
+#include "debug_timer.h"
 
 // Debug timer which outputs via dprintf()
 class DebugTimerDprintf : public DebugTimerBase

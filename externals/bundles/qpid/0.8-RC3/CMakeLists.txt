@@ -24,24 +24,34 @@ endif()
 if (WITH_QPID)
 
 	if ( NOT PROPER )
+	
+		set (QPID_VER 0.8)
 
-		set (QPID_MAJOR_VER 0.8)
-		set (QPID_MINOR_VER RC3)
+		if (NOT WINDOWS)
+			set (QPID_CONFIGURE ./configure --prefix=${EXTERNAL_STAGE} )
+			set (QPID_BUILD make )
+			set (QPID_INSTALL make install )
+		else()
+			set (QPID_CONFIGURE cd cpp && cmake -DBOOST_ROOT:PATH=${BOOST_ROOT} -DCMAKE_INSTALL_PREFIX:PATH=${EXTERNAL_STAGE} -G \"Visual Studio 9 2008\" -DGEN_DOXYGEN:BOOL=OFF -DBoost_DEBUG:BOOL=TRUE )
+			set (QPID_BUILD cd cpp && devenv qpid-cpp.sln /Rebuild RelWithDebInfo /project INSTALL )
+			set (QPID_INSTALL echo "Done" )
+		endif()
 
 		ExternalProject_Add(qpid
-				    PREFIX ${EXTERNAL_BUILD_PREFIX}/${QPID_VER}
+					DEPENDS boost
+				    PREFIX ${EXTERNAL_BUILD_PREFIX}/qpid-${QPID_VER}
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://people.apache.org/~robbie/qpid/${QPID_MAJOR_VER}/${QPID_MINOR_VER}/qpid-cpp-${QPID_MAJOR_VER}.tar.gz ${CMD_TERM}
+					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/qpid-${QPID_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${EXTERNAL_DL}
-				    URL http://people.apache.org/~robbie/qpid/qpid-cpp-${QPID_MAJOR_VER}.tar.gz
+				    URL http://parrot.cs.wisc.edu/externals/qpid-${QPID_VER}.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd qpidc-${QPID_MAJOR_VER} && ./configure --prefix=${EXTERNAL_STAGE}
+				    CONFIGURE_COMMAND cd qpid-${QPID_VER} && ${QPID_CONFIGURE}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd qpidc-${QPID_MAJOR_VER} && make
+				    BUILD_COMMAND cd qpid-${QPID_VER} && ${QPID_BUILD}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${EXTERNAL_STAGE}
-				    INSTALL_COMMAND cd qpidc-${QPID_MAJOR_VER} && make install )
+				    INSTALL_COMMAND cd qpid-${QPID_VER} && ${QPID_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		# all of the below locations need to be verified.
@@ -55,7 +65,11 @@ if (WITH_QPID)
 					  ${EXTERNAL_STAGE}/bin/qmf.pdb
 					  ${EXTERNAL_STAGE}/bin/qpidtypes.dll
 					  DESTINATION ${C_LIB} )
+					  
 			set( QMF_GEN ${EXTERNAL_STAGE}/managementgen/qmf-gen )
+			
+			set_property( TARGET qpid PROPERTY FOLDER "externals" )
+			
 		else()
 			set( QPID_FOUND "${EXTERNAL_STAGE}/lib/libqpidcommon.so;${EXTERNAL_STAGE}/lib/libqpidclient.so;${EXTERNAL_STAGE}/lib/libqmf.so;${EXTERNAL_STAGE}/lib/libqpidtypes.so" )
 			# TODO: so are we going to need to install qpid.so's along with condor..? or should we -static the plugins.

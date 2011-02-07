@@ -77,14 +77,6 @@ UniShadow::updateFromStarterClassAd(ClassAd* update_ad) {
 		// it updates its copy, it's really updating ours, too.
 	remRes->updateFromStarter(update_ad);
 
-	bool exists = true;
-	bool dirty = false;
-	job_ad->GetDirtyFlag( ATTR_JOB_STATUS, &exists, &dirty );
-	if ( exists && dirty ) {
-		job_updater->watchAttribute( ATTR_JOB_STATUS );
-		job_updater->resetUpdateTimer();
-	}
-
 	int cur_image = getImageSize();
 	if (cur_image != prev_image) {
 		JobImageSizeEvent event;

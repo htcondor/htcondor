@@ -865,12 +865,28 @@ const char * const ATTR_LEASE_MANAGER_IP_ADDR = "LeaseManagerIpAddr";
 //************* End of Lease Manager    *******************//
 
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_TIME = "LastNegotiationCycleTime";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_END = "LastNegotiationCycleEnd";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_PERIOD = "LastNegotiationCyclePeriod";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION = "LastNegotiationCycleDuration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE1 = "LastNegotiationCyclePhase1Duration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE2 = "LastNegotiationCyclePhase2Duration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE3 = "LastNegotiationCyclePhase3Duration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE4 = "LastNegotiationCyclePhase4Duration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_TOTAL_SLOTS = "LastNegotiationCycleTotalSlots";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_TRIMMED_SLOTS = "LastNegotiationCycleTrimmedSlots";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_CANDIDATE_SLOTS = "LastNegotiationCycleCandidateSlots";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_SLOT_SHARE_ITER = "LastNegotiationCycleSlotShareIter";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCHES = "LastNegotiationCycleMatches";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS = "LastNegotiationCycleRejections";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT = "LastNegotiationCycleSubmittersShareLimit";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED = "LastNegotiationCycleSubmittersFailed";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME = "LastNegotiationCycleSubmittersOutOfTime";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT = "LastNegotiationCycleActiveSubmitterCount";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE = "LastNegotiationCycleMatchRate";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED = "LastNegotiationCycleMatchRateSustained";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_SCHEDULERS = "LastNegotiationCycleNumSchedulers";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_IDLE_JOBS = "LastNegotiationCycleNumIdleJobs";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_JOBS_CONSIDERED = "LastNegotiationCycleNumJobsConsidered";
 
 const char * const ATTR_JOB_MACHINE_ATTRS = "JobMachineAttrs";
 const char * const ATTR_MACHINE_ATTR_PREFIX = "MachineAttr";

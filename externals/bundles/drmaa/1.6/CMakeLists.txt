@@ -63,7 +63,11 @@ if ( WITH_DRMAA )
 						#--install Step ----------
 						INSTALL_DIR ${EXTERNAL_STAGE}
 						INSTALL_COMMAND ${DRMAA_INSTALL})
-	
+
+	if (WINDOWS)
+		set_property( TARGET drmaa PROPERTY FOLDER "externals" )
+	endif()
+		
 	message (STATUS "external configured (DRMAA_FOUND=${DRMAA_FOUND})")
 	set( DRMAA_FOUND ${DRMAA_FOUND} PARENT_SCOPE )
 	set( HAVE_EXT_DRMAA ON PARENT_SCOPE )

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -68,8 +68,8 @@
 #include "util_lib_proto.h"
 #include "status_string.h"
 #include "condor_id.h"
-#include "condor_classad_namedlist.h"
-#include "schedd_cronmgr.h"
+#include "named_classad_list.h"
+#include "schedd_cron_job_mgr.h"
 #include "misc_utils.h"  // for startdClaimFile()
 #include "condor_crontab.h"
 #include "condor_netdb.h"
@@ -497,7 +497,7 @@ Scheduler::Scheduler() :
 	m_parsed_gridman_selection_expr = NULL;
 	m_unparsed_gridman_selection_expr = NULL;
 
-	CronMgr = NULL;
+	CronJobMgr = NULL;
 
 	jobThrottleNextJobDelay = 0;
 #ifdef HAVE_EXT_POSTGRESQL
@@ -521,9 +521,9 @@ Scheduler::~Scheduler()
 		free ( this->StartSchedulerUniverse );
 	}
 
-	if ( CronMgr ) {
-		delete CronMgr;
-		CronMgr = NULL;
+	if ( CronJobMgr ) {
+		delete CronJobMgr;
+		CronJobMgr = NULL;
 	}
 
 		// we used to cancel and delete the shadowCommand*socks here,
@@ -4351,6 +4351,37 @@ Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify 
 	}
 }
 
+/**
+ * Remove any jobs that match the specified job's OtherJobRemoveRequirements
+ * attribute, if it has one.
+ * @param: the cluster of the "controlling" job
+ * @param: the proc of the "controlling" job
+ * @return: true if successful, false otherwise
+ */
+static bool
+removeOtherJobs( int cluster, int proc )
+{
+	bool result = true;
+
+	MyString removeConstraint;
+	int attrResult = GetAttributeString( cluster, proc,
+				ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
+				removeConstraint );
+	if ( attrResult == 0 && removeConstraint != "" ) {
+		dprintf( D_ALWAYS,
+					"Removing jobs with constraint <%s>\n",
+					removeConstraint.Value() );
+		MyString reason;
+		reason.sprintf(
+					"removed because controlling job (%d.%d) was removed",
+					cluster, proc );
+		result = abortJobsByConstraint(removeConstraint.Value(),
+					reason.Value(), true);
+	}
+
+	return result;
+}
+
 int
 Scheduler::actOnJobMyselfHandler( ServiceData* data )
 {
@@ -4384,18 +4415,7 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 			// are left running.
 			//
 		if ( action == JA_REMOVE_JOBS ) {
-			MyString removeConstraint;
-			int result = GetAttributeString(job_id.cluster, job_id.proc,
-						ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
-						removeConstraint);
-			if ( result == 0 && removeConstraint != "" ) {
-				dprintf( D_ALWAYS,
-							"Removing jobs with constraint <%s>\n",
-							removeConstraint.Value() );
-				abortJobsByConstraint(removeConstraint.Value(),
-					"removed because controlling job was removed",
-					true);
-			}
+			(void)removeOtherJobs(job_id.cluster, job_id.proc);
 		}
 		break;
     }
@@ -10197,9 +10217,9 @@ Scheduler::Init()
 	shadow_mgr.init();
 
 		// Startup the cron logic (only do it once, though)
-	if ( ! CronMgr ) {
-		CronMgr = new ScheddCronMgr( );
-		CronMgr->Initialize( );
+	if ( ! CronJobMgr ) {
+		CronJobMgr = new ScheddCronJobMgr( );
+		CronJobMgr->Initialize( "schedd" );
 	}
 
 	m_xfer_queue_mgr.InitAndReconfig();
@@ -10594,7 +10614,7 @@ Scheduler::attempt_shutdown()
 		return;
 	}
 
-	if ( CronMgr && ( ! CronMgr->ShutdownOk() ) ) {
+	if ( CronJobMgr && ( ! CronJobMgr->ShutdownOk() ) ) {
 		return;
 	}
 
@@ -10609,7 +10629,7 @@ Scheduler::shutdown_graceful()
 
 	// If there's nothing to do, shutdown
 	if(  ( numShadows == 0 ) &&
-		 ( CronMgr && ( CronMgr->ShutdownOk() ) )  ) {
+		 ( CronJobMgr && ( CronJobMgr->ShutdownOk() ) )  ) {
 		schedd_exit();
 	}
 
@@ -10631,8 +10651,8 @@ Scheduler::shutdown_graceful()
 					"attempt_shutdown()", this );
 
 	// Shut down the cron logic
-	if( CronMgr ) {
-		CronMgr->Shutdown( false );
+	if( CronJobMgr ) {
+		CronJobMgr->Shutdown( false );
 	}
 
 }
@@ -10661,8 +10681,8 @@ Scheduler::shutdown_fast()
 	}
 
 	// Shut down the cron logic
-	if( CronMgr ) {
-		CronMgr->Shutdown( true );
+	if( CronJobMgr ) {
+		CronJobMgr->Shutdown( true );
 	}
 
 		// Since this is just sending a bunch of UDP updates, we can
@@ -10691,11 +10711,11 @@ void
 Scheduler::schedd_exit()
 {
 		// Shut down the cron logic
-	if( CronMgr ) {
-		dprintf( D_ALWAYS, "Deleting CronMgr\n" );
-		CronMgr->Shutdown( true );
-		delete CronMgr;
-		CronMgr = NULL;
+	if( CronJobMgr ) {
+		dprintf( D_ALWAYS, "Deleting CronJobMgr\n" );
+		CronJobMgr->Shutdown( true );
+		delete CronJobMgr;
+		CronJobMgr = NULL;
 	}
 
 		// write a clean job queue on graceful shutdown so we can
@@ -11103,7 +11123,7 @@ Scheduler::RemoveShadowRecFromMrec( shadow_rec* shadow )
 			// re-associate match with the original job cluster
 		SetMrecJobID(mrec,mrec->origcluster,-1);
 		if( mrec->is_dedicated ) {
-			DelMrec( mrec );
+			deallocMatchRec( mrec );
 		}
 	}
 }
@@ -11927,6 +11947,12 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 		}
 	}
 
+		// If we successfully removed the job, remove any jobs that
+		// match is OtherJobRemoveRequirements attribute, if it has one.
+	if ( result ) {
+		result = result && removeOtherJobs( cluster, proc );
+	}
+
 	return result;
 }
 
@@ -11966,14 +11992,21 @@ abortJobsByConstraint( const char *constraint,
 	}
 
 	job_count--;
+	ExtArray<PROC_ID> removedJobs;
+	int removedJobCount = 0;
 	while ( job_count >= 0 ) {
 		dprintf(D_FULLDEBUG, "removing: %d.%d\n",
 				jobs[job_count].cluster, jobs[job_count].proc);
 
-		result = result && abortJobRaw(jobs[job_count].cluster,
+		bool tmpResult = abortJobRaw(jobs[job_count].cluster,
 									   jobs[job_count].proc,
 									   reason);
-
+		if ( tmpResult ) {
+			removedJobs[removedJobCount].cluster = jobs[job_count].cluster;
+			removedJobs[removedJobCount].proc =  jobs[job_count].proc;
+			removedJobCount++;
+		}
+		result = result && tmpResult;
 		job_count--;
 	}
 
@@ -11983,6 +12016,20 @@ abortJobsByConstraint( const char *constraint,
 		} else {
 			AbortTransaction();
 		}
+	}
+
+		//
+		// Remove "other" jobs that need to be removed as a result of
+		// the OtherJobRemoveRequirements exppression(s) in the job(s)
+		// that have just been removed.  Note that this must be done
+		// *after* the transaction is committed.
+		//
+	removedJobCount--;
+	while ( removedJobCount >= 0 ) {
+		result = result && removeOtherJobs(
+					removedJobs[removedJobCount].cluster,
+					removedJobs[removedJobCount].proc );
+		removedJobCount--;
 	}
 
 	return result;

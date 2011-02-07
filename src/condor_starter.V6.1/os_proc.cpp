@@ -184,10 +184,6 @@ OsProc::StartJob(FamilyInfo* family_info)
 				free( parrot );
 				return 0;
 			} else {
-				args.AppendArg("-d");
-				args.AppendArg("all");
-				args.AppendArg("-o");
-				args.AppendArg("parrot.realout");
 				args.AppendArg(JobName.Value());
 				JobName = parrot;
 				free( parrot );

@@ -10311,15 +10311,10 @@ DaemonCore::CheckConfigSecurity( const char* config, Sock* sock )
 
 
 bool
-DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
+DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 {
-	char *name;
 	const char* ip_str;
 	int i;
-
-	if (!(name = parse_param_name_from_config(attr))) {
-		EXCEPT("Failed to parse param name from: %s", attr);
-	}
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)
 		dprintf( D_ALWAYS, "CheckConfigSecurity: name is: %s\n", name );
@@ -10364,7 +10359,6 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 						 PermString((DCpermission)i) );
 #endif
 
-				free( name );
 				return true;
 			}
 		}
@@ -10377,8 +10371,6 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 		// Grab a pointer to this string, since it's a little bit
 		// expensive to re-compute.
 	ip_str = sock->peer_ip_str();
-		// Upper-case-ify the string for everything we print out.
-	strupr(name);
 
 		// First, log it.
 	dprintf( D_ALWAYS,
@@ -10387,7 +10379,6 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 	dprintf( D_ALWAYS,
 			 "WARNING: Potential security problem, request refused\n" );
 
-	free( name );
 	return false;
 }
 
