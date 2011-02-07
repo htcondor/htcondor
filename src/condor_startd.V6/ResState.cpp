@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -26,6 +26,7 @@ ResState::ResState( Resource* res_ip )
 	r_state = owner_state;
 	r_destination = no_state;
 	r_act = idle_act;
+	r_act_was_benchmark = false;
 	m_atime = time(NULL);
 	m_stime = m_atime;
 	this->rip = res_ip;
@@ -130,6 +131,7 @@ ResState::change( State new_state, Activity new_act )
 		}
 	}
 	if( actchange ) {
+		r_act_was_benchmark = ( r_act == benchmarking_act );
 		r_act = new_act;
 		m_atime = now;
 	}
@@ -377,8 +379,12 @@ ResState::eval( void )
 			change( owner_state );
 			return TRUE; // XXX: change TRUE
 		}
+
 			// Check to see if we should run benchmarks
-		deal_with_benchmarks( rip );
+		if ( ! r_act_was_benchmark ) {
+			int num_started;
+			resmgr->m_attr->start_benchmarks( rip, num_started );
+		}
 
 #if HAVE_JOB_HOOKS
 			// If we're compiled to support fetching work

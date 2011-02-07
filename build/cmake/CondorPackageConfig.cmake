@@ -151,8 +151,8 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set( C_SBIN bin )
 	set( C_ETC etc )
 
-	set (CPACK_PACKAGE_INSTALL_DIRECTORY "${CONDOR_VERSION}")
-	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VERSION}")
+	set (CPACK_PACKAGE_INSTALL_DIRECTORY "${CONDOR_PACKAGE_NAME}")
+	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}")
 	set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CONDOR_VERSION}")
 
 	# create the WIX package input file (win.xsl) even if we aren't doing packaging.
@@ -165,25 +165,26 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 
     set (CPACK_WIX_PRODUCT_GUID "ea9608e1-9a9d-4678-800c-645df677094a")
     set (CPACK_WIX_UPGRADE_GUID "ef96d7c4-29df-403c-8fab-662386a089a4")
-    set (CPACK_WIX_BITMAP_FOLDER ${CONDOR_WIX_LOC}/Bitmaps)
+    
     set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs)
 
+	set (CPACK_WIX_BITMAP_FOLDER Bitmaps)
+	configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl @ONLY)
+	
+	set (CPACK_WIX_BITMAP_FOLDER ${CONDOR_WIX_LOC}/Bitmaps)
     # the configure file f(n) will replace @CMAKE_XYZ@ with their value
     configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl @ONLY)
         
 	set (CPACK_GENERATOR "ZIP")
 	
-	install ( FILES ${CPACK_WIX_WXS_FILES} ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl
-			DESTINATION ${C_ETC}/WiX/xml
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( FILES ${CPACK_WIX_WXS_FILES} ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl
+			DESTINATION ${C_ETC}/WiX/xml )
 	
-	install ( FILES ${CPACK_WIX_BITMAP_FOLDER}/bannrbmp.bmp ${CPACK_WIX_BITMAP_FOLDER}/dlgbmp.bmp
-			DESTINATION ${C_ETC}/WiX/Bitmaps
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( DIRECTORY ${CPACK_WIX_BITMAP_FOLDER}
+			DESTINATION ${C_ETC}/WiX)
 			
 	install ( FILES ${CONDOR_SOURCE_DIR}/msconfig/license.rtf ${CONDOR_SOURCE_DIR}/msconfig/do_wix.bat
-			  DESTINATION ${C_ETC}/WiX
-	          PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+			  DESTINATION ${C_ETC}/WiX )
 			
 	if (CONDOR_PACKAGE_BUILD)
 

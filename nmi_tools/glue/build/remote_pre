@@ -49,7 +49,7 @@ $| = 1;
 print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 
-    $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\IDE;$ENV{VS90COMNTOOLS}..\..\VC\BIN;$ENV{PATH}";
+    $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
 	system("set");
 	
 } else {
