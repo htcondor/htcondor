@@ -52,5 +52,5 @@ condor_exe( condor_triggerd "${Srcs};CondorTrigger.cpp;CondorTriggerService.cpp;
 
 #############################
 
-install ( FILES get_trigger_data DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES get_trigger_data DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES condor_trigger_config.py DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

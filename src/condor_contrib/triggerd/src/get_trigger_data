@@ -119,7 +119,7 @@ sub PrintLogData
    foreach my $keyword (keys(%grep_data))
    {
       $list = "";
-      @grep_output = `grep $keyword $log_dir/*Log*`;
+      @grep_output = `grep "$keyword" $log_dir/*Log*`;
       $count = @grep_output;
       foreach my $line (@grep_output)
       {
@@ -185,7 +185,7 @@ sub PrintActivityTime()
    my @ad = `condor_status -l -direct $hostname`;
    my @lhf;
    my @eca;
-   my $at;
+   my $at = 0;
 
    foreach my $line (@ad)
    {
