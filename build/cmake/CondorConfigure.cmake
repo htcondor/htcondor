@@ -403,6 +403,7 @@ link_directories( ${EXTERNAL_STAGE}/lib64 ${EXTERNAL_STAGE}/lib )
 
 ###########################################
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)

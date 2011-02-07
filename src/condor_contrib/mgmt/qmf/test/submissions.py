@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from qmf.console import Session
+from sys import exit, argv
+
+url = len(argv) > 2 and argv[2] or "amqp://localhost:5672"
+session = Session();
+try:
+	broker = session.addBroker(url)
+except:
+	print 'Unable to connect to broker'
+	exit(1)
+
+try:
+	agentName = "com.redhat.grid:%s" % argv[1]
+	print "Connecting to agent at ", agentName
+	agent = broker.getAgent(broker.getBrokerBank(),agentName)
+	submissions = agent.getObjects(_class="submission", _package='com.redhat.grid')
+except:
+	print 'Unable to access agent or submissions'
+	session.delBroker(broker)
+	exit(1)
+
+print "Current Submissions:"
+for submission in submissions:
+	print " ", submission.Name
+	print "\tCompleted =\t%s" % submission.Completed
+	print "\tHeld\t=\t%s" % submission.Held
+	print "\tIdle\t=\t%s" % submission.Idle
+	print "\tRemoved\t=\t%s" % submission.Removed
+	print "\tRunning\t=\t%s" % submission.Running
+
+session.delBroker(broker)
