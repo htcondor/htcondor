@@ -1,6 +1,10 @@
 \begin{ManPage}{\label{man-condor-procd}\Condor{procd}}{1}
 {Track and manage process families}
 \Synopsis \SynProg{\Condor{procd}}
+\Opt{-h}
+
+\SynProg{\Condor{procd}}
+\OptArg{-A}{address-file}
 \oOpt{options}
 
 \index{Condor commands!condor\_procd}
@@ -9,81 +13,88 @@
 \Description 
 
 \Condor{procd} tracks and manages process families on behalf of the
-Condor daemons. It may track families of pids via relationships such
+Condor daemons. 
+It may track families of PIDs via relationships such
 as: direct parent/child, environment variables, uid, and supplementary
-group ids.  Management of the pid families include: registering new
-families or new members of existing families, getting usage information,
-signaling families for operations such as suspension, continuing, killing
-the family, and getting a snapshot of the tree of families. In a regular
-Condor installation, this program is not intended to be used or executed
-by any human.
+group ids.  
+Management of the pid families include 
+\begin{itemize}
+\item registering new families or new members of existing families
+\item getting usage information
+\item signaling families for operations such as suspension, 
+continuing, or killing the family 
+\item getting a snapshot of the tree of families 
+\end{itemize}
+In a regular Condor installation, 
+this program is not intended to be used or executed by any human.
 
+The required
+\OptArg{-A}{address-file}
+argument is the path to the address file which is the named pipe
+that clients must use to speak with the \Condor{procd}.
+	
 \begin{Options}
 
-	\OptItem{\Opt{-h}}{Print out usage information.}
+  \OptItem{\Opt{-h}}{Print out usage information.}
 	
-	\OptItem{\Opt{-D}}{Wait for the debugger. Initially sleep 30
-		seconds before beginning normal function.}
+  \OptItem{\Opt{-D}}{Wait for the debugger. Initially sleep 30
+  seconds before beginning normal function.}
 
-	\OptItem{\OptArg{-A}{address-file}}{The path to the address file
-		which is the named pipe clients must use to speak with the
-		\Condor{procd}.}
+  \OptItem{\OptArg{-C}{principal}}{The UID of the owner of the named
+  pipe that clients must use to speak to the \Condor{procd}.}
 	
-	\OptItem{\OptArg{-C}{principal}}{The UID of the owner of the named
-		pipe that clients must use to speak to the \Condor{procd}.}
+  \OptItem{\OptArg{-L}{log-file}}{A file the \Condor{procd} will
+  use to write logging information.}
 	
-	\OptItem{\OptArg{-L}{log-file}}{A file the \Condor{procd} will
-		use to write logging information.}
-	
-	\OptItem{\Opt{-E}}{This determines if the \Condor{procd} will allocate the
-		gid associated with a process by itself (not specified), or if
-		by another tool such as the \Prog{procd\_ctl} tool must perform
-		the association (is specified). The default is the procd will
-		allocate the gid by itself.}
+  \OptItem{\Opt{-E}}{This determines if the \Condor{procd} will allocate the
+  GID associated with a process by itself (not specified), or if
+  by another tool such as the \Prog{procd\_ctl} tool must perform
+  the association (is specified). The default is the \Condor{procd} will
+  allocate the gid by itself.}
 
-	\OptItem{\OptArg{-P}{pid}}{If not specified, the \Condor{procd} will 
-		use the \Condor{procd}'s parent, which may not be pid 1 on UNIX,
-		as the parent of the \Condor{procd} and the root of the tracking
-		family. When not specified, if the \Condor{procd}'s parent pid
-		dies, the \Condor{procd} exits. When specified, the \Condor{procd} will
-		track the pid family in question and not also exit if
-		the pid exits.}
+  \OptItem{\OptArg{-P}{PID}}{If not specified, the \Condor{procd} will 
+  use the \Condor{procd}'s parent, which may not be PID 1 on UNIX,
+  as the parent of the \Condor{procd} and the root of the tracking
+  family. When not specified, if the \Condor{procd}'s parent PID
+  dies, the \Condor{procd} exits. When specified, the \Condor{procd} will
+  track the PID family in question and not also exit if
+  the PID exits.}
 
-	\OptItem{\OptArg{-S}{seconds}}{The maximum number of seconds the 
-		\Condor{procd} will wait in between taking snapshots
-		of the tree of families. Different clients to the
-		\Condor{Procd} can specify different snapshot times. The
-		quickest snapshot time is the one performed by the
-		\Condor{procd}. The default is 60 seconds.}
+  \OptItem{\OptArg{-S}{seconds}}{The maximum number of seconds the 
+  \Condor{procd} will wait between taking snapshots
+  of the tree of families. Different clients to the
+  \Condor{procd} can specify different snapshot times. The
+  quickest snapshot time is the one performed by the
+  \Condor{procd}. When this option is not specified, a default value
+  of 60 seconds is used.}
 
-	
-	\OptItem{\OptArg{-G}{min-gid max-gid}}{If -E is NOT specified, then
-		track process families using a self-allocated free gid out of the
-		range specified. This means if a new process shows up using a
-		previously known gid, it will automatically associate into the
-		process family assigned that gid. If -E IS specified, then
-		instead of self-allocating the gid, the \Prog{procd\_ctl} tool must be
-		used to associate the gid with the pid root of the family. The
-		associated gid must still be in the range specified. This is a
-		Linux only feature.}
+  \OptItem{\OptArg{-G}{min-gid max-gid}}{If -E is NOT specified, then
+  track process families using a self-allocated free GID out of the
+  range specified. This means if a new process shows up using a
+  previously known GID, it will automatically associate into the
+  process family assigned that GID. If -E IS specified, then
+  instead of self-allocating the GID, the \Prog{procd\_ctl} tool must be
+  used to associate the GID with the pid root of the family. The
+  associated GID must still be in the range specified. This is a
+  Linux only feature.}
 		
-	\OptItem{\OptArg{-K}{windows-softkill-binary}}{This is the path to the
-		\Prog{condor\_softkill.exe} binary. It is used to send softkill
-		signals to process families. This is a windows only feature.}
+  \OptItem{\OptArg{-K}{windows-softkill-binary}}{This is the path to the
+  \Prog{condor\_softkill.exe} binary. It is used to send softkill
+  signals to process families. This is a Windows only feature.}
 
-	\OptItem{\OptArg{-I}{glexec-kill-path glexec-path}}{Specify the
-		binary used to send a signal to a pid and the glexec binary 
-		itself which will execute the first binary under the right 
-		privileges to send the signal.}
+  \OptItem{\OptArg{-I}{glexec-kill-path glexec-path}}{Specify the
+  binary used to send a signal to a PID and the \Prog{glexec} binary 
+  itself which will execute the first binary under the right 
+  privileges to send the signal.}
 	
 \end{Options}
 
 \GenRem
 
-This program may be used in a standalone mode, independent of
+This program may be used in a stand alone mode, independent of
 Condor, to track process families. The programs \Prog{procd\_ctl} and
-\Prog{gidd\_alloc} are used with the \Condor{procd} in standalone mode
-to interact with the daemon and inquire about certain state of running
+\Prog{gidd\_alloc} are used with the \Condor{procd} in stand alone mode
+to interact with the daemon and to inquire about certain state of running
 processes on the machine, respectively.
 
 \ExitStatus
