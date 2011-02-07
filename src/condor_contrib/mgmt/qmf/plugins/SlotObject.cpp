@@ -23,6 +23,7 @@
 
 #include "condor_debug.h"
 #include "condor_classad.h"
+#include "condor_classad_util.h"
 
 #include "Slot.h"
 

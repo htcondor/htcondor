@@ -22,11 +22,15 @@
 
 #include "condor_debug.h"
 
+#include "compat_classad_util.h"
+
+
 static const std::string EXPR_TYPE = "com.redhat.grid.Expression";
 static const std::string TYPEMAP_KEY = "!!descriptors";
 
 using namespace std;
 using namespace qpid::types;
+using namespace compat_classad;
 
 // cleans up the quoted values from the job log reader
 string TrimQuotes(const char* str) {
@@ -79,7 +83,7 @@ bool IsValidAttributeName(const std::string& _name, std::string& _text) {
 	return true;
 }
 
-bool CheckRequiredAttrs(ClassAd& ad, const char* attrs[], std::string& missing) {
+bool CheckRequiredAttrs(compat_classad::ClassAd& ad, const char* attrs[], std::string& missing) {
 	bool status = true;
 	int i = 0;
 
@@ -94,7 +98,7 @@ bool CheckRequiredAttrs(ClassAd& ad, const char* attrs[], std::string& missing) 
 }
 
 bool
-AddAttribute(ClassAd &ad, const char *name, Variant::Map &job)
+AddAttribute(compat_classad::ClassAd &ad, const char *name, Variant::Map &job)
 {
 	ExprTree *expr;
 	Variant::Map* descriptors = NULL;
@@ -115,10 +119,11 @@ AddAttribute(ClassAd &ad, const char *name, Variant::Map &job)
 		return false;
 	}
 
-	char* value = NULL;
-	switch (expr->RArg()->MyType()) {
-		case LX_BOOL:
-		case LX_EXPR:
+    classad::Value value;
+    ad.EvaluateExpr(expr,value);
+	switch (value.GetType()) {
+        // TODO: does this cover expressions also?
+        case classad::Value::BOOLEAN_VALUE:
 			{
 				if (!descriptors) {
 					// start a new type map
@@ -131,48 +136,43 @@ AddAttribute(ClassAd &ad, const char *name, Variant::Map &job)
 				else {
 					(*descriptors)[name] = EXPR_TYPE;
 				}
-				expr->RArg()->PrintToNewStr(&value);
-				job[name] = TrimQuotes(value);
+				job[name] = TrimQuotes(ExprTreeToString(expr));
 			}
 			break;
-		case LX_INTEGER:
-			job[name] = ((Integer*)expr->RArg())->Value();
+        case classad::Value::INTEGER_VALUE:
+            int i;
+            value.IsIntegerValue (i);
+			job[name] = i;
 			break;
-		case LX_FLOAT:
-			job[name] = ((Float*)expr->RArg())->Value();
+        case classad::Value::REAL_VALUE:
+            double d;
+            value.IsRealValue(d);
+			job[name] = d;
 			break;
-		case LX_FUNCTION:
-			{
-				Function* func = (Function*)expr->RArg();
-				func->PrintToNewStr(&value);
-				job[name] = TrimQuotes(value);
-			}
-			break;
-		case LX_STRING:
+        case classad::Value::STRING_VALUE:
 		default:
-			expr->RArg()->PrintToNewStr(&value);
-			job[name] = TrimQuotes(value);
-	}
-
-	if (value) {
-		free(value);
+            job[name] = TrimQuotes(ExprTreeToString(expr));
 	}
 
 	return true;
 }
 
 bool
-PopulateVariantMapFromAd(ClassAd &ad, Variant::Map &_map)
+PopulateVariantMapFromAd(compat_classad::ClassAd &ad, Variant::Map &_map)
 {
 	ExprTree *expr;
+    ClassAd::iterator iter;
 
-	ad.ResetExpr();
-	_map.clear();
-	while (NULL != (expr = ad.NextExpr())) {
-		if (!AddAttribute(ad, ((Variable *) expr->LArg())->Name(), _map)) {
-			return false;
-		}
-	}
+    ad.ResetExpr();
+    _map.clear();
+    iter = ad.begin();
+    while (iter != ad.end()) {
+            string name = iter->first;
+            if (!AddAttribute(ad, name.c_str(), _map)) {
+                    return false;
+            }
+            iter++;
+    }
 
 	// TODO: debug
 //	if (DebugFlags & D_FULLDEBUG) {
@@ -184,7 +184,7 @@ PopulateVariantMapFromAd(ClassAd &ad, Variant::Map &_map)
 
 
 bool
-PopulateAdFromVariantMap(Variant::Map &_map, ClassAd &ad)
+PopulateAdFromVariantMap(Variant::Map &_map, compat_classad::ClassAd &ad)
 {
 	Variant::Map* descriptors = NULL;
 	// grab the descriptor map if there is one

@@ -127,20 +127,20 @@ NegotiatorObject::GetLimits(Variant::Map &limits, std::string &/*text*/)
 	matchMaker.getAccountant().ReportLimits(&limitAttrs);
 
 	limitAttrs.ResetExpr();
-	while (NULL != (expr = limitAttrs.NextExpr())) {
+    const char* attr_name;
+    while (!limitAttrs.NextExpr(attr_name,expr)) {
 		Variant::Map limit;
-		MyString name;
-		name = ((Variable *) expr->LArg())->Name();
+		std::string name = attr_name;
 
-			// Get right to the limit's name
-			// len("ConcurrencyLimitX") = 17
-			// X can be any single char separator
-		name = name.Substr(17, name.Length());
+        // Get right to the limit's name
+        // len("ConcurrencyLimitX") = 17
+        // X can be any single char separator
+		name = name.substr(17, name.length());
 
 		limit["CURRENT"] = matchMaker.getAccountant().GetLimit(name);
 		limit["MAX"] = matchMaker.getAccountant().GetLimitMax(name);
 
-		limits[name.StrDup()] = limit;
+		limits[strdup(name.c_str())] = limit;
 
 	}
 

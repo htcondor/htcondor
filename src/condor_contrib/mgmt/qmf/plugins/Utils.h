@@ -23,16 +23,16 @@
 
 std::string TrimQuotes(const char* value);
 
-bool AddAttribute(ClassAd &ad, const char *name, qpid::types::Variant::Map &_map);
+bool AddAttribute(compat_classad::ClassAd &ad, const char *name, qpid::types::Variant::Map &_map);
 
 bool IsValidGroupUserName(const std::string& _name, std::string& _text);
 
 bool IsValidAttributeName(const std::string& _name, std::string& _text);
 
-bool CheckRequiredAttrs(ClassAd& ad, const char* attrs[], std::string& missing);
+bool CheckRequiredAttrs(compat_classad::ClassAd& ad, const char* attrs[], std::string& missing);
 
-bool PopulateVariantMapFromAd(ClassAd &ad, qpid::types::Variant::Map &_map);
+bool PopulateVariantMapFromAd(compat_classad::ClassAd &ad, qpid::types::Variant::Map &_map);
 
-bool PopulateAdFromVariantMap(qpid::types::Variant::Map &_map, ClassAd &ad);
+bool PopulateAdFromVariantMap(qpid::types::Variant::Map &_map, compat_classad::ClassAd &ad);
 
 #endif /* _UTILS_H */

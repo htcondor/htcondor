@@ -57,15 +57,10 @@ if (ad.LookupString(#attr, &str)) {									\
 #define EXPR_BASE(attr,else_action)									\
 expr = ad.Lookup(#attr);											\
 if (expr) {                                                         \
-   if (expr->RArg()) {                                              \
-      expr->RArg()->PrintToNewStr(&str);                            \
-      mgmtObject->set_##attr(str);                             		\
-      free(str);                                                    \
-   } else {                                                         \
+      str = const_cast<char*>(ExprTreeToString(expr));              \
+      mgmtObject->set_##attr(str);                             \
+} else {                                                         \
       dprintf(D_FULLDEBUG, "Warning: " #attr " has no value\n");    	\
-   }                                                                \
-} else {                                                            \
-   else_action;                                                     \
 }
 
 #endif /* MGMT_CONVERSION_MACROS_H */
