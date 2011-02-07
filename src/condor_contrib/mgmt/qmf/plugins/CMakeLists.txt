@@ -34,14 +34,14 @@ set( QMF_GEN_SRCS Slot.h;
     Submission.cpp;
     JobServer.cpp;
     ArgsSchedulerSubmitJob.h;
-    ArgsSchedulerGetJobAd.h;
+    #ArgsSchedulerGetJobAd.h;
     ArgsSchedulerSetJobAttribute.h;
     ArgsSchedulerHoldJob.h;
     ArgsSchedulerReleaseJob.h;
     ArgsSchedulerRemoveJob.h;
-    ArgsSchedulerFetchJobData.h;
-    ArgsSchedulerGetJobSummaries.h;
-    ArgsSchedulerEcho.h;
+    #ArgsSchedulerFetchJobData.h;
+    #ArgsSchedulerGetJobSummaries.h;
+    #ArgsSchedulerEcho.h;
     ArgsNegotiatorGetLimits.h;
     ArgsNegotiatorSetLimit.h;
     ArgsNegotiatorGetStats.h;
@@ -55,14 +55,16 @@ set( QMF_GEN_SRCS Slot.h;
     ArgsGridMethodsEcho.h;
     ArgsJobServerFetchJobData.h;
     ArgsJobServerGetJobAd.h;
-    ArgsSubmissionGetJobSummaries.h
+    ArgsSubmissionGetJobSummaries.h;
     Package.h;
     Package.cpp )
 
 # qmf gen & copy out the results for out of source builds
 add_custom_command( OUTPUT ${QMF_GEN_SRCS} 
                     COMMAND python
-                    ARGS ${QMF_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/condor-management-schema.xml && cd com/redhat/grid && mv * ../../.. )
+                    ARGS ${QMF_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/condor-management-schema.xml && cd com/redhat/grid && mv -f * ../../.. )
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # used for selective compilation differences only otherwise just link the library
 src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
@@ -71,20 +73,17 @@ src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 condor_static_lib( qmf_utils "Utils.h;Utils.cpp;PoolUtils.cpp;PoolUtils.h" )
 
 # NOTE: Still need to update linkage deps
+file( GLOB SchedSrcs JobUtils.* SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* JobServerObject.* MgmtScheddPlugin* Utils.* PoolUtils.*)
+condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "" ON)
 
-file( GLOB SchedSrcs JobUtils.* SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* JobServerObject.* MgmtScheddPlugin* )
-condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "qmf_utils" ON)
+file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* CollectorObject.* SlotObject.* PoolUtils.*)
+condor_plugin( MgmtCollectorPlugin-plugin "${CollectorSrcs};Grid.cpp;Collector.cpp" "${C_LIBEXEC}" ";${QPID_FOUND}" ON)
 
-file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* CollectorObject.* SlotObject.*)
-condor_plugin( MgmtCollectorPlugin-plugin "${CollectorSrcs};Grid.cpp;Collector.cpp" "${C_LIBEXEC}" "qmf_utils;${QPID_FOUND}" ON)
+file( GLOB NegotiatorSrcs MgmtNegotiatorPlugin.* NegotiatorObject.* Utils.* PoolUtils.*)
+condor_plugin( MgmtNegotiatorPlugin-plugin "${NegotiatorSrcs};Negotiator.cpp" "${C_LIBEXEC}" ";${QPID_FOUND}" ON)
 
-file( GLOB StartdSrcs MgmtStartdPlugin.* SlotObject.*)
-condor_plugin( MgmtStartdPlugin-plugin "${COLLECTOR_REF};${StartdSrcs};Slot.cpp" "${C_LIBEXEC}" "qmf_utils;${QPID_FOUND}" ON)
+file( GLOB MasterSrcs MgmtMasterPlugin.* MasterObject.* PoolUtils.* )
+condor_plugin( MgmtMasterPlugin-plugin "${MasterSrcs};Master.cpp" "${C_LIBEXEC}" ";${QPID_FOUND}" ON)
 
-file( GLOB NegotiatorSrcs MgmtNegotiatorPlugin.* NegotiatorObject.* )
-condor_plugin( MgmtNegotiatorPlugin-plugin "${NegotiatorSrcs};Negotiator.cpp" "${C_LIBEXEC}" "qmf_utils;${QPID_FOUND}" ON)
-
-file( GLOB MasterSrcs MgmtMasterPlugin.* MasterObject.* )
-condor_plugin( MgmtMasterPlugin-plugin "${MasterSrcs};Master.cpp" "${C_LIBEXEC}" "qmf_utils;${QPID_FOUND}" ON)
-
-
+file( GLOB StartdSrcs MgmtStartdPlugin.* SlotObject.* PoolUtils.*)
+condor_plugin( MgmtStartdPlugin-plugin "${COLLECTOR_REF};${StartdSrcs};Slot.h;Slot.cpp" "${C_LIBEXEC}" ";${QPID_FOUND}" ON)

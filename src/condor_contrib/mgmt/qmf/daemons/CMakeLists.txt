@@ -26,7 +26,7 @@ if (LINUX)
     # qmf gen & copy out the results for out of source builds
     add_custom_command( OUTPUT ${QMF_GEN_SRCS} 
                         COMMAND python
-                        ARGS ${QMF_GEN} job_server.xml && cd com/redhat/grid && mv * ${CMAKE_CURRENT_BINARY_DIR} && rm -r com )
+                        ARGS ${QMF_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/job_server.xml && cd com/redhat/grid && mv -f * ../../.. )
 
     condor_static_lib( jobserver "${Hdrs};${Srcs};${QMF_GEN_SRCS}" ) # just to build all srcs then let the linker sort it out.
     condor_exe( condor_job_server "job_server_main.cpp" "${C_SBIN}" "jobserver;qmf_utils;${CONDOR_TOOL_LIBS}" OFF )
