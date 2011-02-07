@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "frames.h"
-#include "server_lib.h"
+#include "server_sm_lib.h"
 
 int main( int argc, char** argv )
 {
