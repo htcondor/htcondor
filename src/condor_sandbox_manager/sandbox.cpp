@@ -1,42 +1,86 @@
 /***************************************************************
- *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
- * University of Wisconsin-Madison, WI.
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you
- * may not use this file except in compliance with the License.  You may
- * obtain a copy of the License at
- * 
- *    http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- ***************************************************************/
+Fermitools Software Legal Information (Modified BSD License)
+
+COPYRIGHT STATUS: Dec 1st 2001, Fermi National Accelerator Laboratory (FNAL)
+documents and software are sponsored by the U.S. Department of Energy under
+Contract No. DE-AC02-76CH03000. Therefore, the U.S. Government retains a
+world-wide non-exclusive, royalty-free license to publish or reproduce these
+documents and software for U.S. Government purposes. All documents and
+software available from this server are protected under the U.S. and Foreign
+Copyright Laws, and FNAL reserves all rights.
+
+    * Distribution of the software available from this server is free of
+      charge subject to the user following the terms of the Fermitools
+      Software Legal Information.
+
+    * Redistribution and/or modification of the software shall be accompanied
+      by the Fermitools Software Legal Information (including the copyright
+      notice).
+
+    * The user is asked to feed back problems, benefits, and/or suggestions
+      about the software to the Fermilab Software Providers.
+
+    * Neither the name of Fermilab, the FRA, nor the names of the contributors
+      may be used to endorse or promote products derived from this software
+      without specific prior written permission.
+
+DISCLAIMER OF LIABILITY (BSD): THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL FERMILAB,
+OR THE FRA, OR THE U.S. DEPARTMENT of ENERGY, OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Liabilities of the Government: This software is provided by FRA, independent
+from its Prime Contract with the U.S. Department of Energy. FRA is acting
+independently from the Government and in its own private capacity and is not
+acting on behalf of the U.S. Government, nor as its contractor nor its agent.
+Correspondingly, it is understood and agreed that the U.S. Government has no
+connection to this software and in no manner whatsoever shall be liable for
+nor assume any responsibility or obligation for any claim, cost, or damages
+arising out of or resulting from the use of the software available from this
+server.
+
+Export Control: All documents and software available from this server are
+subject to U.S. export control laws. Anyone downloading information from this
+server is obligated to secure any necessary Government licenses before
+exporting documents or software obtained from this server.
+
+****************************************************************/
 
 #include "sandbox.h"
 
 
+//CSandbox::CSandbox(JobInfoCommunicator* my_jic, const char* sDir)
 CSandbox::CSandbox(const char* sDir)
 {
-	printf("CSandbox::CSandbox called\n");
+	printf("Entering CSandbox::CSandbox()\n");
+	//init(my_jic, sDir, _MIN_LIFETIME, _MIN_SANDBOXID_LENGTH);
 	init(sDir, _MIN_LIFETIME, _MIN_SANDBOXID_LENGTH);
 }
 
 
-CSandbox::CSandbox(const char* sDir, const int lifeTime)
+//CSandbox::CSandbox(	JobInfoCommunicator* my_jic, const char* sDir,
+CSandbox::CSandbox(	const char* sDir,
+					const int lifeTime)
 {
 	printf("CSandbox::CSandbox called\n");
+	//init(my_jic, sDir, lifeTime, _MIN_SANDBOXID_LENGTH);
 	init(sDir, lifeTime, _MIN_SANDBOXID_LENGTH);
 }
 
 
-CSandbox::CSandbox(const char* sDir, const int lifeTime, const int idLength)
+//CSandbox::CSandbox(	JobInfoCommunicator* my_jic, const char* sDir,
+CSandbox::CSandbox(	const char* sDir,
+					const int lifeTime, const int idLength)
 {
 	printf("CSandbox::CSandbox called\n");
+	//init(my_jic, sDir, lifeTime, idLength);
 	init(sDir, lifeTime, idLength);
 }
 
@@ -118,11 +162,11 @@ CSandbox::getDetails()
 	printf("CSandbox::getDetails called\n");
 	std::ostringstream details;
 	
-	details << "id=" << this->id << endl
-		<< "createTime=" << this->createTime << endl
-		<< "expiry=" << this->expiry << endl
-		<< "srcDir=" << this->srcDir << endl
-		<< "sandboxDir=" << this->sandboxDir << endl;
+	details	<< "id=" << this->id << std::endl
+			<< "createTime=" << this->createTime << std::endl
+			<< "expiry=" << this->expiry << std::endl
+			<< "srcDir=" << this->srcDir << std::endl
+			<< "sandboxDir=" << this->sandboxDir << std::endl;
 	return details.str();
 }
 
@@ -131,7 +175,9 @@ CSandbox::getDetails()
 *****************************************************************************/
 
 void
-CSandbox::init(const char* sDir, const int lifeTime, const int idLength)
+//CSandbox::init(	JobInfoCommunicator* my_jic, const char* sDir, 
+CSandbox::init(	const char* sDir, 
+				const int lifeTime, const int idLength)
 {
 	time_t now;
 
@@ -153,6 +199,8 @@ CSandbox::init(const char* sDir, const int lifeTime, const int idLength)
 		// TODO: This may need to change or removed?
 		this->sandboxDir.assign(this->srcDir);
 	}
+
+	//this->jic = my_jic;
 }
 
 
