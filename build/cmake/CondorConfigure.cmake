@@ -351,7 +351,7 @@ if (NOT WINDOWS) # if *nix
 endif()
 
 if (BUILD_TESTS)
-	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
+	set(TEST_TARGET_DIR ${CMAKE_BINARY_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
 
 ##################################################
@@ -740,6 +740,11 @@ dprint ( "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}" )
 
 # the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz")
 dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
+
+# the Condor src directory
+dprint ( "CONDOR_SOURCE_DIR: ${CONDOR_SOURCE_DIR}" )
+dprint ( "CONDOR_EXTERNAL_DIR: ${CONDOR_EXTERNAL_DIR}" )
+dprint ( "TEST_TARGET_DIR: ${TEST_TARGET_DIR}" )
 
 # the Condor version string being used
 dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )

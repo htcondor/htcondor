@@ -7039,7 +7039,8 @@ int DaemonCore::Create_Process(
 			int           job_opt_mask,
 			size_t        *core_hard_limit,
 			int			  *affinity_mask,
-			char const    *daemon_sock
+			char const    *daemon_sock,
+			MyString      *err_return_msg
             )
 {
 	int i, j;
@@ -7948,8 +7949,11 @@ int DaemonCore::Create_Process(
 	if( cwd && (cwd[0] != '\0') ) {
 		if( stat(cwd, &stat_struct) == -1 ) {
 			return_errno = errno;
+            if (NULL != err_return_msg) {
+                err_return_msg->sprintf("Cannot access specified iwd \"%s\"", cwd);
+            }
 			dprintf( D_ALWAYS, "Create_Process: "
-					 "Cannot access specified cwd \"%s\": "
+					 "Cannot access specified iwd \"%s\": "
 					 "errno = %d (%s)\n", cwd, errno, strerror(errno) );
 			if ( priv != PRIV_UNKNOWN ) {
 				set_priv( current_priv );
