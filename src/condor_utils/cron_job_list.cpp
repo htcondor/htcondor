@@ -20,10 +20,12 @@
 #include "condor_common.h"
 #include <limits.h>
 #include <string.h>
+#include <list>
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_cron_job_mgr.h"
 #include "condor_cron_job_list.h"
+using namespace std;
 
 // Instantiate the list of Cron Jobs
 
@@ -44,21 +46,20 @@ CondorCronJobList::~CondorCronJobList( void )
 int
 CondorCronJobList::DeleteAll( void )
 {
-	CronJob	*cur_job;
-
 	// Kill 'em all
 	KillAll( true );
 
-	// Walk through the list
 	dprintf( D_ALWAYS, "CronJobList: Deleting all jobs\n" );
-	m_job_list.Rewind( );
-	while ( m_job_list.Next( cur_job ) ) {
+	list<CronJob *>::iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		CronJob	*job = *iter;
 		dprintf( D_ALWAYS,
 				 "CronJobList: Deleting job '%s'\n",
-				 cur_job->GetName() );
-		m_job_list.DeleteCurrent( );
-		delete cur_job;
+				 job->GetName() );
+		delete job;
 	}
+	m_job_list.clear();
+
 	return 0;
 }
 
@@ -66,13 +67,13 @@ CondorCronJobList::DeleteAll( void )
 int
 CondorCronJobList::KillAll( bool force )
 {
-	CronJob	*cur_job;
-
 	// Walk through the list
 	dprintf( D_ALWAYS, "Cron: Killing all jobs\n" );
-	m_job_list.Rewind( );
-	while ( m_job_list.Next( cur_job ) ) {
-		cur_job->KillJob( force );
+	list<CronJob *>::iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		CronJob	*job = *iter;
+		dprintf( D_ALWAYS, "Killing job %s\n", job->GetName() );
+		job->KillJob( force );
 	}
 	return 0;
 }
@@ -82,14 +83,12 @@ int
 CondorCronJobList::NumAliveJobs( void ) const
 {
 	int			 num_alive = 0;
-	CronJob		*cur_job;
 
 	// Walk through the list
-	SimpleList<CronJob *>	*jl = 
-		const_cast<SimpleList<CronJob*> *>(&m_job_list);
-	jl->Rewind( );
-	while ( jl->Next( cur_job ) ) {
-		if ( cur_job->IsAlive( ) ) {
+	list<CronJob *>::const_iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		const CronJob	*job = *iter;
+		if ( job->IsAlive( ) ) {
 			num_alive++;
 		}
 	}
@@ -101,14 +100,12 @@ double
 CondorCronJobList::RunningJobLoad( void ) const
 {
 	double		 load = 0.0;
-	CronJob		*cur_job;
 
 	// Walk through the list
-	SimpleList<CronJob *>	*jl = 
-		const_cast<SimpleList<CronJob*> *>(&m_job_list);
-	jl->Rewind( );
-	while ( jl->Next( cur_job ) ) {
-		load += cur_job->GetRunLoad();
+	list<CronJob *>::const_iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		const CronJob	*job = *iter;
+		load += job->GetRunLoad();
 	}
 	return load;
 }
@@ -118,30 +115,42 @@ int
 CondorCronJobList::NumActiveJobs( void ) const
 {
 	int			 num_active = 0;
-	CronJob		*cur_job;
 
 	// Walk through the list
-	SimpleList<CronJob *>	*jl = 
-		const_cast<SimpleList<CronJob *> *>(&m_job_list);
-	jl->Rewind( );
-	while ( jl->Next( cur_job ) ) {
-		if ( cur_job->IsActive( ) ) {
+	list<CronJob *>::const_iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		const CronJob	*job = *iter;
+		if ( job->IsActive( ) ) {
 			num_active++;
 		}
 	}
 	return num_active;
 }
 
+// Get a string list representation of the current job list
+bool
+CondorCronJobList::GetStringList( StringList &sl ) const
+{
+	sl.clearAll( );
+
+	// Walk through the list
+	list<CronJob *>::const_iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		const CronJob	*job = *iter;
+		sl.append( job->GetName() );
+	}
+	return true;
+}
+
 // Reconfigure all jobs
 int
 CondorCronJobList::HandleReconfig( void )
 {
-	CronJob		*cur_job;
-
 	// Walk through the list
-	m_job_list.Rewind( );
-	while ( m_job_list.Next(cur_job) ) {
-		cur_job->HandleReconfig( );
+	list<CronJob *>::iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		CronJob	*job = *iter;
+		job->HandleReconfig( );
 	}
 	return 0;
 }
@@ -150,12 +159,11 @@ CondorCronJobList::HandleReconfig( void )
 int
 CondorCronJobList::InitializeAll( void )
 {
-	CronJob		*cur_job;
-
 	// Walk through the list
-	m_job_list.Rewind( );
-	while ( m_job_list.Next( cur_job ) ) {
-		cur_job->Initialize( );
+	list<CronJob *>::iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		CronJob	*job = *iter;
+		job->Initialize( );
 	}
 	return 0;
 }
@@ -164,12 +172,11 @@ CondorCronJobList::InitializeAll( void )
 int
 CondorCronJobList::ScheduleAll( void )
 {
-	CronJob		*cur_job;
-
 	// Walk through the list
-	m_job_list.Rewind( );
-	while ( m_job_list.Next( cur_job ) ) {
-		cur_job->Schedule( );
+	list<CronJob *>::iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		CronJob	*job = *iter;
+		job->Schedule( );
 	}
 	return 0;
 }
@@ -178,14 +185,14 @@ CondorCronJobList::ScheduleAll( void )
 int
 CondorCronJobList::StartOnDemandJobs( void )
 {
-	CronJob		*cur_job;
 	int			 num = 0;
 
 	// Walk through the list
-	m_job_list.Rewind( );
-	while ( m_job_list.Next( cur_job ) ) {
-		if ( cur_job->Params().IsOnDemand() ) {
-			cur_job->StartOnDemand( );
+	list<CronJob *>::iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		CronJob	*job = *iter;
+		if ( job->Params().IsOnDemand() ) {
+			job->StartOnDemand( );
 			num++;
 		}
 	}
@@ -196,12 +203,11 @@ CondorCronJobList::StartOnDemandJobs( void )
 void
 CondorCronJobList::ClearAllMarks( void )
 {
-	CronJob		*cur_job;
-
 	// Walk through the list
-	m_job_list.Rewind( );
-	while ( m_job_list.Next( cur_job ) ) {
-		cur_job->ClearMark( );
+	list<CronJob *>::iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		CronJob	*job = *iter;
+		job->ClearMark( );
 	}
 }
 
@@ -209,19 +215,25 @@ CondorCronJobList::ClearAllMarks( void )
 void
 CondorCronJobList::DeleteUnmarked( void )
 {
-	CronJob		*cur_job;
+	list<CronJob *>		 kill_list;
 
 	// Walk through the list, delete all that didn't get marked
-	m_job_list.Rewind( );
-	while ( m_job_list.Next( cur_job ) ) {
-		if ( ! cur_job->IsMarked( ) ) {
-
-			// Delete it from the list
-			m_job_list.DeleteCurrent( );
-
-			// Finally, delete the job itself
-			delete cur_job;
+	list<CronJob *>::iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		CronJob	*job = *iter;
+		if ( ! job->IsMarked( ) ) {
+			kill_list.push_back( job );
 		}
+	}
+
+	for( iter = kill_list.begin(); iter != kill_list.end(); iter++ ) {
+		CronJob	*job = *iter;
+		dprintf( D_ALWAYS, "Killing job %p '%s'\n", job, job->GetName() );
+		job->KillJob( true );
+		dprintf( D_ALWAYS, "Erasing iterator\n" );
+		m_job_list.remove( job );
+		dprintf( D_ALWAYS, "Deleting job %p\n", job );
+		delete job;
 	}
 }
 
@@ -237,7 +249,7 @@ CondorCronJobList::AddJob( const char *name, CronJob *job )
 
 	// It doesn't exit; put it on the list
 	dprintf( D_ALWAYS, "CronJobList: Adding job '%s'\n", name );
-	m_job_list.Append( job );
+	m_job_list.push_back( job );
 
 	// Done
 	return true;
@@ -247,37 +259,33 @@ CondorCronJobList::AddJob( const char *name, CronJob *job )
 int
 CondorCronJobList::DeleteJob( const char *job_name )
 {
-	// Does the job exist?
-	const CronJob *job = FindJob( job_name );
-	if ( NULL == job ) {
-		dprintf( D_ALWAYS,
-				 "CronJobList: Not deleting non-existent job '%s'\n",
-				 job_name );
-		return 1;
+	// Walk through the list, delete all that didn't get marked
+	list<CronJob *>::iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		CronJob	*job = *iter;
+		if ( ! strcmp( job_name, job->GetName( ) ) ) {
+			m_job_list.erase( iter );
+			delete job;
+			return 0;
+		}
 	}
 
-	// Remove it from the list
-	dprintf( D_ALWAYS, "CronJobList: Deleting job '%s'\n", job_name );
-	m_job_list.DeleteCurrent( );
-
-	// After that, free up it's resources..
-	delete( job );
-
-	// Done
-	return 0;
+	dprintf( D_ALWAYS,
+			 "CronJobList: Attempt to delete non-existent job '%s'\n",
+			 job_name );
+	return 1;
 }
 
 // Find a job from the list
 CronJob *
 CondorCronJobList::FindJob( const char *job_name )
 {
-	CronJob		*cur_job;
-
 	// Walk through the list
-	m_job_list.Rewind( );
-	while ( m_job_list.Next( cur_job ) ) {
-		if ( ! strcmp( job_name, cur_job->GetName( ) ) ) {
-			return cur_job;
+	list<CronJob *>::iterator iter;
+	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
+		CronJob	*job = *iter;
+		if ( ! strcmp( job_name, job->GetName( ) ) ) {
+			return job;
 		}
 	}
 

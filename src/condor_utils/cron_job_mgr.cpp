@@ -313,7 +313,8 @@ int
 CronJobMgr::ParseJobList( const char *job_list_string )
 {
 	// Debug
-	dprintf( D_FULLDEBUG, "CronJobMgr: Job string is '%s'\n",
+	dprintf( D_FULLDEBUG,
+			 "CronJobMgr: Job list string is '%s'\n",
 			 job_list_string );
 
 	// Break it into a string list

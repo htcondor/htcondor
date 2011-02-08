@@ -22,8 +22,9 @@
 
 #include "condor_common.h"
 #include "condor_daemon_core.h"
-#include "simplelist.h"
+#include <list>
 #include "condor_cron_job.h"
+using namespace std;
 
 // Define a simple class to run child tasks periodically.
 class CronJobMgr;
@@ -38,9 +39,10 @@ class CondorCronJobList
 	int HandleReconfig( void );
 	int DeleteAll( void );
 	int KillAll( bool force );
-	int NumJobs( void ) const { return m_job_list.Number(); };
+	int NumJobs( void ) const { return m_job_list.size(); };
 	int NumAliveJobs( void ) const;
 	int NumActiveJobs( void ) const;
+	bool GetStringList( StringList &sl ) const;
 	double RunningJobLoad( void ) const;
 	bool AddJob( 
 		const char		*jobName,
@@ -56,8 +58,8 @@ class CondorCronJobList
 	void DeleteUnmarked( void );
 
   private:
-	SimpleList<CronJob *>	 m_job_list;
-	CronJobMgr				&m_mgr;			// My manager
+	list<CronJob *>		 m_job_list;
+	CronJobMgr			&m_mgr;			// My manager
 
 };
 

@@ -27,6 +27,8 @@ StartdBenchJob::StartdBenchJob( ClassAdCronJobParams *job_params,
 								CronJobMgr &mgr ) :
 		StartdCronJob( job_params, mgr )
 {
+	if (  Params().OptReconfigRerun()  ) {
+	}
 }
 
 // StartdBenchJob destructor

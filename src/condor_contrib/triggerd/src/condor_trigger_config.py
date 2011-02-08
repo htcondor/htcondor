@@ -49,7 +49,7 @@ class TriggerTester(Console):
             self.event_received = True
             print "Received 'CondorTriggerNotify' event"
             for attr in event.getArguments():
-                print attr
+                print '%s: %s' % (attr, event.arguments[attr])
         else:
             print "Received '%s' event, ignoring" % (cls)
 
@@ -173,6 +173,7 @@ class TriggerConfig(Session):
 
         # add a trigger and verify that an event is received
         self.add_trigger("TestTrigger", "(SlotID == 1)", "$(Machine) has a slot 1")
+        self.list_triggers()
 
         self._wait_for_event()
         first_event = time.time()
@@ -188,11 +189,22 @@ class TriggerConfig(Session):
 
         # change the trigger name and verify that an event is received
         self.edit_trigger(trigger_id, "name", "Changed Test Trigger")
+        print "Expecting 1 trigger in the form of '$(Machine) has a slot 1'"
         self._wait_for_event()
+
+        # retrieve the id of the trigger with new name
+        new_trigger_id = self.get_trigger_id_by_name("Changed Test Trigger")
+
+        # The two IDs should be the same
+        if trigger_id == new_trigger_id:
+           print "Name successfully changed"
+        else:
+           print "Error: Did not receive same trigger ID for new name (%d vs %s)" % (trigger_id, new_trigger_id)
 
         # change the trigger query and text and verify that an event is received
         self.edit_trigger(trigger_id, "query", "(SlotID > 0)")
         self.edit_trigger(trigger_id, "text", "$(Machine) has a slot $(SlotID)")
+        print "Expecting >= 1 trigger in the form of '$(Machine) has a slot $(SlotID)'"
         self._wait_for_event()
 
         # list currently installed triggers

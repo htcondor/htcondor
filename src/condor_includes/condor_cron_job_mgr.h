@@ -76,8 +76,10 @@ class CronJobMgr : public Service
 				 const char *setParamExt = NULL );
 	int SetParamBase( const char *base, const char *ext );
 
-  private:
+  protected:
 	CondorCronJobList	 m_job_list;
+
+  private:
 	const char			*m_name;			// Logical name
 	const char			*m_param_base;		// Base of calls to param()
 	CronJobMgrParams	*m_params;			// Lookup parameters
