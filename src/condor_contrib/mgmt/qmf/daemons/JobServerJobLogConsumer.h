@@ -24,10 +24,10 @@
 
 #include "stringSpace.h"
 
-#include "JobLogReader.h"
-
 #include "Job.h"
 #include "SubmissionObject.h"
+
+#include "ClassAdLogReader.h"
 
 #include <string>
 #include <map>
@@ -36,7 +36,7 @@
 using namespace std;
 
 
-class JobServerJobLogConsumer: public JobLogConsumer
+class JobServerJobLogConsumer: public ClassAdLogConsumer
 {
 public:
 	JobServerJobLogConsumer();
@@ -52,12 +52,12 @@ public:
 					  const char *value);
 	bool DeleteAttribute(const char *key,
 						 const char *name);
-	void SetJobLogReader(JobLogReader *_reader) { m_reader = _reader; }
+    void SetJobLogReader(ClassAdLogReader *_reader) { m_reader = _reader; }
 
 
 private:
 
-	JobLogReader *m_reader;
+    ClassAdLogReader *m_reader;
 };
 
 #endif /* _JOBSERVERJOBLOGCONSUMER_H */

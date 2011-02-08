@@ -21,6 +21,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
+#include "proc.h"
 
 #include "SubmissionObject.h"
 #include "JobServerObject.h"
@@ -82,9 +83,6 @@ SubmissionObject::Increment ( const Job *job )
 
     switch ( status )
     {
-        case UNEXPANDED:
-            // Nothing to do for UNEXPANDED, it's the initial state
-            break;
         case IDLE:
             m_idle.insert ( job );
             mgmtObject->inc_Idle();
@@ -105,12 +103,6 @@ SubmissionObject::Increment ( const Job *job )
             m_held.insert ( job );
             mgmtObject->inc_Held();
             break;
-        case SUBMISSION_ERR:
-            // Nothing to do for SUBMISSION_ERR, should never see it
-            dprintf ( D_ALWAYS,
-                      "WARNING: Encountered a %s of SUBMISSION_ERR on %s\n",
-                      ATTR_JOB_STATUS, job->GetKey() );
-            break;
         default:
             dprintf ( D_ALWAYS, "error: Unknown %s of %d on %s\n",
                       ATTR_JOB_STATUS, status, job->GetKey() );
@@ -127,9 +119,6 @@ SubmissionObject::Decrement ( const Job *job )
 
     switch ( status )
     {
-        case UNEXPANDED:
-            // Nothing to do for UNEXPANDED, it's the initial state
-            break;
         case IDLE:
             m_idle.erase ( job );
             mgmtObject->dec_Idle();
@@ -149,12 +138,6 @@ SubmissionObject::Decrement ( const Job *job )
         case HELD:
             m_held.erase ( job );
             mgmtObject->dec_Held();
-            break;
-        case SUBMISSION_ERR:
-            // Nothing to do for SUBMISSION_ERR, should never see it
-            dprintf ( D_ALWAYS,
-                      "WARNING: Encountered a %s of SUBMISSION_ERR on %s\n",
-                      ATTR_JOB_STATUS, job->GetKey() );
             break;
         default:
             dprintf ( D_ALWAYS, "error: Unknown %s of %d on %s\n",

@@ -18,6 +18,7 @@
 
 if (LINUX)
 
+    include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
     file( GLOB RmvSrcs test* *_main* )
     condor_glob( Hdrs Srcs "${RmvSrcs}" )
 
@@ -29,7 +30,7 @@ if (LINUX)
                         ARGS ${QMF_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/job_server.xml && cd com/redhat/grid && mv -f * ../../.. )
 
     condor_static_lib( jobserver "${Hdrs};${Srcs};${QMF_GEN_SRCS}" ) # just to build all srcs then let the linker sort it out.
-    condor_exe( condor_job_server "job_server_main.cpp" "${C_SBIN}" "jobserver;qmf_utils;${CONDOR_TOOL_LIBS}" OFF )
+    condor_exe( condor_job_server "job_server_main.cpp" "${C_SBIN}" "jobserver;qmf_utils;${CONDOR_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${QPID_FOUND}" OFF )
     condor_exe_test(test_history "test_history.cpp" "jobserver;qmf_utils;${CONDOR_TOOL_LIBS}")
 
 endif(LINUX)
