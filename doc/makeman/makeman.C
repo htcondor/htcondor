@@ -534,6 +534,11 @@ static string html_to_nroff(
 				break;
 			case tagType_Code:
 			case tagType_Typewriter:
+				// incorrectly injects space character before
+				// punctuation marks, but without, words are
+				// mashed together
+				*nroff_text += " ";
+				 break;
 			case tagType_Head:
 			case tagType_Meta:
 			case tagType_Link:

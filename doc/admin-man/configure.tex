@@ -3137,7 +3137,7 @@ NEGOTIATOR_USERID = condor
   \Condor{master} will log an error and ignore the command.  If a
   match is found, the \Condor{master} will attempt to verify the
   program, and it will store the path and program name.  When the
-  \Condor{master} shuts down (i.e. just before it exits),
+  \Condor{master} shuts down (that is, just before it exits),
   the program is then executed as described above.
   The manual page for \Condor{set\_shutdown} on
   page~\pageref{man-condor-set-shutdown} contains details on the use
@@ -3544,7 +3544,11 @@ WANT_HOLD_REASON = \
 \label{param:WantSuspend}
 \item[\Macro{WANT\_SUSPEND}]
   A boolean expression that, when \Expr{True},
-  tells Condor to evaluate the \MacroNI{SUSPEND} expression.
+  tells Condor to evaluate the \MacroNI{SUSPEND} expression to decide
+  whether to suspend a running job.
+  When not explicitly set, the \Condor{startd} exits with an error.
+  When explicitly set, but the evaluated value is anything other than
+  \Expr{True}, the value is utilized as if it were \Expr{False}.
 
 \label{param:WantVacate}
 \item[\Macro{WANT\_VACATE}]
@@ -3765,9 +3769,12 @@ WANT_HOLD_REASON = \
   such that the \Condor{schedd} daemon sends keep alive signals
   to the \Condor{startd} daemon.
   When \Expr{True}, the \Condor{startd} daemon sends keep alive signals
-  to the \Condor{schedd} daemon, reversing the direction.
+  to the \Condor{schedd} daemon, reversing the direction;
+  these updates are sent via TCP.
   This may be useful if the \Condor{startd} daemon is on a private
   network or behind a firewall.
+  This variable must be set to the same value for all \Condor{startd} and
+  \Condor{schedd} daemons in the pool.
 
 \label{param:StartdShouldWriteClaimIdFile}
 \item[\Macro{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE}]
@@ -5278,16 +5285,18 @@ MAX_JOBS_RUNNING	= \
      
 \label{param:QueueSuperUsers}
 \item[\Macro{QUEUE\_SUPER\_USERS}]
-  This macro determines what user names on a given machine have
-  \Term{super-user access} to the job queue, meaning that they can
-  modify or delete the job ClassAds of other users.  (Normally, you
-  can only modify or delete ClassAds from the job queue that you own).
-  Whatever user name corresponds with the UID that Condor is running as
-  (usually the Unix user condor) will automatically be included in this list
-  because that is needed for Condor's proper functioning.  See
-  section~\ref{sec:uids} on UIDs in Condor for more details on
-  this.  By default, we give root the ability to remove other
-  user's jobs, in addition to user condor.
+  A comma and/or space separated list of user names on a given machine that
+  are given \Term{super-user access} to the job queue, meaning that they can
+  modify or delete the job ClassAds of other users.  When not on this list,
+  users can only modify or delete their own ClassAds from the job queue.
+  Whatever user name corresponds with the UID that Condor is running as --
+  usually user \Login{condor} --
+  will automatically be included in this list,
+  because that is needed for Condor's proper functioning.
+  See section~\ref{sec:uids} on UIDs in Condor for more details on this.
+  By default, the Unix user \Login{root} and the Windows user 
+  \Login{administrator} are given the ability to remove other user's jobs,
+  in addition to user \Login{condor}.
       
 \label{param:ScheddLock}
 \item[\Macro{SCHEDD\_LOCK}]
@@ -6865,7 +6874,10 @@ The following configuration macros affect negotiation for group users.
   also negotiate a second time with the \verb@none@ group,
   to be considered with the independent job submitters. 
   This allows group submitted jobs to be matched with idle machines
-  even if the group is over its quota.
+  even if the group is over its quota.  The user name that is
+  used for accounting and prioritization purposes is still
+  the group user as specified by \AdAttr{AccountingGroup}
+  in the job ClassAd.
 
 \label{param:GroupAutoregroupGroupname}
 \item[\Macro{GROUP\_AUTOREGROUP\_<groupname>}]
@@ -7858,9 +7870,10 @@ Entries for DAGMan}
 These macros affect the operation of DAGMan and DAGMan
 jobs within Condor.
 
-Some of these configuration variables will be most appropriately set on
-a per DAG basis.
-Setting these is explained in section~\ref{sec:DAG-configuration}.
+\Bold{Note}: Many, if not all, of these configuration variables will
+be most appropriately set on a per DAG basis, rather than in the
+global Condor configuration files.  Per DAG configuration is explained
+in section~\ref{sec:DAG-configuration}.
 
 \begin{description}
 
@@ -10002,8 +10015,8 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   Use of these hooks requires the explicit definition of the
   keyword and the corresponding hook paths.
 
-\label{param:HookTranslate}
-\item[\Macro{<Keyword>\_HOOK\_TRANSLATE}]
+\label{param:HookTranslateJob}
+\item[\Macro{<Keyword>\_HOOK\_TRANSLATE\_JOB}]
   A Job Router hook,
   the full path to the program invoked when the Job Router has determined
   that a job meets the definition for a route.  

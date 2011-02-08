@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-store-cred}\Condor{store\_cred}}{1}
-{securely stash user's password}
+{securely stash a password}
 \Synopsis
 \SynProg{\Condor{store\_cred}}
 \oOpt{-help}
@@ -32,6 +32,17 @@
 
 \Description 
 
+\Condor{store\_cred} has two separate uses,
+differing by operating system.
+
+On a Unix machine, 
+\Condor{store\_cred} with the \Opt{-f} option is used to set
+the pool password,
+as needed when used with the \Expr{PASSWORD} authentication method.
+The pool password is placed in a file specified by 
+the \MacroNI{SEC\_PASSWORD\_FILE} configuration variable,
+for use in \Expr{PASSWORD} authentication among Condor daemons.
+
 On a Windows machine, \Condor{store\_cred} stores the password
 of a user/domain pair securely in the Windows registry.
 Using this stored password, Condor is able to
@@ -43,14 +54,7 @@ setting or changing account passwords.
 When \Condor{store\_cred} is invoked, it contacts the \Condor{schedd}
 daemon to carry out the requested operations on behalf of the user.
 This is necessary since registry keys are accessible only by the Windows
-SYSTEM account, not by administrators or other users.
-
-On a Unix machine, \Condor{store\_cred} is used to manage
-the pool password,
-placed in a file specified by the \MacroNI{SEC\_PASSWORD\_FILE}
-configuration variable, and for use in password authentication
-among Condor daemons.
-
+Local System account, not by administrators or other users.
 
 The password is stashed in a persistent manner; it is maintained
 across system reboots.

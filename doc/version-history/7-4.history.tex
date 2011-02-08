@@ -16,6 +16,82 @@ New features will be added in the 7.5.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-4-5}Version 7.4.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.4.5 not yet released.
+%\item Condor version 7.4.5 released on Month Date, 2010.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+% gittrac #1713
+\item \Condor{dagman} now prints a message in the \File{dagman.out} file
+whenever it truncates a node job user log file.
+
+% gittrac #1715
+\item \Condor{dagman} now prints additional diagnostic information in the
+case of certain log file errors.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+% gittrac #1750
+\item A network disconnect between the submit machine and execute
+  machine during the transfer of output files caused the
+  \Condor{starter} daemon to immediately give up, rather than waiting
+  for the \Condor{shadow} to reconnect.  This problem was introduced
+  in Condor version 7.4.4.
+
+% gittrac #1743
+\item If \Condor{ssh\_to\_job} attempted to connect to a job while the
+  job's input files were being transferred, this caused the file
+  transfer to fail, which resulted in the job returning to the idle
+  state in the queue.
+
+% gittrac #1785
+\item In privsep mode, the transfer of output failed if a job's execute
+  directory contained symbolic links to non-existent paths.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-4-4}Version 7.4.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,12 +99,35 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.4.4 not yet released.
-%\item Condor version 7.4.4 released on Month Date, 2010.
+\item Condor version 7.4.4 released on October 18, 2010.
+
+% gittrac #1508
+\item \Security 
+This release fixes a bug in which Amazon EC2 jobs
+(jobs with \SubmitCmd{universe = grid} and \SubmitCmd{grid\_resource = amazon})
+that use the \SubmitCmd{amazon\_keypair\_file}
+command may expose the private SSH key to other users.
+The created file had insecure permissions,
+allowing other users on the submit host to read the file.
+Any other user who could see the file could learn about these EC2 jobs
+using \Condor{q}, 
+and the other user could then connect to them with the private SSH key.
+
+To work around the bug without installing this release,
+do one or both of the following:
+\begin{itemize}
+\item Do not use the submit description file command
+\SubmitCmd{amazon\_keypair\_file}.
+\item Ensure that the directory holding the private SSH key 
+has suitably restrictive permissions,
+such that other users cannot read files inside the directory.
+\end{itemize}
+
 
 % gittrac #1524
 \item Condor can now be built on Mac OS X 10.6.
 
+% gittrac #1696
 \item The \Condor{master} ``shutdown program'' (configured via 
   \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$}) is now run with root (UNIX)
   or administrator (Windows) privileges.  The adminstrator must insure
@@ -178,10 +277,6 @@ estimation by 100MB.
 command, that caused VMware \SubmitCmd{vm} universe jobs to fail if the virtual
 machine already had a CD-ROM image associated with it.
 
-% gittrac #1508
-\item Fixed permissions of a ssh private key file that is created for 
-Amazon EC2 jobs. Previously, the permissions were too lax.
-
 % gittrac #1465
 \item Configuration variables \Macro{SOAP\_SSL\_CA\_DIR} and
 \Macro{SOAP\_SSL\_CA\_FILE} are now properly used when authenticating
@@ -210,10 +305,16 @@ its checkpoint or from which it might have failed to restore its checkpoint.
 \item Fixed a bug in the \Condor{gridmanager} that could cause it to crash
 while handling grid-type cream jobs.
 
-% gittrac #1696
-\item Fixed a bug in the \Condor{master} that prevented it from
-  executing the ``shutdown program'' as root (UNIX) or administrator
-  (Windows).
+% gittrac #1699
+% gittrac #1700
+\item Improved the \Condor{gridmanager}'s handling of grid-type cream jobs
+that are held or removed by the user. Canceling the cream job is much less
+likely to fail and jobs can no longer get stuck in the cream state of
+CANCELED.
+
+% gittrac #1701
+\item Fixed the web server feature controlled by \Macro{ENABLE\_WEB\_SERVER}.
+Previously, all HTTP GET requests would fail on non-linux Unix machines.
 
 \end{itemize}
 
@@ -507,7 +608,14 @@ both checkpoints and \SubmitCmd{vm} universe jobs in general.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1001
+\item When \MacroNI{WANT\_SUSPEND} is defined and evaluates to anything
+other than the value \Expr{True},
+it is now utilized as if it were \Expr{False}.
+If \MacroNI{WANT\_SUSPEND} is not explicitly defined,
+the \Condor{startd} exits with an error message.
+Previously, if \Expr{Undefined}, it was treated as an error,
+which caused the \Condor{startd} to exit with an error message.
 
 \end{itemize}
 

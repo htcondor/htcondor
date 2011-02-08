@@ -1,5 +1,5 @@
-SUBDIR = v7.4.4
-SUBVER = V7_4_4
+SUBDIR = v7.4.5
+SUBVER = V7_4_5
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
 LOCALDIR = ref-v74
@@ -183,7 +183,7 @@ just-man-pages:
 	ln -s figuresizing-html.tex figuresizing.tex
 	cd makeman && make clean makeman
 	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons just-man-pages.tex
-	for html in just-man-pages/condor_*.html; do \
+	for html in just-man-pages/*.html; do \
 		makeman/makeman -v -i $$html -s 1; \
 	done
 	-mkdir man
