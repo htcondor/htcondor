@@ -786,14 +786,14 @@ RPMs are available in \VersionNotice.
 This packaging method provides for installation and configuration
 in one easy step.
 It is currently available for Linux systems only.
+As of Condor version 7.5.1, native packaging is utilized,
+such that items are placed in FHS locations.
 
 The format of the installation command is
 \begin{verbatim}
-  rpm -i <filename> --prefix=<installation dir>
+  rpm -i <filename> 
 \end{verbatim}
 
-The user provides the path name to the directory
-used for the installation.
 The \Prog{rpm} program calls \Condor{configure} to do portions
 of the installation.
 If the condor user is present on the system,
@@ -812,16 +812,15 @@ program using the \Opt{owner} option, of the format:
   condor_configure  --owner=<user>
 \end{verbatim}
 
-After a successful installation,
-the \Macro{CONDOR\_CONFIG} configuration 
-variable must be set to point to
-\begin{verbatim}
-   <installation dir>/etc/condor_config
-\end{verbatim}
-before starting Condor daemons or invoking Condor tools.
+The installation will be able to find configuration files without
+additional administrative intervention,
+as the configuration files are placed in \File{/etc},
+and the ordered search algorithm utilized by Condor for finding
+its configuration includes this directory.
 
-RPM upgrade (\Opt{-u} option) does not currently
-work for Condor \VersionNotice.
+% Alain thinks that upgrades DO work.
+%RPM upgrade (\Opt{-u} option) does not currently
+%work for Condor \VersionNotice.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:upgrade-directions}Upgrading - Installing a Newer
