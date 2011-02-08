@@ -81,6 +81,13 @@ else()
 endif(PRE_RELEASE)
 add_definitions( -DCONDOR_VERSION="${VERSION}" )
 
+if( NOT BUILD_DATE )
+  GET_DATE( BUILD_DATE )
+endif()
+if(BUILD_DATE)
+  add_definitions( -DBUILD_DATE="${BUILD_DATE}" )
+endif()
+
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 set( CMAKE_VERBOSE_MAKEFILE TRUE )
 set( BUILD_SHARED_LIBS FALSE )
@@ -745,7 +752,8 @@ dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
 # the build id
 dprint ( "BUILDID: ${BUILDID}" )
 
-# the build date
+# the build date & time
+dprint ( "BUILD_TIMEDATE: ${BUILD_TIMEDATE}" )
 dprint ( "BUILD_DATE: ${BUILD_DATE}" )
 
 # the pre-release string
