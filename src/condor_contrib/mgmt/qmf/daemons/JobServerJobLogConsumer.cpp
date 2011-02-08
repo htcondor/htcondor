@@ -25,6 +25,8 @@
 #include "condor_parser.h"
 #include "condor_qmgr.h"
 
+#include "ClassAdLogReader.h"
+
 #include "JobServerJobLogConsumer.h"
 
 #include "Globals.h"
@@ -155,7 +157,7 @@ JobServerJobLogConsumer::DestroyClassAd(const char *_key)
     if (g_jobs.end() == g_element) {
         dprintf(D_ALWAYS,
                 "error reading %s: no such job found for key '%s'\n",
-                m_reader->GetJobLogFileName(), _key);
+                m_reader->GetClassAdLogFileName(), _key);
         return false;
     }
 
@@ -188,7 +190,7 @@ JobServerJobLogConsumer::SetAttribute(const char *_key,
 	if (g_jobs.end() == g_element) {
 		dprintf(D_ALWAYS,
 				"error reading %s: no such job '%s' for '%s = %s'\n",
-				m_reader->GetJobLogFileName(), _key, _name, _value);
+                m_reader->GetClassAdLogFileName(), _key, _name, _value);
 		return false;
 	}
 
@@ -206,7 +208,7 @@ JobServerJobLogConsumer::DeleteAttribute(const char *_key,
 	if (g_jobs.end() == g_element) {
 		dprintf(D_ALWAYS,
 				"error reading %s: no such job '%s' for 'delete %s'\n",
-				m_reader->GetJobLogFileName(), _key, _name);
+                m_reader->GetClassAdLogFileName(), _key, _name);
 		return false;
 	}
 

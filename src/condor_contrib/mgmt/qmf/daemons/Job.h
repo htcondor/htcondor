@@ -23,7 +23,6 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 
-#include "JobLogReader.h"
 #include "HistoryFile.h"
 
 #include "cmpstr.h"

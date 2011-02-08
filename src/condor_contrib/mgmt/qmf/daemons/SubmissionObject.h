@@ -22,8 +22,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 
-#include "JobLogReader.h"
-
 #include "Job.h"
 
 #include <string>

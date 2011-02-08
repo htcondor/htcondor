@@ -21,6 +21,7 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_parser.h"
+#include "proc.h"
 
 #include "stringSpace.h"
 
@@ -117,7 +118,7 @@ LiveJobImpl::~LiveJobImpl()
 {
     // TODO: do we have to unchain our parent?
     if (m_full_ad) {
-        m_full_ad->unchain();
+        m_full_ad->Unchain();
         delete m_full_ad;
         m_full_ad = NULL;
     }
@@ -151,9 +152,11 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
         return false;
     }
     // decode the type
-    switch ( expr->RArg()->MyType() )
+    classad::Value value;
+    m_full_ad->EvaluateExpr(expr,value);
+    switch ( value.GetType() )
     {
-        case LX_INTEGER:
+        case classad::Value::INTEGER_VALUE:
         {
             int i;
             if ( !m_full_ad->LookupInteger ( _name, i ) )
@@ -163,7 +166,7 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
             _attribute = new Attribute ( Attribute::INTEGER_TYPE, to_string<int> ( i,std::dec ).c_str() );
             return true;
         }
-        case LX_FLOAT:
+        case classad::Value::REAL_VALUE:
         {
             float f;
             if ( !m_full_ad->LookupFloat ( _name, f ) )
@@ -173,7 +176,7 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
             _attribute = new Attribute ( Attribute::FLOAT_TYPE, to_string<float> ( f,std::dec ).c_str() );
             return true;
         }
-        case LX_STRING:
+        case classad::Value::STRING_VALUE:
         {
             MyString str;
             if ( !m_full_ad->LookupString ( _name, str ) )
@@ -190,8 +193,8 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
             {
                 return false;
             }
-            char* rhs;
-            tree->RArg()->PrintToNewStr ( &rhs );
+            const char* rhs;
+            rhs = ExprTreeToString( expr );
             _attribute = new Attribute ( Attribute::EXPR_TYPE, rhs );
             return true;
         }
@@ -207,7 +210,7 @@ int LiveJobImpl::GetStatus() const
     if ( !this->Get ( ATTR_JOB_STATUS, attr ) )
     {
 	// TODO: assume we might get cluster jobs here also
-	return UNEXPANDED;
+	return JOB_STATUS_MIN;
     }
 
     return strtol ( attr->GetValue(), ( char ** ) NULL, 10 );
@@ -257,19 +260,21 @@ LiveJobImpl::Set ( const char *_name, const char *_value )
         return;
     }
     // add this value to the classad
-    switch ( expr->MyType() )
+    classad::Value value;
+    expr->Evaluate(value);
+    switch ( value.GetType() )
     {
-        case LX_INTEGER:
+        case classad::Value::INTEGER_VALUE:
             int i;
             from_string<int> ( i, std::string ( _value ), std::dec );
             m_full_ad->Assign ( _name, i );
             break;
-        case LX_FLOAT:
+        case classad::Value::REAL_VALUE:
             float f;
             from_string<float> ( f, std::string ( _value ), std::dec );
             m_full_ad->Assign ( _name, f );
             break;
-        case LX_STRING:
+        case classad::Value::STRING_VALUE:
             m_full_ad->Assign ( _name, _value );
             break;
         default:
@@ -293,9 +298,9 @@ void
 LiveJobImpl::Remove ( const char *_name )
 {
 	// TODO: seems we implode if we don't unchain first
-	ChainedPair cp = m_full_ad->unchain();
+	classad::ClassAd* cp = m_full_ad->GetChainedParentAd();
 	m_full_ad->Delete ( _name );
-	m_full_ad->RestoreChain(cp);
+	m_full_ad->ChainToAd(cp);
 }
 
 const ClassAd* LiveJobImpl::GetSummary () const
