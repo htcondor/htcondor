@@ -62,7 +62,8 @@ set( QMF_GEN_SRCS Slot.h;
 # qmf gen & copy out the results for out of source builds
 add_custom_command( OUTPUT ${QMF_GEN_SRCS} 
                     COMMAND python
-                    ARGS ${QMF_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/condor-management-schema.xml && cd com/redhat/grid && mv -f * ../../.. )
+                    ARGS ${QMF_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/condor-management-schema.xml && cd com/redhat/grid && mv -f * ../../.. 
+                    DEPENDS ${QMF_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/condor-management-schema.xml )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -77,13 +78,13 @@ file( GLOB SchedSrcs JobUtils.* SchedulerObject.* SubmitterObject.* SubmitterUti
 condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "" ON)
 
 file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* CollectorObject.* SlotObject.* PoolUtils.*)
-condor_plugin( MgmtCollectorPlugin-plugin "${CollectorSrcs};Grid.cpp;Collector.cpp" "${C_LIBEXEC}" ";${QPID_FOUND}" ON)
+condor_plugin( MgmtCollectorPlugin-plugin "${CollectorSrcs};Grid.cpp;Collector.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS};${QPID_FOUND};${KRB5_FOUND};${OPENSSL_FOUND}" ON)
 
 file( GLOB NegotiatorSrcs MgmtNegotiatorPlugin.* NegotiatorObject.* Utils.* PoolUtils.*)
-condor_plugin( MgmtNegotiatorPlugin-plugin "${NegotiatorSrcs};Negotiator.cpp" "${C_LIBEXEC}" ";${QPID_FOUND}" ON)
+condor_plugin( MgmtNegotiatorPlugin-plugin "${NegotiatorSrcs};Negotiator.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS};${QPID_FOUND};${KRB5_FOUND};${OPENSSL_FOUND}" ON)
 
 file( GLOB MasterSrcs MgmtMasterPlugin.* MasterObject.* PoolUtils.* )
-condor_plugin( MgmtMasterPlugin-plugin "${MasterSrcs};Master.cpp" "${C_LIBEXEC}" ";${QPID_FOUND}" ON)
+condor_plugin( MgmtMasterPlugin-plugin "${MasterSrcs};Master.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS};${QPID_FOUND};${KRB5_FOUND};${OPENSSL_FOUND}" ON)
 
 file( GLOB StartdSrcs MgmtStartdPlugin.* SlotObject.* PoolUtils.*)
-condor_plugin( MgmtStartdPlugin-plugin "${COLLECTOR_REF};${StartdSrcs};Slot.h;Slot.cpp" "${C_LIBEXEC}" ";${QPID_FOUND}" ON)
+condor_plugin( MgmtStartdPlugin-plugin "${COLLECTOR_REF};${StartdSrcs};Slot.h;Slot.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS};${QPID_FOUND};${KRB5_FOUND};${OPENSSL_FOUND}" ON)

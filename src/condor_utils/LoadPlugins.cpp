@@ -21,7 +21,37 @@
 #include "condor_config.h"
 #include "directory.h"
 #include "simplelist.h"
-#include <dlfcn.h>
+
+#ifndef WIN32
+	#include <dlfcn.h>
+#endif
+
+const char * getErrorString()
+{
+	static std::string szError;
+
+    #ifdef WIN32
+        LPVOID lpMsgBuf;
+		DWORD iErrCode = GetLastError();
+
+        FormatMessage(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER |
+            FORMAT_MESSAGE_FROM_SYSTEM,
+            NULL,
+            (DWORD)iErrCode,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            (LPTSTR) &lpMsgBuf,
+            0, NULL );
+
+        szError =  (char *) lpMsgBuf;
+		LocalFree(lpMsgBuf);
+
+    #else
+        szError = dlerror();
+    #endif
+
+    return szError.c_str();
+}
 
 void
 LoadPlugins()
@@ -80,7 +110,9 @@ LoadPlugins()
 		free(plugin_files); plugin_files = NULL;
 	}
 
+#ifndef WIN32
 	dlerror(); // Clear error
+#endif
 
 	plugins.rewind();
 	while (NULL != (plugin_file = plugins.next())) {
@@ -90,12 +122,11 @@ LoadPlugins()
 			//      more generally in Condor the path to the
 			//      plugin_file here MUST be checked!
 #ifdef WIN32
-        if( LoadLibrary(plugin_file) ) {
-            error = getSystemErrorString(GetLastError());
+        if( NULL == LoadLibrary(plugin_file) ) {
 #else
 		if (!dlopen(plugin_file, RTLD_NOW)) {
-			error = dlerror();
 #endif
+			error = getErrorString();
 			if (error) {
 				dprintf(D_ALWAYS,
 						"Failed to load plugin: %s reason: %s\n",

@@ -56,7 +56,7 @@ if (WITH_QPID)
 		# Set the target dependencies which the rest of condor depends on.
 		# all of the below locations need to be verified.
 		if (WINDOWS)
-			set( QPID_FOUND "${EXTERNAL_STAGE}/lib/qpidcommon.lib;${EXTERNAL_STAGE}/lib/qpidclient.lib;${EXTERNAL_STAGE}/lib/qmf.lib;${EXTERNAL_STAGE}/lib/qpidtypes.lib" )
+			set( QPID_FOUND "${EXTERNAL_STAGE}/bin/qpidcommon.lib;${EXTERNAL_STAGE}/bin/qpidclient.lib;${EXTERNAL_STAGE}/bin/qmf.lib;${EXTERNAL_STAGE}/bin/qpidtypes.lib" )
 			install ( FILES ${EXTERNAL_STAGE}/bin/qpidcommon.dll
 					  ${EXTERNAL_STAGE}/bin/qpidcommon.pdb
 					  ${EXTERNAL_STAGE}/bin/qpidclient.dll
