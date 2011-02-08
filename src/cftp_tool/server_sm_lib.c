@@ -13,6 +13,16 @@
 
 #include "server_sm_lib.h"
 
+#include "server_sm/discovery.h"
+#include "server_sm/negotiation.h"
+#include "server_sm/transfer.h"
+#include "server_sm/teardown.h"
+#include "server_sm/error.h"
+
+
+const int STATE_NUM = 100; // Will need to change this later
+
+
 void run_server( char* server_name,  char* server_port)
 {
 
@@ -23,7 +33,7 @@ void run_server( char* server_name,  char* server_port)
 
 		//-------------- Initialize SM States -----------------
 	
-	SM_States[S_UKNOWN_ERROR]               = &State_UnknownError;
+	SM_States[S_UNKNOWN_ERROR]              = &State_UnknownError;
 	SM_States[S_SEND_SESSION_CLOSE]         = &State_SendSessionClose;
 
 	SM_States[S_RECV_SESSION_PARAMETERS]    = &State_ReceiveSessionParameters;
@@ -34,7 +44,7 @@ void run_server( char* server_name,  char* server_port)
 	SM_States[S_RECV_DATA_BLOCK]            = &State_ReceiveDataBlock;
 	SM_States[S_ACK_DATA_BLOCK]             = &State_AcknowledgeDataBlock;
 
-	SM_States[S_RECV_FILE_FINISH]           = &State_RecieveFileFinish;
+	SM_States[S_RECV_FILE_FINISH]           = &State_ReceiveFileFinish;
 	SM_States[S_ACK_FILE_FINISH]            = &State_AcknowledgeFileFinish;
 
       //------------------------------------------------------- 
@@ -275,7 +285,164 @@ int run_state_machine( StateAction* states, ServerState* session_state )
 	else	
 		{
 			condition = states[session_state->state]( session_state );
+			recv_cftp_frame( session_state );
 			session_state->state = transition_table( session_state, condition );
 			return 0;
 		}
+}
+
+
+/*
+
+
+transition_table
+
+*/
+int transition_table( ServerState* state, int condition )
+{
+	switch( state->state )
+		{
+			
+			
+		case S_UNKNOWN_ERROR:
+			return -1; // If we have completed an unknown error, we should die.
+
+
+		default:
+			return S_UNKNOWN_ERROR;
+			break;
+		}
+}
+
+
+
+/*
+
+
+recv_cftp_frame
+
+
+*/
+int recv_cftp_frame( ServerState* state )
+{
+	if( !state->recv_rdy )
+		return -1;
+
+	memset( &state->frecv_buf, 0, sizeof( cftp_frame ) );
+
+	recv( state->client_info.client_socket, 	
+		  &state->frecv_buf,	
+		  sizeof( cftp_frame ),
+		  MSG_WAITALL );
+
+	return sizeof( cftp_frame );
+}
+
+
+
+/*
+
+
+recv_data_frame
+
+
+*/
+int recv_data_frame( ServerState* state )
+{
+	if( !state->recv_rdy )
+		return -1;
+
+	int recv_bytes;
+
+	if( state->data_buffer_size <= 0 )
+		return 0;
+
+	if( state->data_buffer )
+		free( state->data_buffer );
+	state->data_buffer = (char*) malloc( state->data_buffer_size );
+	memset( state->data_buffer, 0, state->data_buffer_size );
+
+	recv_bytes = recv( state->client_info.client_socket, 	
+					   &state->data_buffer,	
+					   sizeof( state->data_buffer_size ),
+					   MSG_WAITALL );
+
+	return recv_bytes;
+}
+
+
+
+
+/*
+
+
+send_cftp_frame
+
+*/
+int send_cftp_frame( ServerState* state )
+{
+	int length;
+	int status;
+
+	if( !state->send_rdy )
+		return -1;
+
+	length = sizeof( cftp_frame );
+	status = sendall( state->client_info.client_socket,
+					  (char*)(&state->fsend_buf),
+					  &length );
+
+	if( status == -1 )
+		{
+			state->last_error = 1;
+			sprintf( state->error_string, 
+					 "Could not send CFTP frame: %s", strerror(errno));
+			return 0;
+		}
+	else
+		return length;
+
+}
+
+
+/*
+
+
+send_data_frame
+
+*/
+int send_data_frame( ServerState* state )
+{
+	int length;
+	int status;
+
+	if( !state->send_rdy )
+		return -1;
+
+	length = state->data_buffer_size;
+	if( length <= 0 )
+		return 0;
+	
+	if( !state->data_buffer )
+		{
+			state->last_error = 1;
+			sprintf( state->error_string, 
+					 "Could not send data: Data buffer null");
+			return 0;
+		}
+
+	status = sendall( state->client_info.client_socket,
+					  (char*)(&state->data_buffer),
+					  &length );
+
+	if( status == -1 )
+		{
+			state->last_error = 1;
+			sprintf( state->error_string, 
+					 "Could not send data: %s", strerror(errno));
+			return 0;
+		}
+	else
+		return length;
+
 }

@@ -1,6 +1,8 @@
 #ifndef CFTP_UTILITIES_H
 #define CFTP_UTILITIES_H
 
+#include <stdio.h>
+
 typedef struct _FileRecord 
 {
 	char*          filename;

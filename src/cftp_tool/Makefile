@@ -3,7 +3,7 @@
 CFLAGS =  -Wall -g
 
 CLIENT_SRC = client.c client_lib.c
-SERVER_SRC = server.c server_sm_lib.c
+SERVER_SRC = server.c server_sm_lib.c server_sm/error.c server_sm/discovery.c server_sm/negotiation.c server_sm/transfer.c server_sm/teardown.c 
 COMMON_SRC = utilities.c
 SRC = $(CLIENT_SRC) $(SERVER_SRC) $(COMMON_SRC)
 
