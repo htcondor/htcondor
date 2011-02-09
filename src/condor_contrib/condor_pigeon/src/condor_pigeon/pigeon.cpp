@@ -64,6 +64,8 @@ Pigeon::Pigeon() {
   m_qpidHome     = NULL;
 }
 
+void Pigeon::main_config() {}
+
 void Pigeon::initialize() {
   /*        if (m_state == STATE_RUNNING) {
   */
@@ -72,7 +74,7 @@ void Pigeon::initialize() {
   //notify us when our process is down.
   m_reaper = daemonCore->Register_Reaper(
       "reaperQpid",
-      (ReaperHandlercpp) &Qpid::reaperResponse,
+      (ReaperHandlercpp) &Pigeon::reaperResponse,
       "Qpid process reaper", (Service*) this);		
 
   ASSERT(m_reaper != FALSE);
@@ -128,7 +130,7 @@ void Pigeon::initialize() {
     dprintf(D_ALWAYS,"qpid process started on port number %s \n", portStr.c_str());
   }  
   m_qpidAd.SetMyTypeName(GENERIC_ADTYPE);
-  m_qpidAd.SetTargetTypeName("qpid");
+  m_qpidAd.SetTargetTypeName("pigeon");
   std::string hostAddr = "qpid@";
   hostAddr += hostname;
   m_qpidAd.Assign(ATTR_NAME, hostAddr.c_str());
@@ -139,7 +141,7 @@ void Pigeon::initialize() {
   //Register a timer for periodically pushing classads.
   //TODO: Make these rate and interval configurable
   dprintf(D_ALWAYS, "Calling the classAd publish()\n");
-  daemonCore->Register_Timer(1, m_adPubInterval, (TimerHandlercpp) &Qpid::publishClassAd, 
+  daemonCore->Register_Timer(1, m_adPubInterval, (TimerHandlercpp) &Pigeon::publishClassAd, 
       "publishClassAd", this);
 
   dprintf(D_ALWAYS, "Launched qpid process pid=%d at port=|%s|\n", mm_pid,portStr.c_str());
@@ -305,7 +307,7 @@ void Pigeon::writeConfigFile() {
         dprintf(D_ALWAYS, "Created timer on daemon kill signal\n");
         m_timer = daemonCore->Register_Timer(5, 
      	 //  &Qpid::killTimer, 
-            (TimerHandlercpp) &Qpid::killTimer, 
+            (TimerHandlercpp) &Pigeon::killTimer, 
             "qpid kill timer", this);
       }
     }
@@ -404,7 +406,7 @@ void Pigeon::startService(int type) {
     dprintf(D_ALWAYS, "Couldn't create a stdout pipe\n");
   } else {
     if (! daemonCore->Register_Pipe(arrIO[1], "qpid stdout",
-          (PipeHandlercpp) &Qpid::stdoutHandler,
+          (PipeHandlercpp) &Pigeon::stdoutHandler,
           "stdout", this) ) {
 
       dprintf(D_ALWAYS, "Couldn't register stdout pipe\n");                        
@@ -417,7 +419,7 @@ void Pigeon::startService(int type) {
     dprintf(D_ALWAYS, "Couldn't create a stderr pipe\n");
   } else {
     if (! daemonCore->Register_Pipe(arrIO[2], "qpid stderr",
-          (PipeHandlercpp) &Qpid::stderrHandler, 
+          (PipeHandlercpp) &Pigeon::stderrHandler, 
           "stderr", this) ) {
 
       dprintf(D_ALWAYS, "Couldn't register stderr, pipe\n");

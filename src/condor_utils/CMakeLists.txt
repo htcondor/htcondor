@@ -24,17 +24,15 @@ soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_init.c )
 
 condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 
-if (${CMAKE_CURRENT_BINARY_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
-        command_target( utils_genparams perl param_info_c_generator.pl param_info_init.c )
-else()
-	if (WINDOWS)
-        	#command_target( utils_genparams cd "/D;${CMAKE_CURRENT_SOURCE_DIR};&&;perl;param_info_c_generator.pl;&&;mv;-f;param_info_init.c;${CMAKE_CURRENT_BINARY_DIR}" param_info_init.c )
-        	command_target( utils_genparams perl "${CMAKE_CURRENT_SOURCE_DIR}/param_info_c_generator.pl;-i;${CMAKE_CURRENT_SOURCE_DIR}/param_info.in;-o;${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c" param_info_init.c )
-	else()
-        	command_target( utils_genparams cd "${CMAKE_CURRENT_SOURCE_DIR};&&;perl;param_info_c_generator.pl;&&;mv;-f;param_info_init.c;${CMAKE_CURRENT_BINARY_DIR}" param_info_init.c )
-	endif()
-endif()
-		
+############ generate params
+add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c
+                    COMMAND perl
+                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/param_info_c_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in -o ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c 
+                    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in)
+
+add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c)
+############ end generate params
+
 condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )
 add_dependencies(utils utils_genparams syscall_numbers )
 

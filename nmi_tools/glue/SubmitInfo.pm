@@ -65,6 +65,7 @@ our %build_and_test_sets = (
 		'x86_suse_10.2',
 		'x86_suse_10.0',
 		'x86_64_macos_10.6',
+		'x86_64_opensuse_11.3-updated',
 		'ppc_macos_10.4',
 		'ppc_aix_5.2-pl5',
 		'sun4u_sol_5.10',

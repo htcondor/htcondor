@@ -1,6 +1,7 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+ # University of Wisconsin-Madison, WI.
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,20 +17,12 @@
  # 
  ############################################################### 
 
-MACRO ( CONDOR_PL_TEST _TARGET _DESC _TEST_RUNS )
+if ( HAVE_EXT_QPID )
+ 
+ include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon/
+ ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon_client
+ ${CMAKE_CURRENT_BINARY_DIR}/src/condor_pigeon/ )
+ add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon/ )
+ add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon_client/ )
 
-	if (BUILD_TESTS)
-
-		foreach(test ${_TEST_RUNS})
-			file (APPEND ${TEST_TARGET_DIR}/list_${test} "${_TARGET}\n")
-		endforeach(test)
-		
-		# add to all targets 
-		file (APPEND ${TEST_TARGET_DIR}/list_all "${_TARGET}\n")
-
-		# I'm not certain but it appears that the description files are not gen'd
-		# file ( APPEND ${TEST_TARGET_DIR}/${_TARGET}.desc ${_DESC} )
-
-	endif (BUILD_TESTS)
-
-ENDMACRO ( CONDOR_PL_TEST )
+endif()

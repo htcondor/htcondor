@@ -81,6 +81,13 @@ else()
 endif(PRE_RELEASE)
 add_definitions( -DCONDOR_VERSION="${VERSION}" )
 
+if( NOT BUILD_DATE )
+  GET_DATE( BUILD_DATE )
+endif()
+if(BUILD_DATE)
+  add_definitions( -DBUILD_DATE="${BUILD_DATE}" )
+endif()
+
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 set( CMAKE_VERBOSE_MAKEFILE TRUE )
 set( BUILD_SHARED_LIBS FALSE )
@@ -344,7 +351,7 @@ if (NOT WINDOWS) # if *nix
 endif()
 
 if (BUILD_TESTS)
-	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
+	set(TEST_TARGET_DIR ${CMAKE_BINARY_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
 
 ##################################################
@@ -734,13 +741,19 @@ dprint ( "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}" )
 # the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz")
 dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 
+# the Condor src directory
+dprint ( "CONDOR_SOURCE_DIR: ${CONDOR_SOURCE_DIR}" )
+dprint ( "CONDOR_EXTERNAL_DIR: ${CONDOR_EXTERNAL_DIR}" )
+dprint ( "TEST_TARGET_DIR: ${TEST_TARGET_DIR}" )
+
 # the Condor version string being used
 dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
 
 # the build id
 dprint ( "BUILDID: ${BUILDID}" )
 
-# the build date
+# the build date & time
+dprint ( "BUILD_TIMEDATE: ${BUILD_TIMEDATE}" )
 dprint ( "BUILD_DATE: ${BUILD_DATE}" )
 
 # the pre-release string

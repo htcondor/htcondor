@@ -56,6 +56,8 @@ class Pigeon : public Service {
 
         //figures out all the parameters required ro launch a qpid process.
         void initialize();
+        
+        void main_config();
 
         //stops all qpid process invoked by this class earliers
         //resets the reaper and process ids' values to default. 

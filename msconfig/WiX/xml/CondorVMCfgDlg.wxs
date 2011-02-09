@@ -29,7 +29,6 @@
             <ListItem Text="Bridged" Value="B"/>
             <ListItem Text="NAT and Bridged" Value="C"/>
           </ComboBox>
-          <Property Id="VMNETWORKING" Value="N"/>
           <Condition Action="disable">USEVMUNIVERSE="N"</Condition>
           <Condition Action="enable">USEVMUNIVERSE="Y"</Condition>
         </Control>
