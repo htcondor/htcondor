@@ -41,11 +41,11 @@ int main_init(int /* argc */, char * /* argv */ [])
 
 //-------------------------------------------------------------
 
-void 
-main_config(  )
+int 
+main_config( bool b )
 {
         qpidObj.initialize();
-        //return TRUE;
+        return TRUE;
 }
 
 //-------------------------------------------------------------

@@ -28,6 +28,7 @@
                  <RegistryValue Type="string" Name="SUBMITJOBS" Value="[SUBMITJOBS]" />
                  <RegistryValue Type="string" Name="NEWPOOL" Value="[NEWPOOL]" />
                  <RegistryValue Type="string" Name="POOLNAME" Value="[POOLNAME]" />
+                 <RegistryValue Type="string" Name="POOLHOSTNAME" Value="[POOLHOSTNAME]" />
                  <RegistryValue Type="string" Name="ACCOUNTINGDOMAIN" Value="[ACCOUNTINGDOMAIN]" />
                  <RegistryValue Type="string" Name="CONDOREMAIL" Value="[CONDOREMAIL]" />
                  <RegistryValue Type="string" Name="SMTPSERVER" Value="[SMTPSERVER]" />
@@ -39,6 +40,7 @@
                  <RegistryValue Type="string" Name="USEVMUNIVERSE" Value="[USEVMUNIVERSE]" />
                  <RegistryValue Type="string" Name="VMMAXNUMBER" Value="[VMMAXNUMBER]" />
                  <RegistryValue Type="string" Name="VMMEMORY" Value="[VMMEMORY]" />
+                 <RegistryValue Type="string" Name="VMNETWORKING" Value="[VMNETWORKING]" />
                  <RegistryValue Type="string" Name="PERLLOCATION" Value="[PERLLOCATION]" />
                  <RegistryValue Type="string" Name="USEHDFS" Value="[USEHDFS]" />
                  <RegistryValue Type="string" Name="NAMENODE" Value="[NAMENODE]" />
@@ -122,6 +124,74 @@
         </Property>
         <SetProperty Id="JVMLOCATION" Value="[JVMDIR]bin\java.exe" After="AppSearch"/>
 
+        <!--Search for previous install answers.-->
+        <Property Id="OLD_SUBMITJOBS">
+          <RegistrySearch Id="SUBMITJOBS_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="SUBMITJOBS" />
+        </Property>
+        <Property Id="OLD_NEWPOOL">
+          <RegistrySearch Id="NEWPOOL_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="NEWPOOL" />
+        </Property>
+        <Property Id="OLD_POOLNAME">
+          <RegistrySearch Id="POOLNAME_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="POOLNAME" />
+        </Property>
+        <Property Id="OLD_POOLHOSTNAME">
+          <RegistrySearch Id="POOLHOSTNAME_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="POOLHOSTNAME" />
+        </Property>
+        <Property Id="OLD_ACCOUNTINGDOMAIN">
+          <RegistrySearch Id="ACCOUNTINGDOMAIN_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="ACCOUNTINGDOMAIN" />
+        </Property>
+        <Property Id="OLD_CONDOREMAIL">
+          <RegistrySearch Id="CONDOREMAIL_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="CONDOREMAIL" />
+        </Property>
+        <Property Id="OLD_SMTPSERVER">
+          <RegistrySearch Id="SMTPSERVER_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="SMTPSERVER" />
+        </Property>
+        <Property Id="OLD_HOSTALLOWREAD">
+          <RegistrySearch Id="HOSTALLOWREAD_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HOSTALLOWREAD" />
+        </Property>
+        <Property Id="OLD_HOSTALLOWWRITE">
+          <RegistrySearch Id="HOSTALLOWWRITE_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HOSTALLOWWRITE" />
+        </Property>
+        <Property Id="OLD_HOSTALLOWADMINISTRATOR">
+          <RegistrySearch Id="HOSTALLOWADMINISTRATOR_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HOSTALLOWADMINISTRATOR" />
+        </Property>
+        <Property Id="OLD_RUNJOBS">
+          <RegistrySearch Id="RUNJOBS_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="RUNJOBS" />
+        </Property>
+        <Property Id="OLD_VACATEJOBS">
+          <RegistrySearch Id="VACATEJOBS_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="VACATEJOBS" />
+        </Property>
+        <Property Id="OLD_USEVMUNIVERSE">
+          <RegistrySearch Id="USEVMUNIVERSE_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="USEVMUNIVERSE" />
+        </Property>
+        <Property Id="OLD_VMMAXNUMBER">
+          <RegistrySearch Id="VMMAXNUMBER_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="VMMAXNUMBER" />
+        </Property>
+        <Property Id="OLD_VMMEMORY">
+          <RegistrySearch Id="VMMEMORY_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="VMMEMORY" />
+        </Property>
+        <Property Id="OLD_VMNETWORKING">
+          <RegistrySearch Id="VMNETWORKING_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="VMNETWORKING" />
+        </Property>
+        <Property Id="OLD_PERLLOCATION">
+          <RegistrySearch Id="PERLLOCATION_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="PERLLOCATION" />
+        </Property>
+        <Property Id="OLD_USEHDFS">
+          <RegistrySearch Id="USEHDFS_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="USEHDFS" />
+        </Property>
+        <Property Id="OLD_NAMENODE">
+          <RegistrySearch Id="NAMENODE_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="NAMENODE" />
+        </Property>
+        <Property Id="OLD_HDFSMODE">
+          <RegistrySearch Id="HDFSMODE_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HDFSMODE" />
+        </Property>
+        <Property Id="OLD_HDFSPORT">
+          <RegistrySearch Id="HDFSPORT_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HDFSPORT" />
+        </Property>
+        <Property Id="OLD_HDFSWEBPORT">
+          <RegistrySearch Id="HDFSWEBPORT_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HDFSWEBPORT" />
+        </Property>
+
         <Property Id="POOLHOSTNAME" Value="$$(FULL_HOSTNAME)" />
         <!--Permissions properties-->
         <Property Id="HOSTALLOWREAD" Value="*" />
@@ -131,14 +201,37 @@
         <Property Id="VMVERSION" Value="server1.0" />
         <Property Id="VMMEMORY" Value="256" />
         <Property Id="VMMAXNUMBER" Value="$$(NUM_CPUS)" />
+        <Property Id="VMNETWORKING" Value="N"/>
         <Property Id="PERLLOCATION" Value="PERL.EXE" />
         <!--HDFS properties-->
         <Property Id="HDFSPORT" Value="9000" />
         <Property Id="HDFSWEBPORT" Value="8000" />
-        <SetProperty Id="HDFSHOME" Value="[INSTALLDIR]HDFS" After="AppSearch" />
-        <SetProperty Id="HDFSNAMEDIR" Value="[HDFSHOME]/hadoop_name" After="AppSearch" />
-        <SetProperty Id="HDFSDATADIR" Value="[HDFSHOME]/hadoop_data" After="AppSearch" />
+        <SetProperty Id="HDFSHOME" Value="[INSTALLDIR]HDFS" After="AppSearch">Not UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSNAMEDIR" Value="[HDFSHOME]/hadoop_name" After="AppSearch">Not UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSDATADIR" Value="[HDFSHOME]/hadoop_data" After="AppSearch">Not UPGRADEFOUND</SetProperty>
         <SetDirectory Id="TARGETDIR" Value="[INSTALLDIR]" Sequence="execute" />
+
+        <SetProperty Id="SUBMITJOBS" Value="[OLD_SUBMITJOBS]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="NEWPOOL" Value="[OLD_NEWPOOL]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="POOLNAME" Value="[OLD_POOLNAME]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="POOLHOSTNAME" Value="[OLD_POOLHOSTNAME]" After="AppSearch">UPGRADEFOUND AND OLD_POOLHOSTNAME</SetProperty>
+        <SetProperty Id="ACCOUNTINGDOMAIN" Value="[OLD_ACCOUNTINGDOMAIN]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="CONDOREMAIL" Value="[OLD_CONDOREMAIL]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="SMTPSERVER" Value="[OLD_SMTPSERVER]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HOSTALLOWREAD" Value="[OLD_HOSTALLOWREAD]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HOSTALLOWWRITE" Value="[OLD_HOSTALLOWWRITE]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HOSTALLOWADMINISTRATOR" Value="[OLD_HOSTALLOWADMINISTRATOR]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="RUNJOBS" Value="[OLD_RUNJOBS]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="VACATEJOBS" Value="[OLD_VACATEJOBS]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="USEVMUNIVERSE" Value="[OLD_USEVMUNIVERSE]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="VMMAXNUMBER" Value="[OLD_VMMAXNUMBER]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="VMMEMORY" Value="[OLD_VMMEMORY]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="PERLLOCATION" Value="[OLD_PERLLOCATION]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="USEHDFS" Value="[OLD_USEHDFS]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="NAMENODE" Value="[OLD_NAMENODE]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSMODE" Value="[OLD_HDFSMODE]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSPORT" Value="[OLD_HDFSPORT]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSWEBPORT" Value="[OLD_HDFSWEBPORT]" After="AppSearch">UPGRADEFOUND</SetProperty>
 
         <!-- Begin custom actions and install sequence -->
         <CustomAction Id="CondorConfigLocal"
@@ -293,10 +386,16 @@
             <DialogRef Id="CondorPermCfgDlg" />
             <DialogRef Id="CondorVMCfgDlg" />
             <DialogRef Id="CondorHDFSCfgDlg" />
-            <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="CondorPoolCfgDlg" Order="2">LicenseAccepted = "1"</Publish>
+            <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="CondorPoolCfgDlg" Order="2">LicenseAccepted = "1" And Not UPGRADEFOUND</Publish>
             <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="CondorHDFSCfgDlg">1</Publish>
             <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2">1</Publish>
             <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg">1</Publish>
+            <Publish Dialog="LicenseAgreementDlg" Event="NewDialog" Value="VerifyReadyDlg" Control="Next">LicenseAccepted = "1" And UPGRADEFOUND And Not SEVENFIVEFIVEFOUND</Publish>
+            <Publish Dialog="LicenseAgreementDlg" Event="NewDialog" Value="CondorUpHostDlg" Control="Next">LicenseAccepted = "1" And UPGRADEFOUND And SEVENFIVEFIVEFOUND</Publish>
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="LicenseAgreementDlg">UPGRADEFOUND And Not SEVENFIVEFIVEFOUND</Publish>
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="CondorVMCfgDlg">UPGRADEFOUND And SEVENFIVEFIVEFOUND</Publish>
+            <Publish Dialog="CondorVMCfgDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg">UPGRADEFOUND And SEVENFIVEFIVEFOUND</Publish>
+            <Publish Dialog="CondorUpHostDlg" Control="Next" Event="NewDialog" Value="CondorVMCfgDlg">UPGRADEFOUND And SEVENFIVEFIVEFOUND</Publish>
         </UI>
 
         <!--<UIRef Id="WixUI_FeatureTree" />-->

@@ -62,6 +62,10 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 		#Redhat (3,4,5)
 		print TASKLIST $RPM_TASK;
 		print TASKLIST $RPM_CHECK_TASK;
+	} elsif ($ENV{NMI_PLATFORM} =~ /opensuse/) {
+		#openSUSE
+		print TASKLIST $RPM_TASK;
+		print TASKLIST $RPM_CHECK_TASK;
 	}
 
 	print TASKLIST $TAR_TASK;
