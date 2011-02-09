@@ -135,9 +135,7 @@ ClassAdLogProber::getCurProbedCreationTime() {
 //! probe job_queue.log file
 ProbeResultType
 ClassAdLogProber::probe(ClassAdLogEntry *curCALogEntry,
-			  FILE * job_queue_fd)
-Prober::probe(ClassAdLogEntry *curCALogEntry,
-			  FILE* job_queue_fp)
+			  FILE * job_queue_fp)
 {
 	FileOpErrCode   st;
 	int op_type;
