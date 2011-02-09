@@ -287,7 +287,7 @@ JobQueueDBManager::maintain()
 	
 		// polling
 	probe_st = prober->probe(caLogParser->getCurCALogEntry(), 
-							 caLogParser->getFileDescriptor());
+							 caLogParser->getFilePointer());
 
 	// no harm in doing this every time - if someone shutdown and reset
 	// the schedd, we want to be sure to have the latest verison (we could
