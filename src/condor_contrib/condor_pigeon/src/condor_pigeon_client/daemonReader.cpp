@@ -39,7 +39,7 @@ char* getQpidPort(char *hName){
   daemonHost += hostname;
   free(hostname);
   Daemon dObj(DT_GENERIC, daemonHost.Value(), NULL);
-  dObj.setSubsystem("qpid");
+  dObj.setSubsystem("PIGEON");
   bool flag = dObj.locate();
   if(!flag){
     return "-1";
