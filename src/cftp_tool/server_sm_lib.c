@@ -65,14 +65,23 @@ void run_server( char* server_name,  char* server_port)
 		}
 
 	handle_client( &master_server, &session_state );
-	
+
 	if( session_state.last_error )
 		{
 				//Error happened while accepting client, TODO: handle here
 			return;
 		}
 
-	while( run_state_machine( SM_States, &session_state ) )
+
+
+		//Prep structure for initial state
+	session_state.state = S_RECV_SESSION_PARAMETERS;	
+	session_state.phase = NEGOTIATION;
+	session_state.last_error = 0;
+	memset( session_state.error_string, 0, 256 );
+
+
+	while( run_state_machine( SM_States, &session_state )==0 )
 		{
 				// Do nothing here, we wait till the SM kills us.
 		}
@@ -300,12 +309,40 @@ transition_table
 */
 int transition_table( ServerState* state, int condition )
 {
+
 	switch( state->state )
 		{
+
+
+		case S_RECV_SESSION_PARAMETERS:
+			if( state->frecv_buf.MessageType != SIF )
+				{
+					sprintf( state->error_string, 
+							 "No frame received from client or bad frame type.");
+					return S_UNKNOWN_ERROR;
+				}
+			else		
+				return S_CHECK_SESSION_PARAMETERS;
 			
+
+
+		case S_CHECK_SESSION_PARAMETERS:
+			if( condition == -1 ) // Something bad happened here
+				return S_UNKNOWN_ERROR;
+
+			return S_ACK_SESSION_PARAMETERS;
+
+
+
+		case S_ACK_SESSION_PARAMETERS:
+			return S_RECV_CLIENT_READY;
+
+			
+
 			
 		case S_UNKNOWN_ERROR:
 			return -1; // If we have completed an unknown error, we should die.
+
 
 
 		default:
@@ -327,6 +364,7 @@ int recv_cftp_frame( ServerState* state )
 {
 	if( !state->recv_rdy )
 		return -1;
+	state->recv_rdy = 0;
 
 	memset( &state->frecv_buf, 0, sizeof( cftp_frame ) );
 
@@ -334,6 +372,10 @@ int recv_cftp_frame( ServerState* state )
 		  &state->frecv_buf,	
 		  sizeof( cftp_frame ),
 		  MSG_WAITALL );
+
+	#ifdef SERVER_DEBUG
+	fprintf( stderr, "[DEBUG] Read %d bytes from client on frame_recv.\n", sizeof( cftp_frame ) );
+	#endif
 
 	return sizeof( cftp_frame );
 }
@@ -351,6 +393,7 @@ int recv_data_frame( ServerState* state )
 {
 	if( !state->recv_rdy )
 		return -1;
+	state->recv_rdy = 0;
 
 	int recv_bytes;
 
@@ -363,9 +406,13 @@ int recv_data_frame( ServerState* state )
 	memset( state->data_buffer, 0, state->data_buffer_size );
 
 	recv_bytes = recv( state->client_info.client_socket, 	
-					   &state->data_buffer,	
-					   sizeof( state->data_buffer_size ),
+					   state->data_buffer,	
+					   state->data_buffer_size,
 					   MSG_WAITALL );
+
+	#ifdef SERVER_DEBUG
+	fprintf( stderr, "[DEBUG] Read %d bytes from client on data_recv.\n", recv_bytes );
+	#endif
 
 	return recv_bytes;
 }
@@ -386,6 +433,7 @@ int send_cftp_frame( ServerState* state )
 
 	if( !state->send_rdy )
 		return -1;
+	state->send_rdy = 0;
 
 	length = sizeof( cftp_frame );
 	status = sendall( state->client_info.client_socket,
@@ -400,8 +448,15 @@ int send_cftp_frame( ServerState* state )
 			return 0;
 		}
 	else
-		return length;
+		{
 
+    #ifdef SERVER_DEBUG
+	fprintf( stderr, "[DEBUG] Sent %d bytes to client on frame_send.\n", length );
+	#endif
+
+		
+			return length;
+		}
 }
 
 
@@ -418,6 +473,7 @@ int send_data_frame( ServerState* state )
 
 	if( !state->send_rdy )
 		return -1;
+	state->send_rdy = 0;
 
 	length = state->data_buffer_size;
 	if( length <= 0 )
@@ -443,6 +499,13 @@ int send_data_frame( ServerState* state )
 			return 0;
 		}
 	else
-		return length;
+		{
 
+    #ifdef SERVER_DEBUG
+	fprintf( stderr, "[DEBUG] Sent %d bytes to client on data_send.\n", length );
+	#endif
+
+
+			return length;
+		}
 }

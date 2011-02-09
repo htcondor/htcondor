@@ -3,6 +3,23 @@
 
 #define SERVER_DEBUG 1
 
+// State Debugging macros
+#ifdef SERVER_DEBUG
+
+#define ENTER_STATE fprintf(stderr, "[ENTER STATE] %s\n", __func__ );
+#define LEAVE_STATE fprintf(stderr, "[LEAVE STATE] %s\n", __func__ );
+
+#else
+
+#define ENTER_STATE 
+#define LEAVE_STATE 
+
+#endif
+
+
+
+
+
 #include "frames.h"
 #include "simple_parameters.h"
 #include "utilities.h"
@@ -23,7 +40,10 @@ typedef struct _ServerState
 	ServerRecord server_info;
 	ClientRecord client_info;
 
-	simple_parameters* session_parameters;
+	int          session_token;
+	int          parameter_length;
+	int          parameter_format;
+	char*        session_parameters;
 
 	int          recv_rdy;
     int		     send_rdy;
