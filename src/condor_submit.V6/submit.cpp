@@ -4678,7 +4678,7 @@ void
 SetCoreSize()
 {
 	char *size = condor_param( CoreSize, "core_size" );
-	long coresize;
+	long coresize = 0;
 	MyString buffer;
 
 	if (size == NULL) {
