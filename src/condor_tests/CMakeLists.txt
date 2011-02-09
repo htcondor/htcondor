@@ -38,7 +38,7 @@ if (BUILD_TESTS)
 		DESTINATION ${TEST_TARGET_DIR})
 
 	# 1st remove generated files.
-	file( GLOB RMV_FIRST list_* *.desc )
+	file( GLOB RMV_FIRST ${TEST_TARGET_DIR}/list_* *.desc )
 	if (RMV_FIRST)
 		file( REMOVE ${RMV_FIRST} )
 	endif()

@@ -46,7 +46,7 @@ int		DebugFlags			= 0;
 */
 int		_condor_dprintf_works = 0;
 
-char *_condor_DebugFlagNames[] = {
+const char *_condor_DebugFlagNames[] = {
 	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_HOSTNAME", "D_PERF_TRACE", "D_LOAD",
 	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",
 	"D_CONFIG", "D_UNUSED2", "D_UNUSED3", "D_PROTOCOL",	"D_PRIV",

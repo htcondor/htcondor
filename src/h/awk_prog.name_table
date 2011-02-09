@@ -28,7 +28,7 @@ BEGIN {
 	printf "\n"
 	printf "typedef struct {\n"
 	printf "\tint	number;\n"
-	printf "\tchar *	name;\n"
+	printf "\tconst char *	name;\n"
 	printf "} SYSCALL_NAME;\n"
 	printf "\n"
 	printf "SYSCALL_NAME SyscallNameTab[] = {\n"
@@ -38,7 +38,7 @@ BEGIN {
 }
 END {
 	printf "};\n\n"
-	printf "char *\n"
+	printf "const char *\n"
 	printf "_condor_syscall_name( int n )\n"
 	printf "{\n"
 	printf "\tstatic char error[512];\n"
