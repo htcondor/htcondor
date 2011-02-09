@@ -2055,7 +2055,7 @@ jobIsSandboxed( ClassAd * ad )
 {
 	ASSERT(ad);
 	int stage_in_start = 0;
-	int never_create_sandbox_expr = 0;
+	// int never_create_sandbox_expr = 0;
 
 		// Spooled jobs should return true, because they already
 		// have a spool directory, so we need to manage it
@@ -4369,12 +4369,15 @@ removeOtherJobs( int cluster, int proc )
 				removeConstraint );
 	if ( attrResult == 0 && removeConstraint != "" ) {
 		dprintf( D_ALWAYS,
-					"Removing jobs with constraint <%s>\n",
-					removeConstraint.Value() );
+					"Constraint <%s = %s> fired because job (%d.%d) "
+					"was removed\n",
+					ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
+					removeConstraint.Value(), cluster, proc );
 		MyString reason;
 		reason.sprintf(
-					"removed because controlling job (%d.%d) was removed",
-					cluster, proc );
+					"removed because <%s = %s> fired when job (%d.%d)"
+					" was removed", ATTR_OTHER_JOB_REMOVE_REQUIREMENTS,
+					removeConstraint.Value(), cluster, proc );
 		result = abortJobsByConstraint(removeConstraint.Value(),
 					reason.Value(), true);
 	}
@@ -9014,6 +9017,8 @@ Scheduler::child_exit(int pid, int status)
 		delete_shadow_rec( pid );
 
 	} else {
+			// Hmm -- doesn't seem like we can ever get here, given 
+			// that we deference srec before the if... wenger 2011-02-09
 			//
 			// There wasn't a shadow record, so that agent dies after
 			// deleting match. We want to make sure that we don't
@@ -11950,7 +11955,9 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 		// If we successfully removed the job, remove any jobs that
 		// match is OtherJobRemoveRequirements attribute, if it has one.
 	if ( result ) {
-		result = result && removeOtherJobs( cluster, proc );
+		// Ignoring return value because we're not sure what to do
+		// with it.
+		(void)removeOtherJobs( cluster, proc );
 	}
 
 	return result;
@@ -11983,7 +11990,7 @@ abortJobsByConstraint( const char *constraint,
 			break;
 		}
 
-		dprintf(D_FULLDEBUG, "remove by constrain matched: %d.%d\n",
+		dprintf(D_FULLDEBUG, "remove by constraint matched: %d.%d\n",
 				jobs[job_count].cluster, jobs[job_count].proc);
 
 		job_count++;
@@ -12026,7 +12033,9 @@ abortJobsByConstraint( const char *constraint,
 		//
 	removedJobCount--;
 	while ( removedJobCount >= 0 ) {
-		result = result && removeOtherJobs(
+		// Ignoring return value because we're not sure what to do
+		// with it.
+		(void)removeOtherJobs(
 					removedJobs[removedJobCount].cluster,
 					removedJobs[removedJobCount].proc );
 		removedJobCount--;
