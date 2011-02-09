@@ -17,7 +17,9 @@
 #ifndef _SUBMITTERUTILS_H
 #define _SUBMITTERUTILS_H
 
-#include "stdint.h"
+#ifndef WIN32
+	#include "stdint.h"
+#endif
 
 #include "condor_classad.h"
 #include "MyString.h"

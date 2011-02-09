@@ -25,7 +25,7 @@ if (NOT WIN_EXEC_NODE_ONLY)
 	file( GLOB collectorRmvElements Example* )
 	condor_daemon ( collector
 					"${collectorRmvElements}"
-					"${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND}"
+					"${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND};${CONDOR_QMF}"
 					${C_SBIN}
 					ON )
 	if (HAVE_EXT_GSOAP)

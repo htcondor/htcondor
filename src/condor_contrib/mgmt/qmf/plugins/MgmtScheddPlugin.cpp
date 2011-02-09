@@ -128,8 +128,7 @@ MgmtScheddPlugin::earlyInitialize()
 	if (-1 == (index =
 			   daemonCore->Register_Socket((Stream *) sock,
 										   "Mgmt Method Socket",
-										   (SocketHandlercpp)
-										   &MgmtScheddPlugin::HandleMgmtSocket,
+										   (SocketHandlercpp) ( &MgmtScheddPlugin::HandleMgmtSocket ),
 										   "Handler for Mgmt Methods.",
 										   this))) {
 		EXCEPT("Failed to register Mgmt socket");
@@ -303,7 +302,7 @@ MgmtScheddPlugin::deleteAttribute(const char */*key*/,
 
 
 int
-MgmtScheddPlugin::HandleMgmtSocket(Service *, Stream *)
+MgmtScheddPlugin::HandleMgmtSocket(/*Service *,*/ Stream *)
 {
 	singleton->getInstance()->pollCallbacks();
 
@@ -504,3 +503,7 @@ MgmtScheddPlugin::GetSubmitter(MyString &name, SubmitterObject *&submitter)
 
 	return true;
 }
+
+#ifdef WIN32
+	static MgmtScheddPlugin instance;
+#endif

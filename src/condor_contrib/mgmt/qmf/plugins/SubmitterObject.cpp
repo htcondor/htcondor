@@ -20,7 +20,9 @@
 
 #include "SubmitterObject.h"
 
-#include "stdint.h"
+#ifndef WIN32
+	#include "stdint.h"
+#endif
 
 #include "SubmitterUtils.h"
 

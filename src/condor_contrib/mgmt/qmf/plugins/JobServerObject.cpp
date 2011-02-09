@@ -22,7 +22,9 @@
 #include "ArgsJobServerGetJobAd.h"
 #include "ArgsJobServerFetchJobData.h"
 
-#include "stdint.h"
+#ifndef WIN32
+	#include "stdint.h"
+#endif
 
 #include "condor_attributes.h"
 

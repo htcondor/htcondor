@@ -16,7 +16,9 @@
 
 #include "condor_common.h"
 
-#include "stdint.h"
+#ifndef WIN32
+	#include "stdint.h"
+#endif
 
 #include "condor_qmgr.h"
 #include "condor_attributes.h"

@@ -25,7 +25,9 @@
 #include "set_user_priv_from_ad.h"
 #include "../condor_schedd.V6/scheduler.h"
 
-#include "stdint.h"
+#ifndef WIN32
+	#include "stdint.h"
+#endif
 
 #include "JobUtils.h"
 #include "Utils.h"

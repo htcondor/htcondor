@@ -49,7 +49,7 @@ namespace grid {
 // BIG NOTE: If Service is not first in the parent list the
 //           processDirtyJobs handler will segfault when using the
 //           dirtyJobs list
-struct MgmtScheddPlugin : public Service, ClassAdLogPlugin, ScheddPlugin
+class MgmtScheddPlugin : public Service, ClassAdLogPlugin, ScheddPlugin
 {
 
 public:
@@ -101,7 +101,7 @@ private:
 
 	bool m_isPublishing;
 
-	int HandleMgmtSocket(Service *, Stream *);
+	int HandleMgmtSocket(/*Service *,*/ Stream *);
 
 	void processDirtyJobs();
 

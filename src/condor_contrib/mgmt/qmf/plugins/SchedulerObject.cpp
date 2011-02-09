@@ -25,7 +25,9 @@
 #include "ArgsSchedulerReleaseJob.h"
 #include "ArgsSchedulerRemoveJob.h"
 
-#include "stdint.h"
+#ifndef WIN32
+	#include "stdint.h"
+#endif
 
 #include "PoolUtils.h"
 #include "JobUtils.h"

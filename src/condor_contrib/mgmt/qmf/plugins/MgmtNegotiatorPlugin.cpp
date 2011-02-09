@@ -98,8 +98,7 @@ struct MgmtNegotiatorPlugin : public Service, NegotiatorPlugin
 		if (-1 == (index =
 				   daemonCore->Register_Socket((Stream *) sock,
 											   "Mgmt Method Socket",
-											   (SocketHandlercpp)
-											   &MgmtNegotiatorPlugin::HandleMgmtSocket,
+											   (SocketHandlercpp) (&MgmtNegotiatorPlugin::HandleMgmtSocket),
 											   "Handler for Mgmt Methods.",
 											   this))) {
 			EXCEPT("Failed to register Mgmt socket");
@@ -131,7 +130,7 @@ struct MgmtNegotiatorPlugin : public Service, NegotiatorPlugin
 	}
 
 	int
-	HandleMgmtSocket(Service *, Stream *)
+	HandleMgmtSocket(/*Service *,*/ Stream *)
 	{
 		singleton->getInstance()->pollCallbacks();
 
@@ -142,21 +141,3 @@ struct MgmtNegotiatorPlugin : public Service, NegotiatorPlugin
 
 static MgmtNegotiatorPlugin instance;
 
-#ifdef WIN32
-BOOL APIENTRY DllMain( HMODULE hModule,
-                       DWORD  ul_reason_for_call,
-                       LPVOID lpReserved )
-{
-    switch ( ul_reason_for_call )
-    {
-        case DLL_PROCESS_ATTACH:
-            dprintf(D_FULLDEBUG, "WINDOWS loading MgmtNegotiatorPlugin\n");
-        //case DLL_THREAD_ATTACH:
-        //case DLL_THREAD_DETACH:
-        //case DLL_PROCESS_DETACH:
-            break;
-    }
-
-    return TRUE;
-}
-#endif

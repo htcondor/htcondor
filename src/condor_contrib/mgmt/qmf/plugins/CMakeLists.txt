@@ -67,24 +67,38 @@ add_custom_command( OUTPUT ${QMF_GEN_SRCS}
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-# used for selective compilation differences only otherwise just link the library
-src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
-src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
+if (NOT WINDOWS)
 
-condor_static_lib( qmf_utils "Utils.h;Utils.cpp;PoolUtils.cpp;PoolUtils.h" )
+	condor_static_lib( qmf_utils "Utils.h;Utils.cpp;PoolUtils.cpp;PoolUtils.h" )
 
-# NOTE: Still need to update linkage deps
-file( GLOB SchedSrcs JobUtils.* SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* JobServerObject.* MgmtScheddPlugin* Utils.* PoolUtils.*)
-condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "" ON)
+	# used for selective compilation differences only otherwise just link the library
+	src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
+	src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* CollectorObject.* SlotObject.* PoolUtils.*)
-condor_plugin( MgmtCollectorPlugin-plugin "${CollectorSrcs};Grid.cpp;Collector.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS};${QPID_FOUND};${KRB5_FOUND};${OPENSSL_FOUND}" ON)
+	# NOTE: Still need to update linkage deps
+	file( GLOB SchedSrcs JobUtils.* SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* JobServerObject.* MgmtScheddPlugin* Utils.* PoolUtils.*)
+	condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "" ON)
 
-file( GLOB NegotiatorSrcs MgmtNegotiatorPlugin.* NegotiatorObject.* Utils.* PoolUtils.*)
-condor_plugin( MgmtNegotiatorPlugin-plugin "${NegotiatorSrcs};Negotiator.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS};${QPID_FOUND};${KRB5_FOUND};${OPENSSL_FOUND}" ON)
+	file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* CollectorObject.* SlotObject.* PoolUtils.*)
+	condor_plugin( MgmtCollectorPlugin-plugin "${CollectorSrcs};Grid.cpp;Collector.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
 
-file( GLOB MasterSrcs MgmtMasterPlugin.* MasterObject.* PoolUtils.* )
-condor_plugin( MgmtMasterPlugin-plugin "${MasterSrcs};Master.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS};${QPID_FOUND};${KRB5_FOUND};${OPENSSL_FOUND}" ON)
+	file( GLOB NegotiatorSrcs MgmtNegotiatorPlugin.* NegotiatorObject.* Utils.* PoolUtils.*)
+	condor_plugin( MgmtNegotiatorPlugin-plugin "${NegotiatorSrcs};Negotiator.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
 
-file( GLOB StartdSrcs MgmtStartdPlugin.* SlotObject.* PoolUtils.*)
-condor_plugin( MgmtStartdPlugin-plugin "${COLLECTOR_REF};${StartdSrcs};Slot.h;Slot.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS};${QPID_FOUND};${KRB5_FOUND};${OPENSSL_FOUND}" ON)
+	file( GLOB MasterSrcs MgmtMasterPlugin.* MasterObject.* PoolUtils.* )
+	condor_plugin( MgmtMasterPlugin-plugin "${MasterSrcs};Master.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+
+	file( GLOB StartdSrcs MgmtStartdPlugin.* SlotObject.* PoolUtils.*)
+	condor_plugin( MgmtStartdPlugin-plugin "${COLLECTOR_REF};${StartdSrcs};Slot.h;Slot.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+	
+else()
+
+	file( GLOB QMFRMV ${QMF_GEN_SRCS} )
+	condor_glob( HDRS SRCS "${QMFRMV}" )
+	
+	condor_static_lib( condor_qmflib "${HDRS};${SRCS};${QMF_GEN_SRCS}" )
+	
+	# Windows only contrib library, as plugins are totally hosed on windows.
+	set (CONDOR_QMF condor_qmflib PARENT_SCOPE)
+
+endif()
