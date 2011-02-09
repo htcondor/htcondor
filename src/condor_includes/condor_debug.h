@@ -196,6 +196,29 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
         (ptr)->ru_stime.tv_usec ); \
 }
 
+#ifndef REMIND
+# ifdef _MSC_VER // for Microsoft C, prefix file and line to the the message
+#  define PRAGMA_QUOTE(x)   #x
+#  define PRAGMA_QQUOTE(y)  PRAGMA_QUOTE(y)
+#  define REMIND(str)       message(__FILE__ "(" PRAGMA_QQUOTE(__LINE__) ") : " str)
+# elif defined __GNUC__ // gcc emits file and line prefix automatically.
+#  define REMIND(str)       message str
+# else 
+# endif
+#endif // REMIND
+
+#if defined _MSC_VER && defined _DEBUG // WIN32
+# ifdef _X86_
+#  define DEBUG_BREAK_INTO_DEBUGGER _asm {int 3}
+# else
+#  define DEBUG_BREAK_INTO_DEBUGGER DebugBreak()
+# endif
+# define DEBUG_WAIT_FOR_DEBUGGER(var,def) { static int var=def; while (var) Sleep(1000); }
+#else
+# define DEBUG_BREAK_INTO_DEBUGGER ((void)0)
+# define DEBUG_WAIT_FOR_DEBUGGER(var,def) ((void)0)
+#endif
+
 #endif /* CONDOR_DEBUG_H */
 
 /* 
