@@ -73,9 +73,9 @@ int  lessThanFunc(AttrList*,AttrList*,void*);
 int  customLessThanFunc(AttrList*,AttrList*,void*);
 
 extern "C" int SetSyscalls (int) {return 0;}
-extern	void setPPstyle (ppOption, int, char *);
-extern	void setType    (char *, int, char *);
-extern	void setMode 	(Mode, int, char *);
+extern	void setPPstyle (ppOption, int, const char *);
+extern	void setType    (const char *, int, const char *);
+extern	void setMode 	(Mode, int, const char *);
 
 int
 main (int argc, char *argv[])
