@@ -35,10 +35,10 @@ if (BUILD_TESTS)
 			${CONDOR_SCRIPTS_DIR}/CondorPersonal.pm
 			${CONDOR_SCRIPTS_DIR}/CondorUtils.pm
 			${CONDOR_SCRIPTS_DIR}/batch_test.pl
-		DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
+		DESTINATION ${TEST_TARGET_DIR})
 
 	# 1st remove generated files.
-	file( GLOB RMV_FIRST list_* *.desc )
+	file( GLOB RMV_FIRST ${TEST_TARGET_DIR}/list_* *.desc )
 	if (RMV_FIRST)
 		file( REMOVE ${RMV_FIRST} )
 	endif()

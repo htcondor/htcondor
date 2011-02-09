@@ -55,7 +55,7 @@
 #include <stdlib.h>
 
 struct mimetype { 
-	char *ext; 
+	const char *ext; 
 	const char * pmimetype; 
 };
 
