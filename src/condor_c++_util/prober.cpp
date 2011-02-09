@@ -126,11 +126,18 @@ Prober::getCurProbedCreationTime() {
 //! probe job_queue.log file
 ProbeResultType
 Prober::probe(ClassAdLogEntry *curCALogEntry,
-			  int job_queue_fd)
+			  FILE* job_queue_fp)
 {
 	FileOpErrCode   st;
 	int op_type;
 	struct stat filestat;
+	int job_queue_fd = fileno(job_queue_fp);
+	//TODO: uncomment and possibly change
+	/* 
+	if (job_queue_fd == -1) {
+		return PROBE_ERROR;
+	}
+	*/
 
 	//TODO: should use condor's StatInfo instead.
 	if (fstat(job_queue_fd, &filestat) == -1)
@@ -146,7 +153,7 @@ Prober::probe(ClassAdLogEntry *curCALogEntry,
 
 	ClassAdLogParser caLogParser;
 	
-	caLogParser.setFileDescriptor(job_queue_fd);
+	caLogParser.setFilePointer(job_queue_fp);
 	caLogParser.setNextOffset(0);
 	st = caLogParser.readLogEntry(op_type);
 	
