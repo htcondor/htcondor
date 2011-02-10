@@ -114,7 +114,12 @@ as orphans.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1910
+\item If a cycle exists in the OtherJobRemoveRequirements expressions (see
+~\pageref{man-condor-submit-OtherJobRemoveRequirements}) of a set of jobs
+(for example, if two jobs have OtherJobRemoveRequirements expressions that
+attempt to remove the other job) removing any of the jobs will cause the
+\Condor{schedd} to go into an infinite loop.
 
 \end{itemize}
 
