@@ -42,7 +42,7 @@ extern uint64_t		MaxLog[D_NUMLEVELS+1];
 extern int 			MaxLogNum[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
-extern char		*_condor_DebugFlagNames[];
+extern const char		*_condor_DebugFlagNames[];
 extern int		_condor_dprintf_works;
 extern time_t	DebugLastMod;
 extern int		DebugUseTimestamps;
