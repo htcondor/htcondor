@@ -163,12 +163,11 @@ else()
 						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor_config.win)
 						
 	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor_config.win
-			DESTINATION	"."
-			RENAME		condor_config
+			DESTINATION	"${C_ETC}"
+			RENAME		condor_config.generic
 	        )
 			
 	install(FILES
-	        condor_config.generic 
 	        condor_config.power
 	        condor_config.submit.generic
 	        condor_config.local.generic
