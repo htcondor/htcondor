@@ -348,7 +348,7 @@ node  & S & F & F       & S & F & S & F & S & F & S & S & F & F  \\
 \end{center}
 
 Five variables (\Env{\$JOB}, \Env{\$JOBID}, \Env{\$RETRY},
-\Env{MAX\_RETRIES}, and
+\Env{\$MAX\_RETRIES}, and
 \Env{\$RETURN}) can be used within the DAG input file
 as arguments passed to a PRE or POST script.
 
@@ -367,8 +367,9 @@ nodes to be retried.
 The variable \Env{\$MAX\_RETRIES} evaluates to an integer value set 
 to the maximum number of retries for the node.
 See section~\ref{dagman:retry} for the description of how to cause
-nodes to be retried.  (If no retries are set for the node,
-\Env{\$MAX\_RETRIES} will be set to 0.)
+nodes to be retried.  
+If no retries are set for the node,
+\Env{\$MAX\_RETRIES} will be set to 0.
 
 \index{DAGMan!JOBID@\verb^$JOBID^ value}
 \index{job ID!defined for a DAGMan node job}
@@ -816,7 +817,9 @@ on the node.
 
 The variable \Env{\$RETRY} evaluates to an 
 integer value set to 0 first time a node is run,
-and is  incremented each time for each  time the node is retried. 
+and is  incremented each time for each time the node is retried. 
+The variable \Env{\$MAX\_RETRIES} is the value set for
+\Arg{NumberOfRetries}.
 
 
 The \Arg{ABORT-DAG-ON} key word provides a way

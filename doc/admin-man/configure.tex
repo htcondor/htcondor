@@ -908,6 +908,17 @@ File System Configuration File Entries''.
   it appears in the list. 
   The process is not recursive, so any directories found inside the directory
   being processed are ignored. 
+  See also \MacroNI{LOCAL\_CONFIG\_DIR\_EXCLUDE\_REGEXP}.
+
+\label{param:LocalConfigDirExcludeRegexp}
+\item[\Macro{LOCAL\_CONFIG\_DIR\_EXCLUDE\_REGEXP}]
+  A regular expression that specifies file names to be ignored when
+  looking for configuration files within the directories specified via
+  \MacroNI{LOCAL\_CONFIG\_DIR}.  The default expression ignores files
+  with names beginning with a `.' or a `\verb|#|', as well as files with names
+  ending in `\~{}'.  This avoids accidents that can be caused by
+  treating temporary files created by text editors as configuration
+  files.
 
 \label{param:CondorIds}
 \item[\Macro{CONDOR\_IDS}]
@@ -5931,6 +5942,19 @@ These settings affect the \Condor{shadow}.
   the final update to the job ClassAd in the \Condor{schedd}'s
   job queue.  The default is 5.
 
+\label{param:ShadowCheckproxyInterval}
+\item[\Macro{SHADOW\_CHECKPROXY\_INTERVAL}]
+  The number of seconds between tests to see if the job proxy has been
+  updated or should be refreshed.  The default is 600 seconds (10 minutes).
+  This variable's value should be small in comparison to the refresh interval
+  required to keep delegated credentials from expiring 
+  (configured via
+  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} and
+  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}).  
+  If this variable's value is too small, 
+  proxy updates could happen very frequently, 
+  potentially creating a lot of load on the submit machine.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -8660,26 +8684,36 @@ section~\ref{sec:Security} on Security.
 
 \label{param:DelegateJobGSICredentialsLifetime}
 \item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}]
- An integer value that specifies the maximum number of seconds for
- which delegated proxies should be valid.  The default is one day.  A
- value of 0 indicates that the delegated proxy should be valid for as
- long as allowed by the credential used to create the proxy.  The job
- may override this configuration setting by using the
- \SubmitCmd{delegated\_job\_GSI\_credentials\_lifetime} submit file
- command.  This configuration setting currently only applies to
- proxies delegated for non-grid jobs and Condor-C jobs.  It does not
- currently apply to globus grid jobs, which always behave as though
- this setting were 0.  This setting has no effect if
- \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false.
+  An integer value that specifies the maximum number of seconds for
+  which delegated proxies should be valid.  
+  The default value is one day.
+  A value of 0 indicates that the delegated proxy should be valid for as
+  long as allowed by the credential used to create the proxy.  
+  The job may override this configuration setting by using the
+  \SubmitCmd{delegated\_job\_GSI\_credentials\_lifetime} submit file
+  command.  This configuration variable currently only applies to
+  proxies delegated for non-grid jobs and Condor-C jobs.  It does not
+  currently apply to globus grid jobs, which always behave as though
+  the value is 0.
+  This variable has no effect if \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}
+  is \Expr{False}.
 
 \label{param:DelegateJobGSICredentialsRefresh}
 \item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH}]
- A floating point number between 0 and 1 that indicates when delegated
- credentials with limited lifetime should be renewed.  The renewal is
- attempted periodically at the specified fraction of the lifetime of
- the delegated credential.  The default is 0.25.  This setting has no
- effect if \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false or
- \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME} is 0.
+  A floating point number between 0 and 1 that indicates the fraction of 
+  a proxy's lifetime at which point delegated
+  credentials with a limited lifetime should be renewed.  
+  The renewal is attempted periodically at or near the specified fraction
+  of the lifetime of the delegated credential.  
+  The default value is 0.25.
+  This setting has no effect if \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is 
+  \Expr{False} or if
+  \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME} is 0.  
+  For non-grid jobs, the precise timing of the proxy refresh depends on
+  \Macro{SHADOW\_CHECKPROXY\_INTERVAL}.  
+  To ensure that the delegated proxy remains valid, 
+  the interval for checking the proxy should be,
+  at most, half of the interval for refreshing it.
 
 \label{param:GridMap}
 \item[\Macro{GRIDMAP}]
