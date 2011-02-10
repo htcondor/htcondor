@@ -3095,32 +3095,16 @@ void DaemonCore::Driver()
 				}
 			}
 
+#ifndef WIN32
 		// clear the async_pipe_signal flag before we empty to the pipe
 		// that way we won't miss it if someone writes into the pipe.
 		async_pipe_signal = false;
-#ifndef WIN32
 		// Drain our async_pipe; we must do this before we unblock unix signals.
 		// Just keep reading while something is there.  async_pipe is set to
 		// non-blocking mode via fcntl, so the read below will not block.
 		while( read(async_pipe[0],asyncpipe_buf,8) > 0 );
 #else
-		// Drain our async_pipe (which is really a socket)
-		// extra error checking because we 
-		if (async_pipe_signal) {
-			while (int cb = async_pipe[0].bytes_available_to_read()) {
-				if (cb < 0) {
-					dprintf(D_ALWAYS, "async_pipe[0].bytes_available_to_read returned WSA Error %d", 
-							WSAGetLastError());
-					break;
-				}
-				char buf[16];
-				if (recv(async_pipe[0].get_socket(), buf, MIN(cb, COUNTOF(buf)), 0) == SOCKET_ERROR) {
-					dprintf(D_ALWAYS, "recv on async_pipe[0] returned WSA Error %d", 
-							WSAGetLastError());
-					break;
-				}
-			}
-		}
+		// windows version of this code is after selector.execute()
 #endif
 
 		// Prepare to enter main select()
@@ -3295,6 +3279,30 @@ void DaemonCore::Driver()
 		EnterCriticalSection(&Big_fat_mutex);
 		if ( selector.select_retval() == SOCKET_ERROR ) {
 			EXCEPT("select, error # = %d",WSAGetLastError());
+		}
+
+		// Drain our async_pipe (which is really a socket)
+		// extra error checking because we had problems with the pipe getting stuck
+		// in the signalled state in 7.5.5. 
+		if (selector.has_ready() &&
+			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
+			if ( ! async_pipe_signal) {
+				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.");
+			}
+			async_pipe_signal = false;
+			while (int cb = async_pipe[0].bytes_available_to_read()) {
+				if (cb < 0) {
+					dprintf(D_ALWAYS, "DaemonCore: async_pipe[0].bytes_available_to_read returned WSA Error %d", 
+							WSAGetLastError());
+					break;
+				}
+				char buf[16];
+				if (recv(async_pipe[0].get_socket(), buf, MIN(cb, COUNTOF(buf)), 0) == SOCKET_ERROR) {
+					dprintf(D_ALWAYS, "DaemonCore: recv on async_pipe[0] returned WSA Error %d", 
+							WSAGetLastError());
+					break;
+				}
+			}
 		}
 #endif
 
