@@ -783,40 +783,66 @@ page~\pageref{sec:Non-Root}.
 \index{installation!using Linux RPMs}
 \index{RPM installation on Linux}
 RPMs are available in \VersionNotice.
-This packaging method provides for installation and configuration
+Our packaging provides a Yum repository, and installation and configuration
 in one easy step.
 It is currently available for Linux systems only.
 As of Condor version 7.5.1, native packaging is utilized,
 such that items are placed in FHS locations.
 
-The format of the installation command is
+Yum repositories are named to distinguish stable releases from
+development releases and by RHEL version number. 
+There are currently RPMs in four directories:
+\begin{itemize}
+ \item \File{/p/condor/public/html/yum/stable/rhel5/}
+ \item \File{/p/condor/public/html/yum/stable/rhel4/}
+ \item \File{/p/condor/public/html/yum/development/rhel5/}
+ \item \File{/p/condor/public/html/yum/development/rhel4/}
+\end{itemize}
+
+Add or remove the package, as appropriate.
+Then update the repository index, utilizing the correct directory.
+For example,
 \begin{verbatim}
-  rpm -i <filename> 
+  createrepo /p/condor/public/html/yum/stable/rhel5/
 \end{verbatim}
 
-The \Prog{rpm} program calls \Condor{configure} to do portions
-of the installation.
-If the condor user is present on the system,
-the installation script will
-assume that that is the effective user that Condor should run as
-(see 
-section~\ref{sec:uids} on
-page~\pageref{sec:uids}).
-If the condor user is not present,
-the daemon user 
-will be used.
-This user will be present on all Linux systems. 
-Note that the user can later be changed by running the \Condor{configure}
-program using the \Opt{owner} option, of the format:
+Before a first installation, 
+create a \Login{condor} user and group as appropriate to the installation.
+The Condor package will automatically add a \Login{condor} user/group
+if it does not exist already.
+Sites with a targeted security policy should add the \Login{condor} 
+user/group manually before installation.
+
+Get the desired release:
 \begin{verbatim}
-  condor_configure  --owner=<user>
+  cd /etc/yum.repos.d
+  wget http://www.cs.wisc.edu/condor/yum/repo.d/condor-stable-rhel5.repo
 \end{verbatim}
+
+Install.
+For 32-bit machines:
+\begin{verbatim}
+  yum install condor
+\end{verbatim}
+For 64-bit machines:
+\begin{verbatim}
+  yum install condor.x86_64
+\end{verbatim}
+
+As needed, edit the Condor configuration files to customize.
+The configuration files are in the directory \File{/etc/condor/}.
+Do \emph{not} use \Condor{configure} or \Condor{install} for configuration.
 
 The installation will be able to find configuration files without
 additional administrative intervention,
 as the configuration files are placed in \File{/etc},
 and the ordered search algorithm utilized by Condor for finding
 its configuration includes this directory.
+
+Installation is then complete.  Start Condor daemons:
+\begin{verbatim}
+  service condor start
+\end{verbatim}
 
 % Alain thinks that upgrades DO work.
 %RPM upgrade (\Opt{-u} option) does not currently
