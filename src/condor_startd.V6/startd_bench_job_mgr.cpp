@@ -119,6 +119,7 @@ StartdBenchJobMgr::Reconfig( void )
 		free( before_str );
 		free( after_str );
 	}
+	return 1;
 }
 
 // Perform shutdown
