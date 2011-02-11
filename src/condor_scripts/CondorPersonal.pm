@@ -1,6 +1,6 @@
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -1266,8 +1266,9 @@ sub IsPersonalRunning
 			debug("hmmmm looking for <<$pathtoconfig>> got <<$line>> \n",$debuglevel);
 		}
     }
-    close(CONFIG)
-	or warn "Error executing condor_config_val";
+    if ( close(CONFIG) && ($? != 13) ) {       # Ignore SIGPIPE
+        warn "Error executing condor_config_val: '$?' '$!'"
+    }
 
     if( $matchedconfig eq "" ) {
         die "lost: config does not match expected config setting......\n";
@@ -1511,7 +1512,7 @@ sub IsRunningYet
 		my $done = "no";
 		my $currenthost = hostfqdn();
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
-			print "Want collector to see startd - ";
+			print "Waiting for collector to see startd - ";
 			$loopcount = 0;
 			TRY: while( $done eq "no") {
 				$loopcount += 1;
@@ -1542,7 +1543,7 @@ sub IsRunningYet
 		my $done = "no";
 		my $currenthost = hostfqdn();
 		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
-			print "Want collector to see schedd - ";
+			print "Waiting for collector to see schedd - ";
 			$loopcount = 0;
 			TRY: while( $done eq "no") {
 				$loopcount += 1;

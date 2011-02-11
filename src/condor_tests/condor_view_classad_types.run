@@ -1,0 +1,142 @@
+#! /usr/bin/env perl
+##**************************************************************
+## Copyright 2011 Red Hat, Inc.
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##**************************************************************
+
+use CondorTest;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my $port = 10000+int(rand()*10000);
+my $view_port = 10000+int(rand()*10000);
+
+my $append_condor_config = '
+  COLLECTOR_HOST = $(IP_ADDRESS):' . $port . '
+  COLLECTOR_ARGS = -p ' . $port . '
+  VIEW_COLLECTOR = $(COLLECTOR)
+  VIEW_COLLECTOR_ARGS = -p ' . $view_port . ' -local-name VIEW_COLLECTOR
+  VIEW_COLLECTOR.COLLECTOR_LOG = $(LOG)/ViewCollectorLog
+
+  DAEMON_LIST = MASTER,COLLECTOR,VIEW_COLLECTOR,NEGOTIATOR,SCHEDD,STARTD
+  DC_DAEMON_LIST = + VIEW_COLLECTOR
+
+  CONDOR_VIEW_HOST = $(IP_ADDRESS):' . $view_port . '
+  CONDOR_VIEW_CLASSAD_TYPES = Negotiator
+
+  # So CODNOR_VIEW_CLASSAD_TYPES can be changed with a reconfig
+  ALLOW_CONFIG = *
+  SETTABLE_ATTRS_CONFIG = CONDOR_VIEW_CLASSAD_TYPES
+  ENABLE_RUNTIME_CONFIG = TRUE
+
+  # Just on the off chance the default security settings dont cover this
+  ALLOW_ADVERTISE = $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1
+  ALLOW_NEGOTIATOR = $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1
+  ALLOW_ADMINISTRATOR = $(FULL_HOSTNAME), $(IP_ADDRESS), 127.0.0.1
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+# Sanity, the Negotiator showed up in the Collector
+CondorLog::RunCheck(
+    daemon => "COLLECTOR",
+    match_regexp => "Inserting new hashent for 'Negotiator'"
+);
+CondorLog::RunCheck(
+    daemon => "COLLECTOR",
+    match_regexp => "Forwarding ad: type=Negotiator command=UPDATE_NEGOTIATOR_AD"
+);
+
+# The Negotiator got forwarded to the View Collector
+CondorLog::RunCheck(
+    daemon => "VIEW_COLLECTOR.COLLECTOR",
+    match_regexp => "Inserting new hashent for 'Negotiator'"
+);
+
+CondorTest::runCondorTool("condor_off -fast -negotiator");
+
+print "Waiting for Negotiator to leave - ";
+my $backoff = 2;
+my $runlimit = 8;
+my $loopcount = 0;
+my $done = "no";
+TRY: while( $done eq "no") {
+    $loopcount += 1;
+    chomp(my @cmd = `condor_status -negotiator -format \"%s\\n\" Name`);
+
+    if (!@cmd) {
+	$done = "yes";
+	print "ok\n";
+	last TRY;
+    }
+    if ($loopcount == $runlimit) { 
+	print "bad\n";
+	last; 
+    }
+    sleep ($loopcount * $backoff);
+}
+
+# Sanity, the Negotiator was removed from the Collector
+CondorLog::RunCheck(
+    daemon => "COLLECTOR",
+    match_regexp => "Got INVALIDATE_NEGOTIATOR_ADS"
+);
+CondorLog::RunCheck(
+    daemon => "COLLECTOR",
+    match_regexp => "Forwarding ad: type=Negotiator command=INVALIDATE_NEGOTIATOR_ADS"
+);
+
+# The Negotiator was removed from the View Collector
+CondorLog::RunCheck(
+    daemon => "VIEW_COLLECTOR.COLLECTOR",
+    match_regexp => "Got INVALIDATE_NEGOTIATOR_ADS"
+);
+
+CondorTest::runCondorTool("condor_config_val -collector -rset CONDOR_VIEW_CLASSAD_TYPES=Negotiator,Machine");
+CondorTest::runCondorTool("condor_reconfig -collector");
+CondorTest::runCondorTool("condor_reconfig -startd");
+
+print "Waiting for Startd to show up in view collector - ";
+$loopcount = 0;
+$done = "no";
+TRY: while( $done eq "no") {
+    $loopcount += 1;
+    chomp(my @cmd = `condor_status -pool \"<127.0.0.1:$view_port>\" -startd -format \"%s\\n\" Name`);
+
+    if (@cmd) {
+	$done = "yes";
+	print "ok\n";
+	last TRY;
+    }
+    if ($loopcount == $runlimit) { 
+	print "bad\n";
+	last; 
+    }
+    sleep ($loopcount * $backoff);
+}
+
+# The Machine ads now get forwarded to the View Collector
+CondorLog::RunCheck(
+    daemon => "COLLECTOR",
+    match_regexp => "Forwarding ad: type=Machine command=UPDATE_STARTD_AD"
+);
+CondorLog::RunCheck(
+    daemon => "VIEW_COLLECTOR.COLLECTOR",
+    match_regexp => "Inserting new hashent for 'Start'"
+);
+
+
+CondorTest::EndTest();

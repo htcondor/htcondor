@@ -277,7 +277,7 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 				
 				bool      add_to_classad = true;
 				MyString  to_insert;
-				char      *token_text_raw;
+				char      *token_text_raw=0;
 				MyString  token_text("");
 				
 				to_insert = attribute_value;

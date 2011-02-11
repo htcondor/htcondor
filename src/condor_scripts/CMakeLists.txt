@@ -19,22 +19,22 @@
 
 if (NOT WINDOWS)
 
-	install ( FILES condor_glidein condor_run
-			DESTINATION ${C_BIN}
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+    if (HAVE_EXT_GLOBUS)
+        install ( FILES condor_glidein DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+    endif()
 
-	install ( FILES condor_configure condor_updates_stats condor_init
-			DESTINATION ${C_SBIN}
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+    install ( FILES condor_run DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+    install ( FILES condor_updates_stats condor_init DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+    install ( FILES condor_bird_strike DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
-	install ( FILES condor_configure DESTINATION ${C_SBIN} RENAME condor_install PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-	install ( CODE "EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E create_symlink ./sbin/condor_install \${CMAKE_INSTALL_PREFIX}/condor_install)" )
-	install ( CODE "EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E create_symlink ./sbin/condor_configure \${CMAKE_INSTALL_PREFIX}/condor_configure)" )
-	
+    if (WANT_FULL_DEPLOYMENT)
+        install ( FILES condor_configure DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+        install ( FILES condor_configure DESTINATION ${C_SBIN} RENAME condor_install PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+        install ( CODE "EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E create_symlink ./sbin/condor_install \${CMAKE_INSTALL_PREFIX}/condor_install)" )
+        install ( CODE "EXECUTE_PROCESS(COMMAND ${CMAKE_COMMAND} -E create_symlink ./sbin/condor_configure \${CMAKE_INSTALL_PREFIX}/condor_configure)" )
+    endif(WANT_FULL_DEPLOYMENT)
 
-	install ( FILES condor_ssh sshd.sh
-			DESTINATION ${C_LIBEXEC}
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( FILES condor_ssh sshd.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 	install ( FILES Condor.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 

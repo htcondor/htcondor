@@ -640,9 +640,9 @@ REMOTE_CONDOR_rename( char *  from , char *  to)
         syscall_sock->encode();
         result = ( syscall_sock->code(CurrentSysCall) );
 		ASSERT( result );
-        result = ( syscall_sock->code(to) );
-		ASSERT( result );
         result = ( syscall_sock->code(from) );
+		ASSERT( result );
+        result = ( syscall_sock->code(to) );
 		ASSERT( result );
         result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -1059,6 +1059,12 @@ int REMOTE_CONDOR_pwrite( int fd , void* buf ,size_t len, size_t offset )
 	return -1;
 }
 
+int REMOTE_CONDOR_sread( int fd, void *data, size_t length, size_t offset,
+	size_t stride_length, size_t stride_skip )
+{
+	return -1;
+}
+
 int REMOTE_CONDOR_swrite( int fd , void* buf ,size_t len, size_t offset,
 	size_t stride_length, size_t stride_skip )
 {
@@ -1177,6 +1183,52 @@ REMOTE_CONDOR_pwrite(int fd , void* buf ,size_t len, size_t offset)
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
+	result = ( syscall_sock->end_of_message() );
+	ON_ERROR_RETURN( result );
+	return rval;
+}
+
+int
+REMOTE_CONDOR_sread(int fd , void* buf , size_t len, size_t offset,
+	size_t stride_length, size_t stride_skip)
+{
+	int rval = -1, result = 0;
+	condor_errno_t terrno;
+
+	dprintf ( D_SYSCALLS, "Doing CONDOR_sread\n" );
+
+	CurrentSysCall = CONDOR_sread;
+
+	syscall_sock->encode();
+	result = ( syscall_sock->code(CurrentSysCall) );
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->code(fd) );
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->code(len) );
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->code(offset) );
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->code(stride_length) );
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->code(stride_skip) );
+	ON_ERROR_RETURN( result );
+	result = ( syscall_sock->end_of_message() );
+	ON_ERROR_RETURN( result );
+
+	syscall_sock->decode();
+	result = ( syscall_sock->code(rval) );
+	ON_ERROR_RETURN( result );
+	if( rval < 0 ) {
+		result = ( syscall_sock->code(terrno) );
+		ON_ERROR_RETURN( result );
+		result = ( syscall_sock->end_of_message() );
+		ON_ERROR_RETURN( result );
+		errno = terrno;
+		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		return rval;
+	}
+	result = ( syscall_sock->code_bytes_bool(buf, rval) );
+	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
 	return rval;

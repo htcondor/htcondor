@@ -32,14 +32,16 @@ if (BUILD_TESTS AND NOT WINDOWS)
 	dprint("CONDOR_TESTS=${CONDOR_TESTS}")
 endif()
 
-install ( FILES condor_includes/condor_ast.h
-		  condor_includes/condor_astbase.h
-		  condor_includes/condor_attrlist.h
-		  condor_includes/condor_classad.h
-		  condor_includes/condor_constants.h
-		  condor_includes/condor_exprtype.h
-		  condor_includes/condor_header_features.h
-		  condor_includes/condor_parser.h
-		  condor_includes/file_lock.h
-		  condor_utils/iso_dates.h
-		DESTINATION ${C_INCLUDE})
+if (WANT_FULL_DEPLOYMENT)
+	install ( FILES condor_includes/condor_ast.h
+			  condor_includes/condor_astbase.h
+			  condor_includes/condor_attrlist.h
+			  condor_includes/condor_classad.h
+			  condor_includes/condor_constants.h
+			  condor_includes/condor_exprtype.h
+			  condor_includes/condor_header_features.h
+			  condor_includes/condor_parser.h
+			  condor_includes/file_lock.h
+			  condor_utils/iso_dates.h
+			DESTINATION ${C_INCLUDE})
+endif(WANT_FULL_DEPLOYMENT)

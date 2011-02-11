@@ -1052,6 +1052,9 @@ class DaemonCore : public Service
                mask if a given bit is set ("HAS_DCJOBOPT_...")
 		@param fd_inherit_list An array of fds which you want the child to
 		       inherit. The last element must be 0.
+        ...
+        @param err_return_msg Returned with error message pertaining to
+               failure inside the method.  Ignored if NULL (default).
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
     int Create_Process (
@@ -1071,7 +1074,8 @@ class DaemonCore : public Service
         int           job_opt_mask         = 0,
         size_t        *core_hard_limit     = NULL,
 		int			  *affinity_mask	   = NULL,
-		char const    *daemon_sock         = NULL
+		char const    *daemon_sock         = NULL,
+        MyString      *err_return_msg      = NULL
         );
 
     //@}
@@ -1391,9 +1395,19 @@ class DaemonCore : public Service
 	void WantSendChildAlive( bool send_alive )
 		{ m_want_send_child_alive = send_alive; }
 	
-	void Wake_up_select();
+		/**
+			Returns true if a wake signal was sent to the master's select.
+			Does nothing and returns false if called by the master or by a thread 
+			that is not a condor_thread. 
+		*/
+	bool Wake_up_select();
 
-	void Do_Wake_up_select();
+		/**
+			Wakes up the main condor select, does not check to see if the caller
+			is a condor_thread or the main thread. returns true if the main thread
+			will wake, or false if unable to send the wake signal.
+		*/
+	bool Do_Wake_up_select();
 
 		/** Registers a socket for read and then calls HandleReq to
 			process a command on the socket once one becomes
@@ -1730,7 +1744,7 @@ class DaemonCore : public Service
 #else
 	ReliSock async_pipe[2];  // 0 for reading, 1 for writing
 #endif
-	volatile bool async_pipe_empty;
+	volatile bool async_pipe_signal;
 
 	// Data memebers for queuing up waitpid() events
 	struct WaitpidEntry_s

@@ -28,6 +28,10 @@
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
 
+#ifndef COUNTOF // aka count_of condor_countof
+#define COUNTOF(a) (sizeof(a)/sizeof(((a)[0])))
+#endif
+
 	/* When using pthreads, pthread_sigmask() in place of sigprocmask(),
 	 * except in the ckpt or remote syscall code (which doesn't deal
 	 * with pthreads anyhow).

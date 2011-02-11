@@ -22,6 +22,10 @@
             <RadioButton Value="Y" X="0" Y="12" Width="220" Height="12" Text="Restart the job on a different machine."/>
           </RadioButtonGroup>
           <Property Id="VACATEJOBS" Value="N" />
+		  <Condition Action="disable">RUNJOBS="N"</Condition>
+          <Condition Action="disable">RUNJOBS="A"</Condition>
+          <Condition Action="enable">RUNJOBS="I"</Condition>
+          <Condition Action="enable">RUNJOBS="C"</Condition>
         </Control>
         <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
           <Publish Event="NewDialog" Value="CondorPoolCfgDlg">1</Publish>

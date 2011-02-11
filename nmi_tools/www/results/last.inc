@@ -98,5 +98,42 @@ function getLastGoodBuild($id, $debug) {
   return (false);
 } 
 
+function get_queue_for_nmi_platform($platform, $type) {
+  // For the purposes of this script crosstype => type
+  if($type == "crosstest") $type = "test";
+
+  $platform_without_prefix = preg_replace("/nmi:/", "", $platform);
+  $output = `/usr/local/condor/bin/condor_q -global -const 'nmi_target_platform=="$platform_without_prefix" && nmi_run_type=="$type"' -format '%-2s ' 'ifThenElse(JobStatus==0,"U",ifThenElse(JobStatus==1,"I",ifThenElse(JobStatus==2,"R",ifThenElse(JobStatus==3,"X",ifThenElse(JobStatus==4,"C",ifThenElse(JobStatus==5,"H",ifThenElse(JobStatus==6,"E",string(JobStatus))))))))' -format "%6d " ClusterId -format " %-14s " Owner -format '%-11s\n' 'formatTime(QDate,"%0m/%d %H:%M")'`;
+  $queue_contents = split("\n", $output);
+  $depth = sizeof($queue_contents) - 1;
+  $output = "<table><tr><th>State</th><th>ID</th><th>Owner</th><th>Submitted</th></tr>\n";
+  $has_running_job = 0;
+  foreach ($queue_contents as $line) {
+    $items = preg_split("/\s+/", $line);
+    if(sizeof($items) == 5) {
+      $style = "background-color:#FFFFAA; text-decoration:none;";
+      if($items[0] == "R") {
+	$style = "background-color:#0097C5;";
+	$has_running_job++;
+      }
+      elseif($items[0] == "H") {
+	$style = "background-color:#A1A1A1;";
+      }
+      $output .= "<tr style=\"$style\"><td style=\"text-align:center\">$items[0]</td><td>$items[1]</td><td>$items[2]</td><td>$items[3]&nbsp;$items[4]</td></tr>\n";
+    }
+  }
+  $output .= "</table>\n";
+
+  $note = "";
+  if($has_running_job == 0) {
+    $note = "*";
+  }
+
+  $ret = Array();
+  $ret[0] = $depth;
+  $ret[1] = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Q Depth: $depth$note<span>$output</span></a></span>";
+  return $ret;
+}
+
 ?>
 

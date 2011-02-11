@@ -74,7 +74,13 @@ public:
 	//      to try again.
 	enum X509UpdateStatus { XUS_Error = 0, XUS_Okay = 1, XUS_Declined = 2 };
 	X509UpdateStatus updateX509Proxy(const char * filename, char const *sec_session_id);
-	X509UpdateStatus delegateX509Proxy(const char * filename, char const *sec_session_id);
+		// expiration_time: 0 if none; o.w. time of delegated proxy expiration
+
+		// result_expiration_time: set to actual expiration time of
+		//                         remote proxy (could be shorter than
+		//                         requested if source proxy is not valid
+		//                         for long enough)
+	X509UpdateStatus delegateX509Proxy(const char * filename, time_t expiration_time,char const *sec_session_id, time_t *result_expiration_time);
 
 	bool createJobOwnerSecSession(int timeout,char const *job_claim_id,char const *starter_sec_session,char const *session_info,MyString &owner_claim_id,MyString &error_msg,MyString &starter_version,MyString &starter_addr);
 

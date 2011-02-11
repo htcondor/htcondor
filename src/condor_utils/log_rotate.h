@@ -56,12 +56,3 @@ int isLogFilename( char *filename);
   *current base name according to iso time ending 
  */
 char *findOldest(char *dirName, int *count);
-
-/** create an ISO timestamp string */
-static char *createTimestampString();
-
-
-
-
-
-

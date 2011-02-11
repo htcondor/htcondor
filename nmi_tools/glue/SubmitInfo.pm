@@ -45,7 +45,6 @@ our %build_and_test_sets = (
 	'official_ports' => [
 		'ia64_rhas_3',
 		'ppc64_sles_9',
-		'ppc_aix_5.2-pl5',
 		'sun4u_sol_5.9', 
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
@@ -66,8 +65,11 @@ our %build_and_test_sets = (
 		'x86_suse_10.2',
 		'x86_suse_10.0',
 		'x86_64_macos_10.6',
+		'x86_64_opensuse_11.3-updated',
 		'ppc_macos_10.4',
+		'ppc_aix_5.2-pl5',
 		'sun4u_sol_5.10',
+		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
 		'x86_64_macos_10.5-updated',
 		# 'x86_64_fedora_12-updated',  <-- no longer supported in 11/2010, and nmi fails why are we doing this?
@@ -997,11 +999,11 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform Solais 11 on x86_64
+	# Platform Solaris 11 on x86_64
 	# Building openssl is problematic on this platform.  There is
-        # some confusion betwen 64-bit and 32-bit, which causes linkage
-    	# problems.  Since ssh_to_job depends on openssl's base64 functions,
-    	# that is also disabled.
+	# some confusion betwen 64-bit and 32-bit, which causes linkage
+	# problems.  Since ssh_to_job depends on openssl's base64 functions,
+	# that is also disabled.
 	##########################################################################
 	'x86_64_sol_5.11'	=> {
 		'build' => {
@@ -1009,7 +1011,33 @@ our %submit_info = (
 				'-DWITH_OPENSSL:BOOL=OFF' => undef,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
-},
+			},
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Solaris 10 on x86_64
+	# Building openssl is problematic on this platform.  There is
+	# some confusion betwen 64-bit and 32-bit, which causes linkage
+	# problems.  Since ssh_to_job depends on openssl's base64 functions,
+	# that is also disabled.
+	##########################################################################
+	'x86_64_sol_5.10'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITH_OPENSSL:BOOL=OFF' => undef,
+				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
+			},
 			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
 							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
 			'xtests'	=> undef,
@@ -1516,8 +1544,7 @@ sub statistics
 
 sub dump_info
 {
-	my ($f) = @_;
-	my $p;
+	my ($f) = shift(@_);
 	my ($bref, $tref);
 
 	if (!defined($f)) {
@@ -1528,7 +1555,22 @@ sub dump_info
 	print $f "Dump of submit_info information\n";
 	print $f "-------------------------------\n";
 
-	foreach $p (sort keys %submit_info) {
+	foreach my $p (sort keys %submit_info) {
+		my $found = 0;
+		foreach my $pname ( @_ ) {
+			if ( $pname eq $p ) {
+				$found++;
+				last;
+			}
+			elsif ( $pname =~ /\/(.*)\// ) {
+				my $re = "$1";
+				if ( $p =~ /$re/ ) {
+					$found++;
+					last;
+				}
+			}
+		}
+		next if ( ! $found );
 		print $f "Platform: $p\n";
 
 		print $f "Build Info:\n";
@@ -1619,13 +1661,54 @@ sub args_to_array
 
 sub main
 {
+	my @platforms;
+	my $usage = "usage: $0 [--help|-h] [--list|-l] [-a|--all] [(<platform>|/<regex>/) ...]";
+	foreach my $arg ( @ARGV ) {
+		if (  ( $arg eq "-l" ) or ( $arg eq "--list" ) ) {
+			foreach my $key ( sort keys(%submit_info) ) {
+				print "$key\n";
+			}
+			exit( 0 );
+		}
+		elsif (  ( $arg eq "-a" ) or ( $arg eq "--all" ) ) {
+			push( @platforms, "/.*/" );
+		}
+		elsif (  ( $arg eq "-h" ) or ( $arg eq "--help" ) ) {
+			print "$usage\n";
+			print "  --help|-h:  This help\n";
+			print "  --list|-l:  List available platforms\n";
+			print "  --all|-a:   Dump info on all available platforms\n";
+			print "  <platform>: Dump info named platform\n";
+			print "  /<regex>/:  Dump info on all platforms matching <regex>\n";
+			exit(0);
+		}
+		elsif ( $arg =~ /_/ or $arg =~ /^\// ) {
+			push( @platforms, $arg );
+		}
+		elsif ( $arg =~ /^-/ ) {
+			print "Unknown option: '$arg'\n";
+			print "$usage\n";
+			exit( 1 );
+		}
+		else {
+			print "'$arg' does not appear to be a valid platform name or regex\n";
+			print "$usage\n";
+			exit( 1 );
+		}
+	}
+	if ( ! scalar(@platforms) ) {
+			print "$usage\n";
+			exit( 1 );
+	}
+	$#ARGV = -1;
+
 	if (!typecheck()) {
 		die "\tTypecheck failed!";
 	} else {
 		print "\tTypecheck passed.\n";
 	}
 	statistics();
-	dump_info();
+	dump_info( undef, @platforms );
 }
 
 ###############################################################################

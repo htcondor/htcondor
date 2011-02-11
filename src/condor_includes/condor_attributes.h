@@ -67,6 +67,7 @@ extern const char * const  ATTR_CLAIM_ID;
 extern const char * const  ATTR_CLAIM_IDS;
 extern const char * const  ATTR_PUBLIC_CLAIM_ID;
 extern const char * const  ATTR_PUBLIC_CLAIM_IDS;
+extern const char * const  ATTR_CHILD_REMOVE_CONSTRAINT;
 extern const char * const  ATTR_CLAIM_STATE;
 extern const char * const  ATTR_CLAIM_TYPE;
 extern const char * const  ATTR_CLIENT_MACHINE;
@@ -403,6 +404,7 @@ extern const char * const  ATTR_NUM_USERS;
 extern const char * const  ATTR_OFFLINE;
 extern const char * const  ATTR_OPSYS;
 extern const char * const  ATTR_ORIG_MAX_HOSTS;
+extern const char * const  ATTR_OTHER_JOB_REMOVE_REQUIREMENTS;
 extern const char * const  ATTR_OWNER;
 extern const char * const  ATTR_PARALLEL_SCHEDULING_GROUP;
 extern const char * const  ATTR_PARALLEL_SCRIPT_SHADOW;
@@ -551,6 +553,7 @@ extern const char * const  ATTR_CLASSAD_LIFETIME;
 extern const char * const  ATTR_UPDATE_PRIO;
 extern const char * const  ATTR_UPDATE_SEQUENCE_NUMBER;
 extern const char * const  ATTR_USE_GRID_SHELL;
+extern const char * const  ATTR_USE_PARROT;
 extern const char * const  ATTR_USER;
 extern const char * const  ATTR_VACATE;
 extern const char * const  ATTR_VACATE_TYPE;
@@ -793,12 +796,28 @@ extern const char * const ATTR_SOCK;
 extern const char * const ATTR_JOB_AD_INFORMATION_ATTRS;
 
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_TIME;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_END;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_PERIOD;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE1;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE2;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE3;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE4;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_TOTAL_SLOTS;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_TRIMMED_SLOTS;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_CANDIDATE_SLOTS;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SLOT_SHARE_ITER;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_SCHEDULERS;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_IDLE_JOBS;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_JOBS_CONSIDERED;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCHES;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT;
 extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE;
+extern const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED;
 
 extern const char * const ATTR_JOB_MACHINE_ATTRS;
 extern const char * const ATTR_MACHINE_ATTR_PREFIX;
@@ -809,6 +828,7 @@ extern const char * const ATTR_COMMITTED_SLOT_TIME;
 
 extern const char * const ATTR_HASH_NAME;
 extern const char * const ATTR_AUTHENTICATED_IDENTITY;
+extern const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

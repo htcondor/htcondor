@@ -38,6 +38,9 @@ int isInitialized = 0;
 
 int numLogs = 0;
 
+/** create an ISO timestamp string */
+static char *createTimestampString();
+
 #ifndef WIN32
 int scandirectory(const char *dir, struct dirent ***namelist,
             int (*select)(const struct dirent *),
@@ -262,7 +265,7 @@ char *findOldest(char *dirName, int *count) {
 
 #endif
 
-static char *createTimestampString() {
+char *createTimestampString() {
 	time_t clock_now;
 	struct tm *tm;
 	static char timebuf[80];
