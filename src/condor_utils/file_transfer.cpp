@@ -2772,6 +2772,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			} else {
 				dprintf( D_ALWAYS, "DoUpload: invalid subcommand %i, skipping %s.",
 						file_subcommand, filename);
+				bytes = 0;
+				rc = 0;
 			}
 		} else if ( file_command == 4 ) {
 			if ( (PeerDoesGoAhead || s->end_of_message()) ) {
@@ -2805,6 +2807,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			bytes = fullname.Length();
 
 		} else if( file_command == 6 ) { // mkdir
+			// the only data sent is the file_mode.
+			bytes = sizeof( filelist_it->file_mode );
+
 			if( !s->put( filelist_it->file_mode ) ) {
 				rc = -1;
 				dprintf(D_ALWAYS,"DoUpload: failed to send mkdir mode\n");
