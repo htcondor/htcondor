@@ -655,6 +655,26 @@ counter is useful, since Condor-G will always place a job on hold when it
 gives up on some error condition.  Note that if the user places the job
 on hold using the \Condor{hold} command, this attribute is not incremented.
 
+%%% ClassAd attribute: OtherJobRemoveRequirements
+\label{attribute-OtherJobRemoveRequirements}
+\index{ClassAd job attribute!OtherJobRemoveRequirements}
+\index{OtherJobRemoveRequirements!job ClassAd attribute}
+\item[\AdAttr{OtherJobRemoveRequirements}:]
+A string that defines a list of jobs.
+When the job with this attribute defined is removed,
+all other jobs defined by the list are also removed.
+The string is an expression that defines a constraint equivalent to
+the one implied by the command 
+\begin{verbatim}
+  condor_rm -constraint <constraint>
+\end{verbatim}
+This attribute is used for jobs managed with \Condor{dagman} to ensure
+that node jobs of the DAG are removed when the \Condor{dagman} job
+itself is removed.  Note that the list of jobs defined by this attribute
+must not form a cyclic removal of jobs,
+or the \Condor{schedd} will go into an infinite loop 
+when any of the jobs is removed.
+
 %%% ClassAd attribute: Owner
 \index{ClassAd job attribute!Owner}
 \index{Owner!job ClassAd attribute}

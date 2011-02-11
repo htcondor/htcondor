@@ -148,11 +148,12 @@ now removes node jobs of the DAG, rather than leaving them as orphans.
 \begin{itemize}
 
 % gittrac #1910
-\item If a cycle exists in the OtherJobRemoveRequirements expressions (see
-~\pageref{man-condor-submit-OtherJobRemoveRequirements}) of a set of jobs
-(for example, if two jobs have OtherJobRemoveRequirements expressions that
-attempt to remove the other job) removing any of the jobs will cause the
+\item If a cycle exists in the set of jobs to be removed defined by 
+the job ClassAd attribute \Attr{OtherJobRemoveRequirements},
+removing any of the jobs in the set will cause the
 \Condor{schedd} to go into an infinite loop.
+\Attr{OtherJobRemoveRequirements} is defined on
+page ~\pageref{attribute-OtherJobRemoveRequirements}.
 
 \end{itemize}
 

@@ -2714,23 +2714,6 @@ automatically defined for \SubmitCmd{submit\_event\_notes},
 causing the logged submit event to identify the DAG node job submitted. 
 
 %%%%%%%%%%%%%%%%%%%
-%% OtherJobRemoveRequirements
-%%%%%%%%%%%%%%%%%%%
-
-\label{man-condor-submit-OtherJobRemoveRequirements}
-\index{OtherJobRemoveRequirements}
-\item[+OtherJobRemoveRequirements = $<$constraint$>$]
-A string that is used as the constraint for removing other jobs when
-the job whose classad contains this expression is removed.  (Having
-this expression in a job's classad is equivalent to running the
-command "\Condor{rm} -constraint $<$constraint$>$" when that job is
-removed.)  This attribute is used in \Condor{dagman} jobs to ensure
-that node jobs of the DAG are removed when the \Condor{dagman} job
-itself is removed.  Note: the OtherJobRemoveRequirements expressions
-among any set of jobs must not form a cycle, or the \Condor{schedd}
-will go into an infinite loop when any of the jobs is removed.
-
-%%%%%%%%%%%%%%%%%%%
 % +
 % This should always be at the end of the list
 %%%%%%%%%%%%%%%%%%%
