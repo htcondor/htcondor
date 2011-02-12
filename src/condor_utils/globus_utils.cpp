@@ -87,14 +87,13 @@ set_error_string( const char *message )
  * Returns zero if the modules were successfully activated. Returns -1 if
  * something went wrong.
  */
+
+/* This function is only used when HAVE_EXT_GLOBUS is defined */
+#ifdef HAVE_EXT_GLOBUS
 static
 int
 activate_globus_gsi( void )
 {
-#if !defined(HAVE_EXT_GLOBUS)
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
-	return -1;
-#else
 	static int globus_gsi_activated = 0;
 
 	if ( globus_gsi_activated != 0 ) {
@@ -128,8 +127,8 @@ activate_globus_gsi( void )
 
 	globus_gsi_activated = 1;
 	return 0;
-#endif
 }
+#endif
 
 /* Return the path to the X509 proxy file as determined by GSI/SSL.
  * Returns NULL if the filename can't be determined. Otherwise, the

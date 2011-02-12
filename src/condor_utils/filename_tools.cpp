@@ -134,10 +134,10 @@ canonicalize_dir_delimiters( char *path ) {
 char *
 alternate_exec_pathname( const char *path ) 
 {
-	int len;
 	char *buf = NULL;
 
 #ifdef WIN32
+	int len;
 	if ( path && path[0] ) 
 	{
 		len = strlen(path) + 20;

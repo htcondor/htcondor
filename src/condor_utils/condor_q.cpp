@@ -73,9 +73,9 @@ CondorQ ()
 	query.setNumIntegerCats (CQ_INT_THRESHOLD);
 	query.setNumStringCats (CQ_STR_THRESHOLD);
 	query.setNumFloatCats (CQ_FLT_THRESHOLD);
-	query.setIntegerKwList ((char **) intKeywords);
-	query.setStringKwList ((char **) strKeywords);
-	query.setFloatKwList ((char **) fltKeywords);
+	query.setIntegerKwList (const_cast<char **>(intKeywords));
+	query.setStringKwList (const_cast<char **>(strKeywords));
+	query.setFloatKwList (const_cast<char **>(fltKeywords));
 
 	clusterprocarraysize = 128;
 	clusterarray = (int *) malloc(clusterprocarraysize * sizeof(int));

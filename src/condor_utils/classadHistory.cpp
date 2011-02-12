@@ -470,7 +470,7 @@ static void RotateHistory(void)
 // --------------------------------------------------------------------------
 static int findHistoryOffset(FILE *LogFile)
 {
-    int offset;
+    int offset=0;
     int file_size;
     const int JUMP = 200;
 

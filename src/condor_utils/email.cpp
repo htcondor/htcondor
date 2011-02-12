@@ -425,7 +425,7 @@ email_close(FILE *mailer)
 	priv = set_condor_priv();
 
 	customSig = NULL;
-	if (customSig = param("EMAIL_SIGNATURE")) {
+	if ((customSig = param("EMAIL_SIGNATURE")) != NULL) {
 		fprintf( mailer, "\n\n");
 		fprintf( mailer, customSig);
 		fprintf( mailer, "\n");

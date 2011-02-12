@@ -86,7 +86,7 @@ update (ClassAd *ad)
 void TrackTotals::
 displayTotals (FILE *file, int keyLength)
 {
-	ClassTotal *ct;
+	ClassTotal *ct=0;
 	MyString	key;
 	int k;
 

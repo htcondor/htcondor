@@ -131,7 +131,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 {
 	Formatter *fmt;
 	char 	*attr, *alt;
-	ExprTree *tree, *rhs;
+	ExprTree *tree;
 	EvalResult result;
 	MyString  retval("");
 	int		intValue;

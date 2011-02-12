@@ -1870,7 +1870,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 		}
 	}
 
-	bool result;
+	bool result=false;
 	char *string;
 	char *endptr;
 	bool valid = true;

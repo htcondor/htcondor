@@ -122,7 +122,7 @@ multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
 					   size_t n_bytes )
 {
 	char		buf[65536];		/* 64K */
-	ssize_t		bytes_written;
+	ssize_t		bytes_written=0;
 	ssize_t		bytes_read;
 	ssize_t		bytes_moved = 0;
 	size_t		bytes_to_go = n_bytes;
