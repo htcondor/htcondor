@@ -44,7 +44,7 @@ extern Matchmaker matchMaker;
 
 extern int main_shutdown_graceful();
 
-void dc_reconfig(bool is_full);
+void dc_reconfig();
 
 
 using namespace com::redhat::grid;
@@ -229,7 +229,7 @@ NegotiatorObject::SetRawConfig(std::string &name, std::string &value, std::strin
 Manageable::status_t
 NegotiatorObject::Reconfig(std::string &/*text*/)
 {
-	dc_reconfig(false);
+	dc_reconfig();
 
 	return STATUS_OK;
 }

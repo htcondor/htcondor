@@ -77,10 +77,10 @@ if (NOT WINDOWS)
 
 	# NOTE: Still need to update linkage deps
 	file( GLOB SchedSrcs JobUtils.* SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* JobServerObject.* MgmtScheddPlugin* Utils.* PoolUtils.*)
-	condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "" ON)
+    condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
 
 	file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* CollectorObject.* SlotObject.* PoolUtils.*)
-	condor_plugin( MgmtCollectorPlugin-plugin "${CollectorSrcs};Grid.cpp;Collector.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+	condor_plugin( MgmtCollectorPlugin-plugin "${CollectorSrcs};Grid.cpp;Collector.cpp;Slot.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
 
 	file( GLOB NegotiatorSrcs MgmtNegotiatorPlugin.* NegotiatorObject.* Utils.* PoolUtils.*)
 	condor_plugin( MgmtNegotiatorPlugin-plugin "${NegotiatorSrcs};Negotiator.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
