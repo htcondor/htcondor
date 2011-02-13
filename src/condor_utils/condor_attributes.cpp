@@ -670,6 +670,7 @@ const char * const ATTR_ENCRYPT_INPUT_FILES		 = "EncryptInputFiles";
 const char * const ATTR_ENCRYPT_OUTPUT_FILES	 = "EncryptOutputFiles";
 const char * const ATTR_DONT_ENCRYPT_INPUT_FILES = "DontEncryptInputFiles";
 const char * const ATTR_DONT_ENCRYPT_OUTPUT_FILES= "DontEncryptOutputFiles";
+const char * const ATTR_OUTPUT_DESTINATION       = "OutputDestination";
 const char * const ATTR_TRANSFER_SOCKET			 = "TransferSocket";
 const char * const ATTR_SERVER_TIME				 = "ServerTime";
 const char * const ATTR_SHADOW_BIRTHDATE		 = "ShadowBday";

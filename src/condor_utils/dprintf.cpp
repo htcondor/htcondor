@@ -144,8 +144,6 @@ static HANDLE debug_win32_mutex = NULL;
 #endif
 static int use_kernel_mutex = -1;
 
-extern char *_condor_DebugFlagNames[];
-
 /*
 ** Note: setting this to true will avoid blocking signal handlers from running
 ** while we are printing log messages.  It's probably a good idea to block

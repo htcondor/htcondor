@@ -178,6 +178,7 @@ createJobSpoolDirectory(ClassAd const *job_ad,priv_state desired_priv_state,char
 	}
 #endif
 
+	return true;  // All happy paths lead here
 }
 
 bool

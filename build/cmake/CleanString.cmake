@@ -18,6 +18,7 @@
 ##**************************************************************
 
 MACRO( CLEAN_STRING _OUT _IN )
-    string( REGEX REPLACE "[: /$+]+" "_" ${_OUT} "${_IN}" )
-    string( REGEX REPLACE "_+$" "" ${_OUT} "${_OUT}" )
+    string( REGEX REPLACE "[: /$+#]+" "_" _TMP "${_IN}" )
+    string( REGEX REPLACE "_+$" "" _TMP "${_TMP}" )
+    set( ${_OUT} "${_TMP}" )
 ENDMACRO( CLEAN_STRING )

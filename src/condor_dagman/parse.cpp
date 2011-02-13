@@ -1189,7 +1189,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 			}
 		} while(stillInQuotes);
 
-		*str++;
+		str++;
 
 			// Check for illegal variable name.
 		MyString tmpName(varName);

@@ -289,6 +289,8 @@ const char	*EncryptOutputFiles = "encrypt_output_files";
 const char	*DontEncryptInputFiles = "dont_encrypt_input_files";
 const char	*DontEncryptOutputFiles = "dont_encrypt_output_files";
 
+const char	*OutputDestination = "output_destination";
+
 const char	*StreamInput = "stream_input";
 const char	*StreamOutput = "stream_output";
 const char	*StreamError = "stream_error";
@@ -417,6 +419,7 @@ void	SetEmailAttributes();
 void 	SetCronTab();
 void	SetRemoteInitialDir();
 void	SetExitRequirements();
+void	SetOutputDestination();
 void 	SetArguments();
 void 	SetJobDeferral();
 void 	SetEnvironment();
@@ -3757,6 +3760,18 @@ SetExitRequirements()
 }
 	
 void
+SetOutputDestination()
+{
+	char *od = condor_param( OutputDestination, ATTR_OUTPUT_DESTINATION );
+	MyString buffer;
+	if (od) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_OUTPUT_DESTINATION, od);
+		InsertJobExpr (buffer);
+		free(od);
+	}
+}
+
+void
 SetArguments()
 {
 	ArgList arglist;
@@ -4678,7 +4693,7 @@ void
 SetCoreSize()
 {
 	char *size = condor_param( CoreSize, "core_size" );
-	long coresize;
+	long coresize = 0;
 	MyString buffer;
 
 	if (size == NULL) {
@@ -5814,6 +5829,7 @@ queue(int num)
 		SetEmailAttributes();
 		SetRemoteInitialDir();
 		SetExitRequirements();
+		SetOutputDestination();
 
         // really a command, needs to happen before any calls to check_open
 		SetJobDisableFileChecks();
