@@ -4485,6 +4485,9 @@ void
 Matchmaker::updateCollector() {
 	dprintf(D_FULLDEBUG, "enter Matchmaker::updateCollector\n");
 
+		// in case our address changes, re-initialize public ad every time
+	init_public_ad();
+
 	if( publicAd ) {
 		publishNegotiationCycleStats( publicAd );
 	}
