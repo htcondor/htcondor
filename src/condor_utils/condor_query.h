@@ -45,7 +45,7 @@ extern const char *GridManagerStringKeywords [];
 extern const char *GridManagerIntegerKeywords[];
 extern const char *GridManagerFloatKeywords	 [];
 
-char *getStrQueryResult(QueryResult);
+const char *getStrQueryResult(QueryResult);
 
 enum ScheddStringCategory
 {

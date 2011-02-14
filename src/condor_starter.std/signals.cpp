@@ -31,7 +31,7 @@
 
 
 
- static NAME_VALUE SigNameArray[] = {
+static NAME_VALUE SigNameArray[] = {
 	{ SIGABRT, "SIGABRT" },
 	{ SIGALRM, "SIGALRM" },
 	{ SIGFPE, "SIGFPE" },
@@ -75,7 +75,7 @@ EventHandler::display()
 }
 
 void
-display_sigset( char *msg, sigset_t *mask )
+display_sigset( const char *msg, sigset_t *mask )
 {
 	int					signo;
 	NameTableIterator	next_sig( SigNames );

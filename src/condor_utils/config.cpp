@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -619,10 +619,15 @@ string_to_long( const char *s, long *valuep )
 ** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
 */
 char *
-expand_macro( const char *value, BUCKET **table, int table_size, char *self, bool use_default_param_table )
+expand_macro( const char *value,
+			  BUCKET **table,
+			  int table_size,
+			  char *self,
+			  bool use_default_param_table )
 {
 	char *tmp = strdup( value );
-	char *left, *name, *tvalue, *right;
+	char *left, *name, *right;
+	const char *tvalue;
 	char *rval;
 
 	bool all_done = false;

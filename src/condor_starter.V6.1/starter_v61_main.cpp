@@ -39,7 +39,7 @@
 #include "condor_getcwd.h"
 
 
-extern "C" int exception_cleanup(int,int,char*);	/* Our function called by EXCEPT */
+extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
 
 static CStarter StarterObj;
@@ -711,7 +711,7 @@ main_shutdown_graceful()
 }
 
 extern "C" 
-int exception_cleanup(int,int,char*errmsg)
+int exception_cleanup(int,int,const char*errmsg)
 {
 	_EXCEPT_Cleanup = NULL;
 	Starter->jic->notifyStarterError(errmsg,true,0,0);

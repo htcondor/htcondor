@@ -222,7 +222,7 @@ my_popen(ArgList &args, const char *mode, int want_stderr)
 }
 
 extern "C" FILE *
-my_popenv(char *const args[], const char *mode, int want_stderr)
+my_popenv(const char *const args[], const char *mode, int want_stderr)
 {
 	// build the argument list
 	ArgList arglist;
@@ -276,7 +276,7 @@ static int	READ_END = 0;
 static int	WRITE_END = 1;
 
 static FILE *
-my_popenv_impl( char *const args[],
+my_popenv_impl( const char *const args[],
                 const char * mode,
                 int want_stderr,
                 uid_t privsep_uid )
@@ -384,7 +384,7 @@ my_popenv_impl( char *const args[],
 			args = al.GetStringArray();			
 		}
 
-		execvp(cmd.Value(), args);
+		execvp(cmd.Value(), const_cast<char *const*>(args) );
 		_exit( ENOEXEC );		/* This isn't safe ... */
 	}
 
@@ -404,7 +404,7 @@ my_popenv_impl( char *const args[],
 		privsep_exec_set_uid(fp, privsep_uid);
 		privsep_exec_set_path(fp, args[0]);
 		ArgList al;
-		for (char* const* arg = args; *arg != NULL; arg++) {
+		for (const char* const* arg = args; *arg != NULL; arg++) {
 			al.AppendArg(*arg);
 		}
 		privsep_exec_set_args(fp, al);
@@ -434,7 +434,7 @@ my_popenv_impl( char *const args[],
 }
 
 extern "C" FILE *
-my_popenv( char *const args[],
+my_popenv( const char *const args[],
            const char * mode,
            int want_stderr )
 {
@@ -492,7 +492,7 @@ my_pclose(FILE *fp)
 #endif // !WIN32
 
 extern "C" int
-my_systemv(char *const args[])
+my_systemv(const char *const args[])
 {
 	FILE* fp = my_popenv(args, "w", FALSE);
 	return (fp != NULL) ? my_pclose(fp) : -1;
@@ -569,7 +569,7 @@ my_spawnl( const char* cmd, ... )
     >0 == Return status of child
 */
 extern "C" int
-my_spawnv( const char* cmd, char *const argv[] )
+my_spawnv( const char* cmd, const char *const argv[] )
 {
 	int					status;
 	uid_t euid;
@@ -607,7 +607,7 @@ my_spawnv( const char* cmd, char *const argv[] )
 		setuid( euid );
 
 			/* Now it's safe to exec whatever we were given */
-		execv( cmd, argv );
+		execv( cmd, const_cast<char *const*>(argv) );
 		_exit( ENOEXEC );		/* This isn't safe ... */
 	}
 

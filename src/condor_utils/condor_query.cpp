@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -600,7 +600,8 @@ CondorQuery::addExtraAttribute(const char *attr) {
 }
 
 
-char *getStrQueryResult(QueryResult q)
+const char *
+getStrQueryResult(QueryResult q)
 {
 	switch (q)
 	{

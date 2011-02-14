@@ -43,7 +43,7 @@ char *time_to_iso8601(
 {
 	char  buffer[128];
 	char  *iso_representation;
-	char  *utc_note;
+	const char  *utc_note;
 	int   year=0, month=0, day=0;
 	int   hour=0, minute=0, second=0;
 

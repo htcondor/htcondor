@@ -932,7 +932,7 @@ ReadUserLogStateAccess::getFileOffset(
 		return false;
 	}
 
-	if ( my_pos > ULONG_MAX ) {
+	if ( my_pos > LONG_MAX ) {
 		return false;
 	}
 	pos = (unsigned long) my_pos;
