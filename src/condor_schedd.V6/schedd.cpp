@@ -526,10 +526,16 @@ Scheduler::~Scheduler()
 		CronJobMgr = NULL;
 	}
 
-		// we used to cancel and delete the shadowCommand*socks here,
-		// but now that we're calling Cancel_And_Close_All_Sockets(),
-		// they're already getting cleaned up, so if we do it again,
-		// we'll seg fault.
+	if( shadowCommandrsock ) {
+		daemonCore->Cancel_Socket( shadowCommandrsock );
+		delete shadowCommandrsock;
+		shadowCommandrsock = NULL;
+	}
+	if( shadowCommandssock ) {
+		daemonCore->Cancel_Socket( shadowCommandssock );
+		delete shadowCommandssock;
+		shadowCommandssock = NULL;
+	}
 
 	if (CondorAdministrator)
 		free(CondorAdministrator);
@@ -10694,14 +10700,6 @@ Scheduler::shutdown_fast()
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
 
-	int num_closed = daemonCore->Cancel_And_Close_All_Sockets();
-		// now that these have been canceled and deleted, we should
-		// set these to NULL so that we don't try to use them again.
-	shadowCommandrsock = NULL;
-	shadowCommandssock = NULL;
-	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
-			 num_closed ); 
-
 #if HAVE_DLOPEN
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
@@ -10734,14 +10732,6 @@ Scheduler::schedd_exit()
 		// Invalidate our classads at the collector, since we're now
 		// gone.  
 	invalidate_ads();
-
-	int num_closed = daemonCore->Cancel_And_Close_All_Sockets();
-		// now that these have been canceled and deleted, we should
-		// set these to NULL so that we don't try to use them again.
-	shadowCommandrsock = NULL;
-	shadowCommandssock = NULL;
-	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
-			 num_closed ); 
 
 #if HAVE_DLOPEN
 	ScheddPluginManager::Shutdown();

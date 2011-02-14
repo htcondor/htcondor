@@ -1566,47 +1566,6 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	return i;
 }
 
-
-int
-DaemonCore::Cancel_And_Close_All_Sockets(void)
-{
-	// This method will cancel *and delete* all registered sockets.
-	// It will return the number of sockets cancelled + closed.
-	// Dan 2009-01-15: _why_ are we doing this?!
-	int i = 0;
-	int j = 0;
-
-	// Since sockets get deleted below, we must delete the ccb listener
-	// first or it will have dangling references.
-	if( m_ccb_listeners ) {
-		delete m_ccb_listeners;
-		m_ccb_listeners = NULL;
-	}
-
-	if( m_shared_port_endpoint ) {
-		delete m_shared_port_endpoint;
-		m_shared_port_endpoint = NULL;
-	}
-
-	for (j=0; j < nSock; j++) {
-		if ( (*sockTable)[j].iosock ) {	// if a valid entry....
-			Stream* insock = (*sockTable)[j].iosock;
-			Cancel_Socket( insock );
-			delete insock;
-			if( insock == (Stream*)dc_rsock ) {
-				dc_rsock = NULL;
-			}
-			if( insock == (Stream*)dc_ssock ) {
-				dc_ssock = NULL;
-			}
-			i++;
-		}
-	}
-
-	return i;
-}
-
-
 int DaemonCore::Cancel_Socket( Stream* insock)
 {
 	int i,j;

@@ -668,9 +668,6 @@ class DaemonCore : public Service
 		// KEEP_STREAM, the stream is deleted
 	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true);
 
-	/// Cancel and close all registed sockets.
-	int Cancel_And_Close_All_Sockets(void);
-
 
 	/**
 	   @return Number of currently registered sockets.
