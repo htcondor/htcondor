@@ -26,7 +26,7 @@ cmake_minimum_required(VERSION 2.8)
 set(PACKAGE "condor")
 
 # Condor version info
-set(VERSION "7.5.6")
+set(VERSION "7.5.7")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 set(PRE_RELEASE "PRE-RELEASE-UWCS")
