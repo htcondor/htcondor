@@ -55,7 +55,7 @@ if (WITH_BOOST )
 		  define=BOOST_HAS_THREADS variant=release toolset=${TOOLSET}
 		  install)
 		else()
-		  set(BOOST_INSTALL "Do Nothing")
+		  set(BOOST_INSTALL echo "Do Nothing")
 		endif()
 
 
