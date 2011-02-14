@@ -62,7 +62,6 @@ our %build_and_test_sets = (
 	# are those platforms.
 	'nmi_one_offs' => [
 		'x86_64_rhap_5.3-updated',
-		'x86_suse_10.2',
 		'x86_suse_10.0',
 		'x86_64_macos_10.6',
 		'x86_64_opensuse_11.3-updated',
@@ -722,7 +721,6 @@ our %submit_info = (
 				'x86_64_sles_9',
 			 	'x86_rhas_4', 
 				'x86_suse_10.0', 
-				'x86_suse_10.2', 
 				'x86_sles_9',
 			 	'x86_64_rhas_3',
 				'x86_64_rhas_4',
@@ -1449,7 +1447,6 @@ our %submit_info = (
 						'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef
 			},
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [ 'x86_suse_10.2' ],
 		},
 
 		'test' => {
