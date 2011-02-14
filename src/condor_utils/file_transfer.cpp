@@ -1821,8 +1821,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 					error_buf.sprintf(
 						"%s at %s failed due to remote transfer hook error: %s",
 						get_mySubSystem()->getName(),
-						s->my_ip_str(),fullname.Value(),
-						rt_err.Value() );
+						s->my_ip_str(),fullname.Value());
 					download_success = false;
 					try_again = false;
 					hold_code = CONDOR_HOLD_CODE_DownloadFileError;
@@ -3607,10 +3606,10 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// first, check the dest to see if it looks like a URL.  if not, source must
 	// be the URL.
 	if(IsUrl(dest)) {
-		URL = (char*)dest;
+		URL = const_cast<char*>(dest);
 		dprintf(D_FULLDEBUG, "FILETRANSFER: using destination to determine plugin type: %s\n", dest);
 	} else {
-		URL = (char*)source;
+		URL = const_cast<char*>(source);
 		dprintf(D_FULLDEBUG, "FILETRANSFER: using source to determine plugin type: %s\n", source);
 	}
 

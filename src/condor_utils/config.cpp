@@ -680,13 +680,13 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self, boo
 			const char *tmp2;
 
 			tmp2 = entries.next();
-			long	min_value;
+			long	min_value=0;
 			if ( string_to_long( tmp2, &min_value ) < 0 ) {
 				EXCEPT( "$RANDOM_INTEGER() config macro: invalid min!" );
 			}
 
 			tmp2 = entries.next();
-			long	max_value;
+			long	max_value=0;
 			if ( string_to_long( tmp2, &max_value ) < 0 ) {
 				EXCEPT( "$RANDOM_INTEGER() config macro: invalid max!" );
 			}

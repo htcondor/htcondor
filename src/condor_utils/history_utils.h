@@ -40,8 +40,8 @@ static char encode_status( int status );
 
 //------------------------------------------------------------------------
 
-static void
-displayJobShort(AttrList* ad)
+#ifndef DO_NOT_USE_DISPLAYJOBSHORT
+void displayJobShort(AttrList* ad)
 {
     int cluster, proc, date, status, prio, image_size, CompDate;
     float utime;
@@ -109,6 +109,7 @@ short_header (void)
         "CMD"
     );
 }
+#endif /* DO_NOT_USE_DISPLAYJOBSHORT */
 
 //------------------------------------------------------------------------
 

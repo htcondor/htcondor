@@ -154,7 +154,7 @@ Output: true on success, false otherwise
 //----------------------------------------------------------------------------------
 bool ClassAdCollection::ClearClassAdDirtyBits(const char* key)
 {
-  ClassAd* Ad;
+  ClassAd* Ad=0;
   if (table.lookup(HashKey(key),Ad)==-1) return false;
   Ad->ClearAllDirtyFlags();
   return true;
@@ -280,7 +280,7 @@ bool ClassAdCollection::DeleteCollection(int CoID)
 bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID)
 {
   // Get the ad
-  ClassAd* Ad;
+  ClassAd* Ad=0;
   if (table.lookup(HashKey(OID.Value()),Ad)==-1) return false;
 
   return AddClassAd(CoID,OID,Ad);

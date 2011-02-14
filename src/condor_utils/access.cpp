@@ -172,7 +172,7 @@ int attempt_access(const char *filename, int mode, int uid, int gid,
 		// NOTE: It is safe to cast away the const on filename. We
 		// know that code_access_request will not write to it while
 		// the sock is in encode mode.
-	result = code_access_request(sock, (char *&)filename, mode, uid, gid);
+	result = code_access_request(sock, const_cast<char*&>(filename), mode, uid, gid);
 
 	if( result == FALSE ) {
 		dprintf(D_ALWAYS, "ATTEMPT_ACCESS: code_access_request failed.\n");

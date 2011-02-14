@@ -172,8 +172,6 @@ condor_gethostbyname_ipv6(const char* name) {
     }
 
     h_addr_list[addrcount] = NULL;
-
-cleanup:
     freeaddrinfo(res);
     return &hostent;
 }

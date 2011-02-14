@@ -52,7 +52,7 @@ AttrGetName( CONDOR_ATTR which )
     }
 
 	// Otherwise, fill the cache
-	char	*tmps;
+	char	*tmps=0;
 	switch ( local->flag )
 	{
 	case  ATTR_FLAG_NONE:

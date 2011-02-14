@@ -80,7 +80,8 @@ int scandirectory(const char *dir, struct dirent ***namelist,
 int doalphasort(const void *a, const void *b) {
         const struct dirent **d1 = (const struct dirent**)a;
         const struct dirent **d2 = (const struct dirent**)b;		
-        return(strcmp((char*)((*d1)->d_name), (char*)((*d2)->d_name)));
+        return(strcmp(const_cast<char*>((*d1)->d_name),
+		const_cast<char*>((*d2)->d_name)));
 }
 
 #endif
@@ -212,11 +213,8 @@ int isLogFilename( char *filename) {
 
 int file_select(const struct dirent *entry) {
 	
-	char *entryData = (char*)entry->d_name;
-	if (isLogFilename((char*)entry->d_name)) {
-		return 1;
-	}
-	return 0;
+	char *entryData = const_cast<char*>(entry->d_name);
+	return isLogFilename(entryData) ? 1 : 0;
 }
 
 

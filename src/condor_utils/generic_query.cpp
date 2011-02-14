@@ -47,7 +47,7 @@ GenericQuery ()
 GenericQuery::
 GenericQuery (const GenericQuery &gq)
 {
-	copyQueryObject ((GenericQuery &)gq);
+	copyQueryObject (const_cast<GenericQuery &>(gq));
 }
 
 
