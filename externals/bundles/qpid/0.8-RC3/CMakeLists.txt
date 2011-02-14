@@ -28,12 +28,12 @@ if (WITH_QPID)
 		set (QPID_VER 0.8)
 
 		if (NOT WINDOWS)
-			set (QPID_CONFIGURE ./configure --prefix=${EXTERNAL_STAGE} )
+			set (QPID_CONFIGURE ./bootstrap && ./configure --prefix=${EXTERNAL_STAGE} )
 			set (QPID_BUILD make )
 			set (QPID_INSTALL make install )
 		else()
-			set (QPID_CONFIGURE cd cpp && cmake -DBOOST_ROOT:PATH=${BOOST_ROOT} -DCMAKE_INSTALL_PREFIX:PATH=${EXTERNAL_STAGE} -G \"Visual Studio 9 2008\" -DGEN_DOXYGEN:BOOL=OFF -DBoost_DEBUG:BOOL=TRUE )
-			set (QPID_BUILD cd cpp && devenv qpid-cpp.sln /Rebuild RelWithDebInfo /project INSTALL )
+			set (QPID_CONFIGURE cmake -DBOOST_ROOT:PATH=${BOOST_ROOT} -DCMAKE_INSTALL_PREFIX:PATH=${EXTERNAL_STAGE} -G \"Visual Studio 9 2008\" -DGEN_DOXYGEN:BOOL=OFF -DBoost_DEBUG:BOOL=TRUE )
+			set (QPID_BUILD devenv qpid-cpp.sln /Rebuild RelWithDebInfo /project INSTALL )
 			set (QPID_INSTALL echo "Done" )
 		endif()
 
@@ -45,13 +45,13 @@ if (WITH_QPID)
 				    DOWNLOAD_DIR ${EXTERNAL_DL}
 				    URL http://parrot.cs.wisc.edu/externals/qpid-${QPID_VER}.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd qpid-${QPID_VER} && ${QPID_CONFIGURE}
+				    CONFIGURE_COMMAND cd qpid-${QPID_VER}/cpp && ${QPID_CONFIGURE}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd qpid-${QPID_VER} && ${QPID_BUILD}
+				    BUILD_COMMAND cd qpid-${QPID_VER}/cpp && ${QPID_BUILD}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${EXTERNAL_STAGE}
-				    INSTALL_COMMAND cd qpid-${QPID_VER} && ${QPID_INSTALL} )
+				    INSTALL_COMMAND cd qpid-${QPID_VER}/cpp && ${QPID_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		# all of the below locations need to be verified.

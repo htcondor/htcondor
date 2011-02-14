@@ -44,7 +44,20 @@ if (WITH_BOOST )
 		else()
 		  set(BOOST_PATCH echo "nothing")
 		endif()
-		
+
+                # so if we want contrib then build the extra elements,
+		# otherwise just default to the normal build.
+		if (WANT_CONTRIB)
+		  set(BOOST_INSTALL ${EXEC}bjam --with-thread
+		  --with-program_options --with-system --with-regex
+		  --with-filesystem --with-date_time --build-type=complete
+		  --prefix=${EXTERNAL_STAGE} --libdir=${EXTERNAL_STAGE}/lib
+		  define=BOOST_HAS_THREADS variant=release toolset=${TOOLSET}
+		  install)
+		else()
+		  set(BOOST_INSTALL "Do Nothing")
+		endif()
+
 
 		# so the idea of privately staging boost is silly.
 		set (BOOST_VER 1_39_0)
@@ -61,11 +74,12 @@ if (WITH_BOOST )
 				    	./bootstrap.${JAM_EXT} --prefix=${EXTERNAL_STAGE}
 				    #--Build Step ----------
 				    BUILD_COMMAND cd boost_${BOOST_VER} &&
-				    ${EXEC}bjam --with-thread --with-program_options --with-system --with-regex --with-filesystem --with-date_time --build-type=complete --prefix=${EXTERNAL_STAGE} --libdir=${EXTERNAL_STAGE}/lib define=BOOST_HAS_THREADS variant=release toolset=${TOOLSET} install
+				    ${EXEC}bjam --with-thread --layout=system --prefix=${EXTERNAL_STAGE} --libdir=${EXTERNAL_STAGE}/lib define=BOOST_HAS_THREADS link=static variant=release toolset=${TOOLSET} install
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${EXTERNAL_STAGE}
-				    INSTALL_COMMAND echo "Nothing to do" )
+				    INSTALL_COMMAND cd boost_${BOOST_VER} && ${BOOST_INSTALL} )
+				  
 
 	append_var(CONDOR_EXTERNALS boost)
 	
