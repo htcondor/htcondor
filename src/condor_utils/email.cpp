@@ -390,7 +390,11 @@ email_developers_open(const char *subject)
     tmp = param ("CONDOR_DEVELOPERS");
     if (tmp == NULL) {
 		/* we strdup here since we always call free below */
+#ifdef NO_PHONE_HOME
+		tmp = strdup("NONE");
+#else
         tmp = strdup("condor-admin@cs.wisc.edu");
+#endif
     } else
     if (strcasecmp (tmp, "NONE") == 0) {
         free (tmp);

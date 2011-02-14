@@ -1182,7 +1182,11 @@ void CollectorDaemon::Config()
 
 	tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
 	if (tmp == NULL) {
+#ifdef NO_PHONE_HOME
+		tmp = strdup("NONE");
+#else
 		tmp = strdup("condor.cs.wisc.edu");
+#endif
 	}
 	if (strcasecmp(tmp,"NONE") == 0 ) {
 		free(tmp);

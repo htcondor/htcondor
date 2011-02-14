@@ -85,6 +85,10 @@ class CollectorUniverseStats {
 class CollectorDaemon {
 
 public:
+
+	CollectorDaemon() {};
+	virtual ~CollectorDaemon() {};
+
 	virtual void Init();             // main_init
 	virtual void Config();           // main_config
 	virtual void Exit();             // main__shutdown_fast

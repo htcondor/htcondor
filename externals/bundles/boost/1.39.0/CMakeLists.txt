@@ -48,11 +48,11 @@ if (WITH_BOOST )
                 # so if we want contrib then build the extra elements,
 		# otherwise just default to the normal build.
 		if (WANT_CONTRIB)
-		  set(BOOST_INSTALL ${EXEC}bjam --with-thread
+		  set(BOOST_INSTALL ${EXEC}bjam -a --with-thread
 		  --with-program_options --with-system --with-regex
 		  --with-filesystem --with-date_time --build-type=complete
 		  --prefix=${EXTERNAL_STAGE} --libdir=${EXTERNAL_STAGE}/lib
-		  define=BOOST_HAS_THREADS variant=release toolset=${TOOLSET}
+		  define=BOOST_HAS_THREADS link=shared variant=release toolset=${TOOLSET}
 		  install)
 		else()
 		  set(BOOST_INSTALL echo "Do Nothing")
