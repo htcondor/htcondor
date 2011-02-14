@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:qry="http://query.aviary.grid.redhat.com" xmlns:mrg="http://common.aviary.grid.redhat.com" targetNamespace="http://query.aviary.grid.redhat.com">
+	<xs:import namespace="http://common.aviary.grid.redhat.com" schemaLocation="aviary-common.xsd"/>
+	<!-- declare  message-level elements using anonymous complex types for simpler generated types -->
+	<xs:element name="FindJob">
+		<xs:complexType>
+			<xs:choice>
+				<!-- string for id means the impl will perform best effort to resolve, potentially spanning schedulers and pools -->
+				<xs:element name="id" type="xs:string"/>
+				<xs:element name="constraint" type="mrg:JobConstraint"/>
+			</xs:choice>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="FindJobResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="jobs" type="mrg:JobID" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="status" type="mrg:Status"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="FindResource">
+		<xs:choice>
+			<!-- string for id means the impl will perform best effort to resolve, potentially spanning pools -->
+			<xs:element name="id" type="xs:string"/>
+			<xs:element name="constraint" type="mrg:ResourceConstraint"/>
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="FindResourceResponse">
+		<xs:sequence>
+			<xs:element name="resources" type="mrg:ResourceID" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="status" type="mrg:Status"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="GetJobStatus">
+		<xs:sequence>
+			<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="GetJobStatusResponse">
+		<xs:sequence>
+			<xs:element name="jobs" type="mrg:JobStatus" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="status" type="mrg:Status"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="GetJobDetails">
+		<xs:sequence>
+			<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="GetJobDetailsResponse">
+		<xs:sequence>
+			<xs:element name="jobs" type="mrg:JobDetails" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="status" type="mrg:Status"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="GetJobData">
+		<xs:sequence>
+			<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="GetJobDataResponse">
+		<xs:sequence>
+			<xs:element name="jobs" type="mrg:JobData" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="status" type="mrg:Status"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="GetJobAnalysis"/>
+	<xs:complexType name="GetResourceSummaries"/>
+	<xs:complexType name="GetResourceDetails"/>
+	<xs:complexType name="GetSubmitterSummaries"/>
+	<xs:complexType name="GetLastMatchmakingResult"/>
+</xs:schema>

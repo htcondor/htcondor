@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://grid.redhat.com/aviary-query/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:qry="http://query.aviary.grid.redhat.com" targetNamespace="http://grid.redhat.com/aviary-query/" name="aviary-query">
+	<wsdl:types>
+		<xsd:schema targetNamespace="http://grid.redhat.com/aviary-query/">
+			<xsd:import schemaLocation="aviary-query.xsd" namespace="http://query.aviary.grid.redhat.com"/>
+		</xsd:schema>
+	</wsdl:types>
+	<wsdl:message name="FindJobRequest">
+		<wsdl:part name="parameters" element="qry:FindJob"/>
+	</wsdl:message>
+	<wsdl:message name="FindJobResponse">
+		<wsdl:part name="parameters" element="qry:FindJobResponse"/>
+	</wsdl:message>
+	<wsdl:portType name="AviaryQuery">
+		<!-- operations TBD -->
+		<wsdl:operation name="findJob">
+			<wsdl:input message="tns:FindJobRequest"/>
+			<wsdl:output message="tns:FindJobResponse"/>
+		</wsdl:operation>
+	</wsdl:portType>
+	<wsdl:binding name="AviaryQuerySOAPBinding" type="tns:AviaryQuery">
+		<soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+		<!-- operations TBD -->
+		<wsdl:operation name="findJob">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-job/submit"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:binding>
+	<wsdl:service name="AviaryQueryService">
+		<wsdl:port name="AviaryQuerySOAPPort" binding="tns:AviaryQuerySOAPBinding">
+			<soap:address location="http://localhost:8090/"/>
+		</wsdl:port>
+	</wsdl:service>
+	<!-- messages from elements in XSD -->
+</wsdl:definitions>

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://grid.redhat.com/aviary-job/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:job="http://job.aviary.grid.redhat.com" targetNamespace="http://grid.redhat.com/aviary-job/" name="aviary-job">
+	<wsdl:types>
+		<xsd:schema targetNamespace="http://grid.redhat.com/aviary_job/">
+			<xsd:import schemaLocation="aviary-job.xsd" namespace="http://job.aviary.grid.redhat.com"/>
+		</xsd:schema>
+	</wsdl:types>
+	<wsdl:message name="SubmitJobRequest">
+		<wsdl:part name="parameters" element="job:SubmitJob"/>
+	</wsdl:message>
+	<wsdl:message name="SubmitJobResponse">
+		<wsdl:part name="parameters" element="job:SubmitJobResponse"/>
+	</wsdl:message>
+	<wsdl:message name="HoldJobRequest">
+		<wsdl:part name="parameters" element="job:HoldJob"/>
+	</wsdl:message>
+	<wsdl:message name="HoldJobResponse">
+		<wsdl:part name="parameters" element="job:HoldJobResponse"/>
+	</wsdl:message>
+	<wsdl:message name="ReleaseJobRequest">
+		<wsdl:part name="parameters" element="job:ReleaseJob"/>
+	</wsdl:message>
+	<wsdl:message name="ReleaseJobResponse">
+		<wsdl:part name="parameters" element="job:ReleaseJobResponse"/>
+	</wsdl:message>
+	<wsdl:message name="RemoveJobRequest">
+		<wsdl:part name="parameters" element="job:RemoveJob"/>
+	</wsdl:message>
+	<wsdl:message name="RemoveJobResponse">
+		<wsdl:part name="parameters" element="job:RemoveJobResponse"/>
+	</wsdl:message>
+	<wsdl:message name="SetJobAttributeRequest">
+		<wsdl:part name="parameters" element="job:SetJobAttribute"/>
+	</wsdl:message>
+	<wsdl:message name="SetJobAttributeResponse">
+		<wsdl:part name="parameters" element="job:SetJobAttributeResponse"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobTemplateRequest">
+		<wsdl:part name="parameters" element="job:GetJobTemplate"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobTemplateResponse">
+		<wsdl:part name="parameters" element="job:GetJobTemplateResponse"/>
+	</wsdl:message>
+	<wsdl:portType name="AviaryJob">
+		<wsdl:operation name="submitJob">
+			<wsdl:input message="tns:SubmitJobRequest"/>
+			<wsdl:output message="tns:SubmitJobResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="holdJob">
+			<wsdl:input message="tns:HoldJobRequest"/>
+			<wsdl:output message="tns:HoldJobResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="releaseJob">
+			<wsdl:input message="tns:ReleaseJobRequest"/>
+			<wsdl:output message="tns:ReleaseJobResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="removeJob">
+			<wsdl:input message="tns:RemoveJobRequest"/>
+			<wsdl:output message="tns:RemoveJobResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="setJobAttribute">
+			<wsdl:input message="tns:SetJobAttributeRequest"/>
+			<wsdl:output message="tns:SetJobAttributeResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="getJobTemplate">
+			<wsdl:input message="tns:GetJobTemplateRequest"/>
+			<wsdl:output message="tns:GetJobTemplateResponse"/>
+		</wsdl:operation>
+	</wsdl:portType>
+	<wsdl:binding name="AviaryJobSOAPBinding" type="tns:AviaryJob">
+		<soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+		<wsdl:operation name="submitJob">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-job/submit"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="holdJob">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-job/hold"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="releaseJob">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-job/release"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="removeJob">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-job/remove"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="setJobAttribute">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-job/set-attr"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="getJobTemplate">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-job/get-tmpl"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:binding>
+	<wsdl:service name="AviaryJobService">
+		<wsdl:port name="AviaryJobSOAPPort" binding="tns:AviaryJobSOAPBinding">
+			<soap:address location="http://localhost:8080/"/>
+		</wsdl:port>
+	</wsdl:service>
+</wsdl:definitions>

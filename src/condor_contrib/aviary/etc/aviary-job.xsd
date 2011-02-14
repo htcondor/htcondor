@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:job="http://job.aviary.grid.redhat.com" xmlns:mrg="http://common.aviary.grid.redhat.com" targetNamespace="http://job.aviary.grid.redhat.com">
+	<xs:import namespace="http://common.aviary.grid.redhat.com" schemaLocation="aviary-common.xsd"/>
+	<!-- declare message-level elements using anonymous complex types for simpler generated types -->
+	<xs:element name="SubmitJob">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="cmd" type="xs:string"/>
+				<xs:element name="args" type="xs:string"/>
+				<xs:element name="owner" type="xs:string"/>
+				<xs:element name="iwd" type="xs:string"/>
+				<xs:element name="requirements" type="mrg:Attribute"/>
+				<xs:element name="extra" type="mrg:Attributes" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="SubmitJobResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="id" type="mrg:JobID"/>
+				<xs:element name="status" type="mrg:Status"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="ControlJob">
+		<xs:sequence>
+			<xs:element name="id" type="mrg:JobID"/>
+			<xs:element name="reason" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ControlJobResponse">
+		<xs:sequence>
+			<xs:element name="status" type="mrg:Status"/>
+		</xs:sequence>
+	</xs:complexType>
+	<!-- these all follow the same type pattern so reuse -->
+	<xs:element name="HoldJob" type="job:ControlJob"/>
+	<xs:element name="HoldJobResponse" type="job:ControlJobResponse"/>
+	<xs:element name="ReleaseJob" type="job:ControlJob"/>
+	<xs:element name="ReleaseJobResponse" type="job:ControlJobResponse"/>
+	<xs:element name="RemoveJob" type="job:ControlJob"/>
+	<xs:element name="RemoveJobResponse" type="job:ControlJobResponse"/>
+	<xs:element name="SetJobAttribute">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="id" type="xs:string"/>
+				<xs:element name="attribute" type="mrg:Attribute"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="SetJobAttributeResponse" type="job:ControlJobResponse"/>
+	<xs:element name="GetJobTemplate">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="hints" type="xs:string" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetJobTemplateResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="attributes" type="mrg:Attributes"/>
+				<xs:element name="status" type="mrg:Status"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

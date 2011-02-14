@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://common.aviary.grid.redhat.com" targetNamespace="http://common.aviary.grid.redhat.com">
+	<!-- common types should make use of simple and complex types for reuse -->
+	<xs:simpleType name="StatusCodeType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="SUCCESS"/>
+			<xs:enumeration value="FAIL"/>
+			<xs:enumeration value="NO_MATCH"/>
+			<xs:enumeration value="INVALID_OFFSET"/>
+			<xs:enumeration value="UNIMPLEMENTED"/>
+			<xs:enumeration value="UNAVAILABLE"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Status">
+		<xs:sequence>
+			<xs:element name="code" type="tns:StatusCodeType"/>
+			<xs:element name="text" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="AttributeType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="INTEGER"/>
+			<xs:enumeration value="FLOAT"/>
+			<xs:enumeration value="STRING"/>
+			<xs:enumeration value="EXPRESSION"/>
+			<xs:enumeration value="BOOLEAN"/>
+			<xs:enumeration value="UNDEFINED"/>
+			<xs:enumeration value="ERROR"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Attribute">
+		<xs:sequence>
+			<xs:element name="name" type="xs:string"/>
+			<xs:element name="type" type="tns:AttributeType"/>
+			<xs:element name="value" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Attributes">
+		<xs:sequence>
+			<xs:element name="attrs" type="tns:Attribute" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="OSType">
+		<xs:restriction base="xs:string">
+			<!-- can expand later -->
+			<xs:enumeration value="LINUX"/>
+			<xs:enumeration value="WINDOWS"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ArchType">
+		<xs:restriction base="xs:string">
+			<!-- can expand later -->
+			<xs:enumeration value="INTEL"/>
+			<xs:enumeration value="X86_64"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ResourceConstraintType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="OS"/>
+			<xs:enumeration value="ARCH"/>
+			<xs:enumeration value="MEMORY"/>
+			<xs:enumeration value="DISK"/>
+			<!-- when we say MEMORY or DISK we always mean at least the amount provided -->
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="ResourceConstraint">
+		<xs:sequence>
+			<xs:element name="type" type="tns:ResourceConstraintType"/>
+			<xs:element name="value" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="JobConstraintType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="CMD"/>
+			<xs:enumeration value="ARGS"/>
+			<xs:enumeration value="OWNER"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="JobConstraint">
+		<xs:sequence>
+			<xs:element name="type" type="tns:JobConstraintType"/>
+			<xs:element name="value" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="JobID">
+		<xs:sequence>
+			<xs:element name="pool" type="xs:string"/>
+			<xs:element name="scheduler" type="xs:string"/>
+			<xs:element name="job" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="JobStatusType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="COMPLETED"/>
+			<xs:enumeration value="HELD"/>
+			<xs:enumeration value="IDLE"/>
+			<xs:enumeration value="REMOVED"/>
+			<xs:enumeration value="RUNNING"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="JobStatus">
+		<xs:sequence>
+			<xs:element name="id" type="tns:JobID"/>
+			<xs:element name="job_status" type="tns:JobStatusType" minOccurs="0"/>
+			<xs:element name="status" type="tns:Status"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="JobDetails">
+		<xs:sequence>
+			<xs:element name="id" type="tns:JobID"/>
+			<xs:element name="details" type="tns:Attributes" minOccurs="0"/>
+			<xs:element name="status" type="tns:Status"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="JobDataType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="ERR"/>
+			<xs:enumeration value="LOG"/>
+			<xs:enumeration value="OUT"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="JobData">
+		<xs:sequence>
+			<xs:element name="id" type="tns:JobID"/>
+			<xs:element name="type" type="tns:JobDataType" minOccurs="0"/>
+			<!-- string for file content...we probably want to keep line feeds, etc. -->
+			<xs:element name="content" type="xs:string" minOccurs="0"/>
+			<xs:element name="status" type="tns:Status"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="ResourceType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="COLLECTOR"/>
+			<xs:enumeration value="EXECUTOR"/>
+			<xs:enumeration value="EVENT_SERVER"/>
+			<xs:enumeration value="JOB_SERVER"/>
+			<xs:enumeration value="LOW_LATENCY"/>
+			<xs:enumeration value="MASTER"/>
+			<xs:enumeration value="NEGOTIATOR"/>
+			<xs:enumeration value="SCHEDULER"/>
+			<xs:enumeration value="CUSTOM"/>
+			<!-- aka STARTD -->
+			<!-- aka TRIGGERD -->
+			<!-- aka LL_DAEMON -->
+			<!-- aka SCHEDD -->
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="ResourceID">
+		<xs:sequence>
+			<xs:element name="subsystem_type" type="tns:ResourceType"/>
+			<xs:element name="custom_name" type="xs:string" minOccurs="0"/>
+			<xs:element name="pool" type="xs:string"/>
+			<xs:element name="name" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>
