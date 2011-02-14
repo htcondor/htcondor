@@ -3281,6 +3281,11 @@ NEGOTIATOR_USERID = condor
   page~\pageref{man-condor-set-shutdown} contains details on the use
   of this program.
 
+  \Note This program will be run with root privileges under Unix 
+  or administrator privileges under Windows.  
+  The adminstrator must ensure that this cannot
+  be used in such a way as to violate system integrity.
+
 \label{param:MasterBackoffConstant}
 \item[\Macro{MASTER\_BACKOFF\_CONSTANT} and
   \Macro{MASTER\_<name>\_BACKOFF\_CONSTANT}]

@@ -198,6 +198,20 @@ page ~\pageref{attribute-OtherJobRemoveRequirements}.
   See the \File{README.building} file for the new instructions on how
   to build Condor.
 
+\item This release note serves to remind users that as of Condor version 7.5.1,
+  the RPMs come with native packaging.  
+  Therefore, items are in different locations, as given by FHS locations,
+  such as \File{/usr/bin}, \File{/usr/sbin}, \File{/etc}, and \File{/var/log}.  
+  Please see section~\ref{sec:install-rpms} for installation documentation.
+
+\item Quill is now available only within the source code distribution 
+  of Condor.
+  It is no longer included in the builds of Condor provided by UW,
+  but it is available as a feature that can be enabled by those who compile
+  Condor from the source code.
+  Find the code within the \File{condor\_contrib} directory, in the
+  directories \File{condor\_tt} and \File{condor\_dbmsd}. 
+
 %\item Windows packages are not included in this release.  We expect to
 %  release Windows packages in Condor version 7.5.6.
 
@@ -523,7 +537,9 @@ could erroneously be reported as negative.  This has been fixed.
 
 \begin{itemize}
 
-\item None.
+% gittrac #1900
+\item In Condor version 7.5.5, when a running job is put on hold, the job
+  is removed from the job queue.
 
 \end{itemize}
 
