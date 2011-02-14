@@ -76,6 +76,8 @@
 	   $CondorVersion: 6.9.5 WinNTPreview " __DATE__ BUILDIDSTR " $ [WRONG!!!]
    Any questions?  See Todd or Derek.  Note: if you mess it up, DaemonCore
    will EXCEPT at startup time.  
+
+   You generally change this in the top level CMakeLists.txt, NOT HERE.
 */
 
 
