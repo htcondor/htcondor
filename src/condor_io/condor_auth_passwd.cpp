@@ -270,16 +270,16 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk)
 		// Fill in the data for the seed keys.
     setup_seed(seed_ka, seed_kb);
 
-    sk->len = strlen((char *)sk->shared_key);
+    sk->len = strlen(const_cast<char *>(sk->shared_key));
 
 		// Generate the shared keys K and K'
     hmac((unsigned char *)sk->shared_key, sk->len, 
 		 seed_ka, AUTH_PW_KEY_LEN, 
-		 (unsigned char *)ka, &ka_len );
+		 const_cast<unsigned char *>(ka), &ka_len );
 
     hmac((unsigned char *)sk->shared_key, sk->len, 
 		 seed_kb, AUTH_PW_KEY_LEN, 
-		 (unsigned char *)kb, &kb_len );
+		 const_cast<unsigned char *>(kb), &kb_len );
 
 	free(seed_ka);
 	free(seed_kb);
@@ -1151,7 +1151,7 @@ Condor_Auth_Passwd::calculate_hk(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	
 		// Calculate the hmac using K as the key.
 	hmac( buffer, buffer_len,
-		  (unsigned char *)sk->ka, sk->ka_len,
+		  const_cast<unsigned char *>(sk->ka), sk->ka_len,
 		  t_buf->hk, &t_buf->hk_len);
 	if(t_buf->hk_len < 1) {
 		dprintf(D_SECURITY, "Error: hk hmac too short.\n");
@@ -1449,7 +1449,7 @@ bool Condor_Auth_Passwd::calculate_hkt(msg_t_buf *t_buf, sk_buf *sk)
 
 		// Calculate the hmac.
 	hmac( buffer, buffer_len, 
-		  (unsigned char *)sk->ka, sk->ka_len,
+		  const_cast<unsigned char *>(sk->ka), sk->ka_len,
 		  t_buf->hkt, &t_buf->hkt_len);
 	if(t_buf->hkt_len < 1) {  // Maybe should be larger!
 		dprintf(D_SECURITY, "Error: hmac returned zero length.\n");
@@ -1742,7 +1742,7 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 
 		// Calculate W based on K'
 	hmac( t_buf->rb, AUTH_PW_KEY_LEN,
-		  (unsigned char *)sk->kb, sk->kb_len,
+		  const_cast<unsigned char *>(sk->kb), sk->kb_len,
 		  (unsigned char *)key, &key_len );
 
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);

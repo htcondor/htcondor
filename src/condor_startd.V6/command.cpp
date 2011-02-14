@@ -2078,7 +2078,7 @@ cleanup:
 int
 command_classad_handler( Service*, int dc_cmd, Stream* s )
 {
-	int rval;
+	int rval=0;
 	ClassAd ad;
 	ReliSock* rsock = (ReliSock*)s;
 	int cmd = 0;

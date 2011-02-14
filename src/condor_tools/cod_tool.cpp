@@ -114,7 +114,7 @@ main( int argc, char *argv[] )
 		exit( 1 );
 	}
 
-	bool rval;
+	bool rval = FALSE;
 	int irval;
 	ClassAd reply;
 	ClassAd ad;

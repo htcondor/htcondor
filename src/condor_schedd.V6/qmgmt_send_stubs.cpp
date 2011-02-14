@@ -542,8 +542,6 @@ int
 GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 {
 	int	rval = -1;
-	char	*attrs = NULL;
-	int	size;
 	MyString errs;
 
 	CurrentSysCall = CONDOR_GetDirtyAttributes;
@@ -567,7 +565,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 		errno = ETIMEDOUT;
 		return NULL;
 	}
-	assert( qmgmt_sock->end_of_message() );
+	assert( qmgmt_sock->end_of_message() != NULL);
 
 	return rval;
 }

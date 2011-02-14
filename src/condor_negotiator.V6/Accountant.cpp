@@ -735,7 +735,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
   if(GroupWeightedResourcesUsed < 0.0) {
       GroupWeightedResourcesUsed = 0.0;
   }
-  dprintf(D_ACCOUNTANT, "GroupResourcesUsed =%f GroupWeightedResourcesUsed= %f SlotWeight=%f\n",
+  dprintf(D_ACCOUNTANT, "GroupResourcesUsed =%d GroupWeightedResourcesUsed= %f SlotWeight=%f\n",
           GroupResourcesUsed ,GroupWeightedResourcesUsed,SlotWeight);
 
   SetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);

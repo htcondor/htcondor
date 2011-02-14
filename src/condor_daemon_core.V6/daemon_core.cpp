@@ -3656,7 +3656,7 @@ void
 DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock )
 {
 	char *handlerName = NULL;
-	int result;
+	int result=0;
 
 		// if the user provided a handler for this socket, then
 		// call it now.  otherwise, call the daemoncore
@@ -4010,7 +4010,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 {
 	Sock				*sock = NULL;
 
-	int					is_tcp;
+	int					is_tcp=0;
 	int                 req = 0;
 	int					index;
 	int					reqFound = FALSE;
@@ -6530,7 +6530,7 @@ void CreateProcessForkit::exec() {
 
 		// We may determine to seed the child's environment with the parent's.
 	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
-		m_envobject.MergeFrom((const char**)environ);
+		m_envobject.MergeFrom(environ);
 	}
 
 		// Put the caller's env requests into the job's environment, potentially
@@ -7047,6 +7047,7 @@ int DaemonCore::Create_Process(
 	int numInheritFds = 0;
 	extern char **environ;
 	MyString executable_buf;
+	priv_state current_priv = PRIV_UNKNOWN;
 
 	// For automagic DC std pipes.
 	int dc_pipe_fds[3][2] = {{-1, -1}, {-1, -1}, {-1, -1}};
@@ -7919,7 +7920,6 @@ int DaemonCore::Create_Process(
 		// or in the condor priv if PRIV_CONDOR_FINAL is specified.
 		// Don't do anything in PRIV_UNKNOWN case.
 
-	priv_state current_priv;
 	if ( priv != PRIV_UNKNOWN ) {
 		if ( priv == PRIV_USER_FINAL ) {
 			current_priv = set_user_priv();
@@ -9855,7 +9855,7 @@ int DaemonCore::HungChildTimeout()
 		// to call us again and follow up with a hard-kill.
 		if( !first_time ) {
 			dprintf(D_ALWAYS,
-					"Child pid %d is still hung!  Perhaps it hung while generating a core file.  Killing it harder.\n");
+					"Child pid %d is still hung!  Perhaps it hung while generating a core file.  Killing it harder.\n",hung_child_pid);
 			want_core = false;
 		}
 		else {
@@ -10870,7 +10870,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
     int bytes, max_read_bytes, max_buffer;
 	int pipe_index = 0;
 	MyString* cur_buf = NULL;
-	char* pipe_desc;
+	char* pipe_desc=0;
 	if (std_pipes[1] == pipe_fd) {
 		pipe_index = 1;
 		pipe_desc = "stdout";

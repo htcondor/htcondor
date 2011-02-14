@@ -232,7 +232,7 @@ int Sock::getportbyserv(
 	)
 {
 	servent		*sp;
-	char		*my_prot;
+	char		*my_prot=0;
 
 	if (!s) return -1;
 
@@ -359,7 +359,7 @@ int Sock::move_descriptor_up()
 
 int Sock::assign(SOCKET sockd)
 {
-	int		my_type;
+	int my_type = SOCK_DGRAM;
 
 	if (_state != sock_virgin) return FALSE;
 

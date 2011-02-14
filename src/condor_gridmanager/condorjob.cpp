@@ -1309,7 +1309,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 	if (config_attrs_to_copy == NULL) {
 		// use the defaults
-		attrs_to_copy = (char **)default_attrs_to_copy;
+		attrs_to_copy = const_cast<char **>(default_attrs_to_copy);
 	} else {
 		StringList sl(NULL, ", ");
 		freeAttrs = true;

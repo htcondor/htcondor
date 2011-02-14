@@ -186,7 +186,7 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 	m_domain(domainname),
 	m_auxid("")
 {
-	ExprTree *tree = (ExprTree *) scheduler.getGridParsedSelectionExpr();
+	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
 	EvalResult val;
 	if ( ad && tree && 
 		 EvalExprTree(tree,ad,NULL,&val) && val.type==LX_STRING && val.s )
@@ -1684,7 +1684,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			dprintf( D_FULLDEBUG, "Found shadow record for job %d.%d\n",
 					 job_id.cluster, job_id.proc );
 
-			int handler_sig;
+			int handler_sig=0;
 			const char* handler_sig_str;
 			switch( action ) {
 			case JA_HOLD_JOBS:
@@ -1727,7 +1727,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
                         job_id.cluster, job_id.proc);
 				dprintf( D_FULLDEBUG, "This job does not have a match\n");
             }
-			int shadow_sig;
+			int shadow_sig=0;
 			const char* shadow_sig_str;
 			switch( action ) {
 			case JA_HOLD_JOBS:
@@ -6885,8 +6885,8 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 		"resources older than V6.3.3";
 
 	PROC_ID job_id;
-	char* hold_reason;
-	bool* notify_admin;
+	char* hold_reason=NULL;
+	bool* notify_admin=NULL;
 
 	if( ! srec ) {
 		dprintf( D_ALWAYS, "ERROR: Called noShadowForJob with NULL srec!\n" );
@@ -11481,7 +11481,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	bool retry_is_sensible = false;
 	bool job_is_suitable = false;
 	ClassAd starter_ad;
-	int timeout = 20;
+	int ltimeout = 20;
 
 		// This command is called for example by condor_ssh_to_job
 		// in order to establish a security session for communication
@@ -11647,7 +11647,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 
 		jobad->LookupString(ATTR_GLOBAL_JOB_ID,global_job_id);
 
-		if( !startd.locateStarter(global_job_id.Value(),mrec->claimId(),daemonCore->publicNetworkIpAddr(),&starter_ad,timeout) )
+		if( !startd.locateStarter(global_job_id.Value(),mrec->claimId(),daemonCore->publicNetworkIpAddr(),&starter_ad,ltimeout) )
 		{
 			error_msg = "Failed to get address of starter for this job";
 			goto error_wrapup;
@@ -11667,7 +11667,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			goto error_wrapup;
 		}
 
-		if( !starter.createJobOwnerSecSession(timeout,job_claimid,match_sec_session_id,job_owner_session_info.Value(),starter_claim_id,error_msg,starter_version,starter_addr) ) {
+		if( !starter.createJobOwnerSecSession(ltimeout,job_claimid,match_sec_session_id,job_owner_session_info.Value(),starter_claim_id,error_msg,starter_version,starter_addr) ) {
 			goto error_wrapup; // error_msg already set
 		}
 	}

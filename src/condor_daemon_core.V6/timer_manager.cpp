@@ -292,9 +292,6 @@ int TimerManager::CancelTimer(int id)
 void TimerManager::CancelAllTimers()
 {
 	Timer		*timer_ptr;
-	Service		*service;
-	Release		release;
-	Releasecpp	releasecpp;
 
 	while( timer_list != NULL ) {
 		timer_ptr = timer_list;

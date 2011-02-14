@@ -274,7 +274,7 @@ ProcAPI::buildFamily( pid_t daddypid, PidEnvID *penvid, int &status ) {
 	familypids = new pid_t[numprocs];
 
 		// get the daddypid's procInfo struct
-	piPTR pred, current, familyend;
+	piPTR pred=NULL, current, familyend;
 
 	// find the daddy pid out of the linked list of all of the processes
 	current = allProcInfos;

@@ -661,8 +661,8 @@ bool ReliSock::RcvMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
 ReliSock::RcvMsg :: RcvMsg() : 
     mode_(MD_OFF),
     mdChecker_(0), 
-    ready(0), 
-	p_sock(0)
+	p_sock(0),
+    ready(0)
 {
 }
 

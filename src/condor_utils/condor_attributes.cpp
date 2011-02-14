@@ -56,7 +56,7 @@ AttrGetName( CONDOR_ATTR which )
 	switch ( local->flag )
 	{
 	case  ATTR_FLAG_NONE:
-        tmps = (char *) local->string;
+        tmps = const_cast<char *>(local->string);
 		break;
     case ATTR_FLAG_DISTRO:
 		// Yeah, this allocates a couple more bytes than required, but

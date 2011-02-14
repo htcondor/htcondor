@@ -129,7 +129,6 @@ void
 main_init( int, char* argv[] )
 {
 	int		skip_benchmarks = FALSE;
-	char*	tmp = NULL;
 	char**	ptr; 
 
 	// Reset the cron & benchmark managers to a known state

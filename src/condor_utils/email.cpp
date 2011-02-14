@@ -283,8 +283,6 @@ email_open_implementation(char *const final_args[])
 		static char pe_logname[256]; /* Sorry, putenv wants it this way */
 		static char pe_user[256];
 		const char *condor_name;
-		uid_t condor_uid;
-		gid_t condor_gid;
 		int i;
 
 		/* Disable any EXCEPT_Cleanup code installed by the parent process.

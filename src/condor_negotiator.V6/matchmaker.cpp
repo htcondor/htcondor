@@ -1188,7 +1188,7 @@ negotiationTime ()
             }
 
             dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
-                    hgq_groups.size(), served_groups+unserved_groups, served_groups, unserved_groups, double(numDynGroupSlots), requested_total+allocated_total, allocated_total, surplus_quota);
+                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(numDynGroupSlots), requested_total+allocated_total, allocated_total, surplus_quota);
 
             // The loop below can add a lot of work (and log output) to the negotiation.  I'm going to
             // default its behavior to execute once, and just negotiate for everything at once.  If a
@@ -1891,6 +1891,8 @@ GroupEntry::GroupEntry():
     config_quota(0),
     static_quota(false),
     accept_surplus(false),
+    usage(0),
+    submitterAds(NULL),
     quota(0),
     requested(0),
     allocated(0),
@@ -1899,8 +1901,6 @@ GroupEntry::GroupEntry():
     rr(false),
     rr_time(0),
     subtree_rr_time(0),
-    usage(0),
-    submitterAds(NULL),
     parent(NULL),
     children(),
     chmap()
@@ -4715,14 +4715,14 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		slotX_last_match_time.sprintf("slot%d_%s",slot_id,ATTR_MACHINE_LAST_MATCH_TIME);
 		slot1_update_ad.Assign(slotX_last_match_time.Value(),(int)now);
 
-		classy_counted_ptr<ClassAdMsg> msg = \
+		classy_counted_ptr<ClassAdMsg> lmsg = \
 			new ClassAdMsg(MERGE_STARTD_AD, slot1_update_ad);
 
 		if( !collector->useTCPForUpdates() ) {
-			msg->setStreamType( Stream::safe_sock );
+			lmsg->setStreamType( Stream::safe_sock );
 		}
 
-		collector->sendMsg( msg.get() );
+		collector->sendMsg( lmsg.get() );
 	}
 }
 

@@ -1527,6 +1527,7 @@ handle_gcb_recovery_failed( )
 	main_shutdown_fast();
 }
 
+#if HAVE_EXT_GCB
 static void
 gcb_recovery_failed_callback()
 {
@@ -1537,6 +1538,7 @@ gcb_recovery_failed_callback()
 	daemonCore->Register_Timer( 0, handle_gcb_recovery_failed,
 								"handle_gcb_recovery_failed" );
 }
+#endif
 
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from

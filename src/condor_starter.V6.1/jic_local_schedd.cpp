@@ -389,7 +389,7 @@ JICLocalSchedd::notifyJobExit( int exit_status, int reason,
 			// This may be different from what is indicated by 'reason',
 			// because a policy expression evaluted by checkAtExit() may
 			// have changed things.
-		update_t up_type;
+		update_t up_type = U_TERMINATE;
 		switch( this->exit_code ) {
 		case JOB_EXITED:
 			up_type = U_TERMINATE;

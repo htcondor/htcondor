@@ -648,7 +648,7 @@ DLLEXPORT int
 chirp_client_getfile_buffer( struct chirp_client *c, const char *path, 
 							char **buffer )
 {
-	int result, actual;
+	int result, actual=0;
 
 	result = simple_command(c,"getfile %s\n",path);
 	if(result>=0) {

@@ -6888,10 +6888,7 @@ InsertJobExpr (const char *expr, bool clustercheck)
 {
 	MyString attr_name;
 	ExprTree *tree = NULL;
-	int unused = 0;
-
 	MyString hashkey(expr);
-
 	int pos = 0;
 	int retval = Parse (expr, attr_name, tree, &pos);
 

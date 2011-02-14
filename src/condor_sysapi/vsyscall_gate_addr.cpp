@@ -36,7 +36,6 @@ static char* find_ckpt_probe(void)
 {
 	char *tmp = NULL;
 	char *tmp2 = NULL;
-	char path[BUFFER_SIZE];
 
 	tmp = param("CKPT_PROBE");
 

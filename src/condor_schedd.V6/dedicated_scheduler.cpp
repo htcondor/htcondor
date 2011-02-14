@@ -2757,7 +2757,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 									   bool is_reconnect)
 {
 	AllocationNode *alloc;
-	MRecArray* matches;
+	MRecArray* matches=NULL;
 
 		// Debugging hack: allow config file to specify which
 		// ip address we want the master to run on.

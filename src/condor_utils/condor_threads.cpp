@@ -481,7 +481,7 @@ ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & mythread)
 	unsigned int j = sizeof(pthread_t);
 	int i = 0;
 	pthread_t thread = mythread.get_pthread();
-	unsigned int *buf = (unsigned int *) &thread;
+	unsigned int *buf = (unsigned int *)&thread;
 
 
 		// add up bytes in unsigned int chunks
