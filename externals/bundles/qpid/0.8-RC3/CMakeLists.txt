@@ -58,11 +58,8 @@ if (WITH_QPID)
 		if (WINDOWS)
 			set( QPID_FOUND "${EXTERNAL_STAGE}/bin/qpidcommon.lib;${EXTERNAL_STAGE}/bin/qpidclient.lib;${EXTERNAL_STAGE}/bin/qmf.lib;${EXTERNAL_STAGE}/bin/qpidtypes.lib" )
 			install ( FILES ${EXTERNAL_STAGE}/bin/qpidcommon.dll
-					  ${EXTERNAL_STAGE}/bin/qpidcommon.pdb
 					  ${EXTERNAL_STAGE}/bin/qpidclient.dll
-					  ${EXTERNAL_STAGE}/bin/qpidclient.pdb
 					  ${EXTERNAL_STAGE}/bin/qmf.dll
-					  ${EXTERNAL_STAGE}/bin/qmf.pdb
 					  ${EXTERNAL_STAGE}/bin/qpidtypes.dll
 					  DESTINATION ${C_LIB} )
 					  
