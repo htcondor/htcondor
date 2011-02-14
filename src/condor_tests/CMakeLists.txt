@@ -170,10 +170,6 @@ if (BUILD_TESTS)
 		condor_pl_test(lib_lease_manager-get_rel_5 "Lease manager: get/relesae test 5" "core;quick;full")
 	endif(WANT_LEASE_MANAGER)
 
-	if (WANT_QUILL AND HAV_EXT_POSTGRESS)
-		condor_pl_test(lib_lease_manager-get_rel_5 "Lease manager: get/relesae test 5" "core;quick;full")
-	endif(WANT_QUILL AND HAV_EXT_POSTGRESS)
-
 	if (STD_UNIVERSE)
 		# C-Tests
 		condor_pl_test(job_core_compressfiles_std "Do we handle compressed files made by standard jobs?" "stduniv;core;quick;full")
