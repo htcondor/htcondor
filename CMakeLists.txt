@@ -26,9 +26,17 @@ cmake_minimum_required(VERSION 2.8)
 set(PACKAGE "condor")
 
 # Condor version info
+#   Condor and other systems parse this number. Keep it simple:
+#   Number.Number.Number. Do nothing else.  If you need to add
+#   more information, PRE_RELEASE is usually the right location.
 set(VERSION "7.5.7")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
+#   This shuld be "PRE-RELEASE-UWCS most of the time, and OFF when
+#   building a release candidate.  If you need to identify builds,
+#   perhaps because you are working on a feature branch and need to
+#   ship test binaries to a user, change this to identify your work.
+#   Avoid whitespace.
 set(PRE_RELEASE "PRE-RELEASE-UWCS")
 #set(PRE_RELEASE OFF)
 
