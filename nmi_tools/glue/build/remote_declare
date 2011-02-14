@@ -28,6 +28,7 @@ my $BaseDir = getcwd();
 my $buildid_file = "BUILD-ID";
 my $buildid;
 
+my $EXTERNALS_TASK  = "remote_task.externals\n";
 my $TAR_TASK 		= "remote_task.create_tar\n";
 my $UNSTRIPPED_TASK = "remote_task.create_unstripped_tar\n";
 my $RPM_TASK		= "remote_task.create_rpm\n";
@@ -49,7 +50,8 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 	#Windows
 	print TASKLIST $TAR_TASK;
 } else {
-	#Everything else
+	# Everything else
+	print TASKLIST $EXTERNALS_TASK;
 	print TASKLIST $UNSTRIPPED_TASK;
 
 	#Add native package build on Debian and Redhat
