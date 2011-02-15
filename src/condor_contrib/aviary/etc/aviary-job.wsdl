@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://grid.redhat.com/aviary-job/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:job="http://job.aviary.grid.redhat.com" targetNamespace="http://grid.redhat.com/aviary-job/" name="aviary-job">
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://grid.redhat.com/aviary-job/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:job="http://job.aviary.grid.redhat.com" xmlns:ns="http://common.aviary.grid.redhat.com" targetNamespace="http://grid.redhat.com/aviary-job/" name="aviary-job">
 	<wsdl:types>
 		<xsd:schema targetNamespace="http://grid.redhat.com/aviary_job/">
 			<xsd:import schemaLocation="aviary-job.xsd" namespace="http://job.aviary.grid.redhat.com"/>
@@ -35,12 +35,6 @@
 	<wsdl:message name="SetJobAttributeResponse">
 		<wsdl:part name="parameters" element="job:SetJobAttributeResponse"/>
 	</wsdl:message>
-	<wsdl:message name="GetJobTemplateRequest">
-		<wsdl:part name="parameters" element="job:GetJobTemplate"/>
-	</wsdl:message>
-	<wsdl:message name="GetJobTemplateResponse">
-		<wsdl:part name="parameters" element="job:GetJobTemplateResponse"/>
-	</wsdl:message>
 	<wsdl:portType name="AviaryJob">
 		<wsdl:operation name="submitJob">
 			<wsdl:input message="tns:SubmitJobRequest"/>
@@ -61,10 +55,6 @@
 		<wsdl:operation name="setJobAttribute">
 			<wsdl:input message="tns:SetJobAttributeRequest"/>
 			<wsdl:output message="tns:SetJobAttributeResponse"/>
-		</wsdl:operation>
-		<wsdl:operation name="getJobTemplate">
-			<wsdl:input message="tns:GetJobTemplateRequest"/>
-			<wsdl:output message="tns:GetJobTemplateResponse"/>
 		</wsdl:operation>
 	</wsdl:portType>
 	<wsdl:binding name="AviaryJobSOAPBinding" type="tns:AviaryJob">
@@ -107,15 +97,6 @@
 		</wsdl:operation>
 		<wsdl:operation name="setJobAttribute">
 			<soap:operation soapAction="http://grid.redhat.com/aviary-job/set-attr"/>
-			<wsdl:input>
-				<soap:body use="literal"/>
-			</wsdl:input>
-			<wsdl:output>
-				<soap:body use="literal"/>
-			</wsdl:output>
-		</wsdl:operation>
-		<wsdl:operation name="getJobTemplate">
-			<soap:operation soapAction="http://grid.redhat.com/aviary-job/get-tmpl"/>
 			<wsdl:input>
 				<soap:body use="literal"/>
 			</wsdl:input>
