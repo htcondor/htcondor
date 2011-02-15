@@ -9798,12 +9798,17 @@ Scheduler::Init()
 		// If the schedd is just starting up, there isn't a job
 		// queue at this point
 		//
-	if ( !first_time_in_init && this->SchedDInterval.getMaxInterval() != orig_SchedDInterval ) {
+	
+	if ( !first_time_in_init ){
+		double diff = this->SchedDInterval.getMaxInterval()
+			- orig_SchedDInterval;
+		if(diff < -1e-4 || diff > 1e-4) {
 			// 
 			// This will only update the job's that have the old
 			// ScheddInterval attribute defined
 			//
-		WalkJobQueue( (int(*)(ClassAd *))::updateSchedDInterval );
+			WalkJobQueue((int(*)(ClassAd*))::updateSchedDInterval);
+		}
 	}
 
 		// Delay sending negotiation request if we are spending more
@@ -9839,7 +9844,7 @@ Scheduler::Init()
 		// and each running shadow requires 800k of private memory.
 		// We don't use SHADOW_SIZE_ESTIMATE here, because until 7.4,
 		// that was explicitly set to 1800k in the default config file.
-	int default_max_jobs_running = sysapi_phys_memory_raw_no_param()*0.8*1024/800;
+	int default_max_jobs_running = sysapi_phys_memory_raw_no_param()*4096/400;
 
 		// Under Linux (not sure about other OSes), the default TCP
 		// ephemeral port range is 32768-61000.  Each shadow needs 2

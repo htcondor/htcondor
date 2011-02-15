@@ -1213,13 +1213,13 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		getUsageOfVM(sys_time, user_time, max_image, rss);
 		
 		// Added to update CPU Usage of VM in ESX
-		if ( (long)m_vm_cputime > user_time ) {
-			user_time = m_vm_cputime;
+		if ( long(m_vm_cputime) > user_time ) {
+			user_time = long(m_vm_cputime);
 		}
 
 		// Publish it into the ad.
-		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (float)sys_time );
-		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (float)user_time );
+		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, float(sys_time));
+		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, float(user_time));
 
 		buf.sprintf("%s=%lu", ATTR_IMAGE_SIZE, max_image );
 		ad->InsertOrUpdate( buf.Value());

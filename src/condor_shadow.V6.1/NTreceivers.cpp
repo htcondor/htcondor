@@ -1694,9 +1694,9 @@ case CONDOR_getdir:
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
-		char *buffer = (char*)malloc(length);
+		char *lbuffer = (char*)malloc(length);
 		errno = 0;
-		rval = readlink(path, buffer, length);
+		rval = readlink(path, lbuffer, length);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		syscall_sock->encode();
@@ -1707,11 +1707,11 @@ case CONDOR_getdir:
 			ASSERT( result );
 		}
 		else {
-			result = ( syscall_sock->code_bytes_bool(buffer, rval) );
+			result = ( syscall_sock->code_bytes_bool(lbuffer, rval));
 			ASSERT( result );
 		}
-		free( (char*)buffer);
-		free( (char*)path );
+		free(lbuffer);
+		free(path);
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 		return 0;

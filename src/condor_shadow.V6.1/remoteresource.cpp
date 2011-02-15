@@ -2030,11 +2030,11 @@ RemoteResource::checkX509Proxy( void )
 
 bool
 RemoteResource::getSecSessionInfo(
-	char const *starter_reconnect_session_info,
+	char const *,
 	MyString &reconnect_session_id,
 	MyString &reconnect_session_info,
 	MyString &reconnect_session_key,
-	char const *starter_filetrans_session_info,
+	char const *,
 	MyString &filetrans_session_id,
 	MyString &filetrans_session_info,
 	MyString &filetrans_session_key)

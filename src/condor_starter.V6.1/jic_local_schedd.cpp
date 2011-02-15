@@ -296,13 +296,14 @@ JICLocalSchedd::notifyJobPreSpawn( void )
  * update type is for the job and write an EVICT event to the user log.
  * 
  * @param exit_status - the exit status of the job from wait()
+ * This is not used currently
  * @param reason - the Condor-defined reason why the job is exiting
  * @param user_proc - the Proc object for this job
  * @return true if the job was set to exit properly
  * @see h/exit.h
  **/
 bool
-JICLocalSchedd::notifyJobExit( int exit_status, int reason, 
+JICLocalSchedd::notifyJobExit( int, int reason, 
 							   UserProc* user_proc )
 {
 		// Remember what steps we've completed, in case we need to retry.
