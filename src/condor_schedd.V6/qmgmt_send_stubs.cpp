@@ -563,9 +563,9 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 
 	if ( !(updated_attrs->initFromStream(*qmgmt_sock)) ) {
 		errno = ETIMEDOUT;
-		return NULL;
+		return 0;
 	}
-	assert( qmgmt_sock->end_of_message() != NULL);
+	assert( qmgmt_sock->end_of_message() != 0 );
 
 	return rval;
 }

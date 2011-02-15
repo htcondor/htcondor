@@ -261,7 +261,7 @@ void BaseShadow::config()
 
 	reconnect_e_factor = 0.0;
 	reconnect_e_factor = param_double( "RECONNECT_BACKOFF_FACTOR", 2.0, 0.0 );
-	if( !reconnect_e_factor ) {
+	if( reconnect_e_factor < -1e-4 || reconnect_e_factor > 1e-4) {
     	reconnect_e_factor = 2.0;
     }
 

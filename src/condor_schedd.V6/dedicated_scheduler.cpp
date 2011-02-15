@@ -888,7 +888,7 @@ DedicatedScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID job_id)
+DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID)
 {
 	return false;
 }

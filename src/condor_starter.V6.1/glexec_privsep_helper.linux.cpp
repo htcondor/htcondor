@@ -223,7 +223,7 @@ GLExecPrivSepHelper::create_process(const char* path,
                                     int         reaper_id,
                                     int         dc_job_opts,
                                     FamilyInfo* family_info,
-									int *       affinity_mask)
+                                    int *)
 {
 	ASSERT(m_initialized);
 
