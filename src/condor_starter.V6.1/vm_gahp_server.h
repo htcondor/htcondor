@@ -83,8 +83,8 @@ class VMGahpServer : public Service {
 		bool read_argv(Gahp_Args *g_args) { return read_argv(*g_args);}
 		bool write_line(const char *command);
 		bool write_line(const char *command, int req, const char *args);
-		int pipe_ready();
-		int err_pipe_ready();
+		int pipe_ready(int pipe_end);
+		int err_pipe_ready(int pipe_end);
 		int poll();
 		int poll_now();
 		void poll_real_soon();

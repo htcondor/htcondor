@@ -79,7 +79,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io )
 	}
 
 	offset = 0;
-	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",(PipeHandlercpp)&StreamHandler::Handler,"Stream I/O Handler",this,handler_mode);
+	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",static_cast<PipeHandlercpp>(&StreamHandler::Handler),"Stream I/O Handler",this,handler_mode);
 
 	done = false;
 	connected = true;
@@ -232,7 +232,7 @@ StreamHandler::Reconnect() {
 		EXCEPT("Couldn't reopen %s to stream %s: %s\n",filename.Value(),streamname.Value(),strerror(errno));
 	}
 
-	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",(PipeHandlercpp)&StreamHandler::Handler,"Stream I/O Handler",this,handler_mode);
+	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",static_cast<PipeHandlercpp>(&StreamHandler::Handler),"Stream I/O Handler",this,handler_mode);
 	
 	connected = true;
 

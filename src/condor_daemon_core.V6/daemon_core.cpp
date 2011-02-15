@@ -789,7 +789,7 @@ int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 				Service* s, HandlerType handler_type, DCpermission perm)
 {
 	return( Register_Pipe(pipe_end, pipe_descrip, handler,
-							(PipeHandlercpp)NULL, handler_descrip, s,
+							NULL, handler_descrip, s,
 							handler_type, perm, FALSE) );
 }
 
@@ -2241,7 +2241,7 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int len) {
 	}
 	pidinfo->pipe_buf[0] = new MyString;
 	*pidinfo->pipe_buf[0] = (char*)buffer;
-	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", (PipeHandlercpp)& DaemonCore::PidEntry::pipeFullWrite, "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
+	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeFullWrite), "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
 	return 0;
 }
 
@@ -8294,7 +8294,7 @@ int DaemonCore::Create_Process(
 					pipe_handler_desc = "DC stderr pipe handler";
 				}
 				Register_Pipe(dc_pipe_fds[i][0], pipe_desc,
-					  (PipeHandlercpp) & DaemonCore::PidEntry::pipeHandler,
+					  static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeHandler),
 					  pipe_handler_desc, pidtmp);
 			}
 				// Either way, we stashed/closed as needed, so clear
@@ -10928,7 +10928,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 }
 
 
-void
+int
 DaemonCore::PidEntry::pipeFullWrite(int fd)
 {
 	int bytes_written = 0;
@@ -10964,6 +10964,7 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 	{
 		dprintf(D_DAEMONCORE|D_FULLDEBUG, "DaemonCore::PidEntry::pipeFullWrite: Failed to write to fd %d (errno = %d).  Will try again.\n", fd, errno);
 	}
+	return 0;
 }
 
 void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid ) {
