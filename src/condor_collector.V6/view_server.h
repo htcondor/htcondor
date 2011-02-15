@@ -85,7 +85,6 @@ public:
 	void Config();           // main_config
 	void Exit();             // main__shutdown_fast
 	void Shutdown();         // main_shutdown_graceful
-	~ViewServer() {}
 
 	static int ReceiveHistoryQuery(Service*, int, Stream*);
 	static int HandleQuery(Stream*, int cmd, int FromDate, int ToDate, int Options, MyString Arg);
