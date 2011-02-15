@@ -902,8 +902,8 @@ Condor_Auth_Passwd::destroy_t_buf(struct msg_t_buf *t)
 }
 
 int
-Condor_Auth_Passwd::authenticate(const char * remoteHost, 
-								 CondorError* errstack)
+Condor_Auth_Passwd::authenticate(const char * /* remoteHost */, 
+								 CondorError* /* errstack */ )
 {
     int client_status = AUTH_PW_A_OK;
     int server_status = AUTH_PW_A_OK;
@@ -1420,8 +1420,8 @@ bool Condor_Auth_Passwd::calculate_hkt(msg_t_buf *t_buf, sk_buf *sk)
 	unsigned char *buffer;
 	int prefix_len, buffer_len;
 
-	dprintf(D_SECURITY, "Calculating hkt '%s' (%d), '%s' (%d).\n",
-			t_buf->a, strlen(t_buf->a), t_buf->b, strlen(t_buf->b));
+	dprintf(D_SECURITY, "Calculating hkt '%s' (%lu), '%s' (%lu).\n",
+			t_buf->a, (unsigned long)strlen(t_buf->a), t_buf->b, (unsigned long)strlen(t_buf->b));
 		// Assemble the buffer to be hmac'd by concatentating T in
 		// buffer.  Then call hmac with ka.
 	if(!t_buf->a || !t_buf->b || !t_buf->ra || !t_buf->rb) {

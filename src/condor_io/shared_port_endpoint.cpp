@@ -1043,7 +1043,7 @@ SharedPortEndpoint::deserialize(char *inherit_buf)
 	char *ptr;
 	ptr = strchr(inherit_buf,'*');
 	ASSERT( ptr );
-	m_full_name.sprintf("%.*s",ptr-inherit_buf,inherit_buf);
+	m_full_name.sprintf("%.*s",(int)(ptr-inherit_buf),inherit_buf);
 	inherit_buf = ptr+1;
 
 	m_local_id = condor_basename( m_full_name.Value() );

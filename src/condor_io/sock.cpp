@@ -1634,7 +1634,7 @@ char * Sock::serialize() const
 	char * outbuf = new char[500];
     if (outbuf) {
         memset(outbuf, 0, 500);
-        sprintf(outbuf,"%u*%d*%d*%d*%u*%u*%s*%s*",_sock,_state,_timeout,triedAuthentication(),fqu_len,verstring_len,_fqu ? _fqu : "",verstring ? verstring : "");
+        sprintf(outbuf,"%u*%d*%d*%d*%lu*%lu*%s*%s*",_sock,_state,_timeout,triedAuthentication(),(unsigned long)fqu_len,(unsigned long)verstring_len,_fqu ? _fqu : "",verstring ? verstring : "");
     }
     else {
         dprintf(D_ALWAYS, "Out of memory!\n");
@@ -1666,7 +1666,7 @@ char * Sock::serialize(char *buf)
 	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
-	i = sscanf(buf,"%u*%d*%d*%d*%u*%u*%n",&passed_sock,(int*)&_state,&_timeout,&tried_authentication,&fqulen,&verstring_len,&pos);
+	i = sscanf(buf,"%u*%d*%d*%d*%lu*%lu*%n",&passed_sock,(int*)&_state,&_timeout,&tried_authentication,(unsigned long *)&fqulen,(unsigned long *)&verstring_len,&pos);
 	if (i!=6) {
 		EXCEPT("Failed to parse serialized socket information (%d,%d): '%s'\n",i,pos,buf);
 	}
@@ -1682,7 +1682,7 @@ char * Sock::serialize(char *buf)
 	free(fqubuf);
 	buf += fqulen;
 	if( *buf != '*' ) {
-		EXCEPT("Failed to parse serialized socket fqu (%d): '%s'\n",fqulen,buf);
+		EXCEPT("Failed to parse serialized socket fqu (%lu): '%s'\n",(unsigned long)fqulen,buf);
 	}
 	buf++;
 
@@ -1702,7 +1702,7 @@ char * Sock::serialize(char *buf)
 	free( verstring );
 	buf += verstring_len;
 	if( *buf != '*' ) {
-		EXCEPT("Failed to parse serialized peer version string (%d): '%s'\n",verstring_len,buf);
+		EXCEPT("Failed to parse serialized peer version string (%lu): '%s'\n",(unsigned long)verstring_len,buf);
 	}
 	buf++;
 
@@ -2208,7 +2208,7 @@ Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 				the functions signatures all the way down to the
 				the Generic_bind() call in the GCB
 				external. */
-			(struct sockaddr*)addr, 
+			const_cast<struct sockaddr*>(addr),
 			len);
 	}
 	else {

@@ -837,10 +837,10 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
 	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
 }
 
+#ifdef WIN32
 int DaemonCore::Register_Timer_TS(unsigned deltawhen, TimerHandlercpp handler,
 				const char *event_descrip, Service* s)
 {
-#ifdef WIN32
 	EnterCriticalSection(&Big_fat_mutex);
 	int status = Register_Timer(deltawhen, handler, event_descrip, s);
 	Do_Wake_up_select();
@@ -848,6 +848,10 @@ int DaemonCore::Register_Timer_TS(unsigned deltawhen, TimerHandlercpp handler,
 
 	return status;
 #else
+int DaemonCore::Register_Timer_TS(unsigned /* deltawhen */,
+				TimerHandlercpp /* handler */,
+				const char * /* event_descrip */, Service * /* s */ )
+{
 	return 0;
 #endif
 }
@@ -2227,7 +2231,7 @@ DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
 
 
 int
-DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int len) {
+DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 	PidEntry *pidinfo = NULL;
 	if ((pidTable->lookup(pid, pidinfo) < 0)) {
 			// we have no information on this pid
@@ -2754,7 +2758,7 @@ DaemonCore::reconfig(void) {
 		MyString buf;
 		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
 		max_hang_time = param_integer(buf.Value(),-1);
-		if( max_hang_time == -1 ) {
+		if( max_hang_time == (unsigned int)-1 ) {
 			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
 		}
 		if ( !max_hang_time ) {
@@ -10442,7 +10446,7 @@ DaemonCore::InitSettableAttrsLists( void )
 
 
 bool
-DaemonCore::InitSettableAttrsList( const char* subsys, int i )
+DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 {
 	MyString param_name;
 	char* tmp;

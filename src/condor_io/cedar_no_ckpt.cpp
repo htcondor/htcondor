@@ -709,11 +709,11 @@ int relisock_gsi_put(void *arg,  void *buf, size_t size)
     //if successful, send the data
     if ( stat ) {
         if ( !(stat = sock->code_bytes( buf, ((int) size )) ) ) {
-            dprintf( D_ALWAYS, "failure sending data (%d bytes) over sock\n",size);
+            dprintf( D_ALWAYS, "failure sending data (%lu bytes) over sock\n",(unsigned long)size);
         }
     }
     else {
-        dprintf( D_ALWAYS, "failure sending size (%d) over sock\n", size );
+        dprintf( D_ALWAYS, "failure sending size (%lu) over sock\n", (unsigned long)size );
     }
     
     sock->end_of_message();

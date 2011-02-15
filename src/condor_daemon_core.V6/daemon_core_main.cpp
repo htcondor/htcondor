@@ -899,7 +899,7 @@ handle_set_peaceful_shutdown( Service*, int, Stream* stream)
 
 
 static int
-handle_reconfig( Service*, int cmd, Stream* stream )
+handle_reconfig( Service*, int /* cmd */, Stream* stream )
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "handle_reconfig: failed to read end of message\n");
