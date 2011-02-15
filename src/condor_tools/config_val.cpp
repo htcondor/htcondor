@@ -359,6 +359,11 @@ main( int argc, char* argv[] )
 		my_exit( 1 );
 	}
 
+	params.rewind();
+	if( ! params.number() && !print_config_sources ) {
+		usage();
+	}
+
 	if( name || addr || mt != CONDOR_QUERY || dt != DT_MASTER ) {
 		ask_a_daemon = true;
 	}
@@ -402,12 +407,6 @@ main( int argc, char* argv[] )
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
 			my_exit( 1 );
 		}
-	}
-
-	params.rewind();
-
-	if( ! params.number() && !print_config_sources ) {
-		usage();
 	}
 
 	while( (tmp = params.next()) ) {
@@ -515,7 +514,7 @@ GetRemoteParam( Daemon* target, char* param_name )
 void
 SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 {
-	int cmd, rval;
+	int cmd = DC_NOP, rval;
 	ReliSock s;
 	bool set = false;
 
@@ -591,10 +590,10 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		// At this point, in either set or unset mode, param_name
 		// should hold a valid name, so do a final check to make sure
 		// there are no spaces.
-	if( (tmp = strchr(param_name, ' ')) ) {
+	if( !is_valid_param_name(param_name) ) {
 		fprintf( stderr, 
-				 "%s: Error: Configuration variable names cannot contain spaces\n",
-				 MyName );
+				 "%s: Error: Configuration variable name (%s) is not valid, alphanumeric and _ only\n",
+				 MyName, param_name );
 		my_exit( 1 );
 	}
 

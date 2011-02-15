@@ -22,7 +22,7 @@ rem echo %_WXS_FILES%
 rem echo %_WXS_FILES:.wxs=.wixobj%
 set _WIXOBJ_FILES=%_WXS_FILES:xml\=%
 
-heat dir %_condor_path% -ke -g1 -srd -gg -var var.Source -t:xml\win.xsl -out "%~n2.wxs"
+heat dir %_condor_path% -ke -g1 -srd -gg -var var.Source -t:xml\condor.xsl -out "%~n2.wxs"
 
 candle -ext WixFirewallExtension -dSource=%_condor_path% "%~n2.wxs" %_WXS_FILES%
 

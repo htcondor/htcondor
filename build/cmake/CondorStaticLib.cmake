@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,7 +16,12 @@
  # 
  ############################################################### 
 
-MACRO (CONDOR_STATIC_LIB _CNDR_TARGET _SRCS)
+MACRO (CONDOR_STATIC_LIB _CNDR_TARGET)
+
+SET(_SRCS ${ARGN})
+
+# ADD_PRECOMPILED_HEADER macro expects to operate on a global _SRCS
+ADD_PRECOMPILED_HEADER()
 
 add_library(${_CNDR_TARGET} STATIC ${_SRCS})
 

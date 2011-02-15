@@ -155,8 +155,8 @@ IsBooleanValueEquiv(bool &b) const
 		case REAL_VALUE:
 			b = ( realValue ) ? true : false;
 			return true;
+		default: return false;
 	}
-
 	return false;
 }
 

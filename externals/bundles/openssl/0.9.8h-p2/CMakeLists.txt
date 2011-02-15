@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -83,6 +83,8 @@ if (WITH_OPENSSL)
 			install ( FILES ${EXTERNAL_STAGE}/lib/libeay32.dll
 							${EXTERNAL_STAGE}/lib/ssleay32.dll
 					  DESTINATION ${C_LIB} )
+			
+			set_property( TARGET openssl PROPERTY FOLDER "externals" )
 
 		else(WINDOWS)
 			set(OPENSSL_FOUND "${EXTERNAL_STAGE}/lib/libssl.a;${EXTERNAL_STAGE}/lib/libcrypto.a")

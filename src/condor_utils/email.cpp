@@ -283,8 +283,6 @@ email_open_implementation(char *const final_args[])
 		static char pe_logname[256]; /* Sorry, putenv wants it this way */
 		static char pe_user[256];
 		const char *condor_name;
-		uid_t condor_uid;
-		gid_t condor_gid;
 		int i;
 
 		/* Disable any EXCEPT_Cleanup code installed by the parent process.
@@ -390,7 +388,11 @@ email_developers_open(const char *subject)
     tmp = param ("CONDOR_DEVELOPERS");
     if (tmp == NULL) {
 		/* we strdup here since we always call free below */
+#ifdef NO_PHONE_HOME
+		tmp = strdup("NONE");
+#else
         tmp = strdup("condor-admin@cs.wisc.edu");
+#endif
     } else
     if (strcasecmp (tmp, "NONE") == 0) {
         free (tmp);
@@ -425,7 +427,7 @@ email_close(FILE *mailer)
 	priv = set_condor_priv();
 
 	customSig = NULL;
-	if (customSig = param("EMAIL_SIGNATURE")) {
+	if ((customSig = param("EMAIL_SIGNATURE")) != NULL) {
 		fprintf( mailer, "\n\n");
 		fprintf( mailer, customSig);
 		fprintf( mailer, "\n");

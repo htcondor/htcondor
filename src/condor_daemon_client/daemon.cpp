@@ -578,6 +578,7 @@ Daemon::makeConnectedSocket( Stream::stream_type st,
 		return reliSock(timeout, deadline, errstack, non_blocking);
 	case Stream::safe_sock:
 		return safeSock(timeout, deadline, errstack, non_blocking);
+	default: break;
 	}
 
 	EXCEPT( "Unknown stream_type (%d) in Daemon::makeConnectedSocket",
@@ -891,7 +892,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 bool
 Daemon::locate( void )
 {
-	bool rval;
+	bool rval=false;
 	char* tmp = NULL;
 
 		// Make sure we only call locate() once.

@@ -550,7 +550,7 @@ my_spawnl( const char* cmd, ... )
     va_end( va );
 
 	/* Invoke the real spawnl to do the work */
-    rval = my_spawnv( cmd, (char *const*) argv );
+    rval = my_spawnv( cmd, const_cast<char *const*>(argv));
 
 	/* Done */
 	return rval;

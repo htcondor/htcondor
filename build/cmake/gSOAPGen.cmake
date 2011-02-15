@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -53,6 +53,10 @@ if ( HAVE_EXT_GSOAP )
 	if (NOT PROPER)
 		add_dependencies( gen_${_DAEMON}_soapfiles gsoap )
 	endif()
+	
+	if (WINDOWS)
+		set_property( TARGET gen_${_DAEMON}_soapfiles PROPERTY FOLDER "executables" )
+	endif()	
 
 	# now append the header and srcs to incoming vars
 	if ( NOT ${_SRCS} MATCHES "soap_${_DAEMON}C.cpp" )

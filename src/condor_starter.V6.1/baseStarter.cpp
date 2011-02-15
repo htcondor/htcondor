@@ -2335,7 +2335,6 @@ CStarter::allJobsDone( void )
 bool
 CStarter::transferOutput( void )
 {
-	char *ver;
 	UserProc *job;
 	bool transient_failure = false;
 

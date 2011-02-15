@@ -1,6 +1,6 @@
  ###############################################################
  #
- # Copyright (C) 1990-2010, Redhat.
+ # Copyright 2011 Red Hat, Inc.
  #
  # Licensed under the Apache License, Version 2.0 (the "License"); you
  # may not use this file except in compliance with the License.  You may
@@ -65,11 +65,27 @@ include (GlibcDetect)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
 if (CONDOR_PLATFORM)
-	add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
+    add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
 elseif(PLATFORM)
-	add_definitions(-DPLATFORM="${PLATFORM}")
+    add_definitions(-DPLATFORM="${PLATFORM}")
+elseif(LINUX_NAME)
+    add_definitions(-DPLATFORM="${SYS_ARCH}-${LINUX_NAME}_${LINUX_VER}")
 else()
-	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
+    add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
+endif()
+
+if(PRE_RELEASE)
+  add_definitions( -DPRE_RELEASE_STR=" ${PRE_RELEASE}" )
+else()
+  add_definitions( -DPRE_RELEASE_STR="" )
+endif(PRE_RELEASE)
+add_definitions( -DCONDOR_VERSION="${VERSION}" )
+
+if( NOT BUILD_DATE )
+  GET_DATE( BUILD_DATE )
+endif()
+if(BUILD_DATE)
+  add_definitions( -DBUILD_DATE="${BUILD_DATE}" )
 endif()
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
@@ -116,6 +132,7 @@ if( NOT WINDOWS)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	check_function_exists("getpagesize" HAVE_GETPAGESIZE)
 	check_function_exists("getwd" HAVE_GETWD)
+	check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
 	check_function_exists("inet_ntoa" HAS_INET_NTOA)
 	check_function_exists("lchown" HAVE_LCHOWN)
 	check_function_exists("lstat" HAVE_LSTAT)
@@ -334,7 +351,7 @@ if (NOT WINDOWS) # if *nix
 endif()
 
 if (BUILD_TESTS)
-	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
+	set(TEST_TARGET_DIR ${CMAKE_BINARY_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
 
 ##################################################
@@ -393,6 +410,7 @@ link_directories( ${EXTERNAL_STAGE}/lib64 ${EXTERNAL_STAGE}/lib )
 
 ###########################################
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
@@ -493,6 +511,9 @@ include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
+if (WANT_CONTRIB)
+    include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
+endif(WANT_CONTRIB)
 ###########################################
 
 ###########################################
@@ -720,8 +741,44 @@ dprint ( "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}" )
 # the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz")
 dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 
+# the Condor src directory
+dprint ( "CONDOR_SOURCE_DIR: ${CONDOR_SOURCE_DIR}" )
+dprint ( "CONDOR_EXTERNAL_DIR: ${CONDOR_EXTERNAL_DIR}" )
+dprint ( "TEST_TARGET_DIR: ${TEST_TARGET_DIR}" )
+
+# the Condor version string being used
+dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
+
+# the build id
+dprint ( "BUILDID: ${BUILDID}" )
+
+# the build date & time
+dprint ( "BUILD_TIMEDATE: ${BUILD_TIMEDATE}" )
+dprint ( "BUILD_DATE: ${BUILD_DATE}" )
+
+# the pre-release string
+dprint ( "PRE_RELEASE: ${PRE_RELEASE}" )
+
+# the platform specified
+dprint ( "PLATFORM: ${PLATFORM}" )
+
+# the Condor platform specified
+dprint ( "CONDOR_PLATFORM: ${CONDOR_PLATFORM}" )
+
+# the system name (used for generated tarballs)
+dprint ( "SYSTEM_NAME: ${SYSTEM_NAME}" )
+
+# the RPM system name (used for generated tarballs)
+dprint ( "RPM_SYSTEM_NAME: ${RPM_SYSTEM_NAME}" )
+
+# the Condor package name
+dprint ( "CONDOR_PACKAGE_NAME: ${CONDOR_PACKAGE_NAME}" )
+
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "UNIX: ${UNIX}" )
+
+# is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
+dprint ( "Linux: ${LINUX_NAME}" )
 
 # is TRUE on Windows, including CygWin
 dprint ( "WIN32: ${WIN32}" )

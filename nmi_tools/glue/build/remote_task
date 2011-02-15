@@ -37,6 +37,7 @@ my $SrcDir = "$BaseDir/src";
 my $msconfigDir = "$BaseDir/msconfig";
 my $PublicDir = "$BaseDir/public";
 
+my $EXTERNALS_TASK  = "remote_task.externals";
 my $TAR_TASK 	= "remote_task.create_tar";
 my $UNSTRIPPED_TASK = "remote_task.create_unstripped_tar";
 my $CONFIG_TASK = "remote_task.reconfig_package";
@@ -67,7 +68,12 @@ if( ! defined $ENV{_NMI_TASKNAME} ) {
 }
 
 # Checking task type
-if ($taskname eq $TAR_TASK) { 
+if( $taskname eq $EXTERNALS_TASK ) {
+    # Since we only declare the externals task on Windows, we don't have
+    # to handle invoking the Windows build tools.
+    $execstr = "make externals";
+
+} elsif ($taskname eq $TAR_TASK) { 
 	#Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
 	#Reconfigure cmake variables for stripped tarball build
 
@@ -81,7 +87,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 	#Append extra argument
 	# We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make -j4 && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz && make tests";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz && make tests";
 
 } elsif  ($taskname eq $UNSTRIPPED_TASK){
 	#Reconfigure cmake variables for native package build
@@ -96,7 +102,7 @@ if ($taskname eq $TAR_TASK) {
 	close (CMAKECONFIG);
 
 	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make -j4 && make install && make targz && make tests";
+	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make && make install && make targz && make tests";
 } elsif  ($taskname eq $RPM_TASK){
 	#Building RPM
 

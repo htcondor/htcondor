@@ -74,7 +74,6 @@ extern "C" int ConnectToServer(request_type type)
 	time_t				ckpt_server_retry;
 	int					ckpt_server_timeout;
 	int					ret;
-	unsigned int		ddd = 0x0a00000a;
 	time_t				now;
 
 	now = time(NULL);
@@ -196,7 +195,7 @@ extern "C" int ConnectToServer(request_type type)
 
 				dprintf(D_ALWAYS, "Skipping connect to checkpoint server "
 						"%s for %d seconds due to connection timeout.\n",
-						str.Value(), ckpt_server_retry);
+						str.Value(), (int)ckpt_server_retry);
 
 				embargo_time = now + ckpt_server_retry;
 

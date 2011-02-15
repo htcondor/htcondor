@@ -899,6 +899,7 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	}
 	
 	ULogEventOutcome	outcome = ULOG_OK;
+	bool try_again = false;
 	if( m_state->IsLogType( ReadUserLogState::LOG_TYPE_UNKNOWN ) ) {
 	    if( !determineLogType() ) {
 			outcome = ULOG_RD_ERROR;
@@ -908,7 +909,6 @@ ReadUserLog::readEvent (ULogEvent *& event, bool store_state )
 	}
 
 	// Now, read the actual event (depending on the file type)
-	bool	try_again;
 	outcome = readEvent( event, &try_again );
 	if ( ! m_handle_rot ) {
 		try_again = false;

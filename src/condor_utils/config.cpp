@@ -76,6 +76,47 @@ condor_isidchar(int c)
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
 #define DOLLAR_ID "DOLLAR"
 
+
+int is_valid_param_name(const char *name)
+{
+		/* Check that "name" is a legal identifier : only
+		   alphanumeric characters and _ allowed*/
+	while( *name ) {
+		if( !ISIDCHAR(*name++) ) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+char * parse_param_name_from_config(const char *config)
+{
+	char *name, *tmp;
+
+	if (!(name = strdup(config))) {
+		EXCEPT("Out of memory!");
+	}
+
+	tmp = strchr(name, '=');
+	if (!tmp) {
+		tmp = strchr(name, ':');
+	}
+	if (!tmp) {
+			// Line is invalid, should be "name = value" or "name : value"
+		return NULL;
+	}
+
+		// Trim whitespace...
+	*tmp = ' ';
+	while (isspace(*tmp)) {
+		*tmp = '\0';
+		tmp--;
+	}
+
+	return name;
+}
+
 bool 
 is_piped_command(const char* filename)
 {
@@ -284,16 +325,12 @@ Read_config( const char* config_source, BUCKET** table,
 
 		/* Check that "name" is a legal identifier : only
 		   alphanumeric characters and _ allowed*/
-		ptr = name;
-		while( *ptr ) {
-			char c = *ptr++;
-			if( !ISIDCHAR(c) ) {
-				fprintf( stderr,
-		"Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
-					config_source, ConfigLineNo, name );
-				retval = -1;
-				goto cleanup;
-			}
+		if( !is_valid_param_name(name) ) {
+			fprintf( stderr,
+					 "Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
+					 config_source, ConfigLineNo, name );
+			retval = -1;
+			goto cleanup;
 		}
 
 		if( expand_flag == EXPAND_IMMEDIATE ) {
@@ -643,13 +680,13 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self, boo
 			const char *tmp2;
 
 			tmp2 = entries.next();
-			long	min_value;
+			long	min_value=0;
 			if ( string_to_long( tmp2, &min_value ) < 0 ) {
 				EXCEPT( "$RANDOM_INTEGER() config macro: invalid min!" );
 			}
 
 			tmp2 = entries.next();
-			long	max_value;
+			long	max_value=0;
 			if ( string_to_long( tmp2, &max_value ) < 0 ) {
 				EXCEPT( "$RANDOM_INTEGER() config macro: invalid max!" );
 			}

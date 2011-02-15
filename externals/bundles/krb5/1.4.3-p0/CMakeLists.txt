@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -81,6 +81,8 @@ if (WITH_KRB5)
 							${EXTERNAL_STAGE}/lib/krb5_32.dll
 							${EXTERNAL_STAGE}/lib/xpprof32.dll
 					  DESTINATION ${C_LIB} )
+					  
+			set_property( TARGET krb5 PROPERTY FOLDER "externals" )
 
 		else()
 			set(KRB5_FOUND "${EXTERNAL_STAGE}/lib/libkrb5.a;${EXTERNAL_STAGE}/lib/libk5crypto.a;${EXTERNAL_STAGE}/lib/libcom_err.a;${EXTERNAL_STAGE}/lib/libkrb5support.a")

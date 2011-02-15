@@ -287,6 +287,7 @@ class FileTransfer {
 	StringList* FilesToSend;
 	StringList* EncryptFiles;
 	StringList* DontEncryptFiles;
+	char* OutputDestination;
 	char* SpooledIntermediateFiles;
 	char* ExecFile;
 	char* UserLogFile;

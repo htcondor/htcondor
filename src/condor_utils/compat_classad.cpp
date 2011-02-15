@@ -627,7 +627,7 @@ ClassAd::ClassAd()
 	EnableDirtyTracking();
 }
 
-ClassAd::ClassAd( const ClassAd &ad )
+ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();

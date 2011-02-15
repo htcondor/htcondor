@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -63,7 +63,11 @@ if ( WITH_DRMAA )
 						#--install Step ----------
 						INSTALL_DIR ${EXTERNAL_STAGE}
 						INSTALL_COMMAND ${DRMAA_INSTALL})
-	
+
+	if (WINDOWS)
+		set_property( TARGET drmaa PROPERTY FOLDER "externals" )
+	endif()
+		
 	message (STATUS "external configured (DRMAA_FOUND=${DRMAA_FOUND})")
 	set( DRMAA_FOUND ${DRMAA_FOUND} PARENT_SCOPE )
 	set( HAVE_EXT_DRMAA ON PARENT_SCOPE )

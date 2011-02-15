@@ -2675,6 +2675,11 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
 	request->Insert( buffer );
 
+
+	int last_match_time=0, last_rej_match_time=0;
+	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
+	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
+
 	request->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	request->LookupInteger( ATTR_PROC_ID, proc );
 	request->LookupInteger( ATTR_JOB_STATUS, jobState );
@@ -2715,6 +2720,13 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			proc );
 		return return_buff;
 	}
+	if ( last_rej_match_time == 0 ) {
+	  sprintf( return_buff,
+		   "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
+		   proc );
+	  return return_buff;
+	}
+
 
 	startdAds.Open();
 
@@ -2884,9 +2896,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		fOffline, verbose ? fOfflineStr.c_str() : "",
 		available );
 
-	int last_match_time=0, last_rej_match_time=0;
-	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
-	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 	if (last_match_time) {
 		time_t t = (time_t)last_match_time;
 		sprintf( return_buff, "%s\tLast successful match: %s",

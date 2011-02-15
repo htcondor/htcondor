@@ -1,0 +1,480 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use warnings;
+use strict;
+use Getopt::Long;
+use Date::Manip;
+use File::Path;
+use FindBin qw($RealBin $RealScript);
+
+# contains parsed arguments from ARGV
+my %args;
+my @original_argv;
+
+sub usage
+{
+	print<<EOF;
+Usage: $0 --jobid <CLUSTER.PROC> [ OPTIONS ]
+--jobid      The jobid
+--gitrac     The gitrac ticket number associated with this problem
+--sdate      A Unix date corresponding to the start of the search time
+--edate      A Unix date corresponding to the end of the search time
+--pool       The pool to query (local pool if not defined)
+--schedd     The schedd to query (local schedd if not defined)
+--scratch    Scratch directory used by the program, defaults to /tmp/cbd-$$
+EOF
+
+	exit(1);
+}
+
+sub parse_command_line
+{
+	my $rc;
+	my $tmp;
+
+	@original_argv = @ARGV;
+
+	$rc = GetOptions( \%args,
+			'help',
+			'jobid=s',
+			'sdate=s',
+			'edate=s',
+			'pool=s',
+			'schedd=s'
+			);
+	
+	if (!$rc) {
+		usage();
+	}
+
+	if (defined($args{'help'})) {
+		usage();
+	}
+
+	if (!defined($args{'jobid'})) {
+		print "Please specify a jobid.\n";
+		usage();
+	}
+
+	# ######
+	# Reparse the start time into a Date::Manip form.
+	# ######
+	if (exists($args{'sdate'})) {
+		if ($args{'sdate'} =~ m/^\d+$/) {
+			$args{'sdate'} = ParseDateString("epoch $args{'sdate'}");
+		} else {
+			$args{'sdate'} = ParseDate($args{'sdate'});
+		}
+	} else {
+		# start of epoch seconds
+		$args{'sdate'} = ParseDate("Jan 1, 1970  00:00:00 GMT");
+	}
+
+	# ######
+	# Reparse the end time into a Date::Manip form.
+	# ######
+	if (exists($args{'edate'})) {
+		if ($args{'edate'} =~ m/^\d+$/) {
+			$args{'edate'} = ParseDateString("epoch $args{'edate'}");
+		} else {
+			$args{'edate'} = ParseDate($args{'edate'});
+		}
+	} else {
+		# end of epoch seconds-ish
+		$args{'edate'} = ParseDate("Jan 19, 2038  00:00:00 GMT");
+	}
+
+	# ######
+	# set up the scratch space
+	# ######
+
+	# This stupid date format is because tar does insanely stuid things when
+	# there is a colon in the archive name.
+	$tmp = `date +%F-%I_%M_%S%p-%Z`;
+	chomp $tmp;
+	$tmp = getlogin() . "-jid$args{'jobid'}-$tmp";
+
+	# The _scratch for is the parent of the inner scratch directory.
+	if (!exists($args{'scratch'})) {
+		$args{'scratch'} = "/tmp/cbs-$$/cbs-$tmp";
+		$args{'_scratch'} = "/tmp/cbs-$$";
+	} else {
+		$args{'scratch'} .= "/cbs-$$/cbs-$tmp";
+		$args{'_scratch'} = "$args{'scratch'}/cbs-$$";
+	}
+
+	if (-d $args{'_scratch'}) {
+		die "I'm not going to remove /. Sorry." 
+			if ($args{'_scratch'} =~ /^\d*\/\d*$/g);
+		rmtree($args{'_scratch'}, {'keep_root' => 1});
+	}
+
+	# make the scratch space.
+	mkpath($args{'scratch'});
+
+	# fix my self up to clean it up on INT
+	$SIG{'INT'} = 'sigint';
+}
+
+# XXX fixme.
+sub cleanup
+{
+	# remove the scratch dir, sanity check too
+	if (-d $args{'_scratch'}) {
+		print "Cleaning up scratch space.\n";
+		die "I'm not going to remove /. Sorry." 
+			if ($args{'_scratch'} =~ /^\d*\/\d*$/g);
+		# also remove the scratch dir itself...
+		rmtree($args{'_scratch'});
+	}
+}
+
+sub sigint
+{
+	print "Got INT. Quitting.\n";
+	cleanup();
+	exit(1);
+}
+
+# Return the start date in epoch seconds from the arguments. If you pass
+# in a single argument of a format string, the date will be returned as that
+# instead.
+sub sdate
+{
+	my $cmd = shift;
+	if (!defined($cmd)) {
+		$cmd = "%s";
+	}
+	return UnixDate($args{'sdate'}, $cmd);
+}
+
+# Return the end date in epoch seconds from the arguments. If you pass
+# in a single argument of a format string, the date will be returned as that
+# instead.
+sub edate
+{
+	my $cmd = shift;
+	if (!defined($cmd)) {
+		$cmd = "%s";
+	}
+	return UnixDate($args{'edate'}, $cmd);
+}
+
+sub condor_q
+{
+	my $jobid = shift; # Must exist
+	my $output_file = shift; # Fully qualified when passed in...
+	my @cqargs = @_;
+	my $cmd;
+	die "No jobid for which to condor_q!" if !defined($jobid);
+
+	# XXX deal with --pool and --schedd
+	$cmd = "condor_q " . join(" ", @cqargs) . " $jobid " . 
+			"> $output_file 2>&1";
+
+	return system("$cmd");
+}
+
+sub acquire_identity
+{
+	my $jobid = shift; # Must exist
+	my $output_file = shift; # Fully qualified when passed in...
+
+	open(FOUT, ">$output_file") || 
+		die "acquire_identity: Can't open identity file: $!";
+	
+	print "acquire_identity\n";
+
+	print FOUT<<EOF;
+################################
+# User who created this report #
+################################
+ ${\(getlogin() . "\n")}
+####################################################
+# Script invocation and on what machine was it run #
+####################################################
+ Script: $RealBin/$RealScript @original_argv
+ Machine: @{[`/bin/hostname 2>&1`]}
+###########################
+# Date of Report Creation #
+###########################
+ @{[`/bin/date 2>&1`]}
+############
+# uname -a #
+############
+ @{[`/bin/uname -a 2>&1`]}
+##############
+# /etc/issue #
+##############
+ @{[`/bin/cat /etc/issue 2>&1`]}
+##############
+# /etc/hosts #
+##############
+ @{[`/bin/cat /etc/hosts 2>&1`]}
+######################
+# /etc/nsswitch.conf #
+######################
+ @{[`/bin/cat /etc/nsswitch.conf 2>&1`]}
+#############
+# ulimit -a #
+#############
+ @{[`/bin/sh -c "ulimit -a 2>&1"`]}
+###########################
+# Interface configuration #
+###########################
+ @{[`/sbin/ifconfig 2>&1`]}
+##################
+# Condor Version #
+##################
+ @{[`condor_version 2>&1`]}
+###################################
+# Location of Condor Config Files #
+###################################
+ @{[`condor_config_val -config 2>&1`]}
+###########################
+# Condor Config Variables #
+###########################
+ @{[`condor_config_val -v -dump 2>&1`]}
+EOF
+
+	close(FOUT);
+}
+
+sub acquire_job_q
+{
+	my $jobid = shift; # Must exist
+	my $output_file = shift; # Fully qualified when passed in...
+	my @cqargs = @_;
+	die "acquire_job_q: Error. No jobid!" if !defined($jobid);
+
+	print "acquire_job_q: Getting job q for job $jobid\n";
+	return condor_q($jobid, $output_file, @cqargs);
+}
+
+sub acquire_job_ad
+{
+	my $jobid = shift; # Must exist
+	my $output_file = shift; # Fully qualified when passed in...
+	my @cqargs = @_;
+	die "acquire_job_ad: Error. No jobid!" if !defined($jobid);
+
+	print "acquire_job_ad: Getting job ad for job $jobid\n";
+	return condor_q($jobid, $output_file, @cqargs);
+}
+
+sub acquire_job_analysis
+{
+	my $jobid = shift; # Must exist
+	my $output_file = shift; # Fully qualified when passed in...
+	my @cqargs = @_;
+
+	die "acquire_job_analysis: Error. No jobid!" if !defined($jobid);
+
+	print "acquire_job_analysis: Getting job analysis for job $jobid\n";
+	return condor_q($jobid, $output_file, @cqargs);
+}
+
+sub acquire_job_userlog_lines
+{
+	my $jobid = shift; # Must exist
+	my $output_file = shift; # Fully qualified when passed in...
+	my @cqargs = @_;
+	my $tmpfile = "$output_file.query";
+	my @lines;
+	my ($junk, $ulogfile);
+	my ($cluster, $proc);
+	my $line;
+
+	die "acquire_job_userlog_lines: Error. No jobid!" if !defined($jobid);
+
+	print "acquire_job_userlog_lines: Getting job log entries for job $jobid\n";
+
+	# #######
+	# get the path of the user log file
+	# #######
+	condor_q($jobid, $tmpfile, '-format "logfile: %s\n"', 'UserLog');
+
+	# #######
+	# bail if no logfile or otherwise empty
+	# #######
+	if (-z $tmpfile) {
+		system("echo No log fle specified in job ad. > $output_file 2>&1");
+		rmtree("$tmpfile");
+		return;
+	}
+	
+	# #######
+	# see if the log file is well formed.
+	# #######
+	@lines = `grep "logfile:" $tmpfile`;
+	if (scalar(@lines) > 1) {
+		system("echo Unexpected condor_q problem. See query file. " .
+					"> $output_file 2>&1");
+		return;
+	}
+
+	($junk, $ulogfile) = ($lines[0] =~ m/(^logfile: )(.*)/);
+	if ($junk !~ /logfile: / || !defined($ulogfile)) {
+		system("echo Unexpected userlog path problem. See query file. " .
+					"> $output_file 2>&1");
+		return;
+	}
+
+	if (! -f $ulogfile) {
+		system("echo Userlog file does not exist. See query file. " .
+					"> $output_file 2>&1");
+		return;
+	}
+
+	# #######
+	# Process the ulog file, saving all lines out of it pertaining to the jobid.
+	# You know, this is really a stupid piece of code. condor_userlog should
+	# have this functionality built into it.
+	# #######
+	open(FIN, "$ulogfile") || 
+		die "Could not open user log file $ulogfile: $!";
+	open(FOUT, ">$output_file") || 
+		die "Could not open log trace file $output_file: $!";
+
+	# XXX This assumes a well formed logfile. Yuck!
+	while(defined($line = <FIN>)) {
+		# Read the first line of the first event in the file.
+		# XXX Add time filtering to the events!
+
+		($cluster, $proc) = ($line =~ /^\d\d\d\s+\(0*(\d+)\.0*(\d+)/);
+		if (!defined($cluster) || !defined($proc)) {
+			system("echo Userlog file is malformed. See query file. " .
+						"> $output_file 2>&1");
+			close(FOUT);
+			close(FIN);
+			return;
+		}
+		$cluster =~ s/\s//;
+		$proc =~ s/\s//;
+
+		# read the body of the event, filtering it where it is supposed to go
+		if ("$cluster.$proc" eq $jobid) {
+				print FOUT "$line";
+		}
+		while(defined($line = <FIN>)) {
+			if ("$cluster.$proc" eq $jobid) {
+				print FOUT "$line";
+			}
+			last if ($line =~ /^\.\.\.$/);
+		}
+	}
+	close(FOUT);
+	close(FIN);
+
+	# Don't ned this anymore since I did a valid query of the data.
+	rmtree("$tmpfile");
+}
+
+# This is the main function which gathers all information for a single job
+# specified by the passed in jobid.
+sub acquire_all_info_for_jobid
+{
+	my $jobid = shift;
+	my $jdir;
+
+	die "No jobid for which to gather jobid info!" if !defined($jobid);
+
+	# The place to store everything for this job id.
+	$jdir = "$args{'scratch'}/$jobid";
+	mkpath($jdir);
+
+	# ##########
+	# Get the job q.
+	# ##########
+	acquire_job_q($jobid, "$jdir/job_q");
+
+	# ##########
+	# Get the job ad.
+	# ##########
+	acquire_job_ad($jobid, "$jdir/job_ad", '-l');
+
+	# ##########
+	# Do the analysis for the job
+	# ##########
+	acquire_job_analysis($jobid, "$jdir/job_ad_analysis", '-better-analyze');
+
+	# ##########
+	# Grab all log entries for the jobid from the job log file
+	# associated with the job if defined.
+	# ##########
+	acquire_job_userlog_lines($jobid, "$jdir/job_userlog_lines");
+}
+
+sub acquire_all_info
+{
+	my $jobid = shift;
+	die "No jobid for which to all info!" if !defined($jobid);
+
+	# ##########
+	# Identify myself (condor version, who ran this script, where, when, etc)
+	# ##########
+	acquire_identity($jobid, "$args{'scratch'}/identity");
+
+	# ##########
+	# datamine extensive information about the jobid.
+	# ##########
+	acquire_all_info_for_jobid($jobid);
+}
+
+sub package_payload
+{
+	my $pwd;
+	my $dir;
+
+	$pwd = `pwd`;
+	chomp $pwd;
+	chdir("$args{'scratch'}");
+	chdir("..");
+	# grab the only directory there.
+	$dir = `ls -1`;
+	chomp $dir;
+	system("tar czf $dir.tar.gz $dir > /dev/null 2>&1");
+	chdir($pwd);
+	system("mv $args{'scratch'}/../*.tar.gz .");
+}
+
+sub main
+{
+	FindBin::again();
+
+	parse_command_line();
+
+	# get all of the info on the invocation machine, the user, and for the
+	# specified jobid.
+	acquire_all_info($args{'jobid'});
+
+	# package up the scratch directory appropriately and move it to `pwd`.
+	package_payload();
+
+	# get rid of all of my on disk resources I used;
+	cleanup();
+	return 0;
+}
+
+exit main();
+
+
+

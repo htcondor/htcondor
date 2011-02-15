@@ -118,6 +118,11 @@ int param_boolean_int(const char *, int default_value)
 	return default_value;
 }
 
+int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_val*/ )
+{
+	return default_value;
+}
+
 #ifdef HAVE_EXT_PCRE
 
 #ifdef HAVE_PCRE_PCRE_H

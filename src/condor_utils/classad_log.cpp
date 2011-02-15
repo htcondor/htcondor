@@ -828,7 +828,7 @@ LogSetAttribute::Play(void *data_structure)
 {
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	int rval;
-	ClassAd *ad;
+	ClassAd *ad = 0;
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
 	rval = ad->AssignExpr(name, value);
@@ -927,7 +927,7 @@ int
 LogDeleteAttribute::Play(void *data_structure)
 {
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
-	ClassAd *ad;
+	ClassAd *ad = 0;
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
 

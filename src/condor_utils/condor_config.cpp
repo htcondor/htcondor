@@ -512,9 +512,9 @@ condor_net_remap_config( bool force_param )
 				all_brokers.rewind();
 				while ( (next_broker = all_brokers.next()) ) {
 					int rc = 0;
+#if HAVE_EXT_GCB /* num_slots is only used when HAVE_EXT_GCB is defined */
 					int num_slots = 0;
 
-#if HAVE_EXT_GCB
 					rc = GCB_broker_query( next_broker,
 										   GCB_DATA_QUERY_FREE_SOCKS,
 										   &num_slots );
@@ -1870,7 +1870,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 		}
 	}
 
-	bool result;
+	bool result=false;
 	char *string;
 	char *endptr;
 	bool valid = true;

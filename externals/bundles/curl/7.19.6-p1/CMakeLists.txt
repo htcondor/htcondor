@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -65,6 +65,7 @@ if (WITH_CURL)
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)
 			set(CURL_FOUND "${EXTERNAL_STAGE}/lib/libcurl.lib")
+			set_property( TARGET curl PROPERTY FOLDER "externals" )
 		else()
 			# libcurl is dependent on these libraries on some
 			# platforms.

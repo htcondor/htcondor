@@ -84,7 +84,7 @@ $hold = sub
 		}
 		# must reschedule to get released job out of Inactive and into Running
 		$status = 1;
-		$cmd = "condor_reschedule $cluster";
+		$cmd = "condor_reschedule";
 		$status = CondorTest::runCondorTool($cmd,\@adarray,2);
 		if(!$status)
 		{

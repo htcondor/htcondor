@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,7 +16,11 @@
  # 
  ############################################################### 
 
-MACRO (CONDOR_EXE _CNDR_TARGET _SRCS _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
+MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
+
+	# ADD_PRECOMPILED_HEADER macro expects to operate on a global _SRCS
+	SET(_SRCS ${_SRCS_PARAM})
+	ADD_PRECOMPILED_HEADER()
 
 	add_executable( ${_CNDR_TARGET} ${_SRCS})
 

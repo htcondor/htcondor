@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -62,8 +62,10 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )	
 		add_custom_command( OUTPUT condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						COMMAND cp 
+						ARGS condor_config.generic condor_config.patched
 						COMMAND patch 
-						ARGS condor_config.generic condor_config.generic.rpm.patch -o condor_config.patched )
+						ARGS condor_config.patched condor_config.generic.rpm.patch )
 
 		add_custom_target(	patch_configurations
 						ALL
@@ -76,14 +78,18 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 		#we will apply 2 patches on condor_config file
 		add_custom_command( OUTPUT condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						COMMAND cp 
+						ARGS condor_config.generic condor_config.patched
 						COMMAND patch 
-						ARGS condor_config.generic condor_config.generic.rpm.patch -o condor_config.patched )
+						ARGS condor_config.patched condor_config.generic.rpm.patch )
 
 		add_custom_command( OUTPUT condor_config.patched.x86_64
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						COMMAND cp 
+						ARGS condor_config.patched condor_config.patched.x86_64
 						DEPENDS condor_config.patched
 						COMMAND patch 
-						ARGS condor_config.patched condor_config.generic.rpm64.patch -o condor_config.patched.x86_64 )
+						ARGS condor_config.patched.x86_64 condor_config.generic.rpm64.patch )
 	
 		add_custom_target(	patch_configurations_x86_64
 						ALL
@@ -103,8 +109,10 @@ elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
 
 	add_custom_command( OUTPUT condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-						COMMAND patch 
-						ARGS condor_config.generic condor_config.generic.debian.patch -o condor_config.patched )
+						COMMAND cp
+						ARGS condor_config.generic condor_config.patched
+					    COMMAND patch
+						ARGS condor_config.patched condor_config.generic.debian.patch )
 
 	add_custom_target(	patch_configurations
 						ALL
@@ -117,8 +125,10 @@ elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
 	#Debian init script need to be patched because /etc/sysconfig/condor -> /etc/default/condor
 	add_custom_command( OUTPUT condor.boot.debian
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-						COMMAND patch 
-						ARGS condor.boot.rpm condor.boot.debian.patch -o condor.boot.debian )
+						COMMAND cp
+						ARGS condor.boot.rpm condor.boot.debian
+						COMMAND patch
+						ARGS condor.boot.debian condor.boot.debian.patch )
 
 	add_custom_target(	patch_init_script
 						ALL
@@ -153,12 +163,11 @@ else()
 						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor_config.win)
 						
 	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor_config.win
-			DESTINATION	"."
-			RENAME		condor_config
+			DESTINATION	"${C_ETC}"
+			RENAME		condor_config.generic
 	        )
 			
 	install(FILES
-	        condor_config.generic 
 	        condor_config.power
 	        condor_config.submit.generic
 	        condor_config.local.generic

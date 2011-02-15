@@ -84,7 +84,7 @@ extern int _condor_dprintf_works;
 int DebugShouldLockToAppend = 0;
 static int DebugIsLocked = 0;
 
-static int DebugLockDelay = 0.0; /* seconds spent waiting for lock */
+static int DebugLockDelay = 0; /* seconds spent waiting for lock */
 static time_t DebugLockDelayPeriodStarted = 0;
 
 FILE	*DebugFP = 0;
@@ -143,8 +143,6 @@ extern int vprintf_length(const char *format, va_list args);
 static HANDLE debug_win32_mutex = NULL;
 #endif
 static int use_kernel_mutex = -1;
-
-extern char *_condor_DebugFlagNames[];
 
 /*
 ** Note: setting this to true will avoid blocking signal handlers from running
@@ -308,7 +306,7 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 static void
 _condor_dfprintf( FILE *fp, const char* fmt, ... )
 {
-	struct tm *tm;
+	struct tm *tm=0;
 	time_t clock_now;
     va_list args;
 
@@ -335,7 +333,7 @@ struct tm *localtime();
 void
 _condor_dprintf_va( int flags, const char* fmt, va_list args )
 {
-	struct tm *tm;
+	struct tm *tm=0;
 	time_t clock_now;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
@@ -704,7 +702,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 	if( DebugFile[debug_level] ) {
 		errno = 0;
 
-		DebugFP = (FILE *) open_debug_file(debug_level, (char *) mode);
+		DebugFP = (FILE *) open_debug_file(debug_level, const_cast<char *>(mode));
 
 		if( DebugFP == NULL ) {
 			if (debug_level > 0) return NULL;

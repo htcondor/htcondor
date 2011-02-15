@@ -86,6 +86,8 @@ char*	pidFile = NULL;
 char*	addrFile = NULL;
 static	char*	logAppend = NULL;
 
+static char *core_dir = NULL;
+
 int condor_main_argc;
 char **condor_main_argv;
 time_t daemon_stop_time;
@@ -292,6 +294,11 @@ DC_Exit( int status, const char *shutdown_program )
 
 		// and deallocate the memory from the passwd_cache (uids.C)
 	delete_passwd_cache();
+
+	if ( core_dir ) {
+		free( core_dir );
+		core_dir = NULL;
+	}
 
 		/*
 		  Log a message.  We want to do this *AFTER* we delete the
@@ -654,8 +661,6 @@ handle_dynamic_dirs()
 	}
 }
 
-static char *core_dir = NULL;
-
 #if HAVE_EXT_COREDUMPER
 void
 linux_sig_coredump(int signum)
@@ -755,6 +760,10 @@ drop_core_in_log( void )
 		return;
 	}
 
+	if ( core_dir ) {
+		free( core_dir );
+		core_dir = NULL;
+	}
 	core_dir = strdup(ptmp);
 
 	// in some case we need to hook up our own handler to generate
@@ -890,7 +899,7 @@ handle_set_peaceful_shutdown( Service*, int, Stream* stream)
 
 
 static int
-handle_reconfig( Service*, int cmd, Stream* stream )
+handle_reconfig( Service*, int /* cmd */, Stream* stream )
 {
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "handle_reconfig: failed to read end of message\n");
@@ -1241,13 +1250,17 @@ handle_config( Service *, int cmd, Stream *stream )
 		dprintf( D_ALWAYS, "handle_config: failed to read end of message\n");
 		return FALSE;
 	}
-
 	if( config && config[0] ) {
-		to_check = config;
+		to_check = parse_param_name_from_config(config);
 	} else {
-		to_check = admin;
+		to_check = strdup(admin);
 	}
-	if( ! daemonCore->CheckConfigSecurity(to_check, (Sock*)stream) ) {
+	if (!is_valid_param_name(to_check)) {
+		dprintf( D_ALWAYS, "Rejecting attempt to set param with invalid name (%s)\n", to_check);
+		free(admin); free(config);
+		rval = -1;
+		failed = true;
+	} else if( ! daemonCore->CheckConfigSecurity(to_check, (Sock*)stream) ) {
 			// This request is insecure, so don't try to do anything
 			// with it.  We can't return yet, since we want to send
 			// back an rval indicating the error.
@@ -1256,6 +1269,7 @@ handle_config( Service *, int cmd, Stream *stream )
 		rval = -1;
 		failed = true;
 	} 
+	free(to_check);
 
 		// If we haven't hit an error yet, try to process the command  
 	if( ! failed ) {
@@ -1513,6 +1527,7 @@ handle_gcb_recovery_failed( )
 	main_shutdown_fast();
 }
 
+#if HAVE_EXT_GCB
 static void
 gcb_recovery_failed_callback()
 {
@@ -1523,6 +1538,7 @@ gcb_recovery_failed_callback()
 	daemonCore->Register_Timer( 0, handle_gcb_recovery_failed,
 								"handle_gcb_recovery_failed" );
 }
+#endif
 
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from

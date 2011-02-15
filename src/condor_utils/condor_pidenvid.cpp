@@ -27,8 +27,6 @@ extern char **environ;
 /* set the structure to default values */
 void pidenvid_init(PidEnvID *penvid)
 {
-	int i;
-
 	/* zero out the whole struct */
 	memset(penvid, 0, sizeof(PidEnvID));
 

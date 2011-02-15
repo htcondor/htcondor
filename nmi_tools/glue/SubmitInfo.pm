@@ -45,7 +45,6 @@ our %build_and_test_sets = (
 	'official_ports' => [
 		'ia64_rhas_3',
 		'ppc64_sles_9',
-		'ppc_aix_5.2-pl5',
 		'sun4u_sol_5.9', 
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
@@ -63,10 +62,11 @@ our %build_and_test_sets = (
 	# are those platforms.
 	'nmi_one_offs' => [
 		'x86_64_rhap_5.3-updated',
-		'x86_suse_10.2',
 		'x86_suse_10.0',
 		'x86_64_macos_10.6',
+		'x86_64_opensuse_11.3-updated',
 		'ppc_macos_10.4',
+		'ppc_aix_5.2-pl5',
 		'sun4u_sol_5.10',
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
@@ -721,7 +721,6 @@ our %submit_info = (
 				'x86_64_sles_9',
 			 	'x86_rhas_4', 
 				'x86_suse_10.0', 
-				'x86_suse_10.2', 
 				'x86_sles_9',
 			 	'x86_64_rhas_3',
 				'x86_64_rhas_4',
@@ -1448,7 +1447,6 @@ our %submit_info = (
 						'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef
 			},
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [ 'x86_suse_10.2' ],
 		},
 
 		'test' => {
@@ -1543,8 +1541,7 @@ sub statistics
 
 sub dump_info
 {
-	my ($f) = @_;
-	my $p;
+	my ($f) = shift(@_);
 	my ($bref, $tref);
 
 	if (!defined($f)) {
@@ -1555,7 +1552,22 @@ sub dump_info
 	print $f "Dump of submit_info information\n";
 	print $f "-------------------------------\n";
 
-	foreach $p (sort keys %submit_info) {
+	foreach my $p (sort keys %submit_info) {
+		my $found = 0;
+		foreach my $pname ( @_ ) {
+			if ( $pname eq $p ) {
+				$found++;
+				last;
+			}
+			elsif ( $pname =~ /\/(.*)\// ) {
+				my $re = "$1";
+				if ( $p =~ /$re/ ) {
+					$found++;
+					last;
+				}
+			}
+		}
+		next if ( ! $found );
 		print $f "Platform: $p\n";
 
 		print $f "Build Info:\n";
@@ -1646,13 +1658,54 @@ sub args_to_array
 
 sub main
 {
+	my @platforms;
+	my $usage = "usage: $0 [--help|-h] [--list|-l] [-a|--all] [(<platform>|/<regex>/) ...]";
+	foreach my $arg ( @ARGV ) {
+		if (  ( $arg eq "-l" ) or ( $arg eq "--list" ) ) {
+			foreach my $key ( sort keys(%submit_info) ) {
+				print "$key\n";
+			}
+			exit( 0 );
+		}
+		elsif (  ( $arg eq "-a" ) or ( $arg eq "--all" ) ) {
+			push( @platforms, "/.*/" );
+		}
+		elsif (  ( $arg eq "-h" ) or ( $arg eq "--help" ) ) {
+			print "$usage\n";
+			print "  --help|-h:  This help\n";
+			print "  --list|-l:  List available platforms\n";
+			print "  --all|-a:   Dump info on all available platforms\n";
+			print "  <platform>: Dump info named platform\n";
+			print "  /<regex>/:  Dump info on all platforms matching <regex>\n";
+			exit(0);
+		}
+		elsif ( $arg =~ /_/ or $arg =~ /^\// ) {
+			push( @platforms, $arg );
+		}
+		elsif ( $arg =~ /^-/ ) {
+			print "Unknown option: '$arg'\n";
+			print "$usage\n";
+			exit( 1 );
+		}
+		else {
+			print "'$arg' does not appear to be a valid platform name or regex\n";
+			print "$usage\n";
+			exit( 1 );
+		}
+	}
+	if ( ! scalar(@platforms) ) {
+			print "$usage\n";
+			exit( 1 );
+	}
+	$#ARGV = -1;
+
 	if (!typecheck()) {
 		die "\tTypecheck failed!";
 	} else {
 		print "\tTypecheck passed.\n";
 	}
 	statistics();
-	dump_info();
+	dump_info( undef, @platforms );
 }
 
 ###############################################################################
