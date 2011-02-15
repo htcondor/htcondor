@@ -2195,7 +2195,7 @@ bool Sock :: is_encrypt()
 
 int
 Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
-	SOCKET_LENGTH_TYPE len, bool outbound, bool loopback)
+	SOCKET_LENGTH_TYPE len, bool, bool)
 {
 	int rval;
 

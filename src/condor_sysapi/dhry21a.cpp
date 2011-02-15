@@ -531,7 +531,7 @@ static int
 mips_raw( void )
 {
 	static int	mips = -1;
-	int			quick_mips = -1.0;
+	int			quick_mips = -1;
 	int			loops;
 
 	static double ldiff = 0.0;
@@ -550,7 +550,7 @@ mips_raw( void )
 	}
 
 	// For faster machines, run with more loops.
-	loops = floor( 0.99 + (1.0 * QUICK_RUNS * quick_mips * LOOP_CONST ) );
+	loops = int(floor( 0.99 + (1.0 * QUICK_RUNS * quick_mips * LOOP_CONST )));
 	while( true ) {
 		double t1 = UtcTime::getTimeDouble( );
 		mips = dhry_mips(loops);

@@ -183,7 +183,7 @@ ProcessId::isSameProcess(const ProcessId& rhs) const
 		this->pid != UNDEF && rhs.pid != UNDEF &&
 		this->ppid != UNDEF && rhs.ppid != UNDEF &&
 		this->precision_range != UNDEF &&
-		this->time_units_in_sec != (double)UNDEF &&
+		(this->time_units_in_sec < -1e-4 || this->time_units_in_sec > 1e-4) &&
 		this->bday != UNDEF && rhs.bday != UNDEF &&
 		this->ctl_time != UNDEF && rhs.ctl_time != UNDEF ){
 		
@@ -201,7 +201,7 @@ ProcessId::isSameProcess(const ProcessId& rhs) const
 	else if( this->pid != UNDEF && rhs.pid != UNDEF &&
 			 this->ppid != UNDEF && rhs.ppid != UNDEF &&
 			 this->precision_range != UNDEF && 
-			 this->time_units_in_sec != (double) UNDEF && 
+			 (this->time_units_in_sec < -1e-4 || this->time_units_in_sec > 1e-4) && 
 			 this->bday != UNDEF && rhs.bday != UNDEF &&
 			 this->ctl_time != UNDEF && rhs.ctl_time != UNDEF ){
 
@@ -546,7 +546,7 @@ ProcessId::confirm(long confirmtime, long ctltime)
 		// it is an error to confirm a partial id
 	if( this->pid == UNDEF || this->ppid == UNDEF || 
 		this->precision_range == UNDEF || 
-		this->time_units_in_sec == (double) UNDEF ||
+		(this->time_units_in_sec > -1e-4 && this->time_units_in_sec < 1e-4) ||
 		this->bday == UNDEF || this->ctl_time == UNDEF ){
 		dprintf(D_ALWAYS,
 				"ProcessId: Cannot confirm a partially filled process id: %d\n",
