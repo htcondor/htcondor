@@ -28,6 +28,8 @@
 $| = 1;
 
 use Cwd;
+use File::Basename;
+
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
 my $pub_dir = "$BaseDir/public";
@@ -75,12 +77,13 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
 	system("tar -cvf $pub_dir/wix.tar.gz $BaseDir/msconfig/wix/xml/*");
 	system("nmi_tools\\glue\\build\\munge.bat $pub_dir");
 }
-else
-{
+else {
     # Should this be run for Windows also?
+    my $check_tarball_script = dirname($0) . "/check_tarball.pl";
     my $tarball_errors = 0;
     foreach my $tarball (<*.tar.gz>) {
-        if(system("./check_tarball.pl $tarball")) {
+        print `$check_tarball_script $tarball 2>&1`;
+        if($?) {
             $tarball_errors++;
         }
     }

@@ -4,7 +4,8 @@ use warnings;
 
 # In bytes
 my $FILESIZE_LOWER_BOUND = 50_000_000;
-my $FILESIZE_UPPER_BOUND = 500_000_000;
+my $UNSTRIPPED_FILESIZE_UPPER_BOUND = 600_000_000;
+my $STRIPPED_FILESIZE_UPPER_BOUND   = 300_000_000;
 
 # Maximum number of files to print when printing permissions and ownerhsip errors
 my $MAX_TO_PRINT = 20;
@@ -37,6 +38,9 @@ if($size < $FILESIZE_LOWER_BOUND) {
     print STDERR "If this size threshold is not appropriate modify it in $0\n";
     exit 1;
 }
+
+my $FILESIZE_UPPER_BOUND = ($file =~ /stripped/) ? $STRIPPED_FILESIZE_UPPER_BOUND :
+                                                   $UNSTRIPPED_FILESIZE_UPPER_BOUND;
 
 if($size > $FILESIZE_UPPER_BOUND) {
     print STDERR "ERROR: tarball '$file' is too large (> $FILESIZE_UPPER_BOUND bytes).\n";
