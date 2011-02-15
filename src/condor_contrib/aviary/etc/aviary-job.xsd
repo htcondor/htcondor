@@ -9,7 +9,7 @@
 				<xs:element name="args" type="xs:string"/>
 				<xs:element name="owner" type="xs:string"/>
 				<xs:element name="iwd" type="xs:string"/>
-				<xs:element name="requirements" type="mrg:Attribute"/>
+				<xs:element name="requirements" type="mrg:ResourceConstraint" maxOccurs="unbounded"/>
 				<xs:element name="extra" type="mrg:Attributes" minOccurs="0"/>
 			</xs:sequence>
 		</xs:complexType>
@@ -49,19 +49,4 @@
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="SetJobAttributeResponse" type="job:ControlJobResponse"/>
-	<xs:element name="GetJobTemplate">
-		<xs:complexType>
-			<xs:sequence>
-				<xs:element name="hints" type="xs:string" maxOccurs="unbounded"/>
-			</xs:sequence>
-		</xs:complexType>
-	</xs:element>
-	<xs:element name="GetJobTemplateResponse">
-		<xs:complexType>
-			<xs:sequence>
-				<xs:element name="attributes" type="mrg:Attributes"/>
-				<xs:element name="status" type="mrg:Status"/>
-			</xs:sequence>
-		</xs:complexType>
-	</xs:element>
 </xs:schema>
