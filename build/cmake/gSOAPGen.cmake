@@ -64,6 +64,12 @@ if ( HAVE_EXT_GSOAP )
 		list(APPEND ${_HDRS} ${${_DAEMON}_SOAP_HDRS} )
 	endif()
 
+	#  The generated files spew no end of warnings which we can't fix.
+	#  So, turn off the warnings for these files. (-w means no warnings)
+	if (UNIX)
+		set_source_files_properties( ${${_DAEMON}_SOAP_SRCS} PROPERTIES COMPILE_FLAGS "-w")
+	endif(UNIX)
+
 	 list(REMOVE_DUPLICATES ${_SRCS})
 	
 endif()
