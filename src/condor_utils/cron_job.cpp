@@ -725,7 +725,7 @@ CronJob::OpenFds ( void )
 	m_childFds[1] = tmpfds[1];
 	daemonCore->Register_Pipe( m_stdOut,
 							   "Standard Out",
-							   (PipeHandlercpp) & CronJob::StdoutHandler,
+							   static_cast<PipeHandlercpp>(&CronJob::StdoutHandler),
 							   "Standard Out Handler",
 							   this );
 
@@ -745,7 +745,7 @@ CronJob::OpenFds ( void )
 	m_childFds[2] = tmpfds[1];
 	daemonCore->Register_Pipe( m_stdErr,
 							   "Standard Error",
-							   (PipeHandlercpp) & CronJob::StderrHandler,
+							   static_cast<PipeHandlercpp>(&CronJob::StderrHandler),
 							   "Standard Error Handler",
 							   this );
 

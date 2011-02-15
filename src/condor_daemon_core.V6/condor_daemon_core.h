@@ -1659,7 +1659,7 @@ class DaemonCore : public Service
 		PidEntry();
 		~PidEntry();
 		int pipeHandler(int pipe_fd);
-		void pipeFullWrite(int pipe_fd);
+		int pipeFullWrite(int pipe_fd);
 
         pid_t pid;
         int new_process_group;

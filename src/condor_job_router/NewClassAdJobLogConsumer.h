@@ -46,8 +46,8 @@ public:
 	void Reset();
 
 	bool NewClassAd(const char *key,
-					const char */*type*/,
-					const char */*target*/);
+					const char * /*type*/,
+					const char * /*target*/);
 
 	bool DestroyClassAd(const char *key);
 

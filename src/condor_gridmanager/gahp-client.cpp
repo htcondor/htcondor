@@ -380,7 +380,8 @@ GahpServer::buffered_read( int fd, void *buf, int count )
 		// Also read from the gahp's stderr. Otherwise, we can potential
 		// deadlock, us reading from gahp's stdout and it writing to its
 		// stderr.
-		err_pipe_ready();
+		int dummy_pipe = -1;
+		err_pipe_ready(dummy_pipe);
 		int rc = daemonCore->Read_Pipe(fd, m_buffer, m_buffer_size );
 		m_buffer_pos = 0;
 		if ( rc <= 0 ) {
@@ -835,7 +836,7 @@ GahpServer::Startup()
 	} else {
 		// command worked... register the pipe and stop polling
 		int result = daemonCore->Register_Pipe(m_gahp_readfd,
-			"m_gahp_readfd",(PipeHandlercpp)&GahpServer::pipe_ready,
+			"m_gahp_readfd",static_cast<PipeHandlercpp>(&GahpServer::pipe_ready),
 			"&GahpServer::pipe_ready",this);
 		if ( result == -1 ) {
 			// failed to register the pipe for some reason; fall 
@@ -849,7 +850,7 @@ GahpServer::Startup()
 		}
 
 		result = daemonCore->Register_Pipe(m_gahp_errorfd,
-			  "m_gahp_errorfd",(PipeHandlercpp)&GahpServer::err_pipe_ready,
+			  "m_gahp_errorfd",static_cast<PipeHandlercpp>(&GahpServer::err_pipe_ready),
 			   "&GahpServer::err_pipe_ready",this);
 		// If this fails, too fucking bad
 	}
@@ -1359,7 +1360,7 @@ GahpServer::poll_real_soon()
 
 
 int
-GahpServer::pipe_ready()
+GahpServer::pipe_ready(int pipe_end)
 {
 	skip_next_r = true;
 	poll_real_soon();
@@ -1367,7 +1368,7 @@ GahpServer::pipe_ready()
 }
 
 int
-GahpServer::err_pipe_ready()
+GahpServer::err_pipe_ready(int pipe_end)
 {
 	int count = 0;
 
