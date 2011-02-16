@@ -26,7 +26,7 @@ extern "C" {
 
 
 /* Converts an int to a string w/ "st", "nd", "rd, or "th" added on. */
-char*	num_string( int );  
+const char*	num_string( int );  
 
 
 /* Returns the name of the local file the startd uses to write its

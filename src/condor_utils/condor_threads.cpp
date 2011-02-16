@@ -782,6 +782,7 @@ ThreadImplementation::threadStart(void *)
 		// update status
 		item->set_status( WorkerThread::THREAD_COMPLETED );
 	}
+	return NULL;
 }
 
 #ifndef WIN32

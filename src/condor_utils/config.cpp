@@ -876,7 +876,7 @@ get_special_var( const char *prefix, bool only_id_chars, register char *value,
 	while (1) {
 tryagain:
 		if (tvalue) {
-			value = (char *)strstr( (const char *)tvalue, prefix );
+			value = const_cast<char *>(strstr(tvalue, prefix) );
 		}
 		
 		if( value == NULL ) {
@@ -923,7 +923,8 @@ tryagain:
 */
 int
 get_var( register char *value, register char **leftp, 
-		 register char **namep, register char **rightp, char *self,
+		 register char **namep, register char **rightp,
+		 const char *self,
 		 bool getdollardollar, int search_pos)
 {
 	char *left, *left_end, *name, *right;
@@ -935,7 +936,7 @@ get_var( register char *value, register char **leftp,
 	for(;;) {
 tryagain:
 		if (tvalue) {
-			value = (char *)strchr( (const char *)tvalue, '$' );
+			value = const_cast<char *>( strchr(tvalue, '$') );
 		}
 		
 		if( value == NULL ) {

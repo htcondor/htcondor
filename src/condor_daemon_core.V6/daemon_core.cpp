@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011 Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -1218,7 +1218,8 @@ DaemonCore::privateNetworkName(void) {
 
 // Lookup the environment id set for a particular pid, or if -1 then the
 // getpid() in question.  Returns penvid or NULL of can't be found.
-PidEnvID* DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
+PidEnvID*
+DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 {
 	extern char **environ;
 
