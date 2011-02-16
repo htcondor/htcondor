@@ -20,6 +20,9 @@
 # add the contrib subtree for build & test only
 
 if (WANT_CONTRIB)
+  if (HAVE_EXT_POSTGRESQL)
+    option(WANT_QUILL "Support for quill" ON)
+  endif()
   add_subdirectories("${CMAKE_CURRENT_SOURCE_DIR}" "" "")
 else(WANT_CONTRIB)
   dprint("skipping contrib modules")
