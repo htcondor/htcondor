@@ -528,6 +528,8 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
   delete [] full_name;
 
   if (full_name_realpath == NULL) {
+    free(full_name_realpath);
+    free(web_root_realpath);
     return 404;
   }
 
@@ -566,6 +568,7 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
   soap->http_content = type;
 
   if (soap_begin_send(soap) || soap_response(soap, SOAP_FILE)) {
+    fclose(fstr);
     return soap->error;
   }
 
