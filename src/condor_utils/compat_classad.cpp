@@ -37,6 +37,13 @@ using namespace std;
   #define FLT_MAX  __FLT_MAX__
 #endif
 
+// Utility to clarify a couple of evaluations
+static inline bool
+IsStringEnd(const char *str, unsigned off)
+{
+	return (  (str[off] == '\0') || (str[off] == '\n') || (str[off] == '\r')  );
+}
+
 namespace compat_classad {
 
 // EvalResult ctor
@@ -800,8 +807,8 @@ Insert( const char *name, classad::ExprTree *expr )
 	return Insert( str, expr ) ? TRUE : FALSE;
 }
 
-int ClassAd::
-Insert( const char *str )
+int
+ClassAd::Insert( const char *str )
 {
 	classad::ClassAdParser parser;
 	classad::ClassAd *newAd;
@@ -811,12 +818,12 @@ Insert( const char *str )
 		// handing the expression to the new ClassAds parser.
 	string newAdStr = "[";
 	for ( int i = 0; str[i] != '\0'; i++ ) {
-		if ( str[i] == '\\' && 
-			 ( (str[i + 1] != '"' || str[i + 1] == '"') &&
-			   ( str[i + 2] == '\0' ||
-				 str[i + 2] == '\n' ||
-				 str[i + 2] == '\r') ) ) {
-			newAdStr.append( 1, '\\' );
+        if (str[i] == '\\') {
+			if ( ( str[i + 1] != '"') ||
+				 ((str[i + 1] == '"') && IsStringEnd(str,2) )  )
+			{
+				newAdStr.append( 1, '\\' );
+			}
 		}
 		newAdStr.append( 1, str[i] );
 	}
@@ -2931,9 +2938,8 @@ void ConvertEscapingOldToNew( const char *str, std::string &buffer )
 		if ( *str == '\\' ) {
 			buffer.append( 1, '\\' );
 			str++;
-			if( ( ( *str != '"' || *str == '"' ) &&
-				  ( str[1] == '\0' || str[1] == '\n' ||
-					str[1] == '\r') ) )
+			if(  (str[0] != '"') ||
+				 ( (str[0] == '"') && IsStringEnd(str, 1) )   )
 			{
 				buffer.append( 1, '\\' );
 			}
