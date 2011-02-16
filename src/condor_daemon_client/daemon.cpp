@@ -534,7 +534,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 
 
 StartCommandResult
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man, bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *, SecMan *sec_man, bool raw_protocol, char const *sec_session_id )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()

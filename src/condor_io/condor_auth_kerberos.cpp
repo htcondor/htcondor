@@ -230,7 +230,7 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
 int Condor_Auth_Kerberos :: unwrap(char*  input, 
                                    int    /* input_len */, 
                                    char*& output, 
-                                   int&   output_len)
+                                   int& output_len)
 {
     krb5_error_code code;
     krb5_data       out_data;

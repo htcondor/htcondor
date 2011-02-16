@@ -870,8 +870,9 @@ ReliSock::serialize(char *buf)
 	// first, let our parent class restore its state
     ptmp = Sock::serialize(buf);
     ASSERT( ptmp );
-
-    sscanf(ptmp,"%d*",(int*)&_special_state);
+    int itmp;
+    sscanf(ptmp,"%d*",&itmp);
+    _special_state = relisock_state(itmp);
     // skip through this
     ptmp = strchr(ptmp, '*');
     ptmp++;
