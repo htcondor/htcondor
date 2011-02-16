@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -25,7 +25,7 @@
 
 char ATTR_DIRTY_ATTR_LIST [] = "DirtyAttrList";
 
-static char *assign_str = " = ";
+static const char *assign_str = " = ";
 
 
 /* if the attr isn't already in the dirty list, place it in there */

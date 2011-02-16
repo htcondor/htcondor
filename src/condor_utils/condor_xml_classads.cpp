@@ -119,8 +119,8 @@ private:
 
 struct tag_name
 {
-	TagName  id; // Defined in the condor_xml_classads.h
-	char     *name;
+	TagName		 id;	// Defined in the condor_xml_classads.h
+	const char	*name;
 };
 
 #define NUMBER_OF_TAG_NAMES (sizeof(tag_names) / sizeof(struct tag_name))

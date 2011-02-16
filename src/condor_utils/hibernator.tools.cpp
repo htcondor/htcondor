@@ -249,25 +249,25 @@ UserDefinedToolsHibernator::enterState ( HibernatorBase::SLEEP_STATE state ) con
 }
 
 HibernatorBase::SLEEP_STATE
-UserDefinedToolsHibernator::enterStateStandBy ( bool force ) const
+UserDefinedToolsHibernator::enterStateStandBy ( bool /*force*/ ) const
 {
 	return enterState ( HibernatorBase::S1 );
 }
 
 HibernatorBase::SLEEP_STATE
-UserDefinedToolsHibernator::enterStateSuspend ( bool force ) const
+UserDefinedToolsHibernator::enterStateSuspend ( bool /*force*/ ) const
 {
     return enterState ( HibernatorBase::S3 );
 }
 
 HibernatorBase::SLEEP_STATE
-UserDefinedToolsHibernator::enterStateHibernate ( bool force ) const
+UserDefinedToolsHibernator::enterStateHibernate ( bool /*force*/ ) const
 {
     return enterState ( HibernatorBase::S4 );
 }
 
 HibernatorBase::SLEEP_STATE
-UserDefinedToolsHibernator::enterStatePowerOff ( bool force ) const
+UserDefinedToolsHibernator::enterStatePowerOff ( bool /*force*/ ) const
 {
     return enterState ( HibernatorBase::S5 );
 }

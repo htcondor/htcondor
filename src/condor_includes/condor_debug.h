@@ -96,7 +96,7 @@ int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
 void set_debug_flags( const char *strflags );
-void _condor_fd_panic( int line, char *file );
+void _condor_fd_panic( int line, const char *file );
 void _condor_set_debug_flags( const char *strflags );
 
 int  dprintf_config_ContinueOnFailure( int fContinue );
@@ -155,7 +155,7 @@ extern DLL_IMPORT_MAGIC char	*sys_errlist[];
 extern int	_EXCEPT_Line;			/* Line number of the exception    */
 extern const char	*_EXCEPT_File;		/* File name of the exception      */
 extern int	_EXCEPT_Errno;			/* errno from most recent system call */
-extern int (*_EXCEPT_Cleanup)(int,int,char*);	/* Function to call to clean up (or NULL) */
+extern int (*_EXCEPT_Cleanup)(int,int,const char*);	/* Function to call to clean up (or NULL) */
 extern void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2);
 
 #if defined(__cplusplus)

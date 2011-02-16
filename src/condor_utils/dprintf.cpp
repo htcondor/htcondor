@@ -54,7 +54,7 @@
 #include "log_rotate.h"
 
 FILE *debug_lock(int debug_level, const char *mode, int force_lock);
-FILE *open_debug_file( int debug_level, char flags[] );
+FILE *open_debug_file( int debug_level, const char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
 void _condor_dprintf_exit( int error_code, const char* msg );
@@ -119,8 +119,8 @@ int      DebugContinueOnOpenFailure = 0;
 ** at index 0.
 */
 
-uint64_t	MaxLog[D_NUMLEVELS+1] = { 0 };
-int			MaxLogNum[D_NUMLEVELS+1] = { 0 };
+off_t	 MaxLog[D_NUMLEVELS+1] = { 0 };
+int		 MaxLogNum[D_NUMLEVELS+1] = { 0 };
 char	*DebugFile[D_NUMLEVELS+1] = { NULL };
 char	*DebugLock = NULL;
 
@@ -702,7 +702,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 	if( DebugFile[debug_level] ) {
 		errno = 0;
 
-		DebugFP = (FILE *) open_debug_file(debug_level, const_cast<char *>(mode));
+		DebugFP = (FILE *) open_debug_file(debug_level, mode);
 
 		if( DebugFP == NULL ) {
 			if (debug_level > 0) return NULL;
@@ -754,7 +754,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 				// long int, but I'm afraid of changing the output format.
 				// wenger 2009-02-24.
 			_condor_dfprintf( DebugFP, "MaxLog = %d, length = %d\n",
-					 MaxLog[debug_level], (int)length );
+							  (int) MaxLog[debug_level], (int)length );
 			preserve_log_file(debug_level);
 		}
 	}
@@ -831,7 +831,7 @@ preserve_log_file(int debug_level)
 	int			failed_to_rotate = FALSE;
 	int			save_errno;
 	int         rename_failed = 0;
-	char		*timestamp;
+	const char *timestamp;
 	int			result;
 	int			file_there = 0;
 #ifndef WIN32
@@ -949,7 +949,7 @@ preserve_log_file(int debug_level)
 ** somebody know what happened.
 */
 void
-_condor_fd_panic( int line, char* file )
+_condor_fd_panic( int line, const char* file )
 {
 	priv_state	priv;
 	int i;
@@ -1019,7 +1019,7 @@ sigset(){}
 #endif
 
 FILE *
-open_debug_file(int debug_level, char flags[])
+open_debug_file(int debug_level, const char flags[])
 {
 	FILE		*fp;
 	priv_state	priv;
