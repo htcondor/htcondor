@@ -41,11 +41,13 @@ public:
 	
 	// On Unix, make everything a stub saying sucesss
 
-	bool init ( const char *username, const char *domain = 0 ) { return true;}
-	int read_access( const char *filename ) { return 1; }
-	int write_access( const char *filename ) { return 1; }
-	int execute_access( const char *filename ) { return 1; }
-	int set_acls( const char *location ) { return 1; }
+	bool init ( const char * /*username*/, const char * /*domain*/ = NULL ) {
+		return true;
+	}
+	int read_access( const char * /*filename*/ ) { return 1; }
+	int write_access( const char * /*filename*/ ) { return 1; }
+	int execute_access( const char * /*filename*/ ) { return 1; }
+	int set_acls( const char * /*location*/ ) { return 1; }
 
 #else
 
