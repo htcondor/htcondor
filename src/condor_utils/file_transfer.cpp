@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -1011,9 +1011,11 @@ FileTransfer::ComputeFilesToSend()
 				dprintf( D_FULLDEBUG,
 						 "Skipping file %s, t: %"PRIi64"==%"PRIi64
 						 ", s: %"PRIi64"==%"PRIi64"\n",
-						 f, dir.GetModifyTime(), modification_time,
-						 (int64_t)dir.GetFileSize(),
-						 (int64_t)filesize );
+						 f,
+						 (PRIi64_t)dir.GetModifyTime(),
+						 (PRIi64_t)modification_time,
+						 (PRIi64_t)dir.GetFileSize(),
+						 (PRIi64_t)filesize );
 				continue;
 			}
 			if(send_it) {

@@ -29,10 +29,10 @@ endif(WINDOWS)
 
 condor_daemon(procd "${ProcdRmvElements}" "procapi;utils;${PROCD_WIN_LINK_LIBS}" "${C_SBIN}" OFF)
 
-if (LINUX)
+if (LINUX AND WANT_FULL_DEPLOYMENT)
 	condor_exe( procd_ctl "procd_ctl.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF)
 
 	condor_exe( gidd_alloc "gidd_alloc.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF)
-endif(LINUX)
+endif(LINUX AND WANT_FULL_DEPLOYMENT)
 
 condor_static_lib(procd_client "${ProcClientElements}")

@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2011, Redhat. 
+ # Copyright 2011 Red Hat, Inc.
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -15,7 +15,8 @@
  # limitations under the License. 
  # 
  ###############################################################
+option(WITH_TRIGGERD "Support for triggerd" ON)
 
-if ( HAVE_EXT_QPID AND LINUX )
+if (WITH_TRIGGERD AND HAVE_EXT_QPID AND LINUX )
     add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src )
 endif( )
