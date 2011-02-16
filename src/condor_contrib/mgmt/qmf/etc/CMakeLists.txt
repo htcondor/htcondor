@@ -14,13 +14,11 @@
  # See the License for the specific language governing permissions and 
  # limitations under the License. 
  # 
- ############################################################### 
+ ###############################################################
 
-if ( HAVE_EXT_QPID )
- 
- include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/qmf/plugins ${CMAKE_CURRENT_BINARY_DIR}/qmf/plugins )
- add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/qmf/plugins )
- add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/qmf/daemons )
- add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/qmf/etc )
+if (LINUX)
 
-endif()
+install(FILES	60condor-qmf.config
+	DESTINATION "${C_ETC_EXAMPLES}")
+
+endif (LINUX)
