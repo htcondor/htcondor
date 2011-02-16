@@ -29,7 +29,7 @@
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
 
-static char * _globus_error_message = NULL;
+static const char * _globus_error_message = NULL;
 
 #define GRAM_STATUS_STR_LEN		8
 
@@ -672,6 +672,7 @@ time_t
 x509_proxy_expiration_time( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
@@ -744,6 +745,7 @@ int
 x509_proxy_seconds_until_expire( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
@@ -778,7 +780,7 @@ int
 x509_proxy_try_import( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
-
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 
@@ -841,7 +843,7 @@ int
 check_x509_proxy( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
-
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 

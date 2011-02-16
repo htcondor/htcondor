@@ -75,12 +75,12 @@ class StatWrapperIntPath : public StatWrapperIntBase
 {
 public:
 	StatWrapperIntPath( const char *name,
-						int (* const fn)(const char *, StatStructType *) );
+						int (* const fn)(const char *path, StatStructType *s) );
 	StatWrapperIntPath( const StatWrapperIntPath &other );
 	~StatWrapperIntPath( void );
 
 	// Type of the stat function
-	typedef int ( * StatFnPtr ) ( const char *, StatStructType * );
+	typedef int ( * StatFnPtr ) ( const char *path, StatStructType *s );
 	
 	// Copy another object
 	void Copy( const StatWrapperIntPath & );
@@ -92,8 +92,8 @@ public:
 	int Stat( bool force );
 
 	// Accessors
-	const StatFnPtr  GetFn  ( void ) const { return m_fn; };
-	const char      *GetPath( void ) const { return m_path; };
+	StatFnPtr 	 GetFn  ( void ) const { return m_fn; };
+	const char  *GetPath( void ) const { return m_path; };
 
 private:
 	StatFnPtr	m_fn;
@@ -123,8 +123,8 @@ public:
 	int Stat( bool force );
 
 	// Accessors
-	const StatFnPtr GetFn( void ) const { return m_fn; };
-	int             GetFd( void ) const { return m_fd; };
+	StatFnPtr	GetFn( void ) const { return m_fn; };
+	int      	GetFd( void ) const { return m_fd; };
 
 private:
 	StatFnPtr	m_fn;
@@ -150,7 +150,7 @@ public:
 	int Stat( bool force );
 
 	// Accessors
-	const StatFnPtr GetFn( void ) const { return m_fn; };
+	StatFnPtr GetFn( void ) const { return m_fn; };
 
 private:
 	StatFnPtr	m_fn;
