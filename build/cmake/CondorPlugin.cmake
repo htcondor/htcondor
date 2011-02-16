@@ -31,7 +31,10 @@ MACRO (CONDOR_PLUGIN _CNDR_TARGET _SRCS _INSTALL_LOC _LINK_LIBS _COPY_PDBS )
     if (${_CNDR_TARGET}_loc)
         install (TARGETS ${_CNDR_TARGET} DESTINATION ${_INSTALL_LOC} )
     endif()
-    
+
+    # disable the lib from name
+    set_property( TARGET ${_CNDR_TARGET} PROPERTY PREFIX "" )
+
     # the following will install the .pdb files, some hackery needs to occur because of build configuration is not known till runtime.
     if ( WINDOWS )
         if ( ${_COPY_PDBS} )
