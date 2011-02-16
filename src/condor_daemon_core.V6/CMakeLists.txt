@@ -16,8 +16,6 @@
  # 
  ############################################################### 
 
-add_definitions( "-Wno-deprecated" )
-
 file( GLOB DCRmvElements soap_daemon_core* condor_softkill*)
 
 condor_glob( DCHeaderFiles DCSourceFiles "${DCRmvElements};soap_core.cpp;mimetypes.cpp" )
