@@ -159,7 +159,7 @@ GENERIC_PROC GenProc;
 
 extern "C"  void initializeUserLog();
 extern "C"  void log_termination(struct rusage *, struct rusage *);
-extern "C"  void log_except(char *);
+extern "C"  void log_except(const char *);
 
 char	*Spool = NULL;
 char	*ExecutingHost = NULL;
@@ -202,7 +202,7 @@ volatile int check_static_policy = 1;	/* don't check if condor_rm'ed */
 int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
-extern "C" int ExceptCleanup(int,int,char*);
+extern "C" int ExceptCleanup(int,int,const char*);
 extern int Termlog;
 
 StdUnivSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
@@ -1318,7 +1318,7 @@ start_job( char *cluster_id, char *proc_id )
 
 extern "C" {
 int
-ExceptCleanup(int, int, char *buf)
+ExceptCleanup(int, int, const char *buf)
 {
   log_except(buf);
   return DoCleanup();

@@ -68,16 +68,4 @@ class XInterface
 	FILE * utmp_fp;
 	ExtArray<char *> *logged_on_users;
 };
-
-#if defined(LINUX)
-	static char *UtmpName = "/var/run/utmp";
-	static char *AltUtmpName = "/var/adm/utmpx";
-#else
-	static char *UtmpName = "/etc/utmpx";
-	static char *AltUtmpName = "/var/adm/utmpx";
-#endif
-
 #endif //__XINTERFACE_H__
-
-
-

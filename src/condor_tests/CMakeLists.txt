@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -117,18 +117,19 @@ if (BUILD_TESTS)
 		# someone else can add the fortran tests.
 		dprint("UW - add fortran .exe tests if desired")
 		
+		if(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
+			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
+		endif()
 	endif(STD_UNIVERSE)
 
 	##########################################################
 	# platform specific tests
 	if(LINUX)
-	if ( NOT WITHOUT_AMAZON_TEST )
-		condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
-	endif()
+		if ( NOT WITHOUT_AMAZON_TEST )
+			condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
+		endif()
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
-	elseif(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
-		condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
 	endif()
 
 	# negative matches. test on everything but this
@@ -169,10 +170,6 @@ if (BUILD_TESTS)
 		condor_pl_test(lib_lease_manager-get_rel_4 "Lease manager: get/relesae test 4" "core;quick;full")
 		condor_pl_test(lib_lease_manager-get_rel_5 "Lease manager: get/relesae test 5" "core;quick;full")
 	endif(WANT_LEASE_MANAGER)
-
-	if (WANT_QUILL AND HAV_EXT_POSTGRESS)
-		condor_pl_test(lib_lease_manager-get_rel_5 "Lease manager: get/relesae test 5" "core;quick;full")
-	endif(WANT_QUILL AND HAV_EXT_POSTGRESS)
 
 	if (STD_UNIVERSE)
 		# C-Tests

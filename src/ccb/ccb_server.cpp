@@ -859,9 +859,9 @@ CCBServer::RemoveRequest( CCBServerRequest *request )
 
 CCBTarget::CCBTarget(Sock *sock):
 	m_sock(sock),
+	m_ccbid(-1),
 	m_pending_request_results(0),
 	m_socket_is_registered(false),
-	m_ccbid(-1),
 	m_requests(NULL)
 {
 }
@@ -951,8 +951,8 @@ CCBTarget::RemoveRequest(CCBServerRequest *request)
 CCBServerRequest::CCBServerRequest(Sock *sock,CCBID target_ccbid,char const *return_addr,char const *connect_id):
 	m_sock(sock),
 	m_target_ccbid(target_ccbid),
-	m_return_addr(return_addr),
 	m_request_id(-1),
+	m_return_addr(return_addr),
 	m_connect_id(connect_id)
 {
 }

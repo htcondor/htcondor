@@ -93,7 +93,6 @@ public:
 	virtual void Config();           // main_config
 	virtual void Exit();             // main__shutdown_fast
 	virtual void Shutdown();         // main_shutdown_graceful
-
 	// command handlers
 	static int receive_query_cedar(Service*, int, Stream*);
 	static AdTypes receive_query_public( int );

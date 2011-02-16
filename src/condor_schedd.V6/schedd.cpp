@@ -186,7 +186,7 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 	m_domain(domainname),
 	m_auxid("")
 {
-	ExprTree *tree = (ExprTree *) scheduler.getGridParsedSelectionExpr();
+	ExprTree *tree = const_cast<ExprTree *>(scheduler.getGridParsedSelectionExpr());
 	EvalResult val;
 	if ( ad && tree && 
 		 EvalExprTree(tree,ad,NULL,&val) && val.type==LX_STRING && val.s )
@@ -526,10 +526,16 @@ Scheduler::~Scheduler()
 		CronJobMgr = NULL;
 	}
 
-		// we used to cancel and delete the shadowCommand*socks here,
-		// but now that we're calling Cancel_And_Close_All_Sockets(),
-		// they're already getting cleaned up, so if we do it again,
-		// we'll seg fault.
+	if( shadowCommandrsock ) {
+		daemonCore->Cancel_Socket( shadowCommandrsock );
+		delete shadowCommandrsock;
+		shadowCommandrsock = NULL;
+	}
+	if( shadowCommandssock ) {
+		daemonCore->Cancel_Socket( shadowCommandssock );
+		delete shadowCommandssock;
+		shadowCommandssock = NULL;
+	}
 
 	if (CondorAdministrator)
 		free(CondorAdministrator);
@@ -1678,7 +1684,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			dprintf( D_FULLDEBUG, "Found shadow record for job %d.%d\n",
 					 job_id.cluster, job_id.proc );
 
-			int handler_sig;
+			int handler_sig=0;
 			const char* handler_sig_str;
 			switch( action ) {
 			case JA_HOLD_JOBS:
@@ -1721,7 +1727,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
                         job_id.cluster, job_id.proc);
 				dprintf( D_FULLDEBUG, "This job does not have a match\n");
             }
-			int shadow_sig;
+			int shadow_sig=0;
 			const char* shadow_sig_str;
 			switch( action ) {
 			case JA_HOLD_JOBS:
@@ -6879,8 +6885,8 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 		"resources older than V6.3.3";
 
 	PROC_ID job_id;
-	char* hold_reason;
-	bool* notify_admin;
+	char* hold_reason=NULL;
+	bool* notify_admin=NULL;
 
 	if( ! srec ) {
 		dprintf( D_ALWAYS, "ERROR: Called noShadowForJob with NULL srec!\n" );
@@ -9792,12 +9798,17 @@ Scheduler::Init()
 		// If the schedd is just starting up, there isn't a job
 		// queue at this point
 		//
-	if ( !first_time_in_init && this->SchedDInterval.getMaxInterval() != orig_SchedDInterval ) {
+	
+	if ( !first_time_in_init ){
+		double diff = this->SchedDInterval.getMaxInterval()
+			- orig_SchedDInterval;
+		if(diff < -1e-4 || diff > 1e-4) {
 			// 
 			// This will only update the job's that have the old
 			// ScheddInterval attribute defined
 			//
-		WalkJobQueue( (int(*)(ClassAd *))::updateSchedDInterval );
+			WalkJobQueue((int(*)(ClassAd*))::updateSchedDInterval);
+		}
 	}
 
 		// Delay sending negotiation request if we are spending more
@@ -9833,7 +9844,7 @@ Scheduler::Init()
 		// and each running shadow requires 800k of private memory.
 		// We don't use SHADOW_SIZE_ESTIMATE here, because until 7.4,
 		// that was explicitly set to 1800k in the default config file.
-	int default_max_jobs_running = sysapi_phys_memory_raw_no_param()*0.8*1024/800;
+	int default_max_jobs_running = sysapi_phys_memory_raw_no_param()*4096/400;
 
 		// Under Linux (not sure about other OSes), the default TCP
 		// ephemeral port range is 32768-61000.  Each shadow needs 2
@@ -10694,14 +10705,6 @@ Scheduler::shutdown_fast()
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
 
-	int num_closed = daemonCore->Cancel_And_Close_All_Sockets();
-		// now that these have been canceled and deleted, we should
-		// set these to NULL so that we don't try to use them again.
-	shadowCommandrsock = NULL;
-	shadowCommandssock = NULL;
-	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
-			 num_closed ); 
-
 #if HAVE_DLOPEN
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
@@ -10734,14 +10737,6 @@ Scheduler::schedd_exit()
 		// Invalidate our classads at the collector, since we're now
 		// gone.  
 	invalidate_ads();
-
-	int num_closed = daemonCore->Cancel_And_Close_All_Sockets();
-		// now that these have been canceled and deleted, we should
-		// set these to NULL so that we don't try to use them again.
-	shadowCommandrsock = NULL;
-	shadowCommandssock = NULL;
-	dprintf( D_FULLDEBUG, "Canceled/Closed %d socket(s) at shutdown\n",
-			 num_closed ); 
 
 #if HAVE_DLOPEN
 	ScheddPluginManager::Shutdown();
@@ -11491,7 +11486,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	bool retry_is_sensible = false;
 	bool job_is_suitable = false;
 	ClassAd starter_ad;
-	int timeout = 20;
+	int ltimeout = 20;
 
 		// This command is called for example by condor_ssh_to_job
 		// in order to establish a security session for communication
@@ -11657,7 +11652,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 
 		jobad->LookupString(ATTR_GLOBAL_JOB_ID,global_job_id);
 
-		if( !startd.locateStarter(global_job_id.Value(),mrec->claimId(),daemonCore->publicNetworkIpAddr(),&starter_ad,timeout) )
+		if( !startd.locateStarter(global_job_id.Value(),mrec->claimId(),daemonCore->publicNetworkIpAddr(),&starter_ad,ltimeout) )
 		{
 			error_msg = "Failed to get address of starter for this job";
 			goto error_wrapup;
@@ -11677,7 +11672,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			goto error_wrapup;
 		}
 
-		if( !starter.createJobOwnerSecSession(timeout,job_claimid,match_sec_session_id,job_owner_session_info.Value(),starter_claim_id,error_msg,starter_version,starter_addr) ) {
+		if( !starter.createJobOwnerSecSession(ltimeout,job_claimid,match_sec_session_id,job_owner_session_info.Value(),starter_claim_id,error_msg,starter_version,starter_addr) ) {
 			goto error_wrapup; // error_msg already set
 		}
 	}

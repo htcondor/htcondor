@@ -1089,7 +1089,7 @@ cleanup()
 */
 extern "C" {
 int
-exception_cleanup(int,int,char*)
+exception_cleanup(int,int,const char*)
 {
 	sigset_t	mask;
 

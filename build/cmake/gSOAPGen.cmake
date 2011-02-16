@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -63,6 +63,12 @@ if ( HAVE_EXT_GSOAP )
 		list(APPEND ${_SRCS} ${${_DAEMON}_SOAP_SRCS} )
 		list(APPEND ${_HDRS} ${${_DAEMON}_SOAP_HDRS} )
 	endif()
+
+	#  The generated files spew no end of warnings which we can't fix.
+	#  So, turn off the warnings for these files. (-w means no warnings)
+	if (UNIX)
+		set_source_files_properties( ${${_DAEMON}_SOAP_SRCS} PROPERTIES COMPILE_FLAGS "-w")
+	endif(UNIX)
 
 	 list(REMOVE_DUPLICATES ${_SRCS})
 	

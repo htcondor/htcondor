@@ -67,7 +67,7 @@ class CronJob : public Service
 		return ( CRON_INITIALIZING != m_state );
 	};
 	bool IsRunning( void ) const {
-		return ( CRON_RUNNING == m_state );
+		return ( (CRON_RUNNING == m_state) && (m_pid > 0) );
 	};
 	bool IsIdle( void ) const {
 		return ( CRON_IDLE == m_state );
@@ -88,7 +88,7 @@ class CronJob : public Service
 		return ( IsTermSent() || IsKillSent() );
 	};
 	bool IsAlive( void ) const {
-		return ( (CRON_IDLE != m_state) && (CRON_DEAD != m_state) );
+		return ( IsRunning() || IsTermSent() || IsKillSent() );
 	};
 	bool IsActive( void ) const {
 		return ( IsRunning() || IsReady() );

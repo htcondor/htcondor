@@ -23,7 +23,7 @@
 #include <signal.h>
 #define N_POSIX_SIGS 19
 
-void display_sigset( char * msg, sigset_t * mask );
+void display_sigset( const char * msg, sigset_t * mask );
 
 /* pointer to function taking one integer arg and returning void */
 typedef void (*SIGNAL_HANDLER)(int);

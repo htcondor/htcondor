@@ -673,7 +673,7 @@ void daxpy( int n, REAL da, REAL dx[], int incx, REAL dy[], int incy)
 //REAL dx[],dy[],da;
 //int incx,incy,n;
 {
-   int i,ix,iy,m,mp1;
+   int i,ix,iy,m;
 
    if(n <= 0) return;
    if (da == ZERO) return;
@@ -730,7 +730,7 @@ REAL ddot(int n,REAL dx[],int incx,REAL dy[], int incy)
 //int incx,incy,n;
 {
    REAL dtemp;
-   int i,ix,iy,m,mp1;
+   int i,ix,iy,m;
 
    dtemp = ZERO;
 
@@ -786,7 +786,7 @@ void dscal(int n,REAL da,REAL dx[],int incx)
 //REAL da,dx[];
 //int n, incx;
 {
-   int i,m,mp1,nincx;
+   int i,m,nincx;
 
    if(n <= 0)return;
    if(incx != 1) {
@@ -836,7 +836,7 @@ int idamax(int n,REAL dx[],int incx)
 //int incx,n;
 {
    REAL dmax;
-   int i, ix, itemp;
+   int i, ix, itemp=0;
 
    if( n < 1 ) return(-1);
    if(n ==1 ) return(0);

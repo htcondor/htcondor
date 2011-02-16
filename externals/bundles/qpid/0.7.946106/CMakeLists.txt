@@ -25,7 +25,7 @@ if (WITH_QPID)
 
 	if ( NOT PROPER )
 	
-		set (QPID_VER qpid-cpp-mrg-0.7.946106-28 )
+		set (QPID_VER qpid-cpp-mrg-0.7.946106 )
 
 		if (NOT WINDOWS)
 			set (QPID_CONFIGURE ./bootstrap && ./configure --prefix=${EXTERNAL_STAGE} )
@@ -41,17 +41,17 @@ if (WITH_QPID)
 					DEPENDS boost
 				    PREFIX ${EXTERNAL_BUILD_PREFIX}/qpid-${QPID_VER}
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/qpid-${QPID_VER}.tar.gz ${CMD_TERM}
+					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${QPID_VER}-28.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${EXTERNAL_DL}
-				    URL http://parrot.cs.wisc.edu/externals/qpid-${QPID_VER}.tar.gz
+				    URL http://parrot.cs.wisc.edu/externals/${QPID_VER}-28.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd qpid-${QPID_VER}/cpp && ${QPID_CONFIGURE}
+				    CONFIGURE_COMMAND cd ${QPID_VER}/cpp && ${QPID_CONFIGURE}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd qpid-${QPID_VER}/cpp && ${QPID_BUILD}
+				    BUILD_COMMAND cd ${QPID_VER}/cpp && ${QPID_BUILD}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${EXTERNAL_STAGE}
-				    INSTALL_COMMAND cd qpid-${QPID_VER}/cpp && ${QPID_INSTALL} )
+				    INSTALL_COMMAND cd ${QPID_VER}/cpp && ${QPID_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		# all of the below locations need to be verified.

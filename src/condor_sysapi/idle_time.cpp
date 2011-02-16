@@ -465,7 +465,7 @@ dev_idle_time( const char *path, time_t now )
 		In this case, buf.st_atime would already be set to 0 above.
 	*/
 	if ( buf.st_atime != 0 && null_major_device > -1 &&
-							null_major_device == major(buf.st_rdev) ) {
+							null_major_device == int(major(buf.st_rdev))) {
 		// this device is related to /dev/null, it should not count
 		buf.st_atime = 0;
 	}

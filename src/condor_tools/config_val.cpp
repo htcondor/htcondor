@@ -514,7 +514,7 @@ GetRemoteParam( Daemon* target, char* param_name )
 void
 SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 {
-	int cmd, rval;
+	int cmd = DC_NOP, rval;
 	ReliSock s;
 	bool set = false;
 

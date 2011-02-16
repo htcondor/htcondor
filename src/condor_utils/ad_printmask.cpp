@@ -34,9 +34,9 @@ AttrListPrintMask ()
 AttrListPrintMask::
 AttrListPrintMask (const AttrListPrintMask &pm)
 {
-	copyList (formats, (List<Formatter> &) pm.formats);
-	copyList (attributes, (List<char> &) pm.attributes);
-	copyList (alternates, (List<char> &) pm.alternates);
+	copyList (formats, const_cast<List<Formatter> &>(pm.formats));
+	copyList (attributes, const_cast<List<char> &>(pm.attributes));
+	copyList (alternates, const_cast<List<char> &>(pm.alternates));
 }
 
 

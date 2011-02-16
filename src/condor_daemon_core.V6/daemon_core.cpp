@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011 Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -789,7 +789,7 @@ int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 				Service* s, HandlerType handler_type, DCpermission perm)
 {
 	return( Register_Pipe(pipe_end, pipe_descrip, handler,
-							(PipeHandlercpp)NULL, handler_descrip, s,
+							NULL, handler_descrip, s,
 							handler_type, perm, FALSE) );
 }
 
@@ -837,10 +837,10 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
 	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
 }
 
+#ifdef WIN32
 int DaemonCore::Register_Timer_TS(unsigned deltawhen, TimerHandlercpp handler,
 				const char *event_descrip, Service* s)
 {
-#ifdef WIN32
 	EnterCriticalSection(&Big_fat_mutex);
 	int status = Register_Timer(deltawhen, handler, event_descrip, s);
 	Do_Wake_up_select();
@@ -848,6 +848,10 @@ int DaemonCore::Register_Timer_TS(unsigned deltawhen, TimerHandlercpp handler,
 
 	return status;
 #else
+int DaemonCore::Register_Timer_TS(unsigned /* deltawhen */,
+				TimerHandlercpp /* handler */,
+				const char * /* event_descrip */, Service * /* s */ )
+{
 	return 0;
 #endif
 }
@@ -1214,7 +1218,8 @@ DaemonCore::privateNetworkName(void) {
 
 // Lookup the environment id set for a particular pid, or if -1 then the
 // getpid() in question.  Returns penvid or NULL of can't be found.
-PidEnvID* DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
+PidEnvID*
+DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 {
 	extern char **environ;
 
@@ -1565,47 +1570,6 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 
 	return i;
 }
-
-
-int
-DaemonCore::Cancel_And_Close_All_Sockets(void)
-{
-	// This method will cancel *and delete* all registered sockets.
-	// It will return the number of sockets cancelled + closed.
-	// Dan 2009-01-15: _why_ are we doing this?!
-	int i = 0;
-	int j = 0;
-
-	// Since sockets get deleted below, we must delete the ccb listener
-	// first or it will have dangling references.
-	if( m_ccb_listeners ) {
-		delete m_ccb_listeners;
-		m_ccb_listeners = NULL;
-	}
-
-	if( m_shared_port_endpoint ) {
-		delete m_shared_port_endpoint;
-		m_shared_port_endpoint = NULL;
-	}
-
-	for (j=0; j < nSock; j++) {
-		if ( (*sockTable)[j].iosock ) {	// if a valid entry....
-			Stream* insock = (*sockTable)[j].iosock;
-			Cancel_Socket( insock );
-			delete insock;
-			if( insock == (Stream*)dc_rsock ) {
-				dc_rsock = NULL;
-			}
-			if( insock == (Stream*)dc_ssock ) {
-				dc_ssock = NULL;
-			}
-			i++;
-		}
-	}
-
-	return i;
-}
-
 
 int DaemonCore::Cancel_Socket( Stream* insock)
 {
@@ -2268,7 +2232,7 @@ DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
 
 
 int
-DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int len) {
+DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 	PidEntry *pidinfo = NULL;
 	if ((pidTable->lookup(pid, pidinfo) < 0)) {
 			// we have no information on this pid
@@ -2282,7 +2246,7 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int len) {
 	}
 	pidinfo->pipe_buf[0] = new MyString;
 	*pidinfo->pipe_buf[0] = (char*)buffer;
-	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", (PipeHandlercpp)& DaemonCore::PidEntry::pipeFullWrite, "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
+	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeFullWrite), "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
 	return 0;
 }
 
@@ -2420,8 +2384,9 @@ void DaemonCore::Dump(int flag, const char* indent)
 
 void DaemonCore::DumpCommandTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2477,8 +2442,9 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authentica
 
 void DaemonCore::DumpReapTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2511,8 +2477,9 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 
 void DaemonCore::DumpSigTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2546,8 +2513,9 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 
 void DaemonCore::DumpSocketTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2795,7 +2763,7 @@ DaemonCore::reconfig(void) {
 		MyString buf;
 		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
 		max_hang_time = param_integer(buf.Value(),-1);
-		if( max_hang_time == -1 ) {
+		if( max_hang_time == (unsigned int)-1 ) {
 			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
 		}
 		if ( !max_hang_time ) {
@@ -3697,7 +3665,7 @@ void
 DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock )
 {
 	char *handlerName = NULL;
-	int result;
+	int result=0;
 
 		// if the user provided a handler for this socket, then
 		// call it now.  otherwise, call the daemoncore
@@ -4051,7 +4019,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 {
 	Sock				*sock = NULL;
 
-	int					is_tcp;
+	int					is_tcp=0;
 	int                 req = 0;
 	int					index;
 	int					reqFound = FALSE;
@@ -6146,22 +6114,30 @@ void exit(int status)
 		_exit(status);
 	}
 
-	char* my_argv[2];
-	char* my_env[1];
+	const char* my_argv[2];
+	const char* my_env[1];
 	my_argv[1] = NULL;
 	my_env[0] = NULL;
 
 		// First try to just use /bin/true or /bin/false.
 	if ( status == 0 ) {
 		my_argv[0] = "/bin/true";
-		execve("/bin/true",my_argv,my_env);
+		execve( "/bin/true",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 		my_argv[0] = "/usr/bin/true";
-		execve("/usr/bin/true",my_argv,my_env);
+		execve( "/usr/bin/true",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 	} else {
 		my_argv[0] = "/bin/false";
-		execve("/bin/false",my_argv,my_env);
+		execve( "/bin/false",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 		my_argv[0] = "/usr/bin/false";
-		execve("/usr/bin/false",my_argv,my_env);
+		execve( "/usr/bin/false",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 	}
 
 		// If we made it here, we cannot use /bin/[true|false].
@@ -6571,7 +6547,7 @@ void CreateProcessForkit::exec() {
 
 		// We may determine to seed the child's environment with the parent's.
 	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
-		m_envobject.MergeFrom((const char**)environ);
+		m_envobject.MergeFrom(environ);
 	}
 
 		// Put the caller's env requests into the job's environment, potentially
@@ -7088,6 +7064,7 @@ int DaemonCore::Create_Process(
 	int numInheritFds = 0;
 	extern char **environ;
 	MyString executable_buf;
+	priv_state current_priv = PRIV_UNKNOWN;
 
 	// For automagic DC std pipes.
 	int dc_pipe_fds[3][2] = {{-1, -1}, {-1, -1}, {-1, -1}};
@@ -7960,7 +7937,6 @@ int DaemonCore::Create_Process(
 		// or in the condor priv if PRIV_CONDOR_FINAL is specified.
 		// Don't do anything in PRIV_UNKNOWN case.
 
-	priv_state current_priv;
 	if ( priv != PRIV_UNKNOWN ) {
 		if ( priv == PRIV_USER_FINAL ) {
 			current_priv = set_user_priv();
@@ -8324,8 +8300,8 @@ int DaemonCore::Create_Process(
 					// the write end and stash the read end.
 				Close_Pipe(dc_pipe_fds[i][1]);
 				pidtmp->std_pipes[i] = dc_pipe_fds[i][0];
-				char* pipe_desc;
-				char* pipe_handler_desc;
+				const char* pipe_desc;
+				const char* pipe_handler_desc;
 				if (i == 1) {
 					pipe_desc = "DC stdout pipe";
 					pipe_handler_desc = "DC stdout pipe handler";
@@ -8335,7 +8311,7 @@ int DaemonCore::Create_Process(
 					pipe_handler_desc = "DC stderr pipe handler";
 				}
 				Register_Pipe(dc_pipe_fds[i][0], pipe_desc,
-					  (PipeHandlercpp) & DaemonCore::PidEntry::pipeHandler,
+					  static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeHandler),
 					  pipe_handler_desc, pidtmp);
 			}
 				// Either way, we stashed/closed as needed, so clear
@@ -9896,7 +9872,7 @@ int DaemonCore::HungChildTimeout()
 		// to call us again and follow up with a hard-kill.
 		if( !first_time ) {
 			dprintf(D_ALWAYS,
-					"Child pid %d is still hung!  Perhaps it hung while generating a core file.  Killing it harder.\n");
+					"Child pid %d is still hung!  Perhaps it hung while generating a core file.  Killing it harder.\n",hung_child_pid);
 			want_core = false;
 		}
 		else {
@@ -10483,7 +10459,7 @@ DaemonCore::InitSettableAttrsLists( void )
 
 
 bool
-DaemonCore::InitSettableAttrsList( const char* subsys, int i )
+DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 {
 	MyString param_name;
 	char* tmp;
@@ -10911,7 +10887,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
     int bytes, max_read_bytes, max_buffer;
 	int pipe_index = 0;
 	MyString* cur_buf = NULL;
-	char* pipe_desc;
+	const char* pipe_desc=NULL;
 	if (std_pipes[1] == pipe_fd) {
 		pipe_index = 1;
 		pipe_desc = "stdout";
@@ -10969,7 +10945,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 }
 
 
-void
+int
 DaemonCore::PidEntry::pipeFullWrite(int fd)
 {
 	int bytes_written = 0;
@@ -11005,6 +10981,7 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 	{
 		dprintf(D_DAEMONCORE|D_FULLDEBUG, "DaemonCore::PidEntry::pipeFullWrite: Failed to write to fd %d (errno = %d).  Will try again.\n", fd, errno);
 	}
+	return 0;
 }
 
 void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid ) {

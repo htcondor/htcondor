@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -141,7 +141,9 @@ CondorError::getFullText( bool want_newline )
 	return errbuf.Value();
 }
 
-char* CondorError::subsys(int level) {
+const char*
+CondorError::subsys(int level)
+{
 	int n = 0;
 	CondorError* walk = _next;
 	while (walk && n < level) {
@@ -155,7 +157,9 @@ char* CondorError::subsys(int level) {
 	}
 }
 
-int   CondorError::code(int level) {
+int
+CondorError::code(int level)
+{
 	int n = 0;
 	CondorError* walk = _next;
 	while (walk && n < level) {
@@ -169,7 +173,9 @@ int   CondorError::code(int level) {
 	}
 }
 
-char* CondorError::message(int level) {
+const char*
+CondorError::message(int level)
+{
 	int n = 0;
 	CondorError* walk = _next;
 	while (walk && n < level) {

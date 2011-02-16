@@ -2315,10 +2315,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value, flags & SETDIRTY);
 			if( flags & SHOULDLOG ) {
 				char* old_val = NULL;
-				ExprTree *tree;
-				tree = ad->LookupExpr(raw_attribute.Value());
-				if( tree ) {
-					old_val = (char*)ExprTreeToString(tree);
+				ExprTree *ltree;
+				ltree = ad->LookupExpr(raw_attribute.Value());
+				if( ltree ) {
+					old_val = const_cast<char*>(ExprTreeToString(ltree));
 				}
 				scheduler.WriteAttrChangeToUserLog(key, raw_attribute.Value(), attr_value, old_val);
 			}
@@ -2431,7 +2431,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		ExprTree *tree;
 		tree = ad->LookupExpr(attr_name);
 		if( tree ) {
-			old_val = (char*)ExprTreeToString(tree);
+			old_val = const_cast<char*>(ExprTreeToString(tree));
 		}
 		scheduler.WriteAttrChangeToUserLog(key, attr_name, attr_value, old_val);
 	}
@@ -3092,7 +3092,6 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 	char		key[PROC_ID_STR_BUFLEN];
 	ExprTree	*tree;
 	char		*attr_val;
-	const char *tmp_val;
 
 	*val = NULL;
 

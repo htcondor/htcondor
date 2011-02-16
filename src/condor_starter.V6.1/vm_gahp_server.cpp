@@ -458,7 +458,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 	if( m_include_gahp_log ) {
 		result = daemonCore->Register_Pipe(m_vmgahp_errorfd,
 				"m_vmgahp_errorfd",
-				(PipeHandlercpp)&VMGahpServer::err_pipe_ready,
+				static_cast<PipeHandlercpp>(&VMGahpServer::err_pipe_ready),
 				"VMGahpServer::err_pipe_ready",this);
 
 		if( result == -1 ) { 
@@ -489,7 +489,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		// command worked... register the pipe and stop polling
 		result = daemonCore->Register_Pipe(m_vmgahp_readfd,
 				"m_vmgahp_readfd",
-				(PipeHandlercpp)&VMGahpServer::pipe_ready,
+				static_cast<PipeHandlercpp>(&VMGahpServer::pipe_ready),
 				"VMGahpServer::pipe_ready",this);
 		if( result == -1 ) {
 			// failed to register the pipe for some reason; fall 
@@ -721,7 +721,7 @@ VMGahpServer::getPollInterval(void)
 }
 
 int
-VMGahpServer::pipe_ready()
+VMGahpServer::pipe_ready(int)
 {
 	if( m_is_initialized == false ) {
 		return false;
@@ -737,7 +737,7 @@ VMGahpServer::pipe_ready()
 }
 
 int
-VMGahpServer::err_pipe_ready()
+VMGahpServer::err_pipe_ready(int /*pipe_end*/)
 {
 	int count = 0;
 
@@ -1324,7 +1324,8 @@ VMGahpServer::isSupportedVMType(const char *vmtype)
 void 
 VMGahpServer::printSystemErrorMsg(void) 
 {
-	err_pipe_ready();
+	int dummy_pipe = -1;
+	err_pipe_ready(dummy_pipe);
 }
 
 bool

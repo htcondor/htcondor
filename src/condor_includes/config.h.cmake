@@ -1,6 +1,6 @@
 /*************************************************************
  * 
- * Copyright (C) 1990-2010, Redhat.
+ * Copyright 2011 Red Hat, Inc.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
@@ -171,6 +171,9 @@
 #cmakedefine NEEDS_KBDD 1
 // configurable options.
 /////////////////////////////////////////
+
+/* Define if we want to build a Collector that doesn't phone home */
+#cmakedefine NO_PHONE_HOME 1
 
 /* Define if we save sigstate*/
 #cmakedefine DOES_SAVE_SIGSTATE 1

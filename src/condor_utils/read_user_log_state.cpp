@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2009, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -932,7 +932,7 @@ ReadUserLogStateAccess::getFileOffset(
 		return false;
 	}
 
-	if ( my_pos > ULONG_MAX ) {
+	if ( my_pos > LONG_MAX ) {
 		return false;
 	}
 	pos = (unsigned long) my_pos;
@@ -949,7 +949,7 @@ ReadUserLogStateAccess::getFileEventNum(
 		return false;
 	}
 
-	if ( my_num > ULONG_MAX ) {
+	if ( (unsigned long)my_num > ULONG_MAX ) {
 		return false;
 	}
 	num = (unsigned long) my_num;
@@ -1008,7 +1008,7 @@ ReadUserLogStateAccess::getLogPosition(
 		return false;
 	}
 
-	if ( my_pos > ULONG_MAX ) {
+	if ( (unsigned long)my_pos > ULONG_MAX ) {
 		return false;
 	}
 	pos = (unsigned long) my_pos;
@@ -1046,7 +1046,7 @@ ReadUserLogStateAccess::getEventNumber(
 		return false;
 	}
 
-	if ( my_event_no > ULONG_MAX ) {
+	if ( (unsigned long)my_event_no > ULONG_MAX ) {
 		return false;
 	}
 	event_no = (unsigned long) my_event_no;

@@ -110,7 +110,7 @@ void main_config();
 void finish_main_config();
 void main_shutdown_fast();
 void main_shutdown_graceful();
-extern "C" int do_cleanup(int,int,char*);
+extern "C" int do_cleanup(int,int,const char*);
 int reaper( Service*, int pid, int status);
 int	shutdown_reaper( Service*, int pid, int status ); 
 
@@ -129,7 +129,6 @@ void
 main_init( int, char* argv[] )
 {
 	int		skip_benchmarks = FALSE;
-	char*	tmp = NULL;
 	char**	ptr; 
 
 	// Reset the cron & benchmark managers to a known state
@@ -746,7 +745,7 @@ shutdown_reaper(Service *, int pid, int status)
 
 
 int
-do_cleanup(int,int,char*)
+do_cleanup(int,int,const char*)
 {
 	static int already_excepted = FALSE;
 

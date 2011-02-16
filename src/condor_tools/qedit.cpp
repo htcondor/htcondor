@@ -55,7 +55,7 @@ main(int argc, char *argv[])
 {
 	MyString constraint;
 	Qmgr_connection *q;
-	int nextarg = 1, cluster, proc;
+	int nextarg = 1, cluster=0, proc=0;
 	bool UseConstraint = false;
 	MyString schedd_name;
 	MyString pool_name;

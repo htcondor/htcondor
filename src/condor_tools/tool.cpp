@@ -1107,7 +1107,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 		return true;
 	}
 
-	AdTypes	adtype;
+	AdTypes	adtype = MASTER_AD;
 	switch( real_dt ) {
 	case DT_MASTER:
 		adtype = MASTER_AD;

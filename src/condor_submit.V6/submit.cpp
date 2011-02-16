@@ -508,7 +508,7 @@ extern DLL_IMPORT_MAGIC char **environ;
 
 extern "C" {
 int SetSyscalls( int foo );
-int DoCleanup(int,int,char*);
+int DoCleanup(int,int,const char*);
 }
 
 struct SubmitRec {
@@ -6549,7 +6549,7 @@ usage()
 
 extern "C" {
 int
-DoCleanup(int,int,char*)
+DoCleanup(int,int,const char*)
 {
 	if( ClusterCreated ) 
 	{
@@ -6888,10 +6888,7 @@ InsertJobExpr (const char *expr, bool clustercheck)
 {
 	MyString attr_name;
 	ExprTree *tree = NULL;
-	int unused = 0;
-
 	MyString hashkey(expr);
-
 	int pos = 0;
 	int retval = Parse (expr, attr_name, tree, &pos);
 

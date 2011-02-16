@@ -280,7 +280,6 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	// send any unsent data.
 
 	struct linger linger = {0,0};
-	int on = 1;
 	setsockopt(named_sock_fd, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 
 

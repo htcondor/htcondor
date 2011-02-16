@@ -190,7 +190,7 @@ VMGahp::startUp()
 	m_request_buffer.setPipeEnd(stdin_pipe);
 	(void)daemonCore->Register_Pipe(m_request_buffer.getPipeEnd(),
 			"stdin_pipe",
-			(PipeHandlercpp)&VMGahp::waitForCommand,
+			static_cast<PipeHandlercpp>(&VMGahp::waitForCommand),
 			"VMGahp::waitForCommand", this);
 }
 
@@ -390,8 +390,11 @@ VMGahp::findVM(int vm_id)
 	return NULL;
 }
 
+
+
+
 int
-VMGahp::waitForCommand()
+VMGahp::waitForCommand(int pipe_end)
 {
 	MyString *line = NULL;
 

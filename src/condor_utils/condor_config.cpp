@@ -104,8 +104,8 @@ void fill_attributes();
 void check_domain_attributes();
 void clear_config();
 void reinsert_specials(char*);
-void process_config_source(char*, char*, char*, int);
-void process_locals( char*, char*);
+void process_config_source(const char*, const char*, const char*, int);
+void process_locals( const char*, const char*);
 void process_directory( char*, char*);
 static int  process_dynamic_configs();
 void check_params();
@@ -456,6 +456,8 @@ condor_auth_config(int is_daemon)
 		}
 	}
 
+#else
+	(void) is_daemon;	// Quiet 'unused parameter' warnings
 #endif
 }
 
@@ -512,9 +514,9 @@ condor_net_remap_config( bool force_param )
 				all_brokers.rewind();
 				while ( (next_broker = all_brokers.next()) ) {
 					int rc = 0;
-					int num_slots = 0;
 
 #if HAVE_EXT_GCB
+					int num_slots = 0;	/* only used w/HAVE_EXT_GCB */
 					rc = GCB_broker_query( next_broker,
 										   GCB_DATA_QUERY_FREE_SOCKS,
 										   &num_slots );
@@ -833,7 +835,8 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 
 
 void
-process_config_source( char* file, char* name, char* host, int required )
+process_config_source( const char* file, const char* name,
+					   const char* host, int required )
 {
 	int rval;
 	if( access( file, R_OK ) != 0 && !is_piped_command(file)) {
@@ -861,7 +864,7 @@ process_config_source( char* file, char* name, char* host, int required )
 // config source listed there.  If the value is actually a cmd whose
 // output should be piped, then do *not* treat it as a file list.
 void
-process_locals( char* param_name, char* host )
+process_locals( const char* param_name, const char* host )
 {
 	StringList sources_to_process, sources_done;
 	char *source, *sources_value;
