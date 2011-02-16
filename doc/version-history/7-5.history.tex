@@ -22,6 +22,11 @@ The details of each version are described below.
 \item Condor version 7.5.6 not yet released.
 %\item Condor version 7.5.6 released on Month Date, 2011.
 
+\item For clarity, the \Condor{startd} and \Condor{schedd} ``cron''
+  mechanisms will collectively be known as ``Daemon ClassAd
+  Hooks.''  There are several significant changes to this in the 7.5.6
+  release.  These are described below.
+
 \end{itemize}
 
 
@@ -53,6 +58,24 @@ See ~\pageref{dagman:SCRIPT} for details.
 \item Updated Condor's Chirp protocol with new commands. The Chirp C++ client
  and \Condor{chirp} command were updated to use the new commands. See section
  ~\ref{man-condor-chirp} for details on the new commands.
+
+%gittrac #1086
+\item The \Condor{startd}'s benchmarks are no longer hard coded into
+  the \Condor{startd}.  Instead, the benchmarks are now implemented
+  via the Daemon ClassAd Hooks mechanism.  Two new programs are
+  shipped with Condor 7.5.6: \Condor{mips} and \Condor{kflops} (in the
+  ``libexec'' directory); these implement the original ``mips'' and
+  ``kflops'' benchmarks for this new system.  Additional benchmarks
+  can now easily be implemented; the list of benchmarks is controlled
+  via the new \Macro{BENCHMARK\_LIST} macro.
+
+\item Several fixes to the the mips and kflops benchmarks should
+  increase the reproducibility of their results.
+
+%gittrac #1837
+\item Two new job types have been implemented in the Daemon ClassAd
+  Hooks mechanism.  These are ``OneShot'' and ``OnDemand''.
+  Currently, ``OnDemand'' is used only by the new benchmark mechanism.
 
 \end{itemize}
 
@@ -94,6 +117,15 @@ See ~\pageref{dagman:SCRIPT} for details.
   seconds between tests to see if the job proxy has been updated or
   should be refreshed.  The default is 600 (10 minutes).  Previously,
   the \Condor{shadow} checked for proxy updates once per minute.
+
+% gittrac #1698
+\item The Daemon ClassAd Hooks no longer support the ``old''
+  configuration syntax.  This primarily applies to the
+  \Macro{STARTD\_CRON\_JOBS} and \Macro{HAWKEYE\_JOBS} macros.  In
+  previous versions of Condor, the \Condor{startd} would issue a
+  warning if this syntax was found, but, starting with 7.5.6, any use
+  of these macros will be ignored.  Instead, the
+  \Macro{STARTD\_CRON\_JOBLIST} syntax should be used.
 
 \end{itemize}
 
@@ -140,6 +172,10 @@ This behavior on Windows now matches the behavior on other platforms.
 \item Using the \Condor{hold} command followed by the \Condor{remove} 
 command on a job managed by \Condor{dagman}
 now removes node jobs of the DAG, rather than leaving them as orphans.
+
+\item A bug has been fixed in \Condor{config\_val} program which
+  caused it to try to contact the \Condor{collector} before printing
+  usage if the command line was syntactically incorrect.
 
 \end{itemize}
 
