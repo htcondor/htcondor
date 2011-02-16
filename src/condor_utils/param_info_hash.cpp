@@ -82,7 +82,7 @@ param_info_hash_lookup(param_info_hash_t param_info, const char* param) {
 
 // of type to be used by param_info_hash_iterate
 int
-param_info_hash_dump_value(param_info_t* param_value, void* unused) {
+param_info_hash_dump_value(param_info_t* param_value, void* /*unused*/ ) {
 	printf("%s:  default=", param_value->name);
 	switch (param_value->type) {
 		case PARAM_TYPE_STRING:

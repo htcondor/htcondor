@@ -812,9 +812,9 @@ Insert( const char *str )
 	string newAdStr = "[";
 	for ( int i = 0; str[i] != '\0'; i++ ) {
 		if ( str[i] == '\\' && 
-			 ( str[i + 1] != '"' ||
-			   str[i + 1] == '"' &&
-			   ( str[i + 2] == '\0' || str[i + 2] == '\n' ||
+			 ( (str[i + 1] != '"' || str[i + 1] == '"') &&
+			   ( str[i + 2] == '\0' ||
+				 str[i + 2] == '\n' ||
 				 str[i + 2] == '\r') ) ) {
 			newAdStr.append( 1, '\\' );
 		}
@@ -1232,6 +1232,9 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	return rc;
 }
 
+#define IS_DOUBLE_ZERO(_value_) \
+	(  ( (_value_) >= -0.000001 ) && ( (_value_) <= 0.000001 )  )
+
 int ClassAd::
 EvalBool  (const char *name, classad::ClassAd *target, int &value)
 {
@@ -1251,7 +1254,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				value = intVal ? 1 : 0;
 				rc = 1;
 			} else if( val.IsRealValue( doubleVal ) ) {
-				value = doubleVal ? 1 : 0;
+				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
 				rc = 1;
 			}
 		}
@@ -1271,7 +1274,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				rc = 1;
 			}
 			if( val.IsRealValue( doubleVal ) ) {
-				value = doubleVal ? 1 : 0;
+				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
 				rc = 1;
 			}
 		}
@@ -1286,7 +1289,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				rc = 1;
 			}
 			if( val.IsRealValue( doubleVal ) ) {
-				value = doubleVal ? 1 : 0;
+				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
 				rc = 1;
 			}
 		}
@@ -1642,7 +1645,7 @@ void ClassAd::RemoveExplicitTargetRefs( )
 
 
 void ClassAd:: 
-AddTargetRefs( TargetAdType target_type, bool do_version_check )
+AddTargetRefs( TargetAdType /*target_type*/, bool /*do_version_check*/ )
 {
 	// Disable AddTargetRefs for now
 	return;
@@ -2812,7 +2815,8 @@ static void InitTargetAttrLists()
 }
 #endif
 
-classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType target_type )
+classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
+								  TargetAdType /*target_type*/ )
 {
 	// Disable AddTargetRefs for now
 	return tree->Copy();
@@ -2927,8 +2931,7 @@ void ConvertEscapingOldToNew( const char *str, std::string &buffer )
 		if ( *str == '\\' ) {
 			buffer.append( 1, '\\' );
 			str++;
-			if( ( *str != '"' ||
-				  *str == '"' &&
+			if( ( ( *str != '"' || *str == '"' ) &&
 				  ( str[1] == '\0' || str[1] == '\n' ||
 					str[1] == '\r') ) )
 			{

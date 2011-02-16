@@ -213,14 +213,15 @@ char *
 mk_config_name( const char *service_name )
 {
 	static char answer[ 512 ];
-	char	*ptr;
+	const char	*cptr;
+	char		*ptr;
 
 		/* Copy part after the '_' to our answer */
-	ptr = (char *)strchr((const char *) service_name, '_' );
-	if( ptr == NULL ) {
+	cptr = strchr( service_name, '_' );
+	if( cptr == NULL ) {
 		return NULL;
 	}
-	strcpy( answer, ptr + 1 );
+	strcpy( answer, cptr + 1 );
 
 		/* Transform it to upper case */
 	for( ptr=answer; *ptr; ptr++ ) {

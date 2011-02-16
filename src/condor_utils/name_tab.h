@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,40 +17,40 @@
  *
  ***************************************************************/
 
-
- 
-
 #ifndef NAME_TAB_H
 #define NAME_TAB_H
 
 class NameTable;
 class NameTableIterator;
 
-class NAME_VALUE {
-friend class NameTable;
-friend class NameTableIterator;
-public:
-	long	value;
-	char	*name;
+class NAME_VALUE
+{
+	friend class NameTable;
+	friend class NameTableIterator;
+  public:
+	long		 m_value;
+	const char	*m_name;
 };
 
-class NameTable {
-friend class NameTableIterator;
-public:
+class NameTable
+{
+	friend class NameTableIterator;
+  public:
 	NameTable( NAME_VALUE tab[] );
-	char	*get_name( long value );
-	long	get_value( int index );
-	void 	display();
-private:
+	const char	*get_name( long value );
+	long		get_value( int index );
+	void 		display();
+  private:
 	NAME_VALUE	*tab;
 	int			n_entries;
 };
 
-class NameTableIterator {
-public:
+class NameTableIterator
+{
+  public:
 	NameTableIterator( NameTable & );
 	long	operator() ();
-private:
+  private:
 	int			cur;
 	NameTable	*tab;
 };
