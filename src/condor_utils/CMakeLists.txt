@@ -17,8 +17,6 @@
  ############################################################### 
 
 
-# add_definitions( "-Wno-deprecated" )
-
 ##################################################
 # utils library
 file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs*
