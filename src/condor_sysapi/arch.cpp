@@ -168,7 +168,7 @@ init_arch(void)
 }
 
 const char *
-sysapi_translate_arch( const char *machine, const char *sysname )
+sysapi_translate_arch( const char *machine, const char *)
 {
 	char tmp[64];
 	char *tmparch;
