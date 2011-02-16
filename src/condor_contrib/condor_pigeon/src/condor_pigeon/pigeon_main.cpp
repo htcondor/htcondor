@@ -42,7 +42,7 @@ int main_init(int /* argc */, char * /* argv */ [])
 //-------------------------------------------------------------
 
 int 
-main_config( bool b )
+main_config(  )
 {
         qpidObj.initialize();
         return TRUE;

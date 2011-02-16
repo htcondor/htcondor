@@ -22,11 +22,11 @@ if (LINUX)
 file( GLOB RmvSrcs topic_* daemonReader.* )
 condor_glob( Hdrs Srcs "${RmvSrcs}" )
 
-condor_exe( daemonReader "daemonReader.cpp" "${C_SBIN}"
-"condorPigeon;${CONDOR_TOOL_LIBS};${QPID_FOUND}" OFF )
-condor_exe( condor_pigeon_topic_publisher "topic_publisher.cpp" "${C_SBIN}"
-"condorPigeon;${CONDOR_TOOL_LIBS};${QPID_FOUND}" OFF )
-condor_exe( condor_pigeon_topic_listener "topic_listener.cpp" "${C_SBIN}"
-"condorPigeon;${CONDOR_TOOL_LIBS};${QPID_FOUND}" OFF )
+condor_exe( daemonReader "daemonReader.cpp" "${C_SBIN}" "condorPigeon;${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${QPID_FOUND}" OFF )
+condor_exe( condor_pigeon_topic_publisher "topic_publisher.cpp;${Srcs}" "${C_BIN}" "condorapi;${CONDOR_TOOL_LIBS};${QPID_FOUND}" OFF )
+condor_exe( condor_pigeon_topic_listener "topic_listener.cpp" "${C_BIN}" "${QPID_FOUND}" OFF )
+
+###comment the Skype part out for now, since it would require some file copying -- it should be enough to give an idea of what's possible
+##condor_exe( condor_pigeon_topic_listener_skype "topic_listener_skype.cpp" "${C_BIN}" "${QPID_FOUND}" OFF )
 
 endif(LINUX)
