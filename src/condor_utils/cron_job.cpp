@@ -804,7 +804,11 @@ CronJob::KillJob( bool force )
 	}
 
 	// Kill the process *hard*?
-	if ( ( force ) || IsTermSent() ) {
+	if ( IsReady() ) {
+		SetState( CRON_IDLE );
+		return 0;
+	}
+	else if ( ( force ) || IsTermSent() ) {
 		dprintf( D_FULLDEBUG,
 				 "CronJob: Killing job '%s' with SIGKILL, pid = %d\n", 
 				 GetName(), m_pid );
@@ -816,7 +820,8 @@ CronJob::KillJob( bool force )
 		SetState( CRON_KILL_SENT );
 		KillTimer( TIMER_NEVER );	// Cancel the timer
 		return 0;
-	} else if ( IsRunning() ) {
+	}
+	else if ( IsRunning() ) {
 		dprintf( D_FULLDEBUG,
 				 "CronJob: Killing job '%s' with SIGTERM, pid = %d\n",
 				 GetName(), m_pid );
@@ -828,7 +833,8 @@ CronJob::KillJob( bool force )
 		SetState( CRON_TERM_SENT );
 		KillTimer( 1 );				// Schedule hard kill in 1 sec
 		return 1;
-	} else {
+	}
+	else {
 		return -1;					// Nothing else to do!
 	}
 }
