@@ -2384,8 +2384,9 @@ void DaemonCore::Dump(int flag, const char* indent)
 
 void DaemonCore::DumpCommandTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2441,8 +2442,9 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authentica
 
 void DaemonCore::DumpReapTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2475,8 +2477,9 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 
 void DaemonCore::DumpSigTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2510,8 +2513,9 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 
 void DaemonCore::DumpSocketTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -6110,22 +6114,30 @@ void exit(int status)
 		_exit(status);
 	}
 
-	char* my_argv[2];
-	char* my_env[1];
+	const char* my_argv[2];
+	const char* my_env[1];
 	my_argv[1] = NULL;
 	my_env[0] = NULL;
 
 		// First try to just use /bin/true or /bin/false.
 	if ( status == 0 ) {
 		my_argv[0] = "/bin/true";
-		execve("/bin/true",my_argv,my_env);
+		execve( "/bin/true",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 		my_argv[0] = "/usr/bin/true";
-		execve("/usr/bin/true",my_argv,my_env);
+		execve( "/usr/bin/true",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 	} else {
 		my_argv[0] = "/bin/false";
-		execve("/bin/false",my_argv,my_env);
+		execve( "/bin/false",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 		my_argv[0] = "/usr/bin/false";
-		execve("/usr/bin/false",my_argv,my_env);
+		execve( "/usr/bin/false",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 	}
 
 		// If we made it here, we cannot use /bin/[true|false].
@@ -8288,8 +8300,8 @@ int DaemonCore::Create_Process(
 					// the write end and stash the read end.
 				Close_Pipe(dc_pipe_fds[i][1]);
 				pidtmp->std_pipes[i] = dc_pipe_fds[i][0];
-				char* pipe_desc;
-				char* pipe_handler_desc;
+				const char* pipe_desc;
+				const char* pipe_handler_desc;
 				if (i == 1) {
 					pipe_desc = "DC stdout pipe";
 					pipe_handler_desc = "DC stdout pipe handler";
@@ -10875,7 +10887,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
     int bytes, max_read_bytes, max_buffer;
 	int pipe_index = 0;
 	MyString* cur_buf = NULL;
-	char* pipe_desc=0;
+	const char* pipe_desc=NULL;
 	if (std_pipes[1] == pipe_fd) {
 		pipe_index = 1;
 		pipe_desc = "stdout";

@@ -16,6 +16,7 @@
  # 
  ############################################################### 
 
+add_definitions( "-Wno-deprecated" )
 
 file( GLOB DCRmvElements soap_daemon_core* condor_softkill*)
 
