@@ -205,14 +205,6 @@ IpVerify::Init()
                 pDeny = NULL;
 			}
 		}
-        if (pAllow) {
-            free(pAllow);
-            pAllow = NULL;
-        }
-        if (pDeny) {
-            free(pDeny);
-            pDeny = NULL;
-        }
         if (pOldAllow) {
             free(pOldAllow);
             pOldAllow = NULL;

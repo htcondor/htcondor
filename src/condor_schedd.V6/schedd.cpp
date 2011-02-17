@@ -4954,6 +4954,7 @@ Scheduler::negotiate(int command, Stream* s)
 		if( !negotiate_ad.LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
 			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
 					 ATTR_SUBMITTER_TAG );
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 	}
@@ -4970,6 +4971,7 @@ Scheduler::negotiate(int command, Stream* s)
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
+		free(sig_attrs_from_cm);
 		return (!(KEEP_STREAM));
 	}
 
@@ -4998,6 +5000,7 @@ Scheduler::negotiate(int command, Stream* s)
 				dprintf(D_ALWAYS, "Unknown negotiator (host=%s,tag=%s).  "
 						"Aborting negotiation.\n", sock->peer_ip_str(),
 						submitter_tag.Value());
+				free(sig_attrs_from_cm);
 				return (!(KEEP_STREAM));
 			}
 		}
@@ -5018,12 +5021,14 @@ Scheduler::negotiate(int command, Stream* s)
 		char *negotiator_hostname = negotiator.fullHostname();
 		if (!negotiator_hostname) {
 			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 		hent = condor_gethostbyname(negotiator_hostname);
 		if (!hent) {
 			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
 					"  Aborting negotiation.\n", negotiator_hostname);
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 		char *addr;
@@ -5058,6 +5063,7 @@ Scheduler::negotiate(int command, Stream* s)
 		if (!match) {
 			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
 					"Aborting negotiation.\n", sock->peer_ip_str());
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 	}
