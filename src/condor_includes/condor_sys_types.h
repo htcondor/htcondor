@@ -27,7 +27,6 @@
 /* Define 64 bit integer types */
 #if defined( HAVE_INT64_T )
   /* int64_t already defined; do nothing */
-  typedef int64_t filesize_t;
 
 #elif defined( HAVE___INT64 )
   /* Use the compiler's __int64 type for int64_t (Win32) */
@@ -40,9 +39,15 @@
   /* Use the compiler's long long type for int64_t (GCC) */
   typedef long long int64_t;
   typedef unsigned long long uint64_t;
-  typedef long filesize_t;
 # define HAVE_INT64_T 1
 
+#endif
+
+// Finally, define a consistent filesize_t
+#if defined( HAVE_INT64_T )
+  typedef int64_t filesize_t;
+#else
+  typedef long filesize_t;
 #endif
 
 
