@@ -53,6 +53,7 @@ elseif(${OS_NAME} MATCHES "WIN")
 	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc")
 endif()
 
+  
 message(STATUS "***********************************************************")
 message(STATUS "System(${HOSTNAME}): ${OS_NAME}(${OS_VER}) Arch=${SYS_ARCH} BitMode=${BIT_MODE} BUILDID:${BUILDID}")
 message(STATUS "install prefix:${CMAKE_INSTALL_PREFIX}")
@@ -233,10 +234,22 @@ if( NOT WINDOWS)
 endif()
 
 find_program(HAVE_VMWARE vmware)
-check_type_size("id_t" HAVE_ID_T)
-check_type_size("__int64" HAVE___INT64)
-check_type_size("int64_t" HAVE_INT64_T)
-check_type_size("long long" HAVE_LONG_LONG)
+
+# Check for the existense of and size of various types
+check_type_size("id_t" ID_T)
+check_type_size("__int64" __INT64)
+check_type_size("int64_t" INT64_T)
+check_type_size("int" INTEGER)
+set(SIZEOF_INT "${INTEGER}")
+check_type_size("long" LONG_INTEGER)
+set(SIZEOF_LONG "${LONG_INTEGER}")
+check_type_size("long long" LONG_LONG)
+if(HAVE_LONG_LONG)
+  set(SIZEOF_LONG_LONG "${LONG_LONG}")
+endif()
+check_type_size("void *" VOIDPTR)
+set(SIZEOF_VOIDPTR "${VOIDPTR}")
+
 
 ##################################################
 ##################################################

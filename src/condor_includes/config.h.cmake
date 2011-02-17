@@ -361,6 +361,18 @@
 /* Define to 1 if the system has the type 'long long'. (USED)*/
 #cmakedefine HAVE_LONG_LONG 1
 
+/* Define to the size of the of type 'long long'. (USED)*/
+#cmakedefine SIZEOF_LONG_LONG ${SIZEOF_LONG_LONG}
+
+/* Define to the size of the of type 'long'. (USED)*/
+#cmakedefine SIZEOF_LONG ${SIZEOF_LONG}
+
+/* Define to the size of the of type 'int'. (USED)*/
+#cmakedefine SIZEOF_INT ${SIZEOF_INT}
+
+/* Define to the size of the of type 'void *'. (USED)*/
+#cmakedefine SIZEOF_VOIDPTR ${SIZEOF_VOIDPTR}
+
 /* Define to 1 if you have the 'lstat' function. (USED)*/
 #cmakedefine HAVE_LSTAT 1
 
