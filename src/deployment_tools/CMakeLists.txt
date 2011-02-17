@@ -16,6 +16,7 @@
  # 
  ############################################################### 
 
+prep_clone_install()
 
 if (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)
 
