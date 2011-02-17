@@ -339,6 +339,7 @@ CondorVersionInfo::get_platform_from_file(const char* filename,
 	if (!platform) {
 		if ( !(platform = (char *)malloc(100)) ) {
 			// out of memory
+			fclose(fp);
 			return NULL;
 		}
 		must_free = true;

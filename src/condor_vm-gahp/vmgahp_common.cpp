@@ -665,6 +665,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	    
 	      ArgList al;
 	      psforkexec.in_child(cmd, al);
+          deleteStringArray( args_array );
 	      args_array = al.GetStringArray();
 	    }
 
@@ -687,6 +688,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 		close(error_pipe[0]);
 		close(stdin_pipes[1]);
 		close(stdout_pipes[0]);
+	    fclose(fp);
 		deleteStringArray( args_array );
 		return -1;
 	      }
@@ -724,6 +726,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 		args.GetArgsStringForDisplay( &args_string, 0 );
 		vmprintf( D_ALWAYS, "Failed to execute command: %s\n",
 				  args_string.Value() );
+	    fclose(childerr);
 		return -1;
 	}
 

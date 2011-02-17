@@ -323,6 +323,7 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
 				"fseek(%s) failed with errno %d (%s)\n", strFilename.Value(),
 				errno, strerror(errno) );
+		fclose(pFile);
 		return "";
 	}
 	int iLength = ftell(pFile);

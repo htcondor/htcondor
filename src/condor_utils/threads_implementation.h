@@ -27,7 +27,7 @@
 #define _THREADS_IMPLEMENTATION_H
 
 #ifdef WIN32
-	typedef void* ThreadStartFunc_t;
+	typedef void ThreadStartFunc_t;
 #else
 	typedef void* ThreadStartFunc_t;
 	#ifdef HAVE_PTHREAD_H

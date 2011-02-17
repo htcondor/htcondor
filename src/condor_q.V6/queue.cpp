@@ -3111,6 +3111,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
             success = true;
         }
     }
+	fclose(file);
     return success;
 }
 
