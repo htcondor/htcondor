@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -30,36 +30,37 @@ extern "C" {
    "rd", or "th", as appropriate.  The value is returned in a static
    buffer, so beware, and use w/ caution.
 */
-char*
+const unsigned BUF_SIZE = 32;
+const char*
 num_string( int num )
 {
 	int i;
-	static char buf[32];
+	static char buf[BUF_SIZE];
 
 	i = num % 100; 	// i is just last two digits.
 	
 		// teens are a special case... they're always "th"
 	if( i > 10 && i < 20 ) {
-		sprintf( buf, "%dth", num );
+		snprintf( buf, BUF_SIZE, "%dth", num );
 		return buf;
 	}
 
 	i = i % 10;		// Now, we have just the last digit.
 	switch( i ) {
 	case 1:
-		sprintf( buf, "%dst", num );
+		snprintf( buf, BUF_SIZE, "%dst", num );
 		return buf;
 		break;
 	case 2:
-		sprintf( buf, "%dnd", num );
+		snprintf( buf, BUF_SIZE, "%dnd", num );
 		return buf;
 		break;
 	case 3:
-		sprintf( buf, "%drd", num );
+		snprintf( buf, BUF_SIZE, "%drd", num );
 		return buf;
 		break;
 	default:
-		sprintf( buf, "%dth", num );
+		snprintf( buf, BUF_SIZE, "%dth", num );
 		return buf;
 		break;
 	}
@@ -100,7 +101,8 @@ startdClaimIdFile( int slot_id )
 	return strdup( filename.Value() );
 }
 
-const char* my_timezone(int isdst) 
+const char*
+my_timezone(int isdst) 
 {
   tzset();
 
@@ -109,10 +111,10 @@ const char* my_timezone(int isdst)
   
 	  // if daylight is in effect (isdst is positive)
   if (isdst > 0) {
-    return tzname[1];
-  } else
-  {
-    return tzname[0];
+	  return tzname[1];
+  }
+  else {
+	  return tzname[0];
   }
 #else
 	// On Win32, tzname is useless.  It return a string like

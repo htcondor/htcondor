@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -1009,9 +1009,13 @@ FileTransfer::ComputeFilesToSend()
 			}
 			else {
 				dprintf( D_FULLDEBUG,
-					 "Skipping file %s, t: %ld==%ld, s: %lld==%lld\n",
-					 f, dir.GetModifyTime(), modification_time,
-					 dir.GetFileSize(), filesize );
+						 "Skipping file %s, t: %"PRIi64"==%"PRIi64
+						 ", s: %"PRIi64"==%"PRIi64"\n",
+						 f,
+						 (PRIi64_t)dir.GetModifyTime(),
+						 (PRIi64_t)modification_time,
+						 (PRIi64_t)dir.GetFileSize(),
+						 (PRIi64_t)filesize );
 				continue;
 			}
 			if(send_it) {
@@ -3719,7 +3723,7 @@ MyString
 FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 {
     FILE* fp;
-    char *args[] = {const_cast<char*>(path), "-classad", NULL};
+    const char *args[] = { path, "-classad", NULL};
     char buf[1024];
 
         // first, try to execute the given path with a "-classad"

@@ -95,7 +95,7 @@ int     handle_shutdown_program( int cmd, Stream* stream );
 void	time_skip_handler(void * /*data*/, int delta);
 void	restart_everyone();
 
-extern "C" int	DoCleanup(int,int,char*);
+extern "C" int	DoCleanup(int,int,const char*);
 
 // Global variables
 ClassAd	*ad = NULL;				// ClassAd to send to collector
@@ -191,7 +191,7 @@ usage( const char* name )
 }
 
 int
-DoCleanup(int,int,char*)
+DoCleanup(int,int,const char*)
 {
 	static int already_excepted = FALSE;
 

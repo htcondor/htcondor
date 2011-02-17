@@ -1358,7 +1358,7 @@ sub IsRunningYet
 	}
 
 
-	if($daemonlist =~ /.*MASTER.*/i) {
+	if($daemonlist =~ /MASTER/i) {
 		print "Has master dropped an address file yet - ";
 		# now wait for the master to start running... get address file loc
 		# and wait for file to exist
@@ -1387,7 +1387,7 @@ sub IsRunningYet
 		print "ok\n";
 	}
 
-	if($daemonlist =~ /.*COLLECTOR.*/i){
+	if($daemonlist =~ /COLLECTOR/i){
 		print "Has collector dropped an address file yet - ";
 		# now wait for the collector to start running... get address file loc
 		# and wait for file to exist
@@ -1416,7 +1416,7 @@ sub IsRunningYet
 		print "ok\n";
 	}
 
-	if($daemonlist =~ /.*NEGOTIATOR.*/i) {
+	if($daemonlist =~ /NEGOTIATOR/i) {
 		print "Has negotiator dropped an address file yet - ";
 		# now wait for the negotiator to start running... get address file loc
 		# and wait for file to exist
@@ -1445,7 +1445,7 @@ sub IsRunningYet
 		print "ok\n";
 	}
 
-	if($daemonlist =~ /.*STARTD.*/i) {
+	if($daemonlist =~ /STARTD/i) {
 		print "Has startd dropped an address file yet - ";
 		# now wait for the startd to start running... get address file loc
 		# and wait for file to exist
@@ -1476,7 +1476,7 @@ sub IsRunningYet
 
 	####################################################################
 
-	if($daemonlist =~ /.*SCHEDD.*/i) {
+	if($daemonlist =~ /SCHEDD/i) {
 		print "Has schedd dropped an address file yet - ";
 		# now wait for the schedd to start running... get address file loc
 		# and wait for file to exist
@@ -1505,13 +1505,13 @@ sub IsRunningYet
 		print "ok\n";
 	}
 
-	if($daemonlist =~ /.*STARTD.*/i) {
+	if($daemonlist =~ /STARTD/i) {
 		# lets wait for the collector to know about it
 		# if we have a collector
 		my $havestartd = "";
 		my $done = "no";
 		my $currenthost = hostfqdn();
-		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
+		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
 			print "Waiting for collector to see startd - ";
 			$loopcount = 0;
 			TRY: while( $done eq "no") {
@@ -1536,13 +1536,13 @@ sub IsRunningYet
 		}
 	}
 
-	if($daemonlist =~ /.*SCHEDD.*/i) {
+	if($daemonlist =~ /SCHEDD/i) {
 		# lets wait for the collector to know about it
 		# if we have a collector
 		my $haveschedd = "";
 		my $done = "no";
 		my $currenthost = hostfqdn();
-		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
+		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
 			print "Waiting for collector to see schedd - ";
 			$loopcount = 0;
 			TRY: while( $done eq "no") {
@@ -1566,6 +1566,39 @@ sub IsRunningYet
 			}
 		}
 	}
+
+
+	if($daemonlist =~ /NEGOTIATOR/i) {
+		# lets wait for the collector to know about it
+		# if we have a collector
+		my $havenegotiator = "";
+		my $done = "no";
+		my $currenthost = hostfqdn();
+		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
+			print "Waiting for collector to see negotiator - ";
+			$loopcount = 0;
+			TRY: while( $done eq "no") {
+				$loopcount += 1;
+				my @cmd = `condor_status -negotiator -format \"%s\\n\" name`;
+
+    			foreach my $line (@cmd)
+    			{
+        			if( $line =~ /^.*$currenthost.*/)
+        			{
+						print "ok\n";
+            			$done = "yes";
+						last TRY;
+        			}
+    			}
+				if($loopcount == $runlimit) { 
+					print "bad\n";
+					last; 
+				}
+				sleep ($loopcount * $backoff);
+			}
+		}
+	}
+
 	debug("In IsRunningYet calling CollectDaemonPids\n",$debuglevel);
 	CollectDaemonPids();
 	debug("Leaving IsRunningYet\n",$debuglevel);

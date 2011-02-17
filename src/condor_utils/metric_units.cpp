@@ -24,10 +24,11 @@
 #define METRIC_UNITS_BUFFER_SIZE 80
 #define METRIC_POWER_COUNT 5
 
-extern "C" char *metric_units( double bytes )
+extern "C" const char *
+metric_units( double bytes )
 {
 	static char buffer[METRIC_UNITS_BUFFER_SIZE];
-	static char *suffix[METRIC_POWER_COUNT] =
+	static const char *suffix[METRIC_POWER_COUNT] =
 		{ "B ", "KB", "MB", "GB", "TB" };
 
 	double value=0;

@@ -33,29 +33,29 @@ set( QMF_GEN_SRCS Slot.h;
     Grid.cpp;
     Submission.cpp;
     JobServer.cpp;
-    ArgsSchedulerSubmitJob.h;
+    #ArgsSchedulerSubmitJob.h;
     #ArgsSchedulerGetJobAd.h;
-    ArgsSchedulerSetJobAttribute.h;
-    ArgsSchedulerHoldJob.h;
-    ArgsSchedulerReleaseJob.h;
-    ArgsSchedulerRemoveJob.h;
+    #ArgsSchedulerSetJobAttribute.h;
+    #ArgsSchedulerHoldJob.h;
+    #ArgsSchedulerReleaseJob.h;
+    #ArgsSchedulerRemoveJob.h;
     #ArgsSchedulerFetchJobData.h;
     #ArgsSchedulerGetJobSummaries.h;
     #ArgsSchedulerEcho.h;
-    ArgsNegotiatorGetLimits.h;
-    ArgsNegotiatorSetLimit.h;
-    ArgsNegotiatorGetStats.h;
-    ArgsNegotiatorSetPriority.h;
-    ArgsNegotiatorSetPriorityFactor.h;
-    ArgsNegotiatorSetUsage.h;
-    ArgsNegotiatorGetRawConfig.h;
-    ArgsNegotiatorSetRawConfig.h;
-    ArgsMasterStart.h;
-    ArgsMasterStop.h;
-    ArgsGridMethodsEcho.h;
-    ArgsJobServerFetchJobData.h;
-    ArgsJobServerGetJobAd.h;
-    ArgsSubmissionGetJobSummaries.h;
+    #ArgsNegotiatorGetLimits.h;
+    #ArgsNegotiatorSetLimit.h;
+    #ArgsNegotiatorGetStats.h;
+    #ArgsNegotiatorSetPriority.h;
+    #ArgsNegotiatorSetPriorityFactor.h;
+    #ArgsNegotiatorSetUsage.h;
+    #ArgsNegotiatorGetRawConfig.h;
+    #ArgsNegotiatorSetRawConfig.h;
+    #ArgsMasterStart.h;
+    #ArgsMasterStop.h;
+    #ArgsGridMethodsEcho.h;
+    #ArgsJobServerFetchJobData.h;
+    #ArgsJobServerGetJobAd.h;
+    #ArgsSubmissionGetJobSummaries.h;
     Package.h;
     Package.cpp )
 
@@ -63,7 +63,11 @@ set( QMF_GEN_SRCS Slot.h;
 add_custom_command( OUTPUT ${QMF_GEN_SRCS} 
                     COMMAND python
                     ARGS ${QMF_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/condor-management-schema.xml && cd com/redhat/grid && mv -f * ../../.. 
-                    DEPENDS ${QMF_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/condor-management-schema.xml )
+                    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/condor-management-schema.xml )
+
+add_custom_target (qmf_gen_srcs
+                    ALL
+                    DEPENDS ${QMF_GEN_SRCS} )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -78,18 +82,23 @@ if (NOT WINDOWS)
 	# NOTE: Still need to update linkage deps
 	file( GLOB SchedSrcs JobUtils.* SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* JobServerObject.* MgmtScheddPlugin* Utils.* PoolUtils.*)
     condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+    add_dependencies( MgmtScheddPlugin-plugin qmf_gen_srcs )
 
 	file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* CollectorObject.* SlotObject.* PoolUtils.*)
 	condor_plugin( MgmtCollectorPlugin-plugin "${CollectorSrcs};Grid.cpp;Collector.cpp;Slot.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+    add_dependencies( MgmtCollectorPlugin-plugin qmf_gen_srcs )
 
 	file( GLOB NegotiatorSrcs MgmtNegotiatorPlugin.* NegotiatorObject.* Utils.* PoolUtils.*)
 	condor_plugin( MgmtNegotiatorPlugin-plugin "${NegotiatorSrcs};Negotiator.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+    add_dependencies( MgmtNegotiatorPlugin-plugin qmf_gen_srcs )
 
 	file( GLOB MasterSrcs MgmtMasterPlugin.* MasterObject.* PoolUtils.* )
 	condor_plugin( MgmtMasterPlugin-plugin "${MasterSrcs};Master.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+    add_dependencies( MgmtMasterPlugin-plugin qmf_gen_srcs )
 
 	file( GLOB StartdSrcs MgmtStartdPlugin.* SlotObject.* PoolUtils.*)
 	condor_plugin( MgmtStartdPlugin-plugin "${COLLECTOR_REF};${StartdSrcs};Slot.h;Slot.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+    add_dependencies( MgmtStartdPlugin-plugin qmf_gen_srcs )
 	
 else()
 
@@ -97,7 +106,8 @@ else()
 	condor_glob( HDRS SRCS "${QMFRMV}" )
 	
 	condor_static_lib( condor_qmflib "${HDRS};${SRCS};${QMF_GEN_SRCS}" )
-	
+	add_dependencies( condor_qmflib qmf_gen_srcs )
+
 	# Windows only contrib library, as plugins are totally hosed on windows.
 	set (CONDOR_QMF condor_qmflib PARENT_SCOPE)
 

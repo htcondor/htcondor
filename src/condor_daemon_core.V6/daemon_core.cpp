@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011 Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -837,10 +837,10 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
 	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
 }
 
+#ifdef WIN32
 int DaemonCore::Register_Timer_TS(unsigned deltawhen, TimerHandlercpp handler,
 				const char *event_descrip, Service* s)
 {
-#ifdef WIN32
 	EnterCriticalSection(&Big_fat_mutex);
 	int status = Register_Timer(deltawhen, handler, event_descrip, s);
 	Do_Wake_up_select();
@@ -848,6 +848,10 @@ int DaemonCore::Register_Timer_TS(unsigned deltawhen, TimerHandlercpp handler,
 
 	return status;
 #else
+int DaemonCore::Register_Timer_TS(unsigned /* deltawhen */,
+				TimerHandlercpp /* handler */,
+				const char * /* event_descrip */, Service * /* s */ )
+{
 	return 0;
 #endif
 }
@@ -1214,7 +1218,8 @@ DaemonCore::privateNetworkName(void) {
 
 // Lookup the environment id set for a particular pid, or if -1 then the
 // getpid() in question.  Returns penvid or NULL of can't be found.
-PidEnvID* DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
+PidEnvID*
+DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 {
 	extern char **environ;
 
@@ -2227,7 +2232,7 @@ DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
 
 
 int
-DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int len) {
+DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 	PidEntry *pidinfo = NULL;
 	if ((pidTable->lookup(pid, pidinfo) < 0)) {
 			// we have no information on this pid
@@ -2379,8 +2384,9 @@ void DaemonCore::Dump(int flag, const char* indent)
 
 void DaemonCore::DumpCommandTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2436,8 +2442,9 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authentica
 
 void DaemonCore::DumpReapTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2470,8 +2477,9 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 
 void DaemonCore::DumpSigTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2505,8 +2513,9 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 
 void DaemonCore::DumpSocketTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2754,7 +2763,7 @@ DaemonCore::reconfig(void) {
 		MyString buf;
 		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
 		max_hang_time = param_integer(buf.Value(),-1);
-		if( max_hang_time == -1 ) {
+		if( max_hang_time == (unsigned int)-1 ) {
 			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
 		}
 		if ( !max_hang_time ) {
@@ -6105,22 +6114,30 @@ void exit(int status)
 		_exit(status);
 	}
 
-	char* my_argv[2];
-	char* my_env[1];
+	const char* my_argv[2];
+	const char* my_env[1];
 	my_argv[1] = NULL;
 	my_env[0] = NULL;
 
 		// First try to just use /bin/true or /bin/false.
 	if ( status == 0 ) {
 		my_argv[0] = "/bin/true";
-		execve("/bin/true",my_argv,my_env);
+		execve( "/bin/true",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 		my_argv[0] = "/usr/bin/true";
-		execve("/usr/bin/true",my_argv,my_env);
+		execve( "/usr/bin/true",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 	} else {
 		my_argv[0] = "/bin/false";
-		execve("/bin/false",my_argv,my_env);
+		execve( "/bin/false",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 		my_argv[0] = "/usr/bin/false";
-		execve("/usr/bin/false",my_argv,my_env);
+		execve( "/usr/bin/false",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 	}
 
 		// If we made it here, we cannot use /bin/[true|false].
@@ -8283,8 +8300,8 @@ int DaemonCore::Create_Process(
 					// the write end and stash the read end.
 				Close_Pipe(dc_pipe_fds[i][1]);
 				pidtmp->std_pipes[i] = dc_pipe_fds[i][0];
-				char* pipe_desc;
-				char* pipe_handler_desc;
+				const char* pipe_desc;
+				const char* pipe_handler_desc;
 				if (i == 1) {
 					pipe_desc = "DC stdout pipe";
 					pipe_handler_desc = "DC stdout pipe handler";
@@ -10442,7 +10459,7 @@ DaemonCore::InitSettableAttrsLists( void )
 
 
 bool
-DaemonCore::InitSettableAttrsList( const char* subsys, int i )
+DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 {
 	MyString param_name;
 	char* tmp;
@@ -10870,7 +10887,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
     int bytes, max_read_bytes, max_buffer;
 	int pipe_index = 0;
 	MyString* cur_buf = NULL;
-	char* pipe_desc=0;
+	const char* pipe_desc=NULL;
 	if (std_pipes[1] == pipe_fd) {
 		pipe_index = 1;
 		pipe_desc = "stdout";

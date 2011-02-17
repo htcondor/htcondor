@@ -4954,6 +4954,7 @@ Scheduler::negotiate(int command, Stream* s)
 		if( !negotiate_ad.LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
 			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
 					 ATTR_SUBMITTER_TAG );
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 	}
@@ -4970,6 +4971,7 @@ Scheduler::negotiate(int command, Stream* s)
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
+		free(sig_attrs_from_cm);
 		return (!(KEEP_STREAM));
 	}
 
@@ -4998,6 +5000,7 @@ Scheduler::negotiate(int command, Stream* s)
 				dprintf(D_ALWAYS, "Unknown negotiator (host=%s,tag=%s).  "
 						"Aborting negotiation.\n", sock->peer_ip_str(),
 						submitter_tag.Value());
+				free(sig_attrs_from_cm);
 				return (!(KEEP_STREAM));
 			}
 		}
@@ -5018,12 +5021,14 @@ Scheduler::negotiate(int command, Stream* s)
 		char *negotiator_hostname = negotiator.fullHostname();
 		if (!negotiator_hostname) {
 			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 		hent = condor_gethostbyname(negotiator_hostname);
 		if (!hent) {
 			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
 					"  Aborting negotiation.\n", negotiator_hostname);
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 		char *addr;
@@ -5058,6 +5063,7 @@ Scheduler::negotiate(int command, Stream* s)
 		if (!match) {
 			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
 					"Aborting negotiation.\n", sock->peer_ip_str());
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 	}
@@ -9798,12 +9804,17 @@ Scheduler::Init()
 		// If the schedd is just starting up, there isn't a job
 		// queue at this point
 		//
-	if ( !first_time_in_init && this->SchedDInterval.getMaxInterval() != orig_SchedDInterval ) {
+	
+	if ( !first_time_in_init ){
+		double diff = this->SchedDInterval.getMaxInterval()
+			- orig_SchedDInterval;
+		if(diff < -1e-4 || diff > 1e-4) {
 			// 
 			// This will only update the job's that have the old
 			// ScheddInterval attribute defined
 			//
-		WalkJobQueue( (int(*)(ClassAd *))::updateSchedDInterval );
+			WalkJobQueue((int(*)(ClassAd*))::updateSchedDInterval);
+		}
 	}
 
 		// Delay sending negotiation request if we are spending more
@@ -9839,7 +9850,7 @@ Scheduler::Init()
 		// and each running shadow requires 800k of private memory.
 		// We don't use SHADOW_SIZE_ESTIMATE here, because until 7.4,
 		// that was explicitly set to 1800k in the default config file.
-	int default_max_jobs_running = sysapi_phys_memory_raw_no_param()*0.8*1024/800;
+	int default_max_jobs_running = sysapi_phys_memory_raw_no_param()*4096/400;
 
 		// Under Linux (not sure about other OSes), the default TCP
 		// ephemeral port range is 32768-61000.  Each shadow needs 2

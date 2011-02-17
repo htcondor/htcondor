@@ -706,7 +706,7 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 		hash = c + (hash << 6) + (hash << 16) - hash;
 	}
 	char hashVal[256] = {0};
-	sprintf(hashVal, "%u", hash);
+	sprintf(hashVal, "%lu", hash);
 	while (strlen(hashVal) < 5)
 		sprintf(hashVal+strlen(hashVal), "%s", hashVal);
 

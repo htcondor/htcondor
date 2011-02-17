@@ -228,9 +228,9 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
 }
 
 int Condor_Auth_Kerberos :: unwrap(char*  input, 
-                                   int    input_len, 
+                                   int    /* input_len */, 
                                    char*& output, 
-                                   int&   output_len)
+                                   int& output_len)
 {
     krb5_error_code code;
     krb5_data       out_data;
@@ -1207,7 +1207,7 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
     return rc;
 }
 
-int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
+int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * /* ticket */ )
 {
     krb5_error_code  code;
 	//krb5_ccache      ccache;

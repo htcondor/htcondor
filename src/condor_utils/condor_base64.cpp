@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -39,7 +39,7 @@ char* condor_base64_encode(const unsigned char *input, int length)
 	bmem = BIO_new(BIO_s_mem());
 	b64 = BIO_push(b64, bmem);
 	BIO_write(b64, input, length);
-	BIO_flush(b64);
+	(void)BIO_flush(b64);
 	BIO_get_mem_ptr(b64, &bptr);
 
 	char *buff = (char *)malloc(bptr->length);

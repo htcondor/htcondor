@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -249,10 +249,11 @@ extern "C" {
 
 
 	int get_var( register char *value, register char **leftp,
-	      register char **namep, register char **rightp, char *self=NULL,
-		  bool getdollardollar=false, int search_pos=0);
-	int get_special_var( const char *prefix, bool only_id_chars, register char *value, register char **leftp,
-				 register char **namep, register char **rightp);
+		register char **namep, register char **rightp,
+		const char *self=NULL, bool getdollardollar=false, int search_pos=0);
+	int get_special_var( const char *prefix, bool only_id_chars,
+		register char *value, register char **leftp,
+		register char **namep, register char **rightp);
 }
 
 #endif

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -106,7 +106,7 @@ passwd_cache::getUseridMap(MyString &usermap)
 		}
 		usermap.sprintf_cat("%s=%ld,%ld",index.Value(),(long)uent->uid,(long)uent->gid);
 		if( group_table->lookup(index,gent) == 0 ) {
-			int i;
+			unsigned i;
 			for(i=0;i<gent->gidlist_sz;i++) {
 				if( gent->gidlist[i] == uent->gid ) {
 					// already included this gid, because it is the primary
@@ -291,7 +291,7 @@ bool
 passwd_cache::cache_uid(const char* user) {
 
 	struct passwd *pwent;
-	char *err_string;
+	const char *err_string;
 
 	errno = 0;
 	pwent = getpwnam(user);
@@ -317,7 +317,7 @@ passwd_cache::cache_uid(const char* user) {
 #endif
 		) 
 		{
-			static char *errno_clarification = "user not found";
+			static const char *errno_clarification = "user not found";
 			err_string = errno_clarification;
 		} else {
 			err_string = strerror( errno );

@@ -782,6 +782,9 @@ ThreadImplementation::threadStart(void *)
 		// update status
 		item->set_status( WorkerThread::THREAD_COMPLETED );
 	}
+
+	// cast is needed to keep both windows and !windows happy with the return value
+	return (ThreadStartFunc_t)NULL;
 }
 
 #ifndef WIN32

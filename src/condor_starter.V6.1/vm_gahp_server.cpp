@@ -721,7 +721,7 @@ VMGahpServer::getPollInterval(void)
 }
 
 int
-VMGahpServer::pipe_ready(int pipe_end)
+VMGahpServer::pipe_ready(int)
 {
 	if( m_is_initialized == false ) {
 		return false;

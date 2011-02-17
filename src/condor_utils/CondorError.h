@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -35,9 +35,9 @@ class CondorError {
 		void push( const char* subsys, int code, const char* message );
 		void pushf( const char* subsys, int code, const char* format, ... ) CHECK_PRINTF_FORMAT(4,5); 
 		const char* getFullText( bool want_newline = false );
-		char* subsys(int level = 0);
+		const char* subsys(int level = 0);
 		int   code(int level = 0);
-		char* message(int level = 0);
+		const char* message(int level = 0);
 		CondorError* next(int level = 0);
 
 		bool  pop();
