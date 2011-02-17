@@ -19,17 +19,24 @@
 if (LINUX)
 
     include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
-    file( GLOB RmvSrcs test* *_main* )
     condor_glob( Hdrs Srcs "${RmvSrcs}" )
 
-    set( WS02_GEN_SRCS "TBD")
+    set ( WS02_GEN_SRCS AviaryQueryService.cpp )
+    dprint( "WS02_GEN_SRCS = ${WS02_GEN_SRCS}" )
 
-    # ws02 gen & copy out the results for out of source builds
-    add_custom_command( OUTPUT ${WS02_GEN_SRCS} 
-                        COMMAND wsdl2cpp
-                        ARGS ${WS02_GEN} ${CMAKE_CURRENT_SOURCE_DIR}/aviary-query.wsdl)
+    add_custom_command( TARGET aviaryquery
+                        PRE_BUILD
+                        COMMAND WSDL2CPP.sh
+                        ARGS -u ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-query.wsdl -o ../codegen/query -d adb )
 
-    condor_static_lib( aviaryquery "${Hdrs};${Srcs};${WS02_GEN_SRCS}" ) # just to build all srcs then let the linker sort it out.
-    condor_exe( aviary_query_server "job_server_main.cpp" "${C_SBIN}" "jobserver;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
+    file( GLOB_RECURSE WS02_GEN_SRCS codegen/query/*.cpp )
+
+    dprint( "RmvSrcs = ${RmvSrcs}" )
+    dprint( "Srcs = ${Srcs}" )
+    dprint( "Hdrs = ${Hdrs}" )
+    dprint( "WS02_GEN_SRCS = ${WS02_GEN_SRCS}" )
+
+    condor_static_lib( aviaryquery "${Hdrs};${Srcs};${WS02_GEN_SRCS}" )
+    condor_exe( aviary_query_server "aviary_query_server.cpp" "${C_SBIN}" "aviaryquery;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
 
 endif(LINUX)
