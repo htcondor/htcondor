@@ -27,6 +27,6 @@
 dprint( "(TSTCLAIR)-> Deal with Java deps and FT HOOK PLUGINS also what is up with this? it's not in packages...")
 
 condor_exe( url_plugin "url_plugin.c" ${C_LIBEXEC}
-"${CURL_FOUND};${LDAP_FOUND}" OFF )
+"${CURL_FOUND};${LDAP_FOUND};${OPENSSL_FOUND};${ZLIB_FOUND};${KRB5_FOUND}" OFF )
 
 condor_exe( data_plugin "data_plugin.c" ${C_LIBEXEC} "" OFF)
