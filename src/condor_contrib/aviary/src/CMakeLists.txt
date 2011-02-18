@@ -18,6 +18,10 @@
 
 if (LINUX)
 
+    if ( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../include" )
+        message( FATAL_ERROR "run ../gen-build-xsd-lib.sh first!")
+    endif ()
+
     include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
     # hardcode axis2c headers dir for now
