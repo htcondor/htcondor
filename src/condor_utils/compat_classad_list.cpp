@@ -26,13 +26,16 @@
 
 namespace compat_classad {
 
-static unsigned int ptr_hash_fn(ClassAd* const &index)
+static unsigned int
+ptr_hash_fn(ClassAd* const &index)
 {
 	intptr_t i = (intptr_t)index;
 
-	// It is known that this produces a warning on 32-bit gcc's
-	// Ignore those said warning
+#if (SIZEOF_VOIDPTR > 4)
 	return (unsigned int)( i ^ (i>>32) );
+#else
+	return (unsigned int) i;
+#endif
 }
 
 ClassAdListDoesNotDeleteAds::ClassAdListDoesNotDeleteAds():
