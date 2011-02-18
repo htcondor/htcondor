@@ -1735,7 +1735,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 				}
 
 					// attribute has been previously encountered.
-				if( attrInRefdAttrs ) {
+				if( attrInRefdAttrs && tempBools) {
 					BoolValue newValue;
 					BoolValue oldValue = ( *tempBools )[attrNum];
 					And( oldValue, conditionValue, newValue );
