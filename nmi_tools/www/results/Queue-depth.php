@@ -81,7 +81,7 @@ foreach ($platforms AS $platform) {
   
   $color = "";
   if($depth == 0) {
-    $color = "#0000FF";
+    $color = "#00FFFF";
   }
   elseif($depth > 0 and $depth < 3) {
     $color = "#00FF00";
@@ -106,7 +106,7 @@ mysql_close($db);
 <p>Legend:
 <table>
 <tr>
-<td style="background-color:#0000FF">Depth 0</td>
+<td style="background-color:#00FFFF">Depth 0</td>
 <td style="background-color:#00FF00">Depth 1-2</td>
 <td style="background-color:#FFFF00">Depth 3-5</td>
 <td style="background-color:#FF0000">Depth 6+</td>
