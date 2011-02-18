@@ -25,7 +25,8 @@
 #include "string_list.h"
 #include "condor_config.h"
 
-static const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
+#define DAG_SUBMIT_FILE_SUFFIX ".condor.sub"
+
 
 	//
 	// These are options that are *not* passed to lower levels of

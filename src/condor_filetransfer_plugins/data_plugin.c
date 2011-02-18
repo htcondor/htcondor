@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DATA_DEBUG 1
-
 /*
  * in: base64 encoded string with
  * out: 3 uncoded bytes
@@ -45,32 +43,24 @@ int decode_block(unsigned char *in, unsigned char *out) {
 	out[1] = (temp[1] << 4) + (temp[2] >> 2);
 	out[2] = (temp[2] << 6) + (temp[3] >> 0);
 	
-#if DATA_DEBUG
-	i  = 0;
-	printf("decoded '");
-	while(i < j) {
-		printf("%c", *(in+i));
-		i++;
-	}
-	printf("' to '%s'\n", out);
-#endif
-
 	return j;	// Number of chars passed over
 }
 
 int main(int argc, char **argv) {
+	char *c = NULL, *d = NULL, *data = NULL, *dest = NULL;
+	unsigned char out[4];
+	char hex[2];
+	FILE *file = NULL;
+	int base64 = 0, rval = -1;
+
     if(argc != 2) {
 		printf("Usage: data_plugin data:[<MIME-type>][;charset=<encoding>]"
 			"[;base64],<data>/file\n");
         return -1;
     }
 	
-	char *c = NULL, *d = NULL;
-	FILE *file = NULL;
-	int base64 = 0, rval = -1;
-
-	char *data = strchr(argv[1], ',');
-	char *dest = strrchr(argv[1], '/');
+	data = strchr(argv[1], ',');
+	dest = strrchr(argv[1], '/');
 
 	if(data && dest && (file = fopen(dest+1, "w"))) {
 		rval = 4;
@@ -92,7 +82,6 @@ int main(int argc, char **argv) {
 
 		if(base64) {
 			// base64 encoding
-			unsigned char out[4];
 			out[3] = '\0';
 			while(c && *c && c+3 < dest && rval >= 4) {
 				rval = decode_block((unsigned char*)c, out);
@@ -106,7 +95,6 @@ int main(int argc, char **argv) {
 			}
 		} else {
 			// ASCII encoding
-			char hex[2];
 
 			while(c && *c && *c != '/') {
 				if(*c == '%') {
