@@ -689,6 +689,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 		close(stdin_pipes[1]);
 		close(stdout_pipes[0]);
 	    fclose(fp);
+		fclose(fp_for_stdin);
 		deleteStringArray( args_array );
 		return -1;
 	      }
