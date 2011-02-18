@@ -86,9 +86,25 @@ if (WITH_BOOST )
 	if (WINDOWS)
 		set_property( TARGET boost PROPERTY FOLDER "externals" )
 		set(BOOST_ROOT ${EXTERNAL_STAGE} PARENT_SCOPE)
+
+        if (WANT_CONTRIB)
+
+            # binding dep to VS-2008 :-( there is no easy solution to this
+            install ( FILES ${EXTERNAL_STAGE}/lib/boost_date_time-vc90-mt-1_39.dll
+                        ${EXTERNAL_STAGE}/lib/boost_filesystem-vc90-mt-1_39.dll
+                        ${EXTERNAL_STAGE}/lib/boost_program_options-vc90-mt-1_39.dll
+                        ${EXTERNAL_STAGE}/lib/boost_regex-vc90-mt-1_39.dll
+                        ${EXTERNAL_STAGE}/lib/boost_system-vc90-mt-1_39.dll
+                        ${EXTERNAL_STAGE}/lib/boost_thread-vc90-mt-1_39.dll
+                    DESTINATION ${C_LIB} )
+
+        endif()
+
+    else()
+        dprint ("TBD: NON-PROPER INSTALL for CONTRIB")
 	endif()
 
-  else(NOT PROPER)
+  else()
 
 	# For proper builds use the .so/.dll's .
 	set(Boost_USE_MULTITHREADED ON)
