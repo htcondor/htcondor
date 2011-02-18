@@ -201,6 +201,26 @@ Matchmaker ()
 	num_negotiation_cycle_stats = 0;
 
     hgq_root_group = NULL;
+
+	rejForNetwork = 0;
+	rejForNetworkShare = 0;
+	rejPreemptForPrio = 0;
+	rejPreemptForPolicy = 0;
+	rejPreemptForRank = 0;
+	rejForSubmitterLimit = 0;
+	rejForConcurrencyLimit = 0;
+
+	cachedPrio = 0;
+	cachedOnlyForStartdRank = false;
+
+		// just assign default values
+	want_inform_startd = true;
+	preemption_req_unstable = true;
+	preemption_rank_unstable = true;
+	NegotiatorTimeout = 30;
+ 	NegotiatorInterval = 60;
+ 	MaxTimePerSubmitter = 31536000;
+ 	MaxTimePerSpin = 31536000;
 }
 
 

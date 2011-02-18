@@ -620,6 +620,11 @@ parseArgs( int argc, char* argv [] )
 		jic = new JICShadow( shadow_host );
 		free( shadow_host );
 		shadow_host = NULL;
+		free( schedd_addr );
+		free( job_output_ad );
+		free( job_stdin );
+		free( job_stdout );
+		free( job_stderr );
 		return jic;
 	}
 

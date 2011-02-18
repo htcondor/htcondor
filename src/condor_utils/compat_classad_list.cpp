@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -29,6 +29,9 @@ namespace compat_classad {
 static unsigned int ptr_hash_fn(ClassAd* const &index)
 {
 	intptr_t i = (intptr_t)index;
+
+	// It is known that this produces a warning on 32-bit gcc's
+	// Ignore those said warning
 	return (unsigned int)( i ^ (i>>32) );
 }
 

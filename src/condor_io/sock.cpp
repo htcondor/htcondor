@@ -59,7 +59,13 @@ Sock::Sock() : Stream() {
 	_fqu_domain_part = NULL;
 	_tried_authentication = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
+	connect_state.connect_failed = false;
+	connect_state.failed_once = false;
+	connect_state.connect_refused = false;
+	connect_state.old_timeout_value = 0;
+	connect_state.non_blocking_flag = false;
 	connect_state.host = NULL;
+	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
 
@@ -82,7 +88,13 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_fqu_domain_part = NULL;
 	_tried_authentication = false;
 	ignore_timeout_multiplier = orig.ignore_timeout_multiplier;
+	connect_state.connect_failed = false;
+	connect_state.failed_once = false;
+	connect_state.connect_refused = false;
+	connect_state.old_timeout_value = 0;
+	connect_state.non_blocking_flag = false;
 	connect_state.host = NULL;
+	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
 
