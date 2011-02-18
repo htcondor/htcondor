@@ -9155,7 +9155,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// for this, but it's the same number as
 				// JOB_NOT_CKPTED, so we're safe.
 		case JOB_NOT_STARTED:
-			if( !srec->removed && srec->match ) {
+			if( srec != NULL && !srec->removed && srec->match ) {
 				DelMrec(srec->match);
 			}
 			break;
@@ -9187,7 +9187,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			break;
 
 		case JOB_EXITED_AND_CLAIM_CLOSING:
-			if( srec->match ) {
+			if( srec != NULL && srec->match ) {
 					// startd is not accepting more jobs on this claim
 				srec->match->needs_release_claim = false;
 				DelMrec(srec->match);
