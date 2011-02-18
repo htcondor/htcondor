@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://grid.redhat.com/aviary-job/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:job="http://job.aviary.grid.redhat.com" xmlns:ns="http://common.aviary.grid.redhat.com" targetNamespace="http://grid.redhat.com/aviary-job/" name="aviary-job">
 	<wsdl:types>
-		<xsd:schema targetNamespace="http://grid.redhat.com/aviary_job/">
+		<xsd:schema targetNamespace="http://grid.redhat.com/aviary-job/">
 			<xsd:import schemaLocation="aviary-job.xsd" namespace="http://job.aviary.grid.redhat.com"/>
 		</xsd:schema>
 	</wsdl:types>

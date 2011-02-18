@@ -19,24 +19,29 @@
 if (LINUX)
 
     include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
+
+    # hardcode axis2c headers dir for now
+    include_directories( /usr/include/axis2-1.6.0/ /usr/include/axis2-1.6.0/platforms )
+    include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../include )
     condor_glob( Hdrs Srcs "${RmvSrcs}" )
 
-    set ( WS02_GEN_SRCS AviaryQueryService.cpp )
-    dprint( "WS02_GEN_SRCS = ${WS02_GEN_SRCS}" )
+    set ( QUERY_SRCS AviaryQueryService.cpp;AviaryQueryServiceMacro.cpp;AviaryQueryServiceSkeleton.cpp)
+    set ( QUERY_LIBS ${CMAKE_CURRENT_SOURCE_DIR}/../lib/libaviary_query_types.so )
+    
+    dprint( "QUERY_SRCS = ${QUERY_SRCS}" )
 
-    add_custom_command( TARGET aviaryquery
-                        PRE_BUILD
-                        COMMAND WSDL2CPP.sh
-                        ARGS -u ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-query.wsdl -o ../codegen/query -d adb )
-
-    file( GLOB_RECURSE WS02_GEN_SRCS codegen/query/*.cpp )
+    # leave codegen out for now
+#
+#    add_custom_command( TARGET aviaryquery
+#                        PRE_BUILD
+#                        COMMAND WSDL2CPP.sh
+#                        ARGS -u ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-query.wsdl -o ../codegen/query -d adb )
 
     dprint( "RmvSrcs = ${RmvSrcs}" )
     dprint( "Srcs = ${Srcs}" )
     dprint( "Hdrs = ${Hdrs}" )
-    dprint( "WS02_GEN_SRCS = ${WS02_GEN_SRCS}" )
 
     condor_static_lib( aviaryquery "${Hdrs};${Srcs};${WS02_GEN_SRCS}" )
-    condor_exe( aviary_query_server "aviary_query_server.cpp" "${C_SBIN}" "aviaryquery;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
+    condor_exe( aviary_query_server "aviary_query_server.cpp" "${C_SBIN}" "aviaryquery;${QUERY_LIBS};${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
 
 endif(LINUX)
