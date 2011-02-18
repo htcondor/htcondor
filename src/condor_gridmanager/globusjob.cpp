@@ -3039,6 +3039,7 @@ std::string *GlobusJob::buildSubmitRSL()
 					procID.cluster, procID.proc, arg_errors.Value());
 			sprintf(errorString, "Failed to read job arguments: %s\n",
 					arg_errors.Value());
+			delete rsl;
 			return NULL;
 		}
 		if(args.Count() != 0) {
@@ -3236,6 +3237,7 @@ std::string *GlobusJob::buildSubmitRSL()
 					procID.cluster, procID.proc, env_errors.Value());
 			sprintf(errorString, "Failed to read job environment: %s\n",
 					env_errors.Value());
+			delete rsl;
 			return NULL;
 		}
 		char **env_vec = envobj.getStringArray();

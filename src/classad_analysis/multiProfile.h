@@ -86,10 +86,15 @@ class MultiProfile : public BoolExpr
 		*/
 	MultiProfileExplain explain;
 
-    MultiProfile & operator=(const MultiProfile& copy) { return *this;}
  protected:
 	bool InitVal( classad::Value & );
  private:
+	// The assignment overload was VERY broken. Make it private and remove the
+	// old implementation. If someone uses it, they'll know at
+	// compile time, check here, read this comment, be upset, and hopefully
+	// implement the correct assignment overload. -psilord
+    MultiProfile & operator=(const MultiProfile& /* copy */);
+
 	bool isLiteral;
 	BoolValue literalValue;
 	bool AppendProfile( Profile * );

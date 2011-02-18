@@ -2788,6 +2788,7 @@ Dag::IncludeExtraDotCommands(
 		}
 		fprintf(dot_file, "// End of commands included from %s.\n\n", 
 				_dot_include_file_name);
+		fclose(include_file);
 	}
 	return;
 }

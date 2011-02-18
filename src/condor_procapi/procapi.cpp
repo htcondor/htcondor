@@ -3054,6 +3054,7 @@ ProcAPI::generateConfirmTime(long& confirm_time, int& status){
 	if (fscanf( fp, "%lf %lf", &uptime, &junk ) < 1) {
 		dprintf(D_ALWAYS, "Failed to get uptime from /proc/uptime\n"); 
 		status = PROCAPI_UNSPECIFIED;
+		fclose(fp);
 		return PROCAPI_FAILURE;
 	}
 

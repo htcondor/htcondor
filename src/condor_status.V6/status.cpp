@@ -582,6 +582,7 @@ firstPass (int argc, char *argv[])
 			FILE *targetFile = safe_fopen_wrapper(target, "r");
 			int iseof, iserror, empty;
 			targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
+			fclose(targetFile);
 		} else
 		if (matchPrefix (argv[i], "-constraint", 4)) {
 			// can add constraints on second pass only

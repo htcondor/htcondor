@@ -368,7 +368,9 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	char *projection = NULL;
 	cad.LookupString("projection", &projection);
 	SimpleList<MyString> projectionList;
+
 	::split_args(projection, &projectionList);
+	free(projection);
 
 	while ( (curr_ad=results.Next()) )
     {
@@ -1282,8 +1284,10 @@ void CollectorDaemon::Config()
 		tmp = param("CONDOR_VIEW_CLASSAD_TYPES");
 		if (tmp) {
 			viewCollectorTypes = new StringList(tmp);
+			char *printable_string = viewCollectorTypes->print_to_string();
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
-					viewCollectorTypes->print_to_string());
+					printable_string);
+			free(printable_string);
 		}
 	}
 

@@ -52,7 +52,7 @@
            </Component>
             <Component Id="CondorKBDDReg" Guid="3C40071C-6DB9-43AD-8058-920623026740">
               <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Run">
-                <RegistryValue Type="string" Name="condor_kbdd" Value="[INSTALLDIR]bin\condor_kbdd.exe" />
+                <RegistryValue Type="string" Name="condor_kbdd" Value="&quot;[INSTALLDIR]bin\condor_kbdd.exe&quot;" />
               </RegistryKey>
               <Condition>RUNJOBS = "A" Or RUNJOBS = "I" Or RUNJOBS = "C"</Condition>
             </Component>
