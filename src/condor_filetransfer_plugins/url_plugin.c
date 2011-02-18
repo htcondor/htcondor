@@ -2,16 +2,16 @@
 #include <string.h>
 
 int main(int argc, char **argv) {
+	CURL *handle = NULL;
+	int rval = -1;
+	FILE *file = NULL;
+
     if(argc != 3) {
 		printf("Usage: url_plugin source dest\n");
         return -1;
     }
 	
 	curl_global_init(CURL_GLOBAL_NOTHING);
-
-	CURL *handle = NULL;
-	int rval = -1;
-	FILE *file = NULL;
 
 	if((handle = curl_easy_init())) {
 		if((file = fopen(argv[2], "w"))) {

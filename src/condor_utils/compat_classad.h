@@ -417,7 +417,7 @@ class ClassAd : public classad::ClassAd
      * @param fp The file to be printed to.
      * @return TRUE as long as the file existed.
      */
-    int fPrintAsXML(FILE *fp);
+    int fPrintAsXML(FILE *fp, StringList *attr_white_list = NULL);
 
     /* Prints the current classad as XML to a string. fPrintAsXML calls this.
      * @param output The MyString to have filled with the XML-ified classad.

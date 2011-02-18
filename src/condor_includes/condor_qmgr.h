@@ -335,5 +335,14 @@ bool Reschedule();
 
 int QmgmtSetEffectiveOwner(char const *owner);
 
+/* Call this to begin iterating over jobs in the queue that match
+   a constraint.
+   Returns 0 on success, -1 on error*/
+int GetAllJobsByConstraint_Start( char const *constraint, char const *projection);
+/* Retrieve next job matching constraint specified in call to
+   GetAllJobsByCostraint_Start().
+   Returns 0 on success, -1 on error or no more ads (sets errno on error).
+*/
+int GetAllJobsByConstraint_Next( ClassAd &ad );
 
 #endif

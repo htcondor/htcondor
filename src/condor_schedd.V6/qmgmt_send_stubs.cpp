@@ -850,6 +850,44 @@ GetAllJobsByConstraint( char const *constraint, char const *projection, ClassAdL
 	GetAllJobsByConstraint_imp(constraint,projection,list);
 }
 
+int
+GetAllJobsByConstraint_Start( char const *constraint, char const *projection)
+{
+	CurrentSysCall = CONDOR_GetAllJobsByConstraint;
+
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	assert( qmgmt_sock->put(constraint) );
+	assert( qmgmt_sock->put(projection) );
+	assert( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	return 0;
+}
+
+int
+GetAllJobsByConstraint_Next( ClassAd &ad )
+{
+	int rval = -1;
+
+	assert( CurrentSysCall == CONDOR_GetAllJobsByConstraint );
+
+	assert( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( qmgmt_sock->code(terrno) );
+		assert( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return -1;
+	}
+
+	if ( ! (ad.initFromStream(*qmgmt_sock)) ) {
+		errno = ETIMEDOUT;
+		return -1;
+	}
+
+	return 0;
+}
+
 ClassAd *
 GetNextDirtyJobByConstraint( char const *constraint, int initScan )
 {
