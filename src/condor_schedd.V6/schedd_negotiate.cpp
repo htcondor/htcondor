@@ -68,7 +68,8 @@ ScheddNegotiate::ScheddNegotiate
 	m_current_auto_cluster_id(-1),
 	m_jobs_rejected(0),
 	m_jobs_matched(0),
-	m_negotiation_finished(false)
+	m_negotiation_finished(false),
+	m_operation(0)
 {
 	m_current_job_id.cluster = -1;
 	m_current_job_id.proc = -1;
