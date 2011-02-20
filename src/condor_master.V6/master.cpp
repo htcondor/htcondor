@@ -957,8 +957,10 @@ main_config()
 	while( ( daemon_name = daemons.ordered_daemon_names.next() ) ) {
 		if( !old_daemon_list.contains(daemon_name) ) {
 			new_daemon = daemons.FindDaemon(daemon_name);
-			if ( new_daemon == NULL || 
-			     new_daemon->SetupController() < 0 ) {
+			if ( new_daemon == NULL ) {
+				dprintf( D_ALWAYS, "Setup for daemon failed\n");
+			}
+			else if ( new_daemon->SetupController() < 0 ) {
 				dprintf( D_ALWAYS,
 						"Setup for daemon %s failed\n",
 						new_daemon->daemon_name );
