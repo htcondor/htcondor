@@ -70,6 +70,8 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
 	m_filetrans_sec_session = NULL;
 	m_reconnect_sec_session = NULL;
 	
+		// just in case transferOutputMopUp gets called before transferOutput
+	m_ft_rval = true;
 	trust_uid_domain = false;
 	uid_domain = NULL;
 	fs_domain = NULL;

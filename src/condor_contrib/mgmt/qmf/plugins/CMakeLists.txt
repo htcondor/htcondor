@@ -69,6 +69,8 @@ add_custom_target (qmf_gen_srcs
                     ALL
                     DEPENDS ${QMF_GEN_SRCS} )
 
+add_dependencies( qmf_gen_srcs qpid )
+
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 if (NOT WINDOWS)

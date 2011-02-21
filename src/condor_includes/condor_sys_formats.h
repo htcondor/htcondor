@@ -20,6 +20,9 @@
 #ifndef CONDOR_SYS_FORMATS_H
 #define CONDOR_SYS_FORMATS_H
 
+#if defined( HAVE_SYS_TYPES_H )
+#  include <sys/types.h>
+#endif
 #if defined( HAVE_INTTYPES_H )
 #  define __STDC_FORMAT_MACROS
 #  include <inttypes.h>

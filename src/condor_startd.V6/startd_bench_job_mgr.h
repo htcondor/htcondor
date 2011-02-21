@@ -68,7 +68,6 @@ class StartdBenchJobMgr : public CronJobMgr
 	StartdBenchJob *CreateJob( CronJobParams *job_params );
 
   private:
-	bool			 m_initialized;
 	bool			 m_shutting_down;
 	bool			 m_is_running;
 	Resource		*m_rip;

@@ -319,7 +319,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		// ckireyev:
 		// We do NOT want to include MyProxy password in the ClassAd (since it's a secret)
 		// I'm not sure if this is the best place to do this, but....
-		if (strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
+		if (attr_name && attr_value && strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
 			errno = 0;
 			dprintf( D_SYSCALLS, "Got MyProxyPassword, stashing...\n");
 			rval = SetMyProxyPassword (cluster_id, proc_id, attr_value);
