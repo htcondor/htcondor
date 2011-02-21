@@ -574,6 +574,41 @@ Note that the \SubmitCmd{requirements} command ensures that this job
 matches with a machine that has \MacroNI{JAVA5\_HOOK\_PREPARE\_JOB} defined.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:daemon-classad-hooks}
+Daemon ClassAd Hooks}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Job hooks!Daemon ClassAd Hooks} 
+\index{Daemon ClassAd Hooks} 
+\Todo
+
+Here is a complete configuration example.
+\begin{verbatim}
+
+# Daemon ClassAd Hook Job Definitions
+STARTD_CRON_JOBLIST =
+MODULES = $(RELEASE_DIR)/modules
+
+# Job 1
+STARTD_CRON_JOBLIST = job1
+STARTD_CRON_job1_PREFIX = prefix_
+STARTD_CRON_job1_EXECUTABLE = $(MODULES)/job1
+STARTD_CRON_job1_PERIOD = 5m
+STARTD_CRON_job1_MODE = WaitForExit
+STARTD_CRON_job1_KILL = false
+STARTD_CRON_job1_ARGS =-foo -bar
+STARTD_CRON_job1_ENV = xyzzy=somevalue
+
+# Job 2
+STARTD_CRON_JOBLIST = $(HAWKEYE_JOBLIST) job2
+STARTD_CRON_job2_PREFIX = prefix_
+STARTD_CRON_job2_EXECUTABLE = $(MODULES)/job2
+STARTD_CRON_job2_PERIOD = 1h
+STARTD_CRON_job2_ENV = lwpi=somevalue
+
+\end{verbatim}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:job-hooks-JR-overview}
 Hooks for a Job Router}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
