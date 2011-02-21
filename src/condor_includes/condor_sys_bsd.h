@@ -24,8 +24,14 @@
 #define _XOPEN_SOURCE_EXTENDED
 #define _PROTOTYPES */
 
+/* This is an obselete macro, but still used in various OSes */
 #if defined(_POSIX_SOURCE)
 #    undef  _POSIX_SOURCE
+#endif
+
+/* This is the modern hip way to do _POSIX_SOURCE, we don't want it either. */
+#if defined(_POSIX_C_SOURCE)
+#    undef  _POSIX_C_SOURCE
 #endif
 
 #include <sys/types.h>
