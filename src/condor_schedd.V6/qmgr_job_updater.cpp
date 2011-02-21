@@ -33,26 +33,25 @@
 #include "dc_schedd.h"
 
 
-QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address, const char *schedd_version )
+QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address,
+	const char *schedd_version ) : common_job_queue_attrs(0),
+	hold_job_queue_attrs(0),
+	evict_job_queue_attrs(0),
+	remove_job_queue_attrs(0),
+	requeue_job_queue_attrs(0),
+	terminate_job_queue_attrs(0),
+	checkpoint_job_queue_attrs(0),
+	m_pull_attrs(0),
+	job_ad(job), // we do *NOT* want to make our own copy of this ad
+	schedd_addr(schedd_address?strdup(schedd_address):0),
+	schedd_ver(schedd_version?strdup(schedd_version):0),
+	cluster(-1), proc(-1),
+	q_update_tid(-1) 
 {
-	q_update_tid = -1;
-
 	if( ! is_valid_sinful(schedd_address) ) {
 		EXCEPT( "schedd_addr not specified with valid address (%s)",
 				schedd_address );
 	}
-	schedd_addr = strdup( schedd_address );
-	if( schedd_version ) {
-		this->schedd_ver = strdup( schedd_version );
-	}
-	else {
-		this->schedd_ver = NULL;
-	}
-
-		// we do *NOT* want to make our own copy of this ad
-	job_ad = job;
-
-	cluster = proc = -1;
 	if( !job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_CLUSTER_ID);
 	}
@@ -66,22 +65,13 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address, const 
 	// will just be a no-op.
 	job_ad->LookupString(ATTR_OWNER, m_owner);
 
-	common_job_queue_attrs = NULL;
-	hold_job_queue_attrs = NULL;
-	evict_job_queue_attrs = NULL;
-	remove_job_queue_attrs = NULL;
-	requeue_job_queue_attrs = NULL;
-	terminate_job_queue_attrs = NULL;
-	checkpoint_job_queue_attrs = NULL;
-	m_pull_attrs = NULL;
 	initJobQueueAttrLists();
 
-		// finally, clear all the dirty bits on this jobAd, so we only
-		// update the queue with things that have changed after this
-		// point. 
+	// finally, clear all the dirty bits on this jobAd, so we only
+	// update the queue with things that have changed after this
+	// point. 
 	job_ad->ClearAllDirtyFlags();
 }
-
 
 QmgrJobUpdater::~QmgrJobUpdater()
 {
