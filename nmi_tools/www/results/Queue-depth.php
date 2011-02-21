@@ -8,11 +8,17 @@
    # get args
    $branch = "trunk";
    $user = "cndrauto";
-   $type = "build";
+
+   if($_REQUEST["type"] != "") {
+     $type = $_REQUEST["type"];
+   }
+   else {
+     $type = "build";
+   }
 ?>
 <html>
 <head>
-<title>NMI - Queue depths for core platforms</title>
+<title>NMI - Build queue depths for core platforms</title>
 <LINK REL="StyleSheet" HREF="condor.css" TYPE="text/css">
 </head>
 <body>
@@ -31,7 +37,7 @@ $sql = "SELECT runid
           FROM Run 
          WHERE component='condor' AND 
                project='condor' AND
-               run_type='build' AND
+               run_type='$type' AND
                user = '$user' AND
                description LIKE '".$branch."%'".
        " ORDER BY runid DESC ".
@@ -62,7 +68,8 @@ while ($row = mysql_fetch_array($result)) {
 mysql_free_result($result);
 //echo "Found platforms: " . implode(", ", $platforms);
 ?>
-<h2>NMI queue depths:</h2>   
+<h2>NMI build queue depths:</h2>
+<p>This page contains depth information for jobs of type "build" only</p>
 <table border="0" cellspacing="0" >
 <tr>
 
