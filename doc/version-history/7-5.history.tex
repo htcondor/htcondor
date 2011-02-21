@@ -177,6 +177,11 @@ now removes node jobs of the DAG, rather than leaving them as orphans.
   caused it to try to contact the \Condor{collector} before printing
   usage if the command line was syntactically incorrect.
 
+% gittrac #1922
+\item A bug has been fixed that caused Condor daemons to crash in rare
+  circumstances when receiving connections.  The crash occurred during
+  authorization of the new connection.
+
 \end{itemize}
 
 \noindent Known Bugs:
