@@ -178,9 +178,10 @@ now removes node jobs of the DAG, rather than leaving them as orphans.
   usage if the command line was syntactically incorrect.
 
 % gittrac #1922
-\item A bug has been fixed that caused Condor daemons to crash in rare
-  circumstances when receiving connections.  The crash occurred during
-  authorization of the new connection.
+\item A bug has been fixed that caused Condor daemons to crash in
+  response to DNS lookup failures when receiving connections.  The
+  crash occurred during authorization of the new connection.  This
+  problem was introduced in 7.5.4.
 
 \end{itemize}
 
