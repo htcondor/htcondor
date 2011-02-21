@@ -1,6 +1,8 @@
  ###############################################################
  # 
- # Copyright 2011 Red Hat, Inc. 
+ # Copyright (C) 1990-2010, Redhat. 
+ # Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+ # University of Wisconsin-Madison, WI.
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,6 +18,26 @@
  # 
  ############################################################### 
 
+# CLONE_INSTALL adds code that calls ln_or_cp. We need to make
+# sure ln_or_cp is present, so call this once (and only once)
+# in any file that calls CLONE_INSTALL.
+MACRO (PREP_CLONE_INSTALL)
+	install(CODE
+		"macro(ln_or_cp src dstdir dstname)
+			if( WINDOWS )
+				file(INSTALL \${src} DESTINATION \${dstdir} USE_SOURCE_PERMISSIONS RENAME \${dstname})
+			else()
+				find_program(LN ln)
+				if(\${LN} STREQUAL \"LN-NOTFOUND\")
+					message(FATAL_ERROR \"Unable to find ln. Cannot hard link \${src} to \${dstdir}/\${dstname}\")
+				else()
+					message(STATUS \"Linking \${src} to \${dstdir}/\${dstname}\")
+					execute_process(COMMAND \${LN} \${src} \${dstdir}/\${dstname})
+				endif()
+			endif()
+		endmacro()")
+ENDMACRO()
+
 MACRO (CLONE_INSTALL _ORIG_TARGET _NEWNAMES _INSTALL_LOC )
 
 	if ( WINDOWS )
@@ -26,7 +48,8 @@ MACRO (CLONE_INSTALL _ORIG_TARGET _NEWNAMES _INSTALL_LOC )
 	endif( WINDOWS )
 
 	foreach ( new_target ${_NEWNAMES} )
-		install (CODE "FILE(INSTALL \"${${_ORIG_TARGET}_loc}\" DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}\" USE_SOURCE_PERMISSIONS RENAME \"${new_target}${WIN_EXE_EXT}\")")
+		install (CODE "ln_or_cp(\"${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}/${_ORIG_TARGET}\" \"\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}\" \"${new_target}${WIN_EXE_EXT}\")")
+
 	endforeach(new_target)
 
 ENDMACRO (CLONE_INSTALL)
