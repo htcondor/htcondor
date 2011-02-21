@@ -4207,6 +4207,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		// on at least one job or if it was a total failure
 	response_ad->Assign( ATTR_ACTION_RESULT, num_matches ? 1:0 );
 
+		// Return the number of jobs in the queue to the caller can
+		// determine appropriate actions
+	response_ad->Assign( ATTR_TOTAL_JOB_ADS, scheduler.getJobsTotalAds() );
+
 		// Finally, let them know if the user running this command is
 		// a queue super user here
 	response_ad->Assign( ATTR_IS_QUEUE_SUPER_USER,
