@@ -40,6 +40,8 @@ Hadoop::Hadoop() {
         m_adPubInterval  = 5;
         m_hadoopHome     = NULL;
         m_timer          = -1;
+        m_nodeType = HDFS_DATANODE;
+        m_namenodeRole = ACTIVE;
 }
 
 void Hadoop::initialize() {
