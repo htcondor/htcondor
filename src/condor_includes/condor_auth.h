@@ -213,12 +213,6 @@ class Condor_Auth_Base {
     ReliSock *      mySock_;         // Sock to communicate
 
  private:
-    Condor_Auth_Base();              
-    //------------------------------------------
-    // Private constructor which no one should
-    // ever call.
-    //------------------------------------------
-
     //------------------------------------------
     // Data (private)
     //------------------------------------------

@@ -464,6 +464,9 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	// the ProcInfo structure.
 	ASSERT(searchLogin);
 	struct passwd *pwd = getpwnam(searchLogin);
+	if(!pwd) {
+		return PROCAPI_FAILURE;
+	}
 	uid_t searchUid = pwd->pw_uid;
 
 	// now iterate through allProcInfos to find processes

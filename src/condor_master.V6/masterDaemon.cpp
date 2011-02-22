@@ -2229,11 +2229,11 @@ Daemons::AllReaper(int pid, int status)
 	valid_iter = exit_allowed.find(pid);
 	if( valid_iter != exit_allowed.end() ) {
 		valid_iter->second->Exited( status );
+ 		delete valid_iter->second;
 		exit_allowed.erase( valid_iter );
 		if( NumberOfChildren() == 0 ) {
 			AllDaemonsGone();
 		}
- 		delete valid_iter->second;
 		return TRUE;
 	}
 
@@ -2260,8 +2260,8 @@ Daemons::DefaultReaper(int pid, int status)
 	valid_iter = exit_allowed.find(pid);
 	if( valid_iter != exit_allowed.end() ) {
 		valid_iter->second->Exited( status );
-		exit_allowed.erase(valid_iter);
  		delete valid_iter->second;
+		exit_allowed.erase(valid_iter);
 		return TRUE;
 	}
 

@@ -1200,7 +1200,7 @@ void Server::Replicate()
 				errno = 0;
 				bytes_read = read(fd, &buf, sizeof(buf));
 				bytes_left = bytes_read;
-				while (bytes_left) {
+				while (bytes_left > 0) {
 					bytes_written = write(server_sd, &buf, bytes_read);
 					assert(bytes_written >= 0);
 					if (bytes_written == 0)

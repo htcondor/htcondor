@@ -4510,12 +4510,10 @@ Matchmaker::updateCollector() {
 
 	if( publicAd ) {
 		publishNegotiationCycleStats( publicAd );
-	}
 
 		// log classad into sql log so that it can be updated to DB
-	FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
+		FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
 
-	if (publicAd) {
 #if HAVE_DLOPEN
 		NegotiatorPluginManager::Update(*publicAd);
 #endif
