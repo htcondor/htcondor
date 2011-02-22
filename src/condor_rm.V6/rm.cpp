@@ -452,6 +452,7 @@ bool
 doWorkByConstraint( const char* constraint, CondorError * errstack )
 {
 	ClassAd* ad;
+	int total_jobs = -1;
 	bool rval = true;
 	switch( mode ) {
 	case JA_RELEASE_JOBS:
@@ -481,8 +482,21 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 		rval = false;
 	} else {
 		int result = FALSE;
-		if( !ad->LookupInteger(ATTR_ACTION_RESULT, result) || !result ) {
+		if( !ad->LookupInteger(ATTR_ACTION_RESULT, result) ) {
 			had_error = true;
+			rval = false;
+		}
+		else if( !result ) {
+			// There were no ads acted upon, but that doesn't
+			// mean there was an error.  It's possible the schedd
+			// had no jobs
+		        if( !ad->LookupInteger(ATTR_TOTAL_JOB_ADS, total_jobs) || total_jobs > 0 ) {
+				had_error = true;
+			} else {
+				// There were no jobs in the queue, so add a
+				// more meaningful error message
+				errstack->push("condor_rm", 0, "There are no jobs in the queue");
+			}
 			rval = false;
 		}
 	}
@@ -561,9 +575,12 @@ procArg(const char* arg)
 						 actionWord(mode,true) );
 			} else {
 				fprintf( stderr, "%s\n", errstack.getFullText(true) );
-				fprintf( stderr, 
+				if (had_error)
+				{
+					fprintf( stderr, 
 						 "Couldn't find/%s all jobs in cluster %d.\n",
 						 actionWord(mode,false), c );
+				}
 			}
 			return;
 		}
@@ -573,7 +590,7 @@ procArg(const char* arg)
 			if(p < 0)
 			{
 				fprintf( stderr, "Invalid proc # from %s.\n", arg);
-				had_error = 1;
+				had_error = true;
 				return;
 			}
 			if(*tmp == '\0')
@@ -602,9 +619,12 @@ procArg(const char* arg)
 					 actionWord(mode,true) );
 		} else {
 			fprintf( stderr, "%s\n", errstack.getFullText(true) );
-			fprintf( stderr, 
+			if (had_error)
+			{
+				fprintf( stderr, 
 					 "Couldn't find/%s all of user %s's job(s).\n",
 					 actionWord(mode,false), arg );
+			}
 		}
 	}
 }
@@ -674,8 +694,11 @@ handleAll()
 				 actionWord(mode,true) );
 	} else {
 		fprintf( stderr, "%s\n", errstack.getFullText(true) );
-		fprintf( stderr, "Could not %s all jobs.\n",
+		if (had_error)
+		{
+			fprintf( stderr, "Could not %s all jobs.\n",
 				 actionWord(mode,false) );
+		}
 	}
 }
 
@@ -699,9 +722,12 @@ handleConstraints( void )
 
 	} else {
 		fprintf( stderr, "%s\n", errstack.getFullText(true) );
-		fprintf( stderr, 
+		if (had_error)
+		{
+			fprintf( stderr, 
 				 "Couldn't find/%s all jobs matching constraint %s\n",
 				 actionWord(mode,false), tmp );
+		}
 	}
 }
 
