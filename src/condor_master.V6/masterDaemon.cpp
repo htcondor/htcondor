@@ -1872,7 +1872,6 @@ Daemons::StopDaemon( char* name )
 
 	iter = daemon_ptr.find( name );
 	if( iter != daemon_ptr.end() ) {
-		daemon_ptr.erase( iter );
 		if( iter->second->pid > 0 ) {
 			exit_allowed.insert( std::pair<int, class daemon*>(iter->second->pid, iter->second) );
 			iter->second->Stop();
@@ -1881,6 +1880,7 @@ Daemons::StopDaemon( char* name )
 			iter->second->CancelAllTimers();
 			delete iter->second;
 		}
+		daemon_ptr.erase( iter );
 	}
 }
 
