@@ -1043,7 +1043,54 @@ class GahpClient : public Service {
 									  const char* privatekeyfile,
 									  StringList & returnStatus,
 								  	  char* & error_code );
-			
+
+		int ec2_vm_start( const char * service_url,
+						  const char * publickeyfile,
+						  const char * privatekeyfile,
+						  const char * ami_id,
+						  const char * keypair,
+						  const char * user_data,
+						  const char * user_data_file,
+						  const char * instance_type,
+						  StringList & groupnames,
+						  char* & instance_id,
+						  char* & error_code );
+
+		int ec2_vm_stop( const char * service_url,
+						 const char * publickeyfile,
+						 const char * privatekeyfile,
+						 const char * instance_id,
+						 char* & error_code );
+
+		int ec2_vm_status( const char * service_url,
+							  const char * publickeyfile,
+							  const char * privatekeyfile,
+							  const char * instance_id,
+							  StringList & returnStatus,
+							  char* & error_code );
+
+		int ec2_ping( const char * service_url,
+					  const char * publickeyfile,
+					  const char * privatekeyfile );
+
+		int ec2_vm_create_keypair( const char * service_url,
+								   const char * publickeyfile,
+								   const char * privatekeyfile,
+								   const char * keyname,
+								   const char * outputfile,
+								   char* & error_code );
+
+		int ec2_vm_destroy_keypair( const char * service_url,
+									const char * publickeyfile,
+									const char * privatekeyfile,
+									const char * keyname,
+									char* & error_code );
+
+		int ec2_vm_vm_keypair_all( const char * service_url,
+								   const char* publickeyfile,
+								   const char* privatekeyfile,
+								   StringList & returnStatus,
+								   char* & error_code );
 
 		int
 		dcloud_submit( const char *service_url,

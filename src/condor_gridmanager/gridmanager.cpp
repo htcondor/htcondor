@@ -44,6 +44,7 @@
 #include "condor_version.h"
 
 #include "amazonjob.h"
+#include "ec2job.h"
 #include "dcloudjob.h"
 
 #if !defined(WIN32)
@@ -354,6 +355,14 @@ Init()
 	new_type->ReconfigFunc = AmazonJobReconfig;
 	new_type->AdMatchFunc = AmazonJobAdMatch;
 	new_type->CreateFunc = AmazonJobCreate;
+	jobTypes.Append( new_type );
+	
+	new_type = new JobType;
+	new_type->Name = strdup( "EC2" );
+	new_type->InitFunc = EC2JobInit;
+	new_type->ReconfigFunc = EC2JobReconfig;
+	new_type->AdMatchFunc = EC2JobAdMatch;
+	new_type->CreateFunc = EC2JobCreate;
 	jobTypes.Append( new_type );
 	
 	new_type = new JobType;
