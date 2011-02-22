@@ -47,6 +47,10 @@ StartdCronJobMgr::Initialize( const char *name )
 	
 	char *cron_name = param( "STARTD_CRON_NAME" );
 	if ( NULL != cron_name ) {
+		dprintf( D_ALWAYS,
+				 "WARNING: The use of STARTD_CRON_NAME to 'name' your "
+				 "Startd's Daemon ClassAd Hook Manager is not longer supported "
+				 "and will be removed in a future release of Condor." );
 		name = cron_name;
 		SetName( name, name );
 	}
