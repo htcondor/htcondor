@@ -344,6 +344,8 @@ privsep_create_dir(uid_t uid, const char* pathname)
 	if (switchboard_pid == 0) {
 		dprintf(D_ALWAYS, "privsep_create_dir: "
 		                      "error launching switchboard\n");
+		fclose(in_fp);
+		fclose(err_fp);
 		return false;
 	}
 
