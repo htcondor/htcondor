@@ -2371,7 +2371,7 @@ safe_is_path_trusted(const char *pathname, id_range_list *trusted_uids,
 
         /* check the next component in the path */
         r = lstat(path, &stat_buf);
-        if (r == -1) {
+        if (r == -1 || status == -1) {
             status = -1;
             goto restore_dir_and_exit;
         }
@@ -2849,7 +2849,7 @@ safe_is_path_trusted_r(const char *pathname, id_range_list *trusted_uids,
 
         /* check the next component in the path */
         r = lstat(path, &stat_buf);
-        if (r == -1) {
+        if (r == -1 || status == -1) {
             status = -1;
             goto cleanup_and_exit;
         }
