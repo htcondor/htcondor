@@ -1388,7 +1388,8 @@ globus_ftp_client_stat(
 	goto restart;
     }
 
-    err = globus_i_ftp_client_target_activate(handle, 
+    if(handle->source != GLOBUS_NULL)
+	    err = globus_i_ftp_client_target_activate(handle, 
 					      handle->source,
 					      &registered);
     if(registered == GLOBUS_FALSE)
