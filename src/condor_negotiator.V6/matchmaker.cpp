@@ -757,8 +757,8 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	}
 
 	// get the priority
-	AttrList* ad=accountant.ReportState();
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
+	AttrList* ad=accountant.ReportState();
 	
 	if (!ad->putAttrList(*strm) ||
 	    !strm->end_of_message())

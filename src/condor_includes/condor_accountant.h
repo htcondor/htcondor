@@ -97,6 +97,7 @@ public:
   // This maps submitter names to their assigned accounting group.
   // When called with a defined group name, it maps that group name to itself.
   GroupEntry* GetAssignedGroup(const MyString& CustomerName);
+  GroupEntry* GetAssignedGroup(const MyString& CustomerName, bool& IsGroup);
 
   bool UsingWeightedSlots();
 
