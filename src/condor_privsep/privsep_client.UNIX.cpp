@@ -398,6 +398,7 @@ privsep_chown_dir(uid_t target_uid, uid_t source_uid, const char* pathname)
 		dprintf(D_ALWAYS, "privsep_chown_dir: "
 		                      "error launching switchboard\n");
 		fclose(in_fp);
+		fclose(err_fp);
 		return false;
 	}
 
