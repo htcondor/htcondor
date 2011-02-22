@@ -1332,7 +1332,7 @@ open_std_file( int fd )
 		MyString err;
 		err.sprintf("Can't open \"%s\": %s", file_name,strerror(errno));
 		dprintf(D_ALWAYS,"%s\n",err.Value());
-		REMOTE_CONDOR_report_error((char *)err.Value());
+		REMOTE_CONDOR_report_error(const_cast<char *>(err.Value()));
 		exit( 4 );
 	} else {
 		if( real_fd != fd ) {
@@ -1492,7 +1492,7 @@ set_iwd()
 		MyString err;
 		err.sprintf( "Can't open working directory \"%s\": %s", iwd,
 			    strerror(errno) );
-		REMOTE_CONDOR_report_error( (char *)err.Value() );
+		REMOTE_CONDOR_report_error(const_cast<char *>(err.Value()));
 		exit( 4 );
 	}
 	free( iwd );
