@@ -6,10 +6,19 @@ int main(int argc, char **argv) {
 	int rval = -1;
 	FILE *file = NULL;
 
-    if(argc != 3) {
-		printf("Usage: url_plugin source dest\n");
-        return -1;
+    if(argc == 2 && strcmp(argv[1], "-classad") == 0) {
+		printf("%s",
+			"PluginVersion = \"0.1\"\n"
+			"PluginType = \"FileTransfer\"\n"
+			"SupportedMethods = \"http,ftp,file\"\n"
+			);
+
+        return 0;
     }
+
+	if(argc != 3) {
+		return -1;
+	}
 	
 	curl_global_init(CURL_GLOBAL_NOTHING);
 
