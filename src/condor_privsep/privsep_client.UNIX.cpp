@@ -373,6 +373,7 @@ privsep_remove_dir(const char* pathname)
 	if (switchboard_pid == 0) {
 		dprintf(D_ALWAYS, "privsep_remove_dir: "
 		                      "error launching switchboard\n");
+		fclose(in_fp);
 		return false;
 	}
 
