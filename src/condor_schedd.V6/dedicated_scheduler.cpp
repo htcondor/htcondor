@@ -149,7 +149,7 @@ AllocationNode::display( void )
 bool satisfies(ClassAd* job, ClassAd* candidate) {
 	// Make sure the job requirements are satisfied with this resource.
     int satisfied_req = 1;
-	if (job->EvalBool(ATTR_REQUIREMENTS, candidate, satisfied_req) == 0) { 
+	if (!job || job->EvalBool(ATTR_REQUIREMENTS, candidate, satisfied_req) == 0) { 
 		// If it's undefined, treat it as false.
 		satisfied_req = 0;
 	}
@@ -2941,7 +2941,9 @@ DedicatedScheduler::satisfyJobWithGroups(CAList *jobs, int cluster, int nprocs) 
 	jobs->Rewind();
 
 		// Now sort the list of scheduling group example ads by this machine's rank
-	exampleSchedulingGroup.sortByRank(jobAd);
+	if (jobAd != NULL) {
+		exampleSchedulingGroup.sortByRank(jobAd);
+	}
 	exampleSchedulingGroup.Rewind();
 
 	ClassAd *machineAd;
