@@ -105,7 +105,6 @@ my @minimal_build_configure_args =
 		'-DWITH_BOOST:BOOL=OFF'		=> undef,
 		'-DWITH_COREDUMPER:BOOL=OFF'	=> undef,
 		'-DWITH_CREAM:BOOL=OFF'		=> undef,
-		'-DWITH_CURL:BOOL=OFF'		=> undef,
 		'-DWITH_DRMAA:BOOL=OFF'		=> undef,
 		'-DWITH_EXPAT:BOOL=OFF'		=> undef,
 		'-DWITH_GCB:BOOL=OFF'		=> undef,
