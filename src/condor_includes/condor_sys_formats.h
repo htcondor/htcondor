@@ -32,50 +32,45 @@
 
 /* If no inttypes, try to define our own (make a guess) */
 /* The win 32 include file defines the win32 versions */
-#if !defined(PRId64)
-# if ( defined(HAVE_LONG) && (SIZEOF_LONG==8) )
-#  define PRId64 "ld"
-#  define PRIi64 "li"
-#  define PRIu64 "lu"
-# elif ( defined(HAVE_LONG_LONG) && (SIZEOF_LONG_LONG==8) )
-#  define PRId64 "lld"
-#  define PRIi64 "lli"
-#  define PRIu64 "llu"
-# else
-#  error "Don't know how to define PRIx64"
-# endif
+#if !defined( PRId64 )
+# define PRId64 "lld"
+# define PRId64_t long long
 #endif
 
-/* Define types that match the PRIx64_t print format strings */
-#if !defined(PRId64_t)
-# if ( defined(HAVE_LONG) && (SIZEOF_LONG==8) )
-#  define PRId64_t long
-#  define PRIi64_t long
-#  define PRIu64_t unsigned long
-# elif ( defined(HAVE_LONG_LONG) && (SIZEOF_LONG_LONG==8) )
-#  define PRId64_t long long
-#  define PRIi64_t long long
-#  define PRIu64_t unsigned long long
-# elif defined( HAVE___INT64 )
-#  define PRId64_t __int64
-#  define PRIi64_t __int64
-#  define PRIu64_t unsigned __int64
-# else
-#  error "Don't know how to define PRIx64_t"
-# endif
+#if !defined( PRIi64 )
+# define PRIi64 "lli"
+# define PRIi64_t long long
 #endif
 
-/* Define a 'filesize_t' type and PRIfs printf format string and
- *  matching PRIfs_t type
- */
+#if !defined( PRIu64 )
+# define PRIu64 "llu"
+# define PRIu64_t unsigned long long
+#endif
+
+/* Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string */
 #if defined HAVE_INT64_T
 # define FILESIZE_T_FORMAT "%" PRId64
 # define PRIfs PRId64
 # define PRIfs_t PRId64_t
+
 #else
 # define FILESIZE_T_FORMAT "%l"
 # define PRIfs PRId64
 # define PRIfs_t long
+
+#endif
+
+/* Define types that match the PRIx64_t print format strings */
+#if defined( HAVE___INT64 )
+# define PRId64_t __int64
+# define PRIi64_t __int64
+# define PRIu64_t unsigned __int64
+
+#else
+# define PRId64_t int64_t
+# define PRIi64_t int64_t
+# define PRIu64_t uint64_t
+
 #endif
 
 
