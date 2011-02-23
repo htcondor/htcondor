@@ -231,6 +231,8 @@ if( NOT WINDOWS)
     		ARGS ${CMAKE_C_COMPILER_ARG1} -dumpversion
     		OUTPUT_VARIABLE CMAKE_C_COMPILER_VERSION )
 
+    find_program(LN ln)
+
 endif()
 
 find_program(HAVE_VMWARE vmware)
@@ -687,6 +689,7 @@ endif(MSVC)
 message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
 message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
+message(STATUS "LN: ${LN}")
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree
 dprint ( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )
