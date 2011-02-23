@@ -829,11 +829,15 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 
 	// Create temporary file to store myproxy-get-delegation's stderr
 	myProxyEntry->get_delegation_err_filename = create_temp_file();
-	chmod (myProxyEntry->get_delegation_err_filename, 0600);
-	myProxyEntry->get_delegation_err_fd = safe_open_wrapper(myProxyEntry->get_delegation_err_filename,O_RDWR);
-	if (myProxyEntry->get_delegation_err_fd == -1) {
-		dprintf (D_ALWAYS, "Error opening file %s\n",
-				 myProxyEntry->get_delegation_err_filename);
+	if(!myProxyEntry->get_delegation_err_filename) {
+		dprintf( D_ALWAYS, "Failed to create temp file");
+	} else {
+		chmod (myProxyEntry->get_delegation_err_filename, 0600);
+		myProxyEntry->get_delegation_err_fd = safe_open_wrapper(myProxyEntry->get_delegation_err_filename,O_RDWR);
+		if (myProxyEntry->get_delegation_err_fd == -1) {
+			dprintf (D_ALWAYS, "Error opening file %s\n",
+					 myProxyEntry->get_delegation_err_filename);
+		}
 	}
 
 
