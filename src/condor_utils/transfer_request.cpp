@@ -63,11 +63,16 @@ TransferRequest::TransferRequest(ClassAd *ip)
 	m_procids = NULL;
 }
 
-TransferRequest::TransferRequest()
-{
-	m_rejected = false;
-	m_ip = new ClassAd();
-}
+TransferRequest::TransferRequest() : m_ip(new ClassAd()),
+	m_procids(0),
+	m_client_sock(0),
+	m_rejected(false),
+	m_pre_push_func(0),
+	m_pre_push_func_this(0),
+	m_update_func(0),
+	m_update_func_this(0),
+	m_reaper_func(0),
+	m_reaper_func_this(0) { }
 
 TransferRequest::~TransferRequest()
 {

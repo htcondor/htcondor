@@ -6858,7 +6858,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 	{
 		ClassAd *machine_ad = NULL;
-		if( srec && srec->match ) {
+		if(srec->match ) {
 			machine_ad = srec->match->my_match_ad;
 		}
 		setNextJobDelay( job_ad, machine_ad );

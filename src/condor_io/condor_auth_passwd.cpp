@@ -1388,18 +1388,18 @@ int Condor_Auth_Passwd::server_receive_two(int *server_status,
 		// See if it's sane.
 	if(client_status == AUTH_PW_A_OK && *server_status == AUTH_PW_A_OK) {
 		if(rb_len == AUTH_PW_KEY_LEN 
-		   && strlen(a) == strlen(t_client->a)
+		   && a && strlen(a) == strlen(t_client->a)
 		   && a_len == (int)strlen(a)
 		   && !strcmp(a, t_client->a) 
 		   && !memcmp(rb, t_client->rb, AUTH_PW_KEY_LEN)) {
 			
 			t_client->hk = hk;
 			t_client->hk_len = hk_len;
-			if(a) free(a);
+			free(a);
 			if(rb) free(rb);
 			return client_status;
 		} else {
-			dprintf(D_SECURITY, "Received inconsisitent data.\n");
+			dprintf(D_SECURITY, "Received inconsistent data.\n");
 			*server_status = AUTH_PW_ERROR;
 		}
 	} else {
