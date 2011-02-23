@@ -30,21 +30,19 @@
 # 3 = internal fatal error (a.k.a. die)
 ######################################################################
 
+use strict;
+use warnings;
 use Cwd;
 my $BaseDir = getcwd();
 
-my $SrcDir = "$BaseDir/src";
-my $msconfigDir = "$BaseDir/msconfig";
-my $PublicDir = "$BaseDir/public";
-
 my $EXTERNALS_TASK  = "remote_task.externals";
-my $TAR_TASK 	= "remote_task.create_tar";
+my $TAR_TASK        = "remote_task.create_tar";
 my $UNSTRIPPED_TASK = "remote_task.create_unstripped_tar";
-my $CONFIG_TASK = "remote_task.reconfig_package";
-my $RPM_TASK	= "remote_task.create_rpm";
-my $RPM_CHECK_TASK	= "remote_task.check_rpm";
-my $DEB_TASK	= "remote_task.create_deb";
-my $DEB_CHECK_TASK	= "remote_task.check_deb";
+my $CONFIG_TASK     = "remote_task.reconfig_package";
+my $RPM_TASK        = "remote_task.create_rpm";
+my $RPM_CHECK_TASK  = "remote_task.check_rpm";
+my $DEB_TASK        = "remote_task.create_deb";
+my $DEB_CHECK_TASK  = "remote_task.check_deb";
 
 my $taskname = "";
 my $execstr = "";
@@ -62,9 +60,9 @@ open STDERR,">&STDOUT";
 if( ! defined $ENV{_NMI_TASKNAME} ) {
     print "NMI_TASKNAME not defined, building tar.gz package as default";
     $taskname = $TAR_TASK;
-
-}else {
-	$taskname = $ENV{_NMI_TASKNAME};
+}
+else {
+    $taskname = $ENV{_NMI_TASKNAME};
 }
 
 # Checking task type
@@ -72,91 +70,90 @@ if( $taskname eq $EXTERNALS_TASK ) {
     # Since we only declare the externals task on Windows, we don't have
     # to handle invoking the Windows build tools.
     $execstr = "make externals";
-
-} elsif ($taskname eq $TAR_TASK) { 
-	#Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
-	#Reconfigure cmake variables for stripped tarball build
-
-	#Read back configuration from remote_pre stage
-	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
-	while(<CMAKECONFIG>){
-		my($line) = $_;
-		$execstr = $line;
-		last;
-	}
-	close (CMAKECONFIG);
-	#Append extra argument
-	# We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz && make tests";
-
-} elsif  ($taskname eq $UNSTRIPPED_TASK){
-	#Reconfigure cmake variables for native package build
-
-	#Read back configuration from remote_pre stage
-	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
-	while(<CMAKECONFIG>){
-		my($line) = $_;
-		$execstr = $line;
-		last;
-	}
-	close (CMAKECONFIG);
-
-	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make && make install && make targz && make tests";
-} elsif  ($taskname eq $RPM_TASK){
-	#Building RPM
-
-	#Reconfigure cmake variables for native package build	
-	#Read back configuration from remote_pre stage
-	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
-	while(<CMAKECONFIG>){
-		my($line) = $_;
-		$execstr = $line;
-		last;
-	}
-	close (CMAKECONFIG);
-	
-	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
-
-} elsif  ($taskname eq $RPM_CHECK_TASK){
-	#Print packaging log to stdout
-	#List file in the package
-	$execstr= "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
-
-} elsif  ($taskname eq $DEB_TASK){
-	#Building Debian package
-
-	#Reconfigure cmake variables for native package build	
-	#Read back configuration from remote_pre stage
-	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
-	while(<CMAKECONFIG>){
-		my($line) = $_;
-		$execstr = $line;
-		last;
-	}
-	close (CMAKECONFIG);
-	
-	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make package";
-
-} elsif  ($taskname eq $DEB_CHECK_TASK){
-	#Print package summary
-	#Would like to run lintian, but it is not avialable on 
-	#all NMI machine
-	$execstr= "dpkg-deb -I *.deb";
-	
+}
+elsif ($taskname eq $UNSTRIPPED_TASK) {
+    #Reconfigure cmake variables for native package build
+    
+    #Read back configuration from remote_pre stage
+    open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+    while(<CMAKECONFIG>) {
+        my($line) = $_;
+        $execstr = $line;
+        last;
+    }
+    close (CMAKECONFIG);
+    
+    #Append extra argument
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make && make install && make targz && make tests";
+}
+elsif ($taskname eq $TAR_TASK) { 
+    #Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
+    #Reconfigure cmake variables for stripped tarball build
+    
+    #Read back configuration from remote_pre stage
+    open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+    while(<CMAKECONFIG>) {
+        my($line) = $_;
+        $execstr = $line;
+        last;
+    }
+    close (CMAKECONFIG);
+    #Append extra argument
+    # We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz && make tests";
+}
+elsif ($taskname eq $RPM_TASK) {
+    #Building RPM
+    
+    #Reconfigure cmake variables for native package build   
+    #Read back configuration from remote_pre stage
+    open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+    while(<CMAKECONFIG>) {
+        my($line) = $_;
+        $execstr = $line;
+        last;
+    }
+    close (CMAKECONFIG);
+    
+    #Append extra argument
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
+}
+elsif ($taskname eq $RPM_CHECK_TASK) {
+    #Print packaging log to stdout
+    #List file in the package
+    $execstr= "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
+}
+elsif ($taskname eq $DEB_TASK) {
+    #Building Debian package
+    
+    #Reconfigure cmake variables for native package build   
+    #Read back configuration from remote_pre stage
+    open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
+    while(<CMAKECONFIG>) {
+        my($line) = $_;
+        $execstr = $line;
+        last;
+    }
+    close (CMAKECONFIG);
+    
+    #Append extra argument
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make package";
+}
+elsif ($taskname eq $DEB_CHECK_TASK) {
+    #Print package summary
+    #Would like to run lintian, but it is not avialable on 
+    #all NMI machine
+    $execstr= "dpkg-deb -I *.deb";
 }
 
 print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-
-	# build.win.bat uses BASE_DIR to setup some things.
-	#
-	$ENV{BASE_DIR} = "$BaseDir";
+    # build.win.bat uses BASE_DIR to setup some things.
+    #
+    $ENV{BASE_DIR} = "$BaseDir";
     $execstr= "nmi_tools\\glue\\build\\build.win.bat";
-
-} else {
+}
+else {
     $ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
     system("env");
 }
@@ -166,7 +163,7 @@ print "------------------------- ENV DUMP ------------------------\n";
 # build
 ######################################################################
 print "$execstr\n";
-$buildstatus = system("$execstr");
+my $buildstatus = system("$execstr");
 
 # now check the build status and return appropriately
 if( $buildstatus == 0 ) {
