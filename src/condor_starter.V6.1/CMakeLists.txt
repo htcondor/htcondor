@@ -21,9 +21,8 @@ file( GLOB starterRmvElements condor_rsh.cpp glexec_job_wrapper* )
 
 condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};qmgmt" "${C_SBIN}" OFF)
 
-prep_clone_install()
 if (HAVE_EXT_GLOBUS)
-	clone_install( condor_starter "condor_gridshell" "${C_SBIN}" )
+	clone_install( condor_starter "${C_SBIN}" "condor_gridshell" "${C_SBIN}" )
 endif()
 
 # need to add all the other install targets for libexec.
