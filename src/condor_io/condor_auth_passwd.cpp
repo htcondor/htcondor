@@ -1420,8 +1420,10 @@ bool Condor_Auth_Passwd::calculate_hkt(msg_t_buf *t_buf, sk_buf *sk)
 	unsigned char *buffer;
 	int prefix_len, buffer_len;
 
-	dprintf(D_SECURITY, "Calculating hkt '%s' (%lu), '%s' (%lu).\n",
-			t_buf->a, (unsigned long)strlen(t_buf->a), t_buf->b, (unsigned long)strlen(t_buf->b));
+	if(t_buf && t_buf->a && t_buf->b)
+		dprintf(D_SECURITY, "Calculating hkt '%s' (%lu), '%s' (%lu).\n",
+			t_buf->a, (unsigned long)strlen(t_buf->a),
+			t_buf->b, (unsigned long)strlen(t_buf->b));
 		// Assemble the buffer to be hmac'd by concatentating T in
 		// buffer.  Then call hmac with ka.
 	if(!t_buf->a || !t_buf->b || !t_buf->ra || !t_buf->rb) {
@@ -1622,9 +1624,13 @@ int Condor_Auth_Passwd :: client_receive(int *client_status,
 
 int Condor_Auth_Passwd::client_send_one(int client_status, msg_t_buf *t_client)
 {
-	char *send_a = t_client->a;
-	unsigned char *send_b = t_client->ra;
-	int send_a_len = strlen(send_a);
+	char *send_a = 0;
+	unsigned char *send_b = 0;
+	
+	if(t_client && t_client->a) send_a = t_client->a;
+	if(t_client && t_client->ra) send_b = t_client->ra;
+	int send_a_len=0;
+	if(send_a) send_a_len = strlen(send_a);
 	int send_b_len = AUTH_PW_KEY_LEN;
 	char nullstr[2];
 

@@ -872,9 +872,9 @@ ReliSock::serialize(char *buf)
     _special_state = relisock_state(itmp);
     // skip through this
     ptmp = strchr(ptmp, '*');
-    ptmp++;
+    if(ptmp) ptmp++;
     // Now, see if we are 6.3 or 6.2
-    if ((ptr = strchr(ptmp, '*')) != NULL) {
+    if (ptmp && (ptr = strchr(ptmp, '*')) != NULL) {
         // we are 6.3
         memcpy(sinful_string, ptmp, ptr - ptmp);
 
@@ -896,7 +896,7 @@ ReliSock::serialize(char *buf)
             }
         }
     }
-    else {
+    else if(ptmp) {
         // we are 6.2, this is the end of it.
         sscanf(ptmp,"%s",sinful_string);
     }

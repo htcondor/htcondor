@@ -834,6 +834,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 
 #if ( HAVE_HIBERNATION )
     /* let the off-line plug-in have at it */
+	if(cad)
     offline_plugin_.update ( command, *cad );
 #endif
 

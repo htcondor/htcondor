@@ -375,8 +375,10 @@ reinitialize ()
 					tmp);
 		}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
-		delete PreemptionReq;
+		if(PreemptionReq){
+			tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
+			delete PreemptionReq;
+		}
 		PreemptionReq = tmp_expr;
 #endif
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", tmp);
@@ -431,8 +433,10 @@ reinitialize ()
 
 	if( tmp ) free( tmp );
 
-	if (PreemptionRank) delete PreemptionRank;
-	PreemptionRank = NULL;
+	if (PreemptionRank) {
+		delete PreemptionRank;
+		PreemptionRank = NULL;
+	}
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
 		if( ParseClassAdRvalExpr(tmp, PreemptionRank) ) {
@@ -440,8 +444,10 @@ reinitialize ()
 		}
 	}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( PreemptionRank, TargetJobAttrs );
-		delete PreemptionRank;
+		if(PreemptionRank){
+			tmp_expr = AddTargetRefs( PreemptionRank, TargetJobAttrs );
+			delete PreemptionRank;
+		}
 		PreemptionRank = tmp_expr;
 #endif
 
@@ -457,8 +463,10 @@ reinitialize ()
 			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
 		}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( NegotiatorPreJobRank, TargetJobAttrs );
-		delete NegotiatorPreJobRank;
+		if(NegotiatorPreJobRank){
+			tmp_expr = AddTargetRefs( NegotiatorPreJobRank, TargetJobAttrs );
+			delete NegotiatorPreJobRank;
+		}
 		NegotiatorPreJobRank = tmp_expr;
 #endif
 	}
@@ -475,8 +483,10 @@ reinitialize ()
 			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
 		}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( NegotiatorPostJobRank, TargetJobAttrs );
-		delete NegotiatorPostJobRank;
+		if(NegotiatorPostJobRank){
+			tmp_expr = AddTargetRefs( NegotiatorPostJobRank, TargetJobAttrs );
+			delete NegotiatorPostJobRank;
+		}
 		NegotiatorPostJobRank = tmp_expr;
 #endif
 	}
