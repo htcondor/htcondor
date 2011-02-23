@@ -10997,7 +10997,6 @@ int
 Scheduler::DelMrec(char const* id)
 {
 	match_rec *rec;
-	HashKey key(id);
 
 	if(!id)
 	{
@@ -11005,6 +11004,7 @@ Scheduler::DelMrec(char const* id)
 		return -1;
 	}
 
+	HashKey key(id);
 	if( matches->lookup(key, rec) != 0 ) {
 			// Couldn't find it, return failure
 		return -1;
