@@ -201,6 +201,26 @@ Matchmaker ()
 	num_negotiation_cycle_stats = 0;
 
     hgq_root_group = NULL;
+
+	rejForNetwork = 0;
+	rejForNetworkShare = 0;
+	rejPreemptForPrio = 0;
+	rejPreemptForPolicy = 0;
+	rejPreemptForRank = 0;
+	rejForSubmitterLimit = 0;
+	rejForConcurrencyLimit = 0;
+
+	cachedPrio = 0;
+	cachedOnlyForStartdRank = false;
+
+		// just assign default values
+	want_inform_startd = true;
+	preemption_req_unstable = true;
+	preemption_rank_unstable = true;
+	NegotiatorTimeout = 30;
+ 	NegotiatorInterval = 60;
+ 	MaxTimePerSubmitter = 31536000;
+ 	MaxTimePerSpin = 31536000;
 }
 
 
@@ -737,8 +757,8 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	}
 
 	// get the priority
-	AttrList* ad=accountant.ReportState();
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
+	AttrList* ad=accountant.ReportState();
 	
 	if (!ad->putAttrList(*strm) ||
 	    !strm->end_of_message())
@@ -4490,12 +4510,10 @@ Matchmaker::updateCollector() {
 
 	if( publicAd ) {
 		publishNegotiationCycleStats( publicAd );
-	}
 
 		// log classad into sql log so that it can be updated to DB
-	FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
+		FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
 
-	if (publicAd) {
 #if HAVE_DLOPEN
 		NegotiatorPluginManager::Update(*publicAd);
 #endif

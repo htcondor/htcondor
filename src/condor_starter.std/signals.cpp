@@ -61,6 +61,8 @@ EventHandler::EventHandler( void (*f)(int), sigset_t m )
 	func = f;
 	mask = m;
 	is_installed = FALSE;
+	for(int i=0;i<N_POSIX_SIGS;++i)
+		o_action[i].sa_restorer = 0;
 }
 
 void

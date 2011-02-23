@@ -53,6 +53,7 @@ elseif(${OS_NAME} MATCHES "WIN")
 	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc")
 endif()
 
+  
 message(STATUS "***********************************************************")
 message(STATUS "System(${HOSTNAME}): ${OS_NAME}(${OS_VER}) Arch=${SYS_ARCH} BitMode=${BIT_MODE} BUILDID:${BUILDID}")
 message(STATUS "install prefix:${CMAKE_INSTALL_PREFIX}")
@@ -233,10 +234,22 @@ if( NOT WINDOWS)
 endif()
 
 find_program(HAVE_VMWARE vmware)
-check_type_size("id_t" HAVE_ID_T)
-check_type_size("__int64" HAVE___INT64)
-check_type_size("int64_t" HAVE_INT64_T)
-check_type_size("long long" HAVE_LONG_LONG)
+
+# Check for the existense of and size of various types
+check_type_size("id_t" ID_T)
+check_type_size("__int64" __INT64)
+check_type_size("int64_t" INT64_T)
+check_type_size("int" INTEGER)
+set(SIZEOF_INT "${INTEGER}")
+check_type_size("long" LONG_INTEGER)
+set(SIZEOF_LONG "${LONG_INTEGER}")
+check_type_size("long long" LONG_LONG)
+if(HAVE_LONG_LONG)
+  set(SIZEOF_LONG_LONG "${LONG_LONG}")
+endif()
+check_type_size("void *" VOIDPTR)
+set(SIZEOF_VOIDPTR "${VOIDPTR}")
+
 
 ##################################################
 ##################################################
@@ -431,7 +444,6 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gcb/1.5.6)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.6)
@@ -529,8 +541,8 @@ endif()
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-set (CONDOR_LIBS "procd_client;daemon_core;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
-set (CONDOR_TOOL_LIBS "procd_client;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
+set (CONDOR_LIBS "procd_client;daemon_core;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
+set (CONDOR_TOOL_LIBS "procd_client;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 message(STATUS "----- Begin compiler options/flags check -----")

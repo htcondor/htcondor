@@ -60,7 +60,24 @@ class DaemonCoreSockAdapterClass {
 	typedef void (DaemonCore::*daemonContactInfoChanged_fnptr)();
 
 
-	DaemonCoreSockAdapterClass(): m_daemonCore(0) {}
+	DaemonCoreSockAdapterClass(): m_daemonCore(0),
+	m_Register_Socket_fnptr(0),
+	m_Cancel_Socket_fnptr(0),
+	m_CallSocketHandler_fnptr(0),
+	m_CallCommandHandler_fnptr(0),
+	m_HandleReqAsync_fnptr(0),
+	m_Register_DataPtr_fnptr(0),
+	m_GetDataPtr_fnptr(0),
+	m_Register_Timer_fnptr(0),
+	m_Register_PeriodicTimer_fnptr(0),
+	m_Cancel_Timer_fnptr(0),
+	m_TooManyRegisteredSockets_fnptr(0),
+	m_incrementPendingSockets_fnptr(0),
+	m_decrementPendingSockets_fnptr(0),
+	m_publicNetworkIpAddr_fnptr(0),
+	m_Register_Command_fnptr(0),
+	m_daemonContactInfoChanged_fnptr(0),
+	m_Register_Timer_TS_fnptr(0) {}
 
 	void EnableDaemonCore(
 		DaemonCore *dC,

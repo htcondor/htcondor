@@ -4207,6 +4207,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		// on at least one job or if it was a total failure
 	response_ad->Assign( ATTR_ACTION_RESULT, num_matches ? 1:0 );
 
+		// Return the number of jobs in the queue to the caller can
+		// determine appropriate actions
+	response_ad->Assign( ATTR_TOTAL_JOB_ADS, scheduler.getJobsTotalAds() );
+
 		// Finally, let them know if the user running this command is
 		// a queue super user here
 	response_ad->Assign( ATTR_IS_QUEUE_SUPER_USER,
@@ -6854,7 +6858,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 	{
 		ClassAd *machine_ad = NULL;
-		if( srec && srec->match ) {
+		if(srec->match ) {
 			machine_ad = srec->match->my_match_ad;
 		}
 		setNextJobDelay( job_ad, machine_ad );
@@ -7585,6 +7589,10 @@ shadow_rec::shadow_rec():
 	recycle_shadow_stream(NULL),
 	exit_already_handled(false)
 {
+	prev_job_id.proc = -1;
+	prev_job_id.cluster = -1;
+	job_id.proc = -1;
+	job_id.cluster = -1;
 }
 
 shadow_rec::~shadow_rec()
@@ -9155,7 +9163,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// for this, but it's the same number as
 				// JOB_NOT_CKPTED, so we're safe.
 		case JOB_NOT_STARTED:
-			if( !srec->removed && srec->match ) {
+			if( srec != NULL && !srec->removed && srec->match ) {
 				DelMrec(srec->match);
 			}
 			break;
@@ -9187,7 +9195,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			break;
 
 		case JOB_EXITED_AND_CLAIM_CLOSING:
-			if( srec->match ) {
+			if( srec != NULL && srec->match ) {
 					// startd is not accepting more jobs on this claim
 				srec->match->needs_release_claim = false;
 				DelMrec(srec->match);

@@ -93,6 +93,7 @@ do_connect_with_timeout( const char* host, const char* service,
 		sinful.sin_port = htons(port);
 	}
 
+	memset(&sinful.sin_zero, 0, sizeof(sinful.sin_zero));
 	if (timeout == 0) {
 		status = connect(fd,(struct sockaddr *)&sinful,sizeof(sinful));
 	} else {

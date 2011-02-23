@@ -496,7 +496,13 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     }
     else if (rc < 0) {
         last = deltacloud_get_last_error();
-        if (!last || last->error_num != DELTACLOUD_NAME_NOT_FOUND_ERROR) {
+        if (!last) {
+            output_string = create_failure(reqid,
+                                           "Instance_Fetch_Failure %s",
+                                           name);
+            goto cleanup_library;
+		}
+		else if(last->error_num != DELTACLOUD_NAME_NOT_FOUND_ERROR) {
             /* failed to find the instance, output an error */
             output_string = create_failure(reqid,
                                            "Instance_Fetch_Failure %s: %s",

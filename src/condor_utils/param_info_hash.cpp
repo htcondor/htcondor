@@ -113,7 +113,7 @@ param_info_hash_iterate(param_info_hash_t param_info, int (*callPerElement)
 	int i;
 	int stop = 0;
 	for(i = 0; i < PARAM_INFO_TABLE_SIZE && stop == 0; i++) {
-		bucket_t* this_param = (bucket_t*)(param_info + i * sizeof(bucket_t*));
+		bucket_t* this_param = (bucket_t*)(param_info + i);
 		while(this_param != NULL && stop == 0) {
 			stop = callPerElement(this_param->param, user_data);
 			this_param = this_param->next;

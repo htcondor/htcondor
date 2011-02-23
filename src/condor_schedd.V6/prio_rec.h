@@ -40,7 +40,15 @@ public:
     char        owner[MAX_CONDOR_USERNAME_LEN];
 	int			auto_cluster_id;
 
-	prio_rec() { *owner='\0'; }
+	prio_rec() {
+		id.cluster = 0;
+		id.proc = 0;
+		job_prio = 0;
+		status = 0;
+		qdate = 0;
+		*owner='\0';
+		auto_cluster_id = 0;
+	}
 };
 
 #endif

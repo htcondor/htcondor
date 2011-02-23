@@ -178,6 +178,8 @@ clusterProcString::
 clusterProcString() {
 	dagman_cluster_id = -1;
 	dagman_proc_id    = -1;
+	cluster = -1;
+	proc = -1;
 	string = 0;
 	return;
 }
@@ -3094,7 +3096,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
     file = safe_fopen_wrapper(filename, "r");
     if (file == NULL) {
         fprintf(stderr, "Can't open file of job ads: %s\n", filename);
-        success = false;
+		return false;
     } else {
         do {
             classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
@@ -3110,8 +3112,8 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
         } else {
             success = true;
         }
+		fclose(file);
     }
-	fclose(file);
     return success;
 }
 

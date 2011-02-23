@@ -27,6 +27,8 @@ using namespace std;
 MultiProfile::
 MultiProfile( )
 {
+	isLiteral = false;
+	literalValue = UNDEFINED_VALUE;
 }
 
 MultiProfile::

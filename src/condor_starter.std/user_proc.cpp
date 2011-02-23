@@ -940,20 +940,20 @@ UserProc::handle_termination( int exit_st )
 
 				/* this gets deleted when this objects destructs */
 				core_name = new char [ corebuf.Length() + 1 ];
-				strcpy( core_name, corebuf.Value() );
+				if(core_name != NULL) strcpy( core_name,corebuf.Value() );
 
 				/* core_is_valid checks to make sure it isn't a symlink and
 					returns false if it is */
-		    	if( core_is_valid(core_name) == TRUE) {
+					if( core_is_valid(corebuf.Value()) == TRUE) {
 					dprintf( D_FAILURE|D_ALWAYS, 
-						"A core file was created: %s\n", core_name );
+						"A core file was created: %s\n", corebuf.Value());
 					core_created = TRUE;
 				} else {
 					dprintf( D_FULLDEBUG, "No core file was created\n" );
 					core_created = FALSE;
 					if (core_name != NULL) {
 						// remove any incomplete core, or possible symlink
-						(void)unlink( core_name );	
+						(void)unlink(corebuf.Value());	
 					}
 				}
 			}
@@ -1332,7 +1332,7 @@ open_std_file( int fd )
 		MyString err;
 		err.sprintf("Can't open \"%s\": %s", file_name,strerror(errno));
 		dprintf(D_ALWAYS,"%s\n",err.Value());
-		REMOTE_CONDOR_report_error((char *)err.Value());
+		REMOTE_CONDOR_report_error(const_cast<char *>(err.Value()));
 		exit( 4 );
 	} else {
 		if( real_fd != fd ) {
@@ -1492,7 +1492,7 @@ set_iwd()
 		MyString err;
 		err.sprintf( "Can't open working directory \"%s\": %s", iwd,
 			    strerror(errno) );
-		REMOTE_CONDOR_report_error( (char *)err.Value() );
+		REMOTE_CONDOR_report_error(const_cast<char *>(err.Value()));
 		exit( 4 );
 	}
 	free( iwd );
