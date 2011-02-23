@@ -21,6 +21,9 @@
 #define CONDOR_DH
 
 #include "condor_common.h"
+
+#if HAVE_EXT_OPENSSL
+
 #include <openssl/ssl.h>
 //#include <openssl/rand.h>
 
@@ -65,6 +68,6 @@ class Condor_Diffie_Hellman {
     unsigned char * secret_;
     int keySize_;
 };
-
+#endif
 
 #endif
