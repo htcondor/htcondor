@@ -1037,8 +1037,8 @@ our %submit_info = (
 				'-DWITH_OPENSSL:BOOL=OFF' => undef,
 				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
 			},
-			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.21',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-8.9' ],
 			'xtests'	=> undef,
 		},
 
