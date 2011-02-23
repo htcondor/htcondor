@@ -133,9 +133,11 @@ while( $myrow = mysql_fetch_array($result) ) {
   else {
     $stat = stat("$filepath.out");
     $stdout_size = $stat['size'];
+    $stdout_size_display = number_format($stdout_size);
     
     $stat = stat("$filepath.err");
     $stderr_size = $stat['size'];
+    $stderr_size_display = number_format($stderr_size);
     
     $stdout_url = "<a href=\"http://$hostname/$filepath.out\">".basename($filepath).".out</a>";
     $stderr_url = "<a href=\"http://$hostname/$filepath.err\">".basename($filepath).".err</a>";
@@ -172,8 +174,8 @@ while( $myrow = mysql_fetch_array($result) ) {
   echo "<TR><TD>Finish:</TD><TD> ".$myrow["finish"] ."</TD></TR>";
   echo "<TR><TD>Duration:</TD><TD> ".$myrow["duration"] ."</TD></TR>";
   echo "<TR><TD>Result:</TD><TD> $test_results_url </TD></TR>";
-  echo "<TR><TD>Stdout:</TD><TD> $stdout_url - (size: $stdout_size bytes) </TD></TR>";
-  echo "<TR><TD>Stderr:</TD><TD> $stderr_url - (size: $stderr_size bytes) </TD></TR>";
+  echo "<TR><TD>Stdout:</TD><TD> $stdout_url - (size: $stdout_size_display bytes) </TD></TR>";
+  echo "<TR><TD>Stderr:</TD><TD> $stderr_url - (size: $stderr_size_display bytes) </TD></TR>";
   echo "<TR><TD>Run Results:</TD><TD> $results_url</a></TD></TR>";
   echo "<TR><TD># warnings STDOUT:</td><td>$num_warnings</td></tr>";
   echo "<TR><TD># warnings STDERR:</td><td>$num_warnings_stderr</td></tr>";
