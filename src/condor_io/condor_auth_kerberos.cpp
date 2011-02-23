@@ -218,9 +218,9 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     memcpy(output + index, &tmp, sizeof(out_data.ciphertext.length));
     index += sizeof(out_data.ciphertext.length);
 
-    memcpy(output + index, out_data.ciphertext.data, out_data.ciphertext.length);
-
     if (out_data.ciphertext.data) {    
+	memcpy(output + index, out_data.ciphertext.data,
+		out_data.ciphertext.length);
         free(out_data.ciphertext.data);
     }
 

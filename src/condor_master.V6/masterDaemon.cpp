@@ -396,7 +396,7 @@ daemon::DoConfig( bool init )
 	// Previously defind?
 	if ( NULL != flag_in_config_file ) {
 		// Has it changed?
-		if ( strcmp( flag_in_config_file, tmp ) ) {
+		if (tmp && strcmp( flag_in_config_file, tmp ) ) {
 			free( flag_in_config_file );
 			flag_in_config_file = tmp;
 		} else if ( NULL != tmp ) {

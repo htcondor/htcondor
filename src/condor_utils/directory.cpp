@@ -1228,6 +1228,7 @@ bool make_parents_if_needed( const char *path, mode_t mode, priv_state priv )
 
 	ASSERT( path );
 
-	filename_split(path,parent,junk);
-	return mkdir_and_parents_if_needed( parent.c_str(), mode, priv );
+	if(filename_split(path,parent,junk));
+		return mkdir_and_parents_if_needed( parent.c_str(), mode, priv );
+	return false;
 }
