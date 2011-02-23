@@ -5030,16 +5030,11 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 	
-	// AmazonUserData and AmazonUserDataFile cannot exist in the same submit file
-	bool has_userdata = false;
-	bool has_userdatafile = false;
-	
 	// AmazonUserData is not a necessary parameter
 	if( (tmp = condor_param( AmazonUserData, ATTR_AMAZON_USER_DATA )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA, tmp);
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-		has_userdata = true;
 	}	
 
 	// AmazonUserDataFile is not a necessary parameter
@@ -5057,7 +5052,6 @@ SetGridParams()
 				full_path(tmp) );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-		has_userdatafile = true;
 	}
 
 
