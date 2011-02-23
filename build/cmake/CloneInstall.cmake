@@ -35,7 +35,6 @@ MACRO (CLONE_INSTALL _ORIG_TARGET _ORIG_INSTALL _NEWNAMES _INSTALL_LOC )
             #install (CODE "execute_process(COMMAND cd \${CMAKE_INSTALL_PREFIX} && ${LN} -v -f ${_ORIG_INSTALL}/${_ORIG_TARGET} ${_INSTALL_LOC}/${new_target})")
             # because it's a hardlink absolute paths should not matter.
             install (CODE "execute_process(COMMAND ${LN} -v -f \${CMAKE_INSTALL_PREFIX}/${_ORIG_INSTALL}/${_ORIG_TARGET} \${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}/${new_target})")
-
         endif()
 
 	endforeach(new_target)
