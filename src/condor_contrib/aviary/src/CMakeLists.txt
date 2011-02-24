@@ -25,11 +25,11 @@ if (LINUX)
     include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
     # hardcode axis2c headers dir for now
-    include_directories( /usr/include/axis2-1.6.0/ /usr/include/axis2-1.6.0/platforms )
+    include_directories( $ENV{WSFCPP_HOME}/include/axis2-1.6.0/ $ENV{WSFCPP_HOME}/include/axis2-1.6.0/platforms )
     include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../include )
     condor_glob( Hdrs Srcs "${RmvSrcs}" )
 
-    set ( QUERY_SRCS AviaryQueryService.cpp;AviaryQueryServiceMacro.cpp;AviaryQueryServiceSkeleton.cpp)
+    set ( QUERY_SRCS AviaryQueryService.cpp;AviaryQueryServiceMacro.cpp;AviaryQueryServiceSkeleton.cpp;Axis2SoapProvider.cpp)
     set ( QUERY_LIBS ${CMAKE_CURRENT_SOURCE_DIR}/../lib/libaviary_query_types.so )
     
     dprint( "QUERY_SRCS = ${QUERY_SRCS}" )
