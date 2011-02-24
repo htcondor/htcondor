@@ -9,7 +9,7 @@
 ##  condor_config_val -v <variable name>
 ##
 ##  The file is divided into four main parts:
-##  Part 1:  Settings you MUST customize 
+##  Part 1:  Settings you likely want to customize 
 ##  Part 2:  Settings you may want to customize
 ##  Part 3:  Settings that control the policy of when condor will
 ##           start and stop jobs on your machines
@@ -42,7 +42,7 @@
 ##  #        #    #  #   #      #              #
 ##  #        #    #  #    #     #            #####
 ##
-##  Part 1:  Settings you must customize:
+##  Part 1:  Settings you likely want to customize:
 ######################################################################
 ######################################################################
 
@@ -83,11 +83,11 @@ LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
 ##--------------------------------------------------------------------
 ##  When something goes wrong with condor at your site, who should get
 ##  the email?
-CONDOR_ADMIN		= condor-admin@your.domain
+CONDOR_ADMIN		= root@$(FULL_HOSTNAME)
 
 ##  Full path to a mail delivery program that understands that "-s"
 ##  means you want to specify a subject:
-MAIL			= /usr/bin/mail
+MAIL			= /bin/mail
 
 ##--------------------------------------------------------------------
 ##  Network domain parameters:
@@ -96,18 +96,18 @@ MAIL			= /usr/bin/mail
 ##  machines don't share a common UID space, set it to 
 ##  UID_DOMAIN = $(FULL_HOSTNAME)
 ##  to specify that each machine has its own UID space.
-UID_DOMAIN		= your.domain
+UID_DOMAIN		= $(FULL_HOSTNAME)
 
 ##  Internet domain of machines sharing a common file system.
 ##  If your machines don't use a network file system, set it to
 ##  FILESYSTEM_DOMAIN = $(FULL_HOSTNAME)
 ##  to specify that each machine has its own file system. 
-FILESYSTEM_DOMAIN	= your.domain
+FILESYSTEM_DOMAIN	= $(FULL_HOSTNAME)
 
 ##  This macro is used to specify a short description of your pool. 
 ##  It should be about 20 characters long. For example, the name of 
 ##  the UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.
-COLLECTOR_NAME 		= My Pool
+COLLECTOR_NAME 		= My Pool - $(CONDOR_HOST)
 
 ######################################################################
 ######################################################################
@@ -1183,6 +1183,9 @@ PREEN_ARGS			= -m -r
 ## Determine if the Negotiator will honor SlotWeight attributes, which
 ## may be used to give a slot greater weight when calculating usage.
 #NEGOTIATOR_USE_SLOT_WEIGHTS = True
+## Default: True
+NEGOTIATOR_USE_SLOT_WEIGHTS = False
+
 
 ## How often the Negotaitor starts a negotiation cycle, defined in
 ## seconds.
