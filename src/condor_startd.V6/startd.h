@@ -73,6 +73,9 @@ class Resource;
 #include "startd_cron_job_mgr.h"
 #include "startd_bench_job_mgr.h"
 
+#include "sandbox.h"
+#include "sandbox_manager.h"
+
 static const int MAX_STARTERS = 10;
 
 #ifndef _STARTD_NO_DECLARE_GLOBALS
@@ -138,6 +141,8 @@ extern  int main_reaper;
 
 extern StartdCronJobMgr		*cron_job_mgr;
 extern StartdBenchJobMgr	*bench_job_mgr;
+
+extern CSandboxManager* sandMan; // the sandbox manager
 
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 

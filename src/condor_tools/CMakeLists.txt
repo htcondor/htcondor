@@ -33,6 +33,7 @@ if (HAVE_SSH_TO_JOB)
 endif(HAVE_SSH_TO_JOB)
 
 condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_startd_transfer_data "startd_transfer_data.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_version "version.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_wait "wait.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_history "history.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)

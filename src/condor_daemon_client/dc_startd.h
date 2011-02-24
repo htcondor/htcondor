@@ -153,6 +153,8 @@ public:
 	bool checkpointJob( const char* name );
 
 	bool getAds( ClassAdList &adsList );
+	
+	bool getSandboxLocation(std::string sId, std::string &location);
 
  private:
 	char* claim_id;

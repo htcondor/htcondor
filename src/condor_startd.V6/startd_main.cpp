@@ -43,8 +43,12 @@
 CondorSystrayNotifier systray_notifier;
 #endif
 
+#include "sandbox.h"
+#include "sandbox_manager.h"
+
 // Resource manager
 ResMgr*	resmgr;			// Pointer to the resource manager object
+CSandboxManager *sandMan;
 
 // Polling variables
 int	polling_interval = 0;	// Interval for polling when there are resources in use
@@ -134,6 +138,8 @@ main_init( int, char* argv[] )
 	// Reset the cron & benchmark managers to a known state
 	cron_job_mgr = NULL;
 	bench_job_mgr = NULL;
+	sandMan = new CSandboxManager;
+
 
 		// Process command line args.
 	for(ptr = argv + 1; *ptr; ptr++) {
@@ -164,6 +170,7 @@ main_init( int, char* argv[] )
 
 		// Instantiate the Resource Manager object.
 	resmgr = new ResMgr;
+	
 
 		// find all the starters we care about and get their classads. 
 	resmgr->starter_mgr.init();
@@ -365,6 +372,13 @@ main_init( int, char* argv[] )
 								(CommandHandler)command_vm_universe, 
 								"command_vm_universe", 0, DAEMON, 
 								D_FULLDEBUG );
+								
+	// Sandbox Manager
+	daemonCore->Register_Command(GET_SANDBOX_INFO,
+								"GET_SANDBOX_INFO",
+								(CommandHandler)command_sand_man,
+								"command_sand_man", 0, OWNER,
+								D_FULLDEBUG);
 
 		//////////////////////////////////////////////////
 		// Reapers 
@@ -627,6 +641,8 @@ startd_exit()
 
 		delete resmgr;
 		resmgr = NULL;
+		delete sandMan;
+		sandMan = NULL;
 	}
 
 #ifdef WIN32

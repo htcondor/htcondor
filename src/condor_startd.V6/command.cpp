@@ -1737,7 +1737,12 @@ activate_claim( Resource* rip, Stream* stream )
 			// abort now, and all the state will be happy.
 		ABORT;
 	}
-
+	char *execDir = new char[strlen(rip->executeDir()) + 15] ;
+	sprintf(execDir,  "%s%cdir_%ld", rip->executeDir(), DIR_DELIM_CHAR, (long)vm_starter->pid() );
+	char *sandboxId = sandMan->registerSandbox((const char*)execDir);
+	delete []execDir;
+	dprintf(D_ALWAYS, "Newly created sandbox ID: %s \n", sandboxId);
+	
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
 		if( resmgr->m_vmuniverse_mgr.allocVM(vm_starter->pid(), vm_classad, rip->executeDir()) 
 				== false ) {
@@ -2232,4 +2237,47 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 	free( claim_id );
 	free( cmd_str );
 	return rval;
+}
+
+int 
+command_sand_man(Service*, int cmd, Stream* sock )
+{
+	// ultimately we want to switch on the int value -- which may be the Sandbox ID
+	// for now this is just the dummy function to be filled in later.
+	//This is also where we would invoke the transferD - I believe.
+	
+	std::string sandbox_id;
+	ReliSock *stream = (ReliSock*)sock;
+	stream->decode();
+	stream->timeout(5);
+	if( !stream->code(sandbox_id) ) {
+		dprintf( D_ALWAYS, "command_sand_man: "
+							"Can't read sandbox ID\n");
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS, "command_sand_man: Sandbox id received is %s   \n", sandbox_id.c_str());
+	if( !stream->end_of_message() ){
+		dprintf( D_ALWAYS, "command_sand_man: Can't read end_of_message\n");
+		return FALSE;
+	}
+	
+	
+	std::string sandbox_name = sandMan->transferSandbox(sandbox_id.c_str());
+	
+	stream->encode();
+
+	if (!stream->code(sandbox_name)) {
+		dprintf( D_ALWAYS, "command_sand_man: Can't send sandbox name.\n");
+		return FALSE;
+	}
+	
+	if( !stream->end_of_message() ){
+		dprintf( D_ALWAYS, "command_sand_man: Can't send end_of_message\n");
+		return FALSE;
+	}
+	
+	dprintf(D_ALWAYS, "command_sand_man: All done. ");
+
+	return TRUE;
 }

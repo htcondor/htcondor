@@ -27,7 +27,12 @@ endif()
 
 file( GLOB startdRmvElements Example* *.t.* glexec_wrapper* ${BOINC_GOO} )
 
+<<<<<<< HEAD
 condor_daemon( startd "${startdRmvElements}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${CONDOR_QMF}" "${C_SBIN}" OFF)
+=======
+condor_daemon( startd "${startdRmvElements}"
+"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};condor_sandbox" "${C_SBIN}" OFF)
+>>>>>>> b264f4bc1c959074125cff12f6e92cf1c99e7da3
 
 if (LINUX AND GLOBUS_FOUND)
   condor_exe(condor_glexec_wrapper "glexec_wrapper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" OFF )

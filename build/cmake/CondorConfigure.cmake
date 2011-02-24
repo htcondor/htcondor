@@ -524,9 +524,12 @@ include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
+include_directories(${CONDOR_SOURCE_DIR}/src/condor_sandbox_manager)
 if (WANT_CONTRIB)
     include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
 endif(WANT_CONTRIB)
+
+
 ###########################################
 
 ###########################################
