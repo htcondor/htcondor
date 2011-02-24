@@ -615,11 +615,13 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITH_OPENSSL:BOOL=OFF' => undef,
+				'-DWITH_CURL:BOOL=OFF' => undef,
+				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
 			},
 			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9',
+				],
 			'xtests'	=> undef,
 		},
 
@@ -642,10 +644,13 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITH_OPENSSL:BOOL=OFF' => undef,
-				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
+				'-DWITH_CURL:BOOL=OFF' => undef,
+				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 			},
 			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.21',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-8.9' ],
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-8.9',
+				],
 			'xtests'	=> undef,
 		},
 
