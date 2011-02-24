@@ -141,7 +141,7 @@ protected:
     bool  checkList(List<int>*);
     static void removeAllFromList(List<int>*);
     void clearBuffers(void);
-    void printStep(char *curState,char *nextState);
+    void printStep(const char *curState,const char *nextState);
     //char* commandToString(int command);
 
     void init(void);

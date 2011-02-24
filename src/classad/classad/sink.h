@@ -81,7 +81,7 @@ class ClassAdUnParser
 		virtual void UnparseAux( std::string &buffer, std::string identifier);
 
 		// table of string representation of operators
-		static char *opString[];
+		static const char *opString[];
 
  protected:
 		bool oldClassAd;

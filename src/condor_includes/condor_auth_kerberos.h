@@ -104,7 +104,8 @@ class Condor_Auth_Kerberos : public Condor_Auth_Base {
     // RETURNS: TRUE -- if success; FALSE -- if failure
     //------------------------------------------
 
-	void dprintf_krb5_principal ( int deblevel, char *fmt, krb5_principal p );
+	void dprintf_krb5_principal ( int deblevel, const char *fmt,
+								  krb5_principal p );
     
     int authenticate_client_kerberos();
     //------------------------------------------
