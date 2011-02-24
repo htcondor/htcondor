@@ -133,7 +133,6 @@ class JobRouter: public Service {
 	int m_public_ad_update_interval;
 	int m_public_ad_update_timer;
 
-	char* m_custom_attrs;
 	std::string m_job_router_name;
 	std::string daemonName;
 

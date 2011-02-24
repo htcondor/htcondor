@@ -4207,6 +4207,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		// on at least one job or if it was a total failure
 	response_ad->Assign( ATTR_ACTION_RESULT, num_matches ? 1:0 );
 
+		// Return the number of jobs in the queue to the caller can
+		// determine appropriate actions
+	response_ad->Assign( ATTR_TOTAL_JOB_ADS, scheduler.getJobsTotalAds() );
+
 		// Finally, let them know if the user running this command is
 		// a queue super user here
 	response_ad->Assign( ATTR_IS_QUEUE_SUPER_USER,
@@ -6854,7 +6858,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 	{
 		ClassAd *machine_ad = NULL;
-		if( srec && srec->match ) {
+		if(srec->match ) {
 			machine_ad = srec->match->my_match_ad;
 		}
 		setNextJobDelay( job_ad, machine_ad );
@@ -7585,6 +7589,10 @@ shadow_rec::shadow_rec():
 	recycle_shadow_stream(NULL),
 	exit_already_handled(false)
 {
+	prev_job_id.proc = -1;
+	prev_job_id.cluster = -1;
+	job_id.proc = -1;
+	job_id.cluster = -1;
 }
 
 shadow_rec::~shadow_rec()
@@ -10989,7 +10997,6 @@ int
 Scheduler::DelMrec(char const* id)
 {
 	match_rec *rec;
-	HashKey key(id);
 
 	if(!id)
 	{
@@ -10997,6 +11004,7 @@ Scheduler::DelMrec(char const* id)
 		return -1;
 	}
 
+	HashKey key(id);
 	if( matches->lookup(key, rec) != 0 ) {
 			// Couldn't find it, return failure
 		return -1;

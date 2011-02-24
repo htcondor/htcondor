@@ -161,7 +161,9 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 
 GahpServer::~GahpServer()
 {
-	GahpServersById.remove( HashKey( my_id ) );
+	if ( my_id != NULL ) {
+		GahpServersById.remove( HashKey( my_id ) );
+	}
 	if ( m_deleteMeTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( m_deleteMeTid );
 	}

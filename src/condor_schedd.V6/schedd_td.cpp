@@ -167,6 +167,8 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			respad.put(*rsock);
 			rsock->end_of_message();
 
+			delete modify_allow_jobs;
+			delete modify_deny_jobs;
 			return FALSE;
 		}
 
@@ -188,6 +190,8 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			respad.put(*rsock);
 			rsock->end_of_message();
 
+			delete modify_allow_jobs;
+			delete modify_deny_jobs;
 			return FALSE;
 		}
 
@@ -316,6 +320,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.put(*rsock);
 		rsock->end_of_message();
 
+		delete modify_allow_jobs;
 		return FALSE;
 	}
 
@@ -336,6 +341,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.put(*rsock);
 		rsock->end_of_message();
 
+		delete modify_allow_jobs;
 		return FALSE;
 	}
 
@@ -354,6 +360,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.put(*rsock);
 		rsock->end_of_message();
 
+		delete modify_allow_jobs;
 		return FALSE;
 	}
 

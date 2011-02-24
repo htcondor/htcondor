@@ -396,7 +396,7 @@ daemon::DoConfig( bool init )
 	// Previously defind?
 	if ( NULL != flag_in_config_file ) {
 		// Has it changed?
-		if ( strcmp( flag_in_config_file, tmp ) ) {
+		if (tmp && strcmp( flag_in_config_file, tmp ) ) {
 			free( flag_in_config_file );
 			flag_in_config_file = tmp;
 		} else if ( NULL != tmp ) {
@@ -2229,11 +2229,11 @@ Daemons::AllReaper(int pid, int status)
 	valid_iter = exit_allowed.find(pid);
 	if( valid_iter != exit_allowed.end() ) {
 		valid_iter->second->Exited( status );
+ 		delete valid_iter->second;
 		exit_allowed.erase( valid_iter );
 		if( NumberOfChildren() == 0 ) {
 			AllDaemonsGone();
 		}
- 		delete valid_iter->second;
 		return TRUE;
 	}
 
@@ -2260,8 +2260,8 @@ Daemons::DefaultReaper(int pid, int status)
 	valid_iter = exit_allowed.find(pid);
 	if( valid_iter != exit_allowed.end() ) {
 		valid_iter->second->Exited( status );
-		exit_allowed.erase(valid_iter);
  		delete valid_iter->second;
+		exit_allowed.erase(valid_iter);
 		return TRUE;
 	}
 

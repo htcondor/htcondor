@@ -336,14 +336,16 @@ privsep_create_dir(uid_t uid, const char* pathname)
 {
 	// launch the privsep switchboard with the "mkdir" operation
 	//
-	FILE* in_fp;
-	FILE* err_fp;
+	FILE* in_fp = 0;
+	FILE* err_fp = 0;
 	pid_t switchboard_pid = privsep_launch_switchboard("mkdir",
 	                                                   in_fp,
 	                                                   err_fp);
 	if (switchboard_pid == 0) {
 		dprintf(D_ALWAYS, "privsep_create_dir: "
 		                      "error launching switchboard\n");
+		if(in_fp) fclose(in_fp);
+		if(err_fp) fclose(err_fp);
 		return false;
 	}
 
@@ -363,14 +365,16 @@ privsep_remove_dir(const char* pathname)
 {
 	// launch the privsep switchboard with the "rmdir" operation
 	//
-	FILE* in_fp;
-	FILE* err_fp;
+	FILE* in_fp = 0;
+	FILE* err_fp = 0;
 	pid_t switchboard_pid = privsep_launch_switchboard("rmdir",
 	                                                   in_fp,
 	                                                   err_fp);
 	if (switchboard_pid == 0) {
 		dprintf(D_ALWAYS, "privsep_remove_dir: "
 		                      "error launching switchboard\n");
+		if(in_fp) fclose(in_fp);
+		if(err_fp) fclose(err_fp);
 		return false;
 	}
 
@@ -397,6 +401,8 @@ privsep_chown_dir(uid_t target_uid, uid_t source_uid, const char* pathname)
 	if (switchboard_pid == 0) {
 		dprintf(D_ALWAYS, "privsep_chown_dir: "
 		                      "error launching switchboard\n");
+		fclose(in_fp);
+		fclose(err_fp);
 		return false;
 	}
 

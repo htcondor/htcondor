@@ -80,6 +80,8 @@ JobRouter::JobRouter(Scheduler *scheduler): m_jobs(5000,hashFuncStdString,reject
 
 	m_router_lock_fd = -1;
 	m_router_lock = NULL;
+	m_max_jobs = -1;
+	m_max_job_mirror_update_lag = 600;
 
 #if HAVE_JOB_HOOKS
 	m_hook_mgr = NULL;
@@ -771,6 +773,7 @@ RoutedJob::RoutedJob() {
 	is_success = false;
 	is_sandboxed = false;
 	submission_time = 0;
+	retirement_time = 0;
 	proxy_file_copy_chowned = false;
 	target_universe = CONDOR_UNIVERSE_GRID;
 	saw_dest_job = false;
@@ -2135,6 +2138,7 @@ JobRoute::JobRoute() {
 	m_throttle = 0;
 	m_override_routing_entry = -1;
 	m_target_universe = CONDOR_UNIVERSE_GRID;
+	m_route_requirements = NULL;
 }
 
 JobRoute::~JobRoute() {

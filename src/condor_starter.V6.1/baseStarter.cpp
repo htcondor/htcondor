@@ -843,15 +843,15 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	MyString slot_name;
 	input.LookupString(ATTR_NAME,slot_name);
 
-	char const *username;
+	char *username;
 	if( !jic->userPrivInitialized() ) {
 		username = NULL;
 	}
 	else if( condorPrivSepHelper() != NULL ) {
-		username = condorPrivSepHelper()->get_user_name();
+		username = strdup(condorPrivSepHelper()->get_user_name());
 	}
 	else if( can_switch_ids() ) {
-		username = get_user_loginname();
+		username = strdup(get_user_loginname());
 	}
 	else {
 		username = my_username();
@@ -862,6 +862,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	MyString libexec;
 	if( !param(libexec,"LIBEXEC") ) {
+		if(username) free(username);
 		return SSHDFailed(s,"LIBEXEC not defined, so cannot find condor_ssh_to_job_sshd_setup");
 	}
 	MyString ssh_to_job_sshd_setup;
@@ -872,10 +873,12 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		"%s%ccondor_ssh_to_job_shell_setup",libexec.Value(),DIR_DELIM_CHAR);
 
 	if( access(ssh_to_job_sshd_setup.Value(),X_OK)!=0 ) {
+		if(username) free(username);
 		return SSHDFailed(s,"Cannot execute %s: %s",
 						  ssh_to_job_sshd_setup.Value(),strerror(errno));
 	}
 	if( access(ssh_to_job_shell_setup.Value(),X_OK)!=0 ) {
+		if(username) free(username);
 		return SSHDFailed(s,"Cannot execute %s: %s",
 						  ssh_to_job_shell_setup.Value(),strerror(errno));
 	}
@@ -886,10 +889,12 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 			sshd_config_template.sprintf_cat("%ccondor_ssh_to_job_sshd_config_template",DIR_DELIM_CHAR);
 		}
 		else {
+			if(username) free(username);
 			return SSHDFailed(s,"SSH_TO_JOB_SSHD_CONFIG_TEMPLATE and LIB are not defined.  At least one of them is required.");
 		}
 	}
 	if( access(sshd_config_template.Value(),F_OK)!=0 ) {
+		if(username) free(username);
 		return SSHDFailed(s,"%s does not exist!",sshd_config_template.Value());
 	}
 
@@ -900,6 +905,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	param(ssh_keygen_args,"SSH_TO_JOB_SSH_KEYGEN_ARGS","\"-N '' -C '' -q -f %f -t rsa\"");
 	ssh_keygen_arglist.AppendArg(ssh_keygen.Value());
 	if( !ssh_keygen_arglist.AppendArgsV2Quoted(ssh_keygen_args.Value(),&error_msg) ) {
+		if(username) free(username);
 		return SSHDFailed(s,
 						  "SSH_TO_JOB_SSH_KEYGEN_ARGS is misconfigured: %s",
 						  error_msg.Value());
@@ -1079,6 +1085,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	if( !rc ) {
 		MyString msg;
+		if(username) free(username);
 		return SSHDFailed(s,
 			"Failed to parse output of condor_ssh_to_job_sshd_setup: %s",
 			error_msg.Value());
@@ -1094,6 +1101,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	MyString sshd;
 	param(sshd,"SSH_TO_JOB_SSHD","/usr/sbin/sshd");
 	if( access(sshd.Value(),X_OK)!=0 ) {
+		if(username) free(username);
 		return SSHDFailed(s,"Failed, because sshd not correctly configured (SSH_TO_JOB_SSHD=%s): %s.",sshd.Value(),strerror(errno));
 	}
 
@@ -1102,6 +1110,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	param(sshd_arg_string,"SSH_TO_JOB_SSHD_ARGS","\"-i -e -f %f\"");
 	if( !sshd_arglist.AppendArgsV2Quoted(sshd_arg_string.Value(),&error_msg) )
 	{
+		if(username) free(username);
 		return SSHDFailed(s,"Invalid SSH_TO_JOB_SSHD_ARGS (%s): %s",
 						  sshd_arg_string.Value(),error_msg.Value());
 	}
@@ -1121,6 +1130,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 					new_arg += sshd_config_file.Value();
 				}
 				else {
+					if(username) free(username);
 					return SSHDFailed(s,
 							"Unexpected %%%c in SSH_TO_JOB_SSHD_ARGS: %s\n",
 							*ptr ? *ptr : ' ', sshd_arg_string.Value());
@@ -1142,6 +1152,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	sshd_ad.Assign(ATTR_JOB_CMD,sshd.Value());
 	CondorVersionInfo ver_info;
 	if( !sshd_arglist.InsertArgsIntoClassAd(&sshd_ad,&ver_info,&error_msg) ) {
+		if(username) free(username);
 		return SSHDFailed(s,
 			"Failed to insert args into sshd job description: %s",
 			error_msg.Value());
@@ -1151,6 +1162,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 		// to restore the environment that was saved by sshd_setup.
 		// However, we may as well pass the desired environment.
 	if( !setup_env.InsertEnvIntoClassAd(&sshd_ad,&error_msg,NULL,&ver_info) ) {
+		if(username) free(username);
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
 			error_msg.Value());
@@ -1167,6 +1179,8 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	response.Assign(ATTR_SSH_PUBLIC_SERVER_KEY,public_host_key.Value());
 	response.Assign(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key.Value());
 
+	free(username);
+	username = NULL;
 	s->encode();
 	if( !response.put(*s) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to send response to START_SSHD.\n");
