@@ -26,6 +26,7 @@
 \oOptArg{-jobads}{file} 
 \oOptArg{-machineads}{file} 
 \oOptArg{-direct}{rdbms \Bar quilld \Bar schedd} 
+\oOpt{-stream-results}
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
   \OptArg{-constraint}{expression} \Dots \} }
 
@@ -288,6 +289,12 @@ per machine basis.
     in case of error. It is useful for debugging an installation
     of Quill. One of the strings \Arg{rdbms}, \Arg{quilld}, or
     \Arg{schedd} is required with this option.}
+  \OptItem{\OptArg{-stream-results}}{Display results as jobs are fetched
+    from the job queue rather than storing results in memory until all
+    jobs have been fetched.  This can reduce memory consumption when fetching
+    large numbers of jobs, but if \Condor{q} is paused while displaying
+    results, this could result in a timeout in communication with
+    \Condor{schedd}.}
   \OptItem{Restriction list}{The restriction list may have zero or more items,
     each of which may be:
         \begin{description}
