@@ -77,6 +77,10 @@ See ~\pageref{dagman:SCRIPT} for details.
   Hooks mechanism.  These are ``OneShot'' and ``OnDemand''.
   Currently, ``OnDemand'' is used only by the new benchmark mechanism.
 
+\item \Condor{dagman} now prints  out all boolean configuration
+values as \Expr{True}/\Expr{False} instead of 1/0 in the
+\File{dagman.out} file.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -126,6 +130,12 @@ See ~\pageref{dagman:SCRIPT} for details.
   warning if this syntax was found, but, starting with 7.5.6, any use
   of these macros will be ignored.  Instead, the
   \Macro{STARTD\_CRON\_JOBLIST} syntax should be used.
+
+% gittrac #434
+\item Added the configuration variables \Macro{DAGMAN\_VERBOSITY},
+\Macro{DAGMAN\_MAX\_PRE\_SCRIPTS}, \Macro{DAGMAN\_MAX\_POST\_SCRIPTS},
+and \Macro{DAGMAN\_ALLOW\_LOG\_ERROR} (see
+section~\ref{sec:DAGMan-Config-File-Entries} for details).
 
 \end{itemize}
 

@@ -8166,6 +8166,44 @@ in section~\ref{sec:DAG-configuration}.
   A value of 0 allows a job to go on hold any number of times.
   The default value if not defined is 100.
 
+\label{param:DAGManVerbosity}
+\item[\Macro{DAGMAN\_VERBOSITY}]
+  An integer value defining the verbosity of output to the
+  \File{dagman.out} file, as follows (each level includes all output
+  from lower debug levels):
+  \begin{itemize}
+    \item level = 0; never produce output,
+          except for usage info
+    \item level = 1; very quiet, output severe errors
+    \item level = 2; output errors and warnings
+    \item level = 3; normal output
+    \item level = 4; internal debugging output
+    \item level = 5; internal debugging output; outer loop debugging
+    \item level = 6; internal debugging output; inner loop debugging
+    \item level = 7; internal debugging output; rarely used
+  \end{itemize}
+  The default value if not defined is 3.
+
+\label{param:DAGManMaxPreScripts}
+\item[\Macro{DAGMAN\_MAX\_PRE\_SCRIPTS}]
+  An integer defining the maximum number of PRE scripts that any given
+  \Condor{dagman} will run at the same time.  The default value if not
+  defined is 0, which means to allow any number of PRE scripts to run.
+
+\label{param:DAGManMaxPostScripts}
+\item[\Macro{DAGMAN\_MAX\_POST\_SCRIPTS}]
+  An integer defining the maximum number of POST scripts that any given
+  \Condor{dagman} will run at the same time.  The default value if not
+  defined is 0, which means to allow any number of POST scripts to run.
+
+\label{param:DAGManAllowLogError}
+\item[\Macro{DAGMAN\_ALLOW\_LOG\_ERROR}]
+  A boolean value defining whether \Condor{dagman} will still attempt
+  to run a node job, even if errors are detected in the user log
+  specification.  This setting has an effect only on nodes that are
+  Stork jobs (not Condor jobs).  The default value if not defined is
+  \Expr{False}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
