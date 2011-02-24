@@ -1,6 +1,13 @@
 # codegen and build driver until cmake integration
 #!/bin/sh
-export WSFCPP_HOME=/usr
+
+WSFCPP_HOME=/usr
+if [ -z "$1" ]; then
+    echo No arg - using default
+else
+    WSFCPP_HOME=$1
+fi
+echo WSFCPP_HOME=$WSFCPP_HOME
 
 # generate our cpp types from WSDL
 rm -fr codegen/ include/ lib/
