@@ -122,10 +122,12 @@ class TriggerConfig(Session):
 
         cts = self._get_condortriggerservice()
         if cts is None: 
-            return
+            return 1
         print "Initializing, adding default triggers..."
         for t in defaultTriggers:
-            self.add_trigger(t.name, t.query, t.text)
+            if self.add_trigger(t.name, t.query, t.text) > 0:
+                return 1
+        return 0
 
     def list_triggers(self):
         print "Listing currently installed triggers..."
@@ -155,6 +157,8 @@ class TriggerConfig(Session):
         self.tester.reset_event_received()
 
     def test_triggers(self):
+        ret_val = 0
+
         print "Testing triggers..."
         # list currently installed triggers
         self.list_triggers()
@@ -164,15 +168,18 @@ class TriggerConfig(Session):
         interval = self.get_interval()
         if interval != 5:
             print "Error: Interval was not set to 5 seconds"
+            ret_val = 1
         else:
             print "Interval correctly set to 5 seconds"
 
         cts = self._get_condortriggerservice()
         if cts is None: 
-            return
+            ret_val = 1
+            return ret_val
 
         # add a trigger and verify that an event is received
-        self.add_trigger("TestTrigger", "(SlotID == 1)", "$(Machine) has a slot 1")
+        if self.add_trigger("TestTrigger", "(SlotID == 1)", "$(Machine) has a slot 1") > 0:
+            ret_val = 1
         self.list_triggers()
 
         self._wait_for_event()
@@ -181,6 +188,7 @@ class TriggerConfig(Session):
         second_event = time.time()
         if second_event - first_event > 6:
             print "Error: Trigger evaluations occurring greater than every 5 seconds"
+            ret_val = 1
         else:
             print "Trigger evaluations correctly occurring every 5 seconds"
 
@@ -197,9 +205,10 @@ class TriggerConfig(Session):
 
         # The two IDs should be the same
         if trigger_id == new_trigger_id:
-           print "Name successfully changed"
+            print "Name successfully changed"
         else:
-           print "Error: Did not receive same trigger ID for new name (%d vs %s)" % (trigger_id, new_trigger_id)
+            print "Error: Did not receive same trigger ID for new name (%d vs %s)" % (trigger_id, new_trigger_id)
+            ret_val = 1
 
         # change the trigger query and text and verify that an event is received
         self.edit_trigger(trigger_id, "query", "(SlotID > 0)")
@@ -211,21 +220,26 @@ class TriggerConfig(Session):
         self.list_triggers()
 
         # remove the trigger
-        self.del_trigger(trigger_id)
+        if self.del_trigger(trigger_id) > 0:
+            ret_val = 1
+
+        return ret_val
 
     def add_trigger(self, name, query, text):
         cts = self._get_condortriggerservice()
         if cts is None: 
-            return
+            return 1
         print "Adding trigger '%s'..." % (name)
         result = cts.AddTrigger(name, query, text)
         if result.status != 0:
             print "Error: Failed to add trigger '%s' (error message: %d - %s)" % (name, result.status, result.text)
+            return 1
+        return 0
 
     def edit_trigger(self, id, field, value):
         cts = self._get_condortriggerservice()
         if cts is None: 
-            return
+            return 1
         print "Editing trigger '%s', setting '%s' to '%s'..." % (id, field, value)
         if field == "name":
             result = cts.SetTriggerName(id, value)
@@ -235,22 +249,25 @@ class TriggerConfig(Session):
             result = cts.SetTriggerText(id, value)
         else:
             print "Error: invalid field '%s' to be edited" % (field)
-            return
+            return 1
 
         if result.status != 0:
             print "Error: Failed to edit trigger '%s' (error message: %d - %s)" % (id, result.status, result.text)
+            return 1
         else:
             print "Trigger '%s' edited successfully" % (id)
+        return 0
 
     def del_trigger(self, id):
         cts = self._get_condortriggerservice()
         if cts is None: 
-            return
+            return 1
         if id > 0:
             print "Deleting trigger '%d'..." % (id)
             result = cts.RemoveTrigger(id)
             if result.status != 0:
                 print "Error: Failed to delete trigger '%d' (error message: %d - %s)" % (id, result.status, result.text)
+                return 1
         elif id == 0:
             print "Deleting all installed triggers..."
             triggers = self.getObjects(_class="condortrigger")
@@ -259,27 +276,29 @@ class TriggerConfig(Session):
             else:
                 for t in triggers:
                     self.del_trigger(t.TriggerId)
+        return 0
 
     def get_interval(self):
         cts = self._get_condortriggerservice()
         if cts is None: 
-            return
+            return -1
         print "Retrieving interval..."
         result = cts.GetEvalInterval()
         if result.status != 0:
             print "Error: Failed to retrieve interval (error message: %d - %s)" % (result.status, result.text)
-            return 0
+            return -1
         else:
             return result.outArgs["Interval"]
 
     def set_interval(self, interval):
         cts = self._get_condortriggerservice()
         if cts is None: 
-            return
+            return 1
         print "Setting interval to '%d' seconds..." % (interval)
         result = cts.SetEvalInterval(interval)
         if result.status != 0:
             print "Error: Failed to set interval (error message: %d - %s)" % (result.status, result.text)
+            return 1
         
     def _get_condortriggerservice(self):
         if self.cts == None:
@@ -319,6 +338,7 @@ class TriggerConfigOptionParser(OptionParser):
         return valid
 
 def main():
+    ret_val = 0
     parser = TriggerConfigOptionParser(usage="usage: %s [options] broker" % (sys.argv[0],))
 
     opts, args = parser.parse_args()
@@ -340,19 +360,19 @@ def main():
 
     try:
         if opts.init:
-            session.add_default_triggers()
+            ret_val = session.add_default_triggers()
         elif opts.add:
-            session.add_trigger(opts.name, opts.query, opts.text)
+            ret_val = session.add_trigger(opts.name, opts.query, opts.text)
         elif opts.delete != None:
-            session.del_trigger(opts.delete)
+            ret_val = session.del_trigger(opts.delete)
         elif opts.list:
             session.list_triggers()
         elif opts.test:
-            session.test_triggers()
+            ret_val = session.test_triggers()
     finally:
         session.delBroker(broker)
     
-    sys.exit(0)
+    sys.exit(ret_val)
 
 if __name__ == "__main__":
     try:
