@@ -58,6 +58,11 @@ The details of each version are described below.
 ERROR "Assertion ERROR on (m_ref_count == 0)"
 \end{verbatim}
 
+% gittrack 1913
+\item Changes to the negotiator's address were not published to the
+  collector until the negotiator was reconfigured or restarted.  This was
+  a problem in some situations when using \Condor{shared\_port}.
+
 \end{itemize}
 
 \noindent Known Bugs:
