@@ -45,7 +45,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrack 1928
+\item \AdAttr{JobUniverse} was documented as an optional attribute for
+  jobs created via the fetch-work hook, but it was effectively
+  required, because the default \AdAttr{IsValidCheckpointPlatform}
+  expression evaluated to \Expr{undefined} without it.  Now the
+  default \AdAttr{IsValidCheckpointPlatform} expression evaluates to
+  \Expr{true} when \AdAttr{JobUniverse} is not defined.
 
 \end{itemize}
 
