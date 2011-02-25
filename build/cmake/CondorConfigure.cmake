@@ -362,11 +362,7 @@ if (NOT HPUX)
 	endif()
 endif(NOT HPUX)
 
-if (WINDOWS) 
-    if (WANT_CONTRIB AND WITH_MANAGEMENT)
-        set (CONDOR_QMF condor_qmflib) # global scoping dep
-    endif()
-else() # *nix
+if (NOT WINDOWS) 
 	option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 
@@ -436,16 +432,11 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-if (NOT WINDOWS)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-endif(NOT WINDOWS)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
-
-if (NOT WIN_EXEC_NODE_ONLY)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
-endif(NOT WIN_EXEC_NODE_ONLY)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 
 if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
@@ -500,6 +491,12 @@ if (CONDOR_EXTERNALS AND NOT WINDOWS)
 	add_custom_target( externals DEPENDS ${EXTERNAL_MOD_DEP} )
 	add_dependencies( externals ${CONDOR_EXTERNALS} )
 endif(CONDOR_EXTERNALS AND NOT WINDOWS)
+
+######### special case for contrib
+if (WINDOWS AND WANT_CONTRIB AND WITH_MANAGEMENT)
+    # global scoping external linkage var when options enable.
+    set (CONDOR_QMF condor_qmflib;${QPID_FOUND};${BOOST_FOUND})
+endif()
 
 message(STATUS "********* External configuration complete (dropping config.h) *********")
 dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
