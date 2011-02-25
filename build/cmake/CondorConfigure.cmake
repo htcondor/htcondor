@@ -90,7 +90,9 @@ if(BUILD_DATE)
 endif()
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
-set( CMAKE_VERBOSE_MAKEFILE TRUE )
+
+# set to true to enable printing of make actions
+set( CMAKE_VERBOSE_MAKEFILE FALSE )
 set( BUILD_SHARED_LIBS FALSE )
 
 # Windows is so different perform the check 1st and start setting the vars.
