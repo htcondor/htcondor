@@ -207,6 +207,14 @@ removing any of the jobs in the set will cause the
 \Attr{OtherJobRemoveRequirements} is defined on
 page ~\pageref{attribute-OtherJobRemoveRequirements}.
 
+% gittrac #1751
+\item In a \Condor{dagman} workflow, if a splice contains nothing but
+another splice, parsing the DAG will fail.  This can be worked around
+by putting any non-splice job (including a DAG-level NOOP job) in the
+offending splice.  This bug has apparently existed since the splice
+feature was introduced in \Condor{dagman}.
+
+
 \end{itemize}
 
 \noindent Additions and Changes to the Manual:
