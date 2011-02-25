@@ -37,7 +37,6 @@ elseif(${OS_NAME} MATCHES "WIN")
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
 	set(BISON_SIMPLE ${C_WIN_BIN}/bison.simple)
-	set(LN "LN-NOTFOUND")
 	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
 
 	set (HAVE_SNPRINTF 1)
@@ -232,11 +231,10 @@ if( NOT WINDOWS)
     		ARGS ${CMAKE_C_COMPILER_ARG1} -dumpversion
     		OUTPUT_VARIABLE CMAKE_C_COMPILER_VERSION )
 
-    find_program(LN ln)
-
 endif()
 
 find_program(HAVE_VMWARE vmware)
+find_program(LN ln)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -362,7 +360,11 @@ if (NOT HPUX)
 	endif()
 endif(NOT HPUX)
 
-if (NOT WINDOWS) # if *nix
+if (WINDOWS) 
+    if (WANT_CONTRIB AND WITH_MANAGEMENT)
+        set (CONDOR_QMF condor_qmflib) # global scoping dep
+    endif()
+else() # *nix
 	option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 
