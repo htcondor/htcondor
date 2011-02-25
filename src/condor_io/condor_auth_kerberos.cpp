@@ -1419,7 +1419,9 @@ int Condor_Auth_Kerberos :: isValid() const
     return auth_context_ != NULL;  // This is incorrect!
 }
 
-void Condor_Auth_Kerberos :: dprintf_krb5_principal ( int deblevel, char *fmt, krb5_principal p ) {
+void Condor_Auth_Kerberos :: dprintf_krb5_principal ( int deblevel,
+													  const char *fmt,
+													  krb5_principal p ) {
 
 	if (p) {
 		char * tmpprincname = 0;

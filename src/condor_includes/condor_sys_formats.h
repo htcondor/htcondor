@@ -33,7 +33,7 @@
 /* If no inttypes, try to define our own (make a guess) */
 /* The win 32 include file defines the win32 versions */
 #if !defined(PRId64)
-# if ( defined(HAVE_LONG) && (SIZEOF_LONG==8) )
+# if ( SIZEOF_LONG==8 )
 #  define PRId64 "ld"
 #  define PRIi64 "li"
 #  define PRIu64 "lu"
@@ -48,7 +48,7 @@
 
 /* Define types that match the PRIx64_t print format strings */
 #if !defined(PRId64_t)
-# if ( defined(HAVE_LONG) && (SIZEOF_LONG==8) )
+# if ( SIZEOF_LONG==8 )
 #  define PRId64_t long
 #  define PRIi64_t long
 #  define PRIu64_t unsigned long

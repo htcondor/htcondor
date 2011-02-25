@@ -250,7 +250,7 @@ int Sock::getportbyserv(
 	)
 {
 	servent		*sp;
-	char		*my_prot=0;
+	const char	*my_prot=0;
 
 	if (!s) return -1;
 

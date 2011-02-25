@@ -75,11 +75,11 @@ int ResConvStr(char* InpStr, char* OutStr)
   int KbdIdle;
   int State;
   if (sscanf(InpStr," %f %d %f %d",&T,&KbdIdle,&LoadAvg,&State)!=4) return -1;
-  char *stateStr;
+  const char *stateStr;
   // Note: This should be kept in sync with condor_state.h, and with
   // StartdScanFunc() of view_server.C, and with
   // typedef enum ViewStates of view_server.h
-  char* StateName[] = {
+  const char* StateName[] = {
 	  "UNCLAIMED",
 	  "MATCHED",
 	  "CLAIMED",

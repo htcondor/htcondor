@@ -619,9 +619,9 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   Totals.BeginUsage=0;
   Totals.AccUsage=0;
   
-  char* Fmt1="%-30s %14.2f\n";  // Data line format
-  char* Fmt2="%-30s %14s\n";    // Title and separator line format
-  char* Fmt3="Number of users shown: %-13d %14s\n";    // Totals line format
+  const char* Fmt1="%-30s %14.2f\n";  // Data line format
+  const char* Fmt2="%-30s %14s\n";    // Title and separator line format
+  const char* Fmt3="Number of users shown: %-13d %14s\n";  // Totals line format
 
   if (DetailFlag==1) {
     Fmt1="%-30s %14.2f %8.2f %12.2f %4.0f %12.2f %14s %14s\n"; 
