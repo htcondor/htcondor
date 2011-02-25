@@ -111,6 +111,7 @@ else()
 	add_dependencies( condor_qmflib qmf_gen_srcs )
 
 	# Windows only contrib library, as plugins are totally hosed on windows.
-	set (CONDOR_QMF condor_qmflib PARENT_SCOPE)
+	# exists under CondorContrib, need to find a cleaner way
+    # set (CONDOR_QMF condor_qmflib PARENT_SCOPE)
 
 endif()
