@@ -58,6 +58,18 @@ ClassAdListDoesNotDeleteAds::ClassAdListDoesNotDeleteAds():
 
 ClassAdListDoesNotDeleteAds::~ClassAdListDoesNotDeleteAds()
 {
+	Clear();
+	delete list_head;
+	list_head = NULL;
+}
+
+ClassAdList::~ClassAdList()
+{
+	Clear();
+}
+
+void ClassAdListDoesNotDeleteAds::Clear()
+{
 	for(list_cur=list_head->next;
 		list_cur!=list_head;
 		list_cur=list_head->next)
@@ -65,12 +77,12 @@ ClassAdListDoesNotDeleteAds::~ClassAdListDoesNotDeleteAds()
 		list_head->next = list_cur->next;
 		delete list_cur;
 	}
-	delete list_head;
-	list_head = NULL;
-	list_cur = NULL;
+	list_head->next = list_head;
+	list_head->prev = list_head;
+	list_cur = list_head;
 }
 
-ClassAdList::~ClassAdList()
+void ClassAdList::Clear()
 {
 	for(list_cur=list_head->next;
 		list_cur!=list_head;
@@ -79,6 +91,7 @@ ClassAdList::~ClassAdList()
 		delete list_cur->ad;
 		list_cur->ad = NULL;
 	}
+	ClassAdListDoesNotDeleteAds::Clear();
 }
 
 ClassAd* ClassAdListDoesNotDeleteAds::Next()

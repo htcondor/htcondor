@@ -74,3 +74,4 @@ if( WINDOWS )
 endif()
 
 condor_exe_test(condor_test_auth "test_auth.cpp" "${TOOL_LINK_LIBS}")
+condor_exe(condor_test_match "condor_test_match.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
