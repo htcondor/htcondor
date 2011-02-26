@@ -30,12 +30,14 @@ if (BUILD_TESTS)
 	##########################################################
 	## begin file goop manipulation specific to the horror that
 	## is the "condor testing framework."
-	file(COPY ${CONDOR_SCRIPTS_DIR}/Condor.pm
-			${CONDOR_SCRIPTS_DIR}/CondorTest.pm
-			${CONDOR_SCRIPTS_DIR}/CondorPersonal.pm
-			${CONDOR_SCRIPTS_DIR}/CondorUtils.pm
-			${CONDOR_SCRIPTS_DIR}/batch_test.pl
-		DESTINATION ${TEST_TARGET_DIR})
+	foreach(scriptFile Condor.pm
+			   CondorTest.pm
+			   CondorPersonal.pm
+			   CondorUtils.pm
+			   batch_test.pl)
+		configure_file(${CONDOR_SCRIPTS_DIR}/${scriptFile}
+				${TEST_TARGET_DIR}/${scriptFile} COPYONLY)
+	endforeach(scriptFile)
 
 	# 1st remove generated files.
 	file( GLOB RMV_FIRST ${TEST_TARGET_DIR}/list_* *.desc )
