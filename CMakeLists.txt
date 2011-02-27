@@ -82,10 +82,10 @@ include (CondorStaticLib)
 include (CondorPlugin)
 include (CheckCXXCompilerFlag)
 include (CheckCXXSourceCompiles)
-include (CondorConfigure)     # will initiate the configure
 include (AddSubdirectories)
 include (CondorPLTest)
 include (CondorExeTest)
+include (CondorConfigure)     # will initiate the configure
 include (CondorStdExeTest)
 include (SrcTargetRef)
 include (DumpLocalFlags)
