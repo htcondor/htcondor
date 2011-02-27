@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "match_prefix.h"
 #include "HashTable.h"
-#include "condor_classad_util.h"
 #include "condor_attributes.h"
 
 static unsigned int ClassAdPtrHash(ClassAd * const &ptr);
