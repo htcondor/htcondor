@@ -135,73 +135,6 @@ convert_ad_to_adStruct(struct soap *s,
 		continue;
 	}
 
-#ifdef WANT_OLD_CLASSADS
-    skip_attr = false;
-    switch ( tree->MyType() ) {
-    case LX_STRING:
-		if (isDeepCopy) {
-			ad_struct->__ptr[attr_index].value =
-				(char *) soap_malloc(s, strlen(((String *) tree)->Value()) + 1);
-			strcpy(ad_struct->__ptr[attr_index].value,
-				   ((String *) tree)->Value());
-		} else {
-			ad_struct->__ptr[attr_index].value = (char*)((String*)tree)->Value();
-		}
-      //dprintf(D_ALWAYS,"STRINGSPACE|%s|%p\n",ad_struct->__ptr[attr_index].value,ad_struct->__ptr[attr_index].value);
-      ad_struct->__ptr[attr_index].type = STRING_ATTR;
-      break;
-    case LX_INTEGER:
-      tmpint = ((Integer*)tree)->Value();
-      ad_struct->__ptr[attr_index].value = (char*)soap_malloc(s,20);
-      snprintf(ad_struct->__ptr[attr_index].value,20,"%d",tmpint);
-      // ad_struct->__ptr[attr_index].valueInt = (int*)soap_malloc(s,sizeof(int));
-      // *(ad_struct->__ptr[attr_index].valueInt) = tmpint;
-      ad_struct->__ptr[attr_index].type = INTEGER_ATTR;
-      break;
-    case LX_FLOAT:
-      tmpfloat = ((Float*)tree)->Value();
-      ad_struct->__ptr[attr_index].value = (char*)soap_malloc(s,20);
-      snprintf(ad_struct->__ptr[attr_index].value,20,"%f",tmpfloat);
-      // ad_struct->__ptr[attr_index].valueFloat = (float*)soap_malloc(s,sizeof(float));
-      // *(ad_struct->__ptr[attr_index].valueFloat) = tmpfloat;
-      ad_struct->__ptr[attr_index].type = FLOAT_ATTR;
-      break;
-    case LX_BOOL:
-      tmpbool = ((ClassadBoolean*)tree)->Value() ? true : false;
-      if ( tmpbool ) {
-        ad_struct->__ptr[attr_index].value = "TRUE";
-      } else {
-        ad_struct->__ptr[attr_index].value = "FALSE";
-      }
-      // ad_struct->__ptr[attr_index].valueBool = (bool*)soap_malloc(s,sizeof(bool));
-      // *(ad_struct->__ptr[attr_index].valueBool) = tmpbool;
-      ad_struct->__ptr[attr_index].type = BOOLEAN_ATTR;
-      break;
-    case LX_NULL:
-    case LX_UNDEFINED:
-    case LX_ERROR:
-      // if we cannot deal with this type, skip this attribute
-      skip_attr = true;
-      break;
-    default:
-      // assume everything else is some sort of expression
-      tmpstr = NULL;
-      int buflen = strlen( ExprTreeToString( tree ) );
-      tmpstr = (char*)soap_malloc(s,buflen + 1); // +1 for termination
-      ASSERT(tmpstr);
-      tmpstr[0] = '\0';
-	  strcpy( tmpstr, ExprTreeToString( tree ) );
-      if ( !(tmpstr[0]) ) {
-        skip_attr = true;
-      } else {
-        ad_struct->__ptr[attr_index].value = tmpstr;
-        // ad_struct->__ptr[attr_index].valueExpr = tmpstr;
-        // soap_link(s,(void*)tmpstr,0,1,NULL);
-        ad_struct->__ptr[attr_index].type = EXPRESSION_ATTR;
-      }
-      break;
-    }
-#else
     skip_attr = false;
 	if ( tree->GetKind() == classad::ExprTree::LITERAL_NODE ) {
 		classad::Value val;
@@ -255,7 +188,6 @@ convert_ad_to_adStruct(struct soap *s,
 			ad_struct->__ptr[attr_index].type = EXPRESSION_ATTR;
 		}
 	}
-#endif
     // skip this attr is requested to do so...
     if ( skip_attr ) continue;
 

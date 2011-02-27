@@ -22,7 +22,6 @@
 #include "condor_config.h"
 #include "condor_accountant.h"
 #include "condor_classad.h"
-#include "condor_classad_util.h"
 #include "condor_debug.h"
 #include "condor_query.h"
 #include "condor_q.h"

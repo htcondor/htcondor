@@ -22,7 +22,6 @@
 #include "condor_classad.h"
 #include "condor_xml_classads.h"
 #include "stringSpace.h"
-#include "condor_scanner.h" 
 #include "iso_dates.h"
 #define HAVE_DLOPEN 1
 #ifdef HAVE_DLOPEN // Used to be CLASSAD_FUNCTIONS

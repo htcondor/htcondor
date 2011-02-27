@@ -22,7 +22,6 @@
 #include "condor_debug.h"
 #include "classad_merge.h"
 #include "condor_classad.h"
-#include "condor_classad_util.h"
 #include "named_classad.h"
 #include "named_classad_list.h"
 

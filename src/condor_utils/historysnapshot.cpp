@@ -25,7 +25,7 @@
 #define DO_NOT_USE_DISPLAYJOBSHORT 1
 #include "historysnapshot.h"
 #include "quill_enums.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 
 #ifdef HAVE_EXT_POSTGRESQL
 

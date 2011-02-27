@@ -33,8 +33,6 @@
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "condor_io.h"
-#include "condor_parser.h"
-#include "condor_scanner.h"
 #include "condor_distribution.h"
 #include "condor_ver_info.h"
 #if !defined(WIN32)

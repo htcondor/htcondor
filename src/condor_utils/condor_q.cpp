@@ -26,7 +26,7 @@
 #include "format_time.h"
 #include "condor_config.h"
 #include "CondorError.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "quill_enums.h"
 
 #ifdef HAVE_EXT_POSTGRESQL

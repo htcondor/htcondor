@@ -19,10 +19,8 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_exprtype.h"
+#include "condor_classad.h"
 #include "condor_attributes.h"
-#include "condor_astbase.h"
-#include "condor_parser.h"
 #include "condor_qmgr.h"
 
 #include "ClassAdLogReader.h"
