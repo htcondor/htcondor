@@ -73,8 +73,8 @@ else {
 
 # Checking task type
 if( $taskname eq $EXTERNALS_TASK ) {
-    # Since we only declare the externals task on Windows, we don't have
-    # to handle invoking the Windows build tools.
+    # Since we do not declare the externals task on Windows, we don't have
+    # to handle invoking the Windows build tools in this step.
     $execstr = "make externals";
 }
 elsif ($taskname eq $UNSTRIPPED_TASK) {
