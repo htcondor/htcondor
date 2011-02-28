@@ -39,25 +39,34 @@
 #  endif
 #endif /* not WIN32 */
 
+#define DEFAULT_LOG_FILE "./axis2.log"
+#define DEFAULT_REPO_FILE "../axis2.xml"
+#define DEFAULT_PORT 9090
+
 // C++ wrapper around a SINGLE-THREADED
 // Axis2/C engine; suitable for integration
 // with DaemonCore socket registration
 // ./configure --enable-multi-thread=no
 class Axis2SoapProvider {
     public:
-        Axis2SoapProvider();
+        Axis2SoapProvider(int _log_level = AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
         ~Axis2SoapProvider();
-        bool init(int _log_level, const char* _log_file, const char* _repo_path, int _port, std::string& _error);
+        bool init(int _port, int _read_timeout, std::string& _error);
         SOCKET getHttpListenerSocket();
         bool processHttpRequest(std::string& _error);
 
     private:
+        const char* m_log_file;
+        const char* m_repo_path;
+        axutil_log_levels_t m_log_level;
         axutil_env_t* m_env;
         axis2_transport_receiver_t* m_http_server;
         axis2_http_svr_thread_t* m_svr_thread;
+        int m_http_socket_read_timeout;
         bool m_initialized;
 
         axis2_http_svr_thread_t* createHttpReceiver(axutil_env_t* _env, axis2_transport_receiver_t* _server, std::string& _error);
+        void *AXIS2_THREAD_FUNC invokeHttpWorker( axutil_thread_t * thd, void *data );
 };
 
 #endif    // AXIS2SOAPPROVIDER_H

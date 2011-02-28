@@ -25,10 +25,13 @@
 #include "condor_config.h"
 #include "stat_info.h"
 
+#include "Axis2SoapProvider.h"
+
 // about self
 DECL_SUBSYSTEM("QUERY_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
 ClassAd	*ad = NULL;
+Axis2SoapProvider* provider = NULL;
 
 extern MyString m_path;
 
@@ -42,7 +45,17 @@ int main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
-    // TODO: init transport here?
+    // TODO: may want to get these from condor config?
+    const char* log_file = "./axis2.log";
+    std::string repo_path = getenv("WSFCPP_HOME");
+
+    // init transport here
+    provider = new Axis2SoapProvider(AXIS2_LOG_LEVEL_DEBUG,log_file,repo_path.c_str());
+    std::string axis_error;
+
+    if (!provider->init(DEFAULT_PORT,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
+        EXCEPT("Failed to initialize Axis2SoapProvider");
+    }
 
 	init_classad();
 
@@ -51,7 +64,7 @@ int main_init(int /* argc */, char * /* argv */ [])
 		EXCEPT("Failed to allocate transport socket");
 	}
 	// TODO: get socket from transport here?
-	if (!sock->assign(0)) {
+	if (!sock->assign(provider->getHttpListenerSocket())) {
 		EXCEPT("Failed to bind transport socket");
 	}
 	int index;
@@ -157,6 +170,10 @@ int
 HandleTransportSocket(Service *, Stream *)
 {
 	// TODO: respond to a transport callback here?
+	std::string provider_error;
+    if (!provider->processHttpRequest(provider_error)) {
+        dprintf (D_ALWAYS,"Error processing request: %s\n",provider_error.c_str());
+    }
 
 	return KEEP_STREAM;
 }

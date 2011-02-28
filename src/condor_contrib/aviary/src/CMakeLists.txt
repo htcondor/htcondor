@@ -31,6 +31,10 @@ if (LINUX)
 
     set ( QUERY_SRCS AviaryQueryService.cpp;AviaryQueryServiceMacro.cpp;AviaryQueryServiceSkeleton.cpp;Axis2SoapProvider.cpp)
     set ( QUERY_LIBS ${CMAKE_CURRENT_SOURCE_DIR}/../lib/libaviary_query_types.so )
+    set ( AXIS2_LIBS
+            $ENV{WSFCPP_HOME}/lib/libaxutil.so $ENV{WSFCPP_HOME}/lib/libaxis2_engine.so 
+                $ENV{WSFCPP_HOME}/lib/libaxis2_http_common.so $ENV{WSFCPP_HOME}/lib/libaxis2_parser.so
+                    $ENV{WSFCPP_HOME}/lib/libaxis2_http_receiver.so )
     
     dprint( "QUERY_SRCS = ${QUERY_SRCS}" )
 
@@ -46,6 +50,6 @@ if (LINUX)
     dprint( "Hdrs = ${Hdrs}" )
 
     condor_static_lib( aviaryquery "${Hdrs};${Srcs};${WS02_GEN_SRCS}" )
-    condor_exe( aviary_query_server "aviary_query_server.cpp" "${C_SBIN}" "aviaryquery;${QUERY_LIBS};${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
+    condor_exe( aviary_query_server "aviary_query_server.cpp" "${C_SBIN}" "aviaryquery;${AXIS2_LIBS};${QUERY_LIBS};${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
 
 endif(LINUX)
