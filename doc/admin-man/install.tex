@@ -792,7 +792,6 @@ Condor is installed into FHS locations.
 Yum repositories are at
  \URL{http://www.cs.wisc.edu/condor/yum}.
 
-
 Before a first installation, 
 create a \Login{condor} user and group as appropriate to the installation.
 The Condor package will automatically add a \Login{condor} user/group
@@ -844,6 +843,49 @@ Installation is then complete.  Start Condor daemons:
 % Alain thinks that upgrades DO work.
 %RPM upgrade (\Opt{-u} option) does not currently
 %work for Condor \VersionNotice.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:install-debs} DEBs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{installation!using DEBs}
+\index{Debian installation with DEBs}
+
+DEBs are available in \VersionNotice.
+Our packaging provides a Debian repository, as well as 
+installation and configuration in one easy step.
+They are currently available for Debian 4 (Etch) and Debian 5 (Lenny).
+As of Condor version 7.5.1, 
+Condor is installed into FHS locations.
+
+Debian repositories are specified at
+ \URL{http://www.cs.wisc.edu/condor/debian}.
+See this site for repository information.
+
+Before a first installation, 
+create a \Login{condor} user and group as appropriate to the installation.
+The Condor package will automatically add a \Login{condor} user/group
+if it does not exist already.
+Sites with a targeted security policy should add the \Login{condor} 
+user/group manually before installation.
+
+Install:
+\begin{verbatim}
+  apt-get update
+  apt-get install condor
+\end{verbatim}
+
+As needed, edit the Condor configuration files to customize.
+The configuration files are in the directory \File{/etc/condor/}.
+Do \emph{not} use \Condor{configure} or \Condor{install} for configuration.
+The installation will be able to find configuration files without
+additional administrative intervention,
+as the configuration files are placed in \File{/etc},
+and the ordered search algorithm utilized by Condor for finding
+its configuration includes this directory.
+Then, restart Condor with
+\begin{verbatim}
+  /etc/init.d/condor restart
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:upgrade-directions}Upgrading - Installing a Newer
