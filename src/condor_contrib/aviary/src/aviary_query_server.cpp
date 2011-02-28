@@ -38,6 +38,7 @@ extern MyString m_path;
 void init_classad();
 void Dump();
 int HandleTransportSocket(Service *, Stream *);
+void TestDCTimer(Service*);
 
 //-------------------------------------------------------------
 
@@ -76,6 +77,16 @@ int main_init(int /* argc */, char * /* argv */ [])
                                            "Handler for transport invocations"))) {
 		EXCEPT("Failed to register transport socket");
 	}
+	if (-1 == (index =
+            daemonCore->Register_Timer(
+                0,
+                30,
+                (TimerHandler)TestDCTimer,
+                "Test timer to ensure DC time slicing"
+                )))
+    {
+        EXCEPT("Failed to register test timer");
+    }
 
 	return TRUE;
 }
@@ -178,6 +189,10 @@ HandleTransportSocket(Service *, Stream *)
 	return KEEP_STREAM;
 }
 
+void TestDCTimer(Service* )
+{
+    dprintf(D_ALWAYS, "DameonCore timer called\n");
+}
 
 void
 Dump()
