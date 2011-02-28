@@ -4,6 +4,8 @@
 #include <errno.h>
 
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/time.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -23,7 +25,7 @@
 const int STATE_NUM = 100; // Will need to change this later
 
 
-void run_server( char* server_name,  char* server_port)
+void run_server( ServerArguments* arg)
 {
 
 	StateAction SM_States[STATE_NUM];
@@ -52,9 +54,12 @@ void run_server( char* server_name,  char* server_port)
 	memset( &master_server, 0, sizeof( ServerRecord ));
 	memset( &session_state, 0, sizeof( ServerState ));
 
-	master_server.server_name = server_name;
-	master_server.server_port = server_port;
+	master_server.server_name = arg->lhost;
+	master_server.server_port = arg->lport;
 	master_server.server_socket = -1;
+
+	session_state.arguments = arg;
+	session_state.data_buffer = NULL;
 
 	start_server( &master_server );
 	
@@ -63,6 +68,11 @@ void run_server( char* server_name,  char* server_port)
 				//Error has happened, TODO: handle here
 			return;
 		}
+	
+
+	if( session_state.arguments->announce )
+		announce_server( &master_server, &session_state );
+
 
 	handle_client( &master_server, &session_state );
 
@@ -88,6 +98,21 @@ void run_server( char* server_name,  char* server_port)
 
 		// We may want some clean up based on
 	    // the final condition of session_state.
+	
+
+
+		// Clean up allocated memory
+
+	if( session_state.client_info.client_name)
+		free( session_state.client_info.client_name );
+	if( session_state.client_info.client_port )
+		free( session_state.client_info.client_port );
+	if( session_state.data_buffer )
+		free( session_state.data_buffer );
+	if( session_state.local_file.filename )
+		free( session_state.local_file.filename );
+	if( session_state.session_parameters )
+		free( session_state.session_parameters );
 
 	return;
 }
@@ -173,6 +198,72 @@ void start_server( ServerRecord* master_server )
 }
 
 
+/*
+
+
+
+announce_server
+
+*/
+
+void announce_server( ServerRecord* master_server, ServerState* state )
+{
+	
+	int sockfd;
+    struct addrinfo hints, *servinfo, *p;
+    int rv;
+    int numbytes;
+	char message[512];
+
+	VERBOSE( "Announcing server presence..." )
+
+	memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+
+    if ((rv = getaddrinfo( state->arguments->ahost,
+						   state->arguments->aport,
+						   &hints, &servinfo)) != 0)
+		{
+			fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+			return;
+		}
+
+    // loop through all the results and make a socket
+    for(p = servinfo; p != NULL; p = p->ai_next) {
+        if ((sockfd = socket(p->ai_family, p->ai_socktype,
+                p->ai_protocol)) == -1) {
+            perror("talker: socket");
+            continue;
+        }
+
+        break;
+    }
+
+    if (p == NULL) {
+        fprintf(stderr, "announce server: failed to bind socket\n");
+        return;
+    }
+	
+	memset( message, 0, 512 );
+	sprintf( message, "%s %s", state->arguments->lhost,
+			 state->arguments->lport );
+
+    if ((numbytes = sendto(sockfd, message, strlen( message ), 0,
+             p->ai_addr, p->ai_addrlen)) == -1) {
+        perror("announce server: sendto");
+        return;
+    }
+
+    freeaddrinfo(servinfo);
+
+    close(sockfd);
+
+	VERBOSE( "Complete!\n\n" )
+
+    return;
+
+}
 
 
 
@@ -182,7 +273,7 @@ void start_server( ServerRecord* master_server )
 handle_client
 
 */
-void handle_client( ServerRecord* master_server, ServerState* session_state )
+void handle_client( ServerRecord* master_server, ServerState* state )
 {
 
 	int results;
@@ -192,6 +283,39 @@ void handle_client( ServerRecord* master_server, ServerState* session_state )
 
 	struct sockaddr_storage client_addr;
     socklen_t addr_size;	
+	fd_set accept_set;
+	struct timeval timeout_tv;
+
+	VERBOSE( "Waiting for client connection...\n")
+
+	fcntl(master_server->server_socket, F_SETFL, O_NONBLOCK);
+	
+	FD_ZERO(&accept_set);
+	FD_SET( master_server->server_socket, &accept_set );
+	
+	timeout_tv.tv_sec = state->arguments->itimeout;
+	timeout_tv.tv_usec = 0;
+	
+	
+	if( state->arguments->itimeout == -1 )
+		results = select(master_server->server_socket+1, &accept_set,
+						 NULL, NULL, NULL);
+	else
+		results = select(master_server->server_socket+1, &accept_set,
+						 NULL, NULL, &timeout_tv);
+
+	if( results == -1 )
+		{
+			fprintf( stderr, "Error on accepting: %s\n", strerror( errno ) );
+			state->last_error = 1;
+			return;
+		}	
+	if( results == 0 )
+		{
+			fprintf( stderr, "No client connected within initial wait period. Exiting.\n" );
+			state->last_error = 1;
+			return;
+		}
 
 	addr_size = sizeof( client_addr );
 	results = accept( master_server->server_socket,
@@ -201,72 +325,73 @@ void handle_client( ServerRecord* master_server, ServerState* session_state )
 	if( results == -1)
 		{
 			fprintf( stderr, "Error on accepting: %s\n", strerror( errno ) );
-			session_state->last_error = 1;
+			state->last_error = 1;
 			return;
 		}	
 	
-	session_state->client_info.client_socket = results;
-	session_state->client_info.client_name = NULL;
-	session_state->client_info.client_port = NULL;
+	state->client_info.client_socket = results;
+	state->client_info.client_name = NULL;
+	state->client_info.client_port = NULL;
 
 		// Test if the client is using a IP4 address
 	if( client_addr.ss_family == AF_INET )
 		{
-#ifdef SERVER_DEBUG
-			fprintf( stderr, "Client is using IP4.\n" );
-#endif
+			if( state->arguments->debug )
+				fprintf( stderr, "Client is using IP4.\n" );
 
 			caddr_ip4 = (struct sockaddr_in*)(&client_addr);
 
 			// Allocate enough space for an IP4 address
-			session_state->client_info.client_name = (char*) malloc( INET_ADDRSTRLEN ); 
-			memset( session_state->client_info.client_name, 0, INET_ADDRSTRLEN );
+			state->client_info.client_name = (char*) malloc( INET_ADDRSTRLEN ); 
+			memset( state->client_info.client_name, 0, INET_ADDRSTRLEN );
 			
 			inet_ntop( AF_INET, &(caddr_ip4->sin_addr),
-					   session_state->client_info.client_name, INET_ADDRSTRLEN);
+					   state->client_info.client_name, INET_ADDRSTRLEN);
 
 			// 10 chars will hold a IP4 port
-			session_state->client_info.client_port = (char*) malloc( 10 ); 
-			memset( session_state->client_info.client_port, 0, 10 );
+			state->client_info.client_port = (char*) malloc( 10 ); 
+			memset( state->client_info.client_port, 0, 10 );
 			
 			// extract the address from the raw value
-			sprintf( session_state->client_info.client_port, "%d", 
+			sprintf( state->client_info.client_port, "%d", 
 					 ntohs( caddr_ip4->sin_port) );   // port number
 		}
 
 		// Test if the client is using a IP6 address
 	if( client_addr.ss_family == AF_INET6 )
 		{
-#ifdef SERVER_DEBUG
-			fprintf( stderr, "Client is using IP6.\n" );
-#endif
+
+			if( state->arguments->debug )
+				fprintf( stderr, "Client is using IP6.\n" );
+
 
 			caddr_ip6 = (struct sockaddr_in6*)(&client_addr);
 
 			// Allocate enough space for an IP6 address
-			session_state->client_info.client_name = (char*) malloc( INET6_ADDRSTRLEN ); 
-			memset( session_state->client_info.client_name, 0, INET6_ADDRSTRLEN );
+			state->client_info.client_name = (char*) malloc( INET6_ADDRSTRLEN ); 
+			memset( state->client_info.client_name, 0, INET6_ADDRSTRLEN );
 			
 			inet_ntop( AF_INET6, &(caddr_ip6->sin6_addr),
-					   session_state->client_info.client_name, INET6_ADDRSTRLEN);
+					   state->client_info.client_name, INET6_ADDRSTRLEN);
 
 			// 10 chars will hold a IP6 port
-			session_state->client_info.client_port = (char*) malloc( 10 ); 
-			memset( session_state->client_info.client_port, 0, 10 );
+			state->client_info.client_port = (char*) malloc( 10 ); 
+			memset( state->client_info.client_port, 0, 10 );
 			
 			// extract the address from the raw value
-			sprintf( session_state->client_info.client_port, "%d", 
+			sprintf( state->client_info.client_port, "%d", 
 					 ntohs( caddr_ip6->sin6_port) );   // port number
 		}
 
-#ifdef SERVER_DEBUG
-	if( session_state->client_info.client_name && session_state->client_info.client_port )
-		fprintf( stderr, "The client is %s at port %s.\n",
-				 session_state->client_info.client_name, session_state->client_info.client_port );
-#endif
+
+	if( state->arguments->debug )
+		if( state->client_info.client_name && state->client_info.client_port )
+			fprintf( stderr, "The client is %s at port %s.\n\n",
+					 state->client_info.client_name, state->client_info.client_port );
 
 
-	session_state->last_error = 0;
+	VERBOSE( "Client accepted.\n\n" )
+	state->last_error = 0;
 	return;
 
 }
@@ -284,18 +409,18 @@ void handle_client( ServerRecord* master_server, ServerState* session_state )
 run_state_machine 
 
 */
-int run_state_machine( StateAction* states, ServerState* session_state )
+int run_state_machine( StateAction* states, ServerState* state )
 {
 	int condition;
 
 
-	if( session_state->state == -1 )
+	if( state->state == -1 )
 		return 1; // We are done here
 	else	
 		{
-			condition = states[session_state->state]( session_state );
-			recv_cftp_frame( session_state );
-			session_state->state = transition_table( session_state, condition );
+			condition = states[state->state]( state );
+			recv_cftp_frame( state );
+			state->state = transition_table( state, condition );
 			return 0;
 		}
 }
@@ -330,14 +455,59 @@ int transition_table( ServerState* state, int condition )
 			if( condition == -1 ) // Something bad happened here
 				return S_UNKNOWN_ERROR;
 
+				//TODO: Need to handle parameter constraint failures
+
 			return S_ACK_SESSION_PARAMETERS;
 
 
 
 		case S_ACK_SESSION_PARAMETERS:
-			return S_RECV_CLIENT_READY;
+			if( state->frecv_buf.MessageType == SRF )
+				return S_RECV_CLIENT_READY;
+			
+			if( state->frecv_buf.MessageType == SCF )
+				return S_UNKNOWN_ERROR; // TODO: Create a state for client connection close
+
+			return S_UNKNOWN_ERROR; 
+
+
+
+		case S_RECV_CLIENT_READY:
+			if( condition == -1 ) //Something bad happened with the file pointer
+				return S_UNKNOWN_ERROR;
+					
+			return S_RECV_DATA_BLOCK;
+
+
+
+		case S_RECV_DATA_BLOCK:
+			if( state->frecv_buf.MessageType == DTF )
+				return S_ACK_DATA_BLOCK;
+			
+			if( state->frecv_buf.MessageType == FFF )
+				return S_ACK_FILE_FINISH;
+
+			return S_UNKNOWN_ERROR;
+
+
+		case S_ACK_DATA_BLOCK:
+			if( condition == -1 )
+				return S_UNKNOWN_ERROR;
+			if( condition == 1 )
+				return S_RECV_FILE_FINISH;
+
+			return S_RECV_DATA_BLOCK;
 
 			
+		case S_RECV_FILE_FINISH:
+			if( state->frecv_buf.MessageType == FFF )
+				return S_ACK_FILE_FINISH;
+
+
+		case S_ACK_FILE_FINISH:
+			return -1; // Probably need to do more here, but thats for later
+
+					
 
 			
 		case S_UNKNOWN_ERROR:
@@ -375,6 +545,7 @@ int recv_cftp_frame( ServerState* state )
 
 	#ifdef SERVER_DEBUG
 	fprintf( stderr, "[DEBUG] Read %d bytes from client on frame_recv.\n", sizeof( cftp_frame ) );
+	desc_cftp_frame(state, 0 );
 	#endif
 
 	return sizeof( cftp_frame );
@@ -396,12 +567,14 @@ int recv_data_frame( ServerState* state )
 	state->recv_rdy = 0;
 
 	int recv_bytes;
+	int i;
 
 	if( state->data_buffer_size <= 0 )
 		return 0;
 
 	if( state->data_buffer )
 		free( state->data_buffer );
+
 	state->data_buffer = (char*) malloc( state->data_buffer_size );
 	memset( state->data_buffer, 0, state->data_buffer_size );
 
@@ -412,6 +585,15 @@ int recv_data_frame( ServerState* state )
 
 	#ifdef SERVER_DEBUG
 	fprintf( stderr, "[DEBUG] Read %d bytes from client on data_recv.\n", recv_bytes );
+		/*
+    for( i = 0; i < recv_bytes; i ++ )
+		{
+			if( i % 32 == 0 )
+				fprintf( stderr, "\n" );
+			fprintf( stderr, "%c", (char)*(state->data_buffer+i));
+		}
+	fprintf( stderr, "\n" );
+		*/
 	#endif
 
 	return recv_bytes;
@@ -452,6 +634,7 @@ int send_cftp_frame( ServerState* state )
 
     #ifdef SERVER_DEBUG
 	fprintf( stderr, "[DEBUG] Sent %d bytes to client on frame_send.\n", length );
+	desc_cftp_frame(state, 1 );
 	#endif
 
 		
@@ -508,4 +691,71 @@ int send_data_frame( ServerState* state )
 
 			return length;
 		}
+}
+
+
+
+
+/*
+
+desc_cftp_frame
+
+
+
+
+ */
+void desc_cftp_frame( ServerState* state, int send_or_recv)
+{
+	cftp_frame* frame;
+
+	if( send_or_recv == 1 )
+		{
+			frame = &state->fsend_buf;
+			fprintf( stderr, "\tMessage type of Send Frame is " );
+		}
+	else
+		{
+			frame = &state->frecv_buf;
+			fprintf( stderr, "\tMessage type of Recv Frame is " );
+		}
+	
+	switch( frame->MessageType )
+		{
+		case DSF:
+			fprintf( stderr, "DSF frame.\n" );
+			break;
+		case DRF:
+			fprintf( stderr, "DRF frame.\n" );
+			break;
+		case SIF:
+			fprintf( stderr, "SIF frame.\n" );
+			break;
+		case SAF:
+			fprintf( stderr, "SAF frame.\n" );
+			break;
+		case SRF:
+			fprintf( stderr, "SRF frame.\n" );
+			break;
+		case SCF:
+			fprintf( stderr, "SCF frame.\n" );
+			break;
+		case DTF:
+			fprintf( stderr, "DTF frame.\n" );
+			fprintf( stderr, "\tChunk Number: %ld\n" , ntohll(((cftp_dtf_frame*)frame)->BlockNum) );
+			break;
+		case DAF:
+			fprintf( stderr, "DAF frame.\n" );
+			break;
+		case FFF:
+			fprintf( stderr, "FFF frame.\n" );
+			break;
+		case FAF:
+			fprintf( stderr, "FAF frame.\n" );
+			break;
+		default:
+			fprintf( stderr, "Unknown frame.\n" );
+			break;
+		}
+
+
 }

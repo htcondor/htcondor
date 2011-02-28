@@ -14,8 +14,7 @@ int State_UnknownError( ServerState* state )
 	else
 		fprintf( stderr, "ERROR: Unexpected failure, but no error string is set.\n");
 
-	LEAVE_STATE
-	return 0;
+	LEAVE_STATE(0);
 }
 
 
@@ -31,8 +30,7 @@ int State_SendSessionClose( ServerState* state )
 
 
 
-	LEAVE_STATE	
-	return 0;
+		LEAVE_STATE(0);
 }
 
 

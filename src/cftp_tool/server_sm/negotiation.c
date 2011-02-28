@@ -21,8 +21,7 @@ int State_ReceiveSessionParameters( ServerState* state )
 
 	state->recv_rdy = 1;
 
-	LEAVE_STATE
-	return 0;
+	LEAVE_STATE(0)
 }
 
 /*
@@ -66,8 +65,7 @@ int State_CheckSessionParameters( ServerState* state )
 		{
 			sprintf( state->error_string,
 					 "Client is sending parameters in an unacceptable format or unexpected size." );
-			LEAVE_STATE
-				return -1;
+			LEAVE_STATE(-1);
 		}
 
 		// When we add more parameter formats, this will need to be redone
@@ -82,8 +80,7 @@ int State_CheckSessionParameters( ServerState* state )
 		{
 			sprintf( state->error_string,
 					 "Client sent only partial parameters. Error in receiving.");
-			LEAVE_STATE
-			return -1; //TODO, check the return codes here
+			LEAVE_STATE(-1);//TODO, check the return codes here
 		}
 
 
@@ -107,7 +104,23 @@ int State_CheckSessionParameters( ServerState* state )
 	local_params->hash[4] = ntohl( recvd_params->hash[4] );	
 
 		// Do the parameter checking here.
+	
+	VERBOSE( "Checking file parameters against local constraints.\n" );
 
+		//For now we only check against the quota option.
+		//There will probably be more constraints later
+	if( state->arguments->quota != -1 )
+		{
+			if( local_params->filesize > state->arguments->quota*1024 )
+				{
+					//We cannot accept this file. It is over quota
+					VERBOSE( "Quota exceeded. Cannot accept file from client.\n" );
+					LEAVE_STATE(1);				  
+				}
+		}
+
+	VERBOSE( "Check complete." );
+	
 
 //TODO: Perform the server side parameter verification checks
 //      Will need to do this to confirm disk space, etc...
@@ -115,8 +128,7 @@ int State_CheckSessionParameters( ServerState* state )
 
 	
 
-	LEAVE_STATE
-	return 0;
+	LEAVE_STATE(0);
 }
 
 
@@ -175,8 +187,7 @@ int State_AcknowledgeSessionParameters( ServerState* state )
 		//Mark readiness for the Client to send SRF
 	state->recv_rdy = 1;
 
-	LEAVE_STATE
-	return 0;
+	LEAVE_STATE(0);
 }
 
 /*
@@ -187,7 +198,36 @@ State_ReceiveClientReady
 int State_ReceiveClientReady( ServerState* state )
 {
 	ENTER_STATE
+		
+	simple_parameters* local_parameters;
 
-	LEAVE_STATE	
-	return 0;
+	local_parameters = (simple_parameters*)(state->session_parameters);
+
+	memset( &state->local_file, 0, sizeof( FileRecord ));
+
+	state->local_file.filename = malloc(512);
+	memcpy( state->local_file.filename,
+			local_parameters->filename, 512 );
+
+	state->local_file.fp = fopen( state->local_file.filename, "wb" );
+	if( state->local_file.fp == NULL )
+		{
+			free(state->local_file.filename);
+			LEAVE_STATE(-1);
+		}
+
+	state->local_file.file_size = local_parameters->filesize;
+	state->local_file.chunk_size = local_parameters->chunk_size;
+	state->local_file.num_chunks = local_parameters->num_chunks;
+
+	state->local_file.hash[0] = local_parameters->hash[0];
+	state->local_file.hash[1] = local_parameters->hash[1];
+	state->local_file.hash[2] = local_parameters->hash[2];
+	state->local_file.hash[3] = local_parameters->hash[3];
+	state->local_file.hash[4] = local_parameters->hash[4];
+
+
+
+
+	LEAVE_STATE(0);
 }

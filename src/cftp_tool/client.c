@@ -5,6 +5,8 @@
 int main( int argc, char** argv )
 {
 
+	int ret_code;
+
 	char* server_name;
 	char* server_port;
 	char* local_filename;
@@ -23,10 +25,13 @@ int main( int argc, char** argv )
 	
 	transfer_results = transfer_file(server_name, server_port, local_filename);
 
+	ret_code = 1; //Assume failure
+
 	switch( transfer_results )
 		{
 		case NOERROR:
 			printf("Transfer completed successfully.\n");
+			ret_code = 0;
 			break;
 		case CLIENT_TIMEOUT:
 			printf("Transfer Failed. Timeout occured when communicating with Server.\n");
@@ -61,6 +66,6 @@ int main( int argc, char** argv )
 		}
 		
 
-	return 0;
+	return ret_code;
 
 }
