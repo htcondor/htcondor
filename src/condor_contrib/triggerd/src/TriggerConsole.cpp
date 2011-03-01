@@ -55,7 +55,7 @@ TriggerConsole::~TriggerConsole()
 
 
 void
-TriggerConsole::config(std::string host, int port, std::string user, std::string passwd)
+TriggerConsole::config(std::string host, int port, std::string user, std::string passwd, std::string methods)
 {
    qpid::client::ConnectionSettings settings;
    SessionManager::Settings sm_settings;
@@ -69,6 +69,7 @@ TriggerConsole::config(std::string host, int port, std::string user, std::string
    settings.port = port;
    settings.username = user;
    settings.password = passwd;
+   settings.mechanism = methods;
 
    if (NULL == sm)
    {
