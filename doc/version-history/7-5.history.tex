@@ -232,6 +232,15 @@ now removes node jobs of the DAG, rather than leaving them as orphans.
 \item Fixed a bug that caused \Condor{submit} to silently ignore parts
 of attribute values if an equals sign was omitted.
 
+% gittrack 1915
+\item Starting in version 7.5.5, the \Condor{schedd} daemon would
+  sometimes generate an error message and exit abnormally when
+  shutting down.  The error message contained the following text:
+
+\begin{verbatim}
+ERROR ``Assertion ERROR on (m_ref_count == 0)''
+\end{verbatim}
+
 \end{itemize}
 
 \noindent Known Bugs:
