@@ -1402,6 +1402,8 @@ void CollectorDaemon::sendCollectorAd()
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad );
 
+    daemonCore->monitor_data.ExportData(ad);
+
 	// Send the ad
 	int num_updated = updateCollectors->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
 	if ( num_updated != updateCollectors->number() ) {

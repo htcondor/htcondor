@@ -4515,6 +4515,8 @@ Matchmaker::updateCollector() {
 	if( publicAd ) {
 		publishNegotiationCycleStats( publicAd );
 
+		daemonCore->monitor_data.ExportData(publicAd);
+
 		// log classad into sql log so that it can be updated to DB
 		FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
 
