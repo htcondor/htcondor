@@ -2424,6 +2424,47 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 	return ( status >= 0 );
 }
 
+
+// put the proxy first in the list.
+void
+FileTransfer::SortFilesToSend() {
+	bool rc = true;
+
+	if( !FilesToSend ) {
+		return;
+	}
+
+	if( !X509UserProxy ) {
+		return;
+	}
+
+	char *tmp;
+	tmp = FilesToSend->print_to_string();
+	dprintf(D_ALWAYS, "ZKM: pre: %s\n", tmp);
+	free(tmp);
+
+	StringList *new_list = new StringList();
+
+	new_list->append(X509UserProxy);
+
+	FilesToSend->rewind();
+	char const *path;
+	while ( (path=FilesToSend->next()) != NULL ) {
+		if( strcmp(path, X509UserProxy) != 0) {
+			new_list->append(path);
+		}
+	}
+
+	free(FilesToSend);
+	FilesToSend = new_list;
+
+	tmp = FilesToSend->print_to_string();
+	dprintf(D_ALWAYS, "ZKM: post: %s\n", tmp);
+	free(tmp);
+
+}
+
+
 int
 FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 {
@@ -2492,6 +2533,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	if( want_priv_change && saved_priv == PRIV_UNKNOWN ) {
 		saved_priv = set_priv( desired_priv_state );
 	}
+
+	// make sure the proxy goes first.  it might be needed to invoke plugins
+	SortFilesToSend();
 
 	FileTransferList filelist;
 	ExpandFileTransferList( FilesToSend, filelist );
