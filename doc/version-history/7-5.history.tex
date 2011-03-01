@@ -232,6 +232,20 @@ now removes node jobs of the DAG, rather than leaving them as orphans.
 \item Fixed a bug that caused \Condor{submit} to silently ignore parts
 of attribute values if an equals sign was omitted.
 
+% gittrack 1915
+\item Starting in version 7.5.5, the \Condor{schedd} daemon would
+  sometimes generate an error message and exit abnormally when
+  shutting down.  The error message contained the following text:
+
+\begin{verbatim}
+ERROR ``Assertion ERROR on (m_ref_count == 0)''
+\end{verbatim}
+
+% gittrack 1913
+\item Changes to the negotiator's address were not published to the
+  collector until the negotiator was reconfigured or restarted.  This was
+  a problem in some situations when using \Condor{shared\_port}.
+
 \end{itemize}
 
 \noindent Known Bugs:
