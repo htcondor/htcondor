@@ -30,6 +30,6 @@ dprint( "(TSTCLAIR)-> Deal with Java deps and FT HOOK PLUGINS also what is up wi
 if (CURL_FOUND AND NOT WINDOWS)
 condor_exe( curl_plugin "curl_plugin.c" ${C_LIBEXEC}
 "${CURL_FOUND};${LDAP_FOUND};${OPENSSL_FOUND};${ZLIB_FOUND};${KRB5_FOUND}" OFF )
+endif()
 
 condor_exe( data_plugin "data_plugin.c" ${C_LIBEXEC} "" OFF)
-endif()

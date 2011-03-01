@@ -43,6 +43,11 @@ if (HAVE_EXT_GSOAP AND HAVE_EXT_OPENSSL AND HAVE_PTHREADS)
 	add_dependencies(gen_amazon_soapfiles gsoap)
 	set_source_files_properties (${WSSEAPI} ${SMDEVP} PROPERTIES GENERATED TRUE)
 
+	if (NOT WINDOWS)
+      set_source_files_properties( ${WSSEAPI} ${SMDEVP} soapC.cpp soapClient.cpp PROPERTIES COMPILE_FLAGS "-w")
+	endif()
+
+
 	condor_exe_test(ec2_sim "ec2_sim_main.cpp;ec2_sim_impl.cpp;soapC.cpp;soapServer.cpp" "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GSOAP_FOUND};${ZLIB_FOUND}")
 
 endif()

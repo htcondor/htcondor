@@ -15,8 +15,9 @@
  # limitations under the License. 
  # 
  ############################################################### 
-
-option(WITH_ZLIB "Compiling with support for ZLIB" ON)
+if (NOT WINDOWS)
+    option(WITH_ZLIB "Compiling with support for ZLIB" ON)
+endif()
 
 if (WITH_ZLIB)
 

@@ -43,19 +43,22 @@ END_C_DECLS
 
 #if defined(__cplusplus)
 
-// ArgList versions only available from C++
+// ArgList and Env versions only available from C++
 #include "condor_arglist.h"
+#include "env.h"
 FILE *my_popen( ArgList &args,
                 const char * mode,
-                int want_stderr );
-int my_system( ArgList &args );
+                int want_stderr,
+				Env *env_ptr = NULL);
+int my_system( ArgList &args, Env *env_ptr = NULL );
 
 // PrivSep version
 #if !defined(WIN32)
 FILE *privsep_popen( ArgList &args,
                      const char * mode,
                      int want_stderr,
-                     uid_t uid );
+                     uid_t uid,
+					 Env *env_ptr = NULL);
 #endif
 
 #endif

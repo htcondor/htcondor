@@ -37,7 +37,6 @@ elseif(${OS_NAME} MATCHES "WIN")
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
 	set(BISON_SIMPLE ${C_WIN_BIN}/bison.simple)
-	set(LN "LN-NOTFOUND")
 	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
 
 	set (HAVE_SNPRINTF 1)
@@ -91,7 +90,9 @@ if(BUILD_DATE)
 endif()
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
-set( CMAKE_VERBOSE_MAKEFILE TRUE )
+
+# set to true to enable printing of make actions
+set( CMAKE_VERBOSE_MAKEFILE FALSE )
 set( BUILD_SHARED_LIBS FALSE )
 
 # Windows is so different perform the check 1st and start setting the vars.
@@ -232,11 +233,10 @@ if( NOT WINDOWS)
     		ARGS ${CMAKE_C_COMPILER_ARG1} -dumpversion
     		OUTPUT_VARIABLE CMAKE_C_COMPILER_VERSION )
 
-    find_program(LN ln)
-
 endif()
 
 find_program(HAVE_VMWARE vmware)
+find_program(LN ln)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -362,8 +362,12 @@ if (NOT HPUX)
 	endif()
 endif(NOT HPUX)
 
-if (NOT WINDOWS) # if *nix
-	option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
+if (WINDOWS) 
+    if (WANT_CONTRIB AND WITH_MANAGEMENT)
+        set ( CONDOR_QMF condor_qmflib;${QPID_FOUND} ) # global scoping dep
+    endif()
+else() # *nix
+    option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 
 if (BUILD_TESTS)
@@ -432,16 +436,11 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-if (NOT WINDOWS)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-endif(NOT WINDOWS)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
-
-if (NOT WIN_EXEC_NODE_ONLY)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
-endif(NOT WIN_EXEC_NODE_ONLY)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 
 if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
@@ -496,6 +495,12 @@ if (CONDOR_EXTERNALS AND NOT WINDOWS)
 	add_custom_target( externals DEPENDS ${EXTERNAL_MOD_DEP} )
 	add_dependencies( externals ${CONDOR_EXTERNALS} )
 endif(CONDOR_EXTERNALS AND NOT WINDOWS)
+
+######### special case for contrib
+if (WINDOWS AND WANT_CONTRIB AND WITH_MANAGEMENT)
+    # global scoping external linkage var when options enable.
+    set (CONDOR_QMF condor_qmflib;${QPID_FOUND};${BOOST_FOUND})
+endif()
 
 message(STATUS "********* External configuration complete (dropping config.h) *********")
 dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
