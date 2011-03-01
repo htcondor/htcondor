@@ -607,6 +607,7 @@ Set by Collector:
 
   <class name="Collector">
 	<group name="DaemonProperties"/>
+    <group name="DaemonStatistics"/>
 	<!-- TODO: for now this doesn't seem to be worth the headache 
 	      of the query worker socket handler interaction & crashes
 	<group name="GridMethods"/>

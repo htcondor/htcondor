@@ -1557,6 +1557,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	filesize_t bytes=0;
 	MyString filename;;
 	MyString fullname;
+	MyString LocalProxyName;
 	char *tmp_buf = NULL;
 	int final_transfer = 0;
 	bool download_success = true;
@@ -1860,7 +1861,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 
-			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value());
+			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), LocalProxyName.Value());
+
 
 		} else if ( reply == 4 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
@@ -1868,6 +1870,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf( D_FULLDEBUG,
 				         "DoDownload: get_x509_delegation() returned %d\n",
 				         rc );
+				if (rc == 0) {
+					// ZKM FUTURE TODO: allow this to exist outside of the job sandbox -- we may
+					// need the proxy to create the sandbox itself (if execute dir is NFSv4) but
+					// that will require some higher-level refactoring
+					LocalProxyName = fullname;
+				}
 			} else {
 				rc = -1;
 			}
@@ -2424,6 +2432,47 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 	return ( status >= 0 );
 }
 
+
+// put the proxy first in the list.
+void
+FileTransfer::SortFilesToSend() {
+	bool rc = true;
+
+	if( !FilesToSend ) {
+		return;
+	}
+
+	if( !X509UserProxy ) {
+		return;
+	}
+
+	char *tmp;
+	tmp = FilesToSend->print_to_string();
+	dprintf(D_ALWAYS, "ZKM: pre: %s\n", tmp);
+	free(tmp);
+
+	StringList *new_list = new StringList();
+
+	new_list->append(X509UserProxy);
+
+	FilesToSend->rewind();
+	char const *path;
+	while ( (path=FilesToSend->next()) != NULL ) {
+		if( strcmp(path, X509UserProxy) != 0) {
+			new_list->append(path);
+		}
+	}
+
+	free(FilesToSend);
+	FilesToSend = new_list;
+
+	tmp = FilesToSend->print_to_string();
+	dprintf(D_ALWAYS, "ZKM: post: %s\n", tmp);
+	free(tmp);
+
+}
+
+
 int
 FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 {
@@ -2492,6 +2541,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	if( want_priv_change && saved_priv == PRIV_UNKNOWN ) {
 		saved_priv = set_priv( desired_priv_state );
 	}
+
+	// make sure the proxy goes first.  it might be needed to invoke plugins
+	SortFilesToSend();
 
 	FileTransferList filelist;
 	ExpandFileTransferList( FilesToSend, filelist );
@@ -3595,7 +3647,7 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 }
 
 
-int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest) {
+int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, const char* proxy_filename) {
 
 	if (plugin_table == NULL) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: No plugin table defined! (request was %s)\n", source);
@@ -3654,25 +3706,39 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	}
 */
 
-	// TODO: invoke the proper plugin using my_gregs_popen() and the new API.
+	// prepare environment for the plugin
+	Env plugin_env;
 
-	MyString cmd_line = plugin.Value();
-	cmd_line += " ";
-	cmd_line += source;
-	cmd_line += " ";
-	cmd_line += dest;
-	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s\n", cmd_line.Value());
-	int retval = system( cmd_line.Value() );
-	dprintf (D_FULLDEBUG, "FILETRANSFER: plugin returned %i\n", retval);
+	// start with this environment
+	plugin_env.Import();
+
+	// add x509UserProxy if it's defined
+	if (proxy_filename && *proxy_filename) {
+		plugin_env.SetEnv("X509USERPROXY",proxy_filename);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting x509UserProxy env to %s\n", proxy_filename);
+	}
+
+	// prepare args for the plugin
+	ArgList plugin_args;
+	plugin_args.AppendArg(plugin.Value());
+	plugin_args.AppendArg(URL);
+	plugin_args.AppendArg(dest);
+	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s %s %s\n", plugin.Value(), URL, dest);
+
+	// invoke it
+	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env);
+	int plugin_status = my_pclose(plugin_pipe);
+
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
 
 	// clean up
 	free(method);
 
-	// any non-zero exit from plugin indicates error.  this function needs
-	// to return -1 on error, or zero otherwise, so map retval to the proper
-	// value.
-	if (retval != 0) {
-		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s", retval, cmd_line.Value());
+	// any non-zero exit from plugin indicates error.  this function needs to
+	// return -1 on error, or zero otherwise, so map plugin_status to the
+	// proper value.
+	if (plugin_status != 0) {
+		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s\n", plugin_status, plugin.Value());
 		return GET_FILE_PLUGIN_FAILED;
 	}
 

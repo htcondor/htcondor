@@ -126,6 +126,15 @@ CollectorObject::update(const ClassAd &ad)
 	INTEGER(HostsClaimed);
 	INTEGER(HostsUnclaimed);
 	INTEGER(HostsOwner);
+
+		// The MonitorSelf* attributes do not have ATTR_*
+		// definitions
+	INTEGER(MonitorSelfAge);
+	DOUBLE(MonitorSelfCPUUsage);
+	DOUBLE(MonitorSelfImageSize);
+	INTEGER(MonitorSelfRegisteredSocketCount);
+	INTEGER(MonitorSelfResidentSetSize);
+	TIME_INTEGER(MonitorSelfTime);
 }
 
 /* disable for now
