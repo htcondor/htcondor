@@ -32,8 +32,10 @@
 #include "VMRegister.h"
 #include "classadHistory.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
+#endif
 #endif
 
 // Define global variables
@@ -396,10 +398,12 @@ main_init( int, char* argv[] )
 		// This is now called by a timer registered by start_update_timer()
 	//resmgr->update_all();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
    StartdPluginManager::Load();
 
    StartdPluginManager::Initialize();
+#endif
 #endif
 }
 
@@ -633,8 +637,10 @@ startd_exit()
 	systray_notifier.notifyCondorOff();
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Shutdown();
+#endif
 #endif
 
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );

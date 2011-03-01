@@ -45,8 +45,10 @@
 #include "file_lock.h"
 #include "shared_port_server.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "MasterPlugin.h"
+#endif
 #endif
 
 #if HAVE_EXT_GCB
@@ -175,8 +177,10 @@ master_exit(int retval)
 	}
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	MasterPluginManager::Shutdown();
+#endif
 #endif
 
 	DC_Exit(retval, shutdown_program );
@@ -291,10 +295,12 @@ main_init( int argc, char* argv[] )
 		// open up the windows firewall 
 	init_firewall_exceptions();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	MasterPluginManager::Load();
 
 	MasterPluginManager::Initialize();
+#endif
 #endif
 
 		// Register admin commands
