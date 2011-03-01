@@ -362,8 +362,12 @@ if (NOT HPUX)
 	endif()
 endif(NOT HPUX)
 
-if (NOT WINDOWS) 
-	option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
+if (WINDOWS) 
+    if (WANT_CONTRIB AND WITH_MANAGEMENT)
+        set ( CONDOR_QMF condor_qmflib;${QPID_FOUND} ) # global scoping dep
+    endif()
+else() # *nix
+    option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 
 if (BUILD_TESTS)
