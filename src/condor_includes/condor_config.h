@@ -281,10 +281,10 @@ BEGIN_C_DECLS
 	of size TABLESIZE.
 	*/
 	char * macro_expand ( const char *name );
-	void init_config ( bool wantExtraInfo);
+	void init_config ( bool );
 	void clear_config ( void );
 	void set_debug_flags( const char * strFlags);
-	void config_insert( const char* attrName, const char*attrValue);
+	void config_insert( const char* attrName, const char* attrValue);
 	int  param_boolean_int( const char *name, int default_value );
 	int  param_boolean_int_with_default( const char* name );
 	int  param_boolean_int_without_default( const char* name, int default_value );
