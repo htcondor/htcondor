@@ -10093,7 +10093,9 @@ on page~\pageref{sec:daemon-classad-hooks}.
 \label{param:ScheddCronName}
 \item[\Macro{STARTD\_CRON\_NAME} and \Macro{SCHEDD\_CRON\_NAME}]
   These variables will be honored through Condor versions 7.6,
-  but are no longer documented as to their usage.
+  and support will be removed in Condor version 7.7.
+  They are no longer documented as to their usage.
+
   Defines a logical name to be used in the formation of related
   configuration macro names.
   This macro made other Daemon ClassAd Hook macros
@@ -10115,6 +10117,7 @@ on page~\pageref{sec:daemon-classad-hooks}.
 \item[\Macro{STARTD\_CRON\_CONFIG\_VAL} and \Macro{SCHEDD\_CRON\_CONFIG\_VAL}
   and \Macro{BENCHMARKS\_CONFIG\_VAL}]
   This configuration variable can be used to specify the
+  path and executable name of the
   \Condor{config\_val} program which the jobs (hooks) should use to
   get configuration information from the daemon.  If defined,
   an environment variable by the same name with the same value will be
@@ -10124,131 +10127,171 @@ on page~\pageref{sec:daemon-classad-hooks}.
 \item[\Macro{STARTD\_CRON\_AUTOPUBLISH}]
   Optional setting that determines if the \Condor{startd} should
   automatically publish a new update to the \Condor{collector} after
-  any of the cron modules produce output.
+  any of the jobs produce output.
   Beware that enabling this setting can greatly increase the network
   traffic in a Condor pool, especially when many modules are
   executed, or if the period in which they run is short.
   There are three possible (case insensitive) values for this
-  setting: 
+  variable: 
   \begin{description}
-     \item[\texttt{Never}] This default value causes the
+     \item[\Expr{Never}] This default value causes the
      \Condor{startd} to not automatically publish updates based on
-     any cron modules. Instead, updates rely on the usual behavior for sending
+     any jobs. Instead, updates rely on the usual behavior for sending
      updates, which is periodic, based on the \Macro{UPDATE\_INTERVAL}
-     configuration setting, or whenever a given slot
-     changes state.
-     \item[\texttt{Always}] Causes the \Condor{startd} to always send a new
-     update to the \Condor{collector} whenever any module exits.
-     \item[\texttt{If\_Changed}] Causes the \Condor{startd} to only send a
+     configuration variable, or whenever a given slot changes state.
+     \item[\Expr{Always}] Causes the \Condor{startd} to always send a new
+     update to the \Condor{collector} whenever any job exits.
+     \item[\Expr{If\_Changed}] Causes the \Condor{startd} to only send a
      new update to the \Condor{collector} if the output produced by a
-     given module is different than the previous output of the
-     same module.
-     The only exception is the \Attr{LastUpdate} attribute
-     (automatically set for all cron modules to be the timestamp when
-     the module last ran), which is ignored when
-     \MacroNI{STARTD\_CRON\_AUTOPUBLISH} is set to \verb@If_Changed@.
+     given job is different than the previous output of the
+     same job.
+     The only exception is the \Attr{LastUpdate} attribute, 
+     which is automatically set for all jobs to be the timestamp when
+     the job last ran. It is ignored when
+     \MacroNI{STARTD\_CRON\_AUTOPUBLISH} is set to \Expr{If\_Changed}.
   \end{description}
 
 \label{param:StartdCronJobList}
-\item[\Macro{STARTD\_CRON\_JOBLIST}]
-  This configuration variable is defined by a white space separated
-  list of job names to run.  Each of these is the logical name of the
-  job.  This name must be unique (no two jobs may have the same name).
-
-\label{param:BenchmarkJobList}
-\item[\Macro{BENCHMARK\_JOBLIST}]
-  Similar to \Macro{STARTD\_CRON\_JOBLIST}, this configuration
-  variable is defined by a white space separated
-  list of benchmark job names to run.
-  Each of these is the logical name of the job.  This name
-  must be unique (no two benchmark jobs may have the same name).
+\label{param:ScheddCronJobList}
+\label{param:BenchmarksJobList}
+\item[\Macro{STARTD\_CRON\_JOBLIST} and \Macro{SCHEDD\_CRON\_JOBLIST}
+  and \Macro{BENCHMARKS\_JOBLIST}]
+  These configuration variables are defined by a comma and/or white space
+  separated list of job names to run.  Each is the logical name of a job.
+  This name must be unique; no two jobs may have the same name.
 
 \label{param:StartdCronJobPrefix}
-\item[\Macro{STARTD\_CRON\_<JobName>\_PREFIX}]
+\label{param:ScheddCronJobPrefix}
+\label{param:BenchmarksJobPrefix}
+\item[\Macro{STARTD\_CRON\_<JobName>\_PREFIX} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_PREFIX}
+       and \Macro{BENCHMARKS\_<JobName>\_PREFIX}]
   Specifies a string which is prepended by
-  Condor to all attribute names that the module generates.
+  Condor to all attribute names that the job generates.
   The use of prefixes avoids the conflicts that would be caused by
-  attributes of the same name generated and utilized by different
-  modules.
+  attributes of the same name generated and utilized by different jobs.
   For example, if a module prefix is \verb@xyz_@,
   and an individual attribute is named \verb@abc@,
   then the resulting attribute name will be \verb@xyz_abc@.
   Due to restrictions on ClassAd names, a prefix is only permitted to contain
   alpha-numeric characters and the underscore character.
 
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
+
 \label{param:StartdCronJobExecutable}
-\item[\Macro{STARTD\_CRON\_<JobName>\_EXECUTABLE}]
-  Used to specify the full path to the
-  executable to run for this module.  Note that multiple modules may
-  specify the same executable (although the modules need to have different
-  names).
+\label{param:ScheddCronJobExecutable}
+\label{param:BenchmarksJobExecutable}
+\item[\Macro{STARTD\_CRON\_<JobName>\_EXECUTABLE} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_EXECUTABLE}
+       and \Macro{BENCHMARKS\_<JobName>\_EXECUTABLE}]
+  The full path and executable to run for this job.
+  Note that multiple jobs may specify the same executable,
+  although the jobs need to have different logical names.
+
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
 
 \label{param:StartdCronJobPeriod}
-\item[\Macro{STARTD\_CRON\_<JobName>\_PERIOD}]
-  The period specifies time intervals at which the module should be run.
-  For periodic modules, this
-  is the time interval that passes between starting the execution
-  of the module.
-  The value may be specified in seconds (append value with the
-  character 's'), in minutes (append value with the character 'm'),
-  or in hours (append value with the character 'h').
-  As an example, 5m starts the execution of the module every five minutes.
+\label{param:ScheddCronJobPeriod}
+\label{param:BenchmarksJobPeriod}
+\item[\Macro{STARTD\_CRON\_<JobName>\_PERIOD} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_PERIOD}
+       and \Macro{BENCHMARKS\_<JobName>\_PERIOD}]
+  The period specifies time intervals at which the job should be run.
+  For periodic jobs, this
+  is the time interval that passes between starting the execution of the job.
+  The value may be specified in seconds, minutes,  or hours.
+  Specify this time by appending the character \Expr{s}, \Expr{m}, or \Expr{h}
+  to the value.
+  As an example, 5m starts the execution of the job every five minutes.
   If no character is appended to the value, seconds are used as a default.
-  In \Expr{WaitForExit} mode, the value has a different meaning; in
-  this case 
-  the period specifies the length of time after the module ceases execution
+  In \Expr{WaitForExit} mode, the value has a different meaning:
+  the period specifies the length of time after the job ceases execution and
   before it is restarted.
   The minimum valid value of the period is 1 second.
 
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
+
 \label{param:StartdCronJobMode}
-\item[\Macro{STARTD\_CRON\_<JobName>\_MODE}]
-  A string that specifies a mode within which the module operates.
-  Legal values are \Expr{WaitForExit} and \Expr{Periodic} (the
-  default).  
+\label{param:ScheddCronJobMode}
+\label{param:BenchmarksJobMode}
+\item[\Macro{STARTD\_CRON\_<JobName>\_MODE} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_MODE}
+       and \Macro{BENCHMARKS\_<JobName>\_MODE}]
+  A string that specifies a mode within which the job operates.
+  Legal values are 
+  \begin{itemize}
+  \item \Expr{Periodic}, which is the default.  
+  \item \Expr{WaitForExit}
+  \item \Expr{OneShot}
+  \item \Expr{OnDemand}
+  \end{itemize}
 
-  The default \Expr{Periodic} mode is used for most modules.  In
-  this mode, the module is expected to be started by the
-  \Condor{startd} daemon, gather and publish its data, and then
-  exit.
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
 
-  The \Expr{WaitForExit} mode is used to specify a module
-  which runs in the \Expr{WaitForExit} mode.
-  In this mode, the \Condor{startd} daemon interprets the period as defined by 
+  The default \Expr{Periodic} mode is used for most jobs.
+  In this mode, the job is expected to be started by the
+  \Condor{startd} daemon, gather and publish its data, and then exit.
+
+  In \Expr{WaitForExit} mode
+  the \Condor{startd} daemon interprets the period as defined by 
   \MacroNI{STARTD\_CRON\_<JobName>\_PERIOD} differently.
-  In this case, it refers to the amount of time to wait after the module exits
-  before restarting it.  With a value of 1, the module is kept
+  In this case, it refers to the amount of time to wait after the job exits
+  before restarting it.  With a value of 1, the job is kept
   running nearly continuously.
-
-  In general, \Expr{WaitForExit} mode is for modules that produce
+  In general, \Expr{WaitForExit} mode is for jobs that produce
   a periodic stream of updated data, but it can be used for other
   purposes, as well.
 
   The \Expr{OneShot} mode is used for jobs that are run once at the
   start of the daemon.  If the \Expr{reconfig\_rerun} option is
-  specified, the job will be run again after a reconfigure.
+  specified, the job will be run again after any reconfiguration.
 
-  The \Expr{OnDemand} mode is used only by the benchmark mechanism.
+  The \Expr{OnDemand} mode is used only by the \Expr{BENCHMARKS} mechanism.
   All benchmark jobs must be be \Expr{OnDemand} jobs.  Any other jobs
   specified as \Expr{OnDemand} will never run.  Additional future
   features may allow for other \Expr{OnDemand} job uses.
 
 \label{param:StartdCronJobReconfig}
-\item[\Macro{STARTD\_CRON\_<JobName>\_RECONFIG}]
-  A boolean value that when \Expr{True}, causes the \Condor{startd}
-  daemon to send an HUP signal when the \Condor{startd} daemon is reconfigured.
-  The module is expected to reread its configuration at that time.
+\label{param:ScheddCronJobReconfig}
+\item[\Macro{STARTD\_CRON\_<JobName>\_RECONFIG} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_RECONFIG}]
+  A boolean value that when \Expr{True}, causes the 
+  daemon to send an HUP signal to the job when the daemon is reconfigured.
+  The job is expected to reread its configuration at that time.
+
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, or
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}.
 
 \label{param:StartdCronJobReconfigReRun}
-\item[\Macro{STARTD\_CRON\_<JobName>\_RECONFIG\_RERUN}]
-  A boolean value that when \Expr{True}, causes the daemon classad hooks
+\label{param:ScheddCronJobReconfigReRun}
+\item[\Macro{STARTD\_CRON\_<JobName>\_RECONFIG\_RERUN} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_RECONFIG\_RERUN}]
+  A boolean value that when \Expr{True}, causes the daemon ClassAd hooks
   mechanism to re-run the specified job when the daemon is
-  reconfigured (via \Condor{reconfig}).
+  reconfigured via \Condor{reconfig}.
+
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, or
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}.
 
 \label{param:StartdCronJobJobLoad}
 \item[\Macro{STARTD\_CRON\_<JobName>\_JOB\_LOAD}]
   A floating point value that specifies the ``load'' that a specified
   load induces on the system.  This job load can be used to limit the
   jobs that run concurrently.
+
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
 
 \label{param:StartdCronJobKill}
 \item[\Macro{STARTD\_CRON\_<JobName>\_KILL}]
@@ -10277,27 +10320,6 @@ on page~\pageref{sec:daemon-classad-hooks}.
 \label{param:StartdCronJobCwd}
 \item[\Macro{STARTD\_CRON\_<JobName>\_CWD}]
   The working directory in which to start the module.
-
-\label{param:StartdCronJobOptions}
-\item[\Macro{STARTD\_CRON\_<JobName>\_OPTIONS}]
-  A colon separated list of options. 
-  Not all combinations of options make sense;
-  when a nonsense combination is listed,
-  the last one in the list is followed.
-
-  \begin{itemize}
-
-	\item The \Expr{WaitForExit} option enables the \Expr{WaitForExit} mode.
-
-	\item The \Expr{ReConfig} option enables the \Expr{ReConfig} setting.
-
-	\item The \Expr{NoReConfig} option disables the \Expr{ReConfig} setting.
-
-	\item The \Expr{Kill} option enables the \Expr{Kill} setting.
-
-	\item The \Expr{NoKill} option disables the \Expr{Kill} setting.
-
-    \end{itemize}
 
 \end{description}
 
