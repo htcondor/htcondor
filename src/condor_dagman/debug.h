@@ -71,10 +71,11 @@ BEGIN_C_DECLS   /* from condor_header_features.h */
     to printing only in outer loops, and level 6 to inner loops.
 */
 enum debug_level {
+  /** Debug level is unset */                DEBUG_UNSET   = -1,
   /** NEVER output, except for usage info */ DEBUG_SILENT  = 0,
-  /** Very quiet, only severe errors */     DEBUG_QUIET   = 1,
-  /** Normal output, errors and warnings */  DEBUG_NORMAL  = 2,
-  /** Errors, and all warnings */            DEBUG_VERBOSE = 3,
+  /** Very quiet, only severe errors */      DEBUG_QUIET   = 1,
+  /** Errors and warnings */                 DEBUG_NORMAL  = 2,
+  /** Normal output, errors, and warnings */ DEBUG_VERBOSE = 3,
   /** Basic debug output */                  DEBUG_DEBUG_1 = 4,
   /** Outer Loop Debug */                    DEBUG_DEBUG_2 = 5,
   /** Inner Loop Debug */                    DEBUG_DEBUG_3 = 6,

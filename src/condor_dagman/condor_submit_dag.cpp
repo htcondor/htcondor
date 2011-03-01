@@ -689,8 +689,10 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	args.AppendArg("-f");
 	args.AppendArg("-l");
 	args.AppendArg(".");
-	args.AppendArg("-Debug");
-	args.AppendArg(deepOpts.iDebugLevel);
+	if ( shallowOpts.iDebugLevel != DEBUG_UNSET ) {
+		args.AppendArg("-Debug");
+		args.AppendArg(shallowOpts.iDebugLevel);
+	}
 	args.AppendArg("-Lockfile");
 	args.AppendArg(shallowOpts.strLockFile.Value());
 	args.AppendArg("-AutoRescue");
@@ -935,7 +937,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					fprintf(stderr, "-debug argument needs a value\n");
 					printUsage();
 				}
-				deepOpts.iDebugLevel = atoi(argv[++iArg]);
+				shallowOpts.iDebugLevel = atoi(argv[++iArg]);
 			}
 			else if (strArg.find("-noev") != -1) // -noeventchecks
 			{
