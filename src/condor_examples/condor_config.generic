@@ -1233,6 +1233,23 @@ BenchmarkTimer = (time() - LastBenchmark)
 RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 #RunBenchmarks : False
 
+##  When the startd does benchmarks, which set of benchmarks should we
+##  run?  The default is the same as pre-7.5.6: MIPS and KFLOPS.
+benchmarks_joblist = mips kflops
+
+##  What's the max "load" of all running benchmarks?  With the default
+##  (1.01), the startd will run the benchmarks serially.
+benchmarks_max_job_load = 1.0
+
+#  MIPS (Dhrystone 2.1) benchmark: load 1.0
+benchmarks_mips_executable = $(LIBEXEC)/condor_mips
+benchmarks_mips_job_load = 1.0
+
+#  KFLOPS (clinpack) benchmark: load 1.0
+benchmarks_kflops_executable = $(LIBEXEC)/condor_kflops
+benchmarks_kflops_job_load = 1.0
+
+
 ##  Normally, when the startd is computing the idle time of all the
 ##  users of the machine (both local and remote), it checks the utmp
 ##  file to find all the currently active ttys, and only checks access
