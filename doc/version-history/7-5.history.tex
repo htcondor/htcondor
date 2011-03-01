@@ -27,6 +27,10 @@ The details of each version are described below.
   Hooks.''  There are several significant changes to this in the 7.5.6
   release.  These are described below.
 
+% gittrac #1935
+\item In the release directory, the subdirectory \verb|lib/glite/| has
+  been moved to \verb|libexec/glite/|.
+
 \end{itemize}
 
 
@@ -81,11 +85,38 @@ See ~\pageref{dagman:SCRIPT} for details.
 values as \Expr{True}/\Expr{False} instead of 1/0 in the
 \File{dagman.out} file.
 
+% gittrac #1790
+\item When job attributes are modified via \Condor{qedit}, the changes
+are now propagated to the \Condor{shadow} and \Condor{gridmanager}. This
+allows a user's changes to the job ad to affect the job policy expressions
+while the job is managed by these daemons.
+
+\item Several improvements for CREAM grid jobs:
+  \begin{itemize}
+  % gittrac #1936
+  \item CREAM commands are retried if the server closes the connection
+    prematurely.
+  % gittrac #940
+  \item All jobs going to a CREAM server share the same lease handle.
+  % gittrac #1931
+  \item Multiple CREAM status requests for single jobs are now batched
+    into a single command to the server.
+  % gittrac #958
+  \item When there are too many commands to be issued to a CREAM server
+    simultaneously, new job submissions have lower priority than commands
+    operating on existing jobs.
+  \end{itemize}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+% gittrac #1935
+\item The default value of configuration variable \Macro{GLITE\_LOCATION}
+  has changed to \verb|$(LIBEXEC)/glite|. This reflects a change in the
+  layout of the Condor release files.
 
 % gittrac 1800
 \item Values for configuration variables \Macro{NETWORK\_INTERFACE} and
@@ -146,6 +177,10 @@ section~\ref{sec:DAGMan-Config-File-Entries} for details).
 % gittrac #1909
 \item Fixed a memory leak in the quill daemon.
 
+% gittrac #1935
+\item Fixed a problem in 7.5.5 release where the binaries used for
+  the grid universe's pbs and lsf grid types were not marked as
+  executable.
 
 % gittrac #1900
 \item Fixed a bug introduced in Condor version 7.5.5
@@ -192,6 +227,10 @@ now removes node jobs of the DAG, rather than leaving them as orphans.
   response to DNS lookup failures when receiving connections.  The
   crash occurred during authorization of the new connection.  This
   problem was introduced in 7.5.4.
+
+% gittrac #1806
+\item Fixed a bug that caused \Condor{submit} to silently ignore parts
+of attribute values if an equals sign was omitted.
 
 \end{itemize}
 
