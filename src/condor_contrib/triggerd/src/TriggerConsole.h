@@ -39,7 +39,7 @@ class TriggerConsole : public ConsoleListener {
       ~TriggerConsole();
 
       std::list<std::string> findAbsentNodes();
-      void config(std::string host, int port, std::string user, std::string passwd);
+      void config(std::string host, int port, std::string user, std::string passwd, std::string methods = "ANONYMOUS");
 };
 
 }}} /* com::redhat::grid */
