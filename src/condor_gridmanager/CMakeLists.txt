@@ -49,14 +49,14 @@ if(NOT WIN_EXEC_NODE_ONLY)
             condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
         endif()
 
-        if (BLAHP_FOUND)
+        if (HAVE_EXT_BLAHP)
             install (FILES
                 nqs_cancel.sh
                 nqs_hold.sh
                 nqs_resume.sh
                 nqs_status.sh
                 nqs_submit.sh
-                DESTINATION ${C_LIB}/glite/bin
+                DESTINATION ${C_LIBEXEC}/glite/bin
                 PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         endif()
 

@@ -132,6 +132,37 @@ check_result_wrapper(ResultWrapper& rw)
 	}
 }
 
+static void
+check_result_wrapper2(ResultWrapper& rw, map<string, string>& out)
+{
+	list<pair<JobIdWrapper, string> > job_list;
+	list<pair<JobIdWrapper, string> >::iterator itr;
+	rw.getNotExistingJobs(job_list);
+	for ( itr = job_list.begin(); itr != job_list.end(); itr++ ) {
+		out[itr->first.getCreamJobID()] = string("job does not exist");
+	}
+	job_list.clear();
+	rw.getNotMatchingStatusJobs(job_list);
+	for ( itr = job_list.begin(); itr != job_list.end(); itr++ ) {
+		out[itr->first.getCreamJobID()] = string("job status does not match");
+	}
+	job_list.clear();
+	rw.getNotMatchingDateJobs(job_list);
+	for ( itr = job_list.begin(); itr != job_list.end(); itr++ ) {
+		out[itr->first.getCreamJobID()] = string("job date does not match");
+	}
+	job_list.clear();
+	rw.getNotMatchingProxyDelegationIdJobs(job_list);
+	for ( itr = job_list.begin(); itr != job_list.end(); itr++ ) {
+		out[itr->first.getCreamJobID()] = string("job proxy delegation ID does not match");
+	}
+	job_list.clear();
+	rw.getNotMatchingLeaseIdJobs(job_list);
+	for ( itr = job_list.begin(); itr != job_list.end(); itr++ ) {
+		out[itr->first.getCreamJobID()] = string("job lease ID does not match");
+	}
+}
+
 void free_args( char ** );
 
 struct Request {
@@ -198,14 +229,14 @@ pthread_mutex_t outputLock = PTHREAD_MUTEX_INITIALIZER;
 char *response_prefix = NULL; 
 
 int thread_cream_delegate( Request *req );
-int thread_cream_job_register( Request *req );
+int thread_cream_job_register( Request **req );
 int thread_cream_job_start( Request **req );
 int thread_cream_job_purge( Request **req );
 int thread_cream_job_cancel( Request **req );
 int thread_cream_job_suspend( Request *req );
 int thread_cream_job_resume( Request *req );
 int thread_cream_set_lease( Request *req );
-int thread_cream_job_status( Request *req );
+int thread_cream_job_status( Request **req );
 int thread_cream_job_info( Request *req );
 int thread_cream_job_list( Request *req );
 int thread_cream_ping( Request *req );
@@ -460,11 +491,40 @@ void collect_job_ids(Request ** reqlist, vector<JobIdWrapper> & jv,
 }
 
 /* =========================================================================
-Compare a->input_line[2]s (frequently the service)
+   Compare two requests of this form:
+     <command> <req id> <service> ...
+   They are compatible if both have the same service
+   Return true if they are batchable, otherwise return false.
    ========================================================================= */
-bool cmp_request_2(Request * a, Request * b) {
-	// Confirm they share the same service.
-	return strcmp(a->input_line[2], b->input_line[2]);
+bool cmp_request_register(Request * a, Request * b) {
+	/* Don't batch REGISTER commands for now. Batching too many results
+	*  in failures.
+	*/
+	return false;
+#if 0
+	if ( strcmp( a->input_line[2], b->input_line[2] ) ) {
+		return false;
+	} else {
+		return true;
+	}
+#endif
+}
+
+/* =========================================================================
+   Compare two requests of this form:
+     <command> <req id> <service> <num ids> [<id>...]
+   They are compatible if both have the same service and both operate on
+   a single job.
+   Return true if they are batchable, otherwise return false.
+   ========================================================================= */
+bool cmp_request_single( Request * a, Request * b ) {
+	if ( strcmp( a->input_line[3], "1" ) ||
+		 strcmp( b->input_line[3], "1" ) ||
+		 strcmp( a->input_line[2], b->input_line[2] ) ) {
+		return false;
+	} else {
+		return true;
+	}
 }
 
 /* =========================================================================
@@ -570,78 +630,104 @@ int handle_cream_job_register( char **input_line )
 		HANDLE_SYNTAX_ERROR();
 	}
 	
-	enqueue_request( input_line, thread_cream_job_register );
+	enqueue_request_batch( input_line, thread_cream_job_register, cmp_request_register );
 
 	gahp_printf("S\n");  
 
 	return 0;
 }
 
-int thread_cream_job_register( Request *req )
+int thread_cream_job_register( Request **reqlist )
 {
-	// FIXME: The new API does not allow for the proxy to be
-	// delegated as part of the JobRegister operation. As such,
-	// the delgservice parameter is no longer needed and delgid
-	// must not be an empty string. The GridManager already obeys
-	// this new model, but we should still modify the stubs in
-	// gahp-client.C to reflect this change
-
 	// FIXME: The new API returns a lot more information about
 	// the job than just its ID and upload URL. Should we make
 	// more of this available via our GAHP protocol?
 
-	char *reqid, *service, *delgid, *jdl, *lease_id;
+	if ( reqlist == NULL ) {
+		internal_error( "thread_cream_job_register called with NULL pointer\n" );
+	}
+	if ( reqlist[0] == NULL ) {
+		internal_error( "thread_cream_job_status called with empty list\n" );
+	}
+
+	vector<string> reqids;
+
 	string result_line;
+	string proxy = reqlist[0]->proxy;
+	char *service = reqlist[0]->input_line[2];
 	AbsCreamProxy* cp = NULL;
-	
-	process_string_arg( req->input_line[1], &reqid );
-	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &delgid );
-	process_string_arg( req->input_line[4], &jdl );
-	process_string_arg( req->input_line[5], &lease_id );
-	
 	AbsCreamProxy::RegisterArrayResult resp;
+	AbsCreamProxy::RegisterArrayRequest reqs;
+
 	try {
-		JobDescriptionWrapper jdw(jdl,
-		                          delgid,
-		                          "",      // delegation proxy
-		                          lease_id,// lease id
-		                          false,   // autostart
-		                          "JDI");  // job description ID
-		AbsCreamProxy::RegisterArrayRequest reqs;
-		reqs.push_back(&jdw);
+		for ( int i = 0; reqlist[i] != NULL; i++ ) {
+			reqids.push_back( reqlist[i]->input_line[1] );
+			reqs.push_back( new JobDescriptionWrapper( reqlist[i]->input_line[4],
+													   reqlist[i]->input_line[3],
+													   "", // delegation proxy
+													   reqlist[i]->input_line[5],
+													   false, // autostart
+													   reqlist[i]->input_line[1] ) // job description ID
+							);
+		}
+
 		cp = CreamProxyFactory::make_CreamProxyRegister(&reqs,
 														&resp,
 														DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
-		cp->setCredential(req->proxy.c_str());
+		cp->setCredential(proxy.c_str());
 		cp->execute(service);
-		if (resp["JDI"].get<0>() != JobIdWrapper::OK) {
-			throw runtime_error(resp["JDI"].get<2>());
-		}
 		delete cp;
+		for ( AbsCreamProxy::RegisterArrayRequest::iterator it = reqs.begin();
+			  it != reqs.end(); it++ ) {
+			delete *it;
+		}
 	}
 	catch(std::exception& ex) {
 		delete cp;
+		for ( AbsCreamProxy::RegisterArrayRequest::iterator it = reqs.begin();
+			  it != reqs.end(); it++ ) {
+			delete *it;
+		}
 		char *msg = escape_spaces(ex.what());
-		result_line = (string)reqid + " CREAM_Job_Register\\ Error:\\ " + msg;
-		enqueue_result(result_line);
+		for( vector<string>::const_iterator it = reqids.begin();
+			 it != reqids.end(); it++ ) {
+			result_line = (*it) + " CREAM_Job_Register\\ Error:\\ " + msg;
+			enqueue_result(result_line);
+		}
 		free(msg);
-		
+
 		return 1;
 	}
 
-	map<string, string> props;
-	resp["JDI"].get<1>().getProperties(props);
-	result_line = (string)reqid +
-	              " NULL " +
-	              resp["JDI"].get<1>().getCreamJobID() +
-	              sp +
-	              props["CREAMInputSandboxURI"] +
-	              sp +
-	              props["CREAMOutputSandboxURI"];
-	enqueue_result(result_line);
-	
+	for( vector<string>::const_iterator it = reqids.begin();
+		 it != reqids.end(); it++ ) {
+		if ( resp.find( *it ) == resp.end() ) {
+			// job not in results!?
+			result_line = *it + " CREAM_Job_Register\\ Error:\\ Job\\ not\\ in\\ reply";
+			enqueue_result( result_line );
+			continue;
+		}
+		if ( resp[*it].get<0>() != JobIdWrapper::OK) {
+			char *msg = escape_spaces( resp[*it].get<2>().c_str() );
+			result_line = *it + " CREAM_Job_Register\\ Error:\\ " + msg;
+			enqueue_result( result_line );
+			free( msg );
+			continue;
+		}
+
+		map<string, string> props;
+		resp[*it].get<1>().getProperties(props);
+		result_line = *it +
+			" NULL " +
+			resp[*it].get<1>().getCreamJobID() +
+			sp +
+			props["CREAMInputSandboxURI"] +
+			sp +
+			props["CREAMOutputSandboxURI"];
+		enqueue_result(result_line);
+	}
+
 	return 0;
 }
 
@@ -673,7 +759,7 @@ int handle_cream_job_start( char **input_line )
 		HANDLE_SYNTAX_ERROR();
 	}
 
-	enqueue_request_batch( input_line, thread_cream_job_start, cmp_request_2 );
+	enqueue_request_batch( input_line, thread_cream_job_start, cmp_request_single );
 
 	gahp_printf("S\n");  
 
@@ -700,6 +786,7 @@ int thread_cream_job_start( Request **reqlist )
 	AbsCreamProxy* cp = NULL;
 
 	vector<string> reqids;
+	map<string, string> results;
 	
 	try {
 		vector<JobIdWrapper> jv;
@@ -719,7 +806,7 @@ int thread_cream_job_start( Request **reqlist )
 		check_for_factory_error(cp);
 		cp->setCredential(proxy.c_str());
 		cp->execute(service);
-		check_result_wrapper(rw);
+		check_result_wrapper2(rw, results);
 		delete cp;
 	}
 	catch(std::exception& ex) {
@@ -735,9 +822,15 @@ int thread_cream_job_start( Request **reqlist )
 		return 1;
 	}
 	
-	for(vector<string>::const_iterator it = reqids.begin();
-		it != reqids.end(); it++) {
-		enqueue_result((*it) + " NULL");
+	for ( int idx = 0; reqlist[idx] != NULL; idx++ ) {
+		string reqid = reqlist[idx]->input_line[1];
+		string jobid = reqlist[idx]->input_line[4];
+		if ( results[jobid] != "" ) {
+			char *msg = escape_spaces( results[jobid].c_str() );
+			enqueue_result( reqid + " CREAM_Job_Start\\ Error:\\ " + msg );
+		} else {
+			enqueue_result( reqid + " NULL" );
+		}
 	}
 	
 	return 0;
@@ -763,7 +856,7 @@ int handle_cream_job_purge( char **input_line )
 		HANDLE_SYNTAX_ERROR();
 	}
 
-	enqueue_request_batch( input_line, thread_cream_job_purge, cmp_request_2 );
+	enqueue_request_batch( input_line, thread_cream_job_purge, cmp_request_single );
 
 	gahp_printf("S\n");
 	
@@ -790,6 +883,7 @@ int thread_cream_job_purge( Request **reqlist )
 	AbsCreamProxy* cp = NULL;
 
 	vector<string> reqids;
+	map<string, string> results;
 	
 	try {
 		vector<JobIdWrapper> jv;
@@ -809,7 +903,7 @@ int thread_cream_job_purge( Request **reqlist )
 		check_for_factory_error(cp);
 		cp->setCredential(proxy.c_str());
 		cp->execute(service);
-		check_result_wrapper(rw);
+		check_result_wrapper2(rw, results);
 		delete cp;
 	}
 	catch(std::exception& ex) {
@@ -826,9 +920,15 @@ int thread_cream_job_purge( Request **reqlist )
 		return 1;
 	}
 	
-	for(vector<string>::const_iterator it = reqids.begin();
-		it != reqids.end(); it++) {
-		enqueue_result((*it) + " NULL");
+	for ( int idx = 0; reqlist[idx] != NULL; idx++ ) {
+		string reqid = reqlist[idx]->input_line[1];
+		string jobid = reqlist[idx]->input_line[4];
+		if ( results[jobid] != "" ) {
+			char *msg = escape_spaces( results[jobid].c_str() );
+			enqueue_result( reqid + " CREAM_Job_Purge\\ Error:\\ " + msg );
+		} else {
+			enqueue_result( reqid + " NULL" );
+		}
 	}
 	
 	return 0;
@@ -854,7 +954,7 @@ int handle_cream_job_cancel( char **input_line )
 		HANDLE_SYNTAX_ERROR();
 	}
 
-	enqueue_request_batch(input_line, thread_cream_job_cancel, cmp_request_2);
+	enqueue_request_batch(input_line, thread_cream_job_cancel, cmp_request_single);
 	gahp_printf("S\n");
 	
 	return 0;
@@ -880,6 +980,7 @@ int thread_cream_job_cancel( Request **reqlist )
 	AbsCreamProxy* cp = NULL;
 
 	vector<string> reqids;
+	map<string, string> results;
 
 	try {
 		vector<JobIdWrapper> jv;
@@ -899,7 +1000,7 @@ int thread_cream_job_cancel( Request **reqlist )
 		check_for_factory_error(cp);
 		cp->setCredential(proxy.c_str());
 		cp->execute(service);
-		check_result_wrapper(rw);
+		check_result_wrapper2(rw, results);
 		delete cp;
 	}
 	catch(std::exception& ex) {
@@ -916,9 +1017,15 @@ int thread_cream_job_cancel( Request **reqlist )
 		return 1;
 	}
 	
-	for(vector<string>::const_iterator it = reqids.begin();
-		it != reqids.end(); it++) {
-		enqueue_result((*it) + " NULL");
+	for ( int idx = 0; reqlist[idx] != NULL; idx++ ) {
+		string reqid = reqlist[idx]->input_line[1];
+		string jobid = reqlist[idx]->input_line[4];
+		if ( results[jobid] != "" ) {
+			char *msg = escape_spaces( results[jobid].c_str() );
+			enqueue_result( reqid + " CREAM_Job_Cancel\\ Error:\\ " + msg );
+		} else {
+			enqueue_result( reqid + " NULL" );
+		}
 	}
 	
 	return 0;
@@ -1186,115 +1293,182 @@ int handle_cream_job_status( char **input_line )
 		HANDLE_SYNTAX_ERROR();
 	}
 
-	enqueue_request( input_line, thread_cream_job_status );
+	enqueue_request_batch( input_line, thread_cream_job_status, cmp_request_single );
 
 	gahp_printf("S\n");
 	
 	return 0;
 }
 
-int thread_cream_job_status( Request *req )
+int thread_cream_job_status( Request **reqlist )
 {
-	// FIXME: The new API does not appear to have an interface
-	// for managing lease times. This command is currently
-	// stubbed out: we always return success
+	if ( reqlist == NULL ) {
+		internal_error( "thread_cream_job_status called with NULL pointer\n" );
+	}
+	if ( reqlist[0] == NULL ) {
+		internal_error( "thread_cream_job_status called with empty list\n" );
+	}
 
-	char *reqid, *service, *jobnum_str, *jobid;
-	string result_line, temp;
+	bool single_request = (reqlist[1] == NULL);
+
+	string result_line;
+	char *service;
+	process_string_arg( reqlist[0]->input_line[2], &service );
+	string proxy = reqlist[0]->proxy;
 	AbsCreamProxy* cp = NULL;
-	
-	process_string_arg( req->input_line[1], &reqid );
-	process_string_arg( req->input_line[2], &service );
-	process_string_arg( req->input_line[3], &jobnum_str );
-	
+
+	vector<string> reqids;
+
 	AbsCreamProxy::StatusArrayResult sar;
 	try {
-		if (jobnum_str == NULL) {
-			throw runtime_error("status of all jobs not supported");
-		}
 		vector<JobIdWrapper> jv;
-		int jobnum = atoi( jobnum_str );
-		for ( int i = 0; i < jobnum; i++) {
-			process_string_arg( req->input_line[i+4], &jobid );
-			jv.push_back(JobIdWrapper(jobid,
-			                          service,
-			                          vector<JobPropertyWrapper>()));
-		}
+		collect_job_ids( reqlist, jv, reqids );
+
 		vector<string> sv;
 		JobFilterWrapper jfw(jv,
-		                     sv,  // status contraint: none 
-		                     -1,  // from date: none 
-		                     -1,  // to date: none
-		                     "",  // delegation ID constraint: none
-		                     ""); // lease ID constraint: none
+							 sv,  // status contraint: none 
+							 -1,  // from date: none 
+							 -1,  // to date: none
+							 "",  // delegation ID constraint: none
+							 ""); // lease ID constraint: none
+
 		cp = CreamProxyFactory::make_CreamProxyStatus(&jfw,
 													  &sar,
 													  DEFAULT_TIMEOUT);
 		check_for_factory_error(cp);
-		cp->setCredential(req->proxy.c_str());
+		cp->setCredential(proxy.c_str());
 		cp->execute(service);
+		delete cp;
+	}
+	catch(std::exception& ex) {
+		delete cp;
+		for( vector<string>::const_iterator it = reqids.begin();
+			 it != reqids.end(); it++ ) {
+
+			char *msg = escape_spaces(ex.what());
+			enqueue_result( (*it) + " CREAM_Job_Start\\ Error:\\ " + msg );
+			free(msg);
+		}
+		return 1;
+	}
+
+	if ( single_request ) {
+		// This was a single status command for all jobs. Return all job
+		// info in one results line.
+		int cnt = 0;
+		char *failure_reason = NULL;
+		string exit_code;
+		string reqid = reqlist[0]->input_line[1] ;
+		string temp;
+
+		result_line = reqid + " NULL";
+
 		for (AbsCreamProxy::StatusArrayResult::iterator i = sar.begin();
 		     i != sar.end();
 		     i++)
 		{
 			if (i->second.get<0>() != JobStatusWrapper::OK) {
-				throw runtime_error(i->second.get<2>());
+				// We shouldn't see this case when querying about all jobs.
+				// But deal with it gracefully anyway.
+				char *msg = escape_spaces( i->second.get<2>().c_str() );
+				result_line = reqid + " CREAM_Job_Status\\ Error:\\ " + msg;
+				enqueue_result( result_line );
+				free( msg );
+				return 1;
 			}
-		}
-		delete cp;
-	}
-	catch(std::exception& ex) {
-		delete cp;
-		char *msg = escape_spaces(ex.what());
-		result_line = (string)reqid + " CREAM_Job_Status\\ Error:\\ " + msg;
-		enqueue_result(result_line);
-		free(msg);
 
-		return 1;
-	}
-	
-	result_line = (string)reqid + " NULL";
-	
-	int cnt = 0;
-	char *failure_reason = NULL;
-	string exit_code;
+			if (i->second.get<1>().getExitCode().size() == 0) 
+				exit_code = "NULL";
+			else
+				exit_code = i->second.get<1>().getExitCode();
 
-	for (AbsCreamProxy::StatusArrayResult::iterator i = sar.begin();
-	     i != sar.end();
-	     i++)
-	{
-		if (i->second.get<1>().getExitCode().size() == 0) 
-			exit_code = "NULL";
-		else
-			exit_code = i->second.get<1>().getExitCode();
+			temp += sp +
+				i->second.get<1>().getCreamJobID() +
+				sp +
+				i->second.get<1>().getStatusName() +
+				sp +
+				exit_code;
 
-		temp += sp +
-		        i->second.get<1>().getCreamJobID() +
-		        sp +
-		        i->second.get<1>().getStatusName() +
-		        sp +
-		        exit_code;
+			if (i->second.get<1>().getFailureReason().size() == 0) {
+				temp += " NULL";
+			} else {
+				failure_reason =
+					escape_spaces(i->second.get<1>().getFailureReason().c_str());
+				temp += sp + failure_reason;
+				free(failure_reason);
+			}
 
-		if (i->second.get<1>().getFailureReason().size() == 0) {
-			temp += " NULL";
-		}
-		else {
-			failure_reason =
-				escape_spaces(i->second.get<1>().getFailureReason().c_str());
-			temp += sp + failure_reason;
-			free(failure_reason);
+			cnt++;
 		}
 
-		cnt++;
+		char buf[100];
+
+		sprintf(buf, "%d", cnt);
+		result_line += sp + string(buf) + temp;
+
+		enqueue_result( result_line );
+
+		return 0;
+
+	} else {
+		// This was a string of status commands about individual jobs.
+		// Create a results line for each one.
+		int req_idx;
+		char *failure_reason;
+		string exit_code;
+		string reqid;
+		string jobid;
+		AbsCreamProxy::StatusArrayResult::iterator i;
+
+		for ( req_idx = 0; reqlist[req_idx] != NULL; req_idx++ ) {
+
+			reqid = reqlist[req_idx]->input_line[1];
+			jobid = reqlist[req_idx]->input_line[4];
+
+			for ( i = sar.begin(); i != sar.end(); i++ ) {
+				if ( i->first.find( jobid ) != string::npos ) {
+					break;
+				}
+			}
+			if ( i == sar.end() ) {
+				// job not in results!?
+				result_line = reqid + " CREAM_Job_Status\\ Error:\\ Job\\ id\\ not\\ in\\ reply";
+				enqueue_result( result_line );
+				continue;
+			}
+
+			if ( i->second.get<0>() != JobStatusWrapper::OK ) {
+				char *msg = escape_spaces( i->second.get<2>().c_str() );
+				result_line = reqid + " CREAM_Job_Status\\ Error:\\ " + msg;
+				enqueue_result( result_line );
+				free( msg );
+				continue;
+			}
+
+			if (i->second.get<1>().getExitCode().size() == 0) {
+				exit_code = "NULL";
+			} else {
+				exit_code = i->second.get<1>().getExitCode();
+			}
+
+			result_line = reqid + " NULL 1 " +
+				i->second.get<1>().getCreamJobID() + sp +
+				i->second.get<1>().getStatusName() + sp +
+				exit_code;
+
+			if (i->second.get<1>().getFailureReason().size() == 0) {
+				result_line += " NULL";
+			} else {
+				failure_reason =
+					escape_spaces(i->second.get<1>().getFailureReason().c_str());
+				result_line += sp + failure_reason;
+				free( failure_reason );
+			}
+
+			enqueue_result( result_line );
+		}
 	}
 
-	char buf[10000];
-	
-	sprintf(buf, "%d", cnt);
-	result_line += sp + string(buf) + temp;
-
-	enqueue_result(result_line);
-	
 	return 0;
 }
 
@@ -2076,7 +2250,7 @@ bool is_a_batchable_pair(Request * a, Request * b) {
 		return false;
 	}
 	if(a->requestcomp) {
-		return ! a->requestcomp(a,b);
+		return a->requestcomp(a,b);
 	}
 	return true;
 }
