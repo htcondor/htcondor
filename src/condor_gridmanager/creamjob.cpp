@@ -1673,7 +1673,8 @@ bool CreamJob::IsConnectionError( const char *msg )
 {
 	if ( strstr( msg, "[Connection timed out]" ) ||
 		 strstr( msg, "[Connection refused]" ) ||
-		 strstr( msg, "[Unknown host]" ) ) {
+		 strstr( msg, "[Unknown host]" ) ||
+		 strstr( msg, "EOF detected during communication." ) ) {
 		return true;
 	} else {
 		return false;
