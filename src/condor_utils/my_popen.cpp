@@ -389,7 +389,7 @@ my_popenv_impl( const char *const args[],
 		if (env_ptr) {
 			char **m_unix_env = NULL;
 			m_unix_env = env_ptr->getStringArray();
-			execvp(cmd.Value(), const_cast<char *const*>(args), m_unix_env );
+			execve(cmd.Value(), const_cast<char *const*>(args), m_unix_env );
 		} else {
 			execvp(cmd.Value(), const_cast<char *const*>(args) );
 		}
