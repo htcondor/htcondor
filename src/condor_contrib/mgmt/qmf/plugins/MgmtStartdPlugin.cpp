@@ -18,7 +18,7 @@
 
 #include "../condor_startd.V6/StartdPlugin.h"
 
-#include "../condor_collector.V6/hashkey.h"
+#include "hashkey.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
