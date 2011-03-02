@@ -967,10 +967,9 @@ LookupInteger( const char *name, int &value ) const
 {
 	bool    boolVal;
 	int     haveInteger;
-	string  sName;
+	string  sName(name);
 	int		tmp_val;
 
-	sName = string(name);
 	if( EvaluateAttrInt(sName, tmp_val ) ) {
 		value = tmp_val;
 		haveInteger = TRUE;
