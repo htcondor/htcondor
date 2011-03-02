@@ -180,7 +180,7 @@ FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 ##  machine(s) where whoever is the condor administrator(s) works
 ##  (assuming you trust all the users who log into that/those
 ##  machine(s), since this is machine-wide access you're granting).
-ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST), $(IP_ADDRESS)
 
 ##  If there are no machines that should have administrative access 
 ##  to your pool (for example, there's no machine where only trusted
@@ -239,11 +239,11 @@ ALLOW_WRITE = $(FULL_HOSTNAME), $(IP_ADDRESS)
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not have to change this.
-ALLOW_NEGOTIATOR = $(CONDOR_HOST)
+ALLOW_NEGOTIATOR = $(CONDOR_HOST), $(IP_ADDRESS)
 ##  Now, with flocking we need to let the SCHEDD trust the other 
 ##  negotiators we are flocking with as well.  You should normally 
 ##  not have to change this either.
-ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS), $(IP_ADDRESS)
 
 ##  Config access.  Machines listed here can use the condor_config_val
 ##  tool to modify all daemon configurations.  This level of host-wide
