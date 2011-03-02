@@ -848,6 +848,56 @@ our %submit_info = (
 		},
 	},
 
+	##########################################################################
+	# Platform openSUSE 11.3 on x86_64 (& updated)
+	##########################################################################
+	'x86_64_opensuse_11.3'		=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+				'-DWITH_CURL:BOOL=ON' => undef,
+				'-DWITH_EXPAT:BOOL=ON' => undef,
+				'-DWITH_LIBVIRT:BOOL=ON' => undef,
+				'-DWITH_LIBXML2:BOOL=ON' => undef,
+			},
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => {
+				@default_test_configure_args
+				
+			},
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+	'x86_64_opensuse_11.3-updated'		=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+				'-DWITH_CURL:BOOL=ON' => undef,
+				'-DWITH_EXPAT:BOOL=ON' => undef,
+				'-DWITH_LIBVIRT:BOOL=ON' => undef,
+				'-DWITH_LIBXML2:BOOL=ON' => undef,
+			},
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => {
+				@default_test_configure_args
+				
+			},
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
 );
 
 ###############################################################################
