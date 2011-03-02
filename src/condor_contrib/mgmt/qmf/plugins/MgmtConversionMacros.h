@@ -32,6 +32,13 @@ if (ad.Lookup##type(#attr, lookup_var)) {							\
 	dprintf(D_FULLDEBUG, "Warning: Could not find " #attr "\n");		\
 }
 
+#define BASE2(src,dest,type,lookup_var,set_var,extra)				\
+if (ad.Lookup##type(#src, lookup_var)) {							\
+	mgmtObject->set_##dest((set_var) extra);						\
+} else {															\
+	dprintf(D_FULLDEBUG, "Warning: Could not find " #src "\n");			\
+}
+
 #define OPT_BASE(attr,type,lookup_var,set_var,extra)				\
 if (ad.Lookup##type(#attr, lookup_var)) {							\
 	mgmtObject->set_##attr((set_var) extra);						\
@@ -47,6 +54,14 @@ if (ad.LookupString(#attr, &str)) {									\
 	dprintf(D_FULLDEBUG, "Warning: Could not find " #attr "\n");		\
 }
 
+#define STRING2(src,dest)											\
+if (ad.LookupString(#src, &str)) {									\
+	mgmtObject->set_##dest(str);									\
+	free(str);														\
+} else {															\
+	dprintf(D_FULLDEBUG, "Warning: Could not find " #src "\n");			\
+}
+
 #define OPT_STRING(attr)												\
 if (ad.LookupString(#attr, &str)) {									\
 	mgmtObject->set_##attr(str);									\
@@ -56,10 +71,13 @@ if (ad.LookupString(#attr, &str)) {									\
 }
 
 #define INTEGER(attr) BASE(attr,Integer,num,(uint32_t) num,)
+#define INTEGER2(src,dest) BASE2(src,dest,Integer,num,(uint32_t) num,)
 #define OPT_INTEGER(attr) OPT_BASE(attr,Integer,num,(uint32_t) num,)
 #define DOUBLE(attr) BASE(attr,Float,flt,(double) flt,)
+#define DOUBLE2(src,dest) BASE2(src,dest,Float,flt,(double) flt,)
 #define OPT_DOUBLE(attr) OPT_BASE(attr,Float,flt,(double) flt,)
 #define TIME_INTEGER(attr) BASE(attr,Integer,num,(uint64_t) num,* 1000000000)
+#define TIME_INTEGER2(src,dest) BASE2(src,dest,Integer,num,(uint64_t) num,* 1000000000)
 #define OPT_TIME_INTEGER(attr) OPT_BASE(attr,Integer,num,(uint64_t) num,* 1000000000)
 
 #define EXPR(attr)													\
