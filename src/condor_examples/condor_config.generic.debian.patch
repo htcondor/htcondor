@@ -33,40 +33,6 @@
  #LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
  
  ## If the local config file is not present, is it an error?
-@@ -80,7 +80,7 @@
- ##--------------------------------------------------------------------
- ##  When something goes wrong with condor at your site, who should get
- ##  the email?
--CONDOR_ADMIN		= condor-admin@your.domain
-+CONDOR_ADMIN		= root@$(FULL_HOSTNAME)
- 
- ##  Full path to a mail delivery program that understands that "-s"
- ##  means you want to specify a subject:
-@@ -93,13 +93,13 @@
- ##  machines don't share a common UID space, set it to 
- ##  UID_DOMAIN = $(FULL_HOSTNAME)
- ##  to specify that each machine has its own UID space.
--UID_DOMAIN		= your.domain
-+UID_DOMAIN		= $(FULL_HOSTNAME)
- 
- ##  Internet domain of machines sharing a common file system.
- ##  If your machines don't use a network file system, set it to
- ##  FILESYSTEM_DOMAIN = $(FULL_HOSTNAME)
- ##  to specify that each machine has its own file system. 
--FILESYSTEM_DOMAIN	= your.domain
-+FILESYSTEM_DOMAIN	= $(FULL_HOSTNAME)
- 
- ##  This macro is used to specify a short description of your pool. 
- ##  It should be about 20 characters long. For example, the name of 
-@@ -219,7 +219,7 @@
- ##  but note that this will allow anyone to submit jobs or add
- ##  machines to your pool and is a serious security risk.
- 
--ALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
-+ALLOW_WRITE = $(FULL_HOSTNAME)
- #ALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
- #DENY_WRITE = bad-machine.your.domain
- 
 @@ -315,6 +315,12 @@
  ##  permission, you would use:
  #STARTD_SETTABLE_ATTRS_OWNER = your_custom_attribute_name

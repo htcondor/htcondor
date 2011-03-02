@@ -406,7 +406,7 @@ LeaseManager::commandHandler_RenewLease(int command, Stream *stream)
 	}
 	stream->encode( );
 	dprintf (D_FULLDEBUG, "renew (%d): %d leases to renew\n",
-			 command, renew_list.size() );
+			 command, (int) renew_list.size() );
 
 	// Do the actual renewal
 	list <const LeaseManagerLease *> *const_renew_list =
@@ -435,7 +435,8 @@ LeaseManager::commandHandler_RenewLease(int command, Stream *stream)
 	}
 
 	stream->end_of_message();
-	dprintf (D_FULLDEBUG, "renew: %d leases renewed\n", renewed_list.size() );
+	dprintf (D_FULLDEBUG,
+			 "renew: %d leases renewed\n", (int)renewed_list.size() );
 	LeaseManagerLease_FreeList( renewed_list );
 	return TRUE;
 }
@@ -469,7 +470,7 @@ LeaseManager::commandHandler_ReleaseLease(int command, Stream *stream)
 
 	// Free up the list
 	dprintf (D_FULLDEBUG,
-			 "release: %d leases released\n", release_list.size() );
+			 "release: %d leases released\n", (int)release_list.size() );
 	LeaseManagerLease_FreeList( release_list );
 
 	stream->put( OK );
@@ -550,7 +551,7 @@ LeaseManager::initPublicAd( void )
 			EXCEPT( "default_daemon_name() returned NULL" );
 		}
 		m_publicAd.Assign( ATTR_NAME, defaultName );
-		free( const_cast<char *>(defaultName) );
+		delete [] defaultName;
 	}
 
 	m_publicAd.Assign( ATTR_LEASE_MANAGER_IP_ADDR,

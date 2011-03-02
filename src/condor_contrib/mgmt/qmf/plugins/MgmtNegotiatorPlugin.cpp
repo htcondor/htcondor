@@ -27,6 +27,7 @@
 #include <qpid/agent/ManagementAgent.h>
 
 #include "NegotiatorObject.h"
+#include "broker_utils.h"
 
 
 struct MgmtNegotiatorPlugin : public Service, NegotiatorPlugin
@@ -42,6 +43,9 @@ struct MgmtNegotiatorPlugin : public Service, NegotiatorPlugin
 	initialize()
 	{
 		char *host;
+		char *username;
+		char *password;
+		char *mechanism;
 		int port;
 		char *tmp;
 		std::string storefile;
@@ -68,6 +72,18 @@ struct MgmtNegotiatorPlugin : public Service, NegotiatorPlugin
 			free(tmp); tmp = NULL;
 		}
 
+		if (NULL == (username = param("QMF_BROKER_USERNAME")))
+		{
+			username = strdup("");
+		}
+
+		if (NULL == (mechanism = param("QMF_BROKER_AUTH_MECH")))
+		{
+			mechanism = strdup("ANONYMOUS");
+		}
+
+		password = getBrokerPassword();
+
 		// pretty much what the daemon does
 		tmp = default_daemon_name();
 		if (NULL == tmp) {
@@ -81,9 +97,15 @@ struct MgmtNegotiatorPlugin : public Service, NegotiatorPlugin
 		agent->init(std::string(host), port,
 					param_integer("QMF_UPDATE_INTERVAL", 10),
 					true,
-					storefile);
+					storefile,
+					username,
+					password,
+					mechanism);
 
 		free(host);
+		free(username);
+		free(password);
+		free(mechanism);
 
 		negotiator = new com::redhat::grid::NegotiatorObject(agent, mmName.c_str());
 

@@ -314,6 +314,12 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 			set( C_LIB32		usr/lib/condor )
 		endif ()
 
+        if ( ${LINUX_NAME} MATCHES "openSUSE"  OR  ${LINUX_NAME} MATCHES "sles" )
+			set( CPACK_RPM_SHADOW_PACKAGE "pwdutils" )
+		else()
+			set( CPACK_RPM_SHADOW_PACKAGE "shadow-utils" )
+		endif()
+
 		set( C_BIN			usr/bin )
 		set( C_LIBEXEC		usr/libexec/condor )
 		set( C_SBIN			usr/sbin )

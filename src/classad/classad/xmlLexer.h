@@ -113,7 +113,7 @@ class XMLLexer
 
 struct xml_tag_mapping
 {
-	char             *tag_name;
+	const char		*tag_name;
 	XMLLexer::TagID  id;
 };
 

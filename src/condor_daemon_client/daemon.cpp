@@ -1359,7 +1359,7 @@ Daemon::getCmInfo( const char* subsys )
 
 		daemon_list.initializeFromString(hostnames);
 		daemon_list.rewind();
-		host = strnewp(daemon_list.next());
+		host = strdup(daemon_list.next());
 		free( hostnames );
 	}
 

@@ -24,6 +24,8 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 
+// This is the shortest time between two runs of UpdateLeases()
+#define UPDATE_LEASE_DELAY 30
 
 class BaseJob;
 class GahpClient;
@@ -63,6 +65,9 @@ class BaseResource : public Service
 	static void setProbeDelay( int new_delay )
 		{ probeDelay = new_delay; }
 
+	// TODO Make this private and provide an accessor function?
+	time_t m_sharedLeaseExpiration;
+
  protected:
 	void DeleteMe();
 
@@ -73,6 +78,9 @@ class BaseResource : public Service
 	void UpdateLeases();
 	virtual void DoUpdateLeases( time_t& update_delay, bool& update_complete,
 								 SimpleList<PROC_ID>& update_succeeded );
+	virtual void DoUpdateSharedLease( time_t& update_delay,
+									  bool& update_complete,
+									  bool& update_succeeded );
 	bool Invalidate ();
     bool SendUpdate ();	
 	void UpdateCollector ();
@@ -105,6 +113,8 @@ class BaseResource : public Service
 	bool updateLeasesActive;
 	bool leaseAttrsSynched;
 	bool updateLeasesCmdActive;
+	bool m_hasSharedLeases;
+	time_t m_defaultLeaseDuration;
 
 	int _updateCollectorTimerId;
 	time_t _lastCollectorUpdate;

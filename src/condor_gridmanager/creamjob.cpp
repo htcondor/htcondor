@@ -51,17 +51,14 @@
 #define GM_CLEAR_REQUEST		11
 #define GM_HOLD					12
 #define GM_PROXY_EXPIRED		13
-#define GM_EXTEND_LIFETIME		14
-#define GM_POLL_JOB_STATE		15
-#define GM_START				16
-#define GM_DELEGATE_PROXY		17
-#define GM_CLEANUP				18
-#define GM_SET_LEASE			19
-#define GM_RECOVER_POLL			20
-#define GM_STAGE_IN				21
-#define GM_STAGE_OUT			22
-#define GM_EXTEND_LIFETIME_STAGE_IN	23
-#define GM_EXTEND_LIFETIME_STAGE_OUT	24
+#define GM_POLL_JOB_STATE		14
+#define GM_START				15
+#define GM_DELEGATE_PROXY		16
+#define GM_CLEANUP				17
+#define GM_SET_LEASE			18
+#define GM_RECOVER_POLL			19
+#define GM_STAGE_IN				20
+#define GM_STAGE_OUT			21
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -78,7 +75,6 @@ static const char *GMStateNames[] = {
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
 	"GM_PROXY_EXPIRED",
-	"GM_EXTEND_LIFETIME",
 	"GM_POLL_JOB_STATE",
 	"GM_START",
 	"GM_DELEGATE_PROXY",
@@ -87,8 +83,6 @@ static const char *GMStateNames[] = {
 	"GM_RECOVER_POLL",
 	"GM_STAGE_IN",
 	"GM_STAGE_OUT",
-	"GM_EXTEND_LIFETIME_STAGE_IN",
-	"GM_EXTEND_LIFETIME_STAGE_OUT",
 };
 
 #define CREAM_JOB_STATE_UNSET			""
@@ -673,80 +667,28 @@ void CreamJob::doEvaluateState()
 						   delegatedCredentialURI );
 		} break;
 		case GM_SET_LEASE: {
-			// Create a lease id on the cream server for this job
+			const char *lease_id;
+			const char *error_msg;
+				// TODO What happens if CreamResource can't set a lease?
 			if ( condorState == REMOVED || condorState == HELD ) {
-				myResource->CancelSubmit(this);
-				gmState = GM_UNSUBMITTED;
+				gmState = GM_DELETE;
 				break;
 			}
-			if ( leaseId == NULL ) {
-				// Create an ID unique to this job
-
-				// get condor pool name
-				// In case there are multiple collectors, strip out the spaces
-				// If there's no collector, insert a dummy name
-				char* pool_name = param( "COLLECTOR_HOST" );
-				if ( pool_name ) {
-					StringList collectors( pool_name );
-					free( pool_name );
-					pool_name = collectors.print_to_string();
-				} else {
-					pool_name = strdup( "NoPool" );
-				}
-
-				// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
-				std::string job_id;
-				jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
-
-				std::string buf;
-				sprintf( buf, "Condor_%s_%s", pool_name, job_id.c_str() );
-				leaseId = strdup( buf.c_str() );
-
-				jobAd->Assign( ATTR_CREAM_LEASE_ID, leaseId );
-
-				free( pool_name );
-			}
-
-			if ( jmLifetime == 0 ) {
-				int new_lease;
-				if ( CalculateJobLease( jobAd, new_lease,
-										DEFAULT_LEASE_DURATION ) == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) No lease for cream job!?\n",
-							 procID.cluster, procID.proc );
-					jmLifetime = now + DEFAULT_LEASE_DURATION;
-				} else {
-					jmLifetime = new_lease;
-				}
-			}
-
-			time_t server_lease = jmLifetime;
-			rc = gahp->cream_set_lease( resourceManagerString,
-										leaseId, server_lease );
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+			if ( leaseId != NULL ) {
+				gmState = GM_SUBMIT;
 				break;
 			}
-
-			if ( rc != GLOBUS_SUCCESS ) {
-				if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
-					connect_failure = true;
-					break;
-				}
-				// Unhandled error
-				LOG_CREAM_ERROR( "cream_set_lease()", rc );
-				gahpErrorString = gahp->getErrorString();
-				myResource->CancelSubmit( this );
+			if ( (error_msg = myResource->getLeaseError()) ) {
+					// There's a problem setting the lease
+				errorString = error_msg;
 				gmState = GM_HOLD;
+			}
+			lease_id = myResource->getLeaseId();
+			if ( lease_id == NULL ) {
+					// lease still needs to be set. Wait.
 				break;
 			}
-
-			if ( server_lease != jmLifetime ) {
-				dprintf( D_ALWAYS, "(%d.%d) Server changed lease time from %d to %d\n",
-						 procID.cluster, procID.proc, (int)jmLifetime,
-						 (int)server_lease );
-				jmLifetime = server_lease;
-			}
-
+			leaseId = strdup( lease_id );
 			gmState = GM_SUBMIT;
 		} break;
 		case GM_SUBMIT: {
@@ -806,8 +748,8 @@ void CreamJob::doEvaluateState()
 					downloadUrl = download_url;
 					jobAd->Assign( ATTR_CREAM_DOWNLOAD_URL, downloadUrl );
 					gmState = GM_SUBMIT_SAVE;				
-					
-					UpdateJobLeaseSent(jmLifetime);
+
+					UpdateJobLeaseSent(myResource->m_sharedLeaseExpiration);
 					
 				} else {
 					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
@@ -868,17 +810,6 @@ void CreamJob::doEvaluateState()
 					m_xfer_request = NULL;
 					gmState = GM_CLEAR_REQUEST;
 				}
-
-				int new_lease;	// CalculateJobLease needs an int
-				time_t renew_time;
-				if ( CalculateJobLease( jobAd, new_lease,
-										DEFAULT_LEASE_DURATION,
-										&renew_time ) ) {
-					jmLifetime = new_lease;
-					gmState = GM_EXTEND_LIFETIME_STAGE_IN;
-					break;
-				}
-				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
 			}
 		} break;
 		case GM_SUBMIT_COMMIT: {
@@ -919,17 +850,6 @@ void CreamJob::doEvaluateState()
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				int new_lease;	// CalculateJobLease needs an int
-				time_t renew_time;
-				if ( CalculateJobLease( jobAd, new_lease,
-										DEFAULT_LEASE_DURATION,
-										&renew_time ) ) {
-					jmLifetime = new_lease;
-					gmState = GM_EXTEND_LIFETIME;
-					break;
-				}
-				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
-
 				if ( probeNow || remoteState == CREAM_JOB_STATE_UNSET ) {
 					doActivePoll = true;
 					probeNow = false;
@@ -940,44 +860,6 @@ void CreamJob::doEvaluateState()
 					break;
 				}
 				
-			}
-			} break;
-		case GM_EXTEND_LIFETIME_STAGE_IN:
-		case GM_EXTEND_LIFETIME_STAGE_OUT:
-		case GM_EXTEND_LIFETIME: {
-			if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL;
-			} else {
-				CHECK_PROXY;
-				time_t server_lease = jmLifetime;
-
-				rc = gahp->cream_set_lease (resourceManagerString, leaseId, server_lease );
-
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-				if ( rc != GLOBUS_SUCCESS ) {
-					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
-						connect_failure = true;
-						break;
-					}
-					// unhandled error
-					LOG_CREAM_ERROR("cream_set_lease()",rc);
-					gahpErrorString = gahp->getErrorString();
-					gmState = GM_CANCEL;
-					break;
-				}
-				jmLifetime = server_lease;
-
-				UpdateJobLeaseSent( jmLifetime );
-				if ( gmState == GM_EXTEND_LIFETIME_STAGE_IN ) {
-					gmState = GM_STAGE_IN;
-				} else if ( gmState == GM_EXTEND_LIFETIME_STAGE_OUT ) {
-					gmState = GM_STAGE_OUT;
-				} else {
-					gmState = GM_SUBMITTED;
-				}
 			}
 			} break;
 		case GM_POLL_JOB_STATE: {
@@ -1023,19 +905,6 @@ void CreamJob::doEvaluateState()
 					free( fault );
 				}
 
-				if ( remoteState != CREAM_JOB_STATE_DONE_OK && 
-					 remoteState != CREAM_JOB_STATE_DONE_FAILED && 
-					 remoteState != CREAM_JOB_STATE_ABORTED) {
-				   
-					int new_lease;	// CalculateJobLease needs an int
-					if ( CalculateJobLease( jobAd, new_lease,
-											DEFAULT_LEASE_DURATION ) ) {
-						jmLifetime = new_lease;
-						gmState = GM_EXTEND_LIFETIME;
-						break;
-					}
-				}
-				
 				gmState = GM_SUBMITTED;
 			}
 			} break;
@@ -1062,17 +931,6 @@ void CreamJob::doEvaluateState()
 					m_xfer_request = NULL;
 					gmState = GM_CLEAR_REQUEST;
 				}
-
-				int new_lease;	// CalculateJobLease needs an int
-				time_t renew_time;
-				if ( CalculateJobLease( jobAd, new_lease,
-										DEFAULT_LEASE_DURATION,
-										&renew_time ) ) {
-					jmLifetime = new_lease;
-					gmState = GM_EXTEND_LIFETIME_STAGE_OUT;
-					break;
-				}
-				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
 			}
 		} break;
 		case GM_DONE_SAVE: {
@@ -1815,7 +1673,8 @@ bool CreamJob::IsConnectionError( const char *msg )
 {
 	if ( strstr( msg, "[Connection timed out]" ) ||
 		 strstr( msg, "[Connection refused]" ) ||
-		 strstr( msg, "[Unknown host]" ) ) {
+		 strstr( msg, "[Unknown host]" ) ||
+		 strstr( msg, "EOF detected during communication." ) ) {
 		return true;
 	} else {
 		return false;

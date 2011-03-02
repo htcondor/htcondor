@@ -148,7 +148,6 @@ if( $taskname eq $EXTERNALS_TASK ) {
 	
 }
 
-print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 
 	# build.win.bat uses BASE_DIR to setup some things.
@@ -158,7 +157,11 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 
 } else {
     $ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
-    system("env");
+}
+
+print "------------------------- ENV DUMP ------------------------\n";
+foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
+    print "$key=".$ENV{$key}."\n";
 }
 print "------------------------- ENV DUMP ------------------------\n";
 

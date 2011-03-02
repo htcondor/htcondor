@@ -179,7 +179,7 @@ int main( int argc, char *argv[] )
 
 	int result = -1;
 	int exitcode = 1;
-	char *reason=0;
+	const char *reason=NULL;
 	filesize_t filesize;
 
 	sock->decode();
