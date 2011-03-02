@@ -61,7 +61,8 @@ class CronJobMgr : public Service
 	bool ScheduleAllJobs( void );
 
 	double GetCurJobLoad( void ) const { return m_cur_job_load; };
-	double GetMaxJobLoad( void ) const { return m_max_job_load; };
+	// Return max job load allowed with a very small fuzz factor
+	double GetMaxJobLoad( void ) const { return (m_max_job_load+0.000001); };
 	void SetMaxJobLoad( double v ) { m_max_job_load = v; };
 	int GetNumActiveJobs( void ) const;
 	int GetNumJobs( void ) const { return m_job_list.NumJobs(); };
