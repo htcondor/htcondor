@@ -68,7 +68,7 @@ if (WITH_QPID)
 			set_property( TARGET qpid PROPERTY FOLDER "externals" )
 			
 		else()
-			set( QPID_FOUND "${EXTERNAL_STAGE}/lib/libqpidcommon.so;${EXTERNAL_STAGE}/lib/libqpidclient.so;${EXTERNAL_STAGE}/lib/libqmf.so;${EXTERNAL_STAGE}/lib/libqpidtypes.so" )
+			set( QPID_FOUND "${EXTERNAL_STAGE}/lib/libqpidcommon.so;${EXTERNAL_STAGE}/lib/libqpidclient.so;${EXTERNAL_STAGE}/lib/libqmf.so;${EXTERNAL_STAGE}/lib/libqpidtypes.so;${EXTERNAL_STAGE}/lib/qpidmessaging.so;${EXTERNAL_STAGE}/lib/libqmfconsole.so;${EXTERNAL_STAGE}/lib/libqmf2.so" )
 			# TODO: so are we going to need to install qpid.so's along with condor..? or should we -static the plugins.
 			# add linux install target
 			#set( QMF_GEN ${EXTERNAL_STAGE}/managementgen/qmf-gen ) ?
@@ -79,7 +79,7 @@ if (WITH_QPID)
 	else( NOT PROPER )
 
 		# I don't know how we check versions for native search of qpid-qmf? header check? program_exec?
-		find_multiple( "qpidcommon;qpidclient;qmf;qmfengine;qpidtypes" QPID_FOUND)
+		find_multiple( "qpidcommon;qpidclient;qmf;qmfengine;qmfconsole;qpidtypes;qpidmessaging;qmf2" QPID_FOUND)
 		find_program ( QMF_GEN qmf-gen )
 
 	endif( NOT PROPER )
