@@ -107,6 +107,14 @@ while the job is managed by these daemons.
     operating on existing jobs.
   \end{itemize}
 
+% gittrac #434
+\item Because of the new \Macro{DAGMAN\_VERBOSITY} configuration setting
+(see section~\ref{sec:DAGMan-Config-File-Entries}),
+the \Opt{-debug} flag is no longer propagated from a top-level DAG to a
+sub-DAG; furthermore, \Opt{-debug} is no longer set in a
+\File{.condor.sub} file unless it is set on the \Condor{submit\_dag}
+command line.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
