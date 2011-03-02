@@ -22,6 +22,15 @@ The details of each version are described below.
 \item Condor version 7.5.6 not yet released.
 %\item Condor version 7.5.6 released on Month Date, 2011.
 
+\item What used to be known as the \Condor{startd} and \Condor{schedd} cron
+  mechanisms are now collectively called \Term{Daemon ClassAd Hooks}.
+  The significant changes in this Condor version 7.5.6 release are 
+  given in the New Features section. 
+
+% gittrac #1935
+\item In the release directory, the subdirectory \File{lib/glite/} has
+  been moved to \File{libexec/glite/}.
+
 \end{itemize}
 
 
@@ -50,15 +59,83 @@ See ~\pageref{dagman:SCRIPT} for details.
   \Condor{shadow} processes.
 
 %gittrac #1628
-\item Updated Condor's Chirp protocol with new commands. The Chirp C++ client
- and \Condor{chirp} command were updated to use the new commands. See section
- ~\ref{man-condor-chirp} for details on the new commands.
+\item Condor's Chirp protocol has been updated with new commands.
+ The Chirp C++ client
+ and \Condor{chirp} command are updated to use the new commands.
+  See section ~\ref{man-condor-chirp} for details on the new commands.
+
+\item The Daemon ClassAd Hooks mechanism is described in
+section~\ref{sec:daemon-classad-hooks},
+with configuration variables defined in section~\ref{sec:Config-hooks}.
+The mechanism has the following new features:
+  \begin{itemize}
+    %gittrac #1086
+    \item The \Condor{startd}'s benchmarks are no longer hard coded into
+    the \Condor{startd}.  Instead, the benchmarks are now implemented
+    via the Daemon ClassAd Hooks mechanism.  Two new programs are
+    shipped with Condor version 7.5.6:
+    \Condor{mips} and \Condor{kflops}.
+    These programs are in  the \File{libexec} directory). 
+    They implement the original mips and kflops benchmarks for this 
+    new implementation.
+    Additional benchmarks can now easily be implemented;
+    the list of benchmarks is controlled
+    via the new \Macro{BENCHMARKS\_JOBLIST} configuration variable.
+
+  \item Several fixes to the the mips and kflops benchmarks should
+    increase the reproducibility of their results.
+
+  %gittrac #1837
+  \item Two new job types have been implemented in the Daemon ClassAd
+    Hooks mechanism.  They are called \Expr{OneShot} and \Expr{OnDemand}.
+    Currently, \Expr{OnDemand} is used only by the new \Expr{BENCHMARKS} 
+    mechanism.
+  \end{itemize}
+
+\item \Condor{dagman} now prints  out all boolean configuration
+variable values as \Expr{True} or \Expr{False},
+instead of 1 or 0 within the \File{dagman.out} file.
+
+% gittrac #434
+\item Because of the new \Macro{DAGMAN\_VERBOSITY} configuration setting
+(see section~\ref{sec:DAGMan-Config-File-Entries}),
+the \Opt{-debug} flag is no longer propagated from a top-level DAG to a
+sub-DAG; furthermore, \Opt{-debug} is no longer set in a
+\File{.condor.sub} file unless it is set on the \Condor{submit\_dag}
+command line.
+
+% gittrac #1790
+\item When job ClassAd attributes are modified via \Condor{qedit}, 
+the changes are now propagated to the \Condor{shadow} and \Condor{gridmanager}.
+This allows a user's changes to the job ClassAd to affect the job policy 
+expressions while the job is managed by these daemons.
+
+\item Several improvements for CREAM grid jobs:
+  \begin{itemize}
+  % gittrac #1936
+  \item CREAM commands are retried if the server closes the connection
+    prematurely.
+  % gittrac #940
+  \item All jobs going to a CREAM server share the same lease handle.
+  % gittrac #1931
+  \item Multiple CREAM status requests for single jobs are now batched
+    into a single command to the server.
+  % gittrac #958
+  \item When there are too many commands to be issued to a CREAM server
+    simultaneously, new job submissions have lower priority than commands
+    operating on existing jobs.
+  \end{itemize}
 
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+% gittrac #1935
+\item The default value of configuration variable \Macro{GLITE\_LOCATION}
+  has changed to \verb|$(LIBEXEC)/glite|. This reflects the change made in the
+  layout of the Condor release files.
 
 % gittrac 1800
 \item Values for configuration variables \Macro{NETWORK\_INTERFACE} and
@@ -95,6 +172,21 @@ See ~\pageref{dagman:SCRIPT} for details.
   should be refreshed.  The default is 600 (10 minutes).  Previously,
   the \Condor{shadow} checked for proxy updates once per minute.
 
+% gittrac #1698
+\item Daemon ClassAd Hooks no longer support what was identified as 
+  the \emph{old} syntax.  
+  Due to this, variables
+  \Macro{STARTD\_CRON\_JOBS} and \Macro{HAWKEYE\_JOBS} no longer exist.  
+  In previous versions of Condor, the \Condor{startd} would issue a
+  warning if this syntax was found, but, starting with 7.5.6, any use
+  of these macros will be ignored.
+
+% gittrac #434
+\item New configuration variables \Macro{DAGMAN\_VERBOSITY},
+\Macro{DAGMAN\_MAX\_PRE\_SCRIPTS}, \Macro{DAGMAN\_MAX\_POST\_SCRIPTS},
+and \Macro{DAGMAN\_ALLOW\_LOG\_ERROR}
+are defined in section~\ref{sec:DAGMan-Config-File-Entries}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -102,8 +194,12 @@ See ~\pageref{dagman:SCRIPT} for details.
 \begin{itemize}
 
 % gittrac #1909
-\item Fixed a memory leak in the quill daemon.
+\item Fixed a memory leak in the \Condor{quill} daemon.
 
+% gittrac #1935
+\item Fixed a problem in Condor version 7.5.5 release,
+  in which binaries used for the grid universe's pbs and lsf grid types 
+  were not marked as executable.
 
 % gittrac #1900
 \item Fixed a bug introduced in Condor version 7.5.5
@@ -112,16 +208,11 @@ and \SubmitCmd{vm} universe jobs to leave the queue when held.
 
 % gittrac 1826
 \item A bug has been fixed that caused SOAP transactions in the
-  \Condor{schedd} daemon to result in log message of the form 
+  \Condor{schedd} daemon to result in a log message of the form 
 \begin{verbatim}
 Timer <X> not found
 \end{verbatim}
-  This bug is not known to have produced any other
-  undesired behaviors.
-
-% gittrac #1586
-\item Fixed a bug that caused \Condor{dagman} to sometimes falsely
-report that a cycle exists in a DAG.
+  This bug is not known to have produced any other undesired behaviors.
 
 % gittrac #1869
 \item The job ClassAd attribute \AdAttr{JobLeaseDuration} is now set 
@@ -130,16 +221,47 @@ Previously, a default value was not supplied,
 causing jobs to be unnecessarily killed if the
 submit and execute machines temporarily lost contact with each other.
 
+% gittrac #1586
+\item Fixed a bug that caused \Condor{dagman} to sometimes falsely
+report that a cycle existed in a DAG.
+
 % gittrac #741
 \item Using the \Condor{hold} command on a Windows platform job managed
-by \Condor{dagman} no longer
-removes the node job of the DAG.
+by \Condor{dagman} no longer removes the node job of the DAG.
 This behavior on Windows now matches the behavior on other platforms.
 
 % gittrac #1490
 \item Using the \Condor{hold} command followed by the \Condor{remove} 
 command on a job managed by \Condor{dagman}
 now removes node jobs of the DAG, rather than leaving them as orphans.
+
+\item A bug has been fixed in the \Condor{config\_val} program,
+  which caused it to try to contact the \Condor{collector} before printing
+  usage information, if the command line was syntactically incorrect.
+
+% gittrac #1922
+\item A bug has been fixed that caused Condor daemons to crash in
+  response to DNS look up failures when receiving connections.  The
+  crash occurred during authorization of the new connection.  
+  This problem was introduced in Condor version 7.5.4.
+
+% gittrac #1806
+\item Fixed a bug that caused \Condor{submit} to silently ignore parts
+of attribute values if an equals sign was omitted.
+
+% gittrack 1915
+\item Starting in Condor version 7.5.5, the \Condor{schedd} daemon would
+  sometimes generate an error message and exit abnormally when
+  shutting down.  The error message contained the following text:
+\begin{verbatim}
+ERROR ``Assertion ERROR on (m_ref_count == 0)''
+\end{verbatim}
+
+% gittrack 1913
+\item Changes to the \Condor{negotiator} daemon's address were 
+  not published to the \Condor{collector} until the \Condor{negotiator} daemon
+  was reconfigured or restarted.  
+  This was a problem in some situations when using \Condor{shared\_port}.
 
 \end{itemize}
 
@@ -154,6 +276,15 @@ removing any of the jobs in the set will cause the
 \Condor{schedd} to go into an infinite loop.
 \Attr{OtherJobRemoveRequirements} is defined on
 page ~\pageref{attribute-OtherJobRemoveRequirements}.
+
+% gittrac #1751
+\item In a \Condor{dagman} workflow, if a splice contains nothing but
+another splice, parsing the DAG will fail.  This can be worked around
+by putting any non-splice job, including a DAG-level NOOP job,
+into the offending splice.  
+This bug has apparently existed since the splice
+feature was introduced in \Condor{dagman}.
+
 
 \end{itemize}
 

@@ -198,6 +198,16 @@ The following attributes are \emph{required}:
    quotation marks (\verb@"@).
    There is no default.
 
+ \item[\Attr{JobUniverse}] This attribute defines what Condor job
+\index{COD!required attributes!JobUniverse} 
+   universe to use for the given COD application.
+   At this point, the only supported universes are vanilla and Java.
+   This attribute must be an integer, with vanilla using the value 5,
+   and Java the value 10.
+   This attribute is required if the default \MacroNI{START} expression
+   is used, as it references the attribute \Attr{IsValidCheckpointPlatform},
+   which needs the job universe.
+
  \item[\Attr{Owner}] If the \Condor{startd} daemon is executing as root on
 \index{COD!required attributes!Owner} 
    the resource where a COD application will run, the user must also
@@ -238,7 +248,7 @@ The following list of attributes are \emph{optional}:
    the IWD.
    If any other attributes that define file names (for example,
    \Attr{In}, \Attr{Out}, and so on) do not contain a full path, the
-   \Attr{IWD} will automatically be pre-pended to those filenames.
+   \Attr{IWD} will automatically be pre-pended to those file names.
    It is a string attribute, and must therefore be enclosed in 
    quotation marks (\verb@"@).
    If the \Attr{IWD} is not specified, the temporary execution sandbox
@@ -293,18 +303,6 @@ The following list of attributes are \emph{optional}:
    It is a string attribute, and must therefore be enclosed in 
    quotation marks (\verb@"@).
 
- \item[\Attr{JobUniverse}] This attribute defines what Condor job
-\index{COD!optional attributes!JobUniverse} 
-   universe to use for the given COD application.
-   At this point, the only supported universes are vanilla and Java.
-   This attribute must be an integer, with vanilla using the value 5,
-   and Java the value 10.
-   If \Attr{JobUniverse} is not specified, the vanilla universe is
-   used by default.
-   For more information about the Condor job universes, see
-   section~\ref{sec:Choosing-Universe} on
-   page~\pageref{sec:Choosing-Universe}. 
-
  \item[\Attr{JarFiles}] This string attribute is only used if
 \index{COD!optional attributes!JarFiles} 
    \Attr{JobUniverse} is 10 (the Java universe).
@@ -313,7 +311,7 @@ The following list of attributes are \emph{optional}:
    There is no default.
    It is a string attribute, and must therefore be enclosed in 
    quotation marks (\verb@"@).
-   Multiple file names may be delimited with either commas or whitespace
+   Multiple file names may be delimited with either commas or white space
    characters, and
    therefore, file names can not contain spaces.
 
