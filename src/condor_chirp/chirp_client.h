@@ -21,6 +21,9 @@
 Chirp C Client
 */
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #ifndef CHIRP_CLIENT_H
 #define CHIRP_CLIENT_H
 
@@ -49,8 +52,43 @@ Error codes:
 -9   TOO_MANY_OPEN     There are too many resources in use.
 -10  BUSY              That object is in use by someone else.
 -11  TRY_AGAIN         A temporary condition prevented the request.
--12  UNKNOWN           An unknown error occurred.
+-12  BAD_FD:           The file descriptor requested is invalid.
+-13  IS_DIR            A file-only operation was attempted on a directory.
+-14  NOT_DIR           A directory operation was attempted on a file.
+-15  NOT_EMPTY         A directory cannot be removed because it is not empty.
+-16  CROSS_DEVICE_LINK A hard link was attempted across devices.
+-17  OFFLINE           The requested resource is temporarily not available.
+-127 UNKNOWN           An unknown error occurred.
 */
+
+struct chirp_stat {
+	long cst_dev;
+	long cst_ino;
+	long cst_mode;
+	long cst_nlink;
+	long cst_uid;
+	long cst_gid;
+	long cst_rdev;
+	long cst_size;
+	long cst_blksize;
+	long cst_blocks;
+	long cst_atime;
+	long cst_mtime;
+	long cst_ctime;
+};
+
+struct chirp_statfs {
+	long f_type;
+	long f_bsize;
+	long f_blocks;
+	long f_bfree;
+	long f_bavail;
+	long f_files;
+	long f_ffree;
+};
+
+int get_stat( const char *line, struct chirp_stat *info );
+int get_statfs( const char *line, struct chirp_statfs *info );
 
 DLLEXPORT struct chirp_client * chirp_client_connect_default(void);
 /*chirp_client_connect_default()
@@ -59,6 +97,7 @@ DLLEXPORT struct chirp_client * chirp_client_connect_default(void);
   the starter can automatically create this file if you specify
   +WantIOProxy=True in the submit file.
 */
+
 DLLEXPORT struct chirp_client * chirp_client_connect( const char *host, int port );
 /*chirp_client_connect()
   Connect to a chirp server at the specified address.
@@ -203,6 +242,187 @@ DLLEXPORT int chirp_client_ulog( struct chirp_client *c, char const *message );
 /*chirp_client_ulog()
   logs a generic string to the user log
 */
+
+DLLEXPORT int chirp_client_pread( struct chirp_client *c, int fd, void *buffer,
+	int length, int offset);
+/*chirp_client_pread
+  Reads from a file starting at the offset and puts the result in a buffer.
+  The number of bytes actually read is returned, or -1 on error.
+*/
+
+DLLEXPORT int chirp_client_pwrite( struct chirp_client *c, int fd, 
+	const void *buffer,	int length, int offset );
+/*chirp_client_pwrite
+  Writes from a buffer into a file at the given offset.  The number of bytes
+  actually written is returned, or -1 on error.
+*/
+
+DLLEXPORT int chirp_client_sread( struct chirp_client *c, int fd, void *buffer,
+	int length, int offset, int stride_length, int stride_skip );
+/*chirp_client_sread
+  Reads from a file starting at the offset, reading stride_length bytes every
+  stride_skip bytes. Puts the result in a buffer. The number of bytes actually
+  read is returned, or -1 on error.
+*/
+
+
+DLLEXPORT int chirp_client_swrite( struct chirp_client *c, int fd, 
+	const void *buffer,	int length, int offset, int stride_length, 
+	int stride_skip );
+/*chirp_client_swrite
+  Writes from a buffer into a file starting at the given offset.  Writes 
+  stride_length bytes every stride_skip bytes. The total number of bytes
+  written is returned, or -1 on error.
+*/
+
+DLLEXPORT int chirp_client_rmall( struct chirp_client *c, const char *path );
+/*chirp_client_rmall
+  Recursively deletes a directory. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_fstat( struct chirp_client *c, int fd,
+	struct chirp_stat *buf );
+/*chirp_client_fstat
+  Gets metadata. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_fstatfs( struct chirp_client *c, int fd,
+	struct chirp_statfs *buf);
+/*chirp_client_fstatfs
+  Gets filesystem metadata. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_fchown( struct chirp_client *c, int fd, int uid,
+	int gid );
+/*chirp_client_fchown
+  Changes ownership of a file. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_fchmod( struct chirp_client *c, int fd,
+	int mode );
+/*chirp_client_fchmod
+  Changes mode of a file. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_ftruncate( struct chirp_client *c, int fd,
+	int length );
+/*chirp_client_ftruncate
+  Truncates a file. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_getfile_buffer( struct chirp_client *c, 
+	const char *name, char **buffer );
+/*chirp_client_getfile
+  Retrieves an entire file. Returns number of bytes in the file, or -1 on error.
+*/
+
+DLLEXPORT int chirp_client_putfile_buffer( struct chirp_client *c,
+	const char *path, const char *buffer, int mode, int length );
+/*chirp_client_putfile_buffer
+  Stores an entire file. Returns size of written file, or -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_getlongdir( struct chirp_client *c, const char *path,
+	char **buffer );
+/*chirp_client_getlongdir
+  Gets directory contents and all metadata. Returns size of reply, or -1 on
+  error.
+*/
+
+DLLEXPORT int chirp_client_getdir( struct chirp_client *c, const char *path,
+	char **buffer );
+/*chirp_client_getdir
+  Gets directory contents. Returns size of reply, or -1 on error.
+*/
+
+DLLEXPORT int chirp_client_whoami( struct chirp_client *c, char *buf,
+	int length);
+/*chirp_client_whoami
+  Get user's identity. Returns size of reply, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_whoareyou( struct chirp_client *c, const char *rhost,
+	char *buf, int length );
+/*chirp_client_whoareyou
+  Get server's identity with respect to host. Returns 1 on success, -1 on
+  failure.
+*/
+
+DLLEXPORT int chirp_client_link( struct chirp_client *c, const char *path,
+	const char *newpath );
+/*chirp_client_link
+  Creates a hard link. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_symlink( struct chirp_client *c, const char *path,
+	const char *newpath );
+/*chirp_client_symlink
+  Creates a symbolic link. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_readlink( struct chirp_client *c, const char *path,
+	int length, char **buf );
+/*chirp_client_readlink
+  Reads up to length bytes of a symbolic link. Returns number of byes read, or 
+  -1 on error.
+*/
+
+DLLEXPORT int chirp_client_stat( struct chirp_client *c, const char *path,
+	struct chirp_stat *buf );
+/*chirp_client_stat
+  Get metadata. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_lstat( struct chirp_client *c, const char *path,
+	struct chirp_stat *buf );
+/*chirp_client_lstat
+  Get metadata. For symbolic links, examine the link itself. Returns 0 on success,
+  -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_statfs( struct chirp_client *c, const char *path,
+	struct chirp_statfs *buf );
+/*chirp_client_statfs
+  Gets filesystem metadata. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_access( struct chirp_client *c, const char *path,
+	int mode );
+/*chirp_client_access
+  Checks access permissions. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_chmod( struct chirp_client *c, const char *path,
+	int mode );
+/*chirp_client_chmod
+  Changes mode of a file. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_chown( struct chirp_client *c, const char *path,
+	int uid, int gid );
+/*chirp_client_chown
+  Changes the ownership of a file. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_lchown( struct chirp_client *c, const char *path,
+	int uid, int gid );
+/*chirp_client_lchown
+  Changes the ownership of a file. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_truncate( struct chirp_client *c, const char *path,
+	int length );
+/*chirp_client_truncate
+  Truncates a file. Returns 0 on success, -1 on failure.
+*/
+
+DLLEXPORT int chirp_client_utime( struct chirp_client *c, const char *path,
+	int actime, int modtime );
+/*chirp_client_utime
+  Changes the access and modification times of a file. Returns 0 on success,
+  -1 on failure.
+*/
+
 #ifdef __cplusplus
 }
 #endif

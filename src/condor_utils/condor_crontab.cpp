@@ -47,6 +47,8 @@ Regex CronTab::regex;
  **/
 CronTab::CronTab()
 {
+	this->lastRunTime = CRONTAB_INVALID;
+	this->valid = false;
 }
 
 /**
@@ -371,7 +373,7 @@ CronTab::initRegexObject() {
 		if ( ! CronTab::regex.compile( pattern, &errptr, &erroffset )) {
 			MyString error = "CronTab: Failed to compile Regex - ";
 			error += pattern;
-			EXCEPT( (char*)error.Value() );
+			EXCEPT( const_cast<char*>(error.Value()));
 		}
 	}
 }
@@ -585,7 +587,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 				//
 			int day = (this->ranges[CRONTAB_DOW_IDX]->getElementAt(ctr) - firstDay) + 1;
 			while ( day <= CRONTAB_DAY_OF_MONTH_MAX ) {
-				if ( day > 0 && !this->contains( *curRange, day ) ) {
+				if (curRange && day > 0 && !this->contains( *curRange, day ) ) {
 					curRange->add( day );
 				}
 				day += 7;

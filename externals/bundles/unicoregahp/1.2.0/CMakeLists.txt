@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -42,5 +42,5 @@ if ( WITH_UNICOREGAHP AND NOT PROPER )
 	install(FILES ${EXTERNAL_STAGE}/usr/share/java/ugahp.jar DESTINATION ${C_LIB})
 
 else()
-	message (STATUS "external skiped (unicoregahp)")
+	message (STATUS "external skipped (unicoregahp)")
 endif()

@@ -38,9 +38,7 @@ Credential::Credential(const classad::ClassAd& class_ad) {
 	data = NULL;
 }
 
-Credential::Credential() {
-	data = NULL;
-}
+Credential::Credential() : type(0), data(0), m_data_size(0) {}
 
 Credential::~Credential() {
 	if (data != NULL) {

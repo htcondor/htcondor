@@ -124,6 +124,9 @@ reserve_for_afs_cache()
 		   how much is in use. */
 	dprintf( D_FULLDEBUG, "Checking AFS cache parameters\n" );
 	fp = my_popenv( args, "r", FALSE );
+	if( !fp ) {
+		return 0;
+	}
 	fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size );
 	my_pclose( fp );
 	dprintf( D_FULLDEBUG, "cache_in_use = %d, cache_size = %d\n",

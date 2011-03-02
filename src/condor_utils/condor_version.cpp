@@ -57,6 +57,14 @@
 #define BUILDIDSTR ""
 #endif
 
+#if !defined(BUILD_DATE)
+#  define BUILD_DATE __DATE__
+#endif
+
+#if !defined(PRE_RELEASE_STR)
+#  define PRE_RELEASE_STR ""
+#endif
+
 /* Here is the version string - update before a public release */
 /* --- IMPORTANT!  THE FORMAT OF THE VERSION STRING IS VERY STRICT
    BECAUSE IT IS PARSED AT RUNTIME AND COMPILE-TIME.  DO NOT ALTER THE
@@ -68,12 +76,16 @@
 	   $CondorVersion: 6.9.5 WinNTPreview " __DATE__ BUILDIDSTR " $ [WRONG!!!]
    Any questions?  See Todd or Derek.  Note: if you mess it up, DaemonCore
    will EXCEPT at startup time.  
+
+   You generally change this in the top level CMakeLists.txt, NOT HERE.
 */
 
-static char* CondorVersionString = "$CondorVersion: 7.5.6 " __DATE__ BUILDIDSTR " PRE-RELEASE-UWCS $";
+
+static const char* CondorVersionString =
+"$CondorVersion: " CONDOR_VERSION " " BUILD_DATE BUILDIDSTR  PRE_RELEASE_STR " $";
 
 /* Here is the platform string.  You don't need to edit this */
-static char* CondorPlatformString = "$CondorPlatform: " PLATFORM " $";
+static const char* CondorPlatformString = "$CondorPlatform: " PLATFORM " $";
 
 extern "C" {
 

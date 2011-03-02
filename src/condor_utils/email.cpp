@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -39,9 +39,10 @@
 /* how we actually get the FILE* for our mail program pipe varies vastly
 	between NT and unix */
 #ifdef WIN32
-static FILE *email_open_implementation(char *Mailer,char *const final_args[]);
+static FILE *email_open_implementation(char *Mailer,
+									   const char * final_args[]);
 #else
-static FILE *email_open_implementation(char *const final_args[]);
+static FILE *email_open_implementation(const char * final_args[]);
 #endif
 
 extern DLL_IMPORT_MAGIC char **environ;
@@ -59,7 +60,6 @@ email_open( const char *email_addr, const char *subject )
 	char *temp;
 	int token_boundary;
 	int num_addresses;
-	char **final_args;
 	int arg_index;
 	FILE *mailerstream;
 
@@ -146,7 +146,9 @@ email_open( const char *email_addr, const char *subject )
 	}
 
 	/* construct the argument vector for the mailer */
-	final_args = (char **)malloc((8 + num_addresses) * sizeof(char*));
+	//char const * const * final_args;
+	const char * * final_args;
+	final_args = (char const * *)malloc((8 + num_addresses) * sizeof(char*));
 	if (final_args == NULL) {
 		EXCEPT("Out of memory");
 	}
@@ -198,7 +200,7 @@ email_open( const char *email_addr, const char *subject )
 
 #ifdef WIN32
 FILE *
-email_open_implementation(char *Mailer, char *const final_args[])
+email_open_implementation(char *Mailer, const char * final_args[])
 {
 	priv_state priv;
 	int prev_umask;
@@ -229,7 +231,7 @@ email_open_implementation(char *Mailer, char *const final_args[])
 #else /* unix */
 
 FILE *
-email_open_implementation(char *const final_args[])
+email_open_implementation( const char * final_args[])
 {
 
 	FILE *mailerstream;
@@ -283,8 +285,6 @@ email_open_implementation(char *const final_args[])
 		static char pe_logname[256]; /* Sorry, putenv wants it this way */
 		static char pe_user[256];
 		const char *condor_name;
-		uid_t condor_uid;
-		gid_t condor_gid;
 		int i;
 
 		/* Disable any EXCEPT_Cleanup code installed by the parent process.
@@ -357,7 +357,7 @@ email_open_implementation(char *const final_args[])
 		}
 
 		/* invoke the mailer */
-		execvp(final_args[0], final_args);
+		execvp(final_args[0], const_cast<char *const*>(final_args) );
 
 		/* I hope this EXCEPT gets recorded somewhere */
 		EXCEPT("EMAIL PROCESS: Could not exec mailer using '%s' with command "
@@ -390,7 +390,11 @@ email_developers_open(const char *subject)
     tmp = param ("CONDOR_DEVELOPERS");
     if (tmp == NULL) {
 		/* we strdup here since we always call free below */
+#ifdef NO_PHONE_HOME
+		tmp = strdup("NONE");
+#else
         tmp = strdup("condor-admin@cs.wisc.edu");
+#endif
     } else
     if (strcasecmp (tmp, "NONE") == 0) {
         free (tmp);
@@ -425,7 +429,7 @@ email_close(FILE *mailer)
 	priv = set_condor_priv();
 
 	customSig = NULL;
-	if (customSig = param("EMAIL_SIGNATURE")) {
+	if ((customSig = param("EMAIL_SIGNATURE")) != NULL) {
 		fprintf( mailer, "\n\n");
 		fprintf( mailer, customSig);
 		fprintf( mailer, "\n");

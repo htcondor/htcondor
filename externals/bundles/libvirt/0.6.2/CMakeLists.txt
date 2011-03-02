@@ -1,6 +1,6 @@
  ###############################################################
  #
- # Copyright (C) 1990-2010, Redhat.
+ # Copyright 2011 Red Hat, Inc.
  #
  # Licensed under the Apache License, Version 2.0 (the "License"); you
  # may not use this file except in compliance with the License.  You may
@@ -58,5 +58,5 @@ if (LIBVIRT_FOUND)
     set( LIBVIRT_FOUND ${LIBVIRT_FOUND} PARENT_SCOPE )
     set( HAVE_EXT_LIBVIRT ON PARENT_SCOPE )
 else(LIBVIRT_FOUND)
-    message (STATUS "external skiped (libvirt)")
+    message (STATUS "external skipped (libvirt)")
 endif(LIBVIRT_FOUND)

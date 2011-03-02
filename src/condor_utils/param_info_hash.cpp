@@ -82,7 +82,7 @@ param_info_hash_lookup(param_info_hash_t param_info, const char* param) {
 
 // of type to be used by param_info_hash_iterate
 int
-param_info_hash_dump_value(param_info_t* param_value, void* unused) {
+param_info_hash_dump_value(param_info_t* param_value, void* /*unused*/ ) {
 	printf("%s:  default=", param_value->name);
 	switch (param_value->type) {
 		case PARAM_TYPE_STRING:
@@ -113,7 +113,7 @@ param_info_hash_iterate(param_info_hash_t param_info, int (*callPerElement)
 	int i;
 	int stop = 0;
 	for(i = 0; i < PARAM_INFO_TABLE_SIZE && stop == 0; i++) {
-		bucket_t* this_param = (bucket_t*)(param_info + i * sizeof(bucket_t*));
+		bucket_t* this_param = (bucket_t*)(param_info + i);
 		while(this_param != NULL && stop == 0) {
 			stop = callPerElement(this_param->param, user_data);
 			this_param = this_param->next;

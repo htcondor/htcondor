@@ -161,17 +161,19 @@ ClassAdLogParser::readLogEntry(int &op_type)
 	int	rval;
 
     // move to the current offset
-    if (fseek(log_fp, nextOffset, SEEK_SET) != 0) {
+    if (log_fp && fseek(log_fp, nextOffset, SEEK_SET) != 0) {
         fclose(log_fp);
         log_fp = NULL;
         return FILE_READ_EOF;
     }
 
-    rval = readHeader(log_fp, op_type);
-    if (rval < 0) {
-        fclose(log_fp);
-        log_fp = NULL;
-        return FILE_READ_EOF;
+    if(log_fp) {
+	    rval = readHeader(log_fp, op_type);
+	    if (rval < 0) {
+		    fclose(log_fp);
+		    log_fp = NULL;
+		    return FILE_READ_EOF;
+	    }
     }
 
 		// initialize of current & last ClassAd Log Entry objects
@@ -182,34 +184,36 @@ ClassAdLogParser::readLogEntry(int &op_type)
 
 
 		// read a ClassAd Log Entry Body
-	switch(op_type) {
-	    case CondorLogOp_LogHistoricalSequenceNumber:
-            rval = readLogHistoricalSNBody(log_fp);
-			break;
-	    case CondorLogOp_NewClassAd:
-            rval = readNewClassAdBody(log_fp);
-			break;
-	    case CondorLogOp_DestroyClassAd:
-            rval = readDestroyClassAdBody(log_fp);
-			break;
-	    case CondorLogOp_SetAttribute:
-            rval = readSetAttributeBody(log_fp);
-			break;
-	    case CondorLogOp_DeleteAttribute:
-            rval = readDeleteAttributeBody(log_fp);
-			break;
-		case CondorLogOp_BeginTransaction:
-            rval = readBeginTransactionBody(log_fp);
-			break;
-		case CondorLogOp_EndTransaction:
-            rval = readEndTransactionBody(log_fp);
-			break;
-	    default:
-            fclose(log_fp);
-            log_fp = NULL;
-		    return FILE_READ_ERROR;
-			break;
-	}
+	if(log_fp) {
+		switch(op_type) {
+		    case CondorLogOp_LogHistoricalSequenceNumber:
+		    rval = readLogHistoricalSNBody(log_fp);
+				break;
+		    case CondorLogOp_NewClassAd:
+		    rval = readNewClassAdBody(log_fp);
+				break;
+		    case CondorLogOp_DestroyClassAd:
+		    rval = readDestroyClassAdBody(log_fp);
+				break;
+		    case CondorLogOp_SetAttribute:
+		    rval = readSetAttributeBody(log_fp);
+				break;
+		    case CondorLogOp_DeleteAttribute:
+		    rval = readDeleteAttributeBody(log_fp);
+				break;
+			case CondorLogOp_BeginTransaction:
+		    rval = readBeginTransactionBody(log_fp);
+				break;
+			case CondorLogOp_EndTransaction:
+		    rval = readEndTransactionBody(log_fp);
+				break;
+		    default:
+		    fclose(log_fp);
+		    log_fp = NULL;
+			    return FILE_READ_ERROR;
+				break;
+		}
+	} else return FILE_READ_ERROR;
 
 	if (rval < 0) {
 

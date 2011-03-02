@@ -23,6 +23,7 @@
 ######################################################################
 use Cwd;
 
+use POSIX 'strftime';
 use Getopt::Long;
 use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache /;
 # We use -- and everything after it will be configure arguments only.
@@ -39,7 +40,9 @@ my $buildid_file = "BUILD-ID";
 my $buildid;
 my $externals_loc="/scratch/externals/cmake";
 my $platform = "$ENV{NMI_PLATFORM}";
-my $prefix = "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir ";
+my %defines = (
+    prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
+    );
 
 # autoflush our STDOUT
 $| = 1;
@@ -47,7 +50,7 @@ $| = 1;
 print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 
-    $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\IDE;$ENV{VS90COMNTOOLS}..\..\VC\BIN;$ENV{PATH}";
+    $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
 	system("set");
 	
 } else {
@@ -65,6 +68,8 @@ system("cmake --version");
 ######################################################################
 print "Finding build id of Condor\n";
 open( BUILDID, "$buildid_file" ) || die "Can't open $buildid_file: $!\n";
+my @stat = stat(BUILDID);
+$date = strftime( "%b %d %Y", localtime($stat[9]) );
 while( <BUILDID> ) {
     chomp;
     $buildid = $_;
@@ -74,10 +79,12 @@ if( ! $buildid ) {
     die "Can't find Condor build id in $buildid_file!\n";
 }
 print "Build id is: $buildid\n";
-$buildid = "-DBUILDID:STRING=$buildid ";
+$defines{buildid} = "-DBUILDID:STRING=$buildid";
+$defines{date} = "-DBUILD_DATE:STRING=\"$date\"";
 
 print "platform is: $platform\n";
-$platform = "-DPLATFORM:STRING=$platform ";
+$defines{platform} = "-DPLATFORM:STRING=$platform";
+$defines{condor_platform} = "-DCONDOR_PLATFORM:STRING=$platform";
 
 ######################################################################
 # run cmake on the source tree
@@ -104,12 +111,12 @@ if ( defined($opt_clear_externals_cache)||defined($opt_clear_externals_cache_wee
 ######################################################################
 # run cmake on the source tree
 ######################################################################
-my $configexecstr =
-			"cmake . " .
-			$buildid .
-			$platform .
-			$prefix .
-			join(' ', @ARGV);
+my @command = ( "cmake",
+		".",
+		join(" ", values(%defines)),
+		join(' ', @ARGV)
+    );
+my $configexecstr = join( " ", @command );
 
 print "$configexecstr\n";
 

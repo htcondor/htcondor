@@ -43,9 +43,9 @@ char *time_to_iso8601(
 {
 	char  buffer[128];
 	char  *iso_representation;
-	char  *utc_note;
-	int   year, month, day;
-	int   hour, minute, second;
+	const char  *utc_note;
+	int   year=0, month=0, day=0;
+	int   hour=0, minute=0, second=0;
 
 	if (type != ISO8601_TimeOnly) {
 		year = 1900 + time.tm_year; // struct tm has year-1900

@@ -113,6 +113,11 @@ Condor::DebugLevel(1);
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
 
+my $hostname = `hostname`; chomp $hostname;
+if ( ! ($hostname =~ /\./ ) ) {
+    warn "Warning: Host name '$hostname' is not an FQDN!!";
+    sleep( 10 );
+}
 my $iswindows = CondorTest::IsThisWindows();
 
 # configuration options
@@ -1281,8 +1286,9 @@ sub IsPersonalRunning
 			last;
         }
     }
-    close(CONFIG)
-    	or warn "Error executing condor_config_val";
+    if ( close(CONFIG) && ($? != 13) ) {	# Ignore SIGPIPE
+	warn "Error executing condor_config_val: '$?' '$!'"
+    }
 
     if( $matchedconfig eq "" ) {
         die	"lost: config does not match expected config setting......\n";

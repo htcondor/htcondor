@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -53,12 +53,22 @@ if ( HAVE_EXT_GSOAP )
 	if (NOT PROPER)
 		add_dependencies( gen_${_DAEMON}_soapfiles gsoap )
 	endif()
+	
+	if (WINDOWS)
+		set_property( TARGET gen_${_DAEMON}_soapfiles PROPERTY FOLDER "executables" )
+	endif()	
 
 	# now append the header and srcs to incoming vars
 	if ( NOT ${_SRCS} MATCHES "soap_${_DAEMON}C.cpp" )
 		list(APPEND ${_SRCS} ${${_DAEMON}_SOAP_SRCS} )
 		list(APPEND ${_HDRS} ${${_DAEMON}_SOAP_HDRS} )
 	endif()
+
+	#  The generated files spew no end of warnings which we can't fix.
+	#  So, turn off the warnings for these files. (-w means no warnings)
+	if (UNIX)
+		set_source_files_properties( ${${_DAEMON}_SOAP_SRCS} PROPERTIES COMPILE_FLAGS "-w")
+	endif(UNIX)
 
 	 list(REMOVE_DUPLICATES ${_SRCS})
 	

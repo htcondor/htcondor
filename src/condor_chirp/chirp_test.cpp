@@ -39,6 +39,7 @@ char buffer2[BUFFER_SIZE];
 #define TEST_DIR		"/tmp/chirpdir"
 #endif
 
+
 int main( int argc, char *argv[] )
 {
 	struct chirp_client *client;

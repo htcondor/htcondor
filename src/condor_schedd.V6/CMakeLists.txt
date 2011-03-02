@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -23,8 +23,8 @@ condor_selective_glob("qmgmt_send_stubs*;qmgr_lib_support*;qmgr_job_updater*" qm
 file( GLOB scheddRmvElements Example* *.t.* ${qmgmtElements} )
 
 if (NOT WIN_EXEC_NODE_ONLY)
-	condor_daemon( schedd "${scheddRmvElements}"
-	"ckpt_server_api;condor_sandbox;${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND}" "${C_SBIN}" ON)
+	condor_daemon( schedd "${scheddRmvElements}" "ckpt_server_api;condor_sandbox;${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND};${CONDOR_QMF}" "${C_SBIN}" ON)
+
 
 	if (HAVE_EXT_GSOAP)
 		install (FILES ${CMAKE_CURRENT_BINARY_DIR}/condorSchedd.wsdl DESTINATION ${C_LIB}/webservice)

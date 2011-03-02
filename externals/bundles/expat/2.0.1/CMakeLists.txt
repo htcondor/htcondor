@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -59,6 +59,6 @@ if ( WITH_EXPAT )
 
 else(WITH_EXPAT)
 
-	message (STATUS "external skiped (expat)")
+	message (STATUS "external skipped (expat)")
 
 endif(WITH_EXPAT)

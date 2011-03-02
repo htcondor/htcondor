@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -20,6 +20,9 @@
 # add the contrib subtree for build & test only
 
 if (WANT_CONTRIB)
+  if (HAVE_EXT_POSTGRESQL)
+    option(WANT_QUILL "Support for quill" ON)
+  endif()
   add_subdirectories("${CMAKE_CURRENT_SOURCE_DIR}" "" "")
 else(WANT_CONTRIB)
   dprint("skipping contrib modules")

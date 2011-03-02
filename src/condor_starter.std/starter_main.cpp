@@ -1022,7 +1022,8 @@ get_job_info()
 			break;
 #endif
 		default:
-			u_proc = new UserProc( s );
+			if(s.cmd)
+				u_proc = new UserProc( s );
 			break;
 	}
 
@@ -1089,7 +1090,7 @@ cleanup()
 */
 extern "C" {
 int
-exception_cleanup(int,int,char*)
+exception_cleanup(int,int,const char*)
 {
 	sigset_t	mask;
 

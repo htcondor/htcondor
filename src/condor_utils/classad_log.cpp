@@ -56,7 +56,8 @@ ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 	active_transaction = NULL;
 	log_fp = NULL;
 	m_nondurable_level = 0;
-
+	max_historical_logs = 0;
+	historical_sequence_number = 0;
 }
 
 ClassAdLog::ClassAdLog(const char *filename,int max_historical_logs_arg) : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
@@ -828,7 +829,7 @@ LogSetAttribute::Play(void *data_structure)
 {
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	int rval;
-	ClassAd *ad;
+	ClassAd *ad = 0;
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
 	rval = ad->AssignExpr(name, value);
@@ -927,7 +928,7 @@ int
 LogDeleteAttribute::Play(void *data_structure)
 {
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
-	ClassAd *ad;
+	ClassAd *ad = 0;
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
 

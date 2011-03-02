@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -19,12 +19,12 @@
 #set the local target 
 set(TargetName syscall_numbers)
 
-add_custom_command( OUTPUT syscall_numbers.h 
-					COMMAND awk
-					ARGS -f  ${CMAKE_CURRENT_SOURCE_DIR}/awk_prog.include_file ${CMAKE_CURRENT_SOURCE_DIR}/syscall_numbers.tmpl > syscall_numbers.h )
+add_custom_command( OUTPUT syscall_numbers.h
+					COMMAND awk -f ${CMAKE_CURRENT_SOURCE_DIR}/awk_prog.include_file ${CMAKE_CURRENT_SOURCE_DIR}/syscall_numbers.tmpl > syscall_numbers.h
+					DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/awk_prog.include_file ${CMAKE_CURRENT_SOURCE_DIR}/syscall_numbers.tmpl)
 					
-add_custom_command( OUTPUT syscall_numbers.cpp 
-					COMMAND awk
-					ARGS -f ${CMAKE_CURRENT_SOURCE_DIR}/awk_prog.name_table ${CMAKE_CURRENT_SOURCE_DIR}/syscall_numbers.tmpl > syscall_numbers.cpp )
+add_custom_command( OUTPUT syscall_numbers.cpp
+					COMMAND awk -f ${CMAKE_CURRENT_SOURCE_DIR}/awk_prog.name_table ${CMAKE_CURRENT_SOURCE_DIR}/syscall_numbers.tmpl > syscall_numbers.cpp
+					DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/awk_prog.name_table ${CMAKE_CURRENT_SOURCE_DIR}/syscall_numbers.tmpl)
 					
 condor_static_lib( syscall_numbers "syscall_numbers.cpp;syscall_numbers.h" )

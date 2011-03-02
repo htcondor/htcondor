@@ -245,6 +245,7 @@ const char	*NiceUser		= "nice_user";
 
 const char	*GridResource	= "grid_resource";
 const char	*X509UserProxy	= "x509userproxy";
+const char  *DelegateJobGSICredentialsLifetime = "delegate_job_gsi_credentials_lifetime";
 const char    *GridShell = "gridshell";
 const char	*GlobusRSL = "globus_rsl";
 const char	*GlobusXML = "globus_xml";
@@ -287,6 +288,8 @@ const char	*EncryptInputFiles = "encrypt_input_files";
 const char	*EncryptOutputFiles = "encrypt_output_files";
 const char	*DontEncryptInputFiles = "dont_encrypt_input_files";
 const char	*DontEncryptOutputFiles = "dont_encrypt_output_files";
+
+const char	*OutputDestination = "output_destination";
 
 const char	*StreamInput = "stream_input";
 const char	*StreamOutput = "stream_output";
@@ -416,6 +419,7 @@ void	SetEmailAttributes();
 void 	SetCronTab();
 void	SetRemoteInitialDir();
 void	SetExitRequirements();
+void	SetOutputDestination();
 void 	SetArguments();
 void 	SetJobDeferral();
 void 	SetEnvironment();
@@ -504,7 +508,7 @@ extern DLL_IMPORT_MAGIC char **environ;
 
 extern "C" {
 int SetSyscalls( int foo );
-int DoCleanup(int,int,char*);
+int DoCleanup(int,int,const char*);
 }
 
 struct SubmitRec {
@@ -3756,6 +3760,18 @@ SetExitRequirements()
 }
 	
 void
+SetOutputDestination()
+{
+	char *od = condor_param( OutputDestination, ATTR_OUTPUT_DESTINATION );
+	MyString buffer;
+	if (od) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_OUTPUT_DESTINATION, od);
+		InsertJobExpr (buffer);
+		free(od);
+	}
+}
+
+void
 SetArguments()
 {
 	ArgList arglist;
@@ -4677,7 +4693,7 @@ void
 SetCoreSize()
 {
 	char *size = condor_param( CoreSize, "core_size" );
-	long coresize;
+	long coresize = 0;
 	MyString buffer;
 
 	if (size == NULL) {
@@ -5244,6 +5260,17 @@ SetGSICredentials()
 		}
 	}
 
+	tmp = condor_param(DelegateJobGSICredentialsLifetime,ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME);
+	if( tmp ) {
+		char *endptr=NULL;
+		int lifetime = strtol(tmp,&endptr,10);
+		if( !endptr || *endptr != '\0' ) {
+			fprintf(stderr,"\nERROR: invalid integer setting %s = %s\n",DelegateJobGSICredentialsLifetime,tmp);
+			exit( 1 );
+		}
+		InsertJobExprInt(ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME,lifetime);
+		free(tmp);
+	}
 
 	//ckireyev: MyProxy-related crap
 	if ((tmp = condor_param (ATTR_MYPROXY_HOST_NAME))) {
@@ -5802,6 +5829,7 @@ queue(int num)
 		SetEmailAttributes();
 		SetRemoteInitialDir();
 		SetExitRequirements();
+		SetOutputDestination();
 
         // really a command, needs to happen before any calls to check_open
 		SetJobDisableFileChecks();
@@ -6521,7 +6549,7 @@ usage()
 
 extern "C" {
 int
-DoCleanup(int,int,char*)
+DoCleanup(int,int,const char*)
 {
 	if( ClusterCreated ) 
 	{
@@ -6860,10 +6888,7 @@ InsertJobExpr (const char *expr, bool clustercheck)
 {
 	MyString attr_name;
 	ExprTree *tree = NULL;
-	int unused = 0;
-
 	MyString hashkey(expr);
-
 	int pos = 0;
 	int retval = Parse (expr, attr_name, tree, &pos);
 

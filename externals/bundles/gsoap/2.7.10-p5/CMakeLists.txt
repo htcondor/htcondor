@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -29,10 +29,10 @@ if (WITH_GSOAP)
 			
 			set (GSOAP_CONFIGURE cp ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.win32 gsoap/src/Makefile.win32 )
 			
-			set (GSOAP_MAKE set BISON_SIMPLE=${BISON_SIMPLE} \r\n
+			set (GSOAP_MAKE set BISON_SIMPLE=${BISON_SIMPLE}\r\n
 			                gmake -f Makefile.win32 -C gsoap/src )
 			
-			set (GSOAP_INSTALL set PACKAGE_INSTALL_DIR=${EXTERNAL_STAGE} \r\n
+			set (GSOAP_INSTALL set PACKAGE_INSTALL_DIR=${EXTERNAL_STAGE}\r\n
 			                   gmake -f Makefile.win32 install -C gsoap/src )
 		else(WINDOWS)
 			set (GSOAP_PATCH  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/install_soapcpp2_wsdl2h_aux-2.7.10-Makefile.in.patch &&
@@ -69,6 +69,7 @@ if (WITH_GSOAP)
 			set(GSOAP_FOUND ON)
 			set(GSOAP_SRC "${EXTERNAL_STAGE}/src/stdsoap2.cpp" PARENT_SCOPE )
 			set(SOAPCPP2 "${EXTERNAL_STAGE}/soapcpp2.exe")
+			set_property( TARGET gsoap PROPERTY FOLDER "externals" )
 		endif(NOT WINDOWS)
 
 		set ( GSOAP_SHARE "${EXTERNAL_BUILD_PREFIX}/${GSOAP_VER}/src/gsoap/${GSOAP_VER}/gsoap" )
@@ -142,6 +143,6 @@ if (WITH_GSOAP)
 
 else(WITH_GSOAP)
 
-	message (STATUS "external skiped (gsoap)")
+	message (STATUS "external skipped (gsoap)")
 
 endif(WITH_GSOAP)

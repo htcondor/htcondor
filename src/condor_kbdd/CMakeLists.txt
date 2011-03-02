@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -17,7 +17,8 @@
  ############################################################### 
 
 
-if ( HAVE_KBDD AND (LINUX AND NOT ${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND") )
+# Note that this the linux build will break if HAVE_KBDD AND ${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND")
+if (WINDOWS OR (HAVE_KBDD AND LINUX AND NOT (${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND")))
 
 	condor_glob(kbdHdrs kbdSrcs "")
 

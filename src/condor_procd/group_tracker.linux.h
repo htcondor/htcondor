@@ -37,8 +37,8 @@ public:
 
 private:
 	
-	bool m_allocating;
 	GIDPool m_gid_pool;
+	bool m_allocating;
 };
 
 #endif

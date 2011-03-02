@@ -28,6 +28,8 @@
 $| = 1;
 
 use Cwd;
+use File::Basename;
+
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
 my $pub_dir = "$BaseDir/public";
@@ -68,17 +70,30 @@ if( ! -d $pub_dir ) {
 # copy in the package targets
 if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
 	# system("mv *.msi *.zip *.tar.gz $pub_dir");
-	system("nmi_tools\\glue\\build\\munge.bat $pub_dir");
+	system("nmi_tools\\glue\\build\\munge.bat $pub_dir cleanup");
 	system("mv *.zip $pub_dir");
 	system("mv *.msi $pub_dir");
 	system("mv condor-*.tar.gz $pub_dir");
-	system("tar -cvf $pub_dir/wix.tar.gz $BaseDir/msconfig/wix/xml/*");
-	system("nmi_tools\\glue\\build\\munge.bat $pub_dir");
 }
-else
-{
-	system("mv *.tar.gz *.rpm *.deb $pub_dir");
-	system("cmake -E md5sum $pub_dir/* md5s.txt");
+else {
+    # Should this be run for Windows also?
+    my $check_tarball_script = dirname($0) . "/check_tarball.pl";
+    my $tarball_errors = 0;
+    foreach my $tarball (<*.tar.gz>) {
+		# GGT this doesn't seem to be working, let's not break tests
+		# for this now
+        #print `$check_tarball_script $tarball 2>&1`;
+        #if($?) {
+        #    $tarball_errors++;
+        #}
+    }
+    
+    if($tarball_errors > 0) {
+        die("$tarball_errors tarballs had errors");
+    }
+
+    system("mv *.tar.gz *.rpm *.deb $pub_dir");
+    system("cmake -E md5sum $pub_dir/* md5s.txt");
 }
 
 

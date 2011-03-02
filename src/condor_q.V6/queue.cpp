@@ -178,6 +178,8 @@ clusterProcString::
 clusterProcString() {
 	dagman_cluster_id = -1;
 	dagman_proc_id    = -1;
+	cluster = -1;
+	proc = -1;
 	string = 0;
 	return;
 }
@@ -2675,6 +2677,11 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
 	request->Insert( buffer );
 
+
+	int last_match_time=0, last_rej_match_time=0;
+	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
+	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
+
 	request->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	request->LookupInteger( ATTR_PROC_ID, proc );
 	request->LookupInteger( ATTR_JOB_STATUS, jobState );
@@ -2715,6 +2722,13 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			proc );
 		return return_buff;
 	}
+	if ( last_rej_match_time == 0 ) {
+	  sprintf( return_buff,
+		   "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
+		   proc );
+	  return return_buff;
+	}
+
 
 	startdAds.Open();
 
@@ -2884,9 +2898,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		fOffline, verbose ? fOfflineStr.c_str() : "",
 		available );
 
-	int last_match_time=0, last_rej_match_time=0;
-	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
-	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 	if (last_match_time) {
 		time_t t = (time_t)last_match_time;
 		sprintf( return_buff, "%s\tLast successful match: %s",
@@ -3085,7 +3096,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
     file = safe_fopen_wrapper(filename, "r");
     if (file == NULL) {
         fprintf(stderr, "Can't open file of job ads: %s\n", filename);
-        success = false;
+		return false;
     } else {
         do {
             classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
@@ -3101,6 +3112,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
         } else {
             success = true;
         }
+		fclose(file);
     }
     return success;
 }

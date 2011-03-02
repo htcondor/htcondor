@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -62,18 +62,19 @@ if ( NOT PROPER )
 		message (STATUS "external configured (HADOOP_FOUND=${EXTERNAL_STAGE}/hdfs)")
 
 		if (WINDOWS)
+		  set_property( TARGET hadoop PROPERTY FOLDER "externals" )
 		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs/ DESTINATION ./hdfs )
 		else()
 		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs DESTINATION ${C_LIBEXEC} )
 		endif()
 
 	else()
-		message (STATUS "external skiped (hadoop)")
+		message (STATUS "external skipped (hadoop)")
 	endif()
 
 else( NOT PROPER )
 
-	message (STATUS "external skiped (hadoop)")
+	message (STATUS "external skipped (hadoop)")
 
 endif( NOT PROPER )
 

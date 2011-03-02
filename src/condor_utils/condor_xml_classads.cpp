@@ -119,8 +119,8 @@ private:
 
 struct tag_name
 {
-	TagName  id; // Defined in the condor_xml_classads.h
-	char     *name;
+	TagName		 id;	// Defined in the condor_xml_classads.h
+	const char	*name;
 };
 
 #define NUMBER_OF_TAG_NAMES (sizeof(tag_names) / sizeof(struct tag_name))
@@ -277,7 +277,7 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 				
 				bool      add_to_classad = true;
 				MyString  to_insert;
-				char      *token_text_raw;
+				char      *token_text_raw=0;
 				MyString  token_text("");
 				
 				to_insert = attribute_value;

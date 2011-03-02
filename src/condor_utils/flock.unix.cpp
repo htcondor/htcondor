@@ -39,10 +39,18 @@
  * code. So we provide our own emulation of flock() based on fcntl().
  */
 
-#define   LOCK_SH   1<<0
-#define   LOCK_EX   1<<1
-#define   LOCK_NB   1<<2
-#define   LOCK_UN   1<<3
+#if !defined(LOCK_SH)
+# define	LOCK_SH   1<<0
+#endif
+#if !defined(LOCK_EX)
+# define	LOCK_EX   1<<1
+#endif
+#if !defined(LOCK_NB)
+# define	LOCK_NB   1<<2
+#endif
+#if !defined(LOCK_UN)
+# define	LOCK_UN   1<<3
+#endif
 
 
 int

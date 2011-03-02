@@ -145,7 +145,7 @@ int main( int argc, char *argv[] )
 		if( !allow_multiple ) {
 			delim = "***";
 		}
-		ClassAd *ad = new ClassAd(file,(char *)delim,eof,error,empty);
+		ClassAd *ad = new ClassAd(file,const_cast<char *>(delim),eof,error,empty);
 		if(error) {
 			fprintf(stderr,"couldn't parse ClassAd in %s\n",filename);
 			delete ad;

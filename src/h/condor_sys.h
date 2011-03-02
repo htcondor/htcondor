@@ -86,7 +86,7 @@ extern int Syscalls;
 extern "C" {
 #endif
 extern char *CONDOR_SyscallNames[];
-extern char *_condor_syscall_name(int);
+extern const char *_condor_syscall_name(int);
 #if defined(__cplusplus)
 }
 #endif

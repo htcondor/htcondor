@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -90,7 +90,8 @@ double get_random_double( void )
 
 /* returns a random unsigned integer, trying to use best random number
    generator available on each platform */
-unsigned int get_random_uint( void )
+unsigned int
+get_random_uint( void )
 {
 	if (!initialized) {
 		set_seed(getpid());
@@ -101,12 +102,13 @@ unsigned int get_random_uint( void )
 		to ensure the probability fencepost error doesn't
 		happen and I actually can get ALL the numbers from 0 up to and
 		including UINT_MAX */
-	return get_random_double() * (((double)UINT_MAX)+1);
+	return (unsigned) (get_random_double() * (((double)UINT_MAX)+1) );
 }
 
 /* returns a fuzz factor to be added to a timer period to decrease
    chance of many daemons being synchronized */
-int timer_fuzz(int period)
+int
+timer_fuzz(int period)
 {
 	int fuzz = period/10;
 	if( fuzz <= 0 ) {
@@ -115,7 +117,7 @@ int timer_fuzz(int period)
 		}
 		fuzz = period - 1;
 	}
-	fuzz = ( get_random_float() * ((float)fuzz+1) ) - fuzz/2;
+	fuzz = (int)( get_random_float() * ((float)fuzz+1) ) - fuzz/2;
 
 	if( period + fuzz <= 0 ) { // sanity check
 		fuzz = 0;

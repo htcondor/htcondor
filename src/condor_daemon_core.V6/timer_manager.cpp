@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -24,7 +24,7 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 
-static char* DEFAULT_INDENT = "DaemonCore--> ";
+static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 static	TimerManager*	_t = NULL;
 
@@ -93,9 +93,11 @@ int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,TimerHandlercp
 
 // Add a new event in the timer list. if period is 0, this event is a one time
 // event instead of periodical
-int TimerManager::NewTimer(Service* s, unsigned deltawhen, TimerHandler handler, TimerHandlercpp handlercpp,
-		Release release, Releasecpp releasecpp, const char *event_descrip, unsigned period, 
-		const Timeslice *timeslice)
+int TimerManager::NewTimer(Service* s, unsigned deltawhen,
+						   TimerHandler handler, TimerHandlercpp handlercpp,
+						   Release release, Releasecpp releasecpp,
+						   const char *event_descrip, unsigned period, 
+						   const Timeslice *timeslice)
 {
 	Timer*		new_timer;
 
@@ -169,12 +171,15 @@ bool TimerManager::GetTimerTimeslice(int id, Timeslice &timeslice)
 	return true;
 }
 
-int TimerManager::ResetTimer(int id, unsigned when, unsigned period, bool recompute_when, Timeslice const *new_timeslice)
+int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
+							 bool recompute_when,
+							 Timeslice const *new_timeslice)
 {
 	Timer*			timer_ptr;
 	Timer*			trail_ptr;
 
-	dprintf( D_DAEMONCORE, "In reset_timer(), id=%d, time=%d, period=%d\n",id,when,period);
+	dprintf( D_DAEMONCORE,
+			 "In reset_timer(), id=%d, time=%d, period=%d\n",id,when,period);
 	if (timer_list == NULL) {
 		dprintf( D_DAEMONCORE, "Reseting Timer from empty list!\n");
 		return -1;
@@ -212,8 +217,10 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period, bool recomp
 
 			// sanity check
 		int wait_time = (int)timer_ptr->when - (int)time(NULL);
-		if( wait_time > period ) {
-			dprintf(D_ALWAYS,"ResetTimer() tried to set next call to %d (%s) %ds into the future, which is larger than the new period %d.\n",
+		if( wait_time > (int64_t)period ) {
+			dprintf(D_ALWAYS,
+					"ResetTimer() tried to set next call to %d (%s) %ds into"
+					" the future, which is larger than the new period %d.\n",
 					id,
 					timer_ptr->event_descrip ? timer_ptr->event_descrip : "",
 					wait_time,
@@ -224,7 +231,9 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period, bool recomp
 			timer_ptr->when = timer_ptr->period_started + period;
 		}
 
-		dprintf(D_FULLDEBUG,"Changing period of timer %d (%s) from %u to %u (added %ds to time of next scheduled call)\n",
+		dprintf(D_FULLDEBUG,
+				"Changing period of timer %d (%s) from %u to %u "
+				"(added %ds to time of next scheduled call)\n",
 				id, 
 				timer_ptr->event_descrip ? timer_ptr->event_descrip : "",
 				timer_ptr->period,
@@ -292,9 +301,6 @@ int TimerManager::CancelTimer(int id)
 void TimerManager::CancelAllTimers()
 {
 	Timer		*timer_ptr;
-	Service		*service;
-	Release		release;
-	Releasecpp	releasecpp;
 
 	while( timer_list != NULL ) {
 		timer_ptr = timer_list;
@@ -492,11 +498,13 @@ TimerManager::Timeout()
 	return(result);
 }
 
+#define IS_ZERO(_value_) \
+	(  ( (_value_) >= -0.000001 ) && ( (_value_) <= 0.000001 )  )
 
 void TimerManager::DumpTimerList(int flag, const char* indent)
 {
-	Timer	*timer_ptr;
-	char	*ptmp;
+	Timer		*timer_ptr;
+	const char	*ptmp;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -526,19 +534,19 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 		else {
 			slice_desc.sprintf_cat("timeslice = %.3g, ",
 								   timer_ptr->timeslice->getTimeslice());
-			if( timer_ptr->timeslice->getDefaultInterval() ) {
+			if( !IS_ZERO(timer_ptr->timeslice->getDefaultInterval()) ) {
 				slice_desc.sprintf_cat("period = %.1f, ",
 								   timer_ptr->timeslice->getDefaultInterval());
 			}
-			if( timer_ptr->timeslice->getInitialInterval() ) {
+			if( !IS_ZERO(timer_ptr->timeslice->getInitialInterval()) ) {
 				slice_desc.sprintf_cat("initial period = %.1f, ",
 								   timer_ptr->timeslice->getInitialInterval());
 			}
-			if( timer_ptr->timeslice->getMinInterval() ) {
+			if( !IS_ZERO(timer_ptr->timeslice->getMinInterval()) ) {
 				slice_desc.sprintf_cat("min period = %.1f, ",
 								   timer_ptr->timeslice->getMinInterval());
 			}
-			if( timer_ptr->timeslice->getMaxInterval() ) {
+			if( !IS_ZERO(timer_ptr->timeslice->getMaxInterval()) ) {
 				slice_desc.sprintf_cat("max period = %.1f, ",
 								   timer_ptr->timeslice->getMaxInterval());
 			}

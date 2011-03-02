@@ -41,7 +41,7 @@
 
 //  --- Macros to set and reset our priv state and/or return
 #define Set_Access_Priv()	\
-	priv_state saved_priv;	\
+	priv_state saved_priv=PRIV_UNKNOWN; \
 	if ( want_priv_change ) \
 		saved_priv = _set_priv(desired_priv_state,__FILE__,__LINE__,1);
 #define return_and_resetpriv(i) \
@@ -439,8 +439,8 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 {
 
 	MyString rm_buf;
-	const char* log_msg;
-	priv_state saved_priv;
+	const char* log_msg=0;
+	priv_state saved_priv=PRIV_UNKNOWN;
 	int rval;
 
 		/*
@@ -590,7 +590,7 @@ Directory::chmodDirectories( mode_t mode )
 	const char* thefile = NULL;	
 	int chmod_rval;
 	bool rval = true;
-	priv_state saved_priv;
+	priv_state saved_priv=PRIV_UNKNOWN;
 
 		// NOTE: we don't want to just call Set_Access_Priv() here
 		// since a) we *always* want to do the chmod() as the file
@@ -1228,6 +1228,7 @@ bool make_parents_if_needed( const char *path, mode_t mode, priv_state priv )
 
 	ASSERT( path );
 
-	filename_split(path,parent,junk);
-	return mkdir_and_parents_if_needed( parent.c_str(), mode, priv );
+	if(filename_split(path,parent,junk));
+		return mkdir_and_parents_if_needed( parent.c_str(), mode, priv );
+	return false;
 }

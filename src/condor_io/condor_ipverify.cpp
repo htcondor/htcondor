@@ -205,14 +205,6 @@ IpVerify::Init()
                 pDeny = NULL;
 			}
 		}
-        if (pAllow) {
-            free(pAllow);
-            pAllow = NULL;
-        }
-        if (pDeny) {
-            free(pDeny);
-            pDeny = NULL;
-        }
         if (pOldAllow) {
             free(pOldAllow);
             pOldAllow = NULL;
@@ -634,7 +626,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 	perm_mask_t mask;
 	struct in_addr sin_addr;
 	char *thehost;
-	char **aliases;
+	char **aliases = NULL;
     const char * who = user;
 	MyString peer_description; // we build this up as we go along (DNS etc.)
 
@@ -813,7 +805,9 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			}
                 
 				// check all aliases for this IP as well
-			thehost = *(aliases++);
+			if( aliases ) {
+				thehost = *(aliases++);
+			}
 		}
 			// if we found something via our hostname or subnet mactching, we now have 
 			// a mask, and we should add it into our table so we need not

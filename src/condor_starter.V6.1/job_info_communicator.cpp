@@ -869,7 +869,7 @@ JobInfoCommunicator::periodicJobUpdateTimerHandler( void )
 
 
 bool
-JobInfoCommunicator::periodicJobUpdate(ClassAd* update_ad, bool insure_update)
+JobInfoCommunicator::periodicJobUpdate(ClassAd* update_ad, bool)
 {
 #if HAVE_JOB_HOOKS
 	if (m_hook_mgr) {

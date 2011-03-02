@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -42,8 +42,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+#include <math.h>
 #include "dhry.h"
 /* DO NOT include sysapi.h here */
+
+#include "utc_time.h"
+#define dtime()	UtcTime::getTimeDouble()
 
 
 /* Global Variables: */
@@ -101,14 +106,12 @@ Boolean Func_2 (Str_30 Str_1_Par_Ref, Str_30 Str_2_Par_Ref);
 Boolean Func_3 (Enumeration Enum_Par_Val);
 
 int
-dhry_mips ()
+dhry_mips ( REG int Number_Of_Runs )
 /*****/
 
   /* main program, corresponds to procedures        */
   /* Main and Proc_0 in the Ada version             */
 {
-  double   dtime();
-
         One_Fifty       Int_1_Loc;
   REG   One_Fifty       Int_2_Loc;
         One_Fifty       Int_3_Loc;
@@ -117,13 +120,9 @@ dhry_mips ()
         Str_30          Str_1_Loc;
         Str_30          Str_2_Loc;
   REG   int             Run_Index;
-  REG   int             Number_Of_Runs;
 
-        FILE            *Ap;
-
-  /* Initializations */
-
-#if 0
+  #if 0
+  FILE            *Ap;
   if ((Ap = fopen("dhry.res","a+")) == NULL)
     {
        printf("Can not open dhry.res\n\n");
@@ -131,6 +130,7 @@ dhry_mips ()
     }
 #endif
 
+  /* Initializations */
   Next_Ptr_Glob = (Rec_Pointer) malloc (sizeof (Rec_Type));
   Ptr_Glob = (Rec_Pointer) malloc (sizeof (Rec_Type));
 
@@ -168,8 +168,9 @@ dhry_mips ()
     Number_Of_Runs = n;
   }
   printf ("\n");
-#endif
+
   Number_Of_Runs = 1000000;
+#endif
 
 
   /***************/
@@ -352,8 +353,6 @@ void Proc_5 () /* without parameters */
   Bool_Glob = false;
 } /* Proc_5 */
 
-/* here is the entry point into this file for the sysapi library */
-
 void Proc_6 (Enumeration Enum_Val_Par, Enumeration* Enum_Ref_Par)
 /*********************************/
     /* executed once */
@@ -518,21 +517,76 @@ Boolean Func_3 (Enumeration Enum_Par_Val)
 } /* Func_3 */
 
 
+// NRL 5 Jan 2010: These were generated imperically
+#define QUICK_RUNS		2500000
+#define	LOOP_CONST		0.0080
 
+// Enable timing output
+#define ENABLE_TIMING	0
 
-extern "C" {
-
-int sysapi_mips_raw(void)
+/** NRL 22 Oct 2010: There appears to be a real bug in the
+ ** dhry_mips call that causes it to return a negative number.
+ ** NEVER accept this and rerun in that case. */
+static int
+mips_raw( void )
 {
+	static int	mips = -1;
+	int			quick_mips = -1;
+	int			loops;
+
+	static double ldiff = 0.0;
+	static int    lloops = 0;
+
 	sysapi_internal_reconfig();
-	return dhry_mips();
+
+	// If we haven't run before, get a quick measurement
+	// For slow machines, we'll use that quick measurement
+	while (quick_mips < 0 ) {
+		if ( mips < 0 ) {
+			quick_mips = dhry_mips( QUICK_RUNS );
+		} else {
+			quick_mips = mips;
+		}
+	}
+
+	// For faster machines, run with more loops.
+	loops = int(floor( 0.99 + (1.0 * QUICK_RUNS * quick_mips * LOOP_CONST )));
+	while( true ) {
+		double t1 = UtcTime::getTimeDouble( );
+		mips = dhry_mips(loops);
+
+		double t2 = UtcTime::getTimeDouble( );
+
+		if ( mips > 0 ) {
+			lloops = loops;
+			ldiff = t2-t1;
+#		  if(ENABLE_TIMING)
+			printf( "quick=%d, loops=%d, time=%0.3fs\n",
+					quick_mips, loops, t2-t1 );
+#		  endif
+			return mips;
+		}
+		else {
+			fprintf( stderr,
+					 "MIPS<0: loops=%d time=%0.3fs; lloops=%d ltime=%0.3fs\n",
+					 loops, t2-t1, lloops, ldiff );
+		}
+	}
 }
 
-int sysapi_mips(void)
+/* here is the entry point into this file for the sysapi library */
+extern "C" {
+int
+sysapi_mips_raw(void)
+{
+	return mips_raw( );
+}
+
+int
+sysapi_mips(void)
 {
 	sysapi_internal_reconfig();
 	return sysapi_mips_raw();
 }
 
 }
-

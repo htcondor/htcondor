@@ -61,8 +61,6 @@ char*
 get_daemon_name( const char* name )
 {
 	char *tmp, *tmpname, *daemon_name = NULL;
-	char *fullname = NULL;
-	int size;
 
 	dprintf( D_HOSTNAME, "Finding proper daemon name for \"%s\"\n",
 			 name ); 

@@ -39,7 +39,7 @@
 #include "condor_getcwd.h"
 
 
-extern "C" int exception_cleanup(int,int,char*);	/* Our function called by EXCEPT */
+extern "C" int exception_cleanup(int,int,const char*);	/* Our function called by EXCEPT */
 JobInfoCommunicator* parseArgs( int argc, char* argv [] );
 
 static CStarter StarterObj;
@@ -620,6 +620,11 @@ parseArgs( int argc, char* argv [] )
 		jic = new JICShadow( shadow_host );
 		free( shadow_host );
 		shadow_host = NULL;
+		free( schedd_addr );
+		free( job_output_ad );
+		free( job_stdin );
+		free( job_stdout );
+		free( job_stderr );
 		return jic;
 	}
 
@@ -711,7 +716,7 @@ main_shutdown_graceful()
 }
 
 extern "C" 
-int exception_cleanup(int,int,char*errmsg)
+int exception_cleanup(int,int,const char*errmsg)
 {
 	_EXCEPT_Cleanup = NULL;
 	Starter->jic->notifyStarterError(errmsg,true,0,0);

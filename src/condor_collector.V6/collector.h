@@ -85,11 +85,14 @@ class CollectorUniverseStats {
 class CollectorDaemon {
 
 public:
+
+	CollectorDaemon() {};
+	virtual ~CollectorDaemon() {};
+
 	virtual void Init();             // main_init
 	virtual void Config();           // main_config
 	virtual void Exit();             // main__shutdown_fast
 	virtual void Shutdown();         // main_shutdown_graceful
-
 	// command handlers
 	static int receive_query_cedar(Service*, int, Stream*);
 	static AdTypes receive_query_public( int );
@@ -117,6 +120,7 @@ public:
 	static void init_classad(int interval);
 	static void sendCollectorAd();
 
+	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *ad);
 	static void send_classad_to_sock( int cmd, Daemon * d, ClassAd* theAd);	
 
 	// A get method to support SOAP

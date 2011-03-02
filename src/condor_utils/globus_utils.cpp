@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -29,7 +29,7 @@
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
 
-static char * _globus_error_message = NULL;
+static const char * _globus_error_message = NULL;
 
 #define GRAM_STATUS_STR_LEN		8
 
@@ -78,7 +78,7 @@ void
 set_error_string( const char *message )
 {
 	if ( _globus_error_message ) {
-		free( _globus_error_message );
+		free( const_cast<char *>(_globus_error_message) );
 	}
 	_globus_error_message = strdup( message );
 }
@@ -87,14 +87,13 @@ set_error_string( const char *message )
  * Returns zero if the modules were successfully activated. Returns -1 if
  * something went wrong.
  */
+
+/* This function is only used when HAVE_EXT_GLOBUS is defined */
+#ifdef HAVE_EXT_GLOBUS
 static
 int
 activate_globus_gsi( void )
 {
-#if !defined(HAVE_EXT_GLOBUS)
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
-	return -1;
-#else
 	static int globus_gsi_activated = 0;
 
 	if ( globus_gsi_activated != 0 ) {
@@ -128,8 +127,8 @@ activate_globus_gsi( void )
 
 	globus_gsi_activated = 1;
 	return 0;
-#endif
 }
+#endif
 
 /* Return the path to the X509 proxy file as determined by GSI/SSL.
  * Returns NULL if the filename can't be determined. Otherwise, the
@@ -340,7 +339,7 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 	if (verify_type == 0) {
 		ret = VOMS_SetVerificationType( VERIFY_NONE, voms_data, &voms_err );
 		if (ret == 0) {
-			retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
+			VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
 			ret = voms_err;
 			goto end;
 		}
@@ -354,7 +353,7 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 			ret = 1;
 			goto end;
 		} else {
-			retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
+			VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
 			ret = voms_err;
 			goto end;
 		}
@@ -526,6 +525,7 @@ char *
 x509_proxy_subject_name( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return NULL;
 #else
@@ -603,6 +603,7 @@ char *
 x509_proxy_identity_name( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return NULL;
 #else
@@ -671,6 +672,7 @@ time_t
 x509_proxy_expiration_time( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
@@ -743,6 +745,7 @@ int
 x509_proxy_seconds_until_expire( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
@@ -777,7 +780,7 @@ int
 x509_proxy_try_import( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
-
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 
@@ -840,7 +843,7 @@ int
 check_x509_proxy( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
-
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 
@@ -935,14 +938,24 @@ bio_to_buffer( BIO *bio, char **buffer, int *buffer_len )
 
 int
 x509_send_delegation( const char *source_file,
+					  time_t expiration_time,
+					  time_t *result_expiration_time,
 					  int (*recv_data_func)(void *, void **, size_t *), 
 					  void *recv_data_ptr,
 					  int (*send_data_func)(void *, void *, size_t),
 					  void *send_data_ptr )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) source_file;
+	(void) expiration_time;
+	(void) result_expiration_time;
+	(void) recv_data_func;
+	(void) recv_data_ptr;
+	(void) send_data_func;
+	(void) send_data_ptr;
 
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	_globus_error_message =
+		strdup( "This version of Condor doesn't support X509 credentials!");
 	return -1;
 
 #else
@@ -1060,6 +1073,37 @@ x509_send_delegation( const char *source_file,
 		}
 	}
 
+	if( expiration_time || result_expiration_time ) {
+		time_t time_left = 0;
+		result = globus_gsi_cred_get_lifetime( source_cred, &time_left );
+		if ( result != GLOBUS_SUCCESS ) {
+			rc = -1;
+			error_line = __LINE__;
+			goto cleanup;
+		}
+
+		time_t now = time(NULL);
+		int orig_expiration_time = now + time_left;
+
+		if( result_expiration_time ) {
+			*result_expiration_time = orig_expiration_time;
+		}
+
+		if( orig_expiration_time > expiration_time ) {
+			int time_valid = (expiration_time - now)/60;
+
+			result = globus_gsi_proxy_handle_set_time_valid( new_proxy, time_valid );
+			if ( result != GLOBUS_SUCCESS ) {
+				rc = -1;
+				error_line = __LINE__;
+				goto cleanup;
+			}
+			if( result_expiration_time ) {
+				*result_expiration_time = expiration_time;
+			}
+		}
+	}
+
 	/* TODO Do we have to destroy and re-create bio, or can we reuse it? */
 	bio = BIO_new( BIO_s_mem() );
 	if ( bio == NULL ) {
@@ -1155,8 +1199,13 @@ x509_receive_delegation( const char *destination_file,
 						 void *send_data_ptr )
 {
 #if !defined(HAVE_EXT_GLOBUS)
-
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	(void) destination_file;		// Quiet compiler warnings
+	(void) recv_data_func;			// Quiet compiler warnings
+	(void) recv_data_ptr;			// Quiet compiler warnings
+	(void) send_data_func;			// Quiet compiler warnings
+	(void) send_data_ptr;			// Quiet compiler warnings
+	_globus_error_message =
+		strdup("This version of Condor doesn't support X509 credentials!");
 	return -1;
 
 #else
@@ -1358,4 +1407,3 @@ is_globus_friendly_url(const char * path)
 		strstr(path, "gsiftp://") == path ||
 		0;
 }
-

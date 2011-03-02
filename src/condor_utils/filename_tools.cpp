@@ -97,7 +97,7 @@ int filename_split( const char *path, char *dir, char *file )
 {
 	char *last_slash;
 
-	last_slash = (char *)strrchr(path,DIR_DELIM_CHAR);
+	last_slash = const_cast<char *>( strrchr(path, DIR_DELIM_CHAR) );
 	if(last_slash) {
 		strncpy(dir,path,(last_slash-path));
 		dir[(last_slash-path)] = 0;
@@ -134,10 +134,10 @@ canonicalize_dir_delimiters( char *path ) {
 char *
 alternate_exec_pathname( const char *path ) 
 {
-	int len;
 	char *buf = NULL;
 
 #ifdef WIN32
+	int len;
 	if ( path && path[0] ) 
 	{
 		len = strlen(path) + 20;
@@ -155,6 +155,8 @@ alternate_exec_pathname( const char *path )
 		free(buf);
 		buf = NULL;
 	}
+#else
+	(void) path;		// Quiet 'unused parameter' warning
 #endif
 
 	return buf;

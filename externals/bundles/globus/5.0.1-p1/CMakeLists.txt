@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -217,6 +217,6 @@ if (WITH_GLOBUS)
 
 else( WITH_GLOBUS )
 
-	message (STATUS "external skiped (globus)")
+	message (STATUS "external skipped (globus)")
 
 endif( WITH_GLOBUS )

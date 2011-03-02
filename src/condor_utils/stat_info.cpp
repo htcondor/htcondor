@@ -124,7 +124,6 @@ StatInfo::stat_file( const char *path )
 
 # if (! defined WIN32)
 	if ( !status ) {
-		const StatStructType *sb = statbuf.GetBuf( StatWrapper::STATOP_STAT );
 		status = statbuf.Stat( StatWrapper::STATOP_LSTAT );
 	}
 # endif

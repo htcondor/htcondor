@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -47,19 +47,24 @@ endif(HAVE_EXT_POSTGRESQL)
 condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
 
 condor_exe(condor "tool.cpp" "${C_BIN}" "${TOOL_LINK_LIBS}" OFF)
-clone_install(condor "condor_on;condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
-clone_install(condor "condor_vacate;condor_reschedule" "${C_BIN}")
+clone_install(condor "${C_BIN}" "condor_on;condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
+if (WANT_FULL_DEPLOYMENT)
+    clone_install(condor "${C_BIN}" "condor_set_shutdown" "${C_SBIN}")
+endif(WANT_FULL_DEPLOYMENT)
+clone_install(condor "${C_BIN}" "condor_vacate;condor_reschedule" "${C_BIN}")
 
 if (NOT WINDOWS)
-	clone_install(condor "condor_reconfig_schedd;condor_master_off" "${C_SBIN}")
+    if (WANT_FULL_DEPLOYMENT)
+        clone_install(condor "${C_BIN}" "condor_reconfig_schedd;condor_master_off" "${C_SBIN}") # legacy cruft?
+    endif(WANT_FULL_DEPLOYMENT)
 	if (STD_UNIVERSE)
-		clone_install(condor "condor_checkpoint" "${C_BIN}")
+		clone_install(condor "${C_BIN}" "condor_checkpoint" "${C_BIN}")
 		src_target_ref( ckpt "maps" CKPT_REFS)
 		condor_exe(condor_ckpt_probe "probe_process.c;${CKPT_REFS}" "${C_LIBEXEC}" "${TOOL_LINK_LIBS}" OFF)
 	endif(STD_UNIVERSE)
 else(NOT WINDOWS)
-	clone_install(condor_cod "condor_cod_request" "${C_BIN}")
-	clone_install(condor "condor_squawk" "${C_BIN}")
+	clone_install(condor_cod "${C_BIN}" "condor_cod_request" "${C_BIN}")
+	clone_install(condor "${C_BIN}" "condor_squawk" "${C_BIN}")
 endif(NOT WINDOWS)
 
 condor_exe(condor_stats "stats.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
