@@ -496,12 +496,6 @@ if (CONDOR_EXTERNALS AND NOT WINDOWS)
 	add_dependencies( externals ${CONDOR_EXTERNALS} )
 endif(CONDOR_EXTERNALS AND NOT WINDOWS)
 
-######### special case for contrib
-if (WINDOWS AND WANT_CONTRIB AND WITH_MANAGEMENT)
-    # global scoping external linkage var when options enable.
-    set (CONDOR_QMF condor_qmflib;${QPID_FOUND};${BOOST_FOUND})
-endif()
-
 message(STATUS "********* External configuration complete (dropping config.h) *********")
 dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
 
