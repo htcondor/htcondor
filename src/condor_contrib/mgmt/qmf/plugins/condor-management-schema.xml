@@ -34,10 +34,10 @@
 <group name="DaemonStatistics">
   <statistic name="MonitorSelfAge" type="uint32"/>
   <statistic name="MonitorSelfCPUUsage" type="double"/>
-  <statistic name="MonitorSelfImageSize" type="double"/>
+  <statistic name="MonitorSelfImageSize" type="double" unit="KiB"/>
   <statistic name="MonitorSelfRegisteredSocketCount" type="uint32"/>
-  <statistic name="MonitorSelfResidentSetSize" type="uint32"/>
-  <statistic name="MonitorSelfTime" type="absTime"/>
+  <statistic name="MonitorSelfResidentSetSize" type="uint32" unit="KiB"/>
+  <statistic name="MonitorSelfTime" type="absTime" unit="nanosecond"/>
 </group>
 
 <group name="GridMethods">
