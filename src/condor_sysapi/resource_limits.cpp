@@ -25,27 +25,26 @@
 
 #define SLOP 50
 
-
 #if defined( LINUX )
+#define MEG (1024 * 1024)
 
 void
-sysapi_set_resource_limits()
+sysapi_set_resource_limits(int stack_size)
 {
-    rlim_t lim;
-    int free_blocks = sysapi_disk_space( "." );
+	rlim_t lim;
+	int free_blocks = sysapi_disk_space( "." );
 	unsigned long core_lim = (free_blocks - SLOP) * 1024;
+
 	if( core_lim > MAXINT ) {
 		lim = MAXINT;
 	} else {
 		lim = (int) core_lim;
 	}
-
-    limit( RLIMIT_CORE, lim, CONDOR_SOFT_LIMIT, "max core size" );
+	limit( RLIMIT_CORE, lim, CONDOR_SOFT_LIMIT, "max core size" );
 	limit( RLIMIT_CPU, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max cpu time" );
 	limit( RLIMIT_FSIZE, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max file size" );
 	limit( RLIMIT_DATA, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max data size" );
-	limit( RLIMIT_STACK, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max stack size" );
-
+	limit( RLIMIT_STACK, static_cast<rlim_t>(stack_size), CONDOR_SOFT_LIMIT, "max stack size" );
 	dprintf( D_ALWAYS, "Done setting resource limits\n" );
 }
 
@@ -54,7 +53,7 @@ sysapi_set_resource_limits()
 #define MEG (1024 * 1024)
 
 void
-sysapi_set_resource_limits()
+sysapi_set_resource_limits(int)
 {
 	limit( RLIMIT_CPU, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max cpu time" );
 	limit( RLIMIT_FSIZE, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max file size" );
@@ -103,7 +102,7 @@ sysapi_set_resource_limits()
 #elif defined( HPUX ) 
 
 void
-sysapi_set_resource_limits()
+sysapi_set_resource_limits(int)
 {
 		/* These platforms do not support limit() */
 	dprintf( D_ALWAYS, "Setting resource limits not supported!\n" );
@@ -112,7 +111,7 @@ sysapi_set_resource_limits()
 #elif defined( WIN32 ) || defined( AIX ) || defined( Darwin ) || defined( CONDOR_FREEBSD )
 
 void
-sysapi_set_resource_limits()
+sysapi_set_resource_limits(int)
 {
 		/* Not yet implemented on these platforms */
 	dprintf( D_ALWAYS, "Setting resource limits not implemented!\n" );

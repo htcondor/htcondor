@@ -74,7 +74,7 @@ public:
 	void setStdin( const char* path );
 	void setStdout( const char* path );
 	void setStderr( const char* path );
-	
+	int getStackSize(void);	
 		// // // // // // // // // // // //
 		// Job Actions
 		// // // // // // // // // // // //

@@ -215,15 +215,14 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 						  "START_SSHD",
 						  (CommandHandlercpp)&CStarter::startSSHD,
 						  "CStarter::startSSHD", this, READ );
-
-	sysapi_set_resource_limits();
-
 		// initialize our JobInfoCommunicator
 	if( ! jic->init() ) {
 		dprintf( D_ALWAYS, 
 				 "Failed to initialize JobInfoCommunicator, aborting\n" );
 		return false;
 	}
+	if(jic) sysapi_set_resource_limits(jic->getStackSize());
+	else sysapi_set_resource_limits(1<<29); // 512 MB is default stack size.
 
 		// Now, ask our JobInfoCommunicator to setup the environment
 		// where our job is going to execute.  This might include
@@ -270,7 +269,6 @@ CStarter::Config()
 			EXCEPT("Execute directory not specified in config file.");
 		}
 	}
-
 	if (!m_configured) {
 		bool ps = privsep_enabled();
 		bool gl = param_boolean("GLEXEC_JOB", false);

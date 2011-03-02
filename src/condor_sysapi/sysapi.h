@@ -107,7 +107,7 @@ const char *sysapi_translate_opsys( const char *sysname,
 									const char *version );
 
 /* set appropriate resource limits on each platform */
-void sysapi_set_resource_limits( void );
+void sysapi_set_resource_limits( int stack_size );
 
 /* check the magic number of the given executable */
 int sysapi_magic_check( char* executable );

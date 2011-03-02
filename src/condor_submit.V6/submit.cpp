@@ -180,7 +180,7 @@ extern const int JOB_DEFERRAL_PREP_DEFAULT;
 
 char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
-
+char* StackSizeVal = NULL;
 List<char> extraLines;  // lines passed in via -a argument
 
 #define PROCVARSIZE	32
@@ -259,6 +259,7 @@ const char	*BufferFiles = "buffer_files";
 const char	*BufferSize = "buffer_size";
 const char	*BufferBlockSize = "buffer_block_size";
 
+const char	*StackSize = "stack_size";
 const char	*FetchFiles = "fetch_files";
 const char	*CompressFiles = "compress_files";
 const char	*AppendFiles = "append_files";
@@ -3729,6 +3730,17 @@ SetUserNotes()
 }
 
 void
+SetStackSize()
+{
+	StackSizeVal = condor_param(StackSize,ATTR_STACK_SIZE);
+	MyString buffer;
+	if( StackSizeVal ) {
+		(void) buffer.sprintf( "%s = %s", ATTR_STACK_SIZE, StackSizeVal);
+		InsertJobExpr(buffer);
+	}
+}
+
+void
 SetRemoteInitialDir()
 {
 	char *who = condor_param( RemoteInitialDir, ATTR_JOB_REMOTE_IWD );
@@ -5895,6 +5907,7 @@ queue(int num)
 		SetVMParams();
 		SetLogNotes();
 		SetUserNotes();
+		SetStackSize();
 
 			// This must come after all things that modify the input file list
 		FixupTransferInputFiles();
