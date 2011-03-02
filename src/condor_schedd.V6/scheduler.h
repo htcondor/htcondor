@@ -111,6 +111,9 @@ struct OwnerData {
   int JobsFlocked;
   int FlockLevel;
   int OldFlockLevel;
+		// Time of most recent change in flocking level or
+		// successful negotiation at highest current flocking
+		// level.
   time_t NegotiationTimestamp;
   OwnerData() { Name=NULL; Domain=NULL;
   NegotiationTimestamp=JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }

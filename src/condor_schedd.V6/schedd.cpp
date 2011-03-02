@@ -833,8 +833,8 @@ Scheduler::count_jobs()
 				Owners[i].FlockLevel++;
 				Owners[i].NegotiationTimestamp = current_time;
 				dprintf(D_ALWAYS,
-						"Increasing flock level for %s to %d.\n",
-						Owners[i].Name, Owners[i].FlockLevel);
+						"Increasing flock level for %s to %d due to lack of activity from negotiator at level %d.\n",
+						Owners[i].Name, Owners[i].FlockLevel, Owners[i].FlockLevel-1);
 			}
 			if (Owners[i].FlockLevel > FlockLevel) {
 				FlockLevel = Owners[i].FlockLevel;
@@ -4805,7 +4805,16 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 		}
 	}
 
-	Owners[owner_num].NegotiationTimestamp = time(0);
+	if( satisfied || Owners[owner_num].FlockLevel == flock_level ) {
+			// NOTE: we do not want to set NegotiationTimestamp if
+			// this negotiator is less than our current flocking level
+			// and we are unsatisfied, because then if the negotiator
+			// at the current flocking level never contacts us, but
+			// others do, we will never give up waiting, and we will
+			// therefore not advance to the next flocking level.
+		Owners[owner_num].NegotiationTimestamp = time(0);
+	}
+
 	if( satisfied ) {
 		// We are out of jobs.  Stop flocking with less desirable pools.
 		if (Owners[owner_num].FlockLevel > flock_level ) {
@@ -5130,8 +5139,6 @@ Scheduler::negotiate(int command, Stream* s)
 				"This user is no longer flocking with this negotiator.\n");
 		jobs = 0;
 		skip_negotiation = true;
-	} else if (Owners[owner_num].FlockLevel == which_negotiator) {
-		Owners[owner_num].NegotiationTimestamp = time(0);
 	}
 
 	ResourceRequestList *resource_requests = new ResourceRequestList;
