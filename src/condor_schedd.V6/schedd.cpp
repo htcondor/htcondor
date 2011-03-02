@@ -12544,7 +12544,8 @@ Scheduler::claimLocalStartd()
 	}
 
 	dprintf(D_ALWAYS,
-		"Haven't heard from negotiator, trying to claim local startd\n");
+			"Haven't heard from negotiator, trying to claim local startd @ %s\n",
+			startd_addr );
 
 		// Fetch all the slot (machine) ads from the local startd
 	CondorError errstack;
@@ -12554,8 +12555,8 @@ Scheduler::claimLocalStartd()
 	q = query.fetchAds(result, startd_addr, &errstack);
 	if ( q != Q_OK ) {
 		dprintf(D_FULLDEBUG,
-			"ERROR: could not fetch ads from local startd- %s\n",
-			getStrQueryResult(q));
+				"ERROR: could not fetch ads from local startd : %s\n",
+				startd_addr, getStrQueryResult(q) );
 		return false;
 	}
 

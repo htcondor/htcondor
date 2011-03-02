@@ -170,7 +170,7 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 	                       NULL,                   // primary thread SA
 	                       TRUE,                   // inherit handles 
 	                       CREATE_NEW_CONSOLE,     // creation flags
-	                       zkmENV,                 // use our environment
+	                       NULL,                 // use our environment
 	                       NULL,                   // use our CWD
 	                       &si,                    // STARTUPINFO
 	                       &pi);                   // receive PROCESS_INFORMATION
