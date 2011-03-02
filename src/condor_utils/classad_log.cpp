@@ -29,7 +29,7 @@
 #include "classad_merge.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 #include "ClassAdLogPlugin.h"
 #endif
 #endif
@@ -722,7 +722,7 @@ LogNewClassAd::Play(void *data_structure)
 	result = table->insert(HashKey(key), ad);
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::NewClassAd(key);
 #endif
 #endif
@@ -792,7 +792,7 @@ LogDestroyClassAd::Play(void *data_structure)
 	}
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::DestroyClassAd(key);
 #endif
 #endif
@@ -842,7 +842,7 @@ LogSetAttribute::Play(void *data_structure)
 	ad->SetDirtyFlag(name, is_dirty);
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::SetAttribute(key, name, value);
 #endif
 #endif
@@ -941,7 +941,7 @@ LogDeleteAttribute::Play(void *data_structure)
 		return -1;
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::DeleteAttribute(key, name);
 #endif
 #endif

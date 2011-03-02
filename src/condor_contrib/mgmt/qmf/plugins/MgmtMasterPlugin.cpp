@@ -198,6 +198,8 @@ struct MgmtMasterPlugin : public Service, MasterPlugin
 
 static MgmtMasterPlugin instance;
 
+#if defined(WIN32)
 int load_master_mgmt(void) {
 	return 0;
 }
+#endif

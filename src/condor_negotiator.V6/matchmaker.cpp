@@ -45,7 +45,7 @@
 #include <deque>
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 #include "NegotiatorPlugin.h"
 #endif
 #endif
@@ -314,7 +314,7 @@ initialize ()
 
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	NegotiatorPluginManager::Load();
 	NegotiatorPluginManager::Initialize();
 #endif
@@ -4531,7 +4531,7 @@ Matchmaker::updateCollector() {
 		FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 		NegotiatorPluginManager::Update(*publicAd);
 #endif
 #endif

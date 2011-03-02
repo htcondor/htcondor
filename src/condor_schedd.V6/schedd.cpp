@@ -93,7 +93,7 @@
 #include "filename_tools.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
 #endif
@@ -948,7 +948,7 @@ Scheduler::count_jobs()
 #endif
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, m_ad);
 #endif
 #endif
@@ -1020,7 +1020,7 @@ Scheduler::count_jobs()
 			   Owners[i].Name, UidDomain );
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, m_ad);
 #endif
 #endif
@@ -1164,7 +1164,7 @@ Scheduler::count_jobs()
 	  m_ad->InsertOrUpdate(tmp);
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	// update plugins
 	dprintf(D_FULLDEBUG,"Sent owner (0 jobs) ad to schedd plugins\n");
 	ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, m_ad);
@@ -10728,7 +10728,7 @@ Scheduler::shutdown_fast()
 	invalidate_ads();
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
 #endif
@@ -10763,7 +10763,7 @@ Scheduler::schedd_exit()
 	invalidate_ads();
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
 #endif

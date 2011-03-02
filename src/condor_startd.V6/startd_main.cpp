@@ -36,6 +36,9 @@
 #if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
 #endif
+#if defined(WIN32)
+extern int load_startd_mgmt(void);
+#endif
 #endif
 
 // Define global variables
@@ -399,11 +402,12 @@ main_init( int, char* argv[] )
 	//resmgr->update_all();
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
    StartdPluginManager::Load();
-
-   StartdPluginManager::Initialize();
+#elif defined(WIN32)
+	load_startd_mgmt();
 #endif
+   StartdPluginManager::Initialize();
 #endif
 }
 

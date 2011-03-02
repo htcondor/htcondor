@@ -41,7 +41,7 @@
 #include "subsystem_info.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
 #endif
@@ -110,7 +110,7 @@ main_init(int argc, char* argv[])
 	daemonCore->Proc_Family_Init();
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 		// Intialization of the plugin manager, i.e. loading all
 		// plugins, should be performed before the job queue log is
 		// read so plugins have a chance to learn about all jobs
@@ -185,7 +185,7 @@ main_init(int argc, char* argv[])
 	scheduler.timeout();
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
-#if defined(HAVE_DLOPEN) || defined(WIN32)
+#if defined(HAVE_DLOPEN)
 		// Tell all ScheddPlugins to initialze themselves
 	ScheddPluginManager::Initialize();
 
