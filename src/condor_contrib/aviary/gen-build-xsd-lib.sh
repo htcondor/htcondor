@@ -11,8 +11,8 @@ echo WSFCPP_HOME=$WSFCPP_HOME
 
 # generate our cpp types from WSDL
 rm -fr codegen/ include/ lib/
-WSDL2CPP.sh -uri etc/aviary-job.wsdl -d adb -ss -g -o codegen/job
-WSDL2CPP.sh -uri etc/aviary-query.wsdl -d adb -ss -g -o codegen/query
+WSDL2CPP.sh -uri etc/aviary-job.wsdl -d adb -ss -g -ns2p http://common.aviary.grid.redhat.com=AviaryCommon,http://job.aviary.grid.redhat.com=AviaryJob -o codegen/job
+WSDL2CPP.sh -uri etc/aviary-query.wsdl -d adb -ss -g -ns2p http://common.aviary.grid.redhat.com=AviaryCommon,http://query.aviary.grid.redhat.com=AviaryQuery -o codegen/query
 
 # stow the headers for others steps in the build
 if ! test -d include; then
@@ -20,10 +20,11 @@ if ! test -d include; then
 fi
 cp codegen/job/*.h codegen/job/src/*.h include;
 cp codegen/query/*.h codegen/query/src/*.h include;
-rm -f include/Aviary*.h
+rm -f include/*Aviary*Service*.h
 
 # get rid of the extraneous stuff that WSDL2CPP won't let us turn off
 rm -f codegen/job/*.{h,cpp,vcproj}
+rm -f codegen/query/*.{h,cpp,vcproj}
 
 # setup our lib dir
 if ! test -d lib; then
@@ -49,7 +50,7 @@ g++ -g -shared -o lib/libaviary_job_types.so \
         -lwso2_wsf \
          codegen/job/src/*.cpp
 
-# build the job WSDL/XSD cpp types
+# build the query WSDL/XSD cpp types
 g++ -g -shared -o lib/libaviary_query_types.so \
         -I. \
         -Iinclude \
