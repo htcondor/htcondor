@@ -43,13 +43,9 @@ our %build_and_test_sets = (
 	# NOTE: Keep the stable or developer release branches synchronized with
 	# https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=DeveloperReleasePlan
 	'official_ports' => [
-		'ia64_rhas_3',
-		'ppc64_sles_9',
-		'sun4u_sol_5.9', 
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
 		'x86_64_rhas_3',
-		'x86_deb_4.0',
 		'x86_deb_5.0',
 		'x86_macos_10.4',
 		'x86_rhap_5',
@@ -62,22 +58,10 @@ our %build_and_test_sets = (
 	# are those platforms.
 	'nmi_one_offs' => [
 		'x86_64_rhap_5.3-updated',
-		'x86_suse_10.2',
-		'x86_suse_10.0',
-		'x86_64_macos_10.6',
 		'x86_64_opensuse_11.3-updated',
-		'ppc_macos_10.4',
-		'ppc_aix_5.2-pl5',
-		'sun4u_sol_5.10',
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
-		'x86_64_macos_10.5-updated',
-		# 'x86_64_fedora_12-updated',  <-- no longer supported 
-in 11/2010, and nmi fails why are we doing this?
-		# 'ps3_ydl_5.0',   <- no longer supported, and sony 
-has eliminated the ability to install & are even prosecuting 
-jailbreakers, why are we doing this?
-
+                'x86_64_fedora_12-updated',
 	],
 
 	'stduniv' => [
