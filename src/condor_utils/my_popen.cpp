@@ -170,7 +170,7 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 	                       NULL,                   // primary thread SA
 	                       TRUE,                   // inherit handles 
 	                       CREATE_NEW_CONSOLE,     // creation flags
-	                       NULL,                 // use our environment
+	                       NULL,                 // use our environment : given that this value used to be zkmENV (an Env*), maybe this function would want another argument?
 	                       NULL,                   // use our CWD
 	                       &si,                    // STARTUPINFO
 	                       &pi);                   // receive PROCESS_INFORMATION
@@ -210,14 +210,14 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 }
 
 FILE *
-my_popen(ArgList &args, const char *mode, int want_stderr)
+my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV)
 {
 	MyString cmdline, err;
 	if (!args.GetArgsStringWin32(&cmdline, 0, &err)) {
 		dprintf(D_ALWAYS, "my_popen: error making command line: %s\n", err.Value());
 		return NULL;
 	}
-
+	//  maybe the following function should be extended by an Env* argument? Not sure...
 	return my_popen(cmdline.Value(), mode, want_stderr);
 }
 
