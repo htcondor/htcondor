@@ -55,8 +55,10 @@
 #include "filename_tools.h"
 #include "spool_version.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "ScheddPlugin.h"
+#endif
 #endif
 
 #include "file_sql.h"
@@ -1819,8 +1821,10 @@ int DestroyProc(int cluster_id, int proc_id)
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
 	WritePerJobHistoryFile(ad, false);
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
   ScheddPluginManager::Archive(ad);
+#endif
 #endif
 
   if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
@@ -1927,8 +1931,10 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Apend to history file
 				AppendHistory(ad);
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 				ScheddPluginManager::Archive(ad);
+#endif
 #endif
 
 				if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {

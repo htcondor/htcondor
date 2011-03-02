@@ -207,8 +207,8 @@ struct MgmtStartdPlugin : public Service, StartdPlugin
 
 static MgmtStartdPlugin instance;
 
+#if defined(WIN32)
 int load_startd_mgmt(void) {
 	return 0;
 }
-
-
+#endif

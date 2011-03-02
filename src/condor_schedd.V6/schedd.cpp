@@ -91,9 +91,11 @@
 #include "schedd_negotiate.h"
 #include "filename_tools.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
+#endif
 #endif
 
 #define DEFAULT_SHADOW_SIZE 800
@@ -944,8 +946,10 @@ Scheduler::count_jobs()
 	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, m_ad);
+#endif
 #endif
 	
 		// Update collectors
@@ -1014,8 +1018,10 @@ Scheduler::count_jobs()
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, m_ad);
+#endif
 #endif
 		// Update collectors
 	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, m_ad, NULL, true);
@@ -1156,10 +1162,12 @@ Scheduler::count_jobs()
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  m_ad->InsertOrUpdate(tmp);
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	// update plugins
 	dprintf(D_FULLDEBUG,"Sent owner (0 jobs) ad to schedd plugins\n");
 	ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, m_ad);
+#endif
 #endif
 
 		// Update collectors
@@ -10711,9 +10719,11 @@ Scheduler::shutdown_fast()
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
+#endif
 #endif
 
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
@@ -10744,9 +10754,11 @@ Scheduler::schedd_exit()
 		// gone.  
 	invalidate_ads();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
+#endif
 #endif
 
 	dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );

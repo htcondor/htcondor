@@ -73,19 +73,15 @@ add_dependencies( qmf_gen_srcs qpid )
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 src_target_ref( broker_utils "^.*$" BROKER_REF )
-dprint("BROKER_REF=${BROKER_REF}")
+src_target_ref( utils "set_user_priv_from_ad;hashkey" UTILS_REF )
 
 if (NOT WINDOWS)
 
 	condor_static_lib( qmf_utils "Utils.h;Utils.cpp;PoolUtils.cpp;PoolUtils.h" )
 
-	# used for selective compilation differences only otherwise just link the library
-	src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
-	src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
-
 	# NOTE: Still need to update linkage deps
 	file( GLOB SchedSrcs JobUtils.* SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* JobServerObject.* MgmtScheddPlugin* Utils.* PoolUtils.*)
-    condor_plugin( MgmtScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${BROKER_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+    condor_plugin( MgmtScheddPlugin-plugin "${UTILS_REF};${BROKER_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
     add_dependencies( MgmtScheddPlugin-plugin qmf_gen_srcs )
 
 	file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* CollectorObject.* SlotObject.* PoolUtils.*)
@@ -101,7 +97,7 @@ if (NOT WINDOWS)
     add_dependencies( MgmtMasterPlugin-plugin qmf_gen_srcs )
 
 	file( GLOB StartdSrcs MgmtStartdPlugin.* SlotObject.* PoolUtils.*)
-	condor_plugin( MgmtStartdPlugin-plugin "${COLLECTOR_REF};${BROKER_REF};${StartdSrcs};Slot.h;Slot.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+	condor_plugin( MgmtStartdPlugin-plugin "${UTILS_REF};${BROKER_REF};${StartdSrcs};Slot.h;Slot.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
     add_dependencies( MgmtStartdPlugin-plugin qmf_gen_srcs )
 	
 else()
@@ -109,11 +105,7 @@ else()
 	file( GLOB QMFRMV ${QMF_GEN_SRCS} )
 	condor_glob( HDRS SRCS "${QMFRMV}" )
 	
-	condor_static_lib( condor_qmflib "${HDRS};${SRCS};${QMF_GEN_SRCS};${BROKER_REF}" )
+	condor_static_lib( condor_qmflib "${HDRS};${SRCS};${QMF_GEN_SRCS};${BROKER_REF};${UTILS_REF}" )
 	add_dependencies( condor_qmflib qmf_gen_srcs )
-
-	# Windows only contrib library, as plugins are totally hosed on windows.
-	# exists under CondorContrib, need to find a cleaner way
-    # set (CONDOR_QMF condor_qmflib PARENT_SCOPE)
 
 endif()

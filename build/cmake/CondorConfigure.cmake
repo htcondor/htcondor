@@ -362,11 +362,7 @@ if (NOT HPUX)
 	endif()
 endif(NOT HPUX)
 
-if (WINDOWS) 
-    if (WANT_CONTRIB AND WITH_MANAGEMENT)
-        set ( CONDOR_QMF condor_qmflib;${QPID_FOUND} ) # global scoping dep
-    endif()
-else() # *nix
+if (NOT WINDOWS) 
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 
@@ -499,7 +495,9 @@ endif(CONDOR_EXTERNALS AND NOT WINDOWS)
 ######### special case for contrib
 if (WINDOWS AND WANT_CONTRIB AND WITH_MANAGEMENT)
     # global scoping external linkage var when options enable.
-    set (CONDOR_QMF condor_qmflib;${QPID_FOUND};${BOOST_FOUND})
+    set (CONDOR_QMF condor_qmflib;${QPID_FOUND})
+    add_definitions( -DWANT_CONTRIB )
+    add_definitions( -DWITH_MANAGEMENT )
 endif()
 
 message(STATUS "********* External configuration complete (dropping config.h) *********")
