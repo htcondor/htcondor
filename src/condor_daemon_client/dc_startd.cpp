@@ -159,9 +159,9 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	setCmdStr( "requestClaim" );
 	ASSERT( checkClaimId() );
 	ASSERT( checkAddr() );
+	// check for sandbox -- create it put it somewhere in here
 
 	classy_counted_ptr<ClaimStartdMsg> msg = new ClaimStartdMsg( claim_id, req_ad, description, scheduler_addr, alive_interval );
-
 	ASSERT( msg.get() );
 	msg->setCallback(cb);
 

@@ -78,6 +78,10 @@ CStarter::CStarter()
 	m_configured = false;
 	m_job_environment_is_ready = false;
 	m_all_jobs_done = false;
+	
+	// the old default: job is run and output is transferred back; unless stated otherwise
+	m_should_run_job = true;
+	m_should_transfer_output = true;
 }
 
 
@@ -104,7 +108,7 @@ CStarter::~CStarter()
 bool
 CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 				bool is_gsh, int stdin_fd, int stdout_fd, 
-				int stderr_fd )
+				int stderr_fd , int doExecAndTransfer)
 {
 	if( ! my_jic ) {
 		EXCEPT( "CStarter::Init() called with no JobInfoCommunicator!" ); 
@@ -121,6 +125,14 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	starter_stdin_fd = stdin_fd;
 	starter_stdout_fd = stdout_fd;
 	starter_stderr_fd = stderr_fd;
+	
+	if (doExecAndTransfer > 0){
+		if (doExecAndTransfer > 1){
+			m_should_run_job = false;
+		} else {
+			m_should_transfer_output = false;
+		}
+	}
 
 	Config();
 
@@ -1873,6 +1885,12 @@ bool CStarter::getJobClaimId(MyString &result)
 int
 CStarter::SpawnJob( void )
 {
+	if (!m_should_run_job) {
+		this->allJobsDone();
+		return TRUE;
+		
+		
+	}
 		// Now that we've got all our files, we can figure out what
 		// kind of job we're starting up, instantiate the appropriate
 		// userproc class, and actually start the job.
@@ -2291,6 +2309,11 @@ CStarter::Reaper(int pid, int exit_status)
 				// cleanup.
 			if( !allJobsDone() ) {
 				dprintf(D_ALWAYS, "Returning from CStarter::JobReaper()\n");
+				if (m_should_run_job && !m_should_transfer_output){
+					dprintf(D_ALWAYS, "Job execution finished. Transfer data not requested in this step -- Starter is exiting. \n");
+					StarterExit(1);
+					
+				}
 				return 0;
 			}
 		}
@@ -2308,17 +2331,21 @@ CStarter::Reaper(int pid, int exit_status)
 bool
 CStarter::allJobsDone( void )
 {
-	m_all_jobs_done = true;
+	if (m_should_run_job) {
+		m_all_jobs_done = true;
 
 		// now that all user processes are complete, change the
 		// sandbox ownership back over to condor. if this is a VM
 		// universe job, this chown will have already been
 		// performed by the VMGahp, since it does some post-
 		// processing on files in the sandbox
-	if (m_privsep_helper != NULL) {
-		if (jobUniverse != CONDOR_UNIVERSE_VM) {
-			m_privsep_helper->chown_sandbox_to_condor();
+		if (m_privsep_helper != NULL) {
+			if (jobUniverse != CONDOR_UNIVERSE_VM) {
+				m_privsep_helper->chown_sandbox_to_condor();
+			}
 		}
+		if (!m_should_transfer_output)
+			return false;
 	}
 
 		// No more jobs, notify our JobInfoCommunicator.

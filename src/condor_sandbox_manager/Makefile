@@ -33,19 +33,19 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/cmake
+CMAKE_COMMAND = "/Applications/CMake 2.8-3.app/Contents/bin/cmake"
 
 # The command to remove a file.
-RM = /afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/cmake -E remove -f
+RM = "/Applications/CMake 2.8-3.app/Contents/bin/cmake" -E remove -f
 
 # The program to use to edit the cache.
-CMAKE_EDIT_COMMAND = /afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/ccmake
+CMAKE_EDIT_COMMAND = "/Applications/CMake 2.8-3.app/Contents/bin/ccmake"
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /scratch/cweiss/condor/workspace/test/CONDOR_SRC
+CMAKE_SOURCE_DIR = /scratch/work/CONDOR_SRC
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /scratch/cweiss/condor/workspace/test/CONDOR_SRC
+CMAKE_BINARY_DIR = /scratch/work/CONDOR_SRC
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -53,7 +53,7 @@ CMAKE_BINARY_DIR = /scratch/cweiss/condor/workspace/test/CONDOR_SRC
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
-	/afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/ccmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	"/Applications/CMake 2.8-3.app/Contents/bin/ccmake" -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
@@ -63,19 +63,19 @@ edit_cache/fast: edit_cache
 # Special rule for the target install
 install: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/cmake -P cmake_install.cmake
+	"/Applications/CMake 2.8-3.app/Contents/bin/cmake" -P cmake_install.cmake
 .PHONY : install
 
 # Special rule for the target install
 install/fast: preinstall/fast
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/cmake -P cmake_install.cmake
+	"/Applications/CMake 2.8-3.app/Contents/bin/cmake" -P cmake_install.cmake
 .PHONY : install/fast
 
 # Special rule for the target install/local
 install/local: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
-	/afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+	"/Applications/CMake 2.8-3.app/Contents/bin/cmake" -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
 .PHONY : install/local
 
 # Special rule for the target install/local
@@ -85,7 +85,7 @@ install/local/fast: install/local
 # Special rule for the target install/strip
 install/strip: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
-	/afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+	"/Applications/CMake 2.8-3.app/Contents/bin/cmake" -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
 .PHONY : install/strip
 
 # Special rule for the target install/strip
@@ -104,7 +104,7 @@ list_install_components/fast: list_install_components
 # Special rule for the target package
 package: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Run CPack packaging tool..."
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && /afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/cpack --config ./CPackConfig.cmake
+	cd /scratch/work/CONDOR_SRC && "/Applications/CMake 2.8-3.app/Contents/bin/cpack" --config ./CPackConfig.cmake
 .PHONY : package
 
 # Special rule for the target package
@@ -114,7 +114,7 @@ package/fast: package
 # Special rule for the target package_source
 package_source:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Run CPack packaging tool for source..."
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && /afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/cpack --config ./CPackSourceConfig.cmake /scratch/cweiss/condor/workspace/test/CONDOR_SRC/CPackSourceConfig.cmake
+	cd /scratch/work/CONDOR_SRC && "/Applications/CMake 2.8-3.app/Contents/bin/cpack" --config ./CPackSourceConfig.cmake /scratch/work/CONDOR_SRC/CPackSourceConfig.cmake
 .PHONY : package_source
 
 # Special rule for the target package_source
@@ -124,7 +124,7 @@ package_source/fast: package_source
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/afs/cs.wisc.edu/unsup/cmake-2.8.3/@sys/bin/cmake -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	"/Applications/CMake 2.8-3.app/Contents/bin/cmake" -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : rebuild_cache
 
 # Special rule for the target rebuild_cache
@@ -133,14 +133,14 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(CMAKE_COMMAND) -E cmake_progress_start /scratch/cweiss/condor/workspace/test/CONDOR_SRC/CMakeFiles /scratch/cweiss/condor/workspace/test/CONDOR_SRC/src/condor_sandbox_manager/CMakeFiles/progress.marks
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f CMakeFiles/Makefile2 src/condor_sandbox_manager/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /scratch/cweiss/condor/workspace/test/CONDOR_SRC/CMakeFiles 0
+	cd /scratch/work/CONDOR_SRC && $(CMAKE_COMMAND) -E cmake_progress_start /scratch/work/CONDOR_SRC/CMakeFiles /scratch/work/CONDOR_SRC/src/condor_sandbox_manager/CMakeFiles/progress.marks
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f CMakeFiles/Makefile2 src/condor_sandbox_manager/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /scratch/work/CONDOR_SRC/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f CMakeFiles/Makefile2 src/condor_sandbox_manager/clean
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f CMakeFiles/Makefile2 src/condor_sandbox_manager/clean
 .PHONY : clean
 
 # The main clean target
@@ -149,22 +149,22 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f CMakeFiles/Makefile2 src/condor_sandbox_manager/preinstall
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f CMakeFiles/Makefile2 src/condor_sandbox_manager/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f CMakeFiles/Makefile2 src/condor_sandbox_manager/preinstall
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f CMakeFiles/Makefile2 src/condor_sandbox_manager/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /scratch/work/CONDOR_SRC && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Convenience name for target.
 src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/rule:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f CMakeFiles/Makefile2 src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/rule
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f CMakeFiles/Makefile2 src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/rule
 .PHONY : src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/rule
 
 # Convenience name for target.
@@ -173,7 +173,7 @@ condor_sandbox: src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/rule
 
 # fast build rule for target.
 condor_sandbox/fast:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build
 .PHONY : condor_sandbox/fast
 
 sandbox.o: sandbox.cpp.o
@@ -181,7 +181,7 @@ sandbox.o: sandbox.cpp.o
 
 # target to build an object file
 sandbox.cpp.o:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox.cpp.o
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox.cpp.o
 .PHONY : sandbox.cpp.o
 
 sandbox.i: sandbox.cpp.i
@@ -189,7 +189,7 @@ sandbox.i: sandbox.cpp.i
 
 # target to preprocess a source file
 sandbox.cpp.i:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox.cpp.i
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox.cpp.i
 .PHONY : sandbox.cpp.i
 
 sandbox.s: sandbox.cpp.s
@@ -197,7 +197,7 @@ sandbox.s: sandbox.cpp.s
 
 # target to generate assembly for a file
 sandbox.cpp.s:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox.cpp.s
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox.cpp.s
 .PHONY : sandbox.cpp.s
 
 sandbox_manager.o: sandbox_manager.cpp.o
@@ -205,7 +205,7 @@ sandbox_manager.o: sandbox_manager.cpp.o
 
 # target to build an object file
 sandbox_manager.cpp.o:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox_manager.cpp.o
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox_manager.cpp.o
 .PHONY : sandbox_manager.cpp.o
 
 sandbox_manager.i: sandbox_manager.cpp.i
@@ -213,7 +213,7 @@ sandbox_manager.i: sandbox_manager.cpp.i
 
 # target to preprocess a source file
 sandbox_manager.cpp.i:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox_manager.cpp.i
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox_manager.cpp.i
 .PHONY : sandbox_manager.cpp.i
 
 sandbox_manager.s: sandbox_manager.cpp.s
@@ -221,32 +221,8 @@ sandbox_manager.s: sandbox_manager.cpp.s
 
 # target to generate assembly for a file
 sandbox_manager.cpp.s:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox_manager.cpp.s
+	cd /scratch/work/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/sandbox_manager.cpp.s
 .PHONY : sandbox_manager.cpp.s
-
-test_sandbox_manager.o: test_sandbox_manager.cpp.o
-.PHONY : test_sandbox_manager.o
-
-# target to build an object file
-test_sandbox_manager.cpp.o:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/test_sandbox_manager.cpp.o
-.PHONY : test_sandbox_manager.cpp.o
-
-test_sandbox_manager.i: test_sandbox_manager.cpp.i
-.PHONY : test_sandbox_manager.i
-
-# target to preprocess a source file
-test_sandbox_manager.cpp.i:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/test_sandbox_manager.cpp.i
-.PHONY : test_sandbox_manager.cpp.i
-
-test_sandbox_manager.s: test_sandbox_manager.cpp.s
-.PHONY : test_sandbox_manager.s
-
-# target to generate assembly for a file
-test_sandbox_manager.cpp.s:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(MAKE) -f src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/build.make src/condor_sandbox_manager/CMakeFiles/condor_sandbox.dir/test_sandbox_manager.cpp.s
-.PHONY : test_sandbox_manager.cpp.s
 
 # Help Target
 help:
@@ -269,9 +245,6 @@ help:
 	@echo "... sandbox_manager.o"
 	@echo "... sandbox_manager.i"
 	@echo "... sandbox_manager.s"
-	@echo "... test_sandbox_manager.o"
-	@echo "... test_sandbox_manager.i"
-	@echo "... test_sandbox_manager.s"
 .PHONY : help
 
 
@@ -283,6 +256,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /scratch/cweiss/condor/workspace/test/CONDOR_SRC && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /scratch/work/CONDOR_SRC && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

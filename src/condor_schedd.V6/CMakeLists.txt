@@ -24,7 +24,7 @@ file( GLOB scheddRmvElements Example* *.t.* ${qmgmtElements} )
 
 if (NOT WIN_EXEC_NODE_ONLY)
 	condor_daemon( schedd "${scheddRmvElements}"
-	"ckpt_server_api;${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND}" "${C_SBIN}" ON)
+	"ckpt_server_api;condor_sandbox;${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND}" "${C_SBIN}" ON)
 
 	if (HAVE_EXT_GSOAP)
 		install (FILES ${CMAKE_CURRENT_BINARY_DIR}/condorSchedd.wsdl DESTINATION ${C_LIB}/webservice)

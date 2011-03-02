@@ -1033,6 +1033,16 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		rip->dprintf( D_ALWAYS, "Can't receive classad from schedd\n" );
 		ABORT;
 	}
+	// ########## Sandbox Manager output
+	std::string sb_id = "";
+	req_classad->LookupString( "JOB_SANDBOX_ID", sb_id);
+	if (sb_id == "") {
+		dprintf(D_ALWAYS, "**** No sandbox ID *** \n");
+		
+	} else {
+		dprintf(D_ALWAYS, "**** Yes sandbox ID: %s *** \n", sb_id.c_str());
+		char *sandboxId = sandMan->registerSandbox(sb_id.c_str(), true);
+	}
 
 #if !defined(WANT_OLD_CLASSADS)
 	req_classad->AddTargetRefs( TargetMachineAttrs );
@@ -1721,6 +1731,10 @@ activate_claim( Resource* rip, Stream* stream )
 		// update the current rank on this claim
 	float rank = compute_rank( mach_classad, req_classad ); 
 	rip->r_cur->setrank( rank );
+	
+	// look for sandbox ID
+	std::string sb_id = "";
+	req_classad->LookupString( "JOB_SANDBOX_ID", sb_id);
 
 		// Grab the job ID, so we've got it.  Once we give the
 		// req_classad to the Claim object, we no longer control it. 
@@ -1735,12 +1749,20 @@ activate_claim( Resource* rip, Stream* stream )
 			// abort now, and all the state will be happy.
 		ABORT;
 	}
-	char *execDir = new char[strlen(rip->executeDir()) + 15] ;
-	sprintf(execDir,  "%s%cdir_%ld", rip->executeDir(), DIR_DELIM_CHAR, (long)vm_starter->pid() );
-	char *sandboxId = sandMan->registerSandbox((const char*)execDir);
-	delete []execDir;
-	dprintf(D_ALWAYS, "Newly created sandbox ID: %s \n", sandboxId);
 	
+	
+	if (sb_id == "") {
+		dprintf(D_ALWAYS, "**** No sandbox ID *** \n"); // Assume old schedd
+		
+	} else {
+		char *execDir = new char[strlen(rip->executeDir()) + 15] ;
+		sprintf(execDir,  "%s%cdir_%ld", rip->executeDir(), DIR_DELIM_CHAR, (long)vm_starter->pid() );
+		dprintf(D_ALWAYS, "**** Sandbox activated: %s \n", sb_id.c_str());
+		// sandman add execDir to sandbox with ID sb_id ...
+		sandMan->updateSandboxExecDir(sb_id.c_str(), (const char*)execDir);
+		delete []execDir;
+	}
+		
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
 		if( resmgr->m_vmuniverse_mgr.allocVM(vm_starter->pid(), vm_classad, rip->executeDir()) 
 				== false ) {

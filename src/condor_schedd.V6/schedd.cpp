@@ -90,6 +90,7 @@
 #include "forkwork.h"
 #include "condor_open.h"
 #include "schedd_negotiate.h"
+#include "sandbox.h"
 
 #if HAVE_DLOPEN
 #include "ScheddPlugin.h"
@@ -5208,7 +5209,12 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	}
 
 	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );
-
+	//dprintf(D_ALWAYS, "!!!!!!!!!!!!!!!!! Lets call sandbox ID create ... %i \n", CSandbox::_MIN_SANDBOXID_LENGTH);
+	
+	std::string sbid = CSandbox::createId(12);
+	dprintf(D_ALWAYS, "!!!!!!!!!!!!!!!!! Lets call sandbox ID create ...%s \n", sbid.c_str());
+	SetAttributeString(mrec->cluster, mrec->proc, "JOB_SANDBOX_ID", sbid.c_str());
+	jobAd->Assign( "JOB_SANDBOX_ID", sbid);
 	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
 		(DCMsgCallback::CppFunction)&Scheduler::claimedStartd,
 		this,
@@ -5219,7 +5225,6 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	mrec->setStatus( M_STARTD_CONTACT_LIMBO );
 
 	classy_counted_ptr<DCStartd> startd = new DCStartd(mrec->description(),NULL,mrec->peer,mrec->claimId());
-
 	this->num_pending_startd_contacts++;
 
 	int deadline_timeout = -1;

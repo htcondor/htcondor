@@ -82,15 +82,29 @@ CSandboxManager::~CSandboxManager()
 
 
 char*
-//CSandboxManager::registerSandbox(JobInfoCommunicator* jic, const char* sDir)
-CSandboxManager::registerSandbox(const char* sDir)
+CSandboxManager::registerSandbox(const char* sDir, bool isId)
 {
 	dprintf(D_ALWAYS, "CSandboxManager::registerSandbox called \n");
-	cout << "CSandboxManager::registerSandbox called" << std::endl;
 	//CSandbox *sandbox = new CSandbox(jic, sDir);
+	if (isId) {
+		CSandbox *sandbox = new CSandbox(sDir, false);
+		this->sandboxMap[sandbox->getId()] = sandbox;
+		return (char*)sandbox->getId().c_str(); 
+	}
 	CSandbox *sandbox = new CSandbox(sDir);
 	this->sandboxMap[sandbox->getId()] = sandbox;
 	return (char*)sandbox->getId().c_str();
+}
+
+void 
+CSandboxManager::updateSandboxExecDir(const char* sId, const char* sExecDir){
+	string sbId = string(sId);
+	if (sandboxMap.find( sbId ) != sandboxMap.end()) {
+		sandboxMap[sbId]->setSandboxDir(sExecDir);
+		
+		dprintf(D_ALWAYS, "CSandboxManager::updateSandboxExecDir called:  %s , %s \n", sId, sandboxMap[sbId]->getSandboxDir().c_str());
+	}
+	
 }
 
 

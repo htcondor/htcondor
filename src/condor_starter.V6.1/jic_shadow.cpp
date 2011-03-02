@@ -899,7 +899,14 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 	sprintf( tmp, "%s=TRUE", ATTR_HAS_RECONNECT );
 	ad->Insert( tmp );
 	free( tmp );
-
+	
+	// TODO
+	const char *ATTR_HAS_ASYNC_SANDBOX_TRANSFER = "hasAsyncSandboxTransfer";
+	tmp = (char*)malloc(strlen(ATTR_HAS_ASYNC_SANDBOX_TRANSFER) + 6);
+	sprintf( tmp, "%s=TRUE", ATTR_HAS_ASYNC_SANDBOX_TRANSFER);
+	ad->Insert(tmp);
+	free(tmp);
+	
 		// Finally, publish all the DC-managed attributes.
 	daemonCore->publish(ad);
 }

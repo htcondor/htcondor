@@ -16,8 +16,9 @@
  # 
  ############################################################### 
 
+file( GLOB RmvSrcs  test_sandbox_manager.cpp )
 
-condor_glob( csmHdrs csmSrcs "" )
+condor_glob( csmHdrs csmSrcs "${RmvSrcs}" )
 
 condor_static_lib( condor_sandbox "${csmHdrs};${csmSrcs}" )
 

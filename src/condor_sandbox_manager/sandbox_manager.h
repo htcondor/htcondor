@@ -82,7 +82,9 @@ public:
 
 	// Given the base dir, create a local are to move the sandbox, 
 	// assign a sandboxId to the sandbox and set its expiry
-	virtual char* registerSandbox(const char*);
+	virtual char* registerSandbox(const char*, bool isId = false);
+	
+	virtual void updateSandboxExecDir(const char*, const char*);
 
 	// Given the sandboxId give the handle to the sandbox location
 	virtual string transferSandbox(const char*);

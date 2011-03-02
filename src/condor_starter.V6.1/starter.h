@@ -49,10 +49,14 @@ public:
 			Config(), registers a bunch of signals, registers a
 			reaper, makes the starter's working dir and moves there,
 			sets resource limits, then calls StartJob()
+			The last parameter indicates which starter behavior we want: 
+			0 = default behavior, execute and transfer data
+			1 = execute only
+			2 = transfer only
 		*/
 	virtual bool Init( JobInfoCommunicator* my_jic, 
 					   const char* orig_cwd, bool is_gridshell,
-					   int stdin_fd, int stdout_fd, int stderr_fd );
+					   int stdin_fd, int stdout_fd, int stderr_fd , int doExecAndTransfer = 0);
 
 		/** The starter is finally ready to exit, so handle some
 			cleanup code we always need, then call DC_Exit() with the
@@ -375,6 +379,9 @@ private:
 
 		// true if allJobsDone() has been called
 	bool m_all_jobs_done;
+	
+	bool m_should_transfer_output;
+	bool m_should_run_job;
 };
 
 #endif
