@@ -263,6 +263,11 @@ ERROR ``Assertion ERROR on (m_ref_count == 0)''
   was reconfigured or restarted.  
   This was a problem in some situations when using \Condor{shared\_port}.
 
+% gittrack #1945
+\item A bug introduced in 7.5.5 resulted in failure to advance the
+  flocking level due to lack of activity from one of the negotiators
+  in the flocking list.
+
 \end{itemize}
 
 \noindent Known Bugs:
