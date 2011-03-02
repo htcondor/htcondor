@@ -422,19 +422,8 @@ our %submit_info = (
 	# Platform Mac OSX 10.5 on x86_64 with updates
 	# condor actually builds naturally for this one, we just don't release it
 	##########################################################################
-	'x86_64_macos_10.5-updated'	=> {
-		'build' => {
-			'configure_args' => {  @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'libtool-1.5.26' ],
-			'xtests'	=> undef,
-		},
+	'x86_64_macos_10.5-updated'	=> 'x86_64_macos_10.5',
 
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
 
 	##########################################################################
 	# Platform Mac OSX 10.6 on x86_64
@@ -459,19 +448,8 @@ our %submit_info = (
 	##########################################################################
 	# Platform Mac OSX 10.6 with updates on x86_64
 	##########################################################################
-	'x86_64_macos_10.6-updated'	=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'libtool-1.5.26' ],
-			'xtests'	=> undef,
-		},
+	'x86_64_macos_10.6-updated'	=> 'x86_64_macos_10.6',
 
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
 
 	##########################################################################
 	# Platform RHEL 5 on x86
@@ -874,31 +852,23 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-	'x86_64_opensuse_11.3-updated'		=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
-				'-DWITH_CURL:BOOL=ON' => undef,
-				'-DWITH_EXPAT:BOOL=ON' => undef,
-				'-DWITH_LIBVIRT:BOOL=ON' => undef,
-				'-DWITH_LIBXML2:BOOL=ON' => undef,
-			},
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => {
-				@default_test_configure_args
-				
-			},
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
+	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
 );
+
+sub unalias
+{
+	foreach my $platform (keys %submit_info) {
+		next if ref($submit_info{$platform}) eq "HASH";
+		die "Self reference detected in '$platform' definition!!!"
+			if ( $submit_info{$platform} eq $platform );
+		foreach my $p (keys %submit_info) {
+			if ( $submit_info{$platform} eq $p ) {
+				$submit_info{$platform} = $submit_info{$p};
+				last;
+			}
+		}
+	}
+}
 
 ###############################################################################
 # The code below this comment is used to sanity check the above data and
@@ -1076,6 +1046,8 @@ sub main
 {
 	my @platforms;
 	my $usage = "usage: $0 [--help|-h] [--list|-l] [-a|--all] [(<platform>|/<regex>/) ...]";
+
+	unalias( );
 	foreach my $arg ( @ARGV ) {
 		if (  ( $arg eq "-l" ) or ( $arg eq "--list" ) ) {
 			foreach my $key ( sort keys(%submit_info) ) {
