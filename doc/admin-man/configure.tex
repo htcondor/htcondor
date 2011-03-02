@@ -10268,7 +10268,7 @@ on page~\pageref{sec:daemon-classad-hooks}.
   The job is expected to reread its configuration at that time.
 
   \Expr{<JobName>} is the logical name assigned for a job as defined by
-  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, or
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST} or
   \MacroNI{SCHEDD\_CRON\_JOBLIST}.
 
 \label{param:StartdCronJobReconfigReRun}
@@ -10278,48 +10278,109 @@ on page~\pageref{sec:daemon-classad-hooks}.
   A boolean value that when \Expr{True}, causes the daemon ClassAd hooks
   mechanism to re-run the specified job when the daemon is
   reconfigured via \Condor{reconfig}.
+  The default value is \Expr{False}.
 
   \Expr{<JobName>} is the logical name assigned for a job as defined by
-  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, or
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST} or
   \MacroNI{SCHEDD\_CRON\_JOBLIST}.
 
 \label{param:StartdCronJobJobLoad}
-\item[\Macro{STARTD\_CRON\_<JobName>\_JOB\_LOAD}]
-  A floating point value that specifies the ``load'' that a specified
-  load induces on the system.  This job load can be used to limit the
-  jobs that run concurrently.
+\label{param:ScheddCronJobJobLoad}
+\label{param:BenchmarksJobJobLoad}
+\item[\Macro{STARTD\_CRON\_<JobName>\_JOB\_LOAD} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_JOB\_LOAD}
+       and \Macro{BENCHMARKS\_<JobName>\_JOB\_LOAD}]
+  A floating point value that represents the assumed and therefore expected
+  CPU load that a job induces on the system.
+  This job load is then used to limit the total number of jobs that run
+  concurrently, by not starting new jobs if the assumed total load from
+  all jobs is over a set threshold.
+  The default value for each individual 
+  \MacroNI{STARTD\_CRON} or a \MacroNI{SCHEDD\_CRON} job is 0.01.
+  The default value for each individual 
+  \MacroNI{BENCHMARKS} job is 1.0.
 
   \Expr{<JobName>} is the logical name assigned for a job as defined by
   configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
   \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
 
+\label{param:StartdCronMaxJobLoad}
+\label{param:ScheddCronMaxJobLoad}
+\label{param:BenchmarksMaxJobLoad}
+\item[\Macro{STARTD\_CRON\_MAX\_JOB\_LOAD} 
+       and \Macro{SCHEDD\_CRON\_MAX\_JOB\_LOAD}
+       and \Macro{BENCHMARKS\_MAX\_JOB\_LOAD}]
+  A floating point value representing a threshold for CPU load,
+  such that if starting another job would cause the sum of assumed loads
+  for all running jobs to exceed this value,
+  no further jobs will be started.
+  The default value for \MacroNI{STARTD\_CRON} or a \MacroNI{SCHEDD\_CRON} 
+  hook managers is 0.1.
+  This implies that a maximum of 10 jobs (using their default, assumed
+  load) could be concurrently running.
+  The default value for the \MacroNI{BENCHMARKS} hook manager is 1.0.
+  This implies that only 1 \MacroNI{BENCHMARKS} job (at the default, assumed
+  load) may be running.
+
 \label{param:StartdCronJobKill}
-\item[\Macro{STARTD\_CRON\_<JobName>\_KILL}]
-  A boolean value applicable only for modules that have
-  \Expr{STARTD\_CRON\_<JobName>\_MODE = Periodic}.
+\label{param:ScheddCronJobKill}
+\label{param:BenchmarksJobKill}
+\item[\Macro{STARTD\_CRON\_<JobName>\_KILL} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_KILL}
+       and \Macro{BENCHMARKS\_<JobName>\_KILL}]
+  A boolean value applicable only for jobs with a \Expr{MODE} of anything
+  other than  \Expr{WaitForExit}.
   The default value is \Expr{False}.
 
-  This variable controls the behavior of the \Condor{startd} when it
-  detects that an instance of the module's executable is still running
-  as it is time to invoke the module again.
-  If \Expr{True}, the \Condor{startd} will kill the module and then invoke
-  an new instance of the module.
-  If \Expr{False}, the existing module invocation is allowed to
+  This variable controls the behavior of the daemon hook manager when it
+  detects that an instance of the job's executable is still running
+  as it is time to invoke the job again.
+  If \Expr{True}, the daemon hook manager will kill the currently running job
+  and then invoke an new instance of the job.
+  If \Expr{False}, the existing job invocation is allowed to
   continue running. 
 
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
+
 \label{param:StartdCronJobArgs}
-\item[\Macro{STARTD\_CRON\_<JobName>\_ARGS}]
-  The command line arguments to pass to the module to be executed. 
+\label{param:ScheddCronJobArgs}
+\label{param:BenchmarksJobArgs}
+\item[\Macro{STARTD\_CRON\_<JobName>\_ARGS} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_ARGS}
+       and \Macro{BENCHMARKS\_<JobName>\_ARGS}]
+  The command line arguments to pass to the job as it is invoked.
+
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
 
 \label{param:StartdCronJobEnv}
-\item[\Macro{STARTD\_CRON\_<JobName>\_ENV}]
-  The environment string to pass to the module.
-  The syntax is the same as that of 
-  \MacroNI{DAEMONNAME\_ENVIRONMENT} in ~\ref{param:DaemonNameEnvironment}.
+\label{param:ScheddCronJobEnv}
+\label{param:BenchmarksJobEnv}
+\item[\Macro{STARTD\_CRON\_<JobName>\_ENV} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_ENV}
+       and \Macro{BENCHMARKS\_<JobName>\_ENV}]
+  The environment string to pass to the job.
+  The syntax is the same as that of \MacroNI{DAEMONNAME\_ENVIRONMENT}
+  as defined at ~\ref{param:DaemonNameEnvironment}.
+
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
 
 \label{param:StartdCronJobCwd}
-\item[\Macro{STARTD\_CRON\_<JobName>\_CWD}]
-  The working directory in which to start the module.
+\label{param:ScheddCronJobCwd}
+\label{param:BenchmarksJobCwd}
+\item[\Macro{STARTD\_CRON\_<JobName>\_CWD} 
+       and \Macro{SCHEDD\_CRON\_<JobName>\_CWD}
+       and \Macro{BENCHMARKS\_<JobName>\_CWD}]
+  The working directory in which to start the job.
+
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
+  \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
 
 \end{description}
 
