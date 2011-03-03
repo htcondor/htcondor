@@ -19,11 +19,18 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:qry="http://query.aviary.grid.redhat.com" xmlns:mrg="http://common.aviary.grid.redhat.com" targetNamespace="http://query.aviary.grid.redhat.com">
 	<xs:import namespace="http://common.aviary.grid.redhat.com" schemaLocation="aviary-common.xsd"/>
 	<!-- declare  message-level elements using anonymous complex types for simpler generated types -->
+	<xs:complexType name="QueryRequestType">
+		<xs:attribute name="allowPartialMatching" type="xs:boolean" default="false"/>
+	</xs:complexType>
 	<xs:element name="GetJobStatus">
 		<xs:complexType>
-			<xs:sequence>
-				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
-			</xs:sequence>
+			<xs:complexContent>
+				<xs:extension base="qry:QueryRequestType">
+					<xs:sequence>
+						<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+					</xs:sequence>
+				</xs:extension>
+			</xs:complexContent>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetJobStatusResponse">
@@ -36,9 +43,13 @@
 	</xs:element>
 	<xs:element name="GetJobDetails">
 		<xs:complexType>
-			<xs:sequence>
-				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
-			</xs:sequence>
+			<xs:complexContent>
+				<xs:extension base="qry:QueryRequestType">
+					<xs:sequence>
+						<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+					</xs:sequence>
+				</xs:extension>
+			</xs:complexContent>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetJobDetailsResponse">
@@ -51,9 +62,13 @@
 	</xs:element>
 	<xs:element name="GetJobData">
 		<xs:complexType>
-			<xs:sequence>
-				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
-			</xs:sequence>
+			<xs:complexContent>
+				<xs:extension base="qry:QueryRequestType">
+					<xs:sequence>
+						<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+					</xs:sequence>
+				</xs:extension>
+			</xs:complexContent>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetJobDataResponse">
@@ -66,9 +81,13 @@
 	</xs:element>
 	<xs:element name="GetSubmissionSummary">
 		<xs:complexType>
-			<xs:sequence>
-				<xs:element name="ids" type="mrg:SubmissionID" minOccurs="0" maxOccurs="unbounded"/>
-			</xs:sequence>
+			<xs:complexContent>
+				<xs:extension base="qry:QueryRequestType">
+					<xs:sequence>
+						<xs:element name="ids" type="mrg:SubmissionID" minOccurs="0" maxOccurs="unbounded"/>
+					</xs:sequence>
+				</xs:extension>
+			</xs:complexContent>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetSubmissionSummaryResponse">
