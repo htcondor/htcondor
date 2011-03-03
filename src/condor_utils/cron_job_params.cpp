@@ -30,7 +30,7 @@
 
 CronJobParams::CronJobParams( const char		*job_name,
 							  const CronJobMgr	&mgr )
-		: CronParamBase( *(mgr.GetName()) ),
+		: CronParamBase( *(mgr.GetParamBase()) ),
 		  m_mgr( mgr ),
 		  m_mode( CRON_ILLEGAL ),
 		  m_modestr( NULL ),

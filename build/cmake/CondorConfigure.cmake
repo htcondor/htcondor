@@ -329,7 +329,6 @@ option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(BUILD_TESTS "Will build internal test applications" ON)
-option(HAVE_KBDD "Support for condor_kbdd" ON)
 option(WANT_CONTRIB "Enable quill functionality" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
@@ -351,6 +350,16 @@ else()
   option(CLIPPED "disable the standard universe" ON)
 endif()
 
+if (NOT WINDOWS)
+    if (HAVE_X11)
+        if (NOT (${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND"))
+            option(HAVE_KBDD "Support for condor_kbdd" ON)
+        endif()
+    endif()
+else()
+    option(HAVE_KBDD "Support for condor_kbdd" ON)
+endif()
+
 if (NOT CLIPPED AND NOT LINUX)
 	message (FATAL_ERROR "standard universe is *only* supported on Linux")
 endif()
@@ -362,11 +371,7 @@ if (NOT HPUX)
 	endif()
 endif(NOT HPUX)
 
-if (WINDOWS) 
-    if (WANT_CONTRIB AND WITH_MANAGEMENT)
-        set ( CONDOR_QMF condor_qmflib;${QPID_FOUND} ) # global scoping dep
-    endif()
-else() # *nix
+if (NOT WINDOWS) 
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 
@@ -499,7 +504,9 @@ endif(CONDOR_EXTERNALS AND NOT WINDOWS)
 ######### special case for contrib
 if (WINDOWS AND WANT_CONTRIB AND WITH_MANAGEMENT)
     # global scoping external linkage var when options enable.
-    set (CONDOR_QMF condor_qmflib;${QPID_FOUND};${BOOST_FOUND})
+    set (CONDOR_QMF condor_qmflib;${QPID_FOUND})
+    add_definitions( -DWANT_CONTRIB )
+    add_definitions( -DWITH_MANAGEMENT )
 endif()
 
 message(STATUS "********* External configuration complete (dropping config.h) *********")

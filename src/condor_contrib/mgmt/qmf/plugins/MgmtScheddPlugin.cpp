@@ -527,6 +527,4 @@ MgmtScheddPlugin::GetSubmitter(MyString &name, SubmitterObject *&submitter)
 	return true;
 }
 
-#ifdef WIN32
-	static MgmtScheddPlugin instance;
-#endif
+static MgmtScheddPlugin instance;

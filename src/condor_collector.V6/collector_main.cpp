@@ -22,8 +22,10 @@
 #include "view_server.h"
 #include "subsystem_info.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 #include "CollectorPlugin.h"
+#endif
 #endif
 
 //-------------------------------------------------------------
@@ -55,10 +57,12 @@ void main_init(int argc, char *argv[])
 	Daemon=new ViewServer();
 	Daemon->Init();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	CollectorPluginManager::Load();
 
 	CollectorPluginManager::Initialize();
+#endif
 #endif
 }
 
@@ -74,8 +78,10 @@ void main_config()
 void main_shutdown_fast()
 {
 	Daemon->Exit();
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	CollectorPluginManager::Shutdown();
+#endif
 #endif
 	DC_Exit(0);
 }
@@ -85,8 +91,10 @@ void main_shutdown_fast()
 void main_shutdown_graceful()
 {
 	Daemon->Shutdown();
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	CollectorPluginManager::Shutdown();
+#endif
 #endif
 	DC_Exit(0);
 }
