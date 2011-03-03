@@ -60,6 +60,12 @@ The details of each version are described below.
 \item When there are multiple cpus but only one slot, the slot name no
 longer begins with ``slot1@''.
 
+% #1871 commit e4cce6996764a5eaabb28106c44f901c23dc4bae
+\item \AdAttr{stack\_size} was added to the commands that can be put in
+  a job description file for \Condor{submit}. This command only applies to
+  Linux jobs that are not running in the standard universe. This also
+  adds ``\AdAttr{StackSize}'' to the job Ad.
+
 \end{itemize}
 
 \noindent Known Bugs:
