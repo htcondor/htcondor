@@ -29,10 +29,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item \Condor{q} now supports a new option \Opt{-stream-results}.
+\item \Condor{q} now supports the new option \Opt{-stream-results}.
   When this option is specified, \Condor{q} displays results as they
   are fetched from the job queue, rather than buffering up the query
   results before displaying anything.
+
+% #1871 commit e4cce6996764a5eaabb28106c44f901c23dc4bae
+\item The new submit description file command \SubmitCmd{stack\_size} 
+  applies to Linux jobs that are not running in the standard universe. 
+  This also advertises the job ClassAd attribute \AdAttr{StackSize}.
 
 \end{itemize}
 
@@ -50,21 +55,15 @@ The details of each version are described below.
 
 % gittrack 1928
 \item \AdAttr{JobUniverse} was documented as an optional attribute for
-  jobs created via the fetch-work hook, but it was effectively
+  jobs created via the Fetch Work hook, but it was effectively
   required, because the default \AdAttr{IsValidCheckpointPlatform}
-  expression evaluated to \Expr{undefined} without it.  Now the
+  expression evaluated to \Expr{Undefined} without it.  Now the
   default \AdAttr{IsValidCheckpointPlatform} expression evaluates to
-  \Expr{true} when \AdAttr{JobUniverse} is not defined.
+  \Expr{True} when \AdAttr{JobUniverse} is not defined.
 
 % gittrack 1943
 \item When there are multiple cpus but only one slot, the slot name no
-longer begins with ``slot1@''.
-
-% #1871 commit e4cce6996764a5eaabb28106c44f901c23dc4bae
-\item \AdAttr{stack\_size} was added to the commands that can be put in
-  a job description file for \Condor{submit}. This command only applies to
-  Linux jobs that are not running in the standard universe. This also
-  adds ``\AdAttr{StackSize}'' to the job Ad.
+longer begins with \Expr{slot1@}.
 
 \end{itemize}
 
