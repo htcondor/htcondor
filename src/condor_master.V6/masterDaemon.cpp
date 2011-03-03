@@ -40,8 +40,10 @@
 #include "stat_info.h"
 #include "shared_port_endpoint.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "MasterPlugin.h"
+#endif
 #endif
 
 // these are defined in master.C
@@ -2492,8 +2494,10 @@ Daemons::UpdateCollector()
     daemonCore->monitor_data.ExportData(ad);
 	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	MasterPluginManager::Update(ad);
+#endif
 #endif
 
 		// log classad into sql log so that it can be updated to DB

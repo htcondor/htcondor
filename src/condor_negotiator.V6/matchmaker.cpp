@@ -44,8 +44,10 @@
 #include <string>
 #include <deque>
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 #include "NegotiatorPlugin.h"
+#endif
 #endif
 
 // the comparison function must be declared before the declaration of the
@@ -311,9 +313,11 @@ initialize ()
 			"Update Collector", this );
 
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	NegotiatorPluginManager::Load();
 	NegotiatorPluginManager::Initialize();
+#endif
 #endif
 }
 
@@ -4526,8 +4530,10 @@ Matchmaker::updateCollector() {
 		// log classad into sql log so that it can be updated to DB
 		FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 		NegotiatorPluginManager::Update(*publicAd);
+#endif
 #endif
 		daemonCore->sendUpdates(UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}

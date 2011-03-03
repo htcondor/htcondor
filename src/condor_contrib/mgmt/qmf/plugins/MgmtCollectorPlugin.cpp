@@ -18,7 +18,7 @@
 
 #include "../condor_collector.V6/CollectorPlugin.h"
 
-#include "../condor_collector.V6/hashkey.h"
+#include "hashkey.h"
 
 #include "../condor_collector.V6/collector.h"
 

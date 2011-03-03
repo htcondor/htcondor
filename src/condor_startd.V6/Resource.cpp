@@ -28,8 +28,10 @@
 #include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
+#endif
 #endif
 
 extern FILESQL *FILEObj;
@@ -958,8 +960,10 @@ Resource::do_update( void )
         // Get the public and private ads
     publish_for_update( &public_ad, &private_ad );
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Update(&public_ad, &private_ad);
+#endif
 #endif
 
 		// Send class ads to collector(s)
@@ -1021,8 +1025,10 @@ Resource::final_update( void )
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Invalidate(&invalidate_ad);
+#endif
 #endif
 
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
