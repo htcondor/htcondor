@@ -162,34 +162,31 @@ while( $myrow = mysql_fetch_array($result) ) {
   
   $resultval = $myrow["result"];
   $test_results_url = "<a href=\"http://nmi.cs.wisc.edu/node/552\">".$resultval."</a>";
-  echo "<P>";
-  echo "<TABLE>";
-#    echo "<TR><TD>Run ID:</TD><TD><a href=\"http://$hostname/nmi/?page=results/runDetails&id=".$myrow["runid"] ."\">".$myrow["runid"]."</a></TD></TR>";
-    #echo "<TR><TD>Run ID:</TD><TD><a href=\"http://$hostname/nmi/?page=results/runDetails&runid=".$myrow["runid"] 
-  echo "<TR><TD>Run ID:</TD><TD><a href=\"./Task-search.php?runid=".$myrow["runid"]."&Submit=Search+by+RunID" 
-    ."\">".$myrow["runid"]."</a></TD></TR>";
-  echo "<TR><TD>GID:</TD><TD>".$myrow["gid"] ."</TD></TR>";
-  echo "<TR><TD>Task ID:</TD><TD>".$myrow["task_id"] ."</TD></TR>";
-  echo "<TR><TD>Start:</TD><TD>".$myrow["start"] ."</TD></TR>";
-  echo "<TR><TD>Finish:</TD><TD> ".$myrow["finish"] ."</TD></TR>";
-  echo "<TR><TD>Duration:</TD><TD> ".$myrow["duration"] ."</TD></TR>";
-  echo "<TR><TD>Result:</TD><TD> $test_results_url </TD></TR>";
-  echo "<TR><TD>Stdout:</TD><TD> $stdout_url - (size: $stdout_size_display bytes) </TD></TR>";
-  echo "<TR><TD>Stderr:</TD><TD> $stderr_url - (size: $stderr_size_display bytes) </TD></TR>";
-  echo "<TR><TD>Run Results:</TD><TD> $results_url</a></TD></TR>";
-  echo "<TR><TD># warnings STDOUT:</td><td>$num_warnings</td></tr>";
-  echo "<TR><TD># warnings STDERR:</td><td>$num_warnings_stderr</td></tr>";
-  echo "</TABLE>";
-  echo "</P>";
+  echo "<p>";
+  echo "<table>";
+#    echo "<tr><td>Run ID:</td><td><a href=\"http://$hostname/nmi/?page=results/runDetails&id=".$myrow["runid"] ."\">".$myrow["runid"]."</a></td></tr>";
+    #echo "<tr><td>Run ID:</td><td><a href=\"http://$hostname/nmi/?page=results/runDetails&runid=".$myrow["runid"] 
+  echo "<tr><td>Run ID:</td><td><a href=\"./Task-search.php?runid=".$myrow["runid"]."&Submit=Search+by+RunID" 
+    ."\">".$myrow["runid"]."</a></td></tr>";
+  echo "<tr><td>GID:</td><td>".$myrow["gid"] ."</td></tr>";
+  echo "<tr><td>Task ID:</td><td>".$myrow["task_id"] ."</td></tr>";
+  echo "<tr><td>Start:</td><td>".$myrow["start"] ."</td></tr>";
+  echo "<tr><td>Finish:</td><td> ".$myrow["finish"] ."</td></tr>";
+  echo "<tr><td>Duration:</td><td> ".$myrow["duration"] ."</td></tr>";
+  echo "<tr><td>Result:</td><td> $test_results_url </td></tr>";
+  echo "<tr><td>Stdout:</td><td> $stdout_url - (size: $stdout_size_display bytes) </td></tr>";
+  echo "<tr><td>Stderr:</td><td> $stderr_url - (size: $stderr_size_display bytes) </td></tr>";
+  echo "<tr><td>Run Results:</td><td> $results_url</a></td></tr>";
+  echo "<tr><td># warnings STDOUT:</td><td>$num_warnings</td></tr>";
+  echo "<tr><td># warnings STDERR:</td><td>$num_warnings_stderr</td></tr>";
+  echo "</table>";
+  echo "</p>";
 
   if($file_found) {
     if($stdout_size > 0) {
       show_file_content("STDOUT", "$filepath.out");
     }
     
-    if($stderr_size > 0) {
-      show_file_content("STDERR", "$filepath.err");
-    }
   }
 }
 
