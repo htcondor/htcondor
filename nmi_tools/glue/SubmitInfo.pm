@@ -859,14 +859,13 @@ sub unalias
 {
 	foreach my $platform (keys %submit_info) {
 		next if ref($submit_info{$platform}) eq "HASH";
+		my $target = $submit_info{$platform};
 		die "Self reference detected in '$platform' definition!!!"
-			if ( $submit_info{$platform} eq $platform );
-		foreach my $p (keys %submit_info) {
-			if ( $submit_info{$platform} eq $p ) {
-				$submit_info{$platform} = $submit_info{$p};
-				last;
-			}
+			if ( $target eq $platform );
+		if ( ! exists $submit_info{$target} ) {
+			die "No matching platform '$target' for alias '$platform'";
 		}
+		$submit_info{$platform} = $submit_info{$target};
 	}
 }
 
