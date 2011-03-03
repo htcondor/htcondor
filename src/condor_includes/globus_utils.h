@@ -251,6 +251,8 @@ int check_x509_proxy( const char *proxy_file );
 
 time_t x509_proxy_expiration_time( const char *proxy_file );
 
+char* x509_proxy_email( const char *proxy_file);
+
 char* x509_proxy_subject_name( const char *proxy_file);
 
 char* x509_proxy_identity_name( const char *proxy_file);

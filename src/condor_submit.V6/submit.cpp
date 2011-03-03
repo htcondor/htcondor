@@ -5234,6 +5234,15 @@ SetGSICredentials()
 			InsertJobExpr(buffer);	
 			free( proxy_subject );
 
+			/* Insert the proxy email into the ad */
+			char *proxy_email;
+			proxy_email = x509_proxy_email(proxy_file);
+
+			if ( proxy_email ) {
+				InsertJobExprString(ATTR_X509_USER_PROXY_EMAIL, proxy_email);
+				free( proxy_email );
+			}
+
 			/* Insert the VOMS attributes into the ad */
 			char *voname = NULL;
 			char *firstfqan = NULL;

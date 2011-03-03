@@ -1532,6 +1532,9 @@ ClassAd *CondorJob::buildSubmitAd()
 		submit_ad->Assign( ATTR_X509_USER_PROXY, jobProxy->proxy_filename );
 		submit_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT,
 						   jobProxy->subject->subject_name );
+		if (jobProxy->subject->email)
+			submit_ad->Assign( ATTR_X509_USER_PROXY_EMAIL,
+						   jobProxy->subject->email );
 		if ( jobProxy->subject->has_voms_attrs ) {
 			submit_ad->Assign( ATTR_X509_USER_PROXY_FQAN,
 							   jobProxy->subject->fqan );
