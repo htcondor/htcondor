@@ -95,11 +95,13 @@ while ($row = mysql_fetch_array($result)) {
    // --------------------------------
    // BUILDS
    // --------------------------------
-   $sql = "SELECT Task.platform, Task.result" . 
-          "  FROM Task, Run ".
-          " WHERE Run.runid = {$runid}  AND ".
-          "       Task.runid = Run.runid AND ".
-          "       Task.platform != 'local' ".
+   $sql = "SELECT Task.platform," . 
+          "       SUM(IF(Task.result != 0, 1, 0)) AS failed," . 
+          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending " . 
+          "  FROM Task ".
+          " WHERE Task.runid = ${runid} AND ".
+          "       Task.platform != 'local' AND ".
+          "       (Task.name='platform_pre' OR Task.name='platform_job' OR Task.name='platform_post') ".
           " GROUP BY Task.platform ";
    $result2 = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
    $data["build"] = Array();
@@ -107,17 +109,17 @@ while ($row = mysql_fetch_array($result)) {
    $data["build"]["platforms"] = Array();
    while ($platforms = mysql_fetch_array($result2)) {
      $data["build"]["totals"]["total"]++;
-     if($platforms["result"] == NULL) {
+     if($platforms["failed"] > 0) {
+       $data["build"]["totals"]["failed"]++;
+       $data["build"]["platforms"][$platforms["platform"]] = "failed";
+     }
+     elseif($platforms["pending"] > 0) {
        $data["build"]["totals"]["pending"]++;
        $data["build"]["platforms"][$platforms["platform"]] = "pending";
      }
-     elseif($platforms["result"] == 0) {
+     else {
        $data["build"]["totals"]["passed"]++;
        $data["build"]["platforms"][$platforms["platform"]] = "passed";       
-     }
-     elseif($platforms["result"] != 0) {
-       $data["build"]["totals"]["failed"]++;
-       $data["build"]["platforms"][$platforms["platform"]] = "failed";
      }
    }
    mysql_free_result($result2);
