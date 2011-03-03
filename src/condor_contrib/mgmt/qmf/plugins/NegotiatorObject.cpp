@@ -150,9 +150,10 @@ NegotiatorObject::GetLimits(Variant::Map &limits, std::string &/*text*/)
 		//   ConcurrencyLimit.y = <y's current usage>
 	matchMaker.getAccountant().ReportLimits(&limitAttrs);
 
+	limitAttrs.Delete(ATTR_CURRENT_TIME); // compat_classad insists on adding this
 	limitAttrs.ResetExpr();
     const char* attr_name;
-    while (!limitAttrs.NextExpr(attr_name,expr)) {
+    while (limitAttrs.NextExpr(attr_name,expr)) {
 		Variant::Map limit;
 		std::string name = attr_name;
 
