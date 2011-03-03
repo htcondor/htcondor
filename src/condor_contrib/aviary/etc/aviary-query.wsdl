@@ -35,7 +35,7 @@
 		<wsdl:part name="parameters" element="qry:GetJobDetailsResponse"/>
 	</wsdl:message>
 	<wsdl:message name="GetJobDataRequest">
-		<wsdl:part name="parameters" element="qry:GetJobDetails"/>
+		<wsdl:part name="parameters" element="qry:GetJobData"/>
 	</wsdl:message>
 	<wsdl:message name="GetJobDataResponse">
 		<wsdl:part name="parameters" element="qry:GetJobDataResponse"/>
