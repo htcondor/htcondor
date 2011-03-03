@@ -1,39 +1,46 @@
+/*
+ * Copyright 2009-2011 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-
-    /**
-     * AviaryJobServiceSkeleton.h
-     *
-     * This file was auto-generated from WSDL for "AviaryJobService|http://grid.redhat.com/aviary-job/" service
-     * by the WSO2 WSF/CPP Version: 1.0
-     * AviaryJobServiceSkeleton WSO2 WSF/CPP Skeleton for the Service Header File
-     */
 #ifndef AVIARYJOBSERVICESKELETON_H
 #define AVIARYJOBSERVICESKELETON_H
 
     #include <OMElement.h>
     #include <MessageContext.h>
    
-     #include <RemoveJob.h>
+     #include <AviaryJob_RemoveJob.h>
     
-     #include <RemoveJobResponse.h>
+     #include <AviaryJob_RemoveJobResponse.h>
     
-     #include <ReleaseJob.h>
+     #include <AviaryJob_ReleaseJob.h>
     
-     #include <ReleaseJobResponse.h>
+     #include <AviaryJob_ReleaseJobResponse.h>
     
-     #include <SubmitJob.h>
+     #include <AviaryJob_SubmitJob.h>
     
-     #include <SubmitJobResponse.h>
+     #include <AviaryJob_SubmitJobResponse.h>
     
-     #include <HoldJob.h>
+     #include <AviaryJob_HoldJob.h>
     
-     #include <HoldJobResponse.h>
+     #include <AviaryJob_HoldJobResponse.h>
     
-     #include <SetJobAttribute.h>
+     #include <AviaryJob_SetJobAttribute.h>
     
-     #include <SetJobAttributeResponse.h>
+     #include <AviaryJob_SetJobAttributeResponse.h>
     
-namespace com_redhat_grid_aviary_job{
+namespace AviaryJob {
     
 
    /** we have to reserve some error codes for adb and for custom messages */
@@ -67,14 +74,14 @@ class AviaryJobServiceSkeleton
          * Auto generated method declaration
          * for "removeJob|http://grid.redhat.com/aviary-job/" operation.
          * 
-         * @param _removeJob of the com_redhat_grid_aviary_common::RemoveJob
+         * @param _removeJob of the AviaryJob::RemoveJob
          *
-         * @return com_redhat_grid_aviary_common::RemoveJobResponse*
+         * @return AviaryJob::RemoveJobResponse*
          */
         
 
          virtual 
-        com_redhat_grid_aviary_common::RemoveJobResponse* removeJob(wso2wsf::MessageContext *outCtx ,com_redhat_grid_aviary_common::RemoveJob* _removeJob);
+        AviaryJob::RemoveJobResponse* removeJob(wso2wsf::MessageContext *outCtx ,AviaryJob::RemoveJob* _removeJob);
 
 
      
@@ -89,14 +96,14 @@ class AviaryJobServiceSkeleton
          * Auto generated method declaration
          * for "releaseJob|http://grid.redhat.com/aviary-job/" operation.
          * 
-         * @param _releaseJob of the com_redhat_grid_aviary_common::ReleaseJob
+         * @param _releaseJob of the AviaryJob::ReleaseJob
          *
-         * @return com_redhat_grid_aviary_common::ReleaseJobResponse*
+         * @return AviaryJob::ReleaseJobResponse*
          */
         
 
          virtual 
-        com_redhat_grid_aviary_common::ReleaseJobResponse* releaseJob(wso2wsf::MessageContext *outCtx ,com_redhat_grid_aviary_common::ReleaseJob* _releaseJob);
+        AviaryJob::ReleaseJobResponse* releaseJob(wso2wsf::MessageContext *outCtx ,AviaryJob::ReleaseJob* _releaseJob);
 
 
      
@@ -111,14 +118,14 @@ class AviaryJobServiceSkeleton
          * Auto generated method declaration
          * for "submitJob|http://grid.redhat.com/aviary-job/" operation.
          * 
-         * @param _submitJob of the com_redhat_grid_aviary_common::SubmitJob
+         * @param _submitJob of the AviaryJob::SubmitJob
          *
-         * @return com_redhat_grid_aviary_common::SubmitJobResponse*
+         * @return AviaryJob::SubmitJobResponse*
          */
         
 
          virtual 
-        com_redhat_grid_aviary_common::SubmitJobResponse* submitJob(wso2wsf::MessageContext *outCtx ,com_redhat_grid_aviary_common::SubmitJob* _submitJob);
+        AviaryJob::SubmitJobResponse* submitJob(wso2wsf::MessageContext *outCtx ,AviaryJob::SubmitJob* _submitJob);
 
 
      
@@ -133,14 +140,14 @@ class AviaryJobServiceSkeleton
          * Auto generated method declaration
          * for "holdJob|http://grid.redhat.com/aviary-job/" operation.
          * 
-         * @param _holdJob of the com_redhat_grid_aviary_common::HoldJob
+         * @param _holdJob of the AviaryJob::HoldJob
          *
-         * @return com_redhat_grid_aviary_common::HoldJobResponse*
+         * @return AviaryJob::HoldJobResponse*
          */
         
 
          virtual 
-        com_redhat_grid_aviary_common::HoldJobResponse* holdJob(wso2wsf::MessageContext *outCtx ,com_redhat_grid_aviary_common::HoldJob* _holdJob);
+        AviaryJob::HoldJobResponse* holdJob(wso2wsf::MessageContext *outCtx ,AviaryJob::HoldJob* _holdJob);
 
 
      
@@ -155,14 +162,14 @@ class AviaryJobServiceSkeleton
          * Auto generated method declaration
          * for "setJobAttribute|http://grid.redhat.com/aviary-job/" operation.
          * 
-         * @param _setJobAttribute of the com_redhat_grid_aviary_common::SetJobAttribute
+         * @param _setJobAttribute of the AviaryJob::SetJobAttribute
          *
-         * @return com_redhat_grid_aviary_common::SetJobAttributeResponse*
+         * @return AviaryJob::SetJobAttributeResponse*
          */
         
 
          virtual 
-        com_redhat_grid_aviary_common::SetJobAttributeResponse* setJobAttribute(wso2wsf::MessageContext *outCtx ,com_redhat_grid_aviary_common::SetJobAttribute* _setJobAttribute);
+        AviaryJob::SetJobAttributeResponse* setJobAttribute(wso2wsf::MessageContext *outCtx ,AviaryJob::SetJobAttribute* _setJobAttribute);
 
 
      

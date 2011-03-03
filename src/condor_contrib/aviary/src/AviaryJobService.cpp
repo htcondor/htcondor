@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-        #include "AviaryQueryServiceSkeleton.h"
-        #include "AviaryQueryService.h"  
+        #include "AviaryJobServiceSkeleton.h"
+        #include "AviaryJobService.h"  
         #include <ServiceSkeleton.h>
         #include <stdio.h>
         #include <axis2_svc.h>
@@ -25,31 +25,31 @@
 
         using namespace wso2wsf;
         
-        using namespace AviaryQuery;
+        using namespace AviaryJob;
         
 
         /** Load the service into axis2 engine */
-        WSF_SERVICE_INIT(AviaryQueryService)
+        WSF_SERVICE_INIT(AviaryJobService)
 
           
          /**
           * function to free any soap input headers
           */
-         AviaryQueryService::AviaryQueryService()
+         AviaryJobService::AviaryJobService()
 	{
-          skel = wsfGetAviaryQueryServiceSkeleton();
+          skel = wsfGetAviaryJobServiceSkeleton();
     }
 
 
 	void WSF_CALL
-	AviaryQueryService::init()
+	AviaryJobService::init()
 	{
 
       return;
 	}
 
 
-	AviaryQueryService::~AviaryQueryService()
+	AviaryJobService::~AviaryJobService()
 	{
     }
 
@@ -65,7 +65,7 @@
 	 * This method invokes the right service method
 	 */
 	OMElement* WSF_CALL
-	AviaryQueryService::invoke(OMElement *omEle, MessageContext *msgCtx)
+	AviaryJobService::invoke(OMElement *omEle, MessageContext *msgCtx)
 	{
          /* Using the function name, invoke the corresponding method
           */
@@ -89,17 +89,20 @@
           axiom_node_t* content_node = omEle->getAxiomNode();
 
           
-            AviaryQuery::GetJobDataResponse* ret_val1;
-            AviaryQuery::GetJobData* input_val1;
+            AviaryJob::RemoveJobResponse* ret_val1;
+            AviaryJob::RemoveJob* input_val1;
             
-            AviaryQuery::GetJobStatusResponse* ret_val2;
-            AviaryQuery::GetJobStatus* input_val2;
+            AviaryJob::ReleaseJobResponse* ret_val2;
+            AviaryJob::ReleaseJob* input_val2;
             
-            AviaryQuery::GetSubmissionSummaryResponse* ret_val3;
-            AviaryQuery::GetSubmissionSummary* input_val3;
+            AviaryJob::SubmitJobResponse* ret_val3;
+            AviaryJob::SubmitJob* input_val3;
             
-            AviaryQuery::GetJobDetailsResponse* ret_val4;
-            AviaryQuery::GetJobDetails* input_val4;
+            AviaryJob::HoldJobResponse* ret_val4;
+            AviaryJob::HoldJob* input_val4;
+            
+            AviaryJob::SetJobAttributeResponse* ret_val5;
+            AviaryJob::SetJobAttribute* input_val5;
             
        
           msg_ctx = msgCtx->getAxis2MessageContext();
@@ -112,24 +115,24 @@
           {
                
 
-                if ( axutil_strcmp(op_name, "getJobData") == 0 )
+                if ( axutil_strcmp(op_name, "removeJob") == 0 )
                 {
 
                     
                     input_val1 =
                         
-                        new AviaryQuery::GetJobData();
+                        new AviaryJob::RemoveJob();
                         if( AXIS2_FAILURE ==  input_val1->deserialize(&content_node, NULL, false))
                         {
                                         
                             AXIS2_ERROR_SET(Environment::getEnv()->error, AXIS2_ERROR_DATA_ELEMENT_IS_NULL, AXIS2_FAILURE);
-                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryQuery::GetJobData_deserialize: "
+                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryJob::RemoveJob_deserialize: "
                                         "This should be due to an invalid XML");
                             return NULL;      
                         }
                         
-                        //AviaryQueryServiceSkeleton skel;
-                        ret_val1 =  skel->getJobData(msgCtx ,input_val1);
+                        //AviaryJobServiceSkeleton skel;
+                        ret_val1 =  skel->removeJob(msgCtx ,input_val1);
                     
                         if ( NULL == ret_val1 )
                         {
@@ -154,24 +157,24 @@
                 }
              
 
-                if ( axutil_strcmp(op_name, "getJobStatus") == 0 )
+                if ( axutil_strcmp(op_name, "releaseJob") == 0 )
                 {
 
                     
                     input_val2 =
                         
-                        new AviaryQuery::GetJobStatus();
+                        new AviaryJob::ReleaseJob();
                         if( AXIS2_FAILURE ==  input_val2->deserialize(&content_node, NULL, false))
                         {
                                         
                             AXIS2_ERROR_SET(Environment::getEnv()->error, AXIS2_ERROR_DATA_ELEMENT_IS_NULL, AXIS2_FAILURE);
-                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryQuery::GetJobStatus_deserialize: "
+                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryJob::ReleaseJob_deserialize: "
                                         "This should be due to an invalid XML");
                             return NULL;      
                         }
                         
-                        //AviaryQueryServiceSkeleton skel;
-                        ret_val2 =  skel->getJobStatus(msgCtx ,input_val2);
+                        //AviaryJobServiceSkeleton skel;
+                        ret_val2 =  skel->releaseJob(msgCtx ,input_val2);
                     
                         if ( NULL == ret_val2 )
                         {
@@ -196,24 +199,24 @@
                 }
              
 
-                if ( axutil_strcmp(op_name, "getSubmissionSummary") == 0 )
+                if ( axutil_strcmp(op_name, "submitJob") == 0 )
                 {
 
                     
                     input_val3 =
                         
-                        new AviaryQuery::GetSubmissionSummary();
+                        new AviaryJob::SubmitJob();
                         if( AXIS2_FAILURE ==  input_val3->deserialize(&content_node, NULL, false))
                         {
                                         
                             AXIS2_ERROR_SET(Environment::getEnv()->error, AXIS2_ERROR_DATA_ELEMENT_IS_NULL, AXIS2_FAILURE);
-                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryQuery::GetSubmissionSummary_deserialize: "
+                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryJob::SubmitJob_deserialize: "
                                         "This should be due to an invalid XML");
                             return NULL;      
                         }
                         
-                        //AviaryQueryServiceSkeleton skel;
-                        ret_val3 =  skel->getSubmissionSummary(msgCtx ,input_val3);
+                        //AviaryJobServiceSkeleton skel;
+                        ret_val3 =  skel->submitJob(msgCtx ,input_val3);
                     
                         if ( NULL == ret_val3 )
                         {
@@ -238,24 +241,24 @@
                 }
              
 
-                if ( axutil_strcmp(op_name, "getJobDetails") == 0 )
+                if ( axutil_strcmp(op_name, "holdJob") == 0 )
                 {
 
                     
                     input_val4 =
                         
-                        new AviaryQuery::GetJobDetails();
+                        new AviaryJob::HoldJob();
                         if( AXIS2_FAILURE ==  input_val4->deserialize(&content_node, NULL, false))
                         {
                                         
                             AXIS2_ERROR_SET(Environment::getEnv()->error, AXIS2_ERROR_DATA_ELEMENT_IS_NULL, AXIS2_FAILURE);
-                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryQuery::GetJobDetails_deserialize: "
+                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryJob::HoldJob_deserialize: "
                                         "This should be due to an invalid XML");
                             return NULL;      
                         }
                         
-                        //AviaryQueryServiceSkeleton skel;
-                        ret_val4 =  skel->getJobDetails(msgCtx ,input_val4);
+                        //AviaryJobServiceSkeleton skel;
+                        ret_val4 =  skel->holdJob(msgCtx ,input_val4);
                     
                         if ( NULL == ret_val4 )
                         {
@@ -279,14 +282,56 @@
 
                 }
              
+
+                if ( axutil_strcmp(op_name, "setJobAttribute") == 0 )
+                {
+
+                    
+                    input_val5 =
+                        
+                        new AviaryJob::SetJobAttribute();
+                        if( AXIS2_FAILURE ==  input_val5->deserialize(&content_node, NULL, false))
+                        {
+                                        
+                            AXIS2_ERROR_SET(Environment::getEnv()->error, AXIS2_ERROR_DATA_ELEMENT_IS_NULL, AXIS2_FAILURE);
+                            AXIS2_LOG_ERROR( Environment::getEnv()->log, AXIS2_LOG_SI, "NULL returned from the AviaryJob::SetJobAttribute_deserialize: "
+                                        "This should be due to an invalid XML");
+                            return NULL;      
+                        }
+                        
+                        //AviaryJobServiceSkeleton skel;
+                        ret_val5 =  skel->setJobAttribute(msgCtx ,input_val5);
+                    
+                        if ( NULL == ret_val5 )
+                        {
+                            
+                                delete input_val5;
+                            
+                            return NULL; 
+                        }
+                        ret_node = 
+                                            ret_val5->serialize(NULL, NULL, AXIS2_TRUE, NULL, NULL);
+                                            delete ret_val5;
+                                        
+                                            delete input_val5;
+                                        
+
+                        return new OMElement(NULL,ret_node);
+                    
+
+                    /* since this has no output params it just returns NULL */                    
+                    
+
+                }
+             
              }
             
-          AXIS2_LOG_ERROR(Environment::getEnv()->log, AXIS2_LOG_SI, "AviaryQueryService service ERROR: invalid OM parameters in request\n");
+          AXIS2_LOG_ERROR(Environment::getEnv()->log, AXIS2_LOG_SI, "AviaryJobService service ERROR: invalid OM parameters in request\n");
           return NULL;
     }
 
     OMElement* WSF_CALL
-    AviaryQueryService::onFault(OMElement* omEle)
+    AviaryJobService::onFault(OMElement* omEle)
 	{
 		axiom_node_t *error_node = NULL;
 		axiom_element_t *error_ele = NULL;
@@ -294,12 +339,12 @@
         axiom_node_t *node = omEle->getAxiomNode();
         error_code = (axutil_error_codes_t)Environment::getEnv()->error->error_number;
 
-        if(error_code <= AVIARYQUERYSERVICESKELETON_ERROR_NONE ||
-                error_code >= AVIARYQUERYSERVICESKELETON_ERROR_LAST )
+        if(error_code <= AVIARYJOBSERVICESKELETON_ERROR_NONE ||
+                error_code >= AVIARYJOBSERVICESKELETON_ERROR_LAST )
         {
             error_ele = axiom_element_create(Environment::getEnv(), node, "fault", NULL,
                             &error_node);
-            axiom_element_set_text(error_ele, Environment::getEnv(), "AviaryQueryService|http://grid.redhat.com/aviary-query/ failed",
+            axiom_element_set_text(error_ele, Environment::getEnv(), "AviaryJobService|http://grid.redhat.com/aviary-job/ failed",
                             error_node);
         }
         

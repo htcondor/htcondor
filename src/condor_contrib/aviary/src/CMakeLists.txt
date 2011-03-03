@@ -52,4 +52,14 @@ if (LINUX)
     condor_static_lib( aviaryquery "${Hdrs};${Srcs};${WS02_GEN_SRCS}" )
     condor_exe( aviary_query_server "aviary_query_server.cpp" "${C_SBIN}" "aviaryquery;${AXIS2_LIBS};${QUERY_LIBS};${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
 
+    condor_static_lib( aviary_utils "AviaryUtils.h;AviaryUtils.cpp" )
+
+    # used for selective compilation differences only otherwise just link the library
+    src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
+    src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
+
+    # NOTE: Still need to update linkage deps
+    file( GLOB SchedSrcs SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* AviaryMgmtScheddPlugin* AviaryUtils.* )
+    condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_SRCS}" "${C_LIBEXEC}" "${AXIS2_LIBS}" ON)
+
 endif(LINUX)
