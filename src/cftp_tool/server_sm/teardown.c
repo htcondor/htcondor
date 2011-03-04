@@ -42,9 +42,9 @@ int State_AcknowledgeFileFinish( ServerState* state )
 	ENTER_STATE;	
 
 	cftp_faf_frame* faf_frame;
-	SHA1Context hashRecord;	
-	char        chunk;
-	int         len;
+	SHA1Context     hashRecord;	
+	unsigned char   chunk;
+	int             len;
 
 	faf_frame = (cftp_faf_frame*)(&state->fsend_buf);
 

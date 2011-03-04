@@ -94,17 +94,26 @@ parse_opt (int key, char *arg, struct argp_state *state)
 
 		case 'a':
 			port_start = strrchr( arg, ':' );
-			(*port_start) = 0;
+			if( port_start)
+				{
+					(*port_start) = 0;
+					strcpy( arguments->aport, port_start+1 );
+				}
 			strcpy( arguments->ahost, arg );
-			strcpy( arguments->aport, port_start+1 );
+			
 			arguments->announce = 1;
 			break;
 
 		case 'l':
 			port_start = strrchr( arg, ':' );
-			(*port_start) = 0;
+			if(port_start)
+				{
+					(*port_start) = 0;
+					strcpy( arguments->lport, port_start+1 );
+				}
+
 			strcpy( arguments->lhost, arg );
-			strcpy( arguments->lport, port_start+1 );
+			
 			break;		
 
 		case ARGP_KEY_ARG:
@@ -149,7 +158,7 @@ int main( int argc, char** argv )
 
 	arguments.lport = (char*)malloc( 16 );
 	memset( arguments.lport, 0, 16 );
-	sprintf( arguments.lport, "9980" );
+	sprintf( arguments.lport, "0" ); // By default pick random port
 	arguments.lhost = (char*)malloc( 256 );
 	memset( arguments.lhost, 0, 256 );
 	sprintf( arguments.lhost, "localhost" );

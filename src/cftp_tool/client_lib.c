@@ -90,7 +90,7 @@ FileRecord* open_file( char* filename)
 {
 	FileRecord* record;
 	SHA1Context hashRecord;
-	char chunk;
+	unsigned char chunk;
 	unsigned int len;
 
 	record = (FileRecord*) malloc(sizeof(FileRecord));

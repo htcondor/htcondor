@@ -54,8 +54,12 @@ void run_server( ServerArguments* arg)
 	memset( &master_server, 0, sizeof( ServerRecord ));
 	memset( &session_state, 0, sizeof( ServerState ));
 
-	master_server.server_name = arg->lhost;
-	master_server.server_port = arg->lport;
+	master_server.server_name = (char*)malloc(256);
+	master_server.server_port = (char*)malloc(16);
+	
+	memcpy( master_server.server_name, arg->lhost, 256);
+	memcpy( master_server.server_port, arg->lport, 16);
+
 	master_server.server_socket = -1;
 
 	session_state.arguments = arg;
@@ -103,6 +107,11 @@ void run_server( ServerArguments* arg)
 
 		// Clean up allocated memory
 
+	if( master_server.server_name )	
+		free( master_server.server_name );
+	if( master_server.server_port )	
+		free( master_server.server_port );
+
 	if( session_state.client_info.client_name)
 		free( session_state.client_info.client_name );
 	if( session_state.client_info.client_port )
@@ -141,6 +150,8 @@ void start_server( ServerRecord* master_server )
 	int yes;
 	struct addrinfo hints;
 	struct addrinfo *servinfo;  // will point to the results
+	struct sockaddr localsock_name;
+	socklen_t addr_size;
 
 	memset(&hints, 0, sizeof hints); // make sure the struct is empty
 	hints.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
@@ -181,6 +192,22 @@ void start_server( ServerRecord* master_server )
 			freeaddrinfo(servinfo);	
 			return;
 		}
+
+	if( strcmp( master_server->server_port , "0" ) == 0 )
+		{
+				// We grabbed a random port, so now we determine what it is
+			addr_size = sizeof( localsock_name );
+			getsockname( sock, &localsock_name, &addr_size );
+			memset( master_server->server_port, 0, 16 );
+			if( localsock_name.sa_family == AF_INET)
+					// extract the address from the raw value
+				sprintf( master_server->server_port, "%d", 
+						 ntohs( ((struct sockaddr_in*)(&localsock_name))->sin_port) ); 
+			if( localsock_name.sa_family == AF_INET6 )
+				sprintf( master_server->server_port, "%d", 
+						 ntohs( ((struct sockaddr_in6*)(&localsock_name))->sin6_port) ); 
+		}
+
 	
 	results = listen( sock, 1 ); // Using a backlog of 1 for this simple server
 	if( results == -1)
@@ -246,8 +273,8 @@ void announce_server( ServerRecord* master_server, ServerState* state )
     }
 	
 	memset( message, 0, 512 );
-	sprintf( message, "%s %s", state->arguments->lhost,
-			 state->arguments->lport );
+	sprintf( message, "%s %s", master_server->server_name,
+			 master_server->server_port );
 
     if ((numbytes = sendto(sockfd, message, strlen( message ), 0,
              p->ai_addr, p->ai_addrlen)) == -1) {
@@ -544,7 +571,7 @@ int recv_cftp_frame( ServerState* state )
 		  MSG_WAITALL );
 
 	#ifdef SERVER_DEBUG
-	fprintf( stderr, "[DEBUG] Read %d bytes from client on frame_recv.\n", sizeof( cftp_frame ) );
+	fprintf( stderr, "[DEBUG] Read %ld bytes from client on frame_recv.\n", sizeof( cftp_frame ) );
 	desc_cftp_frame(state, 0 );
 	#endif
 
@@ -567,7 +594,7 @@ int recv_data_frame( ServerState* state )
 	state->recv_rdy = 0;
 
 	int recv_bytes;
-	int i;
+		//int i;
 
 	if( state->data_buffer_size <= 0 )
 		return 0;
@@ -637,7 +664,9 @@ int send_cftp_frame( ServerState* state )
 	desc_cftp_frame(state, 1 );
 	#endif
 
-		
+	
+	fprintf( stderr, "MARK!\n" );
+
 			return length;
 		}
 }
@@ -745,6 +774,7 @@ void desc_cftp_frame( ServerState* state, int send_or_recv)
 			break;
 		case DAF:
 			fprintf( stderr, "DAF frame.\n" );
+			fprintf( stderr, "\tChunk Number: %ld\n" , ntohll(((cftp_daf_frame*)frame)->BlockNum) );	
 			break;
 		case FFF:
 			fprintf( stderr, "FFF frame.\n" );

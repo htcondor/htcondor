@@ -5,7 +5,7 @@
 
 // State Debugging macros
 #define ENTER_STATE if( state->arguments->debug) fprintf(stderr, "[ENTER STATE] %s\n", __func__ );
-#define LEAVE_STATE(a) if( state->arguments->debug) { fprintf(stderr, "[LEAVE STATE] %s -- Condition Flag: %d\n\n\n", __func__, a ); return a; }
+#define LEAVE_STATE(a) if( state->arguments->debug) { fprintf(stderr, "[LEAVE STATE] %s -- Condition Flag: %d\n\n\n", __func__, a ); } return a;
 
 #define DEBUG(msg) if( state->arguments->debug) { fprintf( stderr, "%s", msg ); }
 #define VERBOSE(msg) if( state->arguments->verbose) { fprintf( stdout, "%s", msg); }
