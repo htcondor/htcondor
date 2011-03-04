@@ -200,33 +200,19 @@ function show_file_content($header, $file) {
   if($_REQUEST["type"] == "build" && preg_match("/_win/", $_REQUEST["platform"])) {
     // For windows we have a script that does some smarter parsing
     $lines = `./parse-windows-build.pl $file`;
-    echo "<p style=\"font-size: 80%;\">Tried to do some smart parsing for Windows:\n";
-    echo "<p><a href=\"javascript:swap('$header')\">Click to show Windows build info</a>\n";
-    echo "<div id=\"$header\" style=\"display:none;\">\n";
     echo "<pre>$lines</pre>\n";
-    echo "</div>\n";
   }
   else {
-    // For linux we'll just grep for errors for now.  This can probably be improved
-    $lines = `grep -C 5 -i error $file`;
-    echo "<p style=\"font-size: 80%;\">Showing all instances of the word 'error' in $header:\n";
-    if(strlen($lines) > 0) {
-      $lines = preg_replace("/(error)/i", "<font class=\"hl\">$1</font>", $lines);
-      echo "<p><a href=\"javascript:swap('$header')\">Click to show errors in $header</a>\n";
-      echo "<div id=\"$header\" style=\"display:none;\">\n";
-      echo "<pre>$lines</pre>\n";
-      echo "</div>\n";
-    }
-    else {
-      echo "<p>The string 'error' was not present in $header\n";
-    }
+    // For linux show some lines from the bottom of the file
+    $count = 20;
+    $lines = `tail -$count $file`;
+
+    // Do some nice highlighting to make warnings/errors more obvious
+    $lines = preg_replace("/(error)/i", "<font style='background-color:red'>$1</font>", $lines);
+    echo "<p style=\"font-size: 80%;\">Last $count lines of $header:\n";
+    echo "<pre>$lines</pre>";
   }
 
-  // Always show the last 10 lines
-  $count = 10;
-  $lines = `tail -$count $file`;
-  echo "<p style=\"font-size: 80%;\">Last $count lines of $header:\n";
-  echo "<pre>$lines</pre>";
 }
 
 ?>
