@@ -343,3 +343,13 @@ echo Testing characters with negative ascii values
 # the following used to not even parse on some systems
 same "–", "–"
 
+echo Testing stringListsIntersect()
+same true, stringListsIntersect("one,two","two,three")
+same false, stringListsIntersect("one,two","three,four")
+same false, stringListsIntersect("one,two","three,four",";")
+same true, stringListsIntersect("one,two","one")
+same true, stringListsIntersect("one, two","two, three")
+same true, stringListsIntersect("one,two","two,three",",")
+same true, stringListsIntersect("one;two","two;three",";")
+same undefined, stringListsIntersect("one,two",undefined)
+same undefined, stringListsIntersect(undefined,"one,two" )

@@ -61,6 +61,9 @@ endif(NOT PROPER)
 
 condor_exe_test(classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND}")
 
+condor_exe_test(classad_functional_tester "classad_functional_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND}")
+
+
 message (STATUS "external configured (CLASSADS_FOUND=${CLASSADS_FOUND})")
 set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
 set( HAVE_EXT_CLASSADS ON PARENT_SCOPE )
