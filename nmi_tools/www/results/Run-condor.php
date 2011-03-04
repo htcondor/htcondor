@@ -330,7 +330,7 @@ EOF;
 	 $details .= "<tr><td>Start</td><td><nobr>" . $test["start"] . "</nobr></td></tr>";
 	 $details .= "</table>";
 
-	 $detail_url = sprintf(DETAIL_URL, $test["runid"], "test", $user);
+	 $detail_url = sprintf(DETAIL_URL, $build_runid, "test", $user);
 	 $box_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">&nbsp;<span>$details</span></a></span>";
 	 $tests[$build_runid] = "<td class=\"$color\">$box_html</td>\n";
        }
