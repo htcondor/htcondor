@@ -262,7 +262,8 @@ EOF;
 
        // First get all the recent build runs.  We'll use the runids from the
        // build runs to determine which tests to match to them
-       $sql = "SELECT runid,result,start,project_version " . 
+       $sql = "SELECT runid,result,project_version, " . 
+	      "       convert_tz(start, 'GMT', 'US/Central') as start " .
 	      "FROM Run " .
 	      "WHERE run_type='build' AND " .
 	      "      component='condor' AND " .
@@ -302,7 +303,8 @@ EOF;
        // with the builds above
        $platform = $branch;
        $platform = preg_replace("/Continuous Build - /", "", $branch);
-       $sql = "SELECT runid,result,description,start " .
+       $sql = "SELECT runid,result,description," .
+	      "       convert_tz(start, 'GMT', 'US/Central') as start " .
 	      "FROM Run ".
 	      "WHERE run_type = 'TEST' AND " .
 	      "      component = 'condor' AND " .
