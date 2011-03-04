@@ -277,7 +277,10 @@ EOF;
        $spark .= "<td class='sparkheader'>Build:</td>\n";
        $builds = Array();
        while ($build = mysql_fetch_array($result2)) {
-	 array_push($builds, $build["runid"]);
+	 $tmp = Array();
+	 $tmp["runid"] = $build["runid"];
+	 $tmp["sha1"] = $build["project_version"];
+	 array_push($builds, $tmp);
 	 $color = "passed";
 	 if($build["result"] == NULL) {
 	   $color = "pending";
@@ -290,7 +293,7 @@ EOF;
 	 $details .= "<tr><td>Status</td><td class=\"$color\">$color</td></tr>";
 	 $details .= "<tr><td>NMI RunID</td><td>" . $build["runid"] . "</td></tr>";
 	 $details .= "<tr><td>Submitted</td><td><nobr>" . $build["start"] . "</nobr></td></tr>";
-	 $details .= "<tr><td>Hash</td><td>" . substr($build["project_version"], 0, 15) . "</td></tr>";
+	 $details .= "<tr><td>SHA1</td><td>" . substr($build["project_version"], 0, 15) . "</td></tr>";
 	 $details .= "</table>";
 
 	 $detail_url = sprintf(DETAIL_URL, $build["runid"], "build", $user);
@@ -328,6 +331,7 @@ EOF;
 	 $details = "<table>";
 	 $details .= "<tr><td>Status</td><td class=\"$color\">$color</td></tr>";
 	 $details .= "<tr><td>Start</td><td><nobr>" . $test["start"] . "</nobr></td></tr>";
+	 $details .= "<tr><td>SHA1</td><td>_PUT_SHA_HERE_</td></tr>";
 	 $details .= "</table>";
 
 	 $detail_url = sprintf(DETAIL_URL, $build_runid, "test", $user);
@@ -338,8 +342,9 @@ EOF;
 
        $spark .= "<tr><td class='sparkheader'>Test:</td>\n";
        foreach ($builds as $build) {
-	 if($tests[$build]) {
-	   $spark .= $tests[$build];
+	 if($tests[$build["runid"]]) {
+	   $tmp = preg_replace("/_PUT_SHA_HERE_/", substr($build["sha1"], 0, 15), $tests[$build["runid"]]);
+	   $spark .= $tmp;
 	 }
 	 else {
 	   $spark .= "<td class=\"noresults\">&nbsp;</td>\n";
