@@ -8,6 +8,7 @@
    define("CONDOR_USER", "cndrauto");
    
    $result_types = Array( "passed", "pending", "failed", "missing" );
+   $num_spark_days = 2;
 
    require_once "./load_config.inc";
    load_config();
@@ -30,7 +31,7 @@
 <h1><a href="./Run-condor.php" class="title">Condor Latest Build/Test Results</a></h1>
 <table border=1 width="85%">
    <tr>
-      <th>Branch<br><small>Click to see branch history</small></th>
+      <th>Branch</th>
       <th>Runid</th>
       <th>Submitted</th>
       <th>User</th>
@@ -251,6 +252,103 @@ while ($row = mysql_fetch_array($result)) {
 EOF;
 
    foreach (Array("build", "test", "crosstest") AS $type) {
+     if(preg_match("/Continuous/", $branch)) {
+       if($type == "test" || $type == "crosstest") {
+	 continue;
+       }
+
+       // We are going to build "sparklines" for the Continuous builds to make
+       // it easier to visualize their performance over time
+
+       // First get all the recent build runs.  We'll use the runids from the
+       // build runs to determine which tests to match to them
+       $sql = "SELECT runid,result,start,project_version " . 
+	      "FROM Run " .
+	      "WHERE run_type='build' AND " .
+	      "      component='condor' AND " .
+	      "      project='condor' AND " .
+	      "      DATE_SUB(CURDATE(), INTERVAL $num_spark_days DAY) <= start AND " .
+	      "      Description = '$branch' " .
+	      "      ORDER BY runid DESC";
+       $result2 = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
+
+       $spark = "<p style=\"font-size:75%\">Last $num_spark_days days of results: newest at left<table><tr>\n";
+       $spark .= "<td class='sparkheader'>Build:</td>\n";
+       $builds = Array();
+       while ($build = mysql_fetch_array($result2)) {
+	 array_push($builds, $build["runid"]);
+	 $color = "passed";
+	 if($build["result"] == NULL) {
+	   $color = "pending";
+	 }
+	 elseif($build["result"] != 0) {
+	   $color = "failed";
+	 }
+	 
+	 $details = "<table>";
+	 $details .= "<tr><td>Status</td><td class=\"$color\">$color</td></tr>";
+	 $details .= "<tr><td>NMI RunID</td><td>" . $build["runid"] . "</td></tr>";
+	 $details .= "<tr><td>Submitted</td><td><nobr>" . $build["start"] . "</nobr></td></tr>";
+	 $details .= "<tr><td>Hash</td><td>" . substr($build["project_version"], 0, 15) . "</td></tr>";
+	 $details .= "</table>";
+
+	 $detail_url = sprintf(DETAIL_URL, $build["runid"], "build", $user);
+	 $box_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">&nbsp;&nbsp;<span>$details</span></a></span>";
+	 $spark .= "<td class=\"$color\">$box_html</td>\n";
+       }
+       mysql_free_result($result2);
+
+       // And now for the tests.  This is trickier because we have to line it up
+       // with the builds above
+       $platform = $branch;
+       $platform = preg_replace("/Continuous Build - /", "", $branch);
+       $sql = "SELECT runid,result,description,start " .
+	      "FROM Run ".
+	      "WHERE run_type = 'TEST' AND " .
+	      "      component = 'condor' AND " .
+	      "      project = 'condor' AND " .
+	      "      DATE_SUB(CURDATE(), INTERVAL 2 DAY) <= start AND " .
+	      "      description LIKE 'Auto-Test Suite for ($platform, %' " .
+	      "ORDER BY description DESC";
+       $result2 = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
+
+       $tests = Array();
+       while ($test = mysql_fetch_array($result2)) {
+	 $build_runid = preg_replace("/Auto-Test Suite for \($platform, (.+)\)/", "$1", $test["description"]);
+	 $color = "passed";
+	 if($test["result"] == NULL) {
+	   $color = "pending";
+	 }
+	 elseif($test["result"] != 0) {
+	   $color = "failed";
+	 }
+
+	 $details = "<table>";
+	 $details .= "<tr><td>Status</td><td class=\"$color\">$color</td></tr>";
+	 $details .= "<tr><td>Start</td><td><nobr>" . $test["start"] . "</nobr></td></tr>";
+	 $details .= "</table>";
+
+	 $detail_url = sprintf(DETAIL_URL, $test["runid"], "test", $user);
+	 $box_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">&nbsp;<span>$details</span></a></span>";
+	 $tests[$build_runid] = "<td class=\"$color\">$box_html</td>\n";
+       }
+       mysql_free_result($result2);
+
+       $spark .= "<tr><td class='sparkheader'>Test:</td>\n";
+       foreach ($builds as $build) {
+	 if($tests[$build]) {
+	   $spark .= $tests[$build];
+	 }
+	 else {
+	   $spark .= "<td class=\"noresults\">&nbsp;</td>\n";
+	 }
+       }
+       
+       $spark .= "</tr></table>\n";
+
+       echo "<td colspan='3'>$spark</td>";
+     }
+     else {
       $platforms = $data[$type]["platforms"];
       $totals = $data[$type]["totals"];
 
@@ -384,6 +482,7 @@ EOF;
          }
          echo "</table></td>\n";
       } // RESULTS
+     }
    } // FOREACH
    
    echo "</tr>";
