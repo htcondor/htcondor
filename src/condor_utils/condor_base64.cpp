@@ -34,7 +34,7 @@
 // Caller needs to free the returned pointer
 char* condor_base64_encode(const unsigned char *input, int length)
 {
-#if HAVE_OPENSSL
+#if HAVE_EXT_OPENSSL
 	BIO *bmem, *b64;
 	BUF_MEM *bptr;
 
@@ -55,7 +55,7 @@ char* condor_base64_encode(const unsigned char *input, int length)
 #else
 	(void) input;
 	(void) length;
-	EXCEPT( "condor_base64_encode() not available: HAVE_OPENSSL is false" );
+	EXCEPT( "condor_base64_encode() not available: HAVE_EXT_OPENSSL is false" );
 	return NULL;
 #endif
 }
@@ -63,7 +63,7 @@ char* condor_base64_encode(const unsigned char *input, int length)
 // Caller needs to free *output if non-NULL
 void condor_base64_decode(const char *input,unsigned char **output, int *output_length)
 {
-#if HAVE_OPENSSL
+#if HAVE_EXT_OPENSSL
 	BIO *b64, *bmem;
 
 	ASSERT( input );
@@ -92,7 +92,7 @@ void condor_base64_decode(const char *input,unsigned char **output, int *output_
 	(void) input;
 	(void) output;
 	(void) output_length;
-	EXCEPT( "condor_base64_encode() not available: HAVE_OPENSSL is false" );
+	EXCEPT( "condor_base64_encode() not available: HAVE_EXT_OPENSSL is false" );
 #endif
 }
 
