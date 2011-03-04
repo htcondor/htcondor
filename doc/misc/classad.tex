@@ -722,6 +722,13 @@ characters within the delimiter string.
     The return value is \Expr{ERROR}, if any of the arguments
     are not strings, or if \Expr{pattern} is not a valid regular expression.
 
+  \index{ClassAd functions!stringListsIntersect()}
+  \item[\Code{Integer stringListsIntersect(String list1, String list2 \Lbr\ , String delimiter \Rbr)}]
+    Returns true if the lists contain any matching elements and false if the
+    lists do not contain any matching elements.
+    Returns \Expr{ERROR} if either argument is not a string or if an
+    incorrect number of arguments are given.
+
 \end{description}
 
 The following three functions utilize regular expressions as defined
