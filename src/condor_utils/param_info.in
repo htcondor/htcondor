@@ -7271,6 +7271,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=440
 
+[NEGOTIATOR_UPDATE_AFTER_CYCLE]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Update After Cycle
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=440
+
 [NEGOTIATOR_TIMEOUT]
 aliases=
 default=30
