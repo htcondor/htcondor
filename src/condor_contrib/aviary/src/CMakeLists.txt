@@ -18,48 +18,45 @@
 
 if (LINUX)
 
-    if ( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../include" )
+    if ( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../codegen" )
         message( FATAL_ERROR "run ../gen-build-xsd-lib.sh first!")
+    endif ()
+
+    # TODO: querying env vars not reliable like this
+    if ( NOT DEFINED ENV{WSFCPP_HOME} )
+        message( FATAL_ERROR "must set WSFCPP_HOME var in env!")
     endif ()
 
     include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
     # hardcode axis2c headers dir for now
     include_directories( $ENV{WSFCPP_HOME}/include/axis2-1.6.0/ $ENV{WSFCPP_HOME}/include/axis2-1.6.0/platforms )
+    # path to generated headers
     include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../include )
-    condor_glob( Hdrs Srcs "${RmvSrcs}" )
 
-    set ( QUERY_SRCS AviaryQueryService.cpp;AviaryQueryServiceMacro.cpp;AviaryQueryServiceSkeleton.cpp;Axis2SoapProvider.cpp)
-    set ( QUERY_LIBS ${CMAKE_CURRENT_SOURCE_DIR}/../lib/libaviary_query_types.so )
+    file( GLOB JOB_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/job/src/*.cpp )
+    file( GLOB JOB_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/AviaryJobService*.cpp )
+    file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/query/src/*.cpp )
+    file( GLOB QUERY_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryQueryService*.cpp )
     set ( AXIS2_LIBS
             $ENV{WSFCPP_HOME}/lib/libaxutil.so $ENV{WSFCPP_HOME}/lib/libaxis2_engine.so 
                 $ENV{WSFCPP_HOME}/lib/libaxis2_http_common.so $ENV{WSFCPP_HOME}/lib/libaxis2_parser.so
                     $ENV{WSFCPP_HOME}/lib/libaxis2_http_receiver.so )
-    
+
+    dprint( "JOB_GEN_SRCS = ${JOB_GEN_SRCS}" )
+    dprint( "JOB_SRCS = ${JOB_SRCS}" )
+    dprint( "QUERY_GEN_SRCS = ${QUERY_GEN_SRCS}" )
     dprint( "QUERY_SRCS = ${QUERY_SRCS}" )
 
-    # leave codegen out for now
-#
-#    add_custom_command( TARGET aviaryquery
-#                        PRE_BUILD
-#                        COMMAND WSDL2CPP.sh
-#                        ARGS -u ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-query.wsdl -o ../codegen/query -d adb )
-
-    dprint( "RmvSrcs = ${RmvSrcs}" )
-    dprint( "Srcs = ${Srcs}" )
-    dprint( "Hdrs = ${Hdrs}" )
-
-    condor_static_lib( aviaryquery "${Hdrs};${Srcs};${WS02_GEN_SRCS}" )
-    condor_exe( aviary_query_server "aviary_query_server.cpp" "${C_SBIN}" "aviaryquery;${AXIS2_LIBS};${QUERY_LIBS};${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
-
-    condor_static_lib( aviary_utils "AviaryUtils.h;AviaryUtils.cpp" )
+    add_library (aviary_query SHARED ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
+    condor_exe( aviary_query_server "aviary_query_server.cpp;Axis2SoapProvider.cpp" "${C_SBIN}" "${AXIS2_LIBS};${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
 
     # used for selective compilation differences only otherwise just link the library
     src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
     src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-    # NOTE: Still need to update linkage deps
-    file( GLOB SchedSrcs SchedulerObject.* SubmitterObject.* SubmitterUtils.* PROC_ID_comparator.* SubmissionObject.* AviaryMgmtScheddPlugin* AviaryUtils.* )
-    condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_SRCS}" "${C_LIBEXEC}" "${AXIS2_LIBS}" ON)
+    add_library (aviary_job SHARED ${JOB_GEN_SRCS} ${JOB_SRCS} )
+    file( GLOB SCHED_PLUGIN_SRCS SimpleAttribute.* PROC_ID_comparator.* AviaryMgmtScheddPlugin* SchedulerObject.* Axis2SoapProvider.cpp)
+    #condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${AXIS2_LIBS}" ON)
 
 endif(LINUX)
