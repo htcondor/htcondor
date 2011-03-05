@@ -502,9 +502,11 @@ if (CONDOR_EXTERNALS AND NOT WINDOWS)
 endif(CONDOR_EXTERNALS AND NOT WINDOWS)
 
 ######### special case for contrib
-if (WINDOWS AND WANT_CONTRIB AND WITH_MANAGEMENT)
+if (WANT_CONTRIB AND WITH_MANAGEMENT)
     # global scoping external linkage var when options enable.
-    set (CONDOR_QMF condor_qmflib;${QPID_FOUND})
+    if (WINDOWS)
+        set (CONDOR_QMF condor_qmflib;${QPID_FOUND})
+    endif()
     add_definitions( -DWANT_CONTRIB )
     add_definitions( -DWITH_MANAGEMENT )
 endif()
