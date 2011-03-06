@@ -529,12 +529,16 @@ Scheduler::~Scheduler()
 	}
 
 	if( shadowCommandrsock ) {
-		daemonCore->Cancel_Socket( shadowCommandrsock );
+		if( daemonCore ) {
+			daemonCore->Cancel_Socket( shadowCommandrsock );
+		}
 		delete shadowCommandrsock;
 		shadowCommandrsock = NULL;
 	}
 	if( shadowCommandssock ) {
-		daemonCore->Cancel_Socket( shadowCommandssock );
+		if( daemonCore ) {
+			daemonCore->Cancel_Socket( shadowCommandssock );
+		}
 		delete shadowCommandssock;
 		shadowCommandssock = NULL;
 	}

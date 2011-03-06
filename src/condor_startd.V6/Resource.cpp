@@ -1432,7 +1432,7 @@ int
 Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 {
 	int tmp;
-	if( check_vanilla && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
+	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		MyString tmp_expr_name = expr_name;
 		tmp_expr_name += "_VANILLA";
 		tmp = eval_expr( tmp_expr_name.Value(), false, false );
@@ -1442,7 +1442,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 			// otherwise, fall through and try the non-vanilla version
 	}
-	if( check_vanilla && r_cur->universe() == CONDOR_UNIVERSE_VM ) {
+	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VM ) {
 		MyString tmp_expr_name = expr_name;
 		tmp_expr_name += "_VM";
 		tmp = eval_expr( tmp_expr_name.Value(), false, false );
@@ -1452,12 +1452,12 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 			// otherwise, fall through and try the non-vm version
 	}
-	if( (r_classad->EvalBool(expr_name, r_cur->ad(), tmp) ) == 0 ) {
+	if( (r_classad->EvalBool(expr_name, r_cur ? r_cur->ad() : NULL , tmp) ) == 0 ) {
 		if( fatal ) {
 			dprintf(D_ALWAYS, "Can't evaluate %s in the context of following ads\n", expr_name );
 			r_classad->dPrint(D_ALWAYS);
 			dprintf(D_ALWAYS, "=============================\n");
-			if ( r_cur->ad() ) {
+			if ( r_cur && r_cur->ad() ) {
 				r_cur->ad()->dPrint(D_ALWAYS);
 			} else {
 				dprintf( D_ALWAYS, "<no job ad>\n" );
