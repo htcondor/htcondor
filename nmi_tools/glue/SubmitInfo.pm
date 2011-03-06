@@ -486,7 +486,6 @@ our %submit_info = (
 				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
 			'xtests'	=> [ 
-				'x86_64_sles_9',
 			 	'x86_rhas_4', 
 			 	'x86_64_rhas_3',
 				'x86_64_rhas_4',
