@@ -56,7 +56,7 @@ if (LINUX)
     src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
     add_library (aviary_job SHARED ${JOB_GEN_SRCS} ${JOB_SRCS} )
-    file( GLOB SCHED_PLUGIN_SRCS SimpleAttribute.* PROC_ID_comparator.* AviaryMgmtScheddPlugin* SchedulerObject.* Axis2SoapProvider.cpp)
-    #condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${AXIS2_LIBS}" ON)
+    file( GLOB SCHED_PLUGIN_SRCS SimpleAttribute.cpp PROC_ID_comparator.cpp SchedulerObject.cpp Axis2SoapProvider.cpp AviaryMgmtScheddPlugin.cpp )
+    condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${AXIS2_LIBS}" ON)
 
 endif(LINUX)
