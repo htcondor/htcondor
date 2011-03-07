@@ -10,4 +10,4 @@ echo "*"
 echo "* Another option would be to run ccmake or cmake-gui"
 echo "-------------------------------------------------------------------"
 PWD=`pwd`
-cmake -DUW_BUILD:BOOL=TRUE -D_DEBUG:BOOL=TRUE -DBUILDID:STRING=UW_development -DCMAKE_INSTALL_PREFIX:PATH=${PWD}/release_dir "$@"
+cmake -DUW_BUILD:BOOL=TRUE -D_DEBUG:BOOL=TRUE -D_VERBOSE:BOOL=TRUE -DBUILDID:STRING=UW_development -DCMAKE_INSTALL_PREFIX:PATH=${PWD}/release_dir "$@"
