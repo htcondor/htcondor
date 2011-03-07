@@ -2433,7 +2433,7 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 }
 
 
-// put the proxy first in the list.
+// if it's in the list, put the proxy first in the list.
 void
 FileTransfer::SortFilesToSend() {
 	bool rc = true;
@@ -2443,6 +2443,10 @@ FileTransfer::SortFilesToSend() {
 	}
 
 	if( !X509UserProxy ) {
+		return;
+	}
+
+	if( !FilesToSend->contains(X509UserProxy) ) {
 		return;
 	}
 
