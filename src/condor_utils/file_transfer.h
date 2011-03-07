@@ -256,7 +256,6 @@ class FileTransfer {
 
 	void CommitFiles();
 	void ComputeFilesToSend();
-	void SortFilesToSend();
 	float bytesSent, bytesRcvd;
 	StringList* InputFiles;
 
