@@ -100,6 +100,7 @@ my @default_prereqs = (
 my @minimal_build_configure_args =
 	(
 		'-DPROPER:BOOL=OFF'			=> undef,
+        '-D_VERBOSE:BOOL=ON'         => undef,
 		'-DCLIPPED:BOOL=ON'			=> undef,
 		'-DWITH_BLAHP:BOOL=OFF'		=> undef,
 		'-DWITH_BOOST:BOOL=OFF'		=> undef,
@@ -151,6 +152,7 @@ my @default_test_configure_args =
 my @default_build_configure_args =
 	(
 	'-DPROPER:BOOL=OFF' 	=> undef,
+    '-D_VERBOSE:BOOL=ON'    => undef,
 	#'-DSCRATCH_EXTERNALS:BOOL=ON'	=> undef,
 	);
 
