@@ -1183,8 +1183,6 @@ PREEN_ARGS			= -m -r
 ## Determine if the Negotiator will honor SlotWeight attributes, which
 ## may be used to give a slot greater weight when calculating usage.
 #NEGOTIATOR_USE_SLOT_WEIGHTS = True
-## Default: True
-NEGOTIATOR_USE_SLOT_WEIGHTS = False
 
 
 ## How often the Negotaitor starts a negotiation cycle, defined in
