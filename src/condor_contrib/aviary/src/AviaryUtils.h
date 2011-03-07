@@ -17,15 +17,8 @@
 #ifndef _AVIARYUTILS_H
 #define _AVIARYUTILS_H
 
-// c++ includes
-#include <vector>
-#include <map>
-
 // condor includes
 #include "condor_classad.h"
-
-// local includes
-#include "SimpleAttribute.h"
 
 using namespace std;
 using namespace compat_classad;
@@ -33,23 +26,15 @@ using namespace compat_classad;
 namespace aviary {
 namespace util {
 
-string GetPoolName();
+string getPoolName();
 
-string TrimQuotes(const char* value);
+string trimQuotes(const char* value);
 
-bool AddAttribute(ClassAd &ad, const char *name, SimpleAttributeMapType &_map);
+bool isValidGroupUserName(const string& _name, string& _text);
 
-bool IsValidGroupUserName(const string& _name, string& _text);
+bool isValidAttributeName(const string& _name, string& _text);
 
-bool IsValidAttributeName(const string& _name, string& _text);
-
-bool CheckRequiredAttrs(ClassAd& ad, const char* attrs[], string& missing);
-
-bool PopulateMapFromAd(ClassAd &ad, SimpleAttributeMapType &_map);
-
-bool PopulateAdFromMap(SimpleAttributeMapType &_map, ClassAd &ad);
-
-bool PopulateMapFromProcId(int clusterId, int procId, SimpleAttributeMapType &_map);
+bool checkRequiredAttrs(ClassAd& ad, const char* attrs[], string& missing);
 
 }};
 

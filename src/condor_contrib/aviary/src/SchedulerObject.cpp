@@ -26,6 +26,7 @@
 #include "AviaryUtils.h"
 #include "AviaryConversionMacros.h"
 #include "SchedulerObject.h"
+#include "Codec.h"
 
 // Global Scheduler object, used for needReschedule
 extern Scheduler scheduler;
@@ -34,6 +35,7 @@ extern bool qmgmt_all_users_trusted;
 
 using namespace aviary::job;
 using namespace aviary::util;
+using namespace aviary::codec;
 
 SchedulerObject::SchedulerObject(const char* _name)
 {
@@ -49,7 +51,7 @@ SchedulerObject::update(const ClassAd &ad)
 {
 	MGMT_DECLARATIONS;
 
-	m_stats.Pool = GetPoolName();
+	m_stats.Pool = getPoolName();
 	STRING(CondorPlatform);
 	STRING(CondorVersion);
 	TIME_INTEGER(DaemonStartTime);
@@ -82,10 +84,15 @@ SchedulerObject::update(const ClassAd &ad)
 
 
 bool
-SchedulerObject::submit(SimpleAttributeMapType &jobAdMap, std::string &id, std::string &text)
+SchedulerObject::submit(Codec* _codec, AttributeMapType &jobAdMap, std::string &id, std::string &text)
 {
 	int cluster;
 	int proc;
+
+    if (!_codec) {
+        text = "Codec has not been initialized";
+        return false;
+    }
 
 	// our mandatory set of attributes for a submit
 	const char* required[] = {
@@ -136,14 +143,14 @@ SchedulerObject::submit(SimpleAttributeMapType &jobAdMap, std::string &id, std::
 	ClassAd ad;
 	int universe;
 
-	if (!PopulateAdFromMap(jobAdMap, ad)) {
+	if (!_codec->mapToClassAd(jobAdMap, ad)) {
 		AbortTransaction();
 		text = "Failed to parse job ad";
 		return false;
 	}
 
 	std::string missing;
-	if (!CheckRequiredAttrs(ad, required, missing)) {
+	if (!checkRequiredAttrs(ad, required, missing)) {
 		AbortTransaction();
 		text = "Job ad is missing required attributes: " + missing;
 		return false;
@@ -243,7 +250,7 @@ SchedulerObject::setAttribute(std::string key,
 		return false;
 	}
 
-	if (!IsValidAttributeName(name,text)) {
+	if (!isValidAttributeName(name,text)) {
 		return false;
 	}
 

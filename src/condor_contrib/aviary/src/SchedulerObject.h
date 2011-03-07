@@ -21,10 +21,11 @@
 #include "condor_classad.h"
 
 // local includes
-#include "SimpleAttribute.h"
+#include "Codec.h"
 
 using namespace std;
-using namespace aviary::util;;
+using namespace aviary::util;
+using namespace aviary::codec;
 
 namespace aviary {
 namespace job {
@@ -63,7 +64,7 @@ public:
 	~SchedulerObject();
 
 	void update(const ClassAd &ad);
-	bool submit(SimpleAttributeMapType& jobAdMap, string& id, string& text);
+	bool submit(Codec* _codec, AttributeMapType& jobAdMap, string& id, string& text);
 	bool setAttribute(string id,
                       string name,
                       string value,

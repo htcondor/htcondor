@@ -32,7 +32,7 @@ using namespace compat_classad;
 using namespace aviary::util;
 
 string
-GetPoolName()
+getPoolName()
 {
     string poolName;
     char *tmp;
@@ -48,7 +48,7 @@ GetPoolName()
 }
 
 // cleans up the quoted values from the job log reader
-string TrimQuotes(const char* str) {
+string trimQuotes(const char* str) {
 	string val = str;
 
 	size_t endpos = val.find_last_not_of("\\\"");
@@ -65,7 +65,7 @@ string TrimQuotes(const char* str) {
 
 // validate that an incoming group/user name is
 // alphanumeric, underscores, or a dot separator
-bool IsValidGroupUserName(const string& _name, string& _text) {
+bool isValidGroupUserName(const string& _name, string& _text) {
 	const char* ptr = _name.c_str();
 	while( *ptr ) {
 		char c = *ptr++;
@@ -83,7 +83,7 @@ bool IsValidGroupUserName(const string& _name, string& _text) {
 
 // validate that an incoming attribute name is
 // alphanumeric, or underscores
-bool IsValidAttributeName(const string& _name, string& _text) {
+bool isValidAttributeName(const string& _name, string& _text) {
 	const char* ptr = _name.c_str();
 	while( *ptr ) {
 		char c = *ptr++;
@@ -98,7 +98,7 @@ bool IsValidAttributeName(const string& _name, string& _text) {
 	return true;
 }
 
-bool CheckRequiredAttrs(compat_classad::ClassAd& ad, const char* attrs[], string& missing) {
+bool checkRequiredAttrs(compat_classad::ClassAd& ad, const char* attrs[], string& missing) {
 	bool status = true;
 	int i = 0;
 
@@ -110,182 +110,4 @@ bool CheckRequiredAttrs(compat_classad::ClassAd& ad, const char* attrs[], string
 		i++;
 	}
 	return status;
-}
-
-bool
-AddAttribute(ClassAd& ad, const char* name, SimpleAttributeMapType& _map)
-{
-	ExprTree *expr;
-	map* descriptors = NULL;
-	map::iterator it = job.find(TYPEMAP_KEY);
-	if (it != job.end()) {
-		descriptors =  &((it->second).asMap());
-	}
-
-		// All these extra lookups are horrible. They have to
-		// be there because the ClassAd may have multiple
-		// copies of the same attribute name! This means that
-		// the last attribute with a given name will set the
-		// value, but the last attribute tends to be the
-		// attribute with the oldest (wrong) value. How
-		// annoying is that!
-	if (!(expr = ad.Lookup(name))) {
-		dprintf(D_FULLDEBUG, "Warning: failed to lookup attribute '%s' from ad\n", name);
-		return false;
-	}
-
-    classad::Value value;
-    ad.EvaluateExpr(expr,value);
-	switch (value.GetType()) {
-        // TODO: does this cover expressions also?
-        case classad::Value::BOOLEAN_VALUE:
-			{
-				if (!descriptors) {
-					// start a new type map
-					descriptors = new map();
-					(*descriptors)[name] = EXPR_TYPE;
-					// deep copy
-					job[TYPEMAP_KEY] = *descriptors;
-					delete descriptors;
-				}
-				else {
-					(*descriptors)[name] = EXPR_TYPE;
-				}
-				job[name] = TrimQuotes(ExprTreeToString(expr));
-			}
-			break;
-        case classad::Value::INTEGER_VALUE:
-            int i;
-            value.IsIntegerValue (i);
-			job[name] = i;
-			break;
-        case classad::Value::REAL_VALUE:
-            double d;
-            value.IsRealValue(d);
-			job[name] = d;
-			break;
-        case classad::Value::STRING_VALUE:
-		default:
-            job[name] = TrimQuotes(ExprTreeToString(expr));
-	}
-
-	return true;
-}
-
-bool
-PopulateMapFromAd(ClassAd& ad, SimpleAttributeMapType& _map)
-{
-	ExprTree *expr;
-    ClassAd::iterator iter;
-
-    ad.ResetExpr();
-    _map.clear();
-    iter = ad.begin();
-    while (iter != ad.end()) {
-            string name = iter->first;
-            if (!AddAttribute(ad, name.c_str(), _map)) {
-                    return false;
-            }
-            iter++;
-    }
-
-	// TODO: debug
-//	if (DebugFlags & D_FULLDEBUG) {
-//		ad.dPrint(D_FULLDEBUG|D_NOHEADER);
-//	}
-
-	return true;
-}
-
-
-bool
-PopulateAdFromMap(SimpleAttributeMapType& _map, ClassAd& ad)
-{
-	map* descriptors = NULL;
-	// grab the descriptor map if there is one
-	map::iterator it = _map.find(TYPEMAP_KEY);
-	if (it != _map.end()) {
-		descriptors =  &((it->second).asMap());
-	}
-
-	for (map::const_iterator entry = _map.begin(); _map.end() != entry; entry++) {
-		const char* name = entry->first.c_str();
-		Variant value = _map[entry->first];
-
-		// skip the hidden tag
-		if (0 == strcmp(name,EXPR_TYPE.c_str())) {
-			break;
-		}
-
-		// first see if the value is a expression
-		// as indicated by the typemap
-		if (descriptors &&
-			(it = descriptors->find(entry->first)) != descriptors->end() &&
-			it->second == EXPR_TYPE) {
-			ad.AssignExpr(entry->first.c_str(), value.asString().c_str());
-		} // TODO: Report ignored types from descriptors map
-		else {
-			switch (value.getType()) {
-				case VAR_UINT8:
-					ad.Assign(name, value.asUint8());
-					break;
-				case VAR_UINT16:
-					ad.Assign(name, value.asUint16());
-					break;
-				case VAR_UINT32:
-				case VAR_UINT64:
-					ad.Assign(name, value.asUint32());
-					break;
-				case VAR_INT8:
-					ad.Assign(name, value.asInt8());
-					break;
-				case VAR_INT16:
-					ad.Assign(name, value.asInt16());
-					break;
-				case VAR_INT32:
-				case VAR_INT64:
-					ad.Assign(name, value.asInt32());
-					break;
-				case VAR_FLOAT:
-					ad.Assign(name, value.asFloat());
-					break;
-				case VAR_DOUBLE:
-					ad.Assign(name, value.asDouble());
-					break;
-				case VAR_BOOL:
-				case VAR_UUID:
-				case VAR_STRING:
-					ad.Assign(name, value.asString().c_str());
-					break;
-				default:
-					dprintf(D_FULLDEBUG, "Warning: Unknown/unsupported Variant type in map for attribute '%s'\n", name);
-			}
-		}
-	}
-
-	if (!descriptors) {
-		dprintf(D_FULLDEBUG,"Warning - no type map found in this map. Continuing...\n");
-	}
-
-	// TODO: debug
-//	if (DebugFlags & D_FULLDEBUG) {
-//		ad.dPrint(D_FULLDEBUG|D_NOHEADER);
-//	}
-
-	return true;
-}
-
-bool
-PopulateMapFromProcId(int clusterId, int procId, SimpleAttributeMapType& _map)
-{
-    ClassAd *ad;
-
-    if (NULL == (ad = ::GetJobAd(clusterId, procId, false))) {
-        dprintf(D_ALWAYS,
-                "::GetJobAd method called on %d.%d, which does not exist\n",
-                clusterId, procId);
-        return false;
-    }
-
-    return PopulateMapFromAd(*ad, _map);
 }
