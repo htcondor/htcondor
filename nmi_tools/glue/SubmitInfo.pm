@@ -486,7 +486,6 @@ our %submit_info = (
 				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
 			'xtests'	=> [ 
-				'x86_64_sles_9',
 			 	'x86_rhas_4', 
 			 	'x86_64_rhas_3',
 				'x86_64_rhas_4',
@@ -516,7 +515,10 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_12'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -534,7 +536,10 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_12-updated'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -634,8 +639,8 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.21',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-8.9' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -855,19 +860,15 @@ our %submit_info = (
 	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
 );
 
-sub unalias
-{
-	foreach my $platform (keys %submit_info) {
-		next if ref($submit_info{$platform}) eq "HASH";
-		die "Self reference detected in '$platform' definition!!!"
-			if ( $submit_info{$platform} eq $platform );
-		foreach my $p (keys %submit_info) {
-			if ( $submit_info{$platform} eq $p ) {
-				$submit_info{$platform} = $submit_info{$p};
-				last;
-			}
-		}
+foreach my $platform (keys %submit_info) {
+	next if ref($submit_info{$platform}) eq "HASH";
+	my $target = $submit_info{$platform};
+	die "Self reference detected in '$platform' definition!!!"
+		if ( $target eq $platform );
+	if ( ! exists $submit_info{$target} ) {
+		die "No matching platform '$target' for alias '$platform'";
 	}
+	$submit_info{$platform} = $submit_info{$target};
 }
 
 ###############################################################################
@@ -1047,7 +1048,6 @@ sub main
 	my @platforms;
 	my $usage = "usage: $0 [--help|-h] [--list|-l] [-a|--all] [(<platform>|/<regex>/) ...]";
 
-	unalias( );
 	foreach my $arg ( @ARGV ) {
 		if (  ( $arg eq "-l" ) or ( $arg eq "--list" ) ) {
 			foreach my $key ( sort keys(%submit_info) ) {
