@@ -65,7 +65,7 @@ else {
     $taskname = $ENV{_NMI_TASKNAME};
 }
 
-my $hostname = `hostname -f`;
+chomp(my $hostname = `hostname -f`);
 print "Executing task '$taskname' on host '$hostname'\n";
 
 # Checking task type
