@@ -18,7 +18,9 @@
 
 #include "AviaryScheddPlugin.h"
 
-MgmtScheddPlugin *scheddPluginInstance;
+using namespace aviary::job;
+
+AviaryScheddPlugin *scheddPluginInstance;
 
 #ifndef WIN32
 
@@ -26,7 +28,7 @@ void
 __attribute__ ((constructor))
 init(void)
 {
-    scheddPluginInstance = new MgmtScheddPlugin();
+    scheddPluginInstance = new AviaryScheddPlugin();
 }
 
 #endif
