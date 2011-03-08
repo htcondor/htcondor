@@ -127,7 +127,7 @@ if (BUILD_TESTS)
 	##########################################################
 	# platform specific tests
 	if(LINUX)
-		if ( NOT WITHOUT_AMAZON_TEST )
+		if ( NOT WITHOUT_AMAZON_TEST AND HAVE_EXT_GSOAP )
 			condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
 		endif()
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
@@ -463,7 +463,7 @@ if (BUILD_TESTS)
 	condor_pl_test(lib_job_router_local "Test of JobRouter routing to local universe." "core;quick;full;quicknolink")
 	condor_pl_test(condor_view_classad_types "CONDOR_VIEW_CLASSAD_TYPES test" "core;quick;full;quicknolink")
 
-	if ( NOT WITHOUT_SOAP_TEST )
+	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )
 		condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
 	endif()
 

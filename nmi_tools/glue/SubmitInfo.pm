@@ -100,6 +100,7 @@ my @default_prereqs = (
 my @minimal_build_configure_args =
 	(
 		'-DPROPER:BOOL=OFF'			=> undef,
+        '-D_VERBOSE:BOOL=ON'         => undef,
 		'-DCLIPPED:BOOL=ON'			=> undef,
 		'-DWITH_BLAHP:BOOL=OFF'		=> undef,
 		'-DWITH_BOOST:BOOL=OFF'		=> undef,
@@ -151,6 +152,7 @@ my @default_test_configure_args =
 my @default_build_configure_args =
 	(
 	'-DPROPER:BOOL=OFF' 	=> undef,
+    '-D_VERBOSE:BOOL=ON'    => undef,
 	#'-DSCRATCH_EXTERNALS:BOOL=ON'	=> undef,
 	);
 
@@ -515,7 +517,10 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_12'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -533,7 +538,10 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_12-updated'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},

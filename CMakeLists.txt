@@ -52,7 +52,8 @@ option(_DEBUG "Debug statements and set default build config" OFF)
 
 ###########################################
 # start cmake module inclusion
-list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake/macros;${CONDOR_SOURCE_DIR}/build/cmake/modules;${CONDOR_SOURCE_DIR}/build/cmake)
+#include (FeatureSummary)
 include (dprint) # set debug module 1st to all spewing in other modules if needed
 include (AppendVar)
 include (CommandTarget)
@@ -110,3 +111,11 @@ endif()
 ##########################################################################
 # Must in included post *install targets
 include ( CPack )
+
+##########################################################################
+# print out the summary info: http://www.cmake.org/cmake/help/cmake-2-8-docs.html#module:FeatureSummary
+#feature_summary(WHAT ENABLED_FEATURES DESCRIPTION "Enabled Features:" VAR enabledFeaturesText)
+#feature_summary(WHAT DISABLED_FEATURES DESCRIPTION "Disabled Features:" VAR disabledFeaturesText)
+#message(STATUS "*FEATURES:* http://www.cmake.org/cmake/help/cmake-2-8-docs.html#module:FeatureSummary
+#${enabledFeaturesText}")
+#message(STATUS "${disabledFeaturesText}")
