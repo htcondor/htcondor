@@ -16,6 +16,10 @@
 
 // the implementation class for AviaryJob methods
 
+// condor includes
+#include "condor_common.h"
+#include "condor_attributes.h"
+
 // local includes
 #include "AviaryJobServiceSkeleton.h"
 #include <AviaryJob_RemoveJob.h>
@@ -29,7 +33,14 @@
 #include <AviaryJob_SetJobAttribute.h>
 #include <AviaryJob_SetJobAttributeResponse.h>
 
+#include "Codec.h"
+#include "SchedulerObject.h"
+
 using namespace AviaryJob;
+using namespace aviary::codec;
+using namespace compat_classad;
+
+extern aviary::job::SchedulerObject aviarySchedulerObj;
 
 /**
 * "removeJob|http://grid.redhat.com/aviary-job/" operation.
@@ -67,8 +78,43 @@ AviaryJob::ReleaseJobResponse* AviaryJobServiceSkeleton::releaseJob(wso2wsf::Mes
 AviaryJob::SubmitJobResponse* AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext *outCtx ,AviaryJob::SubmitJob* _submitJob)
 
 {
-    /* TODO fill this with the necessary business logic */
-    return (AviaryJob::SubmitJobResponse*)NULL;
+    AviaryJob::SubmitJobResponse* submitJobResponse = new AviaryJob::SubmitJobResponse();
+    DefaultCodecFactory<BaseCodec> codecFactory;
+    BaseCodec* bc = codecFactory.createCodec();
+    AttributeMapType attrMap;
+
+    // add the simple stuff first
+    attrMap[ATTR_JOB_CMD] = new Attribute(Attribute::STRING_TYPE, _submitJob->getCmd().c_str());
+    if (!(_submitJob->isArgsNil() || _submitJob->getArgs().empty())) {
+        attrMap[ATTR_JOB_ARGUMENTS1] = new Attribute(Attribute::STRING_TYPE, _submitJob->getArgs().c_str());
+    }
+    attrMap[ATTR_OWNER] = new Attribute(Attribute::STRING_TYPE, _submitJob->getOwner().c_str());
+    attrMap[ATTR_JOB_IWD] = new Attribute(Attribute::STRING_TYPE, _submitJob->getIwd().c_str());
+
+    // build a requirements string and add to it
+    string reqBuilder;
+    if (!_submitJob->isRequirementsNil()) {
+        // TODO: iterate through resource constraints
+    }
+    else {
+        // default
+        reqBuilder = "TRUE";
+    }
+    attrMap[ATTR_REQUIREMENTS] = new Attribute(Attribute::EXPR_TYPE, reqBuilder.c_str());
+    // TODO: need to add extras attrs also
+
+    // invoke submit
+    string jobId, error;
+    if (!aviarySchedulerObj.submit(bc,attrMap,jobId, error)) {
+        submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
+    }
+    else {
+        // TODO: fix up args
+        submitJobResponse->setId(new AviaryCommon::JobID("","",jobId, new AviaryCommon::SubmissionID("","")));
+        submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),NULL));
+    }
+
+    return submitJobResponse;
 }
 
 /**

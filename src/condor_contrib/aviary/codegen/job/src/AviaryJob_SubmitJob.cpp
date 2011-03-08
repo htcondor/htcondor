@@ -407,17 +407,6 @@
                                  }
                               }
                            
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element args missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -769,10 +758,10 @@
                                }
 
                                
-                                   if (i < 1)
+                                   if (i < 0)
                                    {
                                      /* found element out of order */
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"requirements (@minOccurs = '1') only have %d elements", i);
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"requirements (@minOccurs = '0') only have %d elements", i);
                                      if(element_qname)
                                      {
                                         axutil_qname_free(element_qname, Environment::getEnv());
@@ -1043,9 +1032,8 @@
                    if (!isValidArgs)
                    {
                       
+                           /* no need to complain for minoccurs=0 element */
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property args");
-                            return NULL;
                           
                    }
                    else
@@ -1244,9 +1232,8 @@
                    if (!isValidRequirements)
                    {
                       
+                           /* no need to complain for minoccurs=0 element */
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property requirements");
-                            return NULL;
                           
                    }
                    else
@@ -1525,13 +1512,6 @@
                 }
 
                 
-                  if(arg_Args.empty())
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"args is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
-                
 
                 
                 resetArgs();
@@ -1801,9 +1781,9 @@
                 
                  size = arg_Requirements->size();
                  
-                 if (size < 1)
+                 if (size < 0)
                  {
-                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"requirements has less than minOccurs(1)");
+                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"requirements has less than minOccurs(0)");
                      return false;
                  }
                  for(i = 0; i < size; i ++ )
@@ -1816,19 +1796,6 @@
                  }
 
                  
-                    if(!non_nil_exists)
-                    {
-                        WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"All the elements in the array of requirements is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                        return false;
-                    }
-                 
-                  if(NULL == arg_Requirements)
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"requirements is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
-                
 
                 
                 resetRequirements();
@@ -1897,12 +1864,6 @@
                    
                      non_nil_exists = true;
                   
-                   if(!non_nil_exists)
-                   {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "All the elements in the array of requirements is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                       return AXIS2_FAILURE;
-                   }
-                
 
                 if(property_Requirements == NULL)
                 {
@@ -1924,6 +1885,15 @@
                         }
                         
                     
+                    if(!non_nil_exists)
+                    {
+                        
+                        isValidRequirements = true;
+                        (*property_Requirements)[i]= NULL;
+                        
+                        return AXIS2_SUCCESS;
+                    }
+                
                     (*property_Requirements)[i] = arg_Requirements;
                   
 
@@ -1945,8 +1915,7 @@
                      )
                     {
                       
-                           WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "All the elements in the array of requirements is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                           return false;
+                           return true; 
                         
                     }
                   
@@ -2089,7 +2058,7 @@
                         {
                             k++;
                             non_nil_exists = true;
-                            if( k >= 1)
+                            if( k >= 0)
                             {
                                 break;
                             }
@@ -2097,16 +2066,10 @@
                     }
                 }
                 
-                   if(!non_nil_exists)
-                   {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "All the elements in the array of requirements is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                       return AXIS2_FAILURE;
-                   }
-                
 
-                if( k < 1)
+                if( k < 0)
                 {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "Size of the array of requirements is beinng set to be smaller than the specificed number of minOccurs(1)");
+                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "Size of the array of requirements is beinng set to be smaller than the specificed number of minOccurs(0)");
                        return AXIS2_FAILURE;
                 }
  
@@ -2128,6 +2091,14 @@
                      
                  }
                  
+                    if(!non_nil_exists)
+                    {
+                        
+                        isValidRequirements = false;
+                        (*property_Requirements)[i] = NULL;
+                        return AXIS2_SUCCESS;
+                    }
+                
 
                 
                 (*property_Requirements)[i] = NULL;

@@ -23,10 +23,10 @@
 		<xs:complexType>
 			<xs:sequence>
 				<xs:element name="cmd" type="xs:string"/>
-				<xs:element name="args" type="xs:string"/>
+				<xs:element name="args" type="xs:string" minOccurs="0"/>
 				<xs:element name="owner" type="xs:string"/>
 				<xs:element name="iwd" type="xs:string"/>
-				<xs:element name="requirements" type="mrg:ResourceConstraint" maxOccurs="unbounded"/>
+				<xs:element name="requirements" type="mrg:ResourceConstraint"  minOccurs="0" maxOccurs="unbounded"/>
 				<xs:element name="extra" type="mrg:Attributes" minOccurs="0"/>
 			</xs:sequence>
 		</xs:complexType>

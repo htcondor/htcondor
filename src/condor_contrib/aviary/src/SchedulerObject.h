@@ -22,6 +22,7 @@
 
 // local includes
 #include "Codec.h"
+#include "AviaryUtils.h"
 
 using namespace std;
 using namespace aviary::util;

@@ -34,6 +34,10 @@ extern char * Name;
 using namespace std;
 using namespace aviary::job;
 
+// global SchedulerObject
+// TODO: convert to singleton
+aviary::job::SchedulerObject aviarySchedulerObj;
+
 void
 AviaryScheddPlugin::earlyInitialize()
 {
