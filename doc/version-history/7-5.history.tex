@@ -291,44 +291,46 @@ This bug has apparently existed since the splice
 feature was introduced in \Condor{dagman}.
 
 % gittrac #1947
-\item If an individual Daemon ClassAd Hook manager is not ``named'', the
-  jobs under it will attempt to use incorrectly named parameters. For
-  example, the following will not work (because the \Condor{startd}
-  Daemon ClassAd Hook will be fail to lookup the ``test'' job's
-  executable parameter):
+\item If an individual Daemon ClassAd Hook manager is not \emph{named},
+  the jobs under it will attempt to use incorrectly named configuration
+  variables.
+  For example, the following correct configuration will \emph{not} work,
+  because the Daemon ClassAd Hook manager will fail to look up the job's
+  executable variable, given the error in configuration variable naming:
 
 \begin{verbatim}
-STARTD_CRON_JOBLIST = test
+STARTD_CRON_JOBLIST = TEST
 ...
 STARTD_CRON_TEST_MODE       = periodic
 STARTD_CRON_TEST_EXECUTABLE = $(LIBEXEC)/test
 ...
 \end{verbatim}
 
-The code will incorrectly use \Macro{STARTD\_TEST\_MODE} and
-\Macro{STARTD\_TEST\_EXECUTABLE} instead.
-
-If instead, the Daemon ClassAd Hook Manager had been named, the code
-works as expected.  For example:
+Condor version 7.5.6 and all previous 7.x Condor versions will incorrectly 
+name the variables from this example \MacroNI{STARTD\_TEST\_MODE} and
+\MacroNI{STARTD\_TEST\_EXECUTABLE} instead.
+If instead, the Daemon ClassAd Hook Manager had been named, 
+using the no-longer-supported \MacroNI{STARTD\_CRON\_NAME},
+the code works as expected.  For example:
 
 \begin{verbatim}
-STARTD_CRON_NAME = hawkeye
-HAWKEYE_JOBLIST  = test
+STARTD_CRON_NAME = HAWKEYE
+HAWKEYE_JOBLIST  = TEST
 ...
 HAWKEYE_TEST_MODE       = periodic
 HAWKEYE_TEST_EXECUTABLE = $(LIBEXEC)/test
 ...
 \end{verbatim}
 
-This \emph{old} (named ClassAd Hook Manager) behavior is, as of 7.5.6,
-documented as unsupported and going away (primarily because it's
-confusing), but still works.  It is believed that this same behavior
-exists in all 7.x releases of Condor, but because the naming feature
-is used, it's gone undetected.
+This \emph{old} behavior is, as of Condor version 7.5.6,
+documented as unsupported and is going away,
+primarily because it is confusing.
+But, for this release, it still works.
+It is believed that this same behavior exists in all 7.x releases of Condor,
+but because the naming feature is used, the incorrect behavior went undetected.
 
 This affects the \MacroNI{STARTD\_CRON} and \MacroNI{SCHEDD\_CRON}
-ClassAd Hook Managers, and will be fixed in Condor Version 7.6.0.
-
+Daemon ClassAd Hook managers, and will be fixed in Condor version 7.6.0.
 
 \end{itemize}
 
