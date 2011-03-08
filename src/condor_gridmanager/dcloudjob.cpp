@@ -220,9 +220,9 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	if ( !jobAd->LookupString( ATTR_DELTACLOUD_PASSWORD, &m_password ) ) {
+	if ( !jobAd->LookupString( ATTR_DELTACLOUD_PASSWORD_FILE, &m_password ) ) {
 		sprintf( error_string, "%s is not set in the job ad",
-				 ATTR_DELTACLOUD_PASSWORD );
+				 ATTR_DELTACLOUD_PASSWORD_FILE );
 		goto error_exit;
 	}
 
