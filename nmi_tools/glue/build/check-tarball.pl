@@ -52,6 +52,9 @@ sub validate_tarball {
 	print STDERR "If this size threshold is not appropriate modify it in $0\n";
 	return 1;
     }
+    else {
+	print "Tarball size ($size) is larger than lower bound ($FILESIZE_LOWER_BOUND)\n";
+    }
 
     my $FILESIZE_UPPER_BOUND = ($file =~ /unstripped/) ? $UNSTRIPPED_FILESIZE_UPPER_BOUND :
                                                          $STRIPPED_FILESIZE_UPPER_BOUND;
@@ -60,6 +63,9 @@ sub validate_tarball {
 	print STDERR "ERROR: tarball '$file' is too large (> $FILESIZE_UPPER_BOUND bytes).\n";
 	print STDERR "If this size threshold is not appropriate modify it in $0\n";
 	return 1;
+    }
+    else {
+	print "Tarball size ($size) is smaller than upper bound ($FILESIZE_UPPER_BOUND)\n\n";
     }
 
 
@@ -93,6 +99,9 @@ sub validate_tarball {
     if(not $subdirectory_found) {
 	$num_errors++;
 	error("No subdirectory entries found inside the tarball");
+    }
+    else {
+	print "Subdirectory entries are present in the tarball.\n";
     }
 
 
@@ -148,6 +157,9 @@ sub validate_tarball {
 	      join("\n", @bad_perms_files[0..$num-1]),
 	      "\n\n");
     }
+    else {
+	print "File permissions tests passed.\n";
+    }
 
     if($num_bad_owner_files > 0) {
 	my $num = $num_bad_owner_files < $MAX_TO_PRINT ? $num_bad_owner_files : $MAX_TO_PRINT;
@@ -155,6 +167,9 @@ sub validate_tarball {
 	error("ERROR: $num_bad_owner_files files have bad owners and/or groups.  Here are the first $num entries from the list:\n",
 	      join("\n", @bad_owner_files[0..$num-1]),
 	      "\n\n");
+    }
+    else {
+	print "File ownership tests passed.\n";
     }
 
     if($num_errors > 0) {
