@@ -277,10 +277,6 @@ EOF;
        $spark .= "<td class='sparkheader'>Build:</td>\n";
        $builds = Array();
        while ($build = mysql_fetch_array($result2)) {
-	 $tmp = Array();
-	 $tmp["runid"] = $build["runid"];
-	 $tmp["sha1"] = $build["project_version"];
-	 array_push($builds, $tmp);
 	 $color = "passed";
 	 if($build["result"] == NULL) {
 	   $color = "pending";
@@ -298,9 +294,27 @@ EOF;
 
 	 $detail_url = sprintf(DETAIL_URL, $build["runid"], "build", $user);
 	 $box_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">&nbsp;&nbsp;<span>$details</span></a></span>";
-	 $spark .= "<td class=\"$color\">$box_html</td>\n";
+
+	 $tmp = Array();
+	 $tmp["runid"] = $build["runid"];
+	 $tmp["sha1"]  = substr($build["project_version"], 0, 15);
+	 $tmp["html"]  = $box_html; 
+	 $tmp["color"] = $color;
+	 array_push($builds, $tmp);
        }
        mysql_free_result($result2);
+       
+       for ($i=0; $i < count($builds); $i++) {
+	 $style = "";
+	 if($i != 0 && $builds[$i]["sha1"] == $builds[$i-1]["sha1"]) {
+	   $style .= "border-left-style:dashed;";
+	 }
+	 if($builds[$i+1] && $builds[$i]["sha1"] == $builds[$i+1]["sha1"]) {
+	   $style .= "border-right-style:dashed;";
+	 }
+	 $spark .= "<td class='" . $builds[$i]["color"] . "' style='$style'>";
+	 $spark .= $builds[$i]["html"] . "</td>\n";
+       }
 
        // And now for the tests.  This is trickier because we have to line it up
        // with the builds above
@@ -335,19 +349,33 @@ EOF;
 	 $details .= "</table>";
 
 	 $detail_url = sprintf(DETAIL_URL, $build_runid, "test", $user);
-	 $box_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">&nbsp;<span>$details</span></a></span>";
-	 $tests[$build_runid] = "<td class=\"$color\">$box_html</td>\n";
+	 $box_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">&nbsp;&nbsp;<span>$details</span></a></span>";
+
+	 $tests[$build_runid] = Array();
+	 $tests[$build_runid]["color"] = $color;
+	 $tests[$build_runid]["html"]  = $box_html;
        }
        mysql_free_result($result2);
 
        $spark .= "<tr><td class='sparkheader'>Test:</td>\n";
-       foreach ($builds as $build) {
+       for ($i=0; $i < count($builds); $i++) {
+	 $build = $builds[$i];
+
+	 $style = "";
+	 if($i != 0 && $build["sha1"] == $builds[$i-1]["sha1"]) {
+	   $style .= "border-left-style:dashed;";
+	 }
+	 if($builds[$i+1] && $build["sha1"] == $builds[$i+1]["sha1"]) {
+	   $style .= "border-right-style:dashed;";
+	 }
+
 	 if($tests[$build["runid"]]) {
-	   $tmp = preg_replace("/_PUT_SHA_HERE_/", substr($build["sha1"], 0, 15), $tests[$build["runid"]]);
-	   $spark .= $tmp;
+	   $test = $tests[$build["runid"]];
+	   $tmp = preg_replace("/_PUT_SHA_HERE_/", $build["sha1"], $test["html"]);
+	   $spark .= "<td class='" . $test["color"] . "' style='$style'>$tmp</td>\n";
 	 }
 	 else {
-	   $spark .= "<td class=\"noresults\">&nbsp;</td>\n";
+	   $spark .= "<td class='noresults' style='$style'>&nbsp;</td>\n";
 	 }
        }
        
