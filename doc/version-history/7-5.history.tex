@@ -25,7 +25,7 @@ The details of each version are described below.
 \item What used to be known as the \Condor{startd} and \Condor{schedd} cron
   mechanisms are now collectively called \Term{Daemon ClassAd Hooks}.
   The significant changes in this Condor version 7.5.6 release are 
-  given in the New Features section. 
+  given in the New Features section.
 
 % gittrac #1935
 \item In the release directory, the subdirectory \File{lib/glite/} has
@@ -290,6 +290,47 @@ into the offending splice.
 This bug has apparently existed since the splice
 feature was introduced in \Condor{dagman}.
 
+% gittrac #1947
+\item If an individual Daemon ClassAd Hook manager is not \emph{named},
+  the jobs under it will attempt to use incorrectly named configuration
+  variables.
+  For example, the following correct configuration will \emph{not} work,
+  because the Daemon ClassAd Hook manager will fail to look up the job's
+  executable variable, given the error in configuration variable naming:
+
+\begin{verbatim}
+STARTD_CRON_JOBLIST = TEST
+...
+STARTD_CRON_TEST_MODE       = periodic
+STARTD_CRON_TEST_EXECUTABLE = $(LIBEXEC)/test
+...
+\end{verbatim}
+
+Condor version 7.5.6 and all previous 7.x Condor versions will incorrectly 
+name the variables from this example \MacroNI{STARTD\_TEST\_MODE} and
+\MacroNI{STARTD\_TEST\_EXECUTABLE} instead.
+If instead, the Daemon ClassAd Hook Manager had been named, 
+using the no-longer-supported \MacroNI{STARTD\_CRON\_NAME},
+the code works as expected.  For example:
+
+\begin{verbatim}
+STARTD_CRON_NAME = HAWKEYE
+HAWKEYE_JOBLIST  = TEST
+...
+HAWKEYE_TEST_MODE       = periodic
+HAWKEYE_TEST_EXECUTABLE = $(LIBEXEC)/test
+...
+\end{verbatim}
+
+This \emph{old} behavior is, as of Condor version 7.5.6,
+documented as unsupported and is going away,
+primarily because it is confusing.
+But, for this release, it still works.
+It is believed that this same behavior exists in all 7.x releases of Condor,
+but because the naming feature is used, the incorrect behavior went undetected.
+
+This affects the \MacroNI{STARTD\_CRON} and \MacroNI{SCHEDD\_CRON}
+Daemon ClassAd Hook managers, and will be fixed in Condor version 7.6.0.
 
 \end{itemize}
 

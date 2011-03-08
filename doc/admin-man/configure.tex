@@ -3101,20 +3101,22 @@ These macros control the \Condor{master}.
   section~\ref{sec:Condor-Subsystem-Names}.
 
 \label{param:DaemonNameEnvironment}
-\item[\Macro{DAEMONNAME\_ENVIRONMENT}]
-  For each subsystem defined in \MacroNI{DAEMON\_LIST}, you may specify
-  changes to the environment that daemon is started with by setting
-  \MacroNI{DAEMONNAME\_ENVIRONMENT}, where \MacroNI{DAEMONNAME} is the name of
-  a daemon listed in \MacroNI{DAEMON\_LIST}. It should use the same syntax
+\item[\Macro{<DaemonName>\_ENVIRONMENT}]
+  \MacroNI{<DaemonName>} is the name of a daemon listed in
+  \MacroNI{DAEMON\_LIST}.
+  Defines changes to the environment that the daemon is invoked with.
+  It should use the same syntax
   for specifying the environment as the environment specification in
-  a \Condor{submit} file (see page~\pageref{man-condor-submit-environment}).
-  For example, if you wish to redefine the
+  a submit description file.
+  For example, to redefine the
   \Env{TMP} and \Env{CONDOR\_CONFIG} environment variables seen by the
-  \Condor{schedd}, you could place the following in the config file:
-  \begin{verbatim}
-    SCHEDD_ENVIRONMENT = "TMP=/new/value CONDOR_CONFIG=/special/config"
-  \end{verbatim}
-  When the \Condor{schedd} was started by the \Condor{master}, it would
+  \Condor{schedd}, place the following in the configuration:
+  \footnotesize
+\begin{verbatim}
+  SCHEDD_ENVIRONMENT = "TMP=/new/value CONDOR_CONFIG=/special/config"
+\end{verbatim}
+  \normalsize
+  When the \Condor{schedd} daemon is started by the \Condor{master}, it would
   see the specified values of \Env{TMP} and \Env{CONDOR\_CONFIG}.
 
 \label{param:SubsysArgs}
@@ -10364,7 +10366,7 @@ on page~\pageref{sec:daemon-classad-hooks}.
        and \Macro{SCHEDD\_CRON\_<JobName>\_ENV}
        and \Macro{BENCHMARKS\_<JobName>\_ENV}]
   The environment string to pass to the job.
-  The syntax is the same as that of \MacroNI{DAEMONNAME\_ENVIRONMENT}
+  The syntax is the same as that of \MacroNI{<DaemonName>\_ENVIRONMENT}
   as defined at ~\ref{param:DaemonNameEnvironment}.
 
   \Expr{<JobName>} is the logical name assigned for a job as defined by
