@@ -33,6 +33,7 @@
 use strict;
 use warnings;
 use Cwd;
+use File::Basename;
 my $BaseDir = getcwd();
 
 my $EXTERNALS_TASK        = "remote_task.externals";
@@ -77,8 +78,9 @@ elsif ($taskname eq $UNSTRIPPED_TASK) {
     $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make --no-print-directory && make install && make targz && make tests";
 }
 elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
-    print "Placeholder\n";
-    exit 0;
+    my $tarball_check_script = get_tarball_check_script();
+    my $tarball = get_tarball_name();
+    $execstr = "$tarball_check_script $tarball";
 }
 elsif ($taskname eq $TAR_TASK) { 
     #Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
@@ -90,8 +92,9 @@ elsif ($taskname eq $TAR_TASK) {
     $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz tests";
 }
 elsif ($taskname eq $CHECK_TAR_TASK) {
-    print "Placeholder\n";
-    exit 0;
+    my $tarball_check_script = get_tarball_check_script();
+    my $tarball = get_tarball_name();
+    $execstr = "$tarball_check_script $tarball";
 }
 elsif ($taskname eq $NATIVE_TASK) {
     # Create native packages on Red Hat and Debian
@@ -192,6 +195,21 @@ sub get_cmake_args {
     }
     close (CMAKECONFIG);
     return $cmake_cmd;
+}
+
+sub get_tarball_check_script {
+    return dirname($0) . "/check-tarball.pl";
+}
+
+sub get_tarball_name {
+    if($taskname eq $CHECK_UNSTRIPPED_TASK) {
+	return <*-unstripped.tar.gz>;
+    }
+    elsif($taskname eq $CHECK_TAR_TASK) {
+	return <*-stripped.tar.gz>;
+    }
+    print "ERROR: get_tarball_task() called from a task that does not have an associated tarball.\n";
+    exit 3;
 }
 
 sub create_rpm {
