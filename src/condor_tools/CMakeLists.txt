@@ -37,11 +37,11 @@ condor_exe(condor_version "version.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_wait "wait.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_history "history.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
 
-if (HAVE_EXT_POSTGRESQL)
+if (WANT_QUILL AND HAVE_EXT_POSTGRESQL)
 	condor_exe(condor_load_history "load_history.cpp" ${C_BIN} "tt;${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
 	condor_exe(condor_dump_history "dump_history.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
 	condor_exe(condor_convert_history "convert_history.cpp" ${C_SBIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
-endif(HAVE_EXT_POSTGRESQL)
+endif(WANT_QUILL AND HAVE_EXT_POSTGRESQL)
 
 condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
 
