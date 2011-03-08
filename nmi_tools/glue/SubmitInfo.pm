@@ -656,8 +656,8 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.21',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-8.9' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
