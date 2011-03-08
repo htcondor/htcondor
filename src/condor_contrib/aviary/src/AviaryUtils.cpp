@@ -19,6 +19,7 @@
 
 // condor includes
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "compat_classad_util.h"
@@ -29,10 +30,9 @@
 
 using namespace std;
 using namespace compat_classad;
-using namespace aviary::util;
 
 string
-getPoolName()
+aviary::util::getPoolName()
 {
     string poolName;
     char *tmp;
@@ -48,7 +48,7 @@ getPoolName()
 }
 
 // cleans up the quoted values from the job log reader
-string trimQuotes(const char* str) {
+string aviary::util::trimQuotes(const char* str) {
 	string val = str;
 
 	size_t endpos = val.find_last_not_of("\\\"");
@@ -65,7 +65,7 @@ string trimQuotes(const char* str) {
 
 // validate that an incoming group/user name is
 // alphanumeric, underscores, or a dot separator
-bool isValidGroupUserName(const string& _name, string& _text) {
+bool aviary::util::isValidGroupUserName(const string& _name, string& _text) {
 	const char* ptr = _name.c_str();
 	while( *ptr ) {
 		char c = *ptr++;
@@ -83,7 +83,7 @@ bool isValidGroupUserName(const string& _name, string& _text) {
 
 // validate that an incoming attribute name is
 // alphanumeric, or underscores
-bool isValidAttributeName(const string& _name, string& _text) {
+bool aviary::util::isValidAttributeName(const string& _name, string& _text) {
 	const char* ptr = _name.c_str();
 	while( *ptr ) {
 		char c = *ptr++;
@@ -98,7 +98,7 @@ bool isValidAttributeName(const string& _name, string& _text) {
 	return true;
 }
 
-bool checkRequiredAttrs(compat_classad::ClassAd& ad, const char* attrs[], string& missing) {
+bool aviary::util::checkRequiredAttrs(compat_classad::ClassAd& ad, const char* attrs[], string& missing) {
 	bool status = true;
 	int i = 0;
 

@@ -42,11 +42,11 @@ public:
         FLOAT_TYPE = 2,
         STRING_TYPE = 3
     };
-    Attribute ( AttributeType , const char* );
+    Attribute ( AttributeType _type, const char* _value): m_type(_type), m_value(_value) {};
     ~Attribute();
 
-    AttributeType getType() const;
-    const char * getValue() const;
+    AttributeType getType() const { return m_type; }
+    const char * getValue() const { return m_value; }
 
 private:
     AttributeType m_type;

@@ -36,6 +36,6 @@ bool isValidAttributeName(const string& _name, string& _text);
 
 bool checkRequiredAttrs(ClassAd& ad, const char* attrs[], string& missing);
 
-}};
+}}
 
 #endif /* _AVIARYUTILS_H */

@@ -22,6 +22,7 @@
 
 // local includes
 #include "AviaryScheddPlugin.h"
+#include "Axis2SoapProvider.h"
 #include "SchedulerObject.h"
 
 // Global from the condor_schedd, it's name
@@ -36,49 +37,32 @@ using namespace aviary::job;
 
 // global SchedulerObject
 // TODO: convert to singleton
-aviary::job::SchedulerObject aviarySchedulerObj;
+Axis2SoapProvider* provider = NULL;
+SchedulerObject* aviarySchedulerObj = NULL;
 
 void
 AviaryScheddPlugin::earlyInitialize()
 {
-	char *host;
-	int port;
 	char *tmp;
-	string storefile;
 	string schedd_name;
 
-		// Since this plugin is registered with multiple
-		// PluginManagers it may be initialized more than once,
-		// and we don't want that
+    // Since this plugin is registered with multiple
+    // PluginManagers it may be initialized more than once,
+    // and we don't want that
 	static bool skip = false;
 	if (skip) return; skip = true;
 
-	singleton = new ManagementAgent::Singleton();
+     // TODO: may want to get these from condor config?
+    const char* log_file = "./axis2.log";
+    string repo_path = getenv("WSFCPP_HOME");
 
-	submitterAds = new SubmitterHashTable(512, &hashFuncMyString);
+    // init transport here
+    provider = new Axis2SoapProvider(AXIS2_LOG_LEVEL_DEBUG,log_file,repo_path.c_str());
+    string axis_error;
 
-	ManagementAgent *agent = singleton->getInstance();
-
-	Scheduler::registerSelf(agent);
-	Submitter::registerSelf(agent);
-	m_isPublishing = param_boolean("QMF_PUBLISH_SUBMISSIONS", true);
-	if (m_isPublishing) {
-		JobServer::registerSelf(agent);
-		Submission::registerSelf(agent);
-	}
-
-	port = param_integer("QMF_BROKER_PORT", 5672);
-	if (NULL == (host = param("QMF_BROKER_HOST"))) {
-		host = strdup("localhost");
-	}
-
-	tmp = param("QMF_STOREFILE");
-	if (NULL == tmp) {
-		storefile = ".schedd_storefile";
-	} else {
-		storefile = tmp;
-		free(tmp); tmp = NULL;
-	}
+    if (!provider->init(DEFAULT_PORT,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
+        EXCEPT("Failed to initialize Axis2SoapProvider");
+    }
 
 	tmp = param("SCHEDD_NAME");
 	if (NULL == tmp) {
@@ -87,16 +71,8 @@ AviaryScheddPlugin::earlyInitialize()
 		schedd_name = build_valid_daemon_name(tmp);
 		free(tmp); tmp = NULL;
 	}
-	agent->setName("com.redhat.grid","scheduler", schedd_name.c_str());
 
-	agent->init(string(host), port,
-				param_integer("QMF_UPDATE_INTERVAL", 10),
-				true,
-				storefile);
-
-	free(host);
-
-	scheduler = new SchedulerObject(agent,schedd_name.c_str());
+	aviarySchedulerObj = new SchedulerObject(schedd_name.c_str());
 
 	dirtyJobs = new DirtyJobsType();
 
@@ -104,19 +80,19 @@ AviaryScheddPlugin::earlyInitialize()
 
 	ReliSock *sock = new ReliSock;
 	if (!sock) {
-		EXCEPT("Failed to allocate Mgmt socket");
+		EXCEPT("Failed to allocate transport socket");
 	}
-	if (!sock->assign(agent->getSignalFd())) {
-		EXCEPT("Failed to bind Mgmt socket");
+	if (!sock->assign(provider->getHttpListenerSocket())) {
+		EXCEPT("Failed to bind transport socket");
 	}
 	int index;
 	if (-1 == (index =
 			   daemonCore->Register_Socket((Stream *) sock,
-										   "Mgmt Method Socket",
-										   (SocketHandlercpp) ( &AviaryScheddPlugin::HandleMgmtSocket ),
-										   "Handler for Mgmt Methods.",
+										   "Aviary Method Socket",
+										   (SocketHandlercpp) ( &AviaryScheddPlugin::HandleTransportSocket ),
+										   "Handler for Aviary Methods.",
 										   this))) {
-		EXCEPT("Failed to register Mgmt socket");
+		EXCEPT("Failed to register transport socket");
 	}
 
 	m_initialized = false;
@@ -251,15 +227,17 @@ void
 AviaryScheddPlugin::deleteAttribute(const char */*key*/,
 								  const char */*name*/) { }
 
-
 int
-AviaryScheddPlugin::HandleTransportSocket(/*Service *,*/ Stream *)
+AviaryScheddPlugin::HandleTransportSocket(Stream *)
 {
-	singleton->getInstance()->pollCallbacks();
+    // TODO: respond to a transport callback here?
+    string provider_error;
+    if (!provider->processHttpRequest(provider_error)) {
+        dprintf (D_ALWAYS,"Error processing request: %s\n",provider_error.c_str());
+    }
 
-	return KEEP_STREAM;
+    return KEEP_STREAM;
 }
-
 
 void
 AviaryScheddPlugin::processDirtyJobs()

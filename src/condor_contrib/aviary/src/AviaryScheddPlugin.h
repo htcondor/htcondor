@@ -31,7 +31,6 @@
 #include "SchedulerObject.h"
 #include "PROC_ID_comparator.h"
 
-using namespace com::redhat::grid;
 
 namespace aviary {
 namespace job {
@@ -81,7 +80,7 @@ private:
 
 	bool m_isPublishing;
 
-	int HandleTransportSocket(/*Service *,*/ Stream *);
+	int HandleTransportSocket(Stream *);
 
 	void processDirtyJobs();
 

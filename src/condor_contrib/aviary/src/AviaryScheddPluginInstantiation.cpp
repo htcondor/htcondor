@@ -16,7 +16,7 @@
 
 #include "condor_common.h"
 
-#include "MgmtScheddPlugin.h"
+#include "AviaryScheddPlugin.h"
 
 MgmtScheddPlugin *scheddPluginInstance;
 

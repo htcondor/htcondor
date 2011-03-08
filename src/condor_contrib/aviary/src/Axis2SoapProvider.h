@@ -16,8 +16,8 @@
  *
  ***************************************************************/
 
-#ifndef AXIS2SOAPPROVIDER_H
-#define AXIS2SOAPPROVIDER_H
+#ifndef _AXIS2SOAPPROVIDER_H
+#define _AXIS2SOAPPROVIDER_H
 
 #include <string>
 #include <axis2_http_server.h>
@@ -47,9 +47,10 @@
 // Axis2/C engine; suitable for integration
 // with DaemonCore socket registration
 // ./configure --enable-multi-thread=no
+
 class Axis2SoapProvider {
     public:
-        Axis2SoapProvider(int _log_level = AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
+        Axis2SoapProvider(int _log_level=AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
         ~Axis2SoapProvider();
         bool init(int _port, int _read_timeout, std::string& _error);
         SOCKET getHttpListenerSocket();
@@ -69,4 +70,4 @@ class Axis2SoapProvider {
         void *AXIS2_THREAD_FUNC invokeHttpWorker( axutil_thread_t * thd, void *data );
 };
 
-#endif    // AXIS2SOAPPROVIDER_H
+#endif    // _AXIS2SOAPPROVIDER_H
