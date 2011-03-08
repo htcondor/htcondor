@@ -12,7 +12,7 @@ my $MAX_TO_PRINT = 20;
 ################
 
 if(@ARGV == 0) {
-    print STDERR "ERROR: Usage $0 <tarball to check>\n";
+    print "ERROR: Usage $0 <tarball to check>\n";
     exit 1;
 }
 
@@ -38,7 +38,7 @@ sub validate_tarball {
     # Sanity check
     #
     if(!-e $file) {
-	print STDERR "ERROR: tarball '$file' does not exist";
+	print "ERROR: tarball '$file' does not exist";
 	return 1;
     }
 
@@ -48,8 +48,8 @@ sub validate_tarball {
     my $size = (stat($file))[7];
 
     if($size < $FILESIZE_LOWER_BOUND) {
-	print STDERR "ERROR: tarball '$file' is too small (< $FILESIZE_LOWER_BOUND bytes)\n";
-	print STDERR "If this size threshold is not appropriate modify it in $0\n";
+	print "ERROR: tarball '$file' is too small (< $FILESIZE_LOWER_BOUND bytes)\n";
+	print "If this size threshold is not appropriate modify it in $0\n";
 	return 1;
     }
     else {
@@ -60,8 +60,8 @@ sub validate_tarball {
                                                          $STRIPPED_FILESIZE_UPPER_BOUND;
 
     if($size > $FILESIZE_UPPER_BOUND) {
-	print STDERR "ERROR: tarball '$file' is too large (> $FILESIZE_UPPER_BOUND bytes).\n";
-	print STDERR "If this size threshold is not appropriate modify it in $0\n";
+	print "ERROR: tarball '$file' is too large (> $FILESIZE_UPPER_BOUND bytes).\n";
+	print "If this size threshold is not appropriate modify it in $0\n";
 	return 1;
     }
     else {
@@ -145,8 +145,8 @@ sub validate_tarball {
 	    }
 	}
 	else {
-	    print STDERR "Unrecognized line when validating the permissions and owner of the tarball:\n";
-	    print STDERR "$line\n";
+	    print "Unrecognized line when validating the permissions and owner of the tarball:\n";
+	    print "$line\n";
 	}
     }
 
@@ -173,11 +173,11 @@ sub validate_tarball {
     }
 
     if($num_errors > 0) {
-	print STDERR "There were $num_errors errors when examining the tarball.\n\n";
+	print "There were $num_errors errors when examining the tarball.\n\n";
 	return 1;
     }
     else {
-	print STDERR "Tarball passes all checks in $0\n\n";
+	print "Tarball passes all checks in $0\n\n";
 	return 0;
     }
 }
@@ -207,5 +207,5 @@ sub check_permissions {
 
 
 sub error {
-    print STDERR @_;
+    print @_;
 }
