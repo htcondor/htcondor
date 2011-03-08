@@ -65,6 +65,9 @@ else {
     $taskname = $ENV{_NMI_TASKNAME};
 }
 
+my $hostname = `hostname -f`;
+print "Executing task '$taskname' on host '$hostname'\n";
+
 # Checking task type
 if( $taskname eq $EXTERNALS_TASK ) {
     # Since we do not declare the externals task on Windows, we don't have
