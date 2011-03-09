@@ -53,27 +53,23 @@ exporting documents or software obtained from this server.
 
 ****************************************************************/
 
-
-#if !defined(_CONDOR_SANDBOX_MANAGER_ENUM_UTILS_H)
-#define _CONDOR_SANDBOX_MANAGER_ENUM_UTILS_H
-
-#include "condor_common.h"
 #include "sandbox_manager_enum_utils.h"
+#include "translation_utils.h"
+#include "condor_common.h"
 
 using namespace std;
 
 
 // TODO: This should move to some common header file. enum_utils.h ??
 
-struct Translation SandboxStateTranslation[] {
+struct Translation SandboxStateTranslation[] = {
 	{ "STAGEIN", SANDBOXSTATE_STAGEIN },
 	{ "STAGEOUT", SANDBOXSTATE_STAGEOUT },
 	{ "VALID", SANDBOXSTATE_VALID },
 	{ "EXPIRED", SANDBOXSTATE_EXPIRED }
 };
 
-
-struct Translation SandboxSlotStateTranslation[] {
+struct Translation SandboxSlotStateTranslation[] = {
 	{ "UNUSED", SSS_UNUSED },
 	{ "STAGEIN", SSS_STAGEIN },
 	{ "STAGEOUT", SSS_STAGEOUT },
@@ -94,7 +90,6 @@ getSandboxStateNum( const char* str )
 	return (SandboxState)getNumFromName( str, SandboxStateTranslation );
 }
 
-
 const char*
 getSandboxSlotStateString( SandboxSlotState state )
 {
@@ -107,5 +102,3 @@ getSandboxSlotStateNum( const char* str )
 {
 	return (SandboxSlotState)getNumFromName( str, SandboxSlotStateTranslation );
 }
-
-#endif

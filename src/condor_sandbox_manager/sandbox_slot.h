@@ -95,7 +95,7 @@ class CSandboxSlot
 public:
 	// Constructors
 	// Params: SlotId, pointer to the Sandbox
-	CSandboxSlot(const char*, const Sandbox*);
+	CSandboxSlot(const char*, CSandbox*);
 
 	// Destructor
 	virtual ~CSandboxSlot();
@@ -125,14 +125,14 @@ protected:
 
 private:
 	string id;				// Slot Id
-	Sandbox *sandbox		// Pointer to the sandbox held by this slot
+	CSandbox *sandbox;		// Pointer to the sandbox held by this slot
 	SandboxSlotState state;	// State sandbox is in
 	// NOTE: Slot lease is determined by the expiry of the sandbox
 	// For now we assume that once a sandbox gets the slot it will hold on 
 	// to the slot till done.
 
 	// Initialize the slot
-	void init(const char*, const Sandbox*);
+	void init(const char*, CSandbox*);
 
 };
 #endif

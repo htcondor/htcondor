@@ -57,6 +57,8 @@ exporting documents or software obtained from this server.
 #if !defined(_CONDOR_SANDBOX_MANAGER_ENUM_UTILS_H)
 #define _CONDOR_SANDBOX_MANAGER_ENUM_UTILS_H
 
+#include "../condor_utils/translation_utils.h"
+#include "condor_common.h"
 using namespace std;
 
 

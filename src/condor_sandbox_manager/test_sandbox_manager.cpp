@@ -4,6 +4,9 @@
 int main(void) {
     const char dir[] = "/tmp";
 
+    printf ("=======================================================\n");
+    printf ("                       TESTING\n");
+    printf ("=======================================================\n");
     printf ("Creating new sandbox manager...\n");
     CSandboxManager *sm = new CSandboxManager();
     printf ("Creating new sandbox manager... DONE\n");

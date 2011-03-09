@@ -55,26 +55,18 @@ exporting documents or software obtained from this server.
 
 #include "sandbox.h"
 
-const int CSandbox::_MIN_SANDBOXID_LENGTH = 64;
-const int CSandbox::_MIN_LIFETIME = 3600;
 
-
-CSandbox::CSandbox(const char* sDir, bool isDirectory)
+//CSandbox::CSandbox(JobInfoCommunicator* my_jic, const char* sDir)
+CSandbox::CSandbox(const char* sDir)
 {
-	printf("CSandbox::CSandbox called\n");
-	if (isDirectory) {
-		init(sDir, _MIN_LIFETIME, _MIN_SANDBOXID_LENGTH);
-	} else {
-		init("", _MIN_LIFETIME, _MIN_SANDBOXID_LENGTH);
-		this->id.assign(sDir);
-	} 
-
+	printf("Entering CSandbox::CSandbox()\n");
+	//init(my_jic, sDir, _MIN_LIFETIME, _MIN_SANDBOXID_LENGTH);
+	init(sDir, _MIN_LIFETIME, _MIN_SANDBOXID_LENGTH);
 }
 
 
 //CSandbox::CSandbox(	JobInfoCommunicator* my_jic, const char* sDir,
-CSandbox::CSandbox(	const char* sDir,
-					const int lifeTime)
+CSandbox::CSandbox(	const char* sDir, const int lifeTime)
 {
 	printf("CSandbox::CSandbox called\n");
 	//init(my_jic, sDir, lifeTime, _MIN_SANDBOXID_LENGTH);
@@ -83,8 +75,7 @@ CSandbox::CSandbox(	const char* sDir,
 
 
 //CSandbox::CSandbox(	JobInfoCommunicator* my_jic, const char* sDir,
-CSandbox::CSandbox(	const char* sDir,
-					const int lifeTime, const int idLength)
+CSandbox::CSandbox(	const char* sDir, const int lifeTime, const int idLength)
 {
 	printf("CSandbox::CSandbox called\n");
 	//init(my_jic, sDir, lifeTime, idLength);
@@ -92,6 +83,7 @@ CSandbox::CSandbox(	const char* sDir,
 }
 
 
+// TODO: Do the cleanup of the sandbox data structure
 CSandbox::~CSandbox()
 {
 	printf("CSandbox::~CSandbox called\n");
@@ -105,26 +97,12 @@ CSandbox::getId(void)
 	return this->id;
 }
 
-void
-CSandbox::setId(const char *sId)
-{
-	printf("CSandbox::setId called\n");
-	this->id.assign(sId);
-}
-
 
 time_t
 CSandbox::getCreateTime(void)
 {
 	printf("CSandbox::getCreateTime called\n");
 	return this->createTime;
-}
-
-void
-CSandbox::setCreateTime(time_t cTime)
-{
-	printf("CSandbox::setCreateTime called\n");
-	this->createTime = cTime;
 }
 
 
@@ -144,10 +122,17 @@ CSandbox::isExpired(void)
 	time(&now);
 	bool expired = false;
 
-	if (now >= this->expiry){
-		expired = true; 
+	if (now >= this->expiry) {
+		expired = true;
 	}
+	
 	return expired;
+	/*
+	if (now >= this->expiry){
+		this->state = SANDBOXSTATE_EXPIRED; 
+	}
+	return (this->state == SANDBOXSTATE_EXPIRED);
+	*/
 }
 
 
@@ -158,6 +143,14 @@ CSandbox::renewExpiry(const int grace)
 	time_t now;
 	time(&now);
 	this->expiry = now + grace;
+
+	/*
+	if (this->expiry > now) {
+		this->state = SANDBOXSTATE_VALID;
+	} else {
+		this->state = SANDBOXSTATE_EXPIRED;
+	}
+	*/
 }
 
 
@@ -165,7 +158,17 @@ void
 CSandbox::setExpiry(const int exp)
 {
 	printf("CSandbox::setExpiry called\n");
+	time_t now;
+	time(&now);
 	this->expiry = exp;
+
+	/*
+	if (this->expiry > now) {
+		this->state = SANDBOXSTATE_VALID;
+	} else {
+		this->state = SANDBOXSTATE_EXPIRED;
+	}
+	*/
 }
 
 
@@ -176,28 +179,20 @@ CSandbox::getSandboxDir(void)
 	return this->sandboxDir;
 }
 
-void 
-CSandbox::setSandboxDir(const char *sDir){
-	this->sandboxDir.assign(sDir);
-}
-
 
 string
 CSandbox::getDetails()
 {
 	printf("CSandbox::getDetails called\n");
-	string details;
-	char data[256];
+	std::ostringstream details;
 	
-	details = "id=" + this->id + "\n" ;
-		
-	
-	/*details	<< "id=" << this->id << std::endl
+	details	<< "id=" << this->id << std::endl
 			<< "createTime=" << this->createTime << std::endl
 			<< "expiry=" << this->expiry << std::endl
 			<< "srcDir=" << this->srcDir << std::endl
-			<< "sandboxDir=" << this->sandboxDir << std::endl;*/
-	return details;
+			<< "sandboxDir=" << this->sandboxDir << std::endl
+			<< "desintationURI=" << this->destinationURI << std::endl;
+	return details.str();
 }
 
 /*****************************************************************************
@@ -206,15 +201,15 @@ CSandbox::getDetails()
 
 void
 //CSandbox::init(	JobInfoCommunicator* my_jic, const char* sDir, 
-CSandbox::init(	const char* sDir, 
-				const int lifeTime, const int idLength)
+CSandbox::init(	const char* sDir, const int lifeTime, const int idLength)
 {
 	time_t now;
 
 	printf("CSandbox::init called\n");
 	// Create a unique id enforcing min id size limit
-	this->id = createId(idLength) ;
-	
+	this->id = (idLength >= this->_MIN_SANDBOXID_LENGTH) ?
+		   createId(idLength) :
+		   createId(_MIN_SANDBOXID_LENGTH);
 
 	// Set the sandbox createTime and expiry
 	time(&now);
@@ -229,6 +224,35 @@ CSandbox::init(	const char* sDir,
 		this->sandboxDir.assign(this->srcDir);
 	}
 
+	// Set the state of the sandbox
+	//this->state = SANDBOXSTATE_VALID;
+
+	// Set the destinationURI
+	this->destinationURI = "__NOT_SET__";
+
 	//this->jic = my_jic;
 }
 
+
+string
+CSandbox::createId(const int length)
+{
+	// Allowed set of chars in sandboxId
+	const char charset[] =	"0123456789"
+				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+				"abcdefghijklmnopqrstuvwxyz";
+	char* iden = new char[length + 1];
+	string idTmp;
+	
+	printf("CSandbox::createId called\n");
+	for (int i = 0; i < length; ++i) {
+        	iden[i] = charset[get_random_int() % (sizeof(charset) - 1)];
+	}
+	iden[length] = '\0';
+	idTmp.assign(iden);
+	if (iden) {
+		delete iden;
+	}
+
+	return idTmp;
+}

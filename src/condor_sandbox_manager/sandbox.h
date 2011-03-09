@@ -57,11 +57,16 @@ exporting documents or software obtained from this server.
 #if !defined(_CONDOR_SANDBOX_H)
 #define _CONDOR_SANDBOX_H
 
-
-#include "basename.h"
+//#include "condor_daemon_core.h"
+//#include "list.h"
+//#include "nullfile.h"
+//#include "basename.h"
+//#include "condor_ckpt_name.h"
+#include "condor_qmgr.h"
+#include "condor_config.h"
 #include "condor_common.h"
-#include "condor_debug.h"
-/*#include "dc_collector.h"
+#include "sandbox_manager_enum_utils.h"
+#include "dc_collector.h"
 #include "condor_classad.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
@@ -73,14 +78,12 @@ exporting documents or software obtained from this server.
 #include "condor_string.h"
 #include "string_list.h"
 #include "MyString.h"
-#include "get_full_hostname.h"*/
+#include "get_full_hostname.h"
 #include "condor_random_num.h"
+#include <string>
+#include <sstream>
 
 using namespace std;
-
-
-//#define _MIN_SANDBOXID_LENGTH 64
-
 
 /*
  The Condor Sandbox class. This holds details about the actual sandbox
@@ -88,11 +91,9 @@ using namespace std;
 class CSandbox
 {
 public:
-	static const int _MIN_SANDBOXID_LENGTH; //= 64;
-	static const int _MIN_LIFETIME; //= 3600;
 	// Constructors
 	// Params: Source Dir
-	CSandbox(const char*, bool isDirectory = true);
+	CSandbox(const char*);
 	// Params: Source Dir, lifetime
 	CSandbox(const char*, const int);
 	// Params: Source Dir, lifetime, Id length
@@ -103,17 +104,12 @@ public:
 
 	// Return my Id
 	string getId(void);
-	
-	void setId(const char*);
 
 	// Return the creation time
 	time_t getCreateTime(void);
-	
-	void setCreateTime(time_t);
 
 	// Return the expiry time
 	time_t getExpiry(void);
-	
 
 	// Check if the sandbox is expired
 	bool isExpired(void);
@@ -126,45 +122,27 @@ public:
 
 	// Return the location to the sandboxDir
 	string getSandboxDir(void);
-	
-	// set Sandbox directory later ... 
-	void setSandboxDir(const char*);
 
 	// Given the sandboxId give the handle to the sandbox location
 	virtual string getDetails(void);
-	
-	static string createId(int length)
-	{
-		// Allowed set of chars in sandboxId
-		const char charset[] =	"0123456789"
-					"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-					"abcdefghijklmnopqrstuvwxyz";
-		string idTemp = "";
-		int actualLength = (length > _MIN_SANDBOXID_LENGTH) ? length : _MIN_SANDBOXID_LENGTH;	
-		printf("CSandbox::createId called\n");
-		for (int i = 0; i < actualLength; ++i) {
-	        	idTemp  += charset[get_random_int() % (sizeof(charset) - 1)];
-		}
-		idTemp += '\0';
-		return idTemp;
-
-	};
-		
-
 protected:
 
 
 private:
-	string id;		// Sandbox Id
-	string srcDir;		// Dir where sandboxe is cached
-	string sandboxDir;	// Dir where sandboxe is moved to
-	time_t createTime;	// Sandbox creation time
-	time_t expiry;		// Sandbox expiry time
+	string id;				// Sandbox Id
+	string srcDir;			// Dir where sandboxe is cached
+	string sandboxDir;		// Dir where sandboxe is moved to
+	string destinationURI;	// URI to destination location of sandbox
+	time_t createTime;		// Sandbox creation time
+	time_t expiry;			// Sandbox expiry time
+	//SandboxState state;		// State sandbox is in
 
 	// Initialize the created sandbox
 	void init(const char*, const int, const int);
-	
-};
+	string createId(const int);
 
+	static const int _MIN_SANDBOXID_LENGTH = 64;
+	static const int _MIN_LIFETIME = 3600;
+};
 #endif
 

@@ -59,13 +59,15 @@ exporting documents or software obtained from this server.
 //#include "condor_daemon_core.h"
 //#include "list.h"
 
+#include "condor_common.h"
 #include "sandbox.h"
+#include "sandbox_slot.h"
+#include "util_lib_proto.h"
 #include <string>
 #include <iostream>
 #include <map>
 #include <vector>
 using namespace std;
-
 
 /*
  The Condor Sandbox Manager class.
@@ -82,9 +84,7 @@ public:
 
 	// Given the base dir, create a local are to move the sandbox, 
 	// assign a sandboxId to the sandbox and set its expiry
-	virtual char* registerSandbox(const char*, bool isId = false);
-	
-	virtual void updateSandboxExecDir(const char*, const char*);
+	virtual char* registerSandbox(const char*);
 
 	// Given the sandboxId give the handle to the sandbox location
 	virtual string transferSandbox(const char*);
@@ -115,24 +115,61 @@ public:
 	// Unregister all sandboxes
 	virtual void unregisterAllSandboxes(void);
 	
-	// not sure whether we will need the following two functions in the long run, but for now it's useful.
+	// Not sure if we will need the following two functions in the long run
+    // But for now it's useful.
 	
 	virtual void initIterator(void);
-	
 	virtual std::string getNextSandboxId(void);
+
+	// Check if there is an empty sandbox slot
+	virtual bool isSandboxSlotAvailable(void);
+
+	// Create a slot with slotId and assign a sandbox to it
+	virtual void createSandboxSlot(const char*, CSandbox*);
 
 protected:
 
 
 private:
 	// Map of sandboxIds and a pointer to the sandbox object
-
 	std::map<string, CSandbox*>sandboxMap;
 	
+	std::map<std::string, CSandbox*>::iterator m_iter;
+
+    // Total number of slots available
+    static int numSlotsTotal;
+
+    // number of slots currently active
+    int numSlotsActive;
+    // number of slots currently inactive
+    int numSlotsInactive;
+    // number of free slots
+    int numSlotsAvailable;
+
+    // A vector holding pointer to slot objects for a given slot
+    std::vector<CSandboxSlot*> sandboxSlots;
+
+    // Map to hold what state each slot is in
+    //std::map<SandboxSlotState, std::vector<int> > sandboxSlotStateMap;
+
+    // Map to hold what state each sandbox is in
+    //std::map<SandboxState, std::vector<std:string> > sandboxStateMap;
+
+
+    // Do any required initialization
 	void init(void);
 	
-	std::map<std::string ,CSandbox*>::iterator m_iter;
 
 };
 #endif
 
+
+/*
+ - We need another class SandboxSlot -- DONE
+
+- Slot has state but not sandbox -- DONE
+- array of slots
+- slot disk space TODO
+- slot takes expiry of sandbox -- DONE
+
+*/

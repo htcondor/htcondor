@@ -52,11 +52,11 @@ server is obligated to secure any necessary Government licenses before
 exporting documents or software obtained from this server.
 ****************************************************************/
 
-#include "condor_common.h"
+//#include "condor_common.h"
 #include "sandbox_manager.h"
-#include "util_lib_proto.h"
-#include <string>
-#include <iostream>
+//#include "util_lib_proto.h"
+//#include <string>
+//#include <iostream>
 using namespace std;
 
 CSandboxManager::CSandboxManager()
@@ -82,35 +82,22 @@ CSandboxManager::~CSandboxManager()
 
 
 char*
-CSandboxManager::registerSandbox(const char* sDir, bool isId)
+//CSandboxManager::registerSandbox(JobInfoCommunicator* jic, const char* sDir)
+CSandboxManager::registerSandbox(const char* sDir)
 {
-	dprintf(D_ALWAYS, "CSandboxManager::registerSandbox called \n");
+	dprintf(D_ALWAYS, "CSandboxManager::registerSandbox called for %s\n", sDir);
+	cout << "CSandboxManager::registerSandbox called" << std::endl;
 	//CSandbox *sandbox = new CSandbox(jic, sDir);
-	if (isId) {
-		CSandbox *sandbox = new CSandbox(sDir, false);
-		this->sandboxMap[sandbox->getId()] = sandbox;
-		return (char*)sandbox->getId().c_str(); 
-	}
 	CSandbox *sandbox = new CSandbox(sDir);
 	this->sandboxMap[sandbox->getId()] = sandbox;
 	return (char*)sandbox->getId().c_str();
-}
-
-void 
-CSandboxManager::updateSandboxExecDir(const char* sId, const char* sExecDir){
-	string sbId = string(sId);
-	if (sandboxMap.find( sbId ) != sandboxMap.end()) {
-		sandboxMap[sbId]->setSandboxDir(sExecDir);
-		
-		dprintf(D_ALWAYS, "CSandboxManager::updateSandboxExecDir called:  %s , %s \n", sId, sandboxMap[sbId]->getSandboxDir().c_str());
-	}
-	
 }
 
 
 string
 CSandboxManager::transferSandbox(const char* sid)
 {
+	dprintf(D_ALWAYS, "CSandboxManager::transferSandbox called for %s\n", sid);
 	string s_sid(sid);
 	if (sandboxMap.find(s_sid) != sandboxMap.end())
 		return sandboxMap[s_sid]->getSandboxDir();
@@ -342,7 +329,9 @@ CSandboxManager::unregisterSandbox(const string id)
 			<< id << std::endl;
 	// Find and delete the sandbox object
 	iter = sandboxMap.find(id);
-	delete iter->second;
+	if (iter->second) {
+		delete iter->second;
+	}
 	sandboxMap.erase(id);
 }
 
@@ -385,6 +374,13 @@ void
 CSandboxManager::init(void)
 {
 	cout << "CSandboxManager::init called" << std::endl;
-	// TODO: Fill in more details. Don't know yet
+
+	CSandboxManager::numSlotsTotal = 1;
+
+    this->numSlotsActive = 0;
+	this->numSlotsInactive = 0;
+	this->numSlotsAvailable = CSandboxManager::numSlotsTotal;
+
+
 	return;
 }
