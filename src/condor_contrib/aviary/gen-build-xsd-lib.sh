@@ -27,12 +27,12 @@ fi
 echo WSFCPP_HOME=$WSFCPP_HOME
 
 # generate our cpp types from WSDL
-WSDL2CPP.sh -uri etc/aviary-job.wsdl -or -d adb -ss -ns2p http://common.aviary.grid.redhat.com=AviaryCommon,http://job.aviary.grid.redhat.com=AviaryJob -o codegen/job
-WSDL2CPP.sh -uri etc/aviary-query.wsdl -or -d adb -ss -ns2p http://common.aviary.grid.redhat.com=AviaryCommon,http://query.aviary.grid.redhat.com=AviaryQuery -o codegen/query
+WSDL2CPP.sh -uri etc/aviary-job.wsdl -or -d adb -ss -g -ns2p http://common.aviary.grid.redhat.com=AviaryCommon,http://job.aviary.grid.redhat.com=AviaryJob -o codegen/job
+WSDL2CPP.sh -uri etc/aviary-query.wsdl -or -d adb -ss -g -ns2p http://common.aviary.grid.redhat.com=AviaryCommon,http://query.aviary.grid.redhat.com=AviaryQuery -o codegen/query
 
 # get rid of the extraneous stuff that WSDL2CPP won't let us turn off
-rm -f codegen/job/Aviary*Service*.{h,cpp,vcproj}
-rm -f codegen/query/Aviary*Service*.{h,cpp,vcproj}
+rm -f codegen/job/*AviaryJob*Service*.{h,cpp,vcproj}
+rm -f codegen/query/*AviaryQuery*Service*.{h,cpp,vcproj}
 
 # setup our include dir
 if ! test -d include; then
