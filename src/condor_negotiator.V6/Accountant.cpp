@@ -1076,45 +1076,45 @@ AttrList* Accountant::ReportState() {
 
         MyString CustomerName=key.Value()+CustomerRecord.Length();
         tmp.sprintf("Name%d = \"%s\"",OwnerNum,CustomerName.Value());
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         tmp.sprintf("Priority%d = %f",OwnerNum,GetPriority(CustomerName));
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
         tmp.sprintf("ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
         tmp.sprintf("WeightedResourcesUsed%d = %f",OwnerNum,WeightedResourcesUsed);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
         tmp.sprintf("AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
         tmp.sprintf("WeightedAccumulatedUsage%d = %f",OwnerNum,WeightedAccumulatedUsage);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
         tmp.sprintf("BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
         tmp.sprintf("LastUsageTime%d = %d",OwnerNum,LastUsageTime);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
         tmp.sprintf("PriorityFactor%d = %f",OwnerNum,PriorityFactor);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         bool isGroup=false;
         string cgrp = GetAssignedGroup(CustomerName, isGroup)->name;
         tmp.sprintf("AccountingGroup%d = \"%s\"",OwnerNum,cgrp.c_str());
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
         tmp.sprintf("IsAccountingGroup%d = %s",OwnerNum,(isGroup)?"TRUE":"FALSE");
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         OwnerNum++;
     }
@@ -1122,7 +1122,7 @@ AttrList* Accountant::ReportState() {
     ReportLimits(ad);
 
     tmp.sprintf("NumSubmittors = %d", OwnerNum-1);
-    ad->Insert(tmp.Value(), false);
+    ad->Insert(tmp.Value());
     return ad;
 }
 
