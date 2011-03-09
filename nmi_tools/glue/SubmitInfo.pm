@@ -634,8 +634,8 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.21',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-8.9' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -855,18 +855,15 @@ our %submit_info = (
 	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
 );
 
-sub unalias
-{
-	foreach my $platform (keys %submit_info) {
-		next if ref($submit_info{$platform}) eq "HASH";
-		my $target = $submit_info{$platform};
-		die "Self reference detected in '$platform' definition!!!"
-			if ( $target eq $platform );
-		if ( ! exists $submit_info{$target} ) {
-			die "No matching platform '$target' for alias '$platform'";
-		}
-		$submit_info{$platform} = $submit_info{$target};
+foreach my $platform (keys %submit_info) {
+	next if ref($submit_info{$platform}) eq "HASH";
+	my $target = $submit_info{$platform};
+	die "Self reference detected in '$platform' definition!!!"
+		if ( $target eq $platform );
+	if ( ! exists $submit_info{$target} ) {
+		die "No matching platform '$target' for alias '$platform'";
 	}
+	$submit_info{$platform} = $submit_info{$target};
 }
 
 ###############################################################################
@@ -1046,7 +1043,6 @@ sub main
 	my @platforms;
 	my $usage = "usage: $0 [--help|-h] [--list|-l] [-a|--all] [(<platform>|/<regex>/) ...]";
 
-	unalias( );
 	foreach my $arg ( @ARGV ) {
 		if (  ( $arg eq "-l" ) or ( $arg eq "--list" ) ) {
 			foreach my $key ( sort keys(%submit_info) ) {
