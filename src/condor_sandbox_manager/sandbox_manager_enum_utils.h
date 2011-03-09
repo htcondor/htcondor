@@ -53,11 +53,11 @@ exporting documents or software obtained from this server.
 
 ****************************************************************/
 
+#include "translation_utils.h"
 
-#if !defined(_CONDOR_SANDBOX_MANAGER_ENUM_UTILS_H)
+#ifndef _CONDOR_SANDBOX_MANAGER_ENUM_UTILS_H
 #define _CONDOR_SANDBOX_MANAGER_ENUM_UTILS_H
 
-using namespace std;
 
 
 // TODO: This should move to some common header file. enum_utils.h ??
@@ -69,9 +69,6 @@ typedef enum {
     SANDBOXSTATE_EXPIRED,    // Sandbox is expired
 } SandboxState;
 
-const char* getSandboxStateString( SandboxState state );
-SandboxState getSandboxStateNum( const char* str );
-
 typedef enum {
     SSS_UNUSED,           // Slot is unused i.e. free
     SSS_STAGEIN,          // Slot is in data stagein state
@@ -79,6 +76,10 @@ typedef enum {
     SSS_BOUND_TO_CPUSLOT, // Slot is claimed and holds a valid sandbox
     SSS_EXPIRED,          // Slot is expired and can be made available 
 } SandboxSlotState;
+
+
+const char* getSandboxStateString( SandboxState state );
+SandboxState getSandboxStateNum( const char* str );
 
 const char* getSandboxSlotStateString( SandboxSlotState state );
 SandboxSlotState getSandboxSlotStateNum( const char* str );

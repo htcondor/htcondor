@@ -55,6 +55,7 @@ exporting documents or software obtained from this server.
 #include "condor_common.h"
 #include "sandbox_manager.h"
 #include "util_lib_proto.h"
+#include "directory.h"
 #include <string>
 #include <iostream>
 using namespace std;
@@ -82,10 +83,9 @@ CSandboxManager::~CSandboxManager()
 
 
 char*
-CSandboxManager::registerSandbox(const char* sDir, bool isId)
+CSandboxManager::registerSandbox(const char* sDir, const char* claimId, bool isId)
 {
 	dprintf(D_ALWAYS, "CSandboxManager::registerSandbox called \n");
-	//CSandbox *sandbox = new CSandbox(jic, sDir);
 	if (isId) {
 		CSandbox *sandbox = new CSandbox(sDir, false);
 		this->sandboxMap[sandbox->getId()] = sandbox;
@@ -93,6 +93,8 @@ CSandboxManager::registerSandbox(const char* sDir, bool isId)
 	}
 	CSandbox *sandbox = new CSandbox(sDir);
 	this->sandboxMap[sandbox->getId()] = sandbox;
+	
+	claimIdSandboxMap[string(claimId)].push_back(sandbox->getId());
 	return (char*)sandbox->getId().c_str();
 }
 
@@ -120,175 +122,6 @@ CSandboxManager::transferSandbox(const char* sid)
 }
 
 
-/*
-bool
-CSandboxManager::transferSandbox(int mode, Stream* s)
-{
-	ReliSock* rsock = (ReliSock*)s;
-	TransferDaemon *td = NULL;
-	MyString fquser;
-	ClassAd reqad, respad;
-	MyString jids, jids_allow, jids_deny;
-	int protocol;
-	int cluster, proc;
-	ClassAd *tmp_ad = NULL;
-
-	// TODO: Findout what the heck this does?
-	mode = mode; // quiet the compiler
-
-    cout << "Entering CSandboxManager::transferSandbox()" << std::endl;
-
-	// Make sure this connection is authenticated, and we know who
-	// the user is. Also, set a timeout, since we don't want to
-	// block long trying to read from our client.   
-    rsock->timeout( 20 );
-
-	// Authenticate the socket
-    if( ! rsock->triedAuthentication() ) {
-		CondorError errstack;
-		if( ! SecMan::authenticate_sock(rsock, WRITE, &errstack) ) {
-			// We failed to authenticate, we should bail out now
-			// since we don't know what user is trying to perform
-			// this action.
-			// TODO: it'd be nice to print out what failed, but we
-			// need better error propagation for that...
-			errstack.push(	"SANDBOXMANAGER", SECMAN_ERR_AUTHENTICATION_FAILED,
-							"Failure transfering sandbox. Authentication failed" );
-			dprintf( D_ALWAYS, "requestSandBoxLocation() aborting: %s\n",
-                     errstack.getFullText() );
-
-			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
-			respad.Assign(ATTR_TREQ_INVALID_REASON, "Authentication failed.");
-			respad.put(*rsock);
-			rsock->end_of_message();
-
-			// TODO: For now accept the authentication failures
-			// Eventually we will need this anyways and then just uncomment
-			// the line below
-
-			//return false;
-		}
-	}
-
-	// to whom does the client authenticate?
-	fquser = rsock->getFullyQualifiedUser();
-
-	rsock->decode();
-
-	////////////////////////////////////////////////////////////////////////
-	// read the request ad from the client about what it wants to transfer
-	////////////////////////////////////////////////////////////////////////
-
-	// This request ad from the client will contain
-	//  ATTR_TREQ_DIRECTION
-	//  ATTR_TREQ_PEER_VERSION
-	//  ATTR_TREQ_HAS_CONSTRAINT
-	//  ATTR_TREQ_JOBID_LIST
-	//  ATTR_TREQ_XFP
-	//
-	//  OR
-	//
-	//  ATTR_TREQ_DIRECTION
-	//  ATTR_TREQ_PEER_VERSION
-	//  ATTR_TREQ_HAS_CONSTRAINT
-	//  ATTR_TREQ_CONSTRAINT
-	//  ATTR_TREQ_XFP
-	// 
-	// TODO: Need better understanding.
-	// The above request ad seems to be valid for a schedd but from startd
-	// point of view, we should expect a sandboxid. 
-	// For now assume ATTR_TREQ_JOBID_LIST is your sandbox id list
-	reqad.initFromStream(*rsock);
-	rsock->end_of_message();
-
-	// TODO: Understand if we need this?
-	if (reqad.LookupBool(ATTR_TREQ_HAS_CONSTRAINT, has_constraint) == 0) {
-		cout 	<< "CSandboxManager::transferSandbox(): Client reqad from "
-				<< "must have %s as an attribute." << std::endl
-				<< fquser.Value() <<  ATTR_TREQ_HAS_CONSTRAINT;
-
-        respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
-        respad.Assign(ATTR_TREQ_INVALID_REASON, "Missing constraint bool.");
-        respad.put(*rsock);
-        rsock->end_of_message();
-
-        return false;
-    }
-
-	////////////////////////////////////////////////////////////////////////
-	// Let's validate the jobid set the user wishes to modify with a
-	// file transfer. The reason we sometimes use a constraint and sometimes
-	// not is an optimization for speed. If the client already has the
-	// ads, then we don't iterate over the job queue log, which is 
-	// extremely expensive.
-	////////////////////////////////////////////////////////////////////////
-
-
-	/////////////
-	// The user specified the jobids directly it would like to work with.
-	// We assume the client already has the ads it wishes to transfer.
-	/////////////
-	if (!has_constraint) {
-
-		//dprintf(D_ALWAYS, "Submittor provides procids.\n");
-		cout << "Startd provides sandbox ids" << std::endl;
-
-		modify_allow_jobs = new ExtArray<PROC_ID>;
-		ASSERT(modify_allow_jobs);
-
-		modify_deny_jobs = new ExtArray<PROC_ID>;
-        ASSERT(modify_deny_jobs);
-
-		if (reqad.LookupString(ATTR_TREQ_JOBID_LIST, jids) == 0) {
-            //dprintf(D_ALWAYS, "requestSandBoxLocation(): Submitter "
-            //    "%s's reqad must have %s as an attribute.\n",
-			cout 	<< "CSandboxManager::transferSandbox() " << fquser.Value()
-					<< "'s reqad must have " << ATTR_TREQ_JOBID_LIST 
-					<< " as an attribute." << edt::endl;
-
-            respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
-            respad.Assign(ATTR_TREQ_INVALID_REASON, "Missing jobid list.");
-            respad.put(*rsock);
-            rsock->end_of_message();
-
-            return false;
-		}
-
-		//////////////////////
-		// convert the stringlist of jobids into an actual ExtArray of
-		// PROC_IDs. we are responsible for this newly allocated memory.
-		//////////////////////
-		jobs = mystring_to_procids(jids);
-
-		if (jobs == NULL) {
-            // can't have no constraint and no jobids, bail.
-            // dprintf(D_ALWAYS, "Submitter %s sent inconsistant ad with no "
-            //    "constraint and also no jobids on which to perform sandbox "
-            //    "manipulations.\n", fquser.Value());
-			cout	<< "Submitter " << fquser.Value() 
-					<< " sent inconsistant ad with no constraint and also "
-					<< "no jobids on which to perform sandbox "
-					<< "manipulations" << std::endl;
-
-			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
-			respad.Assign(ATTR_TREQ_INVALID_REASON,
-                "No constraint and no jobid list.");
-			respad.put(*rsock);
-			rsock->end_of_message();
-
-			return false;
-		}
-
-	}
-	else {
-	}
-
-
-
-	return true;
-}
-
-*/
 
 std::vector<string>
 CSandboxManager::getExpiredSandboxIds(void)
@@ -374,6 +207,47 @@ CSandboxManager::getNextSandboxId(void)
 	return this->m_iter->first;
 	
 
+}
+
+bool 
+CSandboxManager::removeSandbox(std::string sandboxId) 
+{
+	if (this->sandboxMap.find(sandboxId) == this->sandboxMap.end())
+		return true;
+		
+	CSandbox *sBox = this->sandboxMap[sandboxId];
+	Directory *sBoxDir = new Directory(sBox->getSandboxDir().c_str());
+	dprintf(D_FULLDEBUG, "CSandboxManager::removeSandbox: removing sandbox directory %s \n", sBox->getSandboxDir().c_str());
+	bool result = sBoxDir->Remove_Entire_Directory();
+	if (result) {
+		result = sBoxDir->Remove_Full_Path(sBox->getSandboxDir().c_str());
+	}
+	delete sBoxDir;
+	delete sBox;
+	this->sandboxMap.erase(sandboxId);
+	
+	return result;
+}
+
+bool 
+CSandboxManager::removeSandboxes(std::string claimId) 
+{
+	if (claimIdSandboxMap.find(claimId) == claimIdSandboxMap.end())
+		return true;
+		
+	vector<std::string> sandboxIds = claimIdSandboxMap[claimId];
+	int size = sandboxIds.size();
+	bool result = true;
+	bool interim = false;
+	for (int i = 0; i < size; i++) {
+		interim = removeSandbox(sandboxIds[i]);
+		if (result) 
+			result = interim;
+		if (interim)
+			dprintf(D_FULLDEBUG, "CSandboxManager::removeSandboxes: Removal of sandbox with id %s succeeded. \n", sandboxIds[i].c_str());
+		else 
+			dprintf(D_FULLDEBUG, "CSandboxManager::removeSandboxes: Removal of sandbox with id %s failed. \n", sandboxIds[i].c_str());
+	}
 }
 
 

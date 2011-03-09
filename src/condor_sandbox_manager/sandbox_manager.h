@@ -82,7 +82,7 @@ public:
 
 	// Given the base dir, create a local are to move the sandbox, 
 	// assign a sandboxId to the sandbox and set its expiry
-	virtual char* registerSandbox(const char*, bool isId = false);
+	virtual char* registerSandbox(const char*, const char*, bool isId = false);
 	
 	virtual void updateSandboxExecDir(const char*, const char*);
 
@@ -120,6 +120,10 @@ public:
 	virtual void initIterator(void);
 	
 	virtual std::string getNextSandboxId(void);
+	
+	bool removeSandbox(std::string sandboxId);
+	
+	bool removeSandboxes(std::string claimId);
 
 protected:
 
@@ -132,6 +136,9 @@ private:
 	void init(void);
 	
 	std::map<std::string ,CSandbox*>::iterator m_iter;
+	
+	// a vector of sandbox ids associated with a particular claim
+	std::map<std::string, vector<std::string> > claimIdSandboxMap;
 
 };
 #endif
