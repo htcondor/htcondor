@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 use Getopt::Long;
-use vars qw/ @opt_testclasses $opt_help /;
+use vars qw/ @opt_testclasses /;
 
 parseOptions();
 
@@ -133,6 +133,7 @@ else {
 
         # Load the tasks, one per line.  Skip comments (lines starting with #)
         %tasklist = map { chomp; $_ => 1} grep !/^\s*\#/, <WINDOWSTESTS>;
+        print join("\n", sort keys %tasklist) . "\n";
         close(WINDOWSTESTS);
     }
 }
@@ -185,7 +186,7 @@ sub findTests {
     my %tasklist = map { chomp; "$_$ext" => 1 } <LIST>;
     close(LIST);
 
-    print join("\n", keys %tasklist) . "\n";
+    print join("\n", sort keys %tasklist) . "\n";
 
     my $total = scalar(keys %tasklist);
     print "-- Found $total test(s) in directory '$dir' for class '$classname'\n\n";
@@ -207,14 +208,10 @@ sub parseOptions {
     print "Script called with ARGV: " . join(' ', @ARGV) . "\n";
 
     my $rc = GetOptions('test-class=s' => \@opt_testclasses,
-                        'help'         => \$opt_help,
+                        'help'         => \&usage,
                         );
 
     if( !$rc ) {
-        usage();
-    }
-
-    if(defined($opt_help)) {
         usage();
     }
 
