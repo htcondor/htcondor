@@ -45,6 +45,8 @@ struct LineRec {
   float Factor;
   int BeginUsage;
   int LastUsage;
+  MyString AcctGroup;
+  bool IsAcctGroup;
 };
 
 //-----------------------------------------------------------------
@@ -537,11 +539,15 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 {
   char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42];
   char  attrLastUsage[32];
+  MyString attrAcctGroup;
+  MyString attrIsAcctGroup;
   char  name[128];
   float priority, Factor, AccUsage = -1;
   int   resUsed = 0, BeginUsage = 0;
   int   LastUsage = 0;
   float wtResUsed;
+  MyString AcctGroup;
+  bool IsAcctGroup;
 
   for( int i=1; i<=numElem; i++) {
     LR[i-1].Priority=0;
@@ -554,6 +560,8 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
     sprintf( attrBeginUsage , "BeginUsageTime%d", i );
     sprintf( attrLastUsage , "LastUsageTime%d", i );
     sprintf( attrAccUsage , "WeightedAccumulatedUsage%d", i );
+    attrAcctGroup.sprintf("AccountingGroup%d", i);
+    attrIsAcctGroup.sprintf("IsAccountingGroup%d", i);
 
     if( !ad->LookupString	( attrName, name ) 		|| 
 		!ad->LookupFloat	( attrPrio, priority ) )
@@ -570,6 +578,13 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 		wtResUsed = resUsed;
 	}
 
+    if (!ad->LookupString(attrAcctGroup.Value(), AcctGroup)) {
+        AcctGroup = "<none>";
+    }
+    if (!ad->LookupBool(attrIsAcctGroup.Value(), IsAcctGroup)) {
+        IsAcctGroup = false;
+    }
+
 	if (LastUsage==0) LastUsage=-1;
 
     LR[i-1].Name=name;
@@ -580,7 +595,8 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
     LR[i-1].BeginUsage=BeginUsage;
     LR[i-1].LastUsage=LastUsage;
     LR[i-1].AccUsage=AccUsage;
-
+    LR[i-1].AcctGroup=AcctGroup;
+    LR[i-1].IsAcctGroup=IsAcctGroup;
   }
  
   // ad->fPrint(stdout);
@@ -603,9 +619,9 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   Totals.BeginUsage=0;
   Totals.AccUsage=0;
   
-  char* Fmt1="%-30s %14.2f\n";  // Data line format
-  char* Fmt2="%-30s %14s\n";    // Title and separator line format
-  char* Fmt3="Number of users shown: %-13d %14s\n";    // Totals line format
+  const char* Fmt1="%-30s %14.2f\n";  // Data line format
+  const char* Fmt2="%-30s %14s\n";    // Title and separator line format
+  const char* Fmt3="Number of users shown: %-13d %14s\n";  // Totals line format
 
   if (DetailFlag==1) {
     Fmt1="%-30s %14.2f %8.2f %12.2f %4.0f %12.2f %14s %14s\n"; 
@@ -631,17 +647,25 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 
   int UserCount=0;
   for (int i=0; i<NumElem; i++) {
+    // We want to avoid counting totals twice for acct group records
+    bool is_group = LR[i].IsAcctGroup;
+
 	if (LR[i].LastUsage<MinLastUsageTime) continue;
-    UserCount++;
+
+    if (!is_group) UserCount++;
+
     strcpy(LastUsageStr,format_date_year(LR[i].LastUsage));
     if (LR[i].Name.Length()>30) LR[i].Name=LR[i].Name.Substr(0,29);
     if (DetailFlag==2)
       printf(Fmt1,LR[i].Name.Value(),LR[i].AccUsage/3600.0,format_date_year(LR[i].BeginUsage),LastUsageStr);
     else 
       printf(Fmt1,LR[i].Name.Value(),LR[i].Priority,(LR[i].Priority/LR[i].Factor),LR[i].Factor,LR[i].wtRes,LR[i].AccUsage/3600.0,format_date_year(LR[i].BeginUsage),LastUsageStr);
-    Totals.wtRes+=LR[i].wtRes;
-    Totals.AccUsage+=LR[i].AccUsage;
-    if (LR[i].BeginUsage<Totals.BeginUsage || Totals.BeginUsage==0) Totals.BeginUsage=LR[i].BeginUsage;
+
+    if (!is_group) {
+      Totals.wtRes+=LR[i].wtRes;
+      Totals.AccUsage+=LR[i].AccUsage;
+      if (LR[i].BeginUsage<Totals.BeginUsage || Totals.BeginUsage==0) Totals.BeginUsage=LR[i].BeginUsage;
+    }
   }
 
   strcpy(LastUsageStr,format_date_year(MinLastUsageTime));

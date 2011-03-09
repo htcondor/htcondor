@@ -208,15 +208,13 @@ endfunction(_ep_parse_arguments)
 define_property(DIRECTORY PROPERTY "EP_BASE" INHERITED
   BRIEF_DOCS "Base directory for External Project storage."
   FULL_DOCS
-  "See documentation of the ExternalProject_Add() function in the "
-  "ExternalProject module."
+  "See documentation of the ExternalProject_Add() function in the ExternalProject module."
   )
 
 define_property(DIRECTORY PROPERTY "EP_PREFIX" INHERITED
   BRIEF_DOCS "Top prefix for External Project storage."
   FULL_DOCS
-  "See documentation of the ExternalProject_Add() function in the "
-  "ExternalProject module."
+  "See documentation of the ExternalProject_Add() function in the ExternalProject module."
   )
 
 

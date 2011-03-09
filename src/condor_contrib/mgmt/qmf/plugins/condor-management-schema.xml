@@ -34,10 +34,10 @@
 <group name="DaemonStatistics">
   <statistic name="MonitorSelfAge" type="uint32"/>
   <statistic name="MonitorSelfCPUUsage" type="double"/>
-  <statistic name="MonitorSelfImageSize" type="double"/>
+  <statistic name="MonitorSelfImageSize" type="double" unit="KiB"/>
   <statistic name="MonitorSelfRegisteredSocketCount" type="uint32"/>
-  <statistic name="MonitorSelfResidentSetSize" type="uint32"/>
-  <statistic name="MonitorSelfTime" type="absTime"/>
+  <statistic name="MonitorSelfResidentSetSize" type="uint32" unit="KiB"/>
+  <statistic name="MonitorSelfTime" type="absTime" unit="nanosecond"/>
 </group>
 
 <group name="GridMethods">
@@ -603,10 +603,35 @@ Set by Collector:
     </method>
 
     <method name="Reconfig"/>
+
+    <statistic name="MatchRate" type="double" desc="Matches per second over current cycle"/>
+    <statistic name="MatchRateSustained" type="double" desc="Matcher per second, since end of previous cycle"/>
+    <statistic name="Matches" type="uint32" desc="Number of matches generated"/>
+    <statistic name="Duration" type="uint32" unit="second" desc="Negotiation cycle duration"/>
+    <statistic name="Phase1Duration" type="uint32" unit="second" desc="Duration of phase 1"/>
+    <statistic name="Phase2Duration" type="uint32" unit="second" desc="Duration of phase 2"/>
+    <statistic name="Phase3Duration" type="uint32" unit="second" desc="Duration of phase 3"/>
+    <statistic name="Phase4Duration" type="uint32" unit="second" desc="Duration of phase 4"/>
+    <statistic name="SlotShareIter" type="uint32" desc="Number of share iterations"/>
+    <statistic name="NumSchedulers" type="uint32" desc="Number of submitters"/>
+    <statistic name="ActiveSubmitterCount" type="uint32" desc="Number of submitters with jobs"/>
+    <statistic name="SubmittersFailed" type="lstr" desc="List of submitters that encountered a failure"/>
+    <statistic name="SubmittersOutOfTime" type="lstr" desc="List of submitters that hit their match time limit"/>
+    <statistic name="SubmittersShareLimit" type="lstr" desc="List of submitters that hit their share limit"/>
+    <statistic name="NumIdleJobs" type="uint32" desc="Number of idle jobs"/>
+    <statistic name="NumJobsConsidered" type="uint32" desc="Number of jobs that were considered for matching"/>
+    <statistic name="Rejections" type="uint32" desc="Number of rejections"/>
+    <statistic name="TotalSlots" type="uint32" desc="Number of slots found"/>
+    <statistic name="CandidateSlots" type="uint32" desc="Number of slots considered"/>
+    <statistic name="TrimmedSlots" type="uint32" desc="Number of slots after trimming claimed slots"/>
+    <statistic name="Time" type="absTime" unit="nanosecond" desc="Start of cycle, since Epoch"/>
+    <statistic name="End" type="absTime" unit="nanosecond" desc="End of cycle, since Epoch"/>
+    <statistic name="Period" type="uint32" unit="second" desc="Time from end of previous cycle to end of current cycle"/>
   </class>
 
   <class name="Collector">
 	<group name="DaemonProperties"/>
+    <group name="DaemonStatistics"/>
 	<!-- TODO: for now this doesn't seem to be worth the headache 
 	      of the query worker socket handler interaction & crashes
 	<group name="GridMethods"/>

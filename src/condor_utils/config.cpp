@@ -177,7 +177,11 @@ Read_config( const char* config_source, BUCKET** table,
 
 			ArgList argList;
 			MyString args_errors;
-			argList.AppendArgsV1RawOrV2Quoted(cmdToExecute, &args_errors);
+			if(!argList.AppendArgsV1RawOrV2Quoted(cmdToExecute, &args_errors)) {
+				printf("Can't append cmd %s(%s)\n", cmdToExecute, args_errors.Value());
+				free( cmdToExecute );
+				return -1;
+			}
 			conf_fp = my_popen(argList, "r", FALSE);
 			if( conf_fp == NULL ) {
 				printf("Can't open cmd %s\n", cmdToExecute);

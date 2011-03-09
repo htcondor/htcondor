@@ -15,10 +15,12 @@
  */
 
 #include "condor_common.h"
+#include "store_cred.h"
 #include "condor_config.h"
 #include "get_daemon_name.h"
 
 #include "Triggerd.h"
+#include "broker_utils.h"
 
 #include "EventCondorTriggerNotify.h"
 #include "CondorTrigger.h"
@@ -29,8 +31,6 @@
 #include "ArgsCondorTriggerServiceSetTriggerText.h"
 #include "ArgsCondorTriggerServiceSetEvalInterval.h"
 #include "ArgsCondorTriggerServiceGetEvalInterval.h"
-
-#include "MgmtConversionMacros.h"
 
 #include "condor_classad.h"
 
@@ -54,7 +54,7 @@ Triggerd::Triggerd()
    triggerCollection = NULL;
    collectors = NULL;
    query_collector = NULL;
-//   console = NULL;
+   console = NULL;
 
    triggerEvalTimerId = -1;
    triggerEvalPeriod = 0;
@@ -116,11 +116,11 @@ Triggerd::~Triggerd()
          singleton = NULL;
       }
    }
-//   if (NULL != console)
-//   {
-//      delete console;
-//      console = NULL;
-//   }
+   if (NULL != console)
+   {
+      delete console;
+      console = NULL;
+   }
 
    InvalidatePublicAd();
 }
@@ -152,15 +152,20 @@ Triggerd::init()
    char* host;
    char* tmp;
    char* dataDir = NULL;
+   char* username;
+   char* password;
+   char* mechanism;
    int port, interval;
    std::string storefile;
    std::string error_text;
    std::stringstream int_str;
+   qpid::management::ConnectionSettings settings;
+   bool enable_console = true;
 
    dprintf(D_FULLDEBUG, "Triggerd::init called\n");
 
    char* name = param("TRIGGERD_NAME");
-   if(name)
+   if (name)
    {
       char* valid_name = build_valid_daemon_name(name);
       daemonName = valid_name;
@@ -183,6 +188,16 @@ Triggerd::init()
       host = strdup("localhost");
    }
 
+   if (NULL == (username = param("QMF_BROKER_USERNAME")))
+   {
+      username = strdup("");
+   }
+
+   if (NULL == (mechanism = param("QMF_BROKER_AUTH_MECH")))
+   {
+      mechanism = strdup("ANONYMOUS");
+   }
+
    tmp = param("QMF_STOREFILE");
    if (NULL == tmp)
    {
@@ -195,6 +210,8 @@ Triggerd::init()
       tmp = NULL;
    }
    interval = param_integer("QMF_UPDATE_INTERVAL", 10);
+
+   password = getBrokerPassword();
 
    dataDir = param("DATA");
    ASSERT(dataDir);
@@ -228,17 +245,29 @@ Triggerd::init()
    EventCondorTriggerNotify::registerSelf(agent);
 
    mgmtObject = new CondorTriggerService(agent, this);
-//   console = new TriggerConsole();
 
-   agent->setName("com.redhat.grid","condortriggerservice", daemonName.c_str());
-
-   qpid::management::ConnectionSettings settings;
    settings.host = std::string(host);
    settings.port = port;
-   settings.mechanism = "ANONYMOUS";
+   settings.username = std::string(username);
+   settings.password = std::string(password);
+   settings.mechanism = std::string(mechanism);
+
+   // Initialize the QMF agent
+   agent->setName("com.redhat.grid","condortriggerservice", daemonName.c_str());
    agent->init(settings, interval, true, storefile);
-//   console->config(host, port, "guest", "guest");
+
+   // Initialize the QMF console, if desired
+   enable_console = param_boolean("ENABLE_ABSENT_NODES_DETECTION", false);
+   if (true == enable_console)
+   {
+      console = new TriggerConsole();
+      console->config(host, port, username, password, mechanism);
+   }
+
    free(host);
+   free(username);
+   free(password);
+   free(mechanism);
 
    bool _lifetime = param_boolean("QMF_IS_PERSISTENT", true);
    agent->addObject(mgmtObject, daemonName.c_str(), _lifetime);
@@ -933,22 +962,22 @@ Triggerd::PerformQueries()
    }
 
    // Look for absent nodes (nodes expected to be in the pool but aren't)
-//   if (NULL != console)
-//   {
-//      missing_nodes = console->findAbsentNodes();
-//      if (0 < missing_nodes.size())
-//      {
-//         for (std::list<std::string>::iterator node = missing_nodes.begin();
-//              node != missing_nodes.end(); ++ node)
-//         {
-//            eventText = node->c_str();
-//            eventText += "is missing from the pool";
-//            EventCondorTriggerNotify event(eventText, time(NULL));
-//            singleton->getInstance()->raiseEvent(event);
-//            dprintf(D_FULLDEBUG, "Triggerd: Raised event with text '%s'\n", eventText.c_str());
-//         }
-//      }
-//   }
+   if (NULL != console)
+   {
+      missing_nodes = console->findAbsentNodes();
+      if (0 < missing_nodes.size())
+      {
+         for (std::list<std::string>::iterator node = missing_nodes.begin();
+              node != missing_nodes.end(); ++ node)
+         {
+            eventText = node->c_str();
+            eventText += " is missing from the pool";
+            EventCondorTriggerNotify event(eventText, time(NULL));
+            singleton->getInstance()->raiseEvent(event);
+            dprintf(D_FULLDEBUG, "Triggerd: Raised event with text '%s'\n", eventText.c_str());
+         }
+      }
+   }
 
    return ret_val;
 }
@@ -961,19 +990,17 @@ Triggerd::RemoveWS(const char* text)
 
    if (NULL != text)
    {
-      result = strdup(text);
-
       // Remove preceeding whitespace first
-      while (isspace(result[pos]))
+      while (result[0] && isspace(result[0]))
       {
-         result = ++result;
+         ++result;
       }
 
       // Now remove trailing whitespace
       pos = strlen(result) - 1;
       while ((pos >= 0) && isspace(result[pos]))
       {
-         result[pos--] = NULL;
+         result[pos--] = '\0';
       }
    }
    return result;

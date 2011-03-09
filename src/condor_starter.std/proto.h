@@ -106,7 +106,7 @@ off_t physical_file_size( char *name );
 off_t logical_file_size( char *name );
 int calc_hdr_blocks();
 int calc_text_blocks( char * );
-int core_is_valid( char * );
+int core_is_valid(const char * );
 int have_running_process();
 int exception_cleanup(int,int,const char*);
 extern "C" {

@@ -1022,7 +1022,8 @@ get_job_info()
 			break;
 #endif
 		default:
-			u_proc = new UserProc( s );
+			if(s.cmd)
+				u_proc = new UserProc( s );
 			break;
 	}
 

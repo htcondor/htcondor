@@ -49,8 +49,10 @@
 
 #include "collector.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "CollectorPlugin.h"
+#endif
 #endif
 
 #include "ccb_server.h"
@@ -640,8 +642,10 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
     offline_plugin_.invalidate ( command, cad );
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	CollectorPluginManager::Invalidate(command, cad);
+#endif
 #endif
 
 	if (viewCollectorTypes) {
@@ -707,8 +711,10 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	offline_plugin_.update ( command, *cad );
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	CollectorPluginManager::Update(command, *cad);
+#endif
 #endif
 
 	if (viewCollectorTypes) {
@@ -834,11 +840,14 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 
 #if ( HAVE_HIBERNATION )
     /* let the off-line plug-in have at it */
+	if(cad)
     offline_plugin_.update ( command, *cad );
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
     CollectorPluginManager::Update ( command, *cad );
+#endif
 #endif
 
 	if (viewCollectorTypes) {
@@ -1402,6 +1411,8 @@ void CollectorDaemon::sendCollectorAd()
 
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad );
+
+    daemonCore->monitor_data.ExportData(ad);
 
 	// Send the ad
 	int num_updated = updateCollectors->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);

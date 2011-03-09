@@ -18,8 +18,8 @@
 
 MACRO (DPRINT _MSG )
 
-	if (_DEBUG)
+	if ( _VERBOSE )
 		message(STATUS "DEBUG: ${_MSG}")
-	endif(_DEBUG)
+	endif()
 
 ENDMACRO (DPRINT)

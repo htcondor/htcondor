@@ -40,8 +40,10 @@
 #include "stat_info.h"
 #include "shared_port_endpoint.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "MasterPlugin.h"
+#endif
 #endif
 
 // these are defined in master.C
@@ -396,7 +398,7 @@ daemon::DoConfig( bool init )
 	// Previously defind?
 	if ( NULL != flag_in_config_file ) {
 		// Has it changed?
-		if ( strcmp( flag_in_config_file, tmp ) ) {
+		if (tmp && strcmp( flag_in_config_file, tmp ) ) {
 			free( flag_in_config_file );
 			flag_in_config_file = tmp;
 		} else if ( NULL != tmp ) {
@@ -1872,7 +1874,6 @@ Daemons::StopDaemon( char* name )
 
 	iter = daemon_ptr.find( name );
 	if( iter != daemon_ptr.end() ) {
-		daemon_ptr.erase( iter );
 		if( iter->second->pid > 0 ) {
 			exit_allowed.insert( std::pair<int, class daemon*>(iter->second->pid, iter->second) );
 			iter->second->Stop();
@@ -1881,6 +1882,7 @@ Daemons::StopDaemon( char* name )
 			iter->second->CancelAllTimers();
 			delete iter->second;
 		}
+		daemon_ptr.erase( iter );
 	}
 }
 
@@ -2229,11 +2231,11 @@ Daemons::AllReaper(int pid, int status)
 	valid_iter = exit_allowed.find(pid);
 	if( valid_iter != exit_allowed.end() ) {
 		valid_iter->second->Exited( status );
+ 		delete valid_iter->second;
 		exit_allowed.erase( valid_iter );
 		if( NumberOfChildren() == 0 ) {
 			AllDaemonsGone();
 		}
- 		delete valid_iter->second;
 		return TRUE;
 	}
 
@@ -2260,8 +2262,8 @@ Daemons::DefaultReaper(int pid, int status)
 	valid_iter = exit_allowed.find(pid);
 	if( valid_iter != exit_allowed.end() ) {
 		valid_iter->second->Exited( status );
-		exit_allowed.erase(valid_iter);
  		delete valid_iter->second;
+		exit_allowed.erase(valid_iter);
 		return TRUE;
 	}
 
@@ -2492,8 +2494,10 @@ Daemons::UpdateCollector()
     daemonCore->monitor_data.ExportData(ad);
 	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	MasterPluginManager::Update(ad);
+#endif
 #endif
 
 		// log classad into sql log so that it can be updated to DB

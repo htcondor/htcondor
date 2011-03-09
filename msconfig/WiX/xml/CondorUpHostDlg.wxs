@@ -3,7 +3,7 @@
   <Fragment>
     <UI>
       <Dialog Id="CondorUpHostDlg" Width="370" Height="270" Title="[ProductName] [Setup]" NoMinimize="yes">
-        <Control Id="Instruction1" Type="Text" X="10" Y="60" Width="270" Height="15" TabSkip="no" Text="Due to an issue with the 7.5.5 installer, some additional information is needed." />
+        <Control Id="Instruction1" Type="Text" X="10" Y="60" Width="320" Height="15" TabSkip="no" Text="Due to an issue with the 7.5.5 installer, some additional information is needed." />
         <Control Id="Instruction2" Type="Text" X="10" Y="75" Width="270" Height="15" TabSkip="no" Text="Hostname of the Central Manager." />
         <Control Id="DomainName" Type="Text" X="47" Y="95" Width="79" Height="18" TabSkip="no" Text="&amp;Central Manager:" />
         <Control Id="DomainNameEdit" Type="Edit" X="124" Y="93" Width="100" Height="18" Property="POOLHOSTNAME" Text="{80}" />

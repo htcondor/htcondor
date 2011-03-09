@@ -1,6 +1,8 @@
  ###############################################################
  # 
- # Copyright 2011 Red Hat, Inc. 
+ # Copyright (C) 1990-2010, Redhat. 
+ # Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+ # University of Wisconsin-Madison, WI.
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,7 +18,7 @@
  # 
  ############################################################### 
 
-MACRO (CLONE_INSTALL _ORIG_TARGET _NEWNAMES _INSTALL_LOC )
+MACRO (CLONE_INSTALL _ORIG_TARGET _ORIG_INSTALL _NEWNAMES _INSTALL_LOC )
 
 	if ( WINDOWS )
 		set(WIN_EXE_EXT .exe)
@@ -26,7 +28,15 @@ MACRO (CLONE_INSTALL _ORIG_TARGET _NEWNAMES _INSTALL_LOC )
 	endif( WINDOWS )
 
 	foreach ( new_target ${_NEWNAMES} )
-		install (CODE "FILE(INSTALL \"${${_ORIG_TARGET}_loc}\" DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}\" USE_SOURCE_PERMISSIONS RENAME \"${new_target}${WIN_EXE_EXT}\")")
+
+        if (WINDOWS OR ${LN} STREQUAL "LN-NOTFOUND")
+            install (CODE "FILE(INSTALL \"${${_ORIG_TARGET}_loc}\" DESTINATION \"\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}\" USE_SOURCE_PERMISSIONS RENAME \"${new_target}${WIN_EXE_EXT}\")")
+        else()
+            #install (CODE "execute_process(COMMAND cd \${CMAKE_INSTALL_PREFIX} && ${LN} -v -f ${_ORIG_INSTALL}/${_ORIG_TARGET} ${_INSTALL_LOC}/${new_target})")
+            # because it's a hardlink absolute paths should not matter.
+	    install (CODE "execute_process(COMMAND ${LN} -v -f \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_ORIG_INSTALL}/${_ORIG_TARGET} \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}/${new_target})")
+        endif()
+
 	endforeach(new_target)
 
 ENDMACRO (CLONE_INSTALL)

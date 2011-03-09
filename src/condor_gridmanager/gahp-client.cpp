@@ -161,7 +161,9 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 
 GahpServer::~GahpServer()
 {
-	GahpServersById.remove( HashKey( my_id ) );
+	if ( my_id != NULL ) {
+		GahpServersById.remove( HashKey( my_id ) );
+	}
 	if ( m_deleteMeTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( m_deleteMeTid );
 	}
@@ -5564,7 +5566,7 @@ GahpClient::cream_job_register(const char *service, const char *delg_id,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy,medium_prio);
+		now_pending(command,buf,deleg_proxy,low_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6275,7 +6277,7 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy,low_prio);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.

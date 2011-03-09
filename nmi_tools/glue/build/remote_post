@@ -27,6 +27,8 @@
 # autoflush our STDOUT
 $| = 1;
 
+use strict;
+use warnings;
 use Cwd;
 use File::Basename;
 
@@ -47,13 +49,14 @@ if( defined $ENV{_NMI_STEP_FAILED} ) {
     print "The _NMI_STEP_FAILED variable is not set\n";
 }
 
-print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
 	$ENV{PATH} ="C:\\Program Files\\Microsoft Visual Studio 9.0\\Common7\\IDE;C:\\prereq\\ActivePerl-5.10.1\\site\\bin;C:\\prereq\\ActivePerl-5.10.1\\bin;C:\\Perl\\site\\bin;C:\\Perl\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\Program Files\\CMake 2.8\\bin;C:\\Program Files\\7-Zip;$ENV{PATH}";
-    system("set");
 } else {
 	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
-    system("env");
+}
+print "------------------------- ENV DUMP ------------------------\n";
+foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
+    print "$key=".$ENV{$key}."\n";
 }
 print "------------------------- ENV DUMP ------------------------\n";
 
@@ -76,22 +79,6 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
 	system("mv condor-*.tar.gz $pub_dir");
 }
 else {
-    # Should this be run for Windows also?
-    my $check_tarball_script = dirname($0) . "/check_tarball.pl";
-    my $tarball_errors = 0;
-    foreach my $tarball (<*.tar.gz>) {
-		# GGT this doesn't seem to be working, let's not break tests
-		# for this now
-        #print `$check_tarball_script $tarball 2>&1`;
-        #if($?) {
-        #    $tarball_errors++;
-        #}
-    }
-    
-    if($tarball_errors > 0) {
-        die("$tarball_errors tarballs had errors");
-    }
-
     system("mv *.tar.gz *.rpm *.deb $pub_dir");
     system("cmake -E md5sum $pub_dir/* md5s.txt");
 }
@@ -112,7 +99,7 @@ while( <TAR> ) {
     print;
 }
 close( TAR );
-$tarstatus = $? >> 8;
+my $tarstatus = $? >> 8;
 if( $tarstatus ) {
     die "Can't tar zcf results.tar.gz public: status $tarstatus\n";
 }

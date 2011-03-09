@@ -29,7 +29,17 @@ extern ReliSock *syscall_sock;
 /*static*/ StreamHandler *StreamHandler::handlers[3];
 
 StreamHandler::StreamHandler()
-{    
+{
+	remote_fd = -1;
+	pipe_fds[0] = -1; pipe_fds[1] = -1;
+	pending = 0;
+	offset = 0;
+	job_pipe = -1;
+	is_output = false;
+	handler_pipe = -1;
+	done = false;
+	connected = false;
+	buffer[0] = '\0';
 }
 
 

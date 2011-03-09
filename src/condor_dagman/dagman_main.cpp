@@ -130,6 +130,7 @@ Dagman::Dagman() :
 	_generateSubdagSubmits(true),
 	_maxJobHolds(100)
 {
+    debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
 
 
@@ -524,9 +525,6 @@ void main_init (int argc, char ** const argv) {
                                  "main_testing_stub", NULL);
 ****** FOR TESTING ********/
     debug_progname = condor_basename(argv[0]);
-    	// Note: this is normally set to DEBUG_VERBOSE by the .condor.sub
-	// file.
-    debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
 		// condor_submit_dag version from .condor.sub
 	bool allowVerMismatch = false;
@@ -946,7 +944,6 @@ void main_init (int argc, char ** const argv) {
 		// already set.
 		//
 	dagman._submitDagDeepOpts.bAllowLogError = dagman.allowLogError;
-	dagman._submitDagDeepOpts.iDebugLevel = debug_level;
 	dagman._submitDagDeepOpts.useDagDir = dagman.useDagDir;
 	dagman._submitDagDeepOpts.oldRescue =
 				(dagman.rescueFileToWrite != NULL);

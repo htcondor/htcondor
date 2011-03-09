@@ -219,8 +219,8 @@
         <Property Id="HDFSPORT" Value="9000" />
         <Property Id="HDFSWEBPORT" Value="8000" />
         <SetProperty Id="HDFSHOME" Value="[INSTALLDIR]HDFS" After="AppSearch">Not UPGRADEFOUND</SetProperty>
-        <SetProperty Id="HDFSNAMEDIR" Value="[HDFSHOME]/hadoop_name" After="AppSearch">Not UPGRADEFOUND</SetProperty>
-        <SetProperty Id="HDFSDATADIR" Value="[HDFSHOME]/hadoop_data" After="AppSearch">Not UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSNAMEDIR" Value="[HDFS_HOME]/hadoop_name" After="AppSearch">Not UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSDATADIR" Value="[HDFS_HOME]/hadoop_data" After="AppSearch">Not UPGRADEFOUND</SetProperty>
         <SetDirectory Id="TARGETDIR" Value="[INSTALLDIR]" Sequence="execute" />
 
         <SetProperty Id="INSTALLDIR" Value="[OLD_INSTALLDIR]" After="AppSearch">UPGRADEFOUND</SetProperty>

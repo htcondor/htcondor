@@ -30,7 +30,7 @@
 #undef open
 #include "classad/classad_distribution.h"
 
-NewClassAdJobLogConsumer::NewClassAdJobLogConsumer() { }
+NewClassAdJobLogConsumer::NewClassAdJobLogConsumer() : m_reader(0) { }
 
 void
 NewClassAdJobLogConsumer::Reset()

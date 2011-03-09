@@ -2258,6 +2258,8 @@ int main( int argc, char** argv )
  
 
 	if( get_mySubSystem()->isType( SUBSYSTEM_TYPE_MASTER ) ||
+		get_mySubSystem()->isType( SUBSYSTEM_TYPE_COLLECTOR ) ||
+		get_mySubSystem()->isType( SUBSYSTEM_TYPE_NEGOTIATOR ) ||
 		get_mySubSystem()->isType( SUBSYSTEM_TYPE_SCHEDD ) ||
 		get_mySubSystem()->isType( SUBSYSTEM_TYPE_STARTD ) ) {
         daemonCore->monitor_data.EnableMonitoring();

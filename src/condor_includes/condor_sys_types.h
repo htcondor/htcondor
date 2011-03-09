@@ -35,11 +35,20 @@
   typedef __int64 filesize_t;
 # define HAVE_INT64_T 1
 
-#elif defined( HAVE_LONG_LONG )
+#elif ( defined(HAVE_LONG) && (SIZEOF_LONG==8) )
+  /* Use the compiler's long type for int64_t (gcc on X86/64) */
+  typedef long int64_t;
+  typedef unsigned long uint64_t;
+# define HAVE_INT64_T 1
+
+#elif ( defined(HAVE_LONG_LONG) && (SIZEOF_LONG_LONG==8) )
   /* Use the compiler's long long type for int64_t (GCC) */
   typedef long long int64_t;
   typedef unsigned long long uint64_t;
 # define HAVE_INT64_T 1
+
+#else
+# warning No 64-bit integer type found
 
 #endif
 

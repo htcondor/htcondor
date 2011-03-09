@@ -25,13 +25,14 @@ if(NOT WIN_EXEC_NODE_ONLY)
 	"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${LIBVIRT_FOUND};${LIBXML2_FOUND};${COREDUMPER_FOUND};${ZLIB_FOUND}"
 	OFF )
 
-    if (LINUX)
+    if (LINUX AND WANT_FULL_DEPLOYMENT)
         condor_exe( condor_vm-gahp-vmware "${HeaderFiles};${SourceFiles}" ${C_SBIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND};${ZLIB_FOUND}" OFF )
         set_property( TARGET condor_vm-gahp-vmware APPEND PROPERTY COMPILE_DEFINITIONS VMWARE_ONLY)
+        install ( FILES condor_vm_vmware.pl DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     endif()
 
     if (NOT WINDOWS)
-        install ( FILES condor_vm_xen.sh condor_vm_vmware.pl DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+        install ( FILES condor_vm_xen.sh DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         install ( FILES libvirt_simple_script.awk DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     endif()
 

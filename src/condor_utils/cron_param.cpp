@@ -27,6 +27,7 @@
 CronParamBase::CronParamBase( const char &base )
 		: m_base( base )
 {
+	memset(m_name_buf,'\0',sizeof(m_name_buf));	
 }
 
 const char *

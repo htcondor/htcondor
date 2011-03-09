@@ -1565,8 +1565,8 @@ param_with_default_abort(const char *name, int abort)
 	if (val == NULL) {
 		if (abort) {
 			EXCEPT("Param name '%s' did not have a definition in any of the "
-				"usual namespaces or default table. Aborting since it MUST "
-				"be defined.\n");
+				   "usual namespaces or default table. Aborting since it MUST "
+				   "be defined.\n", name);
 		}
 		return NULL;
 	}

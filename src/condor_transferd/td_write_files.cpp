@@ -49,7 +49,7 @@ TransferD::write_files_handler(int cmd, Stream *sock)
 {
 	ReliSock *rsock = (ReliSock*)sock;
 	MyString capability;
-	int protocol;
+	int protocol = FTP_UNKNOWN;
 	TransferRequest *treq = NULL;
 	MyString fquser;
 	static int transfer_reaper_id = -1;

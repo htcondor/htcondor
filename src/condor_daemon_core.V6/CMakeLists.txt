@@ -26,6 +26,10 @@ if (GSOAP_SRC)
 	list(APPEND DCSourceFiles ${GSOAP_SRC} )
 endif()
 
+if (DARWIN)
+	link_libraries(resolv)
+endif(DARWIN)
+
 #create the library
 condor_static_lib(daemon_core "${DCHeaderFiles};${DCSourceFiles}")
 

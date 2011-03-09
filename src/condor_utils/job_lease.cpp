@@ -80,7 +80,7 @@ bool CalculateJobLease( const ClassAd *job_ad, int &new_expiration,
 		if ( expire_sent == -1 ) {
 			//dprintf(D_FULLDEBUG,"    Starting sent lease\n");
 			new_expiration = now + lease_duration;
-		} else if ( expire_sent - now < ( ( lease_duration * 2 ) / 3 ) + 10 ) {
+		} else if ( expire_sent - now <= ( ( lease_duration * 2 ) / 3 ) + 10 ) {
 			//dprintf(D_FULLDEBUG,"    lease left(%d) < 2/3 duration(%d)\n",expire_sent-now,(lease_duration*2)/3);
 			new_expiration = now + lease_duration;
 		} else {

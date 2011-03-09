@@ -186,14 +186,18 @@ case "$1" in
 	RETVAL=$?
 	;;
     restart)
-	[ $running -eq 0 ] && stop
-	start
+	RETVAL=0
+	if [ $running -eq 0 ]; then
+	    stop
+	    RETVAL=$?
+	fi
+	[ $RETVAL -eq 0 ] && start
 	RETVAL=$?
 	;;
     condrestart|try-restart)
 	[ $running -eq 0 ] || exit 0
 	stop
-	start
+	[ $? -eq 0 ] && start
 	RETVAL=$?
 	;;
     reload|force-reload)

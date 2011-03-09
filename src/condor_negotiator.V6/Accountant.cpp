@@ -310,11 +310,19 @@ void parse_group_name(const string& gname, vector<string>& gpath) {
     }
 }
 
-
 GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName) {
+    bool unused;
+    return GetAssignedGroup(CustomerName, unused);
+}
+
+GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsGroup) {
     MyString t(CustomerName);
     t.lower_case();
     string subname = t.Value();
+
+    // Is this an acct group, syntactically speaking?
+    string::size_type pos = subname.find_last_of('@');
+    IsGroup = (pos == string::npos);
 
     // cache results from previous invocations
     map<string, GroupEntry*>::iterator fs(hgq_submitter_group_map.find(subname));
@@ -322,10 +330,9 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName) {
 
     ASSERT(NULL != hgq_root_group);
 
-    // is there a username separator?
-    string::size_type pos = subname.find_last_of('@');
-    if (pos==string::npos) {
-        dprintf(D_ALWAYS, "group quotas: WARNING: defaulting submitter with badly-formed name \"%s\"\n", subname.c_str());
+    if (IsGroup) {
+        // This is either a defunct group or a malformed submitter name: map it to root group
+        dprintf(D_ALWAYS, "group quota: WARNING: defaulting submitter \"%s\" to root group\n", subname.c_str());
         hgq_submitter_group_map[subname] = hgq_root_group;
         return hgq_root_group;
     }
@@ -970,137 +977,151 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
 // Report the list of Matches for a customer
 //------------------------------------------------------------------
 
-AttrList* Accountant::ReportState(const MyString& CustomerName, int * NumResources, float *NumResourcesRW) {
+AttrList* Accountant::ReportState(const MyString& CustomerName, int* NumResources, float* NumResourcesRW) {
+    dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
-  dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
+    HashKey HK;
+    ClassAd* ResourceAd;
+    MyString ResourceName;
+    int StartTime;
 
-  HashKey HK;
-  char key[200];
-  ClassAd* ResourceAd;
-  MyString ResourceName;
-  int StartTime;
+    AttrList* ad = new AttrList();
 
-  AttrList* ad=new AttrList();
-  char tmp[512];
+    if (NumResources) {
+        *NumResources = 0;
+    }
+    if (NumResourcesRW) {
+        *NumResourcesRW = 0;
+    }
 
-  if( NumResources ) {
-	  *NumResources = 0;
-  }
-  if( NumResourcesRW ) {
-	  *NumResourcesRW = 0;
-  }
+    bool isGroup=false;
+    string cgrp = GetAssignedGroup(CustomerName.Value(), isGroup)->name;
+    // This is a defunct group:
+    if (isGroup && (cgrp != CustomerName.Value())) return ad;
 
-  int ResourceNum=1;
-  AcctLog->table.startIterations();
-  while (AcctLog->table.iterate(HK,ResourceAd)) {
-    HK.sprint(key);
-    if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
+    int ResourceNum=1;
+    AcctLog->table.startIterations();
+    while (AcctLog->table.iterate(HK,ResourceAd)) {
+        MyString key;
+        HK.sprint(key);
 
-    if (ResourceAd->LookupString(RemoteUserAttr,tmp)==0) continue;
-    if (CustomerName!=MyString(tmp)) continue;
+        if (strncmp(ResourceRecord.Value(), key.Value(), ResourceRecord.Length())) continue;
 
-    ResourceName=key+ResourceRecord.Length();
-    sprintf(tmp,"Name%d = \"%s\"",ResourceNum,ResourceName.Value());
-    ad->Insert(tmp);
+        MyString rname;
+        if (ResourceAd->LookupString(RemoteUserAttr, rname)==0) continue;
 
-    if (ResourceAd->LookupInteger(StartTimeAttr,StartTime)==0) StartTime=0;
-    sprintf(tmp,"StartTime%d = %d",ResourceNum,StartTime);
-    ad->Insert(tmp);
+        if (isGroup) {
+            string rgrp = GetAssignedGroup(rname)->name;
+            if (cgrp != rgrp) continue;
+        } else {
+            // customername is a traditional submitter: group.username@host
+            if (CustomerName != rname) continue;
+     
+            MyString tmp;
+            ResourceName=key+ResourceRecord.Length();
+            tmp.sprintf("Name%d = \"%s\"", ResourceNum, ResourceName.Value());
+            ad->Insert(tmp.Value());
 
-    ResourceNum++;
-	if( NumResourcesRW ) {
-		float SlotWeight = 1.0;
-		ResourceAd->LookupFloat(SlotWeightAttr,SlotWeight);
-		*NumResourcesRW += SlotWeight;
-	}
-  }
+            if (ResourceAd->LookupInteger(StartTimeAttr,StartTime)==0) StartTime=0;
+            tmp.sprintf("StartTime%d = %d", ResourceNum, StartTime);
+            ad->Insert(tmp.Value());
+        }
 
-  if ( NumResources ) {
-	  *NumResources = ResourceNum - 1;
-  }
+        ResourceNum++;
+        if (NumResourcesRW) {
+            float SlotWeight = 1.0;
+            ResourceAd->LookupFloat(SlotWeightAttr,SlotWeight);
+            *NumResourcesRW += SlotWeight;
+        }
+    }
 
-  return ad;
+    if (NumResources) {
+        *NumResources = ResourceNum - 1;
+    }
+
+    return ad;
 }
+
 
 //------------------------------------------------------------------
 // Report the whole list of priorities
 //------------------------------------------------------------------
 
 AttrList* Accountant::ReportState() {
+    dprintf(D_ACCOUNTANT,"Reporting State\n");
 
-  dprintf(D_ACCOUNTANT,"Reporting State\n");
+    HashKey HK;
+    ClassAd* CustomerAd;
+    float PriorityFactor;
+    float AccumulatedUsage;
+    float WeightedAccumulatedUsage;
+    int BeginUsageTime;
+    int LastUsageTime;
+    int ResourcesUsed;
+    float WeightedResourcesUsed;
 
-  HashKey HK;
-  char key[200];
-  ClassAd* CustomerAd;
-  MyString CustomerName;
-  float PriorityFactor;
-  float AccumulatedUsage;
-  float WeightedAccumulatedUsage;
-  int BeginUsageTime;
-  int LastUsageTime;
-  int ResourcesUsed;
-  float WeightedResourcesUsed;
+    AttrList* ad=new AttrList();
+    MyString tmp;
+    tmp.sprintf("LastUpdate = %d", LastUpdateTime);
+    ad->Insert(tmp.Value());
 
-  AttrList* ad=new AttrList();
-  char tmp[512];
-  sprintf(tmp, "LastUpdate = %d", LastUpdateTime);
-  ad->Insert(tmp);
+    int OwnerNum=1;
+    AcctLog->table.startIterations();
+    while (AcctLog->table.iterate(HK,CustomerAd)) {
+        MyString key;
+        HK.sprint(key);
+        if (strncmp(CustomerRecord.Value(),key.Value(),CustomerRecord.Length())) continue;
 
-  int OwnerNum=1;
-  AcctLog->table.startIterations();
-  while (AcctLog->table.iterate(HK,CustomerAd)) {
-    HK.sprint(key);
-    if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
+        MyString CustomerName=key.Value()+CustomerRecord.Length();
+        tmp.sprintf("Name%d = \"%s\"",OwnerNum,CustomerName.Value());
+        ad->Insert(tmp.Value());
 
-	// The following Insert() calls are passed 'false' to prevent
-	// AttrList from checking for duplicates. This is to enhance
-	// performance, but is admittedly dangerous if we're not certain
-	// that the items we're inserting are unique. Use caution.
+        tmp.sprintf("Priority%d = %f",OwnerNum,GetPriority(CustomerName));
+        ad->Insert(tmp.Value());
 
-    CustomerName=key+CustomerRecord.Length();
-    sprintf(tmp,"Name%d = \"%s\"",OwnerNum,CustomerName.Value());
-    ad->Insert(tmp);
+        if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
+        tmp.sprintf("ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
+        ad->Insert(tmp.Value());
 
-    sprintf(tmp,"Priority%d = %f",OwnerNum,GetPriority(CustomerName));
-    ad->Insert(tmp);
+        if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
+        tmp.sprintf("WeightedResourcesUsed%d = %f",OwnerNum,WeightedResourcesUsed);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
-    sprintf(tmp,"ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
-    ad->Insert(tmp);
+        if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
+        tmp.sprintf("AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
-    sprintf(tmp,"WeightedResourcesUsed%d = %f",OwnerNum,WeightedResourcesUsed);
-    ad->Insert(tmp);
+        if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
+        tmp.sprintf("WeightedAccumulatedUsage%d = %f",OwnerNum,WeightedAccumulatedUsage);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
-    sprintf(tmp,"AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
-    ad->Insert(tmp);
+        if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
+        tmp.sprintf("BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
-    sprintf(tmp,"WeightedAccumulatedUsage%d = %f",OwnerNum,WeightedAccumulatedUsage);
-    ad->Insert(tmp);
+        if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
+        tmp.sprintf("LastUsageTime%d = %d",OwnerNum,LastUsageTime);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
-    sprintf(tmp,"BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
-    ad->Insert(tmp);
+        if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
+        tmp.sprintf("PriorityFactor%d = %f",OwnerNum,PriorityFactor);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
-    sprintf(tmp,"LastUsageTime%d = %d",OwnerNum,LastUsageTime);
-    ad->Insert(tmp);
+        bool isGroup=false;
+        string cgrp = GetAssignedGroup(CustomerName, isGroup)->name;
+        tmp.sprintf("AccountingGroup%d = \"%s\"",OwnerNum,cgrp.c_str());
+        ad->Insert(tmp.Value());
+        tmp.sprintf("IsAccountingGroup%d = %s",OwnerNum,(isGroup)?"TRUE":"FALSE");
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
-    sprintf(tmp,"PriorityFactor%d = %f",OwnerNum,PriorityFactor);
-    ad->Insert(tmp);
+        OwnerNum++;
+    }
 
-    OwnerNum++;
-  }
+    ReportLimits(ad);
 
-  ReportLimits(ad);
-
-  sprintf(tmp,"NumSubmittors = %d", OwnerNum-1);
-  ad->Insert(tmp);
-  return ad;
+    tmp.sprintf("NumSubmittors = %d", OwnerNum-1);
+    ad->Insert(tmp.Value());
+    return ad;
 }
 
 //------------------------------------------------------------------

@@ -20,7 +20,7 @@
 
 #include "condor_commands.h"
 #include "command_strings.h"
-#include "../condor_collector.V6/hashkey.h"
+#include "hashkey.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
@@ -126,6 +126,15 @@ CollectorObject::update(const ClassAd &ad)
 	INTEGER(HostsClaimed);
 	INTEGER(HostsUnclaimed);
 	INTEGER(HostsOwner);
+
+		// The MonitorSelf* attributes do not have ATTR_*
+		// definitions
+	INTEGER(MonitorSelfAge);
+	DOUBLE(MonitorSelfCPUUsage);
+	DOUBLE(MonitorSelfImageSize);
+	INTEGER(MonitorSelfRegisteredSocketCount);
+	INTEGER(MonitorSelfResidentSetSize);
+	TIME_INTEGER(MonitorSelfTime);
 }
 
 /* disable for now

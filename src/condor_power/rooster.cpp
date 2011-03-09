@@ -33,7 +33,8 @@
 
 Rooster::Rooster():
 	m_polling_interval(-1),
-	m_polling_timer(-1)
+	m_polling_timer(-1),
+	m_max_unhibernate(0)
 {
 }
 

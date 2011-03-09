@@ -1396,7 +1396,7 @@ condor__listSpool(struct soap * soap,
 		destroy_job = true;
 	}
 
-	if ((code = job->get_spool_list(files, errstack))) {
+	if (job && (code = job->get_spool_list(files, errstack))) {
 		result.response.status.code =
 			(condor__StatusCode) errstack.code();
 		result.response.status.message =

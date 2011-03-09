@@ -22,26 +22,25 @@
 #include "qpid/console/ConsoleListener.h"
 #include "qpid/console/SessionManager.h"
 
-namespace com {
-namespace redhat {
-namespace grid {
+#include "qpid/messaging/Connection.h"
+#include "qmf/ConsoleSession.h"
 
 using namespace qpid::console;
-using namespace com::redhat::grid;
 
-class TriggerConsole : public ConsoleListener {
+class TriggerConsole : public ConsoleListener
+{
    private:
       SessionManager* sm;
       Broker* broker;
+      qpid::messaging::Connection qpidConnection;
+      qmf::ConsoleSession qmf2Session;
 
    public:
       TriggerConsole();
       ~TriggerConsole();
 
       std::list<std::string> findAbsentNodes();
-      void config(std::string host, int port, std::string user, std::string passwd);
+      void config(std::string host, int port, std::string user, std::string passwd, std::string mech = "ANONYMOUS");
 };
-
-}}} /* com::redhat::grid */
 
 #endif /* _TRIGGERCONSOLE_H */

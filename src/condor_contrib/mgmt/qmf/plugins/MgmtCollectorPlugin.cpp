@@ -18,7 +18,7 @@
 
 #include "../condor_collector.V6/CollectorPlugin.h"
 
-#include "../condor_collector.V6/hashkey.h"
+#include "hashkey.h"
 
 #include "../condor_collector.V6/collector.h"
 
@@ -31,6 +31,7 @@
 #include "GridObject.h"
 
 #include "PoolUtils.h"
+#include "broker_utils.h"
 
 //extern DaemonCore *daemonCore;
 
@@ -59,6 +60,9 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 	initialize()
 	{
 		char *host;
+		char* username;
+		char* password;
+		char* mechanism;
 		int port;
 		char *tmp;
 		string storefile;
@@ -91,6 +95,18 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 			free(tmp); tmp = NULL;
 		}
 
+		if (NULL == (username = param("QMF_BROKER_USERNAME")))
+		{
+			username = strdup("");
+		}
+
+		if (NULL == (mechanism = param("QMF_BROKER_AUTH_MECH")))
+		{
+			mechanism = strdup("ANONYMOUS");
+		}
+
+		password = getBrokerPassword();
+
 		tmp = param("COLLECTOR_NAME");
 		if (NULL == tmp) {
 			collName = GetPoolName();
@@ -103,9 +119,15 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 		agent->init(string(host), port,
 					param_integer("QMF_UPDATE_INTERVAL", 10),
 					true,
-					storefile);
+					storefile,
+					username,
+					password,
+					mechanism);
 
 		free(host);
+		free(username);
+		free(password);
+		free(mechanism);
 
 		collector = new CollectorObject(agent, collName.c_str());
 

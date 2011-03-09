@@ -60,6 +60,9 @@ Sock::Sock() : Stream() {
 	_tried_authentication = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.connect_failed = false;
+	connect_state.this_try_timeout_time = 0;
+	connect_state.retry_timeout_time = 0;
+	connect_state.retry_wait_timeout_time = 0;
 	connect_state.failed_once = false;
 	connect_state.connect_refused = false;
 	connect_state.old_timeout_value = 0;
@@ -91,6 +94,9 @@ Sock::Sock(const Sock & orig) : Stream() {
 	connect_state.connect_failed = false;
 	connect_state.failed_once = false;
 	connect_state.connect_refused = false;
+	connect_state.this_try_timeout_time = 0;
+	connect_state.retry_timeout_time = 0;
+	connect_state.retry_wait_timeout_time = 0;
 	connect_state.old_timeout_value = 0;
 	connect_state.non_blocking_flag = false;
 	connect_state.host = NULL;
@@ -244,7 +250,7 @@ int Sock::getportbyserv(
 	)
 {
 	servent		*sp;
-	char		*my_prot=0;
+	const char	*my_prot=0;
 
 	if (!s) return -1;
 

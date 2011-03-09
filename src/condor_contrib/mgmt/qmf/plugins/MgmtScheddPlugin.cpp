@@ -28,6 +28,7 @@
 #include "condor_qmgr.h"
 #include "condor_config.h"
 #include "get_daemon_name.h"
+#include "broker_utils.h"
 
 
 // Global from the condor_schedd, it's name
@@ -51,6 +52,9 @@ void
 MgmtScheddPlugin::earlyInitialize()
 {
 	char *host;
+	char *username;
+	char *password;
+	char *mechanism;
 	int port;
 	char *tmp;
 	string storefile;
@@ -81,6 +85,19 @@ MgmtScheddPlugin::earlyInitialize()
 		host = strdup("localhost");
 	}
 
+	if (NULL == (username = param("QMF_BROKER_USERNAME")))
+	{
+		username = strdup("");
+	}
+
+	if (NULL == (mechanism = param("QMF_BROKER_AUTH_MECH")))
+	{
+		mechanism = strdup("ANONYMOUS");
+	}
+
+	password = getBrokerPassword();
+
+
 	tmp = param("QMF_STOREFILE");
 	if (NULL == tmp) {
 		storefile = ".schedd_storefile";
@@ -101,9 +118,15 @@ MgmtScheddPlugin::earlyInitialize()
 	agent->init(string(host), port,
 				param_integer("QMF_UPDATE_INTERVAL", 10),
 				true,
-				storefile);
+				storefile,
+				username,
+				password,
+				mechanism);
 
 	free(host);
+	free(username);
+	free(password);
+	free(mechanism);
 
 	scheduler = new SchedulerObject(agent,schedd_name.c_str());
 
@@ -503,7 +526,3 @@ MgmtScheddPlugin::GetSubmitter(MyString &name, SubmitterObject *&submitter)
 
 	return true;
 }
-
-#ifdef WIN32
-	static MgmtScheddPlugin instance;
-#endif

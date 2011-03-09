@@ -45,6 +45,10 @@ ScheddCronJobMgr::Initialize( const char *name )
 	
 	char *cron_name = param( "SCHEDD_CRON_NAME" );
 	if ( NULL != cron_name ) {
+		dprintf( D_ALWAYS,
+				 "WARNING: The use of SCHEDD_CRON_NAME to 'name' your "
+				 "Schedd's Daemon ClassAd Hook Manager is not longer supported "
+				 "and will be removed in a future release of Condor." );
 		name = cron_name;
 		SetName( name, name );
 	}

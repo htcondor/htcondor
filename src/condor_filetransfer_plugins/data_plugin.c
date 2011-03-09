@@ -47,22 +47,31 @@ int decode_block(unsigned char *in, unsigned char *out) {
 }
 
 int main(int argc, char **argv) {
-	char *c = NULL, *d = NULL, *data = NULL, *dest = NULL;
+	char *c = NULL, *d = NULL, *data = NULL, *dest = NULL, *lastslash = NULL;
 	unsigned char out[4];
 	char hex[2];
 	FILE *file = NULL;
 	int base64 = 0, rval = -1;
 
-    if(argc != 2) {
-		printf("Usage: data_plugin data:[<MIME-type>][;charset=<encoding>]"
-			"[;base64],<data>/file\n");
-        return -1;
-    }
-	
-	data = strchr(argv[1], ',');
-	dest = strrchr(argv[1], '/');
+    if(argc == 2 && strcmp(argv[1], "-classad") == 0) {
+		printf("%s",
+			"PluginVersion = \"0.1\"\n"
+			"PluginType = \"FileTransfer\"\n"
+			"SupportedMethods = \"data\"\n"
+			);
 
-	if(data && dest && (file = fopen(dest+1, "w"))) {
+        return 0;
+    }
+
+    if(argc != 3) {
+		return -1;
+	}
+
+	data = strchr(argv[1], ',');
+	lastslash = strrchr(argv[1], '/');
+	dest = argv[2];
+
+	if(data && lastslash && (file = fopen(dest, "w"))) {
 		rval = 4;
 
 		// Check for base64 encoding
@@ -83,14 +92,14 @@ int main(int argc, char **argv) {
 		if(base64) {
 			// base64 encoding
 			out[3] = '\0';
-			while(c && *c && c+3 < dest && rval >= 4) {
+			while(c && *c && c+3 < lastslash && rval >= 4) {
 				rval = decode_block((unsigned char*)c, out);
 				fputs((char*)out, file);
 				c+=rval;
 			}
 
 			// invalid base64 data (not 4 char aligned)
-			if(c < dest) {
+			if(c < lastslash) {
 				rval = -1;
 			}
 		} else {
@@ -110,7 +119,7 @@ int main(int argc, char **argv) {
 		}
 		fclose(file);
 		if(rval < 4) {
-			remove(dest+1);	// Remove file if we failed
+			remove(dest);	// Remove file if we failed
 		} else {
 			rval = 0;
 		}

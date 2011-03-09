@@ -4022,7 +4022,7 @@ id=218
 
 [GLITE_LOCATION]
 aliases=
-default=$(LIB)/glite
+default=$(LIBEXEC)/glite
 version=0.0.0
 range=.*
 state=default

@@ -10843,17 +10843,27 @@ DaemonCore::evalExpr( ClassAd* ad, const char* param_name,
 	return value;
 }
 
-
-DaemonCore::PidEntry::PidEntry() {
-	int i;
-	for (i=0; i<=2; i++) {
+DaemonCore::PidEntry::PidEntry() : pid(0),
+	new_process_group(0),
+	is_local(0),
+	parent_is_local(0),
+	reaper_id(0),
+	hung_tid(0),
+	was_not_responding(0),
+	stdin_offset(0),
+	child_session_id(NULL)
+{
+	for (int i=0;i<3;++i) {
 		pipe_buf[i] = NULL;
 		std_pipes[i] = DC_STD_FD_NOPIPE;
 	}
-	stdin_offset = 0;
-	child_session_id = NULL;
+	penvid.num = PIDENVID_MAX;
+	for (int i = 0;i<PIDENVID_MAX; ++i) {
+		penvid.ancestors[i].active=0;
+		for (unsigned int j=0;j<PIDENVID_ENVID_SIZE;++j)
+			penvid.ancestors[i].envid[j]='\0';
+	}
 }
-
 
 DaemonCore::PidEntry::~PidEntry() {
 	int i;

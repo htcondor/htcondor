@@ -587,7 +587,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 				//
 			int day = (this->ranges[CRONTAB_DOW_IDX]->getElementAt(ctr) - firstDay) + 1;
 			while ( day <= CRONTAB_DAY_OF_MONTH_MAX ) {
-				if ( day > 0 && !this->contains( *curRange, day ) ) {
+				if (curRange && day > 0 && !this->contains( *curRange, day ) ) {
 					curRange->add( day );
 				}
 				day += 7;

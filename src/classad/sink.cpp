@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -49,7 +49,7 @@ ClassAdUnParser::
 
 
 // should be in same order as OpKind enumeration in common.h
-char *ClassAdUnParser::opString[] =
+const char *ClassAdUnParser::opString[] =
 {
     "",     // no-op
 
@@ -404,7 +404,7 @@ UnparseAux(string &buffer, Operation::OpKind op, ExprTree *t1, ExprTree *t2,
 	if (!xmlUnparse) {
 		buffer += opString[op];
 	} else {
-		char *opstring = opString[op];
+		const char *opstring = opString[op];
 		int  length    = strlen(opstring);
 		for(int i = 0; i < length; i++) {
 			char c = *opstring;

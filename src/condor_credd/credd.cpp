@@ -1078,7 +1078,6 @@ LoadData (const char * file_name, void *& data, int & data_size) {
   
   char buff [MAX_CRED_DATA_SIZE+1];
   data_size = read (fd, buff, MAX_CRED_DATA_SIZE);
-  buff[data_size]='\0';
 
   close (fd);
 

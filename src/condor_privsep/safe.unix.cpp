@@ -2089,14 +2089,25 @@ is_current_working_directory_trusted_r(id_range_list *trusted_uids,
 #define MAX_SYMLINK_DEPTH 32
 #endif
 
-typedef struct dir_stack {
-    struct dir_path {
-        char *original_ptr;
-        char *cur_position;
-    } stack[MAX_SYMLINK_DEPTH];
+struct dir_stack {
+public:
+	struct dir_path {
+		char *original_ptr;
+		char *cur_position;
+	} stack[MAX_SYMLINK_DEPTH];
+	int count;
+	dir_stack();
+};
 
-    int count;
-} dir_stack;
+/* Constructor */
+
+dir_stack::dir_stack() : count(0) 
+{
+	for(int i=0;i<MAX_SYMLINK_DEPTH;++i){
+		stack[i].cur_position = 0;
+		stack[i].original_ptr = 0;
+	}
+}
 
 /*
  * init_dir_stack
@@ -2107,9 +2118,16 @@ typedef struct dir_stack {
  * returns
  *	Nothing
  */
+
 static void init_dir_stack(dir_stack *stack)
 {
-    stack->count = 0;
+	if(stack){
+		stack->count = 0;
+		for(int i=0;i<MAX_SYMLINK_DEPTH;++i){
+			stack->stack[i].cur_position = 0;
+			stack->stack[i].original_ptr = 0;
+		}
+	}
 }
 
 /*
@@ -2371,7 +2389,7 @@ safe_is_path_trusted(const char *pathname, id_range_list *trusted_uids,
 
         /* check the next component in the path */
         r = lstat(path, &stat_buf);
-        if (r == -1) {
+        if (r == -1 || status == -1) {
             status = -1;
             goto restore_dir_and_exit;
         }
@@ -2786,8 +2804,6 @@ safe_is_path_trusted_r(const char *pathname, id_range_list *trusted_uids,
     char *path_end = path;
     char *prev_path_end;
 
-    init_dir_stack(&paths);
-
     if (*pathname != '/') {
         /* relative path */
         status =
@@ -2849,7 +2865,7 @@ safe_is_path_trusted_r(const char *pathname, id_range_list *trusted_uids,
 
         /* check the next component in the path */
         r = lstat(path, &stat_buf);
-        if (r == -1) {
+        if (r == -1 || status == -1) {
             status = -1;
             goto cleanup_and_exit;
         }
