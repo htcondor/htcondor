@@ -102,7 +102,6 @@ open(USERTASKFILE, '>', $UserdirTaskFile ) || die "Can't open $UserdirTaskFile f
 ######################################################################
 
 my %tasklist;
-my $total_tests = 0;
 
 if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
     foreach my $class (@classlist) {
@@ -135,10 +134,10 @@ else {
         # Load the tasks, one per line.  Skip comments (lines starting with #)
         %tasklist = map { chomp; $_ => 1} grep !/^\s*\#/, <WINDOWSTESTS>;
         close(WINDOWSTESTS);
-        $total_tests = scalar(keys %tasklist);
     }
 }
 
+my $total_tests = scalar(keys %tasklist);
 print "-- Found $total_tests test(s) in all directories\n";
 
 print "****************************************************\n";
