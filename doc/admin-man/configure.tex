@@ -10182,6 +10182,16 @@ on page~\pageref{sec:daemon-classad-hooks}.
   configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
   \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
 
+\label{param:StartdCronJobSlots}
+\label{param:BenchmarksJobSlots}
+\item[\Macro{STARTD\_CRON\_<JobName>\_SLOTS} 
+       and \Macro{BENCHMARKS\_<JobName>\_SLOTS}]
+  A comma separated list of slots.
+
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST} 
+  or \MacroNI{BENCHMARKS\_JOBLIST}.
+
 \label{param:StartdCronJobExecutable}
 \label{param:ScheddCronJobExecutable}
 \label{param:BenchmarksJobExecutable}

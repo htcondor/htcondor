@@ -199,6 +199,7 @@ Daemon ClassAd Hooks}
 \index{Daemon ClassAd Hooks} 
 \index{Hawkeye!see Daemon ClassAd Hooks} 
 \index{Startd Cron functionality!see Daemon ClassAd Hooks} 
+\index{Schedd Cron functionality!see Daemon ClassAd Hooks} 
 
 The \Prog{Daemon ClassAd Hook} mechanism is
 used to run executables (called jobs) directly from the
@@ -209,39 +210,86 @@ The mechanism and associated jobs have been identified by various
 names, including the \Term{Startd Cron}, dynamic attributes,
 and a distribution of executables collectively known as \Term{Hawkeye}.
 
-\MoreTodo
-
-Pool management tasks can be enhanced by using the \Condor{startd}
+Pool management tasks can be enhanced by using a 
 daemon's ability to periodically run executables.
 The executables are expected to generate ClassAd attributes as their output,
 which are incorporated into the machine ClassAd.
 Policy expressions may then reference the dynamic attributes.
 
+Configuration variables related to Daemon ClassAd Hooks are defined
+within section ~\ref{sec:Config-hooks}.
 Here is a complete configuration example.
+It defines all three of the available types of jobs:
+ones that use the \Condor{startd}, benchmark jobs,
+and ones that use the \Condor{schedd}.
 \footnotesize
 \begin{verbatim}
-# Daemon ClassAd Hook Job Definitions
+#
+# Startd Cron Stuff
+#
+# auxiliary variable to use in identifying locations of files
+MODULES = $(ROOT)/modules
+
+STARTD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
+STARTD_CRON_MAX_JOB_LOAD = 0.2
 STARTD_CRON_JOBLIST =
-# An auxiliary variable defined to make specifying the location
-# of the job executables easier.
-MODULES = $(RELEASE_DIR)/modules
 
-# Job 1
-STARTD_CRON_JOBLIST = job1
-STARTD_CRON_job1_PREFIX = j1_
-STARTD_CRON_job1_EXECUTABLE = $(MODULES)/job1
-STARTD_CRON_job1_PERIOD = 5m
-STARTD_CRON_job1_MODE = WaitForExit
-STARTD_CRON_job1_KILL = false
-STARTD_CRON_job1_ARGS =-foo -bar
-STARTD_CRON_job1_ENV = xyzzy=somevalue
+# Test job
+STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) test
+STARTD_CRON_TEST_MODE = OneShot
+STARTD_CRON_TEST_RECONFIG_RERUN = True
+STARTD_CRON_TEST_PREFIX = test_
+STARTD_CRON_TEST_EXECUTABLE = $(MODULES)/test
+STARTD_CRON_TEST_KILL = True
+STARTD_CRON_TEST_PARAM0 = abc
+STARTD_CRON_TEST_PARAM1 = 123
+STARTD_CRON_TEST_SLOTS = 1
+STARTD_CRON_TEST_JOB_LOAD = 0.01
 
-# Job 2
-STARTD_CRON_JOBLIST = $(HAWKEYE_JOBLIST) job2
-STARTD_CRON_job2_PREFIX = j2_
-STARTD_CRON_job2_EXECUTABLE = $(MODULES)/job2
-STARTD_CRON_job2_PERIOD = 1h
-STARTD_CRON_job2_ENV = lwpi=somevalue
+# job 'date'
+STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) date
+STARTD_CRON_DATE_MODE = Periodic
+STARTD_CRON_DATE_EXECUTABLE = $(MODULES)/date
+STARTD_CRON_DATE_PERIOD = 15s
+STARTD_CRON_DATE_JOB_LOAD = 0.01
+
+# Job 'foo'
+STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) foo
+STARTD_CRON_FOO_EXECUTABLE = $(MODULES)/foo
+STARTD_CRON_FOO_PREFIX = Foo
+STARTD_CRON_FOO_MODE = Periodic
+STARTD_CRON_FOO_PERIOD = 10m
+STARTD_CRON_FOO_JOB_LOAD = 0.2
+
+#
+# Benchmark Stuff
+#
+BENCHMARKS_JOBLIST = mips kflops
+
+# MIPS benchmark
+BENCHMARKS_MIPS_EXECUTABLE = $(LIBEXEC)/condor_mips
+BENCHMARKS_MIPS_JOB_LOAD = 1.0
+
+# KFLOPS benchmark
+BENCHMARKS_KFLOPS_EXECUTABLE = $(LIBEXEC)/condor_kflops
+BENCHMARKS_KFLOPS_JOB_LOAD = 1.0
+
+#
+# Schedd Cron Stuff 
+#
+SCHEDD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
+SCHEDD_CRON_JOBLIST =
+
+# Test job
+SCHEDD_CRON_JOBLIST = $(SCHEDD_CRON_JOBLIST) test
+SCHEDD_CRON_TEST_MODE = OneShot
+SCHEDD_CRON_TEST_RECONFIG_RERUN = True
+SCHEDD_CRON_TEST_PREFIX = test_
+SCHEDD_CRON_TEST_EXECUTABLE = $(MODULES)/test
+SCHEDD_CRON_TEST_PERIOD = 5m
+SCHEDD_CRON_TEST_KILL = True
+SCHEDD_CRON_TEST_PARAM0 = abc
+SCHEDD_CRON_TEST_PARAM1 = 123
 
 \end{verbatim}
 \normalsize
