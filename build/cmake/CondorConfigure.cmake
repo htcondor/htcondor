@@ -515,8 +515,9 @@ message(STATUS "********* External configuration complete (dropping config.h) **
 dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
 
 ########################################################
-configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake
-${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h)
+configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp)
+# only update config.h if it is necessary b/c it causes massive rebuilding.
+exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h )
 add_definitions(-DHAVE_CONFIG_H)
 
 ###########################################
