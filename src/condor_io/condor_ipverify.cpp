@@ -39,8 +39,15 @@ const char TotallyWild[] = "*";
 static unsigned int
 compute_perm_hash(const in6_addr &in_addr)
 {
-	const unsigned int h = *((const unsigned int *)&in_addr);
-	return h;
+		// the hash function copied from MyString::Hash()
+	int Len = sizeof(in6_addr);
+	const unsigned char* Data = (const unsigned char*)&in_addr;
+	int i;
+	unsigned int result = 0;
+	for(i = 0; i < Len; i++) {
+		result = (result<<5) + result + Data[i];
+	}
+	return result;
 }
 
 // Hash function for HolePunchTable_t hash tables
@@ -52,7 +59,6 @@ compute_host_hash( const MyString & str )
 
 // == operator for struct in_addr, also needed for hash table template
 bool operator==(const in6_addr& a, const in6_addr& b) {
-		//return a.s_addr == b.s_addr;
 	return IN6_ARE_ADDR_EQUAL(&a, &b);
 }
 
@@ -103,7 +109,7 @@ IpVerify::~IpVerify()
 int
 IpVerify::Init()
 {
-	char *pAllow, *pDeny, *pOldAllow, *pOldDeny, *pNewAllow = NULL, *pNewDeny = NULL;
+	char *pAllow, *pDeny, *pOldAllow, *pOldDeny, *pNewAllow= NULL, *pNewDeny = NULL;
 	DCpermission perm;
 	
 	did_init = TRUE;
@@ -767,8 +773,7 @@ IpVerify::Verify( DCpermission perm, const ipaddr& addr, const char * user, MySt
 			// check for matching subnets in ip/mask style
 			// should use IPv6 addr
 		char ipstr[INET6_ADDRSTRLEN] = { 0, };
-			//addr.to_ip_string(ipstr, IP_STRING_BUF_SIZE);
-		inet_ntop(AF_INET6, &sin6_addr, ipstr, sizeof(ipstr));
+		addr.to_ip_string(ipstr, INET6_ADDRSTRLEN);
 
 		peer_description = addr.to_ip_string();
 

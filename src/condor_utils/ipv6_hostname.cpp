@@ -211,7 +211,7 @@ MyString get_full_hostname(const ipaddr& addr)
 			// first element is the hostname got by gethostname()
 		ret = *hostnames.begin();
 		if (default_domain[0] != '.')
-			local_fqdn += ".";
+			ret += ".";
 		ret += default_domain;
 	}
 	return ret;

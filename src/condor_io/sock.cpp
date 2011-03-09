@@ -700,7 +700,7 @@ int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 	return TRUE; 
 }
 
-bool Sock::guess_address_string(char const* host, ipaddr& addr) {
+bool Sock::guess_address_string(char const* host, int port, ipaddr& addr) {
 	/* might be in <x.x.x.x:x> notation				*/
 	if (host[0] == '<') {
 		addr.from_sinful(host);
@@ -708,6 +708,7 @@ bool Sock::guess_address_string(char const* host, ipaddr& addr) {
 	/* try to get a decimal notation 	 			*/
 	else if ( ipv6_is_ipaddr(host, addr) ) {
 			// nothing to do here
+		addr.set_port(port);
 	}
 	/* if dotted notation fails, try host database	*/
 	else{
@@ -716,6 +717,7 @@ bool Sock::guess_address_string(char const* host, ipaddr& addr) {
 		if (addrs.empty())
 			return false;
 		addr = addrs.front();
+		addr.set_port(port);
 	}
 	return true;
 }
@@ -729,7 +731,7 @@ int Sock::do_connect(
 	if (!host || port < 0) return FALSE;
 
 	_who.clear();
-	if (!guess_address_string(host, _who)) {
+	if (!guess_address_string(host, port, _who)) {
 		return FALSE;
 	}
 

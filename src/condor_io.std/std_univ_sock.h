@@ -75,6 +75,9 @@ public:
 	// [TODO:IPV6] REMOVE
 	/// local ip address integer
 	unsigned int get_ip_int();
+
+	ipaddr my_addr();
+
  private:
 
 	void init();				/* shared initialization method */

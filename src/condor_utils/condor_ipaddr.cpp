@@ -82,10 +82,11 @@ bool ipaddr::is_ipv6() const
 
 // IN6_* macro are came from netinet/inet.h
 // need to check whether it is platform-independent macro
+// -- compiled on every unix/linux platforms
 bool ipaddr::is_addr_any() const
 {
 	if (is_ipv4()) {
-		return v4.sin_addr.s_addr == INADDR_ANY;
+		return v4.sin_addr.s_addr == ntohl(INADDR_ANY);
 	}
 	else if (is_ipv6()) {
 		return IN6_IS_ADDR_UNSPECIFIED(&v6.sin6_addr);
@@ -96,7 +97,7 @@ bool ipaddr::is_addr_any() const
 void ipaddr::set_addr_any()
 {
 	if (is_ipv4()) {
-		v4.sin_addr.s_addr = INADDR_ANY;
+		v4.sin_addr.s_addr = ntohl(INADDR_ANY);
 	}
 	else if (is_ipv6()) {
 		v6.sin6_addr = in6addr_any;
@@ -106,7 +107,7 @@ void ipaddr::set_addr_any()
 bool ipaddr::is_loopback() const
 {
 	if (is_ipv4()) {
-		return v4.sin_addr.s_addr == INADDR_LOOPBACK;
+		return v4.sin_addr.s_addr == ntohl(INADDR_LOOPBACK);
 	}
 	else {
 		return IN6_IS_ADDR_LOOPBACK( &v6.sin6_addr );
@@ -116,7 +117,7 @@ bool ipaddr::is_loopback() const
 void ipaddr::set_loopback()
 {
 	if (is_ipv4()) {
-		v4.sin_addr.s_addr = INADDR_LOOPBACK;
+		v4.sin_addr.s_addr = ntohl(INADDR_LOOPBACK);
 	}
 	else {
 		v6.sin6_addr = in6addr_loopback;
@@ -307,8 +308,25 @@ const char* ipaddr::to_ip_string(char* buf, int len) const
 {
 	if ( is_ipv4() ) 
 		return inet_ntop(AF_INET, &v4.sin_addr, buf, len);	
-	else if (is_ipv6())
-		return inet_ntop(AF_INET6, &v6.sin6_addr, buf, len);	
+	else if (is_ipv6()) {
+			// [m] Special Case for IPv4-mapped-IPv6 string
+			// certain implementation such as IpVerify internally uses
+			// IPv6 format to store all IP addresses.
+			// Although they use IPv6 address, they rely on
+			// IPv4-style text representation.
+			// for example, IPv4-mapped-IPv6 string will be shown as
+			// a form of '::ffff:a.b.c.d', however they need
+			// 'a.b.c.d'
+			//
+			// These reliance should be corrected at some point.
+			// hopefully, at IPv6-Phase3
+		uint32_t* addr = (uint32_t*)&v6.sin6_addr;
+		if (addr[0] == 0 && addr[1] == 0 && addr[2] == htonl(0xffff)) {
+			return inet_ntop(AF_INET, (const void*)&addr[3], buf, len);
+		}
+
+		return inet_ntop(AF_INET6, &v6.sin6_addr, buf, len);
+	}
 	else 
 		return NULL;
 }
@@ -386,9 +404,8 @@ in6_addr ipaddr::to_ipv6_address() const
 {
 	if (is_ipv6()) return v6.sin6_addr;
 	in6_addr ret;
-		// this is due to compatibilty.
 		// the field name of struct in6_addr is differ from platform to
-		// platform.
+		// platform. thus, we use a pointer.
 	uint32_t* addr = (uint32_t*)&ret;
 	addr[0] = 0;
 	addr[1] = 0;

@@ -143,6 +143,17 @@ StdUnivSock::get_ip_int()
 	return (unsigned int) ntohl(addr.sin_addr.s_addr);
 }
 
+ipaddr
+StdUnivSock::my_addr()
+{
+	sockaddr_storage addr;
+	SOCKET_LENGTH_TYPE addr_len;
+	addr_len = sizeof(addr);
+	if (getsockname(_sock, (sockaddr*)&addr, &addr_len) < 0)
+		return ipaddr::null;
+	return ipaddr((const sockaddr*)&addr);
+}
+
 char *
 StdUnivSock::get_sinful_peer()
 {       

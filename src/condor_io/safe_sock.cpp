@@ -266,7 +266,7 @@ int SafeSock::connect(
 	if (!host || port < 0) return FALSE;
 
 	_who.clear();
-	if (!Sock::guess_address_string(host, _who))
+	if (!Sock::guess_address_string(host, port, _who))
 		return FALSE;
 
 	if (host[0] == '<') {

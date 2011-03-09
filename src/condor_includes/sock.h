@@ -491,7 +491,7 @@ protected:
 	CONDOR_MD_MODE      mdMode_;        // MAC mode
 	KeyInfo           * mdKey_;
 
-	static bool guess_address_string(char const* host, ipaddr& addr);
+	static bool guess_address_string(char const* host, int port, ipaddr& addr);
 
 private:
 	bool initialize_crypto(KeyInfo * key);
