@@ -358,8 +358,8 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsG
 
     // walk down the tree using the group path
     for (vector<string>::iterator j(gpath.begin());  j != gpath.end();  ++j) {
-        map<string, GroupEntry::size_type>::iterator f(group->chmap.find(*j));
-        if (f == group->chmap.end()) {
+		GroupEntry *child = group->findChild( *j );
+        if (!child) {
             if (hgq_root_group->children.size() > 0) {
                 // I only want to log a warning if an HGQ configuration exists
                 dprintf(D_ALWAYS, "group quotas: WARNING: defaulting undefined group name %s to group %s\n", 
@@ -367,7 +367,7 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsG
             }
             break;
         } else {
-            group = group->children[f->second];
+            group = child;
         }
     }
 
@@ -581,11 +581,8 @@ void Accountant::SetLastTime(const MyString& CustomerName, int LastTime)
 // Add a match
 //------------------------------------------------------------------
 
-void Accountant::AddMatch(const MyString& CustomerNameP, ClassAd* ResourceAd) 
+void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd) 
 {
-  MyString CustomerName = CustomerNameP;
-  CustomerName.lower_case();
-
   // Get resource name and the time
   MyString ResourceName=GetResourceName(ResourceAd);
   time_t T=time(0);
