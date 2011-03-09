@@ -56,6 +56,7 @@ int CompareMemory(const char * pb1, const char * pb2, int cb)
 }
 
 extern "C" {
+   #pragma function(memset, memcpy)
    void* _cdecl memset(void * ptr, int val, size_t cb) {
    byte * p = (byte*)ptr;
    while (cb > 0) {
