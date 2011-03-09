@@ -39,6 +39,9 @@ set(VERSION "7.5.6")
 #   Avoid whitespace.
 #set(PRE_RELEASE "PRE-RELEASE-UWCS")
 set(PRE_RELEASE OFF)
+if( FORCE_PRE_RELEASE )
+  set(PRE_RELEASE ${FORCE_PRE_RELEASE})
+endif( FORCE_PRE_RELEASE )
 
 set(PACKAGE_BUGREPORT "http://condor-wiki.cs.wisc.edu/index.cgi/tktnew")
 set(PACKAGE_NAME ${PACKAGE} )
