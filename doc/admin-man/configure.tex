@@ -10187,6 +10187,12 @@ on page~\pageref{sec:daemon-classad-hooks}.
 \item[\Macro{STARTD\_CRON\_<JobName>\_SLOTS} 
        and \Macro{BENCHMARKS\_<JobName>\_SLOTS}]
   A comma separated list of slots.
+  The output of the job specified by \Expr{<JobName>}
+  is incorporated into ClassAds;
+  this list specifies which slots are to incorporate the output attributes
+  of the job.
+  If not specified, the default is to incorporate the output attributes into
+  the ClassAd of all slots.
 
   \Expr{<JobName>} is the logical name assigned for a job as defined by
   configuration variable \MacroNI{STARTD\_CRON\_JOBLIST} 
