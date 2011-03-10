@@ -32,9 +32,9 @@ The details of each version are described below.
   been moved to \File{libexec/glite/}.
 
 % gittrac #1897
-\item This development series of Condor is no longer officially released for the 
+\item This development series of Condor is no longer officially released for the
   platforms AIX PPC, PPC 64 SLES 9, PPC MacOS 10.4, Solaris 5.9, Solaris 5.10, 
-  IA64 RHAS 3, PS3 YDL 5.0, and x86 Debian 4.
+  IA64 RHEL 3, PS3 YDL 5.0, and x86 Debian 4.
 
 % gittrac #1924
 \item Support for GCB has been removed.
@@ -135,17 +135,18 @@ expressions while the job is managed by these daemons.
   \end{itemize}
 
 % gittrac #1664  needs documentation?
-\item New script \Condor{gather\_info} (in \File{bin/}) creates reports with 
-  information out of a Condor pool about a specific job id. It also 
-  gathers some understanding of the pool under which it runs.
+\item The new script \Condor{gather\_info}, located in \File{bin/},
+  creates reports with 
+  information from a Condor pool about a specific job ID.
+  It also gathers some understanding of the pool under which it runs.
 
 %gittrac #1393
-\item Added support for Hierarchical Accounting Groups and Group Quotas.
+\item Added support for hierarchical accounting groups and group quotas.
 
 %gittrac #1670
 \item \Condor{q} -better-analyze now identifies jobs that have not yet been 
-  coonsidered by matchmaking, instead of characterizing them as not 
-  matching ``for unknown reasons''.
+  considered by matchmaking, instead of characterizing them as not 
+  matching \emph{for unknown reasons}.
 
 \end{itemize}
 
@@ -214,13 +215,14 @@ are defined in section~\ref{sec:DAGMan-Config-File-Entries}.
 registry key names, 
 whose values will be published in the \Condor{startd} daemon's ClassAd.
 
-\item Added new parameter \Macro{CONDOR\_VIEW\_CLASSAD\_TYPES}, a
-  string list, that specifies the types of ads that will be forwarded to
-  a \Macro{CONDOR\_VIEW\_HOST}. 
-  Behavior is defined in section~\ref{sec:Collector-Config-File-Entries}.
+\item The new configuration variable
+\Macro{CONDOR\_VIEW\_CLASSAD\_TYPES} is a string list that specifies
+the types of the ClassAds that will be forwarded to
+the location defined by \MacroNI{CONDOR\_VIEW\_HOST}. 
+See the definition at section~\ref{sec:Collector-Config-File-Entries}.
 
 % gittrac  #677
-\item Added a -local-name command line flag to
+\item Added a \Opt{-local-name} command line option to
   \Condor{config\_val} to inspect the values of attributes that use
   local names.
 
@@ -232,9 +234,10 @@ whose values will be published in the \Condor{startd} daemon's ClassAd.
 \begin{itemize}
 
 % gittrac #1892
-\item Fixed a bug in the parallel universe introduced in 7.5.5
-    where the schedd would crash under certain conditions when
-    a parallel job was removed or exited.
+\item Fixed a bug for parallel universe jobs,
+  introduced in Condor version 7.5.5,
+  where the \Condor{schedd} would crash under certain conditions when
+  a parallel job was removed or exited.
 
 % gittrac #1909
 \item Fixed a memory leak in the \Condor{quill} daemon.
@@ -313,15 +316,16 @@ ERROR ``Assertion ERROR on (m_ref_count == 0)''
 
 %gittrac #1875
 \item Fixed a Windows-specific problem where the main daemon loop can 
-  get into a state where it is busy waiting
+  get into a state where it is busy waiting.
 
 %gittrac #1915
 \item Fixed \Condor{schedd} exception on shutdown caused by bad reference count.
 
 %gittrac #677
-\item Condor in the 7.5.0 to 7.5.5 version range failed to
-  implement the ``local name'' functionality properly. This was a regression
-  from the Condor 7.4 series. It is now fixed and the local name functionality
+\item Releases of Condor with versions from 7.5.0 to 7.5.5 incorrectly
+  implemented the macro language used for configuration with variables
+  having \Expr{LOCAL.} at the prefix. This was a regression
+  from the Condor 7.4 series. It is now fixed and the functionality
   has been restored.
 
 \end{itemize}

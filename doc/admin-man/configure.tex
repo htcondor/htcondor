@@ -6273,14 +6273,14 @@ These macros affect the \Condor{collector}.
 
 \label{param:CondorViewClassadTypes}
 \item[\Macro{CONDOR\_VIEW\_CLASSAD\_TYPES}]
-  If configured, it provides the ad types that will be forwarded to the
-  \Macro{CONDOR\_VIEW\_HOST}. The ad types can be found with 
-  \Condor{status -any} -any. The default forwarding behavior of the 
-  Collector is equivalent to 
-  \begin{verbatim}
-   CONDOR_VIEW_CLASSAD_TYPES=Machine,Submitter
-  \end{verbatim} 
-  There is no default for this parameter.
+  Provides the ClassAd types that will be forwarded to the
+  \MacroNI{CONDOR\_VIEW\_HOST}. The ClassAd types can be found with 
+  \Condor{status -any}. The default forwarding behavior of the 
+  \Condor{collector} is equivalent to 
+\begin{verbatim}
+  CONDOR_VIEW_CLASSAD_TYPES=Machine,Submitter
+\end{verbatim} 
+  There is no default value for this variable.
 
 \end{description}
 
