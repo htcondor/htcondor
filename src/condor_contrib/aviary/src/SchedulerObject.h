@@ -18,6 +18,7 @@
 #define _SCHEDULEROBJECT_H
 
 // condor includes
+#include "condor_common.h"
 #include "condor_classad.h"
 
 // local includes
@@ -61,8 +62,7 @@ struct SchedulerStats {
 
 class SchedulerObject {
 public:
-	SchedulerObject(const char* _name);
-	~SchedulerObject();
+
 
 	void update(const ClassAd &ad);
 	bool submit(Codec* _codec, AttributeMapType& jobAdMap, string& id, string& text);
@@ -74,10 +74,17 @@ public:
 	bool release(string id, string &reason, string &text);
 	bool remove(string id, string &reason, string &text);
 
+    static SchedulerObject* getInstance();
+
+protected:
+    SchedulerObject();
+    ~SchedulerObject();
+
 private:
     string m_pool;
     string m_name;
     SchedulerStats m_stats;
+    static SchedulerObject* m_instance;
 
 };
 

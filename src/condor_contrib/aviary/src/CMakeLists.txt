@@ -34,29 +34,46 @@ if (LINUX)
     # path to generated headers
     include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../include )
 
+    file( GLOB COMMON_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/common/src/*.cpp )
+
     file( GLOB JOB_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/job/src/*.cpp )
     file( GLOB JOB_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/AviaryJobService*.cpp )
     file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/query/src/*.cpp )
     file( GLOB QUERY_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryQueryService*.cpp )
     set ( AXIS2_LIBS
-            $ENV{WSFCPP_HOME}/lib/libaxutil.so $ENV{WSFCPP_HOME}/lib/libaxis2_engine.so 
-                $ENV{WSFCPP_HOME}/lib/libaxis2_http_common.so $ENV{WSFCPP_HOME}/lib/libaxis2_parser.so
-                    $ENV{WSFCPP_HOME}/lib/libaxis2_http_receiver.so )
+            $ENV{WSFCPP_HOME}/lib/libaxutil.so
+            $ENV{WSFCPP_HOME}/lib/libaxis2_axiom.so $ENV{WSFCPP_HOME}/lib/libaxis2_parser.so
+            $ENV{WSFCPP_HOME}/lib/libaxis2_http_common.so $ENV{WSFCPP_HOME}/lib/libaxis2_http_receiver.so $ENV{WSFCPP_HOME}/lib/libaxis2_http_sender.so
+            $ENV{WSFCPP_HOME}/lib/libneethi.so $ENV{WSFCPP_HOME}/lib/libguththila.so  $ENV{WSFCPP_HOME}/lib/libaxis2_engine.so
+            $ENV{WSFCPP_HOME}/lib/libwso2_wsf.so
+        #    $ENV{WSFCPP_HOME}/modules/libaxis2_mod_addr.so
+        )
 
-    dprint( "JOB_GEN_SRCS = ${JOB_GEN_SRCS}" )
-    dprint( "JOB_SRCS = ${JOB_SRCS}" )
-    dprint( "QUERY_GEN_SRCS = ${QUERY_GEN_SRCS}" )
-    dprint( "QUERY_SRCS = ${QUERY_SRCS}" )
-
-    add_library (aviary_query SHARED ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
-    condor_exe( aviary_query_server "aviary_query_server.cpp;Axis2SoapProvider.cpp" "${C_SBIN}" "${AXIS2_LIBS};${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
+    #add_library (aviary_query SHARED ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
+    #condor_exe( aviary_query_server "aviary_query_server.cpp;Axis2SoapProvider.cpp" "${C_SBIN}" "${AXIS2_LIBS};${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
 
     # used for selective compilation differences only otherwise just link the library
     src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
     src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-    add_library (aviary_job SHARED ${JOB_GEN_SRCS} ${JOB_SRCS} )
-    file( GLOB SCHED_PLUGIN_SRCS AviaryUtils.cpp Codec.cpp PROC_ID_comparator.cpp SchedulerObject.cpp Axis2SoapProvider.cpp AviaryScheddPlugin*.cpp )
-    condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${AXIS2_LIBS}" ON)
+    add_library (aviary_common SHARED ${COMMON_GEN_SRCS} )
+
+    add_library (aviary_job SHARED ${JOB_GEN_SRCS} ${JOB_SRCS} Codec.cpp SchedulerObject.cpp AviaryUtils.cpp)
+    target_link_libraries (aviary_job aviary_common ${AXIS2_LIBS} )
+    set(aviary_job_loc $ENV{WSFCPP_HOME}/services/job)
+    if (aviary_job_loc)
+        install (TARGETS aviary_job DESTINATION $ENV{WSFCPP_HOME}/services/job)
+    endif()
+
+    file( GLOB SCHED_PLUGIN_SRCS AviaryUtils.cpp PROC_ID_comparator.cpp SchedulerObject.cpp Axis2SoapProvider.cpp AviaryScheddPlugin*.cpp )
+
+    add_library( AviaryScheddPlugin-plugin SHARED ${COLLECTOR_REF} ${UTILS_REF} ${SCHED_PLUGIN_SRCS})
+    target_link_libraries (AviaryScheddPlugin-plugin aviary_job ${AXIS2_LIBS})
+    set(AviaryScheddPlugin-plugin_loc ${C_LIBEXEC})
+    if (AviaryScheddPlugin-plugin_loc)
+        install (TARGETS AviaryScheddPlugin-plugin DESTINATION ${C_LIBEXEC} )
+    endif()
+    set_property( TARGET AviaryScheddPlugin-plugin PROPERTY PREFIX "" )
+    #condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${AXIS2_LIBS}" ON)
 
 endif(LINUX)

@@ -20,6 +20,8 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 
+extern bool qmgmt_all_users_trusted;
+
 // local includes
 #include "AviaryJobServiceSkeleton.h"
 #include <AviaryJob_RemoveJob.h>
@@ -38,9 +40,8 @@
 
 using namespace AviaryJob;
 using namespace aviary::codec;
+using namespace aviary::job;
 using namespace compat_classad;
-
-extern aviary::job::SchedulerObject aviarySchedulerObj;
 
 /**
 * "removeJob|http://grid.redhat.com/aviary-job/" operation.
@@ -79,8 +80,11 @@ AviaryJob::SubmitJobResponse* AviaryJobServiceSkeleton::submitJob(wso2wsf::Messa
 
 {
     AviaryJob::SubmitJobResponse* submitJobResponse = new AviaryJob::SubmitJobResponse();
-    DefaultCodecFactory<BaseCodec> codecFactory;
-    BaseCodec* bc = codecFactory.createCodec();
+    SchedulerObject* schedulerObj = SchedulerObject::getInstance();
+    // TODO: would like to templatize the codec stuff
+    // save for the linking issues
+    DefaultCodecFactory codecFactory;
+    Codec* codec = codecFactory.createCodec();
     AttributeMapType attrMap;
 
     // add the simple stuff first
@@ -105,14 +109,18 @@ AviaryJob::SubmitJobResponse* AviaryJobServiceSkeleton::submitJob(wso2wsf::Messa
 
     // invoke submit
     string jobId, error;
-    if (!aviarySchedulerObj.submit(bc,attrMap,jobId, error)) {
+    // TODO: temporary hack for testing
+    // until ws-security or something gets turned on
+    qmgmt_all_users_trusted = true;
+    if (!schedulerObj->submit(codec,attrMap,jobId, error)) {
         submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
     }
     else {
         // TODO: fix up args
         submitJobResponse->setId(new AviaryCommon::JobID("","",jobId, new AviaryCommon::SubmissionID("","")));
-        submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),NULL));
+        submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),""));
     }
+    qmgmt_all_users_trusted = false;
 
     return submitJobResponse;
 }

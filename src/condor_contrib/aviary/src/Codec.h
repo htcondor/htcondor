@@ -72,12 +72,26 @@ public:
 
 };
 
+class CodecFactory {
+public:
+    virtual Codec* createCodec() = 0;
+
+};
+
+class DefaultCodecFactory: public CodecFactory {
+public:
+    virtual Codec* createCodec();
+protected:
+    Codec* m_codec;
+};
+
 class BaseCodec: public Codec {
 public:
-    bool addAttributeToMap(ClassAd& ad, const char* name, AttributeMapType& _map);
-    bool classAdToMap(ClassAd &ad, AttributeMapType &_map);
-    bool mapToClassAd(AttributeMapType &_map, ClassAd &ad);
-    bool procIdToMap(int clusterId, int procId, AttributeMapType& _map);
+    friend class DefaultCodecFactory;
+    virtual bool addAttributeToMap(ClassAd& ad, const char* name, AttributeMapType& _map);
+    virtual bool classAdToMap(ClassAd &ad, AttributeMapType &_map);
+    virtual bool mapToClassAd(AttributeMapType &_map, ClassAd &ad);
+    virtual bool procIdToMap(int clusterId, int procId, AttributeMapType& _map);
 
 protected:
     BaseCodec();
@@ -86,21 +100,6 @@ protected:
 private:
     BaseCodec (const BaseCodec &);
     BaseCodec& operator= (const BaseCodec &);
-
-};
-
-class CodecFactory {
-public:
-    virtual Codec* createCodec() = 0;
-
-protected:
-    Codec* m_codec;
-};
-
-template <class Codec>
-class DefaultCodecFactory: public CodecFactory {
-public:
-    virtual Codec* createCodec();
 
 };
 

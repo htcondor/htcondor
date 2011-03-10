@@ -64,14 +64,12 @@ public:
 	void deleteAttribute(const char *key,
 						 const char *name);
 
-
 private:
 
 	typedef std::pair<std::string, int> DirtyJobStatus;
 	typedef std::pair<std::string, DirtyJobStatus> DirtyJobEntry;
 	typedef std::list<DirtyJobEntry> DirtyJobsType;
 	DirtyJobsType *dirtyJobs;
-	SchedulerObject *scheduler;
 
 
 	bool isHandlerRegistered;

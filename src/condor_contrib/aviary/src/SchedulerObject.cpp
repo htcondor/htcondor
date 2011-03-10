@@ -37,14 +37,25 @@ using namespace aviary::job;
 using namespace aviary::util;
 using namespace aviary::codec;
 
-SchedulerObject::SchedulerObject(const char* _name)
+SchedulerObject* SchedulerObject::m_instance = NULL;
+
+SchedulerObject::SchedulerObject()
 {
-    m_name = _name;
+    m_name = getPoolName();
 }
 
 SchedulerObject::~SchedulerObject()
 {
 }
+
+SchedulerObject* SchedulerObject::getInstance()
+{
+    if (!m_instance) {
+        m_instance = new SchedulerObject();
+    }
+    return m_instance;
+}
+
 
 void
 SchedulerObject::update(const ClassAd &ad)

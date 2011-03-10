@@ -18,9 +18,6 @@
 
 // condor includes
 #include "condor_common.h"
-#ifndef WIN32
-    #include "stdint.h"
-#endif
 #include "condor_qmgr.h"
 
 // local includes
@@ -31,17 +28,27 @@ using namespace compat_classad;
 using namespace aviary::codec;
 using namespace aviary::util;
 
-template <class Codec>
 Codec*
-DefaultCodecFactory<Codec>::createCodec() {
+DefaultCodecFactory::createCodec() {
     if (!m_codec) {
-        m_codec = new Codec;
+        m_codec = new BaseCodec;
     }
     return m_codec;
 }
 
+BaseCodec::BaseCodec()
+{
+    //
+}
+
+BaseCodec::~BaseCodec()
+{
+    //
+}
+
+
 bool
-Codec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _map)
+BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _map)
 {
     ExprTree *expr;
 
@@ -81,7 +88,7 @@ Codec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _map)
 }
 
 bool
-Codec::classAdToMap(ClassAd& ad, AttributeMapType& _map)
+BaseCodec::classAdToMap(ClassAd& ad, AttributeMapType& _map)
 {
     ClassAd::iterator iter;
 
@@ -106,7 +113,7 @@ Codec::classAdToMap(ClassAd& ad, AttributeMapType& _map)
 
 
 bool
-Codec::mapToClassAd(AttributeMapType& _map, ClassAd& ad)
+BaseCodec::mapToClassAd(AttributeMapType& _map, ClassAd& ad)
 {
 
     for (AttributeMapIterator entry = _map.begin(); _map.end() != entry; entry++) {
@@ -130,15 +137,15 @@ Codec::mapToClassAd(AttributeMapType& _map, ClassAd& ad)
     }
 
     // TODO: debug
-    //  if (DebugFlags & D_FULLDEBUG) {
-    //      ad.dPrint(D_FULLDEBUG|D_NOHEADER);
-    //  }
+    if (DebugFlags & D_FULLDEBUG) {
+          ad.dPrint(D_FULLDEBUG|D_NOHEADER);
+    }
 
     return true;
 }
 
 bool
-Codec::procIdToMap(int clusterId, int procId, AttributeMapType& _map)
+BaseCodec::procIdToMap(int clusterId, int procId, AttributeMapType& _map)
 {
     ClassAd *ad;
 
