@@ -61,7 +61,7 @@ our %build_and_test_sets = (
 		'x86_64_opensuse_11.3-updated',
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
-                'x86_64_fedora_12-updated',
+		'x86_64_fedora_12-updated',
 	],
 
 	'stduniv' => [
