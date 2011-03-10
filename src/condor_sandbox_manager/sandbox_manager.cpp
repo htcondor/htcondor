@@ -165,9 +165,9 @@ CSandboxManager::unregisterSandbox(const string id)
 			<< id << std::endl;
 	// Find and delete the sandbox object
 	iter = sandboxMap.find(id);
-	if (iter->second) {
-		delete iter->second;
-	}
+	if (iter == sandboxMap.end())
+		return;
+	delete iter->second;
 	sandboxMap.erase(id);
 }
 
@@ -242,6 +242,29 @@ CSandboxManager::removeSandboxes(std::string claimId)
 	}
 }
 
+bool 
+CSandboxManager::isSandboxSlotAvailable(void)
+{
+	return (numSlotsAvailable > 0);
+}
+
+void CSandboxManager::createSandboxSlot(const char*, CSandbox*)
+{
+	// TODO
+}
+
+
+void 
+CSandboxManager::updateSandboxExecDir(const char* sId, const char* sExecDir)
+{
+	string sbId = string(sId);
+	if (sandboxMap.find( sbId ) != sandboxMap.end()) {
+		sandboxMap[sbId]->setSandboxDir(sExecDir);
+               
+		dprintf(D_ALWAYS, "CSandboxManager::updateSandboxExecDir called:  %s , %s \n", sId, sExecDir);
+	}   
+}
+
 
 /*****************************************************************************
 * PRIVATE MEMBERS FUNCTIONS
@@ -252,7 +275,8 @@ CSandboxManager::init(void)
 {
 	cout << "CSandboxManager::init called" << std::endl;
 
-	CSandboxManager::numSlotsTotal = 1;
+	// actually init from config value
+	this->numSlotsTotal = 1;
 
     this->numSlotsActive = 0;
 	this->numSlotsInactive = 0;

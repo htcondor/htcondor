@@ -86,7 +86,7 @@ public:
 	// assign a sandboxId to the sandbox and set its expiry
 	virtual char* registerSandbox(const char*, const char*, bool isId = false);
 	
-	virtual void updateSandboxExecDir(const char*, const char*);
+	void updateSandboxExecDir(const char*, const char*);
 
 	// Given the sandboxId give the handle to the sandbox location
 	virtual string transferSandbox(const char*);
@@ -141,7 +141,7 @@ private:
 	std::map<string, CSandbox*>sandboxMap;
 	
     // Total number of slots available
-    static int numSlotsTotal;
+    int numSlotsTotal;
 
     // number of slots currently active
     int numSlotsActive;

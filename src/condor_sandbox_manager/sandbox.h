@@ -122,9 +122,27 @@ public:
 
 	// Return the location to the sandboxDir
 	string getSandboxDir(void);
+	
+	void setSandboxDir(const char*);
 
 	// Given the sandboxId give the handle to the sandbox location
 	virtual string getDetails(void);
+	
+	static string createId(const int length) {
+		// Allowed set of chars in sandboxId
+		const char charset[] =	"0123456789"
+				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+				"abcdefghijklmnopqrstuvwxyz";
+		
+		string idTmp;
+		printf("CSandbox::createId called\n");
+		for (int i = 0; i < length; ++i) {
+        	idTmp += charset[get_random_int() % (sizeof(charset) - 1)];
+		}
+		idTmp += '\0';
+		return idTmp;
+	}
+	
 protected:
 
 
@@ -139,7 +157,6 @@ private:
 
 	// Initialize the created sandbox
 	void init(const char*, const int, const int);
-	string createId(const int);
 
 	static const int _MIN_SANDBOXID_LENGTH = 64;
 	static const int _MIN_LIFETIME = 3600;

@@ -180,6 +180,12 @@ CSandbox::getSandboxDir(void)
 }
 
 
+void 
+CSandbox::setSandboxDir(const char *sDir)
+{
+	this->sandboxDir = string(sDir);
+}
+
 string
 CSandbox::getDetails()
 {
@@ -233,26 +239,3 @@ CSandbox::init(	const char* sDir, const int lifeTime, const int idLength)
 	//this->jic = my_jic;
 }
 
-
-string
-CSandbox::createId(const int length)
-{
-	// Allowed set of chars in sandboxId
-	const char charset[] =	"0123456789"
-				"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-				"abcdefghijklmnopqrstuvwxyz";
-	char* iden = new char[length + 1];
-	string idTmp;
-	
-	printf("CSandbox::createId called\n");
-	for (int i = 0; i < length; ++i) {
-        	iden[i] = charset[get_random_int() % (sizeof(charset) - 1)];
-	}
-	iden[length] = '\0';
-	idTmp.assign(iden);
-	if (iden) {
-		delete iden;
-	}
-
-	return idTmp;
-}
