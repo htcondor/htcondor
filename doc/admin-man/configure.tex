@@ -6271,6 +6271,17 @@ These macros affect the \Condor{collector}.
   is described in section~\ref{param:SubsysDebug} as
   \MacroNI{<SUBSYS>\_DEBUG}.
 
+\label{param:CondorViewClassadTypes}
+\item[\Macro{CONDOR\_VIEW\_CLASSAD\_TYPES}]
+  If configured, it provides the ad types that will be forwarded to the
+  \Macro{CONDOR\_VIEW\_HOST}. The ad types can be found with 
+  \Condor{status -any} -any. The default forwarding behavior of the 
+  Collector is equivalent to 
+  \begin{verbatim}
+   CONDOR_VIEW_CLASSAD_TYPES=Machine,Submitter
+  \end{verbatim} 
+  There is no default for this parameter.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
