@@ -33,6 +33,7 @@
 #include "condor_version.h"
 #include "tmp_dir.h"
 #include "my_popen.h"
+#include "setenv.h"
 #include "condor_attributes.h"
 
 
@@ -371,6 +372,26 @@ submitDag( SubmitDagShallowOptions &shallowOpts )
 			args.AppendArg( shallowOpts.strRemoteSchedd );
 		}
 		args.AppendArg( shallowOpts.strSubFile );
+
+			// It is important to set the destination Schedd before
+			// calling condor_submit, otherwise it may submit to the
+			// wrong Schedd.
+			//
+			// my_system() has a variant that takes an Env.
+			// Unfortunately, it results in an execve and no path
+			// searching, which makes the relative path to
+			// "condor_submit" above not work. Instead, we'll set the
+			// env before execvp is called. It may be more correct to
+			// fix my_system to inject the Env after the fork() and
+			// before the execvp().
+		if ( shallowOpts.strScheddDaemonAdFile != "" ) {
+			SetEnv("_CONDOR_SCHEDD_DAEMON_AD_FILE",
+				   shallowOpts.strScheddDaemonAdFile.Value());
+		}
+		if ( shallowOpts.strScheddAddressFile != "" ) {
+			SetEnv("_CONDOR_SCHEDD_ADDRESS_FILE",
+				   shallowOpts.strScheddAddressFile.Value());
+		}
 
 		int retval = my_system( args );
 		if( retval != 0 ) {
@@ -803,6 +824,14 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	}
 	env.SetEnv("_CONDOR_DAGMAN_LOG", shallowOpts.strDebugLog.Value());
 	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
+	if ( shallowOpts.strScheddDaemonAdFile != "" ) {
+		env.SetEnv("_CONDOR_SCHEDD_DAEMON_AD_FILE",
+				   shallowOpts.strScheddDaemonAdFile.Value());
+	}
+	if ( shallowOpts.strScheddAddressFile != "" ) {
+		env.SetEnv("_CONDOR_SCHEDD_ADDRESS_FILE",
+				   shallowOpts.strScheddAddressFile.Value());
+	}
 	if ( shallowOpts.strConfigFile != "" ) {
 		if ( access( shallowOpts.strConfigFile.Value(), F_OK ) != 0 ) {
 			fprintf( stderr, "ERROR: unable to read config file %s "
@@ -902,6 +931,24 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				printUsage();
 				exit( 0 );
+			}
+				// submit and stick to a specific schedd
+			else if (strArg.find("-schedd-daemon-ad-file") != -1)
+			{
+				if (iArg + 1 >= argc) {
+					fprintf(stderr, "-schedd-daemon-ad-file argument needs a value\n");
+					printUsage();
+				}
+				shallowOpts.strScheddDaemonAdFile = argv[++iArg];
+			}
+				// submit and stick to a specific schedd
+			else if (strArg.find("-schedd-address-file") != -1)
+			{
+				if (iArg + 1 >= argc) {
+					fprintf(stderr, "-schedd-address-file argument needs a value\n");
+					printUsage();
+				}
+				shallowOpts.strScheddAddressFile = argv[++iArg];
 			}
 			else if (strArg.find("-f") != -1) // -force
 			{
@@ -1161,6 +1208,8 @@ int printUsage()
     printf("    -verbose            (Verbose error messages from condor_submit_dag)\n");
     printf("    -force              (Overwrite files condor_submit_dag uses if they exist)\n");
     printf("    -r <schedd_name>    (Submit to the specified remote schedd)\n");
+    printf("    -schedd-daemon-ad-file <path>  (Submit to the schedd who dropped the ad file)\n");
+    printf("    -schedd-address-file <path>  (Submit to the schedd who dropped the address file)\n");
 	printf("    -maxidle <number>   (Maximum number of idle nodes to allow)\n");
     printf("    -maxjobs <number>   (Maximum number of jobs ever submitted at once)\n");
     printf("    -MaxPre <number>    (Maximum number of PRE scripts to run at once)\n");
