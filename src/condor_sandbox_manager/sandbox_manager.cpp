@@ -216,7 +216,7 @@ CSandboxManager::removeSandbox(std::string sandboxId)
 	}
 	delete sBoxDir;
 	delete sBox;
-	this->sandboxMap.erase(sandboxId);
+	this->unregisterSandbox(sandboxId);
 	
 	return result;
 }
