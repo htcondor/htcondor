@@ -1,7 +1,7 @@
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
- * University of Wisconsin-Madison, WI.
+ * University of Wisconsin-Madcdn, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
@@ -50,9 +50,6 @@ VMType::VMType(const char* prog_for_script, const char* scriptname, const char* 
 	m_vm_checkpoint = false;
 	m_vm_no_output_vm = false; 
 	m_vm_hardware_vt = false; 
-	m_vm_transfer_cdrom_files = false;
-	m_local_iso = false;
-	m_has_iso = false;
 	m_is_soft_suspended = false;
 	m_self_shutdown = false;
 	m_is_checkpointed = false;
@@ -204,69 +201,6 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 	m_vm_no_output_vm = false; 
 	m_classAd.LookupBool(VMPARAM_NO_OUTPUT_VM, m_vm_no_output_vm);
 
-	// Read CDROM files from Job classAd
-	m_vm_transfer_cdrom_files = false;
-	m_classAd.LookupBool(VMPARAM_TRANSFER_CDROM_FILES, m_vm_transfer_cdrom_files);
-
-	MyString cdrom_files;
-	if( m_classAd.LookupString(VMPARAM_CDROM_FILES, cdrom_files) == 1 ) {
-		cdrom_files.trim();
-	}
-
-	m_iso_file = "";
-	m_local_iso = false;
-	m_has_iso = false;
-	m_vm_cdrom_files.clearAll();
-
-	if( cdrom_files.IsEmpty() == false ) {
-		StringList cd_file_list(NULL, ",");
-		cd_file_list.initializeFromString(cdrom_files.Value());
-	
-		if( cd_file_list.isEmpty() == false ) {
-			// check if cdrom files are readable by user
-			const char *fname = NULL;
-			cd_file_list.rewind();
-			while( (fname = cd_file_list.next()) != NULL ) {
-				MyString tmp_fullname;
-				isTransferedFile(fname, tmp_fullname);
-
-				// check if this file is readable
-				if( check_vm_read_access_file(tmp_fullname.Value(), 
-							false) == false ) {
-					vmprintf(D_ALWAYS, "file(%s) for CDROM cannot "
-							"be read\n", tmp_fullname.Value());
-					m_result_msg = VMGAHP_ERR_CANNOT_READ_CDROM_FILE;
-					return false;
-				}
-			}
-
-			m_vm_cdrom_files.create_union(cd_file_list, false);
-
-			// If cd_file_list has an iso file, 
-			// we don't need to create a ISO file.
-			// We will just use the iso file directly.
-			if( cd_file_list.number() == 1 ) {
-				cd_file_list.rewind();
-
-				const char *file_name = cd_file_list.next();
-				if( has_suffix(file_name, ".iso") ) {
-					// check if this file was transferred.
-					MyString tmp_fullname;
-					if( isTransferedFile(file_name, tmp_fullname) ) {
-						// this file was transferred.
-						m_local_iso = true;
-					}else {
-						// this file is not transferred.
-						m_local_iso = false;
-					}
-
-					m_iso_file = tmp_fullname;
-					m_has_iso = true;
-				}
-			}
-		}
-	}
-
 	m_classad_arg = "";
 	ArgList arglist;
 	MyString error_msg;
@@ -275,23 +209,8 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 	}
 
 	if( m_classad_arg.IsEmpty() == false ) {
-		if( m_has_iso ) {
-			vmprintf(D_ALWAYS, "A job user defined both an ISO file and "
-					"'Argument' in a job description file. But 'Argument' "
-					"cannot be used with an iso file together\n");
-			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
-			return false;
-		}
 
-		if( cdrom_files.find(VM_UNIV_ARGUMENT_FILE, 0) >= 0 ) {
-			vmprintf(D_ALWAYS, "A file with the same filename '%s' "
-					"is already in '%s'\n", VM_UNIV_ARGUMENT_FILE, 
-					VMPARAM_CDROM_FILES);
-			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
-			return false;
-		}
-
-		// Create a file for arguments
+        // Create a file for arguments
 		FILE *argfile_fp = safe_fopen_wrapper(VM_UNIV_ARGUMENT_FILE, "w");
 		if( !argfile_fp ) {
 			vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper the file "
@@ -310,11 +229,11 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 		}
 		fclose(argfile_fp);
 
+        //??
 		m_arg_file.sprintf("%s%c%s", m_workingpath.Value(), 
 				DIR_DELIM_CHAR, VM_UNIV_ARGUMENT_FILE);
-		// Add arg file to cdrom list
-		m_vm_cdrom_files.append(m_arg_file.Value());
-	}
+
+    }
 	return true;
 }
 
@@ -459,111 +378,6 @@ VMType::createTempFile(const char *template_string, const char *suffix, MyString
 		outname = tmp_config_name;
 	}
 	free(config_name);
-	return true;
-}
-
-bool
-VMType::createISOConfigAndName(StringList *cd_files, MyString &isoconf, MyString &isofile)
-{
-	if( !cd_files || cd_files->isEmpty() ) {
-		return false;
-	}
-
-	isoconf = "";
-	isofile = "";
-
-	MyString tmp_config;
-	if( createTempFile("isoXXXXXX", ".config", tmp_config) == false ) {
-		vmprintf(D_ALWAYS, "Temporary config file for ISO cannot be created\n");
-		return false;
-	}
-
-	FILE *config_fp = safe_fopen_wrapper(tmp_config.Value(), "w");
-	if( !config_fp ) {
-		vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper ISO config file "
-				": safe_fopen_wrapper(%s) returns %s\n", 
-				tmp_config.Value(), strerror(errno));
-		return false;
-	}
-
-	cd_files->rewind();
-	const char* tmp_file = NULL;
-	while( (tmp_file = cd_files->next() ) != NULL ) {
-		MyString tmp_fullname;
-
-		// if a file was transferred, make full path with working directory.
-		isTransferedFile(tmp_file, tmp_fullname);
-
-		// check if this file is readable
-		if( check_vm_read_access_file(tmp_fullname.Value()) == false ) {
-			vmprintf(D_ALWAYS, "file(%s) for CDROM cannot be read\n", 
-					tmp_fullname.Value());
-			fclose(config_fp);
-			unlink(tmp_config.Value());
-			return false;
-		}
-		if( fprintf(config_fp, "%s\n", tmp_fullname.Value()) < 0 ) {
-			fclose(config_fp);
-			unlink(tmp_config.Value());
-			vmprintf(D_ALWAYS, "failed to fprintf in createISOConfigAndName(%s:%s)\n",
-					tmp_config.Value(), strerror(errno));
-			return false;
-		}
-	}
-	fclose(config_fp);
-
-	// Make the name of ISO image
-	MyString iso_name(tmp_config);
-	iso_name.replaceString(".config", ".iso");
-
-	isoconf = tmp_config;
-	isofile = iso_name;
-	return true;
-}
-
-bool
-VMType::createISO()
-{
-	vmprintf(D_FULLDEBUG, "Inside VMType::createISO\n");
-
-	m_iso_file = "";
-
-	if( m_scriptname.IsEmpty() || m_vm_cdrom_files.isEmpty() ) {
-		return false;
-	}
-
-	MyString tmp_config;
-	MyString tmp_file;
-	if( createISOConfigAndName(&m_vm_cdrom_files, tmp_config, 
-				tmp_file) == false ) {
-		return false;
-	}
-
-	ArgList systemcmd;
-	if( m_prog_for_script.IsEmpty() == false ) {
-		systemcmd.AppendArg(m_prog_for_script);
-	}
-	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg("createiso");
-	systemcmd.AppendArg(tmp_config);
-	systemcmd.AppendArg(tmp_file);
-
-	int result = systemCommand(systemcmd, m_file_owner);
-	if( result != 0 ) {
-		return false;
-	}
-
-#if defined(LINUX)	
-	// To avoid lazy-write behavior to disk
-	sync();
-#endif
-
-	unlink(tmp_config.Value());
-	m_iso_file = tmp_file;
-	m_local_iso = true;
-
-	// Insert the name of created iso file to classAd for future use
-	m_classAd.Assign("VMPARAM_ISO_NAME", condor_basename(m_iso_file.Value()));
 	return true;
 }
 

@@ -431,7 +431,7 @@ void main_init(int argc, char *argv[])
 	  if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
 			priv_state priv = set_root_priv();
 
-			if( (VirshType::testXen(gahpconfig) == false) || (XenType::checkXenParams(gahpconfig) == false) ) {
+			if( XenType::checkXenParams(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
 						"be used.\n", vmtype.Value());
 				DC_Exit(0);
@@ -440,7 +440,7 @@ void main_init(int argc, char *argv[])
 	  }else if ( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 			priv_state priv = set_root_priv();
 
-			if( (VirshType::testXen(gahpconfig) == false) || (KVMType::checkXenParams(gahpconfig) == false) ) {
+			if( KVMType::checkXenParams(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
 						"be used.\n", vmtype.Value());
 				DC_Exit(0);

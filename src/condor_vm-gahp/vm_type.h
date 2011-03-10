@@ -78,8 +78,6 @@ public:
 	MyString m_result_msg;
 
 protected:
-	virtual bool createISOConfigAndName(StringList *files, MyString &isoconf, MyString &isofile);
-	virtual	bool createISO();
 
 	void setVMStatus(vm_status status);
 	void deleteNonTransferredFiles();
@@ -101,10 +99,7 @@ protected:
 	MyString m_scriptname;
 
 	MyString m_configfile;
-	MyString m_iso_file;
-	bool m_local_iso;
-	bool m_has_iso;
-
+	
 	// File list for TransferInput from submit machine.(full path)
 	StringList m_transfer_input_files;
 	// File list for TransferIntermediate from spool directory.(full path)
@@ -119,8 +114,6 @@ protected:
 	bool m_vm_checkpoint;
 	bool m_vm_no_output_vm;
 	bool m_vm_hardware_vt;
-	StringList m_vm_cdrom_files;
-	bool m_vm_transfer_cdrom_files;
 	MyString m_classad_arg;
 	MyString m_arg_file;
 
