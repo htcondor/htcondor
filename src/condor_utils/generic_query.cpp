@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -20,7 +20,7 @@
 #include "condor_common.h"
 #include "generic_query.h"
 #include "condor_attributes.h"
-#include "condor_parser.h"
+#include "condor_classad.h"
 #include "MyString.h"
 
 static char *new_strdup (const char *);
@@ -32,7 +32,7 @@ GenericQuery ()
 	integerThreshold = 0;
 	stringThreshold = 0;
 	floatThreshold = 0;
-	
+
 	// initialize pointers
 	integerConstraints = 0;
 	floatConstraints = 0;
@@ -47,7 +47,7 @@ GenericQuery ()
 GenericQuery::
 GenericQuery (const GenericQuery &gq)
 {
-	copyQueryObject ((GenericQuery &)gq);
+	copyQueryObject (const_cast<GenericQuery &>(gq));
 }
 
 

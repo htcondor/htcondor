@@ -55,7 +55,7 @@ main(int argc, char *argv[])
 {
 	MyString constraint;
 	Qmgr_connection *q;
-	int nextarg = 1, cluster, proc;
+	int nextarg = 1, cluster=0, proc=0;
 	bool UseConstraint = false;
 	MyString schedd_name;
 	MyString pool_name;
@@ -129,7 +129,7 @@ main(int argc, char *argv[])
 	}
 
 	// Open job queue 
-	q = ConnectQ( schedd.addr() );
+	q = ConnectQ( schedd.addr(), 0, false, NULL, NULL, schedd.version() );
 	if( !q ) {
 		fprintf( stderr, "Failed to connect to queue manager %s\n", 
 				 schedd.addr() );
@@ -187,16 +187,24 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 		if (UseConstraint) {
-			if (SetAttributeByConstraint(constraint.Value(), argv[nextarg],
-										 argv[nextarg+1]) < 0) {
-				fprintf(stderr,
+			// Try to communicate with the newer protocol first
+			if (SetAttributeByConstraint(constraint.Value(),
+							argv[nextarg],
+							argv[nextarg+1],
+							SETDIRTY|SHOULDLOG) < 0) {
+				if (SetAttributeByConstraint(constraint.Value(),
+							argv[nextarg],
+							argv[nextarg+1]) < 0) {
+
+					fprintf(stderr,
 						"Failed to set attribute \"%s\" by constraint: %s\n",
 						argv[nextarg], constraint.Value());
-				exit(1);
+					exit(1);
+				}
 			}
 		} else {
 			if (SetAttribute(cluster, proc, argv[nextarg],
-							 argv[nextarg+1]) < 0) {
+							 argv[nextarg+1], SETDIRTY|SHOULDLOG) < 0) {
 				fprintf(stderr,
 						"Failed to set attribute \"%s\" for job %d.%d.\n",
 						argv[nextarg], cluster, proc);

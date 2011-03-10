@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,14 +16,14 @@
  # 
  ############################################################### 
 
-if(NOT WIN_EXEC_NODE_ONLY)
+if(NOT WIN_EXEC_NODE_ONLY AND WANT_FULL_DEPLOYMENT )
 
 	file( GLOB bgpScripts bgp_*)
 	file( GLOB OtherSrc htc_*)
 
 	condor_glob(startdFHdrs startdFSrcs "${bgpScripts};${OtherSrc}")
 
-	condor_exe( condor_startd_factory "${startdFHdrs};${startdFSrcs}" ${C_SBIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
+	condor_exe( condor_startd_factory "${startdFHdrs};${startdFSrcs}" ${C_SBIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
 
 	file( GLOB htcSrc htc_tool.cpp htc_list_partitions.cpp)
 	install(FILES ${htcSrc} DESTINATION "${C_SRC}/startd_factory/BlueGeneP/")
@@ -37,4 +37,4 @@ if(NOT WIN_EXEC_NODE_ONLY)
 			DESTINATION	"${C_LIBEXEC}"
 			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
-endif(NOT WIN_EXEC_NODE_ONLY)
+endif(NOT WIN_EXEC_NODE_ONLY AND WANT_FULL_DEPLOYMENT)

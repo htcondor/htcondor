@@ -227,6 +227,20 @@ DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
 }
 
 
+ClassAd*
+DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
+                                         action_result_type_t result_type )
+{
+	if( ! ids ) {
+		dprintf( D_ALWAYS, "DCSchedd::clearDirtyAttrs: "
+				"list of jobs is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_CLEAR_DIRTY_JOB_ATTRS, NULL, ids, NULL, NULL,
+				result_type, false, errstack );
+}
+
+
 bool
 DCSchedd::reschedule()
 {
@@ -238,7 +252,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 {
 	if(numdone) { *numdone = 0; }
 	ExprTree *tree = NULL;
-	const char *lhstr, *rhstr;
+	const char *lhstr;
 	int reply;
 	int i;
 	ReliSock rsock;
@@ -1044,6 +1058,8 @@ DCSchedd::updateGSIcredential(const int cluster, const int proc,
 bool 
 DCSchedd::delegateGSIcredential(const int cluster, const int proc, 
 								const char* path_to_proxy_file,
+								time_t expiration_time,
+								time_t *result_expiration_time,
 								CondorError * errstack)
 {
 	int reply;
@@ -1091,7 +1107,7 @@ DCSchedd::delegateGSIcredential(const int cluster, const int proc,
 
 		// Delegate the gsi proxy
 	filesize_t file_size = 0;	// will receive the size of the file
-	if ( rsock.put_x509_delegation(&file_size,path_to_proxy_file) < 0 ) {
+	if ( rsock.put_x509_delegation(&file_size,path_to_proxy_file,expiration_time,result_expiration_time) < 0 ) {
 		dprintf(D_ALWAYS,
 			"DCSchedd::delegateGSIcredential "
 			"failed to send proxy file %s\n",

@@ -189,10 +189,11 @@ public:
   /** Set an attribute in a class-ad.
       @param key The class-ad's key.
       @param name the name of the attribute.
-      @param value the value of the attrinute.
+      @param value the value of the attribute.
+      @param is_dirty the parameter should be marked dirty in the classad.
       @return true on success, false otherwise.
   */
-  bool SetAttribute(const char* key, const char* name, const char* value);
+  bool SetAttribute(const char* key, const char* name, const char* value, const bool is_dirty=false);
 
   /** Delete an attribute in a class-ad.
       @param key The class-ad's key.
@@ -200,6 +201,12 @@ public:
       @return true on success, false otherwise.
   */
   bool DeleteAttribute(const char* key, const char* name);
+
+  /** Clear all parameter dirty bits in a class-ad.
+      @param key The class-ad's key.
+      @return true on success, false otherwise.
+  */
+  bool ClearClassAdDirtyBits(const char* key);
 
   /** Get a class-ad from the repository.
       Note that the class-ad returned cannot be modified directly.

@@ -24,16 +24,25 @@
 
 GroupTracker::GroupTracker(ProcFamilyMonitor* pfm,
                            gid_t min_gid,
-                           gid_t max_gid) :
+                           gid_t max_gid,
+						   bool allocating) :
 	ProcFamilyTracker(pfm),
-	m_gid_pool(min_gid, max_gid)
+	m_gid_pool(min_gid, max_gid, allocating),
+	// A GroupTracker is fixated to either be allocating or associating
+	// concerning the gids and process families.
+	m_allocating(allocating)
 {
 }
 
 bool
 GroupTracker::add_mapping(ProcFamily* family, gid_t& gid)
 {
-	return m_gid_pool.allocate(family, gid);
+	if (m_allocating) {
+		// we write gid parameter with this call.
+		return m_gid_pool.allocate(family, gid);
+	}
+	// we read the gid parameter with this call.
+	return m_gid_pool.associate(family, gid);
 }
 
 bool

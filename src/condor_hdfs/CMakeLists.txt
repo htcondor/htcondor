@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -20,6 +20,6 @@ if (NOT WIN_EXEC_NODE_ONLY AND HAVE_EXT_HADOOP)
 
 	condor_glob(HDFSHdrs HDFSSrcs "")
 
-	condor_exe( condor_hdfs "${HDFSHdrs};${HDFSSrcs}" ${C_SBIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
+	condor_exe( condor_hdfs "${HDFSHdrs};${HDFSSrcs}" ${C_SBIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF)
 
 endif()

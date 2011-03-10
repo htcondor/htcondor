@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -21,18 +21,20 @@ if (WINDOWS)
 	condor_exe( condor_credd
 				"credd.windows.cpp;credd.windows.h"
 				${C_SBIN}
-				"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}" )
+				"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}"
+				ON )
 				
 else(WINDOWS)
 
-	if ( HAVE_EXT_CLASSADS )
+	if ( HAVE_EXT_CLASSADS AND WANT_FULL_DEPLOYMENT )
 
 		file( GLOB CREDRMVSRCS *_cred* )
 		condor_glob( CREDDHDRS CREDDSRCS "${CREDRMVSRCS}" )
 		condor_exe( condor_credd
 			"${CREDDHDRS};${CREDDSRCS}"
 			${C_SBIN}
-			"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND}" )
+			"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND}"
+			OFF )
 		
 	else ()
 

@@ -161,7 +161,9 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 
 GahpServer::~GahpServer()
 {
-	GahpServersById.remove( HashKey( my_id ) );
+	if ( my_id != NULL ) {
+		GahpServersById.remove( HashKey( my_id ) );
+	}
 	if ( m_deleteMeTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( m_deleteMeTid );
 	}
@@ -380,7 +382,8 @@ GahpServer::buffered_read( int fd, void *buf, int count )
 		// Also read from the gahp's stderr. Otherwise, we can potential
 		// deadlock, us reading from gahp's stdout and it writing to its
 		// stderr.
-		err_pipe_ready();
+		int dummy_pipe = -1;
+		err_pipe_ready(dummy_pipe);
 		int rc = daemonCore->Read_Pipe(fd, m_buffer, m_buffer_size );
 		m_buffer_pos = 0;
 		if ( rc <= 0 ) {
@@ -835,7 +838,7 @@ GahpServer::Startup()
 	} else {
 		// command worked... register the pipe and stop polling
 		int result = daemonCore->Register_Pipe(m_gahp_readfd,
-			"m_gahp_readfd",(PipeHandlercpp)&GahpServer::pipe_ready,
+			"m_gahp_readfd",static_cast<PipeHandlercpp>(&GahpServer::pipe_ready),
 			"&GahpServer::pipe_ready",this);
 		if ( result == -1 ) {
 			// failed to register the pipe for some reason; fall 
@@ -849,7 +852,7 @@ GahpServer::Startup()
 		}
 
 		result = daemonCore->Register_Pipe(m_gahp_errorfd,
-			  "m_gahp_errorfd",(PipeHandlercpp)&GahpServer::err_pipe_ready,
+			  "m_gahp_errorfd",static_cast<PipeHandlercpp>(&GahpServer::err_pipe_ready),
 			   "&GahpServer::err_pipe_ready",this);
 		// If this fails, too fucking bad
 	}
@@ -1359,7 +1362,7 @@ GahpServer::poll_real_soon()
 
 
 int
-GahpServer::pipe_ready()
+GahpServer::pipe_ready(int pipe_end)
 {
 	skip_next_r = true;
 	poll_real_soon();
@@ -1367,7 +1370,7 @@ GahpServer::pipe_ready()
 }
 
 int
-GahpServer::err_pipe_ready()
+GahpServer::err_pipe_ready(int pipe_end)
 {
 	int count = 0;
 
@@ -2140,7 +2143,7 @@ GahpClient::clear_pending()
 		if (server->requestTable->remove(pending_reqid) == 0) {
 				// entry was still in the hashtable, which means
 				// that this reqid is still with the gahp server or
-				// still in our waitingToSubmit queue.
+				// still in our waitingHigh/Medium/LowPrio queues.
 				// so re-insert an entry with this pending_reqid
 				// with a NULL data field so we do not reuse this reqid.
 			server->requestTable->insert(pending_reqid,NULL);
@@ -2196,7 +2199,7 @@ GahpClient::reset_user_timer(int tid)
 
 void
 GahpClient::now_pending(const char *command,const char *buf,
-						GahpProxyInfo *cmd_proxy)
+						GahpProxyInfo *cmd_proxy, PrioLevel prio_level )
 {
 
 		// First, if command is not NULL we have a new pending request.
@@ -2223,7 +2226,17 @@ GahpClient::now_pending(const char *command,const char *buf,
 	if ( server->num_pending_requests >= server->max_pending_requests ) {
 			// We have too many requests outstanding.  Queue up
 			// this request for later.
-		server->waitingToSubmit.enqueue(pending_reqid);
+		switch ( prio_level ) {
+		case high_prio:
+			server->waitingHighPrio.push( pending_reqid );
+			break;
+		case medium_prio:
+			server->waitingMediumPrio.push( pending_reqid );
+			break;
+		case low_prio:
+			server->waitingLowPrio.push( pending_reqid );
+			break;
+		}
 		return;
 	}
 
@@ -2433,13 +2446,23 @@ GahpServer::poll()
 
 		// Ok, at this point we may have handled a bunch of results.  So
 		// that means that some gahp requests languishing in the 
-		// waitingToSubmit queue may be good to go.
+		// waitingHigh/Medium/LowPrio queues may be good to go.
 	ASSERT(num_pending_requests >= 0);
 	int waiting_reqid = -1;
-	while ( (waitingToSubmit.Length() > 0) &&
-			(num_pending_requests < max_pending_requests) ) 
+	while ( num_pending_requests < max_pending_requests )
 	{
-		waitingToSubmit.dequeue(waiting_reqid);
+		if ( waitingHighPrio.size() > 0 ) {
+			waiting_reqid = waitingHighPrio.front();
+			waitingHighPrio.pop();
+		} else if ( waitingMediumPrio.size() > 0 ) {
+			waiting_reqid = waitingMediumPrio.front();
+			waitingMediumPrio.pop();
+		} else if ( waitingLowPrio.size() > 0 ) {
+			waiting_reqid = waitingLowPrio.front();
+			waitingLowPrio.pop();
+		} else {
+			break;
+		}
 		entry = NULL;
 		requestTable->lookup(waiting_reqid,entry);
 		if ( entry ) {
@@ -2450,7 +2473,7 @@ GahpServer::poll()
 				// this pending entry had been cleared long ago, and
 				// has been just sitting around in the hash table
 				// to make certain the reqid is not re-used until
-				// it is dequeued from the waitingToSubmit queue.
+				// it is dequeued from the waitingHigh/Medium/Low queues.
 				// So now remove the entry from the hash table
 				// so the reqid can be reused.
 			requestTable->remove(result_reqid);
@@ -5469,7 +5492,7 @@ GahpClient::cream_delegate(const char *delg_service, const char *delg_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5543,7 +5566,7 @@ GahpClient::cream_job_register(const char *service, const char *delg_id,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,low_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5625,7 +5648,7 @@ GahpClient::cream_job_start(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5691,7 +5714,7 @@ GahpClient::cream_job_purge(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5757,7 +5780,7 @@ GahpClient::cream_job_cancel(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5823,7 +5846,7 @@ GahpClient::cream_job_suspend(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5889,7 +5912,7 @@ GahpClient::cream_job_resume(const char *service, const char *job_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -5956,7 +5979,7 @@ GahpClient::cream_job_status(const char *service, const char *job_id,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,medium_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6034,7 +6057,7 @@ GahpClient::cream_job_status_all(const char *service,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6124,7 +6147,7 @@ GahpClient::cream_proxy_renew(const char *delg_service, const char *delg_id)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6184,7 +6207,7 @@ GahpClient::cream_ping(const char * service)
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 	
 		// If we made it here, command is pending.
@@ -6254,7 +6277,7 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,normal_proxy);
+		now_pending(command,buf,normal_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -6299,8 +6322,6 @@ GahpClient::cream_set_lease(const char *service, const char *lease_id, time_t &l
 }
 
 
-
-//************* Added for Amazon Jobs by fangcao ***************************//
 
 //  Start VM
 int GahpClient::amazon_vm_start( const char * service_url,
@@ -6530,7 +6551,6 @@ int GahpClient::amazon_vm_stop( const char *service_url, const char * publickeyf
 }							
 
 #if 0
-
 // Restart VM
 int GahpClient::amazon_vm_reboot( const char * publickeyfile, const char * privatekeyfile, 
 								  const char * instance_id, char* & error_code )		
@@ -7424,7 +7444,6 @@ int GahpClient::amazon_vm_del_group_rule(const char * publickeyfile, const char 
 	// If we made it here, command is still pending...
 	return GAHPCLIENT_COMMAND_PENDING;	
 }
-
 #endif
 
 // Ping to check if the server is alive
@@ -8877,6 +8896,484 @@ int GahpClient::amazon_vm_vm_keypair_all( const char *service_url, const char* p
 	return GAHPCLIENT_COMMAND_PENDING;	
 
 }
-				
-//************* End of changes for Amamzon Jobs by fangcao *****************//
 	
+int GahpClient::dcloud_submit( const char *service_url,
+							   const char *username,
+							   const char *password,
+							   const char *image_id,
+							   const char *instance_name,
+							   const char *realm_id,
+							   const char *hwp_id,
+							   const char *keyname,
+							   const char *userdata,
+							   StringList &attrs )
+{
+	// DELTACLOUD_VM_SUBMIT <req_id> <serviceurl> <username> <password> 
+	//   <image-id> <instance-name> <realm-id> <hwp-id> <keyname> <userdata>
+	static const char* command = "DELTACLOUD_VM_SUBMIT";
+
+	// check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	// Generate request line
+	if ( !service_url ) service_url = NULLSTRING;
+	if ( !username ) username = NULLSTRING;
+	if ( !password ) password = NULLSTRING;
+	if ( !image_id ) image_id = NULLSTRING;
+	if ( !instance_name ) instance_name = NULLSTRING;
+	if ( !realm_id ) realm_id = NULLSTRING;
+	if ( !hwp_id ) hwp_id = NULLSTRING;
+	if ( !keyname ) keyname = NULLSTRING;
+	if ( !userdata ) userdata = NULLSTRING;
+
+	MyString reqline;
+
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(username) );
+	char* esc3 = strdup( escapeGahpString(password) );
+	char* esc4 = strdup( escapeGahpString(image_id) );
+	char* esc5 = strdup( escapeGahpString(instance_name) );
+	char* esc6 = strdup( escapeGahpString(realm_id) );
+	char* esc7 = strdup( escapeGahpString(hwp_id) );
+	char* esc8 = strdup( escapeGahpString(keyname) );
+	char* esc9 = strdup( escapeGahpString(userdata) );
+
+	bool x = reqline.sprintf("%s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9);
+
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	free( esc5 );
+	free( esc6 );
+	free( esc7 );
+	free( esc8 );
+	free( esc9 );
+	ASSERT( x == true );
+
+	const char *buf = reqline.Value();
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// we expect one of the following return:
+	//   req_id NULL <attr>=<value> <attr=value> ...
+	//   req_id <error message>
+
+	if ( result ) {	
+		// command completed. 
+		int rc = 0;
+		if ( result->argc < 2 ) {
+			EXCEPT( "Bad %s result", command );
+		} else if ( result->argc == 2 ) {
+			if ( !strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			error_string = result->argv[1];
+			rc = 1;
+		} else {
+			if ( strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			attrs.clearAll();
+			for ( int i = 2; i < result->argc; i++ ) {
+				attrs.append( result->argv[i] );
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		sprintf( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+int GahpClient::dcloud_status_all( const char *service_url,
+								   const char *username,
+								   const char *password,
+								   StringList &instance_ids,
+								   StringList &statuses )
+{
+	// DELTACLOUD_VM_STATUS_ALL <req_id> <serviceurl> <username> <password>
+	static const char* command = "DELTACLOUD_VM_STATUS_ALL";
+
+	// check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	// Generate request line
+	if ( !service_url ) service_url = NULLSTRING;
+	if ( !username ) username = NULLSTRING;
+	if ( !password ) password = NULLSTRING;
+
+	MyString reqline;
+
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(username) );
+	char* esc3 = strdup( escapeGahpString(password) );
+
+	bool x = reqline.sprintf("%s %s %s", esc1, esc2, esc3);
+
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	ASSERT( x == true );
+
+	const char *buf = reqline.Value();
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// we expect one of the following return:
+	//   req_id NULL <instance> <status> ...
+	//   req_id <error message>
+
+	if ( result ) {	
+		// command completed. 
+		int rc = 0;
+		if ( result->argc < 2 || result->argc % 2 != 0 ) {
+			EXCEPT( "Bad %s result", command );
+		} else if ( result->argc == 2 ) {
+			// we could have one of:
+			// req_id NULL # meaning success, but nothing running
+			// req_id <error_string> # meaning failure
+			if ( strcmp( result->argv[1], NULLSTRING ) == 0 ) {
+				// OK, success; clear out the instance_ids and
+				// statuses, and then we are done
+				instance_ids.clearAll();
+				statuses.clearAll();
+			} else {
+				error_string = result->argv[1];
+				rc = 1;
+			}
+		} else {
+			if ( strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			instance_ids.clearAll();
+			statuses.clearAll();
+			for ( int i = 2; i < result->argc; i += 2 ) {
+				instance_ids.append( result->argv[i] );
+				statuses.append( result->argv[i + 1] );
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		sprintf( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+int GahpClient::dcloud_action( const char *service_url,
+							   const char *username,
+							   const char *password,
+							   const char *instance_id,
+							   const char *action )
+{
+	// DELTACLOUD_VM_ACtION <req_id> <serviceurl> <username> <password> 
+	//   <instanceid> <action>
+	static const char* command = "DELTACLOUD_VM_ACTION";
+
+	// check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	// Generate request line
+	if ( !service_url ) service_url = NULLSTRING;
+	if ( !username ) username = NULLSTRING;
+	if ( !password ) password = NULLSTRING;
+	if ( !instance_id ) instance_id = NULLSTRING;
+	if ( !action ) action = NULLSTRING;
+
+	MyString reqline;
+
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(username) );
+	char* esc3 = strdup( escapeGahpString(password) );
+	char* esc4 = strdup( escapeGahpString(instance_id) );
+	char* esc5 = strdup( escapeGahpString(action) );
+
+	bool x = reqline.sprintf("%s %s %s %s %s", esc1, esc2, esc3, esc4, esc5);
+
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	free( esc5 );
+	ASSERT( x == true );
+
+	const char *buf = reqline.Value();
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// we expect one of the following return:
+	//   req_id NULL <instance> <status> ...
+	//   req_id <error message>
+
+	if ( result ) {	
+		// command completed. 
+		int rc = 0;
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s result", command );
+		} else {
+			if ( strcmp( result->argv[1], NULLSTRING ) ) {
+				error_string = result->argv[1];
+				rc = 1;
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		sprintf( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+int GahpClient::dcloud_info( const char *service_url,
+							 const char *username,
+							 const char *password,
+							 const char *instance_id,
+							 StringList &attrs )
+{
+	// DELTACLOUD_VM_INFO <req_id> <serviceurl> <username> <password> 
+	//   <instance-id>
+	static const char* command = "DELTACLOUD_VM_INFO";
+
+	// check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	// Generate request line
+	if ( !service_url ) service_url = NULLSTRING;
+	if ( !username ) username = NULLSTRING;
+	if ( !password ) password = NULLSTRING;
+	if ( !instance_id ) instance_id = NULLSTRING;
+
+	MyString reqline;
+
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(username) );
+	char* esc3 = strdup( escapeGahpString(password) );
+	char* esc4 = strdup( escapeGahpString(instance_id) );
+
+	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4);
+
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	ASSERT( x == true );
+
+	const char *buf = reqline.Value();
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// we expect one of the following return:
+	//   req_id NULL <attr>=<value> <attr=value> ...
+	//   req_id <error message>
+
+	if ( result ) {	
+		// command completed. 
+		int rc = 0;
+		if ( result->argc < 2 ) {
+			EXCEPT( "Bad %s result", command );
+		} else if ( result->argc == 2 ) {
+			if ( !strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			error_string = result->argv[1];
+			rc = 1;
+		} else {
+			if ( strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			attrs.clearAll();
+			for ( int i = 2; i < result->argc; i++ ) {
+				attrs.append( result->argv[i] );
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		sprintf( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+
+int GahpClient::dcloud_find( const char *service_url,
+							 const char *username,
+							 const char *password,
+							 const char *instance_name,
+							 char **instance_id )
+{
+	// DELTACLOUD_VM_FIND <req_id> <serviceurl> <username> <password> 
+	//   <instance-name>
+	static const char* command = "DELTACLOUD_VM_FIND";
+
+	// check if this command is supported
+	if ( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	// Generate request line
+	if ( !service_url ) service_url = NULLSTRING;
+	if ( !username ) username = NULLSTRING;
+	if ( !password ) password = NULLSTRING;
+	if ( !instance_name ) instance_name = NULLSTRING;
+
+	MyString reqline;
+
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(username) );
+	char* esc3 = strdup( escapeGahpString(password) );
+	char* esc4 = strdup( escapeGahpString(instance_name) );
+
+	bool x = reqline.sprintf("%s %s %s %s", esc1, esc2, esc3, esc4);
+
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	free( esc4 );
+	ASSERT( x == true );
+
+	const char *buf = reqline.Value();
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// we expect one of the following return:
+	//   req_id NULL <instance-id>
+	//   req_id <error message>
+
+	if ( result ) {	
+		// command completed. 
+		int rc = 0;
+		if ( result->argc < 2 || result->argc > 3 ) {
+			EXCEPT( "Bad %s result", command );
+		} else if ( result->argc == 2 ) {
+			if ( !strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			error_string = result->argv[1];
+			rc = 1;
+		} else {
+			if ( strcmp( result->argv[1], NULLSTRING ) ) {
+				EXCEPT( "Bad %s result", command );
+			}
+			if ( strcmp( result->argv[2], NULLSTRING ) ) {
+				*instance_id = strdup( result->argv[2] );
+			} else {
+				*instance_id = NULL;
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command, buf) ) 
+	{
+		// pending command timed out.
+		sprintf( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;	
+}
+

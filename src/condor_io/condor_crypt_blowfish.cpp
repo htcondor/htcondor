@@ -23,6 +23,8 @@
 //#include <string.h>
 //#include <malloc.h>
 
+#ifdef HAVE_EXT_OPENSSL
+
 Condor_Crypt_Blowfish :: Condor_Crypt_Blowfish(const KeyInfo& key)
 #if !defined(SKIP_AUTHENTICATION)
     : Condor_Crypt_Base(CONDOR_BLOWFISH, key)
@@ -96,4 +98,4 @@ bool Condor_Crypt_Blowfish :: decrypt(unsigned char *  input,
 #endif
 }
 
-
+#endif /*HAVE_EXT_OPENSSL*/

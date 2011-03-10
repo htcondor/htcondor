@@ -125,9 +125,9 @@ void AmazonResource::PublishResourceAd( ClassAd *resource_ad )
 void AmazonResource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
 	// Since Amazon doesn't use proxy, we should use Startup() to replace isInitialized()
-	if ( gahp->Startup() == false ) {
+	if ( gahp->isStarted() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
-		ping_delay = 5;		
+		ping_delay = 5;
 		return;
 	}
 	

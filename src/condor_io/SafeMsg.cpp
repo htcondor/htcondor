@@ -179,7 +179,7 @@ bool _condorPacket::init_MD(const char * keyId)
  *	@return: true, if this packet is the whole message
  *         false, otherwise
  */
-int _condorPacket::getHeader(int msgsize,
+int _condorPacket::getHeader(int /* msgsize */,
                              bool &last,
                              int &seq,
                              int &len,
@@ -1186,15 +1186,15 @@ int _condorInMsg::getPtr(void *&buf, char delim)
 
 	if( D_FULLDEBUG & DebugFlags )
 		dprintf(D_NETWORK, "SafeMsg::_longMsg::getPtr:\
-		                    found delim = %c & length = %d\n",
-			  delim, n);
+		                    found delim = %c & length = %lu\n",
+			  delim, (unsigned long)n);
 	if( n > tempBufLen ) {
 		if(tempBuf) {
 			free(tempBuf);
 		}
 		tempBuf = (char *)malloc(n);
 		if(!tempBuf) {
-			dprintf(D_ALWAYS, "getPtr, fail at malloc(%d)\n", n);
+			dprintf(D_ALWAYS, "getPtr, fail at malloc(%lu)\n", (unsigned long)n);
 			tempBufLen = 0;
 			return -1;
 		}

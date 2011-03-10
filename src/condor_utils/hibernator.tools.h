@@ -76,8 +76,8 @@ private:
 
 	/** User defined tool information */
 	MyString m_keyword;
-	char	 *m_tool_paths[10];
-	ArgList	 m_tool_args[10];
+	char	 *m_tool_paths[11];
+	ArgList	 m_tool_args[11];
 
 	/** DC reaper ID. @see reaperOutput() */
 	int m_reaper_id;

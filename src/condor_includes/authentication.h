@@ -173,6 +173,7 @@ class Authentication {
 
 	static MapFile* global_map_file;
 	static bool global_map_file_load_attempted;
+	static bool globus_activated; // Only attempt activation once; NOT THREAD SAFE
 
 };
 

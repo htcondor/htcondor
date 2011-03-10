@@ -113,6 +113,11 @@ Condor::DebugLevel(1);
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
 
+my $hostname = `hostname`; chomp $hostname;
+if ( ! ($hostname =~ /\./ ) ) {
+    warn "Warning: Host name '$hostname' is not an FQDN!!";
+    sleep( 10 );
+}
 my $iswindows = CondorTest::IsThisWindows();
 
 # configuration options
@@ -368,7 +373,7 @@ if(!($wantcurrentdaemons)) {
 		debug("Done Starting Personal Condor\n",2);
 	}
 		
-	IsRunningYet();
+	CondorPersonal::IsRunningYet() || die "Failed to start Condor";
 
 }
 
@@ -1281,7 +1286,9 @@ sub IsPersonalRunning
 			last;
         }
     }
-    close(CONFIG);
+    if ( close(CONFIG) && ($? != 13) ) {	# Ignore SIGPIPE
+	warn "Error executing condor_config_val: '$?' '$!'"
+    }
 
     if( $matchedconfig eq "" ) {
         die	"lost: config does not match expected config setting......\n";
@@ -1307,125 +1314,6 @@ sub IsPersonalRunning
 	close(MADDR);
 }
 
-sub IsRunningYet
-{
-
-    my $daemonlist = `condor_config_val daemon_list`;
-    CondorTest::fullchomp($daemonlist);
-
-	if($daemonlist =~ /.*MASTER.*/) {
-		# now wait for the master to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		my $masteradr = `condor_config_val MASTER_ADDRESS_FILE`;
-		$masteradr =~ s/\012+$//;
-		$masteradr =~ s/\015+$//;
-		debug( "MASTER_ADDRESS_FILE is <<<<<$masteradr>>>>>\n",2);
-    	debug( "We are waiting for the file to exist\n",2);
-    	# Where is the master address file? wait for it to exist
-    	my $havemasteraddr = "no";
-    	while($havemasteraddr ne "yes") {
-        	debug( "Looking for $masteradr\n",2);
-        	if( -f $masteradr ) {
-            	debug("Found it!!!! master address file \n",2);
-            	$havemasteraddr = "yes";
-        	} else {
-            	sleep 1;
-        	}
-    	}
-	}
-
-	if($daemonlist =~ /.*COLLECTOR.*/) {
-		# now wait for the collector to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		my $collectoradr = `condor_config_val COLLECTOR_ADDRESS_FILE`;
-		$collectoradr =~ s/\012+$//;
-		$collectoradr =~ s/\015+$//;
-		debug( "COLLECTOR_ADDRESS_FILE is <<<<<$collectoradr>>>>>\n",2);
-    	debug( "We are waiting for the file to exist\n",2);
-    	# Where is the collector address file? wait for it to exist
-    	my $havecollectoraddr = "no";
-    	while($havecollectoraddr ne "yes") {
-        	debug( "Looking for $collectoradr\n",2);
-        	if( -f $collectoradr ) {
-            	debug("Found it!!!! collector address file\n",2);
-            	$havecollectoraddr = "yes";
-        	} else {
-            	sleep 1;
-        	}
-    	}
-	}
-
-	if($daemonlist =~ /.*NEGOTIATOR.*/) {
-		# now wait for the negotiator to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		my $negotiatoradr = `condor_config_val NEGOTIATOR_ADDRESS_FILE`;
-		$negotiatoradr =~ s/\012+$//;
-		$negotiatoradr =~ s/\015+$//;
-		debug( "NEGOTIATOR_ADDRESS_FILE is <<<<<$negotiatoradr>>>>>\n",2);
-    	debug( "We are waiting for the file to exist\n",2);
-    	# Where is the negotiator address file? wait for it to exist
-    	my $havenegotiatoraddr = "no";
-    	while($havenegotiatoraddr ne "yes") {
-        	debug( "Looking for $negotiatoradr\n",2);
-        	if( -f $negotiatoradr ) {
-            	debug("Found it!!!! negotiator address file\n",2);
-            	$havenegotiatoraddr = "yes";
-        	} else {
-            	sleep 1;
-        	}
-    	}
-	}
-
-	if($daemonlist =~ /.*STARTD.*/) {
-		# now wait for the startd to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		my $startdadr = `condor_config_val STARTD_ADDRESS_FILE`;
-		$startdadr =~ s/\012+$//;
-		$startdadr =~ s/\015+$//;
-		debug( "STARTD_ADDRESS_FILE is <<<<<$startdadr>>>>>\n",2);
-    	debug( "We are waiting for the file to exist\n",2);
-    	# Where is the startd address file? wait for it to exist
-    	my $havestartdaddr = "no";
-    	while($havestartdaddr ne "yes") {
-        	debug( "Looking for $startdadr\n",2);
-        	if( -f $startdadr ) {
-            	debug("Found it!!!! startd address file\n",2);
-            	$havestartdaddr = "yes";
-        	} else {
-            	sleep 1;
-        	}
-    	}
-	}
-
-	if($daemonlist =~ /.*SCHEDD.*/) {
-		# now wait for the schedd to start running... get address file loc
-		# and wait for file to exist
-		# Give the master time to start before jobs are submitted.
-		my $scheddadr = `condor_config_val SCHEDD_ADDRESS_FILE`;
-		$scheddadr =~ s/\012+$//;
-		$scheddadr =~ s/\015+$//;
-		debug( "SCHEDD_ADDRESS_FILE is <<<<<$scheddadr>>>>>\n",2);
-    	debug( "We are waiting for the file to exist\n",2);
-    	# Where is the schedd address file? wait for it to exist
-    	my $havescheddaddr = "no";
-    	while($havescheddaddr ne "yes") {
-        	debug( "Looking for $scheddadr\n",2);
-        	if( -f $scheddadr ) {
-            	debug("Found it!!!! schedd address file\n",2);
-            	$havescheddaddr = "yes";
-        	} else {
-            	sleep 1;
-        	}
-    	}
-	}
-
-    return(1);
-}
-	
 # StartTestOutput($compiler,$test_program);
 sub StartTestOutput
 {

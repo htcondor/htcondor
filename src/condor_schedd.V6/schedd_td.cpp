@@ -167,6 +167,8 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			respad.put(*rsock);
 			rsock->end_of_message();
 
+			delete modify_allow_jobs;
+			delete modify_deny_jobs;
 			return FALSE;
 		}
 
@@ -188,6 +190,8 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			respad.put(*rsock);
 			rsock->end_of_message();
 
+			delete modify_allow_jobs;
+			delete modify_deny_jobs;
 			return FALSE;
 		}
 
@@ -316,6 +320,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.put(*rsock);
 		rsock->end_of_message();
 
+		delete modify_allow_jobs;
 		return FALSE;
 	}
 
@@ -336,6 +341,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.put(*rsock);
 		rsock->end_of_message();
 
+		delete modify_allow_jobs;
 		return FALSE;
 	}
 
@@ -354,6 +360,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.put(*rsock);
 		rsock->end_of_message();
 
+		delete modify_allow_jobs;
 		return FALSE;
 	}
 
@@ -580,7 +587,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 // open for business.
 ///////////////////////////////////////////////////////////////////////////
 TdAction
-Scheduler::td_register_callback(TransferDaemon *td)
+Scheduler::td_register_callback(TransferDaemon *)
 {
 	dprintf(D_ALWAYS, "Scheduler::td_register_callback() called\n");
 
@@ -592,7 +599,7 @@ Scheduler::td_register_callback(TransferDaemon *td)
 // transferd has died.
 ///////////////////////////////////////////////////////////////////////////
 TdAction
-Scheduler::td_reaper_callback(long pid, int status, TransferDaemon *td)
+Scheduler::td_reaper_callback(long, int, TransferDaemon *)
 {
 	dprintf(D_ALWAYS, "Scheduler::td_reaper_callback() called\n");
 
@@ -610,7 +617,7 @@ Scheduler::td_reaper_callback(long pid, int status, TransferDaemon *td)
 // handler, for all other return values this handler should not delete the treq.
 TreqAction
 Scheduler::treq_upload_pre_push_callback(TransferRequest *treq, 
-	TransferDaemon *td)
+	TransferDaemon *)
 {
 	int cluster;
 	int proc;
@@ -730,7 +737,7 @@ Scheduler::treq_upload_post_push_callback(TransferRequest *treq,
 // for the job and remove it from being on hold.
 TreqAction
 Scheduler::treq_upload_update_callback(TransferRequest *treq, 
-	TransferDaemon *td, ClassAd *update)
+	TransferDaemon *, ClassAd *)
 {
 	int cluster,proc,index;
 	char new_attr_value[500];
@@ -918,7 +925,7 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 // This function does NOT own the memory passed to it ever. If you want a copy
 // of the treq, you must make one.
 TreqAction
-Scheduler::treq_upload_reaper_callback(TransferRequest *treq)
+Scheduler::treq_upload_reaper_callback(TransferRequest *)
 {
 	dprintf(D_ALWAYS, "Scheduler::treq_upload_reaper_callback() called.\n");
 
@@ -941,7 +948,7 @@ Scheduler::treq_upload_reaper_callback(TransferRequest *treq)
 
 TreqAction
 Scheduler::treq_download_pre_push_callback(TransferRequest *treq, 
-	TransferDaemon *td)
+	TransferDaemon *)
 {
 	int cluster;
 	int proc;
@@ -1059,7 +1066,7 @@ Scheduler::treq_download_post_push_callback(TransferRequest *treq,
 
 TreqAction
 Scheduler::treq_download_update_callback(TransferRequest *treq, 
-	TransferDaemon *td, ClassAd *update)
+	TransferDaemon *, ClassAd *)
 {
 	int i;
 	ExtArray<PROC_ID> *jobs;
@@ -1100,7 +1107,7 @@ Scheduler::treq_download_update_callback(TransferRequest *treq,
 // This function does NOT own the memory passed to it. If you want a copy
 // of the treq, you must make one.
 TreqAction
-Scheduler::treq_download_reaper_callback(TransferRequest *treq)
+Scheduler::treq_download_reaper_callback(TransferRequest *)
 {
 	dprintf(D_ALWAYS, "Scheduler::treq_download_reaper_callback() called.\n");
 

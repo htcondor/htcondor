@@ -348,14 +348,14 @@ check() {
 		return 1
 	fi
 
-	run_controller list
-	RESULT=$?
-
-	if [ $RESULT != 0 ]; then
-		echo "XM list error" 1>&2
-		cat "$XM_ERROR_OUTPUT" 1>&2
-		return 1
-	fi
+#	run_controller list
+#	RESULT=$?
+#
+#	if [ $RESULT != 0 ]; then
+#		echo "XM list error" 1>&2
+#		cat "$XM_ERROR_OUTPUT" 1>&2
+#		return 1
+#	fi
 }
 
 killvm() {
@@ -437,11 +437,11 @@ if [ -z "$MKISOFS" ]; then
 	exit 1
 fi
 
-ID=`id -u`
-if [ $ID != 0 ]; then
-	echo "Should be a root user" 1>&2
-	exit 1
-fi
+#ID=`id -u`
+#if [ $ID != 0 ]; then
+#	echo "Should be a root user" 1>&2
+#	exit 1
+#fi
 
 case "$1" in
   start)

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -34,7 +34,7 @@
 class Resource : public Service
 {
 public:
-	Resource( CpuAttributes*, int, Resource* _parent = NULL);
+	Resource( CpuAttributes*, int, bool multiple_slots, Resource* _parent = NULL);
 	~Resource();
 
 		// Public methods that can be called from command handlers
@@ -163,7 +163,6 @@ public:
 		// Methods to initialize and refresh the resource classads.
 	void	init_classad( void );		
 	void	refresh_classad( amask_t mask );	
-	int		force_benchmark( void );
 	void	reconfig( void );
 
 	void	update( void );		// Schedule to update the central manager.
@@ -172,6 +171,10 @@ public:
     void    publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad );
 	void	final_update( void );		// Send a final update to the CM
 									    // with Requirements = False.
+
+		// Invoked by the benchmark manager at specific events
+	int     benchmarks_started( void );
+	int	    benchmarks_finished( void );
 
  		// Helper functions to evaluate resource expressions
 	int     wants_hold( void );         // Default's to FALSE on undefined

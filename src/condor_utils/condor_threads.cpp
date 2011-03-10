@@ -481,7 +481,7 @@ ThreadImplementation::hashFuncThreadInfo(const ThreadInfo & mythread)
 	unsigned int j = sizeof(pthread_t);
 	int i = 0;
 	pthread_t thread = mythread.get_pthread();
-	unsigned int *buf = (unsigned int *) &thread;
+	unsigned int *buf = (unsigned int *)&thread;
 
 
 		// add up bytes in unsigned int chunks
@@ -782,6 +782,9 @@ ThreadImplementation::threadStart(void *)
 		// update status
 		item->set_status( WorkerThread::THREAD_COMPLETED );
 	}
+
+	// cast is needed to keep both windows and !windows happy with the return value
+	return (ThreadStartFunc_t)NULL;
 }
 
 #ifndef WIN32

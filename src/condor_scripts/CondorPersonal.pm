@@ -1,6 +1,6 @@
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -1266,7 +1266,9 @@ sub IsPersonalRunning
 			debug("hmmmm looking for <<$pathtoconfig>> got <<$line>> \n",$debuglevel);
 		}
     }
-    close(CONFIG);
+    if ( close(CONFIG) && ($? != 13) ) {       # Ignore SIGPIPE
+        warn "Error executing condor_config_val: '$?' '$!'"
+    }
 
     if( $matchedconfig eq "" ) {
         die "lost: config does not match expected config setting......\n";
@@ -1312,8 +1314,6 @@ sub IsPersonalRunning
 
 sub IsRunningYet
 {
-	my $maxattempts = 9;
-	my $attempts = 0;
 	my $daemonlist = `condor_config_val daemon_list`;
 	fullchomp($daemonlist);
 	my $collector = 0;
@@ -1321,6 +1321,10 @@ sub IsRunningYet
 	my $startd = 0;
 	my $first = 1;
 	my @status;
+
+	my $runlimit = 8;
+	my $backoff = 2;
+	my $loopcount;
 
 	# first failure was had test where we looked for
 	# a negotiator but MASTER_NEGOTIATOR_CONTROLLER
@@ -1354,7 +1358,7 @@ sub IsRunningYet
 	}
 
 
-	if($daemonlist =~ /.*MASTER.*/i) {
+	if($daemonlist =~ /MASTER/i) {
 		print "Has master dropped an address file yet - ";
 		# now wait for the master to start running... get address file loc
 		# and wait for file to exist
@@ -1366,19 +1370,24 @@ sub IsRunningYet
     	debug( "We are waiting for the file to exist\n",$debuglevel);
     	# Where is the master address file? wait for it to exist
     	my $havemasteraddr = "no";
+    	$loopcount = 0;
     	while($havemasteraddr ne "yes") {
+        	$loopcount++;
         	debug( "Looking for $masteradr\n",$debuglevel);
         	if( -f $masteradr ) {
             	debug( "Found it!!!! master address file\n",$debuglevel);
             	$havemasteraddr = "yes";
+        	} elsif ( $loopcount == $runlimit ) {
+				debug( "Gave up waiting for master address file\n",$debuglevel);
+				return 0;
         	} else {
-            	sleep 1;
+            	sleep ($loopcount * $backoff);
         	}
     	}
 		print "ok\n";
 	}
 
-	if($daemonlist =~ /.*COLLECTOR.*/i){
+	if($daemonlist =~ /COLLECTOR/i){
 		print "Has collector dropped an address file yet - ";
 		# now wait for the collector to start running... get address file loc
 		# and wait for file to exist
@@ -1390,19 +1399,24 @@ sub IsRunningYet
     	debug( "We are waiting for the file to exist\n",$debuglevel);
     	# Where is the collector address file? wait for it to exist
     	my $havecollectoraddr = "no";
+    	$loopcount = 0;
     	while($havecollectoraddr ne "yes") {
+        	$loopcount++;
         	debug( "Looking for $collectoradr\n",$debuglevel);
         	if( -f $collectoradr ) {
             	debug( "Found it!!!! collector address file\n",$debuglevel);
             	$havecollectoraddr = "yes";
+        	} elsif ( $loopcount == $runlimit ) {
+				debug( "Gave up waiting for collector address file\n",$debuglevel);
+				return 0;
         	} else {
-            	sleep 1;
+            	sleep ($loopcount * $backoff);
         	}
     	}
 		print "ok\n";
 	}
 
-	if($daemonlist =~ /.*NEGOTIATOR.*/i) {
+	if($daemonlist =~ /NEGOTIATOR/i) {
 		print "Has negotiator dropped an address file yet - ";
 		# now wait for the negotiator to start running... get address file loc
 		# and wait for file to exist
@@ -1414,19 +1428,24 @@ sub IsRunningYet
     	debug( "We are waiting for the file to exist\n",$debuglevel);
     	# Where is the negotiator address file? wait for it to exist
     	my $havenegotiatoraddr = "no";
+    	$loopcount = 0;
     	while($havenegotiatoraddr ne "yes") {
+        	$loopcount++;
         	debug( "Looking for $negotiatoradr\n",$debuglevel);
         	if( -f $negotiatoradr ) {
             	debug( "Found it!!!! negotiator address file\n",$debuglevel);
             	$havenegotiatoraddr = "yes";
+        	} elsif ( $loopcount == $runlimit ) {
+				debug( "Gave up waiting for negotiator address file\n",$debuglevel);
+				return 0;
         	} else {
-            	sleep 1;
+            	sleep ($loopcount * $backoff);
         	}
     	}
 		print "ok\n";
 	}
 
-	if($daemonlist =~ /.*STARTD.*/i) {
+	if($daemonlist =~ /STARTD/i) {
 		print "Has startd dropped an address file yet - ";
 		# now wait for the startd to start running... get address file loc
 		# and wait for file to exist
@@ -1438,13 +1457,18 @@ sub IsRunningYet
     	debug( "We are waiting for the file to exist\n",$debuglevel);
     	# Where is the startd address file? wait for it to exist
     	my $havestartdaddr = "no";
+    	$loopcount = 0;
     	while($havestartdaddr ne "yes") {
+        	$loopcount++;
         	debug( "Looking for $startdadr\n",$debuglevel);
         	if( -f $startdadr ) {
             	debug( "Found it!!!! startd address file\n",$debuglevel);
             	$havestartdaddr = "yes";
+        	} elsif ( $loopcount == $runlimit ) {
+				debug( "Gave up waiting for startd address file\n",$debuglevel);
+				return 0;
         	} else {
-            	sleep 1;
+            	sleep ($loopcount * $backoff);
         	}
     	}
 		print "ok\n";
@@ -1452,7 +1476,7 @@ sub IsRunningYet
 
 	####################################################################
 
-	if($daemonlist =~ /.*SCHEDD.*/i) {
+	if($daemonlist =~ /SCHEDD/i) {
 		print "Has schedd dropped an address file yet - ";
 		# now wait for the schedd to start running... get address file loc
 		# and wait for file to exist
@@ -1464,11 +1488,16 @@ sub IsRunningYet
     	debug( "We are waiting for the file to exist\n",$debuglevel);
     	# Where is the schedd address file? wait for it to exist
     	my $havescheddaddr = "no";
+    	$loopcount = 0;
     	while($havescheddaddr ne "yes") {
+        	$loopcount++;
         	debug( "Looking for $scheddadr\n",$debuglevel);
         	if( -f $scheddadr ) {
             	debug( "Found it!!!! schedd address file\n",$debuglevel);
             	$havescheddaddr = "yes";
+        	} elsif ( $loopcount == $runlimit ) {
+				debug( "Gave up waiting for schedd address file\n",$debuglevel);
+				return 0;
         	} else {
             	sleep 1;
         	}
@@ -1476,17 +1505,14 @@ sub IsRunningYet
 		print "ok\n";
 	}
 
-	my $runlimit = 6;
-	my $backoff = 2;
-	my $loopcount;
-	if($daemonlist =~ /.*STARTD.*/i) {
+	if($daemonlist =~ /STARTD/i) {
 		# lets wait for the collector to know about it
 		# if we have a collector
 		my $havestartd = "";
 		my $done = "no";
 		my $currenthost = hostfqdn();
-		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
-			print "Want collector to see startd - ";
+		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
+			print "Waiting for collector to see startd - ";
 			$loopcount = 0;
 			TRY: while( $done eq "no") {
 				$loopcount += 1;
@@ -1510,14 +1536,14 @@ sub IsRunningYet
 		}
 	}
 
-	if($daemonlist =~ /.*SCHEDD.*/i) {
+	if($daemonlist =~ /SCHEDD/i) {
 		# lets wait for the collector to know about it
 		# if we have a collector
 		my $haveschedd = "";
 		my $done = "no";
 		my $currenthost = hostfqdn();
-		if(($daemonlist =~ /.*COLLECTOR.*/i) && ($personal_startup_wait eq "true")) {
-			print "Want collector to see schedd - ";
+		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
+			print "Waiting for collector to see schedd - ";
 			$loopcount = 0;
 			TRY: while( $done eq "no") {
 				$loopcount += 1;
@@ -1540,6 +1566,39 @@ sub IsRunningYet
 			}
 		}
 	}
+
+
+	if($daemonlist =~ /NEGOTIATOR/i) {
+		# lets wait for the collector to know about it
+		# if we have a collector
+		my $havenegotiator = "";
+		my $done = "no";
+		my $currenthost = hostfqdn();
+		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
+			print "Waiting for collector to see negotiator - ";
+			$loopcount = 0;
+			TRY: while( $done eq "no") {
+				$loopcount += 1;
+				my @cmd = `condor_status -negotiator -format \"%s\\n\" name`;
+
+    			foreach my $line (@cmd)
+    			{
+        			if( $line =~ /^.*$currenthost.*/)
+        			{
+						print "ok\n";
+            			$done = "yes";
+						last TRY;
+        			}
+    			}
+				if($loopcount == $runlimit) { 
+					print "bad\n";
+					last; 
+				}
+				sleep ($loopcount * $backoff);
+			}
+		}
+	}
+
 	debug("In IsRunningYet calling CollectDaemonPids\n",$debuglevel);
 	CollectDaemonPids();
 	debug("Leaving IsRunningYet\n",$debuglevel);

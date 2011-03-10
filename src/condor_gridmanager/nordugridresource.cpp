@@ -180,14 +180,10 @@ void NordugridResource::DoJobStatus()
 	}
 
 	if ( m_statusGahp->isStarted() == false ) {
-		if ( m_statusGahp->Startup() == false ) {
-				// Failed to start the gahp server. Don't do anything
-				// about it. The job objects will also fail on this call
-				// and should go on hold as a result.
-			daemonCore->Reset_Timer( m_jobStatusTid,
-									 NordugridJob::probeInterval );
-			return;
-		}
+		// The gahp isn't started yet. Wait a few seconds for a Job
+		// object to start it and initialize x509 credentials.
+		daemonCore->Reset_Timer( m_jobStatusTid, 5 );
+		return;
 	}
 
 	daemonCore->Reset_Timer( m_jobStatusTid, TIMER_NEVER );

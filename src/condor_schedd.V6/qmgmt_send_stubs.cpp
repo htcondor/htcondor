@@ -220,17 +220,23 @@ DestroyClusterByConstraint( char *constraint )
 
 
 int
-SetAttributeByConstraint( char const *constraint, char const *attr_name, char const *attr_value )
+SetAttributeByConstraint( char const *constraint, char const *attr_name, char const *attr_value, SetAttributeFlags_t flags )
 {
 	int	rval = -1;
 
 		CurrentSysCall = CONDOR_SetAttributeByConstraint;
+		if( flags ) {
+			CurrentSysCall = CONDOR_SetAttributeByConstraint2;
+		}
 
 		qmgmt_sock->encode();
 		assert( qmgmt_sock->code(CurrentSysCall) );
 		assert( qmgmt_sock->put(constraint) );
 		assert( qmgmt_sock->put(attr_value) );
 		assert( qmgmt_sock->put(attr_name) );
+		if( flags ) {
+			assert( qmgmt_sock->code(flags) );
+		}
 		assert( qmgmt_sock->end_of_message() );
 
 		qmgmt_sock->decode();
@@ -533,6 +539,39 @@ GetAttributeExprNew( int cluster_id, int proc_id, char const *attr_name, char **
 
 
 int
+GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
+{
+	int	rval = -1;
+	MyString errs;
+
+	CurrentSysCall = CONDOR_GetDirtyAttributes;
+
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	assert( qmgmt_sock->code(cluster_id) );
+	assert( qmgmt_sock->code(proc_id) );
+	assert( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	assert( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( qmgmt_sock->code(terrno) );
+		assert( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return rval;
+	}
+
+	if ( !(updated_attrs->initFromStream(*qmgmt_sock)) ) {
+		errno = ETIMEDOUT;
+		return 0;
+	}
+	assert( qmgmt_sock->end_of_message() != 0 );
+
+	return rval;
+}
+
+
+int
 DeleteAttribute( int cluster_id, int proc_id, char const *attr_name )
 {
 	int	rval = -1;
@@ -809,4 +848,77 @@ void
 GetAllJobsByConstraint( char const *constraint, char const *projection, ClassAdList &list)
 {
 	GetAllJobsByConstraint_imp(constraint,projection,list);
+}
+
+int
+GetAllJobsByConstraint_Start( char const *constraint, char const *projection)
+{
+	CurrentSysCall = CONDOR_GetAllJobsByConstraint;
+
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	assert( qmgmt_sock->put(constraint) );
+	assert( qmgmt_sock->put(projection) );
+	assert( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	return 0;
+}
+
+int
+GetAllJobsByConstraint_Next( ClassAd &ad )
+{
+	int rval = -1;
+
+	assert( CurrentSysCall == CONDOR_GetAllJobsByConstraint );
+
+	assert( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( qmgmt_sock->code(terrno) );
+		assert( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return -1;
+	}
+
+	if ( ! (ad.initFromStream(*qmgmt_sock)) ) {
+		errno = ETIMEDOUT;
+		return -1;
+	}
+
+	return 0;
+}
+
+ClassAd *
+GetNextDirtyJobByConstraint( char const *constraint, int initScan )
+{
+	int	rval = -1;
+
+	CurrentSysCall = CONDOR_GetNextDirtyJobByConstraint;
+
+	qmgmt_sock->encode();
+	assert( qmgmt_sock->code(CurrentSysCall) );
+	assert( qmgmt_sock->code(initScan) );
+	assert( qmgmt_sock->put(constraint) );
+	assert( qmgmt_sock->end_of_message() );
+
+	qmgmt_sock->decode();
+	assert( qmgmt_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( qmgmt_sock->code(terrno) );
+		assert( qmgmt_sock->end_of_message() );
+		errno = terrno;
+		return NULL;
+	}
+
+	ClassAd *ad = new ClassAd;
+
+	if ( ! (ad->initFromStream(*qmgmt_sock)) ) {
+		delete ad;
+		errno = ETIMEDOUT;
+		return NULL;
+	}
+
+	assert( qmgmt_sock->end_of_message() );
+
+	return ad;
 }

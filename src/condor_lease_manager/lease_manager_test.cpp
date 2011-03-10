@@ -24,9 +24,9 @@
    Written on 10/05/2005 by Nick LeRoy <nleroy@cs.wisc.edu>
 */
 
+#include "condor_common.h"
 #include <signal.h>
 #include <sys/time.h>
-#include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "daemon.h"

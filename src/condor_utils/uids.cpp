@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -55,7 +55,7 @@ static gid_t TrackingGid = 0;
 #endif
 
 /* must be listed in the same order as enum priv_state in condor_uid.h */
-static char *priv_state_name[] = {
+static const char *priv_state_name[] = {
 	"PRIV_UNKNOWN",
 	"PRIV_ROOT",
 	"PRIV_CONDOR",
@@ -1528,7 +1528,7 @@ get_real_username( void )
 {
 	if( ! RealUserName ) {
 		uid_t my_uid = getuid();
-		if ( !(pcache()->get_user_name( my_uid, (char *&)RealUserName )) ) {
+		if ( !(pcache()->get_user_name( my_uid, (char *&)RealUserName)) ) {
 			char buf[64];
 			sprintf( buf, "uid %d", (int)my_uid );
 			RealUserName = strdup( buf );

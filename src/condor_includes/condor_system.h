@@ -28,11 +28,6 @@
 # include "condor_sys_nt.h"
 #endif
 
-/********************************************************************
-** Declare base system types (currently the int64_t types, but will
-** probably grow beyond this charter).
-*********************************************************************/
-#include "condor_sys_types.h"
 
 
 /******************************
@@ -71,6 +66,13 @@
 #else
 #   error "condor_system.h: Don't know what Unix this is!"
 #endif
+
+
+/********************************************************************
+** Declare base system types (currently the int64_t types, but will
+** probably grow beyond this charter).
+*********************************************************************/
+#include "condor_sys_types.h"
 
 
 /**********************************************************************

@@ -22,6 +22,8 @@
 
 #include "condor_common.h"
 
+#if(!HAVE_GETDTABLESIZE)
+
 #ifdef OPEN_MAX
 static int open_max = OPEN_MAX;
 #else
@@ -48,3 +50,5 @@ getdtablesize()
 	}
 	return open_max;
 }
+
+#endif

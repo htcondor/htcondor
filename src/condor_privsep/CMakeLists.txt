@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -24,5 +24,5 @@ condor_glob(PrivsepHdrs PrivsepSrcs "${PrivsepRmvSrcs}")
 condor_static_lib( privsep "${PrivsepHdrs};${PrivsepSrcs}" )
 
 if (NOT WINDOWS)
-	condor_exe( condor_root_switchboard "${PrivsepRmvSrcs}" ${C_SBIN} "${CONDOR_TOOL_LIBS}" )
+	condor_exe( condor_root_switchboard "${PrivsepRmvSrcs}" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
 endif()

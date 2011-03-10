@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -26,33 +26,75 @@
 
 namespace compat_classad {
 
-static unsigned int ptr_hash_fn(ClassAd* const &index)
+static unsigned int
+ptr_hash_fn(ClassAd* const &index)
 {
 	intptr_t i = (intptr_t)index;
+
+#if (SIZEOF_VOIDPTR > 4)
 	return (unsigned int)( i ^ (i>>32) );
+#else
+	return (unsigned int) i;
+#endif
 }
 
-ClassAdList::ClassAdList():
+ClassAdListDoesNotDeleteAds::ClassAdListDoesNotDeleteAds():
 	htable(ptr_hash_fn)
 {
-	list_head.ad = NULL;
-	list_head.next = &list_head; // beginning of list
-	list_head.prev = &list_head; // end of list
-	list_cur = &list_head;
+		// Why do we allocate list_head separately on the heap rather
+		// than just having it be a member of this class?  Because
+		// there are cases where arrays of ClassAdLists are qsorted,
+		// which does a shallow copy.  If list_head were a member of
+		// this class, pointers to the old list_head from within the
+		// linked list would no longer be valid, because they would
+		// point to the address of list_head in the old copy rather
+		// than the new copy of the list.
+	list_head = new ClassAdListItem;
+	list_head->ad = NULL;
+	list_head->next = list_head; // beginning of list
+	list_head->prev = list_head; // end of list
+	list_cur = list_head;
+}
+
+ClassAdListDoesNotDeleteAds::~ClassAdListDoesNotDeleteAds()
+{
+	Clear();
+	delete list_head;
+	list_head = NULL;
 }
 
 ClassAdList::~ClassAdList()
 {
-	for(list_cur=list_head.next;
-		list_cur!=&list_head;
+	Clear();
+}
+
+void ClassAdListDoesNotDeleteAds::Clear()
+{
+	for(list_cur=list_head->next;
+		list_cur!=list_head;
+		list_cur=list_head->next)
+	{
+		list_head->next = list_cur->next;
+		delete list_cur;
+	}
+	list_head->next = list_head;
+	list_head->prev = list_head;
+	list_cur = list_head;
+}
+
+void ClassAdList::Clear()
+{
+	for(list_cur=list_head->next;
+		list_cur!=list_head;
 		list_cur=list_cur->next)
 	{
 		delete list_cur->ad;
-		delete list_cur;
+		list_cur->ad = NULL;
 	}
+	ClassAdListDoesNotDeleteAds::Clear();
 }
 
-ClassAd* ClassAdList::Next()
+ClassAd* ClassAdListDoesNotDeleteAds::Next()
 {
 	ASSERT( list_cur );
 	list_cur = list_cur->next;
@@ -68,7 +110,7 @@ int ClassAdList::Delete(ClassAd* cad)
 	return ret;
 }
 
-int ClassAdList::Remove(ClassAd* cad)
+int ClassAdListDoesNotDeleteAds::Remove(ClassAd* cad)
 {
 	ClassAdListItem *item = NULL;
 	if( htable.lookup(cad,item) == 0 ) {
@@ -85,7 +127,7 @@ int ClassAdList::Remove(ClassAd* cad)
 	return FALSE;
 }
 
-void ClassAdList::Insert(ClassAd* cad)
+void ClassAdListDoesNotDeleteAds::Insert(ClassAd* cad)
 {
 	ClassAdListItem *item = new ClassAdListItem;
 	item->ad = cad;
@@ -95,27 +137,27 @@ void ClassAdList::Insert(ClassAd* cad)
 		return; // already in list
 	}
 		// append to end of list
-	item->next = &list_head;
-	item->prev = list_head.prev;
+	item->next = list_head;
+	item->prev = list_head->prev;
 	item->prev->next = item;
 	item->next->prev = item;
 }
 
-void ClassAdList::Open()
+void ClassAdListDoesNotDeleteAds::Open()
 {
-	list_cur = &list_head;
+	list_cur = list_head;
 }
 
-void ClassAdList::Close()
+void ClassAdListDoesNotDeleteAds::Close()
 {
 }
 
-int ClassAdList::Length()
+int ClassAdListDoesNotDeleteAds::Length()
 {
 	return htable.getNumElements();
 }
 
-void ClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
+void ClassAdListDoesNotDeleteAds::Sort(SortFunctionType smallerThan, void* userInfo)
 {
 	ClassAdComparator isSmallerThan(userInfo, smallerThan);
 
@@ -124,8 +166,8 @@ void ClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
 	std::vector<ClassAdListItem *> tmp_vect;
 	ClassAdListItem *item;
 
-	for(item=list_head.next;
-		item!=&list_head;
+	for(item=list_head->next;
+		item!=list_head;
 		item=item->next)
 	{
 		tmp_vect.push_back(item);
@@ -134,8 +176,8 @@ void ClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
 	std::sort(tmp_vect.begin(), tmp_vect.end(), isSmallerThan);
 
 		// empty our list
-	list_head.next = &list_head;
-	list_head.prev = &list_head;
+	list_head->next = list_head;
+	list_head->prev = list_head;
 
 		// arrange our list in same order as tmp_vect
 	std::vector<ClassAdListItem *>::iterator it;
@@ -145,14 +187,14 @@ void ClassAdList::Sort(SortFunctionType smallerThan, void* userInfo)
 	{
 		item = *(it);
 			// append to end of our list
-		item->next = &list_head;
-		item->prev = list_head.prev;
+		item->next = list_head;
+		item->prev = list_head->prev;
 		item->prev->next = item;
 		item->next->prev = item;
 	}
 }
 
-void ClassAdList::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_white_list)
+void ClassAdListDoesNotDeleteAds::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_white_list)
 {
 	ClassAd            *tmpAttrList;
 	ClassAdXMLUnparser  unparser;
@@ -184,7 +226,7 @@ void ClassAdList::fPrintAttrListList(FILE* f, bool use_xml, StringList *attr_whi
     Close();
 }
 
-int ClassAdList::Count( classad::ExprTree *constraint )
+int ClassAdListDoesNotDeleteAds::Count( classad::ExprTree *constraint )
 {
 	ClassAd *ad = NULL;
 	int matchCount  = 0;

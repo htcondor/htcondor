@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -17,11 +17,11 @@
  ############################################################### 
 
 
-if (NOT WINDOWS)
+if (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)
 
 	install ( DIRECTORY examples
 			DESTINATION ${C_SHARE_EXAMPLES} )
 
 	install(FILES DOC INSTALL ../../LICENSE-2.0.txt README DESTINATION ${C_DOC})
 
-endif (NOT WINDOWS)
+endif (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)

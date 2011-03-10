@@ -82,6 +82,7 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_JOB_STATUS_KNOWN",		// Job status known
 	"ULOG_JOB_STAGE_IN",			// Job staging in input files
 	"ULOG_JOB_STAGE_OUT",			// Job staging out output files
+	"ULOG_ATTRIBUTE_UPDATE"			// Job attribute updated
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -202,6 +203,9 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_JOB_STATUS_KNOWN:
 		return new JobStatusKnownEvent;
+
+	case ULOG_ATTRIBUTE_UPDATE:
+		return new AttributeUpdate;
 
 	default:
 		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
@@ -416,6 +420,9 @@ ULogEvent::toClassAd(void)
 		break;
 	case ULOG_JOB_AD_INFORMATION:
 		myad->SetMyTypeName("JobAdInformationEvent");
+		break;
+	case ULOG_ATTRIBUTE_UPDATE:
+		myad->SetMyTypeName("AttributeUpdateEvent");
 		break;
 	  default:
 		delete myad;
@@ -5225,4 +5232,144 @@ JobStageOutEvent::toClassAd(void)
 void JobStageOutEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
+}
+
+// ----- the AttributeUpdate class
+AttributeUpdate::AttributeUpdate(void)
+{
+	name = NULL;
+	value = NULL;
+	old_value = NULL;
+	eventNumber = ULOG_ATTRIBUTE_UPDATE;
+}
+
+AttributeUpdate::~AttributeUpdate(void)
+{
+	if (name) {
+		free(name);
+	}
+	if (value) {
+		free(value);
+	}
+	if (old_value) {
+		free(old_value);
+	}
+}
+
+int
+AttributeUpdate::writeEvent(FILE *file)
+{
+	int retval;
+	if (old_value)
+	{
+		retval = fprintf(file, "Changing job attribute %s from %s to %s\n", name, old_value, value);
+	} else {
+		retval = fprintf(file, "Setting job attribute %s to %s\n", name, value);
+	}
+
+	if (retval < 0)
+	{
+		return 0;
+	}
+
+	return 1;
+}
+
+int
+AttributeUpdate::readEvent(FILE *file)
+{
+	char buf1[4096], buf2[4096], buf3[4096];
+	int retval;
+
+	buf1[0] = '\0';
+	buf2[0] = '\0';
+	buf3[0] = '\0';
+	retval = fscanf(file, "Changing job attribute %s from %s to %s\n", buf1, buf2, buf3);
+	if (retval < 0)
+	{
+		retval = fscanf(file, "Setting job attribute %s to %s\n", buf1, buf3);
+		if (retval < 0)
+		{
+			return 0;
+		}
+	}
+	name = strdup(buf1);
+	value = strdup(buf3);
+	if (buf2[0] != '\0')
+	{
+		old_value = strdup(buf2);
+	} else {
+		old_value = NULL;
+	}
+	return 1;
+}
+
+ClassAd*
+AttributeUpdate::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if (name) {
+		myad->Assign("Attribute", name);
+	}
+	if (value) {
+		myad->Assign("Value", value);
+	}
+
+	return myad;
+}
+
+void
+AttributeUpdate::initFromClassAd(ClassAd* ad)
+{
+	MyString buf;
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	if( ad->LookupString("Attribute", buf ) ) {
+		name = strdup(buf.Value());
+	}
+	if( ad->LookupString("Value", buf ) ) {
+		value = strdup(buf.Value());
+	}
+}
+
+void
+AttributeUpdate::setName(const char* attr_name)
+{
+	if (!attr_name) {
+		return;
+	}
+	if (name) {
+		free(name);
+	}
+	name = strdup(attr_name);
+}
+
+void
+AttributeUpdate::setValue(const char* attr_value)
+{
+	if (!attr_value) {
+		return;
+	}
+	if (value) {
+		free(value);
+	}
+	value = strdup(attr_value);
+}
+
+void
+AttributeUpdate::setOldValue(const char* attr_value)
+{
+	if (!attr_value) {
+		return;
+	}
+	if (old_value) {
+		free(old_value);
+	}
+	if (attr_value) {
+		old_value = strdup(attr_value);
+	}
 }

@@ -40,6 +40,14 @@
 
 #include <setjmp.h>
 
+#if defined(LINUX)
+	static char *UtmpName = "/var/run/utmp";
+	static char *AltUtmpName = "/var/adm/utmpx";
+#else
+	static char *UtmpName = "/etc/utmpx";
+	static char *AltUtmpName = "/var/adm/utmpx";
+#endif
+
 extern void PollActivity();
 
 bool		g_connected;

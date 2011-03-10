@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "condor_attrlist.h"
+#include "condor_classad.h"
 #include "condor_string.h"
 #include "condor_attributes.h"
 
@@ -309,7 +309,7 @@ Env::WriteToDelimitedString(char const *input,MyString &output) {
 
 	while(*input) {
 		end = input + strcspn(input,specials);
-		ret = output.sprintf_cat("%.*s",end-input,input);
+		ret = output.sprintf_cat("%.*s", (int)(end-input), input);
 		ASSERT(ret);
 		input = end;
 

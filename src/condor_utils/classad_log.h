@@ -209,7 +209,7 @@ private:
 
 class LogSetAttribute : public LogRecord {
 public:
-	LogSetAttribute(const char *key, const char *name, const char *value);
+	LogSetAttribute(const char *key, const char *name, const char *value, const bool dirty=false);
 	virtual ~LogSetAttribute();
 	int Play(void *data_structure);
 	virtual char const *get_key() { return key; }
@@ -223,6 +223,7 @@ private:
 	char *key;
 	char *name;
 	char *value;
+        bool is_dirty;
 };
 
 class LogDeleteAttribute : public LogRecord {

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -23,15 +23,18 @@
 #include "condor_base64.h"
 
 // For base64 encoding
-#include <openssl/sha.h>
-#include <openssl/hmac.h>
-#include <openssl/evp.h>
-#include <openssl/bio.h>
-#include <openssl/buffer.h>
+#if HAVE_EXT_OPENSSL
+# include <openssl/sha.h>
+# include <openssl/hmac.h>
+# include <openssl/evp.h>
+# include <openssl/bio.h>
+# include <openssl/buffer.h>
+#endif
 
 // Caller needs to free the returned pointer
 char* condor_base64_encode(const unsigned char *input, int length)
 {
+#if HAVE_EXT_OPENSSL
 	BIO *bmem, *b64;
 	BUF_MEM *bptr;
 
@@ -39,7 +42,7 @@ char* condor_base64_encode(const unsigned char *input, int length)
 	bmem = BIO_new(BIO_s_mem());
 	b64 = BIO_push(b64, bmem);
 	BIO_write(b64, input, length);
-	BIO_flush(b64);
+	(void)BIO_flush(b64);
 	BIO_get_mem_ptr(b64, &bptr);
 
 	char *buff = (char *)malloc(bptr->length);
@@ -49,11 +52,18 @@ char* condor_base64_encode(const unsigned char *input, int length)
 	BIO_free_all(b64);
 
 	return buff;
+#else
+	(void) input;
+	(void) length;
+	EXCEPT( "condor_base64_encode() not available: HAVE_EXT_OPENSSL is false" );
+	return NULL;
+#endif
 }
 
 // Caller needs to free *output if non-NULL
 void condor_base64_decode(const char *input,unsigned char **output, int *output_length)
 {
+#if HAVE_EXT_OPENSSL
 	BIO *b64, *bmem;
 
 	ASSERT( input );
@@ -78,4 +88,11 @@ void condor_base64_decode(const char *input,unsigned char **output, int *output_
 	}
 
 	BIO_free_all(bmem);
+#else
+	(void) input;
+	(void) output;
+	(void) output_length;
+	EXCEPT( "condor_base64_encode() not available: HAVE_EXT_OPENSSL is false" );
+#endif
 }
+

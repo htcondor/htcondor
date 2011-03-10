@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -63,11 +63,16 @@ TransferRequest::TransferRequest(ClassAd *ip)
 	m_procids = NULL;
 }
 
-TransferRequest::TransferRequest()
-{
-	m_rejected = false;
-	m_ip = new ClassAd();
-}
+TransferRequest::TransferRequest() : m_ip(new ClassAd()),
+	m_procids(0),
+	m_client_sock(0),
+	m_rejected(false),
+	m_pre_push_func(0),
+	m_pre_push_func_this(0),
+	m_update_func(0),
+	m_update_func_this(0),
+	m_reaper_func(0),
+	m_reaper_func_this(0) { }
 
 TransferRequest::~TransferRequest()
 {
@@ -522,7 +527,8 @@ TransferRequest::put(Stream *sock)
 //////////////////////////////////////////////////////////////////////////////
 // utility functions for enum conversions.
 
-EncapMethod encap_method(MyString &line)
+EncapMethod
+encap_method(MyString &line)
 {
 	if (line == "ENCAPSULATION_METHOD_OLD_CLASSADS") {
 		return ENCAP_METHOD_OLD_CLASSADS;
@@ -531,22 +537,24 @@ EncapMethod encap_method(MyString &line)
 	return ENCAP_METHOD_UNKNOWN;
 }
 
-TreqMode transfer_mode(MyString mode)
+TreqMode
+transfer_mode(MyString mode)
 {
 	return transfer_mode(mode.Value());
 }
 
-TreqMode transfer_mode(const char *mode)
+TreqMode
+transfer_mode(const char *mode)
 {
-	if (mode == "Active") {
+	if ( 0 == strcmp(mode, "Active") ) {
 		return TREQ_MODE_ACTIVE;
 	}
 
-	if (mode == "ActiveShadow") {
+	if ( 0 == strcmp(mode, "ActiveShadow") ) {
 		return TREQ_MODE_ACTIVE_SHADOW; /* XXX DEMO mode */
 	}
 
-	if (mode == "Passive") {
+	if ( 0 == strcmp(mode, "Passive") ) {
 		return TREQ_MODE_PASSIVE;
 	}
 

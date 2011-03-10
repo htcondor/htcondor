@@ -51,6 +51,25 @@ CONDOR_LOCAL_MASTER=""
 # used.
 PIDFILE=""
 
+## Description: Disable the use of the Master's PID file (above)
+## Used by:     init-script, condor_master_wrapper
+## Type:        string
+## Default:     "no"
+#
+# Disable Condor's use of a 'PID file?  If "yes", Condor will never
+# create and/or use a "PID file" which stores the PID of the Condor master.
+#DISABLE_PIDFILE="no"
+
+## Description: Force "init.d/condor off" to look *only* at PID in the PID file
+## Used by:     init-script
+## Type:        string
+## Default:     "no"
+#
+# Only kill Condor PID process from the PID file.  If empty or "no",
+# the init sript will use find and kill Condor master processes with
+# UID "root" or that of CONDOR_USER (below, if specified) or "condor" if not.
+#FORCE_PIDFILE="no"
+
 ## Description: Number of seconds to wait for the condor_master to exit.
 ## Used by:     init-script
 ## Type:        integer

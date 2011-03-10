@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -167,10 +167,10 @@ if (WITH_GLOBUS)
 			if ( AIX )
 				set (GLOBUS_GRID_UNIVERSE_GT2 "-Wl,-bstatic;${GLOBUS_GRID_UNIVERSE_GT2};-Wl,-bdynamic")
 			endif()
-			set (GLOBUS_GRID_UNIVERSE_NORUID
+			set (GLOBUS_GRID_UNIVERSE_NORDUGRID
 			"${EXTERNAL_STAGE}/lib/libglobus_ftp_client_${GLOBUS_FLAVOR}.a;${EXTERNAL_STAGE}/lib/libglobus_ftp_control_${GLOBUS_FLAVOR}.a")
 			if ( AIX )
-				set (GLOBUS_GRID_UNIVERSE_NORUID "-Wl,-bstatic;${GLOBUS_GRID_UNIVERSE_NORUID};-Wl,-bdynamic")
+				set (GLOBUS_GRID_UNIVERSE_NORDUGRID "-Wl,-bstatic;${GLOBUS_GRID_UNIVERSE_NORDUGRID};-Wl,-bdynamic")
 			endif()
 			append_var (CONDOR_EXTERNALS globus)
 			append_var (EXTERNAL_INCLUDES ${EXTERNAL_STAGE}/include/${GLOBUS_FLAVOR})
@@ -184,7 +184,7 @@ if (WITH_GLOBUS)
 		find_multiple( "globus_gss_assist;globus_gssapi_gsi;globus_gsi_proxy_core;globus_gsi_credential;globus_gsi_callback;globus_gsi_sysconfig;globus_oldgaa;globus_gsi_cert_utils;globus_openssl;globus_openssl_error;globus_proxy_ssl;globus_callout;globus_common;ltdl" GLOBUS_FOUND )
 		find_multiple( "globus_gssapi_error;globus_xio;globus_io;globus_rsl" GLOBUS_GRID_UNIVERSE_COMMON )
 		find_multiple( "globus_gass_transfer;globus_gram_client;globus_gram_protocol" GLOBUS_GRID_UNIVERSE_GT2 )
-		find_multiple( "globus_ftp_client;globus_ftp_control" GLOBUS_GRID_UNIVERSE_NORUID)
+		find_multiple( "globus_ftp_client;globus_ftp_control" GLOBUS_GRID_UNIVERSE_NORDUGRID)
 		if (GLOBUS_FOUND)
 		  append_var (EXTERNAL_INCLUDES "/usr/include/globus;/usr/lib64/globus/include;/usr/lib/globus/include")
 		endif(GLOBUS_FOUND)
@@ -208,15 +208,15 @@ if (WITH_GLOBUS)
 			set( GLOBUS_GRID_UNIVERSE_GT2 ${GLOBUS_GRID_UNIVERSE_GT2} PARENT_SCOPE )
 		endif(GLOBUS_GRID_UNIVERSE_GT2)
 
-		if (GLOBUS_GRID_UNIVERSE_NORUID)
-			message( STATUS "(GLOBUS_GRID_UNIVERSE_NORUID=${GLOBUS_GRID_UNIVERSE_NORUID})" )
-			set( GLOBUS_GRID_UNIVERSE_NORUID ${GLOBUS_GRID_UNIVERSE_NORUID} PARENT_SCOPE )
-		endif(GLOBUS_GRID_UNIVERSE_NORUID)
+		if (GLOBUS_GRID_UNIVERSE_NORDUGRID)
+			message( STATUS "(GLOBUS_GRID_UNIVERSE_NORDUGRID=${GLOBUS_GRID_UNIVERSE_NORDUGRID})" )
+			set( GLOBUS_GRID_UNIVERSE_NORDUGRID ${GLOBUS_GRID_UNIVERSE_NORDUGRID} PARENT_SCOPE )
+		endif(GLOBUS_GRID_UNIVERSE_NORDUGRID)
 
 	endif(GLOBUS_FOUND)
 
 else( WITH_GLOBUS )
 
-	message (STATUS "external skiped (globus)")
+	message (STATUS "external skipped (globus)")
 
 endif( WITH_GLOBUS )

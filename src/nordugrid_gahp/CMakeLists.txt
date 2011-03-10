@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -25,7 +25,8 @@ if (HAVE_EXT_GLOBUS AND HAVE_LDAP_H AND LDAP_FOUND )
 	condor_exe( nordugrid_gahp
 				"${HeaderFiles};${SourceFiles}"
 				${C_SBIN}
-				"${CONDOR_TOOL_LIBS};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_GRID_UNIVERSE_NORUID};${OPENSSL_FOUND};${LDAP_FOUND};${PCRE_FOUND}" )
+				"${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${OPENSSL_FOUND};${LDAP_FOUND}"
+				OFF )
 
 else()
 

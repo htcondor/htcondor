@@ -193,12 +193,12 @@ sin_to_string(const struct sockaddr_in *sa_in)
 }
 
 
-char *
+const char *
 sock_to_string(SOCKET sockd)
 {
 	struct sockaddr_in	addr;
 	SOCKET_LENGTH_TYPE	addr_len;
-	static char *mynull = "\0";
+	static const char *mynull = "\0";
 
 	addr_len = sizeof(addr);
 
@@ -592,7 +592,7 @@ is_valid_sinful( const char *sinful )
 	char* copy;
 	if( !sinful ) return FALSE;
 	if( !(sinful[0] == '<') ) return FALSE;
-	if( !(tmp = (char *)strrchr(sinful, '>')) ) return FALSE;
+	if( !strrchr(sinful, '>') ) return FALSE;
 	copy = strdup( sinful );
 
 	if( !(tmp = strchr(copy, ':')) ) {
@@ -853,6 +853,21 @@ is_priv_net(uint32_t ip)
             (ip & 0xFFFF0000) == 0xC0A80000);       // 192.168/16
 }
 
+int
+is_loopback_net(uint32_t ip)
+{
+    return ((ip & 0xFF000000) == 0x7F000000); // 127/8
+}
+
+int is_loopback_net_str(char const *ip)
+{
+	struct in_addr sa;
+	if( is_ipaddr_no_wildcard(ip,&sa) ) {
+		return is_loopback_net(ntohl(sa.s_addr));
+	}
+	return 0;
+}
+
 /* Check if two ip addresses, given in network byte, are in the same network */
 int
 in_same_net(uint32_t ipA, uint32_t ipB)
@@ -925,7 +940,7 @@ prt_fds(int maxfd, fd_set *fds)
 int
 getPortFromAddr( const char* addr )
 {
-	char *tmp; 
+	const char *tmp; 
 	char *end; 
 	long port = -1;
 
@@ -933,8 +948,8 @@ getPortFromAddr( const char* addr )
 		return -1;
 	}
 
-	tmp = (char *)strchr( addr, ':' );
-	if( !tmp || !tmp[1] ) {
+	tmp = strchr( addr, ':' );
+	if( !tmp || ! *(tmp+1) ) {
 			/* address didn't specify a port section */
 		return -1;
 	}
@@ -942,12 +957,12 @@ getPortFromAddr( const char* addr )
 		/* clear out our errno so we know if it's set after the
 		   strtol(), that it was set from there */
 	errno = 0;
-	port = strtol( &tmp[1], &end, 10 );
+	port = strtol( tmp+1, &end, 10 );
 	if( errno == ERANGE ) {
 			/* port number was too big */
 		return -1;
 	}
-	if( end == &tmp[1] ) {
+	if( end == tmp+1 ) {
 			/* port section of the address wasn't a number */
 		return -1;
 	}

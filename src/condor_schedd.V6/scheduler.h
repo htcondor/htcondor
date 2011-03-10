@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -46,8 +46,8 @@
 #include "shadow_mgr.h"
 #include "enum_utils.h"
 #include "self_draining_queue.h"
-#include "schedd_cronmgr.h"
-#include "condor_classad_namedlist.h"
+#include "schedd_cron_job_mgr.h"
+#include "named_classad_list.h"
 #include "env.h"
 #include "tdman.h"
 #include "condor_crontab.h"
@@ -111,6 +111,9 @@ struct OwnerData {
   int JobsFlocked;
   int FlockLevel;
   int OldFlockLevel;
+		// Time of most recent change in flocking level or
+		// successful negotiation at highest current flocking
+		// level.
   time_t NegotiationTimestamp;
   OwnerData() { Name=NULL; Domain=NULL;
   NegotiationTimestamp=JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
@@ -313,6 +316,7 @@ class Scheduler : public Service
 	void			finishRecycleShadow(shadow_rec *srec);
 
 	int				requestSandboxLocation(int mode, Stream* s);
+	int			FindGManagerPid(PROC_ID job_id);
 
 	// match managing
 	int 			publish( ClassAd *ad );
@@ -356,6 +360,7 @@ class Scheduler : public Service
 	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	bool			WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reason );
+	bool			WriteAttrChangeToUserLog( const char* job_id_str, const char* attr, const char* attr_value, const char* old_value);
 	int				receive_startd_alive(int cmd, Stream *s);
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine );
 		// Public startd socket management functions
@@ -489,8 +494,8 @@ private:
 	SafeSock*		shadowCommandssock;
 
 	// The "Cron" manager (Hawkeye) & it's classads
-	ScheddCronMgr	*CronMgr;
-	NamedClassAdList extra_ads;
+	ScheddCronJobMgr	*CronJobMgr;
+	NamedClassAdList	 extra_ads;
 
 	// parameters controling the scheduling and starting shadow
 	Timeslice       SchedDInterval;
@@ -541,6 +546,8 @@ private:
 	int				jobThrottleNextJobDelay;	// used by jobThrottle()
 
 	int				shadowReaperId; // daemoncore reaper id for shadows
+//	int 				dirtyNoticeId;
+//	int 				dirtyNoticeInterval;
 
 		// Here we enqueue calls to 'contactStartd' when we can't just 
 		// call it any more.  See contactStartd and the call to it...
@@ -661,7 +668,7 @@ private:
 										ArgList const &args,
 										Env const *env, 
 										const char* name, bool is_dc,
-										bool wants_pipe );
+										bool wants_pipe, bool want_udp );
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	int				is_alive(shadow_rec* srec);
@@ -698,6 +705,9 @@ private:
 		// (e.g. condor_ssh_to_job)
 	int get_job_connect_info_handler(int, Stream* s);
 	int get_job_connect_info_handler_implementation(int, Stream* s);
+
+		// Mark a job as clean
+	int clear_dirty_job_attrs_handler(int, Stream *stream);
 
 		// A bit that says wether or not we've sent email to the admin
 		// about a shadow not starting.

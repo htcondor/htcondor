@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -30,15 +30,17 @@ if (BUILD_TESTS)
 	##########################################################
 	## begin file goop manipulation specific to the horror that
 	## is the "condor testing framework."
-	file(COPY ${CONDOR_SCRIPTS_DIR}/Condor.pm
-			${CONDOR_SCRIPTS_DIR}/CondorTest.pm
-			${CONDOR_SCRIPTS_DIR}/CondorPersonal.pm
-			${CONDOR_SCRIPTS_DIR}/CondorUtils.pm
-			${CONDOR_SCRIPTS_DIR}/batch_test.pl
-		DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
+	foreach(scriptFile Condor.pm
+			   CondorTest.pm
+			   CondorPersonal.pm
+			   CondorUtils.pm
+			   batch_test.pl)
+		configure_file(${CONDOR_SCRIPTS_DIR}/${scriptFile}
+				${TEST_TARGET_DIR}/${scriptFile} COPYONLY)
+	endforeach(scriptFile)
 
 	# 1st remove generated files.
-	file( GLOB RMV_FIRST list_* *.desc )
+	file( GLOB RMV_FIRST ${TEST_TARGET_DIR}/list_* *.desc )
 	if (RMV_FIRST)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
@@ -56,6 +58,7 @@ if (BUILD_TESTS)
 	condor_exe_test(x_write_joblog_events.exe "x_write_joblog_events.cpp" "condorapi")
 	condor_exe_test(lib_eventlog_base.exe "lib_eventlog_base.cpp" "condorapi")
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
+	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
 	
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig.exe "x_trapsig.cpp" "" )
@@ -116,16 +119,19 @@ if (BUILD_TESTS)
 		# someone else can add the fortran tests.
 		dprint("UW - add fortran .exe tests if desired")
 		
+		if(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
+			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
+		endif()
 	endif(STD_UNIVERSE)
 
 	##########################################################
 	# platform specific tests
 	if(LINUX)
-		condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full")
+		if ( NOT WITHOUT_AMAZON_TEST AND HAVE_EXT_GSOAP )
+			condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
+		endif()
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
-	elseif(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
-		condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
 	endif()
 
 	# negative matches. test on everything but this
@@ -136,7 +142,9 @@ if (BUILD_TESTS)
 
 	if(NOT HPUX)
 		condor_pl_test(fetch_work-basic "work fetch smoke test" "core;quick;quicknolink")
-		condor_pl_test(lib_auth_protocol-ssl "SSL authentication test" "core;quick;full;quicknolink")
+		if(HAVE_EXT_OPENSSL)
+			condor_pl_test(lib_auth_protocol-ssl "SSL authentication test" "core;quick;full;quicknolink")
+		endif()
 		#condor_pl_test(lib_auth_protocol-pw "PW authentication test" "core;quick;full;quicknolink")
 		#condor_pl_test(lib_auth_protocol-gsi "GSI authentication test" "core;quick;full;quicknolink")
 		condor_pl_test(job_dagman_large_dag "Test large DAG w/ recovery mode" "dagman;quick;full;quicknolink")
@@ -165,23 +173,19 @@ if (BUILD_TESTS)
 		condor_pl_test(lib_lease_manager-get_rel_5 "Lease manager: get/relesae test 5" "core;quick;full")
 	endif(WANT_LEASE_MANAGER)
 
-	if (WANT_QUILL AND HAV_EXT_POSTGRESS)
-		condor_pl_test(lib_lease_manager-get_rel_5 "Lease manager: get/relesae test 5" "core;quick;full")
-	endif(WANT_QUILL AND HAV_EXT_POSTGRESS)
-
 	if (STD_UNIVERSE)
 		# C-Tests
-		condor_pl_test(job_core_compressfiles_std "Do we handle compressed files made by standard jobs?" "stduniv;core;quick;full;quicknolink")
-		condor_pl_test(job_core_coredump_std "Do we handle core files made by standard jobs?" "stduniv;framework;quick;full;quicknolink")
-		condor_pl_test(job_rsc_binary-io_std "Do we handle binary io in standard jobs?" "stduniv;framework;quick;full;quicknolink")
+		condor_pl_test(job_core_compressfiles_std "Do we handle compressed files made by standard jobs?" "stduniv;core;quick;full")
+		condor_pl_test(job_core_coredump_std "Do we handle core files made by standard jobs?" "stduniv;framework;quick;full")
+		condor_pl_test(job_rsc_binary-io_std "Do we handle binary io in standard jobs?" "stduniv;framework;quick;full")
 
 		# C++-Tests
-		condor_pl_test(job_ckpt_constructor_std "Test C++ global and local constructors" "stduniv;framework;quick;full;quicknolink")
-		condor_pl_test(job_ckpt_env_std "Is the environment restored after ckpt?" "stduniv;framework;quick;full;quicknolink")
-		condor_pl_test(job_ckpt_memory-file_std "Does the memory_file class work across ckpts?" "stduniv;framework;quick;full;quicknolink")
-		condor_pl_test(job_core-cpp_exception_std "C++ exception handling" "framework;quick;full;quicknolink")
-		condor_pl_test(job_core-cpp_mem-alloc_std "Memory allocation and constructors" "framework;quick;full;quicknolink")
-		condor_pl_test(job_rsc_fstream_std "Does the C++ fstream() interface work?" "stduniv;framework;quick;full;quicknolink")
+		condor_pl_test(job_ckpt_constructor_std "Test C++ global and local constructors" "stduniv;framework;quick;full")
+		condor_pl_test(job_ckpt_env_std "Is the environment restored after ckpt?" "stduniv;framework;quick;full")
+		condor_pl_test(job_ckpt_memory-file_std "Does the memory_file class work across ckpts?" "stduniv;framework;quick;full")
+		condor_pl_test(job_core-cpp_exception_std "C++ exception handling" "framework;quick;full")
+		condor_pl_test(job_core-cpp_mem-alloc_std "Memory allocation and constructors" "framework;quick;full")
+		condor_pl_test(job_rsc_fstream_std "Does the C++ fstream() interface work?" "stduniv;framework;quick;full")
 
 		# Common to both
 		condor_pl_test(job_core_bigenv_std "Standard job with an enormous environment" "framework;quick;full")
@@ -239,6 +243,7 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_splice-N "Simple Dagman Splice N" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_splice-O "Simple Dagman Splice O" "core;dagman;quick;full;quicknolink")
 	##### generic lib tests
+	condor_pl_test(lib_classads "Run Classad Unit Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_unit_tests "Run Unit Tests Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_auth_config "Run Authorization Config Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_auth_protocol-fs "FS authentication test" "core;quick;full;quicknolink")
@@ -444,6 +449,7 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_node_status "Test noop nodes" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_job_held "Test removing jobs held too many times" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_reject "Test the REJECT keyword, inside a splice" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_jobstate_log "Test writing the jobstate.log file, including rescue DAG and recovery mode" "dagman;quick;full;quicknolink")
 	#condor_pl_test(perf_busy_lynn_100_100_500_sched "Generated cpu loading performance test" "performance;long")
 	#condor_pl_test(perf_jobs_sue_10_10_30_van "Generated jobs performance test" "performance;long")
 	#condor_pl_test(perf_xfer_deb_10_10_30_van "Generated transfer performance test" "performance;long")
@@ -455,7 +461,10 @@ if (BUILD_TESTS)
 	condor_pl_test(lib_ccb_schedd "Test of submit daemons using CCB." "core;quick;full;quicknolink")
 	condor_pl_test(lib_ccb_schedd_privnet "Test of submit daemons using CCB in private net." "core;quick;full;quicknolink")
 	condor_pl_test(lib_job_router_local "Test of JobRouter routing to local universe." "core;quick;full;quicknolink")
-	#if !defined( IS_CONDOR_PPC_LINUX_SLES9 ) && !defined( IS_CONDOR_PPC_LINUX_YD30 ) && !defined( IS_I386_LINUX_RHEL3 ) && !defined( IS_CONDOR_PPC_LINUX_YD50 ) && !defined( IS_SUN4X_SOLARIS28 )
+	condor_pl_test(condor_view_classad_types "CONDOR_VIEW_CLASSAD_TYPES test" "core;quick;full;quicknolink")
+
+	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )
 		condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
+	endif()
 
 endif(BUILD_TESTS)

@@ -68,7 +68,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 {
 	Selector selector;
 	int nr = 0, nro;
-	unsigned int start_time, cur_time;
+	unsigned int start_time=0, cur_time=0;
 	char sinbuf[SINFUL_STRING_BUF_SIZE];
 
 	if( DebugFlags & D_NETWORK ) {

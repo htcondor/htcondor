@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -17,33 +17,42 @@
  ############################################################### 
 
 
-if (NOT WINDOWS)
-  option(WITH_CURL "Compiling with support for CURL" ON)
-endif(NOT WINDOWS)
+
+option(WITH_CURL "Compiling with support for CURL" ON)
 
 if (WITH_CURL)
 
 	if ( NOT PROPER )
 
 		if (WINDOWS)
-			set (CURL_CONFIGURE echo "Nothing to configure" )
-			set (CURL_MAKE nmake -f Makefile.vc9 CFG=release-ssl )
-			set (CURL_INSTALL cp -f lib\lib*.lib ${EXTERNAL_STAGE}\lib && cp -rf include\curl ${EXTERNAL_STAGE}\include )
+			set (CURL_PATCH pushd "lib" ${CMD_TERM}
+						patch --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.vc9.patch ${CMD_TERM}
+						popd)
+			set (CURL_CONFIGURE echo "Nothing to configure")
+			set (CURL_MAKE pushd "lib" ${CMD_TERM}
+						nmake -f Makefile.vc9 CFG=release-ssl WINDOWS_SDK_PATH="${WIN_SDK_PATH}" OPENSSL_PATH="${EXTERNAL_STAGE}" ${CMD_TERM}
+						popd ${CMD_TERM})
+			set (CURL_DEPENDS openssl)
+			set (CURL_INSTALL cp -f lib/lib*.lib ${EXTERNAL_STAGE}/lib && cp -rf include/curl ${EXTERNAL_STAGE}/include )
 		else()
+			set (CURL_PATCH echo "Nothing to patch on Unix")
 			set (CURL_CONFIGURE PKG_CONFIG_PATH=${EXTERNAL_STAGE} LIBS=-ldl ./configure --prefix=${EXTERNAL_STAGE} --with-ssl=${EXTERNAL_STAGE} --disable-shared --disable-ipv6 )
 			set (CURL_MAKE make)
 			set (CURL_INSTALL make install)
+			set (CURL_DEPENDS openssl zlib)
 		endif()
 
 		set (CURL_VER curl-7.19.6)
 
 		ExternalProject_Add(curl
-							DEPENDS openssl zlib
+							DEPENDS ${CURL_DEPENDS}
 							PREFIX ${EXTERNAL_BUILD_PREFIX}/${CURL_VER}
 							#-- Download Step ----------
 							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${CURL_VER}.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${EXTERNAL_DL}
 							URL http://parrot.cs.wisc.edu/externals/${CURL_VER}.tar.gz
+							#--Patch Step ----------
+							PATCH_COMMAND cd ${CURL_VER} ${CMD_TERM} ${CURL_PATCH}
 							#--Configure step ----------
 							CONFIGURE_COMMAND cd ${CURL_VER} && ${CURL_CONFIGURE}
 							#--Build Step ----------
@@ -56,8 +65,12 @@ if (WITH_CURL)
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)
 			set(CURL_FOUND "${EXTERNAL_STAGE}/lib/libcurl.lib")
+			set_property( TARGET curl PROPERTY FOLDER "externals" )
 		else()
-			set(CURL_FOUND "${EXTERNAL_STAGE}/lib/libcurl.a")
+			# libcurl is dependent on these libraries on some
+			# platforms.
+			find_multiple( "rt;idn" CURL_FOUND )
+			set(CURL_FOUND "${EXTERNAL_STAGE}/lib/libcurl.a;${CURL_FOUND}")
 		endif()
 
 		append_var (CONDOR_EXTERNALS curl)
@@ -78,6 +91,6 @@ if (WITH_CURL)
 
 else(WITH_CURL)
 
-	message (STATUS "external skiped (curl)")
+	message (STATUS "external skipped (curl)")
 
 endif(WITH_CURL)

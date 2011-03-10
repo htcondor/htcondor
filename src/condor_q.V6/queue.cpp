@@ -22,7 +22,6 @@
 #include "condor_config.h"
 #include "condor_accountant.h"
 #include "condor_classad.h"
-#include "condor_classad_util.h"
 #include "condor_debug.h"
 #include "condor_query.h"
 #include "condor_q.h"
@@ -86,7 +85,7 @@ static  void processCommandLineArguments(int, char *[]);
 static  bool process_buffer_line( ClassAd * );
 
 static 	void short_header (void);
-static 	void usage (char *);
+static 	void usage (const char *);
 static 	void io_display (ClassAd *);
 static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
@@ -157,7 +156,7 @@ static  Daemon *g_cur_schedd_for_process_buffer_line = NULL;
 
 static  ClassAdAnalyzer analyzer;
 
-static char* format_owner( char*, AttrList* );
+static const char* format_owner( char*, AttrList* );
 
 // clusterProcString is the container where the output strings are
 //    stored.  We need the cluster and proc so that we can sort in an
@@ -178,6 +177,8 @@ clusterProcString::
 clusterProcString() {
 	dagman_cluster_id = -1;
 	dagman_proc_id    = -1;
+	cluster = -1;
+	proc = -1;
 	string = 0;
 	return;
 }
@@ -204,7 +205,7 @@ static  int			findSubmittor( char * );
 static	void 		setupAnalysis();
 static 	void		fetchSubmittorPrios();
 static	void		doRunAnalysis( ClassAd*, Daemon* );
-static	char *		doRunAnalysisToBuffer( ClassAd*, Daemon* );
+static	const char *doRunAnalysisToBuffer( ClassAd*, Daemon* );
 struct 	PrioEntry { MyString name; float prio; };
 static  bool        better_analyze = false;
 static	bool		run = false;
@@ -231,6 +232,9 @@ char *dbName = NULL;
 char *queryPassword = NULL;
 
 StringList attrs(NULL, "\n");; // The list of attrs we want, "" for all
+
+bool g_stream_results = false;
+
 static void freeConnectionStrings() {
 	if(quillName) {
 		free(quillName);
@@ -396,7 +400,7 @@ int main (int argc, char **argv)
            	// to the schedd time's out and the user gets nothing
            	// useful printed out. Therefore, we use show_queue,
            	// which fetches all of the ads, then analyzes them. 
-			if ( verbose || better_analyze || jobads_file ) {
+			if ( (verbose || better_analyze || jobads_file) && !g_stream_results ) {
 				sqfp = show_queue;
 			} else {
 				sqfp = show_queue_buffered;
@@ -688,7 +692,7 @@ int main (int argc, char **argv)
         // to the schedd time's out and the user gets nothing
         // useful printed out. Therefore, we use show_queue,
         // which fetches all of the ads, then analyzes them. 
-		if ( verbose || better_analyze ) {
+		if ( (verbose || better_analyze) && !g_stream_results ) {
 			sqfp = show_queue;
 		} else {
 			sqfp = show_queue_buffered;
@@ -1292,6 +1296,10 @@ processCommandLineArguments (int argc, char *argv[])
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
         }
+		else
+		if (match_prefix (arg, "stream")) {
+			g_stream_results = true;
+		}
 		else {
 			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
 			usage(argv[0]);
@@ -1601,13 +1609,13 @@ format_remote_host (char *, AttrList *ad)
 	return unknownHost;
 }
 
-static char *
+static const char *
 format_cpu_time (float utime, AttrList *ad)
 {
 	return format_time( (int) job_time(utime,(ClassAd *)ad) );
 }
 
-static char *
+static const char *
 format_goodput (int job_status, AttrList *ad)
 {
 	static char put_result[9];
@@ -1630,7 +1638,7 @@ format_goodput (int job_status, AttrList *ad)
 	return put_result;
 }
 
-static char *
+static const char *
 format_mbps (float bytes_sent, AttrList *ad)
 {
 	static char result_format[10];
@@ -1650,7 +1658,7 @@ format_mbps (float bytes_sent, AttrList *ad)
 	return result_format;
 }
 
-static char *
+static const char *
 format_cpu_util (float utime, AttrList *ad)
 {
 	static char result_format[10];
@@ -1664,7 +1672,7 @@ format_cpu_util (float utime, AttrList *ad)
 	return result_format;
 }
 
-static char *
+static const char *
 format_owner (char *owner, AttrList *ad)
 {
 	static char result_format[15] = "";
@@ -1712,7 +1720,7 @@ format_owner (char *owner, AttrList *ad)
 	return result_format;
 }
 
-static char *
+static const char *
 format_globusStatus( int globusStatus, AttrList * /* ad */ )
 {
 	static char result_format[64];
@@ -1728,7 +1736,7 @@ format_globusStatus( int globusStatus, AttrList * /* ad */ )
 // with is defined. So we register it with an attribute we know will
 // always be present and be a string. We then ignore that attribute
 // and examine GlobusResource and GridResource.
-static char *
+static const char *
 format_globusHostAndJM( char *, AttrList *ad )
 {
 	static char result_format[64];
@@ -1817,7 +1825,7 @@ format_globusHostAndJM( char *, AttrList *ad )
 
 
 
-static char *
+static const char *
 format_q_date (int d, AttrList *)
 {
 	return format_date(d);
@@ -1825,7 +1833,7 @@ format_q_date (int d, AttrList *)
 
 		
 static void
-usage (char *myName)
+usage (const char *myName)
 {
 	printf ("Usage: %s [options]\n\twhere [options] are\n"
 		"\t\t-global\t\t\tGet global queue\n"
@@ -1856,10 +1864,11 @@ usage (char *myName)
 		"\t\t\tPerform a direct query to the rdbms\n"
 		"\t\t\tor to the schedd without falling back to the queue\n"
 		"\t\t\tlocation discovery algortihm, even in case of error\n"
+		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
 #else
 		"\t\t-direct <schedd>\tPerform a direct query to the schedd\n"
 #endif
-		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
+		"\t\t-stream-results \tProduce output as ads are fetched\n"
 		"\t\t-version\t\tPrint the Condor Version and exit\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
@@ -1893,6 +1902,32 @@ output_sorter( const void * va, const void * vb ) {
 	if ((*a)->proc    > (*b)->proc    ) { return  1; }
 
 	return 0;
+}
+
+void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char const *db_name,char const *lastUpdate, char const *scheddName, char const *scheddAddress,char const *scheddMachine)
+{
+	if (! customFormat && !verbose ) {
+		if (useDB) {
+			printf ("\n\n-- Quill: %s : %s : %s : %s\n", quill_name, 
+					db_ipAddr, db_name, lastUpdate);
+		} else if( querySchedds ) {
+			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
+		} else {
+			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
+					scheddAddress, scheddMachine);	
+		}
+			// Print the output header
+		
+		short_header();
+	}
+	if( use_xml ) {
+			// keep this consistent with AttrListList::fPrintAttrListList()
+		ClassAdXMLUnparser  unparser;
+		MyString xml;
+		unparser.SetUseCompactSpacing(false);
+		unparser.AddXMLFileHeader(xml);
+		printf("%s\n", xml.Value());
+	}
 }
 
 /* The parameters v1, v2, and v3 will be intepreted immediately on the top 
@@ -2015,6 +2050,10 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		g_cur_schedd_for_process_buffer_line = NULL;
 	}
 
+	if( g_stream_results ) {
+		full_header(useDB,quill_name,db_ipAddr,db_name,lastUpdate,scheddName,scheddAddress,scheddMachine);
+	}
+
 	CondorError errstack;
 
 		/* get the job ads from database if database can be queried */
@@ -2076,32 +2115,13 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	// If this is a global, don't print anything if this schedd is empty.
 	// If this is NOT global, print out the header and footer to show that we
 	//    did something.
-	if (!global || !output_buffer_empty) {
+	if (!global || !output_buffer_empty || g_stream_results) {
 		the_output = &(*output_buffer)[0];
 		qsort(the_output, output_buffer->getlast()+1, sizeof(clusterProcString*),
 			output_sorter);
 
-		if (! customFormat ) {
-			if (useDB) {
-				printf ("\n\n-- Quill: %s : %s : %s : %s\n", quill_name, 
-						db_ipAddr, db_name, lastUpdate);
-			} else if( querySchedds ) {
-				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
-			} else {
-				printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-						scheddAddress, scheddMachine);	
-			}
-			// Print the output header
-		
-			short_header();
-		}
-		if( use_xml ) {
-				// keep this consistent with AttrListList::fPrintAttrListList()
-			ClassAdXMLUnparser  unparser;
-			MyString xml;
-			unparser.SetUseCompactSpacing(false);
-			unparser.AddXMLFileHeader(xml);
-			printf("%s\n", xml.Value());
+		if( !g_stream_results ) {
+			full_header(useDB,quill_name,db_ipAddr,db_name,lastUpdate,scheddName,scheddAddress,scheddMachine);
 		}
 
 		if (!output_buffer_empty) {
@@ -2157,7 +2177,7 @@ process_buffer_line( ClassAd *job )
 	int status = 0;
 
 	clusterProcString * tempCPS = new clusterProcString;
-	(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
+
 	job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
 	job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
 	job->LookupInteger( ATTR_JOB_STATUS, status );
@@ -2222,6 +2242,12 @@ process_buffer_line( ClassAd *job )
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrintAsXML(s,attr_white_list);
 		tempCPS->string = strnewp( s.Value() );
+	} else if( verbose ) {
+		MyString s;
+		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
+		job->sPrint(s,attr_white_list);
+		s += "\n";
+		tempCPS->string = strnewp( s.Value() );
 	} else if( better_analyze ) {
 		tempCPS->string = strnewp( doRunAnalysisToBuffer( job, g_cur_schedd_for_process_buffer_line ) );
 	} else if ( show_io ) {
@@ -2235,7 +2261,15 @@ process_buffer_line( ClassAd *job )
 		tempCPS->string = strnewp( bufferJobShort( job ) );
 	}
 
-	output_buffer_empty = false;
+	if( g_stream_results ) {
+		printf("%s",tempCPS->string);
+		delete tempCPS;
+		tempCPS = NULL;
+	}
+	else {
+		(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
+		output_buffer_empty = false;
+	}
 
 	return true;
 }
@@ -2632,7 +2666,7 @@ doRunAnalysis( ClassAd *request, Daemon *schedd )
 	printf("%s", doRunAnalysisToBuffer( request, schedd ) );
 }
 
-static char *
+static const char *
 doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 {
 	char	owner[128];
@@ -2677,6 +2711,11 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
 	request->Insert( buffer );
 
+
+	int last_match_time=0, last_rej_match_time=0;
+	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
+	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
+
 	request->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	request->LookupInteger( ATTR_PROC_ID, proc );
 	request->LookupInteger( ATTR_JOB_STATUS, jobState );
@@ -2717,6 +2756,13 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			proc );
 		return return_buff;
 	}
+	if ( last_rej_match_time == 0 ) {
+	  sprintf( return_buff,
+		   "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
+		   proc );
+	  return return_buff;
+	}
+
 
 	startdAds.Open();
 
@@ -2886,9 +2932,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		fOffline, verbose ? fOfflineStr.c_str() : "",
 		available );
 
-	int last_match_time=0, last_rej_match_time=0;
-	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
-	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 	if (last_match_time) {
 		time_t t = (time_t)last_match_time;
 		sprintf( return_buff, "%s\tLast successful match: %s",
@@ -3087,7 +3130,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
     file = safe_fopen_wrapper(filename, "r");
     if (file == NULL) {
         fprintf(stderr, "Can't open file of job ads: %s\n", filename);
-        success = false;
+		return false;
     } else {
         do {
             classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
@@ -3103,6 +3146,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
         } else {
             success = true;
         }
+		fclose(file);
     }
     return success;
 }

@@ -1,23 +1,22 @@
  ###############################################################
- # 
- # Copyright (C) 1990-2010, Redhat. 
- # 
- # Licensed under the Apache License, Version 2.0 (the "License"); you 
- # may not use this file except in compliance with the License.  You may 
- # obtain a copy of the License at 
- # 
- #    http://www.apache.org/licenses/LICENSE-2.0 
- # 
- # Unless required by applicable law or agreed to in writing, software 
- # distributed under the License is distributed on an "AS IS" BASIS, 
+ #
+ # Copyright 2011 Red Hat, Inc.
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License"); you
+ # may not use this file except in compliance with the License.  You may
+ # obtain a copy of the License at
+ #
+ #    http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
  # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and 
- # limitations under the License. 
- # 
- ############################################################### 
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ #
+ ###############################################################
 
-
-#processor modification if necessary
+# OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
   if(${TEST_VER} MATCHES "10.6" AND ${SYS_ARCH} MATCHES "I386")
@@ -26,25 +25,35 @@ if(${OS_NAME} STREQUAL "DARWIN")
 elseif(${OS_NAME} MATCHES "WIN")
 	cmake_minimum_required(VERSION 2.8.3)
 	set(WINDOWS ON)
-	add_definitions(-DWINDOWS)
+
 	# The following is necessary for sdk/ddk version to compile against.
 	# lowest common denominator is winxp (for now)
+	add_definitions(-DWINDOWS)
 	add_definitions(-D_WIN32_WINNT=_WIN32_WINNT_WINXP)
 	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
 	add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
 	set(BISON_SIMPLE ${C_WIN_BIN}/bison.simple)
-	set(CMAKE_SUPPRESS_REGENERATION TRUE)
+	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
 
 	set (HAVE_SNPRINTF 1)
 	set (HAVE_WORKING_SNPRINTF 1)
 
+	if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
+		dprint("**** IN SOURCE BUILDING ON WINDOWS IS NOT ADVISED ****")
+	else()
+		dprint("**** OUT OF SOURCE BUILDS ****")
+		file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/msconfig DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+	endif()
+
 	set( CMAKE_INSTALL_PREFIX "C:/condor_test/${VERSION}")
-	dprint("TODO FEATURE-> Z:TANNENBA:TSTCLAIR Update registry + paths to use this prefixed debug loc")
+	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc")
 endif()
 
+  
 message(STATUS "***********************************************************")
 message(STATUS "System(${HOSTNAME}): ${OS_NAME}(${OS_VER}) Arch=${SYS_ARCH} BitMode=${BIT_MODE} BUILDID:${BUILDID}")
 message(STATUS "install prefix:${CMAKE_INSTALL_PREFIX}")
@@ -56,23 +65,53 @@ include (FindThreads)
 include (GlibcDetect)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
-add_definitions(-DPLATFORM="${CMAKE_SYSTEM}")
+if (CONDOR_PLATFORM)
+    add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
+elseif(PLATFORM)
+    add_definitions(-DPLATFORM="${PLATFORM}")
+elseif(LINUX_NAME)
+    add_definitions(-DPLATFORM="${SYS_ARCH}-${LINUX_NAME}_${LINUX_VER}")
+else()
+    add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
+endif()
+
+if(PRE_RELEASE)
+  add_definitions( -DPRE_RELEASE_STR=" ${PRE_RELEASE}" )
+else()
+  add_definitions( -DPRE_RELEASE_STR="" )
+endif(PRE_RELEASE)
+add_definitions( -DCONDOR_VERSION="${VERSION}" )
+
+if( NOT BUILD_DATE )
+  GET_DATE( BUILD_DATE )
+endif()
+if(BUILD_DATE)
+  add_definitions( -DBUILD_DATE="${BUILD_DATE}" )
+endif()
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
-set( CMAKE_VERBOSE_MAKEFILE TRUE )
+
+# set to true to enable printing of make actions
+set( CMAKE_VERBOSE_MAKEFILE FALSE )
 set( BUILD_SHARED_LIBS FALSE )
 
 # Windows is so different perform the check 1st and start setting the vars.
 if( NOT WINDOWS)
 
 	set( CMD_TERM && )
-	
+
 	if (_DEBUG)
 	  set( CMAKE_BUILD_TYPE Debug )
 	else()
-	  set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package will strip the info)
+	  # Using -O2 crashes the compiler on ppc mac os x when compiling
+	  # condor_submit
+	  if ( ${OS_NAME} STREQUAL "DARWIN" AND ${SYS_ARCH} STREQUAL "POWERPC" )
+	    set( CMAKE_BUILD_TYPE Debug ) # = -g (package may strip the info)
+	  else()
+	    set( CMAKE_BUILD_TYPE RelWithDebInfo ) # = -O2 -g (package may strip the info)
+	  endif()
 	endif()
-	
+
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
 
 	# when we want to distro dynamic libraries only with localized rpaths.
@@ -96,6 +135,7 @@ if( NOT WINDOWS)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	check_function_exists("getpagesize" HAVE_GETPAGESIZE)
 	check_function_exists("getwd" HAVE_GETWD)
+	check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
 	check_function_exists("inet_ntoa" HAS_INET_NTOA)
 	check_function_exists("lchown" HAVE_LCHOWN)
 	check_function_exists("lstat" HAVE_LSTAT)
@@ -107,7 +147,7 @@ if( NOT WINDOWS)
 	check_function_exists("seteuid" HAVE_SETEUID)
 	check_function_exists("setlinebuf" HAVE_SETLINEBUF)
 	check_function_exists("snprintf" HAVE_SNPRINTF)
-	check_function_exists("snprintf" HAVE_WORKING_SNPRINTF)	
+	check_function_exists("snprintf" HAVE_WORKING_SNPRINTF)
 
 	check_function_exists("stat64" HAVE_STAT64)
 	check_function_exists("_stati64" HAVE__STATI64)
@@ -118,7 +158,10 @@ if( NOT WINDOWS)
 	check_function_exists("strsignal" HAVE_STRSIGNAL)
 	check_function_exists("unsetenv" HAVE_UNSETENV)
 	check_function_exists("vasprintf" HAVE_VASPRINTF)
-	
+	check_function_exists("getifaddrs" HAVE_GETIFADDRS)
+	check_function_exists("readdir64" HAVE_READDIR64)
+	check_function_exists("backtrace" HAVE_BACKTRACE)
+
 	# we can likely put many of the checks below in here.
 	check_include_files("dlfcn.h" HAVE_DLFCN_H)
 	check_include_files("inttypes.h" HAVE_INTTYPES_H)
@@ -145,6 +188,8 @@ if( NOT WINDOWS)
 	check_type_exists("struct ifreq" "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ)
 	check_struct_has_member("struct ifreq" ifr_hwaddr "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ_IFR_HWADDR)
 
+	check_struct_has_member("struct sockaddr_in" sin_len "netinet/in.h" HAVE_STRUCT_SOCKADDR_IN_SIN_LEN)
+
 	check_struct_has_member("struct statfs" f_fstyp "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYP)
 	if (NOT ${OS_NAME} STREQUAL "DARWIN")
 		check_struct_has_member("struct statfs" f_fstypename "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYPENAME)
@@ -156,6 +201,28 @@ if( NOT WINDOWS)
 	# previously they were ~=check_cxx_source_compiles
 	set(STATFS_ARGS "2")
 	set(SIGWAIT_ARGS "2")
+
+	check_cxx_source_compiles("
+		#include <sched.h>
+		int main() {
+			cpu_set_t s;
+			sched_setaffinity(0, 1024, &s);
+			return 0;
+		}
+		" HAVE_SCHED_SETAFFINITY )
+
+	check_cxx_source_compiles("
+		#include <sched.h>
+		int main() {
+			cpu_set_t s;
+			sched_setaffinity(0, &s);
+			return 0;
+		}
+		" HAVE_SCHED_SETAFFINITY_2ARG )
+
+	if(HAVE_SCHED_SETAFFINITY_2ARG)
+		set(HAVE_SCHED_SETAFFINITY ON)
+	endif()
 
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
@@ -169,14 +236,27 @@ if( NOT WINDOWS)
 endif()
 
 find_program(HAVE_VMWARE vmware)
-check_type_size("id_t" HAVE_ID_T)
-check_type_size("__int64" HAVE___INT64)
-check_type_size("int64_t" HAVE_INT64_T)
-check_type_size("long long" HAVE_LONG_LONG)
+find_program(LN ln)
+
+# Check for the existense of and size of various types
+check_type_size("id_t" ID_T)
+check_type_size("__int64" __INT64)
+check_type_size("int64_t" INT64_T)
+check_type_size("int" INTEGER)
+set(SIZEOF_INT "${INTEGER}")
+check_type_size("long" LONG_INTEGER)
+set(SIZEOF_LONG "${LONG_INTEGER}")
+check_type_size("long long" LONG_LONG)
+if(HAVE_LONG_LONG)
+  set(SIZEOF_LONG_LONG "${LONG_LONG}")
+endif()
+check_type_size("void *" VOIDPTR)
+set(SIZEOF_VOIDPTR "${VOIDPTR}")
+
 
 ##################################################
 ##################################################
-# Now checking *nix OS based options 
+# Now checking *nix OS based options
 set(HAS_FLOCK ON)
 set(DOES_SAVE_SIGSTATE OFF)
 
@@ -198,7 +278,7 @@ if (${OS_NAME} STREQUAL "SUNOS")
 	endif()
 	add_definitions(-D_STRUCTURED_PROC)
 	set(HAS_INET_NTOA ON)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lkstat -lelf -lsocket")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lkstat -lelf -lnsl -lsocket")
 
 	#update for solaris builds to use pre-reqs namely binutils in this case
 	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -B$ENV{PATH}")
@@ -238,16 +318,6 @@ elseif(${OS_NAME} STREQUAL "HPUX")
 	set(NEEDS_64BIT_STRUCTS ON)
 endif()
 
-# NOTE: instead
-# the following is meant to auto-set for CSL 
-#string(REPLACE  ".cs.wisc.edu" "@@UW" UW_CHECK ${HOSTNAME})
-#if(${UW_CHECK} MATCHES "@@UW") #cmakes regex does not handle on [.] [.] [.] well
-#	if(EXISTS "/s/std/bin")
-#		message(STATUS "*** UW ENV DETECTED: IF YOU WANT AFS CACHING UPDATE HERE ***")
-#		set(UW_CSL_ENV ON)
-#	endif()
-#endif()
-
 ##################################################
 ##################################################
 # compilation/build options.
@@ -260,6 +330,9 @@ option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(BUILD_TESTS "Will build internal test applications" ON)
 option(WANT_CONTRIB "Enable quill functionality" OFF)
+option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
+option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
 
@@ -271,10 +344,20 @@ if (UW_BUILD OR WINDOWS)
   endif()
 
   dprint("**TO UW: IF YOU WANT CUSTOM SETTINGS ADD THEM HERE**")
-  
+
 else()
   option(PROPER "Try to build using native env" ON)
-  option(CLIPPED "enable/disable the standard universe" ON)
+  option(CLIPPED "disable the standard universe" ON)
+endif()
+
+if (NOT WINDOWS)
+    if (HAVE_X11)
+        if (NOT (${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND"))
+            option(HAVE_KBDD "Support for condor_kbdd" ON)
+        endif()
+    endif()
+else()
+    option(HAVE_KBDD "Support for condor_kbdd" ON)
 endif()
 
 if (NOT CLIPPED AND NOT LINUX)
@@ -288,12 +371,12 @@ if (NOT HPUX)
 	endif()
 endif(NOT HPUX)
 
-if (NOT WINDOWS) # if *nix
-	option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
+if (NOT WINDOWS) 
+    option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 
 if (BUILD_TESTS)
-	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
+	set(TEST_TARGET_DIR ${CMAKE_BINARY_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
 
 ##################################################
@@ -310,18 +393,17 @@ if (PROPER)
 	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
 else(PROPER)
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
-	# temporarily disable cacheing externals on windows, primarily b/c of nmi.  
-	if (NOT WINDOWS)
-		option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
-	endif(NOT WINDOWS)
+	# temporarily disable cacheing externals on windows, primarily b/c of nmi.
+	option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
+
 endif(PROPER)
 
-## this primarily exists for nmi cached building.. yuk! 
+## this primarily exists for nmi cached building.. yuk!
 if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
-	#if (WINDOWS)
-	#	set (EXTERNAL_STAGE C:/temp/scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/root)
-	#	set (EXTERNAL_DL C:/temp/scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/download)
-	#else(WINDOWS)
+	if (WINDOWS)
+		set (EXTERNAL_STAGE C:/temp/${PACKAGE_NAME})
+		set (EXTERNAL_DL C:/temp/${PACKAGE_NAME}/download)
+	else(WINDOWS)
 		set (EXTERNAL_STAGE /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/stage/root)
 		set (EXTERNAL_DL /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/externals/stage/download)
 
@@ -331,7 +413,7 @@ if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
 		COMMAND chmod
 		ARGS -f -R a+rwX /scratch/externals/cmake && touch ${EXTERNAL_MOD_DEP}
 		COMMENT "changing ownership on externals cache because so on multiple user machines they can take advantage" )
-	#endif(WINDOWS)
+	endif(WINDOWS)
 else()
 	set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
 	set (EXTERNAL_DL ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/download/${PACKAGE_NAME}_${PACKAGE_VERSION})
@@ -352,32 +434,30 @@ include_directories( ${EXTERNAL_STAGE}/include )
 link_directories( ${EXTERNAL_STAGE}/lib64 ${EXTERNAL_STAGE}/lib )
 
 ###########################################
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.33.1)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-
-if (NOT WIN_EXEC_NODE_ONLY)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
-endif(NOT WIN_EXEC_NODE_ONLY)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 
 if (NOT WINDOWS)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gcb/1.5.6)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.6)
 
 	# globus is an odd *beast* which requires a bit more config.
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.0.1-p1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.0-p2)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/1.9.10_4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
 
@@ -385,7 +465,7 @@ if (NOT WINDOWS)
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
 
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
-		
+
 		if (EXT_GLIBC_FOUND)
 		  if (${BIT_MODE} STREQUAL "32")
 			  set (DOES_COMPRESS_CKPT ON) # this is total crap
@@ -401,11 +481,11 @@ if (NOT WINDOWS)
 		  set (CONDOR_COMPILE ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_compile)
 		  set (CONDOR_ARCH_LINK ${CONDOR_SOURCE_DIR}/src/condor_scripts/condor_arch_link)
 		  set (STDU_LIB_LOC ${CMAKE_INSTALL_PREFIX}/${C_LIB})
-		  
+
 		  include_directories( ${CONDOR_SOURCE_DIR}/src/condor_io.std )
 
 		  message( STATUS "** Standard Universe Enabled **")
-		  
+
 		else()
 			message( STATUS "** Standard Universe Disabled **")
 		endif()
@@ -416,17 +496,28 @@ if (NOT WINDOWS)
 endif(NOT WINDOWS)
 
 if (CONDOR_EXTERNALS AND NOT WINDOWS)
-	### addition of a single externals target which allows you to 
+	### addition of a single externals target which allows you to
 	add_custom_target( externals DEPENDS ${EXTERNAL_MOD_DEP} )
 	add_dependencies( externals ${CONDOR_EXTERNALS} )
 endif(CONDOR_EXTERNALS AND NOT WINDOWS)
+
+######### special case for contrib
+if (WANT_CONTRIB AND WITH_MANAGEMENT)
+    # global scoping external linkage var when options enable.
+    if (WINDOWS)
+        set (CONDOR_QMF condor_qmflib;${QPID_FOUND})
+    endif()
+    add_definitions( -DWANT_CONTRIB )
+    add_definitions( -DWITH_MANAGEMENT )
+endif()
 
 message(STATUS "********* External configuration complete (dropping config.h) *********")
 dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
 
 ########################################################
-configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake
-${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h)
+configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp)
+# only update config.h if it is necessary b/c it causes massive rebuilding.
+exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h )
 add_definitions(-DHAVE_CONFIG_H)
 
 ###########################################
@@ -442,7 +533,7 @@ include_directories(${CONDOR_SOURCE_DIR}/src/condor_includes)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes)
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_utils)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/condor_utils)
-set (DAEMON_CORE ${CONDOR_SOURCE_DIR}/src/condor_daemon_core.V6) #referenced elsewhere primarily for soap gen stuff 
+set (DAEMON_CORE ${CONDOR_SOURCE_DIR}/src/condor_daemon_core.V6) #referenced elsewhere primarily for soap gen stuff
 include_directories(${DAEMON_CORE})
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_daemon_client)
 include_directories(${CONDOR_SOURCE_DIR}/src/ccb)
@@ -450,6 +541,9 @@ include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
+if (WANT_CONTRIB)
+    include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
+endif(WANT_CONTRIB)
 ###########################################
 
 ###########################################
@@ -458,11 +552,15 @@ if (HAVE_EXT_OPENSSL)
 	add_definitions(-DWITH_OPENSSL) # used only by SOAP
 endif(HAVE_EXT_OPENSSL)
 
+if (HAVE_SSH_TO_JOB AND NOT HAVE_EXT_OPENSSL)
+	message (FATAL_ERROR "HAVE_SSH_TO_JOB requires openssl (for condor_base64 functions)")
+endif()
+
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-set (CONDOR_LIBS "procd_client;daemon_core;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
-set (CONDOR_TOOL_LIBS "procd_client;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
+set (CONDOR_LIBS "procd_client;daemon_core;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
+set (CONDOR_TOOL_LIBS "procd_client;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 message(STATUS "----- Begin compiler options/flags check -----")
@@ -567,7 +665,7 @@ else(MSVC)
 
 	if (AIX)
 		# specifically ask for the C++ libraries to be statically linked
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lodm -static-libgcc")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -static-libgcc")
 	endif(AIX)
 
 	if (NOT PROPER AND NOT AIX)
@@ -605,33 +703,35 @@ else(MSVC)
 endif(MSVC)
 
 message(STATUS "----- End compiler options/flags check -----")
-dprint("----- Begin CMake Var DUMP -----")
-# if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise 
-# this is the top level directory of your build tree 
+message(STATUS "----- Begin CMake Var DUMP -----")
+message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
+message(STATUS "LN: ${LN}")
+# if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
+# this is the top level directory of your build tree
 dprint ( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )
 
-# if you are building in-source, this is the same as CMAKE_CURRENT_SOURCE_DIR, otherwise this 
-# is the directory where the compiled or generated files from the current CMakeLists.txt will go to 
+# if you are building in-source, this is the same as CMAKE_CURRENT_SOURCE_DIR, otherwise this
+# is the directory where the compiled or generated files from the current CMakeLists.txt will go to
 dprint ( "CMAKE_CURRENT_BINARY_DIR: ${CMAKE_CURRENT_BINARY_DIR}" )
 
-# this is the directory, from which cmake was started, i.e. the top level source directory 
+# this is the directory, from which cmake was started, i.e. the top level source directory
 dprint ( "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}" )
 
-# this is the directory where the currently processed CMakeLists.txt is located in 
+# this is the directory where the currently processed CMakeLists.txt is located in
 dprint ( "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}" )
 
-# contains the full path to the top level directory of your build tree 
+# contains the full path to the top level directory of your build tree
 dprint ( "PROJECT_BINARY_DIR: ${PROJECT_BINARY_DIR}" )
 
 # contains the full path to the root of your project source directory,
-# i.e. to the nearest directory where CMakeLists.txt contains the PROJECT() command 
+# i.e. to the nearest directory where CMakeLists.txt contains the PROJECT() command
 dprint ( "PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}" )
 
 # set this variable to specify a common place where CMake should put all executable files
 # (instead of CMAKE_CURRENT_BINARY_DIR)
 dprint ( "EXECUTABLE_OUTPUT_PATH: ${EXECUTABLE_OUTPUT_PATH}" )
 
-# set this variable to specify a common place where CMake should put all libraries 
+# set this variable to specify a common place where CMake should put all libraries
 # (instead of CMAKE_CURRENT_BINARY_DIR)
 dprint ( "LIBRARY_OUTPUT_PATH: ${LIBRARY_OUTPUT_PATH}" )
 
@@ -642,13 +742,13 @@ dprint ( "CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}" )
 # print out where we are installing to.
 dprint ( "CMAKE_INSTALL_PREFIX: ${CMAKE_INSTALL_PREFIX}" )
 
-# this is the complete path of the cmake which runs currently (e.g. /usr/local/bin/cmake) 
+# this is the complete path of the cmake which runs currently (e.g. /usr/local/bin/cmake)
 dprint ( "CMAKE_COMMAND: ${CMAKE_COMMAND}" )
 
-# this is the CMake installation directory 
+# this is the CMake installation directory
 dprint ( "CMAKE_ROOT: ${CMAKE_ROOT}" )
 
-# this is the filename including the complete path of the file where this variable is used. 
+# this is the filename including the complete path of the file where this variable is used.
 dprint ( "CMAKE_CURRENT_LIST_FILE: ${CMAKE_CURRENT_LIST_FILE}" )
 
 # this is linenumber where the variable is used
@@ -660,22 +760,58 @@ dprint ( "CMAKE_INCLUDE_PATH: ${CMAKE_INCLUDE_PATH}" )
 # this is used when searching for libraries e.g. using the FIND_LIBRARY() command.
 dprint ( "CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}" )
 
-# the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1" 
+# the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1"
 dprint ( "CMAKE_SYSTEM: ${CMAKE_SYSTEM}" )
 
 # the short system name, e.g. "Linux", "FreeBSD" or "Windows"
 dprint ( "CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}" )
 
-# only the version part of CMAKE_SYSTEM 
+# only the version part of CMAKE_SYSTEM
 dprint ( "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}" )
 
-# the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz") 
+# the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz")
 dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
+
+# the Condor src directory
+dprint ( "CONDOR_SOURCE_DIR: ${CONDOR_SOURCE_DIR}" )
+dprint ( "CONDOR_EXTERNAL_DIR: ${CONDOR_EXTERNAL_DIR}" )
+dprint ( "TEST_TARGET_DIR: ${TEST_TARGET_DIR}" )
+
+# the Condor version string being used
+dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
+
+# the build id
+dprint ( "BUILDID: ${BUILDID}" )
+
+# the build date & time
+dprint ( "BUILD_TIMEDATE: ${BUILD_TIMEDATE}" )
+dprint ( "BUILD_DATE: ${BUILD_DATE}" )
+
+# the pre-release string
+dprint ( "PRE_RELEASE: ${PRE_RELEASE}" )
+
+# the platform specified
+dprint ( "PLATFORM: ${PLATFORM}" )
+
+# the Condor platform specified
+dprint ( "CONDOR_PLATFORM: ${CONDOR_PLATFORM}" )
+
+# the system name (used for generated tarballs)
+dprint ( "SYSTEM_NAME: ${SYSTEM_NAME}" )
+
+# the RPM system name (used for generated tarballs)
+dprint ( "RPM_SYSTEM_NAME: ${RPM_SYSTEM_NAME}" )
+
+# the Condor package name
+dprint ( "CONDOR_PACKAGE_NAME: ${CONDOR_PACKAGE_NAME}" )
 
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "UNIX: ${UNIX}" )
 
-# is TRUE on Windows, including CygWin 
+# is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
+dprint ( "Linux: ${LINUX_NAME}" )
+
+# is TRUE on Windows, including CygWin
 dprint ( "WIN32: ${WIN32}" )
 
 # is TRUE on Apple OS X
@@ -687,7 +823,7 @@ dprint ( "MINGW: ${MINGW}" )
 # is TRUE on Windows when using the CygWin version of cmake
 dprint ( "CYGWIN: ${CYGWIN}" )
 
-# is TRUE on Windows when using a Borland compiler 
+# is TRUE on Windows when using a Borland compiler
 dprint ( "BORLAND: ${BORLAND}" )
 
 if (WINDOWS)
@@ -700,65 +836,65 @@ if (WINDOWS)
 	dprint ( "CMAKE_COMPILER_2005: ${CMAKE_COMPILER_2005}" )
 endif(WINDOWS)
 
-# set this to true if you don't want to rebuild the object files if the rules have changed, 
-# but not the actual source files or headers (e.g. if you changed the some compiler switches) 
+# set this to true if you don't want to rebuild the object files if the rules have changed,
+# but not the actual source files or headers (e.g. if you changed the some compiler switches)
 dprint ( "CMAKE_SKIP_RULE_DEPENDENCY: ${CMAKE_SKIP_RULE_DEPENDENCY}" )
 
-# since CMake 2.1 the install rule depends on all, i.e. everything will be built before installing. 
+# since CMake 2.1 the install rule depends on all, i.e. everything will be built before installing.
 # If you don't like this, set this one to true.
 dprint ( "CMAKE_SKIP_INSTALL_ALL_DEPENDENCY: ${CMAKE_SKIP_INSTALL_ALL_DEPENDENCY}" )
 
 # If set, runtime paths are not added when using shared libraries. Default it is set to OFF
 dprint ( "CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}" )
 
-# set this to true if you are using makefiles and want to see the full compile and link 
-# commands instead of only the shortened ones 
+# set this to true if you are using makefiles and want to see the full compile and link
+# commands instead of only the shortened ones
 dprint ( "CMAKE_VERBOSE_MAKEFILE: ${CMAKE_VERBOSE_MAKEFILE}" )
 
-# this will cause CMake to not put in the rules that re-run CMake. This might be useful if 
-# you want to use the generated build files on another machine. 
+# this will cause CMake to not put in the rules that re-run CMake. This might be useful if
+# you want to use the generated build files on another machine.
 dprint ( "CMAKE_SUPPRESS_REGENERATION: ${CMAKE_SUPPRESS_REGENERATION}" )
 
-# A simple way to get switches to the compiler is to use ADD_DEFINITIONS(). 
-# But there are also two variables exactly for this purpose: 
+# A simple way to get switches to the compiler is to use ADD_DEFINITIONS().
+# But there are also two variables exactly for this purpose:
 
 # output what the linker flags are
 dprint ( "CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}" )
 
-# the compiler flags for compiling C sources 
+# the compiler flags for compiling C sources
 dprint ( "CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}" )
 
 # the compiler flags for compiling C++ sources
 dprint ( "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}" )
 
-# Choose the type of build.  Example: SET(CMAKE_BUILD_TYPE Debug) 
+# Choose the type of build.  Example: SET(CMAKE_BUILD_TYPE Debug)
 dprint ( "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}" )
 
 # if this is set to ON, then all libraries are built as shared libraries by default.
 dprint ( "BUILD_SHARED_LIBS: ${BUILD_SHARED_LIBS}" )
 
-# the compiler used for C files 
+# the compiler used for C files
 dprint ( "CMAKE_C_COMPILER: ${CMAKE_C_COMPILER}" )
 
 # version information about the compiler
 dprint ( "CMAKE_C_COMPILER_VERSION: ${CMAKE_C_COMPILER_VERSION}" )
 
-# the compiler used for C++ files 
+# the compiler used for C++ files
 dprint ( "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}" )
 
 # version information about the compiler
 dprint ( "CMAKE_CXX_COMPILER_VERSION: ${CMAKE_CXX_COMPILER_VERSION}" )
 
-# if the compiler is a variant of gcc, this should be set to 1 
+# if the compiler is a variant of gcc, this should be set to 1
 dprint ( "CMAKE_COMPILER_IS_GNUCC: ${CMAKE_COMPILER_IS_GNUCC}" )
 
-# if the compiler is a variant of g++, this should be set to 1 
+# if the compiler is a variant of g++, this should be set to 1
 dprint ( "CMAKE_COMPILER_IS_GNUCXX : ${CMAKE_COMPILER_IS_GNUCXX}" )
 
-# the tools for creating libraries 
+# the tools for creating libraries
 dprint ( "CMAKE_AR: ${CMAKE_AR}" )
 dprint ( "CMAKE_RANLIB: ${CMAKE_RANLIB}" )
 
-dprint("----- Begin CMake Var DUMP -----")
+message(STATUS "----- Begin CMake Var DUMP -----")
 
 message(STATUS "********* ENDING CONFIGURATION *********")

@@ -24,7 +24,6 @@ extern "C" void event_mgr (void);
 //-------------------------------------------------------------
 
 #include "condor_classad.h"
-#include "condor_parser.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_network.h"
@@ -70,8 +69,8 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction),
 	NegotiatorAds (LESSER_TABLE_SIZE , &adNameHashFunction),
 	HadAds        (LESSER_TABLE_SIZE , &adNameHashFunction),
-	LeaseManagerAds(LESSER_TABLE_SIZE , &adNameHashFunction),
 	GridAds       (LESSER_TABLE_SIZE , &adNameHashFunction),
+	LeaseManagerAds(LESSER_TABLE_SIZE , &adNameHashFunction),
 	GenericAds    (LESSER_TABLE_SIZE , &stringHashFunction)
 {
 	clientTimeout = 20;
@@ -909,7 +908,7 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *q
 	{
 		ClassAd * pAd=0;
 		// try to create a hk from the query ad if it is possible.
-		if ( (*makeKey) (hk, (ClassAd*) &c_query, ipaddr::null) ) {
+		if ( (*makeKey) (hk, const_cast<ClassAd*>(&c_query), ipaddr::null) ) {
 			if( query_contains_hash_key ) {
 				*query_contains_hash_key = true;
 			}

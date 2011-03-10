@@ -27,8 +27,8 @@
 #ifdef HAVE_EXT_POSTGRESQL
 
 #include "pgsqldatabase.h"
-#include "../condor_tt/condor_ttdb.h"
-#include "../condor_tt/jobqueuecollection.h"
+#include "condor_tt/condor_ttdb.h"
+#include "condor_tt/jobqueuecollection.h"
 
 extern "C" {
 

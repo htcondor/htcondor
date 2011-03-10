@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -22,22 +22,21 @@
 # one version of classads which is ${CONDOR_SOURCE_DIR}/src/classad
 
 # the 2nd arg is prio order for symbols ripping to prevent .o copy-mindging within the std:u
-add_subdirectories("${CONDOR_SOURCE_DIR}/src" "${CONDOR_SOURCE_DIR}/src/condor_utils;${CONDOR_SOURCE_DIR}/src/condor_ckpt;${CONDOR_SOURCE_DIR}/src/condor_io;${CONDOR_SOURCE_DIR}/src/condor_io.std;${CONDOR_SOURCE_DIR}/src/condor_syscall_lib" "${CONDOR_SOURCE_DIR}/src/classad")
+add_subdirectories("${CONDOR_SOURCE_DIR}/src"
+	"${CONDOR_SOURCE_DIR}/src/condor_utils;${CONDOR_SOURCE_DIR}/src/condor_ckpt;${CONDOR_SOURCE_DIR}/src/condor_io;${CONDOR_SOURCE_DIR}/src/condor_io.std;${CONDOR_SOURCE_DIR}/src/condor_syscall_lib"
+	"${CONDOR_SOURCE_DIR}/src/classad")
 
-if (BUILD_TESTS)
+if (BUILD_TESTS AND NOT WINDOWS)
 	add_custom_target(tests)
 	add_dependencies(tests ${CONDOR_TESTS})
 	dprint("CONDOR_TESTS=${CONDOR_TESTS}")
-endif(BUILD_TESTS)
+endif()
 
-install ( FILES condor_includes/condor_ast.h
-		  condor_includes/condor_astbase.h
-		  condor_includes/condor_attrlist.h
-		  condor_includes/condor_classad.h
-		  condor_includes/condor_constants.h
-		  condor_includes/condor_exprtype.h
-		  condor_includes/condor_header_features.h
-		  condor_includes/condor_parser.h
-		  condor_includes/file_lock.h
-		  condor_utils/iso_dates.h
-		DESTINATION ${C_INCLUDE})
+if (WANT_FULL_DEPLOYMENT)
+	install ( FILES condor_includes/condor_classad.h
+			  condor_includes/condor_constants.h
+			  condor_includes/condor_header_features.h
+			  condor_includes/file_lock.h
+			  condor_utils/iso_dates.h
+			DESTINATION ${C_INCLUDE})
+endif(WANT_FULL_DEPLOYMENT)

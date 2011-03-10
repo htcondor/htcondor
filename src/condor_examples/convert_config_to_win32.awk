@@ -21,13 +21,13 @@
 ## convert_config_to_win32.awk
 ##
 ## Todd Tannenbaum <tannenba@cs.wisc.edu>, 10/06
+## John Knoeller <johnkn@cs.wisc.edu>, 12/10
 ##
 
 # This is an awk script to modify condor_config.generic into a form that 
-# works with the InstallShield Windows installer.  The packager on Win32
-# will pipe condor_config.generic through this awk script and save it as
-# condor_config.orig, which is what the InstallShield script expects to 
-# modify after unbundling.
+# works with Windows.  
+# Pipe condor_config.generic through this awk script and save it as
+# condor_config.win, which is what the Installer expects to modify after unbundling.
 
 BEGIN {
 	FS = "="
@@ -70,6 +70,45 @@ BEGIN {
 /^SMTP_SERVER/ {
 	next
 }
+
+# Remove SHADOW_STANDARD (the standard universe shadow)
+# 
+/^SHADOW_STANDARD/ {
+	next
+}
+/^SHADOW_LIST/ {
+    printf "SHADOW_LIST = SHADOW\n"
+    next
+}
+
+# Remove STARTER_STANDARD (the standard universe starter)
+#
+/^STARTER_STANDARD/ {
+    next
+}
+/^STARTER_LIST/ {
+    printf "STARTER_LIST = STARTER\n"
+    next
+}
+
+# Choose a Windows-reasonable value for RELEASE_DIR and LOCAL_DIR
+#
+/^RELEASE_DIR[ \t]*=/ {
+	printf "RELEASE_DIR = C:\\Condor\n"
+	next
+}
+/^LOCAL_DIR[ \t]*=/ {
+    printf "LOCAL_DIR = $(RELEASE_DIR)\n"
+    next
+}
+
+# Don't require a local config file.
+#
+/^\#REQUIRE_LOCAL_CONFIG_FILE \=/ {
+   printf "REQUIRE_LOCAL_CONFIG_FILE = FALSE\n"
+   next
+}
+
 
 # Specify $(FULL_HOSTNAME) as the sample commented-out entry for
 # FILESYSTEM_DOMAIN and UID_DOMAIN, as this is what the installer expects.
@@ -184,4 +223,3 @@ BEGIN {
 
 # If we made it here, print out the line unchanged
 {print $0}
-

@@ -45,8 +45,8 @@ typedef enum {
 class QmgrJobUpdater : public Service
 {
 public:
-	QmgrJobUpdater( ClassAd* job_ad, const char* schedd_addr, char const *schedd_version );
-	QmgrJobUpdater( ) :  common_job_queue_attrs(0),  hold_job_queue_attrs(0), evict_job_queue_attrs(0), remove_job_queue_attrs(0), requeue_job_queue_attrs(0), terminate_job_queue_attrs(0), checkpoint_job_queue_attrs(0), m_pull_attrs(0), schedd_addr(0), schedd_ver(0), q_update_tid(-1) {}
+	QmgrJobUpdater( ClassAd* job_a, const char*schedd_address, char const *schedd_version);
+	QmgrJobUpdater( ) :  common_job_queue_attrs(0),  hold_job_queue_attrs(0), evict_job_queue_attrs(0), remove_job_queue_attrs(0), requeue_job_queue_attrs(0), terminate_job_queue_attrs(0), checkpoint_job_queue_attrs(0), m_pull_attrs(0), job_ad(0), schedd_addr(0), schedd_ver(0), q_update_tid(-1) {}
 	virtual ~QmgrJobUpdater();
 
 	virtual void startUpdateTimer( void );
@@ -74,10 +74,10 @@ public:
 			the schedd can be held hostage by user-jobs that call this
 			syscall repeatedly.  :(
 		*/
-	virtual bool updateAttr( const char *name, const char *expr, bool updateMaster );
+	virtual bool updateAttr( const char *name, const char *expr, bool updateMaster, bool log=false );
 
 		/// Helper version that takes an int value instead of a string expr.
-	virtual bool updateAttr( const char *name, int value, bool updateMaster );
+	virtual bool updateAttr( const char *name, int value, bool updateMaster, bool log=false );
 
 		/** Add the given attribute to our list of attributes we
 			should watch for changes and update.  The type specifies
@@ -92,6 +92,10 @@ public:
 		    @return true if added, false if it was already there
 		*/
 	virtual bool watchAttribute( const char* attr, update_t type = U_NONE );
+
+		/** Connect to the job queue and retrieve changed attributes
+		*/
+	bool retrieveJobUpdates( void );
 
 private:
 

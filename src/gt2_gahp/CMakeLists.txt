@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -20,7 +20,7 @@
 if (HAVE_EXT_GLOBUS)
 
 	condor_exe( gahp_server "gahp_server.cpp;my_ez.cpp" ${C_SBIN}
-	"${CONDOR_TOOL_LIBS};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_GRID_UNIVERSE_GT2};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}" )
+	"${GLOBUS_GRID_UNIVERSE_GT2};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${KRB5_FOUND};${OPENSSL_FOUND}" OFF )
 
 else()
 

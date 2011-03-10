@@ -23,7 +23,6 @@
 #include "classad/matchClassad.h"
 
 using namespace std;
-using namespace classad;
 
 static char const *ATTR_UNOPTIMIZED_REQUIREMENTS = "UnoptimizedRequirements";
 

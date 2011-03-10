@@ -40,6 +40,8 @@ const SetAttributeFlags_t NONDURABLE = (1<<0); // do not fsync
 	// so failure will be detected in CommitTransaction().  This is useful
 	// for improving performance when setting lots of attributes.
 const SetAttributeFlags_t SetAttribute_NoAck = (1<<1);
+const SetAttributeFlags_t SETDIRTY = (1<<2);
+const SetAttributeFlags_t SHOULDLOG = (1<<3);
 
 #define SHADOW_QMGMT_TIMEOUT 300
 
@@ -109,28 +111,32 @@ int DestroyCluster(int cluster_id, const char *reason = NULL);
 	@return -1 on failure; 0 on success
 */
 int SetAttributeByConstraint(const char *constraint, const char *attr,
-							 const char *value);
+							 const char *value,
+							 SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value should be a valid ClassAd value (strings
 	should be surrounded by quotes).
 	@return -1 on failure; 0 on success
 */
 int SetAttributeIntByConstraint(const char *constraint, const char *attr,
-								int value);
+							 int value,
+							 SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value should be a valid ClassAd value (strings
 	should be surrounded by quotes).
 	@return -1 on failure; 0 on success
 */
 int SetAttributeFloatByConstraint(const char *constraing, const char *attr,
-								  float value);
+							   float value,
+							   SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value should be a valid ClassAd value (strings
 	should be surrounded by quotes).
 	@return -1 on failure; 0 on success
 */
 int SetAttributeStringByConstraint(const char *constraint, const char *attr,
-								   const char *value);
+							     const char *value,
+							     SetAttributeFlags_t flags=0);
 /** Set attr = value for job with specified cluster and proc.  The value
 	should be a valid ClassAd value (strings should be surrounded by
 	quotes)
@@ -229,6 +235,12 @@ int GetAttributeString( int cluster_id, int proc_id, char const *attr_name,
 	@return -1 on failure; 0 on success
 */
 int GetAttributeExprNew(int cluster, int proc, const char *attr, char **value);
+
+/** Retrieves a classad of attributes that are marked as dirty, then clears
+	the dirty list
+*/
+int GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs);
+
 /** Delete specified attribute for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
@@ -263,6 +275,11 @@ ClassAd *GetNextJob(int initScan);
 	The caller MUST call FreeJobAd when the ad is no longer in use. 
 */
 ClassAd *GetNextJobByConstraint(const char *constraint, int initScan);
+/** Iterate over jobs with dirty attributes in the queue which match the
+	specified constraint.
+	The caller MUST call FreeJobAd when the ad is no longer in use. 
+*/
+ClassAd *GetNextDirtyJobByConstraint(const char *constraint, int initScan);
 /** De-allocate job ClassAd allocated by GetJobAd, GetJobAdByConstraint,
 	GetNextJob, or GetNextJobByConstraint.
 */
@@ -297,7 +314,9 @@ void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void CleanJobQueue();
 bool setQSock( ReliSock* rsock );
 void unsetQSock();
-
+void MarkJobClean(PROC_ID job_id);
+void MarkJobClean(int cluster_id, int proc_id);
+void MarkJobClean(const char* job_id_str);
 
 int rusage_to_float(struct rusage, float *, float *);
 int float_to_rusage(float, float, struct rusage *);
@@ -316,5 +335,14 @@ bool Reschedule();
 
 int QmgmtSetEffectiveOwner(char const *owner);
 
+/* Call this to begin iterating over jobs in the queue that match
+   a constraint.
+   Returns 0 on success, -1 on error*/
+int GetAllJobsByConstraint_Start( char const *constraint, char const *projection);
+/* Retrieve next job matching constraint specified in call to
+   GetAllJobsByCostraint_Start().
+   Returns 0 on success, -1 on error or no more ads (sets errno on error).
+*/
+int GetAllJobsByConstraint_Next( ClassAd &ad );
 
 #endif

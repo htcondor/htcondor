@@ -38,15 +38,23 @@ public:
 	ClassAdListItem *next;
 };
 
-class ClassAdList
+/* ClassAdListDoesNotDeleteAds is a list of ads.  When the list is
+ * destructed, any ads that it contains are _not_ deleted.  If you
+ * want them to be, use ClassAdList instead.
+ *
+ * Behavior that exists for compatibility with historical usage:
+ *   - duplicates are detected and ignored at insertion time
+ *   - removal is fast and does not involve a linear search
+ */
+class ClassAdListDoesNotDeleteAds
 {
-private:
+protected:
 		/* For fast lookups (required in Insert() and Remove()),
 		 * we maintain a hash table that indexes into the list
 		 * via a pointer to the classad.
 		 */
 	HashTable<ClassAd*,ClassAdListItem*> htable;
-	ClassAdListItem list_head; // double-linked list
+	ClassAdListItem *list_head; // double-linked list
 	ClassAdListItem *list_cur; // current position in list
 
 		/* The following private class applies the user supplied
@@ -80,18 +88,20 @@ private:
 	};
 
 public:
-	ClassAdList();
-	~ClassAdList();
+	ClassAdListDoesNotDeleteAds();
+	virtual ~ClassAdListDoesNotDeleteAds();
+	virtual void Clear();
 	ClassAd* Next();
 	void Open();
 		/*This Close() function is no longer really needed*/
 	void Close();
 	void Rewind()           { Open(); }
 	int MyLength()          { return Length(); }
-		/* Removes ad from list and deletes it */
-	int Delete(ClassAd* cad);
-		/* Removes ad from list, but does not delete it */
+		/* Removes ad from list, but does not delete it.  Removal is
+		 * fast.  No linear search through the list is required.
+		 */
 	int Remove(ClassAd* cad);
+		/* Duplicates are efficiently detected and ignored */
 	void Insert(ClassAd* cad);
 	int Length();
 		/* Note on behaviour. The Sort function does not touch the
@@ -103,6 +113,22 @@ public:
 	int Count( classad::ExprTree *constraint );
 
 	void fPrintAttrListList(FILE* f, bool use_xml = false, StringList *attr_white_list = NULL);
+};
+
+/* ClassAdList is just like ClassAdListDoesNotDeleteAds, except it
+ * deletes ads that remain in the list when the list is destructed.
+ * It also defines a Delete() method for deleting specific ads.
+ */
+class ClassAdList: public ClassAdListDoesNotDeleteAds
+{
+ public:
+	~ClassAdList();
+
+		/* Removes ad from list, but does not delete it.  Removal is
+		 * fast.  No linear search through the list is required.
+		 */
+	int Delete(ClassAd* cad);
+	virtual void Clear();
 };
 
 typedef ClassAdList AttrListList;

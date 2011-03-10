@@ -81,9 +81,6 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( deepOpts.strDagmanPath.Value() );
 	}
 
-	args.AppendArg( "-debug" );
-	args.AppendArg( deepOpts.iDebugLevel );
-
 	if ( deepOpts.bAllowLogError ) {
 		args.AppendArg( "-allowlogerror" );
 	}

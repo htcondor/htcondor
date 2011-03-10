@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -56,7 +56,14 @@ if ( WITH_VOMS )
 							INSTALL_COMMAND cd org.glite.security.voms && make install
 				)
 
-		set( VOMS_FOUND "libvomsapi_${GLOBUS_FLAVOR}.a" )
+		# On Mac OS X, giving the basename of the library causes
+		# it to be dynamically linked. On linux, the library may
+		# be in lib/ or lib64/.
+		if ( DARWIN )
+			set( VOMS_FOUND "${EXTERNAL_STAGE}/lib/libvomsapi_${GLOBUS_FLAVOR}.a" )
+		else()
+			set( VOMS_FOUND "libvomsapi_${GLOBUS_FLAVOR}.a" )
+		endif()
 
 	else(NOT PROPER)
 
@@ -75,5 +82,5 @@ if ( WITH_VOMS )
 endif()
 
 if(NOT VOMS_FOUND)
-	message ( STATUS "external skiped (voms)" )
+	message ( STATUS "external skipped (voms)" )
 endif()

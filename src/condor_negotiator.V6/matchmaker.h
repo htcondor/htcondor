@@ -28,6 +28,13 @@
 #include "dc_collector.h"
 #include "condor_ver_info.h"
 
+#include <vector>
+#include <string>
+#include <map>
+#include <algorithm>
+
+using namespace std;
+
 /* FILESQL include */
 #include "file_sql.h"
 
@@ -40,6 +47,50 @@ typedef struct MapEntry {
 //extern ODBC *DBObj;
 /* FILESQL object extern */
 extern FILESQL *FILEObj;
+
+struct GroupEntry {
+    typedef vector<int>::size_type size_type;
+
+	GroupEntry();
+	~GroupEntry();
+
+    // these are set from configuration
+	string name;
+    double config_quota;
+	bool static_quota;
+	bool accept_surplus;
+
+    // current usage information coming into this negotiation cycle
+    double usage;
+    ClassAdList* submitterAds;
+
+    // slot quota as computed by HGQ
+    double quota;
+    // slots requested: jobs submitted against this group
+    double requested;
+    // slots allocated to this group by HGQ
+    double allocated;
+    // sum of slot quotas in this subtree
+    double subtree_quota;
+    // all slots requested by this group and its subtree
+    double subtree_requested;
+    // true if this group got served by most recent round robin
+    bool rr;
+    // timestamp of most recent allocation from round robin
+    double rr_time;
+    double subtree_rr_time;
+
+    // tree structure
+    GroupEntry* parent;
+    vector<GroupEntry*> children;
+		// map of lower-case group names to child index
+    map<string, size_type> chmap;
+
+	GroupEntry *findChild(std::string name);
+	GroupEntry *addChild(std::string name);
+};
+
+
 class Matchmaker : public Service
 {
 	public:
@@ -94,8 +145,8 @@ class Matchmaker : public Service
 		void updateCollector();
 
 		// auxillary functions
-		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClaimIdHash& );	
-		char * compute_significant_attrs(ClassAdList & startdAds);
+		bool obtainAdsFromCollector (ClassAdList&, ClassAdListDoesNotDeleteAds&, ClassAdListDoesNotDeleteAds&, ClaimIdHash& );	
+		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
 		
 		/** Negotiate w/ one schedd for one user, for one 'pie spin'.
 			@param scheddName Name attribute from the submitter ad.
@@ -118,7 +169,7 @@ class Matchmaker : public Service
 		int negotiate( char const *scheddName, const ClassAd *scheddAd, 
 		   double priority, double share,
 		   double submitterLimit,
-		   ClassAdList &startdAds, ClaimIdHash &claimIds, 
+		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
 		   const CondorVersionInfo & scheddVersion,
 		   bool ignore_schedd_limit, time_t startTime, 
 		   int &numMatched, double &limitUsed, double &pieLeft);
@@ -126,17 +177,17 @@ class Matchmaker : public Service
 		int negotiateWithGroup ( int untrimmed_num_startds,
 								 double untrimmedSlotWeightTotal,
 								 double minSlotWeight,
-			ClassAdList& startdAds, 
-			ClaimIdHash& claimIds, ClassAdList& scheddAds, 
+			ClassAdListDoesNotDeleteAds& startdAds, 
+			ClaimIdHash& claimIds, ClassAdListDoesNotDeleteAds& scheddAds, 
 			float groupQuota=INT_MAX, float groupusage=0, const char* groupAccountingName=NULL);
 
 		
-		ClassAd *matchmakingAlgorithm(const char*,const char*,ClassAd&,ClassAdList&,
+		ClassAd *matchmakingAlgorithm(const char*,const char*,ClassAd&,ClassAdListDoesNotDeleteAds&,
 									  double=-1.0, double=1.0, double=0.0, double=0.0, double=0.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
 						const char* scheddName, const char* scheddAddr);
-		void calculateNormalizationFactor (ClassAdList &, double &, double &,
+		void calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &, double &, double &,
 										   double &, double &);
 
 		/** Calculate a submitter's share of the pie.
@@ -185,7 +236,7 @@ class Matchmaker : public Service
 			@param normalAbsFactor Normalization for prio factors
 			@param pieLeft Sum of submitterLimits
 		**/
-		void calculatePieLeft( ClassAdList &scheddAds,
+		void calculatePieLeft( ClassAdListDoesNotDeleteAds &scheddAds,
 		                       char const *groupAccountingName,
 		                       float groupQuota,
 				       float groupusage,
@@ -207,7 +258,7 @@ class Matchmaker : public Service
 		char const *getClaimId (const char *, const char *, ClaimIdHash &, MyString &);
 		void addRemoteUserPrios( ClassAd* ad );
 		void insertNegotiatorMatchExprs(ClassAd *ad);
-		void insertNegotiatorMatchExprs( ClassAdList &cal );
+		void insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal );
 		void reeval( ClassAd *ad );
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
 		static unsigned int HashFunc(const MyString &Key);
@@ -216,10 +267,10 @@ class Matchmaker : public Service
 
 			// If we are not considering preemption, this function will
 			// trim out startd ads that are not in the Unclaimed state.
-		int trimStartdAds(ClassAdList &startdAds);
+		int trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds);
 
 		bool SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft);
-		double sumSlotWeights(ClassAdList &startdAds,double *minSlotWeight);
+		double sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight, ExprTree* constraint);
 
 		/* ODBC insert functions */
 		void insert_into_rejects(char const *userName, ClassAd& job);
@@ -240,7 +291,6 @@ class Matchmaker : public Service
 		bool preemption_rank_unstable;
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
-		bool useSlotWeights; // Should slot weights be used or do all machines count 1.
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
 		/// Should the negotiator inform startds of matches?
@@ -396,20 +446,30 @@ class Matchmaker : public Service
 		double cachedPrio;
 		bool cachedOnlyForStartdRank;
 
-		//
-		class SimpleGroupEntry
-		{
-		public:
-			SimpleGroupEntry();
-			~SimpleGroupEntry();
-			char *groupName;
-			float prio;
-			float maxAllowed;
-			float usage;
-			ClassAdList submitterAds;			
-		};
-		static int groupSortCompare(const void*, const void*);
-		
+        // set at startup/restart/reinit
+        GroupEntry* hgq_root_group;
+        string hgq_root_name;
+        vector<GroupEntry*> hgq_groups;
+        map<string, GroupEntry*> group_entry_map;
+
+        void hgq_construct_tree();
+        void hgq_assign_quotas(GroupEntry* group, double quota);
+        double hgq_fairshare(GroupEntry* group);
+        double hgq_allocate_surplus(GroupEntry* group, double surplus);
+        double hgq_recover_remainders(GroupEntry* group);
+        double hgq_round_robin(GroupEntry* group, double surplus);
+
+        struct ord_by_rr_time {
+            vector<GroupEntry*>* data;
+            bool operator()(unsigned long const& ja, unsigned long const& jb) const {
+                GroupEntry* a = (*data)[ja];
+                GroupEntry* b = (*data)[jb];
+                if (a->subtree_rr_time != b->subtree_rr_time) return a->subtree_rr_time < b->subtree_rr_time;
+                if (a->subtree_quota != b->subtree_quota) return a->subtree_quota > b->subtree_quota;
+                return a->subtree_requested > b->subtree_requested;
+            }
+        };
+
 		int prevLHF;
 
 		#define MAX_NEGOTIATION_CYCLE_STATS 100

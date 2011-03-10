@@ -33,6 +33,7 @@
 #include "condor_version.h"
 #include "tmp_dir.h"
 #include "my_popen.h"
+#include "condor_attributes.h"
 
 
 #ifdef WIN32
@@ -648,6 +649,8 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 #if !defined ( WIN32 )
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 #endif
+    fprintf(pSubFile, "+%s\t= \"%s == $(cluster)\"\n",
+				ATTR_OTHER_JOB_REMOVE_REQUIREMENTS, ATTR_DAGMAN_JOB_ID );
 
 		// ensure DAGMan is automatically requeued by the schedd if it
 		// exits abnormally or is killed (e.g., during a reboot)
@@ -686,8 +689,10 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	args.AppendArg("-f");
 	args.AppendArg("-l");
 	args.AppendArg(".");
-	args.AppendArg("-Debug");
-	args.AppendArg(deepOpts.iDebugLevel);
+	if ( shallowOpts.iDebugLevel != DEBUG_UNSET ) {
+		args.AppendArg("-Debug");
+		args.AppendArg(shallowOpts.iDebugLevel);
+	}
 	args.AppendArg("-Lockfile");
 	args.AppendArg(shallowOpts.strLockFile.Value());
 	args.AppendArg("-AutoRescue");
@@ -932,7 +937,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					fprintf(stderr, "-debug argument needs a value\n");
 					printUsage();
 				}
-				deepOpts.iDebugLevel = atoi(argv[++iArg]);
+				shallowOpts.iDebugLevel = atoi(argv[++iArg]);
 			}
 			else if (strArg.find("-noev") != -1) // -noeventchecks
 			{

@@ -119,8 +119,8 @@ private:
 
 struct tag_name
 {
-	TagName  id; // Defined in the condor_xml_classads.h
-	char     *name;
+	TagName		 id;	// Defined in the condor_xml_classads.h
+	const char	*name;
 };
 
 #define NUMBER_OF_TAG_NAMES (sizeof(tag_names) / sizeof(struct tag_name))
@@ -277,7 +277,7 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 				
 				bool      add_to_classad = true;
 				MyString  to_insert;
-				char      *token_text_raw;
+				char      *token_text_raw=0;
 				MyString  token_text("");
 				
 				to_insert = attribute_value;
@@ -657,77 +657,6 @@ ClassAdXMLUnparser::Unparse(ClassAd *classad, MyString &buffer, StringList *attr
 void 
 ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &buffer)
 {
-#ifdef WANT_OLD_CLASSADS
-	add_attribute_start_tag(buffer, name);
-			
-	MyString  number_string;
-	char      *expr_string;
-	int       int_number;
-	double    double_number;
-	MyString  fixed_string;
-
-	switch (expression->MyType()) {
-	case LX_INTEGER:
-		int_number = ((IntegerBase *)expression)->Value();
-		if (expression->unit == 'k') {
-			int_number *= 1024;
-		}
-		number_string.sprintf("%d", int_number);
-		add_tag(buffer, tag_Integer, true);
-		buffer += number_string;
-		add_tag(buffer, tag_Integer, false);
-		break;
-	case LX_FLOAT:
-		double_number = ((FloatBase *)expression)->Value();
-		if (expression->unit == 'k') {
-			double_number *= 1024;
-		}
-		number_string.sprintf("%1.15E", double_number);
-		add_tag(buffer, tag_Real, true);
-		buffer += number_string;
-		add_tag(buffer, tag_Real, false);
-		break;
-	case LX_STRING:
-		add_tag(buffer, tag_String, true);
-		fix_characters(((StringBase *)expression)->Value(), 
-					   fixed_string);
-		buffer += fixed_string;
-		fixed_string = "";
-		add_tag(buffer, tag_String, false);
-		break;
-	case LX_TIME:
-		add_tag(buffer, tag_Time, true);
-		fix_characters(((ISOTimeBase *)expression)->Value(), 
-					   fixed_string);
-		buffer += fixed_string;
-		fixed_string = "";
-		add_tag(buffer, tag_Time, false);
-		break;
-	case LX_BOOL:
-		add_bool_start_tag(buffer, ((BooleanBase *)expression)->Value());
-		break;
-	case LX_UNDEFINED:
-		add_empty_tag(buffer, tag_Undefined);
-		break;
-	case LX_ERROR:
-		add_empty_tag(buffer, tag_Error);
-		break;
-	default:
-		add_tag(buffer, tag_Expr, true);
-		expr_string = strdup( ExprTreeToString( expression ) );
-		fix_characters(expr_string, fixed_string);
-		free(expr_string);
-		buffer += fixed_string;
-		fixed_string = "";
-		add_tag(buffer, tag_Expr, false);
-		break;
-	}
-	add_tag(buffer, tag_Attribute, false);
-	if (!_use_compact_spacing) {
-		buffer += "\n";
-	}
-	return;
-#else
 	add_attribute_start_tag(buffer, name);
 			
 	MyString  number_string;
@@ -785,7 +714,6 @@ ClassAdXMLUnparser::Unparse(const char *name, ExprTree *expression, MyString &bu
 		buffer += "\n";
 	}
 	return;
-#endif
 }
 	
 /**************************************************************************

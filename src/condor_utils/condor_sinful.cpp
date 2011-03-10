@@ -166,8 +166,10 @@ static std::string urlEncodeParams(map_type const &params)
 			result += "&";
 		}
 		urlEncode(it->first.c_str(),result);
-		result += "=";
-		urlEncode(it->second.c_str(),result);
+		if( !it->second.empty() ) {
+			result += "=";
+			urlEncode(it->second.c_str(),result);
+		}
 	}
 
 	return result;
@@ -297,6 +299,23 @@ Sinful::getPrivateNetworkName() const
 }
 
 void
+Sinful::setNoUDP(bool flag)
+{
+	if( !flag ) {
+		setParam("noUDP",NULL);
+	}
+	else {
+		setParam("noUDP","");
+	}
+}
+
+bool
+Sinful::noUDP() const
+{
+	return getParam("noUDP") != NULL;
+}
+
+void
 Sinful::setHost(char const *host)
 {
 	ASSERT(host);
@@ -345,9 +364,8 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 	{
 		char const *spid = getSharedPortID();
 		char const *addr_spid = addr.getSharedPortID();
-		if( spid == NULL && addr_spid == NULL ||
-			spid && addr_spid && !strcmp(spid,addr_spid) )
-		{
+		if( (spid == NULL && addr_spid == NULL) ||
+			(spid && addr_spid && !strcmp(spid,addr_spid)) ) {
 			return true;
 		}
 	}

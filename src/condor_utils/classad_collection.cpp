@@ -120,9 +120,9 @@ Output: true on success, false otherwise
 */
 //----------------------------------------------------------------------------------
 
-bool ClassAdCollection::SetAttribute(const char *key, const char *name, const char *value)
+bool ClassAdCollection::SetAttribute(const char *key, const char *name, const char *value, bool is_dirty)
 {
-  LogRecord* log=new LogSetAttribute(key,name,value);
+  LogRecord* log=new LogSetAttribute(key,name,value,is_dirty);
   ClassAdLog::AppendLog(log);
   // return ChangeClassAd(key);
   return true;
@@ -142,6 +142,21 @@ bool ClassAdCollection::DeleteAttribute(const char *key, const char *name)
   LogRecord* log=new LogDeleteAttribute(key,name);
   ClassAdLog::AppendLog(log);
   // return ChangeClassAd(key);
+  return true;
+}
+
+//----------------------------------------------------------------------------------
+/** Clear the ditry bits for all attributes of a class ad - this operation
+    is not logged.
+Input: key - the class ad's key
+Output: true on success, false otherwise
+*/
+//----------------------------------------------------------------------------------
+bool ClassAdCollection::ClearClassAdDirtyBits(const char* key)
+{
+  ClassAd* Ad=0;
+  if (table.lookup(HashKey(key),Ad)==-1) return false;
+  Ad->ClearAllDirtyFlags();
   return true;
 }
 
@@ -265,7 +280,7 @@ bool ClassAdCollection::DeleteCollection(int CoID)
 bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID)
 {
   // Get the ad
-  ClassAd* Ad;
+  ClassAd* Ad=0;
   if (table.lookup(HashKey(OID.Value()),Ad)==-1) return false;
 
   return AddClassAd(CoID,OID,Ad);

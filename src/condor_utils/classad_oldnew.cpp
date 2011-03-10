@@ -95,18 +95,28 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 	}
 	buffer += "]";
 
-		// get type info
-	if (!sock->get(inputLine)||!ad.InsertAttr("MyType",(string)inputLine.Value())) {
-		return false;
-	}
-	if (!sock->get(inputLine)|| !ad.InsertAttr("TargetType",
-											   (string)inputLine.Value())) {
-		return false;
-	}
-
 		// parse ad
 	if( !parser.ParseClassAd( buffer, ad ) ) {
 		return( false );
+	}
+
+		// get type info
+	if (!sock->get(inputLine)) {
+		return false;
+	}
+	if (inputLine != "" && inputLine != "(unknown type)") {
+		if (!ad.InsertAttr("MyType",(string)inputLine.Value())) {
+			return false;
+		}
+	}
+
+	if (!sock->get(inputLine)) {
+		return false;
+	}
+	if (inputLine != "" && inputLine != "(unknown type)") {
+		if (!ad.InsertAttr("TargetType",(string)inputLine.Value())) {
+			return false;
+		}
 	}
 
 	return true;
@@ -377,14 +387,14 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
     {
         // Send the type
         if (!ad.EvaluateAttrString(ATTR_MY_TYPE,buf)) {
-            buf="(unknown type)";
+            buf="";
         }
         if (!sock->put(buf.c_str())) {
             return false;
         }
 
         if (!ad.EvaluateAttrString(ATTR_TARGET_TYPE,buf)) {
-            buf="(unknown type)";
+            buf="";
         }
         if (!sock->put(buf.c_str())) {
             return false;

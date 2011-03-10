@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -37,18 +37,21 @@ if( STD_UNIVERSE )
 	###########################################################################
 	add_definitions( ${STD_U_C_FLAGS} -DFILE_TABLE -DIN_CKPT_LIB)
 	include_directories(${CONDOR_SOURCE_DIR}/src/condor_ckpt)
-	condor_selective_glob("*file*;signals*;image*;machdep.LINUX.cpp;tmp_*;syscall_*;fake_*;condor_error*;eprintf*;shared_*;malloc-user*;gto*;maps*" CommonCkptSrcs )
-
-	# from what I can tell this doesn't even work.
-	#if (DOES_COMPRESS_CKPT)
-	#	add_definitions(-DCOMPRESS_CKPT -DMORECORE=condor_morecore -DHAVE_MMAP=0 -Dmalloc_getpagesize=8192)
-	#	condor_selective_glob("malloc-condor.cpp;malloc.cpp" CompressSrcs)
-	#endif(DOES_COMPRESS_CKPT)
+	condor_selective_glob("*file*;signals*;machdep.LINUX.cpp;tmp_*;syscall_*;fake_*;condor_error*;eprintf*;shared_*;malloc-user*;gto*;maps*" CommonCkptSrcs )
 
 	# we create a local lib, but it's never actually used
 	# instead condorsyscall will rip out the target refs.
 	#condor_static_lib( ckpt "${CommonCkptSrcs};${CompressSrcs}")
-	add_library(ckpt STATIC EXCLUDE_FROM_ALL ${CommonCkptSrcs};${CompressSrcs})
+	add_library(ckpt STATIC EXCLUDE_FROM_ALL ${CMAKE_CURRENT_SOURCE_DIR}/image.cpp;${CommonCkptSrcs})
 	add_dependencies( ckpt syscall_numbers )
+
+	if (DOES_COMPRESS_CKPT)
+
+		set_source_files_properties(malloc-condor.c COMPILE_DEFINITIONS "MORECORE=condor_morecore;HAVE_MMAP=0;malloc_getpagesize=8192")
+
+		add_library(zckpt STATIC EXCLUDE_FROM_ALL ${CMAKE_CURRENT_SOURCE_DIR}/zimage.cpp;${CMAKE_CURRENT_SOURCE_DIR}/malloc-condor.c;${CommonCkptSrcs})
+
+		add_dependencies( zckpt syscall_numbers )
+	endif(DOES_COMPRESS_CKPT)
 
 endif(STD_UNIVERSE)

@@ -748,18 +748,20 @@ char * SafeSock::serialize(char *buf)
 	// first, let our parent class restore its state
 	ptmp = Sock::serialize(buf);
 	ASSERT( ptmp );
-	sscanf(ptmp,"%d*",(int*)&_special_state);
+	int itmp;
+	sscanf(ptmp,"%d*",&itmp);
+	_special_state=safesock_state(itmp);
     // skip through this
     ptmp = strchr(ptmp, '*');
-    ptmp++;
+    if(ptmp) ptmp++;
 
     // Now, see if we are 6.3 or 6.2
-    if ( (ptr = strchr(ptmp, '*')) != NULL) {
+    if (ptmp && (ptr = strchr(ptmp, '*')) != NULL) {
         // We are 6.3
         memcpy(sinful_string, ptmp, ptr - ptmp);
         ptmp = ++ptr;
     }
-    else {
+    else if(ptmp) {
         sscanf(ptmp,"%s",sinful_string);
     }
 

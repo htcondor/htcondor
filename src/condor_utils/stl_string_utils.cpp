@@ -162,13 +162,17 @@ void trim( std::string &str )
 	if( str.empty() ) {
 		return;
 	}
-	int		begin = 0;
-	while ( begin < str.length() && isspace(str[begin]) ) { ++begin; }
+	unsigned	begin = 0;
+	while ( begin < str.length() && isspace(str[begin]) ) {
+		++begin;
+	}
 
-	int		end = str.length() - 1;
-	while ( end >= 0 && isspace(str[end]) ) { --end; }
+	int			end = str.length() - 1;
+	while ( end >= 0 && isspace(str[end]) ) {
+		--end;
+	}
 
-	if ( begin != 0 || end != str.length() - 1 ) {
+	if ( begin != 0 || end != (int)(str.length()) - 1 ) {
 		str = str.substr(begin, (end - begin) + 1);
 	}
 }
@@ -251,4 +255,18 @@ const char *GetNextToken(const char *delim, bool skipBlankTokens)
 	}
 
 	return result;
+}
+
+void join(std::vector< std::string > &v, char const *delim, std::string &result)
+{
+	std::vector<std::string>::iterator it;
+	for(it = v.begin();
+		it != v.end();
+		it++)
+	{
+		if( result.size() ) {
+			result += delim;
+		}
+		result += (*it);
+	}
 }

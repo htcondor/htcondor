@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -22,6 +22,14 @@
 
 #add_library( hdfs SHARED ${HDFSLIB} )
 
-#condor_exe( condor_hdfs_hook "${HOOK}" ${C_SBIN} "hdfs;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
+#condor_exe( condor_hdfs_hook "${HOOK}" ${C_SBIN} "hdfs;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF)
 
 dprint( "(TSTCLAIR)-> Deal with Java deps and FT HOOK PLUGINS also what is up with this? it's not in packages...")
+
+#  Curl isn't linking properly on windows, turn it as a short term hackaround
+if (CURL_FOUND AND NOT WINDOWS)
+condor_exe( curl_plugin "curl_plugin.c" ${C_LIBEXEC}
+"${CURL_FOUND};${LDAP_FOUND};${OPENSSL_FOUND};${ZLIB_FOUND};${KRB5_FOUND}" OFF )
+endif()
+
+condor_exe( data_plugin "data_plugin.c" ${C_LIBEXEC} "" OFF)

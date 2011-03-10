@@ -634,8 +634,6 @@ static id_t name_to_gid(const char *name)
  * 	On error errno is set to a non-zero value including EINVAL and ERANGE.
  * 	On success errno is set to 0.
  * parameters
- * 	id
- * 		a pointer to store the id converted to a id_t
  * 	value
  * 		pointer to the beginning of the string to find the name or
  * 		number
@@ -645,14 +643,15 @@ static id_t name_to_gid(const char *name)
  * 	lookup
  * 		function pointer to convert a name to an id
  * returns
- * 	nothing, but sets *id, *endptr, and errno
+ * 	the id, and sets *endptr, and errno
  */
 typedef id_t (*lookup_func) (const char *);
 
-static void
-strto_id(id_t *id, const char *value, const char **endptr,
+static id_t
+strto_id(const char *value, const char **endptr,
          lookup_func lookup)
 {
+	id_t id;
     const char *endp = value;
 
     const char *id_begin = skip_whitespace_const(value);
@@ -662,7 +661,7 @@ strto_id(id_t *id, const char *value, const char **endptr,
     if (isdigit(*id_begin)) {
         /* is numeric form, parse as a number */
         char *e;
-        *id = strtoul(id_begin, &e, 10);
+        id = strtoul(id_begin, &e, 10);
         endp = e;
     } else if (*id_begin) {
         /* is not numeric, parse as a name using lookup function */
@@ -683,17 +682,18 @@ strto_id(id_t *id, const char *value, const char **endptr,
         memcpy(id_name, id_begin, id_len);
         id_name[id_len] = '\0';
 
-        *id = lookup(id_name);
+        id = lookup(id_name);
         free(id_name);
     } else {
         /* value contains nothing parsable */
-        *id = err_id;
+        id = err_id;
         errno = EINVAL;
     }
 
     if (endptr) {
         *endptr = endp;
     }
+	return id;
 }
 
 /*
@@ -718,7 +718,7 @@ uid_t parse_uid(const char *value, const char **endptr)
 {
     uid_t uid;
 
-    strto_id(&uid, value, endptr, name_to_uid);
+    uid = strto_id(value, endptr, name_to_uid);
 
     return uid;
 }
@@ -745,7 +745,7 @@ gid_t parse_gid(const char *value, const char **endptr)
 {
     gid_t gid;
 
-    strto_id(&gid, value, endptr, name_to_gid);
+    gid = strto_id(value, endptr, name_to_gid);
 
     return gid;
 }
@@ -772,7 +772,7 @@ id_t parse_id(const char *value, const char **endptr)
 {
     id_t id;
 
-    strto_id(&id, value, endptr, name_to_error);
+    id = strto_id(value, endptr, name_to_error);
 
     return id;
 }
@@ -818,7 +818,7 @@ strto_id_range(id_t *min_id, id_t *max_id, const char *value,
                const char **endptr, lookup_func lookup)
 {
     const char *endp;
-    strto_id(min_id, value, &endp, lookup);
+    *min_id = strto_id(value, &endp, lookup);
     if (errno == 0 && value != endp) {
         /* parsed min correctly, check for a '-' and max value */
         value = skip_whitespace_const(endp);
@@ -829,7 +829,7 @@ strto_id_range(id_t *min_id, id_t *max_id, const char *value,
                 *max_id = UINT_MAX;
                 endp = value + 1;
             } else {
-                strto_id(max_id, value, &endp, lookup);
+                *max_id = strto_id(value, &endp, lookup);
             }
         } else {
             *max_id = *min_id;
@@ -1109,12 +1109,14 @@ int safe_reset_environment()
     /* clear the environment */
     r = clearenv();
     if (r != 0) {
+        free(tz);
         return -1;
     }
 
     /* set PATH and TZ */
     r = setenv(path_name, path_value, 1);
     if (r == -1) {
+        free(tz);
         return -1;
     }
 
@@ -2087,14 +2089,25 @@ is_current_working_directory_trusted_r(id_range_list *trusted_uids,
 #define MAX_SYMLINK_DEPTH 32
 #endif
 
-typedef struct dir_stack {
-    struct dir_path {
-        char *original_ptr;
-        char *cur_position;
-    } stack[MAX_SYMLINK_DEPTH];
+struct dir_stack {
+public:
+	struct dir_path {
+		char *original_ptr;
+		char *cur_position;
+	} stack[MAX_SYMLINK_DEPTH];
+	int count;
+	dir_stack();
+};
 
-    int count;
-} dir_stack;
+/* Constructor */
+
+dir_stack::dir_stack() : count(0) 
+{
+	for(int i=0;i<MAX_SYMLINK_DEPTH;++i){
+		stack[i].cur_position = 0;
+		stack[i].original_ptr = 0;
+	}
+}
 
 /*
  * init_dir_stack
@@ -2105,9 +2118,16 @@ typedef struct dir_stack {
  * returns
  *	Nothing
  */
+
 static void init_dir_stack(dir_stack *stack)
 {
-    stack->count = 0;
+	if(stack){
+		stack->count = 0;
+		for(int i=0;i<MAX_SYMLINK_DEPTH;++i){
+			stack->stack[i].cur_position = 0;
+			stack->stack[i].original_ptr = 0;
+		}
+	}
 }
 
 /*
@@ -2369,7 +2389,7 @@ safe_is_path_trusted(const char *pathname, id_range_list *trusted_uids,
 
         /* check the next component in the path */
         r = lstat(path, &stat_buf);
-        if (r == -1) {
+        if (r == -1 || status == -1) {
             status = -1;
             goto restore_dir_and_exit;
         }
@@ -2784,8 +2804,6 @@ safe_is_path_trusted_r(const char *pathname, id_range_list *trusted_uids,
     char *path_end = path;
     char *prev_path_end;
 
-    init_dir_stack(&paths);
-
     if (*pathname != '/') {
         /* relative path */
         status =
@@ -2847,7 +2865,7 @@ safe_is_path_trusted_r(const char *pathname, id_range_list *trusted_uids,
 
         /* check the next component in the path */
         r = lstat(path, &stat_buf);
-        if (r == -1) {
+        if (r == -1 || status == -1) {
             status = -1;
             goto cleanup_and_exit;
         }
@@ -3034,7 +3052,17 @@ safe_open_no_follow(const char* path, int* fd_ptr, struct stat* st)
 
     *fd_ptr = open(path, O_RDONLY | O_NONBLOCK);
     if (*fd_ptr == -1) {
-        return -1;
+	if (errno == ENOENT) {
+	    /* path could have been a dangling sym link
+	    * check for symlink and return 0 with fd = -1
+	    */
+	    if (lstat(path, st) != -1 && S_ISLNK(st->st_mode)) {
+		return 0;
+	    }
+	    errno = ENOENT;
+	}
+
+	return -1;
     }
 
     if (fstat(*fd_ptr, st) == -1) {

@@ -18,14 +18,9 @@
  ***************************************************************/
 
 
- 
-
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "alarm.unix.h"
-
 
 Alarm::Alarm() : saved( 0 ) { }
 

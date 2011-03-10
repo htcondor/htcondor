@@ -75,7 +75,7 @@ public:
 	thread_status_t get_status() { return status_; }
 	static const char* get_status_string(thread_status_t status);
 	const char* get_name() const {return name_;}
-	const condor_thread_func_t get_routine() const {return routine_;}
+	condor_thread_func_t get_routine() const {return routine_;}
 	void* get_arg() const {return arg_;}  // get args to routine
 	int get_tid() const {return tid_;}
 

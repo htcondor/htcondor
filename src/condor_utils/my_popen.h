@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -23,15 +23,15 @@
 
 BEGIN_C_DECLS
 
-FILE *my_popenv( char *const argv[],
+FILE *my_popenv( const char *const argv [],
                  const char * mode,
                  int want_stderr );
 int my_pclose( FILE *fp );
 
-int my_systemv( char *const argv[] );
+int my_systemv( const char *const argv[] );
 
 int my_spawnl( const char* cmd, ... );
-int my_spawnv( const char* cmd, char *const argv[] );
+int my_spawnv( const char* cmd, const char *const argv[] );
 
 #if defined(WIN32)
 // on Windows, expose the ability to use a raw command line
@@ -43,19 +43,22 @@ END_C_DECLS
 
 #if defined(__cplusplus)
 
-// ArgList versions only available from C++
+// ArgList and Env versions only available from C++
 #include "condor_arglist.h"
+#include "env.h"
 FILE *my_popen( ArgList &args,
                 const char * mode,
-                int want_stderr );
-int my_system( ArgList &args );
+                int want_stderr,
+				Env *env_ptr = NULL);
+int my_system( ArgList &args, Env *env_ptr = NULL );
 
 // PrivSep version
 #if !defined(WIN32)
 FILE *privsep_popen( ArgList &args,
                      const char * mode,
                      int want_stderr,
-                     uid_t uid );
+                     uid_t uid,
+					 Env *env_ptr = NULL);
 #endif
 
 #endif

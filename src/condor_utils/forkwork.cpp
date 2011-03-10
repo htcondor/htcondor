@@ -216,7 +216,7 @@ ForkWork::WorkerDone( int exit_status )
 
 // Child reaper
 int
-ForkWork::Reaper( int exitPid, int exitStatus )
+ForkWork::Reaper( int exitPid, int /*exitStatus*/ )
 {
 	ForkWorker	*worker;
 

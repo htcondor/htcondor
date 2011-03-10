@@ -1,0 +1,40 @@
+Condor Contrib - PIGEON
+
+1 - Building:
+--------------
+
+For making your life easier, make sure you have the Condor source tree checked out. Then add this folder (condor_contrib_pigeon_client) under src/.
+Now you can run condor_imake , make, make release, make clean .. etc.
+
+One important point is, though, that you have to indicate where your QPid installation is located by setting the environment variable "QPID_INSTALL". make will check whether you did or not. 
+
+
+2 - Running:
+-------------
+
+From whereever you execute any of the clients, make sure that your CONDOR_CONFIG variable is set correctly.
+
+a) topic_publisher : 
+	This is the client tool for reading Condor UserLog files and publishing them to the queue. Currently it will assume that qpid runs on your local host (to be changed easily). The port qpid is running is dynamically determined. It takes two arguments: the userLog file to be published and the persistence file (will be created if it does not exist).
+	
+	./topic_publisher user.log persist.dat
+	
+	
+b) topic_listener : 
+	A queue listener that will dump queue input to stdout. No arguments needed. Again, it assumes qpid host is the local machine; port is determined dynamically.
+	
+	./topic_listener
+	
+c) topic_listener_skype : 
+	A queue listener that will post queue messages through Skype to a particular Skype user. This program takes a config file as an argument (i.e. qpidConfig). This config file consists of the following entries (line by line, example enclosed): 
+		qpid_host_name  : the name of the host qpid is running on
+		log_msg_queue   : the name of the msg queue to subscribe to (should be set to 'log_msg_queue' in the current state)
+		routing_key1    : the routing key (currently there is only this particular routing key
+		theSkypeUser    : the Skype user name to send the messages to 
+
+
+	./topic_listener_skype qpidConfig
+	
+	For this application, Skype needs to be running to the executing machine.
+
+Make sure when running these executables that you have QPID_INSTALL/lib and CONDOR_RELEASE_DIR/lib in your LD_LIBRARY_PATH. 

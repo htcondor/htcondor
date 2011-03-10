@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -20,10 +20,10 @@ if (NOT WIN_EXEC_NODE_ONLY)
 
 	condor_selective_glob( "Pipe*;io*;cgahp*" CGahpSrcs )
 
-	condor_exe( condor_c-gahp "${CGahpSrcs}" ${C_SBIN} "qmgmt;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" )
+	condor_exe( condor_c-gahp "${CGahpSrcs}" ${C_SBIN} "qmgmt;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF )
 
 	condor_selective_glob("Pipe*;schedd*;Sched*;cgahp*" CGahpWorkerSrcs)
 
-	condor_exe( condor_c-gahp_worker_thread "${CGahpWorkerSrcs}" ${C_SBIN} "qmgmt;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" )
+	condor_exe( condor_c-gahp_worker_thread "${CGahpWorkerSrcs}" ${C_SBIN} "qmgmt;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF )
 
 endif(NOT WIN_EXEC_NODE_ONLY)

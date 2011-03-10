@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -62,9 +62,10 @@
 			set(PCRE_FOUND "${EXTERNAL_STAGE}/lib/libpcre.lib")
 
 			#this may become the common case.
-			install ( FILES ${EXTERNAL_STAGE}/lib/libpcre.dll
-					  DESTINATION ${C_LIB} )
-
+			install ( FILES ${EXTERNAL_STAGE}/lib/libpcre.dll DESTINATION ${C_LIB} )
+			
+			set_property( TARGET pcre PROPERTY FOLDER "externals" )
+			
 		else()
 			set(PCRE_FOUND "${EXTERNAL_STAGE}/lib/libpcre.a")
 			if ( AIX )
@@ -90,5 +91,5 @@
 	endif(PCRE_FOUND)
 
 #else(WITH_PCRE)
-#	message (STATUS "external skiped (pcre)")
+#	message (STATUS "external skipped (pcre)")
 #endif(WITH_PCRE)

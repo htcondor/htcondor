@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -25,6 +25,7 @@ if(STD_UNIVERSE )
 
 	condor_exe(condor_shadow.std
 	"${Hdrs};${Srcs};${CNDRSYSCL_REFS}" ${C_SBIN}
-	"${CONDOR_TOOL_LIBS};std_local_ref;syscall_numbers;qmgmt;ckpt_server_api;stdunivio;${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND};${ZLIB_FOUND}")
+	"${CONDOR_TOOL_LIBS};std_local_ref;syscall_numbers;qmgmt;ckpt_server_api;stdunivio;${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND};${ZLIB_FOUND}"
+	OFF)
 
 endif(STD_UNIVERSE)

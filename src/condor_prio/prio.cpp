@@ -222,7 +222,7 @@ void UpdateJobAd(int cluster, int proc)
 		return;
 	}
 	new_prio = calc_prio( old_prio );
-	if( (SetAttributeInt(cluster, proc, ATTR_JOB_PRIO, new_prio) < 0) ) {
+	if( (SetAttributeInt(cluster, proc, ATTR_JOB_PRIO, new_prio, SHOULDLOG) < 0) ) {
 		fprintf(stderr, "Couldn't set new priority for %d.%d.\n",
 				cluster, proc);
 		return;

@@ -50,6 +50,7 @@
 
 MapFile* Authentication::global_map_file = NULL;
 bool Authentication::global_map_file_load_attempted = false;
+bool Authentication::globus_activated = false;
 
 char const *UNMAPPED_DOMAIN = "unmapped";
 char const *MATCHSESSION_DOMAIN = "matchsession";
@@ -420,6 +421,14 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		dprintf (D_SECURITY, "ZKM: map file already loaded.\n");
 	}
 
+#if defined(HAVE_EXT_GLOBUS)
+	if (globus_activated == false) {
+		dprintf (D_FULLDEBUG, "Activating Globus GSI_GSSAPI_ASSIST module.\n");
+		globus_module_activate(GLOBUS_GSI_GSS_ASSIST_MODULE);
+		globus_activated = true;
+	}
+#endif
+      
 
 	dprintf (D_SECURITY, "ZKM: attempting to map '%s'\n", authentication_name);
 

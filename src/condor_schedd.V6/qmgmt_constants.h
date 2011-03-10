@@ -48,3 +48,6 @@
 #define CONDOR_SendSpoolFileIfNeeded 10029
 #define CONDOR_SetEffectiveOwner	10030
 #define CONDOR_CommitTransaction    10031
+#define	CONDOR_SetAttributeByConstraint2	10032		/* Rob */
+#define CONDOR_GetDirtyAttributes	10033		/* Rob */
+#define CONDOR_GetNextDirtyJobByConstraint	10034	/* Rob */

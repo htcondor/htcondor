@@ -64,7 +64,7 @@ int SetEnv( const char *key, const char *value)
 		return FALSE;
 	}
 
-	char *hashed_var;
+	char *hashed_var=0;
 	if ( EnvVars.lookup( HashKey( key ), hashed_var ) == 0 ) {
 			// found old one
 			// remove old one
@@ -145,7 +145,7 @@ int UnsetEnv( const char *env_var )
 		}
 	}
 
-	char *hashed_var;
+	char *hashed_var=0;
 	if ( EnvVars.lookup( HashKey( env_var ), hashed_var ) == 0 ) {
 			// found it
 			// remove it

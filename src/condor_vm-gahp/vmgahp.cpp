@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,7 +33,7 @@
 #include "vmgahp.h"
 #include "vm_type.h"
 #include "vmware_type.h"
-#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT)
+#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 #  include "xen_type.linux.h"
 #endif
 #include "vmgahp_error_codes.h"
@@ -70,7 +70,7 @@ unsigned __stdcall pipe_forward_thread(void *)
 {
 	const int FORWARD_BUFFER_SIZE = 4096;
 	char buf[FORWARD_BUFFER_SIZE];
-	
+
 	// just copy everything from stdin to the forwarding pipe
 	while (true) {
 
@@ -141,7 +141,7 @@ VMGahp::startUp()
 	}
 
 	// Setting pipes from Starter
-	int stdin_pipe = -1; 
+	int stdin_pipe = -1;
 
 #if defined(WIN32)
 	// if our parent is not DaemonCore, then our assumption that
@@ -190,14 +190,14 @@ VMGahp::startUp()
 	m_request_buffer.setPipeEnd(stdin_pipe);
 	(void)daemonCore->Register_Pipe(m_request_buffer.getPipeEnd(),
 			"stdin_pipe",
-			(PipeHandlercpp)&VMGahp::waitForCommand,
+			static_cast<PipeHandlercpp>(&VMGahp::waitForCommand),
 			"VMGahp::waitForCommand", this);
 }
 
 void
 VMGahp::cleanUp()
 {
-	static bool is_called = false; 
+	static bool is_called = false;
 
 	if( is_called ) {
 		return;
@@ -247,14 +247,14 @@ VMGahp::cleanUp()
 	m_need_output_for_quit = false;
 }
 
-int 
+int
 VMGahp::getNewVMId(void)
 {
 	m_max_vm_id++;
 	return m_max_vm_id;
 }
 
-int 
+int
 VMGahp::numOfVM(void)
 {
 	 return m_vm_list.Number();
@@ -291,7 +291,7 @@ VMGahp::addNewRequest(const char *cmd)
 	return new_req;
 }
 
-void 
+void
 VMGahp::removePendingRequest(int req_id)
 {
 	VMRequest *req = findPendingRequest(req_id);
@@ -302,7 +302,7 @@ VMGahp::removePendingRequest(int req_id)
 	}
 }
 
-void 
+void
 VMGahp::removePendingRequest(VMRequest *req)
 {
 	if(!req) {
@@ -332,7 +332,7 @@ VMGahp::printAllReqsWithResult()
 	while( (one_result = m_result_list.next()) != NULL ) {
 		output = one_result;
 		output += "\n";
-		write_to_daemoncore_pipe(vmgahp_stdout_pipe, 
+		write_to_daemoncore_pipe(vmgahp_stdout_pipe,
 				output.Value(), output.Length());
 		m_result_list.deleteCurrent();
 	}
@@ -390,8 +390,11 @@ VMGahp::findVM(int vm_id)
 	return NULL;
 }
 
-int 
-VMGahp::waitForCommand()
+
+
+
+int
+VMGahp::waitForCommand(int pipe_end)
 {
 	MyString *line = NULL;
 
@@ -410,12 +413,12 @@ VMGahp::waitForCommand()
 				returnOutputSuccess();
 			}else {
 				if( !m_jobAd->Insert(command) ) {
-					vmprintf(D_ALWAYS, "Failed to insert \"%s\" into classAd, " 
+					vmprintf(D_ALWAYS, "Failed to insert \"%s\" into classAd, "
 							"ignoring this attribute\n", command);
 				}
 			}
 		}else {
-			if(parse_vmgahp_command(command, args) && 
+			if(parse_vmgahp_command(command, args) &&
 					verifyCommand(args.argv, args.argc)) {
 				new_req = preExecuteCommand(command, &args);
 
@@ -429,8 +432,8 @@ VMGahp::waitForCommand()
 								write_to_daemoncore_pipe("R\n");
 							}
 							// So that we only do it once
-							m_new_results_signaled = true;    
-						} 
+							m_new_results_signaled = true;
+						}
 					}
 				}
 			}else {
@@ -455,11 +458,11 @@ VMGahp::waitForCommand()
 bool VMGahp::verifyCommand(char **argv, int argc) {
 	if(strcasecmp(argv[0], VMGAHP_COMMAND_VM_START) == 0 ) {
 		// Expecting: VMGAHP_COMMAND_VM_START <req_id> <type>
-		return verify_number_args(argc, 3) && 
+		return verify_number_args(argc, 3) &&
 			verify_request_id(argv[1]) &&
 			verify_vm_type(argv[2]);
 
-	} else if(strcasecmp(argv[0], VMGAHP_COMMAND_VM_STOP) == 0 || 
+	} else if(strcasecmp(argv[0], VMGAHP_COMMAND_VM_STOP) == 0 ||
 		strcasecmp(argv[0], VMGAHP_COMMAND_VM_SUSPEND) == 0 ||
 		strcasecmp(argv[0], VMGAHP_COMMAND_VM_SOFT_SUSPEND) == 0 ||
 		strcasecmp(argv[0], VMGAHP_COMMAND_VM_RESUME) == 0 ||
@@ -473,8 +476,8 @@ bool VMGahp::verifyCommand(char **argv, int argc) {
 		// Expecting: VMGAHP_COMMAND_VM_CHECKPOINT <req_id> <vmid>
 		// Expecting: VMGAHP_COMMAND_VM_STATUS <req_id> <vmid>
 		// Expecting: VMGAHP_COMMAND_VM_GETPID <req_id> <vmid>
-		
-		return verify_number_args(argc, 3) && 
+
+		return verify_number_args(argc, 3) &&
 			verify_request_id(argv[1]) &&
 			verify_vm_id(argv[2]);
 
@@ -484,7 +487,7 @@ bool VMGahp::verifyCommand(char **argv, int argc) {
 		strcasecmp(argv[0], VMGAHP_COMMAND_VERSION) == 0 ||
 		strcasecmp(argv[0], VMGAHP_COMMAND_COMMANDS) == 0 ||
 		strcasecmp(argv[0], VMGAHP_COMMAND_SUPPORT_VMS) == 0 ||
-		strcasecmp(argv[0], VMGAHP_COMMAND_RESULTS) == 0 || 
+		strcasecmp(argv[0], VMGAHP_COMMAND_RESULTS) == 0 ||
 		strcasecmp(argv[0], VMGAHP_COMMAND_CLASSAD) == 0 ||
 		strcasecmp(argv[0], VMGAHP_COMMAND_CLASSAD_END) == 0 ) {
 		//These commands need no-args
@@ -496,7 +499,7 @@ bool VMGahp::verifyCommand(char **argv, int argc) {
 }
 
 bool
-VMGahp::verify_request_id(const char *s) 
+VMGahp::verify_request_id(const char *s)
 {
 	if( verify_digit_arg(s) == false) {
 		return false;
@@ -528,7 +531,7 @@ VMGahp::verify_vm_id(const char *s)
 
 
 void
-VMGahp::returnOutput(const char **results, const int count) 
+VMGahp::returnOutput(const char **results, const int count)
 {
 	int i=0;
 
@@ -543,21 +546,21 @@ VMGahp::returnOutput(const char **results, const int count)
 }
 
 void
-VMGahp::returnOutputSuccess(void) 
+VMGahp::returnOutputSuccess(void)
 {
 	const char* result[] = {VMGAHP_RESULT_SUCCESS};
 	returnOutput(result,1);
 }
 
 void
-VMGahp::returnOutputError(void) 
+VMGahp::returnOutputError(void)
 {
 	const char* result[] = {VMGAHP_RESULT_ERROR};
 	returnOutput(result,1);
 }
 
 VMRequest *
-VMGahp::preExecuteCommand(const char* cmd, Gahp_Args *args) 
+VMGahp::preExecuteCommand(const char* cmd, Gahp_Args *args)
 {
 	char *command = args->argv[0];
 
@@ -599,7 +602,7 @@ VMGahp::preExecuteCommand(const char* cmd, Gahp_Args *args)
 		returnOutputSuccess();
 	} else {
 		VMRequest *new_req;
-		new_req = addNewRequest(cmd);		
+		new_req = addNewRequest(cmd);
 		returnOutputSuccess();
 		return new_req;
 	}
@@ -646,7 +649,7 @@ VMGahp::executeStart(VMRequest *req)
 		req->m_has_result = true;
 		req->m_is_success = false;
 		req->m_result = VMGAHP_ERR_NO_JOBCLASSAD_INFO;
-		return; 
+		return;
 	}
 
 	MyString vmworkingdir;
@@ -663,7 +666,7 @@ VMGahp::executeStart(VMRequest *req)
 		req->m_has_result = true;
 		req->m_is_success = false;
 		req->m_result = VMGAHP_ERR_NO_JOBCLASSAD_INFO;
-		vmprintf(D_ALWAYS, "VM_TYPE('%s') cannot be found in vm classAd\n", 
+		vmprintf(D_ALWAYS, "VM_TYPE('%s') cannot be found in vm classAd\n",
 							ATTR_JOB_VM_TYPE);
 		return;
 	}
@@ -687,30 +690,30 @@ VMGahp::executeStart(VMRequest *req)
 	VMType *new_vm = NULL;
 
 	// TBD: tstclair this totally needs to be re-written
-#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT) 
+#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0 ) {
-		new_vm = new XenType(m_gahp_config->m_vm_script.Value(), 
+		new_vm = new XenType(m_gahp_config->m_vm_script.Value(),
 				vmworkingdir.Value(), m_jobAd);
 		ASSERT(new_vm);
 	}else if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_KVM) == 0) {
-	  new_vm = new KVMType(m_gahp_config->m_vm_script.Value(), 
+	  new_vm = new KVMType(m_gahp_config->m_vm_script.Value(),
 				vmworkingdir.Value(), m_jobAd);
 		ASSERT(new_vm);
-	}else 
+	}else
 #endif
 	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
-		new_vm = new VMwareType(m_gahp_config->m_prog_for_script.Value(), 
-				m_gahp_config->m_vm_script.Value(), 
+		new_vm = new VMwareType(m_gahp_config->m_prog_for_script.Value(),
+				m_gahp_config->m_vm_script.Value(),
 				vmworkingdir.Value(), m_jobAd);
 		ASSERT(new_vm);
-	}else 
+	}else
 	  {
 		// We should not reach here
 		vmprintf(D_ALWAYS, "vmtype(%s) is not yet implemented\n", vmtype);
 		req->m_has_result = true;
 		req->m_is_success = false;
 		req->m_result = VMGAHP_ERR_NO_SUPPORTED_VM_TYPE;
-		return; 
+		return;
 	}
 
 	new_vm->Config();
@@ -721,7 +724,7 @@ VMGahp::executeStart(VMRequest *req)
 		delete new_vm;
 		new_vm = NULL;
 		vmprintf(D_FULLDEBUG, "CreateConfigFile fails in executeStart!\n");
-		return; 
+		return;
 	}
 
 	int result = new_vm->Start();
@@ -867,7 +870,7 @@ VMGahp::executeResume(VMRequest *req)
 		req->m_has_result = true;
 		req->m_is_success = false;
 		req->m_result = VMGAHP_ERR_VM_NOT_FOUND;
-		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeResume\n", 
+		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeResume\n",
 					vm_id);
 		return;
 	}else {
@@ -902,7 +905,7 @@ VMGahp::executeCheckpoint(VMRequest *req)
 		req->m_has_result = true;
 		req->m_is_success = false;
 		req->m_result = VMGAHP_ERR_VM_NOT_FOUND;
-		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeCheckpoint\n", 
+		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeCheckpoint\n",
 					vm_id);
 		return;
 	}else {
@@ -971,7 +974,7 @@ VMGahp::executeGetpid(VMRequest *req)
 		req->m_has_result = true;
 		req->m_is_success = false;
 		req->m_result = VMGAHP_ERR_VM_NOT_FOUND;
-		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeGetPid\n", 
+		vmprintf(D_FULLDEBUG, "VM(id=%d) is not found in executeGetPid\n",
 					vm_id);
 		return;
 	}else {
@@ -986,7 +989,7 @@ VMGahp::executeGetpid(VMRequest *req)
 }
 
 void
-VMGahp::executeQuit(void) 
+VMGahp::executeQuit(void)
 {
 	m_need_output_for_quit = true;
 	cleanUp();
@@ -994,13 +997,13 @@ VMGahp::executeQuit(void)
 }
 
 void
-VMGahp::executeVersion(void) 
+VMGahp::executeVersion(void)
 {
 	write_to_daemoncore_pipe("S %s\n", vmgahp_version);
 }
 
 void
-VMGahp::executeCommands(void) 
+VMGahp::executeCommands(void)
 {
 	MyString result;
 	result += "S";
@@ -1033,7 +1036,7 @@ VMGahp::executeSupportVMS(void)
 }
 
 void
-VMGahp::executeResults(void) 
+VMGahp::executeResults(void)
 {
 	write_to_daemoncore_pipe("S %d\n", numOfReqWithResult());
 
@@ -1050,7 +1053,7 @@ VMGahp::make_result_line(VMRequest *req)
 
 	if(req->m_is_success) {
 		// Success
-		// Format: <req_id> 0 <result string> 
+		// Format: <req_id> 0 <result string>
 		res_str += req->m_reqid;
 		res_str += " ";
 		res_str += 0;
@@ -1091,9 +1094,9 @@ VMGahp::killAllProcess()
 		// Virtual machine is absolutely not created.
 		return;
 	}
-	
-#if defined(LINUX) && defined (HAVE_EXT_LIBVIRT)
-	if( strcasecmp(m_gahp_config->m_vm_type.Value(), 
+
+#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
+	if( strcasecmp(m_gahp_config->m_vm_type.Value(),
 				CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
 		priv_state priv = set_root_priv();
 		if( m_jobAd && XenType::checkXenParams(m_gahp_config) ) {
@@ -1104,7 +1107,7 @@ VMGahp::killAllProcess()
 			}
 		}
 		set_priv(priv);
-	} else if(strcasecmp(m_gahp_config->m_vm_type.Value(), 
+	} else if(strcasecmp(m_gahp_config->m_vm_type.Value(),
 			     CONDOR_VM_UNIVERSE_KVM ) == 0 ) {
 		priv_state priv = set_root_priv();
 		if( m_jobAd && KVMType::checkXenParams(m_gahp_config) ) {
@@ -1118,11 +1121,11 @@ VMGahp::killAllProcess()
 
 	} else
 #endif
-	if( strcasecmp(m_gahp_config->m_vm_type.Value(), 
+	if( strcasecmp(m_gahp_config->m_vm_type.Value(),
 				CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
 		priv_state priv = set_user_priv();
 		if( VMwareType::checkVMwareParams(m_gahp_config) ) {
-			VMwareType::killVMFast(m_gahp_config->m_prog_for_script.Value(), 
+			VMwareType::killVMFast(m_gahp_config->m_prog_for_script.Value(),
 					m_gahp_config->m_vm_script.Value(), m_workingdir.Value());
 			vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 		}

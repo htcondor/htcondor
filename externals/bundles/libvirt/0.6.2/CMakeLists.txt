@@ -1,20 +1,20 @@
  ###############################################################
- # 
- # Copyright (C) 1990-2010, Redhat. 
- # 
- # Licensed under the Apache License, Version 2.0 (the "License"); you 
- # may not use this file except in compliance with the License.  You may 
- # obtain a copy of the License at 
- # 
- #    http://www.apache.org/licenses/LICENSE-2.0 
- # 
- # Unless required by applicable law or agreed to in writing, software 
- # distributed under the License is distributed on an "AS IS" BASIS, 
+ #
+ # Copyright 2011 Red Hat, Inc.
+ #
+ # Licensed under the Apache License, Version 2.0 (the "License"); you
+ # may not use this file except in compliance with the License.  You may
+ # obtain a copy of the License at
+ #
+ #    http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
  # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and 
- # limitations under the License. 
- # 
- ############################################################### 
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ #
+ ###############################################################
 
 if (LINUX)
   option(WITH_LIBVIRT "Compiling with support for LIBVIRT" ON)
@@ -22,7 +22,9 @@ endif(LINUX)
 
 if (WITH_LIBVIRT)
 
-	if ( NOT PROPER )
+    find_multiple( "virt" LIBVIRT_FOUND )
+
+	if ( NOT PROPER AND NOT LIBVIRT_FOUND )
 
 		set (LIBVERT_VER libvirt-0.6.2)
 
@@ -47,20 +49,14 @@ if (WITH_LIBVIRT)
 		set(LIBVIRT_FOUND "${EXTERNAL_STAGE}/lib/libvirt.a")
 		append_var(CONDOR_EXTERNALS libvirt)
 
-	else( NOT PROPER )
-
-		find_multiple( "virt" LIBVIRT_FOUND )
-
-	endif( NOT PROPER )
-
-	if (LIBVIRT_FOUND)
-		message (STATUS "external configured (LIBVIRT_FOUND=${LIBVIRT_FOUND})")
-		set( LIBVIRT_FOUND ${LIBVIRT_FOUND} PARENT_SCOPE )
-		set( HAVE_EXT_LIBVIRT ON PARENT_SCOPE )
-	endif(LIBVIRT_FOUND)
-
-else(WITH_LIBVIRT)
-
-	message (STATUS "external skiped (libvirt)")
+	endif( NOT PROPER AND NOT LIBVIRT_FOUND )
 
 endif(WITH_LIBVIRT)
+
+if (LIBVIRT_FOUND)
+    message (STATUS "external configured (LIBVIRT_FOUND=${LIBVIRT_FOUND})")
+    set( LIBVIRT_FOUND ${LIBVIRT_FOUND} PARENT_SCOPE )
+    set( HAVE_EXT_LIBVIRT ON PARENT_SCOPE )
+else(LIBVIRT_FOUND)
+    message (STATUS "external skipped (libvirt)")
+endif(LIBVIRT_FOUND)

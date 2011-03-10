@@ -10,14 +10,12 @@
       <Product xmlns="http://schemas.microsoft.com/wix/2006/wi"
        Id="@CPACK_WIX_PRODUCT_GUID@" Name="@CPACK_PACKAGE_FILE_NAME@"
        Language="1033" Version="@CPACK_PACKAGE_VERSION@"
-       Manufacturer="@CPACK_PACKAGE_VENDOR@" UpgradeCode="@CPACK_WIX_UPGRADE_GUID@">
+       Manufacturer="@CPACK_PACKAGE_VENDOR@" UpgradeCode="EA1CEE00-C44F-4BC4-8035-440AA32C1F33">
         <Package InstallerVersion="300" Compressed="yes"/>
         <Media Id="1" Cabinet="media1.cab" EmbedCab="yes"/>
         <!-- Always force the root drive to be C: -->
-        <Property Id="ROOTDRIVE"><![CDATA[C:\]]></Property>
         <Directory Id="TARGETDIR" Name="SourceDir">
-          <Directory Id="INSTALLLOCATION" Name="@CPACK_PACKAGE_FILE_NAME@">
-
+          <Directory Id="INSTALLDIR" Name="condor">
            <!-- Merge module used to bind VC runtime *do not* copy in the files using include (InstallRequiredSystemLibraries) -->
            <Merge Id="VC90CRT" Language="1033" DiskId="1" SourceFile="C:\Program Files\Common Files\Merge Modules\Microsoft_VC90_CRT_x86.msm"/>
            <Merge Id="VC90Policy" Language="1033" DiskId="1" SourceFile="C:\Program Files\Common Files\Merge Modules\policy_9_0_Microsoft_VC90_CRT_x86.msm"/>
@@ -25,18 +23,106 @@
             <!-- Update the registry, ENV, and FW -->
            <Component Id="CondorRegNEnv" Guid="E282D017-976B-4685-A330-5180B27277C0">
              <RegistryKey Root="HKLM" Key="SOFTWARE\Condor" Action="createAndRemoveOnUninstall" >
-                 <RegistryValue Type="string" Name="CONDOR_CONFIG" Value="[INSTALLLOCATION]condor_config" KeyPath="yes" />
-                 <RegistryValue Type="string" Name="RELEASE_DIR" Value="[INSTALLLOCATION]"/>
+                 <RegistryValue Type="string" Name="CONDOR_CONFIG" Value="[INSTALLDIR]condor_config" KeyPath="yes" />
+                 <RegistryValue Type="string" Name="RELEASE_DIR" Value="[INSTALLDIR]"/>
+                 <RegistryValue Type="string" Name="SUBMITJOBS" Value="[SUBMITJOBS]" />
+                 <RegistryValue Type="string" Name="NEWPOOL" Value="[NEWPOOL]" />
+                 <RegistryValue Type="string" Name="POOLNAME" Value="[POOLNAME]" />
+                 <RegistryValue Type="string" Name="POOLHOSTNAME" Value="[POOLHOSTNAME]" />
+                 <RegistryValue Type="string" Name="ACCOUNTINGDOMAIN" Value="[ACCOUNTINGDOMAIN]" />
+                 <RegistryValue Type="string" Name="CONDOREMAIL" Value="[CONDOREMAIL]" />
+                 <RegistryValue Type="string" Name="SMTPSERVER" Value="[SMTPSERVER]" />
+                 <RegistryValue Type="string" Name="HOSTALLOWREAD" Value="[HOSTALLOWREAD]" />
+                 <RegistryValue Type="string" Name="HOSTALLOWWRITE" Value="[HOSTALLOWWRITE]" />
+                 <RegistryValue Type="string" Name="HOSTALLOWADMINISTRATOR" Value="[HOSTALLOWADMINISTRATOR]" />
+                 <RegistryValue Type="string" Name="RUNJOBS" Value="[RUNJOBS]" />
+                 <RegistryValue Type="string" Name="VACATEJOBS" Value="[VACATEJOBS]" />
+                 <RegistryValue Type="string" Name="USEVMUNIVERSE" Value="[USEVMUNIVERSE]" />
+                 <RegistryValue Type="string" Name="VMMAXNUMBER" Value="[VMMAXNUMBER]" />
+                 <RegistryValue Type="string" Name="VMMEMORY" Value="[VMMEMORY]" />
+                 <RegistryValue Type="string" Name="VMNETWORKING" Value="[VMNETWORKING]" />
+                 <RegistryValue Type="string" Name="PERLLOCATION" Value="[PERLLOCATION]" />
+                 <RegistryValue Type="string" Name="USEHDFS" Value="[USEHDFS]" />
+                 <RegistryValue Type="string" Name="NAMENODE" Value="[NAMENODE]" />
+                 <RegistryValue Type="string" Name="HDFSMODE" Value="[HDFSMODE]" />
+                 <RegistryValue Type="string" Name="HDFSPORT" Value="[HDFSPORT]" />
+                 <RegistryValue Type="string" Name="HDFSWEBPORT" Value="[HDFSWEBPORT]" />
              </RegistryKey>
-             <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLLOCATION]bin\"/>
+             <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLDIR]bin\"/>
            </Component>
-
+            <Component Id="CondorKBDDReg" Guid="3C40071C-6DB9-43AD-8058-920623026740">
+              <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Run">
+                <RegistryValue Type="string" Name="condor_kbdd" Value="&quot;[INSTALLDIR]bin\condor_kbdd.exe&quot;" />
+              </RegistryKey>
+              <Condition>RUNJOBS = "A" Or RUNJOBS = "I" Or RUNJOBS = "C"</Condition>
+            </Component>
+            <Directory Id="LogDir" Name="log">
+              <Component Id="CreatingLogDir" Guid="F6731DF5-5E28-405F-82EC-5F269FD434E5" Permanent="no" NeverOverwrite="yes">
+                <CreateFolder />
+              </Component>
+            </Directory>
+            <Directory Id="ExecuteDir" Name="execute">
+              <Component Id="CreatingExecuteDir" Guid="389E40FD-5B03-4740-B42A-A9F81AEB853D" Permanent="no" NeverOverwrite="yes">
+                <CreateFolder />
+              </Component>
+            </Directory>
+            <Directory Id="SpoolDir" Name="spool">
+              <Component Id="CreatingSpoolDir" Guid="A1F2F929-7417-4C67-851C-1645D587540A" Permanent="no" NeverOverwrite="yes">
+                <CreateFolder />
+              </Component>
+            </Directory>
           </Directory>
         </Directory>
 
         <Condition Message="This application is only supported on Windows XP(SP2) or higher">
           <![CDATA[(VersionNT >= 501)]]>
         </Condition>
+
+        <Property Id="UPGRADEFOUND" Secure="yes" />
+        <Property Id="NEWPRODUCTFOUND" Secure="yes" />
+        <Upgrade Id="EA1CEE00-C44F-4BC4-8035-440AA32C1F33">
+          <!--Upgrading older version of Condor-->
+          <UpgradeVersion
+            Language="1033"
+            Minimum="7.5.5"
+            IncludeMinimum="yes"
+            Maximum="@CPACK_PACKAGE_VERSION@"
+            IncludeMaximum="no"
+            Property="UPGRADEFOUND"
+            OnlyDetect="no"
+            RemoveFeatures="ALL"
+            />
+          <!--Newer version of Condor already installed-->
+          <UpgradeVersion
+            Language="1033"
+            Minimum="@CPACK_PACKAGE_VERSION@"
+            IncludeMinimum="no"
+            OnlyDetect="yes"
+            Property="NEWPRODUCTFOUND"
+            />
+          <UpgradeVersion
+            Language="1033"
+            Maximum="7.5.5"
+            IncludeMaximum="no"
+            OnlyDetect="yes"
+            Property="TOOOLDFOUND"
+            />
+          <UpgradeVersion
+            Language="1033"
+            Maximum="7.5.5"
+            Minimum="7.5.5"
+            IncludeMaximum="yes"
+            IncludeMinimum="yes"
+            Property="SEVENFIVEFIVEFOUND"
+            />
+        </Upgrade>
+
+        <CustomAction Id="PreventDowngrade" Error="Newer version of Condor already installed." />
+
+        <CustomAction Id="PreventUpgrade"
+                      Error="Condor cannot upgrade from the installed version due to issues with migrating the configuration.  Please backup the configuration and uninstall Condor first before attempting to install this version of Condor." />
+
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
 
         <!--Find the location of the Java installation-->
         <Property Id="JVMVERSION">
@@ -47,154 +133,256 @@
         </Property>
         <SetProperty Id="JVMLOCATION" Value="[JVMDIR]bin\java.exe" After="AppSearch"/>
 
-        <Property Id="POOLHOSTNAME" Value="$$(FULL_HOSTNAME)" />
+        <!--Search for previous install answers.-->
+        <Property Id="OLD_INSTALLDIR">
+          <RegistrySearch Id="INSTALLDIR_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="RELEASE_DIR" />
+        </Property>
+        <Property Id="OLD_SUBMITJOBS">
+          <RegistrySearch Id="SUBMITJOBS_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="SUBMITJOBS" />
+        </Property>
+        <Property Id="OLD_NEWPOOL">
+          <RegistrySearch Id="NEWPOOL_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="NEWPOOL" />
+        </Property>
+        <Property Id="OLD_POOLNAME">
+          <RegistrySearch Id="POOLNAME_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="POOLNAME" />
+        </Property>
+        <Property Id="OLD_POOLHOSTNAME">
+          <RegistrySearch Id="POOLHOSTNAME_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="POOLHOSTNAME" />
+        </Property>
+        <Property Id="OLD_ACCOUNTINGDOMAIN">
+          <RegistrySearch Id="ACCOUNTINGDOMAIN_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="ACCOUNTINGDOMAIN" />
+        </Property>
+        <Property Id="OLD_CONDOREMAIL">
+          <RegistrySearch Id="CONDOREMAIL_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="CONDOREMAIL" />
+        </Property>
+        <Property Id="OLD_SMTPSERVER">
+          <RegistrySearch Id="SMTPSERVER_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="SMTPSERVER" />
+        </Property>
+        <Property Id="OLD_HOSTALLOWREAD">
+          <RegistrySearch Id="HOSTALLOWREAD_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HOSTALLOWREAD" />
+        </Property>
+        <Property Id="OLD_HOSTALLOWWRITE">
+          <RegistrySearch Id="HOSTALLOWWRITE_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HOSTALLOWWRITE" />
+        </Property>
+        <Property Id="OLD_HOSTALLOWADMINISTRATOR">
+          <RegistrySearch Id="HOSTALLOWADMINISTRATOR_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HOSTALLOWADMINISTRATOR" />
+        </Property>
+        <Property Id="OLD_RUNJOBS">
+          <RegistrySearch Id="RUNJOBS_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="RUNJOBS" />
+        </Property>
+        <Property Id="OLD_VACATEJOBS">
+          <RegistrySearch Id="VACATEJOBS_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="VACATEJOBS" />
+        </Property>
+        <Property Id="OLD_USEVMUNIVERSE">
+          <RegistrySearch Id="USEVMUNIVERSE_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="USEVMUNIVERSE" />
+        </Property>
+        <Property Id="OLD_VMMAXNUMBER">
+          <RegistrySearch Id="VMMAXNUMBER_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="VMMAXNUMBER" />
+        </Property>
+        <Property Id="OLD_VMMEMORY">
+          <RegistrySearch Id="VMMEMORY_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="VMMEMORY" />
+        </Property>
+        <Property Id="OLD_VMNETWORKING">
+          <RegistrySearch Id="VMNETWORKING_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="VMNETWORKING" />
+        </Property>
+        <Property Id="OLD_PERLLOCATION">
+          <RegistrySearch Id="PERLLOCATION_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="PERLLOCATION" />
+        </Property>
+        <Property Id="OLD_USEHDFS">
+          <RegistrySearch Id="USEHDFS_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="USEHDFS" />
+        </Property>
+        <Property Id="OLD_NAMENODE">
+          <RegistrySearch Id="NAMENODE_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="NAMENODE" />
+        </Property>
+        <Property Id="OLD_HDFSMODE">
+          <RegistrySearch Id="HDFSMODE_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HDFSMODE" />
+        </Property>
+        <Property Id="OLD_HDFSPORT">
+          <RegistrySearch Id="HDFSPORT_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HDFSPORT" />
+        </Property>
+        <Property Id="OLD_HDFSWEBPORT">
+          <RegistrySearch Id="HDFSWEBPORT_search" Root="HKLM" Type="raw" Key="SOFTWARE\Condor" Name="HDFSWEBPORT" />
+        </Property>
+
+        <Property Id="POOLHOSTNAME" Value="$$(IP_ADDRESS)" />
         <!--Permissions properties-->
         <Property Id="HOSTALLOWREAD" Value="*" />
         <Property Id="HOSTALLOWWRITE" Value="your.domain.com, *.cs.wisc.edu" />
-        <Property Id="HOSTALLOWADMINISTRATOR" Value="$$(FULL_HOSTNAME)" />
+        <Property Id="HOSTALLOWADMINISTRATOR" Value="$$(IP_ADDRESS)" />
         <!--VM Universe properties-->
         <Property Id="VMVERSION" Value="server1.0" />
         <Property Id="VMMEMORY" Value="256" />
         <Property Id="VMMAXNUMBER" Value="$$(NUM_CPUS)" />
+        <Property Id="VMNETWORKING" Value="N"/>
         <Property Id="PERLLOCATION" Value="PERL.EXE" />
         <!--HDFS properties-->
         <Property Id="HDFSPORT" Value="9000" />
         <Property Id="HDFSWEBPORT" Value="8000" />
-        <SetProperty Id="HDFSHOME" Value="[INSTALLLOCATION]HDFS" After="AppSearch" />
-        <SetProperty Id="HDFSNAMEDIR" Value="[HDFSHOME]HDFS/hadoop_name" After="AppSearch" />
-        <SetProperty Id="HDFSDATADIR" Value="[HDFSHOME]HDFS/hadoop_data" After="AppSearch" />
+        <SetProperty Id="HDFSHOME" Value="[INSTALLDIR]HDFS" After="AppSearch">Not UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSNAMEDIR" Value="[HDFS_HOME]/hadoop_name" After="AppSearch">Not UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSDATADIR" Value="[HDFS_HOME]/hadoop_data" After="AppSearch">Not UPGRADEFOUND</SetProperty>
+        <SetDirectory Id="TARGETDIR" Value="[INSTALLDIR]" Sequence="execute" />
+
+        <SetProperty Id="INSTALLDIR" Value="[OLD_INSTALLDIR]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="SUBMITJOBS" Value="[OLD_SUBMITJOBS]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="NEWPOOL" Value="[OLD_NEWPOOL]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="POOLNAME" Value="[OLD_POOLNAME]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="POOLHOSTNAME" Value="[OLD_POOLHOSTNAME]" After="AppSearch">UPGRADEFOUND AND OLD_POOLHOSTNAME</SetProperty>
+        <SetProperty Id="ACCOUNTINGDOMAIN" Value="[OLD_ACCOUNTINGDOMAIN]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="CONDOREMAIL" Value="[OLD_CONDOREMAIL]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="SMTPSERVER" Value="[OLD_SMTPSERVER]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HOSTALLOWREAD" Value="[OLD_HOSTALLOWREAD]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HOSTALLOWWRITE" Value="[OLD_HOSTALLOWWRITE]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HOSTALLOWADMINISTRATOR" Value="[OLD_HOSTALLOWADMINISTRATOR]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="RUNJOBS" Value="[OLD_RUNJOBS]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="VACATEJOBS" Value="[OLD_VACATEJOBS]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="USEVMUNIVERSE" Value="[OLD_USEVMUNIVERSE]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="VMMAXNUMBER" Value="[OLD_VMMAXNUMBER]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="VMMEMORY" Value="[OLD_VMMEMORY]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="PERLLOCATION" Value="[OLD_PERLLOCATION]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="USEHDFS" Value="[OLD_USEHDFS]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="NAMENODE" Value="[OLD_NAMENODE]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSMODE" Value="[OLD_HDFSMODE]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSPORT" Value="[OLD_HDFSPORT]" After="AppSearch">UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSWEBPORT" Value="[OLD_HDFSWEBPORT]" After="AppSearch">UPGRADEFOUND</SetProperty>
 
         <!-- Begin custom actions and install sequence -->
         <CustomAction Id="CondorConfigLocal"
                  Script="vbscript">
           <![CDATA[
-            Set fso = CreateObject("Scripting.FileSystemObject")
-            path = Session.Property("INSTALLLOCATION")
-            if Not fso.FolderExists(path & "log") Then
-                Set objFolderLog = fso.CreateFolder(path & "log")
-            End if
-            if Not fso.FolderExists(path & "spool") Then
-                Set objFolderSpool = fso.CreateFolder(path & "spool")
-            End if
-            if Not fso.FolderExists(path & "execute") Then
-                 Set objFolderExec = fso.CreateFolder(path & "execute")
-            End if
-             if Not fso.FolderExists(path & "config") Then
-                 Set objFolderExec = fso.CreateFolder(path & "config")
-            End if
+            Function CreateConfig()
+              Set fso = CreateObject("Scripting.FileSystemObject")
+              path = Session.Property("INSTALLDIR")
+              Set installpath = fso.GetFolder(path)
+              strippedPath = installpath.ShortPath
+              if Not fso.FileExists(path & "condor_config.local") Then
+                 fso.CreateTextFile(path & "condor_config.local")
+              End if
+              if fso.FileExists(path & "condor_config") then
+                Exit Function
+              end if
             
-            daemonList = "MASTER"
+              daemonList = "MASTER"
             
-            if Session.Property("SUBMITJOBS") = "Y" Then
-              daemonList = daemonList & " SCHEDD"
-            End If
-
-            Set Myfh = fso.OpenTextFile(path & "config\\local.config", 2, True)
-            if Session.Property("NEWPOOL") = "Y" Then
-              Myfh.WriteLine("CONDOR_HOST=$$(FULL_HOSTNAME)")
-              Myfh.WriteLine("COLLECTOR_NAME=" & Session.Property("POOLNAME") )
-              daemonList = daemonList & " COLLECTOR NEGOTIATOR"
-            Elseif Session.Property("NEWPOOL") = "N" THEN
-              Myfh.WriteLine("CONDOR_HOST=" & Session.Property("POOLHOSTNAME") )
-            End If
+              if Session.Property("SUBMITJOBS") = "Y" Then
+                daemonList = daemonList & " SCHEDD"
+              End If
+ 
+              Set Configfile = fso.OpenTextFile(path & "etc\condor_config.generic", 1, True)
+              configTxt = Configfile.ReadAll
+              Configfile.Close
             
-            Myfh.WriteLine("UID_DOMAIN=" & Session.Property("ACCOUNTINGDOMAIN") )
-            Myfh.WriteLine("CONDOR_ADMIN=" & Session.Property("CONDOREMAIL") )
-            Myfh.WriteLine("SMTP_SERVER=" & Session.Property("SMTPSERVER") )
-            Myfh.WriteLine("JAVA=" & Session.Property("JVMLOCATION") )
-
-            Select Case Session.Property("RUNJOBS")
-            Case "A"
-              Myfh.WriteLine("START=TRUE")
-              Myfh.WriteLine("SUSPEND=FALSE")
-              Myfh.WriteLine("WANT_SUSPEND=FALSE")
-              Myfh.WriteLine("WANT_VACATE=FALSE")
-              Myfh.WriteLine("PREEMPT=FALSE")
-              daemonList = daemonList & " STARTD KBDD"
-            Case "N"
-              Myfh.WriteLine("START=FALSE")
-            Case "I"
-              Myfh.WriteLine("START=KeyboardIdle > $$(StartIdleTime)" )
-              Myfh.WriteLine("SUSPEND=$$(UWCS_SUSPEND)")
-              Myfh.WriteLine("CONTINUE=KeyboardIdle > $$(ContinueIdleTime)" )
-              daemonList = daemonList & " STARTD KBDD"
-            Case "C"
-              Myfh.WriteLine("START=$$(UWCS_START)" )
-              Myfh.WriteLine("CONTINUE=$$(UWCS_CONTINUE)")
-              Myfh.WriteLine("SUSPEND=$$(UWCS_SUSPEND)")
-              Myfh.WriteLine("WANT_SUSPEND=$$(UWCS_WANT_SUSPEND)" )
-              Myfh.WriteLine("WANT_VACATE=$$(UWCS_WANT_VACATE)" )
-              Myfh.WriteLine("WANT_PREEMPT=$$(UWCS_WANT_PREEMPT)" )
-              daemonList = daemonList & " STARTD KBDD"
-            End Select
-            Select Case Session.Property("VACATEJOBS")
-            Case "N"
-              Myfh.WriteLine("WANT_VACATE=FALSE")
-              Myfh.WriteLine("WANT_SUSPEND=TRUE")
-            Case "Y"
-              Myfh.WriteLine("WANT_VACATE=$$(UWCS_WANT_VACATE)")
-              Myfh.WriteLine("WANT_SUSPEND=$$(UWCS_WANT_SUSPEND)")
-            End Select
+              configTxt = Replace(configTxt, "RELEASE_DIR = C:\Condor", "RELEASE_DIR = " & strippedPath)
             
-            Myfh.WriteLine("ALLOW_READ=" & Session.Property("HOSTALLOWREAD") )
-            Myfh.WriteLine("ALLOW_WRITE=" & Session.Property("HOSTALLOWWRITE") )
-            Myfh.WriteLine("ALLOW_ADMINISTRATOR=" & Session.Property("HOSTALLOWADMINISTRATOR") )
-            
-            If Session.Property("USEVMUNIVERSE") = "Y" Then
-              Set VMfh = fso.OpenTextFile(path & "config\\vm.config", 2, True)
-              VMfh.WriteLine("VM_TYPE=vmware")
-              VMfh.WriteLine("VM_VERSION=" & Session.Property("VMVERSION") )
-              VMfh.WriteLine("VM_MAX_NUMBER=" & Session.Property("VMMAXNUMBER") )
-              VMfh.WriteLine("VM_MEMORY=" & Session.Property("VMMEMORY") )
-              VMfh.WriteLine("VMWARE_PERL=" & Session.Property("PERLLOCATION") )
-              VMfh.WriteLine("VMWARE_SCRIPT=" & path & "bin\\condor_vm_vmware.pl")
-              Select Case Session.Property("VMNETWORKING")
+              Select Case Session.Property("NEWPOOL")
+              Case "Y"
+                configTxt = Replace(configTxt, "CONDOR_HOST	= central-manager-hostname.your.domain", "CONDOR_HOST=$$(FULL_HOSTNAME)")
+                configTxt = Replace(configTxt, "COLLECTOR_NAME 		= My Pool", "COLLECTOR_NAME=" & Session.Property("POOLNAME") )
+                daemonList = daemonList & " COLLECTOR NEGOTIATOR"
               Case "N"
-                VMfh.WriteLine("VM_NETWORKING=FALSE")
-              Case "A"
-                VMfh.WriteLine("VM_NETWORKING=TRUE")
-                VMfh.WriteLine("VM_NETWORKING_TYPE=nat")
-              Case "B"
-                VMfh.WriteLine("VM_NETWORKING=TRUE")
-                VMfh.WriteLine("VM_NETWORKING_TYPE=bridge")
-              Case "C"
-                VMfh.WriteLine("VM_NETWORKING=TRUE")
-                VMfh.WriteLine("VM_NETWORKING_TYPE=nat, bridge")
-                VMfh.WriteLine("VM_NETWORKING_DEFAULT_TYPE=nat")
+                configTxt = Replace(configTxt, "CONDOR_HOST	= central-manager-hostname.your.domain", "CONDOR_HOST=" & Session.Property("POOLHOSTNAME") )
               End Select
-              VMfh.Close
-            End if
-
-            If Session.Property("USEHDFS") = "Y" Then
-              Set HDFSfh = fso.OpenTextFile(path & "config\\hdfs.config", 2, True)
-              namenodeAddr = Session.Property("NAMENODE")
-              HDFSfh.WriteLine("HDFS_SERVICES=" & namenodeAddr & ":" & Session.Property("HDFSMODE") )
-              HDFSfh.WriteLine("HDFS_NAMENODE=" & namenodeAddr & ":" & Session.Property("HDFSPORT") )
-              HDFSfh.WriteLine("HDFS_NAMENODE_WEB=" & Session.Property("HDFSWEBPORT") )
-              HDFSfh.WriteLine("HDFS_HOME=" & Session.Property("HDFSHOME") )
-              HDFSfh.WriteLine("HDFS_NAMENODE_DIR=" & Session.Property("HDFSNAMEDIR") )
-              HDFSfh.WriteLine("HDFS_DATANODE_DIR=" & Session.Property("HDFSDATADIR") )
-              HDFSfh.Close
-            End if
             
-            Myfh.WriteLine("DAEMON_LIST=" & daemonList)
-            Myfh.Close
+              configTxt = Replace(configTxt, "#UID_DOMAIN		= $$(FULL_HOSTNAME)", "UID_DOMAIN=" & Session.Property("ACCOUNTINGDOMAIN") )
+              configTxt = Replace(configTxt, "CONDOR_ADMIN		= condor-admin@your.domain", "CONDOR_ADMIN=" & Session.Property("CONDOREMAIL") )
+              configTxt = Replace(configTxt, "SMTP_SERVER =", "SMTP_SERVER=" & Session.Property("SMTPSERVER") )
+              configTxt = Replace(configTxt, "ALLOW_READ = * ", "ALLOW_READ=" & Session.Property("HOSTALLOWREAD") )
+              configTxt = Replace(configTxt, "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE", Session.Property("HOSTALLOWWRITE") )
+              configTxt = Replace(configTxt, "ALLOW_ADMINISTRATOR = $$(CONDOR_HOST)", "ALLOW_ADMINISTRATOR=" & Session.Property("HOSTALLOWADMINISTRATOR") )
+              jvmLoc = Session.Property("JVMLOCATION")
+              if fso.FileExists(jvmLoc) then
+                Set jvmPath = fso.GetFile(jvmLoc)
+                jvmLoc = jvmPath.ShortPath
+                configTxt = Replace(configTxt, "JAVA =", "JAVA=" & jvmLoc )
+              end if
+            
+              Select Case Session.Property("RUNJOBS")
+              Case "A"
+                configTxt = Replace(configTxt, "$$(UWCS_START)", "TRUE")
+                configTxt = Replace(configTxt, "$$(UWCS_SUSPEND)", "FALSE")
+                configTxt = Replace(configTxt, "WANT_SUSPEND 		= $$(UWCS_WANT_SUSPEND)", "WANT_SUSPEND=FALSE")
+                configTxt = Replace(configTxt, "$$(UWCS_WANT_VACATE)", "FALSE")
+                configTxt = Replace(configTxt, "$$(UWCS_PREEMPT)", "FALSE")
+                daemonList = daemonList & " STARTD KBDD"
+              Case "N"
+                configTxt = Replace(configTxt, "$$(UWCS_START)", "FALSE")
+              Case "I"
+                configTxt = Replace(configTxt, "$$(UWCS_START)", "KeyboardIdle > $$(StartIdleTime)" )
+                configTxt = Replace(configTxt, "$$(UWCS_CONTINUE)", "KeyboardIdle > $$(ContinueIdleTime)" )
+                daemonList = daemonList & " STARTD KBDD"
+              Case "C"
+                daemonList = daemonList & " STARTD KBDD"
+              End Select
+              If Session.Property("VACATEJOBS") = "N" Then
+                configTxt = Replace(configTxt, "$$(UWCS_WANT_VACATE)", "FALSE")
+                configTxt = Replace(configTxt, "WANT_SUSPEND 		= $$(UWCS_WANT_SUSPEND)", "WANT_SUSPEND = TRUE")
+              End If
+            
+              If Session.Property("USEVMUNIVERSE") = "Y" Then
+                configTxt = Replace(configTxt, "VM_TYPE =", "VM_TYPE=vmware")
+                configTxt = Replace(configTxt, "VM_MAX_NUMBER = $$(NUM_CPUS)", "VM_MAX_NUMBER=" & Session.Property("VMMAXNUMBER") )
+                configTxt = Replace(configTxt, "VM_MEMORY = 128", "VM_MEMORY=" & Session.Property("VMMEMORY") )
+                configTxt = Replace(configTxt, "VMWARE_PERL = perl", "VMWARE_PERL=" & Session.Property("PERLLOCATION") )
+                Select Case Session.Property("VMNETWORKING")
+                Case "A"
+                  configTxt = Replace(configTxt, "VM_NETWORKING = FALSE", "VM_NETWORKING = TRUE")
+                Case "B"
+                  configTxt = Replace(configTxt, "VM_NETWORKING = FALSE", "VM_NETWORKING = TRUE")
+                  configTxt = Replace(configTxt, "VM_NETWORKING_TYPE = nat", "VM_NETWORKING_TYPE = bridge")
+                Case "C"
+                  configTxt = Replace(configTxt, "VM_NETWORKING = FALSE", "VM_NETWORKING = TRUE")
+                  configTxt = Replace(configTxt, "VM_NETWORKING_TYPE = nat", "VM_NETWORKING_TYPE = nat, bridge")
+                End Select
+              End if
+            
+              If Session.Property("USEHDFS") = "Y" Then
+                daemonList = daemonList & " HDFS"
+                namenodeAddr = Session.Property("NAMENODE")
+                configTxt = Replace(configTxt, "#HDFS_HOME = $$(RELEASE_DIR)/libexec/hdfs", "HDFS_HOME = $$(RELEASE_DIR)/hdfs")
+                configTxt = Replace(configTxt, "HDFS_NODETYPE = HDFS_DATANODE", "HDFS_NODETYPE=" & Session.Property("HDFSMODE") )
+                configTxt = Replace(configTxt, "hdfs://example.com:9000", namenodeAddr & ":" & Session.Property("HDFSPORT") )
+                configTxt = Replace(configTxt, "example.com:8000", namenodeAddr  & ":" & Session.Property("HDFSWEBPORT") )
+                configTxt = Replace(configTxt, "$$(RELEASE_DIR)/libexec/hdfs", Session.Property("HDFSHOME") )
+                configTxt = Replace(configTxt, "/tmp/hadoop_name", Session.Property("HDFSNAMEDIR") )
+                configTxt = Replace(configTxt, "/scratch/tmp/hadoop_data", Session.Property("HDFSDATADIR") )
+              End if
+            
+              configTxt = Replace(configTxt, " MASTER, STARTD, SCHEDD", daemonList)
+            
+              Set Configfile = fso.OpenTextFile(path & "condor_config", 2, True)
+              Configfile.WriteLine configTxt
+              Configfile.Close
+            End Function
+            
+            CreateConfig
            ]]>
         </CustomAction>
 
         <InstallExecuteSequence>
+          <Custom Action="PreventDowngrade" After="FindRelatedProducts">NEWPRODUCTFOUND</Custom>
+          <Custom Action="PreventUpgrade" After="FindRelatedProducts">TOOOLDFOUND</Custom>
+          <RemoveExistingProducts After="InstallValidate">UPGRADEFOUND</RemoveExistingProducts>
           <Custom Action="CondorConfigLocal" After="InstallFinalize">Not Installed</Custom>
           <ScheduleReboot After="CondorConfigLocal" />
         </InstallExecuteSequence>
+
+        <InstallUISequence>
+          <Custom Action="PreventDowngrade" After="FindRelatedProducts">NEWPRODUCTFOUND</Custom>
+          <Custom Action="PreventUpgrade" After="FindRelatedProducts">TOOOLDFOUND</Custom>
+        </InstallUISequence>
         <!-- End custom actions and install sequence -->
 
         <!-- Feature Block e.g. ComponentRef's -->
         <Feature Id="CondorWindows" Title="Condor Installation" Level="1" Display="expand">
-          <Feature Id="Installation" Title="Condor Installation Files" Level="1">
+          <Feature Id="Installation" Title="Condor Installation Files" Level="1"  ConfigurableDirectory="INSTALLDIR">
             <xsl:apply-templates select="wix:Fragment" mode="CompRef"/>
             <MergeRef Id="VC90CRT"/>
             <MergeRef Id="VC90Policy"/>
             <ComponentRef Id="CondorRegNEnv" />
+            <ComponentRef Id="CondorKBDDReg" />
+            <ComponentRef Id="CreatingSpoolDir" />
+            <ComponentRef Id="CreatingExecuteDir"/>
+            <ComponentRef Id="CreatingLogDir" />
           </Feature>
           <!-- Typical/Complete/Custom, below is complete. 
           <Feature Id="Debugging Symbols" Title="Condor Debug Symbol Files" Description="Files used to debug Condor" Level='1000'>
@@ -206,7 +394,7 @@
 
         <!-- UI Flow + our custom dialogs -->
         <UI Id="MyWixUI_FeatureTree">
-            <UIRef Id="WixUI_FeatureTree" />
+            <UIRef Id="WixUI_InstallDir" />
             <DialogRef Id="CondorPoolCfgDlg" />
             <DialogRef Id="CondorExecCfgDlg" />
             <DialogRef Id="CondorDomainCfgDlg" />
@@ -215,8 +403,14 @@
             <DialogRef Id="CondorPermCfgDlg" />
             <DialogRef Id="CondorVMCfgDlg" />
             <DialogRef Id="CondorHDFSCfgDlg" />
-            <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="CondorPoolCfgDlg" Order="2">LicenseAccepted = "1"</Publish>
-            <Publish Dialog="CustomizeDlg" Control="Back" Event="NewDialog" Value="CondorHDFSCfgDlg">1</Publish>
+            <Publish Dialog="LicenseAgreementDlg" Control="Next" Event="NewDialog" Value="CondorPoolCfgDlg" Order="2">LicenseAccepted = "1" And Not UPGRADEFOUND</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="CondorHDFSCfgDlg">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Order="2">1</Publish>
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="InstallDirDlg">Not UPGRADEFOUND</Publish>
+            <Publish Dialog="LicenseAgreementDlg" Event="NewDialog" Value="VerifyReadyDlg" Control="Next">LicenseAccepted = "1" And UPGRADEFOUND And Not SEVENFIVEFIVEFOUND</Publish>
+            <Publish Dialog="LicenseAgreementDlg" Event="NewDialog" Value="CondorUpHostDlg" Control="Next">LicenseAccepted = "1" And UPGRADEFOUND And SEVENFIVEFIVEFOUND</Publish>
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="LicenseAgreementDlg">UPGRADEFOUND And Not SEVENFIVEFIVEFOUND</Publish>
+            <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="CondorVMCfgDlg">UPGRADEFOUND And SEVENFIVEFIVEFOUND</Publish>
         </UI>
 
         <!--<UIRef Id="WixUI_FeatureTree" />-->
@@ -270,6 +464,90 @@
           <ServiceInstall Id="CondorService" Description="condor" DisplayName="condor" ErrorControl="normal"  Name="condor" Start="auto" Type="ownProcess" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
           <ServiceControl Id="StartCondorService" Name="condor" Start="install" Wait="no" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
           <ServiceControl Id="StopCondorService" Name="condor" Stop="both" Wait="yes" Remove="uninstall" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_schedd.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX2" Name="condor_schedd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_collector.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX3" Name="condor_collector.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_negotiator.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX4" Name="condor_negotiator.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_startd.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX5" Name="condor_startd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_kbdd.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX6" Name="condor_kbdd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_credd.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX7" Name="condor_credd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_hdfs.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX8" Name="condor_hdfs.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_starter.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX9" Name="condor_starter.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_shadow.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX10" Name="condor_shadow.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_gridmanager.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX11" Name="condor_gridmanager.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_dagman.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX12" Name="condor_dagman.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_c-gahp.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX13" Name="condor_c-gahp.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_c-gahp_worker_thread.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX14" Name="condor_c-gahp_worker_thread.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
+       </xsl:when>
+       <xsl:when test="@Source = '$(var.Source)\bin\condor_vm-gahp.exe'">
+          <xsl:copy>
+            <xsl:copy-of select="@*"/>
+            <FirewallException Id="FWX15" Name="condor_vm-gahp.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+          </xsl:copy>
        </xsl:when>
       <xsl:otherwise>
         <xsl:copy>

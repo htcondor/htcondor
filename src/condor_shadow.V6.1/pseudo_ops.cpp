@@ -704,7 +704,7 @@ pseudo_get_job_attr( const char *name, MyString &expr )
 }
 
 int
-pseudo_set_job_attr( const char *name, const char *expr )
+pseudo_set_job_attr( const char *name, const char *expr, bool log )
 {
 	RemoteResource *remote;
 	if (parallelMasterResource == NULL) {
@@ -712,7 +712,7 @@ pseudo_set_job_attr( const char *name, const char *expr )
 	} else {
 		remote = parallelMasterResource;
 	}
-	if(Shadow->updateJobAttr(name,expr)) {
+	if(Shadow->updateJobAttr(name,expr,log)) {
 		dprintf(D_SYSCALLS,"pseudo_set_job_attr(%s,%s) succeeded\n",name,expr);
 		ClassAd *ad = remote->getJobAd();
 		ASSERT(ad);

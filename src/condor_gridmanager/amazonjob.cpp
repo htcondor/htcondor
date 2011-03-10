@@ -329,6 +329,10 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 			remoteJobId = strdup( token );
 		}
 	}
+
+	if ( !m_key_pair.empty() ) {
+		myResource->AlreadySubmitted( this );
+	}
 	
 	jobAd->LookupString( ATTR_GRID_JOB_STATUS, remoteJobState );
 
@@ -428,7 +432,7 @@ void AmazonJob::doEvaluateState()
 					break;
 				}
 
-				if ( gahp->Startup() == false ) {
+				if (gahp && gahp->Startup() == false ) {
 					dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n", procID.cluster, procID.proc );
 					jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 					gmState = GM_HOLD;

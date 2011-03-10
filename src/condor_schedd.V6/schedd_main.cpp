@@ -40,9 +40,11 @@
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
+#endif
 #endif
 
 #if defined(BSD43) || defined(DYNIX)
@@ -107,7 +109,8 @@ main_init(int argc, char* argv[])
 		// each creating their own
 	daemonCore->Proc_Family_Init();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 		// Intialization of the plugin manager, i.e. loading all
 		// plugins, should be performed before the job queue log is
 		// read so plugins have a chance to learn about all jobs
@@ -124,6 +127,7 @@ main_init(int argc, char* argv[])
 
 		// Tell all plugins to initialize themselves
 	ClassAdLogPluginManager::EarlyInitialize();
+#endif
 #endif
 	
 		// Initialize all the modules
@@ -178,12 +182,14 @@ main_init(int argc, char* argv[])
 		// Do a timeout now at startup to get the ball rolling...
 	scheduler.timeout();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 		// Tell all ScheddPlugins to initialze themselves
 	ScheddPluginManager::Initialize();
 
 		// Tell all plugins to initialize themselves
 	ClassAdLogPluginManager::Initialize();
+#endif
 #endif
 } 
 

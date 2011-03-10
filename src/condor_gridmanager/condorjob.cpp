@@ -33,6 +33,7 @@
 #include "gridmanager.h"
 #include "condorjob.h"
 #include "condor_config.h"
+#include "file_transfer.h"
 
 
 // GridManager job states
@@ -178,12 +179,15 @@ CondorJob::CondorJob( ClassAd *classad )
 	submitterId = NULL;
 	connectFailureCount = 0;
 	jobProxy = NULL;
-	remoteProxyExpireTime = 0;
+	lastProxyExpireTime = 0;
+	delegatedProxyExpireTime = 0;
+	delegatedProxyRenewTime = 0;
 	lastProxyRefreshAttempt = 0;
 	myResource = NULL;
 	newRemoteStatusAd = NULL;
 	newRemoteStatusServerTime = 0;
 	doActivePoll = false;
+	int int_value;
 
 	lastRemoteStatusServerTime = 0;
 
@@ -199,6 +203,12 @@ CondorJob::CondorJob( ClassAd *classad )
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL && error_string != "" ) {
 		goto error_exit;
+	}
+
+	int_value = 0;
+	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
+		delegatedProxyExpireTime = (time_t)int_value;
+		delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
 	}
 
 	buff[0] = '\0';
@@ -675,7 +685,15 @@ void CondorJob::doEvaluateState()
 				// HELD. By doing an active probe, we'll automatically
 				// ignore any update ads from before the probe.
 				if(jobProxy) {
-					remoteProxyExpireTime = jobProxy->expiration_time;
+					lastProxyExpireTime = jobProxy->expiration_time;
+					delegatedProxyExpireTime = GetDesiredDelegatedJobCredentialExpiration(jobAd);
+					delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
+					time_t actual_expiration = delegatedProxyExpireTime;
+					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
+						actual_expiration = jobProxy->expiration_time;
+					}
+					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+								   (int)actual_expiration );
 				}
 				gmState = GM_POLL_ACTIVE;
 			} else {
@@ -725,7 +743,8 @@ void CondorJob::doEvaluateState()
 				// The job is on hold remotely but not locally. This means
 				// the remote job needs to be released.
 				gmState = GM_RELEASE_REMOTE_JOB;
-			} else if ( jobProxy && remoteProxyExpireTime < jobProxy->expiration_time ) {
+			} else if ( jobProxy && lastProxyExpireTime < jobProxy->expiration_time ||
+						jobProxy && delegatedProxyRenewTime < now ) {
 				int interval = param_integer( "GRIDMANAGER_PROXY_REFRESH_INTERVAL", 10*60 );
 				if ( now >= lastProxyRefreshAttempt + interval ) {
 					gmState = GM_REFRESH_PROXY;
@@ -760,9 +779,11 @@ void CondorJob::doEvaluateState()
 					}
 					errorString = gahp->getErrorString();
 
-					if ( ( remoteProxyExpireTime != 0 &&
-						   remoteProxyExpireTime < now + 60 ) ||
-						 ( remoteProxyExpireTime == 0 &&
+					if ( ( lastProxyExpireTime != 0 &&
+						   lastProxyExpireTime < now + 60 ) ||
+						 ( delegatedProxyExpireTime != 0 &&
+						   delegatedProxyExpireTime < now + 60 ) ||
+						 ( lastProxyExpireTime == 0 &&
 						   jobProxy->near_expired ) ) {
 
 						dprintf( D_ALWAYS,
@@ -772,7 +793,15 @@ void CondorJob::doEvaluateState()
 						break;
 					}
 				} else {
-					remoteProxyExpireTime = jobProxy->expiration_time;
+					lastProxyExpireTime = jobProxy->expiration_time;
+					delegatedProxyExpireTime = GetDesiredDelegatedJobCredentialExpiration(jobAd);
+					delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
+					time_t actual_expiration = delegatedProxyExpireTime;
+					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
+						actual_expiration = jobProxy->expiration_time;
+					}
+					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+								   (int)actual_expiration );
 				}
 				lastProxyRefreshAttempt = time(NULL);
 				gmState = GM_SUBMITTED;
@@ -1081,7 +1110,7 @@ void CondorJob::doEvaluateState()
 				requestScheddUpdate( this, true );
 				break;
 			}
-			remoteProxyExpireTime = 0;
+			lastProxyExpireTime = 0;
 			lastProxyRefreshAttempt = 0;
 			submitLogged = false;
 			executeLogged = false;
@@ -1280,7 +1309,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 	if (config_attrs_to_copy == NULL) {
 		// use the defaults
-		attrs_to_copy = (char **)default_attrs_to_copy;
+		attrs_to_copy = const_cast<char **>(default_attrs_to_copy);
 	} else {
 		StringList sl(NULL, ", ");
 		freeAttrs = true;
@@ -1503,6 +1532,9 @@ ClassAd *CondorJob::buildSubmitAd()
 		submit_ad->Assign( ATTR_X509_USER_PROXY, jobProxy->proxy_filename );
 		submit_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT,
 						   jobProxy->subject->subject_name );
+		if (jobProxy->subject->email)
+			submit_ad->Assign( ATTR_X509_USER_PROXY_EMAIL,
+						   jobProxy->subject->email );
 		if ( jobProxy->subject->has_voms_attrs ) {
 			submit_ad->Assign( ATTR_X509_USER_PROXY_FQAN,
 							   jobProxy->subject->fqan );
@@ -1564,6 +1596,18 @@ ClassAd *CondorJob::buildSubmitAd()
 
 			submit_ad->Insert( attr_name, next_expr->Copy() );
 		}
+	}
+
+	// If the remote job will use a shadow, we always want to set
+	// JobLeaseDuration. Otherwise, starter-shadow reconnect is disabled.
+	// We need to be careful to respect the user's setting of the
+	// attribute, hence why we do this check last.
+	tmp_int = CONDOR_UNIVERSE_VANILLA;
+	submit_ad->LookupInteger( ATTR_JOB_UNIVERSE, tmp_int );
+	if ( universeCanReconnect( tmp_int ) &&
+		 submit_ad->Lookup( ATTR_JOB_LEASE_DURATION ) == NULL ) {
+
+		submit_ad->Assign( ATTR_JOB_LEASE_DURATION, 20 * 60 );
 	}
 
 		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG

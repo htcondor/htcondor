@@ -296,7 +296,7 @@ unsigned int hashFunction ( const DWORD &key ) {
 SystemProcessInformation::SystemProcessInformation( BOOL bRefresh ) 
 : m_ProcessInfos (hashFunction)
 {
-	m_pBuffer = (UCHAR*)VirtualAlloc ((void*)0x100000,
+	m_pBuffer = (UCHAR*)VirtualAlloc (NULL,
 						BufferSize, 
 						MEM_COMMIT,
 						PAGE_READWRITE);

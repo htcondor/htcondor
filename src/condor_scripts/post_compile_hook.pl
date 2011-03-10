@@ -82,6 +82,7 @@ my @poisoned_syms = (
 			'gt2_gahp',
 			'cream_gahp',
 			'nordugrid_gahp',
+			'dcloud_gahp',
 			'condor_ckpt',
 			'condor_syscall_lib',
 			'condor_tests',

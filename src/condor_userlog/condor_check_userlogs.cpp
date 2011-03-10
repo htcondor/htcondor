@@ -74,9 +74,10 @@ int main(int argc, char **argv)
 
         switch (outcome) {
 
-        case ULOG_NO_EVENT:
         case ULOG_RD_ERROR:
         case ULOG_UNK_ERROR:
+			logsMissing = true;
+        case ULOG_NO_EVENT:
 
 			printf( "Log outcome: %s\n", ULogEventOutcomeNames[outcome] );
 			done = true;

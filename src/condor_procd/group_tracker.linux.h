@@ -28,15 +28,17 @@ class GroupTracker : public ProcFamilyTracker {
 
 public:
 
-	GroupTracker(ProcFamilyMonitor* pfm, gid_t min_gid, gid_t max_gid);
+	GroupTracker(ProcFamilyMonitor* pfm, gid_t min_gid, gid_t max_gid, 
+		bool allocating);
 
 	bool add_mapping(ProcFamily* family, gid_t& group);
 	bool remove_mapping(ProcFamily* family);
 	bool check_process(procInfo* pi);
 
 private:
-
+	
 	GIDPool m_gid_pool;
+	bool m_allocating;
 };
 
 #endif

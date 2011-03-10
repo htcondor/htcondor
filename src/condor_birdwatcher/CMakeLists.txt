@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -20,9 +20,9 @@ if (WINDOWS AND NOT WIN_EXEC_NODE_ONLY)
 
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
 	
-	file( GLOB BWSrcs *.cpp *.h  res/*)
+	file( GLOB BWSrcs *.cpp *.h *.rc  res/*)
 	
-	condor_exe( condor_birdwatcher "${BWSrcs}" ${C_SBIN} "")
+	condor_exe( condor_birdwatcher "${BWSrcs}" ${C_SBIN} "" OFF)
 
 else()
 

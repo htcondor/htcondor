@@ -21,11 +21,9 @@
 #include "condor_common.h"
 #include "utc_time.h"
 
-#ifdef WIN32
-#include <sys/timeb.h>
+#if defined(HAVE__FTIME)
+# include <sys/timeb.h>
 #endif
-
-
 
 
 UtcTime::UtcTime( bool get_time )
@@ -37,24 +35,40 @@ UtcTime::UtcTime( bool get_time )
 	}
 }
 
+double
+UtcTime::getTimeDouble( void )
+{
+#if defined(HAVE__FTIME)
+	struct _timeb timebuffer;
+	_ftime( &timebuffer );
+	return ( timebuffer.time + (timebuffer.millitm * 0.001) );
+#elif defined(HAVE_GETTIMEOFDAY)
+	struct timeval	tv;
+	gettimeofday( &tv, NULL );
+	return ( tv.tv_sec + ( tv.tv_usec * 0.000001 ) );
+#else
+#error Neither _ftime() nor gettimeofday() are available!
+#endif
+}
 
 void
 UtcTime::getTime()
 {
-#ifdef WIN32
-
+#if defined(HAVE__FTIME)
 		// call _ftime()
 	struct _timeb timebuffer;
 	_ftime( &timebuffer );
 
 	sec = timebuffer.time;
 	usec = (long) timebuffer.millitm * 1000; // convert milli to micro 
-
-#else	// UNIX
+#elif defined(HAVE_GETTIMEOFDAY)
+		// UNIX
 	struct timeval now;
 	gettimeofday( &now, NULL );
 	sec = now.tv_sec;
 	usec = (long)now.tv_usec;
+#else
+#error Neither _ftime() nor gettimeofday() are available!
 #endif
 }
 

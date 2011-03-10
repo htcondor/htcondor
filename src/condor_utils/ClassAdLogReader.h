@@ -100,16 +100,16 @@ public:
 		 *
 		 * See Notes on Keys above.
 		 */
-	virtual bool NewClassAd(const char */*key*/,
-							const char */*type*/,
-							const char */*target*/) { return true; }
+	virtual bool NewClassAd(const char * /*key*/,
+							const char * /*type*/,
+							const char * /*target*/) { return true; }
 
 		/**
 		 * Called when a ClassAd deletion is encountered.
 		 *
 		 * See Notes on Keys above.
 		 */
-	virtual bool DestroyClassAd(const char */*key*/) { return true; }
+	virtual bool DestroyClassAd(const char * /*key*/) { return true; }
 
 		/**
 		 * Called when an attribute assignment is encountered.
@@ -123,23 +123,28 @@ public:
 		 *
 		 * See Notes on Keys above.
 		 */
-	virtual bool SetAttribute(const char */*key*/,
-							  const char */*name*/,
-							  const char */*value*/) { return true; }
+	virtual bool SetAttribute(const char * /*key*/,
+							  const char * /*name*/,
+							  const char * /*value*/) { return true; }
 
 		/**
 		 * Called when an attribute deletion is encountered.
 		 *
 		 * See Notes on Keys above.
 		 */
-	virtual bool DeleteAttribute(const char */*key*/,
-								 const char */*name*/) { return true; }
+	virtual bool DeleteAttribute(const char * /*key*/,
+								 const char * /*name*/) { return true; }
 
 		/**
 		 * Simple helpful way for the ClassAdLogConsumer to learn about
 		 * who it is working for, set by the ClassAdLogReader.
 		 */
-	virtual void SetClassAdLogReader(ClassAdLogReader */*reader*/) { }
+	virtual void SetClassAdLogReader(ClassAdLogReader * /*reader*/) { }
+		/**
+		 * Virtual destructor
+		 * Suppresses compiler warnings
+		 */
+	virtual ~ClassAdLogConsumer() {}
 };
 
 #endif

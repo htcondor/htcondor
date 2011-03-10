@@ -36,14 +36,10 @@
 	bringing in the full classad.h header file structure causing complications
 	to third parties using this API. -psilord 02/21/03
 */
-#ifdef WANT_OLD_CLASSADS
-class ClassAd;
-#else
 namespace compat_classad {
   class ClassAd;
 }
 using namespace compat_classad;
-#endif
 
 
 
@@ -88,7 +84,8 @@ enum ULogEventNumber {
 	/** Job Status Unknown        */  ULOG_JOB_STATUS_UNKNOWN       = 29,
 	/** Job Status Known          */  ULOG_JOB_STATUS_KNOWN         = 30,
 	/** Job performing stage-in   */  ULOG_JOB_STAGE_IN				= 31,
-	/** Job performing stage-out  */  ULOG_JOB_STAGE_OUT			= 32
+	/** Job performing stage-out  */  ULOG_JOB_STAGE_OUT			= 32,
+	/** Attribute updated  */	ULOG_ATTRIBUTE_UPDATE		= 33
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -1824,6 +1821,61 @@ class JobStageOutEvent : public ULogEvent
 		@param a pointer to the ClassAd to initialize from
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
+};
+
+
+//----------------------------------------------------------------------------
+/** Framework for a AttributeUpdate object.
+*/
+class AttributeUpdate : public ULogEvent
+{
+	public:
+	///
+	AttributeUpdate(void);
+	///
+	~AttributeUpdate(void);
+
+	/** Read the body of the next AttributeUpdate event.
+		@param file the non-NULL readable log file
+		@return 0 for failure, 1 for success
+	*/
+	virtual int readEvent (FILE *);
+
+	/** Write the body of the next AttributeUpdate event.
+		@param file the non-NULL writable log file
+		@return 0 for failure, 1 for success
+	*/
+	virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this AttributeUpdate event.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd(void);
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+
+	/** Set the attribute name.
+		@param the name of the attribure
+	*/
+	virtual void setName(const char* attr_name);
+
+	/** Set the attribute value.
+		@param the value of the attribure
+	*/
+
+	virtual void setValue(const char* attr_value);
+
+	/** Set the attribute value before the change.
+		@param the value of the attribure before the change
+	*/
+	virtual void setOldValue(const char* attr_value);
+
+	char *name;
+	char *value;
+	char *old_value;
 };
 
 

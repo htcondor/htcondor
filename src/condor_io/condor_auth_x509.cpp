@@ -38,6 +38,7 @@ extern "C" {
 }
 #endif
 
+#define USER_NAME_MAX 256
 
 const char STR_DAEMON_NAME_FORMAT[]="$$(FULL_HOST_NAME)";
 StringList * getDaemonList(ReliSock * sock);
@@ -433,14 +434,24 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 	//just extract username from /CN=<username>@<domain,etc>
 	OM_uint32 major_status;
 	char *tmp_user = NULL;
-	char local_user[256];
+	char local_user[USER_NAME_MAX];
 
 // windows gsi does not currently include this function.  we use it on
 // unix, but implement our own on windows for now.
 #ifdef WIN32
 	major_status = condor_gss_assist_gridmap(GSSClientname, &tmp_user);
 #else
-	major_status = globus_gss_assist_gridmap((char*)GSSClientname, &tmp_user);
+// Switched the unix map function to _map_and_authorize, which allows access
+// to the Globus callout infrastructure.
+	major_status = globus_gss_assist_map_and_authorize(
+            context_handle,
+            "condor", // Requested service name
+            NULL, // Requested user name; NULL for non-specified
+            local_user,
+            USER_NAME_MAX-1); // Leave one space at end of buffer, just-in-case
+        // Defensive programming: to protect against buffer overruns in the
+        // unknown globus mapping module, make sure we are at least nul-term'd
+        local_user[USER_NAME_MAX-1] = '\0';
 #endif
 
 	if (tmp_user) {

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -26,7 +26,7 @@
 #include "format_time.h"
 #include "condor_config.h"
 #include "CondorError.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "quill_enums.h"
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -67,15 +67,15 @@ static const char *fltKeywords[] =
 
 
 CondorQ::
-CondorQ ()
+CondorQ( void )
 {
 	connect_timeout = 20; 
 	query.setNumIntegerCats (CQ_INT_THRESHOLD);
 	query.setNumStringCats (CQ_STR_THRESHOLD);
 	query.setNumFloatCats (CQ_FLT_THRESHOLD);
-	query.setIntegerKwList ((char **) intKeywords);
-	query.setStringKwList ((char **) strKeywords);
-	query.setFloatKwList ((char **) fltKeywords);
+	query.setIntegerKwList (const_cast<char **>(intKeywords));
+	query.setStringKwList (const_cast<char **>(strKeywords));
+	query.setFloatKwList (const_cast<char **>(fltKeywords));
 
 	clusterprocarraysize = 128;
 	clusterarray = (int *) malloc(clusterprocarraysize * sizeof(int));
@@ -288,10 +288,17 @@ fetchQueueFromHost (ClassAdList &list, StringList &attrs, const char *host, char
 	return result;
 }
 
-int CondorQ::
-fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, const char *dbconn, CondorError*  /*errstack*/)
+int
+CondorQ::fetchQueueFromDB (ClassAdList &list,
+						   char *&lastUpdate,
+						   const char *dbconn,
+						   CondorError*  /*errstack*/)
 {
-#ifdef HAVE_EXT_POSTGRESQL
+#ifndef HAVE_EXT_POSTGRESQL
+	(void) list;
+	(void) lastUpdate;
+	(void) dbconn;
+#else
 	int     		result;
 	JobQueueSnapshot	*jqSnapshot;
 	const char 		*constraint;
@@ -337,11 +344,16 @@ fetchQueueFromDB (ClassAdList &list, char *&lastUpdate, const char *dbconn, Cond
 
 	delete jqSnapshot;
 #endif /* HAVE_EXT_POSTGRESQL */
+
 	return Q_OK;
 }
 
-int CondorQ::
-fetchQueueFromHostAndProcess ( const char *host, StringList &attrs, process_function process_func, bool useFastPath, CondorError* errstack)
+int
+CondorQ::fetchQueueFromHostAndProcess ( const char *host,
+										StringList &attrs,
+										process_function process_func,
+										bool useFastPath,
+										CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ExprTree		*tree;
@@ -372,10 +384,17 @@ fetchQueueFromHostAndProcess ( const char *host, StringList &attrs, process_func
 	return result;
 }
 
-int CondorQ::
-fetchQueueFromDBAndProcess ( const char *dbconn, char *&lastUpdate, process_function process_func, CondorError*  /*errstack*/ )
+int
+CondorQ::fetchQueueFromDBAndProcess ( const char *dbconn,
+									  char *&lastUpdate,
+									  process_function process_func,
+									  CondorError*  /*errstack*/ )
 {
-#ifdef HAVE_EXT_POSTGRESQL
+#ifndef HAVE_EXT_POSTGRESQL
+	(void) dbconn;
+	(void) lastUpdate;
+	(void) process_func;
+#else
 	int     		result;
 	JobQueueSnapshot	*jqSnapshot;
 	const char           *constraint;
@@ -432,8 +451,13 @@ fetchQueueFromDBAndProcess ( const char *dbconn, char *&lastUpdate, process_func
 	return Q_OK;
 }
 
-void CondorQ::rawDBQuery(const char *dbconn, CondorQQueryType qType) {
-#ifdef HAVE_EXT_POSTGRESQL
+void
+CondorQ::rawDBQuery(const char *dbconn, CondorQQueryType qType)
+{
+#ifndef HAVE_EXT_POSTGRESQL
+	(void) dbconn;
+	(void) qType;
+#else
 
 	JobQueueDatabase *DBObj = NULL;
 	const char    *rowvalue;
@@ -505,23 +529,30 @@ void CondorQ::rawDBQuery(const char *dbconn, CondorQQueryType qType) {
 #endif /* HAVE_EXT_POSTGRESQL */
 }
 
-int CondorQ::
-getFilterAndProcessAds( const char *constraint, StringList &attrs, process_function process_func, bool useAll )
+int
+CondorQ::getFilterAndProcessAds( const char *constraint,
+								 StringList &attrs,
+								 process_function process_func,
+								 bool useAll )
 {
 	ClassAd *ad;
 
 	if (useAll) {
-	// The fast case with the new protocol
-	ClassAdList list;
-	char *attrs_str = attrs.print_to_delimed_string();
-	GetAllJobsByConstraint(constraint, attrs_str, list);
-	free(attrs_str);
-	list.Rewind();
-	while ((ad = list.Next())) {
-		if ( ( *process_func )( ad ) ) {
-			//delete(ad);
+			// The fast case with the new protocol
+		char *attrs_str = attrs.print_to_delimed_string();
+		GetAllJobsByConstraint_Start(constraint, attrs_str);
+		free(attrs_str);
+
+		while( true ) {
+			ClassAd *ad = new ClassAd;
+			if( GetAllJobsByConstraint_Next( *ad ) != 0 ) {
+				delete ad;
+				break;
+			}
+			if ( ( *process_func )( ad ) ) {
+				delete(ad);
+			}
 		}
-	}
 	} else {
 
 	// slow case, using old protocol
@@ -552,8 +583,11 @@ getFilterAndProcessAds( const char *constraint, StringList &attrs, process_funct
 }
 
 
-int CondorQ::
-getAndFilterAds (const char *constraint, StringList &attrs, ClassAdList &list, bool useAllJobs)
+int
+CondorQ::getAndFilterAds (const char *constraint,
+						  StringList &attrs,
+						  ClassAdList &list,
+						  bool useAllJobs)
 {
 	if (useAllJobs) {
 	char *attrs_str = attrs.print_to_delimed_string();

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -24,10 +24,9 @@
 #include "condor_config.h"
 #include "condor_network.h"
 #include "condor_io.h"
-#include "condor_parser.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "internet.h"
 #include "daemon.h"
 #include "dc_collector.h"
@@ -110,19 +109,19 @@ CondorQuery (AdTypes qType)
 		query.setNumStringCats (STARTD_STRING_THRESHOLD);
 		query.setNumIntegerCats(STARTD_INT_THRESHOLD);
 		query.setNumFloatCats  (STARTD_FLOAT_THRESHOLD);
-		query.setIntegerKwList ((char **)StartdIntegerKeywords);
-		query.setStringKwList  ((char **)StartdStringKeywords);
-		query.setFloatKwList   ((char **)StartdFloatKeywords);
+		query.setIntegerKwList (const_cast<char **>(StartdIntegerKeywords));
+		query.setStringKwList (const_cast<char **>(StartdStringKeywords));
+		query.setFloatKwList (const_cast<char **>(StartdFloatKeywords));
 		command = QUERY_STARTD_ADS;
 		break;
 
 	  case STARTD_PVT_AD:
 		query.setNumStringCats (STARTD_STRING_THRESHOLD);
 		query.setNumIntegerCats(STARTD_INT_THRESHOLD);
-		query.setNumFloatCats  (STARTD_FLOAT_THRESHOLD);
-		query.setIntegerKwList ((char **)StartdIntegerKeywords);
-		query.setStringKwList  ((char **)StartdStringKeywords);
-		query.setFloatKwList   ((char **)StartdFloatKeywords);
+		query.setNumFloatCats (STARTD_FLOAT_THRESHOLD);
+		query.setIntegerKwList (const_cast<char **>(StartdIntegerKeywords));
+		query.setStringKwList (const_cast<char **>(StartdStringKeywords));
+		query.setFloatKwList (const_cast<char **>(StartdFloatKeywords));
 		command = QUERY_STARTD_PVT_ADS;
 		break;
 
@@ -138,30 +137,30 @@ CondorQuery (AdTypes qType)
 	  case SCHEDD_AD:
 		query.setNumStringCats (SCHEDD_STRING_THRESHOLD);
 		query.setNumIntegerCats(SCHEDD_INT_THRESHOLD);
-		query.setNumFloatCats  (SCHEDD_FLOAT_THRESHOLD);
-		query.setIntegerKwList ((char **)ScheddIntegerKeywords);
-		query.setStringKwList  ((char **)ScheddStringKeywords);
-		query.setFloatKwList   ((char **)ScheddFloatKeywords);
+		query.setNumFloatCats (SCHEDD_FLOAT_THRESHOLD);
+		query.setIntegerKwList (const_cast<char **>(ScheddIntegerKeywords));
+		query.setStringKwList (const_cast<char **>(ScheddStringKeywords));
+		query.setFloatKwList (const_cast<char **>(ScheddFloatKeywords));
 		command = QUERY_SCHEDD_ADS;
 		break;
 
 	  case SUBMITTOR_AD:
 		query.setNumStringCats (SCHEDD_STRING_THRESHOLD);
 		query.setNumIntegerCats(SCHEDD_INT_THRESHOLD);
-		query.setNumFloatCats  (SCHEDD_FLOAT_THRESHOLD);
-		query.setIntegerKwList ((char **)ScheddIntegerKeywords);
-		query.setStringKwList  ((char **)ScheddStringKeywords);
-		query.setFloatKwList   ((char **)ScheddFloatKeywords);
+		query.setNumFloatCats (SCHEDD_FLOAT_THRESHOLD);
+		query.setIntegerKwList (const_cast<char **>(ScheddIntegerKeywords));
+		query.setStringKwList (const_cast<char **>(ScheddStringKeywords));
+		query.setFloatKwList (const_cast<char **>(ScheddFloatKeywords));
 		command = QUERY_SUBMITTOR_ADS;
 		break;
 
       case GRID_AD:
         query.setNumStringCats (GRID_STRING_THRESHOLD);
 		query.setNumIntegerCats(GRID_INT_THRESHOLD);
-		query.setNumFloatCats  (GRID_FLOAT_THRESHOLD);
-		query.setIntegerKwList ((char **)GridManagerIntegerKeywords);
-		query.setStringKwList  ((char **)GridManagerStringKeywords);
-		query.setFloatKwList   ((char **)GridManagerFloatKeywords);
+		query.setNumFloatCats (GRID_FLOAT_THRESHOLD);
+		query.setIntegerKwList (const_cast<char **>(GridManagerIntegerKeywords));
+		query.setStringKwList (const_cast<char **>(GridManagerStringKeywords));
+		query.setFloatKwList (const_cast<char **>(GridManagerFloatKeywords));
 		command = QUERY_GRID_ADS;
 		break;
 
@@ -390,7 +389,6 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	int                     more;
 	QueryResult result;
 	ClassAd     queryAd(extraAttrs), *ad;
-	ExprTree *tree;
 
 	if ( !poolName ) {
 		return Q_NO_COLLECTOR_HOST;
@@ -579,7 +577,6 @@ filterAds (ClassAdList &in, ClassAdList &out)
 {
 	ClassAd queryAd, *candidate;
 	QueryResult	result;
-	ExprTree *tree;
 
 	// make the query ad
 	result = getQueryAd (queryAd);
@@ -602,7 +599,8 @@ CondorQuery::addExtraAttribute(const char *attr) {
 }
 
 
-char *getStrQueryResult(QueryResult q)
+const char *
+getStrQueryResult(QueryResult q)
 {
 	switch (q)
 	{

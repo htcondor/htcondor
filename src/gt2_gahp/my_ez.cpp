@@ -389,12 +389,12 @@ globus_gass_server_ez_put_memory_done(void * arg,
 		   receive_length - lastnl);
 	    r->line_buffer_used += receive_length - lastnl;
 	}
-	else
-	{
-	    memcpy(r->line_buffer + r->line_buffer_used,
+	else if(r->line_buffer != GLOBUS_NULL){
+		memcpy(r->line_buffer + r->line_buffer_used,
 		   buffer + lastnl,
 		   receive_length - lastnl);
 	    r->line_buffer_used += receive_length - lastnl;
+	
 	}
 	
 	globus_gass_transfer_receive_bytes(request,

@@ -156,6 +156,7 @@ FileLock::FileLock( int fd, FILE *fp_arg, const char* path )
 	// insert ourselves into a the m_all_locks list.
 	if (path) {
 		SetPath(path);
+		SetPath(path, true);
 		updateLockTimestamp();
 	}
 }
@@ -169,6 +170,7 @@ FileLock::FileLock( const char *path )
 	ASSERT(path != NULL);
 
 	SetPath(path);
+	SetPath(path, true);
 	updateLockTimestamp();
 }
 
@@ -189,42 +191,9 @@ FileLock::FileLock( const char *path , bool deleteFile, bool useLiteralPath)
 			SetPath(hPath);
 			delete []hPath;
 		}
-			
-		m_fd = safe_open_wrapper( m_path, O_RDWR | O_CREAT, 0644 );
-		if (m_fd < 0) {
-			if (!useLiteralPath) {
-				dprintf(D_FULLDEBUG, "FileLock::FileLock: Destination path for lock file %s does not seem to exist - trying to create.\n", m_path);
-				char *dPath = GetTempPath();
-				mode_t old_umask = umask(0);
-				int mdir = mkdir(dPath, 0777);
-				if (mdir < 0) {
-					dprintf(D_FULLDEBUG, "FileLock::FileLock: Destination path directory %s cannot be created. Failure. Will retry to create folder in /tmp. \n", dPath);
-					// try again with defaulting to /tmp : 
-					hPath = CreateHashName(path, true);
-					SetPath(hPath);
-					delete []hPath;
-					mdir = mkdir("/tmp/condorLocks/", 0777);
-					if (mdir < 0) { 
-						//EXCEPT("FileLock::FileLock(): You must have a valid or creatable directory path set as tmp path. Backup creating in /tmp failed as well.");		
-						
-						dprintf(D_FULLDEBUG, "FileLock::FileLock: Folder creation in /tmp was not successful. It may already exist... If you do not see any further messages, locking on local disk will work as expected in backup /tmp folder. \n");
-					}
-				}
-				delete []dPath;
-				umask(old_umask);
-				
-			// now let's try again.
-				m_fd = safe_open_wrapper( m_path, O_RDWR | O_CREAT, 0644 );
-				if ( m_fd < 0 ) {
-					dprintf(D_ALWAYS, "FileLock::FileLock: File locks cannot be created on local disk - will likely fall back on traditional locking. \n");
-					m_init_succeeded = false;
-					m_delete = 0;
-					return;
-				}
-			} else {
-				EXCEPT("FileLock::FileLock(): You must have a valid file path as argument.");
-			}
-		}
+		SetPath(path, true);
+		m_init_succeeded = initLockFile(useLiteralPath);
+
 	} else {
 		SetPath(path);
 	} 
@@ -239,15 +208,18 @@ FileLock::~FileLock( void )
 {
 	
 #ifndef WIN32  // let's only do that for non-Windows for now
+	
 	if (m_delete == 1) { 
+		int deleted = -1;
 		if (m_state != WRITE_LOCK) {
 			bool result = obtain(WRITE_LOCK);
 			if (!result) {
 				dprintf(D_ALWAYS, "Lock file %s cannot be deleted upon lock file object destruction. \n", m_path);
 				goto finish;
 			}
-		}	
-		int deleted = unlink(m_path);
+		}
+		// this path is only called for the literal case by preen -- still want to clean up all two levels.
+		deleted = rec_clean_up(m_path, 2) ;
 		if (deleted == 0){ 
 			dprintf(D_FULLDEBUG, "Lock file %s has been deleted. \n", m_path);
 		} else{
@@ -269,10 +241,38 @@ FileLock::~FileLock( void )
 #endif
 
 	SetPath(NULL);
+	SetPath(NULL, true);
 	if (m_delete == 1) {
 		close(m_fd);
 	}
 	Reset();
+}
+
+bool
+FileLock::initLockFile(bool useLiteralPath) 
+{
+	mode_t old_umask = umask(0);
+	m_fd = rec_touch_file(m_path, 0666, 0777 ); 
+	if (m_fd < 0) {
+		if (!useLiteralPath) {
+			dprintf(D_FULLDEBUG, "FileLock::FileLock: Unable to create file path %s. Trying with default /tmp path.", m_path);
+			char *hPath = CreateHashName(m_orig_path, true);
+			SetPath(hPath);
+			delete []hPath;
+			m_fd = rec_touch_file(m_path, 0666, 0777 ) ;
+			if (m_fd < 0) { // /tmp does not work either ... 
+				dprintf(D_ALWAYS, "FileLock::FileLock: File locks cannot be created on local disk - will fall back on locking the actual file. \n");
+				umask(old_umask);
+				m_delete = 0;
+				return false;
+			}
+		} else {
+			umask(old_umask);
+			EXCEPT("FileLock::FileLock(): You must have a valid file path as argument.");
+		}	
+	}
+	umask(old_umask);
+	return true;
 }
 
 void
@@ -285,6 +285,7 @@ FileLock::Reset( void )
 	m_blocking = true;
 	m_state = UN_LOCK;
 	m_path = NULL;
+	m_orig_path = NULL;
 	m_use_kernel_mutex = -1;
 #ifdef WIN32
 	m_debug_win32_mutex = NULL;
@@ -303,9 +304,35 @@ FileLock::initSucceeded( void )
 	// we create a kernel lock.  Note that the path is only canonicalized 
 	// up to the limits of _fullpath (no reparse points, etc.)
 void
-FileLock::SetPath(const char *path)
+FileLock::SetPath(const char *path, bool setOrigPath)
 {
+	if (setOrigPath) {  // we want to set the original path variable
+		if ( m_orig_path ) {
+			free(m_orig_path);
+		}
+		m_orig_path = NULL;
+		if (path) {
 
+#ifdef WIN32
+			m_orig_path = _fullpath( NULL, path, _MAX_PATH );
+			// Note: if path does not yet exist on the filesystem, then
+			// _fullpath could still return NULL.  In this case, fall thru
+			// this #ifdef WIN32 block and do what we do on Unix - just
+			// strdup the path.  Hey, it is strictly better, eh?
+			if (m_orig_path) {
+				// Cool, _fullpath "weakly" canonicalized the path
+				// for us, so we are done.  
+				// Weakly you say?  See gittrac #205.  Better not
+				// have reparse points thare fella.
+				return;
+			}
+#endif
+			// or not, and therefore just call strdup
+			m_orig_path = strdup(path);
+		}
+		return;
+	}
+	// we want to set the actual path to the lock file
 	if ( m_path ) {
 		free(m_path);
 	}
@@ -534,9 +561,21 @@ FileLock::obtain( LOCK_TYPE t )
 			if ( si.st_nlink < 1 ){
 				release();
 				close(m_fd);
-				m_fd = safe_open_wrapper(m_path, O_CREAT | O_RDWR , 0644);
+				bool initResult;
+				if (m_orig_path != NULL && strcmp(m_path, m_orig_path) != 0)
+					initResult = initLockFile(false);
+				else 
+					initResult = initLockFile(true);
+				if (!initResult) {
+					dprintf(D_FULLDEBUG, "Lock file (%s) cannot be reopened \n", m_path);
+					if (m_orig_path) {
+						dprintf(D_FULLDEBUG, "Opening and locking the actual log file (%s) since lock file cannot be accessed! \n", m_orig_path);
+						m_fd = safe_open_wrapper(m_orig_path, O_CREAT | O_RDWR , 0644);
+					} 
+				}
+				
 				if (m_fd < 0) {
-					dprintf(D_FULLDEBUG, "Reopening the lock file %s failed. \n", m_path);
+					dprintf(D_FULLDEBUG, "Opening the log file %s to lock failed. \n", m_path);
 				}
 				++counter;
 					// let's retry at most 5 times
@@ -628,27 +667,27 @@ FileLock::updateLockTimestamp(void)
 char * 
 FileLock::GetTempPath() 
 {
-
-	char *path = temp_dir_path();
-	char *suffix = "condorLocks";
-	
-	if (path == NULL)
-		return NULL;
-	
-	char *full_path = dirscat(path, suffix);
+	const char *suffix = "";
+	char *result = NULL;
+	char *path = param("LOCAL_DISK_LOCK_DIR");
+	if (!path) {
+		path = temp_dir_path();
+		suffix = "condorLocks";
+	}
+	result = dirscat(path, suffix);
 	free(path);
-	
-	return full_path;
+
+	return result;
 }
 
 char *
 FileLock::CreateHashName(const char *orig, bool useDefault)
 {
 	char *path = GetTempPath();
-	
 	unsigned long hash = 0;
 	char *temp_filename;
 	int c;
+	
 #if defined(_POSIX_PATH_MAX) && !defined(WIN32)
 	char *buffer = new char[_POSIX_PATH_MAX];
 	temp_filename = realpath(orig, buffer);
@@ -666,16 +705,28 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 		c = temp_filename[i];
 		hash = c + (hash << 6) + (hash << 16) - hash;
 	}
-	hash = hash % 1000;
-	int len = strlen(path) + 10;
+	char hashVal[256] = {0};
+	sprintf(hashVal, "%lu", hash);
+	while (strlen(hashVal) < 5)
+		sprintf(hashVal+strlen(hashVal), "%s", hashVal);
+
+	int len = strlen(path) + strlen(hashVal) + 20;
+	
 	char *dest = new char[len];
 #if !defined(WIN32)
 	if (useDefault) 
-		sprintf(dest, "%s%u%s", "/tmp/condorLocks/", hash, ".lockc");
+		sprintf(dest, "%s", "/tmp/condorLocks/" );
 	else 
 #endif
-		sprintf(dest, "%s%u%s", path , hash, ".lockc");
+		sprintf(dest, "%s", path  );
 	delete []temp_filename; 
-	delete []path; 
+	delete []path;
+	for (int i = 0 ; i < 4; i+=2 ) {
+		snprintf(dest+strlen(dest), 3, "%s", hashVal+i);
+		snprintf(dest+strlen(dest), 2, "%c", DIR_DELIM_CHAR);
+	}
+	 
+	
+	sprintf(dest+strlen(dest), "%s.lockc", hashVal+4);
 	return dest;
 }

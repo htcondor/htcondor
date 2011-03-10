@@ -184,7 +184,7 @@ rescue :
 	ReadUserLog log ;
 	HashTable<MyString,MyString> table(127,MyStringHash);
 	
-	if(log.initialize(log_file_name)) {
+	if(log.initialize(log_file_name,false,false,true)) {
 		sec_fp = safe_fopen_wrapper(log_file_name, "r", 0644);
 		fseek (sec_fp, 0, SEEK_END);
 		pos = ftell(sec_fp); 
@@ -217,7 +217,7 @@ rescue :
 						/* nothing to do */
 					}
 				}
-				delete event;
+				if (event != NULL) delete event;
 				if( minjobs && (completed + aborted >= minjobs ) ) {
 					printf( "Specifed number of jobs (%d) done.\n", minjobs );
 					EXIT_SUCCESS;

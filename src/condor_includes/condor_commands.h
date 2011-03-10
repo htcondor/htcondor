@@ -164,6 +164,7 @@
 #define GET_JOB_CONNECT_INFO (SCHED_VERS+109) // schedd: get connection information for starter running a job
 
 #define RECYCLE_SHADOW (SCHED_VERS+110) // schedd: get a new job for a shadow
+#define CLEAR_DIRTY_JOB_ATTRS (SCHED_VERS+111) // schedd: clear dirty attributes for a job
 
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
@@ -396,6 +397,7 @@ const int SHARED_PORT_PASS_SOCK = 76;
 #define MPI_START_COMRADE      (DCSHADOW_BASE+2)  // for MPI & parallel shadow
 #define GIVE_MATCHES 	       (DCSHADOW_BASE+3)  // for MPI & parallel shadow
 #define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)
+#define UPDATE_JOBAD		   (DCSHADOW_BASE+5)
 
 
 /*

@@ -154,7 +154,7 @@ public:
     Attributes=attributes;
   }
 
-  virtual bool CheckClassAd(ClassAd* Ad) {
+  virtual bool CheckClassAd(ClassAd*  /* Ad */) {
     return false;
   }
 

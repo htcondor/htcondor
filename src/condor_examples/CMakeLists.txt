@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -31,9 +31,9 @@ install (FILES
 		condor.boot.generic
 		condor_config.local.central.manager
 		condor_config.local.ha_condor_client
-		#condor.sysconfig
+		condor.sysconfig
 		README
-		#condor.boot.rpm
+		condor.boot.rpm
 		condor_config.local.ckpt.server
 		condor_config.local.ha_condor_had
 		lamscript
@@ -56,32 +56,63 @@ install (FILES condor_limits_wrapper.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${C
 
 #Prepare OS specific config file
 
-if (( ${LINUX_NAME} STREQUAL "Redhat" ) OR ( ${LINUX_NAME} STREQUAL "Fedora" ) )
+if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 
-	add_custom_command( OUTPUT condor_config.patched
+
+	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )	
+		add_custom_command( OUTPUT condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						COMMAND cp 
+						ARGS condor_config.generic condor_config.patched
 						COMMAND patch 
-						ARGS condor_config.generic condor_config.generic.rpm.patch -o condor_config.patched )
+						ARGS condor_config.patched condor_config.generic.rpm.patch )
 
-	add_custom_target(	patch_configurations
+		add_custom_target(	patch_configurations
 						ALL
 						DEPENDS condor_config.patched)
+		install(FILES		condor_config.patched
+				DESTINATION	"${C_ETC}"
+				RENAME	condor_config)
+	else()
+		#x86_64 use /usr/lib64 instead of /usr/lib
+		#we will apply 2 patches on condor_config file
+		add_custom_command( OUTPUT condor_config.patched
+						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						COMMAND cp 
+						ARGS condor_config.generic condor_config.patched
+						COMMAND patch 
+						ARGS condor_config.patched condor_config.generic.rpm.patch )
 
-	install(FILES		condor_config.patched
-			DESTINATION	"${C_ETC}"
-			RENAME	condor_config)
+		add_custom_command( OUTPUT condor_config.patched.x86_64
+						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						COMMAND cp 
+						ARGS condor_config.patched condor_config.patched.x86_64
+						DEPENDS condor_config.patched
+						COMMAND patch 
+						ARGS condor_config.patched.x86_64 condor_config.generic.rpm64.patch )
+	
+		add_custom_target(	patch_configurations_x86_64
+						ALL
+						DEPENDS condor_config.patched.x86_64)
+		
+		install(FILES	condor_config.patched.x86_64
+						DESTINATION	"${C_ETC}"
+						RENAME	condor_config)					
+	endif ()					
 
 	install(FILES		condor.boot.rpm
 			DESTINATION	"${C_INIT}"
 			PERMISSIONS ${CONDOR_SCRIPT_PERMS}
 			RENAME		condor)
 
-elseif ( ${LINUX_NAME} STREQUAL "Debian" )
+elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
 
 	add_custom_command( OUTPUT condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-						COMMAND patch 
-						ARGS condor_config.generic condor_config.generic.debian.patch -o condor_config.patched )
+						COMMAND cp
+						ARGS condor_config.generic condor_config.patched
+					    COMMAND patch
+						ARGS condor_config.patched condor_config.generic.debian.patch )
 
 	add_custom_target(	patch_configurations
 						ALL
@@ -94,8 +125,10 @@ elseif ( ${LINUX_NAME} STREQUAL "Debian" )
 	#Debian init script need to be patched because /etc/sysconfig/condor -> /etc/default/condor
 	add_custom_command( OUTPUT condor.boot.debian
 						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-						COMMAND patch 
-						ARGS condor.boot.rpm condor.boot.debian.patch -o condor.boot.debian )
+						COMMAND cp
+						ARGS condor.boot.rpm condor.boot.debian
+						COMMAND patch
+						ARGS condor.boot.debian condor.boot.debian.patch )
 
 	add_custom_target(	patch_init_script
 						ALL
@@ -118,9 +151,30 @@ else()
 
 endif()
 else()
-	install(FILES		condor_config.generic
-			DESTINATION	"."
-			RENAME		condor_config)
+						 
+    add_custom_command ( OUTPUT condor_config.win
+						 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						 COMMAND awk
+						 ARGS -f convert_config_to_win32.awk condor_config.generic > "${CMAKE_CURRENT_BINARY_DIR}/condor_config.win"
+					   )
+						 
+	add_custom_target(	patch_configurations
+						ALL
+						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor_config.win)
+						
+	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor_config.win
+			DESTINATION	"${C_ETC}"
+			RENAME		condor_config.generic
+	        )
+			
+	install(FILES
+	        condor_config.power
+	        condor_config.submit.generic
+	        condor_config.local.generic
+	        condor_config.local.credd 
+	        condor_config.local.central.manager
+	        convert_config_to_win32.awk
+			DESTINATION	"${C_ETC}")
 
 
 endif(NOT WINDOWS)

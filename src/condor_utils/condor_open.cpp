@@ -150,17 +150,17 @@ int safe_create_keep_if_exists(const char *fn, int flags, mode_t mode)
 			}
 		}
 
-		f = safe_create_fail_if_exists(fn, flags, mode);
+		f = safe_open_no_create(fn, flags);
 
 			/* check for error */
 		if (f == -1)  {
-			if (errno != EEXIST)  {
+			if (errno != ENOENT)  {
 				return -1;
 			}
 
 				/* previous function said the file exists, so this should work */
-			f = safe_open_no_create(fn, flags);
-			if (f == -1 && errno != ENOENT)  {
+			f = safe_create_fail_if_exists(fn, flags, mode);
+			if (f == -1 && errno != EEXIST)  {
 				return -1;
 			}
 

@@ -109,7 +109,7 @@ IpVerify::~IpVerify()
 int
 IpVerify::Init()
 {
-	char *pAllow, *pDeny, *pOldAllow, *pOldDeny, *pNewAllow= NULL, *pNewDeny = NULL;
+	char *pAllow, *pDeny, *pOldAllow, *pOldDeny, *pNewAllow = NULL, *pNewDeny = NULL;
 	DCpermission perm;
 	
 	did_init = TRUE;
@@ -213,14 +213,6 @@ IpVerify::Init()
                 pDeny = NULL;
 			}
 		}
-        if (pAllow) {
-            free(pAllow);
-            pAllow = NULL;
-        }
-        if (pDeny) {
-            free(pDeny);
-            pDeny = NULL;
-        }
         if (pOldAllow) {
             free(pOldAllow);
             pOldAllow = NULL;
@@ -285,7 +277,7 @@ bool IpVerify :: has_user(UserPerm_t * perm, const char * user, perm_mask_t & ma
 
 
 bool
-IpVerify::LookupCachedVerifyResult( DCpermission perm, const in6_addr& sin6, const char * user, perm_mask_t & mask)
+IpVerify::LookupCachedVerifyResult( DCpermission perm, const struct in6_addr &sin6, const char * user, perm_mask_t & mask)
 {
     UserPerm_t * ptable = NULL;
 
@@ -700,7 +692,7 @@ IpVerify::Verify( DCpermission perm, const ipaddr& addr, const char * user, MySt
 		if ( who != TotallyWild ) {
 			id_with_ip.sprintf("%s/%s", who, ip_str);
 			id = who;
-			if ( hpt->lookup(id, count) != -1 ) {
+			if ( hpt->lookup(id, count) != -1 )	{
 				if( allow_reason ) {
 					allow_reason->sprintf(
 						"%s authorization has been made automatic for %s",

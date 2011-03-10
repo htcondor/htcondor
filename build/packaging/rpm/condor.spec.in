@@ -8,7 +8,7 @@ Group:          @CPACK_RPM_PACKAGE_GROUP@
 Vendor:         @CPACK_RPM_PACKAGE_VENDOR@
 URL:		@CPACK_RPM_PACKAGE_URL@
 
-Requires(pre): shadow-utils
+Requires(pre): @CPACK_RPM_SHADOW_PACKAGE@
 Requires(post):/sbin/chkconfig
 Requires(preun):/sbin/chkconfig
 Requires(preun):/sbin/service
@@ -78,6 +78,8 @@ Buildroot:      @CPACK_RPM_DIRECTORY@/@CPACK_PACKAGE_FILE_NAME@
 #%_usr/bin
 #/usr/sbin (_sbindir/ = /usr/sbin)
 #%_sbindir 
+
+#This will pickup all files but not empty directory
 @CPACK_RPM_INSTALL_FILES@
 
 

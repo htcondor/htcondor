@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -25,11 +25,15 @@
 
 #include "globus_utils.h"
 
+#if defined(HAVE_EXT_GLOBUS)
+// Note: this is from OpenSSL, but should be present if Globus is.
+// Only used if HAVE_EXT_GLOBUS.
+#     include "openssl/x509v3.h"
+#endif
 
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
 
-
-static char * _globus_error_message = NULL;
+static const char * _globus_error_message = NULL;
 
 #define GRAM_STATUS_STR_LEN		8
 
@@ -78,7 +82,7 @@ void
 set_error_string( const char *message )
 {
 	if ( _globus_error_message ) {
-		free( _globus_error_message );
+		free( const_cast<char *>(_globus_error_message) );
 	}
 	_globus_error_message = strdup( message );
 }
@@ -87,14 +91,13 @@ set_error_string( const char *message )
  * Returns zero if the modules were successfully activated. Returns -1 if
  * something went wrong.
  */
+
+/* This function is only used when HAVE_EXT_GLOBUS is defined */
+#ifdef HAVE_EXT_GLOBUS
 static
 int
 activate_globus_gsi( void )
 {
-#if !defined(HAVE_EXT_GLOBUS)
-	set_error_string( "This version of Condor doesn't support X509 credentials!" );
-	return -1;
-#else
 	static int globus_gsi_activated = 0;
 
 	if ( globus_gsi_activated != 0 ) {
@@ -128,8 +131,8 @@ activate_globus_gsi( void )
 
 	globus_gsi_activated = 1;
 	return 0;
-#endif
 }
+#endif
 
 /* Return the path to the X509 proxy file as determined by GSI/SSL.
  * Returns NULL if the filename can't be determined. Otherwise, the
@@ -340,7 +343,7 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 	if (verify_type == 0) {
 		ret = VOMS_SetVerificationType( VERIFY_NONE, voms_data, &voms_err );
 		if (ret == 0) {
-			retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
+			VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
 			ret = voms_err;
 			goto end;
 		}
@@ -354,7 +357,7 @@ extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char *
 			ret = 1;
 			goto end;
 		} else {
-			retfqan = VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
+			VOMS_ErrorMessage(voms_data, voms_err, NULL, 0);
 			ret = voms_err;
 			goto end;
 		}
@@ -457,7 +460,6 @@ extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **von
 
 	globus_gsi_cred_handle_t         handle       = NULL;
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
-	char *subject_name = NULL;
 	char *my_proxy_file = NULL;
 	int error = 0;
 
@@ -515,6 +517,134 @@ extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **von
 }
 #endif /* defined(HAVE_EXT_GLOBUS) */
 
+/* Return the email of a given proxy cert. 
+  On error, return NULL.
+  On success, return a pointer to a null-terminated string.
+  IT IS THE CALLER'S RESPONSBILITY TO DE-ALLOCATE THE STIRNG
+  WITH free().  
+ */             
+char *
+x509_proxy_email( const char *proxy_file )
+{
+#if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
+	set_error_string( "This version of Condor doesn't support X509 credentials!" );
+	return NULL;
+#else
+
+	globus_gsi_cred_handle_t         handle       = NULL;
+	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
+	X509_NAME *email_orig = NULL;
+        STACK_OF(X509) *cert_chain = NULL;
+	GENERAL_NAME *gen;
+	GENERAL_NAMES *gens;
+        X509 *cert = NULL;
+	char *email = NULL, *email2 = NULL;
+	char *my_proxy_file = NULL;
+	int i, j;
+
+	if ( activate_globus_gsi() != 0 ) {
+		return NULL;
+	}
+
+	if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
+		set_error_string( "problem during internal initialization1" );
+		goto cleanup;
+	}
+
+	if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
+		set_error_string( "problem during internal initialization2" );
+		goto cleanup;
+	}
+
+	/* Check for proxy file */
+	if (proxy_file == NULL) {
+		my_proxy_file = get_x509_proxy_filename();
+		if (my_proxy_file == NULL) {
+			goto cleanup;
+		}
+		proxy_file = my_proxy_file;
+	}
+
+	// We should have a proxy file, now, try to read it
+	if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
+		set_error_string( "unable to read proxy file" );
+		goto cleanup;
+	}
+
+	if (globus_gsi_cred_get_cert_chain(handle, &cert_chain)) {
+		cert = NULL;
+		set_error_string( "unable to find certificate in proxy" );
+		goto cleanup;
+	}
+
+	for(i = 0; i < sk_X509_num(cert_chain); ++i) {
+		if((cert = X509_dup(sk_X509_value(cert_chain, i))) == NULL) {
+			continue;
+		}
+		if ((email_orig = (X509_NAME *)X509_get_ext_d2i(cert, NID_pkcs9_emailAddress, 0, 0)) != NULL) {
+			if ((email2 = X509_NAME_oneline(email_orig, NULL, 0)) == NULL) {
+				continue;
+			} else {
+				// Return something that we can free().
+				email = strdup(email2);
+				OPENSSL_free(email2);
+				break;
+			}
+		}
+		gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert, NID_subject_alt_name, 0, 0);
+		if (gens) {
+			for (j = 0; j < sk_GENERAL_NAME_num(gens); ++i) {
+				if ((gen = sk_GENERAL_NAME_value(gens, i)) == NULL) {
+					continue;
+				}
+				if (gen->type != GEN_EMAIL) {
+					continue;
+				}
+				ASN1_IA5STRING *email_ia5 = gen->d.ia5;
+				// Sanity checks.
+				if (email_ia5->type != V_ASN1_IA5STRING) goto cleanup;
+				if (!email_ia5->data || !email_ia5->length) goto cleanup;
+				email2 = BUF_strdup((char *)email_ia5->data);
+				// We want to return something we can free(), so make another copy.
+				if (email2) {
+					email = strdup(email2);
+					OPENSSL_free(email2);
+				}
+				break;
+			}
+		}
+	}
+
+	if (email == NULL) {
+		set_error_string( "unable to extract email" );
+		goto cleanup;
+	}
+
+ cleanup:
+	if (my_proxy_file) {
+		free(my_proxy_file);
+	}
+
+	if (cert_chain) {
+		sk_X509_free(cert_chain);
+	}
+
+	if (handle_attrs) {
+		globus_gsi_cred_handle_attrs_destroy(handle_attrs);
+	}
+
+	if (handle) {
+		globus_gsi_cred_handle_destroy(handle);
+	}
+
+	if (email_orig) {
+		X509_NAME_free(email_orig);
+	}
+
+	return email;
+#endif /* !defined(HAVE_EXT_GLOBUS) */
+}
 
 /* Return the subject name of a given proxy cert. 
   On error, return NULL.
@@ -526,6 +656,7 @@ char *
 x509_proxy_subject_name( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return NULL;
 #else
@@ -534,7 +665,6 @@ x509_proxy_subject_name( const char *proxy_file )
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
 	char *my_proxy_file = NULL;
-	int error = 0;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -585,7 +715,7 @@ x509_proxy_subject_name( const char *proxy_file )
 
 	return subject_name;
 
-#endif /* !defined(GSS_AUTHENTICATION) */
+#endif /* !defined(HAVE_EXT_GLOBUS) */
 }
 
 
@@ -603,6 +733,7 @@ char *
 x509_proxy_identity_name( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return NULL;
 #else
@@ -611,7 +742,6 @@ x509_proxy_identity_name( const char *proxy_file )
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *subject_name = NULL;
 	char *my_proxy_file = NULL;
-	int error = 0;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -671,6 +801,7 @@ time_t
 x509_proxy_expiration_time( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
@@ -743,6 +874,7 @@ int
 x509_proxy_seconds_until_expire( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 #else
@@ -777,7 +909,7 @@ int
 x509_proxy_try_import( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
-
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 
@@ -840,7 +972,7 @@ int
 check_x509_proxy( const char *proxy_file )
 {
 #if !defined(HAVE_EXT_GLOBUS)
-
+	(void) proxy_file;
 	set_error_string( "This version of Condor doesn't support X509 credentials!" );
 	return -1;
 
@@ -935,14 +1067,24 @@ bio_to_buffer( BIO *bio, char **buffer, int *buffer_len )
 
 int
 x509_send_delegation( const char *source_file,
+					  time_t expiration_time,
+					  time_t *result_expiration_time,
 					  int (*recv_data_func)(void *, void **, size_t *), 
 					  void *recv_data_ptr,
 					  int (*send_data_func)(void *, void *, size_t),
 					  void *send_data_ptr )
 {
 #if !defined(HAVE_EXT_GLOBUS)
+	(void) source_file;
+	(void) expiration_time;
+	(void) result_expiration_time;
+	(void) recv_data_func;
+	(void) recv_data_ptr;
+	(void) send_data_func;
+	(void) send_data_ptr;
 
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	_globus_error_message =
+		strdup( "This version of Condor doesn't support X509 credentials!");
 	return -1;
 
 #else
@@ -1060,6 +1202,37 @@ x509_send_delegation( const char *source_file,
 		}
 	}
 
+	if( expiration_time || result_expiration_time ) {
+		time_t time_left = 0;
+		result = globus_gsi_cred_get_lifetime( source_cred, &time_left );
+		if ( result != GLOBUS_SUCCESS ) {
+			rc = -1;
+			error_line = __LINE__;
+			goto cleanup;
+		}
+
+		time_t now = time(NULL);
+		int orig_expiration_time = now + time_left;
+
+		if( result_expiration_time ) {
+			*result_expiration_time = orig_expiration_time;
+		}
+
+		if( orig_expiration_time > expiration_time ) {
+			int time_valid = (expiration_time - now)/60;
+
+			result = globus_gsi_proxy_handle_set_time_valid( new_proxy, time_valid );
+			if ( result != GLOBUS_SUCCESS ) {
+				rc = -1;
+				error_line = __LINE__;
+				goto cleanup;
+			}
+			if( result_expiration_time ) {
+				*result_expiration_time = expiration_time;
+			}
+		}
+	}
+
 	/* TODO Do we have to destroy and re-create bio, or can we reuse it? */
 	bio = BIO_new( BIO_s_mem() );
 	if ( bio == NULL ) {
@@ -1155,8 +1328,13 @@ x509_receive_delegation( const char *destination_file,
 						 void *send_data_ptr )
 {
 #if !defined(HAVE_EXT_GLOBUS)
-
-	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	(void) destination_file;		// Quiet compiler warnings
+	(void) recv_data_func;			// Quiet compiler warnings
+	(void) recv_data_ptr;			// Quiet compiler warnings
+	(void) send_data_func;			// Quiet compiler warnings
+	(void) send_data_ptr;			// Quiet compiler warnings
+	_globus_error_message =
+		strdup("This version of Condor doesn't support X509 credentials!");
 	return -1;
 
 #else
@@ -1358,4 +1536,3 @@ is_globus_friendly_url(const char * path)
 		strstr(path, "gsiftp://") == path ||
 		0;
 }
-

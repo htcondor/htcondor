@@ -96,40 +96,26 @@ SpooledJobFiles::getJobSpoolPath(int cluster,int proc,std::string &spool_path)
 	free(spool);
 }
 
-bool
-SpooledJobFiles::createJobSpoolDirectory(ClassAd const *job_ad,priv_state desired_priv_state )
+static bool
+createJobSpoolDirectory(ClassAd const *job_ad,priv_state desired_priv_state,char const *spool_path)
 {
-	int universe=-1;
-
-	job_ad->LookupInteger(ATTR_JOB_UNIVERSE,universe);
-	if( universe == CONDOR_UNIVERSE_STANDARD ) {
-		return createParentSpoolDirectories(job_ad);
-	}
-
 	int cluster=-1,proc=-1;
 
 	job_ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
 	job_ad->LookupInteger(ATTR_PROC_ID,proc);
 
-	std::string spool_path;
-	getJobSpoolPath(cluster, proc, spool_path);
-
-	std::string spool_path_tmp = spool_path.c_str();
-	spool_path_tmp += ".tmp";
-
 #ifndef WIN32
 	uid_t spool_path_uid;
-	uid_t spool_path_tmp_uid;
 #endif
 
-	StatInfo si( spool_path.c_str() );
+	StatInfo si( spool_path );
 	if( si.Error() == SINoFile ) {
-		if(!mkdir_and_parents_if_needed(spool_path.c_str(),0755,PRIV_CONDOR) )
+		if(!mkdir_and_parents_if_needed(spool_path,0755,PRIV_CONDOR) )
 		{
 			dprintf( D_ALWAYS,
 					 "Failed to create spool directory for job %d.%d: "
 					 "mkdir(%s): %s (errno %d)\n",
-					 cluster, proc, spool_path.c_str(), strerror(errno), errno );
+					 cluster, proc, spool_path, strerror(errno), errno );
 			return false;
 		}
 #ifndef WIN32
@@ -139,26 +125,6 @@ SpooledJobFiles::createJobSpoolDirectory(ClassAd const *job_ad,priv_state desire
 #ifndef WIN32
 			// spool_path already exists, check owner
 		spool_path_uid = si.GetOwner();
-#endif
-	}
-
-	StatInfo si_tmp( spool_path_tmp.c_str() );
-	if( si_tmp.Error() == SINoFile ) {
-		if(!mkdir_and_parents_if_needed(spool_path_tmp.c_str(),0755,PRIV_CONDOR))
-		{
-			dprintf( D_ALWAYS,
-					 "Failed to create spool directory for job %d.%d: "
-					 "mkdir(%s): %s (errno %d)\n",
-					 cluster,proc,spool_path_tmp.c_str(),strerror(errno),errno );
-			return false;
-		}
-#ifndef WIN32
-		spool_path_tmp_uid = get_condor_uid();
-#endif
-	} else { 
-#ifndef WIN32
-			// spool_path already exists, check owner
-		spool_path_tmp_uid = si_tmp.GetOwner();
 #endif
 	}
 
@@ -183,26 +149,18 @@ SpooledJobFiles::createJobSpoolDirectory(ClassAd const *job_ad,priv_state desire
 	if( !p_cache->get_user_ids(owner.Value(), dst_uid, dst_gid) ) {
 		dprintf( D_ALWAYS, "(%d.%d) Failed to find UID and GID for "
 				 "user %s. Cannot chown %s to user.\n",
-				 cluster, proc, owner.Value(), spool_path.c_str() );
+				 cluster, proc, owner.Value(), spool_path );
 		return false;
 	}
 
 	if( (spool_path_uid != dst_uid) && 
-		!recursive_chown(spool_path.c_str(),src_uid,dst_uid,dst_gid,true) )
+		!recursive_chown(spool_path,src_uid,dst_uid,dst_gid,true) )
 	{
 		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from %d to %d.%d.\n",
-				 cluster, proc, spool_path.c_str(), src_uid, dst_uid, dst_gid );
+				 cluster, proc, spool_path, src_uid, dst_uid, dst_gid );
 		return false;
 	}
 
-	if( (spool_path_tmp_uid != dst_uid) && 
-		!recursive_chown(spool_path_tmp.c_str(),src_uid,dst_uid,dst_gid,true) )
-	{
-		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from %d to %d.%d.\n",
-				 cluster, proc, spool_path_tmp.c_str(), src_uid, dst_uid, 
-				 dst_gid );
-		return false;
-	}
 #else	/* WIN32 */
 
 	MyString owner;
@@ -211,22 +169,64 @@ SpooledJobFiles::createJobSpoolDirectory(ClassAd const *job_ad,priv_state desire
 	MyString nt_domain;
 	job_ad->LookupString(ATTR_NT_DOMAIN, nt_domain);
 
-	if(!recursive_chown(spool_path.c_str(), owner.Value(), nt_domain.Value()))
+	if(!recursive_chown(spool_path, owner.Value(), nt_domain.Value()))
 	{
 		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from to %d\\%d.\n",
-		         cluster, proc, spool_path.c_str(),
-				 nt_domain.Value(), owner.Value() );
-		return false;
-	}
-
-	if(!recursive_chown(spool_path_tmp.c_str(), owner.Value(), nt_domain.Value()))
-	{
-		dprintf( D_ALWAYS, "(%d.%d) Failed to chown %s from to %d\\%d.\n",
-		         cluster, proc, spool_path.c_str(),
+		         cluster, proc, spool_path,
 				 nt_domain.Value(), owner.Value() );
 		return false;
 	}
 #endif
+
+	return true;  // All happy paths lead here
+}
+
+bool
+SpooledJobFiles::createJobSwapSpoolDirectory(ClassAd const *job_ad,priv_state desired_priv_state )
+{
+	int cluster=-1,proc=-1;
+
+	job_ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
+	job_ad->LookupInteger(ATTR_PROC_ID,proc);
+
+	std::string spool_path;
+	getJobSpoolPath(cluster, proc, spool_path);
+	spool_path += ".swap";
+
+	if( !::createJobSpoolDirectory(job_ad,desired_priv_state,spool_path.c_str()) )
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool
+SpooledJobFiles::createJobSpoolDirectory(ClassAd const *job_ad,priv_state desired_priv_state )
+{
+	int universe=-1;
+
+	job_ad->LookupInteger(ATTR_JOB_UNIVERSE,universe);
+	if( universe == CONDOR_UNIVERSE_STANDARD ) {
+		return createParentSpoolDirectories(job_ad);
+	}
+
+	int cluster=-1,proc=-1;
+
+	job_ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
+	job_ad->LookupInteger(ATTR_PROC_ID,proc);
+
+	std::string spool_path;
+	getJobSpoolPath(cluster, proc, spool_path);
+
+	std::string spool_path_tmp = spool_path.c_str();
+	spool_path_tmp += ".tmp";
+
+	if( !::createJobSpoolDirectory(job_ad,desired_priv_state,spool_path.c_str()) ||
+		!::createJobSpoolDirectory(job_ad,desired_priv_state,spool_path_tmp.c_str()) )
+	{
+		return false;
+	}
 
 	return true;
 }
@@ -291,17 +291,20 @@ SpooledJobFiles::removeJobSpoolDirectory(int cluster, int proc)
 		}
 	}
 
-	spool_path += ".tmp";
-	if ( IsDirectory(spool_path.c_str()) ) {
-		Directory spool_dir(spool_path.c_str());
+	std::string tmp_spool_path = spool_path;
+	tmp_spool_path += ".tmp";
+	if ( IsDirectory(tmp_spool_path.c_str()) ) {
+		Directory spool_dir(tmp_spool_path.c_str());
 		spool_dir.Remove_Entire_Directory();
 	}
-	if( rmdir(spool_path.c_str()) == -1 ) {
+	if( rmdir(tmp_spool_path.c_str()) == -1 ) {
 		if( errno != ENOENT ) {
 			dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
-					spool_path.c_str(), strerror(errno), errno );
+					tmp_spool_path.c_str(), strerror(errno), errno );
 		}
 	}
+
+	removeJobSwapSpoolDirectory(cluster,proc);
 
 		// Now attempt to remove the directory from the spool
 		// directory hierarchy that is for jobs belonging to this
@@ -316,6 +319,26 @@ SpooledJobFiles::removeJobSpoolDirectory(int cluster, int proc)
 				dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
 						parent_path.c_str(), strerror(errno), errno );
 			}
+		}
+	}
+}
+
+void
+SpooledJobFiles::removeJobSwapSpoolDirectory(int cluster, int proc)
+{
+	std::string spool_path;
+	getJobSpoolPath(cluster,proc,spool_path);
+
+	std::string swap_spool_path = spool_path;
+	swap_spool_path += ".swap";
+	if ( IsDirectory(swap_spool_path.c_str()) ) {
+		Directory spool_dir(swap_spool_path.c_str());
+		spool_dir.Remove_Entire_Directory();
+	}
+	if( rmdir(swap_spool_path.c_str()) == -1 ) {
+		if( errno != ENOENT ) {
+			dprintf(D_ALWAYS,"Failed to remove %s: %s (errno %d)\n",
+					swap_spool_path.c_str(), strerror(errno), errno );
 		}
 	}
 }

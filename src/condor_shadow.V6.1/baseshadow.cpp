@@ -64,6 +64,15 @@ BaseShadow::BaseShadow() {
 	myshadow_ptr = this;
 	exception_already_logged = false;
 	began_execution = FALSE;
+	reconnect_e_factor = 0.0;
+	reconnect_ceiling = 300;
+	prev_run_bytes_sent = 0.0;
+	prev_run_bytes_recvd = 0.0;
+	m_num_cleanup_retries = 0;
+	m_max_cleanup_retries = 5;
+	m_lazy_queue_update = true;
+	m_cleanup_retry_tid = -1;
+	m_cleanup_retry_delay = 30;
 }
 
 BaseShadow::~BaseShadow() {
@@ -261,7 +270,7 @@ void BaseShadow::config()
 
 	reconnect_e_factor = 0.0;
 	reconnect_e_factor = param_double( "RECONNECT_BACKOFF_FACTOR", 2.0, 0.0 );
-	if( !reconnect_e_factor ) {
+	if( reconnect_e_factor < -1e-4 || reconnect_e_factor > 1e-4) {
     	reconnect_e_factor = 2.0;
     }
 
@@ -1075,16 +1084,16 @@ BaseShadow::log_except(const char *msg)
 
 
 bool
-BaseShadow::updateJobAttr( const char *name, const char *expr )
+BaseShadow::updateJobAttr( const char *name, const char *expr, bool log )
 {
-	return job_updater->updateAttr( name, expr, false );
+	return job_updater->updateAttr( name, expr, false, log );
 }
 
 
 bool
-BaseShadow::updateJobAttr( const char *name, int value )
+BaseShadow::updateJobAttr( const char *name, int value, bool log )
 {
-	return job_updater->updateAttr( name, value, false );
+	return job_updater->updateAttr( name, value, false, log );
 }
 
 
@@ -1284,4 +1293,19 @@ BaseShadow::CommitSuspensionTime(ClassAd *jobAd)
 		jobAd->Assign( ATTR_COMMITTED_SUSPENSION_TIME, committed_suspension_time );
 		jobAd->Assign( ATTR_UNCOMMITTED_SUSPENSION_TIME, 0 );
 	}
+}
+
+int
+BaseShadow::handleUpdateJobAd( int sig )
+{
+	dprintf ( D_FULLDEBUG, "In handleUpdateJobAd, sig %d\n", sig );
+	if (!job_updater->retrieveJobUpdates()) {
+		dprintf(D_ALWAYS, "Error: Failed to update JobAd\n");
+		return -1;
+	}
+
+	// Attributes might have changed that would cause the job policy
+	// to evaluate differently, so evaluate now.
+	shadow_user_policy.checkPeriodic();
+	return 0;
 }

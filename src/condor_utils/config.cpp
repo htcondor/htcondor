@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -76,6 +76,47 @@ condor_isidchar(int c)
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
 #define DOLLAR_ID "DOLLAR"
 
+
+int is_valid_param_name(const char *name)
+{
+		/* Check that "name" is a legal identifier : only
+		   alphanumeric characters and _ allowed*/
+	while( *name ) {
+		if( !ISIDCHAR(*name++) ) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+char * parse_param_name_from_config(const char *config)
+{
+	char *name, *tmp;
+
+	if (!(name = strdup(config))) {
+		EXCEPT("Out of memory!");
+	}
+
+	tmp = strchr(name, '=');
+	if (!tmp) {
+		tmp = strchr(name, ':');
+	}
+	if (!tmp) {
+			// Line is invalid, should be "name = value" or "name : value"
+		return NULL;
+	}
+
+		// Trim whitespace...
+	*tmp = ' ';
+	while (isspace(*tmp)) {
+		*tmp = '\0';
+		tmp--;
+	}
+
+	return name;
+}
+
 bool 
 is_piped_command(const char* filename)
 {
@@ -136,7 +177,11 @@ Read_config( const char* config_source, BUCKET** table,
 
 			ArgList argList;
 			MyString args_errors;
-			argList.AppendArgsV1RawOrV2Quoted(cmdToExecute, &args_errors);
+			if(!argList.AppendArgsV1RawOrV2Quoted(cmdToExecute, &args_errors)) {
+				printf("Can't append cmd %s(%s)\n", cmdToExecute, args_errors.Value());
+				free( cmdToExecute );
+				return -1;
+			}
 			conf_fp = my_popen(argList, "r", FALSE);
 			if( conf_fp == NULL ) {
 				printf("Can't open cmd %s\n", cmdToExecute);
@@ -284,16 +329,12 @@ Read_config( const char* config_source, BUCKET** table,
 
 		/* Check that "name" is a legal identifier : only
 		   alphanumeric characters and _ allowed*/
-		ptr = name;
-		while( *ptr ) {
-			char c = *ptr++;
-			if( !ISIDCHAR(c) ) {
-				fprintf( stderr,
-		"Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
-					config_source, ConfigLineNo, name );
-				retval = -1;
-				goto cleanup;
-			}
+		if( !is_valid_param_name(name) ) {
+			fprintf( stderr,
+					 "Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
+					 config_source, ConfigLineNo, name );
+			retval = -1;
+			goto cleanup;
 		}
 
 		if( expand_flag == EXPAND_IMMEDIATE ) {
@@ -582,10 +623,15 @@ string_to_long( const char *s, long *valuep )
 ** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
 */
 char *
-expand_macro( const char *value, BUCKET **table, int table_size, char *self, bool use_default_param_table )
+expand_macro( const char *value,
+			  BUCKET **table,
+			  int table_size,
+			  char *self,
+			  bool use_default_param_table )
 {
 	char *tmp = strdup( value );
-	char *left, *name, *tvalue, *right;
+	char *left, *name, *right;
+	const char *tvalue;
 	char *rval;
 
 	bool all_done = false;
@@ -643,13 +689,13 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self, boo
 			const char *tmp2;
 
 			tmp2 = entries.next();
-			long	min_value;
+			long	min_value=0;
 			if ( string_to_long( tmp2, &min_value ) < 0 ) {
 				EXCEPT( "$RANDOM_INTEGER() config macro: invalid min!" );
 			}
 
 			tmp2 = entries.next();
-			long	max_value;
+			long	max_value=0;
 			if ( string_to_long( tmp2, &max_value ) < 0 ) {
 				EXCEPT( "$RANDOM_INTEGER() config macro: invalid max!" );
 			}
@@ -834,7 +880,7 @@ get_special_var( const char *prefix, bool only_id_chars, register char *value,
 	while (1) {
 tryagain:
 		if (tvalue) {
-			value = (char *)strstr( (const char *)tvalue, prefix );
+			value = const_cast<char *>(strstr(tvalue, prefix) );
 		}
 		
 		if( value == NULL ) {
@@ -881,7 +927,8 @@ tryagain:
 */
 int
 get_var( register char *value, register char **leftp, 
-		 register char **namep, register char **rightp, char *self,
+		 register char **namep, register char **rightp,
+		 const char *self,
 		 bool getdollardollar, int search_pos)
 {
 	char *left, *left_end, *name, *right;
@@ -893,7 +940,7 @@ get_var( register char *value, register char **leftp,
 	for(;;) {
 tryagain:
 		if (tvalue) {
-			value = (char *)strchr( (const char *)tvalue, '$' );
+			value = const_cast<char *>( strchr(tvalue, '$') );
 		}
 		
 		if( value == NULL ) {

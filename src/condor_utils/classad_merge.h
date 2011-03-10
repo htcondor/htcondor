@@ -27,11 +27,13 @@
 /** Merge one ClassAd into another.
  *  @param merge_into The ClassAd that is the recipient of attributes
  *  @param merge_from The ClassAd that is giving the attributes
- *  @param merge_confliccts true to copy all attributes, false if you 
+ *  @param merge_conflicts true to copy all attributes, false if you 
  *         don't want to replace attributes that already exist in the
  *         merge_into classad	
+ *  @param mark_dirty true to mark merged attributes as dirty, false
+ *         to mark them as clean
  */
 void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from, 
-				   bool merge_conflicts);
+				   bool merge_conflicts, bool mark_dirty = true);
 
 #endif

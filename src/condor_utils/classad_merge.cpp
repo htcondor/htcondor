@@ -23,7 +23,7 @@
 #include "classad_merge.h"
 
 void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from, 
-				   bool merge_conflicts)
+				   bool merge_conflicts, bool mark_dirty)
 {
 
 	if (!merge_into || !merge_from) {
@@ -43,6 +43,9 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 
 			copy_expression = expression->Copy();
 			merge_into->Insert(name, copy_expression);
+			if ( !mark_dirty ) {
+				merge_into->SetDirtyFlag(name, false);
+			}
 		}
 	}
 

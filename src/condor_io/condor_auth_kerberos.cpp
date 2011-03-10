@@ -189,8 +189,8 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     out_data.ciphertext.data = (char*)encrypted_data;
 	out_data.ciphertext.length = encrypted_length;
 
-    if (code = krb5_c_encrypt(krb_context_, sessionKey_, 1024, /* key usage */
-				0, &in_data, &out_data)) {			/* 0 = no ivec */
+    if ((code = krb5_c_encrypt(krb_context_, sessionKey_, 1024, /* key usage */
+				0, &in_data, &out_data)) != 0) {			/* 0 = no ivec */
         output     = 0;
         output_len = 0;
         if (out_data.ciphertext.data) {    
@@ -219,9 +219,9 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     memcpy(output + index, &tmp, sizeof(out_data.ciphertext.length));
     index += sizeof(out_data.ciphertext.length);
 
-    memcpy(output + index, out_data.ciphertext.data, out_data.ciphertext.length);
-
     if (out_data.ciphertext.data) {    
+	memcpy(output + index, out_data.ciphertext.data,
+		out_data.ciphertext.length);
         free(out_data.ciphertext.data);
     }
 
@@ -229,9 +229,9 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
 }
 
 int Condor_Auth_Kerberos :: unwrap(char*  input, 
-                                   int    input_len, 
+                                   int    /* input_len */, 
                                    char*& output, 
-                                   int&   output_len)
+                                   int& output_len)
 {
     krb5_error_code code;
     krb5_data       out_data;
@@ -268,8 +268,8 @@ int Condor_Auth_Kerberos :: unwrap(char*  input,
     out_data.length = enc_data.ciphertext.length;
 	out_data.data = (char*)malloc(out_data.length);
 
-	if (code = krb5_c_decrypt(krb_context_, sessionKey_, 1024, /* key usage */
-				0, &enc_data, &out_data)) {			/* 0 = no ivec */
+	if ((code = krb5_c_decrypt(krb_context_, sessionKey_, 1024, /* key usage */
+				0, &enc_data, &out_data))!=0) {			/* 0 = no ivec */
 
 	//if (code = krb5_decrypt_data(krb_context_, sessionKey_, 0, &enc_data, &out_data)) {
         output_len = 0;
@@ -382,7 +382,7 @@ int Condor_Auth_Kerberos :: init_daemon()
 	dprintf(D_SECURITY, "init_daemon: Trying to get tgt credential for service %s\n", sname.Value());
 
 	priv = set_root_priv();   // Get the old privilige
-	code = krb5_get_init_creds_keytab(krb_context_, creds_, krb_principal_, keytab, 0, (char*)sname.Value(), 0);
+	code = krb5_get_init_creds_keytab(krb_context_, creds_, krb_principal_, keytab, 0, const_cast<char*>(sname.Value()), 0);
 	set_priv(priv);
 	if(code) {
 		goto error;
@@ -1209,7 +1209,7 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
     return rc;
 }
 
-int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
+int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * /* ticket */ )
 {
     krb5_error_code  code;
 	//krb5_ccache      ccache;
@@ -1421,7 +1421,9 @@ int Condor_Auth_Kerberos :: isValid() const
     return auth_context_ != NULL;  // This is incorrect!
 }
 
-void Condor_Auth_Kerberos :: dprintf_krb5_principal ( int deblevel, char *fmt, krb5_principal p ) {
+void Condor_Auth_Kerberos :: dprintf_krb5_principal ( int deblevel,
+													  const char *fmt,
+													  krb5_principal p ) {
 
 	if (p) {
 		char * tmpprincname = 0;

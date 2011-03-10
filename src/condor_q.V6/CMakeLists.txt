@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,4 +16,4 @@
  # 
  ############################################################### 
 
-condor_exe(condor_q "queue.cpp" ${C_BIN} "conversion;analysis;qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND}")
+condor_exe(condor_q "queue.cpp" ${C_BIN} "conversion;analysis;qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND}" OFF)

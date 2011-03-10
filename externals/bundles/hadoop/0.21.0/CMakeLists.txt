@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -19,18 +19,27 @@
 
 if ( NOT PROPER )
 
-	option( WITH_HADOOP "Compiling with support for HADOOP" ON )
+    option( WITH_HADOOP "Compiling with support for HADOOP" ON )
 
 	if (WITH_HADOOP)
 
 		set (HADOOP_VER hadoop-0.21.0)
-		set ( HADOOP_INSTALL mkdir -p ${EXTERNAL_STAGE}/hdfs/conf ${CMD_TERM}
-							 cp -r lib ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-							 cp -r webapps ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-							 cp hadoop-common-0.21.0.jar ${EXTERNAL_STAGE}/hdfs/ ${CMD_TERM}
-							 cp hadoop-hdfs-0.21.0.jar ${EXTERNAL_STAGE}/hdfs/ ${CMD_TERM}
-							 cp hdfs/src/java/hdfs-default.xml ${EXTERNAL_STAGE}/hdfs/conf )
-
+		if ( WINDOWS )
+			set ( HADOOP_INSTALL md \"${EXTERNAL_STAGE}/hdfs/conf\" ${CMD_TERM}
+								cp -r lib ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
+								rm -rf ${EXTERNAL_STAGE}/hdfs/lib/native ${CMD_TERM}
+								cp -r webapps ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
+								cp hadoop-common-0.21.0.jar ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
+								cp hadoop-hdfs-0.21.0.jar ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
+								cp hdfs/src/java/hdfs-default.xml ${EXTERNAL_STAGE}/hdfs/conf ${CMD_TERM} )
+		else()
+			set ( HADOOP_INSTALL mkdir -p ${EXTERNAL_STAGE}/hdfs/conf ${CMD_TERM}
+								cp -r lib ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
+								cp -r webapps ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
+								cp hadoop-common-0.21.0.jar ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
+								cp hadoop-hdfs-0.21.0.jar ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
+								cp hdfs/src/java/hdfs-default.xml ${EXTERNAL_STAGE}/hdfs/conf )
+		endif()
 		# a couple of odd things, this macro requires a configure and build command.  
 		ExternalProject_Add(hadoop
 							PREFIX ${EXTERNAL_BUILD_PREFIX}/${HADOOP_VER}
@@ -53,18 +62,19 @@ if ( NOT PROPER )
 		message (STATUS "external configured (HADOOP_FOUND=${EXTERNAL_STAGE}/hdfs)")
 
 		if (WINDOWS)
-		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs DESTINATION . )
+		  set_property( TARGET hadoop PROPERTY FOLDER "externals" )
+		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs/ DESTINATION ./hdfs )
 		else()
 		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs DESTINATION ${C_LIBEXEC} )
 		endif()
 
 	else()
-		message (STATUS "external skiped (hadoop)")
+		message (STATUS "external skipped (hadoop)")
 	endif()
 
 else( NOT PROPER )
 
-	message (STATUS "external skiped (hadoop)")
+	message (STATUS "external skipped (hadoop)")
 
 endif( NOT PROPER )
 

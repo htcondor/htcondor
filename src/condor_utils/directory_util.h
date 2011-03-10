@@ -49,4 +49,22 @@ char* dircat( const char* dirpath, const char* filename );
 */
 char* dirscat( const char* dirpath, const char* subdir );
 
+/** Touch a file and create directory path as well if necessary
+	@param path: the full path to the file to be touched
+	@param file_mode: the mode in which the file should be opened (likely 0644)
+	@param directory_mode: the mode in which the directories should be created (likely world RW)
+	@param pos: current position in path string
+	@return Either the open file descriptor or -1 if file could not be opened
+*/
+int rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos = 0); 
+
+/** Clean up a file path recursively up to @depth directories deep.
+	@param path: the file path to clean up (likley requires the file under @path to be locked), depth 0 just deletes the file and no directory
+	@param depth: how many directories deep should be deleted
+	@return 0 upon success, -1 otherwise
+*/
+int rec_clean_up(char *path, int depth, int pos = -1);
+
+
+
 #endif

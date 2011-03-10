@@ -286,8 +286,3 @@ int Condor_Auth_Base :: endTime() const
     return -1;
 }
 
-Condor_Auth_Base :: Condor_Auth_Base()
-{
-}
-
-

@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,11 +16,13 @@
  # 
  ############################################################### 
 
-
-if ( (LINUX AND NOT ${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND") OR WINDOWS )
+if (HAVE_KBDD)
 
 	condor_glob(kbdHdrs kbdSrcs "")
 
-	condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${HAVE_X11}")
+	condor_exe( condor_kbdd "${kbdHdrs};${kbdSrcs}" ${C_SBIN} "${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${HAVE_X11}" OFF )
+else()
+
+    message(STATUS "NOTE: *condor_kbdd* will not be built, HAVE_KBDD doesn't exist")
 
 endif()

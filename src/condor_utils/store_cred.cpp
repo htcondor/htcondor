@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -175,7 +175,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 		dprintf(D_ALWAYS, "store_cred: malformed user name\n");
 		return FAILURE;
 	}
-	if ((at - user != strlen(POOL_PASSWORD_USERNAME)) ||
+	if (( (size_t)(at - user) != strlen(POOL_PASSWORD_USERNAME)) ||
 	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
 	{
 		dprintf(D_ALWAYS, "store_cred: only pool password is supported on UNIX\n");
@@ -690,7 +690,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			return FAILURE;
 		}
 		if (((mode == ADD_MODE) || (mode == DELETE_MODE)) &&
-		    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
+		    ( (size_t)(tmp - user) == strlen(POOL_PASSWORD_USERNAME)) &&
 		    (memcmp(POOL_PASSWORD_USERNAME, user, tmp - user) == 0))
 		{
 			cmd = STORE_POOL_CRED;
@@ -732,7 +732,8 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 		}
 		
 		if (cmd == STORE_CRED) {
-			result = code_store_cred(sock, (char*&)user, (char*&)pw, mode);
+			result = code_store_cred(sock, const_cast<char*&>(user),
+				const_cast<char*&>(pw), mode);
 			if( result == FALSE ) {
 				dprintf(D_ALWAYS, "store_cred: code_store_cred failed.\n");
 				delete sock;
@@ -741,7 +742,9 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 		}
 		else {
 				// only need to send the domain and password for STORE_POOL_CRED
-			if (!sock->code((char*&)user) || !sock->code((char*&)pw) || !sock->end_of_message()) {
+			if (!sock->code(const_cast<char*&>(user)) ||
+				!sock->code(const_cast<char*&>(pw)) ||
+				!sock->end_of_message()) {
 				dprintf(D_ALWAYS, "store_cred: failed to send STORE_POOL_CRED message\n");
 				delete sock;
 				return FAILURE;

@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -137,6 +137,7 @@ FileTransfer::FileTransfer()
 	FilesToSend = NULL;
 	EncryptFiles = NULL;
 	DontEncryptFiles = NULL;
+	OutputDestination = NULL;
 	ExecFile = NULL;
 	UserLogFile = NULL;
 	X509UserProxy = NULL;
@@ -195,6 +196,7 @@ FileTransfer::~FileTransfer()
 	if (EncryptOutputFiles) delete EncryptOutputFiles;
 	if (DontEncryptInputFiles) delete DontEncryptInputFiles;
 	if (DontEncryptOutputFiles) delete DontEncryptOutputFiles;
+	if (OutputDestination) delete OutputDestination;
 	if (IntermediateFiles) delete IntermediateFiles;
 	if (SpooledIntermediateFiles) delete SpooledIntermediateFiles;
 	// Note: do _not_ delete FileToSend!  It points to OutputFile or Intermediate.
@@ -332,6 +334,10 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->append(buf);			
 		}
 	}
+	if ( Ad->LookupString(ATTR_OUTPUT_DESTINATION, buf) == 1 ) {
+		OutputDestination = strdup(buf);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: using OutputDestination %s\n", buf);
+	}
 
 	// there are a few places below where we need the value of the SPOOL
 	// knob if we're the server. we param for it once here, and free it
@@ -343,7 +349,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 
 	// if we're the server, initialize the SpoolSpace and TmpSpoolSpace
-	// member variables (and create the directories if not there already)
+	// member variables
 	//
 	int Cluster = 0;
 	int Proc = 0;
@@ -1003,9 +1009,13 @@ FileTransfer::ComputeFilesToSend()
 			}
 			else {
 				dprintf( D_FULLDEBUG,
-					 "Skipping file %s, t: %ld==%ld, s: %lld==%lld\n",
-					 f, dir.GetModifyTime(), modification_time,
-					 dir.GetFileSize(), filesize );
+						 "Skipping file %s, t: %"PRIi64"==%"PRIi64
+						 ", s: %"PRIi64"==%"PRIi64"\n",
+						 f,
+						 (PRIi64_t)dir.GetModifyTime(),
+						 (PRIi64_t)modification_time,
+						 (PRIi64_t)dir.GetFileSize(),
+						 (PRIi64_t)filesize );
 				continue;
 			}
 			if(send_it) {
@@ -1547,6 +1557,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	filesize_t bytes=0;
 	MyString filename;;
 	MyString fullname;
+	MyString LocalProxyName;
 	char *tmp_buf = NULL;
 	int final_transfer = 0;
 	bool download_success = true;
@@ -1751,7 +1762,89 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		// not bother to fsync every file.
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname.Value());
 		start = time(NULL);
-		if (reply == 5) {
+
+
+		if (reply == 999) {
+			// filename already received:
+			// .  verify that it is the same as FileName attribute in following classad
+			// .  optimization: could be the version protocol instead
+			//
+			// receive the classad
+			ClassAd file_info;
+			if (!file_info.initFromStream(*s)) {
+				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
+				return_and_resetpriv( -1 );
+			}
+
+				
+			// examine subcommand
+			//
+			int      subcommand = 0;
+			if(!file_info.LookupInteger("Result",subcommand)) {
+				subcommand = -1;
+			}
+
+			// perform specified subcommand
+			//
+			// (this can be made a switch statement when more show up)
+			//
+
+			if(subcommand == 7) {
+				// 7 == send local file using plugin
+				
+				MyString rt_src;
+				MyString rt_dst;
+				MyString rt_err;
+				int      rt_result = 0;
+				if(!file_info.LookupInteger("Result",rt_result)) {
+					rt_result = -1;
+				}
+
+				if(!file_info.LookupString("Filename", rt_src)) {
+					rt_src = "<null>";
+				}
+
+				if(!file_info.LookupString("OutputDestination", rt_dst)) {
+					rt_dst = "<null>";
+				}
+
+				if(!file_info.LookupString("ErrorString", rt_err)) {
+					rt_err = "<null>";
+				}
+
+				// TODO: write to job log success/failure for each file (as a custom event?)
+				dprintf(D_ALWAYS, "DoDownload: other side transferred %s to %s and got result %i\n",
+						rt_src.Value(), rt_dst.Value(), rt_result );
+
+				if(rt_result == 0) {
+					rc = 0;
+				} else {
+					// handle the error now and bypass error handling
+					// that hapens further down
+					rc = 0; 
+
+					error_buf.sprintf(
+						"%s at %s failed due to remote transfer hook error: %s",
+						get_mySubSystem()->getName(),
+						s->my_ip_str(),fullname.Value());
+					download_success = false;
+					try_again = false;
+					hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+					hold_subcode = rt_result;
+
+					dprintf(D_ALWAYS,
+						"DoDownload: consuming rest of transfer and failing "
+						"after encountering the following error: %s\n",
+						error_buf.Value());
+				}
+			} else {
+				// unrecongized subcommand
+				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", subcommand);
+				file_info.dPrint(D_FULLDEBUG);
+				
+				rc = 0;
+			}
+		} else if (reply == 5) {
 			// new filetransfer command.  5 means that the next file is a
 			// 3rd party transfer.  cedar will not send the file itself,
 			// and instead will send the URL over the wire.  the receiving
@@ -1768,7 +1861,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 
-			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value());
+			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), LocalProxyName.Value());
+
 
 		} else if ( reply == 4 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
@@ -1776,6 +1870,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf( D_FULLDEBUG,
 				         "DoDownload: get_x509_delegation() returned %d\n",
 				         rc );
+				if (rc == 0) {
+					// ZKM FUTURE TODO: allow this to exist outside of the job sandbox -- we may
+					// need the proxy to create the sandbox itself (if execute dir is NFSv4) but
+					// that will require some higher-level refactoring
+					LocalProxyName = fullname;
+				}
 			} else {
 				rc = -1;
 			}
@@ -2129,11 +2229,17 @@ FileTransfer::CommitFiles()
 {
 	MyString buf;
 	MyString newbuf;
+	MyString swapbuf;
 	const char *file;
 
 	if ( IsClient() ) {
 		return;
 	}
+
+	int cluster = -1;
+	int proc = -1;
+	jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
+	jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
 	priv_state saved_priv = PRIV_UNKNOWN;
 	if( want_priv_change ) {
@@ -2145,17 +2251,40 @@ FileTransfer::CommitFiles()
 	buf.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
 	if ( access(buf.Value(),F_OK) >= 0 ) {
 		// the commit file exists, so commit the files.
+
+		MyString SwapSpoolSpace;
+		SwapSpoolSpace.sprintf("%s.swap",SpoolSpace);
+		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&jobAd,desired_priv_state);
+		if( !swap_dir_ready ) {
+			EXCEPT("Failed to create %s",SwapSpoolSpace.Value());
+		}
+
 		while ( (file=tmpspool.Next()) ) {
 			// don't commit the commit file!
 			if ( file_strcmp(file,COMMIT_FILENAME) == MATCH )
 				continue;
 			buf.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,file);
 			newbuf.sprintf("%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
+			swapbuf.sprintf("%s%c%s",SwapSpoolSpace.Value(),DIR_DELIM_CHAR,file);
+
+				// If the target name exists, move it into the swap
+				// directory.  This serves two purposes:
+				//   1. potentially allow rollback
+				//   2. handle case of target being a non-empty directory,
+				//      which cannot be overwritten by rename()
+			if( access(newbuf.Value(),F_OK) >= 0 ) {
+				if ( rename(newbuf.Value(),swapbuf.Value()) < 0 ) {
+					EXCEPT("FileTransfer CommitFiles failed to move %s to %s: %s",newbuf.Value(),swapbuf.Value(),strerror(errno));
+				}
+			}
+
 			if ( rotate_file(buf.Value(),newbuf.Value()) < 0 ) {
 				EXCEPT("FileTransfer CommitFiles Failed -- What Now?!?!");
 			}
 		}
 		// TODO: remove files specified in commit file
+
+		SpooledJobFiles::removeJobSwapSpoolDirectory(cluster,proc);
 	}
 
 	// We have now commited the files in tmpspool, if we were supposed to.
@@ -2303,6 +2432,8 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 	return ( status >= 0 );
 }
 
+
+
 int
 FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 {
@@ -2320,6 +2451,10 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	bool I_go_ahead_always = false;
 	bool peer_goes_ahead_always = false;
 	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+
+	// use an error stack to keep track of failures when invoke plugins,
+	// perhaps more of this can be instrumented with it later.
+	CondorError errstack;
 
 	// If a bunch of file transfers failed strictly due to
 	// PUT_FILE_OPEN_FAILED, then we keep track of the information relating to
@@ -2438,12 +2573,32 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		// 1 - use socket default (on or off) for next file
 		// 2 - force encryption on for next file.
 		// 3 - force encryption off for next file.
+		//
+		// this was further expanded to allow delagation of x509 creds
 		// 4 - do an x509 credential delegation (using the socket default)
+		//
+		// and again to tell the remote side to fetch a URL
 		// 5 - send a URL and have the other side fetch it
+		//
+		// and again to allow transferring and creating subdirectories
 		// 6 - send a request to make a directory
+		//
+		// and one more time to make a more flexible protocol.  this magic
+		// number 999 means we will still send the filename, and then send a
+		// classad immediately following the filename, and the classad will say
+		// what action to perform.  this will allow potential changes without
+		// breaking the wire protocol and hopefully will be more forward and
+		// backward compatible for future updates.
+		//
+		// 999 - send a classad telling what to do.
+		//
+		// 999 subcommand 7:
+		// send information about a transfer performed using a transfer hook
+
 
 		// default to the socket default
 		int file_command = 1;
+		int file_subcommand = 0;
 		
 		// find out if this file is in DontEncryptFiles
 		if ( DontEncryptFiles->file_contains_withwildcard(filename) ) {
@@ -2469,6 +2624,18 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 		if ( is_url ) {
 			file_command = 5;
+		}
+
+		if ( m_final_transfer_flag && OutputDestination ) {
+			dprintf(D_FULLDEBUG, "FILETRANSFER: Using command 999:7 for OutputDestionation: %s\n",
+					OutputDestination);
+
+			// switch from whatever command we had before to new classad
+			// command new classad command 999 and subcommand 7.
+			//
+			// 7 == invoke plugin to store file
+			file_command = 999;
+			file_subcommand = 7;
 		}
 
 		bool fail_because_mkdir_not_supported = false;
@@ -2527,6 +2694,13 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			dest_filename.sprintf_cat( condor_basename(filename) );
 		}
 
+		// for command 999, this string must equal the Attribute "Filename" in
+		// the classad that follows.  it wouldn't really need to be sent here
+		// but is more wire-compatible with older versions if we do.
+		//
+		// should we send a protocol version string instead?  or some other token
+		// like 'CLASSAD'?
+		//
 		if( !s->put(dest_filename.Value()) ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
@@ -2559,9 +2733,65 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			s->encode();
 		}
 
-		if ( file_command == 4 ) {
+		if ( file_command == 999) {
+			// new-style, send classad
+
+			ClassAd file_info;
+			file_info.Assign("ProtocolVersion", 1);
+			file_info.Assign("Command", file_command);
+			file_info.Assign("SubCommand", file_subcommand);
+
+			// only one subcommand at the moment: 7
+			//
+			// 7 is "Report to shadow the final status of invoking a transfer
+			// hook to move the output file"
+
+			if(file_subcommand == 7) {
+				// make the URL out of Attr OutputDestonation and filename
+				MyString URL;
+				URL = OutputDestination;
+				URL += "/";
+				URL += filename;
+
+				// actually invoke the plugin.  this could block indefinitely.
+				dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", filename, URL.Value());
+				rc = InvokeFileTransferPlugin(errstack, filename, URL.Value());
+				dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", filename, URL.Value(), rc);
+
+				// report the results:
+				file_info.Assign("Filename", dest_filename);
+				file_info.Assign("OutputDestination", URL);
+
+				// will either be 0 (success) or -4 (GET_FILE_PLUGIN_FAILED)
+				file_info.Assign("Result", rc);
+
+				// nonzero indicates failure, put the ErrStack into the classad
+				if (rc) {
+					file_info.Assign("ErrorString", errstack.getFullText());
+				}
+
+				// it's all assembled, so send the ad using stream s.
+				// don't end the message, it's done below.
+				if(!file_info.put(*s)) {
+					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
+					return_and_resetpriv( -1 );
+				}
+
+				// compute the size of what we sent
+				MyString junkbuf;
+				file_info.sPrint(junkbuf);
+				bytes = junkbuf.Length();
+
+			} else {
+				dprintf( D_ALWAYS, "DoUpload: invalid subcommand %i, skipping %s.",
+						file_subcommand, filename);
+				bytes = 0;
+				rc = 0;
+			}
+		} else if ( file_command == 4 ) {
 			if ( (PeerDoesGoAhead || s->end_of_message()) ) {
-				rc = s->put_x509_delegation( &bytes, fullname.Value() );
+				time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(&jobAd);
+				rc = s->put_x509_delegation( &bytes, fullname.Value(), expiration_time, NULL );
 				dprintf( D_FULLDEBUG,
 				         "DoUpload: put_x509_delegation() returned %d\n",
 				         rc );
@@ -2590,6 +2820,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			bytes = fullname.Length();
 
 		} else if( file_command == 6 ) { // mkdir
+			// the only data sent is the file_mode.
+			bytes = sizeof( filelist_it->file_mode );
+
 			if( !s->put( filelist_it->file_mode ) ) {
 				rc = -1;
 				dprintf(D_ALWAYS,"DoUpload: failed to send mkdir mode\n");
@@ -2617,19 +2850,24 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			int the_error = errno;
 			upload_success = false;
 			error_desc.sprintf("error sending %s",fullname.Value());
-			if(rc == PUT_FILE_OPEN_FAILED) {
-				// In this case, put_file() has transmitted a zero-byte
-				// file in place of the failed one. This means there is an
-				// ack waiting for us to read back which we do at the end of
-				// the while loop.
+			if((rc == PUT_FILE_OPEN_FAILED) || (rc == PUT_FILE_PLUGIN_FAILED)) {
+				if (rc == PUT_FILE_OPEN_FAILED) {
+					// In this case, put_file() has transmitted a zero-byte
+					// file in place of the failed one. This means there is an
+					// ack waiting for us to read back which we do at the end of
+					// the while loop.
 
-				error_desc.replaceString("sending","reading from");
-				error_desc.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
-				if( fail_because_mkdir_not_supported ) {
-					error_desc.sprintf_cat("; Remote condor version is too old to transfer directories.");
-				}
-				if( fail_because_symlink_not_supported ) {
-					error_desc.sprintf_cat("; Transfer of symlinks to directories is not supported.");
+					error_desc.replaceString("sending","reading from");
+					error_desc.sprintf_cat(": (errno %d) %s",the_error,strerror(the_error));
+					if( fail_because_mkdir_not_supported ) {
+						error_desc.sprintf_cat("; Remote condor version is too old to transfer directories.");
+					}
+					if( fail_because_symlink_not_supported ) {
+						error_desc.sprintf_cat("; Transfer of symlinks to directories is not supported.");
+					}
+				} else {
+					// add on the error string from the errstack used
+					error_desc.sprintf_cat(": %s", errstack.getFullText());
 				}
 				try_again = false; // put job on hold
 				hold_code = CONDOR_HOLD_CODE_UploadFileError;
@@ -3367,12 +3605,26 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 }
 
 
-int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest) {
+int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, const char* proxy_filename) {
 
 	if (plugin_table == NULL) {
-		dprintf(D_FULLDEBUG, "FILETRANSFER: No plugin table defined! (request was %s)\n", URL);
-		e.pushf("FILETRANSFER", 1, "No plugin table defined", URL);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: No plugin table defined! (request was %s)\n", source);
+		e.pushf("FILETRANSFER", 1, "No plugin table defined (request was %s)", source);
 		return GET_FILE_PLUGIN_FAILED;
+	}
+
+
+	// detect which plugin to invoke
+	char *URL = NULL;
+
+	// first, check the dest to see if it looks like a URL.  if not, source must
+	// be the URL.
+	if(IsUrl(dest)) {
+		URL = const_cast<char*>(dest);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: using destination to determine plugin type: %s\n", dest);
+	} else {
+		URL = const_cast<char*>(source);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: using source to determine plugin type: %s\n", source);
 	}
 
 	// find the type of transfer
@@ -3412,25 +3664,39 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* URL, cons
 	}
 */
 
-	// TODO: invoke the proper plugin using my_gregs_popen() and the new API.
+	// prepare environment for the plugin
+	Env plugin_env;
 
-	MyString cmd_line = plugin.Value();
-	cmd_line += " ";
-	cmd_line += URL;
-	cmd_line += " ";
-	cmd_line += dest;
-	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s\n", cmd_line.Value());
-	int retval = system( cmd_line.Value() );
-	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", retval);
+	// start with this environment
+	plugin_env.Import();
+
+	// add x509UserProxy if it's defined
+	if (proxy_filename && *proxy_filename) {
+		plugin_env.SetEnv("X509USERPROXY",proxy_filename);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting x509UserProxy env to %s\n", proxy_filename);
+	}
+
+	// prepare args for the plugin
+	ArgList plugin_args;
+	plugin_args.AppendArg(plugin.Value());
+	plugin_args.AppendArg(URL);
+	plugin_args.AppendArg(dest);
+	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s %s %s\n", plugin.Value(), URL, dest);
+
+	// invoke it
+	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env);
+	int plugin_status = my_pclose(plugin_pipe);
+
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
 
 	// clean up
 	free(method);
 
-	// any non-zero exit from plugin indicates error.  this function needs
-	// to return -1 on error, or zero otherwise, so map retval to the proper
-	// value.
-	if (retval != 0) {
-		e.pushf("FILETRANSFER", 1, "non-zero exit from %s\n", cmd_line.Value());
+	// any non-zero exit from plugin indicates error.  this function needs to
+	// return -1 on error, or zero otherwise, so map plugin_status to the
+	// proper value.
+	if (plugin_status != 0) {
+		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s\n", plugin_status, plugin.Value());
 		return GET_FILE_PLUGIN_FAILED;
 	}
 
@@ -3481,7 +3747,7 @@ MyString
 FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 {
     FILE* fp;
-    char *args[] = {const_cast<char*>(path), "-classad", NULL};
+    const char *args[] = { path, "-classad", NULL};
     char buf[1024];
 
         // first, try to execute the given path with a "-classad"
@@ -3517,7 +3783,7 @@ FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
     }
 
 	// TODO: verify that plugin type is FileTransfer
-	// e.pushf("FILETRANSFER", 1, "\"%s -classad\" is not plugin type FileTransfer, ignoring\n", path );
+	// e.pushf("FILETRANSFER", 1, "\"%s -classad\" is not plugin type FileTransfer, ignoring", path );
 
 	// extract the info we care about
 	char* methods = NULL;
@@ -3560,11 +3826,24 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 		return true;
 	}
 
+	// if this exists and is in the list do it first
+	if (X509UserProxy && input_list->contains(X509UserProxy)) {
+		if( !ExpandFileTransferList( X509UserProxy, "", Iwd, -1, expanded_list ) ) {
+			rc = false;
+		}
+	}
+
+	// then process the rest of the list
 	input_list->rewind();
 	char const *path;
 	while ( (path=input_list->next()) != NULL ) {
-		if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list ) ) {
-			rc = false;
+		// skip the proxy if it's defined -- we dealt with it above.
+		// everything else gets expanded.  this if would short-circuit
+		// true if X509UserProxy is not defined, but i made it explicit.
+		if(!X509UserProxy || (X509UserProxy && strcmp(path, X509UserProxy) != 0)) {
+			if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list ) ) {
+				rc = false;
+			}
 		}
 	}
 	return rc;
@@ -3816,4 +4095,48 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 void FileTransfer::FileTransferInfo::addSpooledFile(char const *name_in_spool)
 {
 	spooled_files.append_to_list(name_in_spool);
+}
+
+
+time_t
+GetDesiredDelegatedJobCredentialExpiration(ClassAd *job)
+{
+	if ( !param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ) {
+		return 0;
+	}
+
+	time_t expiration_time = 0;
+	int lifetime = 0;
+	if( job ) {
+		job->LookupInteger(ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME,lifetime);
+	}
+	if( !lifetime ) {
+		lifetime = param_integer("DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME",3600*24);
+	}
+	if( lifetime ) {
+		expiration_time = time(NULL) + lifetime;
+	}
+	return expiration_time;
+}
+
+time_t
+GetDelegatedProxyRenewalTime(time_t expiration_time)
+{
+	if( expiration_time == 0 ) {
+		return 0;
+	}
+	if ( !param_boolean( "DELEGATE_JOB_GSI_CREDENTIALS", true ) ) {
+		return 0;
+	}
+
+	time_t now = time(NULL);
+	time_t lifetime = expiration_time - now;
+	double lifetime_frac = param_double( "DELEGATE_JOB_GSI_CREDENTIALS_RENEWAL", 0.25,0,1);
+	return now + (time_t)floor(lifetime*lifetime_frac);
+}
+
+void
+GetDelegatedProxyRenewalTime(ClassAd *jobAd)
+{
+	GetDelegatedProxyRenewalTime(GetDesiredDelegatedJobCredentialExpiration(jobAd));
 }

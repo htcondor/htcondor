@@ -32,151 +32,145 @@
 
 <?php
 
-   $db = mysql_connect(WEB_DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
-   mysql_select_db(DB_NAME) or die("Could not select database");
+$db = mysql_connect(WEB_DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
+mysql_select_db(DB_NAME) or die("Could not select database");
 
-   include "last.inc";
+include "last.inc";
 
-	// 
-	// need to have the branch if we get a request for a test history
-	// Test-history.php?branch=xxxxx&test=yyyyyy
-	//
+// 
+// need to have the branch if we get a request for a test history
+// Test-history.php?branch=xxxxx&test=yyyyyy
+//
 
-	$query_branch="
-		
-		SELECT 
-  			LEFT(description,
-       		(IF(LOCATE('branch-',description),
-         	LOCATE('branch-',description)+5,
-         	(IF(LOCATE('trunk-',description),
-            LOCATE('trunk-',description)+4,
-            CHAR_LENGTH(description)))))) AS branch
-		FROM 
-  			Run 
-		WHERE 
-  			runid=$runid";
-	
-	$result = mysql_query($query_branch) or die ("Query ".$query_branch." failed : " . mysql_error());
-	
-	$row = mysql_fetch_array($result);
-	$branch = $row["branch"];
+$query_branch="SELECT 
+                        LEFT(description,
+                             (IF(LOCATE('branch-',description),
+                                 LOCATE('branch-',description)+5,
+                                 (IF(LOCATE('trunk-',description),
+                                     LOCATE('trunk-',description)+4,
+                                     CHAR_LENGTH(description)))))) AS branch
+                FROM 
+                        Run 
+                WHERE 
+                        runid=$runid";
+        
+$result = mysql_query($query_branch) or die ("Query ".$query_branch." failed : " . mysql_error());
+
+$row = mysql_fetch_array($result);
+$branch = $row["branch"];
 
 
-   $sql = "SELECT host, gid, UNIX_TIMESTAMP(start) AS start ".
-          "  FROM Run ".
-          " WHERE Run.runid = $build_id".
-          "   AND Run.user = '$user'";
-   $result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
-   $row = mysql_fetch_array($result);
-   $host  = $row["host"];
-   $gid   = $row["gid"];
-   $start = $row["start"];
-   mysql_free_result($result);
+$sql = "SELECT host, gid, UNIX_TIMESTAMP(start) AS start
+        FROM Run
+        WHERE Run.runid = $build_id
+          AND Run.user = '$user'";
 
-   echo "<h1><a href=\"./Run-condor.php\" class=\"title\">Condor Latest Build/Test Results</a> ".
-        ":: ".ucfirst($type)."s for Build ID $runid $branch (".date("m/d/Y", $start).")</h1>\n";
+$result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+$row = mysql_fetch_array($result);
+$host  = $row["host"];
+$gid   = $row["gid"];
+$start = $row["start"];
+mysql_free_result($result);
 
-   //
-   // Platforms
-   //
-   // Original platforms we actually built on
-   $sql = "SELECT DISTINCT(platform) AS platform ".
-          "  FROM Run, Task ".
-          " WHERE Task.runid = $runid ".
-          "   AND Task.runid = Run.runid ".
-          //"   AND Run.user = '$user' ".
-          "   AND Run.user = '$user' ";
-          //"   AND Task.platform != 'local' ".
-          //" ORDER BY (IF (platform='local', 'zzz', platform))";
-   $result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
-   $platforms = Array();
-   while ($row = mysql_fetch_array($result)) {
-      	$tmpp = $platforms[] = $row["platform"];
-		//echo "<H3>$tmpp</H3>";
-   }
-   mysql_free_result($result);
+echo "<h1><a href=\"./Run-condor.php\" class=\"title\">Condor Latest Build/Test Results</a> " .
+     ":: ".ucfirst($type)."s for Build ID $runid $branch (".date("m/d/Y", $start).")</h1>\n";
+
+//
+// Platforms
+//
+// Original platforms we actually built on
+$sql = "SELECT DISTINCT(platform) AS platform
+        FROM Run, Task
+        WHERE Task.runid = $runid
+          AND Task.runid = Run.runid
+          AND Run.user = '$user' ";
+//"   AND Task.platform != 'local' ".
+//" ORDER BY (IF (platform='local', 'zzz', platform))";
+$result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+$platforms = Array();
+while ($row = mysql_fetch_array($result)) {
+  $tmpp = $platforms[] = $row["platform"];
+  //echo "<H3>$tmpp</H3>";
+}
+mysql_free_result($result);
    
-   //
-   // Build
-   //
-   $runids = Array();
-   if ($type == 'build') {
-      $sql = "SELECT DISTINCT(Task.name) AS name ".
-             "  FROM Task ".
-             " WHERE Task.runid = $runid ".
-             " ORDER BY Task.name ASC";
-      $runids[] = $runid;
-   //
-   // Test
-   //
-   } elseif ($type == 'test') {
-      $sql = "SELECT DISTINCT(Task.name) AS name ".
-             "  FROM Task, Method_nmi ".
-             " WHERE Task.runid = Method_nmi.runid ".
-             "   AND Method_nmi.input_runid = $runid ".
-             " ORDER BY Task.name ASC";
+$runids = Array();
+if ($type == 'build') {
+  $sql = "SELECT DISTINCT(Task.name) AS name ".
+    "  FROM Task ".
+    " WHERE Task.runid = $runid ".
+    " ORDER BY Task.start ASC";
+  $runids[] = $runid;
+}
+elseif ($type == 'test') {
+  $sql = "SELECT DISTINCT(Task.name) AS name ".
+    "  FROM Task, Method_nmi ".
+    " WHERE Task.runid = Method_nmi.runid ".
+    "   AND Method_nmi.input_runid = $runid ".
+    " ORDER BY Task.start ASC";
              
-      //
-      // We also need runids
-      //
-      $runid_sql = "SELECT DISTINCT Method_nmi.runid ".
-                   "  FROM Method_nmi, Run ".
-                   " WHERE Method_nmi.input_runid = $runid ".
-                   "   AND Run.runid = Method_nmi.runid ".
-		   		   "  AND (component_version = project_version or ( component_version = 'native'))".
-                   "   AND Run.user = '$user' ";
-      $result = mysql_query($runid_sql) or die ("Query $runid_sql failed : " . mysql_error());
-      while ($row = mysql_fetch_array($result)) {
-         $tmp = $runids[] = $row["runid"];
-		 //echo "<H3>$tmp</H3>";
-		 //echo "<H3>$tmp, $row["component_version"], $row["platform"]</H3>";
-      }
-      mysql_free_result($result);
+  //
+  // We also need runids
+  //
+  $runid_sql = "SELECT DISTINCT Method_nmi.runid ".
+    "  FROM Method_nmi, Run ".
+    " WHERE Method_nmi.input_runid = $runid ".
+    "   AND Run.runid = Method_nmi.runid ".
+    "   AND (component_version = project_version or ( component_version = 'native'))".
+    "   AND Run.user = '$user' ";
+  $result = mysql_query($runid_sql) or die ("Query $runid_sql failed : " . mysql_error());
+  while ($row = mysql_fetch_array($result)) {
+    $tmp = $runids[] = $row["runid"];
+    //echo "<H3>$tmp</H3>";
+    //echo "<H3>$tmp, $row["component_version"], $row["platform"]</H3>";
+  }
+  mysql_free_result($result);
       
-   //
-   // Unknown
-   //
-   } else {
-      die("Unsupported parameter type=$type");
-   }
+}
+else {
+  // Type is unknown
+  die("Unsupported parameter type=$type");
+}
    
-   $result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
-   while ($row = mysql_fetch_array($result)) {
-      $task_name = $row["name"];
-	  //echo "<H3>$tmp</H3>";
-   
-      //
-      // Now for each task, get the status from the platforms
-      //
-      $sql = "SELECT platform, result, runid ".
-             "  FROM Task ".
-             " WHERE Task.runid IN (".implode(",", $runids).") ".
-             "   AND Task.name = '$task_name'";
-      $task_result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
-      while ($task_row = mysql_fetch_array($task_result)) {
-         $platform = $task_row["platform"];
-         $platform_runids[$platform] = $task_row["runid"];
-         $result_value = $task_row["result"];
-         
-         if (is_null($result_value)) {
-            $result_value = PLATFORM_PENDING;
-            $platform_status[$platform] = PLATFORM_PENDING;
-            $task_status[$task_name] = PLATFORM_PENDING;
-         } elseif ($result_value) {
-            $platform_status[$platform] = PLATFORM_FAILED;
-            $task_status[$task_name] = PLATFORM_FAILED;
-         } elseif (!$platform_status[$platform]) {
-            $platform_status[$platform] = PLATFORM_PASSED;
-         }
-         if (!$task_status[$task_name]) {
-            $task_status[$task_name] = PLATFORM_PASSED;
-         }
-         $data[$row["name"]][$task_row["platform"]] = $result_value;
-      } // WHILE
-      mysql_free_result($task_result);
-   } // WHILE
-   mysql_free_result($result);
-   // need to lookup location later.....mysql_close($db);
+$result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+while ($row = mysql_fetch_array($result)) {
+  $task_name = $row["name"];
+  //echo "<H3>$tmp</H3>";
+  
+  //
+  // Now for each task, get the status from the platforms
+  //
+  $sql = "SELECT platform, result, runid ".
+    "  FROM Task ".
+    " WHERE Task.runid IN (".implode(",", $runids).") ".
+    "   AND Task.name = '$task_name'";
+  $task_result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+  while ($task_row = mysql_fetch_array($task_result)) {
+    $platform = $task_row["platform"];
+    $platform_runids[$platform] = $task_row["runid"];
+    $result_value = $task_row["result"];
+    
+    if (is_null($result_value)) {
+      $result_value = PLATFORM_PENDING;
+      $platform_status[$platform] = PLATFORM_PENDING;
+      $task_status[$task_name] = PLATFORM_PENDING;
+    }
+    elseif ($result_value) {
+      $platform_status[$platform] = PLATFORM_FAILED;
+      $task_status[$task_name] = PLATFORM_FAILED;
+    }
+    elseif (!$platform_status[$platform]) {
+      $platform_status[$platform] = PLATFORM_PASSED;
+    }
+    if (!$task_status[$task_name]) {
+      $task_status[$task_name] = PLATFORM_PASSED;
+    }
+    $data[$row["name"]][$task_row["platform"]] = $result_value;
+  } // WHILE
+  mysql_free_result($task_result);
+} // WHILE
+mysql_free_result($result);
+// need to lookup location later.....mysql_close($db);
    
 ?>
 
@@ -184,93 +178,99 @@
 <tr>
    <td>Name</td>
 <?php
-	// show link to run directory for each platform
-   foreach ($platforms AS $platform) {
-      $display = $platform;
-	  if( $display == 'local') {
-	  } else {
-      	$idx = strpos($display, "_");
-      	$display[$idx] = " ";
-	  }
-		$filepath = "";
-   
-   	// have to lookup the file location now
-		$loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
-		$loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
-		while( $locrow = mysql_fetch_array($loc_query_res) ) {
-			$filepath = $locrow["filepath"];
-			$mygid = $locrow["gid"];
-		}
+// show link to run directory for each platform
+foreach ($platforms AS $platform) {
+  // We will remove 'nmi:' from the front of the platform and also split it 
+  // onto two separate lines because the length of the header determines the
+  // width of the resulting table column.
+  $display = preg_replace("/nmi:/", "", $platform);
+  $display = preg_replace("/_/", "_ ", $display, 1);
 
-		$display = "<a href=\"$filepath/$mygid/userdir/$platform/\" ".
-                 "title=\"View Run Directory\">$display</a>";
-      echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
-   } // FOREACH 
+   
+  // have to lookup the file location now
+  $filepath = "";
+  $loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
+  $loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
+  while( $locrow = mysql_fetch_array($loc_query_res) ) {
+    $filepath = $locrow["filepath"];
+    $mygid = $locrow["gid"];
+  }
+  
+  # Get the queue depth for the platform if it is pending
+  $queue_depth = "";
+  if($platform_status[$platform] == PLATFORM_PENDING) {
+    $ret = get_queue_for_nmi_platform($platform, $type);
+    $queue_depth = $ret[1];
+  }
+
+  $display = "<a href=\"$filepath/$mygid/userdir/$platform/\" title=\"View Run Directory\">$display</a>";
+  echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display $queue_depth</td>\n";
+} // FOREACH 
 ?>
 <tr>
    <td>Results</td>
 <?php
-	// show link to results for each platform
-   foreach ($platforms AS $platform) {
-      $display = $platform;
-      $idx = strpos($display, "_");
-      $display[$idx] = " ";
-		$filepath = "";
-   
-   	// have to lookup the file location now
-		$loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
-		$loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
-		while( $locrow = mysql_fetch_array($loc_query_res) ) {
-			$filepath = $locrow["filepath"];
-			$mygid = $locrow["gid"];
-		}
+// show link to results for each platform
+foreach ($platforms AS $platform) {
+  $display = $platform;
+  $idx = strpos($display, "_");
+  $display[$idx] = " ";
+  $filepath = "";
+  
+  // have to lookup the file location now
+  $loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
+  $loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
+  while( $locrow = mysql_fetch_array($loc_query_res) ) {
+    $filepath = $locrow["filepath"];
+    $mygid = $locrow["gid"];
+  }
 
-		$display = "<a href=\"$filepath/$mygid/userdir/$platform/results.tar.gz\" ".
-                 "title=\"View Run Directory\">click</a>";
-      echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
-   } // FOREACH 
-   foreach ($data AS $task => $arr) {
-   	if ($type == 'test') {
-			$history_url = sprintf(HISTORY_URL,$branch,rawurlencode($task));
-			$history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
-      	echo "<tr>\n".
-           "<td ".($task_status[$task] != PLATFORM_PASSED ? 
-                  "class=\"".$task_status[$task]."\"" : "").">".
-                  "<span title=\"$task\">$history_disp</span></td>\n";
-		} else {
-      	echo "<tr>\n".
-           "<td ".($task_status[$task] != PLATFORM_PASSED ? 
-                  "class=\"".$task_status[$task]."\"" : "").">".
-                  "<span title=\"$task\">".limitSize($task, 30)."</span></td>\n";
-		}
-      foreach ($platforms AS $platform) {
-         $result = $arr[$platform];
-         if ($result == PLATFORM_PENDING) {
-            echo "<td align=\"center\" class=\"{$result}\">-</td>\n";
-         } else {
-            if ($result == '') {
-               echo "<td align=\"center\">&nbsp;</td>\n";
-            } else {
-               $display = "<a href=\"http://$host/results/Run-condor-taskdetails.php?platform={$platform}&task=".urlencode($task)."&runid=".$platform_runids[$platform]. "\">$result</a>";
-               echo "<td class=\"".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."\" ".
-                    "align=\"center\"><B>$display</B></td>\n";
-            }
-            
-         }
+  $display = "<a href=\"$filepath/$mygid/userdir/$platform/results.tar.gz\" title=\"View Run Directory\">click</a>";
+  echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
+} // FOREACH 
+foreach ($data AS $task => $arr) {
+  if ($type == 'test') {
+    $history_url = sprintf(HISTORY_URL,$branch,rawurlencode($task));
+    $history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
+    echo "<tr>\n".
+      "<td ".($task_status[$task] != PLATFORM_PASSED ? 
+              "class=\"".$task_status[$task]."\"" : "").">".
+      "<span title=\"$task\">$history_disp</span></td>\n";
+  }
+  else {
+    echo "<tr>\n".
+      "<td ".($task_status[$task] != PLATFORM_PASSED ? 
+              "class=\"".$task_status[$task]."\"" : "").">".
+      "<span title=\"$task\">".limitSize($task, 30)."</span></td>\n";
+  }
+  foreach ($platforms AS $platform) {
+    $result = $arr[$platform];
+    if ($result == PLATFORM_PENDING) {
+      echo "<td align=\"center\" class=\"{$result}\">-</td>\n";
+    }
+    else {
+      if ($result == '') {
+        echo "<td align=\"center\">&nbsp;</td>\n";
       }
-      echo "</td>\n";
-   } // FOREACH
-   echo "</table>";
-
-   function limitSize($str, $cnt) {
-      if (strlen($str) > $cnt) {
-         $str = substr($str, 0, $cnt - 3)."...";
+      else {
+        $display = "<a href=\"http://$host/results/Run-condor-taskdetails.php?platform={$platform}&task=".urlencode($task)."&type=".$type."&runid=".$platform_runids[$platform]. "\">$result</a>";
+        echo "<td class=\"".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."\" align=\"center\"><B>$display</B></td>\n";
       }
-      return ($str);
-   }
+    }
+  }
+  echo "</td>\n";
+} // FOREACH
+echo "</table>";
 
-   // done looking up locations.....mysql_close($db);
-   mysql_close($db);
+function limitSize($str, $cnt) {
+  if (strlen($str) > $cnt) {
+    $str = substr($str, 0, $cnt - 3)."...";
+  }
+  return ($str);
+}
+
+// done looking up locations.....mysql_close($db);
+mysql_close($db);
 ?>
 </body>
 </html>

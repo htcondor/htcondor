@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -25,5 +25,5 @@ condor_static_lib( ckpt_server_api "network2.cpp;network2.h;${ServerAPISrcs}" )
 if(STD_UNIVERSE)
 	condor_selective_glob("server_file*" unusedSrcs )
 	condor_glob( HeaderFiles SourceFiles "${ServerAPISrcs};${unusedSrcs}" )
-	condor_exe( condor_ckpt_server "${HeaderFiles};${SourceFiles}" ${C_SBIN} "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${PCRE_FOUND}")
+	condor_exe( condor_ckpt_server "${HeaderFiles};${SourceFiles}" ${C_SBIN} "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${PCRE_FOUND}" OFF )
 endif(STD_UNIVERSE)

@@ -20,11 +20,7 @@
 #ifndef MY_HOSTNAME_H
 #define MY_HOSTNAME_H
 
-#if defined( __cplusplus )
-extern "C" {
-#endif
-
-// every func here is obsolete.
+// every func here will be obsolete.
 extern	char*	my_hostname( void );
 extern	char*	my_full_hostname( void );
 extern	unsigned int	my_ip_addr( void );
@@ -33,12 +29,9 @@ extern	char*	my_ip_string( void );
 extern  void	init_full_hostname( void );
 extern  void	init_ipaddr( int config_done );
 
-#if defined( __cplusplus )
-}
-#endif
-
-#if defined( __cplusplus )
 #include "stream.h"
+#include <string>
+#include <set>
 
 // If the specified attribute name is recognized as an attribute used
 // to publish a daemon IP address, this function replaces any
@@ -66,6 +59,10 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char **expr_string,Stream&
 // and modifies its contents.
 void ConvertDefaultIPToSocketIP(char const *attr_name,std::string &expr_string,Stream& s);
 
-#endif
+bool network_interface_to_ip(
+	char const *interface_param_name,
+	char const *interface_pattern,
+	std::string &ip,
+	std::set< std::string > *network_interface_ips = NULL);
 
 #endif /* MY_HOSTNAME_H */

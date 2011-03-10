@@ -127,13 +127,11 @@ static MyString
 	invalid_dir,
 	empty_dir,
 	full_dir,
-	file_dir;
+	file_dir,
+	tmp;
 
 static const char
 	*readme = "README";
-
-static char
-	tmp[5];
 
 static time_t current_time;
 
@@ -261,11 +259,11 @@ static void setup() {
 	original_dir += DIR_DELIM_CHAR;
 	
 	//Directory strings
-	cut_assert_gz( sprintf(tmp, "tmp%c", DIR_DELIM_CHAR) );
+	cut_assert_true( tmp.sprintf("testtmp%d", getpid()) );
 	
 	//Make a temporary directory to test
-	cut_assert_z( mkdir("tmp", 0700) );
-	cut_assert_z( chdir("tmp") );
+	cut_assert_z( mkdir(tmp.Value(), 0700) );
+	cut_assert_z( chdir(tmp.Value()) );
 	
 	//Store some directories
 	cut_assert_true( condor_getcwd(tmp_dir) );
@@ -321,7 +319,7 @@ static void setup() {
 
 static void cleanup() {
 	//Remove the created files/directories/symlinks
-	cut_assert_z( chdir("tmp") );
+	cut_assert_z( chdir(tmp.Value()) );
 	cut_assert_z( rmdir("empty_dir") );
 	cut_assert_z( remove("symlink_file") );
 	cut_assert_z( remove("symlink_dir") );
@@ -337,7 +335,7 @@ static void cleanup() {
 	chdir("..");
 
 	cut_assert_z( close(fd) );
-	cut_assert_z( rmdir("tmp") );
+	cut_assert_z( rmdir(tmp.Value()) );
 }
 
 static bool test_path_constructor_null() {

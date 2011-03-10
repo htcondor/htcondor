@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -654,7 +654,7 @@ char * generate_reg_key_attr_name(const char * pszPrefix, const char * pszKeyNam
 	memcpy(pszAttr + cchPrefix, psz, cch);
 	pszAttr[cchPrefix + cch] = 0;
 
-	// a bit of a special case, if the keyname ends in a \
+	// a bit of a special case, if the keyname ends in a "\"
 	// pretend that the last slash isn't there.
 	//
 	if (cch > 1 && pszAttr[cchPrefix + cch-1] == '\\')
@@ -804,7 +804,7 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 		// We don't want this inserted into the public ad automatically
 	if( IS_UPDATE(how_much) || IS_TIMEOUT(how_much) ) {
-		cp->Assign( ATTR_LAST_BENCHMARK, m_last_benchmark );
+		cp->Assign( ATTR_LAST_BENCHMARK, (unsigned)m_last_benchmark );
 	}
 
 
@@ -812,7 +812,8 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 		cp->Assign( ATTR_TOTAL_LOAD_AVG, rint(m_load * 100) / 100.0);
 		
-		cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG, rint(m_condor_load * 100) / 100.0);
+		cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG,
+					rint(m_condor_load * 100) / 100.0);
 		
 		cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
 
@@ -821,85 +822,10 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 
 }
 
-
 void
-MachAttributes::benchmark( Resource* rip, int force )
+MachAttributes::start_benchmarks( Resource* rip, int &count )
 {
-
-	if( ! force ) {
-		if( rip->state() != unclaimed_state &&
-			rip->activity() != idle_act ) {
-			dprintf( D_ALWAYS, 
-					 "Tried to run benchmarks when not idle, aborting.\n" );
-			return;
-		}
-			// Enter benchmarking activity
-		dprintf( D_ALWAYS, "State change: %s is TRUE\n", 
-				 ATTR_RUN_BENCHMARKS );
-		rip->change_state( benchmarking_act );
-	}
-
-		// The MIPS calculation occassionally returns a negative number.
-		// Our best guess for the cause is that times() is returning a
-		// smaller value after the calculation than before. So we
-		// explicitly check for that here and log what we see.
-		// See condor-admin #14595
-	dprintf( D_FULLDEBUG, "About to compute mips\n" );
-#ifndef WIN32
-	struct tms before, after;
-	times(&before);
-#endif
-	int new_mips_calc = sysapi_mips();
-#ifndef WIN32
-	times(&after);
-#endif
-	dprintf( D_FULLDEBUG, "Computed mips: %d\n", new_mips_calc );
-	if ( new_mips_calc <= 0 ) {
-		dprintf( D_ALWAYS, "Non-positive MIPS calculated!\n" );
-#ifndef WIN32
-		dprintf( D_ALWAYS, "   ticks before: %ld, ticks after: %ld\n",
-			 (long)before.tms_utime, (long)after.tms_utime );
-#endif
-	}
-
-	if ( m_mips == -1 ) {
-			// first time we've done benchmarks
-		m_mips = new_mips_calc;
-	} else if ( new_mips_calc > 0 ) {
-			// compute a weighted average,
-			// but only if our new calculation is positive
-		m_mips = (m_mips * 3 + new_mips_calc) / 4;
-	}
-
-	dprintf( D_FULLDEBUG, "About to compute kflops\n" );
-	int new_kflops_calc = sysapi_kflops();
-	dprintf( D_FULLDEBUG, "Computed kflops: %d\n", new_kflops_calc );
-	if ( m_kflops == -1 ) {
-			// first time we've done benchmarks
-		m_kflops = new_kflops_calc;
-	} else {
-			// compute a weighted average
-		m_kflops = (m_kflops * 3 + new_kflops_calc) / 4;
-	}
-
-	dprintf( D_FULLDEBUG, "recalc:DHRY_MIPS=%d, CLINPACK KFLOPS=%d\n",
-			 m_mips, m_kflops);
-
-	m_last_benchmark = (int)time(NULL);
-
-	if( ! force ) {
-		// Update all ClassAds with this new value for LastBenchmark.
-		resmgr->refresh_benchmarks();
-
-		dprintf( D_ALWAYS, "State change: benchmarks completed\n" );
-		rip->change_state( idle_act );
-	}
-}
-
-
-void
-deal_with_benchmarks( Resource* rip )
-{
+	count = 0;
 	ClassAd* cp = rip->r_classad;
 
 	if( rip->isSuspendedForCOD() ) {
@@ -908,13 +834,44 @@ deal_with_benchmarks( Resource* rip )
 		return;
 	}
 
+	// This should be a bool, but EvalBool() expects an int
 	int run_benchmarks = 0;
-	if( cp->EvalBool( ATTR_RUN_BENCHMARKS, cp, run_benchmarks ) == 0 ) {
+	if ( cp->EvalBool( ATTR_RUN_BENCHMARKS, cp, run_benchmarks ) == 0 ) {
 		run_benchmarks = 0;
 	}
+	if ( !run_benchmarks ) {
+		return;
+	}
 
-	if( run_benchmarks ) {
-		resmgr->m_attr->benchmark( rip );
+	dprintf( D_ALWAYS,
+			 "State change: %s is TRUE\n", ATTR_RUN_BENCHMARKS );
+
+	if(  (rip->state() != unclaimed_state)  &&
+		 (rip->activity() != idle_act)      ) {
+		dprintf( D_ALWAYS,
+				 "Tried to run benchmarks when not idle, aborting.\n" );
+		return;
+	}
+
+	ASSERT( bench_job_mgr != NULL );
+	bench_job_mgr->StartBenchmarks( rip, count );
+
+	// Enter benchmarking activity
+	if ( count ) {
+		rip->change_state( benchmarking_act );
+	}
+}
+
+void
+MachAttributes::benchmarks_finished( Resource* rip )
+{
+	// Update all ClassAds with this new value for LastBenchmark.
+	m_last_benchmark = time(NULL);
+	resmgr->refresh_benchmarks();
+
+	dprintf( D_ALWAYS, "State change: benchmarks completed\n" );
+	if( rip->activity() == benchmarking_act ) {
+		rip->change_state( idle_act );
 	}
 }
 

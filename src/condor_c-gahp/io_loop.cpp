@@ -227,7 +227,7 @@ main_init( int argc, char ** const argv )
 
 		(void)daemonCore->Register_Pipe (workers[i].result_buffer.getPipeEnd(),
 										 "result pipe",
-										 (PipeHandlercpp)&Worker::result_handler,
+										 static_cast<PipeHandlercpp>(&Worker::result_handler),
 										 "Worker::result_handler",
 										 (Service*)&workers[i]);
 	}

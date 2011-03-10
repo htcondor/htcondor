@@ -74,7 +74,7 @@ CSysinfo::CSysinfo()
 			EXCEPT("cannot get address for NtClose");
 		}
 
-		memptr = (DWORD*)VirtualAlloc ((void*)0x100000, 
+		memptr = (DWORD*)VirtualAlloc (NULL, 
 						memptr_size, 
 						MEM_COMMIT,
 						PAGE_READWRITE); 
@@ -464,7 +464,7 @@ DWORD* CSysinfo::NextBlock (DWORD* oldblock)
 	if ( need_resize ) {
 		VirtualFree (memptr, 0, MEM_RELEASE);
 		memptr_size += 0x10000;		// grow our buffer another 64kbytes
-		memptr = (DWORD*)VirtualAlloc ((void*)0x100000, 
+		memptr = (DWORD*)VirtualAlloc (NULL, 
 						memptr_size, 
 						MEM_COMMIT,
 						PAGE_READWRITE); 

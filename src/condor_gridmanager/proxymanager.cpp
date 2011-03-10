@@ -177,6 +177,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 	ProxySubject *proxy_subject = NULL;
 	char *subject_name = NULL;
 	char *fqan = NULL;
+	char *email = NULL;
 	std::string proxy_path;
 	std::string owner;
 	char *param_str = NULL;
@@ -199,6 +200,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		// Special handling for "use best proxy"
 		job_ad->LookupString( ATTR_X509_USER_PROXY_FQAN, &fqan );
 		job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, &subject_name );
+		job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, &email );
 		if ( subject_name ) {
 			if ( fqan == NULL ) {
 				fqan = strdup( subject_name );
@@ -211,6 +213,10 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 				// create a new ProxySubject and fill it out
 				proxy_subject = new ProxySubject;
 				proxy_subject->subject_name = strdup( subject_name );
+				if (email)
+					proxy_subject->email = strdup( email );
+				else
+					proxy_subject->email = NULL;
 				proxy_subject->fqan = strdup( fqan );
 				proxy_subject->has_voms_attrs = has_voms_attrs;
 
@@ -246,6 +252,8 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 				}
 			}
 			free( subject_name );
+			if ( email )
+				free( email );
 			free( fqan );
 			return proxy;
 
@@ -540,6 +548,8 @@ ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 
 			SubjectsByName.remove( HashKey(proxy_subject->fqan) );
 			free( proxy_subject->subject_name );
+			if ( proxy_subject->email )
+				free( proxy_subject->email );
 			free( proxy_subject->fqan );
 			delete proxy_subject;
 		}
@@ -829,11 +839,15 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 
 	// Create temporary file to store myproxy-get-delegation's stderr
 	myProxyEntry->get_delegation_err_filename = create_temp_file();
-	chmod (myProxyEntry->get_delegation_err_filename, 0600);
-	myProxyEntry->get_delegation_err_fd = safe_open_wrapper(myProxyEntry->get_delegation_err_filename,O_RDWR);
-	if (myProxyEntry->get_delegation_err_fd == -1) {
-		dprintf (D_ALWAYS, "Error opening file %s\n",
-				 myProxyEntry->get_delegation_err_filename);
+	if(!myProxyEntry->get_delegation_err_filename) {
+		dprintf( D_ALWAYS, "Failed to create temp file");
+	} else {
+		chmod (myProxyEntry->get_delegation_err_filename, 0600);
+		myProxyEntry->get_delegation_err_fd = safe_open_wrapper(myProxyEntry->get_delegation_err_filename,O_RDWR);
+		if (myProxyEntry->get_delegation_err_fd == -1) {
+			dprintf (D_ALWAYS, "Error opening file %s\n",
+					 myProxyEntry->get_delegation_err_filename);
+		}
 	}
 
 

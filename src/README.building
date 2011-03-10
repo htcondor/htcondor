@@ -1,6 +1,6 @@
 
 This file is intended to describe the steps needed to build Condor version
-7.0.0 and later from the source code tree.
+7.5.5 and later from the source code tree.
 
 
 ==================================
@@ -21,6 +21,7 @@ We cannot make any claims about the ability to compile Condor with any
 other compilers or other versions of gcc.
 
 Building Condor on Unix also requires the following utilities:
+- cmake (2.8.3 or greater)
 - GNU autoconf and autoheader (2.59 or greater), automake
 - GNU make
 - GNU tar (1.13 or higher)
@@ -46,34 +47,21 @@ External software packages
 ==================================
 
 On both UNIX and Windows, the Condor build depends on some external
-software packages (Globus, zlib, etc).  These external dependencies
-are now included with the Condor source in an "externals" directory.
-The Condor build system takes care of building these software
-dependencies and configuring itself to use them, but it is important
-to understand that this step is taking place.
+software packages (Globus, zlib, etc).  There are two methods for
+getting and linking against these external libraries.  The one
+supported in this document is to have the build system download
+and compile packages plus patches from the UW external collection.
+The other method is to configure the build as a 'proper' build that
+uses native libraries from the system.  The rest of this document
+will assume the former approach.
 
 The specific versions of each external software package used for a
-given version of Condor are listed in the src/configure.ac file
-(search for instances of the "CONDOR_EXTERNAL_VERSION" macro), and
-depend on what platform you are building on.  Generally, these
-versions do not change frequently when new versions of Condor are
-released.  When they do change, the new version of the external
-software package is listed in the Condor release notes.
+given version of Condor are listed in the
+build/cmake/CondorConfigure.cmake file (search for instances of the
+"CONDOR_EXTERNAL_DIR" macro), and depend on what platform you are
+building on.  Generally, these versions do not change frequently when
+new versions of Condor are released.
 
-Some of these external software packages are quite large, and building
-them all can take a considerable amount of time (a few hours, even on
-a fast computer with plenty of RAM).  It is possible to save the
-"externals" directory tree on a given platform and re-use the
-pre-built libraries with another build of the Condor source.  You can
-re-use a pre-built externals tree by specifying
-"--with-externals=/full/path/to/externals/tree" as an argument to the
-"configure" step in the Condor build process (see below).
-
-Keep in mind that the externals tree involves platform-specific,
-compiled output (library files) and can NOT be shared across build
-platforms.  If you are building Condor for different platforms, you
-can not share a single copy of the externals tree, you must have a
-separate copy for each target platform.
 
 
 ==================================
@@ -84,27 +72,29 @@ BUILDING CONDOR ON UNIX
 along with the other required tools described above.
 
 2) The source release of Condor should contain the following
-directories: config, imake, and src.  It may be necessary to edit the
-files in the config directory to match your environment.  In
-particular, the site-specific config file named "site.def" is of
-possible interest.
+directories: build, externals and src.  It may be necessary to edit
+the files in build/cmake to match your environment.  In particular,
+SystemSpecificInformations.cmake is of possible interest.
 
-3) cd into the src directory
+3) Run "./configure_uw".
 
-4) Run "./build_init".  This will test for the required versions of
-the GNU autoconf tools and run them.
+In case of problems, additional arguments may need to be passed to
+cmake by appending them to the command-line to configure_uw.  On most
+common platforms, no additional build options are required. For other
+platforms, there are several ways to explore the build options:
 
-5) Run "./configure".  You can use "./configure --help" for a list of
-supported options.  NOTE: the Condor build does not yet make full use
-of the GNU autoconf system, so some configure options (such as
-"--prefix") will be ignored.
+    * ccmake
+    * cmake-gui
+    * cmake -i
+    * nmi_tools/glue/SubmitInfo.pm, which shows the build options that
+      are used to build Condor on a wide variety of platforms in the
+      NMI build system.
 
-6) Run "make" to build all the modules, and/or "make release" to build
-all the modules, create a src/release_dir directory, and copy all the
-Condor release files into the release_dir.  The files in src/release_dir
-will be dynamically linked with debugging information.  You can enter
-"make public" to create additional subdirectories with stripped
-dynamic and statically linked binaries.
+4) Run "make" to build everything.  Additional make targets of interest:
+
+    * make install   (copy binaries to ./release_dir)
+    * make package   (create packages)
+
 
 
 ==================================
@@ -127,9 +117,9 @@ BUILDING CONDOR ON WIN32
 	others as well:
 
     + "src" - contains the source code (can be shared across Win32 and Unix)
-    + "config" - contains files to build Condor source on Unix
+    + "build" - contains cmake configuration files
     + "msconfig" - contains files to build Condor source on Win32
-	+ "externals" - contains source files to external packages that
+	+ "externals" - contains links to external packages that
 		Condor requires, such as OpenSSL, gSoap, etc; these external
 		packages will be built as part of the Condor build process.
 
@@ -146,7 +136,7 @@ BUILDING CONDOR ON WIN32
 	prepares the command line build environment for you. You do not need
 	Windows XP SP2 to build Condor, though 2000 or XP is recommended.
 
-	+ Look at .\msConfig\set_env.bat line 28 (the set PATH= statement),
+	+ Look at .\msconfig\set_env.bat line 28 (the set PATH= statement),
 	and make sure that the right directory name is specified for the
 	Platform SDK.
 
@@ -155,23 +145,39 @@ BUILDING CONDOR ON WIN32
 	SetEnv.cmd setenv.bat" in the platform SDK subdirectory.  Our build
 	scripts expect to find "setenv.bat".
 
-4. Now you are ready to compile Condor.  You can do this either via
-	the command-line, or via the Microsoft VisualStudio GUI IDE
-	environment.  If you want to simply build Condor from the
-	command-line, just do the following commands:
-    
-		 cd msconfig
-		 make
+4. Run "cmake-gui".
 
-	If you want to do a GUI build, do the following steps instead:
+5. Install perl if not already on your machine
 
-	+ Fire up the Visual Studio with Condor workspace, by issuing:
-     
-		run_msdev.bat
+    * http://www.activestate.com/activeperl/downloads 
 
-	This batch file will do a bunch of prep-work (building stub files, etc) and then
-	fire up VisualStudio w/ the Condor workspace open.
-	Do not start VisualStudio manually and use File->Open, it will not work!
+6. Install the lastest platform SDK and reopen the solution
+
+    * http://msdn.microsoft.com/en-us/windows/bb980924 
+
+7. Download and install WiX 3.0 on your windows machine
+
+    * http://wix.codeplex.com/ 
+
+8. Download and install 7-zip (you will need to add it to your PATH)
+
+    * http://www.7-zip.org/download.html 
+
+9. Patch your version of cmake/cpack to enable wix support by dropping
+the following into your cmake path. You may want to verify with a diff
+tool such as beyond compare when updating. NOTE: This patch is making
+it's way upstream, hopefully in the next point release.
+
+    * https://docs.google.com/leaf?id=0Bzq0eFfVveNqZTgxNjQyZmItNmEyNy00MWZlLTg2NTktMzJiYjljMDc3NTQ0&sort=name&layout=list&num=50 
+
+10.) Open Tools->Options under "Projects and Solutions" click on VC++
+Directories and add the following to the Executable directories
+
+    * $(SolutionDir)\msconfig
+    * Move $(PATH) to the bottom as sometimes C:\cygwin\bin is in the
+      $(PATH) which can cause issues with condor's bundled binaries.
+
+11.) Open and build. 
 
 	+ From inside of Visual C++, choose the menu option "Build/Set
 	Active Configuration...". Select the item at the top of the list,
@@ -179,10 +185,10 @@ BUILDING CONDOR ON WIN32
 
 	+ Now press F7 to build Condor.
 
-5. Once you have built a release release of Condor via step 4,
-	either via the command-line make.bat script or via VisualStudio, now
-	from the command prompt, cd back into the msconfig subdirectory.
-	From a command prompt in the msconfig directory, run:
+12. Once you have built a release of Condor,
+	now from the command prompt, cd back into the msconfig
+	subdirectory.  From a command prompt in the msconfig
+	directory, run:
 
     	dorelease <path-to-final-release-subdirectory> 
 
@@ -201,4 +207,3 @@ BUILDING CONDOR ON WIN32
 	
 
 Questions relating to Condor can be sent to condor-admin@cs.wisc.edu.
-

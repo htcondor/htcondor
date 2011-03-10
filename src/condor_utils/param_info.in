@@ -3668,6 +3668,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,collector
 id=197
 
+[CONDOR_VIEW_CLASSAD_TYPES]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Condor View Classad Types
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=collector,collector
+id=197
+
 [COLLECTOR_STATS_SWEEP]
 aliases=
 default=14400
@@ -4006,7 +4022,7 @@ id=218
 
 [GLITE_LOCATION]
 aliases=
-default=$(LIB)/glite
+default=$(LIBEXEC)/glite
 version=0.0.0
 range=.*
 state=default
@@ -7463,6 +7479,70 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=454
 
+[GROUP_ACCEPT_SURPLUS]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Group Accept Surplus
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
+[NEGOTIATOR_USE_SLOT_WEIGHTS]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Use Slot Weights
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
+[GROUP_QUOTA_MAX_ALLOCATION_ROUNDS]
+aliases=
+default=3
+version=0.0.0
+range=1,1000000000
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Group Quota Maximum Allocation Rounds
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
+[GROUP_QUOTA_ROUND_ROBIN_RATE]
+aliases=
+default=1.0e100
+version=0.0.0
+range=1.0,1.0e100
+state=default
+type=double
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Group Quota Round Robin Rate
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
 [STARTD_AD_REEVAL_EXPR]
 aliases=
 default=
@@ -9928,6 +10008,21 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=600
 
+[LOCAL_DISK_LOCK_DIR]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=/tmp-like directory to store lock files, /tmp/condorLocks is used otherwise
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=600
 
 [LOCK_DEBUG_LOG_TO_APPEND]
 aliases=
@@ -9944,3 +10039,83 @@ usage=
 url=
 tags=
 id=600
+
+[LOCAL_CONFIG_DIR_EXCLUDE_REGEXP]
+aliases=
+default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Local Config Dir Exclude Regex
+usage=
+url=
+tags=c++_util,condor_config
+id=601
+
+[PARROT]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Parrot
+usage=run job within parrot
+url=
+tags=parrot
+id=602
+
+[DELEGATE_JOB_GSI_CREDENTIALS_RENEWAL]
+aliases=
+default=0.25
+version=0.0.0
+range=0,1
+state=default
+type=double
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Delegate Job GSI Credentials Renewal
+usage=
+url=
+tags=
+id=601
+
+[DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME]
+aliases=
+default=86400
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Delegate Job GSI Credentials Lifetime
+usage=
+url=
+tags=
+id=601
+
+[SHADOW_CHECKPROXY_INTERVAL]
+aliases=
+default=600
+version=0.0.0
+range=1,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Shadow Check Proxy Interval
+usage=
+url=
+tags=
+id=601

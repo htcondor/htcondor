@@ -1,0 +1,14 @@
+###
+# The Condor config addon
+#
+###
+
+# where should condor_qpid write its log to? 
+QPID_LOG = $(LOG)/qpidLog
+
+# Where is the qpidd executable?
+QPID_EXEC = $(WHERE_IS_QPID)/sbin/qpidd
+
+#Where should the file containing the current qpid port be written to?
+QPID_PORT = /scratch/condor/QPID/meta/qpidPort
+

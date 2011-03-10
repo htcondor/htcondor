@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -31,7 +31,11 @@ if (NOT WINDOWS)
   # because of the external dependencies on classads we need to be careful to make it look like a normal install
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${EXTERNAL_STAGE}/include )
 
-  condor_selective_glob("attrrefs.*;new_classad.*;collection.*;collectionBase.*;new_classad_debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;new_classad_operators.*;query.*;sink.*;source.*;transaction.*;new_classad_util.*;new_classad_value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;cclassad.*;common.*" ClassadSrcs)
+  if (WANT_FULL_DEPLOYMENT)
+	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${C_INCLUDE} )
+  endif()
+
+  condor_selective_glob("attrrefs.*;classad.*;collection.*;collectionBase.*;debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;operators.*;query.*;sink.*;source.*;transaction.*;util.*;value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;cclassad.*;common.*" ClassadSrcs)
 
   add_library( classads STATIC ${ClassadSrcs} )
   set_target_properties( classads
@@ -43,7 +47,7 @@ if (NOT WINDOWS)
 else()
 	
 	# I should probably just add all and subtract tests.
-	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;new_classad*;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
+	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
 	add_library( classads STATIC ${ClassadSrcs} )
 	set_property( TARGET classads PROPERTY FOLDER "libraries" )
 
@@ -54,6 +58,11 @@ set( CLASSADS_FOUND classads )
 if (NOT PROPER)
   add_dependencies( classads pcre )
 endif(NOT PROPER)
+
+condor_exe_test(classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND}")
+
+condor_exe_test(classad_functional_tester "classad_functional_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND}")
+
 
 message (STATUS "external configured (CLASSADS_FOUND=${CLASSADS_FOUND})")
 set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )

@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -20,6 +20,6 @@ if (NOT WIN_EXEC_NODE_ONLY)
 
 	file( GLOB negotiatorRmvElements Example* )
 	condor_daemon( negotiator "${negotiatorRmvElements}"
-	"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" "${C_SBIN}" OFF )
+	"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${CONDOR_QMF}" "${C_SBIN}" OFF )
 
 endif(NOT WIN_EXEC_NODE_ONLY)

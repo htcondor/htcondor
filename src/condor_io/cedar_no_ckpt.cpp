@@ -615,7 +615,7 @@ ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
 }
 
 int
-ReliSock::put_x509_delegation( filesize_t *size, const char *source )
+ReliSock::put_x509_delegation( filesize_t *size, const char *source, time_t expiration_time, time_t *result_expiration_time )
 {
 	int in_encode_mode;
 
@@ -629,7 +629,7 @@ ReliSock::put_x509_delegation( filesize_t *size, const char *source )
 		return -1;
 	}
 
-	if ( x509_send_delegation( source, relisock_gsi_get, (void *) this,
+	if ( x509_send_delegation( source, expiration_time, result_expiration_time, relisock_gsi_get, (void *) this,
 							   relisock_gsi_put, (void *) this ) != 0 ) {
 		dprintf( D_ALWAYS, "ReliSock::put_x509_delegation(): delegation "
 				 "failed: %s\n", x509_error_string() );
@@ -710,11 +710,11 @@ int relisock_gsi_put(void *arg,  void *buf, size_t size)
     //if successful, send the data
     if ( stat ) {
         if ( !(stat = sock->code_bytes( buf, ((int) size )) ) ) {
-            dprintf( D_ALWAYS, "failure sending data (%d bytes) over sock\n",size);
+            dprintf( D_ALWAYS, "failure sending data (%lu bytes) over sock\n",(unsigned long)size);
         }
     }
     else {
-        dprintf( D_ALWAYS, "failure sending size (%d) over sock\n", size );
+        dprintf( D_ALWAYS, "failure sending size (%lu) over sock\n", (unsigned long)size );
     }
     
     sock->end_of_message();

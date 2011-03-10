@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "CondorError.h"
 
-#if !defined(SKIP_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/hmac.h>
@@ -270,16 +270,16 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk)
 		// Fill in the data for the seed keys.
     setup_seed(seed_ka, seed_kb);
 
-    sk->len = strlen((char *)sk->shared_key);
+    sk->len = strlen(const_cast<char *>(sk->shared_key));
 
 		// Generate the shared keys K and K'
     hmac((unsigned char *)sk->shared_key, sk->len, 
 		 seed_ka, AUTH_PW_KEY_LEN, 
-		 (unsigned char *)ka, &ka_len );
+		 const_cast<unsigned char *>(ka), &ka_len );
 
     hmac((unsigned char *)sk->shared_key, sk->len, 
 		 seed_kb, AUTH_PW_KEY_LEN, 
-		 (unsigned char *)kb, &kb_len );
+		 const_cast<unsigned char *>(kb), &kb_len );
 
 	free(seed_ka);
 	free(seed_kb);
@@ -902,8 +902,8 @@ Condor_Auth_Passwd::destroy_t_buf(struct msg_t_buf *t)
 }
 
 int
-Condor_Auth_Passwd::authenticate(const char * remoteHost, 
-								 CondorError* errstack)
+Condor_Auth_Passwd::authenticate(const char * /* remoteHost */, 
+								 CondorError* /* errstack */ )
 {
     int client_status = AUTH_PW_A_OK;
     int server_status = AUTH_PW_A_OK;
@@ -1151,7 +1151,7 @@ Condor_Auth_Passwd::calculate_hk(struct msg_t_buf *t_buf, struct sk_buf *sk)
 	
 		// Calculate the hmac using K as the key.
 	hmac( buffer, buffer_len,
-		  (unsigned char *)sk->ka, sk->ka_len,
+		  const_cast<unsigned char *>(sk->ka), sk->ka_len,
 		  t_buf->hk, &t_buf->hk_len);
 	if(t_buf->hk_len < 1) {
 		dprintf(D_SECURITY, "Error: hk hmac too short.\n");
@@ -1388,18 +1388,18 @@ int Condor_Auth_Passwd::server_receive_two(int *server_status,
 		// See if it's sane.
 	if(client_status == AUTH_PW_A_OK && *server_status == AUTH_PW_A_OK) {
 		if(rb_len == AUTH_PW_KEY_LEN 
-		   && strlen(a) == strlen(t_client->a)
+		   && a && strlen(a) == strlen(t_client->a)
 		   && a_len == (int)strlen(a)
 		   && !strcmp(a, t_client->a) 
 		   && !memcmp(rb, t_client->rb, AUTH_PW_KEY_LEN)) {
 			
 			t_client->hk = hk;
 			t_client->hk_len = hk_len;
-			if(a) free(a);
+			free(a);
 			if(rb) free(rb);
 			return client_status;
 		} else {
-			dprintf(D_SECURITY, "Received inconsisitent data.\n");
+			dprintf(D_SECURITY, "Received inconsistent data.\n");
 			*server_status = AUTH_PW_ERROR;
 		}
 	} else {
@@ -1420,8 +1420,10 @@ bool Condor_Auth_Passwd::calculate_hkt(msg_t_buf *t_buf, sk_buf *sk)
 	unsigned char *buffer;
 	int prefix_len, buffer_len;
 
-	dprintf(D_SECURITY, "Calculating hkt '%s' (%d), '%s' (%d).\n",
-			t_buf->a, strlen(t_buf->a), t_buf->b, strlen(t_buf->b));
+	if(t_buf && t_buf->a && t_buf->b)
+		dprintf(D_SECURITY, "Calculating hkt '%s' (%lu), '%s' (%lu).\n",
+			t_buf->a, (unsigned long)strlen(t_buf->a),
+			t_buf->b, (unsigned long)strlen(t_buf->b));
 		// Assemble the buffer to be hmac'd by concatentating T in
 		// buffer.  Then call hmac with ka.
 	if(!t_buf->a || !t_buf->b || !t_buf->ra || !t_buf->rb) {
@@ -1449,7 +1451,7 @@ bool Condor_Auth_Passwd::calculate_hkt(msg_t_buf *t_buf, sk_buf *sk)
 
 		// Calculate the hmac.
 	hmac( buffer, buffer_len, 
-		  (unsigned char *)sk->ka, sk->ka_len,
+		  const_cast<unsigned char *>(sk->ka), sk->ka_len,
 		  t_buf->hkt, &t_buf->hkt_len);
 	if(t_buf->hkt_len < 1) {  // Maybe should be larger!
 		dprintf(D_SECURITY, "Error: hmac returned zero length.\n");
@@ -1622,9 +1624,13 @@ int Condor_Auth_Passwd :: client_receive(int *client_status,
 
 int Condor_Auth_Passwd::client_send_one(int client_status, msg_t_buf *t_client)
 {
-	char *send_a = t_client->a;
-	unsigned char *send_b = t_client->ra;
-	int send_a_len = strlen(send_a);
+	char *send_a = 0;
+	unsigned char *send_b = 0;
+	
+	if(t_client && t_client->a) send_a = t_client->a;
+	if(t_client && t_client->ra) send_b = t_client->ra;
+	int send_a_len=0;
+	if(send_a) send_a_len = strlen(send_a);
 	int send_b_len = AUTH_PW_KEY_LEN;
 	char nullstr[2];
 
@@ -1742,7 +1748,7 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 
 		// Calculate W based on K'
 	hmac( t_buf->rb, AUTH_PW_KEY_LEN,
-		  (unsigned char *)sk->kb, sk->kb_len,
+		  const_cast<unsigned char *>(sk->kb), sk->kb_len,
 		  (unsigned char *)key, &key_len );
 
 	dprintf(D_SECURITY, "Key length: %d\n", key_len);
@@ -1757,4 +1763,4 @@ Condor_Auth_Passwd::set_session_key(struct msg_t_buf *t_buf, struct sk_buf *sk)
 
 
 
-#endif	// of if !defined(SKIP_AUTHENTICATION)
+#endif	// of if !defined(SKIP_AUTHENTICATION) && defined(HAVE_EXT_OPENSSL)

@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,7 +16,6 @@
  # 
  ############################################################### 
 
-
 file( GLOB DCRmvElements soap_daemon_core* condor_softkill*)
 
 condor_glob( DCHeaderFiles DCSourceFiles "${DCRmvElements};soap_core.cpp;mimetypes.cpp" )
@@ -27,10 +26,14 @@ if (GSOAP_SRC)
 	list(APPEND DCSourceFiles ${GSOAP_SRC} )
 endif()
 
+if (DARWIN)
+	link_libraries(resolv)
+endif(DARWIN)
+
 #create the library
 condor_static_lib(daemon_core "${DCHeaderFiles};${DCSourceFiles}")
 
 if (WINDOWS)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
-	condor_exe( condor_softkill "condor_softkill.WINDOWS.cpp;condor_softkill.h" ${C_SBIN} "${CONDOR_TOOL_LIBS};psapi")
+	condor_exe( condor_softkill "condor_softkill.WINDOWS.cpp;condor_softkill.h" ${C_SBIN} "${CONDOR_TOOL_LIBS};psapi" OFF )
 endif(WINDOWS)

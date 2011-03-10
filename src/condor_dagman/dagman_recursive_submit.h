@@ -24,8 +24,10 @@
 #include "MyString.h"
 #include "string_list.h"
 #include "condor_config.h"
+#include "debug.h"
 
-static const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
+#define DAG_SUBMIT_FILE_SUFFIX ".condor.sub"
+
 
 	//
 	// These are options that are *not* passed to lower levels of
@@ -58,6 +60,7 @@ struct SubmitDagShallowOptions
 	MyString strRescueFile;
 	MyString strLockFile;
 	bool copyToSpool;
+	int iDebugLevel;
 
 	SubmitDagShallowOptions() 
 	{ 
@@ -74,6 +77,7 @@ struct SubmitDagShallowOptions
 		runValgrind = false;
 		primaryDagFile = "";
 		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
+		iDebugLevel = DEBUG_UNSET;
 	}
 };
 
@@ -89,7 +93,6 @@ struct SubmitDagDeepOptions
 	bool bForce;
 	MyString strNotification;
 	bool bAllowLogError;
-	int iDebugLevel;
 	MyString strDagmanPath; // path to dagman binary
 	bool useDagDir;
 	MyString strOutfileDir;
@@ -107,7 +110,6 @@ struct SubmitDagDeepOptions
 		bForce = false;
 		strNotification = "";
 		bAllowLogError = false;
-		iDebugLevel = 3;
 		useDagDir = false;
 		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", false );
 		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );

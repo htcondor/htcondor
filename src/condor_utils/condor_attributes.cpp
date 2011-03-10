@@ -52,11 +52,11 @@ AttrGetName( CONDOR_ATTR which )
     }
 
 	// Otherwise, fill the cache
-	char	*tmps;
+	char	*tmps=0;
 	switch ( local->flag )
 	{
 	case  ATTR_FLAG_NONE:
-        tmps = (char *) local->string;
+		tmps = const_cast<char *>( local->string );
 		break;
     case ATTR_FLAG_DISTRO:
 		// Yeah, this allocates a couple more bytes than required, but
@@ -79,7 +79,8 @@ AttrGetName( CONDOR_ATTR which )
     }
 
 	// Then, return it
-	return ( local->cached = (const char * ) tmps );
+	local->cached = tmps;
+	return local->cached;
 }
 
 // List of attributes used in ClassAds  If you find yourself using anything
@@ -173,6 +174,18 @@ const char * const ATTR_DEFERRAL_OFFSET			 = "DeferralOffset";
 const char * const ATTR_DEFERRAL_PREP_TIME		 = "DeferralPrepTime";
 const char * const ATTR_DEFERRAL_TIME			 = "DeferralTime";
 const char * const ATTR_DEFERRAL_WINDOW			 = "DeferralWindow";
+const char * const ATTR_DELTACLOUD_AVAILABLE_ACTIONS = "DeltacloudAvailableActions";
+const char * const ATTR_DELTACLOUD_PRIVATE_NETWORK_ADDRESSES = "DeltacloudPrivateNetworkAddresses";
+const char * const ATTR_DELTACLOUD_PROVIDER_ID	 = "DeltacloudProviderId";
+const char * const ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES = "DeltacloudPublicNetworkAddresses";
+const char * const ATTR_DELTACLOUD_RETRY_TIMEOUT = "DeltacloudRetryTimeout";
+const char * const  ATTR_DELTACLOUD_USERNAME	 = "DeltacloudUsername";
+const char * const  ATTR_DELTACLOUD_PASSWORD	 = "DeltacloudPassword";
+const char * const  ATTR_DELTACLOUD_IMAGE_ID	 = "DeltacloudImageId";
+const char * const  ATTR_DELTACLOUD_REALM_ID	 = "DeltacloudRealmId";
+const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE = "DeltacloudHardwareProfile";
+const char * const  ATTR_DELTACLOUD_KEYNAME		 = "DeltacloudKeyname";
+const char * const  ATTR_DELTACLOUD_USER_DATA	 = "DeltacloudUserData";
 const char * const ATTR_DESTINATION				 = "Destination";
 const char * const ATTR_DISK                     = "Disk";
 const char * const ATTR_DISK_USAGE				 = "DiskUsage";
@@ -204,6 +217,7 @@ const char * const ATTR_GID						 = "Gid";
 const char * const ATTR_GLOBAL_JOB_ID            = "GlobalJobId";
 const char * const ATTR_GZIP					 = "GZIP";
 const char * const ATTR_GLOBUS_DELEGATION_URI	 = "GlobusDelegationUri";
+const char * const ATTR_STACK_SIZE		 = "StackSize";
 // Deprecated (cruft) -- no longer used
 const char * const ATTR_GLOBUS_GRAM_VERSION		 = "GlobusGramVersion";
 const char * const ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME = "GlobusResourceUnavailableTime";
@@ -213,6 +227,7 @@ const char * const ATTR_GLOBUS_STATUS			 = "GlobusStatus";
 const char * const ATTR_GLOBUS_XML				 = "GlobusXML";
 const char * const ATTR_X509_USER_PROXY          = "x509userproxy";
 const char * const ATTR_X509_USER_PROXY_SUBJECT	 = "x509userproxysubject";
+const char * const ATTR_X509_USER_PROXY_EMAIL	 = "x509UserProxyEmail";
 const char * const ATTR_X509_USER_PROXY_EXPIRATION	 = "x509UserProxyExpiration";
 const char * const ATTR_X509_USER_PROXY_VONAME	 = "x509UserProxyVOName";
 const char * const ATTR_X509_USER_PROXY_FIRST_FQAN	 = "x509UserProxyFirstFQAN";
@@ -453,6 +468,7 @@ const char * const ATTR_NUM_USERS                = "NumUsers";
 const char * const ATTR_OFFLINE                  ="Offline";
 const char * const ATTR_OPSYS                    = "OpSys";
 const char * const ATTR_ORIG_MAX_HOSTS			 = "OrigMaxHosts";
+const char * const ATTR_OTHER_JOB_REMOVE_REQUIREMENTS    = "OtherJobRemoveRequirements"; 
 const char * const ATTR_OWNER                    = "Owner"; 
 const char * const ATTR_PARALLEL_SCHEDULING_GROUP	 = "ParallelSchedulingGroup";
 const char * const ATTR_PARALLEL_SCRIPT_SHADOW   = "ParallelScriptShadow";  
@@ -602,6 +618,7 @@ const char * const ATTR_CLASSAD_LIFETIME		 = "ClassAdLifetime";
 const char * const ATTR_UPDATE_PRIO              = "UpdatePrio";
 const char * const ATTR_UPDATE_SEQUENCE_NUMBER   = "UpdateSequenceNumber";
 const char * const ATTR_USE_GRID_SHELL           = "UseGridShell";
+const char * const ATTR_USE_PARROT               = "UseParrot";
 const char * const ATTR_USER					 = "User";
 const char * const ATTR_VACATE                   = "Vacate";
 const char * const ATTR_VACATE_TYPE              = "VacateType";
@@ -656,6 +673,7 @@ const char * const ATTR_ENCRYPT_INPUT_FILES		 = "EncryptInputFiles";
 const char * const ATTR_ENCRYPT_OUTPUT_FILES	 = "EncryptOutputFiles";
 const char * const ATTR_DONT_ENCRYPT_INPUT_FILES = "DontEncryptInputFiles";
 const char * const ATTR_DONT_ENCRYPT_OUTPUT_FILES= "DontEncryptOutputFiles";
+const char * const ATTR_OUTPUT_DESTINATION       = "OutputDestination";
 const char * const ATTR_TRANSFER_SOCKET			 = "TransferSocket";
 const char * const ATTR_SERVER_TIME				 = "ServerTime";
 const char * const ATTR_SHADOW_BIRTHDATE		 = "ShadowBday";
@@ -851,12 +869,28 @@ const char * const ATTR_LEASE_MANAGER_IP_ADDR = "LeaseManagerIpAddr";
 //************* End of Lease Manager    *******************//
 
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_TIME = "LastNegotiationCycleTime";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_END = "LastNegotiationCycleEnd";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_PERIOD = "LastNegotiationCyclePeriod";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION = "LastNegotiationCycleDuration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE1 = "LastNegotiationCyclePhase1Duration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE2 = "LastNegotiationCyclePhase2Duration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE3 = "LastNegotiationCyclePhase3Duration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE4 = "LastNegotiationCyclePhase4Duration";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_TOTAL_SLOTS = "LastNegotiationCycleTotalSlots";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_TRIMMED_SLOTS = "LastNegotiationCycleTrimmedSlots";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_CANDIDATE_SLOTS = "LastNegotiationCycleCandidateSlots";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_SLOT_SHARE_ITER = "LastNegotiationCycleSlotShareIter";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCHES = "LastNegotiationCycleMatches";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS = "LastNegotiationCycleRejections";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT = "LastNegotiationCycleSubmittersShareLimit";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED = "LastNegotiationCycleSubmittersFailed";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME = "LastNegotiationCycleSubmittersOutOfTime";
 const char * const ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT = "LastNegotiationCycleActiveSubmitterCount";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE = "LastNegotiationCycleMatchRate";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED = "LastNegotiationCycleMatchRateSustained";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_SCHEDULERS = "LastNegotiationCycleNumSchedulers";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_IDLE_JOBS = "LastNegotiationCycleNumIdleJobs";
+const char * const ATTR_LAST_NEGOTIATION_CYCLE_NUM_JOBS_CONSIDERED = "LastNegotiationCycleNumJobsConsidered";
 
 const char * const ATTR_JOB_MACHINE_ATTRS = "JobMachineAttrs";
 const char * const ATTR_MACHINE_ATTR_PREFIX = "MachineAttr";
@@ -867,3 +901,4 @@ const char * const ATTR_COMMITTED_SLOT_TIME = "CommittedSlotTime";
 
 const char * const ATTR_HASH_NAME = "HashName";
 const char * const ATTR_AUTHENTICATED_IDENTITY = "AuthenticatedIdentity";
+const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME = "DelegateJobGSICredentialsLifetime";

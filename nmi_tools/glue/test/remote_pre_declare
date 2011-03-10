@@ -55,7 +55,7 @@ if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
 
     # Condor will want Win32-style paths for CONDOR_CONFIG
     my $Win32BaseDir = getcwd();
-    print ENVSETUP "CONDOR_CONFIG=$Win32BaseDir/condor/etc/condor_config\n";
+    print ENVSETUP "CONDOR_CONFIG=$Win32BaseDir\\condor_tests\\TestingPersonalCondor\\condor_config\n";
     
     # also, throw in the WIN32 version of the base directory path for later use
     print ENVSETUP "WIN32_BASE_DIR=$Win32BaseDir\n";

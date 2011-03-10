@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -36,14 +36,14 @@ if (WITH_KRB5)
 			set (KRB5_CONFIGURE cp ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.in src/appl/gssftp/ftp/Makefile.in )
 			set (KRB5_MAKE cd src \r\n
 						   nmake -f Makefile.in prep-windows \r\n 
-			               nmake )
+			               nmake NODEBUG=1)
 
 			# Something is wrong with the default install (make install suck-o)
 			set (KRB5_INSTALL cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${EXTERNAL_STAGE}/include/win-mac.h \r\n
-							  cp -r src/lib/obj/i386/dbg/* ${EXTERNAL_STAGE}/lib \r\n
+							  cp -r src/lib/obj/i386/rel/* ${EXTERNAL_STAGE}/lib \r\n
 							  cp -r src/include/* ${EXTERNAL_STAGE}/include \r\n
 							  cd \"\\\" \r\n
-							  cd ${EXTERNAL_STAGE}/lib \r\n 
+							  cd /D "${EXTERNAL_STAGE}/lib" \r\n 
 							  ${CMAKE_CURRENT_SOURCE_DIR}/manifest.bat )
 
 		else()
@@ -81,6 +81,8 @@ if (WITH_KRB5)
 							${EXTERNAL_STAGE}/lib/krb5_32.dll
 							${EXTERNAL_STAGE}/lib/xpprof32.dll
 					  DESTINATION ${C_LIB} )
+					  
+			set_property( TARGET krb5 PROPERTY FOLDER "externals" )
 
 		else()
 			set(KRB5_FOUND "${EXTERNAL_STAGE}/lib/libkrb5.a;${EXTERNAL_STAGE}/lib/libk5crypto.a;${EXTERNAL_STAGE}/lib/libcom_err.a;${EXTERNAL_STAGE}/lib/libkrb5support.a")
@@ -105,6 +107,6 @@ if (WITH_KRB5)
 
 else(WITH_KRB5)
 
-	message (STATUS "external skiped (krb5)")
+	message (STATUS "external skipped (krb5)")
 
 endif(WITH_KRB5)

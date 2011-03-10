@@ -18,35 +18,126 @@
 # also consider "condor.init", which is more native and should
 # integrate better with the rest of the system.
 
+# LSB init part (Used by Debian package)
 ### BEGIN INIT INFO
 # Provides:          condor
 # Required-Start:    $network $local_fs
 # Required-Stop:     $local_fs $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
 # Short-Description: Manage condor daemons
 # Description: Condor HTC computing platform
 ### END INIT INFO
 
-[ -f /etc/sysconfig/condor ] && . /etc/sysconfig/condor
+######################################################################
+## Ensure that the settings below are correct for your Condor
+## installation.  Except for SYSCONFIG, these may also be specified
+## in the "$SYSCONFIG/condor" file.
 
-# Ensure that the settings below are correct for your Condor
-# installation.
+# Directory with system configuration files
+#SYSCONFIG="/etc/sysconfig"
+
+# Condor's sysconfig file
+#CONDOR_SYSCONFIG="/etc/sysconfig/condor"
+
+# Condor users to look for while shutting down.
+#CONDOR_USERS="condor,root"
 
 # Path to your primary condor configuration file.
+#CONDOR_CONFIG="/etc/condor/condor_config"
+
+# Path to condor_config_val
+#CONDOR_CONFIG_VAL="/usr/bin/condor_config_val"
+
+# How long to give Condor to shut down cleanly?
+#MAX_STOP_WAIT=300
+
+# Disable the use of a 'PID file?
+#DISABLE_PIDFILE="no"
+
+# Only kill Condor PIDs from the PID file
+#FORCE_PIDFILE="no"
+
+## There are no settings beyond this point.
+######################################################################
+
+
+# Process command line arguments
+# Looks through argv, pick out ones that start with a dash,
+# and handle them
+EXECUTE=yes
+VERBOSE=no
+while [ $# -gt 0 ] ; do
+  c=`expr $1 : '\(.\).*'`
+  if [ "$c" != "-" ] ; then
+    break
+  fi
+  case "$1" in
+  "-n" | "--no-execute" ) 
+    EXECUTE=no
+    shift
+    ;;
+  "--execute" ) 
+    EXECUTE=yes
+    shift
+    ;;
+  "-v" | "--verbose" ) 
+    VERBOSE=yes
+    shift
+    ;;
+  "--sysconfig" ) 
+    SYSCONFIG=$2
+    shift; shift
+    ;;
+  "-h" | "--help" )
+    echo "usage: $1 [options] command"
+    echo " --no-execute, -n   : No execute mode"
+    echo " --execute          : Execute mode (default)"
+    echo " --verbose, -v      : Verbose mode"
+    echo " --sysconfig <dir>  : Specify the sysconfig directory"
+    echo "Environment variables:"
+    echo "  SYSCONFIG         : Specify the sysconfig directory"
+    echo "  CONDOR_SYSCONFIG  : Specify Condor's sysconfig file"
+    echo "  CONDOR_CONFIG     : Specify path to Condor's configuration file"
+    echo "  CONDOR_CONFIG_VAL : Specify path to condor_config_val"
+    echo "Commands: start stop restart try-restart reload force-reload status"
+    exit 0
+    ;;
+  * )
+    echo "usage: $1 [options]"
+    echo "Unkown option: $1: use --help for help"
+    exit 1
+    ;;
+  esac
+done
+INIT_COMMAND=$1
+
+
+################################################################################
+
+# Read in the sysconfig file
+if [ "$SYSCONFIG" = "" ] ; then
+  SYSCONFIG=/etc/sysconfig
+fi
+if [ "$CONDOR_SYSCONFIG" = "" ] ; then
+  CONDOR_SYSCONFIG=$SYSCONFIG/condor
+fi
+[ -f "$CONDOR_SYSCONFIG" ] && . "$CONDOR_SYSCONFIG"
+
+# Default condor configuration file if none specified
 if [ "$CONDOR_CONFIG" = "" ] ; then
   CONDOR_CONFIG=/etc/condor/condor_config
 fi
 
-# Path to condor_config_val
+# Default path condor_config_val if none specified
 if [ "$CONDOR_CONFIG_VAL" = "" ] ; then
   CONDOR_CONFIG_VAL=/usr/bin/condor_config_val
 fi
 
-
-# There are no settings beyond this point.
-
-
-
-################################################################################
+# Default value to max shutdown wait
+if [ "$MAX_STOP_WAIT" = "" ] ; then
+  MAX_STOP_WAIT=300
+fi
 
 # A key goal of this script is portability.  As a result,
 # there are is awkward syntax.  For example: the -e test
@@ -57,154 +148,360 @@ fi
 
 # Equivalent to "echo -n", but portable.
 echon() {
-    if [ "`echo -n`" = "-n" ]; then
-	echo "$@""\c"
-    else
-	echo -n "$@"
-    fi
+  if [ "`echo -n`" = "-n" ]; then
+    echo "$@""\c"
+  else
+    echo -n "$@"
+  fi
 }
 
 # Emits error with a "FATAL: " prefix. Exits.  Never returns
 fatal_error() {
-    echo "FATAL: $1"
+  echo "FATAL: $1"
+  exit 1
+}
+
+##
+## Try to detect a binary from set of names and set of directories.
+## Note: The names and directories cannot contain whitespace, because
+##       whitespace is the the list delimiter.
+##
+detect_exe() {
+  for name in `echo $2` ; do
+    for dir in `echo $1` ; do
+      if [ -x "$dir/$name" ] ; then
+        echo "$dir/$name"
+        return
+      fi
+    done
+  done
+}
+
+##
+## Based on the ps flavor ($1), return the ps options
+##
+ps_get_opts() {
+  if [ "$1" = "GNU" -o "$1" = "BSD" ] ; then
+    opts="aux"
+  elif [ "$1" = "SYSV" ] ; then
+    opts="-ef"
+  else
+    echo "FATAL: Unknown ps flavor \"$1\""
     exit 1
+  fi
+  echo $opts
+}
+
+##
+## Try to run ps, see if it fails
+##
+ps_try_run() {
+  cmd="$1 $2"
+  $cmd > /dev/null 2>&1
+  if [ $? -eq 0 ] ; then
+    echo "yes"
+  else
+    echo "no"
+  fi
+}
+
+##
+## Detect the 'ps' (in $PS) executable's flavor
+##
+ps_detect_flavor() {
+  if [ "$1" = "GNU" ] ; then
+    OPTS="--version"
+  else
+    OPTS=`ps_get_opts "$1"`
+  fi
+  STATUS=`ps_try_run "$PS" "$OPTS"`
+  echo $STATUS
+}
+
+##
+## Detect ps support extra flags ('w' and 'n')
+##
+ps_detect_flags() {
+  if [ "$PSFLAVOR" = "GNU" ] ; then
+    PSFLAGSn="n"
+    PSFLAGSw="www"
+    return
+  fi
+
+  OPTS=`ps_get_opts "$PSFLAVOR"`
+  OPTS="${OPTS}www"
+  OK=`ps_try_run "$PS" "$OPTS"`
+  if [ "$OK" = "yes" ] ; then
+    PSFLAGSw="www"
+  fi
+
+  OPTS=`ps_get_opts "$PSFLAVOR"`
+  OPTS="${OPTS}n"
+  OK=`ps_try_run "$PS" "$OPTS"`
+  if [ "$OK" = "yes" ] ; then
+    PSFLAGSn="n"
+  fi
+}
+
+##
+## Detect the 'ps' exectuable and it's flavor
+##
+detect_ps() {
+  DIRS="/usr/gnu/bin /usr/local/bin /opt/freeware/bin /usr/ucb /usr/bin /bin"
+  NAMES="ps"
+  PS=`detect_exe "${DIRS}" "${NAMES}"`
+   if [ "$PS" = "" ] ; then
+    echo "FATAL: no ps binary detected"
+    exit 1
+  fi
+
+  for FLAVOR in GNU SYSV BSD ; do
+    if [ "$PSFLAVOR" = "" ] ; then
+      OK=`ps_detect_flavor $FLAVOR`
+      if [ "$OK" = "yes" ] ; then
+        PSFLAVOR="$FLAVOR"
+      fi
+    fi
+  done
+  if [ "$PSFLAVOR" = "" ] ; then
+    echo "FATAL: Unable to detect the flavor of \"$PS\""
+    exit 1
+  fi
+  if [ "$VERBOSE" = "yes" ] ; then
+    echo "Detected ps executable \"$PS\" flavor \"$PSFLAVOR\", flags: $PSFLAGSw $PSFLAGSn"
+  fi
+}
+
+##
+## Detect awk flavor
+## returns: GNU NAWK XPG4 AWK
+##
+detect_awk_flavor() {
+  awk=$1
+  # GNU
+  out=`echo ""|$awk --version 2>/dev/null | grep GNU`
+  if [ "$out" != "" ] ; then
+    echo "GNU"; return 0
+  fi
+  out=`echo "abc"|$awk '{ sub(/abc/,"ABC"); print; }'` 2>/dev/null
+  if [ "$?" != 0 ] ; then
+    echo "AWK"; return 0
+  fi
+  out=`echo "x=4"|$awk '{ s=$1; sub(/x=([0-9]+).*/, "\1", s); print s; }'`
+  if [ "$out" = "x=4" ] ; then
+    echo "XPG4"; return 0
+  fi
+  echo "NAWK"; return 0
+}
+
+##
+## Detect awk and it's flavor
+##
+detect_awk() {
+  if [ "$AWK" != "" ] ; then
+    return 0
+  fi
+  DIRS="/usr/gnu/bin /usr/local/bin /usr/xpg4/bin /opt/freeware/bin /usr/ucb /usr/bin /bin"
+  NAMES="gawk nawk awk"
+  AWK=`detect_exe "$DIRS" "$NAMES"`
+  if [ "$AWK" = "" ] ; then
+    echo "FATAL: no awk binary detected"
+    exit 1
+  fi
+
+  AWKFLAVOR=`detect_awk_flavor $AWK`
+  if [ "$AWKFLAVOR" = "" ] ; then
+    echo "FATAL: Unable to detect the flavor of \"$AWK\""
+    exit 1
+  fi
+  if [ "$VERBOSE" = "yes" ] ; then
+    echo "Detected awk executable \"$AWK\" flavor \"$AWKFLAVOR\""
+  fi
 }
 
 # Is the executable in $1 potentially runnable?
 # Exit if no.
 verify_executable() {
-    if [ ! \( -f "$1" -o -L "$1" \) ]; then
-        fatal_error "Required executable $1 does not exist."
-    fi
-    if [ -d "$1" ]; then
-        fatal_error "Required executable $1 is a directory instead of a file."
-    fi
-    if [ ! -x "$1" ]; then
-        fatal_error "Required executable $1 is not executable."
-    fi
-    return 0
+  if [ ! \( -f "$1" -o -L "$1" \) ]; then
+    fatal_error "Required executable $1 does not exist."
+  fi
+  if [ -d "$1" ]; then
+    fatal_error "Required executable $1 is a directory instead of a file."
+  fi
+  if [ ! -x "$1" ]; then
+    fatal_error "Required executable $1 is not executable."
+  fi
+  return 0
 }
 
 # Is the path in $1 a potentially readable directory?
 # Exit if no.
 verify_readable_directory() {
-    if [ ! -d "$1" ]; then
-        fatal_error "Required directory $1 does not exist, or is not a directory."
-    fi
-    if [ ! -r "$1" ]; then
-        fatal_error "Required executable $1 is not readable."
-    fi
-    return 0
+  if [ ! -d "$1" ]; then
+    fatal_error "Required directory $1 does not exist, or is not a directory."
+  fi
+  if [ ! -r "$1" ]; then
+    fatal_error "Required executable $1 is not readable."
+  fi
+  return 0
 }
 
 # Returns a setting from the CONDOR_CONFIG configuration
 # file.  Exits if the value cannot be found!
 get_condor_config_val() {
-    TMPVAL=`"$CONDOR_CONFIG_VAL" $1`
-    if [ "$TMPVAL" = "" ]; then
-	fatal_error "Unable to locate $1 in $CONDOR_CONFIG"
-    fi
-    echo "$TMPVAL"
+  REQUIRED=$2
+  if [ "$REQUIRED" = "" ] ; then
+    REQUIRED=yes
+  fi
+  TMPVAL=`"$CONDOR_CONFIG_VAL" $1`
+  if [ "$TMPVAL" = "" ] && [ "$REQUIRED" = "yes" ] ; then
+    fatal_error "Unable to locate $1 in $CONDOR_CONFIG"
+  fi
+  echo "$TMPVAL"
 }
 
 # Ensure CONDOR_SBIN holds path to SBIN as defined in the 
 # CONDOR_CONFIG file
-init_condor_sbin() {
-    if [ "$CONDOR_SBIN" != "" ]; then
-	return 0;
-    fi
-    CONDOR_SBIN=`get_condor_config_val SBIN`
-    verify_readable_directory "$CONDOR_SBIN"
+set_condor_sbin() {
+  if [ "$CONDOR_SBIN" != "" ]; then
     return 0;
+  fi
+  CONDOR_SBIN=`get_condor_config_val SBIN`
+  verify_readable_directory "$CONDOR_SBIN"
+  return 0;
 }
 
 # Ensure CONDOR_RUN holds path to a plausible run directory.
 # Exit on failure.
-init_condor_run() {
-    if [ "$CONDOR_RUN" != "" ]; then
-	return 0
-    fi
-    CONDOR_RUN=`get_condor_config_val RUN`
-    verify_readable_directory "$CONDOR_RUN"
+set_condor_run() {
+  if [ "$CONDOR_RUN" != "" ]; then
     return 0
+  fi
+  CONDOR_RUN=`get_condor_config_val RUN no`
+  if [ "$CONDOR_RUN" = "" ]; then
+    CONDOR_RUN=`get_condor_config_val LOG yes`
+  fi
+  verify_readable_directory "$CONDOR_RUN"
+  return 0
 }
 
 
 # Ensure CONDOR_MASTER holds path to a plausible condor_master.
 # Exit on failure.
-init_condor_master() {
-    if [ "$CONDOR_MASTER" = "" ]; then
-	CONDOR_MASTER=`get_condor_config_val MASTER`
-    fi
-    verify_executable "$CONDOR_MASTER"
-    return 0
+set_condor_master() {
+  if [ "$CONDOR_MASTER" = "" ]; then
+    CONDOR_MASTER=`get_condor_config_val MASTER`
+  fi
+  verify_executable "$CONDOR_MASTER"
+  return 0
 }
 
 # Ensure CONDOR_RECONFIG holds path to a plausible condor_reconfig.
 # Exit on failure.
-init_condor_reconfig() {
-    if [ "$CONDOR_RECONFIG" = "" ]; then
-	init_condor_sbin
-	CONDOR_RECONFIG="$CONDOR_SBIN/condor_reconfig"
-    fi
-    verify_executable "$CONDOR_RECONFIG"
+set_condor_reconfig() {
+  if [ "$CONDOR_RECONFIG" = "" ]; then
+    set_condor_sbin
+    CONDOR_RECONFIG="$CONDOR_SBIN/condor_reconfig"
+  fi
+  verify_executable "$CONDOR_RECONFIG"
+  return 0
+}
+
+# Get the condor user(s)
+set_condor_users() {
+  if [ "$CONDOR_USERS" != "" ]; then
     return 0
+  fi
+  IDS=`get_condor_config_val CONDOR_IDS no`
+  if [ "$IDS" = "" ]; then
+    CONDOR_USERS="condor,root"
+    return 0
+  fi
+  USER=`echo $IDS|$AWK 'BEGIN{FS="[ ,\.]"} /^[^0-9]/{print $1}'`
+  if [ "$USER" != "" ] ; then
+    CONDOR_USERS="$USER,root"
+    return 0
+  fi
+  CONDOR_UID=`echo $IDS|$AWK 'BEGIN{FS="[ ,\.]"} /^[0-9]/{print $1}'`
+  echo "CondorUID=$CONDOR_UID"
+
+  for u in condor ; do
+    UID=`id $u|$AWK '{ sub(/uid=/,"",$1); sub(/\(.*\)/,"",$1); print $1; }'`
+    if [ "$UID" = "$CONDOR_UID" ] ; then
+      CONDOR_USERS="$u,root"
+      return
+    fi
+  done
+  
+  USER=`cat /etc/passwd|$AWK 'BEGIN{FS=":"; UID=ARGV[1]; ARGC=0; } { if($3==UID){print $1} }' $CONDOR_UID`
+  if [ "$USER" != "" ] ; then
+    echo "$USER had uid $CONDOR_UID"
+    CONDOR_USERS="$USER,root"
+    return 0
+  fi
+
+  CONDOR_UIDS="$CONDOR_UID,0"
+  return 0
 }
 
 # Ensure CONDOR_OFF holds path to a plausible condor_off.
 # Exit on failure.
-init_condor_off() {
-    if [ "$CONDOR_OFF" = "" ]; then
-	init_condor_sbin
-	CONDOR_OFF="$CONDOR_SBIN/condor_off"
-    fi
-    verify_executable "$CONDOR_OFF"
-    return 0
+set_condor_off() {
+  if [ "$CONDOR_OFF" = "" ]; then
+    set_condor_sbin
+    CONDOR_OFF="$CONDOR_SBIN/condor_off"
+  fi
+  verify_executable "$CONDOR_OFF"
+  return 0
 }
 
-# Try to detect a working ps, if not done already
-init_ps() {
-    if [ "$PS" != "" ]; then
-	return 0;
-    fi
 
-    PS="/bin/ps -efwwww"
-    $PS > /dev/null 2>&1
-    if [ $? -eq 0 ]; then
-	return 0
-    fi
+##
+## Find the Condor master processes
+##
+find_masters() {
 
-    PS="/bin/ps auwx"
-    $PS > /dev/null 2>&1
-    if [ $? -eq 0 ]; then
-	return 0
-    fi
-
-    PS="/bin/ps -ef"
-    $PS > /dev/null 2>&1
-    if [ $? -eq 0 ]; then
-	return 0
-    fi
-
-    fatal_error "Could not determine how to call ps. Edit this script to explicitly set PS as documented there."
+  if [ "$CONDOR_USERS" = "" ] ; then
+    OPTS=`ps_get_opts "$PSFLAVOR" "W" "N"`
+    USERS=$CONDOR_UIDS
+  else
+    OPTS=`ps_get_opts "$PSFLAVOR" "W"`
+    USERS=$CONDOR_USERS
+  fi
+  pids=`$PS $OPTS|$AWK 'BEGIN{split(ARGV[1],users,","); ARGC=0; } { if( (index($0,"condor_master") != 0) && (index($0,"awk") == 0) ) { for(i in users){ if($1==users[i]){print $2; break;} } } }' $USERS`
+  echo "$pids"
 }
-
 
 # To the best of its ability, finds the active condor_master's PID.
 # echos the result, or an empty string if none was found.
 # You can call this repeatedly to check for updates.
-condor_pid() {
-    if [ ! -f "$PIDFILE" ]; then return 1; fi # Isn't a file
-    if [ ! -r "$PIDFILE" ]; then return 1; fi # Isn't readable
-    if [ ! -s "$PIDFILE" ]; then return 1; fi # Is empty
-    masterpid=`cat "$PIDFILE"`
-    if [ $? = 1 ]; then return 1; fi # Master already removed the file, no longer running.
-    if [ "$masterpid" = "" ]; then return 1; fi # Empty? Unreadable?
-    init_ps
-    foundpid=`$PS | grep condor_master | grep -v grep | awk '{print $2}' | grep "^$masterpid$"`
-    if [ "$foundpid" = "" ]; then return 1; fi # No longer running.
+condor_master_pids() {
+  if [ "$FORCE_PIDFILE" != "yes" ] ; then
+    pids=`find_masters`
+  fi
+  if [ -f "$PIDFILE" -a -r "$PIDFILE" ] ; then
+    masterpid=`cat "$PIDFILE"` 2>/dev/null
+  fi
+  if [ "$masterpid" = "" ] ; then
+    echo "$pids"
+    if [ "$pids" = "" ] ; then return 1; else return 0; fi
+  elif [ "$FORCE_PIDFILE" = "yes" ] ; then
     echo "$masterpid"
     return 0
+  fi
+
+  echo "$pids" | grep -w "$masterpid" > /dev/null
+  if [ $? -eq 0 ] ; then
+    echo "$masterpid"
+    return 0
+  fi
+  foundpid=`$PS | grep condor_master | grep -v grep | $AWK '{print $2}' | grep "^$masterpid$"`
+  if [ "$foundpid" = "" ]; then
+    echo "$pids"
+    if [ "$pids" = "" ] ; then return 1; else return 0; fi
+  fi
+  echo "$masterpid"
+  return 0
 }
 
 # Wait for condor_master to exit.
@@ -217,39 +514,53 @@ condor_pid() {
 # $?=0 - condor_master is gone
 # $?=1 - timed out
 wait_for_exit() {
-    echo "Waiting for Condor to stop (MAX: $2 seconds)"
-    max_wait=$2
-    sleep_time=$1
-    stop_duration=0
-    while [ "`condor_pid`" != "" -a $stop_duration -lt $max_wait ]; do
-	sleep $sleep_time
-	stop_duration=`expr $stop_duration + $sleep_time`
-    done
-    
-    if [ "`condor_pid`" = "" ]; then
-	return 0
-    else
-	return 1
-    fi
+  echo "Waiting for Condor to stop (MAX: $2 seconds)"
+  max_wait=$2
+  sleep_time=$1
+  stop_duration=0
+  while [ "`condor_master_pids`" != "" -a $stop_duration -lt $max_wait ]; do
+    sleep $sleep_time
+    stop_duration=`expr $stop_duration + $sleep_time`
+  done
+  
+  if [ "`condor_master_pids`" = "" ]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 
 
 # Start condor.
 start() {
-    init_condor_master
-    echon "Starting up Condor..."
-    if [ "$CONDOR_MASTER_WRAPPER" = "" ] ; then
-        "$CONDOR_MASTER" -pidfile "$PIDFILE"
-    else
-        "$CONDOR_MASTER_WRAPPER"
-        if [ $? -ne 0 ]; then
-           echo " failed to start Condor via condor_master_wrapper."
-           return 1;
-        fi
-    fi
-    echo "done."
+  set_condor_master
+  echon "Starting up Condor..."
+  if [ "$EXECUTE" != "yes" ] ; then
+    echo "skipping."
     return 0
+  fi
+  if [ "$CONDOR_MASTER_WRAPPER" = "" ] ; then
+    if [ "$PIDFILE" = "" ] ; then
+      cmd="$CONDOR_MASTER"
+      "$CONDOR_MASTER"
+    else
+      cmd="$CONDOR_MASTER -pidfile $PIDFILE"
+      "$CONDOR_MASTER" -pidfile "$PIDFILE"
+    fi
+  else
+    cmd="$CONDOR_MASTER_WRAPPER"
+    "$CONDOR_MASTER_WRAPPER"
+  fi
+  if [ $? -ne 0 ]; then
+    echo " failed to start Condor with \"$cmd\"."
+    return 1;
+  fi
+  if [ "$VERBOSE" = "yes" ] ; then
+    echo "Started: \"$cmd\""
+  fi
+  echo "done."
+  return 0
 }
 
 
@@ -269,40 +580,41 @@ start() {
 #
 # named xstop because stop causes problems on AIX and HPUX.
 xstop() {
-    echo "Shutting down Condor (fast-shutdown mode)..."
-    master_pid=`condor_pid`
-    if [ "$master_pid" != "" ]; then
-	#echon "using kill..."
-        kill -QUIT "$master_pid"
-    
-	# We assume that user will use init script to startup/shutdown condor only,
-	# so we will rely on the pid file. condor_off cannot diferentiate between fail to stop condor
-	# or condor is not running, so we don't use it for now.
-
-# else
-#	init_condor_off
-#	echon "using condor_off..."
-#	"$CONDOR_OFF" -fast -master | grep -v 'Sent "Kill-Daemon-Fast" command'
-#	if [ $? -gt 0 ]; then
-#    	echo "Failed to stop Condor (non-0 exit)."
-#	    return 1
-#	fi
-
+  echo "Shutting down Condor (fast-shutdown mode)..."
+  master_pids=`condor_master_pids`
+  if [ "$master_pids" != "" ]; then
+    #echon "using kill..."
+    if [ "$EXECUTE" != "yes" ] ; then
+      echo "Skipping."
+      return 0
     fi
+    for pid in `echo "$master_pids"` ; do
+      if [ "$VERBOSE" = "yes" ] ; then
+        echo "Sending QUIT to $pid"
+      fi
+      kill -QUIT "$pid"
+    done
+  
+    # We assume that user will use init script to startup/shutdown
+    # condor only, so we will rely on the pid file. condor_off cannot
+    # differentiate between fail to stop condor or condor is not
+    # running, so we don't use it for now.
 
-    wait_for_exit 1 $MAX_STOP_WAIT
-    if [ $? -gt 0 ]; then
-	echo "Failed to stop Condor (timed out)."
-	return 1
-    fi
+  fi
 
-    if [ -f "$PIDFILE" ]; then
-	rm "$PIDFILE"
-    fi
+  wait_for_exit 1 $MAX_STOP_WAIT
+  if [ $? -gt 0 ]; then
+    echo "Failed to stop Condor (timed out)."
+    return 1
+  fi
 
-    echo "done."
+  if [ -f "$PIDFILE" ]; then
+    rm "$PIDFILE"
+  fi
 
-    return 0
+  echo "done."
+
+  return 0
 }
 
 
@@ -311,18 +623,18 @@ xstop() {
 # This can fail for any number of reasons, and we wouldn't
 # detect it.
 #
-# As a possible improvement, we might send SIGHUP if `condor_pid`
+# As a possible improvement, we might send SIGHUP if `condor_master_pids`
 # is non-empty, only falling back on condor_reconfig if it is.
 #
 # Also, detect the return code from CONDOR_RECONFIG; non-zero
 # indicates aproblem. (At the moment that never happens, but
 # may in the future.)
 reload() {
-    init_condor_reconfig
-    echon "Reloading Condor configuration..."
-    "$CONDOR_RECONFIG" | grep -v 'Sent "Reconfig" command to local master'
-    echo "done."
-    return 0
+  set_condor_reconfig
+  echon "Reloading Condor configuration..."
+  "$CONDOR_RECONFIG" | grep -v 'Sent "Reconfig" command to local master'
+  echo "done."
+  return 0
 }
 
 
@@ -339,70 +651,77 @@ reload() {
 # 3 not running
 # 4 unknown
 status() {
-    master_pid=`condor_pid`
-    if [ "$master_pid" != "" ]; then
-	echo "Condor is running (pid $master_pid)"
-	return 0
-    else
-	echo "Condor is not running"
-	return 3; 
-    fi
+  master_pid=`condor_master_pids`
+  if [ "$master_pid" != "" ]; then
+    echo "Condor is running (pid $master_pid)"
+    return 0
+  else
+    echo "Condor is not running"
+    return 3; 
+  fi
 }
-
-################################################################################
-
-# Back up only relevant argument, as function calls may stomp it. 
-INIT_COMMAND=$1
 
 verify_executable "$CONDOR_CONFIG_VAL"
 
 # We don't use CONDOR_CONFIG directly, it's used by the
 # Condor tools.
 if [ "$CONDOR_CONFIG" != "" ]; then
-    export CONDOR_CONFIG
+  export CONDOR_CONFIG
 fi
 
+detect_ps
+detect_awk
+set_condor_users
 
-if [ "$PIDFILE" = "" ]; then
-    init_condor_run
-    PIDFILE="$CONDOR_RUN/condor.pid"
+if [ "$CONDOR_USERS" = "" ] ; then
+  if [ "$PSFLAGSn" = "" ] ; then
+    fatal_error "CONDOR_IDS is \"$IDS\", and I can't detect what user that maps to.\n  Specify CONDOR_USERS in your Condor sysconfig file ($CODNOR_SYSCONFIG, if it exists)\n  or at the top of this script."
+  fi
 fi
 
+# PID file overides / fallbacks
+if [ "$DISABLE_PIDFILE" = "yes" ] ; then
+  PIDFILE=""
+elif [ "$PIDFILE" = "" ] ; then
+  set_condor_run
+  PIDFILE="$CONDOR_RUN/condor.pid"
+fi
 
 case $INIT_COMMAND in
-    'start')
-	start
-	;;
+  'start')
+    start
+    ;;
 
-    'stop')
-	xstop
-	;;
+  'stop')
+    xstop
+    ;;
 
-    'restart')
-	xstop
-	start
-	;;
+  'restart')
+    xstop
+    start
+    ;;
 
-    'try-restart')
-	if [ "`condor_pid`" = "" ]; then exit 0; fi # Not running
-	xstop
-	start
-	;;
+  'try-restart')
+    if [ "`condor_master_pids`" = "" ]; then exit 0; fi # Not running
+    xstop
+    start
+    ;;
 
-    'reload')
-	reload
-	;;
+  'reload')
+    reload
+    ;;
 
-    'force-reload')
-	reload
-	;;
+  'force-reload')
+    reload
+    ;;
 
-    'status')
-	status
-	;;
+  'status')
+    status
+    ;;
 
-    *)
-	echo "Usage: $0 {start|stop|restart|try-restart|reload|force-reload|status}"
-	;;
+  *)
+    echo "Unknown command $INIT_COMMAND: use --help for help"
+    exit 1
+    ;;
 
 esac
