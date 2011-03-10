@@ -53,9 +53,8 @@ exporting documents or software obtained from this server.
 
 ****************************************************************/
 
-#include "sandbox_manager_enum_utils.h"
-#include "translation_utils.h"
 #include "condor_common.h"
+#include "sandbox_manager_enum_utils.h"
 
 using namespace std;
 
@@ -68,6 +67,7 @@ struct Translation SandboxStateTranslation[] = {
 	{ "VALID", SANDBOXSTATE_VALID },
 	{ "EXPIRED", SANDBOXSTATE_EXPIRED }
 };
+
 
 struct Translation SandboxSlotStateTranslation[] = {
 	{ "UNUSED", SSS_UNUSED },

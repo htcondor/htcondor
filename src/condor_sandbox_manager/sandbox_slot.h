@@ -57,25 +57,11 @@ exporting documents or software obtained from this server.
 #if !defined(_CONDOR_SANDBOX_SLOT_H)
 #define _CONDOR_SANDBOX_SLOT_H
 
-//#include "condor_daemon_core.h"
-//#include "list.h"
-//#include "nullfile.h"
 #include "basename.h"
-//#include "condor_ckpt_name.h"
-//#include "condor_qmgr.h"
-//#include "condor_config.h"
 #include "condor_common.h"
-#include "sandbox_manager_enum_utils.h"
-#include "sandbox.h"
 #include "condor_debug.h"
-//#include "dc_collector.h"
-//#include "condor_classad.h"
-//#include "condor_adtypes.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-//#include "util_lib_proto.h"
-//#include "internet.h"
-//#include "my_hostname.h"
 #include "condor_state.h"
 #include "condor_string.h"
 #include "string_list.h"
@@ -84,6 +70,9 @@ exporting documents or software obtained from this server.
 #include "condor_random_num.h"
 #include <string>
 #include <sstream>
+
+#include "sandbox.h"
+#include "sandbox_manager_enum_utils.h"
 
 using namespace std;
 

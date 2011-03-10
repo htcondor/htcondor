@@ -5284,7 +5284,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	jobAd->Assign( ATTR_STARTD_SENDS_ALIVES, mrec->m_startd_sends_alives );
 
 	std::string sbid = CSandbox::createId(12);
-	dprintf(D_ALWAYS, "!!!!!!!!!!!!!!!!! Call sandbox ID create ...%s \n", sbid.c_str());
+	dprintf(D_ALWAYS, "Call CSandbox::createId ...%s \n", sbid.c_str());
 	SetAttributeString(mrec->cluster, mrec->proc, "JOB_SANDBOX_ID", sbid.c_str());
 	jobAd->Assign( "JOB_SANDBOX_ID", sbid);
 	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(

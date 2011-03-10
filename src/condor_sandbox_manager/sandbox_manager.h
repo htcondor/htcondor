@@ -59,14 +59,14 @@ exporting documents or software obtained from this server.
 //#include "condor_daemon_core.h"
 //#include "list.h"
 
-#include "condor_common.h"
 #include "sandbox.h"
 #include "sandbox_slot.h"
-#include "util_lib_proto.h"
-#include <string>
-#include <iostream>
+//#include <string>
+//#include <iostream>
 #include <map>
 #include <vector>
+#include <string>
+#include <iostream>
 using namespace std;
 
 /*
@@ -84,7 +84,9 @@ public:
 
 	// Given the base dir, create a local are to move the sandbox, 
 	// assign a sandboxId to the sandbox and set its expiry
-	virtual char* registerSandbox(const char*);
+	virtual char* registerSandbox(const char*, const char*, bool isId = false);
+	
+	virtual void updateSandboxExecDir(const char*, const char*);
 
 	// Given the sandboxId give the handle to the sandbox location
 	virtual string transferSandbox(const char*);
@@ -120,6 +122,10 @@ public:
 	
 	virtual void initIterator(void);
 	virtual std::string getNextSandboxId(void);
+	
+	bool removeSandbox(std::string sandboxId);
+	
+	bool removeSandboxes(std::string claimId);
 
 	// Check if there is an empty sandbox slot
 	virtual bool isSandboxSlotAvailable(void);
@@ -134,8 +140,6 @@ private:
 	// Map of sandboxIds and a pointer to the sandbox object
 	std::map<string, CSandbox*>sandboxMap;
 	
-	std::map<std::string, CSandbox*>::iterator m_iter;
-
     // Total number of slots available
     static int numSlotsTotal;
 
@@ -159,6 +163,10 @@ private:
     // Do any required initialization
 	void init(void);
 	
+	std::map<std::string ,CSandbox*>::iterator m_iter;
+	
+	// a vector of sandbox ids associated with a particular claim
+	std::map<std::string, vector<std::string> > claimIdSandboxMap;
 
 };
 #endif

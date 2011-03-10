@@ -56,10 +56,10 @@ exporting documents or software obtained from this server.
 #include "sandbox_slot.h"
 
 
-CSandboxSlot::CSandboxSlot(const char* i, CSandbox* sb)
+CSandboxSlot::CSandboxSlot(const char* sId, CSandbox* sb)
 {
 	printf("Entering CSandboxSlot::CSandboxSlot()\n");
-	init(i, sb);
+	init(sId, sb);
 }
 
 
@@ -136,15 +136,12 @@ CSandboxSlot::getDetails()
 *****************************************************************************/
 
 void
-//CSandboxSlot::init(	JobInfoCommunicator* my_jic, const char* sDir, 
-CSandboxSlot::init(	const char* i, CSandbox* sb)
+CSandboxSlot::init(	const char* sId, CSandbox* sb)
 {
-	//time_t now;
-
 	printf("CSandboxSlot::init called\n");
 
 	// Set the id
-	this->id.assign(i);
+	this->id.assign(sId);
 
 	// Set the state of the sandbox
 	this->state = SSS_UNUSED;
