@@ -37,7 +37,7 @@ __inline int win32_inet_pton(int af, const char *src, void *dst) {
 	} else if (af == AF_INET6) {
 		struct sockaddr_in6 sin6;
 		int sin6len = sizeof(sin6);
-		ret = WSAStringToAddress((char*)src, af, NULL,
+		ret = WSAStringToAddressA((char*)src, af, NULL,
 			(LPSOCKADDR)&sin6, &sin6len);
 		if (ret == 0) {
 			memcpy(dst, &sin6.sin6_addr, sizeof(sin6.sin6_addr));
@@ -64,11 +64,13 @@ __inline const char* win32_inet_ntop(int af, const void* src, char* dst,
 		sin6->sin6_family = AF_INET6;
 		memcpy(&sin6->sin6_addr, src, sizeof(in6_addr));
 	}
-	int ret = WSAAddressToString(addr, addr_len, NULL,
-								 dst, &size);
+	DWORD dst_len = size;
+	int ret = WSAAddressToStringA(addr, addr_len, NULL,
+								 dst, &dst_len);
 	if (ret == SOCKET_ERROR) {
 		return NULL;
 	}
+	
 	return dst;
 }
 
