@@ -29,7 +29,7 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 
-// Expecting:AMAZON_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <groupname> <groupname> ..
+// Expecting:EC2_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <groupname> <groupname> ..
 // <groupname> are optional ones.
 // we support multiple groupnames
 bool AmazonVMStart::ioCheck(char **argv, int argc)
@@ -46,7 +46,7 @@ bool AmazonVMStart::ioCheck(char **argv, int argc)
 		verify_string_name(argv[9]);
 }
 
-// Expecting:AMAZON_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
+// Expecting:EC2_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 bool AmazonVMStop::ioCheck(char **argv, int argc)
 {
 	return verify_number_args(argc, 6) &&
@@ -57,7 +57,7 @@ bool AmazonVMStop::ioCheck(char **argv, int argc)
 		verify_string_name(argv[5]);
 }
 
-// Expecting:AMAZON_VM_STATUS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
+// Expecting:EC2_VM_STATUS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 bool AmazonVMStatus::ioCheck(char **argv, int argc)
 {
 	return verify_number_args(argc, 6) &&
@@ -68,7 +68,7 @@ bool AmazonVMStatus::ioCheck(char **argv, int argc)
 		verify_string_name(argv[5]);
 }
 
-// Expecting:AMAZON_VM_STATUS_ALL <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
+// Expecting:EC2_VM_STATUS_ALL <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
 bool AmazonVMStatusAll::ioCheck(char **argv, int argc)
 {
 	return verify_min_number_args(argc, 5) &&
@@ -78,7 +78,7 @@ bool AmazonVMStatusAll::ioCheck(char **argv, int argc)
 		verify_string_name(argv[4]);
 }
 
-// Expecting:AMAZON_VM_RUNNING_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <Status>
+// Expecting:EC2_VM_RUNNING_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <Status>
 // <Status> is optional field. If <Status> is specified, the keypair which belongs to VM with the status will be listed.
 
 bool AmazonVMRunningKeypair::ioCheck(char **argv, int argc)
@@ -90,7 +90,7 @@ bool AmazonVMRunningKeypair::ioCheck(char **argv, int argc)
 		verify_string_name(argv[4]);
 }
 
-// Expecting:AMAZON_VM_CREATE_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname> <outputfile>
+// Expecting:EC2_VM_CREATE_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname> <outputfile>
 bool AmazonVMCreateKeypair::ioCheck(char **argv, int argc)
 {
 	return verify_number_args(argc, 7) &&
@@ -102,7 +102,7 @@ bool AmazonVMCreateKeypair::ioCheck(char **argv, int argc)
 		verify_string_name(argv[6]);
 }
 
-// Expecting:AMAZON_VM_DESTROY_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname>
+// Expecting:EC2_VM_DESTROY_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname>
 bool AmazonVMDestroyKeypair::ioCheck(char **argv, int argc)
 {
 	return verify_number_args(argc, 6) &&
@@ -113,7 +113,7 @@ bool AmazonVMDestroyKeypair::ioCheck(char **argv, int argc)
 		verify_string_name(argv[5]);
 }
 
-// Expecting:AMAZON_VM_KEYPAIR_NAMES <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
+// Expecting:EC2_VM_KEYPAIR_NAMES <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
 bool AmazonVMKeypairNames::ioCheck(char **argv, int argc)
 {
 	return verify_number_args(argc, 5) &&

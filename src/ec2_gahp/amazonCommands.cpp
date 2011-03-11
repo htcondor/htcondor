@@ -472,11 +472,11 @@ bool AmazonVMStart::SendRequest() {
     return result;
 }
 
-// Expecting: AMAZON_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <groupname> <groupname> ..
+// Expecting: EC2_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <groupname> <groupname> ..
 // <groupname> are optional ones.
 // we support multiple groupnames
 bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "AMAZON_VM_START" ) == 0 );
+    assert( strcmp( argv[0], "EC2_VM_START" ) == 0 );
 
     // Uses the Query API function 'RunInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-RunInstances.html
@@ -559,9 +559,9 @@ AmazonVMStop::AmazonVMStop() { }
 
 AmazonVMStop::~AmazonVMStop() { }
 
-// Expecting:AMAZON_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
+// Expecting:EC2_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 bool AmazonVMStop::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "AMAZON_VM_STOP" ) == 0 );
+    assert( strcmp( argv[0], "EC2_VM_STOP" ) == 0 );
 
     // Uses the Query API function 'TerminateInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-TerminateInstances.html
@@ -610,9 +610,9 @@ const char * nullStringIfEmpty( const std::string & str ) {
     else { return str.c_str(); }
 }    
 
-// Expecting:AMAZON_VM_STATUS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
+// Expecting:EC2_VM_STATUS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "AMAZON_VM_STATUS" ) == 0 );
+    assert( strcmp( argv[0], "EC2_VM_STATUS" ) == 0 );
 
     // Uses the Query API function 'DescribeInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeInstances.html
@@ -877,9 +877,9 @@ bool AmazonVMStatusAll::SendRequest() {
     return result;
 }
 
-// Expecting:AMAZON_VM_STATUS_ALL <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
+// Expecting:EC2_VM_STATUS_ALL <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
 bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "AMAZON_VM_STATUS_ALL" ) == 0 );
+    assert( strcmp( argv[0], "EC2_VM_STATUS_ALL" ) == 0 );
 
     // Uses the Query API function 'DescribeInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeInstances.html
@@ -945,9 +945,9 @@ AmazonVMRunningKeypair::AmazonVMRunningKeypair() { }
 
 AmazonVMRunningKeypair::~AmazonVMRunningKeypair() { }
 
-// Expecting:AMAZON_VM_RUNNING_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
+// Expecting:EC2_VM_RUNNING_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
 bool AmazonVMRunningKeypair::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "AMAZON_VM_RUNNING_KEYPAIR" ) == 0 );
+    assert( strcmp( argv[0], "EC2_VM_RUNNING_KEYPAIR" ) == 0 );
 
     // Uses the Query API function 'DescribeInstances', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeInstances.html
@@ -1060,9 +1060,9 @@ bool AmazonVMCreateKeypair::SendRequest() {
     return result;
 }
 
-// Expecting:AMAZON_VM_CREATE_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname> <outputfile>
+// Expecting:EC2_VM_CREATE_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname> <outputfile>
 bool AmazonVMCreateKeypair::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "AMAZON_VM_CREATE_KEYPAIR" ) == 0 );
+    assert( strcmp( argv[0], "EC2_VM_CREATE_KEYPAIR" ) == 0 );
 
     // Uses the Query API function 'CreateKeyPair', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-CreateKeyPair.html
@@ -1104,9 +1104,9 @@ AmazonVMDestroyKeypair::AmazonVMDestroyKeypair() { }
 
 AmazonVMDestroyKeypair::~AmazonVMDestroyKeypair() { }
 
-// Expecting:AMAZON_VM_DESTROY_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname>
+// Expecting:EC2_VM_DESTROY_KEYPAIR <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <keyname>
 bool AmazonVMDestroyKeypair::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "AMAZON_VM_DESTROY_KEYPAIR" ) == 0 );
+    assert( strcmp( argv[0], "EC2_VM_DESTROY_KEYPAIR" ) == 0 );
 
     // Uses the Query API function 'DeleteKeyPair', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DeleteKeyPair.html
@@ -1203,9 +1203,9 @@ bool AmazonVMKeypairNames::SendRequest() {
     return result;
 }
 
-// Expecting:AMAZON_VM_KEYPAIR_NAMES <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
+// Expecting:EC2_VM_KEYPAIR_NAMES <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
 bool AmazonVMKeypairNames::workerFunction(char **argv, int argc, std::string &result_string) {
-    assert( strcmp( argv[0], "AMAZON_VM_KEYPAIR_NAMES" ) == 0 );
+    assert( strcmp( argv[0], "EC2_VM_KEYPAIR_NAMES" ) == 0 );
 
     // Uses the Query API function 'DescribeKeyPairs', as documented at
     // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeKeyPairs.html

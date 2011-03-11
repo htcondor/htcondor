@@ -23,13 +23,24 @@ if (HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS)
 
     condor_glob( HeaderFiles SourceFiles "queryAPI-sim.cpp" )
 
+    # Build an executable.
 	condor_exe( ec2_gahp
     	"${HeaderFiles};${SourceFiles}"	${C_SBIN}
 	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${CURL_FOUND};${LDAP_FOUND}"
-    	OFF)
+    	OFF )
 
-	# condor_exe_test(ec2_sim
-	#    "queryAPI-sim.cpp"
-	#    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND}")
+    # Build an executable needed by the tests.
+	condor_exe_test( queryAPI-sim
+        "queryAPI-sim.cpp"
+        "" )
+
+    # Declare the test.
+    #
+    # FIXME: the cmake code is broken and dumps the list_* files into
+    # this directory instead of the condor_tests directory.  It's also
+    # broken and dumping them in the *source* directories, rather than
+    # the *object* directories, but that's a whole different failure.
+    #
+    # condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
 
 endif()

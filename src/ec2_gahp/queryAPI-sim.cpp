@@ -281,7 +281,7 @@ User & validateAndAcquireUser( AttributeValueMap & avm, std::string & userID, st
 }
 
 bool handleRunInstances( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
-    fprintf( stderr, "handleRunInstances()\n" );
+    // fprintf( stdout, "handleRunInstances()\n" );
 
     bool found = false;
     std::string userID;
@@ -413,7 +413,7 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply, unsigned 
 }
 
 bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
-    fprintf( stderr, "handleTerminateInstances()\n" );
+    // fprintf( stdout, "handleTerminateInstances()\n" );
 
     bool found = false;
     std::string userID;
@@ -423,7 +423,7 @@ bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply, uns
     // The ec2_gahp will never request more than one.
     std::string instanceID = getObject< std::string >( avm, "InstanceId.1", found );
     if( (! found) || instanceID.empty() ) {
-        fprintf( stderr, "DEBUG: failed to find instanceID in query.\n" );
+        fprintf( stderr, "Failed to find instanceID in query.\n" );
         reply = "Required parameter InstanceId.1 missing or empty.\n";
         return false;
     }
@@ -467,7 +467,7 @@ bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply, uns
 }
 
 bool handleDescribeInstances( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
-    fprintf( stderr, "handleDescribeInstances()\n" );
+    // fprintf( stdout, "handleDescribeInstances()\n" );
 
     bool found = false;
     std::string userID;
@@ -501,8 +501,8 @@ bool handleDescribeInstances( AttributeValueMap & avm, std::string & reply, unsi
             xml << "<ownerId>" << userID << "</ownerId>" << std::endl;
             
             xml << "<groupSet>" << std::endl;
-                for( unsigned i = 0; i < currentInstance.groupNames.size(); ++i ) {
-                    xml << xmlTag( "item", xmlTag( "groupId", currentInstance.groupNames[i] ) ) << std::endl;
+                for( unsigned j = 0; j < currentInstance.groupNames.size(); ++j ) {
+                    xml << xmlTag( "item", xmlTag( "groupId", currentInstance.groupNames[j] ) ) << std::endl;
                 }
             xml << "</groupSet>" << std::endl;
 
@@ -521,7 +521,7 @@ bool handleDescribeInstances( AttributeValueMap & avm, std::string & reply, unsi
 }
 
 bool handleCreateKeyPair( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
-    fprintf( stderr, "handleCreateKeyPair()\n" );
+    // fprintf( stdout, "handleCreateKeyPair()\n" );
 
     bool found = false;
     std::string userID;
@@ -555,7 +555,7 @@ bool handleCreateKeyPair( AttributeValueMap & avm, std::string & reply, unsigned
 }
 
 bool handleDeleteKeyPair( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
-    fprintf( stderr, "handleDeleteKeyPair()\n" );
+    // fprintf( stdout, "handleDeleteKeyPair()\n" );
 
     bool found = false;
     std::string userID;
@@ -596,7 +596,7 @@ bool handleDeleteKeyPair( AttributeValueMap & avm, std::string & reply, unsigned
 }
 
 bool handleDescribeKeyPairs( AttributeValueMap & avm, std::string & reply, unsigned requestNumber ) {
-    fprintf( stderr, "handleDescribeKeyPairs()\n" );
+    // fprintf( stdout, "handleDescribeKeyPairs()\n" );
 
     bool found = false;
     std::string userID;
@@ -678,10 +678,10 @@ bool extractURL( const std::string & request, std::string & URL ) {
  *      Version
  * 
  */
-bool validateSignature( std::string & method,
-                        const std::string & host,
-                        const std::string & URL,
-                        const AttributeValueMap & queryParameters ) {
+bool validateSignature( std::string & /* method */,
+                        const std::string & /* host */,
+                        const std::string & /* URL */,
+                        const AttributeValueMap & /* queryParameters */ ) {
     return true;
 }
 
@@ -775,7 +775,7 @@ void handleConnection( int sockfd ) {
         
         if( bytesRead == -1 ) {
             if( errno == EINTR ) {
-                fprintf( stderr, "read() interrupted, retrying.\n" );
+                // fprintf( stdout, "read() interrupted, retrying.\n" );
                 continue;
             }
             fprintf( stderr, "read() failed (%d): '%s'\n", errno, strerror( errno ) );
@@ -830,7 +830,7 @@ int printLeakSummary() {
     for( ; u != users.end(); ++u ) {
         // You can leak keys...
         if( ! u->second.keypairs.empty() ) {
-            fprintf( stderr, "User '%s' leaked keys.\n", u->first.c_str() );
+            fprintf( stdout, "User '%s' leaked keys.\n", u->first.c_str() );
             rv = 6;
         }
         
@@ -842,22 +842,22 @@ int printLeakSummary() {
         InstanceIDToInstanceMap::const_iterator i = u->second.instances.begin();
         for( ; i != u->second.instances.end(); ++i ) {
             if( i->second.instanceState.code() != InstanceState::TERMINATED ) {
-                fprintf( stderr, "Instance '%s' in in state '%s', not terminated.\n", i->second.instanceID.c_str(), i->second.instanceState.name().c_str() );
+                fprintf( stdout, "Instance '%s' in in state '%s', not terminated.\n", i->second.instanceID.c_str(), i->second.instanceState.name().c_str() );
                 rv = 6;
             }
         }
     }
 
-    if( rv == 0 ) { fprintf( stderr, "No leaks detected.\n" ); }
+    if( rv == 0 ) { fprintf( stdout, "No leaks detected.\n" ); }
     return rv;
 }
 
 void sigterm( int sig ) {
-    fprintf( stderr, "Caught signal %d, exiting.\n", sig );
+    fprintf( stdout, "Caught signal %d, exiting.\n", sig );
     exit( printLeakSummary() );
 }
 
-int main( int argc, char ** argv ) {
+int main( int /* argc */, char ** /* argv */ ) {
 
     struct sigaction sa;
     sa.sa_handler = & sigterm;
@@ -881,7 +881,10 @@ int main( int argc, char ** argv ) {
         fprintf( stderr, "socket() failed (%d): '%s'; aborting.\n", errno, strerror( errno ) );
         exit( 1 );
     }
-    
+
+/*
+ * listen()ing to an unbound port selects a random free port automagically.
+ *
     struct sockaddr_in listenAddr;
     listenAddr.sin_family = AF_INET;
     listenAddr.sin_port = htons( 21737 );
@@ -891,11 +894,30 @@ int main( int argc, char ** argv ) {
         fprintf( stderr, "bind() failed (%d): '%s'; aborting.\n", errno, strerror( errno ) );
         exit( 2 );
     }
+*/
 
     rv = listen( listenSocket, 0 );
     if( rv != 0 ) {
         fprintf( stderr, "listen() failed (%d): '%s'; aborting.\n", errno, strerror( errno ) );
         exit( 3 );
+    }
+
+    struct sockaddr_in listenAddr;
+    socklen_t listenAddrLen = sizeof( struct sockaddr_in );
+    rv = getsockname( listenSocket, (struct sockaddr *)(& listenAddr), & listenAddrLen );
+    if( rv != 0 ) {
+        fprintf( stderr, "getsockname() failed (%d): '%s'; aborting.\n", errno, strerror( errno ) );
+        exit( 5 );
+    }
+    if( listenAddrLen != sizeof( struct sockaddr_in ) ) {
+        fprintf( stderr, "getsockname() returned bogus address, aborting.\n" );
+        exit( 6 );
+    }
+    fprintf( stdout, "listen_port = %d\n", ntohs( listenAddr.sin_port ) );
+    rv = fflush( stdout );
+    if( rv != 0 ) {
+        fprintf( stderr, "fflush( stdout ) failed (%d): '%s'; aborting.\n", errno, strerror( errno ) );
+        exit( 7 );
     }
 
     registerAllHandlers();

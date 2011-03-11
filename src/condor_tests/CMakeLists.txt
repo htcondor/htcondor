@@ -465,4 +465,7 @@ if (BUILD_TESTS)
 		condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
 	endif()
 
+	# AFAIK, this test isn't platform- or external- dependent.
+	condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
+
 endif(BUILD_TESTS)

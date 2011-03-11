@@ -111,7 +111,7 @@ bool EC2JobAdMatch( const ClassAd *job_ad )
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
 
-	if ( (universe == CONDOR_UNIVERSE_GRID) && (strncasecmp( resource.c_str(), "ec2", 6 ) == 0) ) 
+	if ( (universe == CONDOR_UNIVERSE_GRID) && (strncasecmp( resource.c_str(), "ec2", 3 ) == 0) ) 
 	{
 		return true;
 	}
