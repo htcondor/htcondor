@@ -1117,7 +1117,9 @@ negotiationTime ()
                 dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter ad with no name\n");
                 continue;
             }
-            // this holds the submitter name, which includes group, if present
+            // important to case-fold these so group names match 
+            tname.lower_case();
+            // this holds the (case-folded) submitter name, which includes group, if present
             const string subname(tname.Value());
 
             // is there a username separator?
@@ -1342,6 +1344,9 @@ void Matchmaker::hgq_construct_tree() {
     hgq_root_name = "<none>";
 	vector<string> groups;
     if (NULL != groupnames) {
+        // map to lower case for case insensitivity
+        strlwr(groupnames);
+
         StringList group_name_list;
         group_name_list.initializeFromString(groupnames);
         group_name_list.rewind();
@@ -1397,14 +1402,14 @@ void Matchmaker::hgq_construct_tree() {
         GroupEntry* group = hgq_root_group;
         bool missing_parent = false;
         for (unsigned long k = 0;  k < gpath.size()-1;  ++k) {
-			GroupEntry *child = group->findChild( gpath[k] );
-
-            if (!child) {
+            // chmap is mostly a structure to avoid n^2 behavior in groups with many children
+            map<string, GroupEntry::size_type>::iterator f(group->chmap.find(gpath[k]));
+            if (f == group->chmap.end()) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: ignoring group name %s with missing parent %s\n", gname.c_str(), gpath[k].c_str());
                 missing_parent = true;
                 break;
             }
-            group = child;
+            group = group->children[f->second];
         }
         if (missing_parent) continue;
 
@@ -1415,8 +1420,11 @@ void Matchmaker::hgq_construct_tree() {
         }
 
         // enter the new group
-		group = group->addChild(gpath.back());
-        group_entry_map[gname] = group;
+        group->children.push_back(new GroupEntry);
+        group->chmap[gpath.back()] = group->children.size()-1;
+        group_entry_map[gname] = group->children.back();
+        group->children.back()->parent = group;
+        group = group->children.back();
 
         // "group" now refers to our current group in the list.
         // Fill in entry values from config.
@@ -1948,28 +1956,6 @@ GroupEntry::~GroupEntry() {
     }
 }
 
-GroupEntry *
-GroupEntry::findChild(std::string name)
-{
-	map<string, GroupEntry::size_type>::iterator f;
-	lower_case(name);
-	f = chmap.find(name);
-	if( f == chmap.end() ) {
-		return NULL;
-	}
-	return children[f->second];
-}
-
-GroupEntry *
-GroupEntry::addChild(std::string name)
-{
-	GroupEntry *group = new GroupEntry;
-	lower_case(name);
-	children.push_back(group);
-	chmap[name] = children.size()-1;
-	group->parent = this;
-	return group;
-}
 
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
