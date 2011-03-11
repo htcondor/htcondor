@@ -13,6 +13,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+// For disk quota checks
+#include <sys/statvfs.h>
+
 #include "server_sm_lib.h"
 
 #include "server_sm/discovery.h"
@@ -61,6 +64,11 @@ void run_server( ServerArguments* arg)
 	memcpy( master_server.server_port, arg->lport, 16);
 
 	master_server.server_socket = -1;
+
+	if( confirm_arguments( arg ) != 0)
+	  {
+	    return;
+	  }
 
 	session_state.arguments = arg;
 	session_state.data_buffer = NULL;
@@ -128,7 +136,47 @@ void run_server( ServerArguments* arg)
 
 
 
+/*
 
+  confirm_arguments
+
+
+ */
+
+int confirm_arguments( ServerArguments* arg)
+{
+	struct statvfs fiData;	
+	long int disk_space;
+
+		// Do we have a quota to check for?
+	if( arg->quota != -1 )
+		{
+			if( statvfs( "./", &fiData ) < 0 )
+				{
+					fprintf( stderr, "Unable to confirm quota. Stat failed for './' \n" );
+					return -1;
+				}
+
+			disk_space = fiData.f_bsize*fiData.f_bavail; 
+			
+			if( arg->debug )
+				fprintf( stderr, "Diskspace: %ld, Quota: %ld \n", disk_space, arg->quota*1024l );
+
+			if( disk_space < arg->quota*1024l )
+				{
+					fprintf( stderr, "Unable to satisfy quota. Insufficent disk space available. \n");
+					return -1;
+				}		
+		}
+
+
+
+
+
+
+
+	return 0;
+}
 
 
 

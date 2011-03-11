@@ -89,7 +89,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 			break;
 
 		case 'q':
-			sscanf( arg, "%d", &arguments->quota );
+			sscanf( arg, "%ld", &arguments->quota );
 			break;
 
 		case 'a':
@@ -144,6 +144,8 @@ int main( int argc, char** argv )
 
 	ServerArguments arguments;
      
+	char quotaHR_str[200];
+
 		/* Default values. */
 	arguments.debug = 0;
 	arguments.verbose = 0;
@@ -169,11 +171,20 @@ int main( int argc, char** argv )
 
 	if( arguments.debug )
 		{
+
+			memset( quotaHR_str, 0, 200 );
+			if( arguments.quota > 1024l )
+				sprintf( quotaHR_str, "(%4f MB)", arguments.quota / 1024.0 );
+			if( arguments.quota > 1048576l )
+				sprintf( quotaHR_str, "(%4f GB)", arguments.quota / 1048576.0 );
+			if( arguments.quota > 1073741824l )
+				sprintf( quotaHR_str, "(%4f TB)", arguments.quota / 1073741824.0 );
+
 			printf ("\n--ARGUMENTS--\n"
 					"\tLISTEN PORT      = %s\n"
 					"\tLISTEN INTERFACE = %s"
 					"\n\n--OPTIONS--\n"
-					"\tQUOTA            = %d KB\n"
+					"\tQUOTA            = %ld KB %s\n"
 					"\tINITIAL TIMEOUT  = %d sec\n"
 					"\tVERBOSE          = %s\n"
 					"\tANNOUNCE HOST    = %s\n"
@@ -181,6 +192,7 @@ int main( int argc, char** argv )
 					arguments.lport,
 					arguments.lhost,
 					arguments.quota,
+					quotaHR_str,
 					arguments.itimeout,
 					arguments.verbose ? "yes" : "no",
 					arguments.ahost,

@@ -22,7 +22,8 @@ enum Errors { NO_ERROR, };
 /* Used by main to communicate with parse_opt. */
 typedef struct _arguments
 {
-	int verbose, itimeout, quota, debug, announce;
+	int verbose, itimeout, debug, announce;
+	long quota;
 	char* aport;
 	char* lport;
 	char* ahost;
@@ -66,6 +67,8 @@ typedef int (*StateAction)(ServerState*);
 
 
 //---------------------------------------------------
+
+int confirm_arguments( ServerArguments* arg);
 
 void run_server( ServerArguments* arg);
 void start_server( ServerRecord* master_server );

@@ -10,6 +10,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+
+
 /*
 
 State_ReceiveSessionParameters
@@ -37,6 +39,7 @@ int State_CheckSessionParameters( ServerState* state )
 	cftp_sif_frame* sif_frame;
 	simple_parameters* recvd_params;
 	simple_parameters* local_params;
+
 
 
 	sif_frame = (cftp_sif_frame*)(&state->frecv_buf);
@@ -110,15 +113,15 @@ int State_CheckSessionParameters( ServerState* state )
 		//For now we only check against the quota option.
 		//There will probably be more constraints later
 	if( state->arguments->quota != -1 )
-		{
-			if( local_params->filesize > state->arguments->quota*1024 )
-				{
-					//We cannot accept this file. It is over quota
-					VERBOSE( "Quota exceeded. Cannot accept file from client.\n" );
-					LEAVE_STATE(1);				  
-				}
-		}
-
+	  {
+	    if( local_params->filesize > state->arguments->quota*1024 )
+	      {
+		//We cannot accept this file. It is over quota
+		VERBOSE( "Quota exceeded. Cannot accept file from client.\n" );
+		LEAVE_STATE(1);				  
+	      }
+	  }
+	    
 	VERBOSE( "Check complete." );
 	
 
