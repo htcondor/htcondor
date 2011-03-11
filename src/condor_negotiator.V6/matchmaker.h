@@ -83,7 +83,7 @@ struct GroupEntry {
     // tree structure
     GroupEntry* parent;
     vector<GroupEntry*> children;
-    map<string, size_type> chmap;
+    map<string, size_type, Accountant::ci_less> chmap;
 };
 
 

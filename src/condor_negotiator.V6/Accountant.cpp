@@ -316,16 +316,14 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName) {
 }
 
 GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsGroup) {
-    MyString t(CustomerName);
-    t.lower_case();
-    string subname = t.Value();
+    string subname = CustomerName.Value();
 
     // Is this an acct group, syntactically speaking?
     string::size_type pos = subname.find_last_of('@');
     IsGroup = (pos == string::npos);
 
     // cache results from previous invocations
-    map<string, GroupEntry*>::iterator fs(hgq_submitter_group_map.find(subname));
+    map<string, GroupEntry*, ci_less>::iterator fs(hgq_submitter_group_map.find(subname));
     if (fs != hgq_submitter_group_map.end()) return fs->second;
 
     ASSERT(NULL != hgq_root_group);
@@ -358,7 +356,7 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsG
 
     // walk down the tree using the group path
     for (vector<string>::iterator j(gpath.begin());  j != gpath.end();  ++j) {
-        map<string, GroupEntry::size_type>::iterator f(group->chmap.find(*j));
+        map<string, GroupEntry::size_type, ci_less>::iterator f(group->chmap.find(*j));
         if (f == group->chmap.end()) {
             if (hgq_root_group->children.size() > 0) {
                 // I only want to log a warning if an HGQ configuration exists
@@ -581,11 +579,8 @@ void Accountant::SetLastTime(const MyString& CustomerName, int LastTime)
 // Add a match
 //------------------------------------------------------------------
 
-void Accountant::AddMatch(const MyString& CustomerNameP, ClassAd* ResourceAd) 
+void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd) 
 {
-  MyString CustomerName = CustomerNameP;
-  CustomerName.lower_case();
-
   // Get resource name and the time
   MyString ResourceName=GetResourceName(ResourceAd);
   time_t T=time(0);

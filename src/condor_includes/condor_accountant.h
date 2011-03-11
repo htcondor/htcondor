@@ -101,6 +101,12 @@ public:
 
   bool UsingWeightedSlots();
 
+  struct ci_less {
+      bool operator()(const string& a, const string& b) const {
+          return strcasecmp(a.c_str(), b.c_str()) < 0;
+      }
+  };
+
 private:
 
   //--------------------------------------------------------
@@ -147,7 +153,7 @@ private:
   HashTable<MyString, double> concurrencyLimits;
 
   GroupEntry* hgq_root_group;
-  map<string, GroupEntry*> hgq_submitter_group_map;
+  map<string, GroupEntry*, ci_less> hgq_submitter_group_map;
 
   //--------------------------------------------------------
   // Static values
