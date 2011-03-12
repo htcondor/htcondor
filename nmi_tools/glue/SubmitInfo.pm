@@ -59,6 +59,7 @@ our %build_and_test_sets = (
 	'nmi_one_offs' => [
 		'x86_64_rhap_5.3-updated',
 		'x86_64_opensuse_11.3-updated',
+		'x86_64_opensuse_11.4-updated',
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
 		'x86_64_fedora_12-updated',
@@ -853,6 +854,8 @@ our %submit_info = (
 		},
 	},
 	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
+	'x86_64_opensuse_11.4'				=> 'x86_64_opensuse_11.3',
+	'x86_64_opensuse_11.4-updated'		=> 'x86_64_opensuse_11.4',
 );
 
 foreach my $platform (keys %submit_info) {
