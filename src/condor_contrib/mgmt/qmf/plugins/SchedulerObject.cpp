@@ -161,7 +161,6 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 		// condor_q requires ClusterId (int), ProcId (int), QDate (int), RemoteUserCpu (float), JobStatus (int), JobPrio (int), ImageSize (int), Owner (str) and Cmd (str)
 
 		// Schema: (vm job)
-		// ShouldTransferFiles - unset by default, must be set
 
 	ClassAd ad;
 	int universe;
@@ -178,6 +177,9 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 		text = "Job ad is missing required attributes: " + missing;
 		return STATUS_USER + 4;
 	}
+
+    // ShouldTransferFiles - unset by default, must be set
+    ad.Assign(ATTR_SHOULD_TRANSFER_FILES, "NO");
 
 		// EARLY SET: These attribute are set early so the incoming ad
 		// has a change to override them.
@@ -209,7 +211,7 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 	const char *name;
 	std::string value;
 	ad.ResetExpr();
-	while (!(ad.NextExpr(name,expr))) {
+	while (ad.NextExpr(name,expr)) {
 
 			// All these extra lookups are horrible. They have to
 			// be there because the ClassAd may have multiple
