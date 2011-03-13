@@ -37,8 +37,16 @@ set(VERSION "7.6.0")
 #   perhaps because you are working on a feature branch and need to
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
+<<<<<<< HEAD
 set(PRE_RELEASE "PRE-RELEASE-UWCS")
 #set(PRE_RELEASE OFF)
+=======
+#set(PRE_RELEASE "PRE-RELEASE-UWCS")
+set(PRE_RELEASE OFF)
+if( FORCE_PRE_RELEASE )
+  set(PRE_RELEASE ${FORCE_PRE_RELEASE})
+endif( FORCE_PRE_RELEASE )
+>>>>>>> V7_5_6-NMI-branch
 
 set(PACKAGE_BUGREPORT "http://condor-wiki.cs.wisc.edu/index.cgi/tktnew")
 set(PACKAGE_NAME ${PACKAGE} )
