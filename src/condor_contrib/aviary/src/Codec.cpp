@@ -127,9 +127,11 @@ BaseCodec::mapToClassAd(AttributeMapType& _map, ClassAd& ad)
             case Attribute::FLOAT_TYPE:
                 ad.Assign(name, atof(value->getValue()));
                 break;
-            case Attribute::EXPR_TYPE:
             case Attribute::STRING_TYPE:
                 ad.Assign(name, value->getValue());
+                break;
+            case Attribute::EXPR_TYPE:
+                ad.AssignExpr(name, value->getValue());
                 break;
             default:
                 dprintf(D_FULLDEBUG, "Warning: Unknown/unsupported type in map for attribute '%s'\n", name);

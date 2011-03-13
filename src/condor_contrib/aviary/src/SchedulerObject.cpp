@@ -167,6 +167,12 @@ SchedulerObject::submit(Codec* _codec, AttributeMapType &jobAdMap, std::string &
 		return false;
 	}
 
+        // ShouldTransferFiles - unset by default, must be set
+        // shadow will try to setup local transfer sandbox otherwise
+        // without good priv
+    ad.Assign(ATTR_SHOULD_TRANSFER_FILES, "NO");
+
+
 		// EARLY SET: These attribute are set early so the incoming ad
 		// has a change to override them.
 	::SetAttribute(cluster, proc, ATTR_JOB_STATUS, "1"); // 1 = idle
@@ -197,7 +203,7 @@ SchedulerObject::submit(Codec* _codec, AttributeMapType &jobAdMap, std::string &
 	const char *name;
 	std::string value;
 	ad.ResetExpr();
-	while (!(ad.NextExpr(name,expr))) {
+	while (ad.NextExpr(name,expr)) {
 
 			// All these extra lookups are horrible. They have to
 			// be there because the ClassAd may have multiple
