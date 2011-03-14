@@ -36,7 +36,7 @@ if (WITH_KRB5)
 			set (KRB5_CONFIGURE cp ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.in src/appl/gssftp/ftp/Makefile.in )
 			set (KRB5_MAKE cd src \r\n
 						   nmake -f Makefile.in prep-windows \r\n 
-			               nmake NODEBUG=1)
+			               nmake NODEBUG=1 "DEFS=-D_CRT_SECURE_NO_WARNINGS -FC -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_NON_CONFORMING_SWPRINTFS")
 
 			# Something is wrong with the default install (make install suck-o)
 			set (KRB5_INSTALL cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${EXTERNAL_STAGE}/include/win-mac.h \r\n

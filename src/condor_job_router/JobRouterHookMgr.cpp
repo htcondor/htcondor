@@ -900,7 +900,7 @@ CleanupClient::hookExited(int exit_status)
 
 	// Only tell the job router to finish the cleanup of the job if the
 	// hook exited successfully
-	if (true == WIFSIGNALED(exit_status) || 0 == WEXITSTATUS(exit_status))
+	if (WIFSIGNALED(exit_status) || ! WEXITSTATUS(exit_status))
 	{
 		// Tell the JobRouter to cleanup the job.
 		job_router->FinishCleanupJob(m_routed_job);

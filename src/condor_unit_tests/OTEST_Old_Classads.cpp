@@ -3021,7 +3021,7 @@ static bool test_real_float_negative_quotes() {
     const char* classad_string = "\tB=real(\"-3.4\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	float actual = -1.0, expect = -3.4;
+	float actual = -1.0f, expect = -3.4f;
 	int retVal = classad.EvalFloat("B", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3046,7 +3046,7 @@ static bool test_real_float_negative() {
     const char* classad_string = "\tB=real(-3.4)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	float actual = -1.0, expect = -3.4;
+	float actual = -1.0f, expect = -3.4f;
 	int retVal = classad.EvalFloat("B", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3071,7 +3071,7 @@ static bool test_real_float_positive() {
     const char* classad_string = "\tB=real(3.4)";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	float actual = -1.0, expect = 3.4;
+	float actual = -1.0f, expect = 3.4f;
 	int retVal = classad.EvalFloat("B", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4358,7 +4358,7 @@ static bool test_string_list_avg_both() {
 	const char* classad_string = "\tA1=stringlistavg(\"1,-2.0,3.0\")";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	float actual = -1.0, expect = 0.666667;
+	float actual = -1.0f, expect = 0.666667f;
 	int retVal = classad.EvalFloat("A1", NULL, actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
