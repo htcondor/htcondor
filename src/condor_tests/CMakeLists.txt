@@ -159,8 +159,9 @@ if (BUILD_TESTS)
 	# feature specific tests
 	if (HAVE_VMWARE)
 		condor_pl_test(job_vmu_basic "VM Universe smoke test" "core;quick;full;quicknolink")
-		condor_pl_test(job_vmu_cdrom "VM Universe CD-ROM test" "core;quick;full;quicknolink")
-		#condor_pl_test(job_vmu_network "VM Universe networking test" "core;quick;full;quicknolink")
+		# cdrom xfer bits no longer supported. 
+		# condor_pl_test(job_vmu_cdrom "VM Universe CD-ROM test" "core;quick;full;quicknolink")
+		# condor_pl_test(job_vmu_network "VM Universe networking test" "core;quick;full;quicknolink")
 		condor_pl_test(job_vmu_ckpt "VM Universe checkpoint test" "core;quick;full;quicknolink")
 	endif(HAVE_VMWARE)
 
