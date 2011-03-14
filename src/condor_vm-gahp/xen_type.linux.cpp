@@ -48,30 +48,7 @@
 
 extern VMGahp *vmgahp;
 
-static MyString
-getScriptErrorString(const char* fname)
-{
-	MyString err_msg;
-	FILE *file = NULL;
-	char buffer[1024];
-	file = safe_fopen_wrapper(fname, "r");
-
-	if( !file ) {
-		err_msg = VMGAHP_ERR_INTERNAL;
-		return err_msg;
-	}
-
-	memset(buffer, 0, sizeof(buffer));
-	while( fgets(buffer, sizeof(buffer), file) != NULL ) {
-		err_msg += buffer;
-		memset(buffer, 0, sizeof(buffer));
-	}
-	fclose(file);
-	return err_msg;
-}
-
-VirshType::VirshType(const char* scriptname, const char* workingpath,
-		ClassAd* ad) : VMType("", scriptname, workingpath, ad)
+VirshType::VirshType(const char* workingpath,ClassAd* ad) : VMType("", "none", workingpath, ad)
 {
 	m_cputime_before_suspend = 0;
 	m_xen_hw_vt = false;
@@ -135,11 +112,10 @@ VirshType::Start()
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::Start\n");
 
-	if( (m_scriptname.Length() == 0) ||
-		(m_configfile.Length() == 0)) {
+	if( (m_configfile.Length() == 0)) {
 
 	        m_result_msg = VMGAHP_ERR_INTERNAL;
-		vmprintf(D_FULLDEBUG, "Script name was not set or config file was not set\nscriptname: %s\nconfigfile: %s\n", m_scriptname.Value(), m_configfile.Value());
+		vmprintf(D_FULLDEBUG, "Config file was not set configfile: %s\n", m_configfile.Value());
 		return false;
 	}
 
@@ -211,8 +187,7 @@ VirshType::Shutdown()
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::Shutdown\n");
 
-	if( (m_scriptname.Length() == 0) ||
-		(m_configfile.Length() == 0)) {
+	if( (m_configfile.Length() == 0) ) {
 		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
@@ -297,8 +272,7 @@ VirshType::Checkpoint()
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::Checkpoint\n");
 
-	if( (m_scriptname.Length() == 0) ||
-		(m_configfile.Length() == 0)) {
+	if( (m_configfile.Length() == 0)) {
 		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
@@ -397,6 +371,9 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
       classad_string += "\"\n";
     }
   input_strings.append(classad_string.Value());
+  
+  vmprintf(D_FULLDEBUG, "LIBVIRT_XML_SCRIPT_ARGS input_strings= %s\n", input_strings.print_to_string() );
+  
   int ret = systemCommand(args, PRIV_ROOT, &output_strings, &input_strings, &error_strings, false);
   error_strings.rewind();
   if(ret != 0)
@@ -429,18 +406,11 @@ bool
 VirshType::ResumeFromSoftSuspend(void)
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::ResumeFromSoftSuspend\n");
-	if( (m_scriptname.Length() == 0) ||
-		(m_configfile.Length() == 0)) {
+	if( (m_configfile.Length() == 0)) {
 		return false;
 	}
 
 	if( m_is_soft_suspended ) {
-		// ArgList systemcmd;
-// 		systemcmd.AppendArg(m_scriptname);
-// 		systemcmd.AppendArg("unpause");
-// 		systemcmd.AppendArg(m_configfile);
-
-// 		int result = systemCommand(systemcmd, PRIV_ROOT);
 
 		priv_state priv = set_root_priv();
 		virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
@@ -472,8 +442,7 @@ VirshType::SoftSuspend()
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::SoftSuspend\n");
 
-	if( (m_scriptname.Length() == 0) ||
-		(m_configfile.Length() == 0)) {
+	if( (m_configfile.Length() == 0)) {
 		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
@@ -486,13 +455,6 @@ VirshType::SoftSuspend()
 		m_result_msg = VMGAHP_ERR_VM_INVALID_OPERATION;
 		return false;
 	}
-
-// 	ArgList systemcmd;
-// 	systemcmd.AppendArg(m_scriptname);
-// 	systemcmd.AppendArg("pause");
-// 	systemcmd.AppendArg(m_configfile);
-
-// 	int result = systemCommand(systemcmd, PRIV_ROOT);
 
 	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
@@ -523,8 +485,7 @@ VirshType::Suspend()
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::Suspend\n");
 
-	if( (m_scriptname.Length() == 0) ||
-		(m_configfile.Length() == 0)) {
+	if( (m_configfile.Length() == 0) ) {
 		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
@@ -551,16 +512,6 @@ VirshType::Suspend()
 	MyString tmpfilename;
 	makeNameofSuspendfile(tmpfilename);
 	unlink(tmpfilename.Value());
-
-// 	StringList cmd_out;
-
-// 	ArgList systemcmd;
-// 	systemcmd.AppendArg(m_scriptname);
-// 	systemcmd.AppendArg("suspend");
-// 	systemcmd.AppendArg(m_configfile);
-// 	systemcmd.AppendArg(tmpfilename);
-
-// 	int result = systemCommand(systemcmd, PRIV_ROOT, &cmd_out);
 
 	priv_state priv = set_root_priv();
 	virDomainPtr dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value());
@@ -598,8 +549,7 @@ VirshType::Resume()
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::Resume\n");
 
-	if( (m_scriptname.Length() == 0) ||
-		(m_configfile.Length() == 0)) {
+	if((m_configfile.Length() == 0)) {
 		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
@@ -624,15 +574,6 @@ VirshType::Resume()
 		m_result_msg = VMGAHP_ERR_VM_INVALID_SUSPEND_FILE;
 		return false;
 	}
-
-// 	StringList cmd_out;
-
-// 	ArgList systemcmd;
-// 	systemcmd.AppendArg(m_scriptname);
-// 	systemcmd.AppendArg("resume");
-// 	systemcmd.AppendArg(m_suspendfile);
-
-// 	int result = systemCommand(systemcmd, PRIV_ROOT, &cmd_out);
 
 	priv_state priv = set_root_priv();
 	int result = virDomainRestore(m_libvirt_connection, m_suspendfile.Value());
@@ -660,43 +601,10 @@ VirshType::Status()
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::Status\n");
 
- 	if( (m_scriptname.Length() == 0) ||
- 		(m_configfile.Length() == 0)) {
+ 	if((m_configfile.Length() == 0)) {
  		m_result_msg = VMGAHP_ERR_INTERNAL;
  		return false;
  	}
-
-//      This is no longer needed, because we are not getting the
-//      information from the script.
-
-//  	if( m_is_soft_suspended ) {
-//  		// If a VM is softly suspended,
-//  		// we cannot get info about the VM by using script
-//  		m_result_msg = VMGAHP_STATUS_COMMAND_STATUS;
-//  		m_result_msg += "=";
-// 		m_result_msg += "SoftSuspended";
-// 		return true;
-// 	}
-
-//      Why was this ever here?  This is also no longer needed; we can
-//      query libvirt for the information as many times as we want,
-//      and it should not take a long time...
-
-// 	// Check the last time when we executed status.
-// 	// If the time is in 10 seconds before current time,
-// 	// We will not execute status again.
-// 	// Maybe this case may happen when it took long time
-// 	// to execute the last status.
-// 	UtcTime cur_time;
-// 	long diff_seconds = 0;
-
-// 	cur_time.getTime();
-// 	diff_seconds = cur_time.seconds() - m_last_status_time.seconds();
-
-// 	if( (diff_seconds < 10) && !m_last_status_result.IsEmpty() ) {
-// 		m_result_msg = m_last_status_result;
-// 		return true;
-// 	}
 
  	m_result_msg = "";
 
@@ -1011,6 +919,8 @@ VirshType::parseXenDiskParam(const char *format)
 		return false;
 	}
 
+    vmprintf(D_FULLDEBUG, "format = %s\n", format);
+
 	StringList working_files;
 	find_all_files_in_dir(m_workingpath.Value(), working_files, true);
 
@@ -1024,7 +934,9 @@ VirshType::parseXenDiskParam(const char *format)
 	while( (one_disk = disk_files.next() ) != NULL ) {
 		// found a disk file
 		StringList single_disk_file(one_disk, ":");
-		if( single_disk_file.number() != 3 ) {
+        int iNumParams = single_disk_file.number();
+		if( iNumParams < 3 || iNumParams > 4 ) 
+        {
 			return false;
 		}
 
@@ -1071,15 +983,16 @@ VirshType::parseXenDiskParam(const char *format)
 		MyString disk_perm = single_disk_file.next();
 		disk_perm.trim();
 
-		if( !strcasecmp(disk_perm.Value(), "w") ||
-				!strcasecmp(disk_perm.Value(), "rw")) {
+		if( !strcasecmp(disk_perm.Value(), "w") || !strcasecmp(disk_perm.Value(), "rw")) 
+        {
 			// check if this disk file is writable
 			if( check_vm_write_access_file(disk_file.Value(), false) == false ) {
 				vmprintf(D_ALWAYS, "xen disk image file('%s') cannot be modified\n",
 					   	disk_file.Value());
 				return false;
 			}
-		}else {
+		}else 
+        {
 			// check if this disk file is readable
 			if( check_vm_read_access_file(disk_file.Value(), false) == false ) {
 				vmprintf(D_ALWAYS, "xen disk image file('%s') cannot be read\n",
@@ -1093,6 +1006,15 @@ VirshType::parseXenDiskParam(const char *format)
 		newdisk->filename = disk_file;
 		newdisk->device = disk_device;
 		newdisk->permission = disk_perm;
+
+        // only when a format is specified do we check
+        if (iNumParams == 4 )
+        {
+            newdisk->format = single_disk_file.next();
+            newdisk->format.trim();
+            newdisk->format.lower_case();
+        }
+        
 		m_disk_list.Append(newdisk);
 	}
 
@@ -1105,7 +1027,7 @@ VirshType::parseXenDiskParam(const char *format)
 }
 
 
-// This function should be called after parseVirshDiskParam and createISO
+// This function should be called after parseVirshDiskParam
 MyString
 VirshType::makeVirshDiskString(void)
 {
@@ -1120,7 +1042,22 @@ VirshType::makeVirshDiskString(void)
 			xendisk += "</disk>";
 		}
 		first_disk = false;
-		xendisk += "<disk type='file'>";
+        if ( strstr (vdisk->filename.Value(), ".iso") )
+        {
+            xendisk += "<disk type='file' device='cdrom'>";
+        }
+        else
+        {
+            xendisk += "<disk type='file'>";
+        }
+
+        if (vdisk->format.Length())
+        {
+           xendisk += "<driver name='qemu' type='";
+           xendisk += vdisk->format;
+           xendisk += "'/>";
+        }
+
 		xendisk += "<source file='";
 		xendisk += vdisk->filename;
 		xendisk += "'/>";
@@ -1133,18 +1070,6 @@ VirshType::makeVirshDiskString(void)
 		}
 	}
 	xendisk += "</disk>";
-
-	if( m_iso_file.IsEmpty() == false ) {
-		xendisk += "<disk type='file' device='cdrom'>";
-		xendisk += "<source file='";
-		xendisk += m_iso_file;
-		xendisk += "'/>";
-		xendisk += "<target dev='";
-		xendisk += m_xen_cdrom_device;
-		xendisk += "'/>";
-		xendisk += "<readonly/>";
-		xendisk += "</disk>";
-	}
 
 	return xendisk;
 }
@@ -1269,46 +1194,6 @@ bool KVMType::checkXenParams(VMGahpConfig * config)
   if( !config ) {
     return false;
   }
-// find script program for Virsh
-  config_value = param("VM_SCRIPT");
-  if( !config_value ) {
-    vmprintf(D_ALWAYS,
-	     "\nERROR: 'VM_SCRIPT' not defined in configuration\n");
-    return false;
-  }
-  fixedvalue = delete_quotation_marks(config_value);
-  free(config_value);
-
-
-  struct stat sbuf;
-  if( stat(fixedvalue.Value(), &sbuf ) < 0 ) {
-    vmprintf(D_ALWAYS, "\nERROR: Failed to access the script "
-	     "program for Virsh:(%s:%s)\n", fixedvalue.Value(),
-	     strerror(errno));
-    return false;
-  }
-
-  // Other writable bit
-  if( sbuf.st_mode & S_IWOTH ) {
-    vmprintf(D_ALWAYS, "\nFile Permission Error: "
-	     "other writable bit is not allowed for \"%s\" "
-	     "due to security issues\n", fixedvalue.Value());
-    return false;
-  }
-
-  // is executable?
-  if( !(sbuf.st_mode & S_IXUSR) ) {
-    vmprintf(D_ALWAYS, "\nFile Permission Error: "
-	     "User executable bit is not set for \"%s\"\n", fixedvalue.Value());
-    return false;
-  }
-
-
-  // Can read script program?
-  if( check_vm_read_access_file(fixedvalue.Value(), true) == false ) {
-    return false;
-  }
-  config->m_vm_script = fixedvalue;
 
   // Do we need to check for both read and write access?
   if(check_vm_read_access_file("/dev/kvm", true) == false) {
@@ -1342,51 +1227,7 @@ XenType::checkXenParams(VMGahpConfig* config)
 	if( !config ) {
 		return false;
 	}
-
-	// find script program for Virsh
-	config_value = param("XEN_SCRIPT");
-	if( !config_value )
-	{
-		if (!(config_value = param("VM_SCRIPT")))
-		{
-			vmprintf(D_ALWAYS,
-		         "\nERROR: Neither 'XEN_SCRIPT' or 'VM_SCRIPT' not defined in configuration\n");
-			return false;
-		}
-
-	}
-	fixedvalue = delete_quotation_marks(config_value);
-	free(config_value);
-
-	struct stat sbuf;
-	if( stat(fixedvalue.Value(), &sbuf ) < 0 ) {
-		vmprintf(D_ALWAYS, "\nERROR: Failed to access the script "
-				"program for Virsh:(%s:%s)\n", fixedvalue.Value(),
-			   	strerror(errno));
-		return false;
-	}
-
-	// Other writable bit
-	if( sbuf.st_mode & S_IWOTH ) {
-		vmprintf(D_ALWAYS, "\nFile Permission Error: "
-				"other writable bit is not allowed for \"%s\" "
-				"due to security issues\n", fixedvalue.Value());
-		return false;
-	}
-
-	// is executable?
-	if( !(sbuf.st_mode & S_IXUSR) ) {
-		vmprintf(D_ALWAYS, "\nFile Permission Error: "
-			"User executable bit is not set for \"%s\"\n", fixedvalue.Value());
-		return false;
-	}
-
-	// Can read script program?
-	if( check_vm_read_access_file(fixedvalue.Value(), true) == false ) {
-		return false;
-	}
-	config->m_vm_script = fixedvalue;
-
+	
 	// Read XEN_BOOTLOADER (required parameter)
 	config_value = param("XEN_BOOTLOADER");
 	if( !config_value ) {
@@ -1413,27 +1254,6 @@ XenType::killVMFast(const char* vmname)
 	virConnectPtr libvirt_connection = virConnectOpen("xen:///");
 	set_priv(priv);
 	return VirshType::killVMFast(vmname, libvirt_connection);
-}
-
-bool
-VirshType::testXen(VMGahpConfig* config)
-{
-	if( !config ) {
-		return false;
-	}
-
-
-	ArgList systemcmd;
-	systemcmd.AppendArg(config->m_vm_script);
-	systemcmd.AppendArg("check");
-
-	int result = systemCommand(systemcmd, PRIV_ROOT);
-	if( result != 0 ) {
-		vmprintf( D_ALWAYS, "Virsh script check failed:\n" );
-		return false;
-	}
-
-	return true;
 }
 
 void
@@ -1568,8 +1388,7 @@ VirshType::killVM()
 {
 	vmprintf(D_FULLDEBUG, "Inside VirshType::killVM\n");
 
-	if( (m_scriptname.Length() == 0 ) ||
-			( m_vm_name.Length() == 0 ) ) {
+	if( ( m_vm_name.Length() == 0 ) ) {
 		return false;
 	}
 
@@ -1612,55 +1431,8 @@ VirshType::killVMFast(const char* vmname, virConnectPtr libvirt_con)
 	return ret;
 }
 
-bool
-VirshType::createISO()
-{
-	vmprintf(D_FULLDEBUG, "Inside VirshType::createISO\n");
-
-	m_iso_file = "";
-
-	if( m_scriptname.IsEmpty() || m_vm_cdrom_files.isEmpty() ) {
-		return false;
-	}
-
-	MyString tmp_config;
-	MyString tmp_file;
-	if( createISOConfigAndName(&m_vm_cdrom_files, tmp_config,
-				tmp_file) == false ) {
-		return false;
-	}
-
-	ArgList systemcmd;
-	if( m_prog_for_script.IsEmpty() == false ) {
-		systemcmd.AppendArg(m_prog_for_script);
-	}
-	systemcmd.AppendArg(m_scriptname);
-	systemcmd.AppendArg("createiso");
-	systemcmd.AppendArg(tmp_config);
-	systemcmd.AppendArg(tmp_file);
-
-	int result = systemCommand(systemcmd, m_file_owner);
-	if( result != 0 ) {
-		return false;
-	}
-
-#if defined(LINUX)
-	// To avoid lazy-write behavior to disk
-	sync();
-#endif
-
-	unlink(tmp_config.Value());
-	m_iso_file = tmp_file;
-	m_local_iso = true;
-
-	// Insert the name of created iso file to classAd for future use
-	m_classAd.Assign("VMPARAM_ISO_NAME", condor_basename(m_iso_file.Value()));
-	return true;
-}
-
-
-XenType::XenType(const char * scriptname, const char * workingpath, ClassAd * ad)
-  : VirshType(scriptname, workingpath, ad)
+XenType::XenType(const char * workingpath, ClassAd * ad)
+  : VirshType(workingpath, ad)
 {
 
   m_sessionID="xen:///";
@@ -1771,9 +1543,9 @@ bool XenType::CreateConfigFile()
 
 	MyString xen_disk;
 	// Read the parameter of Virsh Disk
-	if( m_classAd.LookupString(VMPARAM_XEN_DISK, xen_disk) != 1 ) {
+	if( m_classAd.LookupString(VMPARAM_VM_DISK, xen_disk) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n",
-				VMPARAM_XEN_DISK);
+				VMPARAM_VM_DISK);
 		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM;
 		return false;
 	}
@@ -1795,20 +1567,6 @@ bool XenType::CreateConfigFile()
 	// Read the parameter of Virsh Kernel Param
 	if( m_classAd.LookupString(VMPARAM_XEN_KERNEL_PARAMS, m_xen_kernel_params) == 1 ) {
 		m_xen_kernel_params.trim();
-	}
-
-	// Read the parameter of Virsh cdrom device
-	if( m_classAd.LookupString(VMPARAM_XEN_CDROM_DEVICE, m_xen_cdrom_device) == 1 ) {
-		m_xen_cdrom_device.trim();
-		m_xen_cdrom_device.lower_case();
-	}
-
-	if( (m_vm_cdrom_files.isEmpty() == false) &&
-			m_xen_cdrom_device.IsEmpty() ) {
-		vmprintf(D_ALWAYS, "A job user defined files for a CDROM, "
-				"but the job user didn't define CDROM device\n");
-		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_CDROM_DEVICE;
-		return false;
 	}
 
 	// Check whether this is re-starting after vacating checkpointing,
@@ -1834,22 +1592,13 @@ bool XenType::CreateConfigFile()
 		}
 	}
 
-	if( (m_vm_cdrom_files.isEmpty() == false) && !m_has_iso) {
-		// Create ISO file
-		if( createISO() == false ) {
-			vmprintf(D_ALWAYS, "Cannot create a ISO file for CDROM\n");
-			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ISO_FILE;
-			return false;
-		}
-	}
-
 	// Here we check if this job actually can use checkpoint
 	if( m_vm_checkpoint ) {
 		// For vm checkpoint in Virsh
 		// 1. all disk files should be in a shared file system
 		// 2. If a job uses CDROM files, it should be
 		// 	  single ISO file and be in a shared file system
-		if( m_has_transferred_disk_file || m_local_iso ) {
+		if( m_has_transferred_disk_file ) {
 			// In this case, we cannot use vm checkpoint for Virsh
 			// To use vm checkpoint in Virsh,
 			// all disk and iso files should be in a shared file system
@@ -1881,8 +1630,8 @@ bool XenType::CreateConfigFile()
 }
 
 
-KVMType::KVMType(const char * scriptname, const char * workingpath, ClassAd * ad)
-  : VirshType(scriptname, workingpath, ad)
+KVMType::KVMType(const char * workingpath, ClassAd * ad)
+  : VirshType(workingpath, ad)
 {
 
 	m_sessionID="qemu:///session";
@@ -1911,9 +1660,9 @@ KVMType::CreateConfigFile()
 
 	MyString kvm_disk;
 	// Read the parameter of Virsh Disk
-	if( m_classAd.LookupString(VMPARAM_KVM_DISK, kvm_disk) != 1 ) {
+	if( m_classAd.LookupString(VMPARAM_VM_DISK, kvm_disk) != 1 ) {
 		vmprintf(D_ALWAYS, "%s cannot be found in job classAd\n",
-				VMPARAM_KVM_DISK);
+				VMPARAM_VM_DISK);
 		m_result_msg = VMGAHP_ERR_JOBCLASSAD_XEN_NO_DISK_PARAM;
 		return false;
 	}
@@ -1931,20 +1680,6 @@ KVMType::CreateConfigFile()
 		return false;
 	}
 	set_priv(priv);
-
-	// Read the parameter of Virsh cdrom device
-	if( m_classAd.LookupString(VMPARAM_KVM_CDROM_DEVICE, m_xen_cdrom_device) == 1 ) {
-		m_xen_cdrom_device.trim();
-		m_xen_cdrom_device.lower_case();
-	}
-
-	if( (m_vm_cdrom_files.isEmpty() == false) &&
-			m_xen_cdrom_device.IsEmpty() ) {
-		vmprintf(D_ALWAYS, "A job user defined files for a CDROM, "
-				"but the job user didn't define CDROM device\n");
-		m_result_msg = VMGAHP_ERR_JOBCLASSAD_KVM_NO_CDROM_DEVICE;
-		return false;
-	}
 
 	// Check whether this is re-starting after vacating checkpointing,
 	if( m_transfer_intermediate_files.isEmpty() == false ) {
@@ -1969,22 +1704,11 @@ KVMType::CreateConfigFile()
 		}
 	}
 
-	if( (m_vm_cdrom_files.isEmpty() == false) && !m_has_iso) {
-		// Create ISO file
-		if( createISO() == false ) {
-			vmprintf(D_ALWAYS, "Cannot create a ISO file for CDROM\n");
-			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ISO_FILE;
-			return false;
-		}
-	}
-
 	// Here we check if this job actually can use checkpoint
 	if( m_vm_checkpoint ) {
 		// For vm checkpoint in Virsh
 		// 1. all disk files should be in a shared file system
-		// 2. If a job uses CDROM files, it should be
-		// 	  single ISO file and be in a shared file system
-		if( m_has_transferred_disk_file || m_local_iso ) {
+		if( m_has_transferred_disk_file ) {
 			// In this case, we cannot use vm checkpoint for Virsh
 			// To use vm checkpoint in Virsh,
 			// all disk and iso files should be in a shared file system

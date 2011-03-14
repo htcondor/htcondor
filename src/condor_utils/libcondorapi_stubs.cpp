@@ -24,6 +24,26 @@
 #include "condor_query.h"
 
 #ifdef WIN32
+#if 1
+bool 
+get_password_from_credd (
+	const char * credd_host,
+	const char  username[],
+	const char  domain[],
+	char * pw,
+	int    cb) // sizeof pw buffer (in bytes)
+{
+    return false;
+}
+bool 
+cache_credd_locally (
+	const char  username[],
+	const char  domain[],
+	const char * pw)
+{
+	return false;
+}
+#else
 Daemon::Daemon( daemon_t type, const char* name, const char* pool)
 {
 }
@@ -53,6 +73,7 @@ SecMan::~SecMan()
 int addCredential( const char* user, const char* pw, Daemon *d ) {
 	return 0;	
 }
+#endif
 #endif
 /* This file contains various stub functions or small implementation of other
 	functions. The purpose of this is to break edges in a nasty dependency

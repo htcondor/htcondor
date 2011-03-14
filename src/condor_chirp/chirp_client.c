@@ -259,6 +259,11 @@ chirp_client_connect_default()
 	return client;
 }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996) // the seek, read, open, close, fileno, etc are deprecated, use _seek, etc instead.
+#endif
+
 DLLEXPORT struct chirp_client *
 chirp_client_connect( const char *host, int port )
 {
@@ -318,6 +323,10 @@ chirp_client_connect( const char *host, int port )
 
 	return c;
 }
+
+#ifdef _MSC_VER 
+#pragma warning(pop) // the seek, read, open, close, fileno, etc are deprecated, use _seek, etc instead.
+#endif
 
 DLLEXPORT void
 chirp_client_disconnect( struct chirp_client *c )

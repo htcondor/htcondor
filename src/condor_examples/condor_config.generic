@@ -1189,6 +1189,11 @@ PREEN_ARGS			= -m -r
 ## seconds.
 #NEGOTIATOR_INTERVAL = 60
 
+## Should the Negotiator publish an update to the Collector after
+## every negotiation cycle. It is useful to have this set to True
+## to get immediate updates on LastNegotiationCycle statistics.
+#NEGOTIATOR_UPDATE_AFTER_CYCLE = False
+
 
 ##--------------------------------------------------------------------
 ##  condor_startd
@@ -2369,9 +2374,6 @@ VMWARE_NETWORKING_TYPE = nat
 ##--------------------------------------------------------------------
 ##  VM Universe Parameters common to libvirt controlled vm's (xen & kvm)
 ##--------------------------------------------------------------------
-
-##  Where is the Condor script program to control Xen & KVM? (Required)
-VM_SCRIPT = $(SBIN)/condor_vm_xen.sh
 
 ## Networking parameters for Xen & KVM
 ##

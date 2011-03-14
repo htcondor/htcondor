@@ -1933,6 +1933,10 @@ RemoteResource::setRemoteProxyRenewTime()
 		// actually is, we would need to have a better interface for
 		// obtaining that information from the file transfer object.
 
+	if( proxy_path.IsEmpty() ) {
+		return;
+	}
+
 	time_t desired_expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
 	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());
 	time_t expiration_time = desired_expiration_time;
