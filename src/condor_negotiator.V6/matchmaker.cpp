@@ -1368,7 +1368,7 @@ void Matchmaker::hgq_construct_tree() {
     }
 
     // This is convenient for making sure a parent group always appears before its children
-    std::sort(groups.begin(), groups.end());
+    std::sort(groups.begin(), groups.end(), Accountant::ci_less());
 
     // our root group always exists -- all configured HGQ groups are implicitly 
     // children / descendents of the root
@@ -1401,14 +1401,14 @@ void Matchmaker::hgq_construct_tree() {
         GroupEntry* group = hgq_root_group;
         bool missing_parent = false;
         for (unsigned long k = 0;  k < gpath.size()-1;  ++k) {
-			GroupEntry *child = group->findChild( gpath[k] );
-
-            if (!child) {
+            // chmap is mostly a structure to avoid n^2 behavior in groups with many children
+            map<string, GroupEntry::size_type, Accountant::ci_less>::iterator f(group->chmap.find(gpath[k]));
+            if (f == group->chmap.end()) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: ignoring group name %s with missing parent %s\n", gname.c_str(), gpath[k].c_str());
                 missing_parent = true;
                 break;
             }
-            group = child;
+            group = group->children[f->second];
         }
         if (missing_parent) continue;
 
@@ -1419,8 +1419,11 @@ void Matchmaker::hgq_construct_tree() {
         }
 
         // enter the new group
-		group = group->addChild(gpath.back());
-        group_entry_map[gname] = group;
+        group->children.push_back(new GroupEntry);
+        group->chmap[gpath.back()] = group->children.size()-1;
+        group_entry_map[gname] = group->children.back();
+        group->children.back()->parent = group;
+        group = group->children.back();
 
         // "group" now refers to our current group in the list.
         // Fill in entry values from config.
@@ -1952,28 +1955,6 @@ GroupEntry::~GroupEntry() {
     }
 }
 
-GroupEntry *
-GroupEntry::findChild(std::string name)
-{
-	map<string, GroupEntry::size_type>::iterator f;
-	lower_case(name);
-	f = chmap.find(name);
-	if( f == chmap.end() ) {
-		return NULL;
-	}
-	return children[f->second];
-}
-
-GroupEntry *
-GroupEntry::addChild(std::string name)
-{
-	GroupEntry *group = new GroupEntry;
-	lower_case(name);
-	children.push_back(group);
-	chmap[name] = children.size()-1;
-	group->parent = this;
-	return group;
-}
 
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,

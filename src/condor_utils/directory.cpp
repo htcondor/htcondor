@@ -527,7 +527,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 #ifdef _DEBUG
         dprintf( D_ALWAYS, "rmdirAttempt using command: %s\n", rm_buf.Value());
 #else
-        dprintf( D_FULLLDEBUG, "rmdirAttempt using command: %s\n", rm_buf.Value());
+        dprintf( D_FULLDEBUG, "rmdirAttempt using command: %s\n", rm_buf.Value());
 #endif
         if (rmdir_exe_p) free (rmdir_exe_p);
         if (rmdir_opts_p) free (rmdir_opts_p);

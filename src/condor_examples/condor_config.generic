@@ -2362,9 +2362,6 @@ VMWARE_NETWORKING_TYPE = nat
 ##  VM Universe Parameters common to libvirt controlled vm's (xen & kvm)
 ##--------------------------------------------------------------------
 
-##  Where is the Condor script program to control Xen & KVM? (Required)
-VM_SCRIPT = $(SBIN)/condor_vm_xen.sh
-
 ## Networking parameters for Xen & KVM
 ##
 ## This is the path to the XML helper command; the libvirt_simple_script.awk

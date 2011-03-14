@@ -17,7 +17,7 @@
  ###############################################################
 
 #############################
-set( QMF_GEN_SRCS ArgsCondorTriggerGetTriggerId.h;
+set( QMF_GEN_SRCS #ArgsCondorTriggerGetTriggerId.h;
       ArgsCondorTriggerGetTriggerName.h;
       ArgsCondorTriggerGetTriggerQuery.h;
       ArgsCondorTriggerGetTriggerText.h;
