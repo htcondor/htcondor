@@ -1,8 +1,0 @@
-# If you want to test ClassAd functions, you'll need this
-# condor config file, and you'll need CONDOR_CONFIG to point at it.
-# You'll also want to edit it. LOG seems to be required. The other
-# two should point at this directory. Make sure to do 'make shared' to
-# get the shared library
-LOG = blah
-CLASSAD_LIB_PATH = /scratch/roy/v67/src/condor_classad/libshared.so
-CLASSAD_SCRIPT_DIRECTORY = /scratch/roy/v67/src/condor_classad

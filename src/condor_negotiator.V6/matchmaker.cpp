@@ -26,7 +26,7 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_api.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "dc_startd.h"
@@ -2596,7 +2596,6 @@ obtainAdsFromCollector (
 void
 Matchmaker::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 {
-#if !defined(WANT_OLD_CLASSADS)
 		// The machine ad will be passed as the RIGHT ad during
 		// matchmaking (i.e. in the call to IsAMatch()), so
 		// optimize it accordingly.
@@ -2609,13 +2608,11 @@ Matchmaker::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 			name.Value(),
 				error_msg.c_str());
 	}
-#endif
 }
 
 void
 Matchmaker::OptimizeJobAdForMatchmaking(ClassAd *ad)
 {
-#if !defined(WANT_OLD_CLASSADS)
 		// The job ad will be passed as the LEFT ad during
 		// matchmaking (i.e. in the call to IsAMatch()), so
 		// optimize it accordingly.
@@ -2630,7 +2627,6 @@ Matchmaker::OptimizeJobAdForMatchmaking(ClassAd *ad)
 				proc_id,
 				error_msg.c_str());
 	}
-#endif
 }
 
 void
@@ -3755,9 +3751,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		claim_id = "null";
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
 	classad::MatchClassAd::UnoptimizeAdForMatchmaking( offer );
-#endif
 
 	savedRequirements = NULL;
 	length = strlen("Saved") + strlen(ATTR_REQUIREMENTS) + 2;

@@ -26,7 +26,7 @@
 #include "format_time.h"
 #include "condor_config.h"
 #include "CondorError.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "quill_enums.h"
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -538,17 +538,21 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 	ClassAd *ad;
 
 	if (useAll) {
-	// The fast case with the new protocol
-	ClassAdList list;
-	char *attrs_str = attrs.print_to_delimed_string();
-	GetAllJobsByConstraint(constraint, attrs_str, list);
-	free(attrs_str);
-	list.Rewind();
-	while ((ad = list.Next())) {
-		if ( ( *process_func )( ad ) ) {
-			//delete(ad);
+			// The fast case with the new protocol
+		char *attrs_str = attrs.print_to_delimed_string();
+		GetAllJobsByConstraint_Start(constraint, attrs_str);
+		free(attrs_str);
+
+		while( true ) {
+			ClassAd *ad = new ClassAd;
+			if( GetAllJobsByConstraint_Next( *ad ) != 0 ) {
+				delete ad;
+				break;
+			}
+			if ( ( *process_func )( ad ) ) {
+				delete(ad);
+			}
 		}
-	}
 	} else {
 
 	// slow case, using old protocol

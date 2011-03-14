@@ -26,7 +26,7 @@
 #include "list.h"
 #include "simplelist.h"
 #include "extArray.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 
 #include <iostream>
 #include <sstream>

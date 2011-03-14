@@ -19,7 +19,7 @@
 
 
 #include "condor_common.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "condor_mkstemp.h"
 #include "startd.h"
 #include "vm_common.h"

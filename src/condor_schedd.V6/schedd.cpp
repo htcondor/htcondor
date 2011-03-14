@@ -30,7 +30,6 @@
 #include "condor_attributes.h"
 #include "condor_parameters.h"
 #include "condor_classad.h"
-#include "condor_classad_util.h"
 #include "classad_helpers.h"
 #include "condor_adtypes.h"
 #include "condor_string.h"
@@ -7764,14 +7763,7 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 
 	classad::ClassAdUnParser unparser;
 	classad::ClassAd *machine;
-#if !defined (WANT_OLD_CLASSADS)
 	machine = machine_ad;
-#else
-	classad::ClassAd machine_buff;
-	old_to_new(*machine_ad,machine_buff);
-	machine = &machine_buff;
-	unparser.SetOldClassAd(true);
-#endif
 
 	ClassAd *job = GetJobAd( cluster, proc );
 
@@ -10933,7 +10925,6 @@ Scheduler::sendReschedule()
 void
 Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 {
-#if !defined(WANT_OLD_CLASSADS)
 		// The machine ad will be passed as the RIGHT ad during
 		// matchmaking (i.e. in the call to IsAMatch()), so
 		// optimize it accordingly.
@@ -10946,7 +10937,6 @@ Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 			name.Value(),
 				error_msg.c_str());
 	}
-#endif
 }
 
 

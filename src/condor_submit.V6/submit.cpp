@@ -33,8 +33,6 @@
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "condor_io.h"
-#include "condor_parser.h"
-#include "condor_scanner.h"
 #include "condor_distribution.h"
 #include "condor_ver_info.h"
 #if !defined(WIN32)
@@ -182,7 +180,7 @@ extern const int JOB_DEFERRAL_PREP_DEFAULT;
 
 char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
-
+char* StackSizeVal = NULL;
 List<char> extraLines;  // lines passed in via -a argument
 
 #define PROCVARSIZE	32
@@ -261,6 +259,7 @@ const char	*BufferFiles = "buffer_files";
 const char	*BufferSize = "buffer_size";
 const char	*BufferBlockSize = "buffer_block_size";
 
+const char	*StackSize = "stack_size";
 const char	*FetchFiles = "fetch_files";
 const char	*CompressFiles = "compress_files";
 const char	*AppendFiles = "append_files";
@@ -3731,6 +3730,17 @@ SetUserNotes()
 }
 
 void
+SetStackSize()
+{
+	StackSizeVal = condor_param(StackSize,ATTR_STACK_SIZE);
+	MyString buffer;
+	if( StackSizeVal ) {
+		(void) buffer.sprintf( "%s = %s", ATTR_STACK_SIZE, StackSizeVal);
+		InsertJobExpr(buffer);
+	}
+}
+
+void
 SetRemoteInitialDir()
 {
 	char *who = condor_param( RemoteInitialDir, ATTR_JOB_REMOTE_IWD );
@@ -5224,6 +5234,15 @@ SetGSICredentials()
 			InsertJobExpr(buffer);	
 			free( proxy_subject );
 
+			/* Insert the proxy email into the ad */
+			char *proxy_email;
+			proxy_email = x509_proxy_email(proxy_file);
+
+			if ( proxy_email ) {
+				InsertJobExprString(ATTR_X509_USER_PROXY_EMAIL, proxy_email);
+				free( proxy_email );
+			}
+
 			/* Insert the VOMS attributes into the ad */
 			char *voname = NULL;
 			char *firstfqan = NULL;
@@ -5897,6 +5916,7 @@ queue(int num)
 		SetVMParams();
 		SetLogNotes();
 		SetUserNotes();
+		SetStackSize();
 
 			// This must come after all things that modify the input file list
 		FixupTransferInputFiles();

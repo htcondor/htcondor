@@ -217,6 +217,7 @@ const char * const ATTR_GID						 = "Gid";
 const char * const ATTR_GLOBAL_JOB_ID            = "GlobalJobId";
 const char * const ATTR_GZIP					 = "GZIP";
 const char * const ATTR_GLOBUS_DELEGATION_URI	 = "GlobusDelegationUri";
+const char * const ATTR_STACK_SIZE		 = "StackSize";
 // Deprecated (cruft) -- no longer used
 const char * const ATTR_GLOBUS_GRAM_VERSION		 = "GlobusGramVersion";
 const char * const ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME = "GlobusResourceUnavailableTime";
@@ -226,6 +227,7 @@ const char * const ATTR_GLOBUS_STATUS			 = "GlobusStatus";
 const char * const ATTR_GLOBUS_XML				 = "GlobusXML";
 const char * const ATTR_X509_USER_PROXY          = "x509userproxy";
 const char * const ATTR_X509_USER_PROXY_SUBJECT	 = "x509userproxysubject";
+const char * const ATTR_X509_USER_PROXY_EMAIL	 = "x509UserProxyEmail";
 const char * const ATTR_X509_USER_PROXY_EXPIRATION	 = "x509UserProxyExpiration";
 const char * const ATTR_X509_USER_PROXY_VONAME	 = "x509UserProxyVOName";
 const char * const ATTR_X509_USER_PROXY_FIRST_FQAN	 = "x509UserProxyFirstFQAN";

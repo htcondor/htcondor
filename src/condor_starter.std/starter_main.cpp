@@ -164,7 +164,7 @@ init()
 {
 	move_to_execute_directory();
 	init_environment_info();
-	sysapi_set_resource_limits();
+	sysapi_set_resource_limits(1<<29);
 	close_unused_file_descriptors();
 
 	return DEFAULT;

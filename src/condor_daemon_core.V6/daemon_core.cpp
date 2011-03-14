@@ -2633,9 +2633,9 @@ DaemonCore::reconfig(void) {
 	// by the time we get here, because it needs to be called early
 	// in the process.
 
-#if !defined(WANT_OLD_CLASSADS)
+	// This is the compatibility layer on top of new ClassAds.
+	// A few configuration parameters control its behavior.
 	ClassAd::Reconfig();
-#endif
 
 	m_dirty_sinful = true; // refresh our address in case config changes it
 

@@ -17,7 +17,11 @@
 #
 from qmf.console import Session
 from sys import exit, argv
-import time
+import time, pwd
+
+uid = pwd.getpwuid(os.getuid())[0]
+if not uid:
+    uid = "condor"
 
 UNIVERSE = {"VANILLA": 5, "SCHEDULER": 7, "GRID": 9, "JAVA": 10, "PARALLEL": 11, "LOCAL": 12, "VM": 13}
 
@@ -26,7 +30,7 @@ ad = {"Cmd":			"QMF Submitted VM",
       "!!descriptors":		__annotations__,
       "JobUniverse":		UNIVERSE["VM"],
       "Iwd":			"/tmp",
-      "Owner":			"nobody",
+      "Owner":			uid,
       "ShouldTransferFiles":	"NEVER",
       "JobVMType":		"kvm",
       "VMPARAM_Kvm_Kernel":	"included",

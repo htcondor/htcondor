@@ -22,7 +22,6 @@
 #include "condor_config.h"
 #include "condor_accountant.h"
 #include "condor_classad.h"
-#include "condor_classad_util.h"
 #include "condor_debug.h"
 #include "condor_query.h"
 #include "condor_q.h"
@@ -233,6 +232,9 @@ char *dbName = NULL;
 char *queryPassword = NULL;
 
 StringList attrs(NULL, "\n");; // The list of attrs we want, "" for all
+
+bool g_stream_results = false;
+
 static void freeConnectionStrings() {
 	if(quillName) {
 		free(quillName);
@@ -398,7 +400,7 @@ int main (int argc, char **argv)
            	// to the schedd time's out and the user gets nothing
            	// useful printed out. Therefore, we use show_queue,
            	// which fetches all of the ads, then analyzes them. 
-			if ( verbose || better_analyze || jobads_file ) {
+			if ( (verbose || better_analyze || jobads_file) && !g_stream_results ) {
 				sqfp = show_queue;
 			} else {
 				sqfp = show_queue_buffered;
@@ -690,7 +692,7 @@ int main (int argc, char **argv)
         // to the schedd time's out and the user gets nothing
         // useful printed out. Therefore, we use show_queue,
         // which fetches all of the ads, then analyzes them. 
-		if ( verbose || better_analyze ) {
+		if ( (verbose || better_analyze) && !g_stream_results ) {
 			sqfp = show_queue;
 		} else {
 			sqfp = show_queue_buffered;
@@ -1294,6 +1296,10 @@ processCommandLineArguments (int argc, char *argv[])
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
         }
+		else
+		if (match_prefix (arg, "stream")) {
+			g_stream_results = true;
+		}
 		else {
 			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
 			usage(argv[0]);
@@ -1860,6 +1866,7 @@ usage (const char *myName)
 #else
 		"\t\t-direct <schedd>\tPerform a direct query to the schedd\n"
 #endif
+		"\t\t-stream-results \tProduce output as ads are fetched\n"
 		"\t\t-version\t\tPrint the Condor Version and exit\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
@@ -1893,6 +1900,32 @@ output_sorter( const void * va, const void * vb ) {
 	if ((*a)->proc    > (*b)->proc    ) { return  1; }
 
 	return 0;
+}
+
+void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char const *db_name,char const *lastUpdate, char const *scheddName, char const *scheddAddress,char const *scheddMachine)
+{
+	if (! customFormat && !verbose ) {
+		if (useDB) {
+			printf ("\n\n-- Quill: %s : %s : %s : %s\n", quill_name, 
+					db_ipAddr, db_name, lastUpdate);
+		} else if( querySchedds ) {
+			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
+		} else {
+			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
+					scheddAddress, scheddMachine);	
+		}
+			// Print the output header
+		
+		short_header();
+	}
+	if( use_xml ) {
+			// keep this consistent with AttrListList::fPrintAttrListList()
+		ClassAdXMLUnparser  unparser;
+		MyString xml;
+		unparser.SetUseCompactSpacing(false);
+		unparser.AddXMLFileHeader(xml);
+		printf("%s\n", xml.Value());
+	}
 }
 
 /* The parameters v1, v2, and v3 will be intepreted immediately on the top 
@@ -2015,6 +2048,10 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		g_cur_schedd_for_process_buffer_line = NULL;
 	}
 
+	if( g_stream_results ) {
+		full_header(useDB,quill_name,db_ipAddr,db_name,lastUpdate,scheddName,scheddAddress,scheddMachine);
+	}
+
 	CondorError errstack;
 
 		/* get the job ads from database if database can be queried */
@@ -2076,32 +2113,13 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	// If this is a global, don't print anything if this schedd is empty.
 	// If this is NOT global, print out the header and footer to show that we
 	//    did something.
-	if (!global || !output_buffer_empty) {
+	if (!global || !output_buffer_empty || g_stream_results) {
 		the_output = &(*output_buffer)[0];
 		qsort(the_output, output_buffer->getlast()+1, sizeof(clusterProcString*),
 			output_sorter);
 
-		if (! customFormat ) {
-			if (useDB) {
-				printf ("\n\n-- Quill: %s : %s : %s : %s\n", quill_name, 
-						db_ipAddr, db_name, lastUpdate);
-			} else if( querySchedds ) {
-				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
-			} else {
-				printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-						scheddAddress, scheddMachine);	
-			}
-			// Print the output header
-		
-			short_header();
-		}
-		if( use_xml ) {
-				// keep this consistent with AttrListList::fPrintAttrListList()
-			ClassAdXMLUnparser  unparser;
-			MyString xml;
-			unparser.SetUseCompactSpacing(false);
-			unparser.AddXMLFileHeader(xml);
-			printf("%s\n", xml.Value());
+		if( !g_stream_results ) {
+			full_header(useDB,quill_name,db_ipAddr,db_name,lastUpdate,scheddName,scheddAddress,scheddMachine);
 		}
 
 		if (!output_buffer_empty) {
@@ -2157,7 +2175,7 @@ process_buffer_line( ClassAd *job )
 	int status = 0;
 
 	clusterProcString * tempCPS = new clusterProcString;
-	(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
+
 	job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
 	job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
 	job->LookupInteger( ATTR_JOB_STATUS, status );
@@ -2222,6 +2240,12 @@ process_buffer_line( ClassAd *job )
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrintAsXML(s,attr_white_list);
 		tempCPS->string = strnewp( s.Value() );
+	} else if( verbose ) {
+		MyString s;
+		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
+		job->sPrint(s,attr_white_list);
+		s += "\n";
+		tempCPS->string = strnewp( s.Value() );
 	} else if( better_analyze ) {
 		tempCPS->string = strnewp( doRunAnalysisToBuffer( job, g_cur_schedd_for_process_buffer_line ) );
 	} else if ( show_io ) {
@@ -2235,7 +2259,15 @@ process_buffer_line( ClassAd *job )
 		tempCPS->string = strnewp( bufferJobShort( job ) );
 	}
 
-	output_buffer_empty = false;
+	if( g_stream_results ) {
+		printf("%s",tempCPS->string);
+		delete tempCPS;
+		tempCPS = NULL;
+	}
+	else {
+		(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
+		output_buffer_empty = false;
+	}
 
 	return true;
 }

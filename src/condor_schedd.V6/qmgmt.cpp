@@ -42,9 +42,8 @@
 #include "condor_universe.h"
 #include "globus_utils.h"
 #include "env.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "condor_ver_info.h"
-#include "condor_scanner.h"	// for Token, etc.
 #include "condor_string.h" // for strnewp, etc.
 #include "utc_time.h"
 #include "condor_crontab.h"
@@ -2288,18 +2287,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	if( round_param && *round_param && strcmp(round_param,"0") ) {
 		LexemeType attr_type = LX_EOF;
-#ifdef WANT_OLD_CLASSADS
-		Token token;
-
-			// See if attr_value is a scalar (int or float) by
-			// invoking the ClassAd scanner.  We do it this way
-			// to make certain we scan the value the same way that
-			// the ClassAd library will (i.e. support exponential
-			// notation, etc).
-		char const *avalue = attr_value; // scanner will modify ptr, so save it
-		Scanner(avalue,token);
-		attr_type = token.type;
-#else
 		ExprTree *tree = NULL;
 		classad::Value val;
 		if ( ParseClassAdRvalExpr(attr_value, tree) == 0 &&
@@ -2312,7 +2299,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 		}
 		delete tree;
-#endif
 
 		if ( attr_type == LX_INTEGER || attr_type == LX_FLOAT ) {
 			// first, store the actual value
@@ -2333,18 +2319,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			double fvalue;
 
 			if ( attr_type == LX_INTEGER ) {
-#ifdef WANT_OLD_CLASSADS
-				ivalue = token.intVal;
-#else
 				val.IsIntegerValue( ivalue );
-#endif
 				fvalue = ivalue;
 			} else {
-#ifdef WANT_OLD_CLASSADS
-				fvalue = token.floatVal;
-#else
 				val.IsRealValue( fvalue );
-#endif
 				ivalue = (int) fvalue;	// truncation conversion
 			}
 
