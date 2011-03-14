@@ -24,6 +24,7 @@
 #include "condor_debug.h"
 #include "compat_classad_util.h"
 #include "condor_qmgr.h"
+#include "get_daemon_name.h"
 
 // local includes
 #include "AviaryUtils.h"
@@ -35,7 +36,7 @@ string
 aviary::util::getPoolName()
 {
     string poolName;
-    char *tmp;
+    char *tmp = NULL;
 
     tmp = param("COLLECTOR_HOST");
     if (!tmp) {
@@ -45,6 +46,22 @@ aviary::util::getPoolName()
     free(tmp); tmp = NULL;
 
     return poolName;
+}
+
+string
+aviary::util::getScheddName() {
+	string scheddName;
+	char* tmp = NULL;
+
+	tmp = param("SCHEDD_NAME");
+	if (!tmp) {
+		scheddName = default_daemon_name();
+	} else {
+		scheddName = build_valid_daemon_name(tmp);
+		free(tmp); tmp = NULL;
+	}
+
+	return scheddName;
 }
 
 // cleans up the quoted values from the job log reader

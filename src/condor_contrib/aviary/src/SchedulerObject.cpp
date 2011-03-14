@@ -41,7 +41,8 @@ SchedulerObject* SchedulerObject::m_instance = NULL;
 
 SchedulerObject::SchedulerObject()
 {
-    m_name = getPoolName();
+    m_pool = getPoolName();
+	m_name = getScheddName();
 }
 
 SchedulerObject::~SchedulerObject()
@@ -248,7 +249,10 @@ SchedulerObject::submit(Codec* _codec, AttributeMapType &jobAdMap, std::string &
 		// 7. Return identifier
 		// TODO: dag ids?
 	MyString tmp;
-	tmp.sprintf("%s#%d.%d", Name, cluster, proc);
+	//tmp.sprintf("%s#%d.%d", Name, cluster, proc);
+	// we have other API compositions for job id and submission id
+	// so let's return raw cluster.proc
+	tmp.sprintf("%d.%d", cluster, proc);
 	id = tmp.Value();
 
 	return true;

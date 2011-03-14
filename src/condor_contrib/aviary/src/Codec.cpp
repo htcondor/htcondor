@@ -28,13 +28,14 @@ using namespace compat_classad;
 using namespace aviary::codec;
 using namespace aviary::util;
 
-Codec*
-DefaultCodecFactory::createCodec() {
-    if (!m_codec) {
-        m_codec = new BaseCodec;
-    }
-    return m_codec;
-}
+// TODO: defer until linking issues sorted
+//Codec*
+//DefaultCodecFactory::createCodec() {
+//    if (!m_codec) {
+//        m_codec = new BaseCodec;
+//    }
+//    return m_codec;
+//}
 
 BaseCodec::BaseCodec()
 {

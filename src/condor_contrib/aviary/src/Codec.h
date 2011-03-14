@@ -58,6 +58,7 @@ typedef vector<Attribute*> AttributeVectorType;
 typedef AttributeMapType::const_iterator AttributeMapIterator;
 typedef AttributeVectorType::const_iterator AttributeVectorIterator;
 
+// TODO: revisit
 // singleton class for encoding/decoding from/to transport-specific types
 // to a simple type to be used in the impl;
 // intent is to sit above ClassAds but still interact with them;
@@ -72,28 +73,29 @@ public:
 
 };
 
-class CodecFactory {
-public:
-    virtual Codec* createCodec() = 0;
-
-};
-
-class DefaultCodecFactory: public CodecFactory {
-public:
-    virtual Codec* createCodec();
-protected:
-    Codec* m_codec;
-};
+// TODO: defer until linking issues sorted
+//class CodecFactory {
+// public:
+//     virtual Codec* createCodec() = 0;
+// 
+// };
+// 
+// class DefaultCodecFactory: public CodecFactory {
+// public:
+//     virtual Codec* createCodec();
+// protected:
+//     Codec* m_codec;
+// };
 
 class BaseCodec: public Codec {
 public:
-    friend class DefaultCodecFactory;
+    //friend class DefaultCodecFactory;
     virtual bool addAttributeToMap(ClassAd& ad, const char* name, AttributeMapType& _map);
     virtual bool classAdToMap(ClassAd &ad, AttributeMapType &_map);
     virtual bool mapToClassAd(AttributeMapType &_map, ClassAd &ad);
     virtual bool procIdToMap(int clusterId, int procId, AttributeMapType& _map);
 
-protected:
+//protected:
     BaseCodec();
     ~BaseCodec();
 

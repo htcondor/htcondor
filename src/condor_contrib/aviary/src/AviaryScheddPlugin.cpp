@@ -18,7 +18,6 @@
 #include "condor_common.h"
 #include "condor_qmgr.h"
 #include "condor_config.h"
-#include "get_daemon_name.h"
 
 // local includes
 #include "AviaryScheddPlugin.h"
@@ -43,8 +42,6 @@ aviary::job::SchedulerObject* aviarySchedulerObj = NULL;
 void
 AviaryScheddPlugin::earlyInitialize()
 {
-	char *tmp;
-	string schedd_name;
 
     // Since this plugin is registered with multiple
     // PluginManagers it may be initialized more than once,
@@ -63,14 +60,6 @@ AviaryScheddPlugin::earlyInitialize()
     if (!provider->init(DEFAULT_PORT,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
         EXCEPT("Failed to initialize Axis2SoapProvider");
     }
-
-	tmp = param("SCHEDD_NAME");
-	if (NULL == tmp) {
-		schedd_name = default_daemon_name();
-	} else {
-		schedd_name = build_valid_daemon_name(tmp);
-		free(tmp); tmp = NULL;
-	}
 
 	aviarySchedulerObj = SchedulerObject::getInstance();
 

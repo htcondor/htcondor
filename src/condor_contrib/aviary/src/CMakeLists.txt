@@ -57,6 +57,10 @@ if (LINUX)
     src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
     add_library (aviary_common SHARED ${COMMON_GEN_SRCS} )
+    set(aviary_common_loc $ENV{WSFCPP_HOME}/services/job)
+    if (aviary_common_loc)
+        install (TARGETS aviary_common DESTINATION $ENV{WSFCPP_HOME}/services/job)
+    endif()
 
     add_library (aviary_job SHARED ${JOB_GEN_SRCS} ${JOB_SRCS} Codec.cpp SchedulerObject.cpp AviaryUtils.cpp)
     target_link_libraries (aviary_job aviary_common ${AXIS2_LIBS} )

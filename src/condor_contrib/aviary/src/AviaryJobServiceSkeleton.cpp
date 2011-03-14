@@ -34,7 +34,6 @@ extern bool qmgmt_all_users_trusted;
 #include <AviaryJob_HoldJobResponse.h>
 #include <AviaryJob_SetJobAttribute.h>
 #include <AviaryJob_SetJobAttributeResponse.h>
-
 #include "Codec.h"
 #include "SchedulerObject.h"
 
@@ -43,48 +42,30 @@ using namespace aviary::codec;
 using namespace aviary::job;
 using namespace compat_classad;
 
-/**
-* "removeJob|http://grid.redhat.com/aviary-job/" operation.
-*
-* @param _removeJob of the AviaryJob::RemoveJob
-*
-* @return AviaryJob::RemoveJobResponse*
-*/
-AviaryJob::RemoveJobResponse* AviaryJobServiceSkeleton::removeJob(wso2wsf::MessageContext *outCtx ,AviaryJob::RemoveJob* _removeJob)
+AviaryJob::RemoveJobResponse*
+AviaryJobServiceSkeleton::removeJob(wso2wsf::MessageContext *outCtx ,AviaryJob::RemoveJob* _removeJob)
 {
     /* TODO fill this with the necessary business logic */
     return (AviaryJob::RemoveJobResponse*)NULL;
 }
 
-/**
-* "releaseJob|http://grid.redhat.com/aviary-job/" operation.
-*
-* @param _releaseJob of the AviaryJob::ReleaseJob
-*
-* @return AviaryJob::ReleaseJobResponse*
-*/
-AviaryJob::ReleaseJobResponse* AviaryJobServiceSkeleton::releaseJob(wso2wsf::MessageContext *outCtx ,AviaryJob::ReleaseJob* _releaseJob)
+AviaryJob::ReleaseJobResponse*
+AviaryJobServiceSkeleton::releaseJob(wso2wsf::MessageContext *outCtx ,AviaryJob::ReleaseJob* _releaseJob)
 {
     /* TODO fill this with the necessary business logic */
     return (AviaryJob::ReleaseJobResponse*)NULL;
 }
 
-/**
-* "submitJob|http://grid.redhat.com/aviary-job/" operation.
-*
-* @param _submitJob of the AviaryJob::SubmitJob
-*
-* @return AviaryJob::SubmitJobResponse*
-*/
-AviaryJob::SubmitJobResponse* AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext *outCtx ,AviaryJob::SubmitJob* _submitJob)
-
+AviaryJob::SubmitJobResponse*
+AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext *outCtx ,AviaryJob::SubmitJob* _submitJob)
 {
     AviaryJob::SubmitJobResponse* submitJobResponse = new AviaryJob::SubmitJobResponse();
     SchedulerObject* schedulerObj = SchedulerObject::getInstance();
     // TODO: would like to templatize the codec stuff
     // save for the linking issues
-    DefaultCodecFactory codecFactory;
-    Codec* codec = codecFactory.createCodec();
+    //DefaultCodecFactory codecFactory;
+	//codecFactory.createCodec();
+    Codec* codec = new BaseCodec();
     AttributeMapType attrMap;
 
     // add the simple stuff first
@@ -117,37 +98,32 @@ AviaryJob::SubmitJobResponse* AviaryJobServiceSkeleton::submitJob(wso2wsf::Messa
     }
     else {
         // TODO: fix up args
-        submitJobResponse->setId(new AviaryCommon::JobID("","",jobId, new AviaryCommon::SubmissionID("","")));
+        string submissionId = schedulerObj->getName();
+		submissionId.append("#");
+		submissionId.append(jobId);
+        submitJobResponse->setId(new AviaryCommon::JobID(
+				schedulerObj->getPool(),schedulerObj->getName(),jobId,
+				new AviaryCommon::SubmissionID(submissionId,_submitJob->getOwner().c_str())));
         submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),""));
     }
     qmgmt_all_users_trusted = false;
 
+	// TODO: should be an instance member
+	// but for header headaches
+	delete codec;
+
     return submitJobResponse;
 }
 
-/**
-* "holdJob|http://grid.redhat.com/aviary-job/" operation.
-*
-* @param _holdJob of the AviaryJob::HoldJob
-*
-* @return AviaryJob::HoldJobResponse*
-*/
-AviaryJob::HoldJobResponse* AviaryJobServiceSkeleton::holdJob(wso2wsf::MessageContext *outCtx ,AviaryJob::HoldJob* _holdJob)
-
+AviaryJob::HoldJobResponse*
+AviaryJobServiceSkeleton::holdJob(wso2wsf::MessageContext *outCtx ,AviaryJob::HoldJob* _holdJob)
 {
     /* TODO fill this with the necessary business logic */
     return (AviaryJob::HoldJobResponse*)NULL;
 }
 
-/**
-* "setJobAttribute|http://grid.redhat.com/aviary-job/" operation.
-*
-* @param _setJobAttribute of the AviaryJob::SetJobAttribute
-*
-* @return AviaryJob::SetJobAttributeResponse*
-*/
-AviaryJob::SetJobAttributeResponse* AviaryJobServiceSkeleton::setJobAttribute(wso2wsf::MessageContext *outCtx ,AviaryJob::SetJobAttribute* _setJobAttribute)
-
+AviaryJob::SetJobAttributeResponse*
+AviaryJobServiceSkeleton::setJobAttribute(wso2wsf::MessageContext *outCtx ,AviaryJob::SetJobAttribute* _setJobAttribute)
 {
     /* TODO fill this with the necessary business logic */
     return (AviaryJob::SetJobAttributeResponse*)NULL;

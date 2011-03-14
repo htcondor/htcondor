@@ -76,6 +76,9 @@ public:
 
     static SchedulerObject* getInstance();
 
+	const char* getPool() {return m_pool.c_str(); }
+	const char* getName() {return m_name.c_str(); }
+
 protected:
     SchedulerObject();
     ~SchedulerObject();

@@ -28,6 +28,8 @@ namespace util {
 
 string getPoolName();
 
+string getScheddName();
+
 string trimQuotes(const char* value);
 
 bool isValidGroupUserName(const string& _name, string& _text);
