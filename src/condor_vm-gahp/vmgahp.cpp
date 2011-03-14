@@ -190,7 +190,7 @@ VMGahp::startUp()
 	m_request_buffer.setPipeEnd(stdin_pipe);
 	(void)daemonCore->Register_Pipe(m_request_buffer.getPipeEnd(),
 			"stdin_pipe",
-			(PipeHandlercpp)&VMGahp::waitForCommand,
+			static_cast<PipeHandlercpp>(&VMGahp::waitForCommand),
 			"VMGahp::waitForCommand", this);
 }
 
@@ -390,8 +390,11 @@ VMGahp::findVM(int vm_id)
 	return NULL;
 }
 
+
+
+
 int
-VMGahp::waitForCommand()
+VMGahp::waitForCommand(int pipe_end)
 {
 	MyString *line = NULL;
 
@@ -689,11 +692,10 @@ VMGahp::executeStart(VMRequest *req)
 	// TBD: tstclair this totally needs to be re-written
 #if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0 ) {
-		new_vm = new XenType(m_gahp_config->m_vm_script.Value(),
-				vmworkingdir.Value(), m_jobAd);
+		new_vm = new XenType( vmworkingdir.Value(), m_jobAd );
 		ASSERT(new_vm);
 	}else if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_KVM) == 0) {
-	  new_vm = new KVMType(m_gahp_config->m_vm_script.Value(),
+	  new_vm = new KVMType(
 				vmworkingdir.Value(), m_jobAd);
 		ASSERT(new_vm);
 	}else

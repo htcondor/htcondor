@@ -1,6 +1,6 @@
  ###############################################################
  #
- # Copyright (C) 1990-2010, Redhat.
+ # Copyright 2011 Red Hat, Inc.
  #
  # Licensed under the Apache License, Version 2.0 (the "License"); you
  # may not use this file except in compliance with the License.  You may
@@ -28,7 +28,22 @@ set (CPACK_PACKAGE_VENDOR "Condor Team - University of Wisconsin Madison")
 set (CPACK_PACKAGE_VERSION ${PACKAGE_VERSION})
 set (CPACK_PACKAGE_CONTACT "condor-users@cs.wisc.edu")
 set (URL "http://www.cs.wisc.edu/condor/")
-set (CONDOR_VER "${PACKAGE_NAME}-${PACKAGE_VERSION}")
+set (CONDOR_VERSION "${PACKAGE_NAME}-${PACKAGE_VERSION}")
+GET_TIMEDATE( BUILD_TIMEDATE )
+
+if(PRE_RELEASE)
+  if(BUILDID)
+    CLEAN_STRING( CLEAN_BUILDID "${BUILDID}" )
+    set (CONDOR_PACKAGE_NAME "${PACKAGE_NAME}-${PACKAGE_VERSION}-${CLEAN_BUILDID}")
+  elseif(BUILD_DATETIME)
+    set (CONDOR_PACKAGE_NAME "${PACKAGE_NAME}-${PACKAGE_VERSION}-${BUILD_TIMEDATE}")
+  else()
+    CLEAN_STRING( CLEAN_RELEASE "${PRE_RELEASE}" )
+    set (CONDOR_PACKAGE_NAME "${PACKAGE_NAME}-${PACKAGE_VERSION}-${CLEAN_RELEASE}")
+  endif(BUILDID)
+else()
+  set (CONDOR_PACKAGE_NAME "${CONDOR_VERSION}")
+endif()
 
 set (CPACK_PACKAGE_DESCRIPTION "Condor is a specialized workload management system for
 compute-intensive jobs. Like other full-featured batch systems,
@@ -56,7 +71,11 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/LICENSE-2.0.txt")
 #set(CPACK_RESOURCE_FILE_README "${CONDOR_SOURCE_DIR}/build/backstage/release_notes/README")
 #set(CPACK_RESOURCE_FILE_WELCOME "${CONDOR_SOURCE_DIR}/build/backstage/release_notes/DOC") # this should be more of a Hiya welcome.
 
-set(CPACK_SYSTEM_NAME "${OS_NAME}-${SYS_ARCH}" )
+if(SYSTEM_NAME)
+  set(CPACK_SYSTEM_NAME "${SYSTEM_NAME}" )
+else()
+  set(CPACK_SYSTEM_NAME "${OS_NAME}-${SYS_ARCH}" )
+endif()
 set(CPACK_TOPLEVEL_TAG "${OS_NAME}-${SYS_ARCH}" )
 set(CPACK_PACKAGE_ARCHITECTURE ${SYS_ARCH} )
 
@@ -65,13 +84,15 @@ set(CPACK_SOURCE_STRIP_FILES TRUE)
 
 # here is where we can
 if (PLATFORM)
-  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${PLATFORM}" )
+  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${PLATFORM}" )
+elseif(SYSTEM_NAME)
+  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${SYSTEM_NAME}" )
 else()
-  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${OS_NAME}-${SYS_ARCH}" )
+  set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${OS_NAME}-${SYS_ARCH}" )
 endif()
 
 # you can enable/disable file stripping.
-option(CONDOR_STRIP_PACKAGES "Enables a package build" ON)
+option(CONDOR_STRIP_PACKAGES "Enables stripping of packaged binaries" ON)
 set(CPACK_STRIP_FILES ${CONDOR_STRIP_PACKAGES})
 if (NOT CONDOR_STRIP_PACKAGES)
   set (CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-unstripped" )
@@ -90,6 +111,7 @@ option(CONDOR_PACKAGE_BUILD "Enables a package build" OFF)
 # 1st set the location of the install targets, these are the defaults for
 set( C_BIN			bin)
 set( C_LIB			lib)
+set( C_LIB32		lib)
 set( C_LIBEXEC		libexec )
 set( C_SBIN			sbin)
 
@@ -130,9 +152,9 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set( C_SBIN bin )
 	set( C_ETC etc )
 
-	set (CPACK_PACKAGE_INSTALL_DIRECTORY "${CONDOR_VER}")
-	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}")
-	set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CONDOR_VER}")
+	set (CPACK_PACKAGE_INSTALL_DIRECTORY "${CONDOR_PACKAGE_NAME}")
+	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}")
+	set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CONDOR_VERSION}")
 
 	# create the WIX package input file (win.xsl) even if we aren't doing packaging.
 	#
@@ -142,27 +164,28 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
     set (CPACK_PACKAGE_ICON ${CONDOR_WIX_LOC}/Bitmaps/dlgbmp.bmp)
     set (CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/msconfig/license.rtf")
 
-    set (CPACK_WIX_PRODUCT_GUID "ea9608e1-9a9d-4678-800c-645df677094a")
+    set (CPACK_WIX_PRODUCT_GUID "792D07D2-0D3B-46C4-ABBE-849374A8E0B3")
     set (CPACK_WIX_UPGRADE_GUID "ef96d7c4-29df-403c-8fab-662386a089a4")
-    set (CPACK_WIX_BITMAP_FOLDER ${CONDOR_WIX_LOC}/Bitmaps)
-    set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs)
+    
+    set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorUpHostDlg.wxs)
 
+	set (CPACK_WIX_BITMAP_FOLDER Bitmaps)
+	configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl @ONLY)
+	
+	set (CPACK_WIX_BITMAP_FOLDER ${CONDOR_WIX_LOC}/Bitmaps)
     # the configure file f(n) will replace @CMAKE_XYZ@ with their value
     configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl @ONLY)
         
 	set (CPACK_GENERATOR "ZIP")
 	
-	install ( FILES ${CPACK_WIX_WXS_FILES} ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl
-			DESTINATION ${C_ETC}/WiX/xml
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( FILES ${CPACK_WIX_WXS_FILES} ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl
+			DESTINATION ${C_ETC}/WiX/xml )
 	
-	install ( FILES ${CPACK_WIX_BITMAP_FOLDER}/bannrbmp.bmp ${CPACK_WIX_BITMAP_FOLDER}/dlgbmp.bmp
-			DESTINATION ${C_ETC}/WiX/Bitmaps
-			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( DIRECTORY ${CPACK_WIX_BITMAP_FOLDER}
+			DESTINATION ${C_ETC}/WiX)
 			
 	install ( FILES ${CONDOR_SOURCE_DIR}/msconfig/license.rtf ${CONDOR_SOURCE_DIR}/msconfig/do_wix.bat
-			  DESTINATION ${C_ETC}/WiX
-	          PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+			  DESTINATION ${C_ETC}/WiX )
 			
 	if (CONDOR_PACKAGE_BUILD)
 
@@ -199,7 +222,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		# Enable debug message
 		set ( CPACK_DEBIAN_PACKAGE_DEBUG 1 )
 
-		set (CPACK_PACKAGE_FILE_NAME "${PACKAGE_NAME}_${PACKAGE_VERSION}-${PACKAGE_REVISION}${DEBIAN_CODENAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}" )
+		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${PACKAGE_REVISION}${DEBIAN_CODENAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}" )
 		string( TOLOWER "${CPACK_PACKAGE_FILE_NAME}" CPACK_PACKAGE_FILE_NAME )
 
 		set ( CPACK_DEBIAN_PACKAGE_SECTION "contrib/misc")
@@ -222,6 +245,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		#Same as RPM
 		set( C_BIN			usr/bin )
 		set( C_LIB			usr/lib/condor )
+		set( C_LIB32		usr/lib/condor )
 		set( C_SBIN			usr/sbin )
 		set( C_INCLUDE		usr/include/condor )
 		set( C_MAN			usr/share/man )
@@ -261,7 +285,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		#Enable trace during packaging
 		set(CPACK_RPM_PACKAGE_DEBUG 1)
 
-		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_VER}-${PACKAGE_REVISION}.${RPM_SYSTEM_NAME}.${SYS_ARCH}" )
+		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${PACKAGE_REVISION}.${RPM_SYSTEM_NAME}.${SYS_ARCH}" )
 		string( TOLOWER "${CPACK_PACKAGE_FILE_NAME}" CPACK_PACKAGE_FILE_NAME )
 
 		set ( CPACK_RPM_PACKAGE_RELEASE ${PACKAGE_REVISION})
@@ -284,9 +308,17 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 		if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
 			set( C_LIB			usr/lib/condor )
+			set( C_LIB32		usr/lib/condor )
 		else()
 			set( C_LIB			usr/lib64/condor )
+			set( C_LIB32		usr/lib/condor )
 		endif ()
+
+        if ( ${LINUX_NAME} MATCHES "openSUSE"  OR  ${LINUX_NAME} MATCHES "sles" )
+			set( CPACK_RPM_SHADOW_PACKAGE "pwdutils" )
+		else()
+			set( CPACK_RPM_SHADOW_PACKAGE "shadow-utils" )
+		endif()
 
 		set( C_BIN			usr/bin )
 		set( C_LIBEXEC		usr/libexec/condor )
@@ -299,9 +331,9 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_ETC			etc/condor )
 		set( C_CONFIGD		etc/condor/config.d )
 		set( C_SYSCONFIG	etc/sysconfig )
-		set( C_ETC_EXAMPLES	usr/share/doc/${CONDOR_VER}/etc/examples )
-		set( C_SHARE_EXAMPLES usr/share/doc/${CONDOR_VER})
-		set( C_DOC			usr/share/doc/${CONDOR_VER} )
+		set( C_ETC_EXAMPLES	usr/share/doc/${CONDOR_VERSION}/etc/examples )
+		set( C_SHARE_EXAMPLES usr/share/doc/${CONDOR_VERSION})
+		set( C_DOC			usr/share/doc/${CONDOR_VERSION} )
 
 		#Because CPACK_PACKAGE_DEFAULT_LOCATION is set to "/" somewhere, so we have to set prefix like this
 		#This might break as we move to newer version of CMake
@@ -333,6 +365,8 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 			DESTINATION	"${C_LOG_DIR}")
 	install(DIRECTORY
 			DESTINATION	"${C_RUN_DIR}")
+	install(DIRECTORY
+			DESTINATION	"${C_LIB32}")
 
 endif()
 

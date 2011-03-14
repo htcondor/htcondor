@@ -252,7 +252,7 @@ DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack, int 
 {
 	if(numdone) { *numdone = 0; }
 	ExprTree *tree = NULL;
-	const char *lhstr, *rhstr;
+	const char *lhstr;
 	int reply;
 	int i;
 	ReliSock rsock;

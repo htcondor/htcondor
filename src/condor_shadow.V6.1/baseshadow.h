@@ -437,7 +437,6 @@ class BaseShadow : public Service
 	MyString domain;
 	MyString iwd;
 	char *scheddAddr;
-	bool jobExitedGracefully;
 	char *core_file_name;
 	MyString m_xfer_queue_contact_info;
 

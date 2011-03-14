@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -43,6 +43,7 @@ private:
 	State 		r_state;
 	State 		r_destination;
 	Activity	r_act;		
+	bool		r_act_was_benchmark;
 
 	int		enter_action( State, Activity, bool, bool );
 	int		leave_action( State cur_s, Activity cur_a, 

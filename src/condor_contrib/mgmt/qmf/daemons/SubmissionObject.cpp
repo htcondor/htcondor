@@ -1,0 +1,293 @@
+/***************************************************************
+ *
+ * Copyright (C) 2009-2011 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+#include "condor_attributes.h"
+#include "proc.h"
+
+#include "SubmissionObject.h"
+#include "JobServerObject.h"
+#include "ArgsSubmissionGetJobSummaries.h"
+
+#include "Utils.h"
+
+using namespace com::redhat::grid;
+using namespace qmf::com::redhat::grid;
+
+SubmissionObject::SubmissionObject ( ManagementAgent *agent,
+				     JobServerObject* job_server,
+                                     const char *name,
+                                     const char *owner ) :
+        ownerSet ( false )
+{
+    mgmtObject = new Submission ( agent, this, job_server );
+    ASSERT ( mgmtObject );
+
+    mgmtObject->set_Name ( string ( name ) );
+    if ( owner )
+    {
+        SetOwner ( owner );
+    }
+    else
+    {
+        SetOwner ( "Unknown" );
+        ownerSet = false;
+    }
+
+    // By default the submission will be persistent.
+    bool _lifetime = param_boolean("QMF_IS_PERSISTENT", true);
+    agent->addObject ( mgmtObject, name,  _lifetime);
+
+    dprintf ( D_FULLDEBUG, "Created new SubmissionObject '%s' for '%s'\n", name, owner);
+}
+
+SubmissionObject::~SubmissionObject()
+{
+	dprintf ( D_FULLDEBUG, "SubmissionObject::~SubmissionObject for '%s'\n", mgmtObject->get_Name().c_str());
+    if ( mgmtObject )
+    {
+        mgmtObject->resourceDestroy();
+    }
+}
+
+ManagementObject *
+SubmissionObject::GetManagementObject ( void ) const
+{
+    return mgmtObject;
+}
+
+void
+SubmissionObject::Increment ( const Job *job )
+{
+    int status = job->GetStatus();
+
+    dprintf ( D_FULLDEBUG, "SubmissionObject::Increment '%s' on '%s'\n", getJobStatusString(status), job->GetKey());
+
+    switch ( status )
+    {
+        case IDLE:
+            m_idle.insert ( job );
+            mgmtObject->inc_Idle();
+            break;
+        case RUNNING:
+            m_running.insert ( job );
+            mgmtObject->inc_Running();
+            break;
+        case REMOVED:
+            m_removed.insert ( job );
+            mgmtObject->inc_Removed();
+            break;
+        case COMPLETED:
+            m_completed.insert ( job );
+            mgmtObject->inc_Completed();
+            break;
+        case HELD:
+            m_held.insert ( job );
+            mgmtObject->inc_Held();
+            break;
+        default:
+            dprintf ( D_ALWAYS, "error: Unknown %s of %d on %s\n",
+                      ATTR_JOB_STATUS, status, job->GetKey() );
+            break;
+    }
+}
+
+void
+SubmissionObject::Decrement ( const Job *job )
+{
+    int status = job->GetStatus();
+
+    dprintf ( D_FULLDEBUG, "SubmissionObject::Decrement '%s' on '%s'\n", getJobStatusString(status), job->GetKey());
+
+    switch ( status )
+    {
+        case IDLE:
+            m_idle.erase ( job );
+            mgmtObject->dec_Idle();
+            break;
+        case RUNNING:
+            m_running.erase ( job );
+            mgmtObject->dec_Running();
+            break;
+        case REMOVED:
+            m_removed.erase ( job );
+            mgmtObject->dec_Removed();
+            break;
+        case COMPLETED:
+            m_completed.erase ( job );
+            mgmtObject->dec_Completed();
+            break;
+        case HELD:
+            m_held.erase ( job );
+            mgmtObject->dec_Held();
+            break;
+        default:
+            dprintf ( D_ALWAYS, "error: Unknown %s of %d on %s\n",
+                      ATTR_JOB_STATUS, status, job->GetKey() );
+            break;
+    }
+}
+
+
+const SubmissionObject::JobSet &
+SubmissionObject::GetIdle()
+{
+    return m_idle;
+}
+
+const SubmissionObject::JobSet &
+SubmissionObject::GetRunning()
+{
+    return m_running;
+}
+
+const SubmissionObject::JobSet &
+SubmissionObject::GetRemoved()
+{
+    return m_removed;
+}
+
+const SubmissionObject::JobSet &
+SubmissionObject::GetCompleted()
+{
+    return m_completed;
+}
+
+const SubmissionObject::JobSet &
+SubmissionObject::GetHeld()
+{
+    return m_held;
+}
+
+void
+SubmissionObject::SetOwner ( const char *owner )
+{
+    if ( !ownerSet )
+    {
+        mgmtObject->set_Owner ( string(owner) );
+        ownerSet = true;
+    }
+}
+
+Manageable::status_t
+SubmissionObject::GetJobSummaries ( Variant::List &jobs,
+                            std::string &text )
+{
+
+    // id, timestamp (which?), command, args, ins, outs, state, message
+    // id, time queued, time entered current state, state, command, args, hold reason, release reason
+
+	ClassAd ad;
+	Variant::Map job;
+
+    // find all the jobs in their various states...
+
+    //1) Idle
+    for ( SubmissionObject::JobSet::const_iterator i = GetIdle().begin();
+            GetIdle().end() != i; i++ )
+    {
+	    (*i)->GetSummary(ad);
+	if ( !PopulateVariantMapFromAd ( ad, job ) )
+        {
+            text = "Error retrieving attributes for Idle job";
+            return STATUS_USER + 1;
+        }
+
+        jobs.push_back(job);
+    }
+
+    //2) Running
+    for ( SubmissionObject::JobSet::const_iterator i = GetRunning().begin();
+            GetRunning().end() != i;
+            i++ )
+    {
+	    (*i)->GetSummary(ad);
+	if ( !PopulateVariantMapFromAd ( ad, job ) )
+        {
+            text = "Error retrieving attributes for Running job";
+            return STATUS_USER + 1;
+        }
+
+        jobs.push_back(job);
+    }
+
+    //3) Removed
+    for ( SubmissionObject::JobSet::const_iterator i = GetRemoved().begin();
+            GetRemoved().end() != i; i++ )
+    {
+	    (*i)->GetSummary(ad);
+	if ( !PopulateVariantMapFromAd ( ad, job ) )
+        {
+            text = "Error retrieving attributes for Removed job";
+            return STATUS_USER + 1;
+        }
+
+        jobs.push_back(job);
+    }
+
+    //4) Completed
+    for ( SubmissionObject::JobSet::const_iterator i = GetCompleted().begin();
+            GetCompleted().end() != i; i++ )
+    {
+	    (*i)->GetSummary(ad);
+	if ( !PopulateVariantMapFromAd ( ad, job ) )
+        {
+            text = "Error retrieving attributes for Completed job";
+            return STATUS_USER + 1;
+        }
+
+        jobs.push_back(job);
+    }
+
+
+    //5) Held
+    for ( SubmissionObject::JobSet::const_iterator i = GetHeld().begin();
+            GetHeld().end() != i; i++ )
+    {
+	    (*i)->GetSummary(ad);
+	if ( !PopulateVariantMapFromAd ( ad, job ) )
+        {
+            text = "Error retrieving attributes for Held job";
+            return STATUS_USER + 1;
+        }
+
+        jobs.push_back(job);
+    }
+
+    return STATUS_OK;
+}
+
+Manageable::status_t
+SubmissionObject::ManagementMethod ( uint32_t methodId,
+                                     Args &args,
+                                     std::string &text )
+{
+    switch ( methodId )
+    {
+	case qmf::com::redhat::grid::Submission::METHOD_ECHO:
+            return STATUS_OK;
+        case qmf::com::redhat::grid::Submission::METHOD_GETJOBSUMMARIES:
+            return GetJobSummaries ( ( ( ArgsSubmissionGetJobSummaries & ) args ).o_Jobs,
+                             text );
+    }
+
+    return STATUS_NOT_IMPLEMENTED;
+}

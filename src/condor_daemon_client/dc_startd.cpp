@@ -438,7 +438,6 @@ DCStartd::resumeClaim( ClassAd* reply, int timeout )
 	}
 
 	ClassAd req;
-	char buf[1024]; 
 
 		// Add our own attributes to the request ad we're sending
 	req.Assign( ATTR_COMMAND, getCommandString(CA_RESUME_CLAIM) );

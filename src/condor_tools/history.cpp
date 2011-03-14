@@ -75,6 +75,7 @@ static void Usage(char* name)
 #ifdef HAVE_EXT_POSTGRESQL
 static char * getDBConnStr(char *&quillName, char *&databaseIp, char *&databaseName, char *&queryPassword);
 static bool checkDBconfig();
+static	QueryResult result;
 #endif /* HAVE_EXT_POSTGRESQL */
 
 static void readHistoryFromFiles(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr);
@@ -83,7 +84,6 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
 //------------------------------------------------------------------------
 
 static CollectorList * Collectors = NULL;
-static	QueryResult result;
 static	CondorQuery	quillQuery(QUILL_AD);
 static	ClassAdList	quillList;
 static  bool longformat=false;
@@ -104,24 +104,24 @@ main(int argc, char* argv[])
   SQLQuery queryhor;
   SQLQuery queryver;
   QuillErrCode st;
+  bool remotequill=false;
+  char *quillName=NULL;
+  AttrList *ad=0;
+  int flag = 1;
 #endif /* HAVE_EXT_POSTGRESQL */
 
   void **parameters;
   char *dbconn=NULL;
   char *completedsince = NULL;
   char *owner=NULL;
-  bool readfromfile = false,remotequill=false;
+  bool readfromfile = false;
 
   char* JobHistoryFileName=NULL;
-  char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL,*quillName=NULL;
+  char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
 
 
   char* constraint=NULL;
   ExprTree *constraintExpr=NULL;
-
-  AttrList *ad=0;
-
-  int flag = 1;
 
   char tmp[512];
 
@@ -695,7 +695,7 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
         // Ok if only clusterId specified
         while (clusterId != cluster || (proc != -1 && procId != proc)) {
 	  
-            if (prevOffset == 0) { // no match
+            if (prevOffset <= 0) { // no match
                 free(owner);
                 return -1;
             }

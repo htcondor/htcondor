@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -80,7 +80,7 @@ if ( WITH_BLAHP )
 						INSTALL_COMMAND cd org.glite.ce.blahp && make install )
 
 		### set the install
-		install ( DIRECTORY ${EXTERNAL_STAGE}/opt/glite DESTINATION ${C_LIB} )
+		install ( DIRECTORY ${EXTERNAL_STAGE}/opt/glite DESTINATION ${C_LIBEXEC} USE_SOURCE_PERMISSIONS )
 
 		add_dependencies(blahp classads)	
 
@@ -101,6 +101,7 @@ endif( WITH_BLAHP )
 if ( BLAHP_FOUND )
 
 	message( STATUS "external configured (blahp) BLAHP_FOUND=${BLAHP_FOUND}" )
+	set( BLAHP_FOUND ${BLAHP_FOUND} PARENT_SCOPE )
 	set( HAVE_EXT_BLAHP ON PARENT_SCOPE )
 else()
 	message ( STATUS "external skipped (blahp)" )

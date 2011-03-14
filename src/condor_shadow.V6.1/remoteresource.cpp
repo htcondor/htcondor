@@ -1085,8 +1085,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			new_state = RR_EXECUTING;
 		} else if ( strcasecmp(job_state, "Checkpointed") == MATCH ) {
 			new_state = RR_CHECKPOINTED;
-		} else if ( strcasecmp(job_state, "Exited") == MATCH ) {
-			jobAd->Assign( ATTR_JOB_STATUS, TRANSFERRING_OUTPUT );
 		} else { 
 				// For our purposes in here, we don't care about any
 				// other possible states at the moment.  If the job
@@ -2032,11 +2030,11 @@ RemoteResource::checkX509Proxy( void )
 
 bool
 RemoteResource::getSecSessionInfo(
-	char const *starter_reconnect_session_info,
+	char const *,
 	MyString &reconnect_session_id,
 	MyString &reconnect_session_info,
 	MyString &reconnect_session_key,
-	char const *starter_filetrans_session_info,
+	char const *,
 	MyString &filetrans_session_id,
 	MyString &filetrans_session_info,
 	MyString &filetrans_session_key)

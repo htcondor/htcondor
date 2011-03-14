@@ -364,9 +364,8 @@ Sinful::addressPointsToMe( Sinful const &addr ) const
 	{
 		char const *spid = getSharedPortID();
 		char const *addr_spid = addr.getSharedPortID();
-		if( spid == NULL && addr_spid == NULL ||
-			spid && addr_spid && !strcmp(spid,addr_spid) )
-		{
+		if( (spid == NULL && addr_spid == NULL) ||
+			(spid && addr_spid && !strcmp(spid,addr_spid)) ) {
 			return true;
 		}
 	}

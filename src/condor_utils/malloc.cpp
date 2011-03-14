@@ -292,5 +292,5 @@ int print_all;
 
 	head.next = 0;
 }
-#endif DEBUG
-#endif _STORE_H_
+#endif /* DEBUG */
+#endif /* _STORE_H_ */

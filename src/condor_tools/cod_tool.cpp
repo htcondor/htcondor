@@ -66,11 +66,11 @@ VacateType vacate_type = VACATE_GRACEFUL;
 
 
 // protoypes of interest
-void usage( char* );
+void usage( const char* );
 void version( void );
-void invalid( char* opt );
-void ambiguous( char* opt );
-void another( char* opt );
+void invalid( const char* opt );
+void ambiguous( const char* opt );
+void another( const char* opt );
 void parseCOpt( char* opt, char* arg );
 void parsePOpt( char* opt, char* arg );
 void parseArgv( int argc, char* argv[] );
@@ -114,7 +114,7 @@ main( int argc, char *argv[] )
 		exit( 1 );
 	}
 
-	bool rval;
+	bool rval = FALSE;
 	int irval;
 	ClassAd reply;
 	ClassAd ad;
@@ -468,7 +468,7 @@ version()
 }
 
 void
-invalid( char* opt )
+invalid( const char* opt )
 {
 	fprintf( stderr, "%s: '%s' is invalid\n", my_name, opt );
 	usage( my_name );
@@ -476,7 +476,7 @@ invalid( char* opt )
 
 
 void
-ambiguous( char* opt )
+ambiguous( const char* opt )
 {
 	fprintf( stderr, "%s: '%s' is ambiguous\n", my_name, opt ); 
 	usage( my_name );
@@ -484,7 +484,7 @@ ambiguous( char* opt )
 
 
 void
-another( char* opt )
+another( const char* opt )
 {
 	fprintf( stderr, "%s: '%s' requires another argument\n", my_name,
 			 opt ); 
@@ -941,7 +941,7 @@ printFast( void )
 
 
 void
-usage( char *str )
+usage( const char *str )
 {
 	bool has_cmd_opt = true;
 	bool needsID = true;

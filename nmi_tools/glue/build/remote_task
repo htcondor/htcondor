@@ -30,26 +30,25 @@
 # 3 = internal fatal error (a.k.a. die)
 ######################################################################
 
+use strict;
+use warnings;
 use Cwd;
+use File::Basename;
 my $BaseDir = getcwd();
 
-my $SrcDir = "$BaseDir/src";
-my $msconfigDir = "$BaseDir/msconfig";
-my $PublicDir = "$BaseDir/public";
-
-my $TAR_TASK 	= "remote_task.create_tar";
-my $UNSTRIPPED_TASK = "remote_task.create_unstripped_tar";
-my $CONFIG_TASK = "remote_task.reconfig_package";
-my $RPM_TASK	= "remote_task.create_rpm";
-my $RPM_CHECK_TASK	= "remote_task.check_rpm";
-my $DEB_TASK	= "remote_task.create_deb";
-my $DEB_CHECK_TASK	= "remote_task.check_deb";
+my $EXTERNALS_TASK        = "remote_task.externals";
+my $TAR_TASK              = "remote_task.create_tar";
+my $CHECK_TAR_TASK        = "remote_task.check_tar";
+my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
+my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
+my $NATIVE_TASK           = "remote_task.create_native";
+my $CHECK_NATIVE_TASK     = "remote_task.check_native";
 
 my $taskname = "";
 my $execstr = "";
+
 # autoflush our STDOUT
 $| = 1;
-open STDERR,">&STDOUT";
 
 
 ## TSTCLAIR->THAWAN et.al ok below is the conundrum as it relates to packaging
@@ -61,112 +60,180 @@ open STDERR,">&STDOUT";
 if( ! defined $ENV{_NMI_TASKNAME} ) {
     print "NMI_TASKNAME not defined, building tar.gz package as default";
     $taskname = $TAR_TASK;
-
-}else {
-	$taskname = $ENV{_NMI_TASKNAME};
 }
+else {
+    $taskname = $ENV{_NMI_TASKNAME};
+}
+
+chomp(my $hostname = `hostname -f`);
+print "Executing task '$taskname' on host '$hostname'\n";
 
 # Checking task type
-if ($taskname eq $TAR_TASK) { 
-	#Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
-	#Reconfigure cmake variables for stripped tarball build
+if( $taskname eq $EXTERNALS_TASK ) {
+    # Since we do not declare the externals task on Windows, we don't have
+    # to handle invoking the Windows build tools in this step.
+    $execstr = "make externals";
+}
+elsif ($taskname eq $UNSTRIPPED_TASK) {
+    $execstr = get_cmake_args();
+    
+    #Append extra argument
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make --no-print-directory && make install && make targz && make tests";
+}
+elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
+    my $tarball_check_script = get_tarball_check_script();
+    my $tarball = get_tarball_name();
+    $execstr = "$tarball_check_script $tarball";
+}
+elsif ($taskname eq $TAR_TASK) { 
+    #Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
+    #Reconfigure cmake variables for stripped tarball build
+    
+    $execstr = get_cmake_args();
 
-	#Read back configuration from remote_pre stage
-	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
-	while(<CMAKECONFIG>){
-		my($line) = $_;
-		$execstr = $line;
-		last;
-	}
-	close (CMAKECONFIG);
-	#Append extra argument
-	# We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make externals && make -j4 && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz && make tests";
-
-} elsif  ($taskname eq $UNSTRIPPED_TASK){
-	#Reconfigure cmake variables for native package build
-
-	#Read back configuration from remote_pre stage
-	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
-	while(<CMAKECONFIG>){
-		my($line) = $_;
-		$execstr = $line;
-		last;
-	}
-	close (CMAKECONFIG);
-
-	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make externals && make -j4 && make install && make targz && make tests";
-} elsif  ($taskname eq $RPM_TASK){
-	#Building RPM
-
-	#Reconfigure cmake variables for native package build	
-	#Read back configuration from remote_pre stage
-	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
-	while(<CMAKECONFIG>){
-		my($line) = $_;
-		$execstr = $line;
-		last;
-	}
-	close (CMAKECONFIG);
-	
-	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
-
-} elsif  ($taskname eq $RPM_CHECK_TASK){
-	#Print packaging log to stdout
-	#List file in the package
-	$execstr= "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
-
-} elsif  ($taskname eq $DEB_TASK){
-	#Building Debian package
-
-	#Reconfigure cmake variables for native package build	
-	#Read back configuration from remote_pre stage
-	open (CMAKECONFIG, "<cmake_args.txt") || die "Cannot open cmake_args.txt: $!";
-	while(<CMAKECONFIG>){
-		my($line) = $_;
-		$execstr = $line;
-		last;
-	}
-	close (CMAKECONFIG);
-	
-	#Append extra argument
-	$execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make package";
-
-} elsif  ($taskname eq $DEB_CHECK_TASK){
-	#Print package summary
-	#Would like to run lintian, but it is not avialable on 
-	#all NMI machine
-	$execstr= "dpkg-deb -I *.deb";
-	
+    # We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz tests";
+}
+elsif ($taskname eq $CHECK_TAR_TASK) {
+    my $tarball_check_script = get_tarball_check_script();
+    my $tarball = get_tarball_name();
+    $execstr = "$tarball_check_script $tarball";
+}
+elsif ($taskname eq $NATIVE_TASK) {
+    # Create native packages on Red Hat and Debian
+    print "Create native package.  NMI_PLATFORM = $ENV{NMI_PLATFORM}\n";
+    if ($ENV{NMI_PLATFORM} =~ /deb/) {
+        print "Detected OS is Debian.  Creating Deb package.\n";
+        $execstr = create_deb();
+    }
+    elsif ($ENV{NMI_PLATFORM} =~ /rha/) {
+        print "Detected OS is Red Hat.  Creating RPM package.\n";
+        $execstr = create_rpm();
+    }
+    elsif ($ENV{NMI_PLATFORM} =~ /opensuse/) {
+        print "Detected OS is OpenSuSE.  Creating RPM package.\n";
+        $execstr = create_rpm();
+    }
+    else {
+        print "We do not generate a native package for this platform.\n";
+        exit 0;
+    }
+}
+elsif ($taskname eq $CHECK_NATIVE_TASK) {
+    # Validate the native packages
+    print "Validating native package.  NMI_PLATFORM = $ENV{NMI_PLATFORM}\n";
+    if ($ENV{NMI_PLATFORM} =~ /deb/) {
+        print "Detected OS is Debian.  Validating Deb package.\n";
+        $execstr = check_deb();
+    }
+    elsif ($ENV{NMI_PLATFORM} =~ /rha/) {
+        print "Detected OS is Red Hat.  Validating RPM package.\n";
+        $execstr = check_rpm();
+    }
+    elsif ($ENV{NMI_PLATFORM} =~ /opensuse/) {
+        print "Detected OS is OpenSuSE.  Validating RPM package.\n";
+        $execstr = check_rpm();
+    }
+    else {
+        print "We do not generate a native package for this platform.\n";
+        exit 0;
+    }
 }
 
-print "------------------------- ENV DUMP ------------------------\n";
+
+
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-
-	# build.win.bat uses BASE_DIR to setup some things.
-	#
-	$ENV{BASE_DIR} = "$BaseDir";
+    # build.win.bat uses BASE_DIR to setup some things.
+    $ENV{BASE_DIR} = "$BaseDir";
     $execstr= "nmi_tools\\glue\\build\\build.win.bat";
-
-} else {
-    $ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
-    system("env");
 }
-print "------------------------- ENV DUMP ------------------------\n";
+else {
+    $ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
+}
+
+print STDERR "------------------------- ENV DUMP ------------------------\n";
+foreach my $key (sort { uc($a) cmp uc($b) } keys %ENV) {
+    print STDERR "$key=$ENV{$key}\n";
+}
+print STDERR "------------------------- ENV DUMP ------------------------\n";
+
 
 ######################################################################
 # build
 ######################################################################
-print "$execstr\n";
-$buildstatus = system("$execstr");
+
+# Redirecting our STDERR to STDOUT means that we get them interspersed in the
+# build output.  Metronome usually splits STDOUT and STDERR into separate
+# files and putting them together makes it easier to correlate messages between
+# the two.  We are redirecting this after dumping the environment to STDERR
+# since it is nice to have that available, but it is annoying to have it at
+# the top of every step.
+open STDERR,">&STDOUT";
+
+print "Executing the following command:\n$execstr\n";
+my $buildstatus = system("$execstr");
 
 # now check the build status and return appropriately
 if( $buildstatus == 0 ) {
-    print "Building $taskname: SUCCESS\n";
+    print "Completed task $taskname: SUCCESS\n";
     exit 0;
 }
 
-print "Building $taskname: FAILURE ($buildstatus)\n";
+print "Completed task $taskname: FAILURE (Exit status: '$buildstatus')\n";
 exit 1;
+
+
+
+sub get_cmake_args {
+    #Read back configuration from remote_pre stage
+    my $cmake_cmd;
+
+    # A comment above says never to use die() and that we must always return '3' on error.  But the
+    # original code used die() when I took it over.  So I'm not sure which to follow.  I'll just
+    # leave the die() in here for now... -scot 2011/03
+    open(CMAKECONFIG, '<', "cmake_args.txt") or die "Cannot open cmake_args.txt: $!";
+    while(<CMAKECONFIG>) {
+        $cmake_cmd = $_;
+        last;
+    }
+    close (CMAKECONFIG);
+    return $cmake_cmd;
+}
+
+sub get_tarball_check_script {
+    return dirname($0) . "/check-tarball.pl";
+}
+
+sub get_tarball_name {
+    if($taskname eq $CHECK_UNSTRIPPED_TASK) {
+	return <*-unstripped.tar.gz>;
+    }
+    elsif($taskname eq $CHECK_TAR_TASK) {
+	return <*-stripped.tar.gz>;
+    }
+    print "ERROR: get_tarball_task() called from a task that does not have an associated tarball.\n";
+    exit 3;
+}
+
+sub create_rpm {
+    # Reconfigure cmake variables for native package build   
+    my $command = get_cmake_args();
+    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make package";
+}
+
+sub check_rpm {
+    # List files in the package
+    return "find . -name '*rpmbuild*' -print -exec cat {} \\;; rpm -qlp *.rpm";
+}
+
+sub create_deb {    
+    #Reconfigure cmake variables for native package build   
+    my $command = get_cmake_args();
+    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make package";
+}
+
+sub check_deb {
+    # Print package summary
+    # We would like to run lintian, but it is not available on all NMI machine
+    return "dpkg-deb -I *.deb";
+}

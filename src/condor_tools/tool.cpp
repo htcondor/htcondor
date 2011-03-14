@@ -75,6 +75,8 @@ int cmd_set = 0;
 char *subsys_arg = NULL;
 bool IgnoreMissingDaemon = false;
 
+bool all_good = true;
+
 HashTable<MyString, bool> addresses_sent( 100, MyStringHash );
 
 
@@ -237,7 +239,7 @@ pool_target_usage( void )
 }
 
 
-char*
+const char*
 cmdToStr( int c )
 {
 	switch( c ) {
@@ -919,6 +921,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 				fprintf( stderr, "Address %s is not valid.\n", *argv );
 				fprintf( stderr, "Should be of the form <ip.address.here:port>.\n" );
 				fprintf( stderr, "For example: <123.456.789.123:6789>\n" );
+				all_good = false;
 				continue;
 			}
 			break;
@@ -928,6 +931,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 			if( (daemonname = get_daemon_name(*argv)) == NULL ) {
 				fprintf( stderr, "%s: unknown host %s\n", MyName, 
 						 get_host_part(*argv) );
+				all_good = false;
 				continue;
 			}
 			names.append( daemonname );
@@ -962,7 +966,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 			return 1;
 		}
 		doCommand( &local_d );
-		return 0;
+		return all_good ? 0 : 1;
 	}
 
 		// If we got here, there were some targets specified on the
@@ -995,7 +999,7 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 		}
 		doCommand( d );
 	}
-	return 0;
+	return all_good ? 0 : 1;
 }
 
 
@@ -1103,7 +1107,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 		return true;
 	}
 
-	AdTypes	adtype;
+	AdTypes	adtype = MASTER_AD;
 	switch( real_dt ) {
 	case DT_MASTER:
 		adtype = MASTER_AD;
@@ -1302,6 +1306,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 	if( had_error ) {
 		fprintf( stderr,
 				 "Perhaps you need to query another pool.\n" );
+		all_good = false;
 	}
 	return true;
 }
@@ -1390,6 +1395,7 @@ doCommand( Daemon* d )
 				if( !sock.code(name) || !sock.end_of_message() ) {
 					fprintf( stderr, "Can't send %s command to %s\n", 
 								 cmdToStr(my_cmd), d->idStr() );
+					all_good = false;
 					return;
 				} else {
 					done = true;
@@ -1413,6 +1419,7 @@ doCommand( Daemon* d )
 				if( !sock.code(name) || !sock.end_of_message() ) {
 					fprintf( stderr, "Can't send %s command to %s\n",
 								 cmdToStr(my_cmd), d->idStr() );
+					all_good = false;
 					return;
 				} else {
 					done = true;
@@ -1435,6 +1442,7 @@ doCommand( Daemon* d )
 			if( !sock.code( psubsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 							cmdToStr(my_cmd), d->idStr() );
+				all_good = false;
 				return;
 			} else {
 				done = true;
@@ -1448,6 +1456,7 @@ doCommand( Daemon* d )
 			if( !sock.code( psubsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 						 cmdToStr(my_cmd), d->idStr() );
+				all_good = false;
 				return;
 			} else {
 				done = true;
@@ -1503,6 +1512,7 @@ doCommand( Daemon* d )
 			if( !sock.code( pexec ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
 						 cmdToStr(my_cmd), d->idStr() );
+				all_good = false;
 				return;
 			} else {
 				done = true;
@@ -1519,6 +1529,7 @@ doCommand( Daemon* d )
 				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
 				fprintf( stderr, "Can't send %s command to %s\n",
 							 cmdToStr(my_cmd), d->idStr() );
+				all_good = false;
 				return;
 			}
 		}
@@ -1559,6 +1570,7 @@ doCommand( Daemon* d )
 	} while(d->nextValidCm() == true);
 	if( error == true ) {
 		fprintf( stderr, "Can't connect to %s\n", d->idStr() );
+		all_good = false;
 		return;
 	}
 }

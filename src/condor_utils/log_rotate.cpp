@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -37,6 +37,9 @@ char baseDirName[PATH_MAX];
 int isInitialized = 0;
 
 int numLogs = 0;
+
+/** create an ISO timestamp string */
+static char *createTimestampString();
 
 #ifndef WIN32
 int scandirectory(const char *dir, struct dirent ***namelist,
@@ -77,7 +80,8 @@ int scandirectory(const char *dir, struct dirent ***namelist,
 int doalphasort(const void *a, const void *b) {
         const struct dirent **d1 = (const struct dirent**)a;
         const struct dirent **d2 = (const struct dirent**)b;		
-        return(strcmp((char*)((*d1)->d_name), (char*)((*d2)->d_name)));
+        return(strcmp(const_cast<char*>((*d1)->d_name),
+		const_cast<char*>((*d2)->d_name)));
 }
 
 #endif
@@ -102,13 +106,17 @@ void setBaseName(char *baseName) {
 	}
 }
 
-int rotateSingle() {
+int
+rotateSingle()
+{
 	return rotateTimestamp("old", 1);
 } 
 
 
-char *createRotateFilename(char *ending, int maxNum){
-	char *timeStamp;
+const char *
+createRotateFilename(const char *ending, int maxNum)
+{
+	const char *timeStamp;
 	if (maxNum <= 1)
 		timeStamp = "old";
 	else 	
@@ -120,9 +128,11 @@ char *createRotateFilename(char *ending, int maxNum){
 	return timeStamp;
 }
 
-int rotateTimestamp(char *timeStamp, int maxNum) {
+int
+rotateTimestamp(const char *timeStamp, int maxNum)
+{
 	int save_errno;
-	char *ts = createRotateFilename(timeStamp, maxNum);
+	const char *ts = createRotateFilename(timeStamp, maxNum);
 
 	// First, select a name for the rotated history file
 	char *rotated_log_name = (char*)malloc(strlen(logBaseName) + strlen(ts) + 2) ;
@@ -198,8 +208,10 @@ int isLogFilename( char *filename) {
 		++dirLen;
     int fLen = strlen(logBaseName);
     if (strncmp(filename, (logBaseName+dirLen), fLen - dirLen - 1) == 0 ) {
-    	if (strlen(filename) > fLen-dirLen && filename[fLen-dirLen] == '.') {
-			if (isTimestampString(filename+(fLen-dirLen+1)) == 1 || isOldString(filename+(fLen-dirLen+1)) == 1 )
+    	if (  (strlen(filename) > unsigned(fLen-dirLen)) && 
+			  (filename[fLen-dirLen] == '.')  ) {
+			if (  (isTimestampString(filename+(fLen-dirLen+1)) == 1) ||
+				  (isOldString(filename+(fLen-dirLen+1)) == 1) )
     				return 1;
     	}
 	}
@@ -209,11 +221,8 @@ int isLogFilename( char *filename) {
 
 int file_select(const struct dirent *entry) {
 	
-	char *entryData = (char*)entry->d_name;
-	if (isLogFilename((char*)entry->d_name)) {
-		return 1;
-	}
-	return 0;
+	char *entryData = const_cast<char*>(entry->d_name);
+	return isLogFilename(entryData) ? 1 : 0;
 }
 
 
@@ -262,7 +271,7 @@ char *findOldest(char *dirName, int *count) {
 
 #endif
 
-static char *createTimestampString() {
+char *createTimestampString() {
 	time_t clock_now;
 	struct tm *tm;
 	static char timebuf[80];

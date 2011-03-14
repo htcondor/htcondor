@@ -112,8 +112,7 @@ param_info_init()
 
 #include "param_info_init.c"
 
-	after_data_insertion:
-		;
+/* 	after_data_insertion: ; */
 }
 
 void
@@ -142,8 +141,8 @@ param_info_insert(const char* param,
 
 	p = (param_info_t*)malloc(sizeof(param_info_t));
 
-	CPY_STR(p->name,  param);
-	CPY_STR(p->aliases, aliases);
+	CPY_STR(p->name,  const_cast<char*>(param));
+	CPY_STR(p->aliases, const_cast<char*>(aliases));
 
 	if (!value) {
 		EXCEPT("value passed to param_info_insert was NULL");
@@ -152,7 +151,7 @@ param_info_insert(const char* param,
 		EXCEPT("range passed to param_info_insert was NULL");
 	}
 
-	CPY_STR(p->str_val, value);
+	CPY_STR(p->str_val, const_cast<char*>(value));
 
 	p->type = (param_info_t_type_t)type;
 	p->range_valid = 1;
@@ -247,11 +246,11 @@ param_info_insert(const char* param,
 	p->is_macro = is_macro;
 	p->reconfig = reconfig;
 	p->customization = customization;
-	CPY_STR(p->version, version);
-	CPY_STR(p->friendly_name, friendly_name);
-	CPY_STR(p->usage, usage);
-	CPY_STR(p->url, url);
-	CPY_STR(p->tags, tags);
+	CPY_STR(p->version, const_cast<char*>(version));
+	CPY_STR(p->friendly_name, const_cast<char*>(friendly_name));
+	CPY_STR(p->usage, const_cast<char*>(usage));
+	CPY_STR(p->url, const_cast<char*>(url));
+	CPY_STR(p->tags, const_cast<char*>(tags));
 
 	param_info_hash_insert(param_info, p);
 }
@@ -269,7 +268,7 @@ param_default_string(const char* param)
 	// Don't check the type here, since this is used in param and is used
 	// to look up values for all types.
 	if (p && p->default_valid) {
-		ret = (char*) p->str_val;
+		ret = const_cast<char*>(p->str_val);
 	}
 
 	return ret;

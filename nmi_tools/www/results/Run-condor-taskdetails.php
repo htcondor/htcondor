@@ -144,6 +144,13 @@ while( $myrow = mysql_fetch_array($result) ) {
   $resultspath = "$basedir/$gid/userdir/$platform/results.tar.gz";
   $resfound = file_exists($local_fs_prefix.$resultspath);
   
+  $num_warnings = `grep -c -i warning $filepath.out`;
+  $num_warnings_stderr = 0;
+  # STDERR is usually empty so don't do a shell callout unless stderr size is > 0
+  if($stderr_size > 0) {
+    $num_warnings_stderr = `grep -c -i warning $filepath.err`;
+  }
+
   if(!$resfound) {
     $results_url = "N/A";
   }
@@ -168,6 +175,8 @@ while( $myrow = mysql_fetch_array($result) ) {
   echo "<TR><TD>Stdout:</TD><TD> $stdout_url - (size: $stdout_size bytes) </TD></TR>";
   echo "<TR><TD>Stderr:</TD><TD> $stderr_url - (size: $stderr_size bytes) </TD></TR>";
   echo "<TR><TD>Run Results:</TD><TD> $results_url</a></TD></TR>";
+  echo "<TR><TD># warnings STDOUT:</td><td>$num_warnings</td></tr>";
+  echo "<TR><TD># warnings STDERR:</td><td>$num_warnings_stderr</td></tr>";
   echo "</TABLE>";
   echo "</P>";
 

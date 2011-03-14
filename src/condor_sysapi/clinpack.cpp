@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -39,7 +39,7 @@ PLEASE NOTE: You can also just 'uncomment' one of the options below.
 
 #ifdef WIN32
 /* Get rid of warnings; we cannot change this code */
-#pragma warning( disable: 4033 4305 4013 4101 4013 4716 )
+# pragma warning( disable: 4033 4305 4013 4101 4013 4716 )
 #endif
 
 /* #define SP     */
@@ -50,8 +50,11 @@ PLEASE NOTE: You can also just 'uncomment' one of the options below.
 #include <stdio.h>
 #include <math.h>
 #if !defined(WIN32)
-#include <unistd.h>
+# include <unistd.h>
 #endif
+
+#include "utc_time.h"
+#define dtime()	UtcTime::getTimeDouble()
 
 #ifdef SP
 #define REAL float
@@ -66,8 +69,6 @@ PLEASE NOTE: You can also just 'uncomment' one of the options below.
 #define ONE  1.0e0
 #define PREC "Double "
 #endif
-
-#define NTIMES 100
 
 #ifdef ROLL
 #define ROLLING "Rolled "
@@ -93,14 +94,14 @@ REAL epslon (REAL x);
 extern "C" void sysapi_internal_reconfig(void);
 
 int
-clinpack_kflops ( int ntimes_arg )
+clinpack_kflops ( int ntimes )
 {
    static REAL aa[200][200],a[200][201],b[200],x[200];
    REAL cray,ops,total,norma,normx;
    REAL resid,residn,eps;
    REAL kf;
-   double t1,tm,tm2,dtime();
-   static int ipvt[200],n,i,ntimes,info,lda,ldaa,kflops;
+   double t1,tm,tm2;
+   static int ipvt[200],n,i,info,lda,ldaa,kflops;
 
 #if defined(WIN32)
    static float one_tick = .0001;
@@ -225,7 +226,6 @@ clinpack_kflops ( int ntimes_arg )
 	st[4][2] = 2.0e3/st[3][2];
 	st[5][2] = total/cray;
 
-	ntimes = ( ntimes_arg > 0 ) ? ntimes_arg : NTIMES;
 	tm2 = 0.0;
 	t1 = dtime();
 
@@ -336,7 +336,6 @@ clinpack_kflops ( int ntimes_arg )
    st[4][6] = 2.0e3/st[3][6];
    st[5][6] = total/cray;
 
-   ntimes = ( ntimes_arg > 0 ) ? ntimes_arg : NTIMES;
    tm2 = 0;
    t1 = dtime();
    for (i = 0; i < ntimes; i++) {
@@ -674,7 +673,7 @@ void daxpy( int n, REAL da, REAL dx[], int incx, REAL dy[], int incy)
 //REAL dx[],dy[],da;
 //int incx,incy,n;
 {
-   int i,ix,iy,m,mp1;
+   int i,ix,iy,m;
 
    if(n <= 0) return;
    if (da == ZERO) return;
@@ -731,7 +730,7 @@ REAL ddot(int n,REAL dx[],int incx,REAL dy[], int incy)
 //int incx,incy,n;
 {
    REAL dtemp;
-   int i,ix,iy,m,mp1;
+   int i,ix,iy,m;
 
    dtemp = ZERO;
 
@@ -787,7 +786,7 @@ void dscal(int n,REAL da,REAL dx[],int incx)
 //REAL da,dx[];
 //int n, incx;
 {
-   int i,m,mp1,nincx;
+   int i,m,nincx;
 
    if(n <= 0)return;
    if(incx != 1) {
@@ -837,7 +836,7 @@ int idamax(int n,REAL dx[],int incx)
 //int incx,n;
 {
    REAL dmax;
-   int i, ix, itemp;
+   int i, ix, itemp=0;
 
    if( n < 1 ) return(-1);
    if(n ==1 ) return(0);
@@ -1021,37 +1020,54 @@ function, references to m[i][j] are written m[ldm*i+j].  */
    }
 } 
 
-/* Here are the entry points to this file */
-extern "C"
-{
+// NRL 5 Jan 2010: These were generated imperically
+#define QUICK_RUNS		250
+#define	LOOP_CONST		0.000022
 
-int sysapi_kflops_raw(void)
-{
+// Enable timing output
+#define ENABLE_TIMING	0
+
+static int
+kflops_raw( void )
+{	
 	static int		kflops = -1;
 	int				quick_kflops = 0;
+	int				loops;
 
 	sysapi_internal_reconfig();
 
 	// If we haven't run before, get a quick measurement
 	// For slow machines, we'll use that quick measurement
 	if ( kflops < 0 ) {
-		quick_kflops = clinpack_kflops( 0 );
-	} else if ( kflops < 100000 ) {
-		return ( kflops = clinpack_kflops( 0 ) );
-	} else {
+		quick_kflops = clinpack_kflops( QUICK_RUNS );
+	}
+	else {
 		quick_kflops = kflops;
 	}
 
 	// For faster machines, run with more loops.
-	if        ( quick_kflops >= 1000000 ) {
-		return ( kflops = clinpack_kflops( 5000 ) );
-	} else if ( quick_kflops >=  500000 ) {
-		return ( kflops = clinpack_kflops( 2000 ) );
-	} else if ( quick_kflops >=  100000 ) {
-		return ( kflops = clinpack_kflops( 1000 ) );	
-	} else {
-		return ( kflops = quick_kflops );
-	} 
+	loops = floor( 0.9999 + (QUICK_RUNS * quick_kflops * LOOP_CONST) );
+# if(ENABLE_TIMING)
+	double t1 = UtcTime::getTimeDouble( );
+# endif
+
+	kflops = clinpack_kflops( loops );
+
+# if(ENABLE_TIMING)
+	double t2 = UtcTime::getTimeDouble( );
+	printf( "quick=%d, loops=%d, time=%0.3fs\n",
+			quick_kflops, loops, t2-t1 );
+# endif
+	return kflops;
+}
+
+/* Here are the entry points to this file */
+extern "C"
+{
+
+int sysapi_kflops_raw(void)
+{
+	return kflops_raw( );
 }
 
 /* if you need to modify kflops, do it here. */
@@ -1062,4 +1078,3 @@ int sysapi_kflops(void)
 }
 
 }
-

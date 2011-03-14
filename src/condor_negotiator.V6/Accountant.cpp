@@ -33,6 +33,9 @@
 #include "string_list.h"
 #include "HashTable.h"
 #include "ConcurrencyLimitUtils.h"
+#include "matchmaker.h"
+#include <string>
+#include <deque>
 
 #define MIN_PRIORITY_FACTOR (1.0)
 
@@ -68,7 +71,6 @@ Accountant::Accountant():
   MinPriority=0.5;
   AcctLog=NULL;
   DiscountSuspendedResources = false;
-  GroupNamesList = NULL;
   UseSlotWeights = false;
   DefaultPriorityFactor = 1.0f;
   HalfLifePeriod = 1.0f;
@@ -76,6 +78,7 @@ Accountant::Accountant():
   MaxAcctLogSize = 1000000;
   NiceUserPriorityFactor = 100000;
   RemoteUserPriorityFactor = 10000;
+  hgq_root_group = NULL;
 }
 
 //------------------------------------------------------------------
@@ -85,14 +88,13 @@ Accountant::Accountant():
 Accountant::~Accountant()
 {
   if (AcctLog) delete AcctLog;
-  if (GroupNamesList) delete GroupNamesList;
 }
 
 //------------------------------------------------------------------
 // Initialize (or re-configure) and read configuration parameters
 //------------------------------------------------------------------
 
-void Accountant::Initialize() 
+void Accountant::Initialize(GroupEntry* root_group) 
 {
   static bool first_time = true;
 
@@ -104,20 +106,23 @@ void Accountant::Initialize()
   DefaultPriorityFactor=1;
   HalfLifePeriod=86400;
 
-  // get group names
-  if ( GroupNamesList ) {
-	  delete GroupNamesList;
-	  GroupNamesList = NULL;
+  // Set up HGQ accounting-group related information
+  hgq_root_group = root_group;
+  hgq_submitter_group_map.clear();
+  // Pre-set mapping from all defined group names to themselves.
+  deque<GroupEntry*> grpq;
+  grpq.push_back(hgq_root_group);
+  while (!grpq.empty()) {
+      GroupEntry* group = grpq.front();
+      grpq.pop_front();
+      hgq_submitter_group_map[group->name] = group;
+      for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+          grpq.push_back(*j);
+      }
   }
-  char *groups = param("GROUP_NAMES");
-  if ( groups ) {
-		GroupNamesList = new StringList;
-		ASSERT(GroupNamesList);
-		GroupNamesList->initializeFromString(groups);
-		free(groups);
-  }
-
-  // get half life period
+  
+ 
+ // get half life period
   
   tmp = param("PRIORITY_HALFLIFE");
   if(tmp) {
@@ -222,11 +227,7 @@ void Accountant::Initialize()
 		char const *key = keybuf.Value();
 			// skip records that are not customer records...
 		if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
-			// for now, skip records that are "group" customer records. 
-			// TODO: we should fix the below sanity check code so it understands
-			// fixing up group customer records as well.
 		char const *thisUser = &(key[CustomerRecord.Length()]);
-		if (GroupNamesList && GroupNamesList->contains_anycase(thisUser)) continue;
 			// if we made it here, append to our list of users
 		users.append( thisUser );
 	  }
@@ -296,6 +297,87 @@ void Accountant::Initialize()
   UpdatePriorities();
 }
 
+
+void parse_group_name(const string& gname, vector<string>& gpath) {
+    gpath.clear();
+    string::size_type cur = 0;
+    while (true) {
+        string::size_type nxt = gname.find_first_of('.', cur);
+        string::size_type n = (nxt == string::npos) ? string::npos : nxt-cur;
+        gpath.push_back(gname.substr(cur, n));
+        if (nxt == string::npos) break;
+        cur = 1+nxt;
+    }
+}
+
+GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName) {
+    bool unused;
+    return GetAssignedGroup(CustomerName, unused);
+}
+
+GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsGroup) {
+    string subname = CustomerName.Value();
+
+    // Is this an acct group, syntactically speaking?
+    string::size_type pos = subname.find_last_of('@');
+    IsGroup = (pos == string::npos);
+
+    // cache results from previous invocations
+    map<string, GroupEntry*, ci_less>::iterator fs(hgq_submitter_group_map.find(subname));
+    if (fs != hgq_submitter_group_map.end()) return fs->second;
+
+    ASSERT(NULL != hgq_root_group);
+
+    if (IsGroup) {
+        // This is either a defunct group or a malformed submitter name: map it to root group
+        dprintf(D_ALWAYS, "group quota: WARNING: defaulting submitter \"%s\" to root group\n", subname.c_str());
+        hgq_submitter_group_map[subname] = hgq_root_group;
+        return hgq_root_group;
+    }
+
+    // strip '@' and everything after it
+    string gname=subname.substr(0, pos);
+
+    // is there a group/user separator?
+    pos = gname.find_last_of('.');
+    if (pos != string::npos) {
+        // everything prior to separator is group name
+        gname = gname.substr(0, pos);
+    } else {
+        // if there is no separator, semantic is "no group", so it goes to root
+        hgq_submitter_group_map[subname] = hgq_root_group;
+        return hgq_root_group;
+    }
+
+    GroupEntry* group = hgq_root_group;
+    // parse the group name into a path of sub-group names
+    vector<string> gpath;
+    parse_group_name(gname, gpath);
+
+    // walk down the tree using the group path
+    for (vector<string>::iterator j(gpath.begin());  j != gpath.end();  ++j) {
+        map<string, GroupEntry::size_type, ci_less>::iterator f(group->chmap.find(*j));
+        if (f == group->chmap.end()) {
+            if (hgq_root_group->children.size() > 0) {
+                // I only want to log a warning if an HGQ configuration exists
+                dprintf(D_ALWAYS, "group quotas: WARNING: defaulting undefined group name %s to group %s\n", 
+                        gname.c_str(), group->name.c_str());
+            }
+            break;
+        } else {
+            group = group->children[f->second];
+        }
+    }
+
+    hgq_submitter_group_map[subname] = group;
+    return group;
+}
+
+
+bool Accountant::UsingWeightedSlots() {
+    return UseSlotWeights;
+}
+
 //------------------------------------------------------------------
 // Return the number of resources used
 //------------------------------------------------------------------
@@ -344,29 +426,15 @@ float Accountant::GetPriority(const MyString& CustomerName)
 // Get group priority local helper function.
 float Accountant::getGroupPriorityFactor(const MyString& CustomerName) 
 {
-	float priorityFactor = 0.0;	// "error" value
+    string GroupName = GetAssignedGroup(CustomerName)->name;
 
-	// Group names contain a '.' character, so check for it.
-	int pos = CustomerName.FindChar('.');
-	if ( pos <= 0 ) return priorityFactor;
-	// Group separator character found: if the group name appears in
-	// config macro GROUP_NAMES, then we know to treat it as a group.
-	MyString GroupName = CustomerName;
-	GroupName.setChar(pos,'\0');
-	if (GroupNamesList && GroupNamesList->contains_anycase(GroupName.Value())) 
-	{
-		MyString groupPrioFactorConfig;
-		groupPrioFactorConfig.sprintf("GROUP_PRIO_FACTOR_%s",
-				GroupName.Value() );
-#define ERR_CONVERT_DEFPRIOFACTOR   (-1.0)
-		double tmpPriorityFactor = param_double(groupPrioFactorConfig.Value(),
-				   ERR_CONVERT_DEFPRIOFACTOR);
-		if (tmpPriorityFactor != ERR_CONVERT_DEFPRIOFACTOR) {
-			priorityFactor = tmpPriorityFactor;
-		}
-	}
+    MyString groupPrioFactorConfig;
+	groupPrioFactorConfig.sprintf("GROUP_PRIO_FACTOR_%s", GroupName.c_str());
+	double priorityFactor = param_double(groupPrioFactorConfig.Value(), 0.0);
+
 	return priorityFactor;
 }
+
 
 float Accountant::GetPriorityFactor(const MyString& CustomerName) 
 {
@@ -396,6 +464,7 @@ float Accountant::GetPriorityFactor(const MyString& CustomerName)
   }
   return PriorityFactor;
 }
+
 
 //------------------------------------------------------------------
 // Reset the Accumulated usage for all users
@@ -539,29 +608,18 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
   float WeightedUnchargedTime=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
 
-	// Determine if we need to update a second customer record w/ the group name.
-  bool update_group_info = false;
-  MyString GroupName;
   int GroupResourcesUsed=0;
   float GroupWeightedResourcesUsed = 0.0;
   int GroupUnchargedTime=0;
   float WeightedGroupUnchargedTime=0.0;
-  if ( GroupNamesList ) {
-	  GroupName = CustomerName;
-	  int pos = GroupName.FindChar('.');	// '.' is the group seperater
-	  GroupName.setChar(pos,'\0');
-		// if there is a group seperater character, and if the group name
-		// is a valid one listed in the GroupNamesList, then we want to update
-		// two customer records: one with the full name of the customer (group.user),
-		// and one with just the name of the group (group).
-	  if ( pos != -1 && GroupNamesList->contains_anycase(GroupName.Value()) ) {
-			update_group_info = true;			
-			GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
-			GetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
-			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
-			GetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
-	  }
-  }
+
+  string GroupName = GetAssignedGroup(CustomerName)->name;
+  dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.Value(), GroupName.c_str());
+
+  GetAttributeInt(CustomerRecord+GroupName.c_str(),ResourcesUsedAttr,GroupResourcesUsed);
+  GetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
+  GetAttributeInt(CustomerRecord+GroupName.c_str(),UnchargedTimeAttr,GroupUnchargedTime);
+  GetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
   AcctLog->BeginTransaction(); 
   
@@ -578,19 +636,17 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 
   // Do everything we just to update the customer's record a second time if
   // there is a group record to update
-  if ( update_group_info ) {
-	  // Update customer's group resource usage count
-	  GroupWeightedResourcesUsed += SlotWeight;
-	  GroupResourcesUsed += 1;
-	  dprintf(D_ACCOUNTANT, "GroupWeightedResourcesUsed becomes: %.3f\n", GroupWeightedResourcesUsed);
-	  SetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
-	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
-	  // add negative "uncharged" time if match starts after last update 
-	  GroupUnchargedTime-=T-LastUpdateTime;
-	  WeightedGroupUnchargedTime-=(T-LastUpdateTime)*SlotWeight;
-	  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
-	  SetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
-  }
+  // Update customer's group resource usage count
+  GroupWeightedResourcesUsed += SlotWeight;
+  GroupResourcesUsed += 1;
+  dprintf(D_ACCOUNTANT, "GroupWeightedResourcesUsed=%f SlotWeight=%f\n", GroupWeightedResourcesUsed,SlotWeight);
+  SetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
+  SetAttributeInt(CustomerRecord+GroupName.c_str(),ResourcesUsedAttr,GroupResourcesUsed);
+  // add negative "uncharged" time if match starts after last update 
+  GroupUnchargedTime-=T-LastUpdateTime;
+  WeightedGroupUnchargedTime-=(T-LastUpdateTime)*SlotWeight;
+  SetAttributeInt(CustomerRecord+GroupName.c_str(),UnchargedTimeAttr,GroupUnchargedTime);
+  SetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
   // Set reosurce's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
@@ -623,92 +679,81 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
   dprintf(D_ACCOUNTANT,"Accountant::RemoveMatch - ResourceName=%s\n",ResourceName.Value());
 
   MyString CustomerName;
-  if (GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName)) {
-    int StartTime=0;
-    GetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,StartTime);
-    int ResourcesUsed=0;
-    GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
-    float WeightedResourcesUsed=0;
-    GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
-
-    int UnchargedTime=0;
-    GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
-    float WeightedUnchargedTime=0.0;
-    GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
-
-	float SlotWeight=1.0;
-	GetAttributeFloat(ResourceRecord+ResourceName,SlotWeightAttr,SlotWeight);
-
-	// Determine if we need to update a second customer record w/ the group name.
-	bool update_group_info = false;
-	MyString GroupName;
-	int GroupResourcesUsed=0;
-	float GroupWeightedResourcesUsed=0.0;
-	int GroupUnchargedTime=0;
-	float WeightedGroupUnchargedTime=0.0;
-	if ( GroupNamesList ) {
-	  GroupName = CustomerName;
-	  int pos = GroupName.FindChar('.');	// '.' is the group seperater
-	  GroupName.setChar(pos,'\0');
-		// if there is a group seperater character, and if the group name
-		// is a valid one listed in the GroupNamesList, then we want to update
-		// two customer records: one with the full name of the customer (group.user),
-		// and one with just the name of the group (group).
-	  if ( pos != -1 && GroupNamesList->contains_anycase(GroupName.Value()) ) {
-			update_group_info = true;			
-			GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
-			GetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
-			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
-			GetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
-	  }
-	}
-
-	AcctLog->BeginTransaction();
-    // Update customer's resource usage count
-    if (ResourcesUsed>0) ResourcesUsed -= 1;
-    SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
-    WeightedResourcesUsed -= SlotWeight;
-    if( WeightedResourcesUsed < 0 ) {
-        WeightedResourcesUsed = 0;
-    }
-    SetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
-    // update uncharged time
-    if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
-    UnchargedTime+=T-StartTime;
-    WeightedUnchargedTime+=(T-StartTime)*SlotWeight;
-    SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
-    SetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
-
-	// Do everything we just to update the customer's record a second time if
-	// there is a group record to update
-	if ( update_group_info ) {
-	  // Update customer's group resource usage count
-      GroupResourcesUsed -= 1;
-      if (GroupResourcesUsed < 0) GroupResourcesUsed = 0;
-
-      GroupWeightedResourcesUsed -= SlotWeight;
-      if(GroupWeightedResourcesUsed < 0.0) {
-          GroupWeightedResourcesUsed = 0.0;
-      }
-	  SetAttributeFloat(CustomerRecord+GroupName,WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
-
-	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
-	  // update uncharged time
-	  GroupUnchargedTime+=T-StartTime;
-	  WeightedGroupUnchargedTime+=(T-StartTime)*SlotWeight;
-	  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
-	  SetAttributeFloat(CustomerRecord+GroupName,WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
-	}
-
-	DeleteClassAd(ResourceRecord+ResourceName);
-	AcctLog->CommitTransaction();
-
-    dprintf(D_ACCOUNTANT,
-		"(ACCOUNTANT) Removed match between customer %s and resource %s\n",
-			CustomerName.Value(),ResourceName.Value());
-  } else {  
+  if (!GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName)) {
       DeleteClassAd(ResourceRecord+ResourceName);
+      return;
   }
+  int StartTime=0;
+  GetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,StartTime);
+  int ResourcesUsed=0;
+  GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
+  float WeightedResourcesUsed=0;
+  GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
+  
+  int UnchargedTime=0;
+  GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+  float WeightedUnchargedTime=0.0;
+  GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
+  
+  float SlotWeight=1.0;
+  GetAttributeFloat(ResourceRecord+ResourceName,SlotWeightAttr,SlotWeight);
+  
+  int GroupResourcesUsed=0;
+  float GroupWeightedResourcesUsed=0.0;
+  int GroupUnchargedTime=0;
+  float WeightedGroupUnchargedTime=0.0;
+  
+  string GroupName = GetAssignedGroup(CustomerName)->name;
+  dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.Value(), GroupName.c_str());
+  
+  GetAttributeInt(CustomerRecord+GroupName.c_str(),ResourcesUsedAttr,GroupResourcesUsed);
+  GetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
+  GetAttributeInt(CustomerRecord+GroupName.c_str(),UnchargedTimeAttr,GroupUnchargedTime);
+  GetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
+  
+  AcctLog->BeginTransaction();
+  // Update customer's resource usage count
+  if   (ResourcesUsed>0) ResourcesUsed -= 1;
+  SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
+  WeightedResourcesUsed -= SlotWeight;
+  if( WeightedResourcesUsed < 0 ) {
+      WeightedResourcesUsed = 0;
+  }
+  SetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
+  // update uncharged time
+  if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
+  UnchargedTime+=T-StartTime;
+  WeightedUnchargedTime+=(T-StartTime)*SlotWeight;
+  SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+  SetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
+
+  // Do everything we just to update the customer's record a second time if
+  // there is a group record to update
+  // Update customer's group resource usage count
+  GroupResourcesUsed -= 1;
+  if (GroupResourcesUsed < 0) GroupResourcesUsed = 0;
+
+  GroupWeightedResourcesUsed -= SlotWeight;
+  if(GroupWeightedResourcesUsed < 0.0) {
+      GroupWeightedResourcesUsed = 0.0;
+  }
+  dprintf(D_ACCOUNTANT, "GroupResourcesUsed =%d GroupWeightedResourcesUsed= %f SlotWeight=%f\n",
+          GroupResourcesUsed ,GroupWeightedResourcesUsed,SlotWeight);
+
+  SetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedResourcesUsedAttr,GroupWeightedResourcesUsed);
+
+  SetAttributeInt(CustomerRecord+GroupName.c_str(),ResourcesUsedAttr,GroupResourcesUsed);
+  // update uncharged time
+  GroupUnchargedTime+=T-StartTime;
+  WeightedGroupUnchargedTime+=(T-StartTime)*SlotWeight;
+  SetAttributeInt(CustomerRecord+GroupName.c_str(),UnchargedTimeAttr,GroupUnchargedTime);
+  SetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
+
+  DeleteClassAd(ResourceRecord+ResourceName);
+  AcctLog->CommitTransaction();
+
+  dprintf(D_ACCOUNTANT, "(ACCOUNTANT) Removed match between customer %s and resource %s\n",
+          CustomerName.Value(),ResourceName.Value());
 }
 
 //------------------------------------------------------------------
@@ -927,137 +972,151 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
 // Report the list of Matches for a customer
 //------------------------------------------------------------------
 
-AttrList* Accountant::ReportState(const MyString& CustomerName, int * NumResources, float *NumResourcesRW) {
+AttrList* Accountant::ReportState(const MyString& CustomerName, int* NumResources, float* NumResourcesRW) {
+    dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
-  dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
+    HashKey HK;
+    ClassAd* ResourceAd;
+    MyString ResourceName;
+    int StartTime;
 
-  HashKey HK;
-  char key[200];
-  ClassAd* ResourceAd;
-  MyString ResourceName;
-  int StartTime;
+    AttrList* ad = new AttrList();
 
-  AttrList* ad=new AttrList();
-  char tmp[512];
+    if (NumResources) {
+        *NumResources = 0;
+    }
+    if (NumResourcesRW) {
+        *NumResourcesRW = 0;
+    }
 
-  if( NumResources ) {
-	  *NumResources = 0;
-  }
-  if( NumResourcesRW ) {
-	  *NumResourcesRW = 0;
-  }
+    bool isGroup=false;
+    string cgrp = GetAssignedGroup(CustomerName.Value(), isGroup)->name;
+    // This is a defunct group:
+    if (isGroup && (cgrp != CustomerName.Value())) return ad;
 
-  int ResourceNum=1;
-  AcctLog->table.startIterations();
-  while (AcctLog->table.iterate(HK,ResourceAd)) {
-    HK.sprint(key);
-    if (strncmp(ResourceRecord.Value(),key,ResourceRecord.Length())) continue;
+    int ResourceNum=1;
+    AcctLog->table.startIterations();
+    while (AcctLog->table.iterate(HK,ResourceAd)) {
+        MyString key;
+        HK.sprint(key);
 
-    if (ResourceAd->LookupString(RemoteUserAttr,tmp)==0) continue;
-    if (CustomerName!=MyString(tmp)) continue;
+        if (strncmp(ResourceRecord.Value(), key.Value(), ResourceRecord.Length())) continue;
 
-    ResourceName=key+ResourceRecord.Length();
-    sprintf(tmp,"Name%d = \"%s\"",ResourceNum,ResourceName.Value());
-    ad->Insert(tmp);
+        MyString rname;
+        if (ResourceAd->LookupString(RemoteUserAttr, rname)==0) continue;
 
-    if (ResourceAd->LookupInteger(StartTimeAttr,StartTime)==0) StartTime=0;
-    sprintf(tmp,"StartTime%d = %d",ResourceNum,StartTime);
-    ad->Insert(tmp);
+        if (isGroup) {
+            string rgrp = GetAssignedGroup(rname)->name;
+            if (cgrp != rgrp) continue;
+        } else {
+            // customername is a traditional submitter: group.username@host
+            if (CustomerName != rname) continue;
+     
+            MyString tmp;
+            ResourceName=key+ResourceRecord.Length();
+            tmp.sprintf("Name%d = \"%s\"", ResourceNum, ResourceName.Value());
+            ad->Insert(tmp.Value());
 
-    ResourceNum++;
-	if( NumResourcesRW ) {
-		float SlotWeight = 1.0;
-		ResourceAd->LookupFloat(SlotWeightAttr,SlotWeight);
-		*NumResourcesRW += SlotWeight;
-	}
-  }
+            if (ResourceAd->LookupInteger(StartTimeAttr,StartTime)==0) StartTime=0;
+            tmp.sprintf("StartTime%d = %d", ResourceNum, StartTime);
+            ad->Insert(tmp.Value());
+        }
 
-  if ( NumResources ) {
-	  *NumResources = ResourceNum - 1;
-  }
+        ResourceNum++;
+        if (NumResourcesRW) {
+            float SlotWeight = 1.0;
+            ResourceAd->LookupFloat(SlotWeightAttr,SlotWeight);
+            *NumResourcesRW += SlotWeight;
+        }
+    }
 
-  return ad;
+    if (NumResources) {
+        *NumResources = ResourceNum - 1;
+    }
+
+    return ad;
 }
+
 
 //------------------------------------------------------------------
 // Report the whole list of priorities
 //------------------------------------------------------------------
 
 AttrList* Accountant::ReportState() {
+    dprintf(D_ACCOUNTANT,"Reporting State\n");
 
-  dprintf(D_ACCOUNTANT,"Reporting State\n");
+    HashKey HK;
+    ClassAd* CustomerAd;
+    float PriorityFactor;
+    float AccumulatedUsage;
+    float WeightedAccumulatedUsage;
+    int BeginUsageTime;
+    int LastUsageTime;
+    int ResourcesUsed;
+    float WeightedResourcesUsed;
 
-  HashKey HK;
-  char key[200];
-  ClassAd* CustomerAd;
-  MyString CustomerName;
-  float PriorityFactor;
-  float AccumulatedUsage;
-  float WeightedAccumulatedUsage;
-  int BeginUsageTime;
-  int LastUsageTime;
-  int ResourcesUsed;
-  float WeightedResourcesUsed;
+    AttrList* ad=new AttrList();
+    MyString tmp;
+    tmp.sprintf("LastUpdate = %d", LastUpdateTime);
+    ad->Insert(tmp.Value());
 
-  AttrList* ad=new AttrList();
-  char tmp[512];
-  sprintf(tmp, "LastUpdate = %d", LastUpdateTime);
-  ad->Insert(tmp);
+    int OwnerNum=1;
+    AcctLog->table.startIterations();
+    while (AcctLog->table.iterate(HK,CustomerAd)) {
+        MyString key;
+        HK.sprint(key);
+        if (strncmp(CustomerRecord.Value(),key.Value(),CustomerRecord.Length())) continue;
 
-  int OwnerNum=1;
-  AcctLog->table.startIterations();
-  while (AcctLog->table.iterate(HK,CustomerAd)) {
-    HK.sprint(key);
-    if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
+        MyString CustomerName=key.Value()+CustomerRecord.Length();
+        tmp.sprintf("Name%d = \"%s\"",OwnerNum,CustomerName.Value());
+        ad->Insert(tmp.Value());
 
-	// The following Insert() calls are passed 'false' to prevent
-	// AttrList from checking for duplicates. This is to enhance
-	// performance, but is admittedly dangerous if we're not certain
-	// that the items we're inserting are unique. Use caution.
+        tmp.sprintf("Priority%d = %f",OwnerNum,GetPriority(CustomerName));
+        ad->Insert(tmp.Value());
 
-    CustomerName=key+CustomerRecord.Length();
-    sprintf(tmp,"Name%d = \"%s\"",OwnerNum,CustomerName.Value());
-    ad->Insert(tmp);
+        if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
+        tmp.sprintf("ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
+        ad->Insert(tmp.Value());
 
-    sprintf(tmp,"Priority%d = %f",OwnerNum,GetPriority(CustomerName));
-    ad->Insert(tmp);
+        if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
+        tmp.sprintf("WeightedResourcesUsed%d = %f",OwnerNum,WeightedResourcesUsed);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
-    sprintf(tmp,"ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
-    ad->Insert(tmp);
+        if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
+        tmp.sprintf("AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
-    sprintf(tmp,"WeightedResourcesUsed%d = %f",OwnerNum,WeightedResourcesUsed);
-    ad->Insert(tmp);
+        if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
+        tmp.sprintf("WeightedAccumulatedUsage%d = %f",OwnerNum,WeightedAccumulatedUsage);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
-    sprintf(tmp,"AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
-    ad->Insert(tmp);
+        if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
+        tmp.sprintf("BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
-    sprintf(tmp,"WeightedAccumulatedUsage%d = %f",OwnerNum,WeightedAccumulatedUsage);
-    ad->Insert(tmp);
+        if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
+        tmp.sprintf("LastUsageTime%d = %d",OwnerNum,LastUsageTime);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
-    sprintf(tmp,"BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
-    ad->Insert(tmp);
+        if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
+        tmp.sprintf("PriorityFactor%d = %f",OwnerNum,PriorityFactor);
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
-    sprintf(tmp,"LastUsageTime%d = %d",OwnerNum,LastUsageTime);
-    ad->Insert(tmp);
+        bool isGroup=false;
+        string cgrp = GetAssignedGroup(CustomerName, isGroup)->name;
+        tmp.sprintf("AccountingGroup%d = \"%s\"",OwnerNum,cgrp.c_str());
+        ad->Insert(tmp.Value());
+        tmp.sprintf("IsAccountingGroup%d = %s",OwnerNum,(isGroup)?"TRUE":"FALSE");
+        ad->Insert(tmp.Value());
 
-    if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
-    sprintf(tmp,"PriorityFactor%d = %f",OwnerNum,PriorityFactor);
-    ad->Insert(tmp);
+        OwnerNum++;
+    }
 
-    OwnerNum++;
-  }
+    ReportLimits(ad);
 
-  ReportLimits(ad);
-
-  sprintf(tmp,"NumSubmittors = %d", OwnerNum-1);
-  ad->Insert(tmp);
-  return ad;
+    tmp.sprintf("NumSubmittors = %d", OwnerNum-1);
+    ad->Insert(tmp.Value());
+    return ad;
 }
 
 //------------------------------------------------------------------

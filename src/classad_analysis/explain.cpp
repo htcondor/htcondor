@@ -43,6 +43,7 @@ MultiProfileExplain( )
 {
 	match = false;
 	numberOfMatches = 0;
+	numberOfClassAds = 0;
 }
 
 MultiProfileExplain::

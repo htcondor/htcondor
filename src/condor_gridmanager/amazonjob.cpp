@@ -432,7 +432,7 @@ void AmazonJob::doEvaluateState()
 					break;
 				}
 
-				if ( gahp->Startup() == false ) {
+				if (gahp && gahp->Startup() == false ) {
 					dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n", procID.cluster, procID.proc );
 					jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 					gmState = GM_HOLD;

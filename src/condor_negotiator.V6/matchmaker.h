@@ -28,6 +28,13 @@
 #include "dc_collector.h"
 #include "condor_ver_info.h"
 
+#include <vector>
+#include <string>
+#include <map>
+#include <algorithm>
+
+using namespace std;
+
 /* FILESQL include */
 #include "file_sql.h"
 
@@ -40,6 +47,46 @@ typedef struct MapEntry {
 //extern ODBC *DBObj;
 /* FILESQL object extern */
 extern FILESQL *FILEObj;
+
+struct GroupEntry {
+    typedef vector<int>::size_type size_type;
+
+	GroupEntry();
+	~GroupEntry();
+
+    // these are set from configuration
+	string name;
+    double config_quota;
+	bool static_quota;
+	bool accept_surplus;
+
+    // current usage information coming into this negotiation cycle
+    double usage;
+    ClassAdList* submitterAds;
+
+    // slot quota as computed by HGQ
+    double quota;
+    // slots requested: jobs submitted against this group
+    double requested;
+    // slots allocated to this group by HGQ
+    double allocated;
+    // sum of slot quotas in this subtree
+    double subtree_quota;
+    // all slots requested by this group and its subtree
+    double subtree_requested;
+    // true if this group got served by most recent round robin
+    bool rr;
+    // timestamp of most recent allocation from round robin
+    double rr_time;
+    double subtree_rr_time;
+
+    // tree structure
+    GroupEntry* parent;
+    vector<GroupEntry*> children;
+    map<string, size_type, Accountant::ci_less> chmap;
+};
+
+
 class Matchmaker : public Service
 {
 	public:
@@ -219,7 +266,7 @@ class Matchmaker : public Service
 		int trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds);
 
 		bool SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft);
-		double sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight);
+		double sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight, ExprTree* constraint);
 
 		/* ODBC insert functions */
 		void insert_into_rejects(char const *userName, ClassAd& job);
@@ -240,7 +287,6 @@ class Matchmaker : public Service
 		bool preemption_rank_unstable;
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
-		bool useSlotWeights; // Should slot weights be used or do all machines count 1.
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
 		/// Should the negotiator inform startds of matches?
@@ -396,20 +442,30 @@ class Matchmaker : public Service
 		double cachedPrio;
 		bool cachedOnlyForStartdRank;
 
-		//
-		class SimpleGroupEntry
-		{
-		public:
-			SimpleGroupEntry();
-			~SimpleGroupEntry();
-			char *groupName;
-			float prio;
-			float maxAllowed;
-			float usage;
-			ClassAdListDoesNotDeleteAds submitterAds;			
-		};
-		static int groupSortCompare(const void*, const void*);
-		
+        // set at startup/restart/reinit
+        GroupEntry* hgq_root_group;
+        string hgq_root_name;
+        vector<GroupEntry*> hgq_groups;
+        map<string, GroupEntry*> group_entry_map;
+
+        void hgq_construct_tree();
+        void hgq_assign_quotas(GroupEntry* group, double quota);
+        double hgq_fairshare(GroupEntry* group);
+        double hgq_allocate_surplus(GroupEntry* group, double surplus);
+        double hgq_recover_remainders(GroupEntry* group);
+        double hgq_round_robin(GroupEntry* group, double surplus);
+
+        struct ord_by_rr_time {
+            vector<GroupEntry*>* data;
+            bool operator()(unsigned long const& ja, unsigned long const& jb) const {
+                GroupEntry* a = (*data)[ja];
+                GroupEntry* b = (*data)[jb];
+                if (a->subtree_rr_time != b->subtree_rr_time) return a->subtree_rr_time < b->subtree_rr_time;
+                if (a->subtree_quota != b->subtree_quota) return a->subtree_quota > b->subtree_quota;
+                return a->subtree_requested > b->subtree_requested;
+            }
+        };
+
 		int prevLHF;
 
 		#define MAX_NEGOTIATION_CYCLE_STATS 100

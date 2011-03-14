@@ -101,8 +101,8 @@ class GahpServer : public Service {
 	void read_argv(Gahp_Args *g_args) { read_argv(*g_args); }
 	void write_line(const char *command);
 	void write_line(const char *command,int req,const char *args);
-	int pipe_ready();
-	int err_pipe_ready();
+	int pipe_ready(int pipe_end);
+	int err_pipe_ready(int pipe_end);
 
 	void AddGahpClient();
 	void RemoveGahpClient();

@@ -1,6 +1,6 @@
  ###############################################################
  #
- # Copyright (C) 1990-2010, Redhat.
+ # Copyright 2011 Red Hat, Inc.
  #
  # Licensed under the Apache License, Version 2.0 (the "License"); you
  # may not use this file except in compliance with the License.  You may
@@ -53,6 +53,7 @@ elseif(${OS_NAME} MATCHES "WIN")
 	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc")
 endif()
 
+  
 message(STATUS "***********************************************************")
 message(STATUS "System(${HOSTNAME}): ${OS_NAME}(${OS_VER}) Arch=${SYS_ARCH} BitMode=${BIT_MODE} BUILDID:${BUILDID}")
 message(STATUS "install prefix:${CMAKE_INSTALL_PREFIX}")
@@ -65,15 +66,33 @@ include (GlibcDetect)
 
 add_definitions(-D${OS_NAME}="${OS_NAME}_${OS_VER}")
 if (CONDOR_PLATFORM)
-	add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
+    add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
 elseif(PLATFORM)
-	add_definitions(-DPLATFORM="${PLATFORM}")
+    add_definitions(-DPLATFORM="${PLATFORM}")
+elseif(LINUX_NAME)
+    add_definitions(-DPLATFORM="${SYS_ARCH}-${LINUX_NAME}_${LINUX_VER}")
 else()
-	add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
+    add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
+endif()
+
+if(PRE_RELEASE)
+  add_definitions( -DPRE_RELEASE_STR=" ${PRE_RELEASE}" )
+else()
+  add_definitions( -DPRE_RELEASE_STR="" )
+endif(PRE_RELEASE)
+add_definitions( -DCONDOR_VERSION="${VERSION}" )
+
+if( NOT BUILD_DATE )
+  GET_DATE( BUILD_DATE )
+endif()
+if(BUILD_DATE)
+  add_definitions( -DBUILD_DATE="${BUILD_DATE}" )
 endif()
 
 set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
-set( CMAKE_VERBOSE_MAKEFILE TRUE )
+
+# set to true to enable printing of make actions
+set( CMAKE_VERBOSE_MAKEFILE FALSE )
 set( BUILD_SHARED_LIBS FALSE )
 
 # Windows is so different perform the check 1st and start setting the vars.
@@ -116,6 +135,7 @@ if( NOT WINDOWS)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	check_function_exists("getpagesize" HAVE_GETPAGESIZE)
 	check_function_exists("getwd" HAVE_GETWD)
+	check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
 	check_function_exists("inet_ntoa" HAS_INET_NTOA)
 	check_function_exists("lchown" HAVE_LCHOWN)
 	check_function_exists("lstat" HAVE_LSTAT)
@@ -216,10 +236,23 @@ if( NOT WINDOWS)
 endif()
 
 find_program(HAVE_VMWARE vmware)
-check_type_size("id_t" HAVE_ID_T)
-check_type_size("__int64" HAVE___INT64)
-check_type_size("int64_t" HAVE_INT64_T)
-check_type_size("long long" HAVE_LONG_LONG)
+find_program(LN ln)
+
+# Check for the existense of and size of various types
+check_type_size("id_t" ID_T)
+check_type_size("__int64" __INT64)
+check_type_size("int64_t" INT64_T)
+check_type_size("int" INTEGER)
+set(SIZEOF_INT "${INTEGER}")
+check_type_size("long" LONG_INTEGER)
+set(SIZEOF_LONG "${LONG_INTEGER}")
+check_type_size("long long" LONG_LONG)
+if(HAVE_LONG_LONG)
+  set(SIZEOF_LONG_LONG "${LONG_LONG}")
+endif()
+check_type_size("void *" VOIDPTR)
+set(SIZEOF_VOIDPTR "${VOIDPTR}")
+
 
 ##################################################
 ##################################################
@@ -285,16 +318,6 @@ elseif(${OS_NAME} STREQUAL "HPUX")
 	set(NEEDS_64BIT_STRUCTS ON)
 endif()
 
-# NOTE: instead
-# the following is meant to auto-set for CSL
-#string(REPLACE  ".cs.wisc.edu" "@@UW" UW_CHECK ${HOSTNAME})
-#if(${UW_CHECK} MATCHES "@@UW") #cmakes regex does not handle on [.] [.] [.] well
-#	if(EXISTS "/s/std/bin")
-#		message(STATUS "*** UW ENV DETECTED: IF YOU WANT AFS CACHING UPDATE HERE ***")
-#		set(UW_CSL_ENV ON)
-#	endif()
-#endif()
-
 ##################################################
 ##################################################
 # compilation/build options.
@@ -307,6 +330,9 @@ option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(BUILD_TESTS "Will build internal test applications" ON)
 option(WANT_CONTRIB "Enable quill functionality" OFF)
+option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
+option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
 
@@ -321,7 +347,17 @@ if (UW_BUILD OR WINDOWS)
 
 else()
   option(PROPER "Try to build using native env" ON)
-  option(CLIPPED "enable/disable the standard universe" ON)
+  option(CLIPPED "disable the standard universe" ON)
+endif()
+
+if (NOT WINDOWS)
+    if (HAVE_X11)
+        if (NOT (${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND"))
+            option(HAVE_KBDD "Support for condor_kbdd" ON)
+        endif()
+    endif()
+else()
+    option(HAVE_KBDD "Support for condor_kbdd" ON)
 endif()
 
 if (NOT CLIPPED AND NOT LINUX)
@@ -335,19 +371,13 @@ if (NOT HPUX)
 	endif()
 endif(NOT HPUX)
 
-if (NOT WINDOWS) # if *nix
-	option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
+if (NOT WINDOWS) 
+    option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
 
 if (BUILD_TESTS)
-	set(TEST_TARGET_DIR ${CONDOR_SOURCE_DIR}/src/condor_tests)
+	set(TEST_TARGET_DIR ${CMAKE_BINARY_DIR}/src/condor_tests)
 endif(BUILD_TESTS)
-
-if ( NOT WINDOWS )
-	option(HAVE_KBDD "Support for condor_kbdd" ON)
-else()
-	set(HAVE_KBDD ON)
-endif()
 
 ##################################################
 ##################################################
@@ -364,17 +394,16 @@ if (PROPER)
 else(PROPER)
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
 	# temporarily disable cacheing externals on windows, primarily b/c of nmi.
-	if (NOT WINDOWS)
-		option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
-	endif(NOT WINDOWS)
+	option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
+
 endif(PROPER)
 
 ## this primarily exists for nmi cached building.. yuk!
 if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
-	#if (WINDOWS)
-	#	set (EXTERNAL_STAGE C:/temp/scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/root)
-	#	set (EXTERNAL_DL C:/temp/scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/download)
-	#else(WINDOWS)
+	if (WINDOWS)
+		set (EXTERNAL_STAGE C:/temp/${PACKAGE_NAME})
+		set (EXTERNAL_DL C:/temp/${PACKAGE_NAME}/download)
+	else(WINDOWS)
 		set (EXTERNAL_STAGE /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/stage/root)
 		set (EXTERNAL_DL /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/externals/stage/download)
 
@@ -384,7 +413,7 @@ if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
 		COMMAND chmod
 		ARGS -f -R a+rwX /scratch/externals/cmake && touch ${EXTERNAL_MOD_DEP}
 		COMMENT "changing ownership on externals cache because so on multiple user machines they can take advantage" )
-	#endif(WINDOWS)
+	endif(WINDOWS)
 else()
 	set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
 	set (EXTERNAL_DL ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/download/${PACKAGE_NAME}_${PACKAGE_VERSION})
@@ -406,27 +435,22 @@ link_directories( ${EXTERNAL_STAGE}/lib64 ${EXTERNAL_STAGE}/lib )
 
 ###########################################
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-if (NOT WINDOWS)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
-endif(NOT WINDOWS)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
-
-if (NOT WIN_EXEC_NODE_ONLY)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
-endif(NOT WIN_EXEC_NODE_ONLY)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 
 if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gcb/1.5.6)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.6)
@@ -477,12 +501,23 @@ if (CONDOR_EXTERNALS AND NOT WINDOWS)
 	add_dependencies( externals ${CONDOR_EXTERNALS} )
 endif(CONDOR_EXTERNALS AND NOT WINDOWS)
 
+######### special case for contrib
+if (WANT_CONTRIB AND WITH_MANAGEMENT)
+    # global scoping external linkage var when options enable.
+    if (WINDOWS)
+        set (CONDOR_QMF condor_qmflib;${QPID_FOUND})
+    endif()
+    add_definitions( -DWANT_CONTRIB )
+    add_definitions( -DWITH_MANAGEMENT )
+endif()
+
 message(STATUS "********* External configuration complete (dropping config.h) *********")
 dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
 
 ########################################################
-configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake
-${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h)
+configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp)
+# only update config.h if it is necessary b/c it causes massive rebuilding.
+exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h )
 add_definitions(-DHAVE_CONFIG_H)
 
 ###########################################
@@ -506,6 +541,9 @@ include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
+if (WANT_CONTRIB)
+    include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
+endif(WANT_CONTRIB)
 ###########################################
 
 ###########################################
@@ -521,8 +559,8 @@ endif()
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-set (CONDOR_LIBS "procd_client;daemon_core;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
-set (CONDOR_TOOL_LIBS "procd_client;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
+set (CONDOR_LIBS "procd_client;daemon_core;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
+set (CONDOR_TOOL_LIBS "procd_client;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 message(STATUS "----- Begin compiler options/flags check -----")
@@ -667,6 +705,7 @@ endif(MSVC)
 message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
 message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
+message(STATUS "LN: ${LN}")
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree
 dprint ( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )
@@ -733,8 +772,44 @@ dprint ( "CMAKE_SYSTEM_VERSION: ${CMAKE_SYSTEM_VERSION}" )
 # the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz")
 dprint ( "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}" )
 
+# the Condor src directory
+dprint ( "CONDOR_SOURCE_DIR: ${CONDOR_SOURCE_DIR}" )
+dprint ( "CONDOR_EXTERNAL_DIR: ${CONDOR_EXTERNAL_DIR}" )
+dprint ( "TEST_TARGET_DIR: ${TEST_TARGET_DIR}" )
+
+# the Condor version string being used
+dprint ( "CONDOR_VERSION: ${CONDOR_VERSION}" )
+
+# the build id
+dprint ( "BUILDID: ${BUILDID}" )
+
+# the build date & time
+dprint ( "BUILD_TIMEDATE: ${BUILD_TIMEDATE}" )
+dprint ( "BUILD_DATE: ${BUILD_DATE}" )
+
+# the pre-release string
+dprint ( "PRE_RELEASE: ${PRE_RELEASE}" )
+
+# the platform specified
+dprint ( "PLATFORM: ${PLATFORM}" )
+
+# the Condor platform specified
+dprint ( "CONDOR_PLATFORM: ${CONDOR_PLATFORM}" )
+
+# the system name (used for generated tarballs)
+dprint ( "SYSTEM_NAME: ${SYSTEM_NAME}" )
+
+# the RPM system name (used for generated tarballs)
+dprint ( "RPM_SYSTEM_NAME: ${RPM_SYSTEM_NAME}" )
+
+# the Condor package name
+dprint ( "CONDOR_PACKAGE_NAME: ${CONDOR_PACKAGE_NAME}" )
+
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "UNIX: ${UNIX}" )
+
+# is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
+dprint ( "Linux: ${LINUX_NAME}" )
 
 # is TRUE on Windows, including CygWin
 dprint ( "WIN32: ${WIN32}" )

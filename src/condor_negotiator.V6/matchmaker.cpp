@@ -20,7 +20,7 @@
 #include "condor_common.h"
 #include <math.h>
 #include <float.h>
-#include <set>;
+#include <set>
 #include "condor_state.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -38,9 +38,16 @@
 #include "condor_claimid_parser.h"
 #include "misc_utils.h"
 #include "ConcurrencyLimitUtils.h"
+#include "MyString.h"
 
-#if HAVE_DLOPEN
+#include <vector>
+#include <string>
+#include <deque>
+
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 #include "NegotiatorPlugin.h"
+#endif
 #endif
 
 // the comparison function must be declared before the declaration of the
@@ -67,20 +74,63 @@ class NegotiationCycleStats
 {
 public:
 	NegotiationCycleStats();
-	typedef std::set<std::string>::value_type StringSetType;
-
-	void SubmitterOutOfTime( StringSetType const &submitter );
-	void SubmitterFailed( StringSetType const &submitter );
-	void SubmitterActive( StringSetType const &submitter );
 
 	time_t start_time;
+    time_t end_time;
+
 	int duration;
-	std::set<std::string> submitters_out_of_time;
-	std::set<std::string> submitters_failed;
-	std::set<std::string> active_submitters;
+    int duration_phase1;
+    int duration_phase2;
+    int duration_phase3;
+    int duration_phase4;
+
+    int total_slots;
+    int trimmed_slots;
+    int candidate_slots;
+
+    int slot_share_iterations;
+
+    int num_idle_jobs;
+    int num_jobs_considered;
+
 	int matches;
 	int rejections;
+
+    // set of unique active schedd, id by sinful strings:
+    std::set<std::string> active_schedds;
+
+    // active submitters
+	std::set<std::string> active_submitters;
+
+    std::set<std::string> submitters_share_limit;
+	std::set<std::string> submitters_out_of_time;
+	std::set<std::string> submitters_failed;
 };
+
+NegotiationCycleStats::NegotiationCycleStats():
+    start_time(time(NULL)),
+    end_time(start_time),
+	duration(0),
+    duration_phase1(0),
+    duration_phase2(0),
+    duration_phase3(0),
+    duration_phase4(0),
+    total_slots(0),
+    trimmed_slots(0),
+    candidate_slots(0),
+    slot_share_iterations(0),
+    num_idle_jobs(0),
+    num_jobs_considered(0),
+	matches(0),
+	rejections(0),
+    active_schedds(),
+    active_submitters(),
+    submitters_share_limit(),
+    submitters_out_of_time(),
+    submitters_failed()
+{
+}
+
 
 static MyString MachineAdID(ClassAd * ad)
 {
@@ -151,6 +201,28 @@ Matchmaker ()
 
 	memset(negotiation_cycle_stats,0,sizeof(negotiation_cycle_stats));
 	num_negotiation_cycle_stats = 0;
+
+    hgq_root_group = NULL;
+
+	rejForNetwork = 0;
+	rejForNetworkShare = 0;
+	rejPreemptForPrio = 0;
+	rejPreemptForPolicy = 0;
+	rejPreemptForRank = 0;
+	rejForSubmitterLimit = 0;
+	rejForConcurrencyLimit = 0;
+
+	cachedPrio = 0;
+	cachedOnlyForStartdRank = false;
+
+		// just assign default values
+	want_inform_startd = true;
+	preemption_req_unstable = true;
+	preemption_rank_unstable = true;
+	NegotiatorTimeout = 30;
+ 	NegotiatorInterval = 60;
+ 	MaxTimePerSubmitter = 31536000;
+ 	MaxTimePerSpin = 31536000;
 }
 
 
@@ -184,6 +256,8 @@ Matchmaker::
 	for(i=0;i<MAX_NEGOTIATION_CYCLE_STATS;i++) {
 		delete negotiation_cycle_stats[i];
 	}
+
+    if (NULL != hgq_root_group) delete hgq_root_group;
 }
 
 
@@ -239,9 +313,11 @@ initialize ()
 			"Update Collector", this );
 
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	NegotiatorPluginManager::Load();
 	NegotiatorPluginManager::Initialize();
+#endif
 #endif
 }
 
@@ -252,8 +328,12 @@ reinitialize ()
 	static bool first_time = true;
 	ExprTree *tmp_expr;
 
+    // (re)build the HGQ group tree from configuration
+    // need to do this prior to initializing the accountant
+    hgq_construct_tree();
+
     // Initialize accountant params
-    accountant.Initialize();
+    accountant.Initialize(hgq_root_group);
 
 	init_public_ad();
 
@@ -299,8 +379,10 @@ reinitialize ()
 					tmp);
 		}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
-		delete PreemptionReq;
+		if(PreemptionReq){
+			tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
+			delete PreemptionReq;
+		}
 		PreemptionReq = tmp_expr;
 #endif
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", tmp);
@@ -355,8 +437,10 @@ reinitialize ()
 
 	if( tmp ) free( tmp );
 
-	if (PreemptionRank) delete PreemptionRank;
-	PreemptionRank = NULL;
+	if (PreemptionRank) {
+		delete PreemptionRank;
+		PreemptionRank = NULL;
+	}
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
 		if( ParseClassAdRvalExpr(tmp, PreemptionRank) ) {
@@ -364,8 +448,10 @@ reinitialize ()
 		}
 	}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( PreemptionRank, TargetJobAttrs );
-		delete PreemptionRank;
+		if(PreemptionRank){
+			tmp_expr = AddTargetRefs( PreemptionRank, TargetJobAttrs );
+			delete PreemptionRank;
+		}
 		PreemptionRank = tmp_expr;
 #endif
 
@@ -381,8 +467,10 @@ reinitialize ()
 			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
 		}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( NegotiatorPreJobRank, TargetJobAttrs );
-		delete NegotiatorPreJobRank;
+		if(NegotiatorPreJobRank){
+			tmp_expr = AddTargetRefs( NegotiatorPreJobRank, TargetJobAttrs );
+			delete NegotiatorPreJobRank;
+		}
 		NegotiatorPreJobRank = tmp_expr;
 #endif
 	}
@@ -399,8 +487,10 @@ reinitialize ()
 			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
 		}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( NegotiatorPostJobRank, TargetJobAttrs );
-		delete NegotiatorPostJobRank;
+		if(NegotiatorPostJobRank){
+			tmp_expr = AddTargetRefs( NegotiatorPostJobRank, TargetJobAttrs );
+			delete NegotiatorPostJobRank;
+		}
 		NegotiatorPostJobRank = tmp_expr;
 #endif
 	}
@@ -681,8 +771,8 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	}
 
 	// get the priority
-	AttrList* ad=accountant.ReportState();
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
+	AttrList* ad=accountant.ReportState();
 	
 	if (!ad->putAttrList(*strm) ||
 	    !strm->end_of_message())
@@ -766,23 +856,6 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 		while ( (attr_name = AttrsToExpand.next()) ) {
 			startd_ad->GetReferences(attr_name,internal_references,
 					external_references);
-
-#if 0	// Debug code
-			static int extlen = 0;
-			result = external_references.print_to_string();
-			if ( result && (strlen(result) != extlen) ) {
-				extlen = strlen(result);
-				dprintf(D_FULLDEBUG,"CHANGE: Startd being considered in compute_significant_attrs() is:\n");
-				startd_ad->dPrint(D_FULLDEBUG);
-				dprintf(D_FULLDEBUG,"CHANGE: In compute_significant_attrs() attr=%s - result=%s\n",
-						attr_name, result ? result : "(none)" );
-				if ( result ) {
-					free(result);
-				}
-				result = NULL;
-			}
-#endif
-
 		}	// while attr_name
 	}	// while startd_ad
 
@@ -840,13 +913,6 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 bool Matchmaker::
 getGroupInfoFromUserId( const char *user, float & groupQuota, float & groupUsage )
 {
-	/*  Given a user id in the form group.user, strip off the group name
-		return any associated quota and usage for that group.  On failure,
-		return false and quota=usage=0.
-		NOTE - Since we discover the quotas in negotationTime(), we
-		assert that this function should not be called ahead of a call 
-		to negotationTime().
-	 */
 	ASSERT(groupQuotasHash);
 
 	groupQuota = 0.0;
@@ -854,23 +920,33 @@ getGroupInfoFromUserId( const char *user, float & groupQuota, float & groupUsage
 
 	if (!user) return false;
 
-	MyString groupname(user);
+    GroupEntry* group = accountant.GetAssignedGroup(user);
 
-		// User Id is group-name.user-name, so replace the
-		// '.' with a NULL.
-	int pos = groupname.FindChar('.');
-	if ( pos <= 0 ) {
-		return false;
-	}
-	groupname.setChar( pos , '\0' );
-	if ( groupQuotasHash->lookup(groupname,groupQuota) == -1 ) {
+    // If it is the root group, we interpret here as "not a group" for backward compatability
+    if (hgq_root_group == group) return false;
+
+    MyString groupname = group->name.c_str();
+
+	if (groupQuotasHash->lookup(groupname, groupQuota) == -1) {
 		// hash lookup failed, must not be a group name
 		return false;
 	}
 
-	groupUsage = accountant.GetResourcesUsed(groupname.Value());
+	groupUsage = accountant.GetWeightedResourcesUsed(groupname);
 
 	return true;
+}
+
+void round_for_precision(double& x) {
+    double ref = x;
+    x = floor(0.5 + x);
+    double err = fabs(x-ref);
+    // This error threshold is pretty ad-hoc.  It would be ideal to try and figure out
+    // bounds on precision error accumulation based on size of HGQ tree.
+    if (err > 0.00001) {
+        // If precision errors are not small, I am suspicious.
+        dprintf(D_ALWAYS, "group quotas: WARNING: encountered precision error of %g\n", err);
+    }
 }
 
 
@@ -882,8 +958,7 @@ negotiationTime ()
 	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
 	ClaimIdHash claimIds(MyStringHash);
 	ClassAdListDoesNotDeleteAds scheddAds; // ptrs to schedd ads in allAds
-	int unclaimedquota=0; 
-	int staticquota=0;
+
 	/**
 		Check if we just finished a cycle less than NEGOTIATOR_CYCLE_DELAY 
 		seconds ago.  If we did, reset our timer so at least 
@@ -918,6 +993,7 @@ negotiationTime ()
 	MatchList = NULL;
 
 	// ----- Get all required ads from the collector
+    time_t start_time_phase1 = time(NULL);
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
 	if( !obtainAdsFromCollector( allAds, startdAds, scheddAds,
 		claimIds ) )
@@ -936,24 +1012,54 @@ negotiationTime ()
 	// This _must_ come before trimming the startd ads.
 	int untrimmed_num_startds = startdAds.MyLength();
 	int numDynGroupSlots = untrimmed_num_startds;
+    negotiation_cycle_stats[0]->total_slots = untrimmed_num_startds;
+
 	double minSlotWeight = 0;
-	double untrimmedSlotWeightTotal = sumSlotWeights(startdAds,&minSlotWeight);
-	float unclaimed = 0;
+	double untrimmedSlotWeightTotal = sumSlotWeights(startdAds,&minSlotWeight,NULL);
 	
 	// Register a lookup function that passes through the list of all ads.
 	// ClassAdLookupRegister( lookup_global, &allAds );
 
+	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
 	// Compute the significant attributes to pass to the schedd, so
 	// the schedd can do autoclustering to speed up the negotiation cycles.
+
+    // Transition Phase 1 --> Phase 2
+    time_t start_time_phase2 = time(NULL);
+    negotiation_cycle_stats[0]->duration_phase1 += start_time_phase2 - start_time_phase1;
+
 	if ( job_attr_references ) {
 		free(job_attr_references);
 	}
 	job_attr_references = compute_significant_attrs(startdAds);
 
 	// ----- Recalculate priorities for schedds
-	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
 	accountant.UpdatePriorities();
 	accountant.CheckMatches( startdAds );
+
+	if ( !groupQuotasHash ) {
+		groupQuotasHash = new groupQuotasHashType(100,HashFunc);
+		ASSERT(groupQuotasHash);
+    }
+
+    // Restrict number of slots available for dynamic quotas.
+    double hgq_total_quota = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)numDynGroupSlots;
+    if ( numDynGroupSlots && DynQuotaMachConstraint ) {
+		int matchedSlots = startdAds.Count( DynQuotaMachConstraint );
+        if ( matchedSlots ) {
+            dprintf(D_ALWAYS,"GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine "
+                    "count from %d to %d\n", numDynGroupSlots, matchedSlots);
+            numDynGroupSlots = matchedSlots;
+            hgq_total_quota = (accountant.UsingWeightedSlots()) ? sumSlotWeights(startdAds, NULL, DynQuotaMachConstraint) : (double)matchedSlots;
+        } else {
+            dprintf(D_ALWAYS, "warning: 0 out of %d machines match "
+                    "GROUP_DYNAMIC_MACH_CONSTRAINT for dynamic quotas\n",
+                    numDynGroupSlots);
+            numDynGroupSlots = 0;
+            hgq_total_quota = 0;
+        }
+    }
+
 	// if don't care about preemption, we can trim out all non Unclaimed ads now.
 	// note: we cannot trim out the Unclaimed ads before we call CheckMatches,
 	// otherwise CheckMatches will do the wrong thing (because it will not see
@@ -963,6 +1069,9 @@ negotiationTime ()
 		dprintf(D_FULLDEBUG,
 			"Trimmed out %d startd ads not Unclaimed\n",num_trimmed);
 	}
+    negotiation_cycle_stats[0]->trimmed_slots = startdAds.MyLength();
+    // candidate slots may be pruned further below
+    negotiation_cycle_stats[0]->candidate_slots = startdAds.MyLength();
 
 		// We insert NegotiatorMatchExprXXX attributes into the
 		// "matched ad".  In the negotiator, this means the machine ad.
@@ -972,398 +1081,880 @@ negotiationTime ()
 		// ads, but they should always be in at least one.
 	insertNegotiatorMatchExprs( startdAds );
 
-	if ( !groupQuotasHash ) {
-		groupQuotasHash = new groupQuotasHashType(100,HashFunc);
-		ASSERT(groupQuotasHash);
-	}
+    if (hgq_groups.size() <= 1) {
+        // If there is only one group (the root group) we are in traditional non-HGQ mode.
+        // It seems cleanest to take the traditional case separately for maximum backward-compatible behavior.
+        // A possible future change would be to unify this into the HGQ code-path, as a "root-group-only" case. 
+        negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight, startdAds, claimIds, scheddAds);
+    } else {
+        // Otherwise we are in HGQ mode, so begin HGQ computations
 
-	char *groups = param("GROUP_NAMES");
-	if ( groups ) {
+        negotiation_cycle_stats[0]->candidate_slots = numDynGroupSlots;
 
-		// HANDLE GROUPS (as desired by CDF)
+        // Fill in latest usage/prio info for the groups.
+        // While we're at it, reset fields prior to reloading from submitter ads.
+        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+            GroupEntry* group = *j;
 
-		// Populate the groupArray, which contains an entry for
-		// each group.
-		SimpleGroupEntry* groupArray;
-		int i;
-		StringList groupList;		
-		strlwr(groups); // the accountant will want lower case!!!
-		groupList.initializeFromString(groups);
-		free(groups);		
-		groupArray = new SimpleGroupEntry[ groupList.number()+1 ];
-		ASSERT(groupArray);
-		int* numsubmits = new int[groupList.number()+1];
-		ASSERT(numsubmits);
-        // Restrict number of slots available for dynamic quotas.
-        if ( numDynGroupSlots && DynQuotaMachConstraint ) {
-            int matchedSlots = startdAds.Count( DynQuotaMachConstraint );
-            if ( matchedSlots ) {
-                dprintf(D_FULLDEBUG,
-                    "GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine "
-                    "count from %d to %d\n", numDynGroupSlots, matchedSlots);
-                numDynGroupSlots = matchedSlots;
-            } else {
-                dprintf(D_ALWAYS, "warning: 0 out of %d machines match "
-                        "GROUP_DYNAMIC_MACH_CONSTRAINT for dynamic quotas\n",
-                        numDynGroupSlots);
-                numDynGroupSlots = 0;
+            group->quota = 0;
+            group->requested = 0;
+            group->allocated = 0;
+            group->subtree_quota = 0;
+            group->subtree_requested = 0;
+            if (NULL == group->submitterAds) group->submitterAds = new ClassAdList;
+            group->submitterAds->Open();
+            while (ClassAd* ad = group->submitterAds->Next()) {
+                group->submitterAds->Remove(ad);
             }
+            group->submitterAds->Close();
+
+            group->usage = accountant.GetWeightedResourcesUsed(group->name.c_str());
         }
 
-		MyString tmpstr;
-		i = 0;
-		groupQuotasHash->clear();		
-		int unusedslots=0;
-		double quota_fraction;
-		float totalgroupquota=0;
-		groupList.rewind();
-		while ((groups = groupList.next ()))
-		{
-			tmpstr.sprintf("GROUP_QUOTA_%s",groups);
-			float quota = param_double(tmpstr.Value(), -1.0 );
-			if ( quota >= 0.0 ) {
-                // Static groups quotas take priority over any dynamic quota
-                dprintf(D_FULLDEBUG, "group %s static quota = %.3f\n",
-                        groups, quota);
-		staticquota=1;	
-            } else {
-                // Next look for a floating point dynamic quota.
-                tmpstr.sprintf("GROUP_QUOTA_DYNAMIC_%s", groups);
-                double quota_fraction =
-                    param_double(
-                        tmpstr.Value(),     // name
-                        0.0,                // default value
-                        0.0,                // min value
-                        1.0                 // max value
-                    );
-                if (quota_fraction != 0.0) {
-                    // use specified dynamic quota
-                    quota = rint(quota_fraction * numDynGroupSlots);
-                    dprintf(D_FULLDEBUG,
-                        "group %s dynamic quota for %d slots = %.3f\n",
-                            groups, numDynGroupSlots, quota);
-                } else {
-                    // neither a static nor dynamic quota was defined
-                    dprintf(D_ALWAYS,
-                        "ERROR - no quota specified for group %s, ignoring\n",
-                        groups);
-                    continue;
-                }
+
+        // cycle through the submitter ads, and load them into the appropriate group node in the tree
+        dprintf(D_ALWAYS, "group quotas: assigning %d submitters to accounting groups\n", int(scheddAds.MyLength()));
+        scheddAds.Open();
+        while (ClassAd* ad = scheddAds.Next()) {
+            MyString tname;
+            if (!ad->LookupString(ATTR_NAME, tname)) {
+                dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter ad with no name\n");
+                continue;
             }
-            if ( quota <= 0 ) {
-                // Quota for group may have been set to zero by admin.
-                dprintf(D_ALWAYS,
-                    "zero quota for group %s, ignoring\n",
-                    groups);
+            // this holds the submitter name, which includes group, if present
+            const string subname(tname.Value());
+
+            // is there a username separator?
+            string::size_type pos = subname.find_last_of('@');
+            if (pos==string::npos) {
+                dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter with badly-formed name \"%s\"\n", subname.c_str());
                 continue;
             }
 
-			// store this groups quota into our groupQuotas hash so we 
-			// can easily retrieve the quota for this group elsewhere in 
-			// this class.
-			MyString groupQuotaKey(groups);
-			groupQuotasHash->insert(groupQuotaKey,quota);
+            GroupEntry* group = accountant.GetAssignedGroup(subname.c_str());
 
-			// fill in the info into the groupArray, so we can sort
-			// the groups into the order we want to negotiate them.
-			float usage = accountant.GetWeightedResourcesUsed(groups);
-			groupArray[i].groupName = groups;  // don't free this! (in groupList)
-			groupArray[i].maxAllowed = quota;
-			groupArray[i].usage = usage;
-				// the 'prio' field is used to sort the group array, i.e. to
-				// decide which groups get to negotiate first.  
-				// we sort groups based upon the percentage of their quota
-				// currently being used, so that groups using the least 
-				// percentage amount of their quota get to negotiate first.
-			groupArray[i].prio = ( 100 * usage ) / quota;
-			dprintf(D_FULLDEBUG,
-				"Group Table : group %s quota %.3f usage %.3f prio %2.2f\n",
-					groups,quota,usage,groupArray[i].prio);
-		if (!staticquota){
-			//now count total number of group submitters  and fix up quota
-                	int numrunning=0;
-			int numidle=0;
-			ClassAd *ad = NULL;
-			char scheddName[80];
-			numsubmits[i]=0;
-			scheddAds.Open();
-			while( (ad=scheddAds.Next()) ) {
-				if (!ad->LookupString(ATTR_NAME, scheddName, sizeof(scheddName))) {
-					continue;
-				}
-				scheddName[79] = '\0'; // make certain we have a terminating NULL
-				char *sep = strchr(scheddName,'.');	// is there a group seperator?
-				if ( !sep ) {
-					continue;
-				};
-				 *sep = '\0'; 
-				if ( strcasecmp(scheddName,groups)==0 ) { 
-					numidle=0;
-					numrunning=0;
-					ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
-					ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
-		        		numsubmits[i]=numsubmits[i]+numrunning+numidle;
-            			}
-			} 		   
-		   	if( numsubmits[i]==0){
-		   		unusedslots=unusedslots+(int)groupArray[i].maxAllowed;		   
-		   	} else if(numsubmits[i]<quota ) {
-			 	unusedslots=unusedslots+(int)groupArray[i].maxAllowed-numsubmits[i];
-			}
-			totalgroupquota=totalgroupquota+quota;	
-			dprintf(D_FULLDEBUG, "group %s numgroupsubmits=%d quota=%f totalgroupquota=%f unusedslots=%d\n",groups, numsubmits[i], quota,totalgroupquota, unusedslots);
-		
-			} //if notstaticquota
-			i++;
-		} //while groups
-		int groupArrayLen = i;
-		
+            // attach the submitter ad to the assigned group
+            group->submitterAds->Insert(ad);
 
-			// pull out the submitter ads that specify a group from the
-			// scheddAds list, and insert them into a list specific to 
-			// the specified group.
-		ClassAd *ad = NULL;
-		char scheddName[80];
-		scheddAds.Open();
-		while( (ad=scheddAds.Next()) ) {
-			if (!ad->LookupString(ATTR_NAME, scheddName, sizeof(scheddName))) {
-				continue;
-			}
-			scheddName[79] = '\0'; // make certain we have a terminating NULL
-			char *sep = strchr(scheddName,'.');	// is there a group seperator?
-			if ( !sep ) {
-				continue;
-			}
-			*sep = '\0';
-			for (i=0; i<groupArrayLen; i++) {
-				if ( strcasecmp(scheddName,groupArray[i].groupName)==0 ) {
-					groupArray[i].submitterAds.Insert(ad);
-					scheddAds.Remove(ad);
-					break;
-				}
-			}
-		}
-		
-		if (!staticquota){
-		
-		// totalgroupquota is num slots claimed in config for groups
-		// unclamedquota is quota not claimed in config..could be for user jobs
-		// unusedslots is number of totalgroupquota that goes unused due to lack of submitters
+            // Accumulate the submitter jobs submitted against this group
+            // To do: investigate getting these values directly from schedds.  The
+            // collector info can be a bit stale, direct from schedd might be improvement.
+            int numidle=0;
+            ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
+            int numrunning=0;
+            ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
+            group->requested += numrunning + numidle;
+        }
 
-		unclaimed=numDynGroupSlots-totalgroupquota;
-		unclaimedquota=numDynGroupSlots-(int)totalgroupquota;
-		
-		// to fix up roundoff
-		if (unclaimed<1) unclaimedquota=0;
-		
-		dprintf(D_FULLDEBUG, " numDynGroupSlots=%d totalgroupquota=%f unclaimedquota=%d\n",numDynGroupSlots,totalgroupquota,unclaimedquota);
-			
-		scheddAds.Open();
-		// here we check for submitters that are not in a group with quota
-		int nongroupusers=scheddAds.Length();
-		dprintf(D_FULLDEBUG, " nongroupusers=%d totalgroupquota=%f\n",nongroupusers,totalgroupquota);
-		if (nongroupusers){
-			scheddAds.Open();
-			int numrunning=0;
-			int numidle=0;
-			
-			numsubmits[groupArrayLen]=0;
-			int totalsubmits=0;
-			float schedusagetotal=0;
-			float scheddUsage=0;
-			while( (ad=scheddAds.Next()) ) {
-				ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
-				ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
-				numsubmits[groupArrayLen]=numsubmits[groupArrayLen]+numrunning+numidle;
-				if (ad->LookupString(ATTR_NAME, scheddName, sizeof(scheddName))) {
-					scheddName[79] = '\0'; // make certain we have a terminating NULL
-					scheddUsage = accountant.GetWeightedResourcesUsed(scheddName);
-					schedusagetotal=scheddUsage+schedusagetotal;
-					dprintf(D_FULLDEBUG, " nongroupusers=%d schedusagetotal=%f\n",nongroupusers,schedusagetotal);	
-					groupArray[groupArrayLen].submitterAds.Insert(ad);
-					scheddAds.Remove(ad);
-				}
-			}
-			groupArray[groupArrayLen].groupName = "none\0"; 
-			groupArray[groupArrayLen].maxAllowed = unclaimedquota;			
-			groupArray[groupArrayLen].usage = schedusagetotal;
-			groupArray[groupArrayLen].prio = 100;		
-			if(numsubmits[groupArrayLen] ==0 ){
-		 		  unusedslots=unusedslots+(int)groupArray[groupArrayLen].maxAllowed;
-		   	} else if(numsubmits[groupArrayLen]<(int)groupArray[groupArrayLen].maxAllowed ) {
-			 	unusedslots=unusedslots+(int)groupArray[groupArrayLen].maxAllowed-numsubmits[groupArrayLen];
-			}
-			groupArrayLen=groupArrayLen+1;
-		} else {
-			unusedslots=unusedslots+unclaimedquota;
-		}
-		dprintf(D_FULLDEBUG, " built array totalgroupquota=%f unusedslots=%d\n",totalgroupquota,unusedslots);
-		
-		// now we reassign unused slots for autogroup groups based upon percent group quota is of total slots
-		// this keeps fair share percentages the same as unused slots are spread around
-		float quotatotal=0;
-		float* oldquota = new float[groupArrayLen]; 
-		for (i=0;i<groupArrayLen;i++) { 
-			oldquota[i]=groupArray[i].maxAllowed;
-			quotatotal=quotatotal+oldquota[i];
-		}
-		//we know total unusedslots
-		int saveunusedslots=unusedslots;		
-		int unusedslotstotal=unusedslots;
-		int slotflag=1; 
-		int given=0;
-                
-		while (unusedslots>0 && slotflag){
-		 	int myshare=0;
-		  	slotflag=0;
-			int leftoverpie=unusedslots;
-			for (i=0; (i<groupArrayLen && unusedslots>0); i++){
-				double percentofunused=0;
-				dprintf(D_ALWAYS,"Group %s - unusedslots to give=%d maxallowed=%f \n",groupArray[i].groupName, unusedslots,groupArray[i].maxAllowed);
-		 		if (numsubmits[i]>groupArray[i].maxAllowed) {
-					// hand out unused slots to non group users if they had quota
-					if((i==groupArrayLen-1)&&nongroupusers&&groupArray[i].maxAllowed>0){
-						double piefraction=(double) leftoverpie*(double)oldquota[i]/(double)numDynGroupSlots;
-						if (piefraction>0 && piefraction<1) {
-							myshare=1;
-						} else {
-							myshare=rint((double)leftoverpie*(double)oldquota[i]/(double)numDynGroupSlots);
-						}
-						if (unusedslots<myshare) myshare=unusedslots;
-						groupArray[i].maxAllowed=groupArray[i].maxAllowed+myshare;
-						given=given+myshare;
-						slotflag=1;
-						unusedslots=unusedslots-myshare;
-					} else {
-						// hand out unused slots to group users with autoregroup
-						bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP",false);
-						MyString autoregroup_param;
-						autoregroup_param.sprintf("GROUP_AUTOREGROUP_%s",groupArray[i].groupName);
-						if(param_boolean(autoregroup_param.Value(),default_autoregroup)){			
-							double piefraction=(double) leftoverpie*(double)oldquota[i]/(double)numDynGroupSlots;
-							if (piefraction>0 && piefraction<1) {
-								myshare=1;
-							} else {
-								myshare=rint((double)leftoverpie*(double)oldquota[i]/(double)numDynGroupSlots);
-							}
-							if (unusedslots<myshare) myshare=unusedslots;
-							groupArray[i].maxAllowed=groupArray[i].maxAllowed+myshare;
-							given=given+myshare;
-							slotflag=1;
-							unusedslots=unusedslots-myshare;
-						}
-					} 
-			    } else {
-				groupArray[i].maxAllowed=(float)numsubmits[i];}
-		 	
-		 	}
-			dprintf(D_ALWAYS,"totalunusedslots=%d given=%d \n", unusedslotstotal,given); 
-			if(given==0)slotflag=0;
-		}
-		dprintf(D_ALWAYS,"totalunusedslots=%d given=%d \n", unusedslotstotal,given);
-		
-		delete [] oldquota;
-		oldquota = NULL;
-		} //if notstaticquota
+        // assign slot quotas based on the config-quotas
+        dprintf(D_ALWAYS, "group quotas: assigning group quotas from %g available%s slots\n",
+                hgq_total_quota, 
+                (accountant.UsingWeightedSlots()) ? " weighted" : "");
+        hgq_assign_quotas(hgq_root_group, hgq_total_quota);
 
-			// now sort the group array
-		qsort(groupArray,groupArrayLen,sizeof(SimpleGroupEntry),groupSortCompare);		
+        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+            GroupEntry* group = *j;
+            dprintf(D_FULLDEBUG, "group quotas: group= %s  cquota= %g  static= %d  accept= %d  quota= %g  req= %g  usage= %g\n",
+                    group->name.c_str(), group->config_quota, int(group->static_quota), int(group->accept_surplus), group->quota, 
+                    group->requested, group->usage);
+        }
 
-			// and negotiate for each group
-		for (i=0;i<groupArrayLen;i++) {
-			if ( groupArray[i].submitterAds.MyLength() == 0 ) {
-				dprintf(D_ALWAYS,
-					"Group %s - skipping, no submitters\n",
-					groupArray[i].groupName);
-				continue;
-			}
-			if ( groupArray[i].usage >= groupArray[i].maxAllowed  &&
-				 !ConsiderPreemption ) 
-			{
-				dprintf(D_ALWAYS,
-						"Group %s - skipping, at or over quota (usage=%.3f)\n",
-						groupArray[i].groupName,groupArray[i].usage);
-				continue;
-			}
-			dprintf(D_ALWAYS,
-				"Group %s - negotiating\n",groupArray[i].groupName);
-			negotiateWithGroup( untrimmed_num_startds,untrimmedSlotWeightTotal, minSlotWeight, 
-					startdAds, claimIds, groupArray[i].submitterAds, 
-					groupArray[i].maxAllowed, groupArray[i].usage,groupArray[i].groupName );
-		}
-		if (staticquota){
-		
-			// if GROUP_AUTOREGROUP is set to true, then for any submitter
-			// assigned to a group that did match, insert the submitter
-			// ad back into the main scheddAds list.  this way, we will
-			// try to match it again below .
-		bool default_autoregroup = param_boolean("GROUP_AUTOREGROUP",false);
-		for (i=0; i<groupArrayLen; i++) {
-			ad = NULL;
-			MyString autoregroup_param;
-			autoregroup_param.sprintf("GROUP_AUTOREGROUP_%s",groupArray[i].groupName);
-			if(param_boolean(autoregroup_param.Value(),default_autoregroup)) {
-				dprintf(D_ALWAYS,
-						"Group %s - autoregroup inserting %d submitters\n",
-						groupArray[i].groupName,
-						groupArray[i].submitterAds.MyLength());
+        // A user/admin can set this to > 1, to allow the algorithm an opportunity to re-distribute
+        // slots that were not used due to rejection.
+        int maxrounds = 0;
+        if (NULL != param_without_default("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS")) {
+            maxrounds = param_integer("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS", 3, 1, INT_MAX);
+        } else {
+            // backward compatability
+            maxrounds = param_integer("HFS_MAX_ALLOCATION_ROUNDS", 3, 1, INT_MAX);
+        }
 
-				groupArray[i].submitterAds.Open();
-				while( (ad=groupArray[i].submitterAds.Next()) ) {
-					groupArray[i].submitterAds.Remove( ad );
-					scheddAds.Insert(ad);
-				}
-			} else {
-				groupArray[i].submitterAds.Open();
-				while ( (ad = groupArray[i].submitterAds.Next()) ) {
-					groupArray[i].submitterAds.Remove( ad );
-				}
-			}
-		}
-		
-		
-		
-		
-		
-		} //if notstaticquota
+        // The allocation of slots may occur multiple times, if rejections
+        // prevent some allocations from being filled.
+        int iter = 0;
+        while (true) {
+            if (iter >= maxrounds) {
+                dprintf(D_ALWAYS, "group quotas: halting allocation rounds after %d iterations\n", iter);
+                break;
+            }
 
-			// finally, cleanup 
-		delete []  groupArray;
-		groupArray = NULL;
-		delete [] numsubmits;
-		numsubmits = NULL;
+            iter += 1;
+            dprintf(D_ALWAYS, "group quotas: allocation round %d\n", iter);
+            negotiation_cycle_stats[0]->slot_share_iterations += 1;
 
-			// print out a message stating we are about to negotiate below w/
-			// all users who did not specify a group
-		dprintf(D_ALWAYS,"Group *none* - negotiating\n");
+            // make sure working values are reset for this iteration
+            groupQuotasHash->clear();
+            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                GroupEntry* group = *j;
+                group->allocated = 0;
+                group->subtree_requested = 0;
+                group->rr = false;
+            }
 
-	} // if (groups)
-	
-		// negotiate w/ all users who do not belong to a group.
-	negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight, startdAds, claimIds, scheddAds);
-	
-	// ----- Done with the negotiation cycle
-	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
+            // Allocate group slot quotas to satisfy group job requests
+            double surplus_quota = hgq_fairshare(hgq_root_group);
 
-	completedLastCycleTime = time(NULL);
+            // This step is not relevant in a weighted-slot scenario, where slots may
+            // have a floating-point cost != 1.
+            if (!accountant.UsingWeightedSlots()) {
+                // Recover any fractional slot remainders from fairshare algorithm, 
+                // and distribute them using round robin.
+                surplus_quota += hgq_recover_remainders(hgq_root_group);
+            }
 
-	negotiation_cycle_stats[0]->duration = time(NULL) - negotiation_cycle_stats[0]->start_time;
+            double maxdelta = 0;
+            double requested_total = 0;
+            double allocated_total = 0;
+            unsigned long served_groups = 0;
+            unsigned long unserved_groups = 0;
+            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                GroupEntry* group = *j;
+                dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
+                        group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
+                groupQuotasHash->insert(MyString(group->name.c_str()), group->allocated);
+                requested_total += group->requested;
+                allocated_total += group->allocated;
+                if (group->allocated > 0) served_groups += 1;
+                else if (group->requested > 0) unserved_groups += 1;
+                maxdelta = max(maxdelta, max(0.0, group->allocated - group->usage));
+            }
+
+            dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
+                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(numDynGroupSlots), requested_total+allocated_total, allocated_total, surplus_quota);
+
+            // The loop below can add a lot of work (and log output) to the negotiation.  I'm going to
+            // default its behavior to execute once, and just negotiate for everything at once.  If a
+            // user is concerned about the "overlapping effective pool" problem, they can decrease this 
+            // increment so that round robin happens, and competing groups will not starve one another.
+            double ninc = 0;
+            if (NULL != param_without_default("GROUP_QUOTA_ROUND_ROBIN_RATE")) {
+                ninc = param_double("GROUP_QUOTA_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
+            } else {
+                // backward compatability 
+                ninc = param_double("HFS_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
+            }
+
+            // This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
+            // for same subset of available slots.  It gives greatest weight to groups with the greatest difference 
+            // between allocated and their current usage
+            double n = 0;
+            while (true) {
+                // Up our fraction of the full deltas.  Note that maxdelta may be zero, but we still
+                // want to negotiate at least once regardless, so loop halting check is at the end.
+                n = min(n+ninc, maxdelta);
+                dprintf(D_FULLDEBUG, "group quotas: entering RR iteration n= %g\n", n);
+
+                // Do the negotiations
+                for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                    GroupEntry* group = *j;
+
+                    if (group->allocated <= 0) {
+                        dprintf(D_ALWAYS, "Group %s - skipping, zero slots allocated\n", group->name.c_str());
+                        continue;
+                    }
+
+                    if ((group->usage >= group->allocated) && !ConsiderPreemption) {
+                        dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g)\n", group->name.c_str(), group->usage);
+                        continue;
+                    }
+
+                    dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
+
+                    double delta = max(0.0, group->allocated - group->usage);
+                    // If delta > 0, we know maxdelta also > 0.  Otherwise, it means we actually are using more than
+                    // we just got allocated, so just negotiate for what we were allocated.
+                    double slots = (delta > 0) ? group->usage + (delta * (n / maxdelta)) : group->allocated;
+                    // Defensive -- do not exceed allocated slots
+                    slots = min(slots, group->allocated);
+                    if (!accountant.UsingWeightedSlots()) {
+                        slots = floor(slots);
+                    }
+
+                    negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight,
+                                       startdAds, claimIds, *(group->submitterAds), 
+                                       slots, group->usage, group->name.c_str());
+                }
+
+                // Halt when we have negotiated with full deltas
+                if (n >= maxdelta) break;
+            }
+
+            // After round robin, assess where we are relative to HGQ allocation goals
+            double usage_total = 0;
+            for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                GroupEntry* group = *j;
+
+                double usage = accountant.GetWeightedResourcesUsed(group->name.c_str());
+
+                group->usage = usage;
+                dprintf(D_FULLDEBUG, "group quotas: Group %s  allocated= %g  usage= %g\n", group->name.c_str(), group->allocated, group->usage);
+
+                // I do not want to give credit for usage above what was allocated here.
+                usage_total += min(group->usage, group->allocated);
+
+                if (group->usage < group->allocated) {
+                    // If we failed to match all the allocated slots for any reason, then take what we
+                    // got and allow other groups a chance at the rest on next iteration
+                    dprintf(D_FULLDEBUG, "group quotas: Group %s - resetting requested to %g\n", group->name.c_str(), group->usage);
+                    group->requested = group->usage;
+                } else {
+                    // otherwise restore requested to its original state for next iteration
+                    group->requested += group->allocated;
+                }
+            }
+
+            dprintf(D_ALWAYS, "Round %d totals: allocated= %g  usage= %g\n", iter, allocated_total, usage_total);
+
+            // If we negotiated successfully for all slots, we're finished
+            if (usage_total >= allocated_total) break;
+        }
+
+        // For the purposes of RR consistency I want to update these after all allocation rounds are completed.
+        for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+            GroupEntry* group = *j;
+            // If we were served by RR this cycle, then update timestamp of most recent round-robin.  
+            // I also update when requested is zero because I want to favor groups that have been actually
+            // waiting for an allocation the longest.
+            if (group->rr || (group->requested <= 0))  group->rr_time = negotiation_cycle_stats[0]->start_time;
+        }
+    }
+
+    // ----- Done with the negotiation cycle
+    dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
+
+    completedLastCycleTime = time(NULL);
+
+    negotiation_cycle_stats[0]->end_time = completedLastCycleTime;
+
+    // Phase 2 is time to do "all of the above" since end of phase 1, less the time we spent in phase 3 and phase 4
+    // (phase 3 and 4 occur inside of negotiateWithGroup(), which may be called in multiple places, inside looping)
+    negotiation_cycle_stats[0]->duration_phase2 = completedLastCycleTime - start_time_phase2;
+    negotiation_cycle_stats[0]->duration_phase2 -= negotiation_cycle_stats[0]->duration_phase3;
+    negotiation_cycle_stats[0]->duration_phase2 -= negotiation_cycle_stats[0]->duration_phase4;
+
+    negotiation_cycle_stats[0]->duration = completedLastCycleTime - negotiation_cycle_stats[0]->start_time;
 }
 
-Matchmaker::SimpleGroupEntry::
-SimpleGroupEntry()
+
+void Matchmaker::hgq_construct_tree() {
+	// need to construct group structure
+	// groups is list of group names
+    // in form group.subgroup group.subgroup.subgroup etc
+	char* groupnames = param("GROUP_NAMES");
+
+	// Populate the group array, which contains an entry for each group.
+    hgq_root_name = "<none>";
+	vector<string> groups;
+    if (NULL != groupnames) {
+        StringList group_name_list;
+        group_name_list.initializeFromString(groupnames);
+        group_name_list.rewind();
+        while (char* g = group_name_list.next()) {
+            const string gname(g);
+
+            // Best to sanity-check this as early as possible.  This will also
+            // be useful if we ever decided to allow users to name the root group
+            if (gname == hgq_root_name) {
+                dprintf(D_ALWAYS, "group quotas: ERROR: group name \"%s\" is reserved for root group -- ignoring this group\n", gname.c_str());
+                continue;
+            }
+
+            // store the group name
+            groups.push_back(gname);
+        }
+
+        free(groupnames);
+        groupnames = NULL;
+    }
+
+    // This is convenient for making sure a parent group always appears before its children
+    std::sort(groups.begin(), groups.end(), Accountant::ci_less());
+
+    // our root group always exists -- all configured HGQ groups are implicitly 
+    // children / descendents of the root
+    if (NULL != hgq_root_group) delete hgq_root_group;
+    hgq_root_group = new GroupEntry;
+	hgq_root_group->name = hgq_root_name;
+    hgq_root_group->accept_surplus = true;
+
+    group_entry_map.clear();
+    group_entry_map[hgq_root_name] = hgq_root_group;
+
+    bool tdas = false;
+    if (NULL != param_without_default("GROUP_ACCEPT_SURPLUS")) {
+        tdas = param_boolean("GROUP_ACCEPT_SURPLUS", false);
+    } else {
+        // backward compatability
+        tdas = param_boolean("GROUP_AUTOREGROUP", false);
+    }
+    const bool default_accept_surplus = tdas;
+
+    // build the tree structure from our group path info
+    for (unsigned long j = 0;  j < groups.size();  ++j) {
+        string gname = groups[j];
+
+        // parse the group name into a path of sub-group names
+        vector<string> gpath;
+        parse_group_name(gname, gpath);
+
+        // insert the path of the current group into the tree structure
+        GroupEntry* group = hgq_root_group;
+        bool missing_parent = false;
+        for (unsigned long k = 0;  k < gpath.size()-1;  ++k) {
+            // chmap is mostly a structure to avoid n^2 behavior in groups with many children
+            map<string, GroupEntry::size_type, Accountant::ci_less>::iterator f(group->chmap.find(gpath[k]));
+            if (f == group->chmap.end()) {
+                dprintf(D_ALWAYS, "group quotas: WARNING: ignoring group name %s with missing parent %s\n", gname.c_str(), gpath[k].c_str());
+                missing_parent = true;
+                break;
+            }
+            group = group->children[f->second];
+        }
+        if (missing_parent) continue;
+
+        if (group->chmap.count(gpath.back()) > 0) {
+            // duplicate group -- ignore
+            dprintf(D_ALWAYS, "group quotas: WARNING: ignoring duplicate group name %s\n", gname.c_str());
+            continue;
+        }
+
+        // enter the new group
+        group->children.push_back(new GroupEntry);
+        group->chmap[gpath.back()] = group->children.size()-1;
+        group_entry_map[gname] = group->children.back();
+        group->children.back()->parent = group;
+        group = group->children.back();
+
+        // "group" now refers to our current group in the list.
+        // Fill in entry values from config.
+        group->name = gname;
+
+        // group quota setting 
+        MyString vname;
+        vname.sprintf("GROUP_QUOTA_%s", gname.c_str());
+        double quota = param_double(vname.Value(), -1.0, 0, INT_MAX);
+        if (quota >= 0) {
+            group->config_quota = quota;
+            group->static_quota = true;
+        } else {
+            vname.sprintf("GROUP_QUOTA_DYNAMIC_%s", gname.c_str());
+            quota = param_double(vname.Value(), -1.0, 0.0, 1.0);
+            if (quota >= 0) {
+                group->config_quota = quota;
+                group->static_quota = false;
+            } else {
+                dprintf(D_ALWAYS, "group quotas: WARNING: no quota specified for group \"%s\", defaulting to zero\n", gname.c_str());
+                group->config_quota = 0.0;
+                group->static_quota = false;
+            }
+        }
+
+        // defensive sanity checking
+        if (group->config_quota < 0) {
+            dprintf(D_ALWAYS, "group quotas: ERROR: negative quota (%g) defaulting to zero\n", double(group->config_quota));
+            group->config_quota = 0;
+        }
+
+        // accept surplus
+	    vname.sprintf("GROUP_ACCEPT_SURPLUS_%s", gname.c_str());
+        if (NULL != param_without_default(vname.Value())) {
+            group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
+        } else {
+            // backward compatability
+            vname.sprintf("GROUP_AUTOREGROUP_%s", gname.c_str());
+            group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
+        }
+    }
+
+    // With the tree structure in place, we can make a list of groups in breadth-first order
+    // For more convenient iteration over the structure
+    hgq_groups.clear();
+    deque<GroupEntry*> grpq;
+    grpq.push_back(hgq_root_group);
+    while (!grpq.empty()) {
+        GroupEntry* group = grpq.front();
+        grpq.pop_front();
+        hgq_groups.push_back(group);
+        for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+            grpq.push_back(*j);
+        }
+    }
+}
+
+
+void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
+    dprintf(D_FULLDEBUG, "group quotas: subtree %s receiving quota= %g\n", group->name.c_str(), quota);
+
+    // if quota is zero, we can leave this subtree with default quotas of zero
+    if (quota <= 0) return;
+
+    // incoming quota is quota for subtree
+    group->subtree_quota = quota;
+
+    // compute the sum of any static quotas of any children
+    double sqsum = 0;
+    double dqsum = 0;
+    for (unsigned long j = 0;  j < group->children.size();  ++j) {
+        GroupEntry* child = group->children[j];
+        if (child->static_quota) {
+            sqsum += child->config_quota;
+        } else {
+            dqsum += child->config_quota;
+        }
+    }
+
+    // static quotas get first dibs on any available quota
+    // total static quota assignable is bounded by quota coming from above
+    double sqa = min(sqsum, quota);
+
+    // children with dynamic quotas get allocated from the remainder 
+    double dqa = quota - sqa;
+
+    dprintf(D_FULLDEBUG, "group quotas: group %s, allocated %g for static children, %g for dynamic children\n", group->name.c_str(), sqa, dqa);
+
+    // Prevent (0/0) in the case of all static quotas == 0.
+    // In this case, all quotas will still be correctly assigned zero.
+    double Zs = (sqsum > 0) ? sqsum : 1;
+
+    // If dqsum exceeds 1, then dynamic quota values get scaled so that they sum to 1
+    double Zd = max(dqsum, double(1));
+
+    // quota assigned to all children 
+    double chq = 0;
+    for (unsigned long j = 0;  j < group->children.size();  ++j) {
+        GroupEntry* child = group->children[j];
+        // Each child with a static quota gets its proportion of the total of static quota assignable.
+        // Each child with dynamic quota gets the dynamic quota assignable weighted by its configured dynamic quota value
+        double q = (child->static_quota) ? (child->config_quota * (sqa / Zs)) : (child->config_quota * (dqa / Zd));
+        if (q < 0) q = 0;
+
+        if (child->static_quota && (q < child->config_quota)) {
+            dprintf(D_ALWAYS, "group quotas: WARNING: static quota for group %s rescaled from %g to %g\n", child->name.c_str(), child->config_quota, q);
+        } else if (Zd > 1) {
+            dprintf(D_ALWAYS, "group quotas: WARNING: dynamic quota for group %s rescaled from %g to %g\n", child->name.c_str(), child->config_quota, child->config_quota / Zd);
+        }
+
+        hgq_assign_quotas(child, q);
+        chq += q;
+    }
+
+    // Current group gets anything remaining after assigning to any children
+    // If there are no children (a leaf) then this group gets all the quota
+    group->quota = quota - chq;
+    if (group->quota < 0) group->quota = 0;
+    dprintf(D_FULLDEBUG, "group quotas: group %s assigned quota= %g\n", group->name.c_str(), group->quota);
+}
+
+
+double Matchmaker::hgq_fairshare(GroupEntry* group) {
+    dprintf(D_FULLDEBUG, "group quotas: fairshare (1): group= %s  quota= %g  requested= %g\n", 
+            group->name.c_str(), group->quota, group->requested);
+
+    // Allocate whichever is smallest: the requested slots or group quota.
+    group->allocated = min(group->requested, group->quota);
+
+    // update requested values
+    group->requested -= group->allocated;
+    group->subtree_requested = group->requested;
+
+    // surplus quota for this group
+    double surplus = group->quota - group->allocated;
+
+    dprintf(D_FULLDEBUG, "group quotas: fairshare (2): group= %s  quota= %g  allocated= %g  requested= %g\n", 
+            group->name.c_str(), group->quota, group->allocated, group->requested);
+
+    // If this is a leaf group, we're finished: return the surplus
+    if (group->children.empty()) return surplus;
+
+    // This is an internal group: perform fairshare recursively on children
+    for (unsigned long j = 0;  j < group->children.size();  ++j) {
+        GroupEntry* child = group->children[j];
+        surplus += hgq_fairshare(child);
+        if (child->accept_surplus) {
+            group->subtree_requested += child->subtree_requested;
+        }
+    }
+
+    // allocate any available surplus to current node and subtree
+    surplus = hgq_allocate_surplus(group, surplus);
+
+    dprintf(D_FULLDEBUG, "group quotas: fairshare (3): group= %s  surplus= %g  subtree_requested= %g\n", 
+            group->name.c_str(), surplus, group->subtree_requested);
+
+    // return any remaining surplus up the tree
+    return surplus;
+}
+
+
+void hgq_allocate_surplus_loop(bool by_quota, 
+                               vector<GroupEntry*>& groups, vector<double>& allocated, vector<double>& subtree_requested, 
+                               double& surplus, double& requested) {
+    int iter = 0;
+    while (surplus > 0) {
+        iter += 1;
+
+        dprintf(D_FULLDEBUG, "group quotas: allocate-surplus-loop: by_quota= %d  iteration= %d  requested= %g  surplus= %g\n", 
+                int(by_quota), iter, requested, surplus);
+
+        // Compute the normalizer for outstanding groups
+        double Z = 0;
+        for (unsigned long j = 0;  j < groups.size();  ++j) {
+            GroupEntry* grp = groups[j];
+            if (subtree_requested[j] > 0)  Z += (by_quota) ? grp->subtree_quota : 1.0;
+        }
+
+        if (Z <= 0) {
+            dprintf(D_FULLDEBUG, "group quotas: allocate-surplus-loop: no further outstanding groups at iteration %d - halting.\n", iter);
+            break;
+        }
+
+        // allocations
+        bool never_gt = true;
+        double sumalloc = 0;
+        for (unsigned long j = 0;  j < groups.size();  ++j) {
+            GroupEntry* grp = groups[j];
+            if (subtree_requested[j] > 0) {
+                double N = (by_quota) ? grp->subtree_quota : 1.0;
+                double a = surplus * (N / Z);
+                if (a > subtree_requested[j]) {
+                    a = subtree_requested[j];
+                    never_gt = false;
+                }
+                allocated[j] += a;
+                subtree_requested[j] -= a;
+                sumalloc += a;
+            }
+        }
+
+        surplus -= sumalloc;
+        requested -= sumalloc;
+
+        // Compensate for numeric precision jitter
+        // This is part of the convergence guarantee: on each iteration, one of two things happens:
+        // either never_gt becomes true, in which case all surplus was allocated, or >= 1 group had its
+        // requested drop to zero.  This will move us toward Z becoming zero, which will halt the loop.
+        // Note, that in "by-quota" mode, Z can become zero with surplus remaining, which is fine -- it means
+        // groups with quota > 0 did not use all the surplus, and any groups with zero quota have the option
+        // to use it in "non-by-quota" mode.
+        if (never_gt || (surplus < 0)) {
+            if (fabs(surplus) > 0.00001) {
+                dprintf(D_ALWAYS, "group quotas: allocate-surplus-loop: WARNING: rounding surplus= %g to zero\n", surplus);
+            }
+            surplus = 0;
+        }
+    }
+}
+
+
+double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
+    dprintf(D_FULLDEBUG, "group quotas: allocate-surplus (1): group= %s  surplus= %g  subtree-requested= %g\n", group->name.c_str(), surplus, group->subtree_requested);
+
+    // Nothing to allocate
+    if (surplus <= 0) return 0;
+
+    // If entire subtree requests nothing, halt now
+    if (group->subtree_requested <= 0) return surplus;
+
+    // Surplus allocation policy is that a group shares surplus on equal footing with its children.
+    // So we load children and their parent (current group) into a single vector for treatment.
+    // Convention will be that current group (subtree root) is last element.
+    vector<GroupEntry*> groups(group->children);
+    groups.push_back(group);
+
+    // This vector will accumulate allocations.
+    // We will proceed with recursive allocations after allocations at this level
+    // are completed.  This keeps recursive calls to a minimum.
+    vector<double> allocated(groups.size(), 0);
+
+    // Temporarily hacking current group to behave like a child that accepts surplus 
+    // avoids some special cases below.  Somewhere I just made a kitten cry.
+    bool save_accept_surplus = group->accept_surplus;
+    group->accept_surplus = true;
+    double save_subtree_quota = group->subtree_quota;
+    group->subtree_quota = group->quota;
+    double requested = group->subtree_requested;
+    group->subtree_requested = group->requested;
+
+    if (surplus >= requested) {
+        // In this scenario we have enough surplus to satisfy all requests.
+        // Cornucopia! Give everybody what they asked for.
+
+        dprintf(D_FULLDEBUG, "group quotas: allocate-surplus (2a): direct allocation, group= %s  requested= %g  surplus= %g\n",
+                group->name.c_str(), requested, surplus);
+
+        for (unsigned long j = 0;  j < groups.size();  ++j) {
+            GroupEntry* grp = groups[j];
+            if (grp->accept_surplus && (grp->subtree_requested > 0)) {
+                allocated[j] = grp->subtree_requested;
+            }
+        }
+
+        surplus -= requested;
+        requested = 0;
+    } else {
+        // In this scenario there are more requests than there is surplus.
+        // Here groups have to compete based on their quotas.
+
+        dprintf(D_FULLDEBUG, "group quotas: allocate-surplus (2b): quota-based allocation, group= %s  requested= %g  surplus= %g\n", 
+                group->name.c_str(), requested, surplus);
+
+        vector<double> subtree_requested(groups.size(), 0);
+        for (unsigned long j = 0;  j < groups.size();  ++j) {
+            GroupEntry* grp = groups[j];
+            // By conditioning on accept_surplus here, I don't have to check it below
+            if (grp->accept_surplus && (grp->subtree_requested > 0)) {
+                subtree_requested[j] = grp->subtree_requested;
+            }
+        }
+
+        // In this loop we allocate to groups with quota > 0
+        hgq_allocate_surplus_loop(true, groups, allocated, subtree_requested, surplus, requested);
+
+        // Any quota left can be allocated to groups with zero quota
+        hgq_allocate_surplus_loop(false, groups, allocated, subtree_requested, surplus, requested);
+
+        // There should be no surplus left after the above two rounds
+        if (surplus > 0) {
+            dprintf(D_ALWAYS, "group quotas: allocate-surplus WARNING: nonzero surplus %g after allocation\n", surplus);
+        }
+    }
+
+    // We have computed allocations for groups, with results cached in 'allocated'
+    // Now we can perform the actual allocations.  Only actual children should
+    // be allocated recursively here
+    for (unsigned long j = 0;  j < (groups.size()-1);  ++j) {
+        if (allocated[j] > 0) {
+            double s = hgq_allocate_surplus(groups[j], allocated[j]);
+            if (fabs(surplus) > 0.00001) {
+                dprintf(D_ALWAYS, "group quotas: WARNING: allocate-surplus (3): surplus= %g\n", s);
+            }
+        }
+    }
+
+    // Here is logic for allocating current group
+    group->allocated += allocated.back();
+    group->requested -= allocated.back();
+
+    dprintf(D_FULLDEBUG, "group quotas: allocate-surplus (4): group %s allocated surplus= %g  allocated= %g  requested= %g\n",
+            group->name.c_str(), allocated.back(), group->allocated, group->requested);
+
+    // restore proper group settings
+    group->subtree_requested = requested;
+    group->accept_surplus = save_accept_surplus;
+    group->subtree_quota = save_subtree_quota;
+
+    return surplus;
+}
+
+
+double Matchmaker::hgq_recover_remainders(GroupEntry* group) {
+    dprintf(D_FULLDEBUG, "group quotas: recover-remainders (1): group= %s  allocated= %g  requested= %g\n", 
+            group->name.c_str(), group->allocated, group->requested);
+
+    // recover fractional remainder, which becomes surplus
+    double surplus = group->allocated - floor(group->allocated);
+    group->allocated -= surplus;
+    group->requested += surplus;
+
+    // These should be integer values now, so I get to round to correct any precision errs
+    round_for_precision(group->allocated);
+    round_for_precision(group->requested);
+
+    group->subtree_requested = group->requested;
+    group->subtree_rr_time = (group->requested > 0) ? group->rr_time : DBL_MAX;
+
+    dprintf(D_FULLDEBUG, "group quotas: recover-remainders (2): group= %s  allocated= %g  requested= %g  surplus= %g\n", 
+            group->name.c_str(), group->allocated, group->requested, surplus);
+
+    // If this is a leaf group, we're finished: return the surplus
+    if (group->children.empty()) return surplus;
+
+    // This is an internal group: perform recovery recursively on children
+    for (unsigned long j = 0;  j < group->children.size();  ++j) {
+        GroupEntry* child = group->children[j];
+        surplus += hgq_recover_remainders(child);
+        if (child->accept_surplus) {
+            group->subtree_requested += child->subtree_requested;
+            if (child->subtree_requested > 0)
+                group->subtree_rr_time = min(group->subtree_rr_time, child->subtree_rr_time);
+        }
+    }
+
+    // allocate any available surplus to current node and subtree
+    surplus = hgq_round_robin(group, surplus);
+
+    dprintf(D_FULLDEBUG, "group quotas: recover-remainder (3): group= %s  surplus= %g  subtree_requested= %g\n", 
+            group->name.c_str(), surplus, group->subtree_requested);
+
+    // return any remaining surplus up the tree
+    return surplus;
+}
+
+
+double Matchmaker::hgq_round_robin(GroupEntry* group, double surplus) {
+    dprintf(D_FULLDEBUG, "group quotas: round-robin (1): group= %s  surplus= %g  subtree-requested= %g\n", group->name.c_str(), surplus, group->subtree_requested);
+
+    // Sanity check -- I expect these to be integer values by the time I get here.
+    if (group->subtree_requested != floor(group->subtree_requested)) {
+        dprintf(D_ALWAYS, "group quotas: WARNING: forcing group %s requested= %g to integer value %g\n", 
+                group->name.c_str(), group->subtree_requested, floor(group->subtree_requested));
+        group->subtree_requested = floor(group->subtree_requested);
+    }
+
+    // Nothing to do if subtree had no requests
+    if (group->subtree_requested <= 0) return surplus;
+
+    // round robin has nothing to do without at least one whole slot
+    if (surplus < 1) return surplus;
+
+    // Surplus allocation policy is that a group shares surplus on equal footing with its children.
+    // So we load children and their parent (current group) into a single vector for treatment.
+    // Convention will be that current group (subtree root) is last element.
+    vector<GroupEntry*> groups(group->children);
+    groups.push_back(group);
+
+    // This vector will accumulate allocations.
+    // We will proceed with recursive allocations after allocations at this level
+    // are completed.  This keeps recursive calls to a minimum.
+    vector<double> allocated(groups.size(), 0);
+
+    // Temporarily hacking current group to behave like a child that accepts surplus 
+    // avoids some special cases below.  Somewhere I just made a kitten cry.  Even more.
+    bool save_accept_surplus = group->accept_surplus;
+    group->accept_surplus = true;
+    double save_subtree_quota = group->subtree_quota;
+    group->subtree_quota = group->quota;
+    double save_subtree_rr_time = group->subtree_rr_time;
+    group->subtree_rr_time = group->rr_time;
+    double requested = group->subtree_requested;
+    group->subtree_requested = group->requested;
+
+    double outstanding = 0;
+    vector<double> subtree_requested(groups.size(), 0);
+    for (unsigned long j = 0;  j < groups.size();  ++j) {
+        GroupEntry* grp = groups[j];
+        if (grp->accept_surplus && (grp->subtree_requested > 0)) {
+            subtree_requested[j] = grp->subtree_requested;
+            outstanding += 1;
+        }
+    }
+
+    // indexes allow indirect sorting
+    vector<unsigned long> idx(groups.size());
+    for (unsigned long j = 0;  j < idx.size();  ++j) idx[j] = j;
+
+    // order the groups to determine who gets first cut
+    ord_by_rr_time ord;
+    ord.data = &groups;
+    std::sort(idx.begin(), idx.end(), ord);
+
+    while ((surplus >= 1) && (requested > 0)) {
+        // max we can fairly allocate per group this round:
+        double amax = max(double(1), floor(surplus / outstanding));
+
+        dprintf(D_FULLDEBUG, "group quotas: round-robin (2): pass: surplus= %g  requested= %g  outstanding= %g  amax= %g\n", 
+                surplus, requested, outstanding, amax);
+
+        outstanding = 0;
+        double sumalloc = 0;
+        for (unsigned long jj = 0;  jj < groups.size();  ++jj) {
+            unsigned long j = idx[jj];
+            GroupEntry* grp = groups[j];
+            if (grp->accept_surplus && (subtree_requested[j] > 0)) {
+                double a = min(subtree_requested[j], amax);
+                allocated[j] += a;
+                subtree_requested[j] -= a;
+                sumalloc += a;
+                surplus -= a;
+                requested -= a;
+                grp->rr = true;
+                if (subtree_requested[j] > 0) outstanding += 1;
+                if (surplus < amax) break;
+            }
+        }
+
+        // a bit of defensive sanity checking -- should not be possible:
+        if (sumalloc < 1) {
+            dprintf(D_ALWAYS, "group quotas: round-robin (3): WARNING: round robin failed to allocate >= 1 slot this round - halting\n");
+            break;
+        }
+    }
+
+    // We have computed allocations for groups, with results cached in 'allocated'
+    // Now we can perform the actual allocations.  Only actual children should
+    // be allocated recursively here
+    for (unsigned long j = 0;  j < (groups.size()-1);  ++j) {
+        if (allocated[j] > 0) {
+            double s = hgq_round_robin(groups[j], allocated[j]);
+
+            // This algorithm does not allocate more than a child has requested.
+            // Also, this algorithm is designed to allocate every requested slot,
+            // up to the given surplus.  Therefore, I expect these calls to return
+            // zero.   If they don't, something is haywire.
+            if (s > 0) {
+                dprintf(D_ALWAYS, "group quotas: round-robin (4):  WARNING: nonzero surplus %g returned from round robin for group %s\n", 
+                        s, groups[j]->name.c_str());
+            }
+        }
+    }
+
+    // Here is logic for allocating current group
+    group->allocated += allocated.back();
+    group->requested -= allocated.back();
+
+    dprintf(D_FULLDEBUG, "group quotas: round-robin (5): group %s allocated surplus= %g  allocated= %g  requested= %g\n",
+            group->name.c_str(), allocated.back(), group->allocated, group->requested);
+
+    // restore proper group settings
+    group->subtree_requested = requested;
+    group->accept_surplus = save_accept_surplus;
+    group->subtree_quota = save_subtree_quota;
+    group->subtree_rr_time = save_subtree_rr_time;
+
+    return surplus;
+}
+
+
+GroupEntry::GroupEntry():
+    name(),
+    config_quota(0),
+    static_quota(false),
+    accept_surplus(false),
+    usage(0),
+    submitterAds(NULL),
+    quota(0),
+    requested(0),
+    allocated(0),
+    subtree_quota(0),
+    subtree_requested(0),
+    rr(false),
+    rr_time(0),
+    subtree_rr_time(0),
+    parent(NULL),
+    children(),
+    chmap()
 {
-	groupName = NULL;
-	prio = 0;
-	usage = 0.0f;
-	maxAllowed = (float) INT_MAX;
 }
 
-Matchmaker::SimpleGroupEntry::
-~SimpleGroupEntry()
-{
-	// Note: don't free groupName!  See comment above.
+
+GroupEntry::~GroupEntry() {
+    for (unsigned long j=0;  j < children.size();  ++j) {
+        if (children[j] != NULL) {
+            delete children[j];
+        }
+    }
+
+    if (NULL != submitterAds) {
+        submitterAds->Open();
+        while (ClassAd* ad = submitterAds->Next()) {
+            submitterAds->Remove(ad);
+        }
+        submitterAds->Close();
+
+        delete submitterAds;
+    }
 }
+
 
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
@@ -1374,6 +1965,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					 ClassAdListDoesNotDeleteAds& scheddAds, 
 					 float groupQuota, float groupusage,const char* groupAccountingName)
 {
+    time_t start_time_phase3 = time(NULL);
 	ClassAd		*schedd;
 	MyString    scheddName;
 	MyString    scheddAddr;
@@ -1401,6 +1993,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	dprintf( D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n" );
 	scheddAds.Sort( (lessThanFunc)comparisonFunction, this );
 
+    // transition Phase 3 --> Phase 4
+    time_t start_time_phase4 = time(NULL);
+    negotiation_cycle_stats[0]->duration_phase3 += start_time_phase4 - start_time_phase3;
+
+	double scheddUsed=0;
 	int spin_pie=0;
 	do {
 		spin_pie++;
@@ -1451,9 +2048,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		dprintf (D_FULLDEBUG, "    MaxPrioValue = %f\n", maxPrioValue);
 		dprintf (D_FULLDEBUG, "    NumSubmitterAds = %d\n", scheddAds.MyLength());
 		scheddAds.Open();
+        // These are submitter ads, not the actual schedd daemon ads.
+        // "schedd" seems to be used interchangeably with "submitter" here
 		while( (schedd = scheddAds.Next()) )
 		{
-			// get the name and address of the schedd
+			// get the name of the submitter and address of the schedd-daemon it came from
 			if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
 				!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
 			{
@@ -1462,7 +2061,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				dprintf( D_ALWAYS, "  Ignoring this schedd and continuing\n" );
 				scheddAds.Remove( schedd );
 				continue;
-			}	
+			}
+
 			num_idle_jobs = 0;
 			schedd->LookupInteger(ATTR_IDLE_JOBS,num_idle_jobs);
 			if ( num_idle_jobs < 0 ) {
@@ -1574,7 +2174,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				dprintf(D_ALWAYS,
 					"  %d seconds spent, max allowed %d\n ",
 					totalTime, MaxTimePerSubmitter);
-				negotiation_cycle_stats[0]->SubmitterOutOfTime( scheddName.Value() );
+				negotiation_cycle_stats[0]->submitters_out_of_time.insert(scheddName.Value());
 				result = MM_DONE;
 			} else {
 				if ( (submitterLimit <= 0 || pieLeft < minSlotWeight) && spin_pie > 1 ) {
@@ -1588,14 +2188,17 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					int numMatched = 0;
 					startTime = time(NULL);
 					double limitUsed = 0.0;
+                    if (negotiation_cycle_stats[0]->active_submitters.count(scheddName.Value()) <= 0) {
+                        negotiation_cycle_stats[0]->num_idle_jobs += num_idle_jobs;
+                    }
+					negotiation_cycle_stats[0]->active_submitters.insert(scheddName.Value());
+					negotiation_cycle_stats[0]->active_schedds.insert(scheddAddr.Value());
 					result=negotiate( scheddName.Value(),schedd,submitterPrio,
 								  submitterAbsShare, submitterLimit,
 								  startdAds, claimIds, 
 								  scheddVersion, ignore_schedd_limit,
 								  startTime, numMatched, limitUsed, pieLeft);
-					negotiation_cycle_stats[0]->SubmitterActive( scheddName.Value() );
 					updateNegCycleEndTime(startTime, schedd);
-
 				}
 			}
 
@@ -1604,8 +2207,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				case MM_RESUME:
 					// the schedd hit its resource limit.  must resume 
 					// negotiations in next spin
-					dprintf(D_FULLDEBUG,
-							"  This submitter hit its submitterLimit.\n");
+					scheddUsed += accountant.GetWeightedResourcesUsed(scheddName.Value());
+                    negotiation_cycle_stats[0]->submitters_share_limit.insert(scheddName.Value());
+					dprintf(D_FULLDEBUG, "  This submitter hit its submitterLimit.\n");
 					break;
 				case MM_DONE: 
 					if (rejForNetworkShare) {
@@ -1617,8 +2221,10 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					} else {
 							// the schedd got all the resources it
 							// wanted. delete this schedd ad.
-						dprintf(D_FULLDEBUG,"  Submitter %s got all it wants; "
-								"removing it.\n", scheddName.Value() );
+						dprintf(D_FULLDEBUG,"  Submitter %s got all it wants; removing it.\n", scheddName.Value());
+                        scheddUsed += accountant.GetWeightedResourcesUsed(scheddName.Value());
+                        dprintf( D_FULLDEBUG, " resources used by %s are %f\n",scheddName.Value(),	
+                                 accountant.GetWeightedResourcesUsed(scheddName.Value()));
 						scheddAds.Remove( schedd);
 					}
 					break;
@@ -1626,14 +2232,25 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				default:
 					dprintf(D_ALWAYS,"  Error: Ignoring submitter for this cycle\n" );
 					sockCache->invalidateSock( scheddAddr.Value() );
+	
+					scheddUsed += accountant.GetWeightedResourcesUsed(scheddName.Value());
+					dprintf( D_FULLDEBUG, " resources used by %s are %f\n",scheddName.Value(),	
+						    accountant.GetWeightedResourcesUsed(scheddName.Value()));
 					scheddAds.Remove( schedd );
-					negotiation_cycle_stats[0]->SubmitterFailed( scheddName.Value() );
+					negotiation_cycle_stats[0]->submitters_failed.insert(scheddName.Value());
 			}
 		}
 		scheddAds.Close();
+		dprintf( D_FULLDEBUG, " resources used scheddUsed= %f\n",scheddUsed);
+
+		groupusage = scheddUsed;
 	} while ( ( pieLeft < pieLeftOrig || scheddAds.MyLength() < scheddAdsCountOrig )
 			  && (scheddAds.MyLength() > 0)
 			  && (startdAds.MyLength() > 0) );
+
+	dprintf( D_ALWAYS, " negotiateWithGroup resources used scheddAds length %d \n",scheddAds.MyLength());
+
+    negotiation_cycle_stats[0]->duration_phase4 += time(NULL) - start_time_phase4;    
 
 	return TRUE;
 }
@@ -1730,23 +2347,29 @@ trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
 }
 
 double Matchmaker::
-sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight)
+sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds, double* minSlotWeight, ExprTree* constraint)
 {
 	ClassAd *ad = NULL;
 	double sum = 0.0;
 
 	if( minSlotWeight ) {
-		*minSlotWeight = 0;
+		*minSlotWeight = DBL_MAX;
 	}
 
 	startdAds.Open();
 	while( (ad=startdAds.Next()) ) {
+        // only count ads satisfying constraint, if given
+        if ((NULL != constraint) && !EvalBool(ad, constraint)) {
+            continue;
+        }
+
 		float slotWeight = accountant.GetSlotWeight(ad);
 		sum+=slotWeight;
-		if( minSlotWeight && slotWeight < *minSlotWeight ) {
+		if (minSlotWeight && (slotWeight < *minSlotWeight)) {
 			*minSlotWeight = slotWeight;
 		}
 	}
+
 	return sum;
 }
 
@@ -2182,7 +2805,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		// any reschedule requests queued up on our command socket, so
 		// we do not negotiate over & over unnecesarily.
 		daemonCore->ServiceCommandSocket();
-	
+
 		currentTime = time(NULL);
 
 		if( (currentTime - startTime) > MaxTimePerSpin) {
@@ -2281,6 +2904,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 			return MM_ERROR;
 		}
 		dprintf(D_ALWAYS, "    Request %05d.%05d:\n", cluster, proc);
+        negotiation_cycle_stats[0]->num_jobs_considered += 1;
 
 #if !defined(WANT_OLD_CLASSADS)
 		request.AddTargetRefs( TargetMachineAttrs );
@@ -2339,6 +2963,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 				negotiation_cycle_stats[0]->rejections++;
 
 				if( rejForSubmitterLimit ) {
+                    negotiation_cycle_stats[0]->submitters_share_limit.insert(scheddName);
 					limited_by_submitterLimit = true;
 				}
 				if (rejForNetwork) {
@@ -3312,6 +3937,13 @@ Matchmaker::calculatePieLeft(
 	scheddAds.Open();
 	while ((schedd = scheddAds.Next()))
 	{
+        // Don't allow pie to exceed limits imposed by group quotas
+        if ((NULL != groupAccountingName) && (groupusage >= groupQuota)) {
+            double over = groupusage - groupQuota;
+            pieLeft -= min(over, pieLeft);
+            break;
+        }
+
 		double submitterShare = 0.0;
 		double submitterAbsShare = 0.0;
 		double submitterPrio = 0.0;
@@ -3342,6 +3974,8 @@ Matchmaker::calculatePieLeft(
 			
 			
 		pieLeft += submitterLimit;
+        // account for expected group usage increases as we accumulate pie
+        if (NULL != groupAccountingName) groupusage += submitterLimit;
 	}
 	scheddAds.Close();
 }
@@ -3740,21 +4374,6 @@ add_candidate(ClassAd * candidate,
 }
 
 
-int Matchmaker::
-groupSortCompare(const void* elem1, const void* elem2)
-{
-	const SimpleGroupEntry* Elem1 = (const SimpleGroupEntry*) elem1;
-	const SimpleGroupEntry* Elem2 = (const SimpleGroupEntry*) elem2;
-
-	if ( Elem1->prio < Elem2->prio ) {
-		return -1;
-	} 
-	if ( Elem1->prio == Elem2->prio ) {
-		return 0;
-	} 
-	return 1;
-}
-
 void Matchmaker::DeleteMatchList()
 {
 	if( MatchList ) {
@@ -3895,16 +4514,21 @@ void
 Matchmaker::updateCollector() {
 	dprintf(D_FULLDEBUG, "enter Matchmaker::updateCollector\n");
 
+		// in case our address changes, re-initialize public ad every time
+	init_public_ad();
+
 	if( publicAd ) {
 		publishNegotiationCycleStats( publicAd );
-	}
+
+		daemonCore->monitor_data.ExportData(publicAd);
 
 		// log classad into sql log so that it can be updated to DB
-	FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
+		FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
 
-	if (publicAd) {
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 		NegotiatorPluginManager::Update(*publicAd);
+#endif
 #endif
 		daemonCore->sendUpdates(UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}
@@ -4122,36 +4746,15 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 		slotX_last_match_time.sprintf("slot%d_%s",slot_id,ATTR_MACHINE_LAST_MATCH_TIME);
 		slot1_update_ad.Assign(slotX_last_match_time.Value(),(int)now);
 
-		classy_counted_ptr<ClassAdMsg> msg = \
+		classy_counted_ptr<ClassAdMsg> lmsg = \
 			new ClassAdMsg(MERGE_STARTD_AD, slot1_update_ad);
 
 		if( !collector->useTCPForUpdates() ) {
-			msg->setStreamType( Stream::safe_sock );
+			lmsg->setStreamType( Stream::safe_sock );
 		}
 
-		collector->sendMsg( msg.get() );
+		collector->sendMsg( lmsg.get() );
 	}
-}
-
-NegotiationCycleStats::NegotiationCycleStats():
-	duration(0),
-	matches(0),
-	rejections(0)
-{
-	start_time = time(NULL);
-}
-
-void NegotiationCycleStats::SubmitterOutOfTime( StringSetType const &submitter )
-{
-	submitters_out_of_time.insert( submitter );
-}
-void NegotiationCycleStats::SubmitterFailed( StringSetType const &submitter )
-{
-	submitters_failed.insert( submitter );
-}
-void NegotiationCycleStats::SubmitterActive( StringSetType const &submitter )
-{
-	active_submitters.insert( submitter );
 }
 
 void Matchmaker::StartNewNegotiationCycleStat()
@@ -4196,6 +4799,14 @@ SetAttrN( ClassAd *ad, char const *attr, int n, int value )
 }
 
 static void
+SetAttrN( ClassAd *ad, char const *attr, int n, double value )
+{
+	MyString attrn;
+	attrn.sprintf("%s%d",attr,n);
+	ad->Assign(attrn.Value(),value);
+}
+
+static void
 SetAttrN( ClassAd *ad, char const *attr, int n, std::set<std::string> &string_list )
 {
 	MyString attrn;
@@ -4216,40 +4827,74 @@ SetAttrN( ClassAd *ad, char const *attr, int n, std::set<std::string> &string_li
 	ad->Assign(attrn.Value(),value.Value());
 }
 
+
 void
 Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 {
-	int i;
-	char const *attrs[8];
-	attrs[0] = ATTR_LAST_NEGOTIATION_CYCLE_TIME;
-	attrs[1] = ATTR_LAST_NEGOTIATION_CYCLE_DURATION;
-	attrs[2] = ATTR_LAST_NEGOTIATION_CYCLE_MATCHES;
-	attrs[3] = ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS;
-	attrs[4] = ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED;
-	attrs[5] = ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME;
-	attrs[6] = ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT;
-	attrs[7] = NULL;
+	char const* attrs[] = {
+        ATTR_LAST_NEGOTIATION_CYCLE_TIME,
+        ATTR_LAST_NEGOTIATION_CYCLE_END,
+        ATTR_LAST_NEGOTIATION_CYCLE_PERIOD,
+        ATTR_LAST_NEGOTIATION_CYCLE_DURATION,
+        ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE1,
+        ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE2,
+        ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE3,
+        ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE4,
+        ATTR_LAST_NEGOTIATION_CYCLE_TOTAL_SLOTS,
+        ATTR_LAST_NEGOTIATION_CYCLE_TRIMMED_SLOTS,
+        ATTR_LAST_NEGOTIATION_CYCLE_CANDIDATE_SLOTS,
+        ATTR_LAST_NEGOTIATION_CYCLE_SLOT_SHARE_ITER,
+        ATTR_LAST_NEGOTIATION_CYCLE_NUM_SCHEDULERS,
+        ATTR_LAST_NEGOTIATION_CYCLE_NUM_IDLE_JOBS,
+        ATTR_LAST_NEGOTIATION_CYCLE_NUM_JOBS_CONSIDERED,
+        ATTR_LAST_NEGOTIATION_CYCLE_MATCHES,
+        ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS,
+        ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED,
+        ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME,
+        ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT,
+        ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT,
+        ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE,
+        ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED
+    };
+    const int nattrs = sizeof(attrs)/sizeof(*attrs);
 
 		// clear out all negotiation cycle attributes in the ad
-	for(i=0; i<MAX_NEGOTIATION_CYCLE_STATS; i++) {
-		int a;
-		for(a=0; a<sizeof(attrs)/sizeof(char *) && attrs[a]; a++) {
+	for (int i=0; i<MAX_NEGOTIATION_CYCLE_STATS; i++) {
+		for (int a=0; a<nattrs; a++) {
 			DelAttrN( ad, attrs[a], i );
 		}
 	}
 
-	for(i=0; i<num_negotiation_cycle_stats; i++) {
-		NegotiationCycleStats *s = negotiation_cycle_stats[i];
-		if( !s ) {
-			continue;
-		}
+	for (int i=0; i<num_negotiation_cycle_stats; i++) {
+		NegotiationCycleStats* s = negotiation_cycle_stats[i];
+		if (s == NULL) continue;
 
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_MATCHES, i, s->matches);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS, i, s->rejections);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TIME, i, s->start_time);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION, i, s->duration);
-		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT, i, s->active_submitters.size());
+        int period = 0;
+        if (((1+i) < num_negotiation_cycle_stats) && (negotiation_cycle_stats[1+i] != NULL))
+            period = s->end_time - negotiation_cycle_stats[1+i]->end_time;
+
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TIME, i, (int)s->start_time);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_END, i, (int)s->end_time);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_PERIOD, i, (int)period);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION, i, (int)s->duration);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE1, i, (int)s->duration_phase1);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE2, i, (int)s->duration_phase2);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE3, i, (int)s->duration_phase3);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_DURATION_PHASE4, i, (int)s->duration_phase4);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TOTAL_SLOTS, i, (int)s->total_slots);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_TRIMMED_SLOTS, i, (int)s->trimmed_slots);
+        SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_CANDIDATE_SLOTS, i, (int)s->candidate_slots);
+        SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SLOT_SHARE_ITER, i, (int)s->slot_share_iterations);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_NUM_SCHEDULERS, i, (int)s->active_schedds.size());
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_NUM_IDLE_JOBS, i, (int)s->num_idle_jobs);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_NUM_JOBS_CONSIDERED, i, (int)s->num_jobs_considered);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_MATCHES, i, (int)s->matches);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_REJECTIONS, i, (int)s->rejections);
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE, i, (s->duration > 0) ? (double)(s->matches)/double(s->duration) : double(0.0));
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_MATCH_RATE_SUSTAINED, i, (period > 0) ? (double)(s->matches)/double(period) : double(0.0));
+		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_ACTIVE_SUBMITTER_COUNT, i, (int)s->active_submitters.size());
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_FAILED, i, s->submitters_failed);
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME, i, s->submitters_out_of_time);
+        SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT, i, s->submitters_share_limit);
 	}
 }

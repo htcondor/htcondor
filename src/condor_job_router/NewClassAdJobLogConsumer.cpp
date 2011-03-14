@@ -30,7 +30,7 @@
 #undef open
 #include "classad/classad_distribution.h"
 
-NewClassAdJobLogConsumer::NewClassAdJobLogConsumer() { }
+NewClassAdJobLogConsumer::NewClassAdJobLogConsumer() : m_reader(0) { }
 
 void
 NewClassAdJobLogConsumer::Reset()
@@ -51,8 +51,8 @@ NewClassAdJobLogConsumer::Reset()
 
 bool
 NewClassAdJobLogConsumer::NewClassAd(const char *key,
-									 const char */*type*/,
-									 const char */*target*/)
+									 const char * /*type*/,
+									 const char * /*target*/)
 {
 	classad::ClassAd* ad;
 	bool using_existing_ad = false;

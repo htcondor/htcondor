@@ -40,6 +40,8 @@ Hadoop::Hadoop() {
         m_adPubInterval  = 5;
         m_hadoopHome     = NULL;
         m_timer          = -1;
+        m_nodeType = HDFS_DATANODE;
+        m_namenodeRole = ACTIVE;
 }
 
 void Hadoop::initialize() {
@@ -481,7 +483,7 @@ void Hadoop::startService( NodeType type ) {
                 dprintf(D_ALWAYS, "Couldn't create a stdout pipe\n");
         } else {
                 if (! daemonCore->Register_Pipe(stdoutFds[0], "hadoop stdout",
-                        (PipeHandlercpp) &Hadoop::stdoutHandler,
+                        static_cast<PipeHandlercpp>(&Hadoop::stdoutHandler),
                         "stdout", this) ) {
 
                         dprintf(D_ALWAYS, "Couldn't register stdout pipe\n");                        
@@ -497,7 +499,7 @@ void Hadoop::startService( NodeType type ) {
                 dprintf(D_ALWAYS, "Couldn't create a stderr pipe\n");
         } else {
                 if (! daemonCore->Register_Pipe(stderrFds[0], "hadoop stderr",
-                        (PipeHandlercpp) &Hadoop::stderrHandler, 
+                        static_cast<PipeHandlercpp>(&Hadoop::stderrHandler), 
                         "stderr", this) ) {
 
                         dprintf(D_ALWAYS, "Couldn't register stderr, pipe\n");
@@ -709,13 +711,14 @@ void Hadoop::publishClassAd() {
            MyString mode  = runDFSAdmin("-safemode get");
            MyString stats = runDFSAdmin("-report");
 
-           updateClassAd( mode, stats );       }
+           updateClassAd( mode, stats );
+       }
        daemonCore->UpdateLocalAd(&m_hdfsAd);
        int stat = daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_hdfsAd, NULL, true);
        dprintf(D_FULLDEBUG, "Updated ClassAds (status = %d)\n", stat);
 }
 
-void Hadoop::stdoutHandler(int /*pipe*/) {
+int Hadoop::stdoutHandler(int /*pipe*/) {
         char buff[STDOUT_READBUF_SIZE];
         int bytes = 0;
         int ad_type = AD_NULL;
@@ -755,9 +758,10 @@ void Hadoop::stdoutHandler(int /*pipe*/) {
                     pos = m_line_stdout.FindChar('\n', 0);
              }
         }
+		return 0;
 }
 
-void Hadoop::stderrHandler(int /*pipe*/) {
+int Hadoop::stderrHandler(int /*pipe*/) {
         char buff[STDOUT_READBUF_SIZE];
         int bytes = 0;
 
@@ -774,6 +778,7 @@ void Hadoop::stderrHandler(int /*pipe*/) {
                     pos = m_line_stderr.FindChar('\n', 0);
              }
         }
+		return 0;
 }
 
 

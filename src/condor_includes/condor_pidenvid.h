@@ -129,7 +129,7 @@ void pidenvid_init(PidEnvID *penvid);
 int pidenvid_filter_and_insert(PidEnvID *penvid, char **env);
 
 /* create an envid string */
-int pidenvid_format_to_envid(char *dest, int size, 
+int pidenvid_format_to_envid(char *dest, unsigned size, 
 	pid_t forker_pid, pid_t forked_pid, time_t t, unsigned int mii);
 
 /* expand an envid string into the component pieces */

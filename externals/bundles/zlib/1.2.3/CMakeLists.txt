@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -15,8 +15,9 @@
  # limitations under the License. 
  # 
  ############################################################### 
-
-option(WITH_ZLIB "Compiling with support for ZLIB" ON)
+if (NOT WINDOWS)
+    option(WITH_ZLIB "Compiling with support for ZLIB" ON)
+endif()
 
 if (WITH_ZLIB)
 

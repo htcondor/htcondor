@@ -86,7 +86,7 @@ static  void processCommandLineArguments(int, char *[]);
 static  bool process_buffer_line( ClassAd * );
 
 static 	void short_header (void);
-static 	void usage (char *);
+static 	void usage (const char *);
 static 	void io_display (ClassAd *);
 static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
@@ -157,7 +157,7 @@ static  Daemon *g_cur_schedd_for_process_buffer_line = NULL;
 
 static  ClassAdAnalyzer analyzer;
 
-static char* format_owner( char*, AttrList* );
+static const char* format_owner( char*, AttrList* );
 
 // clusterProcString is the container where the output strings are
 //    stored.  We need the cluster and proc so that we can sort in an
@@ -178,6 +178,8 @@ clusterProcString::
 clusterProcString() {
 	dagman_cluster_id = -1;
 	dagman_proc_id    = -1;
+	cluster = -1;
+	proc = -1;
 	string = 0;
 	return;
 }
@@ -204,7 +206,7 @@ static  int			findSubmittor( char * );
 static	void 		setupAnalysis();
 static 	void		fetchSubmittorPrios();
 static	void		doRunAnalysis( ClassAd*, Daemon* );
-static	char *		doRunAnalysisToBuffer( ClassAd*, Daemon* );
+static	const char *doRunAnalysisToBuffer( ClassAd*, Daemon* );
 struct 	PrioEntry { MyString name; float prio; };
 static  bool        better_analyze = false;
 static	bool		run = false;
@@ -1599,13 +1601,13 @@ format_remote_host (char *, AttrList *ad)
 	return unknownHost;
 }
 
-static char *
+static const char *
 format_cpu_time (float utime, AttrList *ad)
 {
 	return format_time( (int) job_time(utime,(ClassAd *)ad) );
 }
 
-static char *
+static const char *
 format_goodput (int job_status, AttrList *ad)
 {
 	static char put_result[9];
@@ -1628,7 +1630,7 @@ format_goodput (int job_status, AttrList *ad)
 	return put_result;
 }
 
-static char *
+static const char *
 format_mbps (float bytes_sent, AttrList *ad)
 {
 	static char result_format[10];
@@ -1648,7 +1650,7 @@ format_mbps (float bytes_sent, AttrList *ad)
 	return result_format;
 }
 
-static char *
+static const char *
 format_cpu_util (float utime, AttrList *ad)
 {
 	static char result_format[10];
@@ -1662,7 +1664,7 @@ format_cpu_util (float utime, AttrList *ad)
 	return result_format;
 }
 
-static char *
+static const char *
 format_owner (char *owner, AttrList *ad)
 {
 	static char result_format[15] = "";
@@ -1710,7 +1712,7 @@ format_owner (char *owner, AttrList *ad)
 	return result_format;
 }
 
-static char *
+static const char *
 format_globusStatus( int globusStatus, AttrList * /* ad */ )
 {
 	static char result_format[64];
@@ -1726,7 +1728,7 @@ format_globusStatus( int globusStatus, AttrList * /* ad */ )
 // with is defined. So we register it with an attribute we know will
 // always be present and be a string. We then ignore that attribute
 // and examine GlobusResource and GridResource.
-static char *
+static const char *
 format_globusHostAndJM( char *, AttrList *ad )
 {
 	static char result_format[64];
@@ -1815,7 +1817,7 @@ format_globusHostAndJM( char *, AttrList *ad )
 
 
 
-static char *
+static const char *
 format_q_date (int d, AttrList *)
 {
 	return format_date(d);
@@ -1823,7 +1825,7 @@ format_q_date (int d, AttrList *)
 
 		
 static void
-usage (char *myName)
+usage (const char *myName)
 {
 	printf ("Usage: %s [options]\n\twhere [options] are\n"
 		"\t\t-global\t\t\tGet global queue\n"
@@ -2630,7 +2632,7 @@ doRunAnalysis( ClassAd *request, Daemon *schedd )
 	printf("%s", doRunAnalysisToBuffer( request, schedd ) );
 }
 
-static char *
+static const char *
 doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 {
 	char	owner[128];
@@ -2675,6 +2677,11 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
 	request->Insert( buffer );
 
+
+	int last_match_time=0, last_rej_match_time=0;
+	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
+	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
+
 	request->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	request->LookupInteger( ATTR_PROC_ID, proc );
 	request->LookupInteger( ATTR_JOB_STATUS, jobState );
@@ -2715,6 +2722,13 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			proc );
 		return return_buff;
 	}
+	if ( last_rej_match_time == 0 ) {
+	  sprintf( return_buff,
+		   "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
+		   proc );
+	  return return_buff;
+	}
+
 
 	startdAds.Open();
 
@@ -2884,9 +2898,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		fOffline, verbose ? fOfflineStr.c_str() : "",
 		available );
 
-	int last_match_time=0, last_rej_match_time=0;
-	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
-	request->LookupInteger(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
 	if (last_match_time) {
 		time_t t = (time_t)last_match_time;
 		sprintf( return_buff, "%s\tLast successful match: %s",
@@ -3085,7 +3096,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
     file = safe_fopen_wrapper(filename, "r");
     if (file == NULL) {
         fprintf(stderr, "Can't open file of job ads: %s\n", filename);
-        success = false;
+		return false;
     } else {
         do {
             classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
@@ -3101,6 +3112,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
         } else {
             success = true;
         }
+		fclose(file);
     }
     return success;
 }

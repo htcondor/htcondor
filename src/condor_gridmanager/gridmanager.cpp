@@ -514,8 +514,8 @@ UPDATE_JOBAD_signalHandler( int )
 // variables.  It is safe to repeatedly call
 // initJobExprs.
 static const char * expr_false = "FALSE";
-static const char * expr_true = "TRUE";
 // Not currently used
+//static const char * expr_true = "TRUE";
 //static const char * expr_undefined = "UNDEFINED";
 	// The job is matched, or in unknown match state.
 	// definately unmatched
@@ -943,7 +943,7 @@ contact_schedd_next_add_job:
 	if ( updateJobsSignaled ) {
 		dprintf( D_FULLDEBUG, "querying for jobs with attribute updates\n" );
 
-		sprintf( expr_buf, "%s && %s && %s && %s && %s",
+		sprintf( expr_buf, "%s && %s && %s && %s",
 				 expr_schedd_job_constraint.c_str(), 
 				 expr_not_completely_done.c_str(),
 				 expr_not_held.c_str(),

@@ -995,33 +995,6 @@ static unsigned long ntohL(unsigned long netint)
 	return hostint;
 }
 
-// no hton function is provided for ints > 4 bytes by any OS.
-static uint64_t htonLL(uint64_t hostint)
-{
-	uint64_t netint;
-	char *hostp = (char *)&hostint;
-	char *netp = (char *)&netint;
-
-	for (unsigned int i=0, j=sizeof(uint64_t)-1; i < sizeof(uint64_t); i++, j--) {
-		netp[i] = hostp[j];
-	}
-	return netint;
-}
-
-// no ntoh function is provided for ints > 4 bytes by any OS.
-static uint64_t ntohLL(uint64_t netint)
-{
-	uint64_t hostint;
-	char *hostp = (char *)&hostint;
-	char *netp = (char *)&netint;
-
-	for (unsigned int i=0, j=sizeof(uint64_t)-1; i < sizeof(uint64_t); i++, j--) {
-		hostp[i] = netp[j];
-	}
-	return hostint;
-}
-
-
 int 
 Stream::put( long	l)
 {
@@ -1096,6 +1069,35 @@ Stream::put( unsigned long	l)
 
 
 #if !defined(__LP64__) || defined(Darwin)
+
+// no hton function is provided for ints > 4 bytes by any OS,
+// but we only use it here.
+static uint64_t htonLL(uint64_t hostint)
+{
+	uint64_t netint;
+	char *hostp = (char *)&hostint;
+	char *netp = (char *)&netint;
+
+	for (unsigned int i=0, j=sizeof(uint64_t)-1; i < sizeof(uint64_t); i++, j--) {
+		netp[i] = hostp[j];
+	}
+	return netint;
+}
+
+// no ntoh function is provided for ints > 4 bytes by any OS,
+// but we only use it here.
+static uint64_t ntohLL(uint64_t netint)
+{
+	uint64_t hostint;
+	char *hostp = (char *)&hostint;
+	char *netp = (char *)&netint;
+
+	for (unsigned int i=0, j=sizeof(uint64_t)-1; i < sizeof(uint64_t); i++, j--) {
+		hostp[i] = netp[j];
+	}
+	return hostint;
+}
+
 int 
 Stream::put( int64_t	l)
 {

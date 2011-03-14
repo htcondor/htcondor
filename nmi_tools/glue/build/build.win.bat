@@ -16,14 +16,19 @@ for /D %%I in ("%VS90COMNTOOLS%..") do set VS90ROOT=%%~sdpI
 set VS_DIR=%VS90ROOT:~0,-1%
 set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VS_DIR%\bin
+
 set DOTNET_PATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
-set PERL_PATH=c:\prereq\ActivePerl-5.10.1\bin;c:\perl\bin
+
+set PERL_PATH=c:\perl\site\bin;c:\perl\bin
+for /D %%I in ("c:\prereq\ActivePerl*") do set ACTIVE_PERL_DIR=%%~fI
+if NOT "~%ACTIVE_PERL_DIR%"=="~" set PERL_PATH=%ACTIVE_PERL_DIR%\site\bin;%ACTIVE_PERL_DIR%\bin;%PERL_PATH%
+
 set ZIP_PATH=%ProgramFiles%\7-Zip
 set WIX_PATH=%WIX%
 set MSCONFIG_TOOLS_DIR=%BUILD_ROOT%\msconfig
-set CMAKE_BIN=%ProgramFiles%\CMake 2.8\bin
+set CMAKE_BIN_DIR=%ProgramFiles%\CMake 2.8\bin
 
-set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN%;%ZIP_PATH%;%WIX_PATH%
+set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN_DIR%;%ZIP_PATH%;%WIX_PATH%
 @echo PATH=%PATH%
 
 set INCLUDE=%BUILD_ROOT%\src\condor_utils

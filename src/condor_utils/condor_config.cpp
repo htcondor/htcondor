@@ -104,8 +104,8 @@ void fill_attributes();
 void check_domain_attributes();
 void clear_config();
 void reinsert_specials(char*);
-void process_config_source(char*, char*, char*, int);
-void process_locals( char*, char*);
+void process_config_source(const char*, const char*, const char*, int);
+void process_locals( const char*, const char*);
 void process_directory( char*, char*);
 static int  process_dynamic_configs();
 void check_params();
@@ -456,6 +456,8 @@ condor_auth_config(int is_daemon)
 		}
 	}
 
+#else
+	(void) is_daemon;	// Quiet 'unused parameter' warnings
 #endif
 }
 
@@ -512,9 +514,9 @@ condor_net_remap_config( bool force_param )
 				all_brokers.rewind();
 				while ( (next_broker = all_brokers.next()) ) {
 					int rc = 0;
-					int num_slots = 0;
 
 #if HAVE_EXT_GCB
+					int num_slots = 0;	/* only used w/HAVE_EXT_GCB */
 					rc = GCB_broker_query( next_broker,
 										   GCB_DATA_QUERY_FREE_SOCKS,
 										   &num_slots );
@@ -833,7 +835,8 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 
 
 void
-process_config_source( char* file, char* name, char* host, int required )
+process_config_source( const char* file, const char* name,
+					   const char* host, int required )
 {
 	int rval;
 	if( access( file, R_OK ) != 0 && !is_piped_command(file)) {
@@ -861,7 +864,7 @@ process_config_source( char* file, char* name, char* host, int required )
 // config source listed there.  If the value is actually a cmd whose
 // output should be piped, then do *not* treat it as a file list.
 void
-process_locals( char* param_name, char* host )
+process_locals( const char* param_name, const char* host )
 {
 	StringList sources_to_process, sources_done;
 	char *source, *sources_value;
@@ -1489,111 +1492,102 @@ param(const char* name)
 }
 
 char *
-param_with_default_abort(const char *name, int abort) {
-	//look for subsys.param in config table first
-	MyString subsysparamname = get_mySubSystem()->getName();
-	subsysparamname += ".";
-	subsysparamname += name;
-	const char* subsysname = subsysparamname.Value();
-	char *val = lookup_macro( subsysname, ConfigTab, TABLESIZE );
+param_with_default_abort(const char *name, int abort) 
+{
+	char *val = NULL;
+	char *next_param_name = NULL;
+	MyString subsys = get_mySubSystem()->getName();
+	MyString local = get_mySubSystem()->getLocalName();
+	MyString subsys_local_name;
+	MyString local_name;
+	MyString subsys_name;
 
-	if( val == NULL ) {
+	// Set up the namespace search for the param name.
+	// WARNING: The order of appending matters. We search more specific 
+	// to less specific in the namespace.
+	StringList sl;
+	if (local != "") {
+		subsys_local_name = (((subsys + ".") + local) + ".") + name;
+		sl.append(subsys_local_name.Value());
 
-/*		dprintf(D_ALWAYS, "'%s' not found in config table, looking in param info table\n", subsysname);*/
-		//couldn't find subsys.param in config table
-		//look for subsys.param in param info table
+		local_name = (local + ".") + name;
+		sl.append(local_name.Value());
+	}
+	subsys_name = (subsys + ".") + name;
+	sl.append(subsys_name.Value());
+	sl.append(name);
 
-		val = param_default_string(subsysname);
+	// Search in left to right order until we find a meaningful val or
+	// can bail out early from the search.
+	sl.rewind();
+	while(val == NULL && (next_param_name = sl.next())) {
+		// See if the candidate is in the Config Table
+		val = lookup_macro(next_param_name, ConfigTab, TABLESIZE);
+
+		if (val != NULL && val[0] == '\0') {
+			// The config table specifically wanted the value to be empty, 
+			// so we honor it regardless of what is in the Default Table.
+			return NULL;
+		}
+
 		if (val != NULL) {
+			// we found something not empty, don't look in the Default Table
+			// and stop the search
+			break;
+		}
 
-			//add value to config table
-			insert(subsysname, val, ConfigTab, TABLESIZE);
+		// At this point in the loop, val == NULL, see if we can find
+		// something in the Default Table.
 
-			if (val[0] != '\0') {
-
-/*				dprintf(D_ALWAYS, "'%s' found in param info table, adding to config table, value: '%s'\n", subsysname, val);*/
-				//found subsys.param in param info table
-
-			} else {
-
-				// the subsytem-specific setting was set to the empty string, so we
-				// return NULL without checking for the actual name since presumably
-				// it was set to empty specifically to clear this parameter for this
-				// specific subsystem.
-
-				dprintf(D_ALWAYS, "'%s' found in param info table, but it was empty, adding to config table\n", subsysname);
-
+		// The candidate wasn't in the Config Table, so check the Default Table
+		val = param_default_string(next_param_name);
+		if (val != NULL) {
+			// Yay! Found something! Add the entry found in the Default 
+			// Table to the Config Table. This could be adding an empty
+			// string. If a default found, the loop stops searching.
+			insert(next_param_name, val, ConfigTab, TABLESIZE);
+			// also add it to the lame extra-info table
+			if (extra_info != NULL) {
+				extra_info->AddInternalParam(next_param_name);
+			}
+			if (val[0] == '\0') {
+				// If indeed it was empty, then just bail since it was
+				// validly found in the Default Table, but empty.
 				return NULL;
 			}
-
-		} else {
-
-/*			dprintf(D_ALWAYS, "'%s' not found in param info table, looking for '%s' in config table\n", subsysname, name);*/
-			//couldn't find subsys.param in param info table
-			//look for param in config table
-
-			val = lookup_macro( name, ConfigTab, TABLESIZE );
-			if (val != NULL) {
-
-/*				dprintf(D_ALWAYS, "'%s' found in config table\n", name);*/
-				//found param in config table
-
-			} else {
-
-/*				dprintf(D_ALWAYS, "'%s' not found in config table, looking in param info table\n", name);*/
-				//couldn't find param in config table
-				//look for param in param info table
-
-				val = param_default_string(name);
-				if (val != NULL) {
-
-/*					dprintf(D_ALWAYS, "'%s' found in param info table, adding to config table, value: '%s'\n", name, val);*/
-					//found param in param info table
-
-					//add value to config table
-					insert(name, val, ConfigTab, TABLESIZE);
-					
-					// also add it to the lame extra-info table
-					if (extra_info != NULL) {
-						extra_info->AddInternalParam(name);
-					}
-
-				} else {
-
-					//couldn't find subsys.param or param anywhere
-					if (abort) {
-						EXCEPT("'%s' or '%s' not found anywhere, add one of them to the table\n", subsysname, name);
-					} else {
-						return NULL;
-					}
-				}
-			}
 		}
-	} else if (val[0] == '\0' ) {
-		// the subsytem-specific setting was set to the empty string, so we
-		// return NULL without checking for the actual name since presumably
-		// it was set to empty specifically to clear this parameter for this
-		// specific subsystem.
-
-/*		dprintf(D_ALWAYS, "'%s' found in config table, but it was empty\n", subsysname);*/
-
-		return NULL;
-	} else {
-/*		dprintf(D_ALWAYS, "'%s' found in config table\n", subsysname);*/
 	}
 
-	// Ok, now expand it out...
+	// If we don't find any value at all, determine if we must abort or 
+	// simply return NULL which will allow older code calling param to do
+	// the right thing (usually by setting up an ad hoc default at the call
+	// site).
+	if (val == NULL) {
+		if (abort) {
+			EXCEPT("Param name '%s' did not have a definition in any of the "
+				   "usual namespaces or default table. Aborting since it MUST "
+				   "be defined.\n", name);
+		}
+		return NULL;
+	}
+
+	// if we get here, it means that we found a val of note, so expand it and
+	// return the canonical value of it. expand_macro returns allocated memory.
+
 	val = expand_macro( val, ConfigTab, TABLESIZE, NULL, true );
 
-	// If it returned an empty string, free it before returning NULL
 	if( val == NULL ) {
 		return NULL;
-	} else if ( val[0] == '\0' ) {
+	}
+	
+	// If expand_macro returned an empty string, free it before returning NULL
+	if ( val[0] == '\0' ) {
 		free( val );
 		return NULL;
-	} else {
-		return val;
 	}
+
+	// return the fully expanded value
+	return val;
 }
 
 /*
@@ -1870,7 +1864,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 		}
 	}
 
-	bool result;
+	bool result=false;
 	char *string;
 	char *endptr;
 	bool valid = true;

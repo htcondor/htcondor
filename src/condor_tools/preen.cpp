@@ -697,7 +697,7 @@ void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 		return;
 	}
 	const char *entry;
-	while (entry = dir->Next()) {
+	while ((entry = dir->Next()) != 0) {
 		if (!dir->IsDirectory() && depth > 1) { // clean up files floating around randomly -- maybe from older releases
 			lock = new FileLock(path, false, true);
 			bool result = lock->obtain(WRITE_LOCK);

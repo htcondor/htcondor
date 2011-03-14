@@ -20,11 +20,11 @@
 #include "condor_common.h"
 #include "condor_state.h"
 
-static char* condor_states [] = 
+static const char* condor_states [] = 
 { "None", "Owner", "Unclaimed", "Matched",  "Claimed", "Preempting",
   "Shutdown", "Delete", "Backfill" };
 
-static char* condor_activities [] = 
+static const char* condor_activities [] = 
 { "None", "Idle", "Busy", "Retiring", "Vacating", "Suspended", "Benchmarking",
   "Killing" };
 

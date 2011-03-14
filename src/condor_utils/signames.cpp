@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 
-char	*SigNames[] = {
+const char	*SigNames[] = {
 "(0)",
 "SIGHUP",		/* 1 */
 "SIGINT",		/* 2 */

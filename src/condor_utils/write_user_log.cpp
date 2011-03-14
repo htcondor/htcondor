@@ -276,7 +276,7 @@ WriteUserLog::Configure( bool force )
 		m_rotation_lock_fd = open( m_rotation_lock_path, O_WRONLY|O_CREAT, 0666 );
 		if ( m_rotation_lock_fd < 0 ) {
 			dprintf( D_ALWAYS,
-				 "Warning: Failed to open event rotation lock file %s:"
+				 "Warning: WriteUserLog Failed to open event rotation lock file %s:"
 				 " %d (%s)\n",
 				 m_rotation_lock_path, errno, strerror(errno) );
 			m_rotation_lock = new FakeFileLock( );
@@ -285,7 +285,7 @@ WriteUserLog::Configure( bool force )
 			m_rotation_lock = new FileLock( m_rotation_lock_fd,
 										NULL,
 										m_rotation_lock_path );
-			dprintf( D_FULLDEBUG, "Created rotation lock %s @ %p\n",
+			dprintf( D_FULLDEBUG, "WriteUserLog Created rotation lock %s @ %p\n",
 				 m_rotation_lock_path, m_rotation_lock );
 		}
 		set_priv(previous);
@@ -583,7 +583,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 		return false;
 	}
 	if (!m_global_lock->obtain(WRITE_LOCK) ) {
-		dprintf( D_ALWAYS, "Failed to grab global event log lock\n" );
+		dprintf( D_ALWAYS, "ERROR WriteUserLog Failed to grab global event log lock\n" );
 		return false;
 	}
 
@@ -628,7 +628,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 
 		if (!updateGlobalStat() ) {
 			dprintf( D_ALWAYS,
-					 "Failed to update global stat after header write\n" );
+					 "WriteUserLog Failed to update global stat after header write\n" );
 		}
 		else {
 			m_global_state->Update( *m_global_stat );
@@ -637,7 +637,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 
 
 	if (!m_global_lock->release() ) {
-		dprintf( D_ALWAYS, "Failed to release global lock\n" );
+		dprintf( D_ALWAYS, "ERROR WriteUserLog Failed to release global lock\n" );
 	}
 
 	set_priv( priv );
@@ -673,7 +673,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 	if ( !m_global_lock ||
 		 m_global_lock->isFakeLock() ||
 		 m_global_lock->isUnlocked() ) {
-		dprintf( D_ALWAYS, "checking for event log rotation, but no lock\n" );
+		dprintf( D_ALWAYS, "WriteUserLog checking for event log rotation, but no lock\n" );
 	}
 
 	// Don't rotate if max rotations is set to zero
@@ -706,7 +706,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 
 	// Get the rotation lock
 	if ( !m_rotation_lock->obtain( WRITE_LOCK ) ) {
-		dprintf( D_ALWAYS, "Failed to get rotation lock\n" );
+		dprintf( D_ALWAYS, "ERROR WriteUserLog Failed to get rotation lock\n" );
 		return false;
 	}
 
@@ -739,7 +739,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 	filesize_t	current_filesize = 0;
 	StatWrapper	sbuf;
 	if ( sbuf.Stat( fileno(m_global_fp) ) ) {
-		dprintf( D_ALWAYS, "Failed to stat file handle\n" );
+		dprintf( D_ALWAYS, "WriteUserLog Failed to stat file handle\n" );
 	}
 	else {
 		current_filesize = sbuf.GetBuf()->st_size;
@@ -867,7 +867,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 									rotated, m_global_max_rotations );
 	if ( num_rotations ) {
 		dprintf(D_FULLDEBUG,
-				"Rotated event log %s to %s at size %lu bytes\n",
+				"WriteUserLog: Rotated event log %s to %s at size %lu bytes\n",
 				m_global_path, rotated.Value(),
 				(unsigned long) current_filesize);
 	}
@@ -876,13 +876,13 @@ WriteUserLog::checkGlobalLogRotation( void )
 	UtcTime	end_time( true );
 	if ( num_rotations ) {
 		dprintf( D_FULLDEBUG,
-				 "Done rotating files (inode = %ld) @ %.6f\n",
+				 "WriteUserLog: Done rotating files (inode = %ld) @ %.6f\n",
 				 (long)swrap.GetBuf()->st_ino, end_time.combined() );
 	}
 	double	elapsed = end_time.difference( time1 );
 	double	rps = ( num_rotations / elapsed );
 	dprintf( D_FULLDEBUG,
-			 "Rotated %d files in %.4fs = %.0f/s\n",
+			 "WriteUserLog: Rotated %d files in %.4fs = %.0f/s\n",
 			 num_rotations, elapsed, rps );
 # endif
 
@@ -998,8 +998,8 @@ WriteUserLog::doRotation( const char *path, FILE *&fp,
 
 	if ( rotate_file( path, rotated.Value()) == 0 ) {
 		UtcTime after(true);
-		dprintf(D_FULLDEBUG, "before .1 rot: %.6f\n", before.combined() );
-		dprintf(D_FULLDEBUG, "after  .1 rot: %.6f\n", after.combined() );
+		dprintf(D_FULLDEBUG, "WriteUserLog before .1 rot: %.6f\n", before.combined() );
+		dprintf(D_FULLDEBUG, "WriteUserLog after  .1 rot: %.6f\n", after.combined() );
 		num_rotations++;
 	}
 
@@ -1078,7 +1078,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 	}
 	if ( status ) {
 		dprintf( D_ALWAYS,
-				 "fseek(%s) failed in WriteUserLog::doWriteEvent - "
+				 "WriteUserLog fseek(%s) failed in WriteUserLog::doWriteEvent - "
 				 "errno %d (%s)\n",
 				 whence, errno, strerror(errno) );
 	}
@@ -1157,7 +1157,7 @@ WriteUserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 		eventAd = event->toClassAd();	// must delete eventAd eventually
 		if (!eventAd) {
 			dprintf( D_ALWAYS,
-					 "Failed to convert event type # %d to classAd.\n",
+					 "WriteUserLog Failed to convert event type # %d to classAd.\n",
 					 event->eventNumber);
 			success = false;
 		} else {
@@ -1168,7 +1168,7 @@ WriteUserLog::doWriteEvent( FILE *fp, ULogEvent *event, bool use_xml )
 			xmlunp.Unparse(eventAd, adXML);
 			if ( adXML.Length() < 1 ) {
 				dprintf( D_ALWAYS,
-						 "Failed to convert event type # %d to XML.\n",
+						 "WriteUserLog Failed to convert event type # %d to XML.\n",
 						 event->eventNumber);
 			}
 			if (fprintf ( fp, adXML.Value()) < 0) {

@@ -41,6 +41,6 @@ ReliSock* NewConnection( int id );
 void support_job_wrapper(MyString &a_out_name, ArgList *args);
 void setSlotEnv( Env* env_obj );
 
-extern "C" int exception_cleanup(int,int,char*);
+extern "C" int exception_cleanup(int,int,const char*);
 
 #endif /* CONDOR_STARTER_COMMON_H */

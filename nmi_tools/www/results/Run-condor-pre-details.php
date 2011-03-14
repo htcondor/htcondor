@@ -3,7 +3,7 @@
    // Configuration
    //
    define("BRANCH_URL", "./Run-condor-branch.php?branch=%s&user=%s");
-   define("CROSS_DETAIL_URL", "./Run-condor-cross-details.php?runid=%s&platform=%s&user=%s");
+   define("CROSS_DETAIL_URL", "./Run-condor-cross-details.php?runid=%s&platform=%s&type=%s&user=%s");
    define("CONDOR_USER", "cndrauto");
    
    $result_types = Array( "passed", "pending", "failed" );
@@ -122,7 +122,7 @@
 
 
 	if($type == "crosstest") {
-            $detail_url = sprintf(CROSS_DETAIL_URL, $runid, $source, $user);
+            $detail_url = sprintf(CROSS_DETAIL_URL, $runid, $source, $type, $user);
         } else {
             $detail_url = sprintf(DETAIL_URL, $runid, $type, $user);
         }

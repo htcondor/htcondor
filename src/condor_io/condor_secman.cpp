@@ -68,7 +68,7 @@ void SecMan::key_printf(int debug_levels, KeyInfo *k) {
 
 
 
-char* SecMan::sec_feat_act_rev[] = {
+const char* SecMan::sec_feat_act_rev[] = {
 	"UNDEFINED",
 	"INVALID",
 	"FAIL",
@@ -77,7 +77,7 @@ char* SecMan::sec_feat_act_rev[] = {
 };
 
 
-char* SecMan::sec_req_rev[] = {
+const char* SecMan::sec_req_rev[] = {
 	"UNDEFINED",
 	"INVALID",
 	"NEVER",

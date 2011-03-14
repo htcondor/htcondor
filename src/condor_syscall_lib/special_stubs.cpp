@@ -187,7 +187,7 @@ condor_gethostname( char *name, size_t namelen )
   measure, and call Suicide() (so we don't leave the job queue).  
 */
 void
-_condor_fd_panic( int line, char* file )
+_condor_fd_panic( int line, const char* file )
 {
 	dprintf( D_ALWAYS,
 			 "**** PANIC -- OUT OF FILE DESCRIPTORS at line %d in %s\n", 

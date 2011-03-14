@@ -1272,8 +1272,13 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 	bool isNoop = JobIsNoop( condorID );
 	int id = GetIndexID( condorID );
 	if ( GetEventIDHash( isNoop, logsource )->lookup(id, node) != 0 ) {
+			// Note: eventually get rid of the "(might be because of
+			// node retries)" message here, and have code that explicitly
+			// figures out whether the node was not found because of a
+			// retry.  (See gittrac #1957 and #1961.)
     	debug_printf( DEBUG_VERBOSE,
-					"ERROR: node for condor ID %d.%d.%d not found!\n",
+					"ERROR: node for condor ID %d.%d.%d not found! "
+					"(might be because of node retries)\n",
 					condorID._cluster, condorID._proc, condorID._subproc);
 		node = NULL;
 	}
@@ -2166,6 +2171,20 @@ Dag::RestartNode( Job *node, bool recovery )
 					"#%d of %d)...\n", node->GetJobName(), node->GetRetries(),
 					node->GetRetryMax() );
 
+			// Remove the "old" Condor ID from the ID->node hash table
+			// here to fix gittrac #1957.
+			// Note: the if checking against the default condor ID
+			// should *always* be true here, but checking just to be safe.
+		if ( !(node->_CondorID == _defaultCondorId) ) {
+			int logsource = node->JobType() == Job::TYPE_CONDOR ? CONDORLOG :
+						DAPLOG;
+			int id = GetIndexID( node->_CondorID );
+			if ( GetEventIDHash( node->GetNoop(), logsource )->remove( id )
+						!= 0 ) {
+				EXCEPT( "Event ID hash table error!" );
+			}
+		}
+
 		// Doing this fixes gittrac #481 (recovery fails on a DAG that
 		// has retried nodes).  (See SubmitNodeJob() for where this
 		// gets done during "normal" running.)
@@ -2788,6 +2807,7 @@ Dag::IncludeExtraDotCommands(
 		}
 		fprintf(dot_file, "// End of commands included from %s.\n\n", 
 				_dot_include_file_name);
+		fclose(include_file);
 	}
 	return;
 }

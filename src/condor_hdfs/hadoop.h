@@ -140,9 +140,9 @@ class Hadoop : public Service {
 
         void publishClassAd();
 
-        void stdoutHandler(int /*pipe*/);
+        int stdoutHandler(int /*pipe*/);
 
-        void stderrHandler(int /*pipe*/);
+        int stderrHandler(int /*pipe*/);
 
         int getKeyValue(MyString line, MyString *key, MyString *value);
 

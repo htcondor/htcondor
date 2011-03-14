@@ -39,51 +39,6 @@ char buffer2[BUFFER_SIZE];
 #define TEST_DIR		"/tmp/chirpdir"
 #endif
 
-/*
-	Existing tests
-		open
-		lseek
-		read
-		write
-		fsync
-		close
-		rename
-		unlink
-		mkdir
-		rmdir
-	New tests
-		putfile
-			several files in submit directory
-		getfile
-			same files that were put
-		pread
-		pwrite
-		swrite
-		rmall
-			make dir with dirs/files
-		fstat
-		fstatfs
-		fchown?
-		fchmod
-		ftruncate
-		getlongdir
-		getdir
-		whoami?
-		whoareyou?
-		link
-		symlink
-		readlink
-		stat
-		lstat
-		statfs
-		access
-		chmod
-		chown
-		lchown
-		truncate
-		utime
-
-*/
 
 int main( int argc, char *argv[] )
 {

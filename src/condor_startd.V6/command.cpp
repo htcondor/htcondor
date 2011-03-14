@@ -373,6 +373,7 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		dprintf( D_ALWAYS,
 				 "Error: can't read end of message for RELEASE_CLAIM %s.\n",
 				 idp.publicClaimId() );
+		free( id );
 		return FALSE;
 	}
 
@@ -509,6 +510,7 @@ command_match_info( Service*, int cmd, Stream* stream )
 	}
 	if( !stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Error: can't read end of message for MATCH_INFO.\n" );
+		free( id );
 		return FALSE;
 	}
 
@@ -870,7 +872,7 @@ command_delegate_gsi_cred( Service*, int, Stream* stream )
 	         proxy_file.Value() );
 
 	// sender decides whether to use delegation or simply copy
-	int use_delegation;
+	int use_delegation = 0;
 	if( ! sock->code(use_delegation) ) {
 		dprintf( D_ALWAYS, "error reading delegation request\n" );
 		return FALSE;
@@ -2078,7 +2080,7 @@ cleanup:
 int
 command_classad_handler( Service*, int dc_cmd, Stream* s )
 {
-	int rval;
+	int rval=0;
 	ClassAd ad;
 	ReliSock* rsock = (ReliSock*)s;
 	int cmd = 0;

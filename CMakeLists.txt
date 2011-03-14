@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -24,7 +24,22 @@ cmake_minimum_required(VERSION 2.8)
 ##########################################################################
 #Setup package meta-data (used in packaging)
 set(PACKAGE "condor")
-set(VERSION "7.5.6")
+
+# Condor version info
+#   Condor and other systems parse this number. Keep it simple:
+#   Number.Number.Number. Do nothing else.  If you need to add
+#   more information, PRE_RELEASE is usually the right location.
+set(VERSION "7.6.0")
+
+# Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
+#   This shuld be "PRE-RELEASE-UWCS most of the time, and OFF when
+#   building a release candidate.  If you need to identify builds,
+#   perhaps because you are working on a feature branch and need to
+#   ship test binaries to a user, change this to identify your work.
+#   Avoid whitespace.
+set(PRE_RELEASE "PRE-RELEASE-UWCS")
+#set(PRE_RELEASE OFF)
+
 set(PACKAGE_BUGREPORT "http://condor-wiki.cs.wisc.edu/index.cgi/tktnew")
 set(PACKAGE_NAME ${PACKAGE} )
 set(PACKAGE_VERSION ${VERSION} )
@@ -37,7 +52,8 @@ option(_DEBUG "Debug statements and set default build config" OFF)
 
 ###########################################
 # start cmake module inclusion
-list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake/macros;${CONDOR_SOURCE_DIR}/build/cmake/modules;${CONDOR_SOURCE_DIR}/build/cmake)
+#include (FeatureSummary)
 include (dprint) # set debug module 1st to all spewing in other modules if needed
 include (AppendVar)
 include (CommandTarget)
@@ -52,6 +68,8 @@ include (CheckStructHasMember)
 include (CheckTypeExists)
 include (CheckLibraryExists)
 include (CheckTypeSize)
+include (GetTimeDate)
+include (CleanString)
 include (PackageDate)
 include (SystemSpecificInformations)
 include (CondorPackageConfig) # setup packaging variables needed prior to install targets
@@ -60,7 +78,9 @@ include (CondorSelectiveGlob)
 include (CondorSetLinkLibs)
 include (CondorExe)
 include (CondorDaemon)
+include (CondorPrecompiledHeaders)
 include (CondorStaticLib)
+include (CondorPlugin)
 include (CheckCXXCompilerFlag)
 include (CheckCXXSourceCompiles)
 include (CondorConfigure)     # will initiate the configure
@@ -91,3 +111,11 @@ endif()
 ##########################################################################
 # Must in included post *install targets
 include ( CPack )
+
+##########################################################################
+# print out the summary info: http://www.cmake.org/cmake/help/cmake-2-8-docs.html#module:FeatureSummary
+#feature_summary(WHAT ENABLED_FEATURES DESCRIPTION "Enabled Features:" VAR enabledFeaturesText)
+#feature_summary(WHAT DISABLED_FEATURES DESCRIPTION "Disabled Features:" VAR disabledFeaturesText)
+#message(STATUS "*FEATURES:* http://www.cmake.org/cmake/help/cmake-2-8-docs.html#module:FeatureSummary
+#${enabledFeaturesText}")
+#message(STATUS "${disabledFeaturesText}")

@@ -184,10 +184,6 @@ OsProc::StartJob(FamilyInfo* family_info)
 				free( parrot );
 				return 0;
 			} else {
-				args.AppendArg("-d");
-				args.AppendArg("all");
-				args.AppendArg("-o");
-				args.AppendArg("parrot.realout");
 				args.AppendArg(JobName.Value());
 				JobName = parrot;
 				free( parrot );
@@ -457,6 +453,10 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 	set_priv ( priv );
 
+    // use this to return more detailed and reliable error message info
+    // from create-process operation.
+    MyString create_process_err_msg;
+
 	if (privsep_helper != NULL) {
 		const char* std_file_names[3] = {
 			privsep_stdin_name.Value(),
@@ -492,14 +492,23 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                     NULL,
 		                                     job_opt_mask, 
 		                                     core_size_ptr,
-											 affinity_mask );
+                                             affinity_mask,
+											 NULL,
+                                             &create_process_err_msg);
 	}
 
-	//NOTE: Create_Process() saves the errno for us if it is an
-	//"interesting" error.
-	char const *create_process_error = NULL;
+	// Create_Process() saves the errno for us if it is an "interesting" error.
 	int create_process_errno = errno;
-	if(JobPid == FALSE && errno) create_process_error = strerror(errno);
+	char const *create_process_error = NULL;
+
+    // errno is 0 in the privsep case.  This executes for the daemon core create-process logic
+    if ((FALSE == JobPid) && (0 != create_process_errno)) {
+        if (create_process_err_msg != "") create_process_err_msg += " ";
+        MyString errbuf;
+        errbuf.sprintf("(errno=%d: '%s')", create_process_errno, strerror(create_process_errno));
+        create_process_err_msg += errbuf;
+        create_process_error = create_process_err_msg.Value();       
+    }
 
 	// now close the descriptors in fds array.  our child has inherited
 	// them already, so we should close them so we do not leak descriptors.

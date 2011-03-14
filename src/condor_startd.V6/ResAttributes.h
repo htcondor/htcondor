@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -95,8 +95,9 @@ public:
 	void publish( ClassAd*, amask_t );  // Publish desired info to given CA
 	void compute( amask_t );			  // Actually recompute desired stats
 
-		// Compute kflops and mips on the given resource
-	void benchmark( Resource*, int force = 0 );	
+		// Initiate benchmark computations benchmarks on the given resource
+	void start_benchmarks( Resource*, int &count );	
+	void benchmarks_finished( Resource* );	
 
 #if defined(WIN32)
 		// For testing communication with the CredD, if one is
@@ -120,6 +121,7 @@ public:
 	time_t		console_idle()	{ return m_console_idle; };
 
 private:
+
 		// Dynamic info
 	float			m_load;
 	float			m_condor_load;
@@ -129,7 +131,7 @@ private:
 	time_t			m_console_idle;
 	int				m_mips;
 	int				m_kflops;
-	int				m_last_benchmark;   // Last time we computed benchmarks
+	time_t			m_last_benchmark;   // Last time we computed benchmarks
 	time_t			m_last_keypress; 	// Last time m_idle decreased
 	bool			m_seen_keypress;    // Have we seen our first keypress yet?
 	int				m_clock_day;
@@ -267,8 +269,4 @@ private:
 	AvailDiskPartition &GetAvailDiskPartition(MyString const &execute_partition_id);
 };
 
-
-void deal_with_benchmarks( Resource* );
-
 #endif /* _RES_ATTRIBUTES_H */
-

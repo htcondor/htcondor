@@ -1,6 +1,6 @@
 /*************************************************************
  * 
- * Copyright (C) 1990-2010, Redhat.
+ * Copyright 2011 Red Hat, Inc.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
@@ -68,17 +68,17 @@
 // These don't appear to be used at all
 ///* Define to 1 if the tool 'find' is available */
 //#cmakedefine HAVE_FIND
-///* Define to 1 if you have the `fseeko' function. */
+///* Define to 1 if you have the 'fseeko' function. */
 //#cmakedefine HAVE_FSEEKO
-///* Define to 1 if you have the `ftello' function. */
+///* Define to 1 if you have the 'ftello' function. */
 //#cmakedefine HAVE_FTELLO
-///* Define to 1 if you have the `getdirentries' function. */
+///* Define to 1 if you have the 'getdirentries' function. */
 //#cmakedefine HAVE_GETDIRENTRIES
 ///* Define if jar is available */
 //#cmakedefine HAVE_JAR
 ///* Define if javac is available */
 //#cmakedefine HAVE_JAVAC
-///* Define to 1 if you have the `crypt' library (-lcrypt). */
+///* Define to 1 if you have the 'crypt' library (-lcrypt). */
 //#cmakedefine HAVE_LIBCRYPT
 ///* check for usable libsasl */
 //#cmakedefine HAVE_LIBSASL
@@ -102,7 +102,7 @@
 //#cmakedefine HAVE_STRINGS_H
 ///* Define to 1 if you have the <string.h> header file. */
 //#cmakedefine HAVE_STRING_H
-///* Define to 1 if `f_fsid' is member of `struct statvfs'. (USED)*/
+///* Define to 1 if 'f_fsid' is member of 'struct statvfs'. (USED)*/
 //#cmakedefine HAVE_STRUCT_STATVFS_F_FSID
 ///* Define to 1 if you have the <sys/stat.h> header file. */
 //#cmakedefine HAVE_SYS_STAT_H
@@ -110,11 +110,11 @@
 //#cmakedefine HAVE_TAR_EXCLUDE_FLAG
 ///* Define to 1 is tar has --files-from option */
 //#cmakedefine HAVE_TAR_FILES_FROM_FLAG
-///* Define to 1 if you have the `tmpnam' function. */
+///* Define to 1 if you have the 'tmpnam' function. */
 //#cmakedefine HAVE_TMPNAM
 ///* Define to 1 if you have the <unistd.h> header file. */
 //#cmakedefine HAVE_UNISTD_H
-///* Define to 1 if you have the `vsnprintf' function. */
+///* Define to 1 if you have the 'vsnprintf' function. */
 //#cmakedefine HAVE_VSNPRINTF
 ///* Define to 1 if you have the ANSI C header files. */
 //#cmakedefine STDC_HEADERS
@@ -122,7 +122,7 @@
 //#cmakedefine WANT_HDFS
 ///* Define to 1 if the X Window System is missing or not being used. */
 //#cmakedefine X_DISPLAY_MISSING
-///* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a `char[]'. */
+///* Define to 1 if 'lex' declares 'yytext' as a 'char *' by default, not a 'char[]'. */
 //#cmakedefine YYTEXT_POINTER
 //////////////////////////////////////////////////
 
@@ -172,6 +172,9 @@
 // configurable options.
 /////////////////////////////////////////
 
+/* Define if we want to build a Collector that doesn't phone home */
+#cmakedefine NO_PHONE_HOME 1
+
 /* Define if we save sigstate*/
 #cmakedefine DOES_SAVE_SIGSTATE 1
 
@@ -190,7 +193,7 @@
 /* Define to 1 if you have the <pthread.h> header file. (USED)*/
 #cmakedefine HAVE_PTHREAD_H 1
 
-/* Define to 1 if you have the `access' function. */
+/* Define to 1 if you have the 'access' function. */
 #cmakedefine HAVE_ACCESS 1
 
 /* are we compiling support for any backfill systems (USED)*/
@@ -205,16 +208,16 @@
 ///* Define to 1 of you know you can produce the debuglink tarball (USED by Imake, might eliminate)*/
 //#cmakedefine HAVE_DEBUGLINK_TARBALL 1
 
-/* Define to 1 if you have the declaration of `res_init', and to 0 if you don't.  (USED-daemoncore */
+/* Define to 1 if you have the declaration of 'res_init', and to 0 if you don't.  (USED-daemoncore */
 #cmakedefine HAVE_DECL_RES_INIT 1
 
-/* Define to 1 if you have the declaration of `SIOCETHTOOL', and to 0 if you don't. (USED)*/
+/* Define to 1 if you have the declaration of 'SIOCETHTOOL', and to 0 if you don't. (USED)*/
 #cmakedefine HAVE_DECL_SIOCETHTOOL 1
 
-/* Define to 1 if you have the declaration of `SIOCGIFCONF', and to 0 if you don't. (USED)*/
+/* Define to 1 if you have the declaration of 'SIOCGIFCONF', and to 0 if you don't. (USED)*/
 #cmakedefine HAVE_DECL_SIOCGIFCONF 1
 
-/* Define to 1 if you have the `dirfd' function. (USED)*/
+/* Define to 1 if you have the 'dirfd' function. (USED)*/
 #cmakedefine HAVE_DIRFD 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. (USED)*/
@@ -223,13 +226,13 @@
 /* dlopen function is available  (used) */
 #cmakedefine HAVE_DLOPEN 1
 
-/* Define to 1 if you have the `execl' function. (used)*/
+/* Define to 1 if you have the 'execl' function. (used)*/
 #cmakedefine HAVE_EXECL 1
 
-/* Define to 1 if you have the `readdir64' function. (used)*/
+/* Define to 1 if you have the 'readdir64' function. (used)*/
 #cmakedefine HAVE_READDIR64 1
 
-/* Define to 1 if you have the `backtrace' function.*/
+/* Define to 1 if you have the 'backtrace' function.*/
 #cmakedefine HAVE_BACKTRACE 1
 
 /* Do we have the blahp external (used Imake)*/
@@ -301,37 +304,40 @@
 ///* Do we have the zlib external */
 #cmakedefine HAVE_EXT_ZLIB
 
-/* Define to 1 if you have the `fstat64' function. (USED)*/
+/* Define to 1 if you have the 'fstat64' function. (USED)*/
 #cmakedefine HAVE_FSTAT64 1
 
-/* Define to 1 if you have the `getdtablesize' function. (USED)*/
+/* Define to 1 if you have the 'getdtablesize' function. (USED)*/
 #cmakedefine HAVE_GETDTABLESIZE 1
 
-/* Define to 1 if you have the `getpagesize' function. (USED)*/
+/* Define to 1 if you have the 'getpagesize' function. (USED)*/
 #cmakedefine HAVE_GETPAGESIZE 1
 
-/* Define to 1 if you have the `getwd' function. (USED)*/
+/* Define to 1 if you have the 'getwd' function. (USED)*/
 #cmakedefine HAVE_GETWD 1
+
+/* Define to 1 if you have the 'gettimeofday' function. (USED)*/
+#cmakedefine HAVE_GETTIMEOFDAY 1
 
 ///* are we using the GNU linker (USED)- I want to remove this comments are untrue*/
 //#cmakedefine HAVE_GNU_LD 1
 
-/* Define to 1 if the system has the type `id_t'. (USED)*/
+/* Define to 1 if the system has the type 'id_t'. (USED)*/
 #cmakedefine HAVE_ID_T 1
 
-/* Define to 1 if the system has the type `int64_t'. (USED)*/
+/* Define to 1 if the system has the type 'int64_t'. (USED)*/
 #cmakedefine HAVE_INT64_T 1
 
 /* Define to 1 if you have the <inttypes.h> header file. (USED)*/
 #cmakedefine HAVE_INTTYPES_H 1
 
-/* Define to 1 if you have the `lchown' function. (USED)*/
+/* Define to 1 if you have the 'lchown' function. (USED)*/
 #cmakedefine HAVE_LCHOWN 1
 
 /* Define to 1 if you have the <ldap.h> header file. (USED)*/
 #cmakedefine HAVE_LDAP_H 1
 
-/* Define to 1 if you have the `gen' library (-lgen) (USED)*/
+/* Define to 1 if you have the 'gen' library (-lgen) (USED)*/
 #cmakedefine HAVE_LIBGEN 1
 
 /* Define to 1 if you have the <linux/ethtool.h> header file.*/
@@ -352,16 +358,28 @@
 /* Define to 1 if you have the <linux/types.h> header file. (USED)*/
 #cmakedefine HAVE_LINUX_TYPES_H 1
 
-/* Define to 1 if the system has the type `long long'. (USED)*/
+/* Define to 1 if the system has the type 'long long'. (USED)*/
 #cmakedefine HAVE_LONG_LONG 1
 
-/* Define to 1 if you have the `lstat' function. (USED)*/
+/* Define to the size of the of type 'long long'. (USED)*/
+#cmakedefine SIZEOF_LONG_LONG ${SIZEOF_LONG_LONG}
+
+/* Define to the size of the of type 'long'. (USED)*/
+#cmakedefine SIZEOF_LONG ${SIZEOF_LONG}
+
+/* Define to the size of the of type 'int'. (USED)*/
+#cmakedefine SIZEOF_INT ${SIZEOF_INT}
+
+/* Define to the size of the of type 'void *'. (USED)*/
+#cmakedefine SIZEOF_VOIDPTR ${SIZEOF_VOIDPTR}
+
+/* Define to 1 if you have the 'lstat' function. (USED)*/
 #cmakedefine HAVE_LSTAT 1
 
-/* Define to 1 if you have the `lstat64' function. (USED)*/
+/* Define to 1 if you have the 'lstat64' function. (USED)*/
 #cmakedefine HAVE_LSTAT64 1
 
-/* Define to 1 if you have the `mkstemp' function. (used)*/
+/* Define to 1 if you have the 'mkstemp' function. (used)*/
 #cmakedefine HAVE_MKSTEMP 1
 
 /* Define to 1 if you have the <net/if.h> header file. (USED)*/
@@ -391,61 +409,61 @@
 /* does sched_setaffinity take two args (USED)*/
 #cmakedefine HAVE_SCHED_SETAFFINITY_2ARG 1
 
-/* Define to 1 if you have the `setegid' function. (USED)*/
+/* Define to 1 if you have the 'setegid' function. (USED)*/
 #cmakedefine HAVE_SETEGID 1
 
-/* Define to 1 if you have the `setenv' function. (USED)*/
+/* Define to 1 if you have the 'setenv' function. (USED)*/
 #cmakedefine HAVE_SETENV 1
 
-/* Define to 1 if you have the `seteuid' function. (USED)*/
+/* Define to 1 if you have the 'seteuid' function. (USED)*/
 #cmakedefine HAVE_SETEUID 1
 
-/* Define to 1 if you have the `setlinebuf' function. (USED)*/
+/* Define to 1 if you have the 'setlinebuf' function. (USED)*/
 #cmakedefine HAVE_SETLINEBUF 1
 
-/* Define to 1 if you have the `snprintf' function. (USED)*/
+/* Define to 1 if you have the 'snprintf' function. (USED)*/
 #cmakedefine HAVE_SNPRINTF 1
 
-/* Define to 1 if you have the `stat64' function. (USED)*/
+/* Define to 1 if you have the 'stat64' function. (USED)*/
 #cmakedefine HAVE_STAT64 1
 
-/* Define to 1 if you have the `statfs' function. (USED)*/
+/* Define to 1 if you have the 'statfs' function. (USED)*/
 #cmakedefine HAVE_STATFS 1
 
-/* Define to 1 if you have the `statvfs' function. (USED)*/
+/* Define to 1 if you have the 'statvfs' function. (USED)*/
 #cmakedefine HAVE_STATVFS 1
 
 /* Define to 1 if you have the <stdint.h> header file. (USED)*/
 #cmakedefine HAVE_STDINT_H 1
 
-/* Define to 1 if you have the `strcasestr' function. (USED)*/
+/* Define to 1 if you have the 'strcasestr' function. (USED)*/
 #cmakedefine HAVE_STRCASESTR 1
 
-/* Define to 1 if you have the `strsignal' function. (USED)*/
+/* Define to 1 if you have the 'strsignal' function. (USED)*/
 #cmakedefine HAVE_STRSIGNAL 1
 
-/* Define to 1 if the system has the type `struct ifconf'. (USED) */
+/* Define to 1 if the system has the type 'struct ifconf'. (USED) */
 #cmakedefine HAVE_STRUCT_IFCONF 1
 
-/* Define to 1 if the system has the type `struct ifreq'. (USED)*/
+/* Define to 1 if the system has the type 'struct ifreq'. (USED)*/
 #cmakedefine HAVE_STRUCT_IFREQ 1
 
-/* Define to 1 if `ifr_hwaddr' is member of `struct ifreq' (USED)*/
+/* Define to 1 if 'ifr_hwaddr' is member of 'struct ifreq' (USED)*/
 #cmakedefine HAVE_STRUCT_IFREQ_IFR_HWADDR 1
 
 /* Define to 1 if struct sockaddr_in has sin_len member. (USED)*/
 #cmakedefine HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
 
-/* Define to 1 if `f_fstyp' is member of `struct statfs'. (USED)*/
+/* Define to 1 if 'f_fstyp' is member of 'struct statfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATFS_F_FSTYP 1
 
-/* Define to 1 if `f_fstypename' is member of `struct statfs'. (USED)*/
+/* Define to 1 if 'f_fstypename' is member of 'struct statfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATFS_F_FSTYPENAME 1
 
-/* Define to 1 if `f_type' is member of `struct statfs'. (USED)*/
+/* Define to 1 if 'f_type' is member of 'struct statfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATFS_F_TYPE 1
 
-/* Define to 1 if `f_basetype' is member of `struct statvfs'. (USED)*/
+/* Define to 1 if 'f_basetype' is member of 'struct statvfs'. (USED)*/
 #cmakedefine HAVE_STRUCT_STATVFS_F_BASETYPE 1
 
 /* Define to 1 if you have the <sys/mount.h> header file. (USED)*/
@@ -472,7 +490,7 @@
 /* Define to 1 if you have the <sys/vfs.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_VFS_H 1
 
-/* Define to 1 if you have the `unsetenv' function. (USED)*/
+/* Define to 1 if you have the 'unsetenv' function. (USED)*/
 #cmakedefine HAVE_UNSETENV 1
 
 /* Define to 1 if you have the <ustat.h> header file. (USED)*/
@@ -487,7 +505,7 @@
 /* Define to 1 if you have the <sys/procfs.h> header file. (USED)*/
 #cmakedefine HAVE_SYS_PROCFS_H 1
 
-/* Define to 1 if you have the `vasprintf' function. (USED)*/
+/* Define to 1 if you have the 'vasprintf' function. (USED)*/
 #cmakedefine HAVE_VASPRINTF 1
 
 /* Define if vmware is available (USED)*/
@@ -496,16 +514,16 @@
 /* "use system (v)snprintf instead of our replacement" (USED)*/
 #cmakedefine HAVE_WORKING_SNPRINTF 1
 
-/* Define to 1 if you have the `_fstati64' function. (USED)*/
+/* Define to 1 if you have the '_fstati64' function. (USED)*/
 #cmakedefine HAVE__FSTATI64 1
 
-/* Define to 1 if you have the `_lstati64' function. (USED)*/
+/* Define to 1 if you have the '_lstati64' function. (USED)*/
 #cmakedefine HAVE__LSTATI64 1
 
-/* Define to 1 if you have the `_stati64' function. (USED)*/
+/* Define to 1 if you have the '_stati64' function. (USED)*/
 #cmakedefine HAVE__STATI64 1
 
-/* Define to 1 if the system has the type `__int64'. (USED)*/
+/* Define to 1 if the system has the type '__int64'. (USED)*/
 #cmakedefine HAVE___INT64 1
 
 /* Define if NEEDS_64BIT_STRUCTS (USED)*/

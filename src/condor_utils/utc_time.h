@@ -28,14 +28,14 @@
 	two UtcTime objects and get the difference between them.
 */
 
-class UtcTime 
+class UtcTime
 {
 public:
 
 		/// Default constructor, does not compute current time by default
 	UtcTime( bool get_time = false );
 
-		/// Compute the current time
+		/// Sample the current time
 	void getTime( void );
 
 		/// Return the last computed epoch time in seconds
@@ -46,7 +46,7 @@ public:
 
 		// Return the last computed time as a floating point combination
 		// of seconds and microseconds
-	double combined( void ) const { return( sec + usec/1000000.0 ); };
+	double combined( void ) const { return( sec + (usec * 0.000001) ); };
 
 		/** How much time elapsed between the two times.  This method
 			subtracts the time of the other UtcTime object we're
@@ -58,6 +58,8 @@ public:
 		 */
 	double difference( const UtcTime* other_time ) const;
 	double difference( const UtcTime &other_time ) const;
+
+	static double getTimeDouble( void );
 
 private:
 

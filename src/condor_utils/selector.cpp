@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -466,7 +466,7 @@ Selector::display()
 }
 
 void
-display_fd_set( char *msg, fd_set *set, int max, bool try_dup )
+display_fd_set( const char *msg, fd_set *set, int max, bool try_dup )
 {
 	int		i, count;
 

@@ -59,7 +59,16 @@ Sock::Sock() : Stream() {
 	_fqu_domain_part = NULL;
 	_tried_authentication = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
+	connect_state.connect_failed = false;
+	connect_state.this_try_timeout_time = 0;
+	connect_state.retry_timeout_time = 0;
+	connect_state.retry_wait_timeout_time = 0;
+	connect_state.failed_once = false;
+	connect_state.connect_refused = false;
+	connect_state.old_timeout_value = 0;
+	connect_state.non_blocking_flag = false;
 	connect_state.host = NULL;
+	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
 	memset(&_who, 0, sizeof(struct sockaddr_in));
 
@@ -82,7 +91,16 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_fqu_domain_part = NULL;
 	_tried_authentication = false;
 	ignore_timeout_multiplier = orig.ignore_timeout_multiplier;
+	connect_state.connect_failed = false;
+	connect_state.failed_once = false;
+	connect_state.connect_refused = false;
+	connect_state.this_try_timeout_time = 0;
+	connect_state.retry_timeout_time = 0;
+	connect_state.retry_wait_timeout_time = 0;
+	connect_state.old_timeout_value = 0;
+	connect_state.non_blocking_flag = false;
 	connect_state.host = NULL;
+	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
 	memset( &_who, 0, sizeof( struct sockaddr_in ) );
 
@@ -232,7 +250,7 @@ int Sock::getportbyserv(
 	)
 {
 	servent		*sp;
-	char		*my_prot;
+	const char	*my_prot=0;
 
 	if (!s) return -1;
 
@@ -359,7 +377,7 @@ int Sock::move_descriptor_up()
 
 int Sock::assign(SOCKET sockd)
 {
-	int		my_type;
+	int my_type = SOCK_DGRAM;
 
 	if (_state != sock_virgin) return FALSE;
 
@@ -1634,7 +1652,7 @@ char * Sock::serialize() const
 	char * outbuf = new char[500];
     if (outbuf) {
         memset(outbuf, 0, 500);
-        sprintf(outbuf,"%u*%d*%d*%d*%u*%u*%s*%s*",_sock,_state,_timeout,triedAuthentication(),fqu_len,verstring_len,_fqu ? _fqu : "",verstring ? verstring : "");
+        sprintf(outbuf,"%u*%d*%d*%d*%lu*%lu*%s*%s*",_sock,_state,_timeout,triedAuthentication(),(unsigned long)fqu_len,(unsigned long)verstring_len,_fqu ? _fqu : "",verstring ? verstring : "");
     }
     else {
         dprintf(D_ALWAYS, "Out of memory!\n");
@@ -1666,7 +1684,7 @@ char * Sock::serialize(char *buf)
 	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
-	i = sscanf(buf,"%u*%d*%d*%d*%u*%u*%n",&passed_sock,(int*)&_state,&_timeout,&tried_authentication,&fqulen,&verstring_len,&pos);
+	i = sscanf(buf,"%u*%d*%d*%d*%lu*%lu*%n",&passed_sock,(int*)&_state,&_timeout,&tried_authentication,(unsigned long *)&fqulen,(unsigned long *)&verstring_len,&pos);
 	if (i!=6) {
 		EXCEPT("Failed to parse serialized socket information (%d,%d): '%s'\n",i,pos,buf);
 	}
@@ -1682,7 +1700,7 @@ char * Sock::serialize(char *buf)
 	free(fqubuf);
 	buf += fqulen;
 	if( *buf != '*' ) {
-		EXCEPT("Failed to parse serialized socket fqu (%d): '%s'\n",fqulen,buf);
+		EXCEPT("Failed to parse serialized socket fqu (%lu): '%s'\n",(unsigned long)fqulen,buf);
 	}
 	buf++;
 
@@ -1702,7 +1720,7 @@ char * Sock::serialize(char *buf)
 	free( verstring );
 	buf += verstring_len;
 	if( *buf != '*' ) {
-		EXCEPT("Failed to parse serialized peer version string (%d): '%s'\n",verstring_len,buf);
+		EXCEPT("Failed to parse serialized peer version string (%lu): '%s'\n",(unsigned long)verstring_len,buf);
 	}
 	buf++;
 
@@ -2208,7 +2226,7 @@ Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 				the functions signatures all the way down to the
 				the Generic_bind() call in the GCB
 				external. */
-			(struct sockaddr*)addr, 
+			const_cast<struct sockaddr*>(addr),
 			len);
 	}
 	else {

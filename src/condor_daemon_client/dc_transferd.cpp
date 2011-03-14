@@ -299,7 +299,6 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	int num_transfers;
 	ClassAd jad;
 	const char *lhstr = NULL;
-	const char *rhstr = NULL;
 	ExprTree *tree = NULL;
 
 	//////////////////////////////////////////////////////////////////////////

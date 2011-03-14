@@ -43,14 +43,9 @@ our %build_and_test_sets = (
 	# NOTE: Keep the stable or developer release branches synchronized with
 	# https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=DeveloperReleasePlan
 	'official_ports' => [
-		'ia64_rhas_3',
-		'ppc64_sles_9',
-		'ppc_aix_5.2-pl5',
-		'sun4u_sol_5.9', 
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
 		'x86_64_rhas_3',
-		'x86_deb_4.0',
 		'x86_deb_5.0',
 		'x86_macos_10.4',
 		'x86_rhap_5',
@@ -63,21 +58,10 @@ our %build_and_test_sets = (
 	# are those platforms.
 	'nmi_one_offs' => [
 		'x86_64_rhap_5.3-updated',
-		'x86_suse_10.2',
-		'x86_suse_10.0',
-		'x86_64_macos_10.6',
-		'ppc_macos_10.4',
-		'sun4u_sol_5.10',
+		'x86_64_opensuse_11.3-updated',
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
-		'x86_64_macos_10.5-updated',
-		# 'x86_64_fedora_12-updated',  <-- no longer supported in 11/2010, and nmi fails why are we doing this?
-		# 'ps3_ydl_5.0',   <- no longer supported, and sony has eliminated the ability to install & are even prosecuting jailbreakers, why are we doing this?
-
-	],
-
-	'psilord' => [
-		'ppc_macos_10.4',
+                'x86_64_fedora_12-updated',
 	],
 
 	'stduniv' => [
@@ -116,12 +100,12 @@ my @default_prereqs = (
 my @minimal_build_configure_args =
 	(
 		'-DPROPER:BOOL=OFF'			=> undef,
+        '-D_VERBOSE:BOOL=ON'         => undef,
 		'-DCLIPPED:BOOL=ON'			=> undef,
 		'-DWITH_BLAHP:BOOL=OFF'		=> undef,
 		'-DWITH_BOOST:BOOL=OFF'		=> undef,
 		'-DWITH_COREDUMPER:BOOL=OFF'	=> undef,
 		'-DWITH_CREAM:BOOL=OFF'		=> undef,
-		'-DWITH_CURL:BOOL=OFF'		=> undef,
 		'-DWITH_DRMAA:BOOL=OFF'		=> undef,
 		'-DWITH_EXPAT:BOOL=OFF'		=> undef,
 		'-DWITH_GCB:BOOL=OFF'		=> undef,
@@ -168,6 +152,7 @@ my @default_test_configure_args =
 my @default_build_configure_args =
 	(
 	'-DPROPER:BOOL=OFF' 	=> undef,
+    '-D_VERBOSE:BOOL=ON'    => undef,
 	#'-DSCRATCH_EXTERNALS:BOOL=ON'	=> undef,
 	);
 
@@ -304,158 +289,6 @@ our %submit_info = (
 	},
 	
 	##########################################################################
-	# Platform HPUX 11 on PARISC 2.0
-	##########################################################################
-	'hppa_hpux_11'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ 
-				@default_prereqs, 
-				'binutils-2.16', 'coreutils-5.2.1', 'gcc-3.4.3', 
-				'gzip-1.3.3', 'wget-1.9.1',
-			],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs,
-				'binutils-2.16', 'coreutils-5.2.1', 'gcc-3.4.3',
-				'gzip-1.3.3', 'wget-1.9.1',
-				'java-1.5.0_03' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-			
-	##########################################################################
-	# Platform RHEL 3 on ia64
-	##########################################################################
-	'ia64_rhas_3'	=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-			},
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [ 'ia64_sles_9' ],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform SLES 9 on PPC64
-	##########################################################################
-	# using WITHOUT_SOAP_TEST because the IBM java installation on
-	# nmi:ppc64_sles_9 hangs while running the test.
-	'ppc64_sles_9'	=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-				'-DWITH_KRB5:BOOL=OFF' => undef,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef
-			},
-			'prereqs'	=> [ 'cmake-2.8.3' ],
-			'xtests'	=> [ 'ps3_fedora_9' ],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ 'java-1.4.2' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform AIX 5L (patch level 5) on PPC
-	##########################################################################
-	'ppc_aix_5.2-pl5'	=> {
-		'build' => {
-			'configure_args' => { '-DPROPER:BOOL=OFF' 			 => undef,
-			  '-DSCRATCH_EXTERNALS:BOOL=OFF'	 => undef,
-			},
-			'prereqs'	=> [ 
-				@default_prereqs, 
-				'vac-6', 'vacpp-6', 'perl-5.8.9', 'gzip-1.3.3',
-				'coreutils-5.2.1',
-			],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.9' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform AIX 5.3 on PPC -- clone of AIX 5L
-	##########################################################################
-	'ppc_aix_5.3'	=> {
-		'build' => {
-			'configure_args' => { '-DPROPER:BOOL=OFF' 			 => undef,
-			  '-DSCRATCH_EXTERNALS:BOOL=OFF'	 => undef,
-			},
-			'prereqs'	=> [ 
-				@default_prereqs, 
-				'vac-6', 'vacpp-6', 'perl-5.8.5', 'gzip-1.3.3',
-				'coreutils-5.2.1',
-			],
-			'xtests'	=> [ 'ppc_aix_5.3' ],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Yellow Dog 5.0 on PPC (specifically on the ps3)
-	##########################################################################
-	'ps3_ydl_5.0'	=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [ 'cmake-2.8.3' ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> undef,
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Solaris 9 on SUN4u
-	##########################################################################
-	'sun4u_sol_5.9'	=> {
-		'build' => {
-			'configure_args' => { '-DPROPER:BOOL=OFF' 			=> undef,
-				'-DSCRATCH_EXTERNALS:BOOL=OFF'		=> undef,
-				'-DCONDOR_CXX_FLAGS:STRING=-B$PATH' 	=> undef,
-			},
-			'prereqs'	=> [ 
-				@default_prereqs, 
-				'gcc-4.1.2', 'binutils-2.16', 'perl-5.8.5', 'gzip-1.3.3',
-				'coreutils-6.9',
-			],
-			'xtests'	=> [ 'sun4u_sol_5.10' ],
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'binutils-2.16',
-				'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9',
-				'java-1.4.2_05', 'perl-5.8.5' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform Debian 5.0 on x86_64
 	##########################################################################
 	'x86_64_deb_5.0'	=> {
@@ -485,10 +318,9 @@ our %submit_info = (
 			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'x86_64_ubuntu_10.04',
 				'x86_64_fedora_13', 'x86_64_rhap_5.2',
 				'x86_64_fedora_12', 'x86_64_fedora_12-updated', 
-				'x86_64_fedora_11', 'x86_64_fedora_13-updated' ],
+				'x86_64_fedora_13-updated' ],
 		},
 
 		'test' => {
@@ -522,23 +354,6 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform Debian 4 on x86
-	##########################################################################
-	'x86_deb_4.0'		=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform Debian 5 on x86
 	##########################################################################
 	'x86_deb_5.0'	=> {
@@ -547,7 +362,7 @@ our %submit_info = (
 				'-DCLIPPED:BOOL=OFF' => undef
 			 },
 			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
-			'xtests'	=> [ 'x86_ubuntu_10.04' ],
+			'xtests'	=> undef,
 		},
 
 		'test' => {
@@ -609,19 +424,8 @@ our %submit_info = (
 	# Platform Mac OSX 10.5 on x86_64 with updates
 	# condor actually builds naturally for this one, we just don't release it
 	##########################################################################
-	'x86_64_macos_10.5-updated'	=> {
-		'build' => {
-			'configure_args' => {  @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'libtool-1.5.26' ],
-			'xtests'	=> undef,
-		},
+	'x86_64_macos_10.5-updated'	=> 'x86_64_macos_10.5',
 
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
 
 	##########################################################################
 	# Platform Mac OSX 10.6 on x86_64
@@ -646,19 +450,8 @@ our %submit_info = (
 	##########################################################################
 	# Platform Mac OSX 10.6 with updates on x86_64
 	##########################################################################
-	'x86_64_macos_10.6-updated'	=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'libtool-1.5.26' ],
-			'xtests'	=> undef,
-		},
+	'x86_64_macos_10.6-updated'	=> 'x86_64_macos_10.6',
 
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
 
 	##########################################################################
 	# Platform RHEL 5 on x86
@@ -670,7 +463,6 @@ our %submit_info = (
 			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'x86_ubuntu_10.04',
 				'x86_64_rhap_5.2',
 				'unmanaged-x86_rhap_5'
 			],
@@ -682,28 +474,6 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-
-	##########################################################################
-	# Platform RHEL 5.1 on x86
-	# I believe this is a real port, but only used internally and for
-	# cross testing purposes.
-	##########################################################################
-	'x86_rhap_5.1'	=> {
-		'build' => {
-			'configure_args' => { @default_build_configure_args,
-				'-DCLIPPED:BOOL=OFF' => undef,
-			 },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.5' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
 
 	##########################################################################
 	# Platform RHEL 3 on x86
@@ -718,11 +488,7 @@ our %submit_info = (
 				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
 			'xtests'	=> [ 
-				'x86_64_sles_9',
 			 	'x86_rhas_4', 
-				'x86_suse_10.0', 
-				'x86_suse_10.2', 
-				'x86_sles_9',
 			 	'x86_64_rhas_3',
 				'x86_64_rhas_4',
 			],
@@ -746,147 +512,15 @@ our %submit_info = (
 	# builds of Condor are as clipped as possible to ensure compilation.
 
 	##########################################################################
-	# Platform RHEL 4 on ia64
-	# This might work
-	##########################################################################
-	'ia64_rhas_4'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform SLES 8 on ia64
-	##########################################################################
-	'ia64_sles_8'	=> {
-		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => {
-				@default_test_configure_args,
-				
-			},
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform SLES 9 on ia64
-	##########################################################################
-	'ia64_sles_9'	=> {
-		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => {
-				@default_test_configure_args,
-				
-			},
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform AIX 5.3 on PPC
-	# This might work
-	##########################################################################
-	'ppc_aix_5.3'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-		
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Mac OPX 10.4 on PPC
-	##########################################################################
-	'ppc_macos_10.4'	=> {
-		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args ,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-			},
-
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => {
-				@default_test_configure_args,
-				
-			},
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Fedora 9 on PPC (specifically on the ps3)
-	# This might work.
-	##########################################################################
-	'ps3_fedora_9'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Fedora 11 on x86_64
-	# This might work.
-	##########################################################################
-	'x86_64_fedora_11'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.9' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform Fedora 12 on x86_64
 	# This might work.
 	##########################################################################
 	'x86_64_fedora_12'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -904,7 +538,10 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_12-updated'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -953,51 +590,6 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform Solaris 8 on SUN4u
-	##########################################################################
-	'sun4u_sol_5.8'		=> {
-		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
-
-			'prereqs'	=> [ @default_prereqs, 'gcc-4.3.2', 'wget-1.9.1' ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => {
-				@default_test_configure_args, 
-				
-			},
-			'prereqs'	=> [ @default_prereqs, 'gcc-4.3.2', 'wget-1.9.1',
-							'java-1.4.2_05' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Solais 10 on SUN 4u
-	# This might work.
-	##########################################################################
-	'sun4u_sol_5.10'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-			},
-			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'perl-5.8.5',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9', 'binutils-2.16' ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'gcc-4.1.2', 'java-1.4.2_05',
-							 'perl-5.8.5', 'gzip-1.3.3', 'wget-1.9.1',
-							 'coreutils-6.9' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform Solaris 11 on x86_64
 	# Building openssl is problematic on this platform.  There is
 	# some confusion betwen 64-bit and 32-bit, which causes linkage
@@ -1008,11 +600,13 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITH_OPENSSL:BOOL=OFF' => undef,
+				'-DWITH_CURL:BOOL=OFF' => undef,
+				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
 			},
 			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9',
+				],
 			'xtests'	=> undef,
 		},
 
@@ -1035,17 +629,20 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITH_OPENSSL:BOOL=OFF' => undef,
-				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef
+				'-DWITH_CURL:BOOL=OFF' => undef,
+				'-DHAVE_SSH_TO_JOB:BOOL=OFF' => undef,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 			},
-			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.21',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-8.9',
+				],
 			'xtests'	=> undef,
 		},
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.15',
-							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-6.9' ],
+			'prereqs'	=> [ @default_prereqs, 'perl-5.8.9', 'binutils-2.21',
+							 'gzip-1.3.3', 'wget-1.9.1', 'coreutils-8.9' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -1064,24 +661,6 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Debian 4 on x86_64
-	# This might work.
-	##########################################################################
-	'x86_64_deb_4.0'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -1181,113 +760,6 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform Scientific Linux 5.5 on X86_64
-	# This might work.
-	##########################################################################
-	'x86_64_sl_5.5'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Scientific Linux 5.3 on X86_64
-	# This might work.
-	##########################################################################
-	'x86_64_sl_5.3'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Scientific Linux 4.4 on X86_64
-	# This might work.
-	##########################################################################
-	'x86_64_sl_4.4'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Scientific Linux (CERN) 4 on X86_64
-	# This might work.
-	##########################################################################
-	'x86_64_slc_4'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Scientific Linux (CERN) 3 on X86
-	# This might work.
-	##########################################################################
-	'x86_slc_3'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform SLES 8 on x86_64
-	##########################################################################
-	'x86_64_sles_8'		=> {
-		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform SLES 9 on x86_64
 	##########################################################################
 	'x86_64_sles_9'		=> {
@@ -1344,24 +816,6 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform Ubuntu 10.04 on x86
-	# This might work.
-	##########################################################################
-	'x86_ubuntu_10.04'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform RHEL 4 on x86
 	# This might work.
 	##########################################################################
@@ -1380,95 +834,17 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform Scientific Linux 4.3 on x86
-	# This might work.
+	# Platform openSUSE 11.3 on x86_64 (& updated)
 	##########################################################################
-	'x86_sl_4.3'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Scientific Linux 4.4 on x86
-	# This might work.
-	##########################################################################
-	'x86_sl_4.4'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform SLES 9 on x86
-	##########################################################################
-	'x86_sles_9'		=> {
-		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => {
-				@default_test_configure_args,
-				
-			},
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform SuSE 10.0 on x86
-	##########################################################################
-	# /usr/lib/libX11.so fails to link properly on this platform due
-	# to the error: undefined reference to `__stack_chk_fail@GLIBC_2.4'
-	'x86_suse_10.0'		=> {
-		'build' => {
-			'configure_args' =>{ @minimal_build_configure_args,
-					     '-DHAVE_KBDD:BOOL=OFF' => undef,
-						'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-						'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef
-			},
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> [ 'x86_suse_10.2' ],
-		},
-
-		'test' => {
-			'configure_args' => {
-				@default_test_configure_args,
-
-			},
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform SuSE 10.2 on x86
-	##########################################################################
-	'x86_suse_10.2'		=> {
+	'x86_64_opensuse_11.3'		=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+				'-DWITH_CURL:BOOL=ON' => undef,
+				'-DWITH_EXPAT:BOOL=ON' => undef,
+				'-DWITH_LIBVIRT:BOOL=ON' => undef,
+				'-DWITH_LIBXML2:BOOL=ON' => undef,
 			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
@@ -1483,8 +859,19 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-
+	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
 );
+
+foreach my $platform (keys %submit_info) {
+	next if ref($submit_info{$platform}) eq "HASH";
+	my $target = $submit_info{$platform};
+	die "Self reference detected in '$platform' definition!!!"
+		if ( $target eq $platform );
+	if ( ! exists $submit_info{$target} ) {
+		die "No matching platform '$target' for alias '$platform'";
+	}
+	$submit_info{$platform} = $submit_info{$target};
+}
 
 ###############################################################################
 # The code below this comment is used to sanity check the above data and
@@ -1543,8 +930,7 @@ sub statistics
 
 sub dump_info
 {
-	my ($f) = @_;
-	my $p;
+	my ($f) = shift(@_);
 	my ($bref, $tref);
 
 	if (!defined($f)) {
@@ -1555,7 +941,22 @@ sub dump_info
 	print $f "Dump of submit_info information\n";
 	print $f "-------------------------------\n";
 
-	foreach $p (sort keys %submit_info) {
+	foreach my $p (sort keys %submit_info) {
+		my $found = 0;
+		foreach my $pname ( @_ ) {
+			if ( $pname eq $p ) {
+				$found++;
+				last;
+			}
+			elsif ( $pname =~ /\/(.*)\// ) {
+				my $re = "$1";
+				if ( $p =~ /$re/ ) {
+					$found++;
+					last;
+				}
+			}
+		}
+		next if ( ! $found );
 		print $f "Platform: $p\n";
 
 		print $f "Build Info:\n";
@@ -1646,13 +1047,55 @@ sub args_to_array
 
 sub main
 {
+	my @platforms;
+	my $usage = "usage: $0 [--help|-h] [--list|-l] [-a|--all] [(<platform>|/<regex>/) ...]";
+
+	foreach my $arg ( @ARGV ) {
+		if (  ( $arg eq "-l" ) or ( $arg eq "--list" ) ) {
+			foreach my $key ( sort keys(%submit_info) ) {
+				print "$key\n";
+			}
+			exit( 0 );
+		}
+		elsif (  ( $arg eq "-a" ) or ( $arg eq "--all" ) ) {
+			push( @platforms, "/.*/" );
+		}
+		elsif (  ( $arg eq "-h" ) or ( $arg eq "--help" ) ) {
+			print "$usage\n";
+			print "  --help|-h:  This help\n";
+			print "  --list|-l:  List available platforms\n";
+			print "  --all|-a:   Dump info on all available platforms\n";
+			print "  <platform>: Dump info named platform\n";
+			print "  /<regex>/:  Dump info on all platforms matching <regex>\n";
+			exit(0);
+		}
+		elsif ( $arg =~ /_/ or $arg =~ /^\// ) {
+			push( @platforms, $arg );
+		}
+		elsif ( $arg =~ /^-/ ) {
+			print "Unknown option: '$arg'\n";
+			print "$usage\n";
+			exit( 1 );
+		}
+		else {
+			print "'$arg' does not appear to be a valid platform name or regex\n";
+			print "$usage\n";
+			exit( 1 );
+		}
+	}
+	if ( ! scalar(@platforms) ) {
+			print "$usage\n";
+			exit( 1 );
+	}
+	$#ARGV = -1;
+
 	if (!typecheck()) {
 		die "\tTypecheck failed!";
 	} else {
 		print "\tTypecheck passed.\n";
 	}
 	statistics();
-	dump_info();
+	dump_info( undef, @platforms );
 }
 
 ###############################################################################

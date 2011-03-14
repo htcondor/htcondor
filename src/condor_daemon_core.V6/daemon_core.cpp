@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011 Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -392,7 +392,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 #ifndef WIN32
 	async_sigs_unblocked = FALSE;
 #endif
-	async_pipe_empty = true;
+	async_pipe_signal = false;
 
 		// Note: this cannot be modified on reconfig, requires restart.
 	m_wants_dc_udp = param_boolean("WANT_UDP_COMMAND_SOCKET", true);
@@ -789,7 +789,7 @@ int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 				Service* s, HandlerType handler_type, DCpermission perm)
 {
 	return( Register_Pipe(pipe_end, pipe_descrip, handler,
-							(PipeHandlercpp)NULL, handler_descrip, s,
+							NULL, handler_descrip, s,
 							handler_type, perm, FALSE) );
 }
 
@@ -837,17 +837,21 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
 	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
 }
 
+#ifdef WIN32
 int DaemonCore::Register_Timer_TS(unsigned deltawhen, TimerHandlercpp handler,
 				const char *event_descrip, Service* s)
 {
-#ifdef WIN32
 	EnterCriticalSection(&Big_fat_mutex);
 	int status = Register_Timer(deltawhen, handler, event_descrip, s);
+	Do_Wake_up_select();
 	LeaveCriticalSection(&Big_fat_mutex);
 
-	Do_Wake_up_select();
 	return status;
 #else
+int DaemonCore::Register_Timer_TS(unsigned /* deltawhen */,
+				TimerHandlercpp /* handler */,
+				const char * /* event_descrip */, Service * /* s */ )
+{
 	return 0;
 #endif
 }
@@ -1214,7 +1218,8 @@ DaemonCore::privateNetworkName(void) {
 
 // Lookup the environment id set for a particular pid, or if -1 then the
 // getpid() in question.  Returns penvid or NULL of can't be found.
-PidEnvID* DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
+PidEnvID*
+DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 {
 	extern char **environ;
 
@@ -1565,47 +1570,6 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 
 	return i;
 }
-
-
-int
-DaemonCore::Cancel_And_Close_All_Sockets(void)
-{
-	// This method will cancel *and delete* all registered sockets.
-	// It will return the number of sockets cancelled + closed.
-	// Dan 2009-01-15: _why_ are we doing this?!
-	int i = 0;
-	int j = 0;
-
-	// Since sockets get deleted below, we must delete the ccb listener
-	// first or it will have dangling references.
-	if( m_ccb_listeners ) {
-		delete m_ccb_listeners;
-		m_ccb_listeners = NULL;
-	}
-
-	if( m_shared_port_endpoint ) {
-		delete m_shared_port_endpoint;
-		m_shared_port_endpoint = NULL;
-	}
-
-	for (j=0; j < nSock; j++) {
-		if ( (*sockTable)[j].iosock ) {	// if a valid entry....
-			Stream* insock = (*sockTable)[j].iosock;
-			Cancel_Socket( insock );
-			delete insock;
-			if( insock == (Stream*)dc_rsock ) {
-				dc_rsock = NULL;
-			}
-			if( insock == (Stream*)dc_ssock ) {
-				dc_ssock = NULL;
-			}
-			i++;
-		}
-	}
-
-	return i;
-}
-
 
 int DaemonCore::Cancel_Socket( Stream* insock)
 {
@@ -2268,7 +2232,7 @@ DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
 
 
 int
-DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int len) {
+DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 	PidEntry *pidinfo = NULL;
 	if ((pidTable->lookup(pid, pidinfo) < 0)) {
 			// we have no information on this pid
@@ -2282,7 +2246,7 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int len) {
 	}
 	pidinfo->pipe_buf[0] = new MyString;
 	*pidinfo->pipe_buf[0] = (char*)buffer;
-	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", (PipeHandlercpp)& DaemonCore::PidEntry::pipeFullWrite, "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
+	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeFullWrite), "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
 	return 0;
 }
 
@@ -2420,8 +2384,9 @@ void DaemonCore::Dump(int flag, const char* indent)
 
 void DaemonCore::DumpCommandTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2477,8 +2442,9 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authentica
 
 void DaemonCore::DumpReapTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2511,8 +2477,9 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 
 void DaemonCore::DumpSigTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2546,8 +2513,9 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 
 void DaemonCore::DumpSocketTable(int flag, const char* indent)
 {
-	int		i;
-	char *descrip1, *descrip2;
+	int			i;
+	const char *descrip1;
+	const char *descrip2;
 
 	// we want to allow flag to be "D_FULLDEBUG | D_DAEMONCORE",
 	// and only have output if _both_ are specified by the user
@@ -2795,7 +2763,7 @@ DaemonCore::reconfig(void) {
 		MyString buf;
 		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
 		max_hang_time = param_integer(buf.Value(),-1);
-		if( max_hang_time == -1 ) {
+		if( max_hang_time == (unsigned int)-1 ) {
 			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
 		}
 		if ( !max_hang_time ) {
@@ -2949,40 +2917,54 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const struct s
 	return result;
 }
 
-void
+bool
 DaemonCore::Wake_up_select()
 {
+	// There is no need to wake up select if it's the main thread calling (tid==1)
+	// because the main thread cannot be inside select if it's here.  There is also
+	// no need if the caller is not a condor thread (get_tid() returns 0), or 
+	// if the condor_threads class has never been initialized (git_tid() returns -1),
+	// because in both cases, the caller is either the main thread, or some wild 
+	// thread that isn't allowed to make DaemonCore calls.
+	if (CondorThreads::get_tid() <= 1) {
+#ifdef WIN32
+		if (GetCurrentThreadId() != dcmainThreadId) {
+			dprintf (D_ALWAYS, "DaemonCore::Wake_up_select called from an unknown thread. windows tid = %d", 
+				GetCurrentThreadId());
+		}
+#endif
 
-	// no need to wake up select again if we already did so
-	if ( async_pipe_empty == false ) {
-		return;
+		return false;
 	}
 
-	// no need to wake up select if we are the only thread
-	if ( CondorThreads::pool_size() == 0 ) {
-		return;
-	}
-
-	// no need to wake up select if we are the main thread
-	// note: main thread always has tid == 1
-	if ( CondorThreads::get_handle()->get_tid() == 1 ) {
-		return;
-	}
-	Do_Wake_up_select();
+	return Do_Wake_up_select();
 }
 
-void
+bool
 DaemonCore::Do_Wake_up_select()
 {
-		if ( async_pipe_empty ) {
+	// note, this code is called by threads other than the main thread,
+	// and (on windows) threads other than condor_threads.  it should be
+	// thread safe and it should not depend on the caller being a condor_thread.
+	// it should never be called by the master thread.
+	//
+	bool fSuccess = true;  // return success if the pipe is not empty
+	if ( ! async_pipe_signal) {
+		// set the async_pipe_signal flag before we write into the pipe
+		// to avoid a potential race condition. better to have the flag 
+		// say the pipe is signalled and have it not be than the reverse.
+		async_pipe_signal = true;
 #ifdef WIN32
-		async_pipe[1].put( '!' );
-		async_pipe[1].end_of_message();
+		if (GetCurrentThreadId() == dcmainThreadId) {
+			dprintf (D_ALWAYS, "DaemonCore::Do_Wake_up_select called from main thread. this should never happen.");
+			return false;
+		}
+		fSuccess = send(async_pipe[1].get_socket(), "!", 1, 0) > 0;
 #else
-		write(async_pipe[1],"!",1);
+		fSuccess = write(async_pipe[1],"!",1) > 0;
 #endif
 	}
-	async_pipe_empty = false;
+	return fSuccess;
 }
 
 // This function never returns. It is responsible for monitor signals and
@@ -3082,18 +3064,16 @@ void DaemonCore::Driver()
 			}
 
 #ifndef WIN32
+		// clear the async_pipe_signal flag before we empty to the pipe
+		// that way we won't miss it if someone writes into the pipe.
+		async_pipe_signal = false;
 		// Drain our async_pipe; we must do this before we unblock unix signals.
 		// Just keep reading while something is there.  async_pipe is set to
 		// non-blocking mode via fcntl, so the read below will not block.
 		while( read(async_pipe[0],asyncpipe_buf,8) > 0 );
 #else
-		if (async_pipe_empty == false) {
-			char c;
-			async_pipe[0].get(c);
-			async_pipe[0].end_of_message();
-		}
+		// windows version of this code is after selector.execute()
 #endif
-		async_pipe_empty = true;
 
 		// Prepare to enter main select()
 
@@ -3197,6 +3177,9 @@ void DaemonCore::Driver()
 		// select on.  We write to async_pipe if a unix async signal
 		// is delivered after we unblock signals and before we block on select.
 #ifdef WIN32
+		if ( ! async_pipe[0].is_connected()) {
+			EXCEPT("DaemonCore:: async_pipe has been unexpectedly closed!");
+		} 
 		selector.add_fd( async_pipe[0].get_file_desc() , Selector::IO_READ );
 #else
 		selector.add_fd( async_pipe[0], Selector::IO_READ );
@@ -3264,6 +3247,30 @@ void DaemonCore::Driver()
 		EnterCriticalSection(&Big_fat_mutex);
 		if ( selector.select_retval() == SOCKET_ERROR ) {
 			EXCEPT("select, error # = %d",WSAGetLastError());
+		}
+
+		// Drain our async_pipe (which is really a socket)
+		// extra error checking because we had problems with the pipe getting stuck
+		// in the signalled state in 7.5.5. 
+		if (selector.has_ready() &&
+			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
+			if ( ! async_pipe_signal) {
+				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.");
+			}
+			async_pipe_signal = false;
+			while (int cb = async_pipe[0].bytes_available_to_read()) {
+				if (cb < 0) {
+					dprintf(D_ALWAYS, "DaemonCore: async_pipe[0].bytes_available_to_read returned WSA Error %d", 
+							WSAGetLastError());
+					break;
+				}
+				char buf[16];
+				if (recv(async_pipe[0].get_socket(), buf, MIN(cb, COUNTOF(buf)), 0) == SOCKET_ERROR) {
+					dprintf(D_ALWAYS, "DaemonCore: recv on async_pipe[0] returned WSA Error %d", 
+							WSAGetLastError());
+					break;
+				}
+			}
 		}
 #endif
 
@@ -3658,7 +3665,7 @@ void
 DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock )
 {
 	char *handlerName = NULL;
-	int result;
+	int result=0;
 
 		// if the user provided a handler for this socket, then
 		// call it now.  otherwise, call the daemoncore
@@ -4012,7 +4019,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 {
 	Sock				*sock = NULL;
 
-	int					is_tcp;
+	int					is_tcp=0;
 	int                 req = 0;
 	int					index;
 	int					reqFound = FALSE;
@@ -6107,22 +6114,30 @@ void exit(int status)
 		_exit(status);
 	}
 
-	char* my_argv[2];
-	char* my_env[1];
+	const char* my_argv[2];
+	const char* my_env[1];
 	my_argv[1] = NULL;
 	my_env[0] = NULL;
 
 		// First try to just use /bin/true or /bin/false.
 	if ( status == 0 ) {
 		my_argv[0] = "/bin/true";
-		execve("/bin/true",my_argv,my_env);
+		execve( "/bin/true",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 		my_argv[0] = "/usr/bin/true";
-		execve("/usr/bin/true",my_argv,my_env);
+		execve( "/usr/bin/true",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 	} else {
 		my_argv[0] = "/bin/false";
-		execve("/bin/false",my_argv,my_env);
+		execve( "/bin/false",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 		my_argv[0] = "/usr/bin/false";
-		execve("/usr/bin/false",my_argv,my_env);
+		execve( "/usr/bin/false",
+				const_cast<char *const*>(my_argv),
+				const_cast<char *const*>(my_env)  );
 	}
 
 		// If we made it here, we cannot use /bin/[true|false].
@@ -6532,7 +6547,7 @@ void CreateProcessForkit::exec() {
 
 		// We may determine to seed the child's environment with the parent's.
 	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
-		m_envobject.MergeFrom((const char**)environ);
+		m_envobject.MergeFrom(environ);
 	}
 
 		// Put the caller's env requests into the job's environment, potentially
@@ -7039,7 +7054,8 @@ int DaemonCore::Create_Process(
 			int           job_opt_mask,
 			size_t        *core_hard_limit,
 			int			  *affinity_mask,
-			char const    *daemon_sock
+			char const    *daemon_sock,
+			MyString      *err_return_msg
             )
 {
 	int i, j;
@@ -7048,6 +7064,7 @@ int DaemonCore::Create_Process(
 	int numInheritFds = 0;
 	extern char **environ;
 	MyString executable_buf;
+	priv_state current_priv = PRIV_UNKNOWN;
 
 	// For automagic DC std pipes.
 	int dc_pipe_fds[3][2] = {{-1, -1}, {-1, -1}, {-1, -1}};
@@ -7920,7 +7937,6 @@ int DaemonCore::Create_Process(
 		// or in the condor priv if PRIV_CONDOR_FINAL is specified.
 		// Don't do anything in PRIV_UNKNOWN case.
 
-	priv_state current_priv;
 	if ( priv != PRIV_UNKNOWN ) {
 		if ( priv == PRIV_USER_FINAL ) {
 			current_priv = set_user_priv();
@@ -7948,8 +7964,11 @@ int DaemonCore::Create_Process(
 	if( cwd && (cwd[0] != '\0') ) {
 		if( stat(cwd, &stat_struct) == -1 ) {
 			return_errno = errno;
+            if (NULL != err_return_msg) {
+                err_return_msg->sprintf("Cannot access specified iwd \"%s\"", cwd);
+            }
 			dprintf( D_ALWAYS, "Create_Process: "
-					 "Cannot access specified cwd \"%s\": "
+					 "Cannot access specified iwd \"%s\": "
 					 "errno = %d (%s)\n", cwd, errno, strerror(errno) );
 			if ( priv != PRIV_UNKNOWN ) {
 				set_priv( current_priv );
@@ -8281,8 +8300,8 @@ int DaemonCore::Create_Process(
 					// the write end and stash the read end.
 				Close_Pipe(dc_pipe_fds[i][1]);
 				pidtmp->std_pipes[i] = dc_pipe_fds[i][0];
-				char* pipe_desc;
-				char* pipe_handler_desc;
+				const char* pipe_desc;
+				const char* pipe_handler_desc;
 				if (i == 1) {
 					pipe_desc = "DC stdout pipe";
 					pipe_handler_desc = "DC stdout pipe handler";
@@ -8292,7 +8311,7 @@ int DaemonCore::Create_Process(
 					pipe_handler_desc = "DC stderr pipe handler";
 				}
 				Register_Pipe(dc_pipe_fds[i][0], pipe_desc,
-					  (PipeHandlercpp) & DaemonCore::PidEntry::pipeHandler,
+					  static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeHandler),
 					  pipe_handler_desc, pidtmp);
 			}
 				// Either way, we stashed/closed as needed, so clear
@@ -9264,9 +9283,8 @@ pidWatcherThread( void* arg )
 			// Eventually, we should just call SendSignal for this.
 			// But for now, handle it all here.
 
-			// In the post v6.4.x world, SafeSock and startCommand
-			// are no longer thread safe, so we must grab our Big_fat lock.			
 			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
+#if 0  // this code replaced by call to Do_Wake_up_select() below
 				// send a NOP command to wake up select()
 			Daemon d( DT_ANY, daemonCore->privateNetworkIpAddr() );
 	        SafeSock ssock;
@@ -9278,6 +9296,9 @@ pidWatcherThread( void* arg )
 				!d.connectSock(&sock,1) ||
 				!d.startCommand(DC_NOP, &sock, 1, NULL, "DC_NOP", true) ||
 				!sock.end_of_message();
+#else
+//#pragma REMIND("TJ: remove this dead code.")
+#endif
 				// while we have the Big_fat_mutex, copy any exited pids
 				// out of our thread local MyExitedQueue and into our main
 				// thread's WaitpidQueue (of course, we must have the mutex
@@ -9288,6 +9309,13 @@ pidWatcherThread( void* arg )
 			while (MyExitedQueue.dequeue(wait_entry)==0) {
 				daemonCore->WaitpidQueue.enqueue( wait_entry );
 			}
+
+			// now wakeup the main thread so it notices our changes.
+			// we use Do_Wake_up rather than Wake_up because we know
+			// we aren't the main thread, but we don't know if condor_threads
+			// was ever initialized. the latter function will not wake in that case.
+			notify_failed = ! daemonCore->Do_Wake_up_select();
+
 			::LeaveCriticalSection(&Big_fat_mutex); // leave big fat mutex
 
             if ( notify_failed )
@@ -9844,7 +9872,7 @@ int DaemonCore::HungChildTimeout()
 		// to call us again and follow up with a hard-kill.
 		if( !first_time ) {
 			dprintf(D_ALWAYS,
-					"Child pid %d is still hung!  Perhaps it hung while generating a core file.  Killing it harder.\n");
+					"Child pid %d is still hung!  Perhaps it hung while generating a core file.  Killing it harder.\n",hung_child_pid);
 			want_core = false;
 		}
 		else {
@@ -10311,29 +10339,10 @@ DaemonCore::CheckConfigSecurity( const char* config, Sock* sock )
 
 
 bool
-DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
+DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 {
-	char *name, *tmp;
 	const char* ip_str;
 	int i;
-
-	if( ! (name = strdup(attr)) ) {
-		EXCEPT( "Out of memory!" );
-	}
-	tmp = strchr( name, '=' );
-	if( ! tmp ) {
-		tmp = strchr( name, ':' );
-	}
-	if( tmp ) {
-			// someone's trying to set something, so we should trim
-			// off the value they want to set it to and any whitespace
-			// so we can just look at the attribute name.
-		*tmp = ' ';
-		while( isspace(*tmp) ) {
-			*tmp = '\0';
-			tmp--;
-		}
-	}
 
 #if (DEBUG_SETTABLE_ATTR_LISTS)
 		dprintf( D_ALWAYS, "CheckConfigSecurity: name is: %s\n", name );
@@ -10378,7 +10387,6 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 						 PermString((DCpermission)i) );
 #endif
 
-				free( name );
 				return true;
 			}
 		}
@@ -10391,8 +10399,6 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 		// Grab a pointer to this string, since it's a little bit
 		// expensive to re-compute.
 	ip_str = sock->peer_ip_str();
-		// Upper-case-ify the string for everything we print out.
-	strupr(name);
 
 		// First, log it.
 	dprintf( D_ALWAYS,
@@ -10401,7 +10407,6 @@ DaemonCore::CheckConfigAttrSecurity( const char* attr, Sock* sock )
 	dprintf( D_ALWAYS,
 			 "WARNING: Potential security problem, request refused\n" );
 
-	free( name );
 	return false;
 }
 
@@ -10454,7 +10459,7 @@ DaemonCore::InitSettableAttrsLists( void )
 
 
 bool
-DaemonCore::InitSettableAttrsList( const char* subsys, int i )
+DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 {
 	MyString param_name;
 	char* tmp;
@@ -10838,17 +10843,27 @@ DaemonCore::evalExpr( ClassAd* ad, const char* param_name,
 	return value;
 }
 
-
-DaemonCore::PidEntry::PidEntry() {
-	int i;
-	for (i=0; i<=2; i++) {
+DaemonCore::PidEntry::PidEntry() : pid(0),
+	new_process_group(0),
+	is_local(0),
+	parent_is_local(0),
+	reaper_id(0),
+	hung_tid(0),
+	was_not_responding(0),
+	stdin_offset(0),
+	child_session_id(NULL)
+{
+	for (int i=0;i<3;++i) {
 		pipe_buf[i] = NULL;
 		std_pipes[i] = DC_STD_FD_NOPIPE;
 	}
-	stdin_offset = 0;
-	child_session_id = NULL;
+	penvid.num = PIDENVID_MAX;
+	for (int i = 0;i<PIDENVID_MAX; ++i) {
+		penvid.ancestors[i].active=0;
+		for (unsigned int j=0;j<PIDENVID_ENVID_SIZE;++j)
+			penvid.ancestors[i].envid[j]='\0';
+	}
 }
-
 
 DaemonCore::PidEntry::~PidEntry() {
 	int i;
@@ -10882,7 +10897,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
     int bytes, max_read_bytes, max_buffer;
 	int pipe_index = 0;
 	MyString* cur_buf = NULL;
-	char* pipe_desc;
+	const char* pipe_desc=NULL;
 	if (std_pipes[1] == pipe_fd) {
 		pipe_index = 1;
 		pipe_desc = "stdout";
@@ -10940,7 +10955,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 }
 
 
-void
+int
 DaemonCore::PidEntry::pipeFullWrite(int fd)
 {
 	int bytes_written = 0;
@@ -10976,6 +10991,7 @@ DaemonCore::PidEntry::pipeFullWrite(int fd)
 	{
 		dprintf(D_DAEMONCORE|D_FULLDEBUG, "DaemonCore::PidEntry::pipeFullWrite: Failed to write to fd %d (errno = %d).  Will try again.\n", fd, errno);
 	}
+	return 0;
 }
 
 void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessid ) {

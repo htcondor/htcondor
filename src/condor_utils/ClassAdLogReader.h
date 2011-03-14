@@ -140,6 +140,11 @@ public:
 		 * who it is working for, set by the ClassAdLogReader.
 		 */
 	virtual void SetClassAdLogReader(ClassAdLogReader * /*reader*/) { }
+		/**
+		 * Virtual destructor
+		 * Suppresses compiler warnings
+		 */
+	virtual ~ClassAdLogConsumer() {}
 };
 
 #endif

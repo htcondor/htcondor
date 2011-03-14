@@ -5371,7 +5371,5 @@ AttributeUpdate::setOldValue(const char* attr_value)
 	}
 	if (attr_value) {
 		old_value = strdup(attr_value);
-	} else {
-		old_value = NULL;
 	}
 }

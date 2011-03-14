@@ -172,8 +172,6 @@ condor_gethostbyname_ipv6(const char* name) {
     }
 
     h_addr_list[addrcount] = NULL;
-
-cleanup:
     freeaddrinfo(res);
     return &hostent;
 }
@@ -453,7 +451,7 @@ convert_hostname_to_ip(const char *name,
 
 	if (NULL != (default_domain_name = param("DEFAULT_DOMAIN_NAME"))) {
 		int i;
-		char *idx;
+		const char *idx;
 			// XXX: What I really want to do here is to not try to
 			// parse names that do not contain the DEFAULT_DOMAIN_NAME
 			// suffix, but for some reason line 517 of condor_config.C
@@ -494,7 +492,8 @@ convert_hostname_to_ip(const char *name,
 // 		}
 
 		memset(tmp_name, 0, MAXHOSTNAMELEN);
-		if (NULL != (idx = (char *)strstr(name, default_domain_name))) {
+		idx = strstr(name, default_domain_name);
+		if (NULL != idx) {
 			strncpy(tmp_name, name, idx - name - 1);
 		} else {
 			strncpy(tmp_name, name, MAXHOSTNAMELEN - 1);

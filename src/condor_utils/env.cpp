@@ -309,7 +309,7 @@ Env::WriteToDelimitedString(char const *input,MyString &output) {
 
 	while(*input) {
 		end = input + strcspn(input,specials);
-		ret = output.sprintf_cat("%.*s",end-input,input);
+		ret = output.sprintf_cat("%.*s", (int)(end-input), input);
 		ASSERT(ret);
 		input = end;
 

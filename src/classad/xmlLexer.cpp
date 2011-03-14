@@ -50,8 +50,8 @@ struct xml_tag_mapping tag_mappings[] =
 
 struct entity
 {
-	char *name;
-	char *replacement_text;
+	const char *name;
+	const char *replacement_text;
 	int length;
 };
 

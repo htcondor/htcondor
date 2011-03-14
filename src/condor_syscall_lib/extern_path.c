@@ -81,6 +81,7 @@ external_name( const char *name, char* buf, int bufsize )
 	if( stat(local_name,&st_buf) < 0 ) {
 		dprintf( D_ALWAYS, "stat failed in external_name: %s\n",
 				 strerror(errno) );
+		FREE(local_name);
 		return -1;
 	}
 	file_dev = st_buf.st_dev;

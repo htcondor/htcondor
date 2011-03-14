@@ -122,17 +122,45 @@ END {
 	    print "</interface>" ;
 	}
     }
-    print "<disk type='file'>" ;
-    if(index(attrs["JobVMType"],"xen") != 0) 
+
+    
+    n=split(attrs["VMPARAM_vm_Disk"], full_disk, ",");
+    for ( i=1; i<=n; i++ )
     {
-	 split(attrs["VMPARAM_Xen_Disk"], disk_string, ":");
+        # count is used to determine if format is passed.
+        p = split(full_disk[i], disk_string, ":");
+
+        if (index( disk_string[1], "iso") )
+        {
+            print "<disk type='file' device='cdrom'>";
+        }
+        else
+        {
+            print "<disk type='file'>" ;
+        }
+        
+        if ( p == 4 )
+        {
+            # only an issue w/qemu
+            if (attrs["JobVMType"] == "kvm")
+            {
+                print "<driver name='qemu' type='" disk_string[4] "'/>";
+            }
+        }
+
+        print "<source file='" disk_string[1] "'/>" ;
+        print "<target dev='" disk_string[2] "'/>" ;
+        
+        if ( disk_string[3] == "r" )
+        {
+            print "<readonly/>"
+        }
+
+        print "</disk>" ;
     }
-    else if(index(attrs["JobVMType"],"kvm") != 0)
-    {
-	split(attrs["VMPARAM_Kvm_Disk"], disk_string, ":");
-    }
-    print "<source file='" disk_string[1] "'/>" ;
-    print "<target dev='" disk_string[2] "'/>" ;
-    print "</disk></devices></domain>" ;
+
+     print "</devices></domain>"
+
+    
     exit(0);
 }

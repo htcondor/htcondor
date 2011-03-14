@@ -22,7 +22,7 @@
 #include "condor_constants.h"
 
 int
-core_is_valid( char *core_fn )
+core_is_valid( const char *core_fn )
 {
 	struct stat buf;
 

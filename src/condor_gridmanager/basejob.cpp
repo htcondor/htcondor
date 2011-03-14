@@ -649,7 +649,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 	if ( new_condor_state == condorState ) {
 		if ( !full_ad ) {
-			MergeClassAds( jobAd, (ClassAd*)new_ad, true, false );
+			MergeClassAds( jobAd, const_cast<ClassAd*>(new_ad), true, false );
 		}
 		return;
 	}
@@ -710,7 +710,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 			// TODO do we need to update any other attributes?
 		SetEvaluateState();
 	} else if ( !full_ad ) {
-		MergeClassAds( jobAd, (ClassAd*)new_ad, true, false );
+		MergeClassAds( jobAd, const_cast<ClassAd*>(new_ad), true, false );
 	}
 
 }

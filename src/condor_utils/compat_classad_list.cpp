@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -26,10 +26,16 @@
 
 namespace compat_classad {
 
-static unsigned int ptr_hash_fn(ClassAd* const &index)
+static unsigned int
+ptr_hash_fn(ClassAd* const &index)
 {
 	intptr_t i = (intptr_t)index;
+
+#if (SIZEOF_VOIDPTR > 4)
 	return (unsigned int)( i ^ (i>>32) );
+#else
+	return (unsigned int) i;
+#endif
 }
 
 ClassAdListDoesNotDeleteAds::ClassAdListDoesNotDeleteAds():

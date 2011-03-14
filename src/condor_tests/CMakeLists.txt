@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -30,15 +30,17 @@ if (BUILD_TESTS)
 	##########################################################
 	## begin file goop manipulation specific to the horror that
 	## is the "condor testing framework."
-	file(COPY ${CONDOR_SCRIPTS_DIR}/Condor.pm
-			${CONDOR_SCRIPTS_DIR}/CondorTest.pm
-			${CONDOR_SCRIPTS_DIR}/CondorPersonal.pm
-			${CONDOR_SCRIPTS_DIR}/CondorUtils.pm
-			${CONDOR_SCRIPTS_DIR}/batch_test.pl
-		DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
+	foreach(scriptFile Condor.pm
+			   CondorTest.pm
+			   CondorPersonal.pm
+			   CondorUtils.pm
+			   batch_test.pl)
+		configure_file(${CONDOR_SCRIPTS_DIR}/${scriptFile}
+				${TEST_TARGET_DIR}/${scriptFile} COPYONLY)
+	endforeach(scriptFile)
 
 	# 1st remove generated files.
-	file( GLOB RMV_FIRST list_* *.desc )
+	file( GLOB RMV_FIRST ${TEST_TARGET_DIR}/list_* *.desc )
 	if (RMV_FIRST)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
@@ -117,18 +119,19 @@ if (BUILD_TESTS)
 		# someone else can add the fortran tests.
 		dprint("UW - add fortran .exe tests if desired")
 		
+		if(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
+			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
+		endif()
 	endif(STD_UNIVERSE)
 
 	##########################################################
 	# platform specific tests
 	if(LINUX)
-	if ( NOT WITHOUT_AMAZON_TEST )
-		condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
-	endif()
+		if ( NOT WITHOUT_AMAZON_TEST AND HAVE_EXT_GSOAP )
+			condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
+		endif()
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
-	elseif(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
-		condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
 	endif()
 
 	# negative matches. test on everything but this
@@ -169,10 +172,6 @@ if (BUILD_TESTS)
 		condor_pl_test(lib_lease_manager-get_rel_4 "Lease manager: get/relesae test 4" "core;quick;full")
 		condor_pl_test(lib_lease_manager-get_rel_5 "Lease manager: get/relesae test 5" "core;quick;full")
 	endif(WANT_LEASE_MANAGER)
-
-	if (WANT_QUILL AND HAV_EXT_POSTGRESS)
-		condor_pl_test(lib_lease_manager-get_rel_5 "Lease manager: get/relesae test 5" "core;quick;full")
-	endif(WANT_QUILL AND HAV_EXT_POSTGRESS)
 
 	if (STD_UNIVERSE)
 		# C-Tests
@@ -450,6 +449,7 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_job_held "Test removing jobs held too many times" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_reject "Test the REJECT keyword, inside a splice" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_jobstate_log "Test writing the jobstate.log file, including rescue DAG and recovery mode" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_gt1957 "Test gittrac #1957 fix" "dagman;quick;full;quicknolink")
 	#condor_pl_test(perf_busy_lynn_100_100_500_sched "Generated cpu loading performance test" "performance;long")
 	#condor_pl_test(perf_jobs_sue_10_10_30_van "Generated jobs performance test" "performance;long")
 	#condor_pl_test(perf_xfer_deb_10_10_30_van "Generated transfer performance test" "performance;long")
@@ -461,8 +461,9 @@ if (BUILD_TESTS)
 	condor_pl_test(lib_ccb_schedd "Test of submit daemons using CCB." "core;quick;full;quicknolink")
 	condor_pl_test(lib_ccb_schedd_privnet "Test of submit daemons using CCB in private net." "core;quick;full;quicknolink")
 	condor_pl_test(lib_job_router_local "Test of JobRouter routing to local universe." "core;quick;full;quicknolink")
+	condor_pl_test(condor_view_classad_types "CONDOR_VIEW_CLASSAD_TYPES test" "core;quick;full;quicknolink")
 
-	if ( NOT WITHOUT_SOAP_TEST )
+	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )
 		condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
 	endif()
 

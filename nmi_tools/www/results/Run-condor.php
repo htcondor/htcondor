@@ -95,26 +95,31 @@ while ($row = mysql_fetch_array($result)) {
    // --------------------------------
    // BUILDS
    // --------------------------------
-   $sql = "SELECT SUM(IF(Task.result = 0, 1, 0)) AS passed, ".
-          "       SUM(IF(Task.result != 0, 1, 0)) AS failed, ".
-          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending ".
+   $sql = "SELECT Task.platform, Task.result" . 
           "  FROM Task, Run ".
           " WHERE Run.runid = {$runid}  AND ".
           "       Task.runid = Run.runid AND ".
           "       Task.platform != 'local' ".
           " GROUP BY Task.platform ";
-   $result2 = mysql_query($sql)
-                  or die ("Query {$sql} failed : " . mysql_error());
+   $result2 = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
    $data["build"] = Array();
+   $data["build"]["totals"] = Array();
+   $data["build"]["platforms"] = Array();
    while ($platforms = mysql_fetch_array($result2)) {
-      if (!empty($platforms["failed"])) {
-         $data["build"]["failed"]++;
-      } elseif (!empty($platforms["pending"])) {
-         $data["build"]["pending"]++;
-      } elseif (!empty($platforms["passed"])) {
-         $data["build"]["passed"]++;
-      }
-   } // WHILE
+     $data["build"]["totals"]["total"]++;
+     if($platforms["result"] == NULL) {
+       $data["build"]["totals"]["pending"]++;
+       $data["build"]["platforms"][$platforms["platform"]] = "pending";
+     }
+     elseif($platforms["result"] == 0) {
+       $data["build"]["totals"]["passed"]++;
+       $data["build"]["platforms"][$platforms["platform"]] = "passed";       
+     }
+     elseif($platforms["result"] != 0) {
+       $data["build"]["totals"]["failed"]++;
+       $data["build"]["platforms"][$platforms["platform"]] = "failed";
+     }
+   }
    mysql_free_result($result2);
 
    // --------------------------------
@@ -122,7 +127,8 @@ while ($row = mysql_fetch_array($result)) {
    // --------------------------------
    $sql = "SELECT SUM(IF(Task.result = 0, 1, 0)) AS passed, ".
           "       SUM(IF(Task.result != 0, 1, 0)) AS failed, ".
-          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending ".
+          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending, ".
+          "       Task.platform" . 
           "  FROM Task, Run, Method_nmi ".
           " WHERE Method_nmi.input_runid = {$runid} AND ".
           "       Run.runid = Method_nmi.runid AND ".
@@ -131,21 +137,25 @@ while ($row = mysql_fetch_array($result)) {
           "       Task.platform != 'local' AND ".
           "       ((Run.project_version = Run.component_version)  OR (Run.component_version = 'native' ))".
           " GROUP BY Task.platform ";
-   $result2 = mysql_query($sql)
-                  or die ("Query {$sql} failed : " . mysql_error());
+   $result2 = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
    $data["test"] = Array();
+   $data["test"]["totals"] = Array();
+   $data["test"]["platforms"] = Array();
    while ($platforms = mysql_fetch_array($result2)) {
-      if (!empty($platforms["failed"])) {
-         $data["test"]["failed"]++;
-         $data["test"]["total"]++;
-      } elseif (!empty($platforms["pending"])) {
-         $data["test"]["pending"]++;
-         $data["test"]["total"]++;
-      } elseif (!empty($platforms["passed"])) {
-         $data["test"]["passed"]++;
-         $data["test"]["total"]++;
-      }
-   } // WHILE
+     $data["test"]["totals"]["total"]++;
+     if($platforms["failed"] > 0) {
+       $data["test"]["totals"]["failed"]++;
+       $data["test"]["platforms"][$platforms["platform"]] = "failed";
+     }
+     elseif($platforms["pending"] > 0) {
+       $data["test"]["totals"]["pending"]++;
+       $data["test"]["platforms"][$platforms["platform"]] = "pending";
+     }
+     elseif($platforms["passed"] > 0) {
+       $data["test"]["totals"]["passed"]++;
+       $data["test"]["platforms"][$platforms["platform"]] = "passed";
+     }
+   }
    mysql_free_result($result2);
 
    // --------------------------------
@@ -153,31 +163,36 @@ while ($row = mysql_fetch_array($result)) {
    // --------------------------------
    $sql = "SELECT SUM(IF(Task.result = 0, 1, 0)) AS passed, ".
           "       SUM(IF(Task.result != 0, 1, 0)) AS failed, ".
-          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending ".
+          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending, ".
+          "       Task.platform " .
           "  FROM Task, Run, Method_nmi ".
           " WHERE Method_nmi.input_runid = {$runid} AND ".
           "       Run.runid = Method_nmi.runid AND ".
           "       Run.user = '$user'  AND ".
           "       Task.runid = Run.runid AND ".
           "       Task.platform != 'local' AND ".
-		  "       project_version != component_version AND ".
-		  "		  component_version != 'native' ".
+          "       project_version != component_version AND ".
+          "	  component_version != 'native' ".
           " GROUP BY Task.platform ";
-   $result2 = mysql_query($sql)
-                  or die ("Query {$sql} failed : " . mysql_error());
+   $result2 = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
    $data["crosstest"] = Array();
+   $data["crosstest"]["totals"] = Array();
+   $data["crosstest"]["platforms"] = Array();
    while ($platforms = mysql_fetch_array($result2)) {
-      if (!empty($platforms["failed"])) {
-         $data["crosstest"]["failed"]++;
-         $data["crosstest"]["total"]++;
-      } elseif (!empty($platforms["pending"])) {
-         $data["crosstest"]["pending"]++;
-         $data["crosstest"]["total"]++;
-      } elseif (!empty($platforms["passed"])) {
-         $data["crosstest"]["passed"]++;
-         $data["crosstest"]["total"]++;
-      }
-   } // WHILE
+     $data["crosstest"]["totals"]["total"]++;
+     if($platforms["failed"] > 0) {
+       $data["crosstest"]["totals"]["failed"]++;
+       $data["crosstest"]["platforms"][$platforms["platform"]] = "failed";
+     }
+     elseif($platforms["pending"] > 0) {
+       $data["crosstest"]["totals"]["pending"]++;
+       $data["crosstest"]["platforms"][$platforms["platform"]] = "pending";
+     }
+     elseif($platforms["passed"] > 0) {
+       $data["crosstest"]["totals"]["passed"]++;
+       $data["crosstest"]["platforms"][$platforms["platform"]] = "passed";
+     }
+   }
    mysql_free_result($result2);
 
    //
@@ -192,38 +207,38 @@ while ($row = mysql_fetch_array($result)) {
    // completely crapped out on us, we need to show it
    // Andy - 11/30/2006
    //
-   if ($user != CONDOR_USER && !count($data["build"]) && !count($data["test"])) continue;
+   if ($user != CONDOR_USER && !count($data["build"]["platforms"]) && !count($data["test"]["platforms"])) continue;
 
-	// Is this top level run pinned or not(probably not but could be one of a kind)
+   // Is this top level run pinned or not(probably not but could be one of a kind)
+   
+   $findpin="SELECT 
+                    run_type, 
+                    runid,
+                    user,
+                    archived,
+                    archive_results_until
+             FROM 
+                    Run 
+             WHERE 
+                    runid = $runid ";
 
-	$findpin="
-		SELECT 
-  			run_type, 
-  			runid,
-  			user,
-			archived,
-  			archive_results_until
-		FROM 
-  			Run 
-		WHERE 
-  			runid = $runid ";
-
-   $pincheck = mysql_query($findpin)
-                  or die ("Query {$findpin} failed : " . mysql_error());
+   $pincheck = mysql_query($findpin) or die ("Query {$findpin} failed : " . mysql_error());
    while ($pindetails = mysql_fetch_array($pincheck)) {
-	  $pin = $pindetails["archive_results_until"];
-	  $archived = $pindetails["archived"];
-	  if( !(is_null($pin))) {
-	  		$pinstr = "pin ". "$pin";
-	  } else {
-	  		$pinstr = "";
-	  }
-	  if( $archived == '0' ) {
-	  		$archivedstr = "$runid". "<br><font size=\"-1\"> D </font>";
-	  } else {
-	  		$archivedstr = "$runid";
-	  }
-   } 
+     $pin = $pindetails["archive_results_until"];
+     $archived = $pindetails["archived"];
+     if( !(is_null($pin))) {
+       $pinstr = "pin ". "$pin";
+     }
+     else {
+       $pinstr = "";
+     }
+     if( $archived == '0' ) {
+       $archivedstr = "$runid". "<br><font size=\"-1\"> D </font>";
+     }
+     else {
+       $archivedstr = "$runid";
+     }
+   }
    
    echo <<<EOF
    <tr>
@@ -234,17 +249,27 @@ while ($row = mysql_fetch_array($result)) {
 EOF;
 
    foreach (Array("build", "test", "crosstest") AS $type) {
-      $cur = $data[$type];
+      $platforms = $data[$type]["platforms"];
+      $totals = $data[$type]["totals"];
+
+      // Form a status table
+      $list = Array();
+      $list["passed"] = Array();
+      $list["pending"] = Array();
+      $list["failed"] = Array();
+      foreach ($platforms as $platform) {
+	$list[$platforms[$platform]] .= $platform;
+      }
       
-      if($cur["failed"] > 0) {
+      if($totals["failed"] > 0) {
 	$status = "FAILED";
 	$color = "FAILED";
       }
-      elseif($cur["pending"] > 0) {
+      elseif($totals["pending"] > 0) {
 	$status = "PENDING";
 	$color = "PENDING";
       }
-      elseif($cur["passed"] > 0) {
+      elseif($totals["passed"] > 0) {
 	$status = "PASSED";
 	$color = "PASSED";
       }
@@ -273,9 +298,9 @@ EOF;
             $res = mysql_fetch_array($cnt_result);
             $no_test_cnt = $res["count"];
          }
-         $cur["missing"] = $data["build"]["passed"] - $cur["total"] - $no_test_cnt;
-         if ($cur["missing"] > 0) $color = "FAILED";
-         elseif ($cur["missing"] < 0) $cur["missing"] = 0;
+         $totals["missing"] = $data["build"]["totals"]["passed"] - $totals["total"] - $no_test_cnt;
+         if ($totals["missing"] > 0) $color = "FAILED";
+         elseif ($totals["missing"] < 0) $totals["missing"] = 0;
       }
 
       if($type == "crosstest") {
@@ -288,7 +313,7 @@ EOF;
       //
       // No results
       //
-      if (!count($cur)) {
+      if (!count($platforms)) {
          //
          // If this is a nightly build, we can check whether it failed and
          // give a failure notice. Without this, the box will just be empty
@@ -296,50 +321,65 @@ EOF;
          //
          if (!empty($run_result) && $type == 'build') {
             $status = "FAILED";
-                     echo <<<EOF
-         <td class="{$status}" align="center">
-            <table cellpadding="1" cellspacing="0" width="100%" class="details">
-               <tr>
-                  <td colspan="2" class="detail_url"><a href="{$detail_url}">$status</a></td>
-               </tr>
-            </table>
-         </td>
+	    echo <<<EOF
+	      <td class="{$status}" align="center">
+	      <table cellpadding="1" cellspacing="0" width="100%" class="details">
+	      <tr>
+	      <td colspan="2" class="detail_url"><a href="{$detail_url}">$status</a></td>
+	      </tr>
+	      </table>
+	      </td>
 EOF;
          //
          // Just display an empty cell
          //
-         } else {
+         }
+	 elseif($type == "test") {
+	    echo <<<EOF
+	      <td class="noresults" align="center">
+	      <table cellpadding="1" cellspacing="0" width="100%" class="details">
+	      <tr><td colspan="2" class="detail_url"><a href="{$detail_url}">No Completed Builds</a></td></tr>
+	      <tr><td colspan="2">&nbsp;</td></tr>
+	      <tr><td colspan="2">&nbsp;</td></tr>
+	      <tr><td colspan="2">&nbsp;</td></tr>
+	      </table>
+	      </td>
+EOF;
+	 }
+	 else {
             echo "<td>&nbsp;</td>\n";
          }
       //
       // Show Summary
       //
-      } else {
+      }
+      else {
                         
          echo <<<EOF
          <td class="{$color}" align="center" valign="top">
             <table cellpadding="1" cellspacing="0" width="100%" class="details">
                <tr>
-                  <td colspan="2" class="detail_url"><a href="{$detail_url}">$status</a></td>
+	          <td colspan="2" class="detail_url">
+                    <a href="{$detail_url}">$status</a>
+	          </td>
                </tr>
 EOF;
          //
          // Show the different status tallies for platforms
          //
          foreach ($result_types AS $key) {
-            if ($key == "missing" && empty($cur[$key])) continue;
+            if ($key == "missing" && empty($totals[$key])) continue;
+	    $prefix = $postfix = "";
             if ($key == "missing") {
                $prefix = "<B>";
                $postfix = "</B>";
-            } else {
-               $prefix = $postfix = "";
             }
 
             echo "<tr>\n".
                "   <td width=\"75%\">{$prefix}".ucfirst($key)."{$postfix}</td>\n".
-               "   <td width=\"25%\">{$prefix}".(int)$cur[$key]."{$postfix}</td>\n".
+               "   <td width=\"25%\">{$prefix}".(int)$totals[$key]."{$postfix}</td>\n".
                "</tr>\n";
-         } // FOREACH
+         }
          echo "</table></td>\n";
       } // RESULTS
    } // FOREACH

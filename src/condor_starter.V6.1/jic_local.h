@@ -127,7 +127,7 @@ public:
 		   happen.  We don't do any file transfer for JICLocal, so
 		   just return true so we move directly onto the next stage.
 		*/
-	bool transferOutput( bool &transient_failure ) { return true; };
+	bool transferOutput( bool & ) { return true; };
 	bool transferOutputMopUp( void ) { return true; };
 
 		/** The last job this starter is controlling has been
@@ -157,7 +157,7 @@ public:
 	bool notifyJobExit( int exit_status, int reason, 
 						UserProc* user_proc );  
 
-	int notifyJobTermination( UserProc* user_proc ) { return 0; };
+	int notifyJobTermination( UserProc* ) { return 0; };
 
 	virtual bool notifyStarterError( const char* err_msg, bool critical, int hold_reason_code, int hold_reason_subcode );
 

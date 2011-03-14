@@ -31,7 +31,7 @@
 #include "openssl/rand.h"
 #include "condor_netdb.h"
 
-Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int remote)
+Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int /* remote */)
     : Condor_Auth_Base    ( sock, CAUTH_SSL )
 {
 	m_crypto = NULL;
@@ -43,7 +43,7 @@ Condor_Auth_SSL :: ~Condor_Auth_SSL()
 	if(m_crypto) delete(m_crypto);
 }
 
-int Condor_Auth_SSL::authenticate(const char * remoteHost, CondorError* errstack)
+int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* /* errstack */)
 {
     long err;
     char *buffer;
@@ -725,7 +725,7 @@ int Condor_Auth_SSL :: receive_message( int &status, int &len, char *buf )
     return AUTH_SSL_A_OK;
 }
 
-int Condor_Auth_SSL :: server_receive_message( int server_status, char *buf, BIO *conn_in, BIO *conn_out )
+int Condor_Auth_SSL :: server_receive_message( int /* server_status */, char *buf, BIO *conn_in, BIO * /* conn_out */)
 {
     int client_status;
     int len;
@@ -750,7 +750,7 @@ int Condor_Auth_SSL :: server_receive_message( int server_status, char *buf, BIO
 //    }
     return client_status;
 }
-int Condor_Auth_SSL :: server_send_message( int server_status, char *buf, BIO *conn_in, BIO *conn_out )
+int Condor_Auth_SSL :: server_send_message( int server_status, char *buf, BIO * /* conn_in */, BIO *conn_out )
 {
     int len;
     // Read from server's conn_out into buffer to send to client.
@@ -776,7 +776,7 @@ int Condor_Auth_SSL :: server_exchange_messages( int server_status, char *buf, B
     return server_receive_message( server_status, buf, conn_in, conn_out );
 }
 
-int Condor_Auth_SSL :: client_send_message( int client_status, char *buf, BIO *conn_in, BIO *conn_out )
+int Condor_Auth_SSL :: client_send_message( int client_status, char *buf, BIO * /* conn_in */, BIO *conn_out )
 {
     int len = 0;
     buf[0] = 0; // just in case we don't read anything
@@ -789,7 +789,7 @@ int Condor_Auth_SSL :: client_send_message( int client_status, char *buf, BIO *c
     }
     return AUTH_SSL_A_OK;
 }
-int Condor_Auth_SSL :: client_receive_message( int client_status, char *buf, BIO *conn_in, BIO *conn_out )
+int Condor_Auth_SSL :: client_receive_message( int /* client_status */, char *buf, BIO *conn_in, BIO * /* conn_out */ )
 {
     int server_status;
     int len = 0;
@@ -831,7 +831,7 @@ int Condor_Auth_SSL :: client_exchange_messages( int client_status, char *buf, B
 }
 
 
-long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role)
+long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int /* role */ )
 {
 	X509      *cert;
 		/* These are removed, see below.

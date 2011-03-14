@@ -79,6 +79,7 @@ class ViewServer : public CollectorDaemon {
 public:
 
 	ViewServer();			 // constructor
+	virtual ~ViewServer() {};
 
 	void Init();             // main_init
 	void Config();           // main_config

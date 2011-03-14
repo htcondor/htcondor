@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -67,6 +67,9 @@ if (WITH_POSTGRESQL)
 			#this may become the common case.
 			install ( FILES ${EXTERNAL_STAGE}/lib/libpq.dll
 					  DESTINATION ${C_LIB})
+			
+			set_property( TARGET postgresql PROPERTY FOLDER "externals" )
+			
 		else()
 			set(POSTGRESQL_FOUND "${EXTERNAL_STAGE}/lib/libpq.a")
 		endif()

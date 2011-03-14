@@ -21,50 +21,42 @@
 ######################################################################
 # script to drive Condor build steps (user tasks)
 ######################################################################
-use Cwd;
+use strict;
+use warnings;
 
-
-my $BaseDir = getcwd();
-my $buildid_file = "BUILD-ID";
-my $buildid;
-
-my $TAR_TASK 		= "remote_task.create_tar\n";
-my $UNSTRIPPED_TASK = "remote_task.create_unstripped_tar\n";
-my $RPM_TASK		= "remote_task.create_rpm\n";
-my $RPM_CHECK_TASK	= "remote_task.check_rpm\n";
-my $DEB_TASK		= "remote_task.create_deb\n";
-my $DEB_CHECK_TASK	= "remote_task.check_deb\n";
+my $EXTERNALS_TASK        = "remote_task.externals";
+my $TAR_TASK              = "remote_task.create_tar";
+my $CHECK_TAR_TASK        = "remote_task.check_tar";
+my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
+my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
+my $NATIVE_TASK           = "remote_task.create_native";
+my $CHECK_NATIVE_TASK     = "remote_task.check_native";
 
 # autoflush our STDOUT
 $| = 1;
 
+my $tasklist_file = "tasklist.nmi";
+
 ######################################################################
 # Detecting platform and generating task list
 ######################################################################
-print "Generating tasklist\n";
+print "Generating tasklist...\n";
 
-open (TASKLIST, ">tasklist.nmi" ) || die "Can't open tasklist.nmi for writing: $!\n";
+open(TASKLIST, '>', $tasklist_file) or die "Can't open $tasklist_file for writing: $!\n";
 
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-	#Windows
-	print TASKLIST $TAR_TASK;
-} else {
-	#Everything else
-	print TASKLIST $UNSTRIPPED_TASK;
-
-	#Add native package build on Debian and Redhat
-	if ($ENV{NMI_PLATFORM} =~ /deb/) {
-		#Debian
-		print TASKLIST $DEB_TASK;
-		print TASKLIST $DEB_CHECK_TASK;
-	
-	} elsif ($ENV{NMI_PLATFORM} =~ /rha/) {
-		#Redhat (3,4,5)
-		print TASKLIST $RPM_TASK;
-		print TASKLIST $RPM_CHECK_TASK;
-	}
-
-	print TASKLIST $TAR_TASK;
+    #Windows
+    print TASKLIST $TAR_TASK;
+}
+else {
+    # Everything else
+    print TASKLIST "$EXTERNALS_TASK\n";
+    print TASKLIST "$UNSTRIPPED_TASK\n";
+    print TASKLIST "$CHECK_UNSTRIPPED_TASK\n";
+    print TASKLIST "$NATIVE_TASK\n";
+    print TASKLIST "$CHECK_NATIVE_TASK\n";
+    print TASKLIST "$TAR_TASK\n";
+    print TASKLIST "$CHECK_TAR_TASK\n";
 }
 
 close (TASKLIST);
@@ -72,11 +64,10 @@ close (TASKLIST);
 ######################################################################
 # Print content of tasklist
 ######################################################################
-print "Generated tasklist\n";
-open ( TASKFILE, "<tasklist.nmi") || die "Can't open tasklist.nmi for reading: $!\n";
-while(<TASKFILE>){
-	my($line) = $_;
-	print "\t$line";
+print "Generated tasklist:\n";
+open(TASKFILE, '<', $tasklist_file) or die "Can't open $tasklist_file for reading: $!\n";
+while(<TASKFILE>) {
+    print "\t$_";
 }
 close (TASKFILE);
 exit 0;

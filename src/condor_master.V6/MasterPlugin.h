@@ -50,7 +50,7 @@ class MasterPlugin
      * statically initialized instance of itself, so that it will be
      * registered when its object file is loaded
      */
-    MasterPlugin();
+	MasterPlugin();
 
 	virtual ~MasterPlugin();
 

@@ -910,40 +910,6 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 		}
 	}
 
-	if( m_iso_file.IsEmpty() == false ) {
-		// There is an ISO iamge. So we use it as a CDROM
-		if( cdrom_devices.isEmpty() ) {
-			vmprintf(D_ALWAYS, "Job user defined files for a CDROM, "
-					"but no CDROM device is found in a vmx file\n");
-			m_result_msg = VMGAHP_ERR_JOBCLASSAD_VMWARE_NO_CDROM_DEVICE;
-			return false;
-		}
-
-		cdrom_devices.rewind();
-		// Obtain the first device name for CDROM
-		cdrom = cdrom_devices.next();
-
-		MyString tmp_string;
-		tmp_string.sprintf("%s.present = \"TRUE\"", cdrom);
-		m_configVars.append(tmp_string.Value());
-
-		if( m_local_iso ) {
-			// use basename
-			tmp_string.sprintf("%s.fileName = \"%s\"", cdrom, 
-					condor_basename(m_iso_file.Value()));
-		}else {
-			tmp_string.sprintf("%s.fileName = \"%s\"", cdrom, 
-					m_iso_file.Value());
-		}
-		m_configVars.append(tmp_string.Value());
-
-		tmp_string.sprintf("%s.deviceType = \"cdrom-image\"", cdrom);
-		m_configVars.append(tmp_string.Value());
-
-		tmp_string.sprintf("%s.autodetect = \"TRUE\"", cdrom);
-		m_configVars.append(tmp_string.Value());
-	}
-
 	return true;
 }
 
@@ -1793,16 +1759,6 @@ VMwareType::CreateConfigFile()
 		}
 	}
 
-	if( (m_vm_cdrom_files.isEmpty() == false) && !m_has_iso ) {
-		// Create ISO file
-		if( createISO() == false ) {
-			vmprintf(D_ALWAYS, "Cannot create a ISO file for CDROM\n");
-			m_iso_file = "";
-			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ISO_FILE;
-			return false;
-		}
-	}
-
 	// Create vm config file
 	if( createTempFile(VMWARE_TMP_TEMPLATE, VMWARE_TMP_CONFIG_SUFFIX, 
 				tmp_config_name) == false ) {
@@ -1986,7 +1942,6 @@ VMwareType::createCkptFiles()
 					!has_suffix(tmp_file, ".log") &&
 					!has_suffix(tmp_file, VMWARE_WRITELOCK_SUFFIX ) &&
 					!has_suffix(tmp_file, VMWARE_READLOCK_SUFFIX ) &&
-					!filelist_contains_file(tmp_file, &m_vm_cdrom_files, true) &&
 					strcmp(condor_basename(tmp_file), m_vmware_vmx.Value())) {
 				// We update mtime and atime of all files 
 				// except vmdk, iso, log, lock files, cdrom file, and 

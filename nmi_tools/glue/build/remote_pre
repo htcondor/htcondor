@@ -23,6 +23,7 @@
 ######################################################################
 use Cwd;
 
+use POSIX 'strftime';
 use Getopt::Long;
 use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache /;
 # We use -- and everything after it will be configure arguments only.
@@ -46,15 +47,14 @@ my %defines = (
 # autoflush our STDOUT
 $| = 1;
 
-print "------------------------- ENV DUMP ------------------------\n";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-
-    $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\IDE;$ENV{VS90COMNTOOLS}..\..\VC\BIN;$ENV{PATH}";
-	system("set");
-	
+    $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
 } else {
 	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
-    system("env");
+}
+print "------------------------- ENV DUMP ------------------------\n";
+foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
+    print "$key=".$ENV{$key}."\n";
 }
 print "------------------------- ENV DUMP ------------------------\n";
 print "Configure args: " . join(' ', @ARGV) . "\n";
@@ -67,6 +67,8 @@ system("cmake --version");
 ######################################################################
 print "Finding build id of Condor\n";
 open( BUILDID, "$buildid_file" ) || die "Can't open $buildid_file: $!\n";
+my @stat = stat(BUILDID);
+$date = strftime( "%b %d %Y", localtime($stat[9]) );
 while( <BUILDID> ) {
     chomp;
     $buildid = $_;
@@ -77,6 +79,7 @@ if( ! $buildid ) {
 }
 print "Build id is: $buildid\n";
 $defines{buildid} = "-DBUILDID:STRING=$buildid";
+$defines{date} = "-DBUILD_DATE:STRING=\"$date\"";
 
 print "platform is: $platform\n";
 $defines{platform} = "-DPLATFORM:STRING=$platform";

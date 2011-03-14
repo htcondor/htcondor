@@ -118,6 +118,11 @@ int param_boolean_int(const char *, int default_value)
 	return default_value;
 }
 
+int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_val*/ )
+{
+	return default_value;
+}
+
 #ifdef HAVE_EXT_PCRE
 
 #ifdef HAVE_PCRE_PCRE_H
@@ -223,10 +228,10 @@ int Stream::get_string_ptr(char const *&){ return not_impl(); }
 void Stream::prepare_crypto_for_secret(){not_impl();}
 void Stream::restore_crypto_after_secret(){not_impl();}
 bool Stream::prepare_crypto_for_secret_is_noop(){not_impl();return true;}
-void Stream::set_crypto_mode(bool enabled){not_impl();}
+void Stream::set_crypto_mode(bool /*enabled*/){not_impl();}
 bool Stream::get_encryption() const{not_impl();return false;}
-int Stream::put_secret( char const *s ){not_impl();return 0;}
-int Stream::get_secret( char *&s ){not_impl();return 0;}
+int Stream::put_secret( char const * /*s*/ ){not_impl();return 0;}
+int Stream::get_secret( char *& /*s*/ ){not_impl();return 0;}
 void Stream::set_deadline_timeout(int){not_impl();}
 void Stream::set_deadline(time_t){not_impl();}
 time_t Stream::get_deadline(){not_impl();return 0;}

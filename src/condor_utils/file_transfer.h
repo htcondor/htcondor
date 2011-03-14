@@ -231,7 +231,7 @@ class FileTransfer {
 	void InsertPluginMappings(MyString methods, MyString p);
 	MyString DeterminePluginMethods( CondorError &e, const char* path );
 	int InitializePlugins(CondorError &e);
-	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest);
+	int InvokeFileTransferPlugin(CondorError &e, const char* URL, const char* dest, const char* proxy_filename = NULL);
 
 		// Convert directories with a trailing slash to a list of the contents
 		// of the directory.  This is used so that ATTR_TRANSFER_INPUT_FILES
@@ -287,6 +287,7 @@ class FileTransfer {
 	StringList* FilesToSend;
 	StringList* EncryptFiles;
 	StringList* DontEncryptFiles;
+	char* OutputDestination;
 	char* SpooledIntermediateFiles;
 	char* ExecFile;
 	char* UserLogFile;

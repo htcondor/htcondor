@@ -3668,6 +3668,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=collector,collector
 id=197
 
+[CONDOR_VIEW_CLASSAD_TYPES]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Condor View Classad Types
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=collector,collector
+id=197
+
 [COLLECTOR_STATS_SWEEP]
 aliases=
 default=14400
@@ -4006,7 +4022,7 @@ id=218
 
 [GLITE_LOCATION]
 aliases=
-default=$(LIB)/glite
+default=$(LIBEXEC)/glite
 version=0.0.0
 range=.*
 state=default
@@ -7458,6 +7474,70 @@ is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Group Autoregroup
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
+[GROUP_ACCEPT_SURPLUS]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Group Accept Surplus
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
+[NEGOTIATOR_USE_SLOT_WEIGHTS]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Use Slot Weights
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
+[GROUP_QUOTA_MAX_ALLOCATION_ROUNDS]
+aliases=
+default=3
+version=0.0.0
+range=1,1000000000
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Group Quota Maximum Allocation Rounds
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
+
+[GROUP_QUOTA_ROUND_ROBIN_RATE]
+aliases=
+default=1.0e100
+version=0.0.0
+range=1.0,1.0e100
+state=default
+type=double
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Group Quota Round Robin Rate
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker

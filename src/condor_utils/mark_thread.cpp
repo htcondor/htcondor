@@ -63,8 +63,8 @@ my_local_basename(const char *path)
 void _mark_thread_safe(int start_or_stop, int dologging, const char* descrip, 
 					   const char* func, const char* file, int line)
 {
-	mark_thread_func_t callback;
-	const char* mode;
+	mark_thread_func_t callback=0;
+	const char* mode=0;
 #ifdef WIN32
 	char buf[40];
 #endif

@@ -56,8 +56,10 @@
 #include "filename_tools.h"
 #include "spool_version.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "ScheddPlugin.h"
+#endif
 #endif
 
 #include "file_sql.h"
@@ -1820,8 +1822,10 @@ int DestroyProc(int cluster_id, int proc_id)
 	// Write a per-job history file (if PER_JOB_HISTORY_DIR param is set)
 	WritePerJobHistoryFile(ad, false);
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
   ScheddPluginManager::Archive(ad);
+#endif
 #endif
 
   if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
@@ -1928,8 +1932,10 @@ int DestroyCluster(int cluster_id, const char* reason)
 
 				// Apend to history file
 				AppendHistory(ad);
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 				ScheddPluginManager::Archive(ad);
+#endif
 #endif
 
 				if (FILEObj->file_newEvent("History", ad) == QUILL_FAILURE) {
@@ -2315,10 +2321,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			JobQueue->SetAttribute(key, raw_attribute.Value(), attr_value, flags & SETDIRTY);
 			if( flags & SHOULDLOG ) {
 				char* old_val = NULL;
-				ExprTree *tree;
-				tree = ad->LookupExpr(raw_attribute.Value());
-				if( tree ) {
-					old_val = (char*)ExprTreeToString(tree);
+				ExprTree *ltree;
+				ltree = ad->LookupExpr(raw_attribute.Value());
+				if( ltree ) {
+					old_val = const_cast<char*>(ExprTreeToString(ltree));
 				}
 				scheduler.WriteAttrChangeToUserLog(key, raw_attribute.Value(), attr_value, old_val);
 			}
@@ -2431,7 +2437,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		ExprTree *tree;
 		tree = ad->LookupExpr(attr_name);
 		if( tree ) {
-			old_val = (char*)ExprTreeToString(tree);
+			old_val = const_cast<char*>(ExprTreeToString(tree));
 		}
 		scheduler.WriteAttrChangeToUserLog(key, attr_name, attr_value, old_val);
 	}
@@ -3092,7 +3098,6 @@ GetAttributeExprNew(int cluster_id, int proc_id, const char *attr_name, char **v
 	char		key[PROC_ID_STR_BUFLEN];
 	ExprTree	*tree;
 	char		*attr_val;
-	const char *tmp_val;
 
 	*val = NULL;
 

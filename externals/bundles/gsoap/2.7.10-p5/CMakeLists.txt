@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -69,6 +69,7 @@ if (WITH_GSOAP)
 			set(GSOAP_FOUND ON)
 			set(GSOAP_SRC "${EXTERNAL_STAGE}/src/stdsoap2.cpp" PARENT_SCOPE )
 			set(SOAPCPP2 "${EXTERNAL_STAGE}/soapcpp2.exe")
+			set_property( TARGET gsoap PROPERTY FOLDER "externals" )
 		endif(NOT WINDOWS)
 
 		set ( GSOAP_SHARE "${EXTERNAL_BUILD_PREFIX}/${GSOAP_VER}/src/gsoap/${GSOAP_VER}/gsoap" )

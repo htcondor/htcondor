@@ -65,9 +65,14 @@ class Profile : public BoolExpr
 		/** A repository for annotations for the Profile.
 			@see ProfileExplain
 		*/
-    Profile& operator=(const Profile& copy) { return *this; } 
 	ProfileExplain explain;
  private:
+	// The assignment overload was VERY broken. Make it private and remove the
+	// old implementation. If someone uses it, they'll know at
+	// compile time, check here, read this comment, be upset, and hopefully
+	// implement the correct assignment overload. -psilord
+    Profile& operator=(const Profile& copy);
+
 	bool AppendCondition( Condition * );
 	List<Condition> conditions;
 };

@@ -542,6 +542,24 @@ chirp_client_pwrite( struct chirp_client *c, int fd, const void *buffer,
 }
 
 DLLEXPORT int
+chirp_client_sread( struct chirp_client *c, int fd, void *buffer, int length,
+				   int offset, int stride_length, int stride_skip )
+{
+	int result;
+	int actual;
+	
+	result = simple_command(c,"sread %d %d %d %d %d\n",fd, length, offset,
+		stride_length, stride_skip);
+
+	if(result > 0) {
+		actual = fread(buffer,1,result,c->rstream);
+		if(actual!=result) chirp_fatal_request("sread");
+	}
+
+	return result;
+}
+
+DLLEXPORT int
 chirp_client_swrite( struct chirp_client *c, int fd, const void *buffer,
 					int length, int offset, int stride_length, int stride_skip )
 {
@@ -630,7 +648,7 @@ DLLEXPORT int
 chirp_client_getfile_buffer( struct chirp_client *c, const char *path, 
 							char **buffer )
 {
-	int result, actual;
+	int result, actual=0;
 
 	result = simple_command(c,"getfile %s\n",path);
 	if(result>=0) {

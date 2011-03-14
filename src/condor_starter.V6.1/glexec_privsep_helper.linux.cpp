@@ -29,7 +29,7 @@
 #include "globus_utils.h"
 
 GLExecPrivSepHelper::GLExecPrivSepHelper() :
-	m_glexec(0), m_proxy(0), m_sandbox(0), m_sandbox_owned_by_user(false), m_initialized(false)
+	 m_initialized(false),m_glexec(0),  m_sandbox(0), m_proxy(0),m_sandbox_owned_by_user(false)
 {
 }
 
@@ -223,7 +223,7 @@ GLExecPrivSepHelper::create_process(const char* path,
                                     int         reaper_id,
                                     int         dc_job_opts,
                                     FamilyInfo* family_info,
-									int *       affinity_mask)
+                                    int *)
 {
 	ASSERT(m_initialized);
 

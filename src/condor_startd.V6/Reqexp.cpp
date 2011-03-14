@@ -104,7 +104,7 @@ Reqexp::compute( amask_t how_much )
 				ignored if it is in the jobad when TARGET.NumCkpts is zero.
 
 			*/
-			char *default_vcp_expr = 
+			const char *default_vcp_expr = 
 			"("
 			  "((TARGET.JobUniverse == 1) == FALSE) || "
 			  "("
@@ -132,7 +132,7 @@ Reqexp::compute( amask_t how_much )
 			m_within_resource_limits_expr = strdup( tmp );
 			free(tmp);
 		} else {
-			tmp =
+			tmp = const_cast<char*>(
 				"("
 				 "ifThenElse(TARGET.RequestCpus =!= UNDEFINED,"
 				           "MY.Cpus > 0 && TARGET.RequestCpus <= MY.Cpus,"
@@ -145,7 +145,7 @@ Reqexp::compute( amask_t how_much )
 				 "ifThenElse(TARGET.RequestDisk =!= UNDEFINED,"
 				           "MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
 				           "FALSE)"
-				")";
+				")");
 			m_within_resource_limits_expr = strdup( tmp );
 		}
 	}

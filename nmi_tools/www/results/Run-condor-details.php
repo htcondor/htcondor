@@ -199,23 +199,8 @@ foreach ($platforms AS $platform) {
   # Get the queue depth for the platform if it is pending
   $queue_depth = "";
   if($platform_status[$platform] == PLATFORM_PENDING) {
-    $platform_without_prefix = preg_replace("/nmi:/", "", $platform);
-    $output = `/usr/local/condor/bin/condor_q -global -const 'nmi_target_platform=="$platform_without_prefix" && nmi_run_type=="$type"' -format '%-2s ' 'ifThenElse(JobStatus==0,"U",ifThenElse(JobStatus==1,"I",ifThenElse(JobStatus==2,"R",ifThenElse(JobStatus==3,"X",ifThenElse(JobStatus==4,"C",ifThenElse(JobStatus==5,"H",ifThenElse(JobStatus==6,"E",string(JobStatus))))))))' -format "%6d " ClusterId -format " %-14s " Owner -format '%-11s\n' 'formatTime(QDate,"%0m/%d %H:%M")'`;
-    $queue_contents = split("\n", $output);
-    $depth = sizeof($queue_contents) - 1;
-    $output = "<table><tr><th>State</th><th>ID</th><th>Owner</th><th>Submitted</th></tr>\n";
-    foreach ($queue_contents as $line) {
-      $items = preg_split("/\s+/", $line);
-      if(sizeof($items) == 5) {
-	$style = "background-color:#FFFFAA; text-decoration:none;";
-	if($items[0] == "R") {
-	  $style = "background-color:#0097C5;";
-	}
-	$output .= "<tr style=\"$style\"><td>$items[0]</td><td>$items[1]</td><td>$items[2]</td><td>$items[3]_$items[4]</td></tr>\n";
-      }
-    }
-    $output .= "</table>\n";
-    $queue_depth = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Q Depth: $depth<span>$output</span></a></span>";
+    $ret = get_queue_for_nmi_platform($platform, $type);
+    $queue_depth = $ret[1];
   }
 
   $display = "<a href=\"$filepath/$mygid/userdir/$platform/\" title=\"View Run Directory\">$display</a>";

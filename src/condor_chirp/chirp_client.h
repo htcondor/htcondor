@@ -257,6 +257,15 @@ DLLEXPORT int chirp_client_pwrite( struct chirp_client *c, int fd,
   actually written is returned, or -1 on error.
 */
 
+DLLEXPORT int chirp_client_sread( struct chirp_client *c, int fd, void *buffer,
+	int length, int offset, int stride_length, int stride_skip );
+/*chirp_client_sread
+  Reads from a file starting at the offset, reading stride_length bytes every
+  stride_skip bytes. Puts the result in a buffer. The number of bytes actually
+  read is returned, or -1 on error.
+*/
+
+
 DLLEXPORT int chirp_client_swrite( struct chirp_client *c, int fd, 
 	const void *buffer,	int length, int offset, int stride_length, 
 	int stride_skip );

@@ -2087,8 +2087,8 @@ handle_nordugrid_ldap_query( char **input_line )
 	int idx = 0;
 	int first_entry = 1;
 
-	process_string_arg( user_arg->cmd[5], &attrs_str );
-	if ( attrs_str && attrs_str[0] ) {
+	if(process_string_arg( user_arg->cmd[5], &attrs_str ) &&
+		attrs_str && attrs_str[0] ) {
 		int num_attrs = 1;
 		char* next = attrs_str;
 		char *prev;

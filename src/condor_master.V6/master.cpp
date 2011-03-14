@@ -45,8 +45,13 @@
 #include "file_lock.h"
 #include "shared_port_server.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "MasterPlugin.h"
+#endif
+#if defined(WIN32)
+extern int load_master_mgmt(void);
+#endif
 #endif
 
 #if HAVE_EXT_GCB
@@ -95,7 +100,7 @@ int     handle_shutdown_program( int cmd, Stream* stream );
 void	time_skip_handler(void * /*data*/, int delta);
 void	restart_everyone();
 
-extern "C" int	DoCleanup(int,int,char*);
+extern "C" int	DoCleanup(int,int,const char*);
 
 // Global variables
 ClassAd	*ad = NULL;				// ClassAd to send to collector
@@ -175,8 +180,10 @@ master_exit(int retval)
 	}
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	MasterPluginManager::Shutdown();
+#endif
 #endif
 
 	DC_Exit(retval, shutdown_program );
@@ -191,7 +198,7 @@ usage( const char* name )
 }
 
 int
-DoCleanup(int,int,char*)
+DoCleanup(int,int,const char*)
 {
 	static int already_excepted = FALSE;
 
@@ -291,9 +298,12 @@ main_init( int argc, char* argv[] )
 		// open up the windows firewall 
 	init_firewall_exceptions();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	MasterPluginManager::Load();
-
+#elif defined(WIN32)
+	load_master_mgmt();
+#endif
 	MasterPluginManager::Initialize();
 #endif
 
@@ -957,8 +967,10 @@ main_config()
 	while( ( daemon_name = daemons.ordered_daemon_names.next() ) ) {
 		if( !old_daemon_list.contains(daemon_name) ) {
 			new_daemon = daemons.FindDaemon(daemon_name);
-			if ( new_daemon == NULL || 
-			     new_daemon->SetupController() < 0 ) {
+			if ( new_daemon == NULL ) {
+				dprintf( D_ALWAYS, "Setup for daemon failed\n");
+			}
+			else if ( new_daemon->SetupController() < 0 ) {
 				dprintf( D_ALWAYS,
 						"Setup for daemon %s failed\n",
 						new_daemon->daemon_name );
