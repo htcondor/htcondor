@@ -10,11 +10,11 @@ gets swallowed.
  
  #include "condor_common.h"
  
--char	*SigNames[] = {
+-const char	*SigNames[] = {
 +/* there is another 'SigNames' src/condor_utils/event_handler.unix.cpp
 + * that has been chosen by fair flip of a coin
 + */
-+char	*SigNamesDISABLED[] = {
++const char	*SigNamesDISABLED[] = {
  "(0)",
  "SIGHUP",		/* 1 */
  "SIGINT",		/* 2 */
