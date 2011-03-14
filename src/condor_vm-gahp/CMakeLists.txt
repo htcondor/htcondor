@@ -32,7 +32,6 @@ if(NOT WIN_EXEC_NODE_ONLY)
     endif()
 
     if (NOT WINDOWS)
-        install ( FILES condor_vm_xen.sh DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
         install ( FILES libvirt_simple_script.awk DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     endif()
 

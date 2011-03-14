@@ -34,15 +34,15 @@ class XenDisk {
 		MyString filename;
 		MyString device;
 		MyString permission;
+        MyString format;
 };
 
 class VirshType : public VMType
 {
 public:
-	static bool testXen(VMGahpConfig* config);
 	static bool killVMFast(const char* script, virConnectPtr libvirt_con);
 
-	VirshType(const char* scriptname, const char* workingpath, ClassAd* ad);
+	VirshType(const char* workingpath, ClassAd* ad);
 
 	virtual ~VirshType();
 
@@ -112,7 +112,7 @@ protected:
 class XenType : public VirshType
 {
  public:
-  XenType(const char* scriptname, const char* workingpath, ClassAd* ad);
+  XenType(const char* workingpath, ClassAd* ad);
   static bool checkXenParams(VMGahpConfig* config);
   virtual bool CreateConfigFile();
   static bool killVMFast(const char* script);
@@ -124,7 +124,7 @@ class XenType : public VirshType
 class KVMType : public VirshType
 {
  public:
-  KVMType(const char* scriptname, const char* workingpath, ClassAd* ad);
+  KVMType(const char* workingpath, ClassAd* ad);
   static bool checkXenParams(VMGahpConfig* config);
   virtual bool CreateConfigFile();
   static bool killVMFast(const char* script);
