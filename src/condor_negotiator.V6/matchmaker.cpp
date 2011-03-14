@@ -1333,6 +1333,10 @@ negotiationTime ()
     negotiation_cycle_stats[0]->duration_phase2 -= negotiation_cycle_stats[0]->duration_phase4;
 
     negotiation_cycle_stats[0]->duration = completedLastCycleTime - negotiation_cycle_stats[0]->start_time;
+
+	if (param_boolean("NEGOTIATOR_UPDATE_AFTER_CYCLE", false)) {
+		updateCollector();
+	}
 }
 
 
