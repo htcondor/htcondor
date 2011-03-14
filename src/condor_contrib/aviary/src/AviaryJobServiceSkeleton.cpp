@@ -18,6 +18,7 @@
 
 // condor includes
 #include "condor_common.h"
+#include "condor_config.h"
 #include "condor_attributes.h"
 
 extern bool qmgmt_all_users_trusted;
@@ -42,19 +43,22 @@ using namespace aviary::codec;
 using namespace aviary::job;
 using namespace compat_classad;
 
-AviaryJob::RemoveJobResponse*
-AviaryJobServiceSkeleton::removeJob(wso2wsf::MessageContext *outCtx ,AviaryJob::RemoveJob* _removeJob)
+void
+AviaryJobServiceSkeleton::checkForSchedulerID(AviaryCommon::JobID* _jobId, string& _text)
 {
-    /* TODO fill this with the necessary business logic */
-    return (AviaryJob::RemoveJobResponse*)NULL;
+	SchedulerObject* schedulerObj = SchedulerObject::getInstance();
+
+	if (!(_jobId->getPool() == schedulerObj->getPool()) ||
+		!(_jobId->getScheduler() == schedulerObj->getName())) {
+	_text = "WARNING: the pool and scheduler names of the requested jobid were empty or did not match this scheduler!";
+	}
 }
 
-AviaryJob::ReleaseJobResponse*
-AviaryJobServiceSkeleton::releaseJob(wso2wsf::MessageContext *outCtx ,AviaryJob::ReleaseJob* _releaseJob)
-{
-    /* TODO fill this with the necessary business logic */
-    return (AviaryJob::ReleaseJobResponse*)NULL;
+void
+AviaryJobServiceSkeleton::buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _requirements) {
+	// TODO: iterate through these and build TARGET.<constraint> like string
 }
+
 
 AviaryJob::SubmitJobResponse*
 AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext *outCtx ,AviaryJob::SubmitJob* _submitJob)
@@ -115,16 +119,105 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext *outCtx ,AviaryJob::
     return submitJobResponse;
 }
 
+
+// TODO: would be nice to template these next 3
 AviaryJob::HoldJobResponse*
 AviaryJobServiceSkeleton::holdJob(wso2wsf::MessageContext *outCtx ,AviaryJob::HoldJob* _holdJob)
 {
-    /* TODO fill this with the necessary business logic */
-    return (AviaryJob::HoldJobResponse*)NULL;
+	AviaryJob::HoldJobResponse* holdJobResponse = new HoldJobResponse;
+    string error;
+
+	AviaryCommon::JobID* jobId = _holdJob->getHoldJob()->getId();
+	string reason = _holdJob->getHoldJob()->getReason();
+	string cluster_proc = jobId->getJob();
+	ControlJobResponse* controlJobResponse = NULL;
+
+	checkForSchedulerID(jobId, error);
+	if (!SchedulerObject::getInstance()->hold(cluster_proc,reason,error)) {
+		dprintf(D_FULLDEBUG, "SchedulerObject Hold failed: %s\n", error.c_str());
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
+	}
+	else {
+		// in this case, error may hve been the result of the pool/schedd check
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),error));
+	}
+
+	holdJobResponse->setHoldJobResponse(controlJobResponse);
+    return holdJobResponse;
+}
+
+
+AviaryJob::ReleaseJobResponse*
+AviaryJobServiceSkeleton::releaseJob(wso2wsf::MessageContext *outCtx ,AviaryJob::ReleaseJob* _releaseJob)
+{
+	AviaryJob::ReleaseJobResponse* releaseJobResponse = new ReleaseJobResponse;
+    string error;
+
+	AviaryCommon::JobID* jobId = _releaseJob->getReleaseJob()->getId();
+	string reason = _releaseJob->getReleaseJob()->getReason();
+	string cluster_proc = jobId->getJob();
+	ControlJobResponse* controlJobResponse = NULL;
+
+	checkForSchedulerID(jobId, error);
+	if (!SchedulerObject::getInstance()->release(cluster_proc,reason,error)) {
+		dprintf(D_FULLDEBUG, "SchedulerObject Release failed: %s\n", error.c_str());
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
+	}
+	else {
+		// in this case, error may hve been the result of the pool/schedd check
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),error));
+	}
+
+	releaseJobResponse->setReleaseJobResponse(controlJobResponse);
+    return releaseJobResponse;
+}
+
+AviaryJob::RemoveJobResponse*
+AviaryJobServiceSkeleton::removeJob(wso2wsf::MessageContext *outCtx ,AviaryJob::RemoveJob* _removeJob)
+{
+	AviaryJob::RemoveJobResponse* removeJobResponse = new RemoveJobResponse;
+    string error;
+
+	AviaryCommon::JobID* jobId = _removeJob->getRemoveJob()->getId();
+	string reason = _removeJob->getRemoveJob()->getReason();
+	string cluster_proc = jobId->getJob();
+	ControlJobResponse* controlJobResponse = NULL;
+
+	checkForSchedulerID(jobId, error);
+	if (!SchedulerObject::getInstance()->remove(cluster_proc,reason,error)) {
+		dprintf(D_FULLDEBUG, "SchedulerObject Remove failed: %s\n", error.c_str());
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
+	}
+	else {
+		// in this case, error may hve been the result of the pool/schedd check
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),error));
+	}
+
+	removeJobResponse->setRemoveJobResponse(controlJobResponse);
+    return removeJobResponse;
 }
 
 AviaryJob::SetJobAttributeResponse*
 AviaryJobServiceSkeleton::setJobAttribute(wso2wsf::MessageContext *outCtx ,AviaryJob::SetJobAttribute* _setJobAttribute)
 {
-    /* TODO fill this with the necessary business logic */
-    return (AviaryJob::SetJobAttributeResponse*)NULL;
+	AviaryJob::SetJobAttributeResponse* setAttrResponse = new SetJobAttributeResponse;
+    string error;
+
+	AviaryCommon::JobID* jobId = _setJobAttribute->getId();
+	AviaryCommon::Attribute* attr = _setJobAttribute->getAttribute();
+	string cluster_proc = jobId->getJob();
+	ControlJobResponse* controlJobResponse = NULL;
+
+	checkForSchedulerID(jobId, error);
+	if (!SchedulerObject::getInstance()->setAttribute(cluster_proc,attr->getName(),attr->getValue(),error)) {
+		dprintf(D_FULLDEBUG, "SchedulerObject SetAttribute failed: %s\n", error.c_str());
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
+	}
+	else {
+		// in this case, error may hve been the result of the pool/schedd check
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),error));
+	}
+
+	setAttrResponse->setSetJobAttributeResponse(controlJobResponse);
+    return setAttrResponse;
 }

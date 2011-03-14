@@ -39,6 +39,8 @@
      #include <AviaryJob_SetJobAttribute.h>
     
      #include <AviaryJob_SetJobAttributeResponse.h>
+
+typedef std::vector<AviaryCommon::ResourceConstraint*> ResourceConstraintVectorType;
     
 namespace AviaryJob {
     
@@ -58,6 +60,10 @@ namespace AviaryJob {
 
 class AviaryJobServiceSkeleton
 {
+private:
+	void checkForSchedulerID(AviaryCommon::JobID* _jobId, std::string& _text);
+	void buildBasicRequirements(ResourceConstraintVectorType* _constraints, std::string& _requirements);
+
         public:
             AviaryJobServiceSkeleton(){}
 

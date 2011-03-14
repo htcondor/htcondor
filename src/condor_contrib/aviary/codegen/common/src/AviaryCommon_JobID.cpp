@@ -220,17 +220,6 @@
                                  }
                               }
                            
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element pool missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -353,17 +342,6 @@
                                      }
                                      return AXIS2_FAILURE;
                                  }
-                              }
-                           
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element scheduler missing");
-                                  return AXIS2_FAILURE;
                               }
                            
                   if(element_qname)
@@ -572,17 +550,6 @@
                                  }
                               }
                            
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element submission missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -680,9 +647,8 @@
                    if (!isValidPool)
                    {
                       
+                           /* no need to complain for minoccurs=0 element */
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property pool");
-                            return NULL;
                           
                    }
                    else
@@ -747,9 +713,8 @@
                    if (!isValidScheduler)
                    {
                       
+                           /* no need to complain for minoccurs=0 element */
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property scheduler");
-                            return NULL;
                           
                    }
                    else
@@ -881,9 +846,8 @@
                    if (!isValidSubmission)
                    {
                       
+                           /* no need to complain for minoccurs=0 element */
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property submission");
-                            return NULL;
                           
                    }
                    else
@@ -978,13 +942,6 @@
                 }
 
                 
-                  if(arg_Pool.empty())
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"pool is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
-                
 
                 
                 resetPool();
@@ -1067,13 +1024,6 @@
                     return true;
                 }
 
-                
-                  if(arg_Scheduler.empty())
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"scheduler is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
                 
 
                 
@@ -1247,13 +1197,6 @@
                     return true;
                 }
 
-                
-                  if(NULL == arg_Submission)
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"submission is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
                 
 
                 

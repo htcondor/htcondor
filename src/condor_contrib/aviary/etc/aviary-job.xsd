@@ -60,7 +60,7 @@
 	<xs:element name="SetJobAttribute">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="id" type="xs:string"/>
+				<xs:element name="id" type="mrg:JobID"/>
 				<xs:element name="attribute" type="mrg:Attribute"/>
 			</xs:sequence>
 		</xs:complexType>

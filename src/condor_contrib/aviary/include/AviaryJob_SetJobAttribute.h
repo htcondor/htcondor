@@ -20,6 +20,8 @@
         
 
         
+       #include "AviaryCommon_JobID.h"
+          
        #include "AviaryCommon_Attribute.h"
           
         #include <axutil_qname.h>
@@ -40,7 +42,7 @@ namespace AviaryJob
         private:
              
                 axutil_qname_t* qname;
-            std::string property_Id;
+            AviaryCommon::JobID* property_Id;
 
                 
                 bool isValidId;
@@ -84,11 +86,11 @@ namespace AviaryJob
         /**
          * Constructor for creating SetJobAttribute
          * @param 
-         * @param Id std::string
+         * @param Id AviaryCommon::JobID*
          * @param Attribute AviaryCommon::Attribute*
          * @return newly created SetJobAttribute object
          */
-        SetJobAttribute(std::string arg_Id,AviaryCommon::Attribute* arg_Attribute);
+        SetJobAttribute(AviaryCommon::JobID* arg_Id,AviaryCommon::Attribute* arg_Attribute);
         
         
         /********************************** Class get set methods **************************************/
@@ -97,18 +99,18 @@ namespace AviaryJob
 
         /**
          * Getter for id. 
-         * @return std::string*
+         * @return AviaryCommon::JobID*
          */
-        WSF_EXTERN std::string WSF_CALL
+        WSF_EXTERN AviaryCommon::JobID* WSF_CALL
         getId();
 
         /**
          * Setter for id.
-         * @param arg_Id std::string*
+         * @param arg_Id AviaryCommon::JobID*
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setId(const std::string  arg_Id);
+        setId(AviaryCommon::JobID*  arg_Id);
 
         /**
          * Re setter for id
@@ -230,10 +232,10 @@ namespace AviaryJob
 
         /**
          * Getter for id by property number (1)
-         * @return std::string
+         * @return AviaryCommon::JobID
          */
 
-        std::string WSF_CALL
+        AviaryCommon::JobID* WSF_CALL
         getProperty1();
 
     

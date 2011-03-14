@@ -26,8 +26,8 @@
         
             qname = NULL;
         
-                    property_Id;
-                
+                property_Id  = NULL;
+              
             isValidId  = false;
         
                 property_Attribute  = NULL;
@@ -41,12 +41,12 @@
                 
         }
 
-       AviaryJob::SetJobAttribute::SetJobAttribute(std::string arg_Id,AviaryCommon::Attribute* arg_Attribute)
+       AviaryJob::SetJobAttribute::SetJobAttribute(AviaryCommon::JobID* arg_Id,AviaryCommon::Attribute* arg_Attribute)
         {
              
                    qname = NULL;
              
-                 property_Id;
+               property_Id  = NULL;
              
             isValidId  = true;
             
@@ -143,7 +143,7 @@
                                  element_qname = axutil_qname_create(Environment::getEnv(), "id", NULL, NULL);
                                  
 
-                           if ( 
+                           if (isParticle() ||  
                                 (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("id", axiom_element_get_localname(current_element, Environment::getEnv())))))
                            {
                               if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("id", axiom_element_get_localname(current_element, Environment::getEnv()))))
@@ -151,71 +151,18 @@
                                 is_early_node_valid = true;
                               }
                               
-                                 
-                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
-                                      if(text_value != NULL)
+                                 AviaryCommon::JobID* element = new AviaryCommon::JobID();
+
+                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                      if(AXIS2_FAILURE == status)
                                       {
-                                            status = setId(text_value);
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element id");
                                       }
-                                      
                                       else
                                       {
-                                            /*
-                                             * axis2_qname_t *qname = NULL;
-                                             * axiom_attribute_t *the_attri = NULL;
-                                             * 
-                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
-                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
-                                             */
-                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
-
-                                            axiom_attribute_t *the_attri = NULL;
-                                            axis2_char_t *attrib_text = NULL;
-                                            axutil_hash_t *attribute_hash = NULL;
-
-                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
-
-                                            attrib_text = NULL;
-                                            if(attribute_hash)
-                                            {
-                                                 axutil_hash_index_t *hi;
-                                                 void *val;
-                                                 const void *key;
-                                        
-                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                                                 {
-                                                     axutil_hash_this(hi, &key, NULL, &val);
-                                                     
-                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
-                                                     {
-                                                         the_attri = (axiom_attribute_t*)val;
-                                                         break;
-                                                     }
-                                                 }
-                                            }
-
-                                            if(the_attri)
-                                            {
-                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
-                                            }
-                                            else
-                                            {
-                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
-                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
-                                            }
-
-                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
-                                            {
-                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element id");
-                                                status = AXIS2_FAILURE;
-                                            }
-                                            else
-                                            {
-                                                /* after all, we found this is a empty string */
-                                                status = setId("");
-                                            }
+                                          status = setId(element);
                                       }
-                                      
+                                    
                                  if(AXIS2_FAILURE ==  status)
                                  {
                                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for id ");
@@ -371,8 +318,7 @@
                 axis2_char_t *qname_prefix = NULL;
                 axis2_char_t *p_prefix = NULL;
             
-                    axis2_char_t *text_value_1;
-                    axis2_char_t *text_value_1_temp;
+                    axis2_char_t text_value_1[ADB_DEFAULT_DIGIT_LIMIT];
                     
                     axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
                     
@@ -440,34 +386,28 @@
 
                     
                     
-                            sprintf(start_input_str, "<%s%sid>",
+                            sprintf(start_input_str, "<%s%sid",
                                  p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
                             
                         start_input_str_len = axutil_strlen(start_input_str);
                         sprintf(end_input_str, "</%s%sid>",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
-                    
-                           text_value_1 = (axis2_char_t*)property_Id.c_str();
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                           
+                     
+                            if(!property_Id->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                            }
+                            property_Id->serialize(current_node, parent_element,
+                                                                                 property_Id->isParticle() || false, namespaces, next_ns_index);
                             
-                           text_value_1_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_1, true);
-                           if (text_value_1_temp)
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_1_temp, axutil_strlen(text_value_1_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_1_temp);
-                           }
-                           else
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_1, axutil_strlen(text_value_1));
-                           }
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                           
+                            if(!property_Id->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                            }
+                            
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
@@ -557,7 +497,7 @@
             /**
              * Getter for id by  Property Number 1
              */
-            std::string WSF_CALL
+            AviaryCommon::JobID* WSF_CALL
             AviaryJob::SetJobAttribute::getProperty1()
             {
                 return getId();
@@ -566,7 +506,7 @@
             /**
              * getter for id.
              */
-            std::string WSF_CALL
+            AviaryCommon::JobID* WSF_CALL
             AviaryJob::SetJobAttribute::getId()
              {
                 return property_Id;
@@ -577,7 +517,7 @@
              */
             bool WSF_CALL
             AviaryJob::SetJobAttribute::setId(
-                    const std::string  arg_Id)
+                    AviaryCommon::JobID*  arg_Id)
              {
                 
 
@@ -589,7 +529,7 @@
                 }
 
                 
-                  if(arg_Id.empty())
+                  if(NULL == arg_Id)
                        
                   {
                       WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"id is being set to NULL, but it is not a nullable element");
@@ -601,7 +541,14 @@
                 resetId();
 
                 
-                        property_Id = std::string(arg_Id.c_str());
+                    if(NULL == arg_Id)
+                         
+                {
+                    /* We are already done */
+                    return true;
+                }
+                
+                        property_Id = arg_Id;
                         isValidId = true;
                     
                 return true;
@@ -620,6 +567,21 @@
 
 
                
+            
+                
+
+                if(property_Id != NULL)
+                {
+                   
+                   
+                         delete  property_Id;
+                     
+
+                   }
+
+                
+                
+                
                isValidId = false; 
                return true;
            }

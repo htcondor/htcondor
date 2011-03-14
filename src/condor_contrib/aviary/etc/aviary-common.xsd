@@ -107,10 +107,10 @@
 	</xs:complexType>
 	<xs:complexType name="JobID">
 		<xs:sequence>
-			<xs:element name="pool" type="xs:string"/>
-			<xs:element name="scheduler" type="xs:string"/>
+			<xs:element name="pool" type="xs:string" minOccurs="0"/>
+			<xs:element name="scheduler" type="xs:string" minOccurs="0"/>
 			<xs:element name="job" type="xs:string"/>
-			<xs:element name="submission" type="tns:SubmissionID"/>
+			<xs:element name="submission" type="tns:SubmissionID" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:simpleType name="JobStatusType">
