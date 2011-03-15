@@ -497,9 +497,40 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 			 path, log_msg );
 
 #ifdef WIN32
-		rm_buf = "cmd.exe /s /c \"rmdir /s /q \"";
-		rm_buf += path;
-		rm_buf += "\"\"";
+        char * rmdir_exe_p = param("WINDOWS_RMDIR");
+        char * rmdir_opts_p = param("WINDOWS_RMDIR_OPTIONS");
+        bool fNativeRmdir = false;
+        if ( ! rmdir_exe_p || ! rmdir_exe_p[0])
+           fNativeRmdir = true;
+        else if ( ! strcasecmp(rmdir_exe_p, "rmdir") || ! strcasecmp(rmdir_exe_p, "rd"))
+           fNativeRmdir = true;
+        else if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(rmdir_exe_p)) {
+           fNativeRmdir = true;
+           dprintf( D_ALWAYS, "Warning: '%s' is invalid RMDIR (0x%X)\n", rmdir_exe_p, GetLastError());
+        }
+
+        if (fNativeRmdir) {
+           rm_buf = "cmd.exe /s /c \"rmdir /s /q \"";
+           rm_buf += path;
+           rm_buf += "\" \"";
+        } else {
+           rm_buf = rmdir_exe_p;
+           rm_buf += " ";
+           if (rmdir_opts_p && rmdir_opts_p[0]) {
+              rm_buf += rmdir_opts_p;
+           }
+           rm_buf += " \"";
+           rm_buf += path;
+           rm_buf += "\"";
+        }
+
+#ifdef _DEBUG
+        dprintf( D_ALWAYS, "rmdirAttempt using command: %s\n", rm_buf.Value());
+#else
+        dprintf( D_FULLDEBUG, "rmdirAttempt using command: %s\n", rm_buf.Value());
+#endif
+        if (rmdir_exe_p) free (rmdir_exe_p);
+        if (rmdir_opts_p) free (rmdir_opts_p);
 #else
 		rm_buf = "/bin/rm -rf ";
 		rm_buf += path;
@@ -1228,7 +1259,7 @@ bool make_parents_if_needed( const char *path, mode_t mode, priv_state priv )
 
 	ASSERT( path );
 
-	if(filename_split(path,parent,junk));
+	if(filename_split(path,parent,junk))
 		return mkdir_and_parents_if_needed( parent.c_str(), mode, priv );
 	return false;
 }

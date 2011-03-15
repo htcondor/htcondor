@@ -1183,8 +1183,6 @@ PREEN_ARGS			= -m -r
 ## Determine if the Negotiator will honor SlotWeight attributes, which
 ## may be used to give a slot greater weight when calculating usage.
 #NEGOTIATOR_USE_SLOT_WEIGHTS = True
-## Default: True
-NEGOTIATOR_USE_SLOT_WEIGHTS = False
 
 
 ## How often the Negotaitor starts a negotiation cycle, defined in
@@ -2363,9 +2361,6 @@ VMWARE_NETWORKING_TYPE = nat
 ##--------------------------------------------------------------------
 ##  VM Universe Parameters common to libvirt controlled vm's (xen & kvm)
 ##--------------------------------------------------------------------
-
-##  Where is the Condor script program to control Xen & KVM? (Required)
-VM_SCRIPT = $(SBIN)/condor_vm_xen.sh
 
 ## Networking parameters for Xen & KVM
 ##

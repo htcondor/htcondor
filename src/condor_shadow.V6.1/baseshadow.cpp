@@ -769,8 +769,13 @@ void BaseShadow::initUserLog()
 {
 	MyString logfilename;
 	int  use_xml;
+	bool result;
+
 	if ( getPathToUserLog(jobAd, logfilename) ) {
-		uLog.initialize (owner.Value(), domain.Value(), logfilename.Value(), cluster, proc, 0, gjid);
+		result = uLog.initialize (owner.Value(), domain.Value(), logfilename.Value(), cluster, proc, 0, gjid);
+		if ( result == false ) {
+			EXCEPT("Failed to initialize user log to %s",logfilename.Value());
+		}
 		if (jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
 			&& use_xml) {
 			uLog.setUseXML(true);
@@ -830,7 +835,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		break;
 	default:
 		dprintf( D_ALWAYS, 
-				 "logTerminateEvent with unknown reason (%d), aborting\n",
+				 "UserLog logTerminateEvent with unknown reason (%d), aborting\n",
 				 exitReason ); 
 		return;
 	}
@@ -884,6 +889,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		if (!uLog.writeEvent (&event,jobAd)) {
 			dprintf (D_ALWAYS,"Unable to log "
 				 	"ULOG_JOB_TERMINATED event\n");
+			EXCEPT("UserLog Unable to log ULOG_JOB_TERMINATED event");
 		}
 
 		return;
@@ -925,6 +931,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	if (!uLog.writeEvent (&event,jobAd)) {
 		dprintf (D_ALWAYS,"Unable to log "
 				 "ULOG_JOB_TERMINATED event\n");
+		EXCEPT("UserLog Unable to log ULOG_JOB_TERMINATED event");
 	}
 }
 

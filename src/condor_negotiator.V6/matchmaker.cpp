@@ -1121,9 +1121,7 @@ negotiationTime ()
                 dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter ad with no name\n");
                 continue;
             }
-            // important to case-fold these so group names match 
-            tname.lower_case();
-            // this holds the (case-folded) submitter name, which includes group, if present
+            // this holds the submitter name, which includes group, if present
             const string subname(tname.Value());
 
             // is there a username separator?
@@ -1348,9 +1346,6 @@ void Matchmaker::hgq_construct_tree() {
     hgq_root_name = "<none>";
 	vector<string> groups;
     if (NULL != groupnames) {
-        // map to lower case for case insensitivity
-        strlwr(groupnames);
-
         StringList group_name_list;
         group_name_list.initializeFromString(groupnames);
         group_name_list.rewind();
@@ -1373,7 +1368,7 @@ void Matchmaker::hgq_construct_tree() {
     }
 
     // This is convenient for making sure a parent group always appears before its children
-    std::sort(groups.begin(), groups.end());
+    std::sort(groups.begin(), groups.end(), Accountant::ci_less());
 
     // our root group always exists -- all configured HGQ groups are implicitly 
     // children / descendents of the root
@@ -1407,7 +1402,7 @@ void Matchmaker::hgq_construct_tree() {
         bool missing_parent = false;
         for (unsigned long k = 0;  k < gpath.size()-1;  ++k) {
             // chmap is mostly a structure to avoid n^2 behavior in groups with many children
-            map<string, GroupEntry::size_type>::iterator f(group->chmap.find(gpath[k]));
+            map<string, GroupEntry::size_type, Accountant::ci_less>::iterator f(group->chmap.find(gpath[k]));
             if (f == group->chmap.end()) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: ignoring group name %s with missing parent %s\n", gname.c_str(), gpath[k].c_str());
                 missing_parent = true;

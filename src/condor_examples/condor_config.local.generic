@@ -30,7 +30,7 @@ KILL = FALSE
 ##  This macro determines what daemons the condor_master will start and keep its watchful eyes on.
 ##  The list is a comma or space separated list of subsystem names
 
-DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD, HDFS
+DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
 
 ##  Sets how often the condor_negotiator starts a negotiation cycle. 
 ##  It is defined in seconds and defaults to 60 (1 minute). 

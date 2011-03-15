@@ -502,9 +502,11 @@ if (CONDOR_EXTERNALS AND NOT WINDOWS)
 endif(CONDOR_EXTERNALS AND NOT WINDOWS)
 
 ######### special case for contrib
-if (WINDOWS AND WANT_CONTRIB AND WITH_MANAGEMENT)
+if (WANT_CONTRIB AND WITH_MANAGEMENT)
     # global scoping external linkage var when options enable.
-    set (CONDOR_QMF condor_qmflib;${QPID_FOUND})
+    if (WINDOWS)
+        set (CONDOR_QMF condor_qmflib;${QPID_FOUND})
+    endif()
     add_definitions( -DWANT_CONTRIB )
     add_definitions( -DWITH_MANAGEMENT )
 endif()
@@ -513,8 +515,9 @@ message(STATUS "********* External configuration complete (dropping config.h) **
 dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
 
 ########################################################
-configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake
-${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h)
+configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp)
+# only update config.h if it is necessary b/c it causes massive rebuilding.
+exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h )
 add_definitions(-DHAVE_CONFIG_H)
 
 ###########################################

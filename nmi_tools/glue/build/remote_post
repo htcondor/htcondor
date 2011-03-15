@@ -27,6 +27,8 @@
 # autoflush our STDOUT
 $| = 1;
 
+use strict;
+use warnings;
 use Cwd;
 use File::Basename;
 
@@ -77,22 +79,6 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
 	system("mv condor-*.tar.gz $pub_dir");
 }
 else {
-    # Should this be run for Windows also?
-    my $check_tarball_script = dirname($0) . "/check_tarball.pl";
-    my $tarball_errors = 0;
-    foreach my $tarball (<*.tar.gz>) {
-		# GGT this doesn't seem to be working, let's not break tests
-		# for this now
-        #print `$check_tarball_script $tarball 2>&1`;
-        #if($?) {
-        #    $tarball_errors++;
-        #}
-    }
-    
-    if($tarball_errors > 0) {
-        die("$tarball_errors tarballs had errors");
-    }
-
     system("mv *.tar.gz *.rpm *.deb $pub_dir");
     system("cmake -E md5sum $pub_dir/* md5s.txt");
 }
@@ -113,7 +99,7 @@ while( <TAR> ) {
     print;
 }
 close( TAR );
-$tarstatus = $? >> 8;
+my $tarstatus = $? >> 8;
 if( $tarstatus ) {
     die "Can't tar zcf results.tar.gz public: status $tarstatus\n";
 }

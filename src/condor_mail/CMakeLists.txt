@@ -20,6 +20,12 @@ if(WINDOWS)
 
 	# In 2.8 there are issues with including .NET projects, so sadly I have decided to prebuild :-( 
 	# path exists in their repo and 2.8.1 we can fix. 
-	# include_external_msproject(condor_mail ${CONDOR_SOURCE_DIR}/src/tools/mail/condor_mail.vcproj )
+	#include_external_msproject(condor_mail ${CONDOR_SOURCE_DIR}/src/condor_mail/condor_mail.vcproj )
+	# Because CMake does not support generating .NET projects in general, condor_mail.exe was prebuilt
+	# and dumped into msconfig.  If we ever decide to convert it into a native app, we can enable an
+	# actual project here.  For the time being we will keep the condor_mail.vcproj around for backup
+	# purposes, also in msconfig, in case we ever find a need to change condor_mail's code.
+	install(FILES ${C_WIN_BIN}/condor_mail.exe
+			DESTINATION "${C_BIN}")
 
 endif(WINDOWS)

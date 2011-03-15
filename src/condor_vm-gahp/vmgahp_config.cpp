@@ -29,6 +29,7 @@ VMGahpConfig::VMGahpConfig()
 	m_vm_max_memory = 0;
 	m_vm_networking = false;
 	m_vm_hardware_vt = false;
+    m_vm_script = "none";
 }
 
 VMGahpConfig& VMGahpConfig::

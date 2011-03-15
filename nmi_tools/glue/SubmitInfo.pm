@@ -59,9 +59,10 @@ our %build_and_test_sets = (
 	'nmi_one_offs' => [
 		'x86_64_rhap_5.3-updated',
 		'x86_64_opensuse_11.3-updated',
+		'x86_64_opensuse_11.4-updated',
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
-                'x86_64_fedora_12-updated',
+		'x86_64_fedora_12-updated',
 	],
 
 	'stduniv' => [
@@ -100,6 +101,7 @@ my @default_prereqs = (
 my @minimal_build_configure_args =
 	(
 		'-DPROPER:BOOL=OFF'			=> undef,
+        '-D_VERBOSE:BOOL=ON'         => undef,
 		'-DCLIPPED:BOOL=ON'			=> undef,
 		'-DWITH_BLAHP:BOOL=OFF'		=> undef,
 		'-DWITH_BOOST:BOOL=OFF'		=> undef,
@@ -151,6 +153,7 @@ my @default_test_configure_args =
 my @default_build_configure_args =
 	(
 	'-DPROPER:BOOL=OFF' 	=> undef,
+    '-D_VERBOSE:BOOL=ON'    => undef,
 	#'-DSCRATCH_EXTERNALS:BOOL=ON'	=> undef,
 	);
 
@@ -486,7 +489,6 @@ our %submit_info = (
 				'perl-5.8.5', 'gzip-1.3.3', 'autoconf-2.59'
 			],
 			'xtests'	=> [ 
-				'x86_64_sles_9',
 			 	'x86_rhas_4', 
 			 	'x86_64_rhas_3',
 				'x86_64_rhas_4',
@@ -516,7 +518,10 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_12'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -534,7 +539,10 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_12-updated'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -853,6 +861,8 @@ our %submit_info = (
 		},
 	},
 	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
+	'x86_64_opensuse_11.4'				=> 'x86_64_opensuse_11.3',
+	'x86_64_opensuse_11.4-updated'		=> 'x86_64_opensuse_11.4',
 );
 
 foreach my $platform (keys %submit_info) {

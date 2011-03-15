@@ -526,5 +526,3 @@ MgmtScheddPlugin::GetSubmitter(MyString &name, SubmitterObject *&submitter)
 
 	return true;
 }
-
-static MgmtScheddPlugin instance;

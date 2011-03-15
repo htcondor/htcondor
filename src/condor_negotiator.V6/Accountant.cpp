@@ -316,16 +316,14 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName) {
 }
 
 GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsGroup) {
-    MyString t(CustomerName);
-    t.lower_case();
-    string subname = t.Value();
+    string subname = CustomerName.Value();
 
     // Is this an acct group, syntactically speaking?
     string::size_type pos = subname.find_last_of('@');
     IsGroup = (pos == string::npos);
 
     // cache results from previous invocations
-    map<string, GroupEntry*>::iterator fs(hgq_submitter_group_map.find(subname));
+    map<string, GroupEntry*, ci_less>::iterator fs(hgq_submitter_group_map.find(subname));
     if (fs != hgq_submitter_group_map.end()) return fs->second;
 
     ASSERT(NULL != hgq_root_group);
@@ -358,7 +356,7 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsG
 
     // walk down the tree using the group path
     for (vector<string>::iterator j(gpath.begin());  j != gpath.end();  ++j) {
-        map<string, GroupEntry::size_type>::iterator f(group->chmap.find(*j));
+        map<string, GroupEntry::size_type, ci_less>::iterator f(group->chmap.find(*j));
         if (f == group->chmap.end()) {
             if (hgq_root_group->children.size() > 0) {
                 // I only want to log a warning if an HGQ configuration exists
@@ -581,11 +579,8 @@ void Accountant::SetLastTime(const MyString& CustomerName, int LastTime)
 // Add a match
 //------------------------------------------------------------------
 
-void Accountant::AddMatch(const MyString& CustomerNameP, ClassAd* ResourceAd) 
+void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd) 
 {
-  MyString CustomerName = CustomerNameP;
-  CustomerName.lower_case();
-
   // Get resource name and the time
   MyString ResourceName=GetResourceName(ResourceAd);
   time_t T=time(0);
@@ -1072,52 +1067,47 @@ AttrList* Accountant::ReportState() {
         HK.sprint(key);
         if (strncmp(CustomerRecord.Value(),key.Value(),CustomerRecord.Length())) continue;
 
-            // The following Insert() calls are passed 'false' to prevent
-            // AttrList from checking for duplicates. This is to enhance
-            // performance, but is admittedly dangerous if we're not certain
-            // that the items we're inserting are unique. Use caution.
-
         MyString CustomerName=key.Value()+CustomerRecord.Length();
         tmp.sprintf("Name%d = \"%s\"",OwnerNum,CustomerName.Value());
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         tmp.sprintf("Priority%d = %f",OwnerNum,GetPriority(CustomerName));
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
         tmp.sprintf("ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
         tmp.sprintf("WeightedResourcesUsed%d = %f",OwnerNum,WeightedResourcesUsed);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
         tmp.sprintf("AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
         tmp.sprintf("WeightedAccumulatedUsage%d = %f",OwnerNum,WeightedAccumulatedUsage);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupInteger(BeginUsageTimeAttr,BeginUsageTime)==0) BeginUsageTime=0;
         tmp.sprintf("BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupInteger(LastUsageTimeAttr,LastUsageTime)==0) LastUsageTime=0;
         tmp.sprintf("LastUsageTime%d = %d",OwnerNum,LastUsageTime);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
         tmp.sprintf("PriorityFactor%d = %f",OwnerNum,PriorityFactor);
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         bool isGroup=false;
         string cgrp = GetAssignedGroup(CustomerName, isGroup)->name;
         tmp.sprintf("AccountingGroup%d = \"%s\"",OwnerNum,cgrp.c_str());
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
         tmp.sprintf("IsAccountingGroup%d = %s",OwnerNum,(isGroup)?"TRUE":"FALSE");
-        ad->Insert(tmp.Value(), false);
+        ad->Insert(tmp.Value());
 
         OwnerNum++;
     }
@@ -1125,7 +1115,7 @@ AttrList* Accountant::ReportState() {
     ReportLimits(ad);
 
     tmp.sprintf("NumSubmittors = %d", OwnerNum-1);
-    ad->Insert(tmp.Value(), false);
+    ad->Insert(tmp.Value());
     return ad;
 }
 
