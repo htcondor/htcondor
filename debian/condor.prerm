@@ -24,7 +24,7 @@ condor_remove_homedir() {
 case "$1" in
 	upgrade|remove)
 		# init script fails of RUN is not there (i.e. broken install)
-		if [ -x "/etc/init.d/condor" -a -d $(condor_config_val RUN) ]; then
+		if [ -x "/etc/init.d/condor" ]; then
 			if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
 			invoke-rc.d condor stop || exit $?
 		else

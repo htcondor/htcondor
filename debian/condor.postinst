@@ -28,7 +28,7 @@ condor_add_user() {
 }
 
 condor_make_homedir() {
-    for dlabel in LOCAL_UNIV_EXECUTE CRED_STORE_DIR EXECUTE LOCK LOG RUN SPOOL; do
+    for dlabel in LOCAL_UNIV_EXECUTE CRED_STORE_DIR EXECUTE LOCK LOG SPOOL; do
         dname=$(condor_config_val $dlabel)
         mkdir -p $dname
         chown -R $condor_user:$condor_group $dname
@@ -178,7 +178,7 @@ case "$1" in
         condor_local_cfg_template
         condor_put_debconf_cfg
         condor_make_homedir
-        if [ -x "/etc/init.d/condor" -a -d $(condor_config_val RUN) ]; then
+        if [ -x "/etc/init.d/condor" ]; then
             if [ -x "`which invoke-rc.d 2>/dev/null`" ]; then
                 invoke-rc.d condor restart || exit $?
             else
