@@ -18,21 +18,17 @@ gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V*' $$(git 
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DBUILD_SHARED_LIBS:BOOL=ON \
-		-DBUILD_TESTS:BOOL=OFF \
 		-DPROPER:BOOL=ON \
 		-DCLIPPED:BOOL=ON \
-		-DWANT_CONTRIB:BOOL=ON \
 		-DUW_BUILD:BOOL=OFF \
 		-D_DEBUG:BOOL=TRUE \
 		-DBUILDID:STRING="Debian [$(debver)]"\
 		-DWITH_GSOAP:BOOL=OFF \
 		-DCMAKE_SKIP_BUILD_RPATH:BOOL=ON \
 		-DCMAKE_INSTALL_RPATH:STRING="/usr/lib/condor" \
-		-DEXTERNAL_INCLUDES:STRING="/usr/include/postgresql" \
 		-DHAVE_EXT_CLASSADS:BOLL=ON -DCLASSADS_FOUND=classad_ns \
 		-DHAVE_EXT_CURL:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
-		-DHAVE_EXT_POSTGRESQL:BOOL=ON \
 		-DHAVE_EXT_BOOST:BOOL=ON \
 		-DHAVE_EXT_GLOBUS:BOOL=ON \
 		-DHAVE_EXT_KRB5:BOOL=ON \
@@ -41,10 +37,16 @@ override_dh_auto_configure:
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_PCRE:BOOL=ON \
 		-DHAVE_EXT_ZLIB:BOOL=ON
+		# upstream says: tests aren't reliablei enough yet
+		#-DBUILD_TESTS:BOOL=OFF \
+		# upstream says: contrib is to unstable for initial packaging
+		#-DWANT_CONTRIB:BOOL=OFF \
+		#-DHAVE_EXT_POSTGRESQL:BOOL=OFF \
+		#-DEXTERNAL_INCLUDES:STRING="/usr/include/postgresql" \
 
 
 override_dh_auto_build: doc/build
-	dh_auto_build
+	dh_auto_build -- VERBOSE=1
 	# post-fixing things that have to be done due to changes introduced by
 	# repackaging
 	# 1. rebuild java stuff
