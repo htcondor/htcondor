@@ -179,7 +179,7 @@ int writeJobTerminatedEvent()
 	jobterminated.normal = false;
 	jobterminated.signalNumber = 9;
 	jobterminated.returnValue = 4;
-	jobterminated.run_remote_rusage_foo = ru;
+	jobterminated.run_remote_rusage = ru;
 	jobterminated.total_remote_rusage = ru;
 	jobterminated.recvd_bytes = 200000;
 	jobterminated.sent_bytes = 400000;
