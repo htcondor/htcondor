@@ -120,7 +120,7 @@ extern const char * const  ATTR_DELTACLOUD_PROVIDER_ID;
 extern const char * const  ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES;
 extern const char * const  ATTR_DELTACLOUD_RETRY_TIMEOUT;
 extern const char * const  ATTR_DELTACLOUD_USERNAME;
-extern const char * const  ATTR_DELTACLOUD_PASSWORD;
+extern const char * const  ATTR_DELTACLOUD_PASSWORD_FILE;
 extern const char * const  ATTR_DELTACLOUD_IMAGE_ID;
 extern const char * const  ATTR_DELTACLOUD_REALM_ID;
 extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE;
