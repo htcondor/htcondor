@@ -570,7 +570,11 @@ if (CONDOR_CXX_FLAGS)
 endif()
 
 if(MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251 /wd4275 /wd4996 /wd4273")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FC")     # use full paths names in errors and warnings
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251") #
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4275") #
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996") #
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4273") #..
 	set(CONDOR_WIN_LIBS "crypt32.lib;mpr.lib;psapi.lib;mswsock.lib;netapi32.lib;imagehlp.lib;ws2_32.lib;powrprof.lib;iphlpapi.lib;userenv.lib;Pdh.lib")
 else(MSVC)
 

@@ -123,7 +123,7 @@ typedef int             int32_t;
 
 #define HAS_VOID_TYPE
 #define HAVE_STDARG_H
-#define HAVE_SYS_TYPES_H
+#define HAVE_SYS_TYPES_H 1
 #define HAVE_STDLIB_H
 
 /* This controls which encryption routines libcrypto will provide */

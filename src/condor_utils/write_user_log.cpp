@@ -28,6 +28,7 @@
 	above.  If this happens again, then maybe this hack can be 
 	extracted and generalized to look a little nicer */
 # undef open
+# undef _CONDOR_ALLOW_OPEN
 # define _CONDOR_ALLOW_OPEN 1
 # include "condor_macros.h"
 #endif

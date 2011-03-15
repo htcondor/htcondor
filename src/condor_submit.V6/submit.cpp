@@ -1664,7 +1664,7 @@ SetExecutable()
 }
 
 #ifdef WIN32
-#define CLIPPED
+#define CLIPPED 1
 #endif
 
 void

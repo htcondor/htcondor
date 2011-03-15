@@ -37,6 +37,11 @@ dump_index()
 	return 1;
 }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996) // the seek, read, open, close, fileno, etc are deprecated, use _seek, etc instead.
+#endif
+
 bool IndexFile::
 TruncateStorageFile()
 {
@@ -94,7 +99,6 @@ TruncateStorageFile()
 	}
 	return true;
 }
-
 
 int IndexFile:: 
 First(string &key)
@@ -223,6 +227,10 @@ DeleteFromStorageFile(string key)
 		return false;
 	}
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop) // the seek, read, open, close, fileno, etc are deprecated, use _seek, etc instead.
+#endif
 
 END_NAMESPACE
 

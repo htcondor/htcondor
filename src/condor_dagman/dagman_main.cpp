@@ -550,7 +550,7 @@ void main_init (int argc, char ** const argv) {
 		// passed to condor_dagman change in an incompatible way!!
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-	typedef struct DagVersionData {
+	struct DagVersionData {
 		int majorVer;
 		int minorVer;
 		int subMinorVer;

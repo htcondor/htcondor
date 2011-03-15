@@ -17,14 +17,18 @@
 #
 from qmf.console import Session
 from sys import exit, argv
-import time
+import time, pwd
+
+uid = pwd.getpwuid(os.getuid())[0]
+if not uid:
+    uid = "condor"
 
 __annotations__ = {"Requirements": "com.redhat.grid.Expression"}
 ad = {"Cmd": 		"/bin/sleep",
       "Args": 		"60",
       "Requirements": 	"TRUE",
       "Iwd": 		"/tmp",
-      "Owner":		"nobody",
+      "Owner":		uid,
       "!!descriptors":	__annotations__
       }
 
