@@ -272,7 +272,7 @@ bool user_policy_ad_checker(ClassAd* ad,
 	int val;
 	bool found = ad->EvalBool(ATTR_TIMER_REMOVE_CHECK, NULL, val);
 	
-	return found && (val != 0) == timer_remove) &&
+	return found && (val == timer_remove) &&
 		user_policy_ad_checker(ad, 
 							   periodic_hold,
 							   periodic_remove,
@@ -479,3 +479,4 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
 	return 0;
 }
 #endif
+
