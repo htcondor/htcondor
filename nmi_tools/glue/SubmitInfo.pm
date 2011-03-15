@@ -858,15 +858,29 @@ our %submit_info = (
 	'x86_64_opensuse_11.4-updated'		=> 'x86_64_opensuse_11.4',
 );
 
-foreach my $platform (keys %submit_info) {
-	next if ref($submit_info{$platform}) eq "HASH";
-	my $target = $submit_info{$platform};
-	die "Self reference detected in '$platform' definition!!!"
-		if ( $target eq $platform );
-	if ( ! exists $submit_info{$target} ) {
-		die "No matching platform '$target' for alias '$platform'";
+while( 1 ) {
+	my $fixed = 0;
+	my @skipped;
+	foreach my $platform (keys %submit_info) {
+		next if ( ref($submit_info{$platform}) eq "HASH" );
+		my $target = $submit_info{$platform};
+		die "Self reference detected in '$platform' definition!!!"
+			if ( $target eq $platform );
+		if ( ! exists $submit_info{$target} ) {
+			die "No matching platform '$target' for alias '$platform'";
+		}
+		if ( ref($submit_info{$target}) eq "HASH" )  {
+			$submit_info{$platform} = $submit_info{$target};
+			$fixed++;
+		}
+		else {
+			push( @skipped, $platform );
+		}
 	}
-	$submit_info{$platform} = $submit_info{$target};
+	last if ( scalar(@skipped) == 0 );
+	if ( ! $fixed ) {
+		die "Can't fixup ", join(", ",@skipped), " platforms!";
+	}
 }
 
 ###############################################################################
