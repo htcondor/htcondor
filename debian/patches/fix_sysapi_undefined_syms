@@ -3,17 +3,6 @@ Subject: Change sysapi symbols to plain C
 
 This is what they are used like and declared in the headers. Implementing them
 as C++ leads to undefined symbolds in the library.
---- a/src/condor_sysapi/CMakeLists.txt
-+++ b/src/condor_sysapi/CMakeLists.txt
-@@ -17,7 +17,7 @@
-  ############################################################### 
- 
- 
--file( GLOB SysApiRmvElements *_t.cpp *.t.* dhry21b* *_main.cpp )
-+file( GLOB SysApiRmvElements *.t.* dhry21b* )
- 
- condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
- 
 --- a/src/condor_sysapi/arch_t.cpp
 +++ b/src/condor_sysapi/arch_t.cpp
 @@ -25,6 +25,10 @@

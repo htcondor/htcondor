@@ -1,3 +1,29 @@
+--- a/src/condor_sysapi/CMakeLists.txt
++++ b/src/condor_sysapi/CMakeLists.txt
+@@ -16,8 +16,8 @@
+  # 
+  ############################################################### 
+ 
+-
+-file( GLOB SysApiRmvElements *_t.cpp *.t.* dhry21b* *_main.cpp )
++ # exclude _main.cpp files to avoid duplicate and useless symbols
++file( GLOB SysApiRmvElements *.t.* dhry21b* *_main.cpp )
+ 
+ condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
+ 
+@@ -26,5 +26,10 @@
+ 
+ # there was a test target which was never used.
+ # it makes the most sense to hook in a UT here instead of integ test
+-condor_exe(condor_kflops "kflops_main.cpp" "${C_LIBEXEC}" "sysapi;condorapi;${TOOL_LINK_LIBS}" OFF)
+-condor_exe(condor_mips "mips_main.cpp" "${C_LIBEXEC}" "sysapi;condorapi;${TOOL_LINK_LIBS}" OFF)
++condor_exe(condor_kflops "kflops_main.cpp" "${C_LIBEXEC}" "utils;sysapi;condorapi;${TOOL_LINK_LIBS}" OFF)
++# unfortunately libutils comes with undefined symbols introduced by
++# libdaemon_core (even when linking libutils to it)
++target_link_libraries(condor_kflops -Wl,--allow-shlib-undefined)
++condor_exe(condor_mips "mips_main.cpp" "${C_LIBEXEC}" "utils;sysapi;condorapi;${TOOL_LINK_LIBS}" OFF)
++# this is needed because libsysapi as a circular dependency on libutils
++target_link_libraries(condor_mips utils -Wl,--allow-shlib-undefined)
 --- a/src/condor_chirp/CMakeLists.txt
 +++ b/src/condor_chirp/CMakeLists.txt
 @@ -22,6 +22,9 @@
@@ -275,6 +301,31 @@
  
  condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
  
+@@ -35,6 +39,15 @@
+ 
+ condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )
+ add_dependencies(utils utils_genparams syscall_numbers )
++# this shouldn't be linked against libdaemon_core, because it introduces
++# undefined symbols that can only be resolved by actual daemons, but it needs
++# some part
++target_link_libraries(utils sysapi procapi privsep procd_client daemon_client daemon_core qmgmt cedar ${CLASSADS_FOUND} ${PCRE_FOUND} ${GLOBUS_FOUND} ${POSTGRESQL_FOUND})
++if (WANT_CONTRIB)
++    if (HAVE_EXT_POSTGRESQL)
++        target_link_libraries(utils tt)
++    endif (HAVE_EXT_POSTGRESQL)
++endif(WANT_CONTRIB)
+ 
+ ##################################################
+ # condorapi & tests
+@@ -44,7 +57,7 @@
+     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
+ endif()
+ 
+-condor_static_lib( condorapi "${ApiSrcs}" )
++condor_really_static_lib( condorapi "${ApiSrcs}" )
+ add_dependencies( condorapi utils )
+ 
+ if (NOT WINDOWS)
 --- a/src/deployment_tools/CMakeLists.txt
 +++ b/src/deployment_tools/CMakeLists.txt
 @@ -35,6 +35,9 @@
@@ -388,3 +439,19 @@
  
  else()
  
+--- a/src/condor_gridmanager/CMakeLists.txt
++++ b/src/condor_gridmanager/CMakeLists.txt
+@@ -28,7 +28,13 @@
+ 	if (NOT WINDOWS)
+         if (HAVE_EXT_GLOBUS)
+             condor_exe( gt4_gahp "gt4_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
++            # unfortunately libutils comes with undefined symbols introduced by
++            # libdaemon_core (even when linking libutils to it)
++            target_link_libraries(gt4_gahp -Wl,--allow-shlib-undefined)
+             condor_exe( gt42_gahp "gt42_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
++            # unfortunately libutils comes with undefined symbols introduced by
++            # libdaemon_core (even when linking libutils to it)
++            target_link_libraries(gt42_gahp -Wl,--allow-shlib-undefined)
+ 
+             add_custom_command(
+                 OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh"

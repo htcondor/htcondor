@@ -17,8 +17,8 @@ Subject: Few fixes to be able to compile with system postgresql
  #include "historysnapshot.h"
  #include "jobqueuedatabase.h"
  #include "pgsqldatabase.h"
--#include "../condor_tt/condor_ttdb.h"
--#include "../condor_tt/jobqueuecollection.h"
+-#include "condor_tt/condor_ttdb.h"
+-#include "condor_tt/jobqueuecollection.h"
 +#include "../condor_contrib/condor_tt/condor_ttdb.h"
 +#include "../condor_contrib/condor_tt/jobqueuecollection.h"
  #include "dbms_utils.h"
@@ -30,8 +30,8 @@ Subject: Few fixes to be able to compile with system postgresql
  #ifdef HAVE_EXT_POSTGRESQL
  
  #include "pgsqldatabase.h"
--#include "../condor_tt/condor_ttdb.h"
--#include "../condor_tt/jobqueuecollection.h"
+-#include "condor_tt/condor_ttdb.h"
+-#include "condor_tt/jobqueuecollection.h"
 +#include "../condor_contrib/condor_tt/condor_ttdb.h"
 +#include "../condor_contrib/condor_tt/jobqueuecollection.h"
  
