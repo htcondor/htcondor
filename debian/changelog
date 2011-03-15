@@ -1,3 +1,16 @@
+condor (7.5.5+git995-ga9a0d2a-1) UNRELEASED; urgency=low
+
+  * New upstream code from V7.6 branch. Updated various patches, removed some
+    merged ones.
+  * No longer compile the 'contrib' parts -- upstream recommended it due to
+    lack of stability.
+  * Added patch to create /var/run/condor upon daemon startup with proper
+    permissions. That helps to conform to the FHS that declares /var/run as
+    volatile and to be cleaned upon boot. Moreover, some systems have /var/run
+    mounted as tmpfs.
+
+ -- Michael Hanke <mih@debian.org>  Tue, 15 Mar 2011 16:37:56 -0400
+
 condor (7.5.4+git567-gb10f6b4-2) UNRELEASED; urgency=low
 
   * Applied patch to allow adding submit specs in condor_run calls. Thanks to
