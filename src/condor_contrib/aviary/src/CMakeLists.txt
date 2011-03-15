@@ -30,7 +30,9 @@ if (LINUX)
     include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
     # hardcode axis2c headers dir for now
-    include_directories( $ENV{WSFCPP_HOME}/include/axis2-1.6.0/ $ENV{WSFCPP_HOME}/include/axis2-1.6.0/platforms )
+    include_directories( $ENV{WSFCPP_HOME}/include/axis2-1.6.0
+			 $ENV{WSFCPP_HOME}/include/wso2-wsf-cpp
+			 $ENV{WSFCPP_HOME}/include/axis2-1.6.0/platforms )
     # path to generated headers
     include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../include )
 
@@ -40,12 +42,11 @@ if (LINUX)
     file( GLOB JOB_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/AviaryJobService*.cpp )
     file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/query/src/*.cpp )
     file( GLOB QUERY_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryQueryService*.cpp )
-    set ( AXIS2_LIBS
-            $ENV{WSFCPP_HOME}/lib/libaxutil.so
-            $ENV{WSFCPP_HOME}/lib/libaxis2_axiom.so $ENV{WSFCPP_HOME}/lib/libaxis2_parser.so
-            $ENV{WSFCPP_HOME}/lib/libaxis2_http_common.so $ENV{WSFCPP_HOME}/lib/libaxis2_http_receiver.so $ENV{WSFCPP_HOME}/lib/libaxis2_http_sender.so
-            $ENV{WSFCPP_HOME}/lib/libneethi.so $ENV{WSFCPP_HOME}/lib/libguththila.so  $ENV{WSFCPP_HOME}/lib/libaxis2_engine.so
-            $ENV{WSFCPP_HOME}/lib/libwso2_wsf.so
+    set ( AXIS2_LIBS -L/usr/lib -L/usr/lib64 -L$ENV{WSFCPP_HOME}/lib
+    	  	     -laxutil -laxis2_axiom -axis2_parser
+		     -laxis2_http_common -laxis2_http_receiver
+		     -laxis2_http_sender -lneethi -lguththila
+		     -laxis2_engine -lwso2_wsf
         #    $ENV{WSFCPP_HOME}/modules/libaxis2_mod_addr.so
         )
 
