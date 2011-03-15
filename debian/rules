@@ -6,9 +6,9 @@ upstreamver = $(shell echo $(debver) | cut -d '-' -f 1,1 )
 
 # this figures out the last merge point from 'master' into the Debian branch and
 # then described this commit relative to the last release tag (V...)
-# If this should make any sense the local master branch must track upstreams
-# master.
-gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V*' $$(git merge-base -a HEAD master) | sed -e 's/^V//' -e 's/_/./g' -e 's/-/+git/')
+# If this should make any sense the local upstream branch must track upstream's
+# master or whatever other source branch.
+gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V*' $$(git merge-base -a HEAD upstream) | sed -e 's/^V//' -e 's/_/./g' -e 's/-/+git/')
 
 # one ring to rule them all ...
 %:
