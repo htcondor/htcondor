@@ -84,7 +84,7 @@ public:
 
 	// Given the base dir, create a local are to move the sandbox, 
 	// assign a sandboxId to the sandbox and set its expiry
-	virtual char* registerSandbox(const char*, const char*, bool isId = false);
+	virtual const char* registerSandbox(const char*, const char*, bool isId = false);
 	
 	void updateSandboxExecDir(const char*, const char*);
 
@@ -150,6 +150,10 @@ private:
     // number of free slots
     int numSlotsAvailable;
 
+	// Directory where sandbox_manager logs are stored.
+	// This dir should be persistant
+	std::string logDir;
+
     // A vector holding pointer to slot objects for a given slot
     std::vector<CSandboxSlot*> sandboxSlots;
 
@@ -168,6 +172,11 @@ private:
 	// a vector of sandbox ids associated with a particular claim
 	std::map<std::string, vector<std::string> > claimIdSandboxMap;
 
+	// Update the history record for a given sandbox
+	void updateSandboxRecord(std::string);
+
+	// Get the filename where sandbox's record is stored
+	std::string getSandboxRecordFileName(std::string);
 };
 #endif
 

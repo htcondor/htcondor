@@ -1040,7 +1040,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	req_classad->LookupString( "JOB_SANDBOX_ID", sb_id);
 	if (sb_id != "") {
 		dprintf(D_ALWAYS, "**** sandbox ID: %s *** \n", sb_id.c_str());
-		char *sandboxId = sandMan->registerSandbox(sb_id.c_str(), (const char*) id, true);
+		const char *sandboxId = sandMan->registerSandbox(sb_id.c_str(), (const char*) id, true);
 	}
 
 #if !defined(WANT_OLD_CLASSADS)

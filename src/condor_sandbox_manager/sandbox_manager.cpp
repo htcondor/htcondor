@@ -55,9 +55,11 @@ exporting documents or software obtained from this server.
 #include "condor_common.h"
 #include "util_lib_proto.h"
 #include "sandbox_manager.h"
+#include "directory_util.h"
 #include "directory.h"
 #include <string>
 #include <iostream>
+#include <fstream>
 using namespace std;
 
 CSandboxManager::CSandboxManager()
@@ -82,20 +84,22 @@ CSandboxManager::~CSandboxManager()
 }
 
 
-char*
+const char*
 CSandboxManager::registerSandbox(const char* sDir, const char* claimId, bool isId)
 {
 	dprintf(D_ALWAYS, "CSandboxManager::registerSandbox called \n");
 	if (isId) {
 		CSandbox *sandbox = new CSandbox(sDir, false);
 		this->sandboxMap[sandbox->getId()] = sandbox;
-		return (char*)sandbox->getId().c_str(); 
+		this->updateSandboxRecord(sandbox->getId());
+		return (const char*)sandbox->getId().c_str(); 
 	}
 	CSandbox *sandbox = new CSandbox(sDir);
 	this->sandboxMap[sandbox->getId()] = sandbox;
-	
+	this->updateSandboxRecord(sandbox->getId());
+
 	claimIdSandboxMap[string(claimId)].push_back(sandbox->getId());
-	return (char*)sandbox->getId().c_str();
+	return (const char*)sandbox->getId().c_str();
 }
 
 
@@ -159,6 +163,8 @@ CSandboxManager::unregisterSandbox(const char* id)
 void
 CSandboxManager::unregisterSandbox(const string id)
 {
+	std::string sboxFileName = this->getSandboxRecordFileName(id);
+
 	// TODO: Need more details. Right now just delete the sandbox object
 	map<string, CSandbox*>::iterator iter;
 	cout 	<< "CSandboxManager::listRegisteredSandboxes called for " 
@@ -167,6 +173,14 @@ CSandboxManager::unregisterSandbox(const string id)
 	iter = sandboxMap.find(id);
 	if (iter == sandboxMap.end())
 		return;
+
+    //sboxFileName = this->getSandboxRecordFileName(id);
+
+    // TODO: More error checking required
+	if (remove(sboxFileName.c_str()) == -1) {
+		dprintf(D_FULLDEBUG, "Error removing sandbox history file %s\n", sboxFileName.c_str());
+	}
+
 	delete iter->second;
 	sandboxMap.erase(id);
 }
@@ -197,8 +211,6 @@ CSandboxManager::getNextSandboxId(void)
 	if (this->m_iter == this->sandboxMap.end())
 		return "";
 	return this->m_iter->first;
-	
-
 }
 
 bool 
@@ -249,7 +261,9 @@ CSandboxManager::isSandboxSlotAvailable(void)
 	return (numSlotsAvailable > 0);
 }
 
-void CSandboxManager::createSandboxSlot(const char*, CSandbox*)
+
+void
+CSandboxManager::createSandboxSlot(const char*, CSandbox*)
 {
 	// TODO
 }
@@ -261,9 +275,9 @@ CSandboxManager::updateSandboxExecDir(const char* sId, const char* sExecDir)
 	string sbId = string(sId);
 	if (sandboxMap.find( sbId ) != sandboxMap.end()) {
 		sandboxMap[sbId]->setSandboxDir(sExecDir);
-               
 		dprintf(D_ALWAYS, "CSandboxManager::updateSandboxExecDir called:  %s , %s \n", sId, sExecDir);
 	}   
+	this->updateSandboxRecord(sId);
 }
 
 
@@ -283,6 +297,31 @@ CSandboxManager::init(void)
 	this->numSlotsInactive = 0;
 	this->numSlotsAvailable = CSandboxManager::numSlotsTotal;
 
+	// TODO: Remove the hard coding and read the info from condor_config
+	this->logDir = "/tmp/sandbox_manager";
+	mkdir_and_parents_if_needed(this->logDir.c_str(), 0744);
+}
 
-	return;
+
+void
+CSandboxManager::updateSandboxRecord(std::string sId)
+{
+	std::string sboxFileName = this->getSandboxRecordFileName(sId);
+	
+	// TODO: More error checking
+	ofstream sboxFile;
+	sboxFile.open(sboxFileName.c_str());
+	sboxFile << sandboxMap[sId]->getDetails();
+	sboxFile.close();
+}
+
+std::string
+CSandboxManager::getSandboxRecordFileName(std::string sId)
+{
+    return dircat(this->logDir.c_str(), sId.c_str());
+	/*
+	stringstream sboxFileName;
+    sboxFileName << this->logDir << "/" << sId;
+	return sboxFileName.str();
+	*/
 }
