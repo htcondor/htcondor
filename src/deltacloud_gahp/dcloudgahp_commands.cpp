@@ -6,6 +6,8 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <ctype.h>
 #include "dcloudgahp_commands.h"
 #include "dcloudgahp_common.h"
 
