@@ -338,6 +338,7 @@ const char * const ATTR_JOB_NONESSENTIAL		 = "Nonessential";
 const char * const ATTR_JOB_NOOP				 = "IsNoopJob";
 const char * const ATTR_JOB_NOOP_EXIT_SIGNAL	 = "NoopJobExitSignal";
 const char * const ATTR_JOB_NOOP_EXIT_CODE		 = "NoopJobExitCode";
+const char * const ATTR_JOB_NORMAL_EXIT			 = "JobNormalExit"; 
 const char * const ATTR_JOB_NOTIFICATION		 = "JobNotification";
 const char * const ATTR_JOB_OUTPUT				 = "Out";
 const char * const ATTR_JOB_OUTPUT_ORIG			 = "OutOrig";

@@ -1854,6 +1854,9 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 	}
 
 	bool rval;
+	char buf[50];
+	sprintf( buf, "%s=%s", ATTR_JOB_NORMAL_EXIT, (strcmp(getExitReasonString(), "exit") == 0) ? "true" : "false");
+	ad->InsertOrUpdate( buf );
 
 		// Try to send it to the shadow
 	if (shadow_version && shadow_version->built_since_version(6,9,5)) {
