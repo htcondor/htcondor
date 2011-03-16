@@ -51,10 +51,17 @@ AviaryScheddPlugin::earlyInitialize()
 
      // TODO: may want to get these from condor config?
     const char* log_file = "./axis2.log";
-    string repo_path = getenv("WSFCPP_HOME");
+	char *repo_path = param("WSFCPP_HOME");
+	if (!repo_path) {
+		repo_path = getenv("WSFCPP_HOME");
+		if (!repo_path) {
+			EXCEPT("No WSFCPP_HOME in config or env");
+		}
+	}
 
     // init transport here
-    provider = new Axis2SoapProvider(AXIS2_LOG_LEVEL_DEBUG,log_file,repo_path.c_str());
+    provider = new Axis2SoapProvider(AXIS2_LOG_LEVEL_DEBUG,log_file,repo_path);
+	free(repo_path);
     string axis_error;
 
     if (!provider->init(DEFAULT_PORT,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {

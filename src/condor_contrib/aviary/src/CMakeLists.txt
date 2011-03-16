@@ -22,17 +22,42 @@ if (LINUX)
         message( FATAL_ERROR "run ../gen-build-xsd-lib.sh first!")
     endif ()
 
-    # TODO: querying env vars not reliable like this
-    if ( NOT DEFINED ENV{WSFCPP_HOME} )
-        message( FATAL_ERROR "must set WSFCPP_HOME var in env!")
-    endif ()
+    if ( PROPER )
+
+		find_multiple( "axutil;axis2_axiom;axis2_parser;axis2_http_common;axis2_http_receiver;axis2_http_sender;neethi;guththila;axis2_engine;wso2_wsf" WSO2_FOUND )
+       message (STATUS "external configured WSO2_FOUND=${WSO2_FOUND}")
+
+       include_directories( /usr/include/axis2-1.6.0
+			    /usr/include/wso2-wsf-cpp
+			    /usr/include/axis2-1.6.0/platforms )
+	    set ( AXIS2_LIBS -L/usr/lib -L/usr/lib64 ${WSO2_FOUND} )
+
+		 set(aviary_services_loc ${CMAKE_INSTALL_PREFIX}/axis2/services)
+
+	else (PROPER)
+
+		# TODO: querying env vars not reliable like this
+	    if ( NOT DEFINED ENV{WSFCPP_HOME} )
+	        message( FATAL_ERROR "$WSFCPP_HOME not defined for non-proper build")
+	    endif ()
+
+		set ( AXIS2_LIBS -L$ENV{WSFCPP_HOME}/lib
+		     -laxutil -laxis2_axiom -laxis2_parser
+		     -laxis2_http_common -laxis2_http_receiver
+		     -laxis2_http_sender -lneethi -lguththila
+		     -laxis2_engine -lwso2_wsf )
+
+		include_directories(
+			    $ENV{WSFCPP_HOME}/include/axis2-1.6.0
+			    $ENV{WSFCPP_HOME}/include/wso2-wsf-cpp
+			    $ENV{WSFCPP_HOME}/include/axis2-1.6.0/platforms )
+
+        set(aviary_services_loc $ENV{WSFCPP_HOME}/services)
+
+	endif ( PROPER )
 
     include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
-    # hardcode axis2c headers dir for now
-    include_directories( $ENV{WSFCPP_HOME}/include/axis2-1.6.0
-			 $ENV{WSFCPP_HOME}/include/wso2-wsf-cpp
-			 $ENV{WSFCPP_HOME}/include/axis2-1.6.0/platforms )
     # path to generated headers
     include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../include )
 
@@ -40,31 +65,21 @@ if (LINUX)
 
     file( GLOB JOB_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/job/src/*.cpp )
     file( GLOB JOB_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/AviaryJobService*.cpp )
-    file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/query/src/*.cpp )
+
+	file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/query/src/*.cpp )
     file( GLOB QUERY_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryQueryService*.cpp )
-    set ( AXIS2_LIBS -L/usr/lib -L/usr/lib64 -L$ENV{WSFCPP_HOME}/lib
-		     -laxutil -laxis2_axiom -laxis2_parser
-		     -laxis2_http_common -laxis2_http_receiver
-		     -laxis2_http_sender -lneethi -lguththila
-		     -laxis2_engine -lwso2_wsf
-        #    $ENV{WSFCPP_HOME}/modules/libaxis2_mod_addr.so
-        )
 
     # used for selective compilation differences only otherwise just link the library
     src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
     src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
     add_library (aviary_common SHARED ${COMMON_GEN_SRCS} )
-    set(aviary_common_loc $ENV{WSFCPP_HOME}/services/job)
-    if (aviary_common_loc)
-        install (TARGETS aviary_common DESTINATION $ENV{WSFCPP_HOME}/services/job)
-    endif()
 
     add_library (aviary_job SHARED ${JOB_GEN_SRCS} ${JOB_SRCS} Codec.cpp SchedulerObject.cpp AviaryUtils.cpp)
     target_link_libraries (aviary_job aviary_common ${AXIS2_LIBS} )
-    set(aviary_job_loc $ENV{WSFCPP_HOME}/services/job)
-    if (aviary_job_loc)
-        install (TARGETS aviary_job DESTINATION $ENV{WSFCPP_HOME}/services/job)
+    if (aviary_services_loc)
+        install (TARGETS aviary_common DESTINATION ${aviary_services_loc}/job)
+		install (TARGETS aviary_job DESTINATION ${aviary_services_loc}/job)
     endif()
 
     file( GLOB SCHED_PLUGIN_SRCS AviaryUtils.cpp PROC_ID_comparator.cpp SchedulerObject.cpp Axis2SoapProvider.cpp AviaryScheddPlugin*.cpp )
@@ -77,9 +92,14 @@ if (LINUX)
     endif()
     set_property( TARGET AviaryScheddPlugin-plugin PROPERTY PREFIX "" )
 
-	add_library (aviary_query SHARED ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
-	file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp Axis2SoapProvider.cpp Codec.cpp AviaryUtils.cpp
-								JobServerObject.cpp SubmissionObject.cpp JobServerJobLogConsumer.cpp
+	add_library (aviary_query SHARED ${QUERY_GEN_SRCS} ${QUERY_SRCS} Codec.cpp JobServerObject.cpp AviaryUtils.cpp )
+	target_link_libraries (aviary_query aviary_common ${AXIS2_LIBS})
+    if (aviary_services_loc)
+        install (TARGETS aviary_common DESTINATION ${aviary_services_loc}/query)
+		install (TARGETS aviary_query DESTINATION ${aviary_services_loc}/query)
+    endif()
+	file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp Axis2SoapProvider.cpp 
+								SubmissionObject.cpp JobServerJobLogConsumer.cpp
 								Job.cpp HistoryFile.cpp HistoryProcessingUtils.cpp Globals.cpp )
     condor_exe( aviary_query_server "${JOB_SERVER_SRCS}"
 			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${AXIS2_LIBS}" OFF )
