@@ -14,5 +14,5 @@
 # limitations under the License.
 #
 acl allow cumin@QPID all all
-acl allow guest@QPID all all
+acl allow anonymous@QPID all all
 acl deny all all

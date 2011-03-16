@@ -379,7 +379,7 @@ const char* AmazonInstanceType = "amazon_instance_type";
 // Deltacloud Parameters
 //
 const char* DeltacloudUsername = "deltacloud_username";
-const char* DeltacloudPassword = "deltacloud_password";
+const char* DeltacloudPasswordFile = "deltacloud_password_file";
 const char* DeltacloudImageId = "deltacloud_image_id";
 const char* DeltacloudRealmId = "deltacloud_realm_id";
 const char* DeltacloudHardwareProfile = "deltacloud_hardware_profile";
@@ -5085,12 +5085,21 @@ SetGridParams()
 		exit( 1 );
 	}
 
-	if ( (tmp = condor_param( DeltacloudPassword, ATTR_DELTACLOUD_PASSWORD )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_PASSWORD, tmp );
+	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
+		// check private key file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_PASSWORD_FILE, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudPassword );
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudPasswordFile );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
 	}
