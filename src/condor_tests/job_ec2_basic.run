@@ -30,6 +30,8 @@ use CondorTest;
 use Check::SimpleJob;
 use Check::CondorLog;
 
+my $debuglevel = 2;
+
 #
 # Start up the simulator, which will print the port to which it binds.
 #
@@ -79,25 +81,16 @@ if( ! defined( $port ) ) {
 # Start up a personal condor.  Why I need to specify the last three
 # lines is something of a mystery.
 #
-my $appendToCondorConfig = '
+my $append_condor_config = '
     EC2_GAHP_LOG = $(LOG)/ec2_gahp_log
     GRIDMANAGER_JOB_PROBE_INTERVAL = 5
-    
-    # This is not always defined, and the test infrastructure does not
-    # ensure that it is, even when I specify it in the daemon list.  *sigh*
-    COLLECTOR = $(SBIN)/condor_collector
-    
-    # This is not always defined.
-    EC2_GAHP = $(SBIN)/ec2_gahp
-';    
+    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+';
+
 CondorPersonal::DebugLevel( 10 );
-my $personalCondorInstance = CondorTest::StartCondorWithParams(
-    type                    => "jobs",
-    ports                   => "dynamic",
-    condor                  => "nightlies",
-    append_condor_config    => $appendToCondorConfig,
-    slots                   => "1",
-    daemon_list             => "master, collector, schedd"
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
 );
 
 #
@@ -139,17 +132,12 @@ CondorLog::RunCheck(
 # Verify that the simulator's logs are OK.
 #
 
-# FIXME: In the output, only /^No leaks detected\.$/ is a success.
-# FIXME: In the error, any message is a failure.
-
-#
-# Kill the personal condor.
-#
-CondorTest::KillPersonal( $personalCondorInstance->{ is_condor_config } );
 
 #
 # Kill the simulator.
 #
 kill( 'TERM', $pid ); sleep( 1 ); kill( 'KILL', $pid );
 
-exit( 0 );
+CondorTest::debug("job_ec2_basic SUCCESS\n",$debuglevel);
+
+CondorTest::EndTest();

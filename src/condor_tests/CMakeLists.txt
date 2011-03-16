@@ -121,6 +121,10 @@ if (BUILD_TESTS)
 	##########################################################
 	# platform specific tests
 	if(LINUX)
+	
+	# AFAIK, this test isn't platform- or external- dependent.
+	condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
+
 	if ( NOT WITHOUT_AMAZON_TEST )
 		condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
 	endif()
@@ -464,8 +468,5 @@ if (BUILD_TESTS)
 	if ( NOT WITHOUT_SOAP_TEST )
 		condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
 	endif()
-
-	# AFAIK, this test isn't platform- or external- dependent.
-	condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
 
 endif(BUILD_TESTS)
