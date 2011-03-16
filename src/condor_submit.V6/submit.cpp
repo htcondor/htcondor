@@ -384,6 +384,9 @@ const char* DeltacloudPasswordFile = "deltacloud_password_file";
 const char* DeltacloudImageId = "deltacloud_image_id";
 const char* DeltacloudRealmId = "deltacloud_realm_id";
 const char* DeltacloudHardwareProfile = "deltacloud_hardware_profile";
+const char* DeltacloudHardwareProfileMemory = "deltacloud_hardware_profile_memory";
+const char* DeltacloudHardwareProfileCpu = "deltacloud_hardware_profile_cpu";
+const char* DeltacloudHardwareProfileStorage = "deltacloud_hardware_profile_storage";
 const char* DeltacloudKeyname = "deltacloud_keyname";
 const char* DeltacloudUserData = "deltacloud_user_data";
 
@@ -5112,6 +5115,24 @@ SetGridParams()
 
 	if( (tmp = condor_param( DeltacloudHardwareProfile, ATTR_DELTACLOUD_HARDWARE_PROFILE )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfileMemory, ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfileCpu, ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfileStorage, ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE, tmp );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}

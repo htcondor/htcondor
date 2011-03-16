@@ -91,6 +91,9 @@ private:
 	char *m_imageId;
 	char *m_realmId;
 	char *m_hwpId;
+	char *m_hwpCpu;
+	char *m_hwpMemory;
+	char *m_hwpStorage;
 	char *m_username;
 	char *m_password;
 	char *m_keyname;
