@@ -1202,6 +1202,7 @@ processCommandLineArguments (int argc, char *argv[])
 			Q.addAND( expr.c_str() );
 			run = true;
 			attrs.append( ATTR_REMOTE_HOST );
+			attrs.append( ATTR_JOB_UNIVERSE );
 		}
 		else
 		if (match_prefix( arg, "hold") || match_prefix( arg, "held")) {
