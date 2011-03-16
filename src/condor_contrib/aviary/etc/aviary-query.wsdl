@@ -105,7 +105,7 @@
 	</wsdl:binding>
 	<wsdl:service name="AviaryQueryService">
 		<wsdl:port name="AviaryQuerySOAPPort" binding="tns:AviaryQuerySOAPBinding">
-			<soap:address location="http://localhost:8090/"/>
+			<soap:address location="http://localhost"/>
 		</wsdl:port>
 	</wsdl:service>
 </wsdl:definitions>

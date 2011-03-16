@@ -54,7 +54,7 @@ private:
 };
 
 typedef map<const char*, Attribute*> AttributeMapType;
-typedef vector<Attribute*> AttributeVectorType;
+typedef vector<AttributeMapType> AttributeVectorType;
 typedef AttributeMapType::const_iterator AttributeMapIterator;
 typedef AttributeVectorType::const_iterator AttributeVectorIterator;
 
@@ -69,7 +69,6 @@ public:
     virtual bool addAttributeToMap(ClassAd& ad, const char* name, AttributeMapType& _map) = 0;
     virtual bool classAdToMap(ClassAd &ad, AttributeMapType &_map) = 0;
     virtual bool mapToClassAd(AttributeMapType &_map, ClassAd &ad) = 0;
-    virtual bool procIdToMap(int clusterId, int procId, AttributeMapType& _map) = 0;
 
 };
 
@@ -93,7 +92,6 @@ public:
     virtual bool addAttributeToMap(ClassAd& ad, const char* name, AttributeMapType& _map);
     virtual bool classAdToMap(ClassAd &ad, AttributeMapType &_map);
     virtual bool mapToClassAd(AttributeMapType &_map, ClassAd &ad);
-    virtual bool procIdToMap(int clusterId, int procId, AttributeMapType& _map);
 
 //protected:
     BaseCodec();

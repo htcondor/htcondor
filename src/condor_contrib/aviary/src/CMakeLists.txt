@@ -43,15 +43,12 @@ if (LINUX)
     file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/query/src/*.cpp )
     file( GLOB QUERY_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryQueryService*.cpp )
     set ( AXIS2_LIBS -L/usr/lib -L/usr/lib64 -L$ENV{WSFCPP_HOME}/lib
-    	  	     -laxutil -laxis2_axiom -axis2_parser
+		     -laxutil -laxis2_axiom -laxis2_parser
 		     -laxis2_http_common -laxis2_http_receiver
 		     -laxis2_http_sender -lneethi -lguththila
 		     -laxis2_engine -lwso2_wsf
         #    $ENV{WSFCPP_HOME}/modules/libaxis2_mod_addr.so
         )
-
-    #add_library (aviary_query SHARED ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
-    #condor_exe( aviary_query_server "aviary_query_server.cpp;Axis2SoapProvider.cpp" "${C_SBIN}" "${AXIS2_LIBS};${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND}" OFF )
 
     # used for selective compilation differences only otherwise just link the library
     src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
@@ -79,6 +76,12 @@ if (LINUX)
         install (TARGETS AviaryScheddPlugin-plugin DESTINATION ${C_LIBEXEC} )
     endif()
     set_property( TARGET AviaryScheddPlugin-plugin PROPERTY PREFIX "" )
-    #condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${AXIS2_LIBS}" ON)
+
+	add_library (aviary_query SHARED ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
+	file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp Axis2SoapProvider.cpp Codec.cpp AviaryUtils.cpp
+								JobServerObject.cpp SubmissionObject.cpp JobServerJobLogConsumer.cpp
+								Job.cpp HistoryFile.cpp HistoryProcessingUtils.cpp Globals.cpp )
+    condor_exe( aviary_query_server "${JOB_SERVER_SRCS}"
+			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${AXIS2_LIBS}" OFF )
 
 endif(LINUX)

@@ -146,18 +146,3 @@ BaseCodec::mapToClassAd(AttributeMapType& _map, ClassAd& ad)
 
     return true;
 }
-
-bool
-BaseCodec::procIdToMap(int clusterId, int procId, AttributeMapType& _map)
-{
-    ClassAd *ad;
-
-    if (NULL == (ad = ::GetJobAd(clusterId, procId, false))) {
-        dprintf(D_ALWAYS,
-                "::GetJobAd method called on %d.%d, which does not exist\n",
-                clusterId, procId);
-        return false;
-    }
-
-    return mapToClassAd(_map, *ad);
-}

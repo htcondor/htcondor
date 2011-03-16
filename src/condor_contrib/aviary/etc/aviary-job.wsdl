@@ -124,7 +124,7 @@
 	</wsdl:binding>
 	<wsdl:service name="AviaryJobService">
 		<wsdl:port name="AviaryJobSOAPPort" binding="tns:AviaryJobSOAPBinding">
-			<soap:address location="http://localhost:8080/"/>
+			<soap:address location="http://localhost"/>
 		</wsdl:port>
 	</wsdl:service>
 </wsdl:definitions>
