@@ -4,6 +4,7 @@
 //==========================================
 #include <windows.h>
 #include <malloc.h>
+#pragma warning(disable: 4273) // inconsistent dll linkage for realloc and calloc
 
 extern "C" void * __cdecl realloc(void * p, size_t size)
 {

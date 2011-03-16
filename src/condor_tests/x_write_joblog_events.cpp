@@ -148,7 +148,7 @@ int writeExecuteEvent(WriteUserLog *log)
 
 int writeJobTerminatedEvent(WriteUserLog *log)
 {
-	struct rusage ru;
+	struct rusage ru = {0};
 
 	JobTerminatedEvent jobterminated;
 	jobterminated.normal = true;

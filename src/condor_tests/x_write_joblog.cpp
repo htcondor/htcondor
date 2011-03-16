@@ -173,7 +173,7 @@ int writeJobEvictedEvent()
 
 int writeJobTerminatedEvent()
 {
-	struct rusage ru;
+	struct rusage ru = {0};
 
 	JobTerminatedEvent jobterminated;
 	jobterminated.normal = false;
@@ -195,7 +195,7 @@ int writeJobTerminatedEvent()
 
 int writeNodeTerminatedEvent()
 {
-	struct rusage ru;
+	struct rusage ru = {0};
 
 	NodeTerminatedEvent nodeterminated;
 	nodeterminated.node = 44;

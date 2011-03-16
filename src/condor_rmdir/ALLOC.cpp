@@ -4,6 +4,7 @@
 //==========================================
 #include <windows.h>
 #include <malloc.h>
+#pragma warning(disable: 4273) // inconsistent dll linkage for malloc and free
 
 extern "C" void * __cdecl malloc(size_t size)
 {

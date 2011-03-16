@@ -28,7 +28,7 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "../condor_privsep/privsep_fork_exec.h"
 
-extern char** environ;
+DLL_IMPORT_MAGIC extern char** environ;
 
 #ifdef WIN32
 typedef HANDLE child_handle_t;
