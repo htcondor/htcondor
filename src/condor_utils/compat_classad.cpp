@@ -1447,8 +1447,6 @@ sPrint( MyString &output, StringList *attr_white_list )
 	unp.SetOldClassAd( true );
 	string value;
 
-	output = "";
-
 	classad::ClassAd *parent = GetChainedParentAd();
 
 	if ( parent ) {
@@ -1487,7 +1485,7 @@ sPrint( std::string &output, StringList *attr_white_list )
 {
 	MyString myout = output;
 	int rc = sPrint( myout, attr_white_list );
-	output = myout;
+	output += myout;
 	return rc;
 }
 // Taken from the old classad's function. Got rid of incorrect documentation. 
