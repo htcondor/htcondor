@@ -498,6 +498,13 @@ protected:
 #endif /* HAVE_JOB_HOOKS */
 
 	bool m_enforce_limits;
+	
+			/**
+		   @return The exit reason string representing what happened to
+		     the job.  Possible values: "exit" (on its own), "hold",
+		     "remove", or "evict" (PREEMPT, condor_vacate, condor_off).
+		*/
+	const char* getExitReasonString( void );
 
 private:
 		/// Start a timer for the periodic job updates
@@ -511,12 +518,7 @@ private:
 
 	bool m_allJobsDone_finished;
 
-		/**
-		   @return The exit reason string representing what happened to
-		     the job.  Possible values: "exit" (on its own), "hold",
-		     "remove", or "evict" (PREEMPT, condor_vacate, condor_off).
-		*/
-	const char* getExitReasonString( void );
+
 };
 
 
