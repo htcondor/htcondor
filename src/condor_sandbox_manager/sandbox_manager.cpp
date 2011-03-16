@@ -240,6 +240,7 @@ CSandboxManager::removeSandboxes(std::string claimId)
 		else 
 			dprintf(D_FULLDEBUG, "CSandboxManager::removeSandboxes: Removal of sandbox with id %s failed. \n", sandboxIds[i].c_str());
 	}
+	return result;
 }
 
 bool 
