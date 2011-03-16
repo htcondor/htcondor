@@ -4,6 +4,7 @@
 //==========================================
 #include <windows.h>
 #include <malloc.h>
+#pragma warning(disable: 4273) // inconsistent dll linkage for msize
 
 extern "C" void * __cdecl _nh_malloc(size_t size, int nhFlag)
 {
