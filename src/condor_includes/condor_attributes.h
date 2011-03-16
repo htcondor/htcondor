@@ -278,6 +278,7 @@ extern const char * const  ATTR_JOB_NONESSENTIAL;
 extern const char * const  ATTR_JOB_NOOP;
 extern const char * const  ATTR_JOB_NOOP_EXIT_SIGNAL;
 extern const char * const  ATTR_JOB_NOOP_EXIT_CODE;
+extern const char * const  ATTR_JOB_NORMAL_EXIT;
 extern const char * const  ATTR_JOB_NOTIFICATION;
 extern const char * const  ATTR_JOB_OUTPUT;
 extern const char * const  ATTR_JOB_OUTPUT_ORIG;

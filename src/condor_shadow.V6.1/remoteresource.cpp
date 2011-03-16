@@ -1075,6 +1075,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	char* job_state = NULL;
 	ResourceState new_state = state;
+	bool normalExit = false;
 	update_ad->LookupString( ATTR_JOB_STATE, &job_state );
 	if( job_state ) { 
 			// The starter told us the job state, see what it is and
@@ -1085,6 +1086,11 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			new_state = RR_EXECUTING;
 		} else if ( strcasecmp(job_state, "Checkpointed") == MATCH ) {
 			new_state = RR_CHECKPOINTED;
+		} else if ( strcasecmp(job_state, "Exited") == MATCH) {
+			// Did job exit by itself or was it held, evicted, ... ?
+			update_ad->LookupBool( ATTR_JOB_NORMAL_EXIT , normalExit) ;
+			if (normalExit)  
+				jobAd->Assign(ATTR_JOB_STATUS, TRANSFERRING_OUTPUT);
 		} else { 
 				// For our purposes in here, we don't care about any
 				// other possible states at the moment.  If the job
