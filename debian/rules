@@ -91,6 +91,7 @@ override_dh_auto_install:
 	# place condor config file with default Debian config
 	sed -e 's,^\(CONDOR_HOST\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
 		-e 's,^\(RELEASE_DIR\s*=\).*,\1 /usr,' \
+		-e 's,^\(MAIL\s*=\).*,\1 /usr/bin/mail,' \
 		-e 's,^\(LOCAL_DIR\s*=\).*,\1 /var,' \
 		-e 's,^\(LOCAL_CONFIG_FILE\s*=\).*,\1 /etc/condor/condor_config.local,' \
 		-e 's,^\(LOCAL_CONFIG_DIR\s*=\).*,\1 /etc/condor/config.d,' \
