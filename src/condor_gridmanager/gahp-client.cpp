@@ -8904,6 +8904,9 @@ int GahpClient::dcloud_submit( const char *service_url,
 							   const char *instance_name,
 							   const char *realm_id,
 							   const char *hwp_id,
+							   const char *hwp_memory,
+							   const char *hwp_cpu,
+							   const char *hwp_storage,
 							   const char *keyname,
 							   const char *userdata,
 							   StringList &attrs )
@@ -8925,6 +8928,9 @@ int GahpClient::dcloud_submit( const char *service_url,
 	if ( !instance_name ) instance_name = NULLSTRING;
 	if ( !realm_id ) realm_id = NULLSTRING;
 	if ( !hwp_id ) hwp_id = NULLSTRING;
+	if ( !hwp_memory ) hwp_memory = NULLSTRING;
+	if ( !hwp_cpu ) hwp_cpu = NULLSTRING;
+	if ( !hwp_storage ) hwp_storage = NULLSTRING;
 	if ( !keyname ) keyname = NULLSTRING;
 	if ( !userdata ) userdata = NULLSTRING;
 
@@ -8937,10 +8943,14 @@ int GahpClient::dcloud_submit( const char *service_url,
 	char* esc5 = strdup( escapeGahpString(instance_name) );
 	char* esc6 = strdup( escapeGahpString(realm_id) );
 	char* esc7 = strdup( escapeGahpString(hwp_id) );
-	char* esc8 = strdup( escapeGahpString(keyname) );
-	char* esc9 = strdup( escapeGahpString(userdata) );
+	char* esc8 = strdup( escapeGahpString(hwp_memory) );
+	char* esc9 = strdup( escapeGahpString(hwp_cpu) );
+	char* esc10 = strdup( escapeGahpString(hwp_storage) );
+	char* esc11 = strdup( escapeGahpString(keyname) );
+	char* esc12 = strdup( escapeGahpString(userdata) );
 
-	bool x = reqline.sprintf("%s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9);
+	bool x = reqline.sprintf("%s %s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3,
+                                 esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11, esc12);
 
 	free( esc1 );
 	free( esc2 );
@@ -8951,6 +8961,9 @@ int GahpClient::dcloud_submit( const char *service_url,
 	free( esc7 );
 	free( esc8 );
 	free( esc9 );
+	free( esc10 );
+	free( esc11 );
+	free( esc12 );
 	ASSERT( x == true );
 
 	const char *buf = reqline.Value();
