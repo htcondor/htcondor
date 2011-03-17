@@ -126,10 +126,10 @@
 
         <!--Find the location of the Java installation-->
         <Property Id="JVMVERSION">
-          <RegistrySearch Id="JavaVersionSearch" Root="HKLM" Type="raw" Key="SOFTWARE\JavaSoft\Java Runtime Environment" Name="CurrentVersion" />
+          <RegistrySearch Id="JavaVersionSearch" Root="HKLM" Type="raw" Key="SOFTWARE\JavaSoft\Java Runtime Environment" Name="CurrentVersion" Win64="yes" />
         </Property>
         <Property Id="JVMDIR">
-          <RegistrySearch Id="JavaDirSearch" Root="HKLM" Type="directory" Key="SOFTWARE\JavaSoft\Java Runtime Environment\[JVMVERSION]" Name="JavaHome" />
+          <RegistrySearch Id="JavaDirSearch" Root="HKLM" Type="directory" Key="SOFTWARE\JavaSoft\Java Runtime Environment\[JVMVERSION]" Name="JavaHome" Win64="yes" />
         </Property>
         <SetProperty Id="JVMLOCATION" Value="[JVMDIR]bin\java.exe" After="AppSearch"/>
 
