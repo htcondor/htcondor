@@ -91,7 +91,7 @@
     <!-- Global Modules  -->
     <!-- ================================================= -->
     <!-- Comment this to disable Addressing -->
-    <module ref="addressing"/>
+    <!--module ref="addressing"/-->
 
 
     <!--Configuring module , providing paramters for modules whether they refer or not-->

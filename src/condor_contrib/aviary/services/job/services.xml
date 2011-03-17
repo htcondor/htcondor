@@ -3,14 +3,6 @@
 <service name="AviaryJobService">
 <parameter name="ServiceClass" locked="xsd:false">job</parameter>
 <description>AviaryJobServiceService</description>
-<operation name="removeJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
-<messageReceiver class="wsf_cpp_msg_recv"/>
-<parameter name="wsamapping">job#remove</parameter>
-</operation>
-<operation name="releaseJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
-<messageReceiver class="wsf_cpp_msg_recv"/>
-<parameter name="wsamapping">job#release</parameter>
-</operation>
 <operation name="submitJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
 <messageReceiver class="wsf_cpp_msg_recv"/>
 <parameter name="wsamapping">job#submit</parameter>
@@ -19,8 +11,16 @@
 <messageReceiver class="wsf_cpp_msg_recv"/>
 <parameter name="wsamapping">job#hold</parameter>
 </operation>
+<operation name="releaseJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="wsf_cpp_msg_recv"/>
+<parameter name="wsamapping">job#release</parameter>
+</operation>
+<operation name="removeJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="wsf_cpp_msg_recv"/>
+<parameter name="wsamapping">job#remove</parameter>
+</operation>
 <operation name="setJobAttribute" mep="http://www.w3.org/2004/08/wsdl/in-out">
 <messageReceiver class="wsf_cpp_msg_recv"/>
-<parameter name="wsamapping">job#set-attr</parameter>
+<parameter name="wsamapping">job#setattr</parameter>
 </operation>
 </service>

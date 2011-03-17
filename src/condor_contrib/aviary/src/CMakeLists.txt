@@ -32,13 +32,13 @@ if (LINUX)
 			    /usr/include/axis2-1.6.0/platforms )
 	    set ( AXIS2_LIBS -L/usr/lib -L/usr/lib64 ${WSO2_FOUND} )
 
-		 set(aviary_services_loc ${CMAKE_INSTALL_PREFIX}/axis2/services)
+		set (axis2_repo_loc ${CMAKE_INSTALL_PREFIX}/axis2)
 
 	else (PROPER)
 
 		# TODO: querying env vars not reliable like this
 	    if ( NOT DEFINED ENV{WSFCPP_HOME} )
-	        message( FATAL_ERROR "$WSFCPP_HOME not defined for non-proper build")
+	        message( FATAL_ERROR "WSFCPP_HOME not defined for non-proper build")
 	    endif ()
 
 		set ( AXIS2_LIBS -L$ENV{WSFCPP_HOME}/lib
@@ -52,9 +52,11 @@ if (LINUX)
 			    $ENV{WSFCPP_HOME}/include/wso2-wsf-cpp
 			    $ENV{WSFCPP_HOME}/include/axis2-1.6.0/platforms )
 
-        set(aviary_services_loc $ENV{WSFCPP_HOME}/services)
+        set(axis2_repo_loc $ENV{WSFCPP_HOME})
 
 	endif ( PROPER )
+
+	set(aviary_services_loc ${axis2_repo_loc}/services)
 
     include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -80,6 +82,7 @@ if (LINUX)
     if (aviary_services_loc)
         install (TARGETS aviary_common DESTINATION ${aviary_services_loc}/job)
 		install (TARGETS aviary_job DESTINATION ${aviary_services_loc}/job)
+		install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../services/job/services.xml DESTINATION ${aviary_services_loc}/job )
     endif()
 
     file( GLOB SCHED_PLUGIN_SRCS AviaryUtils.cpp PROC_ID_comparator.cpp SchedulerObject.cpp Axis2SoapProvider.cpp AviaryScheddPlugin*.cpp )
@@ -97,11 +100,14 @@ if (LINUX)
     if (aviary_services_loc)
         install (TARGETS aviary_common DESTINATION ${aviary_services_loc}/query)
 		install (TARGETS aviary_query DESTINATION ${aviary_services_loc}/query)
+		install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../services/query/services.xml DESTINATION ${aviary_services_loc}/query )
     endif()
 	file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp Axis2SoapProvider.cpp 
 								SubmissionObject.cpp JobServerJobLogConsumer.cpp
 								Job.cpp HistoryFile.cpp HistoryProcessingUtils.cpp Globals.cpp )
     condor_exe( aviary_query_server "${JOB_SERVER_SRCS}"
-			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${AXIS2_LIBS}" OFF )
+			"${C_SBIN}" "aviary_query;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${AXIS2_LIBS}" OFF )
+
+	install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/axis2.xml DESTINATION ${axis2_repo_loc} )
 
 endif(LINUX)
