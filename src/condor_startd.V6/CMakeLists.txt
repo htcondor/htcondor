@@ -21,7 +21,11 @@ if (DARWIN)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework IOKit -framework Carbon")
 endif()
 
-file( GLOB startdRmvElements Example* *.t.* glexec_wrapper*)
+if (NOT HAVE_BOINC)
+	file( GLOB BOINC_GOO boinc* )
+endif()
+
+file( GLOB startdRmvElements Example* *.t.* glexec_wrapper* ${BOINC_GOO} )
 
 condor_daemon( startd "${startdRmvElements}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${CONDOR_QMF}" "${C_SBIN}" OFF)
 

@@ -71,9 +71,9 @@ class GenericQuery
 	int floatThreshold;
 
 	// keyword lists
-	char **integerKeywordList;
-	char **stringKeywordList;
-	char **floatKeywordList;
+	char * const *integerKeywordList;
+	char * const *stringKeywordList;
+	char * const *floatKeywordList;
 
 	// pointers to store the arrays of Lists neessary to store the constraints
 	SimpleList<int>   *integerConstraints;

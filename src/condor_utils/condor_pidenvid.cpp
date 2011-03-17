@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 #include "condor_pidenvid.h"
 
-extern char **environ;
+DLL_IMPORT_MAGIC extern char **environ;
 
 /* set the structure to default values */
 void pidenvid_init(PidEnvID *penvid)
@@ -96,18 +96,20 @@ int pidenvid_append(PidEnvID *penvid, char *line)
 
 /* given a left and right hand side, put it into the buffer specified
 	and ensure it fits correctly */
-int pidenvid_format_to_envid(char *dest, int size, 
-	pid_t forker_pid, pid_t forked_pid, time_t t, unsigned int mii)
+int
+pidenvid_format_to_envid( char *dest, unsigned size,
+						  pid_t forker_pid, pid_t forked_pid,
+						  time_t t, unsigned int mii )
 {
-	if (size > PIDENVID_ENVID_SIZE) {
+	if ( size > PIDENVID_ENVID_SIZE) {
 		return PIDENVID_OVERSIZED;
 	}
 
 	/* Here is the representation which will end up in an environment 
 		somewhere */
 	sprintf(dest, "%s%d=%d%s%lu%s%u", 
-		PIDENVID_PREFIX, forker_pid, 
-		forked_pid, PIDENVID_SEP, t, PIDENVID_SEP, mii);
+			PIDENVID_PREFIX, forker_pid, 
+			forked_pid, PIDENVID_SEP, t, PIDENVID_SEP, mii);
 
 	return PIDENVID_OK;
 }

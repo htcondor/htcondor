@@ -582,6 +582,7 @@ firstPass (int argc, char *argv[])
 			FILE *targetFile = safe_fopen_wrapper(target, "r");
 			int iseof, iserror, empty;
 			targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
+			fclose(targetFile);
 		} else
 		if (matchPrefix (argv[i], "-constraint", 4)) {
 			// can add constraints on second pass only
@@ -976,19 +977,20 @@ customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
 	int			last = sortLessThanExprs.getlast();
 
 	for( int i = 0 ; i <= last ; i++ ) {
-		EvalExprTree( sortLessThanExprs[i], ad1, ad2, &lt_result );
-		if( lt_result.type == LX_INTEGER ) {
+		if(EvalExprTree( sortLessThanExprs[i], ad1, ad2, &lt_result)
+			&& lt_result.type == LX_INTEGER ) {
 			if( lt_result.i ) {
 				return 1;
 			} else {
-				EvalExprTree( sortEqualExprs[i], ad1, ad2, &lt_result );
-				if( lt_result.type != LX_INTEGER || !lt_result.i )
+				if(EvalExprTree( sortEqualExprs[i], ad1,
+					ad2, &lt_result ) &&
+				(( lt_result.type != LX_INTEGER || !lt_result.i ))){
 					return 0;
+				}
 			}
 		} else {
 			return 0;
 		}
 	}
-
 	return 0;
 }

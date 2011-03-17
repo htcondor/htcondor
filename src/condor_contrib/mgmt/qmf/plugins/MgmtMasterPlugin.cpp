@@ -38,6 +38,7 @@
 #include "ArgsMasterStart.h"
 
 #include "PoolUtils.h"
+#include "broker_utils.h"
 
 #include "MgmtConversionMacros.h"
 
@@ -65,6 +66,9 @@ struct MgmtMasterPlugin : public Service, MasterPlugin
 	initialize()
 	{
 		char *host;
+		char *username;
+		char *password;
+		char *mechanism;
 		int port;
 		char *tmp;
 		string storefile;
@@ -90,6 +94,19 @@ struct MgmtMasterPlugin : public Service, MasterPlugin
 			free(tmp); tmp = NULL;
 		}
 
+		if (NULL == (username = param("QMF_BROKER_USERNAME")))
+		{
+			username = strdup("");
+		}
+
+		if (NULL == (mechanism = param("QMF_BROKER_AUTH_MECH")))
+		{
+			mechanism = strdup("ANONYMOUS");
+		}
+
+		password = getBrokerPassword();
+
+
 		// crib some stuff from master daemon
 		char* default_name = NULL;
 		if (MasterName) {
@@ -105,9 +122,15 @@ struct MgmtMasterPlugin : public Service, MasterPlugin
 		agent->init(string(host), port,
 					param_integer("QMF_UPDATE_INTERVAL", 10),
 					true,
-					storefile);
+					storefile,
+					username,
+					password,
+					mechanism);
 
 		free(host);
+		free(username);
+		free(password);
+		free(mechanism);
 
 		master = new com::redhat::grid::MasterObject(agent, default_name);
 		delete [] default_name;
@@ -175,6 +198,8 @@ struct MgmtMasterPlugin : public Service, MasterPlugin
 
 static MgmtMasterPlugin instance;
 
+#if defined(WIN32)
 int load_master_mgmt(void) {
 	return 0;
 }
+#endif

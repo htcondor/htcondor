@@ -29,7 +29,7 @@
 #include <qpid/agent/ManagementAgent.h>
 
 #include "CondorTriggerService.h"
-//#include "TriggerConsole.h"
+#include "TriggerConsole.h"
 #include "TriggerObject.h"
 
 #include "dc_collector.h"
@@ -64,7 +64,7 @@ class Triggerd : public Service, public Manageable
       ManagementAgent::Singleton* singleton;
       std::map<uint32_t, Trigger*> triggers;
       ClassAdCollection* triggerCollection;
-//      TriggerConsole* console;
+      TriggerConsole* console;
       std::string daemonName;
       ClassAd publicAd;
 

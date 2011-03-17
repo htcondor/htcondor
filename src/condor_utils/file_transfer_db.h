@@ -21,7 +21,6 @@
 #define FILE_TRANSFER_DB_H
 
 #include "condor_classad.h"
-#include "condor_attrlist.h"
 #include "reli_sock.h"
 
 typedef struct 

@@ -679,7 +679,7 @@ VMProc::CheckStatus()
 		return;
 	}
 
-	 m_status_req->setNotificationTimerId(m_vmstatus_notify_tid);
+	m_status_req->setNotificationTimerId(m_vmstatus_notify_tid);
 
 	int p_result;
 	p_result = m_status_req->vmStatus(m_vm_id);
@@ -709,10 +709,8 @@ VMProc::CheckStatus()
 		if( m_vmstatus_notify_tid != -1 ) {
 			daemonCore->Reset_Timer(m_vmstatus_notify_tid, 0);
 		}else {
-			if(m_status_req) {
-				delete m_status_req;
-				m_status_req = NULL;
-			}
+			delete m_status_req;
+			m_status_req = NULL;
 		}
 		return;
 	}

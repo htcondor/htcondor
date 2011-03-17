@@ -22,7 +22,7 @@
 #define _HISTORY_UTILS_H_
 
 #include "condor_common.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "proc.h"
 
 //------------------------------------------------------------------------
@@ -40,8 +40,8 @@ static char encode_status( int status );
 
 //------------------------------------------------------------------------
 
-#ifndef DO_NOT_USE_DISPLAYJOBSHORT
-void displayJobShort(AttrList* ad)
+static void
+displayJobShort(AttrList* ad)
 {
     int cluster, proc, date, status, prio, image_size, CompDate;
     float utime;
@@ -109,7 +109,6 @@ short_header (void)
         "CMD"
     );
 }
-#endif /* DO_NOT_USE_DISPLAYJOBSHORT */
 
 //------------------------------------------------------------------------
 

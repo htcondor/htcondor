@@ -26,7 +26,7 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_api.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "condor_query.h"
 #include "daemon.h"
 #include "dc_startd.h"
@@ -44,8 +44,10 @@
 #include <string>
 #include <deque>
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 #include "NegotiatorPlugin.h"
+#endif
 #endif
 
 // the comparison function must be declared before the declaration of the
@@ -201,6 +203,26 @@ Matchmaker ()
 	num_negotiation_cycle_stats = 0;
 
     hgq_root_group = NULL;
+
+	rejForNetwork = 0;
+	rejForNetworkShare = 0;
+	rejPreemptForPrio = 0;
+	rejPreemptForPolicy = 0;
+	rejPreemptForRank = 0;
+	rejForSubmitterLimit = 0;
+	rejForConcurrencyLimit = 0;
+
+	cachedPrio = 0;
+	cachedOnlyForStartdRank = false;
+
+		// just assign default values
+	want_inform_startd = true;
+	preemption_req_unstable = true;
+	preemption_rank_unstable = true;
+	NegotiatorTimeout = 30;
+ 	NegotiatorInterval = 60;
+ 	MaxTimePerSubmitter = 31536000;
+ 	MaxTimePerSpin = 31536000;
 }
 
 
@@ -291,9 +313,11 @@ initialize ()
 			"Update Collector", this );
 
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	NegotiatorPluginManager::Load();
 	NegotiatorPluginManager::Initialize();
+#endif
 #endif
 }
 
@@ -355,8 +379,10 @@ reinitialize ()
 					tmp);
 		}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
-		delete PreemptionReq;
+		if(PreemptionReq){
+			tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
+			delete PreemptionReq;
+		}
 		PreemptionReq = tmp_expr;
 #endif
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", tmp);
@@ -411,8 +437,10 @@ reinitialize ()
 
 	if( tmp ) free( tmp );
 
-	if (PreemptionRank) delete PreemptionRank;
-	PreemptionRank = NULL;
+	if (PreemptionRank) {
+		delete PreemptionRank;
+		PreemptionRank = NULL;
+	}
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
 		if( ParseClassAdRvalExpr(tmp, PreemptionRank) ) {
@@ -420,8 +448,10 @@ reinitialize ()
 		}
 	}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( PreemptionRank, TargetJobAttrs );
-		delete PreemptionRank;
+		if(PreemptionRank){
+			tmp_expr = AddTargetRefs( PreemptionRank, TargetJobAttrs );
+			delete PreemptionRank;
+		}
 		PreemptionRank = tmp_expr;
 #endif
 
@@ -437,8 +467,10 @@ reinitialize ()
 			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
 		}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( NegotiatorPreJobRank, TargetJobAttrs );
-		delete NegotiatorPreJobRank;
+		if(NegotiatorPreJobRank){
+			tmp_expr = AddTargetRefs( NegotiatorPreJobRank, TargetJobAttrs );
+			delete NegotiatorPreJobRank;
+		}
 		NegotiatorPreJobRank = tmp_expr;
 #endif
 	}
@@ -455,8 +487,10 @@ reinitialize ()
 			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
 		}
 #if !defined(WANT_OLD_CLASSADS)
-		tmp_expr = AddTargetRefs( NegotiatorPostJobRank, TargetJobAttrs );
-		delete NegotiatorPostJobRank;
+		if(NegotiatorPostJobRank){
+			tmp_expr = AddTargetRefs( NegotiatorPostJobRank, TargetJobAttrs );
+			delete NegotiatorPostJobRank;
+		}
 		NegotiatorPostJobRank = tmp_expr;
 #endif
 	}
@@ -737,8 +771,8 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	}
 
 	// get the priority
-	AttrList* ad=accountant.ReportState();
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
+	AttrList* ad=accountant.ReportState();
 	
 	if (!ad->putAttrList(*strm) ||
 	    !strm->end_of_message())
@@ -1087,9 +1121,7 @@ negotiationTime ()
                 dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter ad with no name\n");
                 continue;
             }
-            // important to case-fold these so group names match 
-            tname.lower_case();
-            // this holds the (case-folded) submitter name, which includes group, if present
+            // this holds the submitter name, which includes group, if present
             const string subname(tname.Value());
 
             // is there a username separator?
@@ -1301,6 +1333,10 @@ negotiationTime ()
     negotiation_cycle_stats[0]->duration_phase2 -= negotiation_cycle_stats[0]->duration_phase4;
 
     negotiation_cycle_stats[0]->duration = completedLastCycleTime - negotiation_cycle_stats[0]->start_time;
+
+	if (param_boolean("NEGOTIATOR_UPDATE_AFTER_CYCLE", false)) {
+		updateCollector();
+	}
 }
 
 
@@ -1314,9 +1350,6 @@ void Matchmaker::hgq_construct_tree() {
     hgq_root_name = "<none>";
 	vector<string> groups;
     if (NULL != groupnames) {
-        // map to lower case for case insensitivity
-        strlwr(groupnames);
-
         StringList group_name_list;
         group_name_list.initializeFromString(groupnames);
         group_name_list.rewind();
@@ -1339,7 +1372,7 @@ void Matchmaker::hgq_construct_tree() {
     }
 
     // This is convenient for making sure a parent group always appears before its children
-    std::sort(groups.begin(), groups.end());
+    std::sort(groups.begin(), groups.end(), Accountant::ci_less());
 
     // our root group always exists -- all configured HGQ groups are implicitly 
     // children / descendents of the root
@@ -1373,7 +1406,7 @@ void Matchmaker::hgq_construct_tree() {
         bool missing_parent = false;
         for (unsigned long k = 0;  k < gpath.size()-1;  ++k) {
             // chmap is mostly a structure to avoid n^2 behavior in groups with many children
-            map<string, GroupEntry::size_type>::iterator f(group->chmap.find(gpath[k]));
+            map<string, GroupEntry::size_type, Accountant::ci_less>::iterator f(group->chmap.find(gpath[k]));
             if (f == group->chmap.end()) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: ignoring group name %s with missing parent %s\n", gname.c_str(), gpath[k].c_str());
                 missing_parent = true;
@@ -2567,7 +2600,6 @@ obtainAdsFromCollector (
 void
 Matchmaker::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 {
-#if !defined(WANT_OLD_CLASSADS)
 		// The machine ad will be passed as the RIGHT ad during
 		// matchmaking (i.e. in the call to IsAMatch()), so
 		// optimize it accordingly.
@@ -2580,13 +2612,11 @@ Matchmaker::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 			name.Value(),
 				error_msg.c_str());
 	}
-#endif
 }
 
 void
 Matchmaker::OptimizeJobAdForMatchmaking(ClassAd *ad)
 {
-#if !defined(WANT_OLD_CLASSADS)
 		// The job ad will be passed as the LEFT ad during
 		// matchmaking (i.e. in the call to IsAMatch()), so
 		// optimize it accordingly.
@@ -2601,7 +2631,6 @@ Matchmaker::OptimizeJobAdForMatchmaking(ClassAd *ad)
 				proc_id,
 				error_msg.c_str());
 	}
-#endif
 }
 
 void
@@ -3726,9 +3755,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		claim_id = "null";
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
 	classad::MatchClassAd::UnoptimizeAdForMatchmaking( offer );
-#endif
 
 	savedRequirements = NULL;
 	length = strlen("Saved") + strlen(ATTR_REQUIREMENTS) + 2;
@@ -4490,14 +4517,16 @@ Matchmaker::updateCollector() {
 
 	if( publicAd ) {
 		publishNegotiationCycleStats( publicAd );
-	}
+
+		daemonCore->monitor_data.ExportData(publicAd);
 
 		// log classad into sql log so that it can be updated to DB
-	FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
+		FILESQL::daemonAdInsert(publicAd, "NegotiatorAd", FILEObj, prevLHF);	
 
-	if (publicAd) {
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 		NegotiatorPluginManager::Update(*publicAd);
+#endif
 #endif
 		daemonCore->sendUpdates(UPDATE_NEGOTIATOR_AD, publicAd, NULL, true);
 	}

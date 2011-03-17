@@ -27,7 +27,7 @@
 #include "condor_api.h"
 #include "my_username.h"
 #include "condor_classad.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "condor_adtypes.h"
 #include "condor_string.h"
 #include "condor_uid.h"

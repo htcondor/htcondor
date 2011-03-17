@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -106,13 +106,17 @@ void setBaseName(char *baseName) {
 	}
 }
 
-int rotateSingle() {
+int
+rotateSingle()
+{
 	return rotateTimestamp("old", 1);
 } 
 
 
-char *createRotateFilename(char *ending, int maxNum){
-	char *timeStamp;
+const char *
+createRotateFilename(const char *ending, int maxNum)
+{
+	const char *timeStamp;
 	if (maxNum <= 1)
 		timeStamp = "old";
 	else 	
@@ -124,9 +128,11 @@ char *createRotateFilename(char *ending, int maxNum){
 	return timeStamp;
 }
 
-int rotateTimestamp(char *timeStamp, int maxNum) {
+int
+rotateTimestamp(const char *timeStamp, int maxNum)
+{
 	int save_errno;
-	char *ts = createRotateFilename(timeStamp, maxNum);
+	const char *ts = createRotateFilename(timeStamp, maxNum);
 
 	// First, select a name for the rotated history file
 	char *rotated_log_name = (char*)malloc(strlen(logBaseName) + strlen(ts) + 2) ;
@@ -202,8 +208,10 @@ int isLogFilename( char *filename) {
 		++dirLen;
     int fLen = strlen(logBaseName);
     if (strncmp(filename, (logBaseName+dirLen), fLen - dirLen - 1) == 0 ) {
-    	if (strlen(filename) > fLen-dirLen && filename[fLen-dirLen] == '.') {
-			if (isTimestampString(filename+(fLen-dirLen+1)) == 1 || isOldString(filename+(fLen-dirLen+1)) == 1 )
+    	if (  (strlen(filename) > unsigned(fLen-dirLen)) && 
+			  (filename[fLen-dirLen] == '.')  ) {
+			if (  (isTimestampString(filename+(fLen-dirLen+1)) == 1) ||
+				  (isOldString(filename+(fLen-dirLen+1)) == 1) )
     				return 1;
     	}
 	}

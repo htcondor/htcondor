@@ -24,6 +24,7 @@
 #include "subsystem_info.h"
 #include "condor_config.h"
 #include "stat_info.h"
+#include "broker_utils.h"
 
 #include "stringSpace.h"
 
@@ -87,6 +88,9 @@ int main_init(int /* argc */, char * /* argv */ [])
 	mirror->init();
 
 	char *host;
+	char *username;
+	char *password;
+	char *mechanism;
 	int port;
 	char *tmp;
 	string storefile,historyfile;
@@ -111,6 +115,17 @@ int main_init(int /* argc */, char * /* argv */ [])
 		free(tmp); tmp = NULL;
 	}
 
+	if (NULL == (username = param("QMF_BROKER_USERNAME")))
+	{
+		username = strdup("");
+	}
+
+	if (NULL == (mechanism = param("QMF_BROKER_AUTH_MECH")))
+	{
+		mechanism = strdup("ANONYMOUS");
+	}
+	password = getBrokerPassword();
+
 	string jsName = build_valid_daemon_name("jobs@");
 	jsName += default_daemon_name();
 	agent->setName("com.redhat.grid","jobserver", jsName.c_str());
@@ -118,9 +133,15 @@ int main_init(int /* argc */, char * /* argv */ [])
 	agent->init(string(host), port,
 				param_integer("QMF_UPDATE_INTERVAL", 10),
 				true,
-				storefile);
+				storefile,
+				username,
+				password,
+				mechanism);
 
 	free(host);
+	free(username);
+	free(password);
+	free(mechanism);
 
 	construct_schedd_ref(schedd_oid);
 

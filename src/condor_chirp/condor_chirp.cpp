@@ -128,7 +128,7 @@ chirp_get_one_file(char *remote, char *local) {
 
 	CONNECT_STARTER(client);
 	
-	char *buf;
+	char *buf = NULL;
 	
 	int num_read = chirp_client_getfile_buffer( client, remote, &buf );
 	if (num_read < 0) {
@@ -144,6 +144,7 @@ chirp_get_one_file(char *remote, char *local) {
 
 	if (wfd == NULL) {
 		fprintf(stderr, "Can't open local file %s\n", local);
+		free(buf);
 		DISCONNECT_AND_RETURN(client, -1);
 	}
 	
@@ -152,10 +153,12 @@ chirp_get_one_file(char *remote, char *local) {
 	if (num_written != num_read) {
 		fprintf(stderr, "local write error on %s\n", local);
 		::fclose(wfd);
+		free(buf);
 		DISCONNECT_AND_RETURN(client, -1);
 	}
 	
 	fclose(wfd);
+	free(buf);
 	DISCONNECT_AND_RETURN(client, 0);
 }
 
@@ -239,6 +242,7 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 	char* buf = (char*)malloc(size);
 	if ( ! buf) {
 		fprintf(stderr, "Can't allocate %d bytes\n", size);
+		fclose(rfd);
 		DISCONNECT_AND_RETURN(client, -1);
 	}
 	
@@ -464,7 +468,8 @@ int chirp_read(int argc, char **argv) {
 		to_print[length] = '\0';
 		printf("%s\n", to_print);
 	}
-	
+
+	free(buf);
 	CLOSE_DISCONNECT_AND_RETURN(client, fd, ret_val);
 	
 }
@@ -532,6 +537,8 @@ int chirp_write(int argc, char **argv) {
 		// Open the remote file
 	int fd = chirp_client_open(client, remote_file, "w", 0);
 	if(fd < 0) {
+		fclose(rfd);
+		free((char*)buf);
 		DISCONNECT_AND_RETURN(client, fd);
 	}
 
@@ -568,6 +575,7 @@ int chirp_write(int argc, char **argv) {
 		}
 	} while (num_read > 0);
 	
+	fclose(rfd);
 	free((char*)buf);
 	DISCONNECT_AND_RETURN(client, 0);
 }
@@ -626,6 +634,7 @@ int chirp_getdir(int argc, char **argv) {
 			printf("%s", buffer);
 		}
 	}
+	free(buffer);
 	DISCONNECT_AND_RETURN(client, status);
 }
 
@@ -690,6 +699,7 @@ int chirp_readlink(int argc, char **argv) {
 	if(status >= 0) {
 		printf("%s\n", buffer);
 	}
+	free(buffer);
 	DISCONNECT_AND_RETURN(client, status);
 }
 
@@ -759,7 +769,7 @@ int chirp_access(int argc, char **argv) {
 				break;
 			default:
 				fprintf(stderr, "invalid mode char '%c'\n", *m);
-				return -1;
+				DISCONNECT_AND_RETURN(client, -1);
 				break;
 		}
 		m++;

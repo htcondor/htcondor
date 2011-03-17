@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -35,10 +35,10 @@ void setBaseName(char *baseName);
 int rotateSingle(void);
 
 /** create a rotation filename depending on maxNum and existing ending */
-char *createRotateFilename(char *ending, int maxNum);
+const char *createRotateFilename(const char *ending, int maxNum);
 
 /** perform rotation */
-int rotateTimestamp(char *timeStamp, int maxNum);
+int rotateTimestamp(const char *timeStamp, int maxNum);
 
 /** Rotate away all old history files exceeding maxNum count */
 int cleanUp(int maxNum);

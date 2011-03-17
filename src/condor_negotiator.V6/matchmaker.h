@@ -83,7 +83,7 @@ struct GroupEntry {
     // tree structure
     GroupEntry* parent;
     vector<GroupEntry*> children;
-    map<string, size_type> chmap;
+    map<string, size_type, Accountant::ci_less> chmap;
 };
 
 
@@ -287,7 +287,6 @@ class Matchmaker : public Service
 		bool preemption_rank_unstable;
 		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
 		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
-		bool useSlotWeights; // Should slot weights be used or do all machines count 1.
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
 		/// Should the negotiator inform startds of matches?

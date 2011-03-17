@@ -19,7 +19,7 @@
 
 if ( NOT PROPER )
 
-	option( WITH_HADOOP "Compiling with support for HADOOP" ON )
+    option( WITH_HADOOP "Compiling with support for HADOOP" ON )
 
 	if (WITH_HADOOP)
 

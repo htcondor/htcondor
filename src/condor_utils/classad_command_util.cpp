@@ -137,5 +137,6 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
 		free( cmd_str );
 		return FALSE;
 	}
+	free( cmd_str );
 	return cmd;
 }

@@ -17,8 +17,9 @@
  *
 ***************************************************************/
 
-#include <iostream.h>
-#include <stdlib.h>
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
 #include <fstream.h>
 #include <cctype>
 #include <algorithm>

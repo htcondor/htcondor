@@ -120,9 +120,8 @@ main( int __argc, char** __argv )
   // get the names for "Everyone" (S-1-1-0) and "Administrators" (S-1-5-32-544)
   get_names ();
   
-  _stprintf ( cmd_buf, 
-	      TEXT ( "cmd.exe /c echo y|cacls \"%s\" /t /g \"%s:F\" \"%s:R\"" )
-	      ,
+  _stprintf_s ( cmd_buf, sizeof(cmd_buf) / sizeof(cmd_buf[0]), 
+          TEXT ( "cmd.exe /c echo y|cacls \"%s\" /t /g \"%s:F\" \"%s:R\"" ),
 	      __wargv[1], 
 	      administrators_buf, 
 	      everyone_buf );

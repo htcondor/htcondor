@@ -24,6 +24,26 @@
 #include "condor_query.h"
 
 #ifdef WIN32
+#if 1
+bool 
+get_password_from_credd (
+	const char * credd_host,
+	const char  username[],
+	const char  domain[],
+	char * pw,
+	int    cb) // sizeof pw buffer (in bytes)
+{
+    return false;
+}
+bool 
+cache_credd_locally (
+	const char  username[],
+	const char  domain[],
+	const char * pw)
+{
+	return false;
+}
+#else
 Daemon::Daemon( daemon_t type, const char* name, const char* pool)
 {
 }
@@ -53,6 +73,7 @@ SecMan::~SecMan()
 int addCredential( const char* user, const char* pw, Daemon *d ) {
 	return 0;	
 }
+#endif
 #endif
 /* This file contains various stub functions or small implementation of other
 	functions. The purpose of this is to break edges in a nasty dependency
@@ -130,6 +151,9 @@ int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_
 #else
 #  include "pcre.h"
 #endif
+
+#pragma warning(disable : 4273) // inconsistent dll linkage
+
 pcre *pcre_compile(const char *, int, const char **, int *,
 				   const unsigned char *)
 { not_impl(); return NULL; }
@@ -144,6 +168,8 @@ int  pcre_fullinfo(const pcre *, const pcre_extra *, int, void *)
 { return not_impl(); }
 int  pcre_get_substring_list(const char *, int *, int, const char ***)
 { return not_impl(); }
+
+#pragma warning(default : 4273) // inconsistent dll linkage
 
 #endif
 
@@ -228,10 +254,10 @@ int Stream::get_string_ptr(char const *&){ return not_impl(); }
 void Stream::prepare_crypto_for_secret(){not_impl();}
 void Stream::restore_crypto_after_secret(){not_impl();}
 bool Stream::prepare_crypto_for_secret_is_noop(){not_impl();return true;}
-void Stream::set_crypto_mode(bool enabled){not_impl();}
+void Stream::set_crypto_mode(bool /*enabled*/){not_impl();}
 bool Stream::get_encryption() const{not_impl();return false;}
-int Stream::put_secret( char const *s ){not_impl();return 0;}
-int Stream::get_secret( char *&s ){not_impl();return 0;}
+int Stream::put_secret( char const * /*s*/ ){not_impl();return 0;}
+int Stream::get_secret( char *& /*s*/ ){not_impl();return 0;}
 void Stream::set_deadline_timeout(int){not_impl();}
 void Stream::set_deadline(time_t){not_impl();}
 time_t Stream::get_deadline(){not_impl();return 0;}

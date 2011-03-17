@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -28,7 +28,7 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "../condor_privsep/privsep_fork_exec.h"
 
-extern char** environ;
+DLL_IMPORT_MAGIC extern char** environ;
 
 #ifdef WIN32
 typedef HANDLE child_handle_t;
@@ -75,7 +75,7 @@ static child_handle_t remove_child(FILE* fp)
 /*
 
   FILE *my_popenv(char *const args[], const char *mode, int want_stderr);
-  FILE *my_popen(ArgList &args, const char *mode, int want_stderr);
+  FILE *my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr);
 
   This is a popen(3)-like function that intentionally avoids
   calling out to the shell in order to limit what can be done for
@@ -170,7 +170,7 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 	                       NULL,                   // primary thread SA
 	                       TRUE,                   // inherit handles 
 	                       CREATE_NEW_CONSOLE,     // creation flags
-	                       NULL,                   // use our environment
+	                       NULL,                 // use our environment : given that this value used to be zkmENV (an Env*), maybe this function would want another argument?
 	                       NULL,                   // use our CWD
 	                       &si,                    // STARTUPINFO
 	                       &pi);                   // receive PROCESS_INFORMATION
@@ -210,19 +210,19 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 }
 
 FILE *
-my_popen(ArgList &args, const char *mode, int want_stderr)
+my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV)
 {
 	MyString cmdline, err;
 	if (!args.GetArgsStringWin32(&cmdline, 0, &err)) {
 		dprintf(D_ALWAYS, "my_popen: error making command line: %s\n", err.Value());
 		return NULL;
 	}
-
+	//  maybe the following function should be extended by an Env* argument? Not sure...
 	return my_popen(cmdline.Value(), mode, want_stderr);
 }
 
 extern "C" FILE *
-my_popenv(char *const args[], const char *mode, int want_stderr)
+my_popenv(const char *const args[], const char *mode, int want_stderr)
 {
 	// build the argument list
 	ArgList arglist;
@@ -276,10 +276,11 @@ static int	READ_END = 0;
 static int	WRITE_END = 1;
 
 static FILE *
-my_popenv_impl( char *const args[],
+my_popenv_impl( const char *const args[],
                 const char * mode,
                 int want_stderr,
-                uid_t privsep_uid )
+                uid_t privsep_uid,
+				Env *env_ptr = 0)
 {
 	int	pipe_d[2];
 	int	parent_reads;
@@ -384,7 +385,15 @@ my_popenv_impl( char *const args[],
 			args = al.GetStringArray();			
 		}
 
-		execvp(cmd.Value(), args);
+			/* set environment if defined */
+		if (env_ptr) {
+			char **m_unix_env = NULL;
+			m_unix_env = env_ptr->getStringArray();
+			execve(cmd.Value(), const_cast<char *const*>(args), m_unix_env );
+		} else {
+			execvp(cmd.Value(), const_cast<char *const*>(args) );
+		}
+
 		_exit( ENOEXEC );		/* This isn't safe ... */
 	}
 
@@ -404,7 +413,7 @@ my_popenv_impl( char *const args[],
 		privsep_exec_set_uid(fp, privsep_uid);
 		privsep_exec_set_path(fp, args[0]);
 		ArgList al;
-		for (char* const* arg = args; *arg != NULL; arg++) {
+		for (const char* const* arg = args; *arg != NULL; arg++) {
 			al.AppendArg(*arg);
 		}
 		privsep_exec_set_args(fp, al);
@@ -434,7 +443,7 @@ my_popenv_impl( char *const args[],
 }
 
 extern "C" FILE *
-my_popenv( char *const args[],
+my_popenv( const char *const args[],
            const char * mode,
            int want_stderr )
 {
@@ -445,25 +454,26 @@ static FILE *
 my_popen_impl(ArgList &args,
               const char *mode,
               int want_stderr,
-              uid_t privsep_uid)
+              uid_t privsep_uid,
+			  Env *env_ptr)
 {
 	char **string_array = args.GetStringArray();
-	FILE *fp = my_popenv_impl(string_array, mode, want_stderr, privsep_uid);
+	FILE *fp = my_popenv_impl(string_array, mode, want_stderr, privsep_uid, env_ptr);
 	deleteStringArray(string_array);
 
 	return fp;
 }
 
 FILE*
-my_popen(ArgList &args, const char *mode, int want_stderr)
+my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_ptr)
 {
-	return my_popen_impl(args, mode, want_stderr, (uid_t)-1);
+	return my_popen_impl(args, mode, want_stderr, (uid_t)-1, env_ptr);
 }
 
 FILE*
-privsep_popen(ArgList &args, const char *mode, int want_stderr, uid_t uid)
+privsep_popen(ArgList &args, const char *mode, int want_stderr, uid_t uid, Env *env_ptr)
 {
-	return my_popen_impl(args, mode, want_stderr, uid);
+	return my_popen_impl(args, mode, want_stderr, uid, env_ptr);
 }
 
 extern "C" int
@@ -492,16 +502,16 @@ my_pclose(FILE *fp)
 #endif // !WIN32
 
 extern "C" int
-my_systemv(char *const args[])
+my_systemv(const char *const args[])
 {
 	FILE* fp = my_popenv(args, "w", FALSE);
 	return (fp != NULL) ? my_pclose(fp) : -1;
 }
 
 int
-my_system(ArgList &args)
+my_system(ArgList &args, Env *env_ptr)
 {
-	FILE* fp = my_popen(args, "w", FALSE);
+	FILE* fp = my_popen(args, "w", FALSE, env_ptr);
 	return (fp != NULL) ? my_pclose(fp): -1;
 }
 
@@ -569,7 +579,7 @@ my_spawnl( const char* cmd, ... )
     >0 == Return status of child
 */
 extern "C" int
-my_spawnv( const char* cmd, char *const argv[] )
+my_spawnv( const char* cmd, const char *const argv[] )
 {
 	int					status;
 	uid_t euid;
@@ -607,7 +617,7 @@ my_spawnv( const char* cmd, char *const argv[] )
 		setuid( euid );
 
 			/* Now it's safe to exec whatever we were given */
-		execv( cmd, argv );
+		execv( cmd, const_cast<char *const*>(argv) );
 		_exit( ENOEXEC );		/* This isn't safe ... */
 	}
 

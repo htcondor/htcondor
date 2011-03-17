@@ -40,6 +40,13 @@ set(VERSION "7.7.0")
 set(PRE_RELEASE "PRE-RELEASE-UWCS")
 #set(PRE_RELEASE OFF)
 
+# If set via the cmake command line, FORCE_PRE_RELEASE allows for
+#   PRE_RELEASE to be forced into a build.
+#   cmake ... -DFORCE_PRE_RELEASE:STRING=PRE-RELEASE-NMI
+if( FORCE_PRE_RELEASE )
+  set(PRE_RELEASE ${FORCE_PRE_RELEASE})
+endif( FORCE_PRE_RELEASE )
+
 set(PACKAGE_BUGREPORT "http://condor-wiki.cs.wisc.edu/index.cgi/tktnew")
 set(PACKAGE_NAME ${PACKAGE} )
 set(PACKAGE_VERSION ${VERSION} )
@@ -52,7 +59,8 @@ option(_DEBUG "Debug statements and set default build config" OFF)
 
 ###########################################
 # start cmake module inclusion
-list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CONDOR_SOURCE_DIR}/build/cmake/macros;${CONDOR_SOURCE_DIR}/build/cmake/modules;${CONDOR_SOURCE_DIR}/build/cmake)
+#include (FeatureSummary)
 include (dprint) # set debug module 1st to all spewing in other modules if needed
 include (AppendVar)
 include (CommandTarget)
@@ -82,10 +90,10 @@ include (CondorStaticLib)
 include (CondorPlugin)
 include (CheckCXXCompilerFlag)
 include (CheckCXXSourceCompiles)
-include (CondorConfigure)     # will initiate the configure
 include (AddSubdirectories)
 include (CondorPLTest)
 include (CondorExeTest)
+include (CondorConfigure)     # will initiate the configure
 include (CondorStdExeTest)
 include (SrcTargetRef)
 include (DumpLocalFlags)
@@ -110,3 +118,11 @@ endif()
 ##########################################################################
 # Must in included post *install targets
 include ( CPack )
+
+##########################################################################
+# print out the summary info: http://www.cmake.org/cmake/help/cmake-2-8-docs.html#module:FeatureSummary
+#feature_summary(WHAT ENABLED_FEATURES DESCRIPTION "Enabled Features:" VAR enabledFeaturesText)
+#feature_summary(WHAT DISABLED_FEATURES DESCRIPTION "Disabled Features:" VAR disabledFeaturesText)
+#message(STATUS "*FEATURES:* http://www.cmake.org/cmake/help/cmake-2-8-docs.html#module:FeatureSummary
+#${enabledFeaturesText}")
+#message(STATUS "${disabledFeaturesText}")

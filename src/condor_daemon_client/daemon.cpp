@@ -534,7 +534,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 
 
 StartCommandResult
-Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *version, SecMan *sec_man, bool raw_protocol, char const *sec_session_id )
+Daemon::startCommand( int cmd, Sock* sock, int timeout, CondorError *errstack, StartCommandCallbackType *callback_fn, void *misc_data, bool nonblocking, char const *cmd_description, char *, SecMan *sec_man, bool raw_protocol, char const *sec_session_id )
 {
 	// This function may be either blocking or non-blocking, depending
 	// on the flag that is passed in.  All versions of Daemon::startCommand()
@@ -1095,33 +1095,34 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		
 		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
 
-		if( is_ipaddr(host, &sin_addr) ) {
+		if(host && is_ipaddr(host, &sin_addr) ) {
 			buf.sprintf( "<%s:%d>", host, _port );
 			New_addr( strnewp(buf.Value()) );
 			dprintf( D_HOSTNAME,
 					"Host info \"%s\" is an IP address\n", host );
 		} else {
 				// We were given a hostname, not an address.
-			dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
-					 "finding IP address\n", host );
-			tmp = get_full_hostname( host, &sin_addr );
-			if( ! tmp ) {
+			if(host) {
+				dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
+						 "finding IP address\n", host );
+				if((tmp = get_full_hostname( host, &sin_addr ))==0) {
 					// With a hostname, this is a fatal Daemon error.
-				buf.sprintf( "unknown host %s", host );
-				newError( CA_LOCATE_FAILED, buf.Value() );
-				if (host) free( host );
+					buf.sprintf( "unknown host %s", host );
+					newError( CA_LOCATE_FAILED, buf.Value() );
+					if (host) free( host );
 
-					// We assume this is a transient DNS failure.  Therefore,
-					// set _tried_locate = false, so that we keep trying in
-					// future calls to locate().
-				_tried_locate = false;
+						// We assume this is a transient DNS failure.  Therefore,
+						// set _tried_locate = false, so that we keep trying in
+						// future calls to locate().
+					_tried_locate = false;
 
-				return false;
-			}
+					return false;
+				}
+			} else return false;
 			buf.sprintf( "<%s:%d>", inet_ntoa(sin_addr), _port );
 			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.Value() );
 			New_addr( strnewp(buf.Value()) );
-			New_full_hostname( tmp );
+			if(tmp) New_full_hostname( tmp );
 		}
 
 		if (host) free( host );
@@ -1358,7 +1359,7 @@ Daemon::getCmInfo( const char* subsys )
 
 		daemon_list.initializeFromString(hostnames);
 		daemon_list.rewind();
-		host = strnewp(daemon_list.next());
+		host = strdup(daemon_list.next());
 		free( hostnames );
 	}
 

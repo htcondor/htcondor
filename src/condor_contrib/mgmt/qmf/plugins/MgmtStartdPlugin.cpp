@@ -18,7 +18,7 @@
 
 #include "../condor_startd.V6/StartdPlugin.h"
 
-#include "../condor_collector.V6/hashkey.h"
+#include "hashkey.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
@@ -26,6 +26,7 @@
 #include "get_daemon_name.h"
 
 #include "SlotObject.h"
+#include "broker_utils.h"
 
 // Global from the condor_startd, it's name
 extern char * Name;
@@ -49,6 +50,9 @@ struct MgmtStartdPlugin : public Service, StartdPlugin
 	initialize()
 	{
 		char *host;
+		char *username;
+		char *password;
+		char *mechanism;
 		int port;
 		char *tmp;
 		string storefile;
@@ -76,6 +80,18 @@ struct MgmtStartdPlugin : public Service, StartdPlugin
 			free(tmp); tmp = NULL;
 		}
 
+		if (NULL == (username = param("QMF_BROKER_USERNAME")))
+		{
+			username = strdup("");
+		}
+
+		if (NULL == (mechanism = param("QMF_BROKER_AUTH_MECH")))
+		{
+			mechanism = strdup("ANONYMOUS");
+		}
+
+		password = getBrokerPassword();
+
 		std::string startd_name = default_daemon_name();
 		if( Name ) {
 			startd_name = Name;
@@ -85,9 +101,15 @@ struct MgmtStartdPlugin : public Service, StartdPlugin
 		agent->init(string(host), port,
 					param_integer("QMF_UPDATE_INTERVAL", 10),
 					true,
-					storefile);
+					storefile,
+					username,
+					password,
+					mechanism);
 
 		free(host);
+		free(username);
+		free(password);
+		free(mechanism);
 
 		ReliSock *sock = new ReliSock;
 		if (!sock) {
@@ -185,8 +207,8 @@ struct MgmtStartdPlugin : public Service, StartdPlugin
 
 static MgmtStartdPlugin instance;
 
+#if defined(WIN32)
 int load_startd_mgmt(void) {
 	return 0;
 }
-
-
+#endif

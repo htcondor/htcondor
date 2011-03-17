@@ -518,9 +518,11 @@ _condor_interp_cmd_stream( int fd )
 			dprintf( D_ALWAYS, "?\n" );
 			break;
 		  case END:
+			fclose(fp);
 			return;
 		}
 	}
+	fclose(fp);
 	_condor_error_retry("EOF on command stream");
 }
 

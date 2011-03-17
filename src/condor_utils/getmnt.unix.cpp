@@ -1,14 +1,14 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,8 +17,6 @@
  *
  ***************************************************************/
 
-
- 
 
 #include "condor_common.h"
 #include "condor_getmnt.h"
@@ -40,7 +38,9 @@
 #include <sys/mount.h>
 
 
-int getmnt( int * start, struct fs_data buf[], unsigned bufsize, int mode, char * path )
+int
+getmnt( int * start, struct fs_data buf[], unsigned bufsize,
+		int mode, char * path )
 {
 	struct statfs	*data = NULL;
 	struct stat	st_buf;
@@ -155,7 +155,9 @@ struct fs_data	*ent;
 
 /*FILE			*setmntent();*/
 
-int getmnt( int * start, struct fs_data buf[], unsigned bufsize, int mode, char * path )
+int
+getmnt( int * start, struct fs_data buf[], unsigned bufsize,
+		int mode, char * path )
 {
 	FILE			*tab;
 	int			check;
@@ -172,7 +174,7 @@ int getmnt( int * start, struct fs_data buf[], unsigned bufsize, int mode, char 
 	if( (tab=safe_fopen_wrapper("/etc/mnttab","r",0644)) == NULL ) {
 		perror( "setmntent" );
 		exit( 1 );
-	} 
+	}
 
 	lim = bufsize / sizeof(struct fs_data);
 	for( i=0; (i < lim) && (check=getmntent(tab,ent)); i++ ) {
@@ -182,7 +184,7 @@ int getmnt( int * start, struct fs_data buf[], unsigned bufsize, int mode, char 
 			buf[i].fd_req.dev = st_buf.st_dev;
 		}
 		buf[i].fd_req.devname = strdup(ent->mnt_special);
-		buf[i].fd_req.path = strdup(ent->mnt_mountp); 
+		buf[i].fd_req.path = strdup(ent->mnt_mountp);
 	}
 	return i;
 }
@@ -195,8 +197,10 @@ int getmnt( int * start, struct fs_data buf[], unsigned bufsize, int mode, char 
 FILE			*setmntent();
 struct mntent	*getmntent();
 
-// I believe this is *only* used by std::universe 
-extern "C" int getmnt( int* start, struct fs_data buf[], unsigned int bufsize, int mode, char* path )
+// I believe this is *only* used by std::universe
+extern "C" int
+getmnt( int* /*start*/, struct fs_data buf[],
+		unsigned int bufsize, int /*mode*/, char* /*path*/ )
 {
 	FILE			*tab;
 	struct mntent	*ent;
@@ -217,7 +221,7 @@ extern "C" int getmnt( int* start, struct fs_data buf[], unsigned int bufsize, i
 			buf[i].fd_req.dev = st_buf.st_dev;
 		}
 		buf[i].fd_req.devname = strdup(ent->mnt_fsname);
-		buf[i].fd_req.path = strdup(ent->mnt_dir); 
+		buf[i].fd_req.path = strdup(ent->mnt_dir);
 	}
 	return i;
 }

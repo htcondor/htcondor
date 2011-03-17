@@ -16,7 +16,6 @@
  # 
  ############################################################### 
 
-
 file( GLOB DCRmvElements soap_daemon_core* condor_softkill*)
 
 condor_glob( DCHeaderFiles DCSourceFiles "${DCRmvElements};soap_core.cpp;mimetypes.cpp" )
@@ -26,6 +25,10 @@ if (GSOAP_SRC)
 	set_source_files_properties(${GSOAP_SRC} PROPERTIES GENERATED TRUE)
 	list(APPEND DCSourceFiles ${GSOAP_SRC} )
 endif()
+
+if (DARWIN)
+	link_libraries(resolv)
+endif(DARWIN)
 
 #create the library
 condor_static_lib(daemon_core "${DCHeaderFiles};${DCSourceFiles}")

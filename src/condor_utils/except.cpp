@@ -49,7 +49,7 @@ const char	*foo;
 int		_EXCEPT_Line;
 int		_EXCEPT_Errno;
 const char	*_EXCEPT_File;
-int		(*_EXCEPT_Cleanup)(int,int,char*);
+int		(*_EXCEPT_Cleanup)(int,int,const char*);
 int		SetSyscalls(int);
 
 extern int		_condor_dprintf_works;

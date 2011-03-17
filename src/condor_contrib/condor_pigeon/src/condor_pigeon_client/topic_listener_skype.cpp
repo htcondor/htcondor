@@ -18,14 +18,16 @@
 ***************************************************************/
 
 
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+
 #include <qpid/client/Connection.h>
 #include <qpid/client/Session.h>
 #include <qpid/client/Message.h>
 #include <qpid/client/MessageListener.h>
 #include <qpid/client/SubscriptionManager.h>
 
-#include <iostream.h>
-#include <stdlib.h>
 #include <fstream.h>
 #include <cctype>
 #include <algorithm>
@@ -37,7 +39,6 @@
 #include "condor_classad.h"
 #include "MyString.h"
 
-using namespace std;
 
 using namespace qpid::client;
 using namespace qpid::framing;
@@ -94,7 +95,7 @@ Listener::Listener(Session& session) :
 //function: sets the recepient of the skype event log IM's
 void Listener::initSendTo(string receiver){
   sendTo=receiver;
-  cout << "in sendTo=>" << sendTo <<endl;
+  std::cout << "in sendTo=>" << sendTo <<std::endl;
 }
 
 void Listener::prepareQueue(std::string queue, std::string exchange, std::string routing_key) {
@@ -116,7 +117,7 @@ void Listener::received(Message& message) {
   int spos = msg.find("MSG=");
   string msgTxt="";
   if (spos > 0){
-    //    cout << "chk here 2" <<endl;
+    //    std::cout << "chk here 2" <<std::endl;
     msgTxt = msg.substr(spos+4);
   }
   else{
@@ -144,7 +145,7 @@ void Listener::sendXmppIM(string eStr){
   //  string cmd2 = "\" | sendxmpp -s test cLogTest@jabber.org";
   string cmd2 = "\" | sendxmpp -s test condorTest1@jabber.org";
   string cmd = cmd1 + eStr + cmd2;
-  std::cout << "Calling :: "<< cmd <<endl;
+  std::cout << "Calling :: "<< cmd <<std::endl;
   system(cmd.c_str());
 
 }
@@ -154,8 +155,8 @@ void Listener::sendSkypeIM(string eStr){
 
   string cmd1 = "./sendAll.py "+sendTo+" ";
   string cmd = cmd1 + "\"" + eStr + "\"" ;
-  cout << "in sendSkypeIM=>" << sendTo<< " ;cmd="<<cmd <<endl;
-  // std::cout << "Calling :: "<< cmd <<endl;
+  std::cout << "in sendSkypeIM=>" << sendTo<< " ;cmd="<<cmd <<std::endl;
+  // std::cout << "Calling :: "<< cmd <<std::endl;
   system(cmd.c_str());
 }
 
@@ -166,7 +167,7 @@ int main(int argc, char** argv) {
   string param;
   char host[20];
   fin.getline(host,20);
-  cout << "host=>" << host <<endl;
+  std::cout << "host=>" << host <<std::endl;
   string portStr,queueStr,keyStr,receiver;
   char hostProx[20];
   //portStr = string(portNum);
@@ -176,8 +177,8 @@ int main(int argc, char** argv) {
   getline(fin,receiver);
   fin.close();
   int port = getPortNumber(hostProx); //atoi(portStr.c_str());//  5672;
-  cout << "port=>" << port <<endl;
-  cout << "sendTo=>" << receiver <<endl;
+  std::cout << "port=>" << port <<std::endl;
+  std::cout << "sendTo=>" << receiver <<std::endl;
   std::string exchange = "amq.topic";
   Connection connection;
   try {

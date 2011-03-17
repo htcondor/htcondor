@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -1009,9 +1009,13 @@ FileTransfer::ComputeFilesToSend()
 			}
 			else {
 				dprintf( D_FULLDEBUG,
-					 "Skipping file %s, t: %ld==%ld, s: %lld==%lld\n",
-					 f, dir.GetModifyTime(), modification_time,
-					 dir.GetFileSize(), filesize );
+						 "Skipping file %s, t: %"PRIi64"==%"PRIi64
+						 ", s: %"PRIi64"==%"PRIi64"\n",
+						 f,
+						 (PRIi64_t)dir.GetModifyTime(),
+						 (PRIi64_t)modification_time,
+						 (PRIi64_t)dir.GetFileSize(),
+						 (PRIi64_t)filesize );
 				continue;
 			}
 			if(send_it) {
@@ -1553,6 +1557,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	filesize_t bytes=0;
 	MyString filename;;
 	MyString fullname;
+	MyString LocalProxyName;
 	char *tmp_buf = NULL;
 	int final_transfer = 0;
 	bool download_success = true;
@@ -1856,7 +1861,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", URL.Value(), fullname.Value());
 
-			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value());
+			rc = InvokeFileTransferPlugin(errstack, URL.Value(), fullname.Value(), LocalProxyName.Value());
+
 
 		} else if ( reply == 4 ) {
 			if ( PeerDoesGoAhead || s->end_of_message() ) {
@@ -1864,6 +1870,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf( D_FULLDEBUG,
 				         "DoDownload: get_x509_delegation() returned %d\n",
 				         rc );
+				if (rc == 0) {
+					// ZKM FUTURE TODO: allow this to exist outside of the job sandbox -- we may
+					// need the proxy to create the sandbox itself (if execute dir is NFSv4) but
+					// that will require some higher-level refactoring
+					LocalProxyName = fullname;
+				}
 			} else {
 				rc = -1;
 			}
@@ -2419,6 +2431,8 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 	}
 	return ( status >= 0 );
 }
+
+
 
 int
 FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
@@ -3591,7 +3605,7 @@ void FileTransfer::setSecuritySession(char const *session_id) {
 }
 
 
-int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest) {
+int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const char* dest, const char* proxy_filename) {
 
 	if (plugin_table == NULL) {
 		dprintf(D_FULLDEBUG, "FILETRANSFER: No plugin table defined! (request was %s)\n", source);
@@ -3650,25 +3664,39 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	}
 */
 
-	// TODO: invoke the proper plugin using my_gregs_popen() and the new API.
+	// prepare environment for the plugin
+	Env plugin_env;
 
-	MyString cmd_line = plugin.Value();
-	cmd_line += " ";
-	cmd_line += source;
-	cmd_line += " ";
-	cmd_line += dest;
-	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s\n", cmd_line.Value());
-	int retval = system( cmd_line.Value() );
-	dprintf (D_FULLDEBUG, "FILETRANSFER: plugin returned %i\n", retval);
+	// start with this environment
+	plugin_env.Import();
+
+	// add x509UserProxy if it's defined
+	if (proxy_filename && *proxy_filename) {
+		plugin_env.SetEnv("X509USERPROXY",proxy_filename);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting x509UserProxy env to %s\n", proxy_filename);
+	}
+
+	// prepare args for the plugin
+	ArgList plugin_args;
+	plugin_args.AppendArg(plugin.Value());
+	plugin_args.AppendArg(URL);
+	plugin_args.AppendArg(dest);
+	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s %s %s\n", plugin.Value(), URL, dest);
+
+	// invoke it
+	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env);
+	int plugin_status = my_pclose(plugin_pipe);
+
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i\n", plugin_status);
 
 	// clean up
 	free(method);
 
-	// any non-zero exit from plugin indicates error.  this function needs
-	// to return -1 on error, or zero otherwise, so map retval to the proper
-	// value.
-	if (retval != 0) {
-		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s", retval, cmd_line.Value());
+	// any non-zero exit from plugin indicates error.  this function needs to
+	// return -1 on error, or zero otherwise, so map plugin_status to the
+	// proper value.
+	if (plugin_status != 0) {
+		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s\n", plugin_status, plugin.Value());
 		return GET_FILE_PLUGIN_FAILED;
 	}
 
@@ -3719,7 +3747,7 @@ MyString
 FileTransfer::DeterminePluginMethods( CondorError &e, const char* path )
 {
     FILE* fp;
-    char *args[] = {const_cast<char*>(path), "-classad", NULL};
+    const char *args[] = { path, "-classad", NULL};
     char buf[1024];
 
         // first, try to execute the given path with a "-classad"
@@ -3798,11 +3826,24 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 		return true;
 	}
 
+	// if this exists and is in the list do it first
+	if (X509UserProxy && input_list->contains(X509UserProxy)) {
+		if( !ExpandFileTransferList( X509UserProxy, "", Iwd, -1, expanded_list ) ) {
+			rc = false;
+		}
+	}
+
+	// then process the rest of the list
 	input_list->rewind();
 	char const *path;
 	while ( (path=input_list->next()) != NULL ) {
-		if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list ) ) {
-			rc = false;
+		// skip the proxy if it's defined -- we dealt with it above.
+		// everything else gets expanded.  this if would short-circuit
+		// true if X509UserProxy is not defined, but i made it explicit.
+		if(!X509UserProxy || (X509UserProxy && strcmp(path, X509UserProxy) != 0)) {
+			if( !ExpandFileTransferList( path, "", Iwd, -1, expanded_list ) ) {
+				rc = false;
+			}
 		}
 	}
 	return rc;

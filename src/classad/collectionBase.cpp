@@ -174,6 +174,10 @@ TruncateLog(void)
     return ClassAdCollectionInterface::TruncateLog();
 }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996) // the seek, read, open, close, fileno, etc are deprecated, use _seek, etc instead.
+#endif
 
 bool ClassAdCollection::
 ReadCheckPointFile(){
@@ -1637,7 +1641,6 @@ LogState( FILE *fp )
 	return( true );
 }
 	
-
 bool ClassAdCollection::
 LogViews( FILE *fp, View *view, bool subView )
 {
@@ -1758,7 +1761,6 @@ SwitchInClassAd(string key){
   return (true);
 }
 
-
 int ClassAdCollection::
 WriteCheckPoint(){
   //get the latest time mark
@@ -1846,6 +1848,10 @@ ReadStorageEntry(int local_sfiled, int &offset,string &ckey){
 		return 2; //good	   
 	 }
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop) // restore 4996
+#endif
 
 // This function has a clear problem: it can find errors, 
 // but they are not propagated or reacted to. This is bad. 

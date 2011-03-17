@@ -111,6 +111,30 @@ NegotiatorObject::update(const ClassAd &ad)
 	INTEGER(MonitorSelfRegisteredSocketCount);
 	INTEGER(MonitorSelfResidentSetSize);
 	TIME_INTEGER(MonitorSelfTime);
+
+	DOUBLE2(LastNegotiationCycleMatchRate0,MatchRate)
+	DOUBLE2(LastNegotiationCycleMatchRateSustained0,MatchRateSustained)
+	INTEGER2(LastNegotiationCycleMatches0,Matches)
+	INTEGER2(LastNegotiationCycleDuration0,Duration)
+	INTEGER2(LastNegotiationCyclePhase1Duration0,Phase1Duration)
+	INTEGER2(LastNegotiationCyclePhase2Duration0,Phase2Duration)
+	INTEGER2(LastNegotiationCyclePhase3Duration0,Phase3Duration)
+	INTEGER2(LastNegotiationCyclePhase4Duration0,Phase4Duration)
+	INTEGER2(LastNegotiationCycleSlotShareIter0,SlotShareIter)
+	INTEGER2(LastNegotiationCycleNumSchedulers0,NumSchedulers)
+	INTEGER2(LastNegotiationCycleActiveSubmitterCount0,ActiveSubmitterCount)
+	STRING2(LastNegotiationCycleSubmittersFailed0,SubmittersFailed)
+	STRING2(LastNegotiationCycleSubmittersOutOfTime0,SubmittersOutOfTime)
+	STRING2(LastNegotiationCycleSubmittersShareLimit0,SubmittersShareLimit)
+	INTEGER2(LastNegotiationCycleNumIdleJobs0,NumIdleJobs)
+	INTEGER2(LastNegotiationCycleNumJobsConsidered0,NumJobsConsidered)
+	INTEGER2(LastNegotiationCycleRejections0,Rejections)
+	INTEGER2(LastNegotiationCycleTotalSlots0,TotalSlots)
+	INTEGER2(LastNegotiationCycleCandidateSlots0,CandidateSlots)
+	INTEGER2(LastNegotiationCycleTrimmedSlots0,TrimmedSlots)
+	TIME_INTEGER2(LastNegotiationCycleTime0,Time)
+	TIME_INTEGER2(LastNegotiationCycleEnd0,End)
+	INTEGER2(LastNegotiationCyclePeriod0,Period)
 }
 
 
@@ -126,9 +150,10 @@ NegotiatorObject::GetLimits(Variant::Map &limits, std::string &/*text*/)
 		//   ConcurrencyLimit.y = <y's current usage>
 	matchMaker.getAccountant().ReportLimits(&limitAttrs);
 
+	limitAttrs.Delete(ATTR_CURRENT_TIME); // compat_classad insists on adding this
 	limitAttrs.ResetExpr();
     const char* attr_name;
-    while (!limitAttrs.NextExpr(attr_name,expr)) {
+    while (limitAttrs.NextExpr(attr_name,expr)) {
 		Variant::Map limit;
 		std::string name = attr_name;
 

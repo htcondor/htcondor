@@ -17,7 +17,7 @@
  ###############################################################
 
 #############################
-set( QMF_GEN_SRCS ArgsCondorTriggerGetTriggerId.h;
+set( QMF_GEN_SRCS #ArgsCondorTriggerGetTriggerId.h;
       ArgsCondorTriggerGetTriggerName.h;
       ArgsCondorTriggerGetTriggerQuery.h;
       ArgsCondorTriggerGetTriggerText.h;
@@ -47,10 +47,10 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 #############################
 
 
-file( GLOB Srcs Triggerd.* TriggerObject.* triggerd_main.cpp )
-condor_exe( condor_triggerd "${Srcs};CondorTrigger.cpp;CondorTriggerService.cpp;EventCondorTriggerNotify.cpp" "${C_SBIN}" "${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${QPID_FOUND}" OFF )
+file( GLOB Srcs TriggerConsole.* Triggerd.* TriggerObject.* triggerd_main.cpp )
+condor_exe( condor_triggerd "${Srcs};CondorTrigger.cpp;CondorTriggerService.cpp;EventCondorTriggerNotify.cpp" "${C_SBIN}" "${PCRE_FOUND};${CONDOR_LIBS};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${QPID_FOUND};broker_utils" OFF )
 
 #############################
 
 install ( FILES get_trigger_data DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-install ( FILES condor_trigger_config.py DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( FILES condor_trigger_config.py DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} RENAME condor_trigger_config )

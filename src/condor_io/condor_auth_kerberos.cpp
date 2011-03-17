@@ -218,9 +218,9 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
     memcpy(output + index, &tmp, sizeof(out_data.ciphertext.length));
     index += sizeof(out_data.ciphertext.length);
 
-    memcpy(output + index, out_data.ciphertext.data, out_data.ciphertext.length);
-
     if (out_data.ciphertext.data) {    
+	memcpy(output + index, out_data.ciphertext.data,
+		out_data.ciphertext.length);
         free(out_data.ciphertext.data);
     }
 
@@ -230,7 +230,7 @@ int Condor_Auth_Kerberos :: wrap(char*  input,
 int Condor_Auth_Kerberos :: unwrap(char*  input, 
                                    int    /* input_len */, 
                                    char*& output, 
-                                   int&   output_len)
+                                   int& output_len)
 {
     krb5_error_code code;
     krb5_data       out_data;
@@ -1419,7 +1419,9 @@ int Condor_Auth_Kerberos :: isValid() const
     return auth_context_ != NULL;  // This is incorrect!
 }
 
-void Condor_Auth_Kerberos :: dprintf_krb5_principal ( int deblevel, char *fmt, krb5_principal p ) {
+void Condor_Auth_Kerberos :: dprintf_krb5_principal ( int deblevel,
+													  const char *fmt,
+													  krb5_principal p ) {
 
 	if (p) {
 		char * tmpprincname = 0;

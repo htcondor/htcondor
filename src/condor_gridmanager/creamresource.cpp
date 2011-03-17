@@ -119,6 +119,11 @@ CreamResource::CreamResource( const char *resource_name,
 	gahp = NULL;
 	deleg_gahp = NULL;
 	status_gahp = NULL;
+	m_leaseGahp = NULL;
+
+	hasLeases = true;
+	m_hasSharedLeases = true;
+	m_defaultLeaseDuration = 6 * 60 * 60;
 
 	const char delegservice_name[] = "/ce-cream/services/gridsite-delegation";
 	const char *name_ptr;
@@ -180,6 +185,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri?next_deleg->deleg_
 		delete deleg_gahp;
 	}
 	delete status_gahp;
+	delete m_leaseGahp;
 	if ( proxySubject ) {
 		free( proxySubject );
 	}
@@ -217,6 +223,25 @@ bool CreamResource::Init()
 	status_gahp->setMode( GahpClient::normal );
 	status_gahp->setTimeout( gahpCallTimeout );
 
+	m_leaseGahp = new GahpClient( gahp_name.c_str() );
+
+	m_leaseGahp->setNotificationTimerId( updateLeasesTimerId );
+	m_leaseGahp->setMode( GahpClient::normal );
+	m_leaseGahp->setTimeout( gahpCallTimeout );
+
+	char* pool_name = param( "COLLECTOR_HOST" );
+	if ( pool_name ) {
+		StringList collectors( pool_name );
+		free( pool_name );
+		pool_name = collectors.print_to_string();
+	} else {
+		pool_name = strdup( "NoPool" );
+	}
+
+	sprintf( m_leaseId, "Condor#%s#%s#%s", myUserName, ScheddName, pool_name );
+
+	free( pool_name );
+
 	initialized = true;
 
 	Reconfig();
@@ -231,6 +256,7 @@ void CreamResource::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 	deleg_gahp->setTimeout( gahpCallTimeout );
 	status_gahp->setTimeout( gahpCallTimeout );
+	m_leaseGahp->setTimeout( gahpCallTimeout );
 }
 
 const char *CreamResource::ResourceType()
@@ -265,6 +291,28 @@ const char *CreamResource::HashName( const char *resource_name,
 	sprintf( hash_name, "cream %s#%s", resource_name, proxy_subject );
 
 	return hash_name.c_str();
+}
+
+void CreamResource::RegisterJob( CreamJob *job )
+{
+	int job_lease;
+	if ( m_sharedLeaseExpiration == 0 ) {
+		if ( job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, job_lease ) ) {
+			m_sharedLeaseExpiration = job_lease;
+		}
+	} else {
+		if ( job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, job_lease ) ) {
+			job->UpdateJobLeaseSent( m_sharedLeaseExpiration );
+		}
+	}
+
+	// TODO should we also reset the timer if this job has a shorter
+	//   lease duration than all existing jobs?
+	if ( m_sharedLeaseExpiration == 0 ) {
+		daemonCore->Reset_Timer( updateLeasesTimerId, 0 );
+	}
+
+	BaseResource::RegisterJob( job );
 }
 
 void CreamResource::UnregisterJob( CreamJob *job )
@@ -669,3 +717,75 @@ CreamResource::BatchStatusResult CreamResource::FinishBatchStatus()
 }
 
 GahpClient * CreamResource::BatchGahp() { return status_gahp; }
+
+const char *CreamResource::getLeaseId()
+{
+	// TODO trigger a DoUpdateLeases() if we don't have a lease set yet
+	if ( m_sharedLeaseExpiration ) {
+		return m_leaseId.c_str();
+	} else {
+		return NULL;
+	}
+}
+
+const char *CreamResource::getLeaseError()
+{
+	// TODO
+	return NULL;
+}
+
+void CreamResource::DoUpdateSharedLease( time_t& update_delay,
+										 bool& update_complete,
+										 bool& update_succeeded )
+{
+	int rc;
+	time_t our_expiration;
+	time_t server_expiration;
+	BaseJob *curr_job;
+
+	// TODO Should we worry about jobs having different lease ids?
+	if ( m_leaseGahp->isStarted() == false ) {
+		dprintf( D_ALWAYS,"gahp server not up yet, delaying lease update\n" );
+		update_delay = 5;
+		return;
+	}
+
+	update_delay = 0;
+
+	our_expiration = m_sharedLeaseExpiration;
+	server_expiration = m_sharedLeaseExpiration;
+
+	rc = m_leaseGahp->cream_set_lease( resourceName, m_leaseId.c_str(),
+									   server_expiration );
+
+	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+		update_complete = false;
+	} else if ( rc != 0 ) {
+		dprintf( D_FULLDEBUG, "*** Lease update failed!\n" );
+		const char *err = m_leaseGahp->getErrorString();
+		if ( err ) {
+			m_leaseErrorMsg = err;
+		} else {
+			m_leaseErrorMsg = "Failed to set lease";
+		}
+		update_complete = true;
+		update_succeeded = false;
+	} else {
+		m_leaseErrorMsg = "";
+		update_complete = true;
+		update_succeeded = true;
+
+		m_sharedLeaseExpiration = server_expiration;
+
+		registeredJobs.Rewind();
+		while ( registeredJobs.Next( curr_job ) ) {
+			std::string tmp;
+			if ( !curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, tmp ) ) {
+				continue;
+			}
+			if ( our_expiration != server_expiration ) {
+				curr_job->UpdateJobLeaseSent( server_expiration );
+			}
+		}
+	}
+}

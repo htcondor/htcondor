@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -22,6 +22,9 @@
 #include "condor_dh.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+
+#if HAVE_EXT_OPENSSL
+
 //#include <openssl/pem.h>
 //#include <openssl/bn.h>
 
@@ -197,3 +200,5 @@ int Condor_Diffie_Hellman :: initialize()
     }
     return 0;
 }
+
+#endif

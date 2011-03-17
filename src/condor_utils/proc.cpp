@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -52,7 +52,7 @@ format_time( float fp_secs )
 	int		hours;
 	int		min;
 	int		secs;
-	int		tot_secs = fp_secs;
+	int		tot_secs = (int)fp_secs;
 	static char	answer[25];
 
 	days = tot_secs / DAY;

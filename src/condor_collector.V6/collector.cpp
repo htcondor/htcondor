@@ -19,8 +19,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_classad_util.h"
-#include "condor_parser.h"
 #include "condor_status.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -49,8 +47,10 @@
 
 #include "collector.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "CollectorPlugin.h"
+#endif
 #endif
 
 #include "ccb_server.h"
@@ -368,7 +368,9 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	char *projection = NULL;
 	cad.LookupString("projection", &projection);
 	SimpleList<MyString> projectionList;
+
 	::split_args(projection, &projectionList);
+	free(projection);
 
 	while ( (curr_ad=results.Next()) )
     {
@@ -638,8 +640,10 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
     offline_plugin_.invalidate ( command, cad );
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	CollectorPluginManager::Invalidate(command, cad);
+#endif
 #endif
 
 	if (viewCollectorTypes) {
@@ -705,8 +709,10 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	offline_plugin_.update ( command, *cad );
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	CollectorPluginManager::Update(command, *cad);
+#endif
 #endif
 
 	if (viewCollectorTypes) {
@@ -832,11 +838,14 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 
 #if ( HAVE_HIBERNATION )
     /* let the off-line plug-in have at it */
+	if(cad)
     offline_plugin_.update ( command, *cad );
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
     CollectorPluginManager::Update ( command, *cad );
+#endif
 #endif
 
 	if (viewCollectorTypes) {
@@ -1282,8 +1291,10 @@ void CollectorDaemon::Config()
 		tmp = param("CONDOR_VIEW_CLASSAD_TYPES");
 		if (tmp) {
 			viewCollectorTypes = new StringList(tmp);
+			char *printable_string = viewCollectorTypes->print_to_string();
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
-					viewCollectorTypes->print_to_string());
+					printable_string);
+			free(printable_string);
 		}
 	}
 
@@ -1398,6 +1409,8 @@ void CollectorDaemon::sendCollectorAd()
 
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad );
+
+    daemonCore->monitor_data.ExportData(ad);
 
 	// Send the ad
 	int num_updated = updateCollectors->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);

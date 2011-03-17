@@ -1046,7 +1046,7 @@ kflops_raw( void )
 	}
 
 	// For faster machines, run with more loops.
-	loops = floor( 0.9999 + (QUICK_RUNS * quick_kflops * LOOP_CONST) );
+	loops = (int) floor( 0.9999 + (QUICK_RUNS * quick_kflops * LOOP_CONST) );
 # if(ENABLE_TIMING)
 	double t1 = UtcTime::getTimeDouble( );
 # endif

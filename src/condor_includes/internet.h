@@ -82,7 +82,7 @@ char* string_to_hostname( const char* addr );
 /* Convert a hostname[:port] to sinful string */
 char * hostname_to_string (const char * hostname, const int default_port );
 
-char *sock_to_string(SOCKET sockd);
+const char *sock_to_string(SOCKET sockd);
 
 /*
  Puts socket peer's sinful address in buf.  Returns this value or the

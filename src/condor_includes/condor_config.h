@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -249,10 +249,11 @@ extern "C" {
 
 
 	int get_var( register char *value, register char **leftp,
-	      register char **namep, register char **rightp, char *self=NULL,
-		  bool getdollardollar=false, int search_pos=0);
-	int get_special_var( const char *prefix, bool only_id_chars, register char *value, register char **leftp,
-				 register char **namep, register char **rightp);
+		register char **namep, register char **rightp,
+		const char *self=NULL, bool getdollardollar=false, int search_pos=0);
+	int get_special_var( const char *prefix, bool only_id_chars,
+		register char *value, register char **leftp,
+		register char **namep, register char **rightp);
 }
 
 #endif
@@ -282,8 +283,8 @@ BEGIN_C_DECLS
 	char * macro_expand ( const char *name );
 	void init_config ( bool );
 	void clear_config ( void );
-	void set_debug_flags( const char * );
-	void config_insert( const char*, const char* );
+	void set_debug_flags( const char * strFlags);
+	void config_insert( const char* attrName, const char* attrValue);
 	int  param_boolean_int( const char *name, int default_value );
 	int  param_boolean_int_with_default( const char* name );
 	int  param_boolean_int_without_default( const char* name, int default_value );

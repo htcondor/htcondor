@@ -9,7 +9,7 @@
 ##  condor_config_val -v <variable name>
 ##
 ##  The file is divided into four main parts:
-##  Part 1:  Settings you MUST customize 
+##  Part 1:  Settings you likely want to customize 
 ##  Part 2:  Settings you may want to customize
 ##  Part 3:  Settings that control the policy of when condor will
 ##           start and stop jobs on your machines
@@ -42,7 +42,7 @@
 ##  #        #    #  #   #      #              #
 ##  #        #    #  #    #     #            #####
 ##
-##  Part 1:  Settings you must customize:
+##  Part 1:  Settings you likely want to customize:
 ######################################################################
 ######################################################################
 
@@ -83,11 +83,11 @@ LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
 ##--------------------------------------------------------------------
 ##  When something goes wrong with condor at your site, who should get
 ##  the email?
-CONDOR_ADMIN		= condor-admin@your.domain
+CONDOR_ADMIN		= root@$(FULL_HOSTNAME)
 
 ##  Full path to a mail delivery program that understands that "-s"
 ##  means you want to specify a subject:
-MAIL			= /usr/bin/mail
+MAIL			= /bin/mail
 
 ##--------------------------------------------------------------------
 ##  Network domain parameters:
@@ -96,18 +96,18 @@ MAIL			= /usr/bin/mail
 ##  machines don't share a common UID space, set it to 
 ##  UID_DOMAIN = $(FULL_HOSTNAME)
 ##  to specify that each machine has its own UID space.
-UID_DOMAIN		= your.domain
+UID_DOMAIN		= $(FULL_HOSTNAME)
 
 ##  Internet domain of machines sharing a common file system.
 ##  If your machines don't use a network file system, set it to
 ##  FILESYSTEM_DOMAIN = $(FULL_HOSTNAME)
 ##  to specify that each machine has its own file system. 
-FILESYSTEM_DOMAIN	= your.domain
+FILESYSTEM_DOMAIN	= $(FULL_HOSTNAME)
 
 ##  This macro is used to specify a short description of your pool. 
 ##  It should be about 20 characters long. For example, the name of 
 ##  the UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.
-COLLECTOR_NAME 		= My Pool
+COLLECTOR_NAME 		= My Pool - $(CONDOR_HOST)
 
 ######################################################################
 ######################################################################
@@ -180,7 +180,7 @@ FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 ##  machine(s) where whoever is the condor administrator(s) works
 ##  (assuming you trust all the users who log into that/those
 ##  machine(s), since this is machine-wide access you're granting).
-ALLOW_ADMINISTRATOR = $(CONDOR_HOST)
+ALLOW_ADMINISTRATOR = $(CONDOR_HOST), $(IP_ADDRESS)
 
 ##  If there are no machines that should have administrative access 
 ##  to your pool (for example, there's no machine where only trusted
@@ -222,7 +222,7 @@ ALLOW_READ = *
 ##  but note that this will allow anyone to submit jobs or add
 ##  machines to your pool and is a serious security risk.
 
-ALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
+ALLOW_WRITE = $(FULL_HOSTNAME), $(IP_ADDRESS)
 #ALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
 #DENY_WRITE = bad-machine.your.domain
 
@@ -239,11 +239,11 @@ ALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
 
 ##  Negotiator access.  Machines listed here are trusted central
 ##  managers.  You should normally not have to change this.
-ALLOW_NEGOTIATOR = $(CONDOR_HOST)
+ALLOW_NEGOTIATOR = $(CONDOR_HOST), $(IP_ADDRESS)
 ##  Now, with flocking we need to let the SCHEDD trust the other 
 ##  negotiators we are flocking with as well.  You should normally 
 ##  not have to change this either.
-ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS), $(IP_ADDRESS)
 
 ##  Config access.  Machines listed here can use the condor_config_val
 ##  tool to modify all daemon configurations.  This level of host-wide
@@ -1184,9 +1184,15 @@ PREEN_ARGS			= -m -r
 ## may be used to give a slot greater weight when calculating usage.
 #NEGOTIATOR_USE_SLOT_WEIGHTS = True
 
+
 ## How often the Negotaitor starts a negotiation cycle, defined in
 ## seconds.
 #NEGOTIATOR_INTERVAL = 60
+
+## Should the Negotiator publish an update to the Collector after
+## every negotiation cycle. It is useful to have this set to True
+## to get immediate updates on LastNegotiationCycle statistics.
+#NEGOTIATOR_UPDATE_AFTER_CYCLE = False
 
 
 ##--------------------------------------------------------------------
@@ -1229,6 +1235,23 @@ STARTD_ADDRESS_FILE	= $(LOG)/.startd_address
 BenchmarkTimer = (time() - LastBenchmark)
 RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 #RunBenchmarks : False
+
+##  When the startd does benchmarks, which set of benchmarks should we
+##  run?  The default is the same as pre-7.5.6: MIPS and KFLOPS.
+benchmarks_joblist = mips kflops
+
+##  What's the max "load" of all running benchmarks?  With the default
+##  (1.01), the startd will run the benchmarks serially.
+benchmarks_max_job_load = 1.0
+
+#  MIPS (Dhrystone 2.1) benchmark: load 1.0
+benchmarks_mips_executable = $(LIBEXEC)/condor_mips
+benchmarks_mips_job_load = 1.0
+
+#  KFLOPS (clinpack) benchmark: load 1.0
+benchmarks_kflops_executable = $(LIBEXEC)/condor_kflops
+benchmarks_kflops_job_load = 1.0
+
 
 ##  Normally, when the startd is computing the idle time of all the
 ##  users of the machine (both local and remote), it checks the utmp
@@ -1619,6 +1642,14 @@ QUEUE_SUPER_USERS	= root, condor
 ##  job with the specified UID, even if it's not in the passwd file?
 #SOFT_UID_DOMAIN	= FALSE
 
+# On Windows, the built-in rmdir command will not delete directories
+# or files that have Discretionary Access Control (DACLs) that deny
+# access to the SYSTEM account. This binary will take ownership of
+# files and directories and remove DACLs if needed to delete a
+# directory.  Elevated priveleges are needed for it to operate so
+# set this only if Condor runs as SYSTEM. (i.e. as a service)
+#WINDOWS_RMDIR = $(SBIN)\condor_rmdir.exe
+#WINDOWS_RMDIR_OPTIONS = /s /c
 
 ##--------------------------------------------------------------------
 ##  condor_procd
@@ -1913,7 +1944,7 @@ GRIDFTP_SERVER_WRAPPER = $(LIBEXEC)/gridftp_wrapper.sh
 ##
 ## Location of the PBS/LSF gahp and its associated binaries
 ##
-GLITE_LOCATION = $(LIB)/glite
+GLITE_LOCATION = $(LIBEXEC)/glite
 PBS_GAHP = $(GLITE_LOCATION)/bin/batch_gahp
 LSF_GAHP = $(GLITE_LOCATION)/bin/batch_gahp
 
@@ -2343,9 +2374,6 @@ VMWARE_NETWORKING_TYPE = nat
 ##--------------------------------------------------------------------
 ##  VM Universe Parameters common to libvirt controlled vm's (xen & kvm)
 ##--------------------------------------------------------------------
-
-##  Where is the Condor script program to control Xen & KVM? (Required)
-VM_SCRIPT = $(SBIN)/condor_vm_xen.sh
 
 ## Networking parameters for Xen & KVM
 ##

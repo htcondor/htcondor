@@ -63,7 +63,7 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 	int			dont_know_file_size;
 	int			rval;
 
-	if (n_bytes == -1) {
+	if (n_bytes == (size_t)-1) {
 		dont_know_file_size = 1;
 	} else {
 		dont_know_file_size = 0;
@@ -130,7 +130,7 @@ multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
 	int			dont_know_file_size;
 	int			i;
 
-	if (n_bytes == -1) {
+	if (n_bytes == (size_t)-1) {
 		dont_know_file_size = 1;
 	} else {
 		dont_know_file_size = 0;

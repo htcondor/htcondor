@@ -392,6 +392,7 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 			// set the seek to the correct spot and begin searching the file
 		if(fsetpos(fp, search_offset) < 0) {
 				// something failed, so get out of here
+			fclose(fp);
 			return -1;
 		}
 	}
@@ -480,6 +481,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 			// set the seek to the correct spot and begin searching the file
 		if(fsetpos(fp, search_offset) < 0) {
 				// something failed, so get out of here
+			fclose(fp);
 			return -1;
 		}
 	}

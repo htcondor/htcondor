@@ -18,16 +18,12 @@
 ###############################################################
 
 if (LINUX)
-include_directories ( ${EXTERNAL_STAGE}/include/qpid )
-link_directories ( ${EXTERNAL_STAGE}/lib/qpid )
 
-file( GLOB RmvSrcs *_main* declare_queues.* )
+file( GLOB RmvSrcs  declare_queues.cpp )
 condor_glob( Hdrs Srcs "${RmvSrcs}" )
 
 condor_static_lib( condorPigeon "${Hdrs};${Srcs}" ) 
-condor_exe( declareQueues "declare_queues.cpp" "${C_SBIN}"
-"condorPigeon;condorapi;daemon_core;${CONDOR_TOOL_LIBS};${QPID_FOUND};${DAEMON_CORE}" OFF )
-condor_daemon( pigeon "pigeon_main.cpp" "${C_SBIN}"
-"condorPigeon;condorapi;daemon_core;${CONDOR_TOOL_LIBS};${CONDOR_LIBS};${QPID_FOUND};${DAEMON_CORE}" OFF )
+condor_exe( declareQueues "declare_queues.cpp" "${C_SBIN}" "condorPigeon;condorapi;${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${QPID_FOUND}" OFF )
+condor_daemon( pigeon  "${RmvSrcs}" "condorPigeon;${CONDOR_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${QPID_FOUND}" "${C_SBIN}" ON)
 
 endif(LINUX)

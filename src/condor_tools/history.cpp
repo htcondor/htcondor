@@ -695,7 +695,7 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
         // Ok if only clusterId specified
         while (clusterId != cluster || (proc != -1 && procId != proc)) {
 	  
-            if (prevOffset == 0) { // no match
+            if (prevOffset <= 0) { // no match
                 free(owner);
                 return -1;
             }

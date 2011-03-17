@@ -538,8 +538,8 @@ ReliSock::put_bytes(const void *data, int sz)
             }
         }
         else {
-            dta = (unsigned char *) malloc(sz);
-            memcpy(dta, data, sz);
+            if((dta = (unsigned char *) malloc(sz)) != 0)
+		memcpy(dta, data, sz);
         }
 
 	ignore_next_encode_eom = FALSE;
@@ -561,17 +561,14 @@ ReliSock::put_bytes(const void *data, int sz)
 			snd_msg.buf.seek(header_size);
 		}
 		
-		if ((tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
-					if (dta != NULL)
-					{
-                    	free(dta);
-						dta = NULL;
-					}
-                    return -1;
+		if (dta && (tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
+			free(dta);
+			dta = NULL;
+			return -1;
 		}
 		
 		nw += tw;
-		if (nw == sz) {
+		if (nw >= sz) {
 			break;
 		}
 	}
@@ -581,7 +578,7 @@ ReliSock::put_bytes(const void *data, int sz)
 
 	if (dta != NULL)
 	{
-    	free(dta);
+		free(dta);
 		dta = NULL;
 	}
 
@@ -870,13 +867,14 @@ ReliSock::serialize(char *buf)
 	// first, let our parent class restore its state
     ptmp = Sock::serialize(buf);
     ASSERT( ptmp );
-
-    sscanf(ptmp,"%d*",(int*)&_special_state);
+    int itmp;
+    sscanf(ptmp,"%d*",&itmp);
+    _special_state = relisock_state(itmp);
     // skip through this
     ptmp = strchr(ptmp, '*');
-    ptmp++;
+    if(ptmp) ptmp++;
     // Now, see if we are 6.3 or 6.2
-    if ((ptr = strchr(ptmp, '*')) != NULL) {
+    if (ptmp && (ptr = strchr(ptmp, '*')) != NULL) {
         // we are 6.3
         memcpy(sinful_string, ptmp, ptr - ptmp);
 
@@ -898,7 +896,7 @@ ReliSock::serialize(char *buf)
             }
         }
     }
-    else {
+    else if(ptmp) {
         // we are 6.2, this is the end of it.
         sscanf(ptmp,"%s",sinful_string);
     }

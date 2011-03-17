@@ -244,7 +244,7 @@ private:
 	struct _finddata_t filedata;
 #else
 	condor_DIR *dirp;
-	priv_state setOwnerPriv( const char* path );
+	priv_state setOwnerPriv( const char* path, si_error_t &err );
 	uid_t owner_uid;
 	gid_t owner_gid;
 	bool owner_ids_inited;

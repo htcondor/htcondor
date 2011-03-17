@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -175,7 +175,7 @@ int store_cred_service(const char *user, const char *pw, int mode)
 		dprintf(D_ALWAYS, "store_cred: malformed user name\n");
 		return FAILURE;
 	}
-	if ((at - user != strlen(POOL_PASSWORD_USERNAME)) ||
+	if (( (size_t)(at - user) != strlen(POOL_PASSWORD_USERNAME)) ||
 	    (memcmp(user, POOL_PASSWORD_USERNAME, at - user) != 0))
 	{
 		dprintf(D_ALWAYS, "store_cred: only pool password is supported on UNIX\n");
@@ -690,7 +690,7 @@ store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 			return FAILURE;
 		}
 		if (((mode == ADD_MODE) || (mode == DELETE_MODE)) &&
-		    (tmp - user == strlen(POOL_PASSWORD_USERNAME)) &&
+		    ( (size_t)(tmp - user) == strlen(POOL_PASSWORD_USERNAME)) &&
 		    (memcmp(POOL_PASSWORD_USERNAME, user, tmp - user) == 0))
 		{
 			cmd = STORE_POOL_CRED;

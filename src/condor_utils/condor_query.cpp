@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -24,10 +24,9 @@
 #include "condor_config.h"
 #include "condor_network.h"
 #include "condor_io.h"
-#include "condor_parser.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "internet.h"
 #include "daemon.h"
 #include "dc_collector.h"
@@ -600,7 +599,8 @@ CondorQuery::addExtraAttribute(const char *attr) {
 }
 
 
-char *getStrQueryResult(QueryResult q)
+const char *
+getStrQueryResult(QueryResult q)
 {
 	switch (q)
 	{

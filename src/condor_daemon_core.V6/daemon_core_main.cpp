@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -593,12 +593,12 @@ dc_touch_lock_files( )
 
 
 void
-set_dynamic_dir( char* param_name, const char* append_str )
+set_dynamic_dir( const char* param_name, const char* append_str )
 {
 	char* val;
 	MyString newdir;
 
-	val = param( (char *)param_name );
+	val = param( param_name );
 	if( ! val ) {
 			// nothing to do
 		return;
@@ -613,7 +613,7 @@ set_dynamic_dir( char* param_name, const char* append_str )
 
 		// Now, set our own config hashtable entry so we start using
 		// this new directory.
-	config_insert( (char *) param_name, newdir.Value() );
+	config_insert( param_name, newdir.Value() );
 
 	// Finally, insert the _condor_<param_name> environment
 	// variable, so our children get the right configuration.
@@ -1021,7 +1021,7 @@ int
 handle_fetch_log_history(ReliSock *stream, char *name) {
 	int result = DC_FETCH_LOG_RESULT_BAD_TYPE;
 
-	char *history_file_param = "HISTORY";
+	const char *history_file_param = "HISTORY";
 	if (strcmp(name, "STARTD_HISTORY") == 0) {
 		history_file_param = "STARTD_HISTORY";
 	}
@@ -2258,6 +2258,8 @@ int main( int argc, char** argv )
  
 
 	if( get_mySubSystem()->isType( SUBSYSTEM_TYPE_MASTER ) ||
+		get_mySubSystem()->isType( SUBSYSTEM_TYPE_COLLECTOR ) ||
+		get_mySubSystem()->isType( SUBSYSTEM_TYPE_NEGOTIATOR ) ||
 		get_mySubSystem()->isType( SUBSYSTEM_TYPE_SCHEDD ) ||
 		get_mySubSystem()->isType( SUBSYSTEM_TYPE_STARTD ) ) {
         daemonCore->monitor_data.EnableMonitoring();

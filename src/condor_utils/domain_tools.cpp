@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -30,9 +30,10 @@ domainAndNameMatch( const char *account1,
 				   	const char *domain2 ) 
 {
 	
-	return ( ( strcasecmp ( account1, account2 ) == 0 ) && 
-		( domain1 == NULL || domain1 == "" || 
-		strcasecmp ( domain1, domain2 ) == 0 ) );
+	return (  ( strcasecmp ( account1, account2 ) == 0 ) && 
+			  ( domain1 == NULL ||
+				domain1[0] == '\0' || 
+				strcasecmp ( domain1, domain2 ) == 0 )  );
 
 }
 

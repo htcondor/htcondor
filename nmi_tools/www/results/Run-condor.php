@@ -8,6 +8,7 @@
    define("CONDOR_USER", "cndrauto");
    
    $result_types = Array( "passed", "pending", "failed", "missing" );
+   $num_spark_days = 2;
 
    require_once "./load_config.inc";
    load_config();
@@ -30,7 +31,7 @@
 <h1><a href="./Run-condor.php" class="title">Condor Latest Build/Test Results</a></h1>
 <table border=1 width="85%">
    <tr>
-      <th>Branch<br><small>Click to see branch history</small></th>
+      <th>Branch</th>
       <th>Runid</th>
       <th>Submitted</th>
       <th>User</th>
@@ -95,11 +96,13 @@ while ($row = mysql_fetch_array($result)) {
    // --------------------------------
    // BUILDS
    // --------------------------------
-   $sql = "SELECT Task.platform, Task.result" . 
-          "  FROM Task, Run ".
-          " WHERE Run.runid = {$runid}  AND ".
-          "       Task.runid = Run.runid AND ".
-          "       Task.platform != 'local' ".
+   $sql = "SELECT Task.platform," . 
+          "       SUM(IF(Task.result != 0, 1, 0)) AS failed," . 
+          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending " . 
+          "  FROM Task ".
+          " WHERE Task.runid = ${runid} AND ".
+          "       Task.platform != 'local' AND ".
+          "       (Task.name='platform_pre' OR Task.name='platform_job' OR Task.name='platform_post') ".
           " GROUP BY Task.platform ";
    $result2 = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
    $data["build"] = Array();
@@ -107,17 +110,17 @@ while ($row = mysql_fetch_array($result)) {
    $data["build"]["platforms"] = Array();
    while ($platforms = mysql_fetch_array($result2)) {
      $data["build"]["totals"]["total"]++;
-     if($platforms["result"] == NULL) {
+     if($platforms["failed"] > 0) {
+       $data["build"]["totals"]["failed"]++;
+       $data["build"]["platforms"][$platforms["platform"]] = "failed";
+     }
+     elseif($platforms["pending"] > 0) {
        $data["build"]["totals"]["pending"]++;
        $data["build"]["platforms"][$platforms["platform"]] = "pending";
      }
-     elseif($platforms["result"] == 0) {
+     else {
        $data["build"]["totals"]["passed"]++;
        $data["build"]["platforms"][$platforms["platform"]] = "passed";       
-     }
-     elseif($platforms["result"] != 0) {
-       $data["build"]["totals"]["failed"]++;
-       $data["build"]["platforms"][$platforms["platform"]] = "failed";
      }
    }
    mysql_free_result($result2);
@@ -249,6 +252,138 @@ while ($row = mysql_fetch_array($result)) {
 EOF;
 
    foreach (Array("build", "test", "crosstest") AS $type) {
+     if(preg_match("/Continuous/", $branch)) {
+       if($type == "test" || $type == "crosstest") {
+	 continue;
+       }
+
+       // We are going to build "sparklines" for the Continuous builds to make
+       // it easier to visualize their performance over time
+
+       // First get all the recent build runs.  We'll use the runids from the
+       // build runs to determine which tests to match to them
+       $sql = "SELECT runid,result,project_version, " . 
+	      "       convert_tz(start, 'GMT', 'US/Central') as start " .
+	      "FROM Run " .
+	      "WHERE run_type='build' AND " .
+	      "      component='condor' AND " .
+	      "      project='condor' AND " .
+	      "      DATE_SUB(CURDATE(), INTERVAL $num_spark_days DAY) <= start AND " .
+	      "      Description = '$branch' " .
+	      "      ORDER BY runid DESC";
+       $result2 = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
+
+       $spark = "<p style=\"font-size:75%\">Last $num_spark_days days of results: newest at left<table><tr>\n";
+       $spark .= "<td class='sparkheader'>Build:</td>\n";
+       $builds = Array();
+       while ($build = mysql_fetch_array($result2)) {
+	 $color = "passed";
+	 if($build["result"] == NULL) {
+	   $color = "pending";
+	 }
+	 elseif($build["result"] != 0) {
+	   $color = "failed";
+	 }
+	 
+	 $details = "<table>";
+	 $details .= "<tr><td>Status</td><td class=\"$color\">$color</td></tr>";
+	 $details .= "<tr><td>NMI RunID</td><td>" . $build["runid"] . "</td></tr>";
+	 $details .= "<tr><td>Submitted</td><td><nobr>" . $build["start"] . "</nobr></td></tr>";
+	 $details .= "<tr><td>SHA1</td><td>" . substr($build["project_version"], 0, 15) . "</td></tr>";
+	 $details .= "</table>";
+
+	 $detail_url = sprintf(DETAIL_URL, $build["runid"], "build", $user);
+	 $box_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">&nbsp;&nbsp;<span>$details</span></a></span>";
+
+	 $tmp = Array();
+	 $tmp["runid"] = $build["runid"];
+	 $tmp["sha1"]  = substr($build["project_version"], 0, 15);
+	 $tmp["html"]  = $box_html; 
+	 $tmp["color"] = $color;
+	 array_push($builds, $tmp);
+       }
+       mysql_free_result($result2);
+       
+       for ($i=0; $i < count($builds); $i++) {
+	 $style = "";
+	 if($i != 0 && $builds[$i]["sha1"] == $builds[$i-1]["sha1"]) {
+	   $style .= "border-left-style:dashed;";
+	 }
+	 if($builds[$i+1] && $builds[$i]["sha1"] == $builds[$i+1]["sha1"]) {
+	   $style .= "border-right-style:dashed;";
+	 }
+	 $spark .= "<td class='" . $builds[$i]["color"] . "' style='$style'>";
+	 $spark .= $builds[$i]["html"] . "</td>\n";
+       }
+
+       // And now for the tests.  This is trickier because we have to line it up
+       // with the builds above
+       $platform = $branch;
+       $platform = preg_replace("/Continuous Build - /", "", $branch);
+       $sql = "SELECT runid,result,description," .
+	      "       convert_tz(start, 'GMT', 'US/Central') as start " .
+	      "FROM Run ".
+	      "WHERE run_type = 'TEST' AND " .
+	      "      component = 'condor' AND " .
+	      "      project = 'condor' AND " .
+	      "      DATE_SUB(CURDATE(), INTERVAL 2 DAY) <= start AND " .
+	      "      description LIKE 'Auto-Test Suite for ($platform, %' " .
+	      "ORDER BY description DESC";
+       $result2 = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
+
+       $tests = Array();
+       while ($test = mysql_fetch_array($result2)) {
+	 $build_runid = preg_replace("/Auto-Test Suite for \($platform, (.+)\)/", "$1", $test["description"]);
+	 $color = "passed";
+	 if($test["result"] == NULL) {
+	   $color = "pending";
+	 }
+	 elseif($test["result"] != 0) {
+	   $color = "failed";
+	 }
+
+	 $details = "<table>";
+	 $details .= "<tr><td>Status</td><td class=\"$color\">$color</td></tr>";
+	 $details .= "<tr><td>Start</td><td><nobr>" . $test["start"] . "</nobr></td></tr>";
+	 $details .= "<tr><td>SHA1</td><td>_PUT_SHA_HERE_</td></tr>";
+	 $details .= "</table>";
+
+	 $detail_url = sprintf(DETAIL_URL, $build_runid, "test", $user);
+	 $box_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">&nbsp;&nbsp;<span>$details</span></a></span>";
+
+	 $tests[$build_runid] = Array();
+	 $tests[$build_runid]["color"] = $color;
+	 $tests[$build_runid]["html"]  = $box_html;
+       }
+       mysql_free_result($result2);
+
+       $spark .= "<tr><td class='sparkheader'>Test:</td>\n";
+       for ($i=0; $i < count($builds); $i++) {
+	 $build = $builds[$i];
+
+	 $style = "";
+	 if($i != 0 && $build["sha1"] == $builds[$i-1]["sha1"]) {
+	   $style .= "border-left-style:dashed;";
+	 }
+	 if($builds[$i+1] && $build["sha1"] == $builds[$i+1]["sha1"]) {
+	   $style .= "border-right-style:dashed;";
+	 }
+
+	 if($tests[$build["runid"]]) {
+	   $test = $tests[$build["runid"]];
+	   $tmp = preg_replace("/_PUT_SHA_HERE_/", $build["sha1"], $test["html"]);
+	   $spark .= "<td class='" . $test["color"] . "' style='$style'>$tmp</td>\n";
+	 }
+	 else {
+	   $spark .= "<td class='noresults' style='$style'>&nbsp;</td>\n";
+	 }
+       }
+       
+       $spark .= "</tr></table>\n";
+
+       echo "<td colspan='3'>$spark</td>";
+     }
+     else {
       $platforms = $data[$type]["platforms"];
       $totals = $data[$type]["totals"];
 
@@ -382,6 +517,7 @@ EOF;
          }
          echo "</table></td>\n";
       } // RESULTS
+     }
    } // FOREACH
    
    echo "</tr>";

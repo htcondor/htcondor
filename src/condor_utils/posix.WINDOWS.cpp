@@ -77,6 +77,8 @@ index( const char *s, int c )
 	return (char *)strchr( s, c );
 }
 
+#pragma warning(disable: 4273) // inconsistent dll linkage
+
 int
 access(const char *path, int mode)
 {
@@ -103,4 +105,5 @@ access(const char *path, int mode)
 
 	return result;
 }
+#pragma warning(default: 4996) // inconsistent dll linkage
 

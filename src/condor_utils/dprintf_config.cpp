@@ -38,7 +38,7 @@ int		Termlog = 0;
 
 extern int		DebugFlags;
 extern FILE		*DebugFP;
-extern uint64_t		MaxLog[D_NUMLEVELS+1];
+extern off_t		MaxLog[D_NUMLEVELS+1];
 extern int 			MaxLogNum[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;

@@ -30,7 +30,6 @@
 #include "condor_attributes.h"
 #include "condor_parameters.h"
 #include "condor_classad.h"
-#include "condor_classad_util.h"
 #include "classad_helpers.h"
 #include "condor_adtypes.h"
 #include "condor_string.h"
@@ -92,9 +91,11 @@
 #include "schedd_negotiate.h"
 #include "filename_tools.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
+#endif
 #endif
 
 #define DEFAULT_SHADOW_SIZE 800
@@ -527,12 +528,16 @@ Scheduler::~Scheduler()
 	}
 
 	if( shadowCommandrsock ) {
-		daemonCore->Cancel_Socket( shadowCommandrsock );
+		if( daemonCore ) {
+			daemonCore->Cancel_Socket( shadowCommandrsock );
+		}
 		delete shadowCommandrsock;
 		shadowCommandrsock = NULL;
 	}
 	if( shadowCommandssock ) {
-		daemonCore->Cancel_Socket( shadowCommandssock );
+		if( daemonCore ) {
+			daemonCore->Cancel_Socket( shadowCommandssock );
+		}
 		delete shadowCommandssock;
 		shadowCommandssock = NULL;
 	}
@@ -833,8 +838,8 @@ Scheduler::count_jobs()
 				Owners[i].FlockLevel++;
 				Owners[i].NegotiationTimestamp = current_time;
 				dprintf(D_ALWAYS,
-						"Increasing flock level for %s to %d.\n",
-						Owners[i].Name, Owners[i].FlockLevel);
+						"Increasing flock level for %s to %d due to lack of activity from negotiator at level %d.\n",
+						Owners[i].Name, Owners[i].FlockLevel, Owners[i].FlockLevel-1);
 			}
 			if (Owners[i].FlockLevel > FlockLevel) {
 				FlockLevel = Owners[i].FlockLevel;
@@ -945,8 +950,10 @@ Scheduler::count_jobs()
 	FILESQL::daemonAdInsert(m_ad, "ScheddAd", FILEObj, prevLHF);
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, m_ad);
+#endif
 #endif
 	
 		// Update collectors
@@ -1015,8 +1022,10 @@ Scheduler::count_jobs()
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, m_ad);
+#endif
 #endif
 		// Update collectors
 	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, m_ad, NULL, true);
@@ -1157,10 +1166,12 @@ Scheduler::count_jobs()
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  m_ad->InsertOrUpdate(tmp);
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	// update plugins
 	dprintf(D_FULLDEBUG,"Sent owner (0 jobs) ad to schedd plugins\n");
 	ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, m_ad);
+#endif
 #endif
 
 		// Update collectors
@@ -4207,6 +4218,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		// on at least one job or if it was a total failure
 	response_ad->Assign( ATTR_ACTION_RESULT, num_matches ? 1:0 );
 
+		// Return the number of jobs in the queue to the caller can
+		// determine appropriate actions
+	response_ad->Assign( ATTR_TOTAL_JOB_ADS, scheduler.getJobsTotalAds() );
+
 		// Finally, let them know if the user running this command is
 		// a queue super user here
 	response_ad->Assign( ATTR_IS_QUEUE_SUPER_USER,
@@ -4801,7 +4816,16 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 		}
 	}
 
-	Owners[owner_num].NegotiationTimestamp = time(0);
+	if( satisfied || Owners[owner_num].FlockLevel == flock_level ) {
+			// NOTE: we do not want to set NegotiationTimestamp if
+			// this negotiator is less than our current flocking level
+			// and we are unsatisfied, because then if the negotiator
+			// at the current flocking level never contacts us, but
+			// others do, we will never give up waiting, and we will
+			// therefore not advance to the next flocking level.
+		Owners[owner_num].NegotiationTimestamp = time(0);
+	}
+
 	if( satisfied ) {
 		// We are out of jobs.  Stop flocking with less desirable pools.
 		if (Owners[owner_num].FlockLevel > flock_level ) {
@@ -4954,6 +4978,7 @@ Scheduler::negotiate(int command, Stream* s)
 		if( !negotiate_ad.LookupString(ATTR_SUBMITTER_TAG,submitter_tag) ) {
 			dprintf( D_ALWAYS, "Can't find %s in negotiation header!\n",
 					 ATTR_SUBMITTER_TAG );
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 	}
@@ -4970,6 +4995,7 @@ Scheduler::negotiate(int command, Stream* s)
 	}
 	if (!s->end_of_message()) {
 		dprintf( D_ALWAYS, "Can't receive owner/EOM from manager\n" );
+		free(sig_attrs_from_cm);
 		return (!(KEEP_STREAM));
 	}
 
@@ -4998,6 +5024,7 @@ Scheduler::negotiate(int command, Stream* s)
 				dprintf(D_ALWAYS, "Unknown negotiator (host=%s,tag=%s).  "
 						"Aborting negotiation.\n", sock->peer_ip_str(),
 						submitter_tag.Value());
+				free(sig_attrs_from_cm);
 				return (!(KEEP_STREAM));
 			}
 		}
@@ -5018,12 +5045,14 @@ Scheduler::negotiate(int command, Stream* s)
 		char *negotiator_hostname = negotiator.fullHostname();
 		if (!negotiator_hostname) {
 			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!\n");
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 		hent = condor_gethostbyname(negotiator_hostname);
 		if (!hent) {
 			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
 					"  Aborting negotiation.\n", negotiator_hostname);
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 		char *addr;
@@ -5058,6 +5087,7 @@ Scheduler::negotiate(int command, Stream* s)
 		if (!match) {
 			dprintf(D_ALWAYS, "Unknown negotiator (%s).  "
 					"Aborting negotiation.\n", sock->peer_ip_str());
+			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
 	}
@@ -5120,8 +5150,6 @@ Scheduler::negotiate(int command, Stream* s)
 				"This user is no longer flocking with this negotiator.\n");
 		jobs = 0;
 		skip_negotiation = true;
-	} else if (Owners[owner_num].FlockLevel == which_negotiator) {
-		Owners[owner_num].NegotiationTimestamp = time(0);
 	}
 
 	ResourceRequestList *resource_requests = new ResourceRequestList;
@@ -6848,7 +6876,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 	{
 		ClassAd *machine_ad = NULL;
-		if( srec && srec->match ) {
+		if(srec->match ) {
 			machine_ad = srec->match->my_match_ad;
 		}
 		setNextJobDelay( job_ad, machine_ad );
@@ -7579,6 +7607,10 @@ shadow_rec::shadow_rec():
 	recycle_shadow_stream(NULL),
 	exit_already_handled(false)
 {
+	prev_job_id.proc = -1;
+	prev_job_id.cluster = -1;
+	job_id.proc = -1;
+	job_id.cluster = -1;
 }
 
 shadow_rec::~shadow_rec()
@@ -7731,14 +7763,7 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad )
 
 	classad::ClassAdUnParser unparser;
 	classad::ClassAd *machine;
-#if !defined (WANT_OLD_CLASSADS)
 	machine = machine_ad;
-#else
-	classad::ClassAd machine_buff;
-	old_to_new(*machine_ad,machine_buff);
-	machine = &machine_buff;
-	unparser.SetOldClassAd(true);
-#endif
 
 	ClassAd *job = GetJobAd( cluster, proc );
 
@@ -9149,7 +9174,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// for this, but it's the same number as
 				// JOB_NOT_CKPTED, so we're safe.
 		case JOB_NOT_STARTED:
-			if( !srec->removed && srec->match ) {
+			if( srec != NULL && !srec->removed && srec->match ) {
 				DelMrec(srec->match);
 			}
 			break;
@@ -9181,7 +9206,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			break;
 
 		case JOB_EXITED_AND_CLAIM_CLOSING:
-			if( srec->match ) {
+			if( srec != NULL && srec->match ) {
 					// startd is not accepting more jobs on this claim
 				srec->match->needs_release_claim = false;
 				DelMrec(srec->match);
@@ -10705,9 +10730,11 @@ Scheduler::shutdown_fast()
 		// still invalidate our classads, even on a fast shutdown.
 	invalidate_ads();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
+#endif
 #endif
 
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
@@ -10738,9 +10765,11 @@ Scheduler::schedd_exit()
 		// gone.  
 	invalidate_ads();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
 	ScheddPluginManager::Shutdown();
 	ClassAdLogPluginManager::Shutdown();
+#endif
 #endif
 
 	dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
@@ -10896,7 +10925,6 @@ Scheduler::sendReschedule()
 void
 Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 {
-#if !defined(WANT_OLD_CLASSADS)
 		// The machine ad will be passed as the RIGHT ad during
 		// matchmaking (i.e. in the call to IsAMatch()), so
 		// optimize it accordingly.
@@ -10909,7 +10937,6 @@ Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 			name.Value(),
 				error_msg.c_str());
 	}
-#endif
 }
 
 
@@ -10983,7 +11010,6 @@ int
 Scheduler::DelMrec(char const* id)
 {
 	match_rec *rec;
-	HashKey key(id);
 
 	if(!id)
 	{
@@ -10991,6 +11017,7 @@ Scheduler::DelMrec(char const* id)
 		return -1;
 	}
 
+	HashKey key(id);
 	if( matches->lookup(key, rec) != 0 ) {
 			// Couldn't find it, return failure
 		return -1;
@@ -12540,7 +12567,8 @@ Scheduler::claimLocalStartd()
 	}
 
 	dprintf(D_ALWAYS,
-		"Haven't heard from negotiator, trying to claim local startd\n");
+			"Haven't heard from negotiator, trying to claim local startd @ %s\n",
+			startd_addr );
 
 		// Fetch all the slot (machine) ads from the local startd
 	CondorError errstack;
@@ -12550,8 +12578,8 @@ Scheduler::claimLocalStartd()
 	q = query.fetchAds(result, startd_addr, &errstack);
 	if ( q != Q_OK ) {
 		dprintf(D_FULLDEBUG,
-			"ERROR: could not fetch ads from local startd- %s\n",
-			getStrQueryResult(q));
+				"ERROR: could not fetch ads from local startd : %s\n",
+				startd_addr, getStrQueryResult(q) );
 		return false;
 	}
 

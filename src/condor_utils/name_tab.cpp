@@ -26,7 +26,7 @@
 NameTable::NameTable( NAME_VALUE t[] )
 {
 	tab = t;
-	for( n_entries=0; tab[n_entries].value != -1; n_entries++ )
+	for( n_entries=0; tab[n_entries].m_value != -1; n_entries++ )
 		;
 }
 
@@ -36,29 +36,29 @@ NameTable::display()
 	int		i;
 
 	for( i=0; i<n_entries; i++ ) {
-		dprintf( D_ALWAYS, "%ld  %s\n", tab[i].value, tab[i].name );
+		dprintf( D_ALWAYS, "%ld  %s\n", tab[i].m_value, tab[i].m_name );
 	}
 }
 
 
-char *
+const char *
 NameTable::get_name( long value )
 {
 	int		i;
 
 	for( i=0; i<n_entries; i++ ) {
-		if( tab[i].value == value ) {
-			return tab[i].name;
+		if( tab[i].m_value == value ) {
+			return tab[i].m_name;
 		}
 	}
-	return tab[i].name;
+	return tab[i].m_name;
 }
 
 long
 NameTable::get_value( int i )
 {
 	if( i >= 0 && i < n_entries ) {
-		return tab[i].value;
+		return tab[i].m_value;
 	}
 	return -1;
 }

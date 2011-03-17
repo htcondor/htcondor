@@ -1062,7 +1062,7 @@ HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
   Function :
 */
 void
-HADStateMachine::printStep( char *curState,char *nextState )
+HADStateMachine::printStep( const char *curState, const char *nextState )
 {
       dprintf( D_FULLDEBUG,
                 "State machine step : pid <%d> port <%d> "

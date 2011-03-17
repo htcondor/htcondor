@@ -52,8 +52,9 @@
            </Component>
             <Component Id="CondorKBDDReg" Guid="3C40071C-6DB9-43AD-8058-920623026740">
               <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Run">
-                <RegistryValue Type="string" Name="condor_kbdd" Value="[INSTALLDIR]bin\condor_kbdd.exe" />
+                <RegistryValue Type="string" Name="condor_kbdd" Value="&quot;[INSTALLDIR]bin\condor_kbdd.exe&quot;" />
               </RegistryKey>
+              <Condition>RUNJOBS = "A" Or RUNJOBS = "I" Or RUNJOBS = "C"</Condition>
             </Component>
             <Directory Id="LogDir" Name="log">
               <Component Id="CreatingLogDir" Guid="F6731DF5-5E28-405F-82EC-5F269FD434E5" Permanent="no" NeverOverwrite="yes">
@@ -218,8 +219,8 @@
         <Property Id="HDFSPORT" Value="9000" />
         <Property Id="HDFSWEBPORT" Value="8000" />
         <SetProperty Id="HDFSHOME" Value="[INSTALLDIR]HDFS" After="AppSearch">Not UPGRADEFOUND</SetProperty>
-        <SetProperty Id="HDFSNAMEDIR" Value="[HDFSHOME]/hadoop_name" After="AppSearch">Not UPGRADEFOUND</SetProperty>
-        <SetProperty Id="HDFSDATADIR" Value="[HDFSHOME]/hadoop_data" After="AppSearch">Not UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSNAMEDIR" Value="[HDFS_HOME]/hadoop_name" After="AppSearch">Not UPGRADEFOUND</SetProperty>
+        <SetProperty Id="HDFSDATADIR" Value="[HDFS_HOME]/hadoop_data" After="AppSearch">Not UPGRADEFOUND</SetProperty>
         <SetDirectory Id="TARGETDIR" Value="[INSTALLDIR]" Sequence="execute" />
 
         <SetProperty Id="INSTALLDIR" Value="[OLD_INSTALLDIR]" After="AppSearch">UPGRADEFOUND</SetProperty>

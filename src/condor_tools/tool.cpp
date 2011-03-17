@@ -239,7 +239,7 @@ pool_target_usage( void )
 }
 
 
-char*
+const char*
 cmdToStr( int c )
 {
 	switch( c ) {

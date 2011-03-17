@@ -15,11 +15,13 @@
  # limitations under the License. 
  # 
  ############################################################### 
+option(WITH_MANAGEMENT "Support for qmf plugin" ON)
 
-if ( HAVE_EXT_QPID )
+if (WITH_MANAGEMENT AND HAVE_EXT_QPID)
  
  include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/qmf/plugins ${CMAKE_CURRENT_BINARY_DIR}/qmf/plugins )
  add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/qmf/plugins )
  add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/qmf/daemons )
+ add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/qmf/etc )
 
 endif()

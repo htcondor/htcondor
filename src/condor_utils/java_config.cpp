@@ -43,7 +43,7 @@ int java_config( MyString &cmd, ArgList *args, StringList *extra_classpath )
 	free(tmp);
 
 	tmp = param("JAVA_MAXHEAP_ARGUMENT");
-	char *xmx_arg = "";
+	const char *xmx_arg = "";
 	// if tmp is not set or the MAXHEAP argument does not contain the leading -Xmx, add it.
 	if( !tmp || strncmp(tmp, "-Xmx", 4) ) 
 		xmx_arg = "-Xmx";

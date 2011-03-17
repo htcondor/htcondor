@@ -17,14 +17,14 @@
  # 
  ############################################################### 
 
-if ( HAVE_EXT_QPID )
+dprint("ENABLE WHEN BUILDS")
+option(WITH_PIGEON "Support for condor_pigeon" OFF)
+
+if ( WITH_PIGEON AND HAVE_EXT_QPID )
  
- include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon/
- ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon_client
- ${CMAKE_CURRENT_BINARY_DIR}/src/condor_pigeon/ )
+ include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon/ ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon_client ${CMAKE_CURRENT_BINARY_DIR}/src/condor_pigeon/ )
  
- # temporarily disabling until it builds.
- #add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon/ )
- #add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon_client/ )
+ add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon/ )
+ add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src/condor_pigeon_client/ )
 
 endif()

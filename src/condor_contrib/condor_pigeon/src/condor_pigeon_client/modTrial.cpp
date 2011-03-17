@@ -17,8 +17,10 @@
  *
 ***************************************************************/
 
-#include <iostream.h>
-#include <stdlib.h>
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+
 #include <fstream.h>
 #include <cctype>
 #include <algorithm>
@@ -32,7 +34,7 @@
 #include "user_log.c++.h"
 #include "code.h"
 #include "modTrial.h"
-using namespace std;
+
 
 
 
@@ -52,7 +54,7 @@ void JobLog::initStates(char* persistFile,char*iFile,int erotate){
   //IMP : ??? chould this be configurable or in the header file
   //getting the include exclude job eventId list
 
-  cout << "\n In initStates() fn" <<endl;
+  std::cout << "\n In initStates() fn" <<std::endl;
   seek_pos = 0;
   pos=0;
   fileVersion = 1;
@@ -94,7 +96,7 @@ schedName = "SCHED1";
   // activate all events to be reported
   for (int i = 0; i < 28; i++)
   	reportEvent[i] = 1;
-cout << "\n ModTrial initStates variables initialized \n" <<endl;
+std::cout << "\n ModTrial initStates variables initialized \n" <<std::endl;
   //*** these can be class memebers -defined at the time of init -EventLog reader
   //stuff
 
@@ -109,7 +111,7 @@ cout << "\n ModTrial initStates variables initialized \n" <<endl;
       log = new ReadUserLog (stateBuf,true) ; 
       //reading the seek position for the output Job file
       pRFile.seekg(stateBuf.size);
-      cout << "\n PERSIST FILE OPENED: Initialize using filename and max rotate:: status "<<iFile << erotate<<endl;
+      std::cout << "\n PERSIST FILE OPENED: Initialize using filename and max rotate:: status "<<iFile << erotate<<std::endl;
       int seek_pos1 = 0;
       char * temp = "";
       string seekStr = "";
@@ -128,7 +130,7 @@ cout << "\n ModTrial initStates variables initialized \n" <<endl;
       //if the persist file read failed default initialize from input Event Log
       log = new ReadUserLog () ; 
       bool status1 = log->initialize(iFile,erotate,true,true);
-      cout << "\nCANNOT open PERSIST FILE: DEFAULT INITIALIZATION "<<iFile << erotate<<endl;
+      std::cout << "\nCANNOT open PERSIST FILE: DEFAULT INITIALIZATION "<<iFile << erotate<<std::endl;
 
       log->GetFileState(stateBuf);
       fileVersion =1;
@@ -142,7 +144,7 @@ cout << "\n ModTrial initStates variables initialized \n" <<endl;
   else {
     log = new ReadUserLog () ;
     bool status1 = log->initialize(iFile,erotate,true,true);
-    cout << "\nNO PERSIST FILE: DEFAULT INITIALIZATION "<<iFile << erotate<<endl;
+    std::cout << "\nNO PERSIST FILE: DEFAULT INITIALIZATION "<<iFile << erotate<<std::endl;
     log->GetFileState(stateBuf);
     fileVersion =1;
     is_rotated = 0;
@@ -154,7 +156,7 @@ cout << "\n ModTrial initStates variables initialized \n" <<endl;
   if(!log->isInitialized()){
     bool status = log->initialize(stateBuf,erotate,true);
   }
-cout << "\n Exitting initStates function.... \n" <<endl;
+std::cout << "\n Exitting initStates function.... \n" <<std::endl;
 }
 
 string JobLog::timestr( struct tm &tm )
@@ -188,10 +190,10 @@ bool JobLog::updateState(ReadUserLog ::FileState stateBuf,ReadUserLog* log, char
     pWFile.close();
     //ensuring the write to persist file is maintained atomic
     rename(tempPersistFile,persistFile);
-    //cout <<"writen to to persist pos = "<<pos<<" FV" <<fileVersion <<" ISR" <<is_rotated<<endl ;
+    //std::cout <<"writen to to persist pos = "<<pos<<" FV" <<fileVersion <<" ISR" <<is_rotated<<std::endl ;
   }
   else{
-    cout <<"cant right to persist\n";
+    std::cout <<"cant right to persist\n";
     return false;
   }
   return true;
@@ -305,8 +307,8 @@ void JobLog::writeToPPFile(fstream& dbWFile,string eStr, char* persistFile,char*
   //rotation code ends
 
   //write to ouput file
-  //cout << "should write to "<< oFile<< "and persist at "<< tempPersistFile <<endl;
-  dbWFile <<eStr<<endl;
+  //std::cout << "should write to "<< oFile<< "and persist at "<< tempPersistFile <<std::endl;
+  dbWFile <<eStr<<std::endl;
 
   //call the stateUpdate function
 
@@ -323,7 +325,7 @@ void JobLog::writeToFile(fstream& dbWFile,string eStr, char* persistFile)
 {
   dbWFile.seekp(pos);
   //write to ouput file
-  dbWFile <<eStr<<endl;
+  dbWFile <<eStr<<std::endl;
 
   //  log->GetFileState(stateBuf);
   int tempPos= dbWFile.tellp();
@@ -332,7 +334,7 @@ void JobLog::writeToFile(fstream& dbWFile,string eStr, char* persistFile)
   //bool stateUpFlag = updateState(stateBuf,log,persistFile,tempPos,fileVersion,is_rotated);
   bool stateUpFlag = updateState(stateBuf,log,persistFile,tempPos,1,0);
   if(stateUpFlag){
-    cout << "\n Updating prev pos=" << pos << " ; new pos=" << tempPos << endl;
+    std::cout << "\n Updating prev pos=" << pos << " ; new pos=" << tempPos << std::endl;
     //sleep(1);
     pos = tempPos;
 
@@ -351,7 +353,7 @@ void JobLog::sendXmppIM(string eStr, char* persistFile)
   string cmd1 = "echo \"";
   string cmd2 = "\" | sendxmpp -s test cLogTest@jabber.org";
   string cmd = cmd1 + eStr + cmd2;
-  cout << "Calling :: "<< cmd <<endl;
+  std::cout << "Calling :: "<< cmd <<std::endl;
   system(cmd.c_str());
 
   //update persistent state file
@@ -496,8 +498,8 @@ string JobLog::classAdFormatLog(ULogEvent *event){
   }
 
 
-  //cout << "\n CLASS AD be4 : "<<input<<endl; 
-  //cout << "\n CLASS AD after : "<<input1<<endl; 
+  //std::cout << "\n CLASS AD be4 : "<<input<<std::endl; 
+  //std::cout << "\n CLASS AD after : "<<input1<<std::endl; 
 
   clust = o.str();
   p << event->proc ;
@@ -516,7 +518,7 @@ string JobLog::classAdFormatLog(ULogEvent *event){
 
 //new version of ReadLog
 void JobLog::readLog(char* outFile, char* persistFile,  int eventTrack = ULOG_EXECUTE, int erotate = 10, bool excludeFlag=false){
-  //cout <<"test flag " <<exdcludeFlag<<endl;
+  //std::cout <<"test flag " <<exdcludeFlag<<std::endl;
   //filestream declarations
   ifstream dbRFile;
   ofstream dbWFileTemp;
@@ -583,7 +585,7 @@ void JobLog::readLog(char* outFile, char* persistFile,  int eventTrack = ULOG_EX
         int tlen = 128;
         char tbuf[128];
         lsa.getUniqId(tbuf,tlen);
-        cout << "\n Id as obtained => " << tbuf <<endl;
+        std::cout << "\n Id as obtained => " << tbuf <<std::endl;
 
         writeToFile(dbWFile,logStr,persistFile);
       }//else ends here
@@ -591,7 +593,7 @@ void JobLog::readLog(char* outFile, char* persistFile,  int eventTrack = ULOG_EX
     else{
       if(outCome == ULOG_NO_EVENT)
       { 
-        cout << "sleep for 5 sec" <<endl; 
+        std::cout << "sleep for 5 sec" <<std::endl; 
         sleep(5);
       }
       else if(outCome == ULOG_MISSED_EVENT){
@@ -602,7 +604,7 @@ void JobLog::readLog(char* outFile, char* persistFile,  int eventTrack = ULOG_EX
         const ReadUserLogStateAccess thisLSA = ReadUserLogStateAccess(tempStateBuf);
         evnDiffFlag = thisLSA.getEventNumberDiff(otherLSA, missedEventCnt);
         error = ULogEventOutcomeName[outCome];
-        cout << "ERROR MISSED EVENT " <<missedEventCnt <<endl;
+        std::cout << "ERROR MISSED EVENT " <<missedEventCnt <<std::endl;
         missedEStr <<missedEventCnt;
         string mcnt = missedEStr.str();
         int cint=0;

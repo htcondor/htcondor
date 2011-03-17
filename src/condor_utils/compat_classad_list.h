@@ -89,7 +89,8 @@ protected:
 
 public:
 	ClassAdListDoesNotDeleteAds();
-	~ClassAdListDoesNotDeleteAds();
+	virtual ~ClassAdListDoesNotDeleteAds();
+	virtual void Clear();
 	ClassAd* Next();
 	void Open();
 		/*This Close() function is no longer really needed*/
@@ -127,6 +128,7 @@ class ClassAdList: public ClassAdListDoesNotDeleteAds
 		 * fast.  No linear search through the list is required.
 		 */
 	int Delete(ClassAd* cad);
+	virtual void Clear();
 };
 
 typedef ClassAdList AttrListList;

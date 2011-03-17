@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -55,7 +55,7 @@ static gid_t TrackingGid = 0;
 #endif
 
 /* must be listed in the same order as enum priv_state in condor_uid.h */
-static char *priv_state_name[] = {
+static const char *priv_state_name[] = {
 	"PRIV_UNKNOWN",
 	"PRIV_ROOT",
 	"PRIV_CONDOR",
@@ -205,6 +205,21 @@ const char *get_user_domainname() {
     return UserDomainName;
 }
 
+// this is in uids.windows.credd.cpp
+extern bool 
+get_password_from_credd (
+   const char * credd_host,
+   const char  username[],
+   const char  domain[],
+   char * pw,
+   int    cb); // sizeof pw buffer (in bytes)
+
+bool 
+cache_credd_locally (
+	const char  username[],
+	const char  domain[],
+	const char * pw);
+
 int
 init_user_ids(const char username[], const char domain[]) 
 {
@@ -343,10 +358,20 @@ init_user_ids(const char username[], const char domain[])
 		}
 
 		// if we don't have the password from our local stash, try to fetch
-		// it from a credd
+		// it from a credd. this tiny function is in a separate file so
+        // that we don't pull in all of daemon core when we link to the utils library.
 
 		char *credd_host = param("CREDD_HOST");
 		if (credd_host && got_password==false) {
+#if 1
+           got_password = get_password_from_credd(
+              credd_host,
+              username,
+              domain,
+              pw,
+              sizeof(pw));
+           got_password_from_credd = got_password;
+#else
 			dprintf(D_FULLDEBUG, "trying to fetch password from credd: %s\n", credd_host);
 			Daemon credd(DT_CREDD);
 			Sock * credd_sock = credd.startCommand(CREDD_GET_PASSWD,Stream::reli_sock,10);
@@ -372,6 +397,7 @@ init_user_ids(const char username[], const char domain[])
 				dprintf(D_FULLDEBUG,"Failed to contact credd %s: %s\n",
 					credd_host,credd.error() ? credd.error() : "");
 			}
+#endif
 		}
 		if (credd_host) free(credd_host);
 
@@ -426,22 +452,10 @@ init_user_ids(const char username[], const char domain[])
 				// if we got the password from the credd, and the admin wants passwords stashed
 				// locally on this machine, then do it.
 				if ( got_password_from_credd &&
-					 param_boolean("CREDD_CACHE_LOCALLY",false) ) 
-				{
-					MyString my_full_name;
-					my_full_name.sprintf("%s@%s",username,domain);
-					if ( addCredential(my_full_name.Value(),pw) == SUCCESS ) {
-						dprintf(D_FULLDEBUG,
-							"init_user_ids: "
-							"Successfully stashed credential in registry for user %s\n",
-							my_full_name.Value());
-					} else {
-						dprintf(D_FULLDEBUG,
-							"init_user_ids: "
-							"Failed to stash credential in registry for user %s\n",
-							my_full_name.Value());
-					}
-				}
+                     param_boolean("CREDD_CACHE_LOCALLY",false) ) {
+                    cache_credd_locally(username, domain, pw);
+                }
+				
 				retval = 1;	// return of 1 means SUCCESS
 			}
 
@@ -1528,7 +1542,7 @@ get_real_username( void )
 {
 	if( ! RealUserName ) {
 		uid_t my_uid = getuid();
-		if ( !(pcache()->get_user_name( my_uid, const_cast<char *&>(RealUserName) )) ) {
+		if ( !(pcache()->get_user_name( my_uid, (char *&)RealUserName)) ) {
 			char buf[64];
 			sprintf( buf, "uid %d", (int)my_uid );
 			RealUserName = strdup( buf );

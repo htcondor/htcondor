@@ -32,8 +32,13 @@
 #include "VMRegister.h"
 #include "classadHistory.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
+#endif
+#if defined(WIN32)
+extern int load_startd_mgmt(void);
+#endif
 #endif
 
 // Define global variables
@@ -110,7 +115,7 @@ void main_config();
 void finish_main_config();
 void main_shutdown_fast();
 void main_shutdown_graceful();
-extern "C" int do_cleanup(int,int,char*);
+extern "C" int do_cleanup(int,int,const char*);
 int reaper( Service*, int pid, int status);
 int	shutdown_reaper( Service*, int pid, int status ); 
 
@@ -396,9 +401,12 @@ main_init( int, char* argv[] )
 		// This is now called by a timer registered by start_update_timer()
 	//resmgr->update_all();
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
    StartdPluginManager::Load();
-
+#elif defined(WIN32)
+	load_startd_mgmt();
+#endif
    StartdPluginManager::Initialize();
 #endif
 }
@@ -633,8 +641,10 @@ startd_exit()
 	systray_notifier.notifyCondorOff();
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Shutdown();
+#endif
 #endif
 
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
@@ -745,7 +755,7 @@ shutdown_reaper(Service *, int pid, int status)
 
 
 int
-do_cleanup(int,int,char*)
+do_cleanup(int,int,const char*)
 {
 	static int already_excepted = FALSE;
 

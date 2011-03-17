@@ -17,15 +17,17 @@
  *
 ***************************************************************/
 
-
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_debug.h"
 #include <qpid/client/Connection.h>
 #include <qpid/client/Session.h>
 #include <qpid/client/Message.h>
 #include <qpid/client/MessageListener.h>
 #include <qpid/client/SubscriptionManager.h>
 
-#include <cstdlib>
-#include <iostream>
+//#include <cstdlib>
+//#include <iostream>
 
 using namespace qpid::client;
 using namespace qpid::framing;

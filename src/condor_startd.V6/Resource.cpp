@@ -28,13 +28,15 @@
 #include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
+#endif
 #endif
 
 extern FILESQL *FILEObj;
 
-Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
+Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent )
 {
 	MyString tmp;
 	char* tmpName;
@@ -90,7 +92,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	} else {
 		tmpName = my_full_hostname();
 	}
-	if( resmgr->is_smp() ) {
+	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
 		tmp.sprintf( "%s@%s", r_id_str, tmpName );
 		r_name = strdup( tmp.Value() );
 	} else {
@@ -958,8 +960,10 @@ Resource::do_update( void )
         // Get the public and private ads
     publish_for_update( &public_ad, &private_ad );
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Update(&public_ad, &private_ad);
+#endif
 #endif
 
 		// Send class ads to collector(s)
@@ -1021,8 +1025,10 @@ Resource::final_update( void )
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Invalidate(&invalidate_ad);
+#endif
 #endif
 
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
@@ -1426,7 +1432,7 @@ int
 Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 {
 	int tmp;
-	if( check_vanilla && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
+	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		MyString tmp_expr_name = expr_name;
 		tmp_expr_name += "_VANILLA";
 		tmp = eval_expr( tmp_expr_name.Value(), false, false );
@@ -1436,7 +1442,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 			// otherwise, fall through and try the non-vanilla version
 	}
-	if( check_vanilla && r_cur->universe() == CONDOR_UNIVERSE_VM ) {
+	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VM ) {
 		MyString tmp_expr_name = expr_name;
 		tmp_expr_name += "_VM";
 		tmp = eval_expr( tmp_expr_name.Value(), false, false );
@@ -1446,12 +1452,12 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 			// otherwise, fall through and try the non-vm version
 	}
-	if( (r_classad->EvalBool(expr_name, r_cur->ad(), tmp) ) == 0 ) {
+	if( (r_classad->EvalBool(expr_name, r_cur ? r_cur->ad() : NULL , tmp) ) == 0 ) {
 		if( fatal ) {
 			dprintf(D_ALWAYS, "Can't evaluate %s in the context of following ads\n", expr_name );
 			r_classad->dPrint(D_ALWAYS);
 			dprintf(D_ALWAYS, "=============================\n");
-			if ( r_cur->ad() ) {
+			if ( r_cur && r_cur->ad() ) {
 				r_cur->ad()->dPrint(D_ALWAYS);
 			} else {
 				dprintf( D_ALWAYS, "<no job ad>\n" );

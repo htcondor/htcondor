@@ -79,8 +79,8 @@ public:
 	};
 
 
-	static char* sec_feat_act_rev[];
-	static char* sec_req_rev[];
+	static const char* sec_feat_act_rev[];
+	static const char* sec_req_rev[];
 
 	static KeyCache                      * session_cache;
 	static HashTable<MyString, MyString> * command_map;

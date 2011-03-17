@@ -201,7 +201,7 @@ CronJobMgr::ShouldStartJob( const CronJob &job ) const
 	dprintf( D_FULLDEBUG,
 			 "ShouldStartJob: job=%.2f cur=%.2f max=%.2f\n",
 			 job.GetJobLoad( ), m_cur_job_load, m_max_job_load );
-	return ( (job.GetJobLoad( ) + m_cur_job_load) <= m_max_job_load );
+	return ( (job.GetJobLoad( ) + m_cur_job_load) <= GetMaxJobLoad() );
 }
 
 // Job is started
@@ -217,7 +217,7 @@ bool
 CronJobMgr::JobExited( const CronJob & /*job*/ )
 {
 	m_cur_job_load = m_job_list.RunningJobLoad();
-	if (  (m_cur_job_load < m_max_job_load) && (m_schedule_timer < 0)  ) {
+	if (  (m_cur_job_load < GetMaxJobLoad()) && (m_schedule_timer < 0)  ) {
 		m_schedule_timer = daemonCore->Register_Timer(
 			0,
 			(TimerHandlercpp)& CronJobMgr::ScheduleJobsTimer,

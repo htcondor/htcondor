@@ -34,7 +34,7 @@ extern NameTable	TransFuncNames;
 static StateMachine	*CurFSA;
 static sigjmp_buf		JmpBuf;
 
-static char	*TransFmt = "\t%-14s%-16s%-14s%-12s\n";
+static const char	*TransFmt = "\t%-14s%-16s%-14s%-12s\n";
 
 StateMachine::StateMachine(
 	State *st, Transition *tr, const int sigs[], int start, int end

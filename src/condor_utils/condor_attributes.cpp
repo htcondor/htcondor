@@ -56,7 +56,7 @@ AttrGetName( CONDOR_ATTR which )
 	switch ( local->flag )
 	{
 	case  ATTR_FLAG_NONE:
-        tmps = const_cast<char *>(local->string);
+		tmps = const_cast<char *>( local->string );
 		break;
     case ATTR_FLAG_DISTRO:
 		// Yeah, this allocates a couple more bytes than required, but
@@ -79,7 +79,8 @@ AttrGetName( CONDOR_ATTR which )
     }
 
 	// Then, return it
-	return ( local->cached = (const char * ) tmps );
+	local->cached = tmps;
+	return local->cached;
 }
 
 // List of attributes used in ClassAds  If you find yourself using anything
@@ -179,10 +180,13 @@ const char * const ATTR_DELTACLOUD_PROVIDER_ID	 = "DeltacloudProviderId";
 const char * const ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES = "DeltacloudPublicNetworkAddresses";
 const char * const ATTR_DELTACLOUD_RETRY_TIMEOUT = "DeltacloudRetryTimeout";
 const char * const  ATTR_DELTACLOUD_USERNAME	 = "DeltacloudUsername";
-const char * const  ATTR_DELTACLOUD_PASSWORD	 = "DeltacloudPassword";
+const char * const  ATTR_DELTACLOUD_PASSWORD_FILE = "DeltacloudPasswordFile";
 const char * const  ATTR_DELTACLOUD_IMAGE_ID	 = "DeltacloudImageId";
 const char * const  ATTR_DELTACLOUD_REALM_ID	 = "DeltacloudRealmId";
 const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE = "DeltacloudHardwareProfile";
+const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU = "DeltacloudHardwareProfileCpu";
+const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY = "DeltacloudHardwareProfileMemory";
+const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE = "DeltacloudHardwareProfileStorage";
 const char * const  ATTR_DELTACLOUD_KEYNAME		 = "DeltacloudKeyname";
 const char * const  ATTR_DELTACLOUD_USER_DATA	 = "DeltacloudUserData";
 const char * const ATTR_DESTINATION				 = "Destination";
@@ -216,6 +220,7 @@ const char * const ATTR_GID						 = "Gid";
 const char * const ATTR_GLOBAL_JOB_ID            = "GlobalJobId";
 const char * const ATTR_GZIP					 = "GZIP";
 const char * const ATTR_GLOBUS_DELEGATION_URI	 = "GlobusDelegationUri";
+const char * const ATTR_STACK_SIZE		 = "StackSize";
 // Deprecated (cruft) -- no longer used
 const char * const ATTR_GLOBUS_GRAM_VERSION		 = "GlobusGramVersion";
 const char * const ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME = "GlobusResourceUnavailableTime";
@@ -225,6 +230,7 @@ const char * const ATTR_GLOBUS_STATUS			 = "GlobusStatus";
 const char * const ATTR_GLOBUS_XML				 = "GlobusXML";
 const char * const ATTR_X509_USER_PROXY          = "x509userproxy";
 const char * const ATTR_X509_USER_PROXY_SUBJECT	 = "x509userproxysubject";
+const char * const ATTR_X509_USER_PROXY_EMAIL	 = "x509UserProxyEmail";
 const char * const ATTR_X509_USER_PROXY_EXPIRATION	 = "x509UserProxyExpiration";
 const char * const ATTR_X509_USER_PROXY_VONAME	 = "x509UserProxyVOName";
 const char * const ATTR_X509_USER_PROXY_FIRST_FQAN	 = "x509UserProxyFirstFQAN";
