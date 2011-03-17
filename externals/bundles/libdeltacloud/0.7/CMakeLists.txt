@@ -24,7 +24,7 @@ if (WITH_LIBDELTACLOUD)
 
 	if ( NOT PROPER )
 
-		set(LIBDELTACLOUD_VER libdeltacloud-0.6)
+		set(LIBDELTACLOUD_VER libdeltacloud-0.7)
 
 		ExternalProject_Add(libdeltacloud
 				DEPENDS curl libxml2

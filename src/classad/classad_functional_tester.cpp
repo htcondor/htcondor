@@ -21,6 +21,7 @@
 #include "classad/classad_distribution.h"
 #include "classad/lexerSource.h"
 #include "classad/xmlSink.h"
+#undef open // we don't want the open method of basic_ofstream to end up being called _open...
 #include <fstream>
 #include <iostream>
 #include <ctype.h>
