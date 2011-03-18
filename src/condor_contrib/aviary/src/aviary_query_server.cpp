@@ -16,6 +16,7 @@
  *
  ***************************************************************/
 
+// condor includes
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
@@ -24,21 +25,36 @@
 #include "subsystem_info.h"
 #include "condor_config.h"
 #include "stat_info.h"
+#include "JobLogMirror.h"
 
+// local includes
 #include "Axis2SoapProvider.h"
+#include "JobServerJobLogConsumer.h"
+#include "JobServerObject.h"
+#include "HistoryProcessingUtils.h"
+#include "Globals.h"
 
 // about self
 DECL_SUBSYSTEM("QUERY_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
+using namespace std;
+using namespace aviary::query;
+using namespace aviary::soap;
+using namespace aviary::history;
+
 ClassAd	*ad = NULL;
 Axis2SoapProvider* provider = NULL;
+JobLogMirror *mirror = NULL;
+JobServerJobLogConsumer *consumer = NULL;
+JobServerObject *job_server = NULL;
 
 extern MyString m_path;
 
 void init_classad();
 void Dump();
 int HandleTransportSocket(Service *, Stream *);
-void TestDCTimer(Service*);
+int HandleResetSignal(Service *, int);
+void ProcessHistoryTimer(Service*);
 
 //-------------------------------------------------------------
 
@@ -46,15 +62,35 @@ int main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
-    // TODO: may want to get these from condor config?
-    const char* log_file = "./axis2.log";
-    std::string repo_path = getenv("WSFCPP_HOME");
+	// setup the job log consumer
+	consumer = new JobServerJobLogConsumer();
+	mirror = new JobLogMirror(consumer);
+	mirror->init();
+
+    // config then env for our all-important axis2 repo dir
+    const char* log_file = "./aviary_query.axis2.log";
+	string repo_path;
+	char *tmp = NULL;
+	if (tmp = param("WSFCPP_HOME")) {
+		repo_path = tmp;
+		free(tmp);
+	}
+	else if (tmp = getenv("WSFCPP_HOME")) {
+		repo_path = tmp;
+	}
+	else {
+		EXCEPT("No WSFCPP_HOME in config or env");
+	}
+
+	int port = param_integer("HTTP_PORT",9091);
+	int level = param_integer("AXIS2_DEBUG_LEVEL",AXIS2_LOG_LEVEL_DEBUG);
 
     // init transport here
-    provider = new Axis2SoapProvider(AXIS2_LOG_LEVEL_DEBUG,log_file,repo_path.c_str());
-    std::string axis_error;
+    provider = new Axis2SoapProvider(level,log_file,repo_path.c_str());
 
-    if (!provider->init(DEFAULT_PORT,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
+    std::string axis_error;
+    if (!provider->init(port,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
+		dprintf(D_ALWAYS, "%s\n",axis_error.c_str());
         EXCEPT("Failed to initialize Axis2SoapProvider");
     }
 
@@ -64,7 +100,7 @@ int main_init(int /* argc */, char * /* argv */ [])
 	if (!sock) {
 		EXCEPT("Failed to allocate transport socket");
 	}
-	// TODO: get socket from transport here?
+
 	if (!sock->assign(provider->getHttpListenerSocket())) {
 		EXCEPT("Failed to bind transport socket");
 	}
@@ -77,16 +113,44 @@ int main_init(int /* argc */, char * /* argv */ [])
                                            "Handler for transport invocations"))) {
 		EXCEPT("Failed to register transport socket");
 	}
-	if (-1 == (index =
+
+	dprintf(D_ALWAYS,"Axis2 listener on http port: %d\n",port);
+
+    // before doing any job history processing, set the location of the files
+    // TODO: need to test mal-HISTORY values: HISTORY=/tmp/somewhere
+    const char* tmp2 = param ( "HISTORY" );
+    StatInfo si( tmp2 );
+    tmp2 = si.DirPath ();
+    if ( !tmp2 )
+    {
+        dprintf ( D_ALWAYS, "warning: No HISTORY defined - Aviary Query Server will not process history jobs\n" );
+    }
+    else
+    {
+        m_path = tmp2;
+        dprintf ( D_FULLDEBUG, "HISTORY path is %s\n",tmp2 );
+        // register a timer for processing of historical job files
+        if (-1 == (index =
             daemonCore->Register_Timer(
                 0,
-                30,
-                (TimerHandler)TestDCTimer,
-                "Test timer to ensure DC time slicing"
-                )))
-    {
-        EXCEPT("Failed to register test timer");
+                param_integer("HISTORY_INTERVAL",120),
+                (TimerHandler)ProcessHistoryTimer,
+                "Timer for processing job history files"
+                ))) {
+        EXCEPT("Failed to register history timer");
+        }
     }
+
+    // useful for testing job coalescing
+    // and potentially just useful
+	if (-1 == (index =
+		daemonCore->Register_Signal(SIGUSR1,
+				    "Forced Reset Signal",
+				    (SignalHandler)
+				    HandleResetSignal,
+				    "Handler for Reset signals"))) {
+		EXCEPT("Failed to register Reset signal");
+	}
 
 	return TRUE;
 }
@@ -189,10 +253,21 @@ HandleTransportSocket(Service *, Stream *)
 	return KEEP_STREAM;
 }
 
-void TestDCTimer(Service* )
+int
+HandleResetSignal(Service *, int)
 {
-    dprintf(D_ALWAYS, "DameonCore timer called\n");
+	consumer->Reset();
+
+    return TRUE;
 }
+
+void ProcessHistoryTimer(Service*) {
+	dprintf(D_FULLDEBUG, "ProcessHistoryTimer() called\n");
+    processHistoryDirectory();
+    processOrphanedIndices();
+    processCurrentHistory();
+}
+
 
 void
 Dump()

@@ -43,8 +43,8 @@ if (LINUX)
 
 		set ( AXIS2_LIBS -L$ENV{WSFCPP_HOME}/lib
 		     -laxutil -laxis2_axiom -laxis2_parser
-		     -laxis2_http_common -laxis2_http_receiver
-		     -laxis2_http_sender -lneethi -lguththila
+		     -lneethi -lguththila
+		     -laxis2_http_common -laxis2_http_receiver -laxis2_http_sender
 		     -laxis2_engine -lwso2_wsf )
 
 		include_directories(
@@ -78,7 +78,6 @@ if (LINUX)
     add_library (aviary_common SHARED ${COMMON_GEN_SRCS} )
 
     add_library (aviary_job SHARED ${JOB_GEN_SRCS} ${JOB_SRCS} Codec.cpp SchedulerObject.cpp AviaryUtils.cpp)
-    target_link_libraries (aviary_job aviary_common ${AXIS2_LIBS} )
     if (aviary_services_loc)
         install (TARGETS aviary_common DESTINATION ${aviary_services_loc}/job)
 		install (TARGETS aviary_job DESTINATION ${aviary_services_loc}/job)
@@ -86,14 +85,8 @@ if (LINUX)
     endif()
 
     file( GLOB SCHED_PLUGIN_SRCS AviaryUtils.cpp PROC_ID_comparator.cpp SchedulerObject.cpp Axis2SoapProvider.cpp AviaryScheddPlugin*.cpp )
-
-    add_library( AviaryScheddPlugin-plugin SHARED ${COLLECTOR_REF} ${UTILS_REF} ${SCHED_PLUGIN_SRCS})
-    target_link_libraries (AviaryScheddPlugin-plugin aviary_job ${AXIS2_LIBS})
-    set(AviaryScheddPlugin-plugin_loc ${C_LIBEXEC})
-    if (AviaryScheddPlugin-plugin_loc)
-        install (TARGETS AviaryScheddPlugin-plugin DESTINATION ${C_LIBEXEC} )
-    endif()
-    set_property( TARGET AviaryScheddPlugin-plugin PROPERTY PREFIX "" )
+	condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${AXIS2_LIBS}" ON)
+	set_property( TARGET AviaryScheddPlugin-plugin PROPERTY PREFIX "" )
 
 	add_library (aviary_query SHARED ${QUERY_GEN_SRCS} ${QUERY_SRCS} Codec.cpp JobServerObject.cpp AviaryUtils.cpp )
 	target_link_libraries (aviary_query aviary_common ${AXIS2_LIBS})

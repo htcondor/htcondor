@@ -33,11 +33,12 @@ extern char * Name;
 
 using namespace std;
 using namespace aviary::job;
+using namespace aviary::soap;
 
 // global SchedulerObject
 // TODO: convert to singleton
 Axis2SoapProvider* provider = NULL;
-aviary::job::SchedulerObject* aviarySchedulerObj = NULL;
+SchedulerObject* aviarySchedulerObj = NULL;
 
 void
 AviaryScheddPlugin::earlyInitialize()
@@ -49,22 +50,29 @@ AviaryScheddPlugin::earlyInitialize()
 	static bool skip = false;
 	if (skip) return; skip = true;
 
-     // TODO: may want to get these from condor config?
-    const char* log_file = "./axis2.log";
-	char *repo_path = param("WSFCPP_HOME");
-	if (!repo_path) {
-		repo_path = getenv("WSFCPP_HOME");
-		if (!repo_path) {
-			EXCEPT("No WSFCPP_HOME in config or env");
-		}
+	// config then env for our all-important axis2 repo dir
+    const char* log_file = "./aviary_job.axis2.log";
+	string repo_path;
+	char *tmp = NULL;
+	if (tmp = param("WSFCPP_HOME")) {
+		repo_path = tmp;
+		free(tmp);
+	}
+	else if (tmp = getenv("WSFCPP_HOME")) {
+		repo_path = tmp;
+	}
+	else {
+		EXCEPT("No WSFCPP_HOME in config or env");
 	}
 
-    // init transport here
-    provider = new Axis2SoapProvider(AXIS2_LOG_LEVEL_DEBUG,log_file,repo_path);
-	free(repo_path);
-    string axis_error;
+	int port = param_integer("HTTP_PORT",9090);
+	int level = param_integer("AXIS2_DEBUG_LEVEL",AXIS2_LOG_LEVEL_DEBUG);
 
-    if (!provider->init(DEFAULT_PORT,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
+    // init transport here
+    provider = new Axis2SoapProvider(level,log_file,repo_path.c_str());
+    string axis_error;
+    if (!provider->init(9090,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
+		dprintf(D_ALWAYS, "%s\n",axis_error.c_str());
         EXCEPT("Failed to initialize Axis2SoapProvider");
     }
 
@@ -90,6 +98,8 @@ AviaryScheddPlugin::earlyInitialize()
 										   this))) {
 		EXCEPT("Failed to register transport socket");
 	}
+
+	dprintf(D_ALWAYS,"Axis2 listener on http port: %d\n",port);
 
 	m_initialized = false;
 }
@@ -276,7 +286,7 @@ AviaryScheddPlugin::processJob(const char *key,
 
 		// Lookup the job ad assocaited with the key. If it is not
 		// present, skip the key
-	if (NULL == (jobAd = GetJobAd(id.cluster, id.proc, false))) {
+	if (NULL == (jobAd = ::GetJobAd(id.cluster, id.proc, false))) {
 		dprintf(D_ALWAYS,
 				"NOTICE: Failed to lookup ad for %s - maybe deleted\n",
 				key);

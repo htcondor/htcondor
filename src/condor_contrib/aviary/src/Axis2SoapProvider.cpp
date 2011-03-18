@@ -57,14 +57,19 @@ typedef struct axis2_http_svr_thd_args
     axutil_thread_t *thread;
 } axis2_http_svr_thd_args_t;
 
+using namespace aviary::soap;
+
 Axis2SoapProvider::Axis2SoapProvider(int _log_level, const char* _log_file, const char* _repo_path)
 {
     if (_log_file) {
-        m_log_file = strdup(_log_file);
+        m_log_file = _log_file;
     }
     if (_repo_path) {
-        m_repo_path = strdup(_repo_path);
+        m_repo_path = _repo_path;
     }
+    if (m_repo_path[m_repo_path.length()] != '/') {
+		m_repo_path.append("/");
+	}
     m_log_level = axutil_log_levels_t(_log_level);
     m_env = NULL;
     m_http_server = NULL;
@@ -84,14 +89,12 @@ Axis2SoapProvider::~Axis2SoapProvider()
 
     axiom_xml_reader_cleanup();
 
-    delete m_log_file;
-    delete m_repo_path;
 }
 
 bool
 Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
 {
-    if (!m_log_file || !m_repo_path) {
+    if (m_log_file.empty() || m_repo_path.empty()) {
         _error = "Log file or repo path is NULL";
         return false;
     }
@@ -99,7 +102,7 @@ Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
     if (!m_initialized) {
         axutil_allocator_t* allocator = axutil_allocator_init(NULL);
         axutil_error_t *error = axutil_error_create(allocator);
-        axutil_log_t *log = axutil_log_create(allocator, NULL, m_log_file);
+        axutil_log_t *log = axutil_log_create(allocator, NULL, m_log_file.c_str());
 
         // TODO: not sure we need a TP but don't wanted to get tripped up by a NP
         // deeper in the stack
@@ -111,24 +114,28 @@ Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
         m_env = axutil_env_create_with_error_log_thread_pool(allocator, error, log, thread_pool);
         m_env->log->level = m_log_level;
 
-        axis2_status_t status = axutil_file_handler_access(m_repo_path, AXIS2_R_OK);
+        axis2_status_t status = axutil_file_handler_access(m_repo_path.c_str(), AXIS2_R_OK);
 
         if (status != AXIS2_SUCCESS) {
-            AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI, "provided repo path %s does "
-                                                      "not exist or no permissions to read, set "
-                                                      "repo_path to DEFAULT_REPO_PATH", m_repo_path);
+			_error = m_repo_path;
+			_error = " does not exist or insufficient permissions";
+            AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI,_error.c_str());
             return m_initialized;
         }
 
-        m_http_server = axis2_http_server_create(m_env, m_repo_path, _port);
+        m_http_server = axis2_http_server_create(m_env, m_repo_path.c_str(), _port);
         if (!m_http_server) {
-            AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI, "Server creation failed: Error code:" " %d :: %s",
-                            m_env->error->error_number, AXIS2_ERROR_GET_MESSAGE(m_env->error));
+			_error =  AXIS2_ERROR_GET_MESSAGE(m_env->error);
+            AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI, "HTTP server create failed: %d: %s",
+                            m_env->error->error_number,_error.c_str());
             return m_initialized;
         }
 
         m_svr_thread = createHttpReceiver(m_env,m_http_server,_error); 
         if (!m_svr_thread) {
+			_error =  AXIS2_ERROR_GET_MESSAGE(m_env->error);
+			AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI, "HTTP receiver create failed: %d: %s",
+                            m_env->error->error_number,_error.c_str());
             return m_initialized;
         }
 

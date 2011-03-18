@@ -32,7 +32,6 @@
 #include "cmpstr.h"
 
 using namespace std;
-using namespace aviary::query;
 
 namespace aviary {
 namespace query {

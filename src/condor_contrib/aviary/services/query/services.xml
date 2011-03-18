@@ -1,7 +1,7 @@
 <!-- This file was auto-generated from WSDL -->
 <!-- by the Apache Axis2 version: 1.0  Built on : Mar 02, 2011 (11:53:41 EST) -->
 <service name="AviaryQueryService">
-<parameter name="ServiceClass" locked="xsd:false">AviaryQueryService</parameter>
+<parameter name="ServiceClass" locked="xsd:false">aviary_query</parameter>
 <description>AviaryQueryServiceService</description>
 <operation name="getJobStatus" mep="http://www.w3.org/2004/08/wsdl/in-out">
 <messageReceiver class="wsf_cpp_msg_recv"/>

@@ -48,6 +48,9 @@
 // with DaemonCore socket registration
 // ./configure --enable-multi-thread=no
 
+namespace aviary {
+namespace soap {
+
 class Axis2SoapProvider {
     public:
         Axis2SoapProvider(int _log_level=AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
@@ -57,8 +60,8 @@ class Axis2SoapProvider {
         bool processHttpRequest(std::string& _error);
 
     private:
-        const char* m_log_file;
-        const char* m_repo_path;
+        std::string m_log_file;
+        std::string m_repo_path;
         axutil_log_levels_t m_log_level;
         axutil_env_t* m_env;
         axis2_transport_receiver_t* m_http_server;
@@ -69,5 +72,7 @@ class Axis2SoapProvider {
         axis2_http_svr_thread_t* createHttpReceiver(axutil_env_t* _env, axis2_transport_receiver_t* _server, std::string& _error);
         void *AXIS2_THREAD_FUNC invokeHttpWorker( axutil_thread_t * thd, void *data );
 };
+
+}}
 
 #endif    // _AXIS2SOAPPROVIDER_H
