@@ -6271,6 +6271,17 @@ These macros affect the \Condor{collector}.
   is described in section~\ref{param:SubsysDebug} as
   \MacroNI{<SUBSYS>\_DEBUG}.
 
+\label{param:CondorViewClassadTypes}
+\item[\Macro{CONDOR\_VIEW\_CLASSAD\_TYPES}]
+  Provides the ClassAd types that will be forwarded to the
+  \MacroNI{CONDOR\_VIEW\_HOST}. The ClassAd types can be found with 
+  \Condor{status -any}. The default forwarding behavior of the 
+  \Condor{collector} is equivalent to 
+\begin{verbatim}
+  CONDOR_VIEW_CLASSAD_TYPES=Machine,Submitter
+\end{verbatim} 
+  There is no default value for this variable.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -10181,6 +10192,22 @@ on page~\pageref{sec:daemon-classad-hooks}.
   \Expr{<JobName>} is the logical name assigned for a job as defined by
   configuration variable \MacroNI{STARTD\_CRON\_JOBLIST}, 
   \MacroNI{SCHEDD\_CRON\_JOBLIST}, or \MacroNI{BENCHMARKS\_JOBLIST}.
+
+\label{param:StartdCronJobSlots}
+\label{param:BenchmarksJobSlots}
+\item[\Macro{STARTD\_CRON\_<JobName>\_SLOTS} 
+       and \Macro{BENCHMARKS\_<JobName>\_SLOTS}]
+  A comma separated list of slots.
+  The output of the job specified by \Expr{<JobName>}
+  is incorporated into ClassAds;
+  this list specifies which slots are to incorporate the output attributes
+  of the job.
+  If not specified, the default is to incorporate the output attributes into
+  the ClassAd of all slots.
+
+  \Expr{<JobName>} is the logical name assigned for a job as defined by
+  configuration variable \MacroNI{STARTD\_CRON\_JOBLIST} 
+  or \MacroNI{BENCHMARKS\_JOBLIST}.
 
 \label{param:StartdCronJobExecutable}
 \label{param:ScheddCronJobExecutable}

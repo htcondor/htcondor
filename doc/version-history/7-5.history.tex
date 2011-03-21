@@ -19,8 +19,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.5.6 not yet released.
-%\item Condor version 7.5.6 released on Month Date, 2011.
+\item Condor version 7.5.6 released on March 21, 2011.
 
 \item What used to be known as the \Condor{startd} and \Condor{schedd} cron
   mechanisms are now collectively called \Term{Daemon ClassAd Hooks}.
@@ -30,6 +29,16 @@ The details of each version are described below.
 % gittrac #1935
 \item In the release directory, the subdirectory \File{lib/glite/} has
   been moved to \File{libexec/glite/}.
+
+% gittrac #1897
+\item This development series of Condor is no longer officially released 
+  for the platforms PowerPC AIX, PowerPC-64 SLES 9, PowerPC MacOS 10.4, 
+  Solaris 5.9 on all architectures, 
+  Solaris 5.10 on all architectures, 
+  Itanium IA64 RHEL 3, PS3 (PowerPC) YDL 5.0, and x86 Debian 4.
+
+% gittrac #1924
+\item Support for GCB has been removed.
 
 \end{itemize}
 
@@ -126,6 +135,20 @@ expressions while the job is managed by these daemons.
     operating on existing jobs.
   \end{itemize}
 
+% gittrac #1664  needs documentation?
+\item The new script \Condor{gather\_info}, located in \File{bin/},
+  creates reports with 
+  information from a Condor pool about a specific job ID.
+  It also gathers some understanding of the pool under which it runs.
+
+%gittrac #1393
+\item Added support for hierarchical accounting groups and group quotas.
+
+%gittrac #1670
+\item \Condor{q} -better-analyze now identifies jobs that have not yet been 
+  considered by matchmaking, instead of characterizing them as not 
+  matching \emph{for unknown reasons}.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -187,11 +210,35 @@ expressions while the job is managed by these daemons.
 and \Macro{DAGMAN\_ALLOW\_LOG\_ERROR}
 are defined in section~\ref{sec:DAGMan-Config-File-Entries}.
 
+% gittrac #1719
+\item The new configuration variable
+\Macro{STARTD\_PUBLISH\_WINREG} can contain a list of Windows 
+registry key names, 
+whose values will be published in the \Condor{startd} daemon's ClassAd.
+
+\item The new configuration variable
+\Macro{CONDOR\_VIEW\_CLASSAD\_TYPES} is a string list that specifies
+the types of the ClassAds that will be forwarded to
+the location defined by \MacroNI{CONDOR\_VIEW\_HOST}. 
+See the definition at section~\ref{sec:Collector-Config-File-Entries}.
+
+% gittrac  #677
+\item Added a \Opt{-local-name} command line option to
+  \Condor{config\_val} to inspect the values of attributes that use
+  local names.
+
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% gittrac #1892
+\item Fixed a bug for parallel universe jobs,
+  introduced in Condor version 7.5.5,
+  where the \Condor{schedd} would crash under certain conditions when
+  a parallel job was removed or exited.
 
 % gittrac #1909
 \item Fixed a memory leak in the \Condor{quill} daemon.
@@ -267,6 +314,20 @@ ERROR ``Assertion ERROR on (m_ref_count == 0)''
 \item A bug introduced in 7.5.5 resulted in failure to advance the
   flocking level due to lack of activity from one of the negotiators
   in the flocking list.
+
+%gittrac #1875
+\item Fixed a Windows-specific problem where the main daemon loop can 
+  get into a state where it is busy waiting.
+
+%gittrac #1915
+\item Fixed \Condor{schedd} exception on shutdown caused by bad reference count.
+
+%gittrac #677
+\item Releases of Condor with versions from 7.5.0 to 7.5.5 incorrectly
+  implemented the macro language used for configuration with variables
+  having \Expr{LOCAL.} at the prefix. This was a regression
+  from the Condor 7.4 series. It is now fixed and the functionality
+  has been restored.
 
 \end{itemize}
 
