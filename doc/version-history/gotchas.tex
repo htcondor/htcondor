@@ -1,18 +1,52 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:gotchas}Upgrading to a New Version of Condor}
+\section{\label{sec:gotchas}Upgrading from the 7.4 series to the 7.6 series of Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{upgrading!items to be aware of}
-Upgrading from the 7.2 series of Condor to this 7.4 series will
-bring many new features.
-Here is a list of new features,
-to help avoid combing through the lengthy 7.3 developer
-series to become aware of the new features.
-
+Upgrading from the 7.4 series of Condor to this 7.6 series will
+bring many features introduced in the 7.5 series of Condor.
+While nothing will replace reading through the version histories,
+here is a list of some new features and release notes to
+be aware of.
 
 \begin{itemize}
 
-\item  None yet. 
+\item  Condor's RPMs now use FHS locations for files.
+See section~\ref{sec:install-rpms} for updated installation information. 
+
+\item  The locations of \emph{many} executables within the release directories
+have changed.
+
+\item  Condor's file transfer mechanism now provided limited support 
+for the transfer of directories.
+
+\item  The feature set once known as the Startd Cron or as Hawkeye
+is now called \Term{Daemon ClassAd Hooks}.  Besides the new name,
+the mechanisms have been updated and significantly revised.
+See section~\ref{sec:daemon-classad-hooks} for documentation.
+
+\item  Condor DAGMan provides new features.
+See section~\ref{sec:DAGMan} for documentation.
+
+\item  Grid jobs targeted at CREAM, EC2 servers and Eucalyptus systems
+ are now supported.
+
+\item  For those who compile Condor from the source code,
+rather than using packages of pre-built executables, 
+Condor is now built using \Prog{cmake} instead of \Prog{imake}.
+
+\item  Quill is now available in the source code, 
+and it is not incorporated as part of pre-built and released executables.
+
+\item  The \Condor{job\_router} is no longer limited to routing vanilla
+universe jobs.
+
+\item  Condor uses the New ClassAd language internally.
+
+\item  The \Condor{shared\_port} daemon allows Condor daemons 
+to share a single network port. 
+This makes opening access to Condor through a firewall easier and safer. 
+It also increases the scalability of a submit node by decreasing port usage.
 
 \end{itemize}
 

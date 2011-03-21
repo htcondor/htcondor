@@ -25,7 +25,7 @@
 \oOpt{-avgqueuetime}
 \oOptArg{-jobads}{file} 
 \oOptArg{-machineads}{file} 
-\oOptArg{-direct}{rdbms \Bar quilld \Bar schedd} 
+\oOptArg{-direct}{rdbms \Bar schedd} 
 \oOpt{-stream-results}
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
   \OptArg{-constraint}{expression} \Dots \} }
@@ -280,16 +280,16 @@ per machine basis.
     \Condor{collector} daemon. 
     This is most useful for debugging purposes. 
     The ClassAds appear as if \Condor{status} \Opt{-l} is used.}
-  \OptItem{\OptArg{-direct}{rdbms \Bar quilld \Bar schedd}}{When the
+  \OptItem{\OptArg{-direct}{rdbms \Bar schedd}}{When the
     use of Quill is enabled, this option allows a direct query to either
-    the rdbms, the \Condor{quill} daemon, or the \Condor{schedd}
+    the rdbms or the \Condor{schedd}
     daemon for the requested queue information.
     It also prevents the queue location discovery algorithm
     from failing over to alternate sources of information for the queue
     in case of error. It is useful for debugging an installation
-    of Quill. One of the strings \Arg{rdbms}, \Arg{quilld}, or
+    of Quill. One of the strings \Arg{rdbms} or
     \Arg{schedd} is required with this option.}
-  \OptItem{\OptArg{-stream-results}}{Display results as jobs are fetched
+  \OptItem{\Opt{-stream-results}}{Display results as jobs are fetched
     from the job queue rather than storing results in memory until all
     jobs have been fetched.  This can reduce memory consumption when fetching
     large numbers of jobs, but if \Condor{q} is paused while displaying

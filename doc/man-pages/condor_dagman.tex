@@ -81,6 +81,7 @@ Level values and what they produce is described as
        This command-line option to \Condor{submit\_dag}
        is passed to \Condor{dagman} or
        defaults to the value 3, as set by \Condor{submit\_dag}.}
+%TEMPTEMP -- this is a really weird case -- condor_dagman actually defaults to a debug setting of 2, but condor_submit_dag defaults to setting it to 3 -- maybe I should just have dagman itself also default to 3
     \OptItem{\OptArg{-rescue}{filename}}{Sets the file name of
        the rescue DAG to write in the case of a failure.
        As passed by \Condor{submit\_dag}, the name of the file

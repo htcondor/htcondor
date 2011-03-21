@@ -112,11 +112,13 @@ functionality and outside of the Condor system is known as standalone
 mode checkpointing.
 
 To prepare a program for standalone checkpointing, simply use the
-\Condor{compile} utility as for a standard Condor job, but do not
-use \Condor{submit} -- run the program normally from the command
-line.  The checkpointing library will print a message to let you know
+\Condor{compile} utility as for a standard Condor job, 
+but do not use \Condor{submit}.
+Run the program from the command line.
+The checkpointing library will print a message to let you know
 that checkpointing is enabled and to inform you of the default
-name for the checkpoint image. The message is of the form:
+name for the checkpoint image.
+The message is of the form:
 
 \footnotesize
 \begin{verbatim}
@@ -125,6 +127,12 @@ Condor: Notice: Remote system calls disabled.
 \end{verbatim}
 \normalsize
 
+Platforms that use address space randomization will need
+a modified invocation of the program,
+as described in section~\ref{sec:platform-linux-addrspace-random} on
+page~\pageref{sec:platform-linux-addrspace-random}.
+The invocation disables the address space randomization.
+ 
 To force the program to write a checkpoint image and stop, send it
 the SIGTSTP signal or press control-Z.  To force the program to 
 write a checkpoint image and continue executing, send it the
@@ -139,6 +147,9 @@ the checkpoint is called \File{P1.ckpt}, use
 \begin{verbatim}
 P1 -_condor_restart P1.ckpt
 \end{verbatim}
+Again, platforms that implement address space randomization will
+need a modified invocation,
+as described in section~\ref{sec:platform-linux-addrspace-random}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:ckpt-safety}Checkpoint Safety}
@@ -242,7 +253,7 @@ The program will continue to execute.  This is identical to sending
 the program a SIGUSR2 signal.
 
 \item \Code{void ckpt\_and\_exit()}\\
-This function causes a checkpoint image to be writtent to disk.
+This function causes a checkpoint image to be written to disk.
 The program will then exit.  This is identical to sending the program
 a SIGTSTP signal.
 
