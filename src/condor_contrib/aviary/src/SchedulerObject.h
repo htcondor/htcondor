@@ -79,11 +79,13 @@ public:
 	const char* getPool() {return m_pool.c_str(); }
 	const char* getName() {return m_name.c_str(); }
 
-protected:
-    SchedulerObject();
-    ~SchedulerObject();
+	~SchedulerObject();
 
 private:
+    SchedulerObject();
+	SchedulerObject(SchedulerObject const&){};
+	SchedulerObject& operator=(SchedulerObject const&){};
+
     string m_pool;
     string m_name;
     SchedulerStats m_stats;

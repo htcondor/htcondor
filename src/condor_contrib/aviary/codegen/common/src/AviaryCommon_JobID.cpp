@@ -27,6 +27,10 @@
         {
 
         
+                    property_Job;
+                
+            isValidJob  = false;
+        
                     property_Pool;
                 
             isValidPool  = false;
@@ -35,19 +39,19 @@
                 
             isValidScheduler  = false;
         
-                    property_Job;
-                
-            isValidJob  = false;
-        
                 property_Submission  = NULL;
               
             isValidSubmission  = false;
         
         }
 
-       AviaryCommon::JobID::JobID(std::string arg_Pool,std::string arg_Scheduler,std::string arg_Job,AviaryCommon::SubmissionID* arg_Submission)
+       AviaryCommon::JobID::JobID(std::string arg_Job,std::string arg_Pool,std::string arg_Scheduler,AviaryCommon::SubmissionID* arg_Submission)
         {
              
+                 property_Job;
+             
+            isValidJob  = true;
+            
                  property_Pool;
              
             isValidPool  = true;
@@ -56,19 +60,15 @@
              
             isValidScheduler  = true;
             
-                 property_Job;
-             
-            isValidJob  = true;
-            
                property_Submission  = NULL;
              
             isValidSubmission  = true;
             
+                    property_Job = arg_Job;
+            
                     property_Pool = arg_Pool;
             
                     property_Scheduler = arg_Scheduler;
-            
-                    property_Job = arg_Job;
             
                     property_Submission = arg_Submission;
             
@@ -114,7 +114,7 @@
 
                      
                      /*
-                      * building pool element
+                      * building job element
                       */
                      
                      
@@ -133,6 +133,141 @@
                                         mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
                                     }
                                    
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "job", NULL, NULL);
+                                 
+
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("job", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("job", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            status = setJob(text_value);
+                                      }
+                                      
+                                      else
+                                      {
+                                            /*
+                                             * axis2_qname_t *qname = NULL;
+                                             * axiom_attribute_t *the_attri = NULL;
+                                             * 
+                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
+                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
+                                             */
+                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
+
+                                            axiom_attribute_t *the_attri = NULL;
+                                            axis2_char_t *attrib_text = NULL;
+                                            axutil_hash_t *attribute_hash = NULL;
+
+                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
+
+                                            attrib_text = NULL;
+                                            if(attribute_hash)
+                                            {
+                                                 axutil_hash_index_t *hi;
+                                                 void *val;
+                                                 const void *key;
+                                        
+                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                                                 {
+                                                     axutil_hash_this(hi, &key, NULL, &val);
+                                                     
+                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
+                                                     {
+                                                         the_attri = (axiom_attribute_t*)val;
+                                                         break;
+                                                     }
+                                                 }
+                                            }
+
+                                            if(the_attri)
+                                            {
+                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
+                                            }
+                                            else
+                                            {
+                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
+                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
+                                            }
+
+                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
+                                            {
+                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element job");
+                                                status = AXIS2_FAILURE;
+                                            }
+                                            else
+                                            {
+                                                /* after all, we found this is a empty string */
+                                                status = setJob("");
+                                            }
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for job ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element job missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+
+                     
+                     /*
+                      * building pool element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
                                  element_qname = axutil_qname_create(Environment::getEnv(), "pool", NULL, NULL);
                                  
 
@@ -353,141 +488,6 @@
 
                      
                      /*
-                      * building job element
-                      */
-                     
-                     
-                     
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
-                                  
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
-                                   {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "job", NULL, NULL);
-                                 
-
-                           if ( 
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("job", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("job", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 
-                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
-                                      if(text_value != NULL)
-                                      {
-                                            status = setJob(text_value);
-                                      }
-                                      
-                                      else
-                                      {
-                                            /*
-                                             * axis2_qname_t *qname = NULL;
-                                             * axiom_attribute_t *the_attri = NULL;
-                                             * 
-                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
-                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
-                                             */
-                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
-
-                                            axiom_attribute_t *the_attri = NULL;
-                                            axis2_char_t *attrib_text = NULL;
-                                            axutil_hash_t *attribute_hash = NULL;
-
-                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
-
-                                            attrib_text = NULL;
-                                            if(attribute_hash)
-                                            {
-                                                 axutil_hash_index_t *hi;
-                                                 void *val;
-                                                 const void *key;
-                                        
-                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                                                 {
-                                                     axutil_hash_this(hi, &key, NULL, &val);
-                                                     
-                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
-                                                     {
-                                                         the_attri = (axiom_attribute_t*)val;
-                                                         break;
-                                                     }
-                                                 }
-                                            }
-
-                                            if(the_attri)
-                                            {
-                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
-                                            }
-                                            else
-                                            {
-                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
-                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
-                                            }
-
-                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
-                                            {
-                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element job");
-                                                status = AXIS2_FAILURE;
-                                            }
-                                            else
-                                            {
-                                                /* after all, we found this is a empty string */
-                                                status = setJob("");
-                                            }
-                                      }
-                                      
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for job ");
-                                     if(element_qname)
-                                     {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
-                                     }
-                                     return AXIS2_FAILURE;
-                                 }
-                              }
-                           
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element job missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
-                  if(element_qname)
-                  {
-                     axutil_qname_free(element_qname, Environment::getEnv());
-                     element_qname = NULL;
-                  }
-                 
-
-                     
-                     /*
                       * building submission element
                       */
                      
@@ -644,6 +644,73 @@
                        p_prefix = NULL;
                       
 
+                   if (!isValidJob)
+                   {
+                      
+                            
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property job");
+                            return NULL;
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("job"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("job")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing job element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%sjob>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%sjob>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                           text_value_1 = (axis2_char_t*)property_Job.c_str();
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                           
+                            
+                           text_value_1_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_1, true);
+                           if (text_value_1_temp)
+                           {
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_1_temp, axutil_strlen(text_value_1_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_1_temp);
+                           }
+                           else
+                           {
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_1, axutil_strlen(text_value_1));
+                           }
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
                    if (!isValidPool)
                    {
                       
@@ -683,20 +750,20 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_1 = (axis2_char_t*)property_Pool.c_str();
+                           text_value_2 = (axis2_char_t*)property_Pool.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
                             
-                           text_value_1_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_1, true);
-                           if (text_value_1_temp)
+                           text_value_2_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_2, true);
+                           if (text_value_2_temp)
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_1_temp, axutil_strlen(text_value_1_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_1_temp);
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_2_temp, axutil_strlen(text_value_2_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_2_temp);
                            }
                            else
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_1, axutil_strlen(text_value_1));
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_2, axutil_strlen(text_value_2));
                            }
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
@@ -749,74 +816,7 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_2 = (axis2_char_t*)property_Scheduler.c_str();
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                           
-                            
-                           text_value_2_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_2, true);
-                           if (text_value_2_temp)
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_2_temp, axutil_strlen(text_value_2_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_2_temp);
-                           }
-                           else
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_2, axutil_strlen(text_value_2));
-                           }
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                           
-                     
-                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
-                 } 
-
-                 
-                       p_prefix = NULL;
-                      
-
-                   if (!isValidJob)
-                   {
-                      
-                            
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property job");
-                            return NULL;
-                          
-                   }
-                   else
-                   {
-                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("job"))); 
-                                 
-                                 /* axutil_strlen("<:>") + 1 = 4 */
-                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("job")));
-                                  /* axutil_strlen("</:>") + 1 = 5 */
-                                  
-                     
-
-                   
-                   
-                     
-                     /*
-                      * parsing job element
-                      */
-
-                    
-                    
-                            sprintf(start_input_str, "<%s%sjob>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%sjob>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
-                    
-                           text_value_3 = (axis2_char_t*)property_Job.c_str();
+                           text_value_3 = (axis2_char_t*)property_Scheduler.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
@@ -908,176 +908,10 @@
         
 
             /**
-             * Getter for pool by  Property Number 1
+             * Getter for job by  Property Number 1
              */
             std::string WSF_CALL
             AviaryCommon::JobID::getProperty1()
-            {
-                return getPool();
-            }
-
-            /**
-             * getter for pool.
-             */
-            std::string WSF_CALL
-            AviaryCommon::JobID::getPool()
-             {
-                return property_Pool;
-             }
-
-            /**
-             * setter for pool
-             */
-            bool WSF_CALL
-            AviaryCommon::JobID::setPool(
-                    const std::string  arg_Pool)
-             {
-                
-
-                if(isValidPool &&
-                        arg_Pool == property_Pool)
-                {
-                    
-                    return true;
-                }
-
-                
-
-                
-                resetPool();
-
-                
-                        property_Pool = std::string(arg_Pool.c_str());
-                        isValidPool = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for pool
-            */
-           bool WSF_CALL
-           AviaryCommon::JobID::resetPool()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-               isValidPool = false; 
-               return true;
-           }
-
-           /**
-            * Check whether pool is nill
-            */
-           bool WSF_CALL
-           AviaryCommon::JobID::isPoolNil()
-           {
-               return !isValidPool;
-           }
-
-           /**
-            * Set pool to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryCommon::JobID::setPoolNil()
-           {
-               return resetPool();
-           }
-
-           
-
-            /**
-             * Getter for scheduler by  Property Number 2
-             */
-            std::string WSF_CALL
-            AviaryCommon::JobID::getProperty2()
-            {
-                return getScheduler();
-            }
-
-            /**
-             * getter for scheduler.
-             */
-            std::string WSF_CALL
-            AviaryCommon::JobID::getScheduler()
-             {
-                return property_Scheduler;
-             }
-
-            /**
-             * setter for scheduler
-             */
-            bool WSF_CALL
-            AviaryCommon::JobID::setScheduler(
-                    const std::string  arg_Scheduler)
-             {
-                
-
-                if(isValidScheduler &&
-                        arg_Scheduler == property_Scheduler)
-                {
-                    
-                    return true;
-                }
-
-                
-
-                
-                resetScheduler();
-
-                
-                        property_Scheduler = std::string(arg_Scheduler.c_str());
-                        isValidScheduler = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for scheduler
-            */
-           bool WSF_CALL
-           AviaryCommon::JobID::resetScheduler()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-               isValidScheduler = false; 
-               return true;
-           }
-
-           /**
-            * Check whether scheduler is nill
-            */
-           bool WSF_CALL
-           AviaryCommon::JobID::isSchedulerNil()
-           {
-               return !isValidScheduler;
-           }
-
-           /**
-            * Set scheduler to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryCommon::JobID::setSchedulerNil()
-           {
-               return resetScheduler();
-           }
-
-           
-
-            /**
-             * Getter for job by  Property Number 3
-             */
-            std::string WSF_CALL
-            AviaryCommon::JobID::getProperty3()
             {
                 return getJob();
             }
@@ -1159,6 +993,172 @@
            AviaryCommon::JobID::setJobNil()
            {
                return resetJob();
+           }
+
+           
+
+            /**
+             * Getter for pool by  Property Number 2
+             */
+            std::string WSF_CALL
+            AviaryCommon::JobID::getProperty2()
+            {
+                return getPool();
+            }
+
+            /**
+             * getter for pool.
+             */
+            std::string WSF_CALL
+            AviaryCommon::JobID::getPool()
+             {
+                return property_Pool;
+             }
+
+            /**
+             * setter for pool
+             */
+            bool WSF_CALL
+            AviaryCommon::JobID::setPool(
+                    const std::string  arg_Pool)
+             {
+                
+
+                if(isValidPool &&
+                        arg_Pool == property_Pool)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetPool();
+
+                
+                        property_Pool = std::string(arg_Pool.c_str());
+                        isValidPool = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for pool
+            */
+           bool WSF_CALL
+           AviaryCommon::JobID::resetPool()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidPool = false; 
+               return true;
+           }
+
+           /**
+            * Check whether pool is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::JobID::isPoolNil()
+           {
+               return !isValidPool;
+           }
+
+           /**
+            * Set pool to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::JobID::setPoolNil()
+           {
+               return resetPool();
+           }
+
+           
+
+            /**
+             * Getter for scheduler by  Property Number 3
+             */
+            std::string WSF_CALL
+            AviaryCommon::JobID::getProperty3()
+            {
+                return getScheduler();
+            }
+
+            /**
+             * getter for scheduler.
+             */
+            std::string WSF_CALL
+            AviaryCommon::JobID::getScheduler()
+             {
+                return property_Scheduler;
+             }
+
+            /**
+             * setter for scheduler
+             */
+            bool WSF_CALL
+            AviaryCommon::JobID::setScheduler(
+                    const std::string  arg_Scheduler)
+             {
+                
+
+                if(isValidScheduler &&
+                        arg_Scheduler == property_Scheduler)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetScheduler();
+
+                
+                        property_Scheduler = std::string(arg_Scheduler.c_str());
+                        isValidScheduler = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for scheduler
+            */
+           bool WSF_CALL
+           AviaryCommon::JobID::resetScheduler()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidScheduler = false; 
+               return true;
+           }
+
+           /**
+            * Check whether scheduler is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::JobID::isSchedulerNil()
+           {
+               return !isValidScheduler;
+           }
+
+           /**
+            * Set scheduler to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::JobID::setSchedulerNil()
+           {
+               return resetScheduler();
            }
 
            

@@ -36,7 +36,11 @@ namespace AviaryCommon
         class JobID {
 
         private:
-             std::string property_Pool;
+             std::string property_Job;
+
+                
+                bool isValidJob;
+            std::string property_Pool;
 
                 
                 bool isValidPool;
@@ -44,10 +48,6 @@ namespace AviaryCommon
 
                 
                 bool isValidScheduler;
-            std::string property_Job;
-
-                
-                bool isValidJob;
             AviaryCommon::SubmissionID* property_Submission;
 
                 
@@ -58,15 +58,15 @@ namespace AviaryCommon
           
 
         bool WSF_CALL
+        setJobNil();
+            
+
+        bool WSF_CALL
         setPoolNil();
             
 
         bool WSF_CALL
         setSchedulerNil();
-            
-
-        bool WSF_CALL
-        setJobNil();
             
 
         bool WSF_CALL
@@ -96,16 +96,40 @@ namespace AviaryCommon
         /**
          * Constructor for creating JobID
          * @param 
+         * @param Job std::string
          * @param Pool std::string
          * @param Scheduler std::string
-         * @param Job std::string
          * @param Submission AviaryCommon::SubmissionID*
          * @return newly created JobID object
          */
-        JobID(std::string arg_Pool,std::string arg_Scheduler,std::string arg_Job,AviaryCommon::SubmissionID* arg_Submission);
+        JobID(std::string arg_Job,std::string arg_Pool,std::string arg_Scheduler,AviaryCommon::SubmissionID* arg_Submission);
         
         
         /********************************** Class get set methods **************************************/
+        
+        
+
+        /**
+         * Getter for job. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getJob();
+
+        /**
+         * Setter for job.
+         * @param arg_Job std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setJob(const std::string  arg_Job);
+
+        /**
+         * Re setter for job
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetJob();
         
         
 
@@ -158,30 +182,6 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for job. 
-         * @return std::string*
-         */
-        WSF_EXTERN std::string WSF_CALL
-        getJob();
-
-        /**
-         * Setter for job.
-         * @param arg_Job std::string*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setJob(const std::string  arg_Job);
-
-        /**
-         * Re setter for job
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetJob();
-        
-        
-
-        /**
          * Getter for submission. 
          * @return AviaryCommon::SubmissionID*
          */
@@ -215,6 +215,16 @@ namespace AviaryCommon
         
 
         /**
+         * Check whether job is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isJobNil();
+
+
+        
+
+        /**
          * Check whether pool is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -230,16 +240,6 @@ namespace AviaryCommon
          */
         bool WSF_CALL
         isSchedulerNil();
-
-
-        
-
-        /**
-         * Check whether job is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isJobNil();
 
 
         
@@ -311,7 +311,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for pool by property number (1)
+         * Getter for job by property number (1)
          * @return std::string
          */
 
@@ -322,7 +322,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for scheduler by property number (2)
+         * Getter for pool by property number (2)
          * @return std::string
          */
 
@@ -333,7 +333,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for job by property number (3)
+         * Getter for scheduler by property number (3)
          * @return std::string
          */
 

@@ -54,22 +54,30 @@ struct JobServerStats {
     uint32_t    NumUsers;
 };
 
-
 class JobServerObject
 {
 public:
-	JobServerObject(const char* _name);
-	~JobServerObject();
+
 	void update(const ClassAd &ad);
 
+	bool getSummary(string id, AttributeMapType& _map, string &text);
 	bool getJobAd(string id, AttributeMapType& _map, string &text);
 	bool fetchJobData(string id, string &file, int32_t start, int32_t end,
 				string &data, string &text);
 
+    ~JobServerObject();
+	static JobServerObject* getInstance();
+
 private:
+    JobServerObject();
+	JobServerObject(JobServerObject const&){};
+	JobServerObject& operator=(JobServerObject const&){};
+
 	string m_name;
 	JobServerStats m_stats;
 	Codec* m_codec;
+
+	static JobServerObject* m_instance;
 
 };
 

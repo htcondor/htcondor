@@ -17,6 +17,8 @@
 // the implementation methods for AviaryQueryService methods
 
 //local includes
+#include "Globals.h"
+#include "JobServerObject.h"
 #include "AviaryQueryServiceSkeleton.h"
 #include <AviaryQuery_GetJobData.h>
 #include <AviaryQuery_GetJobDataResponse.h>
@@ -28,55 +30,89 @@
 #include <AviaryQuery_GetJobDetailsResponse.h>
 
 using namespace AviaryQuery;
+using namespace AviaryCommon;
+using namespace aviary::query;
 
-/**
- * "getJobData|http://grid.redhat.com/aviary-query/" operation.
- *
- * @param _getJobData of the AviaryQuery::GetJobData
- *
- * @return AviaryQuery::GetJobDataResponse*
- */
-AviaryQuery::GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetJobData* _getJobData)
+typedef std::vector<JobID*> JobIdVectorType;
+typedef std::vector<AviaryCommon::JobStatus*> JobStatusVectorType;
+
+GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(wso2wsf::MessageContext *outCtx ,GetSubmissionSummary* _getSubmissionSummary)
 {
-    /* TODO fill this with the necessary business logic */
-    return (AviaryQuery::GetJobDataResponse*)NULL;
+	GetSubmissionSummaryResponse* getSummaryResponse = new GetSubmissionSummaryResponse;
+
+	SubmissionCollectionType::const_iterator element = g_submissions.begin();
+	SubmissionObject *submission;
+
+	if (_getSubmissionSummary->isIdsNil()) {
+		// no ids to scan, so they get everything
+		for (SubmissionCollectionType::iterator i = g_submissions.begin();
+			 g_submissions.end() != i; i++) {
+			submission = (*i).second;
+			JobID* jobId = new JobID();
+			//SubmissionID* subId = new SubmissionID;
+		}
+	}
+	// check to see if we need to scope our search
+//	else if (_getSubmissionSummary->getAllowPartialMatching()) {
+		// we are partially matching so try to return submissions
+		// with id or owner substrings based on the input
+		// TODO: multimap?
+//	}
+	else {
+		// we search exactly for the provided search id
+
+		if (element != g_submissions.end()) {
+		}
+	}
+
+    return getSummaryResponse;
 }
 
-/**
- * "getJobStatus|http://grid.redhat.com/aviary-query/" operation.
- *
- * @param _getJobStatus of the AviaryQuery::GetJobStatus
- *
- * @return AviaryQuery::GetJobStatusResponse*
- */
-AviaryQuery::GetJobStatusResponse* AviaryQueryServiceSkeleton::getJobStatus(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetJobStatus* _getJobStatus)
+GetJobStatusResponse* AviaryQueryServiceSkeleton::getJobStatus(wso2wsf::MessageContext *outCtx ,GetJobStatus* _getJobStatus)
 {
-    /* TODO fill this with the necessary business logic */
-    return (AviaryQuery::GetJobStatusResponse*)NULL;
+	GetJobStatusResponse* jobStatusResponse = new GetJobStatusResponse;
+	JobServerObject* jso = JobServerObject::getInstance();
+	JobStatusVectorType* job_results = new JobStatusVectorType;
+
+	JobIdVectorType* id_list = _getJobStatus->getIds();
+	for (JobIdVectorType::iterator i = id_list->begin(); id_list->end() != i; i++) {
+		JobCollectionType::const_iterator element = g_jobs.find ( (*i)->getJob().c_str() );
+		if (element != g_jobs.end()) {
+			Job* job = (Job*) element->second;
+			JobStatusType* jst = new JobStatusType;
+			jst->setJobStatusTypeEnum(ADBJobStatusTypeEnum(job->getStatus()));
+			JobStatus* js = new JobStatus(
+								new JobID(string(""),string(""),(*i)->getJob(),
+									new SubmissionID("","")),
+							  jst,
+							  new Status(new StatusCodeType("SUCCESS"),""));
+			job_results->push_back(js);
+		}
+		else {
+			// couldn't find it...report to client
+			JobStatus* js = new JobStatus(new JobID(string(""),string(""),(*i)->getJob(),
+									new SubmissionID("","")), NULL,
+								  new Status(new StatusCodeType("NO_MATCH"),"job not found"));
+			job_results->push_back(js);
+		}
+	}
+
+	jobStatusResponse->setJobs(job_results);
+	jobStatusResponse->setStatus(new Status(new StatusCodeType("SUCCESS"),""));
+
+    return jobStatusResponse;
 }
 
-/**
- * "getSubmissionSummary|http://grid.redhat.com/aviary-query/" operation.
- *
- * @param _getSubmissionSummary of the AviaryQuery::GetSubmissionSummary
- *
- * @return AviaryQuery::GetSubmissionSummaryResponse*
- */
-AviaryQuery::GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetSubmissionSummary* _getSubmissionSummary)
+GetJobDetailsResponse* AviaryQueryServiceSkeleton::getJobDetails(wso2wsf::MessageContext *outCtx ,GetJobDetails* _getJobDetails)
 {
     /* TODO fill this with the necessary business logic */
-    return (AviaryQuery::GetSubmissionSummaryResponse*)NULL;
+    return (GetJobDetailsResponse*)NULL;
 }
 
-/**
- * "getJobDetails|http://grid.redhat.com/aviary-query/" operation.
- *
- * @param _getJobDetails of the AviaryQuery::GetJobDetails
- *
- * @return AviaryQuery::GetJobDetailsResponse*
- */
-AviaryQuery::GetJobDetailsResponse* AviaryQueryServiceSkeleton::getJobDetails(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetJobDetails* _getJobDetails)
+GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageContext *outCtx ,GetJobData* _getJobData)
 {
-    /* TODO fill this with the necessary business logic */
-    return (AviaryQuery::GetJobDetailsResponse*)NULL;
+    GetJobDataResponse* getDataResponse = new  GetJobDataResponse;
+	JobServerObject* jso = JobServerObject::getInstance();
+
+    return getDataResponse;
 }

@@ -26,11 +26,11 @@
         
             qname = NULL;
         
-            isValidAllowPartialMatching  = false;
-        
                 property_Ids  = NULL;
               
             isValidIds  = false;
+        
+            isValidAllowPartialMatching  = false;
         
                   qname =  axutil_qname_create (Environment::getEnv(),
                         "GetJobDetails",
@@ -39,25 +39,25 @@
                 
         }
 
-       AviaryQuery::GetJobDetails::GetJobDetails(bool arg_AllowPartialMatching,std::vector<AviaryCommon::JobID*>* arg_Ids)
+       AviaryQuery::GetJobDetails::GetJobDetails(std::vector<AviaryCommon::JobID*>* arg_Ids,bool arg_AllowPartialMatching)
         {
              
                    qname = NULL;
              
-            isValidAllowPartialMatching  = true;
-            
                property_Ids  = NULL;
              
             isValidIds  = true;
+            
+            isValidAllowPartialMatching  = true;
             
                  qname =  axutil_qname_create (Environment::getEnv(),
                        "GetJobDetails",
                        "http://query.aviary.grid.redhat.com",
                        NULL);
                
-                    property_AllowPartialMatching = arg_AllowPartialMatching;
-            
                     property_Ids = arg_Ids;
+            
+                    property_AllowPartialMatching = arg_AllowPartialMatching;
             
         }
         AviaryQuery::GetJobDetails::~GetJobDetails()
@@ -129,61 +129,6 @@
                  parent_element = (axiom_element_t *)axiom_node_get_data_element(parent, Environment::getEnv());
                  attribute_hash = axiom_element_get_all_attributes(parent_element, Environment::getEnv());
               
-                
-                
-                  parent_attri = NULL;
-                  attrib_text = NULL;
-                  if(attribute_hash)
-                  {
-                       axutil_hash_index_t *hi;
-                       void *val;
-                       const void *key;
-
-                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                       {
-                           axutil_hash_this(hi, &key, NULL, &val);
-                           
-                           
-                               if(!strcmp((axis2_char_t*)key, "allowPartialMatching"))
-                             
-                               {
-                                   parent_attri = (axiom_attribute_t*)val;
-                                   break;
-                               }
-                       }
-                  }
-
-                  if(parent_attri)
-                  {
-                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
-                  }
-                  else
-                  {
-                    /* this is hoping that attribute is stored in "allowPartialMatching", this happnes when name is in default namespace */
-                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "allowPartialMatching");
-                  }
-
-                  if(attrib_text != NULL)
-                  {
-                      
-                      
-                           if (!axutil_strcmp(attrib_text, "TRUE") || !axutil_strcmp(attrib_text, "true"))
-                           {
-                               setAllowPartialMatching(true);
-                           }
-                           else
-                           {
-                               setAllowPartialMatching(false);
-                           }
-                        
-                    }
-                  
-                  if(element_qname)
-                  {
-                     axutil_qname_free(element_qname, Environment::getEnv());
-                     element_qname = NULL;
-                  }
-                 
                        { 
                     /*
                      * building Ids array
@@ -201,7 +146,7 @@
                                     element_qname = axutil_qname_create(Environment::getEnv(), "ids", NULL, NULL);
                                   
                                
-                               for (i = 0, sequence_broken = 0, current_node = (is_early_node_valid?axiom_node_get_next_sibling(current_node, Environment::getEnv()):current_node); !sequence_broken && current_node != NULL;)
+                               for (i = 0, sequence_broken = 0, current_node = first_node; !sequence_broken && current_node != NULL;)
                                              
                                {
                                   if(axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
@@ -287,6 +232,61 @@
                               
                             } 
                         
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+                
+                
+                  parent_attri = NULL;
+                  attrib_text = NULL;
+                  if(attribute_hash)
+                  {
+                       axutil_hash_index_t *hi;
+                       void *val;
+                       const void *key;
+
+                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                       {
+                           axutil_hash_this(hi, &key, NULL, &val);
+                           
+                           
+                               if(!strcmp((axis2_char_t*)key, "allowPartialMatching"))
+                             
+                               {
+                                   parent_attri = (axiom_attribute_t*)val;
+                                   break;
+                               }
+                       }
+                  }
+
+                  if(parent_attri)
+                  {
+                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
+                  }
+                  else
+                  {
+                    /* this is hoping that attribute is stored in "allowPartialMatching", this happnes when name is in default namespace */
+                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "allowPartialMatching");
+                  }
+
+                  if(attrib_text != NULL)
+                  {
+                      
+                      
+                           if (!axutil_strcmp(attrib_text, "TRUE") || !axutil_strcmp(attrib_text, "true"))
+                           {
+                               setAllowPartialMatching(true);
+                           }
+                           else
+                           {
+                               setAllowPartialMatching(false);
+                           }
+                        
+                    }
+                  
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -406,25 +406,6 @@
                    
             }
             
-                    
-                    if(parent_tag_closed)
-                    {
-                       if(isValidAllowPartialMatching)
-                       {
-                       
-                           p_prefix = NULL;
-                           ns1 = NULL;
-                         
-                           
-                           text_value =  (axis2_char_t*)((property_AllowPartialMatching)?axutil_strdup(Environment::getEnv(), "true"):axutil_strdup(Environment::getEnv(), "false"));
-                           text_attri = axiom_attribute_create (Environment::getEnv(), "allowPartialMatching", text_value, ns1);
-                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
-                           AXIS2_FREE(Environment::getEnv()->allocator, text_value);
-                        
-                      }
-                       
-                  }
-                
                        p_prefix = NULL;
                       
 
@@ -508,6 +489,25 @@
                  } 
 
                  
+                    
+                    if(parent_tag_closed)
+                    {
+                       if(isValidAllowPartialMatching)
+                       {
+                       
+                           p_prefix = NULL;
+                           ns1 = NULL;
+                         
+                           
+                           text_value =  (axis2_char_t*)((property_AllowPartialMatching)?axutil_strdup(Environment::getEnv(), "true"):axutil_strdup(Environment::getEnv(), "false"));
+                           text_attri = axiom_attribute_create (Environment::getEnv(), "allowPartialMatching", text_value, ns1);
+                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
+                           AXIS2_FREE(Environment::getEnv()->allocator, text_value);
+                        
+                      }
+                       
+                  }
+                
                    if(namespaces)
                    {
                        axutil_hash_index_t *hi;
@@ -528,93 +528,10 @@
         
 
             /**
-             * Getter for allowPartialMatching by  Property Number 1
-             */
-            bool WSF_CALL
-            AviaryQuery::GetJobDetails::getProperty1()
-            {
-                return getAllowPartialMatching();
-            }
-
-            /**
-             * getter for allowPartialMatching.
-             */
-            bool WSF_CALL
-            AviaryQuery::GetJobDetails::getAllowPartialMatching()
-             {
-                return property_AllowPartialMatching;
-             }
-
-            /**
-             * setter for allowPartialMatching
-             */
-            bool WSF_CALL
-            AviaryQuery::GetJobDetails::setAllowPartialMatching(
-                    bool  arg_AllowPartialMatching)
-             {
-                
-
-                if(isValidAllowPartialMatching &&
-                        arg_AllowPartialMatching == property_AllowPartialMatching)
-                {
-                    
-                    return true;
-                }
-
-                
-
-                
-                resetAllowPartialMatching();
-
-                
-                        property_AllowPartialMatching = arg_AllowPartialMatching;
-                        isValidAllowPartialMatching = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for allowPartialMatching
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobDetails::resetAllowPartialMatching()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-               isValidAllowPartialMatching = false; 
-               return true;
-           }
-
-           /**
-            * Check whether allowPartialMatching is nill
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobDetails::isAllowPartialMatchingNil()
-           {
-               return !isValidAllowPartialMatching;
-           }
-
-           /**
-            * Set allowPartialMatching to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobDetails::setAllowPartialMatchingNil()
-           {
-               return resetAllowPartialMatching();
-           }
-
-           
-
-            /**
-             * Getter for ids by  Property Number 2
+             * Getter for ids by  Property Number 1
              */
             std::vector<AviaryCommon::JobID*>* WSF_CALL
-            AviaryQuery::GetJobDetails::getProperty2()
+            AviaryQuery::GetJobDetails::getProperty1()
             {
                 return getIds();
             }
@@ -984,6 +901,89 @@
                 
                 return AXIS2_SUCCESS;
 
+           }
+
+           
+
+            /**
+             * Getter for allowPartialMatching by  Property Number 2
+             */
+            bool WSF_CALL
+            AviaryQuery::GetJobDetails::getProperty2()
+            {
+                return getAllowPartialMatching();
+            }
+
+            /**
+             * getter for allowPartialMatching.
+             */
+            bool WSF_CALL
+            AviaryQuery::GetJobDetails::getAllowPartialMatching()
+             {
+                return property_AllowPartialMatching;
+             }
+
+            /**
+             * setter for allowPartialMatching
+             */
+            bool WSF_CALL
+            AviaryQuery::GetJobDetails::setAllowPartialMatching(
+                    bool  arg_AllowPartialMatching)
+             {
+                
+
+                if(isValidAllowPartialMatching &&
+                        arg_AllowPartialMatching == property_AllowPartialMatching)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetAllowPartialMatching();
+
+                
+                        property_AllowPartialMatching = arg_AllowPartialMatching;
+                        isValidAllowPartialMatching = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for allowPartialMatching
+            */
+           bool WSF_CALL
+           AviaryQuery::GetJobDetails::resetAllowPartialMatching()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidAllowPartialMatching = false; 
+               return true;
+           }
+
+           /**
+            * Check whether allowPartialMatching is nill
+            */
+           bool WSF_CALL
+           AviaryQuery::GetJobDetails::isAllowPartialMatchingNil()
+           {
+               return !isValidAllowPartialMatching;
+           }
+
+           /**
+            * Set allowPartialMatching to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryQuery::GetJobDetails::setAllowPartialMatchingNil()
+           {
+               return resetAllowPartialMatching();
            }
 
            

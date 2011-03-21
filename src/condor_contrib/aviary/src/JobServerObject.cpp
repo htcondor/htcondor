@@ -40,15 +40,25 @@ using namespace aviary::query;
 using namespace aviary::util;
 using namespace aviary::codec;
 
-JobServerObject::JobServerObject ( const char* _name )
+JobServerObject* JobServerObject::m_instance = NULL;
+
+JobServerObject::JobServerObject ()
 {
-	m_name = _name;
+	m_name = getScheddName();
 	m_codec = new BaseCodec;
 }
 
 JobServerObject::~JobServerObject()
 {
 	delete m_codec;
+}
+
+JobServerObject* JobServerObject::getInstance()
+{
+    if (!m_instance) {
+        m_instance = new JobServerObject();
+    }
+    return m_instance;
 }
 
 void

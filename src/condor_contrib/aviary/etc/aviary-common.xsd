@@ -107,19 +107,19 @@
 	</xs:complexType>
 	<xs:complexType name="JobID">
 		<xs:sequence>
+			<xs:element name="job" type="xs:string"/>
 			<xs:element name="pool" type="xs:string" minOccurs="0"/>
 			<xs:element name="scheduler" type="xs:string" minOccurs="0"/>
-			<xs:element name="job" type="xs:string"/>
 			<xs:element name="submission" type="tns:SubmissionID" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:simpleType name="JobStatusType">
 		<xs:restriction base="xs:string">
+			<xs:enumeration value="IDLE"/>
+			<xs:enumeration value="RUNNING"/>
+			<xs:enumeration value="REMOVED"/>
 			<xs:enumeration value="COMPLETED"/>
 			<xs:enumeration value="HELD"/>
-			<xs:enumeration value="IDLE"/>
-			<xs:enumeration value="REMOVED"/>
-			<xs:enumeration value="RUNNING"/>
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="JobStatus">

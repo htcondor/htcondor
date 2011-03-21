@@ -57,7 +57,6 @@ SchedulerObject* SchedulerObject::getInstance()
     return m_instance;
 }
 
-
 void
 SchedulerObject::update(const ClassAd &ad)
 {

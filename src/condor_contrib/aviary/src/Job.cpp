@@ -477,7 +477,7 @@ Job::~Job() {
 
 	dprintf (D_FULLDEBUG,"Job::~Job of '%s'\n", m_key);
 
-    m_submission->decrement(this);
+    this->decrementSubmission();
 
 	delete m_live_job;
 	delete m_history_job;

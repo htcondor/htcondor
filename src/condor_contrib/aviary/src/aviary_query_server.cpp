@@ -114,6 +114,8 @@ int main_init(int /* argc */, char * /* argv */ [])
 		EXCEPT("Failed to register transport socket");
 	}
 
+	job_server = JobServerObject::getInstance();
+
 	dprintf(D_ALWAYS,"Axis2 listener on http port: %d\n",port);
 
     // before doing any job history processing, set the location of the files
@@ -198,6 +200,8 @@ void Stop()
 	if (param_boolean("DUMP_STATE", false)) {
 		Dump();
 	}
+
+	delete job_server;
 
 	DC_Exit(0);
 }

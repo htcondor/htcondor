@@ -33,11 +33,11 @@ namespace AviaryCommon
         
         /* Enumeration for this type */
         typedef enum {
-            JobStatusType_COMPLETED,
-            JobStatusType_HELD,
             JobStatusType_IDLE,
+            JobStatusType_RUNNING,
             JobStatusType_REMOVED,
-            JobStatusType_RUNNING
+            JobStatusType_COMPLETED,
+            JobStatusType_HELD
         } ADBJobStatusTypeEnum;
         
         

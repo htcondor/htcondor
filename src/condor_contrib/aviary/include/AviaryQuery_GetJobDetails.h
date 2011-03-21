@@ -40,14 +40,14 @@ namespace AviaryQuery
         private:
              
                 axutil_qname_t* qname;
-            bool property_AllowPartialMatching;
-
-                
-                bool isValidAllowPartialMatching;
             std::vector<AviaryCommon::JobID*>* property_Ids;
 
                 
                 bool isValidIds;
+            bool property_AllowPartialMatching;
+
+                
+                bool isValidAllowPartialMatching;
             
 
         /*** Private methods ***/
@@ -80,39 +80,15 @@ namespace AviaryQuery
         /**
          * Constructor for creating GetJobDetails
          * @param 
-         * @param AllowPartialMatching bool
          * @param Ids std::vector<AviaryCommon::JobID*>*
+         * @param AllowPartialMatching bool
          * @return newly created GetJobDetails object
          */
-        GetJobDetails(bool arg_AllowPartialMatching,std::vector<AviaryCommon::JobID*>* arg_Ids);
+        GetJobDetails(std::vector<AviaryCommon::JobID*>* arg_Ids,bool arg_AllowPartialMatching);
         
         
         /********************************** Class get set methods **************************************/
         /******** Deprecated for array types, Use 'Getters and Setters for Arrays' instead ***********/
-        
-
-        /**
-         * Getter for allowPartialMatching. 
-         * @return bool
-         */
-        WSF_EXTERN bool WSF_CALL
-        getAllowPartialMatching();
-
-        /**
-         * Setter for allowPartialMatching.
-         * @param arg_AllowPartialMatching bool
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setAllowPartialMatching(bool  arg_AllowPartialMatching);
-
-        /**
-         * Re setter for allowPartialMatching
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetAllowPartialMatching();
-        
         
 
         /**
@@ -137,6 +113,30 @@ namespace AviaryQuery
          */
         WSF_EXTERN bool WSF_CALL
         resetIds();
+        
+        
+
+        /**
+         * Getter for allowPartialMatching. 
+         * @return bool
+         */
+        WSF_EXTERN bool WSF_CALL
+        getAllowPartialMatching();
+
+        /**
+         * Setter for allowPartialMatching.
+         * @param arg_AllowPartialMatching bool
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setAllowPartialMatching(bool  arg_AllowPartialMatching);
+
+        /**
+         * Re setter for allowPartialMatching
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetAllowPartialMatching();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -220,6 +220,16 @@ namespace AviaryQuery
         
 
         /**
+         * Check whether ids is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isIdsNil();
+
+
+        
+
+        /**
          * Check whether allowPartialMatching is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -234,16 +244,6 @@ namespace AviaryQuery
          */
         bool WSF_CALL
         setAllowPartialMatchingNil();
-        
-
-        /**
-         * Check whether ids is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isIdsNil();
-
-
         
 
         /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
@@ -329,22 +329,22 @@ namespace AviaryQuery
         
 
         /**
-         * Getter for allowPartialMatching by property number (1)
-         * @return bool
+         * Getter for ids by property number (1)
+         * @return Array of AviaryCommon::JobIDs.
          */
 
-        bool WSF_CALL
+        std::vector<AviaryCommon::JobID*>* WSF_CALL
         getProperty1();
 
     
         
 
         /**
-         * Getter for ids by property number (2)
-         * @return Array of AviaryCommon::JobIDs.
+         * Getter for allowPartialMatching by property number (2)
+         * @return bool
          */
 
-        std::vector<AviaryCommon::JobID*>* WSF_CALL
+        bool WSF_CALL
         getProperty2();
 
     

@@ -263,20 +263,20 @@
              {
 
                 
+                 if (axutil_strcmp(property_JobStatusType.c_str(), "IDLE") == 0)
+                    return JobStatusType_IDLE;
+             
+                 if (axutil_strcmp(property_JobStatusType.c_str(), "RUNNING") == 0)
+                    return JobStatusType_RUNNING;
+             
+                 if (axutil_strcmp(property_JobStatusType.c_str(), "REMOVED") == 0)
+                    return JobStatusType_REMOVED;
+             
                  if (axutil_strcmp(property_JobStatusType.c_str(), "COMPLETED") == 0)
                     return JobStatusType_COMPLETED;
              
                  if (axutil_strcmp(property_JobStatusType.c_str(), "HELD") == 0)
                     return JobStatusType_HELD;
-             
-                 if (axutil_strcmp(property_JobStatusType.c_str(), "IDLE") == 0)
-                    return JobStatusType_IDLE;
-             
-                 if (axutil_strcmp(property_JobStatusType.c_str(), "REMOVED") == 0)
-                    return JobStatusType_REMOVED;
-             
-                 if (axutil_strcmp(property_JobStatusType.c_str(), "RUNNING") == 0)
-                    return JobStatusType_RUNNING;
              
              
                  /* Error: none of the strings matched; invalid enum value */
@@ -299,24 +299,24 @@
                    switch (arg_JobStatusType)
                    {
                      
-                       case JobStatusType_COMPLETED :
-                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "COMPLETED");
-                          break;
-                     
-                       case JobStatusType_HELD :
-                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "HELD");
-                          break;
-                     
                        case JobStatusType_IDLE :
                             property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "IDLE");
+                          break;
+                     
+                       case JobStatusType_RUNNING :
+                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "RUNNING");
                           break;
                      
                        case JobStatusType_REMOVED :
                             property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "REMOVED");
                           break;
                      
-                       case JobStatusType_RUNNING :
-                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "RUNNING");
+                       case JobStatusType_COMPLETED :
+                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "COMPLETED");
+                          break;
+                     
+                       case JobStatusType_HELD :
+                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "HELD");
                           break;
                      
                      
