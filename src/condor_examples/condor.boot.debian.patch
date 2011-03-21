@@ -1,0 +1,42 @@
+*** condor.boot.rpm	2011-01-29 08:19:54.534993620 -0600
+--- condor.boot.debian	2011-01-29 11:11:07.691545619 -0600
+***************
+*** 35,44 ****
+  ## in the "$SYSCONFIG/condor" file.
+  
+  # Directory with system configuration files
+! #SYSCONFIG="/etc/sysconfig"
+  
+  # Condor's sysconfig file
+! #CONDOR_SYSCONFIG="/etc/sysconfig/condor"
+  
+  # Condor users to look for while shutting down.
+  #CONDOR_USERS="condor,root"
+--- 35,44 ----
+  ## in the "$SYSCONFIG/condor" file.
+  
+  # Directory with system configuration files
+! #SYSCONFIG="/etc/default"
+  
+  # Condor's sysconfig file
+! #CONDOR_SYSCONFIG="/etc/default/condor"
+  
+  # Condor users to look for while shutting down.
+  #CONDOR_USERS="condor,root"
+***************
+*** 117,123 ****
+  
+  # Read in the sysconfig file
+  if [ "$SYSCONFIG" = "" ] ; then
+!   SYSCONFIG=/etc/sysconfig
+  fi
+  if [ "$CONDOR_SYSCONFIG" = "" ] ; then
+    CONDOR_SYSCONFIG=$SYSCONFIG/condor
+--- 117,123 ----
+  
+  # Read in the sysconfig file
+  if [ "$SYSCONFIG" = "" ] ; then
+!   SYSCONFIG=/etc/default
+  fi
+  if [ "$CONDOR_SYSCONFIG" = "" ] ; then
+    CONDOR_SYSCONFIG=$SYSCONFIG/condor

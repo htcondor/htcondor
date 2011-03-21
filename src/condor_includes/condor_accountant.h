@@ -29,11 +29,22 @@
 
 #include "condor_state.h"
 
+#include <vector>
+#include <map>
+#include <set>
+#include <string>
+
+using std::vector;
+using std::map;
+using std::set;
+using std::string;
+
 // this is the required minimum separation between two priorities for them
 // to be considered distinct values
 static const float PriorityDelta = 0.5;
 
 class ClassAdLog;
+struct GroupEntry;
 
 class Accountant {
 
@@ -46,7 +57,7 @@ public:
   Accountant();
   ~Accountant();
 
-  void Initialize();  // Configuration
+  void Initialize(GroupEntry* group);  // Configuration
 
   int GetResourcesUsed(const MyString& CustomerName); // get # of used resources (unweighted by SlotWeight)
   float GetWeightedResourcesUsed(const MyString& CustomerName);
@@ -69,7 +80,7 @@ public:
   float GetSlotWeight(ClassAd *candidate);
   void UpdatePriorities(); // update all the priorities
 
-  void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
+  void CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList);  // Remove matches that are not claimed
 
   double GetLimit(const MyString& limit);
   double GetLimitMax(const MyString& limit);
@@ -83,6 +94,19 @@ public:
 
   ClassAd* GetClassAd(const MyString& Key);
 
+  // This maps submitter names to their assigned accounting group.
+  // When called with a defined group name, it maps that group name to itself.
+  GroupEntry* GetAssignedGroup(const MyString& CustomerName);
+  GroupEntry* GetAssignedGroup(const MyString& CustomerName, bool& IsGroup);
+
+  bool UsingWeightedSlots();
+
+  struct ci_less {
+      bool operator()(const string& a, const string& b) const {
+          return strcasecmp(a.c_str(), b.c_str()) < 0;
+      }
+  };
+
 private:
 
   //--------------------------------------------------------
@@ -91,7 +115,7 @@ private:
   
   void RemoveMatch(const MyString& ResourceName, time_t T);
 
-  void LoadLimits(ClassAdList &resourceList);
+  void LoadLimits(ClassAdListDoesNotDeleteAds &resourceList);
   void ClearLimits();
   void DumpLimits();
 
@@ -118,7 +142,6 @@ private:
   int	MaxAcctLogSize;		// Max size of log file
   bool  DiscountSuspendedResources;
   bool  UseSlotWeights; 
-  StringList *GroupNamesList;
 
   //--------------------------------------------------------
   // Data members
@@ -128,6 +151,9 @@ private:
   int LastUpdateTime;
 
   HashTable<MyString, double> concurrencyLimits;
+
+  GroupEntry* hgq_root_group;
+  map<string, GroupEntry*, ci_less> hgq_submitter_group_map;
 
   //--------------------------------------------------------
   // Static values
@@ -145,7 +171,7 @@ private:
   bool GetResourceState(ClassAd* Resource, State& state);
   int IsClaimed(ClassAd* ResourceAd, MyString& CustomerName);
   int CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& CustomerName);
-  static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdList& ResourceList);
+  static ClassAd* FindResourceAd(const MyString& ResourceName, ClassAdListDoesNotDeleteAds& ResourceList);
   static MyString GetDomain(const MyString& CustomerName);
 
   bool DeleteClassAd(const MyString& Key);
@@ -160,5 +186,8 @@ private:
 
   bool LoadState(const MyString& OldLogFileName);
 };
+
+
+extern void parse_group_name(const string& gname, vector<string>& gpath);
 
 #endif

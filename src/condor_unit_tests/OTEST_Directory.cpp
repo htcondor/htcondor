@@ -29,6 +29,9 @@
 #include "emit.h"
 #include "directory.h"
 #include "condor_getcwd.h"
+#ifdef WIN32
+__inline __int64 abs(__int64 x) { return _abs64(x); }
+#endif
 
 static void setup(void);
 static void cleanup(void);
@@ -122,7 +125,9 @@ static bool test_remove_full_path_dir_current(void);
 static bool test_remove_entire_directory_filepath(void);
 static bool test_remove_entire_directory_dir_empty(void);
 static bool test_remove_entire_directory_dir_full(void);
-static bool test_recursive_chown(void);
+#ifndef WIN32
+static bool test_recursive_chown(void);	//This one might work if we rewrote it.
+#endif
 static bool test_standalone_is_directory_null(void);
 static bool test_standalone_is_directory_not_exist(void);
 static bool test_standalone_is_directory_file(void);
@@ -156,13 +161,11 @@ static MyString
 	invalid_dir,
 	empty_dir,
 	full_dir,
-	file_dir;
+	file_dir,
+	tmp;
 
 static const char
 	*readme = "README";
-
-static char
-	tmp[5];
 
 static time_t current_time;
 
@@ -265,7 +268,9 @@ bool OTEST_Directory(void) {
 	driver.register_function(test_remove_entire_directory_filepath);
 	driver.register_function(test_remove_entire_directory_dir_empty);
 	driver.register_function(test_remove_entire_directory_dir_full);
+#ifndef WIN32
 	driver.register_function(test_recursive_chown);
+#endif
 	driver.register_function(test_standalone_is_directory_null);
 	driver.register_function(test_standalone_is_directory_not_exist);
 	driver.register_function(test_standalone_is_directory_file);
@@ -342,11 +347,11 @@ static void setup() {
 	cut_assert_true( condor_getcwd(original_dir) );
 	
 	// Directory strings
-	cut_assert_gz( sprintf(tmp, "tmp%c", DIR_DELIM_CHAR) );
+	cut_assert_true( tmp.sprintf("testtmp%d", getpid()) );
 	
 	// Make a temporary directory to test
-	cut_assert_z( mkdir(tmp, 0700) );
-	cut_assert_z( chdir(tmp) );
+	cut_assert_z( mkdir(tmp.Value(), 0700) );
+	cut_assert_z( chdir(tmp.Value()) );
 	
 	// Store some directories
 	cut_assert_true( condor_getcwd(tmp_dir) );
@@ -400,12 +405,13 @@ static void setup() {
 	cut_assert_z( chdir("..") );
 	
 	// Create some symbolic links
+#ifndef WIN32
 	MyString link;
 	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "full_file") );
 	cut_assert_z( symlink(link.Value(), "symlink_file") );
 	cut_assert_true( link.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "link_dir") );
 	cut_assert_z( symlink(link.Value(), "symlink_dir") );
-	
+#endif
 	// Get back to original directory
 	cut_assert_z( chdir(original_dir.Value()) );
 
@@ -419,7 +425,7 @@ static void setup() {
 
 static void cleanup() {
 	// Remove the created files/directories/symlinks
-	cut_assert_z( chdir(tmp) );
+	cut_assert_z( chdir(tmp.Value()) );
 	cut_assert_z( rmdir("empty_dir") );
 	cut_assert_z( remove("symlink_file") );
 	cut_assert_z( remove("symlink_dir") );
@@ -468,7 +474,7 @@ static void cleanup() {
 	cut_assert_z( rmdir("full_dir") );
 	cut_assert_z( chdir("..") );
 	
-	cut_assert_z( rmdir(tmp) );
+	cut_assert_z( rmdir(tmp.Value()) );
 }
 
 static bool test_path_constructor_null() {
@@ -628,14 +634,14 @@ static bool test_get_directory_path_path_dir() {
 	emit_test("Test that GetDirectoryPath() returns the expected path for a "
 		"Directory constructed from a valid directory as a directory path.");
 	emit_input_header();
-	emit_param("Directory Path", "%s", tmp);
+	emit_param("Directory Path", "%s", tmp.Value());
 	emit_output_expected_header();
-	emit_param("Directory Path", "%s", tmp);
-	Directory dir(tmp);
+	emit_param("Directory Path", "%s", tmp.Value());
+	Directory dir(tmp.Value());
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, tmp) != MATCH) {
+	if(strcmp(dir_path, tmp.Value()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -703,15 +709,15 @@ static bool test_get_directory_path_stat_dir() {
 		"Directory constructed from a StatInfo pointer constructed from a "
 		"valid directory as a directory path.");
 	emit_input_header();
-	emit_param("StatInfo", "%s", tmp);
+	emit_param("StatInfo", "%s", tmp.Value());
 	emit_output_actual_header();
-	emit_param("Directory Path", "%s", tmp);
-	StatInfo stat(tmp);
+	emit_param("Directory Path", "%s", tmp.Value());
+	StatInfo stat(tmp.Value());
 	Directory dir(&stat);
 	const char* dir_path = dir.GetDirectoryPath();
 	emit_output_actual_header();
 	emit_param("Directory Path", "%s", dir_path);
-	if(strcmp(dir_path, tmp) != MATCH) {
+	if(strcmp(dir_path, tmp.Value()) != MATCH) {
 		FAIL;
 	}
 	PASS;
@@ -1377,7 +1383,8 @@ static bool test_get_file_size_same() {
 	emit_param("Current File", "full_file");
 	struct stat size;
 	MyString file;
-	file.sprintf("tmp%cfull_dir%cfull_file", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	file.sprintf("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+		DIR_DELIM_CHAR);
 	stat(file.Value(), &size);
 	emit_output_expected_header();
 	emit_retval("%d", size.st_size);
@@ -1448,9 +1455,9 @@ static bool test_get_mode_valid_dir() {
 	emit_test("Test that GetMode() doesn't return 0 for a valid directory.");
 	emit_input_header();
 	emit_param("Directory", "%s", original_dir.Value());
-	emit_param("Current File", "tmp%c", DIR_DELIM_CHAR);
+	emit_param("Current File", "%s%c", tmp.Value(), DIR_DELIM_CHAR);
 	Directory dir(original_dir.Value());
-	dir.Find_Named_Entry("tmp");
+	dir.Find_Named_Entry(tmp.Value());
 	mode_t ret_val = dir.GetMode();
 	emit_output_actual_header();
 	emit_retval("%o", ret_val);
@@ -1467,7 +1474,8 @@ static bool test_get_mode_same() {
 	emit_param("Current File", "full_file");
 	struct stat size;
 	MyString file;
-	file.sprintf("tmp%cfull_dir%cfull_file", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	file.sprintf("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+		DIR_DELIM_CHAR);
 	stat(file.Value(), &size);
 	emit_output_expected_header();
 	emit_retval("%o", size.st_mode);
@@ -1537,7 +1545,8 @@ static bool test_get_directory_size_same() {
 	emit_param("Directory", "%s", full_dir.Value());
 	struct stat size;
 	MyString file;
-	file.sprintf("tmp%cfull_dir%cfull_file", DIR_DELIM_CHAR, DIR_DELIM_CHAR);
+	file.sprintf("%s%cfull_dir%cfull_file", tmp.Value(), DIR_DELIM_CHAR,
+		DIR_DELIM_CHAR);
 	stat(file.Value(), &size);
 	emit_output_expected_header();
 	emit_retval("%d", size.st_size);
@@ -1614,13 +1623,14 @@ static bool test_get_full_path_dir() {
 		"valid directory.");
 	emit_input_header();
 	emit_param("Directory", "%s", original_dir.Value());
-	emit_param("Current File", "tmp%c", DIR_DELIM_CHAR);
+	emit_param("Current File", "%s", tmp.Value());
 	MyString full_path;
-	full_path.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR, "tmp");
+	full_path.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
+		tmp.Value());
 	emit_output_expected_header();
 	emit_retval("%s", full_path.Value());
 	Directory dir(original_dir.Value());
-	dir.Find_Named_Entry("tmp");
+	dir.Find_Named_Entry(tmp.Value());
 	const char* ret_val = dir.GetFullPath();
 	emit_output_actual_header();
 	emit_retval("%s", ret_val);
@@ -2223,7 +2233,8 @@ static bool test_remove_entire_directory_dir_full() {
 	}
 	PASS;
 }
-
+//This test might work if we wrote another version of it for Windows.
+#ifndef WIN32
 static bool test_recursive_chown() {
 	emit_test("Test that Recursive_Chown() returns true and changes the owner "
 		"and group ids.");
@@ -2257,7 +2268,7 @@ static bool test_recursive_chown() {
 	}
 	PASS;
 }
-
+#endif
 static bool test_standalone_is_directory_null() {
 	emit_test("Test that the standalone IsDirectory() returns false for a NULL "
 		"path.");

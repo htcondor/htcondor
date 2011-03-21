@@ -19,6 +19,9 @@
 
 
 #include "condor_common.h"
+
+#if DOES_SAVE_SIGSTATE
+
 #include "condor_debug.h"		/* for EXCEPT */
 #include "condor_sys.h"
 #include "errno.h"
@@ -27,16 +30,10 @@
 extern	char	*strerror();
 extern int SetSyscalls(int);
 extern int MappingFileDescriptors(void);
+extern int SIGACTION(int signum, const struct sigaction *act, struct sigaction *oldact);
+extern int SIGSUSPEND(const sigset_t *mask);
 
-#if defined(HPUX)
-extern void _sigreturn();
-#endif
-
-#if defined(HPUX)
-#define MASK_TYPE long
-#else
 #define MASK_TYPE int
-#endif
 
 #if defined(NSIG)
 #define NUM_SIGS NSIG
@@ -59,13 +56,7 @@ void display_sigstate( int line, const char * file );
 void _condor_save_sigstates(void);
 void _condor_restore_sigstates(void);
 
-#if defined(LINUX)
 typedef int				SS_TYPE;
-#elif defined(Solaris)
-typedef struct sigaltstack SS_TYPE;
-#else
-typedef struct sigstack SS_TYPE;
-#endif
 
 struct signal_states_struct {
 	int nsigs;		/* the number of signals supported on this platform +1 */
@@ -80,8 +71,7 @@ static struct signal_states_struct signal_states;
 
 /* Here we save the signal state of the user process.  This is called
  * when we are checkpointing.  */
-void
-_condor_save_sigstates()
+void _condor_save_sigstates()
 {
 	sigset_t mask;
 	int scm;
@@ -129,13 +119,6 @@ _condor_save_sigstates()
 		sigaction(sig,NULL,&(signal_states.actions[sig]));
 	}
 
-	/* Save pointer to signal stack (not POSIX, but widely supported) */	
-#if defined(Solaris)
-	sigaltstack( (SS_TYPE *) 0, &(signal_states.sig_stack) ); 
-#elif !defined(LINUX)
-	sigstack( (struct sigstack *) 0, &(signal_states.sig_stack) ); 
-#endif
-
 	(void) SetSyscalls( scm );
 }
 
@@ -143,25 +126,13 @@ _condor_save_sigstates()
  * upon a restart of a checkpointed process.  The data space must be
  * restored _before_ calling this function (all signal state info is saved
  * in the static structure signal_states) */
-void
-_condor_restore_sigstates()
+void _condor_restore_sigstates()
 {
 	int scm;
 	int sig;
 	pid_t mypid;
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
-
-#if defined(HPUX)
-     /* Tell the kernel to fill in our process's "trampoline" return
-	  * code function with _sigreturn, so that signal handlers can
-	  * return properly.  HPUX normally does this in _start().  But
-	  * since we are restarting and thus not calling _start(), we must
-	  * do it here.  (The constant is a magic cookie to prove we are
-	  * post pa-risc 89 revision era) -Todd Tannenbaum, 12/94  
-	  */
-     _sigsetreturn(_sigreturn,0x06211988,sizeof(struct sigcontext));
-#endif
 
 	/* Restore signal actions */
 	for ( sig=1; sig < signal_states.nsigs; sig++ ) {
@@ -177,14 +148,6 @@ _condor_restore_sigstates()
 		}
 		sigaction(sig, &(signal_states.actions[sig]), NULL);
 	}
-
-
-	/* Restore signal stack pointer */
-#if defined(Solaris)
-	sigaltstack( &(signal_states.sig_stack), (SS_TYPE *) 0 );  
-#elif !defined(LINUX)
-	sigstack( &(signal_states.sig_stack), (struct sigstack *) 0 );  
-#endif
 
 	/* Restore pending signals, again ignoring special Condor sigs */
 	/* This code assumes that all signals are blocked. */
@@ -214,23 +177,12 @@ _condor_restore_sigstates()
 
 
 #if defined (SYS_sigvec)
-#if defined(HPUX)
-sigvector( sig, vec, ovec )
-#else
-sigvec( sig, vec, ovec )
-#endif
-int sig;
-const struct sigvec *vec;
-struct sigvec *ovec;
+sigvec( int sig, const struct sigvec * vec, struct sigvec * ovec )
 {
 	int rval;
 	struct	sigvec	nvec;
 
 	if( ! MappingFileDescriptors() ) {
-#if defined(HPUX)
-			rval = syscall( SYS_sigvector, sig, vec, ovec );
-			rval = syscall( SYS_sigvec, sig, vec, ovec );
-#endif
 	} else {
 		switch (sig) {
 				/* disallow the special Condor signals */
@@ -245,20 +197,11 @@ struct sigvec *ovec;
 			if (vec) {
 				memcpy( (char *) &nvec,(char *) vec, sizeof nvec );
 				/* while in the handler, block checkpointing */
-#if defined(LINUX)
 				nvec.sv_mask |= __sigmask( SIGTSTP );
 				nvec.sv_mask |= __sigmask( SIGUSR2 );
-#else
-				nvec.sv_mask |= sigmask( SIGTSTP );
-				nvec.sv_mask |= sigmask( SIGUSR2 );
-#endif
 			}
 
-#if defined(HPUX)
-			rval = syscall( SYS_sigvector, sig, vec ? &nvec : vec, ovec );
-#else
 			rval = syscall( SYS_sigvec, sig, vec ? &nvec : vec, ovec );
-#endif
 			break;
 		}
 	}
@@ -268,24 +211,15 @@ struct sigvec *ovec;
 #endif
 
 #if defined (SYS_sigvec)
-#if defined(HPUX)
-_sigvector( int sig, const struct sigvec vec, struct sigvec ovec )
-{
-	sigvector( sig, vec, ovec );
-}
-#else
 _sigvec( int sig, const struct sigvec vec, struct sigvec ovec )
 {
 	sigvec( sig, vec, ovec );
 }
 #endif
-#endif
 
 
 #if defined(SYS_sigblock)
-MASK_TYPE 
-sigblock( mask )
-MASK_TYPE mask;
+MASK_TYPE sigblock( MASK_TYPE mask )
 {
 	MASK_TYPE condor_sig_mask;
 	MASK_TYPE rval;
@@ -294,13 +228,8 @@ MASK_TYPE mask;
 		condor_sig_mask = ~0;
 	} else {
 		/* mask out the special Condor signals */
-#if defined(LINUX)
 		condor_sig_mask = ~( __sigmask( SIGUSR2 ) |
 			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
-#else
-		condor_sig_mask = ~( sigmask( SIGUSR2 ) |
-			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
-#endif
 		mask &= condor_sig_mask;
 	}
 	rval =  syscall( SYS_sigblock, mask ) & condor_sig_mask;
@@ -309,22 +238,15 @@ MASK_TYPE mask;
 #endif
 
 #if defined(SYS_sigpause)
-MASK_TYPE 
-sigpause( mask )
-MASK_TYPE mask;
+MASK_TYPE sigpause( MASK_TYPE mask )
 {
 	MASK_TYPE condor_sig_mask;
 	MASK_TYPE rval;
 
 	if ( MappingFileDescriptors() ) {
 		/* mask out the special Condor signals */
-#if defined(LINUX)
 		condor_sig_mask = ~( __sigmask( SIGUSR2 ) |
 			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
-#else
-		condor_sig_mask = ~( sigmask( SIGUSR2 ) |
-			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
-#endif
 		mask &= condor_sig_mask;
 	}
 	rval =  syscall( SYS_sigpause, mask );
@@ -333,9 +255,7 @@ MASK_TYPE mask;
 #endif
 
 #if defined(SYS_sigsetmask)
-MASK_TYPE 
-sigsetmask( mask )
-MASK_TYPE mask;
+MASK_TYPE sigsetmask( MASK_TYPE mask )
 {
 	MASK_TYPE condor_sig_mask;
 	MASK_TYPE rval;
@@ -344,37 +264,16 @@ MASK_TYPE mask;
 		condor_sig_mask = ~0;
 	} else {
 		/* mask out the special Condor signals */
-#if defined(LINUX)
 		condor_sig_mask = ~( __sigmask( SIGUSR2 ) |
 			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
-#else
-		condor_sig_mask = ~( sigmask( SIGUSR2 ) |
-			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
-#endif
-		mask &= condor_sig_mask;
 	}
 	rval =  syscall( SYS_sigsetmask, mask ) & condor_sig_mask;
 	return rval;
 }
 #endif
 
-/* fork() and sigaction() are not in fork.o or sigaction.o on Solaris 2.5
-   but instead are only in the threads libraries.  We access the old
-   versions through their new names. */
-
-#if defined(Solaris)
-#include <signal.h>
-
-int 
-SIGACTION(int sig, const struct sigaction *act, struct sigaction *oact)
-{
-	return _libc_SIGACTION(sig, act, oact);
-}
-#endif
-
 #if defined(SYS_sigaction)
-int
-sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
+int sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 {
 	struct sigaction tmp, *my_act = &tmp;
 
@@ -397,11 +296,7 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 		}
 	}
 
-#if defined(Solaris) || defined(LINUX)
 	return SIGACTION( sig, my_act, oact);
-#else
-	return syscall(SYS_sigaction, sig, my_act, oact);
-#endif
 }
 #endif
 
@@ -429,9 +324,7 @@ int sigprocmask( int how, const sigset_t *set, sigset_t *oset)
 #endif
 
 #if defined (SYS_sigsuspend)
-int
-sigsuspend(set)
-const sigset_t *set;
+int sigsuspend(const sigset_t *set)
 {
 	sigset_t	my_set = *set;
 	if ( MappingFileDescriptors() ) {
@@ -439,11 +332,7 @@ const sigset_t *set;
 		sigdelset(&my_set,SIGTSTP);
 		sigdelset(&my_set,SIGCONT);
 	}
-#if defined(LINUX)
 	return SIGSUSPEND(&my_set);
-#else
-	return syscall(SYS_sigsuspend,&my_set);
-#endif
 }
 #endif
 
@@ -453,9 +342,7 @@ void (*
 #else
 int (*
 #endif
-signal(sig,func))(int)
-int sig;
-void (*func)(int);
+signal(int sig,void (*func) (int) ))(int)
 {
 	if ( MappingFileDescriptors() ) {	
 		switch (sig) {
@@ -477,35 +364,5 @@ void (*func)(int);
 }
 #endif /* defined(SYS_signal) */
 
-#if 0
-void
-display_sigstate( int line, const char * file )
-{
-	int			scm;
-	int			i;
-	sigset_t	pending_sigs;
-	sigset_t	blocked_sigs;
-	struct sigaction	act;
-	int			pending, blocked;
 
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
-	sigpending( &pending_sigs );
-	sigprocmask(SIG_SETMASK,NULL,&blocked_sigs);
-
-	dprintf( D_ALWAYS, "At line %d in file %s ==============\n", line, file );
-	for( i=1; i<NSIG; i++ ) {
-		sigaction( i, NULL, &act );
-
-		pending = sigismember( &pending_sigs, i );
-		blocked = sigismember( &blocked_sigs, i );
-		dprintf( D_ALWAYS, "%d %s pending %s blocked handler = 0x%p\n",
-			i,
-			pending ? "IS " : "NOT",
-			blocked ? "IS " : "NOT",
-			act.sa_handler
-		);
-	}
-	dprintf( D_ALWAYS, "====================================\n" );
-	SetSyscalls( scm );
-}
 #endif

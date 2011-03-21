@@ -1,0 +1,73 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+######################################################################
+# script to drive Condor build steps (user tasks)
+######################################################################
+use strict;
+use warnings;
+
+my $EXTERNALS_TASK        = "remote_task.externals";
+my $TAR_TASK              = "remote_task.create_tar";
+my $CHECK_TAR_TASK        = "remote_task.check_tar";
+my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
+my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
+my $NATIVE_TASK           = "remote_task.create_native";
+my $CHECK_NATIVE_TASK     = "remote_task.check_native";
+
+# autoflush our STDOUT
+$| = 1;
+
+my $tasklist_file = "tasklist.nmi";
+
+######################################################################
+# Detecting platform and generating task list
+######################################################################
+print "Generating tasklist...\n";
+
+open(TASKLIST, '>', $tasklist_file) or die "Can't open $tasklist_file for writing: $!\n";
+
+if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+    #Windows
+    print TASKLIST $TAR_TASK;
+}
+else {
+    # Everything else
+    print TASKLIST "$EXTERNALS_TASK\n";
+    print TASKLIST "$UNSTRIPPED_TASK\n";
+    print TASKLIST "$CHECK_UNSTRIPPED_TASK\n";
+    print TASKLIST "$NATIVE_TASK\n";
+    print TASKLIST "$CHECK_NATIVE_TASK\n";
+    print TASKLIST "$TAR_TASK\n";
+    print TASKLIST "$CHECK_TAR_TASK\n";
+}
+
+close (TASKLIST);
+
+######################################################################
+# Print content of tasklist
+######################################################################
+print "Generated tasklist:\n";
+open(TASKFILE, '<', $tasklist_file) or die "Can't open $tasklist_file for reading: $!\n";
+while(<TASKFILE>) {
+    print "\t$_";
+}
+close (TASKFILE);
+exit 0;

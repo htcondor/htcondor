@@ -1,7 +1,7 @@
-#! /usr/bin/env perl
+#! /usr/bin/env perl 
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -19,38 +19,22 @@
 ##**************************************************************
 
 
-my @got;
-$testdesc =  'lib_classad - runs prebuilt classad tests from testbin_dir';
-$testname = "lib_classads";
-$test = "../testbin_dir/test_classads";
-if ( ! -x $test ) {
-	$test = "../testbin_dir/test_old_classads";
-}
+use strict;
 
-print scalar localtime() . "\n";
+my $allTestsPassed = 0;
 
-open(ELOG,"$test 2>&1 |") || die "Could not run test<<$test>>: $!\n";
+open(ELOG,"./classad_unit_tester 2>&1 |") || die "Could not run classad_unit_tester: $!\n";
 while(<ELOG>) {
-	push  @got, $_;
+	print $_;
+	if (/^Finished with no errors/) {
+		$allTestsPassed = 1;
+	}
 }
 close(ELOG);
 
-my $lastsave = "";
-foreach $line (@got) {
-	chomp($line);
-	$lastsave = $line;
-	print "$line\n";
-}
-
-
-if($lastsave =~ /^(\d+)\s+of\s+(\d+)\s+tests\s+passed.*$/) {
-	if($1 == $2){
-		print "ClassAd Test passed with $1 successful tests!\n";
-		exit(0);
-	} else {
-		die "Only $1 of $2 classad tests passed\n";
-	}
+if ($allTestsPassed == 1) {
+	print "classad_unit_tester passed\n";
+	exit(0);
 } else {
-	die "$2 tests were expected to pass <$lastsave>\n";
+	die "classad_unit_tester failed\n";
 }
-

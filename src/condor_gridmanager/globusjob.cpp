@@ -324,12 +324,12 @@ void GlobusJobReconfig()
 
 bool GlobusJobAdMatch( const ClassAd *job_ad ) {
 	int universe;
-	MyString resource;
+	std::string resource;
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 ( strncasecmp( resource.Value(), "gt2 ", 4 ) == 0 ||
-		   strncasecmp( resource.Value(), "gt5 ", 4 ) == 0  ) ) {
+		 ( strncasecmp( resource.c_str(), "gt2 ", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "gt5 ", 4 ) == 0  ) ) {
 
 		return true;
 	}
@@ -348,8 +348,8 @@ the filename of the classad.  If not successful, out_filename's contents are
 undefined.
 */
 static bool write_classad_input_file( ClassAd *classad, 
-	const MyString & executable_path,
-	MyString & out_filename )
+	const std::string & executable_path,
+	std::string & out_filename )
 {
 	if( ! classad ) {
 		dprintf(D_ALWAYS,"Internal Error: write_classad_input_file handed "
@@ -359,13 +359,13 @@ static bool write_classad_input_file( ClassAd *classad,
 
 	ClassAd tmpclassad(*classad);
 
-	MyString CmdExpr;
+	std::string CmdExpr;
 	CmdExpr = ATTR_JOB_CMD;
 	CmdExpr += "=\"";
-	CmdExpr += condor_basename( executable_path.Value() );
+	CmdExpr += condor_basename( executable_path.c_str() );
 	CmdExpr += '"';
 	// TODO: Store old Cmd as OrigCmd?
-	tmpclassad.InsertOrUpdate(CmdExpr.Value());
+	tmpclassad.InsertOrUpdate(CmdExpr.c_str());
 
 	PROC_ID procID;
 	if( ! tmpclassad.LookupInteger( ATTR_CLUSTER_ID, procID.cluster ) ) {
@@ -379,10 +379,10 @@ static bool write_classad_input_file( ClassAd *classad,
 		return false;
 	}
 
-	out_filename.sprintf("_condor_private_classad_in_%d.%d", 
+	sprintf(out_filename, "_condor_private_classad_in_%d.%d", 
 		procID.cluster, procID.proc);
 
-	MyString out_filename_full;
+	std::string out_filename_full;
 	{
 		char * buff = NULL;
 		if( ! tmpclassad.LookupString( ATTR_JOB_IWD, &buff ) ) {
@@ -405,16 +405,16 @@ static bool write_classad_input_file( ClassAd *classad,
 	tmpclassad.InsertOrUpdate( "JobUniverse = 5" );
 
 	dprintf(D_FULLDEBUG,"(%d.%d) Writing ClassAd to file %s\n",
-		procID.cluster, procID.proc, out_filename.Value());
+		procID.cluster, procID.proc, out_filename.c_str());
 
 	// TODO: Test for file's existance, complain and die on existance?
-	FILE * fp = safe_fopen_wrapper(out_filename_full.Value(), "w");
+	FILE * fp = safe_fopen_wrapper(out_filename_full.c_str(), "w");
 
 	if( ! fp )
 	{
 		dprintf(D_ALWAYS,"(%d.%d) Failed to write ClassAd to file %s. "
 			"Error number %d (%s).\n",
-			procID.cluster, procID.proc, out_filename.Value(),
+			procID.cluster, procID.proc, out_filename.c_str(),
 			errno, strerror(errno));
 		return false;
 	}
@@ -422,7 +422,7 @@ static bool write_classad_input_file( ClassAd *classad,
 	if( tmpclassad.fPrint(fp) ) {
 		dprintf(D_ALWAYS,"(%d.%d) Failed to write ClassAd to file %s. "
 			"Unknown error in ClassAd::fPrint.\n",
-			procID.cluster, procID.proc, out_filename.Value());
+			procID.cluster, procID.proc, out_filename.c_str());
 		fclose(fp);
 		return false;
 	} 
@@ -431,14 +431,14 @@ static bool write_classad_input_file( ClassAd *classad,
 	return true;
 }
 
-const char *rsl_stringify( const MyString& src )
+const char *rsl_stringify( const std::string& src )
 {
-	int src_len = src.Length();
+	int src_len = src.length();
 	int src_pos = 0;
 	int var_pos1;
 	int var_pos2;
 	int quote_pos;
-	static MyString dst;
+	static std::string dst;
 
 	if ( src_len == 0 ) {
 		dst = "''";
@@ -448,18 +448,18 @@ const char *rsl_stringify( const MyString& src )
 
 	while ( src_pos < src_len ) {
 		var_pos1 = src.find( "$(", src_pos );
-		var_pos2 = var_pos1 == -1 ? -1 : src.find( ")", var_pos1 );
+		var_pos2 = var_pos1 == std::string::npos ? var_pos1 : src.find( ")", var_pos1 );
 		quote_pos = src.find( "'", src_pos );
-		if ( var_pos2 == -1 && quote_pos == -1 ) {
+		if ( var_pos2 == std::string::npos && quote_pos == std::string::npos ) {
 			dst += "'";
-			dst += src.Substr( src_pos, src.Length() - 1 );
+			dst += src.substr( src_pos, src.npos );
 			dst += "'";
-			src_pos = src.Length();
-		} else if ( var_pos2 == -1 ||
-					(quote_pos != -1 && quote_pos < var_pos1 ) ) {
+			src_pos = src.length();
+		} else if ( var_pos2 == std::string::npos ||
+					(quote_pos != std::string::npos && quote_pos < var_pos1 ) ) {
 			if ( src_pos < quote_pos ) {
 				dst += "'";
-				dst += src.Substr( src_pos, quote_pos - 1 );
+				dst += src.substr( src_pos, quote_pos - src_pos );
 				dst += "'#";
 			}
 			dst += '"';
@@ -475,10 +475,10 @@ const char *rsl_stringify( const MyString& src )
 		} else {
 			if ( src_pos < var_pos1 ) {
 				dst += "'";
-				dst += src.Substr( src_pos, var_pos1 - 1 );
+				dst += src.substr( src_pos, var_pos1 - src_pos );
 				dst += "'#";
 			}
-			dst += src.Substr( var_pos1, var_pos2 );
+			dst += src.substr( var_pos1, (var_pos2 - var_pos1) + 1 );
 			if ( var_pos2 + 1 < src_len ) {
 				dst += '#';
 			}
@@ -486,13 +486,15 @@ const char *rsl_stringify( const MyString& src )
 		}
 	}
 
-	return dst.Value();
+	return dst.c_str();
 }
 
 const char *rsl_stringify( const char *string )
 {
-	static MyString src;
-	src = string;
+	static std::string src;
+	if ( string ) {
+		src = string;
+	}
 	return rsl_stringify( src );
 }
 
@@ -554,7 +556,7 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 
 		SAVE_ATTRS.append(ATTR_COMPLETION_DATE);
 
-		MyString full_filename;
+		std::string full_filename;
 		{
 			char * buff = NULL;
 			if( ! ad->LookupString( ATTR_JOB_IWD, &buff ) ) {
@@ -570,7 +572,7 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 			full_filename += filename;
 		}
 		
-		FILE * fp = safe_fopen_wrapper(full_filename.Value(), "r");
+		FILE * fp = safe_fopen_wrapper(full_filename.c_str(), "r");
 		if( ! fp ) {
 			dprintf(D_ALWAYS, "Unable to read output ClassAd at %s.  "
 				"Error number %d (%s).  "
@@ -618,14 +620,14 @@ GlobusJob::GlobusJob( ClassAd *classad )
 {
 	int bool_value;
 	int int_value;
-	MyString iwd;
-	MyString job_output;
-	MyString job_error;
-	MyString grid_resource;
-	MyString grid_job_id;
-	MyString grid_proxy_subject;
+	std::string iwd;
+	std::string job_output;
+	std::string job_error;
+	std::string grid_resource;
+	std::string grid_job_id;
+	std::string grid_proxy_subject;
 	bool job_already_submitted = false;
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 	ArgList gahp_args;
 	bool is_gt5 = false;
@@ -699,7 +701,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 							 (TimerHandlercpp)&GlobusJob::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
-			error_string.sprintf( "%s is not set in the job ad",
+			sprintf( error_string, "%s is not set in the job ad",
 								  ATTR_X509_USER_PROXY );
 		}
 		goto error_exit;
@@ -723,22 +725,22 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		}
 		free(args);
 	}
-	grid_proxy_subject.sprintf( "GT2/%s",
-			  jobProxy->subject->fqan );
-	gahp = new GahpClient( grid_proxy_subject.Value(), gahp_path, &gahp_args );
+	sprintf( grid_proxy_subject, "GT2/%s",
+			 jobProxy->subject->fqan );
+	gahp = new GahpClient( grid_proxy_subject.c_str(), gahp_path, &gahp_args );
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
 	jobAd->LookupString( ATTR_GRID_RESOURCE, grid_resource );
-	if ( grid_resource.Length() ) {
+	if ( grid_resource.length() ) {
 		const char *token;
 
-		grid_resource.Tokenize();
+		Tokenize( grid_resource );
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || ( strcasecmp( token, "gt2" ) && strcasecmp( token, "gt5" ) ) ) {
-			error_string.sprintf( "%s not of type gt2 or gt5",
+			sprintf( error_string, "%s not of type gt2 or gt5",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -746,30 +748,30 @@ GlobusJob::GlobusJob( ClassAd *classad )
 			is_gt5 = true;
 		}
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing GRAM service name",
+			sprintf( error_string, "%s missing GRAM service name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
 	jobAd->LookupString( ATTR_GRID_JOB_ID, grid_job_id );
-	if ( grid_job_id.Length() ) {
+	if ( grid_job_id.length() ) {
 		const char *token;
 
-		grid_job_id.Tokenize();
+		Tokenize( grid_job_id );
 
-		token = grid_job_id.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || ( strcasecmp( token, "gt2" ) && strcasecmp( token, "gt5" ) ) ) {
-			error_string.sprintf( "%s not of type gt2 or gt5",
+			sprintf( error_string, "%s not of type gt2 or gt5",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -777,10 +779,10 @@ GlobusJob::GlobusJob( ClassAd *classad )
 			is_gt5 = true;
 		}
 
-		token = grid_job_id.GetNextToken( " ", false );
-		token = grid_job_id.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token ) {
-			error_string.sprintf( "%s missing job ID",
+			sprintf( error_string, "%s missing job ID",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -813,8 +815,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		jmProxyExpireTime = (time_t)int_value;
 	}
 
-	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.Length() ) {
-		int len = iwd.Length();
+	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.length() ) {
+		int len = iwd.length();
 		if ( len > 1 && iwd[len - 1] != '/' ) {
 			iwd += "/";
 		}
@@ -822,19 +824,19 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		iwd = "/";
 	}
 
-	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, job_output) && job_output.Length() &&
-		 strcmp( job_output.Value(), NULL_FILE ) ) {
+	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, job_output) && job_output.length() &&
+		 strcmp( job_output.c_str(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
 			 bool_value ) {
-			MyString full_job_output;
+			std::string full_job_output;
 
 			if ( job_output[0] != '/' ) {
 				 full_job_output = iwd;
 			}
 
 			full_job_output += job_output;
-			localOutput = strdup( full_job_output.Value() );
+			localOutput = strdup( full_job_output.c_str() );
 
 			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
@@ -843,19 +845,19 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		}
 	}
 
-	if ( jobAd->LookupString(ATTR_JOB_ERROR, job_error) && job_error.Length() &&
-		 strcmp( job_error.Value(), NULL_FILE ) ) {
+	if ( jobAd->LookupString(ATTR_JOB_ERROR, job_error) && job_error.length() &&
+		 strcmp( job_error.c_str(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
 			 bool_value ) {
-			MyString full_job_error;
+			std::string full_job_error;
 
 			if ( job_error[0] != '/' ) {
 				full_job_error = iwd;
 			}
 
 			full_job_error += job_error;
-			localError = strdup( full_job_error.Value() );
+			localError = strdup( full_job_error.c_str() );
 
 			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
@@ -875,8 +877,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		free( gahp_path );
 	}
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }
@@ -1168,7 +1170,7 @@ void GlobusJob::doEvaluateState()
 			}
 			rc = gahp->globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_UPDATE,
-								RSL->Value(), &status, &error );
+								RSL->c_str(), &status, &error );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -1251,7 +1253,7 @@ void GlobusJob::doEvaluateState()
 				}
 				rc = gahp->globus_gram_client_job_request( 
 										resourceManagerString,
-										RSL->Value(),
+										RSL->c_str(),
 										param_boolean( "DELEGATE_FULL_JOB_GSI_CREDENTIALS",
 													   false ) ? 0 : 1,
 										gramCallbackContact, &job_contact );
@@ -1280,7 +1282,7 @@ void GlobusJob::doEvaluateState()
 				if ( rc == GLOBUS_SUCCESS ) {
 					// Previously this supported GRAM 1.0
 					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM 1.6 is now required.\n", procID.cluster, procID.proc);
-					errorString.sprintf("Unexpected remote response.  Remote server must speak GRAM 1.6");
+					sprintf(errorString,"Unexpected remote response.  Remote server must speak GRAM 1.6");
 					myResource->JMComplete( this );
 					gmState = GM_HOLD;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
@@ -1293,7 +1295,7 @@ void GlobusJob::doEvaluateState()
 					myResource->JMComplete( this );
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
 					dprintf(D_ALWAYS,"(%d.%d)    RSL='%s'\n",
-							procID.cluster, procID.proc,RSL->Value());
+							procID.cluster, procID.proc,RSL->c_str());
 					globusError = rc;
 					WriteGlobusSubmitFailedEventToUserLog( jobAd,
 														   rc,
@@ -1621,7 +1623,7 @@ void GlobusJob::doEvaluateState()
 			// Report job completion to the schedd.
 
 			if(useGridShell && !mergedGridShellOutClassad) {
-				if( ! merge_file_into_classad(outputClassadFilename.Value(), jobAd) ) {
+				if( ! merge_file_into_classad(outputClassadFilename.c_str(), jobAd) ) {
 					/* TODO: put job on hold or otherwise don't let it
 					   quietly pass into the great beyond? */
 					dprintf(D_ALWAYS,"(%d.%d) Failed to add job result attributes to job's classad.  Job's history will lack run information.\n",procID.cluster,procID.proc);
@@ -1772,7 +1774,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				}
 				rc = gahp->globus_gram_client_job_request(
 										resourceManagerString,
-										RSL->Value(),
+										RSL->c_str(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -2259,7 +2261,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				jobAd->LookupInteger(ATTR_HOLD_REASON_CODE,holdCode);
 				jobAd->LookupInteger(ATTR_HOLD_REASON_SUBCODE,holdSubCode);
 				if ( holdReason[0] == '\0' && errorString != "" ) {
-					strncpy( holdReason, errorString.Value(),
+					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
 				}
 				if ( holdReason[0] == '\0' && globusStateErrorCode == 0 &&
@@ -2402,7 +2404,7 @@ else{dprintf(D_FULLDEBUG,"(%d.%d) JEF: proceeding immediately with restart\n",pr
 				}
 				rc = gahp->globus_gram_client_job_request(
 										resourceManagerString,
-										RSL->Value(),
+										RSL->c_str(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -2855,12 +2857,12 @@ void GlobusJob::SetRemoteJobId( const char *job_id, bool is_gt5 )
 	if ( myResource ) {
 		is_gt5 = myResource->IsGt5();
 	}
-	MyString full_job_id;
+	std::string full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "%s %s %s", is_gt5 ? "gt5" : "gt2",
+		sprintf( full_job_id, "%s %s %s", is_gt5 ? "gt5" : "gt2",
 							 resourceManagerString, job_id );
 	}
-	BaseJob::SetRemoteJobId( full_job_id.Value() );
+	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
 bool GlobusJob::IsExitStatusValid()
@@ -2869,13 +2871,13 @@ bool GlobusJob::IsExitStatusValid()
 	return useGridShell;
 }
 
-MyString *GlobusJob::buildSubmitRSL()
+std::string *GlobusJob::buildSubmitRSL()
 {
 	int transfer;
-	MyString *rsl = new MyString;
-	MyString iwd = "";
-	MyString riwd = "";
-	MyString buff;
+	std::string *rsl = new std::string;
+	std::string iwd = "";
+	std::string riwd = "";
+	std::string buff;
 	char *attr_value = NULL;
 	char *rsl_suffix = NULL;
 
@@ -2906,12 +2908,12 @@ MyString *GlobusJob::buildSubmitRSL()
 	}
 
 	//Start off the RSL
-	rsl->sprintf( "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))",
+	sprintf( *rsl, "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))",
 				  gassServerUrl );
 
 	//We're assuming all job clasads have a command attribute
 	//First look for executable in the spool area.
-	MyString executable_path;
+	std::string executable_path;
 	char *spooldir = param("SPOOL");
 	if ( spooldir ) {
 		char *source = gen_ckpt_name(spooldir,procID.cluster,ICKPT,0);
@@ -2922,7 +2924,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		}
 		free(source); source = NULL;
 	}
-	if ( executable_path.IsEmpty() ) {
+	if ( executable_path.empty() ) {
 			// didn't find any executable in the spool directory,
 			// so use what is explicitly stated in the job ad
 		if( ! jobAd->LookupString( ATTR_JOB_CMD, &attr_value ) ) {
@@ -2941,12 +2943,11 @@ MyString *GlobusJob::buildSubmitRSL()
 		transfer_executable = 1;
 	}
 
-	MyString input_classad_filename;
-	MyString output_classad_filename;
-	MyString gridshell_log_filename = "condor_gridshell.log.";
-	gridshell_log_filename += procID.cluster;
-	gridshell_log_filename += '.';
-	gridshell_log_filename += procID.proc;
+	std::string input_classad_filename;
+	std::string output_classad_filename;
+	std::string gridshell_log_filename;
+	sprintf( gridshell_log_filename, "condor_gridshell.log.%d.%d",
+			 procID.cluster, procID.proc );
 
 	if( useGridShell ) {
 		// We always transfer the gridshell executable.
@@ -2980,10 +2981,10 @@ MyString *GlobusJob::buildSubmitRSL()
 		if( ! bsuccess ) {
 			/* TODO XXX adesmet: Writing to file failed?  Bail. */
 			dprintf(D_ALWAYS, "(%d.%d) Attempt to write gridshell file %s failed.\n", 
-				procID.cluster, procID.proc, input_classad_filename.Value() );
+				procID.cluster, procID.proc, input_classad_filename.c_str() );
 		}
 
-		output_classad_filename.sprintf("%s.OUT", input_classad_filename.Value());
+		sprintf(output_classad_filename, "%s.OUT", input_classad_filename.c_str());
 		outputClassadFilename = output_classad_filename;
 
 
@@ -2998,7 +2999,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		buff = executable_path;
 	}
 
-	*rsl += rsl_stringify( buff.Value() );
+	*rsl += rsl_stringify( buff );
 
 	if ( jobAd->LookupString(ATTR_JOB_REMOTE_IWD, &attr_value) && *attr_value ) {
 		*rsl += ")(directory=";
@@ -3013,7 +3014,7 @@ MyString *GlobusJob::buildSubmitRSL()
 
 		riwd = "$(SCRATCH_DIRECTORY)";
 	}
-	if ( riwd[riwd.Length()-1] != '/' ) {
+	if ( riwd[riwd.length()-1] != '/' ) {
 		riwd += '/';
 	}
 	if ( attr_value != NULL ) {
@@ -3036,8 +3037,9 @@ MyString *GlobusJob::buildSubmitRSL()
 		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
 					procID.cluster, procID.proc, arg_errors.Value());
-			errorString.sprintf("Failed to read job arguments: %s\n",
+			sprintf(errorString, "Failed to read job arguments: %s\n",
 					arg_errors.Value());
+			delete rsl;
 			return NULL;
 		}
 		if(args.Count() != 0) {
@@ -3063,7 +3065,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		} else {
 			buff = attr_value;
 		}
-		*rsl += rsl_stringify( buff.Value() );
+		*rsl += rsl_stringify( buff );
 	}
 	if ( attr_value != NULL ) {
 		free( attr_value );
@@ -3072,8 +3074,8 @@ MyString *GlobusJob::buildSubmitRSL()
 
 	if ( streamOutput ) {
 		*rsl += ")(stdout=";
-		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
-		*rsl += rsl_stringify( buff.Value() );
+		sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localOutput );
+		*rsl += rsl_stringify( buff );
 	} else {
 		if ( stageOutput ) {
 			*rsl += ")(stdout=$(GLOBUS_CACHED_STDOUT)";
@@ -3092,8 +3094,8 @@ MyString *GlobusJob::buildSubmitRSL()
 
 	if ( streamError ) {
 		*rsl += ")(stderr=";
-		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
-		*rsl += rsl_stringify( buff.Value() );
+		sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localError );
+		*rsl += rsl_stringify( buff );
 	} else {
 		if ( stageError ) {
 			*rsl += ")(stderr=$(GLOBUS_CACHED_STDERR)";
@@ -3118,9 +3120,9 @@ MyString *GlobusJob::buildSubmitRSL()
 			filelist.initializeFromString( attr_value );
 		}
 		if( useGridShell ) {
-			filelist.append(input_classad_filename.Value());
+			filelist.append(input_classad_filename.c_str());
 			if(transfer_executable) {
-				filelist.append(executable_path.Value());
+				filelist.append(executable_path.c_str());
 			}
 		}
 		if ( !filelist.isEmpty() ) {
@@ -3160,9 +3162,9 @@ MyString *GlobusJob::buildSubmitRSL()
 				// files to  be transfered back: the final status
 				// ClassAd from the gridshell
 
-			ASSERT( output_classad_filename.Value() );
-			filelist.append( output_classad_filename.Value() );
-			filelist.append( gridshell_log_filename.Value() );
+			ASSERT( output_classad_filename.c_str() );
+			filelist.append( output_classad_filename.c_str() );
+			filelist.append( gridshell_log_filename.c_str() );
 		}
 		if ( !filelist.isEmpty() || stageOutput || stageError ) {
 			char *filename;
@@ -3170,14 +3172,14 @@ MyString *GlobusJob::buildSubmitRSL()
 
 			if ( stageOutput ) {
 				*rsl += "($(GLOBUS_CACHED_STDOUT) ";
-				buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
+				sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 				*rsl += rsl_stringify( buff );
 				*rsl += ')';
 			}
 
 			if ( stageError ) {
 				*rsl += "($(GLOBUS_CACHED_STDERR) ";
-				buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
+				sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localError );
 				*rsl += rsl_stringify( buff );
 				*rsl += ')';
 			}
@@ -3225,7 +3227,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		*rsl += "(CONDOR_CONFIG 'only_env')";
 		*rsl += "(_CONDOR_GRIDSHELL_DEBUG 'D_FULLDEBUG')";
 		*rsl += "(_CONDOR_GRIDSHELL_LOG '";
-		*rsl += gridshell_log_filename.Value();
+		*rsl += gridshell_log_filename.c_str();
 		*rsl += "')";
 	} else {
 		Env envobj;
@@ -3233,8 +3235,9 @@ MyString *GlobusJob::buildSubmitRSL()
 		if(!envobj.MergeFrom(jobAd,&env_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
 					procID.cluster, procID.proc, env_errors.Value());
-			errorString.sprintf("Failed to read job environment: %s\n",
+			sprintf(errorString, "Failed to read job environment: %s\n",
 					env_errors.Value());
+			delete rsl;
 			return NULL;
 		}
 		char **env_vec = envobj.getStringArray();
@@ -3249,14 +3252,14 @@ MyString *GlobusJob::buildSubmitRSL()
 				continue;
 			}
 			*equals = '\0';
-			buff.sprintf( "(%s %s)", env_vec[i],
+			sprintf( buff, "(%s %s)", env_vec[i],
 							 rsl_stringify(equals + 1) );
 			*rsl += buff;
 		}
 		deleteStringArray(env_vec);
 	}
 
-	buff.sprintf( ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
+	sprintf( buff, ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
 	*rsl += buff;
 
 	int default_timeout = JM_COMMIT_TIMEOUT;
@@ -3265,7 +3268,7 @@ MyString *GlobusJob::buildSubmitRSL()
 	}
 	int commit_timeout = param_integer("GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT", default_timeout);
 
-	buff.sprintf( ")(save_state=yes)(two_phase=%d)"
+	sprintf( buff, ")(save_state=yes)(two_phase=%d)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))",
 				  commit_timeout);
 	*rsl += buff;
@@ -3275,58 +3278,58 @@ MyString *GlobusJob::buildSubmitRSL()
 		free( rsl_suffix );
 	}
 
-	dprintf( D_FULLDEBUG, "Final RSL: %s\n", rsl->Value() );
+	dprintf( D_FULLDEBUG, "Final RSL: %s\n", rsl->c_str() );
 	return rsl;
 }
 
-MyString *GlobusJob::buildRestartRSL()
+std::string *GlobusJob::buildRestartRSL()
 {
-	MyString *rsl = new MyString;
-	MyString buff;
+	std::string *rsl = new std::string;
+	std::string buff;
 
 	DeleteOutput();
 
-	rsl->sprintf( "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))(restart=%s)"
+	sprintf( *rsl, "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))(restart=%s)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))", gassServerUrl,
 				  jobContact );
 	if ( streamOutput ) {
 		*rsl += "(stdout=";
-		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
-		*rsl += rsl_stringify( buff.Value() );
+		sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localOutput );
+		*rsl += rsl_stringify( buff );
 		*rsl += ")(stdout_position=0)";
 	}
 	if ( streamError ) {
 		*rsl += "(stderr=";
-		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
-		*rsl += rsl_stringify( buff.Value() );
+		sprintf( buff, "$(GRIDMANAGER_GASS_URL)%s", localError );
+		*rsl += rsl_stringify( buff );
 		*rsl += ")(stderr_position=0)";
 	}
 
-	buff.sprintf( "(proxy_timeout=%d)", JM_MIN_PROXY_TIME );
+	sprintf( buff, "(proxy_timeout=%d)", JM_MIN_PROXY_TIME );
 	*rsl += buff;
 
 	return rsl;
 }
 
-MyString *GlobusJob::buildStdioUpdateRSL()
+std::string *GlobusJob::buildStdioUpdateRSL()
 {
-	MyString *rsl = new MyString;
-	MyString buff;
+	std::string *rsl = new std::string;
+	std::string buff;
 	char *attr_value = NULL; /* in case the classad lookups fail */
 
 	DeleteOutput();
 
-	rsl->sprintf( "&(remote_io_url=%s)", gassServerUrl );
+	sprintf( *rsl, "&(remote_io_url=%s)", gassServerUrl );
 	if ( streamOutput ) {
 		*rsl += "(stdout=";
-		buff.sprintf( "%s%s", gassServerUrl, localOutput );
-		*rsl += rsl_stringify( buff.Value() );
+		sprintf( buff, "%s%s", gassServerUrl, localOutput );
+		*rsl += rsl_stringify( buff );
 		*rsl += ")(stdout_position=0)";
 	}
 	if ( streamError ) {
 		*rsl += "(stderr=";
-		buff.sprintf( "%s%s", gassServerUrl, localError );
-		*rsl += rsl_stringify( buff.Value() );
+		sprintf( buff, "%s%s", gassServerUrl, localError );
+		*rsl += rsl_stringify( buff );
 		*rsl += ")(stderr_position=0)";
 	}
 

@@ -49,7 +49,7 @@ class Condition : public BoolExpr
 			@param result The attribute in string form.
 			@return true on success, false on failure.
 		*/
-	bool GetAttr( string &result );
+	bool GetAttr( std::string &result );
 
 		/** Gets the operator part of the Condition. (or the operator part of
 			the first simple condition in a complex single attribute
@@ -114,7 +114,7 @@ class Condition : public BoolExpr
 		*/
 	ConditionExplain explain;
  private:
-	string attr;
+	std::string attr;
 	classad::Operation::OpKind op;
 	classad::Value val;
 	classad::Operation::OpKind op2;
@@ -122,12 +122,12 @@ class Condition : public BoolExpr
 	AttrPos pos;
 	bool isComplex;
 	bool multiAttr;
-	bool Init( const string &, classad::ExprTree *, bool );
-	bool Init( const string &, classad::Operation::OpKind,
+	bool Init( const std::string &, classad::ExprTree *, bool );
+	bool Init( const std::string &, classad::Operation::OpKind,
 			   const classad::Value &,
 			   classad::ExprTree *, AttrPos );
 	bool InitComplex( classad::ExprTree * );
-	bool InitComplex( const string &_attr,
+	bool InitComplex( const std::string &_attr,
 					  classad::Operation::OpKind _op1,
 					  const classad::Value &_val1,
 					  classad::Operation::OpKind _op2,

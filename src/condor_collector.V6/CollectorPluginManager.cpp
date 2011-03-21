@@ -21,7 +21,10 @@
 
 #include "condor_config.h"
 #include "directory.h"
+
+#if HAVE_DLFCN_H
 #include <dlfcn.h>
+#endif
 
 
 void

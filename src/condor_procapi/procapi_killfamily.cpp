@@ -30,7 +30,7 @@
 
 #if defined(WIN32)
 
-#include "ntsysinfo.h"
+#include "ntsysinfo.WINDOWS.h"
 static CSysinfo ntSysInfo;
 
 int
@@ -274,7 +274,7 @@ ProcAPI::buildFamily( pid_t daddypid, PidEnvID *penvid, int &status ) {
 	familypids = new pid_t[numprocs];
 
 		// get the daddypid's procInfo struct
-	piPTR pred, current, familyend;
+	piPTR pred=NULL, current, familyend;
 
 	// find the daddy pid out of the linked list of all of the processes
 	current = allProcInfos;
@@ -464,6 +464,9 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	// the ProcInfo structure.
 	ASSERT(searchLogin);
 	struct passwd *pwd = getpwnam(searchLogin);
+	if(!pwd) {
+		return PROCAPI_FAILURE;
+	}
 	uid_t searchUid = pwd->pw_uid;
 
 	// now iterate through allProcInfos to find processes

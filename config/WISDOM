@@ -1,8 +1,0 @@
-For a good introduction on how to use the imake system so the rules that
-you write function as you expect. Please look at this web page:
-
-http://www.cs.wisc.edu/condor/developers/imake.html
-
-Also, the imake system is being phased out. Please talk to Matt Farrellee
-or Peter Keller for how this is happening.
-

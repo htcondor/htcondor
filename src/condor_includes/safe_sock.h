@@ -52,6 +52,7 @@ public:
 	// Virtual socket services
 	virtual int handle_incoming_packet();
 	virtual int end_of_message();
+	virtual bool peek_end_of_message();
 
 	virtual stream_type type() { return Stream::safe_sock; }
 

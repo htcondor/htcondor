@@ -32,7 +32,7 @@
 extern DLL_IMPORT_MAGIC char **environ;
 
 //-----------------------------------------------------------------------------
-Script::Script( bool post, const char* cmd, const Job* node ) :
+Script::Script( bool post, const char* cmd, Job* node ) :
     _post         (post),
     _retValScript (-1),
     _retValJob    (-1),
@@ -88,7 +88,10 @@ Script::BackgroundRun( int reaperId )
 			arg += _node->GetJobName();
 
 		} else if ( !strcasecmp( token, "$RETRY" ) ) {
-            arg += _node->retries;
+            arg += _node->GetRetries();
+
+		} else if ( !strcasecmp( token, "$MAX_RETRIES" ) ) {
+            arg += _node->GetRetryMax();
 
         } else if ( !strcasecmp( token, "$JOBID" ) ) {
 			if ( !_post ) {
@@ -108,6 +111,13 @@ Script::BackgroundRun( int reaperId )
 			}
 			arg += _retValJob;
 
+		} else if (token[0] == '$') {
+			// This should probably be a fatal error when -strict is
+			// implemented.
+			debug_printf( DEBUG_QUIET, "Warning: unrecognized macro %s "
+						"in node %s %s script arguments\n", token,
+						_node->GetJobName(), _post ? "POST" : "PRE" );
+			arg += token;
         } else {
 			arg += token;
 		}

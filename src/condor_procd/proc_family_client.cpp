@@ -254,7 +254,7 @@ ProcFamilyClient::track_family_via_login(pid_t pid,
 
 #if defined(LINUX)
 bool
-ProcFamilyClient::track_family_via_supplementary_group(pid_t pid,
+ProcFamilyClient::track_family_via_allocated_supplementary_group(pid_t pid,
                                                        bool& response,
                                                        gid_t& gid)
 {
@@ -272,7 +272,7 @@ ProcFamilyClient::track_family_via_supplementary_group(pid_t pid,
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr =
-		PROC_FAMILY_TRACK_FAMILY_VIA_SUPPLEMENTARY_GROUP;
+		PROC_FAMILY_TRACK_FAMILY_VIA_ALLOCATED_SUPPLEMENTARY_GROUP;
 	ptr += sizeof(proc_family_command_t);
 
 	*(pid_t*)ptr = pid;
@@ -306,7 +306,59 @@ ProcFamilyClient::track_family_via_supplementary_group(pid_t pid,
 	}
 	m_client->end_connection();
 
-	log_exit("track_family_via_supplementary_group", err);
+	log_exit("track_family_via_allocated_supplementary_group", err);
+	response = (err == PROC_FAMILY_ERROR_SUCCESS);
+	return true;
+}
+
+bool
+ProcFamilyClient::track_family_via_associated_supplementary_group(pid_t pid,
+                                                       gid_t gid,
+                                                       bool& response)
+{
+	ASSERT(m_initialized);
+
+	dprintf(D_PROCFAMILY,
+	        "About to tell ProcD to track family with root %u "
+	            "via GID %u\n",
+	        pid, 
+			gid);
+
+	int message_len = sizeof(proc_family_command_t) +
+	                  sizeof(pid_t) +
+					  sizeof(gid_t);
+	void* buffer = malloc(message_len);
+	ASSERT(buffer != NULL);
+	char* ptr = (char*)buffer;
+
+	*(proc_family_command_t*)ptr =
+		PROC_FAMILY_TRACK_FAMILY_VIA_ASSOCIATED_SUPPLEMENTARY_GROUP;
+	ptr += sizeof(proc_family_command_t);
+
+	*(pid_t*)ptr = pid;
+	ptr += sizeof(pid_t);
+
+	*(gid_t*)ptr = gid;
+	ptr += sizeof(gid_t);
+
+	ASSERT(ptr - (char*)buffer == message_len);
+	
+	if (!m_client->start_connection(buffer, message_len)) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: failed to start connection with ProcD\n");
+		free(buffer);
+		return false;
+	}
+	free(buffer);
+	proc_family_error_t err;
+	if (!m_client->read_data(&err, sizeof(proc_family_error_t))) {
+		dprintf(D_ALWAYS,
+		        "ProcFamilyClient: failed to read response from ProcD\n");
+		return false;
+	}
+	m_client->end_connection();
+
+	log_exit("track_family_via_associated_supplementary_group", err);
 	response = (err == PROC_FAMILY_ERROR_SUCCESS);
 	return true;
 }

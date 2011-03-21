@@ -79,8 +79,8 @@ public:
 	};
 
 
-	static char* sec_feat_act_rev[];
-	static char* sec_req_rev[];
+	static const char* sec_feat_act_rev[];
+	static const char* sec_req_rev[];
 
 	static KeyCache                      * session_cache;
 	static HashTable<MyString, MyString> * command_map;
@@ -207,7 +207,7 @@ public:
 	static char*		_my_parent_unique_id;
 	static bool			_should_check_env_for_unique_id;
 
-	static IpVerify m_ipverify;
+	static IpVerify *m_ipverify;
 
 	friend class SecManStartCommand;
 

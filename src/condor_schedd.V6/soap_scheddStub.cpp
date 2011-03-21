@@ -43,8 +43,8 @@
 
 #include "schedd_api.h"
 
-#include "../condor_c++_util/soap_helpers.cpp"
-#include "../condor_c++_util/dc_service.cpp"
+#include "../condor_utils/soap_helpers.cpp"
+#include "../condor_utils/dc_service.cpp"
 
 #include "qmgmt.h"
 
@@ -524,10 +524,7 @@ condor__commitTransaction(struct soap *soap,
 	entry = NULL;	
 
 	current_trans_id = 0;
-	if ( trans_timer_id != -1 ) {
-		daemonCore->Cancel_Timer(trans_timer_id);
-		trans_timer_id = -1;
-	}
+	trans_timer_id = -1;
 
 	result.response.code = SUCCESS;
 	result.response.message = "Success";
@@ -576,10 +573,7 @@ condor__abortTransaction(struct soap *soap,
 	entry = NULL;	
 
 	current_trans_id = 0;
-	if (trans_timer_id != -1) {
-		daemonCore->Cancel_Timer(trans_timer_id);
-		trans_timer_id = -1;
-	}
+	trans_timer_id = -1;
 
 	result.response.code = SUCCESS;
 	result.response.message = "Success";
@@ -1402,7 +1396,7 @@ condor__listSpool(struct soap * soap,
 		destroy_job = true;
 	}
 
-	if ((code = job->get_spool_list(files, errstack))) {
+	if (job && (code = job->get_spool_list(files, errstack))) {
 		result.response.status.code =
 			(condor__StatusCode) errstack.code();
 		result.response.status.message =

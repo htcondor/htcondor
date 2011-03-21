@@ -43,7 +43,7 @@ $abnormal = sub
 $aborted = sub 
 {
 	CondorTest::debug("Abort event expected\n",1);
-	my $result = system("../testbin_dir/x_read_joblog.exe $joblog FULLREMOVE");
+	my $result = system("./x_read_joblog.exe $joblog FULLREMOVE");
 	if( $result != 0)
 	{
 		die "Not all dag nodes removed!\n";

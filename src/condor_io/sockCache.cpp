@@ -169,7 +169,9 @@ SocketCache::getCacheSlot()
 	// evict the oldest
 	dprintf (D_FULLDEBUG, "SocketCache:  Evicting old connection to %s\n", 
 			 sockCache[oldest].addr.Value());
-	invalidateEntry( oldest );
+	if(oldest != -1) {
+		invalidateEntry( oldest );
+	}
 	return oldest;
 }
 

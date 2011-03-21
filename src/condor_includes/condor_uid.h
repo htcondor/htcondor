@@ -126,7 +126,7 @@ void display_priv_log(void);
 #endif
 
 #if defined(__cplusplus) && !defined( WIN32 )
-#include "passwd_cache.h"
+#include "passwd_cache.unix.h"
 extern passwd_cache* pcache(void);
 #endif
 

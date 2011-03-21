@@ -208,11 +208,11 @@ Building with no library tag.])
 
     BOOST_CFLAGS="$mt_cflags -I$ac_boost_prefix/include"
 
-    BOOST_FS_LIBS="-L$ac_boost_prefix/lib -lboost_filesystem$ext"
-    BOOST_THREAD_LIBS="-L$ac_boost_prefix/lib -lboost_thread$ext -lpthread"
-    BOOST_REGEX_LIBS="-L$ac_boost_prefix/lib -lboost_regex$ext"
-    BOOST_PYTHON_LIBS="-L$ac_boost_prefix/lib -lboost_python$ext"
-    BOOST_LIBS="-L$ac_boost_prefix/lib -lboost_filesystem$ext -lboost_thread$ext -lpthread -lboost_regex$ext"
+    BOOST_FS_LIBS="-L$ac_boost_prefix/lib -lboost_filesystem"
+    BOOST_THREAD_LIBS="-L$ac_boost_prefix/lib -lboost_thread -lpthread"
+    BOOST_REGEX_LIBS="-L$ac_boost_prefix/lib -lboost_regex"
+    BOOST_PYTHON_LIBS="-L$ac_boost_prefix/lib -lboost_python"
+    BOOST_LIBS="-L$ac_boost_prefix/lib -lboost_thread -lpthread"
 
     BOOST_THREAD_STATIC_LIBS="-L$ac_boost_prefix/lib -lboost_thread${static_ext} -lpthread"
 

@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "utilfns.h"
 
 extern "C" {
 

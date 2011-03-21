@@ -36,9 +36,8 @@ sub CountLiveLeases( $ );
 my $version = "1.1.0";
 my $testdesc =  'lib_lease_manager - runs lease manager tests';
 my $testname = "lib_lease_manager";
-my $testbin = "../testbin_dir";
 my %programs = ( advertise	=> getcwd() . "/x_advertise.pl",
-				 tester => "$testbin/condor_lease_manager_tester",
+				 tester => "condor_lease_manager_tester",
 				 );
 
 my $now = time( );

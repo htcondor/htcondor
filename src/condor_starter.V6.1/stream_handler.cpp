@@ -29,7 +29,17 @@ extern ReliSock *syscall_sock;
 /*static*/ StreamHandler *StreamHandler::handlers[3];
 
 StreamHandler::StreamHandler()
-{    
+{
+	remote_fd = -1;
+	pipe_fds[0] = -1; pipe_fds[1] = -1;
+	pending = 0;
+	offset = 0;
+	job_pipe = -1;
+	is_output = false;
+	handler_pipe = -1;
+	done = false;
+	connected = false;
+	buffer[0] = '\0';
 }
 
 
@@ -79,7 +89,7 @@ bool StreamHandler::Init( const char *fn, const char *sn, bool io )
 	}
 
 	offset = 0;
-	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",(PipeHandlercpp)&StreamHandler::Handler,"Stream I/O Handler",this,handler_mode);
+	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",static_cast<PipeHandlercpp>(&StreamHandler::Handler),"Stream I/O Handler",this,handler_mode);
 
 	done = false;
 	connected = true;
@@ -232,7 +242,7 @@ StreamHandler::Reconnect() {
 		EXCEPT("Couldn't reopen %s to stream %s: %s\n",filename.Value(),streamname.Value(),strerror(errno));
 	}
 
-	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",(PipeHandlercpp)&StreamHandler::Handler,"Stream I/O Handler",this,handler_mode);
+	daemonCore->Register_Pipe(handler_pipe,"Job I/O Pipe",static_cast<PipeHandlercpp>(&StreamHandler::Handler),"Stream I/O Handler",this,handler_mode);
 	
 	connected = true;
 

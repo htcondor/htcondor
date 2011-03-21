@@ -56,6 +56,9 @@ BaseResource::BaseResource( const char *resource_name )
 	updateLeasesActive = false;
 	leaseAttrsSynched = false;
 	updateLeasesCmdActive = false;
+	m_hasSharedLeases = false;
+	m_defaultLeaseDuration = -1;
+	m_sharedLeaseExpiration = 0;
 
 	_updateCollectorTimerId = daemonCore->Register_Timer ( 
 		0,
@@ -95,15 +98,15 @@ void BaseResource::Reconfig()
 {
 	int tmp_int;
 	char *param_value;
-	MyString param_name;
+	std::string param_name;
 
 	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
 	setProbeInterval( tmp_int );
 
 	jobLimit = -1;
-	param_name.sprintf( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_%s",
+	sprintf( param_name, "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_%s",
 						ResourceType() );
-	param_value = param( param_name.Value() );
+	param_value = param( param_name.c_str() );
 	if ( param_value == NULL ) {
 		param_value = param( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE" );
 	}
@@ -169,15 +172,15 @@ bool BaseResource::Invalidate () {
 
     /* We only want to invalidate this resource. Using the tuple
        (HashName,SchedName,Owner) as unique id. */
-    MyString line;
-    line.sprintf ( 
+	std::string line;
+	sprintf( line,
         "((TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\") && "
 		 "(TARGET.%s =?= \"%s\") && (TARGET.%s =?= \"%s\"))",
         ATTR_HASH_NAME, GetHashName (),
         ATTR_SCHEDD_NAME, ScheddObj->name (),
 		ATTR_SCHEDD_IP_ADDR, ScheddObj->addr (),
         ATTR_OWNER, myUserName );
-    ad.AssignExpr ( ATTR_REQUIREMENTS, line.Value() );
+    ad.AssignExpr ( ATTR_REQUIREMENTS, line.c_str() );
 
 	ad.Assign( ATTR_HASH_NAME, GetHashName() );
 	ad.Assign( ATTR_SCHEDD_NAME, ScheddObj->name() );
@@ -187,7 +190,7 @@ bool BaseResource::Invalidate () {
     dprintf (
         D_FULLDEBUG,
         "BaseResource::InvalidateResource: \n%s\n",
-        line.Value() );
+        line.c_str() );
     
 	return daemonCore->sendUpdates( INVALIDATE_GRID_ADS, &ad, NULL, true ) > 0;
 }
@@ -204,12 +207,12 @@ bool BaseResource::SendUpdate () {
 
 	daemonCore->publish( &ad );
 
-    MyString tmp;
+	std::string tmp;
     ad.sPrint ( tmp );
     dprintf (
         D_FULLDEBUG,
         "BaseResource::UpdateResource: \n%s\n",
-        tmp.Value() );
+        tmp.c_str() );
 
 	return daemonCore->sendUpdates( UPDATE_GRID_AD, &ad, NULL, true ) > 0;
 }
@@ -246,10 +249,10 @@ void BaseResource::UpdateCollector () {
 
 void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 {
-	MyString buff;
+	std::string buff;
 
-	buff.sprintf( "%s %s", ResourceType(), resourceName );
-	resource_ad->Assign( ATTR_NAME, buff.Value() );
+	sprintf( buff, "%s %s", ResourceType(), resourceName );
+	resource_ad->Assign( ATTR_NAME, buff.c_str() );
 	resource_ad->Assign( "HashName", GetHashName() );
 	resource_ad->Assign( ATTR_SCHEDD_NAME, ScheddName );
     resource_ad->Assign( ATTR_SCHEDD_IP_ADDR, ScheddObj->addr() );
@@ -497,10 +500,10 @@ dprintf(D_FULLDEBUG,"    Leases not supported, cancelling timer\n" );
 
 	// Don't start a new lease update too soon after the previous one.
 	int delay;
-	delay = (lastUpdateLeases + 30) - time(NULL);
+	delay = (lastUpdateLeases + UPDATE_LEASE_DELAY) - time(NULL);
 	if ( delay > 0 ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, delay );
-dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying\n");
+dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying %d secs\n",delay);
 		return;
 	}
 
@@ -508,25 +511,58 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying\n");
 
     if ( updateLeasesActive == false ) {
 		BaseJob *curr_job;
+		time_t next_renew_time = INT_MAX;
+		time_t job_renew_time;
+		int min_new_expire = INT_MAX;
 dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
 		registeredJobs.Rewind();
+dprintf(D_FULLDEBUG,"    starting min_new_expire=%d next_renew_time=%d\n",min_new_expire,next_renew_time);
 		while ( registeredJobs.Next( curr_job ) ) {
 			int new_expire;
-			MyString  job_id;
+			std::string  job_id;
+			job_renew_time = next_renew_time;
 				// Don't update the lease for a job that isn't submitted
 				// anywhere. The Job object will start the lease when it
 				// submits the job.
-			if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) &&
-				 CalculateJobLease( curr_job->jobAd, new_expire ) ) {
+			if ( ( m_hasSharedLeases || curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) &&
+				 CalculateJobLease( curr_job->jobAd, new_expire,
+									m_defaultLeaseDuration,
+									&job_renew_time ) ) {
 
-				curr_job->UpdateJobLeaseSent( new_expire );
-				leaseUpdates.Append( curr_job );
+				if ( new_expire < min_new_expire ) {
+					min_new_expire = new_expire;
+				}
+				if ( !m_hasSharedLeases ) {
+					curr_job->UpdateJobLeaseSent( new_expire );
+					leaseUpdates.Append( curr_job );
+				}
+			} else if ( job_renew_time < next_renew_time ) {
+				next_renew_time = job_renew_time;
 			}
+dprintf(D_FULLDEBUG,"    after %d.%d: min_new_expire=%d next_renew_time=%d job_renew_time=%d\n",curr_job->procID.cluster,curr_job->procID.proc,min_new_expire,next_renew_time,job_renew_time);
 		}
-		if ( leaseUpdates.IsEmpty() ) {
+		if ( min_new_expire == INT_MAX ||
+			 ( m_hasSharedLeases && next_renew_time < INT_MAX &&
+			   m_sharedLeaseExpiration != 0 ) ) {
+			if ( next_renew_time > time(NULL) + 3600 ) {
+				next_renew_time = time(NULL) + 3600;
+			}
+dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %d secs\n",next_renew_time - time(NULL));
 			lastUpdateLeases = time(NULL);
-			daemonCore->Reset_Timer( updateLeasesTimerId, 30 );
+			daemonCore->Reset_Timer( updateLeasesTimerId,
+									 next_renew_time - time(NULL) );
 		} else {
+			if ( m_hasSharedLeases ) {
+				registeredJobs.Rewind();
+				while ( registeredJobs.Next( curr_job ) ) {
+					std::string job_id;
+					if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
+						curr_job->UpdateJobLeaseSent( min_new_expire );
+					}
+				}
+				m_sharedLeaseExpiration = min_new_expire;
+dprintf(D_FULLDEBUG,"    new shared lease expiration at %d, updating job ads...\n",m_sharedLeaseExpiration);
+			}
 			requestScheddUpdateNotification( updateLeasesTimerId );
 			updateLeasesActive = true;
 			leaseAttrsSynched = false;
@@ -567,12 +603,17 @@ else dprintf(D_FULLDEBUG,"    UpdateLeases: leases synched\n");
 	time_t update_delay;
 	bool update_complete;
 	SimpleList<PROC_ID> update_succeeded;
+	bool update_success;
 dprintf(D_FULLDEBUG,"    UpdateLeases: calling DoUpdateLeases\n");
-	DoUpdateLeases( update_delay, update_complete, update_succeeded );
+	if ( m_hasSharedLeases ) {
+		DoUpdateSharedLease( update_delay, update_complete, update_success );
+	} else {
+		DoUpdateLeases( update_delay, update_complete, update_succeeded );
+	}
 
 	if ( update_delay ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, update_delay );
-dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay\n");
+dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %d secs\n",update_delay);
 		return;
 	}
 
@@ -586,36 +627,57 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing resul
 	updateLeasesCmdActive = false;
 	lastUpdateLeases = time(NULL);
 
+	if ( m_hasSharedLeases ) {
+		BaseJob *curr_job;
+		std::string tmp;
+		registeredJobs.Rewind();
+		while ( registeredJobs.Next( curr_job ) ) {
+			if ( !curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, tmp ) ) {
+				continue;
+			}
+			bool curr_renewal_failed = !update_success;
+			bool last_renewal_failed = false;
+			curr_job->jobAd->LookupBool( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
+										 last_renewal_failed );
+			if ( curr_renewal_failed != last_renewal_failed ) {
+				curr_job->jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
+										 curr_renewal_failed );
+				requestScheddUpdate( curr_job, false );
+			}
+		}
+	} else {
 update_succeeded.Rewind();
 PROC_ID id;
-MyString msg = "    update_succeeded:";
-while(update_succeeded.Next(id)) msg.sprintf_cat(" %d.%d", id.cluster, id.proc);
-dprintf(D_FULLDEBUG,"%s\n",msg.Value());
-	BaseJob *curr_job;
-	leaseUpdates.Rewind();
-	while ( leaseUpdates.Next( curr_job ) ) {
-		bool curr_renewal_failed;
-		bool last_renewal_failed = false;
-		if ( update_succeeded.IsMember( curr_job->procID ) ) {
+std::string msg = "    update_succeeded:";
+ while(update_succeeded.Next(id)) sprintf_cat(msg, " %d.%d", id.cluster, id.proc);
+dprintf(D_FULLDEBUG,"%s\n",msg.c_str());
+		BaseJob *curr_job;
+		leaseUpdates.Rewind();
+		while ( leaseUpdates.Next( curr_job ) ) {
+			bool curr_renewal_failed;
+			bool last_renewal_failed = false;
+			if ( update_succeeded.IsMember( curr_job->procID ) ) {
 dprintf(D_FULLDEBUG,"    %d.%d is in succeeded list\n",curr_job->procID.cluster,curr_job->procID.proc);
-			curr_renewal_failed = false;
-		} else {
+				curr_renewal_failed = false;
+			} else {
 dprintf(D_FULLDEBUG,"    %d.%d is not in succeeded list\n",curr_job->procID.cluster,curr_job->procID.proc);
-			curr_renewal_failed = true;
+				curr_renewal_failed = true;
+			}
+			curr_job->jobAd->LookupBool( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
+										 last_renewal_failed );
+			if ( curr_renewal_failed != last_renewal_failed ) {
+				curr_job->jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
+										 curr_renewal_failed );
+				requestScheddUpdate( curr_job, false );
+			}
+			leaseUpdates.DeleteCurrent();
 		}
-		curr_job->jobAd->LookupBool( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
-									 last_renewal_failed );
-		if ( curr_renewal_failed != last_renewal_failed ) {
-			curr_job->jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL_FAILED,
-									 curr_renewal_failed );
-			requestScheddUpdate( curr_job, false );
-		}
-		leaseUpdates.DeleteCurrent();
 	}
 
 	updateLeasesActive = false;
 
-	daemonCore->Reset_Timer( updateLeasesTimerId, 30 );
+dprintf(D_FULLDEBUG,"    UpdateLeases: lease update complete, resetting timer for 30 secs\n");
+	daemonCore->Reset_Timer( updateLeasesTimerId, UPDATE_LEASE_DELAY );
 }
 
 void BaseResource::DoUpdateLeases( time_t& update_delay,
@@ -625,6 +687,16 @@ void BaseResource::DoUpdateLeases( time_t& update_delay,
 dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateLeases called\n");
 	update_delay = 0;
 	update_complete = true;
+}
+
+void BaseResource::DoUpdateSharedLease( time_t& update_delay,
+										bool& update_complete,
+										bool& update_succeeded )
+{
+dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateSharedLease called\n");
+	update_delay = 0;
+	update_complete = true;
+	update_succeeded = false;
 }
 
 void BaseResource::StartBatchStatusTimer()
@@ -692,19 +764,7 @@ int BaseResource::DoBatchStatus()
 	}
 
 	GahpClient * gahp = BatchGahp();
-	if(gahp && (gahp->isStarted() == false) ) {
-		dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus for %s is trying to start the GAHP.\n", ResourceName());
-		if ( gahp->Startup() == false ) {
-				// Failed to start the gahp server. Don't do anything
-				// about it. The job objects will also fail on this call
-				// and should go on hold as a result.
-			daemonCore->Reset_Timer( m_batchPollTid, BatchStatusInterval() );
-			dprintf(D_ALWAYS, "BaseResource::DoBatchStatus for %s failed to start the GAHP.\n", ResourceName());
-			return 0;
-		}
-	}
-
-	if ( gahp->isInitialized() == false ) {
+	if ( gahp && gahp->isStarted() == false ) {
 		int GAHP_INIT_DELAY = 5;
 		dprintf( D_ALWAYS,"BaseResource::DoBatchStatus: gahp server not up yet, delaying %d seconds\n", GAHP_INIT_DELAY );
 		daemonCore->Reset_Timer( m_batchPollTid, GAHP_INIT_DELAY );

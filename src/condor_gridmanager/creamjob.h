@@ -74,12 +74,12 @@ class CreamJob : public BaseJob
 
 	bool IsConnectionError( const char *msg );
 
-	static MyString getFullJobId(const char * resourceManager, const char * job_id);
+	static std::string getFullJobId(const char * resourceManager, const char * job_id);
 
 	// New variables
 	int gmState;
-	MyString remoteState;
-	MyString remoteStateFaultString;
+	std::string remoteState;
+	std::string remoteStateFaultString;
 	CreamResource *myResource;
 	time_t lastProbeTime;
 	bool probeNow;
@@ -108,14 +108,14 @@ class CreamJob : public BaseJob
 		// ad every time we test the call for completion). It should be
 		// freed and reset to NULL once the call completes.
 	char *creamAd;
-	MyString errorString;
+	std::string errorString;
 	char *localOutput;
 	char *localError;
 	bool streamOutput;
 	bool streamError;
 	bool stageOutput;
 	bool stageError;
-	MyString gahpErrorString;
+	std::string gahpErrorString;
 
 	char * delegatedCredentialURI;
 	char *leaseId;

@@ -236,6 +236,13 @@ public:
 						 action_result_type_t result_type = AR_TOTALS,
 						 bool notify_scheduler = true );
 
+		/** Clear dirty attributes for a list of job ids
+			@param ids What jobs to act on
+			@param result_type What kind of results you want
+		*/
+	ClassAd* clearDirtyAttrs( StringList* ids, CondorError * errstack,
+						action_result_type_t result_type = AR_TOTALS );
+
 		/** Get starter connection info for a running job.
 			@param jobid What job to act on
 			@param subproc For parallel jobs, which one (-1 if not specified)
@@ -293,8 +300,14 @@ public:
 	bool updateGSIcredential(const int cluster, const int proc, 
 		const char* path_to_proxy_file, CondorError * errstack);
 
+		// expiration_time: 0 if none; o.w. time to expire delegated proxy
+		// result_expiration_time: if non-NULL, gets set to the delegated
+		//                         proxy expiration time, which may be sooner
+		//                         than requested if source proxy expires
 	bool delegateGSIcredential(const int cluster, const int proc, 
-		const char* path_to_proxy_file, CondorError * errstack);
+							   const char* path_to_proxy_file, time_t expiration_time,
+							   time_t *result_expiration_time,
+							   CondorError * errstack);
 
 		// Caller should delete new_job_ad when done with it.
 		// Returns false on error (see error_msg)

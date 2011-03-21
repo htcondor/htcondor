@@ -19,8 +19,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "condor_classad_util.h"
-#include "condor_parser.h"
 #include "condor_status.h"
 #include "condor_debug.h"
 #include "condor_config.h"
@@ -33,8 +31,8 @@
 #include "condor_query.h"
 
 #include "condor_daemon_core.h"
-#include "../condor_status.V6/status_types.h"
-#include "../condor_status.V6/totals.h"
+#include "status_types.h"
+#include "totals.h"
 
 #include "condor_collector.h"
 #include "collector_engine.h"
@@ -49,8 +47,10 @@
 
 #include "collector.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "CollectorPlugin.h"
+#endif
 #endif
 
 #include "ccb_server.h"
@@ -102,6 +102,8 @@ ClassAd CollectorDaemon::query_any_request;
 OfflineCollectorPlugin CollectorDaemon::offline_plugin_;
 #endif
 
+StringList *viewCollectorTypes;
+
 CCBServer *CollectorDaemon::m_ccb_server;
 
 //---------------------------------------------------------
@@ -127,6 +129,7 @@ void CollectorDaemon::Init()
 	CollectorName=NULL;
 	ad=NULL;
 	View_Collector=NULL;
+	viewCollectorTypes = NULL;
 	view_sock=NULL;
 	UpdateTimerId=-1;
 	updateCollectors = NULL;
@@ -365,7 +368,9 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	char *projection = NULL;
 	cad.LookupString("projection", &projection);
 	SimpleList<MyString> projectionList;
+
 	::split_args(projection, &projectionList);
+	free(projection);
 
 	while ( (curr_ad=results.Next()) )
     {
@@ -635,10 +640,17 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
     offline_plugin_.invalidate ( command, cad );
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	CollectorPluginManager::Invalidate(command, cad);
 #endif
+#endif
 
+	if (viewCollectorTypes) {
+		forward_classad_to_view_collector(command,
+										  ATTR_TARGET_TYPE,
+										  &cad);
+	} else
 	if(View_Collector && ((command == INVALIDATE_STARTD_ADS) ||
 		(command == INVALIDATE_SUBMITTOR_ADS)) ) {
 		send_classad_to_sock(command, View_Collector, &cad);
@@ -697,10 +709,17 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	offline_plugin_.update ( command, *cad );
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	CollectorPluginManager::Update(command, *cad);
 #endif
+#endif
 
+	if (viewCollectorTypes) {
+		forward_classad_to_view_collector(command,
+										  ATTR_MY_TYPE,
+										  cad);
+	} else
 	if(View_Collector && ((command == UPDATE_STARTD_AD) ||
 			(command == UPDATE_SUBMITTOR_AD)) ) {
 		send_classad_to_sock(command, View_Collector, cad);
@@ -819,13 +838,21 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 
 #if ( HAVE_HIBERNATION )
     /* let the off-line plug-in have at it */
+	if(cad)
     offline_plugin_.update ( command, *cad );
 #endif
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
     CollectorPluginManager::Update ( command, *cad );
 #endif
+#endif
 
+	if (viewCollectorTypes) {
+		forward_classad_to_view_collector(command,
+										  ATTR_MY_TYPE,
+										  cad);
+	} else
     if( View_Collector && UPDATE_STARTD_AD_WITH_ACK == command ) {
 		send_classad_to_sock ( command, View_Collector, cad );
 	}
@@ -1164,7 +1191,11 @@ void CollectorDaemon::Config()
 
 	tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
 	if (tmp == NULL) {
+#ifdef NO_PHONE_HOME
+		tmp = strdup("NONE");
+#else
 		tmp = strdup("condor.cs.wisc.edu");
+#endif
 	}
 	if (strcasecmp(tmp,"NONE") == 0 ) {
 		free(tmp);
@@ -1253,6 +1284,19 @@ void CollectorDaemon::Config()
 		   view_sock_timeslice.setMaxInterval(1200);
        }
     }
+
+	if (viewCollectorTypes) delete viewCollectorTypes;
+	viewCollectorTypes = NULL;
+	if (View_Collector) {
+		tmp = param("CONDOR_VIEW_CLASSAD_TYPES");
+		if (tmp) {
+			viewCollectorTypes = new StringList(tmp);
+			char *printable_string = viewCollectorTypes->print_to_string();
+			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
+					printable_string);
+			free(printable_string);
+		}
+	}
 
 	int size = param_integer ("COLLECTOR_CLASS_HISTORY_SIZE",1024);
 	collectorStats.setClassHistorySize( size );
@@ -1366,6 +1410,8 @@ void CollectorDaemon::sendCollectorAd()
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad );
 
+    daemonCore->monitor_data.ExportData(ad);
+
 	// Send the ad
 	int num_updated = updateCollectors->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
 	if ( num_updated != updateCollectors->number() ) {
@@ -1425,6 +1471,31 @@ void CollectorDaemon::init_classad(int interval)
 		// Publish all DaemonCore-specific attributes, which also handles
 		// COLLECTOR_ATTRS for us.
 	daemonCore->publish(ad);
+}
+
+void
+CollectorDaemon::forward_classad_to_view_collector(int cmd,
+										   const char *filterAttr,
+										   ClassAd *ad)
+{
+	if (!View_Collector) return;
+
+	if (!filterAttr) {
+		send_classad_to_sock(cmd, View_Collector, ad);
+		return;
+	}
+
+	std::string type;
+	if (!ad->EvaluateAttrString(std::string(filterAttr), type)) {
+		dprintf(D_ALWAYS, "Failed to lookup %s on ad, not forwarding\n", filterAttr);
+		return;
+	}
+
+	if (viewCollectorTypes->contains_anycase(type.c_str())) {
+		dprintf(D_ALWAYS, "Forwarding ad: type=%s command=%s\n",
+				type.c_str(), getCommandString(cmd));
+		send_classad_to_sock(cmd, View_Collector, ad);
+	}
 }
 
 void

@@ -1,0 +1,77 @@
+ ###############################################################
+ # 
+ # Copyright 2011 Red Hat, Inc. 
+ # 
+ # Licensed under the Apache License, Version 2.0 (the "License"); you 
+ # may not use this file except in compliance with the License.  You may 
+ # obtain a copy of the License at 
+ # 
+ #    http://www.apache.org/licenses/LICENSE-2.0 
+ # 
+ # Unless required by applicable law or agreed to in writing, software 
+ # distributed under the License is distributed on an "AS IS" BASIS, 
+ # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ # See the License for the specific language governing permissions and 
+ # limitations under the License. 
+ # 
+ ############################################################### 
+
+
+set(TOOL_LINK_LIBS "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}")
+
+condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_preen "preen.cpp" ${C_SBIN} "qmgmt;${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_advertise "advertise.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_fetchlog "fetch_log.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_config_val "config_val.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_userprio "user_prio.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_findhost "give_interactive.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "qmgmt;${TOOL_LINK_LIBS}" OFF)
+
+if (HAVE_SSH_TO_JOB)
+	condor_exe(condor_ssh_to_job "ssh_to_job.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+endif(HAVE_SSH_TO_JOB)
+
+condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_version "version.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_wait "wait.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_history "history.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
+
+if (WANT_QUILL AND HAVE_EXT_POSTGRESQL)
+	condor_exe(condor_load_history "load_history.cpp" ${C_BIN} "tt;${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
+	condor_exe(condor_dump_history "dump_history.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
+	condor_exe(condor_convert_history "convert_history.cpp" ${C_SBIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
+endif(WANT_QUILL AND HAVE_EXT_POSTGRESQL)
+
+condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
+
+condor_exe(condor "tool.cpp" "${C_BIN}" "${TOOL_LINK_LIBS}" OFF)
+clone_install(condor "${C_BIN}" "condor_on;condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
+if (WANT_FULL_DEPLOYMENT)
+    clone_install(condor "${C_BIN}" "condor_set_shutdown" "${C_SBIN}")
+endif(WANT_FULL_DEPLOYMENT)
+clone_install(condor "${C_BIN}" "condor_vacate;condor_reschedule" "${C_BIN}")
+
+if (NOT WINDOWS)
+    if (WANT_FULL_DEPLOYMENT)
+        clone_install(condor "${C_BIN}" "condor_reconfig_schedd;condor_master_off" "${C_SBIN}") # legacy cruft?
+    endif(WANT_FULL_DEPLOYMENT)
+	if (STD_UNIVERSE)
+		clone_install(condor "${C_BIN}" "condor_checkpoint" "${C_BIN}")
+		src_target_ref( ckpt "maps" CKPT_REFS)
+		condor_exe(condor_ckpt_probe "probe_process.c;${CKPT_REFS}" "${C_LIBEXEC}" "${TOOL_LINK_LIBS}" OFF)
+	endif(STD_UNIVERSE)
+else(NOT WINDOWS)
+	clone_install(condor_cod "${C_BIN}" "condor_cod_request" "${C_BIN}")
+	clone_install(condor "${C_BIN}" "condor_squawk" "${C_BIN}")
+endif(NOT WINDOWS)
+
+condor_exe(condor_stats "stats.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+
+if( WINDOWS )
+	condor_exe(condor_setup "condor_setup.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+	condor_exe(condor_set_acls "condor_set_acls.c" ${C_BIN} "" OFF)
+endif()
+
+condor_exe_test(condor_test_auth "test_auth.cpp" "${TOOL_LINK_LIBS}")
+condor_exe(condor_test_match "condor_test_match.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)

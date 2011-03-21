@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,8 +26,8 @@
 #include "vmgahp_common.h"
 #include "vmgahp.h"
 #include "vmware_type.h"
-#if defined(LINUX)
-#  include "xen_type.h"
+#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
+#  include "xen_type.linux.h"
 #endif
 #include "subsystem_info.h"
 #include "../condor_privsep/condor_privsep.h"
@@ -68,9 +68,9 @@ vm_cleanup(void)
 
 void Init() {}
 void Register() {}
-void Reconfig() 
+void Reconfig()
 {
-	// DaemonCore library changes current working directory to 
+	// DaemonCore library changes current working directory to
 	// LOG directory defined in Condor config file.
 	// However, because vmgahp server is usually executed by starter
 	// we will change current working directory to job directory
@@ -80,7 +80,7 @@ void Reconfig()
 		}
 	}
 
-	// If we use Termlog, 
+	// If we use Termlog,
 	// we don't want logs from DaemonCore
 	oriDebugFlags = DebugFlags;
 	if( Termlog ) {
@@ -107,7 +107,7 @@ main_config()
 	Reconfig();
 }
 
-void 
+void
 main_shutdown_fast()
 {
 	vmprintf(D_ALWAYS, "Received Signal for shutdown fast\n");
@@ -115,7 +115,7 @@ main_shutdown_fast()
 	DC_Exit(0);
 }
 
-void 
+void
 main_shutdown_graceful()
 {
 	vmprintf(D_ALWAYS, "Received Signal for shutdown gracefully\n");
@@ -123,8 +123,8 @@ main_shutdown_graceful()
 	DC_Exit(0);
 }
 
-void 
-init_uids() 
+void
+init_uids()
 {
 #if !defined(WIN32)
 	bool SwitchUid = can_switch_ids() || privsep_enabled();
@@ -207,12 +207,12 @@ init_uids()
 #endif
 }
 
-void 
+void
 main_pre_dc_init(int, char*[])
 {
 }
 
-void 
+void
 main_pre_command_sock_init()
 {
 	daemonCore->WantSendChildAlive( false );
@@ -221,7 +221,7 @@ main_pre_command_sock_init()
 static void
 usage( char *name)
 {
-	vmprintf(D_ALWAYS, 
+	vmprintf(D_ALWAYS,
 			"Usage: \n"
 			"\tTestMode: %s -f -t -M 0 vmtype <vmtype> \n"
 			"\tStandAlone: %s -f -t -M 3\n"
@@ -269,9 +269,9 @@ void main_init(int argc, char *argv[])
 			DC_Exit(1);
 	}
 
-	if( Termlog && (vmgahp_mode != VMGAHP_TEST_MODE ) && 
+	if( Termlog && (vmgahp_mode != VMGAHP_TEST_MODE ) &&
 			(vmgahp_mode != VMGAHP_KILL_MODE )) {
-		// Initialize pipe for stderr 
+		// Initialize pipe for stderr
 		vmgahp_stderr_pipe = daemonCore->Inherit_Pipe(fileno(stderr),
 				true,		//write pipe
 				false,		//nonregisterable
@@ -352,7 +352,7 @@ void main_init(int argc, char *argv[])
 			vmprintf(D_ALWAYS, "cannot find vmtype\n");
 			DC_Exit(1);
 		}
-	
+
 		workingdir = getenv("VMGAHP_WORKING_DIR");
 		if( workingdir.IsEmpty() ) {
 			vmprintf(D_ALWAYS, "cannot find vmgahp working dir\n");
@@ -374,9 +374,9 @@ void main_init(int argc, char *argv[])
 
 	initialize_uids();
 
-#if defined(LINUX)
+#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 	if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0) || (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
-		// Xen requires root priviledge 
+		// Xen requires root priviledge
 		if( !canSwitchUid() ) {
 			vmprintf(D_ALWAYS, "VMGahp server for Xen or KVM requires "
 					"root privilege\n");
@@ -396,7 +396,7 @@ void main_init(int argc, char *argv[])
 	set_condor_priv();
 
 	// Check if vm specific paramaters are valid in config file
-#if defined(LINUX)
+#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 	// The calls to checkXenParams() were moved here because each
 	// call is specific to the subclass type that is calling it.
 	// These methods are static, so dynamic dispatch cannot be
@@ -427,11 +427,11 @@ void main_init(int argc, char *argv[])
 
 	if( vmgahp_mode == VMGAHP_TEST_MODE ) {
 		// Try to test
-#if defined(LINUX)
+#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 	  if( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
 			priv_state priv = set_root_priv();
 
-			if( (VirshType::testXen(gahpconfig) == false) || (XenType::checkXenParams(gahpconfig) == false) ) {
+			if( XenType::checkXenParams(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
 						"be used.\n", vmtype.Value());
 				DC_Exit(0);
@@ -440,14 +440,14 @@ void main_init(int argc, char *argv[])
 	  }else if ( (strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 			priv_state priv = set_root_priv();
 
-			if( (VirshType::testXen(gahpconfig) == false) || (KVMType::checkXenParams(gahpconfig) == false) ) {
+			if( KVMType::checkXenParams(gahpconfig) == false ) {
 				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
 						"be used.\n", vmtype.Value());
 				DC_Exit(0);
 			}
 			set_priv(priv);
 
-	  } else 
+	  } else
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
 			priv_state priv = set_user_priv();
@@ -460,15 +460,15 @@ void main_init(int argc, char *argv[])
 		}
 
 		// print information to stdout
-		write_to_daemoncore_pipe("VM_GAHP_VERSION = \"%s\"\n", CONDOR_VMGAHP_VERSION); 
-		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_TYPE, 
+		write_to_daemoncore_pipe("VM_GAHP_VERSION = \"%s\"\n", CONDOR_VMGAHP_VERSION);
+		write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_TYPE,
 				gahpconfig->m_vm_type.Value());
-		write_to_daemoncore_pipe("%s = %d\n", ATTR_VM_MEMORY, 
+		write_to_daemoncore_pipe("%s = %d\n", ATTR_VM_MEMORY,
 				gahpconfig->m_vm_max_memory);
-		write_to_daemoncore_pipe("%s = %s\n", ATTR_VM_NETWORKING, 
+		write_to_daemoncore_pipe("%s = %s\n", ATTR_VM_NETWORKING,
 				gahpconfig->m_vm_networking? "TRUE":"FALSE");
 		if( gahpconfig->m_vm_networking ) {
-			write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_NETWORKING_TYPES, 
+			write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_NETWORKING_TYPES,
 				gahpconfig->m_vm_networking_types.print_to_string());
 		}
 		if( gahpconfig->m_vm_hardware_vt ) {
@@ -482,11 +482,11 @@ void main_init(int argc, char *argv[])
 			DC_Exit(0);
 		}
 
-		// With root privilege, 
+		// With root privilege,
 		// we will try to kill the VM that matches with given "matchstring".
 		set_root_priv();
 
-#if defined(LINUX)
+#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
 			XenType::killVMFast(matchstring.Value());
 		}else
@@ -495,7 +495,7 @@ void main_init(int argc, char *argv[])
 		}else
 #endif
 		if( strcasecmp(vmtype.Value(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
-			VMwareType::killVMFast(gahpconfig->m_prog_for_script.Value(), 
+			VMwareType::killVMFast(gahpconfig->m_prog_for_script.Value(),
 					gahpconfig->m_vm_script.Value(), matchstring.Value(), true);
 		}
 		DC_Exit(0);

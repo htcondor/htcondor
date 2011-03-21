@@ -18,6 +18,8 @@
  ***************************************************************/
 
 #include "signals_control.h"
+
+#if DOES_SAVE_SIGSTATE
 #include "condor_syscall_mode.h"
 #include "condor_debug.h"
 
@@ -94,6 +96,7 @@ void _condor_signals_enable( sigset_t mask )
 	if( sigprocmask(SIG_SETMASK,&mask,0) < 0 ) {
 		dprintf(D_ALWAYS, "_condor_signals_enable: sigprocmask failed: %s\n", strerror(errno));
 	}
-}	
+}
+#endif
 
 

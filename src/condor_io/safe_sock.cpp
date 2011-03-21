@@ -192,6 +192,22 @@ int SafeSock::end_of_message()
 	return ret_val;
 }
 
+bool
+SafeSock::peek_end_of_message()
+{
+	if(_msgReady) {
+		if(_longMsg) { // long message is ready
+			if(_longMsg->consumed()) {
+				return true;
+			}
+		} else { // short message is ready
+			if(_shortMsg.consumed())
+				return true;
+		}
+	}
+	return false;
+}
+
 const char *
 SafeSock::my_ip_str()
 {
@@ -564,7 +580,7 @@ int SafeSock::handle_incoming_packet()
 
 
 	received = recvfrom(_sock, _shortMsg.dataGram, SAFE_MSG_MAX_PACKET_SIZE,
-	                    0, (struct sockaddr *)&_who, fromlen );
+	                    0, (struct sockaddr *)&_who, (socklen_t*)fromlen );
 	if(received < 0) {
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;
@@ -752,18 +768,20 @@ char * SafeSock::serialize(char *buf)
 	// first, let our parent class restore its state
 	ptmp = Sock::serialize(buf);
 	ASSERT( ptmp );
-	sscanf(ptmp,"%d*",(int*)&_special_state);
+	int itmp;
+	sscanf(ptmp,"%d*",&itmp);
+	_special_state=safesock_state(itmp);
     // skip through this
     ptmp = strchr(ptmp, '*');
-    ptmp++;
+    if(ptmp) ptmp++;
 
     // Now, see if we are 6.3 or 6.2
-    if ( (ptr = strchr(ptmp, '*')) != NULL) {
+    if (ptmp && (ptr = strchr(ptmp, '*')) != NULL) {
         // We are 6.3
         memcpy(sinful_string, ptmp, ptr - ptmp);
         ptmp = ++ptr;
     }
-    else {
+    else if(ptmp) {
         sscanf(ptmp,"%s",sinful_string);
     }
 

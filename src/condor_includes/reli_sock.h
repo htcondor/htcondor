@@ -45,6 +45,7 @@ class Condor_MD_MAC;
 #define PUT_FILE_OPEN_FAILED -2
 #define GET_FILE_WRITE_FAILED -3
 #define GET_FILE_PLUGIN_FAILED -4
+#define PUT_FILE_PLUGIN_FAILED -4
 
 class ReliSock : public Sock {
 	friend class Authentication;
@@ -67,6 +68,8 @@ public:
 
     ///
 	virtual int end_of_message();
+
+	virtual bool peek_end_of_message();
 
     /** Connect to a host on a port
         @param s can be a hostname or sinful string
@@ -165,7 +168,11 @@ public:
 	int get_x509_delegation( filesize_t *size, const char *destination,
 							 bool flush_buffers=false );
 	/// returns -1 on failure, 0 for ok
-	int put_x509_delegation( filesize_t *size, const char *source );
+	// expiration_time: 0 if none; o.w. timestamp of delegated proxy expiration
+	// result_expiration_time: if non-NULL will be set to actual expiration
+	//                         time of delegated proxy; could be shorter than
+	//                         requested time if source proxy expires sooner
+	int put_x509_delegation( filesize_t *size, const char *source, time_t expiration_time, time_t *result_expiration_time );
     ///
 	float get_bytes_sent() { return _bytes_sent; }
     ///

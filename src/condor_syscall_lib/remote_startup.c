@@ -453,7 +453,7 @@ MAIN( int argc, char *argv[], char **envp )
 
 		_linked_with_condor_message();
 			// Also, register the version with the shadow
-		REMOTE_CONDOR_register_syscall_version( CondorVersion() );
+		REMOTE_CONDOR_register_syscall_version( (char *) CondorVersion() );
 
 		SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 
@@ -518,9 +518,11 @@ _condor_interp_cmd_stream( int fd )
 			dprintf( D_ALWAYS, "?\n" );
 			break;
 		  case END:
+			fclose(fp);
 			return;
 		}
 	}
+	fclose(fp);
 	_condor_error_retry("EOF on command stream");
 }
 
@@ -545,7 +547,7 @@ static enum result
 _condor_do_cmd( int argc, char *argv[] )
 {
 	if( argc == 0 ) {
-		return FALSE;
+		return NOT_OK;
 	}
 
 	switch( _condor_find_cmd(argv[0]) ) {
@@ -553,39 +555,39 @@ _condor_do_cmd( int argc, char *argv[] )
 		return END;
 	  case IWD:
 		if( argc != 2 ) {
-			return FALSE;
+			return NOT_OK;
 		}
-		return condor_iwd( argv[1] );
+		return (condor_iwd( argv[1] ))?OK:NOT_OK;
 	  case FD:
 		assert( argc == 4 );
-		return condor_fd( argv[1], argv[2], argv[3] );
+		return (condor_fd( argv[1], argv[2], argv[3] ))?OK:NOT_OK;
 	  case RESTART:
 		if( argc != 1 ) {
-			return FALSE;
+			return NOT_OK;
 		}
-		return condor_restart();
+		return condor_restart()?OK:NOT_OK;
 	  case CKPT:
 		if( argc != 2 ) {
-			return FALSE;
+			return NOT_OK;
 		}
-		return condor_ckpt( argv[1] );
+		return condor_ckpt( argv[1] )?OK:NOT_OK;
 	  case MIGRATE_TO:
 		if( argc != 3 ) {
-			return FALSE;
+			return NOT_OK;
 		}
-		return condor_migrate_to( argv[1], argv[2] );
+		return condor_migrate_to( argv[1], argv[2] )?OK:NOT_OK;
 	  case MIGRATE_FROM:
 		if( argc != 2 ) {
-			return FALSE;
+			return NOT_OK;
 		}
-		return condor_migrate_from( argv[1] );
+		return condor_migrate_from( argv[1] )?OK:NOT_OK;
 	  case EXIT:
 		if( argc != 2 ) {
-			return FALSE;
+			return NOT_OK;
 		}
-		return condor_exit( argv[1] );
+		return condor_exit( argv[1] )?OK:NOT_OK;
 	  default:
-		return FALSE;
+		return NOT_OK;
 	}
 }
 

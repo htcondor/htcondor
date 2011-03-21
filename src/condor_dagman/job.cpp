@@ -28,9 +28,13 @@
 #include "dag.h"
 #include <set>
 
+static const char *JOB_TAG_NAME = "+job_tag_name";
+static const char *PEGASUS_SITE = "+pegasus_site";
+
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
 int Job::NOOP_NODE_PROCID = INT_MAX;
+int Job::_nextJobstateSeqNum = 1;
 
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the queue_t enum
@@ -88,6 +92,8 @@ Job::~Job() {
 
 	delete _scriptPre;
 	delete _scriptPost;
+
+	delete [] _jobTag;
 }
 
 //---------------------------------------------------------------------------
@@ -168,6 +174,10 @@ void Job::Init( const char* jobName, const char* directory,
 	_logFileIsXml = false;
 
 	_noop = false;
+
+	_jobTag = NULL;
+	_jobstateSeqNum = 0;
+	_lastEventTime = 0;
 
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;
@@ -698,10 +708,16 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 
 	if ( (_throttleInfo != NULL) &&
 				(tmpName != *(_throttleInfo->_category)) ) {
+			// When we implement the -strict flag (see gittrac # 1755),
+			// should this be a fatal error?
 		debug_printf( DEBUG_NORMAL, "Warning: new category %s for node %s "
 					"overrides old value %s\n", categoryName, GetJobName(),
 					_throttleInfo->_category->Value() );
 	}
+
+		// Note: we must assign a ThrottleInfo here even if the name
+		// already matches, for the case of lifting splices.
+	ThrottleByCategory::ThrottleInfo *oldInfo = _throttleInfo;
 
 	ThrottleByCategory::ThrottleInfo *throttleInfo =
 				catThrottles.GetThrottleInfo( &tmpName );
@@ -709,6 +725,13 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 		_throttleInfo = throttleInfo;
 	} else {
 		_throttleInfo = catThrottles.AddCategory( &tmpName );
+	}
+
+	if ( oldInfo != _throttleInfo ) {
+		if ( oldInfo != NULL ) {
+			oldInfo->_totalJobs--;
+		}
+		_throttleInfo->_totalJobs++;
 	}
 }
 
@@ -887,4 +910,57 @@ Job::LogMonitorFailed()
 			_scriptPost->_retValJob = retval;
 		}
 	}
+}
+
+//---------------------------------------------------------------------------
+const char *
+Job::GetJobstateJobTag()
+{
+	if ( !_jobTag ) {
+		MyString jobTagName = MultiLogFiles::loadValueFromSubFile(
+					_cmdFile, _directory, JOB_TAG_NAME );
+		if ( jobTagName == "" ) {
+			jobTagName = PEGASUS_SITE;
+		} else {
+				// Remove double-quotes
+			int begin = jobTagName[0] == '\"' ? 1 : 0;
+			int last = jobTagName.Length() - 1;
+			int end = jobTagName[last] == '\"' ? last - 1 : last;
+			jobTagName = jobTagName.Substr( begin, end );
+		}
+
+		MyString tmpJobTag = MultiLogFiles::loadValueFromSubFile(
+					_cmdFile, _directory, jobTagName.Value() );
+		if ( tmpJobTag == "" ) {
+			tmpJobTag = "-";
+		} else {
+				// Remove double-quotes
+			int begin = tmpJobTag[0] == '\"' ? 1 : 0;
+			int last = tmpJobTag.Length() - 1;
+			int end = tmpJobTag[last] == '\"' ? last - 1 : last;
+			tmpJobTag = tmpJobTag.Substr( begin, end );
+		}
+		_jobTag = strnewp( tmpJobTag.Value() );
+	}
+
+	return _jobTag;
+}
+
+//---------------------------------------------------------------------------
+int
+Job::GetJobstateSequenceNum()
+{
+	if ( _jobstateSeqNum == 0 ) {
+		_jobstateSeqNum = _nextJobstateSeqNum++;
+	}
+
+	return _jobstateSeqNum;
+}
+
+//---------------------------------------------------------------------------
+void
+Job::SetLastEventTime( const ULogEvent *event )
+{
+	struct tm eventTm = event->eventTime;
+	_lastEventTime = mktime( &eventTm );
 }

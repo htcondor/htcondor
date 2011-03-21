@@ -68,18 +68,18 @@ static bool
 SetMasterProxy( Proxy *master, const Proxy *copy_src )
 {
 	int rc;
-	MyString tmp_file;
+	std::string tmp_file;
 
-	tmp_file.sprintf( "%s.tmp", master->proxy_filename );
+	sprintf( tmp_file, "%s.tmp", master->proxy_filename );
 
-	rc = copy_file( copy_src->proxy_filename, tmp_file.Value() );
+	rc = copy_file( copy_src->proxy_filename, tmp_file.c_str() );
 	if ( rc != 0 ) {
 		return false;
 	}
 
-	rc = rotate_file( tmp_file.Value(), master->proxy_filename );
+	rc = rotate_file( tmp_file.c_str(), master->proxy_filename );
 	if ( rc != 0 ) {
-		unlink( tmp_file.Value() );
+		unlink( tmp_file.c_str() );
 		return false;
 	}
 
@@ -164,7 +164,7 @@ void ReconfigProxyManager()
 // any proxy-related attributes, AcquireProxy() will store the empty
 // string in the error parameter and return NULL.
 Proxy *
-AcquireProxy( const ClassAd *job_ad, MyString &error,
+AcquireProxy( const ClassAd *job_ad, std::string &error,
 			  TimerHandlercpp func_ptr, Service *data  )
 {
 	if ( proxymanager_initialized == false ) {
@@ -177,15 +177,16 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 	ProxySubject *proxy_subject = NULL;
 	char *subject_name = NULL;
 	char *fqan = NULL;
-	MyString proxy_path;
-	MyString owner;
+	char *email = NULL;
+	std::string proxy_path;
+	std::string owner;
 	char *param_str = NULL;
 	bool has_voms_attrs = false;
 
 	if ( job_ad->LookupString( ATTR_OWNER, owner ) ) {
-		MyString param_name;
-		param_name.sprintf( "JOB_PROXY_OVERRIDE_FILE_%s", owner.Value() );
-		param_str = param( param_name.Value() );
+		std::string param_name;
+		sprintf( param_name, "JOB_PROXY_OVERRIDE_FILE_%s", owner.c_str() );
+		param_str = param( param_name.c_str() );
 	}
 	if ( param_str == NULL ) {
 		param_str = param( "JOB_PROXY_OVERRIDE_FILE" );
@@ -199,6 +200,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 		// Special handling for "use best proxy"
 		job_ad->LookupString( ATTR_X509_USER_PROXY_FQAN, &fqan );
 		job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, &subject_name );
+		job_ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, &email );
 		if ( subject_name ) {
 			if ( fqan == NULL ) {
 				fqan = strdup( subject_name );
@@ -211,16 +213,20 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 				// create a new ProxySubject and fill it out
 				proxy_subject = new ProxySubject;
 				proxy_subject->subject_name = strdup( subject_name );
+				if (email)
+					proxy_subject->email = strdup( email );
+				else
+					proxy_subject->email = NULL;
 				proxy_subject->fqan = strdup( fqan );
 				proxy_subject->has_voms_attrs = has_voms_attrs;
 
 				// Create a master proxy for our new ProxySubject
 				Proxy *new_master = new Proxy;
 				new_master->id = next_proxy_id++;
-				MyString tmp;
-				tmp.sprintf( "%s/master_proxy.%d", masterProxyDirectory,
+				std::string tmp;
+				sprintf( tmp, "%s/master_proxy.%d", masterProxyDirectory,
 							 new_master->id );
-				new_master->proxy_filename = strdup( tmp.Value() );
+				new_master->proxy_filename = strdup( tmp.c_str() );
 				new_master->num_references = 0;
 				new_master->subject = proxy_subject;
 				//SetMasterProxy( new_master, proxy );
@@ -246,6 +252,8 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 				}
 			}
 			free( subject_name );
+			if ( email )
+				free( email );
 			free( fqan );
 			return proxy;
 
@@ -253,12 +261,12 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 
 		free( subject_name );
 		free( fqan );
-		//error.sprintf( "%s is not set in the job ad", ATTR_X509_USER_PROXY );
+		//sprintf( error, "%s is not set in the job ad", ATTR_X509_USER_PROXY );
 		error = "";
 		return NULL;
 	}
 
-	if ( ProxiesByFilename.lookup( HashKey(proxy_path.Value()), proxy ) == 0 ) {
+	if ( ProxiesByFilename.lookup( HashKey(proxy_path.c_str()), proxy ) == 0 ) {
 		// We already know about this proxy,
 		// use the existing Proxy struct
 		proxy->num_references++;
@@ -276,29 +284,29 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 
 		// We don't know about this proxy yet,
 		// find the proxy's expiration time and subject name
-		expire_time = x509_proxy_expiration_time( proxy_path.Value() );
+		expire_time = x509_proxy_expiration_time( proxy_path.c_str() );
 		if ( expire_time < 0 ) {
 			dprintf( D_ALWAYS, "Failed to get expiration time of proxy %s\n",
-					 proxy_path.Value() );
-			error.sprintf( "Failed to get expiration time of proxy" );
+					 proxy_path.c_str() );
+			error = "Failed to get expiration time of proxy";
 			return NULL;
 		}
-		subject_name = x509_proxy_identity_name( proxy_path.Value() );
+		subject_name = x509_proxy_identity_name( proxy_path.c_str() );
 		if ( subject_name == NULL ) {
 			dprintf( D_ALWAYS, "Failed to get identity of proxy %s\n",
-					 proxy_path.Value() );
-			error.sprintf( "Failed to get identity of proxy" );
+					 proxy_path.c_str() );
+			error = "Failed to get identity of proxy";
 			return NULL;
 		}
 
 		fqan = NULL;
 #if defined(HAVE_EXT_GLOBUS)
-		int rc = extract_VOMS_info_from_file( proxy_path.Value(), 0, NULL,
+		int rc = extract_VOMS_info_from_file( proxy_path.c_str(), 0, NULL,
 											  NULL, &fqan );
 		if ( rc != 0 && rc != 1 ) {
 			dprintf( D_ALWAYS, "Failed to get voms info of proxy %s\n",
-					 proxy_path.Value() );
-			error.sprintf( "Failed to get voms info of proxy" );
+					 proxy_path.c_str() );
+			error = "Failed to get voms info of proxy";
 			free( subject_name );
 			return NULL;
 		}
@@ -311,7 +319,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 
 		// Create a Proxy struct for our new proxy and populate it
 		proxy = new Proxy;
-		proxy->proxy_filename = strdup(proxy_path.Value());
+		proxy->proxy_filename = strdup(proxy_path.c_str());
 		proxy->num_references = 1;
 		proxy->expiration_time = expire_time;
 		proxy->near_expired = (expire_time - time(NULL)) <= minProxy_time;
@@ -325,7 +333,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 			}
 		}
 
-		ProxiesByFilename.insert(HashKey(proxy_path.Value()), proxy);
+		ProxiesByFilename.insert(HashKey(proxy_path.c_str()), proxy);
 
 		if ( SubjectsByName.lookup( HashKey(fqan), proxy_subject ) != 0 ) {
 			// We don't know about this proxy subject yet,
@@ -338,10 +346,10 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 			// Create a master proxy for our new ProxySubject
 			Proxy *new_master = new Proxy;
 			new_master->id = next_proxy_id++;
-			MyString tmp;
-			tmp.sprintf( "%s/master_proxy.%d", masterProxyDirectory,
+			std::string tmp;
+			sprintf( tmp, "%s/master_proxy.%d", masterProxyDirectory,
 						 new_master->id );
-			new_master->proxy_filename = strdup( tmp.Value() );
+			new_master->proxy_filename = strdup( tmp.c_str() );
 			new_master->num_references = 0;
 			new_master->subject = proxy_subject;
 			SetMasterProxy( new_master, proxy );
@@ -369,7 +377,7 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 	}
 
 		// MyProxy crap
-	MyString buff;
+	std::string buff;
 	if ( job_ad->LookupString( ATTR_MYPROXY_HOST_NAME, buff ) ) {
 
 		int cluster;
@@ -388,17 +396,17 @@ AcquireProxy( const ClassAd *job_ad, MyString &error,
 		myProxyEntry->myproxy_password=NULL;
 		myProxyEntry->myproxy_credential_name=NULL;
 
-		myProxyEntry->myproxy_host=strdup(buff.Value());
+		myProxyEntry->myproxy_host=strdup(buff.c_str());
 		myProxyEntry->cluster_id = cluster;
 		myProxyEntry->proc_id = proc;
 
 		// Get optional MYPROXY_SERVER_DN attribute
 		if (job_ad->LookupString (ATTR_MYPROXY_SERVER_DN, buff)) {
-			myProxyEntry->myproxy_server_dn=strdup(buff.Value());
+			myProxyEntry->myproxy_server_dn=strdup(buff.c_str());
 		}
 
 		if (job_ad->LookupString (ATTR_MYPROXY_CRED_NAME, buff)) {
-			myProxyEntry->myproxy_credential_name=strdup(buff.Value());
+			myProxyEntry->myproxy_credential_name=strdup(buff.c_str());
 		}
 
 		if (job_ad->LookupInteger (ATTR_MYPROXY_REFRESH_THRESHOLD, myProxyEntry->refresh_threshold)) {
@@ -540,6 +548,8 @@ ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 
 			SubjectsByName.remove( HashKey(proxy_subject->fqan) );
 			free( proxy_subject->subject_name );
+			if ( proxy_subject->email )
+				free( proxy_subject->email );
 			free( proxy_subject->fqan );
 			delete proxy_subject;
 		}
@@ -765,19 +775,19 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 
 	// Set up environnment for myproxy-get-delegation
 	Env myEnv;
-	MyString buff;
+	std::string buff;
 
 	if (myProxyEntry->myproxy_server_dn) {
-		buff.sprintf( "MYPROXY_SERVER_DN=%s",
+		sprintf( buff, "MYPROXY_SERVER_DN=%s",
 				 myProxyEntry->myproxy_server_dn);
-		myEnv.SetEnv(buff.Value());
-		dprintf (D_FULLDEBUG, "%s\n", buff.Value());
+		myEnv.SetEnv(buff.c_str());
+		dprintf (D_FULLDEBUG, "%s\n", buff.c_str());
 	}
 
 
-	buff.sprintf("X509_USER_PROXY=%s", proxy_filename);
-	myEnv.SetEnv (buff.Value());
-	dprintf (D_FULLDEBUG, "%s\n", buff.Value());
+	sprintf(buff, "X509_USER_PROXY=%s", proxy_filename);
+	myEnv.SetEnv (buff.c_str());
+	dprintf (D_FULLDEBUG, "%s\n", buff.c_str());
 
 
 	// Print password (this will end up in stdin for myproxy-get-delegation)
@@ -829,11 +839,15 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 
 	// Create temporary file to store myproxy-get-delegation's stderr
 	myProxyEntry->get_delegation_err_filename = create_temp_file();
-	chmod (myProxyEntry->get_delegation_err_filename, 0600);
-	myProxyEntry->get_delegation_err_fd = safe_open_wrapper(myProxyEntry->get_delegation_err_filename,O_RDWR);
-	if (myProxyEntry->get_delegation_err_fd == -1) {
-		dprintf (D_ALWAYS, "Error opening file %s\n",
-				 myProxyEntry->get_delegation_err_filename);
+	if(!myProxyEntry->get_delegation_err_filename) {
+		dprintf( D_ALWAYS, "Failed to create temp file");
+	} else {
+		chmod (myProxyEntry->get_delegation_err_filename, 0600);
+		myProxyEntry->get_delegation_err_fd = safe_open_wrapper(myProxyEntry->get_delegation_err_filename,O_RDWR);
+		if (myProxyEntry->get_delegation_err_fd == -1) {
+			dprintf (D_ALWAYS, "Error opening file %s\n",
+					 myProxyEntry->get_delegation_err_filename);
+		}
 	}
 
 
@@ -947,7 +961,7 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 
 		char buff[500];
 		buff[0]='\0';
-		MyString output;
+		std::string output;
 		int fd = safe_open_wrapper(matched_entry->get_delegation_err_filename, O_RDONLY);
 		if (fd != -1) {
 			int bytes_read;
@@ -976,7 +990,7 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 			matched_entry->cluster_id,
 			matched_entry->proc_id,
 			WEXITSTATUS(exitStatus),
-			output.Value());
+			output.c_str());
 
 	}
 

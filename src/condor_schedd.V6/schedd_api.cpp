@@ -21,6 +21,8 @@
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
 
+#if HAVE_EXT_GSOAP
+
 // Things to include for the stubs
 #include "condor_version.h"
 #include "condor_attributes.h"
@@ -767,3 +769,5 @@ NullScheddTransaction::removeCluster(int /* clusterId */)
 {
 	return 0;
 }
+
+#endif

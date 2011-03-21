@@ -1,0 +1,548 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
+
+#include "condor_common.h"
+#include "condor_ver_info.h"
+#include "subsystem_info.h"
+#include "condor_debug.h"
+#include "filename_tools.h"
+
+extern "C" char *CondorVersion(void);
+extern "C" char *CondorPlatform(void);
+
+static const char *monthNames[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+	                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+
+CondorVersionInfo::CondorVersionInfo(const char *versionstring, 
+									 const char *subsystem,
+									 const char *platformstring)
+{
+	myversion.MajorVer = 0;
+	myversion.Arch = NULL;
+	myversion.OpSys = NULL;
+	mysubsys = NULL;
+
+	if ( versionstring == NULL ) {
+		versionstring = CondorVersion();
+	}
+	if ( platformstring == NULL ) {
+		platformstring = CondorPlatform();
+	}
+
+	string_to_VersionData(versionstring,myversion);
+	string_to_PlatformData(platformstring,myversion);
+
+	if ( subsystem ) {
+		mysubsys = strdup(subsystem);
+	} else {
+		mysubsys = strdup(get_mySubSystem()->getName());
+	}
+}
+
+CondorVersionInfo::CondorVersionInfo(CondorVersionInfo const &other)
+{
+	myversion = other.myversion;
+	mysubsys = NULL;
+	if( other.mysubsys ) {
+		mysubsys = strdup(other.mysubsys);
+	}
+	if( other.myversion.Arch ) {
+		myversion.Arch = strdup(other.myversion.Arch);
+	}
+	if( other.myversion.OpSys ) {
+		myversion.OpSys = strdup(other.myversion.OpSys);
+	}
+}
+
+CondorVersionInfo::~CondorVersionInfo()
+{
+	if (mysubsys) free(mysubsys);
+ 	if(myversion.Arch) free(myversion.Arch);
+ 	if(myversion.OpSys) free(myversion.OpSys);
+}
+
+	
+int
+CondorVersionInfo::compare_versions(const char* VersionString1) const
+{
+	VersionData_t ver1;
+
+	ver1.Scalar = 0;
+	string_to_VersionData(VersionString1,ver1);
+
+	if ( ver1.Scalar < myversion.Scalar ) {
+		return -1;
+	}
+	if ( ver1.Scalar > myversion.Scalar ) {
+		return 1;
+	}
+
+	return 0;
+}
+
+int
+CondorVersionInfo::compare_build_dates(const char* VersionString1) const
+{
+	VersionData_t ver1;
+
+	ver1.BuildDate = 0;
+	string_to_VersionData(VersionString1,ver1);
+
+
+	if ( ver1.BuildDate < myversion.BuildDate )
+		return -1;
+	if ( ver1.BuildDate > myversion.BuildDate )
+		return 1;
+
+	return 0;
+}
+
+bool
+CondorVersionInfo::is_compatible(const char* other_version_string, 
+								 const char*  /*other_subsys*/) const
+{
+	VersionData_t other_ver;
+
+	if ( !(string_to_VersionData(other_version_string,other_ver)) ) {
+		// say not compatible if we cannot even grok the version
+		// string!
+		return false;
+	}
+
+	/*********************************************************
+		Add any logic on specific compatibilty issues right
+		here!
+	*********************************************************/
+
+	// This version is not compatible with this for that, blah, blah
+
+
+	/*********************************************************
+		Now that specific rule checks are over, and we still have
+		not made a decision, we fall back upon generalized rules.
+		The general rule is within a given stable series, anything
+		is both forwards and backwards compatible.  Other than that,
+		everything is assumed to be backwards compatible but _not_
+		forwards compatible.  We only check version numbers, not
+		build dates, when performing these checks.
+	*********************************************************/
+
+		// check if both in same stable series
+	if ( is_stable_series() && (myversion.MajorVer == other_ver.MajorVer)
+		&& (myversion.MinorVer == other_ver.MinorVer) ) {
+		return true;
+	}
+
+		// check if other version is older (or same) than we are; if so,
+		// we are compatible because the assumption is we are 
+		// backwards compatible.
+	if ( other_ver.Scalar <= myversion.Scalar ) {
+		return true;
+	}
+
+
+	return false;
+}
+
+bool
+CondorVersionInfo::built_since_version(int MajorVer, int MinorVer, 
+									   int SubMinorVer) const
+{
+	int Scalar = MajorVer * 1000000 + MinorVer * 1000 
+					+ SubMinorVer;
+
+	return ( myversion.Scalar >= Scalar );
+}
+
+bool
+CondorVersionInfo::built_since_date(int month, int day, int year) const
+{
+
+		// Make a struct tm
+	struct tm build_date;
+	time_t BuildDate;
+	build_date.tm_hour = 0;
+	build_date.tm_isdst = 1;
+	build_date.tm_mday = day;
+	build_date.tm_min = 0;
+	build_date.tm_mon = month - 1;
+	build_date.tm_sec = 0;
+	build_date.tm_year = year - 1900;
+
+	if ( (BuildDate = mktime(&build_date)) == -1 ) {
+		return false;
+	}
+
+	return ( myversion.BuildDate >= BuildDate );
+}
+
+bool
+CondorVersionInfo::is_valid(const char* VersionString) const
+{
+	bool ret_value;
+	VersionData_t ver1;
+
+	if ( !VersionString ) {
+		return (myversion.MajorVer > 5);
+	}
+
+	ret_value = string_to_VersionData(VersionString,ver1);
+
+	return ret_value;		
+}
+
+
+char *
+CondorVersionInfo::get_version_from_file(const char* filename, 
+										 char *ver, int maxlen)
+{
+	bool must_free = false;
+
+	if (!filename)
+		return NULL;
+	
+	if (ver && maxlen < 40 )
+		return NULL;
+
+	maxlen--;	// save room for the NULL character at the end
+
+#ifdef WIN32
+	static const char *readonly = "rb";	// need binary-mode on NT
+#else
+	static const char *readonly = "r";
+#endif
+
+	FILE *fp = safe_fopen_wrapper(filename,readonly);
+
+	if (!fp) {
+		// file not found, try alternate exec pathname
+		char *altname = alternate_exec_pathname( filename );
+		if ( altname ) {
+			fp = safe_fopen_wrapper(altname,readonly);
+			free(altname);
+		}
+	}
+
+	if ( !fp ) {
+		// file not found
+		return NULL;
+	}
+		
+	if (!ver) {
+		if ( !(ver = (char *)malloc(100)) ) {
+			// out of memory
+			return NULL;
+		}
+		must_free = true;
+		maxlen = 100;
+	}
+
+		// Look for the magic version string
+		// '$CondorVersion: x.y.z <date> <extra info> $' in the file.
+		// What we look for is a string that begins with '$CondorVersion: '
+		// and continues with a non-NULL character. We need to be careful
+		// not to match the string '$CondorVersion: \0' which this file
+		// includes as static data in a Condor executable.
+	int i = 0;
+	bool got_verstring = false;
+	const char* verprefix = "$CondorVersion: ";
+	int ch;
+	while( (ch=fgetc(fp)) != EOF ) {
+		if ( verprefix[i] == '\0' && ch != '\0' ) {
+			do {
+				ver[i++] = ch;
+				if ( ch == '$' ) {
+					got_verstring = true;
+					ver[i] = '\0';
+					break;
+				}
+			} while ( (i < maxlen) && ((ch=fgetc(fp)) != EOF) );
+			break;
+		}
+
+		if ( ch != verprefix[i] ) {
+			i = 0;
+			if ( ch != verprefix[0] ) {
+				continue;
+			}
+		}
+
+		ver[i++] = ch;
+	}
+
+	fclose(fp);
+
+	if ( got_verstring ) {
+		return ver;
+	} else {
+		// could not find it
+		if ( must_free ) {
+			free( ver );
+		}
+		return NULL;
+	}
+}
+
+char *
+CondorVersionInfo::get_platform_from_file(const char* filename, 
+										 char *platform, int maxlen)
+{
+	bool must_free = false;
+
+	if (!filename)
+		return NULL;
+	
+	if (platform && maxlen < 40 )
+		return NULL;
+
+	maxlen--;	// save room for the NULL character at the end
+
+#ifdef WIN32
+	static const char *readonly = "rb";	// need binary-mode on NT
+#else
+	static const char *readonly = "r";
+#endif
+
+	FILE *fp = safe_fopen_wrapper(filename,readonly);
+
+	if (!fp) {
+		// file not found, try alternate exec pathname
+		char *altname = alternate_exec_pathname( filename );
+		if ( altname ) {
+			fp = safe_fopen_wrapper(altname,readonly);
+			free(altname);
+		}
+	}
+
+	if ( !fp ) {
+		// file not found
+		return NULL;
+	}
+		
+	if (!platform) {
+		if ( !(platform = (char *)malloc(100)) ) {
+			// out of memory
+			fclose(fp);
+			return NULL;
+		}
+		must_free = true;
+		maxlen = 100;
+	}
+
+	int i = 0;
+	bool got_verstring = false;
+	const char* platprefix = CondorPlatform();
+	int ch;
+	while( (ch=fgetc(fp)) != EOF ) {
+		if ( ch != platprefix[i] ) {
+			i = 0;
+			if ( ch != platprefix[0] ) {
+				continue;
+			}
+		}
+
+		platform[i++] = ch;
+
+		if ( ch == ':' ) {
+			while ( (i < maxlen) && ((ch=fgetc(fp)) != EOF) ) {
+				platform[i++] = ch;
+				if ( ch == '$' ) {
+					got_verstring = true;
+					platform[i] = '\0';
+					break;
+				}
+			}
+			break;
+		}
+	}
+
+	fclose(fp);
+
+	if ( got_verstring ) {
+		return platform;
+	} else {
+		// could not find it
+		if ( must_free ) {
+			free( platform );
+		}
+		return NULL;
+	}
+}
+
+char *
+CondorVersionInfo::get_version_string() const
+{
+	return VersionData_to_string( myversion );
+}
+
+char *
+CondorVersionInfo::VersionData_to_string(VersionData_t const &ver) const
+{
+	struct tm *tm;
+	tm = localtime( &ver.BuildDate );
+	if( !tm ) {
+		return NULL;
+	}
+	int day = tm->tm_mday;
+	int year = tm->tm_year + 1900;
+	char const *month = monthNames[tm->tm_mon];
+
+	const int buflen = 256;
+	char *buf = (char *)malloc(buflen);
+	if( !buf ) {
+		return NULL;
+	}
+
+	int n = snprintf(buf,buflen,"$CondorVersion: %d.%d.%d %s %d %d $",
+					 ver.MajorVer, ver.MinorVer, ver.SubMinorVer,
+					 month, day, year);
+	if( n>=buflen || n<0 ) {
+		free(buf);
+		return NULL;
+	}
+	buf[buflen-1] = '\0';
+	return buf;
+}
+
+bool
+CondorVersionInfo::string_to_VersionData(const char *verstring, 
+										 VersionData_t & ver) const
+{
+	// verstring looks like "$CondorVersion: 6.1.10 Nov 23 1999 $"
+
+	if ( !verstring ) {
+		// Use our own version number. 
+		ver = myversion;
+		return true;
+	}
+
+	if ( strncmp(verstring,"$CondorVersion: ",16) != 0 ) {
+		return false;
+	}
+
+	char const *ptr = strchr(verstring,' ');
+	ptr++;		// skip space after the colon
+
+	sscanf(ptr,"%d.%d.%d ",&ver.MajorVer,&ver.MinorVer,&ver.SubMinorVer);
+
+		// Sanity check: the world starts with Condor V6 !
+	if (ver.MajorVer < 6  || ver.MinorVer > 99 || ver.SubMinorVer > 99) {
+		ver.MajorVer = 0;
+		return false;
+	}
+
+	ver.Scalar = ver.MajorVer * 1000000 + ver.MinorVer * 1000 
+					+ ver.SubMinorVer;
+
+		// Now move ptr the next space, which should be 
+		// right before the build date string.
+	ptr = strchr(ptr,' ');
+	if ( !ptr ) {
+		ver.MajorVer = 0;
+		return false;
+	}
+	ptr++;	// skip space after the version numbers
+
+		// Convert month to a number 
+	int month = -1;
+	for (int i=0; i<12; i++) {
+		if (strncmp(monthNames[i],ptr,3) == 0) {
+			month = i;
+			break;
+		}
+	}
+
+	ptr+= 4;	//skip month and space
+
+		// Grab day of the month and year
+	int date, year;
+	date = year = -1;
+	sscanf(ptr,"%d %d",&date,&year);
+
+		// Sanity checks
+	if ( month < 0 || month > 11 || date < 0 || date > 31 || year < 1997 
+		|| year > 2036 ) {
+		ver.MajorVer = 0;
+		return false;
+	}
+
+		// Make a struct tm
+	struct tm build_date;
+	build_date.tm_hour = 0;
+	build_date.tm_isdst = 1;
+	build_date.tm_mday = date;
+	build_date.tm_min = 0;
+	build_date.tm_mon = month;
+	build_date.tm_sec = 0;
+	build_date.tm_year = year - 1900;
+
+	if ( (ver.BuildDate = mktime(&build_date)) == -1 ) {
+		ver.MajorVer = 0;
+		return false;
+	}
+
+	return true;
+}
+
+							
+bool
+CondorVersionInfo::string_to_PlatformData(const char *platformstring, 
+										  VersionData_t & ver) const
+{
+	// platformstring looks like "$CondorPlatform: INTEL-LINUX_RH9 $"
+
+	if ( !platformstring ) {
+		// Use our own version number. 
+		ver = myversion;
+		return true;
+	}
+
+	if ( strncmp(platformstring,"$CondorPlatform: ",17) != 0 ) {
+		return false;
+	}
+
+	char const *ptr = strchr(platformstring,' ');
+	ptr++;		// skip space after the colon
+
+
+	size_t len = strcspn(ptr,"-");
+	if( len ) {
+		ver.Arch = strdup(ptr);
+		ASSERT(ver.Arch);
+		ver.Arch[len] = '\0';
+		ptr += len;
+	}
+
+	if( *ptr == '-' ) {
+		ptr++;
+	}
+
+	len = strcspn(ptr," $");
+	if( len ) {
+		ver.OpSys = strdup(ptr);
+		ASSERT(ver.OpSys);
+		ver.OpSys[len] = '\0';
+		ptr += len;
+	}
+
+	return true;
+}
+
+

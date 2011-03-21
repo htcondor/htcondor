@@ -51,10 +51,7 @@ ThrottleByCategory::AddCategory( const MyString *category, int maxJobs )
 {
 	ASSERT( category != NULL );
 
-	ThrottleInfo *	info = new ThrottleInfo();
-	info->_category = new MyString( *category );
-	info->_maxJobs = maxJobs;
-	info->_currentJobs = 0;
+	ThrottleInfo *	info = new ThrottleInfo( category, maxJobs );
 	if ( _throttles.insert( *(info->_category), info ) != 0 ) {
 		EXCEPT( "HashTable error" );
 	}

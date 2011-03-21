@@ -95,7 +95,7 @@ class VMGahp : public Service {
 		MyString m_workingdir;		 // working directory
 
 	private:
-		int waitForCommand();
+		int waitForCommand(int pipe_end);
 		const char* make_result_line(VMRequest *req);
 
 		int quitFast();

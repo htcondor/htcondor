@@ -23,8 +23,8 @@
 #include "condor_daemon_core.h"
 
 enum NodeType {
-    HADOOP_NAMENODE,
-    HADOOP_DATANODE
+    HDFS_NAMENODE,
+    HDFS_DATANODE
 };
 
 enum NamenodeRole {
@@ -90,7 +90,7 @@ class Hadoop : public Service {
 
         NodeType m_nodeType;
 
-	NamenodeRole m_namenodeRole;
+        NamenodeRole m_namenodeRole;
 
         //keeps tracks of std output and error of  hadoop process
         MyString m_line_stdout, m_line_stderr;
@@ -140,9 +140,9 @@ class Hadoop : public Service {
 
         void publishClassAd();
 
-        void stdoutHandler(int /*pipe*/);
+        int stdoutHandler(int /*pipe*/);
 
-        void stderrHandler(int /*pipe*/);
+        int stderrHandler(int /*pipe*/);
 
         int getKeyValue(MyString line, MyString *key, MyString *value);
 

@@ -76,8 +76,11 @@ char *_sysapi_ckptpltfrm = NULL;
 /* needed by load_avg.c */
 int _sysapi_getload = 0;
 
+bool _sysapi_net_devices_cached = false;
 
-BEGIN_C_DECLS
+
+extern "C"
+{
 
 /*
    The function that configures the above variables each time it is called.
@@ -181,4 +184,4 @@ sysapi_internal_reconfig(void)
 	}
 }
 
-END_C_DECLS
+}

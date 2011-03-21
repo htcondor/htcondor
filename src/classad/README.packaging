@@ -5,9 +5,9 @@ the new version if necessary.
 
 Update the version number and release date in the follow files: 
     src/classad/CHANGELOG
-    src/classad/Imakefile: DIST_VERSION
+    src/classad/do_packaging: DIST_VERSION
     src/classad/README: first line
-    src/classad/new_classad.cpp: ClassAdLibraryVersion()
+    src/classad/classad.cpp: ClassAdLibraryVersion()
         *Update both functions with this name!*
     src/classad/Doxyfile
 
@@ -23,7 +23,7 @@ for examples of things that will change the ABI.
 This ABI compliance checker program may be useful: 
 http://ispras.linuxfoundation.org/index.php/ABI_compliance_checker
 
-run make dist in src/classad
+run do_packaging in src/classad
 
 Ensure the release builds successfully:
     cd classads-1.0.8

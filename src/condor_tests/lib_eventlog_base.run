@@ -85,7 +85,7 @@ foreach my $arg ( @ARGV ) {
 }
 
 my $dir = "test-eventlog_" . $settings{name};
-my $exe = "../testbin_dir/lib_eventlog_".$settings{name}.".exe";
+my $exe = "./lib_eventlog_".$settings{name}.".exe";
 my $fulldir = getcwd() . "/$dir";
 if ( -d $dir  and  $settings{force} )
 {

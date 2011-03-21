@@ -1,0 +1,13 @@
+#!/bin/sh
+
+echo "-------------------------------------------------------------------"
+echo "* NOTE: Attempting to configure a UW-esk build"
+echo "* which will build and link specfic versions of externals"
+echo "* that may not be the version your system distros with!"
+echo "* so if you are not UW, namely a package maintainer for distro xyz"
+echo "* you will likely want to run \"cmake .\""
+echo "*"
+echo "* Another option would be to run ccmake or cmake-gui"
+echo "-------------------------------------------------------------------"
+PWD=`pwd`
+cmake -DUW_BUILD:BOOL=TRUE -D_DEBUG:BOOL=TRUE -D_VERBOSE:BOOL=TRUE -DBUILDID:STRING=UW_development -DCMAKE_INSTALL_PREFIX:PATH=${PWD}/release_dir "$@"

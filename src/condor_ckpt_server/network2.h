@@ -50,7 +50,6 @@
 #ifndef SERVER_NETWORK_H
 #define SERVER_NETWORK_H
 
-
 /* Header Files */
 
 #if !defined(WIN32)
@@ -64,74 +63,25 @@
 #include "typedefs2.h"
 
 
-
-#ifdef __cplusplus
-
-
-/* External Functions */
-
-#if 0
-
-extern "C" { unsigned long int ntohl(unsigned long int); }
-extern "C" { unsigned long int htonl(unsigned long int); }
-extern "C" { unsigned short int ntohs(unsigned int); }
-extern "C" { unsigned short int htons(unsigned int); }
-extern "C" { void bzero(char*, int); }
-extern "C" { pid_t getpid(void); }
-/* extern "C" { int gethostname(const char*, int); } */
-extern "C" { int close(int); }
-extern "C" { pid_t fork(void); }
-extern "C" { int select(int, fd_set*, fd_set*, fd_set*, struct timeval*); }
-extern "C" { int socket(int, int, int); }
-extern "C" { int bind(int, const struct sockaddr*, int); }
-extern "C" { int accept(int, struct sockaddr*, int*); }
-extern "C" { int listen(int, int); }
-extern "C" { int getsockname(int, struct sockaddr*, int*); }
-extern "C" { int getsockopt(int, int, int, void*, int*); }
-extern "C" { int setsockopt(int, int, int, const void*, int); }
-
-#endif
-
-
-
 /* Function Prototypes*/
-
-extern "C" { char* GetIPName(struct in_addr machine_IP); }
-extern "C" { int I_bind(int socket_desc, 
-			 struct sockaddr_in* addr, int is_well_known); }
-extern "C" { char* gethostnamebyaddr(struct in_addr* addr); }
-extern "C" { int I_socket(void); }
-extern "C" { int I_listen(int socket_desc, int queue_len); }
-extern "C" { int I_accept(int                 socket_desc, 
-			  struct sockaddr_in* addr, 
-			  int*                addr_len); }
-extern "C" { int net_write(int socket_desc, 
-			   char* buffer, 
-			   int size); }
-
-
-#else
-
-
-/* Function Prototypes*/
-
+extern "C" {
 char* GetIPName(struct in_addr machine_IP); 
-int I_bind(int                 socket_desc, 
-	   struct sockaddr_in* addr);
-char* gethostnamebyaddr(struct in_addr* addr); 
-int I_socket(void);
-int I_listen(int socket_desc, 
-	     int queue_len); 
-int I_accept(int                 socket_desc, 
-	     struct sockaddr_in* addr, 
-	     int*                addr_len); 
-int net_write(int   socket_desc, 
-	      char* buffer, 
-	      int   size); 
 
+int I_bind(int socket_desc,
+		   struct sockaddr_in* addr, int is_well_known);
 
-#endif
+char* gethostnamebyaddr(struct in_addr* addr);
 
+int I_socket(void); 
+
+int I_listen(int socket_desc, int queue_len);
+
+int I_accept(int                 socket_desc,
+			 struct sockaddr_in* addr,
+			 int*                addr_len);
+
+int net_write(int socket_desc, char* buffer, int size);
+}
 
 
 #endif

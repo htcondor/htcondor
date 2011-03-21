@@ -38,7 +38,7 @@ AC_INIT([classad], [1.0-rc5], [condor-admin@cs.wisc.edu])
 #AC_CONFIG_AUX_DIR([build-aux])
 #AM_INIT_AUTOMAKE([1.6.3 -Wall -Werror foreign])
 AM_INIT_AUTOMAKE([1.6.3 foreign])
-AC_CONFIG_SRCDIR([new_classad.cpp])
+AC_CONFIG_SRCDIR([classad.cpp])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_FILES([Makefile])
 

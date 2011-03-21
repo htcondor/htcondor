@@ -55,7 +55,7 @@ long ProcAPI::boottime_expiration = 0;
 #endif // LINUX
 #else // WIN32
 
-#include "ntsysinfo.h"
+#include "ntsysinfo.WINDOWS.h"
 static CSysinfo ntSysInfo;	// for getting parent pid on NT
 
 	// Windows gives us birthday in 100ns ticks since 01/01/1601
@@ -1513,7 +1513,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	// So to first see if this pid is still alive
 	// on Win32, open a handle to the pid and call GetExitStatus
 	int found_it = FALSE;
-	DWORD last_error;
+	DWORD last_error = 0;
 	HANDLE pidHandle = ::OpenProcess(PROCESS_QUERY_INFORMATION,FALSE,pid);
 	if (pidHandle) {
 		DWORD exitstatus;
@@ -3054,6 +3054,7 @@ ProcAPI::generateConfirmTime(long& confirm_time, int& status){
 	if (fscanf( fp, "%lf %lf", &uptime, &junk ) < 1) {
 		dprintf(D_ALWAYS, "Failed to get uptime from /proc/uptime\n"); 
 		status = PROCAPI_UNSPECIFIED;
+		fclose(fp);
 		return PROCAPI_FAILURE;
 	}
 

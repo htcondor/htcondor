@@ -20,9 +20,9 @@
 
 
 my @got;
-$testdesc =  'lib_sysapi - runs prebuilt sysapi tests from testbin_dir';
+$testdesc =  'lib_sysapi - runs prebuilt sysapi tests';
 $testname = "lib_sysapi";
-$test = "../testbin_dir/condor_sysapi";
+$test = "./condor_sysapi";
 
 print scalar localtime() . "\n";
 

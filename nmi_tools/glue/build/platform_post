@@ -1,0 +1,252 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+
+######################################################################
+# post script to cleanup platform-specific files on the submit side
+######################################################################
+
+use POSIX;
+use Getopt::Long;
+use vars qw/ $opt_without_tests $opt_test_args $opt_submit_xtests /;
+GetOptions(
+            'without-tests' => \$opt_without_tests,
+            'test-args=s' => \$opt_test_args,
+            'git' => \$opt_git,
+            'submit-xtests!' => \$opt_submit_xtests,
+			'tests-at-once=i' => \$opt_tests_at_once,
+);
+
+#print "Args into platform_post 1 $opt_without_tests 2 $opt_test_args 3 $opt_git 4 $opt_submit_xtests 5 $opt_tests_at_once\n";
+
+# we just want to chmod everything in the local directory (the
+# per-platform directory on the submit side, after everything was
+# transfered back) to be world-readable so that other folks can see
+# the results.  until Condor's file transfer mechanism preserves
+# permissions, we'll have to use this hack. :(
+
+print "Running 'chmod a+r *' to make build output world readable\n";
+system("chmod a+r *");
+
+print "Initializing values from the environment\n";
+my $platform = $ENV{NMI_PLATFORM};
+my $mode = "regular"; # if workspace, try to do a workspace test
+
+print "ENV: NMI_PLATFORM = $platform\n";
+$platform || die "No platform to use, NOT submitting tests\n";
+
+if( defined $opt_without_tests ) {
+    print "--without-tests specified on command-line, NOT submitting tests\n";
+    exit 0;
+}   
+
+if( defined $opt_test_args ) {
+    print "--test-args specified on command-line, additional args for " 
+        . "condor_nmi_submit:\n   '$opt_test_args'\n";
+}   
+
+if($opt_test_args =~ /^--workspace=.*/) {
+	print "Attempting workspace build auto test run!\n";
+	$mode = "workspace";
+}
+
+my $tag = $ENV{NMI_tag};
+my $module = $ENV{NMI_module};
+my $notify = $ENV{NMI_notify};
+my $notify_fail_only = $ENV{NMI_notify_fail_only};
+my $gid = $ENV{_NMI_GID};
+my $failed = $ENV{_NMI_STEP_FAILED};
+print "ENV: NMI_tag = $tag\n";
+print "ENV: NMI_module = $module\n";
+print "ENV: NMI_notify = $notify\n";
+print "ENV: NMI_notify_fail_only = $notify_fail_only\n";
+print "ENV: _NMI_GID = $gid\n";
+print "ENV: _NMI_STEP_FAILED = $failed\n";
+
+if(defined $failed) {
+	die "Stopping testing since step \"$failed\" failed\n";
+}
+
+my $notify_arg = '';
+if( $notify ) {
+    $notify_arg = "--notify=$notify";
+	if ( $notify_fail_only) {
+		$notify_arg .= " --notify-fail-only";
+	}
+}
+my $xtests_arg = $opt_submit_xtests == 1 ? '--submit-xtests' : '--nosubmit-xtests';
+
+@crossplatforms = ();
+if( $xtests_arg eq "--submit-xtests") {
+	# look in the environment for the list of platforms desired
+	# condor_nmi_submit parses this information out of "submit_info"
+	# in the nmi_glue directory
+	$nmi_env_lookup = "NMI_x_test_platforms_" . $platform;
+	my $xtestplatforms = $ENV{$nmi_env_lookup};
+	@crossplatforms = split /\s*\,\s*/, $xtestplatforms;
+	foreach $cross (@crossplatforms) {
+		print "Cross test binary testing on $cross for platform $platform\n";
+	}
+}
+
+if($mode ne "workspace") {
+	$tag || die "No tag to use, NOT submitting tests\n";
+	$module || die "No module to use, NOT submitting tests\n";
+}
+$gid || die "No gid to use, NOT submitting tests\n";
+
+my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
+chomp $runid;
+$runid || die "Can't find runid from gid, NOT submitting tests\n";
+
+my $status;
+print "Attempting to submit test job for platform: '$platform' "
+	. "runid: '$runid' ...\n";
+
+# path to the condor_nmi_submit binary we're planning to use
+my $cns = "nmi_tools/condor_nmi_submit";
+-f $cns || die "Can't submit tests: $cns does not exist\n";
+
+my $cwd = `pwd`;
+chomp $cwd;
+print "Will be using cns: $cwd/$cns\n";
+
+if( ! -x $cns ) {
+	chmod(0755, $cns) || die "Can't submit tests: $cns is not executable "
+	. "and chmod() failed: $!\n";
+}
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+
+my $cmd = "";
+my $cmd1 = "";
+my $cmd2 = "--platforms=$platform "; 
+my $cmd3 = "";
+my $desc = "--desc=\'Auto-Test Suite for ($platform, $runid)\'";
+
+if(defined $opt_tests_at_once) {
+	# hand off the concurrency test running back to condor_nmi_submit
+	$cmd3 = "$notify_arg $opt_test_args $xtests_arg --tests-at-once=$opt_tests_at_once ";
+} else {
+	$cmd3 = "$notify_arg $opt_test_args $xtests_arg ";
+}
+
+my $git_cmd_arg = (defined $opt_git ? "--git" : "");
+if($mode ne "workspace") {
+   $cmd1 = "$cns --test --buildid=$runid --tag=$tag --module=$module $git_cmd_arg ";
+} else {
+	# set up tests for a workspace build
+   	$cmd1 = "$cns --test --buildid=$runid $git_cmd_arg "; 
+}
+$cmd = $cmd1 . $cmd2 . $cmd3 . $desc;
+
+# submit the tests for the native build
+print "Invoking CNS ($cmd)\n";
+open( CNS, "$cmd|" ) || 
+	die "Can't submit tests: Can't open '$cmd' as a pipe: $!\n";
+while( <CNS> ) {
+	print "CNS: $_";
+}
+close( CNS );
+
+$status = $?;
+if($status) {
+	# non zero return - not good
+	print "failed to submit tests for $platform\n";
+	leavebadly($status);
+}
+
+# is this a cross test run too?
+foreach $test (@crossplatforms) {
+	# mark the source binaries here and set the platform
+	# condor_nmi_submit will do the magic to make it work
+	# and will make the cross test binaries show up in the 
+	# Run table in the component_version field
+
+	# are we testing 32 bit binaries on 64 bit platform?
+	# run only tests which do not link to 32 bit libraries
+	$cmd2 = "--platforms=$test --input-platform=$platform ";
+	if((!($platform =~ /^.*64.*$/)) && ($test =~ /^.*64.*$/)){
+
+		# XXX This uses --configure, which needs fixing! The main
+		# problem is --configure is stupid about is it for a build, a test,
+		# who knows.
+		$cmd4 = " --configure=--disable-full-port --test-class=quicknolink";
+
+		$cmd = $cmd1 . $cmd2 . $cmd3 . $cmd4;
+	} else {
+		$cmd = $cmd1 . $cmd2 . $cmd3;
+	}
+
+	# Set up the desc so we can get better info about where this came from.
+	$cmd .= " --desc=\'Auto-Cross test for ($platform, $runid) onto $test\'";
+
+	# submit the tests for cross test request
+   	print "Invoking CNS ($cmd)\n";
+   	open( CNS, "$cmd|" ) || 
+       	die "Can't submit tests: Can't open '$cmd' as a pipe: $!\n";
+   	while( <CNS> ) {
+       	print "CNS: $_";
+   	}
+   	close( CNS );
+   	$status = $?;
+
+	if($status) {
+		# non zero return - not good
+		print "failed to submit cross tests for $platform on $test\n";
+		leavebadly($status);
+	}
+
+	# condor_nmi_submit is a heavy-weight activity, and thrashes the
+	# disks of the submit machine.  Running many in a row is
+	# impolite.  sleep for three minutes between submits to
+	# allow some breathing room.
+
+	sleep(180);
+}
+
+##################################################################
+#We will be removing the platform app_input.tar.gz until NMI does
+##################################################################
+
+$appinput = "../../" . $ENV{NMI_PLATFORM} . "_app_input.tar.gz";
+print "Looking to see is $appinput is around and removing\n";
+print "../.. holds:\n";
+system("ls -l ../..");
+system("rm -f $appinput");
+
+
+print "platform_post: SUCCESS\n";
+exit 0;
+
+sub leavebadly
+{
+	my $status = shift;
+
+	if( $status == -1 ) {
+    	die "$cns failed to execute: $!";
+	} elsif( WIFEXITED($status) ) {
+    	die "$cns exited with status " . WEXITSTATUS($status);
+	} elsif( WIFSIGNALED($status) ) {
+    	die "$cns died with signal " . WTERMSIG($status);
+	} else {
+    	die "$cns returned unrecognized status: $status";
+	}
+}

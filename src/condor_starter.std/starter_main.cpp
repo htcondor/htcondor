@@ -28,7 +28,7 @@
 #include "proto.h"
 #include "name_tab.h"
 
-#include "state_machine_driver.h"
+#include "state_machine_driver.unix.h"
 
 #include "starter.h"
 #include "fileno.h"
@@ -164,7 +164,7 @@ init()
 {
 	move_to_execute_directory();
 	init_environment_info();
-	sysapi_set_resource_limits();
+	sysapi_set_resource_limits(1<<29);
 	close_unused_file_descriptors();
 
 	return DEFAULT;
@@ -1022,7 +1022,8 @@ get_job_info()
 			break;
 #endif
 		default:
-			u_proc = new UserProc( s );
+			if(s.cmd)
+				u_proc = new UserProc( s );
 			break;
 	}
 
@@ -1089,7 +1090,7 @@ cleanup()
 */
 extern "C" {
 int
-exception_cleanup(int,int,char*)
+exception_cleanup(int,int,const char*)
 {
 	sigset_t	mask;
 

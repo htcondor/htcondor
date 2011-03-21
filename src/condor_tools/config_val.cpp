@@ -111,13 +111,14 @@ usage()
 	fprintf( stderr, "   -unset\t\t(unset a persistent config file expression)\n" );
 	fprintf( stderr, "   -runset\t\t(unset a runtime config file expression)\n" );
 
-	fprintf( stderr, "   -master\t\t(query the master [default])\n" );
+	fprintf( stderr, "   -master\t\t(query the master)\n" );
 	fprintf( stderr, "   -schedd\t\t(query the schedd)\n" );
 	fprintf( stderr, "   -startd\t\t(query the startd)\n" );
 	fprintf( stderr, "   -collector\t\t(query the collector)\n" );
 	fprintf( stderr, "   -negotiator\t\t(query the negotiator)\n" );
 	fprintf( stderr, "   -tilde\t\t(return the path to the Condor home directory)\n" );
 	fprintf( stderr, "   -owner\t\t(return the owner of the condor_config_val process)\n" );
+	fprintf( stderr, "   -local-name name\t(Specify a local name for use with the config system)\n" );
 	fprintf( stderr, "   -verbose\t\t(print information about where variables are defined)\n" );
 	fprintf( stderr, "   -dump\t\t(print locally defined variables)\n" );
 	fprintf( stderr, "   -config\t\t(print the locations of found config files)\n" );
@@ -134,6 +135,7 @@ main( int argc, char* argv[] )
 {
 	char	*value, *tmp, *host = NULL;
 	char	*addr = NULL, *name = NULL, *pool = NULL;
+	char	*local_name = NULL;
 	int		i;
 	bool	ask_a_daemon = false;
 	bool    verbose = false;
@@ -190,6 +192,13 @@ main( int argc, char* argv[] )
 			} else {
 				usage();
 			}
+		} else if( match_prefix( argv[i], "-local-name" ) ) {
+			if( argv[i + 1] ) {
+				i++;
+				local_name = argv[i];
+			} else {
+				usage();
+			}
 		} else if( match_prefix( argv[i], "-owner" ) ) {
 			pt = CONDOR_OWNER;
 		} else if( match_prefix( argv[i], "-tilde" ) ) {
@@ -243,6 +252,12 @@ main( int argc, char* argv[] )
 		// to "TOOL".
 	if( ! get_mySubSystem()->isValid() ) {
 		get_mySubSystem()->setName( "TOOL" );
+	}
+
+		// Honor any local name we might want to use for the param system
+		// while looking up variables.
+	if( local_name != NULL ) {
+		get_mySubSystem()->setLocalName( local_name );
 	}
 
 		// We need to do this before we call config().  A) we don't
@@ -359,6 +374,11 @@ main( int argc, char* argv[] )
 		my_exit( 1 );
 	}
 
+	params.rewind();
+	if( ! params.number() && !print_config_sources ) {
+		usage();
+	}
+
 	if( name || addr || mt != CONDOR_QUERY || dt != DT_MASTER ) {
 		ask_a_daemon = true;
 	}
@@ -402,12 +422,6 @@ main( int argc, char* argv[] )
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
 			my_exit( 1 );
 		}
-	}
-
-	params.rewind();
-
-	if( ! params.number() && !print_config_sources ) {
-		usage();
 	}
 
 	while( (tmp = params.next()) ) {
@@ -515,7 +529,7 @@ GetRemoteParam( Daemon* target, char* param_name )
 void
 SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 {
-	int cmd, rval;
+	int cmd = DC_NOP, rval;
 	ReliSock s;
 	bool set = false;
 
@@ -591,10 +605,10 @@ SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 		// At this point, in either set or unset mode, param_name
 		// should hold a valid name, so do a final check to make sure
 		// there are no spaces.
-	if( (tmp = strchr(param_name, ' ')) ) {
+	if( !is_valid_param_name(param_name) ) {
 		fprintf( stderr, 
-				 "%s: Error: Configuration variable names cannot contain spaces\n",
-				 MyName );
+				 "%s: Error: Configuration variable name (%s) is not valid, alphanumeric and _ only\n",
+				 MyName, param_name );
 		my_exit( 1 );
 	}
 

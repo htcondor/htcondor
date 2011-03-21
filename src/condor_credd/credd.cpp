@@ -22,7 +22,7 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "credential.h"
-#include "X509credential.h"
+#include "X509credential.unix.h"
 #include "X509credentialWrapper.h"
 #include "classad/xmlSource.h"
 #include "classad/xmlSink.h"
@@ -76,7 +76,7 @@ store_cred_handler(Service * service, int i, Stream *stream) {
   ReliSock * socket = (ReliSock*)stream;
   const char * user = NULL;
 
-  CredentialWrapper * cred_wrapper;
+  CredentialWrapper * cred_wrapper = NULL;
 
   if (!socket->triedAuthentication()) { 
     CondorError errstack;
@@ -166,7 +166,6 @@ store_cred_handler(Service * service, int i, Stream *stream) {
 	  dprintf (D_ALWAYS, "Credential %s for owner %s already exists!\n", 
 			   cred_wrapper->cred->GetName(), 
 			   cred_wrapper->cred->GetOwner());
-	  delete cred_wrapper;
 	  socket->encode();
 	  int rcred=CREDD_ERROR_CREDENTIAL_ALREADY_EXISTS;
 	  socket->code(rcred);
@@ -181,7 +180,6 @@ store_cred_handler(Service * service, int i, Stream *stream) {
   
   init_user_id_from_FQN (user);
   if (!StoreData(temp_file_name,data,data_size)) {
-	delete cred_wrapper;
     socket->encode();
     int rcred = CREDD_UNABLE_TO_STORE;
     socket->code(rcred);
@@ -214,6 +212,9 @@ EXIT:
   }
   if ( temp_file_name != NULL ) {
 	  delete [] temp_file_name;
+  }
+  if ( cred_wrapper != NULL) {
+	  delete cred_wrapper;
   }
   return rtnVal;
 }
@@ -588,6 +589,7 @@ LoadCredentialList () {
     if ((!classad) || (!classad->EvaluateAttrInt ("Type", type))) {
       dprintf (D_ALWAYS, "Invalid classad %s\n", buff);
       set_priv (priv);
+      fclose (fp);
       return FALSE;
     }
 
@@ -1076,7 +1078,6 @@ LoadData (const char * file_name, void *& data, int & data_size) {
   
   char buff [MAX_CRED_DATA_SIZE+1];
   data_size = read (fd, buff, MAX_CRED_DATA_SIZE);
-  buff[data_size]='\0';
 
   close (fd);
 

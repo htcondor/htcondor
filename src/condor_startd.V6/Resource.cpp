@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -26,14 +26,17 @@
 #include "VMRegister.h"
 #include "file_sql.h"
 #include "condor_holdcodes.h"
+#include "startd_bench_job.h"
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 #include "StartdPlugin.h"
+#endif
 #endif
 
 extern FILESQL *FILEObj;
 
-Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
+Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent )
 {
 	MyString tmp;
 	char* tmpName;
@@ -89,7 +92,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	} else {
 		tmpName = my_full_hostname();
 	}
-	if( resmgr->is_smp() ) {
+	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
 		tmp.sprintf( "%s@%s", r_id_str, tmpName );
 		r_name = strdup( tmp.Value() );
 	} else {
@@ -891,13 +894,19 @@ Resource::refresh_classad( amask_t mask )
 
 
 int
-Resource::force_benchmark( void )
+Resource::benchmarks_started( void )
 {
-		// Force this resource to run benchmarking.
-	resmgr->m_attr->benchmark( this, 1 );
-	return TRUE;
+	return 0;
 }
 
+int
+Resource::benchmarks_finished( void )
+{
+	resmgr->m_attr->benchmarks_finished( this );
+	time_t last_benchmark = time(NULL);
+	r_classad->Assign( ATTR_LAST_BENCHMARK, (unsigned)last_benchmark );
+	return 0;
+}
 
 void
 Resource::reconfig( void )
@@ -951,8 +960,10 @@ Resource::do_update( void )
         // Get the public and private ads
     publish_for_update( &public_ad, &private_ad );
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Update(&public_ad, &private_ad);
+#endif
 #endif
 
 		// Send class ads to collector(s)
@@ -1014,8 +1025,10 @@ Resource::final_update( void )
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
 
-#if HAVE_DLOPEN
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN) || defined(WIN32)
 	StartdPluginManager::Invalidate(&invalidate_ad);
+#endif
 #endif
 
 	resmgr->send_update( INVALIDATE_STARTD_ADS, &invalidate_ad, NULL, false );
@@ -1419,7 +1432,7 @@ int
 Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 {
 	int tmp;
-	if( check_vanilla && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
+	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VANILLA ) {
 		MyString tmp_expr_name = expr_name;
 		tmp_expr_name += "_VANILLA";
 		tmp = eval_expr( tmp_expr_name.Value(), false, false );
@@ -1429,7 +1442,7 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 			// otherwise, fall through and try the non-vanilla version
 	}
-	if( check_vanilla && r_cur->universe() == CONDOR_UNIVERSE_VM ) {
+	if( check_vanilla && r_cur && r_cur->universe() == CONDOR_UNIVERSE_VM ) {
 		MyString tmp_expr_name = expr_name;
 		tmp_expr_name += "_VM";
 		tmp = eval_expr( tmp_expr_name.Value(), false, false );
@@ -1439,12 +1452,12 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 		}
 			// otherwise, fall through and try the non-vm version
 	}
-	if( (r_classad->EvalBool(expr_name, r_cur->ad(), tmp) ) == 0 ) {
+	if( (r_classad->EvalBool(expr_name, r_cur ? r_cur->ad() : NULL , tmp) ) == 0 ) {
 		if( fatal ) {
 			dprintf(D_ALWAYS, "Can't evaluate %s in the context of following ads\n", expr_name );
 			r_classad->dPrint(D_ALWAYS);
 			dprintf(D_ALWAYS, "=============================\n");
-			if ( r_cur->ad() ) {
+			if ( r_cur && r_cur->ad() ) {
 				r_cur->ad()->dPrint(D_ALWAYS);
 			} else {
 				dprintf( D_ALWAYS, "<no job ad>\n" );
@@ -1681,6 +1694,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		case DYNAMIC_SLOT:
 			cap->AssignExpr(ATTR_SLOT_DYNAMIC, "TRUE");
 			break;
+		default:
+			break; // Do nothing
 		}
 	}		
 
@@ -1751,6 +1766,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// Update info from the current Claim object, if it exists.
 	if( r_cur ) {
 		r_cur->publish( cap, mask );
+        if (state() == claimed_state)  cap->Assign(ATTR_PUBLIC_CLAIM_ID, r_cur->publicClaimId());
 	}
 	if( r_pre ) {
 		r_pre->publishPreemptingClaim( cap, mask );
@@ -1762,7 +1778,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	r_cod_mgr->publish( cap, mask );
 
 	// Publish the supplemental Class Ads
-	resmgr->adlist_publish( cap, mask );
+	resmgr->adlist_publish( r_id, cap, mask );
 
     // Publish the monitoring information
     daemonCore->monitor_data.ExportData( cap );

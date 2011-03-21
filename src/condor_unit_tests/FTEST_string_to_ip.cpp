@@ -57,7 +57,7 @@ static bool test_normal_case() {
 	free( input );
 	emit_output_expected_header();
 	unsigned int expected;
-	char* ptr = (char*) &expected;
+	unsigned char* ptr = (unsigned char*) &expected;
 	*ptr = 66;
 	ptr++;
 	*ptr = 230;
@@ -84,7 +84,7 @@ static bool test_invalid_ip() {
 	free( input );
 	emit_output_expected_header();
 	unsigned int expected;
-	char* ptr = (char*) &expected;
+	unsigned char* ptr = (unsigned char*) &expected;
 	*ptr = 66;
 	ptr++;
 	*ptr = 255;

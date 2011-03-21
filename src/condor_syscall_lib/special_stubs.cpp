@@ -46,37 +46,6 @@ extern int SYSCALL(int, ...);
 
 
 /*
-  We need our own definition of my_ip_addr(), which is used by
-  Sock::bind() to support Condor on machines with multiple network
-  interfaces.  This version, instead of looking in a config file for
-  magic parameters, looks at the existing syscall_sock and grabs the
-  IP address off of there.
-*/
-unsigned int
-my_ip_addr()
-{
-	return syscall_sock->get_ip_int();
-}
-
-
-/*
-  We need our own definition of my_ip_string(), which is used by the
-  utilities in internet.c (which in turn are used by CEDAR).  This
-  version, instead of looking in a config file for magic parameters,
-  looks at the existing syscall_sock and grabs the IP address off of
-  there.
-*/
-char*
-my_ip_string()
-{
-	struct in_addr addr;
-	memset( &addr, 0, sizeof(struct in_addr) );
-	addr.s_addr = syscall_sock->get_ip_int();
-	return inet_ntoa( addr );
-}
-
-
-/*
 	In the 6.3 series, REMOTE_syscall had been removed. Well, it turns out
 	that 6.4 was supposed to be backwards compatible with 6.2. :( This means
 	that some 6.2 starters are going to look for the symbol REMOTE_syscall in a
@@ -218,7 +187,7 @@ condor_gethostname( char *name, size_t namelen )
   measure, and call Suicide() (so we don't leave the job queue).  
 */
 void
-_condor_fd_panic( int line, char* file )
+_condor_fd_panic( int line, const char* file )
 {
 	dprintf( D_ALWAYS,
 			 "**** PANIC -- OUT OF FILE DESCRIPTORS at line %d in %s\n", 
@@ -241,3 +210,33 @@ int vprintf_length(const char *format, va_list args) { return 0; }
 
 } /* extern "C" */
 
+
+/*
+  We need our own definition of my_ip_addr(), which is used by
+  Sock::bind() to support Condor on machines with multiple network
+  interfaces.  This version, instead of looking in a config file for
+  magic parameters, looks at the existing syscall_sock and grabs the
+  IP address off of there.
+*/
+unsigned int
+my_ip_addr()
+{
+	return syscall_sock->get_ip_int();
+}
+
+
+/*
+  We need our own definition of my_ip_string(), which is used by the
+  utilities in internet.c (which in turn are used by CEDAR).  This
+  version, instead of looking in a config file for magic parameters,
+  looks at the existing syscall_sock and grabs the IP address off of
+  there.
+*/
+char*
+my_ip_string()
+{
+	struct in_addr addr;
+	memset( &addr, 0, sizeof(struct in_addr) );
+	addr.s_addr = syscall_sock->get_ip_int();
+	return inet_ntoa( addr );
+}

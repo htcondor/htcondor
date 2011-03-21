@@ -175,7 +175,16 @@ int main(int argc, char *argv[]) {
 			i++;
 		}
 	}
-
+	//Need to initialize Winsocks on Windows.
+#ifdef WIN32
+	WSADATA wsaData;
+	int iResult = WSAStartup(MAKEWORD(2,0), &wsaData);
+	if(iResult != 0)
+	{
+		printf("Failed to initialize Winsock: %d\n", iResult);
+		return EXIT_FAILURE;
+	}
+#endif
 	if(only_functions && only_objects) {
 		only_functions = false;
 		only_objects = false;
@@ -205,6 +214,10 @@ int main(int argc, char *argv[]) {
 			//Invalid test
 			if(i >= function_map_num_elems) {
 				printf("Invalid test '%s'.\n", test);
+#ifdef WIN32
+				//This technically can fail, but at this point we don't really care.
+				WSACleanup();
+#endif
 				return EXIT_FAILURE;
 	    	}
 
@@ -230,6 +243,10 @@ int main(int argc, char *argv[]) {
 		// run all the functions and return the result
 	bool result = driver.do_all_functions(false);
 	e.emit_summary();
+#ifdef WIN32
+	//This technically can fail, but at this point we don't really care.
+	WSACleanup();
+#endif
 	if(result) {
 		printf ("Test suite has passed.\n");
 		return EXIT_SUCCESS;

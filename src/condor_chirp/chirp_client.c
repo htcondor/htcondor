@@ -259,6 +259,11 @@ chirp_client_connect_default()
 	return client;
 }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996) // the seek, read, open, close, fileno, etc are deprecated, use _seek, etc instead.
+#endif
+
 DLLEXPORT struct chirp_client *
 chirp_client_connect( const char *host, int port )
 {
@@ -318,6 +323,10 @@ chirp_client_connect( const char *host, int port )
 
 	return c;
 }
+
+#ifdef _MSC_VER 
+#pragma warning(pop) // the seek, read, open, close, fileno, etc are deprecated, use _seek, etc instead.
+#endif
 
 DLLEXPORT void
 chirp_client_disconnect( struct chirp_client *c )
@@ -394,7 +403,21 @@ chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char 
 DLLEXPORT int
 chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode )
 {
-	return simple_command(c,"open %s %s %d\n",path,flags,mode);
+	int result = -1;
+
+	result = simple_command(c,"open %s %s %d\n",path,flags,mode);
+	if(result >= 0) {
+		struct chirp_stat buf;
+		char line[CHIRP_LINE_MAX];
+		if(fgets(line,CHIRP_LINE_MAX,c->rstream) == NULL) {
+			chirp_fatal_request("fgets");
+		}
+		if(get_stat(line, &buf) != 0) {
+			chirp_fatal_request("get_stat");
+		}
+	}
+	
+	return result;
 }
 
 DLLEXPORT int
@@ -425,11 +448,18 @@ chirp_client_write( struct chirp_client *c, int fd, const void *buffer, int leng
 	int actual;
 	int result;
 
-	result = fprintf(c->wstream,"write %d %d\n",fd,length);
-	if(result<0) chirp_fatal_request("write");
+	char command[CHIRP_LINE_MAX];
+	sprintf(command, "write %d %d\n", fd, length);
 
+#ifdef DEBUG_CHIRP
+	printf("chirp sending: %s", command);
+#endif
+	
+	result = fputs(command, c->wstream);
+	if(result < 0) chirp_fatal_request("write");
+	
 	result = fflush(c->wstream);
-	if(result<0) chirp_fatal_request("write");
+	if(result < 0) chirp_fatal_request("write");
 
 	actual = fwrite(buffer,1,length,c->wstream);
 	if(actual!=length) chirp_fatal_request("write");
@@ -478,6 +508,384 @@ chirp_client_ulog( struct chirp_client *c, char const *message )
 	return simple_command(c,"ulog %s\n",message);
 }
 
+DLLEXPORT int
+chirp_client_pread( struct chirp_client *c, int fd, void *buffer, int length,
+				   int offset )
+{
+	int result;
+	int actual;
+	
+	result = simple_command(c,"pread %d %d %d\n",fd, length, offset);
+
+	if(result > 0) {
+		actual = fread(buffer,1,result,c->rstream);
+		if(actual!=result) chirp_fatal_request("pread");
+	}
+
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_pwrite( struct chirp_client *c, int fd, const void *buffer,
+					int length, int offset )
+{
+	int actual;
+	int result;
+	char command[CHIRP_LINE_MAX];
+	sprintf(command, "pwrite %d %d %d\n", fd, length, offset);
+
+#ifdef DEBUG_CHIRP
+	printf("chirp sending: %s", command);
+#endif
+	
+	result = fputs(command, c->wstream);
+	if(result < 0) chirp_fatal_request("pwrite");
+
+	result = fflush(c->wstream);
+	if(result < 0) chirp_fatal_request("pwrite");
+
+	actual = fwrite(buffer,1,length,c->wstream);
+	if(actual != length) chirp_fatal_request("pwrite");
+
+	return convert_result(get_result(c->rstream));
+}
+
+DLLEXPORT int
+chirp_client_sread( struct chirp_client *c, int fd, void *buffer, int length,
+				   int offset, int stride_length, int stride_skip )
+{
+	int result;
+	int actual;
+	
+	result = simple_command(c,"sread %d %d %d %d %d\n",fd, length, offset,
+		stride_length, stride_skip);
+
+	if(result > 0) {
+		actual = fread(buffer,1,result,c->rstream);
+		if(actual!=result) chirp_fatal_request("sread");
+	}
+
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_swrite( struct chirp_client *c, int fd, const void *buffer,
+					int length, int offset, int stride_length, int stride_skip )
+{
+	int actual;
+	int result;
+
+	char command[CHIRP_LINE_MAX];
+	sprintf(command, "swrite %d %d %d %d %d\n", fd, length, offset, 
+			stride_length, stride_skip);
+
+#ifdef DEBUG_CHIRP
+	printf("chirp sending: %s", command);
+#endif
+	
+	result = fputs(command, c->wstream);
+	if(result < 0) chirp_fatal_request("swrite");
+
+	result = fflush(c->wstream);
+	if(result < 0) chirp_fatal_request("swrite");
+
+	actual = fwrite(buffer,1,length,c->wstream);
+	if(actual != length) chirp_fatal_request("swrite");
+
+	return convert_result(get_result(c->rstream));
+}
+
+DLLEXPORT int
+chirp_client_rmall( struct chirp_client *c, const char *path ) {
+	return simple_command(c,"rmall %s\n",path);
+}
+
+DLLEXPORT int
+chirp_client_fstat( struct chirp_client *c, int fd,	struct chirp_stat *buf ) {
+
+	int result;
+
+	result = simple_command(c,"fstat %d\n",fd);
+	if( result == 0 ) {
+		char line[CHIRP_LINE_MAX];
+		if(fgets(line,CHIRP_LINE_MAX,c->rstream) == NULL) {
+			chirp_fatal_request("fgets");
+		}
+		if(get_stat(line, buf) == -1) {
+			chirp_fatal_request("get_stat");
+		}
+	}
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_fstatfs( struct chirp_client *c, int fd,
+					 struct chirp_statfs *buf)
+{
+	int result;
+
+	result = simple_command(c,"fstatfs %d\n",fd);
+	if(result == 0) {
+		char line[CHIRP_LINE_MAX];
+		if(fgets(line,CHIRP_LINE_MAX,c->rstream) == NULL) {
+			chirp_fatal_request("fgets");
+		}
+		if(get_statfs(line, buf) == -1) {
+			chirp_fatal_request("get_statfs");
+		}
+	}
+	
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_fchown( struct chirp_client *c, int fd, int uid, int gid ) {
+	return simple_command(c,"fchown %d %d %d\n", fd, uid, gid);
+}
+
+DLLEXPORT int
+chirp_client_fchmod( struct chirp_client *c, int fd, int mode ) {
+	return simple_command(c,"fchmod %d %d\n", fd, mode);
+}
+
+DLLEXPORT int
+chirp_client_ftruncate( struct chirp_client *c, int fd, int length ) {
+	return simple_command(c,"ftruncate %d %d\n", fd, length);
+}
+
+DLLEXPORT int
+chirp_client_getfile_buffer( struct chirp_client *c, const char *path, 
+							char **buffer )
+{
+	int result, actual=0;
+
+	result = simple_command(c,"getfile %s\n",path);
+	if(result>=0) {
+		*buffer = (char*)malloc(result+1);
+		if(*buffer) {
+			actual = fread(*buffer,1,result,c->rstream);
+			if(actual!=result) chirp_fatal_request("getfile");
+			(*buffer)[result] = '\0';
+		}
+		else {
+			chirp_fatal_request("getfile");
+		}
+	}
+	else {
+		chirp_fatal_request("getfile");
+	}
+
+	return actual;
+}
+
+DLLEXPORT int
+chirp_client_putfile_buffer( struct chirp_client *c, const char *path,
+							const char *buffer, int mode, int length )
+{
+	int result, actual;
+
+	// Send request to put file
+	result = simple_command(c, "putfile %s %d %d\n", path, mode, length);
+	if(result < 0) chirp_fatal_request("putfile");
+	result = fflush(c->wstream);
+	if(result < 0) chirp_fatal_request("putfile");
+	
+	// Now send actual file
+	actual = fwrite(buffer,1,length,c->wstream);
+	if(actual!=length) chirp_fatal_request("putfile");
+	
+	return actual;
+}
+
+DLLEXPORT int
+chirp_client_getlongdir( struct chirp_client *c, const char *path,
+						char **buffer) 
+{
+	int result, actual;
+	
+	result = simple_command(c, "getlongdir %s\n", path);
+	if(result< 0) chirp_fatal_request("getlongdir");
+	*buffer = (char*)malloc(result+1);
+	if(*buffer) {
+		actual = fread(*buffer,1,result,c->rstream);
+		if(actual!=result) chirp_fatal_request("getlongdir");
+		(*buffer)[result] = '\0';
+	} else {
+		chirp_fatal_request("getlongdir");
+	}
+	
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_getdir( struct chirp_client *c, const char *path, char **buffer) {
+	int result, actual;
+	
+	result = simple_command(c, "getdir %s\n", path);
+	if(result < 0) chirp_fatal_request("getdir");
+	*buffer = (char*)malloc(result+1);
+	if(*buffer) {
+		actual = fread(*buffer,1,result,c->rstream);
+		if(actual!=result) chirp_fatal_request("getdir");
+		(*buffer)[result] = '\0';
+	} else {
+		chirp_fatal_request("getdir");
+	}
+	
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_whoami( struct chirp_client *c, char *buffer, int length) {
+	int result, actual;
+
+	result = simple_command(c, "whoami %d\n", length);
+	if(result > 0) {
+		actual = fread(buffer,1,result,c->rstream);
+		if(actual!=result) chirp_fatal_request("whoami");
+	}
+
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_whoareyou( struct chirp_client *c, const char *rhost,
+					   char *buffer, int length )
+{
+	int result, actual;
+
+	result = simple_command(c, "whoareyou %s %d\n", rhost, length);
+	if(result > 0) {
+		actual = fread(buffer,1,result,c->rstream);
+		if(actual!=result) chirp_fatal_request("whoareyou");
+	}
+
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_link( struct chirp_client *c, const char *path,
+				  const char *newpath )
+{
+	return simple_command(c,"link %s %s\n",path,newpath);
+}
+
+DLLEXPORT int
+chirp_client_symlink( struct chirp_client *c, const char *path,
+					 const char *newpath )
+{
+	return simple_command(c,"symlink %s %s\n",path,newpath);
+}
+
+DLLEXPORT int
+chirp_client_readlink( struct chirp_client *c, const char *path, int length,
+					  char **buffer )
+{
+	int result, actual;
+
+	result = simple_command(c,"readlink %s %d\n",path, length);
+	if(result > 0) {
+		*buffer = (char*)malloc(result);
+		actual = fread(*buffer,1,result,c->rstream);
+		if(actual!=result) chirp_fatal_request("readlink");
+	}
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_stat( struct chirp_client *c, const char *path,
+				  struct chirp_stat *buf )
+{
+	int result;
+
+	result = simple_command(c,"stat %s\n",path);
+	if(result == 0) {
+		char line[CHIRP_LINE_MAX];
+		if(fgets(line,CHIRP_LINE_MAX,c->rstream) == NULL) {
+			chirp_fatal_request("fgets");
+		}
+		if(get_stat(line, buf) == -1) {
+			chirp_fatal_request("get_stat");
+		}
+	}
+	
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_lstat( struct chirp_client *c, const char *path,
+				   struct chirp_stat *buf )
+{
+	int result;
+
+	result = simple_command(c,"lstat %s\n",path);
+	if(result == 0) {
+		char line[CHIRP_LINE_MAX];
+		if(fgets(line,CHIRP_LINE_MAX,c->rstream) == NULL) {
+			chirp_fatal_request("fgets");
+		}
+		if(get_stat(line, buf) == -1) {
+			chirp_fatal_request("get_stat");
+		}
+	}
+	
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_statfs( struct chirp_client *c, const char *path,
+					struct chirp_statfs *buf )
+{
+	int result;
+
+	result = simple_command(c,"statfs %s\n",path);
+	if(result == 0) {
+		char line[CHIRP_LINE_MAX];
+		if(fgets(line,CHIRP_LINE_MAX,c->rstream) == NULL) {
+			chirp_fatal_request("fgets");
+		}
+		if(get_statfs(line, buf) == -1) {
+			chirp_fatal_request("get_statfs");
+		}
+	}
+	
+	return result;
+}
+
+DLLEXPORT int
+chirp_client_access( struct chirp_client *c, const char *path, int mode ) {
+	return simple_command(c,"access %s %d\n",path,mode);
+}
+
+DLLEXPORT int
+chirp_client_chmod( struct chirp_client *c, const char *path, int mode ) {
+	return simple_command(c,"chmod %s %d\n",path,mode);
+}
+
+DLLEXPORT int
+chirp_client_chown( struct chirp_client *c, const char *path, int uid, int gid )
+{
+	return simple_command(c,"chown %s %d %d\n",path,uid,gid);
+}
+
+DLLEXPORT int
+chirp_client_lchown( struct chirp_client *c, const char *path, int uid,
+					int gid )
+{
+	return simple_command(c,"lchown %s %d %d\n",path,uid,gid);
+}
+
+DLLEXPORT int
+chirp_client_truncate( struct chirp_client *c, const char *path, int length ) {
+	return simple_command(c,"truncate %s %d\n",path,length);
+}
+
+DLLEXPORT int
+chirp_client_utime( struct chirp_client *c, const char *path, int actime,
+				   int modtime )
+{
+	return simple_command(c,"utime %s %d %d\n",path,actime,modtime);
+}
 
 static int
 convert_result( int result )
@@ -518,6 +926,21 @@ convert_result( int result )
 			case CHIRP_ERROR_TRY_AGAIN:
 				errno = EAGAIN;
 				break;
+			case CHIRP_ERROR_BAD_FD:
+				errno = EBADF;
+				break;
+			case CHIRP_ERROR_IS_DIR:
+				errno = EISDIR;
+				break;
+			case CHIRP_ERROR_NOT_DIR:
+				errno = ENOTDIR;
+				break;
+			case CHIRP_ERROR_NOT_EMPTY:
+				errno = ENOTEMPTY;
+				break;
+			case CHIRP_ERROR_CROSS_DEVICE_LINK:
+				errno = EXDEV;
+				break;
 			case CHIRP_ERROR_UNKNOWN:
 				chirp_fatal_response();
 				break;
@@ -541,7 +964,7 @@ get_result( FILE *s )
 	if(fields!=1) chirp_fatal_response();
 
 #ifdef DEBUG_CHIRP
-	fprintf(stderr,"chirp received: %s\n",line);
+	fprintf(stderr, "chirp received: %s\n",line);
 #endif
 
 	return result;
@@ -645,6 +1068,7 @@ vsprintf_chirp(char *command,char const *fmt,va_list args)
 				*(c++) = *(f++);
 				break;
 			default:
+				fprintf(stderr, "vsprintf_chirp error\n");
 				chirp_fatal_request(f);
 			}
 		} else {
@@ -666,7 +1090,7 @@ simple_command(struct chirp_client *c,char const *fmt,...)
 	va_end(args);
 
 #ifdef DEBUG_CHIRP
-	fprintf(stderr,"chirp sending: %s",command);
+	fprintf(stderr, "chirp sending: %s",command);
 #endif
 
 	result = fputs(command,c->wstream);
@@ -726,5 +1150,51 @@ read_url_param(char const *url,char *buffer,size_t length)
 	return url;
 }
 
+int get_stat( const char *line, struct chirp_stat *info ) {
+	int fields;
 
+	memset(info,0,sizeof(*info));
 
+	fields = sscanf(line,"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld\n",
+			&info->cst_dev,
+			&info->cst_ino,
+			&info->cst_mode,
+			&info->cst_nlink,
+			&info->cst_uid,
+			&info->cst_gid,
+			&info->cst_rdev,
+			&info->cst_size,
+			&info->cst_blksize,
+			&info->cst_blocks,
+			&info->cst_atime,
+			&info->cst_mtime,
+			&info->cst_ctime);
+
+	if(fields!=13) {
+		return -1;
+	}
+
+	return 0;
+}
+
+int get_statfs( const char *line, struct chirp_statfs *info ) {
+
+	int fields;
+
+	memset(info,0,sizeof(*info));
+
+	fields = sscanf(line,"%ld %ld %ld %ld %ld %ld %ld\n",
+			&info->f_type,
+			&info->f_bsize,
+			&info->f_blocks,
+			&info->f_bfree,
+			&info->f_bavail,
+			&info->f_files,
+			&info->f_ffree);
+
+	if(fields!=7) {
+		return -1;
+	}
+
+	return 0;
+}

@@ -75,6 +75,7 @@ static void Usage(char* name)
 #ifdef HAVE_EXT_POSTGRESQL
 static char * getDBConnStr(char *&quillName, char *&databaseIp, char *&databaseName, char *&queryPassword);
 static bool checkDBconfig();
+static	QueryResult result;
 #endif /* HAVE_EXT_POSTGRESQL */
 
 static void readHistoryFromFiles(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr);
@@ -83,7 +84,6 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
 //------------------------------------------------------------------------
 
 static CollectorList * Collectors = NULL;
-static	QueryResult result;
 static	CondorQuery	quillQuery(QUILL_AD);
 static	ClassAdList	quillList;
 static  bool longformat=false;
@@ -104,24 +104,24 @@ main(int argc, char* argv[])
   SQLQuery queryhor;
   SQLQuery queryver;
   QuillErrCode st;
+  bool remotequill=false;
+  char *quillName=NULL;
+  AttrList *ad=0;
+  int flag = 1;
 #endif /* HAVE_EXT_POSTGRESQL */
 
   void **parameters;
   char *dbconn=NULL;
   char *completedsince = NULL;
   char *owner=NULL;
-  bool readfromfile = false,remotequill=false;
+  bool readfromfile = false;
 
   char* JobHistoryFileName=NULL;
-  char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL,*quillName=NULL;
+  char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
 
 
   char* constraint=NULL;
   ExprTree *constraintExpr=NULL;
-
-  AttrList *ad=0;
-
-  int flag = 1;
 
   char tmp[512];
 
@@ -254,7 +254,10 @@ main(int argc, char* argv[])
 #endif /* HAVE_EXT_POSTGRESQL */
 
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
-		if (constraint) break;
+		if (constraint) {
+			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>.<proc>\n");
+			break;
+		}
 		sprintf (tmp, "((%s == %d) && (%s == %d))", 
 				 ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
 		constraint=tmp;
@@ -266,7 +269,10 @@ main(int argc, char* argv[])
 #endif /* HAVE_EXT_POSTGRESQL */
     }
     else if (sscanf (argv[i], "%d", &cluster) == 1) {
-		if (constraint) break;
+		if (constraint) {
+			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>\n");
+			break;
+		}
 		sprintf (tmp, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
 		constraint=tmp;
 		parameters[0] = &cluster;
@@ -281,7 +287,10 @@ main(int argc, char* argv[])
           dprintf_config ("TOOL");
     }
     else {
-		if (constraint) break;
+		if (constraint) {
+			fprintf(stderr, "Error: Cannot provide both -constraint and <owner>\n");
+			break;
+		}
 		owner = (char *) malloc(512 * sizeof(char));
 		sscanf(argv[i], "%s", owner);	
 		sprintf(tmp, "(%s == \"%s\")", ATTR_OWNER, owner);
@@ -686,7 +695,7 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
         // Ok if only clusterId specified
         while (clusterId != cluster || (proc != -1 && procId != proc)) {
 	  
-            if (prevOffset == 0) { // no match
+            if (prevOffset <= 0) { // no match
                 free(owner);
                 return -1;
             }

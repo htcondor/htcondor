@@ -86,7 +86,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	char *path, *fullpath, *vername, *platform;
+	char *path=NULL, *fullpath=NULL, *vername=NULL, *platform=NULL;
 	if( use_syscall_lib ) {
 		config();
 		path = param( "LIB" );

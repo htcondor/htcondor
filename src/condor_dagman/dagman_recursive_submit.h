@@ -24,8 +24,10 @@
 #include "MyString.h"
 #include "string_list.h"
 #include "condor_config.h"
+#include "debug.h"
 
-static const char *DAG_SUBMIT_FILE_SUFFIX = ".condor.sub";
+#define DAG_SUBMIT_FILE_SUFFIX ".condor.sub"
+
 
 	//
 	// These are options that are *not* passed to lower levels of
@@ -36,6 +38,8 @@ struct SubmitDagShallowOptions
 {
 	bool bSubmit;
 	MyString strRemoteSchedd;
+	MyString strScheddDaemonAdFile;
+	MyString strScheddAddressFile;
 	int iMaxIdle;
 	int iMaxJobs;
 	int iMaxPre;
@@ -58,11 +62,14 @@ struct SubmitDagShallowOptions
 	MyString strRescueFile;
 	MyString strLockFile;
 	bool copyToSpool;
+	int iDebugLevel;
 
 	SubmitDagShallowOptions() 
 	{ 
 		bSubmit = true;
 		strRemoteSchedd = "";
+		strScheddDaemonAdFile = "";
+		strScheddAddressFile = "";
 		iMaxIdle = 0;
 		iMaxJobs = 0;
 		iMaxPre = 0;
@@ -74,6 +81,7 @@ struct SubmitDagShallowOptions
 		runValgrind = false;
 		primaryDagFile = "";
 		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
+		iDebugLevel = DEBUG_UNSET;
 	}
 };
 
@@ -89,7 +97,6 @@ struct SubmitDagDeepOptions
 	bool bForce;
 	MyString strNotification;
 	bool bAllowLogError;
-	int iDebugLevel;
 	MyString strDagmanPath; // path to dagman binary
 	bool useDagDir;
 	MyString strOutfileDir;
@@ -107,7 +114,6 @@ struct SubmitDagDeepOptions
 		bForce = false;
 		strNotification = "";
 		bAllowLogError = false;
-		iDebugLevel = 3;
 		useDagDir = false;
 		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", false );
 		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
@@ -119,6 +125,7 @@ struct SubmitDagDeepOptions
 	}
 };
 
+extern "C" {
 /** Run condor_submit_dag on the given DAG file.
 	@param opts: the condor_submit_dag options
 	@param dagFile: the DAG file to process
@@ -128,5 +135,6 @@ struct SubmitDagDeepOptions
 */
 int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 			const char *dagFile, const char *directory, bool isRetry );
+}
 
 #endif	// ifndef DAGMAN_RECURSIVE_SUBMIT_H

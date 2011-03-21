@@ -170,7 +170,7 @@ ReliSock::accept( ReliSock	&c )
 #ifndef WIN32 /* Unix */
 	errno = 0;
 #endif
-	if ((c_sock = ::accept(_sock, (sockaddr *)&c._who, &addr_sz)) < 0) {
+	if ((c_sock = ::accept(_sock, (sockaddr *)&c._who, (socklen_t*)&addr_sz)) < 0) {
 #ifndef WIN32 /* Unix */
 		if ( errno == EMFILE ) {
 			_condor_fd_panic ( __LINE__, __FILE__ ); /* This calls dprintf_exit! */
@@ -501,6 +501,16 @@ ReliSock::end_of_message()
 	return ret_val;
 }
 
+bool
+ReliSock::peek_end_of_message()
+{
+	if ( rcv_msg.ready ) {
+		if ( rcv_msg.buf.consumed() ) {
+			return true;
+		}
+	}
+	return false;
+}
 
 const char * ReliSock :: isIncomingDataMD5ed()
 {
@@ -528,8 +538,8 @@ ReliSock::put_bytes(const void *data, int sz)
             }
         }
         else {
-            dta = (unsigned char *) malloc(sz);
-            memcpy(dta, data, sz);
+            if((dta = (unsigned char *) malloc(sz)) != 0)
+		memcpy(dta, data, sz);
         }
 
 	ignore_next_encode_eom = FALSE;
@@ -551,17 +561,14 @@ ReliSock::put_bytes(const void *data, int sz)
 			snd_msg.buf.seek(header_size);
 		}
 		
-		if ((tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
-					if (dta != NULL)
-					{
-                    	free(dta);
-						dta = NULL;
-					}
-                    return -1;
+		if (dta && (tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
+			free(dta);
+			dta = NULL;
+			return -1;
 		}
 		
 		nw += tw;
-		if (nw == sz) {
+		if (nw >= sz) {
 			break;
 		}
 	}
@@ -571,7 +578,7 @@ ReliSock::put_bytes(const void *data, int sz)
 
 	if (dta != NULL)
 	{
-    	free(dta);
+		free(dta);
 		dta = NULL;
 	}
 
@@ -651,8 +658,8 @@ bool ReliSock::RcvMsg::init_MD(CONDOR_MD_MODE mode, KeyInfo * key)
 ReliSock::RcvMsg :: RcvMsg() : 
     mode_(MD_OFF),
     mdChecker_(0), 
-    ready(0), 
-	p_sock(0)
+	p_sock(0),
+    ready(0)
 {
 }
 
@@ -860,13 +867,14 @@ ReliSock::serialize(char *buf)
 	// first, let our parent class restore its state
     ptmp = Sock::serialize(buf);
     ASSERT( ptmp );
-
-    sscanf(ptmp,"%d*",(int*)&_special_state);
+    int itmp;
+    sscanf(ptmp,"%d*",&itmp);
+    _special_state = relisock_state(itmp);
     // skip through this
     ptmp = strchr(ptmp, '*');
-    ptmp++;
+    if(ptmp) ptmp++;
     // Now, see if we are 6.3 or 6.2
-    if ((ptr = strchr(ptmp, '*')) != NULL) {
+    if (ptmp && (ptr = strchr(ptmp, '*')) != NULL) {
         // we are 6.3
         memcpy(sinful_string, ptmp, ptr - ptmp);
 
@@ -888,7 +896,7 @@ ReliSock::serialize(char *buf)
             }
         }
     }
-    else {
+    else if(ptmp) {
         // we are 6.2, this is the end of it.
         sscanf(ptmp,"%s",sinful_string);
     }

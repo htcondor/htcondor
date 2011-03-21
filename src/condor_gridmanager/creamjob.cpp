@@ -51,17 +51,14 @@
 #define GM_CLEAR_REQUEST		11
 #define GM_HOLD					12
 #define GM_PROXY_EXPIRED		13
-#define GM_EXTEND_LIFETIME		14
-#define GM_POLL_JOB_STATE		15
-#define GM_START				16
-#define GM_DELEGATE_PROXY		17
-#define GM_CLEANUP				18
-#define GM_SET_LEASE			19
-#define GM_RECOVER_POLL			20
-#define GM_STAGE_IN				21
-#define GM_STAGE_OUT			22
-#define GM_EXTEND_LIFETIME_STAGE_IN	23
-#define GM_EXTEND_LIFETIME_STAGE_OUT	24
+#define GM_POLL_JOB_STATE		14
+#define GM_START				15
+#define GM_DELEGATE_PROXY		16
+#define GM_CLEANUP				17
+#define GM_SET_LEASE			18
+#define GM_RECOVER_POLL			19
+#define GM_STAGE_IN				20
+#define GM_STAGE_OUT			21
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -78,7 +75,6 @@ static const char *GMStateNames[] = {
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
 	"GM_PROXY_EXPIRED",
-	"GM_EXTEND_LIFETIME",
 	"GM_POLL_JOB_STATE",
 	"GM_START",
 	"GM_DELEGATE_PROXY",
@@ -87,8 +83,6 @@ static const char *GMStateNames[] = {
 	"GM_RECOVER_POLL",
 	"GM_STAGE_IN",
 	"GM_STAGE_OUT",
-	"GM_EXTEND_LIFETIME_STAGE_IN",
-	"GM_EXTEND_LIFETIME_STAGE_OUT",
 };
 
 #define CREAM_JOB_STATE_UNSET			""
@@ -127,7 +121,7 @@ const char *ATTR_CREAM_LEASE_ID = "CreamLeaseId";
 #define LOG_CREAM_ERROR(func,error) \
     dprintf(D_ALWAYS, \
 		"(%d.%d) gmState %s, remoteState %s: %s %s\n", \
-        procID.cluster,procID.proc,GMStateNames[gmState],remoteState.Value(), \
+        procID.cluster,procID.proc,GMStateNames[gmState],remoteState.c_str(), \
         func,error==GAHPCLIENT_COMMAND_TIMED_OUT?"timed out":"failed")
 
 #define CHECK_PROXY \
@@ -173,11 +167,11 @@ void CreamJobReconfig()
 
 bool CreamJobAdMatch( const ClassAd *job_ad ) {
 	int universe;
-	MyString resource;
+	std::string resource;
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 strncasecmp( resource.Value(), "cream ", 6 ) == 0 ) {
+		 strncasecmp( resource.c_str(), "cream ", 6 ) == 0 ) {
 
 		return true;
 	}
@@ -200,13 +194,13 @@ CreamJob::CreamJob( ClassAd *classad )
 
 	int bool_value;
 	char buff[4096];
-	MyString buff2;
-	MyString iwd;
-	MyString job_output;
-	MyString job_error;
-	MyString grid_resource;
+	std::string buff2;
+	std::string iwd;
+	std::string job_output;
+	std::string job_error;
+	std::string grid_resource;
 	bool job_already_submitted = false;
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 
 	creamAd = NULL;
@@ -218,7 +212,7 @@ CreamJob::CreamJob( ClassAd *classad )
 	streamError = false;
 	stageOutput = false;
 	stageError = false;
-	remoteStateFaultString = 0;
+	remoteStateFaultString = "";
 	gmState = GM_INIT;
 	probeNow = false;
 	enteredCurrentGmState = time(NULL);
@@ -252,10 +246,10 @@ CreamJob::CreamJob( ClassAd *classad )
 							 (TimerHandlercpp)&CreamJob::ProxyCallback, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
-			error_string.sprintf( "%s is not set in the job ad",
+			sprintf( error_string, "%s is not set in the job ad",
 								  ATTR_X509_USER_PROXY );
 		}
-		dprintf(D_ALWAYS, "errorstring %s\n", error_string.Value());
+		dprintf(D_ALWAYS, "errorstring %s\n", error_string.c_str());
 		goto error_exit;
 	}
 
@@ -281,55 +275,55 @@ CreamJob::CreamJob( ClassAd *classad )
 	
 	jobAd->LookupString( ATTR_GRID_RESOURCE, grid_resource );
 
-	if ( grid_resource.Length() ) {
+	if ( grid_resource.length() ) {
 		const char *token;
 
-		grid_resource.Tokenize();
+		Tokenize( grid_resource );
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "cream" ) ) {
-			error_string.sprintf( "%s not of type cream", ATTR_GRID_RESOURCE );
+			sprintf( error_string, "%s not of type cream", ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 			/* TODO Make port and '/ce-cream/services/CREAM' optional */
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			// If the resource url is missing a scheme, insert one
 			if ( strncmp( token, "http://", 7 ) == 0 ||
 				 strncmp( token, "https://", 8 ) == 0 ) {
 				resourceManagerString = strdup( token );
 			} else {
-				MyString urlbuf;
-				urlbuf.sprintf("https://%s", token );
-				resourceManagerString = strdup( urlbuf.Value() );
+				std::string urlbuf;
+				sprintf( urlbuf, "https://%s", token );
+				resourceManagerString = strdup( urlbuf.c_str() );
 			}
 		} else {
-			error_string.sprintf( "%s missing CREAM Service URL",
+			sprintf( error_string, "%s missing CREAM Service URL",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			resourceBatchSystemString = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing batch system (LRMS) type.",
+			sprintf( error_string, "%s missing batch system (LRMS) type.",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = grid_resource.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			resourceQueueString = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing LRMS queue name.",
+			sprintf( error_string, "%s missing LRMS queue name.",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -374,8 +368,8 @@ CreamJob::CreamJob( ClassAd *classad )
 
 	gahpErrorString = "";
 
-	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.Length() ) {
-		int len = iwd.Length();
+	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd) && iwd.length() ) {
+		int len = iwd.length();
 		if ( len > 1 && iwd[len - 1] != '/' ) {
 			iwd += "/";
 		}
@@ -384,8 +378,8 @@ CreamJob::CreamJob( ClassAd *classad )
 	}
 
 	buff2 = "";
-	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, job_output) && job_output.Length() &&
-		 strcmp( job_output.Value(), NULL_FILE ) ) {
+	if ( jobAd->LookupString(ATTR_JOB_OUTPUT, job_output) && job_output.length() &&
+		 strcmp( job_output.c_str(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, bool_value ) ||
 			 bool_value ) {
@@ -395,7 +389,7 @@ CreamJob::CreamJob( ClassAd *classad )
 			}
 
 			buff2 += job_output;
-			localOutput = strdup( buff2.Value() );
+			localOutput = strdup( buff2.c_str() );
 
 			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_OUTPUT, bool_value );
@@ -405,8 +399,8 @@ CreamJob::CreamJob( ClassAd *classad )
 	}
 
 	buff2 = "";
-	if ( jobAd->LookupString(ATTR_JOB_ERROR, job_error) && job_error.Length() &&
-		 strcmp( job_error.Value(), NULL_FILE ) ) {
+	if ( jobAd->LookupString(ATTR_JOB_ERROR, job_error) && job_error.length() &&
+		 strcmp( job_error.c_str(), NULL_FILE ) ) {
 
 		if ( !jobAd->LookupBool( ATTR_TRANSFER_ERROR, bool_value ) ||
 			 bool_value ) {
@@ -416,7 +410,7 @@ CreamJob::CreamJob( ClassAd *classad )
 			}
 
 			buff2 += job_error;
-			localError = strdup( buff2.Value() );
+			localError = strdup( buff2.c_str() );
 
 			bool_value = 0;
 			jobAd->LookupBool( ATTR_STREAM_ERROR, bool_value );
@@ -431,8 +425,8 @@ CreamJob::CreamJob( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }
@@ -498,7 +492,7 @@ void CreamJob::doEvaluateState()
 {
 	bool connect_failure = false;
 	int old_gm_state;
-	MyString old_remote_state;
+	std::string old_remote_state;
 	bool reevaluate_state = true;
 	time_t now = time(NULL);
 
@@ -510,7 +504,7 @@ void CreamJob::doEvaluateState()
 	dprintf(D_ALWAYS,
 			"(%d.%d) doEvaluateState called: gmState %s, creamState %s\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],
-			remoteState.Value());
+			remoteState.c_str());
 
 	if ( gahp ) {
 		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
@@ -673,80 +667,28 @@ void CreamJob::doEvaluateState()
 						   delegatedCredentialURI );
 		} break;
 		case GM_SET_LEASE: {
-			// Create a lease id on the cream server for this job
+			const char *lease_id;
+			const char *error_msg;
+				// TODO What happens if CreamResource can't set a lease?
 			if ( condorState == REMOVED || condorState == HELD ) {
-				myResource->CancelSubmit(this);
-				gmState = GM_UNSUBMITTED;
+				gmState = GM_DELETE;
 				break;
 			}
-			if ( leaseId == NULL ) {
-				// Create an ID unique to this job
-
-				// get condor pool name
-				// In case there are multiple collectors, strip out the spaces
-				// If there's no collector, insert a dummy name
-				char* pool_name = param( "COLLECTOR_HOST" );
-				if ( pool_name ) {
-					StringList collectors( pool_name );
-					free( pool_name );
-					pool_name = collectors.print_to_string();
-				} else {
-					pool_name = strdup( "NoPool" );
-				}
-
-				// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
-				MyString job_id;
-				jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
-
-				MyString buf;
-				buf.sprintf( "Condor_%s_%s", pool_name, job_id.Value() );
-				leaseId = strdup( buf.Value() );
-
-				jobAd->Assign( ATTR_CREAM_LEASE_ID, leaseId );
-
-				free( pool_name );
-			}
-
-			if ( jmLifetime == 0 ) {
-				int new_lease;
-				if ( CalculateJobLease( jobAd, new_lease,
-										DEFAULT_LEASE_DURATION ) == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) No lease for cream job!?\n",
-							 procID.cluster, procID.proc );
-					jmLifetime = now + DEFAULT_LEASE_DURATION;
-				} else {
-					jmLifetime = new_lease;
-				}
-			}
-
-			time_t server_lease = jmLifetime;
-			rc = gahp->cream_set_lease( resourceManagerString,
-										leaseId, server_lease );
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+			if ( leaseId != NULL ) {
+				gmState = GM_SUBMIT;
 				break;
 			}
-
-			if ( rc != GLOBUS_SUCCESS ) {
-				if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
-					connect_failure = true;
-					break;
-				}
-				// Unhandled error
-				LOG_CREAM_ERROR( "cream_set_lease()", rc );
-				gahpErrorString = gahp->getErrorString();
-				myResource->CancelSubmit( this );
+			if ( (error_msg = myResource->getLeaseError()) ) {
+					// There's a problem setting the lease
+				errorString = error_msg;
 				gmState = GM_HOLD;
+			}
+			lease_id = myResource->getLeaseId();
+			if ( lease_id == NULL ) {
+					// lease still needs to be set. Wait.
 				break;
 			}
-
-			if ( server_lease != jmLifetime ) {
-				dprintf( D_ALWAYS, "(%d.%d) Server changed lease time from %d to %d\n",
-						 procID.cluster, procID.proc, (int)jmLifetime,
-						 (int)server_lease );
-				jmLifetime = server_lease;
-			}
-
+			leaseId = strdup( lease_id );
 			gmState = GM_SUBMIT;
 		} break;
 		case GM_SUBMIT: {
@@ -806,8 +748,8 @@ void CreamJob::doEvaluateState()
 					downloadUrl = download_url;
 					jobAd->Assign( ATTR_CREAM_DOWNLOAD_URL, downloadUrl );
 					gmState = GM_SUBMIT_SAVE;				
-					
-					UpdateJobLeaseSent(jmLifetime);
+
+					UpdateJobLeaseSent(myResource->m_sharedLeaseExpiration);
 					
 				} else {
 					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
@@ -868,17 +810,6 @@ void CreamJob::doEvaluateState()
 					m_xfer_request = NULL;
 					gmState = GM_CLEAR_REQUEST;
 				}
-
-				int new_lease;	// CalculateJobLease needs an int
-				time_t renew_time;
-				if ( CalculateJobLease( jobAd, new_lease,
-										DEFAULT_LEASE_DURATION,
-										&renew_time ) ) {
-					jmLifetime = new_lease;
-					gmState = GM_EXTEND_LIFETIME_STAGE_IN;
-					break;
-				}
-				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
 			}
 		} break;
 		case GM_SUBMIT_COMMIT: {
@@ -919,17 +850,6 @@ void CreamJob::doEvaluateState()
 			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
-				int new_lease;	// CalculateJobLease needs an int
-				time_t renew_time;
-				if ( CalculateJobLease( jobAd, new_lease,
-										DEFAULT_LEASE_DURATION,
-										&renew_time ) ) {
-					jmLifetime = new_lease;
-					gmState = GM_EXTEND_LIFETIME;
-					break;
-				}
-				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
-
 				if ( probeNow || remoteState == CREAM_JOB_STATE_UNSET ) {
 					doActivePoll = true;
 					probeNow = false;
@@ -940,44 +860,6 @@ void CreamJob::doEvaluateState()
 					break;
 				}
 				
-			}
-			} break;
-		case GM_EXTEND_LIFETIME_STAGE_IN:
-		case GM_EXTEND_LIFETIME_STAGE_OUT:
-		case GM_EXTEND_LIFETIME: {
-			if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL;
-			} else {
-				CHECK_PROXY;
-				time_t server_lease = jmLifetime;
-
-				rc = gahp->cream_set_lease (resourceManagerString, leaseId, server_lease );
-
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-				if ( rc != GLOBUS_SUCCESS ) {
-					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
-						connect_failure = true;
-						break;
-					}
-					// unhandled error
-					LOG_CREAM_ERROR("cream_set_lease()",rc);
-					gahpErrorString = gahp->getErrorString();
-					gmState = GM_CANCEL;
-					break;
-				}
-				jmLifetime = server_lease;
-
-				UpdateJobLeaseSent( jmLifetime );
-				if ( gmState == GM_EXTEND_LIFETIME_STAGE_IN ) {
-					gmState = GM_STAGE_IN;
-				} else if ( gmState == GM_EXTEND_LIFETIME_STAGE_OUT ) {
-					gmState = GM_STAGE_OUT;
-				} else {
-					gmState = GM_SUBMITTED;
-				}
 			}
 			} break;
 		case GM_POLL_JOB_STATE: {
@@ -1023,19 +905,6 @@ void CreamJob::doEvaluateState()
 					free( fault );
 				}
 
-				if ( remoteState != CREAM_JOB_STATE_DONE_OK && 
-					 remoteState != CREAM_JOB_STATE_DONE_FAILED && 
-					 remoteState != CREAM_JOB_STATE_ABORTED) {
-				   
-					int new_lease;	// CalculateJobLease needs an int
-					if ( CalculateJobLease( jobAd, new_lease,
-											DEFAULT_LEASE_DURATION ) ) {
-						jmLifetime = new_lease;
-						gmState = GM_EXTEND_LIFETIME;
-						break;
-					}
-				}
-				
 				gmState = GM_SUBMITTED;
 			}
 			} break;
@@ -1062,17 +931,6 @@ void CreamJob::doEvaluateState()
 					m_xfer_request = NULL;
 					gmState = GM_CLEAR_REQUEST;
 				}
-
-				int new_lease;	// CalculateJobLease needs an int
-				time_t renew_time;
-				if ( CalculateJobLease( jobAd, new_lease,
-										DEFAULT_LEASE_DURATION,
-										&renew_time ) ) {
-					jmLifetime = new_lease;
-					gmState = GM_EXTEND_LIFETIME_STAGE_OUT;
-					break;
-				}
-				daemonCore->Reset_Timer( evaluateStateTid, renew_time - now );
 			}
 		} break;
 		case GM_DONE_SAVE: {
@@ -1386,18 +1244,18 @@ void CreamJob::doEvaluateState()
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
 									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
-					strncpy( holdReason, errorString.Value(),
+					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
 				}
 				if ( holdReason[0] == '\0' &&
-					 !remoteStateFaultString.IsEmpty() ) {
+					 !remoteStateFaultString.empty() ) {
 
 					snprintf( holdReason, 1024, "CREAM error: %s",
-							  remoteStateFaultString.Value() );
+							  remoteStateFaultString.c_str() );
 				}
-				if ( holdReason[0] == '\0' && !gahpErrorString.IsEmpty() ) {
+				if ( holdReason[0] == '\0' && !gahpErrorString.empty() ) {
 					snprintf( holdReason, 1024, "CREAM error: %s",
-							  gahpErrorString.Value() );
+							  gahpErrorString.c_str() );
 				}
 				if ( holdReason[0] == '\0' ) {
 					strncpy( holdReason, "Unspecified gridmanager error",
@@ -1432,8 +1290,8 @@ void CreamJob::doEvaluateState()
 /*
 			dprintf(D_FULLDEBUG, "(%d.%d) remote state change: %s -> %s\n",
 					procID.cluster, procID.proc,
-					old_remote_state.Value(),
-					remoteState.Value());
+					old_remote_state.c_str(),
+					remoteState.c_str());
 */
 			enteredCurrentRemoteState = time(NULL);
 		}
@@ -1491,17 +1349,17 @@ void CreamJob::SetRemoteJobId( const char *job_id )
 		remoteJobId = NULL;
 	}
 
-	MyString full_job_id;
+	std::string full_job_id;
 	if ( job_id ) {
 		full_job_id = CreamJob::getFullJobId(resourceManagerString, job_id);
 	}
-	BaseJob::SetRemoteJobId( full_job_id.Value() );
+	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
 void CreamJob::NewCreamState( const char *new_state, int exit_code,
 							  const char *failure_reason )
 {
-	MyString new_state_str = new_state;
+	std::string new_state_str = new_state ? new_state : "";
 
 		// TODO verify that the string is a valid state name
 
@@ -1509,8 +1367,8 @@ void CreamJob::NewCreamState( const char *new_state, int exit_code,
 
 	if ( new_state_str != remoteState ) {
 		dprintf( D_FULLDEBUG, "(%d.%d) cream state change: %s -> %s\n",
-				 procID.cluster, procID.proc, remoteState.Value(),
-				 new_state_str.Value() );
+				 procID.cluster, procID.proc, remoteState.c_str(),
+				 new_state_str.c_str() );
 
 		if ( ( new_state_str == CREAM_JOB_STATE_RUNNING ||
 			   new_state_str == CREAM_JOB_STATE_REALLY_RUNNING ) &&
@@ -1540,7 +1398,7 @@ void CreamJob::NewCreamState( const char *new_state, int exit_code,
 
 		remoteState = new_state_str;
 		enteredCurrentRemoteState = time(NULL);
-		SetRemoteJobStatus( remoteState.Value() );
+		SetRemoteJobStatus( remoteState.c_str() );
 
 		// When a job is in DONE-OK state, Cream will often set a
 		// failure message of "reason=0", even though there is no
@@ -1582,10 +1440,10 @@ char *CreamJob::buildSubmitAd()
 	
 	ClassAd submitAd;
 
-	MyString tmp_str = "";
-	MyString tmp_str2 = "";
-	MyString buf = "";
-	MyString iwd_str = "";
+	std::string tmp_str = "";
+	std::string tmp_str2 = "";
+	std::string buf = "";
+	std::string iwd_str = "";
 	StringList isb;
 	StringList osb;
 	bool result;
@@ -1599,7 +1457,7 @@ char *CreamJob::buildSubmitAd()
 		//IWD
 	jobAd->LookupString(ATTR_JOB_IWD, iwd_str);
 	if ( jobAd->LookupString(ATTR_JOB_IWD, iwd_str)) {
-		int len = iwd_str.Length();
+		int len = iwd_str.length();
 		if ( len > 1 && iwd_str[len - 1] != '/' ) {
 			iwd_str += '/';
 		}
@@ -1614,58 +1472,58 @@ char *CreamJob::buildSubmitAd()
 	jobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, result);
 	if (result) {
 		//TRANSFERED
-		tmp_str2 = condor_basename( tmp_str.Value() );
+		tmp_str2 = condor_basename( tmp_str.c_str() );
 
-		isb.insert( tmp_str2.Value() );
+		isb.insert( tmp_str2.c_str() );
 
-		submitAd.Assign( ATTR_EXECUTABLE, tmp_str2.Value() );
+		submitAd.Assign( ATTR_EXECUTABLE, tmp_str2.c_str() );
 	} else {
 		//PRE-STAGED
-		submitAd.Assign( ATTR_EXECUTABLE, tmp_str.Value() );
+		submitAd.Assign( ATTR_EXECUTABLE, tmp_str.c_str() );
 	}
 
 		//ARGUMENTS
 	if (jobAd->LookupString(ATTR_JOB_ARGUMENTS1, tmp_str)) {
-		buf.sprintf("%s = \"%s\"", ATTR_ARGS, tmp_str.Value());
-		submitAd.Insert(buf.Value());
+		sprintf(buf, "%s = \"%s\"", ATTR_ARGS, tmp_str.c_str());
+		submitAd.Insert(buf.c_str());
 	}
 	
 		//STDINPUT can be either be PRE-STAGED or TRANSFERED
 	result = true;
 	jobAd->LookupBool(ATTR_TRANSFER_INPUT, result);
 	jobAd->LookupString(ATTR_JOB_INPUT, tmp_str);
-	if ( !tmp_str.IsEmpty() ) {
+	if ( !tmp_str.empty() ) {
 		if (result) {
 			//TRANSFERED
-			tmp_str2 = condor_basename( tmp_str.Value() );
-			isb.insert(condor_basename( tmp_str2.Value() ) );
+			tmp_str2 = condor_basename( tmp_str.c_str() );
+			isb.insert(condor_basename( tmp_str2.c_str() ) );
 			
-			submitAd.Assign( ATTR_STD_INPUT, tmp_str2.Value() );
+			submitAd.Assign( ATTR_STD_INPUT, tmp_str2.c_str() );
 		} else {
 			//PRE-STAGED. Be careful, if stdin is not found in WN, job
 			// will not complete successfully.
 			if ( tmp_str[0] == '/' ) { //Only add absolute path
-				submitAd.Assign( ATTR_STD_INPUT, tmp_str.Value() );
+				submitAd.Assign( ATTR_STD_INPUT, tmp_str.c_str() );
 			}
 		}
 	}
 		
 		//TRANSFER INPUT FILES
 	if (jobAd->LookupString(ATTR_TRANSFER_INPUT_FILES, tmp_str)) {
-		StringList strlist(tmp_str.Value());
+		StringList strlist(tmp_str.c_str());
 		strlist.rewind();
 		
 		for (int i = 0; i < strlist.number(); i++) {
 			tmp_str = strlist.next();
 
-			isb.insert( condor_basename( tmp_str.Value() ) );
+			isb.insert( condor_basename( tmp_str.c_str() ) );
 		}
 	}
 
 		//TRANSFER OUTPUT FILES: handle absolute ?
 	if (jobAd->LookupString(ATTR_TRANSFER_OUTPUT_FILES, tmp_str)) {
 		char *filename;
-		StringList output_files(tmp_str.Value());
+		StringList output_files(tmp_str.c_str());
 		output_files.rewind();
 		while ( (filename = output_files.next()) != NULL ) {
 
@@ -1680,12 +1538,12 @@ char *CreamJob::buildSubmitAd()
 		jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, result);
 
 		if (result) {
-			tmp_str2 = condor_basename( tmp_str.Value() );
-			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str2.Value() );
+			tmp_str2 = condor_basename( tmp_str.c_str() );
+			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str2.c_str() );
 
-			osb.insert( condor_basename( tmp_str2.Value() ) );
+			osb.insert( condor_basename( tmp_str2.c_str() ) );
 		} else {
-			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str.Value() );
+			submitAd.Assign( ATTR_STD_OUTPUT, tmp_str.c_str() );
 		}
 	}
 
@@ -1696,12 +1554,12 @@ char *CreamJob::buildSubmitAd()
 		jobAd->LookupBool(ATTR_TRANSFER_ERROR, result);
 
 		if (result) {
-			tmp_str2 = condor_basename( tmp_str.Value() );
-			submitAd.Assign( ATTR_STD_ERROR, tmp_str2.Value() );
+			tmp_str2 = condor_basename( tmp_str.c_str() );
+			submitAd.Assign( ATTR_STD_ERROR, tmp_str2.c_str() );
 
-			osb.insert( condor_basename( tmp_str2.Value() ) );
+			osb.insert( condor_basename( tmp_str2.c_str() ) );
 		} else {
-			submitAd.Assign( ATTR_STD_ERROR, tmp_str.Value() );
+			submitAd.Assign( ATTR_STD_ERROR, tmp_str.c_str() );
 		}
 	}
 
@@ -1709,17 +1567,17 @@ char *CreamJob::buildSubmitAd()
 		//need to have a value
 		// TODO This needs to be extracted from the VOMS extension in the
 		//   job's credential.
-//	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "");
-	buf.sprintf("%s = \"%s\"", ATTR_VIR_ORG, "ignored");
-	submitAd.Insert(buf.Value());
+//	sprintf(buf, "%s = \"%s\"", ATTR_VIR_ORG, "");
+	sprintf(buf, "%s = \"%s\"", ATTR_VIR_ORG, "ignored");
+	submitAd.Insert(buf.c_str());
 	
 		//BATCHSYSTEM
-	buf.sprintf("%s = \"%s\"", ATTR_BATCH_SYSTEM, resourceBatchSystemString);
-	submitAd.Insert(buf.Value());
+	sprintf(buf, "%s = \"%s\"", ATTR_BATCH_SYSTEM, resourceBatchSystemString);
+	submitAd.Insert(buf.c_str());
 	
 		//QUEUENAME
-	buf.sprintf("%s = \"%s\"", ATTR_QUEUE_NAME, resourceQueueString);
-	submitAd.Insert(buf.Value());
+	sprintf(buf, "%s = \"%s\"", ATTR_QUEUE_NAME, resourceQueueString);
+	submitAd.Insert(buf.c_str());
 
 	submitAd.Assign("outputsandboxbasedesturi", "gsiftp://localhost");
 
@@ -1736,34 +1594,34 @@ char *CreamJob::buildSubmitAd()
 
 		//INPUT SANDBOX
 	if (isb.number() > 0) {
-		buf.sprintf("%s = {", ATTR_INPUT_SB);
+		sprintf(buf, "%s = {", ATTR_INPUT_SB);
 		isb.rewind();
 		for (int i = 0; i < isb.number(); i++) {
 			if (i == 0)
-				buf.sprintf_cat("\"%s\"", isb.next());
+				sprintf_cat(buf, "\"%s\"", isb.next());
 			else
-				buf.sprintf_cat(",\"%s\"", isb.next());
+				sprintf_cat(buf, ",\"%s\"", isb.next());
 		}
-		buf.sprintf_cat("}; ]");
+		sprintf_cat(buf, "}; ]");
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
-		ad_string.replaceString( "]", buf.Value(), insert_pos );
+		ad_string.replaceString( "]", buf.c_str(), insert_pos );
 	}
 
 		//OUTPUT SANDBOX
 	if (osb.number() > 0) {
-		buf.sprintf("%s = {", ATTR_OUTPUT_SB);
+		sprintf(buf, "%s = {", ATTR_OUTPUT_SB);
 		osb.rewind();
 		for (int i = 0; i < osb.number(); i++) {
 			if (i == 0)
-				buf.sprintf_cat("\"%s\"", osb.next());
+				sprintf_cat(buf, "\"%s\"", osb.next());
 			else
-				buf.sprintf_cat(",\"%s\"", osb.next());
+				sprintf_cat(buf, ",\"%s\"", osb.next());
 		}
-		buf.sprintf_cat("}; ]");
+		sprintf_cat(buf, "}; ]");
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
-		ad_string.replaceString( "]", buf.Value(), insert_pos );
+		ad_string.replaceString( "]", buf.c_str(), insert_pos );
 	}
 
 		//ENVIRONMENT
@@ -1772,37 +1630,37 @@ char *CreamJob::buildSubmitAd()
 	if(!envobj.MergeFrom(jobAd,&env_errors)) {
 		dprintf(D_ALWAYS,"(%d.%d) Failed to read job environment: %s\n",
 				procID.cluster, procID.proc, env_errors.Value());
-		errorString.sprintf("Failed to read job environment: %s\n",
+		sprintf(errorString,"Failed to read job environment: %s\n",
 							env_errors.Value());
 		return NULL;
 	}
 	char **env_vec = envobj.getStringArray();
 
 	if ( env_vec[0] ) {
-		buf.sprintf( "%s = {", ATTR_JOB_ENVIRONMENT2 );
+		sprintf( buf, "%s = {", ATTR_JOB_ENVIRONMENT2 );
 
 		for ( int i = 0; env_vec[i]; i++ ) {
 			if ( i == 0 ) {
-				buf.sprintf_cat( "\"%s\"", env_vec[i] );
+				sprintf_cat( buf, "\"%s\"", env_vec[i] );
 			} else {
-				buf.sprintf_cat( ",\"%s\"", env_vec[i] );
+				sprintf_cat( buf, ",\"%s\"", env_vec[i] );
 			}
 		}
-		buf.sprintf_cat( "}; ]" );
+		sprintf_cat( buf, "}; ]" );
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
-		ad_string.replaceString( "]", buf.Value(), insert_pos );
+		ad_string.replaceString( "]", buf.c_str(), insert_pos );
 	}
 	deleteStringArray(env_vec);
 
 	if ( jobAd->LookupString( ATTR_CREAM_ATTRIBUTES, tmp_str ) ) {
-		if ( tmp_str[tmp_str.Length()-1] != ';' ) {
+		if ( tmp_str[tmp_str.length()-1] != ';' ) {
 			tmp_str += ";";
 		}
 		tmp_str += " ]";
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
-		ad_string.replaceString( "]", tmp_str.Value(), insert_pos );
+		ad_string.replaceString( "]", tmp_str.c_str(), insert_pos );
 	}
 
 /*
@@ -1815,33 +1673,34 @@ bool CreamJob::IsConnectionError( const char *msg )
 {
 	if ( strstr( msg, "[Connection timed out]" ) ||
 		 strstr( msg, "[Connection refused]" ) ||
-		 strstr( msg, "[Unknown host]" ) ) {
+		 strstr( msg, "[Unknown host]" ) ||
+		 strstr( msg, "EOF detected during communication." ) ) {
 		return true;
 	} else {
 		return false;
 	}
 }
 
-MyString CreamJob::getFullJobId(const char * resourceManager, const char * job_id) 
+std::string CreamJob::getFullJobId(const char * resourceManager, const char * job_id) 
 {
 	ASSERT(resourceManager);
 	ASSERT(job_id);
-	MyString full_job_id;
-	full_job_id.sprintf( "cream %s %s", resourceManager, job_id );
+	std::string full_job_id;
+	sprintf( full_job_id, "cream %s %s", resourceManager, job_id );
 	return full_job_id;
 }
 
 TransferRequest *CreamJob::MakeStageInRequest()
 {
-	MyString tmp_str = "";
-	MyString tmp_str2 = "";
-	MyString iwd_str = "";
+	std::string tmp_str = "";
+	std::string tmp_str2 = "";
+	std::string iwd_str = "";
 	StringList local_urls;
 	StringList remote_urls;
 	bool result;
 
 	if ( jobAd->LookupString(ATTR_JOB_IWD, tmp_str) ) {
-		int len = tmp_str.Length();
+		int len = tmp_str.length();
 		if ( len > 1 && tmp_str[len - 1] != '/' ) {
 			tmp_str += '/';
 		}
@@ -1856,11 +1715,11 @@ TransferRequest *CreamJob::MakeStageInRequest()
 			//here, JOB_CMD = full path to executable
 		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
 		tmp_str2 = "file://" + tmp_str;
-		local_urls.insert(tmp_str2.Value());
+		local_urls.insert(tmp_str2.c_str());
 
 		sprintf( tmp_str2, "%s/%s", uploadUrl,
-				 condor_basename( tmp_str.Value() ) );
-		remote_urls.insert( tmp_str2.Value() );
+				 condor_basename( tmp_str.c_str() ) );
+		remote_urls.insert( tmp_str2.c_str() );
 	}
 
 	result = true;
@@ -1874,16 +1733,16 @@ TransferRequest *CreamJob::MakeStageInRequest()
 			else 
 				tmp_str2 = "file://" + tmp_str;
 
-			local_urls.insert( tmp_str2.Value() );
+			local_urls.insert( tmp_str2.c_str() );
 
 			sprintf( tmp_str2, "%s/%s", uploadUrl,
-					 condor_basename( tmp_str.Value() ) );
-			remote_urls.insert( tmp_str2.Value() );
+					 condor_basename( tmp_str.c_str() ) );
+			remote_urls.insert( tmp_str2.c_str() );
 		}
 	}
 
 	if (jobAd->LookupString(ATTR_TRANSFER_INPUT_FILES, tmp_str)) {
-		StringList strlist(tmp_str.Value());
+		StringList strlist(tmp_str.c_str());
 		strlist.rewind();
 
 		for (int i = 0; i < strlist.number(); i++) {
@@ -1894,11 +1753,11 @@ TransferRequest *CreamJob::MakeStageInRequest()
 			else 
 				tmp_str2 = "file://" + tmp_str;
 
-			local_urls.insert( tmp_str2.Value() );
+			local_urls.insert( tmp_str2.c_str() );
 
 			sprintf( tmp_str2, "%s/%s", uploadUrl,
-					 condor_basename( tmp_str.Value() ) );
-			remote_urls.insert( tmp_str2.Value() );
+					 condor_basename( tmp_str.c_str() ) );
+			remote_urls.insert( tmp_str2.c_str() );
 		}
 	}
 
@@ -1910,13 +1769,13 @@ TransferRequest *CreamJob::MakeStageOutRequest()
 {
 	StringList remote_urls;
 	StringList local_urls;
-	MyString tmp_str;
-	MyString buf;
-	MyString iwd_str = "";
+	std::string tmp_str;
+	std::string buf;
+	std::string iwd_str = "";
 	bool result;
 
 	if ( jobAd->LookupString( ATTR_JOB_IWD, tmp_str ) ) {
-		int len = tmp_str.Length();
+		int len = tmp_str.length();
 		if ( len > 1 && tmp_str[len - 1] != '/' ) {
 			tmp_str += '/';
 		}
@@ -1931,24 +1790,24 @@ TransferRequest *CreamJob::MakeStageOutRequest()
 		MyString new_name;
 		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
 
-		StringList output_files(tmp_str.Value());
+		StringList output_files(tmp_str.c_str());
 		output_files.rewind();
 		while ( (filename = output_files.next()) != NULL ) {
 
 			sprintf( buf, "%s/%s", downloadUrl, filename );
-			remote_urls.insert( buf.Value() );
+			remote_urls.insert( buf.c_str() );
 
 			if ( remaps && filename_remap_find( remaps, filename,
 												new_name ) ) {
 				sprintf( buf, "%s%s",
-						 new_name[0] == '/' ? "file://" : iwd_str.Value(),
+						 new_name[0] == '/' ? "file://" : iwd_str.c_str(),
 						 new_name.Value() );
 			} else {
 				sprintf( buf, "%s%s",
-						 iwd_str.Value(),
+						 iwd_str.c_str(),
 						 condor_basename( filename ) );
 			}
-			local_urls.insert( buf.Value() );
+			local_urls.insert( buf.c_str() );
 		}
 
 		free( remaps );
@@ -1961,14 +1820,14 @@ TransferRequest *CreamJob::MakeStageOutRequest()
 
 		if (result) {
 			sprintf( buf, "%s/%s", downloadUrl,
-					 condor_basename( tmp_str.Value() ) );
-			remote_urls.insert( buf.Value() );
+					 condor_basename( tmp_str.c_str() ) );
+			remote_urls.insert( buf.c_str() );
 
 			sprintf( buf, "%s%s",
-					 tmp_str[0] == '/' ? "file://" : iwd_str.Value(),
-					 tmp_str.Value());
+					 tmp_str[0] == '/' ? "file://" : iwd_str.c_str(),
+					 tmp_str.c_str());
 
-			local_urls.insert( buf.Value() );
+			local_urls.insert( buf.c_str() );
 		}
 	}
 
@@ -1980,14 +1839,14 @@ TransferRequest *CreamJob::MakeStageOutRequest()
 
 		if ( result ) {
 			sprintf( buf, "%s/%s", downloadUrl,
-					 condor_basename( tmp_str.Value() ) );
-			remote_urls.insert( buf.Value() );
+					 condor_basename( tmp_str.c_str() ) );
+			remote_urls.insert( buf.c_str() );
 
 			sprintf( buf, "%s%s",
-					 tmp_str[0] == '/' ? "file://" : iwd_str.Value(),
-					 tmp_str.Value() );
+					 tmp_str[0] == '/' ? "file://" : iwd_str.c_str(),
+					 tmp_str.c_str() );
 
-			local_urls.insert( buf.Value() );
+			local_urls.insert( buf.c_str() );
 		}
 	}
 

@@ -253,9 +253,12 @@ bool user_policy_ad_checker(ClassAd* ad,
 				 ad->EvalBool(ATTR_ON_EXIT_HOLD_CHECK, NULL, val4) &&
 				 ad->EvalBool(ATTR_ON_EXIT_REMOVE_CHECK, NULL, val5);
 	
-	return found && val1 == periodic_hold && val2 == periodic_remove && 
-		   val3 == periodic_release && val4 == hold_check && 
-		   val5 == remove_check;
+	return found && 
+           ((val1 != 0) == periodic_hold) && 
+           ((val2 != 0) == periodic_remove) && 
+		   ((val3 != 0) == periodic_release) && 
+           ((val4 != 0) == hold_check) && 
+		   ((val5 != 0) == remove_check);
 }
 
 bool user_policy_ad_checker(ClassAd* ad,
@@ -269,7 +272,7 @@ bool user_policy_ad_checker(ClassAd* ad,
 	int val;
 	bool found = ad->EvalBool(ATTR_TIMER_REMOVE_CHECK, NULL, val);
 	
-	return found && val == timer_remove &&
+	return found && ((val != 0) == timer_remove) &&
 		user_policy_ad_checker(ad, 
 							   periodic_hold,
 							   periodic_remove,
@@ -439,3 +442,41 @@ void create_empty_file(char *file)
 	cut_assert_not_null( f = safe_fopen_wrapper(file, "w+") );
 	cut_assert_z( fclose(f) );
 }
+
+#ifdef WIN32
+int gettimeofday(struct timeval *tv, struct timezone *tz)
+{
+	FILETIME ft;
+	unsigned __int64 tmpres = 0;
+	static int tzflag;
+
+	if (NULL != tv)
+	{
+		GetSystemTimeAsFileTime(&ft);
+
+		tmpres |= ft.dwHighDateTime;
+		tmpres <<= 32;
+		tmpres |= ft.dwLowDateTime;
+
+		/*converting file time to unix epoch*/
+		tmpres -= DELTA_EPOCH_IN_MICROSECS; 
+		tmpres /= 10;  /*convert into microseconds*/
+		tv->tv_sec = (long)(tmpres / 1000000UL);
+		tv->tv_usec = (long)(tmpres % 1000000UL);
+	}
+ 
+	if (NULL != tz)
+	{
+		if (!tzflag)
+		{
+			_tzset();
+			tzflag++;
+		}
+		tz->tz_minuteswest = _timezone / 60;
+		tz->tz_dsttime = _daylight;
+	}
+ 
+	return 0;
+}
+#endif
+

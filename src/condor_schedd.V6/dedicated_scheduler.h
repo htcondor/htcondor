@@ -17,6 +17,8 @@
  *
  ***************************************************************/
 
+#include <string>
+#include <map>
 
 #include "condor_classad.h"
 #include "list.h"
@@ -215,14 +217,6 @@ class DedicatedScheduler : public Service {
 	bool DelMrec( char const* id );
 	bool DelMrec( match_rec* rec );
 
-		/** Remove the given shadow record from any match records that
-			point to it by setting the shadowRec field to NULL.
-			@param shadow Pointer to the shadow record to remove
-			@return true if any match records point to that shadow,
-			        false if not.
-		*/
-	bool removeShadowRecFromMrec( shadow_rec* shadow );
-
 	char* name( void ) { return ds_name; };
 	char* owner( void ) { return ds_owner; };
 
@@ -343,8 +337,6 @@ class DedicatedScheduler : public Service {
 		*/
 	void removeAllocation( shadow_rec* srec );
 
-	void clearUnclaimedResources( void );
-
 	void callHandleDedicatedJobs( void );
 
 		/** Do a number of sanity-checks, like releasing resources
@@ -445,6 +437,17 @@ class DedicatedScheduler : public Service {
 
 		// Queue for resource requests we need to negotiate for. 
 	std::list<PROC_ID> resource_requests;
+
+        // stores job classads, indexed by each job's pending claim-id
+    std::map<std::string, ClassAd*> pending_requests;
+
+        // stores match recs from partitionable slots, indexed by claim id
+    std::map<std::string, match_rec*> pending_matches;
+
+        // stores pending claim ids against partitionable slots, indexed
+        // by corresponding public claim id
+    std::map<std::string, std::string> pending_claims;
+
 
 	int		num_matches;	// Total number of matches in all_matches 
 

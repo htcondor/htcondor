@@ -259,7 +259,7 @@ UserProc::getStdFile( std_file_type type,
 	ASSERT(out_name != NULL);
 	*out_fd = -1;
 
-	const char* filename;
+	const char* filename = NULL;
 	bool wants_stream = false;
 	const char* stream_name = NULL;
 	const char* phrase = NULL;

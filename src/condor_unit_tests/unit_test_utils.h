@@ -195,3 +195,19 @@ void cut_assert_null_impl(void *value, char *expr, char *file, int line);
 
 /* Creates an empty file */
 void create_empty_file(char *file);
+
+#ifdef WIN32
+#if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
+  #define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
+#else
+  #define DELTA_EPOCH_IN_MICROSECS  11644473600000000ULL
+#endif
+ 
+struct timezone 
+{
+  int  tz_minuteswest; /* minutes W of Greenwich */
+  int  tz_dsttime;     /* type of dst correction */
+};
+
+int gettimeofday(struct timeval *tv, struct timezone *tz);
+#endif 

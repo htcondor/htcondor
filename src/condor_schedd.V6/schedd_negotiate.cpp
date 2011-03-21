@@ -68,7 +68,8 @@ ScheddNegotiate::ScheddNegotiate
 	m_current_auto_cluster_id(-1),
 	m_jobs_rejected(0),
 	m_jobs_matched(0),
-	m_negotiation_finished(false)
+	m_negotiation_finished(false),
+	m_operation(0)
 {
 	m_current_job_id.cluster = -1;
 	m_current_job_id.proc = -1;
@@ -198,7 +199,8 @@ ScheddNegotiate::fixupPartitionableSlot(PROC_ID job_id, ClassAd *job_ad, ClassAd
 	if (job_ad->EvalInteger(ATTR_REQUEST_DISK, match_ad, disk)) {
 		float total_disk = disk;
 		match_ad->LookupFloat(ATTR_TOTAL_DISK, total_disk);
-		disk = (MAX((int) ceil((disk / total_disk) * 100), 1) / 100.0) * total_disk;
+		disk = (MAX((int) ceil((disk / total_disk) * 100), 1)) *
+			int(total_disk/100.0);
 		match_ad->Assign(ATTR_DISK, disk);
 	} else {
 		dprintf(D_ALWAYS, "No disk request in job %d.%d, skipping match to partitionable slot %s\n", job_id.cluster, job_id.proc, slot_name);
@@ -316,10 +318,6 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		dprintf( D_ALWAYS, "Lost priority - %d jobs matched\n",
 				 m_jobs_matched );
 
-		if( m_current_job_id.cluster != -1 ) {
-			m_jobs_rejected++;
-		}
-
 		m_negotiation_finished = true;
 		break;
 	default:
@@ -418,4 +416,21 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 	}
 
 	return true;
+}
+
+bool ScheddNegotiate::getSatisfaction() {
+	if( m_jobs_rejected > 0 ) {
+		return false;
+	}
+
+		// no jobs were explicitly rejected, but did negotiation end
+		// before we presented all of our jobs?
+	if( m_current_job_id.cluster == -1 ) {
+		nextJob();
+	}
+
+	if( m_current_job_id.cluster == -1 ) {
+		return true; // no more jobs
+	}
+	return false;
 }

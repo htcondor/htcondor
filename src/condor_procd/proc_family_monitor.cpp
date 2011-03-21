@@ -26,19 +26,21 @@
 #include "parent_tracker.h"
 
 #if !defined(WIN32)
-#include "glexec_kill.h"
+#include "glexec_kill.unix.h"
 #endif
 
 #if defined(LINUX)
-#include "group_tracker.h"
+#include "group_tracker.linux.h"
 #endif
 
 ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
                                      birthday_t birthday,
-                                     int snapshot_interval) :
+                                     int snapshot_interval,
+									 bool except_if_pid_dies) :
 	m_everybody_else(NULL),
 	m_family_table(11, pidHashFunc, rejectDuplicateKeys),
-	m_member_table(PHBUCKETS, pidHashFunc, rejectDuplicateKeys)
+	m_member_table(PHBUCKETS, pidHashFunc, rejectDuplicateKeys),
+	m_except_if_pid_dies(except_if_pid_dies)
 {
 	// the snapshot interval must either be non-negative or -1, which
 	// means infinite (higher layers should enforce this)
@@ -71,14 +73,15 @@ ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
 	m_everybody_else = new ProcFamily(this);
 	ASSERT(m_everybody_else != NULL);
 
-	// create the "root" family; set the watcher pid to be the same as
-	// the root pid: there's some special logic in delete_unwatched_families
-	// to EXCEPT if we see that the root process has exited
+	// create the "root" family; if we'd like to EXCEPT if the root family
+	// dies, we make the watcher pid the same as the root pid.  Otherwise, we
+	// set it to zero which means that "garbage collection" won't be enabled
+	// for this family and we won't EXCEPT if it dies.
 	//
 	ProcFamily* family = new ProcFamily(this,
 	                                    pid,
 	                                    birthday,
-	                                    pid,
+	                                    except_if_pid_dies ? pid : 0,
 	                                    snapshot_interval);
 	ASSERT(family != NULL);
 
@@ -120,12 +123,14 @@ ProcFamilyMonitor::~ProcFamilyMonitor()
 #if defined(LINUX)
 void
 ProcFamilyMonitor::enable_group_tracking(gid_t min_tracking_gid,
-                                         gid_t max_tracking_gid)
+                                         gid_t max_tracking_gid,
+										 bool allocating)
 {
 	ASSERT(m_group_tracker == NULL);
 	m_group_tracker = new GroupTracker(this,
 	                                   min_tracking_gid,
-	                                   max_tracking_gid);
+	                                   max_tracking_gid,
+									   allocating);
 	ASSERT(m_group_tracker != NULL);
 }
 #endif
@@ -186,9 +191,8 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 
 	// make sure this process isn't already the root of a family
 	//
-	Tree<ProcFamily*>* tree;
-	ret = m_family_table.lookup(root_pid, tree);
-	if (ret != -1) {
+	Tree<ProcFamily*>* tree = lookup_family(root_pid);
+	if (tree != NULL) {
 		dprintf(D_ALWAYS,
 		        "register_subfamily: pid %u already registered\n",
 		        root_pid);
@@ -213,10 +217,10 @@ ProcFamilyMonitor::register_subfamily(pid_t root_pid,
 	// the parent-child link
 	//
 	pid_t parent_root = member->get_proc_family()->get_root_pid();
-	Tree<ProcFamily*>* parent_tree_node;
-	ret = m_family_table.lookup(parent_root, parent_tree_node);
-	ASSERT(ret != -1);
-	Tree<ProcFamily*>* child_tree_node = parent_tree_node->add_child(family);
+	Tree<ProcFamily*>* parent_tree_node = lookup_family(parent_root);
+	ASSERT(parent_tree_node != NULL);
+	Tree<ProcFamily*>* child_tree_node =
+		parent_tree_node->add_child(family);
 	ASSERT(child_tree_node != NULL);
 
 	// move the new family's root process into the correct family
@@ -259,9 +263,8 @@ ProcFamilyMonitor::track_family_via_environment(pid_t pid, PidEnvID* penvid)
 {
 	// lookup the family
 	//
-	Tree<ProcFamily*>* tree;
-	int ret = m_family_table.lookup(pid, tree);
-	if (ret == -1) {
+	Tree<ProcFamily*>* tree = lookup_family(pid, true);
+	if (tree == NULL) {
 		dprintf(D_ALWAYS,
 		        "track_family_via_environment failure: "
 				    "family with root %u not found\n",
@@ -280,9 +283,8 @@ ProcFamilyMonitor::track_family_via_login(pid_t pid, char* login)
 {
 	// lookup the family
 	//
-	Tree<ProcFamily*>* tree;
-	int ret = m_family_table.lookup(pid, tree);
-	if (ret == -1) {
+	Tree<ProcFamily*>* tree = lookup_family(pid, true);
+	if (tree == NULL) {
 		dprintf(D_ALWAYS,
 		        "track_family_via_login failure: "
 				    "family with root %u not found\n",
@@ -308,9 +310,8 @@ ProcFamilyMonitor::track_family_via_supplementary_group(pid_t pid, gid_t& gid)
 
 	// lookup the family
 	//
-	Tree<ProcFamily*>* tree;
-	int ret = m_family_table.lookup(pid, tree);
-	if (ret == -1) {
+	Tree<ProcFamily*>* tree = lookup_family(pid, true);
+	if (tree == NULL) {
 		dprintf(D_ALWAYS,
 		        "track_family_via_supplementary_group failure: "
 				    "family with root %u not found\n",
@@ -332,9 +333,8 @@ ProcFamilyMonitor::unregister_subfamily(pid_t pid)
 {
 	// lookup the family
 	//
-	Tree<ProcFamily*>* tree;
-	int ret = m_family_table.lookup(pid, tree);
-	if (ret == -1) {
+	Tree<ProcFamily*>* tree = lookup_family(pid);
+	if (tree == NULL) {
 		dprintf(D_ALWAYS,
 		        "unregister_subfamily failure: family with root %u not found\n",
 		        pid);
@@ -404,9 +404,8 @@ ProcFamilyMonitor::signal_process(pid_t pid, int sig)
 {
 	// make sure signals are only sent to subtree roots
 	//
-	Tree<ProcFamily*>* tree;
-	int ret = m_family_table.lookup(pid, tree);
-	if (ret == -1) {
+	Tree<ProcFamily*>* tree = lookup_family(pid, true);
+	if (tree == NULL) {
 		dprintf(D_ALWAYS,
 		        "signal_process failure: family with root %u not found\n",
 				pid);
@@ -428,9 +427,8 @@ ProcFamilyMonitor::signal_family(pid_t pid, int sig)
 
 	// find the family
 	//
-	Tree<ProcFamily*>* tree;
-	int ret = m_family_table.lookup(pid, tree);
-	if (ret == -1) {
+	Tree<ProcFamily*>* tree = lookup_family(pid, true);
+	if (tree == NULL) {
 		dprintf(D_ALWAYS,
 		        "signal_family error: family with root %u not found\n",
 		        pid);
@@ -450,9 +448,8 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 {
 	// find the family
 	//
-	Tree<ProcFamily*>* tree;
-	int ret = m_family_table.lookup(pid, tree);
-	if (ret == -1) {
+	Tree<ProcFamily*>* tree = lookup_family(pid, true);
+	if (tree == NULL) {
 		dprintf(D_ALWAYS,
 		        "get_family_usage failure: family with root %u not found\n",
 		        pid);
@@ -660,9 +657,8 @@ ProcFamilyMonitor::add_member_to_family(ProcFamily* pf,
 		// already assigned to (i.e. pf is a "more specific"
 		// match), then move the process
 		//
-		Tree<ProcFamily*>* node;
-		ret = m_family_table.lookup(pf->get_root_pid(), node);
-		ASSERT(ret != -1);
+		Tree<ProcFamily*>* node = lookup_family(pf->get_root_pid());
+		ASSERT(node != NULL);
 		while(node->get_parent() != NULL) {
 			node = node->get_parent();
 			if (node->get_data() == pfm->get_proc_family()) {
@@ -809,11 +805,13 @@ ProcFamilyMonitor::delete_unwatched_families(Tree<ProcFamily*>* tree)
 	}
 
 	// check to see if the current tree node's watcher has exited
-	//
+	// (a watcher PID of 0 means the family is not watched: automatic
+	// unregistering will not happen)
 	pid_t watcher_pid = tree->get_data()->get_watcher_pid();
 	if (watcher_pid == 0) {
 		return;
 	}
+
 	ProcFamilyMember* member;
 	int ret = m_member_table.lookup(watcher_pid, member);
 	if (ret != -1) {
@@ -836,14 +834,16 @@ ProcFamilyMonitor::delete_unwatched_families(Tree<ProcFamily*>* tree)
 		        tree->get_data()->get_root_birthday());
 	}
 
-	// it looks like the watcher has exited; if this family is the
-	// "root family", then this means the Master has gone away and
-	// we should die. otherwise, simply unregister the unwatched
-	// family
+	// it looks like the watcher has exited. if this family is the
+	// "root family" and we should except if it dies, then this means 
+	// the Master has gone away and we should die. 
+	// otherwise, simply unregister the unwatched family.
 	//
-	if (tree->get_parent() == NULL) {
-		EXCEPT("master has exited");
+	if (m_except_if_pid_dies && tree->get_parent() == NULL) {
+		EXCEPT("Watcher pid %lu exited so procd is exiting. Bye.",
+			(unsigned long)watcher_pid);
 	}
+	ASSERT(tree->get_parent() != NULL);
 	pid_t root_pid = tree->get_data()->get_root_pid();
 	unregister_subfamily(tree);
 

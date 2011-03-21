@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_api.h"
+#include "condor_adtypes.h"
 #include "status_types.h"
 #include "totals.h"
 
@@ -26,7 +27,7 @@ extern AdTypes	type;
 extern Mode		mode;
 extern ppOption	ppStyle;
 
-char *
+const char *
 getPPStyleStr ()
 {
 	switch (ppStyle)
@@ -59,10 +60,10 @@ getPPStyleStr ()
 
 
 void
-setPPstyle (ppOption pps, int i, char *argv)
+setPPstyle (ppOption pps, int i, const char *argv)
 {
     static int setBy = 0;
-    static char *setArg = NULL;
+    static const char *setArg = NULL;
 
 	if (argv == NULL) {
 		printf ("Set by arg %d (%-10s), PrettyPrint style = %s\n",
@@ -97,7 +98,7 @@ setPPstyle (ppOption pps, int i, char *argv)
 }
 
 
-char *
+const char *
 getTypeStr ()
 {
 	switch (type)
@@ -123,10 +124,10 @@ getTypeStr ()
 
 
 void
-setType (char *dtype, int i, char *argv)
+setType (const char *dtype, int i, const char *argv)
 {
     static int setBy = 0;
-    static char *setArg = NULL;
+    static const char *setArg = NULL;
 
 	if (argv == NULL) {
 		printf ("Set by arg %d (%-10s), Query type = %s\n",
@@ -201,7 +202,7 @@ setType (char *dtype, int i, char *argv)
     }
 }
 
-char *
+const char *
 getModeStr()
 {
 	switch (mode)
@@ -234,10 +235,10 @@ getModeStr()
 
 
 void
-setMode (Mode mod, int i, char *argv)
+setMode (Mode mod, int i, const char *argv)
 {
     static int setBy = 0;
-    static char *setArg = NULL;
+    static const char *setArg = NULL;
 
 	if (argv == NULL) {
 		printf("Set by arg %d (%-10s), Mode = %s\n",setBy,setArg,getModeStr());

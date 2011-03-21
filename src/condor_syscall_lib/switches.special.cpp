@@ -1835,10 +1835,10 @@ static int remote_system_posix(const char *command, int len)
 	
 		/* get some memory */
 		str = (char*)malloc(sizeof(char*) * envsize);
-		memset(str, 0, envsize);
 		if (str == NULL) {
 			EXCEPT( "remote_system_posix(): Out of memory!");
 		}
+		memset(str, 0, envsize);
 
 		/* append everything together */
 		strcpy(str, *environ);

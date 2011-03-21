@@ -1,0 +1,146 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+
+######################################################################
+# Submit-side NMI build system infrastructure to setup platform
+# specific input for test jobs.  All we have to do is trim down the
+# architecture-dependent results.tar.gz file to remove all the
+# tarballs we don't care about for testing, and just leave the single 
+# input file we care about.  We'll write the name of that file into a
+# well-known file for our remote-side scripts to easily find it.
+######################################################################
+
+######################################################################
+# We do need to remove things in such a way that this task can restart
+# so we will flag certain steps and not repeat activities if we have 
+# done them prior. This way we can remove things like results.tar.gz
+# once we have extracted what we care about etc...
+######################################################################
+use strict;
+use warnings;
+use Cwd;
+
+my $extractdone = "RESULTEXTRACTIONDONE";
+
+# autoflush our STDOUT
+$| = 1;
+
+my $BaseDir = getcwd();
+
+print "Host: " . `hostname -f`;
+print "CWD: $BaseDir\n";
+print "Contents:\n";
+system("ls -l");
+
+my $tarball_file = "CONDOR-TARBALL-NAME";
+
+my $results = "results.tar.gz";
+die "$results does not exist!\n" unless(-f $results);
+
+######################################################################
+# -1) If we are dealing with a Windows build simply save the
+#     results.tar.gz name in the marker file because it holds only
+#     what we want. Then leave.
+######################################################################
+if($ENV{NMI_PLATFORM} =~ /winnt/) {
+    print "Unzipping results.tar.gz\n";
+    system("tar -xzf $results");
+    print "Moving public/* to $BaseDir\n";
+    system("mv public/* $BaseDir");
+    system("chmod a+r *.tar.gz");
+
+    print "All steps completed successfully\n";
+    print "Currently in $BaseDir which contains the following:\n";
+    system("ls -l");
+    
+    # NOTE: windows quits here!!
+    exit 0;
+}
+
+print "Preparing input test job in $BaseDir\n";
+
+######################################################################
+# 1) find the specific binary we care about
+######################################################################
+if(!-f $extractdone) {
+    print "Searching in results.tar.gz for binaries\n";
+    open(LTAR, "tar -xvzf $results |") || die "Can't open tar -xzvf $results : $!\n";
+    my $saved_tarball;
+    while(<LTAR>) {
+    	chomp;
+    	print "Considering: $_\n";
+        if( /.*condor-.*-stripped.*\.tar\.(gz|Z)$/ ) {
+            $saved_tarball = $_;
+            print "Found tarball!\n";
+        }
+    } 
+    close(LTAR);
+    if( ! $saved_tarball ) {
+    	die "Can't find any tarball in $results\n";
+    }
+    
+    ######################################################################
+    # 2) Now that we found the binary we want, untar it from the tarball,
+    #    move it to this parent directory.
+    ######################################################################
+
+    my @path_parts = split( '/', $saved_tarball );
+    my $tar_name = pop( @path_parts );
+    print "TarName is: $tar_name\n";
+    
+    # Now, copy it to the parent
+    print "Moving $tar_name to $BaseDir\n";
+    system( "mv $saved_tarball $BaseDir" );
+    if( $? ) {
+    	die "'mv $saved_tarball $BaseDir' failed with status $?\n";
+    }
+    
+    ######################################################################
+    # 2) Now that we found the binary we want, untar the pre-built test
+    #	 programs from the tarball and move them to this parent directory.
+    ######################################################################
+    
+    # Now, copy it to the parent
+    my $testbin = "public/condor_*";
+    print "Copying $testbin to $BaseDir\n";
+    system( "cp -r $testbin $BaseDir" );
+    if( $? ) {
+    	die "'cp $testbin $BaseDir' failed with status $?\n";
+    }
+    
+    print "Writing tarball filename to $tarball_file\n";
+    open(TARBALL_FILE, '>', $tarball_file ) || die "Can't open $tarball_file for writing: $!\n";
+    print TARBALL_FILE "$tar_name\n";
+    close(TARBALL_FILE);
+}
+
+# Mark all processing done and results.tar.gz processing etc is done
+system("touch $extractdone");
+
+# Finally, blow away anything still in public and the results.tar.gz
+print "Removing all other arch-dependent data\n";
+system( "rm -rf public $results results" );
+if( $? ) {
+    die "'rm -rf public $results results' failed with status $?\n";
+}
+
+print "All steps completed successfully\n";
+exit 0;

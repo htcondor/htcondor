@@ -251,16 +251,21 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 #endif
 
 	case CONDOR_SetAttributeByConstraint:
+	case CONDOR_SetAttributeByConstraint2:
 	  {
 		char *attr_name=NULL;
 		char *attr_value=NULL;
 		char *constraint=NULL;
 		int terrno;
+		SetAttributeFlags_t flags = 0;
 
 		assert( syscall_sock->code(constraint) );
 		dprintf( D_SYSCALLS, "  constraint = %s\n",constraint);
 		assert( syscall_sock->code(attr_value) );
 		assert( syscall_sock->code(attr_name) );
+		if( request_num == CONDOR_SetAttributeByConstraint2 ) {
+			assert( syscall_sock->code( flags ) );
+		}
 		assert( syscall_sock->end_of_message() );;
 
 		if (strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
@@ -271,7 +276,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		} else {
 
 			errno = 0;
-			rval = SetAttributeByConstraint( constraint, attr_name, attr_value );
+			rval = SetAttributeByConstraint( constraint, attr_name, attr_value, flags );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		}
@@ -314,7 +319,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		// ckireyev:
 		// We do NOT want to include MyProxy password in the ClassAd (since it's a secret)
 		// I'm not sure if this is the best place to do this, but....
-		if (strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
+		if (attr_name && attr_value && strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
 			errno = 0;
 			dprintf( D_SYSCALLS, "Got MyProxyPassword, stashing...\n");
 			rval = SetMyProxyPassword (cluster_id, proc_id, attr_value);
@@ -631,6 +636,43 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		return 0;
 	}
 
+	case CONDOR_GetDirtyAttributes:
+	  {
+		int cluster_id = -1;
+		int proc_id = -1;
+		ClassAd updates;
+
+		int terrno;
+
+		assert( syscall_sock->code(cluster_id) );
+		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
+		assert( syscall_sock->code(proc_id) );
+		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = GetDirtyAttributes( cluster_id, proc_id, &updates );
+
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+
+		if ( !syscall_sock->code(rval) ) {
+			return -1;
+		}
+		if( rval < 0 ) {
+			if ( !syscall_sock->code(terrno) ) {
+					return -1;
+			}
+		}
+		if( rval >= 0 ) {
+			assert( updates.put(*syscall_sock) );
+		}
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
 	case CONDOR_DeleteAttribute:
 	  {
 		int cluster_id = -1;
@@ -821,6 +863,45 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		FreeJobAd(ad);
 		free( (char *)constraint );
 		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+	case CONDOR_GetNextDirtyJobByConstraint:
+	{
+		char *constraint=NULL;
+		ClassAd *ad;
+		int initScan = 0;
+		int terrno;
+
+		assert( syscall_sock->code(initScan) );
+		dprintf( D_SYSCALLS, "  initScan = %d\n", initScan );
+		if ( !(syscall_sock->code(constraint)) ) {
+			if (constraint != NULL) {
+				free(constraint);
+				constraint = NULL;
+			}
+			return -1;
+		}
+		assert( syscall_sock->end_of_message() );
+
+		errno = 0;
+		ad = GetNextDirtyJobByConstraint( constraint, initScan );
+		terrno = errno;
+		rval = ad ? 0 : -1;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		if( rval >= 0 ) {
+			ad->SetPrivateAttributesInvisible( true );
+			assert( ad->put(*syscall_sock) );
+			ad->SetPrivateAttributesInvisible( false );
+		}
+		FreeJobAd(ad);
+		free( (char *)constraint );
+		assert( syscall_sock->end_of_message() );
 		return 0;
 	}
 

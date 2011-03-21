@@ -40,8 +40,8 @@
 #include "historysnapshot.h"
 #include "jobqueuedatabase.h"
 #include "pgsqldatabase.h"
-#include "condor_ttdb.h"
-#include "jobqueuecollection.h"
+#include "condor_tt/condor_ttdb.h"
+#include "condor_tt/jobqueuecollection.h"
 #include "dbms_utils.h"
 #include "subsystem_info.h"
 

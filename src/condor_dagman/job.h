@@ -23,7 +23,7 @@
 
 #include "condor_common.h"      /* for <stdio.h> */
 #include "condor_constants.h"   /* from condor_includes/ directory */
-#include "simplelist.h"         /* from condor_c++_util/ directory */
+#include "simplelist.h"         /* from condor_utils/ directory */
 #include "MyString.h"
 #include "list.h"
 #include "condor_id.h"
@@ -377,6 +377,41 @@ class Job {
 	*/
 	bool GetLogFileIsXml() const { return _logFileIsXml; }
 
+	/** Get the jobstate.log job tag for this node.
+		@return The job tag (can be "local"; if no tag is specified,
+			the value will be "-").
+	*/
+	const char *GetJobstateJobTag();
+
+	/** Get the jobstate.log sequence number for this node, assigning one
+		if we haven't already.
+	*/
+	int GetJobstateSequenceNum();
+	
+	/** Reset the jobstate.log sequence number for this node, so we get a
+		new sequence number for node retries, etc.
+	*/
+	void ResetJobstateSequenceNum() { _jobstateSeqNum = 0; }
+
+	/** Set the master jobstate.log sequence number.
+		@param The next sequence number that should be given out.
+	*/
+	static void SetJobstateNextSequenceNum( int nextSeqNum ) {
+		_nextJobstateSeqNum = nextSeqNum;
+	}
+
+	/** Set the last event time for this job to be the time of the given
+		event (this is used as the time for jobstate.log pseudo-events like
+		JOB_SUCCESS).
+		@param The event whose time should be saved.
+	*/
+	void SetLastEventTime( const ULogEvent *event );
+
+	/** Get the time at which the most recent event occurred for this job.
+		@return the last event time.
+	*/
+	time_t GetLastEventTime() { return _lastEventTime; }
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -536,6 +571,22 @@ private:
 		// Whether this is a noop job (shouldn't actually be submitted
 		// to Condor).
 	bool _noop;
+
+		// The job tag for this node ("-" if nothing is specified;
+		// can also be "local").
+	char *_jobTag;
+
+		// The jobstate.log sequence number for this node (used if we are
+		// writing the jobstate.log file for Pegasus or others to read).
+	int _jobstateSeqNum;
+
+		// The next jobstate.log sequence number for the entire DAG.  Note
+		// that, when we run a rescue DAG, we pick up the sequence numbers
+		// from where we left off when we originally ran the DAG.
+	static int _nextJobstateSeqNum;
+
+		// The time of the most recent event related to this job.
+	time_t _lastEventTime;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

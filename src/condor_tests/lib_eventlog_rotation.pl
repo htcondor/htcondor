@@ -37,10 +37,9 @@ exists $signos{KILL} || die "No KILL signal";
 my $version = "1.1.0";
 my $testdesc =  'lib_eventlog_rotation - runs eventlog rotation tests';
 my $testname = "lib_eventlog_rotation";
-my $testbin = "../testbin_dir";
-my %programs = ( reader			=> "$testbin/test_log_reader",
-				 reader_state	=> "$testbin/test_log_reader_state",
-				 writer			=> "$testbin/test_log_writer", );
+my %programs = ( reader			=> "./test_log_reader",
+				 reader_state	=> "./test_log_reader_state",
+				 writer			=> "./test_log_writer", );
 
 my $DefaultMaxEventLog = 1000000;
 my $EventSize = ( 100045 / 1177 );

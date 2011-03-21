@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -51,7 +51,7 @@
 // Unix specific stuff
 #include "sig_install.h"
 #else
-#include "CondorSystrayNotifier.h"//for the "birdwatcher" (system tray icon)
+#include "CondorSystrayNotifier.windows.h"//for the "birdwatcher" (system tray icon)
 extern CondorSystrayNotifier systray_notifier;
 #endif
 
@@ -70,7 +70,8 @@ class Resource;
 #include "util.h"
 #include "starter_mgr.h"
 #include "cod_mgr.h"
-#include "startd_cronmgr.h"
+#include "startd_cron_job_mgr.h"
+#include "startd_bench_job_mgr.h"
 
 static const int MAX_STARTERS = 10;
 
@@ -135,7 +136,8 @@ extern	int		pid_snapshot_interval;
 
 extern  int main_reaper;
 
-extern StartdCronMgr* Cronmgr;
+extern StartdCronJobMgr		*cron_job_mgr;
+extern StartdBenchJobMgr	*bench_job_mgr;
 
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 

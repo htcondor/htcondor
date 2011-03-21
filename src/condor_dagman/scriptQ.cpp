@@ -65,6 +65,8 @@ ScriptQ::Run( Script *script )
 	if( maxScripts == 0 || _numScriptsRunning < maxScripts ) {
 		debug_printf( DEBUG_NORMAL, "Running %s script of Node %s...\n",
 					  prefix, script->GetNodeName() );
+		_dag->GetJobstateLog().WriteScriptStarted( script->GetNode(),
+					script->_post );
 		if( int pid = script->BackgroundRun( _scriptReaperId ) ) {
 			_numScriptsRunning++;
 			_scriptPidTable->insert( pid, script );

@@ -62,7 +62,7 @@ $submitted = sub
 $success = sub
 {
 	CondorTest::debug("executed successfully\n",1);
-	my $result = system("../testbin_dir/x_read_joblog.exe $joblog MAXJOBS $maxjobs");
+	my $result = system("./x_read_joblog.exe $joblog MAXJOBS $maxjobs");
 	if( $result != 0)
 	{
 		die "MAXJOBS of $maxjobs exceeded\n";

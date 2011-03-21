@@ -77,6 +77,7 @@ void init_params();
 void check_spool_dir();
 void check_execute_dir();
 void check_log_dir();
+void rec_lock_cleanup(const char *path, int depth, bool remove_self = false);
 void check_tmp_dir();
 void check_daemon_sock_dir();
 void bad_file( const char *, const char *, Directory & );
@@ -680,40 +681,62 @@ check_daemon_sock_dir()
 			bad_file( DaemonSockDir, f, dir );
 		}
 	}
+}
+
+void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
+#if !defined(WIN32)
+	FileLock *lock = NULL;
+	if (depth == 0) {
+		lock = new FileLock(path, true, true);
+		delete lock;
+		return ;
+	}
+	Directory *dir = new Directory(path);
+	if (dir == NULL) {
+		// that may be ok as the path could already be cleaned up.
+		return;
+	}
+	const char *entry;
+	while ((entry = dir->Next()) != 0) {
+		if (!dir->IsDirectory() && depth > 1) { // clean up files floating around randomly -- maybe from older releases
+			lock = new FileLock(path, false, true);
+			bool result = lock->obtain(WRITE_LOCK);
+			if (!result) {
+					dprintf(D_FULLDEBUG, "Cannot lock %s\n", path);
+			}
+			int res = unlink(dir->GetFullPath());
+			if (res != 0) {
+				dprintf(D_FULLDEBUG, "Cannot delete %s (%s) \n", path, strerror(errno));
+			}
+			delete lock;
+		} else {
+			rec_lock_cleanup(dir->GetFullPath(), --depth, true);
+		}
+	}
+	// make sure, orphaned directories will be deleted as well.
+	if (remove_self) {		
+		int res = rmdir(path);
+		if (res != 0) {
+			dprintf(D_FULLDEBUG, "Directory %s could not be removed.\n", path);
+		}
+	}
+	
+	delete dir;
+#endif
 }	
 
 void check_tmp_dir(){
 #if !defined(WIN32)
-	const char *file;
-	char *tmpDir = NULL;
+	const char *tmpDir = NULL;
 	bool newLock = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (newLock) {
 				// create a dummy FileLock for TmpPath access
 		FileLock *lock = new FileLock(-1, NULL, NULL);
 		tmpDir = lock->GetTempPath();	
 		delete lock;
-		Directory *files = new Directory(tmpDir);
-		if(files == NULL) {
-			fprintf(stderr, "Cannot open %s\n", tmpDir);
-		} else {
-			int i = 0;
-			while( (file = files->Next()) && i < 65536) {
-				if(! files->IsDirectory() ) {
-					const char *path = files->GetFullPath();
-					int fd = safe_open_wrapper( path, O_WRONLY, 0664 );
-					lock = new FileLock(path, true, true);
-					bool result = lock->obtain(WRITE_LOCK);
-					if (!result) {
-							fprintf(stderr, "Cannot lock %s\n", path);
-					}
-					delete lock;
-				}
-			}
-			delete files;
-		}
+		rec_lock_cleanup(tmpDir, 4);
 		if (tmpDir != NULL)
 			delete []tmpDir;
-		
 	}
   
 #endif	

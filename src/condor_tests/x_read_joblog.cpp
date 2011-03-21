@@ -21,8 +21,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef WIN32
+#include "condor_header_features.h"
+#include "condor_sys_nt.h"
+#else
 #include <netdb.h>
 #include <sys/socket.h>
+#endif
 #include "read_user_log.h"
 
 struct hostent *NameEnt;

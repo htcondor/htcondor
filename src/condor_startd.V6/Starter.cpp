@@ -38,7 +38,7 @@
 #include "classad_helpers.h"
 
 #if defined(LINUX)
-#include "glexec_starter.h"
+#include "glexec_starter.linux.h"
 #endif
 
 #ifdef WIN32
@@ -1071,7 +1071,7 @@ Starter::cleanupAfterGlexec()
 {
 	// remove the copy of the user proxy that we own
 	// (the starter should remove the one glexec created for it)
-	if( s_claim->client()->proxyFile() != NULL ) {
+	if( s_claim && s_claim->client()->proxyFile() != NULL ) {
 		if ( unlink( s_claim->client()->proxyFile() ) == -1) {
 			dprintf( D_ALWAYS,
 			         "error removing temporary proxy %s: %s (%d)\n",

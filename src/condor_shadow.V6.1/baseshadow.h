@@ -28,7 +28,7 @@
 #include "write_user_log.h"
 #include "exit.h"
 #include "internet.h"
-#include "qmgr_job_updater.h"
+#include "../condor_schedd.V6/qmgr_job_updater.h"
 #include "condor_update_style.h"
 
 /* Forward declaration to prevent loops... */
@@ -246,6 +246,10 @@ class BaseShadow : public Service
 		 */
 	virtual int handleJobRemoval(int sig) = 0;
 
+		/** Update this job.
+		 */
+	int handleUpdateJobAd(int sig);
+
 		/** This function returns a file pointer that one can 
 			write an email message into.
 			@return A mail message file pointer.
@@ -320,10 +324,10 @@ class BaseShadow : public Service
 	bool updateJobInQueue( update_t type );
 
 		/** Connect to the job queue and update one attribute */
-	virtual bool updateJobAttr( const char *name, const char *expr );
+	virtual bool updateJobAttr( const char *name, const char *expr, bool log=false );
 
 		/** Connect to the job queue and update one integer attribute */
-	virtual bool updateJobAttr( const char *name, int value );
+	virtual bool updateJobAttr( const char *name, int value, bool log=false );
 
 		/** Do whatever cleanup (like killing starter(s)) that's
 			required before the shadow can exit.
@@ -433,7 +437,6 @@ class BaseShadow : public Service
 	MyString domain;
 	MyString iwd;
 	char *scheddAddr;
-	bool jobExitedGracefully;
 	char *core_file_name;
 	MyString m_xfer_queue_contact_info;
 

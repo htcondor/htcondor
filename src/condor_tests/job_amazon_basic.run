@@ -57,7 +57,7 @@ CondorTest::debug("Master PID is $mypid\n",$debuglevel);
 CondorTest::debug("Master PID submit file is $submit_file\n",$debuglevel);
 
 my $ec2_sim_port = 0;
-my $ec2_sim = "../testbin_dir/ec2_sim";
+my $ec2_sim = "ec2_sim";
 if ( ! -x $ec2_sim ) {
 	die("$ec2_sim isn't executable!\n");
 }

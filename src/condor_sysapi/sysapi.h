@@ -18,9 +18,8 @@
  ***************************************************************/
 
 
-#ifndef SYSAPI_H
-#define SYSAPI_H
-
+#ifndef __CONDOR_SYSAPI_H__
+#define __CONDOR_SYSAPI_H__
 
 BEGIN_C_DECLS
 
@@ -108,7 +107,7 @@ const char *sysapi_translate_opsys( const char *sysname,
 									const char *version );
 
 /* set appropriate resource limits on each platform */
-void sysapi_set_resource_limits( void );
+void sysapi_set_resource_limits( int stack_size );
 
 /* check the magic number of the given executable */
 int sysapi_magic_check( char* executable );
@@ -142,6 +141,40 @@ int sysapi_partition_id_raw(char const *path,char **result);
 int sysapi_partition_id(char const *path,char **result);
 
 END_C_DECLS
+
+#if defined(__cplusplus)
+
+#include <string>
+#include <vector>
+
+class NetworkDeviceInfo {
+public:
+	NetworkDeviceInfo(char const *the_name,char const *the_ip):
+		m_name(the_name),
+		m_ip(the_ip)
+	{
+	}
+
+	NetworkDeviceInfo(NetworkDeviceInfo const &other):
+		m_name(other.m_name),
+		m_ip(other.m_ip)
+	{
+	}
+
+	char const *name() { return m_name.c_str(); }
+	char const *IP() { return m_ip.c_str(); }
+
+private:
+	std::string m_name;
+	std::string m_ip;
+};
+
+bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices);
+bool sysapi_get_network_device_info(std::vector<NetworkDeviceInfo> &devices);
+
+void sysapi_clear_network_device_info_cache();
+
+#endif // __cplusplus
 
 #endif
 

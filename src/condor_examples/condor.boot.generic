@@ -1,7 +1,7 @@
 #! /bin/sh
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -39,37 +39,153 @@
 # Author: Derek Wright <wright@cs.wisc.edu> 2/27/98
 #
 
-MASTER=/usr/local/condor/sbin/condor_master
-PS="/usr/ucb/ps auwx"
+
+##
+## Edit the below settings to match your installation
+##  If you have a /etc/sysconfig, specify these parameters there
+##
+
+[ -f /etc/sysconfig/condor ] && . /etc/sysconfig/condor
+
+# Path to Condor's main configuration file
+if [ "$CONDOR_CONFIG" = "" ] ; then
+  CONDOR_CONFIG=/etc/condor/condor_config
+fi
+
+# Path to condor_config_val
+if [ "$CONDOR_CONFIG_VAL" = "" ] ; then
+  CONDOR_CONFIG_VAL=/usr/local/condor/bin/condor_config_val
+fi
+
+# Path to the "ps" program.  We'll try to auto-detect if not
+# specified here or in the sysconfig file
+# PS="/bin/ps"
+
+# Type of your ps
+# Recognized flavors: GNU BSD BSDw SYSV SYSVw
+# The "w" varients support the "w" wide option
+# We'll try to autodetect if not specified
+# PSFLAVOR="GNU"
+
+##
+## End of configuration parameters
+##
+
+
+##
+## Try to detect the ps binary
+##
+detect_ps_exe() {
+  if [ "$PS" != "" ] ; then
+    return 0
+  fi
+  if [ -x "$1/ps" ] ; then
+    echo "$1/ps"
+    return 0
+  else
+    return 1
+  fi
+}
+
+##
+## Based on the ps flavor ($1), return the ps options
+##
+get_ps_opts() {
+  if [ "$1" = "GNU" ] || [ "$1" = "BSDw" ] ; then
+    echo "auxww"
+  elif [ "$1" = "BSD" ] ; then
+    echo "aux"
+  elif [ "$1" = "SYSVw" ] ; then
+    echo "-efwwww"
+  elif [ "$1" = "SYSV" ] ; then
+    echo "-ef"
+  else
+    echo "FATAL: Unknown ps flavor \"$1\""
+    exit 1
+  fi
+}
+  
+##
+## Detect the 'ps' (in $PS) executable's flavor
+##
+detect_ps_flavor() {
+  if [ "$1" != "" ] ; then
+    return "$1"
+  fi
+  OPTS=`get_ps_opts $2`
+  CMD="$PS $OPTS"
+  $CMD > /dev/null 2>&1
+  if [ $? -eq 0 ] ; then
+    echo "$2"
+  fi
+  echo ""
+}
+
+##
+## Detect the 'ps' exectuable and it's flavor
+##
+detect_ps() {
+  detect_ps_exe "/usr/gnu/bin"
+  detect_ps_exe "/usr/local/bin"
+  detect_ps_exe "/opt/freeware/bin"
+  detect_ps_exe "/usr/ucb"
+  detect_ps_exe "/bin"
+  if [ "$PS" = "" ] ; then
+    echo "FATAL: no ps binary detected"
+    exit 1
+  fi
+  echo "Detected \"$PS\""
+
+  PSFLAVOR=`detect_ps_flavor "$PSFLAVOR" "GNU"`
+  PSFLAVOR=`detect_ps_flavor "$PSFLAVOR" "BSDw"`
+  PSFLAVOR=`detect_ps_flavor "$PSFLAVOR" "BSD"`
+  PSFLAVOR=`detect_ps_flavor "$PSFLAVOR" "SYSVw"`
+  PSFLAVOR=`detect_ps_flavor "$PSFLAVOR" "SYSV"`
+  if [ "$PSFLAVOR" = "" ] ; then
+    echo "FATAL: Unable to detect the flavor of \"$PS\""
+    exit 1
+  fi
+  echo "Detected \"$PSFLAVOR\""
+}
+
+# Find the master's PID
+find_master_pid() {
+  FOO=""
+}
+
+# Pull the path to condor_master from the condor configuration
+if [ "$CONDOR_MASTER" = "" ] ; then
+  CONDOR_MASTER=`condor_config_val MASTER`
+fi
 
 case $1 in
 'start')
-    if [ -x $MASTER ]; then
-        echo "Starting up Condor"
-        $MASTER
-    else
-        echo "$MASTER is not executable.  Skipping Condor startup."
-        exit 1
-    fi
-    ;;
+  if [ -x $MASTER ]; then
+    echo "Starting up Condor"
+    $MASTER
+  else
+    echo "$MASTER is not executable.  Skipping Condor startup."
+    exit 1
+  fi
+  ;;
 
 'stop')
-    pid=`$PS | grep condor_master | grep -v grep | awk '{print $2}'`
-    if [ -n "$pid" ]; then 
-        # send SIGQUIT to the condor_master, which initiates its fast
-        # shutdown method.  The master itself eventually start sending
-        # SIGKILL to all its children if they're not gone after
-        # SHUTDOWN_FAST_TIMEOUT seconds, as defined in the Condor
-        # configuration file.
-        echo "Shutting down Condor (fast-shutdown mode)"
-        kill -QUIT $pid
-    else
-        echo "Condor not running"
-    fi	
-    ;;
+  pid=`$PS $PSOPTS | grep condor_master | grep -v grep | awk '{print $2}'`
+  if [ -n "$pid" ]; then 
+    # send SIGQUIT to the condor_master, which initiates its fast
+    # shutdown method.  The master itself eventually start sending
+    # SIGKILL to all its children if they're not gone after
+    # SHUTDOWN_FAST_TIMEOUT seconds, as defined in the Condor
+    # configuration file.
+    echo "Shutting down Condor (fast-shutdown mode)"
+    kill -QUIT $pid
+  else
+    echo "Condor not running"
+  fi	
+  ;;
 
 *)
-    echo "Usage: condor {start|stop}"
-    ;;
+  echo "Usage: condor {start|stop}"
+  ;;
 
 esac

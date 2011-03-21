@@ -58,9 +58,16 @@ public:
 	bool track_family_via_login(pid_t pid, const char* login, bool&);
 
 #if defined(LINUX)
-	// tell ProcD to track a family via supplementary group id
+	// tell ProcD to self-allocate a supplementary group id, track the
+	// family with it, and return it to me in the gid_t& parameter.
 	//
-	bool track_family_via_supplementary_group(pid_t pid, bool&, gid_t&);
+	bool track_family_via_allocated_supplementary_group(pid_t pid, bool&, 
+		gid_t&);
+
+	// tell ProcD that I have a specific gid_t that should be associated
+	// with this family and used to track it.
+	bool track_family_via_associated_supplementary_group(pid_t pid, gid_t,
+		bool&);
 #endif
 
 	// tell the ProcD it needs to use glexec (along with the given

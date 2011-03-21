@@ -177,6 +177,7 @@ class FileLock : public FileLockBase
 	FILE		*m_fp;
 	char		*m_path;	// Path to the file being locked, must use
 							// method SetPath to set.
+	char		*m_orig_path; // path to the original file the lock is for.
 	int			 m_use_kernel_mutex;	// -1=unitialized,0=false,1=true
 	int 		m_delete;  // delete file upon object destruction; 1= true, 0=false
 							// as another effect, this means that we create the lock file ourselves.
@@ -187,7 +188,8 @@ class FileLock : public FileLockBase
 	//
 	char* 		CreateHashName(const char *orig, bool useDefault = false);
 	void		Reset( void );
-	void		SetPath(const char *);
+	void		SetPath(const char *, bool setOrigPath = false);
+	bool		initLockFile(bool);
 
 	// Windows specific, actually
 	int			lockViaMutex( LOCK_TYPE type );

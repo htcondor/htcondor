@@ -68,7 +68,7 @@ void SecMan::key_printf(int debug_levels, KeyInfo *k) {
 
 
 
-char* SecMan::sec_feat_act_rev[] = {
+const char* SecMan::sec_feat_act_rev[] = {
 	"UNDEFINED",
 	"INVALID",
 	"FAIL",
@@ -77,7 +77,7 @@ char* SecMan::sec_feat_act_rev[] = {
 };
 
 
-char* SecMan::sec_req_rev[] = {
+const char* SecMan::sec_req_rev[] = {
 	"UNDEFINED",
 	"INVALID",
 	"NEVER",
@@ -93,7 +93,7 @@ int SecMan::sec_man_ref_count = 0;
 char* SecMan::_my_unique_id = 0;
 char* SecMan::_my_parent_unique_id = 0;
 bool SecMan::_should_check_env_for_unique_id = true;
-IpVerify SecMan::m_ipverify;
+IpVerify *SecMan::m_ipverify = NULL;
 
 SecMan::sec_req
 SecMan::sec_alpha_to_sec_req(char *b) {
@@ -2524,7 +2524,11 @@ SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 }
 
 
-SecMan::SecMan(int nbuckets) {
+SecMan::SecMan(int nbuckets)
+{
+	if ( NULL == m_ipverify ) {
+		m_ipverify = new IpVerify( );
+	}
 	// session_cache is a static member... we only
 	// want to construct it ONCE.
 	if (session_cache == NULL) {
@@ -2584,14 +2588,14 @@ SecMan::~SecMan() {
 void
 SecMan::reconfig()
 {
-	m_ipverify.reconfig();
+	m_ipverify->reconfig();
 	Authentication::reconfigMapFile();
 }
 
 IpVerify *
 SecMan::getIpVerify()
 {
-	return &m_ipverify;
+	return m_ipverify;
 }
 
 int
@@ -2900,6 +2904,8 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		return false;
 	}
 	KeyInfo *keyinfo = new KeyInfo(keybuf,keylen,crypt_protocol);
+	free( keybuf );
+	keybuf = NULL;
 
 		// extract the session duration from the (imported) policy
 	int expiration_time = 0;

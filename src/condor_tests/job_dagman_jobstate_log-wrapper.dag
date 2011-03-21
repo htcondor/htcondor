@@ -1,0 +1,6 @@
+Job UNodeA job_dagman_jobstate_log-upper-nodeA.cmd
+
+Subdag External UNodeB job_dagman_jobstate_log.dag
+Retry UNodeB 1
+
+Parent UNodeA Child UNodeB

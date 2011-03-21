@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#if HAVE_EXT_GSOAP
 #include "string_list.h"
 #include "file_transfer.h"
 
@@ -40,3 +41,4 @@ LooseFileTransfer::getInputFiles(StringList & inputFileList)
 
   return true;
 }
+#endif

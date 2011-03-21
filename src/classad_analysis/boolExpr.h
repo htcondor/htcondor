@@ -100,7 +100,7 @@ class BoolExpr
 			@param buffer A string to print the result to.
 			@return true on success, false on failure.
 		*/ 
-	bool ToString( string &buffer );
+	bool ToString( std::string &buffer );
 
 		/** Returns the ClassAd expression equivalent of the BoolExpr
 			@return the ExprTree equivalent of the BoolExpr.

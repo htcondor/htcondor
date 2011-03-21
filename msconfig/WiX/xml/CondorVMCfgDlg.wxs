@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <UI>
+      <Dialog Id="CondorVMCfgDlg" Width="370" Height="270" Title="[ProductName] [Setup]" NoMinimize="yes">
+        <Control Id="InstructionVM" Type="Text" X="80" Y="60" Width="90" Height="15" TabSkip="no" Text="Enable VM Universe:"/>
+        <Control Id="RadioVM" Type="RadioButtonGroup" X="160" Y="60" Width="290" Height="26" TabSkip="no" Property="USEVMUNIVERSE">
+          <RadioButtonGroup Property="USEVMUNIVERSE">
+            <RadioButton Value="N" X="0" Y="0" Width="290" Height="13" Text="&amp;No"/>
+            <RadioButton Value="Y" X="0" Y="13" Width="290" Height="13" Text="&amp;Yes (Requires VMware Server and Perl)"/>
+          </RadioButtonGroup>
+          <Property Id="USEVMUNIVERSE" Value="N"/>
+        </Control>
+        <Control Id="VMMem" Type="Text" X="55" Y="102" Width="95" Height="15" TabSkip="no" Text="Maximum &amp;Memory (in MB):" />
+        <Control Id="VMMemEdit" Type="Edit" X="160" Y="100" Width="50" Height="18" Property="VMMEMORY" Text="{10}" Integer="yes">
+          <Condition Action="disable">USEVMUNIVERSE="N"</Condition>
+          <Condition Action="enable">USEVMUNIVERSE="Y"</Condition>
+        </Control>
+        <Control Id="VMNum" Type="Text" X="55" Y="122" Width="95" Height="15" TabSkip="no" Text="Maximum number of VMs:" />
+        <Control Id="VMNumEdit" Type="Edit" X="160" Y="120" Width="100" Height="18" Property="VMMAXNUMBER">
+          <Condition Action="disable">USEVMUNIVERSE="N"</Condition>
+          <Condition Action="enable">USEVMUNIVERSE="Y"</Condition>
+        </Control>
+        <Control Id="VMNet" Type="Text" X="65" Y="142" Width="95" Height="15" Text="N&amp;etworking Support:" />
+        <Control Id="VMNetCombo" Type="ComboBox" X="160" Y="140" Width="80" Height="20" TabSkip="no" Property="VMNETWORKING"  Text="Networking Support:" Sorted="yes" ComboList="yes">
+          <ComboBox Property="VMNETWORKING">
+            <ListItem Text="None" Value="N"/>
+            <ListItem Text="NAT" Value="A"/>
+            <ListItem Text="Bridged" Value="B"/>
+            <ListItem Text="NAT and Bridged" Value="C"/>
+          </ComboBox>
+          <Condition Action="disable">USEVMUNIVERSE="N"</Condition>
+          <Condition Action="enable">USEVMUNIVERSE="Y"</Condition>
+        </Control>
+        <Control Id="PerlPath" Type="Text" X="65" Y="164" Width="90" Height="15" TabSkip="no" Text="Path to &amp;Perl Executable:"/>
+        <Control Id="PerlPathEdit" Type="Edit" X="160" Y="162" Width="170" Height="18" Property="PERLLOCATION">
+          <Condition Action="disable">USEVMUNIVERSE="N"</Condition>
+          <Condition Action="enable">USEVMUNIVERSE="Y"</Condition>
+        </Control>
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
+          <Publish Event="NewDialog" Value="CondorPermCfgDlg">Not UPGRADEFOUND</Publish>
+          <Publish Event="NewDialog" Value="CondorUpHostDlg">UPGRADEFOUND And SEVENFIVEFIVEFOUND</Publish>
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
+          <Publish Event="NewDialog" Value="CondorHDFSCfgDlg">Not UPGRADEFOUND</Publish>
+          <Publish Event="NewDialog" Value="VerifyReadyDlg">UPGRADEFOUND And SEVENFIVEFIVEFOUND</Publish>
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        </Control>
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>Please enter the following condor config data</Text>
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}VM Universe Settings</Text>
+        </Control>
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+      </Dialog>
+    </UI>
+  </Fragment>
+</Wix>

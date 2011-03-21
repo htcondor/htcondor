@@ -27,8 +27,14 @@
 #include "creamjob.h"
 #include "gridmanager.h"
 
+#ifdef WIN32
+	#include <sys/types.h> 
+	#include <sys/timeb.h>
+#endif
+
 // Enable more expensive debugging and testing code
 #define DEBUG_CREAM 1
+
 
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 
@@ -66,7 +72,7 @@ struct CreamProxyDelegation {
 	time_t proxy_expire;
 	time_t last_proxy_refresh;
 	Proxy *proxy;
-	MyString error_message;
+	std::string error_message;
 };
 
 CreamResource *CreamResource::FindOrCreateResource( const char *resource_name,
@@ -113,6 +119,11 @@ CreamResource::CreamResource( const char *resource_name,
 	gahp = NULL;
 	deleg_gahp = NULL;
 	status_gahp = NULL;
+	m_leaseGahp = NULL;
+
+	hasLeases = true;
+	m_hasSharedLeases = true;
+	m_defaultLeaseDuration = 6 * 60 * 60;
 
 	const char delegservice_name[] = "/ce-cream/services/gridsite-delegation";
 	const char *name_ptr;
@@ -174,6 +185,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri?next_deleg->deleg_
 		delete deleg_gahp;
 	}
 	delete status_gahp;
+	delete m_leaseGahp;
 	if ( proxySubject ) {
 		free( proxySubject );
 	}
@@ -188,28 +200,47 @@ bool CreamResource::Init()
 
 		// TODO This assumes that at least one CreamJob has already
 		// initialized the gahp server. Need a better solution.
-	MyString gahp_name;
-	gahp_name.sprintf( "CREAM/%s", proxyFQAN );
+	std::string gahp_name;
+	sprintf( gahp_name, "CREAM/%s", proxyFQAN );
 
-	gahp = new GahpClient( gahp_name.Value() );
+	gahp = new GahpClient( gahp_name.c_str() );
 
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	deleg_gahp = new GahpClient( gahp_name.Value() );
+	deleg_gahp = new GahpClient( gahp_name.c_str() );
 
 	deleg_gahp->setNotificationTimerId( delegationTimerId );
 	deleg_gahp->setMode( GahpClient::normal );
 	deleg_gahp->setTimeout( gahpCallTimeout );
 
-	status_gahp = new GahpClient( gahp_name.Value() );
+	status_gahp = new GahpClient( gahp_name.c_str() );
 
 	StartBatchStatusTimer();
 
 	status_gahp->setNotificationTimerId( BatchPollTid() );
 	status_gahp->setMode( GahpClient::normal );
 	status_gahp->setTimeout( gahpCallTimeout );
+
+	m_leaseGahp = new GahpClient( gahp_name.c_str() );
+
+	m_leaseGahp->setNotificationTimerId( updateLeasesTimerId );
+	m_leaseGahp->setMode( GahpClient::normal );
+	m_leaseGahp->setTimeout( gahpCallTimeout );
+
+	char* pool_name = param( "COLLECTOR_HOST" );
+	if ( pool_name ) {
+		StringList collectors( pool_name );
+		free( pool_name );
+		pool_name = collectors.print_to_string();
+	} else {
+		pool_name = strdup( "NoPool" );
+	}
+
+	sprintf( m_leaseId, "Condor#%s#%s#%s", myUserName, ScheddName, pool_name );
+
+	free( pool_name );
 
 	initialized = true;
 
@@ -225,6 +256,7 @@ void CreamResource::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 	deleg_gahp->setTimeout( gahpCallTimeout );
 	status_gahp->setTimeout( gahpCallTimeout );
+	m_leaseGahp->setTimeout( gahpCallTimeout );
 }
 
 const char *CreamResource::ResourceType()
@@ -235,18 +267,18 @@ const char *CreamResource::ResourceType()
 const char *CreamResource::CanonicalName( const char *name )
 {
 /*
-	static MyString canonical;
+	static std::string canonical;
 	char *host;
 	char *port;
 
 	parse_resource_manager_string( name, &host, &port, NULL, NULL );
 
-	canonical.sprintf( "%s:%s", host, *port ? port : "2119" );
+	sprintf( canonical, "%s:%s", host, *port ? port : "2119" );
 
 	free( host );
 	free( port );
 
-	return canonical.Value();
+	return canonical.c_str();
 */
 	return name;
 }
@@ -254,11 +286,33 @@ const char *CreamResource::CanonicalName( const char *name )
 const char *CreamResource::HashName( const char *resource_name,
 									 const char *proxy_subject )
 {
-	static MyString hash_name;
+	static std::string hash_name;
 
-	hash_name.sprintf( "cream %s#%s", resource_name, proxy_subject );
+	sprintf( hash_name, "cream %s#%s", resource_name, proxy_subject );
 
-	return hash_name.Value();
+	return hash_name.c_str();
+}
+
+void CreamResource::RegisterJob( CreamJob *job )
+{
+	int job_lease;
+	if ( m_sharedLeaseExpiration == 0 ) {
+		if ( job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, job_lease ) ) {
+			m_sharedLeaseExpiration = job_lease;
+		}
+	} else {
+		if ( job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, job_lease ) ) {
+			job->UpdateJobLeaseSent( m_sharedLeaseExpiration );
+		}
+	}
+
+	// TODO should we also reset the timer if this job has a shorter
+	//   lease duration than all existing jobs?
+	if ( m_sharedLeaseExpiration == 0 ) {
+		daemonCore->Reset_Timer( updateLeasesTimerId, 0 );
+	}
+
+	BaseResource::RegisterJob( job );
 }
 
 void CreamResource::UnregisterJob( CreamJob *job )
@@ -386,10 +440,10 @@ const char *CreamResource::getDelegationError( Proxy *job_proxy )
 
 	while ( ( next_deleg = delegatedProxies.Next() ) != NULL ) {
 		if ( next_deleg->proxy == job_proxy ) {
-			if ( next_deleg->error_message.IsEmpty() ) {
+			if ( next_deleg->error_message.empty() ) {
 				return NULL;
 			} else {
-				return next_deleg->error_message.Value();
+				return next_deleg->error_message.c_str();
 			}
 		}
 	}
@@ -434,15 +488,21 @@ dprintf(D_FULLDEBUG,"    new delegation\n");
 		
 				/* TODO generate better id */
 			if ( delegation_uri == "" ) {
+#ifdef WIN32
+				struct _timeb timebuffer;
+				_ftime( &timebuffer );
+				sprintf( delegation_uri, "%d.%d", timebuffer.time, timebuffer.millitm );
+#else
 				struct timeval tv;
 				gettimeofday( &tv, NULL );
-				delegation_uri.sprintf( "%d.%d", (int)tv.tv_sec, (int)tv.tv_usec );
+				sprintf( delegation_uri, "%d.%d", (int)tv.tv_sec, (int)tv.tv_usec );
+#endif
 			}
 
 			deleg_gahp->setDelegProxy( next_deleg->proxy );
 
 			rc = deleg_gahp->cream_delegate(delegationServiceUri,
-											delegation_uri.Value() );
+											delegation_uri.c_str() );
 			
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				activeDelegationCmd = next_deleg;
@@ -461,10 +521,10 @@ dprintf(D_FULLDEBUG,"    new delegation\n");
 				}
 				signal_jobs = true;
 			} else {
-dprintf(D_FULLDEBUG,"      %s\n",delegation_uri.Value());
+dprintf(D_FULLDEBUG,"      %s\n",delegation_uri.c_str());
 				activeDelegationCmd = NULL;
 					// we are assuming responsibility to free this
-				next_deleg->deleg_uri = strdup( delegation_uri.Value() );
+				next_deleg->deleg_uri = strdup( delegation_uri.c_str() );
 				next_deleg->proxy_expire = next_deleg->proxy->expiration_time;
 				next_deleg->lifetime = now + 12*60*60;
 				next_deleg->error_message = "";
@@ -609,26 +669,26 @@ CreamResource::BatchStatusResult CreamResource::StartBatchStatus()
 
 		const GahpClient::CreamJobStatus & status = it->second;
 
-		MyString full_job_id = CreamJob::getFullJobId(ResourceName(), status.job_id.Value());
+		std::string full_job_id = CreamJob::getFullJobId(ResourceName(), status.job_id.c_str());
 		BaseJob * bjob;
 		int rc2 = BaseJob::JobsByRemoteId.lookup( 
-			HashKey( full_job_id.Value()), bjob);
+			HashKey( full_job_id.c_str()), bjob);
 		if(rc2 != 0) {
 			// Job not found. Probably okay; we might see jobs
 			// submitted via other means, or jobs we've abandoned.
-			dprintf(D_FULLDEBUG, "Job %s on remote host is unknown. Skipping.\n", status.job_id.Value());
+			dprintf(D_FULLDEBUG, "Job %s on remote host is unknown. Skipping.\n", status.job_id.c_str());
 			continue;
 		}
 		CreamJob * job = dynamic_cast<CreamJob *>(bjob);
 		ASSERT(job);
-		job->NewCreamState(status.job_status.Value(), status.exit_code, 
-			status.failure_reason.Value());
+		job->NewCreamState(status.job_status.c_str(), status.exit_code, 
+			status.failure_reason.c_str());
 		dprintf(D_FULLDEBUG, "%d.%d %s new status: %s, %d, %s\n", 
 			job->procID.cluster, job->procID.proc,
-			status.job_id.Value(),
-			status.job_status.Value(), 
+			status.job_id.c_str(),
+			status.job_status.c_str(), 
 			status.exit_code, 
-			status.failure_reason.Value());
+			status.failure_reason.c_str());
 	}
 
 #if DEBUG_CREAM
@@ -657,3 +717,75 @@ CreamResource::BatchStatusResult CreamResource::FinishBatchStatus()
 }
 
 GahpClient * CreamResource::BatchGahp() { return status_gahp; }
+
+const char *CreamResource::getLeaseId()
+{
+	// TODO trigger a DoUpdateLeases() if we don't have a lease set yet
+	if ( m_sharedLeaseExpiration ) {
+		return m_leaseId.c_str();
+	} else {
+		return NULL;
+	}
+}
+
+const char *CreamResource::getLeaseError()
+{
+	// TODO
+	return NULL;
+}
+
+void CreamResource::DoUpdateSharedLease( time_t& update_delay,
+										 bool& update_complete,
+										 bool& update_succeeded )
+{
+	int rc;
+	time_t our_expiration;
+	time_t server_expiration;
+	BaseJob *curr_job;
+
+	// TODO Should we worry about jobs having different lease ids?
+	if ( m_leaseGahp->isStarted() == false ) {
+		dprintf( D_ALWAYS,"gahp server not up yet, delaying lease update\n" );
+		update_delay = 5;
+		return;
+	}
+
+	update_delay = 0;
+
+	our_expiration = m_sharedLeaseExpiration;
+	server_expiration = m_sharedLeaseExpiration;
+
+	rc = m_leaseGahp->cream_set_lease( resourceName, m_leaseId.c_str(),
+									   server_expiration );
+
+	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+		update_complete = false;
+	} else if ( rc != 0 ) {
+		dprintf( D_FULLDEBUG, "*** Lease update failed!\n" );
+		const char *err = m_leaseGahp->getErrorString();
+		if ( err ) {
+			m_leaseErrorMsg = err;
+		} else {
+			m_leaseErrorMsg = "Failed to set lease";
+		}
+		update_complete = true;
+		update_succeeded = false;
+	} else {
+		m_leaseErrorMsg = "";
+		update_complete = true;
+		update_succeeded = true;
+
+		m_sharedLeaseExpiration = server_expiration;
+
+		registeredJobs.Rewind();
+		while ( registeredJobs.Next( curr_job ) ) {
+			std::string tmp;
+			if ( !curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, tmp ) ) {
+				continue;
+			}
+			if ( our_expiration != server_expiration ) {
+				curr_job->UpdateJobLeaseSent( server_expiration );
+			}
+		}
+	}
+}

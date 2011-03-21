@@ -73,7 +73,7 @@ class MultiProfile : public BoolExpr
 			@param buffer A string to print the result to.
 			@return true on success, false on failure.
 		*/ 
-	bool ToString( string &buffer );
+	bool ToString( std::string &buffer );
 
 
 		// unsupported methods
@@ -86,10 +86,15 @@ class MultiProfile : public BoolExpr
 		*/
 	MultiProfileExplain explain;
 
-    MultiProfile & operator=(const MultiProfile& copy) { return *this;}
  protected:
 	bool InitVal( classad::Value & );
  private:
+	// The assignment overload was VERY broken. Make it private and remove the
+	// old implementation. If someone uses it, they'll know at
+	// compile time, check here, read this comment, be upset, and hopefully
+	// implement the correct assignment overload. -psilord
+    MultiProfile & operator=(const MultiProfile& /* copy */);
+
 	bool isLiteral;
 	BoolValue literalValue;
 	bool AppendProfile( Profile * );

@@ -109,7 +109,7 @@ void INFNBatchJobReconfig()
 
 bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 	int universe;
-	MyString resource;
+	std::string resource;
 		// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 		//   system names should be used (pbs, lsf). Glite are the only
 		//   people who care about the old value. This changed happend in
@@ -119,11 +119,11 @@ bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 ( strncasecmp( resource.Value(), "blah", 4 ) == 0 ||
-		   strncasecmp( resource.Value(), "pbs", 4 ) == 0 ||
-		   strncasecmp( resource.Value(), "lsf", 4 ) == 0 ||
-		   strncasecmp( resource.Value(), "nqs", 4 ) == 0 ||
-		   strncasecmp( resource.Value(), "naregi", 6 ) == 0 ) ) {
+		 ( strncasecmp( resource.c_str(), "blah", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "pbs", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "lsf", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "nqs", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "naregi", 6 ) == 0 ) ) {
 
 		return true;
 	}
@@ -145,7 +145,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	: BaseJob( classad )
 {
 	char buff[4096];
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path;
 
 	gahpAd = NULL;
@@ -173,7 +173,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	if ( buff[0] != '\0' ) {
 		batchType = strdup( buff );
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -191,7 +191,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	sprintf( buff, "%s_GAHP", batchType );
 	gahp_path = param(buff);
 	if ( gahp_path == NULL ) {
-		error_string.sprintf( "%s not defined", buff );
+		sprintf( error_string, "%s not defined", buff );
 		goto error_exit;
 	}
 	gahp = new GahpClient( batchType, gahp_path );
@@ -216,8 +216,8 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }
@@ -620,7 +620,7 @@ void INFNBatchJob::doEvaluateState()
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
 									 sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
-					strncpy( holdReason, errorString.Value(),
+					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
 				}
 				if ( holdReason[0] == '\0' ) {
@@ -677,17 +677,16 @@ void INFNBatchJob::SetRemoteJobId( const char *job_id )
 		remoteJobId = NULL;
 	}
 
-	MyString full_job_id;
+	std::string full_job_id;
 	if ( job_id ) {
-		full_job_id.sprintf( "%s %s", batchType, job_id );
+		sprintf( full_job_id, "%s %s", batchType, job_id );
 	}
-	BaseJob::SetRemoteJobId( full_job_id.Value() );
+	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
 void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 {
 	int new_remote_state;
-	MyString buff;
 	ExprTree *new_expr, *old_expr;
 
 	int index;
@@ -852,7 +851,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 		if ( !args.AppendArgsFromClassAd( jobAd, &error_str ) ||
 			 !args.GetArgsStringV1Raw( &value_str, &error_str ) ) {
-			errorString = error_str;
+			errorString = error_str.Value();
 			delete submit_ad;
 			return NULL;
 		}
@@ -861,7 +860,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		value_str = "";
 		if ( !env.MergeFrom( jobAd, &error_str ) ||
 			 !env.getDelimitedStringV1Raw( &value_str, &error_str ) ) {
-			errorString = error_str;
+			errorString = error_str.Value();
 			delete submit_ad;
 			return NULL;
 		}

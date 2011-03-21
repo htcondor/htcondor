@@ -1013,6 +1013,10 @@ AdminEvent::process_ShutdownTime( char *req_time )
 	// secs, day and hour from the next scan of the req_time`
 	tmnow = localtime(&m_timeNow);
 
+#ifdef WIN32
+
+#else
+
 	// find secs, hour and minutes
 	res = strptime(req_time,"%H:%M:%S",&tm);
 	if(res != NULL) {
@@ -1020,6 +1024,7 @@ AdminEvent::process_ShutdownTime( char *req_time )
 			"Processing Shutdown Time String<<LEFTOVERS--%s-->>\n",res);
 		//return(-1);
 	}
+#endif
 
 	// Get today into request structure
 	tm.tm_mday = tmnow->tm_mday;

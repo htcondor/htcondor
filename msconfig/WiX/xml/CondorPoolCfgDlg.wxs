@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <UI>
+      <Dialog Id="CondorPoolCfgDlg" Width="370" Height="270" Title="[ProductName] [Setup]" NoMinimize="yes">
+        <Control Id="InstructionNEWPOOL" Type="Text" X="55" Y="53" Width="75" Height="15" Text="Choose install type:"/>
+        <Control Id="RadioNEWPOOL" Type="RadioButtonGroup" X="130" Y="53" Width="290" Height="26" TabSkip="no" Property="NEWPOOL" Text="New or Existing Condor Pool?">
+          <RadioButtonGroup Property="NEWPOOL">
+            <RadioButton Value="Y" X="0" Y="0" Width="120" Height="13" Text="Create a new Condor Pool."/>
+            <RadioButton Value="N" X="0" Y="13" Width="120" Height="13" Text="Join an existing Condor Pool."/>
+          </RadioButtonGroup>
+          <Property Id="NEWPOOL" Value="N" />
+        </Control>
+        <Control Id="PoolName" Type="Text" X="57" Y="109" Width="73" Height="15" TabSkip="no" Text="&amp;Name of New Pool:" />
+        <Control Id="PoolNameEdit" Type="Edit" X="130" Y="107" Width="90" Height="18" Property="POOLNAME" Text="{80}">
+          <Condition Action="disable">NEWPOOL="N"</Condition>
+          <Condition Action="enable">NEWPOOL="Y"</Condition>
+        </Control>
+        <Control Id="ManagerName" Type="Text" X="15" Y="127" Width="120" Height="15" TabSkip="no" Text="&amp;Hostname of Central Manager:" />
+        <Control Id="ManagerNameEdit" Type="Edit" X="130" Y="125" Width="90" Height="18" Property="POOLHOSTNAME" Text="{80}">
+          <Condition Action="disable">NEWPOOL="Y"</Condition>
+          <Condition Action="enable">NEWPOOL="N"</Condition>
+        </Control>
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
+          <Publish Event="NewDialog" Value="LicenseAgreementDlg">1</Publish>
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
+          <Publish Event="NewDialog" Value="CondorExecCfgDlg">1</Publish>
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        </Control>
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>Please enter the following condor config data</Text>
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}New or Existing Condor Pool?</Text>
+        </Control>
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+      </Dialog>
+    </UI>
+  </Fragment>
+</Wix>

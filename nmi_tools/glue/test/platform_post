@@ -1,0 +1,51 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+
+##################################################################
+#We will be removing the platform app_input.tar.gz until NMI does
+##################################################################
+
+$appinput = "../../" . $ENV{NMI_PLATFORM} . "_app_input.tar.gz";
+print "../.. has the following:\n";
+system("ls -l ../..");
+print "Looking to see is $appinput is around and removing\n";
+system("rm -f $appinput");
+
+##################################################################
+# We do not need to hang on to the source tarball
+##################################################################
+
+#my $vers_file = "CONDOR-VERSION";
+#print "Finding version of Condor\n";
+#open( VERS, "$vers_file" ) || die "Can't open $vers_file: $!\n";
+#while( <VERS> ) {
+#    chomp;
+#    $vers = $_;
+#}
+#close( VERS );
+#if( ! $vers ) {
+#    die "Can't find Condor version in $vers_file!\n";
+#}
+print "Remove unwanted binaries ....\n";
+$binaries_file = "condor-*.tar.gz";
+system("rm -f $binaries_file");
+
+exit(0);

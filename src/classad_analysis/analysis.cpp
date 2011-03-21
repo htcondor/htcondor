@@ -26,7 +26,7 @@
 #include "list.h"
 #include "simplelist.h"
 #include "extArray.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 
 #include <iostream>
 #include <sstream>
@@ -1735,7 +1735,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 				}
 
 					// attribute has been previously encountered.
-				if( attrInRefdAttrs ) {
+				if( attrInRefdAttrs && tempBools) {
 					BoolValue newValue;
 					BoolValue oldValue = ( *tempBools )[attrNum];
 					And( oldValue, conditionValue, newValue );
@@ -2180,22 +2180,31 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 	if( twoVals ) {
 		Interval *i1 = new Interval( );
 		Interval *i2 = new Interval( );
-		i1->lower.CopyFrom( val1 );
-		i2->lower.CopyFrom( val2 );
-		i1->upper.CopyFrom( val1 );
-		i2->upper.CopyFrom( val2 );
-		i1->openLower = false;
-		i2->openLower = false;
-		i1->openUpper = false;
-		i2->openUpper = false;
-		if( vr->IsInitialized( ) ) {
-			vr->Intersect( i1, i2, false );
+		if(i1) {
+			if(i2) {
+				i1->lower.CopyFrom( val1 );
+				i2->lower.CopyFrom( val2 );
+				i1->upper.CopyFrom( val1 );
+				i2->upper.CopyFrom( val2 );
+				i1->openLower = false;
+				i2->openLower = false;
+				i1->openUpper = false;
+				i2->openUpper = false;
+				if( vr->IsInitialized( ) ) {
+					vr->Intersect( i1, i2, false );
+				}
+				else {
+					vr->Init( i1, i2, false );
+				}
+			} else {
+				delete i1;
+				i1=0;
+			}
 		}
-		else {
-			vr->Init( i1, i2, false );
+		if(i1 && i2) {
+			delete i1;
+			delete i2;
 		}
-		delete i1;
-		delete i2;
 	}
 	else if( op == classad::Operation::NOT_EQUAL_OP || 
 			 op == classad::Operation::ISNT_OP ) {

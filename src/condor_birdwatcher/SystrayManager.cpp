@@ -40,21 +40,21 @@ SystrayManager::SystrayManager()
 	
 	HKEY hNotifyHandle;
 	DWORD dwCreatedOrOpened;
-	RegCreateKeyEx(HKEY_LOCAL_MACHINE, L"SOFTWARE\\condor", 0, L"REG_DWORD", 
+	RegCreateKeyEx(HKEY_LOCAL_MACHINE, (LPCSTR)L"SOFTWARE\\condor", 0, (LPSTR)L"REG_DWORD", 
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hNotifyHandle, &dwCreatedOrOpened);
 	
 	DWORD dwValue = (unsigned) wmr.getHWnd();
-	RegSetValueEx(hNotifyHandle, L"systray_notify_handle", 0, REG_DWORD, (unsigned char *) &dwValue, sizeof(DWORD));
+	RegSetValueEx(hNotifyHandle, (LPCSTR)L"systray_notify_handle", 0, REG_DWORD, (unsigned char *) &dwValue, sizeof(DWORD));
 	
 	DWORD dwType;
 	DWORD dwData = 1; // assume one-bird mode
 	DWORD dwDataLen = 4;
-	RegQueryValueEx(hNotifyHandle, L"systray_one_bird", 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
+	RegQueryValueEx(hNotifyHandle, (LPCSTR)L"systray_one_bird", 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
 	bUseSingleIcon = dwData == 1;
 
 	WCHAR *psBuf = new WCHAR[MAX_PATH];
 	dwDataLen = MAX_PATH * sizeof(WCHAR);
-	RegQueryValueExW(hNotifyHandle, L"RELEASE_DIR", 0, &dwType, (unsigned char *) psBuf, &dwDataLen);
+	RegQueryValueExW(hNotifyHandle, (LPCWSTR)L"RELEASE_DIR", 0, &dwType, (unsigned char *) psBuf, &dwDataLen);
 	
 	vecIconsForEachCpu.resize(1);
 	hPopupMenu = NULL;
@@ -68,7 +68,7 @@ SystrayManager::SystrayManager()
 		DWORD temp = GetLastError();
 		WCHAR buffer[256];
 		_ltow(temp, buffer, 10);
-		OutputDebugString(buffer);
+		OutputDebugString((LPCSTR)buffer);
 	}
 	zCondorDir = psBuf;
 	//pDlg->Create(IDD_BIRDWATCHER_DIALOG);
@@ -129,7 +129,7 @@ void SystrayManager::setIcon(BirdIconVector::size_type iCpuId, HICON hToSet)
 	
 	icon.nid.hIcon = hToSet;
 	icon.nid.hWnd = wmr.getHWnd();
-	wcscpy_s(icon.nid.szTip, _countof(icon.nid.szTip), icon.strTooltip);
+	wcscpy_s((wchar_t *)icon.nid.szTip, _countof(icon.nid.szTip), icon.strTooltip);
 	//strcpy(icon.nid.szTip, icon.strTooltip.c_str());
 	icon.nid.uCallbackMessage = CONDOR_SYSTRAY_INTERNAL_EVENTS;
 	icon.nid.uFlags = NIF_MESSAGE | NIF_ICON;
@@ -199,11 +199,11 @@ void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, U
 				
 				HKEY hNotifyHandle;
 				DWORD dwCreatedOrOpened;
-				RegCreateKeyEx(HKEY_LOCAL_MACHINE, L"SOFTWARE\\condor", 0, L"REG_DWORD", 
+				RegCreateKeyEx(HKEY_LOCAL_MACHINE, (LPCSTR)L"SOFTWARE\\condor", 0, (LPSTR)L"REG_DWORD", 
 					REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hNotifyHandle, &dwCreatedOrOpened);
 				
 				DWORD dwValue = bUseSingleIcon ? 1 : 0;
-				RegSetValueEx(hNotifyHandle, L"systray_one_bird", 0, REG_DWORD, (unsigned char *) &dwValue, sizeof(DWORD));
+				RegSetValueEx(hNotifyHandle, (LPCSTR)L"systray_one_bird", 0, REG_DWORD, (unsigned char *) &dwValue, sizeof(DWORD));
 				
 				reloadStatus();
 			}
@@ -244,23 +244,23 @@ void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, U
 				
 				
 				hPopupMenu = CreatePopupMenu();
-				AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 1, L"Hide Birdwatcher (this icon)");
+				AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 1, (LPCSTR)L"Hide Birdwatcher (this icon)");
 				if (bMultipleCpusAvailable)
 				{
 					if (!bUseSingleIcon)
-						AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 6, L"Show one bird only");
+						AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 6, (LPCSTR)L"Show one bird only");
 					else
-						AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 6, L"Show one bird per cpu");
+						AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 6, (LPCSTR)L"Show one bird per cpu");
 				}
 				AppendMenu(hPopupMenu, MF_SEPARATOR, 4, NULL);
 				if (vecIconsForEachCpu.size() == 1 && vecIconsForEachCpu[0].nid.hIcon == hCondorOff)
 				{
-					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 2, L"Turn Condor on");
+					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 2, (LPCSTR)L"Turn Condor on");
 				}
 				else
 				{
-					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 3, L"Turn Condor off");
-					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 5, L"Vacate all local jobs");
+					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 3, (LPCSTR)L"Turn Condor off");
+					AppendMenu(hPopupMenu, MF_STRING | MF_ENABLED, 5, (LPCSTR)L"Vacate all local jobs");
 				}
 				
 				SetForegroundWindow(wmr.getHWnd());
@@ -270,8 +270,8 @@ void SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource, U
 				{
 					WCHAR szBuf[256]; 
 					DWORD dw = GetLastError(); 
-					FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, dw, 0, szBuf, 256, NULL);
-					MessageBox(parentHwnd, szBuf, szBuf, 0);
+					FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, dw, 0, (LPSTR)szBuf, 256, NULL);
+					MessageBox(parentHwnd, (LPCSTR)szBuf, (LPCSTR)szBuf, 0);
 					//AfxMessageBox(szBuf);			
 				}
 			}				
@@ -310,13 +310,13 @@ void SystrayManager::reloadStatus()
 {
 	HKEY hNotifyHandle;
 	DWORD dwCreatedOrOpened;
-	RegCreateKeyEx(HKEY_LOCAL_MACHINE, L"SOFTWARE\\condor", 0, L"REG_DWORD", 
+	RegCreateKeyEx(HKEY_LOCAL_MACHINE, (LPCSTR)L"SOFTWARE\\condor", 0, (LPSTR)L"REG_DWORD", 
 		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hNotifyHandle, &dwCreatedOrOpened);
 	
 	DWORD dwType;
 	DWORD dwData = 0;
 	DWORD dwDataLen = 4;
-	RegQueryValueEx(hNotifyHandle, L"systray_num_cpus", 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
+	RegQueryValueEx(hNotifyHandle, (LPCSTR)L"systray_num_cpus", 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
 	int iCpus = (int) dwData;
 	
 	if (!iCpus)
@@ -362,7 +362,7 @@ void SystrayManager::reloadStatus()
 	{
 		WCHAR psBuf[] = L"systray_cpu_%d_state";
 		dwData = (int) kSystrayStatusIdle; // assume idle
-		RegQueryValueEx(hNotifyHandle, psBuf, 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
+		RegQueryValueEx(hNotifyHandle, (LPCSTR)psBuf, 0, &dwType, (unsigned char *) &dwData, &dwDataLen);
 		
 		ECpuStatus eStatus = (ECpuStatus) ((int) dwData);
 		

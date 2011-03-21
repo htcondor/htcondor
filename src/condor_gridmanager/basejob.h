@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "MyString.h"
 #include "write_user_log.h"
 #include "user_job_policy.h"
 #include "classad_hashtable.h"
@@ -65,7 +64,7 @@ class BaseJob : public Service
 	virtual void JobLeaseSentExpired();
 	virtual void JobLeaseReceivedExpired();
 
-	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad );
+	virtual void JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad );
 
 	static void EvalAllPeriodicJobExprs();
 	int EvalPeriodicJobExpr();

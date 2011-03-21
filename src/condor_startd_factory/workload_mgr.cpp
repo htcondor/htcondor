@@ -42,7 +42,6 @@ WorkloadManager::~WorkloadManager()
 void WorkloadManager::query_workloads(char *script)
 {
 	FILE *fin = NULL;
-	char *delim = " \t";
 	int idx;
 	ClassAd *ad = NULL;
 	int eof, error, empty;

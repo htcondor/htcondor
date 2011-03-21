@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <UI>
+      <Dialog Id="CondorExecCfgDlg" Width="370" Height="270" Title="[ProductName] [Setup]" NoMinimize="yes">
+        <Control Id="DialogSUBMITJOBS" Type="CheckBox" X="130" Y="55" Width="290" Height="18" TabSkip="no" CheckBoxValue="Y" Property="SUBMITJOBS" Text="Submit jobs to Condor Pool" />
+        <Control Id ="InstructionRUNJOBS" Type="Text" X="10" Y="72" Width="120" Height="15" Text="When should Condor run jobs?" />
+        <Control Id="RadioRUNJOBS" Type="RadioButtonGroup" X="130" Y="72" Width="290" Height="50" TabSkip="no" Property="RUNJOBS" Text="When should Condor run jobs?">
+          <RadioButtonGroup Property="RUNJOBS">
+            <RadioButton Value="N" X="0" Y="0" Width="290" Height="12" Text="Do not run jobs on this machine."/>
+            <RadioButton Value="A" X="0" Y="12" Width="290" Height="12" Text="Always run jobs and never suspend them."/>
+            <RadioButton Value="I" X="0" Y="24" Width="290" Height="12" Text="When keyboard has been idle for 15 minutes."/>
+            <RadioButton Value="C" X="0" Y="36" Width="290" Height="12" Text="When keyboard has been idle for 15 minutes and CPU is idle."/>
+          </RadioButtonGroup>
+          <Property Id="RUNJOBS" Value="N" />
+        </Control>
+        <Control Id="InstructionVACATEJOBS" Type="Text" X="10" Y="140" Width="270" Height="18" Text="When the machine becomes no longer idle, jobs are suspended."/>
+        <Control Id="TimeVACATEJOBS" Type="Text" X="60" Y="158" Width="70" Height="15" Text="After 10 minutes:"/>
+        <Control Id="RadioVACATEJOBS" Type="RadioButtonGroup" X="130" Y="158" Width="290" Height="75" TabSkip="no" Property="VACATEJOBS">
+          <RadioButtonGroup Property="VACATEJOBS">
+            <RadioButton Value="N" X="0" Y="0" Width="220" Height="12" Text="Keep the job in memory and restart it when you leave."/>
+            <RadioButton Value="Y" X="0" Y="12" Width="220" Height="12" Text="Restart the job on a different machine."/>
+          </RadioButtonGroup>
+          <Property Id="VACATEJOBS" Value="N" />
+		  <Condition Action="disable">RUNJOBS="N"</Condition>
+          <Condition Action="disable">RUNJOBS="A"</Condition>
+          <Condition Action="enable">RUNJOBS="I"</Condition>
+          <Condition Action="enable">RUNJOBS="C"</Condition>
+        </Control>
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Back">
+          <Publish Event="NewDialog" Value="CondorPoolCfgDlg">1</Publish>
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
+          <Publish Event="NewDialog" Value="CondorDomainCfgDlg">1</Publish>
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        </Control>
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>Please enter the following condor config data</Text>
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}Configure Execute and Submit Behavior</Text>
+        </Control>
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+      </Dialog>
+    </UI>
+  </Fragment>
+</Wix>

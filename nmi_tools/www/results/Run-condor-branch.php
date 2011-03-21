@@ -4,7 +4,7 @@
    //
    define("DETAIL_URL", "./Run-condor-details.php?runid=%s&type=%s&user=%s");
    define("CROSS_DETAIL_URL", "./Run-condor-pre-details.php?runid=%s&type=%s&user=%s");
-   define("GITSHA1","http://bonsai.cs.wisc.edu/gitweb/gitweb.cgi?p=CONDOR_SRC.git;a=commit;h=%s");
+   define("GITSHA1","http://condor-git.cs.wisc.edu/?p=condor.git;a=commit;h=%s");
    
    $result_types = Array( "passed", "pending", "failed", "missing" );
 
@@ -54,7 +54,7 @@
    <tr>
       <th>Branch</th>
       <th>Runid</th>
-      <th>Last build</th>
+      <th>Submitted</th>
       <th>Build Results</th>
       <th>Test Results</th>  
       <th>Cross Test Results</th>  
@@ -72,12 +72,12 @@
 # for each (branch, type) tuple
 
 $sql = "SELECT description,
-			   project_version,
+               project_version,
                convert_tz(start, 'GMT', 'US/Central') as start,
                run_type, 
                runid,
-					archived,
-					archive_results_until,
+               archived,
+               archive_results_until,
                result
           FROM Run 
          WHERE component='condor' AND 
@@ -95,8 +95,8 @@ while ($row = mysql_fetch_array($results)) {
   $projectversion = $row["project_version"];
   $start      = $row["start"];
   $run_result = $row["result"];
-  $pin 		  = $row["archive_results_until"];
-	$archived = $row["archived"];
+  $pin 	      = $row["archive_results_until"];
+  $archived   = $row["archived"];
 
    // --------------------------------
    // BUILDS
@@ -220,9 +220,22 @@ EOF;
    foreach (Array("build", "test", "crosstest") AS $type) {
       $cur = $data[$type];
 
-      $status = ($cur["failed"] ? "FAILED" :
-                ($cur["pending"] ? "PENDING" : "PASSED"));
-      $color = $status;
+      if($cur["failed"] > 0) {
+	$status = "FAILED";
+	$color = "FAILED";
+      }
+      elseif($cur["pending"] > 0) {
+	$status = "PENDING";
+	$color = "PENDING";
+      }
+      elseif($cur["passed"] > 0) {
+	$status = "PASSED";
+	$color = "PASSED";
+      }
+      else {
+	$status = "No Results";
+	$color = "NORESULTS";
+      }
 
       ##
       ## Check for missing tests

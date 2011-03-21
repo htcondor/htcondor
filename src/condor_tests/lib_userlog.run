@@ -55,10 +55,10 @@ my @expected_output =
 CondorTest::SetExpected(\@expected_output);
 
 runcmd("rm -f local.log");
-my $stats = system("../testbin_dir/x_write_joblog.exe");
+my $stats = system("./x_write_joblog.exe");
 if($stats != 0)
 {
-	if( -e "../testbin_dir/x_write_joblog.exe" )
+	if( -e "./x_write_joblog.exe" )
 	{
 		die "Write Log... failed.....\n";
 	}

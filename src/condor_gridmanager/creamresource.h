@@ -43,6 +43,7 @@ class CreamResource : public BaseResource
 	bool Init();
 	const char *ResourceType();
 	void Reconfig();
+	void RegisterJob( CreamJob *job );
 	void UnregisterJob( CreamJob *job );
 
 	const char *GetHashName();
@@ -53,6 +54,9 @@ class CreamResource : public BaseResource
 	const char *getDelegationURI( Proxy *job_proxy );
 	const char *getDelegationError( Proxy *job_proxy );
 	const char *getDelegationService() { return delegationServiceUri; };
+
+	const char *getLeaseId();
+	const char *getLeaseError();
 
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,
@@ -84,10 +88,13 @@ class CreamResource : public BaseResource
 	char *delegationServiceUri;
 	List<CreamProxyDelegation> delegatedProxies;
 	static int gahpCallTimeout;
-	MyString delegation_uri;
+	std::string delegation_uri;
 	GahpClient *gahp; // For pings.
 	GahpClient *deleg_gahp;
 	GahpClient *status_gahp;
+	GahpClient *m_leaseGahp;
+	std::string m_leaseId;
+	std::string m_leaseErrorMsg;
 
 protected:
 
@@ -96,6 +103,8 @@ protected:
 	BatchStatusResult FinishBatchStatus();
 	GahpClient * BatchGahp();
 
+	void DoUpdateSharedLease( time_t& update_delay, bool& update_complete, 
+							  bool& update_succeeded );
 };
 
 #endif

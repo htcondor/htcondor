@@ -465,7 +465,7 @@ dev_idle_time( const char *path, time_t now )
 		In this case, buf.st_atime would already be set to 0 above.
 	*/
 	if ( buf.st_atime != 0 && null_major_device > -1 &&
-							null_major_device == major(buf.st_rdev) ) {
+							null_major_device == int(major(buf.st_rdev))) {
 		// this device is related to /dev/null, it should not count
 		buf.st_atime = 0;
 	}
@@ -561,30 +561,30 @@ get_keyboard_info(idle_t *fill_me)
 
 	fgets(buf, BUFFER_SIZE, intr_fs);  /* Ignore header line */
 	while (!result && (fgets(buf, BUFFER_SIZE, intr_fs) != NULL)) {
-	    if (strstr(buf, "i8042") != NULL || strstr(buf, "keyboard") != NULL){
+		if (strstr(buf, "i8042") != NULL || strstr(buf, "keyboard") != NULL){
 
 			if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
 				dprintf( D_IDLE, "Keyboard IRQ: %d\n", atoi(buf) );
 			}
-		tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
-		do {
-		    tok = strtok_r(NULL, DELIMS, &tok_loc);
-		    if (is_number(tok)) {
-					/* It is ok if this overflows */
-				fill_me->num_key_intr += strtoul(tok, NULL, 10);
-				if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
-					dprintf( D_FULLDEBUG, 
-							 "Add %lu keyboard interrupts.  Total: %lu\n",
-							 strtoul(tok, NULL, 10), fill_me->num_key_intr );
-				}
-		    } else {
-			break;  /* device type column */
-		    }
-		} while (tok != NULL);		
-		result = TRUE;
-	    }
+			tok = strtok_r(buf, DELIMS, &tok_loc);  /* Ignore [IRQ #]: */
+			if(tok != NULL)
+				do {
+					tok = strtok_r(NULL, DELIMS, &tok_loc);
+					if (tok && is_number(tok)) {
+						/* It is ok if this overflows */
+						fill_me->num_key_intr += strtoul(tok, NULL, 10);
+						if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+							dprintf( D_FULLDEBUG, 
+									"Add %lu keyboard interrupts.  Total: %lu\n",
+									strtoul(tok, NULL, 10), fill_me->num_key_intr );
+						}
+					} else {
+						break;  /* device type column */
+					}
+				} while (tok != NULL);		
+			result = TRUE;
+		}
 	}
-
 	fclose(intr_fs);	
 	return result;
 }
@@ -1118,10 +1118,9 @@ static time_t solaris_mouse_idle(void)
  out of this file. This will get a little ugly. The sysapi entry points
  are C linkage */
 
-BEGIN_C_DECLS
+extern "C" {
 
-void
-sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
+void sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 {
 
 
@@ -1140,12 +1139,11 @@ sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 #endif
 }
 
-void
-sysapi_idle_time(time_t *m_idle, time_t *m_console_idle)
+void sysapi_idle_time(time_t *m_idle, time_t *m_console_idle)
 {
 	sysapi_internal_reconfig();
 
 	sysapi_idle_time_raw(m_idle, m_console_idle);
 }
 
-END_C_DECLS
+}

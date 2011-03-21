@@ -22,30 +22,29 @@
 
 #include <list>
 #include <string>
-using namespace std;
 
 class LeaseManagerLease
 {
   public:
-	LeaseManagerLease( const string &lease_id,
+	LeaseManagerLease( const std::string &lease_id,
 					   int duration = -1,
 					   bool rel = true );
 	~LeaseManagerLease( void );
 
-	void setLeaseId( const string & );
+	void setLeaseId( const std::string & );
 	void setLeaseDuration( int );
 	void setReleaseWhenDone( bool );
 
-	const string &getLeaseId( void ) const { return m_id; };
+	const std::string &getLeaseId( void ) const { return m_id; };
 	int getDuration( void ) const { return m_duration; };
 	int getReleaseWhenDone( void ) const { return m_release_when_done; };
 
   private:
-	string		m_id;
+	std::string		m_id;
 	int			m_duration;
 	bool		m_release_when_done;
 };
 
-void LeaseManagerLease_FreeList( list<LeaseManagerLease *> &lease_list );
+void LeaseManagerLease_FreeList( std::list<LeaseManagerLease *> &lease_list );
 
 #endif//__LEASE_MANAGER_LEASE_H__

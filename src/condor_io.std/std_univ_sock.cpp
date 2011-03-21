@@ -275,46 +275,45 @@ StdUnivSock::end_of_message()
 }
 
 
+bool 
+StdUnivSock::peek_end_of_message()
+{
+	EXCEPT("not implemented");
+	return false;
+}
+
 int 
 StdUnivSock::put_bytes(const void *data, int sz)
 {
 	int		tw, header_size = NORMAL_HEADER_SIZE;
 	int		nw;
-        unsigned char * dta = NULL;
+	unsigned char * dta = NULL;
 
-            dta = (unsigned char *) malloc(sz);
-            memcpy(dta, data, sz);
-
+	if((dta = (unsigned char *) malloc(sz)) != 0)
+		memcpy(dta, data, sz);
 	ignore_next_encode_eom = FALSE;
-
 	for(nw=0;;) {
-		
 		if (snd_msg.buf.full()) {
 			if (!snd_msg.snd_packet(peer_description(), _sock, FALSE, _timeout)) {
-				if (dta != NULL)
-				{
+				if (dta != NULL) {
 					free(dta);
 					dta = NULL;
 				}
 				return FALSE;
 			}
 		}
-		
 		if (snd_msg.buf.empty()) {
 			snd_msg.buf.seek(header_size);
 		}
-		
 		if ((tw = snd_msg.buf.put_max(&((char *)dta)[nw], sz-nw)) < 0) {
-					if (dta != NULL)
-					{
-                    	free(dta);
-						dta = NULL;
-					}
-                    return -1;
+			if (dta != NULL) {
+				free(dta);
+				dta = NULL;
+			}
+			return -1;
 		}
-		
 		nw += tw;
-		if (nw == sz) {
+		if (nw >= sz) {
 			break;
 		}
 	}
@@ -322,12 +321,10 @@ StdUnivSock::put_bytes(const void *data, int sz)
 		_bytes_sent += nw;
 	}
 
-	if (dta != NULL)
-	{
-    	free(dta);
+	if (dta != NULL) {
+		free(dta);
 		dta = NULL;
 	}
-
 	return nw;
 }
 
@@ -378,15 +375,9 @@ int StdUnivSock::peek( char &c)
 	return rcv_msg.buf.peek(c);
 }
 
-StdUnivSock::RcvMsg :: RcvMsg() : 
-    ready(0), 
-	p_sock(0)
-{
-}
+StdUnivSock::RcvMsg :: RcvMsg() : p_sock(0),ready(0) {}
 
-StdUnivSock::RcvMsg::~RcvMsg()
-{
-}
+StdUnivSock::RcvMsg::~RcvMsg() {}
 
 int StdUnivSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
 {

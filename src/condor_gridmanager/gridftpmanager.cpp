@@ -183,10 +183,10 @@ const char *GridftpServer::GetUrlBase()
 
 const char *GridftpServer::GetErrorMessage()
 {
-	if ( m_errorMessage.IsEmpty() ) {
+	if ( m_errorMessage.empty() ) {
 		return NULL;
 	} else {
-		return m_errorMessage.Value();
+		return m_errorMessage.c_str();
 	}
 }
 
@@ -251,7 +251,7 @@ void GridftpServer::CheckServerSoon( int delta )
 
 void GridftpServer::CheckServer()
 {
-	bool existing_error = !m_errorMessage.IsEmpty();
+	bool existing_error = !m_errorMessage.empty();
  
 	daemonCore->Reset_Timer( m_checkServerTid, CHECK_SERVER_INTERVAL );
 
@@ -359,7 +359,7 @@ void GridftpServer::CheckServer()
 		}
 	}
 
-	if ( !existing_error && !m_errorMessage.IsEmpty() ) {
+	if ( !existing_error && !m_errorMessage.empty() ) {
 		int tid;
 		m_registeredClients.Rewind();
 		while ( m_registeredClients.Next( tid ) ) {
@@ -372,7 +372,7 @@ bool GridftpServer::ScanSchedd()
 {
 	Qmgr_connection *schedd;
 	bool error = false;
-	MyString expr;
+	std::string expr;
 	ClassAd *next_ad;
 
 	dprintf( D_FULLDEBUG, "GridftpServer: Scanning schedd for previously "
@@ -403,7 +403,7 @@ bool GridftpServer::ScanSchedd()
 		// jobs to be canceled and resubmitted. Instead, we'll ignore the
 		// restarted server and submit a one that's told to listen on
 		// the old port.
-	expr.sprintf( "%s == \"%s\" && %s =?= True && ( %s == %d || %s == %d ) && "
+	sprintf( expr, "%s == \"%s\" && %s =?= True && ( %s == %d || %s == %d ) && "
 				  "( %s =!= Undefined || ( %s + ( %s == %d ) ) <= 1 )",
 				  ATTR_OWNER, myUserName, ATTR_GRIDFTP_SERVER_JOB,
 				  ATTR_JOB_STATUS, IDLE, ATTR_JOB_STATUS, RUNNING,
@@ -412,10 +412,10 @@ bool GridftpServer::ScanSchedd()
 
 		// TODO check that this didn't return NULL due to a connection
 		//   failure
-	next_ad = GetNextJobByConstraint( expr.Value(), 1 );
+	next_ad = GetNextJobByConstraint( expr.c_str(), 1 );
 	while ( next_ad != NULL ) {
-		MyString buff;
-		MyString buff2;
+		std::string buff;
+		std::string buff2;
 		GridftpServer *server;
 
 			// If we have a Server object for this proxy subect with
@@ -424,9 +424,9 @@ bool GridftpServer::ScanSchedd()
 			// the first one, ignoring the requested url base (which
 			// may match one of the later jobs). Tough luck.
 		next_ad->LookupString( ATTR_X509_USER_PROXY_FQAN, buff );
-		if ( m_serversByProxy.lookup( HashKey( buff.Value() ), server ) ) {
+		if ( m_serversByProxy.lookup( HashKey( buff.c_str() ), server ) ) {
 
-			MyString error_str;
+			std::string error_str;
 			Proxy *proxy = AcquireProxy( next_ad, error_str );
 			server = new GridftpServer( proxy );
 			ASSERT(server);
@@ -448,36 +448,36 @@ bool GridftpServer::ScanSchedd()
 				free( server->m_requestedUrlBase );
 				server->m_requestedUrlBase = NULL;
 			}
-			MyString value;
+			std::string value;
 			next_ad->LookupString( ATTR_JOB_OUTPUT, value );
-			server->m_outputFile = strdup( value.Value() );
+			server->m_outputFile = strdup( value.c_str() );
 			if ( next_ad->LookupString( ATTR_REQUESTED_GRIDFTP_URL_BASE,
 										value ) ) {
-				server->m_requestedUrlBase = strdup( value.Value() );
+				server->m_requestedUrlBase = strdup( value.c_str() );
 			}
 				// TODO should check these SetAttributeString calls
 				//   for errors.
-			buff.sprintf( "SUBMIT_%s", ATTR_JOB_IWD );
+			sprintf( buff, "SUBMIT_%s", ATTR_JOB_IWD );
 			SetAttributeString( server->m_jobId.cluster,
 								server->m_jobId.proc,
-								buff.Value(), GridmanagerScratchDir );
-			buff.sprintf( "SUBMIT_%s", ATTR_JOB_OUTPUT );
-			buff2.sprintf( "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
+								buff.c_str(), GridmanagerScratchDir );
+			sprintf( buff, "SUBMIT_%s", ATTR_JOB_OUTPUT );
+			sprintf( buff2, "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
 			SetAttributeString( server->m_jobId.cluster,
 								server->m_jobId.proc,
-								buff.Value(), buff2.Value() );
-			buff.sprintf( "SUBMIT_%s", ATTR_JOB_ERROR );
-			buff2.sprintf( "%s/%s", GridmanagerScratchDir, STDERR_NAME );
+								buff.c_str(), buff2.c_str() );
+			sprintf( buff, "SUBMIT_%s", ATTR_JOB_ERROR );
+			sprintf( buff2, "%s/%s", GridmanagerScratchDir, STDERR_NAME );
 			SetAttributeString( server->m_jobId.cluster,
 								server->m_jobId.proc,
-								buff.Value(), buff2.Value() );
+								buff.c_str(), buff2.c_str() );
 				// TODO check expiration time on proxy?
 		}
 
 		delete next_ad;
 			// TODO check that this didn't return NULL due to a connection
 			//   failure
-		next_ad = GetNextJobByConstraint( expr.Value(), 0 );
+		next_ad = GetNextJobByConstraint( expr.c_str(), 0 );
 	}
 
 	DisconnectQ( schedd );
@@ -509,9 +509,10 @@ bool GridftpServer::SubmitServerJob()
 	Env env_obj;
 	int low_port, high_port;
 	const char *value;
-	MyString buff;
+	std::string buff;
 	CondorVersionInfo ver_info;
 	ArgList args_list;
+	MyString err_msg;
 
 	dprintf( D_FULLDEBUG, "GridftpServer: Submitting job for proxy '%s'\n",
 			 m_proxy->subject->fqan );
@@ -523,7 +524,7 @@ bool GridftpServer::SubmitServerJob()
 	if ( !server_path ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: No gridftp "
 				 "server configured\n" );
-		m_errorMessage.sprintf( "No gridftp server configured" );
+		m_errorMessage = "No gridftp server configured";
 		return false;
 	} else {
 		StatInfo si( server_path );
@@ -531,7 +532,7 @@ bool GridftpServer::SubmitServerJob()
 			dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: "
 					 "GRIDFTP_SERVER file %s is invalid\n",
 					 server_path );
-			m_errorMessage.sprintf( "GRIDFTP_SERVER file is invalid" );
+			m_errorMessage = "GRIDFTP_SERVER file is invalid";
 			goto error_exit;
 		}
 	}
@@ -543,7 +544,7 @@ bool GridftpServer::SubmitServerJob()
 			dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: "
 					 "GRIDFTP_SERVER_WRAPPER file %s is invalid\n",
 					 server_path );
-			m_errorMessage.sprintf( "GRIDFTP_SERVER_WRAPPER file is invalid" );
+			m_errorMessage = "GRIDFTP_SERVER_WRAPPER file is invalid";
 			goto error_exit;
 		}
 	}
@@ -561,16 +562,16 @@ bool GridftpServer::SubmitServerJob()
 		// object for a given gridftp job later on.
 	job_ad->Assign( ATTR_X509_USER_PROXY_FQAN, m_proxy->subject->fqan );
 	job_ad->Assign( ATTR_JOB_IWD, GridmanagerScratchDir );
-	buff.sprintf( "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
-	job_ad->Assign( ATTR_JOB_OUTPUT, buff.Value() );
-	buff.sprintf( "%s/%s", GridmanagerScratchDir, STDERR_NAME );
-	job_ad->Assign( ATTR_JOB_ERROR, buff.Value() );
+	sprintf( buff, "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
+	job_ad->Assign( ATTR_JOB_OUTPUT, buff.c_str() );
+	sprintf( buff, "%s/%s", GridmanagerScratchDir, STDERR_NAME );
+	job_ad->Assign( ATTR_JOB_ERROR, buff.c_str() );
 
 	job_ad->Assign( ATTR_TIMER_REMOVE_CHECK,
 					(int)time(NULL) + SERVER_JOB_LEASE );
-	buff.sprintf( "%s == %d && %s > time()", ATTR_JOB_STATUS, COMPLETED,
+	sprintf( buff, "%s == %d && %s > time()", ATTR_JOB_STATUS, COMPLETED,
 				  ATTR_TIMER_REMOVE_CHECK );
-	job_ad->AssignExpr( ATTR_JOB_LEAVE_IN_QUEUE, buff.Value() );
+	job_ad->AssignExpr( ATTR_JOB_LEAVE_IN_QUEUE, buff.c_str() );
 
 	snprintf( mapfile, sizeof(mapfile), "%s/grid-mapfile",
 			  GridmanagerScratchDir );
@@ -607,12 +608,12 @@ bool GridftpServer::SubmitServerJob()
 		// outgoing LOWPORT/HIGHPORT settings, pass them through
 		// to globus via the appropriate environment variables.
 	if ( get_port_range( FALSE, &low_port, &high_port ) == TRUE ) {
-		buff.sprintf( "%d,%d", low_port, high_port );
-		env_obj.SetEnv( "GLOBUS_TCP_PORT_RANGE", buff.Value() );
+		sprintf( buff, "%d,%d", low_port, high_port );
+		env_obj.SetEnv( "GLOBUS_TCP_PORT_RANGE", buff.c_str() );
 	}
 	if ( get_port_range( TRUE, &low_port, &high_port ) == TRUE ) {
-		buff.sprintf( "%d,%d", low_port, high_port );
-		env_obj.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.Value() );
+		sprintf( buff, "%d,%d", low_port, high_port );
+		env_obj.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.c_str() );
 	}
 
 		// TODO Should check config parameter GSI_DAEMON_TRUSTED_CA_DIR?
@@ -621,9 +622,9 @@ bool GridftpServer::SubmitServerJob()
 		env_obj.SetEnv( "X509_CERT_DIR", value );
 	}
 
-	if ( !env_obj.InsertEnvIntoClassAd( job_ad, &buff ) ) {
+	if ( !env_obj.InsertEnvIntoClassAd( job_ad, &err_msg ) ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: Env: %s\n",
-				 buff.Value() );
+				 err_msg.Value() );
 		goto error_exit;
 	}		
 		// TODO what about LD_LIBRARY_PATH?
@@ -654,17 +655,17 @@ bool GridftpServer::SubmitServerJob()
 				url_port = 2811;
 			}
 			args_list.AppendArg( "-p" );
-			buff.sprintf( "%d", url_port );
-			args_list.AppendArg( buff.Value() );
+			sprintf( buff, "%d", url_port );
+			args_list.AppendArg( buff.c_str() );
 
 			job_ad->Assign( ATTR_REQUESTED_GRIDFTP_URL_BASE,
 							m_requestedUrlBase );
 		}
 	}
 
-	if ( !args_list.InsertArgsIntoClassAd( job_ad, &ver_info, &buff ) ) {
+	if ( !args_list.InsertArgsIntoClassAd( job_ad, &ver_info, &err_msg ) ) {
 		dprintf( D_ALWAYS, "GridftpServer::SubmitServerJob: ArgList: %s\n",
-				 buff.Value() );
+				 err_msg.Value() );
 		goto error_exit;
 	}
 
@@ -821,22 +822,22 @@ bool GridftpServer::ReadUrlBase()
 		return false;
 	}
 
-	MyString out_name;
+	std::string out_name;
 	FILE *out_fp;
 
-	out_name.sprintf( "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
-	out_fp = safe_fopen_wrapper( out_name.Value(), "r" );
+	sprintf( out_name, "%s/%s", GridmanagerScratchDir, STDOUT_NAME );
+	out_fp = safe_fopen_wrapper( out_name.c_str(), "r" );
 	if ( out_fp == NULL ) {
 		dprintf( D_ALWAYS, "GridftpServer::ReadUrlBase: Failed to open "
-				 "'%s': errno=%d\n", out_name.Value(), errno );
+				 "'%s': errno=%d\n", out_name.c_str(), errno );
 		return false;
 	}
 
 	char buff[1024];
 	if ( fscanf( out_fp, "Server listening at %[^\n]\n", buff ) == 1 ) {
-		MyString buff2;
-		buff2.sprintf( "gsiftp://%s", buff );
-		m_urlBase = strdup( buff2.Value() );
+		std::string buff2;
+		sprintf( buff2, "gsiftp://%s", buff );
+		m_urlBase = strdup( buff2.c_str() );
 	}
 
 	fclose( out_fp );
@@ -859,9 +860,9 @@ bool GridftpServer::ReadUrlBase()
 
 	char buff[1024];
 	if ( fscanf( out, "Server listening at %[^\n]\n", buff ) == 1 ) {
-		MyString buff2;
-		buff2.sprintf( "gsiftp://%s", buff );
-		m_urlBase = strdup( buff2.Value() );
+		std::string buff2;
+		sprintf( buff2, "gsiftp://%s", buff );
+		m_urlBase = strdup( buff2.c_str() );
 	}
 
 	fclose( out );
@@ -959,14 +960,14 @@ bool GridftpServer::CheckPortError()
 		return false;
 	}
 
-	MyString err_name;
+	std::string err_name;
 	FILE *err_fp;
 
-	err_name.sprintf( "%s/%s", GridmanagerScratchDir, STDERR_NAME );
-	err_fp = safe_fopen_wrapper( err_name.Value(), "r" );
+	sprintf( err_name, "%s/%s", GridmanagerScratchDir, STDERR_NAME );
+	err_fp = safe_fopen_wrapper( err_name.c_str(), "r" );
 	if ( err_fp == NULL ) {
 		dprintf( D_ALWAYS, "GridftpServer::CheckPortError: Failed to "
-				 "open '%s': errno=%d\n", err_name.Value(), errno );
+				 "open '%s': errno=%d\n", err_name.c_str(), errno );
 		return false;
 	}
 
@@ -1025,12 +1026,12 @@ bool GridftpServer::FetchJobFiles()
 
 	bool result;
 	CondorError errstack;
-	MyString constraint;
+	std::string constraint;
 
-	constraint.sprintf( "%s == %d && %s == %d", ATTR_CLUSTER_ID,
+	sprintf( constraint, "%s == %d && %s == %d", ATTR_CLUSTER_ID,
 						m_jobId.cluster, ATTR_PROC_ID, m_jobId.proc );
 
-	result = ScheddObj->receiveJobSandbox( constraint.Value(), &errstack );
+	result = ScheddObj->receiveJobSandbox( constraint.c_str(), &errstack );
 	if ( result == false ) {
 		dprintf( D_ALWAYS, "GridftpServer::FetchJobFiles: Failed to fetch "
 				 "files: %s\n", errstack.getFullText() );

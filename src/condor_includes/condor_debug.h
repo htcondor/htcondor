@@ -48,7 +48,7 @@
 #define D_NFS			(1<<11)
 #define D_CONFIG        (1<<12)
 #define D_UNUSED2       (1<<13)
-#define D_PREEMPT		(1<<14)
+#define D_UNUSED3		(1<<14)
 #define D_PROTOCOL		(1<<15)
 #define D_PRIV			(1<<16)
 #define D_SECURITY		(1<<17)
@@ -68,7 +68,7 @@
 */ 
 #define D_PID           (1<<28)
 #define D_FDS           (1<<29)
-#define D_UNUSED3       (1<<30)
+#define D_UNUSED4       (1<<30)
 #define D_NOHEADER      (1<<31)
 #define D_ALL           (~(0) & (~(D_NOHEADER)))
 
@@ -96,7 +96,7 @@ int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
 void set_debug_flags( const char *strflags );
-void _condor_fd_panic( int line, char *file );
+void _condor_fd_panic( int line, const char *file );
 void _condor_set_debug_flags( const char *strflags );
 
 int  dprintf_config_ContinueOnFailure( int fContinue );
@@ -144,7 +144,7 @@ int fclose_wrapper( FILE *stream, int maxRetries );
 /*
 **	Important external variables in libc
 */
-#if !( defined(LINUX) && defined(GLIBC) || defined(Darwin) || defined(CONDOR_FREEBSD) )
+#if !( defined(LINUX) || defined(Darwin) || defined(CONDOR_FREEBSD) )
 extern DLL_IMPORT_MAGIC int		errno;
 extern DLL_IMPORT_MAGIC int		sys_nerr;
 #if _MSC_VER < 1400 /* VC++ 2005 version */
@@ -155,7 +155,7 @@ extern DLL_IMPORT_MAGIC char	*sys_errlist[];
 extern int	_EXCEPT_Line;			/* Line number of the exception    */
 extern const char	*_EXCEPT_File;		/* File name of the exception      */
 extern int	_EXCEPT_Errno;			/* errno from most recent system call */
-extern int (*_EXCEPT_Cleanup)(int,int,char*);	/* Function to call to clean up (or NULL) */
+extern int (*_EXCEPT_Cleanup)(int,int,const char*);	/* Function to call to clean up (or NULL) */
 extern void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2);
 
 #if defined(__cplusplus)
@@ -195,6 +195,29 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
         dprintf( flags, "(ptr)->ru_stime = %d.%06d\n", (ptr)->ru_stime.tv_sec,\
         (ptr)->ru_stime.tv_usec ); \
 }
+
+#ifndef REMIND
+# ifdef _MSC_VER // for Microsoft C, prefix file and line to the the message
+#  define PRAGMA_QUOTE(x)   #x
+#  define PRAGMA_QQUOTE(y)  PRAGMA_QUOTE(y)
+#  define REMIND(str)       message(__FILE__ "(" PRAGMA_QQUOTE(__LINE__) ") : " str)
+# elif defined __GNUC__ // gcc emits file and line prefix automatically.
+#  define REMIND(str)       message str
+# else 
+# endif
+#endif // REMIND
+
+#if defined _MSC_VER && defined _DEBUG // WIN32
+# ifdef _X86_
+#  define DEBUG_BREAK_INTO_DEBUGGER _asm {int 3}
+# else
+#  define DEBUG_BREAK_INTO_DEBUGGER DebugBreak()
+# endif
+# define DEBUG_WAIT_FOR_DEBUGGER(var,def) { static int var=def; while (var) Sleep(1000); }
+#else
+# define DEBUG_BREAK_INTO_DEBUGGER ((void)0)
+# define DEBUG_WAIT_FOR_DEBUGGER(var,def) ((void)0)
+#endif
 
 #endif /* CONDOR_DEBUG_H */
 

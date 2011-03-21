@@ -28,7 +28,6 @@
 
 #define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
-using namespace std;
 
 #include "dc_lease_manager_lease.h"
 
@@ -62,7 +61,7 @@ class DCLeaseManager : public Daemon
 	bool getLeases( const char *requestor_name,
 					int num, int duration,
 					const char* requirements, const char *rank,
-					list< DCLeaseManagerLease *> &leases );
+					std::list< DCLeaseManagerLease *> &leases );
 
 
 		/** Get lease(s) which to match the requirements passed in
@@ -72,7 +71,7 @@ class DCLeaseManager : public Daemon
 			@return true on success, false on invalid input (NULL)
 		*/
 	bool getLeases( const classad::ClassAd &ad,
-					list< DCLeaseManagerLease *> &leases );
+					std::list< DCLeaseManagerLease *> &leases );
 
 
 		/** Renew the leases specified
@@ -81,15 +80,15 @@ class DCLeaseManager : public Daemon
 			@param out_leases STL list of renewed leases
 			The list pointers should be delete()ed when no longer used
 		*/
-	bool renewLeases( list< const DCLeaseManagerLease *> &leases,
-					  list< DCLeaseManagerLease *> &out_leases );
+	bool renewLeases( std::list< const DCLeaseManagerLease *> &leases,
+					  std::list< DCLeaseManagerLease *> &out_leases );
 
 
 		/** Release the leases specified
 			@param leases STL list of lease information on leases to release
 			@return true on success, false on invalid input (NULL)
 		*/
-	bool releaseLeases( list <DCLeaseManagerLease *> &leases );
+	bool releaseLeases( std::list <DCLeaseManagerLease *> &leases );
 
 
  private:
@@ -101,7 +100,7 @@ class DCLeaseManager : public Daemon
 	// Helper methods to get/send leases
 	bool SendLeases(
 		Stream								*stream,
-		list< const DCLeaseManagerLease *> &l_list
+		std::list< const DCLeaseManagerLease *> &l_list
 		);
 	bool GetLeases(
 		Stream								*stream,

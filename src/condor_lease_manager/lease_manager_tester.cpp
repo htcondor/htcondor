@@ -30,7 +30,7 @@
 #define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
-#include "conversion.h"
+//#include "conversion.h"
 using namespace std;
 
 #include <list>

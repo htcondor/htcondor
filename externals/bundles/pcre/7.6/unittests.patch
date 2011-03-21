@@ -1,6 +1,5 @@
-diff -ruN pcre-7.6/RunGrepTest pcre-7.6-patched/RunGrepTest
---- pcre-7.6/RunGrepTest	2007-12-05 14:40:51.000000000 -0600
-+++ pcre-7.6-patched/RunGrepTest	2008-02-07 22:29:50.562943714 -0600
+--- RunGrepTest.orig	2007-12-05 14:40:51.000000000 -0600
++++ RunGrepTest	2008-02-07 22:29:50.562943714 -0600
 @@ -14,7 +14,7 @@
  echo "Testing pcregrep"
  $pcregrep -V
@@ -10,9 +9,8 @@ diff -ruN pcre-7.6/RunGrepTest pcre-7.6-patched/RunGrepTest
  valgrind=
  
  while [ $# -gt 0 ] ; do
-diff -ruN pcre-7.6/RunTest pcre-7.6-patched/RunTest
---- pcre-7.6/RunTest	2007-09-17 04:35:29.000000000 -0500
-+++ pcre-7.6-patched/RunTest	2008-02-07 22:29:46.727784628 -0600
+--- RunTest.orig	2007-09-17 04:35:29.000000000 -0500
++++ RunTest	2008-02-07 22:29:46.727784628 -0600
 @@ -2,7 +2,7 @@
  
  # Run PCRE tests

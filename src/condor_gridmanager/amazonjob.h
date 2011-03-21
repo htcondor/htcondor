@@ -23,7 +23,6 @@
   
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "MyString.h"
 #include "classad_hashtable.h"
 
 #include "basejob.h"
@@ -73,17 +72,17 @@ public:
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 
-	MyString errorString;
+	std::string errorString;
 	char *remoteJobId;
-	MyString remoteJobState;
+	std::string remoteJobState;
 
 	AmazonResource *myResource;
 	GahpClient *gahp;
 
 private:
 	// create dynamic input parameters
-	MyString build_ami_id();
-	MyString build_keypair();
+	std::string build_ami_id();
+	std::string build_keypair();
 	StringList* build_groupnames();
 
 	std::string m_serviceUrl;
@@ -97,9 +96,9 @@ private:
 	int m_vm_check_times;
 	int m_keypair_check_times;
 	
-	MyString m_ami_id;
-	MyString m_key_pair;
-	MyString m_key_pair_file;
+	std::string m_ami_id;
+	std::string m_key_pair;
+	std::string m_key_pair_file;
 	StringList* m_group_names;
 	
 	// remove created temporary keypair file

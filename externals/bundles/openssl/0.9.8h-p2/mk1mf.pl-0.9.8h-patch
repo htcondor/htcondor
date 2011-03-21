@@ -1,5 +1,5 @@
---- mk1mf.pl.old	2008-09-15 17:18:59.000000000 -0500
-+++ mk1mf.pl	2008-09-15 17:19:43.000000000 -0500
+--- util/mk1mf.pl.old	2008-09-15 17:18:59.000000000 -0500
++++ util/mk1mf.pl	2008-09-15 17:19:43.000000000 -0500
 @@ -228,6 +228,7 @@
  $cflags.=" -DOPENSSL_NO_ECDH" if $no_ecdh;
  $cflags.=" -DOPENSSL_NO_ENGINE"   if $no_engine;

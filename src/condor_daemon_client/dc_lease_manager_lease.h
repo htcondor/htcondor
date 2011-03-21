@@ -29,7 +29,6 @@
 
 #define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
-using namespace std;
 
 
 class DCLeaseManagerLease {
@@ -40,7 +39,7 @@ class DCLeaseManagerLease {
 	DCLeaseManagerLease( const DCLeaseManagerLease &, time_t now = 0 );
 	DCLeaseManagerLease( classad::ClassAd *, time_t now = 0 );
 	DCLeaseManagerLease( const classad::ClassAd &, time_t now = 0 );
-	DCLeaseManagerLease( const string &lease_id,
+	DCLeaseManagerLease( const std::string &lease_id,
 						 int lease_duration = 0,
 						 bool release_when_done = true,
 						 time_t now = 0 );
@@ -52,7 +51,7 @@ class DCLeaseManagerLease {
 	int copyUpdates( const DCLeaseManagerLease & );
 
 	// Accessors
-	const string &leaseId( void ) const
+	const std::string &leaseId( void ) const
 		{ return m_lease_id; };
 	int leaseDuration( void ) const
 		{ return m_lease_duration; };
@@ -66,7 +65,7 @@ class DCLeaseManagerLease {
 	// Lease ID matching methods
 	bool idMatch( const char *id ) const
 		{ return m_lease_id == id; };
-	bool idMatch( const string &id ) const
+	bool idMatch( const std::string &id ) const
 		{ return m_lease_id == id; };
 	bool idMatch( const DCLeaseManagerLease &other ) const
 		{ return m_lease_id == other.leaseId(); };
@@ -78,7 +77,7 @@ class DCLeaseManagerLease {
 		{ return m_dead = dead; };
 
 	// Set methods
-	int setLeaseId( const string & );
+	int setLeaseId( const std::string & );
 	int setLeaseDuration( int );
 	int setLeaseStart( time_t now = 0 );
 
@@ -104,7 +103,7 @@ class DCLeaseManagerLease {
 
   private:
 	classad::ClassAd	*m_lease_ad;
-	string				 m_lease_id;
+	std::string			 m_lease_id;
 	int					 m_lease_duration;
 	int					 m_lease_time;
 	bool				 m_release_lease_when_done;
@@ -120,75 +119,75 @@ class DCLeaseManagerLease {
 // Copy a list of leases -- returns count
 int
 DCLeaseManagerLease_copyList(
-	const list<const DCLeaseManagerLease *>	&source_list,
-	list<const DCLeaseManagerLease *>		&dest_list
+	const std::list<const DCLeaseManagerLease *>	&source_list,
+	std::list<const DCLeaseManagerLease *>		&dest_list
 	);
 int
 DCLeaseManagerLease_copyList(
-	const list<DCLeaseManagerLease *>		&source_list,
-	list<DCLeaseManagerLease *>				&dest_list
+	const std::list<DCLeaseManagerLease *>		&source_list,
+	std::list<DCLeaseManagerLease *>				&dest_list
 	);
 
 // Free a list of leases -- returns count
 int
 DCLeaseManagerLease_freeList(
-	list<DCLeaseManagerLease *>				&lease_list
+	std::list<DCLeaseManagerLease *>				&lease_list
 	);
 
 // Remove leases from a list
 int
 DCLeaseManagerLease_removeLeases(
-	list<DCLeaseManagerLease *>				&lease_list,
-	const list<const DCLeaseManagerLease *> &remove_list
+	std::list<DCLeaseManagerLease *>				&lease_list,
+	const std::list<const DCLeaseManagerLease *> &remove_list
 	);
 
 // Update a list of leases
 int
 DCLeaseManagerLease_updateLeases(
-	list<DCLeaseManagerLease *>				&lease_list,
-	const list<const DCLeaseManagerLease *> &update_list
+	std::list<DCLeaseManagerLease *>				&lease_list,
+	const std::list<const DCLeaseManagerLease *> &update_list
 	);
 
 // Lease mark operations
 int
 DCLeaseManagerLease_markLeases(
-	list<DCLeaseManagerLease *>				&lease_list,
+	std::list<DCLeaseManagerLease *>				&lease_list,
 	bool									mark
 	);
 int
 DCLeaseManagerLease_removeMarkedLeases(
-	list<DCLeaseManagerLease *>				&lease_list,
+	std::list<DCLeaseManagerLease *>				&lease_list,
 	bool									mark
 	);
 int
 DCLeaseManagerLease_getMarkedLeases(
-	const list<const DCLeaseManagerLease *> &lease_list,
+	const std::list<const DCLeaseManagerLease *> &lease_list,
 	bool									mark,
-	list<const DCLeaseManagerLease *>	 	&marked_lease_list
+	std::list<const DCLeaseManagerLease *>	 	&marked_lease_list
 	);
 int
 DCLeaseManagerLease_countMarkedLeases(
-	const list<const DCLeaseManagerLease *> &lease_list,
+	const std::list<const DCLeaseManagerLease *> &lease_list,
 	bool									mark
 	);
 
 // Get a 'const' list of leases from a list of leases
-list<const DCLeaseManagerLease *> &
+std::list<const DCLeaseManagerLease *> &
 DCLeaseManagerLease_getConstList(
-	const list<DCLeaseManagerLease *>		&non_const_list
+	const std::list<DCLeaseManagerLease *>		&non_const_list
 	);
 
 // Write out a list of leases to a file (returns count)
 int
 DCLeaseManagerLease_fwriteList(
-	const list<const DCLeaseManagerLease *> &lease_list,
+	const std::list<const DCLeaseManagerLease *> &lease_list,
 	FILE									*fp
 	);
 
 // Read a list of leases from a file (returns count)
 int
 DCLeaseManagerLease_freadList(
-	list<DCLeaseManagerLease *>				&lease_list,
+	std::list<DCLeaseManagerLease *>				&lease_list,
 	FILE									*fp
 	);
 

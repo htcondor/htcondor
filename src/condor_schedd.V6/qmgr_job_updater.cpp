@@ -25,32 +25,33 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "internet.h"
+#include "classad_merge.h"
 
 
 #include "qmgr_job_updater.h"
 #include "condor_qmgr.h"
+#include "dc_schedd.h"
 
 
-QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address, const char *schedd_version )
+QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address,
+	const char *schedd_version ) : common_job_queue_attrs(0),
+	hold_job_queue_attrs(0),
+	evict_job_queue_attrs(0),
+	remove_job_queue_attrs(0),
+	requeue_job_queue_attrs(0),
+	terminate_job_queue_attrs(0),
+	checkpoint_job_queue_attrs(0),
+	m_pull_attrs(0),
+	job_ad(job), // we do *NOT* want to make our own copy of this ad
+	schedd_addr(schedd_address?strdup(schedd_address):0),
+	schedd_ver(schedd_version?strdup(schedd_version):0),
+	cluster(-1), proc(-1),
+	q_update_tid(-1) 
 {
-	q_update_tid = -1;
-
 	if( ! is_valid_sinful(schedd_address) ) {
 		EXCEPT( "schedd_addr not specified with valid address (%s)",
 				schedd_address );
 	}
-	schedd_addr = strdup( schedd_address );
-	if( schedd_version ) {
-		this->schedd_ver = strdup( schedd_version );
-	}
-	else {
-		this->schedd_ver = NULL;
-	}
-
-		// we do *NOT* want to make our own copy of this ad
-	job_ad = job;
-
-	cluster = proc = -1;
 	if( !job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_CLUSTER_ID);
 	}
@@ -64,22 +65,13 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address, const 
 	// will just be a no-op.
 	job_ad->LookupString(ATTR_OWNER, m_owner);
 
-	common_job_queue_attrs = NULL;
-	hold_job_queue_attrs = NULL;
-	evict_job_queue_attrs = NULL;
-	remove_job_queue_attrs = NULL;
-	requeue_job_queue_attrs = NULL;
-	terminate_job_queue_attrs = NULL;
-	checkpoint_job_queue_attrs = NULL;
-	m_pull_attrs = NULL;
 	initJobQueueAttrLists();
 
-		// finally, clear all the dirty bits on this jobAd, so we only
-		// update the queue with things that have changed after this
-		// point. 
+	// finally, clear all the dirty bits on this jobAd, so we only
+	// update the queue with things that have changed after this
+	// point. 
 	job_ad->ClearAllDirtyFlags();
 }
-
 
 QmgrJobUpdater::~QmgrJobUpdater()
 {
@@ -127,6 +119,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
 	common_job_queue_attrs->insert( ATTR_JOB_COMMITTED_TIME );
 	common_job_queue_attrs->insert( ATTR_COMMITTED_SLOT_TIME );
+	common_job_queue_attrs->insert( ATTR_DELEGATED_PROXY_EXPIRATION );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
@@ -219,10 +212,11 @@ QmgrJobUpdater::resetUpdateTimer( void )
   modify it to be less potentially harmful for schedd scalability.
 */
 bool
-QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaster )
+QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaster, bool log )
 {
 	bool result;
 	MyString err_msg;
+	SetAttributeFlags_t flags=0;
 
 	dprintf( D_FULLDEBUG, "QmgrJobUpdater::updateAttr: %s = %s\n",
 			 name, expr );
@@ -235,8 +229,12 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 	if (updateMaster) {
 		p = 0;
 	}
+
+	if (log) {
+		flags = SHOULDLOG;
+	}
 	if( ConnectQ(schedd_addr,SHADOW_QMGMT_TIMEOUT,false,NULL,m_owner.Value(),schedd_ver) ) {
-		if( SetAttribute(cluster,p,name,expr) < 0 ) {
+		if( SetAttribute(cluster,p,name,expr,flags) < 0 ) {
 			err_msg = "SetAttribute() failed";
 			result = FALSE;
 		} else {
@@ -257,11 +255,11 @@ QmgrJobUpdater::updateAttr( const char *name, const char *expr, bool updateMaste
 
 
 bool
-QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster )
+QmgrJobUpdater::updateAttr( const char *name, int value, bool updateMaster, bool log )
 {
 	MyString buf;
     buf.sprintf("%d", value);
-	return updateAttr(name, buf.Value(), updateMaster);
+	return updateAttr(name, buf.Value(), updateMaster, log);
 }
 
 
@@ -356,6 +354,40 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 		return false;
 	}
 	job_ad->ClearAllDirtyFlags();
+	return true;
+}
+
+
+bool
+QmgrJobUpdater::retrieveJobUpdates( void )
+{
+	ClassAd updates;
+	CondorError errstack;
+	StringList job_ids;
+	char id_str[PROC_ID_STR_BUFLEN];
+	MyString error;
+
+	ProcIdToStr(cluster, proc, id_str);
+	job_ids.insert(id_str);
+
+	if ( !ConnectQ( schedd_addr, SHADOW_QMGMT_TIMEOUT, false ) ) {
+		return false;
+	}
+	if ( GetDirtyAttributes( cluster, proc, &updates ) < 0 ) {
+		DisconnectQ(NULL,false);
+		return false;
+	}
+	DisconnectQ( NULL, false );
+
+	dprintf( D_FULLDEBUG, "Retrieved updated attributes from schedd\n" );
+	updates.dPrint( D_JOB );
+	MergeClassAds( job_ad, &updates, true );
+
+	DCSchedd schedd( schedd_addr );
+	if ( schedd.clearDirtyAttrs( &job_ids, &errstack ) == NULL ) {
+		dprintf( D_ALWAYS, "clearDirtyAttrs() failed: %s\n", errstack.getFullText( ) );
+		return false;
+	}
 	return true;
 }
 

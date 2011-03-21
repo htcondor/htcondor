@@ -54,8 +54,8 @@
 #define NOSOUND
 
 // Make it official that Windows 2000 is our target
-#define _WIN32_WINNT 0x0500
-#define WINVER       0x0500
+//#define _WIN32_WINNT 0x0500
+//#define WINVER       0x0500
 
 // Make sure to define this *before* we include winsock2.h
 #define FD_SETSIZE 1024
@@ -107,7 +107,7 @@ typedef unsigned __int32 uint32_t;
 #define strlwr _strlwr
 #define chdir _chdir
 #define fsync _commit
-int access(const char *, int);
+DLL_IMPORT_MAGIC int access(const char *, int);
 #define execl _execl  
 #define execv _execv
 #define putenv _putenv
@@ -235,8 +235,11 @@ END_C_DECLS
 
 /* Win32 has a __int64 type defined*/
 # define HAVE___INT64	1
-#endif
 
+/* Win32 doesn't have gettimeofday() */
+# define HAVE__FTIME	1
+
+#endif
 
 /* Define the PRIx64 macros */
 

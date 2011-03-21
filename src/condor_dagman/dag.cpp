@@ -215,7 +215,7 @@ Dag::~Dag() {
 	delete[] _dot_include_file_name;
 
 	delete[] _statusFileName;
-    
+
     return;
 }
 
@@ -245,6 +245,8 @@ bool Dag::Bootstrap (bool recovery)
 
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode... "
 					">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n" );
+		_jobstateLog.WriteRecoveryStarted();
+		_jobstateLog.InitializeRecovery();
 
 		// as we read the event log files, we emit lots of imformation into
 		// the logfile. If this is on NFS, then we pay a *very* large price
@@ -263,6 +265,7 @@ bool Dag::Bootstrap (bool recovery)
 				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 							_nfsLogIsError, recovery, _defaultNodeLog ) ) {
 					debug_cache_stop_caching();
+					_jobstateLog.WriteRecoveryFailure();
 					return false;
 				}
 			}
@@ -275,6 +278,7 @@ bool Dag::Bootstrap (bool recovery)
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
+				_jobstateLog.WriteRecoveryFailure();
 				return false;
 			}
 		}
@@ -282,6 +286,7 @@ bool Dag::Bootstrap (bool recovery)
 			if( !ProcessLogEvents( DAPLOG, recovery ) ) {
 				_recovery = false;
 				debug_cache_stop_caching();
+				_jobstateLog.WriteRecoveryFailure();
 				return false;
 			}
 		}
@@ -293,6 +298,7 @@ bool Dag::Bootstrap (bool recovery)
 				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 							_nfsLogIsError, _recovery, _defaultNodeLog ) ) {
 					debug_cache_stop_caching();
+					_jobstateLog.WriteRecoveryFailure();
 					return false;
 				}
 				_postScriptQ->Run( job->_scriptPost );
@@ -303,6 +309,7 @@ bool Dag::Bootstrap (bool recovery)
 
 		debug_cache_stop_caching();
 
+		_jobstateLog.WriteRecoveryFinished();
         debug_printf( DEBUG_NORMAL, "...done with RECOVERY mode "
 					"<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n" );
 		print_status();
@@ -464,6 +471,14 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 		debug_printf( DEBUG_NORMAL, "    ------------------------------\n");
 	}
 
+		// For performance reasons, we don't want to flush the jobstate
+		// log file in recovery mode.  Outside of recovery mode, though
+		// we want to do that so that the jobstate log file stays
+		// current with the status of the workflow.
+	if ( !_recovery ) {
+		_jobstateLog.Flush();
+	}
+
 	return result;
 }
 
@@ -538,6 +553,13 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 					// ignore it and hope for the best...
 				break;
 			} 
+
+				// Log this event if necessary.
+			if ( job ) {
+				_jobstateLog.WriteEvent( event, job );
+			}
+
+			job->SetLastEventTime( event );
 
 				// Note: this is a bit conservative -- some events (e.g.,
 				// ImageSizeUpdate) don't actually outdate the status file.
@@ -815,6 +837,9 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 	if ( job->_queuedNodeJobProcs == 0 ) {
 		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+
+			// Log job success or failure if necessary.
+		_jobstateLog.WriteJobSuccessOrFailure( job );
 	}
 
 	//
@@ -854,8 +879,8 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 	if ( job->_queuedNodeJobProcs == 0 ) {
 			// All procs for this job are done.
-			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
-						job->GetJobName() );
+		debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
+					job->GetJobName() );
 
 			// if a POST script is specified for the job, run it
 		if (job->_scriptPost != NULL) {
@@ -882,7 +907,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
-			(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+		(void)job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 
 			// Note: "|| recovery" below is somewhat of a "quick and dirty"
 			// fix to Gnats PR 357.  The first part of the assert can fail
@@ -942,6 +967,9 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				job->retval = (0 - termEvent->signalNumber);
 			}
 
+				// Log post script success or failure if necessary.
+			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
+
 				//
 				// Deal with retries.
 				//
@@ -991,7 +1019,12 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			ASSERT( termEvent->returnValue == 0 );
 			debug_dprintf( D_ALWAYS | D_NOHEADER, DEBUG_NORMAL,
 						"completed successfully.\n" );
+
 			job->retval = 0;
+
+				// Log post script success or failure if necessary.
+			_jobstateLog.WriteScriptSuccessOrFailure( job, true );
+
 			TerminateJob( job, recovery );
 		}
 
@@ -1239,8 +1272,13 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 	bool isNoop = JobIsNoop( condorID );
 	int id = GetIndexID( condorID );
 	if ( GetEventIDHash( isNoop, logsource )->lookup(id, node) != 0 ) {
+			// Note: eventually get rid of the "(might be because of
+			// node retries)" message here, and have code that explicitly
+			// figures out whether the node was not found because of a
+			// retry.  (See gittrac #1957 and #1961.)
     	debug_printf( DEBUG_VERBOSE,
-					"ERROR: node for condor ID %d.%d.%d not found!\n",
+					"ERROR: node for condor ID %d.%d.%d not found! "
+					"(might be because of node retries)\n",
 					condorID._cluster, condorID._proc, condorID._subproc);
 		node = NULL;
 	}
@@ -1501,11 +1539,11 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 
         job->_Status = Job::STATUS_ERROR;
 		_preRunNodeCount--;
+		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 
 		if( job->GetRetries() < job->GetRetryMax() ) {
 			RestartNode( job, false );
-		}
-		else {
+		} else {
 			_numNodesFailed++;
 			if( job->GetRetryMax() > 0 ) {
 				// add # of retries to error_text
@@ -1516,13 +1554,13 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				delete [] tmp;   
 			}
 		}
-	}
-	else {
+	} else {
 		debug_printf( DEBUG_NORMAL, "PRE Script of Node %s completed "
 					  "successfully.\n", job->GetJobName() );
 		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
 		_preRunNodeCount--;
+		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( job, -job->_nodePriority );
 		} else {
@@ -1659,6 +1697,10 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 }
 
 //---------------------------------------------------------------------------
+// Note: the Condor part of this method essentially duplicates functionality
+// that is now in schedd.cpp.  We are keeping this here for now in case
+// someone needs to run a 7.5.6 DAGMan with an older schedd.
+// wenger 2011-01-26
 void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 
 	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor/"
@@ -1760,18 +1802,18 @@ void Dag::RemoveRunningScripts ( ) const {
 }
 
 //-----------------------------------------------------------------------------
-void Dag::Rescue ( const char * datafile, bool multiDags,
+void Dag::Rescue ( const char * dagFile, bool multiDags,
 			int maxRescueDagNum, bool parseFailed ) /* const */
 {
 	MyString rescueDagFile;
 	if ( parseFailed ) {
-		rescueDagFile = datafile;
+		rescueDagFile = dagFile;
 		rescueDagFile += ".parse_failed";
 	} else {
-		int nextRescue = FindLastRescueDagNum( datafile, multiDags,
+		int nextRescue = FindLastRescueDagNum( dagFile, multiDags,
 					maxRescueDagNum ) + 1;
 		if ( nextRescue > maxRescueDagNum ) nextRescue = maxRescueDagNum;
-		rescueDagFile = RescueDagName( datafile, multiDags, nextRescue );
+		rescueDagFile = RescueDagName( dagFile, multiDags, nextRescue );
 	}
 
 		// Note: there could possibly be a race condition here if two
@@ -1779,11 +1821,11 @@ void Dag::Rescue ( const char * datafile, bool multiDags,
 		// should be avoided by the lock file, though, so I'm not doing
 		// anything about it right now.  wenger 2007-02-27
 
-	WriteRescue( rescueDagFile.Value(), datafile, parseFailed );
+	WriteRescue( rescueDagFile.Value(), dagFile, parseFailed );
 }
 
 //-----------------------------------------------------------------------------
-void Dag::WriteRescue (const char * rescue_file, const char * datafile,
+void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 			bool parseFailed) /* const */
 {
 	debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
@@ -1802,10 +1844,10 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile,
 
 	if ( parseFailed ) {
     	fprintf(fp, "# \"Rescue\" DAG file, created after failure parsing\n");
-    	fprintf(fp, "#   the %s DAG file\n", datafile);
+    	fprintf(fp, "#   the %s DAG file\n", dagFile);
 	} else {
     	fprintf(fp, "# Rescue DAG file, created after running\n");
-    	fprintf(fp, "#   the %s DAG file\n", datafile);
+    	fprintf(fp, "#   the %s DAG file\n", dagFile);
 	}
 
 	time_t timestamp;
@@ -1855,6 +1897,13 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile,
 	//
 	if ( _statusFileName ) {
 		fprintf( fp, "NODE_STATUS_FILE %s\n\n", _statusFileName );
+	}
+
+	//
+	// Print the jobstate.log file, if any.
+	//
+	if ( _jobstateLog.LogFile() ) {
+		fprintf( fp, "JOBSTATE_LOG %s\n\n", _jobstateLog.LogFile() );
 	}
 
     //
@@ -2005,7 +2054,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * datafile,
 	//
 	_catThrottles.PrintThrottles( fp );
 
-    fclose(fp);
+    fclose( fp );
 }
 
 //===========================================================================
@@ -2085,8 +2134,6 @@ PrintEvent( debug_level_t level, const ULogEvent* event, Job* node,
 					  event->cluster, event->proc,
 					  event->subproc, recovStr );
 	}
-
-	return;
 }
 
 //-------------------------------------------------------------------------
@@ -2112,6 +2159,7 @@ Dag::RestartNode( Job *node, bool recovery )
 		node->_scriptPre->_done = false;
 	}
 	strcpy( node->error_text, "" );
+	node->ResetJobstateSequenceNum();
 
 	if( !recovery ) {
 		debug_printf( DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n",
@@ -2122,6 +2170,20 @@ Dag::RestartNode( Job *node, bool recovery )
 		debug_printf( DEBUG_VERBOSE, "Looking for retry of node %s (retry "
 					"#%d of %d)...\n", node->GetJobName(), node->GetRetries(),
 					node->GetRetryMax() );
+
+			// Remove the "old" Condor ID from the ID->node hash table
+			// here to fix gittrac #1957.
+			// Note: the if checking against the default condor ID
+			// should *always* be true here, but checking just to be safe.
+		if ( !(node->_CondorID == _defaultCondorId) ) {
+			int logsource = node->JobType() == Job::TYPE_CONDOR ? CONDORLOG :
+						DAPLOG;
+			int id = GetIndexID( node->_CondorID );
+			if ( GetEventIDHash( node->GetNoop(), logsource )->remove( id )
+						!= 0 ) {
+				EXCEPT( "Event ID hash table error!" );
+			}
+		}
 
 		// Doing this fixes gittrac #481 (recovery fails on a DAG that
 		// has retried nodes).  (See SubmitNodeJob() for where this
@@ -2556,6 +2618,21 @@ Dag::GetReject( MyString &firstLocation )
 
 //===========================================================================
 
+/** Set the filename of the jobstate.log file.
+	@param the filename to which to write the jobstate log
+*/
+void 
+Dag::SetJobstateLogFileName( const char *logFileName )
+{
+	if ( _jobstateLog.LogFile() != NULL ) {
+		debug_printf( DEBUG_NORMAL, "Attempt to set JOBSTATE_LOG "
+					"to %s does not override existing value of %s\n",
+					logFileName, _jobstateLog.LogFile() );
+		return;
+	}
+	_jobstateLog.SetLogFile( logFileName );
+}
+
 //-------------------------------------------------------------------------
 // 
 // Function: CheckAllJobs
@@ -2672,6 +2749,35 @@ Dag::SetPendingNodeReportInterval( int interval )
 }
 
 //-------------------------------------------------------------------------
+void
+Dag::CheckThrottleCats()
+{
+	ThrottleByCategory::ThrottleInfo *info;
+	_catThrottles.StartIterations();
+	while ( _catThrottles.Iterate( info ) ) {
+		debug_printf( DEBUG_DEBUG_1, "Category %s has %d jobs, "
+					"throttle setting of %d\n", info->_category->Value(),
+					info->_totalJobs, info->_maxJobs );
+		ASSERT( info->_totalJobs >= 0 );
+		if ( info->_totalJobs < 1 ) {
+				// When we implement the -strict flag (see gittrac #1755)
+				// this should be a fatal error.
+			debug_printf( DEBUG_NORMAL, "Warning: category %s has no "
+						"assigned nodes, so the throttle setting (%d) "
+						"will have no effect\n", info->_category->Value(),
+						info->_maxJobs );
+		}
+
+		if ( !info->isSet() ) {
+				// When we implement the -strict flag (see gittrac #1755)
+				// this should be a fatal error.
+			debug_printf( DEBUG_NORMAL, "Warning: category %s has no "
+						"throttle value set\n", info->_category->Value() );
+		}
+	}
+}
+
+//-------------------------------------------------------------------------
 // 
 // Function: IncludeExtraDotCommands
 // Purpose:  Helper function for DumpDotFile. Reads the _dot_include_file_name 
@@ -2701,6 +2807,7 @@ Dag::IncludeExtraDotCommands(
 		}
 		fprintf(dot_file, "// End of commands included from %s.\n\n", 
 				_dot_include_file_name);
+		fclose(include_file);
 	}
 	return;
 }
@@ -3435,6 +3542,8 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	// This function should never be called when the Dag object is being used
 	// to parse a splice.
 	ASSERT( _isSplice == false );
+
+	_jobstateLog.WriteSubmitFailure( node );
 
 		// Set the times to wait twice as long as last time.
 	int thisSubmitDelay = _nextSubmitDelay;

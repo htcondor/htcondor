@@ -146,11 +146,11 @@ check_PROGRAMS =							\
 	$(TESTS)
 
 libclassad_la_SOURCES = \
-	attrrefs.cpp new_classad.cpp collection.cpp collectionBase.cpp new_classad_debug.cpp	\
+	attrrefs.cpp classad.cpp common.cpp collection.cpp collectionBase.cpp debug.cpp	\
 	exprList.cpp exprTree.cpp fnCall.cpp indexfile.cpp lexer.cpp		\
-	lexerSource.cpp literals.cpp matchClassad.cpp new_classad_operators.cpp query.cpp	\
-	sink.cpp source.cpp transaction.cpp new_classad_util.cpp new_classad_value.cpp view.cpp xmlLexer.cpp	\
-	xmlSink.cpp xmlSource.cpp cclassad.cpp common.cpp $(_libclassad_la_SOURCES)
+	lexerSource.cpp literals.cpp matchClassad.cpp operators.cpp query.cpp	\
+	sink.cpp source.cpp transaction.cpp util.cpp value.cpp view.cpp xmlLexer.cpp	\
+	xmlSink.cpp xmlSource.cpp cclassad.cpp $(_libclassad_la_SOURCES)
 
 libclassad_la_LDFLAGS = -version-info 1:0:1
 libclassad_ns_la_LDFLAGS = -version-info 1:0:1

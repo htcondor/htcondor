@@ -29,7 +29,9 @@
 #include "list.h"
 #include "qmgmt.h"
 
+#ifdef HAVE_EXT_GSOAP
 #include "soap_scheddH.h"
+#endif
 
 /**
    `A JobFile is a file that resides in a Job's spool. JobFile objects

@@ -33,6 +33,7 @@
 #include "gridmanager.h"
 #include "condorjob.h"
 #include "condor_config.h"
+#include "file_transfer.h"
 
 
 // GridManager job states
@@ -132,11 +133,11 @@ void CondorJobReconfig()
 
 bool CondorJobAdMatch( const ClassAd *job_ad ) {
 	int universe;
-	MyString resource;
+	std::string resource;
 	if ( job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) &&
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
-		 strncasecmp( resource.Value(), "condor ", 7 ) == 0 ) {
+		 strncasecmp( resource.c_str(), "condor ", 7 ) == 0 ) {
 
 		return true;
 	}
@@ -159,7 +160,7 @@ CondorJob::CondorJob( ClassAd *classad )
 {
 	char buff[4096];
 	ArgList args;
-	MyString error_string = "";
+	std::string error_string = "";
 	char *gahp_path;
 	bool job_already_submitted = false;
 
@@ -178,12 +179,15 @@ CondorJob::CondorJob( ClassAd *classad )
 	submitterId = NULL;
 	connectFailureCount = 0;
 	jobProxy = NULL;
-	remoteProxyExpireTime = 0;
+	lastProxyExpireTime = 0;
+	delegatedProxyExpireTime = 0;
+	delegatedProxyRenewTime = 0;
 	lastProxyRefreshAttempt = 0;
 	myResource = NULL;
 	newRemoteStatusAd = NULL;
 	newRemoteStatusServerTime = 0;
 	doActivePoll = false;
+	int int_value;
 
 	lastRemoteStatusServerTime = 0;
 
@@ -201,41 +205,46 @@ CondorJob::CondorJob( ClassAd *classad )
 		goto error_exit;
 	}
 
+	int_value = 0;
+	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
+		delegatedProxyExpireTime = (time_t)int_value;
+		delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
+	}
+
 	buff[0] = '\0';
 	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff[0] != '\0' ) {
 		const char *token;
-		MyString str = buff;
 
-		str.Tokenize();
+		Tokenize( buff );
 
-		token = str.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "condor" ) ) {
-			error_string.sprintf( "%s not of type condor",
+			sprintf( error_string, "%s not of type condor",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			remoteScheddName = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing schedd name",
+			sprintf( error_string, "%s missing schedd name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
-		token = str.GetNextToken( " ", false );
+		token = GetNextToken( " ", false );
 		if ( token && *token ) {
 			remotePoolName = strdup( token );
 		} else {
-			error_string.sprintf( "%s missing pool name",
+			sprintf( error_string, "%s missing pool name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -258,7 +267,7 @@ CondorJob::CondorJob( ClassAd *classad )
 		}
 		submitterId = strdup( buff );
 	} else {
-		error_string.sprintf( "%s is not set in the job ad",
+		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GLOBAL_JOB_ID );
 		goto error_exit;
 	}
@@ -301,8 +310,8 @@ CondorJob::CondorJob( ClassAd *classad )
 		// We must ensure that the code-path from GM_HOLD doesn't depend
 		// on any initialization that's been skipped.
 	gmState = GM_HOLD;
-	if ( !error_string.IsEmpty() ) {
-		jobAd->Assign( ATTR_HOLD_REASON, error_string.Value() );
+	if ( !error_string.empty() ) {
+		jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 	}
 	return;
 }
@@ -437,12 +446,12 @@ void CondorJob::doEvaluateState()
 			int num_ads = 0;
 			int tmp_int = 0;
 			ClassAd **status_ads = NULL;
-			MyString constraint;
-			constraint.sprintf( "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
+			std::string constraint;
+			sprintf( constraint, "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
 								remoteJobId.cluster, ATTR_PROC_ID,
 								remoteJobId.proc );
 			rc = gahp->condor_job_status_constrained( remoteScheddName,
-													  constraint.Value(),
+													  constraint.c_str(),
 													  &num_ads, &status_ads );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -676,7 +685,15 @@ void CondorJob::doEvaluateState()
 				// HELD. By doing an active probe, we'll automatically
 				// ignore any update ads from before the probe.
 				if(jobProxy) {
-					remoteProxyExpireTime = jobProxy->expiration_time;
+					lastProxyExpireTime = jobProxy->expiration_time;
+					delegatedProxyExpireTime = GetDesiredDelegatedJobCredentialExpiration(jobAd);
+					delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
+					time_t actual_expiration = delegatedProxyExpireTime;
+					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
+						actual_expiration = jobProxy->expiration_time;
+					}
+					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+								   (int)actual_expiration );
 				}
 				gmState = GM_POLL_ACTIVE;
 			} else {
@@ -726,7 +743,8 @@ void CondorJob::doEvaluateState()
 				// The job is on hold remotely but not locally. This means
 				// the remote job needs to be released.
 				gmState = GM_RELEASE_REMOTE_JOB;
-			} else if ( jobProxy && remoteProxyExpireTime < jobProxy->expiration_time ) {
+			} else if ( jobProxy && lastProxyExpireTime < jobProxy->expiration_time ||
+						jobProxy && delegatedProxyRenewTime < now ) {
 				int interval = param_integer( "GRIDMANAGER_PROXY_REFRESH_INTERVAL", 10*60 );
 				if ( now >= lastProxyRefreshAttempt + interval ) {
 					gmState = GM_REFRESH_PROXY;
@@ -761,9 +779,11 @@ void CondorJob::doEvaluateState()
 					}
 					errorString = gahp->getErrorString();
 
-					if ( ( remoteProxyExpireTime != 0 &&
-						   remoteProxyExpireTime < now + 60 ) ||
-						 ( remoteProxyExpireTime == 0 &&
+					if ( ( lastProxyExpireTime != 0 &&
+						   lastProxyExpireTime < now + 60 ) ||
+						 ( delegatedProxyExpireTime != 0 &&
+						   delegatedProxyExpireTime < now + 60 ) ||
+						 ( lastProxyExpireTime == 0 &&
 						   jobProxy->near_expired ) ) {
 
 						dprintf( D_ALWAYS,
@@ -773,7 +793,15 @@ void CondorJob::doEvaluateState()
 						break;
 					}
 				} else {
-					remoteProxyExpireTime = jobProxy->expiration_time;
+					lastProxyExpireTime = jobProxy->expiration_time;
+					delegatedProxyExpireTime = GetDesiredDelegatedJobCredentialExpiration(jobAd);
+					delegatedProxyRenewTime = GetDelegatedProxyRenewalTime(delegatedProxyExpireTime);
+					time_t actual_expiration = delegatedProxyExpireTime;
+					if( actual_expiration == 0 || actual_expiration > jobProxy->expiration_time ) {
+						actual_expiration = jobProxy->expiration_time;
+					}
+					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+								   (int)actual_expiration );
 				}
 				lastProxyRefreshAttempt = time(NULL);
 				gmState = GM_SUBMITTED;
@@ -840,12 +868,12 @@ void CondorJob::doEvaluateState()
 		case GM_POLL_ACTIVE: {
 			int num_ads;
 			ClassAd **status_ads = NULL;
-			MyString constraint;
-			constraint.sprintf( "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
+			std::string constraint;
+			sprintf( constraint, "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
 								remoteJobId.cluster, ATTR_PROC_ID,
 								remoteJobId.proc );
 			rc = gahp->condor_job_status_constrained( remoteScheddName,
-													  constraint.Value(),
+													  constraint.c_str(),
 													  &num_ads, &status_ads );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -882,7 +910,7 @@ void CondorJob::doEvaluateState()
 				// retry the poll until the job is no longer on hold to
 				// spool input files. Not the best solution, but it should
 				// work.
-			MyString hold_reason = "";
+			std::string hold_reason = "";
 			status_ads[0]->LookupString( ATTR_HOLD_REASON, hold_reason );
 			if ( hold_reason == "Spooling input data files" ) {
 				dprintf( D_FULLDEBUG, "(%d.%d) Job not yet released from stage-in hold, retrying poll\n",
@@ -1043,7 +1071,7 @@ void CondorJob::doEvaluateState()
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
 			if( remoteJobId.cluster != 0 ) {
-				errorString.sprintf( "Internal error: Attempting to clear "
+				sprintf( errorString, "Internal error: Attempting to clear "
 									 "request, but remoteJobId.cluster(%d) "
 									 "!= 0, condorState is %s (%d)",
 									 remoteJobId.cluster,
@@ -1082,7 +1110,7 @@ void CondorJob::doEvaluateState()
 				requestScheddUpdate( this, true );
 				break;
 			}
-			remoteProxyExpireTime = 0;
+			lastProxyExpireTime = 0;
 			lastProxyRefreshAttempt = 0;
 			submitLogged = false;
 			executeLogged = false;
@@ -1110,7 +1138,7 @@ void CondorJob::doEvaluateState()
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
 								  sizeof(holdReason) - 1 );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
-					strncpy( holdReason, errorString.Value(),
+					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
 				}
 				if ( holdReason[0] == '\0' ) {
@@ -1180,7 +1208,7 @@ void CondorJob::doEvaluateState()
 void CondorJob::SetRemoteJobId( const char *job_id )
 {
 	int rc;
-	MyString full_job_id;
+	std::string full_job_id;
 
 	if ( job_id ) {
 		rc = sscanf( job_id, "%d.%d", &remoteJobId.cluster,
@@ -1192,13 +1220,13 @@ void CondorJob::SetRemoteJobId( const char *job_id )
 			return;
 		}
 
-		full_job_id.sprintf( "condor %s %s %s", remoteScheddName,
+		sprintf( full_job_id, "condor %s %s %s", remoteScheddName,
 							 remotePoolName, job_id );
 	} else {
 		remoteJobId.cluster = 0;
 	}
 
-	BaseJob::SetRemoteJobId( full_job_id.Value() );
+	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
 void CondorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
@@ -1238,7 +1266,6 @@ void CondorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
 void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 {
 	int new_remote_state;
-	MyString buff;
 	ExprTree *new_expr, *old_expr;
 
 	int index;
@@ -1282,7 +1309,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 
 	if (config_attrs_to_copy == NULL) {
 		// use the defaults
-		attrs_to_copy = (char **)default_attrs_to_copy;
+		attrs_to_copy = const_cast<char **>(default_attrs_to_copy);
 	} else {
 		StringList sl(NULL, ", ");
 		freeAttrs = true;
@@ -1290,9 +1317,9 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		sl.rewind();
 		attrs_to_copy = new char *[sl.number() + 1];
 		for (int i = 0; i < sl.number(); i++) {
-			MyString attribute(sl.next());
-			attrs_to_copy[i] = new char[ attribute.Length() + 1 ];
-			strcpy(attrs_to_copy[i], attribute.Value());
+			std::string attribute(sl.next());
+			attrs_to_copy[i] = new char[ attribute.length() + 1 ];
+			strcpy(attrs_to_copy[i], attribute.c_str());
 		}
 		attrs_to_copy[sl.number()] = NULL;
 		free(config_attrs_to_copy);
@@ -1367,7 +1394,7 @@ BaseResource *CondorJob::GetResource()
 ClassAd *CondorJob::buildSubmitAd()
 {
 	int now = time(NULL);
-	MyString expr;
+	std::string expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;
 	int tmp_int;
@@ -1448,53 +1475,53 @@ ClassAd *CondorJob::buildSubmitAd()
 		// If stdout or stderr is not in the job's Iwd, rename them and
 		// add a transfer remap. Otherwise, the file transfer object will
 		// place them in the Iwd when we stage back the job's output files.
-	MyString output_remaps = "";
-	MyString filename = "";
+	std::string output_remaps = "";
+	std::string filename = "";
 	submit_ad->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps );
 
 	jobAd->LookupString( ATTR_JOB_OUTPUT, filename );
-	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) &&
-		 !nullFile( filename.Value() ) ) {
+	if ( strcmp( filename.c_str(), condor_basename( filename.c_str() ) ) &&
+		 !nullFile( filename.c_str() ) ) {
 
 		char const *working_name = "_condor_stdout";
-		if ( !output_remaps.IsEmpty() ) output_remaps += ";";
-		output_remaps.sprintf_cat( "%s=%s", working_name, filename.Value() );
+		if ( !output_remaps.empty() ) output_remaps += ";";
+		sprintf_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
 		submit_ad->Assign( ATTR_JOB_OUTPUT, working_name );
 	}
 
 	jobAd->LookupString( ATTR_JOB_ERROR, filename );
-	if ( strcmp( filename.Value(), condor_basename( filename.Value() ) ) &&
-		 !nullFile( filename.Value() ) ) {
+	if ( strcmp( filename.c_str(), condor_basename( filename.c_str() ) ) &&
+		 !nullFile( filename.c_str() ) ) {
 
 		char const *working_name = "_condor_stderr";
-		if ( !output_remaps.IsEmpty() ) output_remaps += ";";
-		output_remaps.sprintf_cat( "%s=%s", working_name, filename.Value() );
+		if ( !output_remaps.empty() ) output_remaps += ";";
+		sprintf_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
 		submit_ad->Assign( ATTR_JOB_ERROR, working_name );
 	}
 
-	if ( !output_remaps.IsEmpty() ) {
+	if ( !output_remaps.empty() ) {
 		submit_ad->Assign( ATTR_TRANSFER_OUTPUT_REMAPS,
-						   output_remaps.Value() );
+						   output_remaps.c_str() );
 	}
 
-	expr.sprintf( "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
+	sprintf( expr, "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
 				  COMPLETED );
 
 	if ( jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, tmp_int ) ) {
 		submit_ad->Assign( ATTR_TIMER_REMOVE_CHECK, tmp_int );
-		expr.sprintf_cat( " && ( time() < %s )", ATTR_TIMER_REMOVE_CHECK );
+		sprintf_cat( expr, " && ( time() < %s )", ATTR_TIMER_REMOVE_CHECK );
 	}
 
-	submit_ad->Insert( expr.Value() );
+	submit_ad->Insert( expr.c_str() );
 
-	expr.sprintf( "%s = Undefined", ATTR_OWNER );
-	submit_ad->Insert( expr.Value() );
+	sprintf( expr, "%s = Undefined", ATTR_OWNER );
+	submit_ad->Insert( expr.c_str() );
 
 	const int STAGE_IN_TIME_LIMIT  = 60 * 60 * 8; // 8 hours in seconds.
-	expr.sprintf( "%s = (%s > 0) =!= True && time() > %s + %d",
+	sprintf( expr, "%s = (%s > 0) =!= True && time() > %s + %d",
 				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
 				  ATTR_Q_DATE, STAGE_IN_TIME_LIMIT );
-	submit_ad->Insert( expr.Value() );
+	submit_ad->Insert( expr.c_str() );
 
 	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
 
@@ -1505,6 +1532,9 @@ ClassAd *CondorJob::buildSubmitAd()
 		submit_ad->Assign( ATTR_X509_USER_PROXY, jobProxy->proxy_filename );
 		submit_ad->Assign( ATTR_X509_USER_PROXY_SUBJECT,
 						   jobProxy->subject->subject_name );
+		if (jobProxy->subject->email)
+			submit_ad->Assign( ATTR_X509_USER_PROXY_EMAIL,
+						   jobProxy->subject->email );
 		if ( jobProxy->subject->has_voms_attrs ) {
 			submit_ad->Assign( ATTR_X509_USER_PROXY_FQAN,
 							   jobProxy->subject->fqan );
@@ -1568,6 +1598,18 @@ ClassAd *CondorJob::buildSubmitAd()
 		}
 	}
 
+	// If the remote job will use a shadow, we always want to set
+	// JobLeaseDuration. Otherwise, starter-shadow reconnect is disabled.
+	// We need to be careful to respect the user's setting of the
+	// attribute, hence why we do this check last.
+	tmp_int = CONDOR_UNIVERSE_VANILLA;
+	submit_ad->LookupInteger( ATTR_JOB_UNIVERSE, tmp_int );
+	if ( universeCanReconnect( tmp_int ) &&
+		 submit_ad->Lookup( ATTR_JOB_LEASE_DURATION ) == NULL ) {
+
+		submit_ad->Assign( ATTR_JOB_LEASE_DURATION, 20 * 60 );
+	}
+
 		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
 
 	return submit_ad;
@@ -1575,7 +1617,6 @@ ClassAd *CondorJob::buildSubmitAd()
 
 ClassAd *CondorJob::buildStageInAd()
 {
-	MyString expr;
 	ClassAd *stage_in_ad;
 
 		// Base the stage in ad on our own job ad

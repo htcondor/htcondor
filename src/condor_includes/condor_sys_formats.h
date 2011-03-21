@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -23,36 +23,59 @@
 #if defined( HAVE_SYS_TYPES_H )
 #  include <sys/types.h>
 #endif
-
 #if defined( HAVE_INTTYPES_H )
 #  define __STDC_FORMAT_MACROS
 #  include <inttypes.h>
 #endif
 
+#include "condor_sys_types.h"
+
 /* If no inttypes, try to define our own (make a guess) */
 /* The win 32 include file defines the win32 versions */
-#if !defined( PRId64 )
+#if !defined(PRId64)
+# if ( SIZEOF_LONG==8 )
+#  define PRId64 "ld"
+#  define PRIi64 "li"
+#  define PRIu64 "lu"
+# elif ( defined(HAVE_LONG_LONG) && (SIZEOF_LONG_LONG==8) )
 #  define PRId64 "lld"
-#endif
-#if !defined( PRIi64 )
 #  define PRIi64 "lli"
-#endif
-#if !defined( PRIu64 )
 #  define PRIu64 "llu"
+# else
+#  error "Don't know how to define PRIx64"
+# endif
 #endif
 
-// Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string
+/* Define types that match the PRIx64_t print format strings */
+#if !defined(PRId64_t)
+# if ( SIZEOF_LONG==8 )
+#  define PRId64_t long
+#  define PRIi64_t long
+#  define PRIu64_t unsigned long
+# elif ( defined(HAVE_LONG_LONG) && (SIZEOF_LONG_LONG==8) )
+#  define PRId64_t long long
+#  define PRIi64_t long long
+#  define PRIu64_t unsigned long long
+# elif defined( HAVE___INT64 )
+#  define PRId64_t __int64
+#  define PRIi64_t __int64
+#  define PRIu64_t unsigned __int64
+# else
+#  error "Don't know how to define PRIx64_t"
+# endif
+#endif
+
+/* Define a 'filesize_t' type and PRIfs printf format string and
+ *  matching PRIfs_t type
+ */
 #if defined HAVE_INT64_T
-  typedef int64_t filesize_t;
 # define FILESIZE_T_FORMAT "%" PRId64
-
-#elif defined HAVE___INT64_T
-  typedef __int64 filesize_t;
-# define FILESIZE_T_FORMAT "%" PRId64
-
+# define PRIfs PRId64
+# define PRIfs_t PRId64_t
 #else
-  typedef long filesize_t;
 # define FILESIZE_T_FORMAT "%l"
+# define PRIfs PRId64
+# define PRIfs_t long
 #endif
 
 

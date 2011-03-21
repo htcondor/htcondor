@@ -25,3 +25,4 @@ const char *type_for_ext(const char *ext);
 }
 
 #endif /* _MIME_TYPES_H_ */
+

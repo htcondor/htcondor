@@ -66,8 +66,8 @@ compiled with CC.  Go figure.
 	code because some vendor C++ compilers don't understand the bool keyword
 	which ends up being used in the condor_common.h header file. -psilord */
 #define NO_CONDOR_COMMON
-#include "../../condor_c++_util/memory_file.h"
-#include "../../condor_c++_util/memory_file.cpp"
+#include "memory_file.h"
+#include "memory_file.cpp"
 
 void use(char *program)
 {

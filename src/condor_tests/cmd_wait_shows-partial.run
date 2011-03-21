@@ -40,7 +40,7 @@ my $outputfile = $curcwd . "/" . $pid . "/condor_wait.out";
 CondorTest::debug("condor_wait output is in $outputfile\n",$debuglevel);
 
 my $flowlog = $curcwd . "/" . $pid . "/cmd_wait_shows-partial.log";
-my $writelog = "../testbin_dir/x_write_joblog_events.exe";
+my $writelog = "./x_write_joblog_events.exe";
 
 CondorTest::debug("Result File is $resultfile\n",$debuglevel);
 

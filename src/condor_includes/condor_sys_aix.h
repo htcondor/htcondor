@@ -43,16 +43,11 @@
 #include <sys/id.h>
 #include <sys/wait.h>
 
-/* XXX the odmi uses the variable name 'class' in certain structures which
-	cause the C++ compiler to scream loudly. So, this means that the ODMI is
-	only available in .c files, not .C files. What a pain! */
-#ifndef __cplusplus
 /* Bring in the creepy ODMI stuff tht I use to divine runtime attributes from
 	the system like swap space and stuff */
 #include <odmi.h>
 /* For the various classes(e.g., CuAt) I can get out of /etc/objrepos */
 #include <sys/cfgodm.h>
-#endif
 
 /* to determine swap space sizes */
 #include <sys/vminfo.h>

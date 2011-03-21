@@ -88,7 +88,7 @@ void WindowsMessageReceiver::createHwnd()
 		wc.hCursor					= NULL;
 		wc.hbrBackground			= (HBRUSH)GetStockObject(BLACK_BRUSH);
 		wc.lpszMenuName				= NULL;
-		wc.lpszClassName			= pszClassNameBuf;
+		wc.lpszClassName			= (LPCSTR)pszClassNameBuf;
 
 		//WCHAR wmreceiver[] = ;
 		//wcscpy_s(pszClassNameBuf, wcslen(wmreceiver), wmreceiver);
@@ -109,13 +109,13 @@ void WindowsMessageReceiver::createHwnd()
 			}
 		}
 	}
-	m_hWnd = CreateWindow(pszClassNameBuf, TEXT(""), 0, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, NULL,	NULL, hinst, NULL);
+	m_hWnd = CreateWindow((LPCSTR)pszClassNameBuf, TEXT(""), 0, CW_USEDEFAULT, CW_USEDEFAULT, 1, 1, NULL,	NULL, hinst, NULL);
 	if(!m_hWnd)
 	{
 		DWORD temp = GetLastError();
 		WCHAR buffer[256];
 		_ltow(temp, buffer, 10);
-		OutputDebugString(buffer);
+		OutputDebugString((LPCSTR)buffer);
 	}
 	mapWindowsMessageReceivers()[m_hWnd] = this;
 }

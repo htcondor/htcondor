@@ -83,9 +83,9 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 	parallelMasterResource = rr;
 
 	char buffer[1024];
-	char *spool = param("SPOOL");
-	char *dir = gen_ckpt_name(spool, getCluster(), 0, 0);
-	free(spool);
+	char *lspool = param("SPOOL");
+	char *dir = gen_ckpt_name(lspool, getCluster(), 0, 0);
+	free(lspool);
 	job_ad->Assign(ATTR_REMOTE_SPOOL_DIR,dir);
 	free(dir); dir = NULL;
 	job_ad->Insert(buffer);
@@ -302,9 +302,9 @@ ParallelShadow::getResources( void )
 			job_ad->InsertOrUpdate( buf );
 
 			char buffer[1024];
-			char *spool = param("SPOOL");
-			char *dir = gen_ckpt_name(spool, job_cluster, 0, 0);
-			free(spool);
+			char *lspool = param("SPOOL");
+			char *dir = gen_ckpt_name(lspool, job_cluster, 0, 0);
+			free(lspool);
 			job_ad->Assign(ATTR_REMOTE_SPOOL_DIR, dir);
 			free(dir); dir = NULL;
 			job_ad->Insert(buffer);
@@ -1001,14 +1001,14 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 }
 
 bool
-ParallelShadow::updateJobAttr( const char *name, const char *expr )
+ParallelShadow::updateJobAttr( const char *name, const char *expr, bool log )
 {
-	return job_updater->updateAttr( name, expr, true );
+	return job_updater->updateAttr( name, expr, true, log );
 }
 
 bool
-ParallelShadow::updateJobAttr( const char *name, int value )
+ParallelShadow::updateJobAttr( const char *name, int value, bool log )
 {
-	return job_updater->updateAttr( name, value, true );
+	return job_updater->updateAttr( name, value, true, log );
 }
 

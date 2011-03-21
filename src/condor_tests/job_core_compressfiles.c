@@ -18,11 +18,13 @@
  ***************************************************************/
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <fcntl.h>
 
-int read();
-int write();
-int exit();
+//int read();
+//int write();
+//int exit();
 
 int main(int argc, char* argv[])
 {

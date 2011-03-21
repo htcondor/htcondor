@@ -89,7 +89,7 @@ $failure = sub
 	{
 		my $line = "";
 		CondorTest::debug("Good, a rescue dag was created.......\n",1);
-		my $result = `../testbin_dir/x_read_joblog.exe $joblog RETURNVALUE`;
+		my $result = `./x_read_joblog.exe $joblog RETURNVALUE`;
 		CondorTest::debug("Result of Dag is $result\n",1);
 		CondorTest::debug("Checking for retries.....\n",1);
 		open( RESCUE, "<$rescuedag");

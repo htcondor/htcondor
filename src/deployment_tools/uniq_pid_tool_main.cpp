@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "../condor_procapi/procapi.h"
-#include "../condor_c++_util/exponential_backoff.h"
+#include "../condor_utils/exponential_backoff.h"
 
 //***
 //constant static variables

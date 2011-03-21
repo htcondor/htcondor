@@ -29,14 +29,11 @@
  * __eprintf() is one of those functions, so we include an __eprintf here. 
  */
 #include <stdio.h>
+#include <stdlib.h>
 
 /* This is used by the `assert' macro.  */
 void
-__eprintf (string, expression, line, filename)
-  const char *string;
-  const char *expression;
-  int line;
-  const char *filename;
+__eprintf (const char * string, const char * expression, int line, const char * filename)
 {
    fprintf (stderr, string, expression, line, filename);
    fflush (stderr);

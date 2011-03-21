@@ -1,6 +1,6 @@
---- condor_config.generic	2010-06-05 20:58:29.000000000 -0500
-+++ condor_config.generic.debian	2010-06-18 16:19:48.000000000 -0500
-@@ -47,22 +47,22 @@
+--- condor_config.generic	2010-11-22 10:55:07.000000000 -0600
++++ condor_config.patched	2010-12-03 12:03:16.000000000 -0600
+@@ -47,27 +47,27 @@
  ######################################################################
  
  ##  What machine is your central manager?
@@ -26,53 +26,14 @@
 +LOCAL_CONFIG_FILE	= /etc/condor/condor_config.local
  #LOCAL_CONFIG_FILE	= $(RELEASE_DIR)/etc/$(HOSTNAME).local
  
- ## If the local config file is not present, is it an error?
-@@ -70,12 +70,18 @@
- ## If not specificed, the default is True
- #REQUIRE_LOCAL_CONFIG_FILE = TRUE
- 
-+##  Where is the machine-specific local config directory?
-+##  The files in this directory will be processed in lexicographical 
-+##  order before processing LOCAL_CONFIG_FILE. Any files in its 
-+##  sub-directories will not be ignored
+ ##  Where are optional machine-specific local config files located?
+ ##  Config files are included in lexicographic order.
+-LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
 +LOCAL_CONFIG_DIR	= /etc/condor/config.d
-+
- ##--------------------------------------------------------------------
- ##  Mail parameters:
- ##--------------------------------------------------------------------
- ##  When something goes wrong with condor at your site, who should get
- ##  the email?
--CONDOR_ADMIN		= condor-admin@your.domain
-+CONDOR_ADMIN		= root@$(FULL_HOSTNAME)
+ #LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
  
- ##  Full path to a mail delivery program that understands that "-s"
- ##  means you want to specify a subject:
-@@ -88,13 +94,13 @@
- ##  machines don't share a common UID space, set it to 
- ##  UID_DOMAIN = $(FULL_HOSTNAME)
- ##  to specify that each machine has its own UID space.
--UID_DOMAIN		= your.domain
-+UID_DOMAIN		= $(FULL_HOSTNAME)
- 
- ##  Internet domain of machines sharing a common file system.
- ##  If your machines don't use a network file system, set it to
- ##  FILESYSTEM_DOMAIN = $(FULL_HOSTNAME)
- ##  to specify that each machine has its own file system. 
--FILESYSTEM_DOMAIN	= your.domain
-+FILESYSTEM_DOMAIN	= $(FULL_HOSTNAME)
- 
- ##  This macro is used to specify a short description of your pool. 
- ##  It should be about 20 characters long. For example, the name of 
-@@ -214,7 +220,7 @@
- ##  but note that this will allow anyone to submit jobs or add
- ##  machines to your pool and is a serious security risk.
- 
--ALLOW_WRITE = YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE
-+ALLOW_WRITE = $(FULL_HOSTNAME)
- #ALLOW_WRITE = *.your.domain, your-friend's-machine.other.domain
- #DENY_WRITE = bad-machine.your.domain
- 
-@@ -310,6 +316,12 @@
+ ## If the local config file is not present, is it an error?
+@@ -315,6 +315,12 @@
  ##  permission, you would use:
  #STARTD_SETTABLE_ATTRS_OWNER = your_custom_attribute_name
  
@@ -85,7 +46,7 @@
  
  ##--------------------------------------------------------------------
  ##  Network filesystem parameters:
-@@ -401,7 +413,7 @@
+@@ -406,7 +412,7 @@
  ##  condor account, it's probably condor.  Otherwise, it's whatever
  ##  you've set in the CONDOR_IDS environment variable.  See the Admin
  ##  manual for details on this.
@@ -94,7 +55,7 @@
  
  ##  If you don't use a fully qualified name in your /etc/hosts file
  ##  (or NIS, etc.) for either your official hostname or as an alias,
-@@ -906,14 +918,16 @@
+@@ -924,14 +930,16 @@
  ######################################################################
  
  ##  Pathnames
@@ -117,7 +78,7 @@
  
  ## If you leave HISTORY undefined (comment it out), no history file
  ## will be created. 
-@@ -1590,7 +1604,7 @@
+@@ -1635,7 +1643,7 @@
  #     UNIX); the name will be something like:
  #         \\.\pipe\condor_procd
  #
@@ -126,7 +87,7 @@
  
  # The procd currently uses a very simplistic logging system. Since this
  # log will not be rotated like other Condor logs, it is only recommended
-@@ -1691,7 +1705,7 @@
+@@ -1736,7 +1744,7 @@
  ##  If left blank, your JVM will choose some default value,
  ##  typically 64 MB.  The default (-Xmx) works with the Sun JVM.
  

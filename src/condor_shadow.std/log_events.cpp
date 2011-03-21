@@ -312,7 +312,7 @@ log_image_size (int size)
 
 
 extern "C" void
-log_except (char *msg)
+log_except (const char *msg)
 {
 	check_execute_event();
 

@@ -45,13 +45,13 @@ REMOTE = dir
  
 Usage
 -----
-Once etc/rcondor.conf is properly configured, run:
+Once rcondor.conf is properly configured, run:
 
 rcondor_mnt
 
 Make sure that any paths corresponding to job executables, submit files, and job
 output files are located somewhere within the LOCAL path specified in
-etc/rcondor.conf.  Also make sure your current working directory is within the
+rcondor.conf.  Also make sure your current working directory is within the
 LOCAL path.
 
 Then run a command such as 

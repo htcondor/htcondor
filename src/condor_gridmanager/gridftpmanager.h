@@ -73,7 +73,7 @@ class GridftpServer : public Service
 	int m_lastProxyUpdateAttempt;
 	SimpleList<int> m_registeredClients;
 	PROC_ID m_jobId;
-	MyString m_errorMessage;
+	std::string m_errorMessage;
 	int m_lastSubmitAttempt;
 	bool m_submitNow;
 	int m_lastJobPoll;

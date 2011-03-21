@@ -20,8 +20,10 @@
 #include "ScheddPlugin.h"
 
 #include "condor_config.h"
-#include <dlfcn.h>
 
+#ifdef HAVE_DLFCN_H
+#include <dlfcn.h>
+#endif
 
 void
 ScheddPluginManager::EarlyInitialize()

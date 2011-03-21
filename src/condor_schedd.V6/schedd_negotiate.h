@@ -110,6 +110,10 @@ class ScheddNegotiate: public DCMsg {
 
 	int getNumJobsRejected() { return m_jobs_rejected; }
 
+		// Returns true if we got everything we wanted from the negotiator
+		// and false if "I can't get no ..."
+	bool getSatisfaction();
+
 		///////////// virtual functions for scheduler to define  //////////////
 
 		// Returns false if job does not exist.  Otherwise, job_ad is

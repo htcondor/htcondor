@@ -22,9 +22,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef WIN32
+#include "condor_header_features.h"
+#include "condor_sys_nt.h"
+#else
 #include <unistd.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#endif
 #include "write_user_log.h"
 #include <sys/types.h>
 
@@ -143,7 +148,7 @@ int writeExecuteEvent(WriteUserLog *log)
 
 int writeJobTerminatedEvent(WriteUserLog *log)
 {
-	struct rusage ru;
+	struct rusage ru = {0};
 
 	JobTerminatedEvent jobterminated;
 	jobterminated.normal = true;

@@ -24,15 +24,17 @@
 #include "condor_netdb.h"
 #include "util_lib_proto.h"
 
+static struct fs_data	FS_Buf[ NMOUNT ];
+static int				N_Sys;
+static char				Hostname[512];
+static int				InitDone;
+
 static void init( void );
 static char * remote_part( char *mnt_pt, char *name );
 static char * xlate_link(  char *name );
 static char	* compress( char *path );
 
-static struct fs_data	FS_Buf[ NMOUNT ];
-static int				N_Sys;
-static char				Hostname[512];
-static int				InitDone;
+int getmnt( int* start, struct fs_data buf[], unsigned int bufsize, int mode, char* path );
 
 /*
 ** Translate a name which may cross a mount point.
@@ -79,6 +81,7 @@ external_name( const char *name, char* buf, int bufsize )
 	if( stat(local_name,&st_buf) < 0 ) {
 		dprintf( D_ALWAYS, "stat failed in external_name: %s\n",
 				 strerror(errno) );
+		FREE(local_name);
 		return -1;
 	}
 	file_dev = st_buf.st_dev;
@@ -182,7 +185,7 @@ xlate_link( char* name )
 	char			*up;
 	int				done = TRUE;
 
-	up = MALLOC( MAXPATHLEN + 1 );
+	up = (char *) MALLOC( MAXPATHLEN + 1 );
 	up[0] = '/';
 	up[1] = '\0';
 	cur = name + 1;
@@ -262,3 +265,4 @@ compress( char* path )
 	}
 	return path;
 }
+
