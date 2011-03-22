@@ -14,18 +14,22 @@ Can have one of the following values:
 	\end{description}
 %
 \index{ClassAd machine attribute!Arch}
-\item[\AdAttr{Arch}:] String with the architecture of the machine.  Typically
-one of the following: 
+\item[\AdAttr{Arch}:] String with the architecture of the machine.  
+Currently supported architectures have the following string
+definitions:
+	\begin{description}
+	\item[\AdStr{INTEL}:] Intel x86 CPU (Pentium, Xeon, etc).
+	\item[\AdStr{X86\_64}:] AMD/Intel 64-bit X86
+	\end{description}
+These strings show definitions for architectures no longer suppported:
 	\begin{description}
 	\item[\AdStr{IA64}:] Intel Itanium
-	\item[\AdStr{INTEL}:] Intel x86 CPU (Pentium, Xeon, etc).
 	\item[\AdStr{SUN4u}:] Sun UltraSparc CPU
 	\item[\AdStr{SUN4x}:] A Sun Sparc CPU other than an UltraSparc, i.e.
 sun4m or sun4c CPU found in older Sparc workstations such as the Sparc~10, 
 Sparc~20, IPC, IPX, etc.
 	\item[\AdStr{PPC}:] 32-bit PowerPC
 	\item[\AdStr{PPC64}:] 64-bit PowerPC
-	\item[\AdStr{X86\_64}:] AMD/Intel 64-bit X86
 	\end{description}
 %
 \index{ClassAd machine attribute!CheckpointPlatform}
@@ -187,18 +191,23 @@ vulture.cs.wisc.edu.
 %
 \index{ClassAd machine attribute!OpSys}
 \item[\AdAttr{OpSys}:] String describing the operating system running on this
-machine.  For Condor \VersionNotice\ typically one of the following:
+machine.  
+Currently supported operating systems have the following string
+definitions:
 	\begin{description}
 	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x,
 	LINUX 2.4.x, or LINUX 2.6.x kernel systems
-	\item[\AdStr{OSX}:] for Darwin
-	\item[\AdStr{SOLARIS28}:] for Solaris 2.8 or 5.8
-	\item[\AdStr{SOLARIS29}:] for Solaris 2.9 or 5.9
 	\item[\AdStr{WINNT50}:] for Windows 2000
 	\item[\AdStr{WINNT51}:] for Windows XP
 	\item[\AdStr{WINNT52}:] for Windows Server 2003
 	\item[\AdStr{WINNT60}:] for Windows Vista
 	\item[\AdStr{WINNT61}:] for Windows 7
+	\end{description}
+These strings show definitions for operating systems no longer suppported:
+	\begin{description}
+	\item[\AdStr{OSX}:] for Darwin
+	\item[\AdStr{SOLARIS28}:] for Solaris 2.8 or 5.8
+	\item[\AdStr{SOLARIS29}:] for Solaris 2.9 or 5.9
 	\end{description}
 %
 \index{ClassAd machine attribute!Requirements}

@@ -21,7 +21,7 @@ MyType       = "Machine"
 TargetType   = "Job"
 Machine      = "froth.cs.wisc.edu"
 Arch         = "INTEL"
-OpSys        = "SOLARIS251"
+OpSys        = "LINUX"
 Disk         = 35882
 Memory       = 128
 KeyboardIdle = 173
@@ -1057,12 +1057,12 @@ the desirability of the match (where higher numbers mean better matches).
 For example, a job ad may contain the following expressions:
 \footnotesize
 \begin{verbatim}
-Requirements = Arch=="SUN4u" && OpSys == "SOLARIS251"
+Requirements = Arch=="INTEL" && OpSys == "LINUX"
 Rank         = TARGET.Memory + TARGET.Mips
 \end{verbatim}
 \normalsize
-In this case, the job requires an UltraSparc computer running the Solaris 
-2.5.1 operating system.
+In this case, the job requires an Intel 32-bit computer running RHEL 3
+as its operating system.
 Among all such computers,
 the customer prefers those with large physical memories and high MIPS ratings.  
 Since the \Attr{Rank} is a user-specified metric,
