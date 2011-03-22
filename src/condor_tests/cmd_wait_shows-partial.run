@@ -44,8 +44,6 @@ my $writelog = "./x_write_joblog_events.exe";
 
 CondorTest::debug("Result File is $resultfile\n",$debuglevel);
 
-runcmd("chmod -R 777 .");
-
 ####################################################################
 ####################################################################
 #
