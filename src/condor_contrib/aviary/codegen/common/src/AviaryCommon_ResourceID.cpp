@@ -31,10 +31,6 @@
               
             isValidSubsystem_type  = false;
         
-                    property_Custom_name;
-                
-            isValidCustom_name  = false;
-        
                     property_Pool;
                 
             isValidPool  = false;
@@ -43,18 +39,18 @@
                 
             isValidName  = false;
         
+                    property_Custom_name;
+                
+            isValidCustom_name  = false;
+        
         }
 
-       AviaryCommon::ResourceID::ResourceID(AviaryCommon::ResourceType* arg_Subsystem_type,std::string arg_Custom_name,std::string arg_Pool,std::string arg_Name)
+       AviaryCommon::ResourceID::ResourceID(AviaryCommon::ResourceType* arg_Subsystem_type,std::string arg_Pool,std::string arg_Name,std::string arg_Custom_name)
         {
              
                property_Subsystem_type  = NULL;
              
             isValidSubsystem_type  = true;
-            
-                 property_Custom_name;
-             
-            isValidCustom_name  = true;
             
                  property_Pool;
              
@@ -64,13 +60,17 @@
              
             isValidName  = true;
             
-                    property_Subsystem_type = arg_Subsystem_type;
+                 property_Custom_name;
+             
+            isValidCustom_name  = true;
             
-                    property_Custom_name = arg_Custom_name;
+                    property_Subsystem_type = arg_Subsystem_type;
             
                     property_Pool = arg_Pool;
             
                     property_Name = arg_Name;
+            
+                    property_Custom_name = arg_Custom_name;
             
         }
         AviaryCommon::ResourceID::~ResourceID()
@@ -176,130 +176,6 @@
                                   /* this is not a nillable element*/
 				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element subsystem_type missing");
                                   return AXIS2_FAILURE;
-                              }
-                           
-                  if(element_qname)
-                  {
-                     axutil_qname_free(element_qname, Environment::getEnv());
-                     element_qname = NULL;
-                  }
-                 
-
-                     
-                     /*
-                      * building custom_name element
-                      */
-                     
-                     
-                     
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
-                                  
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
-                                   {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "custom_name", NULL, NULL);
-                                 
-
-                           if ( 
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("custom_name", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("custom_name", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 
-                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
-                                      if(text_value != NULL)
-                                      {
-                                            status = setCustom_name(text_value);
-                                      }
-                                      
-                                      else
-                                      {
-                                            /*
-                                             * axis2_qname_t *qname = NULL;
-                                             * axiom_attribute_t *the_attri = NULL;
-                                             * 
-                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
-                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
-                                             */
-                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
-
-                                            axiom_attribute_t *the_attri = NULL;
-                                            axis2_char_t *attrib_text = NULL;
-                                            axutil_hash_t *attribute_hash = NULL;
-
-                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
-
-                                            attrib_text = NULL;
-                                            if(attribute_hash)
-                                            {
-                                                 axutil_hash_index_t *hi;
-                                                 void *val;
-                                                 const void *key;
-                                        
-                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                                                 {
-                                                     axutil_hash_this(hi, &key, NULL, &val);
-                                                     
-                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
-                                                     {
-                                                         the_attri = (axiom_attribute_t*)val;
-                                                         break;
-                                                     }
-                                                 }
-                                            }
-
-                                            if(the_attri)
-                                            {
-                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
-                                            }
-                                            else
-                                            {
-                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
-                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
-                                            }
-
-                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
-                                            {
-                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element custom_name");
-                                                status = AXIS2_FAILURE;
-                                            }
-                                            else
-                                            {
-                                                /* after all, we found this is a empty string */
-                                                status = setCustom_name("");
-                                            }
-                                      }
-                                      
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for custom_name ");
-                                     if(element_qname)
-                                     {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
-                                     }
-                                     return AXIS2_FAILURE;
-                                 }
                               }
                            
                   if(element_qname)
@@ -578,6 +454,130 @@
                      element_qname = NULL;
                   }
                  
+
+                     
+                     /*
+                      * building custom_name element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "custom_name", NULL, NULL);
+                                 
+
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("custom_name", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("custom_name", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            status = setCustom_name(text_value);
+                                      }
+                                      
+                                      else
+                                      {
+                                            /*
+                                             * axis2_qname_t *qname = NULL;
+                                             * axiom_attribute_t *the_attri = NULL;
+                                             * 
+                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
+                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
+                                             */
+                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
+
+                                            axiom_attribute_t *the_attri = NULL;
+                                            axis2_char_t *attrib_text = NULL;
+                                            axutil_hash_t *attribute_hash = NULL;
+
+                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
+
+                                            attrib_text = NULL;
+                                            if(attribute_hash)
+                                            {
+                                                 axutil_hash_index_t *hi;
+                                                 void *val;
+                                                 const void *key;
+                                        
+                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                                                 {
+                                                     axutil_hash_this(hi, &key, NULL, &val);
+                                                     
+                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
+                                                     {
+                                                         the_attri = (axiom_attribute_t*)val;
+                                                         break;
+                                                     }
+                                                 }
+                                            }
+
+                                            if(the_attri)
+                                            {
+                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
+                                            }
+                                            else
+                                            {
+                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
+                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
+                                            }
+
+                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
+                                            {
+                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element custom_name");
+                                                status = AXIS2_FAILURE;
+                                            }
+                                            else
+                                            {
+                                                /* after all, we found this is a empty string */
+                                                status = setCustom_name("");
+                                            }
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for custom_name ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
           return status;
        }
 
@@ -727,72 +727,6 @@
                        p_prefix = NULL;
                       
 
-                   if (!isValidCustom_name)
-                   {
-                      
-                           /* no need to complain for minoccurs=0 element */
-                            
-                          
-                   }
-                   else
-                   {
-                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("custom_name"))); 
-                                 
-                                 /* axutil_strlen("<:>") + 1 = 4 */
-                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("custom_name")));
-                                  /* axutil_strlen("</:>") + 1 = 5 */
-                                  
-                     
-
-                   
-                   
-                     
-                     /*
-                      * parsing custom_name element
-                      */
-
-                    
-                    
-                            sprintf(start_input_str, "<%s%scustom_name>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%scustom_name>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
-                    
-                           text_value_2 = (axis2_char_t*)property_Custom_name.c_str();
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                           
-                            
-                           text_value_2_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_2, true);
-                           if (text_value_2_temp)
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_2_temp, axutil_strlen(text_value_2_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_2_temp);
-                           }
-                           else
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_2, axutil_strlen(text_value_2));
-                           }
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                           
-                     
-                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
-                 } 
-
-                 
-                       p_prefix = NULL;
-                      
-
                    if (!isValidPool)
                    {
                       
@@ -833,20 +767,20 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_3 = (axis2_char_t*)property_Pool.c_str();
+                           text_value_2 = (axis2_char_t*)property_Pool.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
                             
-                           text_value_3_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_3, true);
-                           if (text_value_3_temp)
+                           text_value_2_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_2, true);
+                           if (text_value_2_temp)
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_3_temp, axutil_strlen(text_value_3_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_3_temp);
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_2_temp, axutil_strlen(text_value_2_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_2_temp);
                            }
                            else
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_2, axutil_strlen(text_value_2));
                            }
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
@@ -900,7 +834,73 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_4 = (axis2_char_t*)property_Name.c_str();
+                           text_value_3 = (axis2_char_t*)property_Name.c_str();
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                           
+                            
+                           text_value_3_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_3, true);
+                           if (text_value_3_temp)
+                           {
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_3_temp, axutil_strlen(text_value_3_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_3_temp);
+                           }
+                           else
+                           {
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
+                           }
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidCustom_name)
+                   {
+                      
+                           /* no need to complain for minoccurs=0 element */
+                            
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("custom_name"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("custom_name")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing custom_name element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%scustom_name>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%scustom_name>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                           text_value_4 = (axis2_char_t*)property_Custom_name.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
@@ -1044,93 +1044,10 @@
            
 
             /**
-             * Getter for custom_name by  Property Number 2
+             * Getter for pool by  Property Number 2
              */
             std::string WSF_CALL
             AviaryCommon::ResourceID::getProperty2()
-            {
-                return getCustom_name();
-            }
-
-            /**
-             * getter for custom_name.
-             */
-            std::string WSF_CALL
-            AviaryCommon::ResourceID::getCustom_name()
-             {
-                return property_Custom_name;
-             }
-
-            /**
-             * setter for custom_name
-             */
-            bool WSF_CALL
-            AviaryCommon::ResourceID::setCustom_name(
-                    const std::string  arg_Custom_name)
-             {
-                
-
-                if(isValidCustom_name &&
-                        arg_Custom_name == property_Custom_name)
-                {
-                    
-                    return true;
-                }
-
-                
-
-                
-                resetCustom_name();
-
-                
-                        property_Custom_name = std::string(arg_Custom_name.c_str());
-                        isValidCustom_name = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for custom_name
-            */
-           bool WSF_CALL
-           AviaryCommon::ResourceID::resetCustom_name()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-               isValidCustom_name = false; 
-               return true;
-           }
-
-           /**
-            * Check whether custom_name is nill
-            */
-           bool WSF_CALL
-           AviaryCommon::ResourceID::isCustom_nameNil()
-           {
-               return !isValidCustom_name;
-           }
-
-           /**
-            * Set custom_name to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryCommon::ResourceID::setCustom_nameNil()
-           {
-               return resetCustom_name();
-           }
-
-           
-
-            /**
-             * Getter for pool by  Property Number 3
-             */
-            std::string WSF_CALL
-            AviaryCommon::ResourceID::getProperty3()
             {
                 return getPool();
             }
@@ -1217,10 +1134,10 @@
            
 
             /**
-             * Getter for name by  Property Number 4
+             * Getter for name by  Property Number 3
              */
             std::string WSF_CALL
-            AviaryCommon::ResourceID::getProperty4()
+            AviaryCommon::ResourceID::getProperty3()
             {
                 return getName();
             }
@@ -1302,6 +1219,89 @@
            AviaryCommon::ResourceID::setNameNil()
            {
                return resetName();
+           }
+
+           
+
+            /**
+             * Getter for custom_name by  Property Number 4
+             */
+            std::string WSF_CALL
+            AviaryCommon::ResourceID::getProperty4()
+            {
+                return getCustom_name();
+            }
+
+            /**
+             * getter for custom_name.
+             */
+            std::string WSF_CALL
+            AviaryCommon::ResourceID::getCustom_name()
+             {
+                return property_Custom_name;
+             }
+
+            /**
+             * setter for custom_name
+             */
+            bool WSF_CALL
+            AviaryCommon::ResourceID::setCustom_name(
+                    const std::string  arg_Custom_name)
+             {
+                
+
+                if(isValidCustom_name &&
+                        arg_Custom_name == property_Custom_name)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetCustom_name();
+
+                
+                        property_Custom_name = std::string(arg_Custom_name.c_str());
+                        isValidCustom_name = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for custom_name
+            */
+           bool WSF_CALL
+           AviaryCommon::ResourceID::resetCustom_name()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidCustom_name = false; 
+               return true;
+           }
+
+           /**
+            * Check whether custom_name is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::ResourceID::isCustom_nameNil()
+           {
+               return !isValidCustom_name;
+           }
+
+           /**
+            * Set custom_name to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::ResourceID::setCustom_nameNil()
+           {
+               return resetCustom_name();
            }
 
            

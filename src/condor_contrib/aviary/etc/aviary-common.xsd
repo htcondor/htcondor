@@ -77,6 +77,7 @@
 			<xs:enumeration value="ARCH"/>
 			<xs:enumeration value="MEMORY"/>
 			<xs:enumeration value="DISK"/>
+			<xs:enumeration value="FILESYSTEM"/>
 			<!-- when we say MEMORY or DISK we always mean at least the amount provided -->
 		</xs:restriction>
 	</xs:simpleType>
@@ -122,18 +123,19 @@
 			<xs:enumeration value="HELD"/>
 		</xs:restriction>
 	</xs:simpleType>
+	<!-- reuse through extension not available for the following related types -->
 	<xs:complexType name="JobStatus">
 		<xs:sequence>
 			<xs:element name="id" type="tns:JobID"/>
-			<xs:element name="job_status" type="tns:JobStatusType" minOccurs="0"/>
 			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="job_status" type="tns:JobStatusType" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="JobDetails">
 		<xs:sequence>
 			<xs:element name="id" type="tns:JobID"/>
-			<xs:element name="details" type="tns:Attributes" minOccurs="0"/>
 			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="details" type="tns:Attributes" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:simpleType name="JobDataType">
@@ -146,10 +148,10 @@
 	<xs:complexType name="JobData">
 		<xs:sequence>
 			<xs:element name="id" type="tns:JobID"/>
+			<xs:element name="status" type="tns:Status"/>
 			<xs:element name="type" type="tns:JobDataType" minOccurs="0"/>
 			<!-- string for file content...we probably want to keep line feeds, etc. TODO: need to revisit this-->
 			<xs:element name="content" type="xs:string" minOccurs="0"/>
-			<xs:element name="status" type="tns:Status"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:simpleType name="ResourceType">
@@ -168,9 +170,9 @@
 	<xs:complexType name="ResourceID">
 		<xs:sequence>
 			<xs:element name="subsystem_type" type="tns:ResourceType"/>
-			<xs:element name="custom_name" type="xs:string" minOccurs="0"/>
 			<xs:element name="pool" type="xs:string"/>
 			<xs:element name="name" type="xs:string"/>
+			<xs:element name="custom_name" type="xs:string" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 </xs:schema>

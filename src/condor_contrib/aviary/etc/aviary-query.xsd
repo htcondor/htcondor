@@ -26,7 +26,7 @@
 			<xs:sequence>
 				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
 			</xs:sequence>
-			<xs:attribute name="allowPartialMatching" type="xs:boolean" default="false"/>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="false"/>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetJobStatusResponse">
@@ -42,7 +42,7 @@
 			<xs:sequence>
 				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
 			</xs:sequence>
-			<xs:attribute name="allowPartialMatching" type="xs:boolean" default="false"/>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="false"/>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetJobDetailsResponse">
@@ -58,7 +58,7 @@
 			<xs:sequence>
 				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
 			</xs:sequence>
-			<xs:attribute name="allowPartialMatching" type="xs:boolean" default="false"/>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="false"/>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetJobDataResponse">
@@ -74,7 +74,7 @@
 			<xs:sequence>
 				<xs:element name="ids" type="mrg:SubmissionID" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
-			<xs:attribute name="allowPartialMatching" type="xs:boolean" default="false"/>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="false"/>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetSubmissionSummaryResponse">

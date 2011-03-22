@@ -22,9 +22,9 @@
         
        #include "AviaryCommon_JobID.h"
           
-       #include "AviaryCommon_JobStatusType.h"
-          
        #include "AviaryCommon_Status.h"
+          
+       #include "AviaryCommon_JobStatusType.h"
           
 
         #include <stdio.h>
@@ -44,14 +44,14 @@ namespace AviaryCommon
 
                 
                 bool isValidId;
-            AviaryCommon::JobStatusType* property_Job_status;
-
-                
-                bool isValidJob_status;
             AviaryCommon::Status* property_Status;
 
                 
                 bool isValidStatus;
+            AviaryCommon::JobStatusType* property_Job_status;
+
+                
+                bool isValidJob_status;
             
 
         /*** Private methods ***/
@@ -62,11 +62,11 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
-        setJob_statusNil();
+        setStatusNil();
             
 
         bool WSF_CALL
-        setStatusNil();
+        setJob_statusNil();
             
 
 
@@ -93,11 +93,11 @@ namespace AviaryCommon
          * Constructor for creating JobStatus
          * @param 
          * @param Id AviaryCommon::JobID*
-         * @param Job_status AviaryCommon::JobStatusType*
          * @param Status AviaryCommon::Status*
+         * @param Job_status AviaryCommon::JobStatusType*
          * @return newly created JobStatus object
          */
-        JobStatus(AviaryCommon::JobID* arg_Id,AviaryCommon::JobStatusType* arg_Job_status,AviaryCommon::Status* arg_Status);
+        JobStatus(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,AviaryCommon::JobStatusType* arg_Job_status);
         
         
         /********************************** Class get set methods **************************************/
@@ -129,30 +129,6 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for job_status. 
-         * @return AviaryCommon::JobStatusType*
-         */
-        WSF_EXTERN AviaryCommon::JobStatusType* WSF_CALL
-        getJob_status();
-
-        /**
-         * Setter for job_status.
-         * @param arg_Job_status AviaryCommon::JobStatusType*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setJob_status(AviaryCommon::JobStatusType*  arg_Job_status);
-
-        /**
-         * Re setter for job_status
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetJob_status();
-        
-        
-
-        /**
          * Getter for status. 
          * @return AviaryCommon::Status*
          */
@@ -173,6 +149,30 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetStatus();
+        
+        
+
+        /**
+         * Getter for job_status. 
+         * @return AviaryCommon::JobStatusType*
+         */
+        WSF_EXTERN AviaryCommon::JobStatusType* WSF_CALL
+        getJob_status();
+
+        /**
+         * Setter for job_status.
+         * @param arg_Job_status AviaryCommon::JobStatusType*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setJob_status(AviaryCommon::JobStatusType*  arg_Job_status);
+
+        /**
+         * Re setter for job_status
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetJob_status();
         
 
 
@@ -196,21 +196,21 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether job_status is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isJob_statusNil();
-
-
-        
-
-        /**
          * Check whether status is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
         isStatusNil();
+
+
+        
+
+        /**
+         * Check whether job_status is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isJob_statusNil();
 
 
         
@@ -283,22 +283,22 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for job_status by property number (2)
-         * @return AviaryCommon::JobStatusType
+         * Getter for status by property number (2)
+         * @return AviaryCommon::Status
          */
 
-        AviaryCommon::JobStatusType* WSF_CALL
+        AviaryCommon::Status* WSF_CALL
         getProperty2();
 
     
         
 
         /**
-         * Getter for status by property number (3)
-         * @return AviaryCommon::Status
+         * Getter for job_status by property number (3)
+         * @return AviaryCommon::JobStatusType
          */
 
-        AviaryCommon::Status* WSF_CALL
+        AviaryCommon::JobStatusType* WSF_CALL
         getProperty3();
 
     

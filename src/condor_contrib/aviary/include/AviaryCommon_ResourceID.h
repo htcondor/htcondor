@@ -40,10 +40,6 @@ namespace AviaryCommon
 
                 
                 bool isValidSubsystem_type;
-            std::string property_Custom_name;
-
-                
-                bool isValidCustom_name;
             std::string property_Pool;
 
                 
@@ -52,6 +48,10 @@ namespace AviaryCommon
 
                 
                 bool isValidName;
+            std::string property_Custom_name;
+
+                
+                bool isValidCustom_name;
             
 
         /*** Private methods ***/
@@ -62,15 +62,15 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
-        setCustom_nameNil();
-            
-
-        bool WSF_CALL
         setPoolNil();
             
 
         bool WSF_CALL
         setNameNil();
+            
+
+        bool WSF_CALL
+        setCustom_nameNil();
             
 
 
@@ -97,12 +97,12 @@ namespace AviaryCommon
          * Constructor for creating ResourceID
          * @param 
          * @param Subsystem_type AviaryCommon::ResourceType*
-         * @param Custom_name std::string
          * @param Pool std::string
          * @param Name std::string
+         * @param Custom_name std::string
          * @return newly created ResourceID object
          */
-        ResourceID(AviaryCommon::ResourceType* arg_Subsystem_type,std::string arg_Custom_name,std::string arg_Pool,std::string arg_Name);
+        ResourceID(AviaryCommon::ResourceType* arg_Subsystem_type,std::string arg_Pool,std::string arg_Name,std::string arg_Custom_name);
         
         
         /********************************** Class get set methods **************************************/
@@ -130,30 +130,6 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetSubsystem_type();
-        
-        
-
-        /**
-         * Getter for custom_name. 
-         * @return std::string*
-         */
-        WSF_EXTERN std::string WSF_CALL
-        getCustom_name();
-
-        /**
-         * Setter for custom_name.
-         * @param arg_Custom_name std::string*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setCustom_name(const std::string  arg_Custom_name);
-
-        /**
-         * Re setter for custom_name
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetCustom_name();
         
         
 
@@ -203,6 +179,30 @@ namespace AviaryCommon
         WSF_EXTERN bool WSF_CALL
         resetName();
         
+        
+
+        /**
+         * Getter for custom_name. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getCustom_name();
+
+        /**
+         * Setter for custom_name.
+         * @param arg_Custom_name std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setCustom_name(const std::string  arg_Custom_name);
+
+        /**
+         * Re setter for custom_name
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetCustom_name();
+        
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -225,16 +225,6 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether custom_name is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isCustom_nameNil();
-
-
-        
-
-        /**
          * Check whether pool is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -250,6 +240,16 @@ namespace AviaryCommon
          */
         bool WSF_CALL
         isNameNil();
+
+
+        
+
+        /**
+         * Check whether custom_name is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isCustom_nameNil();
 
 
         
@@ -322,7 +322,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for custom_name by property number (2)
+         * Getter for pool by property number (2)
          * @return std::string
          */
 
@@ -333,7 +333,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for pool by property number (3)
+         * Getter for name by property number (3)
          * @return std::string
          */
 
@@ -344,7 +344,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for name by property number (4)
+         * Getter for custom_name by property number (4)
          * @return std::string
          */
 

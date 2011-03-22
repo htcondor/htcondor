@@ -31,36 +31,36 @@
               
             isValidId  = false;
         
-                property_Details  = NULL;
-              
-            isValidDetails  = false;
-        
                 property_Status  = NULL;
               
             isValidStatus  = false;
         
+                property_Details  = NULL;
+              
+            isValidDetails  = false;
+        
         }
 
-       AviaryCommon::JobDetails::JobDetails(AviaryCommon::JobID* arg_Id,AviaryCommon::Attributes* arg_Details,AviaryCommon::Status* arg_Status)
+       AviaryCommon::JobDetails::JobDetails(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,AviaryCommon::Attributes* arg_Details)
         {
              
                property_Id  = NULL;
              
             isValidId  = true;
             
-               property_Details  = NULL;
-             
-            isValidDetails  = true;
-            
                property_Status  = NULL;
              
             isValidStatus  = true;
             
+               property_Details  = NULL;
+             
+            isValidDetails  = true;
+            
                     property_Id = arg_Id;
             
-                    property_Details = arg_Details;
-            
                     property_Status = arg_Status;
+            
+                    property_Details = arg_Details;
             
         }
         AviaryCommon::JobDetails::~JobDetails()
@@ -177,77 +177,6 @@
 
                      
                      /*
-                      * building details element
-                      */
-                     
-                     
-                     
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
-                                  
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
-                                   {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "details", NULL, NULL);
-                                 
-
-                           if (isParticle() ||  
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("details", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("details", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 AviaryCommon::Attributes* element = new AviaryCommon::Attributes();
-
-                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
-                                      if(AXIS2_FAILURE == status)
-                                      {
-                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element details");
-                                      }
-                                      else
-                                      {
-                                          status = setDetails(element);
-                                      }
-                                    
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for details ");
-                                     if(element_qname)
-                                     {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
-                                     }
-                                     return AXIS2_FAILURE;
-                                 }
-                              }
-                           
-                  if(element_qname)
-                  {
-                     axutil_qname_free(element_qname, Environment::getEnv());
-                     element_qname = NULL;
-                  }
-                 
-
-                     
-                     /*
                       * building status element
                       */
                      
@@ -319,6 +248,77 @@
                                   /* this is not a nillable element*/
 				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element status missing");
                                   return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+
+                     
+                     /*
+                      * building details element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "details", NULL, NULL);
+                                 
+
+                           if (isParticle() ||  
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("details", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("details", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 AviaryCommon::Attributes* element = new AviaryCommon::Attributes();
+
+                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                      if(AXIS2_FAILURE == status)
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element details");
+                                      }
+                                      else
+                                      {
+                                          status = setDetails(element);
+                                      }
+                                    
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for details ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
                               }
                            
                   if(element_qname)
@@ -471,66 +471,6 @@
                        p_prefix = NULL;
                       
 
-                   if (!isValidDetails)
-                   {
-                      
-                           /* no need to complain for minoccurs=0 element */
-                            
-                          
-                   }
-                   else
-                   {
-                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("details"))); 
-                                 
-                                 /* axutil_strlen("<:>") + 1 = 4 */
-                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("details")));
-                                  /* axutil_strlen("</:>") + 1 = 5 */
-                                  
-                     
-
-                   
-                   
-                     
-                     /*
-                      * parsing details element
-                      */
-
-                    
-                    
-                            sprintf(start_input_str, "<%s%sdetails",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%sdetails>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
-                     
-                            if(!property_Details->isParticle())
-                            {
-                                axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                            }
-                            property_Details->serialize(current_node, parent_element,
-                                                                                 property_Details->isParticle() || false, namespaces, next_ns_index);
-                            
-                            if(!property_Details->isParticle())
-                            {
-                                axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                            }
-                            
-                     
-                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
-                 } 
-
-                 
-                       p_prefix = NULL;
-                      
-
                    if (!isValidStatus)
                    {
                       
@@ -579,6 +519,66 @@
                                                                                  property_Status->isParticle() || false, namespaces, next_ns_index);
                             
                             if(!property_Status->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                            }
+                            
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidDetails)
+                   {
+                      
+                           /* no need to complain for minoccurs=0 element */
+                            
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("details"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("details")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing details element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%sdetails",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%sdetails>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                     
+                            if(!property_Details->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                            }
+                            property_Details->serialize(current_node, parent_element,
+                                                                                 property_Details->isParticle() || false, namespaces, next_ns_index);
+                            
+                            if(!property_Details->isParticle())
                             {
                                 axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                             }
@@ -709,115 +709,10 @@
            
 
             /**
-             * Getter for details by  Property Number 2
-             */
-            AviaryCommon::Attributes* WSF_CALL
-            AviaryCommon::JobDetails::getProperty2()
-            {
-                return getDetails();
-            }
-
-            /**
-             * getter for details.
-             */
-            AviaryCommon::Attributes* WSF_CALL
-            AviaryCommon::JobDetails::getDetails()
-             {
-                return property_Details;
-             }
-
-            /**
-             * setter for details
-             */
-            bool WSF_CALL
-            AviaryCommon::JobDetails::setDetails(
-                    AviaryCommon::Attributes*  arg_Details)
-             {
-                
-
-                if(isValidDetails &&
-                        arg_Details == property_Details)
-                {
-                    
-                    return true;
-                }
-
-                
-
-                
-                resetDetails();
-
-                
-                    if(NULL == arg_Details)
-                         
-                {
-                    /* We are already done */
-                    return true;
-                }
-                
-                        property_Details = arg_Details;
-                        isValidDetails = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for details
-            */
-           bool WSF_CALL
-           AviaryCommon::JobDetails::resetDetails()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-            
-                
-
-                if(property_Details != NULL)
-                {
-                   
-                   
-                         delete  property_Details;
-                     
-
-                   }
-
-                
-                
-                
-               isValidDetails = false; 
-               return true;
-           }
-
-           /**
-            * Check whether details is nill
-            */
-           bool WSF_CALL
-           AviaryCommon::JobDetails::isDetailsNil()
-           {
-               return !isValidDetails;
-           }
-
-           /**
-            * Set details to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryCommon::JobDetails::setDetailsNil()
-           {
-               return resetDetails();
-           }
-
-           
-
-            /**
-             * Getter for status by  Property Number 3
+             * Getter for status by  Property Number 2
              */
             AviaryCommon::Status* WSF_CALL
-            AviaryCommon::JobDetails::getProperty3()
+            AviaryCommon::JobDetails::getProperty2()
             {
                 return getStatus();
             }
@@ -921,6 +816,111 @@
            AviaryCommon::JobDetails::setStatusNil()
            {
                return resetStatus();
+           }
+
+           
+
+            /**
+             * Getter for details by  Property Number 3
+             */
+            AviaryCommon::Attributes* WSF_CALL
+            AviaryCommon::JobDetails::getProperty3()
+            {
+                return getDetails();
+            }
+
+            /**
+             * getter for details.
+             */
+            AviaryCommon::Attributes* WSF_CALL
+            AviaryCommon::JobDetails::getDetails()
+             {
+                return property_Details;
+             }
+
+            /**
+             * setter for details
+             */
+            bool WSF_CALL
+            AviaryCommon::JobDetails::setDetails(
+                    AviaryCommon::Attributes*  arg_Details)
+             {
+                
+
+                if(isValidDetails &&
+                        arg_Details == property_Details)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetDetails();
+
+                
+                    if(NULL == arg_Details)
+                         
+                {
+                    /* We are already done */
+                    return true;
+                }
+                
+                        property_Details = arg_Details;
+                        isValidDetails = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for details
+            */
+           bool WSF_CALL
+           AviaryCommon::JobDetails::resetDetails()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+            
+                
+
+                if(property_Details != NULL)
+                {
+                   
+                   
+                         delete  property_Details;
+                     
+
+                   }
+
+                
+                
+                
+               isValidDetails = false; 
+               return true;
+           }
+
+           /**
+            * Check whether details is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::JobDetails::isDetailsNil()
+           {
+               return !isValidDetails;
+           }
+
+           /**
+            * Set details to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::JobDetails::setDetailsNil()
+           {
+               return resetDetails();
            }
 
            

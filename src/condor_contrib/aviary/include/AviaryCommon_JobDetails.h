@@ -22,9 +22,9 @@
         
        #include "AviaryCommon_JobID.h"
           
-       #include "AviaryCommon_Attributes.h"
-          
        #include "AviaryCommon_Status.h"
+          
+       #include "AviaryCommon_Attributes.h"
           
 
         #include <stdio.h>
@@ -44,14 +44,14 @@ namespace AviaryCommon
 
                 
                 bool isValidId;
-            AviaryCommon::Attributes* property_Details;
-
-                
-                bool isValidDetails;
             AviaryCommon::Status* property_Status;
 
                 
                 bool isValidStatus;
+            AviaryCommon::Attributes* property_Details;
+
+                
+                bool isValidDetails;
             
 
         /*** Private methods ***/
@@ -62,11 +62,11 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
-        setDetailsNil();
+        setStatusNil();
             
 
         bool WSF_CALL
-        setStatusNil();
+        setDetailsNil();
             
 
 
@@ -93,11 +93,11 @@ namespace AviaryCommon
          * Constructor for creating JobDetails
          * @param 
          * @param Id AviaryCommon::JobID*
-         * @param Details AviaryCommon::Attributes*
          * @param Status AviaryCommon::Status*
+         * @param Details AviaryCommon::Attributes*
          * @return newly created JobDetails object
          */
-        JobDetails(AviaryCommon::JobID* arg_Id,AviaryCommon::Attributes* arg_Details,AviaryCommon::Status* arg_Status);
+        JobDetails(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,AviaryCommon::Attributes* arg_Details);
         
         
         /********************************** Class get set methods **************************************/
@@ -129,30 +129,6 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for details. 
-         * @return AviaryCommon::Attributes*
-         */
-        WSF_EXTERN AviaryCommon::Attributes* WSF_CALL
-        getDetails();
-
-        /**
-         * Setter for details.
-         * @param arg_Details AviaryCommon::Attributes*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setDetails(AviaryCommon::Attributes*  arg_Details);
-
-        /**
-         * Re setter for details
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetDetails();
-        
-        
-
-        /**
          * Getter for status. 
          * @return AviaryCommon::Status*
          */
@@ -173,6 +149,30 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetStatus();
+        
+        
+
+        /**
+         * Getter for details. 
+         * @return AviaryCommon::Attributes*
+         */
+        WSF_EXTERN AviaryCommon::Attributes* WSF_CALL
+        getDetails();
+
+        /**
+         * Setter for details.
+         * @param arg_Details AviaryCommon::Attributes*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setDetails(AviaryCommon::Attributes*  arg_Details);
+
+        /**
+         * Re setter for details
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetDetails();
         
 
 
@@ -196,21 +196,21 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether details is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isDetailsNil();
-
-
-        
-
-        /**
          * Check whether status is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
         isStatusNil();
+
+
+        
+
+        /**
+         * Check whether details is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isDetailsNil();
 
 
         
@@ -283,22 +283,22 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for details by property number (2)
-         * @return AviaryCommon::Attributes
+         * Getter for status by property number (2)
+         * @return AviaryCommon::Status
          */
 
-        AviaryCommon::Attributes* WSF_CALL
+        AviaryCommon::Status* WSF_CALL
         getProperty2();
 
     
         
 
         /**
-         * Getter for status by property number (3)
-         * @return AviaryCommon::Status
+         * Getter for details by property number (3)
+         * @return AviaryCommon::Attributes
          */
 
-        AviaryCommon::Status* WSF_CALL
+        AviaryCommon::Attributes* WSF_CALL
         getProperty3();
 
     

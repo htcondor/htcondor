@@ -275,6 +275,9 @@
                  if (axutil_strcmp(property_ResourceConstraintType.c_str(), "DISK") == 0)
                     return ResourceConstraintType_DISK;
              
+                 if (axutil_strcmp(property_ResourceConstraintType.c_str(), "FILESYSTEM") == 0)
+                    return ResourceConstraintType_FILESYSTEM;
+             
              
                  /* Error: none of the strings matched; invalid enum value */
                  return (ADBResourceConstraintTypeEnum)-1;
@@ -310,6 +313,10 @@
                      
                        case ResourceConstraintType_DISK :
                             property_ResourceConstraintType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "DISK");
+                          break;
+                     
+                       case ResourceConstraintType_FILESYSTEM :
+                            property_ResourceConstraintType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "FILESYSTEM");
                           break;
                      
                      

@@ -31,36 +31,36 @@
               
             isValidId  = false;
         
-                property_Job_status  = NULL;
-              
-            isValidJob_status  = false;
-        
                 property_Status  = NULL;
               
             isValidStatus  = false;
         
+                property_Job_status  = NULL;
+              
+            isValidJob_status  = false;
+        
         }
 
-       AviaryCommon::JobStatus::JobStatus(AviaryCommon::JobID* arg_Id,AviaryCommon::JobStatusType* arg_Job_status,AviaryCommon::Status* arg_Status)
+       AviaryCommon::JobStatus::JobStatus(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,AviaryCommon::JobStatusType* arg_Job_status)
         {
              
                property_Id  = NULL;
              
             isValidId  = true;
             
-               property_Job_status  = NULL;
-             
-            isValidJob_status  = true;
-            
                property_Status  = NULL;
              
             isValidStatus  = true;
             
+               property_Job_status  = NULL;
+             
+            isValidJob_status  = true;
+            
                     property_Id = arg_Id;
             
-                    property_Job_status = arg_Job_status;
-            
                     property_Status = arg_Status;
+            
+                    property_Job_status = arg_Job_status;
             
         }
         AviaryCommon::JobStatus::~JobStatus()
@@ -177,77 +177,6 @@
 
                      
                      /*
-                      * building job_status element
-                      */
-                     
-                     
-                     
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
-                                  
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
-                                   {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "job_status", NULL, NULL);
-                                 
-
-                           if (isParticle() ||  
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("job_status", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("job_status", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 AviaryCommon::JobStatusType* element = new AviaryCommon::JobStatusType();
-
-                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
-                                      if(AXIS2_FAILURE == status)
-                                      {
-                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element job_status");
-                                      }
-                                      else
-                                      {
-                                          status = setJob_status(element);
-                                      }
-                                    
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for job_status ");
-                                     if(element_qname)
-                                     {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
-                                     }
-                                     return AXIS2_FAILURE;
-                                 }
-                              }
-                           
-                  if(element_qname)
-                  {
-                     axutil_qname_free(element_qname, Environment::getEnv());
-                     element_qname = NULL;
-                  }
-                 
-
-                     
-                     /*
                       * building status element
                       */
                      
@@ -319,6 +248,77 @@
                                   /* this is not a nillable element*/
 				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element status missing");
                                   return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+
+                     
+                     /*
+                      * building job_status element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "job_status", NULL, NULL);
+                                 
+
+                           if (isParticle() ||  
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("job_status", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("job_status", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 AviaryCommon::JobStatusType* element = new AviaryCommon::JobStatusType();
+
+                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                      if(AXIS2_FAILURE == status)
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element job_status");
+                                      }
+                                      else
+                                      {
+                                          status = setJob_status(element);
+                                      }
+                                    
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for job_status ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
                               }
                            
                   if(element_qname)
@@ -471,66 +471,6 @@
                        p_prefix = NULL;
                       
 
-                   if (!isValidJob_status)
-                   {
-                      
-                           /* no need to complain for minoccurs=0 element */
-                            
-                          
-                   }
-                   else
-                   {
-                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("job_status"))); 
-                                 
-                                 /* axutil_strlen("<:>") + 1 = 4 */
-                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("job_status")));
-                                  /* axutil_strlen("</:>") + 1 = 5 */
-                                  
-                     
-
-                   
-                   
-                     
-                     /*
-                      * parsing job_status element
-                      */
-
-                    
-                    
-                            sprintf(start_input_str, "<%s%sjob_status",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%sjob_status>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
-                     
-                            if(!property_Job_status->isParticle())
-                            {
-                                axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                            }
-                            property_Job_status->serialize(current_node, parent_element,
-                                                                                 property_Job_status->isParticle() || false, namespaces, next_ns_index);
-                            
-                            if(!property_Job_status->isParticle())
-                            {
-                                axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                            }
-                            
-                     
-                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
-                 } 
-
-                 
-                       p_prefix = NULL;
-                      
-
                    if (!isValidStatus)
                    {
                       
@@ -579,6 +519,66 @@
                                                                                  property_Status->isParticle() || false, namespaces, next_ns_index);
                             
                             if(!property_Status->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                            }
+                            
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidJob_status)
+                   {
+                      
+                           /* no need to complain for minoccurs=0 element */
+                            
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("job_status"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("job_status")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing job_status element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%sjob_status",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%sjob_status>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                     
+                            if(!property_Job_status->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                            }
+                            property_Job_status->serialize(current_node, parent_element,
+                                                                                 property_Job_status->isParticle() || false, namespaces, next_ns_index);
+                            
+                            if(!property_Job_status->isParticle())
                             {
                                 axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                             }
@@ -709,115 +709,10 @@
            
 
             /**
-             * Getter for job_status by  Property Number 2
-             */
-            AviaryCommon::JobStatusType* WSF_CALL
-            AviaryCommon::JobStatus::getProperty2()
-            {
-                return getJob_status();
-            }
-
-            /**
-             * getter for job_status.
-             */
-            AviaryCommon::JobStatusType* WSF_CALL
-            AviaryCommon::JobStatus::getJob_status()
-             {
-                return property_Job_status;
-             }
-
-            /**
-             * setter for job_status
-             */
-            bool WSF_CALL
-            AviaryCommon::JobStatus::setJob_status(
-                    AviaryCommon::JobStatusType*  arg_Job_status)
-             {
-                
-
-                if(isValidJob_status &&
-                        arg_Job_status == property_Job_status)
-                {
-                    
-                    return true;
-                }
-
-                
-
-                
-                resetJob_status();
-
-                
-                    if(NULL == arg_Job_status)
-                         
-                {
-                    /* We are already done */
-                    return true;
-                }
-                
-                        property_Job_status = arg_Job_status;
-                        isValidJob_status = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for job_status
-            */
-           bool WSF_CALL
-           AviaryCommon::JobStatus::resetJob_status()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-            
-                
-
-                if(property_Job_status != NULL)
-                {
-                   
-                   
-                         delete  property_Job_status;
-                     
-
-                   }
-
-                
-                
-                
-               isValidJob_status = false; 
-               return true;
-           }
-
-           /**
-            * Check whether job_status is nill
-            */
-           bool WSF_CALL
-           AviaryCommon::JobStatus::isJob_statusNil()
-           {
-               return !isValidJob_status;
-           }
-
-           /**
-            * Set job_status to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryCommon::JobStatus::setJob_statusNil()
-           {
-               return resetJob_status();
-           }
-
-           
-
-            /**
-             * Getter for status by  Property Number 3
+             * Getter for status by  Property Number 2
              */
             AviaryCommon::Status* WSF_CALL
-            AviaryCommon::JobStatus::getProperty3()
+            AviaryCommon::JobStatus::getProperty2()
             {
                 return getStatus();
             }
@@ -921,6 +816,111 @@
            AviaryCommon::JobStatus::setStatusNil()
            {
                return resetStatus();
+           }
+
+           
+
+            /**
+             * Getter for job_status by  Property Number 3
+             */
+            AviaryCommon::JobStatusType* WSF_CALL
+            AviaryCommon::JobStatus::getProperty3()
+            {
+                return getJob_status();
+            }
+
+            /**
+             * getter for job_status.
+             */
+            AviaryCommon::JobStatusType* WSF_CALL
+            AviaryCommon::JobStatus::getJob_status()
+             {
+                return property_Job_status;
+             }
+
+            /**
+             * setter for job_status
+             */
+            bool WSF_CALL
+            AviaryCommon::JobStatus::setJob_status(
+                    AviaryCommon::JobStatusType*  arg_Job_status)
+             {
+                
+
+                if(isValidJob_status &&
+                        arg_Job_status == property_Job_status)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetJob_status();
+
+                
+                    if(NULL == arg_Job_status)
+                         
+                {
+                    /* We are already done */
+                    return true;
+                }
+                
+                        property_Job_status = arg_Job_status;
+                        isValidJob_status = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for job_status
+            */
+           bool WSF_CALL
+           AviaryCommon::JobStatus::resetJob_status()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+            
+                
+
+                if(property_Job_status != NULL)
+                {
+                   
+                   
+                         delete  property_Job_status;
+                     
+
+                   }
+
+                
+                
+                
+               isValidJob_status = false; 
+               return true;
+           }
+
+           /**
+            * Check whether job_status is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::JobStatus::isJob_statusNil()
+           {
+               return !isValidJob_status;
+           }
+
+           /**
+            * Set job_status to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::JobStatus::setJob_statusNil()
+           {
+               return resetJob_status();
            }
 
            

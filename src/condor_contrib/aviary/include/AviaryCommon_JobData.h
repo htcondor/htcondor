@@ -22,9 +22,9 @@
         
        #include "AviaryCommon_JobID.h"
           
-       #include "AviaryCommon_JobDataType.h"
-          
        #include "AviaryCommon_Status.h"
+          
+       #include "AviaryCommon_JobDataType.h"
           
 
         #include <stdio.h>
@@ -44,6 +44,10 @@ namespace AviaryCommon
 
                 
                 bool isValidId;
+            AviaryCommon::Status* property_Status;
+
+                
+                bool isValidStatus;
             AviaryCommon::JobDataType* property_Type;
 
                 
@@ -52,10 +56,6 @@ namespace AviaryCommon
 
                 
                 bool isValidContent;
-            AviaryCommon::Status* property_Status;
-
-                
-                bool isValidStatus;
             
 
         /*** Private methods ***/
@@ -66,15 +66,15 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
+        setStatusNil();
+            
+
+        bool WSF_CALL
         setTypeNil();
             
 
         bool WSF_CALL
         setContentNil();
-            
-
-        bool WSF_CALL
-        setStatusNil();
             
 
 
@@ -101,12 +101,12 @@ namespace AviaryCommon
          * Constructor for creating JobData
          * @param 
          * @param Id AviaryCommon::JobID*
+         * @param Status AviaryCommon::Status*
          * @param Type AviaryCommon::JobDataType*
          * @param Content std::string
-         * @param Status AviaryCommon::Status*
          * @return newly created JobData object
          */
-        JobData(AviaryCommon::JobID* arg_Id,AviaryCommon::JobDataType* arg_Type,std::string arg_Content,AviaryCommon::Status* arg_Status);
+        JobData(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,AviaryCommon::JobDataType* arg_Type,std::string arg_Content);
         
         
         /********************************** Class get set methods **************************************/
@@ -134,6 +134,30 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetId();
+        
+        
+
+        /**
+         * Getter for status. 
+         * @return AviaryCommon::Status*
+         */
+        WSF_EXTERN AviaryCommon::Status* WSF_CALL
+        getStatus();
+
+        /**
+         * Setter for status.
+         * @param arg_Status AviaryCommon::Status*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setStatus(AviaryCommon::Status*  arg_Status);
+
+        /**
+         * Re setter for status
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetStatus();
         
         
 
@@ -183,30 +207,6 @@ namespace AviaryCommon
         WSF_EXTERN bool WSF_CALL
         resetContent();
         
-        
-
-        /**
-         * Getter for status. 
-         * @return AviaryCommon::Status*
-         */
-        WSF_EXTERN AviaryCommon::Status* WSF_CALL
-        getStatus();
-
-        /**
-         * Setter for status.
-         * @param arg_Status AviaryCommon::Status*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setStatus(AviaryCommon::Status*  arg_Status);
-
-        /**
-         * Re setter for status
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetStatus();
-        
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -229,6 +229,16 @@ namespace AviaryCommon
         
 
         /**
+         * Check whether status is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isStatusNil();
+
+
+        
+
+        /**
          * Check whether type is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -244,16 +254,6 @@ namespace AviaryCommon
          */
         bool WSF_CALL
         isContentNil();
-
-
-        
-
-        /**
-         * Check whether status is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isStatusNil();
 
 
         
@@ -326,33 +326,33 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for type by property number (2)
-         * @return AviaryCommon::JobDataType
+         * Getter for status by property number (2)
+         * @return AviaryCommon::Status
          */
 
-        AviaryCommon::JobDataType* WSF_CALL
+        AviaryCommon::Status* WSF_CALL
         getProperty2();
 
     
         
 
         /**
-         * Getter for content by property number (3)
-         * @return std::string
+         * Getter for type by property number (3)
+         * @return AviaryCommon::JobDataType
          */
 
-        std::string WSF_CALL
+        AviaryCommon::JobDataType* WSF_CALL
         getProperty3();
 
     
         
 
         /**
-         * Getter for status by property number (4)
-         * @return AviaryCommon::Status
+         * Getter for content by property number (4)
+         * @return std::string
          */
 
-        AviaryCommon::Status* WSF_CALL
+        std::string WSF_CALL
         getProperty4();
 
     

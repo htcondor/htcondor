@@ -61,7 +61,7 @@ AviaryJobServiceSkeleton::buildBasicRequirements(ResourceConstraintVectorType* _
 
 
 AviaryJob::SubmitJobResponse*
-AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext *outCtx ,AviaryJob::SubmitJob* _submitJob)
+AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJob::SubmitJob* _submitJob)
 {
     AviaryJob::SubmitJobResponse* submitJobResponse = new AviaryJob::SubmitJobResponse();
     SchedulerObject* schedulerObj = SchedulerObject::getInstance();
@@ -122,7 +122,7 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext *outCtx ,AviaryJob::
 
 // TODO: would be nice to template these next 3
 AviaryJob::HoldJobResponse*
-AviaryJobServiceSkeleton::holdJob(wso2wsf::MessageContext *outCtx ,AviaryJob::HoldJob* _holdJob)
+AviaryJobServiceSkeleton::holdJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJob::HoldJob* _holdJob)
 {
 	AviaryJob::HoldJobResponse* holdJobResponse = new HoldJobResponse;
     string error;
@@ -148,7 +148,7 @@ AviaryJobServiceSkeleton::holdJob(wso2wsf::MessageContext *outCtx ,AviaryJob::Ho
 
 
 AviaryJob::ReleaseJobResponse*
-AviaryJobServiceSkeleton::releaseJob(wso2wsf::MessageContext *outCtx ,AviaryJob::ReleaseJob* _releaseJob)
+AviaryJobServiceSkeleton::releaseJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJob::ReleaseJob* _releaseJob)
 {
 	AviaryJob::ReleaseJobResponse* releaseJobResponse = new ReleaseJobResponse;
     string error;
@@ -173,7 +173,7 @@ AviaryJobServiceSkeleton::releaseJob(wso2wsf::MessageContext *outCtx ,AviaryJob:
 }
 
 AviaryJob::RemoveJobResponse*
-AviaryJobServiceSkeleton::removeJob(wso2wsf::MessageContext *outCtx ,AviaryJob::RemoveJob* _removeJob)
+AviaryJobServiceSkeleton::removeJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJob::RemoveJob* _removeJob)
 {
 	AviaryJob::RemoveJobResponse* removeJobResponse = new RemoveJobResponse;
     string error;
@@ -198,7 +198,7 @@ AviaryJobServiceSkeleton::removeJob(wso2wsf::MessageContext *outCtx ,AviaryJob::
 }
 
 AviaryJob::SetJobAttributeResponse*
-AviaryJobServiceSkeleton::setJobAttribute(wso2wsf::MessageContext *outCtx ,AviaryJob::SetJobAttribute* _setJobAttribute)
+AviaryJobServiceSkeleton::setJobAttribute(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJob::SetJobAttribute* _setJobAttribute)
 {
 	AviaryJob::SetJobAttributeResponse* setAttrResponse = new SetJobAttributeResponse;
     string error;

@@ -44,10 +44,10 @@ namespace AviaryQuery
 
                 
                 bool isValidIds;
-            bool property_AllowPartialMatching;
+            bool property_PartialMatches;
 
                 
-                bool isValidAllowPartialMatching;
+                bool isValidPartialMatches;
             
 
         /*** Private methods ***/
@@ -81,10 +81,10 @@ namespace AviaryQuery
          * Constructor for creating GetJobStatus
          * @param 
          * @param Ids std::vector<AviaryCommon::JobID*>*
-         * @param AllowPartialMatching bool
+         * @param PartialMatches bool
          * @return newly created GetJobStatus object
          */
-        GetJobStatus(std::vector<AviaryCommon::JobID*>* arg_Ids,bool arg_AllowPartialMatching);
+        GetJobStatus(std::vector<AviaryCommon::JobID*>* arg_Ids,bool arg_PartialMatches);
         
         
         /********************************** Class get set methods **************************************/
@@ -117,26 +117,26 @@ namespace AviaryQuery
         
 
         /**
-         * Getter for allowPartialMatching. 
+         * Getter for partialMatches. 
          * @return bool
          */
         WSF_EXTERN bool WSF_CALL
-        getAllowPartialMatching();
+        getPartialMatches();
 
         /**
-         * Setter for allowPartialMatching.
-         * @param arg_AllowPartialMatching bool
+         * Setter for partialMatches.
+         * @param arg_PartialMatches bool
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setAllowPartialMatching(bool  arg_AllowPartialMatching);
+        setPartialMatches(bool  arg_PartialMatches);
 
         /**
-         * Re setter for allowPartialMatching
+         * Re setter for partialMatches
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetAllowPartialMatching();
+        resetPartialMatches();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -230,20 +230,20 @@ namespace AviaryQuery
         
 
         /**
-         * Check whether allowPartialMatching is Nill
+         * Check whether partialMatches is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isAllowPartialMatchingNil();
+        isPartialMatchesNil();
 
 
         
         /**
-         * Set allowPartialMatching to Nill (same as using reset)
+         * Set partialMatches to Nill (same as using reset)
          * @return true on success, false otherwise.
          */
         bool WSF_CALL
-        setAllowPartialMatchingNil();
+        setPartialMatchesNil();
         
 
         /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
@@ -340,7 +340,7 @@ namespace AviaryQuery
         
 
         /**
-         * Getter for allowPartialMatching by property number (2)
+         * Getter for partialMatches by property number (2)
          * @return bool
          */
 

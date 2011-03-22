@@ -45,6 +45,7 @@ JobServerObject* JobServerObject::m_instance = NULL;
 JobServerObject::JobServerObject ()
 {
 	m_name = getScheddName();
+	m_pool = getPoolName();
 	m_codec = new BaseCodec;
 }
 

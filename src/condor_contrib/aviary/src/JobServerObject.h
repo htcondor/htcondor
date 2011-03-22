@@ -68,12 +68,16 @@ public:
     ~JobServerObject();
 	static JobServerObject* getInstance();
 
+	const char* getName() { return m_name.c_str(); }
+	const char* getPool() { return m_pool.c_str(); }
+
 private:
     JobServerObject();
 	JobServerObject(JobServerObject const&){};
 	JobServerObject& operator=(JobServerObject const&){};
 
 	string m_name;
+	string m_pool;
 	JobServerStats m_stats;
 	Codec* m_codec;
 

@@ -36,7 +36,8 @@ namespace AviaryCommon
             ResourceConstraintType_OS,
             ResourceConstraintType_ARCH,
             ResourceConstraintType_MEMORY,
-            ResourceConstraintType_DISK
+            ResourceConstraintType_DISK,
+            ResourceConstraintType_FILESYSTEM
         } ADBResourceConstraintTypeEnum;
         
         
