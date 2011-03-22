@@ -189,7 +189,7 @@ appear in \File{foo.error}.
 \item{Submit Description File Example 2:} This submit description file
 example queues 150
 runs of program \Prog{foo} which must have been compiled and linked for
-Sun workstations running Solaris 8.
+an Intel x86 processor running RHEL 3.
 Condor will not attempt
 to run the processes on machines which have less than 32 Megabytes of
 physical memory, and it will run them on machines which have at least 64
@@ -214,7 +214,7 @@ in this cluster will be written into file \File{foo.log}.
                                                                           
       Executable     = foo                                                    
       Universe       = standard
-      Requirements   = Memory >= 32 && OpSys == "SOLARIS28" && Arch =="SUN4u"     
+      Requirements   = Memory >= 32 && OpSys == "LINUX" && Arch =="INTEL"     
       Rank           = Memory >= 64
       Image_Size     = 28 Meg                                                 
                                                                           
