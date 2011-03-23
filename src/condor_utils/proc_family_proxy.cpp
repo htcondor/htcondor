@@ -326,28 +326,8 @@ ProcFamilyProxy::start_procd()
 	//
 	char* path = param("PROCD");
 	if (path == NULL) {
-		// Setup a default of PROCD=$(SBIN)/condor_procd
-		char *binpath = param("SBIN");
-		if (!binpath) {
-			binpath = param("BIN");
-		}
-		if ( binpath ) {
-#if defined(WIN32)
-			char *temp = dircat(binpath,"condor_procd.exe");
-#else
-			char *temp = dircat(binpath,"condor_procd");
-#endif
-			ASSERT(temp);
-				// Note: temp allocated with new char[]; we want
-				// path to be allocated with malloc.
-			path = strdup(temp);
-			free(binpath);
-			delete [] temp;
-		}
-		if ( path == NULL ) {
-			dprintf(D_ALWAYS, "start_procd: PROCD not defined in configuration\n");
-			return false;
-		}
+		dprintf(D_ALWAYS, "start_procd: PROCD not defined in configuration\n");
+		return false;
 	}
 	exe = path;
 	args.AppendArg(condor_basename(path));
