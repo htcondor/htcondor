@@ -385,23 +385,6 @@ ProcFamilyProxy::start_procd()
 	// softkills
 	//
 	char* softkill_path = param("WINDOWS_SOFTKILL");
-	if (softkill_path == NULL) {
-		// Setup a default of $(SBIN)/condor_softkill.exe
-		char *binpath = param("SBIN");
-		if (!binpath) {
-			binpath = param("BIN");
-		}
-		if ( binpath ) {
-			char *temp = dircat(binpath,"condor_softkill.exe");
-			ASSERT(temp);
-				// Note: temp allocated with new char[]; we want
-				// path to be allocated with malloc.
-			softkill_path = strdup(temp);
-			free(binpath);
-			delete [] temp;
-		}
-	}
-
 	if ( softkill_path == NULL ) {
 		dprintf(D_ALWAYS,
 		        "WINDOWS_SOFTKILL undefined; "
