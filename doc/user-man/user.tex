@@ -742,11 +742,11 @@ and/or object code to \Prog{mathematica} is not available.
 The submit description file for Example 3 queues 150
 \index{running multiple programs}
 runs of program \Prog{foo} which has been compiled and linked for
-Sun workstations running Solaris 8.
+RHEL 3 running on a 32-bit Intel processor.
 This job requires Condor to run the program on machines which have
 greater than 32 megabytes of physical memory, and expresses a
-preference to run the program on machines with more than 64 megabytes,
-if such machines are available.  It also advises Condor that it will
+preference to run the program on machines with more than 64 megabytes.
+It also advises Condor that it will
 use up to 28 megabytes of memory when running.
 Each of the 150 runs of the program is given its own process number,
 starting with process number 0.
@@ -770,7 +770,7 @@ will be written into the single file \File{foo.log}.
 
   Executable    = foo                                                    
   Universe      = standard                                                    
-  Requirements  = Memory >= 32 && OpSys == "SOLARIS28" && Arch =="SUN4u"     
+  Requirements  = Memory >= 32 && OpSys == "LINUX" && Arch =="INTEL"     
   Rank          = Memory >= 64
   Image_Size    = 28 Meg                                                 
 
@@ -1935,11 +1935,12 @@ An executable is available for one platform, but
 the submission is done from a different platform.
 Given the correct executable, the \AdAttr{requirements} command in
 the submit description file specifies the target architecture.
-For example, an executable compiled for a Sun 4, submitted
+For example, an executable compiled for a 32-bit Intel processor
+running  Windows Vista, submitted
 from an Intel architecture running Linux would add the 
 \AdAttr{requirement}
 \begin{verbatim}
-  requirements = Arch == "SUN4x" && OpSys == "SOLARIS251"
+  requirements = Arch == "INTEL" && OpSys == "WINNT60"
 \end{verbatim}
 Without this \AdAttr{requirement}, \Condor{submit}
 will assume that the program is to be executed on
@@ -1980,8 +1981,8 @@ The \$\$() informs Condor to substitute the requested
 from the machine where the job will be executed.
 
 An example of the heterogeneous job submission
-has executables available for three platforms:
-LINUX Intel, Solaris26 Intel, and Solaris 8 Sun.
+has executables available for two platforms:
+RHEL 3 on both 32-bit and 64-bit Intel processors.
 This example uses \Prog{povray}
 to render images using a popular free rendering engine.
 
@@ -1991,8 +1992,7 @@ These executables must therefore be named based on the
 machine attributes that describe a platform.
 The executables named \begin{verbatim}
   povray.LINUX.INTEL
-  povray.SOLARIS26.INTEL
-  povray.SOLARIS28.SUN4u
+  povray.LINUX.X86_64
 \end{verbatim}
 will work correctly for the macro
 \begin{verbatim}
@@ -2018,8 +2018,7 @@ A submit description file that queues three jobs for this example:
   Error        = povray.err.$(Process)
 
   Requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
-                 (Arch == "INTEL" && OpSys =="SOLARIS26") || \
-                 (Arch == "SUN4u" && OpSys == "SOLARIS28")
+                 (Arch == "X86_64" && OpSys =="LINUX") 
 
   Arguments    = +W1024 +H768 +Iimage1.pov
   Queue 
