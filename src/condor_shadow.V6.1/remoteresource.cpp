@@ -1789,7 +1789,7 @@ RemoteResource::requestReconnect( void )
 
 		// And also put in the request the ATTR_TRANS_SOCK and
 		// the ATTR_TRANS_KEY --- the starter will need these two
-		// atttribute value in order to re-establish the FileTransfer
+		// attribute value in order to re-establish the FileTransfer
 		// objects.  To get the values for these, just instantiate a 
 		// FileTransfer server object right here.  No worries if
 		// one already exists, the FileTransfer object will just
