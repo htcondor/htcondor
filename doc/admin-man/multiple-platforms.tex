@@ -45,18 +45,18 @@ Platform-Specific Configuration File}
 
 The name of 
 platform-specific configuration files may be specified by using the
-\Macro{ARCH} and \Macro{OPSYS} parameters, as are defined
+\MacroNI{ARCH} and \MacroNI{OPSYS} configuration variables, as are defined
 automatically by Condor.
-For example, for Intel Linux
-machines, and Sparc Solaris 2.6 machines,
+For example, for 32-bit Intel Windows 7
+machines and 64-bit Intel Linux machines,
 the files ought to be named:
 
 \begin{verbatim}
-  condor_config.INTEL.LINUX
-  condor_config.SUN4x.SOLARIS26
+  condor_config.INTEL.WINNT61
+  condor_config.X86_64.LINUX
 \end{verbatim}
 
-Then, assuming these three files are in the directory defined by the
+Then, assuming these files are in the directory defined by the
 \MacroNI{ETC} configuration macro,
 and machine-specific configuration files are in
 the same directory, named by each machine's host name, the
@@ -78,8 +78,6 @@ a soft link named \File{condor\_config.platform} that points to
 
 \begin{verbatim}
   condor_config.i386_linux2
-  condor_config.sun4x_56
-  condor_config.sgi_64
   condor_config.platform -> condor_config.@sys
 \end{verbatim}
 
