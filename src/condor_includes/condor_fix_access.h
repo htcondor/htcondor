@@ -45,6 +45,12 @@ END_C_DECLS
 #undef access
 #define access(x,y) access_euid(x,y)
 
+#else 
+
+extern "C" int __access_(const char *path, int mode);
+#undef access
+#define access(x,y) __access_(x,y)
+
 #endif /* WIN32 */
 
 #endif /* CONDOR_FIX_ACCESS_H */
