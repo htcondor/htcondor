@@ -131,6 +131,21 @@
 			<xs:element name="job_status" type="tns:JobStatusType" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
+	<xs:complexType name="JobSummary">
+		<xs:sequence>
+			<xs:element name="id" type="tns:JobID"/>
+			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="cmd" type="xs:string"/>
+			<xs:element name="queued" type="xs:date"/>
+			<xs:element name="last_update" type="xs:date"/>
+			<xs:element name="job_status" type="tns:JobStatusType"/>
+			<xs:element name="args1" type="xs:string" minOccurs="0"/>
+			<xs:element name="args2" type="xs:string" minOccurs="0"/>
+			<xs:element name="held" type="xs:string" minOccurs="0"/>
+			<xs:element name="released" type="xs:string" minOccurs="0"/>
+			<xs:element name="removed" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
 	<xs:complexType name="JobDetails">
 		<xs:sequence>
 			<xs:element name="id" type="tns:JobID"/>
@@ -148,10 +163,7 @@
 	<xs:complexType name="JobData">
 		<xs:sequence>
 			<xs:element name="id" type="tns:JobID"/>
-			<xs:element name="status" type="tns:Status"/>
-			<xs:element name="type" type="tns:JobDataType" minOccurs="0"/>
-			<!-- string for file content...we probably want to keep line feeds, etc. TODO: need to revisit this-->
-			<xs:element name="content" type="xs:string" minOccurs="0"/>
+			<xs:element name="type" type="tns:JobDataType"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:simpleType name="ResourceType">

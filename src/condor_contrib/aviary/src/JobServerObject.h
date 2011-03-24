@@ -24,6 +24,10 @@
 // local includes
 #include "Codec.h"
 
+struct a;
+struct a;
+struct a;
+struct a;
 using namespace std;
 using namespace compat_classad;
 using namespace aviary::codec;
@@ -54,16 +58,43 @@ struct JobServerStats {
     uint32_t    NumUsers;
 };
 
+enum UserFileType {
+	ERR = 0,
+	LOG = 1,
+	OUT = 2
+};
+
+struct JobSummaryFields {
+	int status;
+	string cmd;
+	string args1;
+	string args2;
+	int queued;
+	int last_update;
+	string hold_reason;
+	string release_reason;
+	string remove_reason;
+	string submission_id;
+	string owner;
+};
+
 class JobServerObject
 {
 public:
 
 	void update(const ClassAd &ad);
 
-	bool getSummary(string id, AttributeMapType& _map, string &text);
-	bool getJobAd(string id, AttributeMapType& _map, string &text);
-	bool fetchJobData(string id, string &file, int32_t start, int32_t end,
-				string &data, string &text);
+	bool getStatus(const char* id, int& status, string &text);
+	bool getSummary(const char* key, JobSummaryFields& _summary, string& text);
+	bool getJobAd(const char* id, AttributeMapType& _map, string &text);
+	bool fetchJobData(const char* key,
+					   const UserFileType ftype,
+					   std::string& fname,
+					   int max_bytes,
+					   bool from_end,
+					   int& fsize,
+					   std::string &data,
+					   std::string &text);
 
     ~JobServerObject();
 	static JobServerObject* getInstance();
@@ -73,8 +104,8 @@ public:
 
 private:
     JobServerObject();
-	JobServerObject(JobServerObject const&){};
-	JobServerObject& operator=(JobServerObject const&){};
+	JobServerObject(JobServerObject const&);
+	JobServerObject& operator=(JobServerObject const&);
 
 	string m_name;
 	string m_pool;

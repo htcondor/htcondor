@@ -1,28 +1,26 @@
 
 
-        #ifndef AviaryQuery_GETSUBMISSIONSUMMARYRESPONSE_H
-        #define AviaryQuery_GETSUBMISSIONSUMMARYRESPONSE_H
+        #ifndef AviaryQuery_GETJOBSUMMARY_H
+        #define AviaryQuery_GETJOBSUMMARY_H
 
        /**
-        * GetSubmissionSummaryResponse.h
+        * GetJobSummary.h
         *
         * This file was auto-generated from WSDL
         * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
         */
 
        /**
-        *  GetSubmissionSummaryResponse class
+        *  GetJobSummary class
         */
 
         namespace AviaryQuery{
-            class GetSubmissionSummaryResponse;
+            class GetJobSummary;
         }
         
 
         
-       #include "AviaryCommon_JobSummary.h"
-          
-       #include "AviaryCommon_Status.h"
+       #include "AviaryCommon_JobID.h"
           
         #include <axutil_qname.h>
         
@@ -37,30 +35,26 @@ namespace AviaryQuery
         
         
 
-        class GetSubmissionSummaryResponse {
+        class GetJobSummary {
 
         private:
              
                 axutil_qname_t* qname;
-            std::vector<AviaryCommon::JobSummary*>* property_Jobs;
+            std::vector<AviaryCommon::JobID*>* property_Ids;
 
                 
-                bool isValidJobs;
-            AviaryCommon::Status* property_Status;
+                bool isValidIds;
+            bool property_PartialMatches;
 
                 
-                bool isValidStatus;
+                bool isValidPartialMatches;
             
 
         /*** Private methods ***/
           
 
         bool WSF_CALL
-        setJobsNil();
-            
-
-        bool WSF_CALL
-        setStatusNil();
+        setIdsNil();
             
 
 
@@ -70,27 +64,27 @@ namespace AviaryQuery
         public:
 
         /**
-         * Constructor for class GetSubmissionSummaryResponse
+         * Constructor for class GetJobSummary
          */
 
-        GetSubmissionSummaryResponse();
+        GetJobSummary();
 
         /**
-         * Destructor GetSubmissionSummaryResponse
+         * Destructor GetJobSummary
          */
-        ~GetSubmissionSummaryResponse();
+        ~GetJobSummary();
 
 
        
 
         /**
-         * Constructor for creating GetSubmissionSummaryResponse
+         * Constructor for creating GetJobSummary
          * @param 
-         * @param Jobs std::vector<AviaryCommon::JobSummary*>*
-         * @param Status AviaryCommon::Status*
-         * @return newly created GetSubmissionSummaryResponse object
+         * @param Ids std::vector<AviaryCommon::JobID*>*
+         * @param PartialMatches bool
+         * @return newly created GetJobSummary object
          */
-        GetSubmissionSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs,AviaryCommon::Status* arg_Status);
+        GetJobSummary(std::vector<AviaryCommon::JobID*>* arg_Ids,bool arg_PartialMatches);
         
         
         /********************************** Class get set methods **************************************/
@@ -98,51 +92,51 @@ namespace AviaryQuery
         
 
         /**
-         * Getter for jobs. Deprecated for array types, Use getJobsAt instead
-         * @return Array of AviaryCommon::JobSummary*s.
+         * Getter for ids. Deprecated for array types, Use getIdsAt instead
+         * @return Array of AviaryCommon::JobID*s.
          */
-        WSF_EXTERN std::vector<AviaryCommon::JobSummary*>* WSF_CALL
-        getJobs();
+        WSF_EXTERN std::vector<AviaryCommon::JobID*>* WSF_CALL
+        getIds();
 
         /**
-         * Setter for jobs.Deprecated for array types, Use setJobsAt
-         * or addJobs instead.
-         * @param arg_Jobs Array of AviaryCommon::JobSummary*s.
+         * Setter for ids.Deprecated for array types, Use setIdsAt
+         * or addIds instead.
+         * @param arg_Ids Array of AviaryCommon::JobID*s.
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setJobs(std::vector<AviaryCommon::JobSummary*>*  arg_Jobs);
+        setIds(std::vector<AviaryCommon::JobID*>*  arg_Ids);
 
         /**
-         * Re setter for jobs
+         * Re setter for ids
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetJobs();
+        resetIds();
         
         
 
         /**
-         * Getter for status. 
-         * @return AviaryCommon::Status*
+         * Getter for partialMatches. 
+         * @return bool
          */
-        WSF_EXTERN AviaryCommon::Status* WSF_CALL
-        getStatus();
+        WSF_EXTERN bool WSF_CALL
+        getPartialMatches();
 
         /**
-         * Setter for status.
-         * @param arg_Status AviaryCommon::Status*
+         * Setter for partialMatches.
+         * @param arg_PartialMatches bool
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setStatus(AviaryCommon::Status*  arg_Status);
+        setPartialMatches(bool  arg_PartialMatches);
 
         /**
-         * Re setter for status
+         * Re setter for partialMatches
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetStatus();
+        resetPartialMatches();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -171,47 +165,47 @@ namespace AviaryQuery
         
         
         /**
-         * Get the ith element of jobs.
+         * Get the ith element of ids.
         * @param i index of the item to be obtained
-         * @return ith AviaryCommon::JobSummary* of the array
+         * @return ith AviaryCommon::JobID* of the array
          */
-        WSF_EXTERN AviaryCommon::JobSummary* WSF_CALL
-        getJobsAt(int i);
+        WSF_EXTERN AviaryCommon::JobID* WSF_CALL
+        getIdsAt(int i);
 
         /**
-         * Set the ith element of jobs. (If the ith already exist, it will be replaced)
+         * Set the ith element of ids. (If the ith already exist, it will be replaced)
          * @param i index of the item to return
-         * @param arg_Jobs element to set AviaryCommon::JobSummary* to the array
-         * @return ith AviaryCommon::JobSummary* of the array
+         * @param arg_Ids element to set AviaryCommon::JobID* to the array
+         * @return ith AviaryCommon::JobID* of the array
          */
         WSF_EXTERN bool WSF_CALL
-        setJobsAt(int i,
-                AviaryCommon::JobSummary* arg_Jobs);
+        setIdsAt(int i,
+                AviaryCommon::JobID* arg_Ids);
 
 
         /**
-         * Add to jobs.
-         * @param arg_Jobs element to add AviaryCommon::JobSummary* to the array
+         * Add to ids.
+         * @param arg_Ids element to add AviaryCommon::JobID* to the array
          * @return true on success, false otherwise.
          */
         WSF_EXTERN bool WSF_CALL
-        addJobs(
-            AviaryCommon::JobSummary* arg_Jobs);
+        addIds(
+            AviaryCommon::JobID* arg_Ids);
 
         /**
-         * Get the size of the jobs array.
-         * @return the size of the jobs array.
+         * Get the size of the ids array.
+         * @return the size of the ids array.
          */
         WSF_EXTERN int WSF_CALL
-        sizeofJobs();
+        sizeofIds();
 
         /**
-         * Remove the ith element of jobs.
+         * Remove the ith element of ids.
          * @param i index of the item to remove
          * @return true on success, false otherwise.
          */
         WSF_EXTERN bool WSF_CALL
-        removeJobsAt(int i);
+        removeIdsAt(int i);
 
         
 
@@ -226,23 +220,30 @@ namespace AviaryQuery
         
 
         /**
-         * Check whether jobs is Nill
+         * Check whether ids is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isJobsNil();
+        isIdsNil();
 
 
         
 
         /**
-         * Check whether status is Nill
+         * Check whether partialMatches is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isStatusNil();
+        isPartialMatchesNil();
 
 
+        
+        /**
+         * Set partialMatches to Nill (same as using reset)
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setPartialMatchesNil();
         
 
         /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
@@ -253,21 +254,21 @@ namespace AviaryQuery
          */
         
         /**
-         * Check whether jobs is Nill at position i
+         * Check whether ids is Nill at position i
          * @param i index of the item to return.
          * @return true if the value is Nil at position i, false otherwise
          */
         bool WSF_CALL
-        isJobsNilAt(int i);
+        isIdsNilAt(int i);
  
        
         /**
-         * Set jobs to NILL at the  position i.
+         * Set ids to NILL at the  position i.
          * @param i . The index of the item to be set Nill.
          * @return true on success, false otherwise.
          */
         bool WSF_CALL
-        setJobsNilAt(int i);
+        setIdsNilAt(int i);
 
         
 
@@ -302,18 +303,18 @@ namespace AviaryQuery
 
         /**
          * Serialize the ADB object to an xml
-         * @param GetSubmissionSummaryResponse_om_node node to serialize from
-         * @param GetSubmissionSummaryResponse_om_element parent element to serialize from
+         * @param GetJobSummary_om_node node to serialize from
+         * @param GetJobSummary_om_element parent element to serialize from
          * @param tag_closed Whether the parent tag is closed or not
          * @param namespaces hash of namespace uris to prefixes
          * @param next_ns_index an int which contains the next namespace index
          * @return axiom_node_t on success,NULL otherwise.
          */
         axiom_node_t* WSF_CALL
-        serialize(axiom_node_t* GetSubmissionSummaryResponse_om_node, axiom_element_t *GetSubmissionSummaryResponse_om_element, int tag_closed, axutil_hash_t *namespaces, int *next_ns_index);
+        serialize(axiom_node_t* GetJobSummary_om_node, axiom_element_t *GetJobSummary_om_element, int tag_closed, axutil_hash_t *namespaces, int *next_ns_index);
 
         /**
-         * Check whether the GetSubmissionSummaryResponse is a particle class (E.g. group, inner sequence)
+         * Check whether the GetJobSummary is a particle class (E.g. group, inner sequence)
          * @return true if this is a particle class, false otherwise.
          */
         bool WSF_CALL
@@ -328,22 +329,22 @@ namespace AviaryQuery
         
 
         /**
-         * Getter for jobs by property number (1)
-         * @return Array of AviaryCommon::JobSummarys.
+         * Getter for ids by property number (1)
+         * @return Array of AviaryCommon::JobIDs.
          */
 
-        std::vector<AviaryCommon::JobSummary*>* WSF_CALL
+        std::vector<AviaryCommon::JobID*>* WSF_CALL
         getProperty1();
 
     
         
 
         /**
-         * Getter for status by property number (2)
-         * @return AviaryCommon::Status
+         * Getter for partialMatches by property number (2)
+         * @return bool
          */
 
-        AviaryCommon::Status* WSF_CALL
+        bool WSF_CALL
         getProperty2();
 
     
@@ -351,6 +352,6 @@ namespace AviaryQuery
 };
 
 }        
- #endif /* GETSUBMISSIONSUMMARYRESPONSE_H */
+ #endif /* GETJOBSUMMARY_H */
     
 

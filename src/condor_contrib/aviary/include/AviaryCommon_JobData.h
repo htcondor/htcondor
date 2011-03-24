@@ -22,8 +22,6 @@
         
        #include "AviaryCommon_JobID.h"
           
-       #include "AviaryCommon_Status.h"
-          
        #include "AviaryCommon_JobDataType.h"
           
 
@@ -44,18 +42,10 @@ namespace AviaryCommon
 
                 
                 bool isValidId;
-            AviaryCommon::Status* property_Status;
-
-                
-                bool isValidStatus;
             AviaryCommon::JobDataType* property_Type;
 
                 
                 bool isValidType;
-            std::string property_Content;
-
-                
-                bool isValidContent;
             
 
         /*** Private methods ***/
@@ -66,15 +56,7 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
-        setStatusNil();
-            
-
-        bool WSF_CALL
         setTypeNil();
-            
-
-        bool WSF_CALL
-        setContentNil();
             
 
 
@@ -101,12 +83,10 @@ namespace AviaryCommon
          * Constructor for creating JobData
          * @param 
          * @param Id AviaryCommon::JobID*
-         * @param Status AviaryCommon::Status*
          * @param Type AviaryCommon::JobDataType*
-         * @param Content std::string
          * @return newly created JobData object
          */
-        JobData(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,AviaryCommon::JobDataType* arg_Type,std::string arg_Content);
+        JobData(AviaryCommon::JobID* arg_Id,AviaryCommon::JobDataType* arg_Type);
         
         
         /********************************** Class get set methods **************************************/
@@ -138,30 +118,6 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for status. 
-         * @return AviaryCommon::Status*
-         */
-        WSF_EXTERN AviaryCommon::Status* WSF_CALL
-        getStatus();
-
-        /**
-         * Setter for status.
-         * @param arg_Status AviaryCommon::Status*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setStatus(AviaryCommon::Status*  arg_Status);
-
-        /**
-         * Re setter for status
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetStatus();
-        
-        
-
-        /**
          * Getter for type. 
          * @return AviaryCommon::JobDataType*
          */
@@ -182,30 +138,6 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetType();
-        
-        
-
-        /**
-         * Getter for content. 
-         * @return std::string*
-         */
-        WSF_EXTERN std::string WSF_CALL
-        getContent();
-
-        /**
-         * Setter for content.
-         * @param arg_Content std::string*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setContent(const std::string  arg_Content);
-
-        /**
-         * Re setter for content
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetContent();
         
 
 
@@ -229,31 +161,11 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether status is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isStatusNil();
-
-
-        
-
-        /**
          * Check whether type is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
         isTypeNil();
-
-
-        
-
-        /**
-         * Check whether content is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isContentNil();
 
 
         
@@ -326,34 +238,12 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for status by property number (2)
-         * @return AviaryCommon::Status
-         */
-
-        AviaryCommon::Status* WSF_CALL
-        getProperty2();
-
-    
-        
-
-        /**
-         * Getter for type by property number (3)
+         * Getter for type by property number (2)
          * @return AviaryCommon::JobDataType
          */
 
         AviaryCommon::JobDataType* WSF_CALL
-        getProperty3();
-
-    
-        
-
-        /**
-         * Getter for content by property number (4)
-         * @return std::string
-         */
-
-        std::string WSF_CALL
-        getProperty4();
+        getProperty2();
 
     
 

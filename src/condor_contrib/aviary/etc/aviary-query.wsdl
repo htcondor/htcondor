@@ -22,6 +22,12 @@
 			<xsd:import schemaLocation="aviary-query.xsd" namespace="http://query.aviary.grid.redhat.com"/>
 		</xsd:schema>
 	</wsdl:types>
+	<wsdl:message name="GetJobSummaryRequest">
+		<wsdl:part name="parameters" element="qry:GetJobSummary"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobSummaryResponse">
+		<wsdl:part name="parameters" element="qry:GetJobSummaryResponse"/>
+	</wsdl:message>
 	<wsdl:message name="GetJobStatusRequest">
 		<wsdl:part name="parameters" element="qry:GetJobStatus"/>
 	</wsdl:message>
@@ -47,6 +53,10 @@
 		<wsdl:part name="parameters" element="qry:GetSubmissionSummaryResponse"/>
 	</wsdl:message>
 	<wsdl:portType name="AviaryQuery">
+		<wsdl:operation name="getJobSummary">
+			<wsdl:input message="tns:GetJobSummaryRequest"/>
+			<wsdl:output message="tns:GetJobSummaryResponse"/>
+		</wsdl:operation>
 		<wsdl:operation name="getJobStatus">
 			<wsdl:input message="tns:GetJobStatusRequest"/>
 			<wsdl:output message="tns:GetJobStatusResponse"/>
@@ -66,6 +76,15 @@
 	</wsdl:portType>
 	<wsdl:binding name="AviaryQuerySOAPBinding" type="tns:AviaryQuery">
 		<soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+		<wsdl:operation name="getJobSummary">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-query/job/summary"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
 		<wsdl:operation name="getJobStatus">
 			<soap:operation soapAction="http://grid.redhat.com/aviary-query/job/status"/>
 			<wsdl:input>

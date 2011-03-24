@@ -35,6 +35,11 @@
      #include <AviaryQuery_GetJobDetails.h>
     
      #include <AviaryQuery_GetJobDetailsResponse.h>
+
+     #include <AviaryQuery_GetJobSummary.h>
+
+     #include <AviaryQuery_GetJobSummaryResponse.h>
+    
     
 namespace AviaryQuery {
     
@@ -131,7 +136,6 @@ class AviaryQueryServiceSkeleton
 
 		 
 
-
         /**
          * Auto generated method declaration
          * for "getJobDetails|http://grid.redhat.com/aviary-query/" operation.
@@ -146,8 +150,18 @@ class AviaryQueryServiceSkeleton
         AviaryQuery::GetJobDetailsResponse* getJobDetails(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetJobDetails* _getJobDetails);
 
 
-     
+         /**
+         * Auto generated method declaration
+         * for "getJobSummary|http://grid.redhat.com/aviary-query/" operation.
+         *
+         * @param _getJobSummary of the AviaryQuery::GetJobSummary
+         *
+         * @return AviaryQuery::GetJobSummaryResponse*
+         */
 
+
+         virtual
+        AviaryQuery::GetJobSummaryResponse* getJobSummary(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetJobSummary* _getJobSummary);
 
 
 };

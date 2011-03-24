@@ -1,21 +1,21 @@
 
 
-        #ifndef AviaryQuery_GETSUBMISSIONSUMMARYRESPONSE_H
-        #define AviaryQuery_GETSUBMISSIONSUMMARYRESPONSE_H
+        #ifndef AviaryQuery_GETJOBSUMMARYRESPONSE_H
+        #define AviaryQuery_GETJOBSUMMARYRESPONSE_H
 
        /**
-        * GetSubmissionSummaryResponse.h
+        * GetJobSummaryResponse.h
         *
         * This file was auto-generated from WSDL
         * by the Apache Axis2/Java version: 1.0  Built on : Mar 02, 2011 (11:54:00 EST)
         */
 
        /**
-        *  GetSubmissionSummaryResponse class
+        *  GetJobSummaryResponse class
         */
 
         namespace AviaryQuery{
-            class GetSubmissionSummaryResponse;
+            class GetJobSummaryResponse;
         }
         
 
@@ -37,7 +37,7 @@ namespace AviaryQuery
         
         
 
-        class GetSubmissionSummaryResponse {
+        class GetJobSummaryResponse {
 
         private:
              
@@ -70,27 +70,27 @@ namespace AviaryQuery
         public:
 
         /**
-         * Constructor for class GetSubmissionSummaryResponse
+         * Constructor for class GetJobSummaryResponse
          */
 
-        GetSubmissionSummaryResponse();
+        GetJobSummaryResponse();
 
         /**
-         * Destructor GetSubmissionSummaryResponse
+         * Destructor GetJobSummaryResponse
          */
-        ~GetSubmissionSummaryResponse();
+        ~GetJobSummaryResponse();
 
 
        
 
         /**
-         * Constructor for creating GetSubmissionSummaryResponse
+         * Constructor for creating GetJobSummaryResponse
          * @param 
          * @param Jobs std::vector<AviaryCommon::JobSummary*>*
          * @param Status AviaryCommon::Status*
-         * @return newly created GetSubmissionSummaryResponse object
+         * @return newly created GetJobSummaryResponse object
          */
-        GetSubmissionSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs,AviaryCommon::Status* arg_Status);
+        GetJobSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs,AviaryCommon::Status* arg_Status);
         
         
         /********************************** Class get set methods **************************************/
@@ -302,18 +302,18 @@ namespace AviaryQuery
 
         /**
          * Serialize the ADB object to an xml
-         * @param GetSubmissionSummaryResponse_om_node node to serialize from
-         * @param GetSubmissionSummaryResponse_om_element parent element to serialize from
+         * @param GetJobSummaryResponse_om_node node to serialize from
+         * @param GetJobSummaryResponse_om_element parent element to serialize from
          * @param tag_closed Whether the parent tag is closed or not
          * @param namespaces hash of namespace uris to prefixes
          * @param next_ns_index an int which contains the next namespace index
          * @return axiom_node_t on success,NULL otherwise.
          */
         axiom_node_t* WSF_CALL
-        serialize(axiom_node_t* GetSubmissionSummaryResponse_om_node, axiom_element_t *GetSubmissionSummaryResponse_om_element, int tag_closed, axutil_hash_t *namespaces, int *next_ns_index);
+        serialize(axiom_node_t* GetJobSummaryResponse_om_node, axiom_element_t *GetJobSummaryResponse_om_element, int tag_closed, axutil_hash_t *namespaces, int *next_ns_index);
 
         /**
-         * Check whether the GetSubmissionSummaryResponse is a particle class (E.g. group, inner sequence)
+         * Check whether the GetJobSummaryResponse is a particle class (E.g. group, inner sequence)
          * @return true if this is a particle class, false otherwise.
          */
         bool WSF_CALL
@@ -351,6 +351,6 @@ namespace AviaryQuery
 };
 
 }        
- #endif /* GETSUBMISSIONSUMMARYRESPONSE_H */
+ #endif /* GETJOBSUMMARYRESPONSE_H */
     
 

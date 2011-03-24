@@ -1,13 +1,13 @@
 
 
         /**
-         * GetSubmissionSummaryResponse.cpp
+         * GetJobSummaryResponse.cpp
          *
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
 
-        #include "AviaryQuery_GetSubmissionSummaryResponse.h"
+        #include "AviaryQuery_GetJobSummaryResponse.h"
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -18,9 +18,9 @@
         using namespace AviaryQuery;
         
                /*
-                * Implementation of the GetSubmissionSummaryResponse|http://query.aviary.grid.redhat.com Element
+                * Implementation of the GetJobSummaryResponse|http://query.aviary.grid.redhat.com Element
                 */
-           AviaryQuery::GetSubmissionSummaryResponse::GetSubmissionSummaryResponse()
+           AviaryQuery::GetJobSummaryResponse::GetJobSummaryResponse()
         {
 
         
@@ -35,13 +35,13 @@
             isValidStatus  = false;
         
                   qname =  axutil_qname_create (Environment::getEnv(),
-                        "GetSubmissionSummaryResponse",
+                        "GetJobSummaryResponse",
                         "http://query.aviary.grid.redhat.com",
                         NULL);
                 
         }
 
-       AviaryQuery::GetSubmissionSummaryResponse::GetSubmissionSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs,AviaryCommon::Status* arg_Status)
+       AviaryQuery::GetJobSummaryResponse::GetJobSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs,AviaryCommon::Status* arg_Status)
         {
              
                    qname = NULL;
@@ -55,7 +55,7 @@
             isValidStatus  = true;
             
                  qname =  axutil_qname_create (Environment::getEnv(),
-                       "GetSubmissionSummaryResponse",
+                       "GetJobSummaryResponse",
                        "http://query.aviary.grid.redhat.com",
                        NULL);
                
@@ -64,7 +64,7 @@
                     property_Status = arg_Status;
             
         }
-        AviaryQuery::GetSubmissionSummaryResponse::~GetSubmissionSummaryResponse()
+        AviaryQuery::GetJobSummaryResponse::~GetJobSummaryResponse()
         {
 
         }
@@ -72,7 +72,7 @@
         
 
         bool WSF_CALL
-        AviaryQuery::GetSubmissionSummaryResponse::deserialize(axiom_node_t** dp_parent,bool *dp_is_early_node_valid, bool dont_care_minoccurs)
+        AviaryQuery::GetJobSummaryResponse::deserialize(axiom_node_t** dp_parent,bool *dp_is_early_node_valid, bool dont_care_minoccurs)
         {
           axiom_node_t *parent = *dp_parent;
           
@@ -115,7 +115,7 @@
                     else
                     {
                         WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI,
-                              "Failed in building adb object for GetSubmissionSummaryResponse : "
+                              "Failed in building adb object for GetJobSummaryResponse : "
                               "Expected %s but returned %s",
                               axutil_qname_to_string(qname, Environment::getEnv()),
                               axutil_qname_to_string(mqname, Environment::getEnv()));
@@ -318,7 +318,7 @@
        }
 
           bool WSF_CALL
-          AviaryQuery::GetSubmissionSummaryResponse::isParticle()
+          AviaryQuery::GetJobSummaryResponse::isParticle()
           {
             
                  return false;
@@ -327,7 +327,7 @@
 
 
           void WSF_CALL
-          AviaryQuery::GetSubmissionSummaryResponse::declareParentNamespaces(
+          AviaryQuery::GetJobSummaryResponse::declareParentNamespaces(
                     axiom_element_t *parent_element,
                     axutil_hash_t *namespaces, int *next_ns_index)
           {
@@ -339,7 +339,7 @@
         
         
         axiom_node_t* WSF_CALL
-	AviaryQuery::GetSubmissionSummaryResponse::serialize(axiom_node_t *parent, 
+	AviaryQuery::GetJobSummaryResponse::serialize(axiom_node_t *parent, 
 			axiom_element_t *parent_element, 
 			int parent_tag_closed, 
 			axutil_hash_t *namespaces, 
@@ -388,7 +388,7 @@
                            axutil_hash_set(namespaces, "http://query.aviary.grid.redhat.com", AXIS2_HASH_KEY_STRING, axutil_strdup(Environment::getEnv(), "n"));
                        
                      
-                    parent_element = axiom_element_create (Environment::getEnv(), NULL, "GetSubmissionSummaryResponse", ns1 , &parent);
+                    parent_element = axiom_element_create (Environment::getEnv(), NULL, "GetJobSummaryResponse", ns1 , &parent);
                     
                     
                     axiom_element_set_namespace(parent_element, Environment::getEnv(), ns1, parent);
@@ -564,7 +564,7 @@
              * Getter for jobs by  Property Number 1
              */
             std::vector<AviaryCommon::JobSummary*>* WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::getProperty1()
+            AviaryQuery::GetJobSummaryResponse::getProperty1()
             {
                 return getJobs();
             }
@@ -573,7 +573,7 @@
              * getter for jobs.
              */
             std::vector<AviaryCommon::JobSummary*>* WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::getJobs()
+            AviaryQuery::GetJobSummaryResponse::getJobs()
              {
                 return property_Jobs;
              }
@@ -582,7 +582,7 @@
              * setter for jobs
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::setJobs(
+            AviaryQuery::GetJobSummaryResponse::setJobs(
                     std::vector<AviaryCommon::JobSummary*>*  arg_Jobs)
              {
                 
@@ -643,7 +643,7 @@
              * Get ith element of jobs.
              */
             AviaryCommon::JobSummary* WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::getJobsAt(int i)
+            AviaryQuery::GetJobSummaryResponse::getJobsAt(int i)
             {
                 AviaryCommon::JobSummary* ret_val;
                 if(property_Jobs == NULL)
@@ -660,7 +660,7 @@
              * Set the ith element of jobs.
              */
            bool WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::setJobsAt(int i,
+            AviaryQuery::GetJobSummaryResponse::setJobsAt(int i,
                     AviaryCommon::JobSummary* arg_Jobs)
             {
                  AviaryCommon::JobSummary* element;
@@ -726,7 +726,7 @@
              * Add to jobs.
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::addJobs(
+            AviaryQuery::GetJobSummaryResponse::addJobs(
                     AviaryCommon::JobSummary* arg_Jobs)
              {
 
@@ -755,7 +755,7 @@
              * Get the size of the jobs array.
              */
             int WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::sizeofJobs()
+            AviaryQuery::GetJobSummaryResponse::sizeofJobs()
             {
 
                 if(property_Jobs == NULL)
@@ -769,7 +769,7 @@
              * remove the ith element, same as set_nil_at.
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::removeJobsAt(int i)
+            AviaryQuery::GetJobSummaryResponse::removeJobsAt(int i)
             {
                 return setJobsNilAt(i);
             }
@@ -780,7 +780,7 @@
             * resetter for jobs
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::resetJobs()
+           AviaryQuery::GetJobSummaryResponse::resetJobs()
            {
                int i = 0;
                int count = 0;
@@ -824,7 +824,7 @@
             * Check whether jobs is nill
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::isJobsNil()
+           AviaryQuery::GetJobSummaryResponse::isJobsNil()
            {
                return !isValidJobs;
            }
@@ -833,7 +833,7 @@
             * Set jobs to nill (currently the same as reset)
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::setJobsNil()
+           AviaryQuery::GetJobSummaryResponse::setJobsNil()
            {
                return resetJobs();
            }
@@ -843,7 +843,7 @@
             * Check whether jobs is nill at i
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::isJobsNilAt(int i)
+           AviaryQuery::GetJobSummaryResponse::isJobsNilAt(int i)
            {
                return (isValidJobs == false ||
                        NULL == property_Jobs ||
@@ -854,7 +854,7 @@
             * Set jobs to nil at i
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::setJobsNilAt(int i)
+           AviaryQuery::GetJobSummaryResponse::setJobsNilAt(int i)
            {
                 int size = 0;
                 int j;
@@ -933,7 +933,7 @@
              * Getter for status by  Property Number 2
              */
             AviaryCommon::Status* WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::getProperty2()
+            AviaryQuery::GetJobSummaryResponse::getProperty2()
             {
                 return getStatus();
             }
@@ -942,7 +942,7 @@
              * getter for status.
              */
             AviaryCommon::Status* WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::getStatus()
+            AviaryQuery::GetJobSummaryResponse::getStatus()
              {
                 return property_Status;
              }
@@ -951,7 +951,7 @@
              * setter for status
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::setStatus(
+            AviaryQuery::GetJobSummaryResponse::setStatus(
                     AviaryCommon::Status*  arg_Status)
              {
                 
@@ -995,7 +995,7 @@
             * resetter for status
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::resetStatus()
+           AviaryQuery::GetJobSummaryResponse::resetStatus()
            {
                int i = 0;
                int count = 0;
@@ -1025,7 +1025,7 @@
             * Check whether status is nill
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::isStatusNil()
+           AviaryQuery::GetJobSummaryResponse::isStatusNil()
            {
                return !isValidStatus;
            }
@@ -1034,7 +1034,7 @@
             * Set status to nill (currently the same as reset)
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::setStatusNil()
+           AviaryQuery::GetJobSummaryResponse::setStatusNil()
            {
                return resetStatus();
            }

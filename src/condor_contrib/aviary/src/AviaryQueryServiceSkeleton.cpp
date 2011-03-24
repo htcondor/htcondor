@@ -28,10 +28,13 @@
 #include <AviaryQuery_GetSubmissionSummaryResponse.h>
 #include <AviaryQuery_GetJobDetails.h>
 #include <AviaryQuery_GetJobDetailsResponse.h>
+#include <AviaryQuery_GetJobSummary.h>
+#include <AviaryQuery_GetJobSummaryResponse.h>
 
 // condor includes
 #include "stl_string_utils.h"
 #include "proc.h"
+#include "condor_attributes.h"
 
 using namespace std;
 using namespace AviaryQuery;
@@ -41,7 +44,7 @@ using namespace aviary::query;
 typedef vector<JobID*> JobIdVectorType;
 typedef vector<JobStatus*> JobStatusVectorType;
 typedef vector<JobDetails*> JobDetailsVectorType;
-typedef vector<JobData*> JobDataVectorType;
+typedef vector<JobSummary*> JobSummaryVectorType;
 
 // NOTE #1: unfortunately the Axis2/C generated code is inconsistent in its
 // internal checking of nillable (i.e., minOccurs=0) elements
@@ -51,10 +54,8 @@ typedef vector<JobData*> JobDataVectorType;
 // NOTE #2: using template functions since WSO2 codegen won't give us
 // XSD extension->C++ inheritance
 template <class JobBase>
-void createFoundJob(JobBase& jb, const char* job_id) {
-	SubmissionObject* so = NULL;
+void createGoodJobResponse(JobBase& jb, const char* job_id) {
 	JobServerObject* jso = JobServerObject::getInstance();
-
 	JobID* jid = new JobID;
 	jid->setJob(job_id);
 	jid->setPool(jso->getPool());
@@ -66,16 +67,11 @@ void createFoundJob(JobBase& jb, const char* job_id) {
 }
 
 template <class JobBase>
-void createMissedJob(JobBase& jb, const char* job_id) {
-	string unfound;
-	JobServerObject* jso = JobServerObject::getInstance();
-
-	sprintf(unfound, "job '%s' not found at scheduler '%s:%s'",
-			job_id, jso->getPool(),jso->getName());
+void createFailJobResponse(JobBase& jb, const char* job_id, const string error) {
 	JobID* jid = new JobID;
 	jid->setJob(job_id);
 	jb.setId(jid);
-	Status* jst = new Status(new StatusCodeType("NO_MATCH"),unfound);
+	Status* jst = new Status(new StatusCodeType("FAIL"),error);
 	jb.setStatus(jst);
 }
 
@@ -92,7 +88,7 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 		for (SubmissionCollectionType::iterator i = g_submissions.begin();
 			 g_submissions.end() != i; i++) {
 			submission = (*i).second;
-			JobID* jobId = new JobID();
+			//JobID* jobId = new JobID();
 			//SubmissionID* subId = new SubmissionID;
 		}
 	}
@@ -116,22 +112,24 @@ GetJobStatusResponse* AviaryQueryServiceSkeleton::getJobStatus(wso2wsf::MessageC
 	,GetJobStatus* _getJobStatus)
 {
 	GetJobStatusResponse* jobStatusResponse = new GetJobStatusResponse;
+	JobServerObject* jso = JobServerObject::getInstance();
 	JobStatusVectorType* job_results = new JobStatusVectorType;
 
 	JobIdVectorType* id_list = _getJobStatus->getIds();
 	for (JobIdVectorType::iterator i = id_list->begin(); id_list->end() != i; i++) {
-		JobCollectionType::const_iterator element = g_jobs.find ( (*i)->getJob().c_str() );
 		JobStatus* js = new JobStatus;
-		if (element != g_jobs.end()) {
-			Job* job = (Job*) element->second;
-			createFoundJob<JobStatus>(*js,job->getKey());
+		const char* job = (*i)->getJob().c_str();
+		string error;
+		int job_status = JOB_STATUS_MIN;
+		if (jso->getStatus((*i)->getJob().c_str(),job_status,error)) {
+			createGoodJobResponse<JobStatus>(*js,job);
 			JobStatusType* jst = new JobStatusType;
-			jst->setJobStatusType(getJobStatusString(job->getStatus()));
+			jst->setJobStatusType(getJobStatusString(job_status));
 			js->setJob_status(jst);
 		}
 		else {
-			// couldn't find it...report to client
-			createMissedJob<JobStatus>(*js,(*i)->getJob().c_str());
+			// problem...report to client
+			createFailJobResponse<JobStatus>(*js,job,error);
 		}
 		job_results->push_back(js);
 	}
@@ -144,6 +142,84 @@ GetJobStatusResponse* AviaryQueryServiceSkeleton::getJobStatus(wso2wsf::MessageC
     return jobStatusResponse;
 }
 
+void mapFieldsToSummary(const JobSummaryFields& fields, JobSummary* _summary) {
+
+	// JobID should already been in our summary
+	SubmissionID* sid = new SubmissionID;
+	sid->setName(fields.submission_id);
+	sid->setOwner(fields.owner);
+	_summary->getId()->setSubmission(sid);
+	_summary->setCmd(fields.cmd);
+	_summary->setArgs1(fields.args1);
+	_summary->setArgs2(fields.args2);
+	_summary->setHeld(fields.hold_reason);
+	_summary->setReleased(fields.release_reason);
+	_summary->setRemoved(fields.remove_reason);
+	JobStatusType* jst = new JobStatusType;
+	jst->setJobStatusType(getJobStatusString(fields.status));
+	_summary->setJob_status(jst);
+
+	// TODO: need to figure out our date/time/conversion
+}
+
+GetJobSummaryResponse* AviaryQueryServiceSkeleton::getJobSummary(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetJobSummary* _getJobSummary)
+{
+	GetJobSummaryResponse* jobSummaryResponse = new GetJobSummaryResponse;
+	JobServerObject* jso = JobServerObject::getInstance();
+	JobSummaryVectorType* job_results = new JobSummaryVectorType;
+
+	JobIdVectorType* id_list = _getJobSummary->getIds();
+	for (JobIdVectorType::iterator i = id_list->begin(); id_list->end() != i; i++) {
+		JobSummary* js = new JobSummary;
+		const char* job = (*i)->getJob().c_str();
+		JobSummaryFields jsf;
+		string error;
+		if (jso->getSummary((*i)->getJob().c_str(),jsf,error)) {
+			createGoodJobResponse<JobSummary>(*js,job);
+			mapFieldsToSummary(jsf,js);
+		}
+		else {
+			// problem...report to client
+			createFailJobResponse<JobSummary>(*js, job, error);
+		}
+		job_results->push_back(js);
+	}
+
+	jobSummaryResponse->setJobs(job_results);
+	Status* status = new Status;
+	status->setCode(new StatusCodeType("SUCCESS"));
+	jobSummaryResponse->setStatus(status);
+    return jobSummaryResponse;
+}
+
+void mapToXsdAttributes(const aviary::codec::AttributeMapType& _map, AviaryCommon::Attributes* _attrs) {
+	for (AttributeMapIterator i = _map.begin(); _map.end() != i; i++) {
+		aviary::codec::Attribute* codec_attr = (aviary::codec::Attribute*)(*i).second;
+		AviaryCommon::Attribute* attr = new AviaryCommon::Attribute;
+		attr->setName((*i).first);
+		AviaryCommon::AttributeType* attr_type = new AviaryCommon::AttributeType;
+		switch (codec_attr->getType()) {
+			case aviary::codec::Attribute::INTEGER_TYPE:
+				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_INTEGER);
+				break;
+			case aviary::codec::Attribute::FLOAT_TYPE:
+				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_FLOAT);
+				break;
+			case aviary::codec::Attribute::STRING_TYPE:
+				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_STRING);
+				break;
+			case aviary::codec::Attribute::EXPR_TYPE:
+				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_EXPRESSION);
+				break;
+			default:
+				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_UNDEFINED);
+		}
+		attr->setType(attr_type);
+		attr->setValue(codec_attr->getValue());
+		_attrs->addAttrs(attr);
+	}
+}
+
 GetJobDetailsResponse* AviaryQueryServiceSkeleton::getJobDetails(wso2wsf::MessageContext* /* outCtx*/
 	,GetJobDetails* _getJobDetails)
 {
@@ -153,16 +229,20 @@ GetJobDetailsResponse* AviaryQueryServiceSkeleton::getJobDetails(wso2wsf::Messag
 
 	JobIdVectorType* id_list = _getJobDetails->getIds();
 	for (JobIdVectorType::iterator i = id_list->begin(); id_list->end() != i; i++) {
-		JobCollectionType::const_iterator element = g_jobs.find ( (*i)->getJob().c_str() );
 		JobDetails* jd = new JobDetails;
-		if (element != g_jobs.end()) {
-			Job* job = (Job*) element->second;
-			createFoundJob<JobDetails>(*jd,job->getKey());
-			// TODO: get attributes
+		const char* job = (*i)->getJob().c_str();
+		aviary::codec::AttributeMapType attr_map;
+		string error;
+		if (jso->getJobAd((*i)->getJob().c_str(),attr_map,error)) {
+			createGoodJobResponse<JobDetails>(*jd,job);
+			// TODO: load attributes
+			AviaryCommon::Attributes* attrs = new AviaryCommon::Attributes;
+			mapToXsdAttributes(attr_map,attrs);
+			jd->setDetails(attrs);
 		}
 		else {
-			// couldn't find it...report to client
-			createMissedJob<JobDetails>(*jd, (*i)->getJob().c_str());
+			// problem...report to client
+			createFailJobResponse<JobDetails>(*jd, job, error);
 		}
 		job_results->push_back(jd);
 	}
@@ -174,34 +254,39 @@ GetJobDetailsResponse* AviaryQueryServiceSkeleton::getJobDetails(wso2wsf::Messag
     return jobDetailsResponse;
 }
 
+// NOTE: getJobData is the rare case (?) where someone wants to pull the job output
+// thus, we don't batch this - just one at a time
 GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageContext* /* outCtx */
 	,GetJobData* _getJobData)
 {
     GetJobDataResponse* jobDataResponse = new  GetJobDataResponse;
 	JobServerObject* jso = JobServerObject::getInstance();
-	JobDataVectorType* job_results = new JobDataVectorType;
 
-	JobIdVectorType* id_list = _getJobData->getIds();
-	for (JobIdVectorType::iterator i = id_list->begin(); id_list->end() != i; i++) {
-		JobCollectionType::const_iterator element = g_jobs.find ( (*i)->getJob().c_str() );
+	const char* job = _getJobData->getData()->getId()->getJob().c_str();
+	ADBJobDataTypeEnum file_type = _getJobData->getData()->getType()->getJobDataTypeEnum();
+	string error, fname, content;
+	int fsize;
+	if (jso->fetchJobData(job,UserFileType(file_type),fname,_getJobData->getMax_bytes(),_getJobData->getFrom_end(),fsize,content,error)) {
+		JobID* jid = new JobID;
+		jid->setJob(job);
+		jid->setPool(jso->getPool());
+		jid->setScheduler(jso->getName());
 		JobData* jd = new JobData;
-		if (element != g_jobs.end()) {
-			Job* job = (Job*) element->second;
-			createFoundJob<JobData>(*jd,job->getKey());
-			// TODO: load requested file data
-		}
-		else {
-			// couldn't find it...report to client
-			createMissedJob<JobData>(*jd, (*i)->getJob().c_str());
-		}
-		job_results->push_back(jd);
+		jd->setId(jid);
+		jobDataResponse->setData(jd);
+		Status* jst = new Status;
+		jst->setCode(new StatusCodeType("SUCCESS"));
+		jobDataResponse->setStatus(jst);
+
+		// TODO: load requested file data
+	}
+	else {
+		// couldn't find it...report to client
+		JobID* jid = new JobID;
+		jid->setJob(job);
+		Status* jst = new Status(new StatusCodeType("FAIL"),error);
+		jobDataResponse->setStatus(jst);
 	}
 
-	jobDataResponse->setJobs(job_results);
-	Status* status = new Status;
-	status->setCode(new StatusCodeType("SUCCESS"));
-	jobDataResponse->setStatus(status);
-    return jobDataResponse;
-	
     return jobDataResponse;
 }

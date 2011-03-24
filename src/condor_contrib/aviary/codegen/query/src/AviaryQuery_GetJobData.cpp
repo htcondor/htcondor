@@ -26,11 +26,13 @@
         
             qname = NULL;
         
-                property_Ids  = NULL;
+                property_Data  = NULL;
               
-            isValidIds  = false;
+            isValidData  = false;
         
-            isValidPartialMatches  = false;
+            isValidMax_bytes  = false;
+        
+            isValidFrom_end  = false;
         
                   qname =  axutil_qname_create (Environment::getEnv(),
                         "GetJobData",
@@ -39,25 +41,29 @@
                 
         }
 
-       AviaryQuery::GetJobData::GetJobData(std::vector<AviaryCommon::JobID*>* arg_Ids,bool arg_PartialMatches)
+       AviaryQuery::GetJobData::GetJobData(AviaryCommon::JobData* arg_Data,int arg_Max_bytes,bool arg_From_end)
         {
              
                    qname = NULL;
              
-               property_Ids  = NULL;
+               property_Data  = NULL;
              
-            isValidIds  = true;
+            isValidData  = true;
             
-            isValidPartialMatches  = true;
+            isValidMax_bytes  = true;
+            
+            isValidFrom_end  = true;
             
                  qname =  axutil_qname_create (Environment::getEnv(),
                        "GetJobData",
                        "http://query.aviary.grid.redhat.com",
                        NULL);
                
-                    property_Ids = arg_Ids;
+                    property_Data = arg_Data;
             
-                    property_PartialMatches = arg_PartialMatches;
+                    property_Max_bytes = arg_Max_bytes;
+            
+                    property_From_end = arg_From_end;
             
         }
         AviaryQuery::GetJobData::~GetJobData()
@@ -73,22 +79,10 @@
           axiom_node_t *parent = *dp_parent;
           
           bool status = AXIS2_SUCCESS;
-          
-          axiom_attribute_t *parent_attri = NULL;
-          axiom_element_t *parent_element = NULL;
-          axis2_char_t *attrib_text = NULL;
-
-          axutil_hash_t *attribute_hash = NULL;
-
            
          const axis2_char_t* text_value = NULL;
          axutil_qname_t *mqname = NULL;
           
-               int i = 0;
-            
-               int sequence_broken = 0;
-               axiom_node_t *tmp_node = NULL;
-            
             axutil_qname_t *element_qname = NULL; 
             
                axiom_node_t *first_node = NULL;
@@ -126,167 +120,235 @@
                         return AXIS2_FAILURE;
                     }
                     
-                 parent_element = (axiom_element_t *)axiom_node_get_data_element(parent, Environment::getEnv());
-                 attribute_hash = axiom_element_get_all_attributes(parent_element, Environment::getEnv());
-              
-                       { 
-                    /*
-                     * building Ids array
-                     */
-                       std::vector<AviaryCommon::JobID*>* arr_list =new std::vector<AviaryCommon::JobID*>();
-                   
 
                      
                      /*
-                      * building ids element
+                      * building data element
                       */
                      
                      
                      
-                                    element_qname = axutil_qname_create(Environment::getEnv(), "ids", NULL, NULL);
-                                  
-                               
-                               for (i = 0, sequence_broken = 0, current_node = first_node; !sequence_broken && current_node != NULL;)
-                                             
-                               {
-                                  if(axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                  {
-                                     current_node =axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                     is_early_node_valid = false;
-                                     continue;
-                                  }
-                                  
-                                  current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                  mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                   current_node = first_node;
+                                   is_early_node_valid = false;
+                                   
+                                   
+                                    while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                    {
+                                        current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                    }
+                                    if(current_node != NULL)
+                                    {
+                                        current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                        mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                    }
+                                   
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "data", NULL, NULL);
+                                 
 
-                                  if (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("ids", axiom_element_get_localname(current_element, Environment::getEnv())))
-                                  {
-                                  
-                                      is_early_node_valid = true;
-                                      
-                                     AviaryCommon::JobID* element = new AviaryCommon::JobID();
-                                          
-                                          status =  element->deserialize(&current_node, &is_early_node_valid, false);
-                                          
-                                          if(AXIS2_FAILURE ==  status)
-                                          {
-					  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "failed in building element ids ");
-                                          }
-                                          else
-                                          {
-                                            arr_list->push_back(element);
-                                            
-                                          }
-                                        
-                                     if(AXIS2_FAILURE ==  status)
-                                     {
-                                         WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in setting the value for ids ");
-                                         if(element_qname)
-                                         {
-                                            axutil_qname_free(element_qname, Environment::getEnv());
-                                         }
-                                         if(arr_list)
-                                         {
-                                            delete arr_list;
-                                         }
-                                         return false;
-                                     }
+                           if (isParticle() ||  
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("data", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("data", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 AviaryCommon::JobData* element = new AviaryCommon::JobData();
 
-                                     i++;
-                                    current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                  }
-                                  else
-                                  {
-                                      is_early_node_valid = false;
-                                      sequence_broken = 1;
-                                  }
-                                  
-                               }
-
-                               
-                                   if (i < 1)
-                                   {
-                                     /* found element out of order */
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"ids (@minOccurs = '1') only have %d elements", i);
+                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                      if(AXIS2_FAILURE == status)
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element data");
+                                      }
+                                      else
+                                      {
+                                          status = setData(element);
+                                      }
+                                    
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for data ");
                                      if(element_qname)
                                      {
-                                        axutil_qname_free(element_qname, Environment::getEnv());
+                                         axutil_qname_free(element_qname, Environment::getEnv());
                                      }
-                                     if(arr_list)
-                                     {
-                                        delete arr_list;
-                                     }
-                                     return false;
-                                   }
-                               
-
-                               if(0 == arr_list->size())
-                               {
-                                    delete arr_list;
-                               }
-                               else
-                               {
-                                    status = setIds(arr_list);
-                               }
-
-                              
-                            } 
-                        
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element data missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
                      element_qname = NULL;
                   }
                  
-                
-                
-                  parent_attri = NULL;
-                  attrib_text = NULL;
-                  if(attribute_hash)
-                  {
-                       axutil_hash_index_t *hi;
-                       void *val;
-                       const void *key;
 
-                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                       {
-                           axutil_hash_this(hi, &key, NULL, &val);
-                           
-                           
-                               if(!strcmp((axis2_char_t*)key, "partialMatches"))
-                             
-                               {
-                                   parent_attri = (axiom_attribute_t*)val;
-                                   break;
-                               }
-                       }
-                  }
+                     
+                     /*
+                      * building max_bytes element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "max_bytes", NULL, NULL);
+                                 
 
-                  if(parent_attri)
-                  {
-                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
-                  }
-                  else
-                  {
-                    /* this is hoping that attribute is stored in "partialMatches", this happnes when name is in default namespace */
-                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "partialMatches");
-                  }
-
-                  if(attrib_text != NULL)
-                  {
-                      
-                      
-                           if (!axutil_strcmp(attrib_text, "TRUE") || !axutil_strcmp(attrib_text, "true"))
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("max_bytes", axiom_element_get_localname(current_element, Environment::getEnv())))))
                            {
-                               setPartialMatches(true);
-                           }
-                           else
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("max_bytes", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            status = setMax_bytes(atoi(text_value));
+                                      }
+                                      
+                                      else
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element max_bytes");
+                                          status = AXIS2_FAILURE;
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for max_bytes ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element max_bytes missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+
+                     
+                     /*
+                      * building from_end element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "from_end", NULL, NULL);
+                                 
+
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("from_end", axiom_element_get_localname(current_element, Environment::getEnv())))))
                            {
-                               setPartialMatches(false);
-                           }
-                        
-                    }
-                  
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("from_end", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            if (!axutil_strcasecmp(text_value , "true"))
+                                            {
+                                                status = setFrom_end(true);
+                                            }
+                                            else
+                                            {
+                                                status = setFrom_end(false);
+                                            }
+                                      }
+                                      
+                                      else
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element from_end");
+                                          status = AXIS2_FAILURE;
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for from_end ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -326,10 +388,6 @@
         {
             
             
-               axiom_attribute_t *text_attri = NULL;
-             
-             axis2_char_t *string_to_stream;
-            
          
          axiom_node_t *current_node = NULL;
          int tag_closed = 0;
@@ -342,16 +400,12 @@
                 axis2_char_t *qname_prefix = NULL;
                 axis2_char_t *p_prefix = NULL;
             
-               int i = 0;
-               int count = 0;
-               void *element = NULL;
-             
                     axis2_char_t text_value_1[ADB_DEFAULT_DIGIT_LIMIT];
                     
                     axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
                     
-                axis2_char_t *text_value = NULL;
-             
+                    axis2_char_t text_value_3[ADB_DEFAULT_DIGIT_LIMIT];
+                    
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
                unsigned int start_input_str_len = 0;
@@ -383,37 +437,14 @@
                     data_source = axiom_data_source_create(Environment::getEnv(), parent, &current_node);
                     stream = axiom_data_source_get_stream(data_source, Environment::getEnv());
                   
-            if(!parent_tag_closed)
-            {
-            
-                if(isValidPartialMatches)
-                {
-                
-                        p_prefix = NULL;
-                      
-                           
-                           text_value = (axis2_char_t*)((property_PartialMatches)?"true":"false");
-                           string_to_stream = (axis2_char_t*) AXIS2_MALLOC (Environment::getEnv()-> allocator, sizeof (axis2_char_t) *
-                                                            (5  + ADB_DEFAULT_NAMESPACE_PREFIX_LIMIT +
-                                                             axutil_strlen(text_value) + 
-                                                             axutil_strlen("partialMatches")));
-                           sprintf(string_to_stream, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
-                                                "partialMatches",  text_value);
-                           axutil_stream_write(stream, Environment::getEnv(), string_to_stream, axutil_strlen(string_to_stream));
-                           AXIS2_FREE(Environment::getEnv()-> allocator, string_to_stream);
-                        
-                   }
-                   
-            }
-            
                        p_prefix = NULL;
                       
 
-                   if (!isValidIds)
+                   if (!isValidData)
                    {
                       
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property ids");
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property data");
                             return NULL;
                           
                    }
@@ -421,93 +452,165 @@
                    {
                      start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
                                  (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("ids"))); 
+                                  axutil_strlen("data"))); 
                                  
                                  /* axutil_strlen("<:>") + 1 = 4 */
                      end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("ids")));
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("data")));
                                   /* axutil_strlen("</:>") + 1 = 5 */
                                   
                      
 
                    
                    
+                     
                      /*
-                      * Parsing Ids array
+                      * parsing data element
                       */
-                     if (property_Ids != NULL)
-                     {
-                        
 
-                            sprintf(start_input_str, "<%s%sids",
+                    
+                    
+                            sprintf(start_input_str, "<%s%sdata",
                                  p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
                             
-                         start_input_str_len = axutil_strlen(start_input_str);
-
-                         sprintf(end_input_str, "</%s%sids>",
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%sdata>",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                         end_input_str_len = axutil_strlen(end_input_str);
-
-                         count = property_Ids->size();
-                         for(i = 0; i < count; i++)
-                         {
-                            AviaryCommon::JobID* element = (*property_Ids)[i];
-
-                            if(NULL == element) 
-                            {
-                                continue;
-                            }
-
-                    
+                        end_input_str_len = axutil_strlen(end_input_str);
                      
-                     /*
-                      * parsing ids element
-                      */
-
-                    
-                     
-                            if(!element->isParticle())
+                            if(!property_Data->isParticle())
                             {
                                 axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                             }
-                            element->serialize(current_node, parent_element,
-                                                                                 element->isParticle() || false, namespaces, next_ns_index);
+                            property_Data->serialize(current_node, parent_element,
+                                                                                 property_Data->isParticle() || false, namespaces, next_ns_index);
                             
-                            if(!element->isParticle())
+                            if(!property_Data->isParticle())
                             {
                                 axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                             }
                             
-                         }
-                     }
-                   
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
                  } 
 
                  
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidMax_bytes)
+                   {
+                      
+                            
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property max_bytes");
+                            return NULL;
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("max_bytes"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("max_bytes")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing max_bytes element
+                      */
+
                     
-                    if(parent_tag_closed)
-                    {
-                       if(isValidPartialMatches)
-                       {
-                       
-                           p_prefix = NULL;
-                           ns1 = NULL;
-                         
+                    
+                            sprintf(start_input_str, "<%s%smax_bytes>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%smax_bytes>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                               sprintf (text_value_2, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Max_bytes);
+                             
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           text_value =  (axis2_char_t*)((property_PartialMatches)?axutil_strdup(Environment::getEnv(), "true"):axutil_strdup(Environment::getEnv(), "false"));
-                           text_attri = axiom_attribute_create (Environment::getEnv(), "partialMatches", text_value, ns1);
-                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
-                           AXIS2_FREE(Environment::getEnv()->allocator, text_value);
-                        
-                      }
-                       
-                  }
-                
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_2, axutil_strlen(text_value_2));
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidFrom_end)
+                   {
+                      
+                           /* no need to complain for minoccurs=0 element */
+                            
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("from_end"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("from_end")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing from_end element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%sfrom_end>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%sfrom_end>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                           strcpy(text_value_3, (property_From_end)?"true":"false");
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
                    if(namespaces)
                    {
                        axutil_hash_index_t *hi;
@@ -528,425 +631,61 @@
         
 
             /**
-             * Getter for ids by  Property Number 1
+             * Getter for data by  Property Number 1
              */
-            std::vector<AviaryCommon::JobID*>* WSF_CALL
+            AviaryCommon::JobData* WSF_CALL
             AviaryQuery::GetJobData::getProperty1()
             {
-                return getIds();
+                return getData();
             }
 
             /**
-             * getter for ids.
+             * getter for data.
              */
-            std::vector<AviaryCommon::JobID*>* WSF_CALL
-            AviaryQuery::GetJobData::getIds()
+            AviaryCommon::JobData* WSF_CALL
+            AviaryQuery::GetJobData::getData()
              {
-                return property_Ids;
+                return property_Data;
              }
 
             /**
-             * setter for ids
+             * setter for data
              */
             bool WSF_CALL
-            AviaryQuery::GetJobData::setIds(
-                    std::vector<AviaryCommon::JobID*>*  arg_Ids)
+            AviaryQuery::GetJobData::setData(
+                    AviaryCommon::JobData*  arg_Data)
              {
                 
-                 int size = 0;
-                 int i = 0;
-                 bool non_nil_exists = false;
-                
 
-                if(isValidIds &&
-                        arg_Ids == property_Ids)
+                if(isValidData &&
+                        arg_Data == property_Data)
                 {
                     
                     return true;
                 }
 
                 
-                 size = arg_Ids->size();
-                 
-                 if (size < 1)
-                 {
-                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"ids has less than minOccurs(1)");
-                     return false;
-                 }
-                 for(i = 0; i < size; i ++ )
-                 {
-                     if(NULL != (*arg_Ids)[i])
-                     {
-                         non_nil_exists = true;
-                         break;
-                     }
-                 }
-
-                 
-                    if(!non_nil_exists)
-                    {
-                        WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"All the elements in the array of ids is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                        return false;
-                    }
-                 
-                  if(NULL == arg_Ids)
+                  if(NULL == arg_Data)
                        
                   {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"ids is being set to NULL, but it is not a nullable element");
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"data is being set to NULL, but it is not a nullable element");
                       return AXIS2_FAILURE;
                   }
                 
 
                 
-                resetIds();
+                resetData();
 
                 
-                    if(NULL == arg_Ids)
+                    if(NULL == arg_Data)
                          
                 {
                     /* We are already done */
                     return true;
                 }
                 
-                        property_Ids = arg_Ids;
-                        if(non_nil_exists)
-                        {
-                            isValidIds = true;
-                        }
-                        
-                    
-                return true;
-             }
-
-            
-            /**
-             * Get ith element of ids.
-             */
-            AviaryCommon::JobID* WSF_CALL
-            AviaryQuery::GetJobData::getIdsAt(int i)
-            {
-                AviaryCommon::JobID* ret_val;
-                if(property_Ids == NULL)
-                {
-                    return (AviaryCommon::JobID*)0;
-                }
-                ret_val =   (*property_Ids)[i];
-                
-                    return ret_val;
-                  
-            }
-
-            /**
-             * Set the ith element of ids.
-             */
-           bool WSF_CALL
-            AviaryQuery::GetJobData::setIdsAt(int i,
-                    AviaryCommon::JobID* arg_Ids)
-            {
-                 AviaryCommon::JobID* element;
-                int size = 0;
-
-                int non_nil_count;
-                bool non_nil_exists = false;
-
-                 
-
-                if( isValidIds &&
-                    property_Ids &&
-                  
-                    arg_Ids == (*property_Ids)[i])
-                  
-                 {
-                    
-                    return AXIS2_SUCCESS; 
-                }
-
-                   
-                     non_nil_exists = true;
-                  
-                   if(!non_nil_exists)
-                   {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "All the elements in the array of ids is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                       return AXIS2_FAILURE;
-                   }
-                
-
-                if(property_Ids == NULL)
-                {
-                    property_Ids = new std::vector<AviaryCommon::JobID*>();
-                }
-                else{
-                /* check whether there already exist an element */
-                element = (*property_Ids)[i];
-                }
-
-                
-                        if(NULL != element)
-                        {
-                          
-                          
-                          
-                                delete element;
-                             
-                        }
-                        
-                    
-                    (*property_Ids)[i] = arg_Ids;
-                  
-
-               isValidIds = true;
-                
-                return AXIS2_SUCCESS;
-            }
-
-            /**
-             * Add to ids.
-             */
-            bool WSF_CALL
-            AviaryQuery::GetJobData::addIds(
-                    AviaryCommon::JobID* arg_Ids)
-             {
-
-                
-                    if( NULL == arg_Ids
-                     )
-                    {
-                      
-                           WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "All the elements in the array of ids is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                           return false;
-                        
-                    }
-                  
-
-                if(property_Ids == NULL)
-                {
-                    property_Ids = new std::vector<AviaryCommon::JobID*>();
-                }
-              
-               property_Ids->push_back(arg_Ids);
-              
-                isValidIds = true;
-                return true;
-             }
-
-            /**
-             * Get the size of the ids array.
-             */
-            int WSF_CALL
-            AviaryQuery::GetJobData::sizeofIds()
-            {
-
-                if(property_Ids == NULL)
-                {
-                    return 0;
-                }
-                return property_Ids->size();
-            }
-
-            /**
-             * remove the ith element, same as set_nil_at.
-             */
-            bool WSF_CALL
-            AviaryQuery::GetJobData::removeIdsAt(int i)
-            {
-                return setIdsNilAt(i);
-            }
-
-            
-
-           /**
-            * resetter for ids
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobData::resetIds()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-                if (property_Ids != NULL)
-                {
-                  std::vector<AviaryCommon::JobID*>::iterator it =  property_Ids->begin();
-                  for( ; it <  property_Ids->end() ; ++it)
-                  {
-                     AviaryCommon::JobID* element = *it;
-                
-            
-                
-
-                if(element != NULL)
-                {
-                   
-                   
-                         delete  element;
-                     
-
-                   }
-
-                
-                
-                
-               }
-
-             }
-                
-                    if(NULL != property_Ids)
-                 delete property_Ids;
-                
-               isValidIds = false; 
-               return true;
-           }
-
-           /**
-            * Check whether ids is nill
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobData::isIdsNil()
-           {
-               return !isValidIds;
-           }
-
-           /**
-            * Set ids to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobData::setIdsNil()
-           {
-               return resetIds();
-           }
-
-           
-           /**
-            * Check whether ids is nill at i
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobData::isIdsNilAt(int i)
-           {
-               return (isValidIds == false ||
-                       NULL == property_Ids ||
-                     NULL == (*property_Ids)[i]);
-            }
-
-           /**
-            * Set ids to nil at i
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobData::setIdsNilAt(int i)
-           {
-                int size = 0;
-                int j;
-                bool non_nil_exists = false;
-
-                int k = 0;
-
-                if(property_Ids == NULL ||
-                            isValidIds == false)
-                {
-                    
-                    non_nil_exists = false;
-                }
-                else
-                {
-                    size = property_Ids->size();
-                    for(j = 0, k = 0; j < size; j ++ )
-                    {
-                        if(i == j) continue; 
-                        if(NULL != (*property_Ids)[i])
-                        {
-                            k++;
-                            non_nil_exists = true;
-                            if( k >= 1)
-                            {
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-                   if(!non_nil_exists)
-                   {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "All the elements in the array of ids is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                       return AXIS2_FAILURE;
-                   }
-                
-
-                if( k < 1)
-                {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "Size of the array of ids is beinng set to be smaller than the specificed number of minOccurs(1)");
-                       return AXIS2_FAILURE;
-                }
- 
-                if(property_Ids == NULL)
-                {
-                    isValidIds = false;
-                    
-                    return true;
-                }
-                 
-                 /* check whether there already exist an element */
-                 AviaryCommon::JobID* element = (*property_Ids)[i];
-                if(NULL != element)
-                {
-                  
-                  
-                  
-                        delete element;
-                     
-                 }
-                 
-
-                
-                (*property_Ids)[i] = NULL;
-                
-                return AXIS2_SUCCESS;
-
-           }
-
-           
-
-            /**
-             * Getter for partialMatches by  Property Number 2
-             */
-            bool WSF_CALL
-            AviaryQuery::GetJobData::getProperty2()
-            {
-                return getPartialMatches();
-            }
-
-            /**
-             * getter for partialMatches.
-             */
-            bool WSF_CALL
-            AviaryQuery::GetJobData::getPartialMatches()
-             {
-                return property_PartialMatches;
-             }
-
-            /**
-             * setter for partialMatches
-             */
-            bool WSF_CALL
-            AviaryQuery::GetJobData::setPartialMatches(
-                    bool  arg_PartialMatches)
-             {
-                
-
-                if(isValidPartialMatches &&
-                        arg_PartialMatches == property_PartialMatches)
-                {
-                    
-                    return true;
-                }
-
-                
-
-                
-                resetPartialMatches();
-
-                
-                        property_PartialMatches = arg_PartialMatches;
-                        isValidPartialMatches = true;
+                        property_Data = arg_Data;
+                        isValidData = true;
                     
                 return true;
              }
@@ -954,36 +693,217 @@
              
 
            /**
-            * resetter for partialMatches
+            * resetter for data
             */
            bool WSF_CALL
-           AviaryQuery::GetJobData::resetPartialMatches()
+           AviaryQuery::GetJobData::resetData()
            {
                int i = 0;
                int count = 0;
 
 
                
-               isValidPartialMatches = false; 
+            
+                
+
+                if(property_Data != NULL)
+                {
+                   
+                   
+                         delete  property_Data;
+                     
+
+                   }
+
+                
+                
+                
+               isValidData = false; 
                return true;
            }
 
            /**
-            * Check whether partialMatches is nill
+            * Check whether data is nill
             */
            bool WSF_CALL
-           AviaryQuery::GetJobData::isPartialMatchesNil()
+           AviaryQuery::GetJobData::isDataNil()
            {
-               return !isValidPartialMatches;
+               return !isValidData;
            }
 
            /**
-            * Set partialMatches to nill (currently the same as reset)
+            * Set data to nill (currently the same as reset)
             */
            bool WSF_CALL
-           AviaryQuery::GetJobData::setPartialMatchesNil()
+           AviaryQuery::GetJobData::setDataNil()
            {
-               return resetPartialMatches();
+               return resetData();
+           }
+
+           
+
+            /**
+             * Getter for max_bytes by  Property Number 2
+             */
+            int WSF_CALL
+            AviaryQuery::GetJobData::getProperty2()
+            {
+                return getMax_bytes();
+            }
+
+            /**
+             * getter for max_bytes.
+             */
+            int WSF_CALL
+            AviaryQuery::GetJobData::getMax_bytes()
+             {
+                return property_Max_bytes;
+             }
+
+            /**
+             * setter for max_bytes
+             */
+            bool WSF_CALL
+            AviaryQuery::GetJobData::setMax_bytes(
+                    const int  arg_Max_bytes)
+             {
+                
+
+                if(isValidMax_bytes &&
+                        arg_Max_bytes == property_Max_bytes)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetMax_bytes();
+
+                
+                        property_Max_bytes = arg_Max_bytes;
+                        isValidMax_bytes = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for max_bytes
+            */
+           bool WSF_CALL
+           AviaryQuery::GetJobData::resetMax_bytes()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidMax_bytes = false; 
+               return true;
+           }
+
+           /**
+            * Check whether max_bytes is nill
+            */
+           bool WSF_CALL
+           AviaryQuery::GetJobData::isMax_bytesNil()
+           {
+               return !isValidMax_bytes;
+           }
+
+           /**
+            * Set max_bytes to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryQuery::GetJobData::setMax_bytesNil()
+           {
+               return resetMax_bytes();
+           }
+
+           
+
+            /**
+             * Getter for from_end by  Property Number 3
+             */
+            bool WSF_CALL
+            AviaryQuery::GetJobData::getProperty3()
+            {
+                return getFrom_end();
+            }
+
+            /**
+             * getter for from_end.
+             */
+            bool WSF_CALL
+            AviaryQuery::GetJobData::getFrom_end()
+             {
+                return property_From_end;
+             }
+
+            /**
+             * setter for from_end
+             */
+            bool WSF_CALL
+            AviaryQuery::GetJobData::setFrom_end(
+                    bool  arg_From_end)
+             {
+                
+
+                if(isValidFrom_end &&
+                        arg_From_end == property_From_end)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetFrom_end();
+
+                
+                        property_From_end = arg_From_end;
+                        isValidFrom_end = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for from_end
+            */
+           bool WSF_CALL
+           AviaryQuery::GetJobData::resetFrom_end()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidFrom_end = false; 
+               return true;
+           }
+
+           /**
+            * Check whether from_end is nill
+            */
+           bool WSF_CALL
+           AviaryQuery::GetJobData::isFrom_endNil()
+           {
+               return !isValidFrom_end;
+           }
+
+           /**
+            * Set from_end to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryQuery::GetJobData::setFrom_endNil()
+           {
+               return resetFrom_end();
            }
 
            

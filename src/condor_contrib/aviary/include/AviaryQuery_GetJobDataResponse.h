@@ -42,25 +42,49 @@ namespace AviaryQuery
         private:
              
                 axutil_qname_t* qname;
-            std::vector<AviaryCommon::JobData*>* property_Jobs;
+            AviaryCommon::JobData* property_Data;
 
                 
-                bool isValidJobs;
+                bool isValidData;
             AviaryCommon::Status* property_Status;
 
                 
                 bool isValidStatus;
+            std::string property_File_name;
+
+                
+                bool isValidFile_name;
+            int property_File_size;
+
+                
+                bool isValidFile_size;
+            std::string property_Content;
+
+                
+                bool isValidContent;
             
 
         /*** Private methods ***/
           
 
         bool WSF_CALL
-        setJobsNil();
+        setDataNil();
             
 
         bool WSF_CALL
         setStatusNil();
+            
+
+        bool WSF_CALL
+        setFile_nameNil();
+            
+
+        bool WSF_CALL
+        setFile_sizeNil();
+            
+
+        bool WSF_CALL
+        setContentNil();
             
 
 
@@ -86,39 +110,41 @@ namespace AviaryQuery
         /**
          * Constructor for creating GetJobDataResponse
          * @param 
-         * @param Jobs std::vector<AviaryCommon::JobData*>*
+         * @param Data AviaryCommon::JobData*
          * @param Status AviaryCommon::Status*
+         * @param File_name std::string
+         * @param File_size int
+         * @param Content std::string
          * @return newly created GetJobDataResponse object
          */
-        GetJobDataResponse(std::vector<AviaryCommon::JobData*>* arg_Jobs,AviaryCommon::Status* arg_Status);
+        GetJobDataResponse(AviaryCommon::JobData* arg_Data,AviaryCommon::Status* arg_Status,std::string arg_File_name,int arg_File_size,std::string arg_Content);
         
         
         /********************************** Class get set methods **************************************/
-        /******** Deprecated for array types, Use 'Getters and Setters for Arrays' instead ***********/
+        
         
 
         /**
-         * Getter for jobs. Deprecated for array types, Use getJobsAt instead
-         * @return Array of AviaryCommon::JobData*s.
+         * Getter for data. 
+         * @return AviaryCommon::JobData*
          */
-        WSF_EXTERN std::vector<AviaryCommon::JobData*>* WSF_CALL
-        getJobs();
+        WSF_EXTERN AviaryCommon::JobData* WSF_CALL
+        getData();
 
         /**
-         * Setter for jobs.Deprecated for array types, Use setJobsAt
-         * or addJobs instead.
-         * @param arg_Jobs Array of AviaryCommon::JobData*s.
+         * Setter for data.
+         * @param arg_Data AviaryCommon::JobData*
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setJobs(std::vector<AviaryCommon::JobData*>*  arg_Jobs);
+        setData(AviaryCommon::JobData*  arg_Data);
 
         /**
-         * Re setter for jobs
+         * Re setter for data
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetJobs();
+        resetData();
         
         
 
@@ -144,80 +170,82 @@ namespace AviaryQuery
         WSF_EXTERN bool WSF_CALL
         resetStatus();
         
-        /****************************** Get Set methods for Arrays **********************************/
-        /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
-
-        /**
-         * E.g. use of get_at, set_at, add and sizeof
-         *
-         * for(i = 0; i < adb_element->sizeofProperty(); i ++ )
-         * {
-         *     // Getting ith value to property_object variable
-         *     property_object = adb_element->getPropertyAt(i);
-         *
-         *     // Setting ith value from property_object variable
-         *     adb_element->setPropertyAt(i, property_object);
-         *
-         *     // Appending the value to the end of the array from property_object variable
-         *     adb_element->addProperty(property_object);
-         *
-         *     // Removing the ith value from an array
-         *     adb_element->removePropertyAt(i);
-         *     
-         * }
-         *
-         */
-
         
-        
-        /**
-         * Get the ith element of jobs.
-        * @param i index of the item to be obtained
-         * @return ith AviaryCommon::JobData* of the array
-         */
-        WSF_EXTERN AviaryCommon::JobData* WSF_CALL
-        getJobsAt(int i);
 
         /**
-         * Set the ith element of jobs. (If the ith already exist, it will be replaced)
-         * @param i index of the item to return
-         * @param arg_Jobs element to set AviaryCommon::JobData* to the array
-         * @return ith AviaryCommon::JobData* of the array
+         * Getter for file_name. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getFile_name();
+
+        /**
+         * Setter for file_name.
+         * @param arg_File_name std::string*
+         * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setJobsAt(int i,
-                AviaryCommon::JobData* arg_Jobs);
-
+        setFile_name(const std::string  arg_File_name);
 
         /**
-         * Add to jobs.
-         * @param arg_Jobs element to add AviaryCommon::JobData* to the array
-         * @return true on success, false otherwise.
+         * Re setter for file_name
+         * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        addJobs(
-            AviaryCommon::JobData* arg_Jobs);
+        resetFile_name();
+        
+        
 
         /**
-         * Get the size of the jobs array.
-         * @return the size of the jobs array.
+         * Getter for file_size. 
+         * @return int*
          */
         WSF_EXTERN int WSF_CALL
-        sizeofJobs();
+        getFile_size();
 
         /**
-         * Remove the ith element of jobs.
-         * @param i index of the item to remove
-         * @return true on success, false otherwise.
+         * Setter for file_size.
+         * @param arg_File_size int*
+         * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        removeJobsAt(int i);
+        setFile_size(const int  arg_File_size);
 
+        /**
+         * Re setter for file_size
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetFile_size();
+        
+        
+
+        /**
+         * Getter for content. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getContent();
+
+        /**
+         * Setter for content.
+         * @param arg_Content std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setContent(const std::string  arg_Content);
+
+        /**
+         * Re setter for content
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetContent();
         
 
 
         /******************************* Checking and Setting NIL values *********************************/
-        /* Use 'Checking and Setting NIL values for Arrays' to check and set nil for individual elements */
+        
 
         /**
          * NOTE: set_nil is only available for nillable properties
@@ -226,11 +254,11 @@ namespace AviaryQuery
         
 
         /**
-         * Check whether jobs is Nill
+         * Check whether data is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isJobsNil();
+        isDataNil();
 
 
         
@@ -245,29 +273,33 @@ namespace AviaryQuery
 
         
 
-        /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
+        /**
+         * Check whether file_name is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isFile_nameNil();
+
+
+        
 
         /**
-         * NOTE: You may set this to remove specific elements in the array
-         *       But you can not remove elements, if the specific property is declared to be non-nillable or sizeof(array) < minOccurs
+         * Check whether file_size is Nill
+         * @return true if the element is Nil, false otherwise
          */
+        bool WSF_CALL
+        isFile_sizeNil();
+
+
         
+
         /**
-         * Check whether jobs is Nill at position i
-         * @param i index of the item to return.
-         * @return true if the value is Nil at position i, false otherwise
+         * Check whether content is Nill
+         * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isJobsNilAt(int i);
- 
-       
-        /**
-         * Set jobs to NILL at the  position i.
-         * @param i . The index of the item to be set Nill.
-         * @return true on success, false otherwise.
-         */
-        bool WSF_CALL
-        setJobsNilAt(int i);
+        isContentNil();
+
 
         
 
@@ -328,11 +360,11 @@ namespace AviaryQuery
         
 
         /**
-         * Getter for jobs by property number (1)
-         * @return Array of AviaryCommon::JobDatas.
+         * Getter for data by property number (1)
+         * @return AviaryCommon::JobData
          */
 
-        std::vector<AviaryCommon::JobData*>* WSF_CALL
+        AviaryCommon::JobData* WSF_CALL
         getProperty1();
 
     
@@ -345,6 +377,39 @@ namespace AviaryQuery
 
         AviaryCommon::Status* WSF_CALL
         getProperty2();
+
+    
+        
+
+        /**
+         * Getter for file_name by property number (3)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty3();
+
+    
+        
+
+        /**
+         * Getter for file_size by property number (4)
+         * @return int
+         */
+
+        int WSF_CALL
+        getProperty4();
+
+    
+        
+
+        /**
+         * Getter for content by property number (5)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty5();
 
     
 

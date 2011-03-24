@@ -19,22 +19,21 @@
 #ifndef _JOBSERVERJOBLOGCONSUMER_H
 #define _JOBSERVERJOBLOGCONSUMER_H
 
+// condor includes
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "ClassAdLogReader.h"
 
-#include "stringSpace.h"
-
+// local includes
 #include "Job.h"
 #include "SubmissionObject.h"
 
-#include "ClassAdLogReader.h"
-
+// c++ includes
 #include <string>
 #include <map>
 #include <set>
 
 using namespace std;
-
 
 class JobServerJobLogConsumer: public ClassAdLogConsumer
 {

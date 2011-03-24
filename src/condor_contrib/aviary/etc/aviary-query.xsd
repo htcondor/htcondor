@@ -21,6 +21,22 @@
 
 	<!-- declare  message-level elements using anonymous complex types for simpler generated types -->
 	<!-- use of refs, inheritance into anonymous types, etc. eschewed for simplicity and interop -->
+	<xs:element name="GetJobSummary">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="false"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetJobSummaryResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="jobs" type="mrg:JobSummary" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="status" type="mrg:Status"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
 	<xs:element name="GetJobStatus">
 		<xs:complexType>
 			<xs:sequence>
@@ -56,16 +72,21 @@
 	<xs:element name="GetJobData">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+				<xs:element name="data" type="mrg:JobData"/>
+				<xs:element name="max_bytes" type="xs:integer" default="1024"/>
+				<xs:element name="from_end" type="xs:boolean" minOccurs="0" default="false"/>
 			</xs:sequence>
-			<xs:attribute name="partialMatches" type="xs:boolean" default="false"/>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetJobDataResponse">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="jobs" type="mrg:JobData" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="data" type="mrg:JobData"/>
 				<xs:element name="status" type="mrg:Status"/>
+				<xs:element name="file_name" type="xs:string" minOccurs="0"/>
+				<xs:element name="file_size" type="xs:integer" minOccurs="0"/>
+				<!-- string for file content...we probably want to keep line feeds, etc. TODO: need to revisit this-->
+				<xs:element name="content" type="xs:string" minOccurs="0"/>
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>
@@ -80,7 +101,7 @@
 	<xs:element name="GetSubmissionSummaryResponse">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="jobs" type="mrg:JobStatus" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="jobs" type="mrg:JobSummary" minOccurs="0" maxOccurs="unbounded"/>
 				<xs:element name="status" type="mrg:Status"/>
 			</xs:sequence>
 		</xs:complexType>

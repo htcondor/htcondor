@@ -20,7 +20,7 @@
         
 
         
-       #include "AviaryCommon_JobID.h"
+       #include "AviaryCommon_JobData.h"
           
         #include <axutil_qname.h>
         
@@ -40,21 +40,33 @@ namespace AviaryQuery
         private:
              
                 axutil_qname_t* qname;
-            std::vector<AviaryCommon::JobID*>* property_Ids;
+            AviaryCommon::JobData* property_Data;
 
                 
-                bool isValidIds;
-            bool property_PartialMatches;
+                bool isValidData;
+            int property_Max_bytes;
 
                 
-                bool isValidPartialMatches;
+                bool isValidMax_bytes;
+            bool property_From_end;
+
+                
+                bool isValidFrom_end;
             
 
         /*** Private methods ***/
           
 
         bool WSF_CALL
-        setIdsNil();
+        setDataNil();
+            
+
+        bool WSF_CALL
+        setMax_bytesNil();
+            
+
+        bool WSF_CALL
+        setFrom_endNil();
             
 
 
@@ -80,138 +92,92 @@ namespace AviaryQuery
         /**
          * Constructor for creating GetJobData
          * @param 
-         * @param Ids std::vector<AviaryCommon::JobID*>*
-         * @param PartialMatches bool
+         * @param Data AviaryCommon::JobData*
+         * @param Max_bytes int
+         * @param From_end bool
          * @return newly created GetJobData object
          */
-        GetJobData(std::vector<AviaryCommon::JobID*>* arg_Ids,bool arg_PartialMatches);
+        GetJobData(AviaryCommon::JobData* arg_Data,int arg_Max_bytes,bool arg_From_end);
         
         
         /********************************** Class get set methods **************************************/
-        /******** Deprecated for array types, Use 'Getters and Setters for Arrays' instead ***********/
+        
         
 
         /**
-         * Getter for ids. Deprecated for array types, Use getIdsAt instead
-         * @return Array of AviaryCommon::JobID*s.
+         * Getter for data. 
+         * @return AviaryCommon::JobData*
          */
-        WSF_EXTERN std::vector<AviaryCommon::JobID*>* WSF_CALL
-        getIds();
+        WSF_EXTERN AviaryCommon::JobData* WSF_CALL
+        getData();
 
         /**
-         * Setter for ids.Deprecated for array types, Use setIdsAt
-         * or addIds instead.
-         * @param arg_Ids Array of AviaryCommon::JobID*s.
+         * Setter for data.
+         * @param arg_Data AviaryCommon::JobData*
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setIds(std::vector<AviaryCommon::JobID*>*  arg_Ids);
+        setData(AviaryCommon::JobData*  arg_Data);
 
         /**
-         * Re setter for ids
+         * Re setter for data
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetIds();
+        resetData();
         
         
 
         /**
-         * Getter for partialMatches. 
+         * Getter for max_bytes. 
+         * @return int*
+         */
+        WSF_EXTERN int WSF_CALL
+        getMax_bytes();
+
+        /**
+         * Setter for max_bytes.
+         * @param arg_Max_bytes int*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setMax_bytes(const int  arg_Max_bytes);
+
+        /**
+         * Re setter for max_bytes
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetMax_bytes();
+        
+        
+
+        /**
+         * Getter for from_end. 
          * @return bool
          */
         WSF_EXTERN bool WSF_CALL
-        getPartialMatches();
+        getFrom_end();
 
         /**
-         * Setter for partialMatches.
-         * @param arg_PartialMatches bool
+         * Setter for from_end.
+         * @param arg_From_end bool
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setPartialMatches(bool  arg_PartialMatches);
+        setFrom_end(bool  arg_From_end);
 
         /**
-         * Re setter for partialMatches
+         * Re setter for from_end
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetPartialMatches();
-        
-        /****************************** Get Set methods for Arrays **********************************/
-        /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
-
-        /**
-         * E.g. use of get_at, set_at, add and sizeof
-         *
-         * for(i = 0; i < adb_element->sizeofProperty(); i ++ )
-         * {
-         *     // Getting ith value to property_object variable
-         *     property_object = adb_element->getPropertyAt(i);
-         *
-         *     // Setting ith value from property_object variable
-         *     adb_element->setPropertyAt(i, property_object);
-         *
-         *     // Appending the value to the end of the array from property_object variable
-         *     adb_element->addProperty(property_object);
-         *
-         *     // Removing the ith value from an array
-         *     adb_element->removePropertyAt(i);
-         *     
-         * }
-         *
-         */
-
-        
-        
-        /**
-         * Get the ith element of ids.
-        * @param i index of the item to be obtained
-         * @return ith AviaryCommon::JobID* of the array
-         */
-        WSF_EXTERN AviaryCommon::JobID* WSF_CALL
-        getIdsAt(int i);
-
-        /**
-         * Set the ith element of ids. (If the ith already exist, it will be replaced)
-         * @param i index of the item to return
-         * @param arg_Ids element to set AviaryCommon::JobID* to the array
-         * @return ith AviaryCommon::JobID* of the array
-         */
-        WSF_EXTERN bool WSF_CALL
-        setIdsAt(int i,
-                AviaryCommon::JobID* arg_Ids);
-
-
-        /**
-         * Add to ids.
-         * @param arg_Ids element to add AviaryCommon::JobID* to the array
-         * @return true on success, false otherwise.
-         */
-        WSF_EXTERN bool WSF_CALL
-        addIds(
-            AviaryCommon::JobID* arg_Ids);
-
-        /**
-         * Get the size of the ids array.
-         * @return the size of the ids array.
-         */
-        WSF_EXTERN int WSF_CALL
-        sizeofIds();
-
-        /**
-         * Remove the ith element of ids.
-         * @param i index of the item to remove
-         * @return true on success, false otherwise.
-         */
-        WSF_EXTERN bool WSF_CALL
-        removeIdsAt(int i);
-
+        resetFrom_end();
         
 
 
         /******************************* Checking and Setting NIL values *********************************/
-        /* Use 'Checking and Setting NIL values for Arrays' to check and set nil for individual elements */
+        
 
         /**
          * NOTE: set_nil is only available for nillable properties
@@ -220,55 +186,32 @@ namespace AviaryQuery
         
 
         /**
-         * Check whether ids is Nill
+         * Check whether data is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isIdsNil();
+        isDataNil();
 
 
         
 
         /**
-         * Check whether partialMatches is Nill
+         * Check whether max_bytes is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isPartialMatchesNil();
+        isMax_bytesNil();
 
 
         
-        /**
-         * Set partialMatches to Nill (same as using reset)
-         * @return true on success, false otherwise.
-         */
-        bool WSF_CALL
-        setPartialMatchesNil();
-        
-
-        /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
 
         /**
-         * NOTE: You may set this to remove specific elements in the array
-         *       But you can not remove elements, if the specific property is declared to be non-nillable or sizeof(array) < minOccurs
-         */
-        
-        /**
-         * Check whether ids is Nill at position i
-         * @param i index of the item to return.
-         * @return true if the value is Nil at position i, false otherwise
+         * Check whether from_end is Nill
+         * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isIdsNilAt(int i);
- 
-       
-        /**
-         * Set ids to NILL at the  position i.
-         * @param i . The index of the item to be set Nill.
-         * @return true on success, false otherwise.
-         */
-        bool WSF_CALL
-        setIdsNilAt(int i);
+        isFrom_endNil();
+
 
         
 
@@ -329,23 +272,34 @@ namespace AviaryQuery
         
 
         /**
-         * Getter for ids by property number (1)
-         * @return Array of AviaryCommon::JobIDs.
+         * Getter for data by property number (1)
+         * @return AviaryCommon::JobData
          */
 
-        std::vector<AviaryCommon::JobID*>* WSF_CALL
+        AviaryCommon::JobData* WSF_CALL
         getProperty1();
 
     
         
 
         /**
-         * Getter for partialMatches by property number (2)
+         * Getter for max_bytes by property number (2)
+         * @return int
+         */
+
+        int WSF_CALL
+        getProperty2();
+
+    
+        
+
+        /**
+         * Getter for from_end by property number (3)
          * @return bool
          */
 
         bool WSF_CALL
-        getProperty2();
+        getProperty3();
 
     
 

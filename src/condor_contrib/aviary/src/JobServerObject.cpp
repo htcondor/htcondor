@@ -21,6 +21,8 @@
 #include "condor_debug.h"
 #include "condor_qmgr.h"
 #include "set_user_priv_from_ad.h"
+#include "stat_info.h"
+#include "stl_string_utils.h"
 
 // C++ includes
 // enable for debugging classad to ostream
@@ -94,32 +96,97 @@ JobServerObject::update ( const ClassAd &ad )
     m_stats.System = m_stats.Machine;
 }
 
+Job*
+getValidKnownJob(const char* key, string& text) {
 
-bool
-JobServerObject::getJobAd ( string key, AttributeMapType& _map, string &text)
-{
-    JobCollectionType::const_iterator element = g_jobs.find(key.c_str());
-    if ( g_jobs.end() == element )
+	// #1: is it even a proper "cluster.proc"?
+	PROC_ID id = getProcByString(key);
+	if (id.cluster < 0 || id.proc < 0) {
+		sprintf (text, "Invalid job id '%s'",key);
+		dprintf(D_FULLDEBUG, "%s\n", text.c_str());
+		return NULL;
+	}
+
+	// #2 is it anywhere in our job map?
+    JobCollectionType::const_iterator element = g_jobs.find(key);
+    if ( g_jobs.end() == element ) {
+		sprintf (text, "Unknown local job id '%s'",key);
+		dprintf(D_FULLDEBUG, "%s\n", text.c_str());
+		return NULL;
+    }
+
+	return (*element).second;
+}
+
+bool JobServerObject::getStatus(const char* key, int& job_status, string &text) {
+	Job* job = NULL;
+	if (!(job = getValidKnownJob(key,text))) {
+		return false;
+	}
+
+	job_status = job->getStatus();
+	return true;
+}
+
+bool JobServerObject::getSummary(const char* key, JobSummaryFields& _summary, string &text) {
+	Job* job = NULL;
+	if (!(job = getValidKnownJob(key,text))) {
+		return false;
+	}
+
+    ClassAd classAd;
+    job->getSummary ( classAd );
+    // little cheat for ad problems with history lookups
+    string str;
+    if ( classAd.LookupString("JOB_AD_ERROR", str) )
     {
-        text = "Unknown Job Id";
+		sprintf(text,"Error obtaining ClassAd for job '%s'; ",key);
+		text += str;
+		dprintf(D_ALWAYS,"%s\n",text.c_str());
         return false;
     }
 
+	// return the limited attributes
+    classAd.LookupString(ATTR_JOB_CMD,_summary.cmd);
+	classAd.LookupString(ATTR_JOB_ARGUMENTS1,_summary.args1);
+	classAd.LookupString(ATTR_JOB_ARGUMENTS2,_summary.args2);
+	classAd.LookupString(ATTR_HOLD_REASON,_summary.hold_reason);
+	classAd.LookupString(ATTR_RELEASE_REASON,_summary.release_reason);
+	classAd.LookupString(ATTR_REMOVE_REASON,_summary.remove_reason);
+	classAd.LookupString(ATTR_JOB_SUBMISSION,_summary.submission_id);
+	classAd.LookupString(ATTR_OWNER,_summary.owner);
+	classAd.LookupInteger(ATTR_Q_DATE,_summary.queued);
+	classAd.LookupInteger(ATTR_ENTERED_CURRENT_STATUS,_summary.last_update);
+	_summary.status = job->getStatus();
+	
+    return true;
+}
+
+bool
+JobServerObject::getJobAd ( const char* key, AttributeMapType& _map, string &text)
+{
+
+	Job* job = NULL;
+	if (!(job = getValidKnownJob(key,text))) {
+		return false;
+	}
     // call Job::getFullAd and use utils to populate the map
     ClassAd classAd;
-    ( *element ).second->getFullAd ( classAd );
+    job->getFullAd ( classAd );
     // little cheat for ad problems with history lookups
-    char* str = NULL;
-    if ( !classAd.LookupString("JOB_AD_ERROR", str) )
+    string str;
+    if ( classAd.LookupString("JOB_AD_ERROR", str) )
     {
-		text = str;
-        return false;
+  		sprintf(text,"Error obtaining ClassAd for job '%s'; ",key);
+		text += str;
+		dprintf(D_ALWAYS,"%s\n",text.c_str());
     }
 
     // return all the attributes in the ClassAd
     if ( !m_codec->classAdToMap ( classAd, _map  ) )
     {
-        text = "Error retrieving Job data";
+		sprintf(text,"Error mapping info for job '%s'; ",key);
+		dprintf(D_ALWAYS,"%s\n",text.c_str());
         return false;
     }
 
@@ -135,13 +202,17 @@ JobServerObject::getJobAd ( string key, AttributeMapType& _map, string &text)
 }
 
 bool
-JobServerObject::fetchJobData(std::string key,
-					   std::string &file,
-					   int32_t start,
-					   int32_t end,
+JobServerObject::fetchJobData(const char* key,
+					   const UserFileType ftype,
+					   std::string& fname,
+					   int max_bytes,
+					   bool from_end,
+					   int& fsize,
 					   std::string &data,
 					   std::string &text)
 {
+	int32_t start;
+	int32_t end;
 	priv_state prev_priv_state;
 	int fd = -1;
 	int count;
@@ -149,21 +220,77 @@ JobServerObject::fetchJobData(std::string key,
 	int whence;
 	char *buffer;
 	bool status;
-
-	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
-		dprintf(D_FULLDEBUG, "FetchJobData: Failed to parse id: %s\n", key.c_str());
-		text = "Invalid Job Id";
+	Job* job = NULL;
+	
+	if (!(job =getValidKnownJob(key,text))) {
 		return false;
 	}
 
-		// start >= 0, end >= 0 :: lseek(start, SEEK_SET), read(end - start)
-		//  end < start :: error, attempt to read backwards
-		// start >= 0, end < 0 :: error, don't know length
-		// start < 0, end > 0 :: attempt to read off end of file, end = 0
-		// start < 0, end <= 0 :: lseek(start, SEEK_END), read(abs(start - end))
-		//  end < start :: error, attempt to read backwards
+	// TODO: find out what the actual file is from classad lookup
+	ClassAd ad;
+	string str;
+	job->getFullAd ( ad );
+	if ( ad.LookupString("JOB_AD_ERROR", str)  ) {
+		sprintf(text,"Error checking ClassAd for user priv on job '%s'; ",key);
+		text += str;
+		dprintf(D_ALWAYS,"%s\n",text.c_str());
+		return false;
+	}
+	
+	switch (ftype) {
+		case ERR:
+			if ( !ad.LookupString("ATTR_JOB_ERROR", fname)  ) {
+				sprintf (text,  "No error file for job '%s'",key);
+				dprintf(D_ALWAYS,"%s\n", text.c_str());
+				return false;
+			}
+			break;
+		case LOG:
+			if ( !ad.LookupString("ATTR_ULOG_FILE", fname)  ) {
+				sprintf (text,  "No log file for job '%s'",key);
+				dprintf(D_ALWAYS,"%s\n", text.c_str());
+				return false;
+			}
+			break;
+		case OUT:
+			if ( !ad.LookupString("ATTR_JOB_OUTPUT", fname)  ) {
+				sprintf (text,  "No output file for job '%s'",key);
+				dprintf(D_ALWAYS,"%s\n", text.c_str());
+				return false;
+			}
+			break;
+		default:
+			// ruh-roh...asking for a file type we don't know about
+			sprintf (text,  "Unknown file type for job '%s'",key);
+			dprintf(D_ALWAYS,"%s\n", text.c_str());
+			return false;
+	}
+	
+	StatInfo the_file(fname.c_str());
+	if (the_file.Error()) {
+		sprintf (text, "Error opening requested file '%s', error %d",fname.c_str(),the_file.Errno());
+		dprintf(D_ALWAYS,"%s\n", text.c_str());
+		return false;
+	}
 
+	// TODO: we calculate these based on file size
+	if (from_end) {
+		end = the_file.GetFileSize();
+		start = end - max_bytes;
+	}
+	else {
+		start = 0;
+		end = max_bytes;
+	}
+
+	// start >= 0, end >= 0 :: lseek(start, SEEK_SET), read(end - start)
+	//  end < start :: error, attempt to read backwards
+	// start >= 0, end < 0 :: error, don't know length
+	// start < 0, end > 0 :: attempt to read off end of file, end = 0
+	// start < 0, end <= 0 :: lseek(start, SEEK_END), read(abs(start - end))
+	//  end < start :: error, attempt to read backwards
+
+	// TODO: redundant checks given above
 	if ((start >= 0 && end >= 0 && end < start) ||
 		(start >= 0 && end < 0) ||
 		(start < 0 && end <= 0 && end < start)) {
@@ -171,8 +298,8 @@ JobServerObject::fetchJobData(std::string key,
 		return false;
 	}
 
-		// Instead of reading off the end of the file, read to the
-		// end of it
+	// Instead of reading off the end of the file, read to the
+	// end of it
 	if (start < 0 && end > 0) {
 		end = 0;
 	}
@@ -185,32 +312,12 @@ JobServerObject::fetchJobData(std::string key,
 		length = abs(start - end);
 	}
 
-		// XXX: Sanity check that length isn't too big?
-
+	// TODO: Sanity check that length isn't too big?
 	buffer = new char[length + 1];
-
-	// scan our job map to see if this is even a known proc id
-	JobCollectionType::const_iterator element = g_jobs.find(key.c_str());
-	if ( g_jobs.end() == element ) {
-		dprintf(D_ALWAYS,
-				"Fetch method called on '%d.%d', which does not exist\n",
-				id.cluster, id.proc);
-		return false;
-	}
-
-	ClassAd ad;
-	char* str = NULL;
-	( *element ).second->getFullAd ( ad );
-	if ( !ad.LookupString("JOB_AD_ERROR", str)  ) {
-		dprintf(D_ALWAYS,
-				"Error checking ClassAd for user priv on key = '%d.%d'\n",
-				id.cluster, id.proc);
-		return false;
-	}
 
 	prev_priv_state = set_user_priv_from_ad(ad);
 
-	if (-1 != (fd = safe_open_wrapper(file.c_str(),
+	if (-1 != (fd = safe_open_wrapper(fname.c_str(),
 									  O_RDONLY | _O_BINARY,
 									  0))) {
 			// If we are seeking from the end of the file, it is
@@ -228,7 +335,7 @@ JobServerObject::fetchJobData(std::string key,
 
 		if (-1 != lseek(fd, start, whence)) {				
 			if (-1 == (count = full_read(fd, buffer, length))) {
-				text = "Failed to read from " + file;
+				text = "Failed to read from " + fname;
 				status = false;
 			} else {
 					// Terminate the string.
@@ -240,11 +347,11 @@ JobServerObject::fetchJobData(std::string key,
 
 			close(fd); // assume closed on failure?
 		} else {
-			text = "Failed to seek in " + file;
+			text = "Failed to seek in " + fname;
 			status = false;
 		}
 	} else {
-		text = "Failed to open " + file;
+		text = "Failed to open " + fname;
 		status = false;
 	}
 

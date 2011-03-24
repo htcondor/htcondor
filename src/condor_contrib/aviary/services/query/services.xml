@@ -3,6 +3,10 @@
 <service name="AviaryQueryService">
 <parameter name="ServiceClass" locked="xsd:false">aviary_query</parameter>
 <description>AviaryQueryServiceService</description>
+<operation name="getJobSummary" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="wsf_cpp_msg_recv"/>
+<parameter name="wsamapping">query#summary</parameter>
+</operation>
 <operation name="getJobStatus" mep="http://www.w3.org/2004/08/wsdl/in-out">
 <messageReceiver class="wsf_cpp_msg_recv"/>
 <parameter name="wsamapping">query#status</parameter>

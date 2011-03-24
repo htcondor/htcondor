@@ -36,7 +36,7 @@ using namespace aviary::history;
 
 #define IS_JOB(key) ((key) && '0' != (key)[0])
 
-JobServerJobLogConsumer::JobServerJobLogConsumer()
+JobServerJobLogConsumer::JobServerJobLogConsumer(): m_reader(NULL)
 { }
 
 JobServerJobLogConsumer::~JobServerJobLogConsumer()
@@ -152,6 +152,12 @@ JobServerJobLogConsumer::NewClassAd(const char *_key,
 bool
 JobServerJobLogConsumer::DestroyClassAd(const char *_key)
 {
+
+	// ignore the marker
+	if (strcmp(_key,"0.0") == 0) {
+	  return true;
+	}
+
    dprintf ( D_FULLDEBUG, "JobServerJobLogConsumer::DestroyClassAd - key '%s'\n", _key);
     JobCollectionType::iterator g_element = g_jobs.find(_key);
 
@@ -179,6 +185,11 @@ JobServerJobLogConsumer::SetAttribute(const char *_key,
 									  const char *_value)
 {
 
+	// ignore the marker
+	if (strcmp(_key,"0.0") == 0) {
+	  return true;
+	}
+
 	if (0 == strcmp(_name,"NextClusterNum") ) {
 		// skip over these
 		//dprintf(D_FULLDEBUG, "%s: skipping job entry '%s' for '%s = %s'\n",
@@ -190,8 +201,9 @@ JobServerJobLogConsumer::SetAttribute(const char *_key,
 
 	if (g_jobs.end() == g_element) {
 		dprintf(D_ALWAYS,
-				"error reading %s: no such job '%s' for '%s = %s'\n",
-                m_reader->GetClassAdLogFileName(), _key, _name, _value);
+				"error reading %s : no such job '%s' for '%s = %s'\n",
+				m_reader->GetClassAdLogFileName(),
+				_key, _name, _value);
 		return false;
 	}
 
@@ -204,6 +216,11 @@ bool
 JobServerJobLogConsumer::DeleteAttribute(const char *_key,
 										 const char *_name)
 {
+	// ignore the marker
+	if (strcmp(_key,"0.0") == 0) {
+	  return true;
+	}
+
 	JobCollectionType::const_iterator g_element = g_jobs.find(_key);
 
 	if (g_jobs.end() == g_element) {
