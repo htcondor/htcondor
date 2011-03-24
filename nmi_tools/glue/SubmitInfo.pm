@@ -65,6 +65,10 @@ our %build_and_test_sets = (
 		'x86_64_fedora_12-updated',
 	],
 
+        # This is a placeholder that is intended to remain empty in V7_6-branch.
+        # It is populated in the master.
+        'extra_builds' => [],
+
 	'stduniv' => [
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
