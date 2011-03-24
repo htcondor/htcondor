@@ -442,12 +442,13 @@ detect_condor_users() {
     set_condor_users "condor" "root" "$MYUSER"
     return 0
   fi
-  TMP_USER=`echo $IDS|$AWK 'BEGIN{FS="[ ,\.]"} /^[^0-9]/{print $1}'`
+
+  TMP_USER=`echo $IDS|$AWK 'BEGIN{FS="[ ,.]"} /^[^0-9]/{print $1}'`
   if [ "$TMP_USER" != "" ] ; then
     set_condor_user "$TMP_USER" "root" "$MYUSER"
     return 0
   fi
-  CONDOR_UID=`echo $IDS|$AWK 'BEGIN{FS="[ ,\.]"} /^[0-9]/{print $1}'`
+  CONDOR_UID=`echo $IDS|$AWK 'BEGIN{FS="[ ,.]"} /^[0-9]/{print $1}'`
 
   for u in condor ; do
     TMP_UID=`id $u|$AWK '{ sub(/uid=/,"",$1); sub(/\(.*\)/,"",$1); print $1; }'`
