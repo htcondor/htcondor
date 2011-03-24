@@ -502,7 +502,7 @@ Job::~Job() {
 
 	dprintf (D_FULLDEBUG,"Job::~Job of '%s'\n", m_key);
 
-    m_submission->Decrement(this);
+    this->DecrementSubmission();
 
 	delete m_live_job;
 	delete m_history_job;

@@ -27,6 +27,9 @@
 #include "condor_common.h"
 #include "filename_tools.h"
 
+extern "C" 
+{
+
 #define EXCEPTION( x ) case EXCEPTION_##x: return 0;
 
 int 
@@ -77,10 +80,10 @@ index( const char *s, int c )
 	return (char *)strchr( s, c );
 }
 
-#pragma warning(disable: 4273) // inconsistent dll linkage
+//#pragma warning(disable: 4273) // inconsistent dll linkage
 
 int
-access(const char *path, int mode)
+__access_(const char *path, int mode)
 {
 	int result, len;
 	char *buf;
@@ -105,5 +108,6 @@ access(const char *path, int mode)
 
 	return result;
 }
-#pragma warning(default: 4996) // inconsistent dll linkage
+//#pragma warning(default: 4996) // inconsistent dll linkage
 
+}
