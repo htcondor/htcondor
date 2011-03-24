@@ -61,12 +61,12 @@ from the proxy.
 \begin{itemize}
 
 % gittrack 1928
-\item \AdAttr{JobUniverse} was documented as an optional attribute for
-  jobs created via the Fetch Work hook, but it was effectively
-  required, because the default \AdAttr{IsValidCheckpointPlatform}
-  expression evaluated to \Expr{Undefined} without it.  Now the
-  default \AdAttr{IsValidCheckpointPlatform} expression evaluates to
-  \Expr{True} when \AdAttr{JobUniverse} is not defined.
+\item \AdAttr{JobUniverse} was effectively a required attribute for
+  jobs created via the Fetch Work hook,
+  due to the need to set the \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM}
+  expression, such that it would not evaluate to \Expr{Undefined}.
+  Now the default \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM} expression
+  evaluates to \Expr{True} when \AdAttr{JobUniverse} is not defined.
 
 % gittrack 1943
 \item When there are multiple cpus but only one slot, the slot name no

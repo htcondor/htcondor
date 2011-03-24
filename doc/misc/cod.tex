@@ -198,16 +198,6 @@ The following attributes are \emph{required}:
    quotation marks (\verb@"@).
    There is no default.
 
- \item[\Attr{JobUniverse}] This attribute defines what Condor job
-\index{COD!required attributes!JobUniverse} 
-   universe to use for the given COD application.
-   At this point, the only supported universes are vanilla and Java.
-   This attribute must be an integer, with vanilla using the value 5,
-   and Java the value 10.
-   This attribute is required if the default \MacroNI{START} expression
-   is used, as it references the attribute \Attr{IsValidCheckpointPlatform},
-   which needs the job universe.
-
  \item[\Attr{Owner}] If the \Condor{startd} daemon is executing as root on
 \index{COD!required attributes!Owner} 
    the resource where a COD application will run, the user must also
@@ -238,6 +228,13 @@ The following attributes are \emph{required}:
 The following list of attributes are \emph{optional}:
 
 \begin{description}
+
+ \item[\Attr{JobUniverse}] This attribute defines what Condor job
+\index{COD!optional attributes!JobUniverse} 
+   universe to use for the given COD application.
+   At this point, the only supported universes are vanilla and Java.
+   This attribute must be an integer, with vanilla using the value 5,
+   and Java the value 10.
 
  \item[\Attr{IWD}] IWD is an acronym for Initial Working Directory.
 \index{COD!optional attributes!IWD} 

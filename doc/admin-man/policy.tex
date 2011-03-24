@@ -167,7 +167,8 @@ assuming you had enough free memory for the Condor jobs that there
 was little swapping.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Is-Valid-Checkpoint-Platform}The \Macro{IS\_VALID\_CHECKPOINT\_PLATFORM} expression}
+\subsection{\label{sec:Is-Valid-Checkpoint-Platform}The \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM} expression}
+\Macro{IS\_VALID\_CHECKPOINT\_PLATFORM}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A checkpoint is the platform-dependent information necessary
@@ -197,7 +198,7 @@ that are not standard universe.
 In words,
 the current default policy for this expression:
 
-\Bold{ Any non standard universe job may run on this machine.  
+\Bold{Any non standard universe job may run on this machine.  
 A standard universe job may run on machines with the new checkpointing
 identification system. 
 A standard universe job may run if it has not yet produced a
@@ -211,15 +212,11 @@ A \Attr{JobUniverse} value of 1 denotes the standard universe.
 This expression  may be
 overridden in the Condor configuration files.
 
-%% Karen's note:
-%%  (TARGET.JobUniverse == 1) == FALSE
-%%  really ought to be
-%%  (TARGET.JobUniverse != 1) 
 \footnotesize
 \begin{verbatim}
 IS_VALID_CHECKPOINT_PLATFORM = 
 (
-  ( (TARGET.JobUniverse == 1) == FALSE) ||
+  (TARGET.JobUniverse =!= 1) ||
 
   (
     (MY.CheckpointPlatform =!= UNDEFINED) &&
