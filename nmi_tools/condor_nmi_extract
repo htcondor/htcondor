@@ -5,6 +5,7 @@ import sys
 import time
 import shutil
 import subprocess
+import getpass
 from optparse import *
 
 
@@ -87,6 +88,25 @@ def ParseArgs( ) :
     parser.add_option( "--user", "-u",
                        action="store", dest="user",
                        help="Specify submit user <default 'cndrauto'>" )
+    parser.add_option( "--me",
+                       action="store_const", dest="user",
+                       const=os.environ["USER"],
+                       help="Specify submit user as $USER" )
+    
+    parser.set_defaults( root = os.environ['HOME'] )
+    parser.add_option( "--root",
+                       action="store", dest="root",
+                       help="Specify root directory <default '$HOME'>" )
+    
+    parser.set_defaults( cache = None )
+    parser.add_option( "--cache",
+                       action="store", dest="cache",
+                       help="Specify cache directory <default <root>/cache>" )
+    
+    parser.set_defaults( public = None )
+    parser.add_option( "--public",
+                       action="store", dest="public",
+                       help="Specify cache directory <default <root>/public>" )
     
     parser.add_option( "--date", "-d",
                        action="callback", callback=DateCallback,
@@ -146,6 +166,10 @@ class Extractor ( object ) :
         else :
             self._parser.error( "'"+tmp+"' is not a valid runid or GID" )
 
+        if self._options.cache is None :
+            self._options.cache = os.path.join( self._options.root, "cache" )
+        if self._options.public is None :
+            self._options.public = os.path.join( self._options.root, "public" )
 
         for platform in self._args :
             if platform.count( "_" ) < 2 :
@@ -160,7 +184,7 @@ class Extractor ( object ) :
         # and 0 as the buffer size (unbuffered) 
         sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0) 
 
-        self._cache = Cache( "cache" )
+        self._cache = Cache( self._options.cache )
 
         self._condor_version = None
         self._condor_release = None
@@ -222,9 +246,9 @@ class Extractor ( object ) :
             self._condor_release = release
 
         if self._version_dir is None :
-            self._version_dir = "public/v"+version
+            self._version_dir = os.path.join(self._options.public,"v"+version)
         if self._release_dir is None :
-            self._release_dir = "public/v"+release
+            self._release_dir = os.path.join(self._options.public,"v"+release)
 
         if not os.path.isdir( self._version_dir ) :
             os.makedirs( self._version_dir )
