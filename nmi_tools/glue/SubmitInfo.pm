@@ -328,6 +328,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 				'-DCLIPPED:BOOL=OFF' => undef,
+                                '-DWITH_KRB5:BOOL=OFF' => undef,
 			 },
 			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
 			'xtests'	=>  [ 'x86_64_ubuntu_10.04', ],
