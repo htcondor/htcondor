@@ -386,6 +386,10 @@ class FileTransfer {
 		// wants us to write to.  It must be a relative path, containing
 		// no ".." elements.
 	bool LegalPathInSandbox(char const *path,char const *sandbox);
+
+		// Returns true if specified path points into the spool directory.
+		// This does not do an existence check for the file.
+	bool outputFileIsSpooled(char const *fname);
 };
 
 // returns 0 if no expiration

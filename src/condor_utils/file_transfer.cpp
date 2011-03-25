@@ -467,6 +467,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
+		// add the spooled user log to the list of files to xfer
+		// (i.e. when sending output to condor_transfer_data)
+	MyString ulog;
+	if( jobAd.LookupString(ATTR_ULOG_FILE,ulog) ) {
+		if( outputFileIsSpooled(ulog.Value()) ) {
+			if( OutputFiles ) {
+				if( !OutputFiles->file_contains(ulog.Value()) ) {
+					OutputFiles->append(ulog.Value());
+				}
+			} else {
+				OutputFiles = new StringList(buf,",");
+			}
+		}
+	}
+
 	// Set EncryptInputFiles to be ATTR_ENCRYPT_INPUT_FILES if specified.
 	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, buf) == 1) {
 		EncryptInputFiles = new StringList(buf,",");
@@ -1155,17 +1170,6 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 				FilesToSend = OutputFiles;
 				EncryptFiles = EncryptOutputFiles;
 				DontEncryptFiles = DontEncryptOutputFiles;
-
-					// add the spooled user log to the list of files to xfer
-				if( OutputFiles ) {
-					MyString ulog;
-					if( jobAd.LookupString(ATTR_ULOG_FILE,ulog) ) {
-						if( !nullFile(ulog.Value()) && !OutputFiles->file_contains(ulog.Value()) ) {
-							OutputFiles->append(ulog.Value());
-						}
-					}
-				}
-
 			}
 		} else {
 			// starter sending back to the shadow
@@ -4150,4 +4154,17 @@ void
 GetDelegatedProxyRenewalTime(ClassAd *jobAd)
 {
 	GetDelegatedProxyRenewalTime(GetDesiredDelegatedJobCredentialExpiration(jobAd));
+}
+
+bool
+FileTransfer::outputFileIsSpooled(char const *fname) {
+	if( is_relative_to_cwd(fname) ) {
+		if( Iwd && SpoolSpace && strcmp(Iwd,SpoolSpace)==0 ) {
+			return true;
+		}
+	}
+	else if( SpoolSpace && strncmp(fname,SpoolSpace,strlen(SpoolSpace))==0 ) {
+		return true;
+	}
+	return false;
 }
