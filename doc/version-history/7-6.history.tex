@@ -54,6 +54,13 @@ The details of each version are described below.
 mode in the face of a specific combination of node job failures with
 retries.
 
+% gittrac #1991
+\item Fixed a bug that resulted in the spooled user log not being
+  fetched by \Condor{transfer\_data}.  Prior to Condor 7.5.4, this
+  problem affected spooled jobs submitted with an explicit list of
+  output files to transfer.  Beginning in 7.5.4, this problem also
+  affected spooled jobs that auto-detected output files.
+
 \end{itemize}
 
 \noindent Known Bugs:
