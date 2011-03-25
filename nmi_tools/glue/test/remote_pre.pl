@@ -26,6 +26,7 @@
 use Cwd;
 use Env; 
 use File::Copy;
+use File::Basename;
 
 # Don't buffer output.
 $|=1;
@@ -69,6 +70,17 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
 	system("unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile !\n";
 	print "Unzipped $release_zipfile ...\n";
 	
+	(my $tmp_dir = basename($release_zipfile)) =~ s/\.zip$//;
+	print "\$tmp_dir = '$tmp_dir'\n";
+    print "Directory listing of 'condor':\n";
+	print `dir condor`;
+	if(-d "condor/$tmp_dir") {
+	    print "condor/$tmp_dir exists.  Trying to move...\n";
+	    system("mv condor/$tmp_dir/* condor/");
+	}
+	print "Second directory listing of 'condor':\n";
+	print `dir condor`;
+
 	print "fixing execute bits ...\n";
 	system("chmod a+x condor/bin/*");
 	
