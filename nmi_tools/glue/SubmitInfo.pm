@@ -247,7 +247,10 @@ our %submit_info = (
 	'x86_winnt_5.1'	=> {
 		'build' => {
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
-			'prereqs'	=> undef,
+			'prereqs'	=> [
+				'cmake-2.8.3', '7-Zip-9.20', 'ActivePerl-5.10.1',
+				'VisualStudio-9.0', 'WindowsSDK-6.1',
+			],
 			'xtests'	=> undef,
 		},
 
@@ -328,6 +331,8 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 				'-DCLIPPED:BOOL=OFF' => undef,
+                                '-DWITH_KRB5:BOOL=OFF' => undef,
+                                '-DWITH_CREAM:BOOL=OFF' => undef,
 			 },
 			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
 			'xtests'	=>  [ 'x86_64_ubuntu_10.04', ],
