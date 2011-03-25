@@ -44,8 +44,6 @@ my $writelog = "./x_write_joblog_events.exe";
 
 CondorTest::debug("Result File is $resultfile\n",$debuglevel);
 
-runcmd("chmod -R 777 .");
-
 ####################################################################
 ####################################################################
 #
@@ -82,9 +80,9 @@ while(!(-f $resultfile)) {
 
 CondorTest::debug("$resultfile exits!\n",$debuglevel);
 
-my $waitmax = 14;
+my $waitmax = 60;
 my $waittime = 0;
-my $inc = 2;
+my $inc = 1;
 
 while( (-s $resultfile) == 0 ) {
 	CondorTest::debug("Waiting for results\n",$debuglevel);

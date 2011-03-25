@@ -33,44 +33,53 @@ package SubmitInfo;
 # With nmi_condor_submit, one can request a build/test set to submit.
 ###############################################################################
 
-# The sets of ports we know about nativly in the glue script.
+# The sets of ports we know about natively in the glue script.
 our %build_and_test_sets = (
-	# The ports we officially support and for which we provide native binaries
-	# on our download site.
-	# If you don't specify what platforms you'd like built, then this is the
-	# list to which we default.
-
-	# NOTE: Keep the stable or developer release branches synchronized with
-	# https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=DeveloperReleasePlan
-	'official_ports' => [
-		'x86_64_deb_5.0',
-		'x86_64_rhap_5',
-		'x86_64_rhas_3',
-		'x86_deb_5.0',
-		'x86_macos_10.4',
-		'x86_rhap_5',
-		'x86_rhas_3',
-		'x86_winnt_5.1-tst', 
-		#'x86_winnt_5.1',
-	],
-
-	# Occasionally, NMI would like a port on a bunch of odd platforms. These
-	# are those platforms.
-	'nmi_one_offs' => [
-		'x86_64_rhap_5.3-updated',
-		'x86_64_opensuse_11.3-updated',
-		'x86_64_opensuse_11.4-updated',
-		'x86_64_sol_5.10',
-		'x86_64_sol_5.11',
-		'x86_64_fedora_12-updated',
-	],
-
-	'stduniv' => [
-		'x86_64_deb_5.0',
-		'x86_64_rhap_5',
-		'x86_64_rhas_3',
-		'x86_deb_5.0',
-	],
+    # The ports we officially support and for which we provide native binaries
+    # on our download site.
+    # If you don't specify what platforms you'd like built, then this is the
+    # list to which we default.
+    
+    # NOTE: Keep the stable or developer release branches synchronized with
+    # https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=DeveloperReleasePlan
+    'official_ports' => [
+        'x86_64_deb_6.0-updated', # this will switch to non-updated when NMI has that platform
+        'x86_64_deb_5.0',
+        'x86_64_rhap_5',
+        'x86_64_rhas_3',
+        'x86_deb_5.0',
+        'x86_macos_10.4',
+        'x86_rhap_5',
+        'x86_rhas_3',
+        'x86_winnt_5.1-tst', 
+        #'x86_winnt_5.1',
+    ],
+    
+    # NMI will need builds on a set of platforms that we do not provide in our
+    # core builds.  These are those platforms.
+    'nmi_one_offs' => [
+        'x86_64_sol_5.10',
+        'x86_64_sol_5.11',
+    ],
+    
+    # We will build on a set of machines that we want to be sure continue building
+    # but we do not release them so they are not included in the 'official ports' 
+    # section above.  Platforms in this list include things like the latest Fedora
+    # release - a build problem on this platform could indicate problems on a future
+    # release of RHEL.
+    'extra_builds' => [
+        'x86_64_rhap_5.3-updated',
+        'x86_64_fedora_14-updated',
+        'x86_64_opensuse_11.3-updated',
+        'x86_64_opensuse_11.4-updated',
+    ],
+    
+    'stduniv' => [
+        'x86_64_deb_5.0',
+        'x86_64_rhap_5',
+        'x86_64_rhas_3',
+        'x86_deb_5.0',
+    ],
 );
 
 ###############################################################################
@@ -258,7 +267,7 @@ our %submit_info = (
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
 			# when it works add x86_64_winnt_5.1 to the x_tests
-			'xtests'	=> undef,
+			'xtests'	=> [ "x86_winnt_5.1", "x86_64_winnt_5.1", "x86_winnt_6.0" ],
 		},
 
 		'test' => {
@@ -298,7 +307,32 @@ our %submit_info = (
 				'-DCLIPPED:BOOL=OFF' => undef,
 			 },
 			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
-			'xtests'	=>  [ 'x86_64_ubuntu_10.04', 'x86_64_ubuntu_8.04.3' ],
+			'xtests'	=>  [ 'x86_64_ubuntu_10.04', ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ 'java-1.4.2_05' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+
+	##########################################################################
+	# Platform Debian 6.0 on x86_64
+        # As of this writing there is no x86_64_deb-6.0 (non updated) machine in 
+        # the NMI pool.  When they include one we should switch this from using
+        # the updated machine to the non-updated machine.
+	##########################################################################
+	'x86_64_deb_6.0-updated' => {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL=OFF' => undef,
+                                '-DWITH_KRB5:BOOL=OFF' => undef,
+                                '-DWITH_CREAM:BOOL=OFF' => undef,
+			 },
+			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
+			'xtests'	=>  [ 'x86_64_ubuntu_10.04', ],
 		},
 
 		'test' => {
@@ -319,9 +353,12 @@ our %submit_info = (
 			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-				'x86_64_fedora_13', 'x86_64_rhap_5.2',
-				'x86_64_fedora_12', 'x86_64_fedora_12-updated', 
-				'x86_64_fedora_13-updated' ],
+                            'x86_64_fedora_14', 'x86_64_fedora_14-updated',
+                            'x86_64_fedora_13', 'x86_64_fedora_13-updated',
+                            'x86_64_rhap_5.2', 'x86_64_rhap_5.3', 'x86_64_rhap_5.3-updated',
+                            'x86_64_sl_5.5',
+                            'x86_64_opensuse_11.3-updated', 'x86_64_opensuse_11.4-updated',
+                            ],
 		},
 
 		'test' => {
@@ -363,7 +400,7 @@ our %submit_info = (
 				'-DCLIPPED:BOOL=OFF' => undef
 			 },
 			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
-			'xtests'	=> undef,
+			'xtests'	=> [ 'x86_ubuntu_10.04', ],
 		},
 
 		'test' => {
@@ -465,6 +502,8 @@ our %submit_info = (
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
 				'x86_64_rhap_5.2',
+				'x86_64_rhap_5.3',
+				'x86_64_rhap_5.3-updated',
 				'unmanaged-x86_rhap_5'
 			],
 		},
@@ -513,50 +552,7 @@ our %submit_info = (
 	# builds of Condor are as clipped as possible to ensure compilation.
 
 	##########################################################################
-	# Platform Fedora 12 on x86_64
-	# This might work.
-	##########################################################################
-	'x86_64_fedora_12'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
-			 },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
-	# Platform Fedora 12 with updates on x86_64
-	# This might work.
-	##########################################################################
-	'x86_64_fedora_12-updated'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args,
-				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
-			 },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.9' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform Fedora 13 on x86_64
-	# This might work.
 	##########################################################################
 	'x86_64_fedora_13'	=> {
 		'build' => {
@@ -574,9 +570,42 @@ our %submit_info = (
 
 	##########################################################################
 	# Platform Fedora 13 with updates on x86_64
-	# This might work.
 	##########################################################################
 	'x86_64_fedora_13-updated'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Fedora 14 on x86_64
+	##########################################################################
+	'x86_64_fedora_14'	=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform Fedora 14 with updates on x86_64
+	##########################################################################
+	'x86_64_fedora_14-updated'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
@@ -743,6 +772,25 @@ our %submit_info = (
 	},
 
 	##########################################################################
+	# Platform SL 5.5 on X86_64
+	# I suspect this could be a real port if we bothered.
+	##########################################################################
+	'x86_64_sl_5.5' => {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+
+	##########################################################################
 	# Platform RHEL 4 on X86_64
 	# This might work.
 	##########################################################################
@@ -781,24 +829,6 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform Ubuntu 8.04.3 on x86_64
-	# This might work.
-	##########################################################################
-	'x86_64_ubuntu_8.04.3'	=> {
-		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs , 'java-1.4.2_05' ],
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-
-	##########################################################################
 	# Platform Ubuntu 10.04 on x86_64
 	# This might work.
 	##########################################################################
@@ -817,8 +847,24 @@ our %submit_info = (
 	},
 
 	##########################################################################
+	# Platform Ubuntu 10.04 on x86
+	##########################################################################
+	'x86_ubuntu_10.04' => {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
 	# Platform RHEL 4 on x86
-	# This might work.
 	##########################################################################
 	'x86_rhas_4'	=> {
 		'build' => {

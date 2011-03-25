@@ -129,9 +129,16 @@
           <RegistrySearch Id="JavaVersionSearch" Root="HKLM" Type="raw" Key="SOFTWARE\JavaSoft\Java Runtime Environment" Name="CurrentVersion" />
         </Property>
         <Property Id="JVMDIR">
-          <RegistrySearch Id="JavaDirSearch" Root="HKLM" Type="directory" Key="SOFTWARE\JavaSoft\Java Runtime Environment\[JVMVERSION]" Name="JavaHome" />
+          <RegistrySearch Id="JavaDirSearch" Root="HKLM" Type="raw" Key="SOFTWARE\JavaSoft\Java Runtime Environment\[JVMVERSION]" Name="JavaHome" />
         </Property>
-        <SetProperty Id="JVMLOCATION" Value="[JVMDIR]bin\java.exe" After="AppSearch"/>
+        <!-- Verify that registry == reality -->
+        <Property Id="JVMFOUND">
+            <DirectorySearch Id="JavaDirValidate" Path="[JVMDIR]\bin">
+                <FileSearch Name="java.exe"/>
+            </DirectorySearch>
+        </Property>
+
+        <SetProperty Id="JVMLOCATION" Value="[JVMDIR]\bin\java.exe" After="AppSearch">JVMFOUND</SetProperty>
 
         <!--Search for previous install answers.-->
         <Property Id="OLD_INSTALLDIR">

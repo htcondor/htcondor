@@ -47,8 +47,6 @@ unless ($pid)
 #main process continues here
 sleep(60);
 
-system("chmod -R 777 .");
-
 @filestoedit = qw/job_core_priority2/;
 @filestochmod = qw/job_core_priority2.pl/;
 
