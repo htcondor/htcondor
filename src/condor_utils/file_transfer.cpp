@@ -1155,6 +1155,17 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 				FilesToSend = OutputFiles;
 				EncryptFiles = EncryptOutputFiles;
 				DontEncryptFiles = DontEncryptOutputFiles;
+
+					// add the spooled user log to the list of files to xfer
+				if( OutputFiles ) {
+					MyString ulog;
+					if( jobAd.LookupString(ATTR_ULOG_FILE,ulog) ) {
+						if( !nullFile(ulog.Value()) && !OutputFiles->file_contains(ulog.Value()) ) {
+							OutputFiles->append(ulog.Value());
+						}
+					}
+				}
+
 			}
 		} else {
 			// starter sending back to the shadow
