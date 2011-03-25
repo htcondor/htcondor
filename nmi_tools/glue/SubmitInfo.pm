@@ -51,8 +51,7 @@ our %build_and_test_sets = (
         'x86_macos_10.4',
         'x86_rhap_5',
         'x86_rhas_3',
-        'x86_winnt_5.1-tst', 
-        #'x86_winnt_5.1',
+        'x86_winnt_5.1',
     ],
     
     # NMI will need builds on a set of platforms that we do not provide in our
@@ -284,7 +283,7 @@ our %submit_info = (
 	# Microsoft Windows 5.1/2000/xp/whatever on x86
 	# prereqs testing configuration (also cmake)
 	##########################################################################
-	'x86_winnt_5.1-prereqs'	=> {
+	'x86_winnt_5.1'	=> {
 		'build' => {
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> [
