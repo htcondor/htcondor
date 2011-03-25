@@ -96,14 +96,13 @@ while ($row = mysql_fetch_array($result)) {
    // --------------------------------
    // BUILDS
    // --------------------------------
-   $sql = "SELECT Task.platform," . 
-          "       SUM(IF(Task.result != 0, 1, 0)) AS failed," . 
-          "       SUM(IF(Task.result IS NULL, 1, 0)) AS pending " . 
+   $sql = "SELECT platform," . 
+          "       SUM(IF(result != 0, 1, 0)) AS failed," . 
+          "       SUM(IF(result IS NULL, 1, 0)) AS pending " . 
           "  FROM Task ".
-          " WHERE Task.runid = ${runid} AND ".
-          "       Task.platform != 'local' AND ".
-          "       (Task.name='platform_pre' OR Task.name='platform_job' OR Task.name='platform_post') ".
-          " GROUP BY Task.platform ";
+          " WHERE runid = ${runid} AND ".
+          "       platform != 'local'  ".
+          " GROUP BY platform ";
    $result2 = mysql_query($sql) or die ("Query {$sql} failed : " . mysql_error());
    $data["build"] = Array();
    $data["build"]["totals"] = Array();

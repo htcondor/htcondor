@@ -12,6 +12,7 @@ a:link { color: #1C3F75; }
 .noresults {
    background-color: #aaaaaa;
 }
+
 .details {
    font-size: 10px;
 }
@@ -21,6 +22,7 @@ a:link { color: #1C3F75; }
 .title {
    color: black;
 }
+
 TABLE {
     border-collapse: collapse;
     cellspacing: 0;
@@ -29,6 +31,12 @@ TABLE {
 }
 TD {
     border: 1px solid grey;
+}
+.sparkheader {
+   font-size: 75%;
+   border-top-style: none;
+   border-bottom-style: none;
+   border-left-style: none;
 }
 
 
