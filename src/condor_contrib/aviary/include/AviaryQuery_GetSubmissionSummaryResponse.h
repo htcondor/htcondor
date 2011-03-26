@@ -22,8 +22,6 @@
         
        #include "AviaryCommon_JobSummary.h"
           
-       #include "AviaryCommon_Status.h"
-          
         #include <axutil_qname.h>
         
 
@@ -46,10 +44,6 @@ namespace AviaryQuery
 
                 
                 bool isValidJobs;
-            AviaryCommon::Status* property_Status;
-
-                
-                bool isValidStatus;
             
 
         /*** Private methods ***/
@@ -57,10 +51,6 @@ namespace AviaryQuery
 
         bool WSF_CALL
         setJobsNil();
-            
-
-        bool WSF_CALL
-        setStatusNil();
             
 
 
@@ -87,10 +77,9 @@ namespace AviaryQuery
          * Constructor for creating GetSubmissionSummaryResponse
          * @param 
          * @param Jobs std::vector<AviaryCommon::JobSummary*>*
-         * @param Status AviaryCommon::Status*
          * @return newly created GetSubmissionSummaryResponse object
          */
-        GetSubmissionSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs,AviaryCommon::Status* arg_Status);
+        GetSubmissionSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs);
         
         
         /********************************** Class get set methods **************************************/
@@ -119,30 +108,6 @@ namespace AviaryQuery
          */
         WSF_EXTERN bool WSF_CALL
         resetJobs();
-        
-        
-
-        /**
-         * Getter for status. 
-         * @return AviaryCommon::Status*
-         */
-        WSF_EXTERN AviaryCommon::Status* WSF_CALL
-        getStatus();
-
-        /**
-         * Setter for status.
-         * @param arg_Status AviaryCommon::Status*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setStatus(AviaryCommon::Status*  arg_Status);
-
-        /**
-         * Re setter for status
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetStatus();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -231,16 +196,6 @@ namespace AviaryQuery
          */
         bool WSF_CALL
         isJobsNil();
-
-
-        
-
-        /**
-         * Check whether status is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isStatusNil();
 
 
         
@@ -334,17 +289,6 @@ namespace AviaryQuery
 
         std::vector<AviaryCommon::JobSummary*>* WSF_CALL
         getProperty1();
-
-    
-        
-
-        /**
-         * Getter for status by property number (2)
-         * @return AviaryCommon::Status
-         */
-
-        AviaryCommon::Status* WSF_CALL
-        getProperty2();
 
     
 

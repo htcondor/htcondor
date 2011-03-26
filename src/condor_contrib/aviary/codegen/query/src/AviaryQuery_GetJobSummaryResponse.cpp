@@ -30,10 +30,6 @@
               
             isValidJobs  = false;
         
-                property_Status  = NULL;
-              
-            isValidStatus  = false;
-        
                   qname =  axutil_qname_create (Environment::getEnv(),
                         "GetJobSummaryResponse",
                         "http://query.aviary.grid.redhat.com",
@@ -41,7 +37,7 @@
                 
         }
 
-       AviaryQuery::GetJobSummaryResponse::GetJobSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs,AviaryCommon::Status* arg_Status)
+       AviaryQuery::GetJobSummaryResponse::GetJobSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs)
         {
              
                    qname = NULL;
@@ -50,18 +46,12 @@
              
             isValidJobs  = true;
             
-               property_Status  = NULL;
-             
-            isValidStatus  = true;
-            
                  qname =  axutil_qname_create (Environment::getEnv(),
                        "GetJobSummaryResponse",
                        "http://query.aviary.grid.redhat.com",
                        NULL);
                
                     property_Jobs = arg_Jobs;
-            
-                    property_Status = arg_Status;
             
         }
         AviaryQuery::GetJobSummaryResponse::~GetJobSummaryResponse()
@@ -232,88 +222,6 @@
                      element_qname = NULL;
                   }
                  
-
-                     
-                     /*
-                      * building status element
-                      */
-                     
-                     
-                     
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
-                                  
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
-                                   {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "status", NULL, NULL);
-                                 
-
-                           if (isParticle() ||  
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("status", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("status", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 AviaryCommon::Status* element = new AviaryCommon::Status();
-
-                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
-                                      if(AXIS2_FAILURE == status)
-                                      {
-                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element status");
-                                      }
-                                      else
-                                      {
-                                          status = setStatus(element);
-                                      }
-                                    
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for status ");
-                                     if(element_qname)
-                                     {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
-                                     }
-                                     return AXIS2_FAILURE;
-                                 }
-                              }
-                           
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element status missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
-                  if(element_qname)
-                  {
-                     axutil_qname_free(element_qname, Environment::getEnv());
-                     element_qname = NULL;
-                  }
-                 
           return status;
        }
 
@@ -364,8 +272,6 @@
                void *element = NULL;
              
                     axis2_char_t text_value_1[ADB_DEFAULT_DIGIT_LIMIT];
-                    
-                    axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -474,67 +380,6 @@
                          }
                      }
                    
-                     
-                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
-                 } 
-
-                 
-                       p_prefix = NULL;
-                      
-
-                   if (!isValidStatus)
-                   {
-                      
-                            
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property status");
-                            return NULL;
-                          
-                   }
-                   else
-                   {
-                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("status"))); 
-                                 
-                                 /* axutil_strlen("<:>") + 1 = 4 */
-                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("status")));
-                                  /* axutil_strlen("</:>") + 1 = 5 */
-                                  
-                     
-
-                   
-                   
-                     
-                     /*
-                      * parsing status element
-                      */
-
-                    
-                    
-                            sprintf(start_input_str, "<%s%sstatus",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%sstatus>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
-                     
-                            if(!property_Status->isParticle())
-                            {
-                                axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                            }
-                            property_Status->serialize(current_node, parent_element,
-                                                                                 property_Status->isParticle() || false, namespaces, next_ns_index);
-                            
-                            if(!property_Status->isParticle())
-                            {
-                                axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                            }
-                            
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
@@ -925,118 +770,6 @@
                 
                 return AXIS2_SUCCESS;
 
-           }
-
-           
-
-            /**
-             * Getter for status by  Property Number 2
-             */
-            AviaryCommon::Status* WSF_CALL
-            AviaryQuery::GetJobSummaryResponse::getProperty2()
-            {
-                return getStatus();
-            }
-
-            /**
-             * getter for status.
-             */
-            AviaryCommon::Status* WSF_CALL
-            AviaryQuery::GetJobSummaryResponse::getStatus()
-             {
-                return property_Status;
-             }
-
-            /**
-             * setter for status
-             */
-            bool WSF_CALL
-            AviaryQuery::GetJobSummaryResponse::setStatus(
-                    AviaryCommon::Status*  arg_Status)
-             {
-                
-
-                if(isValidStatus &&
-                        arg_Status == property_Status)
-                {
-                    
-                    return true;
-                }
-
-                
-                  if(NULL == arg_Status)
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"status is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
-                
-
-                
-                resetStatus();
-
-                
-                    if(NULL == arg_Status)
-                         
-                {
-                    /* We are already done */
-                    return true;
-                }
-                
-                        property_Status = arg_Status;
-                        isValidStatus = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for status
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobSummaryResponse::resetStatus()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-            
-                
-
-                if(property_Status != NULL)
-                {
-                   
-                   
-                         delete  property_Status;
-                     
-
-                   }
-
-                
-                
-                
-               isValidStatus = false; 
-               return true;
-           }
-
-           /**
-            * Check whether status is nill
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobSummaryResponse::isStatusNil()
-           {
-               return !isValidStatus;
-           }
-
-           /**
-            * Set status to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryQuery::GetJobSummaryResponse::setStatusNil()
-           {
-               return resetStatus();
            }
 
            

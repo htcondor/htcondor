@@ -263,8 +263,8 @@
              {
 
                 
-                 if (axutil_strcmp(property_StatusCodeType.c_str(), "SUCCESS") == 0)
-                    return StatusCodeType_SUCCESS;
+                 if (axutil_strcmp(property_StatusCodeType.c_str(), "OK") == 0)
+                    return StatusCodeType_OK;
              
                  if (axutil_strcmp(property_StatusCodeType.c_str(), "FAIL") == 0)
                     return StatusCodeType_FAIL;
@@ -302,8 +302,8 @@
                    switch (arg_StatusCodeType)
                    {
                      
-                       case StatusCodeType_SUCCESS :
-                            property_StatusCodeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "SUCCESS");
+                       case StatusCodeType_OK :
+                            property_StatusCodeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "OK");
                           break;
                      
                        case StatusCodeType_FAIL :

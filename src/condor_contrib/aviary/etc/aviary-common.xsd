@@ -20,7 +20,7 @@
 	<!-- common types should make use of simple and complex types for reuse -->
 	<xs:simpleType name="StatusCodeType">
 		<xs:restriction base="xs:string">
-			<xs:enumeration value="SUCCESS"/>
+			<xs:enumeration value="OK"/>
 			<xs:enumeration value="FAIL"/>
 			<xs:enumeration value="NO_MATCH"/>
 			<xs:enumeration value="INVALID_OFFSET"/>
@@ -135,10 +135,10 @@
 		<xs:sequence>
 			<xs:element name="id" type="tns:JobID"/>
 			<xs:element name="status" type="tns:Status"/>
-			<xs:element name="cmd" type="xs:string"/>
-			<xs:element name="queued" type="xs:date"/>
-			<xs:element name="last_update" type="xs:date"/>
+			<xs:element name="queued" type="xs:dateTime"/>
+			<xs:element name="last_update" type="xs:dateTime"/>
 			<xs:element name="job_status" type="tns:JobStatusType"/>
+			<xs:element name="cmd" type="xs:string"/>
 			<xs:element name="args1" type="xs:string" minOccurs="0"/>
 			<xs:element name="args2" type="xs:string" minOccurs="0"/>
 			<xs:element name="held" type="xs:string" minOccurs="0"/>

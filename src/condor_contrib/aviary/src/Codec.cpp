@@ -67,22 +67,23 @@ BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _
 
     classad::Value value;
     ad.EvaluateExpr(expr,value);
+	const char* key = strdup(name);
     switch (value.GetType()) {
         // TODO: does this cover expressions also?
         case classad::Value::BOOLEAN_VALUE:
             {
-            _map[name] = new Attribute(Attribute::EXPR_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
+            _map[key] = new Attribute(Attribute::EXPR_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
             }
             break;
         case classad::Value::INTEGER_VALUE:
-            _map[name] = new Attribute(Attribute::INTEGER_TYPE,ExprTreeToString(expr));;
+            _map[key] = new Attribute(Attribute::INTEGER_TYPE,ExprTreeToString(expr));;
             break;
         case classad::Value::REAL_VALUE:
-            _map[name] = new Attribute(Attribute::FLOAT_TYPE,ExprTreeToString(expr));
+            _map[key] = new Attribute(Attribute::FLOAT_TYPE,ExprTreeToString(expr));
             break;
         case classad::Value::STRING_VALUE:
         default:
-            _map[name] = new Attribute(Attribute::STRING_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
+            _map[key] = new Attribute(Attribute::STRING_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
     }
 
     return true;
@@ -97,17 +98,17 @@ BaseCodec::classAdToMap(ClassAd& ad, AttributeMapType& _map)
     _map.clear();
     iter = ad.begin();
     while (iter != ad.end()) {
-            string name = iter->first;
-            if (!addAttributeToMap(ad, name.c_str(), _map)) {
+            const char* name = iter->first.c_str();
+            if (!addAttributeToMap(ad, name, _map)) {
                     return false;
             }
             iter++;
     }
 
-    // TODO: debug
-    //  if (DebugFlags & D_FULLDEBUG) {
-    //      ad.dPrint(D_FULLDEBUG|D_NOHEADER);
-    //  }
+//     TODO: debug
+//       if (DebugFlags & D_FULLDEBUG) {
+//           ad.dPrint(D_FULLDEBUG|D_NOHEADER);
+//       }
 
     return true;
 }

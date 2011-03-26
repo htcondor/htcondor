@@ -97,40 +97,44 @@ JobServerObject::update ( const ClassAd &ad )
 }
 
 Job*
-getValidKnownJob(const char* key, string& text) {
+getValidKnownJob(const char* key, AviaryStatus &_status) {
 
 	// #1: is it even a proper "cluster.proc"?
 	PROC_ID id = getProcByString(key);
 	if (id.cluster < 0 || id.proc < 0) {
-		sprintf (text, "Invalid job id '%s'",key);
-		dprintf(D_FULLDEBUG, "%s\n", text.c_str());
+		sprintf (_status.text, "Invalid job id '%s'",key);
+		dprintf(D_FULLDEBUG, "%s\n", _status.text.c_str());
+		_status.type = AviaryStatus::FAIL;
 		return NULL;
 	}
 
 	// #2 is it anywhere in our job map?
     JobCollectionType::const_iterator element = g_jobs.find(key);
     if ( g_jobs.end() == element ) {
-		sprintf (text, "Unknown local job id '%s'",key);
-		dprintf(D_FULLDEBUG, "%s\n", text.c_str());
+		sprintf (_status.text, "Unknown local job id '%s'",key);
+		dprintf(D_FULLDEBUG, "%s\n", _status.text.c_str());
+		_status.type = AviaryStatus::NO_MATCH;
 		return NULL;
     }
 
 	return (*element).second;
 }
 
-bool JobServerObject::getStatus(const char* key, int& job_status, string &text) {
+bool JobServerObject::getStatus(const char* key, int& job_status, AviaryStatus &_status) {
 	Job* job = NULL;
-	if (!(job = getValidKnownJob(key,text))) {
+	if (!(job = getValidKnownJob(key,_status))) {
 		return false;
 	}
 
 	job_status = job->getStatus();
+
+	_status.type = AviaryStatus::A_OK;
 	return true;
 }
 
-bool JobServerObject::getSummary(const char* key, JobSummaryFields& _summary, string &text) {
+bool JobServerObject::getSummary(const char* key, JobSummaryFields& _summary, AviaryStatus &_status) {
 	Job* job = NULL;
-	if (!(job = getValidKnownJob(key,text))) {
+	if (!(job = getValidKnownJob(key,_status))) {
 		return false;
 	}
 
@@ -140,9 +144,9 @@ bool JobServerObject::getSummary(const char* key, JobSummaryFields& _summary, st
     string str;
     if ( classAd.LookupString("JOB_AD_ERROR", str) )
     {
-		sprintf(text,"Error obtaining ClassAd for job '%s'; ",key);
-		text += str;
-		dprintf(D_ALWAYS,"%s\n",text.c_str());
+		sprintf(_status.text,"Error obtaining ClassAd for job '%s'; ",key);
+		_status.text += str;
+		dprintf(D_ALWAYS,"%s\n",_status.text.c_str());
         return false;
     }
 
@@ -158,16 +162,16 @@ bool JobServerObject::getSummary(const char* key, JobSummaryFields& _summary, st
 	classAd.LookupInteger(ATTR_Q_DATE,_summary.queued);
 	classAd.LookupInteger(ATTR_ENTERED_CURRENT_STATUS,_summary.last_update);
 	_summary.status = job->getStatus();
-	
+
+	_status.type = AviaryStatus::A_OK;
     return true;
 }
 
 bool
-JobServerObject::getJobAd ( const char* key, AttributeMapType& _map, string &text)
+JobServerObject::getJobAd ( const char* key, AttributeMapType& _map, AviaryStatus &_status)
 {
-
 	Job* job = NULL;
-	if (!(job = getValidKnownJob(key,text))) {
+	if (!(job = getValidKnownJob(key,_status))) {
 		return false;
 	}
     // call Job::getFullAd and use utils to populate the map
@@ -177,16 +181,16 @@ JobServerObject::getJobAd ( const char* key, AttributeMapType& _map, string &tex
     string str;
     if ( classAd.LookupString("JOB_AD_ERROR", str) )
     {
-  		sprintf(text,"Error obtaining ClassAd for job '%s'; ",key);
-		text += str;
-		dprintf(D_ALWAYS,"%s\n",text.c_str());
+		sprintf(_status.text,"Error obtaining ClassAd for job '%s'; ",key);
+		_status.text += str;
+		dprintf(D_ALWAYS,"%s\n",_status.text.c_str());
     }
 
     // return all the attributes in the ClassAd
     if ( !m_codec->classAdToMap ( classAd, _map  ) )
     {
-		sprintf(text,"Error mapping info for job '%s'; ",key);
-		dprintf(D_ALWAYS,"%s\n",text.c_str());
+		sprintf(_status.text,"Error mapping info for job '%s'; ",key);
+		dprintf(D_ALWAYS,"%s\n",_status.text.c_str());
         return false;
     }
 
@@ -198,6 +202,7 @@ JobServerObject::getJobAd ( const char* key, AttributeMapType& _map, string &tex
 //        dprintf(D_FULLDEBUG|D_NOHEADER, oss.str().c_str());
 //    }
 
+	_status.type = AviaryStatus::A_OK;
     return true;
 }
 
@@ -209,7 +214,7 @@ JobServerObject::fetchJobData(const char* key,
 					   bool from_end,
 					   int& fsize,
 					   std::string &data,
-					   std::string &text)
+					   AviaryStatus &_status)
 {
 	int32_t start;
 	int32_t end;
@@ -219,10 +224,10 @@ JobServerObject::fetchJobData(const char* key,
 	int length;
 	int whence;
 	char *buffer;
-	bool status;
+	bool fetched;
 	Job* job = NULL;
-	
-	if (!(job =getValidKnownJob(key,text))) {
+
+	if (!(job =getValidKnownJob(key,_status))) {
 		return false;
 	}
 
@@ -231,45 +236,45 @@ JobServerObject::fetchJobData(const char* key,
 	string str;
 	job->getFullAd ( ad );
 	if ( ad.LookupString("JOB_AD_ERROR", str)  ) {
-		sprintf(text,"Error checking ClassAd for user priv on job '%s'; ",key);
-		text += str;
-		dprintf(D_ALWAYS,"%s\n",text.c_str());
+		sprintf(_status.text,"Error checking ClassAd for user priv on job '%s'; ",key);
+		_status.text += str;
+		dprintf(D_ALWAYS,"%s\n",_status.text.c_str());
 		return false;
 	}
 	
 	switch (ftype) {
 		case ERR:
 			if ( !ad.LookupString("ATTR_JOB_ERROR", fname)  ) {
-				sprintf (text,  "No error file for job '%s'",key);
-				dprintf(D_ALWAYS,"%s\n", text.c_str());
+				sprintf (_status.text,  "No error file for job '%s'",key);
+				dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 				return false;
 			}
 			break;
 		case LOG:
 			if ( !ad.LookupString("ATTR_ULOG_FILE", fname)  ) {
-				sprintf (text,  "No log file for job '%s'",key);
-				dprintf(D_ALWAYS,"%s\n", text.c_str());
+				sprintf (_status.text,  "No log file for job '%s'",key);
+				dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 				return false;
 			}
 			break;
 		case OUT:
 			if ( !ad.LookupString("ATTR_JOB_OUTPUT", fname)  ) {
-				sprintf (text,  "No output file for job '%s'",key);
-				dprintf(D_ALWAYS,"%s\n", text.c_str());
+				sprintf (_status.text,  "No output file for job '%s'",key);
+				dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 				return false;
 			}
 			break;
 		default:
 			// ruh-roh...asking for a file type we don't know about
-			sprintf (text,  "Unknown file type for job '%s'",key);
-			dprintf(D_ALWAYS,"%s\n", text.c_str());
+			sprintf (_status.text,  "Unknown file type for job '%s'",key);
+			dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 			return false;
 	}
 	
 	StatInfo the_file(fname.c_str());
 	if (the_file.Error()) {
-		sprintf (text, "Error opening requested file '%s', error %d",fname.c_str(),the_file.Errno());
-		dprintf(D_ALWAYS,"%s\n", text.c_str());
+		sprintf (_status.text, "Error opening requested file '%s', error %d",fname.c_str(),the_file.Errno());
+		dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 		return false;
 	}
 
@@ -294,7 +299,7 @@ JobServerObject::fetchJobData(const char* key,
 	if ((start >= 0 && end >= 0 && end < start) ||
 		(start >= 0 && end < 0) ||
 		(start < 0 && end <= 0 && end < start)) {
-		text = "Invalid start and end values";
+		_status.text = "Invalid start and end values";
 		return false;
 	}
 
@@ -335,29 +340,32 @@ JobServerObject::fetchJobData(const char* key,
 
 		if (-1 != lseek(fd, start, whence)) {				
 			if (-1 == (count = full_read(fd, buffer, length))) {
-				text = "Failed to read from " + fname;
-				status = false;
+				_status.text = "Failed to read from " + fname;
+				fetched = false;
 			} else {
 					// Terminate the string.
 				buffer[count] = '\0';
 
 				data = buffer;
-				status = false;
+				fetched = false;
 			}
 
 			close(fd); // assume closed on failure?
 		} else {
-			text = "Failed to seek in " + fname;
-			status = false;
+			_status.text = "Failed to seek in " + fname;
+			fetched = false;
 		}
 	} else {
-		text = "Failed to open " + fname;
-		status = false;
+		_status.text = "Failed to open " + fname;
+		fetched = false;
 	}
 
 	set_priv(prev_priv_state);
 
 	delete [] buffer;
 
-	return status;
+	if (fetched) {
+		_status.type = AviaryStatus::A_OK;
+	}
+	return fetched;
 }

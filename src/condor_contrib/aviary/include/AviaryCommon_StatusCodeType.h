@@ -33,7 +33,7 @@ namespace AviaryCommon
         
         /* Enumeration for this type */
         typedef enum {
-            StatusCodeType_SUCCESS,
+            StatusCodeType_OK,
             StatusCodeType_FAIL,
             StatusCodeType_NO_MATCH,
             StatusCodeType_INVALID_OFFSET,

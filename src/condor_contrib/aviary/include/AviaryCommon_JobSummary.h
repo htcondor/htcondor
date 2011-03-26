@@ -50,10 +50,6 @@ namespace AviaryCommon
 
                 
                 bool isValidStatus;
-            std::string property_Cmd;
-
-                
-                bool isValidCmd;
             axutil_date_time_t* property_Queued;
 
                 
@@ -66,6 +62,10 @@ namespace AviaryCommon
 
                 
                 bool isValidJob_status;
+            std::string property_Cmd;
+
+                
+                bool isValidCmd;
             std::string property_Args1;
 
                 
@@ -100,10 +100,6 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
-        setCmdNil();
-            
-
-        bool WSF_CALL
         setQueuedNil();
             
 
@@ -113,6 +109,10 @@ namespace AviaryCommon
 
         bool WSF_CALL
         setJob_statusNil();
+            
+
+        bool WSF_CALL
+        setCmdNil();
             
 
         bool WSF_CALL
@@ -160,10 +160,10 @@ namespace AviaryCommon
          * @param 
          * @param Id AviaryCommon::JobID*
          * @param Status AviaryCommon::Status*
-         * @param Cmd std::string
          * @param Queued axutil_date_time_t*
          * @param Last_update axutil_date_time_t*
          * @param Job_status AviaryCommon::JobStatusType*
+         * @param Cmd std::string
          * @param Args1 std::string
          * @param Args2 std::string
          * @param Held std::string
@@ -171,7 +171,7 @@ namespace AviaryCommon
          * @param Removed std::string
          * @return newly created JobSummary object
          */
-        JobSummary(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,std::string arg_Cmd,axutil_date_time_t* arg_Queued,axutil_date_time_t* arg_Last_update,AviaryCommon::JobStatusType* arg_Job_status,std::string arg_Args1,std::string arg_Args2,std::string arg_Held,std::string arg_Released,std::string arg_Removed);
+        JobSummary(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,axutil_date_time_t* arg_Queued,axutil_date_time_t* arg_Last_update,AviaryCommon::JobStatusType* arg_Job_status,std::string arg_Cmd,std::string arg_Args1,std::string arg_Args2,std::string arg_Held,std::string arg_Released,std::string arg_Removed);
         
         
         /********************************** Class get set methods **************************************/
@@ -223,30 +223,6 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetStatus();
-        
-        
-
-        /**
-         * Getter for cmd. 
-         * @return std::string*
-         */
-        WSF_EXTERN std::string WSF_CALL
-        getCmd();
-
-        /**
-         * Setter for cmd.
-         * @param arg_Cmd std::string*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setCmd(const std::string  arg_Cmd);
-
-        /**
-         * Re setter for cmd
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetCmd();
         
         
 
@@ -319,6 +295,30 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetJob_status();
+        
+        
+
+        /**
+         * Getter for cmd. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getCmd();
+
+        /**
+         * Setter for cmd.
+         * @param arg_Cmd std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setCmd(const std::string  arg_Cmd);
+
+        /**
+         * Re setter for cmd
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetCmd();
         
         
 
@@ -472,16 +472,6 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether cmd is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isCmdNil();
-
-
-        
-
-        /**
          * Check whether queued is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -507,6 +497,16 @@ namespace AviaryCommon
          */
         bool WSF_CALL
         isJob_statusNil();
+
+
+        
+
+        /**
+         * Check whether cmd is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isCmdNil();
 
 
         
@@ -640,18 +640,18 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for cmd by property number (3)
-         * @return std::string
+         * Getter for queued by property number (3)
+         * @return axutil_date_time_t*
          */
 
-        std::string WSF_CALL
+        axutil_date_time_t* WSF_CALL
         getProperty3();
 
     
         
 
         /**
-         * Getter for queued by property number (4)
+         * Getter for last_update by property number (4)
          * @return axutil_date_time_t*
          */
 
@@ -662,22 +662,22 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for last_update by property number (5)
-         * @return axutil_date_time_t*
+         * Getter for job_status by property number (5)
+         * @return AviaryCommon::JobStatusType
          */
 
-        axutil_date_time_t* WSF_CALL
+        AviaryCommon::JobStatusType* WSF_CALL
         getProperty5();
 
     
         
 
         /**
-         * Getter for job_status by property number (6)
-         * @return AviaryCommon::JobStatusType
+         * Getter for cmd by property number (6)
+         * @return std::string
          */
 
-        AviaryCommon::JobStatusType* WSF_CALL
+        std::string WSF_CALL
         getProperty6();
 
     

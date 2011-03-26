@@ -32,6 +32,27 @@ using namespace compat_classad;
 namespace aviary {
 namespace codec {
 
+// universal err struct
+struct AviaryStatus
+{
+	// keep these aligned with whatever public API
+	// in XSD, JSON, etc.
+    enum StatusType
+    {
+		// don't use "OK"
+        A_OK = 0,
+        FAIL = 1,
+        NO_MATCH = 2,
+        STRING_TYPE = 3,
+		INVALID_OFFSET = 4,
+		UNIMPLEMENTED = 5,
+		UNAVAILABLE = 6
+    };
+
+    StatusType type;
+    string text;
+};
+
 class Attribute
 {
 public:

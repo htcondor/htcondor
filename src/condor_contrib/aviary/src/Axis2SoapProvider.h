@@ -59,6 +59,8 @@ class Axis2SoapProvider {
         SOCKET getHttpListenerSocket();
         bool processHttpRequest(std::string& _error);
 
+		const axutil_env_t* getEnv() {return m_env;}
+
     private:
         std::string m_log_file;
         std::string m_repo_path;

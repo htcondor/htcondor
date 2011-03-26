@@ -35,10 +35,6 @@
               
             isValidStatus  = false;
         
-                    property_Cmd;
-                
-            isValidCmd  = false;
-        
                 property_Queued  = NULL;
               
             isValidQueued  = false;
@@ -50,6 +46,10 @@
                 property_Job_status  = NULL;
               
             isValidJob_status  = false;
+        
+                    property_Cmd;
+                
+            isValidCmd  = false;
         
                     property_Args1;
                 
@@ -73,7 +73,7 @@
         
         }
 
-       AviaryCommon::JobSummary::JobSummary(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,std::string arg_Cmd,axutil_date_time_t* arg_Queued,axutil_date_time_t* arg_Last_update,AviaryCommon::JobStatusType* arg_Job_status,std::string arg_Args1,std::string arg_Args2,std::string arg_Held,std::string arg_Released,std::string arg_Removed)
+       AviaryCommon::JobSummary::JobSummary(AviaryCommon::JobID* arg_Id,AviaryCommon::Status* arg_Status,axutil_date_time_t* arg_Queued,axutil_date_time_t* arg_Last_update,AviaryCommon::JobStatusType* arg_Job_status,std::string arg_Cmd,std::string arg_Args1,std::string arg_Args2,std::string arg_Held,std::string arg_Released,std::string arg_Removed)
         {
              
                property_Id  = NULL;
@@ -83,10 +83,6 @@
                property_Status  = NULL;
              
             isValidStatus  = true;
-            
-                 property_Cmd;
-             
-            isValidCmd  = true;
             
                property_Queued  = NULL;
              
@@ -99,6 +95,10 @@
                property_Job_status  = NULL;
              
             isValidJob_status  = true;
+            
+                 property_Cmd;
+             
+            isValidCmd  = true;
             
                  property_Args1;
              
@@ -124,13 +124,13 @@
             
                     property_Status = arg_Status;
             
-                    property_Cmd = arg_Cmd;
-            
                     property_Queued = arg_Queued;
             
                     property_Last_update = arg_Last_update;
             
                     property_Job_status = arg_Job_status;
+            
+                    property_Cmd = arg_Cmd;
             
                     property_Args1 = arg_Args1;
             
@@ -327,141 +327,6 @@
                                   }
                                   /* this is not a nillable element*/
 				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element status missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
-                  if(element_qname)
-                  {
-                     axutil_qname_free(element_qname, Environment::getEnv());
-                     element_qname = NULL;
-                  }
-                 
-
-                     
-                     /*
-                      * building cmd element
-                      */
-                     
-                     
-                     
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
-                                  
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
-                                   {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "cmd", NULL, NULL);
-                                 
-
-                           if ( 
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("cmd", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("cmd", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 
-                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
-                                      if(text_value != NULL)
-                                      {
-                                            status = setCmd(text_value);
-                                      }
-                                      
-                                      else
-                                      {
-                                            /*
-                                             * axis2_qname_t *qname = NULL;
-                                             * axiom_attribute_t *the_attri = NULL;
-                                             * 
-                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
-                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
-                                             */
-                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
-
-                                            axiom_attribute_t *the_attri = NULL;
-                                            axis2_char_t *attrib_text = NULL;
-                                            axutil_hash_t *attribute_hash = NULL;
-
-                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
-
-                                            attrib_text = NULL;
-                                            if(attribute_hash)
-                                            {
-                                                 axutil_hash_index_t *hi;
-                                                 void *val;
-                                                 const void *key;
-                                        
-                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                                                 {
-                                                     axutil_hash_this(hi, &key, NULL, &val);
-                                                     
-                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
-                                                     {
-                                                         the_attri = (axiom_attribute_t*)val;
-                                                         break;
-                                                     }
-                                                 }
-                                            }
-
-                                            if(the_attri)
-                                            {
-                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
-                                            }
-                                            else
-                                            {
-                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
-                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
-                                            }
-
-                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
-                                            {
-                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element cmd");
-                                                status = AXIS2_FAILURE;
-                                            }
-                                            else
-                                            {
-                                                /* after all, we found this is a empty string */
-                                                status = setCmd("");
-                                            }
-                                      }
-                                      
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for cmd ");
-                                     if(element_qname)
-                                     {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
-                                     }
-                                     return AXIS2_FAILURE;
-                                 }
-                              }
-                           
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element cmd missing");
                                   return AXIS2_FAILURE;
                               }
                            
@@ -738,6 +603,141 @@
                                   }
                                   /* this is not a nillable element*/
 				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element job_status missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+
+                     
+                     /*
+                      * building cmd element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "cmd", NULL, NULL);
+                                 
+
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("cmd", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("cmd", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            status = setCmd(text_value);
+                                      }
+                                      
+                                      else
+                                      {
+                                            /*
+                                             * axis2_qname_t *qname = NULL;
+                                             * axiom_attribute_t *the_attri = NULL;
+                                             * 
+                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
+                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
+                                             */
+                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
+
+                                            axiom_attribute_t *the_attri = NULL;
+                                            axis2_char_t *attrib_text = NULL;
+                                            axutil_hash_t *attribute_hash = NULL;
+
+                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
+
+                                            attrib_text = NULL;
+                                            if(attribute_hash)
+                                            {
+                                                 axutil_hash_index_t *hi;
+                                                 void *val;
+                                                 const void *key;
+                                        
+                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                                                 {
+                                                     axutil_hash_this(hi, &key, NULL, &val);
+                                                     
+                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
+                                                     {
+                                                         the_attri = (axiom_attribute_t*)val;
+                                                         break;
+                                                     }
+                                                 }
+                                            }
+
+                                            if(the_attri)
+                                            {
+                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
+                                            }
+                                            else
+                                            {
+                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
+                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
+                                            }
+
+                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
+                                            {
+                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element cmd");
+                                                status = AXIS2_FAILURE;
+                                            }
+                                            else
+                                            {
+                                                /* after all, we found this is a empty string */
+                                                status = setCmd("");
+                                            }
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for cmd ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element cmd missing");
                                   return AXIS2_FAILURE;
                               }
                            
@@ -1424,10 +1424,10 @@
                     axis2_char_t *text_value_4;
                     axis2_char_t *text_value_4_temp;
                     
-                    axis2_char_t *text_value_5;
-                    axis2_char_t *text_value_5_temp;
+                    axis2_char_t text_value_5[ADB_DEFAULT_DIGIT_LIMIT];
                     
-                    axis2_char_t text_value_6[ADB_DEFAULT_DIGIT_LIMIT];
+                    axis2_char_t *text_value_6;
+                    axis2_char_t *text_value_6_temp;
                     
                     axis2_char_t *text_value_7;
                     axis2_char_t *text_value_7_temp;
@@ -1596,73 +1596,6 @@
                        p_prefix = NULL;
                       
 
-                   if (!isValidCmd)
-                   {
-                      
-                            
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property cmd");
-                            return NULL;
-                          
-                   }
-                   else
-                   {
-                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("cmd"))); 
-                                 
-                                 /* axutil_strlen("<:>") + 1 = 4 */
-                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("cmd")));
-                                  /* axutil_strlen("</:>") + 1 = 5 */
-                                  
-                     
-
-                   
-                   
-                     
-                     /*
-                      * parsing cmd element
-                      */
-
-                    
-                    
-                            sprintf(start_input_str, "<%s%scmd>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%scmd>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
-                    
-                           text_value_3 = (axis2_char_t*)property_Cmd.c_str();
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                           
-                            
-                           text_value_3_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_3, true);
-                           if (text_value_3_temp)
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_3_temp, axutil_strlen(text_value_3_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_3_temp);
-                           }
-                           else
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
-                           }
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                           
-                     
-                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
-                 } 
-
-                 
-                       p_prefix = NULL;
-                      
-
                    if (!isValidQueued)
                    {
                       
@@ -1703,11 +1636,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                          text_value_4 = axutil_date_time_serialize_date_time(property_Queued, Environment::getEnv());
+                          text_value_3 = axutil_date_time_serialize_date_time(property_Queued, Environment::getEnv());
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_4, axutil_strlen(text_value_4));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1760,11 +1693,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                          text_value_5 = axutil_date_time_serialize_date_time(property_Last_update, Environment::getEnv());
+                          text_value_4 = axutil_date_time_serialize_date_time(property_Last_update, Environment::getEnv());
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_5, axutil_strlen(text_value_5));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_4, axutil_strlen(text_value_4));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1829,6 +1762,73 @@
                                 axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                             }
                             
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidCmd)
+                   {
+                      
+                            
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property cmd");
+                            return NULL;
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("cmd"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("cmd")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing cmd element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%scmd>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%scmd>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                           text_value_6 = (axis2_char_t*)property_Cmd.c_str();
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                           
+                            
+                           text_value_6_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_6, true);
+                           if (text_value_6_temp)
+                           {
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_6_temp, axutil_strlen(text_value_6_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_6_temp);
+                           }
+                           else
+                           {
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_6, axutil_strlen(text_value_6));
+                           }
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
@@ -2397,100 +2397,10 @@
            
 
             /**
-             * Getter for cmd by  Property Number 3
-             */
-            std::string WSF_CALL
-            AviaryCommon::JobSummary::getProperty3()
-            {
-                return getCmd();
-            }
-
-            /**
-             * getter for cmd.
-             */
-            std::string WSF_CALL
-            AviaryCommon::JobSummary::getCmd()
-             {
-                return property_Cmd;
-             }
-
-            /**
-             * setter for cmd
-             */
-            bool WSF_CALL
-            AviaryCommon::JobSummary::setCmd(
-                    const std::string  arg_Cmd)
-             {
-                
-
-                if(isValidCmd &&
-                        arg_Cmd == property_Cmd)
-                {
-                    
-                    return true;
-                }
-
-                
-                  if(arg_Cmd.empty())
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"cmd is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
-                
-
-                
-                resetCmd();
-
-                
-                        property_Cmd = std::string(arg_Cmd.c_str());
-                        isValidCmd = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for cmd
-            */
-           bool WSF_CALL
-           AviaryCommon::JobSummary::resetCmd()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-               isValidCmd = false; 
-               return true;
-           }
-
-           /**
-            * Check whether cmd is nill
-            */
-           bool WSF_CALL
-           AviaryCommon::JobSummary::isCmdNil()
-           {
-               return !isValidCmd;
-           }
-
-           /**
-            * Set cmd to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryCommon::JobSummary::setCmdNil()
-           {
-               return resetCmd();
-           }
-
-           
-
-            /**
-             * Getter for queued by  Property Number 4
+             * Getter for queued by  Property Number 3
              */
             axutil_date_time_t* WSF_CALL
-            AviaryCommon::JobSummary::getProperty4()
+            AviaryCommon::JobSummary::getProperty3()
             {
                 return getQueued();
             }
@@ -2600,10 +2510,10 @@
            
 
             /**
-             * Getter for last_update by  Property Number 5
+             * Getter for last_update by  Property Number 4
              */
             axutil_date_time_t* WSF_CALL
-            AviaryCommon::JobSummary::getProperty5()
+            AviaryCommon::JobSummary::getProperty4()
             {
                 return getLast_update();
             }
@@ -2713,10 +2623,10 @@
            
 
             /**
-             * Getter for job_status by  Property Number 6
+             * Getter for job_status by  Property Number 5
              */
             AviaryCommon::JobStatusType* WSF_CALL
-            AviaryCommon::JobSummary::getProperty6()
+            AviaryCommon::JobSummary::getProperty5()
             {
                 return getJob_status();
             }
@@ -2820,6 +2730,96 @@
            AviaryCommon::JobSummary::setJob_statusNil()
            {
                return resetJob_status();
+           }
+
+           
+
+            /**
+             * Getter for cmd by  Property Number 6
+             */
+            std::string WSF_CALL
+            AviaryCommon::JobSummary::getProperty6()
+            {
+                return getCmd();
+            }
+
+            /**
+             * getter for cmd.
+             */
+            std::string WSF_CALL
+            AviaryCommon::JobSummary::getCmd()
+             {
+                return property_Cmd;
+             }
+
+            /**
+             * setter for cmd
+             */
+            bool WSF_CALL
+            AviaryCommon::JobSummary::setCmd(
+                    const std::string  arg_Cmd)
+             {
+                
+
+                if(isValidCmd &&
+                        arg_Cmd == property_Cmd)
+                {
+                    
+                    return true;
+                }
+
+                
+                  if(arg_Cmd.empty())
+                       
+                  {
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"cmd is being set to NULL, but it is not a nullable element");
+                      return AXIS2_FAILURE;
+                  }
+                
+
+                
+                resetCmd();
+
+                
+                        property_Cmd = std::string(arg_Cmd.c_str());
+                        isValidCmd = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for cmd
+            */
+           bool WSF_CALL
+           AviaryCommon::JobSummary::resetCmd()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidCmd = false; 
+               return true;
+           }
+
+           /**
+            * Check whether cmd is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::JobSummary::isCmdNil()
+           {
+               return !isValidCmd;
+           }
+
+           /**
+            * Set cmd to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::JobSummary::setCmdNil()
+           {
+               return resetCmd();
            }
 
            

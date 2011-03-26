@@ -84,9 +84,9 @@ public:
 
 	void update(const ClassAd &ad);
 
-	bool getStatus(const char* id, int& status, string &text);
-	bool getSummary(const char* key, JobSummaryFields& _summary, string& text);
-	bool getJobAd(const char* id, AttributeMapType& _map, string &text);
+	bool getStatus(const char* id, int& status, AviaryStatus &_status);
+	bool getSummary(const char* key, JobSummaryFields& _summary, AviaryStatus &_status);
+	bool getJobAd(const char* id, AttributeMapType& _map, AviaryStatus &_status);
 	bool fetchJobData(const char* key,
 					   const UserFileType ftype,
 					   std::string& fname,
@@ -94,7 +94,7 @@ public:
 					   bool from_end,
 					   int& fsize,
 					   std::string &data,
-					   std::string &text);
+			           AviaryStatus &_status);
 
     ~JobServerObject();
 	static JobServerObject* getInstance();
