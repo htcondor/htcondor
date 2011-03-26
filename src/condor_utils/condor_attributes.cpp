@@ -903,3 +903,12 @@ const char * const ATTR_COMMITTED_SLOT_TIME = "CommittedSlotTime";
 const char * const ATTR_HASH_NAME = "HashName";
 const char * const ATTR_AUTHENTICATED_IDENTITY = "AuthenticatedIdentity";
 const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME = "DelegateJobGSICredentialsLifetime";
+
+const char * const ATTR_TRANSFER_QUEUE_NUM_UPLOADING = "TransferQueueNumUploading";
+const char * const ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING = "TransferQueueNumDownloading";
+const char * const ATTR_TRANSFER_QUEUE_MAX_UPLOADING = "TransferQueueMaxUploading";
+const char * const ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING = "TransferQueueMaxDownloading";
+const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD = "TransferQueueNumWaitingToUpload";
+const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD = "TransferQueueNumWaitingToDownload";
+const char * const ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME = "TransferQueueUploadWaitTime";
+const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME = "TransferQueueDownloadWaitTime";
