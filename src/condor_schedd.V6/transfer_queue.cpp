@@ -25,6 +25,7 @@
 #include "condor_commands.h"
 #include "condor_config.h"
 #include "dc_transfer_queue.h"
+#include "condor_email.h"
 
 TransferQueueRequest::TransferQueueRequest(ReliSock *sock,char const *fname,char const *jobid,bool downloading,time_t max_queue_age):
 	m_sock(sock),
@@ -84,6 +85,12 @@ TransferQueueManager::TransferQueueManager() {
 	m_max_downloads = 0;
 	m_check_queue_timer = -1;
 	m_default_max_queue_age = 0;
+	m_uploading = 0;
+	m_downloading = 0;
+	m_waiting_to_upload = 0;
+	m_waiting_to_download = 0;
+	m_upload_wait_time = 0;
+	m_download_wait_time = 0;
 }
 
 TransferQueueManager::~TransferQueueManager() {
@@ -262,6 +269,10 @@ TransferQueueManager::CheckTransferQueue() {
 	int queue_position = 0;
 
 	m_check_queue_timer = -1;
+	m_waiting_to_upload = 0;
+	m_waiting_to_download = 0;
+	m_upload_wait_time = 0;
+	m_download_wait_time = 0;
 
 	m_xfer_queue.Rewind();
 	while( m_xfer_queue.Next(client) ) {
@@ -322,9 +333,27 @@ TransferQueueManager::CheckTransferQueue() {
 			}
 			else {
 				clients_waiting = true;
+
+				int age = time(NULL) - client->m_time_born;
+				if( client->m_downloading ) {
+					m_waiting_to_download++;
+					if( age > m_download_wait_time ) {
+						m_download_wait_time = age;
+					}
+				}
+				else {
+					m_waiting_to_upload++;
+					if( age > m_upload_wait_time ) {
+						m_upload_wait_time = age;
+					}
+				}
 			}
 		}
 	}
+
+	m_uploading = uploading;
+	m_downloading = downloading;
+
 
 	if( clients_waiting ) {
 			// queue is full; check for ancient clients
@@ -346,6 +375,42 @@ TransferQueueManager::CheckTransferQueue() {
 							age,
 							client->Description(),
 							max_queue_age);
+
+
+					FILE *email = email_admin_open("file transfer took too long");
+					if( !email ) {
+							// Error sending the message
+						dprintf( D_ALWAYS, 
+								 "ERROR: Can't send email to the Condor "
+								 "Administrator\n" );
+					} else {
+						fprintf( email,
+								 "A file transfer for\n%s\ntook longer than MAX_TRANSFER_QUEUE_AGE=%ds,\n"
+								 "so this transfer is being removed from the transfer queue,\n"
+								 "which will abort further transfers for this attempt to run this job.\n\n"
+								 "To avoid this timeout, MAX_TRANSFER_QUEUE_AGE may be increased,\n"
+								 "but be aware that transfers which take a long time will delay other\n"
+								 "transfers from starting if the maximum number of concurrent transfers\n"
+								 "is exceeded.  Therefore, it is advisable to also review the settings\n"
+								 "of MAX_CONCURRENT_UPLOADS and/or MAX_CONCURRENT_DOWNLOADS.\n\n"
+								 "The transfer queue currently has %d/%d uploads,\n"
+								 "%d/%d downloads, %d transfers waiting %ds to upload,\n"
+								 "and %d transfers waiting %ds to download.\n",
+								 client->Description(),
+								 max_queue_age,
+								 m_uploading,
+								 m_max_uploads,
+								 m_downloading,
+								 m_max_downloads,
+								 m_waiting_to_upload,
+								 m_upload_wait_time,
+								 m_waiting_to_download,
+								 m_download_wait_time
+								 );
+
+						email_close ( email );
+					}
+
 					delete client;
 					m_xfer_queue.DeleteCurrent();
 					TransferQueueChanged();

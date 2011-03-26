@@ -922,6 +922,34 @@ Scheduler::count_jobs()
 
 	m_ad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, (bool)SwapSpaceExhausted);
 
+	int num_uploading = m_xfer_queue_mgr.GetNumUploading();
+	int num_downloading = m_xfer_queue_mgr.GetNumDownloading();
+	int max_uploading = m_xfer_queue_mgr.GetMaxUploading();
+	int max_downloading = m_xfer_queue_mgr.GetMaxDownloading();
+	int num_waiting_to_upload = m_xfer_queue_mgr.GetNumWaitingToUpload();
+	int num_waiting_to_download = m_xfer_queue_mgr.GetNumWaitingToDownload();
+	int upload_wait_time = m_xfer_queue_mgr.GetUploadWaitTime();
+	int download_wait_time = m_xfer_queue_mgr.GetDownloadWaitTime();
+
+	dprintf(D_ALWAYS,"TransferQueueManager stats: active up=%d/%d down=%d/%d; waiting up=%d down=%d; wait time up=%ds down=%ds\n",
+			num_uploading,
+			max_uploading,
+			num_downloading,
+			max_downloading,
+			num_waiting_to_upload,
+			num_waiting_to_download,
+			upload_wait_time,
+			download_wait_time);
+
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,num_uploading);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,num_downloading);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,max_uploading);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,max_downloading);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,num_waiting_to_upload);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD,num_waiting_to_download);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME,upload_wait_time);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME,download_wait_time);
+
     daemonCore->publish(m_ad);
     daemonCore->monitor_data.ExportData(m_ad);
 	extra_ads.Publish( m_ad );
