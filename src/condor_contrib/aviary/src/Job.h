@@ -73,7 +73,7 @@ class LiveJobImpl: public JobImpl
         const ClassAd* getSummary () const;
         const ClassAd* getFullAd () const;
         void set ( const char* , const char* );
-        bool get ( const char * , const Attribute *& ) const;
+        bool get ( const char * , const AviaryAttribute *& ) const;
         void remove ( const char* );
 
         virtual bool destroy();

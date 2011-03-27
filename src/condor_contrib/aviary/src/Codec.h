@@ -53,7 +53,7 @@ struct AviaryStatus
     string text;
 };
 
-class Attribute
+class AviaryAttribute
 {
 public:
     enum AttributeType
@@ -63,8 +63,8 @@ public:
         FLOAT_TYPE = 2,
         STRING_TYPE = 3
     };
-    Attribute ( AttributeType _type, const char* _value): m_type(_type), m_value(_value) {};
-    ~Attribute();
+    AviaryAttribute ( AttributeType _type, const char* _value): m_type(_type), m_value(_value) {};
+    ~AviaryAttribute();
 
     AttributeType getType() const { return m_type; }
     const char * getValue() const { return m_value; }
@@ -74,7 +74,7 @@ private:
     const char * m_value;
 };
 
-typedef map<const char*, Attribute*> AttributeMapType;
+typedef map<const char*, AviaryAttribute*> AttributeMapType;
 typedef vector<AttributeMapType> AttributeVectorType;
 typedef AttributeMapType::const_iterator AttributeMapIterator;
 typedef AttributeVectorType::const_iterator AttributeVectorIterator;

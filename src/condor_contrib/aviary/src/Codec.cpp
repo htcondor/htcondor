@@ -72,18 +72,18 @@ BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _
         // TODO: does this cover expressions also?
         case classad::Value::BOOLEAN_VALUE:
             {
-            _map[key] = new Attribute(Attribute::EXPR_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
+            _map[key] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE,strdup(trimQuotes(ExprTreeToString(expr)).c_str()));
             }
             break;
         case classad::Value::INTEGER_VALUE:
-            _map[key] = new Attribute(Attribute::INTEGER_TYPE,ExprTreeToString(expr));;
+            _map[key] = new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,strdup(ExprTreeToString(expr)));;
             break;
         case classad::Value::REAL_VALUE:
-            _map[key] = new Attribute(Attribute::FLOAT_TYPE,ExprTreeToString(expr));
+            _map[key] = new AviaryAttribute(AviaryAttribute::FLOAT_TYPE,strdup(ExprTreeToString(expr)));
             break;
         case classad::Value::STRING_VALUE:
         default:
-            _map[key] = new Attribute(Attribute::STRING_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
+            _map[key] = new AviaryAttribute(AviaryAttribute::STRING_TYPE,strdup(trimQuotes(ExprTreeToString(expr)).c_str()));
     }
 
     return true;
@@ -120,19 +120,19 @@ BaseCodec::mapToClassAd(AttributeMapType& _map, ClassAd& ad)
 
     for (AttributeMapIterator entry = _map.begin(); _map.end() != entry; entry++) {
         const char* name = entry->first;
-        Attribute* value = entry->second;
+        AviaryAttribute* value = entry->second;
 
         switch (value->getType()) {
-            case Attribute::INTEGER_TYPE:
+            case AviaryAttribute::INTEGER_TYPE:
                 ad.Assign(name, atoi(value->getValue()));
                 break;
-            case Attribute::FLOAT_TYPE:
+            case AviaryAttribute::FLOAT_TYPE:
                 ad.Assign(name, atof(value->getValue()));
                 break;
-            case Attribute::STRING_TYPE:
+            case AviaryAttribute::STRING_TYPE:
                 ad.Assign(name, value->getValue());
                 break;
-            case Attribute::EXPR_TYPE:
+            case AviaryAttribute::EXPR_TYPE:
                 ad.AssignExpr(name, value->getValue());
                 break;
             default:

@@ -73,12 +73,12 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
     AttributeMapType attrMap;
 
     // add the simple stuff first
-    attrMap[ATTR_JOB_CMD] = new Attribute(Attribute::STRING_TYPE, _submitJob->getCmd().c_str());
+    attrMap[ATTR_JOB_CMD] = new AviaryAttribute(AviaryAttribute::STRING_TYPE, _submitJob->getCmd().c_str());
     if (!(_submitJob->isArgsNil() || _submitJob->getArgs().empty())) {
-        attrMap[ATTR_JOB_ARGUMENTS1] = new Attribute(Attribute::STRING_TYPE, _submitJob->getArgs().c_str());
+        attrMap[ATTR_JOB_ARGUMENTS1] = new AviaryAttribute(AviaryAttribute::STRING_TYPE, _submitJob->getArgs().c_str());
     }
-    attrMap[ATTR_OWNER] = new Attribute(Attribute::STRING_TYPE, _submitJob->getOwner().c_str());
-    attrMap[ATTR_JOB_IWD] = new Attribute(Attribute::STRING_TYPE, _submitJob->getIwd().c_str());
+    attrMap[ATTR_OWNER] = new AviaryAttribute(AviaryAttribute::STRING_TYPE, _submitJob->getOwner().c_str());
+    attrMap[ATTR_JOB_IWD] = new AviaryAttribute(AviaryAttribute::STRING_TYPE, _submitJob->getIwd().c_str());
 
     // build a requirements string and add to it
     string reqBuilder;
@@ -89,7 +89,7 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
         // default
         reqBuilder = "TRUE";
     }
-    attrMap[ATTR_REQUIREMENTS] = new Attribute(Attribute::EXPR_TYPE, reqBuilder.c_str());
+    attrMap[ATTR_REQUIREMENTS] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE, reqBuilder.c_str());
     // TODO: need to add extras attrs also
 
     // invoke submit
@@ -108,7 +108,7 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
         submitJobResponse->setId(new AviaryCommon::JobID(
 				schedulerObj->getPool(),schedulerObj->getName(),jobId,
 				new AviaryCommon::SubmissionID(submissionId,_submitJob->getOwner().c_str())));
-        submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),""));
+        submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),""));
     }
     qmgmt_all_users_trusted = false;
 
@@ -139,7 +139,7 @@ AviaryJobServiceSkeleton::holdJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJob
 	}
 	else {
 		// in this case, error may hve been the result of the pool/schedd check
-		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),error));
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),error));
 	}
 
 	holdJobResponse->setHoldJobResponse(controlJobResponse);
@@ -165,7 +165,7 @@ AviaryJobServiceSkeleton::releaseJob(wso2wsf::MessageContext* /*outCtx*/ ,Aviary
 	}
 	else {
 		// in this case, error may hve been the result of the pool/schedd check
-		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),error));
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),error));
 	}
 
 	releaseJobResponse->setReleaseJobResponse(controlJobResponse);
@@ -190,7 +190,7 @@ AviaryJobServiceSkeleton::removeJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
 	}
 	else {
 		// in this case, error may hve been the result of the pool/schedd check
-		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),error));
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),error));
 	}
 
 	removeJobResponse->setRemoveJobResponse(controlJobResponse);
@@ -215,7 +215,7 @@ AviaryJobServiceSkeleton::setJobAttribute(wso2wsf::MessageContext* /*outCtx*/ ,A
 	}
 	else {
 		// in this case, error may hve been the result of the pool/schedd check
-		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("SUCCESS"),error));
+		controlJobResponse = new ControlJobResponse(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),error));
 	}
 
 	setAttrResponse->setSetJobAttributeResponse(controlJobResponse);

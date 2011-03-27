@@ -113,7 +113,7 @@ LiveJobImpl::~LiveJobImpl()
 // TODO: this code doesn't work as expected
 // everything seems to get set to EXPR_TYPE
 bool
-LiveJobImpl::get ( const char *_name, const Attribute *&_attribute ) const
+LiveJobImpl::get ( const char *_name, const AviaryAttribute *&_attribute ) const
 {
     // our job ad is chained so lookups will
     // encompass our parent ad as well as the child
@@ -138,7 +138,7 @@ LiveJobImpl::get ( const char *_name, const Attribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new Attribute ( Attribute::INTEGER_TYPE, to_string<int> ( i,std::dec ).c_str() );
+            _attribute = new AviaryAttribute ( AviaryAttribute::INTEGER_TYPE, to_string<int> ( i,std::dec ).c_str() );
             return true;
         }
         case classad::Value::REAL_VALUE:
@@ -148,7 +148,7 @@ LiveJobImpl::get ( const char *_name, const Attribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new Attribute ( Attribute::FLOAT_TYPE, to_string<float> ( f,std::dec ).c_str() );
+            _attribute = new AviaryAttribute ( AviaryAttribute::FLOAT_TYPE, to_string<float> ( f,std::dec ).c_str() );
             return true;
         }
         case classad::Value::STRING_VALUE:
@@ -158,7 +158,7 @@ LiveJobImpl::get ( const char *_name, const Attribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new Attribute ( Attribute::STRING_TYPE, str.StrDup() );
+            _attribute = new AviaryAttribute ( AviaryAttribute::STRING_TYPE, str.StrDup() );
             return true;
         }
         default:
@@ -170,7 +170,7 @@ LiveJobImpl::get ( const char *_name, const Attribute *&_attribute ) const
             }
             const char* rhs;
             rhs = ExprTreeToString( expr );
-            _attribute = new Attribute ( Attribute::EXPR_TYPE, rhs );
+            _attribute = new AviaryAttribute ( AviaryAttribute::EXPR_TYPE, rhs );
             return true;
         }
     }
@@ -180,7 +180,7 @@ LiveJobImpl::get ( const char *_name, const Attribute *&_attribute ) const
 
 int LiveJobImpl::getStatus() const
 {
-    const Attribute* attr;
+    const AviaryAttribute* attr;
 
     if ( !this->get ( ATTR_JOB_STATUS, attr ) )
     {
@@ -286,17 +286,17 @@ const ClassAd* LiveJobImpl::getSummary () const
 		_summary_ad->ResetExpr();
 		int i = 0;
 		while (NULL != ATTRS[i]) {
-			const Attribute* attr = NULL;
+			const AviaryAttribute* attr = NULL;
 			if (this->get(ATTRS[i],attr)) {
 				switch (attr->getType()) {
-					case Attribute::FLOAT_TYPE:
+					case AviaryAttribute::FLOAT_TYPE:
 						_summary_ad->Assign(ATTRS[i], atof(attr->getValue()));
 						break;
-					case Attribute::INTEGER_TYPE:
+					case AviaryAttribute::INTEGER_TYPE:
 						_summary_ad->Assign(ATTRS[i], atol(attr->getValue()));
 						break;
-					case Attribute::EXPR_TYPE:
-					case Attribute::STRING_TYPE:
+					case AviaryAttribute::EXPR_TYPE:
+					case AviaryAttribute::STRING_TYPE:
 					default:
 						_summary_ad->Assign(ATTRS[i], strdup(attr->getValue()));
 				}

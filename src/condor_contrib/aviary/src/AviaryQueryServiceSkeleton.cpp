@@ -241,21 +241,21 @@ GetJobSummaryResponse* AviaryQueryServiceSkeleton::getJobSummary(wso2wsf::Messag
 
 void mapToXsdAttributes(const aviary::codec::AttributeMapType& _map, AviaryCommon::Attributes* _attrs) {
 	for (AttributeMapIterator i = _map.begin(); _map.end() != i; i++) {
-		aviary::codec::Attribute* codec_attr = (aviary::codec::Attribute*)(*i).second;
+		AviaryAttribute* codec_attr = (AviaryAttribute*)(*i).second;
 		AviaryCommon::Attribute* attr = new AviaryCommon::Attribute;
 		attr->setName((*i).first);
 		AviaryCommon::AttributeType* attr_type = new AviaryCommon::AttributeType;
 		switch (codec_attr->getType()) {
-			case aviary::codec::Attribute::INTEGER_TYPE:
+			case AviaryAttribute::INTEGER_TYPE:
 				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_INTEGER);
 				break;
-			case aviary::codec::Attribute::FLOAT_TYPE:
+			case AviaryAttribute::FLOAT_TYPE:
 				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_FLOAT);
 				break;
-			case aviary::codec::Attribute::STRING_TYPE:
+			case AviaryAttribute::STRING_TYPE:
 				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_STRING);
 				break;
-			case aviary::codec::Attribute::EXPR_TYPE:
+			case AviaryAttribute::EXPR_TYPE:
 				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_EXPRESSION);
 				break;
 			default:
