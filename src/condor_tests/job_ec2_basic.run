@@ -30,8 +30,6 @@ use CondorTest;
 use Check::SimpleJob;
 use Check::CondorLog;
 
-my $debuglevel = 2;
-
 #
 # Start up the simulator, which will print the port to which it binds.
 #
@@ -84,10 +82,8 @@ if( ! defined( $port ) ) {
 my $append_condor_config = '
     EC2_GAHP_LOG = $(LOG)/ec2_gahp_log
     GRIDMANAGER_JOB_PROBE_INTERVAL = 5
-    DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+    DAEMON_LIST = MASTER, SCHEDD, COLLECTOR, NEGOTIATOR, STARTD
 ';
-
-CondorPersonal::DebugLevel( 10 );
 
 CondorTest::StartCondorWithParams(
     append_condor_config => $append_condor_config
@@ -132,12 +128,23 @@ CondorLog::RunCheck(
 # Verify that the simulator's logs are OK.
 #
 
+# FIXME: In the output, only /^No leaks detected\.$/ is a success.
+# FIXME: In the error, any message is a failure.
 
 #
 # Kill the simulator.
 #
 kill( 'TERM', $pid ); sleep( 1 ); kill( 'KILL', $pid );
 
-CondorTest::debug("job_ec2_basic SUCCESS\n",$debuglevel);
+#
+# Apparently required by the framework.  '2' is a magic constant
+# defined in Condor.pm as "batch_test.pl".
+#
+CondorTest::debug( "job_ec2_basic SUCCESS\n", 2 );
 
+#
+# "This function ... should be the last thing that a test program does."
+# It shuts down "all personal condors" (which probably breaks other tests)
+# and does some magic for the framework w.r.t. to exiting.
+#
 CondorTest::EndTest();
