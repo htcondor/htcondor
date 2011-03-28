@@ -355,7 +355,7 @@ our %submit_info = (
 			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-                            'x86_64_fedora_14', 'x86_64_fedora_14-updated',
+                            'x86_64_fedora_14-updated',
                             'x86_64_fedora_13', 'x86_64_fedora_13-updated',
                             'x86_64_rhap_5.2', 'x86_64_rhap_5.3', 'x86_64_rhap_5.3-updated',
                             'x86_64_sl_5.5',
