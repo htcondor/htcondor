@@ -1915,13 +1915,13 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 		// temporary for 7.2 only: avoid evaluating periodic
 		// expressions when the job is on hold for spooling
 	if( status == HELD ) {
-		MyString hold_reason;
-		jobad->LookupString(ATTR_HOLD_REASON,hold_reason);
-		if( hold_reason == "Spooling input data files" ) {
+		int hold_reason_code = -1;
+		jobad->LookupInteger(ATTR_HOLD_REASON_CODE,hold_reason_code);
+		if( hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
 			int cluster = -1, proc = -1;
 			jobad->LookupInteger(ATTR_CLUSTER_ID, cluster);
 			jobad->LookupInteger(ATTR_PROC_ID, proc);
-			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason is '%s'\n",cluster,proc,hold_reason.Value());
+			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason code is '%d'\n",cluster,proc,hold_reason_code);
 			return 0;
 		}
 	}
@@ -3943,8 +3943,11 @@ Scheduler::actOnJobs(int, Stream* s)
 			snprintf( buf, 256, "(%s!=%d) && (", ATTR_JOB_STATUS, HELD );
 			break;
 		case JA_RELEASE_JOBS:
-				// Only release held jobs
-			snprintf( buf, 256, "(%s==%d) && (", ATTR_JOB_STATUS, HELD );
+				// Only release held jobs which aren't waiting for
+				// input files to be spooled
+			snprintf( buf, 256, "(%s==%d && %s=!=%d) && (", ATTR_JOB_STATUS,
+					  HELD, ATTR_HOLD_REASON_CODE,
+					  CONDOR_HOLD_CODE_SpoolingInput );
 			break;
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
@@ -4137,7 +4140,9 @@ Scheduler::actOnJobs(int, Stream* s)
 				}
 				break;
 			case JA_RELEASE_JOBS:
-				if( status != HELD ) {
+				GetAttributeInt(tmp_id.cluster, tmp_id.proc,
+								ATTR_HOLD_REASON_CODE, &hold_reason_code);
+				if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
 					results.record( tmp_id, AR_BAD_STATUS );
 					continue;
 				}
