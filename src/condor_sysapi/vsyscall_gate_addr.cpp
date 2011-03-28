@@ -34,64 +34,7 @@ static char* find_ckpt_probe(void);
 
 static char* find_ckpt_probe(void)
 {
-	char *tmp = NULL;
-	char *tmp2 = NULL;
-
-	tmp = param("CKPT_PROBE");
-
-	if (tmp != NULL) {
-		return tmp;
-	}
-
-	tmp = param("LIBEXEC");
-
-	if (tmp != NULL) {
-		tmp2 = (char *) malloc(strlen(tmp) + strlen("/condor_ckpt_probe") + 1);
-		if (tmp2 == NULL) {
-			EXCEPT("Out of memory!");
-		}
-
-		/* build up the path to the probe process */
-		strcpy(tmp2, tmp);
-		strcat(tmp2, "/condor_ckpt_probe");
-		free(tmp);
-
-		/* now check to see if it exists */
-		if (access(tmp2, X_OK) < 0) {
-			/* Nope, it isn't there */
-			free(tmp2);
-			return NULL;
-		}
-
-		/* Ok it is executable, give it back to the caller */
-		return tmp2;
-	}
-
-	tmp = param("RELEASE_DIR");
-
-	if (tmp != NULL) {
-		tmp2 = (char*) malloc(strlen(tmp) + strlen("/libexec/condor_ckpt_probe") + 1);
-		if (tmp2 == NULL) {
-			EXCEPT("Out of memory!");
-		}
-
-		/* build up the path to the probe process */
-		strcpy(tmp2, tmp);
-		strcat(tmp2, "/libexec/condor_ckpt_probe");
-		free(tmp);
-
-		/* now check to see if it exists */
-		if (access(tmp2, X_OK) < 0) {
-			/* Nope, it isn't there */
-			free(tmp2);
-			return NULL;
-		}
-
-		/* Ok it is executable, give it back to the caller */
-		return tmp2;
-	}
-
-	return NULL;
+	return param("CKPT_PROBE");
 }
 
 /* the raw version */
