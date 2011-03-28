@@ -765,23 +765,16 @@ page~\pageref{sec:Non-Root}.
 
 \index{installation!using Red Hat RPMs}
 \index{RPM installation on Red Hat}
-RPMs are available in \VersionNotice.
-Our packaging provides a Yum repository, as well as 
+RPMs are available in Condor \VersionNotice.
+We provide a Yum repository, as well as 
 installation and configuration in one easy step.
-It is currently available for Red Hat systems only.
+This RPM installation is currently available for Red Hat-compatible
+systems only.
 As of Condor version 7.5.1, 
-Condor is installed into FHS locations.
+the Condor RPM installs into FHS locations.
 
 Yum repositories are at
- \URL{http://www.cs.wisc.edu/condor/yum}.
-
-Before a first installation, 
-create a \Login{condor} user and group as appropriate to the installation.
-The Condor package will automatically add a \Login{condor} user/group
-if it does not exist already.
-Sites with a targeted security policy should add the \Login{condor} 
-user/group manually before installation.
-
+ \URL{http://www.cs.wisc.edu/condor/yum/} .
 The repositories are named to distinguish stable releases from
 development releases and by Red Hat version number. 
 The 4 repositories are:
@@ -792,13 +785,27 @@ The 4 repositories are:
   \item \File{condor-development-rhel5.repo}
 \end{itemize}
 
-Get the desired release:
+Here are an ordered set of steps that get Condor running using the RPM.
+\begin{enumerate}
+\item The Condor package will automatically add a \Login{condor} user/group,
+if it does not exist already.
+Sites wishing to control the attributes of this user/group 
+should add the \Login{condor} user/group manually before installation.
+
+\item
+This step will only be done once, the first time that 
+a Condor stable or development release is installed for the targeted
+operating system. 
+Download and install the meta-data that describes the desired YUM repository. 
+This example is for the stable series, on RHEL 5. 
+\footnotesize
 \begin{verbatim}
   cd /etc/yum.repos.d
   wget http://www.cs.wisc.edu/condor/yum/repo.d/condor-stable-rhel5.repo
 \end{verbatim}
+\normalsize
 
-Install.
+\item Install Condor.
 For 32-bit machines:
 \begin{verbatim}
   yum install condor
@@ -808,67 +815,85 @@ For 64-bit machines:
   yum install condor.x86_64
 \end{verbatim}
 
-As needed, edit the Condor configuration files to customize.
-The configuration files are in the directory \File{/etc/condor/}.
+\item As needed, edit the Condor configuration files to customize.
+The configuration files are in the directory \File{/etc/condor/} .
 Do \emph{not} use \Condor{configure} or \Condor{install} for configuration.
-
 The installation will be able to find configuration files without
 additional administrative intervention,
 as the configuration files are placed in \File{/etc},
-and the ordered search algorithm utilized by Condor for finding
-its configuration includes this directory.
+and Condor searches this directory.
 
-Installation is then complete.  Start Condor daemons:
+\item Start Condor daemons:
 \begin{verbatim}
   service condor start
 \end{verbatim}
+
+\end{enumerate}
 
 % Alain thinks that upgrades DO work.
 %RPM upgrade (\Opt{-u} option) does not currently
 %work for Condor \VersionNotice.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:install-debs} DEBs}
+\subsection{\label{sec:install-debs} Debian Packages}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{installation!using DEBs}
-\index{Debian installation with DEBs}
+\index{installation!using Debian Packages}
+\index{Debian installation with Debian Packages}
 
-DEBs are available in \VersionNotice.
-Our packaging provides a Debian repository, as well as 
+Debian Packages are available in Condor \VersionNotice.
+We provide an APT repository, as well as 
 installation and configuration in one easy step.
-They are currently available for Debian 4 (Etch) and Debian 5 (Lenny).
+These Debian Packages of Condor are currently available for 
+Debian 4 (Etch) and Debian 5 (Lenny).
 As of Condor version 7.5.1, 
-Condor is installed into FHS locations.
+the Condor Debian Package installs into FHS locations.
 
-Debian repositories are specified at
- \URL{http://www.cs.wisc.edu/condor/debian}.
-See this site for repository information.
+The Condor APT repositories are specified at
+ \URL{http://www.cs.wisc.edu/condor/debian/} .
+See this web page for repository information.
 
-Before a first installation, 
-create a \Login{condor} user and group as appropriate to the installation.
-The Condor package will automatically add a \Login{condor} user/group
+Here are an ordered set of steps that get Condor running.
+\begin{enumerate}
+\item The Condor package will automatically add a \Login{condor} user/group,
 if it does not exist already.
-Sites with a targeted security policy should add the \Login{condor} 
-user/group manually before installation.
+Sites wishing to control the attributes of this user/group 
+should add the \Login{condor} user/group manually before installation.
 
-Install:
+\item This step will only be done once, the first time that 
+a Condor stable or development release is installed for the targeted
+operating system. 
+Ensure that the correct one of the following release and 
+operating system-specific lines is in 
+the file \File{/etc/apt/sources.list} .
+\footnotesize
+\begin{verbatim}
+deb http://www.cs.wisc.edu/condor/debian/stable/ etch contrib
+deb http://www.cs.wisc.edu/condor/debian/development/ etch contrib
+deb http://www.cs.wisc.edu/condor/debian/stable/ lenny contrib
+deb http://www.cs.wisc.edu/condor/debian/development/ lenny contrib
+\end{verbatim}
+\normalsize
+
+\item Install, which also starts Condor.
 \begin{verbatim}
   apt-get update
   apt-get install condor
 \end{verbatim}
 
-As needed, edit the Condor configuration files to customize.
-The configuration files are in the directory \File{/etc/condor/}.
+\item As needed, edit the Condor configuration files to customize.
+The configuration files are in the directory \File{/etc/condor/} .
 Do \emph{not} use \Condor{configure} or \Condor{install} for configuration.
 The installation will be able to find configuration files without
 additional administrative intervention,
 as the configuration files are placed in \File{/etc},
-and the ordered search algorithm utilized by Condor for finding
-its configuration includes this directory.
-Then, restart Condor with
+and Condor searches this directory.
+
+Then, if any configuration changes are made, restart Condor with
 \begin{verbatim}
   /etc/init.d/condor restart
 \end{verbatim}
+
+\end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:upgrade-directions}Upgrading - Installing a Newer
