@@ -628,6 +628,14 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	if(pid < 0)
 	  {
 	    vmprintf(D_ALWAYS, "Error forking: %s\n", strerror(errno));
+		close(stdin_pipes[0]);
+		close(stdin_pipes[1]);
+		close(stdout_pipes[0]);
+		close(stdout_pipes[1]);
+		if(cmd_err != NULL) {
+			close(error_pipe[0]);
+			close(error_pipe[1]);
+		}
 		deleteStringArray( args_array );
 	    return -1;
 	  }
@@ -714,6 +722,10 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 		     "my_popenv failure on %s\n",
 		     args_array[0]);
 	    fclose(fp);
+		fclose(fp_for_stdin);
+		if (childerr) {
+			fclose(childerr);
+		}
 		deleteStringArray( args_array );
 	    return -1;
 	  }
@@ -739,6 +751,8 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	      fprintf(fp_for_stdin, "%s\n", tmp);
 	      fflush(fp_for_stdin);
 	    }
+	}
+	if (fp_for_stdin) {
 	  // So that we will not be waiting for output while the
 	  // script waits for stdin to be closed.
 	  fclose(fp_for_stdin);
