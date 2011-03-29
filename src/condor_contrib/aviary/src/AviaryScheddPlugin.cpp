@@ -38,7 +38,7 @@ using namespace aviary::soap;
 // global SchedulerObject
 // TODO: convert to singleton
 Axis2SoapProvider* provider = NULL;
-SchedulerObject* aviarySchedulerObj = NULL;
+SchedulerObject* schedulerObj = NULL;
 
 void
 AviaryScheddPlugin::earlyInitialize()
@@ -76,7 +76,7 @@ AviaryScheddPlugin::earlyInitialize()
         EXCEPT("Failed to initialize Axis2SoapProvider");
     }
 
-	aviarySchedulerObj = SchedulerObject::getInstance();
+	schedulerObj = SchedulerObject::getInstance();
 
 	dirtyJobs = new DirtyJobsType();
 
@@ -153,10 +153,10 @@ AviaryScheddPlugin::shutdown()
 
 	dprintf(D_FULLDEBUG, "MgmtScheddPlugin: shutting down...\n");
 
-//	if (aviarySchedulerObj) {
-//		delete aviarySchedulerObj;
-//		aviarySchedulerObj = NULL;
-//	}
+	if (schedulerObj) {
+		delete schedulerObj;
+		schedulerObj = NULL;
+	}
 }
 
 
@@ -168,7 +168,7 @@ AviaryScheddPlugin::update(int cmd, const ClassAd *ad)
 	switch (cmd) {
 	case UPDATE_SCHEDD_AD:
 		dprintf(D_FULLDEBUG, "Received UPDATE_SCHEDD_AD\n");
-		aviarySchedulerObj->update(*ad);
+		schedulerObj->update(*ad);
 		break;
 	default:
 		dprintf(D_FULLDEBUG, "Unsupported command: %s\n",

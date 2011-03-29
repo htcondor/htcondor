@@ -43,10 +43,12 @@ SchedulerObject::SchedulerObject()
 {
     m_pool = getPoolName();
 	m_name = getScheddName();
+    m_codec = new BaseCodec();
 }
 
 SchedulerObject::~SchedulerObject()
 {
+	delete m_codec;
 }
 
 SchedulerObject* SchedulerObject::getInstance()
@@ -95,12 +97,12 @@ SchedulerObject::update(const ClassAd &ad)
 
 
 bool
-SchedulerObject::submit(Codec* _codec, AttributeMapType &jobAdMap, std::string &id, std::string &text)
+SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string &text)
 {
 	int cluster;
 	int proc;
 
-    if (!_codec) {
+    if (!m_codec) {
         text = "Codec has not been initialized";
         return false;
     }
@@ -154,7 +156,7 @@ SchedulerObject::submit(Codec* _codec, AttributeMapType &jobAdMap, std::string &
 	ClassAd ad;
 	int universe;
 
-	if (!_codec->mapToClassAd(jobAdMap, ad)) {
+	if (!m_codec->mapToClassAd(jobAdMap, ad)) {
 		AbortTransaction();
 		text = "Failed to parse job ad";
 		return false;

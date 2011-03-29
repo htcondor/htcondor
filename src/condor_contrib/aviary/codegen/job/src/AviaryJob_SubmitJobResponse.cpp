@@ -174,17 +174,6 @@
                                  }
                               }
                            
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element id missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -359,9 +348,8 @@
                    if (!isValidId)
                    {
                       
+                           /* no need to complain for minoccurs=0 element */
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property id");
-                            return NULL;
                           
                    }
                    else
@@ -528,13 +516,6 @@
                     return true;
                 }
 
-                
-                  if(NULL == arg_Id)
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"id is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
                 
 
                 

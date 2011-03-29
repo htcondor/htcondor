@@ -65,7 +65,7 @@ public:
 
 
 	void update(const ClassAd &ad);
-	bool submit(Codec* _codec, AttributeMapType& jobAdMap, string& id, string& text);
+	bool submit(AttributeMapType& jobAdMap, string& id, string& text);
 	bool setAttribute(string id,
                       string name,
                       string value,
@@ -83,11 +83,12 @@ public:
 
 private:
     SchedulerObject();
-	SchedulerObject(SchedulerObject const&){};
-	SchedulerObject& operator=(SchedulerObject const&){};
+	SchedulerObject(SchedulerObject const&);
+	SchedulerObject& operator=(SchedulerObject const&);
 
     string m_pool;
     string m_name;
+	Codec* m_codec;
     SchedulerStats m_stats;
     static SchedulerObject* m_instance;
 

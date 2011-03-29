@@ -118,7 +118,7 @@ Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
 
         if (status != AXIS2_SUCCESS) {
 			_error = m_repo_path;
-			_error = " does not exist or insufficient permissions";
+			_error += " does not exist or insufficient permissions";
             AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI,_error.c_str());
             return m_initialized;
         }
