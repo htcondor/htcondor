@@ -793,10 +793,8 @@ Sites wishing to control the attributes of this user/group
 should add the \Login{condor} user/group manually before installation.
 
 \item
-This step will only be done once, the first time that 
-a Condor stable or development release is installed for the targeted
-operating system. 
-Download and install the meta-data that describes the desired YUM repository. 
+\item Download and install the meta-data that describes 
+the appropriate YUM repository. 
 This example is for the stable series, on RHEL 5. 
 \footnotesize
 \begin{verbatim}
@@ -804,6 +802,8 @@ This example is for the stable series, on RHEL 5.
   wget http://www.cs.wisc.edu/condor/yum/repo.d/condor-stable-rhel5.repo
 \end{verbatim}
 \normalsize
+Note that this step need be done only once;
+do not get the same repository more than once.
 
 \item Install Condor.
 For 32-bit machines:
@@ -825,7 +825,7 @@ and Condor searches this directory.
 
 \item Start Condor daemons:
 \begin{verbatim}
-  service condor start
+  /sbin/service condor start
 \end{verbatim}
 
 \end{enumerate}
@@ -837,16 +837,16 @@ and Condor searches this directory.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:install-debs} Debian Packages}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{installation!using Debian Packages}
-\index{Debian installation with Debian Packages}
+\index{installation!using Debian packages}
+\index{Debian installation with Debian packages}
 
-Debian Packages are available in Condor \VersionNotice.
+Debian packages are available in Condor \VersionNotice.
 We provide an APT repository, as well as 
 installation and configuration in one easy step.
-These Debian Packages of Condor are currently available for 
+These Debian packages of Condor are currently available for 
 Debian 4 (Etch) and Debian 5 (Lenny).
 As of Condor version 7.5.1, 
-the Condor Debian Package installs into FHS locations.
+the Condor Debian package installs into FHS locations.
 
 The Condor APT repositories are specified at
  \URL{http://www.cs.wisc.edu/condor/debian/} .
@@ -859,9 +859,10 @@ if it does not exist already.
 Sites wishing to control the attributes of this user/group 
 should add the \Login{condor} user/group manually before installation.
 
-\item This step will only be done once, the first time that 
-a Condor stable or development release is installed for the targeted
-operating system. 
+\item If not already present,
+set up access to the appropriate APT repository;
+they are distinguished as stable or development release,
+and by operating system. 
 Ensure that the correct one of the following release and 
 operating system-specific lines is in 
 the file \File{/etc/apt/sources.list} .
@@ -873,8 +874,10 @@ deb http://www.cs.wisc.edu/condor/debian/stable/ lenny contrib
 deb http://www.cs.wisc.edu/condor/debian/development/ lenny contrib
 \end{verbatim}
 \normalsize
+Note that this step need be done only once;
+do not add the same repository more than once.
 
-\item Install, which also starts Condor.
+\item Install and start Condor services:
 \begin{verbatim}
   apt-get update
   apt-get install condor
