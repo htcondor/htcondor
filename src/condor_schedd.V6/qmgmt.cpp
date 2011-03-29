@@ -4058,16 +4058,20 @@ PrintQ()
 // seperate. 
 int get_job_prio(ClassAd *job)
 {
-    int job_prio;
-    int job_status;
+    int     job_prio, 
+            pre_job_prio1, 
+            pre_job_prio2, 
+            post_job_prio1, 
+            post_job_prio2;
+    int     job_status;
     PROC_ID id;
     int     q_date;
     char    buf[100];
-	char	owner[100];
+    char    owner[100];
     int     cur_hosts;
     int     max_hosts;
-	int 	niceUser;
-	int		universe;
+    int     niceUser;
+    int     universe;
 
 	ASSERT(job);
 
@@ -4103,9 +4107,24 @@ int get_job_prio(ClassAd *job)
         return cur_hosts;
 	}
 
-
 	// --- Insert this job into the PrioRec array ---
-
+     	
+       // If pre/post prios are not defined as forced attributes, set them to INT_MIN
+	// to flag priocompare routine to not use them.
+	 
+    if (!job->LookupInteger(ATTR_PRE_JOB_PRIO1, pre_job_prio1)) {
+         pre_job_prio1 = INT_MIN;
+    }
+    if (!job->LookupInteger(ATTR_PRE_JOB_PRIO2, pre_job_prio2)) {
+         pre_job_prio2 = INT_MIN;
+    } 
+    if (!job->LookupInteger(ATTR_POST_JOB_PRIO1, post_job_prio1)) {
+         post_job_prio1 = INT_MIN;
+    }	 
+    if (!job->LookupInteger(ATTR_POST_JOB_PRIO2, post_job_prio2)) {
+         post_job_prio2 = INT_MIN;
+    }
+		   
     job->LookupInteger(ATTR_JOB_PRIO, job_prio);
     job->LookupInteger(ATTR_Q_DATE, q_date);
 	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
@@ -4129,11 +4148,15 @@ int get_job_prio(ClassAd *job)
     // Rather look at if it has all the hosts that it wanted.
     if (cur_hosts>=max_hosts || job_status==HELD)
         return cur_hosts;
-
-    PrioRec[N_PrioRecs].id       = id;
-    PrioRec[N_PrioRecs].job_prio = job_prio;
-    PrioRec[N_PrioRecs].status   = job_status;
-    PrioRec[N_PrioRecs].qdate    = q_date;
+	     
+    PrioRec[N_PrioRecs].id             = id;
+    PrioRec[N_PrioRecs].job_prio       = job_prio;
+    PrioRec[N_PrioRecs].pre_job_prio1  = pre_job_prio1;
+    PrioRec[N_PrioRecs].pre_job_prio2  = pre_job_prio2;
+    PrioRec[N_PrioRecs].post_job_prio1 = post_job_prio1;
+    PrioRec[N_PrioRecs].post_job_prio2 = post_job_prio2;
+    PrioRec[N_PrioRecs].status         = job_status;
+    PrioRec[N_PrioRecs].qdate          = q_date;
 	if ( auto_id == -1 ) {
 		PrioRec[N_PrioRecs].auto_cluster_id = id.cluster;
 	} else {

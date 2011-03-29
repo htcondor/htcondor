@@ -34,6 +34,10 @@ const 	int		INITIAL_MAX_PRIO_REC = 2048;
 class prio_rec {
 public:
     PROC_ID     id;
+    int         pre_job_prio1;
+    int         pre_job_prio2;
+    int         post_job_prio1;
+    int         post_job_prio2;
     int         job_prio;
     int         status;
     int         qdate;

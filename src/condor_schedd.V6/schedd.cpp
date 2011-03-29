@@ -10597,6 +10597,26 @@ extern "C" {
 int
 prio_compar(prio_rec* a, prio_rec* b)
 {
+	 /* compare submitted job preprio's: higher values have more priority */
+	 /* Typically used to prioritize entire DAG jobs over other DAG jobs */
+	 if (a->pre_job_prio1 > INT_MIN && b->pre_job_prio1 > INT_MIN ) { 
+	      if( a->pre_job_prio1 < b->pre_job_prio1 ) {
+		  return 1;
+              }
+	      if( a->pre_job_prio1 > b->pre_job_prio1 ) {
+		  return -1;
+	      }
+	 }
+		 
+	 if( a->pre_job_prio2 > INT_MIN && b->pre_job_prio2 > INT_MIN ) {
+	      if( a->pre_job_prio2 < b->pre_job_prio2 ) {
+		  return 1;
+	      }
+	      if( a->pre_job_prio2 > b->pre_job_prio2 ) {
+		  return -1;
+	      }
+	 }
+	 
 	 /* compare job priorities: higher values have more priority */
 	 if( a->job_prio < b->job_prio ) {
 		  return 1;
@@ -10604,7 +10624,27 @@ prio_compar(prio_rec* a, prio_rec* b)
 	 if( a->job_prio > b->job_prio ) {
 		  return -1;
 	 }
-
+	 
+	 /* compare submitted job postprio's: higher values have more priority */
+	 /* Typically used to prioritize entire DAG jobs over other DAG jobs */
+	 if( a->post_job_prio1 > INT_MIN && b->post_job_prio1 > INT_MIN ) {
+	      if( a->post_job_prio1 < b->post_job_prio1 ) {
+		  return 1;
+	      }
+	      if( a->post_job_prio1 > b->post_job_prio1 ) {
+		  return -1;
+	      }
+	 }
+	 
+	 if( a->post_job_prio2 > INT_MIN && b->post_job_prio2 > INT_MIN ) {
+	      if( a->post_job_prio2 < b->post_job_prio2 ) {
+		  return 1;
+	      }
+	      if( a->post_job_prio2 > b->post_job_prio2 ) {
+		  return -1;
+	      }
+	 }
+	      
 	 /* here,updown priority and job_priority are both equal */
 
 	 /* check for job submit times */
