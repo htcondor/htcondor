@@ -1,7 +1,7 @@
 <!-- This file was auto-generated from WSDL -->
 <!-- by the Apache Axis2 version: 1.0  Built on : Jan 09, 2011 (11:40:28 EST) -->
 <service name="AviaryJobService">
-<parameter name="ServiceClass" locked="xsd:false">aviary_job</parameter>
+<parameter name="ServiceClass" locked="xsd:false">aviary_job_axis</parameter>
 <description>AviaryJobServiceService</description>
 <operation name="submitJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
 <messageReceiver class="wsf_cpp_msg_recv"/>

@@ -93,12 +93,12 @@ if (LINUX)
     src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
     src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-    add_library (aviary_job SHARED ${COMMON_GEN_SRCS} ${JOB_GEN_SRCS} ${JOB_SRCS} Codec.cpp AviaryUtils.cpp SchedulerObject.cpp )
+    add_library (aviary_job_axis SHARED ${COMMON_GEN_SRCS} ${JOB_GEN_SRCS} ${JOB_SRCS} Codec.cpp AviaryUtils.cpp SchedulerObject.cpp )
 
 	# remove unresolved deps by copying in -lwso2_wsf objects
-	target_link_libraries(aviary_job --whole-archive -lwso2_wsf --no-whole-archive)
+	target_link_libraries(aviary_job_axis --whole-archive -lwso2_wsf --no-whole-archive)
     if (aviary_services_loc)
-		install (TARGETS aviary_job DESTINATION ${aviary_services_loc}/job)
+		install (TARGETS aviary_job_axis DESTINATION ${aviary_services_loc}/job)
 		install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../services/job/services.xml DESTINATION ${aviary_services_loc}/job )
 		install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
 						${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-job.xsd
@@ -117,8 +117,8 @@ if (LINUX)
 	#
 	# query server (aka ye old job server)
 	#
-	add_library (aviary_query SHARED ${COMMON_GEN_SRCS} ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
-	target_link_libraries (aviary_query ${AXIS2_LIBS})
+	add_library (aviary_query_axis SHARED ${COMMON_GEN_SRCS} ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
+	target_link_libraries (aviary_query_axis ${AXIS2_LIBS})
 
 	file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp Axis2SoapProvider.cpp 
 								SubmissionObject.cpp JobServerJobLogConsumer.cpp
@@ -130,7 +130,7 @@ if (LINUX)
 	install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/axis2.xml DESTINATION ${axis2_repo_loc} )
 
     if (aviary_services_loc)
-		install (TARGETS aviary_query DESTINATION ${aviary_services_loc}/query)
+		install (TARGETS aviary_query_axis DESTINATION ${aviary_services_loc}/query)
 		install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../services/query/services.xml DESTINATION ${aviary_services_loc}/query )
 		install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
 					${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-query.xsd
