@@ -28,7 +28,6 @@ if (LINUX)
 
 		# hackiness for /usr/lib64 softlink later
 		if ( ${SYS_ARCH} STREQUAL "X86_64" )
-			set (PROPER_64 ON)
 			set (WS02_LIB_ROOT "/usr/lib64")
 		else()
 			set (WS02_LIB_ROOT "/usr/lib")
@@ -42,7 +41,7 @@ if (LINUX)
 			    /usr/include/axis2-1.6.0/platforms )
 	    set ( AXIS2_LIBS -L${WS02_LIB_ROOT} ${WSO2_FOUND} )
 
-		set (axis2_repo_loc ${CMAKE_INSTALL_PREFIX}/lib/axis2)
+		set (axis2_repo_loc ${CMAKE_INSTALL_PREFIX})
 
 	else (PROPER)
 
@@ -138,13 +137,8 @@ if (LINUX)
 				DESTINATION ${aviary_services_loc}/query )
 	endif()
 
-	message (STATUS "softlinking ${WS02_LIB_ROOT} for axis2c engine rpath")
-	# bloody awful
-	# just easier to hardcode the target link
-	if (PROPER_64)
-		install (CODE "execute_process(COMMAND ${LN} -v -s -f  /usr/lib64 \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}/lib/axis2)")
-	else  (PROPER_64)
-		install (CODE "execute_process(COMMAND ${LN} -v -s -f  /usr/lib \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}/lib/axis2)")
-	endif (PROPER_64)
+	if (PROPER)
+		install (CODE "execute_process(COMMAND echo set WSFCPP_HOME to \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC} for local testing)")
+	endif (PROPER)
 
 endif(LINUX)
