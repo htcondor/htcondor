@@ -7001,7 +7001,7 @@ id=422
 
 [VM_GAHP_SEND_ALL_CLASSAD]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
