@@ -33,7 +33,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Condor can now create and manage virtual machine instances in a
+cloud service via Deltacloud. This is done via the new
+\SubmitCmd{deltacloud} grid-type in the grid universe.
+See section ~\ref{sec:Deltacloud} for details.
 
 \end{itemize}
 
@@ -41,7 +44,32 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{DELTACLOUD\_GAHP} specifies
+where the \File{deltacloud\_gahp} binary is located. This binary is used to
+manage grid-type deltacloud jobs in the grid universe.
+In a normal Condor installation, the value should be
+\File{\$(SBIN)/deltacloud\_gahp}.
+
+\item Several new job ClassAd attributes have been added to support
+grid-type deltacloud in the grid universe.
+These attributes are taken from the submit description file:
+\AdAttr{DeltacloudUsername},
+\AdAttr{DeltacloudPasswordFile},
+\AdAttr{DeltacloudImageId},
+\AdAttr{DeltacloudRealmId},
+\AdAttr{DeltacloudHardwareProfile},
+\AdAttr{DeltacloudHardwareProfileCpu},
+\AdAttr{DeltacloudHardwareProfileMemory},
+\AdAttr{DeltacloudHardwareProfileStorage},
+\AdAttr{DeltacloudKeyname}, and
+\AdAttr{DeltacloudUserData}.
+%\AdAttr{DeltacloudRetryTimeout},
+These attributes are set by Condor when the instance runs:
+\AdAttr{DeltacloudAvailableActions},
+\AdAttr{DeltacloudPrivateNetworkAddresses},
+\AdAttr{DeltacloudPublicNetworkAddresses}.
+See sections ~\ref{sec:Deltacloud} and ~\ref{sec:Job-ClassAd-Attributes}
+for details.
 
 \end{itemize}
 
