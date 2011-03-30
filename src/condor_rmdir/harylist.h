@@ -1,3 +1,21 @@
+/***************************************************************
+ *
+ * Copyright (C) 2010, John M. Knoeller
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
 #pragma once
 
 #ifndef FNEXPORT
@@ -348,7 +366,7 @@ HRESULT PtrVector_Iterate (HARYLIST hlst, HRESULT (CALLBACK *pfn)(T, LPARAM), LP
 
 #define DivRU(x, y)     (((x) + ((y) - 1)) / (y))
 #define DivRN(x, y)     (((x) + ((y) / 2)) / (y))
-
+INLINE DWORD ALIGN(SIZE_T cb, SIZE_T cbAlign) { return (DWORD)( (cb + (cbAlign - 1)) & ~(cbAlign - 1) );}
 
 HRESULT FNEXPORT HaryList_Create (
     PHARYLIST phlst,
@@ -376,7 +394,7 @@ HRESULT FNEXPORT HaryList_Create (
         InitializeCriticalSection(&plst->cs);
 
     const LONG cbAlign = NUMBYTES(DWORD);
-    cbItem = SfAlign(cbItem, cbAlign);
+    cbItem = ALIGN(cbItem, cbAlign);
 
     if (cGrowBy <= 0)
         cGrowBy = 4;
