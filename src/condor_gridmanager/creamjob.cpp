@@ -753,6 +753,8 @@ void CreamJob::doEvaluateState()
 					
 				} else {
 					if ( !resourcePingComplete && IsConnectionError( gahp->getErrorString() ) ) {
+						// Don't count this as a submission attempt.
+						numSubmitAttempts--;
 						connect_failure = true;
 						break;
 					}
