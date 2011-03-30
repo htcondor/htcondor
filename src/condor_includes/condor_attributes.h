@@ -761,6 +761,8 @@ extern const char * const ATTR_EC2_USER_DATA;
 extern const char * const ATTR_EC2_USER_DATA_FILE;
 extern const char * const ATTR_EC2_REMOTE_VM_NAME;
 extern const char * const ATTR_EC2_INSTANCE_TYPE;
+extern const char * const ATTR_EC2_INSTANCE_NAME;
+extern const char * const ATTR_EC2_ELASTIC_IP;
 //************* End of changes for EC2 Jobs *****************//
 
 

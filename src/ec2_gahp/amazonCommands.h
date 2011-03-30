@@ -45,6 +45,8 @@
 #define AMAZON_COMMAND_VM_KEYPAIR_NAMES     "EC2_VM_KEYPAIR_NAMES"
 #define AMAZON_COMMAND_VM_REGISTER_IMAGE    "EC2_VM_REGISTER_IMAGE"
 #define AMAZON_COMMAND_VM_DEREGISTER_IMAGE  "EC2_VM_DEREGISTER_IMAGE"
+#define AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS "EC2_VM_ASSOCIATE_ADDRESS"
+//#define AMAZON_COMMAND_VM_DISASSOCIATE_ADDRESS   "EC2_VM_DISASSOCIATE_ADDRESS"
 
 // S3 Commands
 #define AMAZON_COMMAND_S3_ALL_BUCKETS       "AMAZON_S3_ALL_BUCKETS"
@@ -191,6 +193,15 @@ class AmazonVMKeypairNames : public AmazonRequest {
 
     protected:
         StringList keyNames;
+};
+
+class AmazonAssociateAddress : public AmazonRequest {
+    public:
+        AmazonAssociateAddress();
+        virtual ~AmazonAssociateAddress();
+
+        static bool ioCheck(char **argv, int argc);
+        static bool workerFunction(char **argv, int argc, std::string &result_string);
 };
 
 

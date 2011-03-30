@@ -133,6 +133,12 @@ registerAllAmazonCommands(void)
 
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_KEYPAIR_NAMES, 
 			AmazonVMKeypairNames::ioCheck, AmazonVMKeypairNames::workerFunction);
+    
+    registerAmazonGahpCommand(AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS, 
+            AmazonAssociateAddress::ioCheck, AmazonAssociateAddress::workerFunction);
+
+    //registerAmazonGahpCommand(AMAZON_COMMAND_VM_RELEASE_ADDRESS, 
+    //        AmazonReleaseAddress::ioCheck, AmazonReleaseAddress::workerFunction);
 
 	/*
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_REGISTER_IMAGE, 

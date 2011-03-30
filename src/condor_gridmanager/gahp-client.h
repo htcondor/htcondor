@@ -716,10 +716,31 @@ class GahpClient : public Service {
 									char* & error_code );
 
 		int ec2_vm_vm_keypair_all( const char * service_url,
-								   const char* publickeyfile,
-								   const char* privatekeyfile,
+								   const char * publickeyfile,
+								   const char * privatekeyfile,
 								   StringList & returnStatus,
 								   char* & error_code );
+
+        /**
+         * Used to associate an elastic ip with a running instance
+         */
+        int ec2_associate_address(const char * service_url,
+                                  const char * publickeyfile,
+                                  const char * privatekeyfile,
+                                  const char * instance_id, 
+                                  const char * elastic_ip,
+                                  StringList & returnStatus,
+                                  char* & error_code );
+        /**
+         * Used to release an elastic ip from an instance
+         * leaving around in case we ever need this. 
+         * shutdown causes automatic disassociation
+        int ec2_disassociate_address( const char * service_url,
+                                      const char * publickeyfile,
+                                      const char * privatekeyfile,
+                                      const char * elastic_ip,
+                                      StringList & returnStatus,
+                                      char* & error_code ); */
 
 		int
 		dcloud_submit( const char *service_url,

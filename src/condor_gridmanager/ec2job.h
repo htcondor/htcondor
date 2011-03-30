@@ -92,6 +92,7 @@ private:
 	char * m_user_data;
 	char * m_user_data_file;
 	char * m_instance_type;
+    char * m_elastic_ip;
 	
 	int m_vm_check_times;
 	int m_keypair_check_times;

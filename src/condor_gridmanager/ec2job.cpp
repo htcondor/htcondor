@@ -175,6 +175,11 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 		goto error_exit;
 	}
 
+    // lookup the elastic IP
+    buff[0] = '\0';
+    jobAd->LookupString( ATTR_EC2_ELASTIC_IP, buff );
+    m_elastic_ip = strdup(buff);
+
 		// XXX: Buffer Overflow if the user_data is > 16K? This code
 		// should be unprivileged.
 
@@ -368,6 +373,7 @@ EC2Job::~EC2Job()
 	if (m_group_names != NULL) delete m_group_names;
 	free(m_user_data_file);
 	free(m_instance_type);
+    free(m_elastic_ip);
 }
 
 
@@ -900,6 +906,29 @@ void EC2Job::doEvaluateState()
 							   new_status == EC2_VM_STATE_SHUTTINGDOWN ||
 							   new_status == EC2_VM_STATE_TERMINATED ) ) {
 							JobRunning();
+                            
+                            // if we have an elastic ip now we associate with a live running instance
+                            if ( new_status == EC2_VM_STATE_RUNNING && strlen(m_elastic_ip) )
+                            {
+                                StringList returnStatus; 
+                                rc = gahp->ec2_associate_address(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, remoteJobId, m_elastic_ip, returnStatus, gahp_error_code );
+
+                                switch (rc)
+                                {
+                                    case 0:
+                                        break;
+                                    case GAHPCLIENT_COMMAND_PENDING:
+                                        break;
+                                    case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
+                                        if ( (condorState == REMOVED) || (condorState == HELD) ) 
+                                            gmState = GM_DELETE;
+                                        break;
+                                    default:
+                                        dprintf(D_ALWAYS, "Failed Association returned %s\n", gahp_error_code);
+                                        break;
+                                }
+                            }
+
 						}
 												
 						remoteJobState = new_status;
@@ -1187,6 +1216,7 @@ void EC2Job::SetInstanceId( const char *instance_id )
 	free( remoteJobId );
 	if ( instance_id ) {
 		remoteJobId = strdup( instance_id );
+        jobAd->Assign( ATTR_EC2_INSTANCE_NAME, remoteJobId );
 	} else {
 		remoteJobId = NULL;
 	}

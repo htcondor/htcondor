@@ -384,6 +384,7 @@ const char* EC2UserDataFile = "ec2_user_data_file";
 const char* EC2SecurityGroups = "ec2_security_groups";
 const char* EC2KeyPairFile = "ec2_keypair_file";
 const char* EC2InstanceType = "ec2_instance_type";
+const char* EC2ElasticIP = "ec2_elastic_ip";
 
 //
 // Deltacloud Parameters
@@ -5127,6 +5128,13 @@ SetGridParams()
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}
+	
+	// EC2ElasticIP is not a necessary parameter
+    if( (tmp = condor_param( EC2ElasticIP, ATTR_EC2_ELASTIC_IP )) ) {
+        buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ELASTIC_IP, tmp );
+        free( tmp );
+        InsertJobExpr( buffer.Value() );
+    }
 	
 	// EC2UserData is not a necessary parameter
 	if( (tmp = condor_param( EC2UserData, ATTR_EC2_USER_DATA )) ) {
