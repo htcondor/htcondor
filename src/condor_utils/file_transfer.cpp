@@ -528,7 +528,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	bool spooling_output = false;
 	{
-		if (Spool) {
+		if (Iwd && Spool) {
 			if(!strncmp(Iwd,Spool,strlen(Spool))) {
 				// We are in the spool directory.
 				// Wish there was a better way to find this out!
@@ -4171,13 +4171,15 @@ GetDelegatedProxyRenewalTime(ClassAd *jobAd)
 
 bool
 FileTransfer::outputFileIsSpooled(char const *fname) {
-	if( is_relative_to_cwd(fname) ) {
-		if( Iwd && SpoolSpace && strcmp(Iwd,SpoolSpace)==0 ) {
+	if(fname) {
+		if( is_relative_to_cwd(fname) ) {
+			if( Iwd && SpoolSpace && strcmp(Iwd,SpoolSpace)==0 ) {
+				return true;
+			}
+		}
+		else if( SpoolSpace && strncmp(fname,SpoolSpace,strlen(SpoolSpace))==0 ) {
 			return true;
 		}
-	}
-	else if( SpoolSpace && strncmp(fname,SpoolSpace,strlen(SpoolSpace))==0 ) {
-		return true;
 	}
 	return false;
 }
