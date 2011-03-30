@@ -38,6 +38,9 @@ cloud service via Deltacloud. This is done via the new
 \SubmitCmd{deltacloud} grid-type in the grid universe.
 See section ~\ref{sec:Deltacloud} for details.
 
+% gittrac #1931
+\item Improved scalability of submission of grid-type cream jobs.
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -88,6 +91,18 @@ retries.
   problem affected spooled jobs submitted with an explicit list of
   output files to transfer.  Beginning in 7.5.4, this problem also
   affected spooled jobs that auto-detected output files.
+
+% gittrac #1985
+\item When a job is submitted with the -spool option to \Condor{submit},
+the \Condor{schedd} now writes the submit event to the user log in its
+spool directory. Before, it would try to write the event using the user
+log path given to \condor{submit} by the user, which it may not have
+access to.
+
+% gittrac #2001
+\item Fixed a file descriptor leak in the \condor{vm-gahp}. The leak would
+cause the daemon to fail if a VMware job ran for more than 16 hours on a
+linux machine.
 
 \end{itemize}
 
