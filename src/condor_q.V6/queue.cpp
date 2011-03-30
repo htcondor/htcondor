@@ -2755,13 +2755,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			proc );
 		return return_buff;
 	}
-	if ( last_rej_match_time == 0 ) {
-	  sprintf( return_buff,
-		   "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
-		   proc );
-	  return return_buff;
-	}
-
 
 	startdAds.Open();
 
@@ -2823,7 +2816,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 				continue;
 			} else {
 				// no remote user, but std rank condition failed
-				fRankCond++;
+			  if (last_rej_match_time != 0) {
+  				fRankCond++;
 				if (fRankCond != 1) {
 					fRankCondStr += ", ";
 				}
@@ -2834,6 +2828,12 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 						return_buff);
 				}
 				continue;
+			  } else {
+			    sprintf( return_buff,
+				     "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
+				     proc );
+			    return return_buff;
+			  }
 			}
 		}
 
@@ -2886,7 +2886,14 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 					// customer
 					// NOTE: In practice this often indicates some
 					// unknown problem.
+				  if (last_rej_match_time != 0) {
 					fRankCond++;
+				  } else {
+				    sprintf( return_buff,
+					     "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
+					     proc );
+				    return return_buff;
+				  }
 				}
 			} 
 		} else {
