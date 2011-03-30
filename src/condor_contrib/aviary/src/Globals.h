@@ -19,11 +19,11 @@
 #ifndef _GLOBALS_H
 #define _GLOBALS_H
 
-// c++ includes
-#include <map>
-
 // condor includes
 #include "condor_common.h"
+
+// c++ includes
+#include <map>
 
 // local includes
 #include "Job.h"

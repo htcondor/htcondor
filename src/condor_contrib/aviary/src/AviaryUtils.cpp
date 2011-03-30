@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-// c++ includes
-#include <map>
-
 // condor includes
 #include "condor_common.h"
 #include "condor_config.h"
@@ -25,6 +22,9 @@
 #include "compat_classad_util.h"
 #include "condor_qmgr.h"
 #include "get_daemon_name.h"
+
+// c++ includes
+#include <map>
 
 // local includes
 #include "AviaryUtils.h"
