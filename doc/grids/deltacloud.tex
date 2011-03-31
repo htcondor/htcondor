@@ -1,0 +1,100 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Deltacloud}The deltacloud Grid Type }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Deltacloud}
+\index{cloud computing!submitting jobs to Deltacloud}
+
+Condor jobs may be submitted to Deltacloud services.
+Deltacloud is a translation service for cloud services.
+Cloud services allow you to rent computers by the hour to run
+computation applications.
+Many cloud services define their own protocol for users to communicate
+with them.
+Deltacloud defines its own simple protocol and translates a user's
+commands into the appropriate protocol for the cloud service the user
+wants to use.
+Anyone can set up a Deltacloud service and configure it to translate
+for a specific cloud service.
+See the Deltacloud web page at \URL{http://incubator.apache.org/deltacloud}
+for more information about Deltacloud.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Deltacloud-submit}Deltacloud Job Submission}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor jobs are submitted to Deltacloud
+using the \SubmitCmd{grid} universe and the
+\SubmitCmd{grid\_resource} command  by placing the following
+into the submit description file.
+\begin{verbatim}
+grid_resource = deltacloud https://deltacloud.foo.org/api
+\end{verbatim}
+
+The URL above is just a sample. Replace it with the URL of the
+Deltacloud service you wish to use.
+
+Since the job is a virtual machine image,
+most of the submit description file commands
+specifying input or output files are not applicable.
+The \SubmitCmd{executable} command is still required,
+but its value is ignored. 
+It can be used to identify different jobs in the output of \Condor{q}.
+
+The VM image for the job must already be stored and registerd with the
+cloud service.
+In the submit description file,
+provide the identifier for the image using the
+\SubmitCmd{deltacloud\_image\_id} attribute.
+
+To authenticate with Deltacloud, Condor needs your credentials for
+the cloud service the Deltacloud server is representing. These are
+presented as a username (given in the submit file) and secret key
+(stored in a file whose name is given in the submit file:
+
+\begin{verbatim}
+deltacloud_username = your_username
+deltacloud_password_file = /path/to/password/file
+\end{verbatim}
+
+You can create and register an ssh keypair with the cloud service,
+which you can then use to securely log into your virtual machines
+once they are running.
+You can then use the command \SubmitCmd{deltacloud\_keyname} in the
+submit description file to specify the identifier of the ssh keypair
+to use.
+
+The cloud service may have multiple locations where the virtual
+machine can run. You can use \SubmitCmd{deltacloud\_realm\_id} to
+select one. If you don't, the service will select a sensible default.
+
+The cloud service may offer several hardware configurations for
+instances to run on. Select which configuration to use with the
+\SubmitCmd{deltacloud\_hardware\_profile}  submit description file
+command. The cloud service will select a sensible default if you
+don't indicate a preference.
+You can customize the select hardware profile with the optional
+commands \SubmitCmd{deltacloud\_hardware\_profile\_memory},
+\SubmitCmd{deltacloud\_hardware\_profile\_cpu}, and
+\SubmitCmd{deltacloud\_hardware\_profile\_storage}.
+
+Each virtual machine instance can be given some unique data, 
+accessible by the instance connecting to a well-known address.
+This makes it easy for many instances to share the same VM image,
+but perform different work.
+This data can be specified with the submit description file command
+\SubmitCmd{deltacloud\_user\_data}.
+The amount of data that can be provided depends on the cloud service.
+EC2 services allow up to 16kB of data.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Deltacloud-config}Deltacloud Configuration Parameters}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The deltacloud grid type requires one configuration variable 
+to be set in the Condor configuration file:
+
+\footnotesize
+\begin{verbatim}
+DELTACLOUD_GAHP=$(SBIN)/deltacloud_gahp
+\end{verbatim}
+\normalsize
