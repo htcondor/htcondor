@@ -196,13 +196,6 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 			
 	install ( FILES ${CONDOR_SOURCE_DIR}/msconfig/license.rtf ${CONDOR_SOURCE_DIR}/msconfig/do_wix.bat
 			  DESTINATION ${C_ETC}/WiX )
-			
-	if (CONDOR_PACKAGE_BUILD)
-
-		set (CPACK_GENERATOR "ZIP;WIX")
-        set (CPACK_WIX_XSL ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl)
-
-	endif()
 
     # the following will dump a header used to insert file info into bin's
     set ( WINVER ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/condor_winver.h)
