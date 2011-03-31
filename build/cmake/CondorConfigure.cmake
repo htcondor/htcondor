@@ -49,11 +49,11 @@ elseif(${OS_NAME} MATCHES "WIN")
 		file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/msconfig DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 	endif()
     
-    # means user did not specify, so change the default.
-    if ( ${CMAKE_INSTALL_PREFIX} STREQUAL "C:/Program Files/CONDOR" )
-        # mimic *nix for consistency
-        set( CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir")
-    endif()
+	# means user did not specify, so change the default.
+	if ( ${CMAKE_INSTALL_PREFIX} MATCHES "Program Files" )
+		# mimic *nix for consistency
+		set( CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir")
+	endif()
 
 	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc (test_install)")
 
