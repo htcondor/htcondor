@@ -104,6 +104,11 @@ access to.
 cause the daemon to fail if a VMware job ran for more than 16 hours on a
 linux machine.
 
+%gittrac #2017
+\item Fixed a bug in \Condor{dagman} that caused it to treat any dollar
+sign in the log file name of a node job submit file as an (illegal for
+\Condor{dagman}) macro.  (Now only '\$(...' is considered a macro.)
+
 \end{itemize}
 
 \noindent Known Bugs:
