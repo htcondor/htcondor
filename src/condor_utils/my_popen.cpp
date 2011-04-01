@@ -105,7 +105,7 @@ static child_handle_t remove_child(FILE* fp)
 //////////////////////////////////////////////////////////////////////////
 
 extern "C" FILE *
-my_popen(const char *const_cmd, const char *mode, int want_stderr)
+my_popen(const char *const_cmd, const char *mode, int want_stderr, Env* env_to_use)
 {
 	BOOL read_mode;
 	SECURITY_ATTRIBUTES saPipe;
@@ -162,6 +162,11 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 	}
 	si.dwFlags = STARTF_USESTDHANDLES;
 
+	char **env_string_array = NULL;
+	if (env_to_use) {
+		env_string_array = env_to_use->getStringArray();
+	}
+
 	// make call to CreateProcess
 	cmd = strdup(const_cmd);
 	result = CreateProcess(NULL,                   // determine app from cmd line
@@ -170,11 +175,15 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 	                       NULL,                   // primary thread SA
 	                       TRUE,                   // inherit handles 
 	                       CREATE_NEW_CONSOLE,     // creation flags
-	                       NULL,                 // use our environment : given that this value used to be zkmENV (an Env*), maybe this function would want another argument?
+	                       env_string_array,       // environment to use (NULL == ours)
 	                       NULL,                   // use our CWD
 	                       &si,                    // STARTUPINFO
 	                       &pi);                   // receive PROCESS_INFORMATION
 	free(cmd);
+	if(env_string_array) {
+		deleteStringArray(env_string_array);
+	}
+
 	if (result == 0) {
 		CloseHandle(hParentPipe);
 		CloseHandle(hChildPipe);
@@ -210,15 +219,14 @@ my_popen(const char *const_cmd, const char *mode, int want_stderr)
 }
 
 FILE *
-my_popen(ArgList &args, const char *mode, int want_stderr, Env *zkmENV)
+my_popen(ArgList &args, const char *mode, int want_stderr, Env *env_to_use)
 {
 	MyString cmdline, err;
 	if (!args.GetArgsStringWin32(&cmdline, 0, &err)) {
 		dprintf(D_ALWAYS, "my_popen: error making command line: %s\n", err.Value());
 		return NULL;
 	}
-	//  maybe the following function should be extended by an Env* argument? Not sure...
-	return my_popen(cmdline.Value(), mode, want_stderr);
+	return my_popen(cmdline.Value(), mode, want_stderr, env_to_use);
 }
 
 extern "C" FILE *
@@ -280,7 +288,7 @@ my_popenv_impl( const char *const args[],
                 const char * mode,
                 int want_stderr,
                 uid_t privsep_uid,
-				Env *env_ptr = 0)
+				Env *env_ptr)
 {
 	int	pipe_d[2];
 	int	parent_reads;
@@ -447,7 +455,7 @@ my_popenv( const char *const args[],
            const char * mode,
            int want_stderr )
 {
-	return my_popenv_impl(args, mode, want_stderr, (uid_t)-1);
+	return my_popenv_impl(args, mode, want_stderr, (uid_t)-1, NULL);
 }
 
 static FILE *
