@@ -2141,10 +2141,7 @@ SetImageSize()
 	if ((tmp = condor_param(RequestMemory, ATTR_REQUEST_MEMORY))) {
 		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
 		free(tmp);
-	} else if ((tmp = param(ATTR_REQUEST_MEMORY))) {
-		buffer.sprintf("%s = %s", ATTR_REQUEST_MEMORY, tmp);
-		free(tmp);
-	} else  {
+	} else {
 		buffer.sprintf("%s = ceiling(ifThenElse(%s =!= UNDEFINED, %s, %s/1024.0))",
 					   ATTR_REQUEST_MEMORY,
 					   ATTR_JOB_VM_MEMORY,
