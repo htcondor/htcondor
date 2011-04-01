@@ -144,13 +144,17 @@ IpVerify::Init()
 		dprintf(D_SECURITY,"IPVERIFY: Subsystem %s\n",ssysname);
 		dprintf(D_SECURITY,"IPVERIFY: Permission %s\n",PermString(perm));
 		if(strcmp(ssysname,"TOOL")==0 || strcmp(ssysname,"SUBMIT")==0){
+			// to avoid unneccesary DNS activity, the TOOL and SUBMIT
+			// subsystems only load the CLIENT lists, since they have no
+			// command port and don't need the other authorization lists.
 			if(strcmp(PermString(perm),"CLIENT")==0){ 
 				pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
 				pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param, ssysname );
+				pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
+				pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param, ssysname );
 			}
 		} else {
 			pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
-			// This is the old stuff, eventually it will be gone
 			pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param, ssysname );
 			pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
 			pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param, ssysname );
