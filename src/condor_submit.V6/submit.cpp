@@ -364,7 +364,7 @@ const char    *VM_Networking = "vm_networking";
 const char    *VM_Networking_Type = "vm_networking_type";
 
 //
-// Amazon EC2 Parameters
+// Amazon EC2 SOAP Parameters
 //
 const char* AmazonPublicKey = "amazon_public_key";
 const char* AmazonPrivateKey = "amazon_private_key";
@@ -374,6 +374,19 @@ const char* AmazonUserDataFile = "amazon_user_data_file";
 const char* AmazonSecurityGroups = "amazon_security_groups";
 const char* AmazonKeyPairFile = "amazon_keypair_file";
 const char* AmazonInstanceType = "amazon_instance_type";
+
+//
+// EC2 Query Parameters
+//
+const char* EC2AccessKeyId = "ec2_access_key_id";
+const char* EC2SecretAccessKey = "ec2_secret_access_key";
+const char* EC2AmiID = "ec2_ami_id";
+const char* EC2UserData = "ec2_user_data";
+const char* EC2UserDataFile = "ec2_user_data_file";
+const char* EC2SecurityGroups = "ec2_security_groups";
+const char* EC2KeyPairFile = "ec2_keypair_file";
+const char* EC2InstanceType = "ec2_instance_type";
+const char* EC2ElasticIP = "ec2_elastic_ip";
 
 //
 // Deltacloud Parameters
@@ -1459,6 +1472,7 @@ SetExecutable()
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "amazon" ) == MATCH ||
+			 strcasecmp( JobGridType, "ec2" ) == MATCH ||
 			 strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
@@ -1740,7 +1754,7 @@ SetUniverse()
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
 			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
-			//    amazon, unicore, cream, deltacloud
+			//    amazon, unicore, cream, deltacloud, ec2
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 			//   system names should be used (pbs, lsf). Glite are the only
@@ -1758,6 +1772,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
+				(strcasecmp (JobGridType, "ec2") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
@@ -1771,7 +1786,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
-						 "nqs, condor, nordugrid, unicore, amazon, deltacloud, or cream\n" );
+						 "nqs, condor, nordugrid, unicore, amazon, ec2, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -4850,7 +4865,8 @@ SetGridParams()
 			InsertJobExpr (buffer);
 		}
 
-		if ( strcasecmp( tmp, "amazon" ) == 0 ) {
+		if ( strcasecmp( tmp, "amazon" ) == 0 ||
+			 strcasecmp( tmp, "ec2" ) == 0 ) {
 			fprintf(stderr, "\nERROR: Amazon EC2 grid jobs require a "
 					"service URL\n");
 			DoCleanup( 0, 0, NULL );
@@ -5044,16 +5060,11 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 	
-	// AmazonUserData and AmazonUserDataFile cannot exist in the same submit file
-	bool has_userdata = false;
-	bool has_userdatafile = false;
-	
 	// AmazonUserData is not a necessary parameter
 	if( (tmp = condor_param( AmazonUserData, ATTR_AMAZON_USER_DATA )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA, tmp);
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-		has_userdata = true;
 	}	
 
 	// AmazonUserDataFile is not a necessary parameter
@@ -5071,7 +5082,111 @@ SetGridParams()
 				full_path(tmp) );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-		has_userdatafile = true;
+	}
+
+
+	//
+	// EC2 grid-type submit attributes
+	//
+	if ( (tmp = condor_param( EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID )) ) {
+		// check public key file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY_ID, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "ec2" ) == 0 ) {
+		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", EC2AccessKeyId );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	if ( (tmp = condor_param( EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY )) ) {
+		// check private key file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_SECRET_ACCESS_KEY, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "ec2" ) == 0 ) {
+		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", EC2SecretAccessKey );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	// EC2KeyPairFile is not a necessary parameter
+	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
+		// for the relative path, the keypair output file will be written to the IWD
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR_FILE, full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// EC2GroupName is not a necessary parameter
+	if( (tmp = condor_param( EC2SecurityGroups, ATTR_EC2_SECURITY_GROUPS )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_SECURITY_GROUPS, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	if ( (tmp = condor_param( EC2AmiID, ATTR_EC2_AMI_ID )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_AMI_ID, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "ec2" ) == 0 ) {
+		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", EC2AmiID );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	// EC2InstanceType is not a necessary parameter
+	if( (tmp = condor_param( EC2InstanceType, ATTR_EC2_INSTANCE_TYPE )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_INSTANCE_TYPE, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// EC2ElasticIP is not a necessary parameter
+    if( (tmp = condor_param( EC2ElasticIP, ATTR_EC2_ELASTIC_IP )) ) {
+        buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ELASTIC_IP, tmp );
+        free( tmp );
+        InsertJobExpr( buffer.Value() );
+    }
+	
+	// EC2UserData is not a necessary parameter
+	if( (tmp = condor_param( EC2UserData, ATTR_EC2_USER_DATA )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_USER_DATA, tmp);
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}	
+
+	// EC2UserDataFile is not a necessary parameter
+	if( (tmp = condor_param( EC2UserDataFile, ATTR_EC2_USER_DATA_FILE )) ) {
+		// check user data file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_USER_DATA_FILE, 
+				full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
 	}
 	
 

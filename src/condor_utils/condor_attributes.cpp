@@ -870,6 +870,19 @@ const char * const ATTR_AMAZON_REMOTE_VM_NAME = "AmazonRemoteVirtualMachineName"
 const char * const ATTR_AMAZON_INSTANCE_TYPE = "AmazonInstanceType";
 //************* End of changes for Amamzon Jobs *****************//
 
+//************* Added for EC2 Jobs ***************************//
+const char * const ATTR_EC2_ACCESS_KEY_ID = "EC2AccessKeyId";
+const char * const ATTR_EC2_SECRET_ACCESS_KEY = "EC2SecretAccessKey";
+const char * const ATTR_EC2_AMI_ID = "EC2AmiID";
+const char * const ATTR_EC2_SECURITY_GROUPS = "EC2SecurityGroups";
+const char * const ATTR_EC2_KEY_PAIR_FILE = "EC2KeyPairFile";
+const char * const ATTR_EC2_USER_DATA = "EC2UserData";
+const char * const ATTR_EC2_USER_DATA_FILE = "EC2UserDataFile";
+const char * const ATTR_EC2_REMOTE_VM_NAME = "EC2RemoteVirtualMachineName";
+const char * const ATTR_EC2_INSTANCE_TYPE = "EC2InstanceType";
+const char * const ATTR_EC2_INSTANCE_NAME = "EC2InstanceName";
+const char * const ATTR_EC2_ELASTIC_IP = "EC2ElasticIp";
+//************* End of changes for EC2 Jobs *****************//
 
 //************* Added for Lease Manager *******************//
 const char * const ATTR_LEASE_MANAGER_IP_ADDR = "LeaseManagerIpAddr";

@@ -1834,6 +1834,14 @@ GRIDMANAGER_LOCK = $(LOCK)/GridmanagerLock.$(USERNAME)
 ##  Various other settings that the Condor-G can use. 
 ##--------------------------------------------------------------------
 
+## The number of seconds between status update requests. You can make 
+## this short (5 seconds) if you want Condor to respond quickly to 
+## instances as they terminate, or you can make it long (300 seconds = 5 
+## minutes) if you know your instances will run for awhile and don't 
+## mind delay between when they stop and when Condor responds to them 
+## stopping.
+GRIDMANAGER_JOB_PROBE_INTERVAL = 300
+
 ## For grid-type gt2 jobs (pre-WS GRAM), limit the number of jobmanager
 ## processes the gridmanager will let run on the headnode. Letting too
 ## many jobmanagers run causes severe load on the headnode.
@@ -1892,7 +1900,7 @@ CONDOR_GAHP = $(SBIN)/condor_c-gahp
 CONDOR_GAHP_WORKER = $(SBIN)/condor_c-gahp_worker_thread
 
 ##
-## The Condor GAHP server has it's own log.  Like the Gridmanager, the
+## The Condor GAHP server has its own log.  Like the Gridmanager, the
 ## GAHP server is run as the User, not a Condor daemon, so all users must 
 ## have write permssion to the directory used for the logfile. Our 
 ## suggestion is to create a directory called GridLogs in $(LOG) with 
@@ -1969,7 +1977,7 @@ CREAM_GAHP = $(SBIN)/cream_gahp
 DELTACLOUD_GAHP = $(SBIN)/deltacloud_gahp
 
 ##
-## EC2: Universe = Grid, Grid_Resource = Amazon
+## EC2 (SOAP): Universe = Grid, Grid_Resource = Amazon
 ##
 
 ## The location of the amazon_gahp program, required
@@ -1980,18 +1988,27 @@ AMAZON_GAHP = $(SBIN)/amazon_gahp
 #AMAZON_GAHP_DEBUG = D_FULLDEBUG
 AMAZON_GAHP_LOG = /tmp/AmazonGahpLog.$(USERNAME)
 
-## The number of seconds between status update requests to EC2. You can
-## make this short (5 seconds) if you want Condor to respond quickly to
-## instances as they terminate, or you can make it long (300 seconds = 5
-## minutes) if you know your instances will run for awhile and don't mind
-## delay between when they stop and when Condor responds to them
-## stopping.
-GRIDMANAGER_JOB_PROBE_INTERVAL = 300
-
 ## As of this writing Amazon EC2 has a hard limit of 20 concurrently
 ## running instances, so a limit of 20 is imposed so the GridManager
 ## does not waste its time sending requests that will be rejected.
 GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_AMAZON = 20
+
+##
+## EC2 (REST): Universe = Grid, Grid_Resource = ec2
+##
+
+## The location of the ec2_gahp program, required
+EC2_GAHP = $(SBIN)/ec2_gahp
+
+## Location of log files, useful for debugging, must be in
+## a directory writable by any user, such as /tmp
+#EC2_GAHP_DEBUG = D_FULLDEBUG
+EC2_GAHP_LOG = /tmp/EC2GahpLog.$(USERNAME)
+
+## As of this writing Amazon EC2 has a hard limit of 20 concurrently
+## running instances, so a limit of 20 is imposed so the GridManager
+## does not waste its time sending requests that will be rejected.
+GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2 = 20
 
 ##
 ##--------------------------------------------------------------------

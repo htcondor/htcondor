@@ -764,6 +764,20 @@ extern const char * const ATTR_AMAZON_REMOTE_VM_NAME;
 extern const char * const ATTR_AMAZON_INSTANCE_TYPE;
 //************* End of changes for Amamzon Jobs *****************//
 
+//************* Added for EC2 Jobs ***************************//
+extern const char * const ATTR_EC2_ACCESS_KEY_ID;
+extern const char * const ATTR_EC2_SECRET_ACCESS_KEY;
+extern const char * const ATTR_EC2_AMI_ID;
+extern const char * const ATTR_EC2_KEY_PAIR_FILE;
+extern const char * const ATTR_EC2_SECURITY_GROUPS;
+extern const char * const ATTR_EC2_USER_DATA;
+extern const char * const ATTR_EC2_USER_DATA_FILE;
+extern const char * const ATTR_EC2_REMOTE_VM_NAME;
+extern const char * const ATTR_EC2_INSTANCE_TYPE;
+extern const char * const ATTR_EC2_INSTANCE_NAME;
+extern const char * const ATTR_EC2_ELASTIC_IP;
+//************* End of changes for EC2 Jobs *****************//
+
 
 extern const char * const ATTR_REQUEST_CPUS;
 extern const char * const ATTR_REQUEST_MEMORY;
