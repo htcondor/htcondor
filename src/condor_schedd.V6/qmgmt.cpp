@@ -304,6 +304,22 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 	}
 
 		// CRUFT
+		// Before 7.6.0, Condor-C didn't set ATTR_HOLD_REASON_CODE
+		// properly when submitting jobs to a remote schedd. Since then,
+		// we look at the code instead of the hold reason string to
+		// see if a job is expecting input files to be spooled.
+	int job_status = -1;
+	job_ad->LookupInteger( ATTR_JOB_STATUS, job_status );
+	if ( job_status == HELD && job_ad->LookupExpr( ATTR_HOLD_REASON_CODE ) == NULL ) {
+		std::string hold_reason;
+		job_ad->LookupString( ATTR_HOLD_REASON, hold_reason );
+		if ( hold_reason == "Spooling input data files" ) {
+			job_ad->Assign( ATTR_HOLD_REASON_CODE,
+							CONDOR_HOLD_CODE_SpoolingInput );
+		}
+	}
+
+		// CRUFT
 		// Starting in 7.5.4, the GridResource attribute for the amazon
 		// grid-type contains the URL of the service to be submitted
 		// to. Prior to that, only one service could be submitted to,
@@ -1035,7 +1051,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			int job_status = -1;
 			int hold_code = -1;
 			ad->LookupInteger(ATTR_JOB_STATUS, job_status);
-			ad->LookupInteger(ATTR_LAST_HOLD_REASON_CODE, hold_code);
+			ad->LookupInteger(ATTR_HOLD_REASON_CODE, hold_code);
 			if ( job_status == HELD && hold_code == CONDOR_HOLD_CODE_SpoolingInput ) {
 				if ( rewriteSpooledJobAd( ad, cluster, proc, true ) ) {
 					JobQueueDirty = true;
