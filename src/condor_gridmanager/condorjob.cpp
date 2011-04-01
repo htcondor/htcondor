@@ -34,6 +34,7 @@
 #include "condorjob.h"
 #include "condor_config.h"
 #include "file_transfer.h"
+#include "condor_holdcodes.h"
 
 
 // GridManager job states
@@ -1447,6 +1448,7 @@ ClassAd *CondorJob::buildSubmitAd()
 
 	submit_ad->Assign( ATTR_JOB_STATUS, HELD );
 	submit_ad->Assign( ATTR_HOLD_REASON, "Spooling input data files" );
+	submit_ad->Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput );
 	submit_ad->Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
 
 	submit_ad->Assign( ATTR_Q_DATE, now );
