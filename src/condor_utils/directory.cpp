@@ -287,6 +287,10 @@ Directory::do_remove_dir( const char* path )
 
 	char *usr, *dom;
 
+#if 0
+    extern int rmdir_with_acls_win32(const char * path);
+    rmdir_with_acls_win32( path );
+#else
 	usr = my_username();
 	dom = my_domainname();
 
@@ -295,6 +299,7 @@ Directory::do_remove_dir( const char* path )
 	free(dom);
 
 	rmdirAttempt( path, desired_priv_state );
+#endif
 
 	StatInfo si2( path );
 
