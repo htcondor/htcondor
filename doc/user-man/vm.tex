@@ -33,10 +33,6 @@ as \Condor{q}.
 Other commands specific to the type of virtual machine software
 identify the disk image.
 
-Use of the \SubmitCmd{arguments} command creates a file named \File{condor.arg},
-which is added to the set of CD-ROM files.
-The contents of this file are the arguments specified.
-
 VMware, Xen, and KVM virtual machine software are supported.
 As these differ from each other, the submit description file
 specifies one of
@@ -57,23 +53,6 @@ for the disk image with \SubmitCmd{vm\_memory},
 which is given in Mbytes.
 Condor uses this number to assure a match with a machine
 that can provide the needed memory space.
-
-A CD-ROM for the virtual machine is composed of a set of files.
-These files are specified in the submit description file
-with a comma-separated list of file names.
-\begin{verbatim}
-  vm_cdrom_files = a.txt,b.txt,c.txt
-\end{verbatim}
-If these files are not on a shared file system visible to
-the machine that will run the \SubmitCmd{vm} universe job, then
-Condor must also be told to transfer them from
-the submit machine with 
-\begin{verbatim}
-  vm_should_transfer_cdrom_files = YES
-\end{verbatim}
-If a single file that ends with the suffix \Expr{.iso} is listed
-with \SubmitCmd{vm\_cdrom\_files},
-Condor uses the file as an iso file, rather than creating one.
 
 Virtual machine networking is enabled with the command
 \begin{verbatim}
@@ -106,6 +85,20 @@ the submit command to prevent the transfer is
   vm_no_output_vm = true
 \end{verbatim}
 
+The required disk image must be identified for a virtual machine.
+This \SubmitCmd{vm\_disk} command specifies a list of comma-separated files.
+Each disk file is specified by 4 colon separated fields.
+The first field is the path and file name of the disk file.
+The second field specifies the device,
+The third field specifies permissions, and the optional 
+fourth specifies the format.
+Here is an example that identifies two files:
+\footnotesize
+\begin{verbatim}
+  vm_disk = /var/lib/libvirt/images/swap.img:sda2:w:raw
+\end{verbatim}
+\normalsize
+
 Setting values in the submit description file for some commands
 have consequences for the virtual machine description file.
 These commands are
@@ -114,7 +107,7 @@ These commands are
   \item \SubmitCmd{vm\_macaddr}
   \item \SubmitCmd{vm\_networking}
   \item \SubmitCmd{vm\_networking\_type}
-  \item \SubmitCmd{vm\_cdrom\_files}
+  \item \SubmitCmd{vm\_disk}
 \end{itemize}
 For VMware virtual machines,
 setting values for these commands causes Condor to modify the
@@ -195,19 +188,6 @@ to execute the Condor job.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{vm universe!submit commands specific to Xen}
 
-The required disk image must be identified for a Xen virtual machine.
-This \SubmitCmd{xen\_disk} command specifies a list of comma-separated files.
-Each disk file is specified by 3 colon separated fields.
-The first field is the path and file name of the disk file.
-The second field specifies the device,
-and the third field specifies permissions.
-Here is an example that identifies two files:
-\footnotesize
-\begin{verbatim}
-  xen_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
-\end{verbatim}
-\normalsize
-
 If any files need to be transferred from the submit machine
 to the machine where the \SubmitCmd{vm} universe job will execute, 
 Condor must be explicitly told to do so with the 
@@ -229,7 +209,7 @@ utilizing one of the following definitions.
 \begin{enumerate}
 \item \SubmitCmd{xen\_kernel = included} implies that the kernel
   is to be found in disk image given by the definition of the single file
-  specified in \SubmitCmd{xen\_disk}. 
+  specified in \SubmitCmd{vm\_disk}. 
 
 \item \SubmitCmd{xen\_kernel = path-to-kernel} gives a full path and
   file name of the required kernel.  If this kernel must be transferred
@@ -243,34 +223,10 @@ utilizing one of the following definitions.
 
 \end{enumerate}
 
-Transfer of CD-ROM files under Xen requires the definition of
-the associated device in addition to the specification of the
-files.
-The submit description file contains
-\begin{verbatim}
-  vm_cdrom_files = a.txt,b.txt,c.txt
-  vm_should_transfer_cdrom_files = YES
-  xen_cdrom_device = device-name
-\end{verbatim}
-where the last line of this example defines the device.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:vm-KVMsubmitfile}KVM-Specific Submit Commands}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{vm universe!submit commands specific to KVM}
-
-The required disk image must be identified for a KVM virtual machine.
-This \SubmitCmd{kvm\_disk} command specifies a list of comma-separated files.
-Each disk file is specified by 3 colon separated fields.
-The first field is the path and file name of the disk file.
-The second field specifies the device,
-and the third field specifies permissions.
-Here is an example that identifies two files:
-\footnotesize
-\begin{verbatim}
-  kvm_disk = /var/lib/libvirt/images/swap.img:sda2:w
-\end{verbatim}
-\normalsize
 
 If any files need to be transferred from the submit machine
 to the machine where the \SubmitCmd{vm} universe job will execute,
@@ -284,17 +240,6 @@ Condor must be explicitly told to do so with the
 Any and all needed files on a system without a shared file
 system (between the submit machine and the machine where the
 job will execute) must be listed.
-
-Transfer of CD-ROM files under KVM requires the definition of
-the associated device in addition to the specification of the
-files.
-The submit description file contains
-\begin{verbatim}
-  vm_cdrom_files = a.txt,b.txt,c.txt
-  vm_should_transfer_cdrom_files = YES
-  kvm_cdrom_device = device-name
-\end{verbatim}
-where the last line of this example defines the device.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-checkpoints}Checkpoints}

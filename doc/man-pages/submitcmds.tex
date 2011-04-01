@@ -2004,34 +2004,6 @@ the value of \SubmitCmd{kill\_sig} is used.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
-%% kvm_disk
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!kvm\_disk}
-\item[kvm\_disk = file1:device1:permission1, file2:device2:permission2, \Dots]
-A list of comma separated disk files.
-Each disk file is specified by 3 colon separated fields.
-The first field is the path and file name of the disk file.
-The second field specifies the device, and
-the third field specifies permissions.
-
-An example that specifies two disk files:
-\footnotesize
-\begin{verbatim}
-kvm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
-\end{verbatim}
-\normalsize
-
-%%%%%%%%%%%%%%%%%%%
-%% kvm_cdrom_device
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!kvm\_cdrom\_device}
-\item[kvm\_cdrom\_device = $<$device$>$]
-Describes the KVM CD-ROM device when
-\SubmitCmd{vm\_cdrom\_files} is defined.
-
-%%%%%%%%%%%%%%%%%%%
 %% kvm_transfer_files
 %%%%%%%%%%%%%%%%%%%
 
@@ -2041,14 +2013,24 @@ A comma separated list of all files that Condor is to transfer
 to the execute machine.
 
 %%%%%%%%%%%%%%%%%%%
-%% vm_cdrom_files
+%% vm_disk
 %%%%%%%%%%%%%%%%%%%
 
-\index{submit commands!vm\_cdrom\_files}
-\item[vm\_cdrom\_files = file1, file2, \Dots]
-A comma-separated list of input CD-ROM files.
-If a single file that ends with the suffix \Expr{.iso} is listed,
-Condor uses the file as an iso file, rather than creating one.
+\index{submit commands!vm\_disk}
+\item[vm\_disk = file1:device1:permission1, file2:device2:permission2:format2, \Dots]
+A list of comma separated disk files.
+Each disk file is specified by 4 colon separated fields.
+The first field is the path and file name of the disk file.
+The second field specifies the device. 
+The third field specifies permissions,
+and the optional fourth field specifies the image format. 
+
+An example that specifies two disk files:
+\footnotesize
+\begin{verbatim}
+vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
+\end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_checkpoint
@@ -2098,7 +2080,6 @@ Networking cannot be used if a vm universe job uses a
 checkpoint in order to continue execution after migration
 to another machine.
 
-
 %%%%%%%%%%%%%%%%%%%
 %% vm_networking_type
 %%%%%%%%%%%%%%%%%%%
@@ -2120,16 +2101,6 @@ When \Expr{True}, prevents Condor from transferring output
 files back to the machine from which the vm universe job
 was submitted.
 If not specified, the default value is \Expr{False}.
-
-%%%%%%%%%%%%%%%%%%%
-%% vm_should_transfer_cdrom_files
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!vm\_should\_transfer\_cdrom\_files}
-\item[vm\_should\_transfer\_cdrom\_files = $<$True \Bar\ False$>$]
-Specifies whether Condor will transfer CD-ROM files to
-the execute machine (\Expr{True}) or rely on access through 
-a shared file system (\Expr{False}).
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_type
@@ -2175,34 +2146,6 @@ job will not be submitted.
 When \Expr{True}, causes Condor to utilize
 a VMware snapshot disk for new or modified files.
 If not specified, the default value is \Expr{True}.
-
-%%%%%%%%%%%%%%%%%%%
-%% xen_cdrom_device
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!xen\_cdrom\_device}
-\item[xen\_cdrom\_device = $<$device$>$]
-Describes the Xen CD-ROM device when
-\SubmitCmd{vm\_cdrom\_files} is defined.
-
-%%%%%%%%%%%%%%%%%%%
-%% xen_disk
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!xen\_disk}
-\item[xen\_disk = file1:device1:permission1, file2:device2:permission2, \Dots]
-A list of comma separated disk files.
-Each disk file is specified by 3 colon separated fields.
-The first field is the path and file name of the disk file.
-The second field specifies the device, and
-the third field specifies permissions.
-
-An example that specifies two disk files:
-\footnotesize
-\begin{verbatim}
-xen_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
-\end{verbatim}
-\normalsize
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_initrd
