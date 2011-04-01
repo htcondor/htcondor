@@ -4436,6 +4436,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,creamjob
 id=247
 
+[DELTACLOUD_GAHP]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Deltacloud Gahp
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,deltacloudjob
+id=247
+
 [AMAZON_GAHP_LOG]
 aliases=
 default=
