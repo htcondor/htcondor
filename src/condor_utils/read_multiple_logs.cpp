@@ -413,9 +413,10 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		// handle those.
 		//
 	if ( logFileName != "" ) {
-		if ( strchr(logFileName.Value(), '$') ) {
-			dprintf(D_ALWAYS, "MultiLogFiles: macros not allowed "
-						"in log file name in DAG node submit files\n");
+		if ( strstr(logFileName.Value(), "$(") ) {
+			dprintf(D_ALWAYS, "MultiLogFiles: macros ('$(...') not allowed "
+						"in log file name (%s) in DAG node submit files\n",
+						logFileName.Value());
 			logFileName = "";
 		}
 	}
