@@ -45,7 +45,7 @@ if not quiet:
 	print client
 
 try:
-	result = client.service.submitJob('/bin/sleep','120','condor','/tmp')
+	result = client.service.submitJob('/bin/sleep','120',uid,'/tmp')
 except Exception, e:
 	print "unable to access scheduler at: ", job_url
 	print e
