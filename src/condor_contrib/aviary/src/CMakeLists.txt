@@ -141,4 +141,7 @@ if (LINUX)
 		install (CODE "execute_process(COMMAND echo set WSFCPP_HOME to \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC} for local testing)")
 	endif (PROPER)
 
+	install(FILES	${CMAKE_CURRENT_SOURCE_DIR}/../etc/61aviary.config
+		DESTINATION "${C_ETC_EXAMPLES}")
+
 endif(LINUX)
