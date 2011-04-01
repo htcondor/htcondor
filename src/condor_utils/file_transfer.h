@@ -276,6 +276,7 @@ class FileTransfer {
 	bool PeerDoesTransferAck;
 	bool PeerDoesGoAhead;
 	bool PeerUnderstandsMkdir;
+	bool TransferUserLog;
 	char* Iwd;
 	StringList* ExceptionFiles;
 	StringList* OutputFiles;

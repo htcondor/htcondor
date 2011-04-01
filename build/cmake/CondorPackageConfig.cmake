@@ -196,13 +196,6 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 			
 	install ( FILES ${CONDOR_SOURCE_DIR}/msconfig/license.rtf ${CONDOR_SOURCE_DIR}/msconfig/do_wix.bat
 			  DESTINATION ${C_ETC}/WiX )
-			
-	if (CONDOR_PACKAGE_BUILD)
-
-		set (CPACK_GENERATOR "ZIP;WIX")
-        set (CPACK_WIX_XSL ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl)
-
-	endif()
 
     # the following will dump a header used to insert file info into bin's
     set ( WINVER ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/condor_winver.h)
@@ -232,7 +225,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		# Enable debug message
 		set ( CPACK_DEBIAN_PACKAGE_DEBUG 1 )
 
-		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${PACKAGE_REVISION}${DEBIAN_CODENAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}" )
+		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${PACKAGE_REVISION}-${DEB_SYSTEM_NAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}" )
 		string( TOLOWER "${CPACK_PACKAGE_FILE_NAME}" CPACK_PACKAGE_FILE_NAME )
 
 		set ( CPACK_DEBIAN_PACKAGE_SECTION "contrib/misc")

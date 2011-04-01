@@ -449,7 +449,7 @@ void
     {
 		buf <<  "unable to open history file " << m_he.file;
 		text = buf.str();
-        dprintf ( D_ALWAYS, text.c_str(), "\n");
+        dprintf ( D_ALWAYS, "%s\n", text.c_str());
 	_ad.Assign("JOB_AD_ERROR",text.c_str());
 	return;
     }
@@ -457,7 +457,7 @@ void
     {
 		buf << "bad seek in " << m_he.file << " at " << m_he.start;
 		text = buf.str();
-        dprintf ( D_ALWAYS, text.c_str(), "\n");
+        dprintf ( D_ALWAYS, "%s\n", text.c_str());
 	_ad.Assign("JOB_AD_ERROR",text.c_str());
         return;
     }

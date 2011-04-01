@@ -1,3 +1,20 @@
+/***************************************************************
+ *
+ * Copyright (C) 2010, John M. Knoeller
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
 
 // -------------------------------------------------- bprint stuff ---------
 //
@@ -202,13 +219,21 @@ int __cdecl bprintf(LPCTSTR pszFormat, ...)
 }
 
 #ifdef UNICODE
+
+// can't use this with libctiny because of the 8kb buffer on the stack.
+// which generates a reference to __chkstk in the c-runtime...
 int __cdecl bprintf(LPCSTR pszFormat, ...)
 {
    int cch = -1;
    va_list va;
    va_start(va, pszFormat);
 
-   TCHAR wszFormat[4096];
+   // stack useage > 4k generate a reference to __chkstk which libctiny doesn't have.
+  #ifdef USE_LIBCTINY
+   TCHAR wszFormat[2000];
+  #else
+   TCHAR wszFormat[8192];
+  #endif
    MultiByteToWideChar(CP_ACP, 0, pszFormat, -1, wszFormat, NUMCHARS(wszFormat));
    cch = bvprintf(g_bprint, wszFormat, va);
 
@@ -389,7 +414,12 @@ void __cdecl bprintfl(BPRINT_BUFFER & bp, LPCSTR pszFormat, ...)
    va_list va;
    va_start(va, pszFormat);
 
-   TCHAR wszFormat[4096];
+   // stack useage > 4k generate a reference to __chkstk which libctiny doesn't have.
+  #ifdef USE_LIBCTINY
+   TCHAR wszFormat[2000];
+  #else
+   TCHAR wszFormat[8192];
+  #endif
    MultiByteToWideChar(CP_ACP, 0, pszFormat, -1, wszFormat, NUMCHARS(wszFormat));
    cch = bvprintf(bp, wszFormat, va);
 
@@ -404,7 +434,12 @@ void __cdecl bprintfl(LPCSTR pszFormat, ...)
    va_list va;
    va_start(va, pszFormat);
 
-   TCHAR wszFormat[4096];
+   // stack useage > 4k generate a reference to __chkstk which libctiny doesn't have.
+  #ifdef USE_LIBCTINY
+   TCHAR wszFormat[2000];
+  #else
+   TCHAR wszFormat[8192];
+  #endif
    MultiByteToWideChar(CP_ACP, 0, pszFormat, -1, wszFormat, NUMCHARS(wszFormat));
    cch = bvprintf(g_bprint, wszFormat, va);
 
@@ -436,7 +471,7 @@ void bprint_Terminate(BPRINT_BUFFER & bp, bool fFlush)
       GlobalFreePtr(bp.pszAscii);
    if (bp.hOut && (bp.hOut != GetStdHandle(STD_OUTPUT_HANDLE)))
       CloseHandle(bp.hOut);
-   SfZeroStruct(&bp);
+   ZeroStruct(&bp);
 }
 #endif // BPRINT_INCLUDE_CODE
 
