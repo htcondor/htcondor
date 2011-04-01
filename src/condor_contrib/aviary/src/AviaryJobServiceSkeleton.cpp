@@ -37,6 +37,7 @@ extern bool qmgmt_all_users_trusted;
 #include <AviaryJob_SetJobAttributeResponse.h>
 #include "Codec.h"
 #include "SchedulerObject.h"
+#include "stl_string_utils.h"
 
 using namespace AviaryJob;
 using namespace aviary::codec;
@@ -56,6 +57,7 @@ AviaryJobServiceSkeleton::checkForSchedulerID(AviaryCommon::JobID* _jobId, strin
 void
 AviaryJobServiceSkeleton::buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _requirements) {
 	// TODO: iterate through these and build TARGET.<constraint> like string
+	//ResourceConstraintVectorType::const_iterator it = _constraints->front();
 }
 
 
@@ -78,6 +80,7 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
     string reqBuilder;
     if (!_submitJob->isRequirementsNil()) {
         // TODO: iterate through resource constraints
+    //    buildBasicRequirements(_submitJob->getRequirements(), reqBuilder);
     }
     else {
         // default
@@ -100,7 +103,7 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
 		submissionId.append("#");
 		submissionId.append(jobId);
         submitJobResponse->setId(new AviaryCommon::JobID(
-				schedulerObj->getPool(),schedulerObj->getName(),jobId,
+				jobId,schedulerObj->getPool(),schedulerObj->getName(),
 				new AviaryCommon::SubmissionID(submissionId,_submitJob->getOwner().c_str())));
         submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),""));
     }
