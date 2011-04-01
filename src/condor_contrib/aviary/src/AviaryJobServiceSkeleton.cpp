@@ -40,9 +40,21 @@ extern bool qmgmt_all_users_trusted;
 #include "stl_string_utils.h"
 
 using namespace AviaryJob;
+using namespace AviaryCommon;
 using namespace aviary::codec;
 using namespace aviary::job;
 using namespace compat_classad;
+
+const char* BASIC_REQ_FORMAT = 
+"\
+( TARGET.Arch %s ) && \
+( TARGET.OpSys %s ) && \
+( TARGET.Disk %s ) && \
+( ( TARGET.Memory * 1024 ) %s ) && \
+( TARGET.FileSystemDomain %s )";
+
+const char* REQ_UNDEFINED = " =!= undefined ";
+const char* REQ_GTE_ZERO = " >= 0 ";
 
 void
 AviaryJobServiceSkeleton::checkForSchedulerID(AviaryCommon::JobID* _jobId, string& _text)
@@ -55,9 +67,40 @@ AviaryJobServiceSkeleton::checkForSchedulerID(AviaryCommon::JobID* _jobId, strin
 }
 
 void
-AviaryJobServiceSkeleton::buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _requirements) {
-	// TODO: iterate through these and build TARGET.<constraint> like string
-	//ResourceConstraintVectorType::const_iterator it = _constraints->front();
+AviaryJobServiceSkeleton::buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _reqs) {
+	// TODO: scan through these and build TARGET.<constraint> like string
+	string arch = REQ_UNDEFINED;
+	string opsys = REQ_UNDEFINED;
+	string disk = REQ_GTE_ZERO;
+	string memory = REQ_GTE_ZERO;
+	string filesystem = REQ_UNDEFINED;
+	for ( ResourceConstraintVectorType::const_iterator it = _constraints->begin(); it != _constraints->end();
+		 it++ ) {
+		ResourceConstraint* rc = *it;
+		ADBResourceConstraintTypeEnum rct = rc->getType()->getResourceConstraintTypeEnum();
+		switch (rct) {
+			case ResourceConstraintType_ARCH:
+				arch = " == \"" + rc->getValue() + "\"";
+				break;
+			case ResourceConstraintType_OS:
+				opsys = " == \"" + rc->getValue() + "\"";
+				break;
+            case ResourceConstraintType_DISK:
+				disk = " >= " + rc->getValue();
+				break;
+			case ResourceConstraintType_MEMORY:
+				memory = " >= " + rc->getValue();
+				break;
+            case ResourceConstraintType_FILESYSTEM:
+				filesystem = " == \"" + rc->getValue() + "\"";
+				break;
+			default:
+				dprintf(D_ALWAYS,"Ignoring unknown resource constraint submitted: %s:%s\n",
+						rc->getType()->getResourceConstraintType().c_str(),rc->getValue().c_str());
+		}
+	}
+	// order is important! see BASIC_REQ_FORMAT above
+	sprintf(_reqs, BASIC_REQ_FORMAT, arch.c_str(), opsys.c_str(), disk.c_str(), memory.c_str(), filesystem.c_str());
 }
 
 
@@ -79,8 +122,8 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
     // build a requirements string and add to it
     string reqBuilder;
     if (!_submitJob->isRequirementsNil()) {
-        // TODO: iterate through resource constraints
-    //    buildBasicRequirements(_submitJob->getRequirements(), reqBuilder);
+        // TODO: build from resource constraints
+		buildBasicRequirements(_submitJob->getRequirements(), reqBuilder);
     }
     else {
         // default
