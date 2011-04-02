@@ -35,7 +35,7 @@ int my_spawnv( const char* cmd, const char *const argv[] );
 
 #if defined(WIN32)
 // on Windows, expose the ability to use a raw command line
-FILE *my_popen( const char *cmd, const char *mode, int want_stderr, Env* env_to_use = NULL );
+FILE *my_popen( const char *cmd, const char *mode, int want_stderr );
 int my_system( const char *cmd );
 #endif
 
