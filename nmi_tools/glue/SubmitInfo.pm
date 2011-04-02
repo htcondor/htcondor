@@ -332,6 +332,7 @@ our %submit_info = (
 				'-DCLIPPED:BOOL=OFF' => undef,
                                 '-DWITH_KRB5:BOOL=OFF' => undef,
                                 '-DWITH_CREAM:BOOL=OFF' => undef,
+								'-DWITH_COREDUMPER:BOOL=OFF'	=> undef,
 			 },
 			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
 			'xtests'	=>  [ 'x86_64_ubuntu_10.04', ],
