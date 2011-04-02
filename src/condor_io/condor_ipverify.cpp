@@ -385,12 +385,18 @@ IpVerify::AuthEntryToString(const in6_addr & host, const char * user, perm_mask_
 		// every address will be seen as IPv6 format. should do something
 		// to print IPv4 address neatly.
 	char buf[INET6_ADDRSTRLEN];
-	inet_ntop(AF_INET6, &host, buf, sizeof(buf));
+	uint32_t* addr = (uint32_t*)&host;
+		// checks if IPv4-mapped-IPv6 address
+	if (addr[0] == 0 && addr[1] == 0 & addr[2] == htonl(0xffff)) {
+		inet_ntop(AF_INET, (const void*)&addr[3], buf, sizeof(buf));
+	} else {
+		inet_ntop(AF_INET6, &host, buf, sizeof(buf));
+	}
+
 	MyString mask_str;
 	PermMaskToString( mask, mask_str );
 	result.sprintf("%s/%s: %s", /* NOTE: this does not need a '\n', all the call sites add one. */
 			user ? user : "(null)",
-					   //inet_ntoa(host),
 			buf,
 			mask_str.Value() );
 }
@@ -763,9 +769,8 @@ IpVerify::Verify( DCpermission perm, const ipaddr& addr, const char * user, MySt
 		perm_mask_t const allow_resolved = allow_mask(perm)|deny_mask(perm);
 
 			// check for matching subnets in ip/mask style
-			// should use IPv6 addr
 		char ipstr[INET6_ADDRSTRLEN] = { 0, };
-		addr.to_ip_string(ipstr, INET6_ADDRSTRLEN);
+   		addr.to_ip_string(ipstr, INET6_ADDRSTRLEN);
 
 		peer_description = addr.to_ip_string();
 

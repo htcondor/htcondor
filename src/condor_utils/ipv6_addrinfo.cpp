@@ -91,6 +91,7 @@ addrinfo_iterator& addrinfo_iterator::operator= (const addrinfo_iterator& rhs)
 	cxt_->add_ref();
 
 	current_ = NULL;
+	return *this;
 }
 
 addrinfo* addrinfo_iterator::next()
