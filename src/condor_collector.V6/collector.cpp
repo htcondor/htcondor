@@ -42,7 +42,7 @@
 #include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_universe.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "condor_threads.h"
 
 #include "collector.h"
@@ -1116,7 +1116,7 @@ void CollectorDaemon::reportToDevelopers (void)
 	ustatsMonthly.setMax( ustatsAccum );
 
 	sprintf( buffer, "Collector (%s):  Monthly report",
-			 my_full_hostname() );
+			 get_local_fqdn().Value() );
 	if( ( mailer = email_developers_open(buffer) ) == NULL ) {
 		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open mailer)\n");		
 		return;
@@ -1455,10 +1455,10 @@ void CollectorDaemon::init_classad(int interval)
             if( strchr( CollectorName, '@' ) ) {
                id.sprintf( "%s", CollectorName );
             } else {
-               id.sprintf( "%s@%s", CollectorName, my_full_hostname() );
+               id.sprintf( "%s@%s", CollectorName, get_local_fqdn().Value() );
             }
     } else {
-            id.sprintf( "%s", my_full_hostname() );
+            id.sprintf( "%s", get_local_fqdn().Value() );
     }
     ad->Assign( ATTR_NAME, id.Value() );
 

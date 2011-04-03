@@ -83,6 +83,7 @@
 #include "subsystem_info.h"
 #include "param_info.h"
 #include "Regex.h"
+#include "ipv6_hostname.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -798,17 +799,22 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		free( config_source );
 	}
 
+		// init_full_hostname(), init_ipaddr() will be removed soon.
+
 		// Now that we're done reading files, if DEFAULT_DOMAIN_NAME
 		// is set, we need to re-initialize my_full_hostname().
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		free( tmp );
 		init_full_hostname();
-		init_local_hostname();
 	}
 
 		// Also, we should be safe to process the NETWORK_INTERFACE
 		// parameter at this point, if it's set.
+
 	init_ipaddr( TRUE );
+
+	init_network_interfaces(TRUE);
+	init_local_hostname();
 
 		// Re-insert the special macros.  We don't want the user to
 		// override them, since it's not going to work.
@@ -2066,7 +2072,9 @@ reinsert_specials( char* host )
 	}
 	snprintf(buf,40,"%u",reinsert_ppid);
 	insert( "PPID", buf, ConfigTab, TABLESIZE );
-	insert( "IP_ADDRESS", my_ip_string(), ConfigTab, TABLESIZE );
+	ipaddr local_ipaddr = get_local_ipaddr();
+	const char* local_ipaddr_str = local_ipaddr.to_ip_string().Value();
+	insert( "IP_ADDRESS", local_ipaddr_str, ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("PPID");
 	extra_info->AddInternalParam("IP_ADDRESS");
 }

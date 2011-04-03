@@ -27,6 +27,7 @@
 #include "my_hostname.h"
 #include "condor_attributes.h"
 #include "condor_netdb.h"
+#include "ipv6_hostname.h"
 
 static char* hostname = NULL;
 static char* full_hostname = NULL;
@@ -38,6 +39,7 @@ static int ipaddr_initialized = 0;
 static bool enable_convert_default_IP_to_socket_IP = true;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
+static std::string matched_network_interface_ip;
 
 static void init_hostnames();
 
@@ -45,6 +47,7 @@ static void init_hostnames();
 char *
 my_hostname()
 {
+	//EXCEPT("my_hostname() is deprecated");
 	if( ! hostnames_initialized ) {
 		init_hostnames();
 	}
@@ -56,6 +59,7 @@ my_hostname()
 char*
 my_full_hostname()
 {
+	//EXCEPT("my_full_hostname() is deprecated");
 	if( ! hostnames_initialized ) {
 		init_hostnames();
 	}
@@ -67,6 +71,7 @@ my_full_hostname()
 unsigned int
 my_ip_addr()
 {
+	//EXCEPT("my_ip_addr() is deprecated");
 	if( ! ipaddr_initialized ) {
 		init_ipaddr(0);
 	}
@@ -77,6 +82,7 @@ my_ip_addr()
 struct in_addr*
 my_sin_addr()
 {
+	//EXCEPT("my_sin_addr() is deprecated");
 	if( ! ipaddr_initialized ) {
 		init_ipaddr(0);
 	}
@@ -87,6 +93,7 @@ my_sin_addr()
 char*
 my_ip_string()
 {
+	//EXCEPT("my_ip_string() is deprecated");
 	if( ! ipaddr_initialized ) {
 		init_ipaddr(0);
 	}
@@ -140,6 +147,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		network_interface_ips->clear();
 	}
 
+	// potential error
 	if( is_ipaddr_no_wildcard(interface_pattern,NULL) ) {
 		ip = interface_pattern;
 		if( network_interface_ips ) {
@@ -243,6 +251,8 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 void
 init_ipaddr( int config_done )
 {
+	//EXCEPT("init_ipaddr is deprecated\n");
+
     if( ! hostname ) {
 		init_hostnames();
 	}
@@ -357,6 +367,35 @@ init_hostnames()
 	hostnames_initialized = TRUE;
 }
 
+void init_network_interfaces(int config_done)
+{
+	dprintf( D_HOSTNAME, "Trying to initialize network interfaces (%s)\n",
+		 config_done ? "after reading config" : "config file not read" );
+
+	std::string network_interface;
+
+	if( config_done ) {
+		param(network_interface,"NETWORK_INTERFACE");
+	}
+	if( network_interface.empty() ) {
+		network_interface = "*";
+	}
+
+	network_interface_matches_all = (network_interface == "*");
+
+	bool ok;
+	ok = network_interface_to_ip(
+		"NETWORK_INTERFACE",
+		network_interface.c_str(),
+		matched_network_interface_ip,
+		&configured_network_interface_ips);
+}
+
+const char* get_matched_network_if()
+{
+	return matched_network_interface_ip.c_str();
+}
+
 // Returns true if given attribute is used by Condor to advertise the
 // IP address of the sender.  This is used by
 // ConvertDefaultIPToSocketIP().
@@ -375,9 +414,10 @@ static bool is_sender_ip_attr(char const *attr_name)
 
 void ConfigConvertDefaultIPToSocketIP()
 {
-	if( ! ipaddr_initialized ) {
-		init_ipaddr(0);
-	}
+	// ipaddr initialization is not required here
+//	if( ! ipaddr_initialized ) {
+//		init_ipaddr(0);
+//	}
 
 	enable_convert_default_IP_to_socket_IP = true;
 
@@ -441,7 +481,10 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 		return;
 	}
 
-	char const *my_default_ip = my_ip_string();
+	//char const *my_default_ip = my_ip_string();
+    ipaddr addr = get_local_ipaddr();
+    MyString default_ip = addr.to_ip_string();
+    const char* my_default_ip = default_ip.Value();
 	char const *my_sock_ip = s.my_ip_str();
 	if(!my_default_ip || !my_sock_ip) {
 		return;

@@ -33,6 +33,14 @@ extern  void	init_ipaddr( int config_done );
 #include <string>
 #include <set>
 
+// instead of call to init_ipaddr which is deprecated, call
+// init_network_interfaces() for the use of below functions.
+void init_network_interfaces(int config_done);
+
+// returns IP address of network interface that
+// matches to NETWORK_INTERFACE config value
+const char* get_matched_network_if();
+
 // If the specified attribute name is recognized as an attribute used
 // to publish a daemon IP address, this function replaces any
 // reference to the default host IP with the actual connection IP in

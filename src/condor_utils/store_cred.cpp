@@ -27,6 +27,7 @@
 #include "lsa_mgr.h"
 #include "store_cred.h"
 #include "condor_config.h"
+#include "ipv6_hostname.h"
 
 static int code_store_cred(Stream *socket, char* &user, char* &pw, int &mode);
 
@@ -598,15 +599,19 @@ void store_pool_cred_handler(void *, int  /*i*/, Stream *s)
 	char *credd_host = param("CREDD_HOST");
 	if (credd_host) {
 
+		MyString my_fqdn_str = get_local_fqdn();
+		MyString my_hostname_str = get_local_hostname();
+		MyString my_ip_str = get_local_ipaddr().to_ip_string();
+
 		// figure out if we're on the CREDD_HOST
-		bool on_credd_host = (strcasecmp(my_full_hostname(), credd_host) == MATCH);
-		on_credd_host = on_credd_host || (strcasecmp(my_hostname(), credd_host) == MATCH);
-		on_credd_host = on_credd_host || (strcmp(my_ip_string(), credd_host) == MATCH);
+		bool on_credd_host = (strcasecmp(my_fqdn_str.Value(), credd_host) == MATCH);
+		on_credd_host = on_credd_host || (strcasecmp(my_hostname_str.Value(), credd_host) == MATCH);
+		on_credd_host = on_credd_host || (strcmp(my_ip_str.Value(), credd_host) == MATCH);
 
 		if (on_credd_host) {
 				// we're the CREDD_HOST; make sure the source address matches ours
 			const char *addr = ((ReliSock*)s)->peer_ip_str();
-			if (!addr || strcmp(my_ip_string(), addr)) {
+			if (!addr || strcmp(my_ip_str.Value(), addr)) {
 				dprintf(D_ALWAYS, "ERROR: attempt to set pool password remotely\n");
 				free(credd_host);
 				return;
