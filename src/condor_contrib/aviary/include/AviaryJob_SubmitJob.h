@@ -22,7 +22,7 @@
         
        #include "AviaryCommon_ResourceConstraint.h"
           
-       #include "AviaryCommon_Attributes.h"
+       #include "AviaryCommon_Attribute.h"
           
         #include <axutil_qname.h>
         
@@ -58,11 +58,15 @@ namespace AviaryJob
 
                 
                 bool isValidIwd;
+            std::string property_Submission_name;
+
+                
+                bool isValidSubmission_name;
             std::vector<AviaryCommon::ResourceConstraint*>* property_Requirements;
 
                 
                 bool isValidRequirements;
-            AviaryCommon::Attributes* property_Extra;
+            std::vector<AviaryCommon::Attribute*>* property_Extra;
 
                 
                 bool isValidExtra;
@@ -85,6 +89,10 @@ namespace AviaryJob
 
         bool WSF_CALL
         setIwdNil();
+            
+
+        bool WSF_CALL
+        setSubmission_nameNil();
             
 
         bool WSF_CALL
@@ -122,11 +130,12 @@ namespace AviaryJob
          * @param Args std::string
          * @param Owner std::string
          * @param Iwd std::string
+         * @param Submission_name std::string
          * @param Requirements std::vector<AviaryCommon::ResourceConstraint*>*
-         * @param Extra AviaryCommon::Attributes*
+         * @param Extra std::vector<AviaryCommon::Attribute*>*
          * @return newly created SubmitJob object
          */
-        SubmitJob(std::string arg_Cmd,std::string arg_Args,std::string arg_Owner,std::string arg_Iwd,std::vector<AviaryCommon::ResourceConstraint*>* arg_Requirements,AviaryCommon::Attributes* arg_Extra);
+        SubmitJob(std::string arg_Cmd,std::string arg_Args,std::string arg_Owner,std::string arg_Iwd,std::string arg_Submission_name,std::vector<AviaryCommon::ResourceConstraint*>* arg_Requirements,std::vector<AviaryCommon::Attribute*>* arg_Extra);
         
         
         /********************************** Class get set methods **************************************/
@@ -230,6 +239,30 @@ namespace AviaryJob
         
 
         /**
+         * Getter for submission_name. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getSubmission_name();
+
+        /**
+         * Setter for submission_name.
+         * @param arg_Submission_name std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setSubmission_name(const std::string  arg_Submission_name);
+
+        /**
+         * Re setter for submission_name
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetSubmission_name();
+        
+        
+
+        /**
          * Getter for requirements. Deprecated for array types, Use getRequirementsAt instead
          * @return Array of AviaryCommon::ResourceConstraint*s.
          */
@@ -255,19 +288,20 @@ namespace AviaryJob
         
 
         /**
-         * Getter for extra. 
-         * @return AviaryCommon::Attributes*
+         * Getter for extra. Deprecated for array types, Use getExtraAt instead
+         * @return Array of AviaryCommon::Attribute*s.
          */
-        WSF_EXTERN AviaryCommon::Attributes* WSF_CALL
+        WSF_EXTERN std::vector<AviaryCommon::Attribute*>* WSF_CALL
         getExtra();
 
         /**
-         * Setter for extra.
-         * @param arg_Extra AviaryCommon::Attributes*
+         * Setter for extra.Deprecated for array types, Use setExtraAt
+         * or addExtra instead.
+         * @param arg_Extra Array of AviaryCommon::Attribute*s.
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setExtra(AviaryCommon::Attributes*  arg_Extra);
+        setExtra(std::vector<AviaryCommon::Attribute*>*  arg_Extra);
 
         /**
          * Re setter for extra
@@ -346,6 +380,51 @@ namespace AviaryJob
         removeRequirementsAt(int i);
 
         
+        
+        /**
+         * Get the ith element of extra.
+        * @param i index of the item to be obtained
+         * @return ith AviaryCommon::Attribute* of the array
+         */
+        WSF_EXTERN AviaryCommon::Attribute* WSF_CALL
+        getExtraAt(int i);
+
+        /**
+         * Set the ith element of extra. (If the ith already exist, it will be replaced)
+         * @param i index of the item to return
+         * @param arg_Extra element to set AviaryCommon::Attribute* to the array
+         * @return ith AviaryCommon::Attribute* of the array
+         */
+        WSF_EXTERN bool WSF_CALL
+        setExtraAt(int i,
+                AviaryCommon::Attribute* arg_Extra);
+
+
+        /**
+         * Add to extra.
+         * @param arg_Extra element to add AviaryCommon::Attribute* to the array
+         * @return true on success, false otherwise.
+         */
+        WSF_EXTERN bool WSF_CALL
+        addExtra(
+            AviaryCommon::Attribute* arg_Extra);
+
+        /**
+         * Get the size of the extra array.
+         * @return the size of the extra array.
+         */
+        WSF_EXTERN int WSF_CALL
+        sizeofExtra();
+
+        /**
+         * Remove the ith element of extra.
+         * @param i index of the item to remove
+         * @return true on success, false otherwise.
+         */
+        WSF_EXTERN bool WSF_CALL
+        removeExtraAt(int i);
+
+        
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -398,6 +477,16 @@ namespace AviaryJob
         
 
         /**
+         * Check whether submission_name is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isSubmission_nameNil();
+
+
+        
+
+        /**
          * Check whether requirements is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -440,6 +529,24 @@ namespace AviaryJob
          */
         bool WSF_CALL
         setRequirementsNilAt(int i);
+
+        
+        /**
+         * Check whether extra is Nill at position i
+         * @param i index of the item to return.
+         * @return true if the value is Nil at position i, false otherwise
+         */
+        bool WSF_CALL
+        isExtraNilAt(int i);
+ 
+       
+        /**
+         * Set extra to NILL at the  position i.
+         * @param i . The index of the item to be set Nill.
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setExtraNilAt(int i);
 
         
 
@@ -544,23 +651,34 @@ namespace AviaryJob
         
 
         /**
-         * Getter for requirements by property number (5)
-         * @return Array of AviaryCommon::ResourceConstraints.
+         * Getter for submission_name by property number (5)
+         * @return std::string
          */
 
-        std::vector<AviaryCommon::ResourceConstraint*>* WSF_CALL
+        std::string WSF_CALL
         getProperty5();
 
     
         
 
         /**
-         * Getter for extra by property number (6)
-         * @return AviaryCommon::Attributes
+         * Getter for requirements by property number (6)
+         * @return Array of AviaryCommon::ResourceConstraints.
          */
 
-        AviaryCommon::Attributes* WSF_CALL
+        std::vector<AviaryCommon::ResourceConstraint*>* WSF_CALL
         getProperty6();
+
+    
+        
+
+        /**
+         * Getter for extra by property number (7)
+         * @return Array of AviaryCommon::Attributes.
+         */
+
+        std::vector<AviaryCommon::Attribute*>* WSF_CALL
+        getProperty7();
 
     
 

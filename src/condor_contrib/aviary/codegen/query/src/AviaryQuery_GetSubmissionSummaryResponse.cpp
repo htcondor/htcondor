@@ -26,9 +26,9 @@
         
             qname = NULL;
         
-                property_Jobs  = NULL;
+                property_Submissions  = NULL;
               
-            isValidJobs  = false;
+            isValidSubmissions  = false;
         
                   qname =  axutil_qname_create (Environment::getEnv(),
                         "GetSubmissionSummaryResponse",
@@ -37,21 +37,21 @@
                 
         }
 
-       AviaryQuery::GetSubmissionSummaryResponse::GetSubmissionSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs)
+       AviaryQuery::GetSubmissionSummaryResponse::GetSubmissionSummaryResponse(std::vector<AviaryCommon::SubmissionSummary*>* arg_Submissions)
         {
              
                    qname = NULL;
              
-               property_Jobs  = NULL;
+               property_Submissions  = NULL;
              
-            isValidJobs  = true;
+            isValidSubmissions  = true;
             
                  qname =  axutil_qname_create (Environment::getEnv(),
                        "GetSubmissionSummaryResponse",
                        "http://query.aviary.grid.redhat.com",
                        NULL);
                
-                    property_Jobs = arg_Jobs;
+                    property_Submissions = arg_Submissions;
             
         }
         AviaryQuery::GetSubmissionSummaryResponse::~GetSubmissionSummaryResponse()
@@ -115,19 +115,19 @@
                     
                        { 
                     /*
-                     * building Jobs array
+                     * building Submissions array
                      */
-                       std::vector<AviaryCommon::JobSummary*>* arr_list =new std::vector<AviaryCommon::JobSummary*>();
+                       std::vector<AviaryCommon::SubmissionSummary*>* arr_list =new std::vector<AviaryCommon::SubmissionSummary*>();
                    
 
                      
                      /*
-                      * building jobs element
+                      * building submissions element
                       */
                      
                      
                      
-                                    element_qname = axutil_qname_create(Environment::getEnv(), "jobs", NULL, NULL);
+                                    element_qname = axutil_qname_create(Environment::getEnv(), "submissions", NULL, NULL);
                                   
                                
                                for (i = 0, sequence_broken = 0, current_node = first_node; !sequence_broken && current_node != NULL;)
@@ -143,18 +143,18 @@
                                   current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
                                   mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
 
-                                  if (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("jobs", axiom_element_get_localname(current_element, Environment::getEnv())))
+                                  if (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("submissions", axiom_element_get_localname(current_element, Environment::getEnv())))
                                   {
                                   
                                       is_early_node_valid = true;
                                       
-                                     AviaryCommon::JobSummary* element = new AviaryCommon::JobSummary();
+                                     AviaryCommon::SubmissionSummary* element = new AviaryCommon::SubmissionSummary();
                                           
                                           status =  element->deserialize(&current_node, &is_early_node_valid, false);
                                           
                                           if(AXIS2_FAILURE ==  status)
                                           {
-					  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "failed in building element jobs ");
+					  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "failed in building element submissions ");
                                           }
                                           else
                                           {
@@ -164,7 +164,7 @@
                                         
                                      if(AXIS2_FAILURE ==  status)
                                      {
-                                         WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in setting the value for jobs ");
+                                         WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in setting the value for submissions ");
                                          if(element_qname)
                                          {
                                             axutil_qname_free(element_qname, Environment::getEnv());
@@ -191,7 +191,7 @@
                                    if (i < 0)
                                    {
                                      /* found element out of order */
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"jobs (@minOccurs = '0') only have %d elements", i);
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"submissions (@minOccurs = '0') only have %d elements", i);
                                      if(element_qname)
                                      {
                                         axutil_qname_free(element_qname, Environment::getEnv());
@@ -210,7 +210,7 @@
                                }
                                else
                                {
-                                    status = setJobs(arr_list);
+                                    status = setSubmissions(arr_list);
                                }
 
                               
@@ -307,7 +307,7 @@
                        p_prefix = NULL;
                       
 
-                   if (!isValidJobs)
+                   if (!isValidSubmissions)
                    {
                       
                            /* no need to complain for minoccurs=0 element */
@@ -318,11 +318,11 @@
                    {
                      start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
                                  (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("jobs"))); 
+                                  axutil_strlen("submissions"))); 
                                  
                                  /* axutil_strlen("<:>") + 1 = 4 */
                      end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("jobs")));
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("submissions")));
                                   /* axutil_strlen("</:>") + 1 = 5 */
                                   
                      
@@ -330,27 +330,27 @@
                    
                    
                      /*
-                      * Parsing Jobs array
+                      * Parsing Submissions array
                       */
-                     if (property_Jobs != NULL)
+                     if (property_Submissions != NULL)
                      {
                         
 
-                            sprintf(start_input_str, "<%s%sjobs",
+                            sprintf(start_input_str, "<%s%ssubmissions",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                             
                          start_input_str_len = axutil_strlen(start_input_str);
 
-                         sprintf(end_input_str, "</%s%sjobs>",
+                         sprintf(end_input_str, "</%s%ssubmissions>",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                          end_input_str_len = axutil_strlen(end_input_str);
 
-                         count = property_Jobs->size();
+                         count = property_Submissions->size();
                          for(i = 0; i < count; i++)
                          {
-                            AviaryCommon::JobSummary* element = (*property_Jobs)[i];
+                            AviaryCommon::SubmissionSummary* element = (*property_Submissions)[i];
 
                             if(NULL == element) 
                             {
@@ -360,7 +360,7 @@
                     
                      
                      /*
-                      * parsing jobs element
+                      * parsing submissions element
                       */
 
                     
@@ -406,29 +406,29 @@
         
 
             /**
-             * Getter for jobs by  Property Number 1
+             * Getter for submissions by  Property Number 1
              */
-            std::vector<AviaryCommon::JobSummary*>* WSF_CALL
+            std::vector<AviaryCommon::SubmissionSummary*>* WSF_CALL
             AviaryQuery::GetSubmissionSummaryResponse::getProperty1()
             {
-                return getJobs();
+                return getSubmissions();
             }
 
             /**
-             * getter for jobs.
+             * getter for submissions.
              */
-            std::vector<AviaryCommon::JobSummary*>* WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::getJobs()
+            std::vector<AviaryCommon::SubmissionSummary*>* WSF_CALL
+            AviaryQuery::GetSubmissionSummaryResponse::getSubmissions()
              {
-                return property_Jobs;
+                return property_Submissions;
              }
 
             /**
-             * setter for jobs
+             * setter for submissions
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::setJobs(
-                    std::vector<AviaryCommon::JobSummary*>*  arg_Jobs)
+            AviaryQuery::GetSubmissionSummaryResponse::setSubmissions(
+                    std::vector<AviaryCommon::SubmissionSummary*>*  arg_Submissions)
              {
                 
                  int size = 0;
@@ -436,24 +436,24 @@
                  bool non_nil_exists = false;
                 
 
-                if(isValidJobs &&
-                        arg_Jobs == property_Jobs)
+                if(isValidSubmissions &&
+                        arg_Submissions == property_Submissions)
                 {
                     
                     return true;
                 }
 
                 
-                 size = arg_Jobs->size();
+                 size = arg_Submissions->size();
                  
                  if (size < 0)
                  {
-                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"jobs has less than minOccurs(0)");
+                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"submissions has less than minOccurs(0)");
                      return false;
                  }
                  for(i = 0; i < size; i ++ )
                  {
-                     if(NULL != (*arg_Jobs)[i])
+                     if(NULL != (*arg_Submissions)[i])
                      {
                          non_nil_exists = true;
                          break;
@@ -463,20 +463,20 @@
                  
 
                 
-                resetJobs();
+                resetSubmissions();
 
                 
-                    if(NULL == arg_Jobs)
+                    if(NULL == arg_Submissions)
                          
                 {
                     /* We are already done */
                     return true;
                 }
                 
-                        property_Jobs = arg_Jobs;
+                        property_Submissions = arg_Submissions;
                         if(non_nil_exists)
                         {
-                            isValidJobs = true;
+                            isValidSubmissions = true;
                         }
                         
                     
@@ -485,30 +485,30 @@
 
             
             /**
-             * Get ith element of jobs.
+             * Get ith element of submissions.
              */
-            AviaryCommon::JobSummary* WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::getJobsAt(int i)
+            AviaryCommon::SubmissionSummary* WSF_CALL
+            AviaryQuery::GetSubmissionSummaryResponse::getSubmissionsAt(int i)
             {
-                AviaryCommon::JobSummary* ret_val;
-                if(property_Jobs == NULL)
+                AviaryCommon::SubmissionSummary* ret_val;
+                if(property_Submissions == NULL)
                 {
-                    return (AviaryCommon::JobSummary*)0;
+                    return (AviaryCommon::SubmissionSummary*)0;
                 }
-                ret_val =   (*property_Jobs)[i];
+                ret_val =   (*property_Submissions)[i];
                 
                     return ret_val;
                   
             }
 
             /**
-             * Set the ith element of jobs.
+             * Set the ith element of submissions.
              */
            bool WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::setJobsAt(int i,
-                    AviaryCommon::JobSummary* arg_Jobs)
+            AviaryQuery::GetSubmissionSummaryResponse::setSubmissionsAt(int i,
+                    AviaryCommon::SubmissionSummary* arg_Submissions)
             {
-                 AviaryCommon::JobSummary* element;
+                 AviaryCommon::SubmissionSummary* element;
                 int size = 0;
 
                 int non_nil_count;
@@ -516,10 +516,10 @@
 
                  
 
-                if( isValidJobs &&
-                    property_Jobs &&
+                if( isValidSubmissions &&
+                    property_Submissions &&
                   
-                    arg_Jobs == (*property_Jobs)[i])
+                    arg_Submissions == (*property_Submissions)[i])
                   
                  {
                     
@@ -530,13 +530,13 @@
                      non_nil_exists = true;
                   
 
-                if(property_Jobs == NULL)
+                if(property_Submissions == NULL)
                 {
-                    property_Jobs = new std::vector<AviaryCommon::JobSummary*>();
+                    property_Submissions = new std::vector<AviaryCommon::SubmissionSummary*>();
                 }
                 else{
                 /* check whether there already exist an element */
-                element = (*property_Jobs)[i];
+                element = (*property_Submissions)[i];
                 }
 
                 
@@ -553,30 +553,30 @@
                     if(!non_nil_exists)
                     {
                         
-                        isValidJobs = true;
-                        (*property_Jobs)[i]= NULL;
+                        isValidSubmissions = true;
+                        (*property_Submissions)[i]= NULL;
                         
                         return AXIS2_SUCCESS;
                     }
                 
-                    (*property_Jobs)[i] = arg_Jobs;
+                    (*property_Submissions)[i] = arg_Submissions;
                   
 
-               isValidJobs = true;
+               isValidSubmissions = true;
                 
                 return AXIS2_SUCCESS;
             }
 
             /**
-             * Add to jobs.
+             * Add to submissions.
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::addJobs(
-                    AviaryCommon::JobSummary* arg_Jobs)
+            AviaryQuery::GetSubmissionSummaryResponse::addSubmissions(
+                    AviaryCommon::SubmissionSummary* arg_Submissions)
              {
 
                 
-                    if( NULL == arg_Jobs
+                    if( NULL == arg_Submissions
                      )
                     {
                       
@@ -585,59 +585,59 @@
                     }
                   
 
-                if(property_Jobs == NULL)
+                if(property_Submissions == NULL)
                 {
-                    property_Jobs = new std::vector<AviaryCommon::JobSummary*>();
+                    property_Submissions = new std::vector<AviaryCommon::SubmissionSummary*>();
                 }
               
-               property_Jobs->push_back(arg_Jobs);
+               property_Submissions->push_back(arg_Submissions);
               
-                isValidJobs = true;
+                isValidSubmissions = true;
                 return true;
              }
 
             /**
-             * Get the size of the jobs array.
+             * Get the size of the submissions array.
              */
             int WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::sizeofJobs()
+            AviaryQuery::GetSubmissionSummaryResponse::sizeofSubmissions()
             {
 
-                if(property_Jobs == NULL)
+                if(property_Submissions == NULL)
                 {
                     return 0;
                 }
-                return property_Jobs->size();
+                return property_Submissions->size();
             }
 
             /**
              * remove the ith element, same as set_nil_at.
              */
             bool WSF_CALL
-            AviaryQuery::GetSubmissionSummaryResponse::removeJobsAt(int i)
+            AviaryQuery::GetSubmissionSummaryResponse::removeSubmissionsAt(int i)
             {
-                return setJobsNilAt(i);
+                return setSubmissionsNilAt(i);
             }
 
             
 
            /**
-            * resetter for jobs
+            * resetter for submissions
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::resetJobs()
+           AviaryQuery::GetSubmissionSummaryResponse::resetSubmissions()
            {
                int i = 0;
                int count = 0;
 
 
                
-                if (property_Jobs != NULL)
+                if (property_Submissions != NULL)
                 {
-                  std::vector<AviaryCommon::JobSummary*>::iterator it =  property_Jobs->begin();
-                  for( ; it <  property_Jobs->end() ; ++it)
+                  std::vector<AviaryCommon::SubmissionSummary*>::iterator it =  property_Submissions->begin();
+                  for( ; it <  property_Submissions->end() ; ++it)
                   {
-                     AviaryCommon::JobSummary* element = *it;
+                     AviaryCommon::SubmissionSummary* element = *it;
                 
             
                 
@@ -658,48 +658,48 @@
 
              }
                 
-                    if(NULL != property_Jobs)
-                 delete property_Jobs;
+                    if(NULL != property_Submissions)
+                 delete property_Submissions;
                 
-               isValidJobs = false; 
+               isValidSubmissions = false; 
                return true;
            }
 
            /**
-            * Check whether jobs is nill
+            * Check whether submissions is nill
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::isJobsNil()
+           AviaryQuery::GetSubmissionSummaryResponse::isSubmissionsNil()
            {
-               return !isValidJobs;
+               return !isValidSubmissions;
            }
 
            /**
-            * Set jobs to nill (currently the same as reset)
+            * Set submissions to nill (currently the same as reset)
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::setJobsNil()
+           AviaryQuery::GetSubmissionSummaryResponse::setSubmissionsNil()
            {
-               return resetJobs();
+               return resetSubmissions();
            }
 
            
            /**
-            * Check whether jobs is nill at i
+            * Check whether submissions is nill at i
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::isJobsNilAt(int i)
+           AviaryQuery::GetSubmissionSummaryResponse::isSubmissionsNilAt(int i)
            {
-               return (isValidJobs == false ||
-                       NULL == property_Jobs ||
-                     NULL == (*property_Jobs)[i]);
+               return (isValidSubmissions == false ||
+                       NULL == property_Submissions ||
+                     NULL == (*property_Submissions)[i]);
             }
 
            /**
-            * Set jobs to nil at i
+            * Set submissions to nil at i
             */
            bool WSF_CALL
-           AviaryQuery::GetSubmissionSummaryResponse::setJobsNilAt(int i)
+           AviaryQuery::GetSubmissionSummaryResponse::setSubmissionsNilAt(int i)
            {
                 int size = 0;
                 int j;
@@ -707,19 +707,19 @@
 
                 int k = 0;
 
-                if(property_Jobs == NULL ||
-                            isValidJobs == false)
+                if(property_Submissions == NULL ||
+                            isValidSubmissions == false)
                 {
                     
                     non_nil_exists = false;
                 }
                 else
                 {
-                    size = property_Jobs->size();
+                    size = property_Submissions->size();
                     for(j = 0, k = 0; j < size; j ++ )
                     {
                         if(i == j) continue; 
-                        if(NULL != (*property_Jobs)[i])
+                        if(NULL != (*property_Submissions)[i])
                         {
                             k++;
                             non_nil_exists = true;
@@ -734,19 +734,19 @@
 
                 if( k < 0)
                 {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "Size of the array of jobs is beinng set to be smaller than the specificed number of minOccurs(0)");
+                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "Size of the array of submissions is beinng set to be smaller than the specificed number of minOccurs(0)");
                        return AXIS2_FAILURE;
                 }
  
-                if(property_Jobs == NULL)
+                if(property_Submissions == NULL)
                 {
-                    isValidJobs = false;
+                    isValidSubmissions = false;
                     
                     return true;
                 }
                  
                  /* check whether there already exist an element */
-                 AviaryCommon::JobSummary* element = (*property_Jobs)[i];
+                 AviaryCommon::SubmissionSummary* element = (*property_Submissions)[i];
                 if(NULL != element)
                 {
                   
@@ -759,14 +759,14 @@
                     if(!non_nil_exists)
                     {
                         
-                        isValidJobs = false;
-                        (*property_Jobs)[i] = NULL;
+                        isValidSubmissions = false;
+                        (*property_Submissions)[i] = NULL;
                         return AXIS2_SUCCESS;
                     }
                 
 
                 
-                (*property_Jobs)[i] = NULL;
+                (*property_Submissions)[i] = NULL;
                 
                 return AXIS2_SUCCESS;
 

@@ -20,7 +20,7 @@
         
 
         
-       #include "AviaryCommon_JobSummary.h"
+       #include "AviaryCommon_SubmissionSummary.h"
           
         #include <axutil_qname.h>
         
@@ -40,17 +40,17 @@ namespace AviaryQuery
         private:
              
                 axutil_qname_t* qname;
-            std::vector<AviaryCommon::JobSummary*>* property_Jobs;
+            std::vector<AviaryCommon::SubmissionSummary*>* property_Submissions;
 
                 
-                bool isValidJobs;
+                bool isValidSubmissions;
             
 
         /*** Private methods ***/
           
 
         bool WSF_CALL
-        setJobsNil();
+        setSubmissionsNil();
             
 
 
@@ -76,10 +76,10 @@ namespace AviaryQuery
         /**
          * Constructor for creating GetSubmissionSummaryResponse
          * @param 
-         * @param Jobs std::vector<AviaryCommon::JobSummary*>*
+         * @param Submissions std::vector<AviaryCommon::SubmissionSummary*>*
          * @return newly created GetSubmissionSummaryResponse object
          */
-        GetSubmissionSummaryResponse(std::vector<AviaryCommon::JobSummary*>* arg_Jobs);
+        GetSubmissionSummaryResponse(std::vector<AviaryCommon::SubmissionSummary*>* arg_Submissions);
         
         
         /********************************** Class get set methods **************************************/
@@ -87,27 +87,27 @@ namespace AviaryQuery
         
 
         /**
-         * Getter for jobs. Deprecated for array types, Use getJobsAt instead
-         * @return Array of AviaryCommon::JobSummary*s.
+         * Getter for submissions. Deprecated for array types, Use getSubmissionsAt instead
+         * @return Array of AviaryCommon::SubmissionSummary*s.
          */
-        WSF_EXTERN std::vector<AviaryCommon::JobSummary*>* WSF_CALL
-        getJobs();
+        WSF_EXTERN std::vector<AviaryCommon::SubmissionSummary*>* WSF_CALL
+        getSubmissions();
 
         /**
-         * Setter for jobs.Deprecated for array types, Use setJobsAt
-         * or addJobs instead.
-         * @param arg_Jobs Array of AviaryCommon::JobSummary*s.
+         * Setter for submissions.Deprecated for array types, Use setSubmissionsAt
+         * or addSubmissions instead.
+         * @param arg_Submissions Array of AviaryCommon::SubmissionSummary*s.
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setJobs(std::vector<AviaryCommon::JobSummary*>*  arg_Jobs);
+        setSubmissions(std::vector<AviaryCommon::SubmissionSummary*>*  arg_Submissions);
 
         /**
-         * Re setter for jobs
+         * Re setter for submissions
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetJobs();
+        resetSubmissions();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -136,47 +136,47 @@ namespace AviaryQuery
         
         
         /**
-         * Get the ith element of jobs.
+         * Get the ith element of submissions.
         * @param i index of the item to be obtained
-         * @return ith AviaryCommon::JobSummary* of the array
+         * @return ith AviaryCommon::SubmissionSummary* of the array
          */
-        WSF_EXTERN AviaryCommon::JobSummary* WSF_CALL
-        getJobsAt(int i);
+        WSF_EXTERN AviaryCommon::SubmissionSummary* WSF_CALL
+        getSubmissionsAt(int i);
 
         /**
-         * Set the ith element of jobs. (If the ith already exist, it will be replaced)
+         * Set the ith element of submissions. (If the ith already exist, it will be replaced)
          * @param i index of the item to return
-         * @param arg_Jobs element to set AviaryCommon::JobSummary* to the array
-         * @return ith AviaryCommon::JobSummary* of the array
+         * @param arg_Submissions element to set AviaryCommon::SubmissionSummary* to the array
+         * @return ith AviaryCommon::SubmissionSummary* of the array
          */
         WSF_EXTERN bool WSF_CALL
-        setJobsAt(int i,
-                AviaryCommon::JobSummary* arg_Jobs);
+        setSubmissionsAt(int i,
+                AviaryCommon::SubmissionSummary* arg_Submissions);
 
 
         /**
-         * Add to jobs.
-         * @param arg_Jobs element to add AviaryCommon::JobSummary* to the array
+         * Add to submissions.
+         * @param arg_Submissions element to add AviaryCommon::SubmissionSummary* to the array
          * @return true on success, false otherwise.
          */
         WSF_EXTERN bool WSF_CALL
-        addJobs(
-            AviaryCommon::JobSummary* arg_Jobs);
+        addSubmissions(
+            AviaryCommon::SubmissionSummary* arg_Submissions);
 
         /**
-         * Get the size of the jobs array.
-         * @return the size of the jobs array.
+         * Get the size of the submissions array.
+         * @return the size of the submissions array.
          */
         WSF_EXTERN int WSF_CALL
-        sizeofJobs();
+        sizeofSubmissions();
 
         /**
-         * Remove the ith element of jobs.
+         * Remove the ith element of submissions.
          * @param i index of the item to remove
          * @return true on success, false otherwise.
          */
         WSF_EXTERN bool WSF_CALL
-        removeJobsAt(int i);
+        removeSubmissionsAt(int i);
 
         
 
@@ -191,11 +191,11 @@ namespace AviaryQuery
         
 
         /**
-         * Check whether jobs is Nill
+         * Check whether submissions is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isJobsNil();
+        isSubmissionsNil();
 
 
         
@@ -208,21 +208,21 @@ namespace AviaryQuery
          */
         
         /**
-         * Check whether jobs is Nill at position i
+         * Check whether submissions is Nill at position i
          * @param i index of the item to return.
          * @return true if the value is Nil at position i, false otherwise
          */
         bool WSF_CALL
-        isJobsNilAt(int i);
+        isSubmissionsNilAt(int i);
  
        
         /**
-         * Set jobs to NILL at the  position i.
+         * Set submissions to NILL at the  position i.
          * @param i . The index of the item to be set Nill.
          * @return true on success, false otherwise.
          */
         bool WSF_CALL
-        setJobsNilAt(int i);
+        setSubmissionsNilAt(int i);
 
         
 
@@ -283,11 +283,11 @@ namespace AviaryQuery
         
 
         /**
-         * Getter for jobs by property number (1)
-         * @return Array of AviaryCommon::JobSummarys.
+         * Getter for submissions by property number (1)
+         * @return Array of AviaryCommon::SubmissionSummarys.
          */
 
-        std::vector<AviaryCommon::JobSummary*>* WSF_CALL
+        std::vector<AviaryCommon::SubmissionSummary*>* WSF_CALL
         getProperty1();
 
     

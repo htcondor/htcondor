@@ -24,9 +24,9 @@
 	<xs:element name="GetJobSummary">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+				<xs:element name="ids" type="mrg:JobID" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
-			<xs:attribute name="partialMatches" type="xs:boolean" default="false"/>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetJobSummaryResponse">
@@ -39,9 +39,9 @@
 	<xs:element name="GetJobStatus">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+				<xs:element name="ids" type="mrg:JobID" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
-			<xs:attribute name="partialMatches" type="xs:boolean" default="false"/>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetJobStatusResponse">
@@ -54,9 +54,9 @@
 	<xs:element name="GetJobDetails">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="ids" type="mrg:JobID" maxOccurs="unbounded"/>
+				<xs:element name="ids" type="mrg:JobID" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
-			<xs:attribute name="partialMatches" type="xs:boolean" default="false"/>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetJobDetailsResponse">
@@ -92,13 +92,13 @@
 			<xs:sequence>
 				<xs:element name="ids" type="mrg:SubmissionID" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
-			<xs:attribute name="partialMatches" type="xs:boolean" default="false"/>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="GetSubmissionSummaryResponse">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="jobs" type="mrg:JobSummary" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="submissions" type="mrg:SubmissionSummary" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>

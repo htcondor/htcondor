@@ -45,13 +45,26 @@ using namespace AviaryQuery;
 using namespace AviaryCommon;
 using namespace aviary::query;
 
-typedef vector<JobID*> JobIdVectorType;
-typedef vector<JobStatus*> JobStatusVectorType;
-typedef vector<JobDetails*> JobDetailsVectorType;
-typedef vector<JobSummary*> JobSummaryVectorType;
+struct cmpid {
+	bool operator()(const char *a, const char *b) const {
+		return strcmp(a, b) < 0;
+	}
+};
+
+typedef vector<JobID*> JobIdCollection;
+typedef vector<SubmissionID*> SubmissionIdCollection;
+typedef vector<JobStatus*> JobStatusCollection;
+typedef vector<JobDetails*> JobDetailsCollection;
+typedef vector<JobSummary*> JobSummaryCollection;
+typedef vector<SubmissionSummary*> SubmissionSummaryCollection;
+typedef set<const char*, cmpid> IdCollection;
 
 // TODO: singleton this...
 extern aviary::soap::Axis2SoapProvider* provider;
+
+//
+// Utility section START
+//
 
 // NOTE #1: unfortunately the Axis2/C generated code is inconsistent in its
 // internal checking of nillable (i.e., minOccurs=0) elements
@@ -84,76 +97,12 @@ void createBadJobResponse(JobBase& jb, const char* job_id, const AviaryStatus& e
 	jb.setStatus(js);
 }
 
-GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(wso2wsf::MessageContext* /*outCtx*/
-	,GetSubmissionSummary* _getSubmissionSummary)
-{
-	GetSubmissionSummaryResponse* getSummaryResponse = new GetSubmissionSummaryResponse;
-
-	SubmissionCollectionType::const_iterator element = g_submissions.begin();
-	SubmissionObject *submission;
-
-	if (_getSubmissionSummary->isIdsNil()) {
-		// no ids to scan, so they get everything
-		for (SubmissionCollectionType::iterator i = g_submissions.begin();
-			 g_submissions.end() != i; i++) {
-			submission = (*i).second;
-			//JobID* jobId = new JobID();
-			//SubmissionID* subId = new SubmissionID;
-		}
-	}
-	// check to see if we need to scope our search
-	else if (_getSubmissionSummary->getPartialMatches()) {
-		// we are partially matching so try to return submissions
-		// with id or owner substrings based on the input
-		// TODO: multimap?
-	}
-	else {
-		// we search exactly for the provided search id
-
-		if (element != g_submissions.end()) {
-		}
-	}
-
-    return getSummaryResponse;
-}
-
-GetJobStatusResponse* AviaryQueryServiceSkeleton::getJobStatus(wso2wsf::MessageContext* /*outCtx*/
-	,GetJobStatus* _getJobStatus)
-{
-	GetJobStatusResponse* jobStatusResponse = new GetJobStatusResponse;
-	JobServerObject* jso = JobServerObject::getInstance();
-	JobStatusVectorType* job_results = new JobStatusVectorType;
-
-	JobIdVectorType* id_list = _getJobStatus->getIds();
-	for (JobIdVectorType::iterator i = id_list->begin(); id_list->end() != i; i++) {
-		JobStatus* js = new JobStatus;
-		const char* job = (*i)->getJob().c_str();
-		AviaryStatus status;
-		int job_status = JOB_STATUS_MIN;
-		if (jso->getStatus((*i)->getJob().c_str(),job_status,status)) {
-			createGoodJobResponse<JobStatus>(*js,job);
-			JobStatusType* jst = new JobStatusType;
-			jst->setJobStatusType(getJobStatusString(job_status));
-			js->setJob_status(jst);
-		}
-		else {
-			// problem...report to client
-			createBadJobResponse<JobStatus>(*js,job,status);
-		}
-		job_results->push_back(js);
-	}
-
-	jobStatusResponse->setJobs(job_results);
-
-    return jobStatusResponse;
-}
-
 // unfortunately no convenience functions from WS02 for dateTime
 axutil_date_time_t* encodeDateTime(const time_t* _time) {
 	struct tm _tm;
 
 	// need the re-entrant version because axutil_date_time_create
-	// calls time() again
+	// calls time() again and overwrites static tm
 	localtime_r(_time,&_tm);
 	// get our Axis2 env for the allocator
 	const axutil_env_t* _env = provider->getEnv();
@@ -211,34 +160,6 @@ void mapFieldsToSummary(const JobSummaryFields& fields, JobSummary* _summary) {
 	}
 }
 
-GetJobSummaryResponse* AviaryQueryServiceSkeleton::getJobSummary(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetJobSummary* _getJobSummary)
-{
-	GetJobSummaryResponse* jobSummaryResponse = new GetJobSummaryResponse;
-	JobServerObject* jso = JobServerObject::getInstance();
-	JobSummaryVectorType* job_results = new JobSummaryVectorType;
-
-	JobIdVectorType* id_list = _getJobSummary->getIds();
-	for (JobIdVectorType::iterator i = id_list->begin(); id_list->end() != i; i++) {
-		JobSummary* js = new JobSummary;
-		const char* job = (*i)->getJob().c_str();
-		JobSummaryFields jsf;
-		AviaryStatus status;
-		if (jso->getSummary((*i)->getJob().c_str(),jsf,status)) {
-			createGoodJobResponse<JobSummary>(*js,job);
-			mapFieldsToSummary(jsf,js);
-		}
-		else {
-			// problem...report to client
-			createBadJobResponse<JobSummary>(*js, job, status);
-		}
-		job_results->push_back(js);
-	}
-
-	jobSummaryResponse->setJobs(job_results);
-
-    return jobSummaryResponse;
-}
-
 void mapToXsdAttributes(const aviary::codec::AttributeMapType& _map, AviaryCommon::Attributes* _attrs) {
 	for (AttributeMapIterator i = _map.begin(); _map.end() != i; i++) {
 		AviaryAttribute* codec_attr = (AviaryAttribute*)(*i).second;
@@ -267,20 +188,196 @@ void mapToXsdAttributes(const aviary::codec::AttributeMapType& _map, AviaryCommo
 	}
 }
 
+//
+// Utility section END
+//
+
+//
+// Interface implementation START
+//
+GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(wso2wsf::MessageContext* /*outCtx*/
+	,GetSubmissionSummary* _getSubmissionSummary)
+{
+	GetSubmissionSummaryResponse* getSummaryResponse = new GetSubmissionSummaryResponse;
+
+	SubmissionCollectionType::const_iterator element = g_submissions.begin();
+	SubmissionSummaryCollection* submissions = new SubmissionSummaryCollection;
+
+	SubmissionCollectionType sub_map;
+
+	if (_getSubmissionSummary->isIdsNil() || _getSubmissionSummary->getIds()->size() == 0) {
+		// no ids supplied...they get them all
+		for (SubmissionCollectionType::iterator i = g_submissions.begin(); g_submissions.end() != i; i++) {
+			sub_map[(*i).first] = (*i).second;
+		}
+	}
+	else {
+		// fast track...client has supplied ids to scan
+		SubmissionIdCollection* id_list = _getSubmissionSummary->getIds();
+		for (SubmissionIdCollection::iterator sic_it = id_list->begin(); id_list->end() != sic_it; sic_it++) {
+			const char* sid_str = (*sic_it)->getName().c_str();
+			SubmissionCollectionType::iterator sct_it = g_submissions.find(sid_str);
+			if (sct_it != g_submissions.end()) {
+				sub_map[(*sct_it).first] = (*sct_it).second;
+			}
+			else {
+				// mark this as not matched when returning our results
+				sub_map[(*sct_it).first] = NULL;
+			}
+		}
+	}
+
+	for (SubmissionCollectionType::iterator i = sub_map.begin(); sub_map.end() != i; i++) {
+		SubmissionSummary* summary = new SubmissionSummary;
+		SubmissionObject *submission = (*i).second;
+		if (submission) {
+			SubmissionID* sid = new SubmissionID;
+			sid->setName(submission->getName());
+			sid->setOwner(submission->getOwner());
+			summary->setId(sid);
+			summary->setCompleted(submission->getCompleted().size());
+			summary->setHeld(submission->getHeld().size());
+			summary->setIdle(submission->getIdle().size());
+			summary->setRemoved(submission->getRemoved().size());
+			summary->setRunning(submission->getRunning().size());
+			Status* ss = new Status;
+			ss->setCode(new StatusCodeType("OK"));
+			summary->setStatus(ss);
+		}
+		else {
+			SubmissionID* sid = new SubmissionID;
+			summary->setId(sid);
+			StatusCodeType* sst = new StatusCodeType;
+			sst->setStatusCodeType("NO_MATCH");
+			Status* ss = new Status(sst,"Unable to locate submission");
+			summary->setStatus(ss);
+		}
+		submissions->push_back(summary);
+	}
+
+	getSummaryResponse->setSubmissions(submissions);
+
+    return getSummaryResponse;
+}
+
+GetJobStatusResponse* AviaryQueryServiceSkeleton::getJobStatus(wso2wsf::MessageContext* /*outCtx*/
+	,GetJobStatus* _getJobStatus)
+{
+	GetJobStatusResponse* jobStatusResponse = new GetJobStatusResponse;
+	JobServerObject* jso = JobServerObject::getInstance();
+	JobStatusCollection* job_results = new JobStatusCollection;
+
+	IdCollection id_set;
+
+	if (_getJobStatus->isIdsNil() || _getJobStatus->getIds()->size() == 0) {
+		// no ids supplied...they get them all
+		for (JobCollectionType::iterator i = g_jobs.begin(); g_jobs.end() != i; i++) {
+			id_set.insert((*i).first);
+		}
+	}
+	else {
+		// fast track...client has supplied ids to scan
+		JobIdCollection* id_list = _getJobStatus->getIds();
+		for (JobIdCollection::iterator i = id_list->begin(); id_list->end() != i; i++) {
+			id_set.insert((*i)->getJob().c_str());
+		}
+	}
+
+	for (IdCollection::const_iterator i = id_set.begin(); id_set.end() != i; i++) {
+		JobStatus* js = new JobStatus;
+		const char* job = *i;
+		AviaryStatus status;
+		int job_status = JOB_STATUS_MIN;
+		if (jso->getStatus(job,job_status,status)) {
+			createGoodJobResponse<JobStatus>(*js,job);
+			JobStatusType* jst = new JobStatusType;
+			jst->setJobStatusType(getJobStatusString(job_status));
+			js->setJob_status(jst);
+		}
+		else {
+			// problem...report to client
+			createBadJobResponse<JobStatus>(*js,job,status);
+		}
+		job_results->push_back(js);
+	}
+
+	jobStatusResponse->setJobs(job_results);
+
+    return jobStatusResponse;
+}
+
+GetJobSummaryResponse* AviaryQueryServiceSkeleton::getJobSummary(wso2wsf::MessageContext *outCtx ,AviaryQuery::GetJobSummary* _getJobSummary)
+{
+	GetJobSummaryResponse* jobSummaryResponse = new GetJobSummaryResponse;
+	JobServerObject* jso = JobServerObject::getInstance();
+	JobSummaryCollection* job_results = new JobSummaryCollection;
+	
+	IdCollection id_set;
+
+	if (_getJobSummary->isIdsNil() || _getJobSummary->getIds()->size() == 0) {
+		// no ids supplied...they get them all
+		for (JobCollectionType::iterator i = g_jobs.begin(); g_jobs.end() != i; i++) {
+			id_set.insert((*i).first);
+		}
+	}
+	else {
+		// fast track...client has supplied ids to scan
+		JobIdCollection* id_list = _getJobSummary->getIds();
+		for (JobIdCollection::iterator i = id_list->begin(); id_list->end() != i; i++) {
+			id_set.insert((*i)->getJob().c_str());
+		}
+	}
+	
+	for (IdCollection::const_iterator i = id_set.begin(); id_set.end() != i; i++) {
+		JobSummary* js = new JobSummary;
+		const char* job = *i;
+		JobSummaryFields jsf;
+		AviaryStatus status;
+		if (jso->getSummary(job,jsf,status)) {
+			createGoodJobResponse<JobSummary>(*js,job);
+			mapFieldsToSummary(jsf,js);
+		}
+		else {
+			// problem...report to client
+			createBadJobResponse<JobSummary>(*js, job, status);
+		}
+		job_results->push_back(js);
+	}
+
+	jobSummaryResponse->setJobs(job_results);
+
+    return jobSummaryResponse;
+}
+
 GetJobDetailsResponse* AviaryQueryServiceSkeleton::getJobDetails(wso2wsf::MessageContext* /* outCtx*/
 	,GetJobDetails* _getJobDetails)
 {
 	GetJobDetailsResponse* jobDetailsResponse = new GetJobDetailsResponse;
 	JobServerObject* jso = JobServerObject::getInstance();
-	JobDetailsVectorType* job_results = new JobDetailsVectorType;
+	JobDetailsCollection* job_results = new JobDetailsCollection;
 
-	JobIdVectorType* id_list = _getJobDetails->getIds();
-	for (JobIdVectorType::iterator i = id_list->begin(); id_list->end() != i; i++) {
+	IdCollection id_set;
+
+	if (_getJobDetails->isIdsNil() || _getJobDetails->getIds()->size() == 0) {
+		// no ids supplied...they get them all
+		for (JobCollectionType::iterator i = g_jobs.begin(); g_jobs.end() != i; i++) {
+			id_set.insert((*i).first);
+		}
+	}
+	else {
+		// fast track...client has supplied ids to scan
+		JobIdCollection* id_list = _getJobDetails->getIds();
+		for (JobIdCollection::iterator i = id_list->begin(); id_list->end() != i; i++) {
+			id_set.insert((*i)->getJob().c_str());
+		}
+	}
+
+	for (IdCollection::const_iterator i = id_set.begin(); id_set.end() != i; i++) {
 		JobDetails* jd = new JobDetails;
-		const char* job = (*i)->getJob().c_str();
+		const char* job = *i;
 		aviary::codec::AttributeMapType attr_map;
 		AviaryStatus status;
-		if (jso->getJobAd((*i)->getJob().c_str(),attr_map,status)) {
+		if (jso->getJobAd(job,attr_map,status)) {
 			createGoodJobResponse<JobDetails>(*jd,job);
 			// TODO: load attributes
 			AviaryCommon::Attributes* attrs = new AviaryCommon::Attributes;
@@ -339,3 +436,4 @@ GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageConte
 
     return jobDataResponse;
 }
+

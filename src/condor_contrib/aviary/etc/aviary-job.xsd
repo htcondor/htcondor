@@ -26,8 +26,9 @@
 				<xs:element name="args" type="xs:string" minOccurs="0"/>
 				<xs:element name="owner" type="xs:string"/>
 				<xs:element name="iwd" type="xs:string"/>
+				<xs:element name="submission_name" type="xs:string" minOccurs="0"/>
 				<xs:element name="requirements" type="mrg:ResourceConstraint"  minOccurs="0" maxOccurs="unbounded"/>
-				<xs:element name="extra" type="mrg:Attributes" minOccurs="0"/>
+				<xs:element name="extra" type="mrg:Attribute" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>

@@ -43,11 +43,39 @@ client.set_options(location=job_url)
 
 if not quiet:
 	print client
+	
+# add specific requirements here
+req1 = client.factory.create("ns0:ResourceConstraint")
+req1.type = 'OS'
+req1.value = 'LINUX'
+reqs = [ req1 ]
+
+# add extra Condor-specific or custom job attributes here
+extra1 = client.factory.create("ns0:Attribute")
+extra1.name = 'RECIPE'
+extra1.type = 'STRING'
+extra1.value = 'SECRET_SAUCE'
+extras = [ extra1 ]
 
 try:
-	result = client.service.submitJob('/bin/sleep','120',uid,'/tmp')
+	result = client.service.submitJob( \
+	# the executable command
+		'/bin/sleep', \
+	# some arguments for the command
+		'120', \
+	# the submitter name
+		uid, \
+	# initial working directory wwhere job will execute
+		'/tmp', \
+	# an arbitrary string identifying the target submission group
+		'python_test_submit', \
+	# special resource requirements
+		reqs,	\
+	# additional attributes
+		extras
+	)
 except Exception, e:
-	print "unable to access scheduler at: ", job_url
+	print "invocation failed at: ", job_url
 	print e
 	exit(1)	
 

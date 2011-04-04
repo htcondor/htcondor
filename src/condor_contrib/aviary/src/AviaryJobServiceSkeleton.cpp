@@ -39,6 +39,7 @@ extern bool qmgmt_all_users_trusted;
 #include "SchedulerObject.h"
 #include "stl_string_utils.h"
 
+using namespace std;
 using namespace AviaryJob;
 using namespace AviaryCommon;
 using namespace aviary::codec;
@@ -56,8 +57,14 @@ const char* BASIC_REQ_FORMAT =
 const char* REQ_UNDEFINED = " =!= undefined ";
 const char* REQ_GTE_ZERO = " >= 0 ";
 
+//
+// Utility methods START
+//
+
+typedef vector<AviaryCommon::Attribute*> CommonAttributeCollection;
+
 void
-AviaryJobServiceSkeleton::checkForSchedulerID(AviaryCommon::JobID* _jobId, string& _text)
+checkForSchedulerID(AviaryCommon::JobID* _jobId, string& _text)
 {
 	SchedulerObject* schedulerObj = SchedulerObject::getInstance();
 	if (!(_jobId->getPool() == schedulerObj->getPool()) ||
@@ -67,7 +74,7 @@ AviaryJobServiceSkeleton::checkForSchedulerID(AviaryCommon::JobID* _jobId, strin
 }
 
 void
-AviaryJobServiceSkeleton::buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _reqs) {
+buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _reqs) {
 	// TODO: scan through these and build TARGET.<constraint> like string
 	string arch = REQ_UNDEFINED;
 	string opsys = REQ_UNDEFINED;
@@ -103,13 +110,55 @@ AviaryJobServiceSkeleton::buildBasicRequirements(ResourceConstraintVectorType* _
 	sprintf(_reqs, BASIC_REQ_FORMAT, arch.c_str(), opsys.c_str(), disk.c_str(), memory.c_str(), filesystem.c_str());
 }
 
+void
+addExtraAttributes(const CommonAttributeCollection* extra_attrs, AttributeMapType& attr_map) {
+	// TODO: add in the extras
+	for (CommonAttributeCollection::const_iterator i = extra_attrs->begin();i < extra_attrs->end();i++) {
+		AviaryCommon::Attribute* attr = *i;
+		switch (attr->getType()->getAttributeTypeEnum()) {
+			case AviaryCommon::AttributeType_INTEGER:
+				attr_map[attr->getName().c_str()] = 
+					new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,attr->getValue().c_str());
+			break;
+			case AviaryCommon::AttributeType_FLOAT:
+				attr_map[attr->getName().c_str()] = 
+					new AviaryAttribute(AviaryAttribute::FLOAT_TYPE,attr->getValue().c_str());
+			break;
+			case AviaryCommon::AttributeType_STRING:
+				attr_map[attr->getName().c_str()] = 
+					new AviaryAttribute(AviaryAttribute::STRING_TYPE,attr->getValue().c_str());
+			break;
+			case AviaryCommon::AttributeType_BOOLEAN:
+			case AviaryCommon::AttributeType_EXPRESSION:
+				attr_map[attr->getName().c_str()] = 
+					new AviaryAttribute(AviaryAttribute::EXPR_TYPE,attr->getValue().c_str());
+			break;
+			// probably shouldn't get here unless axis2 fails us
+			case AviaryCommon::AttributeType_ERROR:
+			case AviaryCommon::AttributeType_UNDEFINED:
+			default:
+				dprintf(D_FULLDEBUG,"Unknown type supplied for attribute '%s=%s'\n",
+						attr->getName().c_str(),attr->getValue().c_str());
+		}
+	}
+}
+
+//
+// Utility methods END
+//
+
+//
+// Interface implementation START
+//
+
 
 AviaryJob::SubmitJobResponse*
 AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJob::SubmitJob* _submitJob)
 {
     AviaryJob::SubmitJobResponse* submitJobResponse = new AviaryJob::SubmitJobResponse();
 	SchedulerObject* schedulerObj = SchedulerObject::getInstance();
-    AttributeMapType attrMap;
+    AttributeMapType reqsMap, attrMap;
+	const char* submissionName = NULL;
 
     // add the simple stuff first
     attrMap[ATTR_JOB_CMD] = new AviaryAttribute(AviaryAttribute::STRING_TYPE, _submitJob->getCmd().c_str());
@@ -118,10 +167,14 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
     }
     attrMap[ATTR_OWNER] = new AviaryAttribute(AviaryAttribute::STRING_TYPE, _submitJob->getOwner().c_str());
     attrMap[ATTR_JOB_IWD] = new AviaryAttribute(AviaryAttribute::STRING_TYPE, _submitJob->getIwd().c_str());
+	if (!(_submitJob->isSubmission_nameNil() || _submitJob->getSubmission_name().empty())) {
+		submissionName = _submitJob->getSubmission_name().c_str();
+        attrMap[ATTR_JOB_SUBMISSION] = new AviaryAttribute(AviaryAttribute::STRING_TYPE,submissionName);
+    }
 
     // build a requirements string and add to it
     string reqBuilder;
-    if (!_submitJob->isRequirementsNil()) {
+    if (!(_submitJob->isRequirementsNil() || _submitJob->getRequirements()->empty())) {
         // TODO: build from resource constraints
 		buildBasicRequirements(_submitJob->getRequirements(), reqBuilder);
     }
@@ -130,8 +183,20 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
         reqBuilder = "TRUE";
     }
     attrMap[ATTR_REQUIREMENTS] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE, reqBuilder.c_str());
-    // TODO: need to add extras attrs also
 
+    // TODO: need to add extras attrs also
+	// wso2 doesn't seem to make true nil checking easy
+	// might remove the Attributes element
+	CommonAttributeCollection* attrs = NULL;
+	if (!_submitJob->isExtraNil()) {
+		attrs = _submitJob->getExtra();
+		if (attrs && !attrs->empty()) {			
+			if (attrs && !attrs->empty()) {
+				addExtraAttributes(attrs, attrMap);
+			}
+		}
+	}
+	
     // invoke submit
     string jobId, error;
     // TODO: temporary hack for testing
@@ -142,9 +207,15 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
     }
     else {
         // TODO: fix up args
-        string submissionId = schedulerObj->getName();
-		submissionId.append("#");
-		submissionId.append(jobId);
+        string submissionId;
+        if (submissionName) {
+			submissionId = submissionName;
+		}
+		else {
+			submissionId = schedulerObj->getName();
+			submissionId.append("#");
+			submissionId.append(jobId);
+		}
         submitJobResponse->setId(new AviaryCommon::JobID(
 				jobId,schedulerObj->getPool(),schedulerObj->getName(),
 				new AviaryCommon::SubmissionID(submissionId,_submitJob->getOwner().c_str())));

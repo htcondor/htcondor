@@ -146,6 +146,17 @@
 			<xs:element name="removed" type="xs:string" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
+		<xs:complexType name="SubmissionSummary">
+		<xs:sequence>
+			<xs:element name="id" type="tns:SubmissionID"/>
+			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="completed" type="xs:int"/>
+			<xs:element name="held" type="xs:int"/>
+			<xs:element name="idle" type="xs:int"/>
+			<xs:element name="removed" type="xs:int"/>
+			<xs:element name="running" type="xs:int"/>
+		</xs:sequence>
+	</xs:complexType>
 	<xs:complexType name="JobDetails">
 		<xs:sequence>
 			<xs:element name="id" type="tns:JobID"/>

@@ -60,6 +60,8 @@ public:
 	const JobSet & getHeld();
 
 	void setOwner(const char *owner);
+	const char* getOwner() { return m_owner.c_str(); }
+	const char* getName() { return m_name.c_str(); }
 	bool getJobSummaries(AttributeVectorType &jobs,
                      string &text);
 

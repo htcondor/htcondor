@@ -42,6 +42,10 @@
                 
             isValidIwd  = false;
         
+                    property_Submission_name;
+                
+            isValidSubmission_name  = false;
+        
                 property_Requirements  = NULL;
               
             isValidRequirements  = false;
@@ -57,7 +61,7 @@
                 
         }
 
-       AviaryJob::SubmitJob::SubmitJob(std::string arg_Cmd,std::string arg_Args,std::string arg_Owner,std::string arg_Iwd,std::vector<AviaryCommon::ResourceConstraint*>* arg_Requirements,AviaryCommon::Attributes* arg_Extra)
+       AviaryJob::SubmitJob::SubmitJob(std::string arg_Cmd,std::string arg_Args,std::string arg_Owner,std::string arg_Iwd,std::string arg_Submission_name,std::vector<AviaryCommon::ResourceConstraint*>* arg_Requirements,std::vector<AviaryCommon::Attribute*>* arg_Extra)
         {
              
                    qname = NULL;
@@ -77,6 +81,10 @@
                  property_Iwd;
              
             isValidIwd  = true;
+            
+                 property_Submission_name;
+             
+            isValidSubmission_name  = true;
             
                property_Requirements  = NULL;
              
@@ -98,6 +106,8 @@
                     property_Owner = arg_Owner;
             
                     property_Iwd = arg_Iwd;
+            
+                    property_Submission_name = arg_Submission_name;
             
                     property_Requirements = arg_Requirements;
             
@@ -683,6 +693,130 @@
                      element_qname = NULL;
                   }
                  
+
+                     
+                     /*
+                      * building submission_name element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "submission_name", NULL, NULL);
+                                 
+
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("submission_name", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("submission_name", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            status = setSubmission_name(text_value);
+                                      }
+                                      
+                                      else
+                                      {
+                                            /*
+                                             * axis2_qname_t *qname = NULL;
+                                             * axiom_attribute_t *the_attri = NULL;
+                                             * 
+                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
+                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
+                                             */
+                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
+
+                                            axiom_attribute_t *the_attri = NULL;
+                                            axis2_char_t *attrib_text = NULL;
+                                            axutil_hash_t *attribute_hash = NULL;
+
+                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
+
+                                            attrib_text = NULL;
+                                            if(attribute_hash)
+                                            {
+                                                 axutil_hash_index_t *hi;
+                                                 void *val;
+                                                 const void *key;
+                                        
+                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                                                 {
+                                                     axutil_hash_this(hi, &key, NULL, &val);
+                                                     
+                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
+                                                     {
+                                                         the_attri = (axiom_attribute_t*)val;
+                                                         break;
+                                                     }
+                                                 }
+                                            }
+
+                                            if(the_attri)
+                                            {
+                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
+                                            }
+                                            else
+                                            {
+                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
+                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
+                                            }
+
+                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
+                                            {
+                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element submission_name");
+                                                status = AXIS2_FAILURE;
+                                            }
+                                            else
+                                            {
+                                                /* after all, we found this is a empty string */
+                                                status = setSubmission_name("");
+                                            }
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for submission_name ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
                        { 
                     /*
                      * building Requirements array
@@ -792,6 +926,12 @@
                      element_qname = NULL;
                   }
                  
+                       { 
+                    /*
+                     * building Extra array
+                     */
+                       std::vector<AviaryCommon::Attribute*>* arr_list =new std::vector<AviaryCommon::Attribute*>();
+                   
 
                      
                      /*
@@ -800,63 +940,95 @@
                      
                      
                      
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
+                                    element_qname = axutil_qname_create(Environment::getEnv(), "extra", NULL, NULL);
                                   
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
+                               
+                               for (i = 0, sequence_broken = 0, current_node = (is_early_node_valid?axiom_node_get_next_sibling(current_node, Environment::getEnv()):current_node); !sequence_broken && current_node != NULL;)
+                                             
+                               {
+                                  if(axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                  {
+                                     current_node =axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                     is_early_node_valid = false;
+                                     continue;
+                                  }
+                                  
+                                  current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                  mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+
+                                  if (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("extra", axiom_element_get_localname(current_element, Environment::getEnv())))
+                                  {
+                                  
+                                      is_early_node_valid = true;
+                                      
+                                     AviaryCommon::Attribute* element = new AviaryCommon::Attribute();
+                                          
+                                          status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                          
+                                          if(AXIS2_FAILURE ==  status)
+                                          {
+					  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "failed in building element extra ");
+                                          }
+                                          else
+                                          {
+                                            arr_list->push_back(element);
+                                            
+                                          }
+                                        
+                                     if(AXIS2_FAILURE ==  status)
+                                     {
+                                         WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in setting the value for extra ");
+                                         if(element_qname)
+                                         {
+                                            axutil_qname_free(element_qname, Environment::getEnv());
+                                         }
+                                         if(arr_list)
+                                         {
+                                            delete arr_list;
+                                         }
+                                         return false;
+                                     }
+
+                                     i++;
+                                    current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                  }
+                                  else
+                                  {
+                                      is_early_node_valid = false;
+                                      sequence_broken = 1;
+                                  }
+                                  
+                               }
+
+                               
+                                   if (i < 0)
                                    {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "extra", NULL, NULL);
-                                 
-
-                           if (isParticle() ||  
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("extra", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("extra", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 AviaryCommon::Attributes* element = new AviaryCommon::Attributes();
-
-                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
-                                      if(AXIS2_FAILURE == status)
-                                      {
-                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element extra");
-                                      }
-                                      else
-                                      {
-                                          status = setExtra(element);
-                                      }
-                                    
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for extra ");
+                                     /* found element out of order */
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"extra (@minOccurs = '0') only have %d elements", i);
                                      if(element_qname)
                                      {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                        axutil_qname_free(element_qname, Environment::getEnv());
                                      }
-                                     return AXIS2_FAILURE;
-                                 }
-                              }
-                           
+                                     if(arr_list)
+                                     {
+                                        delete arr_list;
+                                     }
+                                     return false;
+                                   }
+                               
+
+                               if(0 == arr_list->size())
+                               {
+                                    delete arr_list;
+                               }
+                               else
+                               {
+                                    status = setExtra(arr_list);
+                               }
+
+                              
+                            } 
+                        
                   if(element_qname)
                   {
                      axutil_qname_free(element_qname, Environment::getEnv());
@@ -924,9 +1096,12 @@
                     axis2_char_t *text_value_4;
                     axis2_char_t *text_value_4_temp;
                     
-                    axis2_char_t text_value_5[ADB_DEFAULT_DIGIT_LIMIT];
+                    axis2_char_t *text_value_5;
+                    axis2_char_t *text_value_5_temp;
                     
                     axis2_char_t text_value_6[ADB_DEFAULT_DIGIT_LIMIT];
+                    
+                    axis2_char_t text_value_7[ADB_DEFAULT_DIGIT_LIMIT];
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -1229,6 +1404,72 @@
                        p_prefix = NULL;
                       
 
+                   if (!isValidSubmission_name)
+                   {
+                      
+                           /* no need to complain for minoccurs=0 element */
+                            
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("submission_name"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("submission_name")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing submission_name element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%ssubmission_name>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%ssubmission_name>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                           text_value_5 = (axis2_char_t*)property_Submission_name.c_str();
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                           
+                            
+                           text_value_5_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_5, true);
+                           if (text_value_5_temp)
+                           {
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_5_temp, axutil_strlen(text_value_5_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_5_temp);
+                           }
+                           else
+                           {
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_5, axutil_strlen(text_value_5));
+                           }
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
                    if (!isValidRequirements)
                    {
                       
@@ -1333,35 +1574,57 @@
 
                    
                    
+                     /*
+                      * Parsing Extra array
+                      */
+                     if (property_Extra != NULL)
+                     {
+                        
+
+                            sprintf(start_input_str, "<%s%sextra",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                         start_input_str_len = axutil_strlen(start_input_str);
+
+                         sprintf(end_input_str, "</%s%sextra>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                         end_input_str_len = axutil_strlen(end_input_str);
+
+                         count = property_Extra->size();
+                         for(i = 0; i < count; i++)
+                         {
+                            AviaryCommon::Attribute* element = (*property_Extra)[i];
+
+                            if(NULL == element) 
+                            {
+                                continue;
+                            }
+
+                    
                      
                      /*
                       * parsing extra element
                       */
 
                     
-                    
-                            sprintf(start_input_str, "<%s%sextra",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%sextra>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
                      
-                            if(!property_Extra->isParticle())
+                            if(!element->isParticle())
                             {
                                 axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                             }
-                            property_Extra->serialize(current_node, parent_element,
-                                                                                 property_Extra->isParticle() || false, namespaces, next_ns_index);
+                            element->serialize(current_node, parent_element,
+                                                                                 element->isParticle() || false, namespaces, next_ns_index);
                             
-                            if(!property_Extra->isParticle())
+                            if(!element->isParticle())
                             {
                                 axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                             }
                             
+                         }
+                     }
+                   
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
@@ -1741,10 +2004,93 @@
            
 
             /**
-             * Getter for requirements by  Property Number 5
+             * Getter for submission_name by  Property Number 5
+             */
+            std::string WSF_CALL
+            AviaryJob::SubmitJob::getProperty5()
+            {
+                return getSubmission_name();
+            }
+
+            /**
+             * getter for submission_name.
+             */
+            std::string WSF_CALL
+            AviaryJob::SubmitJob::getSubmission_name()
+             {
+                return property_Submission_name;
+             }
+
+            /**
+             * setter for submission_name
+             */
+            bool WSF_CALL
+            AviaryJob::SubmitJob::setSubmission_name(
+                    const std::string  arg_Submission_name)
+             {
+                
+
+                if(isValidSubmission_name &&
+                        arg_Submission_name == property_Submission_name)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetSubmission_name();
+
+                
+                        property_Submission_name = std::string(arg_Submission_name.c_str());
+                        isValidSubmission_name = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for submission_name
+            */
+           bool WSF_CALL
+           AviaryJob::SubmitJob::resetSubmission_name()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidSubmission_name = false; 
+               return true;
+           }
+
+           /**
+            * Check whether submission_name is nill
+            */
+           bool WSF_CALL
+           AviaryJob::SubmitJob::isSubmission_nameNil()
+           {
+               return !isValidSubmission_name;
+           }
+
+           /**
+            * Set submission_name to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryJob::SubmitJob::setSubmission_nameNil()
+           {
+               return resetSubmission_name();
+           }
+
+           
+
+            /**
+             * Getter for requirements by  Property Number 6
              */
             std::vector<AviaryCommon::ResourceConstraint*>* WSF_CALL
-            AviaryJob::SubmitJob::getProperty5()
+            AviaryJob::SubmitJob::getProperty6()
             {
                 return getRequirements();
             }
@@ -2110,10 +2456,10 @@
            
 
             /**
-             * Getter for extra by  Property Number 6
+             * Getter for extra by  Property Number 7
              */
-            AviaryCommon::Attributes* WSF_CALL
-            AviaryJob::SubmitJob::getProperty6()
+            std::vector<AviaryCommon::Attribute*>* WSF_CALL
+            AviaryJob::SubmitJob::getProperty7()
             {
                 return getExtra();
             }
@@ -2121,7 +2467,7 @@
             /**
              * getter for extra.
              */
-            AviaryCommon::Attributes* WSF_CALL
+            std::vector<AviaryCommon::Attribute*>* WSF_CALL
             AviaryJob::SubmitJob::getExtra()
              {
                 return property_Extra;
@@ -2132,8 +2478,12 @@
              */
             bool WSF_CALL
             AviaryJob::SubmitJob::setExtra(
-                    AviaryCommon::Attributes*  arg_Extra)
+                    std::vector<AviaryCommon::Attribute*>*  arg_Extra)
              {
+                
+                 int size = 0;
+                 int i = 0;
+                 bool non_nil_exists = false;
                 
 
                 if(isValidExtra &&
@@ -2144,6 +2494,23 @@
                 }
 
                 
+                 size = arg_Extra->size();
+                 
+                 if (size < 0)
+                 {
+                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"extra has less than minOccurs(0)");
+                     return false;
+                 }
+                 for(i = 0; i < size; i ++ )
+                 {
+                     if(NULL != (*arg_Extra)[i])
+                     {
+                         non_nil_exists = true;
+                         break;
+                     }
+                 }
+
+                 
 
                 
                 resetExtra();
@@ -2157,12 +2524,152 @@
                 }
                 
                         property_Extra = arg_Extra;
-                        isValidExtra = true;
+                        if(non_nil_exists)
+                        {
+                            isValidExtra = true;
+                        }
+                        
                     
                 return true;
              }
 
-             
+            
+            /**
+             * Get ith element of extra.
+             */
+            AviaryCommon::Attribute* WSF_CALL
+            AviaryJob::SubmitJob::getExtraAt(int i)
+            {
+                AviaryCommon::Attribute* ret_val;
+                if(property_Extra == NULL)
+                {
+                    return (AviaryCommon::Attribute*)0;
+                }
+                ret_val =   (*property_Extra)[i];
+                
+                    return ret_val;
+                  
+            }
+
+            /**
+             * Set the ith element of extra.
+             */
+           bool WSF_CALL
+            AviaryJob::SubmitJob::setExtraAt(int i,
+                    AviaryCommon::Attribute* arg_Extra)
+            {
+                 AviaryCommon::Attribute* element;
+                int size = 0;
+
+                int non_nil_count;
+                bool non_nil_exists = false;
+
+                 
+
+                if( isValidExtra &&
+                    property_Extra &&
+                  
+                    arg_Extra == (*property_Extra)[i])
+                  
+                 {
+                    
+                    return AXIS2_SUCCESS; 
+                }
+
+                   
+                     non_nil_exists = true;
+                  
+
+                if(property_Extra == NULL)
+                {
+                    property_Extra = new std::vector<AviaryCommon::Attribute*>();
+                }
+                else{
+                /* check whether there already exist an element */
+                element = (*property_Extra)[i];
+                }
+
+                
+                        if(NULL != element)
+                        {
+                          
+                          
+                          
+                                delete element;
+                             
+                        }
+                        
+                    
+                    if(!non_nil_exists)
+                    {
+                        
+                        isValidExtra = true;
+                        (*property_Extra)[i]= NULL;
+                        
+                        return AXIS2_SUCCESS;
+                    }
+                
+                    (*property_Extra)[i] = arg_Extra;
+                  
+
+               isValidExtra = true;
+                
+                return AXIS2_SUCCESS;
+            }
+
+            /**
+             * Add to extra.
+             */
+            bool WSF_CALL
+            AviaryJob::SubmitJob::addExtra(
+                    AviaryCommon::Attribute* arg_Extra)
+             {
+
+                
+                    if( NULL == arg_Extra
+                     )
+                    {
+                      
+                           return true; 
+                        
+                    }
+                  
+
+                if(property_Extra == NULL)
+                {
+                    property_Extra = new std::vector<AviaryCommon::Attribute*>();
+                }
+              
+               property_Extra->push_back(arg_Extra);
+              
+                isValidExtra = true;
+                return true;
+             }
+
+            /**
+             * Get the size of the extra array.
+             */
+            int WSF_CALL
+            AviaryJob::SubmitJob::sizeofExtra()
+            {
+
+                if(property_Extra == NULL)
+                {
+                    return 0;
+                }
+                return property_Extra->size();
+            }
+
+            /**
+             * remove the ith element, same as set_nil_at.
+             */
+            bool WSF_CALL
+            AviaryJob::SubmitJob::removeExtraAt(int i)
+            {
+                return setExtraNilAt(i);
+            }
+
+            
 
            /**
             * resetter for extra
@@ -2175,20 +2682,34 @@
 
 
                
+                if (property_Extra != NULL)
+                {
+                  std::vector<AviaryCommon::Attribute*>::iterator it =  property_Extra->begin();
+                  for( ; it <  property_Extra->end() ; ++it)
+                  {
+                     AviaryCommon::Attribute* element = *it;
+                
             
                 
 
-                if(property_Extra != NULL)
+                if(element != NULL)
                 {
                    
                    
-                         delete  property_Extra;
+                         delete  element;
                      
 
                    }
 
                 
                 
+                
+               }
+
+             }
+                
+                    if(NULL != property_Extra)
+                 delete property_Extra;
                 
                isValidExtra = false; 
                return true;
@@ -2210,6 +2731,95 @@
            AviaryJob::SubmitJob::setExtraNil()
            {
                return resetExtra();
+           }
+
+           
+           /**
+            * Check whether extra is nill at i
+            */
+           bool WSF_CALL
+           AviaryJob::SubmitJob::isExtraNilAt(int i)
+           {
+               return (isValidExtra == false ||
+                       NULL == property_Extra ||
+                     NULL == (*property_Extra)[i]);
+            }
+
+           /**
+            * Set extra to nil at i
+            */
+           bool WSF_CALL
+           AviaryJob::SubmitJob::setExtraNilAt(int i)
+           {
+                int size = 0;
+                int j;
+                bool non_nil_exists = false;
+
+                int k = 0;
+
+                if(property_Extra == NULL ||
+                            isValidExtra == false)
+                {
+                    
+                    non_nil_exists = false;
+                }
+                else
+                {
+                    size = property_Extra->size();
+                    for(j = 0, k = 0; j < size; j ++ )
+                    {
+                        if(i == j) continue; 
+                        if(NULL != (*property_Extra)[i])
+                        {
+                            k++;
+                            non_nil_exists = true;
+                            if( k >= 0)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+
+                if( k < 0)
+                {
+                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "Size of the array of extra is beinng set to be smaller than the specificed number of minOccurs(0)");
+                       return AXIS2_FAILURE;
+                }
+ 
+                if(property_Extra == NULL)
+                {
+                    isValidExtra = false;
+                    
+                    return true;
+                }
+                 
+                 /* check whether there already exist an element */
+                 AviaryCommon::Attribute* element = (*property_Extra)[i];
+                if(NULL != element)
+                {
+                  
+                  
+                  
+                        delete element;
+                     
+                 }
+                 
+                    if(!non_nil_exists)
+                    {
+                        
+                        isValidExtra = false;
+                        (*property_Extra)[i] = NULL;
+                        return AXIS2_SUCCESS;
+                    }
+                
+
+                
+                (*property_Extra)[i] = NULL;
+                
+                return AXIS2_SUCCESS;
+
            }
 
            

@@ -60,9 +60,6 @@ namespace AviaryJob {
 
 class AviaryJobServiceSkeleton
 {
-private:
-	void checkForSchedulerID(AviaryCommon::JobID* _jobId, std::string& _text);
-	void buildBasicRequirements(ResourceConstraintVectorType* _constraints, std::string& _requirements);
 
         public:
             AviaryJobServiceSkeleton(){}

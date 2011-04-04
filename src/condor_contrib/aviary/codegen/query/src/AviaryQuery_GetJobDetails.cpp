@@ -204,10 +204,10 @@
                                }
 
                                
-                                   if (i < 1)
+                                   if (i < 0)
                                    {
                                      /* found element out of order */
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"ids (@minOccurs = '1') only have %d elements", i);
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"ids (@minOccurs = '0') only have %d elements", i);
                                      if(element_qname)
                                      {
                                         axutil_qname_free(element_qname, Environment::getEnv());
@@ -412,9 +412,8 @@
                    if (!isValidIds)
                    {
                       
+                           /* no need to complain for minoccurs=0 element */
                             
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property ids");
-                            return NULL;
                           
                    }
                    else
@@ -568,9 +567,9 @@
                 
                  size = arg_Ids->size();
                  
-                 if (size < 1)
+                 if (size < 0)
                  {
-                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"ids has less than minOccurs(1)");
+                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"ids has less than minOccurs(0)");
                      return false;
                  }
                  for(i = 0; i < size; i ++ )
@@ -583,19 +582,6 @@
                  }
 
                  
-                    if(!non_nil_exists)
-                    {
-                        WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"All the elements in the array of ids is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                        return false;
-                    }
-                 
-                  if(NULL == arg_Ids)
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"ids is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
-                
 
                 
                 resetIds();
@@ -664,12 +650,6 @@
                    
                      non_nil_exists = true;
                   
-                   if(!non_nil_exists)
-                   {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "All the elements in the array of ids is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                       return AXIS2_FAILURE;
-                   }
-                
 
                 if(property_Ids == NULL)
                 {
@@ -691,6 +671,15 @@
                         }
                         
                     
+                    if(!non_nil_exists)
+                    {
+                        
+                        isValidIds = true;
+                        (*property_Ids)[i]= NULL;
+                        
+                        return AXIS2_SUCCESS;
+                    }
+                
                     (*property_Ids)[i] = arg_Ids;
                   
 
@@ -712,8 +701,7 @@
                      )
                     {
                       
-                           WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "All the elements in the array of ids is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                           return false;
+                           return true; 
                         
                     }
                   
@@ -856,7 +844,7 @@
                         {
                             k++;
                             non_nil_exists = true;
-                            if( k >= 1)
+                            if( k >= 0)
                             {
                                 break;
                             }
@@ -864,16 +852,10 @@
                     }
                 }
                 
-                   if(!non_nil_exists)
-                   {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "All the elements in the array of ids is being set to NULL, but it is not a nullable or minOccurs=0 element");
-                       return AXIS2_FAILURE;
-                   }
-                
 
-                if( k < 1)
+                if( k < 0)
                 {
-                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "Size of the array of ids is beinng set to be smaller than the specificed number of minOccurs(1)");
+                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "Size of the array of ids is beinng set to be smaller than the specificed number of minOccurs(0)");
                        return AXIS2_FAILURE;
                 }
  
@@ -895,6 +877,14 @@
                      
                  }
                  
+                    if(!non_nil_exists)
+                    {
+                        
+                        isValidIds = false;
+                        (*property_Ids)[i] = NULL;
+                        return AXIS2_SUCCESS;
+                    }
+                
 
                 
                 (*property_Ids)[i] = NULL;
