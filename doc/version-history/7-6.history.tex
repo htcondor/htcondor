@@ -82,6 +82,11 @@ These attributes are set by Condor when the instance runs:
 See sections ~\ref{sec:Deltacloud} and ~\ref{sec:Job-ClassAd-Attributes}
 for details.
 
+\item The configuration veriable \Macro{JAVA\_MAXHEAP\_ARGUMENT} has been removed. 
+  This means that Java universe jobs will now run with the JVM's default maximum heap
+  setting unless specified othwerwise by the user via \Macro{java\_vm\_args} in the submit file. 
+  (See also section~\ref{sec:Java}.)
+
 \end{itemize}
 
 \noindent Bugs Fixed:
