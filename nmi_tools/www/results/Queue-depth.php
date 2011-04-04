@@ -31,6 +31,13 @@ mysql_select_db(DB_NAME) or die("Could not select database");
 
 include "last.inc";
 
+// Create the sidebar
+echo "<div id='wrap'>";
+make_sidebar();
+
+// Now create the HTML tables.
+echo "<div id='main'>\n";
+
 echo "<h2>NMI build queue depths:</h2>\n";
 echo "<p>This page contains depth information for jobs of type \"build\" only</p>\n";
 
@@ -118,6 +125,10 @@ mysql_close($db);
 <td style="background-color:#00FF00">Depth 1-2</td>
 <td style="background-color:#FFFF00">Depth 3-5</td>
 <td style="background-color:#FF0000">Depth 6+</td>
+
+</div>
+<div id='footer'>&nbsp;</div>
+</div>
 
 </body>
 </html>
