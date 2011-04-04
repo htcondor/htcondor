@@ -87,12 +87,3 @@
  
  # The procd currently uses a very simplistic logging system. Since this
  # log will not be rotated like other Condor logs, it is only recommended
-@@ -1736,7 +1744,7 @@
- ##  If left blank, your JVM will choose some default value,
- ##  typically 64 MB.  The default (-Xmx) works with the Sun JVM.
- 
--JAVA_MAXHEAP_ARGUMENT = -Xmx
-+JAVA_MAXHEAP_ARGUMENT =
- 
- ## JAVA_CLASSPATH_DEFAULT gives the default set of paths in which
- ## Java classes are to be found.  Each path is separated by spaces.
