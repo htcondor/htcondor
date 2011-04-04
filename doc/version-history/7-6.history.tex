@@ -26,6 +26,14 @@ The details of each version are described below.
 \item Condor version 7.6.0 not yet released.
 %\item Condor version 7.6.0 released on Month Date, 2011.
 
+% gittrac #2016
+\item Prior to Condor 7.5.0, commenting out \MacroNI{PREEN} in the
+  default configuration file disabled \Condor{preen}.  Starting in
+  7.5.0, there is an internal default value for \MacroNI{PREEN}, so if
+  it is not set in any configuration file, \Condor{preen} will still
+  run.  To disable it, \MacroNI{PREEN} can be explicitly set to
+  nothing.
+
 \end{itemize}
 
 
