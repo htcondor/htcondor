@@ -124,9 +124,10 @@ if(!$one_offs) {
   $info .= "  <li>The last " . NUM_SPARK_DAYS . " days of results are shown for each platform.</li>\n";
   $info .= "  <li>The newest results are at the left.</li>\n";
   $info .= "  <li>Thick black bars designate commits to the repository between runs.</li>\n";
-  $info .= "  <li>The number shown is the hour in which the test ran.</li>\n";
+  $info .= "  <li>The number shown in the build line is the hour in which the test ran.</li>\n";
+  $info .= "  <li>If a number is shown in the test line it is the number of tests that failed.</li>\n";
   $info .= "</ul>";
-  echo "<span class=\"link\" style=\"font-size:100%\"><a href=\"javascript: void(0)\" style=\"text-decoration:none\">Hover here to have this section explained<span style=\"width:400px;\">$info</span></a></span>";
+  echo "<span class=\"link\" style=\"font-size:100%\"><a href=\"javascript: void(0)\" style=\"text-decoration:none\">Hover here to have this section explained<span style=\"width:450px;\">$info</span></a></span>";
   
   echo "<table>\n";
   echo "<tr><th>Platform</th><th>Results</th></tr>\n";
@@ -568,21 +569,47 @@ function create_sparkline($branch, $user) {
   $tests = Array();
   while ($test = mysql_fetch_array($result2)) {
     $build_runid = preg_replace("/Auto-Test Suite for \($platform, (.+)\)/", "$1", $test["description"]);
+    $runid = $test["runid"];
     $color = "passed";
     $hour = "&nbsp;&nbsp;&nbsp;";
+    $failed_tests = "";
     if($test["result"] == NULL) {
       $color = "pending";
     }
     elseif($test["result"] != 0) {
       $color = "failed";
-      # TODO - do a DB query to get the number of failed steps and put it in here
-      # $hour = "##";
+      
+      $sql = "SELECT name
+              FROM   Task
+              WHERE  runid=$runid AND Result!=0";
+      
+      $result3 = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+
+      $hour = 0;
+      $LIMIT = 5; // Cap the number of entries we show in the pop-up box
+      while ($task = mysql_fetch_array($result3)) {
+        if($task["name"] == "platform_job" || $task["name"] == "remote_task") {
+          // no-op for now
+        }
+        else {
+          $hour += 1;
+          if($hour <= $LIMIT) {
+            $failed_tests .= "<nobr>" . $task["name"] . "</nobr><br>";
+          }
+        }
+      }
+
+      # Add a 
+      if($hour > $LIMIT) {
+        $failed_tests .= ($hour - $LIMIT) . " more...";
+      }
     }
     
     $details = "<table>";
     $details .= "<tr><td>Status</td><td class=\"$color\">$color</td></tr>";
     $details .= "<tr><td>Start</td><td><nobr>" . $test["start"] . "</nobr></td></tr>";
     $details .= "<tr><td>SHA1</td><td>__PUT_SHA_HERE__</td></tr>";
+    $details .= "<tr><td>Failed tests</td><td>$failed_tests</td></td></tr>";
     $details .= "</table>";
     
     $detail_url = sprintf(DETAIL_URL, $build_runid, "test", $user);
@@ -610,7 +637,7 @@ function create_sparkline($branch, $user) {
       $test = $tests[$build["runid"]];
       $tmp = preg_replace("/__PUT_SHA_HERE__/", $build["sha1"], $test["html"]);
       $tmp = preg_replace("/__PUT_HOUR_HERE__/", $build["hour"], $tmp);
-      $spark .= "<td class='" . $test["color"] . "' style='$style'>$tmp</td>\n";
+      $spark .= "<td class='" . $test["color"] . "' style='$style;text-align:center'>$tmp</td>\n";
     }
     else {
       $spark .= "<td class='noresults' style='$style'>&nbsp;</td>\n";
