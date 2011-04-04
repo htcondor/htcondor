@@ -1756,14 +1756,6 @@ INVALID_LOG_FILES	= core
 
 JAVA = /usr/bin/java
 
-##  Some JVMs need to be told the maximum amount of heap memory
-##  to offer to the process.  If your JVM supports this, give
-##  the argument here, and Condor will fill in the memory amount.
-##  If left blank, your JVM will choose some default value,
-##  typically 64 MB.  The default (-Xmx) works with the Sun JVM.
-
-JAVA_MAXHEAP_ARGUMENT = -Xmx
-
 ## JAVA_CLASSPATH_DEFAULT gives the default set of paths in which
 ## Java classes are to be found.  Each path is separated by spaces.
 ## If your JVM needs to be informed of additional directories, add
