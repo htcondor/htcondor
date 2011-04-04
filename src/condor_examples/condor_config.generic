@@ -1102,7 +1102,7 @@ TRANSFERER			= $(LIBEXEC)/condor_transferer
 MASTER_ADDRESS_FILE = $(LOG)/.master_address
 
 ##  Where should the master find the condor_preen binary? If you don't
-##  want preen to run at all, just comment out this setting.
+##  want preen to run at all, set it to nothing.
 PREEN				= $(SBIN)/condor_preen
 
 ##  How do you want preen to behave?  The "-m" means you want email
