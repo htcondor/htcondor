@@ -41,17 +41,16 @@ The details of each version are described below.
 \item Support for GCB has been removed.
 
 % gittrac #1661
-\item The default UNIX Sys-V init script has been competely reworked.
-  In addition to new features (see New Features, below), this changes
-  the following:
+\item The default Unix Sys-V init script has been completely reworked.
+  In addition to new features, this changes the following:
   \begin{itemize}
     \item The default location of the Condor configuration file is now
-      ``/etc/condor/condor\_config''.  This can be overriden by
-      editing the syconfig file or the init script itself.
+      \File{/etc/condor/condor\_config}.  This location can be changed by
+      editing the \File{sysconfig} file or the init script itself.
     \item The default location of the Condor installation is now
-      ``/usr/'', with binaries in ``/usr/bin'' and ``/usr/sbin''.
-      This can be overriden by editing the syconfig file or the init
-      script itself.
+      \File{/usr/}, with binaries in \File{/usr/bin} and \File{/usr/sbin}.
+      These locations can also be changed by editing the \File{sysconfig} file
+      or the init script itself.
   \end{itemize}
 
 \end{itemize}
@@ -164,11 +163,11 @@ expressions while the job is managed by these daemons.
   matching \emph{for unknown reasons}.
 
 % gittrac #1661
-\item The default UNIX Sys-V init script has been competely reworked.
-  The new version should now work on all UNIX and Linux systems.
-  Major features / changes in the new script:
+\item The default Unix Sys-V init script has been completely reworked.
+  The new version should now work on all Unix and Linux systems.
+  Major features and changes in the new script:
   \begin{itemize}
-    \item Supports the use of a Linux-style ``sysconfig'' file
+    \item Supports the use of a Linux-style \File{sysconfig} file
     \item Supports the use of a Linux-style PID file
     \item Supports the following commands:
       \begin{itemize}
@@ -181,12 +180,12 @@ expressions while the job is managed by these daemons.
          \item status
       \end{itemize}
     \item The default location of the Condor configuration file is now
-      ``/etc/condor/condor\_config''.  This can be overriden by
-      editing the syconfig file or the init script itself.
+     \File{/etc/condor/condor\_config}.  This location can be changed by
+      editing the \File{sysconfig} file or the init script itself.
     \item The default location of the Condor installation is now
-      ``/usr/'', with binaries in ``/usr/bin'' and ``/usr/sbin''.
-      This can be overriden by editing the syconfig file or the init
-      script itself.
+      \File{/usr/}, with binaries in \File{/usr/bin} and \File{/usr/sbin}.
+      These locations can be changed by editing the \File{sysconfig} file
+      or the init script itself.
   \end{itemize}
 
 \end{itemize}
