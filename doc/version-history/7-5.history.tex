@@ -40,6 +40,19 @@ The details of each version are described below.
 % gittrac #1924
 \item Support for GCB has been removed.
 
+% gittrac #1661
+\item The default Unix Sys-V init script has been completely reworked.
+  In addition to new features, this changes the following:
+  \begin{itemize}
+    \item The default location of the Condor configuration file is now
+      \File{/etc/condor/condor\_config}.  This location can be changed by
+      editing the \File{sysconfig} file or the init script itself.
+    \item The default location of the Condor installation is now
+      \File{/usr/}, with binaries in \File{/usr/bin} and \File{/usr/sbin}.
+      These locations can also be changed by editing the \File{sysconfig} file
+      or the init script itself.
+  \end{itemize}
+
 \end{itemize}
 
 
@@ -148,6 +161,32 @@ expressions while the job is managed by these daemons.
 \item \Condor{q} -better-analyze now identifies jobs that have not yet been 
   considered by matchmaking, instead of characterizing them as not 
   matching \emph{for unknown reasons}.
+
+% gittrac #1661
+\item The default Unix Sys-V init script has been completely reworked.
+  The new version should now work on all Unix and Linux systems.
+  Major features and changes in the new script:
+  \begin{itemize}
+    \item Supports the use of a Linux-style \File{sysconfig} file
+    \item Supports the use of a Linux-style PID file
+    \item Supports the following commands:
+      \begin{itemize}
+         \item start
+         \item stop
+         \item restart
+         \item try-restart
+         \item reload
+         \item force-reload
+         \item status
+      \end{itemize}
+    \item The default location of the Condor configuration file is now
+     \File{/etc/condor/condor\_config}.  This location can be changed by
+      editing the \File{sysconfig} file or the init script itself.
+    \item The default location of the Condor installation is now
+      \File{/usr/}, with binaries in \File{/usr/bin} and \File{/usr/sbin}.
+      These locations can be changed by editing the \File{sysconfig} file
+      or the init script itself.
+  \end{itemize}
 
 \end{itemize}
 
