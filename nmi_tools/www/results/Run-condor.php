@@ -94,10 +94,13 @@ while ($row = mysql_fetch_array($result)) {
       $cndrauto_buf[$branch]["results"] = get_results(&$cndrauto_buf[$branch], $runid, $user, $row["result"]);
     }
     else {
-      $oneoff_buf[$branch] = Array();
-      $oneoff_buf[$branch]["user"] = $user;
-      $oneoff_buf[$branch]["start"] = $row["start"];
-      $oneoff_buf[$branch]["results"] = get_results(&$oneoff_buf[$branch], $runid, $user, $row["result"]);
+      # The branch might not be unique for one-off builds so we need to make a more unique key
+      $key = "$branch ($user)";
+      $oneoff_buf[$key] = Array();
+      $oneoff_buf[$key]["branch"]  = $branch;
+      $oneoff_buf[$key]["user"]    = $user;
+      $oneoff_buf[$key]["start"]   = $row["start"];
+      $oneoff_buf[$key]["results"] = get_results(&$oneoff_buf[$key], $runid, $user, $row["result"]);
     }
   }
 }
@@ -189,11 +192,11 @@ if($one_offs) {
   echo "<tr><th>Branch</th><th>Runid</th><th>Submitted</th><th>User</th><th>Build Results</th><th>Test Results</th><th>Cross Test Results</th>\n";
   echo "</tr>\n";
   
-  foreach (array_keys($oneoff_buf) as $branch) {
-    $info = $oneoff_buf[$branch];
-    $branch_url = sprintf(BRANCH_URL, $branch, $info["user"]);
+  foreach (array_keys($oneoff_buf) as $key) {
+    $info = $oneoff_buf[$key];
+    $branch_url = sprintf(BRANCH_URL, $info["branch"], $info["user"]);
     echo "<tr>\n";
-    echo "  <td><a href='$branch_url'>$branch</a><br><font size='-2'>" . $info["pin"] . "</font></td>\n";
+    echo "  <td><a href='$branch_url'>" . $info["branch"] . "</a><br><font size='-2'>" . $info["pin"] . "</font></td>\n";
     echo "  <td align='center'>" . $info["runid"] . "</td>\n";
     echo "  <td align='center'>" . $info["start"] . "</td>\n";
     echo "  <td align='center'>" . $info["user"] . "</td>\n";
