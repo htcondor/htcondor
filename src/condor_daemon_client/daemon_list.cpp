@@ -221,8 +221,9 @@ CollectorList::resortLocal( const char *preferred_collector )
 
 	if ( !preferred_collector ) {
         // figure out our hostname for plan b) above
-		const char * _hostname = get_local_fqdn().Value();
-		if ((!_hostname) || !(*_hostname)) {
+		MyString _hostname_str = get_local_fqdn();
+		const char * _hostname = _hostname_str.Value();
+		if (!(*_hostname)) {
 				// Can't get our hostname??? fuck off
 			return -1;
 		}
