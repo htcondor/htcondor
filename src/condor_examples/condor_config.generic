@@ -1102,7 +1102,7 @@ TRANSFERER			= $(LIBEXEC)/condor_transferer
 MASTER_ADDRESS_FILE = $(LOG)/.master_address
 
 ##  Where should the master find the condor_preen binary? If you don't
-##  want preen to run at all, just comment out this setting.
+##  want preen to run at all, set it to nothing.
 PREEN				= $(SBIN)/condor_preen
 
 ##  How do you want preen to behave?  The "-m" means you want email
@@ -1763,14 +1763,6 @@ INVALID_LOG_FILES	= core
 ##  empty or incorrect.
 
 JAVA = /usr/bin/java
-
-##  Some JVMs need to be told the maximum amount of heap memory
-##  to offer to the process.  If your JVM supports this, give
-##  the argument here, and Condor will fill in the memory amount.
-##  If left blank, your JVM will choose some default value,
-##  typically 64 MB.  The default (-Xmx) works with the Sun JVM.
-
-JAVA_MAXHEAP_ARGUMENT = -Xmx
 
 ## JAVA_CLASSPATH_DEFAULT gives the default set of paths in which
 ## Java classes are to be found.  Each path is separated by spaces.
