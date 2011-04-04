@@ -83,7 +83,7 @@ foreach ($branches as $branch) {
     // onto two separate lines because the length of the header determines the
     // width of the resulting table column.
     $display = preg_replace("/nmi:/", "", $platform);
-    $display = preg_replace("/_/", "_ ", $display, 1);
+    #$display = preg_replace("/_/", "_ ", $display, 1);
     
     $ret = get_queue_for_nmi_platform($platform, $type);
     $depth = $ret[0];
