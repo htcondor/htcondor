@@ -72,6 +72,12 @@ from the proxy.
 \item When there are multiple cpus but only one slot, the slot name no
 longer begins with \Expr{slot1@}.
 
+% gittrac 1805 commit 931ca85d6bc483dc6af82d7000a3f5c9ee64dc07
+% gittrac 1805 commit e45ec5ff35e77533bfba3239dc3b71315d9d5afd
+% gittrac 1805 commit 7fe5d0c64562f59a7efafe77227995e4ada24e20
+\item The tool \Condor{advertise} seemed to be trying too hard to resolve
+hostnames. This was fixed to only do the minimally necessary lookups.
+
 \end{itemize}
 
 \noindent Known Bugs:
