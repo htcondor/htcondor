@@ -1468,45 +1468,6 @@ of a grid universe job destined for the CREAM grid system.
 The pairs are separated by semicolons, and written in New ClassAd syntax.
 
 %%%%%%%%%%%%%%%%%%%
-%% deltacloud_username
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_username}
-\item[deltacloud\_username = $<$Deltacloud username$>$]
-Used for \SubmitCmd{deltacloud} jobs.
-The username to be used to authenticate with a Deltacloud service.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_password_file
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_password\_file}
-\item[deltacloud\_password\_file = $<$pathname$>$]
-Used for \SubmitCmd{deltacloud} jobs.
-Path and filename of a file containing the secret key to be used to
-authenticate with a Deltacloud service.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_image_id
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_image\_id}
-\item[deltacloud\_image\_id = $<$Deltacloud image ID$>$]
-Used for \SubmitCmd{deltacloud} jobs.
-Identifier of the VM image to run.
-
-%%%%%%%%%%%%%%%%%%%
-%% deltacloud_realm_id
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_realm\_id}
-\item[deltacloud\_realm\_id = $<$Deltacloud realm ID$>$]
-Used for \SubmitCmd{deltacloud} jobs.
-An optional identifier specifying which of multiple locations within a
-cloud service should be used to run the VM. If not provided, a
-service-selected default is used.
-
-%%%%%%%%%%%%%%%%%%%
 %% deltacloud_hardware_profile
 %%%%%%%%%%%%%%%%%%%
 
@@ -1517,16 +1478,6 @@ An optional identifier for the type of VM desired. If not provided,
 a service-defined default is used.
 
 %%%%%%%%%%%%%%%%%%%
-%% deltacloud_hardware_profile_memory
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!deltacloud\_hardware\_profile\_memory}
-\item[deltacloud\_hardware\_profile\_memory = $<$memory details$>$]
-Used for \SubmitCmd{deltacloud} jobs.
-An optional description of the memory desired for the VM, overriding
-the seledted hardware profile.
-
-%%%%%%%%%%%%%%%%%%%
 %% deltacloud_hardware_profile_cpu
 %%%%%%%%%%%%%%%%%%%
 
@@ -1534,6 +1485,16 @@ the seledted hardware profile.
 \item[deltacloud\_hardware\_profile\_cpu = $<$cpu details$>$]
 Used for \SubmitCmd{deltacloud} jobs.
 An optional description of the CPUs desired for the VM, overriding
+the selected hardware profile.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_hardware_profile_memory
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_hardware\_profile\_memory}
+\item[deltacloud\_hardware\_profile\_memory = $<$memory details$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+An optional description of the memory desired for the VM, overriding
 the selected hardware profile.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1547,15 +1508,45 @@ An optional description of the storage desired for the VM, overriding
 the selected hardware profile.
 
 %%%%%%%%%%%%%%%%%%%
+%% deltacloud_image_id
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_image\_id}
+\item[deltacloud\_image\_id = $<$Deltacloud image ID$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+Identifier of the VM image to run.
+
+%%%%%%%%%%%%%%%%%%%
 %% deltacloud_keyname
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!deltacloud\_keyname}
 \item[deltacloud\_keyname = $<$Deltacloud key name$>$]
 Used for \SubmitCmd{deltacloud} jobs.
-Identifier of the SSH keypair that should be used to allow remote login
+Identifier of the SSH key pair that should be used to allow remote login
 to the running instance. The keypair needs to be created before
 submission.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_password_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_password\_file}
+\item[deltacloud\_password\_file = $<$pathname$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+Path and file name of a file containing the secret key to be used to
+authenticate with a Deltacloud service.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_realm_id
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_realm\_id}
+\item[deltacloud\_realm\_id = $<$Deltacloud realm ID$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+An optional identifier specifying which of multiple locations within a
+cloud service should be used to run the VM. If not provided, a
+service-selected default is used.
 
 %%%%%%%%%%%%%%%%%%%
 %% deltacloud_user_data
@@ -1567,6 +1558,14 @@ Used for \SubmitCmd{deltacloud} jobs.
 A block of data that can be accessed by the virtual machine job inside
 the cloud service.
 
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_username
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_username}
+\item[deltacloud\_username = $<$Deltacloud username$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+The user name to be used to authenticate with a Deltacloud service.
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_rematch

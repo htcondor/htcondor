@@ -6,13 +6,13 @@
 
 Condor jobs may be submitted to Deltacloud services.
 Deltacloud is a translation service for cloud services.
-Cloud services allow you to rent computers by the hour to run
+Cloud services allow the rental of computers by the hour to run
 computation applications.
 Many cloud services define their own protocol for users to communicate
 with them.
 Deltacloud defines its own simple protocol and translates a user's
 commands into the appropriate protocol for the cloud service the user
-wants to use.
+specifies.
 Anyone can set up a Deltacloud service and configure it to translate
 for a specific cloud service.
 See the Deltacloud web page at \URL{http://incubator.apache.org/deltacloud}
@@ -24,14 +24,15 @@ for more information about Deltacloud.
 
 Condor jobs are submitted to Deltacloud
 using the \SubmitCmd{grid} universe and the
-\SubmitCmd{grid\_resource} command  by placing the following
-into the submit description file.
+\SubmitCmd{grid\_resource} command
+into the submit description file
+following this example:
 \begin{verbatim}
 grid_resource = deltacloud https://deltacloud.foo.org/api
 \end{verbatim}
 
-The URL above is just a sample. Replace it with the URL of the
-Deltacloud service you wish to use.
+The URL in this example will be replaced with the URL of the
+Deltacloud service desired.
 
 Since the job is a virtual machine image,
 most of the submit description file commands
@@ -40,42 +41,45 @@ The \SubmitCmd{executable} command is still required,
 but its value is ignored. 
 It can be used to identify different jobs in the output of \Condor{q}.
 
-The VM image for the job must already be stored and registerd with the
+The VM image for the job must already be stored and registered with the
 cloud service.
 In the submit description file,
 provide the identifier for the image using the
-\SubmitCmd{deltacloud\_image\_id} attribute.
+\SubmitCmd{deltacloud\_image\_id} command.
 
 To authenticate with Deltacloud, Condor needs your credentials for
-the cloud service the Deltacloud server is representing. These are
-presented as a username (given in the submit file) and secret key
-(stored in a file whose name is given in the submit file:
+the cloud service that the Deltacloud server is representing. 
+The credentials are
+presented as a user name and the name of a file that holds a secret key.
+Both are specified in the submit description file:
 
 \begin{verbatim}
 deltacloud_username = your_username
 deltacloud_password_file = /path/to/password/file
 \end{verbatim}
 
-You can create and register an ssh keypair with the cloud service,
-which you can then use to securely log into your virtual machines
-once they are running.
-You can then use the command \SubmitCmd{deltacloud\_keyname} in the
-submit description file to specify the identifier of the ssh keypair
+You can create and register an SSH key pair with the cloud service,
+which you can then use to securely log in to virtual machines,
+once running.
+The command \SubmitCmd{deltacloud\_keyname} in the
+submit description file specifies the identifier of the SSH key pair
 to use.
 
 The cloud service may have multiple locations where the virtual
-machine can run. You can use \SubmitCmd{deltacloud\_realm\_id} to
-select one. If you don't, the service will select a sensible default.
+machine can run. 
+The submit description file command \SubmitCmd{deltacloud\_realm\_id}
+selects one.
+If not specified, the service will select a sensible default.
 
 The cloud service may offer several hardware configurations for
-instances to run on. Select which configuration to use with the
-\SubmitCmd{deltacloud\_hardware\_profile}  submit description file
-command. The cloud service will select a sensible default if you
-don't indicate a preference.
-You can customize the select hardware profile with the optional
-commands \SubmitCmd{deltacloud\_hardware\_profile\_memory},
+instances to run on.
+Select which configuration to use with the
+\SubmitCmd{deltacloud\_hardware\_profile} submit description file command. 
+If not specified, the cloud service will select a sensible default.
+The optional commands \SubmitCmd{deltacloud\_hardware\_profile\_memory},
 \SubmitCmd{deltacloud\_hardware\_profile\_cpu}, and
-\SubmitCmd{deltacloud\_hardware\_profile\_storage}.
+\SubmitCmd{deltacloud\_hardware\_profile\_storage}
+customize the selected hardware profile.
 
 Each virtual machine instance can be given some unique data, 
 accessible by the instance connecting to a well-known address.
@@ -84,14 +88,15 @@ but perform different work.
 This data can be specified with the submit description file command
 \SubmitCmd{deltacloud\_user\_data}.
 The amount of data that can be provided depends on the cloud service.
-EC2 services allow up to 16kB of data.
+EC2 services allow up to 16Kb of data.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Deltacloud-config}Deltacloud Configuration Parameters}
+\subsubsection{\label{sec:Deltacloud-config}Configuration for Deltacloud}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The deltacloud grid type requires one configuration variable 
-to be set in the Condor configuration file:
+to be set,
+to specify the path and executable of the \Prog{deltacloud\_gahp}:
 
 \footnotesize
 \begin{verbatim}
