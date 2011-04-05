@@ -587,9 +587,10 @@ function create_sparkline($branch, $user) {
 
       $hour = 0;
       $LIMIT = 5; // Cap the number of entries we show in the pop-up box
+      $failed_parents = "";
       while ($task = mysql_fetch_array($result3)) {
         if($task["name"] == "platform_job" || $task["name"] == "remote_task") {
-          // no-op for now
+          $failed_parents .= "<nobr>" . $task["name"] . "</nobr><br>";
         }
         else {
           $hour += 1;
@@ -602,6 +603,10 @@ function create_sparkline($branch, $user) {
       # Add a 
       if($hour > $LIMIT) {
         $failed_tests .= ($hour - $LIMIT) . " more...";
+      }
+      elseif($hour == 0) {
+        # We only want to display the failed parents if there were no failed tests to display.
+        $failed_tests = $failed_parents;
       }
     }
     
