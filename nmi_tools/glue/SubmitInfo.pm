@@ -334,7 +334,7 @@ our %submit_info = (
                                 '-DWITH_CREAM:BOOL=OFF' => undef,
 								'-DWITH_COREDUMPER:BOOL=OFF'	=> undef,
 			 },
-			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
+			'prereqs'	=> [ 'cmake-2.8.3' ],
 			'xtests'	=>  [ 'x86_64_ubuntu_10.04', ],
 		},
 
@@ -433,7 +433,7 @@ our %submit_info = (
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ 
 				@default_prereqs, 
-				'java-1.4.2_09', 
+				'java-1.4.2_12', 
 				'coreutils-5.2.1'
 			],
 			'testclass'	=> [ @default_testclass ],
