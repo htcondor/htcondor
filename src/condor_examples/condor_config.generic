@@ -1642,13 +1642,17 @@ QUEUE_SUPER_USERS	= root, condor
 ##  job with the specified UID, even if it's not in the passwd file?
 #SOFT_UID_DOMAIN	= FALSE
 
-# On Windows, the built-in rmdir command will not delete directories
-# or files that have Discretionary Access Control (DACLs) that deny
-# access to the SYSTEM account. This binary will take ownership of
-# files and directories and remove DACLs if needed to delete a
-# directory.  Elevated priveleges are needed for it to operate so
-# set this only if Condor runs as SYSTEM. (i.e. as a service)
-#WINDOWS_RMDIR = $(SBIN)\condor_rmdir.exe
+##  honor the run_as_owner option from the condor submit file.
+##
+#STARTER_ALLOW_RUNAS_OWNER = TRUE
+
+##  Tell the Starter/Startd what program to use to remove a directory
+##  condor_rmdir.exe is a windows-only command that does a better job
+##  than the built-in rmdir command when it is run with elevated privileges
+##  Such as when when Condor is running as a service.
+##   /s is delete subdirectories
+##   /c is continue on error
+WINDOWS_RMDIR = $(SBIN)\condor_rmdir.exe
 #WINDOWS_RMDIR_OPTIONS = /s /c
 
 ##--------------------------------------------------------------------

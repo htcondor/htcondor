@@ -174,10 +174,18 @@ if(!$one_offs) {
       $warning = "<p style='font-size:75%; color:red;'>$days+ days old</p>";
     }
 
+    $style = "";
+    if(preg_match("/^NMI/", $branch)) {
+      $style = "style='border-bottom-width:4px;'";
+    }
+    else {
+      $style = "style='border-top-width:4px;'";
+    }
+
     echo "<tr>\n";
-    echo "  <td><a href='$branch_url'>$branch</a><br><font size='-2'>" . $info["pin"] . "</font></td>\n";
-    echo "  <td align='center'>" . $info["runid"] . "</td>\n";
-    echo "  <td align='center'>" . $info["start"] . $warning . "</td>\n";
+    echo "  <td $style><a href='$branch_url'>$branch</a><br><font size='-2'>" . $info["pin"] . "</font></td>\n";
+    echo "  <td $style align='center'>" . $info["runid"] . "</td>\n";
+    echo "  <td $style align='center'>" . $info["start"] . $warning . "</td>\n";
     echo $info["results"];
     echo "</tr>\n";
   }
@@ -517,12 +525,12 @@ function create_sparkline($branch, $user) {
       $color = "failed";
     }
     
-    $details = "<table>";
-    $details .= "<tr><td>Status</td><td class=\"$color\">$color</td></tr>";
-    $details .= "<tr><td>NMI RunID</td><td>" . $build["runid"] . "</td></tr>";
-    $details .= "<tr><td>Submitted</td><td><nobr>" . $build["start"] . "</nobr></td></tr>";
-    $details .= "<tr><td>SHA1</td><td>" . substr($build["project_version"], 0, 15) . "</td></tr>";
-    $details .= "</table>";
+    $details = "  <table>";
+    $details .= "    <tr><td>Status</td><td class=\"$color\">$color</td></tr>";
+    $details .= "    <tr><td>NMI RunID</td><td>" . $build["runid"] . "</td></tr>";
+    $details .= "    <tr><td>Submitted</td><td><nobr>" . $build["start"] . "</nobr></td></tr>";
+    $details .= "    <tr><td>SHA1</td><td>" . substr($build["project_version"], 0, 15) . "</td></tr>";
+    $details .= "  </table>";
     
     $hour = preg_replace("/^.+(\d\d):\d\d:\d\d.*$/", "$1", $build["start"]);
     
@@ -587,9 +595,10 @@ function create_sparkline($branch, $user) {
 
       $hour = 0;
       $LIMIT = 5; // Cap the number of entries we show in the pop-up box
+      $failed_parents = "";
       while ($task = mysql_fetch_array($result3)) {
         if($task["name"] == "platform_job" || $task["name"] == "remote_task") {
-          // no-op for now
+          $failed_parents .= "<nobr>" . $task["name"] . "</nobr><br>";
         }
         else {
           $hour += 1;
@@ -602,6 +611,10 @@ function create_sparkline($branch, $user) {
       # Add a 
       if($hour > $LIMIT) {
         $failed_tests .= ($hour - $LIMIT) . " more...";
+      }
+      elseif($hour == 0) {
+        # We only want to display the failed parents if there were no failed tests to display.
+        $failed_tests = $failed_parents;
       }
     }
     
@@ -654,11 +667,16 @@ function cndrauto_sort($a, $b) {
   $a_is_nmi = preg_match("/^NMI/", $a);
   $b_is_nmi = preg_match("/^NMI/", $b);
 
-  if($a_is_nmi and !$b_is_nmi) {
-    return 1;
-  }
-  elseif($b_is_nmi and !$a_is_nmi) {
-    return -1;
+  $a = preg_replace("/^NMI Ports - /", "", $a);
+  $b = preg_replace("/^NMI Ports - /", "", $b);
+
+  if($a == $b) {
+    if($a_is_nmi and !$b_is_nmi) {
+      return 1;
+    }
+    elseif($b_is_nmi and !$a_is_nmi) {
+      return -1;
+    }
   }
 
   if(preg_match("/trunk/", $a)) {
