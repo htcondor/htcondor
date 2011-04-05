@@ -1494,7 +1494,7 @@ the selected hardware profile.
 \index{submit commands!deltacloud\_hardware\_profile\_memory}
 \item[deltacloud\_hardware\_profile\_memory = $<$memory details$>$]
 Used for \SubmitCmd{deltacloud} jobs.
-An optional description of the memory desired for the VM, overriding
+An optional description of the memory (RAM) desired for the VM, overriding
 the selected hardware profile.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1504,7 +1504,7 @@ the selected hardware profile.
 \index{submit commands!deltacloud\_hardware\_profile\_storage}
 \item[deltacloud\_hardware\_profile\_storage = $<$storage details$>$]
 Used for \SubmitCmd{deltacloud} jobs.
-An optional description of the storage desired for the VM, overriding
+An optional description of the storage (disk) desired for the VM, overriding
 the selected hardware profile.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1524,7 +1524,7 @@ Identifier of the VM image to run.
 \item[deltacloud\_keyname = $<$Deltacloud key name$>$]
 Used for \SubmitCmd{deltacloud} jobs.
 Identifier of the SSH key pair that should be used to allow remote login
-to the running instance. The keypair needs to be created before
+to the running instance. The key pair needs to be created before
 submission.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1555,8 +1555,8 @@ service-selected default is used.
 \index{submit commands!deltacloud\_user\_data}
 \item[deltacloud\_user\_data = $<$data$>$]
 Used for \SubmitCmd{deltacloud} jobs.
-A block of data that can be accessed by the virtual machine job inside
-the cloud service.
+A string, representing a block of data that can be accessed 
+by the virtual machine job inside the cloud service.
 
 %%%%%%%%%%%%%%%%%%%
 %% deltacloud_username
@@ -1650,6 +1650,7 @@ This submit description file command allows each to
 be given in a space-separated list.
 Allowable \SubmitCmd{grid-type-string} values are
 \SubmitCmd{amazon}, \SubmitCmd{condor}, \SubmitCmd{cream}, 
+\SubmitCmd{deltacloud}, 
 \SubmitCmd{gt2}, \SubmitCmd{gt4}, \SubmitCmd{gt5},
 \SubmitCmd{lsf}, \SubmitCmd{nordugrid}, \SubmitCmd{pbs},
 and \SubmitCmd{unicore}.
@@ -1675,6 +1676,10 @@ name of the batch system that sits behind the CREAM server.
 The third parameter identifies a site-specific queue
 within the batch system.
 See section~\ref{sec:CREAM} for details.
+
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{deltacloud},
+the single parameter is the URL of the deltacloud service requested.
+See section~\ref{sec:Deltacloud} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt2},
 the single parameter is the name of the pre-WS GRAM resource to be used.
