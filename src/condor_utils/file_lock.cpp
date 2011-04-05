@@ -688,8 +688,8 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 	char *temp_filename;
 	int c;
 	
-#if defined(_POSIX_PATH_MAX) && !defined(WIN32)
-	char *buffer = new char[_POSIX_PATH_MAX];
+#if defined(PATH_MAX) && !defined(WIN32)
+	char *buffer = new char[PATH_MAX];
 	temp_filename = realpath(orig, buffer);
 	if (temp_filename == NULL) {
 		temp_filename = new char[strlen(orig)+1];
