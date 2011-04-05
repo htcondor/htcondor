@@ -52,6 +52,7 @@
 			<xs:element name="value" type="xs:string"/>
 		</xs:sequence>
 	</xs:complexType>
+	<!-- might just want to use the following just for returning data like in getJobDetails -->
 	<xs:complexType name="Attributes">
 		<xs:sequence>
 			<xs:element name="attrs" type="tns:Attribute" minOccurs="0" maxOccurs="unbounded"/>

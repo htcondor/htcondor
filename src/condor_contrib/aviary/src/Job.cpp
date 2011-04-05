@@ -21,7 +21,9 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_parser.h"
+#include "compat_classad.h"
 #include "proc.h"
+#include "stl_string_utils.h"
 
 // c++ includes
 #include <sstream>
@@ -29,6 +31,11 @@
 // local includes
 #include "Globals.h"
 #include "AviaryUtils.h"
+
+using namespace std;
+using namespace compat_classad;
+using namespace aviary::query;
+using namespace aviary::util;
 
 // Any key that begins with the '0' char is either the
 // header or a cluster, i.e. not a job
@@ -52,23 +59,20 @@
 // TODO: C++ utils which may very well exist elsewhere :-)
 template <class T>
 bool from_string ( T& t,
-                   const std::string& s,
-                   std::ios_base& ( *f ) ( std::ios_base& ) )
+                   const string& s,
+                   ios_base& ( *f ) ( ios_base& ) )
 {
-    std::istringstream iss ( s );
+    istringstream iss ( s );
     return ! ( iss >> f >> t ).fail();
 }
 
 template <class T>
-std::string to_string ( T t, std::ios_base & ( *f ) ( std::ios_base& ) )
+string to_string ( T t, ios_base & ( *f ) ( ios_base& ) )
 {
-    std::ostringstream oss;
+    ostringstream oss;
     oss << f << t;
     return oss.str();
 }
-
-using namespace aviary::query;
-using namespace aviary::util;
 
 //////////////
 // LiveJobImpl
@@ -138,7 +142,7 @@ LiveJobImpl::get ( const char *_name, const AviaryAttribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new AviaryAttribute ( AviaryAttribute::INTEGER_TYPE, to_string<int> ( i,std::dec ).c_str() );
+            _attribute = new AviaryAttribute ( AviaryAttribute::INTEGER_TYPE, to_string<int> ( i,dec ).c_str() );
             return true;
         }
         case classad::Value::REAL_VALUE:
@@ -148,7 +152,7 @@ LiveJobImpl::get ( const char *_name, const AviaryAttribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new AviaryAttribute ( AviaryAttribute::FLOAT_TYPE, to_string<float> ( f,std::dec ).c_str() );
+            _attribute = new AviaryAttribute ( AviaryAttribute::FLOAT_TYPE, to_string<float> ( f,dec ).c_str() );
             return true;
         }
         case classad::Value::STRING_VALUE:
@@ -197,7 +201,7 @@ LiveJobImpl::set ( const char *_name, const char *_value )
 
     if ( strcasecmp ( _name, ATTR_JOB_SUBMISSION ) == 0 )
     {
-        std::string val = trimQuotes( _value );
+        string val = trimQuotes( _value );
         // TODO: grab the cluster from our key
         PROC_ID id = getProcByString(m_job->getKey());
 	if (m_job) {
@@ -221,7 +225,7 @@ LiveJobImpl::set ( const char *_name, const char *_value )
 	// to be picked up soon
 	// if we are in here, we don't have m_submission
 	PROC_ID id = getProcByString(m_job->getKey());
-	std::string val = trimQuotes( _value );
+	string val = trimQuotes( _value );
 	g_ownerless[id.cluster] = strdup( val.c_str() );
     }
 
@@ -241,12 +245,12 @@ LiveJobImpl::set ( const char *_name, const char *_value )
     {
         case classad::Value::INTEGER_VALUE:
             int i;
-            from_string<int> ( i, std::string ( _value ), std::dec );
+            from_string<int> ( i, string ( _value ), dec );
             m_full_ad->Assign ( _name, i );
             break;
         case classad::Value::REAL_VALUE:
             float f;
-            from_string<float> ( f, std::string ( _value ), std::dec );
+            from_string<float> ( f, string ( _value ), dec );
             m_full_ad->Assign ( _name, f );
             break;
         case classad::Value::STRING_VALUE:
@@ -414,26 +418,22 @@ void
     int end = 0;
     int error = 0;
     int empty = 0;
-	std::ostringstream buf;
-	// placeholder in case we want to expose error details to UI
-	std::string text;
+	string _text;
 
     // TODO: move the ClassAd/file deserialize back to HistoryFile???
     const char* fName = m_he.file.c_str();
     if ( ! ( hFile = safe_fopen_wrapper ( fName, "r" ) ) )
     {
-		buf <<  "unable to open history file " << m_he.file;
-		text = buf.str();
-        dprintf ( D_ALWAYS, text.c_str(), "\n");
-	_ad.Assign("JOB_AD_ERROR",text.c_str());
-	return;
+		sprintf(_text,"unable to open history file '%s'", m_he.file.c_str());
+        dprintf ( D_ALWAYS, "%s\n",_text.c_str());
+		_ad.Assign("JOB_AD_ERROR",_text.c_str());
+		return;
     }
     if ( fseek ( hFile , m_he.start , SEEK_SET ) )
     {
-		buf << "bad seek in " << m_he.file << " at " << m_he.start;
-		text = buf.str();
-        dprintf ( D_ALWAYS, text.c_str(), "\n");
-	_ad.Assign("JOB_AD_ERROR",text.c_str());
+		sprintf(_text,"bad seek in '%s' at index %d", m_he.file.c_str(),m_he.start);
+        dprintf ( D_ALWAYS, "%s\n",_text.c_str());
+		_ad.Assign("JOB_AD_ERROR",_text.c_str());
         return;
     }
 
@@ -444,22 +444,24 @@ void
 	// we might not have our original history file anymore
     if ( error )
     {
-		buf <<  "malformed ad for job '" << m_job->getKey() << "' in " << m_he.file;
-		text = buf.str();
-        dprintf ( D_FULLDEBUG, "%s\n", text.c_str());
-	_ad.Assign("JOB_AD_ERROR",text.c_str());
+		sprintf(_text,"malformed ad for job '%s' in file '%s'",m_job->getKey(), m_he.file.c_str());
+        dprintf ( D_FULLDEBUG, "%s\n", _text.c_str());
+		_ad.Assign("JOB_AD_ERROR",_text.c_str());
 		return;
     }
     if ( empty )
     {
-		buf << "empty ad for job '" << m_job->getKey() << "' in " << m_he.file;
-		text = buf.str();
-        dprintf ( D_FULLDEBUG,"%s\n", text.c_str());
-	_ad.Assign("JOB_AD_ERROR",text.c_str());
+		sprintf(_text,"empty ad for job '%s' in '%s'", m_job->getKey(),m_he.file.c_str());
+        dprintf ( D_FULLDEBUG,"%s\n", _text.c_str());
+		_ad.Assign("JOB_AD_ERROR",_text.c_str());
 		return;
     }
 
-	_ad = myJobAd;
+	if (!_ad.CopyFrom(myJobAd)) {
+		sprintf(_text,"problem copying contents of history ClassAd for '%s'",m_job->getKey());
+		dprintf ( D_ALWAYS, "%s\n",_text.c_str());
+		_ad.Assign("JOB_AD_ERROR",_text.c_str());
+	}
 
 }
 

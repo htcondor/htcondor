@@ -405,7 +405,8 @@ GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageConte
 	JobServerObject* jso = JobServerObject::getInstance();
 
 	const char* job = _getJobData->getData()->getId()->getJob().c_str();
-	ADBJobDataTypeEnum file_type = _getJobData->getData()->getType()->getJobDataTypeEnum();
+	AviaryCommon::JobDataType* jdt = _getJobData->getData()->getType();
+	ADBJobDataTypeEnum file_type = jdt->getJobDataTypeEnum();
 	AviaryStatus status;
 	status.type = AviaryStatus::FAIL;
 	string fname, content;
@@ -417,17 +418,25 @@ GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageConte
 		jid->setScheduler(jso->getName());
 		JobData* jd = new JobData;
 		jd->setId(jid);
+		jd->setType(jdt);
 		jobDataResponse->setData(jd);
 		Status* js = new Status;
 		js->setCode(new StatusCodeType("OK"));
 		jobDataResponse->setStatus(js);
 
 		// TODO: load requested file data
+		jobDataResponse->setContent(content);
+		jobDataResponse->setFile_name(fname);
+		jobDataResponse->setFile_size(fsize);
 	}
 	else {
 		// problem...report to client
 		JobID* jid = new JobID;
 		jid->setJob(job);
+		JobData* jd = new JobData;
+		jd->setId(jid);
+		jd->setType(jdt);
+		jobDataResponse->setData(jd);
 		StatusCodeType* jst = new StatusCodeType;
 		jst->setStatusCodeTypeEnum(ADBStatusCodeTypeEnum(status.type));
 		Status* js = new Status(jst,status.text);

@@ -231,7 +231,7 @@ JobServerObject::fetchJobData(const char* key,
 		return false;
 	}
 
-	// TODO: find out what the actual file is from classad lookup
+
 	ClassAd ad;
 	string str;
 	job->getFullAd ( ad );
@@ -242,23 +242,24 @@ JobServerObject::fetchJobData(const char* key,
 		return false;
 	}
 	
+	// TODO: find out what the actual file is from classad lookup
 	switch (ftype) {
 		case ERR:
-			if ( !ad.LookupString("ATTR_JOB_ERROR", fname)  ) {
+			if ( !ad.LookupString(ATTR_JOB_ERROR, fname)  ) {
 				sprintf (_status.text,  "No error file for job '%s'",key);
 				dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 				return false;
 			}
 			break;
 		case LOG:
-			if ( !ad.LookupString("ATTR_ULOG_FILE", fname)  ) {
+			if ( !ad.LookupString(ATTR_ULOG_FILE, fname)  ) {
 				sprintf (_status.text,  "No log file for job '%s'",key);
 				dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 				return false;
 			}
 			break;
 		case OUT:
-			if ( !ad.LookupString("ATTR_JOB_OUTPUT", fname)  ) {
+			if ( !ad.LookupString(ATTR_JOB_OUTPUT, fname)  ) {
 				sprintf (_status.text,  "No output file for job '%s'",key);
 				dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 				return false;
@@ -278,9 +279,11 @@ JobServerObject::fetchJobData(const char* key,
 		return false;
 	}
 
+	fsize = the_file.GetFileSize();
+
 	// TODO: we calculate these based on file size
 	if (from_end) {
-		end = the_file.GetFileSize();
+		end = fsize;
 		start = end - max_bytes;
 	}
 	else {
@@ -347,7 +350,7 @@ JobServerObject::fetchJobData(const char* key,
 				buffer[count] = '\0';
 
 				data = buffer;
-				fetched = false;
+				fetched = true;
 			}
 
 			close(fd); // assume closed on failure?
