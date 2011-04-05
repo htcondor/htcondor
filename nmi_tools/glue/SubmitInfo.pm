@@ -593,7 +593,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_14'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITH_EXPAT:BOOL=ON' => undef,
+			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -610,7 +612,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_14-updated'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITH_EXPAT:BOOL=ON' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
