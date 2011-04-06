@@ -2300,7 +2300,7 @@ CreateUserDirectory ( HANDLE user_token, PCSTR directory ) {
         }
 
         if ( acl ) {
-             GlobalFree ( acl );
+             delete[] acl;
         }
 
     }
