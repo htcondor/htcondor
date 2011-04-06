@@ -513,6 +513,7 @@ FileLock::obtain( LOCK_TYPE t )
 // their current position.  The lesson here is don't use fseeks and lseeks
 // interchangeably...
 	int		status = -1;
+	int saved_errno;
 
 	if ( m_use_kernel_mutex == -1 ) {
 		m_use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
@@ -538,6 +539,7 @@ FileLock::obtain( LOCK_TYPE t )
 			// This will help narrow down where the delay is coming from.
 		time_t before = time(NULL);
 		status = lock_file( m_fd, t, m_blocking );
+		saved_errno = errno;
 		time_t after = time(NULL);
 		if ( (after - before) > 5 ) {
 			dprintf( D_FULLDEBUG,
@@ -594,7 +596,7 @@ FileLock::obtain( LOCK_TYPE t )
 	}
 	if ( status != 0 ) {
 		dprintf( D_ALWAYS, "FileLock::obtain(%d) failed - errno %d (%s)\n",
-	                t, errno, strerror(errno) );
+	                t, saved_errno, strerror(saved_errno) );
 	}
 	else {
 		UtcTime	now( true );
