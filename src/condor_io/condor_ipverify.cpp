@@ -385,13 +385,23 @@ IpVerify::AuthEntryToString(const in6_addr & host, const char * user, perm_mask_
 		// every address will be seen as IPv6 format. should do something
 		// to print IPv4 address neatly.
 	char buf[INET6_ADDRSTRLEN];
+	memset((void*)buf, 0, sizeof(buf));
 	uint32_t* addr = (uint32_t*)&host;
 		// checks if IPv4-mapped-IPv6 address
+	
+	const char* ret = NULL;
 	if (addr[0] == 0 && addr[1] == 0 & addr[2] == htonl(0xffff)) {
-		inet_ntop(AF_INET, (const void*)&addr[3], buf, sizeof(buf));
+		ret = inet_ntop(AF_INET, (const void*)&addr[3], buf, sizeof(buf));
 	} else {
-		inet_ntop(AF_INET6, &host, buf, sizeof(buf));
+		ret = inet_ntop(AF_INET6, &host, buf, sizeof(buf));
 	}
+
+#ifndef WIN32
+	if (!ret) {
+		dprintf(D_HOSTNAME, "IP address conversion failed, errno = %d\n",
+				errno);
+	}
+#endif
 
 	MyString mask_str;
 	PermMaskToString( mask, mask_str );

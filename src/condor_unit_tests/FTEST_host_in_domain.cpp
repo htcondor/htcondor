@@ -28,6 +28,7 @@
 #include "function_test_driver.h"
 #include "emit.h"
 #include "unit_test_utils.h"
+#include "ipv6_hostname.h"
 
 static bool test_normal_case(void);
 static bool test_general_domain(void);
@@ -35,6 +36,11 @@ static bool test_two_hostname(void);
 static bool test_different_subdomain(void);
 
 bool FTEST_host_in_domain(void) {
+    printf("local fqdn = %s\n", get_local_fqdn().Value());
+    printf("local ipstr = %s\n", get_local_ipaddr().to_ip_string().Value());
+
+
+
 		// beginning junk for getPortFromAddr(() {
 	emit_function("host_in_domain(char* host, char* domain)");
 	emit_comment("Converts a sockaddr_in to a sinful string.");

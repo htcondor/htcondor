@@ -5,7 +5,6 @@
 #include "condor_netdb.h"
 #include "condor_config.h"
 #include "condor_sockfunc.h"
-#include "my_hostname.h"
 #include "ipv6_hostname.h"
 #include "ipv6_addrinfo.h"
 
@@ -22,7 +21,7 @@ static bool nodns_enabled()
 void init_local_hostname()
 {
 		// [m.]
-		// initializing of local hostname, ip address, fqdn was
+		// initializing local hostname, ip address, fqdn was
 		// super complex.
 		//
 		// implementation was scattered over condor_netdb and
@@ -45,16 +44,10 @@ void init_local_hostname()
 	}
 
 		// if NETWORK_INTERFACE is defined, we use that as a local ip addr.
-		// [TODO:IPV6] even if NETWORK_INTERFCE is defined, it should find matching network interfaces.
 	MyString network_interface;
 	if (param(network_interface, "NETWORK_INTERFACE")) {
-		MyString matched_network_if = get_matched_network_if();
-		dprintf(D_HOSTNAME, "Trying to initialize local IP address to NETWORK_INTERFACE(%s)", network_interface.Value());
-		if (network_interface == matched_network_if && local_ipaddr.from_ip_string(network_interface))
+		if (local_ipaddr.from_ip_string(network_interface))
 			ipaddr_inited = true;
-		else
-			dprintf(D_HOSTNAME, "NETWORK_INTERFACE is not IP address or does not match to any system's network interface(%s).",
-					matched_network_if.Value());
 	}
 
 		// now initialize hostname and fqdn
