@@ -35,7 +35,7 @@ Restart the \Condor{startd} daemon on that host.  For example,
 \end{verbatim}
 
 The \Condor{startd} daemon takes a few moments to exercise the Java
-capabilites of the \Condor{starter}, query its properties,
+capabilities of the \Condor{starter}, query its properties,
 and then advertise the machine
 to the pool as Java-capable.
 If the set up succeeded, then \Condor{status} will
@@ -99,39 +99,19 @@ If the Java installation is incorrect, then any error
 messages from the shell or Java will be printed
 on the error stream instead.
 
-One identified difficulty occurs when the machine has
-a large quantity of physical RAM, and this quantity
-exceeds the Java limitations.
-This is a known problem for the Sun JVM.
-Condor appends the maximum amount of system RAM
-to the Java Maxheap Argument,
-and sometimes this value is larger than the JVM allows.
-The end result is that Condor believes that the JVM on the machine
-is faulty,
-resulting in nothing showing up as a result of executing
-the command \ShortExpr{condor\_status -java}.
-
-The way to work around this particular problem is to modify
-the configuration file for those machines that may execute
-Java universe jobs.
-The \Macro{JAVA\_MAXHEAP\_ARGUMENT} macro is explicitly set
-to null in the configuration, to prevent Condor from appending
-the machine-specific, but too-big value.
-Then the Java Maxheap Argument is set (again, in the configuration)
-to the maximum value allowed for the JVM on that platform,
-using the \Macro{JAVA\_EXTRA\_ARGUMENTS} configuration variable.
-Note that the name of the switch that regulates the Java
-Maxheap Argument is different for different vendors' JVM.
-
-The following is an example of the configuration fix for the Sun JVM:
+The Sun JVM sets a value of 64 Mbytes for the Java Maxheap Argument,
+which Condor uses.
+This value is often too small for the application.
+The administrator can change this value through configuration by setting
+a different value for \Macro{JAVA\_EXTRA\_ARGUMENTS}.
 
 \footnotesize
 \begin{verbatim}
-# First set JAVA_MAXHEAP_ARGUMENT to null, to disable the default of max RAM
-JAVA_MAXHEAP_ARGUMENT =
-# Now set the argument with the Sun-specific maximum allowable value
-JAVA_EXTRA_ARGUMENTS = -Xmx1906m
+JAVA_EXTRA_ARGUMENTS = -Xmx1024m
 \end{verbatim}
 \normalsize
+Note that if a specific job sets the value in the submit description
+file, using the submit command \SubmitCmd{java\_vm\_args},
+this job's value takes precedence over a configured value.
 
 

@@ -90,9 +90,11 @@ for definitions of these job ClassAd attributes.
   has been removed. 
   This means that Java universe jobs will now run with the JVM's 
   default maximum heap setting,
-  unless specified otherwise for the job via 
-  \SubmitCmd{java\_vm\_args} in the submit description file. 
-  See also section~\ref{sec:Java}.
+  unless specified otherwise by the administrator using the configuration
+  of \Macro{JAVA\_EXTRA\_ARGUMENTS},
+  or by the job via 
+  \SubmitCmd{java\_vm\_args} in the submit description file
+  as described in section~\ref{sec:Java}.
 
 \end{itemize}
 
