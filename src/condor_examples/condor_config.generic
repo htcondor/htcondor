@@ -1642,6 +1642,18 @@ QUEUE_SUPER_USERS	= root, condor
 ##  job with the specified UID, even if it's not in the passwd file?
 #SOFT_UID_DOMAIN	= FALSE
 
+##  honor the run_as_owner option from the condor submit file.
+##
+#STARTER_ALLOW_RUNAS_OWNER = TRUE
+
+##  Tell the Starter/Startd what program to use to remove a directory
+##  condor_rmdir.exe is a windows-only command that does a better job
+##  than the built-in rmdir command when it is run with elevated privileges
+##  Such as when when Condor is running as a service.
+##   /s is delete subdirectories
+##   /c is continue on error
+WINDOWS_RMDIR = $(SBIN)\condor_rmdir.exe
+#WINDOWS_RMDIR_OPTIONS = /s /c
 
 ##--------------------------------------------------------------------
 ##  condor_procd
