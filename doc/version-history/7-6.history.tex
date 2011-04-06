@@ -132,7 +132,15 @@ sign in the log file name of a node job submit file as an (illegal for
 
 \begin{itemize}
 
-\item None.
+\item There are two known issues related to automatic checkpointing with the
+Condor checkpointing library in 7.6.0.  The first is that compression of
+standalone checkpoints is disabled for 32 bit binaries.  It was always disabled
+before, for 64 bit ones.  A standalone checkpoint is one that is run outside
+of Condor's standard universe.  The second problem has to do with compressed
+32 bit checkpoints within standard universe.  If a user requests a compressed
+32 bit checkpoint in standard universe, the resultant checkpoint will not
+be compressed.  As with standalone checkpointing, this has never been supported
+in 64 bit binaries.  We hope to fix both problems in 7.6.1
 
 \end{itemize}
 
