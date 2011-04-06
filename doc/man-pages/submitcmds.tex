@@ -2008,6 +2008,15 @@ the value of \SubmitCmd{kill\_sig} is used.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
+%% kvm_transfer_files
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!kvm\_transfer\_files}
+\item[kvm\_transfer\_files = $<$list-of-files$>$]
+A comma separated list of all files that Condor is to transfer
+to the execute machine.
+
+%%%%%%%%%%%%%%%%%%%
 %% vm_disk
 %%%%%%%%%%%%%%%%%%%
 
@@ -2016,8 +2025,9 @@ the value of \SubmitCmd{kill\_sig} is used.
 A list of comma separated disk files.
 Each disk file is specified by 4 colon separated fields.
 The first field is the path and file name of the disk file.
-The second field specifies the device. The third field specifies 
-permissions, the optional fourth field specifies the image format. 
+The second field specifies the device. 
+The third field specifies permissions,
+and the optional fourth field specifies the image format. 
 
 An example that specifies two disk files:
 \footnotesize
@@ -2025,15 +2035,6 @@ An example that specifies two disk files:
 vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
 \end{verbatim}
 \normalsize
-
-%%%%%%%%%%%%%%%%%%%
-%% kvm_transfer_files
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!kvm\_transfer\_files}
-\item[kvm\_transfer\_files = $<$list-of-files$>$]
-A comma separated list of all files that Condor is to transfer
-to the execute machine.
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_checkpoint
