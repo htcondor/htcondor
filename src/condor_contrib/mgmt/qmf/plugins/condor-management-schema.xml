@@ -605,7 +605,7 @@ Set by Collector:
     <method name="Reconfig"/>
 
     <statistic name="MatchRate" type="double" desc="Matches per second over current cycle"/>
-    <statistic name="MatchRateSustained" type="double" desc="Matcher per second, since end of previous cycle"/>
+    <statistic name="MatchRateSustained" type="double" desc="Matches per second, since end of previous cycle"/>
     <statistic name="Matches" type="uint32" desc="Number of matches generated"/>
     <statistic name="Duration" type="uint32" unit="second" desc="Negotiation cycle duration"/>
     <statistic name="Phase1Duration" type="uint32" unit="second" desc="Duration of phase 1"/>

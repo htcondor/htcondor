@@ -124,6 +124,7 @@ FileTransfer::FileTransfer()
 	PeerDoesTransferAck = false;
 	PeerDoesGoAhead = false;
 	PeerUnderstandsMkdir = false;
+	TransferUserLog = false;
 	Iwd = NULL;
 	ExceptionFiles = NULL;
 	InputFiles = NULL;
@@ -320,11 +321,10 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	}
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf) == 1 ) {
 		UserLogFile = strdup(condor_basename(buf));
-			// add to input files if sending from submit to the schedd
-		if ( (simple_init) && (!nullFile(buf)) ) {			
-			if ( !InputFiles->file_contains(buf) )
-				InputFiles->append(buf);			
-		}
+		// For 7.5.6 and earlier, we want to transfer the user log as
+		// an input file if we're in condor_submit. Otherwise, we don't.
+		// At this point, we don't know what version our peer is,
+		// so we have to delay this decision until UploadFiles().
 	}
 	if ( Ad->LookupString(ATTR_X509_USER_PROXY, buf) == 1 ) {
 		X509UserProxy = strdup(buf);
@@ -467,6 +467,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
+		// add the spooled user log to the list of files to xfer
+		// (i.e. when sending output to condor_transfer_data)
+	MyString ulog;
+	if( jobAd.LookupString(ATTR_ULOG_FILE,ulog) ) {
+		if( outputFileIsSpooled(ulog.Value()) ) {
+			if( OutputFiles ) {
+				if( !OutputFiles->file_contains(ulog.Value()) ) {
+					OutputFiles->append(ulog.Value());
+				}
+			} else {
+				OutputFiles = new StringList(buf,",");
+			}
+		}
+	}
+
 	// Set EncryptInputFiles to be ATTR_ENCRYPT_INPUT_FILES if specified.
 	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, buf) == 1) {
 		EncryptInputFiles = new StringList(buf,",");
@@ -513,7 +528,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	bool spooling_output = false;
 	{
-		if (Spool) {
+		if (Iwd && Spool) {
 			if(!strncmp(Iwd,Spool,strlen(Spool))) {
 				// We are in the spool directory.
 				// Wish there was a better way to find this out!
@@ -1131,6 +1146,13 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 	// we are the server side, there is a programmer error -- do EXCEPT.
 	if ( !simple_init && IsServer() ) {
 		EXCEPT("FileTransfer: UploadFiles called on server side");
+	}
+
+	// If we're a client talking to a 7.5.6 or older schedd, we want
+	// to send the user log as an input file.
+	if ( TransferUserLog && simple_init && !nullFile( UserLogFile ) ) {
+		if ( !InputFiles->file_contains( UserLogFile ) )
+			InputFiles->append( UserLogFile );
 	}
 
 	// set flag saying if this is the last upload (i.e. job exited)
@@ -3480,6 +3502,12 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	else {
 		PeerUnderstandsMkdir = false;
 	}
+
+	if ( peer_version.built_since_version(7,6,0) ) {
+		TransferUserLog = false;
+	} else {
+		TransferUserLog = true;
+	}
 }
 
 
@@ -4139,4 +4167,19 @@ void
 GetDelegatedProxyRenewalTime(ClassAd *jobAd)
 {
 	GetDelegatedProxyRenewalTime(GetDesiredDelegatedJobCredentialExpiration(jobAd));
+}
+
+bool
+FileTransfer::outputFileIsSpooled(char const *fname) {
+	if(fname) {
+		if( is_relative_to_cwd(fname) ) {
+			if( Iwd && SpoolSpace && strcmp(Iwd,SpoolSpace)==0 ) {
+				return true;
+			}
+		}
+		else if( SpoolSpace && strncmp(fname,SpoolSpace,strlen(SpoolSpace))==0 ) {
+			return true;
+		}
+	}
+	return false;
 }

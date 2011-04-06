@@ -141,11 +141,11 @@ bool AutoCluster::config(const char* significant_target_attrs)
 
 	if ( sig_attrs_changed ) {
 		dprintf(D_ALWAYS,
-			"AutoCluster:config() significant atttributes changed to %s\n",
+			"AutoCluster:config() significant attributes changed to %s\n",
 			new_sig_attrs ? new_sig_attrs : "(null)");
 	} else {
 		dprintf(D_FULLDEBUG,
-			"AutoCluster:config() significant atttributes unchanged\n");
+			"AutoCluster:config() significant attributes unchanged\n");
 	}
 		
 

@@ -147,5 +147,14 @@ function get_queue_for_nmi_platform($platform, $type) {
   return $ret;
 }
 
-?>
+function make_sidebar() {
+  echo "<div id='nav'>\n";
 
+  echo "<p><a href='" . AUTO_URL . "'>Auto builds</a>\n";
+  echo "<p><a href='" . ONEOFFS_URL . "'>One-off builds</a>\n";
+  echo "<p><a href='" . QUEUE_DEPTH_URL . "'>NMI platform queue</a>\n";
+
+  echo "</div>\n";
+}
+
+?>

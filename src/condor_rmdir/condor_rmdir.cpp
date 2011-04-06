@@ -1,5 +1,22 @@
-/*
-*/
+/***************************************************************
+ *
+ * Copyright (C) 2011, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
 #define UNICODE
 #include <windows.h>
 #include <shlwapi.h>
@@ -392,7 +409,7 @@ int RemoveFileDACLs(LPCTSTR pszPath, BOOL fDiagnostic, BPRINT_BUFFER *pbp)
    // Attempt to put a NULL Dacl on the file/directory
    //
    SECURITY_DESCRIPTOR si;
-   SfZeroStruct(&si);
+   ZeroStruct(&si);
    InitializeSecurityDescriptor(&si, SECURITY_DESCRIPTOR_REVISION);
    SetSecurityDescriptorDacl (&si,  TRUE, NULL, FALSE);
 
@@ -428,7 +445,7 @@ int RemoveFileDACLs(LPCTSTR pszPath, BOOL fDiagnostic, BPRINT_BUFFER *pbp)
       if (fDiagnostic)
          ReportError (err, "SetFileSecurity(Owner)[1] ", pszPath);
 
-      //SfZeroStruct(&si);
+      //ZeroStruct(&si);
       //InitializeSecurityDescriptor(&si, SECURITY_DESCRIPTOR_REVISION);
       //SetSecurityDescriptorOwner (&si, ls.OwnerSid, FALSE);
 
@@ -1013,7 +1030,7 @@ int DeletePath(LPCTSTR pszPathIn,
    bool fQuiet = (fdwVerbose & DP_V_QUIET) != 0;
 
    DeletePathData lad;
-   SfZeroStruct(&lad);
+   ZeroStruct(&lad);
    lad.pbp = &bp;
 
    if (fdwSecurity & DP_S_NODELETE)

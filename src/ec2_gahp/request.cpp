@@ -17,6 +17,18 @@
  *
  ***************************************************************/
 
-#define COMPRESS_CKPT
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "amazongahp_common.h"
+#include "request.h"
 
-#include "image.cpp"
+Request::Request (const char *cmd)
+{   
+	m_worker = NULL;
+	m_raw_cmd = cmd;
+
+	if ( parse_gahp_command(cmd, &m_args) )
+		m_reqid = (int)strtol(m_args.argv[1], (char **)NULL, 10);
+	else
+		m_reqid = -1;
+}

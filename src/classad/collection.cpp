@@ -345,6 +345,10 @@ ReadLogEntry( FILE *fp )
     return log_rec;
 }
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4996) // the seek, read, open, close, fileno, etc are deprecated, use _seek, etc instead.
+#endif
 
 bool ClassAdCollectionInterface::
 WriteLogEntry( FILE *fp, ClassAd *rec, bool synch )
@@ -488,6 +492,10 @@ TruncateLog( )
 
     return( true );
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop) // restore 4996
+#endif
 
 static bool string_is_empty(const string &text)
 {

@@ -130,6 +130,10 @@ if (BUILD_TESTS)
 		if ( NOT WITHOUT_AMAZON_TEST AND HAVE_EXT_GSOAP )
 			condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
 		endif()
+
+        # AFAIK, this test isn't platform- or external- dependent.
+        condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
+
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
 	endif()
@@ -159,8 +163,9 @@ if (BUILD_TESTS)
 	# feature specific tests
 	if (HAVE_VMWARE)
 		condor_pl_test(job_vmu_basic "VM Universe smoke test" "core;quick;full;quicknolink")
-		condor_pl_test(job_vmu_cdrom "VM Universe CD-ROM test" "core;quick;full;quicknolink")
-		#condor_pl_test(job_vmu_network "VM Universe networking test" "core;quick;full;quicknolink")
+		# cdrom xfer bits no longer supported. 
+		# condor_pl_test(job_vmu_cdrom "VM Universe CD-ROM test" "core;quick;full;quicknolink")
+		# condor_pl_test(job_vmu_network "VM Universe networking test" "core;quick;full;quicknolink")
 		condor_pl_test(job_vmu_ckpt "VM Universe checkpoint test" "core;quick;full;quicknolink")
 	endif(HAVE_VMWARE)
 
@@ -450,6 +455,7 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_job_held "Test removing jobs held too many times" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_reject "Test the REJECT keyword, inside a splice" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_jobstate_log "Test writing the jobstate.log file, including rescue DAG and recovery mode" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_gt1957 "Test gittrac #1957 fix" "dagman;quick;full;quicknolink")
 	#condor_pl_test(perf_busy_lynn_100_100_500_sched "Generated cpu loading performance test" "performance;long")
 	#condor_pl_test(perf_jobs_sue_10_10_30_van "Generated jobs performance test" "performance;long")
 	#condor_pl_test(perf_xfer_deb_10_10_30_van "Generated transfer performance test" "performance;long")

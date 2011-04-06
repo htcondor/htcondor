@@ -38,6 +38,8 @@ struct SubmitDagShallowOptions
 {
 	bool bSubmit;
 	MyString strRemoteSchedd;
+	MyString strScheddDaemonAdFile;
+	MyString strScheddAddressFile;
 	int iMaxIdle;
 	int iMaxJobs;
 	int iMaxPre;
@@ -66,6 +68,8 @@ struct SubmitDagShallowOptions
 	{ 
 		bSubmit = true;
 		strRemoteSchedd = "";
+		strScheddDaemonAdFile = "";
+		strScheddAddressFile = "";
 		iMaxIdle = 0;
 		iMaxJobs = 0;
 		iMaxPre = 0;

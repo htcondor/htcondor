@@ -1,0 +1,495 @@
+#! /usr/bin/env python
+import os
+import re
+import sys
+import time
+import shutil
+import subprocess
+import getpass
+from optparse import *
+
+
+class Cache( object ) :
+    class CacheEnt ( object ) :
+        def __init__( self, cachedir, version, platform ) :
+            self.__platform  = platform
+            self.__version = version
+            self.__cachefile = \
+                os.path.join( cachedir, "%s-v%s"%(platform,version) )
+            self.__mtime = None
+        def Read( self ) :
+            try:
+                f = open( self.__cachefile )
+                self.__mtime = int(f.readline().strip())
+                f.close()
+            except:
+                pass
+        def Match( self, statinfo ) :
+            mtime = statinfo.st_mtime
+            return self.__mtime is not None  and  mtime == self.__mtime
+        def Set( self, statinfo ) :
+            self.__mtime = statinfo.st_mtime
+        def Store( self ) :
+            f = open( self.__cachefile, "w" )
+            print >>f, self.__mtime
+            f.close()
+            
+    def __init__( self, cachedir ) :
+        self.__cachedir = cachedir
+        self.__entries = { }
+        if not os.path.isdir( cachedir ) :
+            os.makedirs(cachedir)
+
+    def Get( self, version, platform ) :
+        name = version+":"+platform
+        ent = self.__entries.get(name, None )
+        if ent is not None :
+            return ent
+        ent = self.CacheEnt( self.__cachedir, version, platform )
+        ent.Read( )
+        self.__entries[name] = ent
+        return ent
+
+
+def ParseArgs( ) :
+    usage = "%prog: [options] (runid|GID) [platform ...]"
+    parser = OptionParser( usage = usage, version = "%prog 0.1" )
+
+    parser.set_defaults( platforms = [] )
+    parser.set_defaults( runid = None )
+    parser.set_defaults( guid = None)
+
+
+    tmp = time.strftime( "%Y/%m" )
+    parser.set_defaults( datestr = tmp )
+    tmp = time.strftime( "%Y/%m/%d" )
+    parser.set_defaults( date = time.time() )
+    def DateCallback( option, opt, value, parser ):
+        year = time.strftime( "%Y" )
+        datestr = None
+        if re.match( "\d{4}/\d{2}/\d{2}", value ) :
+            datestr = value
+        elif re.match( "\d{2}/\d{2}/\d{2}", value ) :
+            datestr = year[0:1]+"/"+value
+        elif re.match( "\d{2}/\d{2}", value ) :
+            datestr = year+"/"+value
+        else :
+            raise OptionValueError( "invalid date string '"+value+"'" )
+
+        date = None
+        try:
+            date = time.strptime( datestr, "%Y/%m/%d" )
+            parser.values.date = time.mktime( date )
+        except ValueError, e:
+            raise OptionValueError("invalid date string '"+value+"': "+str(e))
+        parser.values.datestr = time.strftime( "%Y/%m", date )
+
+    parser.set_defaults( user = "cndrauto" )
+    parser.add_option( "--user", "-u",
+                       action="store", dest="user",
+                       help="Specify submit user <default 'cndrauto'>" )
+    parser.add_option( "--me",
+                       action="store_const", dest="user",
+                       const=os.environ["USER"],
+                       help="Specify submit user as $USER" )
+    
+    parser.set_defaults( root = os.environ['HOME'] )
+    parser.add_option( "--root",
+                       action="store", dest="root",
+                       help="Specify root directory <default '$HOME'>" )
+    
+    parser.set_defaults( cache = None )
+    parser.add_option( "--cache",
+                       action="store", dest="cache",
+                       help="Specify cache directory <default <root>/cache>" )
+    
+    parser.set_defaults( public = None )
+    parser.add_option( "--public",
+                       action="store", dest="public",
+                       help="Specify cache directory <default <root>/public>" )
+    
+    parser.add_option( "--date", "-d",
+                       action="callback", callback=DateCallback,
+                       nargs=1, type="string",
+                       help="Set date yyyy/mm/dd|yy/mm/dd|mm/dd <"+tmp+">" )
+
+    parser.set_defaults( version = None )
+    parser.add_option( "--condor-version",
+                       action="store", dest="version",
+                       help="Specify condor version (i.e. '7.1.4')" )
+
+    parser.set_defaults( find_mode = False )
+    parser.add_option( "--find",
+                       action="store_true", dest="find_mode",
+                       help="Exit after locating the run directory" )
+
+    parser.set_defaults( create_sourceball = None )
+    parser.add_option( "--no-sources",
+                       action="store_false", dest="create_sourceball",
+                       help="Disable source tarball" )
+    parser.add_option( "--sources", "-s",
+                       action="store_true", dest="create_sourceball",
+                       help="Enable source tarball" )
+
+    parser.set_defaults( execute = True )
+    parser.add_option( "--no-exec", "-n",
+                       action="store_false", dest="execute",
+                       help="Disable execution" )
+
+    parser.set_defaults( verbose = 0 )
+    parser.add_option( "--verbose", "-v",
+                       action="count", dest="verbose",
+                       help="Increase verbose level" )
+
+    (options, args) = parser.parse_args()
+    return ( parser, options, args )
+
+class DirectoryError( Exception ) :
+    pass
+
+class Extractor ( object ) :
+    def __init__( self ) :
+        self._gid = None
+
+        self._base_dir = None
+
+        ( self._parser, self._options, self._args ) = ParseArgs( )
+        if len(self._args) < 1 :
+            self._parser.error( "No runid or GID specified" )
+        tmp = self._args.pop(0)
+        if re.match( "\d+_\d+$", tmp ) :
+            self._options.runid = None
+            self._options.gid = tmp
+        elif tmp.isdigit( ) :
+            self._options.runid = tmp
+            self._options.gid = None
+        else :
+            self._parser.error( "'"+tmp+"' is not a valid runid or GID" )
+
+        if self._options.cache is None :
+            self._options.cache = os.path.join( self._options.root, "cache" )
+        if self._options.public is None :
+            self._options.public = os.path.join( self._options.root, "public" )
+
+        for platform in self._args :
+            if platform.count( "_" ) < 2 :
+                self._parser.error(
+                    "'"+platform+"' is not a valid platform name" )
+            self._options.platforms.append( platform )
+        if self._options.create_sourceball is None :
+            self._options.create_sourceball = len(self._options.platforms) == 0
+
+
+        # reopen stdout file descriptor with write mode 
+        # and 0 as the buffer size (unbuffered) 
+        sys.stdout = os.fdopen(sys.stdout.fileno(), 'w', 0) 
+
+        self._cache = Cache( self._options.cache )
+
+        self._condor_version = None
+        self._condor_release = None
+        self._release_dir = None
+        self._version_dir = None
+        self._gid_format = self._options.user+"_nmi-s006.cs.wisc.edu_%s"
+
+        if self._options.version is not None :
+            self.SetVersion( self._options.version )
+
+
+    def CheckDir( self, base, new = None, parser = False ) :
+        if new is not None :
+            base = os.path.join( base, new )
+        if not os.path.isdir( base ) :
+            if parser :
+                self._parser.error( "%s does not exist!!" % (base) )
+            else :
+                raise DirectoryError( base )
+        return base
+
+
+    def Initialize( self ) :
+        basedir = os.path.join( "/nmi/run", self._options.user )
+        basedir = self.CheckDir( basedir )
+        basedir = self.CheckDir( basedir, self._options.datestr, True )
+
+        if self._options.gid is None :
+            ( gid, full ) = self.findGid( basedir, self._options.runid )
+            if gid is None :
+                self._parser.error( "Can't find GID for runid %s" % \
+                                    ( self._options.runid ) )
+            basedir = self.CheckDir( full, "userdir" )
+            self._options.gid = gid
+
+        else :
+            basedir = self.CheckDir(
+                basedir, self._gid_format % (self._options.gid) )
+            print basedir
+            basedir = self.CheckDir( basedir, "userdir" )
+            print basedir
+
+        self._base_dir = basedir
+
+        print "GID:", self._options.gid
+        print "DIR:", self._base_dir
+        if self._options.find_mode :
+            sys.exit( 0 )
+
+
+    def SetVersion( self, version ) :
+        if self._condor_version is None :
+            self._condor_version = version
+        else :
+            assert version == self._condor_version
+
+        release = ".".join(version.split(".")[:2])
+        if self._condor_release is None :
+            self._condor_release = release
+
+        if self._version_dir is None :
+            self._version_dir = os.path.join(self._options.public,"v"+version)
+        if self._release_dir is None :
+            self._release_dir = os.path.join(self._options.public,"v"+release)
+
+        if not os.path.isdir( self._version_dir ) :
+            os.makedirs( self._version_dir )
+            assert os.path.isdir( self._version_dir )
+        if not os.path.isdir( self._release_dir ) :
+            os.makedirs( self._release_dir )
+            assert os.path.isdir( self._release_dir )
+        if self._options.verbose :
+            print "Version dir:", self._version_dir
+            print "Release dir:", self._release_dir
+        return self._condor_version
+
+    def FindVersion( self ) :
+        path = os.path.join( self._base_dir, "common/CMakeLists.txt" )
+        try:
+            listfile = open( path )
+        except Exception, e:
+            print >>sys.stderr, "Can't open '%s': %s" % ( path, e )
+            return None
+        ver_re = re.compile( r'set\s*\(\s*VERSION\s+"([\d\.]+)"\s*\)' )
+        version = None
+        for line in listfile :
+            line = line.strip()
+            line = re.sub( "\#.*$", "", line )
+            m = ver_re.search( line )
+            if m is not None :
+                version = m.group(1)
+                break
+        if version is None :
+            print >>sys.stderr, "No version found in %s" % ( path )
+            return None
+        self.SetVersion( version )
+        return version
+
+
+    def ExtractReleases( self ) :
+        ver = self.FindVersion( )
+        if ver is None :
+            print >>sys.stderr, \
+                  "Failed to find version in %s" % ( self._base_dir )
+            sys.exit( 1 )
+        print self._condor_version, self._condor_release, self._release_dir
+
+        for name in os.listdir( self._base_dir ) :
+            full = self.CheckDir( self._base_dir, name )
+            if not name.startswith("nmi:") or not os.path.isdir(full) :
+                continue
+            print full
+            platform = name[4:]
+            if len(self._options.platforms) :
+                if platform not in self._options.platforms :
+                    if self._options.verbose > 1 :
+                        print "'%s not in %s: skipping" % \
+                              (platform, str(self._options.platforms) )
+                    continue
+            results = os.path.join( self._base_dir, name, "results.tar.gz" )
+            if not os.path.isfile(results) :
+                print >>sys.stderr, "No results in %s" % \
+                      ( os.path.join(self._base_dir, name) )
+                continue
+
+            # Read the cache file
+            cache_ent = self._cache.Get( self._condor_version, platform )
+
+            # Stat the results file, skip the file if it matches the cache
+            statinfo = os.stat(results)
+            if cache_ent.Match( statinfo ) :
+                continue
+            cache_ent.Set( statinfo )
+
+            # Finally, extract from the file
+            ok = False
+            patterns = [ "public/condor-"+ver+"-*" ]
+            if name.find( "winnt" ) >= 0 :
+                ok = self.ExtractWindows( results, patterns )
+            else :
+                ok = self.ExtractUnix( results, patterns, self._version_dir )
+            if not self._options.execute :
+                ok = True
+
+            if ok and self._options.execute :
+                cache_ent.Store( )
+
+
+        if self._options.execute :
+            if os.path.isdir( self._release_dir ) :
+                print "'"+str(self._release_dir)+"'"
+                for name in os.listdir( self._release_dir ) :
+                    if name.startswith( "." ) :
+                        continue
+                    full = os.path.join( self._release_dir, name )
+                    dest = os.path.join( self._version_dir, name )
+                    print "Moving %s to %s" % ( name, self._version_dir )
+                    if os.path.isfile( dest ) :
+                        os.remove( dest )
+                    elif os.path.isdir( dest ) :
+                        shutil.rmtree( dest )
+                    shutil.move( full, self._version_dir )
+        print "Done"
+
+
+
+    def ExtractSources( self ) :
+        if self._condor_version is None or self._condor_release is None :
+            print "No version specified, and none found in archives"
+            sys.exit(1)
+        sources = os.path.join( self._base_dir, "common" )
+        filename = "condor_src-%s-all-all.tar.gz" % (self._condor_version)
+        tarball = os.path.join( self._version_dir, filename )
+
+        cmd = [ "/bin/tar", "--directory", sources, "--gzip",
+                "-cf", tarball, "." ]
+
+        print "Running: ", cmd, "from", sources
+        if not self._options.execute or not self._options.create_sourceball :
+            return True
+
+        status = subprocess.call( cmd )
+
+        if status:
+            print "Exit status:", status
+            return False
+        else:
+            return True
+
+
+    def Cleanup( self ) :
+        if os.path.isdir( self._release_dir ) :
+            os.removedirs( self._release_dir )
+
+
+    def ExtractWindows( self, results, patterns ) :
+        print "Extracting windows release %s" % (self._release_dir )
+        if not self._options.execute :
+            return True
+        d = self._release_dir
+        try:
+            os.makedirs(d)
+        except OSError, e :
+            if str(e).find( "exists" ) < 0 :
+                raise OSError, e
+        f = os.path.join( d, "condor-%s-winnt50-x86.tar.gz" % \
+                          (self._condor_version) )
+        print "Copying", results, "to", f
+        if not self._options.execute :
+            return True
+
+        try:
+            shutil.copyfile( results, f )
+            return True
+        except:
+            print "Failed"
+            return False
+
+
+    def ExtractUnix( self, results, patterns, newdir ) :
+        cmd = [ "/bin/tar", "--force-local", "--strip-path=1",
+                "--directory", newdir, "-xvzf", results ]
+        cmd += patterns
+        print "Running: ", cmd, "from", newdir
+        if not self._options.execute:
+            return True
+
+        status = subprocess.call( cmd )
+
+        if status:
+            print "Exit status:", status
+            return False
+        else:
+            return True
+
+
+    def findGid( self, basedir, runid ) :
+        print "Searching runs in %s for runid %s..." % ( basedir, runid )
+
+        time1 = self._options.date - 24*60*60
+        time2 = self._options.date + 24*60*60
+        total = 0
+        skipped = 0
+        for name in os.listdir( basedir ) :
+            total += 1
+            if name.startswith( "." ) :
+                skipped += 1
+                continue
+
+            # Extract the GID from the directory name
+            gid = None
+            m = re.search( "_(\d+_\d+)$", name )
+            if m is not None :
+                gid = m.group(1)
+            else :
+                skipped += 1
+                continue
+
+            # Look at the mtime of the directory
+            full = os.path.join( basedir, name )
+            try :
+                s = os.stat( full )
+            except Exception, e:
+                print "Error stating %s: %s" % ( full, e )
+                continue
+            if s[8] < time1 or s[8] > time2 :
+                skipped += 1
+                continue
+
+            # OK, it looks reasonable... let's dig deeper
+            print "\r"+gid+"                    \r",
+
+            # Full path to the build ID file
+            build = os.path.join( full, "userdir", "common", "BUILD-ID" )
+            if not os.path.isfile( build ) :
+                skipped += 1
+                continue
+
+            # Read the build ID from the file
+            try :
+                f = open( build )
+            except :
+                skipped += 1
+                continue
+            id = f.readline().strip()
+            f.close()
+
+            # And, compare it to the one we're looking for
+            print "\r"+gid+": runid="+id+"          \r",
+            if id == self._options.runid :
+                if self._options.verbose :
+                    print "\nMatch found @ GID %s (dir '%s')" % ( gid, name )
+                return ( gid, full )
+        if self._options.verbose :
+            print "\nNo match found in %d (%d skipped)" % ( total, skipped )
+        return ( None, None )
+
+
+extractor = Extractor( )
+try:
+    extractor.Initialize( )
+except DirectoryError, e:
+    print >>sys.stderr, "%s does not exist!!" % (e)
+    sys.exit(1)
+
+extractor.ExtractReleases( )
+extractor.ExtractSources( )
+extractor.Cleanup( )

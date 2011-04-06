@@ -180,10 +180,13 @@ const char * const ATTR_DELTACLOUD_PROVIDER_ID	 = "DeltacloudProviderId";
 const char * const ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES = "DeltacloudPublicNetworkAddresses";
 const char * const ATTR_DELTACLOUD_RETRY_TIMEOUT = "DeltacloudRetryTimeout";
 const char * const  ATTR_DELTACLOUD_USERNAME	 = "DeltacloudUsername";
-const char * const  ATTR_DELTACLOUD_PASSWORD	 = "DeltacloudPassword";
+const char * const  ATTR_DELTACLOUD_PASSWORD_FILE = "DeltacloudPasswordFile";
 const char * const  ATTR_DELTACLOUD_IMAGE_ID	 = "DeltacloudImageId";
 const char * const  ATTR_DELTACLOUD_REALM_ID	 = "DeltacloudRealmId";
 const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE = "DeltacloudHardwareProfile";
+const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU = "DeltacloudHardwareProfileCpu";
+const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY = "DeltacloudHardwareProfileMemory";
+const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE = "DeltacloudHardwareProfileStorage";
 const char * const  ATTR_DELTACLOUD_KEYNAME		 = "DeltacloudKeyname";
 const char * const  ATTR_DELTACLOUD_USER_DATA	 = "DeltacloudUserData";
 const char * const ATTR_DESTINATION				 = "Destination";
@@ -345,6 +348,10 @@ const char * const ATTR_JOB_OUTPUT				 = "Out";
 const char * const ATTR_JOB_OUTPUT_ORIG			 = "OutOrig";
 const char * const ATTR_JOB_OUTPUT_SIZE			 = "OutSize";
 const char * const ATTR_JOB_PID                  = "JobPid";
+const char * const ATTR_PRE_JOB_PRIO1            = "PreJobPrio1";
+const char * const ATTR_PRE_JOB_PRIO2            = "PreJobPrio2";
+const char * const ATTR_POST_JOB_PRIO1           = "PostJobPrio1";
+const char * const ATTR_POST_JOB_PRIO2           = "PostJobPrio2";
 const char * const ATTR_JOB_PRIO                 = "JobPrio";
 const char * const ATTR_JOB_COMMITTED_TIME		 = "CommittedTime";
 const char * const ATTR_JOB_LANGUAGE             = "JobLanguage";
@@ -863,6 +870,19 @@ const char * const ATTR_AMAZON_REMOTE_VM_NAME = "AmazonRemoteVirtualMachineName"
 const char * const ATTR_AMAZON_INSTANCE_TYPE = "AmazonInstanceType";
 //************* End of changes for Amamzon Jobs *****************//
 
+//************* Added for EC2 Jobs ***************************//
+const char * const ATTR_EC2_ACCESS_KEY_ID = "EC2AccessKeyId";
+const char * const ATTR_EC2_SECRET_ACCESS_KEY = "EC2SecretAccessKey";
+const char * const ATTR_EC2_AMI_ID = "EC2AmiID";
+const char * const ATTR_EC2_SECURITY_GROUPS = "EC2SecurityGroups";
+const char * const ATTR_EC2_KEY_PAIR_FILE = "EC2KeyPairFile";
+const char * const ATTR_EC2_USER_DATA = "EC2UserData";
+const char * const ATTR_EC2_USER_DATA_FILE = "EC2UserDataFile";
+const char * const ATTR_EC2_REMOTE_VM_NAME = "EC2RemoteVirtualMachineName";
+const char * const ATTR_EC2_INSTANCE_TYPE = "EC2InstanceType";
+const char * const ATTR_EC2_INSTANCE_NAME = "EC2InstanceName";
+const char * const ATTR_EC2_ELASTIC_IP = "EC2ElasticIp";
+//************* End of changes for EC2 Jobs *****************//
 
 //************* Added for Lease Manager *******************//
 const char * const ATTR_LEASE_MANAGER_IP_ADDR = "LeaseManagerIpAddr";
@@ -902,3 +922,12 @@ const char * const ATTR_COMMITTED_SLOT_TIME = "CommittedSlotTime";
 const char * const ATTR_HASH_NAME = "HashName";
 const char * const ATTR_AUTHENTICATED_IDENTITY = "AuthenticatedIdentity";
 const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME = "DelegateJobGSICredentialsLifetime";
+
+const char * const ATTR_TRANSFER_QUEUE_NUM_UPLOADING = "TransferQueueNumUploading";
+const char * const ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING = "TransferQueueNumDownloading";
+const char * const ATTR_TRANSFER_QUEUE_MAX_UPLOADING = "TransferQueueMaxUploading";
+const char * const ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING = "TransferQueueMaxDownloading";
+const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD = "TransferQueueNumWaitingToUpload";
+const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD = "TransferQueueNumWaitingToDownload";
+const char * const ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME = "TransferQueueUploadWaitTime";
+const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME = "TransferQueueDownloadWaitTime";

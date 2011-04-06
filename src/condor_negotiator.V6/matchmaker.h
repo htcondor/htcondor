@@ -83,11 +83,7 @@ struct GroupEntry {
     // tree structure
     GroupEntry* parent;
     vector<GroupEntry*> children;
-		// map of lower-case group names to child index
-    map<string, size_type> chmap;
-
-	GroupEntry *findChild(std::string name);
-	GroupEntry *addChild(std::string name);
+    map<string, size_type, Accountant::ci_less> chmap;
 };
 
 

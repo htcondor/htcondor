@@ -38,6 +38,7 @@
 #include "file_lock.h"
 #include "stat_info.h"
 #include "shared_port_endpoint.h"
+#include "condor_fix_access.h"
 #include "condor_ipaddr.h"
 #include "ipv6_hostname.h"
 

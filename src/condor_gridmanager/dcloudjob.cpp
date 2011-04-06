@@ -152,6 +152,9 @@ DCloudJob::DCloudJob( ClassAd *classad )
 	m_imageId = NULL;
 	m_realmId = NULL;
 	m_hwpId = NULL;
+	m_hwpMemory = NULL;
+	m_hwpCpu = NULL;
+	m_hwpStorage = NULL;
 	m_username = NULL;
 	m_password = NULL;
 	m_keyname = NULL;
@@ -220,9 +223,9 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	if ( !jobAd->LookupString( ATTR_DELTACLOUD_PASSWORD, &m_password ) ) {
+	if ( !jobAd->LookupString( ATTR_DELTACLOUD_PASSWORD_FILE, &m_password ) ) {
 		sprintf( error_string, "%s is not set in the job ad",
-				 ATTR_DELTACLOUD_PASSWORD );
+				 ATTR_DELTACLOUD_PASSWORD_FILE );
 		goto error_exit;
 	}
 
@@ -234,6 +237,9 @@ DCloudJob::DCloudJob( ClassAd *classad )
 
 	jobAd->LookupString( ATTR_DELTACLOUD_REALM_ID, &m_realmId );
 	jobAd->LookupString( ATTR_DELTACLOUD_HARDWARE_PROFILE, &m_hwpId );
+	jobAd->LookupString( ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU, &m_hwpCpu );
+	jobAd->LookupString( ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY, &m_hwpMemory );
+	jobAd->LookupString( ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE, &m_hwpStorage );
 	jobAd->LookupString( ATTR_DELTACLOUD_KEYNAME, &m_keyname );
 	jobAd->LookupString( ATTR_DELTACLOUD_USER_DATA, &m_userdata );
 
@@ -300,6 +306,9 @@ DCloudJob::~DCloudJob()
 	free( m_imageId );
 	free( m_realmId );
 	free( m_hwpId );
+	free( m_hwpCpu );
+	free( m_hwpMemory );
+	free( m_hwpStorage );
 	free( m_username );
 	free( m_password );
 	free( m_keyname );
@@ -487,6 +496,9 @@ void DCloudJob::doEvaluateState()
 											  m_instanceName,
 											  m_realmId,
 											  m_hwpId,
+											  m_hwpMemory,
+											  m_hwpCpu,
+											  m_hwpStorage,
 											  m_keyname,
 											  m_userdata,
 											  instance_attrs );

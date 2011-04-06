@@ -75,6 +75,15 @@ class TransferQueueManager: public Service {
 	void TransferQueueChanged();
 
 	void GetContactInfo(char const *command_sock_addr,MyString &contact_str);
+
+	int GetNumUploading() { return m_uploading; }
+	int GetNumDownloading() { return m_downloading; }
+	int GetNumWaitingToUpload() { return m_waiting_to_upload; }
+	int GetNumWaitingToDownload() { return m_waiting_to_download; }
+	int GetUploadWaitTime() { return m_upload_wait_time; }
+	int GetDownloadWaitTime() { return m_download_wait_time; }
+	int GetMaxUploading() { return m_max_uploads; }
+	int GetMaxDownloading() { return m_max_downloads; }
  private:
 	SimpleList<TransferQueueRequest *> m_xfer_queue;
 	int m_max_uploads;   // 0 if unlimited
@@ -82,6 +91,13 @@ class TransferQueueManager: public Service {
 	time_t m_default_max_queue_age; // 0 if unlimited
 
 	int m_check_queue_timer;
+
+	int m_uploading;
+	int m_downloading;
+	int m_waiting_to_upload;
+	int m_waiting_to_download;
+	int m_upload_wait_time;
+	int m_download_wait_time;
 
 	bool AddRequest( TransferQueueRequest *client );
 	void RemoveRequest( TransferQueueRequest *client );

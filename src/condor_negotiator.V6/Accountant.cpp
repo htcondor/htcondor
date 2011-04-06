@@ -316,16 +316,14 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName) {
 }
 
 GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsGroup) {
-    MyString t(CustomerName);
-    t.lower_case();
-    string subname = t.Value();
+    string subname = CustomerName.Value();
 
     // Is this an acct group, syntactically speaking?
     string::size_type pos = subname.find_last_of('@');
     IsGroup = (pos == string::npos);
 
     // cache results from previous invocations
-    map<string, GroupEntry*>::iterator fs(hgq_submitter_group_map.find(subname));
+    map<string, GroupEntry*, ci_less>::iterator fs(hgq_submitter_group_map.find(subname));
     if (fs != hgq_submitter_group_map.end()) return fs->second;
 
     ASSERT(NULL != hgq_root_group);
@@ -358,8 +356,8 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsG
 
     // walk down the tree using the group path
     for (vector<string>::iterator j(gpath.begin());  j != gpath.end();  ++j) {
-		GroupEntry *child = group->findChild( *j );
-        if (!child) {
+        map<string, GroupEntry::size_type, ci_less>::iterator f(group->chmap.find(*j));
+        if (f == group->chmap.end()) {
             if (hgq_root_group->children.size() > 0) {
                 // I only want to log a warning if an HGQ configuration exists
                 dprintf(D_ALWAYS, "group quotas: WARNING: defaulting undefined group name %s to group %s\n", 
@@ -367,7 +365,7 @@ GroupEntry* Accountant::GetAssignedGroup(const MyString& CustomerName, bool& IsG
             }
             break;
         } else {
-            group = child;
+            group = group->children[f->second];
         }
     }
 

@@ -26,7 +26,7 @@ set(SPECIFIC_SYSTEM_VERSION_NAME "")
 set(LINUX_NAME "Unknown")
 
 #For Linux, the folowing varaible will be set
-#LINUX_NAME		= Fedora, CentOS, Redhat, Ubuntu, openSUSE
+#LINUX_NAME		= Fedora, CentOS, RedHat, Ubuntu, openSUSE
 #LINUX_VER		= 12 (Fedora), 5.0 (Debian, CentOS)
 #RPM_SYSTEM_NAME	= fc12, rhel5, ..
 #BIT_MODE		= 32 | 64
@@ -136,7 +136,7 @@ if(UNIX)
       # Red Hat Enterprise Linux Server release 5 (Tikanga)
       if(LINUX_ISSUE MATCHES "Red Hat")
         string(REGEX MATCH "release ([0-9]+\\.*[0-9]*)" REDHAT "${LINUX_ISSUE}")
-        set(LINUX_NAME "Redhat")        
+        set(LINUX_NAME "RedHat")        
 	set(LINUX_VER "${CMAKE_MATCH_1}")
 	set(SYSTEM_NAME "rhel${CMAKE_MATCH_1}")
 	set(RPM_SYSTEM_NAME "${SYSTEM_NAME}")
@@ -147,6 +147,7 @@ if(UNIX)
         set(LINUX_NAME "Ubuntu")        
 	set(LINUX_VER "${CMAKE_MATCH_1}")		  
 	set(SYSTEM_NAME "Ubuntu-${CMAKE_MATCH_1}")
+	set(DEB_SYSTEM_NAME "ubuntu_${CMAKE_MATCH_1}")
       endif(LINUX_ISSUE MATCHES "Ubuntu")		
       # Debian case
       if(LINUX_ISSUE MATCHES "Debian")
@@ -154,6 +155,7 @@ if(UNIX)
         set(LINUX_NAME "Debian")
 	set(LINUX_VER "${CMAKE_MATCH_1}")        
 	set(SYSTEM_NAME "Debian-${CMAKE_MATCH_1}")
+	set(DEB_SYSTEM_NAME "deb_${CMAKE_MATCH_1}")
       endif(LINUX_ISSUE MATCHES "Debian")      
       # SuSE / openSUSE case
       if(LINUX_ISSUE MATCHES "openSUSE")

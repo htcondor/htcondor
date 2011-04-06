@@ -1102,7 +1102,7 @@ TRANSFERER			= $(LIBEXEC)/condor_transferer
 MASTER_ADDRESS_FILE = $(LOG)/.master_address
 
 ##  Where should the master find the condor_preen binary? If you don't
-##  want preen to run at all, just comment out this setting.
+##  want preen to run at all, set it to nothing.
 PREEN				= $(SBIN)/condor_preen
 
 ##  How do you want preen to behave?  The "-m" means you want email
@@ -1188,6 +1188,11 @@ PREEN_ARGS			= -m -r
 ## How often the Negotaitor starts a negotiation cycle, defined in
 ## seconds.
 #NEGOTIATOR_INTERVAL = 60
+
+## Should the Negotiator publish an update to the Collector after
+## every negotiation cycle. It is useful to have this set to True
+## to get immediate updates on LastNegotiationCycle statistics.
+#NEGOTIATOR_UPDATE_AFTER_CYCLE = False
 
 
 ##--------------------------------------------------------------------
@@ -1637,6 +1642,18 @@ QUEUE_SUPER_USERS	= root, condor
 ##  job with the specified UID, even if it's not in the passwd file?
 #SOFT_UID_DOMAIN	= FALSE
 
+##  honor the run_as_owner option from the condor submit file.
+##
+#STARTER_ALLOW_RUNAS_OWNER = TRUE
+
+##  Tell the Starter/Startd what program to use to remove a directory
+##  condor_rmdir.exe is a windows-only command that does a better job
+##  than the built-in rmdir command when it is run with elevated privileges
+##  Such as when when Condor is running as a service.
+##   /s is delete subdirectories
+##   /c is continue on error
+WINDOWS_RMDIR = $(SBIN)\condor_rmdir.exe
+#WINDOWS_RMDIR_OPTIONS = /s /c
 
 ##--------------------------------------------------------------------
 ##  condor_procd
@@ -1751,14 +1768,6 @@ INVALID_LOG_FILES	= core
 
 JAVA = /usr/bin/java
 
-##  Some JVMs need to be told the maximum amount of heap memory
-##  to offer to the process.  If your JVM supports this, give
-##  the argument here, and Condor will fill in the memory amount.
-##  If left blank, your JVM will choose some default value,
-##  typically 64 MB.  The default (-Xmx) works with the Sun JVM.
-
-JAVA_MAXHEAP_ARGUMENT = -Xmx
-
 ## JAVA_CLASSPATH_DEFAULT gives the default set of paths in which
 ## Java classes are to be found.  Each path is separated by spaces.
 ## If your JVM needs to be informed of additional directories, add
@@ -1821,6 +1830,14 @@ GRIDMANAGER_LOCK = $(LOCK)/GridmanagerLock.$(USERNAME)
 ##  Various other settings that the Condor-G can use. 
 ##--------------------------------------------------------------------
 
+## The number of seconds between status update requests. You can make 
+## this short (5 seconds) if you want Condor to respond quickly to 
+## instances as they terminate, or you can make it long (300 seconds = 5 
+## minutes) if you know your instances will run for awhile and don't 
+## mind delay between when they stop and when Condor responds to them 
+## stopping.
+GRIDMANAGER_JOB_PROBE_INTERVAL = 300
+
 ## For grid-type gt2 jobs (pre-WS GRAM), limit the number of jobmanager
 ## processes the gridmanager will let run on the headnode. Letting too
 ## many jobmanagers run causes severe load on the headnode.
@@ -1879,7 +1896,7 @@ CONDOR_GAHP = $(SBIN)/condor_c-gahp
 CONDOR_GAHP_WORKER = $(SBIN)/condor_c-gahp_worker_thread
 
 ##
-## The Condor GAHP server has it's own log.  Like the Gridmanager, the
+## The Condor GAHP server has its own log.  Like the Gridmanager, the
 ## GAHP server is run as the User, not a Condor daemon, so all users must 
 ## have write permssion to the directory used for the logfile. Our 
 ## suggestion is to create a directory called GridLogs in $(LOG) with 
@@ -1956,7 +1973,7 @@ CREAM_GAHP = $(SBIN)/cream_gahp
 DELTACLOUD_GAHP = $(SBIN)/deltacloud_gahp
 
 ##
-## EC2: Universe = Grid, Grid_Resource = Amazon
+## EC2 (SOAP): Universe = Grid, Grid_Resource = Amazon
 ##
 
 ## The location of the amazon_gahp program, required
@@ -1967,18 +1984,27 @@ AMAZON_GAHP = $(SBIN)/amazon_gahp
 #AMAZON_GAHP_DEBUG = D_FULLDEBUG
 AMAZON_GAHP_LOG = /tmp/AmazonGahpLog.$(USERNAME)
 
-## The number of seconds between status update requests to EC2. You can
-## make this short (5 seconds) if you want Condor to respond quickly to
-## instances as they terminate, or you can make it long (300 seconds = 5
-## minutes) if you know your instances will run for awhile and don't mind
-## delay between when they stop and when Condor responds to them
-## stopping.
-GRIDMANAGER_JOB_PROBE_INTERVAL = 300
-
 ## As of this writing Amazon EC2 has a hard limit of 20 concurrently
 ## running instances, so a limit of 20 is imposed so the GridManager
 ## does not waste its time sending requests that will be rejected.
 GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_AMAZON = 20
+
+##
+## EC2 (REST): Universe = Grid, Grid_Resource = ec2
+##
+
+## The location of the ec2_gahp program, required
+EC2_GAHP = $(SBIN)/ec2_gahp
+
+## Location of log files, useful for debugging, must be in
+## a directory writable by any user, such as /tmp
+#EC2_GAHP_DEBUG = D_FULLDEBUG
+EC2_GAHP_LOG = /tmp/EC2GahpLog.$(USERNAME)
+
+## As of this writing Amazon EC2 has a hard limit of 20 concurrently
+## running instances, so a limit of 20 is imposed so the GridManager
+## does not waste its time sending requests that will be rejected.
+GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2 = 20
 
 ##
 ##--------------------------------------------------------------------
@@ -2361,9 +2387,6 @@ VMWARE_NETWORKING_TYPE = nat
 ##--------------------------------------------------------------------
 ##  VM Universe Parameters common to libvirt controlled vm's (xen & kvm)
 ##--------------------------------------------------------------------
-
-##  Where is the Condor script program to control Xen & KVM? (Required)
-VM_SCRIPT = $(SBIN)/condor_vm_xen.sh
 
 ## Networking parameters for Xen & KVM
 ##

@@ -1,0 +1,150 @@
+#! /usr/bin/env perl
+
+##*****************************************************************************
+##
+## Copyright (C) 2011, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##*****************************************************************************
+
+use strict;
+use warnings;
+
+use POSIX;
+use Cwd;
+
+use CondorTest;
+
+use Check::SimpleJob;
+use Check::CondorLog;
+
+#
+# Start up the simulator, which will print the port to which it binds.
+#
+my $pid = fork();
+if( $pid == 0 ) {
+    if( ! open( STDOUT, '>', 'simulator.out' ) ) {
+        die( "Unable to redirect output to 'simulator.out', aborting.\n" );
+    }
+
+    if( ! open( STDERR, '>', 'simulator.err' ) ) {
+        die( "Unable to redirect errors to 'simulator.err', aborting.\n" );
+    }
+
+    my $binary = cwd() . '/queryAPI-sim';
+    exec { $binary } ( $binary );
+    die( "Failed to exec { $binary } ( $binary ): '$!'\n" );
+}
+
+# Wait, arbitrarily, ten seconds to acquire a port.
+my $port = undef;
+for( my $i = 0; $i < 10; ++$i ) {
+    sleep( 1 );
+    
+    if( ! open( SIMULATOR_OUT, '<', 'simulator.out' ) ) { next; }
+    while( my $line = <SIMULATOR_OUT> ) {
+        if( $line =~ /^listen_port = (\d+)$/ ) {
+            $port = $1;
+            last;
+        }
+    }
+    close( SIMULATOR_OUT );
+
+    my $rv = waitpid( $pid, WNOHANG );
+    if( $rv == -1 || $rv == $pid ) {
+        die( "Simulator died before printing its port number (pid $pid), aborting.\n" );
+    } 
+}
+
+if( ! defined( $port ) ) {
+    kill( 'SIGTERM', $pid ); sleep( 1 ); kill( 'SIGKILL', $pid );
+    die( "Unable to determine simulator's port number, aborting.\n" );
+} else {
+    print( "Determined simulator's port number (pid $pid, port $port).\n" );
+}    
+
+#
+# Start up a personal condor.  Why I need to specify the last three
+# lines is something of a mystery.
+#
+my $append_condor_config = '
+    EC2_GAHP_LOG = $(LOG)/ec2_gahp_log
+    GRIDMANAGER_JOB_PROBE_INTERVAL = 5
+    DAEMON_LIST = MASTER, SCHEDD, COLLECTOR, NEGOTIATOR, STARTD
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+#
+# Make sure the ec2 job runs.  The test suite gets confused easily,
+# so make sure the job log doesn't exist.
+#
+my $appendSubmitCommands = qq/
+    ec2_ami_id = 7
+    ec2_instance_type = m1.small
+    ec2_access_key_id = job_ec2_basic.accessKey
+    ec2_secret_access_key = job_ec2_basic.secretKey
+    ec2_keypair_file = job_ec2_basic.keypair
+    ec2_user_data = job_ec2_basic.user-data
+    ec2_user_data_file = job_ec2_basic.userDataFile
+/;
+if( -e "job_ec2_basic.log" ) {
+    # Otherwise, the test framework gets terribly confused.
+    if( ! unlink( "job_ec2_basic.log" ) ) {
+        die( "Failed to delete job_ec2_basic.log, aborting.\n" );
+    }
+}
+SimpleJob::RunCheck(
+    user_log                => "job_ec2_basic.log",
+    universe                => "grid",
+    grid_resource           => "ec2 http://localhost:$port",
+    append_submit_commands  => $appendSubmitCommands
+);
+
+#
+# Verify that the gahp's logs are OK.
+#
+CondorLog::RunCheck(
+    daemon                  => "EC2_GAHP",
+    match_regexp            => "([Ff]ail(ed|ing))|([Uu]nable)|(Wrong number of arguments)",
+    fail_if_found           => 1
+);
+
+#
+# Verify that the simulator's logs are OK.
+#
+
+# FIXME: In the output, only /^No leaks detected\.$/ is a success.
+# FIXME: In the error, any message is a failure.
+
+#
+# Kill the simulator.
+#
+kill( 'TERM', $pid ); sleep( 1 ); kill( 'KILL', $pid );
+
+#
+# Apparently required by the framework.  '2' is a magic constant
+# defined in Condor.pm as "batch_test.pl".
+#
+CondorTest::debug( "job_ec2_basic SUCCESS\n", 2 );
+
+#
+# "This function ... should be the last thing that a test program does."
+# It shuts down "all personal condors" (which probably breaks other tests)
+# and does some magic for the framework w.r.t. to exiting.
+#
+CondorTest::EndTest();

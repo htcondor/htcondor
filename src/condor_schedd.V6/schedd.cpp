@@ -922,6 +922,34 @@ Scheduler::count_jobs()
 
 	m_ad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, (bool)SwapSpaceExhausted);
 
+	int num_uploading = m_xfer_queue_mgr.GetNumUploading();
+	int num_downloading = m_xfer_queue_mgr.GetNumDownloading();
+	int max_uploading = m_xfer_queue_mgr.GetMaxUploading();
+	int max_downloading = m_xfer_queue_mgr.GetMaxDownloading();
+	int num_waiting_to_upload = m_xfer_queue_mgr.GetNumWaitingToUpload();
+	int num_waiting_to_download = m_xfer_queue_mgr.GetNumWaitingToDownload();
+	int upload_wait_time = m_xfer_queue_mgr.GetUploadWaitTime();
+	int download_wait_time = m_xfer_queue_mgr.GetDownloadWaitTime();
+
+	dprintf(D_ALWAYS,"TransferQueueManager stats: active up=%d/%d down=%d/%d; waiting up=%d down=%d; wait time up=%ds down=%ds\n",
+			num_uploading,
+			max_uploading,
+			num_downloading,
+			max_downloading,
+			num_waiting_to_upload,
+			num_waiting_to_download,
+			upload_wait_time,
+			download_wait_time);
+
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,num_uploading);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,num_downloading);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,max_uploading);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,max_downloading);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,num_waiting_to_upload);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD,num_waiting_to_download);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME,upload_wait_time);
+	m_ad->Assign(ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME,download_wait_time);
+
     daemonCore->publish(m_ad);
     daemonCore->monitor_data.ExportData(m_ad);
 	extra_ads.Publish( m_ad );
@@ -1886,13 +1914,13 @@ ResponsibleForPeriodicExprs( ClassAd *jobad )
 		// temporary for 7.2 only: avoid evaluating periodic
 		// expressions when the job is on hold for spooling
 	if( status == HELD ) {
-		MyString hold_reason;
-		jobad->LookupString(ATTR_HOLD_REASON,hold_reason);
-		if( hold_reason == "Spooling input data files" ) {
+		int hold_reason_code = -1;
+		jobad->LookupInteger(ATTR_HOLD_REASON_CODE,hold_reason_code);
+		if( hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
 			int cluster = -1, proc = -1;
 			jobad->LookupInteger(ATTR_CLUSTER_ID, cluster);
 			jobad->LookupInteger(ATTR_PROC_ID, proc);
-			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason is '%s'\n",cluster,proc,hold_reason.Value());
+			dprintf(D_FULLDEBUG,"Skipping periodic expressions for job %d.%d, because hold reason code is '%d'\n",cluster,proc,hold_reason_code);
 			return 0;
 		}
 	}
@@ -2499,6 +2527,50 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 
 
 bool
+Scheduler::WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync )
+{
+	std::string submitUserNotes, submitEventNotes;
+
+		// Skip writing submit events for procid != 0 for parallel jobs
+	int universe = -1;
+	GetAttributeInt( job_id.cluster, job_id.proc, ATTR_JOB_UNIVERSE, &universe );
+	if ( universe == CONDOR_UNIVERSE_PARALLEL ) {
+		if ( job_id.proc > 0) {
+			return true;;
+		}
+	}
+
+	WriteUserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+	SubmitEvent event;
+	ClassAd *job_ad = GetJobAd(job_id.cluster,job_id.proc);
+
+	strcpy (event.submitHost, daemonCore->privateNetworkIpAddr());
+	if ( job_ad->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
+		event.submitEventLogNotes = strnewp(submitEventNotes.c_str());
+	}
+	if ( job_ad->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
+		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
+	}
+
+	ULog->setEnableFsync(do_fsync);
+	bool status = ULog->writeEvent(&event, job_ad);
+	delete ULog;
+
+	if (!status) {
+		dprintf( D_ALWAYS,
+				 "Unable to log ULOG_SUBMIT event for job %d.%d\n",
+				 job_id.cluster, job_id.proc );
+		return false;
+	}
+	return true;
+}
+
+
+bool
 Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 {
 	WriteUserLog* ULog = this->InitializeUserLog( job_id );
@@ -2894,26 +2966,6 @@ int
 Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
-		// These three lists must be kept in sync!
-	static const int ATTR_ARRAY_SIZE = 5;
-	static const char *AttrsToModify[ATTR_ARRAY_SIZE] = { 
-		ATTR_JOB_CMD,
-		ATTR_JOB_INPUT,
-		ATTR_TRANSFER_INPUT_FILES,
-		ATTR_ULOG_FILE,
-		ATTR_X509_USER_PROXY };
-	static const bool AttrIsList[ATTR_ARRAY_SIZE] = {
-		false,
-		false,
-		true,
-		false,
-		false };
-	static const char *AttrXferBool[ATTR_ARRAY_SIZE] = {
-		ATTR_TRANSFER_EXECUTABLE,
-		ATTR_TRANSFER_INPUT,
-		NULL,
-		NULL,
-		NULL };
 
 	dprintf(D_FULLDEBUG,"spoolJobFilesReaper tid=%d status=%d\n",
 			tid,exit_status);
@@ -2936,124 +2988,19 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 	}
 
 
-	int jobIndex,cluster,proc,attrIndex;
-	char new_attr_value[500];
-	char *buf = NULL;
-	ExprTree *expr = NULL;
-	char *SpoolSpace = NULL;
-		// figure out how many jobs we're dealing with
+	int jobIndex,cluster,proc;
 	int len = (*jobs).getlast() + 1;
-
 
 		// For each job, modify its ClassAd
 	for (jobIndex = 0; jobIndex < len; jobIndex++) {
 		cluster = (*jobs)[jobIndex].cluster;
 		proc = (*jobs)[jobIndex].proc;
 
-		ClassAd *job_ad = GetJobAd(cluster,proc);
-		if (!job_ad) {
-			// didn't find this job ad, must've been removed?
-			// just go to the next one
-			continue;
-		}
-		if ( SpoolSpace ) free(SpoolSpace);
-		SpoolSpace = gen_ckpt_name(Spool,cluster,proc,0);
-		ASSERT(SpoolSpace);
-
 		BeginTransaction();
-
-			// Backup the original IWD at submit time
-		if (buf) free(buf);
-		buf = NULL;
-		job_ad->LookupString(ATTR_JOB_IWD,&buf);
-		if ( buf ) {
-			snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_JOB_IWD);
-			SetAttributeString(cluster,proc,new_attr_value,buf);
-			free(buf);
-			buf = NULL;
-		}
-			// Modify the IWD to point to the spool space			
-		SetAttributeString(cluster,proc,ATTR_JOB_IWD,SpoolSpace);
-
-			// Backup the original TRANSFER_OUTPUT_REMAPS at submit time
-		expr = job_ad->LookupExpr(ATTR_TRANSFER_OUTPUT_REMAPS);
-		snprintf(new_attr_value,500,"SUBMIT_%s",ATTR_TRANSFER_OUTPUT_REMAPS);
-		if ( expr ) {
-			const char *remap_buf = ExprTreeToString(expr);
-			ASSERT(remap_buf);
-			SetAttribute(cluster,proc,new_attr_value,remap_buf);
-		}
-		else if(job_ad->LookupExpr(new_attr_value)) {
-				// SUBMIT_TransferOutputRemaps is defined, but
-				// TransferOutputRemaps is not; disable the former,
-				// so that when somebody fetches the sandbox, nothing
-				// gets remapped.
-			SetAttribute(cluster,proc,new_attr_value,"Undefined");
-		}
-			// Set TRANSFER_OUTPUT_REMAPS to Undefined so that we don't
-			// do remaps when the job's output files come back into the
-			// spool space. We only want to remap when the submitter
-			// retrieves the files.
-		SetAttribute(cluster,proc,ATTR_TRANSFER_OUTPUT_REMAPS,"Undefined");
-
-			// Now, for all the attributes listed in 
-			// AttrsToModify, change them to be relative to new IWD
-			// by taking the basename of all file paths.
-		for ( attrIndex = 0; attrIndex < ATTR_ARRAY_SIZE; attrIndex++ ) {
-				// Lookup original value
-			bool xfer_it;
-			if (buf) free(buf);
-			buf = NULL;
-			job_ad->LookupString(AttrsToModify[attrIndex],&buf);
-			if (!buf) {
-				// attribute not found, so no need to modify it
-				continue;
-			}
-			if ( nullFile(buf) ) {
-				// null file -- no need to modify it
-				continue;
-			}
-			if ( AttrXferBool[attrIndex] &&
-				 job_ad->LookupBool( AttrXferBool[attrIndex], xfer_it ) && !xfer_it ) {
-					// ad says not to transfer this file, so no need
-					// to modify it
-				continue;
-			}
-				// Create new value - deal with the fact that
-				// some of these attributes contain a list of pathnames
-			StringList old_paths(NULL,",");
-			StringList new_paths(NULL,",");
-			if ( AttrIsList[attrIndex] ) {
-				old_paths.initializeFromString(buf);
-			} else {
-				old_paths.insert(buf);
-			}
-			old_paths.rewind();
-			char *old_path_buf;
-			bool changed = false;
-			const char *base = NULL;
-			while ( (old_path_buf=old_paths.next()) ) {
-				base = condor_basename(old_path_buf);
-				if ( strcmp(base,old_path_buf)!=0 ) {
-					changed = true;
-				}
-				new_paths.append(base);
-			}
-			if ( changed ) {
-					// Backup original value
-				snprintf(new_attr_value,500,"SUBMIT_%s",AttrsToModify[attrIndex]);
-				SetAttributeString(cluster,proc,new_attr_value,buf);
-					// Store new value
-				char *new_value = new_paths.print_to_string();
-				ASSERT(new_value);
-				SetAttributeString(cluster,proc,AttrsToModify[attrIndex],new_value);
-				free(new_value);
-			}
-		}
 
 			// Set ATTR_STAGE_IN_FINISH if not already set.
 		int spool_completion_time = 0;
-		job_ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
+		GetAttributeInt(cluster,proc,ATTR_STAGE_IN_FINISH,&spool_completion_time);
 		if ( !spool_completion_time ) {
 			// The transfer thread specifically slept for 1 second
 			// to ensure that the job can't possibly start (and finish)
@@ -3074,8 +3021,6 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 	spoolJobFileWorkers->remove(tid);
 	delete jobs;
-	if (SpoolSpace) free(SpoolSpace);
-	if (buf) free(buf);
 	return TRUE;
 }
 
@@ -3914,8 +3859,11 @@ Scheduler::actOnJobs(int, Stream* s)
 			snprintf( buf, 256, "(%s!=%d) && (", ATTR_JOB_STATUS, HELD );
 			break;
 		case JA_RELEASE_JOBS:
-				// Only release held jobs
-			snprintf( buf, 256, "(%s==%d) && (", ATTR_JOB_STATUS, HELD );
+				// Only release held jobs which aren't waiting for
+				// input files to be spooled
+			snprintf( buf, 256, "(%s==%d && %s=!=%d) && (", ATTR_JOB_STATUS,
+					  HELD, ATTR_HOLD_REASON_CODE,
+					  CONDOR_HOLD_CODE_SpoolingInput );
 			break;
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
@@ -4094,6 +4042,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// the command we're trying to perform
 			int status;
 			int on_release_status = IDLE;
+			int hold_reason_code = -1;
 			if( GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
 								ATTR_JOB_STATUS, &status) < 0 ) {
 				results.record( tmp_id, AR_NOT_FOUND );
@@ -4108,7 +4057,9 @@ Scheduler::actOnJobs(int, Stream* s)
 				}
 				break;
 			case JA_RELEASE_JOBS:
-				if( status != HELD ) {
+				GetAttributeInt(tmp_id.cluster, tmp_id.proc,
+								ATTR_HOLD_REASON_CODE, &hold_reason_code);
+				if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
 					results.record( tmp_id, AR_BAD_STATUS );
 					continue;
 				}
@@ -10564,6 +10515,26 @@ extern "C" {
 int
 prio_compar(prio_rec* a, prio_rec* b)
 {
+	 /* compare submitted job preprio's: higher values have more priority */
+	 /* Typically used to prioritize entire DAG jobs over other DAG jobs */
+	 if (a->pre_job_prio1 > INT_MIN && b->pre_job_prio1 > INT_MIN ) { 
+	      if( a->pre_job_prio1 < b->pre_job_prio1 ) {
+		  return 1;
+              }
+	      if( a->pre_job_prio1 > b->pre_job_prio1 ) {
+		  return -1;
+	      }
+	 }
+		 
+	 if( a->pre_job_prio2 > INT_MIN && b->pre_job_prio2 > INT_MIN ) {
+	      if( a->pre_job_prio2 < b->pre_job_prio2 ) {
+		  return 1;
+	      }
+	      if( a->pre_job_prio2 > b->pre_job_prio2 ) {
+		  return -1;
+	      }
+	 }
+	 
 	 /* compare job priorities: higher values have more priority */
 	 if( a->job_prio < b->job_prio ) {
 		  return 1;
@@ -10571,7 +10542,27 @@ prio_compar(prio_rec* a, prio_rec* b)
 	 if( a->job_prio > b->job_prio ) {
 		  return -1;
 	 }
-
+	 
+	 /* compare submitted job postprio's: higher values have more priority */
+	 /* Typically used to prioritize entire DAG jobs over other DAG jobs */
+	 if( a->post_job_prio1 > INT_MIN && b->post_job_prio1 > INT_MIN ) {
+	      if( a->post_job_prio1 < b->post_job_prio1 ) {
+		  return 1;
+	      }
+	      if( a->post_job_prio1 > b->post_job_prio1 ) {
+		  return -1;
+	      }
+	 }
+	 
+	 if( a->post_job_prio2 > INT_MIN && b->post_job_prio2 > INT_MIN ) {
+	      if( a->post_job_prio2 < b->post_job_prio2 ) {
+		  return 1;
+	      }
+	      if( a->post_job_prio2 > b->post_job_prio2 ) {
+		  return -1;
+	      }
+	 }
+	      
 	 /* here,updown priority and job_priority are both equal */
 
 	 /* check for job submit times */

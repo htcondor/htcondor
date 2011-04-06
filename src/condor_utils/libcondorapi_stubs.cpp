@@ -24,6 +24,26 @@
 #include "condor_query.h"
 
 #ifdef WIN32
+#if 1
+bool 
+get_password_from_credd (
+	const char * credd_host,
+	const char  username[],
+	const char  domain[],
+	char * pw,
+	int    cb) // sizeof pw buffer (in bytes)
+{
+    return false;
+}
+bool 
+cache_credd_locally (
+	const char  username[],
+	const char  domain[],
+	const char * pw)
+{
+	return false;
+}
+#else
 Daemon::Daemon( daemon_t type, const char* name, const char* pool)
 {
 }
@@ -53,6 +73,7 @@ SecMan::~SecMan()
 int addCredential( const char* user, const char* pw, Daemon *d ) {
 	return 0;	
 }
+#endif
 #endif
 /* This file contains various stub functions or small implementation of other
 	functions. The purpose of this is to break edges in a nasty dependency
@@ -130,6 +151,9 @@ int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_
 #else
 #  include "pcre.h"
 #endif
+
+#pragma warning(disable : 4273) // inconsistent dll linkage
+
 pcre *pcre_compile(const char *, int, const char **, int *,
 				   const unsigned char *)
 { not_impl(); return NULL; }
@@ -144,6 +168,8 @@ int  pcre_fullinfo(const pcre *, const pcre_extra *, int, void *)
 { return not_impl(); }
 int  pcre_get_substring_list(const char *, int *, int, const char ***)
 { return not_impl(); }
+
+#pragma warning(default : 4273) // inconsistent dll linkage
 
 #endif
 

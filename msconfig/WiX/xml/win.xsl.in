@@ -16,9 +16,10 @@
         <!-- Always force the root drive to be C: -->
         <Directory Id="TARGETDIR" Name="SourceDir">
           <Directory Id="INSTALLDIR" Name="condor">
+
            <!-- Merge module used to bind VC runtime *do not* copy in the files using include (InstallRequiredSystemLibraries) -->
-           <Merge Id="VC90CRT" Language="1033" DiskId="1" SourceFile="C:\Program Files\Common Files\Merge Modules\Microsoft_VC90_CRT_x86.msm"/>
-           <Merge Id="VC90Policy" Language="1033" DiskId="1" SourceFile="C:\Program Files\Common Files\Merge Modules\policy_9_0_Microsoft_VC90_CRT_x86.msm"/>
+           <Merge Id="VCCRT" Language="1033" DiskId="1" SourceFile="@CPACK_VC_MERGE_MODULE@"/>
+           <Merge Id="VCPolicy" Language="1033" DiskId="1" SourceFile="@CPACK_VC_POLICY_MODULE@"/>
 
             <!-- Update the registry, ENV, and FW -->
            <Component Id="CondorRegNEnv" Guid="E282D017-976B-4685-A330-5180B27277C0">
@@ -129,9 +130,16 @@
           <RegistrySearch Id="JavaVersionSearch" Root="HKLM" Type="raw" Key="SOFTWARE\JavaSoft\Java Runtime Environment" Name="CurrentVersion" />
         </Property>
         <Property Id="JVMDIR">
-          <RegistrySearch Id="JavaDirSearch" Root="HKLM" Type="directory" Key="SOFTWARE\JavaSoft\Java Runtime Environment\[JVMVERSION]" Name="JavaHome" />
+          <RegistrySearch Id="JavaDirSearch" Root="HKLM" Type="raw" Key="SOFTWARE\JavaSoft\Java Runtime Environment\[JVMVERSION]" Name="JavaHome" />
         </Property>
-        <SetProperty Id="JVMLOCATION" Value="[JVMDIR]bin\java.exe" After="AppSearch"/>
+        <!-- Verify that registry == reality -->
+        <Property Id="JVMFOUND">
+            <DirectorySearch Id="JavaDirValidate" Path="[JVMDIR]\bin">
+                <FileSearch Name="java.exe"/>
+            </DirectorySearch>
+        </Property>
+
+        <SetProperty Id="JVMLOCATION" Value="[JVMDIR]\bin\java.exe" After="AppSearch">JVMFOUND</SetProperty>
 
         <!--Search for previous install answers.-->
         <Property Id="OLD_INSTALLDIR">
@@ -376,8 +384,8 @@
         <Feature Id="CondorWindows" Title="Condor Installation" Level="1" Display="expand">
           <Feature Id="Installation" Title="Condor Installation Files" Level="1"  ConfigurableDirectory="INSTALLDIR">
             <xsl:apply-templates select="wix:Fragment" mode="CompRef"/>
-            <MergeRef Id="VC90CRT"/>
-            <MergeRef Id="VC90Policy"/>
+            <MergeRef Id="VCCRT"/>
+            <MergeRef Id="VCPolicy"/>
             <ComponentRef Id="CondorRegNEnv" />
             <ComponentRef Id="CondorKBDDReg" />
             <ComponentRef Id="CreatingSpoolDir" />
@@ -459,7 +467,7 @@
        <xsl:when test="@Source = '$(var.Source)\bin\condor_master.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX1" Name="condor_master.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX1" Name="condor_master.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
           <ServiceInstall Id="CondorService" Description="condor" DisplayName="condor" ErrorControl="normal"  Name="condor" Start="auto" Type="ownProcess" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
           <ServiceControl Id="StartCondorService" Name="condor" Start="install" Wait="no" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
@@ -468,85 +476,85 @@
        <xsl:when test="@Source = '$(var.Source)\bin\condor_schedd.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX2" Name="condor_schedd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX2" Name="condor_schedd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_collector.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX3" Name="condor_collector.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX3" Name="condor_collector.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_negotiator.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX4" Name="condor_negotiator.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX4" Name="condor_negotiator.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_startd.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX5" Name="condor_startd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX5" Name="condor_startd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_kbdd.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX6" Name="condor_kbdd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX6" Name="condor_kbdd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_credd.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX7" Name="condor_credd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX7" Name="condor_credd.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_hdfs.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX8" Name="condor_hdfs.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX8" Name="condor_hdfs.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_starter.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX9" Name="condor_starter.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX9" Name="condor_starter.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_shadow.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX10" Name="condor_shadow.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX10" Name="condor_shadow.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_gridmanager.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX11" Name="condor_gridmanager.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX11" Name="condor_gridmanager.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_dagman.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX12" Name="condor_dagman.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX12" Name="condor_dagman.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_c-gahp.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX13" Name="condor_c-gahp.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX13" Name="condor_c-gahp.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_c-gahp_worker_thread.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX14" Name="condor_c-gahp_worker_thread.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX14" Name="condor_c-gahp_worker_thread.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_vm-gahp.exe'">
           <xsl:copy>
             <xsl:copy-of select="@*"/>
-            <FirewallException Id="FWX15" Name="condor_vm-gahp.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" />
+            <FirewallException Id="FWX15" Name="condor_vm-gahp.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
        </xsl:when>
       <xsl:otherwise>

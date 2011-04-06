@@ -33,7 +33,7 @@ const char * version = "$GahpVersion " DCLOUD_GAHP_VERSION " Feb 4 2010 Condor\\
 
 static std::set<DcloudGahpCommand*> dcloud_gahp_commands;
 
-FILE *logfp;
+FILE *logfp = NULL;
 
 static PipeBuffer m_stdin_buffer;
 
@@ -460,11 +460,14 @@ static void registerAllDcloudCommands(void)
 
 int main(int argc, char *argv[])
 {
-    logfp = fopen("/tmp/dcloud_gahp.debug", "a");
-    if (!logfp) {
-        fprintf(stderr, "Could not open log file /tmp/dcloud_gahp.debug: %s\n",
-                strerror(errno));
-        return 1;
+    const char *debug_file = getenv("DELTACLOUD_GAHP_DEBUG_FILE");
+    if ( debug_file ) {
+        logfp = fopen(debug_file, "a");
+        if (!logfp) {
+            fprintf(stderr, "Could not open log file %s: %s\n",
+                    debug_file, strerror(errno));
+            return 1;
+        }
     }
 
     dcloudprintf("Starting dcloud GAHP\n");

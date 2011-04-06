@@ -62,6 +62,25 @@
 ######################################################################
 
 
+
+# help & usage
+myusage() {
+    echo "usage: $1 [options] command"
+}
+myhelp() {
+    myusage   
+    echo " --no-execute, -n   : No execute mode"
+    echo " --execute          : Execute mode (default)"
+    echo " --verbose, -v      : Verbose mode"
+    echo " --sysconfig <dir>  : Specify the sysconfig directory"
+    echo "Environment variables:"
+    echo "  SYSCONFIG         : Specify the sysconfig directory"
+    echo "  CONDOR_SYSCONFIG  : Specify Condor's sysconfig file"
+    echo "  CONDOR_CONFIG     : Specify path to Condor's configuration file"
+    echo "  CONDOR_CONFIG_VAL : Specify path to condor_config_val"
+    echo "Commands: start stop restart try-restart reload force-reload status"
+}
+
 # Process command line arguments
 # Looks through argv, pick out ones that start with a dash,
 # and handle them
@@ -90,21 +109,11 @@ while [ $# -gt 0 ] ; do
     shift; shift
     ;;
   "-h" | "--help" )
-    echo "usage: $1 [options] command"
-    echo " --no-execute, -n   : No execute mode"
-    echo " --execute          : Execute mode (default)"
-    echo " --verbose, -v      : Verbose mode"
-    echo " --sysconfig <dir>  : Specify the sysconfig directory"
-    echo "Environment variables:"
-    echo "  SYSCONFIG         : Specify the sysconfig directory"
-    echo "  CONDOR_SYSCONFIG  : Specify Condor's sysconfig file"
-    echo "  CONDOR_CONFIG     : Specify path to Condor's configuration file"
-    echo "  CONDOR_CONFIG_VAL : Specify path to condor_config_val"
-    echo "Commands: start stop restart try-restart reload force-reload status"
+    myhelp
     exit 0
     ;;
   * )
-    echo "usage: $1 [options]"
+    myusage
     echo "Unkown option: $1: use --help for help"
     exit 1
     ;;
@@ -353,7 +362,7 @@ get_condor_config_val() {
   if [ "$REQUIRED" = "" ] ; then
     REQUIRED=yes
   fi
-  TMPVAL=`"$CONDOR_CONFIG_VAL" $1`
+  TMPVAL=`"$CONDOR_CONFIG_VAL" $1 2>/dev/null`
   if [ "$TMPVAL" = "" ] && [ "$REQUIRED" = "yes" ] ; then
     fatal_error "Unable to locate $1 in $CONDOR_CONFIG"
   fi
@@ -407,39 +416,57 @@ set_condor_reconfig() {
   return 0
 }
 
-# Get the condor user(s)
+# Set CONDOR_USERS
 set_condor_users() {
+  CONDOR_USERS=""
+  CONDOR_USER="$1"
+  while [ "$1" != "" ] ; do
+    if [ "$CONDOR_USERS" != "" ] ; then
+      CONDOR_USERS="$CONDOR_USERS,$1"
+    else
+      CONDOR_USERS="$1"
+    fi
+    shift
+  done
+}
+
+# Get the condor user(s)
+detect_condor_users() {
   if [ "$CONDOR_USERS" != "" ]; then
     return 0
   fi
+  if [ "$USER" != "root" -a "$USER" != "condor" ] ; then
+    MYUSER="$USER"
+  fi
   IDS=`get_condor_config_val CONDOR_IDS no`
   if [ "$IDS" = "" ]; then
-    CONDOR_USERS="condor,root"
+    set_condor_users "condor" "root" "$MYUSER"
     return 0
   fi
-  USER=`echo $IDS|$AWK 'BEGIN{FS="[ ,\.]"} /^[^0-9]/{print $1}'`
-  if [ "$USER" != "" ] ; then
-    CONDOR_USERS="$USER,root"
+
+  TMP_USER=`echo $IDS|$AWK 'BEGIN{FS="[ ,.]"} /^[^0-9]/{print $1}'`
+  if [ "$TMP_USER" != "" ] ; then
+    set_condor_users "$TMP_USER" "root" "$MYUSER"
     return 0
   fi
-  CONDOR_UID=`echo $IDS|$AWK 'BEGIN{FS="[ ,\.]"} /^[0-9]/{print $1}'`
-  echo "CondorUID=$CONDOR_UID"
+  CONDOR_UID=`echo $IDS|$AWK 'BEGIN{FS="[ ,.]"} /^[0-9]/{print $1}'`
 
   for u in condor ; do
-    UID=`id $u|$AWK '{ sub(/uid=/,"",$1); sub(/\(.*\)/,"",$1); print $1; }'`
-    if [ "$UID" = "$CONDOR_UID" ] ; then
-      CONDOR_USERS="$u,root"
-      return
+    TMP_UID=`id $u|$AWK '{ sub(/uid=/,"",$1); sub(/\(.*\)/,"",$1); print $1; }'`
+    if [ "$TMP_UID" = "$CONDOR_UID" ] ; then
+      set_condor_users "$u" "root" "$MYUSER"
+      return 0
     fi
   done
   
-  USER=`cat /etc/passwd|$AWK 'BEGIN{FS=":"; UID=ARGV[1]; ARGC=0; } { if($3==UID){print $1} }' $CONDOR_UID`
-  if [ "$USER" != "" ] ; then
-    echo "$USER had uid $CONDOR_UID"
-    CONDOR_USERS="$USER,root"
+  TMP_USER=`cat /etc/passwd|$AWK 'BEGIN{FS=":"; UID=ARGV[1]; ARGC=0; } { if($3==UID){print $1} }' $CONDOR_UID`
+  if [ "$TMP_USER" != "" ] ; then
+    echo "$TMP_USER had uid $CONDOR_UID"
+    set_condor_users "$TMP_USER" "root" "$MYUSER"
     return 0
   fi
 
+  CONDOR_USER="$CONDOR_UID"
   CONDOR_UIDS="$CONDOR_UID,0"
   return 0
 }
@@ -463,44 +490,47 @@ find_masters() {
 
   if [ "$CONDOR_USERS" = "" ] ; then
     OPTS=`ps_get_opts "$PSFLAVOR" "W" "N"`
-    USERS=$CONDOR_UIDS
+    TMP_USERS=$CONDOR_UIDS
   else
     OPTS=`ps_get_opts "$PSFLAVOR" "W"`
-    USERS=$CONDOR_USERS
+    TMP_USERS=$CONDOR_USERS
   fi
-  pids=`$PS $OPTS|$AWK 'BEGIN{split(ARGV[1],users,","); ARGC=0; } { if( (index($0,"condor_master") != 0) && (index($0,"awk") == 0) ) { for(i in users){ if($1==users[i]){print $2; break;} } } }' $USERS`
+  pids=`$PS $OPTS|$AWK 'BEGIN{split(ARGV[1],users,","); ARGC=0; } { if( (index($0,"condor_master") != 0) && (index($0,"awk") == 0) ) { for(i in users){ if($1==users[i]){print $2; break;} } } }' $TMP_USERS`
   echo "$pids"
 }
 
 # To the best of its ability, finds the active condor_master's PID.
 # echos the result, or an empty string if none was found.
 # You can call this repeatedly to check for updates.
+# If we use the pid file the first time through, always use it --
+#  if it disappears, means that the Condor went bye-bye
 condor_master_pids() {
-  if [ "$FORCE_PIDFILE" != "yes" ] ; then
-    pids=`find_masters`
-  fi
+  masterpid=
   if [ -f "$PIDFILE" -a -r "$PIDFILE" ] ; then
     masterpid=`cat "$PIDFILE"` 2>/dev/null
+    FORCE_PIDFILE="yes"
   fi
-  if [ "$masterpid" = "" ] ; then
-    echo "$pids"
-    if [ "$pids" = "" ] ; then return 1; else return 0; fi
-  elif [ "$FORCE_PIDFILE" = "yes" ] ; then
-    echo "$masterpid"
+  if [ "$FORCE_PIDFILE" = "yes" ] ; then
+    MASTER_PIDS="$masterpid"
     return 0
   fi
 
+  pids=`find_masters`
+  if [ "$masterpid" = "" ] ; then
+    MASTER_PIDS="$pids"
+    if [ "$pids" = "" ] ; then return 1; else return 0; fi
+  fi
   echo "$pids" | grep -w "$masterpid" > /dev/null
   if [ $? -eq 0 ] ; then
-    echo "$masterpid"
+    MASTER_PIDS="$masterpid"
     return 0
   fi
   foundpid=`$PS | grep condor_master | grep -v grep | $AWK '{print $2}' | grep "^$masterpid$"`
   if [ "$foundpid" = "" ]; then
-    echo "$pids"
+    MASTER_PIDS="$foundpid"
     if [ "$pids" = "" ] ; then return 1; else return 0; fi
   fi
-  echo "$masterpid"
+  MASTER_PIDS="$masterpid"
   return 0
 }
 
@@ -514,13 +544,20 @@ condor_master_pids() {
 # $?=0 - condor_master is gone
 # $?=1 - timed out
 wait_for_exit() {
-  echo "Waiting for Condor to stop (MAX: $2 seconds)"
-  max_wait=$2
+  if [ "$VERBOSE" = "yes" ] ; then
+    echo "Waiting for Condor to stop (MAX: $2 seconds)"
+  fi
   sleep_time=$1
+  max_wait=$2
   stop_duration=0
-  while [ "`condor_master_pids`" != "" -a $stop_duration -lt $max_wait ]; do
+  condor_master_pids
+  while [ "$MASTER_PIDS" != "" -a $stop_duration -lt $max_wait ]; do
+    if [ "$VERBOSE" = "yes" ] ; then
+      echo "Still waiting on $MASTER_PIDS"
+    fi
     sleep $sleep_time
     stop_duration=`expr $stop_duration + $sleep_time`
+    condor_master_pids
   done
   
   if [ "`condor_master_pids`" = "" ]; then
@@ -535,7 +572,11 @@ wait_for_exit() {
 # Start condor.
 start() {
   set_condor_master
-  echon "Starting up Condor..."
+  if [ "$VERBOSE" = "yes" ] ; then
+    echo "Starting up Condor..."
+  else
+    echon "Starting up Condor...    "
+  fi
   if [ "$EXECUTE" != "yes" ] ; then
     echo "skipping."
     return 0
@@ -545,6 +586,12 @@ start() {
       cmd="$CONDOR_MASTER"
       "$CONDOR_MASTER"
     else
+      if [ "$CONDOR_RUN" != "" -a ! -d "$CONDOR_RUN" ] ; then
+        mkdir "$CONDOR_RUN"
+        if [ "$USER" = "root" -a "$CONDOR_USER" != "" ] ; then
+          chown "$CONDOR_USER" "$CONDOR_RUN"
+        fi
+      fi
       cmd="$CONDOR_MASTER -pidfile $PIDFILE"
       "$CONDOR_MASTER" -pidfile "$PIDFILE"
     fi
@@ -558,6 +605,17 @@ start() {
   fi
   if [ "$VERBOSE" = "yes" ] ; then
     echo "Started: \"$cmd\""
+    if [ "$PIDFILE" != "" ] ; then
+      seconds=0
+      while [ ! -f "$PIDFILE" -a $seconds -lt 10 ]; do
+        sleep 1
+        seconds=`expr $seconds + 1`
+      done
+      if [ -f "$PIDFILE" ] ; then
+        echon "Master PID = ";
+        cat "$PIDFILE"
+      fi
+    fi
   fi
   echo "done."
   return 0
@@ -580,15 +638,18 @@ start() {
 #
 # named xstop because stop causes problems on AIX and HPUX.
 xstop() {
-  echo "Shutting down Condor (fast-shutdown mode)..."
-  master_pids=`condor_master_pids`
-  if [ "$master_pids" != "" ]; then
-    #echon "using kill..."
+  if [ "$VERBOSE" = "yes" ] ; then
+    echo "Shutting down Condor (fast-shutdown mode)..."
+  else
+    echon "Shutting down Condor (fast-shutdown mode)...  "
+  fi
+  condor_master_pids
+  if [ "$MASTER_PIDS" != "" ]; then
     if [ "$EXECUTE" != "yes" ] ; then
       echo "Skipping."
       return 0
     fi
-    for pid in `echo "$master_pids"` ; do
+    for pid in `echo "$MASTER_PIDS"` ; do
       if [ "$VERBOSE" = "yes" ] ; then
         echo "Sending QUIT to $pid"
       fi
@@ -671,7 +732,7 @@ fi
 
 detect_ps
 detect_awk
-set_condor_users
+detect_condor_users
 
 if [ "$CONDOR_USERS" = "" ] ; then
   if [ "$PSFLAGSn" = "" ] ; then
@@ -687,7 +748,12 @@ elif [ "$PIDFILE" = "" ] ; then
   PIDFILE="$CONDOR_RUN/condor.pid"
 fi
 
-case $INIT_COMMAND in
+if [ "$INIT_COMMAND" = "" ] ; then
+  myhelp
+  exit 1
+fi
+
+case "$INIT_COMMAND" in
   'start')
     start
     ;;

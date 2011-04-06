@@ -755,7 +755,7 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 			// Insert the string into the classad
 		if( Insert( buffer.Value() ) == FALSE ) { 	
 				// print out where we barfed to the log file
-			dprintf(D_ALWAYS,"failed to create classad; bad expr = %s\n",
+			dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n",
 					buffer.Value());
 				// read until delimitor or EOF; whichever comes first
 			buffer = "";
@@ -820,7 +820,7 @@ ClassAd::Insert( const char *str )
 	for ( int i = 0; str[i] != '\0'; i++ ) {
         if (str[i] == '\\') {
 			if ( ( str[i + 1] != '"') ||
-				 ((str[i + 1] == '"') && IsStringEnd(str,2) )  )
+				 ((str[i + 1] == '"') && IsStringEnd(str + i,2) )  )
 			{
 				newAdStr.append( 1, '\\' );
 			}
@@ -1338,10 +1338,10 @@ initFromString( char const *str,MyString *err_msg )
 
 		if (!Insert(exprbuf)) {
 			if( err_msg ) {
-				err_msg->sprintf("Failed to parse ClassAd expression: %s",
+				err_msg->sprintf("Failed to parse ClassAd expression: '%s'",
 					exprbuf);
 			} else {
-				dprintf(D_ALWAYS,"Failed to parse ClassAd expression: %s\n",
+				dprintf(D_ALWAYS,"Failed to parse ClassAd expression: '%s'\n",
 					exprbuf);
 			}
 			succeeded = false;
@@ -1446,8 +1446,6 @@ sPrint( MyString &output, StringList *attr_white_list )
 	unp.SetOldClassAd( true );
 	string value;
 
-	output = "";
-
 	classad::ClassAd *parent = GetChainedParentAd();
 
 	if ( parent ) {
@@ -1486,7 +1484,7 @@ sPrint( std::string &output, StringList *attr_white_list )
 {
 	MyString myout = output;
 	int rc = sPrint( myout, attr_white_list );
-	output = myout;
+	output += myout;
 	return rc;
 }
 // Taken from the old classad's function. Got rid of incorrect documentation. 

@@ -11,13 +11,15 @@ void dcloudprintf_internal(const char *function, const char *fmt, ...)
 {
     va_list va_args;
 
-    pthread_mutex_lock(&dcloudprintf_mutex);
-    fprintf(logfp, "%s: ", function);
-    va_start(va_args, fmt);
-    vfprintf(logfp, fmt, va_args);
-    va_end(va_args);
-    fflush(logfp);
-    pthread_mutex_unlock(&dcloudprintf_mutex);
+    if ( logfp ) {
+        pthread_mutex_lock(&dcloudprintf_mutex);
+        fprintf(logfp, "%s: ", function);
+        va_start(va_args, fmt);
+        vfprintf(logfp, fmt, va_args);
+        va_end(va_args);
+        fflush(logfp);
+        pthread_mutex_unlock(&dcloudprintf_mutex);
+    }
 }
 
 std::string create_failure(const char *req_id, const char *err_msg, ...)

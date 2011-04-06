@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright (C) 1990-2010, Redhat. 
+ # Copyright 2011 Red Hat, Inc. 
  # Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
  # University of Wisconsin-Madison, WI.
  # 

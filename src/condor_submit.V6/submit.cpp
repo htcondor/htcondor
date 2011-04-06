@@ -364,7 +364,7 @@ const char    *VM_Networking = "vm_networking";
 const char    *VM_Networking_Type = "vm_networking_type";
 
 //
-// Amazon EC2 Parameters
+// Amazon EC2 SOAP Parameters
 //
 const char* AmazonPublicKey = "amazon_public_key";
 const char* AmazonPrivateKey = "amazon_private_key";
@@ -376,13 +376,29 @@ const char* AmazonKeyPairFile = "amazon_keypair_file";
 const char* AmazonInstanceType = "amazon_instance_type";
 
 //
+// EC2 Query Parameters
+//
+const char* EC2AccessKeyId = "ec2_access_key_id";
+const char* EC2SecretAccessKey = "ec2_secret_access_key";
+const char* EC2AmiID = "ec2_ami_id";
+const char* EC2UserData = "ec2_user_data";
+const char* EC2UserDataFile = "ec2_user_data_file";
+const char* EC2SecurityGroups = "ec2_security_groups";
+const char* EC2KeyPairFile = "ec2_keypair_file";
+const char* EC2InstanceType = "ec2_instance_type";
+const char* EC2ElasticIP = "ec2_elastic_ip";
+
+//
 // Deltacloud Parameters
 //
 const char* DeltacloudUsername = "deltacloud_username";
-const char* DeltacloudPassword = "deltacloud_password";
+const char* DeltacloudPasswordFile = "deltacloud_password_file";
 const char* DeltacloudImageId = "deltacloud_image_id";
 const char* DeltacloudRealmId = "deltacloud_realm_id";
 const char* DeltacloudHardwareProfile = "deltacloud_hardware_profile";
+const char* DeltacloudHardwareProfileMemory = "deltacloud_hardware_profile_memory";
+const char* DeltacloudHardwareProfileCpu = "deltacloud_hardware_profile_cpu";
+const char* DeltacloudHardwareProfileStorage = "deltacloud_hardware_profile_storage";
 const char* DeltacloudKeyname = "deltacloud_keyname";
 const char* DeltacloudUserData = "deltacloud_user_data";
 
@@ -1456,6 +1472,7 @@ SetExecutable()
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "amazon" ) == MATCH ||
+			 strcasecmp( JobGridType, "ec2" ) == MATCH ||
 			 strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
@@ -1663,7 +1680,7 @@ SetExecutable()
 }
 
 #ifdef WIN32
-#define CLIPPED
+#define CLIPPED 1
 #endif
 
 void
@@ -1737,7 +1754,7 @@ SetUniverse()
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
 			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
-			//    amazon, unicore, cream, deltacloud
+			//    amazon, unicore, cream, deltacloud, ec2
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 			//   system names should be used (pbs, lsf). Glite are the only
@@ -1755,6 +1772,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
+				(strcasecmp (JobGridType, "ec2") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
@@ -1768,7 +1786,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
-						 "nqs, condor, nordugrid, unicore, amazon, deltacloud, or cream\n" );
+						 "nqs, condor, nordugrid, unicore, amazon, ec2, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -4847,7 +4865,8 @@ SetGridParams()
 			InsertJobExpr (buffer);
 		}
 
-		if ( strcasecmp( tmp, "amazon" ) == 0 ) {
+		if ( strcasecmp( tmp, "amazon" ) == 0 ||
+			 strcasecmp( tmp, "ec2" ) == 0 ) {
 			fprintf(stderr, "\nERROR: Amazon EC2 grid jobs require a "
 					"service URL\n");
 			DoCleanup( 0, 0, NULL );
@@ -5041,16 +5060,11 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 	
-	// AmazonUserData and AmazonUserDataFile cannot exist in the same submit file
-	bool has_userdata = false;
-	bool has_userdatafile = false;
-	
 	// AmazonUserData is not a necessary parameter
 	if( (tmp = condor_param( AmazonUserData, ATTR_AMAZON_USER_DATA )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA, tmp);
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-		has_userdata = true;
 	}	
 
 	// AmazonUserDataFile is not a necessary parameter
@@ -5068,7 +5082,111 @@ SetGridParams()
 				full_path(tmp) );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-		has_userdatafile = true;
+	}
+
+
+	//
+	// EC2 grid-type submit attributes
+	//
+	if ( (tmp = condor_param( EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID )) ) {
+		// check public key file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY_ID, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "ec2" ) == 0 ) {
+		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", EC2AccessKeyId );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	if ( (tmp = condor_param( EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY )) ) {
+		// check private key file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_SECRET_ACCESS_KEY, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "ec2" ) == 0 ) {
+		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", EC2SecretAccessKey );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	// EC2KeyPairFile is not a necessary parameter
+	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
+		// for the relative path, the keypair output file will be written to the IWD
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR_FILE, full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// EC2GroupName is not a necessary parameter
+	if( (tmp = condor_param( EC2SecurityGroups, ATTR_EC2_SECURITY_GROUPS )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_SECURITY_GROUPS, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	if ( (tmp = condor_param( EC2AmiID, ATTR_EC2_AMI_ID )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_AMI_ID, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "ec2" ) == 0 ) {
+		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", EC2AmiID );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	// EC2InstanceType is not a necessary parameter
+	if( (tmp = condor_param( EC2InstanceType, ATTR_EC2_INSTANCE_TYPE )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_INSTANCE_TYPE, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// EC2ElasticIP is not a necessary parameter
+    if( (tmp = condor_param( EC2ElasticIP, ATTR_EC2_ELASTIC_IP )) ) {
+        buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ELASTIC_IP, tmp );
+        free( tmp );
+        InsertJobExpr( buffer.Value() );
+    }
+	
+	// EC2UserData is not a necessary parameter
+	if( (tmp = condor_param( EC2UserData, ATTR_EC2_USER_DATA )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_USER_DATA, tmp);
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}	
+
+	// EC2UserDataFile is not a necessary parameter
+	if( (tmp = condor_param( EC2UserDataFile, ATTR_EC2_USER_DATA_FILE )) ) {
+		// check user data file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_USER_DATA_FILE, 
+				full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
 	}
 	
 
@@ -5085,12 +5203,21 @@ SetGridParams()
 		exit( 1 );
 	}
 
-	if ( (tmp = condor_param( DeltacloudPassword, ATTR_DELTACLOUD_PASSWORD )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_PASSWORD, tmp );
+	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
+		// check private key file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_PASSWORD_FILE, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudPassword );
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudPasswordFile );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
 	}
@@ -5113,6 +5240,24 @@ SetGridParams()
 
 	if( (tmp = condor_param( DeltacloudHardwareProfile, ATTR_DELTACLOUD_HARDWARE_PROFILE )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfileMemory, ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfileCpu, ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfileStorage, ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE, tmp );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}
@@ -7098,8 +7243,7 @@ bool parse_vm_option(char *value, bool& onoff)
 
 // If a file is in transfer_input_files, the file will have just basename.
 // Otherwise, it will have full path. To get full path, iwd is used.
-bool 
-make_vm_file_path(const char *filename, MyString& fixedname)
+bool make_vm_file_path(const char *filename, MyString& fixedname)
 {
 	if( filename == NULL ) {
 		return false;
@@ -7109,13 +7253,11 @@ make_vm_file_path(const char *filename, MyString& fixedname)
 
 	MyString transfer_input_files;
 	// check whether the file will be transferred
-	if( job->LookupString(ATTR_TRANSFER_INPUT_FILES,transfer_input_files) 
-				== 1 ) {
+	if( job->LookupString(ATTR_TRANSFER_INPUT_FILES,transfer_input_files) == 1 ) {
 		StringList transfer_file_list(NULL, ",");
 		transfer_file_list.initializeFromString(transfer_input_files.Value() );
 
-		if( filelist_contains_file(fixedname.Value(), 
-					&transfer_file_list, true) ) {
+		if( filelist_contains_file(fixedname.Value(), &transfer_file_list, true) ) {
 			// this file is already in transfer_input_files
 			// filename should have only basename
 			fixedname = condor_basename(fixedname.Value());
@@ -7163,7 +7305,8 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 
 		// found disk file
 		StringList single_disk_file(one_disk, ":");
-		if( single_disk_file.number() != 3 ) {
+        int iNumDiskParams = single_disk_file.number();
+		if( iNumDiskParams < 3 || iNumDiskParams > 4 ) {
 			return false;
 		}
 
@@ -7173,8 +7316,7 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 		filename.trim();
 
 		MyString fixedname;
-		if( make_vm_file_path(filename.Value(), fixedname) 
-				== false ) {
+		if( make_vm_file_path(filename.Value(), fixedname) == false ) {
 			return false;
 		}else {
 			if( fullpath(fixedname.Value()) == false ) {
@@ -7193,6 +7335,12 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 			fixed_disk += ":";
 			// permission
 			fixed_disk += single_disk_file.next();
+            if (iNumDiskParams == 4)
+            {
+                // optional (format)
+                fixed_disk += ":";
+                fixed_disk += single_disk_file.next();
+            }
 		}
 	}
 	return true;
@@ -7210,21 +7358,6 @@ void SetVMRequirements()
 	vmanswer = "(";
 	vmanswer += JobRequirements;
 	vmanswer += ")";
-
-	// check OS
-	/*	
-	if( (strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH ) || 
-			vm_need_fsdomain ) {
-		bool checks_opsys = false;
-		checks_opsys = findClause( vmanswer, ATTR_OPSYS );
-
-		if( !checks_opsys ) {
-			vmanswer += " && (OpSys == \"";
-			vmanswer += OperatingSystem;
-			vmanswer += "\")";
-		}
-	}
-	*/
 
 	// check file system domain
 	if( vm_need_fsdomain ) {
@@ -7377,10 +7510,6 @@ SetVMParams()
 	}
 
 	char* tmp_ptr = NULL;
-	bool has_vm_cdrom_files = false;
-	bool has_vm_iso_file = false;
-	bool vm_should_transfer_cdrom_files = false;
-	MyString final_cdrom_files;
 	MyString buffer;
 
 	// VM type is already set in SetUniverse
@@ -7388,13 +7517,11 @@ SetVMParams()
 	InsertJobExpr(buffer);
 
 	// VM checkpoint is already set in SetUniverse
-	buffer.sprintf( "%s = %s", ATTR_JOB_VM_CHECKPOINT, 
-			VMCheckpoint? "TRUE":"FALSE");
+	buffer.sprintf( "%s = %s", ATTR_JOB_VM_CHECKPOINT, VMCheckpoint? "TRUE":"FALSE");
 	InsertJobExpr(buffer);
 
 	// VM networking is already set in SetUniverse
-	buffer.sprintf( "%s = %s", ATTR_JOB_VM_NETWORKING, 
-			VMNetworking? "TRUE":"FALSE");
+	buffer.sprintf( "%s = %s", ATTR_JOB_VM_NETWORKING, VMNetworking? "TRUE":"FALSE");
 	InsertJobExpr(buffer);
 
 	// Here we need to set networking type
@@ -7483,99 +7610,6 @@ SetVMParams()
 		}
 	}
 
-	// 'vm_cdrom_files' defines files which will be shown in CDROM inside a VM.
-	// That is, vm-gahp on the execute machine will create a ISO file with 
-	// the defined files. The ISO file will be viewed as a CDROM in a VM.
-	char *vm_cdrom_files = NULL;
-	vm_cdrom_files = condor_param("vm_cdrom_files");
-	if( vm_cdrom_files ) {
-		vm_should_transfer_cdrom_files = false;
-		tmp_ptr = condor_param("vm_should_transfer_cdrom_files");
-		if( parse_vm_option(tmp_ptr, vm_should_transfer_cdrom_files) 
-				== false ) {
-			MyString err_msg;
-			err_msg = "\nERROR: You must explicitly specify "
-				"\"vm_should_transfer_cdrom_files\" "
-				"in your submit description file. "
-				"You need to define either "
-				"\"vm_should_transfer_cdrom_files = YES\" or "
-				" \"vm_should_transfer_cdrom_files = NO\". "
-				"If you define \"vm_should_transfer_cdrom_files = YES\", " 
-				"all files in \"vm_cdrom_files\" will be "
-				"transfered to an execute machine. "
-				"If you define \"vm_should_transfer_cdrom_files = NO\", "
-				"all files in \"vm_cdrom_files\" should be "
-				"accessible with a shared file system\n";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}
-		free(tmp_ptr);
-
-		buffer.sprintf( "%s = %s", VMPARAM_TRANSFER_CDROM_FILES,
-				vm_should_transfer_cdrom_files ? "TRUE" : "FALSE");
-		InsertJobExpr( buffer );
-
-		if( vm_should_transfer_cdrom_files == false ) {
-			vm_need_fsdomain = true;
-		}
-
-		StringList cdrom_file_list(NULL, ",");
-		cdrom_file_list.initializeFromString(vm_cdrom_files);
-		final_cdrom_files = "";
-
-		cdrom_file_list.rewind();
-
-		has_vm_iso_file = false;
-		MyString cdrom_file;
-		const char *tmp_file = NULL;
-		while( (tmp_file = cdrom_file_list.next() ) != NULL ) {
-			cdrom_file = delete_quotation_marks(tmp_file);
-			if( cdrom_file.Length() == 0 ) {
-				continue;
-			}
-			cdrom_file.trim();
-			if( has_suffix(cdrom_file.Value(), ".iso") ) {
-				has_vm_iso_file = true;
-			}
-
-			// convert file name to full path that uses iwd
-			cdrom_file = full_path(cdrom_file.Value());
-			check_and_universalize_path(cdrom_file);
-
-			if( vm_should_transfer_cdrom_files ) {
-				// add this cdrom file to transfer_input_files
-				transfer_vm_file(cdrom_file.Value());
-			}
-
-			if( final_cdrom_files.Length() > 0 ) {
-				final_cdrom_files += ",";
-			}
-			if( vm_should_transfer_cdrom_files ) {
-				// A file will be transferred. 
-				// So we use basename.
-				final_cdrom_files += condor_basename(cdrom_file.Value());
-			}else {
-				final_cdrom_files += cdrom_file.Value();
-			}
-		}
-
-		if( has_vm_iso_file && (cdrom_file_list.number() > 1)) {
-			fprintf( stderr, "\nERROR: You cannot define an iso file "
-					"with other files. You should define either "
-					"only one iso file or multiple non-iso files in %s\n", 
-					"vm_cdrom_files");
-			DoCleanup(0,0,NULL);
-			exit(1);
-		}
-
-		buffer.sprintf( "%s = \"%s\"", VMPARAM_CDROM_FILES, 
-				final_cdrom_files.Value());
-		InsertJobExpr( buffer );
-		has_vm_cdrom_files = true;
-		free(vm_cdrom_files);
-	}
-
 	if( (strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) ||
 		(strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
 		bool real_xen_kernel_file = false;
@@ -7584,52 +7618,18 @@ SetVMParams()
 		// Read the parameter of xen_transfer_files 
 		char *transfer_files = NULL;
 		const char *transf_attr_name;
-		if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
-		{
-			transfer_files = condor_param("xen_transfer_files");
-			transf_attr_name = VMPARAM_XEN_TRANSFER_FILES;
-		}
-		else
-		{
-			transfer_files = condor_param("kvm_transfer_files");
-			transf_attr_name = VMPARAM_KVM_TRANSFER_FILES;
-		}
 
-		if( transfer_files ) {
-			MyString final_output;
-			StringList xen_file_list(NULL, ",");
-			xen_file_list.initializeFromString(transfer_files);
+        transfer_files = condor_param("transfer_input_files");
+        if (transfer_files)
+        {
+            // tbd - I don't think we need to do anything here
+            free(transfer_files);
+        }
+        else
+        {
+            vm_need_fsdomain = true;
+        }
 
-			xen_file_list.rewind();
-
-			MyString one_file;
-			const char *tmp_file = NULL;
-			while( (tmp_file = xen_file_list.next() ) != NULL ) {
-				one_file = delete_quotation_marks(tmp_file);
-				if( one_file.Length() == 0 ) {
-					continue;
-				}
-				one_file.trim();
-				// convert file name to full path that uses iwd
-				one_file = full_path(one_file.Value());
-				check_and_universalize_path(one_file);
-
-				// add this file to transfer_input_files
-				transfer_vm_file(one_file.Value());
-
-				if( final_output.Length() > 0 ) {
-					final_output += ",";
-				}
-				// VMPARAM_XEN_TRANSFER_FILES will include 
-				// basenames for files to be transferred.
-				final_output += condor_basename(one_file.Value());
-			}
-			buffer.sprintf( "%s = \"%s\"", transf_attr_name, 
-					final_output.Value());
-			InsertJobExpr( buffer );
-			free(transfer_files);
-		}
-		
 		if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
 		{
 			// xen_kernel is a required parameter
@@ -7721,18 +7721,8 @@ SetVMParams()
 		}// xen only params
 
 		// <x>_disk is a required parameter
-		char *disk = NULL;
-		const char *disk_attr_name;
-		if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
-		{
-			disk = condor_param("xen_disk");
-			disk_attr_name = VMPARAM_XEN_DISK;
-		}
-		else
-		{
-			disk = condor_param("kvm_disk");
-			disk_attr_name = VMPARAM_KVM_DISK;
-		}
+		char *disk = condor_param("vm_disk");
+		const char *disk_attr_name = VMPARAM_VM_DISK;
 
 		if( !disk ) {
 			fprintf( stderr, "\nERROR: '%s' cannot be found.\n"
@@ -7743,9 +7733,9 @@ SetVMParams()
 			exit(1);
 		}else {
 			MyString fixedvalue = delete_quotation_marks(disk);
-			if( validate_xen_disk_parm(fixedvalue.Value(), fixedvalue) 
-					== false ) {
-				fprintf(stderr, "\nERROR: '<vm>_disk' has incorrect format.\n"
+			if( validate_xen_disk_parm(fixedvalue.Value(), fixedvalue) == false ) 
+            {
+				fprintf(stderr, "\nERROR: 'vm_disk' has incorrect format.\n"
 						"The format shoud be like "
 						"\"<filename>:<devicename>:<permission>\"\n"
 						"e.g.> For single disk: <vm>_disk = filename1:hda1:w\n"
@@ -7772,45 +7762,6 @@ SetVMParams()
 				InsertJobExpr( buffer );
 				free(xen_kernel_params);
 			}
-		}
-
-		if( has_vm_cdrom_files )
-		{
-			MyString xen_cdrom_string;
-			char *cdrom_device = NULL;
-			const char *cdrom_attr_name;
-
-			if ( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH )
-			{
-				cdrom_device = condor_param("xen_cdrom_device");
-				cdrom_attr_name = VMPARAM_XEN_CDROM_DEVICE;
-			}
-			else
-			{
-				cdrom_device = condor_param("kvm_cdrom_device");
-				cdrom_attr_name = VMPARAM_KVM_CDROM_DEVICE;
-			}
-
-			if( !cdrom_device ) {
-				fprintf(stderr, "\nERROR: To use 'vm_cdrom_files', "
-						"you must also define '<vm>_cdrom_device'.\n");
-				DoCleanup(0,0,NULL);
-				exit(1);
-			}
-			xen_cdrom_string = cdrom_device;
-			free(cdrom_device);
-
-			if( xen_cdrom_string.find(":", 0 ) >= 0 ) {
-				fprintf(stderr, "\nERROR: '<vm>_cdrom_device' should include "
-						"just device name.\n"
-						"e.g.) 'xen_cdrom_device = hdc'\n");
-				DoCleanup(0,0,NULL);
-				exit(1);
-			}
-
-			buffer.sprintf( "%s = \"%s\"", cdrom_attr_name,
-					xen_cdrom_string.Value());
-			InsertJobExpr( buffer );
 		}
 
 	}else if( strcasecmp(VMType.Value(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
@@ -7958,30 +7909,19 @@ SetVMParams()
 			// 1. all disk files should be in a shared file system
 			// 2. If a job uses CDROM files, it should be 
 			// 	  single ISO file and be in a shared file system
-			if( xen_has_file_to_be_transferred || 
-				(has_vm_cdrom_files && 
-				 (!has_vm_iso_file || vm_should_transfer_cdrom_files)) ||
-				!arg_str.IsEmpty() ) {
+			if( xen_has_file_to_be_transferred || !arg_str.IsEmpty() ) 
+            {
 				MyString err_msg;
 				err_msg = "\nERROR: To use checkpoint in Xen, "
 					"You need to make sure the followings.\n"
 					"1. All xen disk files should be in a shared file system\n"
-					"2. If you use 'vm_cdrom_files', "
-					"only single ISO file is allowed and the ISO file "
-					"should also be in a shared file system\n"
-					"3. You cannot use 'arguments' in a job description file\n\n";
+					"2. You cannot use 'arguments' in a job description file\n\n";
 
 				if( xen_has_file_to_be_transferred ) {
 					err_msg += "ERROR: You requested to transfer at least one Xen "
 						"disk file\n";
 				}
-				if( has_vm_cdrom_files ) {
-					if( !has_vm_iso_file ) {
-						err_msg += "ERROR: You defined non-iso CDROM files\n";
-					}else if( vm_should_transfer_cdrom_files ) {
-						err_msg += "ERROR: You requested to transfer a ISO file\n";
-					}
-				}
+				
 				if( !arg_str.IsEmpty() ) {
 					err_msg += "ERROR: You defined 'arguments'.\n";
 				}
@@ -7992,38 +7932,6 @@ SetVMParams()
 			}
 		}
 		// For vmware, there is no limitation.
-	}
-
-	if( !arg_str.IsEmpty() && has_vm_cdrom_files ) {
-		if( has_vm_iso_file ) {
-			// A job user cannot use a iso file for input CDROM and 
-			// 'Argument' parameter together, 
-			MyString err_msg;
-			err_msg = "\nERROR: You cannot use single iso file for "
-				"'vm_cdrom_files' and 'arguments' in a job description "
-				"file together. To use 'arguments' you need to use "
-				"non-iso files in 'vm_cdrom_files'\n";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}else {
-			// Because a file called "condor.arg" will be created and 
-			// be added to input CDROM on an execute machine,
-			// 'vm_cdrom_files' should not contain "condor.arg".
-			if( final_cdrom_files.find(VM_UNIV_ARGUMENT_FILE, 0) >= 0 ) {
-				MyString err_msg;
-				err_msg.sprintf("\nERROR: The file name '%s' is reserved for "
-					"'arguments' in vm universe. String in 'arguments' will "
-					"be saved into a file '%s'. And '%s' will be added to "
-					"input CDROM. So 'vm_cdrom_files' should not "
-					"contain '%s'\n", VM_UNIV_ARGUMENT_FILE,
-					VM_UNIV_ARGUMENT_FILE, VM_UNIV_ARGUMENT_FILE,
-					VM_UNIV_ARGUMENT_FILE);
-				print_wrapped_text( err_msg.Value(), stderr );
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-			}
-		}
 	}
 			
 	// Now all VM parameters are set
