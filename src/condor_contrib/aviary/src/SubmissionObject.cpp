@@ -28,6 +28,7 @@
 #include "JobServerObject.h"
 #include "AviaryUtils.h"
 
+using namespace std;
 using namespace aviary::query;
 using namespace aviary::codec;
 using namespace aviary::util;
@@ -162,16 +163,22 @@ SubmissionObject::setOwner ( const char *_owner )
     }
 }
 
-bool
-SubmissionObject::getJobSummaries ( AttributeVectorType &jobs,
-                            std::string &text )
+JobSummaryPair makeJobPair(const Job* job) {
+	JobServerObject* jso = JobServerObject::getInstance();
+	const char* job_cp = job->getKey();
+	JobSummaryFields* jsf = new JobSummaryFields;
+	AviaryStatus status;
+	// TODO: should check this return val i suppose
+	jso->getSummary(job_cp, *jsf, status);
+	return make_pair(job_cp,jsf);
+}
+
+void
+SubmissionObject::getJobSummaries ( JobSummaryPairCollection &jobs)
 {
 
     // id, timestamp (which?), command, args, ins, outs, state, message
     // id, time queued, time entered current state, state, command, args, hold reason, release reason
-
-	ClassAd ad;
-	AttributeMapType job;
 
     // find all the jobs in their various states...
 
@@ -179,73 +186,36 @@ SubmissionObject::getJobSummaries ( AttributeVectorType &jobs,
     for ( SubmissionObject::JobSet::const_iterator i = getIdle().begin();
             getIdle().end() != i; i++ )
     {
-	    (*i)->getSummary(ad);
-	if ( !m_codec->classAdToMap ( ad, job ) )
-        {
-            text = "Error retrieving attributes for Idle job";
-            return false;
-        }
-
-        jobs.push_back(job);
-    }
+		jobs.push_back(makeJobPair(*i));
+	}
 
     //2) Running
     for ( SubmissionObject::JobSet::const_iterator i = getRunning().begin();
             getRunning().end() != i;
             i++ )
     {
-	    (*i)->getSummary(ad);
-	if ( !m_codec->classAdToMap ( ad, job ) )
-        {
-            text = "Error retrieving attributes for Running job";
-            return false;
-        }
-
-        jobs.push_back(job);
+		jobs.push_back(makeJobPair(*i));
     }
 
     //3) Removed
     for ( SubmissionObject::JobSet::const_iterator i = getRemoved().begin();
             getRemoved().end() != i; i++ )
     {
-	    (*i)->getSummary(ad);
-	if ( !m_codec->classAdToMap ( ad, job ) )
-        {
-            text = "Error retrieving attributes for Removed job";
-            return false;
-        }
-
-        jobs.push_back(job);
+		jobs.push_back(makeJobPair(*i));
     }
 
     //4) Completed
     for ( SubmissionObject::JobSet::const_iterator i = getCompleted().begin();
             getCompleted().end() != i; i++ )
     {
-	    (*i)->getSummary(ad);
-	if ( !m_codec->classAdToMap ( ad, job ) )
-        {
-            text = "Error retrieving attributes for Completed job";
-            return false;
-        }
-
-        jobs.push_back(job);
+		jobs.push_back(makeJobPair(*i));
     }
-
 
     //5) Held
     for ( SubmissionObject::JobSet::const_iterator i = getHeld().begin();
             getHeld().end() != i; i++ )
     {
-	    (*i)->getSummary(ad);
-	if ( !m_codec->classAdToMap ( ad, job ) )
-        {
-            text = "Error retrieving attributes for Held job";
-            return false;
-        }
-
-        jobs.push_back(job);
+		jobs.push_back(makeJobPair(*i));
     }
 
-    return true;
 }

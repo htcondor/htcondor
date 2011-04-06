@@ -24,6 +24,8 @@
           
        #include "AviaryCommon_Status.h"
           
+       #include "AviaryCommon_JobSummary.h"
+          
 
         #include <stdio.h>
         #include <OMElement.h>
@@ -66,6 +68,10 @@ namespace AviaryCommon
 
                 
                 bool isValidRunning;
+            std::vector<AviaryCommon::JobSummary*>* property_Jobs;
+
+                
+                bool isValidJobs;
             
 
         /*** Private methods ***/
@@ -99,6 +105,10 @@ namespace AviaryCommon
         setRunningNil();
             
 
+        bool WSF_CALL
+        setJobsNil();
+            
+
 
 
         /******************************* public functions *********************************/
@@ -129,13 +139,14 @@ namespace AviaryCommon
          * @param Idle int
          * @param Removed int
          * @param Running int
+         * @param Jobs std::vector<AviaryCommon::JobSummary*>*
          * @return newly created SubmissionSummary object
          */
-        SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running);
+        SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,std::vector<AviaryCommon::JobSummary*>* arg_Jobs);
         
         
         /********************************** Class get set methods **************************************/
-        
+        /******** Deprecated for array types, Use 'Getters and Setters for Arrays' instead ***********/
         
 
         /**
@@ -304,10 +315,105 @@ namespace AviaryCommon
         WSF_EXTERN bool WSF_CALL
         resetRunning();
         
+        
+
+        /**
+         * Getter for jobs. Deprecated for array types, Use getJobsAt instead
+         * @return Array of AviaryCommon::JobSummary*s.
+         */
+        WSF_EXTERN std::vector<AviaryCommon::JobSummary*>* WSF_CALL
+        getJobs();
+
+        /**
+         * Setter for jobs.Deprecated for array types, Use setJobsAt
+         * or addJobs instead.
+         * @param arg_Jobs Array of AviaryCommon::JobSummary*s.
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setJobs(std::vector<AviaryCommon::JobSummary*>*  arg_Jobs);
+
+        /**
+         * Re setter for jobs
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetJobs();
+        
+        /****************************** Get Set methods for Arrays **********************************/
+        /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
+
+        /**
+         * E.g. use of get_at, set_at, add and sizeof
+         *
+         * for(i = 0; i < adb_element->sizeofProperty(); i ++ )
+         * {
+         *     // Getting ith value to property_object variable
+         *     property_object = adb_element->getPropertyAt(i);
+         *
+         *     // Setting ith value from property_object variable
+         *     adb_element->setPropertyAt(i, property_object);
+         *
+         *     // Appending the value to the end of the array from property_object variable
+         *     adb_element->addProperty(property_object);
+         *
+         *     // Removing the ith value from an array
+         *     adb_element->removePropertyAt(i);
+         *     
+         * }
+         *
+         */
+
+        
+        
+        /**
+         * Get the ith element of jobs.
+        * @param i index of the item to be obtained
+         * @return ith AviaryCommon::JobSummary* of the array
+         */
+        WSF_EXTERN AviaryCommon::JobSummary* WSF_CALL
+        getJobsAt(int i);
+
+        /**
+         * Set the ith element of jobs. (If the ith already exist, it will be replaced)
+         * @param i index of the item to return
+         * @param arg_Jobs element to set AviaryCommon::JobSummary* to the array
+         * @return ith AviaryCommon::JobSummary* of the array
+         */
+        WSF_EXTERN bool WSF_CALL
+        setJobsAt(int i,
+                AviaryCommon::JobSummary* arg_Jobs);
+
+
+        /**
+         * Add to jobs.
+         * @param arg_Jobs element to add AviaryCommon::JobSummary* to the array
+         * @return true on success, false otherwise.
+         */
+        WSF_EXTERN bool WSF_CALL
+        addJobs(
+            AviaryCommon::JobSummary* arg_Jobs);
+
+        /**
+         * Get the size of the jobs array.
+         * @return the size of the jobs array.
+         */
+        WSF_EXTERN int WSF_CALL
+        sizeofJobs();
+
+        /**
+         * Remove the ith element of jobs.
+         * @param i index of the item to remove
+         * @return true on success, false otherwise.
+         */
+        WSF_EXTERN bool WSF_CALL
+        removeJobsAt(int i);
+
+        
 
 
         /******************************* Checking and Setting NIL values *********************************/
-        
+        /* Use 'Checking and Setting NIL values for Arrays' to check and set nil for individual elements */
 
         /**
          * NOTE: set_nil is only available for nillable properties
@@ -382,6 +488,42 @@ namespace AviaryCommon
         bool WSF_CALL
         isRunningNil();
 
+
+        
+
+        /**
+         * Check whether jobs is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isJobsNil();
+
+
+        
+
+        /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
+
+        /**
+         * NOTE: You may set this to remove specific elements in the array
+         *       But you can not remove elements, if the specific property is declared to be non-nillable or sizeof(array) < minOccurs
+         */
+        
+        /**
+         * Check whether jobs is Nill at position i
+         * @param i index of the item to return.
+         * @return true if the value is Nil at position i, false otherwise
+         */
+        bool WSF_CALL
+        isJobsNilAt(int i);
+ 
+       
+        /**
+         * Set jobs to NILL at the  position i.
+         * @param i . The index of the item to be set Nill.
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setJobsNilAt(int i);
 
         
 
@@ -514,6 +656,17 @@ namespace AviaryCommon
 
         int WSF_CALL
         getProperty7();
+
+    
+        
+
+        /**
+         * Getter for jobs by property number (8)
+         * @return Array of AviaryCommon::JobSummarys.
+         */
+
+        std::vector<AviaryCommon::JobSummary*>* WSF_CALL
+        getProperty8();
 
     
 

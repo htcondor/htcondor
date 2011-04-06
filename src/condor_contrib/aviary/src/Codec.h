@@ -75,9 +75,7 @@ private:
 };
 
 typedef map<const char*, AviaryAttribute*> AttributeMapType;
-typedef vector<AttributeMapType> AttributeVectorType;
 typedef AttributeMapType::const_iterator AttributeMapIterator;
-typedef AttributeVectorType::const_iterator AttributeVectorIterator;
 
 // TODO: revisit
 // singleton class for encoding/decoding from/to transport-specific types

@@ -48,6 +48,10 @@ namespace AviaryQuery
 
                 
                 bool isValidPartialMatches;
+            bool property_IncludeJobSummaries;
+
+                
+                bool isValidIncludeJobSummaries;
             
 
         /*** Private methods ***/
@@ -82,9 +86,10 @@ namespace AviaryQuery
          * @param 
          * @param Ids std::vector<AviaryCommon::SubmissionID*>*
          * @param PartialMatches bool
+         * @param IncludeJobSummaries bool
          * @return newly created GetSubmissionSummary object
          */
-        GetSubmissionSummary(std::vector<AviaryCommon::SubmissionID*>* arg_Ids,bool arg_PartialMatches);
+        GetSubmissionSummary(std::vector<AviaryCommon::SubmissionID*>* arg_Ids,bool arg_PartialMatches,bool arg_IncludeJobSummaries);
         
         
         /********************************** Class get set methods **************************************/
@@ -137,6 +142,30 @@ namespace AviaryQuery
          */
         WSF_EXTERN bool WSF_CALL
         resetPartialMatches();
+        
+        
+
+        /**
+         * Getter for includeJobSummaries. 
+         * @return bool
+         */
+        WSF_EXTERN bool WSF_CALL
+        getIncludeJobSummaries();
+
+        /**
+         * Setter for includeJobSummaries.
+         * @param arg_IncludeJobSummaries bool
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setIncludeJobSummaries(bool  arg_IncludeJobSummaries);
+
+        /**
+         * Re setter for includeJobSummaries
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetIncludeJobSummaries();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -246,6 +275,23 @@ namespace AviaryQuery
         setPartialMatchesNil();
         
 
+        /**
+         * Check whether includeJobSummaries is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isIncludeJobSummariesNil();
+
+
+        
+        /**
+         * Set includeJobSummaries to Nill (same as using reset)
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setIncludeJobSummariesNil();
+        
+
         /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
 
         /**
@@ -346,6 +392,17 @@ namespace AviaryQuery
 
         bool WSF_CALL
         getProperty2();
+
+    
+        
+
+        /**
+         * Getter for includeJobSummaries by property number (3)
+         * @return bool
+         */
+
+        bool WSF_CALL
+        getProperty3();
 
     
 

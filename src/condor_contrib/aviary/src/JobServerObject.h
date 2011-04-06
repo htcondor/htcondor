@@ -78,6 +78,9 @@ struct JobSummaryFields {
 	string owner;
 };
 
+typedef pair<const char*,JobSummaryFields*> JobSummaryPair;
+typedef vector<JobSummaryPair> JobSummaryPairCollection;
+
 class JobServerObject
 {
 public:

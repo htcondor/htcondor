@@ -45,9 +45,13 @@
         
             isValidRunning  = false;
         
+                property_Jobs  = NULL;
+              
+            isValidJobs  = false;
+        
         }
 
-       AviaryCommon::SubmissionSummary::SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running)
+       AviaryCommon::SubmissionSummary::SubmissionSummary(AviaryCommon::SubmissionID* arg_Id,AviaryCommon::Status* arg_Status,int arg_Completed,int arg_Held,int arg_Idle,int arg_Removed,int arg_Running,std::vector<AviaryCommon::JobSummary*>* arg_Jobs)
         {
              
                property_Id  = NULL;
@@ -68,6 +72,10 @@
             
             isValidRunning  = true;
             
+               property_Jobs  = NULL;
+             
+            isValidJobs  = true;
+            
                     property_Id = arg_Id;
             
                     property_Status = arg_Status;
@@ -81,6 +89,8 @@
                     property_Removed = arg_Removed;
             
                     property_Running = arg_Running;
+            
+                    property_Jobs = arg_Jobs;
             
         }
         AviaryCommon::SubmissionSummary::~SubmissionSummary()
@@ -100,6 +110,11 @@
          const axis2_char_t* text_value = NULL;
          axutil_qname_t *mqname = NULL;
           
+               int i = 0;
+            
+               int sequence_broken = 0;
+               axiom_node_t *tmp_node = NULL;
+            
             axutil_qname_t *element_qname = NULL; 
             
                axiom_node_t *first_node = NULL;
@@ -691,6 +706,115 @@
                      element_qname = NULL;
                   }
                  
+                       { 
+                    /*
+                     * building Jobs array
+                     */
+                       std::vector<AviaryCommon::JobSummary*>* arr_list =new std::vector<AviaryCommon::JobSummary*>();
+                   
+
+                     
+                     /*
+                      * building jobs element
+                      */
+                     
+                     
+                     
+                                    element_qname = axutil_qname_create(Environment::getEnv(), "jobs", NULL, NULL);
+                                  
+                               
+                               for (i = 0, sequence_broken = 0, current_node = (is_early_node_valid?axiom_node_get_next_sibling(current_node, Environment::getEnv()):current_node); !sequence_broken && current_node != NULL;)
+                                             
+                               {
+                                  if(axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                  {
+                                     current_node =axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                     is_early_node_valid = false;
+                                     continue;
+                                  }
+                                  
+                                  current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                  mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+
+                                  if (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("jobs", axiom_element_get_localname(current_element, Environment::getEnv())))
+                                  {
+                                  
+                                      is_early_node_valid = true;
+                                      
+                                     AviaryCommon::JobSummary* element = new AviaryCommon::JobSummary();
+                                          
+                                          status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                          
+                                          if(AXIS2_FAILURE ==  status)
+                                          {
+					  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "failed in building element jobs ");
+                                          }
+                                          else
+                                          {
+                                            arr_list->push_back(element);
+                                            
+                                          }
+                                        
+                                     if(AXIS2_FAILURE ==  status)
+                                     {
+                                         WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in setting the value for jobs ");
+                                         if(element_qname)
+                                         {
+                                            axutil_qname_free(element_qname, Environment::getEnv());
+                                         }
+                                         if(arr_list)
+                                         {
+                                            delete arr_list;
+                                         }
+                                         return false;
+                                     }
+
+                                     i++;
+                                    current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                  }
+                                  else
+                                  {
+                                      is_early_node_valid = false;
+                                      sequence_broken = 1;
+                                  }
+                                  
+                               }
+
+                               
+                                   if (i < 0)
+                                   {
+                                     /* found element out of order */
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"jobs (@minOccurs = '0') only have %d elements", i);
+                                     if(element_qname)
+                                     {
+                                        axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     if(arr_list)
+                                     {
+                                        delete arr_list;
+                                     }
+                                     return false;
+                                   }
+                               
+
+                               if(0 == arr_list->size())
+                               {
+                                    delete arr_list;
+                               }
+                               else
+                               {
+                                    status = setJobs(arr_list);
+                               }
+
+                              
+                            } 
+                        
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
           return status;
        }
 
@@ -738,6 +862,10 @@
                 axis2_char_t *qname_prefix = NULL;
                 axis2_char_t *p_prefix = NULL;
             
+               int i = 0;
+               int count = 0;
+               void *element = NULL;
+             
                     axis2_char_t text_value_1[ADB_DEFAULT_DIGIT_LIMIT];
                     
                     axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
@@ -751,6 +879,8 @@
                     axis2_char_t text_value_6[ADB_DEFAULT_DIGIT_LIMIT];
                     
                     axis2_char_t text_value_7[ADB_DEFAULT_DIGIT_LIMIT];
+                    
+                    axis2_char_t text_value_8[ADB_DEFAULT_DIGIT_LIMIT];
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -1180,6 +1310,88 @@
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidJobs)
+                   {
+                      
+                           /* no need to complain for minoccurs=0 element */
+                            
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("jobs"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("jobs")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     /*
+                      * Parsing Jobs array
+                      */
+                     if (property_Jobs != NULL)
+                     {
+                        
+
+                            sprintf(start_input_str, "<%s%sjobs",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                         start_input_str_len = axutil_strlen(start_input_str);
+
+                         sprintf(end_input_str, "</%s%sjobs>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                         end_input_str_len = axutil_strlen(end_input_str);
+
+                         count = property_Jobs->size();
+                         for(i = 0; i < count; i++)
+                         {
+                            AviaryCommon::JobSummary* element = (*property_Jobs)[i];
+
+                            if(NULL == element) 
+                            {
+                                continue;
+                            }
+
+                    
+                     
+                     /*
+                      * parsing jobs element
+                      */
+
+                    
+                     
+                            if(!element->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                            }
+                            element->serialize(current_node, parent_element,
+                                                                                 element->isParticle() || false, namespaces, next_ns_index);
+                            
+                            if(!element->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                            }
+                            
+                         }
+                     }
+                   
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
@@ -1828,6 +2040,375 @@
            AviaryCommon::SubmissionSummary::setRunningNil()
            {
                return resetRunning();
+           }
+
+           
+
+            /**
+             * Getter for jobs by  Property Number 8
+             */
+            std::vector<AviaryCommon::JobSummary*>* WSF_CALL
+            AviaryCommon::SubmissionSummary::getProperty8()
+            {
+                return getJobs();
+            }
+
+            /**
+             * getter for jobs.
+             */
+            std::vector<AviaryCommon::JobSummary*>* WSF_CALL
+            AviaryCommon::SubmissionSummary::getJobs()
+             {
+                return property_Jobs;
+             }
+
+            /**
+             * setter for jobs
+             */
+            bool WSF_CALL
+            AviaryCommon::SubmissionSummary::setJobs(
+                    std::vector<AviaryCommon::JobSummary*>*  arg_Jobs)
+             {
+                
+                 int size = 0;
+                 int i = 0;
+                 bool non_nil_exists = false;
+                
+
+                if(isValidJobs &&
+                        arg_Jobs == property_Jobs)
+                {
+                    
+                    return true;
+                }
+
+                
+                 size = arg_Jobs->size();
+                 
+                 if (size < 0)
+                 {
+                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"jobs has less than minOccurs(0)");
+                     return false;
+                 }
+                 for(i = 0; i < size; i ++ )
+                 {
+                     if(NULL != (*arg_Jobs)[i])
+                     {
+                         non_nil_exists = true;
+                         break;
+                     }
+                 }
+
+                 
+
+                
+                resetJobs();
+
+                
+                    if(NULL == arg_Jobs)
+                         
+                {
+                    /* We are already done */
+                    return true;
+                }
+                
+                        property_Jobs = arg_Jobs;
+                        if(non_nil_exists)
+                        {
+                            isValidJobs = true;
+                        }
+                        
+                    
+                return true;
+             }
+
+            
+            /**
+             * Get ith element of jobs.
+             */
+            AviaryCommon::JobSummary* WSF_CALL
+            AviaryCommon::SubmissionSummary::getJobsAt(int i)
+            {
+                AviaryCommon::JobSummary* ret_val;
+                if(property_Jobs == NULL)
+                {
+                    return (AviaryCommon::JobSummary*)0;
+                }
+                ret_val =   (*property_Jobs)[i];
+                
+                    return ret_val;
+                  
+            }
+
+            /**
+             * Set the ith element of jobs.
+             */
+           bool WSF_CALL
+            AviaryCommon::SubmissionSummary::setJobsAt(int i,
+                    AviaryCommon::JobSummary* arg_Jobs)
+            {
+                 AviaryCommon::JobSummary* element;
+                int size = 0;
+
+                int non_nil_count;
+                bool non_nil_exists = false;
+
+                 
+
+                if( isValidJobs &&
+                    property_Jobs &&
+                  
+                    arg_Jobs == (*property_Jobs)[i])
+                  
+                 {
+                    
+                    return AXIS2_SUCCESS; 
+                }
+
+                   
+                     non_nil_exists = true;
+                  
+
+                if(property_Jobs == NULL)
+                {
+                    property_Jobs = new std::vector<AviaryCommon::JobSummary*>();
+                }
+                else{
+                /* check whether there already exist an element */
+                element = (*property_Jobs)[i];
+                }
+
+                
+                        if(NULL != element)
+                        {
+                          
+                          
+                          
+                                delete element;
+                             
+                        }
+                        
+                    
+                    if(!non_nil_exists)
+                    {
+                        
+                        isValidJobs = true;
+                        (*property_Jobs)[i]= NULL;
+                        
+                        return AXIS2_SUCCESS;
+                    }
+                
+                    (*property_Jobs)[i] = arg_Jobs;
+                  
+
+               isValidJobs = true;
+                
+                return AXIS2_SUCCESS;
+            }
+
+            /**
+             * Add to jobs.
+             */
+            bool WSF_CALL
+            AviaryCommon::SubmissionSummary::addJobs(
+                    AviaryCommon::JobSummary* arg_Jobs)
+             {
+
+                
+                    if( NULL == arg_Jobs
+                     )
+                    {
+                      
+                           return true; 
+                        
+                    }
+                  
+
+                if(property_Jobs == NULL)
+                {
+                    property_Jobs = new std::vector<AviaryCommon::JobSummary*>();
+                }
+              
+               property_Jobs->push_back(arg_Jobs);
+              
+                isValidJobs = true;
+                return true;
+             }
+
+            /**
+             * Get the size of the jobs array.
+             */
+            int WSF_CALL
+            AviaryCommon::SubmissionSummary::sizeofJobs()
+            {
+
+                if(property_Jobs == NULL)
+                {
+                    return 0;
+                }
+                return property_Jobs->size();
+            }
+
+            /**
+             * remove the ith element, same as set_nil_at.
+             */
+            bool WSF_CALL
+            AviaryCommon::SubmissionSummary::removeJobsAt(int i)
+            {
+                return setJobsNilAt(i);
+            }
+
+            
+
+           /**
+            * resetter for jobs
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::resetJobs()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+                if (property_Jobs != NULL)
+                {
+                  std::vector<AviaryCommon::JobSummary*>::iterator it =  property_Jobs->begin();
+                  for( ; it <  property_Jobs->end() ; ++it)
+                  {
+                     AviaryCommon::JobSummary* element = *it;
+                
+            
+                
+
+                if(element != NULL)
+                {
+                   
+                   
+                         delete  element;
+                     
+
+                   }
+
+                
+                
+                
+               }
+
+             }
+                
+                    if(NULL != property_Jobs)
+                 delete property_Jobs;
+                
+               isValidJobs = false; 
+               return true;
+           }
+
+           /**
+            * Check whether jobs is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::isJobsNil()
+           {
+               return !isValidJobs;
+           }
+
+           /**
+            * Set jobs to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::setJobsNil()
+           {
+               return resetJobs();
+           }
+
+           
+           /**
+            * Check whether jobs is nill at i
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::isJobsNilAt(int i)
+           {
+               return (isValidJobs == false ||
+                       NULL == property_Jobs ||
+                     NULL == (*property_Jobs)[i]);
+            }
+
+           /**
+            * Set jobs to nil at i
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionSummary::setJobsNilAt(int i)
+           {
+                int size = 0;
+                int j;
+                bool non_nil_exists = false;
+
+                int k = 0;
+
+                if(property_Jobs == NULL ||
+                            isValidJobs == false)
+                {
+                    
+                    non_nil_exists = false;
+                }
+                else
+                {
+                    size = property_Jobs->size();
+                    for(j = 0, k = 0; j < size; j ++ )
+                    {
+                        if(i == j) continue; 
+                        if(NULL != (*property_Jobs)[i])
+                        {
+                            k++;
+                            non_nil_exists = true;
+                            if( k >= 0)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+
+                if( k < 0)
+                {
+                       WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "Size of the array of jobs is beinng set to be smaller than the specificed number of minOccurs(0)");
+                       return AXIS2_FAILURE;
+                }
+ 
+                if(property_Jobs == NULL)
+                {
+                    isValidJobs = false;
+                    
+                    return true;
+                }
+                 
+                 /* check whether there already exist an element */
+                 AviaryCommon::JobSummary* element = (*property_Jobs)[i];
+                if(NULL != element)
+                {
+                  
+                  
+                  
+                        delete element;
+                     
+                 }
+                 
+                    if(!non_nil_exists)
+                    {
+                        
+                        isValidJobs = false;
+                        (*property_Jobs)[i] = NULL;
+                        return AXIS2_SUCCESS;
+                    }
+                
+
+                
+                (*property_Jobs)[i] = NULL;
+                
+                return AXIS2_SUCCESS;
+
            }
 
            

@@ -32,6 +32,8 @@
         
             isValidPartialMatches  = false;
         
+            isValidIncludeJobSummaries  = false;
+        
                   qname =  axutil_qname_create (Environment::getEnv(),
                         "GetSubmissionSummary",
                         "http://query.aviary.grid.redhat.com",
@@ -39,7 +41,7 @@
                 
         }
 
-       AviaryQuery::GetSubmissionSummary::GetSubmissionSummary(std::vector<AviaryCommon::SubmissionID*>* arg_Ids,bool arg_PartialMatches)
+       AviaryQuery::GetSubmissionSummary::GetSubmissionSummary(std::vector<AviaryCommon::SubmissionID*>* arg_Ids,bool arg_PartialMatches,bool arg_IncludeJobSummaries)
         {
              
                    qname = NULL;
@@ -50,6 +52,8 @@
             
             isValidPartialMatches  = true;
             
+            isValidIncludeJobSummaries  = true;
+            
                  qname =  axutil_qname_create (Environment::getEnv(),
                        "GetSubmissionSummary",
                        "http://query.aviary.grid.redhat.com",
@@ -58,6 +62,8 @@
                     property_Ids = arg_Ids;
             
                     property_PartialMatches = arg_PartialMatches;
+            
+                    property_IncludeJobSummaries = arg_IncludeJobSummaries;
             
         }
         AviaryQuery::GetSubmissionSummary::~GetSubmissionSummary()
@@ -293,6 +299,61 @@
                      element_qname = NULL;
                   }
                  
+                
+                
+                  parent_attri = NULL;
+                  attrib_text = NULL;
+                  if(attribute_hash)
+                  {
+                       axutil_hash_index_t *hi;
+                       void *val;
+                       const void *key;
+
+                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                       {
+                           axutil_hash_this(hi, &key, NULL, &val);
+                           
+                           
+                               if(!strcmp((axis2_char_t*)key, "includeJobSummaries"))
+                             
+                               {
+                                   parent_attri = (axiom_attribute_t*)val;
+                                   break;
+                               }
+                       }
+                  }
+
+                  if(parent_attri)
+                  {
+                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
+                  }
+                  else
+                  {
+                    /* this is hoping that attribute is stored in "includeJobSummaries", this happnes when name is in default namespace */
+                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "includeJobSummaries");
+                  }
+
+                  if(attrib_text != NULL)
+                  {
+                      
+                      
+                           if (!axutil_strcmp(attrib_text, "TRUE") || !axutil_strcmp(attrib_text, "true"))
+                           {
+                               setIncludeJobSummaries(true);
+                           }
+                           else
+                           {
+                               setIncludeJobSummaries(false);
+                           }
+                        
+                    }
+                  
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
           return status;
        }
 
@@ -350,6 +411,8 @@
                     
                     axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
                     
+                    axis2_char_t text_value_3[ADB_DEFAULT_DIGIT_LIMIT];
+                    
                 axis2_char_t *text_value = NULL;
              
                axis2_char_t *start_input_str = NULL;
@@ -399,6 +462,24 @@
                                                              axutil_strlen("partialMatches")));
                            sprintf(string_to_stream, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
                                                 "partialMatches",  text_value);
+                           axutil_stream_write(stream, Environment::getEnv(), string_to_stream, axutil_strlen(string_to_stream));
+                           AXIS2_FREE(Environment::getEnv()-> allocator, string_to_stream);
+                        
+                   }
+                   
+                if(isValidIncludeJobSummaries)
+                {
+                
+                        p_prefix = NULL;
+                      
+                           
+                           text_value = (axis2_char_t*)((property_IncludeJobSummaries)?"true":"false");
+                           string_to_stream = (axis2_char_t*) AXIS2_MALLOC (Environment::getEnv()-> allocator, sizeof (axis2_char_t) *
+                                                            (5  + ADB_DEFAULT_NAMESPACE_PREFIX_LIMIT +
+                                                             axutil_strlen(text_value) + 
+                                                             axutil_strlen("includeJobSummaries")));
+                           sprintf(string_to_stream, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
+                                                "includeJobSummaries",  text_value);
                            axutil_stream_write(stream, Environment::getEnv(), string_to_stream, axutil_strlen(string_to_stream));
                            AXIS2_FREE(Environment::getEnv()-> allocator, string_to_stream);
                         
@@ -500,6 +581,25 @@
                            
                            text_value =  (axis2_char_t*)((property_PartialMatches)?axutil_strdup(Environment::getEnv(), "true"):axutil_strdup(Environment::getEnv(), "false"));
                            text_attri = axiom_attribute_create (Environment::getEnv(), "partialMatches", text_value, ns1);
+                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
+                           AXIS2_FREE(Environment::getEnv()->allocator, text_value);
+                        
+                      }
+                       
+                  }
+                
+                    
+                    if(parent_tag_closed)
+                    {
+                       if(isValidIncludeJobSummaries)
+                       {
+                       
+                           p_prefix = NULL;
+                           ns1 = NULL;
+                         
+                           
+                           text_value =  (axis2_char_t*)((property_IncludeJobSummaries)?axutil_strdup(Environment::getEnv(), "true"):axutil_strdup(Environment::getEnv(), "false"));
+                           text_attri = axiom_attribute_create (Environment::getEnv(), "includeJobSummaries", text_value, ns1);
                            axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
                            AXIS2_FREE(Environment::getEnv()->allocator, text_value);
                         
@@ -974,6 +1074,89 @@
            AviaryQuery::GetSubmissionSummary::setPartialMatchesNil()
            {
                return resetPartialMatches();
+           }
+
+           
+
+            /**
+             * Getter for includeJobSummaries by  Property Number 3
+             */
+            bool WSF_CALL
+            AviaryQuery::GetSubmissionSummary::getProperty3()
+            {
+                return getIncludeJobSummaries();
+            }
+
+            /**
+             * getter for includeJobSummaries.
+             */
+            bool WSF_CALL
+            AviaryQuery::GetSubmissionSummary::getIncludeJobSummaries()
+             {
+                return property_IncludeJobSummaries;
+             }
+
+            /**
+             * setter for includeJobSummaries
+             */
+            bool WSF_CALL
+            AviaryQuery::GetSubmissionSummary::setIncludeJobSummaries(
+                    bool  arg_IncludeJobSummaries)
+             {
+                
+
+                if(isValidIncludeJobSummaries &&
+                        arg_IncludeJobSummaries == property_IncludeJobSummaries)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetIncludeJobSummaries();
+
+                
+                        property_IncludeJobSummaries = arg_IncludeJobSummaries;
+                        isValidIncludeJobSummaries = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for includeJobSummaries
+            */
+           bool WSF_CALL
+           AviaryQuery::GetSubmissionSummary::resetIncludeJobSummaries()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidIncludeJobSummaries = false; 
+               return true;
+           }
+
+           /**
+            * Check whether includeJobSummaries is nill
+            */
+           bool WSF_CALL
+           AviaryQuery::GetSubmissionSummary::isIncludeJobSummariesNil()
+           {
+               return !isValidIncludeJobSummaries;
+           }
+
+           /**
+            * Set includeJobSummaries to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryQuery::GetSubmissionSummary::setIncludeJobSummariesNil()
+           {
+               return resetIncludeJobSummaries();
            }
 
            

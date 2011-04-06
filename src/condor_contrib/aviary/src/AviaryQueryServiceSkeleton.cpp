@@ -243,6 +243,19 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 			Status* ss = new Status;
 			ss->setCode(new StatusCodeType("OK"));
 			summary->setStatus(ss);
+
+			if (_getSubmissionSummary->getIncludeJobSummaries()) {
+				// client wants the job summaries also
+				JobSummaryPairCollection jobs;
+				submission->getJobSummaries(jobs);
+				for (JobSummaryPairCollection::const_iterator i = jobs.begin(); jobs.end() != i; i++) {
+					JobSummary* js = new JobSummary;
+					createGoodJobResponse<JobSummary>(*js,(*i).first);
+					mapFieldsToSummary(*((*i).second),js);
+					summary->addJobs(js);
+				}
+			}
+
 		}
 		else {
 			SubmissionID* sid = new SubmissionID;

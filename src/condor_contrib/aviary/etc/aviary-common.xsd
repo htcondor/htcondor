@@ -156,6 +156,7 @@
 			<xs:element name="idle" type="xs:int"/>
 			<xs:element name="removed" type="xs:int"/>
 			<xs:element name="running" type="xs:int"/>
+			<xs:element name="jobs" type="tns:JobSummary" minOccurs="0" maxOccurs="unbounded"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="JobDetails">
