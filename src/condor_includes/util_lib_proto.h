@@ -63,10 +63,6 @@ void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void condor_except_should_dump_core( int flag );
 int getdtablesize ( void );
 
-#ifndef WIN32	// on WIN32, it messes with our getwd macro in condor_sys_nt.h
-char * getwd ( char *path );
-#endif
-
 char * ltrunc ( register char *str );
 int set_machine_status ( int status );
 int get_machine_status ( void );

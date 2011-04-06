@@ -932,7 +932,7 @@ Image::Write( const char *ckpt_file )
 {
 	int	file_d;
 	int	scm;
-	char	tmp_name[ _POSIX_PATH_MAX ];
+	char	tmp_name[ PATH_MAX ];
 
 	if( ckpt_file == 0 ) {
 		ckpt_file = file_name;

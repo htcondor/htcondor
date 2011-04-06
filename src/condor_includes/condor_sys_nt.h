@@ -144,7 +144,6 @@ DLL_IMPORT_MAGIC int access(const char *, int);
 #include "file_lock.h"
 #include "condor_fix_assert.h"
 
-#define getwd(path) (int)_getcwd(path, _POSIX_PATH_MAX)
 #define mkdir(path,mode) (int)_mkdir(path)
 #define S_IRWXU 0
 #define S_IRWXG 1
