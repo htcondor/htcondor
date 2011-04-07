@@ -577,9 +577,51 @@ independent of the size of the pool.
 A dynamic quota specifies a percentage of machines (slots) calculated
 based on the current number of machines in the pool.
 It is intended that only one of a static or a dynamic quota is defined 
-for a group.
+for a specified group.
 If both are defined, then the static quota is implemented, 
 and the dynamic quota is ignored.
+
+\begin{description}
+\item[Static Quotas]
+In the hierarchical implementation,
+there are two cases defined here,
+to specify for the allocation of machines where
+there is both a group and a subgroup.
+In the first case, the sum for the numbers of machines
+within all of a group's subgroups totals to fewer than the specification for
+the group's static quota.
+For example:
+\begin{verbatim}
+  GROUP_QUOTA_group_physics = 100
+  GROUP_QUOTA_group_physics.experiment1 = 20
+  GROUP_QUOTA_group_physics.experiment2 = 70
+\end{verbatim}
+In this case, the unused, surplus quota of 10 machines is assigned to
+the higher level with in the hierarchy.  
+
+In the second case, the specification for the numbers of machines
+of a set of subgroups totals to more than the specification for
+the group's quota.
+For example:
+\begin{verbatim}
+  GROUP_QUOTA_group_chemistry = 100
+  GROUP_QUOTA_group_chemistry.lab1 = 40
+  GROUP_QUOTA_group_chemistry.lab2 = 80
+\end{verbatim}
+In this case, 
+a warning is written to the log for the \Condor{negotiator} daemon,
+and each of the subgroups will have their static quota scaled.
+In this example, the ratio 100/120 scales each subgroup.
+\Expr{lab1} will have a revised (floating point) quota of 33.333 machines,
+and \Expr{lab2} will have a revised (floating point) quota of 66.667 machines.
+As numbers of machines are always integer values,
+the floating point values are truncated for quota allocation.
+Fractional remainders resulting from the truncation are summed
+and assigned to the next higher level within the group hierarchy.
+
+\item[Dynamic Quotas]
+\item[Mixed Quotas - Both Static and Dynamic]
+\end{description}
 \MoreTodo
 
 %A declared number of slots specifies the quota for each group
