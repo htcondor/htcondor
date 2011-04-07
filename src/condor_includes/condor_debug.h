@@ -78,6 +78,8 @@ extern "C" {
 
 #if _MSC_VER >= 1400 /* VC++ 2005 version */
 #define PREFAST_NORETURN __declspec(noreturn)
+#else
+#define PREFAST_NORETURN
 #endif
 
 extern int DebugFlags;	/* Bits to look for in dprintf */
