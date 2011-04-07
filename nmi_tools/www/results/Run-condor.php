@@ -24,6 +24,8 @@ include "last.inc";
 //
 //$no_test_platforms = Array( "ppc_macos_10.4", "x86_macos_10.4" );
 $no_test_platforms = Array( );
+
+$continuous_blacklist = Array( "x86_64_sol_5.11", "x86_winnt_5.1-tst" );
 ?>
 <html>
 <head>
@@ -81,6 +83,17 @@ while ($row = mysql_fetch_array($result)) {
   $run_result = $row["result"];
 
   if(preg_match("/Continuous/", $branch)) {
+    $skip = 0;
+    foreach ($continuous_blacklist as $blacklisted_platform) {
+      if(preg_match("/ $blacklisted_platform$/", $branch)) {
+        $skip = 1;
+        break;
+      }
+    }
+    if($skip == 1) {
+      continue;
+    }
+
     $continuous_buf[$branch] = Array();
     $continuous_buf[$branch]["user"] = $user;
     $continuous_buf[$branch]["results"] = create_sparkline($branch, $user);
