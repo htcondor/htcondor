@@ -132,6 +132,8 @@ echo "<div id='main'>\n";
 //
 if(!$one_offs) {  
   echo "<h2>Continuous Builds</h2>\n";
+
+  echo "<p style='font-size:-1'>Continuous blacklist: " . implode(", ", $continuous_blacklist) . "</p>";
   
   $info = "<ul>\n";
   $info .= "  <li>The last " . NUM_SPARK_DAYS . " days of results are shown for each platform.</li>\n";
