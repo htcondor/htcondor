@@ -262,7 +262,9 @@ class DeleteFileLater {
 	~DeleteFileLater () {
 		if (filename) {
             if (unlink(filename)) {  // conditional to defeat prefast warning.
+               #ifdef D_ALWAYS
                dprintf(D_ALWAYS, "DeleteFileLater of %s failed err=%d", filename, errno);
+               #endif
                }
 			free (filename);
 		}
