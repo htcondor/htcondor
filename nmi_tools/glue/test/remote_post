@@ -28,7 +28,7 @@ use warnings;
 use File::Basename;
 
 my $dir = dirname($0);
-require "$dir/TestGlue";
+require "$dir/TestGlue.pm";
 TestGlue::setup_test_environment();
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
