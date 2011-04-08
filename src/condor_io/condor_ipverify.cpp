@@ -892,9 +892,12 @@ IpVerify::Verify( DCpermission perm, const ipaddr& addr, const char * user, MySt
 						deny_reason->sprintf(
 							"%s authorization policy contains no matching "
 							"ALLOW entry for this request"
-							"; identifiers used for this host: %s",
+							"; identifiers used for this host: %s, hostname size = %d, "
+							"original ip address = %s",
 							PermString(perm),
-							peer_description.Value());
+							peer_description.Value(),
+							hostnames.size(),
+							ipstr);
 					}
 				}
 			}

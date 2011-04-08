@@ -14,6 +14,9 @@ void ipaddr::clear()
 void ipaddr::init(int ip, unsigned port)
 {
 	clear();
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+	v4.sin_len = sizeof(sockaddr_in);
+#endif
 	v4.sin_family = AF_INET;
 	v4.sin_port = port;
 	v4.sin_addr.s_addr = ip;
@@ -31,7 +34,10 @@ ipaddr::ipaddr(in_addr ip, unsigned short port)
 
 ipaddr::ipaddr(const in6_addr& in6, unsigned short port)
 {
-	memset(&storage, 0, sizeof(storage));
+	clear();
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+	v6.sin6_len = sizeof(sockaddr_in6);
+#endif
 	v6.sin6_family = AF_INET6;
 	v6.sin6_port = htons(port);
 	v6.sin6_addr = in6;
@@ -237,6 +243,9 @@ bool ipaddr::from_sinful(const char* sinful)
 		if ( addr_len >= INET6_ADDRSTRLEN ) return false;
 		memcpy(tmp, addr_begin, addr_len);
 		tmp[addr_len] = '\0';
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+		v6.sin6_len = sizeof(sockaddr_in6);
+#endif
 		v6.sin6_family = AF_INET6;
 		if ( inet_pton(AF_INET6, tmp, &v6.sin6_addr) <= 0) return false;
 		v6.sin6_port = htons(port_no);
@@ -245,6 +254,9 @@ bool ipaddr::from_sinful(const char* sinful)
 		if ( addr_len >= INET_ADDRSTRLEN ) return false;
 		memcpy(tmp, addr_begin, addr_len);
 		tmp[addr_len] = '\0';
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+		v4.sin_len = sizeof(sockaddr_in);
+#endif
 		v4.sin_family = AF_INET;
 		if ( inet_pton(AF_INET, tmp, &v4.sin_addr) <= 0) return false;
 		v4.sin_port = htons(port_no);
@@ -275,10 +287,16 @@ bool ipaddr::from_ip_string(const MyString& ip_string)
 bool ipaddr::from_ip_string(const char* ip_string)
 {
 	if (inet_pton(AF_INET, ip_string, &v4.sin_addr) == 1) {
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+		v4.sin_len = sizeof(sockaddr_in);
+#endif
 		v4.sin_family = AF_INET;
 		v4.sin_port = 0;
 		return true;
 	} else if (inet_pton(AF_INET, ip_string, &v6.sin6_addr) == 1) {
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+		v6.sin_len = sizeof(sockaddr_in);
+#endif
 		v6.sin6_family = AF_INET6;
 		v6.sin6_port = 0;
 		return true;
@@ -321,7 +339,7 @@ const char* ipaddr::to_ip_string(char* buf, int len) const
 			// These reliance should be corrected at some point.
 			// hopefully, at IPv6-Phase3
 		uint32_t* addr = (uint32_t*)&v6.sin6_addr;
-		if (addr[0] == 0 && addr[1] == 0 && addr[2] == htonl(0xffff)) {
+		if (addr[0] == 0 && addr[1] == 0 && addr[2] == ntohl(0xffff)) {
 			return inet_ntop(AF_INET, (const void*)&addr[3], buf, len);
 		}
 
