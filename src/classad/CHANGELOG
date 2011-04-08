@@ -1,4 +1,4 @@
-Changes for version 1.0.10 (Released ????-??-??)
+Changes for version 1.0.10 (Released 2011-04-08)
 * Fix infinite loop and bad iterator comparison in FunctionCall::SameAs().
 * Fix memory leak in FunctionCall::eval().
 * Fix ClassAd::GetInternalReferences() and ClassAd::GetExternalReferences()
