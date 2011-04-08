@@ -40,9 +40,9 @@ The details of each version are described below.
   This also advertises the job ClassAd attribute \AdAttr{StackSize}.
 
 % gittrac #1550
-\item The new ClassAd function \Code{stringListsIntersect} evaluates
-  to true if two strings of delimited elements have any matching elements
-  and it evaluates to false otherwise.
+\item The new ClassAd function \Code{stringListsIntersect} evaluates to 
+  \Expr{True} if two strings of delimited elements have any matching elements,
+  and it evaluates to \Expr{False} otherwise.
 
 \end{itemize}
 
@@ -76,7 +76,8 @@ longer begins with \Expr{slot1@}.
 % gittrac 1805 commit e45ec5ff35e77533bfba3239dc3b71315d9d5afd
 % gittrac 1805 commit 7fe5d0c64562f59a7efafe77227995e4ada24e20
 \item The tool \Condor{advertise} seemed to be trying too hard to resolve
-hostnames. This was fixed to only do the minimally necessary lookups.
+host names. This was fixed to only do the minimally necessary 
+number of look ups.
 
 \end{itemize}
 

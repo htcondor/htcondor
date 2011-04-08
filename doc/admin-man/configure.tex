@@ -438,6 +438,7 @@ the changed value.
   \item \verb@CKPT_SERVER@
   \item \verb@COLLECTOR@
   \item \verb@DBMSD@
+  \item \verb@EC2_GAHP@
   \item \verb@GRIDMANAGER@
   \item \verb@HAD@
   \item \verb@HDFS@
@@ -7148,7 +7149,7 @@ These macros affect the \Condor{gridmanager}.
 
 \label{param:AmazonEC2URL}
 \item[\Macro{AMAZON\_EC2\_URL}]
-  The URL Condor should use when contacting the Amazon EC2 service.
+  The URL Condor should use when contacting the Amazon EC2 (SOAP) service.
   This URL may include a user name and password as in the implied
   syntax example:
 \footnotesize
@@ -7162,7 +7163,7 @@ These macros affect the \Condor{gridmanager}.
 
 \label{param:AmazonHttpProxy}
 \item[\Macro{AMAZON\_HTTP\_PROXY}]
-  The http proxy that Condor should use when contacting the Amazon EC2
+  The http proxy that Condor should use when contacting the Amazon EC2 (SOAP)
   service. The default is to not use a proxy.
 
 \label{param:CondorGAHP}
@@ -7176,6 +7177,12 @@ These macros affect the \Condor{gridmanager}.
   The complete path and file name of the Amazon GAHP executable.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{SBIN}/amazon\_gahp}.
+
+\label{param:EC2GAHP}
+\item[\Macro{EC2\_GAHP}]
+  The complete path and file name of the EC2 GAHP executable.
+  There is no default value. The expected location as given
+  in the example configuration is \File{\MacroUNI{SBIN}/ec2\_gahp}.
 
 \label{param:GT2GAHP}
 \item[\Macro{GT2\_GAHP}]
@@ -9558,7 +9565,7 @@ Configuration File Macros Affecting APIs}
   CA will be authenticated.
   When SOAP over SSL is enabled, this variable or the variable
   \Macro{SOAP\_SSL\_CA\_FILE} must be defined.
-  This variable is also used when communicating with an Amazon EC2 server
+  This variable is also used when communicating with an Amazon EC2 (SOAP) server
   (possibly through a proxy), although it is not required in that case.
   There is no default value.
 

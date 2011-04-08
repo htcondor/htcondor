@@ -1467,6 +1467,107 @@ Provides a list of attribute/value pairs to be set in a CREAM job description
 of a grid universe job destined for the CREAM grid system.
 The pairs are separated by semicolons, and written in New ClassAd syntax.
 
+%%%%%%%%%%%%%%%%%%%
+%% ec2_access_key_id
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_access\_key\_id}
+\item[ec2\_access\_key\_id = $<$pathname$>$]
+For grid type \SubmitCmd{ec2} jobs,
+identifies the file containing the access key.  
+Note that this EC2 Query API's access key is not the same as
+an \SubmitCmd{amazon} grid type job's EC2 SOAP API's public key.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_ami_id
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_ami\_id}
+\item[ec2\_ami\_id = $<$EC2 xMI ID$>$]
+For grid type \SubmitCmd{ec2} jobs, identifies the machine image.
+Services compatible with the EC2 Query API may refer to these
+with abbreviations other than \Expr{AMI},
+for example \Expr{EMI} is valid for Eucalyptus.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_elastic_ip
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_elastic\_ip}
+\item[ec2\_elastic\_ip = $<$elastic IP address$>$]
+For grid type \SubmitCmd{ec2} jobs,
+specifies an Elastic IP address to associate with the instance.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_instance_type
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_instance\_type}
+\item[ec2\_instance\_type = $<$instance type$>$]
+For grid type \SubmitCmd{ec2} jobs, identifies the instance type.
+Different services may offer different instance types,
+so no default value is set.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_keypair_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_keypair\_file}
+\item[ec2\_key\_pair\_file = $<$pathname$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+specifies the path and file name into which to write the SSH key 
+used to access the image, once it is running.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_secret_access_key
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_secret\_access\_key}
+\item[ec2\_secret\_access\_key = $<$pathname$>$]
+For grid type \SubmitCmd{ec2} jobs,
+specifies the path and file name containing the secret access key.
+Note that this EC2 Query API's secret access key 
+is not same as a grid type \SubmitCmd{amazon} job's 
+EC2 SOAP API's private key.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_security_groups
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_security\_groups}
+\item[ec2\_security\_groups = group1, group2, ...]
+For grid type \SubmitCmd{ec2} jobs, 
+defines the list of EC2 security groups which
+should be associated with the job.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_user_data
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_user\_data}
+\item[ec2\_user\_data = $<$data$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+provides a block of data that can be accessed by the virtual machine.
+If both \SubmitCmd{ec2\_user\_data} and 
+\SubmitCmd{ec2\_user\_data\_file} are specified for a job,
+the two blocks of data are concatenated, 
+with the data from this \SubmitCmd{ec2\_user\_data} submit command 
+occurring first.
+
+%%%%%%%%%%%%%%%%%%%
+%% ec2_user_data_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_user\_data\_file}
+\item[ec2\_user\_data\_file = $<$pathname$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+specifies a path and file name whose contents can be 
+accessed by the virtual machine.
+If both \SubmitCmd{ec2\_user\_data} and 
+\SubmitCmd{ec2\_user\_data\_file} are specified for a job,
+the two blocks of data are concatenated, 
+with the data from that \SubmitCmd{ec2\_user\_data} submit command 
+occurring first.
 
 %%%%%%%%%%%%%%%%%%%
 %% globus_rematch
