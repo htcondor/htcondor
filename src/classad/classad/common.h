@@ -48,6 +48,10 @@
 #define _STLP_NEW_PLATFORM_SDK
 #define _STLP_NO_OWN_IOSTREAMS 1
 
+// Disable warnings about calling posix functions like open()
+// instead of _open()
+#define _CRT_NONSTDC_NO_WARNINGS
+
 // Disable warnings about possible loss of data, since "we know what
 // we are doing" and fixing them correctly would require too much 
 // time from one of us. (Maybe this should be a student exercise.)
@@ -71,6 +75,7 @@
 
 
 #ifdef WIN32
+
 	// special definitions we need for Windows
 #ifndef DLL_IMPORT_MAGIC
 #define DLL_IMPORT_MAGIC __declspec(dllimport)
@@ -79,9 +84,6 @@
 #include <float.h>
 #include <io.h>
 #define fsync _commit
-#ifndef open
-#define open _open
-#endif
 #define strcasecmp _stricmp
 #ifndef rint
 #define rint(num) floor(num + .5)
@@ -89,9 +91,7 @@
 #define isnan _isnan
 	// isinf() defined in util.h
 
-#ifdef WIN32
 #include <hash_map>
-#endif
 
 #define snprintf _snprintf
 
@@ -102,6 +102,7 @@
 #pragma warning( disable : 4800 )  
 	// Disable warnings about truncated debug identifiers
 #pragma warning( disable : 4786 )
+
 #endif // WIN32
 
 
