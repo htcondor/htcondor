@@ -47,6 +47,8 @@ my $BaseDir = getcwd();
 
 print "Host: " . `hostname -f`;
 print "CWD: $BaseDir\n";
+print "Perl path: $^X\n";
+print "Perl version: $]\n";
 print "Contents:\n";
 system("ls -l");
 
