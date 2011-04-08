@@ -50,6 +50,20 @@
 	return i;
 // -----------------------------------------------
 
+DeleteFileLater::DeleteFileLater (const char * _name)
+{
+    filename = _name?strdup(_name):NULL;
+}
+
+DeleteFileLater::~DeleteFileLater ()
+{
+	if (filename) {
+        if (unlink(filename)) {  // conditional to defeat prefast warning.
+            dprintf(D_ALWAYS, "DeleteFileLater of %s failed err=%d", filename, errno);
+        }
+		free (filename);
+	}
+}
 
 
 #ifndef WIN32
