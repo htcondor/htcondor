@@ -129,44 +129,51 @@ dirscat( const char *dirpath, const char *subdir )
 int 
 rec_touch_file(char *path, mode_t file_mode, mode_t directory_mode , int pos) 
 {
-	int m_fd = safe_open_wrapper(path, O_CREAT | O_RDWR, file_mode);
-	if (m_fd > 0) {
-		return m_fd;
-	}	
-	if (errno == 2) {
-		int size = strlen(path);
-		while (pos < size){
-			if (path[pos] == DIR_DELIM_CHAR && pos > 0){
-				char *dir = new char[pos+1];
-				dir[pos] = '\0';
-				strncpy(dir, path, pos);
-				dprintf(D_FULLDEBUG, "directory_util::rec_touch_file: Creating directory %s \n", dir);
-				int err = mkdir(dir, directory_mode);
-
-				if (err != 0) {
-					if (errno != EEXIST) {
-						dprintf(D_ALWAYS, "directory_util::rec_touch_file: Directory %s cannot be created (%s) \n", dir, strerror(errno));
-						delete []dir;
-						return -1;
-					}
-				} 
-				delete []dir;
-				++pos;
-				break;
+	// in case a process deletes parts of the directory tree, retry up to three times 
+	int retry_value = 4;
+	int retry = retry_value;
+	int m_fd = -1;
+	int size = strlen(path);
+	while (m_fd <= 0 && retry > 0 ){
+		m_fd = safe_open_wrapper(path, O_CREAT | O_RDWR, file_mode);
+		if (m_fd > 0)
+			return m_fd;
+		if (errno == 2) {
+			if (retry < retry_value) {
+				dprintf(D_ALWAYS, "directory_util::rec_touch_file: Directory creation completed successfully but \
+					still cannot touch file. Likely another process deleted parts of the directory structure. \
+					Will retry now to recover (retry attempt %i)\n", (retry_value-retry));
 			}
-			++pos;
+			pos = 0;
+			--retry;
+			while (pos < size){
+				if (path[pos] == DIR_DELIM_CHAR && pos > 0){
+					char *dir = new char[pos+1];
+					dir[pos] = '\0';
+					strncpy(dir, path, pos);
+					dprintf(D_FULLDEBUG, "directory_util::rec_touch_file: Creating directory %s \n", dir);
+					int err = mkdir(dir, directory_mode);
+					if (err != 0) {
+						if (errno != EEXIST) {
+							dprintf(D_ALWAYS, "directory_util::rec_touch_file: Directory %s cannot be created (%s) \n", dir, strerror(errno));
+							delete []dir;
+							return -1;
+						}
+					}
+					delete []dir;
+					++pos;
+				}
+				++pos;
+			}
+		} else {
+			dprintf(D_ALWAYS, "directory_util::rec_touch_file: File %s cannot be created (%s) \n", path, strerror(errno));
+			return -1;
 		}
-		while (pos < size && path[pos] == DIR_DELIM_CHAR){
-			++pos;
-		}
-		return rec_touch_file(path, file_mode, directory_mode, pos);
-		
-	} else {
-		dprintf(D_ALWAYS, "directory_util::rec_touch_file: File %s cannot be created (%s) \n", path, strerror(errno));
-		return -1;
 	}
+	dprintf(D_ALWAYS, "Tried to recover from problems but failed. Path to lock file %s cannot be created. Giving up.\n", path);
 	return -1;
 } 
+
 
 int 
 rec_clean_up(char *path, int depth, int pos ) 
