@@ -36,6 +36,8 @@ parse_gahp_command (const char* raw, Gahp_Args* args) {
 	int len=strlen(raw);
 
 	char * buff = (char*)malloc(len+1);
+    ASSERT(buff);
+
 	int buff_len = 0;
 
 	for (int i = 0; i<len; i++) {

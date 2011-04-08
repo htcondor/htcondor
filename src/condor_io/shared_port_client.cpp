@@ -193,12 +193,12 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		return false;
 	}
 
-	int bufferSize = sizeof(WSAPROTOCOL_INFO) + sizeof(int);
+	int bufferSize = sizeof(protocol_info) + sizeof(int);
 	char *buffer = new char[bufferSize];
 	ASSERT( buffer );
 	int cmd = SHARED_PORT_PASS_SOCK;
 	memcpy_s(buffer, sizeof(int), &cmd, sizeof(int));
-	memcpy_s(buffer+sizeof(int), sizeof(WSAPROTOCOL_INFO), &protocol_info, sizeof(WSAPROTOCOL_INFO));
+	memcpy_s(buffer+sizeof(int), sizeof(protocol_info), &protocol_info, sizeof(protocol_info));
 	BOOL write_result = WriteFile(child_pipe, buffer, bufferSize, &read_bytes, 0);
 
 	delete [] buffer;
