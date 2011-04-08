@@ -22,8 +22,10 @@ use strict;
 use warnings;
 use Getopt::Long;
 use vars qw/ @opt_testclasses /;
+use File::Basename;
 
-use TestGlue;
+my $dir = dirname($0);
+require "$dir/TestGlue";
 TestGlue::setup_test_environment();
 
 parseOptions();

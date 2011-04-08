@@ -30,7 +30,8 @@ use Env;
 use File::Copy;
 use File::Basename;
 
-use TestGlue;
+my $dir = dirname($0);
+require "$dir/TestGlue";
 TestGlue::setup_test_environment();
 
 # Don't buffer output.

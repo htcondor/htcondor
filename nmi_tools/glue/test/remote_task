@@ -37,8 +37,10 @@
 use strict;
 use warnings;
 use File::Copy;
+use File::Basename;
 
-use TestGlue;
+my $dir = dirname($0);
+require "$dir/TestGlue";
 TestGlue::setup_test_environment();
 TestGlue::setup_task_environment();
 
