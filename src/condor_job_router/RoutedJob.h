@@ -23,7 +23,6 @@
 //#include "condor_common.h"
 
 #define WANT_CLASSAD_NAMESPACE
-#undef open
 #include "classad/classad_distribution.h"
 
 class JobRoute;
