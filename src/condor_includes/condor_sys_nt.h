@@ -240,6 +240,18 @@ END_C_DECLS
 
 #endif
 
+// defeat prefast warnings
+_Check_return_ inline int isspace(_In_ char ch) {
+   return isspace(static_cast<int> (static_cast<unsigned char> (ch)));
+}
+_Check_return_ inline int isalnum(_In_ char ch) {
+   return isalnum(static_cast<int> (static_cast<unsigned char> (ch)));
+}
+_Check_return_ inline int isdigit(_In_ char ch) {
+   return isdigit(static_cast<int> (static_cast<unsigned char> (ch)));
+}
+
+
 /* Define the PRIx64 macros */
 
 // If no inttypes, try to define our own

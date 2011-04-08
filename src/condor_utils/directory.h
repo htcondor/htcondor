@@ -255,20 +255,8 @@ private:
 // when the class instance is deleted
 class DeleteFileLater {
  public:
-	DeleteFileLater (const char * _name) {
-		filename = _name?strdup(_name):NULL;
-	}
-
-	~DeleteFileLater () {
-		if (filename) {
-            if (unlink(filename)) {  // conditional to defeat prefast warning.
-               #ifdef D_ALWAYS
-               dprintf(D_ALWAYS, "DeleteFileLater of %s failed err=%d", filename, errno);
-               #endif
-               }
-			free (filename);
-		}
-	}
+	DeleteFileLater (const char * _name);
+	~DeleteFileLater ();
  protected:
 	char * filename;
 };

@@ -23,7 +23,6 @@
 #include "classad_newold.h"
 #include "condor_new_classads.h"
 #define WANT_CLASSAD_NAMESPACE
-#undef open
 #include "classad/classad_distribution.h"
 
 bool new_to_old(classad::ClassAd & src, ClassAd & dst)
