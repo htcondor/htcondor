@@ -38,13 +38,13 @@ sub setup_test_environment {
         # on Windows.
         (my $win_base_dir = $base_dir) =~ s|/|\\|g;
 
-        set_env("PATH", "$base_dir\\nmi_tools\\glue\\test;$base_dir\\condor\\bin");
+        set_env("PATH", "$win_base_dir\\nmi_tools\\glue\\test;$win_base_dir\\condor\\bin");
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
-        set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
+        set_env("CONDOR_CONFIG", "$win_base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
         
         # also, throw in the WIN32 version of the base directory path for later use
-        set_env("WIN32_BASE_DIR", $base_dir);
+        set_env("WIN32_BASE_DIR", $win_base_dir);
     }
 }
 
