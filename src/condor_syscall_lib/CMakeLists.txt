@@ -109,6 +109,12 @@ if( STD_UNIVERSE )
 		# condorsyscall except use ZCKPT_REFS in place of
 		# CKPT_REFS
 		src_target_ref( zckpt "^.*$" ZCKPT_REFS)
+
+		# We need to compile condor-malloc.c with special preprocessor
+		# definitions.
+		src_target_ref( zckpt "malloc-condor.c" MALLOC_CONDOR_REF)
+		set_property(SOURCE ${MALLOC_CONDOR_REF} APPEND PROPERTY COMPILE_DEFINITIONS "MORECORE=condor_morecore;HAVE_MMAP=0;malloc_getpagesize=8192")
+
 		condor_static_lib( condorzsyscall "senders.cpp;switches.cpp;${SyscallHdrs};${SyscallSrcs};${STDU_OBJS};${ZCKPT_REFS};${UTIL_REFS};${IO_REFS};${STDIO_REF}")
 	endif()
 
