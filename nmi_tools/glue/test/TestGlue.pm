@@ -42,7 +42,7 @@ sub setup_test_environment {
 
         # This line is temporary (I think) and should be taken out when Cygwin is removed.
         # However, right now we need to find certain executables (e.h. tar)
-        set_env("PATH", "$ENV{PATH};C:\bin;C:\usr\bin");
+        set_env("PATH", "$ENV{PATH};C:\\bin;C:\\usr\\bin");
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
         set_env("CONDOR_CONFIG", "$win_base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
