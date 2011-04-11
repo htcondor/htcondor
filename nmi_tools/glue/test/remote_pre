@@ -84,7 +84,7 @@ if( TestGlue::is_windows() ) {
     my $tmp_dir_path = File::Spec->catdir("condor", $tmp_dir);
     if( -d $tmp_dir_path ) {
         print "$tmp_dir_path exists.  Trying to move...\n";
-        system("mv $tmp_dir_path\\* condor\\");
+        system("move $tmp_dir_path\\* condor\\");
     }
     TestGlue::dir_listing("condor");
 
@@ -134,7 +134,7 @@ if( not TestGlue::is_windows() ) {
     
     # Remove leftovers from extracting built binaries.
     print "Removing $version tar file and extraction\n";
-    system("rm -rf $version*");
+    unlink(<$version*>);
 }
 else {
     # windows personal condor setup
@@ -145,7 +145,7 @@ else {
     
     # Remove leftovers from extracting built binaries.
     print "Removing $version.zip file\n";
-    system("rm -rf $version.zip");
+    unlink("$version.zip");
 
     my $Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
     

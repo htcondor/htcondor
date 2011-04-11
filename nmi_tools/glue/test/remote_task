@@ -88,7 +88,7 @@ if( ! $testname ) {
 }
 
 #track time.....
-system("date");
+print scalar(localtime);
 
 print "Testname: '$testname'\n";
 if( not TestGlue::is_windows() ) {
