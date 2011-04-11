@@ -20,7 +20,7 @@ if (LINUX)
 
 	# shouldn't happen if gen code checked-in
     if ( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../codegen" )
-        message( FATAL_ERROR "run ../gen-build-xsd-lib.sh first!")
+        message( FATAL_ERROR "run ../gen-xsd-cpp.sh first!")
     endif ()
 
 	# proper v. WSFCPP_HOME build
@@ -65,8 +65,6 @@ if (LINUX)
         set(axis2_repo_loc $ENV{WSFCPP_HOME})
 
 	endif ( PROPER )
-
-
 
     include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -126,6 +124,10 @@ if (LINUX)
     condor_exe( aviary_query_server "${JOB_SERVER_SRCS}"
 			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${AXIS2_LIBS}" OFF )
 
+	#
+	# configure our axis2.xml for platform
+	#
+	CONFIGURE_FILE("${CMAKE_CURRENT_SOURCE_DIR}/../etc/axis2.xml.in" "${CMAKE_CURRENT_SOURCE_DIR}/../etc/axis2.xml" @ONLY)
 	install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/axis2.xml DESTINATION ${axis2_repo_loc} )
 
     if (aviary_services_loc)
@@ -137,11 +139,12 @@ if (LINUX)
 				DESTINATION ${aviary_services_loc}/query )
 	endif()
 
-	if (PROPER)
-		install (CODE "execute_process(COMMAND echo set WSFCPP_HOME to \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC} for local testing)")
-	endif (PROPER)
+	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/61aviary.config DESTINATION "${C_ETC_EXAMPLES}")
 
-	install(FILES	${CMAKE_CURRENT_SOURCE_DIR}/../etc/61aviary.config
-		DESTINATION "${C_ETC_EXAMPLES}")
+	if (PROPER)
+		install (CODE "execute_process(COMMAND echo Local testing instructions )" )
+		install (CODE "execute_process(COMMAND echo set WSFCPP_HOME to \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}axis2.xml)" )
+		install (CODE "execute_process(COMMAND echo change the servicesDir parameter in axis2.xml to \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}services)" )
+	endif (PROPER)
 
 endif(LINUX)

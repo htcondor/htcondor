@@ -24,11 +24,11 @@ from sys import exit, argv, stdin
 import time
 
 # enable these to see the SOAP messages
-logging.basicConfig(level=logging.INFO)
-logging.getLogger('suds.client').setLevel(logging.DEBUG)
+#logging.basicConfig(level=logging.INFO)
+#logging.getLogger('suds.client').setLevel(logging.DEBUG)
 
 # change these for other default locations and ports
-job_wsdl = 'file:/usr/services/query/aviary-query.wsdl'
+job_wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
 
 cmds = ['getJobStatus', 'getJobSummary', 'getJobDetails']
 
@@ -46,7 +46,7 @@ job_url += cmdarg
 client.set_options(location=job_url)
 
 # enable to see service schema
-print client
+#print client
 
 # set up our JobID
 if cproc:

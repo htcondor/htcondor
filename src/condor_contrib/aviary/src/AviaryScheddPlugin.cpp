@@ -66,7 +66,7 @@ AviaryScheddPlugin::earlyInitialize()
 	}
 
 	int port = param_integer("HTTP_PORT",9090);
-	int level = param_integer("AXIS2_DEBUG_LEVEL",AXIS2_LOG_LEVEL_DEBUG);
+	int level = param_integer("AXIS2_DEBUG_LEVEL",AXIS2_LOG_LEVEL_CRITICAL);
 
     // init transport here
     provider = new Axis2SoapProvider(level,log_file,repo_path.c_str());

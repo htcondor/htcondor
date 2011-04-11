@@ -230,6 +230,7 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 	for (SubmissionCollectionType::iterator i = sub_map.begin(); sub_map.end() != i; i++) {
 		SubmissionSummary* summary = new SubmissionSummary;
 		SubmissionObject *submission = (*i).second;
+
 		if (submission) {
 			SubmissionID* sid = new SubmissionID;
 			sid->setName(submission->getName());

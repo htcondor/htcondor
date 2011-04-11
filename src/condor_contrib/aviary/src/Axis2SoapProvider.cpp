@@ -67,9 +67,6 @@ Axis2SoapProvider::Axis2SoapProvider(int _log_level, const char* _log_file, cons
     if (_repo_path) {
         m_repo_path = _repo_path;
     }
-    if (m_repo_path[m_repo_path.length()] != '/') {
-		m_repo_path.append("/");
-	}
     m_log_level = axutil_log_levels_t(_log_level);
     m_env = NULL;
     m_http_server = NULL;
@@ -123,7 +120,7 @@ Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
             return m_initialized;
         }
 
-        m_http_server = axis2_http_server_create(m_env, m_repo_path.c_str(), _port);
+        m_http_server = axis2_http_server_create_with_file(m_env, m_repo_path.c_str(), _port);
         if (!m_http_server) {
 			_error =  AXIS2_ERROR_GET_MESSAGE(m_env->error);
             AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI, "HTTP server create failed: %d: %s",

@@ -23,7 +23,7 @@ from sys import exit, argv, stdin
 import time
 
 # change these for other default locations and ports
-job_wsdl = 'file:/usr/services/job/aviary-job.wsdl'
+job_wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
 
 cproc =  len(argv) > 1 and argv[1]
 attr_name = len(argv) > 2 and argv[2]

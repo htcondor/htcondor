@@ -29,7 +29,7 @@ if not uid:
 quiet = False
 
 # change these for other default locations and ports
-job_wsdl = 'file:/usr/services/job/aviary-job.wsdl'
+job_wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
 job_url = 'http://localhost:9090/services/job/submitJob'
 
 for arg in argv[1:]:

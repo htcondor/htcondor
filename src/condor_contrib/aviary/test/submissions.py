@@ -26,7 +26,7 @@ from sys import exit, argv
 #logging.basicConfig(level=logging.INFO)
 #logging.getLogger('suds.client').setLevel(logging.DEBUG)
 
-query_wsdl = 'file:/usr/services/query/aviary-query.wsdl'
+query_wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
 
 sub_name = len(argv) > 1 and argv[1]
 query_url = len(argv) > 2 and argv[2] or 'http://localhost:9091/services/query/getSubmissionSummary'
