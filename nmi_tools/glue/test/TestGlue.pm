@@ -21,41 +21,39 @@
 use strict;
 use warnings;
 use Cwd;
+use File::Spec;
 
 package TestGlue;
 
 sub setup_test_environment {
 
     my $base_dir = Cwd::getcwd();
-    set_env("BASE_DIR", $base_dir);
 
-    if( $ENV{NMI_PLATFORM} !~ /winnt/ ) {
+    if( not is_windows() ) {
+        set_env("BASE_DIR", $base_dir);
         set_env("PATH", "$base_dir/nmi_tools/glue/test:$base_dir/condor/bin:$base_dir/condor/sbin:$ENV{PATH}");
         set_env("CONDOR_CONFIG", "$base_dir/condor_tests/TestingPersonalCondor/condor_config");
     }
     else {
         # Get the right slashes for Windows.  Apparently getcwd() returns forward slashes, even
         # on Windows.
-        (my $win_base_dir = $base_dir) =~ s|/|\\|g;
+        $base_dir =~ s|/|\\|g;
+        set_env("BASE_DIR", $base_dir);
 
-        set_env("PATH", "$win_base_dir\\nmi_tools\\glue\\test;$win_base_dir\\condor\\bin");
-
-        # This line is temporary (I think) and should be taken out when Cygwin is removed.
-        # However, right now we need to find certain executables (e.h. tar)
-        set_env("PATH", "$ENV{PATH};C:\\bin;C:\\usr\\bin");
+        set_env("PATH", "$base_dir\\nmi_tools\\glue\\test;$base_dir\\condor\\bin;C:\\tools");
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
-        set_env("CONDOR_CONFIG", "$win_base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
+        set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
         
         # also, throw in the WIN32 version of the base directory path for later use
-        set_env("WIN32_BASE_DIR", $win_base_dir);
+        set_env("WIN32_BASE_DIR", $base_dir);
     }
 }
 
 
 
 sub setup_task_environment {
-    $ENV{GCBTARGET} = "nmi-s006.cs.wisc.edu";
+    set_env("GCBTARGET", "nmi-s006.cs.wisc.edu");
 }
 
 
@@ -64,6 +62,46 @@ sub set_env {
     print "Setting environment variable:\n";
     print "\t$key -> '$val'\n";
     $ENV{$key} = $val;
+}
+
+
+sub dir_listing {
+    my (@path) = @_;
+
+    my $path = File::Spec->catdir(@path);
+
+    # If we have a relative path then show the CWD
+    my $cwd = "";
+    if(not File::Spec->file_name_is_absolute($path)) {
+        $cwd = "(CWD: '" . Cwd::getcwd() . "')";
+    }
+    print "Showing directory contents of path '$path' $cwd\n";
+
+    if( is_windows() ) {
+        system("dir $path");
+    }
+    else {
+        system("ls -l $path");
+    }
+}
+
+
+sub which {
+    my ($exe) = @_;
+
+    if( is_windows() ) {
+        return system('for /F %I in ("' . $exe . '") do echo %~$PATH:I');
+    }
+    else {
+        return system("which $exe");
+    }
+}
+
+sub is_windows {
+    if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
+        return 1;
+    }
+    return 0;
 }
 
 1;

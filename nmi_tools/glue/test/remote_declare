@@ -23,6 +23,7 @@ use warnings;
 use Getopt::Long;
 use vars qw/ @opt_testclasses /;
 use File::Basename;
+use File::Spec;
 
 my $dir = dirname($0);
 require "$dir/TestGlue.pm";
@@ -35,49 +36,17 @@ parseOptions();
 ######################################################################
 
 my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
-my $TaskFile = "$BaseDir/tasklist.nmi";
-my $UserdirTaskFile = "$BaseDir/../tasklist.nmi";
+my $TaskFile = File::Spec->catfile($BaseDir, "tasklist.nmi");
+my $UserdirTaskFile = File::Spec->catfile($BaseDir, "..", "tasklist.nmi");
 my $testdir = "condor_tests";
 
 # Look for a specific file that contains overrides for the default timeouts for some tests
-my %CustomTimeouts;
-my $TimeoutFile = "$BaseDir/condor_tests/TimeoutChanges";
-if( -f $TimeoutFile) {
-    print "Found a custom timeout file at '$TimeoutFile'.  Loading it...\n";
-    open(TIMEOUTS, '<', $TimeoutFile) || die "Failed to open $TimeoutFile for reading: $!\n";
-    while(<TIMEOUTS>) {
-        if(/^\s*([\-\w]*)\s+(\d*)\s*$/) {
-            print "\tCustom Timeout: $1:$2\n";
-            $CustomTimeouts{$1} = $2;
-        }
-    }
-    close(TIMEOUTS);
-}
-else {
-    print "INFO: No custom timeout file found.\n";
-}
-
-my %RuncountChanges;
-my $RuncountFile = "$BaseDir/condor_tests/RuncountChanges";
-# Do we have a file with non-default runtimes for some tests?
-if( -f $RuncountFile) {
-    print "Found a custom runcount file at '$RuncountFile'.  Loading it...\n";
-    open(RUNCOUNT, '<', $RuncountFile) || die "Failed to open $RuncountFile for reading: $!\n";
-    while(<RUNCOUNT>) {
-        if(/^\s*([\w\-]+)\s+(\d*)\s*$/) {
-            print "\tCustom Runcount: $1:$2\n";
-            $RuncountChanges{$1} = $2;
-        }
-    }
-    close(RUNCOUNT);
-}
-else {
-    print "INFO: No custom runcount file found.\n";
-}
+my %CustomTimeouts = load_custom_timeout_file();
+my %RuncountChanges = load_custom_runcount_file();
 
 # file which contains the list of tests to run on Windows
-my $WinTestList = "$BaseDir/condor_tests/Windows_list";
-my $ShortWinTestList = "$BaseDir/condor_tests/Windows_shortlist";
+my $WinTestList = File::Spec->catfile($BaseDir, $testdir, "Windows_list");
+my $ShortWinTestList = File::Spec->catfile($BaseDir, $testdir, "Windows_shortlist");
 
 # Figure out what testclasses we should declare based on our
 # command-line arguments.  If none are given, we declare the testclass
@@ -108,7 +77,7 @@ open(USERTASKFILE, '>', $UserdirTaskFile ) || die "Can't open $UserdirTaskFile f
 
 my %tasklist;
 
-if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+if( not TestGlue::is_windows() ) {
     foreach my $class (@classlist) {
     	print "****************************************************\n";
     	print "**** Finding tests for class: '$class'\n";
@@ -226,4 +195,48 @@ sub parseOptions {
     if (!defined(@opt_testclasses)) {
         die "Please supply a test class!\n";
     }
+}
+
+
+sub load_custom_timeout_file {
+    my %timeouts = {};
+    my $TimeoutFile = File::Spec->catfile($BaseDir, $testdir, "TimeoutChanges");
+    if( -f $TimeoutFile) {
+        print "Found a custom timeout file at '$TimeoutFile'.  Loading it...\n";
+        open(TIMEOUTS, '<', $TimeoutFile) || die "Failed to open $TimeoutFile for reading: $!\n";
+        while(<TIMEOUTS>) {
+            if(/^\s*([\-\w]*)\s+(\d*)\s*$/) {
+                print "\tCustom Timeout: $1:$2\n";
+                $timeouts{$1} = $2;
+            }
+        }
+        close(TIMEOUTS);
+    }
+    else {
+        print "INFO: No custom timeout file found.\n";
+    }
+
+    return %timeouts;
+}
+
+
+sub load_custom_runcount_file {
+    my %runcounts = {};
+    my $RuncountFile = File::Spec->catfile($BaseDir, $testdir, "RuncountChanges");
+    if( -f $RuncountFile) {
+        print "Found a custom runcount file at '$RuncountFile'.  Loading it...\n";
+        open(RUNCOUNT, '<', $RuncountFile) || die "Failed to open $RuncountFile for reading: $!\n";
+        while(<RUNCOUNT>) {
+            if(/^\s*([\w\-]+)\s+(\d*)\s*$/) {
+                print "\tCustom Runcount: $1:$2\n";
+                $runcounts{$1} = $2;
+            }
+        }
+        close(RUNCOUNT);
+    }
+    else {
+        print "INFO: No custom runcount file found.\n";
+    }
+
+    return %runcounts;
 }

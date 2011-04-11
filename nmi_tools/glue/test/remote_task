@@ -61,8 +61,8 @@ if( ! $fulltestname ) {
     exit 0;
 }
 
-my $BaseDir = $ENV{BASE_DIR} || c_die("BASE_DIR is not in environment!\n");
-my $testdir = "condor_tests";
+my $BaseDir  = $ENV{BASE_DIR} || c_die("BASE_DIR is not in environment!\n");
+my $test_dir = File::Spec->catdir($BaseDir, "condor_tests");
 
 # iterations have numbers placed at the end of the name
 # for unique db tracking in nmi for now.
@@ -91,7 +91,7 @@ if( ! $testname ) {
 system("date");
 
 print "Testname: '$testname'\n";
-if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+if( not TestGlue::is_windows() ) {
     if( $compiler ) {
         print "compiler is $compiler\n";
     }
@@ -108,15 +108,12 @@ else {
 ######################################################################
 
 print "RUNNING $testname\n";
-chdir("$BaseDir/$testdir") || c_die("Can't chdir($BaseDir/$testdir): $!\n");
+chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
 
+# -b means build & test and ensures the first time that we have our testing
+# personal condor configured from release generic config files.
 print "About to run batch_test.pl\n";
-
-# -b means build & test and ensures the first time that
-# we have our testing personal condor configered from
-# release generic config files.
-
-system("perl ./batch_test.pl --no-error -d $compiler -t $testname -b");
+system("perl batch_test.pl --no-error -d $compiler -t $testname -b");
 my $batchteststatus = $?;
 
 # figure out here if the test passed or failed.  
@@ -132,13 +129,14 @@ else {
 # print output from .run script to stdout of this task, and final exit
 ######################################################################
 
-chdir("$BaseDir/$testdir/$compiler") || c_die("Can't chdir($BaseDir/$testdir/$compiler): $!\n");
+my $compiler_path = File::Spec->catpath($test_dir, $compiler);
+chdir($compiler_path) || c_die("Can't chdir($compiler_path): $!\n");
 my $run_out       = "$testname.run.out";
-my $run_out_path  = "$BaseDir/$testdir/$compiler/$run_out";
+my $run_out_path  = File::Spec->catfile($compiler_path, $run_out);
 my $test_out      = "$testname.out";
-my $test_out_path = "$BaseDir/$testdir/$compiler/$test_out";
+my $test_out_path = File::Spec->catfile($compiler_path, $test_out);
 my $test_err      = "$testname.err";
-my $test_err_path = "$BaseDir/$testdir/$compiler/$test_err";
+my $test_err_path = File::Spec->catfile($compiler_path, $test_err);
 
 if( ! -f $run_out_path ) {
     if( $teststatus == 0 ) {
@@ -195,18 +193,6 @@ if( open(RES, '<', $test_err_path) ) {
 else {
     print "\n\nERROR: failed to open $test_err_path: $!\n";
 }
-# add  local config file
-#my $local_out = "$BaseDir/$testdir/TestingPersonalCondor/condor_config.local";
-#if( open(RES, "<$local_out") ) {
-#    print "\n\n----- Start of TestingPersonalCondor/condor_config.local -----\n";
-#    while(<RES>) {
-#        print "$_";
-#    }
-#    close RES;
-#    print "\n----- End of TestingPersonalCondor/condor_config.local -----\n";
-#} else {
-#    print "\n\nERROR: failed to open $local_out: $!\n";
-#}
 
 exit $teststatus;
 

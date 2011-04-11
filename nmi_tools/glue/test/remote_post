@@ -52,18 +52,22 @@ else {
 
 print "Seeing if personal condor needs killing\n";
 
-if( -f "$BaseDir/condor_tests/TestingPersonalCondor/local/log/.scheduler_address" ) {
+my $personal_condor_dir = File::Spec->catdir($BaseDir, "condor_tests", "TestingPersonalCondor");
+my $sentinel = File::Spec->catfile($personal_condor_dir, "local", "log", ".scheduler_address");
+if( -f $sentinel ) {
     #  Came up and had a scheduler running. good
-    $ENV{"CONDOR_CONFIG"} = "$BaseDir/condor_tests/TestingPersonalCondor/condor_config";
+    $ENV{CONDOR_CONFIG} = File::Spec->catfile($personal_condor_dir, "condor_config");
     if( defined $ENV{_NMI_STEP_FAILED} ) { 
-        print "not calling condor_off for $BaseDir/condor_tests/TestingPersonalCondor/condor_config\n";
+        print "Not calling condor_off for $ENV{CONDOR_CONFIG}\n";
     }
     else {
-        print "calling condor_off for $BaseDir/condor_tests/TestingPersonalCondor/condor_config\n";
-        system("$BaseDir/userdir/condor/sbin/condor_off -master");
+        print "Calling condor_off for $ENV{CONDOR_CONFIG}\n";
+        my $condor_off = File::Spec->catfile($BaseDir, "userdir", "condor", "sbin", "condor_off");
+        system("$condor_off -master");
+
         # give some time for condor to shutdown
         sleep(30);
-        print "done calling condor_off for $BaseDir/condor_tests/TestingPersonalCondor/condor_config\n";
+        print "Done calling condor_off for $ENV{CONDOR_CONFIG}\n";
     }
 }
 else {
@@ -102,12 +106,6 @@ chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 #----------------------------------------
 print "Tarring up all results\n";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
-system( "tar zcf results.tar.gz --exclude *.exe $BaseDir/condor_tests local" );
-# don't care if condor is still running or sockets
-# are being skipped. Save what we can and don't bitch
-#if( $? >> 8 ) {
-    #print "Can't tar zcf src/condor_tests local\n";
-    #$exit_status = 1;
-#}
+system("tar zcf results.tar.gz --exclude *.exe $BaseDir/condor_tests local");
 
 exit $exit_status;

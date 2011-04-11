@@ -56,12 +56,12 @@ if( -z "tasklist.nmi" ) {
 
 my $release_tarball;
 my $version;
-if( $ENV{NMI_PLATFORM} =~ /winnt/) {
+if( TestGlue::is_windows() ) {
     # on Windows, condor is in a zip file, not a tarball
     print "Finding release zip file\n";
     my ($release_zipfile) = glob("condor-*.zip");
     
-    print "Release zip file is $release_zipfile\n";
+    print "Release zip file is '$release_zipfile'\n";
     
     if( ! $release_zipfile ) {
         die "Could not find a condor release zip file!\n";
@@ -70,29 +70,24 @@ if( $ENV{NMI_PLATFORM} =~ /winnt/) {
     if ( ! mkdir("condor") ) {
         die "Could not make the condor folder\n";
     }
-    
+
+    # We are explicitly calling unzip from C:\tools so that we do not use Cygwin's
+    # version of unzip.  When Cygwin unzips a tarball it removes the execute bits 
+    # and we have to restore them.  We want to avoid this so use non-Cygwin unzip
     print "Unzipping $release_zipfile ...\n";
-    system("unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile !\n";
-    print "Unzipped $release_zipfile ...\n";
+    system("C:\\tools\\unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile: $!\n";
+    print "Unzipped $release_zipfile.\n";
     
     (my $tmp_dir = basename($release_zipfile)) =~ s/\.zip$//;
     print "\$tmp_dir = '$tmp_dir'\n";
-    print "Directory listing of 'condor':\n";
-    print `dir condor`;
-    if(-d "condor/$tmp_dir") {
-        print "condor/$tmp_dir exists.  Trying to move...\n";
-        system("mv condor/$tmp_dir/* condor/");
+    TestGlue::dir_listing("condor");
+    my $tmp_dir_path = File::Spec->catdir("condor", $tmp_dir);
+    if( -d $tmp_dir_path ) {
+        print "$tmp_dir_path exists.  Trying to move...\n";
+        system("mv $tmp_dir_path\\* condor\\");
     }
-    print "Second directory listing of 'condor':\n";
-    print `dir condor`;
-    
-    print "fixing execute bits ...\n";
-    system("chmod a+x condor/bin/*");
-    
-    #debug code...
-    #system("ls");
-    #system("ls -l condor");
-    
+    TestGlue::dir_listing("condor");
+
     $version = substr($release_zipfile, 0, -4);
     print "VERSION string is $version from $release_zipfile\n";
 }
@@ -114,11 +109,11 @@ else {
     }
     
     print "Release tarball file exists:\n";
-    system("ls -l $release_tarball");
+    TestGlue::dir_listing($release_tarball);
 
     print "Untarring $release_tarball ...\n";
     system("tar -xzvf $release_tarball" ) && die "Can't untar $release_tarball: $!\n";
-    print "Untarred $release_tarball ...\n";
+    print "Untarred $release_tarball.\n";
     
     ($version) = $release_tarball =~ /^(.*)\.[^.]+\.[^.]+$/;
     print "VERSION string is $version from $release_tarball\n";
@@ -133,19 +128,13 @@ print "Condor version: $version\n";
 print "SETTING UP PERSONAL CONDOR\n";
 
 # I'm not 100% certain wtf this actually does. 
-if($ENV{NMI_PLATFORM} !~ /winnt/) {
+if( not TestGlue::is_windows() ) {
     mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
     system("mv $BaseDir/$version $BaseDir/condor" );
     
     # Remove leftovers from extracting built binaries.
     print "Removing $version tar file and extraction\n";
     system("rm -rf $version*");
-    
-    # Add condor to the path and set a condor_config variable
-    my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
-    my $NewPath = "$BaseDir/condor/sbin:" . "$BaseDir/condor/bin:" . $OldPath;
-    $ENV{PATH} = $NewPath;
-    $ENV{CONDOR_CONFIG} = "$BaseDir/condor/condor_config";
 }
 else {
     # windows personal condor setup
@@ -160,37 +149,20 @@ else {
 
     my $Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
     
-    #print "current dir\n";
-    #system("ls -l");
-    #print "$BaseDir/condor_tests\n";
-    #system("ls -l $BaseDir/condor_tests");
-    #print "$BaseDir/condor/bin\n";
-    #system("ls -l $BaseDir/condor/bin");
-    
-    # Add condor to the path
-    my $OldPath = $ENV{PATH} || die "PATH not in environment!\n";
-    print "PATH=$OldPath\n";
-    system ("which condor_master.exe");
-    print "adding condor to the path\n";
-    my $NewPath = "$BaseDir/condor/bin:" . $OldPath;
-    $ENV{PATH} = $NewPath;
-    print "PATH=$ENV{PATH}\n";
+    TestGlue::which("condor_master.exe");
 }
 
 
-# -p means  just set up the personal condor for the test run
 # move into the condor_tests directory first
+my $test_dir = File::Spec->catdir($BaseDir, "condor_tests");
+chdir($test_dir) || die "Can't chdir($test_dir for personal condor setup): $!\n";
 
-chdir( "$BaseDir/condor_tests" ) ||
-    die "Can't chdir($BaseDir/condor_tests for personal condor setup): $!\n";
+# -p means just set up the personal condor for the test run
+my $batch_test = File::Spec->catfile($test_dir, "batch_test.pl");
+my $command_line = "$batch_test --debug -p";
+print "About to run '$command_line'\n";
+system("perl $command_line");
 
-print "About to run batch_test.pl --debug -p\n";
-#system("env");
-
-system("perl $BaseDir/condor_tests/batch_test.pl --debug -p");
-my $batchteststatus = $?;
-
-# figure out here if the setup passed or failed.
-if( $batchteststatus != 0 ) {
+if( $? != 0 ) {
     exit 2;
 }
