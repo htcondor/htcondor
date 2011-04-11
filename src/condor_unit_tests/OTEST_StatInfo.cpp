@@ -879,11 +879,12 @@ static bool test_get_access_time_file() {
 	emit_param("Directory Path", "%s", full_dir.Value());
 	emit_param("File Name", "empty_file");
 	StatInfo info(full_dir.Value(), "empty_file");
-	time_t time = info.GetAccessTime();
+	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
+	emit_retval("%d", atime);
+	current_time = time(NULL);
 	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	if(abs(current_time - atime) > 10) {
 		FAIL;
 	}
 	PASS;
@@ -918,11 +919,12 @@ static bool test_get_access_time_dir() {
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "full_dir");
 	StatInfo info(tmp_dir.Value(), "full_dir");
-	time_t time = info.GetAccessTime();
+	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
+	emit_retval("%d", atime);
+	current_time = time(NULL);
 	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	if(abs(current_time - atime) > 10) {
 		FAIL;
 	}
 	PASS;
@@ -935,11 +937,12 @@ static bool test_get_access_time_symlink_file() {
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_file");
 	StatInfo info(tmp_dir.Value(), "symlink_file");
-	time_t time = info.GetAccessTime();
+	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
+	emit_retval("%d", atime);
+	current_time = time(NULL);
 	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	if(abs(current_time - atime) > 10) {
 		FAIL;
 	}
 	PASS;
@@ -952,11 +955,12 @@ static bool test_get_access_time_symlink_dir() {
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_dir");
 	StatInfo info(tmp_dir.Value(), "symlink_dir");
-	time_t time = info.GetAccessTime();
+	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
+	emit_retval("%d", atime);
+	current_time = time(NULL);
 	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	if(abs(current_time - atime) > 10) {
 		FAIL;
 	}
 	PASS;
@@ -987,11 +991,12 @@ static bool test_get_modify_time_file() {
 	emit_param("Directory Path", "%s", full_dir.Value());
 	emit_param("File Name", "empty_file");
 	StatInfo info(full_dir.Value(), "empty_file");
-	time_t time = info.GetModifyTime();
+	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
+	emit_retval("%d", mtime);
+	current_time = time(NULL);
 	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	if(abs(current_time - mtime) > 10) {
 		FAIL;
 	}
 	PASS;
@@ -1060,11 +1065,12 @@ static bool test_get_modify_time_symlink_dir() {
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_dir");
 	StatInfo info(tmp_dir.Value(), "symlink_dir");
-	time_t time = info.GetModifyTime();
+	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
+	emit_retval("%d", mtime);
+	current_time = time(NULL);
 	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	if(abs(current_time - mtime) > 10) {
 		FAIL;
 	}
 	PASS;
@@ -1095,11 +1101,12 @@ static bool test_get_create_time_file() {
 	emit_param("Directory Path", "%s", full_dir.Value());
 	emit_param("File Name", "empty_file");
 	StatInfo info(full_dir.Value(), "empty_file");
-	time_t time = info.GetCreateTime();
+	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
+	emit_retval("%d", ctime);
+	current_time = time(NULL);
 	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	if(abs(current_time - ctime) > 10) {
 		FAIL;
 	}
 	PASS;
@@ -1134,11 +1141,12 @@ static bool test_get_create_time_dir() {
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "full_dir");
 	StatInfo info(tmp_dir.Value(), "full_dir");
-	time_t time = info.GetCreateTime();
+	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
+	emit_retval("%d", ctime);
+	current_time = time(NULL);
 	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	if(abs(current_time - ctime) > 10) {
 		FAIL;
 	}
 	PASS;
@@ -1151,11 +1159,12 @@ static bool test_get_create_time_symlink_file() {
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_file");
 	StatInfo info(tmp_dir.Value(), "symlink_file");
-	time_t time = info.GetCreateTime();
+	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
+	emit_retval("%d", ctime);
+	current_time = time(NULL);
 	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	if(abs(current_time - ctime) > 10) {
 		FAIL;
 	}
 	PASS;
@@ -1168,11 +1177,12 @@ static bool test_get_create_time_symlink_dir() {
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_dir");
 	StatInfo info(tmp_dir.Value(), "symlink_dir");
-	time_t time = info.GetCreateTime();
+	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
+	emit_retval("%d", ctime);
+	current_time = time(NULL);
 	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	if(abs(current_time - ctime) > 10) {
 		FAIL;
 	}
 	PASS;
