@@ -620,6 +620,71 @@ Fractional remainders resulting from the truncation are summed
 and assigned to the next higher level within the group hierarchy.
 
 \item[Dynamic Quotas]
+A dynamic quota specifies a percentage of machines (slots) calculated
+based on the current number of machines in the pool.
+The quota is specified for a group (subgroup, etc.) by a floating point
+value in range 0.0 to 1.0 (inclusive).
+
+Like static quota specification, there are two cases defined:
+when the dynamic quotas of all sub groups of a specific group
+sum to a fraction less than 1.0,
+and when the dynamic quotas of all sub groups of a specific group
+sum to greater than 1.0.
+
+Here is an example configuration in which dynamic group quotas are assigned for
+a single group and its subgroups.
+\begin{verbatim}
+  GROUP_QUOTA_DYNAMIC_group_econ = .6
+  GROUP_QUOTA_DYNAMIC_group_econ.project1 = .2
+  GROUP_QUOTA_DYNAMIC_group_econ.project2 = .15
+  GROUP_QUOTA_DYNAMIC_group_econ.project3 = .2
+\end{verbatim}
+The sum of dynamic quotas for the subgroups is .55, 
+which is less than the parent group, which has a dynamic quota of .6.
+If the pool has 100 slots, 
+then the \Expr{project1} subgroup is assigned a quota that
+equals (100)(.6)(.2) = 12 machines. 
+The \Expr{project2} subgroup is assigned a quota that
+equals (100)(.6)(.15) = 9 machines. 
+The \Expr{project3} subgroup is assigned a quota that
+equals (100)(.6)(.2) = 12 machines. 
+If the calculated dynamic quota of the subgroups resulted in non integer
+numbers of machines,
+integer numbers of machines are assigned based on the truncation of the
+non integer dynamic group quota.
+The unused, surplus quota of machines resulting from
+fractional remainders resulting from the truncation are summed
+and assigned to the next higher level within the group hierarchy.
+
+Here is another example configuration in which dynamic group quotas 
+are assigned for a single group and its subgroups.
+\begin{verbatim}
+  GROUP_QUOTA_DYNAMIC_group_stat = .5
+  GROUP_QUOTA_DYNAMIC_group_stat.project1 = .2
+  GROUP_QUOTA_DYNAMIC_group_stat.project2 = .3
+  GROUP_QUOTA_DYNAMIC_group_stat.project3 = .2
+\end{verbatim}
+In this case, the sum of dynamic quotas for the subgroups is .7, 
+which is greater than the parent group, at .5 .
+A warning is written to the log for the \Condor{negotiator} daemon,
+and each of the subgroups will have their dynamic group quota scaled
+by (.5)/(.7) = .7143 for this example.
+If the pool has 100 slots, 
+then the \Expr{project1} subgroup is assigned a dynamic quota that
+equals (100)(.7143)(.2) which is 14.286 machines. 
+The \Expr{project2} subgroup is assigned a dynamic quota that
+equals (100)(.7143)(.3) which is 21.429 machines. 
+The \Expr{project3} subgroup is assigned a dynamic quota that
+equals (100)(.7143)(.2) which is 14.286 machines. 
+The quota for each of \Expr{project1} and \Expr{project3} results 
+in the truncated amount of 14 machines,
+with the 0.286 fractional portion of the calculated quota assigned to
+the parent group, \Expr{group\_stat}. 
+The quota for \Expr{project2} results in the truncated amount of 21 machines,
+with the 0.429 fractional portion of the calculated quota assigned to
+the parent group, \Expr{group\_stat}. 
+
+
 \item[Mixed Quotas - Both Static and Dynamic]
 \end{description}
 \MoreTodo
