@@ -73,6 +73,7 @@ BaseShadow::BaseShadow() {
 	m_lazy_queue_update = true;
 	m_cleanup_retry_tid = -1;
 	m_cleanup_retry_delay = 30;
+	m_RunAsNobody = false;
 }
 
 BaseShadow::~BaseShadow() {
@@ -163,9 +164,30 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	// handle system calls with Owner's privilege
 // XXX this belong here?  We'll see...
 	if ( !init_user_ids(owner.Value(), domain.Value())) {
-		dprintf(D_ALWAYS, "init_user_ids() failed!\n");
+		dprintf(D_ALWAYS, "init_user_ids() failed as user %s\n",owner.Value() );
 		// uids.C will EXCEPT when we set_user_priv() now
 		// so there's not much we can do at this point
+		
+#if ! defined(WIN32)
+		if ( param_boolean( "SHADOW_RUN_UNKNOWN_USER_JOBS", false ) )
+		{
+			dprintf(D_ALWAYS, "trying init_user_ids() as user nobody\n" );
+			
+			owner="nobody";
+			domain=NULL;
+			if (!init_user_ids(owner.Value(), domain.Value()))
+			{
+				dprintf(D_ALWAYS, "init_user_ids() failed!\n");
+			}
+			else
+			{
+				jobAd->Assign( ATTR_JOB_RUNAS_OWNER, "FALSE" );
+				m_RunAsNobody=true;
+				dprintf(D_ALWAYS, "init_user_ids() now running as user nobody\n");
+			}
+		}
+#endif
+
 	}
 	set_user_priv();
 	daemonCore->Register_Priv_State( PRIV_USER );
@@ -287,6 +309,15 @@ void BaseShadow::config()
 
 
 int BaseShadow::cdToIwd() {
+	int iRet =0;
+	
+#if ! defined(WIN32)
+	priv_state p;
+	
+	if (m_RunAsNobody)
+		p = set_root_priv();
+#endif
+	
 	if (chdir(iwd.Value()) < 0) {
 		int chdir_errno = errno;
 		dprintf(D_ALWAYS, "\n\nPath does not exist.\n"
@@ -297,9 +328,15 @@ int BaseShadow::cdToIwd() {
 		                    iwd.Value(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
 		holdJob(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
-		return -1;
+		iRet = -1;
 	}
-	return 0;
+	
+#if ! defined(WIN32)
+	if ( m_RunAsNobody )
+		set_priv(p);
+#endif
+	
+	return iRet;
 }
 
 
