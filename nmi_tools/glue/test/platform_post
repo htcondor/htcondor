@@ -21,6 +21,7 @@
 use strict;
 use warnings;
 use File::Spec;
+use File::Basename;
 
 my $dir = dirname($0);
 require "$dir/TestGlue.pm";

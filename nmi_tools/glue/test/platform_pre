@@ -37,6 +37,7 @@
 use strict;
 use warnings;
 use Cwd;
+use File::Basename;
 
 my $dir = dirname($0);
 require "$dir/TestGlue.pm";
