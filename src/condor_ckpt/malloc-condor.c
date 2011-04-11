@@ -26,6 +26,9 @@ a private heap.  This is *not* the malloc called
 by ordinary user code.
 */
 
+/* Change all usual malloc calls to be prefixed with condor_. The ckpt
+	library uses this new interface when performing compressed checkpoints.
+*/
 #define MALLOC_SYMBOL(x) condor_##x
 
 #include "malloc.c"
