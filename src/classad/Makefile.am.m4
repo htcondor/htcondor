@@ -152,8 +152,8 @@ libclassad_la_SOURCES = \
 	sink.cpp source.cpp transaction.cpp util.cpp value.cpp view.cpp xmlLexer.cpp	\
 	xmlSink.cpp xmlSource.cpp cclassad.cpp $(_libclassad_la_SOURCES)
 
-libclassad_la_LDFLAGS = -version-info 1:0:1
-libclassad_ns_la_LDFLAGS = -version-info 1:0:1
+libclassad_la_LDFLAGS = -version-info 1:2:0
+libclassad_ns_la_LDFLAGS = -version-info 1:2:0
 
 MF_IF_NAMESPACE([libclassad_ns_la_SOURCES = $(libclassad_la_SOURCES)
    libclassad_ns_la_CXXFLAGS = $(NAMESPACE)])
