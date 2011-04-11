@@ -151,6 +151,11 @@ JobServerJobLogConsumer::NewClassAd(const char *_key,
 bool
 JobServerJobLogConsumer::DestroyClassAd(const char *_key)
 {
+	// ignore the marker
+	if (strcmp(_key,"0.0") == 0) {
+	  return true;
+	}
+
    dprintf ( D_FULLDEBUG, "JobServerJobLogConsumer::DestroyClassAd - key '%s'\n", _key);
     JobCollectionType::iterator g_element = g_jobs.find(_key);
 
@@ -177,6 +182,10 @@ JobServerJobLogConsumer::SetAttribute(const char *_key,
 									  const char *_name,
 									  const char *_value)
 {
+	// ignore the marker
+	if (strcmp(_key,"0.0") == 0) {
+	  return true;
+	}
 
 	if (0 == strcmp(_name,"NextClusterNum") ) {
 		// skip over these
@@ -203,6 +212,11 @@ bool
 JobServerJobLogConsumer::DeleteAttribute(const char *_key,
 										 const char *_name)
 {
+	// ignore the marker
+	if (strcmp(_key,"0.0") == 0) {
+	  return true;
+	}
+
 	JobCollectionType::const_iterator g_element = g_jobs.find(_key);
 
 	if (g_jobs.end() == g_element) {

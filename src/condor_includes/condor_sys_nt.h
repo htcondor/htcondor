@@ -107,7 +107,7 @@ typedef unsigned __int32 uint32_t;
 #define strlwr _strlwr
 #define chdir _chdir
 #define fsync _commit
-int access(const char *, int);
+DLL_IMPORT_MAGIC int access(const char *, int);
 #define execl _execl  
 #define execv _execv
 #define putenv _putenv
@@ -240,6 +240,18 @@ END_C_DECLS
 # define HAVE__FTIME	1
 
 #endif
+
+// defeat prefast warnings
+_Check_return_ inline int isspace(_In_ char ch) {
+   return isspace(static_cast<int> (static_cast<unsigned char> (ch)));
+}
+_Check_return_ inline int isalnum(_In_ char ch) {
+   return isalnum(static_cast<int> (static_cast<unsigned char> (ch)));
+}
+_Check_return_ inline int isdigit(_In_ char ch) {
+   return isdigit(static_cast<int> (static_cast<unsigned char> (ch)));
+}
+
 
 /* Define the PRIx64 macros */
 

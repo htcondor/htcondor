@@ -380,10 +380,13 @@ const char* AmazonInstanceType = "amazon_instance_type";
 // Deltacloud Parameters
 //
 const char* DeltacloudUsername = "deltacloud_username";
-const char* DeltacloudPassword = "deltacloud_password";
+const char* DeltacloudPasswordFile = "deltacloud_password_file";
 const char* DeltacloudImageId = "deltacloud_image_id";
 const char* DeltacloudRealmId = "deltacloud_realm_id";
 const char* DeltacloudHardwareProfile = "deltacloud_hardware_profile";
+const char* DeltacloudHardwareProfileMemory = "deltacloud_hardware_profile_memory";
+const char* DeltacloudHardwareProfileCpu = "deltacloud_hardware_profile_cpu";
+const char* DeltacloudHardwareProfileStorage = "deltacloud_hardware_profile_storage";
 const char* DeltacloudKeyname = "deltacloud_keyname";
 const char* DeltacloudUserData = "deltacloud_user_data";
 
@@ -1664,7 +1667,7 @@ SetExecutable()
 }
 
 #ifdef WIN32
-#define CLIPPED
+#define CLIPPED 1
 #endif
 
 void
@@ -5075,12 +5078,21 @@ SetGridParams()
 		exit( 1 );
 	}
 
-	if ( (tmp = condor_param( DeltacloudPassword, ATTR_DELTACLOUD_PASSWORD )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_PASSWORD, tmp );
+	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
+		// check private key file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_PASSWORD_FILE, full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( JobGridType && strcasecmp( JobGridType, "deltacloud" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudPassword );
+		fprintf(stderr, "\nERROR: Deltacloud jobs require a \"%s\" parameter\n", DeltacloudPasswordFile );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
 	}
@@ -5103,6 +5115,24 @@ SetGridParams()
 
 	if( (tmp = condor_param( DeltacloudHardwareProfile, ATTR_DELTACLOUD_HARDWARE_PROFILE )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfileMemory, ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfileCpu, ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	if( (tmp = condor_param( DeltacloudHardwareProfileStorage, ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE, tmp );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
 	}

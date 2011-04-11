@@ -50,10 +50,24 @@
 	return i;
 // -----------------------------------------------
 
+DeleteFileLater::DeleteFileLater (const char * _name)
+{
+    filename = _name?strdup(_name):NULL;
+}
+
+DeleteFileLater::~DeleteFileLater ()
+{
+	if (filename) {
+        if (unlink(filename)) {  // conditional to defeat prefast warning.
+            dprintf(D_ALWAYS, "DeleteFileLater of %s failed err=%d", filename, errno);
+        }
+		free (filename);
+	}
+}
 
 
 #ifndef WIN32
-static bool GetIds( const char *path, uid_t *owner, gid_t *group );
+static bool GetIds( const char *path, uid_t *owner, gid_t *group, si_error_t &err );
 #endif
 
 #ifdef WIN32
@@ -287,6 +301,10 @@ Directory::do_remove_dir( const char* path )
 
 	char *usr, *dom;
 
+#if 0
+    extern int rmdir_with_acls_win32(const char * path);
+    rmdir_with_acls_win32( path );
+#else
 	usr = my_username();
 	dom = my_domainname();
 
@@ -295,6 +313,7 @@ Directory::do_remove_dir( const char* path )
 	free(dom);
 
 	rmdirAttempt( path, desired_priv_state );
+#endif
 
 	StatInfo si2( path );
 
@@ -403,9 +422,14 @@ Directory::do_remove_file( const char* path )
 			_chmod( path, _S_IWRITE );
 #else /* UNIX */
 			if( want_priv_change && (desired_priv_state == PRIV_ROOT) ) {
-				priv_state priv = setOwnerPriv( path );
+				si_error_t err = SIGood;
+				priv_state priv = setOwnerPriv( path, err );
 				if( priv == PRIV_UNKNOWN ) {
-					dprintf( D_ALWAYS, "Directory::do_remove_file(): "
+					if (err == SINoFile)
+						dprintf( D_FULLDEBUG, "Directory::do_remove_file(): "
+						"Failed to unlink(%s) and file does not exist anymore \n", path);
+					else 
+						dprintf( D_ALWAYS, "Directory::do_remove_file(): "
 							 "Failed to unlink(%s) as %s and can't find "
 							 "file owner, giving up\n", path, 
 							 priv_to_string(get_priv()) );
@@ -451,7 +475,9 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 		  rmdir, which requires a call to setOwnerPriv(), not just the
 		  usual set_priv().
 		*/
-
+#ifndef WIN32
+	si_error_t err = SIGood;
+#endif
 	if( want_priv_change ) {
 		switch( priv ) {
 
@@ -464,7 +490,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 			EXCEPT( "Programmer error: Directory::rmdirAttempt() called "
 					"with PRIV_FILE_OWNER on WIN32!" );
 #else
-			saved_priv = setOwnerPriv( path );
+			saved_priv = setOwnerPriv( path, err );
 			log_msg = priv_identifier( priv );
 #endif
 			break;
@@ -500,13 +526,20 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
         char * rmdir_exe_p = param("WINDOWS_RMDIR");
         char * rmdir_opts_p = param("WINDOWS_RMDIR_OPTIONS");
         bool fNativeRmdir = false;
+        bool fCondorRmdir = false;
         if ( ! rmdir_exe_p || ! rmdir_exe_p[0])
            fNativeRmdir = true;
         else if ( ! strcasecmp(rmdir_exe_p, "rmdir") || ! strcasecmp(rmdir_exe_p, "rd"))
            fNativeRmdir = true;
         else if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(rmdir_exe_p)) {
            fNativeRmdir = true;
-           dprintf( D_ALWAYS, "Warning: '%s' is invalid RMDIR (0x%X)\n", rmdir_exe_p, GetLastError());
+           dprintf( D_ALWAYS, "Warning: WINDOWS_RMDIR - '%s' is not valid - Error %d\n", rmdir_exe_p, GetLastError());
+        } else {
+           // figure out if they are specifying condor_rmdir.exe, so we can default
+           // the options
+           MyString exe(rmdir_exe_p);
+           exe.lower_case();
+           fCondorRmdir = (exe.find("condor_rmdir.exe",0) >= 0);
         }
 
         if (fNativeRmdir) {
@@ -516,9 +549,14 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
         } else {
            rm_buf = rmdir_exe_p;
            rm_buf += " ";
-           if (rmdir_opts_p && rmdir_opts_p[0]) {
+           if (fCondorRmdir)
+              rm_buf += "/s "; // /s is recursive
+
+           if (rmdir_opts_p && rmdir_opts_p[0])
               rm_buf += rmdir_opts_p;
-           }
+           else if (fCondorRmdir)
+              rm_buf += " /c"; // /c is continue on error
+
            rm_buf += " \"";
            rm_buf += path;
            rm_buf += "\"";
@@ -572,7 +610,7 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 #ifndef WIN32
 
 priv_state
-Directory::setOwnerPriv( const char* path )
+Directory::setOwnerPriv( const char* path, si_error_t &err)
 {
 	uid_t	uid;
 	gid_t	gid;
@@ -588,9 +626,13 @@ Directory::setOwnerPriv( const char* path )
 	} else {
 			// If we don't already know, figure out what user owns our
 			// parent directory...
-		if( ! GetIds( path, &uid, &gid ) ) {
-			dprintf( D_ALWAYS, "Directory::setOwnerPriv() -- failed to "
+		if( ! GetIds( path, &uid, &gid, err ) ) {
+			if (err == SINoFile) {
+				dprintf(D_FULLDEBUG, "Directory::setOwnerPriv() -- path %s does not exist (yet).\n", path);
+			} else {
+				dprintf( D_ALWAYS, "Directory::setOwnerPriv() -- failed to "
 					 "find owner of %s\n", path );
+			}
 			return PRIV_UNKNOWN;
 		}
 		if( is_root_dir ) {
@@ -631,9 +673,15 @@ Directory::chmodDirectories( mode_t mode )
 		// since we're using the same variable name (saved_priv), we
 		// can still use return_and_resetpriv() in here...
 	if( want_priv_change ) {
-		saved_priv = setOwnerPriv( GetDirectoryPath() );
+		si_error_t err = SIGood;
+		saved_priv = setOwnerPriv( GetDirectoryPath(), err );
 		if( saved_priv == PRIV_UNKNOWN ) {
-			dprintf( D_ALWAYS, "Directory::chmodDirectories(): "
+			if (err == SINoFile)
+				dprintf( D_FULLDEBUG, "Directory::chmodDirectories(): "
+						 "path \"%s\" does not exist (yet).\n",
+						 GetDirectoryPath() );
+			else 
+				dprintf( D_ALWAYS, "Directory::chmodDirectories(): "
 					 "failed to find owner of \"%s\"\n",
 					 GetDirectoryPath() );
 				// if setOwnerPriv() returns PRIV_UNKNOWN, it didn't
@@ -705,9 +753,13 @@ Directory::Rewind()
 				return_and_resetpriv(false);
 			}
 
-				// If we *DO* want to try priv-switching, try the owner
-			priv_state old_priv = setOwnerPriv( curr_dir );
+				// If we *DO* want to try priv-switching, try the owner	
+			si_error_t err = SIGood;	
+			priv_state old_priv = setOwnerPriv( curr_dir, err );
 			if( old_priv == PRIV_UNKNOWN ) {
+				if (err == SINoFile)
+					dprintf(D_FULLDEBUG, "Directory::Rewind(): path \"%s\" does not exist (yet) \n", curr_dir);
+				else 
 					dprintf( D_ALWAYS, "Directory::Rewind(): "
 							 "failed to find owner of \"%s\"\n", curr_dir );
 						// we can just set our priv back to what it was
@@ -990,9 +1042,10 @@ IsSymlink( const char *path )
 
 #ifndef WIN32
 static bool 
-GetIds( const char *path, uid_t *owner, gid_t *group )
+GetIds( const char *path, uid_t *owner, gid_t *group, si_error_t &err )
 {
 	StatInfo si( path );
+	err = si.Error();
 	switch( si.Error() ) {
 	case SIGood:
 		*owner = si.GetOwner( );

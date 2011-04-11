@@ -24,7 +24,9 @@ int main( int argc, char **argv )
 {
 	char *null = NULL;
 	char *space;
+#ifndef WIN32
 	int dumpnow;
+#endif
 
 	space = (char *) malloc(600000);
 

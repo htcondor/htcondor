@@ -90,7 +90,7 @@ typedef int(*SingleHandler)(Request *);
 // A function that takes one or more Request pointers.  The list
 // is terminated with a NULL Request pointer.
 typedef int(*BatchHandler)(Request **);
-typedef bool(*RequestCmp)(Request *, Request *);
+typedef bool(*RequestCmp)(const vector<Request *>&, const Request *);
 
 static void internal_error(const char * p)
 {
@@ -496,18 +496,19 @@ void collect_job_ids(Request ** reqlist, vector<JobIdWrapper> & jv,
    They are compatible if both have the same service
    Return true if they are batchable, otherwise return false.
    ========================================================================= */
-bool cmp_request_register(Request * a, Request * b) {
-	/* Don't batch REGISTER commands for now. Batching too many results
-	*  in failures.
-	*/
-	return false;
-#if 0
+bool cmp_request_register(const vector<Request *> &list, const Request * b) {
+	/* Batch REGISTER commands in sets of 10. Batching too many results
+	 * in failures.
+	 */
+	const Request *a = list.front();
+	if ( list.size() >= 10 ) {
+		return false;
+	}
 	if ( strcmp( a->input_line[2], b->input_line[2] ) ) {
 		return false;
 	} else {
 		return true;
 	}
-#endif
 }
 
 /* =========================================================================
@@ -517,7 +518,8 @@ bool cmp_request_register(Request * a, Request * b) {
    a single job.
    Return true if they are batchable, otherwise return false.
    ========================================================================= */
-bool cmp_request_single( Request * a, Request * b ) {
+bool cmp_request_single( const vector<Request *> &list, const Request * b ) {
+	const Request *a = list.front();
 	if ( strcmp( a->input_line[3], "1" ) ||
 		 strcmp( b->input_line[3], "1" ) ||
 		 strcmp( a->input_line[2], b->input_line[2] ) ) {
@@ -1346,7 +1348,7 @@ int thread_cream_job_status( Request **reqlist )
 			 it != reqids.end(); it++ ) {
 
 			char *msg = escape_spaces(ex.what());
-			enqueue_result( (*it) + " CREAM_Job_Start\\ Error:\\ " + msg );
+			enqueue_result( (*it) + " CREAM_Job_Status\\ Error:\\ " + msg );
 			free(msg);
 		}
 		return 1;
@@ -2233,12 +2235,13 @@ void process_request( char **input_line )
    batchable_pair: Are these two requests similar enough that they
    can be batched together?
    ========================================================================= */
-bool is_a_batchable_pair(Request * a, Request * b) {
-	if( a == NULL || b == NULL) {
-		internal_error("is_a_batchable_pair passed a NULL pointer");
+bool is_a_batchable_set( const vector<Request*> &list, const Request *b ) {
+	const Request *a = list.front();
+	if ( a == NULL || b == NULL ) {
+		internal_error("is_a_batchable_set passed a NULL pointer");
 	}
 	if(a->bhandler == NULL && b->bhandler == NULL) {
-		internal_error("is_a_batchable_pair passed all NULL bhandler");
+		internal_error("is_a_batchable_set passed all NULL bhandler");
 	}
 	if(a->bhandler != b->bhandler) { // Not the same command; impossible
 		return false;
@@ -2250,7 +2253,7 @@ bool is_a_batchable_pair(Request * a, Request * b) {
 		return false;
 	}
 	if(a->requestcomp) {
-		return a->requestcomp(a,b);
+		return a->requestcomp(list,b);
 	}
 	return true;
 }
@@ -2287,7 +2290,7 @@ void *worker_main(void * /*ignored*/)
 				int size = requestQueue.size()+1;//+1 = we pop_fronted earlier
 				for(ReqDeque::iterator it = requestQueue.begin();
 					it != requestQueue.end(); ) {
-					if(is_a_batchable_pair(req, *it)) {
+					if(is_a_batchable_set(rv, *it)) {
 						rv.push_back(*it);
 						it = requestQueue.erase(it);
 					} else {

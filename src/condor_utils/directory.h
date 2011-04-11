@@ -244,7 +244,7 @@ private:
 	struct _finddata_t filedata;
 #else
 	condor_DIR *dirp;
-	priv_state setOwnerPriv( const char* path );
+	priv_state setOwnerPriv( const char* path, si_error_t &err );
 	uid_t owner_uid;
 	gid_t owner_gid;
 	bool owner_ids_inited;
@@ -255,16 +255,8 @@ private:
 // when the class instance is deleted
 class DeleteFileLater {
  public:
-	DeleteFileLater (const char * _name) {
-		filename = _name?strdup(_name):NULL;
-	}
-
-	~DeleteFileLater () {
-		if (filename) {
-			unlink(filename);
-			free (filename);
-		}
-	}
+	DeleteFileLater (const char * _name);
+	~DeleteFileLater ();
  protected:
 	char * filename;
 };

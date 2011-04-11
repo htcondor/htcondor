@@ -31,12 +31,30 @@ if (WITH_KRB5)
 			# Just so it is noted this is a complete and total hack build of an arcane 
 			# version of krb5, this is such a terrible practice it gives me chills.  b4 we 
 			# used to error out and go about our marry way.  OMG.
+			#
+			# TJ: krb5 has _TONS_ of warnings but since we can't fix them
+			# we'll just make them shut up instead. 
+			#   4002 too many actual parameters for macro
+			#   4005 macro redefinition
+			#   4013 function undefined assuming extern returning int
+			#   4018 signed/unsigned mismatch
+			#   4028 formal parameter different from declaration
+			#   4047 different in levels of indirection
+			#   4090 different 'const' qualifiers
+			#   4091 ignored on left of 'type' when no variable is declared
+			#   4101 ureferenced local variable
+			#   4102 unreferenced label
+			#   4133 function : incompatible types
+			#   4146 unary minus operator applied to unsigned type, result still unsigned.
+			#   4244 conversion from 'type' to 'type', possible loss of data
+			#   4700 uninitialized local variable
+			#   4996 is use of obsolete posix names for functions
 
 			set (KRB5_PATCH cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.pre.h src/include/win-mac.h )
 			set (KRB5_CONFIGURE cp ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.in src/appl/gssftp/ftp/Makefile.in )
 			set (KRB5_MAKE cd src \r\n
 						   nmake -f Makefile.in prep-windows \r\n 
-			               nmake NODEBUG=1)
+			               nmake NODEBUG=1 "DEFS=-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_NON_CONFORMING_SWPRINTFS -wd4002 -wd4005 -wd4013 -wd4018 -wd4028 -wd4047 -wd4090 -wd4091 -wd4101 -wd4102 -wd4133 -wd4146 -wd4244 -wd4700 -wd4996")
 
 			# Something is wrong with the default install (make install suck-o)
 			set (KRB5_INSTALL cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${EXTERNAL_STAGE}/include/win-mac.h \r\n

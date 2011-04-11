@@ -1,3 +1,21 @@
+/***************************************************************
+ *
+ * Copyright (C) 2010, John M. Knoeller
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
 #pragma once
 
 #ifndef FNEXPORT
@@ -100,13 +118,13 @@ HRESULT FNEXPORT HaryList_InsertList (
 INLINE LPVOID HaryList_AllocItem(HARYLIST hlst, LONG cbItem) {
 	DASSERT(PCARYLIST_PTR(hlst)->cbItem == sizeof(void*));
 	DASSERT(PCARYLIST_PTR(hlst)->fdwOptions & ARYLIST_OPT_F_GPTRS);
-	return (LPVOID)GlobalAllocPtr(GPTR, cbItem);
+	return (LPVOID)malloc(cbItem);
 }
 
 INLINE void HaryList_FreeItem(HARYLIST hlst, LPVOID pvItem) {
 	DASSERT(PCARYLIST_PTR(hlst)->cbItem == sizeof(void*));
 	DASSERT(PCARYLIST_PTR(hlst)->fdwOptions & ARYLIST_OPT_F_GPTRS);
-	GlobalFreePtr(pvItem);
+	free(pvItem);
 }
 
 INLINE HRESULT HaryList_InsertItemCopy(HARYLIST hlst, LONG ix, LPCVOID pvItem) {
@@ -348,7 +366,7 @@ HRESULT PtrVector_Iterate (HARYLIST hlst, HRESULT (CALLBACK *pfn)(T, LPARAM), LP
 
 #define DivRU(x, y)     (((x) + ((y) - 1)) / (y))
 #define DivRN(x, y)     (((x) + ((y) / 2)) / (y))
-
+INLINE DWORD ALIGN(SIZE_T cb, SIZE_T cbAlign) { return (DWORD)( (cb + (cbAlign - 1)) & ~(cbAlign - 1) );}
 
 HRESULT FNEXPORT HaryList_Create (
     PHARYLIST phlst,
@@ -366,7 +384,7 @@ HRESULT FNEXPORT HaryList_Create (
 	else
 	{
 		*phlst = NULL;
-		plst = (PARYLIST)GlobalAllocPtr(GPTR, sizeof(*plst));
+		plst = (PARYLIST)malloc(sizeof(*plst));
 	}
 	if ( ! plst)
 		return E_OUTOFMEMORY;
@@ -376,7 +394,7 @@ HRESULT FNEXPORT HaryList_Create (
         InitializeCriticalSection(&plst->cs);
 
     const LONG cbAlign = NUMBYTES(DWORD);
-    cbItem = SfAlign(cbItem, cbAlign);
+    cbItem = ALIGN(cbItem, cbAlign);
 
     if (cGrowBy <= 0)
         cGrowBy = 4;
@@ -389,7 +407,7 @@ HRESULT FNEXPORT HaryList_Create (
 	plst->cGrowBy    = cGrowBy;
 
     LONG cb = cAllocate * cbItem;
-    plst->pvList = (void**)GlobalAllocPtr(GPTR, cb);
+    plst->pvList = (void**)malloc(cb);
 
 	if (fdwOptions & ARYLIST_OPT_F_EMBEDDED)
 	{
@@ -399,7 +417,7 @@ HRESULT FNEXPORT HaryList_Create (
     DASSERT(plst->pvList);
     if ( ! plst->pvList)
     {
-        GlobalFreePtr(plst);
+        free(plst);
         return E_OUTOFMEMORY;
     }
 
@@ -427,12 +445,12 @@ HRESULT FNEXPORT HaryList_Destroy (HARYLIST hlst)
 				LPVOID pv = ppv[plst->cItems-1];
 				ppv[plst->cItems-1] = NULL;
 				if (pv)
-					GlobalFreePtr(pv);
+					free(pv);
 				--plst->cItems;
 			}
 		}
 
-        GlobalFreePtr(plst->pvList);
+        free(plst->pvList);
         plst->pvList = NULL;
     }
 
@@ -443,7 +461,7 @@ HRESULT FNEXPORT HaryList_Destroy (HARYLIST hlst)
     }
 
 	if ( ! (plst->fdwOptions & ARYLIST_OPT_F_EMBEDDED))
-		GlobalFreePtr(plst);
+		free(plst);
     return S_OK;
 }
 
@@ -467,12 +485,7 @@ HRESULT HaryList_GrowAllocated (
 
     LONG cbNewAlloc = (plst->cAllocated + cDelta) * plst->cbItem;
 
-    // 
-    // GlobalReAllocPtr can fail, will fail so we have to allocate
-    // a whole new buffer and copy the new data to it.
-    //pvNew = (LPVOID)GlobalReAllocPtr(plst->pvList, cb, GMEM_ZEROINIT);
-
-    void** pvNew = (void**)GlobalAllocPtr(GPTR, cbNewAlloc);
+    void** pvNew = (void**)malloc(cbNewAlloc);
     if ( ! pvNew)
     {
         hr = E_OUTOFMEMORY;
@@ -480,7 +493,7 @@ HRESULT HaryList_GrowAllocated (
     }
 
     RtlCopyMemory(pvNew, plst->pvList, plst->cAllocated * plst->cbItem);
-    GlobalFreePtr(plst->pvList);
+    free(plst->pvList);
 
     plst->pvList = pvNew;
     plst->cAllocated += cDelta;

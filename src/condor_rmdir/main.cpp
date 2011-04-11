@@ -1,3 +1,22 @@
+/***************************************************************
+ *
+ * Copyright (C) 2011, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
 #define UNICODE
 #include <windows.h>
 #include <windowsx.h>
@@ -8,6 +27,12 @@
 
 #define BPRINT_INCLUDE_CODE 1
 #include "bprint.h"
+
+#ifdef UNICODE
+#define TokenizeString (LPCTSTR*) CommandLineToArgvW
+#else
+#include "tokenize.h"
+#endif
 
 #include "condor_rmdir.h"
 
@@ -55,27 +80,6 @@ int CompareMemory(const char * pb1, const char * pb2, int cb)
    return 0;
 }
 
-extern "C" {
-   #pragma function(memset, memcpy)
-   void* _cdecl memset(void * ptr, int val, size_t cb) {
-   byte * p = (byte*)ptr;
-   while (cb > 0) {
-      --cb;
-      *p++ = val;
-      }
-   return ptr;
-   }
-   void * _cdecl memcpy(void * dst, const void * src, size_t cb) {
-      byte * d = (byte*)dst;
-      const byte * s = (const byte*)src;
-      while (cb > 0) {
-        --cb;
-        *d++ = *s++;
-      }
-   return dst;
-   }
-};
-
 #ifdef D_ALWAYS
 /*+
  *
@@ -119,8 +123,6 @@ void ReportError(int err, LPCSTR szContext, LPCTSTR pszPath)
    bprint_EndLine(bp);
 }
 
-//#define OPT_F_SUBDIRS  0x0001
-
 typedef struct _OPENLIST_FILE {
 
    INT             eFileType;               // app specific type. not used by explorer
@@ -138,8 +140,7 @@ typedef struct _OPENLIST_FILE {
          DWORD     fGroup              : 1;
          DWORD     fFirstInGroup       : 1;
          DWORD     fLastInGroup        : 1;
-         DWORD     fFileInfo           : 1;  // FileIO info is filled in.
-         DWORD     fReserved           : 7;
+         DWORD     fReserved           : 13;
          DWORD     fUser               : 16; // user flags (openlist does not look at them).
 
          };
@@ -191,13 +192,6 @@ static struct _app_globals {
 
    } g_app = {0};
 
-#ifdef UNICODE
-#define TokenizeString _TokenizeStringW
-extern LPCTSTR * _TokenizeStringW (LPCTSTR pszInput, LPUINT  pcArgs);
-#else
-#define TokenizeString _TokenizeStringA
-extern LPCTSTR * _TokenizeStringA (LPCTSTR pszInput, LPUINT  pcArgs);
-#endif
 
 /*+
  *
@@ -228,7 +222,7 @@ typedef const struct _cmdtable {
 #define CMDF_FILEOP           2 // Cmd operates on files previously listed on the commandline (FILEOPS create sections)
 #define CMDF_OPT              4 // Cmd is an option for all fileops in it's section. 
 
-BOOL SfApp_LookupCmdLineArg (
+BOOL App_LookupCmdLineArg (
    CMDTABLE    aCmdTable[],
    LPCTSTR     pszArg,
    CMDSWITCH * pcmd)
@@ -249,7 +243,7 @@ BOOL SfApp_LookupCmdLineArg (
  *
  *-===============================================================*/
 
-#define APP_CMD_SEGMENT         0  // MUST BE 0 !!
+#define APP_CMD_SEPARATOR       0
 
 #define APP_CMD_NOGUI           1  // don't bring up the main window.
 #define APP_CMD_NOLOGO          2  // don't bring up the splash
@@ -298,7 +292,7 @@ static const CMDTABLE g_aAppCommands[] = {
  *
  *-===============================================================*/
 
-HRESULT SfApp_CookArgList (
+HRESULT App_CookArgList (
    HCMDLIST * phlst,
    LPCTSTR    aArgs[],
    UINT       ixFirst,  // first arg to execute
@@ -389,7 +383,7 @@ HRESULT SfApp_CookArgList (
 
          // lookup the argment
          //
-         if ( ! SfApp_LookupCmdLineArg (g_aAppCommands, pszArg, &cmd))
+         if ( ! App_LookupCmdLineArg (g_aAppCommands, pszArg, &cmd))
             {
             bprintfl("%s is not a valid argument", pszArg);
             hr = E_INVALIDARG;
@@ -466,49 +460,6 @@ bail:
 }
 
 /*+
- *  Break command line into segments.  so that renders get grouped
- *  with opens that come before them.  basically, once we see a render
- *  we treat the next open as a 'start of segment'
- *
- *-===============================================================*/
-
-static HRESULT SfApp_SegmentCmds (
-   HCMDLIST hlstCmds)
-{
-   BOOL fSegmentNextOpen = FALSE;
-
-   LONG cCmds = Vector_GetCount (hlstCmds);
-   for (LONG ii = 0; ii < cCmds; ++ii)
-      {
-      CMDSWITCH * pcmd = Vector_GetItemPtr(hlstCmds, ii);
-      if (APP_CMD_SEGMENT == pcmd->idCmd)
-         {
-         return E_UNEXPECTED;
-         }
-
-      if (APP_CMD_PATH == pcmd->idCmd)
-         {
-         if (fSegmentNextOpen)
-            {
-            // Insert a segment marker. 
-            DASSERT(APP_CMD_SEGMENT == 0);
-            static const CMDSWITCH cmd = {0};
-            Vector_InsertItem<CMDSWITCH> (hlstCmds, ii, cmd);
-            cCmds++; // Increment command count (to account for Segment marker)
-            }
-         fSegmentNextOpen = FALSE;
-         }
-      else if (pcmd->fdwFlags & CMDF_FILEOP)
-         {
-         fSegmentNextOpen = TRUE;
-         }
-      }
-
-   return S_OK;
-}
-
-
-/*+
  *
  *-===============================================================*/
 
@@ -532,7 +483,7 @@ HRESULT OpenList_Add (
    if ( ! polf)
       return E_OUTOFMEMORY;
 
-   SfZeroStruct(polf);
+   ZeroStruct(polf);
    CopyMemory(polf->szPathName, pszPath, cbPath);
    polf->fdwOpen = fdwOpen & 0xFFFF0000;
    polf->lParam  = lParam;
@@ -627,7 +578,6 @@ HRESULT OpenList_Destroy (
 }
 
 
-HRESULT SfApp_ExecuteCommandFile (LPCTSTR pszCommandFile); // Forward ref
 
 static DWORD MergeCmdFlag(LPCTSTR pszParams, DWORD fdwFlag, DWORD fdwOut)
 {
@@ -640,9 +590,8 @@ static DWORD MergeCmdFlag(LPCTSTR pszParams, DWORD fdwFlag, DWORD fdwOut)
 }
 
 
-static HRESULT SfApp_ExecuteCmdSegment (
-   HCMDLIST  hlstCmds,
-   LONG   *  pixSeg)
+static HRESULT App_ExecuteCmds (
+   HCMDLIST  hlstCmds)
 {
    BOOL      fHasFileOp = FALSE;
    HRESULT   hr = S_FALSE; //
@@ -654,18 +603,12 @@ static HRESULT SfApp_ExecuteCmdSegment (
 
    // execute open and general commands from the HLST of commands.
    //
-   LONG ixSegStart = *pixSeg;
-   LONG ixSegEnd = Vector_GetCount (hlstCmds);
    LONG ii;
-   for (ii = ixSegStart; ii < ixSegEnd; ++ii)
+   for (ii = 0; ii < Vector_GetCount (hlstCmds); ++ii)
       {
       CMDSWITCH * pcmd = Vector_GetItemPtr(hlstCmds, ii);
       switch (pcmd->idCmd)
          {
-         case APP_CMD_SEGMENT:
-            ixSegEnd = ii+1;
-            break;
-
          //case APP_CMD_NOGUI:
          //   g_app.fNoUI = TRUE;
          //   break;
@@ -699,7 +642,7 @@ static HRESULT SfApp_ExecuteCmdSegment (
             break;
 
          case APP_CMD_ARGFILE:
-            hr = SfApp_ExecuteCommandFile(pcmd->pszParams);
+            hr = E_NOTIMPL; //App_ExecuteCommandFile(pcmd->pszParams);
             break;
 
          case APP_CMD_PATH:
@@ -747,7 +690,6 @@ static HRESULT SfApp_ExecuteCmdSegment (
          OpenList_Destroy (g_app.hlstOpen);
       }
 
-   *pixSeg = ixSegEnd;
    return hr;
 }
 
@@ -755,147 +697,131 @@ static HRESULT SfApp_ExecuteCmdSegment (
  *
  *-===============================================================*/
 
-HRESULT SfApp_ExecuteArgList (
+HRESULT App_ExecuteArgList (
    LPCTSTR   aArgs[],
    UINT      ixFirst,  // first arg to execute
    UINT      cArgs)    // count of args to execute
 {
-   HCMDLIST  hlstCmds = NULL;
-   HRESULT   hr;
-   //BOOL      fLoadedMedia = FALSE;
-
-   // turn the tokenized arg list into a HLST of commands.
+   // turn the tokenized arg list into a HCMDLIST of commands.
    //
-   hr = SfApp_CookArgList (&hlstCmds, aArgs, ixFirst, cArgs);
+   HCMDLIST  hlstCmds = NULL;
+   HRESULT hr = App_CookArgList (&hlstCmds, aArgs, ixFirst, cArgs);
    if (FAILED(hr) || ! hlstCmds)
       return hr;
 
-   // segment the argument list. this adds APP_CMD_SEGMENT entries
-   // between renders and opens
+   // execute the HCMDLIST
    //
-   SfApp_SegmentCmds(hlstCmds);
+   hr = App_ExecuteCmds(hlstCmds);
 
-   // execute the command list, one segment at a time.
-   //
-   LONG cCmds = Vector_GetCount (hlstCmds);
-   for (LONG ix = 0; IS_WITHIN_RGN(ix,0,cCmds); /* ix increment is implied.. */)
-      {
-      LONG ixNext = ix + 1;
-
-      hr = SfApp_ExecuteCmdSegment(hlstCmds, &ix);
-      if (FAILED(hr))
-         break;
-
-      if (ix < ixNext)
-         {
-         hr = E_UNEXPECTED;
-         break;
-         }
-      }
-
-   // we can free the command list now.
+   // and now free the HCMDLIST
    //
    Vector_Delete (hlstCmds);
 
    return hr;
 }
 
-/*+
- *
- *-===============================================================*/
-
-HRESULT SfApp_ExecuteCommandFile (
-   LPCTSTR pszCommandFile)
-{
-   if ( ! pszCommandFile)
-      {
-      g_app.fUseage = ! g_app.fNoLogo;
-      bprintfl("Error: no command file specified.");
-      return E_INVALIDARG;
-      }
-
-   HANDLE hFile;
-   hFile = CreateFile(pszCommandFile, GENERIC_READ, FILE_SHARE_READ, NULL,
-                      OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-   if ( ! hFile || INVALID_HANDLE_VALUE == hFile)
-      {
-      g_app.fUseage = ! g_app.fNoLogo;
-      bprintfl("Error: could not open command file \"%s\"", pszCommandFile);
-      return E_FILEOPEN;
-      }
-
-   DWORD   cb = GetFileSize(hFile, NULL);
-   LPVOID  pszCommand = GlobalAllocPtr(GPTR, cb + 2);
-   if ( ! pszCommand)
-      {
-      VERIFY(CloseHandle(hFile));
-      return E_OUTOFMEMORY;
-      }
-
-   LPCTSTR * aArgsFile = NULL;
-   UINT      cArgsFile = 0;
-
-   if (ReadFile (hFile, pszCommand, cb, &cb, NULL))
-      {
-      ((LPBYTE)pszCommand)[cb] = 0;   // null terminate the file.
-      ((LPBYTE)pszCommand)[cb+1] = 0; //
-
-      // parse the file as if it were a command line.
-      //
-      //aArgsFile = SfApp_TokenizeCommandLine ((LPCTSTR)pszCommand, &cArgsFile);
-      aArgsFile = TokenizeString ((LPCTSTR)pszCommand, &cArgsFile);
-      }
-   GlobalFreePtr (pszCommand);
-   VERIFY(CloseHandle (hFile));
-
-   HRESULT hr = S_FALSE; // file was empty
-   if (aArgsFile)
-      {
-      // load and parse command file here.
-      hr = SfApp_ExecuteArgList (aArgsFile, 0, cArgsFile);
-      GlobalFreePtr (aArgsFile);
-      }
-
-   return hr;
-}
 
 /*+
  *
  *-===============================================================*/
 
 
-HRESULT SfApp_ExecuteCommandLine (
+HRESULT App_ExecuteCommandLine (
    LPCTSTR pszCmdLine,
    BOOL    fFirstArgIsExe)
 {
-   LPCTSTR * aArgs;
-   UINT      cArgs;
    HRESULT   hr = S_FALSE; // there were no args...
 
-   //aArgs = SfApp_TokenizeCommandLine (pszCmdLine, &cArgs);
-   aArgs = TokenizeString (pszCmdLine, &cArgs);
+   int cArgs = 0;
+   LPCTSTR * aArgs = TokenizeString (pszCmdLine, &cArgs);
    if (aArgs)
       {
       LPCTSTR pszArg = aArgs[0];
       if (*pszArg == '@' || *pszArg == '-' || *pszArg == '/')
          fFirstArgIsExe = FALSE;
 
-      UINT ixFirst = fFirstArgIsExe ? 1 : 0;
+      int ixFirst = fFirstArgIsExe ? 1 : 0;
       if (cArgs > ixFirst)
          {
-         hr = SfApp_ExecuteArgList (aArgs, ixFirst, cArgs - ixFirst);
+         hr = App_ExecuteArgList (aArgs, ixFirst, cArgs - ixFirst);
          }
-      GlobalFreePtr (aArgs);
+
+      HeapFree(GetProcessHeap(), 0, aArgs);
       }
 
    return hr;
 }
 
-// these are in libctiny
-extern const TCHAR * _pszModuleName; // global module name
-extern const TCHAR * _pszModulePath; // global path name
-extern void __cdecl _SetModuleInfo( void ); // the function that initializes them.
+const TCHAR * _pszModuleName; // global module name
+const TCHAR * _pszModulePath; // global path name
+
+// allocate memory from the heap and read in the module filename, then split it
+// into path and filename and store the results as global pointers. note
+// that this allocation will NEVER be freed. 
+//
+void App_SetModuleInfo(void)
+{
+   TCHAR * pszBase =(TCHAR*)malloc(sizeof(TCHAR) * (MAX_PATH+3));
+   if ( ! pszBase)
+      {
+	  _pszModulePath = _pszModuleName = TEXT("");
+	  return;
+      }
+
+   TCHAR * psz = pszBase;
+   *psz++ = 0; // so we have room for a "" path if the module filename has no path
+   int cch = GetModuleFileName(NULL, psz, MAX_PATH+1);
+
+   _pszModuleName = psz;
+   _pszModulePath = psz;
+
+   // if module path starts with N:, then skip over that and any \ that
+   // follow
+   if ((psz[0] & ~0x20) >= 'A' && (psz[0] & ~0x20) <= 'Z' && psz[1] == ':')
+      {
+      psz += 2;
+      while (psz[0] == '\\')
+         ++psz;
+      _pszModuleName = psz;
+      }
+
+   // scan for path separators (\) and set the name to point to
+   // the first character after it. when this loop is done, this
+   // will result in name pointing to the first character after
+   // the last path separator.
+   //
+   while (*psz)
+      {
+      if (*psz == '\\')
+        _pszModuleName = psz+1;
+      psz = CharNext(psz);
+      }
+
+   // if the name still points to the start of the string, there is no path.
+   // so point _pszModulePath at the \0 that we reserved at the beginning
+   // of the allocation. 
+   //
+   if (_pszModuleName == _pszModulePath)
+      _pszModulePath = pszBase;
+   else
+      {
+      if (_pszModuleName-2 >= _pszModulePath)
+         {
+         // we need to be careful not to delete \ folling a drive letter,
+         // if that happens, we have to move the name by 1 character
+         // so there is room for a null terminator after N:\ and before
+         // the name.
+         if (_pszModuleName[-2] == ':' &&
+             _pszModuleName[-1] == '\\')
+            {
+            RtlMoveMemory((void*)(_pszModuleName+1), (void*)(_pszModuleName),
+                          sizeof(TCHAR) *((cch+1) - (_pszModuleName - _pszModulePath)));
+            _pszModuleName += 1;
+            }
+         ((TCHAR *)_pszModuleName)[-1] = 0;
+         }
+      }
+}
 
 HRESULT App_Early_Initialize()
 {
@@ -913,7 +839,7 @@ HRESULT App_Early_Initialize()
 
    // this function initializes the global module name and path name
    //
-   _SetModuleInfo();
+   App_SetModuleInfo();
 
    return hr;
 }
@@ -921,8 +847,6 @@ HRESULT App_Early_Initialize()
 
 void App_Cleanup(bool fFlush)
 {
-   // CoUninitialize();
-
    bprint_Terminate(fFlush);
    if (g_bprintErr.hOut)
       {
@@ -935,12 +859,12 @@ void App_Cleanup(bool fFlush)
    bprint_Terminate(g_bprintErr, false);
 }
 
-int __cdecl main(int argc, const char * argv[])
+int __cdecl main()
 {
    HRESULT hr = App_Early_Initialize();
    if (SUCCEEDED(hr))
       {
-      hr = SfApp_ExecuteCommandLine (GetCommandLine(), TRUE);
+      hr = App_ExecuteCommandLine (GetCommandLine(), TRUE);
       if (FAILED(hr))
          g_app.fUseage = TRUE;
       }
@@ -953,9 +877,6 @@ int __cdecl main(int argc, const char * argv[])
 
    if (g_app.fUseage)
       {
-      //echo argv.
-      //for (int ii = 0; ii < argc; ++ii)
-      //   bprintf("arg[%d] = %s\n", ii, argv[ii]);
       LPCTSTR pszAppName = _pszModuleName;
 
       bprintf("\nuseage: %s [/? | /HELP] [@{argfile}] [args] <dir>\n\n", pszAppName);
@@ -985,17 +906,3 @@ int __cdecl main(int argc, const char * argv[])
    App_Cleanup(SUCCEEDED(hr));
    return (int)hr;
 }
-
-/*
-#pragma comment(linker, "/ENTRY:_tmainCRTStartup")
-//#pragma comment(linker, "/OPT:NOWIN98")
-//#pragma comment(linker, "/ALIGN:512")
-//#pragma comment(linker, "/defaultlib:kernel32.lib")
-
-extern "C" {
-extern void __cdecl _tmainCRTStartup( void );
-int __cdecl _tmain(int argc, char * argv[]);
-}
-
-int __cdecl _tmain(int argc, char * argv[])
-*/

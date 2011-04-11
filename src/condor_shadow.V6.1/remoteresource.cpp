@@ -1789,7 +1789,7 @@ RemoteResource::requestReconnect( void )
 
 		// And also put in the request the ATTR_TRANS_SOCK and
 		// the ATTR_TRANS_KEY --- the starter will need these two
-		// atttribute value in order to re-establish the FileTransfer
+		// attribute value in order to re-establish the FileTransfer
 		// objects.  To get the values for these, just instantiate a 
 		// FileTransfer server object right here.  No worries if
 		// one already exists, the FileTransfer object will just
@@ -1932,6 +1932,10 @@ RemoteResource::setRemoteProxyRenewTime()
 		// expiration time of the delegated proxy.  To know what it
 		// actually is, we would need to have a better interface for
 		// obtaining that information from the file transfer object.
+
+	if( proxy_path.IsEmpty() ) {
+		return;
+	}
 
 	time_t desired_expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
 	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());

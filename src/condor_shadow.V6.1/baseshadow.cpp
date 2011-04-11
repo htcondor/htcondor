@@ -773,7 +773,21 @@ void BaseShadow::initUserLog()
 
 	if ( getPathToUserLog(jobAd, logfilename) ) {
 		result = uLog.initialize (owner.Value(), domain.Value(), logfilename.Value(), cluster, proc, 0, gjid);
+		// It is important to NOT ignore a failure to initialize the user log,
+		// since if we fail to initialize here, then all event logging 
+		// in the shadow from this point forward are effectively ignored.
+		// So if we fail to initialize the user log, put this job on hold.
+		// Future work: it would be good to pass use the error stack to 
+		// figure out -why- the initialization failed, allowing the shadow
+		// to retry automatically -vs- go on hold depending upon the details
+		// of the failure.
 		if ( result == false ) {
+			MyString hold_reason;
+			hold_reason.sprintf(
+				"Failed to initialize user log to %s", logfilename.Value());
+			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
+			holdJob(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+			// holdJob() should not return, but just in case it does EXCEPT
 			EXCEPT("Failed to initialize user log to %s",logfilename.Value());
 		}
 		if (jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)

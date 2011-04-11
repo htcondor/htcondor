@@ -120,10 +120,13 @@ extern const char * const  ATTR_DELTACLOUD_PROVIDER_ID;
 extern const char * const  ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES;
 extern const char * const  ATTR_DELTACLOUD_RETRY_TIMEOUT;
 extern const char * const  ATTR_DELTACLOUD_USERNAME;
-extern const char * const  ATTR_DELTACLOUD_PASSWORD;
+extern const char * const  ATTR_DELTACLOUD_PASSWORD_FILE;
 extern const char * const  ATTR_DELTACLOUD_IMAGE_ID;
 extern const char * const  ATTR_DELTACLOUD_REALM_ID;
 extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE;
+extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU;
+extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY;
+extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE;
 extern const char * const  ATTR_DELTACLOUD_KEYNAME;
 extern const char * const  ATTR_DELTACLOUD_USER_DATA;
 extern const char * const  ATTR_DESTINATION;
@@ -830,6 +833,15 @@ extern const char * const ATTR_COMMITTED_SLOT_TIME;
 extern const char * const ATTR_HASH_NAME;
 extern const char * const ATTR_AUTHENTICATED_IDENTITY;
 extern const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME;
+
+extern const char * const ATTR_TRANSFER_QUEUE_NUM_UPLOADING;
+extern const char * const ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING;
+extern const char * const ATTR_TRANSFER_QUEUE_MAX_UPLOADING;
+extern const char * const ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING;
+extern const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD;
+extern const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD;
+extern const char * const ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME;
+extern const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

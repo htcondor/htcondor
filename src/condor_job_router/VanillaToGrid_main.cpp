@@ -26,7 +26,6 @@
 #include "condor_attributes.h"
 #include "basename.h"
 #define WANT_CLASSAD_NAMESPACE
-#undef open
 #include "classad/classad_distribution.h"
 
 #include <libgen.h>

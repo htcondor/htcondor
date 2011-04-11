@@ -119,10 +119,8 @@ JobServerObject::GetJobAd ( std::string key,
     ClassAd classAd;
     ( *element ).second->GetFullAd ( classAd );
     // little cheat for ad problems with history lookups
-    char* str = NULL;
-    if ( !classAd.LookupString("JOB_AD_ERROR", str) )
+    if ( classAd.LookupString("JOB_AD_ERROR", text) )
     {
-	text = str;
         return STATUS_USER + 1;
     }
 
@@ -209,9 +207,8 @@ JobServerObject::FetchJobData(std::string key,
 	}
 
 	ClassAd ad;
-	char* str = NULL;
 	( *element ).second->GetFullAd ( ad );
-	if ( !ad.LookupString("JOB_AD_ERROR", str)  ) {
+	if ( ad.LookupString("JOB_AD_ERROR", text)  ) {
 		dprintf(D_ALWAYS,
 				"Error checking ClassAd for user priv on key = '%d.%d'\n",
 				id.cluster, id.proc);

@@ -152,7 +152,7 @@ ClassAdLogReader::IncrementalLoad()
  */
 bool
 ClassAdLogReader::ProcessLogEntry(ClassAdLogEntry *log_entry,
-							  ClassAdLogParser */*caLogParser*/)
+							  ClassAdLogParser * /*caLogParser*/)
 {
 
 	switch(log_entry->op_type) {

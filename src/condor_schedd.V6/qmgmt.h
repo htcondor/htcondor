@@ -102,6 +102,7 @@ bool OwnerCheck2( ClassAd *ad, const char *test_owner, char const *job_owner=NUL
 bool BuildPrioRecArray(bool no_match_found=false);
 void DirtyPrioRecArray();
 extern ClassAd *dollarDollarExpand(int cid, int pid, ClassAd *job, ClassAd *res, bool persist_expansions);
+bool rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad);
 ClassAd* GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions);
 ClassAd* GetNextJobByCluster( int, int );
 
