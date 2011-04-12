@@ -493,12 +493,12 @@ period matches a group name,
 as described in the next section on group quotas.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:group-quotas}Group Quotas}
+\subsection{\label{sec:group-quotas}Hierarchical Group Quotas}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{negotiation!by group}
 \index{groups!quotas}
-\index{quotas!for a group}
+\index{quotas!hierarchical quotas for a group}
 The use of group quotas modifies the negotiation for 
 available resources (machines) within a Condor pool.
 This solves the difficulties inherent when
@@ -529,6 +529,12 @@ the desired policy allows users within the physics group to have
 preference on up to twenty of the machines within the pool,
 and the machines can be any of the machines that are available.
 
+The implementation of quotas is hierarchical,
+such that quotas may be described for groups, subgroups,
+sub subgroups, etc.  
+The hierarchy is described by adherence to a naming scheme
+set up in advance.
+
 A quota for a set of users requires an identification of
 the set; members are called group users.
 Jobs under the group quota
@@ -536,146 +542,266 @@ specify the group user with the
 \AdAttr{AccountingGroup} job ClassAd attribute.
 This is the same attribute as is used with group accounting.
 
-The submit file syntax for specifying a group user includes 
-both a group name and a user name.
-The syntax is
+The submit description file syntax for specifying a job is to be
+part of a group includes 
+a series of names separated by the period character ('\Expr{.}').
+Example syntax that shows only 2 levels of a (limited) hierarchy is
 \begin{verbatim}
-  +AccountingGroup = "<group>.<user>"
+  +AccountingGroup = "<group>.<subgroup>.<user>"
 \end{verbatim}
-The \verb@group@ is a name chosen for the group.
+Both \verb@<group>@ and \verb@<subgroup>@ are names chosen for the group.
 Group names are case-insensitive for negotiation.
-Group names are not required to begin with the
+The topmost level group name is not required to begin with the
 string \AdStr{group\_},
 as in the examples
 \AdStr{group\_physics.newton} and \AdStr{group\_chemistry.curie},
 but it is a useful convention,
-because group names must not conflict with user names.
-The period character between the group and the user name is
-a required part of the syntax.  \Note  An accounting
-group value lacking the period will cause the job to not 
-be considered part of the
-group when negotiating, even if the group name has a quota.
+because group names must not conflict with subgroup or user names.
+Note that a job specifying a value for the \Attr{AccountingGroup}
+ClassAd attribute that lacks at least one period in the specification
+will cause the job to not be considered part of a
+group when negotiating, even if the group name 
+(highest within the hierarchy) has a quota.
 Furthermore, there will be no warnings that the group quota is not
 in effect for the job, as this syntax defines group accounting.
 
 Configuration controls the order of negotiation for
-groups and individual users,
+groups, subgroups within the hierarchy defined, and individual users,
 as well as sets quotas
 (preferentially allocated numbers of machines)
 for the groups.
-A declared number of slots specifies the quota for each group
-(see \MacroNI{GROUP\_QUOTA\_<groupname>}
-in section~\ref{param:GroupQuotaGroupname}).
-The sum of the quotas for all groups should typically be less than or equal to
-the number of slots in the entire pool, but there are situations where it
-can make sense to have the sum be greater than the size of the pool.
-An example of this is where large quotas can be used to give 
-some groups a chance to
-claim all slots before other groups have a chance to claim any.
-If the sum is less than the number of
-slots in the entire pool,
-the slots are 
-allocated to the \verb@none@ group,
-comprised of the general
-users not submitting jobs in a group.
 
-Where group users are specified for jobs,
-accounting is done per group user.
-It is no longer done by group, or by individual user.
+Quotas are categorized as either static or dynamic.
+A static quota specifies an integral numbers of machines (slots),
+independent of the size of the pool.
+A dynamic quota specifies a percentage of machines (slots) calculated
+based on the current number of machines in the pool.
+It is intended that only one of a static or a dynamic quota is defined 
+for a specified group.
+If both are defined, then the static quota is implemented, 
+and the dynamic quota is ignored.
 
-Negotiation is changed when group quotas are used.
-Condor negotiates first for defined groups,
-and then for independent job submitters.
-Given jobs belonging to different groups,
-Condor negotiates first for the group 
-currently utilizing the smallest percentage of machines
-in its quota.
-After this,
-Condor negotiates for the group 
-currently utilizing the second smallest percentage of machines
-in its quota.
-The last group will be the one with the highest percentage
-of machines in its quota.
-As an example, again use the imaginary pool and groups 
-given above.
-If various users within \verb@group_physics@ have
-jobs running on 15 computers, 
-then the physics group has 75\% of the 
-machines within its quota.
-If various users within \verb@group_chemistry@ have
-jobs running on 5 computers, 
-then the chemistry group has 50\% of the 
-machines within its quota.
-Negotiation will take place for the chemistry group first.
-For independent job submissions (those not part of any group),
-the classic Condor user fair share algorithm still applies.
-
-Note that there is no verification that a user is a member of
-the group that he claims.
-We rely on societal pressure for enforcement. 
-
-Configuration variables affect group quotas.
-See section~\ref{sec:Negotiator-Config-File-Entries} for detailed
-descriptions of the variables mentioned.
-Group names that may be given quotas to be used in
-negotiation are listed in the \Macro{GROUP\_NAMES} macro.
-The names chosen must not conflict with Condor user names.
-Quotas (by group) are defined in numbers of machine slots.
-Each group may be assigned an initial value for its
-user priority factor with the \Macro{GROUP\_PRIO\_FACTOR\_<groupname>}
-macro.
-If a group is currently allocated its entire quota of machines,
-and a group user has a submitted job that is not running,
-the \Macro{GROUP\_AUTOREGROUP} macro allows the job to be
-considered a second time within the negotiation cycle
-along with all other individual users' jobs.
-The user name that is used for accounting and prioritization purposes
-is still the group user as specified by \AdAttr{AccountingGroup} in
-the job ClassAd.
-
+\begin{description}
+\item[Static Quotas]
+In the hierarchical implementation,
+there are two cases defined here,
+to specify for the allocation of machines where
+there is both a group and a subgroup.
+In the first case, the sum for the numbers of machines
+within all of a group's subgroups totals to fewer than the specification for
+the group's static quota.
+For example:
 \begin{verbatim}
-  ####################
-  #
-  # Example 1
-  # Configuration for group quotas
-  #
-  ####################
-
-  GROUP_NAMES = group_physics, group_chemistry
-  GROUP_QUOTA_group_physics = 20
-  GROUP_QUOTA_group_chemistry = 10
-  GROUP_PRIO_FACTOR_group_physics = 1.0
-  GROUP_PRIO_FACTOR_group_chemistry = 3.0
-  GROUP_AUTOREGROUP_group_physics = FALSE
-  GROUP_AUTOREGROUP_group_chemistry = TRUE
+  GROUP_QUOTA_group_physics = 100
+  GROUP_QUOTA_group_physics.experiment1 = 20
+  GROUP_QUOTA_group_physics.experiment2 = 70
 \end{verbatim}
+In this case, the unused, surplus quota of 10 machines is assigned to
+the higher level with in the hierarchy.  
 
-This configuration specifies that the \verb@group_physics@ users will
-get 20 machines and the \verb@group_chemistry@ users will get
-ten machines.  \verb@group_physics@ users will never get more than
-20 machines; however, \verb@group_chemistry@ users can potentially get
-more than ten machines because \MacroNI{GROUP\_AUTOREGROUP\_chemistry}
-is true.
-This could happen, for example, if there are only 15 jobs
-submitted by \verb@group_physics@ users.
-Also, the default priority
-factor for the physics groups is 1.0, and the default priority factor
-for the chemistry group is 3.0.
-
-
+In the second case, the specification for the numbers of machines
+of a set of subgroups totals to more than the specification for
+the group's quota.
+For example:
 \begin{verbatim}
-  ####################
-  #
-  # Submit description file for group quota user
-  #
-  ####################
-  ...
-  +AccountingGroup = "group_physics.newton"
-  ...
+  GROUP_QUOTA_group_chemistry = 100
+  GROUP_QUOTA_group_chemistry.lab1 = 40
+  GROUP_QUOTA_group_chemistry.lab2 = 80
 \end{verbatim}
+In this case, 
+a warning is written to the log for the \Condor{negotiator} daemon,
+and each of the subgroups will have their static quota scaled.
+In this example, the ratio 100/120 scales each subgroup.
+\Expr{lab1} will have a revised (floating point) quota of 33.333 machines,
+and \Expr{lab2} will have a revised (floating point) quota of 66.667 machines.
+As numbers of machines are always integer values,
+the floating point values are truncated for quota allocation.
+Fractional remainders resulting from the truncation are summed
+and assigned to the next higher level within the group hierarchy.
 
-This submit file specifies that this job is to be negotiated as part of
-the \verb@group_physics@ group and that the user is newton.
-Remember that
-both the group name and the user name are required for the group quota
-to take effect.
+\item[Dynamic Quotas]
+A dynamic quota specifies a percentage of machines (slots) calculated
+based on the current number of machines in the pool.
+The quota is specified for a group (subgroup, etc.) by a floating point
+value in range 0.0 to 1.0 (inclusive).
+
+Like static quota specification, there are two cases defined:
+when the dynamic quotas of all sub groups of a specific group
+sum to a fraction less than 1.0,
+and when the dynamic quotas of all sub groups of a specific group
+sum to greater than 1.0.
+
+Here is an example configuration in which dynamic group quotas are assigned for
+a single group and its subgroups.
+\begin{verbatim}
+  GROUP_QUOTA_DYNAMIC_group_econ = .6
+  GROUP_QUOTA_DYNAMIC_group_econ.project1 = .2
+  GROUP_QUOTA_DYNAMIC_group_econ.project2 = .15
+  GROUP_QUOTA_DYNAMIC_group_econ.project3 = .2
+\end{verbatim}
+The sum of dynamic quotas for the subgroups is .55, 
+which is less than the parent group, which has a dynamic quota of .6.
+If the pool has 100 slots, 
+then the \Expr{project1} subgroup is assigned a quota that
+equals (100)(.6)(.2) = 12 machines. 
+The \Expr{project2} subgroup is assigned a quota that
+equals (100)(.6)(.15) = 9 machines. 
+The \Expr{project3} subgroup is assigned a quota that
+equals (100)(.6)(.2) = 12 machines. 
+If the calculated dynamic quota of the subgroups resulted in non integer
+numbers of machines,
+integer numbers of machines are assigned based on the truncation of the
+non integer dynamic group quota.
+The unused, surplus quota of machines resulting from
+fractional remainders resulting from the truncation are summed
+and assigned to the next higher level within the group hierarchy.
+
+Here is another example configuration in which dynamic group quotas 
+are assigned for a single group and its subgroups.
+\begin{verbatim}
+  GROUP_QUOTA_DYNAMIC_group_stat = .5
+  GROUP_QUOTA_DYNAMIC_group_stat.project1 = .2
+  GROUP_QUOTA_DYNAMIC_group_stat.project2 = .3
+  GROUP_QUOTA_DYNAMIC_group_stat.project3 = .2
+\end{verbatim}
+In this case, the sum of dynamic quotas for the subgroups is .7, 
+which is greater than the parent group, at .5 .
+A warning is written to the log for the \Condor{negotiator} daemon,
+and each of the subgroups will have their dynamic group quota scaled
+by (.5)/(.7) = .7143 for this example.
+If the pool has 100 slots, 
+then the \Expr{project1} subgroup is assigned a dynamic quota that
+equals (100)(.7143)(.2) which is 14.286 machines. 
+The \Expr{project2} subgroup is assigned a dynamic quota that
+equals (100)(.7143)(.3) which is 21.429 machines. 
+The \Expr{project3} subgroup is assigned a dynamic quota that
+equals (100)(.7143)(.2) which is 14.286 machines. 
+The quota for each of \Expr{project1} and \Expr{project3} results 
+in the truncated amount of 14 machines,
+with the 0.286 fractional portion of the calculated quota assigned to
+the parent group, \Expr{group\_stat}. 
+The quota for \Expr{project2} results in the truncated amount of 21 machines,
+with the 0.429 fractional portion of the calculated quota assigned to
+the parent group, \Expr{group\_stat}. 
+
+
+\item[Mixed Quotas - Both Static and Dynamic]
+\end{description}
+\MoreTodo
+
+%A declared number of slots specifies the quota for each group
+%(see \MacroNI{GROUP\_QUOTA\_<groupname>}
+%in section~\ref{param:GroupQuotaGroupname}).
+%The sum of the quotas for all groups should typically be less than or equal to
+%the number of slots in the entire pool, but there are situations where it
+%can make sense to have the sum be greater than the size of the pool.
+%An example of this is where large quotas can be used to give 
+%some groups a chance to
+%claim all slots before other groups have a chance to claim any.
+%If the sum is less than the number of
+%slots in the entire pool,
+%the slots are 
+%allocated to the \verb@none@ group,
+%comprised of the general
+%users not submitting jobs in a group.
+
+%Where group users are specified for jobs,
+%accounting is done per group user.
+%It is no longer done by group, or by individual user.
+
+%Negotiation is changed when group quotas are used.
+%Condor negotiates first for defined groups,
+%and then for independent job submitters.
+%Given jobs belonging to different groups,
+%Condor negotiates first for the group 
+%currently utilizing the smallest percentage of machines
+%in its quota.
+%After this,
+%Condor negotiates for the group 
+%currently utilizing the second smallest percentage of machines
+%in its quota.
+%The last group will be the one with the highest percentage
+%of machines in its quota.
+%As an example, again use the imaginary pool and groups 
+%given above.
+%If various users within \verb@group_physics@ have
+%jobs running on 15 computers, 
+%then the physics group has 75\% of the 
+%machines within its quota.
+%If various users within \verb@group_chemistry@ have
+%jobs running on 5 computers, 
+%then the chemistry group has 50\% of the 
+%machines within its quota.
+%Negotiation will take place for the chemistry group first.
+%For independent job submissions (those not part of any group),
+%the classic Condor user fair share algorithm still applies.
+
+%Note that there is no verification that a user is a member of
+%the group that he claims.
+%We rely on societal pressure for enforcement. 
+
+%Configuration variables affect group quotas.
+%See section~\ref{sec:Negotiator-Config-File-Entries} for detailed
+%descriptions of the variables mentioned.
+%Group names that may be given quotas to be used in
+%negotiation are listed in the \Macro{GROUP\_NAMES} macro.
+%The names chosen must not conflict with Condor user names.
+%Quotas (by group) are defined in numbers of machine slots.
+%Each group may be assigned an initial value for its
+%user priority factor with the \Macro{GROUP\_PRIO\_FACTOR\_<groupname>}
+%macro.
+%If a group is currently allocated its entire quota of machines,
+%and a group user has a submitted job that is not running,
+%the \Macro{GROUP\_AUTOREGROUP} macro allows the job to be
+%considered a second time within the negotiation cycle
+%along with all other individual users' jobs.
+%The user name that is used for accounting and prioritization purposes
+%is still the group user as specified by \AdAttr{AccountingGroup} in
+%the job ClassAd.
+
+%\begin{verbatim}
+%  ####################
+%  #
+%  # Example 1
+%  # Configuration for group quotas
+%  #
+%  ####################
+%
+%  GROUP_NAMES = group_physics, group_chemistry
+%  GROUP_QUOTA_group_physics = 20
+%  GROUP_QUOTA_group_chemistry = 10
+%  GROUP_PRIO_FACTOR_group_physics = 1.0
+%  GROUP_PRIO_FACTOR_group_chemistry = 3.0
+%  GROUP_AUTOREGROUP_group_physics = FALSE
+%  GROUP_AUTOREGROUP_group_chemistry = TRUE
+%\end{verbatim}
+
+%This configuration specifies that the \verb@group_physics@ users will
+%get 20 machines and the \verb@group_chemistry@ users will get
+%ten machines.  \verb@group_physics@ users will never get more than
+%20 machines; however, \verb@group_chemistry@ users can potentially get
+%more than ten machines because \MacroNI{GROUP\_AUTOREGROUP\_chemistry}
+%is true.
+%This could happen, for example, if there are only 15 jobs
+%submitted by \verb@group_physics@ users.
+%Also, the default priority
+%factor for the physics groups is 1.0, and the default priority factor
+%for the chemistry group is 3.0.
+
+
+%\begin{verbatim}
+%  ####################
+%  #
+%  # Submit description file for group quota user
+%  #
+%  ####################
+%  ...
+%  +AccountingGroup = "group_physics.newton"
+%  ...
+%\end{verbatim}
+
+%This submit file specifies that this job is to be negotiated as part of
+%the \verb@group_physics@ group and that the user is newton.
+%Remember that
+%both the group name and the user name are required for the group quota
+%to take effect.

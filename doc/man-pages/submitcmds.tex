@@ -1468,6 +1468,106 @@ of a grid universe job destined for the CREAM grid system.
 The pairs are separated by semicolons, and written in New ClassAd syntax.
 
 %%%%%%%%%%%%%%%%%%%
+%% deltacloud_hardware_profile
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_hardware\_profile}
+\item[deltacloud\_hardware\_profile = $<$Deltacloud profile name$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+An optional identifier for the type of VM desired. If not provided,
+a service-defined default is used.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_hardware_profile_cpu
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_hardware\_profile\_cpu}
+\item[deltacloud\_hardware\_profile\_cpu = $<$cpu details$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+An optional description of the CPUs desired for the VM, overriding
+the selected hardware profile.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_hardware_profile_memory
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_hardware\_profile\_memory}
+\item[deltacloud\_hardware\_profile\_memory = $<$memory details$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+An optional description of the memory (RAM) desired for the VM, overriding
+the selected hardware profile.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_hardware_profile_storage
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_hardware\_profile\_storage}
+\item[deltacloud\_hardware\_profile\_storage = $<$storage details$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+An optional description of the storage (disk) desired for the VM, overriding
+the selected hardware profile.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_image_id
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_image\_id}
+\item[deltacloud\_image\_id = $<$Deltacloud image ID$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+Identifier of the VM image to run.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_keyname
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_keyname}
+\item[deltacloud\_keyname = $<$Deltacloud key name$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+Identifier of the SSH key pair that should be used to allow remote login
+to the running instance. The key pair needs to be created before
+submission.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_password_file
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_password\_file}
+\item[deltacloud\_password\_file = $<$pathname$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+Path and file name of a file containing the secret key to be used to
+authenticate with a Deltacloud service.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_realm_id
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_realm\_id}
+\item[deltacloud\_realm\_id = $<$Deltacloud realm ID$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+An optional identifier specifying which of multiple locations within a
+cloud service should be used to run the VM. If not provided, a
+service-selected default is used.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_user_data
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_user\_data}
+\item[deltacloud\_user\_data = $<$data$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+A string, representing a block of data that can be accessed 
+by the virtual machine job inside the cloud service.
+
+%%%%%%%%%%%%%%%%%%%
+%% deltacloud_username
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!deltacloud\_username}
+\item[deltacloud\_username = $<$Deltacloud username$>$]
+Used for \SubmitCmd{deltacloud} jobs.
+The user name to be used to authenticate with a Deltacloud service.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_access_key_id
 %%%%%%%%%%%%%%%%%%%
 
@@ -1652,6 +1752,7 @@ This submit description file command allows each to
 be given in a space-separated list.
 Allowable \SubmitCmd{grid-type-string} values are
 \SubmitCmd{amazon}, \SubmitCmd{condor}, \SubmitCmd{cream}, 
+\SubmitCmd{deltacloud}, 
 \SubmitCmd{gt2}, \SubmitCmd{gt4}, \SubmitCmd{gt5},
 \SubmitCmd{lsf}, \SubmitCmd{nordugrid}, \SubmitCmd{pbs},
 and \SubmitCmd{unicore}.
@@ -1677,6 +1778,10 @@ name of the batch system that sits behind the CREAM server.
 The third parameter identifies a site-specific queue
 within the batch system.
 See section~\ref{sec:CREAM} for details.
+
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{deltacloud},
+the single parameter is the URL of the deltacloud service requested.
+See section~\ref{sec:Deltacloud} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt2},
 the single parameter is the name of the pre-WS GRAM resource to be used.
@@ -2005,34 +2110,6 @@ the value of \SubmitCmd{kill\_sig} is used.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
-%% kvm_disk
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!kvm\_disk}
-\item[kvm\_disk = file1:device1:permission1, file2:device2:permission2, \Dots]
-A list of comma separated disk files.
-Each disk file is specified by 3 colon separated fields.
-The first field is the path and file name of the disk file.
-The second field specifies the device, and
-the third field specifies permissions.
-
-An example that specifies two disk files:
-\footnotesize
-\begin{verbatim}
-kvm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
-\end{verbatim}
-\normalsize
-
-%%%%%%%%%%%%%%%%%%%
-%% kvm_cdrom_device
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!kvm\_cdrom\_device}
-\item[kvm\_cdrom\_device = $<$device$>$]
-Describes the KVM CD-ROM device when
-\SubmitCmd{vm\_cdrom\_files} is defined.
-
-%%%%%%%%%%%%%%%%%%%
 %% kvm_transfer_files
 %%%%%%%%%%%%%%%%%%%
 
@@ -2042,14 +2119,24 @@ A comma separated list of all files that Condor is to transfer
 to the execute machine.
 
 %%%%%%%%%%%%%%%%%%%
-%% vm_cdrom_files
+%% vm_disk
 %%%%%%%%%%%%%%%%%%%
 
-\index{submit commands!vm\_cdrom\_files}
-\item[vm\_cdrom\_files = file1, file2, \Dots]
-A comma-separated list of input CD-ROM files.
-If a single file that ends with the suffix \Expr{.iso} is listed,
-Condor uses the file as an iso file, rather than creating one.
+\index{submit commands!vm\_disk}
+\item[vm\_disk = file1:device1:permission1, file2:device2:permission2:format2, \Dots]
+A list of comma separated disk files.
+Each disk file is specified by 4 colon separated fields.
+The first field is the path and file name of the disk file.
+The second field specifies the device. 
+The third field specifies permissions,
+and the optional fourth field specifies the image format. 
+
+An example that specifies two disk files:
+\footnotesize
+\begin{verbatim}
+vm_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
+\end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_checkpoint
@@ -2099,7 +2186,6 @@ Networking cannot be used if a vm universe job uses a
 checkpoint in order to continue execution after migration
 to another machine.
 
-
 %%%%%%%%%%%%%%%%%%%
 %% vm_networking_type
 %%%%%%%%%%%%%%%%%%%
@@ -2121,16 +2207,6 @@ When \Expr{True}, prevents Condor from transferring output
 files back to the machine from which the vm universe job
 was submitted.
 If not specified, the default value is \Expr{False}.
-
-%%%%%%%%%%%%%%%%%%%
-%% vm_should_transfer_cdrom_files
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!vm\_should\_transfer\_cdrom\_files}
-\item[vm\_should\_transfer\_cdrom\_files = $<$True \Bar\ False$>$]
-Specifies whether Condor will transfer CD-ROM files to
-the execute machine (\Expr{True}) or rely on access through 
-a shared file system (\Expr{False}).
 
 %%%%%%%%%%%%%%%%%%%
 %% vm_type
@@ -2176,34 +2252,6 @@ job will not be submitted.
 When \Expr{True}, causes Condor to utilize
 a VMware snapshot disk for new or modified files.
 If not specified, the default value is \Expr{True}.
-
-%%%%%%%%%%%%%%%%%%%
-%% xen_cdrom_device
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!xen\_cdrom\_device}
-\item[xen\_cdrom\_device = $<$device$>$]
-Describes the Xen CD-ROM device when
-\SubmitCmd{vm\_cdrom\_files} is defined.
-
-%%%%%%%%%%%%%%%%%%%
-%% xen_disk
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!xen\_disk}
-\item[xen\_disk = file1:device1:permission1, file2:device2:permission2, \Dots]
-A list of comma separated disk files.
-Each disk file is specified by 3 colon separated fields.
-The first field is the path and file name of the disk file.
-The second field specifies the device, and
-the third field specifies permissions.
-
-An example that specifies two disk files:
-\footnotesize
-\begin{verbatim}
-xen_disk = /myxen/diskfile.img:sda1:w,/myxen/swap.img:sda2:w
-\end{verbatim}
-\normalsize
 
 %%%%%%%%%%%%%%%%%%%
 %% xen_initrd

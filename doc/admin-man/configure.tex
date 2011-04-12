@@ -3174,7 +3174,7 @@ NEGOTIATOR_USERID = condor
   a special process, \Condor{preen} to clean out junk files that have
   been left laying around by Condor.  This macro determines where the
   \Condor{master} finds the \Condor{preen} binary.
-  Comment out this macro, and \Condor{preen} will not run.
+  If this macro is set to nothing, \Condor{preen} will not run.
 
 \label{param:PreenArgs}
 \item[\Macro{PREEN\_ARGS}]
@@ -4302,15 +4302,6 @@ The following configuration variables support java universe jobs.
 \label{param:Java}
 \item[\Macro{JAVA}]
   The full path to the Java interpreter (the Java Virtual Machine).
-
-\label{param:JavaMaxheapArgument}
-\item[\Macro{JAVA\_MAXHEAP\_ARGUMENT}]
-  An incomplete command line argument to the Java interpreter
-  (the Java Virtual Machine)
-  to specify the switch name for the Maxheap Argument.
-  Condor uses it to construct the maximum heap size
-  for the Java Virtual Machine. 
-  For example, the value for the Sun JVM is \Arg{-Xmx}.
 
 \label{param:JavaClasspathArgument}
 \item[\Macro{JAVA\_CLASSPATH\_ARGUMENT}]
@@ -6617,54 +6608,37 @@ The following configuration macros affect negotiation for group users.
 
 \label{param:GroupQuotaGroupname}
 \item[\Macro{GROUP\_QUOTA\_<groupname>}]
-  A positive integer  to represent a static quota specifying
-  the exact number of machines owned by this group.
-  Note that Condor does not verify or check consistency of quota values.
-  % When both are defined, static quotas supersede dynamic quotas. 
+  A floating point value to represent a static quota specifying
+  an integral number of machines for the hierarchical group
+  identified by \Expr{<groupname>}.
+  It is meaningless to specify a non integer value, 
+  since only integral numbers of machines can be allocated.
   Example:
   \begin{verbatim}
     GROUP_QUOTA_group_physics = 20
     GROUP_QUOTA_group_chemistry = 10
   \end{verbatim}
+  When both static and dynamic quotas are defined for a specific group,
+  the static quota is used and the dynamic quota is ignored. 
 
-%\label{param:GroupDynamicMachConstraint}
-%\item[\Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}]
-%  Filter the number of machines for use with dynamic groups accounting
-%  quotas, below.  Without this filter, dynamic quotas are calculated
-%  from the total of all machines, in all states, that have reported to
-%  the collector, which is probably not what you want.  Use this filter to
-%  restrict the number of machines reserved for calculating dynamic
-%  quotas.  The value is a ClassAd expression, and is evaluated every
-%  negotiation cycle.  For example, the following expression will only
-%  consider unclaimed Intel/Linux machines for dynamic quotas.
-%
-%  \begin{verbatim}
-%    GROUP_DYNAMIC_MACH_CONSTRAINT = State == "Unclaimed" && \
-%    Arch == "INTEL" && OpSys == "LINUX"
-%  \end{verbatim}
-%  will only considered. If all computers should be considered for
-%  dynamic quotas, then the following expression could be used:
-%  \begin{verbatim}
-%      GROUP_DYNAMIC_MACH_CONSTRAINT = TRUE
-%  \end{verbatim}
-
-
-%\label{param:GroupQuotaDynamicGroupname}
-%\item[\Macro{GROUP\_QUOTA\_DYNAMIC\_<groupname>}]
-%  Specify a dynamic group accounting quota.  For example, the following
-%  specifies that a quota of 25\% of the total dynamic quota machines are
-%  reserved for members of the group\_biology group.
-%  \begin{verbatim}
-%  	GROUP_QUOTA_DYNAMIC_group_biology = 0.25
-%  \end{verbatim}
-%  The total dynamic quota machine count is determined using
-%  \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT above}. The group name must
-%  also be specified in the \Macro{GROUP\_NAMES} list. The value must be
-%  positive float between 0.0 and 1.0. Condor does not verify that the
-%  quota value is reasonable, nor does Condor verify that all specified
-%  quotas are consistent.  This parameter is evaluated whenever Condor
-%  negotiates for the group.  When both are defined, static quotas
-%  supersede dynamic quotas.
+\label{param:GroupQuotaDynamicGroupname}
+\item[\Macro{GROUP\_QUOTA\_DYNAMIC\_<groupname>}]
+  A floating point value in the range 0.0 to 1.0, inclusive,
+  representing a fraction of a pool's machines (slots) set as
+  a dynamic quota for the hierarchical group identified by \Expr{<groupname>}.
+  For example, the following
+  specifies that a quota of 25\% of the total machines are
+  reserved for members of the group\_biology group.
+  \begin{verbatim}
+  	GROUP_QUOTA_DYNAMIC_group_biology = 0.25
+  \end{verbatim}
+  The group name must be specified in the \Macro{GROUP\_NAMES} list.
+  \MoreTodo
+  %Condor does not verify that the
+  %quota value is reasonable, nor does Condor verify that all specified
+  %quotas are consistent.  This parameter is evaluated whenever Condor
+  %negotiates for the group.  When both are defined, static quotas
+  %supersede dynamic quotas.
 
 \label{param:GroupPrioFactorGroupname}
 \item[\Macro{GROUP\_PRIO\_FACTOR\_<groupname>}]
@@ -7231,6 +7205,13 @@ These macros affect the \Condor{gridmanager}.
   There is no default value.
   The expected location as given in the example configuration is
   \File{\MacroUNI{SBIN}/cream\_gahp}.
+
+\label{param:DeltacloudGAHP}
+\item[\Macro{DELTACLOUD\_GAHP}]
+  The complete path and file name of the Deltacloud GAHP executable.
+  There is no default value.
+  The expected location as given in the example configuration is
+  \File{\MacroUNI{SBIN}/deltacloud\_gahp}.
 
 \end{description}
 
@@ -8772,11 +8753,6 @@ They specify items related to the \Condor{vm-gahp}.
   Where multiple networking types are given in \MacroNI{VM\_NETWORKING\_TYPE},
   and this variable is \emph{not} defined, a default of \Expr{nat}
   is used.
-
-\label{param:VMScript}
-\item[\Macro{VM\_SCRIPT}]
-  The complete path and file name of the script that controls Xen and KVM.
-    There is no default value for this required variable.
 
 \label{param:VMNetworkingBridgeInterface}
 \item[\Macro{VM\_NETWORKING\_BRIDGE\_INTERFACE}]

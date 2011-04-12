@@ -27,11 +27,8 @@ we have successfully used \Prog{ActivePerl}.
 
 For VMware, \Prog{VMware Server 1} must be installed
 and running on the execute machine.
-Additionally, a reasonably
-recent version of the \Prog{mkisofs} utility on the execute machine, for
-the creation of job-specific CD-ROM disk images is required.
 
-For Xen, there are four things that must exist on 
+For Xen, there are three things that must exist on 
 an execute machine to fully support \SubmitCmd{vm} universe jobs. 
 \begin{enumerate}
 \item
@@ -44,15 +41,11 @@ The \Prog{libvirtd} daemon must be available,
 and \Prog{Xend} services must be running. 
 
 \item
-A reasonably recent version of the \Prog{mkisofs} utility must be available, 
-for the creation of job-specific CD-ROM disk images. 
-
-\item
 The \Prog{pygrub} program must be available,
 for execution of VMs whose disks contain the kernel they will run.
 \end{enumerate}
 
-For KVM, there are three things that must exist on
+For KVM, there are two things that must exist on
 an execute machine to fully support \SubmitCmd{vm} universe jobs. 
 \begin{enumerate}
 \item
@@ -61,10 +54,6 @@ The machine must have the KVM kernel module installed and running.
 \item
 The \Prog{libvirtd} daemon must be installed and running.
 
-\item
-Third, a reasonably recent version of the \Prog{mkisofs} 
-utility must be available,
-for the creation of job-specific CD-ROM disk images. 
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -141,17 +130,6 @@ See the FAQ entry in section~\ref{sec:vmware-symlink-bug} for details.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Xen-Specific and KVM-Specific Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Xen and KVM configurations must identify the location of the control script
-Condor uses to interact with the virtual machine software:
-
-\begin{verbatim}
-VM_SCRIPT = $(SBIN)/condor_vm_xen.sh
-\end{verbatim}
-
-Note that in the current version of Condor,
-there is one script utilized for both Xen and KVM,
-and the name of the script  includes the string \Expr{"xen"}.
 
 Once the configuration options have been set, restart the \Condor{startd} 
 daemon on that host.  For example:

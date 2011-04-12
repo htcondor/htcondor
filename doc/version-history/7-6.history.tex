@@ -26,6 +26,16 @@ The details of each version are described below.
 \item Condor version 7.6.0 not yet released.
 %\item Condor version 7.6.0 released on Month Date, 2011.
 
+% gittrac #2016
+\item Prior to Condor version 7.5.0, commenting out \MacroNI{PREEN} in the
+  default configuration file disabled \Condor{preen}.  
+  Starting in Condor version 7.5.0,
+  there was an internal default value for \MacroNI{PREEN}, so if
+  the configuration variable was not set in any configuration file,
+  \Condor{preen} would still run.
+  To disable this functionality, \MacroNI{PREEN} can be explicitly set to
+  nothing.
+
 \end{itemize}
 
 
@@ -33,7 +43,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Condor can now create and manage virtual machine instances in a
+cloud service via Deltacloud. This is done via the new
+\SubmitCmd{deltacloud} grid type in the grid universe.
+See section ~\ref{sec:Deltacloud} for details.
+
+% gittrac #1931
+\item Improved scalability of submission of cream grid type jobs.
 
 \end{itemize}
 
@@ -41,7 +57,44 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{DELTACLOUD\_GAHP} specifies
+where the \Prog{deltacloud\_gahp} binary is located. This binary is used to
+manage deltacloud grid type jobs in the grid universe.
+In a normal Condor installation, the value should be
+\File{\$(SBIN)/deltacloud\_gahp}.
+
+\item Several new job ClassAd attributes have been added to support
+the deltacloud grid type in the grid universe.
+These attributes are taken from the submit description file:
+\AdAttr{DeltacloudUsername},
+\AdAttr{DeltacloudPasswordFile},
+\AdAttr{DeltacloudImageId},
+\AdAttr{DeltacloudRealmId},
+\AdAttr{DeltacloudHardwareProfile},
+\AdAttr{DeltacloudHardwareProfileCpu},
+\AdAttr{DeltacloudHardwareProfileMemory},
+\AdAttr{DeltacloudHardwareProfileStorage},
+\AdAttr{DeltacloudKeyname}, and
+\AdAttr{DeltacloudUserData}.
+%\AdAttr{DeltacloudRetryTimeout},
+These attributes are set by Condor when the instance runs:
+\AdAttr{DeltacloudAvailableActions},
+\AdAttr{DeltacloudPrivateNetworkAddresses},
+\AdAttr{DeltacloudPublicNetworkAddresses}.
+See section ~\ref{sec:Deltacloud} for details of running jobs under
+Deltacloud, and see section ~\ref{sec:Job-ClassAd-Attributes}
+for definitions of these job ClassAd attributes.
+
+% gittrac #2024
+\item The configuration variable \Macro{JAVA\_MAXHEAP\_ARGUMENT} 
+  has been removed. 
+  This means that Java universe jobs will now run with the JVM's 
+  default maximum heap setting,
+  unless specified otherwise by the administrator using the configuration
+  of \Macro{JAVA\_EXTRA\_ARGUMENTS},
+  or by the job via 
+  \SubmitCmd{java\_vm\_args} in the submit description file
+  as described in section~\ref{sec:Java}.
 
 \end{itemize}
 
@@ -50,9 +103,35 @@ The details of each version are described below.
 \begin{itemize}
 
 % gittrac #1957
-\item Fixed a bug in \Condor{dagman} that caused it to fail in recovery
+\item Fixed a bug in \Condor{dagman} that caused it to fail when in recovery
 mode in the face of a specific combination of node job failures with
 retries.
+
+% gittrac #1991
+\item Fixed a bug that resulted in the spooled user log not being
+  fetched by \Condor{transfer\_data}.  Prior to Condor version 7.5.4, this
+  problem affected spooled jobs submitted with an explicit list of
+  output files to transfer.  In Condor version 7.5.4, this problem also
+  affected spooled jobs that auto-detected output files.
+
+% gittrac #1985
+\item When a job is submitted with the \Opt{-spool} option to \Condor{submit},
+the \Condor{schedd} now correctly writes the submit event to the user log 
+in its spool directory. 
+Previously, it would try to write the event using the user
+log path given to \Condor{submit} by the user, 
+which \Condor{submit} may not have access to.
+
+% gittrac #2001
+\item Fixed a file descriptor leak in the \Condor{vm-gahp}. The leak would
+cause the daemon to fail if a VMware job ran for more than 16 hours on a
+Linux machine.
+
+%gittrac #2017
+\item Fixed a bug in \Condor{dagman} that caused it to treat any dollar
+sign in the log file name of a node job's submit description file
+as an illegal \Condor{dagman} macro.
+Now only the sequence of characters \Expr{\$(} delimits a macro.
 
 \end{itemize}
 
@@ -60,7 +139,20 @@ retries.
 
 \begin{itemize}
 
-\item None.
+\item There are two known issues related to the automatic creation
+of checkpoints with the Condor checkpointing library in 
+Condor version 7.6.0.
+The first is that compression of
+standalone checkpoints is disabled for 32-bit binaries.
+It was always disabled previously, for 64-bit binaries.
+A standalone checkpoint is one that is run outside
+of Condor's standard universe.  The second problem has to do with compressed
+32-bit checkpoint files within the standard universe.
+If a user requests a compressed 32-bit checkpoint in the standard universe,
+the resulting checkpoint will not be compressed.
+As with standalone checkpoints, this has never been supported
+in 64-bit binaries.  We hope to fix both problems in 
+Condor version 7.6.1.
 
 \end{itemize}
 
