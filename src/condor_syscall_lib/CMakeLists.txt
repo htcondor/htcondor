@@ -125,9 +125,9 @@ if( STD_UNIVERSE )
 	# part 2:
 	# set dependencies to ensure build dep order for parallel builds
 	##################################################
-	add_dependencies( condorsyscall ckpt utils cedar stdunivio stub_gen )
+	add_dependencies( condorsyscall stub_gen )
 	if (DOES_COMPRESS_CKPT)
-		add_dependencies( condorzsyscall ckpt utils cedar stdunivio stub_gen )
+		add_dependencies( condorzsyscall stub_gen )
 	endif()
 	add_dependencies( switches syscall_numbers stub_gen )
 	add_dependencies( senders syscall_numbers stub_gen )
