@@ -255,7 +255,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> undef,
+			'prereqs'	=> [ 'ActivePerl-5.10.1', ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -279,27 +279,6 @@ our %submit_info = (
 		},
 	},
 
-	##########################################################################
-	# Microsoft Windows 5.1/2000/xp/whatever on x86
-	# prereqs testing configuration (also cmake)
-	##########################################################################
-	'x86_winnt_5.1'	=> {
-		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
-			'prereqs'	=> [
-				'cmake-2.8.3', '7-Zip-9.20', 'ActivePerl-5.10.1',
-				'VisualStudio-9.0', 'WindowsSDK-6.1',
-			],
-			'xtests'	=> undef,
-		},
-
-		'test' => {
-			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> undef,
-			'testclass'	=> [ @default_testclass ],
-		},
-	},
-	
 	##########################################################################
 	# Platform Debian 5.0 on x86_64
 	##########################################################################
