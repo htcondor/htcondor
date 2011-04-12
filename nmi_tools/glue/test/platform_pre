@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -37,6 +37,10 @@
 use strict;
 use warnings;
 use Cwd;
+use File::Basename;
+
+my $dir = dirname($0);
+require "$dir/TestGlue.pm";
 
 my $extractdone = "RESULTEXTRACTIONDONE";
 
@@ -47,8 +51,10 @@ my $BaseDir = getcwd();
 
 print "Host: " . `hostname -f`;
 print "CWD: $BaseDir\n";
+print "Perl path: $^X\n";
+print "Perl version: $]\n";
 print "Contents:\n";
-system("ls -l");
+TestGlue::dir_listing(".");
 
 my $tarball_file = "CONDOR-TARBALL-NAME";
 
@@ -60,7 +66,7 @@ die "$results does not exist!\n" unless(-f $results);
 #     results.tar.gz name in the marker file because it holds only
 #     what we want. Then leave.
 ######################################################################
-if($ENV{NMI_PLATFORM} =~ /winnt/) {
+if( TestGlue::is_windows() ) {
     print "Unzipping results.tar.gz\n";
     system("tar -xzf $results");
     print "Moving public/* to $BaseDir\n";
@@ -68,8 +74,7 @@ if($ENV{NMI_PLATFORM} =~ /winnt/) {
     system("chmod a+r *.tar.gz");
 
     print "All steps completed successfully\n";
-    print "Currently in $BaseDir which contains the following:\n";
-    system("ls -l");
+    TestGlue::dir_listing(".");
     
     # NOTE: windows quits here!!
     exit 0;

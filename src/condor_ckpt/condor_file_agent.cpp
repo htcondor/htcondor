@@ -50,7 +50,7 @@ int CondorFileAgent::open( const char *url_in, int flags, int mode )
 	int local_flags;
 	char *junk = (char *)malloc(strlen(url_in)+1);
 	char *sub_url = (char *)malloc(strlen(url_in)+1);
-	char local_filename[_POSIX_PATH_MAX];
+	char local_filename[L_tmpnam];
 
 	memset(local_filename, 0, sizeof(local_filename));
 

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env perl
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -19,19 +19,150 @@
 ##**************************************************************
 
 
-# $Id: remote_pre,v 1.3 2007-11-08 22:53:46 nleroy Exp $
+######################################################################
+# script to set up for Condor testsuite run
+######################################################################
 
-# Condor implementation of NMI test infrastructure interface
-# Simple wrapper to source the environment file and spawn the
-# corresponding perl script for a given stage of the test.
+use strict;
+use warnings;
+use Cwd;
+use Env; 
+use File::Copy;
+use File::Basename;
 
-ENV_FILE=setup_test_env
+my $dir = dirname($0);
+require "$dir/TestGlue.pm";
+TestGlue::setup_test_environment();
 
-# include the environment info from the pre-script
-if [ ! -f $ENV_FILE ]; then
-    echo "$ENV_FILE does not exist!"
-    exit 1
-fi
-. $ENV_FILE
+# Don't buffer output.
+$|=1;
 
-exec remote_pre.pl $*
+my $BaseDir = $ENV{BASE_DIR} || die "BASE_DIR not in environment!\n";
+my $logsize = "50000000"; # size for logs of personal Condor
+
+# Hard-coded filename, defined in test_platform_pre
+my $tarball_file = "CONDOR-TARBALL-NAME";
+
+if( -z "tasklist.nmi" ) {
+    # our tasklist is empty, so don't do any real work
+    print "No tasks in tasklist.nmi, nothing to do\n";
+    exit 0;
+}
+
+
+######################################################################
+# untar pre-built tarball
+######################################################################
+
+my $release_tarball;
+my $version;
+if( TestGlue::is_windows() ) {
+    # on Windows, condor is in a zip file, not a tarball
+    print "Finding release zip file\n";
+    my ($release_zipfile) = glob("condor-*.zip");
+    
+    print "Release zip file is '$release_zipfile'\n";
+    
+    if( ! $release_zipfile ) {
+        die "Could not find a condor release zip file!\n";
+    }
+    
+    if ( ! mkdir("condor") ) {
+        die "Could not make the condor folder\n";
+    }
+
+    # We are explicitly calling unzip from C:\tools so that we do not use Cygwin's
+    # version of unzip.  When Cygwin unzips a tarball it removes the execute bits 
+    # and we have to restore them.  We want to avoid this so use non-Cygwin unzip
+    print "Unzipping $release_zipfile ...\n";
+    system("C:\\tools\\unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile: $!\n";
+    print "Unzipped $release_zipfile.\n";
+    
+    (my $tmp_dir = basename($release_zipfile)) =~ s/\.zip$//;
+    print "\$tmp_dir = '$tmp_dir'\n";
+    TestGlue::dir_listing("condor");
+    my $tmp_dir_path = File::Spec->catdir("condor", $tmp_dir);
+    if( -d $tmp_dir_path ) {
+        print "$tmp_dir_path exists.  Trying to move...\n";
+        system("move $tmp_dir_path\\* condor\\");
+    }
+    TestGlue::dir_listing("condor");
+
+    $version = substr($release_zipfile, 0, -4);
+    print "VERSION string is $version from $release_zipfile\n";
+}
+else {
+    print "Finding release tarball\n";
+    open(TARBALL_FILE, '<', $tarball_file ) || die "Can't open $tarball_file: $!\n";
+    while(<TARBALL_FILE>) {
+        chomp;
+        $release_tarball = $_;
+    }
+    
+    print "Release tarball is '$release_tarball'\n";
+    
+    if( ! $release_tarball ) {
+        die "$tarball_file does not contain a filename!\n";
+    }
+    if( ! -f $release_tarball ) {
+        die "$release_tarball (from $tarball_file) does not exist!\n";
+    }
+    
+    print "Release tarball file exists:\n";
+    TestGlue::dir_listing($release_tarball);
+
+    print "Untarring $release_tarball ...\n";
+    system("tar -xzvf $release_tarball" ) && die "Can't untar $release_tarball: $!\n";
+    print "Untarred $release_tarball.\n";
+    
+    ($version) = $release_tarball =~ /^(.*)\.[^.]+\.[^.]+$/;
+    print "VERSION string is $version from $release_tarball\n";
+}
+
+######################################################################
+# setup the personal condor
+######################################################################
+
+print "Condor version: $version\n";
+
+print "SETTING UP PERSONAL CONDOR\n";
+
+# I'm not 100% certain wtf this actually does. 
+if( not TestGlue::is_windows() ) {
+    mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
+    system("mv $BaseDir/$version $BaseDir/condor" );
+    
+    # Remove leftovers from extracting built binaries.
+    print "Removing $version tar file and extraction\n";
+    unlink(<$version*>);
+}
+else {
+    # windows personal condor setup
+    mkdir( "local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
+    mkdir( "local/spool", 0777 ) || die "Can't mkdir $BaseDir/local/spool: $!\n";
+    mkdir( "local/execute", 0777 ) || die "Can't mkdir $BaseDir/local/execute: $!\n";
+    mkdir( "local/log", 0777 ) || die "Can't mkdir $BaseDir/local/log: $!\n";
+    
+    # Remove leftovers from extracting built binaries.
+    print "Removing $version.zip file\n";
+    unlink("$version.zip");
+
+    my $Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
+    
+    TestGlue::which("condor_master.exe");
+}
+
+
+# move into the condor_tests directory first
+my $test_dir = File::Spec->catdir($BaseDir, "condor_tests");
+chdir($test_dir) || die "Can't chdir($test_dir for personal condor setup): $!\n";
+
+# -p means just set up the personal condor for the test run
+my $batch_test = File::Spec->catfile($test_dir, "batch_test.pl");
+my $command_line = "$batch_test --debug -p";
+print "About to run '$command_line'\n";
+system("perl $command_line");
+
+if( $? != 0 ) {
+    exit 2;
+}

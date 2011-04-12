@@ -51,8 +51,7 @@ our %build_and_test_sets = (
         'x86_macos_10.4',
         'x86_rhap_5',
         'x86_rhas_3',
-        'x86_winnt_5.1-tst', 
-        #'x86_winnt_5.1',
+        'x86_winnt_5.1',
     ],
     
     # NMI will need builds on a set of platforms that we do not provide in our
@@ -284,7 +283,7 @@ our %submit_info = (
 	# Microsoft Windows 5.1/2000/xp/whatever on x86
 	# prereqs testing configuration (also cmake)
 	##########################################################################
-	'x86_winnt_5.1-prereqs'	=> {
+	'x86_winnt_5.1'	=> {
 		'build' => {
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> [
@@ -333,8 +332,9 @@ our %submit_info = (
 				'-DCLIPPED:BOOL=OFF' => undef,
                                 '-DWITH_KRB5:BOOL=OFF' => undef,
                                 '-DWITH_CREAM:BOOL=OFF' => undef,
+								'-DWITH_COREDUMPER:BOOL=OFF'	=> undef,
 			 },
-			'prereqs'	=> [ 'libtool-1.5.26', 'cmake-2.8.3' ],
+			'prereqs'	=> [ 'cmake-2.8.3' ],
 			'xtests'	=>  [ 'x86_64_ubuntu_10.04', ],
 		},
 
@@ -356,7 +356,7 @@ our %submit_info = (
 			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [ 
-                            'x86_64_fedora_14', 'x86_64_fedora_14-updated',
+                            'x86_64_fedora_14-updated',
                             'x86_64_fedora_13', 'x86_64_fedora_13-updated',
                             'x86_64_rhap_5.2', 'x86_64_rhap_5.3', 'x86_64_rhap_5.3-updated',
                             'x86_64_sl_5.5',
@@ -433,7 +433,7 @@ our %submit_info = (
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ 
 				@default_prereqs, 
-				'java-1.4.2_09', 
+				'java-1.4.2_12', 
 				'coreutils-5.2.1'
 			],
 			'testclass'	=> [ @default_testclass ],
@@ -593,7 +593,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_14'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITH_EXPAT:BOOL=ON' => undef,
+			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -610,7 +612,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_fedora_14-updated'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITH_EXPAT:BOOL=ON' => undef,
+			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},

@@ -4436,6 +4436,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,creamjob
 id=247
 
+[DELTACLOUD_GAHP]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Deltacloud Gahp
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,deltacloudjob
+id=247
+
 [AMAZON_GAHP_LOG]
 aliases=
 default=
@@ -7001,7 +7017,7 @@ id=422
 
 [VM_GAHP_SEND_ALL_CLASSAD]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -10135,3 +10151,20 @@ usage=
 url=
 tags=
 id=601
+
+[SHADOW_RUN_UNKNOWN_USER_JOBS]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=Shadow Run Unknown User Jobs
+usage=
+url=
+tags=shadow
+id=602
+

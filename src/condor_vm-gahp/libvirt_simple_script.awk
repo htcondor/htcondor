@@ -97,7 +97,9 @@ END {
 
     print "<devices>" ;
     print "<console type='pty'><source path='/dev/ptmx'/></console>" ;
-    if(attrs["JobVMNetworking"] == "TRUE")
+    
+    # To see full input ad to script set D_FULLDEBUG
+    if(attrs["JobVMNetworking"] == "true")
     {
 	if(index(attrs["JobVMNetworkingType"],"nat") != 0)
 	{

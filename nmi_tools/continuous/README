@@ -1,0 +1,5 @@
+To add a new platform for a continuous run edit run.sh and submit and replace "PLATFORM" with 
+the platform you wish to add (use the NMI platform string, e.g. x86_64_rhap_5).
+
+Currently these are put in /home/cndrauto/continuous on nmi-s006.
+They are submitted to Condor (as Condor-Cron jobs)

@@ -31,6 +31,13 @@ mysql_select_db(DB_NAME) or die("Could not select database");
 
 include "last.inc";
 
+// Create the sidebar
+echo "<div id='wrap'>";
+make_sidebar();
+
+// Now create the HTML tables.
+echo "<div id='main'>\n";
+
 echo "<h2>NMI build queue depths:</h2>\n";
 echo "<p>This page contains depth information for jobs of type \"build\" only</p>\n";
 
@@ -83,7 +90,7 @@ foreach ($branches as $branch) {
     // onto two separate lines because the length of the header determines the
     // width of the resulting table column.
     $display = preg_replace("/nmi:/", "", $platform);
-    $display = preg_replace("/_/", "_ ", $display, 1);
+    #$display = preg_replace("/_/", "_ ", $display, 1);
     
     $ret = get_queue_for_nmi_platform($platform, $type);
     $depth = $ret[0];
@@ -118,6 +125,10 @@ mysql_close($db);
 <td style="background-color:#00FF00">Depth 1-2</td>
 <td style="background-color:#FFFF00">Depth 3-5</td>
 <td style="background-color:#FF0000">Depth 6+</td>
+
+</div>
+<div id='footer'>&nbsp;</div>
+</div>
 
 </body>
 </html>

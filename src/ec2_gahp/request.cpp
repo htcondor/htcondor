@@ -17,18 +17,18 @@
  *
  ***************************************************************/
 
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "amazongahp_common.h"
+#include "request.h"
 
-#include "config.h"
+Request::Request (const char *cmd)
+{   
+	m_worker = NULL;
+	m_raw_cmd = cmd;
 
-#ifndef HAVE_GETWD
-#include <sys/param.h>
-
-/*
-** Compatibility routine for systems which use getcwd() instead.
-*/
-char * getwd(char	*path)
-{
-	return ((char *) getcwd( path, MAXPATHLEN ));
+	if ( parse_gahp_command(cmd, &m_args) )
+		m_reqid = (int)strtol(m_args.argv[1], (char **)NULL, 10);
+	else
+		m_reqid = -1;
 }
-
-#endif

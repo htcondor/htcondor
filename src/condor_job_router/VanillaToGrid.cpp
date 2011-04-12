@@ -29,7 +29,6 @@
 #include "filename_tools.h"
 #include "string_list.h"
 #define WANT_CLASSAD_NAMESPACE
-#undef open
 #include "classad/classad_distribution.h"
 
 

@@ -48,9 +48,15 @@ elseif(${OS_NAME} MATCHES "WIN")
 		dprint("**** OUT OF SOURCE BUILDS ****")
 		file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/msconfig DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 	endif()
+    
+	# means user did not specify, so change the default.
+	if ( ${CMAKE_INSTALL_PREFIX} MATCHES "Program Files" )
+		# mimic *nix for consistency
+		set( CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir")
+	endif()
 
-	set( CMAKE_INSTALL_PREFIX "C:/condor_test/${VERSION}")
-	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc")
+	dprint("TODO FEATURE-> Z:TANNENBA:TJ:TSTCLAIR Update registry + paths to use this prefixed debug loc (test_install)")
+
 endif()
 
   
@@ -134,7 +140,6 @@ if( NOT WINDOWS)
 	check_function_exists("_fstati64" HAVE__FSTATI64)
 	check_function_exists("getdtablesize" HAVE_GETDTABLESIZE)
 	check_function_exists("getpagesize" HAVE_GETPAGESIZE)
-	check_function_exists("getwd" HAVE_GETWD)
 	check_function_exists("gettimeofday" HAVE_GETTIMEOFDAY)
 	check_function_exists("inet_ntoa" HAS_INET_NTOA)
 	check_function_exists("lchown" HAVE_LCHOWN)

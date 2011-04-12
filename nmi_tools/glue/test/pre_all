@@ -18,41 +18,5 @@
 ##
 ##**************************************************************
 
-
-######################################################################
-# $Id: pre_all,v 1.4 2007-11-08 22:53:46 nleroy Exp $
-# Submit-side NMI build system infrastructure to setup source
-# input for test jobs before the platform-specific stuff is called.
-# All we have to do is untar the common/results.tar.gz file so that
-# when the NMI infrastructure copies everything into each platform-
-# specific directory, "results.tar.gz" doesn't get clobbered.
-# We assume we're born inside the "common" directory...
-######################################################################
-
-use Getopt::Long;
-
-# autoflush our STDOUT
-$| = 1;
-
-# Set up environment file for talking to tests on remote execute node
-setupTestEnvFile();
-
-print "All steps completed successfully\n";
-exit 0;
-
-sub setupTestEnvFile
-{
-    ######################################################################
-    # set up environment and create env file for test tasks
-    ######################################################################
-
-    print "Setting up environtment file 'setup_test_env' for other scripts\n";
-    open( ENVSETUP, ">test_task_env" ) ||
-    die "cannot open test_task_env for writing\n";
-
-    print ENVSETUP "GCBTARGET=nmi-s006.cs.wisc.edu\n";
-    print ENVSETUP "export GCBTARGET\n";
-    close(ENVSETUP);
-}
-
-
+print "Nothing to do for pre-all currently.\n";
+exit(0);

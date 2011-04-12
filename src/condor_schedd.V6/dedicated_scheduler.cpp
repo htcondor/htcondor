@@ -4247,27 +4247,71 @@ clusterSortByPrioAndDate( const void *ptr1, const void* ptr2 )
 {
 	int cluster1 = *((const int*)ptr1);
 	int cluster2 = *((const int*)ptr2);
-	int qdate1, qdate2;
+	int c1_qdate, c2_qdate;	
+	int c1_prio, c1_preprio1, c1_preprio2, c1_postprio1, c1_postprio2=0;	
+	int c2_prio, c2_preprio1, c2_preprio2, c2_postprio1, c2_postprio2=0;
 
-	int prio1, prio2;
-
-	if( (GetAttributeInt(cluster1, 0, ATTR_Q_DATE, &qdate1) < 0) || 
-		(GetAttributeInt(cluster2, 0, ATTR_Q_DATE, &qdate2) < 0) ||
-		(GetAttributeInt(cluster1, 0, ATTR_JOB_PRIO, &prio1) < 0) ||
-		(GetAttributeInt(cluster2, 0, ATTR_JOB_PRIO, &prio2) < 0)) {
+	if ((GetAttributeInt(cluster1, 0, ATTR_Q_DATE, &c1_qdate) < 0) || 
+	        (GetAttributeInt(cluster2, 0, ATTR_Q_DATE, &c2_qdate) < 0) ||
+	        (GetAttributeInt(cluster1, 0, ATTR_JOB_PRIO, &c1_prio) < 0) ||
+	        (GetAttributeInt(cluster2, 0, ATTR_JOB_PRIO, &c2_prio) < 0)) {
 		
 		return -1;
 	}
+	
+        if (GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO1, &c1_preprio1) > -1 &&
+	       GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO1, &c2_preprio1) > -1 ){
+	     if (c1_preprio1 < c2_preprio1) {
+		return 1;
+	     }
 
-	if (prio1 < prio2) {
+	     if (c1_preprio1 > c2_preprio1) {
+		return -1;
+	     }
+        }
+	
+	if (GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO2, &c1_preprio2) > -1 &&
+	       GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO2, &c2_preprio2) > -1 ) {
+	     if (c1_preprio2 < c2_preprio2) {
+		return 1;
+	     }
+
+	     if (c1_preprio2 > c2_preprio2) {
+		return -1;
+	     }
+        }
+	
+	if (c1_prio < c2_prio) {
 		return 1;
 	}
 
-	if (prio1 > prio2) {
+	if (c1_prio > c2_prio) {
 		return -1;
 	}
+	
+        if (GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO1, &c1_postprio1) > -1 &&
+	       GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO1, &c2_postprio1) > -1 ) { 
+	     if (c1_postprio1 < c2_postprio1) {
+		return 1;
+	     }
 
-	return (qdate1 - qdate2);
+	     if (c1_postprio1 > c2_postprio1) {
+		return -1;
+	     }
+        }
+	
+	if (GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO2, &c1_postprio2) > -1 &&
+	       GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO2, &c2_postprio2) > -1 ) {
+	     if (c1_postprio2 < c2_postprio2) {
+		return 1;
+	     }
+
+	     if (c1_postprio2 > c2_postprio2) {
+		return -1;
+	     }
+        }
+	
+	return (c1_qdate - c2_qdate);
 }
 
 

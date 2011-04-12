@@ -101,13 +101,15 @@ IpVerify::~IpVerify()
 int
 IpVerify::Init()
 {
-	char *pAllow, *pDeny, *pOldAllow, *pOldDeny, *pNewAllow = NULL, *pNewDeny = NULL;
+	char *pAllow = NULL, *pDeny = NULL, *pOldAllow = NULL, *pOldDeny = NULL,
+		*pNewAllow = NULL, *pNewDeny = NULL;
 	DCpermission perm;
-	
+	const char* const ssysname = get_mySubSystem()->getName();	
+
 	did_init = TRUE;
 
-		// Make sure that perm_mask_t is big enough to hold all possible
-		// results of allow_mask() and deny_mask().
+	// Make sure that perm_mask_t is big enough to hold all possible
+	// results of allow_mask() and deny_mask().
 	ASSERT( sizeof(perm_mask_t)*8 - 2 > LAST_PERM );
 
 	// Clear the Permission Hash Table in case re-initializing
@@ -132,52 +134,50 @@ IpVerify::Init()
 		}
 	}
 
-    // This is the new stuff
+	// This is the new stuff
 	for ( perm=FIRST_PERM; perm < LAST_PERM; perm=NEXT_PERM(perm) ) {
-
 		PermTypeEntry* pentry = new PermTypeEntry();
 		ASSERT( pentry );
 		PermTypeArray[perm] = pentry;
-
 		MyString allow_param, deny_param;
 
-		pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param,
-										  get_mySubSystem()->getName() );
-
-        // This is the old stuff, eventually it will be gone
-		pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param,
-										  get_mySubSystem()->getName() );
-
+		dprintf(D_SECURITY,"IPVERIFY: Subsystem %s\n",ssysname);
+		dprintf(D_SECURITY,"IPVERIFY: Permission %s\n",PermString(perm));
+		if(strcmp(ssysname,"TOOL")==0 || strcmp(ssysname,"SUBMIT")==0){
+			// to avoid unneccesary DNS activity, the TOOL and SUBMIT
+			// subsystems only load the CLIENT lists, since they have no
+			// command port and don't need the other authorization lists.
+			if(strcmp(PermString(perm),"CLIENT")==0){ 
+				pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
+				pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param, ssysname );
+				pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
+				pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param, ssysname );
+			}
+		} else {
+			pNewAllow = SecMan::getSecSetting("ALLOW_%s",perm,&allow_param, ssysname );
+			pOldAllow = SecMan::getSecSetting("HOSTALLOW_%s",perm,&allow_param, ssysname );
+			pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param, ssysname );
+			pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param, ssysname );
+		}
 		// concat the two
 		pAllow = merge(pNewAllow, pOldAllow);
-
-		pNewDeny = SecMan::getSecSetting("DENY_%s",perm,&deny_param,
-										 get_mySubSystem()->getName() );
-
-		pOldDeny = SecMan::getSecSetting("HOSTDENY_%s",perm,&deny_param,
-										 get_mySubSystem()->getName() );
-
 		// concat the two
 		pDeny = merge(pNewDeny, pOldDeny);
-
 		if( pAllow ) {
 			dprintf ( D_SECURITY, "IPVERIFY: allow %s: %s (from config value %s)\n", PermString(perm),pAllow,allow_param.Value());
 		}
 		if( pDeny ) {
 			dprintf ( D_SECURITY, "IPVERIFY: deny %s: %s (from config value %s)\n", PermString(perm),pDeny,deny_param.Value());
 		}
-
-        // Treat a "*", "*/*" for ALLOW_XXX as if it's just undefined,
-        // because that's the optimized default, except for
-        // CONFIG_PERM which has a different default (see below).
+		// Treat a "*", "*/*" for ALLOW_XXX as if it's just undefined,
+		// because that's the optimized default, except for
+		// CONFIG_PERM which has a different default (see below).
 		if( perm != CONFIG_PERM ) {
-			if(pAllow && (!strcmp(pAllow, "*") || !strcmp(pAllow, "*/*") ) )
-			{
+			if(pAllow && (!strcmp(pAllow, "*") || !strcmp(pAllow, "*/*"))) {
 				free( pAllow );
 				pAllow = NULL;
 			}
 		}
-
 		if ( !pAllow && !pDeny ) {
 			if (perm == CONFIG_PERM) { 	  // deny all CONFIG requests 
 				pentry->behavior = USERVERIFY_DENY; // by default
@@ -195,38 +195,44 @@ IpVerify::Init()
 				pentry->behavior = USERVERIFY_USE_TABLE;
 			}
 			if ( pAllow ) {
-                fill_table( pentry, pAllow, true );
+				fill_table( pentry, pAllow, true );
 				free(pAllow);
-                pAllow = NULL;
+				pAllow = NULL;
 			}
 			if ( pDeny ) {
 				fill_table( pentry,	pDeny, false );
 				free(pDeny);
-                pDeny = NULL;
+				pDeny = NULL;
 			}
 		}
-        if (pOldAllow) {
-            free(pOldAllow);
-            pOldAllow = NULL;
-        }
-        if (pOldDeny) {
-            free(pOldDeny);
-            pOldDeny = NULL;
-        }
-        if (pNewAllow) {
-            free(pNewAllow);
-            pNewAllow = NULL;
-        }
-        if (pNewDeny) {
-            free(pNewDeny);
-            pNewDeny = NULL;
-        }
-    
-    }
-
+		if (pAllow) {
+			free(pAllow);
+			pAllow = NULL;
+		}
+		if (pDeny) {
+			free(pDeny);
+			pDeny = NULL;
+		}
+		if (pOldAllow) {
+			free(pOldAllow);
+			pOldAllow = NULL;
+		}
+		if (pOldDeny) {
+			free(pOldDeny);
+			pOldDeny = NULL;
+		}
+		if (pNewAllow) {
+			free(pNewAllow);
+			pNewAllow = NULL;
+		}
+		if (pNewDeny) {
+			free(pNewDeny);
+			pNewDeny = NULL;
+		}
+	}
 	dprintf(D_FULLDEBUG|D_SECURITY,"Initialized the following authorization table:\n");
-	PrintAuthTable(D_FULLDEBUG|D_SECURITY);
-
+	if(PermHashTable)	
+		PrintAuthTable(D_FULLDEBUG|D_SECURITY);
 	return TRUE;
 }
 
@@ -633,7 +639,6 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 	if( !did_init ) {
 		Init();
 	}
-
 	/*
 	 * Be Warned:  careful about parameter "sin" being NULL.  It could be, in
 	 * which case we should return FALSE (unless perm is ALLOW)

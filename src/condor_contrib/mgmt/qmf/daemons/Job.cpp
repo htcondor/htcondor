@@ -405,7 +405,7 @@ void HistoryJobImpl::GetSummary ( ClassAd& _ad ) const
 	_ad.Assign(ATTR_PROC_ID,m_he.proc);
 	_ad.Assign(ATTR_Q_DATE,m_he.q_date);
 	_ad.Assign(ATTR_JOB_STATUS,m_he.status);
-	_ad.Assign(ATTR_ENTERED_CURRENT_STATE,m_he.entered_status);
+	_ad.Assign(ATTR_ENTERED_CURRENT_STATUS,m_he.entered_status);
 	_ad.Assign(ATTR_JOB_SUBMISSION,m_he.submission.c_str());
 	_ad.Assign(ATTR_OWNER,m_he.owner.c_str());
 	_ad.Assign(ATTR_JOB_CMD,m_he.cmd.c_str());
@@ -449,7 +449,7 @@ void
     {
 		buf <<  "unable to open history file " << m_he.file;
 		text = buf.str();
-        dprintf ( D_ALWAYS, text.c_str(), "\n");
+        dprintf ( D_ALWAYS, "%s\n", text.c_str());
 	_ad.Assign("JOB_AD_ERROR",text.c_str());
 	return;
     }
@@ -457,7 +457,7 @@ void
     {
 		buf << "bad seek in " << m_he.file << " at " << m_he.start;
 		text = buf.str();
-        dprintf ( D_ALWAYS, text.c_str(), "\n");
+        dprintf ( D_ALWAYS, "%s\n", text.c_str());
 	_ad.Assign("JOB_AD_ERROR",text.c_str());
         return;
     }

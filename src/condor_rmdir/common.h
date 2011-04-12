@@ -1,11 +1,29 @@
+/***************************************************************
+ *
+ * Copyright (C) 2011, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
 
 #pragma once
 #define _COMMON_H_
-#define USE_LIBCTINY
 
-#undef MoveMemory
-#undef RtlMoveMemory
-extern "C" __declspec(dllimport) void* __stdcall RtlMoveMemory(void *, const void *, int);
+//#define USE_LIBCTINY 1
+//#undef MoveMemory
+//#undef RtlMoveMemory
+//extern "C" __declspec(dllimport) void* __stdcall RtlMoveMemory(void *, const void *, int);
 //#pragma comment(linker,"/EXPORT:RtlMoveMemory=Kernel32.RtlMoveMemory")
 
 #ifndef NUMELMS
@@ -38,12 +56,7 @@ extern "C" __declspec(dllimport) void* __stdcall RtlMoveMemory(void *, const voi
 #define NUMBYTES(x)         sizeof(x)
 #define NUMWIDES(x)         (sizeof(x) / sizeof(WCHAR))
 
-INLINE DWORD SfAlign(SIZE_T cb, SIZE_T cbAlign)
-{
-   return (DWORD)( (cb + (cbAlign - 1)) & ~(cbAlign - 1) );
-}
-
-#define SfZeroStruct(ps)        RtlZeroMemory(ps, sizeof(*(ps)))
+#define ZeroStruct(ps)        RtlZeroMemory(ps, sizeof(*(ps)))
 
 #define BOUND(x, l, h)          (((x) < (l)) ? (l) : ((x) > (h) ? (h) : (x)))
 
@@ -126,17 +139,14 @@ template <class T> INLINE bool CharIsSpace(T ch) { return (' ' == ch) || (ch >= 
 template <class T> UINT StrAllocBytes(T psz) { return (UINT)(psz ? lstrlen(psz)+1 : 0) * sizeof(psz[0]); }
 template <class T> T StrSkipWhiteSpace(T psz) { while(CharIsSpace(psz[0])) { psz = StrCharNext(psz); } return psz; }
 
-template <class T> void StrCopy(T * psz1, const T * psz2, int cch1Max) { 
-   StrCopyWorker(psz1, cch1Max, NULL, psz2, STR_MAX_POSSIBLE_CCH); 
+template <class T> void StrCopy(T * psz1, const T * psz2, int cch1Max) {
+   StrCopyWorker(psz1, cch1Max, NULL, psz2, STR_MAX_POSSIBLE_CCH);
    }
-template <class T> void StrCopyN(T * psz1, int cch1Max, const T * psz2, int cchToCopy) { 
+template <class T> void StrCopyN(T * psz1, int cch1Max, const T * psz2, int cchToCopy) {
    StrCopyWorker(psz1, cch1Max, NULL, psz2, cchToCopy); 
    }
 
-//#define SfGetStr(idStr) (LPCTSTR)(idStr)
 #ifndef FIELDOFF
   #define FIELDOFF(st,fld) FIELD_OFFSET(st, fld)
   #define FIELDSIZ(st,fld) ((UINT)(sizeof(((st *)0)->fld)))
-  #define SFVFLD(st,fld,as) {T(#fld), FIELDOFF(st,fld), FIELDSIZ(st,fld), (as), 0, NULL, 0}
-  #define SFV_BLANK_LINE    {_UT(""), 0, 0, SFVF_AS_NONE, 0, NULL, 0}
 #endif
