@@ -66,6 +66,10 @@ extern aviary::soap::Axis2SoapProvider* provider;
 // Utility section START
 //
 
+// Any key that begins with the '0' char is either the
+// header or a cluster, i.e. not a job
+#define IS_JOB(key) ((key) && '0' != (key)[0])
+
 // NOTE #1: unfortunately the Axis2/C generated code is inconsistent in its
 // internal checking of nillable (i.e., minOccurs=0) elements
 // so we have to use default ctors and build the element object using setters
@@ -249,10 +253,10 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 				// client wants the job summaries also
 				JobSummaryPairCollection jobs;
 				submission->getJobSummaries(jobs);
-				for (JobSummaryPairCollection::const_iterator i = jobs.begin(); jobs.end() != i; i++) {
+				for (JobSummaryPairCollection::const_iterator it = jobs.begin(); jobs.end() != it; it++) {
 					JobSummary* js = new JobSummary;
-					createGoodJobResponse<JobSummary>(*js,(*i).first);
-					mapFieldsToSummary(*((*i).second),js);
+					createGoodJobResponse<JobSummary>(*js,(*it).first);
+					mapFieldsToSummary(*((*it).second),js);
 					summary->addJobs(js);
 				}
 			}
@@ -286,7 +290,10 @@ GetJobStatusResponse* AviaryQueryServiceSkeleton::getJobStatus(wso2wsf::MessageC
 	if (_getJobStatus->isIdsNil() || _getJobStatus->getIds()->size() == 0) {
 		// no ids supplied...they get them all
 		for (JobCollectionType::iterator i = g_jobs.begin(); g_jobs.end() != i; i++) {
-			id_set.insert((*i).first);
+			const char* job_id = (*i).first;
+			if (IS_JOB(job_id)) {
+				id_set.insert(job_id);
+			}
 		}
 	}
 	else {
@@ -331,7 +338,10 @@ GetJobSummaryResponse* AviaryQueryServiceSkeleton::getJobSummary(wso2wsf::Messag
 	if (_getJobSummary->isIdsNil() || _getJobSummary->getIds()->size() == 0) {
 		// no ids supplied...they get them all
 		for (JobCollectionType::iterator i = g_jobs.begin(); g_jobs.end() != i; i++) {
-			id_set.insert((*i).first);
+			const char* job_id = (*i).first;
+			if (IS_JOB(job_id)) {
+				id_set.insert(job_id);
+			}
 		}
 	}
 	else {
@@ -375,7 +385,10 @@ GetJobDetailsResponse* AviaryQueryServiceSkeleton::getJobDetails(wso2wsf::Messag
 	if (_getJobDetails->isIdsNil() || _getJobDetails->getIds()->size() == 0) {
 		// no ids supplied...they get them all
 		for (JobCollectionType::iterator i = g_jobs.begin(); g_jobs.end() != i; i++) {
-			id_set.insert((*i).first);
+			const char* job_id = (*i).first;
+			if (IS_JOB(job_id)) {
+				id_set.insert(job_id);
+			}
 		}
 	}
 	else {
