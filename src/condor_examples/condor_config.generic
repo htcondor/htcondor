@@ -1102,7 +1102,7 @@ TRANSFERER			= $(LIBEXEC)/condor_transferer
 MASTER_ADDRESS_FILE = $(LOG)/.master_address
 
 ##  Where should the master find the condor_preen binary? If you don't
-##  want preen to run at all, just comment out this setting.
+##  want preen to run at all, set it to nothing.
 PREEN				= $(SBIN)/condor_preen
 
 ##  How do you want preen to behave?  The "-m" means you want email
@@ -1642,6 +1642,18 @@ QUEUE_SUPER_USERS	= root, condor
 ##  job with the specified UID, even if it's not in the passwd file?
 #SOFT_UID_DOMAIN	= FALSE
 
+##  honor the run_as_owner option from the condor submit file.
+##
+#STARTER_ALLOW_RUNAS_OWNER = TRUE
+
+##  Tell the Starter/Startd what program to use to remove a directory
+##  condor_rmdir.exe is a windows-only command that does a better job
+##  than the built-in rmdir command when it is run with elevated privileges
+##  Such as when when Condor is running as a service.
+##   /s is delete subdirectories
+##   /c is continue on error
+WINDOWS_RMDIR = $(SBIN)\condor_rmdir.exe
+#WINDOWS_RMDIR_OPTIONS = /s /c
 
 ##--------------------------------------------------------------------
 ##  condor_procd
@@ -1755,14 +1767,6 @@ INVALID_LOG_FILES	= core
 ##  empty or incorrect.
 
 JAVA = /usr/bin/java
-
-##  Some JVMs need to be told the maximum amount of heap memory
-##  to offer to the process.  If your JVM supports this, give
-##  the argument here, and Condor will fill in the memory amount.
-##  If left blank, your JVM will choose some default value,
-##  typically 64 MB.  The default (-Xmx) works with the Sun JVM.
-
-JAVA_MAXHEAP_ARGUMENT = -Xmx
 
 ## JAVA_CLASSPATH_DEFAULT gives the default set of paths in which
 ## Java classes are to be found.  Each path is separated by spaces.

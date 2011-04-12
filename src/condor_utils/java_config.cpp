@@ -41,20 +41,6 @@ int java_config( MyString &cmd, ArgList *args, StringList *extra_classpath )
 	if(!tmp) return 0;
 	cmd = tmp;
 	free(tmp);
-
-	tmp = param("JAVA_MAXHEAP_ARGUMENT");
-	const char *xmx_arg = "";
-	// if tmp is not set or the MAXHEAP argument does not contain the leading -Xmx, add it.
-	if( !tmp || strncmp(tmp, "-Xmx", 4) ) 
-		xmx_arg = "-Xmx";
-
-	if (!tmp) {
-		arg_buf.sprintf("%s%dm",xmx_arg,sysapi_phys_memory()/ sysapi_ncpus());
-	} else {
-		arg_buf.sprintf("%s%s",xmx_arg,tmp);
-		free(tmp);
-	}
-	args->AppendArg(arg_buf.Value());
 	
 	tmp = param("JAVA_CLASSPATH_ARGUMENT");
 	if(!tmp) tmp = strdup("-classpath");

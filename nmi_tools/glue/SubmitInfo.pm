@@ -396,7 +396,7 @@ our %submit_info = (
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ 
 				@default_prereqs, 
-				'java-1.4.2_09', 
+				'java-1.4.2_12', 
 				'coreutils-5.2.1'
 			],
 			'testclass'	=> [ @default_testclass ],

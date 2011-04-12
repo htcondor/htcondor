@@ -745,7 +745,8 @@ HRESULT App_ExecuteCommandLine (
          {
          hr = App_ExecuteArgList (aArgs, ixFirst, cArgs - ixFirst);
          }
-      GlobalFreePtr (aArgs);
+
+      HeapFree(GetProcessHeap(), 0, aArgs);
       }
 
    return hr;
@@ -761,6 +762,12 @@ const TCHAR * _pszModulePath; // global path name
 void App_SetModuleInfo(void)
 {
    TCHAR * pszBase =(TCHAR*)malloc(sizeof(TCHAR) * (MAX_PATH+3));
+   if ( ! pszBase)
+      {
+	  _pszModulePath = _pszModuleName = TEXT("");
+	  return;
+      }
+
    TCHAR * psz = pszBase;
    *psz++ = 0; // so we have room for a "" path if the module filename has no path
    int cch = GetModuleFileName(NULL, psz, MAX_PATH+1);
@@ -798,13 +805,13 @@ void App_SetModuleInfo(void)
       _pszModulePath = pszBase;
    else
       {
-      if (_pszModuleName-1 > _pszModulePath)
+      if (_pszModuleName-2 >= _pszModulePath)
          {
          // we need to be careful not to delete \ folling a drive letter,
          // if that happens, we have to move the name by 1 character
          // so there is room for a null terminator after N:\ and before
          // the name.
-         if (_pszModuleName[-1] == ':' &&
+         if (_pszModuleName[-2] == ':' &&
              _pszModuleName[-1] == '\\')
             {
             RtlMoveMemory((void*)(_pszModuleName+1), (void*)(_pszModuleName),

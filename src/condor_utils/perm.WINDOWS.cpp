@@ -102,7 +102,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 		&pSD_length_needed			// address of required size of buffer
 		) ) {
 		dprintf(D_ALWAYS, "perm::GetFileSecurity(%s) failed (err=%d)\n", file_name, GetLastError());
-		delete pSD;
+		delete[] pSD;
 		return -1;
 	}
 	
@@ -114,7 +114,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 		&acl_defaulted					// address of flag for default disc. ACL
 		) ) {
 		dprintf(D_ALWAYS, "perm::GetSecurityDescriptorDacl failed (file=%s err=%d)\n", file_name, GetLastError());
-		delete pSD;
+		delete[] pSD;
 		return -1;
 	}
 	
@@ -134,7 +134,7 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 	// first get the number of ACEs in the ACL
 		if (! GetAclInformation( pacl,		// acl to get info from
 								acl_info,	// buffer to receive info
-								24,			// size in bytes of buffer
+								sizeof(acl_info),  // size in bytes of buffer
 								AclSizeInformation // class of info to retrieve
 								) ) {
 			dprintf(D_ALWAYS, "Perm::GetAclInformation failed with error %d\n", GetLastError() );
@@ -439,10 +439,8 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 		char* builtin = getBuiltinDomainName();
 		char* nt_authority = getNTAuthorityDomainName();
 
-		
-		int success = GetComputerName( computerName, &nameLength );
-		
-		if (! success ) {
+		BOOL bSuccess = GetComputerName( computerName, &nameLength );
+		if ( ! bSuccess ) {
 			// this should never happen
 			dprintf(D_ALWAYS, "perm::GetComputerName failed: (Err: %d)", GetLastError());
 			result = -1; // failure
