@@ -49,11 +49,13 @@ using namespace compat_classad;
 const char* BASIC_REQ_FORMAT = 
 "\
 ( TARGET.Arch %s ) && \
-( TARGET.OpSys %s ) && \
+( %s ) && \
 ( TARGET.Disk %s ) && \
 ( ( TARGET.Memory * 1024 ) %s ) && \
 ( TARGET.FileSystemDomain %s )";
 
+const char* BASIC_OS_FORMAT = "TARGET.OpSys == \"%s\"";
+const char* BASIC_WINOS_FORMAT = "TARGET.OpSys==\"WINNT51\" || TARGET.OpSys==\"WINNT52\" || TARGET.OpSys==\"WINNT60\"";
 const char* REQ_UNDEFINED = " =!= undefined ";
 const char* REQ_GTE_ZERO = " >= 0 ";
 
@@ -90,7 +92,12 @@ buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _reqs
 				arch = " == \"" + rc->getValue() + "\"";
 				break;
 			case ResourceConstraintType_OS:
-				opsys = " == \"" + rc->getValue() + "\"";
+				if (rc->getValue() == "WINDOWS") {
+					opsys = BASIC_WINOS_FORMAT;
+				}
+				else {
+					sprintf(opsys,BASIC_OS_FORMAT,rc->getValue().c_str());
+				}
 				break;
             case ResourceConstraintType_DISK:
 				disk = " >= " + rc->getValue();
