@@ -143,15 +143,15 @@ StdUnivSock::get_ip_int()
 	return (unsigned int) ntohl(addr.sin_addr.s_addr);
 }
 
-ipaddr
+condor_sockaddr
 StdUnivSock::my_addr()
 {
 	sockaddr_storage addr;
 	SOCKET_LENGTH_TYPE addr_len;
 	addr_len = sizeof(addr);
 	if (getsockname(_sock, (sockaddr*)&addr, &addr_len) < 0)
-		return ipaddr::null;
-	return ipaddr((const sockaddr*)&addr);
+		return condor_sockaddr::null;
+	return condor_sockaddr((const sockaddr*)&addr);
 }
 
 char *

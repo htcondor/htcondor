@@ -39,7 +39,7 @@
 #include "stat_info.h"
 #include "shared_port_endpoint.h"
 #include "condor_fix_access.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
@@ -222,7 +222,7 @@ daemon::runs_on_this_host()
 	char	*tmp;
 	char	hostname[512];
 	static bool this_host_addr_cached = false;
-	static std::vector<ipaddr> this_host_addr;
+	static std::vector<condor_sockaddr> this_host_addr;
 	struct hostent	*hp;
 	int		i, j;
 
@@ -253,7 +253,7 @@ daemon::runs_on_this_host()
 			}
 			runs_here = FALSE;
 
-			std::vector<ipaddr> addrs = resolve_hostname(tmp);
+			std::vector<condor_sockaddr> addrs = resolve_hostname(tmp);
 			if (addrs.empty()) {
 				dprintf(D_ALWAYS, "Master couldn't lookup host %s\n", tmp);
 				return FALSE;

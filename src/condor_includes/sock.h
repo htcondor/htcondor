@@ -26,7 +26,7 @@
 #include "stream.h"
 #include "CondorError.h"
 #include "condor_perms.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 
 // retry failed connects for CONNECT_TIMEOUT seconds
 #define CONNECT_TIMEOUT 10
@@ -252,7 +252,7 @@ public:
 
     /// peer's port and IP address in a struct sockaddr_in.
 	//struct sockaddr_in *peer_addr();
-	ipaddr peer_addr();
+	condor_sockaddr peer_addr();
 
 	/// peer's port number 
 	int peer_port();
@@ -266,7 +266,7 @@ public:
 	/// is peer a local interface, aka did this connection originate from a local process?
 	bool peer_is_local();
 
-	ipaddr my_addr();
+	condor_sockaddr my_addr();
 
     /// my port and IP address in a struct sockaddr_in
     /// @args: the address is returned via 'sin'
@@ -475,7 +475,7 @@ protected:
 	sock_state		_state;
 	int				_timeout;
 		//struct sockaddr_in _who;	// endpoint of "connection"
-	ipaddr			_who;
+	condor_sockaddr			_who;
 	char *			m_connect_addr;
 	char *          _fqu;
 	char *          _fqu_user_part;
@@ -491,7 +491,7 @@ protected:
 	CONDOR_MD_MODE      mdMode_;        // MAC mode
 	KeyInfo           * mdKey_;
 
-	static bool guess_address_string(char const* host, int port, ipaddr& addr);
+	static bool guess_address_string(char const* host, int port, condor_sockaddr& addr);
 
 private:
 	bool initialize_crypto(KeyInfo * key);
@@ -587,7 +587,7 @@ private:
 	*/
 	//int _bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 	//	SOCKET_LENGTH_TYPE len, bool outbound, bool loopback);
-	int _bind_helper(int fd, const ipaddr& addr, bool outbound, bool loopback);
+	int _bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loopback);
 };
 
 #endif /* SOCK_H */

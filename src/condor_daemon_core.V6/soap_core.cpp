@@ -225,7 +225,7 @@ dc_soap_init(struct soap *&soap)
 						(details && *details) ? *details : "No details.");
 			}
 
-			ipaddr sockaddr;
+			condor_sockaddr sockaddr;
 			if (condor_getsockname(sock_fd, sockaddr)) {
 				dprintf(D_ALWAYS, "Failed to get name of SOAP SSL socket\n");
 			} else {
@@ -325,7 +325,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 	sockaddr.sin_addr.s_addr = htonl(ssl_soap->ip);
 	sockaddr.sin_port = htons(ssl_soap->port);
 
-	ipaddr addr(&sockaddr);
+	condor_sockaddr addr(&sockaddr);
 
 	current_soap = soap_copy(ssl_soap);
 	ASSERT(current_soap);

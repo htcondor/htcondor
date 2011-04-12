@@ -1,17 +1,17 @@
 #include "condor_common.h"
 #include "MyString.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
 
-ipaddr ipaddr::null;
+condor_sockaddr condor_sockaddr::null;
 
-void ipaddr::clear()
+void condor_sockaddr::clear()
 {
 	memset(&storage, 0, sizeof(sockaddr_storage));
 }
 
 // init only accepts network-ordered ip and port
-void ipaddr::init(int ip, unsigned port)
+void condor_sockaddr::init(int ip, unsigned port)
 {
 	clear();
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
@@ -22,17 +22,17 @@ void ipaddr::init(int ip, unsigned port)
 	v4.sin_addr.s_addr = ip;
 }
 
-ipaddr::ipaddr()
+condor_sockaddr::condor_sockaddr()
 {
 	clear();
 }
 
-ipaddr::ipaddr(in_addr ip, unsigned short port)
+condor_sockaddr::condor_sockaddr(in_addr ip, unsigned short port)
 {
 	init(ip.s_addr, htons(port));
 }
 
-ipaddr::ipaddr(const in6_addr& in6, unsigned short port)
+condor_sockaddr::condor_sockaddr(const in6_addr& in6, unsigned short port)
 {
 	clear();
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
@@ -43,7 +43,7 @@ ipaddr::ipaddr(const in6_addr& in6, unsigned short port)
 	v6.sin6_addr = in6;
 }
 
-ipaddr::ipaddr(const sockaddr* sa)
+condor_sockaddr::condor_sockaddr(const sockaddr* sa)
 {
 	if (sa->sa_family == AF_INET) {
 		sockaddr_in* sin = (sockaddr_in*)sa;
@@ -56,32 +56,32 @@ ipaddr::ipaddr(const sockaddr* sa)
 	}
 }
 
-ipaddr::ipaddr(const sockaddr_in* sin) 
+condor_sockaddr::condor_sockaddr(const sockaddr_in* sin) 
 {
 	init(sin->sin_addr.s_addr, sin->sin_port);
 }
 
-ipaddr::ipaddr(const sockaddr_in6* sin6)
+condor_sockaddr::condor_sockaddr(const sockaddr_in6* sin6)
 {
 	v6 = *sin6;
 }
 
-sockaddr_in ipaddr::to_sin() const
+sockaddr_in condor_sockaddr::to_sin() const
 {
 	return v4;
 }
 
-sockaddr_in6 ipaddr::to_sin6() const
+sockaddr_in6 condor_sockaddr::to_sin6() const
 {
 	return v6;
 }
 
-bool ipaddr::is_ipv4() const
+bool condor_sockaddr::is_ipv4() const
 {
 	return v4.sin_family == AF_INET;
 }
 
-bool ipaddr::is_ipv6() const
+bool condor_sockaddr::is_ipv6() const
 {
 	return v6.sin6_family == AF_INET6;
 }
@@ -89,7 +89,7 @@ bool ipaddr::is_ipv6() const
 // IN6_* macro are came from netinet/inet.h
 // need to check whether it is platform-independent macro
 // -- compiled on every unix/linux platforms
-bool ipaddr::is_addr_any() const
+bool condor_sockaddr::is_addr_any() const
 {
 	if (is_ipv4()) {
 		return v4.sin_addr.s_addr == ntohl(INADDR_ANY);
@@ -100,7 +100,7 @@ bool ipaddr::is_addr_any() const
 	return false;
 }
 
-void ipaddr::set_addr_any()
+void condor_sockaddr::set_addr_any()
 {
 	if (is_ipv4()) {
 		v4.sin_addr.s_addr = ntohl(INADDR_ANY);
@@ -110,7 +110,7 @@ void ipaddr::set_addr_any()
 	}
 }
 
-bool ipaddr::is_loopback() const
+bool condor_sockaddr::is_loopback() const
 {
 	if (is_ipv4()) {
 		return v4.sin_addr.s_addr == ntohl(INADDR_LOOPBACK);
@@ -120,7 +120,7 @@ bool ipaddr::is_loopback() const
 	}
 }
 
-void ipaddr::set_loopback()
+void condor_sockaddr::set_loopback()
 {
 	if (is_ipv4()) {
 		v4.sin_addr.s_addr = ntohl(INADDR_LOOPBACK);
@@ -130,7 +130,7 @@ void ipaddr::set_loopback()
 	}
 }
 
-unsigned short ipaddr::get_port() const
+unsigned short condor_sockaddr::get_port() const
 {
 	if (is_ipv4()) {
 		return ntohs(v4.sin_port);
@@ -140,7 +140,7 @@ unsigned short ipaddr::get_port() const
 	}
 }
 
-void ipaddr::set_port(unsigned short port)
+void condor_sockaddr::set_port(unsigned short port)
 {
 	if (is_ipv4()) {
 		v4.sin_port = htons(port);
@@ -150,7 +150,7 @@ void ipaddr::set_port(unsigned short port)
 	}
 }
 
-MyString ipaddr::to_sinful() const
+MyString condor_sockaddr::to_sinful() const
 {
 	MyString ret;
 	char tmp[IP_STRING_BUF_SIZE];
@@ -168,7 +168,7 @@ MyString ipaddr::to_sinful() const
 	return ret;
 }
 
-const char* ipaddr::to_sinful(char* buf, int len) const
+const char* condor_sockaddr::to_sinful(char* buf, int len) const
 {
 	char tmp[IP_STRING_BUF_SIZE];
 		// if it is not ipv4 or ipv6, to_ip_string_ex will fail.
@@ -186,7 +186,7 @@ const char* ipaddr::to_sinful(char* buf, int len) const
 }
 
 // faithful reimplementation of 'string_to_sin' of internet.c
-bool ipaddr::from_sinful(const char* sinful)
+bool condor_sockaddr::from_sinful(const char* sinful)
 {
 	const char* addr = sinful;
 	bool ipv6 = false;
@@ -264,12 +264,12 @@ bool ipaddr::from_sinful(const char* sinful)
 	return true;
 }
 
-sockaddr* ipaddr::to_sockaddr() const
+sockaddr* condor_sockaddr::to_sockaddr() const
 {
 	return (sockaddr*)&storage;
 }
 
-socklen_t ipaddr::get_socklen() const
+socklen_t condor_sockaddr::get_socklen() const
 {
 	if (is_ipv4())
 		return sizeof(sockaddr_in);
@@ -279,12 +279,12 @@ socklen_t ipaddr::get_socklen() const
 		return sizeof(sockaddr_storage);
 }
 
-bool ipaddr::from_ip_string(const MyString& ip_string)
+bool condor_sockaddr::from_ip_string(const MyString& ip_string)
 {
 	return from_ip_string(ip_string.Value());
 }
 
-bool ipaddr::from_ip_string(const char* ip_string)
+bool condor_sockaddr::from_ip_string(const char* ip_string)
 {
 	if (inet_pton(AF_INET, ip_string, &v4.sin_addr) == 1) {
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
@@ -305,24 +305,24 @@ bool ipaddr::from_ip_string(const char* ip_string)
 }
 
 /*
-const char* ipaddr::to_ip_string(char* buf, int len) const
+const char* condor_sockaddr::to_ip_string(char* buf, int len) const
 {
 	if (is_addr_any())
-		return get_local_ipaddr().to_raw_ip_string(buf, len);
+		return get_local_condor_sockaddr().to_raw_ip_string(buf, len);
 	else
 		return to_raw_ip_string(buf, len);
 }
 
-MyString ipaddr::to_ip_string() const
+MyString condor_sockaddr::to_ip_string() const
 {
 	if (is_addr_any())
-		return get_local_ipaddr().to_raw_ip_string();
+		return get_local_condor_sockaddr().to_raw_ip_string();
 	else
 		return to_raw_ip_string();
 }
 */
 
-const char* ipaddr::to_ip_string(char* buf, int len) const
+const char* condor_sockaddr::to_ip_string(char* buf, int len) const
 {
 	if ( is_ipv4() ) 
 		return inet_ntop(AF_INET, &v4.sin_addr, buf, len);	
@@ -349,7 +349,7 @@ const char* ipaddr::to_ip_string(char* buf, int len) const
 		return NULL;
 }
 
-MyString ipaddr::to_ip_string() const
+MyString condor_sockaddr::to_ip_string() const
 {
 	char tmp[IP_STRING_BUF_SIZE];
 	MyString ret;
@@ -359,7 +359,7 @@ MyString ipaddr::to_ip_string() const
 	return ret;
 }
 
-MyString ipaddr::to_ip_string_ex() const
+MyString condor_sockaddr::to_ip_string_ex() const
 {
 		// no need to check is_valid()
 	if ( is_addr_any() )
@@ -368,7 +368,7 @@ MyString ipaddr::to_ip_string_ex() const
 		return to_ip_string();
 }
 
-const char* ipaddr::to_ip_string_ex(char* buf, int len) const
+const char* condor_sockaddr::to_ip_string_ex(char* buf, int len) const
 {
 		// no need to check is_valid()
 	if (is_addr_any())
@@ -377,7 +377,7 @@ const char* ipaddr::to_ip_string_ex(char* buf, int len) const
 		return to_ip_string(buf, len);
 }
 
-bool ipaddr::is_valid() const
+bool condor_sockaddr::is_valid() const
 {
 		// the field name of sockaddr_storage differs from platform to
 		// platform. For AIX, it defines __ss_family while others usually
@@ -387,7 +387,7 @@ bool ipaddr::is_valid() const
 	return v4.sin_family == AF_INET || v6.sin6_family == AF_INET6;
 }
 
-bool ipaddr::is_private_network() const
+bool condor_sockaddr::is_private_network() const
 {
 	if (is_ipv4()) {
 		uint32_t ip = (uint32_t)v4.sin_addr.s_addr;
@@ -404,12 +404,12 @@ bool ipaddr::is_private_network() const
 	return false;
 }
 
-void ipaddr::set_ipv4() 
+void condor_sockaddr::set_ipv4() 
 {
 	v4.sin_family = AF_INET;
 }
 
-int ipaddr::get_aftype() const
+int condor_sockaddr::get_aftype() const
 {
 	if (is_ipv4())
 		return AF_INET;
@@ -418,7 +418,7 @@ int ipaddr::get_aftype() const
 	return AF_UNSPEC;
 }
 
-in6_addr ipaddr::to_ipv6_address() const
+in6_addr condor_sockaddr::to_ipv6_address() const
 {
 	if (is_ipv6()) return v6.sin6_addr;
 	in6_addr ret;
@@ -432,7 +432,7 @@ in6_addr ipaddr::to_ipv6_address() const
 	return ret;
 }
 
-bool ipaddr::compare_address(const ipaddr& addr) const
+bool condor_sockaddr::compare_address(const condor_sockaddr& addr) const
 {
 	if (is_ipv4()) {
 		if (!addr.is_ipv4())
@@ -453,14 +453,14 @@ bool ipaddr::compare_address(const ipaddr& addr) const
 // 2. compare address
 // 3. compare port
 
-bool ipaddr::operator<(const ipaddr& rhs) const
+bool condor_sockaddr::operator<(const condor_sockaddr& rhs) const
 {
 	const void* l = (const void*)&storage;
 	const void* r = (const void*)&rhs.storage;
 	return memcmp(l, r, sizeof(sockaddr_storage)) < 0;
 }
 
-bool ipaddr::operator==(const ipaddr& rhs) const
+bool condor_sockaddr::operator==(const condor_sockaddr& rhs) const
 {
 	const void* l = (const void*)&storage;
 	const void* r = (const void*)&rhs.storage;

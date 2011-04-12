@@ -680,7 +680,7 @@ int _condorOutMsg::putn(const char *dta, const int size) {
  *	          -1, if fails
  */
 int _condorOutMsg::sendMsg(const int sock,
-                           const ipaddr& who,
+                           const condor_sockaddr& who,
                            _condorMsgID msgID,
                            unsigned char * mac)
 {

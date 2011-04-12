@@ -22,24 +22,24 @@
 
 #include "MyString.h"
 #include <vector>
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 
 void init_local_hostname();
 
-ipaddr get_local_ipaddr();
+condor_sockaddr get_local_ipaddr();
 MyString get_local_hostname();
 MyString get_local_fqdn();
 
-MyString get_hostname(const ipaddr& addr);
-std::vector<MyString> get_hostname_with_alias(const ipaddr& addr);
-MyString get_full_hostname(const ipaddr& addr);
+MyString get_hostname(const condor_sockaddr& addr);
+std::vector<MyString> get_hostname_with_alias(const condor_sockaddr& addr);
+MyString get_full_hostname(const condor_sockaddr& addr);
 
-std::vector<ipaddr> resolve_hostname(const MyString& hostname);
-std::vector<ipaddr> resolve_hostname(const char* hostname);
+std::vector<condor_sockaddr> resolve_hostname(const MyString& hostname);
+std::vector<condor_sockaddr> resolve_hostname(const char* hostname);
 
 // IPv6-compliant version of convert_ip_to_hostname and
 // convert_hostname_to_ip.
-MyString convert_ipaddr_to_hostname(const ipaddr& addr);
-ipaddr convert_hostname_to_ipaddr(const MyString& fullname);
+MyString convert_ipaddr_to_hostname(const condor_sockaddr& addr);
+condor_sockaddr convert_hostname_to_ipaddr(const MyString& fullname);
 
 #endif // IPV6_HOSTNAME_H

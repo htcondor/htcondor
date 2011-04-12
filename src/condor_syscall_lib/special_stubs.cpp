@@ -33,11 +33,11 @@
 #include "get_port_range.h"
 #include "condor_netdb.h"
 #include "simplelist.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 
 extern	StdUnivSock* syscall_sock;
 
-ipaddr
+condor_sockaddr
 get_local_ipaddr() {
 	return syscall_sock->my_addr();	
 }

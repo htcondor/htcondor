@@ -41,7 +41,7 @@
 #include "net_string_list.h"
 #include "MyString.h"
 #include "condor_perms.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 
 template <class Key, class Value> class HashTable; // forward declaration
 
@@ -102,7 +102,7 @@ public:
 		@return USER_AUTH_SUCCESS -- if success, USER_AUTH_FAILURE -- if failer
                 USER_ID_REQUIRED -- if user id is required but the caller did not pass in
 	*/
-	int Verify( DCpermission perm, const ipaddr& addr, const char * user, MyString *allow_reason, MyString *deny_reason );
+	int Verify( DCpermission perm, const condor_sockaddr& addr, const char * user, MyString *allow_reason, MyString *deny_reason );
 
 	/** Dynamically opens a hole in the authorization settings for the
 	    given (user, IP) at the given perm level.

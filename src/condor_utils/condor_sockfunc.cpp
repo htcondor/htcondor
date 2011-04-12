@@ -3,12 +3,12 @@
 #include "condor_sockfunc.h"
 #include "ipv6_hostname.h"
 
-int condor_connect(int sockfd, const ipaddr& addr)
+int condor_connect(int sockfd, const condor_sockaddr& addr)
 {
 	return connect(sockfd, addr.to_sockaddr(), addr.get_socklen());
 }
 
-int condor_accept(int sockfd, ipaddr& addr)
+int condor_accept(int sockfd, condor_sockaddr& addr)
 {
 	sockaddr_storage st;
 	socklen_t len;
@@ -17,11 +17,11 @@ int condor_accept(int sockfd, ipaddr& addr)
 	if (ret) {
 		if (st.ss_family == AF_INET) {
 			sockaddr_in* sin = (sockaddr_in*)&st;
-			addr = ipaddr(sin);
+			addr = condor_sockaddr(sin);
 		}	
 		else if (st.ss_family == AF_INET6) {
 			sockaddr_in6* sin6 = (sockaddr_in6*)&st;
-			addr = ipaddr(sin6);
+			addr = condor_sockaddr(sin6);
 		}
 		else
 		{
@@ -32,12 +32,12 @@ int condor_accept(int sockfd, ipaddr& addr)
 
 }
 
-int condor_bind(int sockfd, const ipaddr& addr)
+int condor_bind(int sockfd, const condor_sockaddr& addr)
 {
 	return bind(sockfd, addr.to_sockaddr(), addr.get_socklen());
 }
 
-int condor_inet_pton(const char* src, ipaddr& dest)
+int condor_inet_pton(const char* src, condor_sockaddr& dest)
 {
 	int ret;
 	const char* colon = strchr(src, ':');
@@ -46,14 +46,14 @@ int condor_inet_pton(const char* src, ipaddr& dest)
 		ret = inet_pton(AF_INET, src, (void*)&inaddr);
 		//printf("inet_pton ipv4 path, ret=%d sin=%08x\n", ret, inaddr.s_addr);
 		if (ret)
-			dest = ipaddr(inaddr);
+			dest = condor_sockaddr(inaddr);
 	}
 	else
 	{
 		in6_addr in6addr;
 		ret = inet_pton(AF_INET6, src, (void*)&in6addr);
 		if (ret)
-			dest = ipaddr(in6addr);
+			dest = condor_sockaddr(in6addr);
 	}
 	return ret;
 }
@@ -68,7 +68,7 @@ int condor_socket(int socket_type, int protocol)
 }
 
 int condor_sendto(int sockfd, const void* buf, size_t len, int flags,
-				  const ipaddr& addr)
+				  const condor_sockaddr& addr)
 {
 	int ret = sendto(sockfd, (const char*)buf, len, flags, addr.to_sockaddr(),
 					 addr.get_socklen());
@@ -77,7 +77,7 @@ int condor_sendto(int sockfd, const void* buf, size_t len, int flags,
 
 
 int condor_recvfrom(int sockfd, void* buf, size_t buf_size, int flags,
-		        ipaddr& addr)
+		        condor_sockaddr& addr)
 {
 		// we can further optimize it by passing addr into recvfrom() directly
 	sockaddr_storage ss;
@@ -88,23 +88,23 @@ int condor_recvfrom(int sockfd, void* buf, size_t buf_size, int flags,
 	ret = recvfrom(sockfd, (char*)buf, buf_size, flags, (sockaddr*)&ss, 
 		&fromlen);
 	if (ret>=0) {
-		addr = ipaddr( (sockaddr*)&ss );
+		addr = condor_sockaddr( (sockaddr*)&ss );
 	}
 	return ret;
 }
 
-int condor_getsockname(int sockfd, ipaddr& addr)
+int condor_getsockname(int sockfd, condor_sockaddr& addr)
 {
 	sockaddr_storage ss;
 	socklen_t socklen = sizeof(ss);
 	int ret = getsockname(sockfd, (sockaddr*)&ss, &socklen);
 	if (ret == 0) {
-		addr = ipaddr((sockaddr*)&ss);
+		addr = condor_sockaddr((sockaddr*)&ss);
 	}
 	return ret;
 }
 
-int condor_getsockname_ex(int sockfd, ipaddr& addr)
+int condor_getsockname_ex(int sockfd, condor_sockaddr& addr)
 {
 	int ret;
 	ret = condor_getsockname(sockfd, addr);
@@ -117,18 +117,18 @@ int condor_getsockname_ex(int sockfd, ipaddr& addr)
 	return ret;
 }
 
-int condor_getpeername(int sockfd, ipaddr& addr)
+int condor_getpeername(int sockfd, condor_sockaddr& addr)
 {
 	sockaddr_storage ss;
 	socklen_t socklen = sizeof(ss);
 	int ret = getpeername(sockfd, (sockaddr*)&ss, &socklen);
 	if (ret == 0) {
-		addr = ipaddr((sockaddr*)&ss);
+		addr = condor_sockaddr((sockaddr*)&ss);
 	}
 	return ret;
 }
 
-int condor_getnameinfo (const ipaddr& addr,
+int condor_getnameinfo (const condor_sockaddr& addr,
 		                char * __host, socklen_t __hostlen,
 		                char * __serv, socklen_t __servlen,
 		                unsigned int __flags)
@@ -152,7 +152,7 @@ int condor_getaddrinfo(const char *node,
 	return ret;
 }
 
-hostent* condor_gethostbyaddr_ipv6(const ipaddr& addr)
+hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr)
 {
 	sockaddr* sa = addr.to_sockaddr();
 	int type = sa->sa_family;
@@ -174,7 +174,7 @@ hostent* condor_gethostbyaddr_ipv6(const ipaddr& addr)
 	return ret;
 }
 
-//const char* ipv6_addr_to_hostname(const ipaddr& addr, char* buf, int len)
+//const char* ipv6_addr_to_hostname(const condor_sockaddr& addr, char* buf, int len)
 //{
 //    struct hostent  *hp;
 //    struct sockaddr_in caddr;
@@ -186,18 +186,18 @@ hostent* condor_gethostbyaddr_ipv6(const ipaddr& addr)
 //	return hp->h_name;
 //}
 
-int ipv6_is_ipaddr(const char* host, ipaddr& addr)
+int ipv6_is_ipaddr(const char* host, condor_sockaddr& addr)
 {
 	int ret = FALSE;
 	in_addr v4_addr;
 	in6_addr v6_addr;
 
 	if ( inet_pton( AF_INET, host, &v4_addr) > 0 ) {
-		addr = ipaddr(v4_addr, 0);
+		addr = condor_sockaddr(v4_addr, 0);
 		ret = TRUE;
 	}
 	else if ( inet_pton( AF_INET6, host, &v6_addr ) > 0 ) {
-		addr = ipaddr(v6_addr, 0);
+		addr = condor_sockaddr(v6_addr, 0);
 		ret = TRUE;
 	}
 

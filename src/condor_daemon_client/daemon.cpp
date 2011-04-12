@@ -1540,7 +1540,7 @@ Daemon::initHostname( void )
 	dprintf( D_HOSTNAME, "Address \"%s\" specified but no name, "
 			 "looking up host info\n", _addr );
 
-	ipaddr addr;
+	condor_sockaddr addr;
 	addr.from_sinful(_addr);
 	MyString fqdn = get_full_hostname(addr);
 	if (fqdn.IsEmpty()) {

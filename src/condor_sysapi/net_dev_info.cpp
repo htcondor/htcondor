@@ -24,7 +24,7 @@
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 
 
 static bool net_devices_cached = false;
@@ -116,7 +116,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 		const char* ip = NULL;
 		char const *name = ifap->ifa_name;
 		if( ifap->ifa_addr && ifap->ifa_addr->sa_family == AF_INET ) {
-			ipaddr addr(ifap->ifa_addr);
+			condor_sockaddr addr(ifap->ifa_addr);
 			ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
 		}
 		if( ip ) {
@@ -197,7 +197,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 		const char* ip = NULL;
 
 		if( ifr->ifr_addr.sa_family == AF_INET ||ifr->ifr.addr.sa_family == AF_INET6 ) {
-			ipaddr addr(&ifr->ifr_addr);
+			condor_sockaddr addr(&ifr->ifr_addr);
 			ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
 		}
 		if( ip ) {

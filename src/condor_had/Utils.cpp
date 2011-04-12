@@ -162,9 +162,9 @@ utilToSinful( char* address )
       return 0;
     }
 
-	ipaddr addr;
+	condor_sockaddr addr;
 	if (!addr.from_ip_string(ipAddress)) {
-		std::vector<ipaddr> addrs = resolve_hostname(hostName);
+		std::vector<condor_sockaddr> addrs = resolve_hostname(hostName);
 		if (addrs.empty()) {
 			free(hostName);
 			return 0;

@@ -915,10 +915,10 @@ Sock::get_sinful_public()
 	MyString tcp_forwarding_host;
 	param(tcp_forwarding_host,"TCP_FORWARDING_HOST");
 	if (!tcp_forwarding_host.IsEmpty()) {
-		ipaddr addr;
+		condor_sockaddr addr;
 		
 		if (!addr.from_ip_string(tcp_forwarding_host)) {
-			std::vector<ipaddr> addrs = resolve_hostname(tcp_forwarding_host);
+			std::vector<condor_sockaddr> addrs = resolve_hostname(tcp_forwarding_host);
 			if (addrs.empty()) {
 				dprintf(D_ALWAYS,
 					"failed to resolve address of TCP_FORWARDING_HOST=%s\n",

@@ -58,7 +58,7 @@
 #include "limit.h"
 #include "ccb_listener.h"
 #include "condor_sinful.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -301,7 +301,7 @@ class DaemonCore : public Service
         @param sin  Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Verify (char const *command_descrip, DCpermission perm, const ipaddr& addr, const char * fqu);
+    int Verify (char const *command_descrip, DCpermission perm, const condor_sockaddr& addr, const char * fqu);
     int AddAllowHost( const char* host, DCpermission perm );
 
     /** clear all sessions associated with the child 

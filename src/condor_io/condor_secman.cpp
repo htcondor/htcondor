@@ -2603,7 +2603,7 @@ SecMan::getIpVerify()
 }
 
 int
-SecMan::Verify(DCpermission perm, const ipaddr& addr, const char * fqu, MyString *allow_reason, MyString *deny_reason )
+SecMan::Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu, MyString *allow_reason, MyString *deny_reason )
 {
 	IpVerify *ipverify = getIpVerify();
 	ASSERT( ipverify );
@@ -2930,7 +2930,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
 	}
 
-	ipaddr tmp_addr(&peer_addr);
+	condor_sockaddr tmp_addr(&peer_addr);
 	KeyCacheEntry key(sesid,peer_sinful ? &tmp_addr : NULL,keyinfo,&policy,expiration_time,0);
 
 	if( !session_cache->insert(key) ) {

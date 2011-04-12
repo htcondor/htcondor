@@ -251,7 +251,7 @@ SafeSock::my_ip_str()
 		return NULL;
 	}
 
-	ipaddr addr;
+	condor_sockaddr addr;
 	addr = s.my_addr();
 	strcpy(_my_ip_buf, addr.to_ip_string().Value());
 	return _my_ip_buf;

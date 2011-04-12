@@ -472,7 +472,7 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 
 	int this_trial = start_trial;
 	do {
-		ipaddr			addr;
+		condor_sockaddr			addr;
 		int bind_return_val;
 
 		addr.clear();
@@ -529,7 +529,7 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 
 int Sock::bind(bool outbound, int port, bool loopback)
 {
-	ipaddr addr;
+	condor_sockaddr addr;
 	int bind_return_value;
 
 	// Following lines are added because some functions in condor call
@@ -718,7 +718,7 @@ int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 	return TRUE; 
 }
 
-bool Sock::guess_address_string(char const* host, int port, ipaddr& addr) {
+bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& addr) {
 	/* might be in <x.x.x.x:x> notation				*/
 	if (host[0] == '<') {
 		addr.from_sinful(host);
@@ -730,7 +730,7 @@ bool Sock::guess_address_string(char const* host, int port, ipaddr& addr) {
 	}
 	/* if dotted notation fails, try host database	*/
 	else{
-		std::vector<ipaddr> addrs;
+		std::vector<condor_sockaddr> addrs;
 		addrs = resolve_hostname(host);
 		if (addrs.empty())
 			return false;
@@ -1778,7 +1778,7 @@ Sock::addr_changed()
     _sinful_peer_buf[0] = '\0';
 }
 
-ipaddr
+condor_sockaddr
 Sock::peer_addr()
 {
 	return _who;
@@ -1835,7 +1835,7 @@ Sock::peer_is_local()
 		return false;
 
 	bool result;
-	ipaddr addr = peer_addr();
+	condor_sockaddr addr = peer_addr();
 		// ... but use any old ephemeral port.
 	addr.set_port(0);
 	int sock = ::socket(addr.get_aftype(), SOCK_DGRAM, IPPROTO_UDP);
@@ -1932,10 +1932,10 @@ Sock::peer_is_local()
 		*/
 }
 
-ipaddr
+condor_sockaddr
 Sock::my_addr() 
 {
-	ipaddr addr;
+	condor_sockaddr addr;
 	int ret = condor_getsockname_ex(_sock, addr);
 	return addr;
 }
@@ -1954,7 +1954,7 @@ char *
 Sock::get_sinful()
 {       
     if( !_sinful_self_buf[0] ) {
-		ipaddr addr;
+		condor_sockaddr addr;
 		int ret = condor_getsockname_ex(_sock, addr);
 		if (ret == 0) {
 			MyString sinful_self = addr.to_sinful();
@@ -1987,7 +1987,7 @@ Sock::default_peer_description()
 int
 Sock::get_port()
 {
-	ipaddr addr;
+	condor_sockaddr addr;
 	if (condor_getsockname(_sock, addr) < 0)
 		return -1;
 	return addr.get_port();
@@ -2223,7 +2223,7 @@ bool Sock :: is_encrypt()
 
 
 int
-Sock::_bind_helper(int fd, const ipaddr& addr, bool outbound, bool loopback)
+Sock::_bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loopback)
 {
 	int rval;
 

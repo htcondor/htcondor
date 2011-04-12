@@ -24,7 +24,7 @@
 #include "classad_hashtable.h"
 #include "internet.h"
 #include "condor_distribution.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
 
 /* 
@@ -322,7 +322,7 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 	HostStatistics *hs;
 	HashKey hostkey(ip_addr);
 	if (HStats.lookup(hostkey, hs) < 0) {
-		ipaddr addr;
+		condor_sockaddr addr;
 		const char* hostname = NULL;
 		MyString hostname_str;
 		addr.from_sinful(host);

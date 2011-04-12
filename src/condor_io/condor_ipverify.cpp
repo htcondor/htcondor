@@ -479,11 +479,11 @@ ExpandHostAddresses(char const *host,StringList *list)
 		return; // not a valid hostname, so don't bother trying to look it up
 	}
 
-	std::vector<ipaddr> addrs = resolve_hostname(host);
-	for (std::vector<ipaddr>::iterator iter = addrs.begin();
+	std::vector<condor_sockaddr> addrs = resolve_hostname(host);
+	for (std::vector<condor_sockaddr>::iterator iter = addrs.begin();
 		 iter != addrs.end();
 		 ++iter) {
-		const ipaddr& addr = *iter;
+		const condor_sockaddr& addr = *iter;
 		list->append(addr.to_ip_string().Value());
 	}
 }
@@ -654,7 +654,7 @@ IpVerify::refreshDNS() {
 }
 
 int
-IpVerify::Verify( DCpermission perm, const ipaddr& addr, const char * user, MyString *allow_reason, MyString *deny_reason )
+IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * user, MyString *allow_reason, MyString *deny_reason )
 {
 	perm_mask_t mask;
 	in6_addr sin6_addr;

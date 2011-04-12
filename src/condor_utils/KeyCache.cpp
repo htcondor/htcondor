@@ -24,7 +24,7 @@
 #include "condor_attributes.h"
 #include "internet.h"
 
-KeyCacheEntry::KeyCacheEntry( char const *id_param, const ipaddr * addr_param, KeyInfo* key_param, ClassAd * policy_param, int expiration_param, int lease_interval ) {
+KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr_param, KeyInfo* key_param, ClassAd * policy_param, int expiration_param, int lease_interval ) {
 	if (id_param) {
 		_id = strdup(id_param);
 	} else {
@@ -32,7 +32,7 @@ KeyCacheEntry::KeyCacheEntry( char const *id_param, const ipaddr * addr_param, K
 	}
 
 	if (addr_param) {
-		_addr = new ipaddr(*addr_param);
+		_addr = new condor_sockaddr(*addr_param);
 	} else {
 		_addr = NULL;
 	}
@@ -76,7 +76,7 @@ char* KeyCacheEntry::id() {
 	return _id;
 }
 
-const ipaddr*  KeyCacheEntry::addr() {
+const condor_sockaddr*  KeyCacheEntry::addr() {
 	return _addr;
 }
 
@@ -130,7 +130,7 @@ void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
 	}
 
 	if (copy._addr) {
-    	_addr = new ipaddr(*(copy._addr));
+    	_addr = new condor_sockaddr(*(copy._addr));
 	} else {
     	_addr = NULL;
 	}

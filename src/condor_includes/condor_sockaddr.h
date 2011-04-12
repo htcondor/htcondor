@@ -18,12 +18,12 @@
  ***************************************************************/
 
 
-#ifndef CONDOR_IPADDR_H
-#define CONDOR_IPADDR_H
+#ifndef CONDOR_SOCKADDR_H
+#define CONDOR_SOCKADDR_H
 
 #include "MyString.h"
 
-class ipaddr 
+class condor_sockaddr 
 {
 	union {
 		// sockaddr_in6 and sockaddr_in structure differs from OS to OS.
@@ -39,7 +39,7 @@ class ipaddr
 	};
 	
 public:
-	ipaddr();
+	condor_sockaddr();
 	
 	// int represented ip should be network-byte order.
 	// however, port is always host-byte order.
@@ -47,12 +47,12 @@ public:
 	// the reason is that in Condor source code, it does not convert
 	// network-byte order to host-byte order in IP address
 	// but convert so in port number.
-	/*ipaddr(int ip, unsigned short port = 0);*/
-	ipaddr(in_addr ip, unsigned short port = 0);
-	ipaddr(const in6_addr& ipv6, unsigned short port = 0);
-	ipaddr(const sockaddr* saddr);
-	ipaddr(const sockaddr_in* sin) ;
-	ipaddr(const sockaddr_in6* sin6);
+	/*condor_sockaddr(int ip, unsigned short port = 0);*/
+	condor_sockaddr(in_addr ip, unsigned short port = 0);
+	condor_sockaddr(const in6_addr& ipv6, unsigned short port = 0);
+	condor_sockaddr(const sockaddr* saddr);
+	condor_sockaddr(const sockaddr_in* sin) ;
+	condor_sockaddr(const sockaddr_in6* sin6);
 
 	void init(int ip, unsigned port);
 
@@ -127,13 +127,13 @@ public:
 
 		// only compares address, ignores port number.
 		// returns true if same.
-	bool compare_address(const ipaddr& addr) const;
+	bool compare_address(const condor_sockaddr& addr) const;
 
 		// use it when you want a null place holder.
-	static ipaddr null;
+	static condor_sockaddr null;
 
-	bool operator<(const ipaddr& rhs) const;
-	bool operator==(const ipaddr& lhs) const;
+	bool operator<(const condor_sockaddr& rhs) const;
+	bool operator==(const condor_sockaddr& lhs) const;
 };
 
-#endif // CONDOR_IPADDR_H
+#endif // CONDOR_CONDOR_SOCKADDR_H

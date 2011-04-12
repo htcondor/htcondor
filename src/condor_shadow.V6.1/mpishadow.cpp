@@ -367,7 +367,7 @@ MPIShadow::startMaster()
     }
         
     char *sinful = new char[128];
-	ipaddr addr;
+	condor_sockaddr addr;
 
         // get the machine name (using string_to_sin and sin_to_hostname)
     rr = ResourceList[0];

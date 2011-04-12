@@ -230,7 +230,7 @@ vmapi_create_vmmanager(char *list)
 
 		addrinfo* ai = iter.next();
 		if (ai) {
-			ipaddr addr(ai->ai_addr);
+			condor_sockaddr addr(ai->ai_addr);
 			vm_list->append(strdup(addr.to_ip_string().Value()));
 		}
 	}

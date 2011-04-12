@@ -28,14 +28,14 @@
 #include "HashTable.h"
 #include "string_list.h"
 #include "simplelist.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 
 class SecMan;
 class KeyCacheEntry {
  public:
     KeyCacheEntry(
 			char const * id,
-			const ipaddr* addr,
+			const condor_sockaddr* addr,
 			KeyInfo * key,
 			ClassAd * policy,
 			int expiration,
@@ -47,7 +47,7 @@ class KeyCacheEntry {
 	const KeyCacheEntry& operator=(const KeyCacheEntry &kc);
 
     char*                 id();
-	const ipaddr*         addr();
+	const condor_sockaddr*         addr();
     KeyInfo*              key();
     ClassAd*              policy();
     int                   expiration();
@@ -61,7 +61,7 @@ class KeyCacheEntry {
 	void copy_storage(const KeyCacheEntry &);
 
     char *               _id;
-    ipaddr*              _addr;
+    condor_sockaddr*              _addr;
     KeyInfo*             _key;
     ClassAd*             _policy;
     int                  _expiration;

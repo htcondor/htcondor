@@ -289,7 +289,7 @@ void CollectorDaemon::Init()
     offline_plugin_.rewind ();
     while ( offline_plugin_.iterate ( ad ) ) {
 		ad = new ClassAd(*ad);
-	    if ( !collector.collect (UPDATE_STARTD_AD, ad, ipaddr::null,
+	    if ( !collector.collect (UPDATE_STARTD_AD, ad, condor_sockaddr::null,
 								 insert ) ) {
 		    
             if ( -3 == insert ) {
@@ -676,7 +676,7 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	insert = -3;
 
 	// get endpoint
-	ipaddr from = ((Sock*)sock)->peer_addr();
+	condor_sockaddr from = ((Sock*)sock)->peer_addr();
 
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
@@ -766,7 +766,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
     int insert = -3;
     
     /* get peer's IP/port */
-	ipaddr from = socket->peer_addr();
+	condor_sockaddr from = socket->peer_addr();
 
     /* "collect" the ad */
     ClassAd *cad = collector.collect ( 
@@ -1572,7 +1572,7 @@ CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
 		AdNameHashKey		hk;
 		ClassAd *pvt_ad;
 
-		ASSERT( makeStartdAdHashKey (hk, theAd, ipaddr::null) );
+		ASSERT( makeStartdAdHashKey (hk, theAd, condor_sockaddr::null) );
 		pvt_ad = collector.lookup(STARTD_PVT_AD,hk);
 		if( pvt_ad ) {
 			if( ! pvt_ad->put( *view_sock ) ) {

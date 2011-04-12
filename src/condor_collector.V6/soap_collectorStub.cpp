@@ -68,7 +68,7 @@ condor__insertAd(struct soap *soap,
 	}
 
 	ClassAd *ad = new ClassAd;
-	ipaddr from;				// We don't need this ONLY because
+	condor_sockaddr from;				// We don't need this ONLY because
 								// it is ignored in all hash
 								// functions in hashkey.C
 	int insert;	// Return value from CollectorEngine::collect

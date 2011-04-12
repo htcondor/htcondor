@@ -753,7 +753,7 @@ _condor_local_bind( int is_outgoing, int fd )
 		}
 		
 			// this implementation should be changed to the one
-			// using ipaddr class
+			// using condor_sockaddr class
 		if (ss.ss_family == AF_INET) {
 			struct sockaddr_in* sa_in = (struct sockaddr_in*)&ss;
 			memset( (char *)sa_in, 0, sizeof(struct sockaddr_in) );

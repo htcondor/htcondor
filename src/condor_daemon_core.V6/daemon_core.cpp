@@ -2883,7 +2883,7 @@ DaemonCore::ReloadSharedPortServerAddr()
 }
 
 int
-DaemonCore::Verify(char const *command_descrip,DCpermission perm, const ipaddr& addr, const char * fqu )
+DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_sockaddr& addr, const char * fqu )
 {
 	MyString deny_reason; // always get 'deny' reason, if there is one
 	MyString *allow_reason = NULL;

@@ -49,7 +49,7 @@
 #include "subsystem_info.h"
 #include "condor_xml_classads.h"
 #include "condor_open.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
 
 #include "../classad_analysis/analysis.h"
@@ -1575,7 +1575,7 @@ format_remote_host (char *, AttrList *ad)
 	static char host_result[MAXHOSTNAMELEN];
 	static char unknownHost [] = "[????????????????]";
 	char* tmp;
-	ipaddr addr;
+	condor_sockaddr addr;
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );

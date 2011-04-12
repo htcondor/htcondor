@@ -4989,9 +4989,9 @@ Scheduler::negotiate(int command, Stream* s)
 			// and FLOCK_NEGOTIATOR_HOSTS.
 
 		// first, check if this is our local negotiator
-		ipaddr endpoint_addr = sock->peer_addr();
-		std::vector<ipaddr> addrs;
-		std::vector<ipaddr>::iterator iter;
+		condor_sockaddr endpoint_addr = sock->peer_addr();
+		std::vector<condor_sockaddr> addrs;
+		std::vector<condor_sockaddr>::iterator iter;
 		bool match = false;
 		Daemon negotiator (DT_NEGOTIATOR);
 		char *negotiator_hostname = negotiator.fullHostname();
@@ -5008,7 +5008,7 @@ Scheduler::negotiate(int command, Stream* s)
 			return (!(KEEP_STREAM));
 		}
 		for (iter = addrs.begin(); iter != addrs.end(); ++iter) {
-			const ipaddr& addr = *iter;
+			const condor_sockaddr& addr = *iter;
 			if (addr.compare_address(endpoint_addr)) {
 					match = true;
 				break;
@@ -5021,7 +5021,7 @@ Scheduler::negotiate(int command, Stream* s)
 				 !match && FlockNegotiators->next(neg_host); n++) {
 				addrs = resolve_hostname(neg_host->fullHostname());
 				for (iter = addrs.begin(); iter != addrs.end(); ++iter) {
-					const ipaddr& addr = *iter;
+					const condor_sockaddr& addr = *iter;
 					if (addr.compare_address(endpoint_addr)) {
 						match = true;
 						which_negotiator = n;
@@ -7859,7 +7859,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 					 "for of remote resource for setting %s, using "
 					 "inferior alternatives!\n", ATTR_NAME, 
 					 ATTR_REMOTE_HOST );
-			ipaddr addr;
+			condor_sockaddr addr;
 			if( mrec->peer && mrec->peer[0] && addr.from_sinful(mrec->peer) ) {
 					// make local copy of static hostname buffer
 				char *tmp;

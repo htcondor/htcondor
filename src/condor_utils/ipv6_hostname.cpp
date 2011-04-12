@@ -1,14 +1,14 @@
 #include "condor_common.h"
 #include <set>
 #include "MyString.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 #include "condor_netdb.h"
 #include "condor_config.h"
 #include "condor_sockfunc.h"
 #include "ipv6_hostname.h"
 #include "ipv6_addrinfo.h"
 
-static ipaddr local_ipaddr;
+static condor_sockaddr local_ipaddr;
 static MyString local_hostname;
 static MyString local_fqdn;
 static bool hostname_initialized = false;
@@ -77,7 +77,7 @@ void init_local_hostname()
 		if (!name)
 			continue;
 		const char* dotpos = strchr(name, '.');
-		ipaddr addr(info->ai_addr);
+		condor_sockaddr addr(info->ai_addr);
 
 		if (addr.is_loopback() || addr.is_private_network())
 			continue;
@@ -110,7 +110,7 @@ void init_local_hostname()
 	hostname_initialized = true;
 }
 
-ipaddr get_local_ipaddr()
+condor_sockaddr get_local_ipaddr()
 {
 	if (!hostname_initialized)
 		init_local_hostname();
@@ -131,13 +131,13 @@ MyString get_local_fqdn()
 	return local_fqdn;
 }
 
-MyString get_hostname(const ipaddr& addr)
+MyString get_hostname(const condor_sockaddr& addr)
 {
 	MyString ret;
 	if (nodns_enabled())
 		return convert_ipaddr_to_hostname(addr);
 
-	ipaddr targ_addr;
+	condor_sockaddr targ_addr;
 
 	// just like sin_to_string(), if given address is 0.0.0.0 or equivalent,
 	// it changes to local IP address.
@@ -157,7 +157,7 @@ MyString get_hostname(const ipaddr& addr)
 	return ret;
 }
 
-std::vector<MyString> get_hostname_with_alias(const ipaddr& addr)
+std::vector<MyString> get_hostname_with_alias(const condor_sockaddr& addr)
 {
 	std::vector<MyString> ret;
 	MyString hostname = get_hostname(addr);
@@ -192,7 +192,7 @@ std::vector<MyString> get_hostname_with_alias(const ipaddr& addr)
 
 // look up FQDN for hostname and aliases.
 // if not, it adds up DEFAULT_DOMAIN_NAME
-MyString get_full_hostname(const ipaddr& addr)
+MyString get_full_hostname(const condor_sockaddr& addr)
 {
 		// this function will go smooth even with NODNS.
 	MyString ret;
@@ -217,19 +217,19 @@ MyString get_full_hostname(const ipaddr& addr)
 	return ret;
 }
 
-std::vector<ipaddr> resolve_hostname(const char* hostname)
+std::vector<condor_sockaddr> resolve_hostname(const char* hostname)
 {
 	MyString host(hostname);
 	return resolve_hostname(host);
 }
 
 
-std::vector<ipaddr> resolve_hostname(const MyString& hostname)
+std::vector<condor_sockaddr> resolve_hostname(const MyString& hostname)
 {
-	std::vector<ipaddr> ret;
+	std::vector<condor_sockaddr> ret;
 	if (nodns_enabled()) {
-		ipaddr addr = convert_hostname_to_ipaddr(hostname);
-		if (addr == ipaddr::null)
+		condor_sockaddr addr = convert_hostname_to_ipaddr(hostname);
+		if (addr == condor_sockaddr::null)
 			return ret;
 		ret.push_back(addr);
 		return ret;
@@ -242,16 +242,16 @@ std::vector<ipaddr> resolve_hostname(const MyString& hostname)
 	}
 	
 		// To eliminate duplicate address, here we use std::set
-	std::set<ipaddr> s;
+	std::set<condor_sockaddr> s;
 	while (addrinfo* info = ai.next()) {
-		s.insert(ipaddr(info->ai_addr));
+		s.insert(condor_sockaddr(info->ai_addr));
 	}
 
 	ret.insert(ret.begin(), s.begin(), s.end());
 	return ret;
 }
 
-MyString convert_ipaddr_to_hostname(const ipaddr& addr)
+MyString convert_ipaddr_to_hostname(const condor_sockaddr& addr)
 {
 	MyString ret;
 	MyString default_domain;
@@ -273,7 +273,7 @@ MyString convert_ipaddr_to_hostname(const ipaddr& addr)
 	return ret;
 }
 
-ipaddr convert_hostname_to_ipaddr(const MyString& fullname)
+condor_sockaddr convert_hostname_to_ipaddr(const MyString& fullname)
 {
 	MyString hostname;
 	MyString default_domain;
@@ -302,7 +302,7 @@ ipaddr convert_hostname_to_ipaddr(const MyString& fullname)
 			hostname.setChar(i, target_char);
 	}
 
-	ipaddr ret;
+	condor_sockaddr ret;
 	ret.from_ip_string(hostname);
 	return ret;
 }

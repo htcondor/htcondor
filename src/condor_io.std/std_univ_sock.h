@@ -26,7 +26,7 @@
 #include "stream.h"
 #include "CondorError.h"
 #include "std_univ_buffers.h"
-#include "condor_ipaddr.h"
+#include "condor_sockaddr.h"
 
 #if !defined(WIN32)
 #  ifndef SOCKET
@@ -76,7 +76,7 @@ public:
 	/// local ip address integer
 	unsigned int get_ip_int();
 
-	ipaddr my_addr();
+	condor_sockaddr my_addr();
 
  private:
 
@@ -136,7 +136,7 @@ public:
 
 	SOCKET			_sock;
 	int				_timeout;
-	ipaddr			 _who;	// endpoint of "connection"
+	condor_sockaddr			 _who;	// endpoint of "connection"
 
 	char _peer_ip_buf[IP_STRING_BUF_SIZE];	
 
