@@ -40,11 +40,22 @@ sub setup_test_environment {
         $base_dir =~ s|/|\\|g;
         set_env("BASE_DIR", $base_dir);
 
+        # Create the Windows PATH
+        my $path = "$base_dir\\nmi_tools\\glue\\test;$base_dir\\condor\\bin;";
+
+        # We installed some tools (unzip, tar) in C:\tools on our Windows NMI machines
+        $path .= "C:\\tools;";
+
+        # We need to add Perl to the path 
+        $path .= "$ENV{_NMI_PREREQ_ActivePerl_5_10_1_ROOT};";
+
         # Windows requires the SystemRoot directory to the PATH.  This is generally C:\Windows.
         # Also, add the system32 subdirectory in this folder
         my $system_paths = "$ENV{SystemRoot};" . File::Spec->catdir($ENV{SystemRoot}, "system32");
+        $path .= "$ENV{SystemRoot};";
+        $path .= File::Spec->catdir($ENV{SystemRoot}, "system32") . ";";
 
-        set_env("PATH", "$base_dir\\nmi_tools\\glue\\test;$base_dir\\condor\\bin;C:\\tools;$system_paths");
+        set_env("PATH", $path);
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
         set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
