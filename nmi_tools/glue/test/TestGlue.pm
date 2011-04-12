@@ -42,9 +42,9 @@ sub setup_test_environment {
 
         # Windows requires the SystemRoot directory to the PATH.  This is generally C:\Windows.
         # Also, add the system32 subdirectory in this folder
-        my $system_paths = "$ENV{SystemRoot}:" . File::Spec->catdir($ENV{SystemRoot}, "system32");
+        my $system_paths = "$ENV{SystemRoot};" . File::Spec->catdir($ENV{SystemRoot}, "system32");
 
-        set_env("PATH", "$base_dir\\nmi_tools\\glue\\test;$base_dir\\condor\\bin;C:\\tools:$system_paths");
+        set_env("PATH", "$base_dir\\nmi_tools\\glue\\test;$base_dir\\condor\\bin;C:\\tools;$system_paths");
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
         set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
