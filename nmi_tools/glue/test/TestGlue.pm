@@ -62,6 +62,11 @@ sub setup_test_environment {
         
         # also, throw in the WIN32 version of the base directory path for later use
         set_env("WIN32_BASE_DIR", $base_dir);
+
+        print "----------------------------------\n";
+        print "Dumping environment:\n";
+        system("set");
+        print "----------------------------------\n\n";
     }
 }
 
