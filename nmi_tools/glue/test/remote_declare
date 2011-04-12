@@ -199,7 +199,7 @@ sub parseOptions {
 
 
 sub load_custom_timeout_file {
-    my %timeouts = {};
+    my %timeouts = ();
     my $TimeoutFile = File::Spec->catfile($BaseDir, $testdir, "TimeoutChanges");
     if( -f $TimeoutFile) {
         print "Found a custom timeout file at '$TimeoutFile'.  Loading it...\n";
@@ -221,7 +221,7 @@ sub load_custom_timeout_file {
 
 
 sub load_custom_runcount_file {
-    my %runcounts = {};
+    my %runcounts = ();
     my $RuncountFile = File::Spec->catfile($BaseDir, $testdir, "RuncountChanges");
     if( -f $RuncountFile) {
         print "Found a custom runcount file at '$RuncountFile'.  Loading it...\n";

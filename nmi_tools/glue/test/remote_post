@@ -62,7 +62,7 @@ if( -f $sentinel ) {
     }
     else {
         print "Calling condor_off for $ENV{CONDOR_CONFIG}\n";
-        my $condor_off = File::Spec->catfile($BaseDir, "userdir", "condor", "sbin", "condor_off");
+        my $condor_off = File::Spec->catfile($BaseDir, "condor", "sbin", "condor_off");
         system("$condor_off -master");
 
         # give some time for condor to shutdown
