@@ -106,6 +106,7 @@ chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
 #----------------------------------------
 print "Tarring up all results\n";
 chdir("$BaseDir") || die "Can't chdir($BaseDir): $!\n";
-system("tar zcf results.tar.gz --exclude *.exe $BaseDir/condor_tests local");
+my $test_dir = File::Spec->catdir($BaseDir, "condor_tests");
+system("tar zcf results.tar.gz --exclude *.exe $test_dir local");
 
 exit $exit_status;
