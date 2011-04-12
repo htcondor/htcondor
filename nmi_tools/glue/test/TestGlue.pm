@@ -46,8 +46,8 @@ sub setup_test_environment {
         # We installed some tools (unzip, tar) in C:\tools on our Windows NMI machines
         $path .= "C:\\tools;";
 
-        # We need to add Perl to the path 
-        $path .= "$ENV{_NMI_PREREQ_ActivePerl_5_10_1_ROOT};";
+        # We need to add Perl to the path
+        $path .= "C:\\prereq\\ActivePerl-5.10.1\\bin;";
 
         # Windows requires the SystemRoot directory to the PATH.  This is generally C:\Windows.
         # Also, add the system32 subdirectory in this folder
