@@ -30,6 +30,7 @@
 				<xs:element name="requirements" type="mrg:ResourceConstraint"  minOccurs="0" maxOccurs="unbounded"/>
 				<xs:element name="extra" type="mrg:Attribute" minOccurs="0" maxOccurs="unbounded"/>
 			</xs:sequence>
+			<xs:attribute name="allowOverrides" type="xs:boolean" default="false"/>
 		</xs:complexType>
 	</xs:element>
 	<xs:element name="SubmitJobResponse">

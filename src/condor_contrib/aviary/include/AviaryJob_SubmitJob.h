@@ -70,6 +70,10 @@ namespace AviaryJob
 
                 
                 bool isValidExtra;
+            bool property_AllowOverrides;
+
+                
+                bool isValidAllowOverrides;
             
 
         /*** Private methods ***/
@@ -133,9 +137,10 @@ namespace AviaryJob
          * @param Submission_name std::string
          * @param Requirements std::vector<AviaryCommon::ResourceConstraint*>*
          * @param Extra std::vector<AviaryCommon::Attribute*>*
+         * @param AllowOverrides bool
          * @return newly created SubmitJob object
          */
-        SubmitJob(std::string arg_Cmd,std::string arg_Args,std::string arg_Owner,std::string arg_Iwd,std::string arg_Submission_name,std::vector<AviaryCommon::ResourceConstraint*>* arg_Requirements,std::vector<AviaryCommon::Attribute*>* arg_Extra);
+        SubmitJob(std::string arg_Cmd,std::string arg_Args,std::string arg_Owner,std::string arg_Iwd,std::string arg_Submission_name,std::vector<AviaryCommon::ResourceConstraint*>* arg_Requirements,std::vector<AviaryCommon::Attribute*>* arg_Extra,bool arg_AllowOverrides);
         
         
         /********************************** Class get set methods **************************************/
@@ -309,6 +314,30 @@ namespace AviaryJob
          */
         WSF_EXTERN bool WSF_CALL
         resetExtra();
+        
+        
+
+        /**
+         * Getter for allowOverrides. 
+         * @return bool
+         */
+        WSF_EXTERN bool WSF_CALL
+        getAllowOverrides();
+
+        /**
+         * Setter for allowOverrides.
+         * @param arg_AllowOverrides bool
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setAllowOverrides(bool  arg_AllowOverrides);
+
+        /**
+         * Re setter for allowOverrides
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetAllowOverrides();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -506,6 +535,23 @@ namespace AviaryJob
 
         
 
+        /**
+         * Check whether allowOverrides is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isAllowOverridesNil();
+
+
+        
+        /**
+         * Set allowOverrides to Nill (same as using reset)
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setAllowOverridesNil();
+        
+
         /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
 
         /**
@@ -679,6 +725,17 @@ namespace AviaryJob
 
         std::vector<AviaryCommon::Attribute*>* WSF_CALL
         getProperty7();
+
+    
+        
+
+        /**
+         * Getter for allowOverrides by property number (8)
+         * @return bool
+         */
+
+        bool WSF_CALL
+        getProperty8();
 
     
 

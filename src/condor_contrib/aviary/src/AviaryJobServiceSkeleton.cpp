@@ -117,35 +117,55 @@ buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _reqs
 	sprintf(_reqs, BASIC_REQ_FORMAT, arch.c_str(), opsys.c_str(), disk.c_str(), memory.c_str(), filesystem.c_str());
 }
 
+bool
+isBasicAttribute(const string& attr_name) {
+	return (
+		attr_name == ATTR_JOB_CMD ||
+		attr_name == ATTR_REQUIREMENTS ||
+		attr_name == ATTR_OWNER ||
+		attr_name == ATTR_JOB_IWD ||
+		attr_name == ATTR_JOB_ARGUMENTS1
+	);
+}
+
 void
-addExtraAttributes(const CommonAttributeCollection* extra_attrs, AttributeMapType& attr_map) {
+addExtraAttributes(const CommonAttributeCollection* extra_attrs, AttributeMapType& attr_map, bool override_basic) {
 	// TODO: add in the extras
 	for (CommonAttributeCollection::const_iterator i = extra_attrs->begin();i < extra_attrs->end();i++) {
 		AviaryCommon::Attribute* attr = *i;
+		const string& attr_key = attr->getName();
+
+		// Are we overriding our basic attributes?
+		if (!override_basic && isBasicAttribute(attr_key)) {
+			// exclude this attribute from the submission map
+			continue;
+		}
+
+		const char* attr_value = attr->getValue().c_str();
 		switch (attr->getType()->getAttributeTypeEnum()) {
 			case AviaryCommon::AttributeType_INTEGER:
-				attr_map[attr->getName().c_str()] = 
-					new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,attr->getValue().c_str());
+				attr_map[attr_key.c_str()] =
+					new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,attr_value);
 			break;
 			case AviaryCommon::AttributeType_FLOAT:
-				attr_map[attr->getName().c_str()] = 
-					new AviaryAttribute(AviaryAttribute::FLOAT_TYPE,attr->getValue().c_str());
+				attr_map[attr_key.c_str()] =
+					new AviaryAttribute(AviaryAttribute::FLOAT_TYPE,attr_value);
 			break;
 			case AviaryCommon::AttributeType_STRING:
-				attr_map[attr->getName().c_str()] = 
-					new AviaryAttribute(AviaryAttribute::STRING_TYPE,attr->getValue().c_str());
+				attr_map[attr_key.c_str()] =
+					new AviaryAttribute(AviaryAttribute::STRING_TYPE,attr_value);
 			break;
 			case AviaryCommon::AttributeType_BOOLEAN:
 			case AviaryCommon::AttributeType_EXPRESSION:
-				attr_map[attr->getName().c_str()] = 
-					new AviaryAttribute(AviaryAttribute::EXPR_TYPE,attr->getValue().c_str());
+				attr_map[attr_key.c_str()] =
+					new AviaryAttribute(AviaryAttribute::EXPR_TYPE,attr_value);
 			break;
 			// probably shouldn't get here unless axis2 fails us
 			case AviaryCommon::AttributeType_ERROR:
 			case AviaryCommon::AttributeType_UNDEFINED:
 			default:
 				dprintf(D_FULLDEBUG,"Unknown type supplied for attribute '%s=%s'\n",
-						attr->getName().c_str(),attr->getValue().c_str());
+						attr_key.c_str(),attr_value);
 		}
 	}
 }
@@ -199,7 +219,7 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
 		attrs = _submitJob->getExtra();
 		if (attrs && !attrs->empty()) {			
 			if (attrs && !attrs->empty()) {
-				addExtraAttributes(attrs, attrMap);
+				addExtraAttributes(attrs, attrMap,_submitJob->getAllowOverrides());
 			}
 		}
 	}

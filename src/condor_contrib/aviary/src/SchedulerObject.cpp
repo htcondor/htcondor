@@ -156,6 +156,11 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
 	ClassAd ad;
 	int universe;
 
+    // ShouldTransferFiles - unset by default, must be set
+    // shadow will try to setup local transfer sandbox otherwise
+    // without good priv
+    ad.Assign(ATTR_SHOULD_TRANSFER_FILES, "NO");
+
 	if (!m_codec->mapToClassAd(jobAdMap, ad)) {
 		AbortTransaction();
 		text = "Failed to parse job ad";
@@ -168,12 +173,6 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
 		text = "Job ad is missing required attributes: " + missing;
 		return false;
 	}
-
-        // ShouldTransferFiles - unset by default, must be set
-        // shadow will try to setup local transfer sandbox otherwise
-        // without good priv
-    ad.Assign(ATTR_SHOULD_TRANSFER_FILES, "NO");
-
 
 		// EARLY SET: These attribute are set early so the incoming ad
 		// has a change to override them.
@@ -326,7 +325,7 @@ SchedulerObject::release(std::string key, std::string &reason, std::string &text
 		dprintf(D_FULLDEBUG, "Release: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
-	}	
+	}
 
 	if (!releaseJob(id.cluster,
 					id.proc,
