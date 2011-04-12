@@ -107,12 +107,18 @@ else {
 # run the test using batch_test.pl
 ######################################################################
 
+# Some of the tests fail because the schedd fsync can take 30 seconds
+# or more on busy nmi filesystems, which causes the tools to timeout.
+# Up the tool timeout multipler to try to deal with this.
+$ENV{_condor_TOOL_TIMEOUT_MULTIPLIER}="4";
+
 print "RUNNING $testname\n";
 chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
 
 # -b means build & test and ensures the first time that we have our testing
 # personal condor configured from release generic config files.
 print "About to run batch_test.pl\n";
+
 system("perl batch_test.pl --no-error -d $compiler -t $testname -b");
 my $batchteststatus = $?;
 
