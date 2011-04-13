@@ -47,7 +47,7 @@ if (NOT WINDOWS)
   if (LINUX)  
   	add_library( classad SHARED ${ClassadSrcs} )     # for distribution at this point may swap to depend at a future date.
   	install( TARGETS classad DESTINATION ${C_LIB} )
-  endif
+  endif()
   
   ###### Install elements with our distribution
   install( TARGETS classads DESTINATION ${C_LIB} )
