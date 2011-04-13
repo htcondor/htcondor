@@ -49,7 +49,7 @@ string TrimQuotes(const char* str) {
 }
 
 // validate that an incoming group/user name is
-// alphanumeric, underscores, or a dot separator
+// alphanumeric, underscores, @ or a dot separator
 bool IsValidGroupUserName(const std::string& _name, std::string& _text) {
 	const char* ptr = _name.c_str();
 	while( *ptr ) {
@@ -58,8 +58,9 @@ bool IsValidGroupUserName(const std::string& _name, std::string& _text) {
 			('A' > c || c > 'Z') &&
 			('0' > c || c > '9') &&
 			(c != '_' ) &&
+			(c != '@' ) &&
 			(c != '.' ) ) {
-			_text = "Invalid name for group/user - alphanumeric, underscore and dot characters only";
+			_text = "Invalid name for group/user - alphanumeric, underscore, @ and dot characters only";
 			return false;
 		}
 	}
