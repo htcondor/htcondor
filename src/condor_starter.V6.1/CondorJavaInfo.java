@@ -98,7 +98,7 @@ public class CondorJavaInfo {
 			// deal with escaped double quotes very well. This might be
 			// revisited in the future.
 			System.out.print( UnDotString(name) + " = \"" + 
-				value.replace('"', '\'') + "\"");
+				value.replace('"', '\'').replace('\n',' ').replace('\r', ' ') + "\"");
 
 			if( newmode ) {
 				System.out.println(";");
