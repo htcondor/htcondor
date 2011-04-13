@@ -93,7 +93,6 @@ include (CheckCXXSourceCompiles)
 include (AddSubdirectories)
 include (CondorPLTest)
 include (CondorExeTest)
-include (CondorConfigure)     # will initiate the configure
 include (CondorStdExeTest)
 include (SrcTargetRef)
 include (DumpLocalFlags)

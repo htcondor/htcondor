@@ -73,7 +73,3 @@ if (NOT PROPER)
   add_dependencies( classads pcre )
 endif(NOT PROPER)
 
-message (STATUS "external configured (CLASSADS_FOUND=${CLASSADS_FOUND})")
-set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
-set( HAVE_EXT_CLASSADS ON PARENT_SCOPE )
-append_var (CONDOR_EXTERNALS classads)
