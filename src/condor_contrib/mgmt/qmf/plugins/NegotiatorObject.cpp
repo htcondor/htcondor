@@ -188,7 +188,7 @@ NegotiatorObject::SetLimit(std::string &name, double max, std::string &text)
 		return STATUS_USER + 1;
 	}
 
-	if (!IsValidGroupUserName(name,text)) {
+	if (!IsValidParamName(name,text)) {
 		return STATUS_USER + 2;
 	}
 
@@ -233,7 +233,7 @@ NegotiatorObject::SetRawConfig(std::string &name, std::string &value, std::strin
 		return STATUS_USER + 1;
 	}
 
-	if (!IsValidGroupUserName(name,text)) {
+	if (!IsValidParamName(name,text)) {
 		return STATUS_USER + 2;
 	}
 
