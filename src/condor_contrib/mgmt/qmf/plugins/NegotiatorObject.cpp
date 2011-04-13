@@ -233,7 +233,7 @@ NegotiatorObject::SetRawConfig(std::string &name, std::string &value, std::strin
 		return STATUS_USER + 1;
 	}
 
-	if (!IsValidAttributeName(name,text)) {
+	if (!IsValidGroupUserName(name,text)) {
 		return STATUS_USER + 2;
 	}
 
