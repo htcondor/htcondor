@@ -71,9 +71,7 @@ BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _
     switch (value.GetType()) {
         // TODO: does this cover expressions also?
         case classad::Value::BOOLEAN_VALUE:
-            {
             _map[key] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE,strdup(trimQuotes(ExprTreeToString(expr)).c_str()));
-            }
             break;
         case classad::Value::INTEGER_VALUE:
             _map[key] = new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,strdup(ExprTreeToString(expr)));;
@@ -92,23 +90,20 @@ BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _
 bool
 BaseCodec::classAdToMap(ClassAd& ad, AttributeMapType& _map)
 {
-    ClassAd::iterator iter;
-
-    ad.ResetExpr();
-    _map.clear();
-    iter = ad.begin();
-    while (iter != ad.end()) {
-            const char* name = iter->first.c_str();
-            if (!addAttributeToMap(ad, name, _map)) {
+    ExprTree *expr;
+	const char *name;
+	ad.ResetExpr();
+	_map.clear();
+	while (ad.NextExpr(name,expr)) {
+		if (!addAttributeToMap(ad, name, _map)) {
                     return false;
-            }
-            iter++;
-    }
+		}
+	}
 
-//     TODO: debug
-//       if (DebugFlags & D_FULLDEBUG) {
-//           ad.dPrint(D_FULLDEBUG|D_NOHEADER);
-//       }
+// //     TODO: debug
+//        if (DebugFlags & D_FULLDEBUG) {
+//            ad.dPrint(D_FULLDEBUG|D_NOHEADER);
+//        }
 
     return true;
 }
@@ -140,10 +135,10 @@ BaseCodec::mapToClassAd(AttributeMapType& _map, ClassAd& ad)
         }
     }
 
-    // TODO: debug
-    if (DebugFlags & D_FULLDEBUG) {
-          ad.dPrint(D_FULLDEBUG|D_NOHEADER);
-    }
+//     // TODO: debug
+//     if (DebugFlags & D_FULLDEBUG) {
+//           ad.dPrint(D_FULLDEBUG|D_NOHEADER);
+//     }
 
     return true;
 }

@@ -119,30 +119,20 @@ JobServerJobLogConsumer::NewClassAd(const char *_key,
 		JobCollectionType::const_iterator element = g_jobs.find(cluster_dup);
         ClusterJobImpl* cluster_impl = NULL;
 
-		// TODO this code assumes that we will always get the parent 
-		// classad before its child from the job log...this is not strictly
-		// guaranteed (e.g., compressed log?)
 		if (g_jobs.end() == element) {
-			// didn't find an existing job so create a new one
+			// didn't find an existing cluster job so create a new one
 			Job* new_cluster_job = new Job(cluster_dup);
             cluster_impl = new ClusterJobImpl(cluster_dup);
             new_cluster_job->setImpl(cluster_impl);
             g_jobs[cluster_dup] = new_cluster_job;
 		} else {
-			// found an existing job - we'll assume it is the cluster parent
+			// found an existing cluster job - we'll assume it is the cluster parent
 			cluster_impl = static_cast<ClusterJobImpl*>((*element).second->getImpl());
 		}
 
         Job* new_proc_job = new Job(key_dup);
         new_proc_job->setImpl(new LiveJobImpl(key_dup, cluster_impl));
         g_jobs[key_dup] = new_proc_job;
-
-//		if (cluster_job) {
-//			ClassAd ad;
-//			cluster_job->GetFullAd(ad);
-//			dprintf(D_FULLDEBUG, "JobServerJobLogConsumer::NewClassAd found a parent ClassAd from cluster...\n");
-//			ad.dPrint(D_FULLDEBUG|D_NOHEADER);
-//		}
 
 	}
 

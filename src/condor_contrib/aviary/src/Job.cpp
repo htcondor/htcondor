@@ -53,6 +53,8 @@ using namespace aviary::util;
                            ATTR_JOB_ARGUMENTS2,
                            ATTR_RELEASE_REASON,
                            ATTR_HOLD_REASON,
+                           ATTR_JOB_SUBMISSION,
+                           ATTR_OWNER,
                            NULL
                           };
 
