@@ -54,6 +54,15 @@ The details of each version are described below.
 the job's requirements expression when the expression contained ClassAd
 function calls in some cases. 
 
+%gittrac #2013
+\item Fixed a segmentation fault bug introduced in Condor version 7.5.5,
+in the checkpoint and restart of jobs using compressed checkpoint images
+under the standard universe.
+By default, Condor will not compress checkpoints under the standard universe.
+Jobs which do not compress their checkpoints were immune to this bug.  
+Compressed checkpoints are only available in 32-bit versions of Condor.
+Generation of checkpoints in 64-bit versions of Condor are unaffected.
+
 \end{itemize}
 
 \noindent Known Bugs:
