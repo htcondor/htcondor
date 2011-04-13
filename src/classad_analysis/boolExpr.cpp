@@ -67,7 +67,9 @@ ExprToMultiProfile( classad::ExprTree *expr, MultiProfile *&mp )
 
 		kind = currentTree->GetKind( );
 			
-		if( kind == classad::ExprTree::ATTRREF_NODE ) {
+		if( kind == classad::ExprTree::ATTRREF_NODE ||
+			kind == classad::ExprTree::FN_CALL_NODE )
+		{
 			atLeftMostProfile = true;
 			continue;
 		}
@@ -172,7 +174,9 @@ ExprToProfile( classad::ExprTree *expr, Profile *&p )
 
 		kind = currentTree->GetKind( );
 
-		if( kind == classad::ExprTree::ATTRREF_NODE ) {
+		if( kind == classad::ExprTree::ATTRREF_NODE ||
+			kind == classad::ExprTree::FN_CALL_NODE )
+		{
 			atLeftMostCondition = true;
 			continue;
 		}
@@ -259,7 +263,9 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 
 	kind = expr->GetKind( );
 
-	if( kind == classad::ExprTree::ATTRREF_NODE ) {
+	if( kind == classad::ExprTree::ATTRREF_NODE ||
+		kind == classad::ExprTree::FN_CALL_NODE )
+	{
 		( ( classad::AttributeReference * )expr )->GetComponents( base, attr,
 																  junkBool);
 		if( !c->Init( attr, expr->Copy( ), true ) ) {
