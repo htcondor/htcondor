@@ -45,7 +45,8 @@ if (NOT WINDOWS)
   condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "classads;${PCRE_FOUND}" OFF)
 
   if (LINUX)  
-  	add_library( classad SHARED ${ClassadSrcs} )     # for distribution at this point may swap to depend at a future date.
+  	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
+    set_target_properties( classad PROPERTIES VERSION 1.0.2 SOVERSION 1 )
   	install( TARGETS classad DESTINATION ${C_LIB} )
   endif()
   
