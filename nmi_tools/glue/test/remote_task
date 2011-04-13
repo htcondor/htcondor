@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/bin/sh
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -19,195 +19,28 @@
 ##**************************************************************
 
 
-######################################################################
-# run a test in the Condor testsuite
-# return val is the status of the test
-# 0 = built and passed
-# 1 = build failed
-# 2 = run failed
-# 3 = internal fatal error (a.k.a. die)
-######################################################################
+# $Id: remote_task,v 1.3 2007-11-08 22:53:46 nleroy Exp $
 
-######################################################################
-###### WARNING!!!  The return value of this script has special  ######
-###### meaning, so you can NOT just call die().  you MUST       ######
-###### use the special c_die() method so we return 3!!!!        ######
-######################################################################
+# Condor implementation of NMI test infrastructure interface
+# Simple wrapper to source the environment file and spawn the
+# corresponding perl script for a given stage of the test.
 
-use strict;
-use warnings;
-use File::Copy;
-use File::Basename;
+ENV_FILE=setup_test_env
+TEST_FILE=test_task_env
 
-my $dir = dirname($0);
-require "$dir/TestGlue.pm";
-TestGlue::setup_test_environment();
-TestGlue::setup_task_environment();
+# include the environment info from the pre-script
+if [ ! -f $ENV_FILE ]; then
+    echo "$ENV_FILE does not exist!"
+    exit 1
+fi
+. $ENV_FILE
 
-if( ! defined $ENV{_NMI_TASKNAME} ) {
-    die "_NMI_TASKNAME not in environment, can't test anything!\n";
-}
-my $fulltestname = $ENV{_NMI_TASKNAME};
+# look for passed in test environment file
+if [ ! -f $TEST_FILE ]; then
+    echo "No task environment file found!"
+else
+    echo "Found environment file for tests!"
+    .  $TEST_FILE
+fi
 
-print "Test environment variable GCBTARGET = '$ENV{GCBTARGET}'\n";
-
-if( $fulltestname =~ /remote_task/) {
-    die "_NMI_TASKNAME set to remote_task meaning 0 tests seen!\n";
-}
-
-if( ! $fulltestname ) {
-    # if we have no task, just return success immediately
-    print "No tasks specified, returning SUCCESS\n";
-    exit 0;
-}
-
-my $BaseDir  = $ENV{BASE_DIR} || c_die("BASE_DIR is not in environment!\n");
-my $test_dir = File::Spec->catdir($BaseDir, "condor_tests");
-
-# iterations have numbers placed at the end of the name
-# for unique db tracking in nmi for now.
-if($fulltestname =~ /([\w\-\.\+]+)-\d+/) {
-    my $matchingtest = $fulltestname . ".run";
-    if(!(-f $matchingtest)) {
-        # if we don't have a test called this, strip iterator off
-        $fulltestname = $1;
-    }
-}
-
-
-######################################################################
-# get the testname and group
-######################################################################
-
-my @testinfo = split(/\./, $fulltestname);
-my $testname = $testinfo[0];
-my $compiler = $testinfo[1];
-
-if( ! $testname ) {
-    c_die("Invalid input for testname\n");
-}
-
-#track time.....
-print scalar(localtime);
-
-print "Testname: '$testname'\n";
-if( not TestGlue::is_windows() ) {
-    if( $compiler ) {
-        print "compiler is $compiler\n";
-    }
-    else {
-        $compiler = ".";
-    }
-}
-else {
-    $compiler = ".";
-}
-
-######################################################################
-# run the test using batch_test.pl
-######################################################################
-
-# Some of the tests fail because the schedd fsync can take 30 seconds
-# or more on busy nmi filesystems, which causes the tools to timeout.
-# Up the tool timeout multipler to try to deal with this.
-$ENV{_condor_TOOL_TIMEOUT_MULTIPLIER}="4";
-
-print "RUNNING $testname\n";
-chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
-
-# -b means build & test and ensures the first time that we have our testing
-# personal condor configured from release generic config files.
-print "About to run batch_test.pl\n";
-
-system("perl batch_test.pl --no-error -d $compiler -t $testname -b");
-my $batchteststatus = $?;
-
-# figure out here if the test passed or failed.  
-my $teststatus;
-if( $batchteststatus != 0 ) {
-    $teststatus = 2;
-}
-else {
-    $teststatus = 0;
-}
-
-######################################################################
-# print output from .run script to stdout of this task, and final exit
-######################################################################
-
-my $compiler_path = File::Spec->catpath($test_dir, $compiler);
-chdir($compiler_path) || c_die("Can't chdir($compiler_path): $!\n");
-my $run_out       = "$testname.run.out";
-my $run_out_path  = File::Spec->catfile($compiler_path, $run_out);
-my $test_out      = "$testname.out";
-my $test_out_path = File::Spec->catfile($compiler_path, $test_out);
-my $test_err      = "$testname.err";
-my $test_err_path = File::Spec->catfile($compiler_path, $test_err);
-
-if( ! -f $run_out_path ) {
-    if( $teststatus == 0 ) {
-        # if the test passed but we don't have a run.out file, we
-        # should consider that some kind of weird error
-        c_die("ERROR: test passed but $run_out does not exist!");
-    }
-    else {
-        # if the test failed, this isn't suprising.  we can print it, 
-        # but we should just treat it as if the test failed, not an
-        # internal error. 
-        print "\n\nTest failed and $run_out does not exist\n";
-    }
-}
-else {
-    # spit out the contents of the run.out file to the stdout of the task
-    if( open(RES, '<', $run_out_path) ) {
-        print "\n\n----- Start of $run_out -----\n";
-        while(<RES>) {
-            print "$_";
-        }
-        close RES;
-        print "\n----- End of $run_out -----\n";
-    }
-    else {
-        print "\n\nERROR: failed to open $run_out_path: $!\n";
-    }
-}
-
-# add test.out and test.err to run output if they exist
-
-# spit out the contents of the test.out file to the stdout of the task
-if( open(RES, '<', $test_out_path) ) {
-    print "\n\n----- Start of $test_out -----\n";
-    while(<RES>) {
-        print "$_";
-    }
-    close RES;
-    print "\n----- End of $test_out -----\n";
-}
-else {
-    print "\n\nERROR: failed to open $test_out_path: $!\n";
-}
-
-# spit err the contents of the test.err file to the stdout of the task
-if( open(RES, '<', $test_err_path) ) {
-    print "\n\n----- Start of $test_err -----\n";
-    while(<RES>) {
-        print "$_";
-    }
-    close RES;
-    print "\n----- End of $test_err -----\n";
-}
-else {
-    print "\n\nERROR: failed to open $test_err_path: $!\n";
-}
-
-exit $teststatus;
-
-######################################################################
-# helper methods
-######################################################################
-
-sub c_die {
-    my( $msg ) = @_;
-    print $msg;
-    exit 3;
-}
+exec remote_task.pl $*

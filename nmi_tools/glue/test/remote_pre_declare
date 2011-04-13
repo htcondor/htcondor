@@ -18,5 +18,68 @@
 ##
 ##**************************************************************
 
-print "Nothing to do for remote_pre_declare currently.\n";
-exit(0);
+######################################################################
+# script to set up for Condor testsuite run
+######################################################################
+
+use Cwd;
+
+my $BaseDir = getcwd();
+
+if( ($ENV{NMI_PLATFORM} =~ /winnt/) ){
+	my $newbase = `cygpath -u $BaseDir`;
+	chomp($newbase);
+	$BaseDir = $newbase;
+} 
+
+# autoflush our STDOUT
+$| = 1;
+
+######################################################################
+# set up environment and create env file for the rest of the scripts
+######################################################################
+
+print "Setting up environtment file 'setup_test_env' for other scripts\n";
+open( ENVSETUP, ">setup_test_env" ) || 
+    die "cannot open setup_test_env for writing\n";
+
+print ENVSETUP "BASE_DIR=$BaseDir\n";
+print ENVSETUP "export BASE_DIR\n";
+
+if( !($ENV{NMI_PLATFORM} =~ /winnt/) ) {
+    print ENVSETUP "PATH=$BaseDir/nmi_tools/glue/test:$BaseDir/condor/bin:$BaseDir/condor/sbin:\$PATH\n";
+    print ENVSETUP "CONDOR_CONFIG=$BaseDir/condor_tests/TestingPersonalCondor/condor_config\n";
+} else {
+    # we want UNIX-style paths for PATH (since we're using cygwin)
+    print ENVSETUP "PATH=$BaseDir/nmi_tools/glue/test:$BaseDir/condor/bin:/bin:/usr/bin\n";
+
+    # Condor will want Win32-style paths for CONDOR_CONFIG
+    my $Win32BaseDir = getcwd();
+    print ENVSETUP "CONDOR_CONFIG=$Win32BaseDir\\condor_tests\\TestingPersonalCondor\\condor_config\n";
+    
+    # also, throw in the WIN32 version of the base directory path for later use
+    print ENVSETUP "WIN32_BASE_DIR=$Win32BaseDir\n";
+    print ENVSETUP "export WIN32_BASE_DIR\n";
+}
+
+print ENVSETUP "export PATH\n";
+print ENVSETUP "export CONDOR_CONFIG\n";
+close(ENVSETUP);
+
+if( ($ENV{NMI_PLATFORM} =~ /winnt/) ){
+	$res = system("d2u  setup_test_env");
+	if($res != 0) {
+		die "Failed to convert environment variable file\n";
+	}
+}
+
+close(ENVSETUP);
+
+if( ($ENV{NMI_PLATFORM} =~ /winnt/) ){
+	$res = system("d2u  setup_test_env");
+	if($res != 0) {
+		die "Failed to convert environment variable file\n";
+	}
+}
+
+print "All steps completed successfully\n";
