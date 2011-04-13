@@ -16,7 +16,7 @@ AC_DEFUN(AC_CLASSADS,
     AC_MSG_CHECKING([for CLASSAD installation])
 
     CLASSAD_CFLAGS=""
-    CLASSAD_LIBS="-lclassad_ns -lpcre"
+    CLASSAD_LIBS="-lclassad -lpcre"
     CLASSAD_DL_LIBS="-lclassad_dl"
     if test -n "$with_classads_prefix" -a "$with_classads_prefix" != "/usr" ; then
             AC_MSG_RESULT([prefix: $with_classads_prefix])
@@ -24,7 +24,7 @@ AC_DEFUN(AC_CLASSADS,
             ac_classads_prefix=$with_classads_prefix
 
             CLASSAD_CFLAGS="-I$with_classads_prefix/include"
-            CLASSAD_LIBS="$with_classads_prefix/lib/libclassad_ns.a $with_classads_prefix/lib/libpcre.a"
+            CLASSAD_LIBS="$with_classads_prefix/lib/libclassad.a $with_classads_prefix/lib/libpcre.a"
 	    CLASSAD_DL_LIBS="-L$with_classads_prefix/lib $CLASSAD_DL_LIBS"
     fi
 
