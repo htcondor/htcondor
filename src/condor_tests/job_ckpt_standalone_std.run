@@ -26,10 +26,8 @@ use strict;
 use warnings;
 
 my $testdesc =  'Standalone Checkpointing Stack Test';
-my $testname = "job_ckpt_standalone_std.exe";
-my $ckptfile = "job_ckpt_standalone_std.exe.ckpt.$$";
-my $ckpt_out = "job_ckpt_standalone_std.checkpoint.out";
-my $resume_out = "job_ckpt_standalone_std.resume.out";
+my $testname = "job_ckpt_standalone_std.cndr.exe";
+my $ckptfile = "job_ckpt_standalone_std.cndr.exe.ckpt.$$";
 my $ret;
 my $last;
 
