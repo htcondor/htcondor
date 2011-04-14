@@ -18,7 +18,7 @@ static char doc[] =
 	"Cluster File Transfer Server - A simple file transfer server designed to be run in parallel across a cluster";
 
 /* A description of the arguments we accept. */
-static char args_doc[] = "[-i TIMEOUT] [-q QUOTA] [-a HOST[:PORT]] [-l HOST[:PORT]]";
+static char args_doc[] = "[-i TIMEOUT] [-q QUOTA] [-a HOST[:PORT]] [-l HOST[:PORT]] [-t PATH]";
 
 	/* The options we understand. */
 static struct argp_option options[] = {
@@ -57,6 +57,18 @@ static struct argp_option options[] = {
 	 "HOST[:PORT]",
 	 0,
 	 "Bind to this address instead of the default." },
+
+	{"transfer-dir",
+	 't',
+	 "PATH",
+	 0,
+	 "Path to store received files. Defaults to './' " },
+
+	{"uuid",
+	 'u',
+	 "UUID",
+	 0,
+	 "Unique Identifier that is provided during server announcements. Defaults to 0." },
 
 	{ 0 }
 };
@@ -116,6 +128,17 @@ parse_opt (int key, char *arg, struct argp_state *state)
 			
 			break;		
 
+		case 't':
+			memset( arguments->tpath, 0, 513 );
+			strcpy( arguments->tpath, arg );
+			break;
+
+		case 'u':
+			memset( arguments->uuid, 0, 129 );
+			strcpy( arguments->uuid, arg );
+			break;
+		
+
 		case ARGP_KEY_ARG:
 			if (state->arg_num > 0)
 					/* Too many arguments. */
@@ -165,6 +188,15 @@ int main( int argc, char** argv )
 	memset( arguments.lhost, 0, 256 );
 	sprintf( arguments.lhost, "localhost" );
 
+	arguments.tpath = (char*)malloc( 513 );
+	memset( arguments.tpath, 0, 513 );
+	sprintf( arguments.tpath, "." );
+
+	arguments.uuid = (char*)malloc( 129 );
+	memset( arguments.uuid, 0, 129 );
+	sprintf( arguments.uuid, "0" );
+	
+	
 		/* Parse our arguments; every option seen by parse_opt will
 		   be reflected in arguments. */
 	argp_parse (&argp, argc, argv, 0, 0, &arguments);
@@ -188,7 +220,9 @@ int main( int argc, char** argv )
 					"\tINITIAL TIMEOUT  = %d sec\n"
 					"\tVERBOSE          = %s\n"
 					"\tANNOUNCE HOST    = %s\n"
-					"\tANNOUNCE PORT    = %s\n\n\n",
+					"\tANNOUNCE PORT    = %s\n"
+					"\tTRANSFER PATH    = %s\n"
+					"\tUUID             = %s\n\n\n",
 					arguments.lport,
 					arguments.lhost,
 					arguments.quota,
@@ -196,7 +230,9 @@ int main( int argc, char** argv )
 					arguments.itimeout,
 					arguments.verbose ? "yes" : "no",
 					arguments.ahost,
-					arguments.aport);
+					arguments.aport,
+					arguments.tpath,
+					arguments.uuid);
 		}
 
 		//TODO: Write server main loop and associated handling code.
@@ -206,6 +242,8 @@ int main( int argc, char** argv )
 	free( arguments.ahost );
 	free( arguments.lport );
 	free( arguments.lhost );
+	free( arguments.tpath );
+	free( arguments.uuid );
 
 	return 0;
 }

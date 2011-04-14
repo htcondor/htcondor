@@ -39,7 +39,8 @@ int State_CheckSessionParameters( ServerState* state )
 	cftp_sif_frame* sif_frame;
 	simple_parameters* recvd_params;
 	simple_parameters* local_params;
-
+	char* str_ptr;
+	char* old_str_ptr;
 
 
 	sif_frame = (cftp_sif_frame*)(&state->frecv_buf);
@@ -92,9 +93,23 @@ int State_CheckSessionParameters( ServerState* state )
 	recvd_params = (simple_parameters*)(state->data_buffer);
 	local_params = (simple_parameters*)(state->session_parameters);
 
-	memcpy( local_params->filename,
-			recvd_params->filename, 
-			512 );
+		//memcpy( local_params->filename,
+		//		recvd_params->filename, 
+		//		512 );
+
+ 
+		// Extract the base filename from the filepath given
+	old_str_ptr = str_ptr = recvd_params->filename;;
+	while( str_ptr )
+		{
+			old_str_ptr = str_ptr;
+			str_ptr = strchr( str_ptr+1, '/' );
+			if( str_ptr )
+				str_ptr = str_ptr + 1;
+		}
+	str_ptr = old_str_ptr;
+
+	sprintf( local_params->filename, "%s/%s", state->arguments->tpath, str_ptr );
 
 	local_params->filesize   = ntohll( recvd_params->filesize );
 	local_params->num_chunks = ntohll( recvd_params->num_chunks );
@@ -171,7 +186,7 @@ int State_AcknowledgeSessionParameters( ServerState* state )
 	memcpy( send_parameters->filename,
 			local_parameters->filename,
 			512 );
-
+	
 	send_parameters->filesize   = htonll( local_parameters->filesize );
 	send_parameters->num_chunks = htonll( local_parameters->num_chunks );
 	send_parameters->chunk_size = htonll( local_parameters->chunk_size );
@@ -215,6 +230,8 @@ int State_ReceiveClientReady( ServerState* state )
 	state->local_file.fp = fopen( state->local_file.filename, "wb" );
 	if( state->local_file.fp == NULL )
 		{
+			sprintf( state->error_string,
+					 "Could not open file %s locally for writing. Check for permissions or disk errors.", state->local_file.filename);
 			free(state->local_file.filename);
 			LEAVE_STATE(-1);
 		}

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -26,7 +27,7 @@
 
 
 const int STATE_NUM = 100; // Will need to change this later
-
+const int ANNOUNCE_INTERVAL = 5; // As long as we don't have a client, we should announce presence every X seconds
 
 void run_server( ServerArguments* arg)
 {
@@ -82,10 +83,6 @@ void run_server( ServerArguments* arg)
 		}
 	
 
-	if( session_state.arguments->announce )
-		announce_server( &master_server, &session_state );
-
-
 	handle_client( &master_server, &session_state );
 
 	if( session_state.last_error )
@@ -117,17 +114,22 @@ void run_server( ServerArguments* arg)
 
 	if( master_server.server_name )	
 		free( master_server.server_name );
+
 	if( master_server.server_port )	
 		free( master_server.server_port );
 
 	if( session_state.client_info.client_name)
 		free( session_state.client_info.client_name );
+
 	if( session_state.client_info.client_port )
 		free( session_state.client_info.client_port );
+
 	if( session_state.data_buffer )
 		free( session_state.data_buffer );
+
 	if( session_state.local_file.filename )
 		free( session_state.local_file.filename );
+
 	if( session_state.session_parameters )
 		free( session_state.session_parameters );
 
@@ -171,7 +173,14 @@ int confirm_arguments( ServerArguments* arg)
 
 
 
+		// Check for transfer path	
 
+	if( access(arg->tpath, R_OK | W_OK ) != 0 )
+		{
+			fprintf(stderr, "Unable to access transfer path with READ/WRITE permissions.\n");
+			fprintf(stderr, "Error: %s\n", strerror( errno ) );
+			return -1;
+		}
 
 
 
@@ -321,8 +330,11 @@ void announce_server( ServerRecord* master_server, ServerState* state )
     }
 	
 	memset( message, 0, 512 );
-	sprintf( message, "%s %s", master_server->server_name,
-			 master_server->server_port );
+	sprintf( message, "%s %s %s",
+			 master_server->server_name,
+			 master_server->server_port,
+			 state->arguments->uuid
+			 );
 
     if ((numbytes = sendto(sockfd, message, strlen( message ), 0,
              p->ai_addr, p->ai_addrlen)) == -1) {
@@ -360,27 +372,40 @@ void handle_client( ServerRecord* master_server, ServerState* state )
     socklen_t addr_size;	
 	fd_set accept_set;
 	struct timeval timeout_tv;
+	unsigned long int total_time_waited;
+	unsigned long int max_wait;
 
 	VERBOSE( "Waiting for client connection...\n")
 
 	fcntl(master_server->server_socket, F_SETFL, O_NONBLOCK);
 	
-	FD_ZERO(&accept_set);
-	FD_SET( master_server->server_socket, &accept_set );
-	
-	timeout_tv.tv_sec = state->arguments->itimeout;
-	timeout_tv.tv_usec = 0;
-	
-	
+	total_time_waited = 0;
 	if( state->arguments->itimeout == -1 )
-		results = select(master_server->server_socket+1, &accept_set,
-						 NULL, NULL, NULL);
+		max_wait = ULONG_MAX;
 	else
-		results = select(master_server->server_socket+1, &accept_set,
-						 NULL, NULL, &timeout_tv);
+		max_wait = state->arguments->itimeout;
+	results = 0;
 
-	if( results == -1 )
+
+	while( total_time_waited < max_wait && results == 0)
 		{
+			printf( "Total Time: %d\n", total_time_waited );
+			FD_ZERO(&accept_set);
+			FD_SET( master_server->server_socket, &accept_set );
+			timeout_tv.tv_sec = ANNOUNCE_INTERVAL;
+			timeout_tv.tv_usec = 0;
+
+			results = select(master_server->server_socket+1, &accept_set,
+							 NULL, NULL, &timeout_tv);
+			
+			if( state->arguments->announce )
+				announce_server( master_server, state );
+			
+			total_time_waited += ANNOUNCE_INTERVAL;
+		}
+
+	if( results == -1 )	
+		{	
 			fprintf( stderr, "Error on accepting: %s\n", strerror( errno ) );
 			state->last_error = 1;
 			return;

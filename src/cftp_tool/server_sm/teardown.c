@@ -99,7 +99,10 @@ int State_AcknowledgeFileFinish( ServerState* state )
 					 "Local file does not match hash value expected. Aborting." );
 			LEAVE_STATE(-1);
 		}
-
+	else
+		{
+			VERBOSE( "Local file hash value matches. File transfer is successful." );
+		}
 
 		// Everything looks good, send FAF
 	

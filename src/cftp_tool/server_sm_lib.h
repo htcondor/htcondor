@@ -28,6 +28,8 @@ typedef struct _arguments
 	char* lport;
 	char* ahost;
 	char* lhost;
+	char* tpath;
+	char* uuid;
 } ServerArguments;
 
 typedef struct _ServerState

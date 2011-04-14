@@ -2,13 +2,14 @@
 
 '''Uses cftp tools and condor to handle transferring a file to many nodes.'''
 
-CFTP_SERVER = "/scratch/CONDOR_SRC/src/cftp_tool/server"
-CFTP_CLIENT = "/scratch/CONDOR_SRC/src/cftp_tool/client"
+CFTP_SERVER = "./server"
+CFTP_CLIENT = "./client"
 
 
 import sys
 if sys.version_info < (2, 6):
-    raise "must use python 2.6 or greater"
+    print sys.version_info
+    raise "must use python 2.6 or greater. you are running %d.%d" % sys.version_info
 
 
 from condor_starter import start_job
@@ -17,14 +18,13 @@ from Queue import Empty as QEmpty
 import socket
 from optparse import OptionParser
 import subprocess
+import uuid
 
 
 
+def serverCollector( interface, port, max_servers, uuid_list, out_queue, command_queue ):
 
-
-
-def serverCollector( interface, port, max_servers, out_queue, command_queue ):
-    
+    uuid_list = uuid_list[:]
     collector_socket = socket.socket( socket.AF_INET,
                                       socket.SOCK_DGRAM )
     collector_socket.setsockopt( socket.SOL_SOCKET,
@@ -46,13 +46,19 @@ def serverCollector( interface, port, max_servers, out_queue, command_queue ):
         
         try:
             data_bits = data.split()
-            server = { 'host':data_bits[0], 'port':int(data_bits[1]) }
+            server = { 'host':data_bits[0], 'port':int(data_bits[1]), 'uuid':str(data_bits[2]) }
         except Exception, e:
             print "Error recieving server announcement: %s" % data
             print e
         else:
-            server_count += 1
-            out_queue.put( server )
+            if server["uuid"] in uuid_list:  
+                server_count += 1
+                out_queue.put( server )
+                uuid_list.remove( server["uuid"] )
+            else:
+                # Ignore announcements from uuids we are not looking for
+                # They may be duplicates or zombies
+                pass
         
     return 0
 
@@ -62,16 +68,19 @@ def serverCollector( interface, port, max_servers, out_queue, command_queue ):
 
 def handle_server( server, filename ):
 
-    client_out_log = open( "logs/client_%(host)s_%(port)d.out" % server,'w')
-    client_err_log = open( "logs/client_%(host)s_%(port)d.err" % server,'w')
+    client_out_log = open( "/tmp/logs/client_%(host)s_%(port)d.out" % server,'w')
+    client_err_log = open( "/tmp/logs/client_%(host)s_%(port)d.err" % server,'w')
 
     client_args = [ CFTP_CLIENT, server["host"], str(server["port"]), filename ]
-    subprocess.call( client_args,
-                     stdout=client_out_log,
-                     stderr=client_err_log)
-   
-    
+    retCode = subprocess.call( client_args,
+                               stdout=client_out_log,
+                               stderr=client_err_log)
 
+    client_out_log.close()
+    client_err_log.close()
+
+    return retCode
+    
 
 
 
@@ -84,10 +93,9 @@ if __name__ == "__main__":
     parser.add_option("-f", "--file", dest="filename",
                       help="transfer FILE to remote machines.", metavar="FILE")
     
-    # We can't support this yet
-    #parser.add_option("-c", "--count", dest="count",
-    #                  type="int", metavar="NUM_REPLICA", 
-    #                  help="transfer NUM_REPLICA copies to unique machines. Overrides machine list." )
+    parser.add_option("-c", "--count", dest="count",
+                      type="int", metavar="NUM_REPLICA", 
+                      help="transfer NUM_REPLICA copies to unique machines. Overrides machine list." )
     
     # Collector options
     parser.add_option("-H", "--host", dest="host",
@@ -98,7 +106,14 @@ if __name__ == "__main__":
                       metavar="PORT" )
         
 
-    
+    # Debug Options
+    parser.add_option( "-s", "--save-submit", dest="savesubmit",
+                       help = "Save a copy of each submit file to the current directory for debugging.",
+                       action="store_true")
+
+    parser.add_option( "-S", "--collect-server-statistics", dest='collectstats',
+                       help = "Collect statistics on server placement afterwards",
+                       action = "store_true")
     
     (options, args) = parser.parse_args()
 
@@ -106,20 +121,17 @@ if __name__ == "__main__":
         print "ERROR: Must specify a file to transfer. Did you remember --file?"
         exit(1)
 
-    #if options.count:
-    #    machine_list = set()
-    #    machine_count = options.count
-    #else:
-    #    machine_list = set( args )
-    #    machine_count = len( machine_list )
-
-    machine_list = set( args )
-    machine_count = len( machine_list ) 
+    if options.count:
+        machine_list = set()
+        machine_count = options.count
+    else:
+        machine_list = set( args )
+        machine_count = len( machine_list )
 
     if options.host:
         host = options.host
     else:
-        host = socket.gethostbyname( socket.gethostname )
+        host = socket.gethostbyname( socket.gethostname() )
     
     if options.port:
         port = options.port
@@ -130,46 +142,70 @@ if __name__ == "__main__":
     
     q_out = Queue()
     q_cmd = Queue()
-    p = Process(target=serverCollector, args=(host, port, machine_count, q_out, q_cmd))
+    m_id_list = list(( uuid.uuid4().hex for machine in range(machine_count) ))
+    p = Process(target=serverCollector, args=(host, port, machine_count, m_id_list, q_out, q_cmd))
     p.start()
     
     # Generate submit data and start condor jobs
 
     print "\n\nSubmitting server instances to condor for starting...\n\n"
 
-    submit_args = [ '-verbose', '-pool' , 'chopin.cs.wisc.edu:15396']
+    submit_args = [ '-verbose' ]
 
     submit = {}
     submit["Executable"] = CFTP_SERVER 
-    submit["Arguments"] = "-a %s:%d -i 60 -l $$([TARGET.Machine])" % (host, port)
-    submit["Error"] =  "logs/server_$$([TARGET.Machine]).error"
-    submit["Output"] = "logs/server_$$([TARGET.Machine]).output"
-    submit["Log"] = "logs/server_$$([TARGET.Machine]).log"
+    submit["Error"] =  "/tmp/logs/server_$$([TARGET.Machine]).output"
+    submit["Output"] = "/tmp/logs/server_$$([TARGET.Machine]).output"
+    submit["Log"] = "/tmp/logs/server_$$([TARGET.Machine]).log"
     submit["Universe"] = "vanilla"
-    for machine in machine_list:
-        submit["Requirements"] = 'Machine == "%s"' % machine
-        start_job( submit, submit_args, queue=1 )
+    submit["should_transfer_files"] = "YES"
+    submit["when_to_transfer_output"] = "ON_EXIT"
+
+    m_list= list( machine_list )
+    for machine_index in range(machine_count):
+
+        submit["Arguments"] = "-a %s:%d -i 60 -l $$([TARGET.Machine]) -d -u %s" % (host, port, m_id_list[machine_index])
+        submit["Requirements"] = ''
+        #submit["Requirements"] = submit["Requirements"] + '(target.FileSystemDomain == "*.chtc.wisc.edu")'
+
+        if m_list :
+            machine = m_list[machine_index]
+            submit["Requirements"] = submit["Requirements"]  + ' && (Machine == "%s")' % machine
+
+        start_job( submit, submit_args, queue=1 , save=( options.savesubmit == True) )
 
     # Display list of entered jobs to prove we are done
         
-    print "\n\n"
-    subprocess.call( ["condor_q",] )
-    print "\n\n"
+    #print "\n\n"
+    #subprocess.call( ["condor_q",] )
+    #print "\n\n"
 
 
     # Respond to servers starting up
     print "\n\nWaiting for servers to comeup to begin file transfer...\n\n"
 
     seen_servers = 0
+    seen_server_buckets = {}
         
     while p.is_alive and seen_servers < machine_count:
         server = q_out.get(True)
-        print "We have seen server %d come up at %s:%d" % ( seen_servers+1,
+        print "We have seen server %s come up at %s:%d" % ( server["uuid"],
                                                             server["host"],
                                                             server["port"] )
         seen_servers += 1
 
-        handle_server( server, options.filename )
+        # collect history of server placement
+        if server["host"] in seen_server_buckets:
+            seen_server_buckets[ server["host"] ][0] += 1
+        else:
+            seen_server_buckets[ server["host"] ] = [1, 0]
+
+
+        retcode = handle_server( server, options.filename )
+        if retcode == 0:
+            seen_server_buckets[ server["host"] ][1] += 1
+        else:
+            print "Warning. Transfer failed to server instance %d" % (seen_servers)
         
         if seen_servers == machine_count:
             q_cmd.put( "QUIT" )
@@ -178,11 +214,38 @@ if __name__ == "__main__":
         print "Collector died unexpectedly. Quitting now, but there may be issues."
     else:
         #Wait for collector to quit
-        print "All servers seen. Killing collector..."
+        print "\nAll servers seen. Killing collector..."
         p.join()
         print "Done."
     
 
+
+    if options.collectstats:
+
+        print "\n\nTransfer Statistics\n"
+
+        total_unique = len( seen_server_buckets.keys() )
+        total_servers, successful_transfers = map( sum, zip(*seen_server_buckets.values()))
+        maxName = max( [len(key) for key in seen_server_buckets.keys() ] ) + 2
+
+        print "Total Unique Servers: ", total_unique
+        print "Total Successful Transfers: ", successful_transfers
+        print ""
+        print "Server Name%s%sCount%s%%%sTransfers%sT%%" % ( ' '*(maxName-11),
+                                                             ' '*(6),
+                                                             ' '*(6),
+                                                             ' '*(6),
+                                                             ' '*(6),)
+        print "-"*(maxName+6+6)
+        for key in seen_server_buckets.keys():
+            print "%(server_name)s%(spacer)s%(count) 11d%(percent) 7d%%%(transfers) 15d%(transfer_percent)5d" % { 'server_name':key,
+                                                                                                                  'spacer': ' '*(maxName-len(key)),
+                                                                                                                  'count':int(seen_server_buckets[key][0]),
+                                                                                                                  'percent':int(float(seen_server_buckets[key][0]) / total_servers * 100),
+                                                                                                                  'transfers':int(seen_server_buckets[key][1]),
+                                                                                                                  'transfer_percent':float(float(seen_server_buckets[key][1]) / float(seen_server_buckets[key][0]) * 100)
+                                                                       }
+        
 
 
 

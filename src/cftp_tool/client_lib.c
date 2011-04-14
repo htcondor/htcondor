@@ -92,11 +92,30 @@ FileRecord* open_file( char* filename)
 	SHA1Context hashRecord;
 	unsigned char chunk;
 	unsigned int len;
+    char* str_ptr;	
+	char* old_str_ptr;
+	
 
 	record = (FileRecord*) malloc(sizeof(FileRecord));
 	memset( record, 0, sizeof( FileRecord ));
 
-	record->filename = filename;
+
+		// Extract the base filename from the filepath given
+	old_str_ptr = str_ptr = filename;
+	while( str_ptr )
+		{
+			old_str_ptr = str_ptr;
+			str_ptr = strchr( str_ptr+1, '/' );
+			if( str_ptr )
+				str_ptr = str_ptr + 1;
+		}
+	str_ptr = old_str_ptr;
+
+
+	record->filename = (char*)malloc( strlen(str_ptr)+1 );
+	strcpy( record->filename, str_ptr );
+
+
 	record->fp = fopen( filename, "rb" );
 	if( record->fp == NULL )
 		{
