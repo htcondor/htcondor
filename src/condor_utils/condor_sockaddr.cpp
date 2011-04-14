@@ -238,9 +238,10 @@ bool condor_sockaddr::from_sinful(const char* sinful)
 
 	int port_no = atoi(port_begin);
 
-	char tmp[INET6_ADDRSTRLEN];
+	char tmp[NI_MAXHOST];
 	if ( ipv6 ) {
-		if ( addr_len >= INET6_ADDRSTRLEN ) return false;
+		if (addr_len >= INET6_ADDRSTRLEN) 
+			return false;
 		memcpy(tmp, addr_begin, addr_len);
 		tmp[addr_len] = '\0';
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
@@ -251,15 +252,26 @@ bool condor_sockaddr::from_sinful(const char* sinful)
 		v6.sin6_port = htons(port_no);
 	}	
 	else {
-		if ( addr_len >= INET_ADDRSTRLEN ) return false;
+		if (addr_len >= NI_MAXHOST)
+			return false;
 		memcpy(tmp, addr_begin, addr_len);
 		tmp[addr_len] = '\0';
+
+		if (inet_pton(AF_INET, tmp, &v4.sin_addr) > 0) {
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
-		v4.sin_len = sizeof(sockaddr_in);
+			v4.sin_len = sizeof(sockaddr_in);
 #endif
-		v4.sin_family = AF_INET;
-		if ( inet_pton(AF_INET, tmp, &v4.sin_addr) <= 0) return false;
-		v4.sin_port = htons(port_no);
+			v4.sin_family = AF_INET;
+			v4.sin_port = htons(port_no);
+		} else {
+			std::vector<condor_sockaddr> ret;
+			ret = resolve_hostname(tmp);
+			if (!ret.empty()) {
+				*this = ret.front();
+				set_port(port_no);
+			} else
+				return false;
+		}
 	}
 	return true;
 }

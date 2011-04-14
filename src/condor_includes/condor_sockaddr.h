@@ -81,6 +81,8 @@ public:
 	bool from_ip_string(const MyString& ip_string);
 	bool from_ip_string(const char* ip_string);
 
+		// sinful string could contain either IP address or hostname.
+		// from_sinful() calls gethostbyname to resolve DNS name to IP addr.
 	bool from_sinful(const char* sinful);
 	MyString to_sinful() const;
 	const char* to_sinful(char* buf, int len) const;
