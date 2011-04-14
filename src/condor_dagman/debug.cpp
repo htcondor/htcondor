@@ -44,7 +44,11 @@ static int cache_size = 0;
 //extern "C" {
 extern int DebugFlags;
 extern int DebugUseTimestamps;
+#ifdef WIN32
+extern FILE *DebugFPs[D_NUMLEVELS+1];
+#else
 extern FILE *DebugFP;
+#endif
 //}
 
 static void debug_cache_insert(int flags, const char *fmt, va_list args);
@@ -169,6 +173,12 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 
 	MyString tstamp, fds, line, pid;
 	pid_t my_pid;
+	FILE *debug_file_fp;
+#ifdef WIN32
+	debug_file_fp = DebugFPs[D_ALWAYS];
+#else
+	debug_file_fp = DebugFP;
+#endif
 
 	// XXX TODO
 	// handle flags...
@@ -194,7 +204,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 		}
 
 		if ((DebugFlags|flags) & D_FDS) {
-			fds.sprintf("(fd:%d) ", fileno(DebugFP) );
+			fds.sprintf("(fd:%d) ", fileno(debug_file_fp) );
 		}
 
 		if ((DebugFlags|flags) & D_PID) {

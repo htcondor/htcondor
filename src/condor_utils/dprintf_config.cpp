@@ -37,7 +37,11 @@
 int		Termlog = 0;
 
 extern int		DebugFlags;
+#ifdef WIN32
+extern FILE		*DebugFPs[D_NUMLEVELS+1];
+#else
 extern FILE		*DebugFP;
+#endif
 extern off_t		MaxLog[D_NUMLEVELS+1];
 extern int 			MaxLogNum[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
@@ -47,6 +51,7 @@ extern int		_condor_dprintf_works;
 extern time_t	DebugLastMod;
 extern int		DebugUseTimestamps;
 extern int      DebugContinueOnOpenFailure;
+extern int		log_keep_open;
 
 extern void		_condor_set_debug_flags( const char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
@@ -104,6 +109,7 @@ dprintf_config( const char *subsys )
 	static int first_time = 1;
 	int want_truncate;
 	int debug_level;
+	FILE *debug_file_fp;
 
 	/*  
 	**  We want to initialize this here so if we reconfig and the
@@ -248,12 +254,12 @@ dprintf_config( const char *subsys )
 				}
 
 				if( first_time && want_truncate ) {
-					DebugFP = debug_lock(debug_level, "w", 0);
+					debug_file_fp = debug_lock(debug_level, "w", 0);
 				} else {
-					DebugFP = debug_lock(debug_level, "a", 0);
+					debug_file_fp = debug_lock(debug_level, "a", 0);
 				}
 
-				if( DebugFP == NULL && debug_level == 0 ) {
+				if( debug_file_fp == NULL && debug_level == 0 ) {
                    #ifdef WIN32
 					/*
 					** If we could not open the log file, we might want to keep running anyway.
@@ -278,8 +284,8 @@ dprintf_config( const char *subsys )
 					}
 				}
 
-				if (DebugFP) (void)debug_unlock( debug_level );
-				DebugFP = (FILE *)0;
+				if (debug_file_fp) (void)debug_unlock( debug_level );
+				debug_file_fp = NULL;
 
 				if (debug_level == 0) {
 					(void)sprintf(pname, "MAX_%s_LOG", subsys);
@@ -318,6 +324,11 @@ dprintf_config( const char *subsys )
 
 		(void)fflush( stderr );	/* Don't know why we need this, but if not here
 							   the first couple dprintf don't come out right */
+	}
+
+	if(!DebugLock) {
+		sprintf(pname, "%s_LOG_KEEP_OPEN", subsys);
+		log_keep_open = param_boolean_int(pname, FALSE);
 	}
 
 	first_time = 0;
