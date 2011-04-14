@@ -263,13 +263,19 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 
 	kind = expr->GetKind( );
 
-	if( kind == classad::ExprTree::ATTRREF_NODE ||
-		kind == classad::ExprTree::FN_CALL_NODE )
-	{
+	if( kind == classad::ExprTree::ATTRREF_NODE ) {
 		( ( classad::AttributeReference * )expr )->GetComponents( base, attr,
 																  junkBool);
 		if( !c->Init( attr, expr->Copy( ), true ) ) {
   				cerr << "error: problem with Condition::Init" << endl;
+  				return false;
+		}
+		return true;
+	}
+
+	if( kind == classad::ExprTree::FN_CALL_NODE ) {
+		if( !c->InitComplex( expr->Copy( ) ) ) {
+  				cerr << "error: problem with Condition::InitComplex" << endl;
   				return false;
 		}
 		return true;
