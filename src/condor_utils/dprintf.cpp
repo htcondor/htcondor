@@ -1068,6 +1068,11 @@ preserve_log_file(int debug_level)
 
 	fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
 	debug_file_ptr = NULL;
+#ifdef WIN32
+	DebugFPs[debug_level] = NULL;
+#else
+	DebugFP = NULL;
+#endif
 
 	result = rotateTimestamp(timestamp, MaxLogNum[debug_level]);
 
@@ -1294,7 +1299,6 @@ open_debug_file(int debug_level, const char flags[])
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 
-	DebugFPs[debug_level] = fp;
 	return fp;
 }
 
@@ -1374,6 +1378,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		DprintfBroken = 1;
 
 			/* Don't forget to unlock the log file, if possible! */
+#ifdef WIN32
 		for (int debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++)
 		{
 			if(DebugFPs[debug_level])
@@ -1382,6 +1387,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 				debug_close_file(debug_level);
 			}
 		}
+#endif
 	}
 
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
