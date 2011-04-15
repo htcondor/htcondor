@@ -1150,7 +1150,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 
 	// If we're a client talking to a 7.5.6 or older schedd, we want
 	// to send the user log as an input file.
-	if ( TransferUserLog && simple_init && !nullFile( UserLogFile ) ) {
+	if ( UserLogFile && TransferUserLog && simple_init && !nullFile( UserLogFile ) ) {
 		if ( !InputFiles->file_contains( UserLogFile ) )
 			InputFiles->append( UserLogFile );
 	}
