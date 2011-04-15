@@ -6,47 +6,14 @@ Condor's Dedicated Scheduling}
 \index{dedicated scheduling}
 \index{MPI application!under the dedicated scheduler}
 
-Applications that require multiple resources,
-yet must not be preempted, are handled gracefully by Condor.
-Condor combines
-\index{scheduling!opportunistic}
-\index{opportunistic scheduling}
-\Term{opportunistic scheduling} and \Term{dedicated scheduling} within
-a single system.
-\Term{Opportunistic scheduling} involves placing a job on a non-dedicated
-resource under the assumption that the resource may not be
-available for the entire duration of the job.
-\index{scheduling!dedicated}
-\index{dedicated scheduling}
-\Term{Dedicated scheduling} assumes the constant availability of
-resources;
-it is assumed that the job will run to completion,
-without interruption.
-
-To support applications needing dedicated resources,
-an administrator 
-configures resources to be dedicated.
-These resources are controlled by a dedicated scheduler, a
-single machine within the pool that runs a \Condor{schedd} daemon.
-There is no limit on the number of dedicated schedulers within
-a Condor pool.
-However, each dedicated resource may only be managed by a single
-dedicated scheduler.
-Running multiple dedicated schedulers within a single pool
-results in a fragmentation of dedicated resources.
-This can create a situation where jobs cannot run, because 
-there are too few resource that may be allocated.
-
-After a \Condor{schedd} daemon has been selected as the dedicated scheduler
-for the pool and resources are configured to be
-dedicated, users submit parallel universe jobs (including MPI applications)
-through that \Condor{schedd} daemon.
-When an idle parallel universe job is found in the queue,
-this dedicated scheduler
-performs its own scheduling algorithm to find and claim appropriate
-resources for the job.
-When a resource can no longer be used to serve a job that must
-not be preempted, the resource is allowed to run opportunistic jobs.
+The dedicated scheduler is a part of the condor\_schedd that handles scheduling
+of parallel jobs that require more than one machine concurrently running per
+job.  MPI applications are a common use for the dedicated scheduler, but parallel
+applications which don't require MPI can also be run with the dedicated scheduler.
+All jobs which use the parallel universe are routed to the dedicated scheduler
+within the schedd they were submitted to.  A default condor installation
+does not configure a dedicated scheduler, the administrator must designate
+one or more schedds to perform as dedicated scheduler.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
