@@ -7554,9 +7554,24 @@ the HDFS XML configuration.
   Defines the value of \Expr{dfs.datanode.address} in the HDFS XML
  configuration.
 
-\label{param:HDFSServices}
-\item[\Macro{HDFS\_SERVICES}]
+\label{param:HDFS}
+\item[\Macro{HDFS\_NODETYPE}]
   A host name, to identify the machine acting as the Name-node.
+
+\label{param:HDFSBackupnode}
+\item[\Macro{HDFS\_BACKUPNODE}]
+	The host address and port number for the HDFS Backup node.  There is no
+default value.  Defines the value of the HDFS dfs.namenode.backup.address
+field in the HDFS XML config file.
+
+\label{param:HDFSBackupnodeWeb}
+\item[\Macro{HDFS\_BACKUPNODE\_WEB}]
+The address and port number for the HDFS embedded web server within the BackupNode with the syntax of hdfs://host\_address:portnumber. There is no default value for this required variable. Defines the value of dfs.namenode.backup.http-address in the HDFS XML configuration. 
+
+\label{param:HDFSNamenodeRole}
+\item[\Macro{HDFS\_NAMENODE\_ROLE}]
+If this machine is selected to be NameNode then by a role should defined. Available options are ACTIVE, BACKUP, CHECKPOINT, and STANDBY. Default value is ACTIVE. STANDBY option is added for future expansion. If HDFS\_NODETYPE is selected to be DataNode (HDFS\_DATANODE) then this parameter is ignored.
+
 
 \label{param:HDFSLog4j}
 \item[\Macro{HDFS\_LOG4J}]
