@@ -32,6 +32,19 @@
 #include "subsystem_info.h"
 #include "gtodc.h"
 
+#if defined(COMPRESS_CKPT)
+/* This structure represents an alternate heap, controlled by a specially
+	created malloc, and used by zlib for the checkpoint compression feature.
+*/
+struct alternate_memory_heap {
+	void *begin;
+	void *corestart;
+	void **coreend;
+	void **segend;
+	int pagesize;
+};
+#endif
+
 extern int _condor_in_file_stream;
 
 const int KILO = 1024;
@@ -49,6 +62,8 @@ extern "C" void _condor_restore_sigstates();
 #if defined(COMPRESS_CKPT)
 #include "zlib.h"
 extern "C" {
+	void display_alternate_memory_heap(int dlevel);
+	int condor_malloc_getpagesize(void); // in malloc-condor.c
 	int condor_malloc_init_size();
 	void condor_malloc_init(void *start);
 	char *condor_malloc(size_t);
@@ -85,6 +100,7 @@ extern "C" void _install_signal_handler( int sig, SIG_HANDLER handler );
 extern "C" int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 extern "C" int get_ckpt_mode( int sig );
 extern "C" int get_ckpt_speed( );
+static void sleep_syscall(int seconds);
 
 Image MyImage;
 static jmp_buf Env;
@@ -97,6 +113,13 @@ static size_t StackSaveSize;
 unsigned int _condor_numrestarts = 0;
 int condor_compress_ckpt = 1; // compression off(0) or on(1)
 int condor_slow_ckpt = 0;
+
+#if defined(COMPRESS_CKPT)
+// There is only ONE alternate heap. This global variable gets saved and
+// restored across checkpoints. This means that the mmap'ed heap during
+// checkpoint will be known to be put into the right place upon restore.
+static struct alternate_memory_heap amh = { NULL, NULL, NULL, NULL, -1 };
+#endif
 
 /* these are the remote system calls we use in this file */
 extern "C" int REMOTE_CONDOR_send_rusage(struct rusage *use_p);
@@ -148,71 +171,225 @@ void *condor_map_seg(void *base, size_t size)
 	return base;
 }
 
+void display_alternate_memory_heap(int dlevel)
+{
+	dprintf(dlevel,
+		"Alternate Memory Heap: {begin=%p, corestart=%p, coreend=%p, segend=%p, *coreend=%p, *segend=%p, pagesize=%d}\n",
+		amh.begin, amh.corestart, amh.coreend, amh.segend, 
+		amh.coreend!=NULL?*amh.coreend:NULL,
+		amh.segend!=NULL?*amh.segend:NULL,
+		amh.pagesize);
+}
+
 // TODO: deallocate segments on negative incr
 void *condor_morecore(int incr)
 {
-	// begin points to the start of our heap segment
-	// corestart points to the start of the allocated portion of the segment
-	// *coreend points to the end of the allocated portion of the segment
-	// *segend points to the end of our allocated segment
-	// coreend and segend are stored at the start of the segment because
+	// amh.begin points to the start of our heap segment
+	// amh.corestart points to the start of the allocated portion of the segment
+	// *amh.coreend points to the end of the allocated portion of the segment
+	// *amh.segend points to the end of our allocated segment
+	// amh.coreend and segend are stored at the start of the segment because
 	//   we don't want them to be overwritten on a restart
-	static void *begin = NULL, *corestart = NULL,
-		**coreend = NULL, **segend = NULL;
-	static int pagesize = -1;
 
-	if (pagesize == -1) {
-		pagesize = getpagesize();
+	if (amh.pagesize == -1) {
+		// This is the page size of the alternate heap allocator, NOT the
+		// regular allocator used by the application. The two allocators
+		// can sometimes have different sizes and we don't want to confuse
+		// the two.
+		amh.pagesize = condor_malloc_getpagesize();
 	}
-	
-	if (begin == NULL) {
-		begin = MyImage.FindAltHeap();
+
+	if (amh.begin == NULL) {
+		amh.begin = MyImage.FindAltHeap();
 		int malloc_static_data = condor_malloc_init_size();
 		int segincr =
 			(((incr+malloc_static_data+
-			   (2*sizeof(void *)))/pagesize)+1)*pagesize;
-		begin = condor_map_seg(begin, segincr);
-		corestart = (void *) (
-			(int)begin+(int)(2*sizeof(void *))+(int)malloc_static_data ); 
-		condor_malloc_init((void *)((int)begin+(int)(2*sizeof(void *))));
-		coreend = (void **)begin;
-		segend = (void **)((int)begin+(int)sizeof(void *));
-		*segend = (void *)((int)begin+(int)segincr);
-		*coreend = (void *)((int)corestart+(int)incr);
-		return corestart;
+			   (2*sizeof(void *)))/amh.pagesize)+1)*amh.pagesize;
+		amh.begin = condor_map_seg(amh.begin, segincr);
+		amh.corestart = (void *) (
+			(int)amh.begin+(int)(2*sizeof(void *))+(int)malloc_static_data ); 
+		condor_malloc_init((void *)((int)amh.begin+(int)(2*sizeof(void *))));
+		amh.coreend = (void **)amh.begin;
+		amh.segend = (void **)((int)amh.begin+(int)sizeof(void *));
+		*amh.segend = (void *)((int)amh.begin+(int)segincr);
+		*amh.coreend = (void *)((int)amh.corestart+(int)incr);
+		return amh.corestart;
 	} else if (incr == 0) {
-		return *coreend;
+		return *amh.coreend;
 	} else {
-		void *old_break = *coreend;
-		*coreend = (void *)((int)*coreend + (int)incr);
-		if (*coreend > *segend) {
-			int segincr = (int)((((int)*coreend-(int)*segend)/(int)pagesize)+1)*(int)pagesize;
-			if ((int)*coreend+(int)segincr-(int)begin > ALT_HEAP_SIZE) {
+		void *old_break = *amh.coreend;
+		*amh.coreend = (void *)((int)*amh.coreend + (int)incr);
+		if (*amh.coreend > *amh.segend) {
+			int segincr = (int)((((int)*amh.coreend-(int)*amh.segend)/(int)amh.pagesize)+1)*(int)amh.pagesize;
+			if ((int)*amh.coreend+(int)segincr-(int)amh.begin > ALT_HEAP_SIZE) {
 				dprintf(D_ALWAYS,
 						"fatal error: exceeded ALT_HEAP_SIZE of %d bytes!\n",
 						ALT_HEAP_SIZE);
 				Suicide();
 			}
-			if (condor_map_seg(*segend, segincr) != *segend) {
+			if (condor_map_seg(*amh.segend, segincr) != *amh.segend) {
 				dprintf(D_ALWAYS, "failed to allocate contiguous segments in "
 						"condor_morecore!\n");
 				Suicide();
 			}
-			*segend = (void *)((int)*segend + (int)segincr);
+			*amh.segend = (void *)((int)*amh.segend + (int)segincr);
 		}
 		return old_break;
 	}
 }
 
 void *
-zalloc(voidpf opaque, uInt items, uInt size)
+zalloc(voidpf /* opaque */, uInt items, uInt size)
 {
-	return condor_malloc(items*size);
+	uInt total_size = 0;
+	void *chunk = NULL;
+	void *chunk_start = NULL;
+	void *chunk_end = NULL;
+
+	// Get the requested memory from the alternate heap. This may initialize
+	// the alternate heap based upon condor_morecore(). 
+	total_size = items * size;
+	chunk = condor_malloc(total_size);
+
+	// some useful pointers for later checks and messages.
+	chunk_start = chunk;
+	chunk_end = (char*)chunk + total_size;
+
+	// Check to make sure alternate heap was and still is initialized.
+	if (amh.begin == NULL ||
+		amh.corestart == NULL ||
+		amh.coreend == NULL ||
+		*amh.coreend == NULL ||
+		amh.segend == NULL ||
+		*amh.segend == NULL ||
+		amh.pagesize != condor_malloc_getpagesize())
+	{
+		dprintf(D_ALWAYS, 
+			"ERROR: The alternate heap has not been initialized properly. "
+			"Please check to see that MORECORE had been defined properly "
+			"when compiling malloc-condor.c. Committing Suicide()!\n");
+		display_alternate_memory_heap(D_ALWAYS);
+		Suicide();
+	}
+
+	// Check to see that the memory we got back from the allocator is
+	// _completely contained_ in the alternate heap. We do this because if
+	// somehow condor_malloc() actually called sbrk() instead of
+	// condor_morecore(), we'd silently corrupt the checkpoint image and
+	// subsequent checkpoint. We take great care to examine how it fails 
+	// since that can lead to insight into what is going wrong.
+
+	// Check if chunk starts before the alt heap and ends after the alt heap
+	if (chunk_start < amh.corestart && chunk_end >= *amh.coreend) 
+	{
+		dprintf(D_ALWAYS, 
+			"ERROR: Alternate heap allocator allocated chunk "
+			"[start=%p, end=%p, size=%d bytes] "
+			"which _completely_ overlaps the alternate heap boundaries "
+			"of [%p, %p]. "
+			"Check to see if MORECORE is defined properly when "
+			"compiling malloc-condor.c! Commiting Suicide()!\n",
+			chunk_start, chunk_end, total_size,
+			amh.corestart, amh.coreend!=NULL?*amh.coreend:NULL);
+		display_alternate_memory_heap(D_ALWAYS);
+		Suicide();
+	}
+
+	// Check if the entire chunk is below the alternate heap.
+	if (chunk_end < amh.corestart) {
+		dprintf(D_ALWAYS, 
+			"ERROR: Alternate heap allocator allocated chunk "
+			"[start=%p, end=%p, size=%d bytes] "
+			"which is below the valid alternate heap boundaries of [%p, %p]. "
+			"Check to see if MORECORE is defined properly when "
+			"compiling malloc-condor.c! Commiting Suicide()!\n",
+			chunk_start, chunk_end, total_size,
+			amh.corestart, amh.coreend!=NULL?*amh.coreend:NULL);
+		display_alternate_memory_heap(D_ALWAYS);
+		Suicide();
+	}
+
+	// Check if the entire chunk is above the alternate heap.
+	if (chunk_start > *amh.coreend) {
+		dprintf(D_ALWAYS, 
+			"ERROR: Alternate heap allocator allocated chunk "
+			"[start=%p, end=%p, size=%d bytes] "
+			"which is above the valid alternate heap boundaries of [%p, %p]. "
+			"Check to see if MORECORE is defined properly when "
+			"compiling malloc-condor.c! Commiting Suicide()!\n",
+			chunk_start, chunk_end, total_size,
+			amh.corestart, amh.coreend!=NULL?*amh.coreend:NULL);
+		display_alternate_memory_heap(D_ALWAYS);
+		Suicide();
+	}
+
+	// Check if the chunk overlaps the lower boundary of the alt heap.
+	if (chunk_start < amh.corestart && chunk_end >= amh.corestart)
+	{
+		dprintf(D_ALWAYS, 
+			"ERROR: Alternate heap allocator allocated chunk "
+			"[start=%p, end=%p, size=%d bytes] "
+			"which overlaps the start alternate heap boundaries of [%p, %p]. "
+			"Check to see if MORECORE is defined properly when "
+			"compiling malloc-condor.c! Commiting Suicide()!\n",
+			chunk_start, chunk_end, total_size,
+			amh.corestart, amh.coreend!=NULL?*amh.coreend:NULL);
+		display_alternate_memory_heap(D_ALWAYS);
+		Suicide();
+	}
+
+	// Check if the chunk overlaps the upper boundary of the alt heap.
+	if (chunk_start >= amh.corestart && 
+		chunk_start < *amh.coreend &&
+		chunk_end >= *amh.coreend)
+	{
+		dprintf(D_ALWAYS, 
+			"ERROR: Alternate heap allocator allocated chunk "
+			"[start=%p, end=%p, size=%d bytes] "
+			"which overlaps the end alternate heap boundaries of [%p, %p]. "
+			"compiling malloc-condor.c! Commiting Suicide()!\n",
+			chunk_start, chunk_end, total_size,
+			amh.corestart, amh.coreend!=NULL?*amh.coreend:NULL);
+		display_alternate_memory_heap(D_ALWAYS);
+		Suicide();
+	}
+
+	// If we passed the validation gauntlet, we're good to go!
+	return chunk;
 }
 
 void
-zfree(voidpf opaque, voidpf address)
+zfree(voidpf /* opaque */ , voidpf address)
 {
+	// Check to see that the pointer we are about to free actually exists IN
+	// the alternate heap. We do this because if somehow we pass pointers from
+	// the real malloc heap to here, we could silently corrupt or segfault in
+	// either heap.
+
+	if (address < amh.corestart) {
+		dprintf(D_ALWAYS, 
+			"ERROR: Alternate heap allocator asked to free a pointer %p from "
+			"below the alternate heap! Check to see if MORECORE is defined "
+			"properly when compiling malloc-condor.c! Also check that a real "
+			"heap pointer isn't being passed to the alternate heap free "
+			"function! Commiting Suicide()!\n",
+			address);
+		display_alternate_memory_heap(D_ALWAYS);
+		Suicide();
+	}
+
+	if (address >= *amh.coreend) {
+		dprintf(D_ALWAYS, 
+			"ERROR: Alternate heap allocator asked to free a pointer %p from "
+			"above the alternate heap! Check to see if MORECORE is defined "
+			"properly when compiling malloc-condor.c! Also check that a real "
+			"heap pointer isn't being passed to the alternate heap free "
+			"function! Commiting Suicide()!\n",
+			address);
+		display_alternate_memory_heap(D_ALWAYS);
+		Suicide();
+	}
+
 	condor_free(address);
 }
 #endif
@@ -1871,6 +2048,33 @@ void ckpt_and_exit__()
 
 }   /* end of extern "C" */
 
+/* this bypasses our need for libc */
+void sleep_syscall(int seconds)
+{
+
+#if defined(SYS_sleep)
+	SYSCALL(SYS_sleep, seconds);
+#elif defined(SYS__newselect)
+	struct timeval t;
+	t.tv_sec = seconds;
+	t.tv_usec = 0;
+	SYSCALL(SYS__newselect, 0, NULL, NULL, NULL, &t);
+#elif defined(SYS_select)
+	struct timeval t;
+	t.tv_sec = seconds;
+	t.tv_usec = 0;
+	SYSCALL(SYS_select, 0, NULL, NULL, NULL, &t);
+#elif defined(SYS_nanosleep)
+	struct timespec t;
+	t.tv_sec = seconds;
+	t.tv_nsec = 0;
+	SYSCALL(SYS_nanosleep, &t, NULL);
+#else
+#error "Please port me!  I need a sleep system call."
+#endif
+
+}
+
 /*
   Arrange to terminate abnormally with the given signal.  Note: the
   expectation is that the signal is one whose default action terminates
@@ -1918,26 +2122,7 @@ terminate_with_sig( int sig )
 	// our debug message doesn't arrive at the shadow, we won't know why
 	// the job died.  Note that we don't necessarily have access to any
 	// libc functions here, so we must use SYSCALL(SYS_something, ...).
-#if defined(SYS_sleep)
-	SYSCALL(SYS_sleep, 1);
-#elif defined(SYS__newselect)
-	struct timeval t;
-	t.tv_sec = 1;
-	t.tv_usec = 0;
-	SYSCALL(SYS__newselect, 0, NULL, NULL, NULL, &t);
-#elif defined(SYS_select)
-	struct timeval t;
-	t.tv_sec = 1;
-	t.tv_usec = 0;
-	SYSCALL(SYS_select, 0, NULL, NULL, NULL, &t);
-#elif defined(SYS_nanosleep)
-	struct timespec t;
-	t.tv_sec = 1;
-	t.tv_nsec = 0;
-	SYSCALL(SYS_nanosleep, &t, NULL);
-#else
-#error "Please port me!  I need a sleep system call."
-#endif
+	sleep_syscall(1);
 
 	if( SYSCALL(SYS_kill, my_pid, sig) < 0 ) {
 		EXCEPT( "kill" );

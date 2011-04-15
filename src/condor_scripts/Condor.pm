@@ -703,7 +703,7 @@ sub Monitor
 	# if this line is for another cluster, ignore
 	if ( $line =~ /^\d+\s+\(0*(\d+)\./ && $1 != $cluster )
 	{
-	    debug( "log line for cluster $1, not $cluster -- ignoring...\n" ,6);
+	    debug( "log line for cluster $1, not $cluster -- ignoring...\n" ,1);
 	    next LINE;
 	}
 	
@@ -713,7 +713,7 @@ sub Monitor
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
 
-	    debug( "Saw job evicted\n" ,5);
+	    debug( "Saw job ($1.$2) evicted\n" ,1);
 
 	    # execute callback if one is registered
 	    &$EvictedCallback( %info )
@@ -738,7 +738,7 @@ sub Monitor
 
 	    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
 	    {
-		debug( "job was evicted without ckpt\n" ,5);
+		debug( "job was evicted without ckpt\n" ,1);
 		# execute callback if one is registered
 		&$EvictedWithoutCheckpointCallback( %info )
 		    if defined $EvictedWithoutCheckpointCallback;
@@ -746,14 +746,14 @@ sub Monitor
 	    }
 	    elsif( $line =~ /^\s+\(1\) Job was checkpointed\./ )
 	    {
-		debug( "job was evicted with ckpt\n" ,5);
+		debug( "job was evicted with ckpt\n" ,1);
 		# execute callback if one is registered
 		&$EvictedWithCheckpointCallback( %info )
 		    if defined $EvictedWithCheckpointCallback;
 	    }
 	    elsif( $line =~ /^\s+\(0\) Job terminated and was requeued.*$/ )
 	    {
-		debug( "job was evicted and requeued\n" ,5);
+		debug( "job was evicted and requeued\n" ,1);
 		# execute callback if one is registered
 		&$EvictedWithRequeueCallback( %info )
 		    if defined $EvictedWithRequeueCallback;
@@ -762,7 +762,7 @@ sub Monitor
 	    {
 		debug( "parse error on line $linenum of $info{'log'}:\n" .
 		       "   no checkpoint message found after eviction: " .
-		       "continuing...\n" ,5);
+		       "continuing...\n" ,1);
 		# re-parse line so we don't miss whatever it said
 		goto PARSE;
 	    }
@@ -775,7 +775,7 @@ sub Monitor
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
 
-	    debug( "Saw job terminated\n" ,5);
+	    debug( "Saw job terminated\n" ,1);
 
 	    # decrement # of queued jobs so we will know when to exit monitor
 	    $num_active_jobs--;
@@ -817,11 +817,11 @@ sub Monitor
 	    # abnormal termination
 	    elsif( $line =~ /^\s+\(0\) Abnormal termination \(signal (\d+)\)/ )
 	    {
-		debug( "Loading $1 as info{'signal'}\n" ,5);
+		debug( "Loading $1 as info{'signal'}\n" ,1);
 		$info{'signal'} = $1;
 		#print "keys:".join(" ",keys %info)."\n";
 
-		debug( "checking for core file...\n" ,5);
+		debug( "checking for core file...\n" ,1);
 
 		# read next line to find core file
 		$line = <SUBMIT_LOG>;
@@ -860,7 +860,7 @@ sub Monitor
 	    {
 		debug( "parse error on line $linenum of $info{'log'}:\n" .
 		       "   no termination status message found after " .
-		       "termination: continuing...\n" ,5);
+		       "termination: continuing...\n" ,1);
 		# re-parse line so we don't miss whatever it said
 		goto PARSE;
 	    }
@@ -873,7 +873,7 @@ sub Monitor
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
 
-	    debug( "Saw Shadow Exception\n" ,5);
+	    debug( "Saw Shadow Exception\n" ,1);
 
 		if(! defined $ShadowCallback)
 		{
@@ -916,7 +916,7 @@ sub Monitor
 	    $info{'host'} = $3;
 	    $info{'sinful'} = "<$3>";
 	    
-	    debug( "Saw job executing\n" ,5);
+	    debug( "Saw job executing\n" ,1);
 
 	    # execute callback if one is registered
 	    &$ExecuteCallback( %info )
@@ -934,7 +934,7 @@ sub Monitor
 	    $info{'host'} = $3;
 	    $info{'sinful'} = "<$3>";
 
-	    debug( "Saw job submitted\n" ,5);
+	    debug( "Saw job submitted\n" ,1);
 	    $submit_info{'cluster'} = $1; # squirrel it away for TimedWait
 
 	    # mark that we've seen a submit so we can start watching # of jobs
@@ -955,7 +955,7 @@ sub Monitor
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
 
-	    debug( "Saw job abort cluster $1 job $2\n" ,5);
+	    debug( "Saw job abort cluster $1 job $2\n" ,1);
 
 	    # decrement # of queued jobs so we will know when to exit monitor
 	    $num_active_jobs--;
@@ -989,7 +989,7 @@ sub Monitor
 
 		$info{'holdreason'} = $line;
 
-	    debug( "Saw job held\n" ,5);
+	    debug( "Saw job held\n" ,1);
 
 	    
 	    # execute callback if one is registered
@@ -1005,7 +1005,7 @@ sub Monitor
 	    #$info{'host'} = $3;
 	    #$info{'sinful'} = "<$3:$4>";
 	    
-	    debug( "Saw job released\n" ,5);
+	    debug( "Saw job released\n" ,1);
 
 	    
 	    # execute callback if one is registered

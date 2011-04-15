@@ -10151,3 +10151,20 @@ usage=
 url=
 tags=
 id=601
+
+[SHADOW_RUN_UNKNOWN_USER_JOBS]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=Shadow Run Unknown User Jobs
+usage=
+url=
+tags=shadow
+id=602
+
