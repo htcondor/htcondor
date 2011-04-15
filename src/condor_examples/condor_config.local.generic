@@ -31,12 +31,3 @@ KILL = FALSE
 ##  The list is a comma or space separated list of subsystem names
 
 DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
-
-##  Sets how often the condor_negotiator starts a negotiation cycle. 
-##  It is defined in seconds and defaults to 60 (1 minute). 
-
-NEGOTIATOR_INTERVAL = 20
-
-##  Disable UID_DOMAIN check when submit a job
-
-TRUST_UID_DOMAIN = TRUE
