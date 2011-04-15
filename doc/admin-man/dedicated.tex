@@ -2,19 +2,21 @@
 \subsection{\label{sec:Config-Dedicated-Jobs}
 Condor's Dedicated Scheduling} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \index{dedicated scheduling}
 \index{MPI application!under the dedicated scheduler}
 
-The dedicated scheduler is a part of the condor\_schedd that handles scheduling
-of parallel jobs that require more than one machine concurrently running per
-job.  MPI applications are a common use for the dedicated scheduler, but parallel
-applications which don't require MPI can also be run with the dedicated scheduler.
+The dedicated scheduler is a part of the \Condor{schedd} that handles 
+the scheduling of parallel jobs that require more than one machine
+concurrently running per job.  
+MPI applications are a common use for the dedicated scheduler, 
+but parallel applications which do not require MPI can also be run 
+with the dedicated scheduler.
 All jobs which use the parallel universe are routed to the dedicated scheduler
-within the schedd they were submitted to.  A default condor installation
-does not configure a dedicated scheduler, the administrator must designate
-one or more schedds to perform as dedicated scheduler.
-
+within the \Condor{schedd} they were submitted to.  
+A default Condor installation
+does not configure a dedicated scheduler; 
+the administrator must designate one or more \Condor{schedd} daemons
+to perform as dedicated scheduler.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Setup-Dedicated-Scheduler}
