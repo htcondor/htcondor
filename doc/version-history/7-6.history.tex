@@ -96,6 +96,17 @@ for definitions of these job ClassAd attributes.
   \SubmitCmd{java\_vm\_args} in the submit description file
   as described in section~\ref{sec:Java}.
 
+% gittrac #2066
+\item The configuration variable \Macro{TRUST\_UID\_DOMAIN}
+  was set to \Expr{True} in the default \File{condor\_config.local}
+  in the rpm and debian packages.  This is no longer the case.
+  This setting will therefore use the default value \Expr{False}.
+
+\item The configuration variable \Macro{NEGOTIATOR\_INTERVAL} was set
+  to 20 in the default \File{condor\_config.local} in the rpm and
+  debian packages.  This is no longer the case.  This setting
+  therefore will use the default value 60.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
