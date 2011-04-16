@@ -332,6 +332,9 @@ class FileTransfer {
 	MyString m_jobid; // what job we are working on, for informational purposes
 	char *m_sec_session_id;
 
+	// stores the path to the proxy after one is received
+	MyString LocalProxyName;
+
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);
 
