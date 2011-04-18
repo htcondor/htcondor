@@ -42,7 +42,9 @@ MACRO (CONDOR_PRE_EXTERNAL _TARGET _VER _INSTALL_DIRS _EXISTANCE_CHECK )
 	endforeach(dir)
 
 	# Check for existance of 
-	if ( EXISTS ${${_TARGET}_INSTALL_LOC}}/${_EXISTANCE_CHECK} )
+	#message (STATUS "Checking ${${_TARGET}_INSTALL_LOC}/${_EXISTANCE_CHECK}") 
+	if ( EXISTS ${${_TARGET}_INSTALL_LOC}/${_EXISTANCE_CHECK} )
+		#message (STATUS "FOUND!") 
 		set (${_TARGET}_PREBUILT ON )
 	endif()
 
