@@ -39,6 +39,7 @@
 #include "file_lock.h"
 #include "stat_info.h"
 #include "shared_port_endpoint.h"
+#include "condor_fix_access.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)

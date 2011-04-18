@@ -1053,6 +1053,9 @@ class GahpClient : public Service {
 					   const char *instance_name,
 					   const char *realm_id,
 					   const char *hwp_id,
+					   const char *hwp_memory,
+					   const char *hwp_cpu,
+					   const char *hwp_storage,
 					   const char *keyname,
 					   const char *userdata,
 					   StringList &attrs );

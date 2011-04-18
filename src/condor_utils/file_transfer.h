@@ -276,6 +276,7 @@ class FileTransfer {
 	bool PeerDoesTransferAck;
 	bool PeerDoesGoAhead;
 	bool PeerUnderstandsMkdir;
+	bool TransferUserLog;
 	char* Iwd;
 	StringList* ExceptionFiles;
 	StringList* OutputFiles;
@@ -330,6 +331,9 @@ class FileTransfer {
 	TransferQueueContactInfo m_xfer_queue_contact_info;
 	MyString m_jobid; // what job we are working on, for informational purposes
 	char *m_sec_session_id;
+
+	// stores the path to the proxy after one is received
+	MyString LocalProxyName;
 
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);
@@ -386,6 +390,10 @@ class FileTransfer {
 		// wants us to write to.  It must be a relative path, containing
 		// no ".." elements.
 	bool LegalPathInSandbox(char const *path,char const *sandbox);
+
+		// Returns true if specified path points into the spool directory.
+		// This does not do an existence check for the file.
+	bool outputFileIsSpooled(char const *fname);
 };
 
 // returns 0 if no expiration

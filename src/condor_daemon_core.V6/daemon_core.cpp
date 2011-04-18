@@ -5669,7 +5669,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	else {
 		msg->setStreamType(Stream::reli_sock);
 	}
-	if(pidinfo->child_session_id)
+	if (pidinfo && pidinfo->child_session_id)
 	{
 		msg->setSecSessionId(pidinfo->child_session_id);
 	}

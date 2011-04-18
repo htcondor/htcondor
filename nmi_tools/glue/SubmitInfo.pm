@@ -50,8 +50,7 @@ our %build_and_test_sets = (
 		'x86_macos_10.4',
 		'x86_rhap_5',
 		'x86_rhas_3',
-		'x86_winnt_5.1-tst', 
-		#'x86_winnt_5.1',
+		'x86_winnt_5.1',
 	],
 
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
@@ -64,6 +63,10 @@ our %build_and_test_sets = (
 		'x86_64_sol_5.11',
 		'x86_64_fedora_12-updated',
 	],
+
+        # This is a placeholder that is intended to remain empty in V7_6-branch.
+        # It is populated in the master.
+        'extra_builds' => [],
 
 	'stduniv' => [
 		'x86_64_deb_5.0',
@@ -272,7 +275,7 @@ our %submit_info = (
 	# Microsoft Windows 5.1/2000/xp/whatever on x86
 	# prereqs testing configuration (also cmake)
 	##########################################################################
-	'x86_winnt_5.1-prereqs'	=> {
+	'x86_winnt_5.1'	=> {
 		'build' => {
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> [
@@ -393,7 +396,7 @@ our %submit_info = (
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ 
 				@default_prereqs, 
-				'java-1.4.2_09', 
+				'java-1.4.2_12', 
 				'coreutils-5.2.1'
 			],
 			'testclass'	=> [ @default_testclass ],

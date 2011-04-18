@@ -169,10 +169,20 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
     
     set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorUpHostDlg.wxs)
 
+	# At present we only currently support VC90, but we could change
+    find_file( CPACK_VC_MERGE_MODULE 
+               Microsoft_VC90_CRT_x86.msm
+               "C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+
+    find_file( CPACK_VC_POLICY_MODULE 
+               policy_9_0_Microsoft_VC90_CRT_x86.msm
+               "C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+			   
 	set (CPACK_WIX_BITMAP_FOLDER Bitmaps)
 	configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl @ONLY)
 	
 	set (CPACK_WIX_BITMAP_FOLDER ${CONDOR_WIX_LOC}/Bitmaps)
+
     # the configure file f(n) will replace @CMAKE_XYZ@ with their value
     configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl @ONLY)
         
@@ -186,13 +196,6 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 			
 	install ( FILES ${CONDOR_SOURCE_DIR}/msconfig/license.rtf ${CONDOR_SOURCE_DIR}/msconfig/do_wix.bat
 			  DESTINATION ${C_ETC}/WiX )
-			
-	if (CONDOR_PACKAGE_BUILD)
-
-		set (CPACK_GENERATOR "ZIP;WIX")
-        set (CPACK_WIX_XSL ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl)
-
-	endif()
 
     # the following will dump a header used to insert file info into bin's
     set ( WINVER ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/condor_winver.h)
@@ -222,7 +225,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		# Enable debug message
 		set ( CPACK_DEBIAN_PACKAGE_DEBUG 1 )
 
-		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${PACKAGE_REVISION}${DEBIAN_CODENAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}" )
+		set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}-${PACKAGE_REVISION}-${DEB_SYSTEM_NAME}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}" )
 		string( TOLOWER "${CPACK_PACKAGE_FILE_NAME}" CPACK_PACKAGE_FILE_NAME )
 
 		set ( CPACK_DEBIAN_PACKAGE_SECTION "contrib/misc")

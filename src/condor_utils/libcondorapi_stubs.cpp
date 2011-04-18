@@ -151,6 +151,9 @@ int param_integer_c(const char *, int default_value, int /*min_val*/, int /*max_
 #else
 #  include "pcre.h"
 #endif
+
+#pragma warning(disable : 4273) // inconsistent dll linkage
+
 pcre *pcre_compile(const char *, int, const char **, int *,
 				   const unsigned char *)
 { not_impl(); return NULL; }
@@ -165,6 +168,8 @@ int  pcre_fullinfo(const pcre *, const pcre_extra *, int, void *)
 { return not_impl(); }
 int  pcre_get_substring_list(const char *, int *, int, const char ***)
 { return not_impl(); }
+
+#pragma warning(default : 4273) // inconsistent dll linkage
 
 #endif
 

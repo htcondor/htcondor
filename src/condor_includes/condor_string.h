@@ -25,8 +25,8 @@
 
 BEGIN_C_DECLS
 
-char* strupr( char *str );
-char* strlwr( char *str );
+DLL_IMPORT_MAGIC char* strupr( char *str );
+DLL_IMPORT_MAGIC char* strlwr( char *str );
 char * getline ( FILE *fp );
 char * ltrunc ( register char *str );
 
