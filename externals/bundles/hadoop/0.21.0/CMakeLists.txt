@@ -22,51 +22,53 @@ if ( NOT PROPER )
     option( WITH_HADOOP "Compiling with support for HADOOP" ON )
 
 	if (WITH_HADOOP)
-
-		set (HADOOP_VER hadoop-0.21.0)
+		
+		condor_pre_external( HADOOP hadoop-0.21.0 "hdfs" "hdfs/conf/hdfs-default.xml")
+	
 		if ( WINDOWS )
-			set ( HADOOP_INSTALL md \"${EXTERNAL_STAGE}/hdfs/conf\" ${CMD_TERM}
-								cp -r lib ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-								rm -rf ${EXTERNAL_STAGE}/hdfs/lib/native ${CMD_TERM}
-								cp -r webapps ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-								cp hadoop-common-0.21.0.jar ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-								cp hadoop-hdfs-0.21.0.jar ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-								cp hdfs/src/java/hdfs-default.xml ${EXTERNAL_STAGE}/hdfs/conf ${CMD_TERM} )
+			set ( HADOOP_INSTALL md \"${HADOOP_INSTALL_LOC}/hdfs/conf\" ${CMD_TERM}
+								cp -r lib ${HADOOP_INSTALL_LOC}/hdfs ${CMD_TERM}
+								rm -rf ${HADOOP_INSTALL_LOC}/hdfs/lib/native ${CMD_TERM}
+								cp -r webapps ${HADOOP_INSTALL_LOC}/hdfs ${CMD_TERM}
+								cp hadoop-common-0.21.0.jar ${HADOOP_INSTALL_LOC}/hdfs ${CMD_TERM}
+								cp hadoop-hdfs-0.21.0.jar ${HADOOP_INSTALL_LOC}/hdfs ${CMD_TERM}
+								cp hdfs/src/java/hdfs-default.xml ${HADOOP_INSTALL_LOC}/hdfs/conf ${CMD_TERM} )
 		else()
-			set ( HADOOP_INSTALL mkdir -p ${EXTERNAL_STAGE}/hdfs/conf ${CMD_TERM}
-								cp -r lib ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-								cp -r webapps ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-								cp hadoop-common-0.21.0.jar ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-								cp hadoop-hdfs-0.21.0.jar ${EXTERNAL_STAGE}/hdfs ${CMD_TERM}
-								cp hdfs/src/java/hdfs-default.xml ${EXTERNAL_STAGE}/hdfs/conf )
+			set ( HADOOP_INSTALL mkdir -p ${HADOOP_INSTALL_LOC}/hdfs/conf ${CMD_TERM}
+								cp -r lib ${HADOOP_INSTALL_LOC}/hdfs ${CMD_TERM}
+								cp -r webapps ${HADOOP_INSTALL_LOC}/hdfs ${CMD_TERM}
+								cp hadoop-common-0.21.0.jar ${HADOOP_INSTALL_LOC}/hdfs ${CMD_TERM}
+								cp hadoop-hdfs-0.21.0.jar ${HADOOP_INSTALL_LOC}/hdfs ${CMD_TERM}
+								cp hdfs/src/java/hdfs-default.xml ${HADOOP_INSTALL_LOC}/hdfs/conf )
 		endif()
 		# a couple of odd things, this macro requires a configure and build command.  
 		ExternalProject_Add(hadoop
 							PREFIX ${EXTERNAL_BUILD_PREFIX}/${HADOOP_VER}
 							#-- Download Step ----------
 							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${HADOOP_VER}.tar.gz ${CMD_TERM}
-							DOWNLOAD_DIR ${EXTERNAL_DL}
+							DOWNLOAD_DIR ${HADOOP_STAGE}/dl
 							URL http://parrot.cs.wisc.edu/externals/${HADOOP_VER}.tar.gz
 							# PATCH_COMMAND patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/hadoop-0.20.0-patch
 							CONFIGURE_COMMAND echo "nothing to configure"
 							BUILD_COMMAND echo "nothing to build"
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
-							INSTALL_DIR ${EXTERNAL_STAGE}
+							INSTALL_DIR ${HADOOP_INSTALL_LOC}
 							INSTALL_COMMAND cd ${HADOOP_VER} ${CMD_TERM} ${HADOOP_INSTALL} )
 
 		## Set all the config information
 		set( HADOOP_TARGET ${HADOOP_TARGET} PARENT_SCOPE )
 		set( HAVE_EXT_HADOOP ON PARENT_SCOPE )
 		append_var(CONDOR_EXTERNALS hadoop)
-		message (STATUS "external configured (HADOOP_FOUND=${EXTERNAL_STAGE}/hdfs)")
+		message (STATUS "external configured (HADOOP_FOUND=${HADOOP_INSTALL_LOC}/hdfs)")
 
 		if (WINDOWS)
-		  set_property( TARGET hadoop PROPERTY FOLDER "externals" )
-		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs/ DESTINATION ./hdfs )
+		  install ( DIRECTORY ${HADOOP_INSTALL_LOC}/hdfs/ DESTINATION ./hdfs )
 		else()
-		  install ( DIRECTORY ${EXTERNAL_STAGE}/hdfs DESTINATION ${C_LIBEXEC} )
+		  install ( DIRECTORY ${HADOOP_INSTALL_LOC}/hdfs DESTINATION ${C_LIBEXEC} )
 		endif()
+		
+		condor_post_external( hadoop OFF OFF )
 
 	else()
 		message (STATUS "external skipped (hadoop)")

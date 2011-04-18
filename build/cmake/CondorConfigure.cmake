@@ -403,8 +403,13 @@ endif(PROPER)
 
 if (WINDOWS)
 	set (EXTERNAL_STAGE C:/temp/condor)
-else(WINDOWS)
-	set (EXTERNAL_STAGE /scratch/externals/condor)
+else()
+	# special CS ASF check
+	if ( EXISTS /p/condor/externals )
+		set (EXTERNAL_STAGE /p/condor/externals/cmake)
+	else()
+		set (EXTERNAL_STAGE /scratch/condor/externals)
+	endif()
 endif(WINDOWS)
 
 dprint("EXTERNAL_STAGE=${EXTERNAL_STAGE}")
@@ -499,8 +504,8 @@ add_definitions(-DHAVE_CONFIG_H)
 
 ###########################################
 # include and link locations
-include_directories(${EXTERNAL_STAGE}/include ${EXTERNAL_INCLUDES} )
-link_directories(${EXTERNAL_STAGE}/lib)
+include_directories( ${CONDOR_EXTERNAL_INCLUDE_DIRS} )
+link_directories( ${CONDOR_EXTERNAL_LINK_DIRS} )
 
 if ( $ENV{JAVA_HOME} )
 	include_directories($ENV{JAVA_HOME}/include)

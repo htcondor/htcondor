@@ -18,15 +18,7 @@
 
 if ( NOT PROPER )
 
-	set ( PCRE_VER pcre-7.6 )
-	set ( PCRE_STAGE ${EXTERNAL_STAGE}/${PCRE_VER} )
-	set ( PCRE_INSTALL_LOC ${PCRE_STAGE}/install )
-	file ( MAKE_DIRECTORY ${PCRE_INSTALL_LOC} ${PCRE_INSTALL_LOC}/lib ${PCRE_INSTALL_LOC}/include )
-
-	# search for a local copy to see if one exists.
-	if (SCRATCH_EXTERNALS AND EXISTS ${PCRE_INSTALL_LOC}/include/pcre.h)
-		set( PCRE_PREBUILT ON)
-	endif()
+	condor_pre_external( PCRE pcre-7.6 "lib;include" "include/pcre.h")
 
 	if (WINDOWS)
 		set (PCRE_PATCH cp ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.win32 . \r\n
@@ -60,14 +52,7 @@ if ( NOT PROPER )
 						#--install Step ----------
 						INSTALL_DIR ${PCRE_INSTALL_LOC}
 						INSTALL_COMMAND cd ${PCRE_VER} ${CMD_TERM} ${PCRE_INSTALL} )
-
-	# if a local built copy exists disable from all build 
-	if ( PCRE_PREBUILT )  
-		set_target_properties( pcre PROPERTIES EXCLUDE_FROM_ALL TRUE)
-	else()
-		append_var(CONDOR_EXTERNALS pcre)
-	endif()
-
+	
 	#################################################################
 	# Set the target dependencies which the rest of condor depends on.
 	if (WINDOWS)
@@ -79,11 +64,10 @@ if ( NOT PROPER )
 			set (PCRE_FOUND "-Wl,-bstatic;${PCRE_FOUND};-Wl,-bdynamic")
 		endif()
 	endif()
-
-	append_var(CONDOR_EXTERNAL_INCLUDE_DIRS ${PCRE_INSTALL_LOC}/include)
-	append_var(CONDOR_EXTERNAL_LINK_DIRS ${PCRE_INSTALL_LOC}/lib)
 	#
 	#################################################################
+
+	condor_post_external( pcre include lib )
 
 else( NOT PROPER )
 

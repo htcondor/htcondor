@@ -28,6 +28,8 @@ if (WITH_BOOST )
 
   if (NOT PROPER)
 
+		condor_pre_external( BOOST boost_1_39_0 "lib;include" "include/boost-1_39")
+		
 		if (WINDOWS)
 		  # need to expand the configure and
 		  set(TOOLSET msvc)
@@ -51,7 +53,7 @@ if (WITH_BOOST )
 		  set(BOOST_INSTALL ${EXEC}bjam -a --with-thread
 		  --with-program_options --with-system --with-regex
 		  --with-filesystem --with-date_time --build-type=complete
-		  --prefix=${EXTERNAL_STAGE} --libdir=${EXTERNAL_STAGE}/lib
+		  --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib
 		  define=BOOST_HAS_THREADS link=shared variant=release toolset=${TOOLSET}
 		  install)
 		else()
@@ -60,42 +62,37 @@ if (WITH_BOOST )
 
 
 		# so the idea of privately staging boost is silly.
-		set (BOOST_VER 1_39_0)
 		ExternalProject_Add(boost
-				    PREFIX ${EXTERNAL_BUILD_PREFIX}/boost_${BOOST_VER}
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/boost_${BOOST_VER}.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${EXTERNAL_DL}
-				    URL http://parrot.cs.wisc.edu/externals/boost_${BOOST_VER}.tar.gz
+					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${BOOST_VER}.tar.gz ${CMD_TERM}
+				    DOWNLOAD_DIR ${BOOST_STAGE}/dl
+				    URL http://parrot.cs.wisc.edu/externals/${BOOST_VER}.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND ${BOOST_PATCH}
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd boost_${BOOST_VER} ${CMD_TERM}
-				    	./bootstrap.${JAM_EXT} --prefix=${EXTERNAL_STAGE}
+				    CONFIGURE_COMMAND cd ${BOOST_VER} ${CMD_TERM}
+				    	./bootstrap.${JAM_EXT} --prefix=${BOOST_INSTALL_LOC}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd boost_${BOOST_VER} &&
-				    ${EXEC}bjam --with-thread --layout=system --prefix=${EXTERNAL_STAGE} --libdir=${EXTERNAL_STAGE}/lib define=BOOST_HAS_THREADS link=static variant=release toolset=${TOOLSET} install
+				    BUILD_COMMAND cd ${BOOST_VER} &&
+				    ${EXEC}bjam --with-thread --layout=system --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS link=static variant=release toolset=${TOOLSET} install
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_STAGE}
-				    INSTALL_COMMAND cd boost_${BOOST_VER} && ${BOOST_INSTALL} )
-				  
-
-	append_var(CONDOR_EXTERNALS boost)
+				    INSTALL_DIR ${BOOST_INSTALL_LOC}
+				    INSTALL_COMMAND cd ${BOOST_VER} && ${BOOST_INSTALL} )
+				  	
 	
 	if (WINDOWS)
-		set_property( TARGET boost PROPERTY FOLDER "externals" )
-		set(BOOST_ROOT ${EXTERNAL_STAGE} PARENT_SCOPE)
+		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
 
         if (WANT_CONTRIB)
 
             # binding dep to VS-2008 :-( there is no easy solution to this
-            install ( FILES ${EXTERNAL_STAGE}/lib/boost_date_time-vc90-mt-1_39.dll
-                        ${EXTERNAL_STAGE}/lib/boost_filesystem-vc90-mt-1_39.dll
-                        ${EXTERNAL_STAGE}/lib/boost_program_options-vc90-mt-1_39.dll
-                        ${EXTERNAL_STAGE}/lib/boost_regex-vc90-mt-1_39.dll
-                        ${EXTERNAL_STAGE}/lib/boost_system-vc90-mt-1_39.dll
-                        ${EXTERNAL_STAGE}/lib/boost_thread-vc90-mt-1_39.dll
+            install ( FILES ${BOOST_INSTALL_LOC}/lib/boost_date_time-vc90-mt-1_39.dll
+                        ${BOOST_INSTALL_LOC}/lib/boost_filesystem-vc90-mt-1_39.dll
+                        ${BOOST_INSTALL_LOC}/lib/boost_program_options-vc90-mt-1_39.dll
+                        ${BOOST_INSTALL_LOC}/lib/boost_regex-vc90-mt-1_39.dll
+                        ${BOOST_INSTALL_LOC}/lib/boost_system-vc90-mt-1_39.dll
+                        ${BOOST_INSTALL_LOC}/lib/boost_thread-vc90-mt-1_39.dll
                     DESTINATION ${C_LIB} )
 
         endif()
@@ -104,6 +101,8 @@ if (WITH_BOOST )
         dprint ("TBD: NON-PROPER INSTALL for CONTRIB")
 	endif()
 
+	condor_post_external( boost "include/boost-1_39" lib )
+	
   else()
 
 	# For proper builds use the .so/.dll's .

@@ -22,16 +22,8 @@ endif()
 
 if ( WITH_DRMAA )
 
-	set ( DRMAA_VER drmaa-1.6)
-	set ( DRMAA_STAGE ${EXTERNAL_STAGE}/${DRMAA_VER} )
-	set ( DRMAA_INSTALL_LOC ${DRMAA_STAGE}/install )
-	file ( MAKE_DIRECTORY ${DRMAA_INSTALL_LOC} ${DRMAA_INSTALL_LOC}/lib ${DRMAA__INSTALL_LOC}/include )
-
-	# search for a local copy to see if one exists.
-	if (SCRATCH_EXTERNALS AND EXISTS ${DRMAA_INSTALL_LOC}/include/drmaa.h )
-		set (DRMAA_PREBUILT ON)
-	endif()
-
+	condor_pre_external( DRMAA drmaa-1.6 "lib;include" "include/drmaa.h")
+	
 	if (NOT WINDOWS)
 		set (DRMAA_CONFIGURE ./configure --prefix=${EXTERNAL_STAGE})
 		set (DRMAA_MAKE make)
@@ -71,20 +63,10 @@ if ( WITH_DRMAA )
 						INSTALL_DIR ${DRMAA_INSTALL_LOC}
 						INSTALL_COMMAND ${DRMAA_INSTALL})
 
-	# if a local built copy exists disable from all build 
-	if ( DRMAA_PREBUILT )  
-		set_target_properties( drmaa PROPERTIES EXCLUDE_FROM_ALL TRUE)
-	else()
-		append_var(CONDOR_EXTERNALS drmaa)
-	endif()
-	
+	# set standard globals include and link loc
+	condor_post_external( drmaa include lib )
 	message (STATUS "external configured (DRMAA_FOUND=${DRMAA_FOUND})")
-	set( DRMAA_FOUND ${DRMAA_FOUND} PARENT_SCOPE )
-	set( HAVE_EXT_DRMAA ON PARENT_SCOPE )
-
-	append_var(CONDOR_EXTERNAL_INCLUDE_DIRS ${DRMAA_INSTALL_LOC}/include)
-	append_var(CONDOR_EXTERNAL_LINK_DIRS ${DRMAA_INSTALL_LOC}/lib)
-
+	
 	# i've tar bundled drmaa, does anyone actually use this?  if so I can explode.
 	install ( FILES ${EXTERNAL_DL}/${DRMAA_VER}.tar.gz DESTINATION ${C_SRC}/drmaa )
 	install ( FILES ${EXTERNAL_STAGE}/include/drmaa.h
