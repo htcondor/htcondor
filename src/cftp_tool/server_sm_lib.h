@@ -7,8 +7,8 @@
 #define ENTER_STATE if( state->arguments->debug) fprintf(stderr, "[ENTER STATE] %s\n", __func__ );
 #define LEAVE_STATE(a) if( state->arguments->debug) { fprintf(stderr, "[LEAVE STATE] %s -- Condition Flag: %d\n\n\n", __func__, a ); } return a;
 
-#define DEBUG(msg) if( state->arguments->debug) { fprintf( stderr, "%s", msg ); }
-#define VERBOSE(msg) if( state->arguments->verbose) { fprintf( stdout, "%s", msg); }
+#define DEBUG(...) if( state->arguments->debug) { fprintf( stderr,  __VA_ARGS__ ); }
+#define VERBOSE(...) if( state->arguments->verbose) { fprintf( stdout, __VA_ARGS__ ); }
 
 
 
@@ -41,6 +41,7 @@ typedef struct _ServerState
 
 	FileRecord   local_file;
 	ServerRecord server_info;
+	ServerRecord oob_info;
 	ClientRecord client_info;
 	ServerArguments* arguments;
 
@@ -73,9 +74,10 @@ typedef int (*StateAction)(ServerState*);
 int confirm_arguments( ServerArguments* arg);
 
 void run_server( ServerArguments* arg);
-void start_server( ServerRecord* master_server );
-void announce_server( ServerRecord* master_server, ServerState* state );
-void handle_client( ServerRecord* master_server, ServerState* state );
+void start_server( ServerState* state );
+void start_oob( ServerState* state );
+void announce_server( ServerState* state );
+void handle_client( ServerState* state );
 int run_state_machine( StateAction* states, ServerState* state );
 int transition_table( ServerState* state, int condition_code );
 

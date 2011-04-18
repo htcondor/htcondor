@@ -33,8 +33,6 @@ void run_server( ServerArguments* arg)
 {
 
 	StateAction SM_States[STATE_NUM];
-
-	ServerRecord master_server;
 	ServerState  session_state;
 
 		//-------------- Initialize SM States -----------------
@@ -55,16 +53,21 @@ void run_server( ServerArguments* arg)
 
       //------------------------------------------------------- 
 
-	memset( &master_server, 0, sizeof( ServerRecord ));
 	memset( &session_state, 0, sizeof( ServerState ));
 
-	master_server.server_name = (char*)malloc(256);
-	master_server.server_port = (char*)malloc(16);
+	session_state.server_info.server_name = (char*)malloc(256);
+	session_state.server_info.server_port = (char*)malloc(16);
+	session_state.oob_info.server_name = (char*)malloc(256);
+	session_state.oob_info.server_port = (char*)malloc(16);
 	
-	memcpy( master_server.server_name, arg->lhost, 256);
-	memcpy( master_server.server_port, arg->lport, 16);
+	memcpy( session_state.server_info.server_name, arg->lhost, 256);
+	memcpy( session_state.server_info.server_port, arg->lport, 16);
+	memcpy( session_state.oob_info.server_name, arg->lhost, 256);
+	memcpy( session_state.oob_info.server_port, arg->lport, 16);
 
-	master_server.server_socket = -1;
+	session_state.server_info.server_socket = -1;
+	session_state.oob_info.server_socket = -1;
+	
 
 	if( confirm_arguments( arg ) != 0)
 	  {
@@ -74,16 +77,15 @@ void run_server( ServerArguments* arg)
 	session_state.arguments = arg;
 	session_state.data_buffer = NULL;
 
-	start_server( &master_server );
-	
-	if( master_server.server_socket == -1 )
+	start_server( &session_state );
+	if( session_state.last_error )
 		{
 				//Error has happened, TODO: handle here
 			return;
 		}
 	
 
-	handle_client( &master_server, &session_state );
+	handle_client( &session_state );
 
 	if( session_state.last_error )
 		{
@@ -112,11 +114,17 @@ void run_server( ServerArguments* arg)
 
 		// Clean up allocated memory
 
-	if( master_server.server_name )	
-		free( master_server.server_name );
+	if( session_state.oob_info.server_name )	
+		free( session_state.oob_info.server_name );
 
-	if( master_server.server_port )	
-		free( master_server.server_port );
+	if( session_state.oob_info.server_port )	
+		free( session_state.oob_info.server_port );
+
+	if( session_state.server_info.server_name )	
+		free( session_state.oob_info.server_name );
+
+	if( session_state.server_info.server_port )	
+		free( session_state.oob_info.server_port );
 
 	if( session_state.client_info.client_name)
 		free( session_state.client_info.client_name );
@@ -195,7 +203,7 @@ int confirm_arguments( ServerArguments* arg)
 
 
  */
-void start_server( ServerRecord* master_server )
+void start_server( ServerState* state )
 {
 
 //Really rusty on socket api - refered to Beej's guide for this
@@ -215,18 +223,20 @@ void start_server( ServerRecord* master_server )
 	hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
 	hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
-	if ((status = getaddrinfo(master_server->server_name,
-							  master_server->server_port,
+	if ((status = getaddrinfo(state->server_info.server_name,
+							  state->server_info.server_port,
 							  &hints,
 							  &servinfo)) != 0) {
-		fprintf(stderr, "Unable to resolve server: %s\n", gai_strerror(status));
+		sprintf(state->error_string, "Unable to resolve server: %s\n", gai_strerror(status));
+		state->last_error = 1;
 		return;
 	}
 
 	sock = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
 	if( sock == -1)
 		{
-			fprintf( stderr, "Error on creating socket: %s\n", strerror( errno ) );
+			sprintf( state->error_string, "Error on creating socket: %s\n", strerror( errno ) );
+			state->last_error = 1;
 			freeaddrinfo(servinfo);
 			return;
 		}	
@@ -236,7 +246,8 @@ void start_server( ServerRecord* master_server )
     // lose the pesky "Address already in use" error message
     yes = 1;
 	if (setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(int)) == -1) {
-		fprintf( stderr, "Error on clearing old port bindings: %s\n", strerror( errno ) );
+		sprintf( state->error_string, "Error on clearing old port bindings: %s\n", strerror( errno ) );
+		state->last_error = 1;
 		freeaddrinfo(servinfo);	
 		return;
 	} 
@@ -245,23 +256,24 @@ void start_server( ServerRecord* master_server )
 	results = bind( sock, servinfo->ai_addr, servinfo->ai_addrlen);
 	if( results == -1)
 		{
-			fprintf( stderr, "Error on binding socket: %s\n", strerror( errno ) );
+			sprintf( state->error_string, "Error on binding socket: %s\n", strerror( errno ) );
+			state->last_error = 1;
 			freeaddrinfo(servinfo);	
 			return;
 		}
 
-	if( strcmp( master_server->server_port , "0" ) == 0 )
+	if( strcmp( state->server_info.server_port , "0" ) == 0 )
 		{
 				// We grabbed a random port, so now we determine what it is
 			addr_size = sizeof( localsock_name );
 			getsockname( sock, &localsock_name, &addr_size );
-			memset( master_server->server_port, 0, 16 );
+			memset( state->server_info.server_port, 0, 16 );
 			if( localsock_name.sa_family == AF_INET)
 					// extract the address from the raw value
-				sprintf( master_server->server_port, "%d", 
+				sprintf( state->server_info.server_port, "%d", 
 						 ntohs( ((struct sockaddr_in*)(&localsock_name))->sin_port) ); 
 			if( localsock_name.sa_family == AF_INET6 )
-				sprintf( master_server->server_port, "%d", 
+				sprintf( state->server_info.server_port, "%d", 
 						 ntohs( ((struct sockaddr_in6*)(&localsock_name))->sin6_port) ); 
 		}
 
@@ -269,12 +281,13 @@ void start_server( ServerRecord* master_server )
 	results = listen( sock, 1 ); // Using a backlog of 1 for this simple server
 	if( results == -1)
 		{
-			fprintf( stderr, "Error on listening: %s\n", strerror( errno ) );
+			sprintf( state->error_string, "Error on listening: %s\n", strerror( errno ) );
+			state->last_error = 1;
 			freeaddrinfo(servinfo);
 			return;
 		}	
 
-	master_server->server_socket = sock;
+    state->server_info.server_socket = sock;
 	//We fill in a ServerRecord so we don't need this anymore.
 	freeaddrinfo(servinfo);
 
@@ -290,7 +303,7 @@ announce_server
 
 */
 
-void announce_server( ServerRecord* master_server, ServerState* state )
+void announce_server( ServerState* state )
 {
 	
 	int sockfd;
@@ -331,8 +344,8 @@ void announce_server( ServerRecord* master_server, ServerState* state )
 	
 	memset( message, 0, 512 );
 	sprintf( message, "%s %s %s",
-			 master_server->server_name,
-			 master_server->server_port,
+			 state->server_info.server_name,
+			 state->server_info.server_port,
 			 state->arguments->uuid
 			 );
 
@@ -360,7 +373,7 @@ void announce_server( ServerRecord* master_server, ServerState* state )
 handle_client
 
 */
-void handle_client( ServerRecord* master_server, ServerState* state )
+void handle_client( ServerState* state )
 {
 
 	int results;
@@ -377,7 +390,7 @@ void handle_client( ServerRecord* master_server, ServerState* state )
 
 	VERBOSE( "Waiting for client connection...\n")
 
-	fcntl(master_server->server_socket, F_SETFL, O_NONBLOCK);
+	fcntl(state->server_info.server_socket, F_SETFL, O_NONBLOCK);
 	
 	total_time_waited = 0;
 	if( state->arguments->itimeout == -1 )
@@ -389,42 +402,42 @@ void handle_client( ServerRecord* master_server, ServerState* state )
 
 	while( total_time_waited < max_wait && results == 0)
 		{
-			printf( "Total Time: %d\n", total_time_waited );
+			printf( "Total Time: %ld\n", total_time_waited );
 			FD_ZERO(&accept_set);
-			FD_SET( master_server->server_socket, &accept_set );
+			FD_SET( state->server_info.server_socket, &accept_set );
 			timeout_tv.tv_sec = ANNOUNCE_INTERVAL;
 			timeout_tv.tv_usec = 0;
 
-			results = select(master_server->server_socket+1, &accept_set,
+			results = select(state->server_info.server_socket+1, &accept_set,
 							 NULL, NULL, &timeout_tv);
 			
 			if( state->arguments->announce )
-				announce_server( master_server, state );
+				announce_server(  state );
 			
 			total_time_waited += ANNOUNCE_INTERVAL;
 		}
 
 	if( results == -1 )	
 		{	
-			fprintf( stderr, "Error on accepting: %s\n", strerror( errno ) );
+			sprintf( state->error_string, "Error on accepting: %s\n", strerror( errno ) );
 			state->last_error = 1;
 			return;
 		}	
 	if( results == 0 )
 		{
-			fprintf( stderr, "No client connected within initial wait period. Exiting.\n" );
+			sprintf( state->error_string, "No client connected within initial wait period. Exiting.\n" );
 			state->last_error = 1;
 			return;
 		}
 
 	addr_size = sizeof( client_addr );
-	results = accept( master_server->server_socket,
+	results = accept( state->server_info.server_socket,
 					  (struct sockaddr *)&client_addr,
 					  &addr_size );
 
 	if( results == -1)
 		{
-			fprintf( stderr, "Error on accepting: %s\n", strerror( errno ) );
+			sprintf( state->error_string, "Error on accepting: %s\n", strerror( errno ) );
 			state->last_error = 1;
 			return;
 		}	
@@ -436,8 +449,7 @@ void handle_client( ServerRecord* master_server, ServerState* state )
 		// Test if the client is using a IP4 address
 	if( client_addr.ss_family == AF_INET )
 		{
-			if( state->arguments->debug )
-				fprintf( stderr, "Client is using IP4.\n" );
+			DEBUG( "Client is using IP4.\n" );
 
 			caddr_ip4 = (struct sockaddr_in*)(&client_addr);
 
@@ -460,9 +472,7 @@ void handle_client( ServerRecord* master_server, ServerState* state )
 		// Test if the client is using a IP6 address
 	if( client_addr.ss_family == AF_INET6 )
 		{
-
-			if( state->arguments->debug )
-				fprintf( stderr, "Client is using IP6.\n" );
+			DEBUG( "Client is using IP6.\n" );
 
 
 			caddr_ip6 = (struct sockaddr_in6*)(&client_addr);
@@ -484,10 +494,8 @@ void handle_client( ServerRecord* master_server, ServerState* state )
 		}
 
 
-	if( state->arguments->debug )
 		if( state->client_info.client_name && state->client_info.client_port )
-			fprintf( stderr, "The client is %s at port %s.\n\n",
-					 state->client_info.client_name, state->client_info.client_port );
+			DEBUG( "The client is %s at port %s.\n\n", state->client_info.client_name, state->client_info.client_port );
 
 
 	VERBOSE( "Client accepted.\n\n" )
