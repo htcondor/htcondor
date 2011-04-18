@@ -34,14 +34,14 @@ if (WITH_CURL)
 			set (CURL_MAKE pushd "lib" ${CMD_TERM}
 						nmake -f Makefile.vc9 CFG=release-ssl WINDOWS_SDK_PATH="${WIN_SDK_PATH}" OPENSSL_PATH="${OPENSSL_INSTALL_LOC}" ${CMD_TERM}
 						popd ${CMD_TERM})
-			set (CURL_DEPENDS openssl)
+			set (CURL_DEPENDS ${OPENSSL_REF})
 			set (CURL_INSTALL cp -f lib/lib*.lib ${CURL_INSTALL_LOC}/lib && cp -rf include/curl ${CURL_INSTALL_LOC}/include )
 		else()
 			set (CURL_PATCH echo "Nothing to patch on Unix")
 			set (CURL_CONFIGURE PKG_CONFIG_PATH=${CURL_INSTALL_LOC} LIBS=-ldl ./configure --prefix=${CURL_INSTALL_LOC} --with-ssl=${OPENSSL_INSTALL_LOC} --disable-shared --disable-ipv6 )
 			set (CURL_MAKE make)
 			set (CURL_INSTALL make install)
-			set (CURL_DEPENDS openssl zlib)
+			set (CURL_DEPENDS ${OPENSSL_REF} ${ZLIB_REF})
 		endif()
 
 		ExternalProject_Add(curl

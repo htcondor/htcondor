@@ -59,7 +59,6 @@ if ( NOT PROPER )
 		## Set all the config information
 		set( HADOOP_TARGET ${HADOOP_TARGET} PARENT_SCOPE )
 		set( HAVE_EXT_HADOOP ON PARENT_SCOPE )
-		append_var(CONDOR_EXTERNALS hadoop)
 		message (STATUS "external configured (HADOOP_FOUND=${HADOOP_INSTALL_LOC}/hdfs)")
 
 		if (WINDOWS)

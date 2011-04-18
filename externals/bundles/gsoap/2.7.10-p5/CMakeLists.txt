@@ -44,7 +44,7 @@ if (WITH_GSOAP)
 		endif(WINDOWS)
 
 		ExternalProject_Add( gsoap
-					DEPENDS openssl
+					DEPENDS ${OPENSSL_REF}
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GSOAP_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${GSOAP_STAGE}/dl
@@ -62,18 +62,18 @@ if (WITH_GSOAP)
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (NOT WINDOWS)
-			set(GSOAP_FOUND "${GSOAP_INSTALL_LOC}/lib/libgsoapssl++.a")
+			set(GSOAP_FOUND "${GSOAP_INSTALL_LOC}/lib/libgsoapssl++.a")	
+			condor_post_external( gsoap include lib )
 			set(SOAPCPP2 "${GSOAP_INSTALL_LOC}/bin/soapcpp2")
 		else(NOT WINDOWS)
+			# gsoap is handled differently on windows
+			condor_post_external( gsoap include OFF )
 			set(GSOAP_FOUND ON)
 			set(GSOAP_SRC "${GSOAP_INSTALL_LOC}/src/stdsoap2.cpp" PARENT_SCOPE )
 			set(SOAPCPP2 "${GSOAP_INSTALL_LOC}/soapcpp2.exe")
-		endif(NOT WINDOWS)
-		
-		condor_post_external( gsoap include OFF )
+		endif(NOT WINDOWS)		
 		
 		set ( GSOAP_SHARE "${EXTERNAL_BUILD_PREFIX}/${GSOAP_VER}/src/gsoap/${GSOAP_VER}/gsoap" )
-		append_var (CONDOR_EXTERNALS gsoap)
 		set(WSSEAPI "WSSEAPI-NOTFOUND")
 
 	else( NOT PROPER )

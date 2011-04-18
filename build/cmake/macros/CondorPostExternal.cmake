@@ -25,12 +25,12 @@ MACRO (CONDOR_POST_EXTERNAL _TARGET _INC_DIR _LIB_DIR)
 	endif()	
 		
 	# if a local built copy exists disable from all build 
-	#message (STATUS "${_UP_TARGET}_PREBUILT = ${${_UP_TARGET}_PREBUILT}")
 	if ( ${_UP_TARGET}_PREBUILT )  
 		set_target_properties( ${_TARGET} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 		message (STATUS "NOTE: external(${_TARGET}) excluded from all target, cached version exists") 
 	else()
 		append_var(CONDOR_EXTERNALS ${_TARGET})
+		append_var(${_UP_TARGET}_REF ${_TARGET})
 	endif()
 	
 	set( ${_UP_TARGET}_FOUND ${${_UP_TARGET}_FOUND} PARENT_SCOPE )
@@ -39,11 +39,13 @@ MACRO (CONDOR_POST_EXTERNAL _TARGET _INC_DIR _LIB_DIR)
 	set(${_TARGET}INCLUDE ${_INC_DIR})
 	if(${_TARGET}INCLUDE)
 		append_var(CONDOR_EXTERNAL_INCLUDE_DIRS ${${_UP_TARGET}_INSTALL_LOC}/${_INC_DIR})
+		append_var(${_UP_TARGET}_INCLUDE ${${_UP_TARGET}_INSTALL_LOC}/${_INC_DIR})
 	endif()
 	
 	set(${_TARGET}LINK ${_LIB_DIR})
 	if(${_TARGET}LINK)
 		append_var(CONDOR_EXTERNAL_LINK_DIRS ${${_UP_TARGET}_INSTALL_LOC}/${_LIB_DIR})
+		append_var(${_UP_TARGET}_LD ${${_UP_TARGET}_INSTALL_LOC}/${_LIB_DIR})
 	endif()
 
 ENDMACRO(CONDOR_POST_EXTERNAL)

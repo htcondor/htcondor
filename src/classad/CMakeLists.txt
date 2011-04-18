@@ -20,6 +20,7 @@ add_definitions(-DCLASSAD_DISTRIBUTION -DWANT_CLASSAD_NAMESPACE=1 -DDISABLE_DLOP
 
 # disable PCRE build unless dep added to externals.
 if(PCRE_FOUND)
+	include_directories(${PCRE_INCLUDE})
 	add_definitions(-DUSE_PCRE -DHAVE_PCRE_H)
 else()
 	add_definitions(-DUSE_POSIX_REGEX) 
@@ -70,7 +71,7 @@ set( HAVE_EXT_CLASSADS ON PARENT_SCOPE )
 append_var (CONDOR_EXTERNALS classads)
 
 # finally add dependencies if there are any
-if (NOT PROPER)
-  add_dependencies( classads pcre )
-endif(NOT PROPER)
+if (NOT PROPER AND PCRE_REF)
+  add_dependencies( classads ${PCRE_REF} )
+endif()
 
