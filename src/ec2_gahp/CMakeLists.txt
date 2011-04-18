@@ -16,20 +16,17 @@
  # 
  ############################################################### 
 
-if (HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS)
+if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS AND HAVE_EXT_EXPAT )
 
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
     condor_glob( HeaderFiles SourceFiles "queryAPI-sim.cpp" )
 
-    # Build an executable.  The gahp depends on the condor tools,
-    # libpcre, OpenSSL, and curl; curl depends on ldap on some systems
-    # and on zlib on others.  It seems like the build system should
-    # know about that, but whatever.
+    # Build the GAHP; curl requires libz on some systems.
 	condor_exe( ec2_gahp
     	"${HeaderFiles};${SourceFiles}"	${C_SBIN}
-	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${CURL_FOUND};${LDAP_FOUND};${ZLIB_FOUND}"
+	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${CURL_FOUND};${ZLIB_FOUND}"
     	OFF )
 
     # Build an executable needed by the tests.

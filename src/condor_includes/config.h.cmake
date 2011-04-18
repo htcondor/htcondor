@@ -313,9 +313,6 @@
 /* Define to 1 if you have the 'getpagesize' function. (USED)*/
 #cmakedefine HAVE_GETPAGESIZE 1
 
-/* Define to 1 if you have the 'getwd' function. (USED)*/
-#cmakedefine HAVE_GETWD 1
-
 /* Define to 1 if you have the 'gettimeofday' function. (USED)*/
 #cmakedefine HAVE_GETTIMEOFDAY 1
 

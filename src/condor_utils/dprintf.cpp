@@ -1580,6 +1580,11 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 	char *ptr = NULL;
 	char mutex_name[MAX_PATH];
 
+		// If we're trying to lock NUL, just return success early
+	if (strcasecmp(DebugLock, "NUL") == 0) {
+		return 0;
+	}
+
 	if ( use_kernel_mutex == FALSE ) {
 			// use a filesystem lock
 		return lock_file_plain(fd,type,do_block);
@@ -1593,10 +1598,6 @@ lock_or_mutex_file(int fd, LOCK_TYPE type, int do_block)
 		// starving to get the lock.  The Win32 mutex object,
 		// on the other hand, is FIFO --- thus starvation is avoided.
 
-		// If we're trying to lock NUL, just return success early
-	if (strcasecmp(DebugLock, "NUL") == 0) {
-		return 0;
-	}
 
 		// first, open a handle to the mutex if we haven't already
 	if ( debug_win32_mutex == NULL && DebugLock ) {

@@ -144,7 +144,6 @@ DLL_IMPORT_MAGIC int access(const char *, int);
 #include "file_lock.h"
 #include "condor_fix_assert.h"
 
-#define getwd(path) (int)_getcwd(path, _POSIX_PATH_MAX)
 #define mkdir(path,mode) (int)_mkdir(path)
 #define S_IRWXU 0
 #define S_IRWXG 1
@@ -240,6 +239,18 @@ END_C_DECLS
 # define HAVE__FTIME	1
 
 #endif
+
+// defeat prefast warnings
+_Check_return_ inline int isspace(_In_ char ch) {
+   return isspace(static_cast<int> (static_cast<unsigned char> (ch)));
+}
+_Check_return_ inline int isalnum(_In_ char ch) {
+   return isalnum(static_cast<int> (static_cast<unsigned char> (ch)));
+}
+_Check_return_ inline int isdigit(_In_ char ch) {
+   return isdigit(static_cast<int> (static_cast<unsigned char> (ch)));
+}
+
 
 /* Define the PRIx64 macros */
 

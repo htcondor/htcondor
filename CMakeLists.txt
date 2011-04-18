@@ -37,8 +37,8 @@ set(VERSION "7.7.0")
 #   perhaps because you are working on a feature branch and need to
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
-set(PRE_RELEASE "PRE-RELEASE-UWCS")
-#set(PRE_RELEASE OFF)
+#set(PRE_RELEASE "PRE-RELEASE-UWCS")
+set(PRE_RELEASE OFF)
 
 # If set via the cmake command line, FORCE_PRE_RELEASE allows for
 #   PRE_RELEASE to be forced into a build.
@@ -93,11 +93,12 @@ include (CheckCXXSourceCompiles)
 include (AddSubdirectories)
 include (CondorPLTest)
 include (CondorExeTest)
-include (CondorConfigure)     # will initiate the configure
 include (CondorStdExeTest)
 include (SrcTargetRef)
 include (DumpLocalFlags)
+include (CondorConfigure)     # will initiate the configure
 include (TarGz) # Must be after include(CondorPackageConfig)
+
 
 if ( WINDOWS )
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)

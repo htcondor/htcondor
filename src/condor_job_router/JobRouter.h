@@ -26,7 +26,6 @@
 #include "RoutedJob.h"
 
 #define WANT_CLASSAD_NAMESPACE
-#undef open
 #include "classad/classad_distribution.h"
 
 #if HAVE_JOB_HOOKS

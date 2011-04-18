@@ -22,31 +22,42 @@ $ARGV[0] =~ s/[|<>]//g;
 
 open(FILE, '<', $ARGV[0]) or die("Cannot open $ARGV[0]: $!");
 
+my @output;
 my @chunk;
 my $begin_re = qr/^------ /;
 my $end_re   = qw/ error\(s\),/;
 while(<FILE>) {
-    if(/$begin_re/ .. /$end_re/) {
+    if(/\d+\s+succeeded/) {
+        # We want this to print first, so make sure it's at the beginning of @output
+        unshift @output, $_;
+    }
+    elsif(/$begin_re/ .. /$end_re/) {
 	push @chunk, $_;
 
 	if(/$end_re/) {
 	    if(/\s0\s+error\(s\),/) {
 		if(/,\s+0\s+warning/) {
-		    print $_;
+                    # TJ requested that we do not print this line.  So for now, do nothing
+		    # print $_;
 		}
 		else {
 		    $_ =~ s/,\s+(\d+\s+warning\(s\))/, <font style="background-color:yellow">$1<\/font>/;
-		    print $_;
+		    push @output, $_;
 		}
 	    }
 	    else {
 		pop @chunk;
-		print @chunk;
+
+                my @tmp = map { s/(error \S+)/<font style="background-color:#ff00ff">$1<\/font>/; $_ } grep /: (error|warning) (C|LNK)\d+/, @chunk;
+                push @output, @tmp;
+
 		
 		$_ =~ s/\s(\d+\s+error\(s\))/ <font style="background-color:red">$1<\/font>/;
-		print $_;
+		push @output, $_;
 	    }
 	    @chunk = ();
 	}
     }
 }
+
+print @output;

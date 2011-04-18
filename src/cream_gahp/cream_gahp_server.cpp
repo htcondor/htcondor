@@ -1348,7 +1348,7 @@ int thread_cream_job_status( Request **reqlist )
 			 it != reqids.end(); it++ ) {
 
 			char *msg = escape_spaces(ex.what());
-			enqueue_result( (*it) + " CREAM_Job_Start\\ Error:\\ " + msg );
+			enqueue_result( (*it) + " CREAM_Job_Status\\ Error:\\ " + msg );
 			free(msg);
 		}
 		return 1;

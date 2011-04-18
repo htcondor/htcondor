@@ -15,11 +15,15 @@ Update the shared library version number in src/classad/Makefile.am.m4.
 Look for these two lines:
     libclassad_la_LDFLAGS = -version-info 1:0:0
     libclassad_ns_la_LDFLAGS = -version-info 1:0:0
-If the ABI has changed, you should increment the first number and set the 
-second and third ones to zero. If the ABI hasn't changed, then increment 
-the second or third number. See 
+
+If the ABI has changed (such that programs linked against an older 
+version won't work with the new version), you should increment the first 
+number and set the second and third ones to zero. If the ABI has only been 
+expanded (new symbols added), increment the first and third numbers, and 
+set the second one to zero. If the ABI hasn't changed, then increment the 
+second number. See 
 http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html#AEN135  
-for examples of things that will change the ABI.
+for examples of things that will change the ABI incompatibly.
 This ABI compliance checker program may be useful: 
 http://ispras.linuxfoundation.org/index.php/ABI_compliance_checker
 

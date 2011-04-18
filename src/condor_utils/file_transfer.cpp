@@ -1150,7 +1150,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 
 	// If we're a client talking to a 7.5.6 or older schedd, we want
 	// to send the user log as an input file.
-	if ( TransferUserLog && simple_init && !nullFile( UserLogFile ) ) {
+	if ( UserLogFile && TransferUserLog && simple_init && !nullFile( UserLogFile ) ) {
 		if ( !InputFiles->file_contains( UserLogFile ) )
 			InputFiles->append( UserLogFile );
 	}
@@ -1579,7 +1579,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	filesize_t bytes=0;
 	MyString filename;;
 	MyString fullname;
-	MyString LocalProxyName;
 	char *tmp_buf = NULL;
 	int final_transfer = 0;
 	bool download_success = true;
@@ -2769,19 +2768,25 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			// hook to move the output file"
 
 			if(file_subcommand == 7) {
-				// make the URL out of Attr OutputDestonation and filename
+				// make the URL out of Attr OutputDestination and filename
+				MyString source_filename;
+				source_filename = Iwd;
+				source_filename += DIR_DELIM_CHAR;
+				source_filename += filename;
+
 				MyString URL;
 				URL = OutputDestination;
-				URL += "/";
+				URL += DIR_DELIM_CHAR;
 				URL += filename;
 
 				// actually invoke the plugin.  this could block indefinitely.
-				dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", filename, URL.Value());
-				rc = InvokeFileTransferPlugin(errstack, filename, URL.Value());
-				dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", filename, URL.Value(), rc);
+				dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.Value(), URL.Value());
+				dprintf (D_FULLDEBUG, "LocalProxyName: %s\n", LocalProxyName.Value());
+				rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), URL.Value(), LocalProxyName.Value());
+				dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.Value(), URL.Value(), rc);
 
 				// report the results:
-				file_info.Assign("Filename", dest_filename);
+				file_info.Assign("Filename", source_filename);
 				file_info.Assign("OutputDestination", URL);
 
 				// will either be 0 (success) or -4 (GET_FILE_PLUGIN_FAILED)
@@ -3700,16 +3705,16 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 	// add x509UserProxy if it's defined
 	if (proxy_filename && *proxy_filename) {
-		plugin_env.SetEnv("X509USERPROXY",proxy_filename);
-		dprintf(D_FULLDEBUG, "FILETRANSFER: setting x509UserProxy env to %s\n", proxy_filename);
+		plugin_env.SetEnv("X509_USER_PROXY",proxy_filename);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting X509_USER_PROXY env to %s\n", proxy_filename);
 	}
 
 	// prepare args for the plugin
 	ArgList plugin_args;
 	plugin_args.AppendArg(plugin.Value());
-	plugin_args.AppendArg(URL);
+	plugin_args.AppendArg(source);
 	plugin_args.AppendArg(dest);
-	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s %s %s\n", plugin.Value(), URL, dest);
+	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s %s %s\n", plugin.Value(), source, dest);
 
 	// invoke it
 	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env);

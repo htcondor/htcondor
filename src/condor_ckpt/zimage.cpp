@@ -17,18 +17,6 @@
  *
  ***************************************************************/
 
+#define COMPRESS_CKPT
 
-#include "config.h"
-
-#ifndef HAVE_GETWD
-#include <sys/param.h>
-
-/*
-** Compatibility routine for systems which use getcwd() instead.
-*/
-char * getwd(char	*path)
-{
-	return ((char *) getcwd( path, MAXPATHLEN ));
-}
-
-#endif
+#include "image.cpp"

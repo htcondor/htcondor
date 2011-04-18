@@ -67,7 +67,9 @@ ExprToMultiProfile( classad::ExprTree *expr, MultiProfile *&mp )
 
 		kind = currentTree->GetKind( );
 			
-		if( kind == classad::ExprTree::ATTRREF_NODE ) {
+		if( kind == classad::ExprTree::ATTRREF_NODE ||
+			kind == classad::ExprTree::FN_CALL_NODE )
+		{
 			atLeftMostProfile = true;
 			continue;
 		}
@@ -172,7 +174,9 @@ ExprToProfile( classad::ExprTree *expr, Profile *&p )
 
 		kind = currentTree->GetKind( );
 
-		if( kind == classad::ExprTree::ATTRREF_NODE ) {
+		if( kind == classad::ExprTree::ATTRREF_NODE ||
+			kind == classad::ExprTree::FN_CALL_NODE )
+		{
 			atLeftMostCondition = true;
 			continue;
 		}
@@ -264,6 +268,14 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 																  junkBool);
 		if( !c->Init( attr, expr->Copy( ), true ) ) {
   				cerr << "error: problem with Condition::Init" << endl;
+  				return false;
+		}
+		return true;
+	}
+
+	if( kind == classad::ExprTree::FN_CALL_NODE ) {
+		if( !c->InitComplex( expr->Copy( ) ) ) {
+  				cerr << "error: problem with Condition::InitComplex" << endl;
   				return false;
 		}
 		return true;

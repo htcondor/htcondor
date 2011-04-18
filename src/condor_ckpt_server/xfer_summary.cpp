@@ -33,11 +33,6 @@
 #include "condor_getcwd.h"
 
 
-extern "C" {
-	char* getwd( char* );
-}
-
-
 
 XferSummary::XferSummary() 
 {
