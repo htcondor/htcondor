@@ -6,21 +6,7 @@ for example, has /var/run as tmpfs, hence the init script needs to handle
 this.
 --- a/src/condor_examples/condor.boot.rpm
 +++ b/src/condor_examples/condor.boot.rpm
-@@ -351,9 +351,12 @@
- get_condor_config_val() {
-   REQUIRED=$2
-   if [ "$REQUIRED" = "" ] ; then
-+    TMPVAL=`"$CONDOR_CONFIG_VAL" $1`
-     REQUIRED=yes
-+  else
-+    # make failure silent if setting is not required
-+    TMPVAL=`"$CONDOR_CONFIG_VAL" $1 2>/dev/null`
-   fi
--  TMPVAL=`"$CONDOR_CONFIG_VAL" $1`
-   if [ "$TMPVAL" = "" ] && [ "$REQUIRED" = "yes" ] ; then
-     fatal_error "Unable to locate $1 in $CONDOR_CONFIG"
-   fi
-@@ -381,6 +384,11 @@
+@@ -390,6 +390,11 @@
    if [ "$CONDOR_RUN" = "" ]; then
      CONDOR_RUN=`get_condor_config_val LOG yes`
    fi

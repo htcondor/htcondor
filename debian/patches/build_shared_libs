@@ -340,7 +340,7 @@
  
 --- a/build/cmake/CondorConfigure.cmake
 +++ b/build/cmake/CondorConfigure.cmake
-@@ -93,7 +93,7 @@
+@@ -99,7 +99,7 @@
  
  # set to true to enable printing of make actions
  set( CMAKE_VERBOSE_MAKEFILE FALSE )
@@ -349,7 +349,7 @@
  
  # Windows is so different perform the check 1st and start setting the vars.
  if( NOT WINDOWS)
-@@ -115,7 +115,7 @@
+@@ -121,7 +121,7 @@
  	set( CMAKE_SUPPRESS_REGENERATION FALSE )
  
  	# when we want to distro dynamic libraries only with localized rpaths.
@@ -358,7 +358,7 @@
  	# set (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
  	# set (CMAKE_INSTALL_RPATH YOUR_LOC)
  	# set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-@@ -440,7 +440,8 @@
+@@ -446,7 +446,8 @@
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
