@@ -1070,8 +1070,10 @@ preserve_log_file(int debug_level)
 	debug_file_ptr = NULL;
 #ifdef WIN32
 	DebugFPs[debug_level] = NULL;
+	debug_file_ptr = DebugFPs[debug_level];
 #else
 	DebugFP = NULL;
+	debug_file_ptr = DebugFP;
 #endif
 
 	result = rotateTimestamp(timestamp, MaxLogNum[debug_level]);
@@ -1137,9 +1139,7 @@ preserve_log_file(int debug_level)
 
 	if( debug_file_ptr == NULL ) {
 		debug_file_ptr = stderr;
-#ifndef WIN32
-		DebugFP = debug_file_ptr;
-#endif
+
 		save_errno = errno;
 		snprintf( msg_buf, sizeof(msg_buf), "Can't open file for debug level %d\n",
 				 debug_level ); 
@@ -1298,6 +1298,8 @@ open_debug_file(int debug_level, const char flags[])
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
+
+	DebugFPs[debug_level] = fp;
 
 	return fp;
 }

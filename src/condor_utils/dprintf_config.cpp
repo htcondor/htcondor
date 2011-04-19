@@ -56,8 +56,6 @@ extern int		log_keep_open;
 extern void		_condor_set_debug_flags( const char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
 
-FILE *open_debug_file( int debug_level, char flags[] );
-
 #if HAVE_EXT_GCB
 void	_condor_gcb_dprintf_va( int flags, char* fmt, va_list args );
 extern "C" void Generic_set_log_va(void(*app_log_va)(int level, char *fmt, va_list args));
