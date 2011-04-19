@@ -24,29 +24,31 @@ if (WITH_LIBXML2)
 
 	if ( NOT PROPER )
 
-		set (LIBXML2_VER libxml2-2.7.3 )
+		condor_pre_external( LIBXML2 libxml2-2.7.3 "lib;include" "include")
+
 		ExternalProject_Add( libxml2
-					DEPENDS zlib
-				    PREFIX ${EXTERNAL_BUILD_PREFIX}/${LIBXML2_VER}
+					DEPENDS ${ZLIB_REF}
 				    #-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBXML2_VER}.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${EXTERNAL_DL}
+				    DOWNLOAD_DIR ${LIBXML2_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${LIBXML2_VER}.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${LIBXML2_VER} && ./configure --prefix=${EXTERNAL_STAGE} --disable-shared --with-zlib=${EXTERNAL_STAGE}
+				    CONFIGURE_COMMAND cd ${LIBXML2_VER} && ./configure --prefix=${LIBXML2_INSTALL_LOC} --disable-shared --with-zlib=${ZLIB_INSTALL_LOC}
 				    #--Build Step ----------
 				    BUILD_COMMAND cd ${LIBXML2_VER} && make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_STAGE}
+				    INSTALL_DIR ${LIBXML2_INSTALL_LOC}
 				    INSTALL_COMMAND cd ${LIBXML2_VER} && make install )
 
 		# Set the target dependencies which the rest of condor depends on.
-		set(LIBXML2_FOUND "${EXTERNAL_STAGE}/lib/libxml2.a")
-		append_var(CONDOR_EXTERNALS libxml2)
+		set(LIBXML2_FOUND "${LIBXML2_INSTALL_LOC}/lib/libxml2.a")
+
+		condor_post_external( libxml2 OFF OFF )
+
 	else()
 	
-    		find_multiple( "xml2" LIBXML2_FOUND )
+    	find_multiple( "xml2" LIBXML2_FOUND )
 
 	endif( NOT PROPER )
 

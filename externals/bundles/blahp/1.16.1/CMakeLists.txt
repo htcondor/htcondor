@@ -28,32 +28,33 @@ if ( WITH_BLAHP )
 	if ( NOT PROPER )
 		message(STATUS "TODO:TSTCLAIR BLAHP eval if linking correct popt w/o mundging Makefile.am")
 
-		set(POPT_VER popt-1.14)
-		set(BLAHP_VER blahp-1.16.1)
+		########################################
+		condor_pre_external( POPT popt-1.14 "lib;include" "include/")
 
 		ExternalProject_Add(popt
-						PREFIX ${EXTERNAL_BUILD_PREFIX}/${POPT_VER}
 						#-- Download Step ----------
 						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${POPT_VER}.tar.gz ${CMD_TERM}
-						DOWNLOAD_DIR ${EXTERNAL_DL}
+						DOWNLOAD_DIR ${POPT_STAGE}/dl
 						URL http://parrot.cs.wisc.edu/externals/${POPT_VER}.tar.gz
 						#--Configure step ----------
-			    		CONFIGURE_COMMAND cd ${POPT_VER} && ./configure --prefix=${EXTERNAL_STAGE}
+			    		CONFIGURE_COMMAND cd ${POPT_VER} && ./configure --prefix=${POPT_INSTALL_LOC}
 						#--Build Step ----------
 						BUILD_COMMAND cd ${POPT_VER} && make
 						BUILD_IN_SOURCE 1
 						#--install Step ----------
-						INSTALL_DIR ${EXTERNAL_STAGE}
+						INSTALL_DIR ${POPT_INSTALL_LOC}
 						INSTALL_COMMAND cd ${POPT_VER} && make install )
 
-		#dprint("we ingore the return param from bootstrap.. there are errors!")
+		condor_post_external( popt OFF OFF )
 
+		########################################
+		condor_pre_external( BLAHP blahp-1.16.1 "lib;include" "include/")
+		
 		ExternalProject_Add(blahp
-						DEPENDS openssl globus popt
-					    PREFIX ${EXTERNAL_BUILD_PREFIX}/${BLAHP_VER}
+						DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} ${POPT_REF} classads
 					    #-- Download Step ----------
 						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${BLAHP_VER}.tar.gz ${CMD_TERM}
-					    DOWNLOAD_DIR ${EXTERNAL_DL}
+					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
 						URL http://parrot.cs.wisc.edu/externals/${BLAHP_VER}.tar.gz
 						#--Patch step ----------
 						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
@@ -67,26 +68,24 @@ if ( WITH_BLAHP )
 							mv org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp/config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND cd org.glite.ce.blahp &&
-							./bootstrap || ./configure --with-classads-prefix=${EXTERNAL_STAGE}
-							--with-openssl-prefix=${EXTERNAL_STAGE}
-							--with-globus-prefix=${EXTERNAL_STAGE}
+							./bootstrap || ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
+							--with-openssl-prefix=${OPENSSL_INSTALL_LOC}
+							--with-globus-prefix=${GLOBUS_INSTALL_LOC}
 							--with-globus-nothr-flavor=gcc${BIT_MODE}dbg
-							--prefix=${EXTERNAL_STAGE}/opt/glite
+							--prefix=${BLAHP_INSTALL_LOC}/opt/glite
 						#--Build Step ----------
 						BUILD_COMMAND cd org.glite.ce.blahp && make
 						BUILD_IN_SOURCE 1
 						#--install Step ----------
-						INSTALL_DIR ${EXTERNAL_STAGE}
+						INSTALL_DIR ${BLAHP_INSTALL_LOC}
 						INSTALL_COMMAND cd org.glite.ce.blahp && make install )
 
 		### set the install
-		install ( DIRECTORY ${EXTERNAL_STAGE}/opt/glite DESTINATION ${C_LIBEXEC} USE_SOURCE_PERMISSIONS )
+		install ( DIRECTORY ${BLAHP_INSTALL_LOC}/opt/glite DESTINATION ${C_LIBEXEC} USE_SOURCE_PERMISSIONS )
 
-		add_dependencies(blahp classads)	
+		condor_post_external( blahp OFF OFF )
 
 		set(BLAHP_FOUND ON)
-
-		append_var (CONDOR_EXTERNALS blahp)
 
 	else ( NOT PROPER )
 
@@ -99,7 +98,6 @@ if ( WITH_BLAHP )
 endif( WITH_BLAHP )
 
 if ( BLAHP_FOUND )
-
 	message( STATUS "external configured (blahp) BLAHP_FOUND=${BLAHP_FOUND}" )
 	set( BLAHP_FOUND ${BLAHP_FOUND} PARENT_SCOPE )
 	set( HAVE_EXT_BLAHP ON PARENT_SCOPE )

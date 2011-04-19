@@ -98,15 +98,15 @@ if (NOT CLIPPED)
 	endif()
 
 	if (GLIBC_DETECTED)
-	  set (GLIBC_VER glibc-${VER})
+
+	  condor_pre_external( GLIBC glibc-${VER} "lib;include" "include")
 	  set (GLIBC_INSTALL make install )
 
 	  ExternalProject_Add(glibc
-					  PREFIX ${EXTERNAL_BUILD_PREFIX}/${GLIBC_VER}
 					  #-- Download Step ----------
 					  DOWNLOAD_COMMAND wget -N
 					  http://parrot.cs.wisc.edu/externals/${GLIBC_VER}.tar.gz ${CMD_TERM}
-					  DOWNLOAD_DIR ${EXTERNAL_DL}
+					  DOWNLOAD_DIR ${GLIBC_STAGE}/dl
 					  URL http://parrot.cs.wisc.edu/externals/${GLIBC_VER}.tar.gz
 					  #--Patch step ----------
 					  PATCH_COMMAND cd ${GLIBC_VER} && ${GLIBC_PATCH}
@@ -116,13 +116,14 @@ if (NOT CLIPPED)
 					  BUILD_COMMAND ${GLIBC_MAKE}
 					  BUILD_IN_SOURCE 1
 					  #--install Step ----------
-					  INSTALL_DIR ${EXTERNAL_STAGE}
+					  INSTALL_DIR ${GLIBC_INSTALL_LOC}
 					  INSTALL_COMMAND ${GLIBC_INSTALL} )
 
-	  set( EXT_GLIBC_FOUND "${GLIBC_PREFIX}/lib/libc.a" )
+	  set( EXT_GLIBC_FOUND "${GLIBC_INSTALL_LOC}/lib/libc.a" )
 	  message ( STATUS "external configured (EXT_GLIBC_FOUND=${EXT_GLIBC_FOUND})" )
 	  set( EXT_GLIBC_FOUND ${EXT_GLIBC_FOUND} PARENT_SCOPE )
-	  append_var(CONDOR_EXTERNALS glibc)
+	  
+	  condor_post_external( glibc include lib )
 
 	  install ( FILES ${GLIBC_PREFIX}/lib/libc.a DESTINATION ${C_LIB} RENAME libcondor_c.a)
 	  install ( FILES ${GLIBC_PREFIX}/lib/libnss_files.a DESTINATION ${C_LIB} RENAME libcondor_nss_files.a)

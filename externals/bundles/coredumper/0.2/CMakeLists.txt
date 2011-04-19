@@ -25,26 +25,26 @@ if (WITH_COREDUMPER)
 
 	if ( NOT PROPER )
 
-		set (CRDPR_VER coredumper-0.2)
+		condor_pre_external( COREDUMPER coredumper-0.2 "lib;include" "include")
 
 		ExternalProject_Add(coredumper
-				    PREFIX ${EXTERNAL_BUILD_PREFIX}/${CRDPR_VER}
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${CRDPR_VER}.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${EXTERNAL_DL}
-				    URL http://parrot.cs.wisc.edu/externals/${CRDPR_VER}.tar.gz
+					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${COREDUMPER_VER}.tar.gz ${CMD_TERM}
+				    DOWNLOAD_DIR ${COREDUMPER}/dl
+				    URL http://parrot.cs.wisc.edu/externals/${COREDUMPER_VER}.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${CRDPR_VER} && ./configure --prefix=${EXTERNAL_STAGE}
+				    CONFIGURE_COMMAND cd ${COREDUMPER_VER} && ./configure --prefix=${COREDUMPER_INSTALL_LOC}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd ${CRDPR_VER} && make
+				    BUILD_COMMAND cd ${COREDUMPER_VER} && make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_STAGE}
-				    INSTALL_COMMAND cd ${CRDPR_VER} && make install )
+				    INSTALL_DIR ${COREDUMPER_INSTALL_LOC}
+				    INSTALL_COMMAND cd ${COREDUMPER_VER} && make install )
 
 		# Set the target dependencies which the rest of condor depends on.
-		set(COREDUMPER_FOUND "${EXTERNAL_STAGE}/lib/libcoredumper.a")
-		append_var (CONDOR_EXTERNALS coredumper)
+		set(COREDUMPER_FOUND "${COREDUMPER_INSTALL_LOC}/lib/libcoredumper.a")
+
+		condor_post_external( coredumper include lib )
 
 	else( NOT PROPER )
 

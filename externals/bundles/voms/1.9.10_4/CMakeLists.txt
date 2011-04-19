@@ -25,14 +25,13 @@ if ( WITH_VOMS )
 
 	if (NOT PROPER)
 
-		set (VOMS_VER voms-1.9.10_4)
+		condor_pre_external( VOMS voms-1.9.10_4 "include;lib" "include")
 
 		ExternalProject_Add(voms
-							DEPENDS expat openssl globus zlib
-							PREFIX ${EXTERNAL_BUILD_PREFIX}/${VOMS_VER}
+							DEPENDS ${EXPAT_REF} ${OPENSSL_RED} ${GLOBUS_REF} ${ZLIB_REF}
 							#-- Download Step ----------
 							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${VOMS_VER}.tar.gz ${CMD_TERM}
-							DOWNLOAD_DIR ${EXTERNAL_DL}
+							DOWNLOAD_DIR ${VOMS_STAGE}/dl
 							URL http://parrot.cs.wisc.edu/externals/${VOMS_VER}.tar.gz
 							#--Patch step ----------
 							PATCH_COMMAND patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
@@ -42,17 +41,17 @@ if ( WITH_VOMS )
 							#--Configure step ----------
 							CONFIGURE_COMMAND cd org.glite.security.voms &&
 								./configure
-								--prefix=${EXTERNAL_STAGE}
+								--prefix=${VOMS_INSTALL_LOC}
 								--with-api-only
-								--with-openssl-prefix=${EXTERNAL_STAGE}
-								--with-expat-prefix=${EXTERNAL_STAGE}
-								--with-globus-prefix=${EXTERNAL_STAGE}
+								--with-openssl-prefix=${OPENSSL_INSTALL_LOC}
+								--with-expat-prefix=${EXPAT_INSTALL_LOC}
+								--with-globus-prefix=${GLOBUS_INSTALL_LOC}
 								--with-globus-flavor=${GLOBUS_FLAVOR} --disable-java --disable-docs --disable-glite
 							#--Build Step ----------
 							BUILD_COMMAND cd org.glite.security.voms && make
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
-							INSTALL_DIR ${EXTERNAL_STAGE}
+							INSTALL_DIR ${VOMS_INSTALL_LOC}
 							INSTALL_COMMAND cd org.glite.security.voms && make install
 				)
 
@@ -60,10 +59,14 @@ if ( WITH_VOMS )
 		# it to be dynamically linked. On linux, the library may
 		# be in lib/ or lib64/.
 		if ( DARWIN )
-			set( VOMS_FOUND "${EXTERNAL_STAGE}/lib/libvomsapi_${GLOBUS_FLAVOR}.a" )
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi_${GLOBUS_FLAVOR}.a" )
 		else()
 			set( VOMS_FOUND "libvomsapi_${GLOBUS_FLAVOR}.a" )
 		endif()
+
+		append_var(EXTERNAL_INCLUDES ${VOMS_INSTALL_LOC}/include/glite/security)
+
+		condor_post_external( voms include lib )
 
 	else(NOT PROPER)
 
@@ -75,8 +78,6 @@ if ( WITH_VOMS )
 		message ( STATUS "external configured (VOMS_FOUND=${VOMS_FOUND})" )
 		set( HAVE_EXT_VOMS ON PARENT_SCOPE )
 		set( VOMS_FOUND ${VOMS_FOUND} PARENT_SCOPE )
-		append_var(CONDOR_EXTERNALS voms)
-		append_var(EXTERNAL_INCLUDES ${EXTERNAL_STAGE}/include/glite/security)
 	endif()
 
 endif()
