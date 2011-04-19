@@ -249,7 +249,7 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 			ss->setCode(new StatusCodeType("OK"));
 			summary->setStatus(ss);
 
-			if (_getSubmissionSummary->getIncludeJobSummaries()) {
+			if (!_getSubmissionSummary->isIncludeJobSummariesNil() && _getSubmissionSummary->getIncludeJobSummaries()) {
 				// client wants the job summaries also
 				JobSummaryPairCollection jobs;
 				submission->getJobSummaries(jobs);
