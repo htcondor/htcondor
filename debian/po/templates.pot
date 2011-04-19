@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: condor@packages.debian.org\n"
-"POT-Creation-Date: 2011-01-07 08:55-0500\n"
+"POT-Creation-Date: 2011-04-18 22:01-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -63,6 +63,18 @@ msgstr ""
 #. Description
 #: ../condor.templates:4001
 msgid "Enabled submission of usage statistics?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../condor.templates:4001
+msgid ""
+"The Condor authors kindly ask that each Condor pool sends them periodic "
+"updates with basic information about the status of the pool. Updates include "
+"only the number of total machines, the number of jobs submitted, the number "
+"of machines running jobs, the host name of the central manager, and the name "
+"of the pool. These updates help the Condor Team see how Condor is being used "
+"around the world."
 msgstr ""
 
 #. Type: string
