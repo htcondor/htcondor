@@ -47,7 +47,7 @@ Description: workload management system
 # system is available, Condor can transfer the job's data files on behalf of
 # the user.
 # .
-# This packages provides Condor's test-suite that can be used to verify
+# This package provides Condor's test-suite that can be used to verify
 # proper functioning of a Condor installation.
 
 
@@ -69,7 +69,7 @@ Description: documentation for Condor
  system is available, Condor can transfer the job's data files on behalf of
  the user.
  .
- This packages provides Condor's documentation in HTML and PDF format, as well
+ This package provides Condor's documentation in HTML and PDF format, as well
  as configuration and other examples.
 
 
@@ -91,4 +91,4 @@ Description: debugging symbols for Condor
  system is available, Condor can transfer the job's data files on behalf of
  the user.
  .
- This packages provides the debugging symbols for Condor.
+ This package provides the debugging symbols for Condor.
