@@ -136,6 +136,7 @@ class Job
         void remove ( const char* );
 
         void setSubmission ( const char*, int );
+        void updateSubmission ( int, const char* );
         void incrementSubmission();
         void decrementSubmission();
 

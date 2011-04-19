@@ -23,6 +23,7 @@ namespace query {
 
 JobCollectionType g_jobs;
 SubmissionCollectionType g_submissions;
-OwnerlessClusterType g_ownerless;
+OwnerlessClusterType g_ownerless_clusters;
+OwnerlessSubmissionType g_ownerless_submissions;
 
 }}
