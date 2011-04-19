@@ -25,6 +25,19 @@ use File::Spec;
 
 package TestGlue;
 
+
+sub print_debug_header {
+    my $cwd = Cwd::getcwd();
+    
+    print "----------- Debug Header ----------------\n";
+    print "Current host: " . `/bin/hostname -f`;
+    print "CWD: $cwd\n";
+    print "Perl path: $^X\n";
+    print "Perl version: $]\n";
+    dir_listing(".");
+    print "---------- End Debug Header --------------\n";
+}
+
 sub setup_test_environment {
 
     my $base_dir = Cwd::getcwd();
@@ -47,15 +60,15 @@ sub setup_test_environment {
         $path .= "C:\\tools;";
 
         # We need to add Perl to the path
-        $path .= "C:\\prereq\\ActivePerl-5.10.1\\bin;";
+        #$path .= "C:\\prereq\\ActivePerl-5.10.1\\bin;";
 
         # Windows requires the SystemRoot directory to the PATH.  This is generally C:\Windows.
         # Also, add the system32 subdirectory in this folder
-        my $system_paths = "$ENV{SystemRoot};" . File::Spec->catdir($ENV{SystemRoot}, "system32");
-        $path .= "$ENV{SystemRoot};";
-        $path .= File::Spec->catdir($ENV{SystemRoot}, "system32") . ";";
+        #my $system_paths = "$ENV{SystemRoot};" . File::Spec->catdir($ENV{SystemRoot}, "system32");
+        #$path .= "$ENV{SystemRoot};";
+        #$path .= File::Spec->catdir($ENV{SystemRoot}, "system32") . ";";
 
-        set_env("PATH", $path);
+        set_env("PATH", "$ENV{PATH};$path");
 
         # Condor will want Win32-style paths for CONDOR_CONFIG
         set_env("CONDOR_CONFIG", "$base_dir\\condor_tests\\TestingPersonalCondor\\condor_config");
@@ -97,7 +110,9 @@ sub dir_listing {
     }
     print "Showing directory contents of path '$path' $cwd\n";
 
-    if( is_windows() ) {
+    # We have to check $^O because the platform_* scripts will be executed on a Linux
+    # submit node - but the nmi platform string will have winnt
+    if( is_windows() && $^O ne "linux" ) {
         system("dir $path");
     }
     else {

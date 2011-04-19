@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -34,111 +34,114 @@
 # done them prior. This way we can remove things like results.tar.gz
 # once we have extracted what we care about etc...
 ######################################################################
+use strict;
+use warnings;
 use Cwd;
+use File::Basename;
+use File::Spec;
 
-$extractdone = "RESULTEXTRACTIONDONE";
+my $dir = dirname($0);
+unshift @INC, $dir;
+require "TestGlue.pm";
+TestGlue::print_debug_header();
+
+my $extractdone = "RESULTEXTRACTIONDONE";
 
 # autoflush our STDOUT
 $| = 1;
 
 my $BaseDir = getcwd();
 
-print "Currently in $BaseDir which contains the following:\n";
-system("ls -l");
-
 my $tarball_file = "CONDOR-TARBALL-NAME";
+
 my $results = "results.tar.gz";
--f $results || die "$results does not exist!\n";
+die "$results does not exist!\n" unless(-f $results);
 
 ######################################################################
 # -1) If we are dealing with a Windows build simply save the
 #     results.tar.gz name in the marker file because it holds only
 #     what we want. Then leave.
 ######################################################################
-if( ($ENV{NMI_PLATFORM} =~ /winnt/) ) {
-    
-    print "Unzipping results.tar.gz\n";
-    system("tar -xzf $results");
-    print "Moving public/* to $BaseDir\n";
+if( TestGlue::is_windows() ) {
+    # Note that even though this is Windows this code executes on a Linux submit host
+    # so it is ok to use Unix commands (tar, mv, chmod, etc)
+    print "Untarring results.tar.gz\n";
+    system("tar -xzvf $results");
+    print "\nMoving public/* to $BaseDir\n";
     system("mv public/* $BaseDir");
     system("chmod a+r *.tar.gz");
 
     print "All steps completed successfully\n";
-	print "Currently in $BaseDir which contains the following:\n";
-	system("ls -l");
-	
-	# NOTE: windows quits here!!
-	#
+    print "Contents of '$BaseDir':\n";
+    system("ls -l .");
+    
+    # NOTE: windows quits here!!
     exit 0;
 }
 
-my $testbin = "public/condor_*";
 print "Preparing input test job in $BaseDir\n";
 
 ######################################################################
 # 1) find the specific binary we care about
 ######################################################################
-if(!(-f $extractdone)) {
-	print "Searching in results.tar.gz for binaries\n";
-	open( LTAR, "tar -xvzf $results |" ) ||
-    	die "Can't open tar -xzvf $results : $!\n";
-	my $saved_tarball;
-	while( <LTAR> ) {
-    	chomp;
-    	print "Considering: $_\n";
-		if( /.*condor-.*-stripped.*\.tar\.(gz|Z)$/ ) {
-    		$saved_tarball = $_;
-    		print "Found tarball!\n";
-		}
-	} 
-	close( LTAR );
-	if( ! $saved_tarball ) {
-    	die "Can't find any tarball in $results\n";
-	}
+if(!-f $extractdone) {
+    my $pattern = "public/condor-*-stripped.tar.gz";
+    print "Extracting '$pattern', condor_examples, and condor_tests from results.tar.gz\n";
 
-######################################################################
-# 2) Now that we found the binary we want, untar it from the tarball,
-#    move it to this parent directory.
-######################################################################
+    my $ret = system("tar -xvzf $results $pattern public/condor_tests public/condor_examples");
 
-	@path_parts = split( '/', $saved_tarball );
-	$tar_name = pop( @path_parts );
-	print "TarName is: $tar_name\n";
+    if($ret) {
+    	die "Could not extract tarball or test dir from $results: $!\n";
+    }
+    
+    my $saved_tarball = glob($pattern);
+    print "Tarball extracted: '$saved_tarball'\n";
+    my $tar_name = basename($saved_tarball);
+    print "Tarball name is: $tar_name\n";
+    
+    ######################################################################
+    # 2) Now that we found the binary we want, untar it from the tarball,
+    #    move it to this parent directory.
+    ######################################################################
+    
+    print "Moving $tar_name to $BaseDir\n";
+    if(not rename($saved_tarball, "$BaseDir/$tar_name")) {
+    	die "Could not move $saved_tarball to $BaseDir: $!";
+    }
+       
+    ######################################################################
+    # 2) Now that we found the binary we want, untar the pre-built test
+    #	 programs from the tarball and move them to this parent directory.
+    ######################################################################
+       
+    # Now, copy it to the parent
+    my $test_dir = "public/condor_tests";
+    print "Moving $test_dir to $BaseDir\n";
+    if(not rename($test_dir, "$BaseDir/condor_tests")) {
+    	die "Could not move $test_dir into $BaseDir: $!\n";
+    }
 
-	# Now, copy it to the parent
-	print "Moving $tar_name to $BaseDir\n";
-	system( "mv $saved_tarball $BaseDir" );
-	if( $? ) {
-    	die "'mv $saved_tarball $BaseDir' failed with status $?\n";
-	}
-
-######################################################################
-# 2) Now that we found the binary we want, untar the pre-built test
-#	 programs from the tarball and move them to this parent directory.
-######################################################################
-
-	# Now, copy it to the parent
-	print "Copying $testbin to $BaseDir\n";
-	system( "cp -r $testbin $BaseDir" );
-	if( $? ) {
-    	die "'cp $testbin $BaseDir' failed with status $?\n";
-	}
-
-	print "Writing tarball filename to $tarball_file\n";
-	open( TARBALL_FILE, ">$tarball_file" ) || 
-    	die "Can't open $tarball_file: $!\n";
-	print TARBALL_FILE "$tar_name\n";
-	close( TARBALL_FILE );
-}
+    my $example_dir = "public/condor_examples";
+    print "Moving $example_dir to $BaseDir\n";
+    if(not rename($example_dir, "$BaseDir/condor_examples")) {
+    	die "Could not move $example_dir into $BaseDir: $!\n";
+    }
+    
+    print "Writing tarball filename to $tarball_file.\n";
+    open(TARBALL_FILE, '>', $tarball_file ) || die "Can't open $tarball_file for writing: $!\n";
+    print TARBALL_FILE "$tar_name\n";
+    close(TARBALL_FILE);
+   }
 
 # Mark all processing done and results.tar.gz processing etc is done
-system("touch $extractdone");
+open(SENTINEL, '>', $extractdone) or die("Can't touch $extractdone: $!");
+close(SENTINEL);
 
 # Finally, blow away anything still in public and the results.tar.gz
 print "Removing all other arch-dependent data\n";
 system( "rm -rf public $results results" );
 if( $? ) {
-    die "'rm -rf public $results results' failed with status $?\n";
+    die "'rm -rf public $results results' failed with status $? ($!)\n";
 }
 
 print "All steps completed successfully\n";
