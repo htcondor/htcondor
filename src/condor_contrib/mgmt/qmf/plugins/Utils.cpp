@@ -177,18 +177,14 @@ bool
 PopulateVariantMapFromAd(compat_classad::ClassAd &ad, Variant::Map &_map)
 {
 	ExprTree *expr;
-    ClassAd::iterator iter;
-
-    ad.ResetExpr();
-    _map.clear();
-    iter = ad.begin();
-    while (iter != ad.end()) {
-            string name = iter->first;
-            if (!AddAttribute(ad, name.c_str(), _map)) {
+	const char *name;
+	ad.ResetExpr();
+	_map.clear();
+	while (ad.NextExpr(name,expr)) {
+		if (!AddAttribute(ad, name, _map)) {
                     return false;
-            }
-            iter++;
-    }
+		}
+	}
 
 	// TODO: debug
 //	if (DebugFlags & D_FULLDEBUG) {
