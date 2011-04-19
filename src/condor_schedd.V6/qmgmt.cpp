@@ -2840,6 +2840,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					rewriteSpooledJobAd(procad, cluster_id, proc_id, false);
 					JobQueue->CommitNondurableTransaction();
 					ScheduleJobQueueLogFlush();
+					SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 				}
 
 				std::string version;
@@ -2849,7 +2850,6 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					// they are responsible for writing the submit event
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 						PROC_ID job_id;
 						job_id.cluster = cluster_id;
 						job_id.proc = proc_id;

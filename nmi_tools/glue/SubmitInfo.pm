@@ -324,6 +324,45 @@ our %submit_info = (
         },
     },
 
+	##########################################################################
+	# platform rhel 6 on x86
+	##########################################################################
+	'x86_rhap_6'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				# turn this back on when ready
+				# '-dclipped:bool=off' => undef,
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform RHEL 6 on x86_64
+	##########################################################################
+	'x86_64_rhap_6'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				# Turn this back on when ready
+				# '-DCLIPPED:BOOL=OFF' => undef,
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
 
     ##########################################################################
     # Platform RHEL 5 on x86_64
@@ -340,6 +379,7 @@ our %submit_info = (
                 'x86_64_rhap_5.2', 'x86_64_rhap_5.3', 'x86_64_rhap_5.3-updated',
                 'x86_64_sl_5.5',
                 'x86_64_opensuse_11.3-updated', 'x86_64_opensuse_11.4-updated',
+				'x86_64_rhap_6',
                 ],
         },
 
@@ -895,7 +935,8 @@ our %submit_info = (
     'x86_64_opensuse_11.3-updated' => 'x86_64_opensuse_11.3',
     'x86_64_opensuse_11.4'         => 'x86_64_opensuse_11.3',
     'x86_64_opensuse_11.4-updated' => 'x86_64_opensuse_11.4',
-    );
+
+);
 
 while( 1 ) {
     my $fixed = 0;
