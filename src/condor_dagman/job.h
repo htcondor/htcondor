@@ -181,6 +181,8 @@ class Job {
 	bool AddPostScript( const char *cmd, MyString &whynot );
 	bool AddScript( bool post, const char *cmd, MyString &whynot );
 
+	void SetFinal(bool value) { _final = value; }
+	bool GetFinal() const { return _final; }
 	void SetNoop( bool value ) { _noop = value; }
 	bool GetNoop( void ) { return _noop; }
 
@@ -487,12 +489,6 @@ class Job {
 	int _jobProcsOnHold;
 
 private:
-
-		// Note: Init moved to private section because calling int more than
-		// once will cause a memory leak.  wenger 2005-06-24.
-	void Init( const char* jobName, const char *directory,
-				const char* cmdFile, bool prohibitMultiJobs );
-  
 		// Mark this node as failed because of an error in monitoring
 		// the log file.
   	void LogMonitorFailed();
@@ -587,6 +583,9 @@ private:
 
 		// The time of the most recent event related to this job.
 	time_t _lastEventTime;
+
+	// whether this is a final job
+	bool _final;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

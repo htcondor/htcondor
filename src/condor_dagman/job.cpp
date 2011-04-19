@@ -100,14 +100,7 @@ Job::~Job() {
 Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile,
 			bool prohibitMultiJobs ) :
-	_jobType( jobType )
-{
-	Init( jobName, directory, cmdFile, prohibitMultiJobs );
-}
-
-//---------------------------------------------------------------------------
-void Job::Init( const char* jobName, const char* directory,
-			const char* cmdFile, bool prohibitMultiJobs )
+	_jobType( jobType ), _final(false)
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -409,6 +402,10 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 		whynot = "parent == NULL";
 		return false;
 	}
+	if(GetFinal()) {
+		whynot = "Tried to add a parent to a Final node";
+		return false;
+	}
 
 		// we don't currently allow a new parent to be added to a
 		// child that has already been started (unless the parent is
@@ -472,7 +469,10 @@ Job::CanAddChild( Job* child, MyString &whynot )
 		whynot = "child == NULL";
 		return false;
 	}
-
+	if(GetFinal()) {
+		whynot = "Tried to add a child to a final node";
+		return false;
+	}
 	whynot = "n/a";
 	return true;
 }
