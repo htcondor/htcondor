@@ -26,8 +26,8 @@ _Description: Manage initial configuration with Debconf?
 
 Template: condor/phonehome
 Type: boolean
-_Description: Enabled submission of usage statistics?
 Default: false
+_Description: Enabled submission of usage statistics?
  The Condor authors kindly ask that each Condor pool sends them periodic updates
  with basic information about the status of the pool. Updates include only the
  number of total machines, the number of jobs submitted, the number of machines
