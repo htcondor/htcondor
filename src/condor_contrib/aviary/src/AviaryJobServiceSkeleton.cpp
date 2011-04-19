@@ -77,7 +77,7 @@ checkForSchedulerID(AviaryCommon::JobID* _jobId, string& _text)
 
 void
 buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _reqs) {
-	// TODO: scan through these and build TARGET.<constraint> like string
+	// scan through these and build TARGET.<constraint> like string
 	string arch = REQ_UNDEFINED;
 	string opsys = REQ_UNDEFINED;
 	string disk = REQ_GTE_ZERO;
@@ -130,7 +130,7 @@ isBasicAttribute(const string& attr_name) {
 
 void
 addExtraAttributes(const CommonAttributeCollection* extra_attrs, AttributeMapType& attr_map, bool override_basic) {
-	// TODO: add in the extras
+	// add in the extras
 	for (CommonAttributeCollection::const_iterator i = extra_attrs->begin();i < extra_attrs->end();i++) {
 		AviaryCommon::Attribute* attr = *i;
 		const string& attr_key = attr->getName();
@@ -202,7 +202,7 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
     // build a requirements string and add to it
     string reqBuilder;
     if (!(_submitJob->isRequirementsNil() || _submitJob->getRequirements()->empty())) {
-        // TODO: build from resource constraints
+        // build from resource constraints
 		buildBasicRequirements(_submitJob->getRequirements(), reqBuilder);
     }
     else {
@@ -211,7 +211,7 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
     }
     attrMap[ATTR_REQUIREMENTS] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE, reqBuilder.c_str());
 
-    // TODO: need to add extras attrs also
+    // need to add extras attrs also
 	// wso2 doesn't seem to make true nil checking easy
 	// might remove the Attributes element
 	CommonAttributeCollection* attrs = NULL;
@@ -233,7 +233,6 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
         submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
     }
     else {
-        // TODO: fix up args
         string submissionId;
         if (submissionName) {
 			submissionId = submissionName;

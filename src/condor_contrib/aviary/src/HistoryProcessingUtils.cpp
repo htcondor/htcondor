@@ -84,7 +84,7 @@ process ( const HistoryEntry &entry )
       dprintf ( D_FULLDEBUG, "HistoryJobImpl created for '%s'\n", key_cstr);
     }
 
-	// TODO why all this? just debugging?
+	// // debug
 	// fprintf ( stdout,
 	//          "%ld %ld %s %d %d %d %d %d %s %s %s %s %s %s %s\n",
 	//          entry.start, entry.stop, entry.id.c_str(),

@@ -180,7 +180,6 @@ init_classad()
 	// Initialize all the DaemonCore-provided attributes
 	daemonCore->publish( ad );
 
-    // TODO: update classad impls here?
 }
 
 //-------------------------------------------------------------
@@ -248,7 +247,7 @@ main_pre_command_sock_init( )
 int
 HandleTransportSocket(Service *, Stream *)
 {
-	// TODO: respond to a transport callback here?
+	// respond to a transport callback here
 	std::string provider_error;
     if (!provider->processHttpRequest(provider_error)) {
         dprintf (D_ALWAYS,"Error processing request: %s\n",provider_error.c_str());

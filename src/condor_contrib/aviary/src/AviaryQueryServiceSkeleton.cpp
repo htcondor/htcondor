@@ -140,7 +140,7 @@ void mapFieldsToSummary(const JobSummaryFields& fields, JobSummary* _summary) {
 	sid->setName(fields.submission_id);
 	sid->setOwner(fields.owner);
 	_summary->getId()->setSubmission(sid);
-	// TODO: need to figure out our date/time/conversion
+	// do date/time conversion
 	_summary->setQueued(encodeDateTime((const time_t*)&fields.queued));
 	_summary->setLast_update(encodeDateTime((const time_t*)&fields.last_update));
 	JobStatusType* jst = new JobStatusType;
@@ -406,7 +406,7 @@ GetJobDetailsResponse* AviaryQueryServiceSkeleton::getJobDetails(wso2wsf::Messag
 		AviaryStatus status;
 		if (jso->getJobAd(job,attr_map,status)) {
 			createGoodJobResponse<JobDetails>(*jd,job);
-			// TODO: load attributes
+			// load attributes
 			AviaryCommon::Attributes* attrs = new AviaryCommon::Attributes;
 			mapToXsdAttributes(attr_map,attrs);
 			jd->setDetails(attrs);
@@ -451,7 +451,7 @@ GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageConte
 		js->setCode(new StatusCodeType("OK"));
 		jobDataResponse->setStatus(js);
 
-		// TODO: load requested file data
+		// load requested file data
 		jobDataResponse->setContent(content);
 		jobDataResponse->setFile_name(fname);
 		jobDataResponse->setFile_size(fsize);

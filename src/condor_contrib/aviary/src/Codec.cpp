@@ -69,7 +69,7 @@ BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _
     ad.EvaluateExpr(expr,value);
 	const char* key = strdup(name);
     switch (value.GetType()) {
-        // TODO: does this cover expressions also?
+        // seems this covers expressions also
         case classad::Value::BOOLEAN_VALUE:
             _map[key] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE,strdup(trimQuotes(ExprTreeToString(expr)).c_str()));
             break;
@@ -100,7 +100,7 @@ BaseCodec::classAdToMap(ClassAd& ad, AttributeMapType& _map)
 		}
 	}
 
-// //     TODO: debug
+// //debug
 //        if (DebugFlags & D_FULLDEBUG) {
 //            ad.dPrint(D_FULLDEBUG|D_NOHEADER);
 //        }
@@ -135,7 +135,7 @@ BaseCodec::mapToClassAd(AttributeMapType& _map, ClassAd& ad)
         }
     }
 
-//     // TODO: debug
+//     // debug
 //     if (DebugFlags & D_FULLDEBUG) {
 //           ad.dPrint(D_FULLDEBUG|D_NOHEADER);
 //     }

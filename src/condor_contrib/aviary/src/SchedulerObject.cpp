@@ -31,7 +31,6 @@
 // Global Scheduler object, used for needReschedule
 extern Scheduler scheduler;
 extern char * Name;
-extern bool qmgmt_all_users_trusted;
 
 using namespace aviary::job;
 using namespace aviary::util;

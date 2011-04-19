@@ -314,7 +314,7 @@ Axis2SoapProvider::invokeHttpWorker(
         AXIS2_LOG_WARNING(thread_env->log, AXIS2_LOG_SI, "Error occurred in processing request ");
     }
 
-    // TODO: just ST here
+    // just ST here
     AXIS2_FREE(thread_env->allocator, arg_list);
     axutil_free_thread_env(thread_env);
     thread_env = NULL;

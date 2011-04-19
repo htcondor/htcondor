@@ -242,7 +242,7 @@ JobServerObject::fetchJobData(const char* key,
 		return false;
 	}
 	
-	// TODO: find out what the actual file is from classad lookup
+	// find out what the actual file is from classad lookup
 	switch (ftype) {
 		case ERR:
 			if ( !ad.LookupString(ATTR_JOB_ERROR, fname)  ) {
@@ -281,7 +281,7 @@ JobServerObject::fetchJobData(const char* key,
 
 	fsize = the_file.GetFileSize();
 
-	// TODO: we calculate these based on file size
+	// we calculate these based on file size
 	if (from_end) {
 		end = fsize;
 		start = end - max_bytes;
