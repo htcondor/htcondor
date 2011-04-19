@@ -466,6 +466,7 @@ void main_shutdown_rescue( int exitVal ) {
 	dagman.dag->DumpNodeStatus( false, true );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	unlink( lockFileName ); 
+	dagman.dag->SubmitFinalJob(dagman);
     dagman.CleanUp();
 	DC_Exit( exitVal );
 }
@@ -480,6 +481,7 @@ int main_shutdown_remove(Service *, int) {
 }
 
 void ExitSuccess() {
+	dagman.dag->SubmitFinalJob(dagman);
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	unlink( lockFileName ); 
