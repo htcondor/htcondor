@@ -373,7 +373,7 @@ HistoryJobImpl::HistoryJobImpl ( const HistoryEntry& _he):
 	m_he(_he)
 {
     m_job = NULL;
-    g_ownerless_clusters[_he.cluster] = strdup(_he.owner.c_str());
+    g_ownerless_clusters[_he.cluster] = _he.owner;
     dprintf ( D_FULLDEBUG, "HistoryJobImpl created for '%d.%d'\n", _he.cluster, _he.proc );
 }
 
