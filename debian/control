@@ -76,7 +76,7 @@ Description: documentation for Condor
 Package: condor-dbg
 Section: debug
 Architecture: any
-Depends: condor (= ${binary:Version})
+Depends: ${misc:Depends}, condor (= ${binary:Version})
 Description: debugging symbols for Condor
  Like other full-featured batch systems, Condor provides a job queueing
  mechanism, scheduling policy, priority scheme, resource monitoring, and
