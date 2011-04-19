@@ -63,6 +63,11 @@ Jobs which do not compress their checkpoints were immune to this bug.
 Compressed checkpoints are only available in 32-bit versions of Condor.
 Generation of checkpoints in 64-bit versions of Condor are unaffected.
 
+% gittrac #2069
+\item In Condor 7.6.0, the \Condor{schedd} would create a spool directory
+for every job. The previous behavior has now been restored (create a spool
+directory only when needed).
+
 \end{itemize}
 
 \noindent Known Bugs:
