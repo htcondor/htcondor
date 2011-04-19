@@ -247,7 +247,8 @@ LiveJobImpl::Set ( const char *_name, const char *_value )
 	// if we are in here, we don't have m_submission
 	PROC_ID id = getProcByString(m_job->GetKey());
 	std::string val = TrimQuotes( _value );
-	g_ownerless[id.cluster] = strdup( val.c_str() );
+	g_ownerless_clusters[id.cluster] = val;
+	m_job->UpdateSubmission(id.cluster,val.c_str());
     }
 
     // parse the type
@@ -372,7 +373,7 @@ HistoryJobImpl::HistoryJobImpl ( const HistoryEntry& _he):
 	m_he(_he)
 {
     m_job = NULL;
-    g_ownerless[_he.cluster] = strdup(_he.owner.c_str());
+    g_ownerless_clusters[_he.cluster] = strdup(_he.owner.c_str());
     dprintf ( D_FULLDEBUG, "HistoryJobImpl created for '%d.%d'\n", _he.cluster, _he.proc );
 }
 
@@ -585,18 +586,26 @@ void Job::DecrementSubmission() {
 }
 
 void
+Job::UpdateSubmission ( int cluster, const char* owner )
+{
+	OwnerlessSubmissionType::const_iterator it = g_ownerless_submissions.find ( cluster );
+	if ( g_ownerless_submissions.end() != it ) {
+		SubmissionObject* submission = (*it).second;
+		submission->SetOwner(owner);
+		g_ownerless_submissions.erase(cluster);
+	}
+}
+
+void
 Job::SetSubmission ( const char* _subName, int cluster )
 {
 	const char* owner = NULL;
 
 	// need to see if someone has left us an owner
-	OwnerlessClusterType::const_iterator it = g_ownerless.find ( cluster );
-	if ( g_ownerless.end() == it )
+	OwnerlessClusterType::const_iterator it = g_ownerless_clusters.find ( cluster );
+	if ( g_ownerless_clusters.end() != it )
 	{
-		dprintf ( D_FULLDEBUG, "warning: unable to resolve owner for Job key '%s' and cluster '%d'\n", GetKey(), cluster );
-	}
-	else {
-		owner = ( *it ).second ;
+		owner = ( *it ).second.c_str() ;
 	}
 
 	SubmissionCollectionType::const_iterator element = g_submissions.find ( _subName );
@@ -617,7 +626,11 @@ Job::SetSubmission ( const char* _subName, int cluster )
 	if (owner) {
 		// ensure that the submission has an owner
 		m_submission->SetOwner ( owner );
-		g_ownerless.erase ( cluster );
+		g_ownerless_clusters.erase ( cluster );
+	}
+	else {
+		// add it to our list to be updated for owner
+		g_ownerless_submissions[cluster] = m_submission;
 	}
 
 }
