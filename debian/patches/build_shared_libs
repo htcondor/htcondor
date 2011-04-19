@@ -368,6 +368,15 @@
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
+@@ -546,7 +547,7 @@
+ include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
+ include_directories(${CONDOR_SOURCE_DIR}/src/h)
+ include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
+-include_directories(${CONDOR_SOURCE_DIR}/src/classad)
++#include_directories(${CONDOR_SOURCE_DIR}/src/classad)
+ if (WANT_CONTRIB)
+     include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
+ endif(WANT_CONTRIB)
 --- a/build/cmake/macros/CondorStaticLib.cmake
 +++ b/build/cmake/macros/CondorStaticLib.cmake
 @@ -23,7 +23,9 @@
