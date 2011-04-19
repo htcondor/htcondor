@@ -87,6 +87,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_splices              (200, hashFuncMyString, rejectDuplicateKeys),
 	_dagFiles             (dagFiles),
 	_useDagDir            (useDagDir),
+	_final_job (0),
 	_nodeNameHash		  (NODE_HASH_SIZE, MyStringHash, rejectDuplicateKeys),
 	_nodeIDHash			  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
 	_condorIDHash		  (NODE_HASH_SIZE, hashFuncInt, rejectDuplicateKeys),
@@ -1503,6 +1504,42 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	return numSubmitsThisCycle;
 }
 
+//-------------------------------------------------------------------------
+// Returns 0 if a job failed to submit, and 1 otherwise
+int
+Dag::SubmitFinalJob(const Dagman &dm)
+{
+	if(!_final_job) {
+		return 0;
+	}
+	debug_printf( DEBUG_DEBUG_1, "Dag::SubmitFinalJob()\n" );
+
+	// Jobs deferred by category throttles.
+	int numSubmitsThisCycle = 0;
+	// At this point, we are exiting or all other jobs have finished.
+	// Let's submit the job and quit
+	Job* job=_final_job;
+	ASSERT( job != NULL );
+	debug_printf( DEBUG_DEBUG_1, "Got node %s from the ready queue\n",
+				job->GetJobName() );
+	// Check for throttling by node category.
+	CondorID condorID(0,0,0);
+	submit_result_t submit_result = SubmitNodeJob( dm, job, condorID );
+	// Note: if instead of switch here so we can use break
+	// to break out of while loop.
+	if ( submit_result == SUBMIT_RESULT_OK ) {
+		// Is there any processing to be done here?
+		// Dagman is finishing, and we are firing off
+		// a final job. Is Dagman going to wait around for it
+		// to finish?
+		ProcessSuccessfulSubmit( job, condorID );
+		numSubmitsThisCycle=1;
+	} else if ( submit_result == SUBMIT_RESULT_FAILED ) {
+		ProcessFailedSubmit( job, dm.max_submit_attempts );
+	}
+	return numSubmitsThisCycle;
+}
+
 //---------------------------------------------------------------------------
 int
 Dag::PreScriptReaper( const char* nodeName, int status )
@@ -1567,13 +1604,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			_readyQ->Append( job, -job->_nodePriority );
 		}
 	}
-
-	bool abort = CheckForDagAbort(job, "PRE script");
+	(void)CheckForDagAbort(job, "PRE script");
 	// if dag abort happened, we never return here!
-	if( abort ) {
-		return true;
-	}
-
 	return true;
 }
 
@@ -2967,6 +2999,18 @@ bool Dag::Add( Job& job )
 	ASSERT( insertResult == 0 );
 
 	return _jobs.Append(&job);
+}
+
+bool Dag::AddFinal(Job& job)
+{
+	int insertResult = _nodeNameHash.insert( job.GetJobName(), &job );
+	ASSERT( insertResult == 0 );
+
+	insertResult = _nodeIDHash.insert( job.GetJobID(), &job );
+	ASSERT( insertResult == 0 );
+
+	_final_job=&job;
+	return true;
 }
 
 

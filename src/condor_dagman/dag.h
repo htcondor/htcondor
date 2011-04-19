@@ -160,7 +160,8 @@ class Dag {
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
-  
+    bool AddFinal(Job& job);
+    int SubmitFinalJob(const Dagman& dm);
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
         @param parent The parent job
@@ -835,7 +836,7 @@ class Dag {
 
     /// List of Job objects
     List<Job>     _jobs;
-
+        Job* _final_job;
 	HashTable<MyString, Job *>		_nodeNameHash;
 
 	HashTable<JobID_t, Job *>		_nodeIDHash;
