@@ -59,13 +59,8 @@ ResumeDag(Dagman &dm)
 	return true;
 }
 
-bool
-AddNode( Dag *dag, Job::job_type_t type, const char *name,
-		 const char* directory,
-		 const char* submitFile,
-		 const char *precmd, const char *postcmd, bool noop,
-		 bool done,
-		 MyString &failReason )
+static bool
+ValidateAddNode( Dag *dag, const char *name, const char* submitFile, MyString &failReason )
 {
 	MyString why;
 	if( !IsValidNodeName( dag, name, why ) ) {
@@ -76,8 +71,13 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		failReason = why;
 		return false;
 	}
-	Job* node = new Job( type, name, directory, submitFile,
-				dag->ProhibitMultiJobs() );
+	return true;
+}
+
+static bool
+FinishAddNode(Job*node,const char* precmd,const char* postcmd, bool noop,
+	bool done,MyString&failReason)
+{
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
@@ -85,24 +85,69 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		failReason = "out of memory!";
 		return false;
 	}
-	if( precmd ) {
-		if( !node->AddPreScript( precmd, why ) ) {
+	MyString why;
+	if( precmd && !node->AddPreScript( precmd, why ) ) {
 			failReason = "failed to add PRE script: " + why;
 			delete node;
 			return false;
 		}
-	}
-	if( postcmd ) {
-		if( !node->AddPostScript( postcmd, why ) ) {
+	if( postcmd && !node->AddPostScript( postcmd, why ) ) {
 			failReason = "failed to add POST script: " + why;
 			delete node;
 			return false;
 		}
-	}
 	node->SetNoop( noop );
 	if( done ) {
 		node->SetStatus( Job::STATUS_DONE );
 	}
+	return true;
+}
+
+bool
+AddFinalNode( Dag *dag, Job::job_type_t type, const char *name,
+		 const char* directory,
+		 const char* submitFile,
+		 const char *precmd, const char *postcmd, bool noop,
+		 bool done,
+		 MyString &failReason )
+{
+	MyString why;
+	if(!ValidateAddNode(dag,name,submitFile,why)){
+		failReason=why;
+		return false;
+	}
+	Job* node = new Job( type, name, directory, submitFile,
+				dag->ProhibitMultiJobs() );
+	if(!FinishAddNode(node,precmd,postcmd,noop,done,failReason))
+		return false;
+	node->SetFinal(true);
+	ASSERT( dag != NULL );
+	if( !dag->AddFinal( *node ) ) {
+		failReason = "unknown failure adding Final node to DAG";
+		delete node;
+		return false;
+	}
+	failReason = "n/a";
+	return true;
+}
+
+bool
+AddNode( Dag *dag, Job::job_type_t type, const char *name,
+		 const char* directory,
+		 const char* submitFile,
+		 const char *precmd, const char *postcmd, bool noop,
+		 bool done,
+		 MyString &failReason )
+{
+	MyString why;
+	if(!ValidateAddNode(dag,name,submitFile,why)){
+		failReason=why;
+		return false;
+	}
+	Job* node = new Job( type, name, directory, submitFile,
+				dag->ProhibitMultiJobs() );
+	if(!FinishAddNode(node,precmd,postcmd,noop,done,failReason))
+		return false;
 	ASSERT( dag != NULL );
 	if( !dag->Add( *node ) ) {
 		failReason = "unknown failure adding node to DAG";
