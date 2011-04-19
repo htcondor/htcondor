@@ -184,6 +184,7 @@ case "$1" in
             else
                 /etc/init.d/condor restart || exit $?
             fi
+            update-rc.d condor defaults 30 70 >/dev/null || exit 0
         fi
     ;;
 
