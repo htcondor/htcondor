@@ -1,3 +1,15 @@
+condor (7.6.0-1) UNRELEASED; urgency=low
+
+  * New upstream stable release.
+  * Adjusted patches.
+  * Added missing debhelper dependencies.
+  * Added missing sysv-style init script symlinks.
+  * Fixed various typos.
+  * Prevent local classad header files from being used, in favor of
+    system-wide libclassad installations.
+
+ -- Michael Hanke <mih@debian.org>  Mon, 18 Apr 2011 22:07:08 -0400
+
 condor (7.5.5+git995-ga9a0d2a-1) UNRELEASED; urgency=low
 
   * New upstream code from V7.6 branch. Updated various patches, removed some
