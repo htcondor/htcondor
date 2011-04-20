@@ -43,6 +43,7 @@ if (NOT WINDOWS)
   ###### Test executables
   condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "classads;${PCRE_FOUND}")
   condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "classads;${PCRE_FOUND}" OFF)
+  condor_exe( classad_version "classad_version.cpp" ${C_BIN} "classads;${PCRE_FOUND}" OFF)
 
   if (LINUX)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
