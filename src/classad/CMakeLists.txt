@@ -55,10 +55,12 @@ if (NOT WINDOWS)
   ###### Test executables
   condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND}")
   condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND}" OFF)
+  condor_exe( classad_version "classad_version.cpp" ${C_BIN} "classads;${PCRE_FOUND}" OFF)
   
   if(HAVE_DLFCN_H)
 	target_link_libraries(classad -ldl)
     target_link_libraries(classad_functional_tester -ldl)
+    target_link_libraries(classad_version -ldl)
   endif()
 
   ###### Install elements with our distribution
