@@ -323,12 +323,12 @@ dprintf_config( const char *subsys )
 		(void)fflush( stderr );	/* Don't know why we need this, but if not here
 							   the first couple dprintf don't come out right */
 	}
-
+#ifdef WIN32
 	if(!DebugLock) {
 		sprintf(pname, "%s_LOG_KEEP_OPEN", subsys);
-		log_keep_open = param_boolean_int(pname, FALSE);
+		log_keep_open = param_boolean_int(pname, TRUE);
 	}
-
+#endif
 	first_time = 0;
 	_condor_dprintf_works = 1;
 #if HAVE_EXT_GCB
