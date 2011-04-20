@@ -43,11 +43,7 @@ if (NOT WINDOWS)
   if (LINUX)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
 	set_target_properties( classad PROPERTIES VERSION 1.0.2 SOVERSION 1 )
-	if (NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  		install( TARGETS classad DESTINATION ${C_LIB} )
-	else()
-		install( TARGETS classad DESTINATION ${CMAKE_INSTALL_LIBDIR} )
-	endif()
+	install( TARGETS classad DESTINATION ${C_LIB} )
   endif()
 
   set (CLASSADS_FOUND classads)
