@@ -23,7 +23,7 @@ if (WITH_ZLIB)
 
 	if ( NOT PROPER )
 
-		condor_pre_external( ZLIB  zlib-1.2.3 "lib;include" "include")
+		condor_pre_external( ZLIB  zlib-1.2.3 "lib;include" "lib/libz.a")
 
 		ExternalProject_Add(zlib
 				    #-- Download Step ----------
@@ -43,7 +43,7 @@ if (WITH_ZLIB)
 		set(ZLIB_FOUND "${ZLIB_INSTALL_LOC}/lib/libz.a")
 		condor_post_external( zlib include OFF )
 
-		install ( FILES ${ZLIB_INSTALL_LOC}/lib/libz.a DESTINATION ${C_LIB} RENAME libcondor_z.a)
+		install ( FILES "${ZLIB_INSTALL_LOC}/lib/libz.a" DESTINATION ${C_LIB} RENAME libcondor_z.a)
 
 	else( NOT PROPER )
 

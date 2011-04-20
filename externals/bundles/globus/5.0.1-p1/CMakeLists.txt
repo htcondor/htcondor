@@ -62,7 +62,7 @@ if (WITH_GLOBUS)
 		install ( DIRECTORY ${GT42_INSTALL_LOC}/lib/gt42 DESTINATION ${C_LIB} )
 		condor_post_external( gt42 OFF OFF )
 		###################################################
-		condor_pre_external( GLOBUS globus-5.0.1 "lib;include" "include")
+		condor_pre_external( GLOBUS globus-5.0.1 "lib;include" "lib/libglobus_gss_assist_${GLOBUS_FLAVOR}.a")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
@@ -170,7 +170,7 @@ if (WITH_GLOBUS)
 
 			condor_post_external( globus "include/${GLOBUS_FLAVOR}" OFF )
 
-			install ( PROGRAMS ${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server.dynamic DESTINATION ${C_LIBEXEC} RENAME globus-gridftp-server )
+			install ( PROGRAMS "${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server.dynamic" DESTINATION ${C_LIBEXEC} RENAME globus-gridftp-server )
 
 	else( NOT PROPER )
 

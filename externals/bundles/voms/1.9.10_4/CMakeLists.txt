@@ -25,7 +25,7 @@ if ( WITH_VOMS )
 
 	if (NOT PROPER)
 
-		condor_pre_external( VOMS voms-1.9.10_4 "include;lib" "include")
+		condor_pre_external( VOMS voms-1.9.10_4 "include;lib" "lib/libvomsapi_${GLOBUS_FLAVOR}.a")
 
 		ExternalProject_Add(voms
 							DEPENDS ${EXPAT_REF} ${OPENSSL_RED} ${GLOBUS_REF} ${ZLIB_REF}
@@ -55,18 +55,9 @@ if ( WITH_VOMS )
 							INSTALL_COMMAND cd org.glite.security.voms && make install
 				)
 
-		# On Mac OS X, giving the basename of the library causes
-		# it to be dynamically linked. On linux, the library may
-		# be in lib/ or lib64/.
-		if ( DARWIN )
-			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi_${GLOBUS_FLAVOR}.a" )
-		else()
-			set( VOMS_FOUND "libvomsapi_${GLOBUS_FLAVOR}.a" )
-		endif()
+		set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi_${GLOBUS_FLAVOR}.a" )
 
-		append_var(EXTERNAL_INCLUDES ${VOMS_INSTALL_LOC}/include/glite/security)
-
-		condor_post_external( voms include lib )
+		condor_post_external( voms include/glite/security OFF )
 
 	else(NOT PROPER)
 

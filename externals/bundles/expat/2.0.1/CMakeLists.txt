@@ -24,7 +24,7 @@ if ( WITH_EXPAT )
 
 	if( NOT PROPER )
 
-		condor_pre_external( EXPAT expat-2.0.1 "lib;include" "include")
+		condor_pre_external( EXPAT expat-2.0.1 "lib;include" "lib/libexpat.a")
 
 		ExternalProject_Add(expat
 				    #-- Download Step ----------

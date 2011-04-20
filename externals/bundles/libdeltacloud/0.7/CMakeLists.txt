@@ -24,7 +24,7 @@ if (WITH_LIBDELTACLOUD)
 
 	if ( NOT PROPER )
 
-		condor_pre_external( LIBDELTACLOUD libdeltacloud-0.7 "lib;include" "include")
+		condor_pre_external( LIBDELTACLOUD libdeltacloud-0.7 "lib;include" "lib/libdeltacloud.a")
 
 		ExternalProject_Add(libdeltacloud
 				DEPENDS ${CURL_REF} ${LIBXML2_REF}

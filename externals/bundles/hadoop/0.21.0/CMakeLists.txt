@@ -43,18 +43,17 @@ if ( NOT PROPER )
 		endif()
 		# a couple of odd things, this macro requires a configure and build command.  
 		ExternalProject_Add(hadoop
-							PREFIX ${EXTERNAL_BUILD_PREFIX}/${HADOOP_VER}
-							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${HADOOP_VER}.tar.gz ${CMD_TERM}
-							DOWNLOAD_DIR ${HADOOP_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/${HADOOP_VER}.tar.gz
-							# PATCH_COMMAND patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/hadoop-0.20.0-patch
-							CONFIGURE_COMMAND echo "nothing to configure"
-							BUILD_COMMAND echo "nothing to build"
-							BUILD_IN_SOURCE 1
-							#--install Step ----------
-							INSTALL_DIR ${HADOOP_INSTALL_LOC}
-							INSTALL_COMMAND cd ${HADOOP_VER} ${CMD_TERM} ${HADOOP_INSTALL} )
+					#-- Download Step ----------
+					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${HADOOP_VER}.tar.gz ${CMD_TERM}
+					DOWNLOAD_DIR ${HADOOP_STAGE}/dl
+					URL http://parrot.cs.wisc.edu/externals/${HADOOP_VER}.tar.gz
+					# PATCH_COMMAND patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/hadoop-0.20.0-patch
+					CONFIGURE_COMMAND echo "nothing to configure"
+					BUILD_COMMAND echo "nothing to build"
+					BUILD_IN_SOURCE 1
+					#--install Step ----------
+					INSTALL_DIR ${HADOOP_INSTALL_LOC}
+					INSTALL_COMMAND cd ${HADOOP_VER} ${CMD_TERM} ${HADOOP_INSTALL} )
 
 		## Set all the config information
 		set( HADOOP_TARGET ${HADOOP_TARGET} PARENT_SCOPE )

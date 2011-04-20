@@ -20,26 +20,27 @@ option(WITH_UNICOREGAHP "Compiling with support for UNICOREGAHP" ON)
 
 if ( WITH_UNICOREGAHP AND NOT PROPER )
 
-	condor_pre_external( UCGAHP unicoregahp-1.2.0 "usr/share/java" "usr/share/java/ugahp.jar")
+	condor_pre_external( UNICOREGAHP unicoregahp-1.2.0 "usr/share/java" "usr/share/java/ugahp.jar")
 
 	ExternalProject_Add(unicoregahp
 			    #-- Download Step ----------
-				DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${UCGAHP_VER}.tar.gz ${CMD_TERM}
-			    DOWNLOAD_DIR ${UCGAHP_STAGE}/dl
-			    URL http://parrot.cs.wisc.edu/externals/${UCGAHP_VER}.tar.gz
+				DOWNLOAD_COMMAND wget -N
+				http://parrot.cs.wisc.edu/externals/${UNICOREGAHP_VER}.tar.gz ${CMD_TERM}
+			    DOWNLOAD_DIR ${UNICOREGAHP_STAGE}/dl
+			    URL http://parrot.cs.wisc.edu/externals/${UNICOREGAHP_VER}.tar.gz
 				#--Configure step ----------
 				CONFIGURE_COMMAND echo "nothing to do"
 				#--Build Step ----------
 				BUILD_COMMAND echo "nothing to do"
 				BUILD_IN_SOURCE 1
 				#--install Step ----------
-			    INSTALL_DIR ${UCGAHP_INSTALL_LOC}/usr/share/java
-			    INSTALL_COMMAND cp ugahp.jar ${UCGAHP_INSTALL_LOC}/usr/share/java )
+			    INSTALL_DIR ${UNICOREGAHP_INSTALL_LOC}/usr/share/java
+			    INSTALL_COMMAND cp ugahp.jar ${UNICOREGAHP_INSTALL_LOC}/usr/share/java )
 
 	message (STATUS "external configured (unicoregahp)")
 
 	condor_post_external( unicoregahp OFF OFF )
-	install(FILES ${UCGAHP_INSTALL_LOC}/usr/share/java/ugahp.jar DESTINATION ${C_LIB})
+	install(FILES "${UNICOREGAHP_INSTALL_LOC}/usr/share/java/ugahp.jar" DESTINATION ${C_LIB})
 
 else()
 	message (STATUS "external skipped (unicoregahp)")

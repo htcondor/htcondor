@@ -24,7 +24,7 @@ if (WITH_LIBXML2)
 
 	if ( NOT PROPER )
 
-		condor_pre_external( LIBXML2 libxml2-2.7.3 "lib;include" "include")
+		condor_pre_external( LIBXML2 libxml2-2.7.3 "lib;include" "lib/libxml2")
 
 		ExternalProject_Add( libxml2
 					DEPENDS ${ZLIB_REF}

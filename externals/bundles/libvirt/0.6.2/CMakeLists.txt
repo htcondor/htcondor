@@ -26,7 +26,7 @@ if (WITH_LIBVIRT)
 
 	if ( NOT PROPER AND NOT LIBVIRT_FOUND )
 
-		condor_pre_external( LIBVIRT libvirt-0.6.2 "lib;include" "include")
+		condor_pre_external( LIBVIRT libvirt-0.6.2 "lib;include" "lib/libvirt.a" )
 
 		ExternalProject_Add(libvirt
 					DEPENDS ${LIBXML2_REF}

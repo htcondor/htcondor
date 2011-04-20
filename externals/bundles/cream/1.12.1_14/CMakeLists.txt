@@ -26,8 +26,8 @@ if ( WITH_CREAM )
 		condor_pre_external( CREAM org.glite.ce.cream-client-api-c-1.12.1-14 "lib;include;include/glite/security;opt" "include")
 
 #########################################
-		condor_pre_external( CREAMSOAP gsoap_2.7.6b "lib;include" "include")
-		ExternalProject_Add(cream_soap
+		condor_pre_external( CREAMSOAP gsoap_2.7.6b "lib;include" "done")
+		ExternalProject_Add(creamsoap
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${CREAMSOAP_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CREAMSOAP_STAGE}/dl
@@ -39,14 +39,17 @@ if ( WITH_CREAM )
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND cd gsoap-2.7 && make install && cp -f soapcpp2/wsdl/stlvector.h ${CREAM_INSTALL_LOC}/include )
+				    INSTALL_COMMAND cd gsoap-2.7 && make
+				    install && cp -f soapcpp2/wsdl/stlvector.h
+				    ${CREAM_INSTALL_LOC}/include && touch
+				    ${CREAMSOAP_INSTALL_LOC}/done )
 
-		condor_post_external( cream_soap OFF OFF )
+		condor_post_external( creamsoap OFF OFF )
 
 #########################################
 
-		condor_pre_external( CARES c-ares-1.3.0 "lib;include" "include")
-		ExternalProject_Add(c-ares
+		condor_pre_external( CARES c-ares-1.3.0 "lib;include" "done")
+		ExternalProject_Add(cares
 				    #-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${CARES_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CARES_STAGE}/dl
@@ -58,12 +61,13 @@ if ( WITH_CREAM )
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND cd ${CARES_VER} && make install )
-		condor_post_external( c-ares OFF OFF )
+				    INSTALL_COMMAND cd ${CARES_VER} && make
+				    install && touch ${CARES_INSTALL_LOC}/done )
+		condor_post_external( cares OFF OFF )
 
 #########################################
 
-		condor_pre_external( LOG4CPP log4cpp-1.0-3 "lib;include" "include")
+		condor_pre_external( LOG4CPP log4cpp-1.0-3 "lib;include" "lib/liblog4cpp.a")
 		ExternalProject_Add(log4cpp
 				    #-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LOG4CPP_VER}.tar.gz ${CMD_TERM}
@@ -84,12 +88,12 @@ if ( WITH_CREAM )
 
 ######################################### cream/gss packages.
 
-		condor_pre_external( GRIDSITE gridsite-1.6.0 "lib;include" "include")
+		condor_pre_external( GRIDSITE gridsite-1.6.0 "lib;include" "done")
 		ExternalProject_Add(gridsite
-					DEPENDS ${LIBXML2_REF}
+				    DEPENDS ${LIBXML2_REF}
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GRIDSITE_VER}.src.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${LIBXML2_STAGE}/dl
+				    DOWNLOAD_DIR ${GRIDSITE_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${GRIDSITE_VER}.src.tar.gz
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "no config"
@@ -101,13 +105,16 @@ if ( WITH_CREAM )
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND cd org.gridsite.core/src && cp libgridsite.a ${CREAM_INSTALL_LOC}/lib && cp ../interface/*.h ${CREAM_INSTALL_LOC}/include )
+				    INSTALL_COMMAND cd org.gridsite.core/src && 
+				    cp -f libgridsite.a ${CREAM_INSTALL_LOC}/lib && 
+				    cp -f ../interface/*.h ${CREAM_INSTALL_LOC}/include && 
+				    touch ${GRIDSITE_INSTALL_LOC}/done )
 		condor_post_external( gridsite OFF OFF )
 
 #########################################
 
-		condor_pre_external( GLITE_SECURITY org.glite.security.gss-2.0.1-1 "lib;include/glite/security" "include/glite/security/libglite_security_gss_${GLOBUS_FLAVOR}pthr.a")
-		ExternalProject_Add(glite_gss
+		condor_pre_external( GLITE_SECURITY org.glite.security.gss-2.0.1-1 "lib;include" "done")
+		ExternalProject_Add(glite_security
 				    DEPENDS ${GLOBUS_REF} ${GRIDSITE_REF} ${CARES_REF}
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GLITE_SECURITY_VER}.tar.gz ${CMD_TERM}
@@ -125,16 +132,17 @@ if ( WITH_CREAM )
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
 				    INSTALL_COMMAND cd org.glite.security.gss/src &&
 					  cp ../interface/* ${CREAM_INSTALL_LOC}/include/glite/security &&
-					  cp libglite_security_gss_${GLOBUS_FLAVOR}pthr.a ${CREAM_INSTALL_LOC}/lib)
-		condor_post_external( glite_gss OFF OFF )
+					  cp libglite_security_gss_${GLOBUS_FLAVOR}pthr.a ${CREAM_INSTALL_LOC}/lib && 
+					  touch ${GLITE_SECURITY_INSTALL_LOC}/done )
+		condor_post_external( glite_security OFF OFF )
 
 #########################################
 
 		# build gsoap plugin.
 		set (CSP_CC_FLAGS -g -O0 -W -Wall -Wno-unused-parameter -I. -I../interface -DWITH_NONAMESPACES -I${CREAM_STAGE}/include -D_GNU_SOURCE)
-		condor_pre_external( CREAM_SOAP_PLUGIN cream_soap_plugin1 "lib;include" "include")
+		condor_pre_external( CREAM_SOAP_PLUGIN org.glite.security.gsoap-plugin-2.0.1-3 "lib;include" "done")
 		ExternalProject_Add(cream_soap_plugin
-					DEPENDS cream_soap glite_gss
+					DEPENDS ${CREAMSOAP_REF} ${GLITE_SECURITY_REF}
 				    #-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/org.glite.security.gsoap-plugin-2.0.1-3.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CREAM_SOAP_PLUGIN_STAGE}/dl
@@ -153,11 +161,11 @@ if ( WITH_CREAM )
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}/lib
 				    INSTALL_COMMAND  cd org.glite.security.gsoap-plugin/src &&
 						cp libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a ${CREAM_INSTALL_LOC}/lib && 
-						cp ../interface/*.h ${CREAM_INSTALL_LOC}/include/glite/security
-				)
+						cp ../interface/*.h ${CREAM_INSTALL_LOC}/include/glite/security && 
+						touch ${CREAM_SOAP_PLUGIN_INSTALL_LOC}/done )
 		condor_post_external( cream_soap_plugin OFF OFF )
 
-		condor_pre_external( CREAM_WSDL org.glite.ce.wsdl-1.12.1-14 "lib;include" "include")
+		condor_pre_external( CREAM_WSDL org.glite.ce.wsdl-1.12.1-14 "lib;include" "done")
 		ExternalProject_Add(cream_wsdl
 				    #-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/org.glite.ce.wsdl-1.12.1-14.tar.gz ${CMD_TERM}
@@ -171,7 +179,7 @@ if ( WITH_CREAM )
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND cd org.glite.ce.wsdl && ln -fs share/wsdl ${CREAM_INSTALL_LOC}/interface )
+				    INSTALL_COMMAND cd org.glite.ce.wsdl && ln -fs share/wsdl ${CREAM_INSTALL_LOC}/interface && touch ${CREAM_WSDL_INSTALL_LOC}/done )
 		condor_post_external( cream_wsdl OFF OFF )
 
 		set (CREAM_PATCH patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch)
@@ -180,7 +188,10 @@ if ( WITH_CREAM )
 		endif(DARWIN)
 
 		ExternalProject_Add(cream
-				    DEPENDS voms cream_soap boost log4cpp gridsite c-ares cream_soap_plugin cream_wsdl
+				    DEPENDS ${VOMS_REF} ${CREAMSOAP_REF}
+				    ${BOOST_REF} ${LOG4CPP_REF}
+				    ${GRIDSITE_REF} ${CARES_REF}
+				    ${CREAM_SOAP_PLUGIN_REF} ${CREAM_WSDL_REF} ${CLASSADS_REF}
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CREAM_STAGE}/dl
@@ -200,8 +211,6 @@ if ( WITH_CREAM )
 				    INSTALL_COMMAND cd org.glite.ce.cream-client-api-c &&
 						make install
 				)
-
-		add_dependencies(cream classads)
 
 		set (BOOST_LIB ${BOOST_INSTALL_LOC}/lib/libboost_thread.a)
 		set(CREAM_FOUND "${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_soap.a;${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_util.a;${CREAM_INSTALL_LOC}/lib/libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a;${CREAM_INSTALL_LOC}/lib/libglite_security_gss_${GLOBUS_FLAVOR}pthr.a;${LOG4CPP_INSTALL_LOC}/lib/liblog4cpp.a;${CREAM_INSTALL_LOC}/lib/libgridsite.a;${BOOST_LIB};${CREAM_INSTALL_LOC}/lib/libcares.a")

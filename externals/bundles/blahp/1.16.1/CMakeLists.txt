@@ -29,7 +29,7 @@ if ( WITH_BLAHP )
 		message(STATUS "TODO:TSTCLAIR BLAHP eval if linking correct popt w/o mundging Makefile.am")
 
 		########################################
-		condor_pre_external( POPT popt-1.14 "lib;include" "include/")
+		condor_pre_external( POPT popt-1.14 "lib;include" "lib/libpopt.a")
 
 		ExternalProject_Add(popt
 						#-- Download Step ----------
@@ -48,7 +48,7 @@ if ( WITH_BLAHP )
 		condor_post_external( popt OFF OFF )
 
 		########################################
-		condor_pre_external( BLAHP blahp-1.16.1 "lib;include" "include/")
+		condor_pre_external( BLAHP blahp-1.16.1 "lib;include" "opt/glite")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} ${POPT_REF} classads
