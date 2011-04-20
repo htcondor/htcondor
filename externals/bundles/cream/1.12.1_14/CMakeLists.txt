@@ -124,7 +124,9 @@ if ( WITH_CREAM )
 				    CONFIGURE_COMMAND echo "no config"
 				    #--Build Step ----------
 				    BUILD_COMMAND cd org.glite.security.gss/src && 
-					  gcc -g -O0 -W -Wall -Wno-unused-parameter -I../interface -I${GLOBUS_INSTALL_LOC}/include/${GLOBUS_FLAVOR}pthr -o glite_gss.thr.o -c glite_gss.c && 
+					  gcc -g -O0 -W -Wall
+					  -Wno-unused-parameter -I../interface
+					  -I${CREAM_INSTALL_LOC}/include -I${GLOBUS_INSTALL_LOC}/include/${GLOBUS_FLAVOR}pthr -o glite_gss.thr.o -c glite_gss.c && 
 					  ar crv libglite_security_gss_${GLOBUS_FLAVOR}pthr.a glite_gss.thr.o &&
 					  ranlib libglite_security_gss_${GLOBUS_FLAVOR}pthr.a
 				    BUILD_IN_SOURCE 1
@@ -139,7 +141,7 @@ if ( WITH_CREAM )
 #########################################
 
 		# build gsoap plugin.
-		set (CSP_CC_FLAGS -g -O0 -W -Wall -Wno-unused-parameter -I. -I../interface -DWITH_NONAMESPACES -I${CREAM_STAGE}/include -D_GNU_SOURCE)
+		set (CSP_CC_FLAGS -g -O0 -W -Wall -Wno-unused-parameter -I. -I../interface -DWITH_NONAMESPACES -I${CREAM_INSTALL_LOC}/include -D_GNU_SOURCE)
 		condor_pre_external( CREAM_SOAP_PLUGIN org.glite.security.gsoap-plugin-2.0.1-3 "lib;include" "done")
 		ExternalProject_Add(cream_soap_plugin
 					DEPENDS ${CREAMSOAP_REF} ${GLITE_SECURITY_REF}
