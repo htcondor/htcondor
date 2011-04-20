@@ -42,6 +42,7 @@
 // WINDOWS only
 #include "store_cred.h"
 #endif
+#include "internet.h"
 #include "my_hostname.h"
 #include "domain_tools.h"
 #include "get_daemon_name.h"
@@ -81,6 +82,8 @@
 #include "vm_univ_utils.h"
 #include "condor_md.h"
 
+#include <string>
+
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
 //   the case-insensitivity of hashFunction() doesn't complish anything.
@@ -108,6 +111,7 @@ char	*OperatingSystem;
 char	*Architecture;
 char	*Spool;
 char	*ScheddName = NULL;
+std::string ScheddAddr;
 char	*PoolName = NULL;
 DCSchedd* MySchedd = NULL;
 char	*My_fs_domain;
@@ -813,6 +817,18 @@ main( int argc, char *argv[] )
 			} else if ( match_prefix( ptr[0], "-spool" ) ) {
 				Remote++;
 				DisableFileChecks = 1;
+            } else if ( match_prefix( ptr[0], "-addr" ) ) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf(stderr, "%s: -addr requires another argument\n", MyName);
+					exit(1);
+				}
+                if (!is_valid_sinful(*ptr)) {
+                    fprintf(stderr, "%s: \"%s\" is not a valid address\n", MyName, *ptr);
+                    fprintf(stderr, "Should be of the form <ip.address.here:port>\n");
+                    fprintf(stderr, "For example: <123.456.789.123:6789>\n");
+                    exit(1);
+                }
+                ScheddAddr = *ptr;
 			} else if ( match_prefix( ptr[0], "-remote" ) ) {
 				Remote++;
 				DisableFileChecks = 1;
@@ -952,7 +968,11 @@ main( int argc, char *argv[] )
 	if ( !DumpClassAdToFile ) {
 		// Instantiate our DCSchedd so we can locate and communicate
 		// with our schedd.  
-		MySchedd = new DCSchedd( ScheddName, PoolName );
+        if (!ScheddAddr.empty()) {
+            MySchedd = new DCSchedd(ScheddAddr.c_str());
+        } else {
+            MySchedd = new DCSchedd(ScheddName, PoolName);
+        }
 		if( ! MySchedd->locate() ) {
 			if( ScheddName ) {
 				fprintf( stderr, "\nERROR: Can't find address of schedd %s\n",
@@ -6695,6 +6715,7 @@ usage()
 	fprintf( stderr,
 			 "	-remote <name>\t\tsubmit to the specified remote schedd\n"
 			 "                \t\t(implies -spool)\n" );
+    fprintf( stderr, "\t-addr <ip:port>\t\tsubmit to schedd at given \"sinful string\"\n" );
 	fprintf( stderr,
 			 "	-append <line>\t\tadd line to submit file before processing\n"
 			 "                \t\t(overrides submit file; multiple -a lines ok)\n" );
