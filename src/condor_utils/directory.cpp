@@ -630,8 +630,7 @@ Directory::setOwnerPriv( const char* path, si_error_t &err)
 			if (err == SINoFile) {
 				dprintf(D_FULLDEBUG, "Directory::setOwnerPriv() -- path %s does not exist (yet).\n", path);
 			} else {
-				dprintf( D_ALWAYS, "Directory::setOwnerPriv() -- failed to "
-					 "find owner of %s\n", path );
+				dprintf( D_ALWAYS, "Directory::setOwnerPriv() -- failed to find owner of %s\n", path );
 			}
 			return PRIV_UNKNOWN;
 		}

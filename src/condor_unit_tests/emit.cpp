@@ -55,6 +55,7 @@ void Emitter::init(bool failures_printed, bool successes_printed) {
 	set_debug_flags("D_ALWAYS");
 	set_debug_flags("D_NOHEADER");
 	config();
+	global_start = time(0);
 }
 
 /* Formats and prints a parameter and its value as a sub-point of input,
@@ -78,7 +79,9 @@ void Emitter::emit_retval(const char* format, va_list args) {
 /* Emits a heading and the function string.
  */
 void Emitter::emit_function(const char* function) {
-	test_buf->sprintf("---------------------\nFUNCTION:  %s\n", function);
+	test_buf->sprintf("\n\n------------------------------------------------------"
+		"--------------------------\nFUNCTION:  %s\n---------------------------"
+		"-----------------------------------------------------\n", function);
 	if(print_failures && print_successes) {
 		dprintf(D_ALWAYS, "%s", test_buf->Value());
 		test_buf->setChar(0, '\0');
@@ -88,7 +91,9 @@ void Emitter::emit_function(const char* function) {
 /* Emits a heading and the object string.
  */
 void Emitter::emit_object(const char* object) {
-	test_buf->sprintf("---------------------\nOBJECT:  %s\n", object);
+	test_buf->sprintf("\n------------------------------------------------------"
+		"--------------------------\nOBJECT:  %s\n-----------------------------"
+		"---------------------------------------------------\n", object);
 	if(print_failures && print_successes) {
 		dprintf(D_ALWAYS, "%s", test_buf->Value());
 		test_buf->setChar(0, '\0');
@@ -146,7 +151,7 @@ void Emitter::emit_output_actual_header() {
  * be called via the PASS macro."
  */
 void Emitter::emit_result_success(int line) {
-	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%ld seconds)\n", 
+	buf->sprintf_cat("RESULT:  SUCCESS, test passed at line %d (%ld seconds)\n",
 		line, time(0) - start);
 	print_now_if_possible();
 	if(print_successes && !print_failures) {
@@ -210,14 +215,15 @@ void Emitter::emit_test_break() {
 }
 
 void Emitter::emit_summary() {
-	dprintf(D_ALWAYS, "\n---------------------\nSUMMARY:\n");
-	dprintf(D_ALWAYS, "========\n");
+	dprintf(D_ALWAYS, "\n========\nSUMMARY:\n========\n");
 	dprintf(D_ALWAYS, "    Total Tested Objects:  %d\n", object_tests);
 	dprintf(D_ALWAYS, "    Total Unit Tests:      %d\n", function_tests);
 	dprintf(D_ALWAYS, "    Passed Unit Tests:     %d\n", passed_tests);
 	dprintf(D_ALWAYS, "    Failed Unit Tests:     %d\n", failed_tests);
 	dprintf(D_ALWAYS, "    Aborted Unit Tests:    %d\n", aborted_tests);
 	dprintf(D_ALWAYS, "    Skipped Unit Tests:    %d\n", skipped_tests);
+	dprintf(D_ALWAYS, "    Total Time Taken:      %ld seconds\n",
+			time(0) - global_start);
 }
 
 void Emitter::print_result_failure() {
