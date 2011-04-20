@@ -71,7 +71,7 @@ AviaryScheddPlugin::earlyInitialize()
     // init transport here
     provider = new Axis2SoapProvider(level,log_file,repo_path.c_str());
     string axis_error;
-    if (!provider->init(9090,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
+    if (!provider->init(port,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
 		dprintf(D_ALWAYS, "%s\n",axis_error.c_str());
         EXCEPT("Failed to initialize Axis2SoapProvider");
     }
