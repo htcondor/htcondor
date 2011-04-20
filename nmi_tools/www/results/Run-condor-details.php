@@ -3,9 +3,6 @@
 // Configuration
 //
 define("HISTORY_URL", "./Test-history.php?branch=%s&test=%s");
-define("BRANCH_URL", "./Run-condor-branch.php?branch=%s&user=%s");
-define("DETAIL_URL", "./Run-condor-details.php?runid=%s&type=%s");
-define("CONDOR_USER", "cndrauto");
 
 $result_types = Array( "passed", "pending", "failed" );
 
@@ -16,7 +13,7 @@ load_config();
 $type     = $_REQUEST["type"];
 $runid    = (int)$_REQUEST["runid"];
 $user     = $_REQUEST["user"];
-$timed    = $_REQUEST["timed"];
+$timed    = array_key_exists("timed", $_REQUEST) ? $_REQUEST["timed"] : "";
 $build_id = $runid;
 $branch   = "unknown";
 
@@ -140,7 +137,6 @@ else {
 $result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
 while ($row = mysql_fetch_array($result)) {
   $task_name = $row["name"];
-  //echo "<H3>$tmp</H3>";
   
   //
   // Now for each task, get the status from the platforms
@@ -165,33 +161,28 @@ while ($row = mysql_fetch_array($result)) {
       $platform_status[$platform] = PLATFORM_FAILED;
       $task_status[$task_name] = PLATFORM_FAILED;
     }
-    elseif (!$platform_status[$platform]) {
+    elseif(!array_key_exists($platform, $platform_status)) {
       $platform_status[$platform] = PLATFORM_PASSED;
     }
-    if (!$task_status[$task_name]) {
+
+    if(!array_key_exists($task_name, $task_status)) {
       $task_status[$task_name] = PLATFORM_PASSED;
     }
     $data[$row["name"]][$task_row["platform"]] = Array($result_value, $length);
-  } // WHILE
+  }
   mysql_free_result($task_result);
-} // WHILE
+}
 mysql_free_result($result);
-// need to lookup location later.....mysql_close($db);
-   
-?>
 
-<table border="0" cellspacing="0" >
-<tr>
-   <td>Name</td>
-<?php
+echo "<table border='0' cellspacing='0'>\n";
+echo "<tr>\n";
+echo "   <td>Name</td>\n";
+
+$hosts = get_hosts(Array($runid));
+
 // show link to run directory for each platform
 foreach ($platforms AS $platform) {
-  // We will remove 'nmi:' from the front of the platform and also split it 
-  // onto two separate lines because the length of the header determines the
-  // width of the resulting table column.
   $display = preg_replace("/nmi:/", "", $platform);
-  #$display = preg_replace("/_/", "_ ", $display, 1);
-
    
   // have to lookup the file location now
   $filepath = "";
@@ -209,21 +200,23 @@ foreach ($platforms AS $platform) {
     $queue_depth = $ret[1];
   }
 
-  $display = "<a href=\"$filepath/$mygid/userdir/$platform/\" title=\"View Run Directory\">$display</a>";
-  echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display $queue_depth</td>\n";
-} // FOREACH 
+  $remote_host = "";
+  if(array_key_exists($display, $hosts[$runid])) {
+    $remote_host = "<br><font style='font-size:75%'>" . $hosts[$runid][$display] . "</font>";
+  }
+
+  $display = "<a href='$filepath/$mygid/userdir/$platform/' title='View Run Directory'>$display</a>";
+  echo "<td align='center' class='".$platform_status[$platform]."'>$display $remote_host $queue_depth</td>\n";
+}
+
 ?>
 <tr>
    <td>Results</td>
 <?php
 // show link to results for each platform
 foreach ($platforms AS $platform) {
-  $display = $platform;
-  $idx = strpos($display, "_");
-  $display[$idx] = " ";
-  $filepath = "";
-  
   // have to lookup the file location now
+  $filepath = "";
   $loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
   $loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
   while( $locrow = mysql_fetch_array($loc_query_res) ) {
@@ -231,9 +224,10 @@ foreach ($platforms AS $platform) {
     $mygid = $locrow["gid"];
   }
 
-  $display = "<a href=\"$filepath/$mygid/userdir/$platform/results.tar.gz\" title=\"View Run Directory\">click</a>";
-  echo "<td align=\"center\" class=\"".$platform_status[$platform]."\">$display</td>\n";
-} // FOREACH 
+  $display = "<a href='$filepath/$mygid/userdir/$platform/results.tar.gz' title='View Run Directory'>click</a>";
+  echo "<td align='center' class='".$platform_status[$platform]."'>$display</td>\n";
+}
+
 foreach ($data AS $task => $arr) {
   if ($type == 'test') {
     $history_url = sprintf(HISTORY_URL,$branch,rawurlencode($task));
@@ -250,19 +244,26 @@ foreach ($data AS $task => $arr) {
       "<span title=\"$task\">".limitSize($task, 30)."</span></td>\n";
   }
   foreach ($platforms AS $platform) {
+    if(!array_key_exists($platform, $arr)) {
+      echo "<td align='center'>&nbsp;</td>\n";
+      continue;
+    }
+
     $result = $arr[$platform][0];
     $length = $arr[$platform][1];
     if ($result == PLATFORM_PENDING) {
-      echo "<td align=\"center\" class=\"{$result}\">-</td>\n";
+      echo "<td align='center' class='$result'>-</td>\n";
     }
     else {
       if ($result == '') {
-        echo "<td align=\"center\">&nbsp;</td>\n";
+        echo "<td align='center'>&nbsp;</td>\n";
       }
       else {
+        $height = "";
         if($timed) {
           if($task != "platform_job" and $task != "remote_task") {
-            $size = ($length >= 50) ? $length : 50;
+            # Keep the font from getting too small or too large
+            $size = ($length < 50) ? 50 : (($length > 1000) ? 1000 : $length);
             $height = "font-size:$size%;";
           }
         }
@@ -278,7 +279,7 @@ foreach ($data AS $task => $arr) {
           $display .= ")";
         }
 
-        echo "<td class=\"".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."\" style='text-align:center;$height'>$display</td>\n";
+        echo "<td class='".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."' style='text-align:center;$height'>$display</td>\n";
       }
     }
   }

@@ -10,7 +10,7 @@ require_once "./load_config.inc";
 load_config();
 include "dashboard.inc";
 
-$continuous_blacklist = Array( "x86_64_sol_5.11", "x86_64_rhap_5.3-updated");
+$continuous_blacklist = Array( "x86_deb_5.0", "x86_64_rhap_5.3-updated");
 ?>
 <html>
 <head>
@@ -197,7 +197,7 @@ if(!$one_offs) {
     array_push($table, $out);
   }
 
-  $num_cols = sizeof($runs);
+  $num_cols = sizeof($runs) + 1;
   echo implode("<tr><td style='font-size:10%' colspan='$num_cols'>&nbsp;</td></tr>\n", $table);
   echo "</table>\n";
 }
@@ -302,7 +302,10 @@ function create_sparkline($branch, $user) {
   $output["test"]  = Array();
 
   $builds = Array();
+  $runids = Array();
   while ($build = mysql_fetch_array($result2)) {
+    array_push($runids, $build["runid"]);
+
     $color = "passed";
     if($build["result"] == NULL) {
       $color = "pending";
@@ -316,6 +319,7 @@ function create_sparkline($branch, $user) {
     $details .= "    <tr><td>NMI RunID</td><td>" . $build["runid"] . "</td></tr>";
     $details .= "    <tr><td>Submitted</td><td><nobr>" . $build["start"] . "</nobr></td></tr>";
     $details .= "    <tr><td>SHA1</td><td>" . substr($build["project_version"], 0, 15) . "</td></tr>";
+    $details .= "    <tr><td>Host</td><td>__PUT_HOST_HERE__</td></tr>";
     $details .= "  </table>";
     
     $hour = preg_replace("/^.+(\d\d):\d\d:\d\d.*$/", "$1", $build["start"]);
@@ -342,19 +346,23 @@ function create_sparkline($branch, $user) {
     array_push($builds, $tmp);
   }
   mysql_free_result($result2);
+
+  // Figure out the hostname for each execute node
+  $hosts = get_hosts($runids);
+  $platform = preg_replace("/Continuous Build - /", "", $branch);
   
   for ($i=0; $i < count($builds); $i++) {
     $key = $builds[$i]["key"];
     $output["build"][$key] = Array();
     $output["build"][$key]["sha1"]  = $builds[$i]["sha1"];
     $output["build"][$key]["color"] = $builds[$i]["color"];
-    $output["build"][$key]["html"]  = $builds[$i]["html"];
+
+    $tmp = preg_replace("/__PUT_HOST_HERE__/", $hosts[$builds[$i]["runid"]][$platform], $builds[$i]["html"]);
+    $output["build"][$key]["html"] = $tmp;
   }
   
   // And now for the tests.  This is trickier because we have to line it up
   // with the builds above
-  $platform = $branch;
-  $platform = preg_replace("/Continuous Build - /", "", $branch);
   $sql = "SELECT runid,result,description," .
          "       convert_tz(start, 'GMT', 'US/Central') as start " .
          "FROM Run ".
@@ -366,10 +374,12 @@ function create_sparkline($branch, $user) {
          "ORDER BY description DESC";
   $result2 = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
   
+  $runids = Array();
   $tests = Array();
   while ($test = mysql_fetch_array($result2)) {
     $build_runid = preg_replace("/Auto-Test Suite for \($platform, (.+)\)/", "$1", $test["description"]);
     $runid = $test["runid"];
+    array_push($runids, $runid);
     $color = "passed";
     $hour = "&nbsp;&nbsp;&nbsp;";
     $failed_tests = "";
@@ -400,7 +410,7 @@ function create_sparkline($branch, $user) {
         }
       }
 
-      # Add a 
+      # Add a max number of failures we'll show
       if($hour > $LIMIT) {
         $failed_tests .= ($hour - $LIMIT) . " more...";
       }
@@ -414,6 +424,7 @@ function create_sparkline($branch, $user) {
     $details .= "<tr><td>Status</td><td class=\"$color\">$color</td></tr>";
     $details .= "<tr><td>Start</td><td><nobr>" . $test["start"] . "</nobr></td></tr>";
     $details .= "<tr><td>SHA1</td><td>__PUT_SHA_HERE__</td></tr>";
+    $details .= "<tr><td>Host</td><td>__PUT_HOST_HERE__</td></tr>";
     $details .= "<tr><td>Failed tests</td><td>$failed_tests</td></td></tr>";
     $details .= "</table>";
     
@@ -423,8 +434,11 @@ function create_sparkline($branch, $user) {
     $tests[$build_runid] = Array();
     $tests[$build_runid]["color"] = $color;
     $tests[$build_runid]["html"]  = $popup_html;
+    $tests[$build_runid]["runid"] = $runid;
   }
   mysql_free_result($result2);
+
+  $hosts = get_hosts($runids);
   
   for ($i=0; $i < count($builds); $i++) {
     $build = $builds[$i];
@@ -436,6 +450,7 @@ function create_sparkline($branch, $user) {
       $test = $tests[$build["runid"]];
       $tmp = preg_replace("/__PUT_SHA_HERE__/", $build["sha1"], $test["html"]);
       $tmp = preg_replace("/__PUT_HOUR_HERE__/", $build["hour"], $tmp);
+      $tmp = preg_replace("/__PUT_HOST_HERE__/", $hosts[$test["runid"]][$platform], $tmp);
       $output["test"][$key]["color"] = $test["color"];
       $output["test"][$key]["html"]  = $tmp;
     }
@@ -448,7 +463,8 @@ function create_sparkline($branch, $user) {
   return $output;
 }
 
-// Define a custom sort that puts trunk ahead of other builds, and NMI after core builds
+// Define a custom sort that puts trunk ahead of other builds, and NMI immediately
+// after the matching core build.
 function cndrauto_sort($a, $b) {
   $a_is_nmi = preg_match("/^NMI/", $a);
   $b_is_nmi = preg_match("/^NMI/", $b);
