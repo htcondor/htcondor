@@ -134,7 +134,7 @@ int SafeSock::end_of_message()
                     if (mdChecker_) {
 	    		md = mdChecker_->computeMD();
 		    }
-                    sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, 
+                    sent = _outMsg.sendMsg(_sock, _who, 
 				           _outMsgID, md);
 		    if (md) {
 		    	free(md);
