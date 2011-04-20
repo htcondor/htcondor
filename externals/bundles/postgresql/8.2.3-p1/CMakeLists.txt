@@ -71,7 +71,7 @@ if (WITH_POSTGRESQL)
 			set(POSTGRESQL_FOUND "${POSTGRESQL_INSTALL_LOC}/lib/libpq.a")
 		endif()
 
-		condor_post_external( postgresql include lib )
+		condor_post_external( postgresql include OFF )
 
 	else( NOT PROPER )
 

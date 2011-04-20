@@ -71,7 +71,7 @@ if (WITH_CURL)
 			set(CURL_FOUND "${CURL_INSTALL_LOC}/lib/libcurl.a;${CURL_FOUND}")
 		endif()
 		
-		condor_post_external( curl include lib )
+		condor_post_external( curl include OFF )
 
 	else( NOT PROPER )
 

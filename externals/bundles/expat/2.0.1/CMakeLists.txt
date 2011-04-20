@@ -32,18 +32,18 @@ if ( WITH_EXPAT )
 				    DOWNLOAD_DIR ${EXPAT_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${EXPAT_VER}.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${EXPAT_VER} && ./configure --prefix=${EXTERNAL_INSTALL_LOC}
+				    CONFIGURE_COMMAND cd ${EXPAT_VER} && ./configure --prefix=${EXPAT_INSTALL_LOC}
 				    #--Build Step ----------
 				    BUILD_COMMAND cd ${EXPAT_VER} && make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_INSTALL_LOC}
+				    INSTALL_DIR ${EXPAT_INSTALL_LOC}
 				    INSTALL_COMMAND cd ${EXPAT_VER} && make install )
 
 		# Set the target dependencies which the rest of condor depends on.
-		set(EXPAT_FOUND "${EXTERNAL_INSTALL_LOC}/lib/libexpat.a")
+		set(EXPAT_FOUND "${EXPAT_INSTALL_LOC}/lib/libexpat.a")
 
-		condor_post_external( expat include lib )
+		condor_post_external( expat include OFF )
 
 	else( NOT PROPER )
 

@@ -109,7 +109,7 @@ if (WITH_BOOST )
 	set(Boost_USE_MULTITHREADED ON)
 	find_package( Boost 1.33.1 COMPONENTS thread program_options system regex filesystem)
 	if(Boost_FOUND)
-		append_var (EXTERNAL_INCLUDES ${Boost_INCLUDE_DIRS})
+		append_var (CONDOR_EXTERNAL_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 		set (BOOST_VER ${Boost_VERSION})
 	endif(Boost_FOUND)
 

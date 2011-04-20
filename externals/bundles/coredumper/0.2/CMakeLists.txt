@@ -29,8 +29,8 @@ if (WITH_COREDUMPER)
 
 		ExternalProject_Add(coredumper
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${COREDUMPER_VER}.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${COREDUMPER}/dl
+				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${COREDUMPER_VER}.tar.gz ${CMD_TERM}
+				    DOWNLOAD_DIR ${COREDUMPER_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${COREDUMPER_VER}.tar.gz
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND cd ${COREDUMPER_VER} && ./configure --prefix=${COREDUMPER_INSTALL_LOC}
@@ -44,7 +44,7 @@ if (WITH_COREDUMPER)
 		# Set the target dependencies which the rest of condor depends on.
 		set(COREDUMPER_FOUND "${COREDUMPER_INSTALL_LOC}/lib/libcoredumper.a")
 
-		condor_post_external( coredumper include lib )
+		condor_post_external( coredumper include OFF )
 
 	else( NOT PROPER )
 

@@ -105,7 +105,7 @@ if (WITH_KRB5)
 			endif()
 		endif()
 
-		condor_post_external( krb5 include lib )
+		condor_post_external( krb5 include OFF )
 
 	else( NOT PROPER )
 

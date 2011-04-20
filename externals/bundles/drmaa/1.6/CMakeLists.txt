@@ -25,7 +25,7 @@ if ( WITH_DRMAA )
 	condor_pre_external( DRMAA drmaa-1.6 "lib;include" "include/drmaa.h")
 	
 	if (NOT WINDOWS)
-		set (DRMAA_CONFIGURE ./configure --prefix=${EXTERNAL_STAGE})
+		set (DRMAA_CONFIGURE ./configure --prefix=${DRMAA_INSTALL_LOC})
 		set (DRMAA_MAKE make)
 		set (DRMAA_INSTALL cp libcondordrmaa.a ${DRMAA_INSTALL_LOC}/lib &&
 						   cp drmaa.h README ${DRMAA_INSTALL_LOC}/include/ )
@@ -64,13 +64,13 @@ if ( WITH_DRMAA )
 						INSTALL_COMMAND ${DRMAA_INSTALL})
 
 	# set standard globals include and link loc
-	condor_post_external( drmaa include lib )
+	condor_post_external( drmaa include OFF )
 	message (STATUS "external configured (DRMAA_FOUND=${DRMAA_FOUND})")
 	
 	# i've tar bundled drmaa, does anyone actually use this?  if so I can explode.
-	install ( FILES ${EXTERNAL_DL}/${DRMAA_VER}.tar.gz DESTINATION ${C_SRC}/drmaa )
-	install ( FILES ${EXTERNAL_STAGE}/include/drmaa.h
-			  ${EXTERNAL_STAGE}/include/README
+	install ( FILES ${DRMAA_STAGE}/dl/${DRMAA_VER}.tar.gz DESTINATION ${C_SRC}/drmaa )
+	install ( FILES ${DRMAA_INSTALL_LOC}/include/drmaa.h
+			  ${DRMAA_INSTALL_LOC}/include/README
 			  DESTINATION ${C_INCLUDE} )
 			  
 	install ( FILES ${DRMAA_FOUND} DESTINATION ${C_LIB} )

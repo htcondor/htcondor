@@ -43,6 +43,8 @@ if (WITH_GSOAP)
 			set (GSOAP_INSTALL make install )
 		endif(WINDOWS)
 
+		message (STATUS "OPENSSL_INSTALL_LOC = ${OPENSSL_INSTALL_LOC}")
+
 		ExternalProject_Add( gsoap
 				    DEPENDS ${OPENSSL_REF}
 				    #-- Download Step ----------
@@ -64,16 +66,16 @@ if (WITH_GSOAP)
 		if (NOT WINDOWS)
 			set(GSOAP_FOUND "${GSOAP_INSTALL_LOC}/lib/libgsoapssl++.a")	
 			set(SOAPCPP2 "${GSOAP_INSTALL_LOC}/bin/soapcpp2")
-			condor_post_external( gsoap include OFF )
+		#	condor_post_external( gsoap include OFF )
 		else(NOT WINDOWS)
-		        condor_post_external( gsoap include OFF )
+		#    condor_post_external( gsoap include OFF )
 			# gsoap is handled differently on windows
 			set(GSOAP_FOUND ON)
 			set(GSOAP_SRC "${GSOAP_INSTALL_LOC}/src/stdsoap2.cpp" PARENT_SCOPE )
 			set(SOAPCPP2 "${GSOAP_INSTALL_LOC}/soapcpp2.exe")
 		endif(NOT WINDOWS)		
 		
-		#set ( GSOAP_SHARE "${EXTERNAL_BUILD_PREFIX}/${GSOAP_VER}/src/gsoap/${GSOAP_VER}/gsoap" )
+		set ( GSOAP_SHARE "${GSOAP_INSTALL_LOC}/share/gsoap/plugin" )
 		set(WSSEAPI "WSSEAPI-NOTFOUND")
 
 	else( NOT PROPER )

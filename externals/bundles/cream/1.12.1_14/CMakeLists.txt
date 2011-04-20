@@ -207,7 +207,7 @@ if ( WITH_CREAM )
 				    BUILD_COMMAND cd org.glite.ce.cream-client-api-c && make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_STAGE}
+				    INSTALL_DIR ${CREAM_INSTALL_LOC}
 				    INSTALL_COMMAND cd org.glite.ce.cream-client-api-c &&
 						make install
 				)

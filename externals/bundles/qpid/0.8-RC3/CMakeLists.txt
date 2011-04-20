@@ -72,7 +72,7 @@ if (WITH_QPID)
 			#set( QMF_GEN ${QPID_INSTALL_LOC}/managementgen/qmf-gen ) ?
 		endif()
 
-		condor_post_external( qpid include lib )
+		condor_post_external( qpid include OFF )
 
 	else( NOT PROPER )
 

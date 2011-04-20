@@ -179,7 +179,7 @@ if (WITH_GLOBUS)
 		find_multiple( "globus_gass_transfer;globus_gram_client;globus_gram_protocol" GLOBUS_GRID_UNIVERSE_GT2 )
 		find_multiple( "globus_ftp_client;globus_ftp_control" GLOBUS_GRID_UNIVERSE_NORDUGRID)
 		if (GLOBUS_FOUND)
-		  append_var (EXTERNAL_INCLUDES "/usr/include/globus;/usr/lib64/globus/include;/usr/lib/globus/include")
+		  append_var (CONDOR_EXTERNAL_INCLUDE_DIRS "/usr/include/globus;/usr/lib64/globus/include;/usr/lib/globus/include")
 		endif(GLOBUS_FOUND)
 
 	endif(NOT PROPER)

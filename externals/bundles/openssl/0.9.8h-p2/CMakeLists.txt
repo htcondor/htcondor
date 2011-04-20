@@ -87,7 +87,7 @@ if (WITH_OPENSSL)
 			set(OPENSSL_FOUND "${OPENSSL_INSTALL_LOC}/lib/libssl.a;${OPENSSL_INSTALL_LOC}/lib/libcrypto.a")
 		endif(WINDOWS)
 
-		condor_post_external( openssl include lib )
+		condor_post_external( openssl include OFF )
 
 	else( NOT PROPER )
 

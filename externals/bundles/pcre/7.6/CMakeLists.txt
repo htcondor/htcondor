@@ -67,7 +67,7 @@ if ( NOT PROPER )
 	#
 	#################################################################
 
-	condor_post_external( pcre include lib )
+	condor_post_external( pcre include OFF )
 
 else( NOT PROPER )
 
