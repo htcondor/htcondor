@@ -43,11 +43,7 @@ if (NOT WINDOWS)
   if (LINUX)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
 	set_target_properties( classad PROPERTIES VERSION 1.0.2 SOVERSION 1 )
-	if (NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  		install( TARGETS classad DESTINATION ${C_LIB} )
-	else()
-		install( TARGETS classad DESTINATION ${CMAKE_INSTALL_LIBDIR} )
-	endif()
+	install( TARGETS classad DESTINATION ${C_LIB} )
   endif()
 
   set (CLASSADS_FOUND classads)
@@ -55,7 +51,7 @@ if (NOT WINDOWS)
   ###### Test executables
   condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND}")
   condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND}" OFF)
-  condor_exe( classad_version "classad_version.cpp" ${C_BIN} "classads;${PCRE_FOUND}" OFF)
+  condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND}" OFF)
   
   if(HAVE_DLFCN_H)
 	target_link_libraries(classad -ldl)
