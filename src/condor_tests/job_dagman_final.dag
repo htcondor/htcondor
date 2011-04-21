@@ -1,0 +1,4 @@
+JOB A A.cdr
+JOB B B.cdr
+FINAL C C.cdr
+PARENT A CHILD B
