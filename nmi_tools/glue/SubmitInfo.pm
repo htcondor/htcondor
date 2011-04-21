@@ -314,7 +314,7 @@ our %submit_info = (
 	##########################################################################
 	# Platform RHEL 6 on x86
 	##########################################################################
-	'x86_rhap_6'	=> {
+	'x86_rhap_6.0'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 				# Turn this back on when ready
@@ -330,11 +330,16 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+
+	##########################################################################
+	# Platform RHEL 6 on x86. This one is continuously updated by the batlab.
+	##########################################################################
+	'x86_rhap_6.0-updated'	=> 'x86_rhap_6.0',
 
 	##########################################################################
 	# Platform RHEL 6 on x86_64
 	##########################################################################
-	'x86_64_rhap_6'	=> {
+	'x86_64_rhap_6.0'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 				# Turn this back on when ready
@@ -350,6 +355,11 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+
+	##########################################################################
+	# Platform RHEL 6 on x86_64. This one is continuously updated by the batlab.
+	##########################################################################
+	'x86_64_rhap_6.0-updated'	=> 'x86_64_rhap_6.0',
 
 	##########################################################################
 	# Platform RHEL 5 on x86_64
@@ -364,7 +374,7 @@ our %submit_info = (
 				'x86_64_fedora_13', 'x86_64_rhap_5.2',
 				'x86_64_fedora_12', 'x86_64_fedora_12-updated', 
 				'x86_64_fedora_13-updated',
-				'x86_64_rhap_6' ],
+				'x86_64_rhap_6.0-updated' ],
 		},
 
 		'test' => {
