@@ -82,7 +82,6 @@ void
 parseArgs( int argc, char *argv[] )
 {
 	char *opt;
-	int args_handled = 0;
 
 	char** tmp = argv;
 	for( tmp++; *tmp; tmp++ ) {
@@ -94,8 +93,6 @@ parseArgs( int argc, char *argv[] )
 						"ERROR: invalid cluster.proc specified: %s\n", opt);
 				usage(argc, argv);
 			}
-				// great, it was a job id, we're done with this option
-			args_handled++;
 			continue;
 		}
 		
@@ -103,7 +100,6 @@ parseArgs( int argc, char *argv[] )
 				// might be the schedd's address
 			if( is_valid_sinful(opt)) {
 				schedd_addr = opt;
-				args_handled++;
 				continue;
 			} else {
 				dprintf(D_ALWAYS, 
@@ -114,7 +110,6 @@ parseArgs( int argc, char *argv[] )
 
 		if( !strcmp(opt, "--reconnect") || !strcmp(opt, "-reconnect") ) {
 			is_reconnect = true;
-			args_handled++;
 			continue;
 		}
 
@@ -122,7 +117,6 @@ parseArgs( int argc, char *argv[] )
 			char *ptr = strchr(opt, '<');
 			if (ptr && is_valid_sinful(ptr)) {
 				public_schedd_addr = ptr;
-				args_handled++;
 				continue;
 			}
 			else {
@@ -135,12 +129,10 @@ parseArgs( int argc, char *argv[] )
 
 		if (strncmp(opt, "--xfer-queue=", 13) == 0) {
 			xfer_queue_contact_info = opt+13;
-			args_handled++;
 			continue;
 		}
 
 		if (strcmp(opt, "--no-schedd-updates") == 0) {
-			args_handled++;
 			sendUpdatesToSchedd = false;
 			continue;
 		}
@@ -154,12 +146,16 @@ parseArgs( int argc, char *argv[] )
 			usage(argc, argv);
 		}
 		job_ad_file = opt;
-		args_handled++;
 	}
-	if( args_handled < 3 || args_handled != (argc-1) ) {
-		dprintf( D_ALWAYS, "ERROR: missing command-line arguments!" );
-		usage(argc, argv);
-	}
+
+		// A proper model of arguments should be presented here and
+		// used to validate the provided arguments. It would be
+		// something like:
+		// if no cluster/proc, who cares
+		// if no job_ad_file, fail
+		// And that might be it.
+		// The validation used to count arguments processed, which was
+		// easily fooled.
 }
 
 
