@@ -133,17 +133,13 @@ int State_AcknowledgeDataBlock( ServerState* state )
 
 	state->send_rdy = 1;
 	send_cftp_frame( state );
-	fprintf( stderr, "MARK!\n" );
 	if( state->current_chunk == state->local_file.num_chunks-1)
 		{
-				fprintf( stderr, "MARK (LEAVE)!\n" );
 			free( chunk_data );
 			LEAVE_STATE(1);
 		}
 
 	state->current_chunk ++;
-
-		fprintf( stderr, "MARK (LEAVE2)!\n" );
 
 	free( chunk_data );
 	LEAVE_STATE(0);

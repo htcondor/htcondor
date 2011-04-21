@@ -45,20 +45,12 @@ int State_CheckSessionParameters( ServerState* state )
 
 	sif_frame = (cftp_sif_frame*)(&state->frecv_buf);
 	
-#ifdef SERVER_DEBUG
-	fprintf( stderr, "MessageType: %d.\n", 
-			 sif_frame->MessageType );
-	fprintf( stderr, "SIF error code: %d.\n", 
-			 ntohs(sif_frame->ErrorCode) );
-	fprintf( stderr, "SIF session token: %d.\n", 
-			 sif_frame->SessionToken );
-	fprintf( stderr, "SIF parameter format: %d.\n", 
-			 ntohs(sif_frame->ParameterFormat) );
-	fprintf( stderr, "SIF parameter length: %d.\n", 
-			 ntohs(sif_frame->ParameterLength) );
-#endif 
-
-
+	DEBUG("MessageType: %d.\n",  sif_frame->MessageType );
+	DEBUG( "SIF error code: %d.\n", ntohs(sif_frame->ErrorCode) );
+	DEBUG( "SIF session token: %d.\n", sif_frame->SessionToken );
+	DEBUG( "SIF parameter format: %d.\n", ntohs(sif_frame->ParameterFormat) );
+	DEBUG( "SIF parameter length: %d.\n", ntohs(sif_frame->ParameterLength) );
+ 
 		// Load parameters
 	state->session_token    = sif_frame->SessionToken;  
 	state->parameter_length = ntohs( sif_frame->ParameterLength );
@@ -123,7 +115,7 @@ int State_CheckSessionParameters( ServerState* state )
 
 		// Do the parameter checking here.
 	
-	VERBOSE( "Checking file parameters against local constraints.\n" );
+	VERBOSE( "Checking file parameters against local constraints...\n" );
 
 		//For now we only check against the quota option.
 		//There will probably be more constraints later
@@ -132,12 +124,12 @@ int State_CheckSessionParameters( ServerState* state )
 	    if( local_params->filesize > state->arguments->quota*1024 )
 	      {
 		//We cannot accept this file. It is over quota
-		VERBOSE( "Quota exceeded. Cannot accept file from client.\n" );
+		VERBOSE( "\tQuota exceeded. Cannot accept file from client.\n" );
 		LEAVE_STATE(1);				  
 	      }
 	  }
 	    
-	VERBOSE( "Check complete." );
+	VERBOSE( "\tCheck complete.\n" );
 	
 
 //TODO: Perform the server side parameter verification checks
@@ -246,8 +238,7 @@ int State_ReceiveClientReady( ServerState* state )
 	state->local_file.hash[3] = local_parameters->hash[3];
 	state->local_file.hash[4] = local_parameters->hash[4];
 
-
-
+	VERBOSE( "Client Ready. Transfer Starting.\n");
 
 	LEAVE_STATE(0);
 }

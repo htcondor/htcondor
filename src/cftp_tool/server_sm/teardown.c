@@ -101,7 +101,7 @@ int State_AcknowledgeFileFinish( ServerState* state )
 		}
 	else
 		{
-			VERBOSE( "Local file hash value matches. File transfer is successful." );
+			VERBOSE( "Local file hash value matches. File transfer is successful.\n" );
 		}
 
 		// Everything looks good, send FAF

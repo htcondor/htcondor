@@ -84,9 +84,16 @@ void run_server( ServerArguments* arg)
 			return;
 		}
 	
+	start_oob( &session_state );
+	if( session_state.last_error )
+		{
+				//Error has happened, TODO: handle here
+			return;
+		}
+
+
 
 	handle_client( &session_state );
-
 	if( session_state.last_error )
 		{
 				//Error happened while accepting client, TODO: handle here
@@ -110,8 +117,9 @@ void run_server( ServerArguments* arg)
 		// We may want some clean up based on
 	    // the final condition of session_state.
 	
-
-
+	
+	post_transfer_loop( &session_state );
+	
 		// Clean up allocated memory
 
 	if( session_state.oob_info.server_name )	
@@ -121,10 +129,10 @@ void run_server( ServerArguments* arg)
 		free( session_state.oob_info.server_port );
 
 	if( session_state.server_info.server_name )	
-		free( session_state.oob_info.server_name );
+		free( session_state.server_info.server_name );
 
 	if( session_state.server_info.server_port )	
-		free( session_state.oob_info.server_port );
+		free( session_state.server_info.server_port );
 
 	if( session_state.client_info.client_name)
 		free( session_state.client_info.client_name );
@@ -140,6 +148,8 @@ void run_server( ServerArguments* arg)
 
 	if( session_state.session_parameters )
 		free( session_state.session_parameters );
+
+	
 
 	return;
 }
@@ -294,6 +304,77 @@ void start_server( ServerState* state )
 	return;
 }
 
+/*
+
+  start_server
+
+
+ */
+void start_oob( ServerState* state )
+{
+	
+	int sockfd;
+    struct addrinfo hints, *servinfo;
+    int rv;
+	int yes;
+ 	int results;
+
+	memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+
+		// We are re-using the address and port of our TCP transfer socket
+	memcpy( state->oob_info.server_name, state->server_info.server_name, 256);
+	memcpy( state->oob_info.server_port, state->server_info.server_port, 16);
+
+
+    if ((rv = getaddrinfo( state->oob_info.server_name,
+						   state->oob_info.server_port,
+						   &hints, &servinfo)) != 0)
+		{
+			fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+			return;
+		}
+
+	sockfd = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+	if( sockfd == -1)
+		{
+			sprintf( state->error_string, "Error on creating OOB socket: %s\n", strerror( errno ) );
+			state->last_error = 1;
+			freeaddrinfo(servinfo);
+			return;
+		}	
+
+
+	// Clear up any old binds on the port
+    // lose the pesky "Address already in use" error message
+    yes = 1;
+	if (setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(int)) == -1)
+		{
+			sprintf( state->error_string, "Error on clearing old port bindings: %s\n", strerror( errno ) );
+			state->last_error = 1;
+			freeaddrinfo(servinfo);	
+			return;
+		} 
+	
+
+	results = bind( sockfd, servinfo->ai_addr, servinfo->ai_addrlen);
+	if( results == -1)
+		{
+			sprintf( state->error_string, "Error on binding OOB socket: %s\n", strerror( errno ) );
+			state->last_error = 1;
+			freeaddrinfo(servinfo);	
+			return;
+		}
+	
+	state->oob_info.server_socket = sockfd;
+		//We fill in a ServerRecord so we don't need this anymore.
+	freeaddrinfo(servinfo);
+	
+	
+}
+
+
 
 /*
 
@@ -306,19 +387,16 @@ announce_server
 void announce_server( ServerState* state )
 {
 	
-	int sockfd;
-    struct addrinfo hints, *servinfo, *p;
-    int rv;
-    int numbytes;
+	int numbytes;
 	char message[512];
-
-	VERBOSE( "Announcing server presence..." )
-
+    struct addrinfo hints, *servinfo;
+	int rv;
+	
+	
 	memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
-
-    if ((rv = getaddrinfo( state->arguments->ahost,
+	if ((rv = getaddrinfo( state->arguments->ahost,
 						   state->arguments->aport,
 						   &hints, &servinfo)) != 0)
 		{
@@ -326,40 +404,22 @@ void announce_server( ServerState* state )
 			return;
 		}
 
-    // loop through all the results and make a socket
-    for(p = servinfo; p != NULL; p = p->ai_next) {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype,
-                p->ai_protocol)) == -1) {
-            perror("talker: socket");
-            continue;
-        }
-
-        break;
-    }
-
-    if (p == NULL) {
-        fprintf(stderr, "announce server: failed to bind socket\n");
-        return;
-    }
-	
 	memset( message, 0, 512 );
-	sprintf( message, "%s %s %s",
+	sprintf( message, "%s %s %s\n",
 			 state->server_info.server_name,
 			 state->server_info.server_port,
 			 state->arguments->uuid
 			 );
-
-    if ((numbytes = sendto(sockfd, message, strlen( message ), 0,
-             p->ai_addr, p->ai_addrlen)) == -1) {
-        perror("announce server: sendto");
-        return;
-    }
-
-    freeaddrinfo(servinfo);
-
-    close(sockfd);
-
-	VERBOSE( "Complete!\n\n" )
+	
+	if ((numbytes = sendto(state->oob_info.server_socket,
+						   message, strlen( message ), 0,
+						   servinfo->ai_addr, servinfo->ai_addrlen)) == -1)
+		{
+			perror("announce server: sendto");
+			return;
+		}
+	
+	freeaddrinfo(servinfo);
 
     return;
 
@@ -388,21 +448,29 @@ void handle_client( ServerState* state )
 	unsigned long int total_time_waited;
 	unsigned long int max_wait;
 
-	VERBOSE( "Waiting for client connection...\n")
+	VERBOSE( "Waiting for client connection...\n");
+	if( state->arguments->announce )
+		VERBOSE( "\tAnnouncing server presence every %d seconds.\n", ANNOUNCE_INTERVAL );
 
 	fcntl(state->server_info.server_socket, F_SETFL, O_NONBLOCK);
 	
 	total_time_waited = 0;
 	if( state->arguments->itimeout == -1 )
-		max_wait = ULONG_MAX;
+		{
+			max_wait = ULONG_MAX;
+			VERBOSE( "\tMax client wait time is forever.\n");
+		}
 	else
-		max_wait = state->arguments->itimeout;
+		{
+			max_wait = state->arguments->itimeout;
+			VERBOSE( "\tMax client wait time is %ld seconds.\n", max_wait );
+		}
 	results = 0;
 
 
 	while( total_time_waited < max_wait && results == 0)
 		{
-			printf( "Total Time: %ld\n", total_time_waited );
+			DEBUG( "\tTotal Time: %ld\n", total_time_waited );
 			FD_ZERO(&accept_set);
 			FD_SET( state->server_info.server_socket, &accept_set );
 			timeout_tv.tv_sec = ANNOUNCE_INTERVAL;
@@ -508,9 +576,6 @@ void handle_client( ServerState* state )
 
 
 
-
-
-
 /*
 
 
@@ -532,6 +597,129 @@ int run_state_machine( StateAction* states, ServerState* state )
 			return 0;
 		}
 }
+
+
+
+
+
+
+/* 
+
+   post_transfer_loop
+
+*/
+
+int post_transfer_loop( ServerState* state )
+{
+
+	int numbytes;
+	char message[512];
+    struct addrinfo hints, *servinfo;
+	int rv;
+	fd_set accept_set;
+	struct timeval timeout_tv;
+	unsigned long int total_time_waited;
+	unsigned long int max_wait;
+	unsigned long int next_wait;
+	int results;
+	
+	if( !state->arguments->announce )
+		{
+			VERBOSE( "Goodbye!\n\n" );
+			return 0;
+		}
+
+	memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+	if ((rv = getaddrinfo( state->arguments->ahost,
+						   state->arguments->aport,
+						   &hints, &servinfo)) != 0)
+		{
+			fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+			return -1;
+		}
+
+
+
+		// Create socket set for select
+	fcntl(state->server_info.server_socket, F_SETFL, O_NONBLOCK);
+	
+	total_time_waited = 0;
+	max_wait = state->arguments->ptimeout;
+	results = 0;
+
+	if(max_wait)
+		{
+			VERBOSE( "Announcing server continuing presence...\n" );
+			VERBOSE( "\tAnnouncing server presence every %d seconds.\n", ANNOUNCE_INTERVAL );
+			VERBOSE( "\tServer persisting for %ld more seconds.\n", max_wait );
+		}
+
+	while( total_time_waited < max_wait && results == 0)
+		{
+			DEBUG( "\tTotal Time: %ld\n", total_time_waited );
+			FD_ZERO(&accept_set);
+			FD_SET( state->server_info.server_socket, &accept_set );
+			next_wait = (max_wait - total_time_waited) < ANNOUNCE_INTERVAL ? (max_wait - total_time_waited) : ANNOUNCE_INTERVAL;
+			timeout_tv.tv_sec = next_wait;
+			timeout_tv.tv_usec = 0;
+
+			results = select(0, NULL, NULL, NULL, &timeout_tv);
+			
+			total_time_waited += next_wait;
+
+			memset( message, 0, 512 );
+			sprintf( message, "%s %s %s %s %ld\n",
+					 state->server_info.server_name,
+					 state->server_info.server_port,
+					 state->arguments->uuid,
+					 state->local_file.filename,
+					 max_wait - total_time_waited
+					 );
+			
+			if ((numbytes = sendto(state->oob_info.server_socket,
+						   message, strlen( message ), 0,
+								   servinfo->ai_addr,
+								   servinfo->ai_addrlen)) == -1)
+				{
+					perror("announce server: sendto");
+					freeaddrinfo(servinfo);
+					return -1;
+				}
+			
+			
+		}
+
+		// Final Death message
+	memset( message, 0, 512 );
+	sprintf( message, "%s %s %s %s %s\n",
+			 state->server_info.server_name,
+			 state->server_info.server_port,
+			 state->arguments->uuid,
+			 state->local_file.filename,
+			 "KILLED"
+			 );
+	
+	if ((numbytes = sendto(state->oob_info.server_socket,
+						   message, strlen( message ), 0,
+						   servinfo->ai_addr,
+						   servinfo->ai_addrlen)) == -1)
+		{
+			perror("announce server: sendto");
+			freeaddrinfo(servinfo);
+			return -1;
+		}
+	
+
+
+	VERBOSE( "Goodbye!\n\n" );
+	freeaddrinfo(servinfo);
+	return 0;
+
+}
+
+
 
 
 /*
@@ -651,10 +839,8 @@ int recv_cftp_frame( ServerState* state )
 		  sizeof( cftp_frame ),
 		  MSG_WAITALL );
 
-	#ifdef SERVER_DEBUG
-	fprintf( stderr, "[DEBUG] Read %ld bytes from client on frame_recv.\n", sizeof( cftp_frame ) );
+	DEBUG("Read %ld bytes from client on frame_recv.\n", sizeof( cftp_frame ) );
 	desc_cftp_frame(state, 0 );
-	#endif
 
 	return sizeof( cftp_frame );
 }
@@ -691,8 +877,7 @@ int recv_data_frame( ServerState* state )
 					   state->data_buffer_size,
 					   MSG_WAITALL );
 
-	#ifdef SERVER_DEBUG
-	fprintf( stderr, "[DEBUG] Read %d bytes from client on data_recv.\n", recv_bytes );
+	DEBUG("Read %d bytes from client on data_recv.\n", recv_bytes );
 		/*
     for( i = 0; i < recv_bytes; i ++ )
 		{
@@ -702,8 +887,7 @@ int recv_data_frame( ServerState* state )
 		}
 	fprintf( stderr, "\n" );
 		*/
-	#endif
-
+	
 	return recv_bytes;
 }
 
@@ -718,8 +902,8 @@ send_cftp_frame
 */
 int send_cftp_frame( ServerState* state )
 {
-	int length;
-	int status;
+	int length = 0;
+	int status = 0;
 
 	if( !state->send_rdy )
 		return -1;
@@ -739,15 +923,8 @@ int send_cftp_frame( ServerState* state )
 		}
 	else
 		{
-
-    #ifdef SERVER_DEBUG
-	fprintf( stderr, "[DEBUG] Sent %d bytes to client on frame_send.\n", length );
-	desc_cftp_frame(state, 1 );
-	#endif
-
-	
-	fprintf( stderr, "MARK!\n" );
-
+			DEBUG("Sent %d bytes to client on frame_send.\n", length );
+			desc_cftp_frame(state, 1 );
 			return length;
 		}
 }
@@ -761,8 +938,8 @@ send_data_frame
 */
 int send_data_frame( ServerState* state )
 {
-	int length;
-	int status;
+	int length = 0;
+	int status = 0;
 
 	if( !state->send_rdy )
 		return -1;
@@ -792,13 +969,8 @@ int send_data_frame( ServerState* state )
 			return 0;
 		}
 	else
-		{
-
-    #ifdef SERVER_DEBUG
-	fprintf( stderr, "[DEBUG] Sent %d bytes to client on data_send.\n", length );
-	#endif
-
-
+		{ 
+			DEBUG("Sent %d bytes to client on data_send.\n", length );
 			return length;
 		}
 }
@@ -821,50 +993,50 @@ void desc_cftp_frame( ServerState* state, int send_or_recv)
 	if( send_or_recv == 1 )
 		{
 			frame = &state->fsend_buf;
-			fprintf( stderr, "\tMessage type of Send Frame is " );
+			DEBUG("\tMessage type of Send Frame is " );
 		}
 	else
 		{
 			frame = &state->frecv_buf;
-			fprintf( stderr, "\tMessage type of Recv Frame is " );
+			DEBUG("\tMessage type of Recv Frame is " );
 		}
 	
 	switch( frame->MessageType )
 		{
 		case DSF:
-			fprintf( stderr, "DSF frame.\n" );
+			DEBUG("DSF frame.\n" );
 			break;
 		case DRF:
-			fprintf( stderr, "DRF frame.\n" );
+			DEBUG("DRF frame.\n" );
 			break;
 		case SIF:
-			fprintf( stderr, "SIF frame.\n" );
+			DEBUG("SIF frame.\n" );
 			break;
 		case SAF:
-			fprintf( stderr, "SAF frame.\n" );
+			DEBUG("SAF frame.\n" );
 			break;
 		case SRF:
-			fprintf( stderr, "SRF frame.\n" );
+			DEBUG("SRF frame.\n" );
 			break;
 		case SCF:
-			fprintf( stderr, "SCF frame.\n" );
+			DEBUG("SCF frame.\n" );
 			break;
 		case DTF:
-			fprintf( stderr, "DTF frame.\n" );
-			fprintf( stderr, "\tChunk Number: %ld\n" , ntohll(((cftp_dtf_frame*)frame)->BlockNum) );
+			DEBUG("DTF frame.\n" );
+			DEBUG("\tChunk Number: %ld\n" , ntohll(((cftp_dtf_frame*)frame)->BlockNum) );
 			break;
 		case DAF:
-			fprintf( stderr, "DAF frame.\n" );
-			fprintf( stderr, "\tChunk Number: %ld\n" , ntohll(((cftp_daf_frame*)frame)->BlockNum) );	
+			DEBUG("DAF frame.\n" );
+			DEBUG("\tChunk Number: %ld\n" , ntohll(((cftp_daf_frame*)frame)->BlockNum) );	
 			break;
 		case FFF:
-			fprintf( stderr, "FFF frame.\n" );
+			DEBUG("FFF frame.\n" );
 			break;
 		case FAF:
-			fprintf( stderr, "FAF frame.\n" );
+			DEBUG("FAF frame.\n" );
 			break;
 		default:
-			fprintf( stderr, "Unknown frame.\n" );
+			DEBUG("Unknown frame.\n" );
 			break;
 		}
 

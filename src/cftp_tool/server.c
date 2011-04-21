@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "frames.h"
 #include "server_sm_lib.h"
-
+#include <time.h>
 
 // For command line arguments
 #include <argp.h>
@@ -18,7 +18,7 @@ static char doc[] =
 	"Cluster File Transfer Server - A simple file transfer server designed to be run in parallel across a cluster";
 
 /* A description of the arguments we accept. */
-static char args_doc[] = "[-i TIMEOUT] [-q QUOTA] [-a HOST[:PORT]] [-l HOST[:PORT]] [-t PATH]";
+static char args_doc[] = "[-i TIMEOUT] [-I TIMEOUT[:MAX]] [-q QUOTA] [-a HOST[:PORT]] [-l HOST[:PORT]] [-t PATH]";
 
 	/* The options we understand. */
 static struct argp_option options[] = {
@@ -39,6 +39,12 @@ static struct argp_option options[] = {
 	 "TIMEOUT",
 	 0,
 	 "Do not wait forever for first client connection. Exit after TIMEOUT if no client connects."},
+
+	{"post-timeout",
+	 'I',
+	 "TIMEOUT[:MAX]",
+	 0,
+	 "Wait for TIMEOUT ( or randomly between TIMEOUT and TIMEOUT + MAX ) after transfer before terminating."},
 
 	{"disk-quota",
 	 'q',	
@@ -82,13 +88,36 @@ parse_opt (int key, char *arg, struct argp_state *state)
 		/* Get the input argument from argp_parse, which we
 		   know is a pointer to our arguments structure. */
 	ServerArguments *arguments = state->input;
-	char* port_start;
+	char* sep_start;
 
+	int t_min, t_max;
 
 	switch (key)
 		{
 		case 'i':
 			sscanf( arg, "%d", &arguments->itimeout );
+			break;
+
+		case 'I':
+			sep_start = strrchr( arg, ':' );
+			if( sep_start)
+				{
+					(*sep_start) = 0;
+					sscanf( sep_start+1 , "%d", &t_max);
+					sscanf( arg, "%d", &t_min );
+
+					if( t_max < 0 )
+						t_max = 0;
+
+					arguments->ptimeout = t_min + ( rand() %  ( t_max ) );
+				}
+			else
+				{
+					sscanf( arg, "%d", &arguments->ptimeout );
+				}
+			
+			
+
 			break;
 
 		case 'v':
@@ -105,11 +134,11 @@ parse_opt (int key, char *arg, struct argp_state *state)
 			break;
 
 		case 'a':
-			port_start = strrchr( arg, ':' );
-			if( port_start)
+			sep_start = strrchr( arg, ':' );
+			if( sep_start)
 				{
-					(*port_start) = 0;
-					strcpy( arguments->aport, port_start+1 );
+					(*sep_start) = 0;
+					strcpy( arguments->aport, sep_start+1 );
 				}
 			strcpy( arguments->ahost, arg );
 			
@@ -117,11 +146,11 @@ parse_opt (int key, char *arg, struct argp_state *state)
 			break;
 
 		case 'l':
-			port_start = strrchr( arg, ':' );
-			if(port_start)
+			sep_start = strrchr( arg, ':' );
+			if(sep_start)
 				{
-					(*port_start) = 0;
-					strcpy( arguments->lport, port_start+1 );
+					(*sep_start) = 0;
+					strcpy( arguments->lport, sep_start+1 );
 				}
 
 			strcpy( arguments->lhost, arg );
@@ -164,7 +193,8 @@ static struct argp argp = { options, parse_opt, args_doc, doc };
 
 int main( int argc, char** argv )
 {
-
+	srand ( time(NULL) + clock() );
+	
 	ServerArguments arguments;
      
 	char quotaHR_str[200];
@@ -173,6 +203,7 @@ int main( int argc, char** argv )
 	arguments.debug = 0;
 	arguments.verbose = 0;
 	arguments.itimeout = -1;
+	arguments.ptimeout = 0;
 	arguments.quota = -1;
 	arguments.announce = 0;
 
@@ -218,6 +249,7 @@ int main( int argc, char** argv )
 					"\n\n--OPTIONS--\n"
 					"\tQUOTA            = %ld KB %s\n"
 					"\tINITIAL TIMEOUT  = %d sec\n"
+					"\tPOST TIMEOUT     = %d sec\n"
 					"\tVERBOSE          = %s\n"
 					"\tANNOUNCE HOST    = %s\n"
 					"\tANNOUNCE PORT    = %s\n"
@@ -228,6 +260,7 @@ int main( int argc, char** argv )
 					arguments.quota,
 					quotaHR_str,
 					arguments.itimeout,
+					arguments.ptimeout,
 					arguments.verbose ? "yes" : "no",
 					arguments.ahost,
 					arguments.aport,
