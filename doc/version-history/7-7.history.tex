@@ -55,6 +55,12 @@ after every other node, whether or not the DAG successfully completes.  This
 node cannot be the child of another node, and it cannot be the parent of any
 other node. Only one node can be labeled as \texttt{FINAL}; if more than one
 node is so labeled, the DAG is in error.
+
+% gittrac #659 commit 551785beaa1c0d8689d44368030b9f561b5ddfee
+\item Filip Krikava supplied a patch that limits the number of file descriptors
+that DAGman has open at a time. The reason for creating this capability is that
+DAGman tends to fail on ``wide'' dags, where many jobs are independent, rather
+than being ``linear'', where jobs are highly interdependent.
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
