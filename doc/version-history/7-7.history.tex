@@ -49,6 +49,12 @@ The details of each version are described below.
   which uses the EC2 Query (REST) API to start virtual machines on cloud
   resources.
 
+% gittrac #1482 commit fc3df0c206e4010b50d881cd5642a2386e0c7d9b
+\item A Dagman node can be labeled \texttt{FINAL}, in which case it is executed
+after every other node, whether or not the DAG successfully completes.  This
+node cannot be the child of another node, and it cannot be the parent of any
+other node. Only one node can be labeled as \texttt{FINAL}; if more than one
+node is so labeled, the DAG is in error.
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
