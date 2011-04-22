@@ -25,6 +25,8 @@
 #include "server_sm/teardown.h"
 #include "server_sm/error.h"
 
+#include "client_lib.h"
+
 
 const int STATE_NUM = 100; // Will need to change this later
 const int ANNOUNCE_INTERVAL = 5; // As long as we don't have a client, we should announce presence every X seconds
@@ -656,17 +658,22 @@ int post_transfer_loop( ServerState* state )
 			VERBOSE( "\tServer persisting for %ld more seconds.\n", max_wait );
 		}
 
-	while( total_time_waited < max_wait && results == 0)
+	while( total_time_waited < max_wait )
 		{
 			DEBUG( "\tTotal Time: %ld\n", total_time_waited );
 			FD_ZERO(&accept_set);
-			FD_SET( state->server_info.server_socket, &accept_set );
+			FD_SET( state->oob_info.server_socket, &accept_set );
 			next_wait = (max_wait - total_time_waited) < ANNOUNCE_INTERVAL ? (max_wait - total_time_waited) : ANNOUNCE_INTERVAL;
 			timeout_tv.tv_sec = next_wait;
 			timeout_tv.tv_usec = 0;
 
-			results = select(0, NULL, NULL, NULL, &timeout_tv);
+			results = select(state->oob_info.server_socket+1, &accept_set, NULL, NULL, &timeout_tv);
 			
+			if(results > 0)
+				handle_oob_command( state );
+			if(results == -1)
+				printf( "Error: %s\n", strerror( errno ) );
+
 			total_time_waited += next_wait;
 
 			memset( message, 0, 512 );
@@ -720,7 +727,69 @@ int post_transfer_loop( ServerState* state )
 }
 
 
+/*
 
+
+ handle_oob_command 
+
+*/
+void handle_oob_command( ServerState* state )
+{
+
+	int byte_count;
+	socklen_t fromlen;
+	struct sockaddr_storage addr;
+	char buf[1024];
+	char command[100];
+	char arg1[100];
+	char arg2[100];
+	char arg3[100];
+	char arg4[100];
+	char arg5[100];
+	int num_args;
+
+	DEBUG( "OOB CHANNEL ACTIVATED\n" );
+
+		// Check to see if we are actually getting a command
+	fromlen = sizeof addr;
+	buf[8] = 0;
+	byte_count = readOOB(state->oob_info.server_socket,
+						 buf, 1024, 0,
+						 &addr, &fromlen,
+						 2, '\n'
+						 );
+
+    // If this is not a command we will return
+	if( strncmp( buf, "COMMAND:", 8 )) 
+		{
+			DEBUG( "OOB CHANNEL TERMINATED: No Command Phrase\n" );
+			return;
+		}
+
+
+	VERBOSE( "Received Command: %s...", buf );
+	num_args = sscanf( buf+8, "%s %s %s %s %s %s", command,
+					   arg1, arg2, arg3, arg4, arg5 );
+
+	if( strcmp( command, "SENDTO" ) == 0 && num_args == 3)
+		{
+			VERBOSE( "Executing.\n");
+			
+			
+			transfer_file( arg1,
+						   arg2,
+						   state->local_file.filename );
+		}
+	else
+		{
+			VERBOSE( "Not Recognised.\n" );
+		}
+			
+
+	DEBUG( "OOB CHANNEL TERMINATED\n" );
+	return;
+
+}
 
 /*
 

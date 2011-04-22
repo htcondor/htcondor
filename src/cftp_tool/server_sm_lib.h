@@ -7,7 +7,7 @@
 #define ENTER_STATE if( state->arguments->debug) fprintf(stderr, "[ENTER STATE] %s\n", __func__ );
 #define LEAVE_STATE(a) if( state->arguments->debug) { fprintf(stderr, "[LEAVE STATE] %s -- Condition Flag: %d\n\n\n", __func__, a ); } return a;
 
-#define DEBUG(...) if( state->arguments->debug) { fprintf( stderr,  __VA_ARGS__ ); }
+#define DEBUG(...) if( state->arguments->debug) { fprintf( stderr,  __VA_ARGS__ ); fflush( stderr ); }
 #define VERBOSE(...) if( state->arguments->verbose) { fprintf( stdout, __VA_ARGS__ ); }
 
 
@@ -78,6 +78,7 @@ void start_server( ServerState* state );
 void start_oob( ServerState* state );
 void announce_server( ServerState* state );
 void handle_client( ServerState* state );
+void handle_oob_command( ServerState* state );
 int run_state_machine( StateAction* states, ServerState* state );
 int post_transfer_loop( ServerState* state);
 int transition_table( ServerState* state, int condition_code );

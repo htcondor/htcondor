@@ -1,6 +1,9 @@
 #ifndef CFTP_UTILITIES_H
 #define CFTP_UTILITIES_H
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include <stdio.h>
 
 typedef struct _FileRecord 
@@ -30,6 +33,11 @@ typedef struct _ClientRecord
 
 //sendall - taken from the Beej guide to socket programming
 int sendall(int s, char *buf, int *len);
+
+//readOOB - reads a block of data from UDP socket, with timeouts
+int readOOB(int s, void* buf, int len, int flags,
+			struct sockaddr *from, socklen_t *fromlen,
+			int timeout, char termChar);
 
 //implement the host to network/network to host byte order 
 //conversions for long datatypes
