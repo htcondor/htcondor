@@ -22,7 +22,7 @@ if(NOT WIN_EXEC_NODE_ONLY)
 	condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 
 	condor_exe( condor_vm-gahp "${HeaderFiles};${SourceFiles}" ${C_SBIN}
-	"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${LIBVIRT_FOUND};${LIBXML2_FOUND};${COREDUMPER_FOUND};${ZLIB_FOUND}"
+	"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${LIBVIRT_FOUND};${COREDUMPER_FOUND}"
 	OFF )
 
     if (LINUX AND WANT_FULL_DEPLOYMENT)
