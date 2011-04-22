@@ -271,19 +271,28 @@ sum of the job's executable and all input files.
 \index{ClassAd job attribute!EC2AccessKeyId}
 \index{EC2AccessKeyId!job ClassAd attribute}
 \item[\AdAttr{EC2AccessKeyId}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_access\_key\_id}.
+Defines that path and file name of the file containing the access key.
 
 %%% ClassAd attribute: EC2AmiID
 \index{ClassAd job attribute!EC2AmiID}
 \index{EC2AmiID!job ClassAd attribute}
 \item[\AdAttr{EC2AmiID}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_ami\_id}.
+Identifies the machine image of services compatible with the EC2 Query API.
 
 %%% ClassAd attribute: EC2ElasticIp
 \index{ClassAd job attribute!EC2ElasticIp}
 \index{EC2ElasticIp!job ClassAd attribute}
 \item[\AdAttr{EC2ElasticIp}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_elastic\_ip}.
+Specifies an Elastic IP address to associate with the instance.
 
 %%% ClassAd attribute: EC2InstanceName
 \index{ClassAd job attribute!EC2InstanceName}
@@ -295,13 +304,20 @@ sum of the job's executable and all input files.
 \index{ClassAd job attribute!EC2InstanceType}
 \index{EC2InstanceType!job ClassAd attribute}
 \item[\AdAttr{EC2InstanceType}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_instance\_type}.
+Specifies a service-specific instance type.
 
 %%% ClassAd attribute: EC2KeyPairFile
 \index{ClassAd job attribute!EC2KeyPairFile}
 \index{EC2KeyPairFile!job ClassAd attribute}
 \item[\AdAttr{EC2KeyPairFile}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_key\_pair\_file}.
+Defines that path and file name of the file 
+into which to write the SSH key used to access the image, once it is running. 
 
 %%% ClassAd attribute: EC2RemoteVirtualMachineName
 \index{ClassAd job attribute!EC2RemoteVirtualMachineName}
@@ -313,25 +329,39 @@ sum of the job's executable and all input files.
 \index{ClassAd job attribute!EC2SecretAccessKey}
 \index{EC2SecretAccessKey!job ClassAd attribute}
 \item[\AdAttr{EC2SecretAccessKey}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_secret\_access\_key}.
+Defines that path and file name of the file 
+containing the EC2 Query API's secret access key.
 
 %%% ClassAd attribute: EC2SecurityGroups
 \index{ClassAd job attribute!EC2SecurityGroups}
 \index{EC2SecurityGroups!job ClassAd attribute}
 \item[\AdAttr{EC2SecurityGroups}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_security\_groups}.
+Defines the list of EC2 security groups which should be associated with the job.
 
 %%% ClassAd attribute: EC2UserData
 \index{ClassAd job attribute!EC2UserData}
 \index{EC2UserData!job ClassAd attribute}
 \item[\AdAttr{EC2UserData}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_user\_data}.
+Defines a block of data that can be accessed by the virtual machine.
 
 %%% ClassAd attribute: EC2UserDataFile
 \index{ClassAd job attribute!EC2UserDataFile}
 \index{EC2UserDataFile!job ClassAd attribute}
 \item[\AdAttr{EC2UserDataFile}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_user\_data\_file}.
+Specifies a path and file name of a file containing 
+data that can be accessed by the virtual machine.
 
 %%% ClassAd attribute: EmailAttributes
 \index{ClassAd job attribute!EmailAttributes}
