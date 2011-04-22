@@ -16,9 +16,13 @@
  # 
  ############################################################### 
 
-if ( WITH_AVIARY )
+if (LINUX)
+	option(WITH_AVIARY "Support for aviary SOAP plugins" ON)
+endif()
+
+if ( WITH_AVIARY AND HAVE_EXT_WSO2 )
  
- include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src )
+ include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${WSO2_INCLUDES})
  add_subdirectory( ${CMAKE_CURRENT_SOURCE_DIR}/src )
 
 endif()
