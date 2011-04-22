@@ -51,7 +51,7 @@ if ( WITH_BLAHP )
 		condor_pre_external( BLAHP blahp-1.16.1 "lib;include" "opt/glite")
 		
 		ExternalProject_Add(blahp
-						DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} ${POPT_REF} classads
+						DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} ${POPT_REF}
 					    #-- Download Step ----------
 						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${BLAHP_VER}.tar.gz ${CMD_TERM}
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
@@ -79,6 +79,8 @@ if ( WITH_BLAHP )
 						#--install Step ----------
 						INSTALL_DIR ${BLAHP_INSTALL_LOC}
 						INSTALL_COMMAND cd org.glite.ce.blahp && make install )
+
+		add_dependencies(blahp ${CLASSADS_FOUND})
 
 		### set the install
 		install ( DIRECTORY ${BLAHP_INSTALL_LOC}/opt/glite DESTINATION ${C_LIBEXEC} USE_SOURCE_PERMISSIONS )

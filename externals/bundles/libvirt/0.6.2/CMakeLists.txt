@@ -31,21 +31,22 @@ if (WITH_LIBVIRT)
 		ExternalProject_Add(libvirt
 					DEPENDS ${LIBXML2_REF}
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBVERT_VER}.tar.gz ${CMD_TERM}
+					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBVIRT_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${LIBVIRT_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/${LIBVERT_VER}.tar.gz
-					PATCH_COMMAND cd ${LIBVERT_VER} && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/no_gnutls.patch
+				    URL http://parrot.cs.wisc.edu/externals/${LIBVIRT_VER}.tar.gz
+				    PATCH_COMMAND cd ${LIBVIRT_VER} && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/no_gnutls.patch
 					#--Configure step ----------
-				    CONFIGURE_COMMAND cd ${LIBVERT_VER} && ./configure --prefix=${LIBVERT_INSTALL_LOC} --disable-shared --without-python --without-xen --without-libvirtd --without-remote --without-test --without-uml --without-openvz --without-avahi --without-selinux --without-sasl --with-libxml=${LIBXML2_INSTALL_LOC}
+				    CONFIGURE_COMMAND cd ${LIBVIRT_VER} &&
+				    ./configure --prefix=${LIBVIRT_INSTALL_LOC} --disable-shared --without-python --without-xen --without-libvirtd --without-remote --without-test --without-uml --without-openvz --without-avahi --without-selinux --without-sasl --with-libxml=${LIBXML2_INSTALL_LOC}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd ${LIBVERT_VER} && make
+				    BUILD_COMMAND cd ${LIBVIRT_VER} && make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${LIBVERT_INSTALL_LOC}
-				    INSTALL_COMMAND cd ${LIBVERT_VER} && make install )
+				    INSTALL_DIR ${LIBVIRT_INSTALL_LOC}
+				    INSTALL_COMMAND cd ${LIBVIRT_VER} && make install )
 
 		# Set the target dependencies which the rest of condor depends on.
-		set(LIBVIRT_FOUND "${LIBVERT_INSTALL_LOC}/lib/libvirt.a")
+		set(LIBVIRT_FOUND "${LIBVIRT_INSTALL_LOC}/lib/libvirt.a")
 		
 		condor_post_external( libvirt OFF OFF )
 

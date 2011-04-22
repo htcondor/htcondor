@@ -27,7 +27,7 @@ MACRO (CONDOR_POST_EXTERNAL _TARGET _INC_DIR _LIB_DIR)
 	# if a local built copy exists disable from all build 
 	if ( ${_UP_TARGET}_PREBUILT )  
 		set_target_properties( ${_TARGET} PROPERTIES EXCLUDE_FROM_ALL TRUE)
-		message (STATUS "NOTE: external(${_TARGET}) excluded from all target, cached version exists") 
+		message (STATUS "--> (${_TARGET}): excluded from all target, cached version exists") 
 	else()
 		append_var(CONDOR_EXTERNALS ${_TARGET})
 		append_var(${_UP_TARGET}_REF ${_TARGET})

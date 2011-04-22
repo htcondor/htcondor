@@ -28,7 +28,7 @@ if (WITH_BOOST )
 
   if (NOT PROPER)
 
-		condor_pre_external( BOOST boost_1_39_0 "lib;include" "include/boost-1_39")
+		condor_pre_external( BOOST boost_1_39_0 "lib;include" "include/boost")
 		
 		if (WINDOWS)
 		  # need to expand the configure and

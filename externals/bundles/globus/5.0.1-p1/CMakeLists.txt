@@ -62,7 +62,16 @@ if (WITH_GLOBUS)
 		install ( DIRECTORY ${GT42_INSTALL_LOC}/lib/gt42 DESTINATION ${C_LIB} )
 		condor_post_external( gt42 OFF OFF )
 		###################################################
-		condor_pre_external( GLOBUS globus-5.0.1 "lib;include" "lib/libglobus_gss_assist_${GLOBUS_FLAVOR}.a")
+
+		if(${SYS_ARCH} MATCHES "IA64|X86_64")
+			set( GLOBUS_FLAVOR gcc64dbg )
+		elseif(AIX)
+			set( GLOBUS_FLAVOR vendorcc32dbg )
+		else ()
+			set( GLOBUS_FLAVOR gcc32dbg )
+		endif()
+
+		condor_pre_external( GLOBUS globus-5.0.1 "lib;include" "done")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
@@ -111,14 +120,6 @@ if (WITH_GLOBUS)
 
 		set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF} ${KRB5_REF})
 
-		if(${SYS_ARCH} MATCHES "IA64|X86_64")
-			set( GLOBUS_FLAVOR gcc64dbg )
-		elseif(AIX)
-			set( GLOBUS_FLAVOR vendorcc32dbg )
-		else ()
-			set( GLOBUS_FLAVOR gcc32dbg )
-		endif()
-
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
 		ExternalProject_Add(globus
 							DEPENDS ${GLOBUS_DEPENDS}
@@ -145,7 +146,7 @@ if (WITH_GLOBUS)
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${GLOBUS_INSTALL_LOC}
-							INSTALL_COMMAND echo "done with the craziness that is globus" )
+							INSTALL_COMMAND touch ${GLOBUS_INSTALL_LOC}/done)
 
 			## Set all the config information
 			set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libltdl_${GLOBUS_FLAVOR}.a")

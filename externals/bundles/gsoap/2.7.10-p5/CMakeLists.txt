@@ -22,7 +22,7 @@ if (WITH_GSOAP)
 
 	if ( NOT PROPER )
 
-		condor_pre_external( GSOAP gsoap-2.7.10 "src;include" "src/stdsoap2.cpp")
+		condor_pre_external( GSOAP gsoap-2.7.10 "src;include" "done")
 
 		if (WINDOWS)
 			set (GSOAP_PATCH cp ${CMAKE_CURRENT_SOURCE_DIR}/config.WINDOWS.h gsoap/src/config.h)
@@ -60,22 +60,24 @@ if (WITH_GSOAP)
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${GSOAP_INSTALL_LOC}
-				    INSTALL_COMMAND cd ${GSOAP_VER} ${CMD_TERM} ${GSOAP_INSTALL} )
+				    INSTALL_COMMAND cd ${GSOAP_VER}
+				    ${CMD_TERM} ${GSOAP_INSTALL} ${CMD_TERM}
+				    touch ${GSOAP_INSTALL_LOC}/done )
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (NOT WINDOWS)
 			set(GSOAP_FOUND "${GSOAP_INSTALL_LOC}/lib/libgsoapssl++.a")	
 			set(SOAPCPP2 "${GSOAP_INSTALL_LOC}/bin/soapcpp2")
-		#	condor_post_external( gsoap include OFF )
+			condor_post_external( gsoap include OFF )
 		else(NOT WINDOWS)
-		#    condor_post_external( gsoap include OFF )
+			condor_post_external( gsoap OFF OFF )
 			# gsoap is handled differently on windows
 			set(GSOAP_FOUND ON)
 			set(GSOAP_SRC "${GSOAP_INSTALL_LOC}/src/stdsoap2.cpp" PARENT_SCOPE )
 			set(SOAPCPP2 "${GSOAP_INSTALL_LOC}/soapcpp2.exe")
 		endif(NOT WINDOWS)		
 		
-		set ( GSOAP_SHARE "${GSOAP_INSTALL_LOC}/share/gsoap/plugin" )
+		set ( GSOAP_SHARE "${GSOAP_INSTALL_LOC}/share/gsoap" )
 		set(WSSEAPI "WSSEAPI-NOTFOUND")
 
 	else( NOT PROPER )

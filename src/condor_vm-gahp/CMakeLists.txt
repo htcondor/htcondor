@@ -18,6 +18,8 @@
 
 if(NOT WIN_EXEC_NODE_ONLY)
 
+	include_directories(${LIBVIRT_INCLUDE})
+
 	file( GLOB RmvSrcs *_t.cpp )
 	condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 

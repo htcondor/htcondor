@@ -189,12 +189,11 @@ if ( WITH_CREAM )
 		  set (CREAM_PATCH ${CREAM_PATCH} && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/bsd.patch && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/macos.patch )
 		endif(DARWIN)
 
+	
+	        message (STATUS "****************************CLASSADS_FOUND=${CLASSADS_FOUND}")
 		ExternalProject_Add(cream
-				    DEPENDS ${VOMS_REF} ${CREAMSOAP_REF}
-				    ${BOOST_REF} ${LOG4CPP_REF}
-				    ${GRIDSITE_REF} ${CARES_REF}
-				    ${CREAM_SOAP_PLUGIN_REF} ${CREAM_WSDL_REF} ${CLASSADS_REF}
-				    #-- Download Step ----------
+				    DEPENDS ${VOMS_REF} ${CREAMSOAP_REF} ${BOOST_REF} ${LOG4CPP_REF} ${GRIDSITE_REF} ${CARES_REF} ${CREAM_SOAP_PLUGIN_REF} ${CREAM_WSDL_REF}
+				    #-- Download Step -------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CREAM_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz
@@ -204,7 +203,7 @@ if ( WITH_CREAM )
 				    CONFIGURE_COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/*.m4 org.glite.ce.cream-client-api-c/project &&    
 						cd org.glite.ce.cream-client-api-c &&
 						./bootstrap &&
-						./configure --prefix=${CREAM_INSTALL_LOC} --with-globus-prefix=${GLOBUS_INSTALL_LOC} --with-globus-thr-flavor=${GLOBUS_FLAVOR}pthr --with-globus-nothr-flavor=${GLOBUS_FLAVOR} --with-openssl-prefix=${OPENSSL_INSTALL_LOC} --with-voms-prefix=${VOMS_INSTALL_LOC} --with-boost-prefix=${BOOST_INSTALL_LOC} --with-classads-prefix=${CLASSADS_INSTALL_LOC} --with-log4cpp-prefix=${LOG4CPP_INSTALL_LOC} --with-gsoap-location=${CREAMSOAP_INSTALL_LOC} --with-glite-location=${CREAM_INSTALL_LOC} --with-ce-wsdl-version=1.12.1 --with-delegation-wsdl-version=2.0.0
+						./configure --prefix=${CREAM_INSTALL_LOC} --with-globus-prefix=${GLOBUS_INSTALL_LOC} --with-globus-thr-flavor=${GLOBUS_FLAVOR}pthr --with-globus-nothr-flavor=${GLOBUS_FLAVOR} --with-openssl-prefix=${OPENSSL_INSTALL_LOC} --with-voms-prefix=${VOMS_INSTALL_LOC} --with-boost-prefix=${BOOST_INSTALL_LOC} --with-classads-prefix=${CLASSADS_INSTALL_LOC} --with-log4cpp-prefix=${LOG4CPP_INSTALL_LOC} --with-gsoap-location=${CREAM_INSTALL_LOC} --with-glite-location=${CREAM_INSTALL_LOC} --with-ce-wsdl-version=1.12.1 --with-delegation-wsdl-version=2.0.0
 				    #--Build Step ----------
 				    BUILD_COMMAND cd org.glite.ce.cream-client-api-c && make
 				    BUILD_IN_SOURCE 1
@@ -213,6 +212,9 @@ if ( WITH_CREAM )
 				    INSTALL_COMMAND cd org.glite.ce.cream-client-api-c &&
 						make install
 				)
+
+		
+		add_dependencies(cream ${CLASSADS_FOUND})
 
 		set (BOOST_LIB ${BOOST_INSTALL_LOC}/lib/libboost_thread.a)
 		set(CREAM_FOUND "${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_soap.a;${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_util.a;${CREAM_INSTALL_LOC}/lib/libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a;${CREAM_INSTALL_LOC}/lib/libglite_security_gss_${GLOBUS_FLAVOR}pthr.a;${LOG4CPP_INSTALL_LOC}/lib/liblog4cpp.a;${CREAM_INSTALL_LOC}/lib/libgridsite.a;${BOOST_LIB};${CREAM_INSTALL_LOC}/lib/libcares.a")

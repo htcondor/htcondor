@@ -16,6 +16,10 @@
  # 
  ############################################################### 
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+#####################################################################
+## set var using master config
 add_definitions(-DCLASSAD_DISTRIBUTION -DWANT_CLASSAD_NAMESPACE=1 )
 
 # disable PCRE build unless dep added to externals.
@@ -33,9 +37,13 @@ endif()
 if (HAVE_DLFCN_H)
 	add_definitions(-DHAVE_DLFCN_H)
 endif()
+##
+#####################################################################
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${EXTERNAL_STAGE}/include )
-
+#####################################################################
+# treat like an external for others to use
+condor_pre_external( CLASSADS classads-1.0.10 "lib;include" "alwaysbuild")
+#####################################################################
 
 if (NOT WINDOWS)
 
@@ -52,6 +60,7 @@ if (NOT WINDOWS)
 	endif()
   endif()
 
+  ###### change here if you want to link condor to the shared version
   set (CLASSADS_FOUND classads)
 
   ###### Test executables
@@ -59,10 +68,11 @@ if (NOT WINDOWS)
   condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND}" OFF)
   condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND}" OFF)
   
+  ##### extra link library when ld is present
   if(HAVE_DLFCN_H)
 	target_link_libraries(classad -ldl)
-    target_link_libraries(classad_functional_tester -ldl)
-    target_link_libraries(classad_version -ldl)
+	target_link_libraries(classad_functional_tester -ldl)
+	target_link_libraries(classad_version -ldl)
   endif()
 
   ###### Install elements with our distribution
@@ -73,10 +83,11 @@ else()
 	# windows specific configuration.
 	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
 	add_library( classads STATIC ${ClassadSrcs} )
-	set_property( TARGET classads PROPERTY FOLDER "libraries" )
-    set (CLASSADS_FOUND classads)
+	set (CLASSADS_FOUND classads)
 
 endif()
+
+condor_post_external( ${CLASSADS_FOUND} include OFF )
 
 # standard output message used to slog users.  
 message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
@@ -84,6 +95,9 @@ message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
 # finally add dependencies if there are any
 if (NOT PROPER)
 
+  file( COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${CLASSADS_INSTALL_LOC}/include )
+  file( COPY ${PCRE_FOUND} DESTINATION ${CLASSADS_INSTALL_LOC}/lib )
+  
   if(PCRE_REF)
 	add_dependencies( ${CLASSADS_FOUND} PCRE_REF )
   endif()
@@ -92,9 +106,9 @@ if (NOT PROPER)
   ############################################################################## 
   # the only reason this exists is b/c our externals depend on it  
   set_target_properties( classads
-	PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${EXTERNAL_STAGE}/lib 
-	LIBRARY_OUTPUT_DIRECTORY ${EXTERNAL_STAGE}/lib
-	RUNTIME_OUTPUT_DIRECTORY ${EXTERNAL_STAGE}/lib
+	PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
+	LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
+	RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
 	OUTPUT_NAME classad)
   endif()
 
