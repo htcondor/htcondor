@@ -15,6 +15,7 @@
  # limitations under the License. 
  # 
  ############################################################### 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -36,6 +37,7 @@ endif()
 
 if (HAVE_DLFCN_H)
 	add_definitions(-DHAVE_DLFCN_H)
+	set (DL_FOUND -ldl)
 endif()
 ##
 #####################################################################
@@ -53,28 +55,17 @@ if (NOT WINDOWS)
   if (LINUX)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
 	set_target_properties( classad PROPERTIES VERSION 1.0.2 SOVERSION 1 )
-	if (NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  		install( TARGETS classad DESTINATION ${C_LIB} )
-	else()
-		install( TARGETS classad DESTINATION ${CMAKE_INSTALL_LIBDIR} )
-	endif()
+	install( TARGETS classad DESTINATION ${C_LIB} )
   endif()
 
   ###### change here if you want to link condor to the shared version
   set (CLASSADS_FOUND classads)
 
   ###### Test executables
-  condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND}")
-  condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND}" OFF)
-  condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND}" OFF)
+  condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}")
+  condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
+  condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
   
-  ##### extra link library when ld is present
-  if(HAVE_DLFCN_H)
-	target_link_libraries(classad -ldl)
-	target_link_libraries(classad_functional_tester -ldl)
-	target_link_libraries(classad_version -ldl)
-  endif()
-
   ###### Install elements with our distribution
   install( TARGETS classads DESTINATION ${C_LIB} )
   install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${C_INCLUDE} )
@@ -105,6 +96,7 @@ if (NOT PROPER)
   if (NOT WINDOWS)
   ############################################################################## 
   # the only reason this exists is b/c our externals depend on it  
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${EXTERNAL_STAGE}/include )
   set_target_properties( classads
 	PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
 	LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
