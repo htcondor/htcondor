@@ -1307,8 +1307,11 @@ open_debug_file(int debug_level, const char flags[])
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
-
+#ifdef WIN32
 	DebugFPs[debug_level] = fp;
+#else
+	DebugFP = fp;
+#endif
 
 	return fp;
 }
