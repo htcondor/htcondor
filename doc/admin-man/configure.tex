@@ -6509,13 +6509,15 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:GroupDynamicMachConstraint}
 \item[\Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}]
-  This optional expression specifies which machine ads should be counted
-  when computing the size of the pool for purposes of group quota
-  allocation.  The default is to count all machine ads.  When extra slots
-  exist for special purposes (e.g. suspension slots or file transfer slots),
-  this expression can be used to inform the negotiator that only ``normal''
-  slots should be counted when computing how big each group's share of
-  the pool should be.
+  This optional expression specifies which machine ClassAds should be counted
+  when computing the size of the pool,
+  for purposes of group quota allocation.
+  The default is to count all machine ClassAds.
+  When extra slots exist for special purposes,
+  as, for example, suspension slots or file transfer slots,
+  this expression can be used to inform the \Condor{negotiator} that 
+  only normal slots should be counted when computing how big each group's 
+  share of the pool should be.
 
 \label{param:NegotiatorDebug}
 \item[\Macro{NEGOTIATOR\_DEBUG}]
