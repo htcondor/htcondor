@@ -979,6 +979,27 @@ the job is evicted without a checkpoint.
 a string containing a name of
 a signal to be sent to the job if the job is removed.
 
+%%% ClassAd attribute: RequestCpus
+\index{ClassAd job attribute!RequestCpus}
+\index{RequestCpus!job ClassAd attribute}
+\item[\AdAttr{RequestCpus}:]  The number of CPUs requested for this job;
+utilized when dynamic \Condor{startd} provisioning is enabled.
+
+%%% ClassAd attribute: RequestDisk
+\index{ClassAd job attribute!RequestDisk}
+\index{RequestDisk!job ClassAd attribute}
+\item[\AdAttr{RequestDisk}:]  The amount of disk space in Kbytes requested 
+for this job; utilized when dynamic \Condor{startd} provisioning is enabled.
+
+%%% ClassAd attribute: RequestMemory
+\index{ClassAd job attribute!RequestMemory}
+\index{RequestMemory!job ClassAd attribute}
+\item[\AdAttr{RequestMemory}:]  The amount of memory space in Mbytes 
+requested for this job;
+results in setting an initial value for the job ClassAd attribute 
+\Attr{ImageSize}.
+Utilized when dynamic \Condor{startd} provisioning is enabled.
+
 %%% ClassAd attribute: ResidentSetSize
 \index{ClassAd job attribute!ResidentSetSize}
 \index{ResidentSetSize!job ClassAd attribute}

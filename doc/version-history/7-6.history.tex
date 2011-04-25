@@ -16,6 +16,78 @@ New features will be added in the 7.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-1}Version 7.6.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.1 not yet released.
+%\item Condor version 7.X.X released on Month Date, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+% gittrac #2059
+\item \Condor{q} \Opt{-analyze} failed to provide detailed analysis of
+the job's requirements expression when the expression contained ClassAd
+function calls in some cases. 
+
+%gittrac #2013
+\item Fixed a segmentation fault bug introduced in Condor version 7.5.5,
+in the checkpoint and restart of jobs using compressed checkpoint images
+under the standard universe.
+By default, Condor will not compress checkpoints under the standard universe.
+Jobs which do not compress their checkpoints were immune to this bug.  
+Compressed checkpoints are only available in 32-bit versions of Condor.
+Generation of checkpoints in 64-bit versions of Condor are unaffected.
+
+% gittrac #2069
+\item In Condor 7.6.0, the \Condor{schedd} would create a spool directory
+for every job. The previous behavior has now been restored (create a spool
+directory only when needed).
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-6-0}Version 7.6.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,8 +95,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.6.0 not yet released.
-%\item Condor version 7.6.0 released on Month Date, 2011.
+\item Condor version 7.6.0 released on April 19, 2011.
 
 % gittrac #2016
 \item Prior to Condor version 7.5.0, commenting out \MacroNI{PREEN} in the
@@ -95,6 +166,17 @@ for definitions of these job ClassAd attributes.
   or by the job via 
   \SubmitCmd{java\_vm\_args} in the submit description file
   as described in section~\ref{sec:Java}.
+
+% gittrac #2066
+\item The configuration variable \Macro{TRUST\_UID\_DOMAIN}
+  was set to \Expr{True} in the default \File{condor\_config.local}
+  in the rpm and debian packages.  This is no longer the case.
+  This setting will therefore use the default value \Expr{False}.
+
+\item The configuration variable \Macro{NEGOTIATOR\_INTERVAL} was set
+  to 20 in the default \File{condor\_config.local} in the rpm and
+  debian packages.  This is no longer the case.  This setting
+  therefore will use the default value 60.
 
 \end{itemize}
 

@@ -6508,6 +6508,18 @@ These macros affect the \Condor{negotiator}.
   If utilized attributes will change during the 
   negotiation period time interval, then set this variable to \Expr{False}.
 
+\label{param:GroupDynamicMachConstraint}
+\item[\Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}]
+  This optional expression specifies which machine ClassAds should be counted
+  when computing the size of the pool,
+  for purposes of group quota allocation.
+  The default is to count all machine ClassAds.
+  When extra slots exist for special purposes,
+  as, for example, suspension slots or file transfer slots,
+  this expression can be used to inform the \Condor{negotiator} that 
+  only normal slots should be counted when computing how big each group's 
+  share of the pool should be.
+
 \label{param:NegotiatorDebug}
 \item[\Macro{NEGOTIATOR\_DEBUG}]
   This macro (and other settings related to debug logging in the negotiator) is
@@ -7504,8 +7516,8 @@ the HDFS XML configuration.
 
   \begin{itemize}
   \item{directory \File{lib}},
-  containing all necessary jar files for the execution of Name-nodes
-  and Data-nodes.
+  containing all necessary jar files for the execution of a Name node
+  and Data nodes.
   \item{directory \File{conf}},
   containing default Hadoop file system configuration files with names that
   conform to \Expr{*-site.xml}.
@@ -7516,21 +7528,21 @@ the HDFS XML configuration.
 
 \label{param:HDFSNamenode}
 \item[\Macro{HDFS\_NAMENODE}]
-  The host and port number for the HDFS Name-node.
+  The host and port number for the HDFS Name node.
   There is no default value for this required variable.
   Defines the value of \Expr{fs.default.name} in the HDFS XML configuration.
 
 \label{param:HDFSNamenodeWeb}
 \item[\Macro{HDFS\_NAMENODE\_WEB}]
   The IP address and port number for the HDFS embedded web server within the
-  Name-node with the syntax of \Expr{a.b.c.d:portnumber}.
+  Name node with the syntax of \Expr{a.b.c.d:portnumber}.
   There is no default value for this required variable.
   Defines the value of \Expr{dfs.http.address} in the HDFS XML configuration.
 
 \label{param:HDFSNamenodeWeb}
 \item[\Macro{HDFS\_DATANODE\_WEB}]
   The IP address and port number for the HDFS embedded web server within the
-  Name-node with the syntax of \Expr{a.b.c.d:portnumber}.
+  Name node with the syntax of \Expr{a.b.c.d:portnumber}.
   The default value for this optional variable is 0.0.0.0:0, which means
   bind to the default interface on a dynamic port.
   Defines the value of \Expr{dfs.datanode.http.address} in 
@@ -7538,32 +7550,59 @@ the HDFS XML configuration.
 
 \label{param:HDFSNamenodeDir}
 \item[\Macro{HDFS\_NAMENODE\_DIR}]
-  The path to the directory on a local file system where the Name-node will
+  The path to the directory on a local file system where the Name node will
   store its meta-data for file blocks.
   There is no default value for this variable; it is required to be defined
-  for the Name-node machine.
+  for the Name node machine.
   Defines the value of \Expr{dfs.name.dir} in the HDFS XML configuration.
 
 \label{param:HDFSDatanodeDir}
 \item[\Macro{HDFS\_DATANODE\_DIR}]
-  The path to the directory on a local file system where the Data-node will
+  The path to the directory on a local file system where the Data node will
   store file blocks.
   There is no default value for this variable; it is required to be defined
-  for a Data-node machine.
+  for a Data node machine.
   Defines the value of \Expr{dfs.data.dir} in the HDFS XML configuration.
 
 \label{param:HDFSDatanodeAddress}
 \item[\Macro{HDFS\_DATANODE\_ADDRESS}]
-  The IP address and port number of this machine's Data-node.
+  The IP address and port number of this machine's Data node.
   There is no default value for this variable; it is required to be defined
-  for a Data-node machine, and may be given the value \Expr{0.0.0.0:0}
-  as a Data-node need not be running on a known port.
+  for a Data node machine, and may be given the value \Expr{0.0.0.0:0}
+  as a Data node need not be running on a known port.
   Defines the value of \Expr{dfs.datanode.address} in the HDFS XML
- configuration.
+  configuration.
 
-\label{param:HDFSServices}
-\item[\Macro{HDFS\_SERVICES}]
-  A host name, to identify the machine acting as the Name-node.
+\label{param:HDFS}
+\item[\Macro{HDFS\_NODETYPE}]
+  A host name, to identify the machine acting as the Name node.
+
+\label{param:HDFSBackupnode}
+\item[\Macro{HDFS\_BACKUPNODE}]
+  The host address and port number for the HDFS Backup node.
+  There is no default value.
+  It defines the value of the HDFS dfs.namenode.backup.address
+  field in the HDFS XML configuration file.
+
+\label{param:HDFSBackupnodeWeb}
+\item[\Macro{HDFS\_BACKUPNODE\_WEB}]
+  The address and port number for the HDFS embedded web server 
+  within the Backup node,
+  with the syntax of hdfs://<host\_address>:<portnumber>.
+  There is no default value for this required variable. 
+  It defines the value of dfs.namenode.backup.http-address in the 
+  HDFS XML configuration. 
+
+\label{param:HDFSNamenodeRole}
+\item[\Macro{HDFS\_NAMENODE\_ROLE}]
+  If this machine is selected to be the Name node,
+  then the role must be defined. 
+  Possible values are \Expr{ACTIVE}, \Expr{BACKUP}, \Expr{CHECKPOINT}, 
+  and \Expr{STANDBY}.
+  The default value is \Expr{ACTIVE}.
+  The \Expr{STANDBY} value exists for future expansion.
+  If \MacroNI{HDFS\_NODETYPE} is selected to be Data node
+  (\MacroNI{HDFS\_DATANODE}), then this variable is ignored.  
 
 \label{param:HDFSLog4j}
 \item[\Macro{HDFS\_LOG4J}]
