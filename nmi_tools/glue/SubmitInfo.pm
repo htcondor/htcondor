@@ -1182,3 +1182,8 @@ if (!defined($main::slaved_module)) {
 }
 
 1;
+
+### Local Variables: ***
+### mode:perl ***
+### tab-width: 4  ***
+### End: ***
