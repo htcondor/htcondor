@@ -226,6 +226,8 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 	int my_pid;
 	int my_tid;
 	int start_pos;
+	FILE *local_fp;
+	int fopen_rc = 1;
 
 		/* Print the message with the time and a nice identifier */
 	if( ((mask_flags|flags) & D_NOHEADER) == 0 ) {
@@ -246,9 +248,20 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 		}
 
 		if ( (mask_flags|flags) & D_FDS ) {
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:%d) ", fileno(fp) );
+			//Regardless of whether we're keeping the log file pen our not, we open
+			//the NULL file for the FD number.
+			if( (local_fp=safe_fopen_wrapper(NULL_FILE,"r",0644)) == NULL )
+			{
+				local_fp = fp;
+				fopen_rc = 0;
+			}
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:%d) ", fileno(local_fp) );
 			if( rc < 0 ) {
 				sprintf_errno = errno;
+			}
+			if(fopen_rc)
+			{
+				fopen_rc = fclose_wrapper(local_fp, FCLOSE_RETRY_MAX);
 			}
 		}
 
@@ -836,10 +849,13 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			 * we do not go back to the old priv state until we call the
 			 * two functions.
 			 */
-			debug_close_lock();
-			debug_close_file(debug_level);
-			_set_priv(priv, __FILE__, __LINE__, 0);
-			return debug_lock(debug_level, mode, 1);
+			if(DebugLock)
+			{
+				debug_close_lock();
+				debug_close_file(debug_level);
+				_set_priv(priv, __FILE__, __LINE__, 0);
+				return debug_lock(debug_level, mode, 1);
+			}
 		}
 
 		// Casting length to int to get rid of compile warning.
@@ -1068,13 +1084,6 @@ preserve_log_file(int debug_level)
 
 	fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
 	debug_file_ptr = NULL;
-#ifdef WIN32
-	DebugFPs[debug_level] = NULL;
-	debug_file_ptr = DebugFPs[debug_level];
-#else
-	DebugFP = NULL;
-	debug_file_ptr = DebugFP;
-#endif
 
 	result = rotateTimestamp(timestamp, MaxLogNum[debug_level]);
 
