@@ -71,6 +71,8 @@ our %build_and_test_sets = (
 		'x86_64_fedora_14-updated',
 		'x86_64_opensuse_11.3-updated',
 		'x86_64_opensuse_11.4-updated',
+		'x86_freebsd_7.4',
+		'x86_64_freebsd_8.2',
 	],
 	
 	'stduniv' => [
@@ -938,13 +940,62 @@ our %submit_info = (
 				@default_test_configure_args
 					
 			},
-					'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-					'testclass' => [ @default_testclass ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'testclass' => [ @default_testclass ],
 		},
 	},
-	'x86_64_opensuse_11.3-updated' => 'x86_64_opensuse_11.3',
-	'x86_64_opensuse_11.4'		   => 'x86_64_opensuse_11.3',
-	'x86_64_opensuse_11.4-updated' => 'x86_64_opensuse_11.4',
+	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
+	'x86_64_opensuse_11.4'				=> 'x86_64_opensuse_11.3',
+	'x86_64_opensuse_11.4-updated'		=> 'x86_64_opensuse_11.4',
+
+
+	##########################################################################
+	# Platform FreeBSD 7.4 on x86
+	##########################################################################
+	'x86_freebsd_7.4'		=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+				'-DWITH_CURL:BOOL=OFF' => undef,
+				'-DWITH_EXPAT:BOOL=ON' => undef,
+				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
+				'-DWITH_LIBXML2:BOOL=ON' => undef,
+			},
+			'prereqs'	=> [ 'tar-1.14',
+							 'patch-2.6.1',
+							 'cmake-2.8.3',
+							 'flex-2.5.4a',
+							 'make-3.80',
+							 'byacc-1.9',
+							 'bison-1.25',
+							 'wget-1.9.1',
+							 'm4-1.4.1',
+				],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => {
+				@default_test_configure_args
+				
+			},
+			'prereqs'	=> [ 'tar-1.14',
+							 'patch-2.6.1',
+							 'cmake-2.8.3',
+							 'flex-2.5.4a',
+							 'make-3.80',
+							 'byacc-1.9',
+							 'bison-1.25',
+							 'wget-1.9.1',
+							 'm4-1.4.1',
+				],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+	'x86_64_freebsd_7.4'		=> 'x86_freebsd_7.4',
+	'x86_freebsd_8.2'			=> 'x86_freebsd_7.4',
+	'x86_64_freebsd_8.2'		=> 'x86_freebsd_7.4',
 );
 
 while( 1 ) {
