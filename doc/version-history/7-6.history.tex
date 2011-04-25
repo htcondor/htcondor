@@ -68,6 +68,10 @@ Generation of checkpoints in 64-bit versions of Condor are unaffected.
 for every job. The previous behavior has now been restored (create a spool
 directory only when needed).
 
+%gittrac #2086
+\item Fixed a bug introduced in 7.5.2 that caused the \Condor{negotiator}
+daemon to crash if any machine ads contained circular attribute references.
+
 \end{itemize}
 
 \noindent Known Bugs:
