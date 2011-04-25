@@ -219,7 +219,7 @@ if ( WITH_CREAM )
 		set (BOOST_LIB ${BOOST_INSTALL_LOC}/lib/libboost_thread.a)
 		set(CREAM_FOUND "${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_soap.a;${CREAM_INSTALL_LOC}/lib/libglite_ce_cream_client_util.a;${CREAM_INSTALL_LOC}/lib/libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a;${CREAM_INSTALL_LOC}/lib/libglite_security_gss_${GLOBUS_FLAVOR}pthr.a;${LOG4CPP_INSTALL_LOC}/lib/liblog4cpp.a;${CREAM_INSTALL_LOC}/lib/libgridsite.a;${BOOST_LIB};${CREAM_INSTALL_LOC}/lib/libcares.a")
 
-		condor_post_external( cream OFF OFF )
+		condor_post_external( cream include OFF )
 
 		message (STATUS "external configured (CREAM_FOUND=${CREAM_FOUND})")
 

@@ -44,7 +44,7 @@ if (WITH_LIBDELTACLOUD)
 		# Set the target dependencies which the rest of condor depends on.
 		set(LIBDELTACLOUD_FOUND "${LIBDELTACLOUD_INSTALL_LOC}/lib/libdeltacloud.a")
 
-		condor_post_external( libdeltacloud OFF OFF )
+		condor_post_external( libdeltacloud include OFF )
 
 	else( NOT PROPER )
 

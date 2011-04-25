@@ -48,7 +48,7 @@ if (WITH_LIBVIRT)
 		# Set the target dependencies which the rest of condor depends on.
 		set(LIBVIRT_FOUND "${LIBVIRT_INSTALL_LOC}/lib/libvirt.a")
 		
-		condor_post_external( libvirt OFF OFF )
+		condor_post_external( libvirt include OFF )
 
 	endif( NOT PROPER AND NOT LIBVIRT_FOUND )
 
