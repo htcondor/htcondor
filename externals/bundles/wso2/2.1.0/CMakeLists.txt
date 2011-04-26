@@ -21,6 +21,13 @@ endif()
 
 if (WITH_WSO2)
 
+	# hackiness for /usr/lib64 softlink later
+	if ( ${SYS_ARCH} STREQUAL "X86_64" )
+		set (WS02_LIB_ROOT "/usr/lib64")
+	else()
+		set (WS02_LIB_ROOT "/usr/lib")
+	endif ()
+
 	if ( NOT PROPER )
 
 		set ( WSO2_VER wso2-2.0.1 )
@@ -81,6 +88,7 @@ if (WSO2_FOUND)
 	message (STATUS "external configured (WSO2_FOUND=${WSO2_FOUND})")
 	set( WSO2_FOUND ${WSO2_FOUND} PARENT_SCOPE )
 	set( HAVE_EXT_WSO2 ON PARENT_SCOPE )
+	set( WS02_LIB_ROOT ${WS02_LIB_ROOT} PARENT_SCOPE )
 else()
 	message (STATUS "external skipped (wso2)")
 endif()
