@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+/*
+ * Copyright 2000-2011 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://grid.redhat.com/aviary-query/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:qry="http://query.aviary.grid.redhat.com" xmlns:ns="http://common.aviary.grid.redhat.com" targetNamespace="http://grid.redhat.com/aviary-query/" name="aviary-query">
+	<wsdl:types>
+		<xsd:schema targetNamespace="http://grid.redhat.com/aviary-query/">
+			<xsd:import schemaLocation="aviary-query.xsd" namespace="http://query.aviary.grid.redhat.com"/>
+		</xsd:schema>
+	</wsdl:types>
+	<wsdl:message name="GetJobSummaryRequest">
+		<wsdl:part name="parameters" element="qry:GetJobSummary"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobSummaryResponse">
+		<wsdl:part name="parameters" element="qry:GetJobSummaryResponse"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobStatusRequest">
+		<wsdl:part name="parameters" element="qry:GetJobStatus"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobStatusResponse">
+		<wsdl:part name="parameters" element="qry:GetJobStatusResponse"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobDetailsRequest">
+		<wsdl:part name="parameters" element="qry:GetJobDetails"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobDetailsResponse">
+		<wsdl:part name="parameters" element="qry:GetJobDetailsResponse"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobDataRequest">
+		<wsdl:part name="parameters" element="qry:GetJobData"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobDataResponse">
+		<wsdl:part name="parameters" element="qry:GetJobDataResponse"/>
+	</wsdl:message>
+	<wsdl:message name="GetSubmissionSummaryRequest">
+		<wsdl:part name="parameters" element="qry:GetSubmissionSummary"/>
+	</wsdl:message>
+	<wsdl:message name="GetSubmissionSummaryResponse">
+		<wsdl:part name="parameters" element="qry:GetSubmissionSummaryResponse"/>
+	</wsdl:message>
+	<wsdl:portType name="AviaryQuery">
+		<wsdl:operation name="getJobSummary">
+			<wsdl:input message="tns:GetJobSummaryRequest"/>
+			<wsdl:output message="tns:GetJobSummaryResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="getJobStatus">
+			<wsdl:input message="tns:GetJobStatusRequest"/>
+			<wsdl:output message="tns:GetJobStatusResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="getJobDetails">
+			<wsdl:input message="tns:GetJobDetailsRequest"/>
+			<wsdl:output message="tns:GetJobDetailsResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="getJobData">
+			<wsdl:input message="tns:GetJobDataRequest"/>
+			<wsdl:output message="tns:GetJobDataResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="getSubmissionSummary">
+			<wsdl:input message="tns:GetSubmissionSummaryRequest"/>
+			<wsdl:output message="tns:GetSubmissionSummaryResponse"/>
+		</wsdl:operation>
+	</wsdl:portType>
+	<wsdl:binding name="AviaryQuerySOAPBinding" type="tns:AviaryQuery">
+		<soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+		<wsdl:operation name="getJobSummary">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-query/job/summary"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="getJobStatus">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-query/job/status"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="getJobDetails">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-query/job/details"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="getJobData">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-query/job/data"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="getSubmissionSummary">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-query/job/submission"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:binding>
+	<wsdl:service name="AviaryQueryService">
+		<wsdl:port name="AviaryQuerySOAPPort" binding="tns:AviaryQuerySOAPBinding">
+			<soap:address location="http://localhost"/>
+		</wsdl:port>
+	</wsdl:service>
+</wsdl:definitions>
