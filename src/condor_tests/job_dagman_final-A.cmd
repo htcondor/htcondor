@@ -1,7 +1,7 @@
 executable = /bin/echo
-output = A.$(cluster).out
-error = A.$(cluster).err
-log = A.$(cluster).log
+output = $(job).out
+error = $(job).err
+log = submit-A.log
 arguments = OK done with A
-universe = vanilla
+universe = scheduler
 queue
