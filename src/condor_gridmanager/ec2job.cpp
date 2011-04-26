@@ -154,6 +154,13 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	numSubmitAttempts = 0;
 	myResource = NULL;
 	gahp = NULL;
+	m_public_key_file = NULL;
+	m_private_key_file = NULL;
+	m_user_data = NULL;
+	m_user_data_file = NULL;
+	m_group_names = NULL;
+	m_instance_type = NULL;
+	m_elastic_ip = NULL;
 	
 	// check the public_key_file
 	buff[0] = '\0';
@@ -188,8 +195,6 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 		// at the attribute in a better way.
 
 	memset(buff, 0, 16385);
-	m_user_data = NULL;
-	m_user_data_file = NULL;	
 	
 	// if user assigns both user_data and user_data_file, the two will
 	// be concatenated by the gahp
@@ -202,14 +207,13 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	
 	// get VM instance type
 	memset(buff, 0, 16385);
-	m_instance_type = NULL; // if clients don't assign this value in condor submit file,
-							// we should set the default value to NULL and gahp_server
-							// will start VM in EC2 using m1.small mode.
+	// if clients don't assign this value in condor submit file,
+	// we should set the default value to NULL and gahp_server
+	// will start VM in EC2 using m1.small mode.
 	if ( jobAd->LookupString( ATTR_EC2_INSTANCE_TYPE, buff ) ) {
 		m_instance_type = strdup(buff);	
 	}
 	
-	m_group_names = NULL;
 	m_vm_check_times = 0;
 	m_keypair_check_times = 0;
 
