@@ -221,6 +221,37 @@ Triggerd::init()
    triggerCollection = new ClassAdCollection(trigger_log.c_str());
    free(dataDir);
 
+   settings.host = std::string(host);
+   settings.port = port;
+   settings.username = std::string(username);
+   settings.password = std::string(password);
+   settings.mechanism = std::string(mechanism);
+
+   // Initialize the QMF agent
+   singleton = new ManagementAgent::Singleton();
+   ManagementAgent* agent = singleton->getInstance();
+
+   CondorTriggerService::registerSelf(agent);
+   CondorTrigger::registerSelf(agent);
+   EventCondorTriggerNotify::registerSelf(agent);
+
+   agent->setName("com.redhat.grid","condortriggerservice", daemonName.c_str());
+   agent->init(settings, interval, true, storefile);
+   mgmtObject = new CondorTriggerService(agent, this);
+
+   // Initialize the QMF console, if desired
+   enable_console = param_boolean("ENABLE_ABSENT_NODES_DETECTION", false);
+   if (true == enable_console)
+   {
+      console = new TriggerConsole();
+      console->config(host, port, username, password, mechanism);
+   }
+
+   free(host);
+   free(username);
+   free(password);
+   free(mechanism);
+
    // Initialize the triggers if any already exist
    triggerCollection->StartIterateAllClassAds();
    while(true == triggerCollection->IterateAllClassAds(ad, key))
@@ -237,40 +268,8 @@ Triggerd::init()
       }
    }
 
-   singleton = new ManagementAgent::Singleton();
-   ManagementAgent* agent = singleton->getInstance();
-
-   CondorTriggerService::registerSelf(agent);
-   CondorTrigger::registerSelf(agent);
-   EventCondorTriggerNotify::registerSelf(agent);
-
-   mgmtObject = new CondorTriggerService(agent, this);
-
-   settings.host = std::string(host);
-   settings.port = port;
-   settings.username = std::string(username);
-   settings.password = std::string(password);
-   settings.mechanism = std::string(mechanism);
-
-   // Initialize the QMF agent
-   agent->setName("com.redhat.grid","condortriggerservice", daemonName.c_str());
-   agent->init(settings, interval, true, storefile);
-
-   // Initialize the QMF console, if desired
-   enable_console = param_boolean("ENABLE_ABSENT_NODES_DETECTION", false);
-   if (true == enable_console)
-   {
-      console = new TriggerConsole();
-      console->config(host, port, username, password, mechanism);
-   }
-
-   free(host);
-   free(username);
-   free(password);
-   free(mechanism);
-
-   bool _lifetime = param_boolean("QMF_IS_PERSISTENT", true);
-   agent->addObject(mgmtObject, daemonName.c_str(), _lifetime);
+   bool lifetime = param_boolean("QMF_IS_PERSISTENT", true);
+   agent->addObject(mgmtObject, daemonName.c_str(), lifetime);
 
    // Create a socket to handle management method calls
    sock = new ReliSock;

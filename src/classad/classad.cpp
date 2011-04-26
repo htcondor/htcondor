@@ -968,7 +968,15 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
                         refs.insert( fullName );
                         return true;
                     } else {
-                        return( _GetExternalReferences( tree, ad, state, refs, fullNames ));
+                        if( state.depth_remaining <= 0 ) {
+                            return false;
+                        }
+                        state.depth_remaining--;
+
+                        bool ret = _GetExternalReferences( tree, ad, state, refs, fullNames );
+
+                        state.depth_remaining++;
+                        return ret;
                     }
                 }
                     // otherwise, if the tree didn't evaluate to a classad,
@@ -992,7 +1000,15 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 
                 case EVAL_OK: {
                         // attr is internal; find external refs in result
-					bool rval=_GetExternalReferences(result,ad,state,refs,fullNames);
+                    if( state.depth_remaining <= 0 ) {
+                        state.curAd = curAd;
+                        return false;
+                    }
+                    state.depth_remaining--;
+
+                    bool rval=_GetExternalReferences(result,ad,state,refs,fullNames);
+
+                    state.depth_remaining++;
 					state.curAd = curAd;
 					return( rval );
 				}
@@ -1043,7 +1059,15 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 
             ((const ClassAd*)expr)->GetComponents( attrs );
             for( itr = attrs.begin( ); itr != attrs.end( ); itr++ ) {
-                if( !_GetExternalReferences( itr->second, ad, state, refs, fullNames )) {
+                if( state.depth_remaining <= 0 ) {
+                    return false;
+                }
+                state.depth_remaining--;
+
+                bool ret = _GetExternalReferences( itr->second, ad, state, refs, fullNames );
+
+                state.depth_remaining++;
+                if( !ret ) {
 					return( false );
 				}
             }
@@ -1058,7 +1082,15 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
 
             ((const ExprList*)expr)->GetComponents( exprs );
             for( itr = exprs.begin( ); itr != exprs.end( ); itr++ ) {
-                if( !_GetExternalReferences( *itr, ad, state, refs, fullNames ) ) {
+                if( state.depth_remaining <= 0 ) {
+                    return false;
+                }
+                state.depth_remaining--;
+
+                bool ret = _GetExternalReferences( *itr, ad, state, refs, fullNames );
+
+                state.depth_remaining++;
+                if( !ret ) {
 					return( false );
 				}
             }
@@ -1342,7 +1374,15 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
                 case EVAL_OK:   {
                     //whoo, it's internal.
                     refs.insert(attr);
+                    if( state.depth_remaining <= 0 ) {
+                        state.curAd = curAd;
+                        return false;
+                    }
+                    state.depth_remaining--;
+
                     bool rval =_GetInternalReferences(result, ad, state, refs, fullNames);
+
+                    state.depth_remaining++;
                     //TODO: Does this actually matter?
                     state.curAd = curAd;
                     return rval;
@@ -1405,7 +1445,15 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
 
             ((const ClassAd*)expr)->GetComponents(attrs);
             for(itr = attrs.begin(); itr != attrs.end(); itr++){
-                if( !_GetInternalReferences(itr->second, ad, state, refs, fullNames)) {
+                if( state.depth_remaining <= 0 ) {
+                    return false;
+                }
+                state.depth_remaining--;
+
+                bool ret = _GetInternalReferences(itr->second, ad, state, refs, fullNames);
+
+                state.depth_remaining++;
+                if( !ret ) {
                     return false;
                 }
             }
@@ -1420,7 +1468,15 @@ _GetInternalReferences( const ExprTree *expr, ClassAd *ad,
 
             ((const ExprList*)expr)->GetComponents(exprs);
             for(itr = exprs.begin(); itr != exprs.end(); itr++){
-                if( !_GetInternalReferences(*itr, ad, state, refs, fullNames) ) {
+                if( state.depth_remaining <= 0 ) {
+                    return false;
+                }
+                state.depth_remaining--;
+
+                bool ret = _GetInternalReferences(*itr, ad, state, refs, fullNames);
+
+                state.depth_remaining++;
+                if( !ret ) {
                     return false;
                 }
             }

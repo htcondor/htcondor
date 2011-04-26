@@ -2172,8 +2172,19 @@ _GetReferences(classad::ExprTree *tree,
 	classad::References ext_refs_set;
 	classad::References int_refs_set;
 	classad::References::iterator set_itr;
-	GetExternalReferences(tree, ext_refs_set, true);
-	GetInternalReferences(tree, int_refs_set, true);
+
+	bool ok = true;
+	if( !GetExternalReferences(tree, ext_refs_set, true) ) {
+		ok = false;
+	}
+	if( !GetInternalReferences(tree, int_refs_set, true) ) {
+		ok = false;
+	}
+	if( !ok ) {
+		dprintf(D_FULLDEBUG,"warning: failed to get all attribute references in ClassAd (perhaps caused by circular reference).\n");
+		dPrint(D_FULLDEBUG);
+		dprintf(D_FULLDEBUG,"End of offending ad.\n");
+	}
 
 		// We first process the references and save results in
 		// final_*_refs_set.  The processing may hit duplicates that
