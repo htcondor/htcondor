@@ -482,6 +482,7 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/1.9.10_4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
 
 	# the following logic if for standard universe *only*
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
