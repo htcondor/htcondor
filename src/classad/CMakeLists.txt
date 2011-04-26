@@ -45,7 +45,7 @@ if (NOT WINDOWS)
 
   if (LINUX)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
-	set_target_properties( classad PROPERTIES VERSION 1.0.2 SOVERSION 1 )
+	set_target_properties( classad PROPERTIES VERSION 1.1.0 SOVERSION 1 )
 	install( TARGETS classad DESTINATION ${C_LIB} )
   endif()
 
