@@ -897,6 +897,27 @@ leave_in_queue = (JobStatus == 4) && ((StageOutFinish =?= UNDEFINED) ||\
 \normalsize
 
 %%%%%%%%%%%%%%%%%%%
+%% next_job_start_delay
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!next\_job\_start\_delay}
+\item[next\_job\_start\_delay = $<$ClassAd Boolean Expression$>$]
+This expression specifies the number of seconds to delay after starting up
+this job before the next job is started.  The maximum
+allowed delay is specified by the Condor configuration variable
+\Macro{MAX\_NEXT\_JOB\_START\_DELAY}, which defaults to 10 minutes.
+This command does not apply to \SubmitCmd{scheduler}
+or \SubmitCmd{local} universe jobs.
+
+This command has been historically used to implement a form
+of job start throttling from the job submitter's perspective.
+It was effective for the case of multiple job submission where
+the transfer of extremely large input data sets to the execute
+machine caused machine performance to suffer.
+This command is no longer useful, as throttling should be
+accomplished through configuration of the \Condor{schedd} daemon.
+
+%%%%%%%%%%%%%%%%%%%
 %% on_exit_hold
 %%%%%%%%%%%%%%%%%%%
 
@@ -1094,27 +1115,6 @@ by default, only checks
 periodic expressions once every 300 seconds.  The period of
 these evaluations can be adjusted by setting the
 \MacroNI{PERIODIC\_EXPR\_INTERVAL} configuration macro.
-
-%%%%%%%%%%%%%%%%%%%
-%% next_job_start_delay
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!next\_job\_start\_delay}
-\item[next\_job\_start\_delay = $<$ClassAd Boolean Expression$>$]
-This expression specifies the number of seconds to delay after starting up
-this job before the next job is started.  The maximum
-allowed delay is specified by the Condor configuration variable
-\Macro{MAX\_NEXT\_JOB\_START\_DELAY}, which defaults to 10 minutes.
-This command does not apply to \SubmitCmd{scheduler}
-or \SubmitCmd{local} universe jobs.
-
-This command has been historically used to implement a form
-of job start throttling from the job submitter's perspective.
-It was effective for the case of multiple job submission where
-the transfer of extremely large input data sets to the execute
-machine caused machine performance to suffer.
-This command is no longer useful, as throttling should be
-accomplished through configuration of the \Condor{schedd} daemon.
 
 \end{description} 
 
@@ -1466,6 +1466,27 @@ occurring first.
 Provides a list of attribute/value pairs to be set in a CREAM job description
 of a grid universe job destined for the CREAM grid system.
 The pairs are separated by semicolons, and written in New ClassAd syntax.
+
+%%%%%%%%%%%%%%%%%%%
+%% delegate_job_GSI_credentials_lifetime
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!delegate\_job\_GSI\_credentials\_lifetime}
+\item[delegate\_job\_GSI\_credentials\_lifetime = $<$seconds$>$]
+Specifies the maximum number of seconds for which
+delegated proxies should be valid.  
+The default behavior when this command is not specified
+is determined by the configuration variable 
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}, 
+which defaults to one day.  
+A value of 0 indicates that the delegated proxy
+should be valid for as long as allowed by the credential used to
+create the proxy.  This setting currently only applies to proxies
+delegated for non-grid jobs and for Condor-C jobs.  It does not currently
+apply to globus grid jobs, which always behave as though this setting
+were 0.  This variable has no effect if the configuration
+variable \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is \Expr{False},
+because in that case the job proxy is copied rather than delegated.
 
 %%%%%%%%%%%%%%%%%%%
 %% deltacloud_hardware_profile
@@ -1908,22 +1929,6 @@ Further, VOMS attributes defined in the proxy will appear in
 the job ClassAd.
 See the unnumbered subsection labeled Job ClassAd Attributes
 on page~\pageref{sec:Job-ClassAd-Attributes} for all job attribute descriptions.
-
-\index{submit commands!delegate\_job\_GSI\_credentials\_lifetime}
-\item[delegate\_job\_GSI\_credentials\_lifetime = $<$seconds$>$]
-
-This command specifies the maximum number of seconds for which
-delegated proxies should be valid.  The default behavior is determined
-by the configuration
-setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}, which
-defaults to one day.  A value of 0 indicates that the delegated proxy
-should be valid for as long as allowed by the credential used to
-create the proxy.  This setting currently only applies to proxies
-delegated for non-grid jobs and Condor-C jobs.  It does not currently
-apply to globus grid jobs, which always behave as though this setting
-were 0.  This setting has no effect if the configuration
-setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false, because in
-that case the job proxy is copied rather than delegated.
 
 \end{description} 
 
