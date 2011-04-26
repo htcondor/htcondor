@@ -298,7 +298,10 @@ Specifies an Elastic IP address to associate with the instance.
 \index{ClassAd job attribute!EC2InstanceName}
 \index{EC2InstanceName!job ClassAd attribute}
 \item[\AdAttr{EC2InstanceName}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string set for the job once the instance starts running, 
+as assigned by the EC2 service, 
+that represents the unique ID assigned to the instance by the EC2 service.
 
 %%% ClassAd attribute: EC2InstanceType
 \index{ClassAd job attribute!EC2InstanceType}
@@ -323,7 +326,11 @@ into which to write the SSH key used to access the image, once it is running.
 \index{ClassAd job attribute!EC2RemoteVirtualMachineName}
 \index{EC2RemoteVirtualMachineName!job ClassAd attribute}
 \item[\AdAttr{EC2RemoteVirtualMachineName}:] 
-  Definition not yet written.
+Used for grid type ec2 jobs;
+a string set for the job once the instance starts running, 
+as assigned by the EC2 service, that represents
+the host name upon which the instance runs, such that the
+user can communicate with the running instance.
 
 %%% ClassAd attribute: EC2SecretAccessKey
 \index{ClassAd job attribute!EC2SecretAccessKey}
