@@ -492,12 +492,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		// assume success
 	status = PROCAPI_OK;
 
-		// clear the memory of procRaw
-	initProcInfoRaw(procRaw);
-
-		// set the sample time
-	procRaw.sample_time = secsSinceEpoch();
-
 	// read the entry a certain number of times since it appears that linux
 	// often simply does something stupid while reading.
 	sprintf( path, "/proc/%d/stat", pid );
@@ -508,7 +502,10 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// in case I must restart, assume that everything is ok again...
 		status = PROCAPI_OK;
+		// clear the memory of procRaw
 		initProcInfoRaw(procRaw);
+		// set the sample time
+		procRaw.sample_time = secsSinceEpoch();
 
 		if( (fp = safe_fopen_wrapper(path, "r")) == NULL ) {
 			if( errno == ENOENT ) {
