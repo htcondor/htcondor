@@ -927,6 +927,7 @@ our %submit_info = (
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
 				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
 				'-DWITH_CURL:BOOL=OFF' => undef,
 				'-DWITH_EXPAT:BOOL=ON' => undef,
 				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
