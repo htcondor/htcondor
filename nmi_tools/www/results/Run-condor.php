@@ -2,9 +2,10 @@
 //
 // Configuration
 //
-define("NUM_SPARK_DAYS", 3);
+define("NUM_SPARK_DAYS", 2);
 
 $one_offs = array_key_exists("oneoffs", $_REQUEST) ? $_REQUEST["oneoffs"] : 0;
+$SPARK_DAYS = array_key_exists("days", $_REQUEST) ? $_REQUEST["days"] : NUM_SPARK_DAYS;
 
 require_once "./load_config.inc";
 load_config();
@@ -20,8 +21,7 @@ $continuous_blacklist = Array( "x86_deb_5.0", "x86_64_rhap_5.3-updated");
 <body>
 
 <?php
-$db = mysql_connect(WEB_DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
-mysql_select_db(DB_NAME) or die("Could not select database");
+$db = connect_to_mysql();
 
 $user_condition = $one_offs ? "user!='" . CONDOR_USER . "'" : "user='" . CONDOR_USER . "'";
 
@@ -81,7 +81,7 @@ while ($row = mysql_fetch_array($result)) {
 
     $continuous_buf[$branch] = Array();
     $continuous_buf[$branch]["user"] = $user;
-    $continuous_buf[$branch]["results"] = create_sparkline($branch, $user);
+    $continuous_buf[$branch]["results"] = create_sparkline($branch, $user, $SPARK_DAYS);
   }
   else {
     if($user == CONDOR_USER) {
@@ -120,15 +120,23 @@ if(!$one_offs) {
   
   echo "<p style='font-size:-1'>Continuous blacklist: " . implode(", ", $continuous_blacklist) . "</p>";
 
+  echo "<form method='get' action='" . $_SERVER{PHP_SELF} . "'>\n";
+  echo "<p>Days:&nbsp;<select name='days'>\n";
+  echo "<option selected='selected'>2</option>\n";
+  echo "<option>3</option>\n";
+  echo "<option>4</option>\n";
+  echo "<option>5</option>\n";
+  echo "</select><input type='submit' value='Show'></form>\n";
+
   $help_text = "<ul>\n";
-  $help_text .= "  <li>The last " . NUM_SPARK_DAYS . " days of results are shown for each platform.</li>\n";
+  $help_text .= "  <li>The last $SPARK_DAYS days of results are shown for each platform.</li>\n";
   $help_text .= "  <li>The newest results are at the left.</li>\n";
   $help_text .= "  <li>Thick black bars designate commits to the repository between runs.</li>\n";
   $help_text .= "  <li>The number shown in the build line is the hour in which the test ran.</li>\n";
   $help_text .= "  <li>If a number is shown in the test line it is the number of tests that failed.</li>\n";
   $help_text .= "</ul>";
-  echo "<span class=\"link\" style=\"font-size:100%\"><a href=\"javascript: void(0)\" style=\"text-decoration:none\">Hover here to have this section explained<span style=\"width:450px;\">$help_text</span></a></span>";
-  
+  echo "<p><span class=\"link\" style=\"font-size:100%\"><a href=\"javascript: void(0)\" style=\"text-decoration:none\">Hover here to have this section explained<span style=\"width:450px;\">$help_text</span></a></span>";
+
   echo "<table>\n";
 
   $branches = array_keys($continuous_buf);
@@ -152,12 +160,17 @@ if(!$one_offs) {
     $out = "<tr>\n";
     $out .= "  <td rowspan='2'><a href='$branch_url'>$branch_display</a></td>\n";
     $out .= "  <td class='sparkheader'>Build</td>\n";
-    
+
+    $counter = 0;
+    $commits = Array();
     $last_sha1 = "";
     foreach (array_keys($runs) as $key) {
+      $counter += 1;
       $style = "";
       if($runs[$key] != $last_sha1 && $last_sha1 != "") {
         $style .= "border-left-width:4px; border-left-color:black; ";
+        array_push($commits, $counter);
+        $counter = 0;
       }
       $last_sha1 = $runs[$key];
 
@@ -197,8 +210,21 @@ if(!$one_offs) {
     array_push($table, $out);
   }
 
-  $num_cols = sizeof($runs) + 1;
-  echo implode("<tr><td style='font-size:10%' colspan='$num_cols'>&nbsp;</td></tr>\n", $table);
+  // We want to have a little spacing between the sparklines.  If we stack them one on top of
+  // the other they look crowded.  But we want the spacing to be minimal, so we'll make it only
+  // a few pixels high.  Also, it looks really nice to have the black commit lines continue
+  // through the spacing.  It's a little bit more code to generate this "separator" row correctly.
+  $sep = "<tr><td style='height:6px'></td>";
+  $sum = 1;
+  foreach ($commits as $len) {
+    $sep .= "<td style='height:6px; border-right-width:4px; border-right-color:black;' colspan='$len'></td>";
+    $sum += $len;
+  }
+  $final_cell = sizeof($runs) + 2 - $sum;
+  $sep .= "<td style='height:6px;' colspan='$final_cell'></td>";
+  $sep .= "</tr>\n";
+
+  echo implode($sep, $table);
   echo "</table>\n";
 }
 
@@ -279,11 +305,9 @@ echo "</div>\n";
 
 
 
-function create_sparkline($branch, $user) {
-  // We are going to build "sparklines" for the Continuous builds to make
-  // it easier to visualize their performance over time
-  $num_spark_days = NUM_SPARK_DAYS;
-  
+// We are going to build "sparklines" for the Continuous builds to make
+// it easier to visualize their performance over time
+function create_sparkline($branch, $user, $num_spark_days) {
   // First get all the recent build runs.  We'll use the runids from the
   // build runs to determine which tests to match to them
   $sql = "SELECT runid,result,project_version, " . 

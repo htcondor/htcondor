@@ -12,6 +12,14 @@ define("CROSS_DETAIL_URL", "./Run-condor-pre-details.php?runid=%s&type=%s&user=%
 define("GITSHA1","http://condor-git.cs.wisc.edu/?p=condor.git;a=commit;h=%s");
 define("GITSHA1SHORT","http://condor-git.cs.wisc.edu/?p=condor.git;a=log;h=%s;hp=%s");
 
+// Connect to MySQL DB
+function connect_to_mysql() {
+  $db = mysql_connect(WEB_DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
+  mysql_select_db(DB_NAME) or die("Could not select database");
+  return $db;
+}
+
+
 // Given a set of runids, return a hash of the platform/host combinations of where the jobs executed
 function get_hosts($runids) {
   $hosts = Array();
@@ -44,9 +52,9 @@ function get_queue_for_nmi_platform($platform, $type) {
   $output = `/usr/local/condor/bin/condor_q -global -const 'nmi_target_platform=="$platform_without_prefix" && nmi_run_type=="$type"' -format '%-2s ' 'ifThenElse(JobStatus==0,"U",ifThenElse(JobStatus==1,"I",ifThenElse(JobStatus==2,"R",ifThenElse(JobStatus==3,"X",ifThenElse(JobStatus==4,"C",ifThenElse(JobStatus==5,"H",ifThenElse(JobStatus==6,"E",string(JobStatus))))))))' -format "%6d " ClusterId -format " %-14s " Owner -format '%-11s ' 'formatTime(QDate,"%0m/%d %H:%M")' -format '%-11s\n' 'formatTime(EnteredCurrentStatus,"%0m/%d %H:%M")'`;
   $queue_contents = split("\n", $output);
   $depth = sizeof($queue_contents) - 1;
+  $has_running_job = 0;
   if($depth != 0) {
     $output = "<table><tr><th>State</th><th>ID</th><th>Owner</th><th>Submitted</th><th>Started</th></tr>\n";
-    $has_running_job = 0;
     foreach ($queue_contents as $line) {
       $items = preg_split("/\s+/", $line);
       if(sizeof($items) == 7) {
