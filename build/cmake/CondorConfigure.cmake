@@ -354,6 +354,7 @@ option(BUILD_TESTS "Will build internal test applications" ON)
 option(WANT_CONTRIB "Enable quill functionality" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
