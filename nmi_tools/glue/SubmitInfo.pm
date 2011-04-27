@@ -62,6 +62,7 @@ our %build_and_test_sets = (
 		'x86_64_fedora_12-updated',
 		'x86_freebsd_7.4',
 		'x86_64_freebsd_8.2',
+		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
 	],
 
