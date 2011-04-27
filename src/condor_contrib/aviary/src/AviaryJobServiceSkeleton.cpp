@@ -226,8 +226,9 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
 	
     // invoke submit
     string jobId, error;
-    // TODO: temporary hack for testing
-    // until ws-security or something gets turned on
+    // we need this since we don't have a trusted socket to the schedd,
+    // without it basically the schedd won't accept whatever we claim
+    // is Owner and the job will be pseudo-pruned
     qmgmt_all_users_trusted = true;
     if (!schedulerObj->submit(attrMap,jobId, error)) {
         submitJobResponse->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),error));
