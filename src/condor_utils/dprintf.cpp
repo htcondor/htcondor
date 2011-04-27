@@ -248,7 +248,7 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 		}
 
 		if ( (mask_flags|flags) & D_FDS ) {
-			//Regardless of whether we're keeping the log file pen our not, we open
+			//Regardless of whether we're keeping the log file open our not, we open
 			//the NULL file for the FD number.
 			if( (local_fp=safe_fopen_wrapper(NULL_FILE,"r",0644)) == NULL )
 			{
@@ -617,87 +617,30 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
  * - assumes correct priv state (PRIV_CONDOR) has already been set
  * - aborts the program on error
  */
+static void
+debug_open_lock(void)
+{
+	int save_errno;
+	char msg_buf[DPRINTF_ERR_MAX];
+	struct stat fstatus;
+	time_t start_time,end_time;
+
+	if ( use_kernel_mutex == -1 ) {
 #ifdef WIN32
-static void
-debug_open_lock(void)
-{
-	int save_errno;
-	char msg_buf[DPRINTF_ERR_MAX];
-	struct stat fstatus;
-	time_t start_time,end_time;
-
-	if ( use_kernel_mutex == -1 ) {
-			// Use a mutex by default on Win32
+		// Use a mutex by default on Win32
 		use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
-	}
-
-		/* Acquire the lock */
-	if( DebugLock ) {
-		if( use_kernel_mutex == FALSE) {
-			if (LockFd > 0 ) {
-				fstat(LockFd, &fstatus);
-				if (fstatus.st_nlink == 0){
-					close(LockFd);
-					LockFd = -1;
-				}	
-			}
-			if (LockFd < 0) {
-				LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
-				if( LockFd < 0 ) {
-					save_errno = errno;
-					snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n", DebugLock );
-					_condor_dprintf_exit( save_errno, msg_buf );
-				} 
-			}	
-		}
-
-		start_time = time(NULL);
-		if( DebugLockDelayPeriodStarted == 0 ) {
-			DebugLockDelayPeriodStarted = start_time;
-		}
-
-		errno = 0;
-
-		if( lock_or_mutex_file(LockFd,WRITE_LOCK,TRUE) < 0 ) 
-		{
-			save_errno = errno;
-			snprintf( msg_buf, sizeof(msg_buf), "Can't get exclusive lock on \"%s\", "
-					 "LockFd: %d\n", DebugLock, LockFd );
-			_condor_dprintf_exit( save_errno, msg_buf );
-		}
-
-		DebugIsLocked = 1;
-
-			/* Update DebugLockDelay.  Ignore delays that are less than
-			 * two seconds because the resolution is only 1s.
-			 */
-		end_time = time(NULL);
-		if( end_time-start_time > 1 ) {
-			DebugLockDelay += end_time-start_time;
-		}
-	}
-}
 #else
-static void
-debug_open_lock(void)
-{
-	int save_errno;
-	char msg_buf[DPRINTF_ERR_MAX];
-	struct stat fstatus;
-	time_t start_time,end_time;
-
-	if ( use_kernel_mutex == -1 ) {
-			// Use file locking by default on Unix.  We should 
-			// call param_boolean_int here, but since locking via
-			// a mutex is not yet implemented on Unix, we will force it
-			// to always be FALSE no matter what the config file says.
+		// Use file locking by default on Unix.  We should 
+		// call param_boolean_int here, but since locking via
+		// a mutex is not yet implemented on Unix, we will force it
+		// to always be FALSE no matter what the config file says.
 		// use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", FALSE);
 		use_kernel_mutex = FALSE;
+#endif
 	}
 
 		/* Acquire the lock */
 	if( DebugLock ) {
-		
 		if( use_kernel_mutex == FALSE) {
 			if (LockFd > 0 ) {
 				fstat(LockFd, &fstatus);
@@ -722,8 +665,11 @@ debug_open_lock(void)
 		}
 
 		errno = 0;
-
-		if( lock_file_plain(LockFd,WRITE_LOCK,TRUE) < 0 ) 
+#ifdef WIN32
+		if( lock_or_mutex_file(LockFd,WRITE_LOCK,TRUE) < 0 )
+#else
+		if( lock_file_plain(LockFd,WRITE_LOCK,TRUE) < 0 )
+#endif
 		{
 			save_errno = errno;
 			snprintf( msg_buf, sizeof(msg_buf), "Can't get exclusive lock on \"%s\", "
@@ -742,7 +688,6 @@ debug_open_lock(void)
 		}
 	}
 }
-#endif
 
 void dprintf_reset_lock_delay(void) {
 	DebugLockDelay = 0;
@@ -757,7 +702,6 @@ double dprintf_get_lock_delay(void) {
 	return ((double)DebugLockDelay)/(now-DebugLockDelayPeriodStarted);
 }
 
-#ifdef WIN32
 FILE *
 debug_lock(int debug_level, const char *mode, int force_lock )
 {
@@ -791,6 +735,11 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 	}
 	else
 	{
+		if( DebugShouldLockToAppend || force_lock ) {
+			debug_open_lock();
+			locked = 1;
+		}
+
 		//open_debug_file will set DebugFPs[debug_level] so we do
 		//not have to worry about it in this function, assuming
 		//there are no further errors.
@@ -800,27 +749,27 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			if (debug_level > 0) return NULL;
 			
 			save_errno = errno;
-
+#ifdef WIN32
 			if (DebugContinueOnOpenFailure) {
 				_set_priv(priv, __FILE__, __LINE__, 0);
 				return NULL;
 			}
-
+#else
+			if( errno == EMFILE ) {
+				_condor_fd_panic( __LINE__, __FILE__ );
+			}
+#end
 			snprintf( msg_buf, sizeof(msg_buf), "Could not open DebugFile \"%s\"\n", 
 					 DebugFile[debug_level] );
 			_condor_dprintf_exit( save_errno, msg_buf );
-		}
-
-		if( DebugShouldLockToAppend || force_lock ) {
-			debug_open_lock();
-			locked = 1;
 		}
 	}
 
 	if( (length=lseek(fileno(debug_file_ptr), 0, SEEK_END)) < 0 ) {
 		if (debug_level > 0) {
-			fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
-			DebugFPs[debug_level] = NULL;
+			if(locked) debug_close_lock();
+			debug_close_file(debug_level);
+
 			return NULL;
 		}
 		save_errno = errno;
@@ -873,91 +822,6 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 
 	return debug_file_ptr;
 }
-#else
-FILE *
-debug_lock(int debug_level, const char *mode, int force_lock )
-{
-	off_t		length = 0; // this gets assigned return value from lseek()
-	priv_state	priv;
-	int save_errno;
-	char msg_buf[DPRINTF_ERR_MAX];
-	int locked = 0;
-
-	if ( mode == NULL ) {
-		mode = "a";
-	}
-
-	if ( DebugFP == NULL ) {
-		DebugFP = stderr;
-	}
-
-	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
-
-	if( DebugShouldLockToAppend || force_lock ) {
-		debug_open_lock();
-		locked = 1;
-	}
-
-	if( DebugFile[debug_level] ) {
-		errno = 0;
-
-		DebugFP = (FILE *) open_debug_file(debug_level, mode);
-
-		if( DebugFP == NULL ) {
-			if (debug_level > 0) return NULL;
-			save_errno = errno;
-
-			if( errno == EMFILE ) {
-				_condor_fd_panic( __LINE__, __FILE__ );
-			}
-
-			snprintf( msg_buf, sizeof(msg_buf), "Could not open DebugFile \"%s\"\n", 
-					 DebugFile[debug_level] );
-			_condor_dprintf_exit( save_errno, msg_buf );
-		}
-			/* Seek to the end */
-		if( (length=lseek(fileno(DebugFP), 0, SEEK_END)) < 0 ) {
-			if (debug_level > 0) {
-				fclose_wrapper( DebugFP, FCLOSE_RETRY_MAX );
-				DebugFP = NULL;
-				return NULL;
-			}
-			save_errno = errno;
-			snprintf( msg_buf, sizeof(msg_buf), "Can't seek to end of DebugFP file\n" );
-			_condor_dprintf_exit( save_errno, msg_buf );
-		}
-
-			/* If it's too big, preserve it and start a new one */
-		if( MaxLog[debug_level] && length > MaxLog[debug_level] ) {
-
-			if( !locked ) {
-					/* We need to redo everything we just did but with a lock
-					 * to prevent a race in which multiple processes rotate
-					 * the file.
-					 */
-
-				_set_priv(priv, __FILE__, __LINE__, 0);
-
-				debug_unlock(debug_level);
-
-				return debug_lock(debug_level, mode, 1);
-			}
-
-				// Casting length to int to get rid of compile warning.
-				// Probably format should be %ld, and we should cast to
-				// long int, but I'm afraid of changing the output format.
-				// wenger 2009-02-24.
-			_condor_dfprintf( DebugFP, "MaxLog = %d, length = %d\n",
-							  (int) MaxLog[debug_level], (int)length );
-			preserve_log_file(debug_level);
-		}
-	}
-
-	_set_priv(priv, __FILE__, __LINE__, 0);
-
-	return DebugFP;
-}
-#endif
 
 void debug_close_lock()
 {
