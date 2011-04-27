@@ -120,9 +120,9 @@ bool INFNBatchJobAdMatch( const ClassAd *job_ad ) {
 		 universe == CONDOR_UNIVERSE_GRID &&
 		 job_ad->LookupString( ATTR_GRID_RESOURCE, resource ) &&
 		 ( strncasecmp( resource.c_str(), "blah", 4 ) == 0 ||
-		   strncasecmp( resource.c_str(), "pbs", 4 ) == 0 ||
-		   strncasecmp( resource.c_str(), "lsf", 4 ) == 0 ||
-		   strncasecmp( resource.c_str(), "nqs", 4 ) == 0 ||
+		   strncasecmp( resource.c_str(), "pbs", 3 ) == 0 ||
+		   strncasecmp( resource.c_str(), "lsf", 3 ) == 0 ||
+		   strncasecmp( resource.c_str(), "nqs", 3 ) == 0 ||
 		   strncasecmp( resource.c_str(), "naregi", 6 ) == 0 ) ) {
 
 		return true;
@@ -144,9 +144,11 @@ int INFNBatchJob::maxConnectFailures = 3;		// default value
 INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	: BaseJob( classad )
 {
-	char buff[4096];
+	std::string buff;
 	std::string error_string = "";
 	char *gahp_path;
+	std::string cluster_name;
+	ArgList gahp_args;
 
 	gahpAd = NULL;
 	gmState = GM_INIT;
@@ -168,20 +170,29 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
-	buff[0] = '\0';
+	buff = "";
 	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
-	if ( buff[0] != '\0' ) {
-		batchType = strdup( buff );
+	if ( buff != "" ) {
+		const char *token;
+		Tokenize( buff );
+
+		token = GetNextToken( " ", false );
+		batchType = strdup( token );
+
+		token = GetNextToken( " ", false );
+		if ( token ) {
+			cluster_name = token;
+		}
 	} else {
 		sprintf( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
 
-	buff[0] = '\0';
+	buff = "";
 	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
-	if ( buff[0] != '\0' ) {
-		SetRemoteJobId( strchr( buff, ' ' ) + 1 );
+	if ( buff != "" ) {
+		SetRemoteJobId( strchr( buff.c_str(), ' ' ) + 1 );
 	} else {
 		remoteState = JOB_STATE_UNSUBMITTED;
 	}
@@ -189,12 +200,18 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	strupr( batchType );
 
 	sprintf( buff, "%s_GAHP", batchType );
-	gahp_path = param(buff);
+	gahp_path = param(buff.c_str());
 	if ( gahp_path == NULL ) {
-		sprintf( error_string, "%s not defined", buff );
+		sprintf( error_string, "%s not defined", buff.c_str() );
 		goto error_exit;
 	}
-	gahp = new GahpClient( batchType, gahp_path );
+
+	if ( cluster_name != "" ) {
+		gahp_args.AppendArg( cluster_name.c_str() );
+	}
+
+	sprintf( buff, "%s/%s", batchType, cluster_name.c_str() );
+	gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 	free( gahp_path );
 
 		// Does this have to be lower-case for SetRemoteJobId()?
