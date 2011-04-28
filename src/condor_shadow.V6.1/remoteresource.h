@@ -336,6 +336,13 @@ class RemoteResource : public Service {
 		/// Did the job on this resource exit with a signal?
 	bool exitedBySignal( void ) { return exited_by_signal; };
 
+        /** Return true if we already asked the startd to deactivate
+            the claim (aka kill the starter), false if not.
+            @return true if claim deactivated, false if not
+         */
+    bool wasClaimDeactivated( void ) {
+       return already_killed_graceful || already_killed_fast; };
+
 		/** If the job on this resource exited with a signal, return
 			the signal.  If not, return -1. */
 	int exitSignal( void );
