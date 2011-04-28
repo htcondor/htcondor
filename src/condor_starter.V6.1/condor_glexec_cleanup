@@ -17,7 +17,7 @@ SANDBOX="$3"
 SH=`readlink -f /bin/sh`
 GLEXEC_CLIENT_CERT="$SANDBOX.condor/$PROXY"
 export GLEXEC_CLIENT_CERT
-"$GLEXEC" "$SH" -c "chmod -R 0777 $SANDBOX && rm -f \"$SANDBOX/$PROXY\" && \
+"$GLEXEC" "$SH" -c "rm -f \"$SANDBOX/$PROXY\" && \
                         tar -C \"$SANDBOX\" -c . && \
                         rm -rf \"$SANDBOX\"" | \
     tar -C "$SANDBOX.condor" -x
