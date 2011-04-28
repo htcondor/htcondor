@@ -817,7 +817,8 @@ main( int argc, char *argv[] )
 			} else if ( match_prefix( ptr[0], "-spool" ) ) {
 				Remote++;
 				DisableFileChecks = 1;
-            } else if ( match_prefix( ptr[0], "-addr" ) ) {
+            // can't use match_prefix() here, since '-a' already has popular semantic
+            } else if ( 0 == strcmp(ptr[0], "-addr") ) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf(stderr, "%s: -addr requires another argument\n", MyName);
 					exit(1);
