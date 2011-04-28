@@ -758,7 +758,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			if( errno == EMFILE ) {
 				_condor_fd_panic( __LINE__, __FILE__ );
 			}
-#end
+#endif
 			snprintf( msg_buf, sizeof(msg_buf), "Could not open DebugFile \"%s\"\n", 
 					 DebugFile[debug_level] );
 			_condor_dprintf_exit( save_errno, msg_buf );
