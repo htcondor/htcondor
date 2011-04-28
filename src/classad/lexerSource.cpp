@@ -112,7 +112,7 @@ InputStreamLexerSource::ReadCharacter(void)
 	char real_character;
 	int  character;
 
-	if (_stream != NULL && !_stream->eof()) {
+	if (_stream != NULL && _stream->good()) {
 		_stream->get(real_character);
 		character = (unsigned char)real_character;
 	} else {

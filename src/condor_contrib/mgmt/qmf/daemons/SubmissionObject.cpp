@@ -180,7 +180,7 @@ SubmissionObject::GetHeld()
 void
 SubmissionObject::SetOwner ( const char *owner )
 {
-    if ( !ownerSet )
+    if (owner && !ownerSet )
     {
         mgmtObject->set_Owner ( string(owner) );
         ownerSet = true;
