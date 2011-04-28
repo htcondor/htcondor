@@ -156,7 +156,7 @@ SubmissionObject::getHeld()
 void
 SubmissionObject::setOwner ( const char *_owner )
 {
-    if ( !ownerSet )
+    if (_owner && !ownerSet )
     {
         m_owner = _owner;
         ownerSet = true;

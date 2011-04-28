@@ -21,7 +21,7 @@ endif()
 
 if (WITH_WSO2)
 
-	# hackiness for /usr/lib64 softlink later
+	# need to embed libDir in axis2.xml
 	if ( ${SYS_ARCH} STREQUAL "X86_64" )
 		set (WS02_LIB_ROOT "/usr/lib64")
 	else()
