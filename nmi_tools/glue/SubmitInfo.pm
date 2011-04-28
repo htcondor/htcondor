@@ -59,6 +59,8 @@ our %build_and_test_sets = (
 	'nmi_one_offs' => [
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
+		'x86_freebsd_7.4',
+		'x86_64_freebsd_8.2',
 	],
 	
 	# We will build on a set of machines that we want to be sure continue building
@@ -71,8 +73,6 @@ our %build_and_test_sets = (
 		'x86_64_fedora_14-updated',
 		'x86_64_opensuse_11.3-updated',
 		'x86_64_opensuse_11.4-updated',
-		'x86_freebsd_7.4',
-		'x86_64_freebsd_8.2',
 	],
 	
 	'stduniv' => [
