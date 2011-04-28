@@ -38,7 +38,9 @@ MACRO (CONDOR_PRE_EXTERNAL _TARGET _VER _INSTALL_DIRS _EXISTANCE_CHECK )
 	
 	file ( MAKE_DIRECTORY ${${_TARGET}_INSTALL_LOC} )
 	foreach ( dir ${_INSTALL_DIRS} )
-		file ( MAKE_DIRECTORY ${${_TARGET}_INSTALL_LOC}/${dir} )
+		if (NOT EXISTS ${${_TARGET}_INSTALL_LOC}/${dir})
+			file ( MAKE_DIRECTORY ${${_TARGET}_INSTALL_LOC}/${dir} )
+		endif()
 	endforeach(dir)
 
 	# Check for existance of 

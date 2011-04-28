@@ -101,7 +101,7 @@ if (WITH_BOOST )
         dprint ("TBD: NON-PROPER INSTALL for CONTRIB")
 	endif()
 
-	condor_post_external( boost "include/boost-1_39" lib )
+	condor_post_external( boost "include" OFF )
 	
   else()
 

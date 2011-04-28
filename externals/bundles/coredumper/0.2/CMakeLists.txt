@@ -25,7 +25,7 @@ if (WITH_COREDUMPER)
 
 	if ( NOT PROPER )
 
-		condor_pre_external( COREDUMPER coredumper-0.2 "lib;include" "include")
+		condor_pre_external( COREDUMPER coredumper-0.2 "lib;include" "done")
 
 		ExternalProject_Add(coredumper
 				    #-- Download Step ----------
@@ -39,7 +39,7 @@ if (WITH_COREDUMPER)
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${COREDUMPER_INSTALL_LOC}
-				    INSTALL_COMMAND cd ${COREDUMPER_VER} && make install )
+				    INSTALL_COMMAND cd ${COREDUMPER_VER} && make install && touch ${COREDUMPER_INSTALL_LOC}/done)
 
 		# Set the target dependencies which the rest of condor depends on.
 		set(COREDUMPER_FOUND "${COREDUMPER_INSTALL_LOC}/lib/libcoredumper.a")

@@ -33,7 +33,7 @@ if (WITH_LIBDELTACLOUD)
 				DOWNLOAD_DIR ${LIBDELTACLOUD_STAGE}/dl
 				URL http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz
 				#--Configure step ----------
-				CONFIGURE_COMMAND cd ${LIBDELTACLOUD_VER} && ./configure --prefix=${LIBDELTACLOUD_INSTALL_LOC} --with-libxml=${LIBXML2_INSTALL_LOC} --with-libcurl=${LIBCURL_INSTALL_LOC} --disable-shared
+				CONFIGURE_COMMAND cd ${LIBDELTACLOUD_VER} && ./configure --prefix=${LIBDELTACLOUD_INSTALL_LOC} --with-libxml=${LIBXML2_INSTALL_LOC} --with-libcurl=${CURL_INSTALL_LOC} --disable-shared
 				#--Build Step ----------
 				BUILD_COMMAND cd ${LIBDELTACLOUD_VER} && make
 				BUILD_IN_SOURCE 1

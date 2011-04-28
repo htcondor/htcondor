@@ -23,7 +23,7 @@ endif()
 if ( WITH_CREAM )
 
 		# we define cream 1st because other externals will place bits there.
-		condor_pre_external( CREAM org.glite.ce.cream-client-api-c-1.12.1-14 "lib;include;include/glite/security;opt" "include")
+		condor_pre_external( CREAM org.glite.ce.cream-client-api-c-1.12.1-14 "lib;include;include/glite/security;opt" "done")
 
 #########################################
 		condor_pre_external( CREAMSOAP gsoap_2.7.6b "lib;include" "done")
@@ -84,7 +84,7 @@ if ( WITH_CREAM )
 				    #--install Step ----------
 				    INSTALL_DIR ${LOG4CPP_INSTALL_LOC}
 				    INSTALL_COMMAND cd log4cpp-1.0 && make install )
-		condor_post_external( log4cpp OFF OFF )
+		condor_post_external( log4cpp include OFF )
 
 ######################################### cream/gss packages.
 
@@ -126,7 +126,7 @@ if ( WITH_CREAM )
 				    BUILD_COMMAND cd org.glite.security.gss/src && 
 					  gcc -g -O0 -W -Wall
 					  -Wno-unused-parameter -I../interface
-					  -I${CREAM_INSTALL_LOC}/include -I${GLOBUS_INSTALL_LOC}/include/${GLOBUS_FLAVOR}pthr -o glite_gss.thr.o -c glite_gss.c && 
+					  -I${CREAM_INSTALL_LOC}/include -I${KRB5_INSTALL_LOC}/include -I${GLOBUS_INSTALL_LOC}/include/${GLOBUS_FLAVOR}pthr -o glite_gss.thr.o -c glite_gss.c && 
 					  ar crv libglite_security_gss_${GLOBUS_FLAVOR}pthr.a glite_gss.thr.o &&
 					  ranlib libglite_security_gss_${GLOBUS_FLAVOR}pthr.a
 				    BUILD_IN_SOURCE 1
@@ -190,7 +190,6 @@ if ( WITH_CREAM )
 		endif(DARWIN)
 
 	
-	        message (STATUS "****************************CLASSADS_FOUND=${CLASSADS_FOUND}")
 		ExternalProject_Add(cream
 				    DEPENDS ${VOMS_REF} ${CREAMSOAP_REF} ${BOOST_REF} ${LOG4CPP_REF} ${GRIDSITE_REF} ${CARES_REF} ${CREAM_SOAP_PLUGIN_REF} ${CREAM_WSDL_REF}
 				    #-- Download Step -------
@@ -210,7 +209,7 @@ if ( WITH_CREAM )
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
 				    INSTALL_COMMAND cd org.glite.ce.cream-client-api-c &&
-						make install
+						make install && touch ${CREAM_INSTALL_LOC}/done
 				)
 
 		

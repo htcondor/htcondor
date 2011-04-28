@@ -24,8 +24,14 @@ endif(LINUX OR DARWIN)
 if ( WITH_VOMS )
 
 	if (NOT PROPER)
+		if(${SYS_ARCH} MATCHES "X86_64")
+			set(VOMS_LIB lib64)
+		else()
+			set(VOMS_LIB lib)
+		endif()
 
-		condor_pre_external( VOMS voms-1.9.10_4 "include;lib" "lib/libvomsapi_${GLOBUS_FLAVOR}.a")
+	
+		condor_pre_external( VOMS voms-1.9.10_4 "include;${VOMS_LIB}" "done")
 
 		ExternalProject_Add(voms
 							DEPENDS ${EXPAT_REF} ${OPENSSL_RED} ${GLOBUS_REF} ${ZLIB_REF}
@@ -52,10 +58,10 @@ if ( WITH_VOMS )
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${VOMS_INSTALL_LOC}
-							INSTALL_COMMAND cd org.glite.security.voms && make install
+							INSTALL_COMMAND cd org.glite.security.voms && make install && touch ${VOMS_INSTALL_LOC}/done
 				)
 
-		set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi_${GLOBUS_FLAVOR}.a" )
+		set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.a" )
 
 		condor_post_external( voms include/glite/security OFF )
 

@@ -17,8 +17,6 @@
  ############################################################### 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 #####################################################################
 ## set var using master config
 add_definitions(-DCLASSAD_DISTRIBUTION -DWANT_CLASSAD_NAMESPACE=1 )
@@ -85,23 +83,30 @@ message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
 
 # finally add dependencies if there are any
 if (NOT PROPER)
-
-  file( COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${CLASSADS_INSTALL_LOC}/include )
-  file( COPY ${PCRE_FOUND} DESTINATION ${CLASSADS_INSTALL_LOC}/lib )
   
   if(PCRE_REF)
-	add_dependencies( ${CLASSADS_FOUND} PCRE_REF )
+	add_dependencies( ${CLASSADS_FOUND} ${PCRE_REF} )
   endif()
 
   if (NOT WINDOWS)
-  ############################################################################## 
-  # the only reason this exists is b/c our externals depend on it  
-  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${EXTERNAL_STAGE}/include )
-  set_target_properties( classads
-	PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
-	LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
-	RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
-	OUTPUT_NAME classad)
+	############################################################################## 
+	# the only reason this exists is b/c our externals depend on it
+	# (blahp & creame)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${CLASSADS_INSTALL_LOC}/include )
+	set_target_properties( classads
+		PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
+		LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
+		RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
+		OUTPUT_NAME classad)
+
+        add_custom_command (OUTPUT ${CLASSADS_INSTALL_LOC}/lib/libpcre.a
+                    COMMAND cp
+                    ARGS -f ${PCRE_FOUND} ${CLASSADS_INSTALL_LOC}/lib          
+                    DEPENDS ${PCRE_REF} )
+
+        add_custom_target( pcre_coinstall ALL DEPENDS ${CLASSADS_INSTALL_LOC}/lib/libpcre.a )
+        add_dependencies( ${CLASSADS_FOUND} pcre_coinstall )
+
   endif()
 
 endif(NOT PROPER)

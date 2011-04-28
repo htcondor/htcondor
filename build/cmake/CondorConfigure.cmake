@@ -413,7 +413,9 @@ else()
 endif(WINDOWS)
 
 dprint("EXTERNAL_STAGE=${EXTERNAL_STAGE}")
-file ( MAKE_DIRECTORY ${EXTERNAL_STAGE} )
+if (NOT EXISTS ${EXTERNAL_STAGE})
+	file ( MAKE_DIRECTORY ${EXTERNAL_STAGE} )
+endif()
 
 ###########################################
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)

@@ -70,7 +70,7 @@ if (WITH_GSOAP)
 			set(SOAPCPP2 "${GSOAP_INSTALL_LOC}/bin/soapcpp2")
 			condor_post_external( gsoap include OFF )
 		else(NOT WINDOWS)
-			condor_post_external( gsoap OFF OFF )
+			condor_post_external( gsoap include OFF )
 			# gsoap is handled differently on windows
 			set(GSOAP_FOUND ON)
 			set(GSOAP_SRC "${GSOAP_INSTALL_LOC}/src/stdsoap2.cpp" PARENT_SCOPE )

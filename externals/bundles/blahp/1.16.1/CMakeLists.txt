@@ -48,7 +48,7 @@ if ( WITH_BLAHP )
 		condor_post_external( popt OFF OFF )
 
 		########################################
-		condor_pre_external( BLAHP blahp-1.16.1 "lib;include" "opt/glite")
+		condor_pre_external( BLAHP blahp-1.16.1 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} ${POPT_REF}
@@ -78,7 +78,7 @@ if ( WITH_BLAHP )
 						BUILD_IN_SOURCE 1
 						#--install Step ----------
 						INSTALL_DIR ${BLAHP_INSTALL_LOC}
-						INSTALL_COMMAND cd org.glite.ce.blahp && make install )
+						INSTALL_COMMAND cd org.glite.ce.blahp && make install && touch ${BLAHP_INSTALL_LOC}/done )
 
 		add_dependencies(blahp ${CLASSADS_FOUND})
 

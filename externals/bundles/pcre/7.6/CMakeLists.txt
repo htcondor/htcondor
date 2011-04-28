@@ -60,9 +60,6 @@ if ( NOT PROPER )
 		install ( FILES ${PCRE_INSTALL_LOC}/lib/libpcre.dll DESTINATION ${C_LIB} )
 	else()
 		set(PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.a")
-		if ( AIX )
-			set (PCRE_FOUND "-Wl,-bstatic;${PCRE_FOUND};-Wl,-bdynamic")
-		endif()
 	endif()
 	#
 	#################################################################
