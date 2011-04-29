@@ -74,6 +74,11 @@ which is to create a spool directory only when needed.
 that caused the \Condor{negotiator} daemon to crash
 if any machine ClassAds contained cyclical attribute references.
 
+%gittrac #2101
+\item Fixed a bug that caused usage by \SubmitCmd{nice\_user} jobs to
+be charged to the user directly rather than `nice-user.\emph{user}'.
+This bug was introduced in the 7.5 series.
+
 \end{itemize}
 
 \noindent Known Bugs:
