@@ -979,7 +979,10 @@ tryagain:
 				// the terminating pattern, this $$ match fails, try again.
 
 				char * end_marker = strstr(value, "])");
-				if( end_marker == NULL ) { goto tryagain; }
+				if( end_marker == NULL ) {
+					tvalue = value;
+					goto tryagain;
+				}
 
 				left_end = value - 2;
 				name = ++value;
