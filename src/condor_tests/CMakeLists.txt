@@ -168,12 +168,16 @@ if (BUILD_TESTS)
 
 	if (WANT_LEASE_MANAGER)
 		condor_pl_test(lib_lease_manager-simple "Lease manager: Simple test" "core;quick;full")
+	
+	endif(WANT_LEASE_MANAGER)
+
+	if (WANT_LEASE_MANAGER_EXTRA_TESTS)
 		condor_pl_test(lib_lease_manager-get_rel_1 "Lease manager: get/relesae test 1" "core;quick;full")
 		condor_pl_test(lib_lease_manager-get_rel_2 "Lease manager: get/relesae test 2" "core;quick;full")
 		condor_pl_test(lib_lease_manager-get_rel_3 "Lease manager: get/relesae test 3" "core;quick;full")
 		condor_pl_test(lib_lease_manager-get_rel_4 "Lease manager: get/relesae test 4" "core;quick;full")
 		condor_pl_test(lib_lease_manager-get_rel_5 "Lease manager: get/relesae test 5" "core;quick;full")
-	endif(WANT_LEASE_MANAGER)
+	endif(WANT_LEASE_MANAGER_EXTRA_TESTS)
 
 	if (STD_UNIVERSE)
 		# C-Tests
