@@ -2951,7 +2951,7 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
 		if( tmp_ad.LookupFloat(attr_name, *val) == 1) {
-			return 0;
+			return 1;
 		}
 		return -1;
 	}
@@ -2979,7 +2979,7 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
 		if( tmp_ad.LookupInteger(attr_name, *val) == 1) {
-			return 0;
+			return 1;
 		}
 		return -1;
 	}
@@ -3007,7 +3007,7 @@ GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
 		if( tmp_ad.LookupBool(attr_name, *val) == 1) {
-			return 0;
+			return 1;
 		}
 		return -1;
 	}
@@ -3041,7 +3041,7 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
 		if( tmp_ad.LookupString(attr_name, val) == 1) {
-			return 0;
+			return 1;
 		}
 		return -1;
 	}
@@ -3074,7 +3074,7 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
 		if( tmp_ad.LookupString(attr_name, val) == 1) {
-			return 0;
+			return 1;
 		}
 		val = "";
 		return -1;
