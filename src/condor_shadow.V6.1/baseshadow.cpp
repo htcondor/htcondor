@@ -651,6 +651,13 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 	// update the job ad in the queue with some important final
 	// attributes so we know what happened to the job when using
 	// condor_history...
+    if (m_num_cleanup_retries < 1 &&
+        param_boolean("SHADOW_TEST_JOB_CLEANUP_RETRY", false)) {
+		dprintf( D_ALWAYS,
+				 "Testing Failure to perform final update to job queue!\n");
+		retryJobCleanup();
+		return;
+    }
 	if( !updateJobInQueue(U_TERMINATE) ) {
 		dprintf( D_ALWAYS, 
 				 "Failed to perform final update to job queue!\n");

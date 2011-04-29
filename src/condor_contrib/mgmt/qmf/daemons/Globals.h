@@ -33,10 +33,12 @@ using namespace std;
 
 typedef map<const char *, Job *, cmpstr> JobCollectionType;
 typedef map<const char *, SubmissionObject *, cmpstr> SubmissionCollectionType;
-typedef map<int, const char *> OwnerlessClusterType;
+typedef map<int, string> OwnerlessClusterType;
+typedef map<int, SubmissionObject*> OwnerlessSubmissionType;
 
 extern JobCollectionType g_jobs;
 extern SubmissionCollectionType g_submissions;
-extern OwnerlessClusterType g_ownerless;
+extern OwnerlessClusterType g_ownerless_clusters;
+extern OwnerlessSubmissionType g_ownerless_submissions;
 
 #endif /* _GLOBALS_H */

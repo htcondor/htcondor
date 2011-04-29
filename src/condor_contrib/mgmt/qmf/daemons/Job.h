@@ -149,6 +149,7 @@ class Job
         void Remove ( const char* );
 
         void SetSubmission ( const char*, int );
+        void UpdateSubmission ( int, const char* );
         void IncrementSubmission();
         void DecrementSubmission();
 

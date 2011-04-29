@@ -1272,7 +1272,7 @@ negotiationTime ()
 
                     negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight,
                                        startdAds, claimIds, *(group->submitterAds), 
-                                       slots, group->usage, group->name.c_str());
+                                       slots, group->name.c_str());
                 }
 
                 // Halt when we have negotiated with full deltas
@@ -1967,7 +1967,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					 ClassAdListDoesNotDeleteAds& startdAds,
 					 ClaimIdHash& claimIds, 
 					 ClassAdListDoesNotDeleteAds& scheddAds, 
-					 float groupQuota, float groupusage,const char* groupAccountingName)
+					 float groupQuota, const char* groupName)
 {
     time_t start_time_phase3 = time(NULL);
 	ClassAd		*schedd;
@@ -2006,6 +2006,18 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	do {
 		spin_pie++;
 
+        // On the first spin of the pie we tell the negotiate function to ignore the
+        // submitterLimit w/ respect to jobs which are strictly preferred by resource 
+        // offers (via startd rank).  However, if preemption is not being considered, 
+        // we respect submitter limits on all iterations.
+        const bool ignore_submitter_limit = ((spin_pie == 1) && ConsiderPreemption);
+
+        double groupusage = (NULL != groupName) ? accountant.GetWeightedResourcesUsed(groupName) : 0.0;
+        if (!ignore_submitter_limit && (NULL != groupName) && (groupusage >= groupQuota)) {
+            // If we've met the group quota, and if we are paying attention to submitter limits, halt now
+            dprintf(D_ALWAYS, "Group %s is using its quota %g - halting negotiation\n", groupName, groupQuota);
+            break;
+        }
 			// invalidate the MatchList cache, because even if it is valid
 			// for the next user+auto_cluster being considered, we might
 			// have thrown out matches due to SlotWeight being too high
@@ -2028,7 +2040,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
 		calculatePieLeft(
 			scheddAds,
-			groupAccountingName,
+			groupName,
 			groupQuota,
 			groupusage,
 			maxPrioValue,
@@ -2056,6 +2068,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
         // "schedd" seems to be used interchangeably with "submitter" here
 		while( (schedd = scheddAds.Next()) )
 		{
+            if (!ignore_submitter_limit && (NULL != groupName) && (accountant.GetWeightedResourcesUsed(groupName) >= groupQuota)) {
+                // If we met group quota, and if we're respecting submitter limits, halt.
+                // (output message at top of outer loop above)
+                break;
+            }
 			// get the name of the submitter and address of the schedd-daemon it came from
 			if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
 				!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
@@ -2100,7 +2117,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
 			calculateSubmitterLimit(
 				scheddName.Value(),
-				groupAccountingName,
+				groupName,
 				groupQuota,
 				groupusage,
 				maxPrioValue,
@@ -2184,11 +2201,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				if ( (submitterLimit <= 0 || pieLeft < minSlotWeight) && spin_pie > 1 ) {
 					result = MM_RESUME;
 				} else {
-					if ( spin_pie == 1 && ConsiderPreemption ) {
-						ignore_schedd_limit = true;
-					} else {
-						ignore_schedd_limit = false;
-					}
 					int numMatched = 0;
 					startTime = time(NULL);
 					double limitUsed = 0.0;
@@ -2247,7 +2259,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		scheddAds.Close();
 		dprintf( D_FULLDEBUG, " resources used scheddUsed= %f\n",scheddUsed);
 
-		groupusage = scheddUsed;
 	} while ( ( pieLeft < pieLeftOrig || scheddAds.MyLength() < scheddAdsCountOrig )
 			  && (scheddAds.MyLength() > 0)
 			  && (startdAds.MyLength() > 0) );
@@ -2570,6 +2581,25 @@ obtainAdsFromCollector (
 				// CRUFT: Before 7.3.2, submitter ads had a MyType of
 				//   "Scheduler". The only way to tell the difference
 				//   was that submitter ads didn't have ATTR_NUM_USERS.
+
+            MyString subname;
+            if (!ad->LookupString(ATTR_NAME, subname)) {
+                dprintf(D_ALWAYS, "WARNING: ignoring submitter ad with no name\n");
+                continue;
+            }
+
+            int numidle=0;
+            ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
+            int numrunning=0;
+            ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
+            int requested = numrunning + numidle;
+
+            // This will avoid some wasted effort in negotiation looping
+            if (requested <= 0) {
+                dprintf(D_FULLDEBUG, "Ignoring submitter %s with no requested jobs\n", subname.Value());
+                continue;
+            }
+
     		ad->Assign(ATTR_TOTAL_TIME_IN_CYCLE, 0);
 			scheddAds.Insert(ad);
 		}

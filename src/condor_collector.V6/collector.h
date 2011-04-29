@@ -20,6 +20,8 @@
 #ifndef _COLLECTOR_DAEMON_H_
 #define _COLLECTOR_DAEMON_H_
 
+#include <vector>
+
 #include "condor_classad.h"
 #include "condor_commands.h"
 #include "totals.h"
@@ -121,18 +123,23 @@ public:
 	static void sendCollectorAd();
 
 	static void forward_classad_to_view_collector(int cmd, const char *filterAttr, ClassAd *ad);
-	static void send_classad_to_sock( int cmd, Daemon * d, ClassAd* theAd);	
+	static void send_classad_to_sock(int cmd, ClassAd* theAd);	
 
 	// A get method to support SOAP
 	static CollectorEngine & getCollector( void ) { return collector; };
 
-protected:
+    // data pertaining to each view collector entry
+    struct vc_entry {
+        std::string name;
+        Daemon* collector;
+        Sock* sock;
+    };
 
+protected:
 	static CollectorStats collectorStats;
 	static CollectorEngine collector;
-	static Daemon* View_Collector;
-	static Sock* view_sock;
 	static Timeslice view_sock_timeslice;
+    static std::vector<vc_entry> vc_list;
 
 	static int ClientTimeout;
 	static int QueryTimeout;

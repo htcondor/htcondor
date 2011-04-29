@@ -144,6 +144,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	char *gahp_debug = NULL;
 	ArgList args;
 	std::string value;
+	char *buffer = NULL;
 	
 	remoteJobId = NULL;
 	remoteJobState = "";
@@ -154,6 +155,12 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	numSubmitAttempts = 0;
 	myResource = NULL;
 	gahp = NULL;
+	m_public_key_file = NULL;
+	m_private_key_file = NULL;
+	m_user_data = NULL;
+	m_user_data_file = NULL;
+	m_group_names = NULL;
+	m_instance_type = NULL;
 	
 	// check the public_key_file
 	buff[0] = '\0';
@@ -183,8 +190,6 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		// at the attribute in a better way.
 
 	memset(buff, 0, 16385);
-	m_user_data = NULL;
-	m_user_data_file = NULL;	
 	
 	// if user assigns both user_data and user_data_file, the two will
 	// be concatenated by the gahp
@@ -197,21 +202,17 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	
 	// get VM instance type
 	memset(buff, 0, 16385);
-	m_instance_type = NULL; // if clients don't assign this value in condor submit file,
-							// we should set the default value to NULL and gahp_server
-							// will start VM in Amazon using m1.small mode.
+	// if clients don't assign this value in condor submit file,
+	// we should set the default value to NULL and gahp_server
+	// will start VM in Amazon using m1.small mode.
 	if ( jobAd->LookupString( ATTR_AMAZON_INSTANCE_TYPE, buff ) ) {
 		m_instance_type = strdup(buff);	
 	}
 	
-	m_group_names = NULL;
 	m_vm_check_times = 0;
 	m_keypair_check_times = 0;
 
 	// for SSH keypair output file
-	{
-	char* buffer = NULL;
-	
 	// Notice:
 	// 	we can have two kinds of SSH keypair output file names or the place where the 
 	// output private file should be written to, 
@@ -227,7 +228,6 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		m_key_pair_file = NULL_FILE;
 	}
 	free (buffer);
-	}
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
@@ -359,13 +359,13 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 AmazonJob::~AmazonJob()
 {
 	if ( myResource ) myResource->UnregisterJob( this );
-	if ( remoteJobId ) free( remoteJobId );
+	free( remoteJobId );
 	
-	if ( gahp != NULL ) delete gahp;
+	delete gahp;
 	free (m_public_key_file);
 	free (m_private_key_file);
 	free (m_user_data);
-	if (m_group_names != NULL) delete m_group_names;
+	delete m_group_names;
 	free(m_user_data_file);
 	free(m_instance_type);
 }

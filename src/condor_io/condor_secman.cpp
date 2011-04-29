@@ -2900,7 +2900,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
 	if(!keybuf) {
 		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
-				"oneWayHashKey() failed.\n",sesid);
+				" oneWayHashKey() failed.\n",sesid);
 		return false;
 	}
 	KeyInfo *keyinfo = new KeyInfo(keybuf,keylen,crypt_protocol);

@@ -48,7 +48,7 @@ while(<FILE>) {
 	    else {
 		pop @chunk;
 
-                my @tmp = map { s/(error \S+)/<font style="background-color:#ff00ff">$1<\/font>/; $_ } grep /: (error|warning) (C|LNK)\d+/, @chunk;
+                my @tmp = map { s/(error \S+)/<font style="background-color:#ff00ff">$1<\/font>/; $_ } grep / (error|warning) (C|LNK|PRJ)\d+/, @chunk;
                 push @output, @tmp;
 
 		

@@ -28,10 +28,8 @@
 #include "util_lib_proto.h"
 #include "classad_merge.h"
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 #include "ClassAdLogPlugin.h"
-#endif
 #endif
 
 // explicitly instantiate the HashTable template
@@ -721,10 +719,8 @@ LogNewClassAd::Play(void *data_structure)
 	ad->SetTargetTypeName(targettype);
 	result = table->insert(HashKey(key), ad);
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::NewClassAd(key);
-#endif
 #endif
 
 	return result;
@@ -791,10 +787,8 @@ LogDestroyClassAd::Play(void *data_structure)
 		return -1;
 	}
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::DestroyClassAd(key);
-#endif
 #endif
 
 	delete ad;
@@ -841,10 +835,8 @@ LogSetAttribute::Play(void *data_structure)
 	rval = ad->AssignExpr(name, value);
 	ad->SetDirtyFlag(name, is_dirty);
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::SetAttribute(key, name, value);
-#endif
 #endif
 
 	return rval;
@@ -940,10 +932,8 @@ LogDeleteAttribute::Play(void *data_structure)
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
 
-#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 	ClassAdLogPluginManager::DeleteAttribute(key, name);
-#endif
 #endif
 
 	return ad->Delete(name);

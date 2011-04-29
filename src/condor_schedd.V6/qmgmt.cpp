@@ -2840,6 +2840,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					rewriteSpooledJobAd(procad, cluster_id, proc_id, false);
 					JobQueue->CommitNondurableTransaction();
 					ScheduleJobQueueLogFlush();
+					SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 				}
 
 				std::string version;
@@ -2849,7 +2850,6 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					// they are responsible for writing the submit event
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 						PROC_ID job_id;
 						job_id.cluster = cluster_id;
 						job_id.proc = proc_id;
@@ -2925,9 +2925,13 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		sscanf(attr_val, "%f", val);
+		ClassAd tmp_ad;
+		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		return 1;
+		if( tmp_ad.LookupFloat(attr_name, *val) == 1) {
+			return 0;
+		}
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -2949,9 +2953,13 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		sscanf(attr_val, "%d", val);
+		ClassAd tmp_ad;
+		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		return 1;
+		if( tmp_ad.LookupInteger(attr_name, *val) == 1) {
+			return 0;
+		}
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -2973,9 +2981,13 @@ GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		sscanf(attr_val, "%d", val);
+		ClassAd tmp_ad;
+		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		return 1;
+		if( tmp_ad.LookupBool(attr_name, *val) == 1) {
+			return 0;
+		}
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -3003,15 +3015,13 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		int attr_len = strlen( attr_val );
-		if ( attr_val[0] != '"' || attr_val[attr_len-1] != '"' ) {
-			free( attr_val );
-			return -1;
-		}
-		attr_val[attr_len - 1] = '\0';
-		*val = strdup(&attr_val[1]);
+		ClassAd tmp_ad;
+		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		return 1;
+		if( tmp_ad.LookupString(attr_name, val) == 1) {
+			return 0;
+		}
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -3038,16 +3048,14 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		int attr_len = strlen( attr_val );
-		if ( attr_val[0] != '"' || attr_val[attr_len-1] != '"' ) {
-			free( attr_val );
-			val = "";
-			return -1;
-		}
-		attr_val[attr_len - 1] = '\0';
-		val = attr_val + 1;
+		ClassAd tmp_ad;
+		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		return 1;
+		if( tmp_ad.LookupString(attr_name, val) == 1) {
+			return 0;
+		}
+		val = "";
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {

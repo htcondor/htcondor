@@ -181,14 +181,25 @@ do_REMOTE_syscall()
 		err_msg += ':';
 		err_msg += syscall_sock->peer_port();
 		err_msg += '>';
+
+            // the socket is closed, there's no way to recover
+            // from this.  so, we have to cancel the socket
+            // handler in daemoncore and delete the relisock.
+		thisRemoteResource->closeClaimSock();
+
+            /* It is possible that we are failing to read the
+            syscall number because the starter went away
+            because we *asked* it to go away. Don't be shocked
+            and surprised if the startd/starter actually did
+            what we asked when we deactivated the claim */
+       if ( thisRemoteResource->wasClaimDeactivated() ) {
+           return 0;
+       }
+
 		if( Shadow->supportsReconnect() ) {
 				// instead of having to EXCEPT, we can now try to
 				// reconnect.  happy day! :)
 			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-				// the socket is closed, there's no way to recover
-				// from this.  so, we have to cancel the socket
-				// handler in daemoncore and delete the relisock.
-			thisRemoteResource->closeClaimSock();
 
 			const char* txt = "Socket between submit and execute hosts "
 				"closed unexpectedly";

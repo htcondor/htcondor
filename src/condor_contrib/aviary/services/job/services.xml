@@ -1,0 +1,26 @@
+<!-- This file was auto-generated from WSDL -->
+<!-- by the Apache Axis2 version: 1.0  Built on : Jan 09, 2011 (11:40:28 EST) -->
+<service name="AviaryJobService">
+<parameter name="ServiceClass" locked="xsd:false">aviary_job_axis</parameter>
+<description>AviaryJobServiceService</description>
+<operation name="submitJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">job#submit</parameter>
+</operation>
+<operation name="holdJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">job#hold</parameter>
+</operation>
+<operation name="releaseJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">job#release</parameter>
+</operation>
+<operation name="removeJob" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">job#remove</parameter>
+</operation>
+<operation name="setJobAttribute" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">job#setattr</parameter>
+</operation>
+</service>

@@ -73,7 +73,7 @@ class HashTable {
   int lookup(const Index &index, Value* &value) const;
 	  // returns 0 if exists, -1 otherwise
   int exists(const Index &index) const;
-  int getNext(Index &index, void *current, Value &value,
+  int getNext(const Index &index, void *current, Value &value,
 	      void *&next) const;
   int remove(const Index &index);  
   int getNumElements( ) const { return numElems; }
@@ -421,7 +421,7 @@ int HashTable<Index,Value>::exists(const Index &index) const
 	no unit test written.
 */
 template <class Index, class Value>
-int HashTable<Index,Value>::getNext(Index &index, void *current,
+int HashTable<Index,Value>::getNext(const Index &index, void *current,
 				    Value &value, void *&next) const
 {
   HashBucket<Index, Value> *bucket;
