@@ -710,9 +710,12 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
 	int locked = 0;
-
-	FILE *debug_file_ptr = NULL;
-
+	FILE *debug_file_ptr;
+#ifdef WIN32
+	debug_file_ptr = DebugFPs[debug_level];
+#else
+	debug_file_ptr = DebugFP;
+#endif
 	if ( mode == NULL ) {
 		mode = "a";
 	}
@@ -724,9 +727,8 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-	if(DebugFPs[debug_level])
+	if(debug_file_ptr)
 	{
-		debug_file_ptr = DebugFPs[debug_level];
 		//Hypothetically if we never closed the file, we
 		//should have never unlocked it either.  The best
 		//way to handle this will need further thought.
@@ -815,7 +817,11 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			(int) MaxLog[debug_level], (int)length );
 		
 		preserve_log_file(debug_level);
+#ifdef WIN32
 		debug_file_ptr = DebugFPs[debug_level];
+#else
+		debug_file_ptr = DebugFP;
+#endif
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
