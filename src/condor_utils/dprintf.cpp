@@ -369,7 +369,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	int saved_errno;
 	priv_state	priv;
 	int debug_level;
-	File *debug_file_ptr = NULL;
+	FILE *debug_file_ptr = NULL;
 
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
