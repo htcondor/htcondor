@@ -370,8 +370,6 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	priv_state	priv;
 	int debug_level;
 
-	FILE *debug_file_ptr;
-
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
 
@@ -493,7 +491,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 #ifdef va_copy
 					va_list copyargs;
 					va_copy(copyargs, args);
-					_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,DebugFP,fmt,copyargs);
+					_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,copyargs);
 					va_end(copyargs);
 #else
 					_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,args);
@@ -954,6 +952,11 @@ preserve_log_file(int debug_level)
 
 	fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
 	debug_file_ptr = NULL;
+#ifdef WIN32
+	DebugFPs[debug_level] = debug_file_ptr;
+#else
+	DebugFP = debug_file_ptr;
+#endif
 
 	result = rotateTimestamp(timestamp, MaxLogNum[debug_level]);
 
@@ -1271,6 +1274,9 @@ _condor_dprintf_exit( int error_code, const char* msg )
 				debug_close_file(debug_level);
 			}
 		}
+#else
+		debug_close_lock();
+		debug_close_file(0);
 #endif
 	}
 
