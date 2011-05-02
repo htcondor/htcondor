@@ -95,11 +95,7 @@ static time_t DebugLockDelayPeriodStarted = 0;
  * limit to FDs.  Windows can open as many as you want short of running
  * out of physical resources like memory.
  */
-#ifdef WIN32
 FILE	*DebugFPs[D_NUMLEVELS+1] = { NULL };
-#else
-FILE	*DebugFP = 0;
-#endif
 
 /*
  * This is last modification time of the main debug file as returned
@@ -710,11 +706,9 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 	char msg_buf[DPRINTF_ERR_MAX];
 	int locked = 0;
 	FILE *debug_file_ptr;
-#ifdef WIN32
+
 	debug_file_ptr = DebugFPs[debug_level];
-#else
-	debug_file_ptr = DebugFP;
-#endif
+
 	if ( mode == NULL ) {
 		mode = "a";
 	}
@@ -816,11 +810,8 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			(int) MaxLog[debug_level], (int)length );
 		
 		preserve_log_file(debug_level);
-#ifdef WIN32
 		debug_file_ptr = DebugFPs[debug_level];
-#else
-		debug_file_ptr = DebugFP;
-#endif
+
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
@@ -857,11 +848,8 @@ void debug_close_file(int debug_level)
 {
 	FILE *debug_file_ptr;
 
-#ifdef WIN32
 	debug_file_ptr = DebugFPs[debug_level];
-#else
-	debug_file_ptr = DebugFP;
-#endif
+
 
 	if( DebugFile[debug_level] ) {
 		if (debug_file_ptr) {
@@ -870,11 +858,7 @@ void debug_close_file(int debug_level)
 				DebugUnlockBroken = 1;
 				_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
 			}
-#ifdef WIN32
 			DebugFPs[debug_level] = NULL;
-#else
-			DebugFP = NULL;
-#endif
 		}
 	}
 }
@@ -891,11 +875,8 @@ debug_unlock(int debug_level)
 	if(log_keep_open)
 		return;
 
-#ifdef WIN32
 	debug_file_ptr = DebugFPs[debug_level];
-#else
-	debug_file_ptr = DebugFP;
-#endif
+
 	if( DebugUnlockBroken ) {
 		return;
 	}
@@ -938,11 +919,7 @@ preserve_log_file(int debug_level)
 #endif
 	char msg_buf[DPRINTF_ERR_MAX];
 
-#ifdef WIN32
 	debug_file_ptr = DebugFPs[debug_level];
-#else
-	debug_file_ptr = DebugFP;
-#endif
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 	(void)setBaseName(DebugFile[debug_level]);
@@ -953,11 +930,8 @@ preserve_log_file(int debug_level)
 
 	fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
 	debug_file_ptr = NULL;
-#ifdef WIN32
 	DebugFPs[debug_level] = debug_file_ptr;
-#else
-	DebugFP = debug_file_ptr;
-#endif
+
 
 	result = rotateTimestamp(timestamp, MaxLogNum[debug_level]);
 
@@ -1030,11 +1004,7 @@ preserve_log_file(int debug_level)
 	}
 	else
 	{
-#ifdef WIN32
 		DebugFPs[debug_level] = debug_file_ptr;
-#else
-		DebugFP = debug_file_ptr;
-#endif
 	}
 
 	if ( !still_in_old_file ) {
@@ -1087,19 +1057,19 @@ _condor_fd_panic( int line, const char* file )
 		(void)close( i );
 	}
 	if( DebugFile[0] ) {
-		DebugFP = safe_fopen_wrapper(DebugFile[0], "a", 0644);
+		DebugFPs[0] = safe_fopen_wrapper(DebugFile[0], "a", 0644);
 	}
 
-	if( DebugFP == NULL ) {
+	if( DebugFPs[0] == NULL ) {
 		save_errno = errno;
 		snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", DebugFile[0],
 				 panic_msg ); 
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
-	(void)lseek( fileno(DebugFP), 0, SEEK_END );
-	fprintf( DebugFP, "%s\n", panic_msg );
-	(void)fflush( DebugFP );
+	(void)lseek( fileno(DebugFP[0]), 0, SEEK_END );
+	fprintf( DebugFPs[0], "%s\n", panic_msg );
+	(void)fflush( DebugFPs[0] );
 
 	_condor_dprintf_exit( 0, panic_msg );
 }
@@ -1146,11 +1116,7 @@ open_debug_file(int debug_level, const char flags[])
 	int save_errno;
 
 	FILE* debug_file_fp;
-#ifdef WIN32
 	debug_file_fp = DebugFPs[debug_level];
-#else
-	debug_file_fp = DebugFP;
-#endif
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -1181,11 +1147,7 @@ open_debug_file(int debug_level, const char flags[])
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
-#ifdef WIN32
 	DebugFPs[debug_level] = fp;
-#else
-	DebugFP = fp;
-#endif
 
 	return fp;
 }
@@ -1266,7 +1228,6 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		DprintfBroken = 1;
 
 			/* Don't forget to unlock the log file, if possible! */
-#ifdef WIN32
 		for (int debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++)
 		{
 			if(DebugFPs[debug_level])
@@ -1275,10 +1236,6 @@ _condor_dprintf_exit( int error_code, const char* msg )
 				debug_close_file(debug_level);
 			}
 		}
-#else
-		debug_close_lock();
-		debug_close_file(0);
-#endif
 	}
 
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),

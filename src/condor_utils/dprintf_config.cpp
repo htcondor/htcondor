@@ -37,11 +37,7 @@
 int		Termlog = 0;
 
 extern int		DebugFlags;
-#ifdef WIN32
 extern FILE		*DebugFPs[D_NUMLEVELS+1];
-#else
-extern FILE		*DebugFP;
-#endif
 extern off_t		MaxLog[D_NUMLEVELS+1];
 extern int 			MaxLogNum[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
@@ -108,6 +104,7 @@ dprintf_config( const char *subsys )
 	int want_truncate;
 	int debug_level;
 	FILE *debug_file_fp;
+	int log_open_default = TRUE;
 
 	/*  
 	**  We want to initialize this here so if we reconfig and the
@@ -323,12 +320,19 @@ dprintf_config( const char *subsys )
 		(void)fflush( stderr );	/* Don't know why we need this, but if not here
 							   the first couple dprintf don't come out right */
 	}
-#ifdef WIN32
-	if(!DebugLock) {
-		sprintf(pname, "%s_LOG_KEEP_OPEN", subsys);
-		log_keep_open = param_boolean_int(pname, TRUE);
+
+#ifndef WIN32
+	if(strcmp(subsys, "SHADOW") == 0)
+	{
+		log_open_default = FALSE;
 	}
 #endif
+
+	if(!DebugLock) {
+		sprintf(pname, "%s_LOG_KEEP_OPEN", subsys);
+		log_keep_open = param_boolean_int(pname, log_open_default);
+	}
+
 	first_time = 0;
 	_condor_dprintf_works = 1;
 #if HAVE_EXT_GCB
