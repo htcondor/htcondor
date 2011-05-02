@@ -100,6 +100,7 @@ static time_t xact_start_time = 0;	// time at which the current transaction was 
 static int cluster_initial_val = 1;		// first cluster number to use
 static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
 static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 'no max')
+static int job_queued_count = 0;
 
 static void AddOwnerHistory(const MyString &user);
 
@@ -1747,6 +1748,7 @@ NewProc(int cluster_id)
 	JobQueue->NewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
 
 	IncrementClusterSize(cluster_id);
+    job_queued_count += 1;
 
 		// now that we have a real job ad with a valid proc id, then
 		// also insert the appropriate GlobalJobId while we're at it.
@@ -4922,4 +4924,8 @@ void
 dirtyJobQueue()
 {
 	JobQueueDirty = true;
+}
+
+int GetJobQueuedCount() {
+    return job_queued_count;
 }

@@ -10136,6 +10136,22 @@ url=
 tags=
 id=601
 
+[WINDOWED_STAT_WIDTH]
+aliases=
+default=300
+version=0.0.0
+range=1,1000000000
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Windowed Statistic Width
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=scheduler
+id=602
+
 [SHADOW_CHECKPROXY_INTERVAL]
 aliases=
 default=600
