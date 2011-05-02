@@ -154,6 +154,8 @@ if (BUILD_TESTS)
 		#condor_pl_test(lib_auth_protocol-gsi "GSI authentication test" "core;quick;full;quicknolink")
 		condor_pl_test(job_dagman_large_dag "Test large DAG w/ recovery mode" "dagman;quick;full;quicknolink")
 		condor_pl_test(lib_shared_port_van "Test of shared port feature." "core;quick;full;quicknolink")
+		condor_pl_test(lib_shared_port-collector_van "Test of shared port feature with collector usage." "core;quick;full;quicknolink")
+		condor_pl_test(lib_shared_port-check-ports_van "Test of shared port feature with respect to open ports." "core;quick;full;quicknolink")
 	endif()
 
 	if (NOT AIX)
