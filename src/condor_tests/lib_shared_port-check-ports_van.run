@@ -23,7 +23,7 @@ use Check::CondorLog;
 
 $execute = sub {
 	# use netstat to find open ports
-	my $netstat_result = `netstatat -tlpn | grep condor`;
+	my $netstat_result = `netstat -tlpn | grep condor`;
 
 	# allow netstat to fail as some nmi platforms (macos_10.4) don't support it
 	if(length($netstat_result) == 0) {
