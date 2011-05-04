@@ -1067,7 +1067,7 @@ _condor_fd_panic( int line, const char* file )
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
-	(void)lseek( fileno(DebugFP[0]), 0, SEEK_END );
+	(void)lseek( fileno(DebugFPs[0]), 0, SEEK_END );
 	fprintf( DebugFPs[0], "%s\n", panic_msg );
 	(void)fflush( DebugFPs[0] );
 
