@@ -184,7 +184,7 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 		willing = false;
 	}
 	else {
-		rank = compute_rank(rip->r_classad, job_ad);
+		rank = rip->compute_rank(job_ad);
 		rip->dprintf(D_FULLDEBUG, "Rank of this fetched claim is: %f\n", rank);
 		if (rip->state() == claimed_state && !idle_fetch_claim) {
 				// Make sure it's got a high enough rank to preempt us.

@@ -1197,7 +1197,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 
 		// Now, make sure it's got a high enough rank to preempt us.
-	rank = compute_rank(rip->r_classad, req_classad);
+	rank = rip->compute_rank(req_classad);
 	rip->dprintf( D_FULLDEBUG, "Rank of this claim is: %f\n", rank );
 
 	if( rip->state() == claimed_state ) {
@@ -1721,7 +1721,7 @@ activate_claim( Resource* rip, Stream* stream )
 	tmp_starter = NULL;
 
 		// update the current rank on this claim
-	float rank = compute_rank( mach_classad, req_classad ); 
+	float rank = rip->compute_rank( req_classad ); 
 	rip->r_cur->setrank( rank );
 
 		// Grab the job ID, so we've got it.  Once we give the

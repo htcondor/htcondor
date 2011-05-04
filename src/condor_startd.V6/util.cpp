@@ -356,20 +356,6 @@ cleanup_execute_dir(int pid, char const *exec_path)
 #endif  /* UNIX */
 }
 
-
-float
-compute_rank( ClassAd* mach_classad, ClassAd* req_classad ) 
-{
-	float rank;
-
-	if( mach_classad->EvalFloat( ATTR_RANK, req_classad, rank ) == 0 ) {
-		dprintf( D_ALWAYS, "Error evaluating rank.\n" );
-		rank = 0;
-	}
-	return rank;
-}
-
-
 int
 create_port( ReliSock* rsock )
 {
