@@ -16,7 +16,9 @@
  #
  ###############################################################
 
-option(WITH_LIBCGROUP "Compiling with support for libcgroup" ON)
+if (LINUX)
+	option(WITH_LIBCGROUP "Compiling with support for libcgroup" ON)
+endif()
 
 if (WITH_LIBCGROUP)
 
@@ -24,7 +26,7 @@ if (WITH_LIBCGROUP)
 
 		set (LIBCGROUP_VER libcgroup-0.37)
 
-		set (LIBCGROUP_CONFIGURE ./configure --prefix=${EXTERNAL_STAGE} --disable-dependency-tracking CPPFLAGS=-I${EXTERNAL_STAGE}/include/)
+		set (LIBCGROUP_CONFIGURE ./configure --prefix=${EXTERNAL_STAGE} --enable-static=yes --disable-dependency-tracking CPPFLAGS=-I${EXTERNAL_STAGE}/include/)
 		set (LIBCGROUP_MAKE make )
 		set (LIBCGROUP_INSTALL make install )
 
