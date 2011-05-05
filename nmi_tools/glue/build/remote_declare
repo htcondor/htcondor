@@ -24,6 +24,8 @@
 use strict;
 use warnings;
 
+exit 3;
+
 my $EXTERNALS_TASK        = "remote_task.externals";
 my $TAR_TASK              = "remote_task.create_tar";
 my $CHECK_TAR_TASK        = "remote_task.check_tar";
