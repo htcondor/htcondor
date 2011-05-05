@@ -65,6 +65,9 @@ private:
 	void track_family_via_allocated_supplementary_group();
 	void track_family_via_associated_supplementary_group();
 #endif
+#if defined(HAVE_EXT_LIBCGROUP)
+	void track_family_via_cgroup();
+#endif
 #if !defined(WIN32)
 	void use_glexec_for_family();
 #endif

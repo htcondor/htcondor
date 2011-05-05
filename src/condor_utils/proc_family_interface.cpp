@@ -63,8 +63,9 @@ ProcFamilyInterface* ProcFamilyInterface::create(const char* subsys)
 		        "GLEXEC_JOB requires use of ProcD; "
 		            "ignoring USE_PROCD setting\n");
 		ptr = new ProcFamilyProxy;
-	}
-	else {
+	// Note: if CGROUPS is turned on and the startd has USE_PROCD=false,
+	// then we will respect the procd setting and not use cgroups.
+	} else {
 
 		ptr = new ProcFamilyDirect;
 	}

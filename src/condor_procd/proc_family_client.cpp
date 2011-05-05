@@ -364,6 +364,66 @@ ProcFamilyClient::track_family_via_associated_supplementary_group(pid_t pid,
 }
 #endif
 
+#if defined(HAVE_EXT_LIBCGROUP)
+bool
+ProcFamilyClient::track_family_via_cgroup(pid_t pid,
+                                          const char * cgroup,
+                                          bool& response)
+{
+	ASSERT(m_initialized);
+
+	dprintf(D_FULLDEBUG,
+		"About to tell ProcD to track family with root %u "
+		    "via cgroup %s\n",
+		pid,
+		cgroup);
+
+	size_t cgroup_len = strlen(cgroup);
+
+	int message_len = sizeof(proc_family_command_t) +
+			  sizeof(pid_t) +
+			  sizeof(size_t) +
+			  sizeof(char)*cgroup_len;
+	void* buffer = malloc(message_len);
+	ASSERT(buffer != NULL);
+	char* ptr = (char*)buffer;
+
+	*(proc_family_command_t*)ptr =
+		PROC_FAMILY_TRACK_FAMILY_VIA_CGROUP;
+	ptr += sizeof(proc_family_command_t);
+
+	*(pid_t*)ptr = pid;
+	ptr += sizeof(pid_t);
+
+	*(size_t*)ptr = cgroup_len;
+	ptr += sizeof(size_t);
+
+	memcpy((void *)ptr, (const void *)cgroup, sizeof(char)*cgroup_len);
+	ptr += cgroup_len*sizeof(char);
+
+	ASSERT(ptr - (char*)buffer == message_len);
+
+	if (!m_client->start_connection(buffer, message_len)) {
+		dprintf(D_ALWAYS,
+			"ProcFamilyClient: failed to start connection with ProcD\n");
+		free(buffer);
+		return false;
+        }
+	free(buffer);
+	proc_family_error_t err;
+	if (!m_client->read_data(&err, sizeof(proc_family_error_t))) {
+		dprintf(D_ALWAYS,
+			"ProcFamilyClient: failed to read response from ProcD\n");
+		return false;
+	}
+	m_client->end_connection();
+
+	log_exit("track_family_via_cgroup", err);
+	response = (err == PROC_FAMILY_ERROR_SUCCESS);
+	return true;
+}
+#endif
+
 bool
 ProcFamilyClient::use_glexec_for_family(pid_t pid,
                                         const char* proxy,

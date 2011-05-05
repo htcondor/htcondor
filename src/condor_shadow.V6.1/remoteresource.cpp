@@ -1019,6 +1019,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	    jobAd->Assign(ATTR_RESIDENT_SET_SIZE, int_value);
 	}
 
+	if( update_ad->LookupInteger(ATTR_BLOCK_READ_KBYTES, int_value) ) {
+		jobAd->Assign(ATTR_BLOCK_READ_KBYTES, int_value);
+	}
+
+	if( update_ad->LookupInteger(ATTR_BLOCK_WRITE_KBYTES, int_value) ) {
+		jobAd->Assign(ATTR_BLOCK_WRITE_KBYTES, int_value);
+	}
+
 	if( update_ad->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		if( int_value > disk_usage ) {
 			disk_usage = int_value;

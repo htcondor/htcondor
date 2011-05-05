@@ -318,6 +318,9 @@
 ///* Do we have the zlib external */
 #cmakedefine HAVE_EXT_ZLIB
 
+///* Do we have the libcgroup external */
+#cmakedefine HAVE_EXT_LIBCGROUP
+
 /* Define to 1 if you have the 'fstat64' function. (USED)*/
 #cmakedefine HAVE_FSTAT64 1
 

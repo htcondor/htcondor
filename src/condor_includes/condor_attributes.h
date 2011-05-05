@@ -152,6 +152,8 @@ extern const char * const  ATTR_FILE_READ_COUNT;
 extern const char * const  ATTR_FILE_READ_BYTES;
 extern const char * const  ATTR_FILE_WRITE_COUNT;
 extern const char * const  ATTR_FILE_WRITE_BYTES;
+extern const char * const  ATTR_BLOCK_READ_KBYTES;
+extern const char * const  ATTR_BLOCK_WRITE_KBYTES;
 extern const char * const  ATTR_FILE_SEEK_COUNT;
 extern const char * const  ATTR_FLOCKED_JOBS;
 extern const char * const  ATTR_FLAVOR;
