@@ -175,7 +175,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri?next_deleg->deleg_
 		free( serviceUri );
 	}
 
-	ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject ) ) );
+	ResourcesByName.remove( HashKey( HashName( resourceName, proxyFQAN ) ) );
 
 	daemonCore->Cancel_Timer( delegationTimerId );
 	if ( gahp != NULL ) {
