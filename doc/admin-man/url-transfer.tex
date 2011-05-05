@@ -3,20 +3,45 @@
 Enabling the Transfer of Files Specified by a URL}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{file transfer mechanism!input file specified by URL}
+\index{file transfer mechanism!output file(s) specified by URL}
 \index{URL file transfer}
 
-A vanilla universe's job input files or a vm universe VM image file
-may be specified by a URL,
-causing the execute machine to retrieve the files.
+\Revision
+
+Because staging data on the submit machine is not always efficient,
+Condor permits input files to be transferred
+from a location specified by a URL;
+likewise, output files may be transferred
+to a location specified by a URL.
+All transfers (both input and output) are accomplished by invoking 
+a \Term{plug-in},
+an executable or shell script that handles the task of file transfer.
+
+For transferring input files,
+URL specification is limited to jobs running under the vanilla universe 
+and to a vm universe VM image file.
+The execute machine retrieves the files.
 This differs from the normal file transfer mechanism,
 in which transfers are from the machine where the job is submitted
 to the machine where the job is executed.
+Each file to be transferred by specifying a URL, causing a
+plug-in to be invoked is specified separately in the job submit
+description file with the command \SubmitCmd{transfer\_input\_files};
+see section~\ref{sec:file-transfer-by-URL} for details.
 
-The transfers are accomplished a \Term{plug-in},
-an executable or shell script that handles the task of file transfer.
-More than one plug-in may be specified.
+For transferring output files,
+either the entire output sandbox, which are all files produced or
+modified by the job as it executes, or a subset of these files,
+as specified by the submit description file command 
+\SubmitCmd{transfer\_output\_files} are transferred to the
+directory specified by the URL.
+The URL itself is specified in the separate submit description file command 
+\SubmitCmd{output\_destination};
+see section~\ref{sec:file-transfer-by-URL} for details.
+
+Configuration identifies the availability of the one or more plug-in(s).
 The plug-ins must be installed and available on every execute machine 
-that may run a job specifying an input file with a URL.
+that may run a job which might specify a URL either for input or output.
 
 URL transfers are enabled by default in the configuration 
 of execute machines.
@@ -106,7 +131,7 @@ And, then when a job requested that this plug-in be invoked,
 for the invented example:
 \footnotesize
 \begin{verbatim}
-transfer_intput_files = zkm://128/r-data
+transfer_input_files = zkm://128/r-data
 \end{verbatim}
 \normalsize
 the plug-in will be invoked with a first command line argument
