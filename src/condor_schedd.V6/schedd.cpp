@@ -11801,12 +11801,11 @@ bool
 moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 			 bool verbose )
 {
-	char* value = NULL;
-	MyString new_value;
+	MyString value;
 	int rval;
 
-	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-							  old_attr, &value) < 0 ) { 
+	if( GetAttributeString(job_id.cluster, job_id.proc,
+						   old_attr, value) < 0 ) { 
 		if( verbose ) {
 			dprintf( D_FULLDEBUG, "No %s found for job %d.%d\n",
 					 old_attr, job_id.cluster, job_id.proc );
@@ -11814,14 +11813,8 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 		return false;
 	}
 	
-	new_value += '"';
-	new_value += value;
-	new_value += '"';
-	free( value );
-	value = NULL;
-
-	rval = SetAttribute( job_id.cluster, job_id.proc, new_attr,
-						 new_value.Value() ); 
+	rval = SetAttributeString( job_id.cluster, job_id.proc, new_attr,
+							   value.Value() ); 
 
 	if( rval < 0 ) { 
 		if( verbose ) {
