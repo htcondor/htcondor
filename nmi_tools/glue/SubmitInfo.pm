@@ -410,6 +410,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
+								  '-DWITH_LIBCGROUP:BOOL' => 'OFF',
 			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> [
@@ -556,6 +557,7 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
+								  '-DWITH_LIBCGROUP:BOOL' => 'OFF',
 			},
 			'prereqs'	=> [ 
 				@default_prereqs,
