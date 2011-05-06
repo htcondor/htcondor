@@ -145,6 +145,10 @@ CCBListener::SendMsgToCCB(ClassAd &msg,bool blocking)
 		}
 		else if( !m_waiting_for_connect ) {
 			m_sock = ccb.makeConnectedSocket(Stream::reli_sock, CCB_TIMEOUT, 0, NULL, true /*nonblocking*/ );
+			if( !m_sock ) {
+				Disconnected();
+				return false;
+			}
 			m_waiting_for_connect = true;
 			incRefCount(); // do not let ourselves be deleted until called back
 			ccb.startCommand_nonblocking( cmd, m_sock, CCB_TIMEOUT, NULL, CCBListener::CCBConnectCallback, this, NULL, false, USE_TMP_SEC_SESSION );
