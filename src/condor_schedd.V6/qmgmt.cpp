@@ -3358,7 +3358,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			bool expanded_something = false;
 			int search_pos = 0;
 			while( !attribute_not_found &&
-					get_var(attribute_value,&left,&name,&right,NULL,true,search_pos) )
+					find_config_macro(attribute_value,&left,&name,&right,NULL,true,search_pos) )
 			{
 				expanded_something = true;
 				
