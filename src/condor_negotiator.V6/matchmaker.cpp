@@ -2951,7 +2951,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		request.Assign(ATTR_SUBMITTER_USER_PRIO , (float)priority );  
 		// next insert the submitter user usage attributes into the request
 		request.Assign(ATTR_SUBMITTER_USER_RESOURCES_IN_USE, 
-					   accountant.GetResourcesUsed ( scheddName ));
+					   accountant.GetWeightedResourcesUsed ( scheddName ));
 		float temp_groupQuota, temp_groupUsage;
 		bool is_group = false;
 		if (getGroupInfoFromUserId(scheddName,temp_groupQuota,temp_groupUsage))
@@ -4120,7 +4120,7 @@ addRemoteUserPrios( ClassAd	*ad )
 		prio = (float) accountant.GetPriority( remoteUser.Value() );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
 		ad->Assign(ATTR_REMOTE_USER_RESOURCES_IN_USE,
-			accountant.GetResourcesUsed( remoteUser.Value() ));
+			accountant.GetWeightedResourcesUsed( remoteUser.Value() ));
 		if (getGroupInfoFromUserId(remoteUser.Value(),
 									temp_groupQuota,temp_groupUsage))
 		{
@@ -4172,7 +4172,7 @@ addRemoteUserPrios( ClassAd	*ad )
 			buffer.sprintf("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_RESOURCES_IN_USE);
 			ad->Assign(buffer.Value(),
-					accountant.GetResourcesUsed(remoteUser.Value()));
+					accountant.GetWeightedResourcesUsed(remoteUser.Value()));
 			if (getGroupInfoFromUserId(remoteUser.Value(),
 										temp_groupQuota,temp_groupUsage))
 			{
