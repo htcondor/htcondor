@@ -127,7 +127,7 @@ typedef struct _AttribValue {
 	//
 	const char * StringValue() const {
         if ((this->vtype == AttribValue_DataType_String) &&
-            (this->value.zstr.ix >= sizeof(*this)) &&
+            (this->value.zstr.ix >= (int)sizeof(*this)) &&
             (this->value.zstr.ix < this->cb)) {
 			return (const char *)this + this->value.zstr.ix;
         }
@@ -163,12 +163,12 @@ typedef struct _AttribValue {
             pav->pszAttr = (char*)(pav+1);
 
             pav->vtype = AttribValue_DataType_String;
-            pav->value.zstr.ix = sizeof(AttribValue) + cchAttr;
+            pav->value.zstr.ix = sizeof(struct _AttribValue) + cchAttr;
             pav->value.zstr.cb = cchValue;
             if (value)
-               strcpy((char*)pav->StringValue(), value);
+               strcpy(const_cast<char*>(pav->StringValue()), value);
             else
-               ((char*)pav->StringValue())[0] = 0;
+               (const_cast<char*>(pav->StringValue()))[0] = 0;
         }
         return pav;
     }
