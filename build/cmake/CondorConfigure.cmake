@@ -414,47 +414,26 @@ if (PROPER)
 	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
 	find_path(HAVE_PCRE_H "pcre.h")
 	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
-else(PROPER)
+else()
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
-	# temporarily disable cacheing externals on windows, primarily b/c of nmi.
-	option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
-
 endif(PROPER)
 
-## this primarily exists for nmi cached building.. yuk!
-if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
-	if (WINDOWS)
-		set (EXTERNAL_STAGE C:/temp/${PACKAGE_NAME})
-		set (EXTERNAL_DL C:/temp/${PACKAGE_NAME}/download)
-	else(WINDOWS)
-		set (EXTERNAL_STAGE /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/stage/root)
-		set (EXTERNAL_DL /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/externals/stage/download)
-
-		set (EXTERNAL_MOD_DEP /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/mod.txt)
-		add_custom_command(
-		OUTPUT ${EXTERNAL_MOD_DEP}
-		COMMAND chmod
-		ARGS -f -R a+rwX /scratch/externals/cmake && touch ${EXTERNAL_MOD_DEP}
-		COMMENT "changing ownership on externals cache because so on multiple user machines they can take advantage" )
-	endif(WINDOWS)
+if (WINDOWS)
+	set (EXTERNAL_STAGE C:/temp/condor)
 else()
-	set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
-	set (EXTERNAL_DL ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/download/${PACKAGE_NAME}_${PACKAGE_VERSION})
-endif()
+	# temporarily disable AFS cache. 
+	#if ( EXISTS /p/condor/workspaces/externals  )
+	#	set (EXTERNAL_STAGE /p/condor/workspaces/externals/cmake/${OS_NAME}/${SYS_ARCH})
+	#else()
+		# in case someone tries something funky insert OS & ARCH in path
+		set (EXTERNAL_STAGE /scratch/condor/externals) #${OS_NAME}/${SYS_ARCH})
+	#endif()
+endif(WINDOWS)
 
 dprint("EXTERNAL_STAGE=${EXTERNAL_STAGE}")
-set (EXTERNAL_BUILD_PREFIX ${EXTERNAL_STAGE}/opt)
-
-# let cmake carve out the paths for the externals
-file (MAKE_DIRECTORY ${EXTERNAL_DL}
-	${EXTERNAL_STAGE}/include
-	${EXTERNAL_STAGE}/lib
-	${EXTERNAL_STAGE}/lib64
-	${EXTERNAL_STAGE}/opt
-	${EXTERNAL_STAGE}/src )
-
-include_directories( ${EXTERNAL_STAGE}/include )
-link_directories( ${EXTERNAL_STAGE}/lib64 ${EXTERNAL_STAGE}/lib )
+if (NOT EXISTS ${EXTERNAL_STAGE})
+	file ( MAKE_DIRECTORY ${EXTERNAL_STAGE} )
+endif()
 
 ###########################################
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
@@ -546,8 +525,8 @@ add_definitions(-DHAVE_CONFIG_H)
 
 ###########################################
 # include and link locations
-include_directories(${EXTERNAL_STAGE}/include ${EXTERNAL_INCLUDES} )
-link_directories(${EXTERNAL_STAGE}/lib)
+include_directories( ${CONDOR_EXTERNAL_INCLUDE_DIRS} )
+link_directories( ${CONDOR_EXTERNAL_LINK_DIRS} )
 
 if ( $ENV{JAVA_HOME} )
 	include_directories($ENV{JAVA_HOME}/include)

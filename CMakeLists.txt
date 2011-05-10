@@ -96,6 +96,8 @@ include (CondorExeTest)
 include (CondorStdExeTest)
 include (SrcTargetRef)
 include (DumpLocalFlags)
+include (CondorPreExternal)
+include (CondorPostExternal)
 include (CondorConfigure)     # will initiate the configure
 include (TarGz) # Must be after include(CondorPackageConfig)
 
