@@ -169,7 +169,6 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
-#include <rpc/types.h>
 #if !defined(Darwin) && !defined(CONDOR_FREEBSD)
 #include <values.h>
 #endif
