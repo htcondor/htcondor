@@ -925,6 +925,9 @@ const char * const ATTR_HASH_NAME = "HashName";
 const char * const ATTR_AUTHENTICATED_IDENTITY = "AuthenticatedIdentity";
 const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME = "DelegateJobGSICredentialsLifetime";
 
+//.NET attributes
+const char * const ATTR_DOTNET_VERSIONS = "DotNetVersions";
+
 const char * const ATTR_TRANSFER_QUEUE_NUM_UPLOADING = "TransferQueueNumUploading";
 const char * const ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING = "TransferQueueNumDownloading";
 const char * const ATTR_TRANSFER_QUEUE_MAX_UPLOADING = "TransferQueueMaxUploading";
@@ -933,3 +936,4 @@ const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD = "TransferQueueNum
 const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD = "TransferQueueNumWaitingToDownload";
 const char * const ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME = "TransferQueueUploadWaitTime";
 const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME = "TransferQueueDownloadWaitTime";
+

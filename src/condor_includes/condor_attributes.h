@@ -856,6 +856,8 @@ extern const char * const ATTR_HASH_NAME;
 extern const char * const ATTR_AUTHENTICATED_IDENTITY;
 extern const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME;
 
+extern const char * const ATTR_DOTNET_VERSIONS;
+
 extern const char * const ATTR_TRANSFER_QUEUE_NUM_UPLOADING;
 extern const char * const ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING;
 extern const char * const ATTR_TRANSFER_QUEUE_MAX_UPLOADING;

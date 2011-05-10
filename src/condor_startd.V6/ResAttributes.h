@@ -83,6 +83,98 @@ const float AUTO_SHARE = 123;
 // evenly between slots using AUTO_MEM.
 const int AUTO_MEM = -123;
 
+// This is used with the AttribValue structure to identify the datatype
+// for the value (selects an entry in the union)
+enum {
+	AttribValue_DataType_String = 0,
+	AttribValue_DataType_Double,
+	AttribValue_DataType_Int,
+
+	AttribValue_DataType_Max // this should be last
+};
+
+// holds a single value to be written into a classad, note that
+// fields with names that begin with ix are offsets from the start
+// of the structure to the actual field data.  In use, one would 
+// normally allocate (sizeof(AttribValue) + size_of_strings + size_of_extra_data)
+// and then setup index fields to make it possible to locate the extra data.
+//
+typedef struct _AttribValue {
+	const char * pszAttr;	// Classad attrib name, may be a pointer to a constant
+                            // or a pointer into the allocation for this structure.
+
+	void * pquery;			// pointer to the original query used to get the data.
+                            // may be null. do not free from this structure.
+
+	int cb;                 // allocation size of this structure, may be larger than sizeof(AttribValue)
+	int vtype;              // an AttribValue_DataType_xxx value, the Attrib data type decodes the value union
+	union {                 // 0=string, 1=double, 2=int
+		struct {
+			int       ix;   // offset from the start of this structure to the string data
+			int       cb;   // size of the string data in bytes including terminating null.
+			} zstr;         // vtype == AttribValue_DataType_String
+		double    d;        // vtype == AttribValue_DataType_Double
+		int       i;        // vtype == AttribValue_DataType_Int
+		long long ll;       // vtype == AttribValue_DataType_Int64 (future)
+		//struct {
+		//	int       ix;
+		//	int		  cb;
+		//    } bin;          // vtype == AttribValue_DataType_Bin
+	} value;
+
+	// helper function to fetch the value of string type values.
+    // AttribValue is a packed structure, a single allocation with a header
+	//
+	const char * StringValue() const {
+        if ((this->vtype == AttribValue_DataType_String) &&
+            (this->value.zstr.ix >= sizeof(*this)) &&
+            (this->value.zstr.ix < this->cb)) {
+			return (const char *)this + this->value.zstr.ix;
+        }
+        return NULL;
+    }
+
+    void AssignToClassAd(ClassAd* cp) const {
+        switch (this->vtype) {
+            case AttribValue_DataType_String:
+                cp->Assign(this->pszAttr, this->StringValue());
+                break;
+            case AttribValue_DataType_Double:
+                cp->Assign(this->pszAttr, this->value.d);
+                break;
+            case AttribValue_DataType_Int:
+                cp->Assign(this->pszAttr, this->value.i);
+                break;
+        }
+    }
+
+    // allocate an initialized packed attrib and value, this consists of a
+    // header (struct _AttribValue) followed by the attribute string, followed by
+    // the value string.
+    //
+    static struct _AttribValue * Allocate(const char * pszAttr, const char * value) {
+        int cchValue = value ? strlen(value)+1 : 1;
+        int cchAttr  = strlen(pszAttr) + 1;
+        int cb = sizeof(struct _AttribValue) + cchValue + cchAttr;
+        struct _AttribValue * pav = (struct _AttribValue *)malloc(cb);
+        if (pav) {
+            pav->cb = cb;
+            strcpy((char*)(pav+1), pszAttr);
+            pav->pszAttr = (char*)(pav+1);
+
+            pav->vtype = AttribValue_DataType_String;
+            pav->value.zstr.ix = sizeof(AttribValue) + cchAttr;
+            pav->value.zstr.cb = cchValue;
+            if (value)
+               strcpy((char*)pav->StringValue(), value);
+            else
+               ((char*)pav->StringValue())[0] = 0;
+        }
+        return pav;
+    }
+
+} AttribValue;
+
 // Machine-wide attributes.  
 class MachAttributes
 {
@@ -91,6 +183,8 @@ public:
 	~MachAttributes();
 
 	void init();
+    void init_user_settings(); // read STARTD_PUBLISH_WINREG param and parse it
+                               // creating data structure needed in compute and publish
 
 	void publish( ClassAd*, amask_t );  // Publish desired info to given CA
 	void compute( amask_t );			  // Actually recompute desired stats
@@ -136,6 +230,7 @@ private:
 	bool			m_seen_keypress;    // Have we seen our first keypress yet?
 	int				m_clock_day;
 	int				m_clock_min;
+	List<AttribValue> m_lst_dynamic;    // list of user specified dynamic Attributes
 #if defined(WIN32)
 	char*			m_local_credd;
 	time_t			m_last_credd_test;
@@ -150,10 +245,20 @@ private:
 	char*			m_filesystem_domain;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
 	char*			m_ckptpltfrm;
+	List<AttribValue> m_lst_static;     // list of user-specified static attributes
+
+	// this holds strings that m_lst_static and m_lst_dynamic point to
+	// it is initialized from the param STARTD_PUBLISH_WINREG and then parsed/modified and used
+	// to initialize m_lst_static and m_lst_dynamic.  these two lists
+	// continue to hold pointers into this.  do not free it unless you first empty those
+	// lists. -tj
+	StringList      m_user_specified;
+	int             m_user_settings_init;  // set to true when init_user_settings has been called at least once.
 
 #if defined ( WIN32 )
 	int				m_got_windows_version_info;
 	OSVERSIONINFOEX	m_window_version_info;
+    char*           m_dot_Net_Versions;
 #endif
 
 };	
