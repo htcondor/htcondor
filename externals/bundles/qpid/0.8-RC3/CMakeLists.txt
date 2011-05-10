@@ -82,14 +82,17 @@ if (WITH_QPID)
 
 	endif( NOT PROPER )
 
+endif()
+
+# only enable if qpid and qmf bits are all present.
+if (QPID_FOUND AND NOT "${QMF_GEN}" MATCHES "-NOTFOUND" )
 	# you will need to update config.h.cmake with your var.
 	message (STATUS "external configured QPID_FOUND=(${QPID_FOUND}) QMF_GEN=(${QMF_GEN})")
 	set( HAVE_EXT_QPID ON PARENT_SCOPE )
 	set (QPID_FOUND ${QPID_FOUND} PARENT_SCOPE)
 	set (QMF_GEN ${QMF_GEN} PARENT_SCOPE)
-
-else(WITH_QPID)
+else()
 
 	message (STATUS "external skipped (qpid)")
 
-endif(WITH_QPID)
+endif()
