@@ -593,12 +593,28 @@ that can be used in the ClassAd expression.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
+%% output_destination
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!output\_destination}
+\index{file transfer mechanism!output file(s) specified by URL}
+\item[output\_destination = $<$destination-URL$>$] 
+When present, defines a URL that specifies both a plug-in and a
+destination for the transfer of the entire output sandbox or
+a subset of output files as specified by the submit command
+\SubmitCmd{transfer\_output\_files}.
+The plug-in does the transfer of files, 
+and no files are sent back to the submit machine.
+See both section~\ref{sec:URL-transfer} and
+section~\ref{sec:file-transfer-by-URL} for details. 
+
+%%%%%%%%%%%%%%%%%%%
 %% should_transfer_files
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!should\_transfer\_files}
+\index{file transfer mechanism!submit command should\_transfer\_files}
 \item[should\_transfer\_files = $<$YES \Bar\ NO \Bar\ IF\_NEEDED $>$] 
-\index{file transfer mechanism}
 The \SubmitCmd{should\_transfer\_files} setting is used to define if Condor
 should transfer files to and from the remote machine where the job
 runs.

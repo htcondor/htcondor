@@ -743,21 +743,24 @@ in dealing with the transfer of files.
 \subsubsection{File Transfer Using a URL \label{sec:file-transfer-by-URL}}
 %%%%%%%%%%%%
 \index{file transfer mechanism!input file specified by URL}
+\index{file transfer mechanism!output file(s) specified by URL}
 \index{URL file transfer}
 
-\Revision
-
-For vanilla and vm universe jobs only,
-Condor has the ability to allow a job's input file to be 
-obtained by the machine allocated to execute the job
-with the specification of a URL.
+Instead of file transfer that goes only between the submit machine
+and the execute machine,
+Condor has the ability to transfer files from a location specified
+by a URL for a job's input file,
+or from the execute machine to a location specified by a URL
+for a job's output file(s).
 This capability requires administrative set up, 
 as described in section~\ref{sec:URL-transfer}.
 
-To use this feature, Condor's file transfer mechanism must be enabled.
+The transfer of an input file is restricted to
+vanilla and vm universe jobs only.
+Condor's file transfer mechanism must be enabled.
 Therefore, the submit description file for the job will define both
 \SubmitCmd{should\_transfer\_files} and \SubmitCmd{when\_to\_transfer\_output}.
-In addition, the URL for the any files specified this way are
+In addition, the URL for any files specified with a URL are
 given in the \SubmitCmd{transfer\_input\_files} command.
 An example portion of the submit description file for a job
 that has a single file specified with a URL:
@@ -770,7 +773,27 @@ transfer_input_files = http://www.full.url/path/to/filename
 \end{verbatim}
 \normalsize
 
-The destination file is given by the file name in the URL. 
+The destination file is given by the file name within the URL. 
+
+For the transfer of the entire contents of the output sandbox,
+which are all files that the job creates or modifies,
+a command of the following form is added to the submit description file:
+\footnotesize
+\begin{verbatim}
+output_destination = urltype://path/to/destination/directory
+\end{verbatim}
+\normalsize
+Note that with this feature, no files are transferred back to the 
+submit machine.  
+This does not interfere with the streaming of output. 
+
+If only a subset of the output sandbox should be transferred,
+the subset is specified by further adding a submit command of the form:
+\footnotesize
+\begin{verbatim}
+transfer_output_files = file1, file2
+\end{verbatim}
+\normalsize
 
 %%%%%%%%%%%% 
 \subsubsection{Requirements and Rank for File Transfer}

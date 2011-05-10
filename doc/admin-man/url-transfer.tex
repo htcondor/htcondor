@@ -6,8 +6,6 @@ Enabling the Transfer of Files Specified by a URL}
 \index{file transfer mechanism!output file(s) specified by URL}
 \index{URL file transfer}
 
-\Revision
-
 Because staging data on the submit machine is not always efficient,
 Condor permits input files to be transferred
 from a location specified by a URL;
@@ -25,7 +23,7 @@ This differs from the normal file transfer mechanism,
 in which transfers are from the machine where the job is submitted
 to the machine where the job is executed.
 Each file to be transferred by specifying a URL, causing a
-plug-in to be invoked is specified separately in the job submit
+plug-in to be invoked, is specified separately in the job submit
 description file with the command \SubmitCmd{transfer\_input\_files};
 see section~\ref{sec:file-transfer-by-URL} for details.
 
@@ -38,10 +36,11 @@ directory specified by the URL.
 The URL itself is specified in the separate submit description file command 
 \SubmitCmd{output\_destination};
 see section~\ref{sec:file-transfer-by-URL} for details.
+The plug-in is invoked once for each output file to be transferred.
 
 Configuration identifies the availability of the one or more plug-in(s).
 The plug-ins must be installed and available on every execute machine 
-that may run a job which might specify a URL either for input or output.
+that may run a job which might specify a URL, either for input or for output.
 
 URL transfers are enabled by default in the configuration 
 of execute machines.
@@ -52,7 +51,7 @@ ENABLE_URL_TRANSFERS = FALSE
 \end{verbatim}
 \normalsize
 
-In addition, a comma separated list giving the absolute path and name
+A comma separated list giving the absolute path and name
 of all available plug-ins is specified as in the example:
 \footnotesize
 \begin{verbatim}
@@ -91,27 +90,62 @@ PluginType = "FileTransfer"
 The third ClassAd attribute is \Attr{SupportedMethods}. 
 This attribute is a string containing a comma separated list of the
 protocols that the plug-in handles.
-So, for example:
+So, for example
 \footnotesize
 \begin{verbatim}
 SupportedMethods = "http,ftp,file"
 \end{verbatim}
 \normalsize
 would identify that the three protocols described by \verb@http@,
-\verb@ftp@, and \verb@ftp@ are supported.
+\verb@ftp@, and \verb@file@ are supported.
 These strings will match the protocol specification as given
-within a URL in a \SubmitCmd{transfer\_input\_files} command 
+within a URL in a \SubmitCmd{transfer\_input\_files} command
+or within a URL in an \SubmitCmd{output\_destination} command 
 in a submit description file for a job.
 
 When a job specifies a URL transfer,
 the plug-in is invoked, without the command line argument \Opt{-classad}.
 It will instead be given two other command line arguments.
-The first will be the URL of the file to retrieve.
-The second will be the absolute path identifying where to place the
+For the transfer of input file(s),
+the first will be the URL of the file to retrieve
+and the second will be the absolute path identifying where to place the
 transferred file.
+For the transfer of output file(s),
+the first will be the absolute path on the local machine of the file
+to transfer,
+and the second will be the URL of the directory and file name
+at the destination.
+
 The plug-in is expected to do the transfer,
 exiting with status 0 if the transfer was successful, 
 and a non-zero status if the transfer was \emph{not} successful.
+When \emph{not} successful, the job is placed on hold,
+and the job ClassAd attribute \Attr{HoldReason} will be set as
+appropriate for the job.
+The job ClassAd attribute \Attr{HoldReasonSubCode} will be set to
+the exit status of the plug-in.
+
+As an example of the transfer of a subset of output files,
+assume that the submit description file contains 
+\footnotesize
+\begin{verbatim}
+output_destination = url://server/some/directory/
+transfer_output_files = foo, bar, qux
+\end{verbatim}
+\normalsize
+Condor invokes the plug-in that handles the \Expr{url} protocol
+three times.
+The directory delimiter
+(\verb@/@ on Unix, and \verb@\@ on Windows) 
+is appended to the destination URL,
+such that the three (Unix) invocations of the plug-in will appear similar to
+\footnotesize
+\begin{verbatim}
+url_plugin /path/to/local/copy/of/foo url://server/some/directory//foo
+url_plugin /path/to/local/copy/of/bar url://server/some/directory//bar
+url_plugin /path/to/local/copy/of/qux url://server/some/directory//qux
+\end{verbatim}
+\normalsize
 
 Note that this functionality is not limited to a predefined set
 of protocols.
@@ -138,3 +172,25 @@ the plug-in will be invoked with a first command line argument
 of \verb@zkm://128/r-data@ and a second command line argument giving
 the full path along with the file name \File{r-data} as the location
 for the plug-in to write 128 bytes of random data.
+
+The transfer of output files in this manner was introduced 
+in Condor version 7.6.0. 
+Incompatibility and inability to function will result if the executables
+for the \Condor{starter} and \Condor{shadow} are versions earlier
+than Condor version 7.6.0.
+Here is the expected behavior for these cases that 
+cannot be backward compatible. 
+\begin{itemize}
+\item
+If the \Condor{starter} version is earlier than 7.6.0,
+then regardless of the \Condor{shadow} version,
+transfer of output files, as identified in the submit description
+file with the command \SubmitCmd{output\_destination} is ignored.
+The files are transferred back to the submit machine.
+\item
+If the \Condor{starter} version is 7.6.0 or later,
+but the  \Condor{shadow} version is earlier than 7.6.0,
+then the \Condor{starter} will attempt to send the command to the
+\Condor{shadow}, but the \Condor{shadow} will ignore the command.
+No files will be transferred, and the job will be placed on hold.
+\end{itemize}
