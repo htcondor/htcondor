@@ -2527,4 +2527,19 @@ void Resource::disable()
 }
 
 
+float
+Resource::compute_rank( ClassAd* req_classad ) {
+
+	float rank;
+
+	if( r_classad->EvalFloat( ATTR_RANK, req_classad, rank ) == 0 ) {
+		ExprTree *rank_expr = r_classad->LookupExpr("RANK");
+		dprintf( D_ALWAYS, "Error evaluating machine rank expression: %s\n", ExprTreeToString(rank_expr));
+		dprintf( D_ALWAYS, "Setting RANK to 0.0\n");
+		rank = 0.0;
+	}
+	return rank;
+}
+
+
 #endif /* HAVE_JOB_HOOKS */

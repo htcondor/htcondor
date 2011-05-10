@@ -1,0 +1,26 @@
+<!-- This file was auto-generated from WSDL -->
+<!-- by the Apache Axis2 version: 1.0  Built on : Mar 02, 2011 (11:53:41 EST) -->
+<service name="AviaryQueryService">
+<parameter name="ServiceClass" locked="xsd:false">aviary_query_axis</parameter>
+<description>AviaryQueryServiceService</description>
+<operation name="getJobSummary" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">query#summary</parameter>
+</operation>
+<operation name="getJobStatus" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">query#status</parameter>
+</operation>
+<operation name="getJobDetails" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">query#details</parameter>
+</operation>
+<operation name="getJobData" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">query#data</parameter>
+</operation>
+<operation name="getSubmissionSummary" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">query#submission</parameter>
+</operation>
+</service>

@@ -1,0 +1,102 @@
+<!--
+/*
+ * Copyright 2000-2011 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+
+<!-- Aviary-specific axis2.xml -->
+<axisconfig name="Axis2/C">
+	<!-- ================================================= -->
+	<!-- Parameters -->
+	<!-- ================================================= -->
+	<parameter name="libDir">@WS02_LIB_ROOT@</parameter>
+	<parameter name="servicesDir">/var/lib/condor/aviary/services</parameter>
+	<parameter name="enableREST" locked="false">true</parameter>
+	<parameter name="persistOperationContext" locked="false">true</parameter>
+
+	<!-- ================================================= -->
+	<!-- Transport Ins -->
+	<!-- ================================================= -->
+	<transportReceiver name="http" class="libaxis2_http_receiver.so.0">
+		<parameter name="port" locked="false">6060</parameter>
+	</transportReceiver>
+
+    <!-- applies to Axis2/C clients only -->
+	<transportReceiver name="https" class="libaxis2_http_receiver.so.0">
+		<parameter name="port" locked="false">6060</parameter>
+	</transportReceiver>
+	<!--transportReceiver name="tcp" class="axis2_tcp_receiver"-->
+	<!--parameter name="port" locked="false">6060</parameter-->
+	<!--/transportReceiver-->
+
+	<!-- ================================================= -->
+	<!-- Transport Outs -->
+	<!-- ================================================= -->
+
+	<transportSender name="http" class="libaxis2_http_sender.so.0">
+		<parameter name="PROTOCOL" locked="false">HTTP/1.1</parameter>
+		<parameter name="xml-declaration" insert="false"/>
+		<!--parameter name="Transfer-Encoding">chunked</parameter-->
+		<!--parameter name="PROXY" proxy_host="127.0.0.1" proxy_port="8080" locked="true"/-->
+	</transportSender>
+
+    <!-- applies to Axis2/C clients only -->
+	<transportSender name="https" class="libaxis2_http_sender.so.0">
+		<parameter name="PROTOCOL" locked="false">HTTP/1.1</parameter>
+		<parameter name="xml-declaration" insert="false"/>
+	</transportSender>
+
+	<!-- ================================================= -->
+	<!-- SSL  -->
+	<!-- ================================================= -->
+	<!-- NOTE: server-side SSL support currently unavailable for aviary components -->
+	<!-- alternatives include the use of a SSL-enabled proxy server such as squid; -->
+	<!-- the following settings would apply to Axis2/C clients only if enabled -->
+	<!-- set the server's SSL certificate here -->
+	<!--parameter name="SERVER_CERT">/path/to/ca/certificate</parameter-->
+	<!-- set the client's SSL key file and passphrase here for client auth -->
+	<!--parameter name="KEY_FILE">/path/to/client/certificate/chain/file</parameter-->
+	<!--parameter name="SSL_PASSPHRASE">passphrase</parameter-->
+
+	<!-- ================================================= -->
+	<!-- Phases  -->
+	<!-- ================================================= -->
+	<phaseOrder type="inflow">
+		<!-- System pre defined phases -->
+		<phase name="Transport"/>
+		<phase name="PreDispatch"/>
+		<phase name="Dispatch"/>
+		<phase name="PostDispatch"/>
+		<!-- End system pre defined phases -->
+		<!-- After PostDispatch phase, module or service author can add any phase as required  -->
+		<!-- User defined phases could be added here -->
+		<phase name="Security"/>
+		<phase name="Rahas"/>
+	</phaseOrder>
+	<phaseOrder type="outflow">
+		<!-- User defined phases could be added here -->
+		<phase name="MessageOut"/>
+		<phase name="Security"/>
+	</phaseOrder>
+	<phaseOrder type="INfaultflow">
+		<!-- User defined phases could be added here -->
+		<!--phase name="userphase1"/-->
+	</phaseOrder>
+	<phaseOrder type="Outfaultflow">
+		<!-- User defined phases could be added here -->
+		<!--phase name="userphase1"/-->
+		<phase name="MessageOut"/>
+	</phaseOrder>
+</axisconfig>
