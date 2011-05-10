@@ -421,12 +421,13 @@ endif(PROPER)
 if (WINDOWS)
 	set (EXTERNAL_STAGE C:/temp/condor)
 else()
-	# special CS ASF check
-	if ( EXISTS /p/condor/workspaces/externals  )
-		set (EXTERNAL_STAGE /p/condor/workspaces/externals/cmake)
-	else()
-		set (EXTERNAL_STAGE /scratch/condor/externals)
-	endif()
+	# temporarily disable AFS cache. 
+	#if ( EXISTS /p/condor/workspaces/externals  )
+	#	set (EXTERNAL_STAGE /p/condor/workspaces/externals/cmake/${OS_NAME}/${SYS_ARCH})
+	#else()
+		# just in case someone tries something funky still insert OS & ARCH in path
+		set (EXTERNAL_STAGE /scratch/condor/externals/${OS_NAME}/${SYS_ARCH})
+	#endif()
 endif(WINDOWS)
 
 dprint("EXTERNAL_STAGE=${EXTERNAL_STAGE}")
