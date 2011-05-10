@@ -20,9 +20,10 @@ option(WITH_GSOAP "Compiling with support for GSOAP" ON)
 
 if (WITH_GSOAP)
 
-	if ( NOT PROPER )
+	# this is only done in proper mode to cache local mods which are done to gsoap
+	condor_pre_external( GSOAP gsoap-2.7.10 "src;include" "done")
 
-		condor_pre_external( GSOAP gsoap-2.7.10 "src;include" "done")
+	if ( NOT PROPER )
 
 		if (WINDOWS)
 			set (GSOAP_PATCH cp ${CMAKE_CURRENT_SOURCE_DIR}/config.WINDOWS.h gsoap/src/config.h)
