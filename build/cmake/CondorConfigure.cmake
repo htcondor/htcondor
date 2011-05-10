@@ -425,8 +425,8 @@ else()
 	#if ( EXISTS /p/condor/workspaces/externals  )
 	#	set (EXTERNAL_STAGE /p/condor/workspaces/externals/cmake/${OS_NAME}/${SYS_ARCH})
 	#else()
-		# just in case someone tries something funky still insert OS & ARCH in path
-		set (EXTERNAL_STAGE /scratch/condor/externals/${OS_NAME}/${SYS_ARCH})
+		# in case someone tries something funky insert OS & ARCH in path
+		set (EXTERNAL_STAGE /scratch/condor/externals) #${OS_NAME}/${SYS_ARCH})
 	#endif()
 endif(WINDOWS)
 
