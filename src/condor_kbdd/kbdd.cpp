@@ -38,7 +38,6 @@
 #include <utmp.h>
 #include <sys/file.h>
 #include <netinet/in.h>
-#include <rpc/types.h>
 #include <X11/Xlib.h>
 
 XInterface *xinter = NULL;
