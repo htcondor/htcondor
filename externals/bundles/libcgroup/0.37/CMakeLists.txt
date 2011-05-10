@@ -24,32 +24,28 @@ if (WITH_LIBCGROUP)
 
 	if ( NOT PROPER )
 
-		set (LIBCGROUP_VER libcgroup-0.37)
-
-		set (LIBCGROUP_CONFIGURE ./configure --prefix=${EXTERNAL_STAGE} --enable-static=yes --disable-dependency-tracking CPPFLAGS=-I${EXTERNAL_STAGE}/include/)
-		set (LIBCGROUP_MAKE make )
-		set (LIBCGROUP_INSTALL make install )
+		condor_pre_external( LIBCGROUP libcgroup-0.37 "lib;include" "lib/libcgroup.a")
 
 		ExternalProject_Add( libcgroup
-				    PREFIX ${EXTERNAL_BUILD_PREFIX}/${LIBCGROUP_VER}
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://cdnetworks-us-1.dl.sourceforge.net/project/libcg/libcgroup/v0.37/${LIBCGROUP_VER}.tar.bz2 ${CMD_TERM}
-				    DOWNLOAD_DIR ${EXTERNAL_DL}
+				    DOWNLOAD_DIR ${LIBCGROUP_STAGE}/dl
 				    URL http://cdnetworks-us-1.dl.sourceforge.net/project/libcg/libcgroup/v0.37/${LIBCGROUP_VER}.tar.bz2
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${LIBCGROUP_VER} ${CMD_TERM} ${LIBCGROUP_CONFIGURE}
+				    CONFIGURE_COMMAND cd ${LIBCGROUP_VER} ${CMD_TERM} ./configure --prefix=${LIBCGROUP_INSTALL_LOC} --enable-static=yes --disable-dependency-tracking
 				    #--Build Step ----------
-				    BUILD_COMMAND cd ${LIBCGROUP_VER} ${CMD_TERM} ${LIBCGROUP_MAKE}
+				    BUILD_COMMAND cd ${LIBCGROUP_VER} ${CMD_TERM} make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_STAGE}
-				    INSTALL_COMMAND cd ${LIBCGROUP_VER} ${CMD_TERM} ${LIBCGROUP_INSTALL} )
+				    INSTALL_DIR ${LIBCGROUP_INSTALL_LOC}
+				    INSTALL_COMMAND cd ${LIBCGROUP_VER} ${CMD_TERM} make install )
 
 		# Set the target dependencies which the rest of condor depends on.
-		set(LIBCGROUP_FOUND "${EXTERNAL_STAGE}/lib/libcgroup.a")
+		set(LIBCGROUP_FOUND "${LIBCGROUP_INSTALL_LOC}/lib/libcgroup.a")
 
-		set ( LIBCGROUP_SHARE "${EXTERNAL_BUILD_PREFIX}/${LIBCGROUP_VER}/src/libcgroup/${LIBCGROUP_VER}/libcgroup" )
-		append_var (CONDOR_EXTERNALS libcgroup)
+		#set ( LIBCGROUP_SHARE "${EXTERNAL_BUILD_PREFIX}/${LIBCGROUP_VER}/src/libcgroup/${LIBCGROUP_VER}/libcgroup" )
+
+		condor_post_external( libcgroup include OFF )
 
 	else( NOT PROPER )
 
@@ -57,16 +53,12 @@ if (WITH_LIBCGROUP)
 
 	endif( NOT PROPER )
 
-	if (LIBCGROUP_FOUND)
-
-		set( LIBCGROUP_FOUND ${LIBCGROUP_FOUND} PARENT_SCOPE )
-		set( HAVE_EXT_LIBCGROUP ON PARENT_SCOPE )
-		message ( STATUS "external configured (LIBCGROUP_FOUND=${LIBCGROUP_FOUND})" )
-
-	endif (LIBCGROUP_FOUND)
-
-else(WITH_LIBCGROUP)
-
+endif()
+	
+if (LIBCGROUP_FOUND)
+	set( LIBCGROUP_FOUND ${LIBCGROUP_FOUND} PARENT_SCOPE )
+	set( HAVE_EXT_LIBCGROUP ON PARENT_SCOPE )
+	message ( STATUS "external configured (LIBCGROUP_FOUND=${LIBCGROUP_FOUND})" )
+else()
 	message (STATUS "external skipped (libcgroup)")
-
-endif(WITH_LIBCGROUP)
+endif()

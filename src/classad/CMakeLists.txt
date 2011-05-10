@@ -17,10 +17,13 @@
  ############################################################### 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+#####################################################################
+## set var using master config
 add_definitions(-DCLASSAD_DISTRIBUTION -DWANT_CLASSAD_NAMESPACE=1 )
 
 # disable PCRE build unless dep added to externals.
 if(PCRE_FOUND)
+	include_directories(${PCRE_INCLUDE})
 	add_definitions(-DUSE_PCRE -DHAVE_PCRE_H)
 else()
 	add_definitions(-DUSE_POSIX_REGEX) 
@@ -32,11 +35,15 @@ endif()
 
 if (HAVE_DLFCN_H)
 	add_definitions(-DHAVE_DLFCN_H)
-endif(HAVE_DLFCN_H)
+	set (DL_FOUND -ldl)
+endif()
+##
+#####################################################################
 
-if (HAVE_LIBDL)
-	set(DL_FOUND -ldl)
-endif(HAVE_LIBDL)
+#####################################################################
+# treat like an external for others to use
+condor_pre_external( CLASSADS classads-1.0.10 "lib;include" "alwaysbuild")
+#####################################################################
 
 if (NOT WINDOWS)
 
@@ -49,6 +56,7 @@ if (NOT WINDOWS)
 	install( TARGETS classad DESTINATION ${C_LIB} )
   endif()
 
+  ###### change here if you want to link condor to the shared version
   set (CLASSADS_FOUND classads)
 
   ###### Test executables
@@ -60,35 +68,45 @@ if (NOT WINDOWS)
   install( TARGETS classads DESTINATION ${C_LIB} )
   install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${C_INCLUDE} )
 
-else()
-	
+else()	
 	# windows specific configuration.
 	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
 	add_library( classads STATIC ${ClassadSrcs} )
-	set_property( TARGET classads PROPERTY FOLDER "libraries" )
-    set (CLASSADS_FOUND classads)
+	set (CLASSADS_FOUND classads)
 
 endif()
 
+condor_post_external( ${CLASSADS_FOUND} include OFF )
+
 # standard output message used to slog users.  
 message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
-append_var (CONDOR_EXTERNALS ${CLASSADS_FOUND})
-set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
-set( HAVE_EXT_CLASSADS ON PARENT_SCOPE )
 
 # finally add dependencies if there are any
 if (NOT PROPER)
-  add_dependencies( ${CLASSADS_FOUND} pcre )
+  
+  if(PCRE_REF)
+	add_dependencies( ${CLASSADS_FOUND} ${PCRE_REF} )
+  endif()
 
   if (NOT WINDOWS)
-  ############################################################################## 
-  # the only reason this exists is b/c our externals depend on it  
-  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${EXTERNAL_STAGE}/include )
-  set_target_properties( classads
-	PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${EXTERNAL_STAGE}/lib 
-	LIBRARY_OUTPUT_DIRECTORY ${EXTERNAL_STAGE}/lib
-	RUNTIME_OUTPUT_DIRECTORY ${EXTERNAL_STAGE}/lib
-	OUTPUT_NAME classad)
+	############################################################################## 
+	# the only reason this exists is b/c our externals depend on it
+	# (blahp & creame)
+	file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${CLASSADS_INSTALL_LOC}/include )
+	set_target_properties( classads
+		PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
+		LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
+		RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
+		OUTPUT_NAME classad)
+
+        add_custom_command (OUTPUT ${CLASSADS_INSTALL_LOC}/lib/libpcre.a
+                    COMMAND cp
+                    ARGS -f ${PCRE_FOUND} ${CLASSADS_INSTALL_LOC}/lib          
+                    DEPENDS ${PCRE_REF} )
+
+        add_custom_target( pcre_coinstall ALL DEPENDS ${CLASSADS_INSTALL_LOC}/lib/libpcre.a )
+        add_dependencies( ${CLASSADS_FOUND} pcre_coinstall )
+
   endif()
 
 endif(NOT PROPER)

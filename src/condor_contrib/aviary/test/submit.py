@@ -20,7 +20,7 @@
 from suds import *
 from suds.client import Client
 from sys import exit, argv
-import time, pwd
+import time, pwd, os
 
 uid = pwd.getpwuid(os.getuid())[0]
 if not uid:

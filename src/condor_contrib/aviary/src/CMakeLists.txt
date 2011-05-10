@@ -46,11 +46,11 @@ src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
 add_library (aviary_job_axis SHARED ${COMMON_GEN_SRCS} ${JOB_GEN_SRCS} ${JOB_SRCS} Codec.cpp AviaryUtils.cpp SchedulerObject.cpp )
 # remove unresolved deps by copying in -lwso2_wsf objects
-target_link_libraries(aviary_job_axis --whole-archive -lwso2_wsf --no-whole-archive)
+target_link_libraries(aviary_job_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
 
 condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
 # remove unresolved deps by copying in -laxis2_engine objects
-target_link_libraries(AviaryScheddPlugin-plugin --whole-archive -laxis2_engine --no-whole-archive)
+target_link_libraries(AviaryScheddPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
 
 ############################
 # query server (aka ye old job server)
