@@ -777,9 +777,15 @@ The destination file is given by the file name within the URL.
 
 For the transfer of the entire contents of the output sandbox,
 which are all files that the job creates or modifies,
-a command of the following form is added to the submit description file:
+Condor's file transfer mechanism must be enabled.
+In this sample portion of the submit description file,
+the first two commands explicitly enable file transfer,
+and the added \SubmitCmd{output\_destination} command provides
+both the protocol to be used and the destination of the transfer.
 \footnotesize
 \begin{verbatim}
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
 output_destination = urltype://path/to/destination/directory
 \end{verbatim}
 \normalsize
