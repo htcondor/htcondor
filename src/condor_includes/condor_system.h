@@ -159,7 +159,6 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
-#include <sys/utsname.h>		
 #include <sys/resource.h>
 #include <limits.h>
 #include <ctype.h>
@@ -174,9 +173,6 @@
 #endif
 #include <math.h>
 #include <utime.h>
-#if !defined(Darwin)
-#include <sys/poll.h>
-#endif
 
 /* select() on all our platforms takes an fd_set pointer, so we can
    just define this here for everyone.  We don't really need it

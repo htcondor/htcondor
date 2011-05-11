@@ -292,7 +292,6 @@ public:
     ///
 	int code_array(gid_t *&array, int &len);
     ///
-	int code(struct utsname &);
 #endif // !defined(WIN32)
 	///
 	int code(condor_mode_t &);
@@ -361,7 +360,6 @@ public:
 	int code(struct utimbuf *x)		{ return code(*x); }
     ///
 	int code(struct rlimit *x)		{ return code(*x); }
-	int code(struct utsname *x)		{ return code(*x); }
 #endif // !defined(WIN32)
 
 #if HAS_64BIT_STRUCTS

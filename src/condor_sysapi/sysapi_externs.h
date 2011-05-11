@@ -21,6 +21,8 @@
 #ifndef SYSAPI_EXTERNS_H
 #define SYSAPI_EXTERNS_H
 
+#include <sys/utsname.h>
+
 /* this header file can be included by C and C++ files, so make sure it
    understands that fact.
 
