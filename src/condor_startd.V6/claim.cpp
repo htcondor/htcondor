@@ -1543,11 +1543,11 @@ Claim::starterKillPg( int sig )
 
 
 bool
-Claim::starterKillSoft( void )
+Claim::starterKillSoft( bool state_change )
 {
 	if( c_starter ) {
 		changeState( CLAIM_VACATING );
-		return c_starter->killSoft();
+		return c_starter->killSoft( state_change );
 	}
 		// if there's no starter, we don't need to kill anything, so
 		// it worked...  

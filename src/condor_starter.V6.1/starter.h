@@ -190,6 +190,8 @@ public:
 		*/
 	virtual bool cleanupJobs( void );
 
+	virtual void RemoteStateChange( int );
+
 		/** Return the Working dir */
 	const char *GetWorkingDir() const { return WorkingDir.Value(); }
 
@@ -279,6 +281,8 @@ public:
 		return dynamic_cast<GLExecPrivSepHelper*>(m_privsep_helper);
 	}
 #endif
+	bool remoteStateChanged( void ) { return remote_state_change; };
+	void resetStateChanged( void );
 
 protected:
 	List<UserProc> m_job_list;
@@ -375,6 +379,8 @@ private:
 
 		// true if allJobsDone() has been called
 	bool m_all_jobs_done;
+
+	bool remote_state_change;
 };
 
 #endif

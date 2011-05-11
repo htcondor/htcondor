@@ -783,7 +783,7 @@ ResState::enter_action( State s, Activity a,
 				if( rip->preemptWasTrue() && rip->wants_hold() ) {
 					rip->hold_job();
 				}
-				else if( ! rip->r_cur->starterKillSoft() ) {
+				else if( ! rip->r_cur->starterKillSoft(true) ) {
 					rip->r_cur->starterKillPg( SIGKILL );
 					dprintf( D_ALWAYS,
 							 "State change: Error sending signals to starter\n" );
