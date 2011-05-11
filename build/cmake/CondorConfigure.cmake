@@ -419,7 +419,17 @@ else()
 endif(PROPER)
 
 if (WINDOWS)
-	set (EXTERNAL_STAGE C:/temp/condor)
+	# the environment variable CONDOR_BLD_EXTERNAL_STAGE will be set to the
+	# path for externals if the invoker wants shared externals. otherwise
+	# just build externals in a sub-directory of the project directory
+	#
+	set (EXTERNAL_STAGE $ENV{CONDOR_BLD_EXTERNAL_STAGE})
+	if (EXTERNAL_STAGE)
+        # cmake doesn't like windows paths, so make sure that this path separators are unix style
+	    string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
+	else()
+	   set (EXTERNAL_STAGE ${PROJECT_BINARY_DIR}/bld_external)
+    endif(EXTERNAL_STAGE)
 else()
 	if (PROPER)
 		set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
