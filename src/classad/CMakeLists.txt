@@ -101,10 +101,14 @@ if (NOT PROPER)
 
         add_custom_command (OUTPUT ${CLASSADS_INSTALL_LOC}/lib/libpcre.a
                     COMMAND cp
-                    ARGS -f ${PCRE_FOUND} ${CLASSADS_INSTALL_LOC}/lib          
-                    DEPENDS ${PCRE_REF} )
+                    ARGS -f ${PCRE_FOUND} ${CLASSADS_INSTALL_LOC}/lib)
 
         add_custom_target( pcre_coinstall ALL DEPENDS ${CLASSADS_INSTALL_LOC}/lib/libpcre.a )
+
+	if (PCRE_REF)
+		add_dependencies( pcre_coinstall ${PCRE_REF} )
+	endif()
+
         add_dependencies( ${CLASSADS_FOUND} pcre_coinstall )
 
   endif()
