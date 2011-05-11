@@ -340,7 +340,15 @@ VanillaProc::ShutdownGraceful()
 	// now softkill the parent job process.  this is exactly what
 	// OsProc::ShutdownGraceful does, so call it.
 	//
-	return OsProc::ShutdownGraceful();
+	OsProc::ShutdownGraceful();
+#if !defined(WIN32)
+	if (Starter->remoteStateChanged() == false)
+	{
+		startEscalationTimer();
+	}
+	Starter->resetStateChanged();
+#endif
+	return false; // shutdown is pending (same as OsProc::ShutdownGraceful()
 }
 
 bool
