@@ -35,8 +35,12 @@ endif()
 
 if (HAVE_DLFCN_H)
 	add_definitions(-DHAVE_DLFCN_H)
-	set (DL_FOUND -ldl)
 endif()
+
+if (HAVE_LIBDL)
+	set (DL_FOUND -ldl)
+endif (HAVE_LIBDL)
+
 ##
 #####################################################################
 
