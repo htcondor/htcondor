@@ -52,22 +52,20 @@ DECL_SUBSYSTEM( "KBDD", SUBSYSTEM_TYPE_DAEMON );
 bool
 update_startd()
 {
-    static SafeSock ssock;
-	static bool first_time = true;
-	static Daemon startd( DT_STARTD );
-	if( first_time ) {
-		if( ! startd.locate() ) {
-			dprintf( D_ALWAYS, "Can't locate startd, aborting (%s)\n",
-					 startd.error() );
-			return false;
-		}
-		if( !ssock.connect(startd.addr(), 0) ) {
-			dprintf( D_ALWAYS, "Can't connect to startd at: %s, "
-					 "aborting\n", startd.addr() );
-			return false;
-		}
-		first_time = false;
+    SafeSock ssock;
+	Daemon startd( DT_STARTD );
+
+	if( ! startd.locate() ) {
+		dprintf( D_ALWAYS, "Can't locate startd, aborting (%s)\n",
+			startd.error() );
+		return false;
 	}
+	if( !ssock.connect(startd.addr(), 0) ) {
+		dprintf( D_ALWAYS, "Can't connect to startd at: %s, "
+			"aborting\n", startd.addr() );
+		return false;
+	}
+
 	if( !startd.sendCommand(X_EVENT_NOTIFICATION, &ssock, 3) ) {
 		dprintf( D_ALWAYS, "Can't send X_EVENT_NOTIFICATION command "
 				 "to startd at: %s, aborting\n", startd.addr() );
