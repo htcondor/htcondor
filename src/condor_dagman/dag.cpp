@@ -1527,7 +1527,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 					daemonCore->GetExceptionString(status) );
 			job->retval = ( 0 - WTERMSIG(status ) );
 		} else if( (preskip_interrogator = WEXITSTATUS( status )) != 0 ) {
-			if(job->HasPreSkip() && preskip_interrogator == job->GetPreSkip()){
+			if( job->HasPreSkip() && preskip_interrogator == job->GetPreSkip() ){
 				// We are exiting with a nonzero status In this
 				// case, it is expected.  We mark the job as a
 				// noop. Then jump below to where pre skip looks
@@ -1535,6 +1535,12 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				debug_printf(DEBUG_NORMAL,"PRE_SKIP return "
 					"value indicates we are done with this node\n");
 				job->SetNoop(1);
+				// Also we need to turn off the POST script, if
+				// there is one.
+				if( job->_scriptPost ) {
+					delete job->_scriptPost;
+					job->_scriptPost = NULL;
+				}
 				goto pre_skip_fake_success;
 			}
 			// if script returned failure
