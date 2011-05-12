@@ -1089,8 +1089,15 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		} else if ( strcasecmp(job_state, "Exited") == MATCH) {
 			// Did job exit by itself or was it held, evicted, ... ?
 			update_ad->LookupBool( ATTR_JOB_NORMAL_EXIT , normalExit) ;
-			if (normalExit)  
+			if (normalExit) { 
 				jobAd->Assign(ATTR_JOB_STATUS, TRANSFERRING_OUTPUT);
+				GenericEvent evt;
+				evt.setInfoText("TRANSFERRING_OUTPUT");
+				if( !writeULogEvent(&evt) ) {
+					 dprintf( D_ALWAYS, "Unable to log ULOG_JOB_SUSPENDED event\n" );
+				}
+
+			}
 		} else { 
 				// For our purposes in here, we don't care about any
 				// other possible states at the moment.  If the job
