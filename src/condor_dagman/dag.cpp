@@ -1514,30 +1514,40 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		EXCEPT( "Error: node %s is not in PRERUN state", job->GetJobName() );
 	}
 
-	if( WIFSIGNALED( status ) || WEXITSTATUS( status ) != 0 ) {
+	if( WIFSIGNALED( status ) ||  WEXITSTATUS( status ) != 0) {
+		int preskip_interrogator = 0;
 		// if script returned failure or was killed by a signal
 		if( WIFSIGNALED( status ) ) {
 			// if script was killed by a signal
 			debug_printf( DEBUG_QUIET, "PRE Script of Job %s died on %s\n",
-						  job->GetJobName(),
-						  daemonCore->GetExceptionString(status) );
+					job->GetJobName(),
+					daemonCore->GetExceptionString(status) );
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
 					"PRE Script died on %s",
 					daemonCore->GetExceptionString(status) );
-            job->retval = ( 0 - WTERMSIG(status ) );
-		}
-		else if( WEXITSTATUS( status ) != 0 ) {
+			job->retval = ( 0 - WTERMSIG(status ) );
+		} else if( (preskip_interrogator = WEXITSTATUS( status )) != 0 ) {
+			if(job->HasPreSkip() && preskip_interrogator == job->GetPreSkip()){
+				// We are exiting with a nonzero status In this
+				// case, it is expected.  We mark the job as a
+				// noop. Then jump below to where pre skip looks
+				// like it succeeded
+				debug_printf(DEBUG_NORMAL,"PRE_SKIP return "
+					"value indicates we are done with this node\n");
+				job->SetNoop(1);
+				goto pre_skip_fake_success;
+			}
 			// if script returned failure
 			debug_printf( DEBUG_QUIET,
-						  "PRE Script of Job %s failed with status %d\n",
-						  job->GetJobName(), WEXITSTATUS(status) );
+					"PRE Script of Job %s failed with status %d\n",
+					job->GetJobName(), WEXITSTATUS(status) );
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
 					"PRE Script failed with status %d",
 					WEXITSTATUS(status) );
-            job->retval = WEXITSTATUS( status );
+			job->retval = WEXITSTATUS( status );
 		}
 
-        job->_Status = Job::STATUS_ERROR;
+		job->_Status = Job::STATUS_ERROR;
 		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 
@@ -1549,14 +1559,15 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				// add # of retries to error_text
 				char *tmp = strnewp( job->error_text );
 				snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-						 "%s (after %d node retries)", tmp,
-						 job->GetRetries() );
+						"%s (after %d node retries)", tmp,
+						job->GetRetries() );
 				delete [] tmp;   
 			}
 		}
 	} else {
 		debug_printf( DEBUG_NORMAL, "PRE Script of Node %s completed "
 					  "successfully.\n", job->GetJobName() );
+	pre_skip_fake_success:
 		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
 		_preRunNodeCount--;
