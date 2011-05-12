@@ -256,6 +256,7 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_splice-O "Simple Dagman Splice O" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_pre_skip-A "Simple Dagman Pre Skip A" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_pre_skip-B "Simple Dagman Pre Skip B" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_pre_skip-C "Simple Dagman Pre Skip C" "core;dagman;quick;full;quicknolink")
 	##### generic lib tests
 	condor_pl_test(lib_classads "Run Classad Unit Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_unit_tests "Run Unit Tests Tests" "core;quick;full;quicknolink")
