@@ -1,7 +1,4 @@
-JOB A_A job_dagman_final-A.cmd
-VARS A_A job="$(JOB)"
-JOB A_B job_dagman_final-AB.cmd
-VARS A_B job="$(JOB)"
-FINAL A_C job_dagman_final-C.cmd
-VARS A_C job="$(JOB)"
+JOB A_A job_dagman_final-A-nodeA.cmd
+JOB A_B job_dagman_final-A-nodeB.cmd
+FINAL A_C job_dagman_final-A-nodeC.cmd
 PARENT A_A CHILD A_B
