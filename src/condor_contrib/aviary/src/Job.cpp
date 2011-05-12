@@ -20,7 +20,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "condor_parser.h"
+//#include "condor_parser.h"
 #include "compat_classad.h"
 #include "proc.h"
 #include "stl_string_utils.h"
