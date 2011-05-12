@@ -1286,7 +1286,8 @@ sub IsPersonalRunning
 			last;
         }
     }
-    if ( close(CONFIG) && ($? != 13) ) {	# Ignore SIGPIPE
+        # TODO: Why would SIGPIPE cause close to return 13 (Perm denied?) $? should contain the exit status from condor_config_value
+    if ( (not close(CONFIG)) && ($? != 13) ) {	# Ignore SIGPIPE
 	warn "Error executing condor_config_val: '$?' '$!'"
     }
 
