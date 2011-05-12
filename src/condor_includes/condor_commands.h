@@ -167,6 +167,7 @@
 #define CLEAR_DIRTY_JOB_ATTRS (SCHED_VERS+111) // schedd: clear dirty attributes for a job
 
 #define GET_SANDBOX_INFO (SCHED_VERS + 111)  // startd: get Sandbox information
+#define STARTD_JOB_EXITED (SCHED_VERS + 112)        // startd: receive starter info that job exited
 
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)

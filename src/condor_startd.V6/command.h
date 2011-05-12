@@ -32,6 +32,11 @@ class Service;
 int command_handler( Service*, int, Stream* );
 
 /*
+	command_job_exited notifies the StartD that a job execution
+	has finished and file transfer is ongoing
+*/
+int command_job_exited( Service*, int, Stream* );
+/*
   ACTIVATE_CLAIM is a special case of the above case, in that more
   stuff is sent over the wire than just the command and the
   ClaimId, and if anything goes wrong, the shadow wants a reply. 
@@ -72,6 +77,7 @@ int command_query_ads( Service*, int, Stream* );
 int command_vm_register( Service*, int, Stream* );
 int command_vm_universe( Service*, int, Stream* );
 int command_sand_man(Service*, int, Stream*);
+
 
 /*
    This command handler deals with commands that send a name as part

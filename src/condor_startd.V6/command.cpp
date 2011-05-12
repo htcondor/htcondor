@@ -74,6 +74,53 @@ command_handler( Service*, int cmd, Stream* stream )
 	return rval;
 }
 
+int 
+command_job_exited( Service*, int cmd, Stream* stream ) {
+	int rval = TRUE;
+	char* id = NULL;
+	Resource* rip;
+
+	if( ! stream->get_secret(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		free( id );
+		return FALSE;
+	}
+	rip = resmgr->get_by_cur_id( id );
+	if( !rip ) {
+		ClaimIdParser idp( id );
+		dprintf( D_ALWAYS, 
+				 "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
+		free( id );
+		stream->end_of_message();
+		reply( stream, NOT_OK );
+		return FALSE;
+	}
+	free(id);
+	
+	
+	char *jobStatus = NULL;
+	if( !stream->code(jobStatus) ) {
+		dprintf( D_ALWAYS, "command_handler: "
+						"	Can't read job exit status \n");
+		free(jobStatus);
+		return FALSE;
+	}
+
+	Claim *foo = rip->r_cur;
+	if( foo ) {
+		foo->jobExited(atoi(jobStatus));
+	}
+	rval = TRUE;
+	
+	free(jobStatus); 
+	
+	if (!stream->end_of_message()) {
+		dprintf( D_ALWAYS, "command_handler: "
+						"	Can't read EOM \n");
+	}
+	return rval;
+}
+
 int
 deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 {
@@ -2300,3 +2347,7 @@ command_sand_man(Service*, int cmd, Stream* sock )
 
 	return TRUE;
 }
+
+
+
+
