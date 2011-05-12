@@ -56,7 +56,7 @@
         }
         AviaryCommon::AttributeType::~AttributeType()
         {
-
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         
@@ -306,31 +306,31 @@
                    {
                      
                        case AttributeType_INTEGER :
-                            property_AttributeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "INTEGER");
+                            property_AttributeType = ("INTEGER");
                           break;
                      
                        case AttributeType_FLOAT :
-                            property_AttributeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "FLOAT");
+                            property_AttributeType = ("FLOAT");
                           break;
                      
                        case AttributeType_STRING :
-                            property_AttributeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "STRING");
+                            property_AttributeType = ("STRING");
                           break;
                      
                        case AttributeType_EXPRESSION :
-                            property_AttributeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "EXPRESSION");
+                            property_AttributeType = ("EXPRESSION");
                           break;
                      
                        case AttributeType_BOOLEAN :
-                            property_AttributeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "BOOLEAN");
+                            property_AttributeType = ("BOOLEAN");
                           break;
                      
                        case AttributeType_UNDEFINED :
-                            property_AttributeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "UNDEFINED");
+                            property_AttributeType = ("UNDEFINED");
                           break;
                      
                        case AttributeType_ERROR :
-                            property_AttributeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "ERROR");
+                            property_AttributeType = ("ERROR");
                           break;
                      
                      

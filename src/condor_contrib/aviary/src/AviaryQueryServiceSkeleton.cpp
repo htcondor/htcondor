@@ -416,6 +416,10 @@ GetJobDetailsResponse* AviaryQueryServiceSkeleton::getJobDetails(wso2wsf::Messag
 			createBadJobResponse<JobDetails>(*jd, job, status);
 		}
 		job_results->push_back(jd);
+
+        for (aviary::codec::AttributeMapType::iterator i = attr_map.begin();attr_map.end() != i; i++) {
+            delete (*i).second;
+        }
 	}
 
 	jobDetailsResponse->setJobs(job_results);

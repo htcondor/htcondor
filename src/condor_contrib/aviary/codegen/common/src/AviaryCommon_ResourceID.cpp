@@ -75,7 +75,7 @@
         }
         AviaryCommon::ResourceID::~ResourceID()
         {
-
+            if (property_Subsystem_type) delete property_Subsystem_type;
         }
 
         

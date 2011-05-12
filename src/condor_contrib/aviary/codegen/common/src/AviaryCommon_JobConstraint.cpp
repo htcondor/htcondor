@@ -55,7 +55,7 @@
         }
         AviaryCommon::JobConstraint::~JobConstraint()
         {
-
+            if (property_Type) delete property_Type;
         }
 
         

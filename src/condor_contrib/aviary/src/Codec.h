@@ -64,17 +64,17 @@ public:
         STRING_TYPE = 3
     };
     AviaryAttribute ( AttributeType _type, const char* _value): m_type(_type), m_value(_value) {};
-    ~AviaryAttribute();
+    ~AviaryAttribute() { /**/ };
 
     AttributeType getType() const { return m_type; }
-    const char * getValue() const { return m_value; }
+    const char * getValue() const { return m_value.c_str(); }
 
 private:
     AttributeType m_type;
-    const char * m_value;
+    std::string m_value;
 };
 
-typedef map<const char*, AviaryAttribute*> AttributeMapType;
+typedef map<std::string, AviaryAttribute*> AttributeMapType;
 typedef AttributeMapType::const_iterator AttributeMapIterator;
 
 // TODO: revisit

@@ -56,7 +56,7 @@
         }
         AviaryCommon::ResourceType::~ResourceType()
         {
-
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         
@@ -312,39 +312,39 @@
                    {
                      
                        case ResourceType_COLLECTOR :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "COLLECTOR");
+                            property_ResourceType = ("COLLECTOR");
                           break;
                      
                        case ResourceType_EXECUTOR :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "EXECUTOR");
+                            property_ResourceType = ("EXECUTOR");
                           break;
                      
                        case ResourceType_EVENT_SERVER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "EVENT_SERVER");
+                            property_ResourceType = ("EVENT_SERVER");
                           break;
                      
                        case ResourceType_JOB_SERVER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "JOB_SERVER");
+                            property_ResourceType = ("JOB_SERVER");
                           break;
                      
                        case ResourceType_LOW_LATENCY :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "LOW_LATENCY");
+                            property_ResourceType = ("LOW_LATENCY");
                           break;
                      
                        case ResourceType_MASTER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "MASTER");
+                            property_ResourceType = ("MASTER");
                           break;
                      
                        case ResourceType_NEGOTIATOR :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "NEGOTIATOR");
+                            property_ResourceType = ("NEGOTIATOR");
                           break;
                      
                        case ResourceType_SCHEDULER :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "SCHEDULER");
+                            property_ResourceType = ("SCHEDULER");
                           break;
                      
                        case ResourceType_CUSTOM :
-                            property_ResourceType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "CUSTOM");
+                            property_ResourceType = ("CUSTOM");
                           break;
                      
                      

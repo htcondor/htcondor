@@ -56,7 +56,7 @@
         }
         AviaryCommon::JobDataType::~JobDataType()
         {
-
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         
@@ -294,15 +294,15 @@
                    {
                      
                        case JobDataType_ERR :
-                            property_JobDataType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "ERR");
+                            property_JobDataType = ("ERR");
                           break;
                      
                        case JobDataType_LOG :
-                            property_JobDataType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "LOG");
+                            property_JobDataType = ("LOG");
                           break;
                      
                        case JobDataType_OUT :
-                            property_JobDataType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "OUT");
+                            property_JobDataType = ("OUT");
                           break;
                      
                      

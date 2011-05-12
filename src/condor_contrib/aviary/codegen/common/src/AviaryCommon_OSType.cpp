@@ -56,7 +56,7 @@
         }
         AviaryCommon::OSType::~OSType()
         {
-
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         
@@ -291,11 +291,11 @@
                    {
                      
                        case OSType_LINUX :
-                            property_OSType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "LINUX");
+                            property_OSType = ("LINUX");
                           break;
                      
                        case OSType_WINDOWS :
-                            property_OSType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "WINDOWS");
+                            property_OSType = ("WINDOWS");
                           break;
                      
                      

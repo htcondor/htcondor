@@ -299,6 +299,11 @@ HistoryFile::poll(CondorError &/*errstack*/)
 		if (hold_reason) entry.hold_reason = hold_reason;
 
 		m_entries.push_back(entry);
+
+        free(global_id);free(cmd);free(args1); free(args2);
+        free(release_reason); free(hold_reason);
+        free(submission);
+        free(owner);
 	}
 
 		// Return iterators for newly read records

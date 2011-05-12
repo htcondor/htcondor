@@ -56,7 +56,7 @@
         }
         AviaryCommon::StatusCodeType::~StatusCodeType()
         {
-
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         
@@ -303,27 +303,27 @@
                    {
                      
                        case StatusCodeType_OK :
-                            property_StatusCodeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "OK");
+                            property_StatusCodeType = ("OK");
                           break;
                      
                        case StatusCodeType_FAIL :
-                            property_StatusCodeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "FAIL");
+                            property_StatusCodeType = ("FAIL");
                           break;
                      
                        case StatusCodeType_NO_MATCH :
-                            property_StatusCodeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "NO_MATCH");
+                            property_StatusCodeType = ("NO_MATCH");
                           break;
                      
                        case StatusCodeType_INVALID_OFFSET :
-                            property_StatusCodeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "INVALID_OFFSET");
+                            property_StatusCodeType = ("INVALID_OFFSET");
                           break;
                      
                        case StatusCodeType_UNIMPLEMENTED :
-                            property_StatusCodeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "UNIMPLEMENTED");
+                            property_StatusCodeType = ("UNIMPLEMENTED");
                           break;
                      
                        case StatusCodeType_UNAVAILABLE :
-                            property_StatusCodeType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "UNAVAILABLE");
+                            property_StatusCodeType = ("UNAVAILABLE");
                           break;
                      
                      

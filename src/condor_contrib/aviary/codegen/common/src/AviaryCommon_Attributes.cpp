@@ -45,7 +45,10 @@
         }
         AviaryCommon::Attributes::~Attributes()
         {
-
+            if (property_Attrs) {
+                while(!property_Attrs->empty()) delete property_Attrs->back(), property_Attrs->pop_back();
+                delete property_Attrs;
+            }
         }
 
         

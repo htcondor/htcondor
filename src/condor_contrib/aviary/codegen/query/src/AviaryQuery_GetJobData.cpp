@@ -68,7 +68,8 @@
         }
         AviaryQuery::GetJobData::~GetJobData()
         {
-
+            if (property_Data) delete property_Data;
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         
