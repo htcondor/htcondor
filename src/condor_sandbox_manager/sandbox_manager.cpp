@@ -277,7 +277,7 @@ CSandboxManager::updateSandboxExecDir(const char* sId, const char* sExecDir)
 		sandboxMap[sbId]->setSandboxDir(sExecDir);
 		dprintf(D_ALWAYS, "CSandboxManager::updateSandboxExecDir called:  %s , %s \n", sId, sExecDir);
 	}   
-	this->updateSandboxRecord(sId);
+	//this->updateSandboxRecord(sId);
 }
 
 
