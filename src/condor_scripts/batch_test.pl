@@ -377,7 +377,7 @@ if(!($wantcurrentdaemons)) {
 
 }
 
-my @myfig = `condor_config_val -config`;
+my @myfig = `condor_config_val -config 2>&1`;
 debug("Current config settings are:\n",2);
 foreach my $fig (@myfig) {
 	debug("$fig\n",2);
