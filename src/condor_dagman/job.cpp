@@ -100,7 +100,7 @@ Job::~Job() {
 Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile,
 			bool prohibitMultiJobs ) :
-	_jobType( jobType )
+	_jobType( jobType ), _preskip(-1)
 {
 	Init( jobName, directory, cmdFile, prohibitMultiJobs );
 }
@@ -552,14 +552,33 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 }
 
 bool
+Job::AddPreSkip(const char *result, MyString &whynot )
+{
+	if( !result || strcmp( result, "" ) == 0 ) {
+		whynot = "missing exit code";
+		return false;
+	}
+	int res=atoi(result);
+	if(res == 0) {
+		debug_printf(DEBUG_NORMAL,"Exit code 0 for a pre_skip node "
+				"is weird.\n");
+	}
+	// Return values from programs are all in the range 0-256
+	if(_preskip == -1){
+		_preskip = res;	
+	} else {
+		whynot = "Two definitions of PRE_SKIP for a node.\n";
+		return false;
+	}
+	whynot = "n/a";
+	return true;
+}
+
+bool
 Job::IsActive() const
 {
-	if( _Status == STATUS_PRERUN ||
-		_Status == STATUS_SUBMITTED ||
-		_Status == STATUS_POSTRUN ) {
-		return true;
-	}
-	return false;
+	return  _Status == STATUS_PRERUN || _Status == STATUS_SUBMITTED ||
+			_Status == STATUS_POSTRUN;
 }
 
 const char*
@@ -963,4 +982,13 @@ Job::SetLastEventTime( const ULogEvent *event )
 {
 	struct tm eventTm = event->eventTime;
 	_lastEventTime = mktime( &eventTm );
+}
+
+int
+Job::GetPreSkip() const
+{
+	if(!HasPreSkip()) {
+		debug_printf(DEBUG_QUIET,"Evaluating PRE_SKIP... It is not defined.\n");
+	}
+	return _preskip;
 }

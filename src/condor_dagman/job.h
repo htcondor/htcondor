@@ -178,6 +178,7 @@ class Job {
 	job_type_t JobType() const;
 
 	bool AddPreScript( const char *cmd, MyString &whynot );
+	bool AddPreSkip( const char* result, MyString &whynot );
 	bool AddPostScript( const char *cmd, MyString &whynot );
 	bool AddScript( bool post, const char *cmd, MyString &whynot );
 
@@ -411,7 +412,8 @@ class Job {
 		@return the last event time.
 	*/
 	time_t GetLastEventTime() { return _lastEventTime; }
-
+	bool HasPreSkip() const { return _preskip >= 0 && _preskip <= 0xff; }
+	int GetPreSkip() const;
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -587,6 +589,7 @@ private:
 
 		// The time of the most recent event related to this job.
 	time_t _lastEventTime;
+	int _preskip;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.
