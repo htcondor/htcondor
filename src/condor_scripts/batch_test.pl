@@ -113,11 +113,6 @@ Condor::DebugLevel(1);
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
 
-my $hostname = `hostname`; chomp $hostname;
-if ( ! ($hostname =~ /\./ ) ) {
-    warn "Warning: Host name '$hostname' is not an FQDN!!";
-    sleep( 10 );
-}
 my $iswindows = CondorTest::IsThisWindows();
 
 # configuration options
