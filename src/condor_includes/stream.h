@@ -50,7 +50,7 @@ const condor_mode_t NULL_FILE_PERMISSIONS = (condor_mode_t)0;
     We need to define a special code() method for certain integer arguments.
     To take advantage of overloading, we need make these arguments have a
     new type.  Since typedef doesn't actually create a new type in C++, we
-    use enum.  Note that we explicitly define MAXINT as an allowable value
+    use enum.  Note that we explicitly define INT_MAX as an allowable value
     for the enum to make sure sizeof(enum) == sizeof(int).
 */
 

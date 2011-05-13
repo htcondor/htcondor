@@ -28,8 +28,6 @@
 # include "condor_sys_nt.h"
 #endif
 
-
-
 /******************************
 ** Unix specifics
 ******************************/
@@ -44,7 +42,6 @@
 #ifndef UNIX
 # define UNIX
 #endif
-
 
 /**********************************************************************
 ** These system-specific files will "fix" anything that needs fixing,
@@ -168,9 +165,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
-#if !defined(Darwin) && !defined(CONDOR_FREEBSD)
-#include <values.h>
-#endif
+#include <float.h>
 #include <math.h>
 #include <utime.h>
 
