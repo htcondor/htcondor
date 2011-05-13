@@ -56,7 +56,7 @@
         }
         AviaryCommon::JobConstraintType::~JobConstraintType()
         {
-
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         
@@ -294,15 +294,15 @@
                    {
                      
                        case JobConstraintType_CMD :
-                            property_JobConstraintType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "CMD");
+                            property_JobConstraintType = ("CMD");
                           break;
                      
                        case JobConstraintType_ARGS :
-                            property_JobConstraintType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "ARGS");
+                            property_JobConstraintType = ("ARGS");
                           break;
                      
                        case JobConstraintType_OWNER :
-                            property_JobConstraintType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "OWNER");
+                            property_JobConstraintType = ("OWNER");
                           break;
                      
                      

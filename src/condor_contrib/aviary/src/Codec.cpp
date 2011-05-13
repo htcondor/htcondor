@@ -67,21 +67,21 @@ BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _
 
     classad::Value value;
     ad.EvaluateExpr(expr,value);
-	const char* key = strdup(name);
+	std::string key = name;
     switch (value.GetType()) {
         // seems this covers expressions also
         case classad::Value::BOOLEAN_VALUE:
-            _map[key] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE,strdup(trimQuotes(ExprTreeToString(expr)).c_str()));
+            _map[key] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
             break;
         case classad::Value::INTEGER_VALUE:
-            _map[key] = new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,strdup(ExprTreeToString(expr)));;
+            _map[key] = new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,ExprTreeToString(expr));
             break;
         case classad::Value::REAL_VALUE:
-            _map[key] = new AviaryAttribute(AviaryAttribute::FLOAT_TYPE,strdup(ExprTreeToString(expr)));
+            _map[key] = new AviaryAttribute(AviaryAttribute::FLOAT_TYPE,ExprTreeToString(expr));
             break;
         case classad::Value::STRING_VALUE:
         default:
-            _map[key] = new AviaryAttribute(AviaryAttribute::STRING_TYPE,strdup(trimQuotes(ExprTreeToString(expr)).c_str()));
+            _map[key] = new AviaryAttribute(AviaryAttribute::STRING_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
     }
 
     return true;
@@ -114,7 +114,7 @@ BaseCodec::mapToClassAd(AttributeMapType& _map, ClassAd& ad)
 {
 
     for (AttributeMapIterator entry = _map.begin(); _map.end() != entry; entry++) {
-        const char* name = entry->first;
+        const char* name = entry->first.c_str();
         AviaryAttribute* value = entry->second;
 
         switch (value->getType()) {

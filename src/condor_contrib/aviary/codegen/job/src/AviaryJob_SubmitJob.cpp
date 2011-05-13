@@ -122,7 +122,15 @@
         }
         AviaryJob::SubmitJob::~SubmitJob()
         {
-
+            if (property_Requirements) {
+                while(!property_Requirements->empty()) delete property_Requirements->back(), property_Requirements->pop_back();
+                delete property_Requirements;
+            }
+            if (property_Extra) {
+                while(!property_Extra->empty()) delete property_Extra->back(), property_Extra->pop_back();
+                delete property_Extra;
+            }
+            axutil_qname_free (qname,Environment::getEnv());
         }
 
         

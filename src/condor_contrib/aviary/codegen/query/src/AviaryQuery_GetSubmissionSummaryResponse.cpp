@@ -56,7 +56,11 @@
         }
         AviaryQuery::GetSubmissionSummaryResponse::~GetSubmissionSummaryResponse()
         {
-
+            if (property_Submissions) {
+                while(!property_Submissions->empty()) delete property_Submissions->back(), property_Submissions->pop_back();
+                delete property_Submissions;
+            }
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         

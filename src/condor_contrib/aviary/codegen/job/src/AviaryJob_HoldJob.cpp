@@ -56,7 +56,8 @@
         }
         AviaryJob::HoldJob::~HoldJob()
         {
-
+            if (property_HoldJob) delete property_HoldJob;
+            axutil_qname_free (qname,Environment::getEnv());
         }
 
         

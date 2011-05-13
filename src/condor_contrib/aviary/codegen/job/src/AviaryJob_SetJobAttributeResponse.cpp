@@ -56,7 +56,8 @@
         }
         AviaryJob::SetJobAttributeResponse::~SetJobAttributeResponse()
         {
-
+            if (property_SetJobAttributeResponse) delete property_SetJobAttributeResponse;
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         

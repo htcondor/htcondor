@@ -250,6 +250,14 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
     }
     qmgmt_all_users_trusted = false;
 
+    // clean up
+    for (AttributeMapType::iterator i = attrMap.begin(); attrMap.end() != i; i++) {
+        delete (*i).second;
+    }
+    for (AttributeMapType::iterator i = reqsMap.begin(); reqsMap.end() != i; i++) {
+        delete (*i).second;
+    }
+
     return submitJobResponse;
 }
 

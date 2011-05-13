@@ -75,7 +75,7 @@
         }
         AviaryCommon::JobID::~JobID()
         {
-
+            if (property_Submission) delete property_Submission;
         }
 
         

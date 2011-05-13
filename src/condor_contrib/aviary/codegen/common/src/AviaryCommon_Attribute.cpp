@@ -65,7 +65,7 @@
         }
         AviaryCommon::Attribute::~Attribute()
         {
-
+            if (property_Type) delete property_Type;
         }
 
         

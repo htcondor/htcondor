@@ -45,7 +45,7 @@
         }
         AviaryJob::ControlJobResponse::~ControlJobResponse()
         {
-
+            if (property_Status) delete property_Status;
         }
 
         

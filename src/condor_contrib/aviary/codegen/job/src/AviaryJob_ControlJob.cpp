@@ -55,7 +55,7 @@
         }
         AviaryJob::ControlJob::~ControlJob()
         {
-
+            if (property_Id) delete property_Id;
         }
 
         

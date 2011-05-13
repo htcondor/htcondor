@@ -56,7 +56,7 @@
         }
         AviaryCommon::ArchType::~ArchType()
         {
-
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         
@@ -291,11 +291,11 @@
                    {
                      
                        case ArchType_INTEL :
-                            property_ArchType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "INTEL");
+                            property_ArchType = ("INTEL");
                           break;
                      
                        case ArchType_X86_64 :
-                            property_ArchType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "X86_64");
+                            property_ArchType = ("X86_64");
                           break;
                      
                      

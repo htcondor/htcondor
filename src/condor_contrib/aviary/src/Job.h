@@ -70,7 +70,7 @@ class LiveJobImpl: public JobImpl
         LiveJobImpl ( const char*, ClusterJobImpl* );
         virtual ~LiveJobImpl();
         int getStatus () const;
-        const ClassAd* getSummary () const;
+        const ClassAd* getSummary ();
         const ClassAd* getFullAd () const;
         void set ( const char* , const char* );
         bool get ( const char * , const AviaryAttribute *& ) const;

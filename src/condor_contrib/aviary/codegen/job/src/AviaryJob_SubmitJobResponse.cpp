@@ -66,7 +66,9 @@
         }
         AviaryJob::SubmitJobResponse::~SubmitJobResponse()
         {
-
+            delete property_Id;
+            delete property_Status;
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         
