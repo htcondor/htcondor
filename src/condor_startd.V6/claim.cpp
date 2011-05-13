@@ -1360,9 +1360,9 @@ Claim::spawnStarter( Stream* s )
 void
 Claim::setStarter( Starter* s )
 {
-	if( s && c_starter ) {
+	/*if( s && c_starter ) {
 		EXCEPT( "Claim::setStarter() called with existing starter!" );
-	}
+	}*/
 	c_starter = s;
 	if( s ) {
 		s->setClaim( this );
@@ -1374,7 +1374,7 @@ void
 Claim::starterExited( int status )
 {
 		// Now that the starter is gone, we need to change our state
-	changeState( CLAIM_IDLE );
+	//changeState( CLAIM_IDLE );
 
 		// Notify our starter object that its starter exited, so it
 		// can cancel timers any pending timers, cleanup the starter's
@@ -1384,6 +1384,27 @@ Claim::starterExited( int status )
 		// Now, clear out this claim with all the starter-specific
 		// info, including the starter object itself.
 	resetClaim();
+
+		// finally, let our resource know that our starter exited, so
+		// it can do the right thing.
+	//c_rip->starterExited( this );
+}
+
+void 
+Claim::jobExited( int status )
+{
+			// Now that the starter is gone, we need to change our state
+	changeState( CLAIM_IDLE );
+
+		// Notify our starter object that its starter exited, so it
+		// can cancel timers any pending timers, cleanup the starter's
+		// execute directory, and do any other cleanup. 
+	//c_starter->exited(status);
+	c_starter->jobExited(status);
+	
+		// Now, clear out this claim with all the starter-specific
+		// info, including the starter object itself.
+	//resetClaim();
 
 		// finally, let our resource know that our starter exited, so
 		// it can do the right thing.

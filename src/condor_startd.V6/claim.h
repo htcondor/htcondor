@@ -232,6 +232,7 @@ public:
 	int	 spawnStarter( Stream* = NULL );
 	void setStarter( Starter* s );
 	void starterExited( int status );
+	void jobExited( int status );
 	bool starterPidMatches( pid_t starter_pid );
 	bool isDeactivating( void );
 	bool isActive( void );
