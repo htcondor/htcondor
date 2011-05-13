@@ -78,10 +78,6 @@ CStarter::CStarter()
 	m_configured = false;
 	m_job_environment_is_ready = false;
 	m_all_jobs_done = false;
-	
-	// the old default: job is run and output is transferred back; unless stated otherwise
-	m_should_run_job = true;
-	m_should_transfer_output = true;
 }
 
 
@@ -108,7 +104,7 @@ CStarter::~CStarter()
 bool
 CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 				bool is_gsh, int stdin_fd, int stdout_fd, 
-				int stderr_fd , int doExecAndTransfer)
+				int stderr_fd )
 {
 	if( ! my_jic ) {
 		EXCEPT( "CStarter::Init() called with no JobInfoCommunicator!" ); 
@@ -125,14 +121,6 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 	starter_stdin_fd = stdin_fd;
 	starter_stdout_fd = stdout_fd;
 	starter_stderr_fd = stderr_fd;
-	
-	if (doExecAndTransfer > 0){
-		if (doExecAndTransfer > 1){
-			m_should_run_job = false;
-		} else {
-			m_should_transfer_output = false;
-		}
-	}
 
 	Config();
 
@@ -1899,12 +1887,6 @@ bool CStarter::getJobClaimId(MyString &result)
 int
 CStarter::SpawnJob( void )
 {
-	if (!m_should_run_job) {
-		this->allJobsDone();
-		return TRUE;
-		
-		
-	}
 		// Now that we've got all our files, we can figure out what
 		// kind of job we're starting up, instantiate the appropriate
 		// userproc class, and actually start the job.
@@ -2252,6 +2234,74 @@ CStarter::PeriodicCkpt( void )
 	return true;
 }
 
+bool 
+CStarter::sendJobExitedToStartd(int exitStatus)
+{
+	Daemon startd(DT_STARTD, NULL);
+
+	if( !startd.locate() ) {
+		dprintf(D_ALWAYS,"ERROR: %s\n", startd.error());
+		return false;
+	}
+
+	char* addr = startd.addr();
+	if( !addr ) {
+		dprintf(D_ALWAYS,"Can't find the address of local startd\n");
+		return false;
+	}
+
+	// Using udp packet
+	SafeSock ssock;
+
+	ssock.timeout( 30 ); // 5 seconds timeout
+	ssock.encode();
+
+	if( !ssock.connect(addr) ) {
+		dprintf( D_ALWAYS, "Failed to connect to local startd(%s)\n", addr);
+		return false;
+	}
+
+	int cmd = STARTD_JOB_EXITED;
+	if( !startd.startCommand(cmd, &ssock) ) {
+		dprintf( D_ALWAYS, "Failed to send UDP command(%s) to local startd %s\n",
+			  			 	getCommandString(cmd), addr);
+		return false;
+	}
+	MyString claimId;
+	getJobClaimId(claimId);
+	char *buffer = strdup(claimId.Value());
+	ASSERT(buffer);
+	if( !ssock.put_secret(buffer) ) {
+        	dprintf( D_ALWAYS, "ERROR in sendJobExitedToStartd(): "
+				 "Can't code ClaimId (%s)\n", buffer );
+			free(buffer);
+		return false;
+	}
+	free(buffer);
+	
+	MyString e_status;
+	e_status += exitStatus;
+
+	buffer = strdup(e_status.Value());
+	ASSERT(buffer);
+	dprintf( D_ALWAYS, "sendJobExitedToStartd(): Exit status is (%s)\n", buffer );
+	if (! ssock.code(buffer) ) {
+		dprintf( D_ALWAYS, "ERROR in sendJobExitedToStartd(): "
+				 "Can't code exit status (%s)\n", buffer );
+			free(buffer);
+		return false;
+	}
+	
+	if (! ssock.end_of_message() ) {
+		dprintf( D_ALWAYS, "ERROR in sendJobExitedToStartd(): "
+				 "Can't send end of message\n" );
+			free(buffer);
+		return false;
+	}
+	free(buffer);
+	return true;
+}
+
 
 int
 CStarter::Reaper(int pid, int exit_status)
@@ -2259,7 +2309,8 @@ CStarter::Reaper(int pid, int exit_status)
 	int handled_jobs = 0;
 	int all_jobs = 0;
 	UserProc *job;
-
+	
+	
 	if( WIFSIGNALED(exit_status) ) {
 		dprintf( D_ALWAYS, "Process exited, pid=%d, signal=%d\n", pid,
 				 WTERMSIG(exit_status) );
@@ -2291,7 +2342,10 @@ CStarter::Reaper(int pid, int exit_status)
 		allJobsDone();
 		return TRUE;
 	}
-
+	dprintf(D_ALWAYS, "STARTER::REAPER Sending job exit status %i to startd \n", exit_status);
+	bool res = sendJobExitedToStartd(exit_status);
+	dprintf(D_ALWAYS, "STARTER::REAPER ... sending of exit status to startd %s \n", (res) ? "succeeded" : "failed");
+	
 
 	m_job_list.Rewind();
 	while ((job = m_job_list.Next()) != NULL) {
@@ -2323,14 +2377,10 @@ CStarter::Reaper(int pid, int exit_status)
 				// cleanup.
 			if( !allJobsDone() ) {
 				dprintf(D_ALWAYS, "Returning from CStarter::JobReaper()\n");
-				if (m_should_run_job && !m_should_transfer_output){
-					dprintf(D_ALWAYS, "Job execution finished. Transfer data not requested in this step -- Starter is exiting. \n");
-					StarterExit(1);
-					
-				}
-				return 0;
+				return FALSE;
 			}
 		}
+		ShuttingDown = TRUE;
 	}
 
 	if ( ShuttingDown && (all_jobs - handled_jobs == 0) ) {
@@ -2345,26 +2395,25 @@ CStarter::Reaper(int pid, int exit_status)
 bool
 CStarter::allJobsDone( void )
 {
-	if (m_should_run_job) {
-		m_all_jobs_done = true;
+	
+	m_all_jobs_done = true;
 
 		// now that all user processes are complete, change the
 		// sandbox ownership back over to condor. if this is a VM
 		// universe job, this chown will have already been
 		// performed by the VMGahp, since it does some post-
 		// processing on files in the sandbox
-		if (m_privsep_helper != NULL) {
-			if (jobUniverse != CONDOR_UNIVERSE_VM) {
-				m_privsep_helper->chown_sandbox_to_condor();
-			}
+	if (m_privsep_helper != NULL) {
+		if (jobUniverse != CONDOR_UNIVERSE_VM) {
+			m_privsep_helper->chown_sandbox_to_condor();
 		}
-		if (!m_should_transfer_output)
-			return false;
 	}
-
+	
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
-			// JIC::allJobsDone returned true: we're ready to move on.
+			// JIC::allJobsDone returned true: we're ready to move on
+		
+		sleep(120);
 		return transferOutput();
 	}
 		// JIC::allJobsDone() returned false: propagate that so we
