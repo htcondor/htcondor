@@ -10416,7 +10416,7 @@ Scheduler::Init()
     // These are best done here in Init(), since the windows may change on reconfig, and
     // it does not result in total loss of data, only some data if reconfiguring to smaller
     // window, in which case it was because the user requested it.
-    int event_stat_window = param_integer("WINDOWED_STAT_WIDTH", 300, 1, MAXINT);
+    int event_stat_window = param_integer("WINDOWED_STAT_WIDTH", 300, 1, INT_MAX);
     JobsSubmittedTQ.max_time(event_stat_window);
     JobsStartedTQ.max_time(event_stat_window);
     JobsCompletedTQ.max_time(event_stat_window);
