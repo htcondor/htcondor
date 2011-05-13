@@ -85,6 +85,7 @@ Starter::Starter( const Starter& s )
 void
 Starter::initRunData( void ) 
 {
+	m_job_exited = false;
 	s_claim = NULL;
 	s_pid = 0;		// pid_t can be unsigned, so use 0, not -1
 	s_birthdate = 0;
@@ -598,6 +599,24 @@ Starter::spawn( time_t now, Stream* s )
 }
 
 void
+Starter::jobExited(int status)
+{
+	
+	m_job_exited = true;
+		// Make sure our time isn't going to go off.
+	cancelKillTimer();
+
+		// Just for good measure, try to kill what's left of our whole
+		// pid family.
+	/*if (daemonCore->Kill_Family(s_pid) == FALSE) {
+		dprintf(D_ALWAYS,
+		        "error killing process family of starter with pid %u\n",
+		        s_pid);
+	}*/
+
+}
+
+void
 Starter::exited(int status)
 {
 	ClassAd *jobAd = NULL;
@@ -643,7 +662,7 @@ Starter::exited(int status)
 	}
 
 		// Make sure our time isn't going to go off.
-	cancelKillTimer();
+//	cancelKillTimer();
 
 		// Just for good measure, try to kill what's left of our whole
 		// pid family.
@@ -1118,6 +1137,8 @@ Starter::dprintf( int flags, const char* fmt, ... )
 float
 Starter::percentCpuUsage( void )
 {
+	if (m_job_exited)
+		return -1;
 	if (daemonCore->Get_Family_Usage(s_pid, s_usage, true) == FALSE) {
 		EXCEPT( "Starter::percentCpuUsage(): Fatal error getting process "
 		        "info for the starter and decendents" ); 

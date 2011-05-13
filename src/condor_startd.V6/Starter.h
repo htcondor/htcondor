@@ -98,6 +98,8 @@ public:
 	int receiveJobClassAdUpdate( Stream *stream );
 
 	void holdJobCallback(DCMsgCallback *cb);
+	
+	void jobExited(int );
 
 private:
 
@@ -132,6 +134,7 @@ private:
 	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
 		// choose EXECUTE directory for starter
 	void    finalizeExecuteDir( void );
+	
 
 		// data that will be the same across all instances of this
 		// starter (i.e. things that are valid for copying)
@@ -156,6 +159,7 @@ private:
 	MyString        s_execute_dir;
 	DCMsgCallback*  m_hold_job_cb;
 	MyString        m_starter_addr;
+	bool			m_job_exited;
 };
 
 #endif /* _CONDOR_STARTD_STARTER_H */

@@ -268,7 +268,11 @@ main_init( int, char* argv[] )
 								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, DAEMON );
+								  "command_handler", 0, DAEMON );		
+								  			  
+	daemonCore->Register_Command( STARTD_JOB_EXITED, "STARTD_JOB_EXITED", 
+								  (CommandHandler)command_job_exited,
+								  "command_job_exited", 0, DAEMON, D_FULLDEBUG );							
 
 		// These commands are special and need their own handlers
 		// READ permission commands
