@@ -138,6 +138,8 @@ double dprintf_get_lock_delay(void);
  */
 int fclose_wrapper( FILE *stream, int maxRetries );
 
+int debug_open_fds(int *open_fds);
+
 /*
 **	Definition of exception macro
 */

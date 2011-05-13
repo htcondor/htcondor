@@ -1146,6 +1146,27 @@ extern "C"	void _updateckpt( char *foo, char *bar, char *glarch ) {}
 int
 needed_fd( int fd )
 {
+	int fd_count = 0;
+	int *open_fds = (int*)malloc(sizeof(int) * (D_NUMLEVELS+1));
+	if(!open_fds)
+		EXCEPT("Out of memory!\n");
+
+	fd_count = debug_open_fds(open_fds);
+	if(fd_count > 0)
+	{
+		for(int index = 0; index <= D_NUMLEVELS; index++)
+		{
+			if(fd == open_fds[index])
+			{
+				free(open_fds);
+
+				return TRUE;
+			}
+		}
+	}
+
+	free(open_fds);
+
 	switch( fd ) {
 
 	  case 2:

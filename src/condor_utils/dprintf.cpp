@@ -774,9 +774,9 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 
 	if( MaxLog[debug_level] && length > MaxLog[debug_level] ) {
 		if( !locked ) {
-			/* We need to redo everything we just did but with a lock
-			 * to prevent a race in which multiple processes rotate
-			 * the file.
+			/*
+			 * We only need to redo everything if there is a lock defined
+			 * for the log.
 			 */
 
 			if (debug_file_ptr) {
@@ -1647,6 +1647,27 @@ dprintf_dump_stack(void) {
 #endif
 
 #endif
+
+int debug_open_fds(int *open_fds)
+{
+	int counter = 0;
+
+	if(open_fds == NULL)
+		return 0;
+
+	for(int index = 0; index <= D_NUMLEVELS; index++)
+	{
+		if(DebugFPs[index] != NULL)
+		{
+			open_fds[index] = fileno(DebugFPs[index]);
+			++counter;
+		}
+		else
+			open_fds[index] = -1;
+	}
+
+	return counter;
+}
 
 #if !defined(HAVE_BACKTRACE)
 void

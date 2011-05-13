@@ -322,7 +322,7 @@ dprintf_config( const char *subsys )
 	}
 
 #ifndef WIN32
-	if(strcmp(subsys, "SHADOW") == 0)
+	if((strcmp(subsys, "SHADOW") == 0) || (strcmp(subsys, "GRIDMANAGER") == 0))
 	{
 		log_open_default = FALSE;
 	}
