@@ -656,7 +656,7 @@ Resource::starterExited( Claim* cur_claim )
 		// exiting, so let folks know that happened.  The logic in
 		// leave_preempting_state() is more complicated, and we'll
 		// describe why we make the change we do in there.
-	dprintf( D_ALWAYS, "State change: starter exited\n" );
+	dprintf( D_ALWAYS, "State change: job exited\n" );
 
 	State s = state();
 	Activity a = activity();
