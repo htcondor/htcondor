@@ -5437,6 +5437,20 @@ SYSTEM_PERIODIC_REMOVE = \
   takes for changes to the job ClassAd to be visible to the Condor Job Router
   and to Quill.  The default is 5 seconds.
 
+\label{param:RotateHistoryDaily}
+\item[\Macro{ROTATE\_HISTORY\_DAILY}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, the history file will be rotated daily,
+  in addition to the rotations that occur due to the definition of  
+  \MacroNI{MAX\_HISTORY\_LOG} that rotate due to size.
+
+\label{param:RotateHistoryMonthly}
+\item[\Macro{ROTATE\_HISTORY\_MONTHLY}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, the history file will be rotated monthly,
+  in addition to the rotations that occur due to the definition of  
+  \MacroNI{MAX\_HISTORY\_LOG} that rotate due to size.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
