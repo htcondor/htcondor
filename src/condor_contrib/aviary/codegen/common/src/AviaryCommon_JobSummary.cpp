@@ -145,7 +145,11 @@
         }
         AviaryCommon::JobSummary::~JobSummary()
         {
-
+            if (property_Id) delete property_Id;
+            if (property_Status) delete property_Status;
+            if (property_Job_status) delete property_Job_status;
+            axutil_date_time_free(property_Queued,Environment::getEnv());
+            axutil_date_time_free(property_Last_update,Environment::getEnv());
         }
 
         
@@ -1646,6 +1650,7 @@
                            
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,text_value_3);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
                  } 
 
@@ -1703,6 +1708,7 @@
                            
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,text_value_4);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
                  } 
 

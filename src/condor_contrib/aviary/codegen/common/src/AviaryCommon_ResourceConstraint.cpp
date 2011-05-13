@@ -55,7 +55,7 @@
         }
         AviaryCommon::ResourceConstraint::~ResourceConstraint()
         {
-
+            if (property_Type) delete property_Type;
         }
 
         

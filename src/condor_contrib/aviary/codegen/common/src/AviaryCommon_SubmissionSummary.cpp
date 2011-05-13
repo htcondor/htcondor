@@ -95,7 +95,12 @@
         }
         AviaryCommon::SubmissionSummary::~SubmissionSummary()
         {
-
+            if (property_Id) delete property_Id;
+            if (property_Status) delete property_Status;
+            if (property_Jobs) {
+                while(!property_Jobs->empty()) delete property_Jobs->back(), property_Jobs->pop_back();
+                delete property_Jobs;
+            }
         }
 
         

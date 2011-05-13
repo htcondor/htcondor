@@ -55,7 +55,7 @@
         }
         AviaryCommon::Status::~Status()
         {
-
+            if (property_Code) delete property_Code;
         }
 
         

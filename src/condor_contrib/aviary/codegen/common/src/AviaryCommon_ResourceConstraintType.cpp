@@ -56,7 +56,7 @@
         }
         AviaryCommon::ResourceConstraintType::~ResourceConstraintType()
         {
-
+            axutil_qname_free (qname,Environment::getEnv());
         }
 
         
@@ -300,23 +300,23 @@
                    {
                      
                        case ResourceConstraintType_OS :
-                            property_ResourceConstraintType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "OS");
+                            property_ResourceConstraintType = ("OS");
                           break;
                      
                        case ResourceConstraintType_ARCH :
-                            property_ResourceConstraintType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "ARCH");
+                            property_ResourceConstraintType = ("ARCH");
                           break;
                      
                        case ResourceConstraintType_MEMORY :
-                            property_ResourceConstraintType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "MEMORY");
+                            property_ResourceConstraintType = ("MEMORY");
                           break;
                      
                        case ResourceConstraintType_DISK :
-                            property_ResourceConstraintType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "DISK");
+                            property_ResourceConstraintType = ("DISK");
                           break;
                      
                        case ResourceConstraintType_FILESYSTEM :
-                            property_ResourceConstraintType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "FILESYSTEM");
+                            property_ResourceConstraintType = ("FILESYSTEM");
                           break;
                      
                      

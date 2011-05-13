@@ -56,7 +56,7 @@
         }
         AviaryCommon::JobStatusType::~JobStatusType()
         {
-
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         
@@ -300,23 +300,23 @@
                    {
                      
                        case JobStatusType_IDLE :
-                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "IDLE");
+                            property_JobStatusType = ("IDLE");
                           break;
                      
                        case JobStatusType_RUNNING :
-                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "RUNNING");
+                            property_JobStatusType = ("RUNNING");
                           break;
                      
                        case JobStatusType_REMOVED :
-                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "REMOVED");
+                            property_JobStatusType = ("REMOVED");
                           break;
                      
                        case JobStatusType_COMPLETED :
-                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "COMPLETED");
+                            property_JobStatusType = ("COMPLETED");
                           break;
                      
                        case JobStatusType_HELD :
-                            property_JobStatusType = (axis2_char_t *)axutil_strdup(Environment::getEnv(), "HELD");
+                            property_JobStatusType = ("HELD");
                           break;
                      
                      

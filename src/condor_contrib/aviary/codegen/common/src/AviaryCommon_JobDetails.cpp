@@ -65,7 +65,9 @@
         }
         AviaryCommon::JobDetails::~JobDetails()
         {
-
+            if (property_Id) delete property_Id;
+            if (property_Status) delete property_Status;
+            if (property_Details) delete property_Details;
         }
 
         
