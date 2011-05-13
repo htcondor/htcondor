@@ -418,12 +418,12 @@ Scheduler::Scheduler() :
 	SchedUniverseJobsRunning = 0;
 	LocalUniverseJobsIdle = 0;
 	LocalUniverseJobsRunning = 0;
-    ShadowExceptionsCum = 0;
-    JobsCompletedCum = 0;
-    JobsExitedCum = 0;
-    JobsStartedCum = 0;
-    TimeToStartCum = 0;
-    RunningTimeCum = 0;
+    ShadowExceptionsCumulative = 0;
+    JobsCompletedCumulative = 0;
+    JobsExitedCumulative = 0;
+    JobsStartedCumulative = 0;
+    TimeToStartCumulative = 0;
+    RunningTimeCumulative = 0;
     LastJobsQueued = 0;
     LastUpdateTime = time(NULL);
 	LocalUnivExecuteDir = NULL;
@@ -436,22 +436,22 @@ Scheduler::Scheduler() :
     // This defines the universe of recognized exit codes, and initializes
     // lifetime cumulative counts.
     // It is also used in Init() to set ExitCodes timed queues.
-    ExitCodesCum[JOB_EXITED] = 0;
-    ExitCodesCum[JOB_CKPTED] = 0;
-    ExitCodesCum[JOB_KILLED] = 0;
-    ExitCodesCum[JOB_COREDUMPED] = 0;
-    ExitCodesCum[JOB_EXCEPTION] = 0;
-    ExitCodesCum[JOB_NO_MEM] = 0;
-    ExitCodesCum[JOB_SHADOW_USAGE] = 0;
-    ExitCodesCum[JOB_NOT_CKPTED] = 0;
-    ExitCodesCum[JOB_NOT_STARTED] = 0;
-    ExitCodesCum[JOB_BAD_STATUS] = 0;
-    ExitCodesCum[JOB_EXEC_FAILED] = 0;
-    ExitCodesCum[JOB_NO_CKPT_FILE] = 0;
-    ExitCodesCum[JOB_SHOULD_HOLD] = 0;
-    ExitCodesCum[JOB_SHOULD_REMOVE] = 0;
-    ExitCodesCum[JOB_MISSED_DEFERRAL_TIME] = 0;
-    ExitCodesCum[JOB_EXITED_AND_CLAIM_CLOSING] = 0;
+    ExitCodesCumulative[JOB_EXITED] = 0;
+    ExitCodesCumulative[JOB_CKPTED] = 0;
+    ExitCodesCumulative[JOB_KILLED] = 0;
+    ExitCodesCumulative[JOB_COREDUMPED] = 0;
+    ExitCodesCumulative[JOB_EXCEPTION] = 0;
+    ExitCodesCumulative[JOB_NO_MEM] = 0;
+    ExitCodesCumulative[JOB_SHADOW_USAGE] = 0;
+    ExitCodesCumulative[JOB_NOT_CKPTED] = 0;
+    ExitCodesCumulative[JOB_NOT_STARTED] = 0;
+    ExitCodesCumulative[JOB_BAD_STATUS] = 0;
+    ExitCodesCumulative[JOB_EXEC_FAILED] = 0;
+    ExitCodesCumulative[JOB_NO_CKPT_FILE] = 0;
+    ExitCodesCumulative[JOB_SHOULD_HOLD] = 0;
+    ExitCodesCumulative[JOB_SHOULD_REMOVE] = 0;
+    ExitCodesCumulative[JOB_MISSED_DEFERRAL_TIME] = 0;
+    ExitCodesCumulative[JOB_EXITED_AND_CLAIM_CLOSING] = 0;
 
 
 		//
@@ -990,18 +990,18 @@ Scheduler::count_jobs()
     LastJobsQueued = jobsQueued;
 
     // Update cumulative counts over schedd lifetime
-    m_ad->Assign(ATTR_JOBS_SUBMITTED_CUM, jobsQueued);
-    m_ad->Assign(ATTR_JOBS_STARTED_CUM, JobsStartedCum);
-    m_ad->Assign(ATTR_JOBS_EXITED_CUM, JobsExitedCum);
-    m_ad->Assign(ATTR_JOBS_COMPLETED_CUM, JobsCompletedCum);
-    m_ad->Assign(ATTR_SHADOW_EXCEPTIONS_CUM, ShadowExceptionsCum);
-    m_ad->Assign(ATTR_MEAN_TIME_TO_START_CUM, (JobsStartedCum > 0) ? double(TimeToStartCum)/double(JobsStartedCum) : 0.0);
-    m_ad->Assign(ATTR_SUM_TIME_TO_START_CUM, TimeToStartCum);
-    m_ad->Assign(ATTR_MEAN_RUNNING_TIME_CUM, (JobsCompletedCum > 0) ? double(RunningTimeCum)/double(JobsCompletedCum) : 0.0);
-    m_ad->Assign(ATTR_SUM_RUNNING_TIME_CUM, RunningTimeCum);
-    for (map<int,int>::iterator jj(ExitCodesCum.begin());  jj != ExitCodesCum.end();  ++jj) {
+    m_ad->Assign(ATTR_JOBS_SUBMITTED_CUMULATIVE, jobsQueued);
+    m_ad->Assign(ATTR_JOBS_STARTED_CUMULATIVE, JobsStartedCumulative);
+    m_ad->Assign(ATTR_JOBS_EXITED_CUMULATIVE, JobsExitedCumulative);
+    m_ad->Assign(ATTR_JOBS_COMPLETED_CUMULATIVE, JobsCompletedCumulative);
+    m_ad->Assign(ATTR_SHADOW_EXCEPTIONS_CUMULATIVE, ShadowExceptionsCumulative);
+    m_ad->Assign(ATTR_MEAN_TIME_TO_START_CUMULATIVE, (JobsStartedCumulative > 0) ? double(TimeToStartCumulative)/double(JobsStartedCumulative) : 0.0);
+    m_ad->Assign(ATTR_SUM_TIME_TO_START_CUMULATIVE, TimeToStartCumulative);
+    m_ad->Assign(ATTR_MEAN_RUNNING_TIME_CUMULATIVE, (JobsCompletedCumulative > 0) ? double(RunningTimeCumulative)/double(JobsCompletedCumulative) : 0.0);
+    m_ad->Assign(ATTR_SUM_RUNNING_TIME_CUMULATIVE, RunningTimeCumulative);
+    for (map<int,int>::iterator jj(ExitCodesCumulative.begin());  jj != ExitCodesCumulative.end();  ++jj) {
         string aname;
-        sprintf(aname, "%s%03d", ATTR_EXIT_CODE_CUM, jj->first);
+        sprintf(aname, "%s%03d", ATTR_EXIT_CODE_CUMULATIVE, jj->first);
         m_ad->Assign(aname.c_str(), jj->second);
     }
 
@@ -1102,17 +1102,17 @@ Scheduler::count_jobs()
 	m_ad->Delete (ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
 	m_ad->Delete (ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
 
-    m_ad->Delete(ATTR_JOBS_SUBMITTED_CUM);
-    m_ad->Delete(ATTR_JOBS_STARTED_CUM);
-    m_ad->Delete(ATTR_JOBS_COMPLETED_CUM);
-    m_ad->Delete(ATTR_JOBS_EXITED_CUM);
-    m_ad->Delete(ATTR_SHADOW_EXCEPTIONS_CUM);
-    m_ad->Delete(ATTR_MEAN_TIME_TO_START_CUM);
-    m_ad->Delete(ATTR_SUM_TIME_TO_START_CUM);
-    m_ad->Delete(ATTR_MEAN_RUNNING_TIME_CUM);
-    m_ad->Delete(ATTR_SUM_RUNNING_TIME_CUM);
-    for (map<int,int>::iterator jj(ExitCodesCum.begin());  jj != ExitCodesCum.end();  ++jj) {
-        sprintf(tmp, "%s%03d", ATTR_EXIT_CODE_CUM, jj->first);
+    m_ad->Delete(ATTR_JOBS_SUBMITTED_CUMULATIVE);
+    m_ad->Delete(ATTR_JOBS_STARTED_CUMULATIVE);
+    m_ad->Delete(ATTR_JOBS_COMPLETED_CUMULATIVE);
+    m_ad->Delete(ATTR_JOBS_EXITED_CUMULATIVE);
+    m_ad->Delete(ATTR_SHADOW_EXCEPTIONS_CUMULATIVE);
+    m_ad->Delete(ATTR_MEAN_TIME_TO_START_CUMULATIVE);
+    m_ad->Delete(ATTR_SUM_TIME_TO_START_CUMULATIVE);
+    m_ad->Delete(ATTR_MEAN_RUNNING_TIME_CUMULATIVE);
+    m_ad->Delete(ATTR_SUM_RUNNING_TIME_CUMULATIVE);
+    for (map<int,int>::iterator jj(ExitCodesCumulative.begin());  jj != ExitCodesCumulative.end();  ++jj) {
+        sprintf(tmp, "%s%03d", ATTR_EXIT_CODE_CUMULATIVE, jj->first);
         m_ad->Delete(tmp);
     }
     m_ad->Delete(ATTR_UPDATE_INTERVAL);
@@ -7725,8 +7725,8 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
         
         int qdate = 0;
         GetAttributeInt(cluster, proc, ATTR_Q_DATE, &qdate);
-        scheduler.JobsStartedCum += 1;
-        scheduler.TimeToStartCum += current_time - qdate;
+        scheduler.JobsStartedCumulative += 1;
+        scheduler.TimeToStartCumulative += current_time - qdate;
         update(scheduler.TimeToStartTQ, current_time - qdate, current_time);
         update(scheduler.JobsStartedTQ, 1, current_time);
 	}
@@ -9206,10 +9206,10 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
     int start_date = 0;
     GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_START_DATE, &start_date);
     time_t updateTime = time(NULL);
-    JobsExitedCum += 1;
+    JobsExitedCumulative += 1;
     update(JobsExitedTQ, 1, updateTime);
-    map<int,int>::iterator f(ExitCodesCum.find(exit_code));
-    if (f != ExitCodesCum.end()) {
+    map<int,int>::iterator f(ExitCodesCumulative.find(exit_code));
+    if (f != ExitCodesCumulative.end()) {
         f->second += 1;
     }
     map<int, timed_queue<int> >::iterator ff(ExitCodesTQ.find(exit_code));
@@ -9302,9 +9302,9 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// no break, fall through
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
-            JobsCompletedCum += 1;
+            JobsCompletedCumulative += 1;
             update(JobsCompletedTQ, 1, updateTime);
-            RunningTimeCum += updateTime - start_date;
+            RunningTimeCumulative += updateTime - start_date;
             update(RunningTimeTQ, updateTime - start_date, updateTime);
 				// no break, fall through and do the action
 
@@ -9412,7 +9412,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// above, but we might need to do this in other cases in
 		// the future
 	if (reportException && srec != NULL) {
-        ShadowExceptionsCum += 1;
+        ShadowExceptionsCumulative += 1;
         update(ShadowExceptionsTQ, 1, updateTime);
 			// Record the shadow exception in the job ad.
 		int num_excepts = 0;
@@ -10424,7 +10424,7 @@ Scheduler::Init()
     ShadowExceptionsTQ.max_time(event_stat_window);
     TimeToStartTQ.max_time(event_stat_window);
     RunningTimeTQ.max_time(event_stat_window);
-    for (map<int,int>::iterator jj(ExitCodesCum.begin());  jj != ExitCodesCum.end();  ++jj) {
+    for (map<int,int>::iterator jj(ExitCodesCumulative.begin());  jj != ExitCodesCumulative.end();  ++jj) {
         // Note, this also will create the entries, first time.
         ExitCodesTQ[jj->first].max_time(event_stat_window);
     }
