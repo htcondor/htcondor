@@ -2085,7 +2085,101 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 	// Print "throttle by node category" settings.
 	//
 	_catThrottles.PrintThrottles( fp );
+	//
+	// Print Final Job Stuff
+	// 
+	if(_final_job){
+			// Print the JOB/DATA line.
+		job = _final_job;
+		const char *keyword = "";
+        if( job->JobType() == Job::TYPE_CONDOR ) {
+			keyword = job->GetDagFile() ? "SUBDAG EXTERNAL" : "JOB";
+        } else if( job->JobType() == Job::TYPE_STORK ) {
+			keyword = "DATA";
+        } else {
+			EXCEPT( "Illegal node type (%d)\n", job->JobType() );
+		}
+        fprintf(fp, "%s %s %s ", keyword, job->GetJobName(),
+					job->GetDagFile() ? job->GetDagFile() :
+					job->GetCmdFile());
+		if ( strcmp( job->GetDirectory(), "" ) ) {
+			fprintf(fp, "DIR %s ", job->GetDirectory());
+		}
+		if ( job->GetNoop() ) {
+        	fprintf( fp, "NOOP " );
+		}
+		// Makes no sense for a FINAL job to be DONE
+		// Print the SCRIPT PRE line, if any.
+        if (job->_scriptPre != NULL) {
+            fprintf(fp, "SCRIPT PRE  %s %s\n", 
+                     job->GetJobName(), job->_scriptPre->GetCmd());
+        }
 
+			// Print the SCRIPT POST line, if any.
+        if (job->_scriptPost != NULL) {
+            fprintf(fp, "SCRIPT POST %s %s\n", 
+                     job->GetJobName(), job->_scriptPost->GetCmd());
+        }
+
+			// Print the RETRY line, if any.
+        if( job->retry_max > 0 ) {
+            int retriesLeft = (job->retry_max - job->retries);
+
+            if (   job->_Status == Job::STATUS_ERROR
+                && job->retries < job->retry_max 
+                && job->have_retry_abort_val
+                && job->retval == job->retry_abort_val ) {
+                fprintf(fp, "# %d of %d retries performed; remaining attempts "
+                        "aborted after node returned %d\n", 
+                        job->retries, job->retry_max, job->retval );
+            } else {
+				if( !reset_retries_upon_rescue ) {
+					fprintf( fp,
+							 "# %d of %d retries already performed; %d remaining\n",
+							 job->retries, job->retry_max, retriesLeft );
+				}
+            }
+            
+            ASSERT( job->retries <= job->retry_max );
+			if( !reset_retries_upon_rescue ) {
+				fprintf( fp, "RETRY %s %d", job->GetJobName(), retriesLeft );
+			} else {
+				fprintf( fp, "RETRY %s %d", job->GetJobName(), job->retry_max );
+			}
+            if( job->have_retry_abort_val ) {
+                fprintf( fp, " UNLESS-EXIT %d", job->retry_abort_val );
+            }
+            fprintf( fp, "\n" );
+        }
+
+		// Print the VARS line, if any.
+        if(!job->varNamesFromDag->IsEmpty()) {
+            fprintf(fp, "VARS %s", job->GetJobName());
+	
+            ListIterator<MyString> names(*job->varNamesFromDag);
+            ListIterator<MyString> vals(*job->varValsFromDag);
+            names.ToBeforeFirst();
+            vals.ToBeforeFirst();
+            MyString *strName, *strVal;
+            while((strName = names.Next()) && (strVal = vals.Next())) {
+                fprintf(fp, " %s=\"", strName->Value());
+                // now we print the value, but we have to re-escape certain characters
+                for(int i = 0; i < strVal->Length(); i++) {
+                    char c = (*strVal)[i];
+                    if(c == '\"') {
+                        fprintf(fp, "\\\"");
+                    } else if(c == '\\') {
+                        fprintf(fp, "\\\\");
+                    } else {
+                        fprintf(fp, "%c", c);
+					}
+                }
+                fprintf(fp, "\"");
+            }
+            fprintf(fp, "\n");
+        }
+        fprintf( fp, "\n" );
+    }
     fclose( fp );
 }
 
