@@ -1019,6 +1019,10 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	    jobAd->Assign(ATTR_RESIDENT_SET_SIZE, int_value);
 	}
 
+	if( update_ad->LookupInteger(ATTR_PROPORTIONAL_SET_SIZE, int_value) ) {
+	    jobAd->Assign(ATTR_PROPORTIONAL_SET_SIZE, int_value);
+	}
+
 	if( update_ad->LookupInteger(ATTR_BLOCK_READ_KBYTES, int_value) ) {
 		jobAd->Assign(ATTR_BLOCK_READ_KBYTES, int_value);
 	}

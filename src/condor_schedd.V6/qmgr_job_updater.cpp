@@ -107,6 +107,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs = new StringList();
 	common_job_queue_attrs->insert( ATTR_IMAGE_SIZE );
 	common_job_queue_attrs->insert( ATTR_RESIDENT_SET_SIZE );
+	common_job_queue_attrs->insert( ATTR_PROPORTIONAL_SET_SIZE );
 	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );

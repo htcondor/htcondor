@@ -225,6 +225,7 @@ extern const char * const  ATTR_HOOK_KEYWORD;
 extern const char * const  ATTR_IDLE_JOBS;
 extern const char * const  ATTR_IMAGE_SIZE;
 extern const char * const  ATTR_RESIDENT_SET_SIZE;
+extern const char * const  ATTR_PROPORTIONAL_SET_SIZE;
 extern const char * const  ATTR_INTERACTIVE;
 extern const char * const  ATTR_IS_DAEMON_CORE;
 extern const char * const  ATTR_IS_OWNER;

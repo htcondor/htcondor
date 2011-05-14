@@ -86,6 +86,10 @@ struct ProcFamilyUsage {
 	unsigned long max_image_size;
 	unsigned long total_image_size;
 	unsigned long total_resident_set_size;
+#if HAVE_PSS
+    unsigned long total_proportional_set_size;
+    bool total_proportional_set_size_available;
+#endif
 	int           num_procs;
 	// These are signed so a negative number indicates uninitialized
 	long          block_read_bytes;

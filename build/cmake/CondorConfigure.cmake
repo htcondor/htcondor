@@ -318,6 +318,12 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 
+	# Even if the flavor of linux we are compiling on doesn't
+	# have Pss in /proc/pid/smaps, the binaries we generate
+	# may run on some other version of linux that does, so
+	# be optimistic here.
+	set(HAVE_PSS ON)
+
 	#The following checks are for std:u only.
 	glibc_detect( GLIBC_VERSION )
 

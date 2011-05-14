@@ -208,6 +208,14 @@ struct procInfo {
   /// the resident set size, in k.  on WinNT, it is peak working set size.
   unsigned long rssize;       
 
+  /** The proportional set size (PSS) is the image size in k divided
+      by number of processes sharing each page.  If pssize information
+      is not available, pssize_available is false; o.w. true. */
+#if HAVE_PSS
+  unsigned long pssize;
+  bool pssize_available;
+#endif
+
   /** The number of minor page faults generated per second.  
       The definition of "minor" is "those which have not required 
       loading a memory page from disk"  Therefore, the page was
@@ -294,6 +302,11 @@ typedef struct procInfoRaw{
 #else
 	__int64 imgsize;
 	__int64 rssize;
+#endif
+
+#if HAVE_PSS
+	unsigned long pssize;
+	bool pssize_available;
 #endif
 
 	long minfault;
@@ -570,6 +583,10 @@ class ProcAPI {
   static void initProcInfoRaw(procInfoRaw& procRaw);
 
   
+#if HAVE_PSS
+  static int getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status );
+#endif
+
 	  /**
 		 Generates a control time by which a process birthday can be
 		 shifted in case of time shifting due to ntpd or the admin.

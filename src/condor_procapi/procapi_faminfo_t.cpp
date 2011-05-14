@@ -101,7 +101,15 @@ int getFamilyInfo_test(bool verbose) {
       printf("imgsize %d as returned by getFamilyInfo is less than rssize %d\n", pi->imgsize, pi->rssize);
       success = -1;
     }
-    
+
+#if HAVE_PSS
+		// the proportional set size should be <= the image size
+	if( pi->pssize_available && pi->pssize > pi->imgsize ) {
+      printf("Error process %d:\n", pid);
+      printf("imgsize %d as returned by getFamilyInfo is less than pssize %d\n", pi->imgsize, pi->pssize);
+      success = -1;
+	}
+#endif
 
     // now get the parents info and do some more checks
     if(ProcAPI::getFamilyInfo(ppid, ppi, &penvid, status) == PROCAPI_FAILURE) {
@@ -120,6 +128,13 @@ int getFamilyInfo_test(bool verbose) {
       printf("Error process %d:\n", pid);
       printf("parent family imgsize %d is smaller than childs %d\n", ppi->imgsize, pi->imgsize); 
     }
+#if HAVE_PSS
+    //same for pssize
+    if(pi->pssize_available && ppi->pssize_available && pi->pssize > ppi->pssize){
+      printf("Error process %d:\n", pid);
+      printf("parent family pssize %d is smaller than childs %d\n", ppi->pssize, pi->pssize); 
+    }
+#endif
     //and age
     if(pi->age > ppi->age){
       printf("Error process %d:\n", pid);

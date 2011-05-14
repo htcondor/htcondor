@@ -800,6 +800,12 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 		//
 		usage->total_image_size += member->m_proc_info->imgsize;
 		usage->total_resident_set_size += member->m_proc_info->rssize;
+#if HAVE_PSS
+		if( member->m_proc_info->pssize_available ) {
+			usage->total_proportional_set_size_available = true;
+			usage->total_proportional_set_size += member->m_proc_info->pssize;
+		}
+#endif
 
 		// number of alive processes
 		//
