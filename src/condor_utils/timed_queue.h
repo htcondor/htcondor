@@ -70,7 +70,7 @@ struct timed_queue : public std::deque<std::pair<time_t, Data> > {
 
     void max_time(size_type t) {
         _max_time = t;
-        if (max_time() > 0) trim_time(base_type::front().first - max_time());
+        if ((!base_type::empty()) && (max_time() > 0)) trim_time(base_type::front().first - max_time());
     }
     size_type max_time() const {
         return _max_time;
