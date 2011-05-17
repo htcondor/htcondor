@@ -3112,6 +3112,11 @@ DedicatedScheduler::AddMrec(
 	char const *remote_pool
 )
 {
+		// The dedicated scheduler expects the job id to not be set
+		// until this match is associated with a job.
+	job_id.cluster = -1;
+	job_id.proc = -1;
+
 		// Now, create a match_rec for this resource
 		// Note, we want to claim this startd as the
 		// "DedicatedScheduler" owner, which is why we call
