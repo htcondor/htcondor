@@ -1194,6 +1194,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	classad::Value val;
 	double doubleVal;
 	int intVal;
+	bool boolVal;
 
 	if( target == this || target == NULL ) {
 		getTheMyRef( this );
@@ -1204,6 +1205,10 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 			}
 			if( val.IsIntegerValue( intVal ) ) {
 				value = ( float )intVal;
+				rc = 1;
+			}
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = ( float )boolVal;
 				rc = 1;
 			}
 		}
@@ -1222,6 +1227,10 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 				value = ( float )intVal;
 				rc = 1;
 			}
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = ( float )boolVal;
+				rc = 1;
+			}
 		}
 	} else if( target->Lookup( name ) ) {
 		if( target->EvaluateAttr( name, val ) ) {
@@ -1231,6 +1240,10 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 			}
 			if( val.IsIntegerValue( intVal ) ) {
 				value = ( float )intVal;
+				rc = 1;
+			}
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = ( float )boolVal;
 				rc = 1;
 			}
 		}
