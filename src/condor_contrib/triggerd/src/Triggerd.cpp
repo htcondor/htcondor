@@ -990,6 +990,7 @@ Triggerd::RemoveWS(const char* text)
    if (NULL != text)
    {
       // Remove preceeding whitespace first
+      result = strdup(text);
       while (result[0] && isspace(result[0]))
       {
          ++result;
