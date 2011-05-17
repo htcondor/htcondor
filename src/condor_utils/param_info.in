@@ -10184,3 +10184,18 @@ url=
 tags=shadow
 id=602
 
+[SCHEDD_ROUND_ATTR_ProportionalSetSizeKb]
+aliases=
+default=25%
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=
+usage=
+url=
+tags=schedd
+id=602
