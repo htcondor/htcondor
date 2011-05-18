@@ -3114,14 +3114,15 @@ DedicatedScheduler::AddMrec(
 {
 		// The dedicated scheduler expects the job id to not be set
 		// until this match is associated with a job.
-	job_id.cluster = -1;
-	job_id.proc = -1;
+	PROC_ID empty_job_id;
+	empty_job_id.cluster = -1;
+	empty_job_id.proc = -1;
 
 		// Now, create a match_rec for this resource
 		// Note, we want to claim this startd as the
 		// "DedicatedScheduler" owner, which is why we call
 		// owner() here...
-	match_rec *mrec = new match_rec( claim_id, startd_addr, &job_id,
+	match_rec *mrec = new match_rec( claim_id, startd_addr, &empty_job_id,
 									 match_ad,owner(),remote_pool,true);
 
 	match_rec *existing_mrec;
