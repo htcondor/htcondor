@@ -237,7 +237,7 @@ FileTransfer::~FileTransfer()
 int
 FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
 						 ReliSock *sock_to_use, priv_state priv,
-						 bool use_file_catalog) 
+						 bool use_file_catalog, bool is_spool) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
@@ -319,6 +319,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->append(buf);			
 		}
 	}
+
+	// If we are spooling, we want to ignore URLs
+	// We want the file transfer plugin to be invoked at the starter, not the schedd.
+	// See https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=2162
+	if (IsClient() && simple_init && is_spool) {
+		InputFiles->rewind();
+		const char *x;
+		while ((x = InputFiles->next())) {
+			if (IsUrl(x)) {
+				InputFiles->deleteCurrent();
+			}
+		}
+		dprintf(D_FULLDEBUG, "Input files: %s\n", InputFiles->print_to_string());
+	}
+	
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf) == 1 ) {
 		UserLogFile = strdup(condor_basename(buf));
 		// For 7.5.6 and earlier, we want to transfer the user log as
