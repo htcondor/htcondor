@@ -41,6 +41,7 @@
 #include "extArray.h"
 #include "condor_string.h"  /* for strnewp() */
 #include "dagman_recursive_submit.h"
+#include "condor_getcwd.h"
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
@@ -161,9 +162,11 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 
 	FILE *fp = safe_fopen_wrapper(tmpFilename, "r");
 	if(fp == NULL) {
-		if(DEBUG_LEVEL(DEBUG_QUIET)) {
-			debug_printf( DEBUG_QUIET, "Could not open file %s for input\n", filename);
-		}
+		MyString cwd;
+		condor_getcwd( cwd );
+		debug_printf( DEBUG_QUIET, "Could not open file %s for input "
+					"(cwd %s) (errno %d, %s)\n", tmpFilename,
+					cwd.Value(), errno, strerror(errno));
 		return false;
    	}
 
