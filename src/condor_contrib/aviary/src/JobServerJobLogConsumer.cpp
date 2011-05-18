@@ -19,10 +19,10 @@
 // condor includes
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_exprtype.h"
+//#include "condor_exprtype.h"
 #include "condor_attributes.h"
-#include "condor_astbase.h"
-#include "condor_parser.h"
+//#include "condor_astbase.h"
+//#include "condor_parser.h"
 #include "condor_qmgr.h"
 #include "ClassAdLogReader.h"
 
@@ -85,14 +85,14 @@ JobServerJobLogConsumer::NewClassAd(const char *_key,
 									const char */*target*/)
 {
 
-	const char* key_dup = strdup(_key);
-
 	dprintf(D_FULLDEBUG, "JobServerJobLogConsumer::NewClassAd processing _key='%s'\n", _key);
 
 	// ignore the marker
 	if (strcmp(_key,"0.0") == 0) {
 	  return true;
 	}
+
+    const char* key_dup = strdup(_key);
 
 	if ('0' == _key[0]) {
 		// Cluster ad

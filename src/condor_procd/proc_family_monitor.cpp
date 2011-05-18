@@ -515,6 +515,10 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 	usage->percent_cpu = 0.0;
 	usage->total_image_size = 0;
 	usage->total_resident_set_size = 0;
+#if HAVE_PSS
+    usage->total_proportional_set_size = 0;
+    usage->total_proportional_set_size_available = false;
+#endif
 	// We initialize these to -1 to distinguish the "cannot record" and "no I/O" cases.
 	usage->block_read_bytes = -1;
 	usage->block_write_bytes = -1;

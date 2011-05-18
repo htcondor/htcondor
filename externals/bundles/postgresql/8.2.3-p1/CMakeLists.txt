@@ -26,30 +26,29 @@ if (WITH_POSTGRESQL)
 
 	if ( NOT PROPER )
 
-		set (POSTGRESQL_VER postgresql-8.2.3)
+		condor_pre_external( POSTGRESQL postgresql-8.2.3 "lib;include" "include/postgres.h")
 
 		if (WINDOWS)
 			set (POSTGRESQL_CONFIGURE echo "Nothing to patch on Windows")
 			set (POSTGRESQL_MAKE cd src \r\n
 			                     nmake -f win32.mak )
-			set (POSTGRESQL_INSTALL cp src/interfaces/libpq/Release/*.lib  ${EXTERNAL_STAGE}/lib \r\n
-									cp src/interfaces/libpq/Release/*.dll ${EXTERNAL_STAGE}/lib \r\n
-									cp src/interfaces/libpq/libpq-fe.h ${EXTERNAL_STAGE}/include \r\n
-									cp -r src/include/* ${EXTERNAL_STAGE}/include )
+			set (POSTGRESQL_INSTALL cp src/interfaces/libpq/Release/*.lib  ${POSTGRESQL_INSTALL_LOC}/lib \r\n
+									cp src/interfaces/libpq/Release/*.dll ${POSTGRESQL_INSTALL_LOC}/lib \r\n
+									cp src/interfaces/libpq/libpq-fe.h ${POSTGRESQL_INSTALL_LOC}/include \r\n
+									cp -r src/include/* ${POSTGRESQL_INSTALL_LOC}/include )
 									
-									#mt.exe /manifest ${CMAKE_CURRENT_SOURCE_DIR}/libpq.dll.manifest /outputresource:${EXTERNAL_STAGE}/lib/libpq.dll)
+									#mt.exe /manifest ${CMAKE_CURRENT_SOURCE_DIR}/libpq.dll.manifest /outputresource:${POSTGRESQL_INSTALL_LOC}/lib/libpq.dll)
 									#imbedding custom manifests is a bad idea.
 		else()
-			set (POSTGRESQL_CONFIGURE ./configure --prefix=${EXTERNAL_STAGE} --without-readline --without-zlib)
+			set (POSTGRESQL_CONFIGURE ./configure --prefix=${POSTGRESQL_INSTALL_LOC} --without-readline --without-zlib)
 			set (POSTGRESQL_MAKE make)
 			set (POSTGRESQL_INSTALL make install)
 		endif()
 
 		ExternalProject_Add(postgresql
-							PREFIX ${EXTERNAL_BUILD_PREFIX}/${POSTGRESQL_VER}
 							#-- Download Step ----------
 							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${POSTGRESQL_VER}.tar.gz ${CMD_TERM}
-							DOWNLOAD_DIR ${EXTERNAL_DL}
+							DOWNLOAD_DIR ${POSTGRESQL_STAGE}/dl
 							URL http://parrot.cs.wisc.edu/externals/${POSTGRESQL_VER}.tar.gz
 							#--Configure step ----------
 							CONFIGURE_COMMAND cd ${POSTGRESQL_VER} ${CMD_TERM} ${POSTGRESQL_CONFIGURE}
@@ -57,24 +56,22 @@ if (WITH_POSTGRESQL)
 							BUILD_COMMAND cd ${POSTGRESQL_VER} ${CMD_TERM} ${POSTGRESQL_MAKE}
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
-							INSTALL_DIR ${EXTERNAL_STAGE}
+							INSTALL_DIR ${POSTGRESQL_INSTALL_LOC}
 							INSTALL_COMMAND cd ${POSTGRESQL_VER} ${CMD_TERM} ${POSTGRESQL_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)
-			set(POSTGRESQL_FOUND "${EXTERNAL_STAGE}/lib/libpqdll.lib")
+			set(POSTGRESQL_FOUND "${POSTGRESQL_INSTALL_LOC}/lib/libpqdll.lib")
 
 			#this may become the common case.
-			install ( FILES ${EXTERNAL_STAGE}/lib/libpq.dll
+			install ( FILES ${POSTGRESQL_INSTALL_LOC}/lib/libpq.dll
 					  DESTINATION ${C_LIB})
 			
-			set_property( TARGET postgresql PROPERTY FOLDER "externals" )
-			
 		else()
-			set(POSTGRESQL_FOUND "${EXTERNAL_STAGE}/lib/libpq.a")
+			set(POSTGRESQL_FOUND "${POSTGRESQL_INSTALL_LOC}/lib/libpq.a")
 		endif()
 
-		append_var(CONDOR_EXTERNALS postgresql)
+		condor_post_external( postgresql include OFF )
 
 	else( NOT PROPER )
 

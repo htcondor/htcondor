@@ -769,8 +769,8 @@ init_condor_ids()
 	char* env_val = NULL;
 	char* config_val = NULL;
 	char* val = NULL;
-	uid_t envCondorUid = MAXINT;
-	gid_t envCondorGid = MAXINT;
+	uid_t envCondorUid = INT_MAX;
+	gid_t envCondorGid = INT_MAX;
 
         /*
         ** N.B. if we are using the yellow pages, system calls which are
@@ -783,9 +783,9 @@ init_condor_ids()
 	gid_t MyGid = get_my_gid();
 	
 		/* if either of the following get_user_*() functions fail,
-		 * the default is MAXINT */
-	RealCondorUid = MAXINT;
-	RealCondorGid = MAXINT;
+		 * the default is INT_MAX */
+	RealCondorUid = INT_MAX;
+	RealCondorGid = INT_MAX;
 	pcache()->get_user_uid( myDistro->Get(), RealCondorUid );
 	pcache()->get_user_gid( myDistro->Get(), RealCondorGid );
 
@@ -839,13 +839,13 @@ init_condor_ids()
 	   specified in the "CONDOR_IDS" environment variable */
 	if( can_switch_ids() ) {
 		const char	*enviName = EnvGetName( ENV_UG_IDS ); 
-		if( envCondorUid != MAXINT ) {	
+		if( envCondorUid != INT_MAX ) {	
 			/* CONDOR_IDS are set, use what it said */
 				CondorUid = envCondorUid;
 				CondorGid = envCondorGid;
 		} else {
 			/* No CONDOR_IDS set, use condor.condor */
-			if( RealCondorUid != MAXINT ) {
+			if( RealCondorUid != INT_MAX ) {
 				CondorUid = RealCondorUid;
 				CondorGid = RealCondorGid;
 				if( CondorUserName != NULL ) {

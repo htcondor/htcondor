@@ -72,6 +72,7 @@ Axis2SoapProvider::Axis2SoapProvider(int _log_level, const char* _log_file, cons
     m_http_server = NULL;
     m_svr_thread = NULL;
     m_initialized = false;
+    m_http_socket_read_timeout = AXIS2_HTTP_DEFAULT_SO_TIMEOUT;
 }
 
 Axis2SoapProvider::~Axis2SoapProvider()

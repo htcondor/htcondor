@@ -344,5 +344,6 @@ int GetAllJobsByConstraint_Start( char const *constraint, char const *projection
    Returns 0 on success, -1 on error or no more ads (sets errno on error).
 */
 int GetAllJobsByConstraint_Next( ClassAd &ad );
+int GetJobQueuedCount();
 
 #endif

@@ -62,7 +62,11 @@
         }
         AviaryQuery::GetJobDetails::~GetJobDetails()
         {
-
+            if (property_Ids) {
+                while(!property_Ids->empty()) delete property_Ids->back(), property_Ids->pop_back();
+                delete property_Ids;
+            }
+            axutil_qname_free(qname,Environment::getEnv());
         }
 
         

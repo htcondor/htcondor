@@ -163,6 +163,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	pi->birthday    = procRaw.creation_time;
 	pi->imgsize	= procRaw.imgsize;    // already in k!
 	pi->rssize	= procRaw.rssize;  // already in k!
+#if HAVE_PSS
+	pi->pssize = procRaw.pssize;
+	pi->pssize_available = procRaw.pssize_available;
+#endif
 	pi->user_time= procRaw.user_time_1;
 	pi->sys_time = procRaw.sys_time_1;
 	
@@ -177,6 +181,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 /* Fills ProcInfoRaw with the following units:
    imgsize		: KB
    rssize		: KB
+   pssize		: KB
    minfault		: total minor faults
    majfault		: total major faults
    user_time_1	: seconds
@@ -251,6 +256,9 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	// grab the information out of what the kernel told us. 
 	procRaw.imgsize	= psinfo.pr_size;
 	procRaw.rssize	= psinfo.pr_rssize;
+#if HAVE_PSS
+#error PSS not implemented on this platform
+#endif
 	procRaw.pid		= psinfo.pr_pid;
 	procRaw.ppid	= psinfo.pr_ppid;
 	procRaw.creation_time = psinfo.pr_start.tv_sec;
@@ -377,8 +385,16 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		*/
 	pi->imgsize = procRaw.imgsize / 1024;  //bytes to k
 	pi->rssize = procRaw.rssize * pagesize;  // pages to k
+#if HAVE_PSS
+	pi->pssize = procRaw.pssize; // k
+	pi->pssize_available = procRaw.pssize_available;
+#endif
 	if ((procRaw.proc_flags & 64) && procRaw.ppid != 1) { //64 == PF_FORKNOEXEC
 		//zero out memory usage
+		// But do not zero out pssize, because it correctly deals with
+		// sharing between processes.  Also, if the linux version is
+		// modern enough to support PSS, there should be no need to
+		// ignore threads that look like processes.
 		pi->imgsize = 0;
 		pi->rssize = 0;
 	}
@@ -459,9 +475,113 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	return PROCAPI_SUCCESS;
 }
 
+#if HAVE_PSS
+int
+ProcAPI::getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status ) 
+{
+	char path[64];
+	FILE *fp;
+	int number_of_attempts;
+	const int max_attempts = 5;
+
+		// Note that HAVE_PSS may be true at compile-time, but that
+		// does not mean /proc/pid/smaps will actually contain
+		// Pss info at run-time.  Therefore, we do not treat missing
+		// Pss info as an error in this function.
+
+	sprintf( path, "/proc/%d/smaps", pid );
+	number_of_attempts = 0;
+	while (number_of_attempts < max_attempts) {
+
+		number_of_attempts++;
+
+		// in case I must restart, assume that everything is ok again...
+		status = PROCAPI_OK;
+		procRaw.pssize = 0;
+		procRaw.pssize_available = false;
+
+		if( (fp = safe_fopen_wrapper(path, "r")) == NULL ) {
+			if( errno == ENOENT ) {
+				// /proc/pid doesn't exist
+				// This system may simply not support smaps, so
+				// don't treat this as an error.  We just won't
+				// set pssize_available = true.
+				status = PROCAPI_OK;
+				dprintf( D_FULLDEBUG, 
+					"ProcAPI::getProcInfo() %s does not exist.\n", path );
+				break;
+			} else if ( errno == EACCES ) {
+				status = PROCAPI_PERM;
+				dprintf( D_FULLDEBUG, 
+					"ProcAPI::getProcInfo() No permission to open %s.\n", 
+					 path );
+				break;
+			} else { 
+				status = PROCAPI_UNSPECIFIED;
+				dprintf( D_ALWAYS, 
+					"ProcAPI::getProcInfo() Error opening %s, errno: %d.\n", 
+					 path, errno );
+			}
+
+			// immediate failure, try again.
+			continue;
+		}
+
+		char buf[512];
+		while( fgets(buf,sizeof(buf)-1,fp) ) {
+			buf[sizeof(buf)-2] = '\0'; // ensure null termination
+
+			if( strncmp(buf,"Pss:",4)==0 ) {
+				char const *s = buf+4;
+				while( isspace(*s) ) {
+					s++;
+				}
+				char *endptr = NULL;
+				unsigned long pssize = (unsigned long)strtol(s,&endptr,10);
+				if( !endptr || endptr == s ) {
+					dprintf(D_FULLDEBUG,"Unexpted Pss value in %s: %s",path,buf);
+					break;
+				}
+				while( isspace(*endptr) ) {
+					endptr++;
+				}
+				if( strncmp(endptr,"kB",2)!=0 ) {
+					dprintf(D_FULLDEBUG,"Unexpted Pss units in %s: %s",path,buf);
+					break;
+				}
+
+				procRaw.pssize += pssize;
+				procRaw.pssize_available = true;
+			}
+		}
+
+		if( !ferror(fp) ) {
+			break;
+		}
+
+			// we encountered a read error
+		status = PROCAPI_UNSPECIFIED;
+		dprintf( D_ALWAYS, 
+				 "ProcAPI: Unexpected error on %s, errno: %d.\n", 
+				 path, errno );
+
+			// don't leak for the next attempt;
+		fclose( fp );
+		fp = NULL;
+
+	} 	// end of while number_of_attempts < 0
+
+	if (fp != NULL) {
+		fclose( fp );
+		fp = NULL;
+	}
+}
+#endif
+
 /* Fills in procInfoRaw with the following units:
    imgsize		: bytes
    rssize		: pages
+   pssize       : k
    minfault		: total minor faults
    majfault		: total major faults
    user_time_1	: jiffies (1/100 of a second)
@@ -597,6 +717,13 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// close the file
 	fclose( fp );
+
+#if HAVE_PSS
+	getPSSInfo(pid,procRaw,status);
+	if( status != PROCAPI_OK ) {
+		return PROCAPI_FAILURE;
+	}
+#endif
 
 		// only one value for times
 	procRaw.user_time_2 = 0;

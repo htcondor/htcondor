@@ -98,6 +98,15 @@ int getProcInfo_test(bool verbose) {
       success = -1;
     }
 
+#if HAVE_PSS
+    // the image size should be >= the proportional set size
+    if(pi->pssize > pi->imgsize){
+      printf("Error process %d:\n", pid);
+      printf("imgsize %lu as returned by getProcInfo is less than pssize %lu\n", pi->imgsize, pi->pssize);
+      success = -1;
+    }
+#endif
+
     // time in user mode + system mode should not be greater then age
     if((pi->user_time + pi->sys_time) > pi->age){
       printf("Error process %d:\n", pid);

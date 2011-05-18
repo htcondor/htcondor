@@ -50,8 +50,8 @@ if ( HAVE_EXT_GSOAP )
 			ALL
 			DEPENDS ${${_DAEMON}_SOAP_SRCS} )
 			
-	if (NOT PROPER)
-		add_dependencies( gen_${_DAEMON}_soapfiles gsoap )
+	if (NOT PROPER AND GSOAP_REF)
+		add_dependencies( gen_${_DAEMON}_soapfiles ${GSOAP_REF} )
 	endif()
 	
 	if (WINDOWS)

@@ -248,10 +248,37 @@ extern "C" {
 
 
 
-	int get_var( register char *value, register char **leftp,
+	/** Find next $(MACRO) or $$(MACRO) in a string
+
+	The caller is expected to concatenate *leftp, the evaluated
+	*namep, then *rightp to get the expanded setting.
+
+	- value - The null-terminated string to scan. WILL BE MODIFIED!
+
+	- leftp - OUTPUT. *leftp will be set to value+search_pos.  It
+	  will be null terminated at the $ for the first $(MACRO) found.
+
+	- namep - OUTPUT. The name of the MACRO (the bit between the
+	  parenthesis).  Pointer into value.  Null terminated at the
+	  closing parenthesis.
+
+	- rightp - OUTPUT. Everything to the right of the $(MACRO).
+	  Pointer into value.
+
+	- self - Default to null. If non-null, only macros whose name is
+	  identical to self will be expanded. (Used for the special
+	  $(DOLLAR) case?)
+
+	- getdollardollar - Defaults false. If true, scans for $$(MACRO)
+	  and $$([expression]) instead of $(MACRO)
+
+	- search_pos - 0-indexed position in value to start scanning at.
+	  Defaults to 0.
+	*/
+	int find_config_macro( register char *value, register char **leftp,
 		register char **namep, register char **rightp,
 		const char *self=NULL, bool getdollardollar=false, int search_pos=0);
-	int get_special_var( const char *prefix, bool only_id_chars,
+	int find_special_config_macro( const char *prefix, bool only_id_chars,
 		register char *value, register char **leftp,
 		register char **namep, register char **rightp);
 }

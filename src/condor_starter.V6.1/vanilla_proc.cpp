@@ -272,6 +272,13 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	ad->InsertOrUpdate( buf );
 	sprintf( buf, "%s=%lu", ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size );
 	ad->InsertOrUpdate( buf );
+
+#if HAVE_PSS
+	if( usage->total_proportional_set_size_available ) {
+		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, usage->total_proportional_set_size );
+	}
+#endif
+
 	if (usage->block_read_bytes >= 0) {
 		sprintf( buf, "%s=%lu", ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes/1024 );
 		ad->InsertOrUpdate( buf );
@@ -378,7 +385,11 @@ VanillaProc::ShutdownGraceful()
 	//
 	OsProc::ShutdownGraceful();
 #if !defined(WIN32)
-	startEscalationTimer();
+	if (Starter->remoteStateChanged() == false)
+	{
+		startEscalationTimer();
+	}
+	Starter->resetStateChanged();
 #endif
 	return false; // shutdown is pending (same as OsProc::ShutdownGraceful()
 }

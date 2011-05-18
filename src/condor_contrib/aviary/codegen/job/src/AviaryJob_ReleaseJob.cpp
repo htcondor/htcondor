@@ -56,7 +56,8 @@
         }
         AviaryJob::ReleaseJob::~ReleaseJob()
         {
-
+            if (property_ReleaseJob) delete property_ReleaseJob;
+            axutil_qname_free (qname,Environment::getEnv());
         }
 
         

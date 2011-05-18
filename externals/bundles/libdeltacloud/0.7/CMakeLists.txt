@@ -24,27 +24,27 @@ if (WITH_LIBDELTACLOUD)
 
 	if ( NOT PROPER )
 
-		set(LIBDELTACLOUD_VER libdeltacloud-0.7)
+		condor_pre_external( LIBDELTACLOUD libdeltacloud-0.7 "lib;include" "lib/libdeltacloud.a")
 
 		ExternalProject_Add(libdeltacloud
-				DEPENDS curl libxml2
-				PREFIX ${EXTERNAL_BUILD_PREFIX}/${LIBDELTACLOUD_VER}
+				DEPENDS ${CURL_REF} ${LIBXML2_REF}
 				#-- Download Step ----------
 				DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz ${CMD_TERM}
-				DOWNLOAD_DIR ${EXTERNAL_DL}
+				DOWNLOAD_DIR ${LIBDELTACLOUD_STAGE}/dl
 				URL http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz
 				#--Configure step ----------
-			    	CONFIGURE_COMMAND cd ${LIBDELTACLOUD_VER} && ./configure --prefix=${EXTERNAL_STAGE} --with-libxml=${EXTERNAL_STAGE} --with-libcurl=${EXTERNAL_STAGE} --disable-shared
+				CONFIGURE_COMMAND cd ${LIBDELTACLOUD_VER} && ./configure --prefix=${LIBDELTACLOUD_INSTALL_LOC} --with-libxml=${LIBXML2_INSTALL_LOC} --with-libcurl=${CURL_INSTALL_LOC} --disable-shared
 				#--Build Step ----------
 				BUILD_COMMAND cd ${LIBDELTACLOUD_VER} && make
 				BUILD_IN_SOURCE 1
 				#--install Step ----------
-				INSTALL_DIR ${EXTERNAL_STAGE}
+				INSTALL_DIR ${LIBDELTACLOUD_INSTALL_LOC}
 				INSTALL_COMMAND cd ${LIBDELTACLOUD_VER} && make install )
 
 		# Set the target dependencies which the rest of condor depends on.
-		set(LIBDELTACLOUD_FOUND "${EXTERNAL_STAGE}/lib/libdeltacloud.a")
-		append_var( CONDOR_EXTERNALS libdeltacloud )
+		set(LIBDELTACLOUD_FOUND "${LIBDELTACLOUD_INSTALL_LOC}/lib/libdeltacloud.a")
+
+		condor_post_external( libdeltacloud include OFF )
 
 	else( NOT PROPER )
 

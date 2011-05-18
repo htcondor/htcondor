@@ -66,7 +66,9 @@
         }
         AviaryJob::SetJobAttribute::~SetJobAttribute()
         {
-
+            if (property_Id) delete property_Id;
+            if (property_Attribute) delete property_Attribute;
+            axutil_qname_free (qname,Environment::getEnv());
         }
 
         

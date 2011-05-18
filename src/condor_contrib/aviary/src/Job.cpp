@@ -20,7 +20,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "condor_parser.h"
+//#include "condor_parser.h"
 #include "compat_classad.h"
 #include "proc.h"
 #include "stl_string_utils.h"
@@ -142,7 +142,8 @@ LiveJobImpl::get ( const char *_name, const AviaryAttribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new AviaryAttribute ( AviaryAttribute::INTEGER_TYPE, to_string<int> ( i,dec ).c_str() );
+            const char* int_str = to_string<int> ( i,dec ).c_str();
+            _attribute = new AviaryAttribute ( AviaryAttribute::INTEGER_TYPE, int_str );
             return true;
         }
         case classad::Value::REAL_VALUE:
@@ -152,7 +153,8 @@ LiveJobImpl::get ( const char *_name, const AviaryAttribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new AviaryAttribute ( AviaryAttribute::FLOAT_TYPE, to_string<float> ( f,dec ).c_str() );
+            const char* float_str = to_string<float> ( f,dec ).c_str();
+            _attribute = new AviaryAttribute ( AviaryAttribute::FLOAT_TYPE, float_str );
             return true;
         }
         case classad::Value::STRING_VALUE:
@@ -162,7 +164,7 @@ LiveJobImpl::get ( const char *_name, const AviaryAttribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new AviaryAttribute ( AviaryAttribute::STRING_TYPE, str.StrDup() );
+            _attribute = new AviaryAttribute ( AviaryAttribute::STRING_TYPE, str.Value() );
             return true;
         }
         default:
@@ -184,7 +186,7 @@ LiveJobImpl::get ( const char *_name, const AviaryAttribute *&_attribute ) const
 
 int LiveJobImpl::getStatus() const
 {
-    const AviaryAttribute* attr;
+    const AviaryAttribute* attr = NULL;
 
     if ( !this->get ( ATTR_JOB_STATUS, attr ) )
     {
@@ -283,36 +285,34 @@ LiveJobImpl::remove ( const char *_name )
 	m_full_ad->ChainToAd(cp);
 }
 
-const ClassAd* LiveJobImpl::getSummary () const
+const ClassAd* LiveJobImpl::getSummary ()
 {
-	ClassAd* _summary_ad = NULL;
 	if (!m_summary_ad) {
-		_summary_ad = new ClassAd();
-		_summary_ad->ResetExpr();
+		m_summary_ad = new ClassAd();
+		m_summary_ad->ResetExpr();
 		int i = 0;
 		while (NULL != ATTRS[i]) {
 			const AviaryAttribute* attr = NULL;
 			if (this->get(ATTRS[i],attr)) {
 				switch (attr->getType()) {
 					case AviaryAttribute::FLOAT_TYPE:
-						_summary_ad->Assign(ATTRS[i], atof(attr->getValue()));
+						m_summary_ad->Assign(ATTRS[i], atof(attr->getValue()));
 						break;
 					case AviaryAttribute::INTEGER_TYPE:
-						_summary_ad->Assign(ATTRS[i], atol(attr->getValue()));
+						m_summary_ad->Assign(ATTRS[i], atol(attr->getValue()));
 						break;
 					case AviaryAttribute::EXPR_TYPE:
 					case AviaryAttribute::STRING_TYPE:
 					default:
-						_summary_ad->Assign(ATTRS[i], strdup(attr->getValue()));
+						m_summary_ad->Assign(ATTRS[i], attr->getValue());
 				}
 			}
+			delete attr;
 		i++;
-		}
-	} else {
-		_summary_ad = m_summary_ad;
+        }
 	}
 
-	return _summary_ad;
+	return m_summary_ad;
 }
 
 const ClassAd* LiveJobImpl::getFullAd () const
@@ -485,7 +485,7 @@ Job::~Job() {
 	delete m_live_job;
 	delete m_history_job;
 
-	delete m_key;
+	delete [] m_key;
 	// submissions are shared and can't be deleted here
 }
 
@@ -672,7 +672,7 @@ void Job::getSummary ( ClassAd& _ad) const
 {
 	//same thing as full ad
 	if (m_live_job) {
-		_ad = *(m_live_job->getSummary());
+		_ad.CopyFrom(*m_live_job->getSummary());
 	}
 	else {
 		m_history_job->getSummary(_ad);

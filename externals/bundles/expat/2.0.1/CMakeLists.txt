@@ -24,26 +24,26 @@ if ( WITH_EXPAT )
 
 	if( NOT PROPER )
 
-		set ( EXPAT_VER expat-2.0.1 )
+		condor_pre_external( EXPAT expat-2.0.1 "lib;include" "lib/libexpat.a")
 
 		ExternalProject_Add(expat
-				    PREFIX ${EXTERNAL_BUILD_PREFIX}/${EXPAT_VER}
 				    #-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${EXPAT_VER}.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${EXTERNAL_DL}
+				    DOWNLOAD_DIR ${EXPAT_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${EXPAT_VER}.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${EXPAT_VER} && ./configure --prefix=${EXTERNAL_STAGE}
+				    CONFIGURE_COMMAND cd ${EXPAT_VER} && ./configure --prefix=${EXPAT_INSTALL_LOC}
 				    #--Build Step ----------
 				    BUILD_COMMAND cd ${EXPAT_VER} && make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_STAGE}
+				    INSTALL_DIR ${EXPAT_INSTALL_LOC}
 				    INSTALL_COMMAND cd ${EXPAT_VER} && make install )
 
 		# Set the target dependencies which the rest of condor depends on.
-		set(EXPAT_FOUND "${EXTERNAL_STAGE}/lib/libexpat.a")
-		append_var (CONDOR_EXTERNALS expat)
+		set(EXPAT_FOUND "${EXPAT_INSTALL_LOC}/lib/libexpat.a")
+
+		condor_post_external( expat include OFF )
 
 	else( NOT PROPER )
 

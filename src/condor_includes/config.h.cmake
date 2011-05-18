@@ -570,4 +570,7 @@
 /* Define to 1 if the system has getifaddrs().*/
 #cmakedefine HAVE_GETIFADDRS 1
 
+/* Define to 1 if the system has proportional set size (PSS).*/
+#cmakedefine HAVE_PSS 1
+
 #endif
