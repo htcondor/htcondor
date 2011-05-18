@@ -1010,7 +1010,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 
 	if ( !sock->put_secret( claimId ) || !sock->end_of_message() ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
-				 "Failed to send Alive to schedd %s for job %d.%d id \n",
+				 "Failed to send Alive to schedd %s for job %d.%d id %s\n",
 				 c_addr, c_cluster, c_proc, publicClaimId() );
 		ALIVE_BAILOUT;  // note daemonCore will close sock for us
 	}
@@ -1058,14 +1058,14 @@ Claim::sendAliveResponseHandler( Stream *sock )
 
  	if( !sock->rcv_int(reply, TRUE) ) {
 		dprintf( D_ALWAYS, 
-			"Response problem from schedd on ALIVE job %d.%d.\n", 
+			"Response problem from schedd %s on ALIVE job %d.%d.\n", 
 			c_addr, c_cluster, c_proc );	
 		ALIVE_BAILOUT;  // note daemonCore will close sock for us
 	}
 
 		// So here we got a response from the schedd.  
 	dprintf(D_PROTOCOL,
-		"Received Alive response of %d from schedd %d job %d.%d\n",
+		"Received Alive response of %d from schedd %s job %d.%d\n",
 		reply, c_addr, c_cluster, c_proc);
 
 		// If the response is -1, that means the schedd knows nothing
