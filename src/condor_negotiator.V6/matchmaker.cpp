@@ -2838,7 +2838,13 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		// It also performs the important function of draining out
 		// any reschedule requests queued up on our command socket, so
 		// we do not negotiate over & over unnecesarily.
-		daemonCore->ServiceCommandSocket();
+
+	
+		// #2163  We core dump if we service a reconfig here iff
+		// hierarchical group quotas are on.  Disable for now,
+		// this will cause condor_userprio to run very slowly.
+		
+		//daemonCore->ServiceCommandSocket();
 
 		currentTime = time(NULL);
 
