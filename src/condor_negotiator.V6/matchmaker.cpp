@@ -321,12 +321,24 @@ initialize ()
 #endif
 }
 
+static bool delayReinit;
+
 int Matchmaker::
 reinitialize ()
 {
 	char *tmp;
 	static bool first_time = true;
 	ExprTree *tmp_expr;
+
+	// If we got reconfig'ed in the middle of the negotiation cycle,
+	// don't reconfig now.  This code isn't safe wrt CommandSocket re-entrancy
+
+	if (daemonCore->InServiceCommandSocket()) {
+		delayReinit = true;
+		return true;
+	} else {
+		delayReinit = false;
+	}
 
     // (re)build the HGQ group tree from configuration
     // need to do this prior to initializing the accountant
@@ -1333,6 +1345,10 @@ negotiationTime ()
     negotiation_cycle_stats[0]->duration_phase2 -= negotiation_cycle_stats[0]->duration_phase4;
 
     negotiation_cycle_stats[0]->duration = completedLastCycleTime - negotiation_cycle_stats[0]->start_time;
+
+	if (delayReinit) {
+		this->reinitialize();
+	}
 
 	if (param_boolean("NEGOTIATOR_UPDATE_AFTER_CYCLE", false)) {
 		updateCollector();
@@ -2835,12 +2851,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		// any reschedule requests queued up on our command socket, so
 		// we do not negotiate over & over unnecesarily.
 
-	
-		// #2163  We core dump if we service a reconfig here iff
-		// hierarchical group quotas are on.  Disable for now,
-		// this will cause condor_userprio to run very slowly.
-		
-		//daemonCore->ServiceCommandSocket();
+		daemonCore->ServiceCommandSocket();
 
 		currentTime = time(NULL);
 
