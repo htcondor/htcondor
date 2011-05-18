@@ -57,6 +57,7 @@
 #include "spool_version.h"
 #include "condor_holdcodes.h"
 #include "nullfile.h"
+#include "condor_url.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -3909,7 +3910,9 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		const char *base = NULL;
 		while ( (old_path_buf=old_paths.next()) ) {
 			base = condor_basename(old_path_buf);
-			if ( strcmp(base,old_path_buf)!=0 ) {
+			if ((AttrsToModify[attrIndex] == ATTR_TRANSFER_INPUT_FILES) && IsUrl(old_path_buf)) {
+				base = old_path_buf;
+			} else if ( strcmp(base,old_path_buf)!=0 ) {
 				changed = true;
 			}
 			new_paths.append(base);

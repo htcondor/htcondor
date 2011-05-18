@@ -933,7 +933,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		// Now send all the files via the file transfer object
 	for (i=0; i<JobAdsArrayLen; i++) {
 		FileTransfer ftrans;
-		if ( !ftrans.SimpleInit(JobAdsArray[i], false, false, &rsock) ) {
+		if ( !ftrans.SimpleInit(JobAdsArray[i], false, false, &rsock, PRIV_UNKNOWN, false, true) ) {
 			if( errstack ) {
 				int cluster = -1, proc = -1;
 				if(JobAdsArray[i]) {
