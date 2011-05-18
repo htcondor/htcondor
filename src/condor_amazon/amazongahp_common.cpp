@@ -34,11 +34,10 @@ static SimpleList<AmazonGahpCommand*> amazon_gahp_commands;
 
 static FILE *gahp_log_file = stderr;
 
-// This variable is defined in dprintf.c
-extern FILE *DebugFPs[D_NUMLEVELS + 1];
 
 bool set_gahp_log_file(const char* logfile)
 {
+	/*
 	static bool done_init = false;
 
 	DebugFPs[0] = stderr;
@@ -72,6 +71,7 @@ bool set_gahp_log_file(const char* logfile)
 	DebugFPs[0] = fp;
 
 	//DebugLock = ;
+	*/
 	return true;
 }
 

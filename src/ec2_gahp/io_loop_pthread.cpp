@@ -70,7 +70,7 @@ static void io_process_exit(int exit_num)
 void
 usage()
 {
-	dprintf( D_ALWAYS, "Usage: amazon_gahp -f logfile -d debuglevel -w min_worker_nums -m max_worker_nums\n");
+	dprintf( D_ALWAYS, "Usage: amazon_gahp -d debuglevel -w min_worker_nums -m max_worker_nums\n");
 	exit(1);
 }
 
@@ -231,6 +231,7 @@ main( int argc, char ** const argv )
 	int c = 0;
 	while ( (c = my_getopt(argc, argv, "f:d:w:m:" )) != -1 ) {
 		switch(c) {
+			/*
 			case 'f':
 				// Log file
 				if ( my_optarg ) {
@@ -241,6 +242,7 @@ main( int argc, char ** const argv )
 					}
 				}
 				break;
+				*/
 			case 'd':
 				// Debug Level
 				if( my_optarg && *my_optarg ) {
