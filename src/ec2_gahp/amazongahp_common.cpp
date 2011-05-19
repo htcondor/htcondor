@@ -38,10 +38,8 @@ static FILE *gahp_log_file = stderr;
 
 bool set_gahp_log_file(const char* logfile)
 {
-	/*
 	static bool done_init = false;
 
-	DebugFP = stderr;
 	Termlog = 1;
 
 	if( !done_init ) {
@@ -69,10 +67,9 @@ bool set_gahp_log_file(const char* logfile)
 	}
 
 	gahp_log_file = fp;
-	DebugFP = fp;
 
 	//DebugLock = ;
-	*/
+
 	return true;
 }
 

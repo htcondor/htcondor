@@ -289,7 +289,7 @@ close_unused_file_descriptors()
 		{
 			for(int index = 0; index <= D_NUMLEVELS; index++)
 			{
-				if(fd == open_fds[index])
+				if(i == open_fds[index])
 				{
 					is_log = true;
 				}
