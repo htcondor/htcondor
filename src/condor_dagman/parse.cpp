@@ -1207,8 +1207,6 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 		job->varNamesFromDag->Rewind();
 		while(MyString* s = job->varNamesFromDag->Next()){
 			if(varName == *s){
-				printf("Warning: VAR \"%s\" is already defined "
-					"in job \"%s\".\n",varName.Value(),job->GetJobName());
 				debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
 					"is already defined in job \"%s\".\n",varName.Value(),job->GetJobName());
 			}
