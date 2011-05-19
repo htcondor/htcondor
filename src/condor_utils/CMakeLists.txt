@@ -19,8 +19,12 @@
 
 ##################################################
 # utils library
-file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs*
-soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_init.c )
+file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* 
+soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_init.c
+state_machine_driver.unix.cpp)
+# exclude state_machine_driver.unix.cpp because it pulls in undefined symbols
+# (e.g. TransFuncNames src/condor_starter.std/starter.h) that do not become
+# part of libutils.
 
 condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 
@@ -35,6 +39,15 @@ add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param
 
 condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )
 add_dependencies(utils utils_genparams syscall_numbers )
+# this shouldn't be linked against libdaemon_core, because it introduces
+# undefined symbols that can only be resolved by actual daemons, but it needs
+# some part
+target_link_libraries(utils sysapi procapi privsep procd_client daemon_client daemon_core qmgmt cedar ${CLASSADS_FOUND} ${PCRE_FOUND} ${GLOBUS_FOUND} ${POSTGRESQL_FOUND})
+if (WANT_CONTRIB)
+    if (HAVE_EXT_POSTGRESQL)
+        target_link_libraries(utils tt)
+    endif (HAVE_EXT_POSTGRESQL)
+endif(WANT_CONTRIB)
 
 ##################################################
 # condorapi & tests
@@ -44,7 +57,7 @@ if(WINDOWS)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
 endif()
 
-condor_static_lib( condorapi "${ApiSrcs}" )
+condor_really_static_lib( condorapi "${ApiSrcs}" )
 add_dependencies( condorapi utils )
 
 if (NOT WINDOWS)

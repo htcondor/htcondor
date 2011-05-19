@@ -35,6 +35,9 @@ if (NOT WINDOWS AND WANT_FULL_DEPLOYMENT)
 	install ( FILES Execute.pm FileLock.pm DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 	condor_exe( uniq_pid_command "uniq_pid_tool_main.cpp" "${C_SBIN}" "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" OFF )
+	# unfortunately libutils comes with undefined symbols introduced by
+	# libdaemon_core (even when linking libutils to it)
+	target_link_libraries(uniq_pid_command -Wl,--allow-shlib-undefined)
 	clone_install( uniq_pid_command "${C_SBIN}" uniq_pid_midwife "${C_SBIN}" )
 	clone_install( uniq_pid_command "${C_SBIN}" uniq_pid_undertaker "${C_SBIN}" )
 

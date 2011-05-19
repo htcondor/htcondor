@@ -25,4 +25,7 @@ condor_static_lib( privsep "${PrivsepHdrs};${PrivsepSrcs}" )
 
 if (NOT WINDOWS)
 	condor_exe( condor_root_switchboard "${PrivsepRmvSrcs}" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
+	# unfortunately libutils comes with undefined symbols introduced by
+	# libdaemon_core (even when linking libutils to it)
+	target_link_libraries(condor_root_switchboard -Wl,--allow-shlib-undefined)
 endif()

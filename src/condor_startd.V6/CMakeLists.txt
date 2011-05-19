@@ -32,6 +32,9 @@ condor_daemon( startd "${startdRmvElements}" "${CONDOR_LIBS};${PCRE_FOUND};${OPE
 if (LINUX AND GLOBUS_FOUND)
   condor_exe(condor_glexec_wrapper "glexec_wrapper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" OFF )
   install (FILES glexec_starter_setup.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+  # unfortunately libutils comes with undefined symbols introduced by
+  # libdaemon_core (even when linking libutils to it)
+  target_link_libraries(condor_glexec_wrapper -Wl,--allow-shlib-undefined)
 endif()
 
 
