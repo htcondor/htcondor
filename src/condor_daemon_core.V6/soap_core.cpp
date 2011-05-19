@@ -51,7 +51,7 @@ int get_handler(struct soap *soap);
 struct soap *
 dc_soap_accept(Sock *socket, const struct soap *soap)
 {
-	struct soap *cursoap = soap_copy(soap);
+	struct soap *cursoap = soap_copy(const_cast<struct soap*>(soap));
 	ASSERT(cursoap);
 
 		// Mimic a gsoap soap_accept as follows:
