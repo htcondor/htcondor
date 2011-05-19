@@ -1389,7 +1389,21 @@ of the subsystem corresponding to the daemon.
   to \Expr{True}, the affected log will be truncated and started from an
   empty file with each invocation of the program.  Otherwise, new
   invocations of the program will append to the previous log
-  file.  By default this setting is \Expr{False} for all daemons. 
+  file.  By default this setting is \Expr{False} for all daemons.
+  
+\label{param:SubsysLogKeepOpen}
+\item[\Macro{<SUBSYS>\_LOG\_KEEP\_OPEN}]\
+  A boolean value that controls keeping the log file open between writes.
+  When true, the daemon will not constantly open and close the log file
+  between writes.  Instead the daemon will hold the log file open until the log
+  needs to be rotated. When false, the daemon reverts to the old behavior
+  of opening and closing the log file between writes.  When the
+  \MacroUNI{<SUBSYS>\_LOCK} macro is defined, setting
+  \MacroUNI{<SUBSYS>\_LOG\_KEEP\_OPEN} has  no effect as the daemon
+  will unconditionally revert back to the open/close between writes behavior.
+  On Windows the value defaults to true for all daemons. On Linux the value
+  defaults to true for all daemons except the shadow due to a
+  global file descriptor limit.
 
 \label{param:SubsysLock} 
 \item[\MacroB{<SUBSYS>\_LOCK}]
@@ -4328,6 +4342,25 @@ The following configuration variables support java universe jobs.
 \label{param:JavaExtraArguments}
 \item[\Macro{JAVA\_EXTRA\_ARGUMENTS}]
   A list of additional arguments to be passed to the Java executable.
+\end{description}
+
+The following configuration variables control .NET version advertisement.
+
+\begin{description}
+\label{param:StartdPublishDotnet}
+\item[\Macro{STARTD\_PUBLISH\_DOTNET}]
+  A boolean value that controls the advertising of the .NET framework on Windows.
+  When set to true the startd will advertise all installed versions of the .NET framework
+  in the DotNetVersions attribute in the startd classad.  The default value is true.
+  Set to false to turn off .NET version advertising.
+  
+\label{param:DotNetVersions}
+\item[\Macro{DOT\_NET\_VERSIONS}]
+  A string expression that administrators can use to override the way .NET versions
+  are advertised.  If the administrator wishes to advertise .NET installations but wishes
+  to do so in a format different than what the startd publishes in its ads, setting a
+  string in this expression will result in the startd publishing the string when
+  \Macro{STARTD\_PUBLISH\_DOTNET} is true.  This value is empty by default.
 \end{description}
 
 These macros control the power management capabilities of the 
