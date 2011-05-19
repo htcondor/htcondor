@@ -23,7 +23,9 @@ SET(_SRCS ${ARGN})
 # ADD_PRECOMPILED_HEADER macro expects to operate on a global _SRCS
 ADD_PRECOMPILED_HEADER()
 
-add_library(${_CNDR_TARGET} STATIC ${_SRCS})
+add_library(${_CNDR_TARGET} ${_SRCS})
+
+install(TARGETS ${_CNDR_TARGET} DESTINATION ${C_LIB})
 
 if (CONDOR_EXTERNALS)
 	add_dependencies ( ${_CNDR_TARGET} ${CONDOR_EXTERNALS} )
@@ -34,3 +36,17 @@ if ( WINDOWS )
 endif ( WINDOWS )
 
 ENDMACRO(CONDOR_STATIC_LIB)
+
+MACRO (CONDOR_REALLY_STATIC_LIB _CNDR_TARGET _SRCS)
+
+add_library(${_CNDR_TARGET} STATIC ${_SRCS})
+
+if (CONDOR_EXTERNALS)
+	add_dependencies ( ${_CNDR_TARGET} ${CONDOR_EXTERNALS} )
+endif()
+
+if ( WINDOWS )
+	set_property( TARGET ${_CNDR_TARGET} PROPERTY FOLDER "libraries" )
+endif ( WINDOWS )
+
+ENDMACRO(CONDOR_REALLY_STATIC_LIB)

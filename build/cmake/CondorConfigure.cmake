@@ -99,7 +99,7 @@ set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
 # set to true to enable printing of make actions
 set( CMAKE_VERBOSE_MAKEFILE FALSE )
-set( BUILD_SHARED_LIBS FALSE )
+#set( BUILD_SHARED_LIBS FALSE )
 
 # Windows is so different perform the check 1st and start setting the vars.
 if( NOT WINDOWS)
@@ -121,7 +121,7 @@ if( NOT WINDOWS)
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
 
 	# when we want to distro dynamic libraries only with localized rpaths.
-	set (CMAKE_SKIP_RPATH TRUE)
+	# set (CMAKE_SKIP_RPATH TRUE)
 	# set (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 	# set (CMAKE_INSTALL_RPATH YOUR_LOC)
 	# set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -461,7 +461,8 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
+# use from external package
+#add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
@@ -563,7 +564,7 @@ include_directories(${CONDOR_SOURCE_DIR}/src/ccb)
 include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
-include_directories(${CONDOR_SOURCE_DIR}/src/classad)
+#include_directories(${CONDOR_SOURCE_DIR}/src/classad)
 if (WANT_CONTRIB)
     include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
 endif(WANT_CONTRIB)

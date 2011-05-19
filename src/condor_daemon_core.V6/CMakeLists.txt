@@ -32,6 +32,7 @@ endif(DARWIN)
 
 #create the library
 condor_static_lib(daemon_core "${DCHeaderFiles};${DCSourceFiles}")
+target_link_libraries(daemon_core ccb)
 
 if (WINDOWS)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
