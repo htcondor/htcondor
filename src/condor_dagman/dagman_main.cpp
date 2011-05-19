@@ -464,9 +464,10 @@ void main_shutdown_rescue( int exitVal ) {
 		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
 	}
 	dagman.dag->DumpNodeStatus( false, true );
+	//TEMPTEMP -- should we submit the final node before or after dumping node status?
+	dagman.dag->SubmitFinalJob(dagman);
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	unlink( lockFileName ); 
-	dagman.dag->SubmitFinalJob(dagman);
     dagman.CleanUp();
 	DC_Exit( exitVal );
 }

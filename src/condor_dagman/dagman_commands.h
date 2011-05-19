@@ -31,18 +31,11 @@ bool PauseDag(Dagman &dm);
 // resume DAGMan's normal event-processing
 bool ResumeDag(Dagman &dm);
 
-// Add a final node to dag
-bool AddFinalNode( Dag *dag, Job::job_type_t type, const char *name,
-		const char* directory,
-		const char* submitFile,
-		const char *precmd, const char *postcmd, bool noop,
-		bool done, MyString &failReason );
-
 bool AddNode( Dag *dag, Job::job_type_t type, const char *name,
 			  const char* directory,
 			  const char* submitFile,
 			  const char *precmd, const char *postcmd, bool noop,
-			  bool done, MyString &failReason );
+			  bool done, bool isFinal, MyString &failReason );
 
 /** Set the DAG file (if any) for a node.
 	@param dag: the DAG this node is part of

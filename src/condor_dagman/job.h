@@ -184,7 +184,7 @@ class Job {
 	void SetFinal(bool value) { _final = value; }
 	bool GetFinal() const { return _final; }
 	void SetNoop( bool value ) { _noop = value; }
-	bool GetNoop( void ) { return _noop; }
+	bool GetNoop( void ) const { return _noop; }
 
     Script * _scriptPre;
     Script * _scriptPost;

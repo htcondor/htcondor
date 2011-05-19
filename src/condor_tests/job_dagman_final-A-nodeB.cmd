@@ -1,4 +1,4 @@
-executable = ./job_dagman_final-node.pl
+executable = ./job_dagman_final-A-node.pl
 output = job_dagman_final-A-nodeB.out
 error = job_dagman_final-A-nodeB.err
 log = job_dagman_final-A-nodeB.log

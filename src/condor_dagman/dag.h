@@ -160,7 +160,6 @@ class Dag {
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
-    bool AddFinal(Job& job);
     int SubmitFinalJob(const Dagman& dm);
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
@@ -794,6 +793,14 @@ class Dag {
 		// the Job object)
 
 	bool SanityCheckSubmitEvent( const CondorID condorID, const Job* node );
+
+		/** Write the given node to the rescue DAG.
+			@param The file pointer to the rescue DAG fle
+			@param The node to write
+			@param Whether retries should be reset for a rescue DAG
+		*/
+	void WriteNodeToRescue( FILE *fp, /* const */ Job *node,
+				bool reset_retries_upon_rescue ) const;
 
 		/** Get the appropriate hash table for event ID->node mapping,
 			according to whether this is a Condor or Stork node.

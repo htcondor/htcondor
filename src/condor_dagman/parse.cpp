@@ -85,9 +85,6 @@ static bool parse_reject(Dag  *dag, const char *filename,
 		int  lineNumber);
 static bool parse_jobstate_log(Dag  *dag, const char *filename,
 		int  lineNumber);
-static bool parse_final_job( Dag *dag, Job::job_type_t nodeType,
-						const char* dagFile, int lineNum,
-						const char *directory);
 static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
@@ -230,10 +227,19 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 					   "submitfile");
 		}
 
+		// Handle a SUBDAG spec
 		else if	(strcasecmp(token, "SUBDAG") == 0) {
 			parsed_line_successfully = parse_subdag( dag, 
 						Job::TYPE_CONDOR,
 						token, filename, lineNumber, tmpDirectory.Value() );
+		}
+
+		// Handle a FINAL spec
+		else if(strcasecmp(token, "FINAL") == 0) {
+			parsed_line_successfully = parse_node( dag, 
+					   Job::TYPE_CONDOR, token,
+					   filename, lineNumber, tmpDirectory.Value(), "",
+					   "submitfile" );
 		}
 
 		// Handle a SCRIPT spec
@@ -325,12 +331,6 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		else if(strcasecmp(token, "JOBSTATE_LOG") == 0) {
 			parsed_line_successfully = parse_jobstate_log(dag,
 						filename, lineNumber);
-		}
-
-		// Handle a FINAL spec
-		else if(strcasecmp(token, "FINAL") == 0) {
-			parsed_line_successfully=parse_final_job(dag,Job::TYPE_CONDOR,
-				filename, lineNumber, tmpDirectory.Value());
 		}
 
 		// None of the above means that there was bad input.
@@ -510,8 +510,9 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 	}
 
 	// looks ok, so add it
+	bool isFinal = strcasecmp( nodeTypeKeyword, "FINAL" ) == MATCH;
 	if( !AddNode( dag, nodeType, nodeName, directory,
-				submitFile, NULL, NULL, noop, done, whynot ) )
+				submitFile, NULL, NULL, noop, done, isFinal, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
@@ -1771,131 +1772,6 @@ parse_jobstate_log(
 	}
 
 	dag->SetJobstateLogFileName( logFileName );
-	return true;
-}
-
-static bool
-parse_final_job(Dag *dag, Job::job_type_t nodeType,
-		const char* dagFile, int lineNum,
-		const char *directory)
-{
-	MyString example;
-	MyString whynot;
-	bool done = false;
-	Dag *tmp = NULL;
-
-	MyString expectedSyntax;
-	expectedSyntax.sprintf( "FINAL nodename SubmitFile [NOOP] [DIR directory]");
-	// NOTE: fear not -- any missing tokens resulting in NULL
-	// strings will be error-handled correctly by AddNode()
-	// first token is the node name
-
-	const char *nodeName = strtok( NULL, DELIMITERS );
-	MyString tmpNodeName = munge_job_name(nodeName);
-	nodeName = tmpNodeName.Value();
-
-	// next token is the submit file name
-	const char *submitFile = strtok( NULL, DELIMITERS );
-
-	// next token (if any) is "DIR" "NOOP", or "DONE" (in that order)
-	const char* nextTok = strtok( NULL, DELIMITERS );
-	TmpDir nodeDir;
-	if ( nextTok ) {
-		if (strcasecmp(nextTok, "DIR") == 0) {
-			if ( strcmp(directory, "") ) {
-				debug_printf( DEBUG_QUIET, "ERROR: DIR specification in node "
-							"lines not allowed with -UseDagDir command-line "
-							"argument\n");
-				return false;
-			}
-
-			directory = strtok( NULL, DELIMITERS );
-			if ( !directory ) {
-				debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no directory "
-							"specified after DIR keyword\n", dagFile, lineNum );
-				debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
-				return false;
-			}
-
-			MyString errMsg;
-			if ( !nodeDir.Cd2TmpDir(directory, errMsg) ) {
-				debug_printf( DEBUG_QUIET,
-							"ERROR: can't change to directory %s: %s\n",
-							directory, errMsg.Value() );
-				return false;
-			}
-			nextTok = strtok( NULL, DELIMITERS );
-		} else {
-			// Fall through to check for NOOP.
-		}
-	}
-
-	bool noop = false;
-
-	if ( nextTok && strcasecmp( nextTok, "NOOP" ) == 0 ) {
-		noop = true;
-		nextTok = strtok( NULL, DELIMITERS );
-	}
-	if( nextTok ) {
-		if( strcasecmp( nextTok, "DONE" ) == 0 ) {
-			debug_printf(DEBUG_QUIET,"Warning: FINAL node marked DONE.\n");
-			done = true;
-		} else {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
-						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
-			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
-			return false;
-		}
-		nextTok = strtok( NULL, DELIMITERS );
-	}
-
-	// anything else is garbage
-	if( nextTok ) {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
-						  "parameter \"%s\"\n", dagFile, lineNum, nextTok );
-			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
-			return false;
-	}
-
-	// check to see if this node name is also a splice name for this dag.
-	if (dag->LookupSplice(MyString(nodeName), tmp) == 0) {
-		debug_printf( DEBUG_QUIET,
-			  "%s (line %d): "
-			  "Node name '%s' must not also be a splice name.\n",
-			  dagFile, lineNum, nodeName );
-		return false;
-	}
-
-	// If this is a "SUBDAG" line, generate the real submit file name.
-	MyString nestedDagFile("");
-	MyString dagSubmitFile(""); // must be outside if so it stays in scope
-	// looks ok, so add it
-	if( !AddFinalNode(dag, nodeType, nodeName, directory,
-		submitFile, NULL, NULL, noop, done, whynot ) )
-	{
-		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
-					  dagFile, lineNum, whynot.Value() );
-		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
-		return false;
-	}
-
-	if ( nestedDagFile != "" ) {
-		if ( !SetNodeDagFile( dag, nodeName, nestedDagFile.Value(),
-					whynot ) ) {
-			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
-						dagFile, lineNum, whynot.Value() );
-			return false;
-		}
-	}
-
-	MyString errMsg;
-	if ( !nodeDir.Cd2MainDir(errMsg) ) {
-		debug_printf( DEBUG_QUIET,
-					"ERROR: can't change to original directory: %s\n",
-					errMsg.Value() );
-		return false;
-	}
-
 	return true;
 }
 
