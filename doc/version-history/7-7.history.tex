@@ -56,6 +56,11 @@ node cannot be the child of another node, and it cannot be the parent of any
 other node. Only one node can be labeled as \texttt{FINAL}; if more than one
 node is so labeled, the DAG is in error.
 
+% gittrac #2090 commit 4e5a7301cef565e5df3c85c1b4500e15727c3aa9
+\item If you overwrite the VARS value in a DAG submit file, DAGman will write a
+warning to the log, saying ``VAR $\langle$\texttt{variable}$\rangle$ is already
+defined in job $\langle$\texttt{jobname}$\rangle$.''
+
 % gittrac #659 commit 551785beaa1c0d8689d44368030b9f561b5ddfee
 \item Filip Krikava supplied a patch that limits the number of file descriptors
 that DAGman has open at a time. The reason for creating this capability is that
