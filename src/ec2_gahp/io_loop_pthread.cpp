@@ -70,7 +70,7 @@ static void io_process_exit(int exit_num)
 void
 usage()
 {
-	dprintf( D_ALWAYS, "Usage: amazon_gahp -f logfile -d debuglevel -w min_worker_nums -m max_worker_nums\n");
+	dprintf( D_ALWAYS, "Usage: amazon_gahp -d debuglevel -w min_worker_nums -m max_worker_nums\n");
 	exit(1);
 }
 
