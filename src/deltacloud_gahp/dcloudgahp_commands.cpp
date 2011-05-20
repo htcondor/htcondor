@@ -270,10 +270,8 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
                                        deltacloud_get_last_error_string());
-        return FALSE;
+        goto cleanup_password;
     }
-
-    free(password);
 
     if (deltacloud_create_instance(&api, image_id, name, realm_id, hwp_id,
                                    hwp_memory, hwp_cpu, hwp_storage, keyname,
@@ -291,6 +289,9 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
 
 cleanup_library:
     deltacloud_free(&api);
+
+cleanup_password:
+    free(password);
 
     return ret;
 }
@@ -351,10 +352,8 @@ bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
                                        deltacloud_get_last_error_string());
-        return FALSE;
+        goto cleanup_password;
     }
-
-    free(password);
 
     if (deltacloud_get_instance_by_id(&api, instance_id, &instance) < 0) {
         output_string = create_failure(reqid, "Instance_Lookup_Failure: %s",
@@ -393,6 +392,9 @@ cleanup_instance:
 
 cleanup_library:
     deltacloud_free(&api);
+
+cleanup_password:
+    free(password);
 
     return ret;
 }
@@ -446,10 +448,8 @@ bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
                                        deltacloud_get_last_error_string());
-        return FALSE;
+        goto cleanup_password;
     }
-
-    free(password);
 
     if (deltacloud_get_instance_by_id(&api, instance_id, &inst) < 0) {
         output_string = create_failure(reqid, "Instance_Lookup_Failure %s: %s",
@@ -466,6 +466,9 @@ bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
 
 cleanup_library:
     deltacloud_free(&api);
+
+cleanup_password:
+    free(password);
 
     return ret;
 }
@@ -516,10 +519,8 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
                                        deltacloud_get_last_error_string());
-        return FALSE;
+        goto cleanup_password;
     }
-
-    free(password);
 
     if (deltacloud_get_instances(&api, &instances) < 0) {
         output_string = create_failure(reqid, "Instance_Fetch_Failure: %s",
@@ -548,6 +549,9 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
 
 cleanup_library:
     deltacloud_free(&api);
+
+cleanup_password:
+    free(password);
 
     return ret;
 }
@@ -604,10 +608,8 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
                                        deltacloud_get_last_error_string());
-        return FALSE;
+        goto cleanup_password;
     }
-
-    free(password);
 
     rc = deltacloud_get_instance_by_name(&api, name, &inst);
     if (rc == 0) {
@@ -646,6 +648,9 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
 
 cleanup_library:
     deltacloud_free(&api);
+
+cleanup_password:
+    free(password);
 
     return ret;
 }
