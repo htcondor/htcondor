@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
+#include "test.h"
 #include "stdio.h"
 #include "time.h"
 
