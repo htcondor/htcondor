@@ -321,7 +321,7 @@ BEGIN_C_DECLS
 	int write_config_file( const char* pathname );
 	// Helper function, of form to iterate over the hash table of parameter
 	// information.  Returns 0 to continue, -1 to stop (i.e. on an error).
-	int write_config_variable(param_info_t* value, void* file_desc);
+	int write_config_variable(const param_info_t* value, void* file_desc);
 
 /* This function initialize GSI (maybe other) authentication related
    stuff Daemons that should use the condor daemon credentials should

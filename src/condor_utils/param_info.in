@@ -8537,7 +8537,8 @@ id=513
 
 [MAX_JOBS_RUNNING]
 aliases=
-default=ceiling(ifThenElse( regexp("WIN.*","$(OPSYS)"), 200, ifThenElse( $(DETECTED_MEMORY)*0.8*1024/800 < 10000, $(DETECTED_MEMORY)*0.8*1024/800, 10000 )))
+default=ceiling(ifThenElse( $(DETECTED_MEMORY)*0.8*1024/800 < 10000, $(DETECTED_MEMORY)*0.8*1024/800, 10000 ))
+win32_default=200
 version=0.0.0
 range=.*
 state=default
