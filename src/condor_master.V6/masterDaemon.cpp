@@ -2331,8 +2331,7 @@ Daemons::StopDaemonsBeforeMasterStops()
 	std::map<std::string, class daemon*>::iterator iter;
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
-		if( ( iter->second->pid || iter->second->IsHA() )
-			&& iter->second->runs_here )
+		if( iter->second->pid && iter->second->runs_here )
 		{
 			iter->second->Stop();
 			running++;
