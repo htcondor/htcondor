@@ -103,7 +103,7 @@ static char *read_file(const char *path)
 {
     int fd;
     struct stat stat_buf;
-    char *data;
+    char *data = NULL;
 
     if (path == NULL)
         return NULL;
@@ -112,18 +112,20 @@ static char *read_file(const char *path)
     if (fd < 0)
         return NULL;
 
-    if (fstat(fd, &stat_buf) < 0) {
-        close(fd);
-        return NULL;
-    }
+    if (fstat(fd, &stat_buf) < 0)
+        goto cleanup;
 
     data = (char *)calloc(stat_buf.st_size + 1, 1);
+    if (data == NULL)
+        goto cleanup;
+
     if (full_read(fd, data, stat_buf.st_size) < 0) {
-        close(fd);
         free(data);
-        return NULL;
+        data = NULL;
+        goto cleanup;
     }
 
+cleanup:
     close(fd);
     return data;
 }
