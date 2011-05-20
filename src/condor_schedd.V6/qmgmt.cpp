@@ -4206,6 +4206,36 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 					        hash.c_str());
 					hash = "";
 			}
+
+			MyString cluster_owner;
+			if( GetAttributeString(active_cluster_num,-1,ATTR_OWNER,cluster_owner) == -1 ) {
+					// The owner is not set in the cluster ad.  We
+					// need it to be set so we can attempt to clean up
+					// the shared file when the cluster goes away.
+					// Setting the owner in the cluster ad to whatever
+					// it is in the ad we were given should be okay.
+					// If any other procs in this cluster have a
+					// different value for Owner, the cleanup will not
+					// be complete, but the files should eventually be
+					// cleaned by preen.  It would probably be a good
+					// idea to enforce the rule that all jobs in a
+					// cluster have the same Owner, but that is outside
+					// the scope of the code here.
+
+				rv = SetAttributeString(active_cluster_num,
+			                      -1,
+			                      ATTR_OWNER,
+			                      owner.Value());
+
+				if (rv < 0) {
+					dprintf(D_ALWAYS,
+					        "SendSpoolFileIfNeeded: unable to set %s to %s\n",
+					        ATTR_OWNER,
+					        owner.Value());
+					hash = "";
+				}
+			}
+
 			if (!hash.empty() &&
 			    ickpt_share_try_sharing(owner.Value(), hash, path))
 			{
