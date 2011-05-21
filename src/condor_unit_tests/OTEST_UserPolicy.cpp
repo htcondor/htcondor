@@ -291,9 +291,9 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_firing_reason_exit_on_exit_remove);
 	driver.register_function(test_firing_reason_exit_false);
 /*	driver.register_function(test_remove_macro_analyze_policy);*/
-	driver.register_function(test_remove_macro_firing_expression);
-	driver.register_function(test_remove_macro_firing_expression_value);
-	driver.register_function(test_remove_macro_firing_reason);
+//	driver.register_function(test_remove_macro_firing_expression);
+//	driver.register_function(test_remove_macro_firing_expression_value);
+//	driver.register_function(test_remove_macro_firing_reason);
 /*	driver.register_function(test_release_macro_analyze_policy);*/
 	driver.register_function(test_release_macro_firing_expression);
 	driver.register_function(test_release_macro_firing_expression_value);
