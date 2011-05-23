@@ -1208,7 +1208,10 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 		while(MyString* s = job->varNamesFromDag->Next()){
 			if(varName == *s){
 				debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
-					"is already defined in job \"%s\".\n",varName.Value(),job->GetJobName());
+					"is already defined in job \"%s\" "
+					"(Discovered at file \"%s\", line %d)\n",
+					varName.Value(),job->GetJobName(),filename,
+					lineNumber);
 			}
 		}
 		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
