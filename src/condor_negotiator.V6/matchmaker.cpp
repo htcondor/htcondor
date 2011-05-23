@@ -2004,7 +2004,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	double 		pieLeftOrig;
 	int         scheddAdsCountOrig;
 	int			totalTime;
-	bool ignore_schedd_limit;
 	int			num_idle_jobs;
 	time_t		startTime;
 	
@@ -2228,7 +2227,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					result=negotiate( scheddName.Value(),schedd,submitterPrio,
 								  submitterAbsShare, submitterLimit,
 								  startdAds, claimIds, 
-								  scheddVersion, ignore_schedd_limit,
+								  scheddVersion, ignore_submitter_limit,
 								  startTime, numMatched, limitUsed, pieLeft);
 					updateNegCycleEndTime(startTime, schedd);
 				}
