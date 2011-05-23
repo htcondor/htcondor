@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  ***************************************************************/
-
+#ifdef old_safe_lib
 
 	/* Before including condor_common.h, we must set definitions so that
 	 * open() and fopen() calls are not redefined to be an error.  This
@@ -422,3 +422,4 @@ FILE* safe_fdopen(int fd, const char* flags)
 }
 
 
+#endif

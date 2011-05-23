@@ -34,7 +34,9 @@ add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param
 ############ end generate params
 
 condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )
-add_dependencies(utils utils_genparams syscall_numbers )
+add_dependencies(utils utils_genparams syscall_numbers safe_open )
+
+target_link_libraries(utils safe_open)
 
 ##################################################
 # condorapi & tests
@@ -45,13 +47,13 @@ if(WINDOWS)
 endif()
 
 condor_static_lib( condorapi "${ApiSrcs}" )
-add_dependencies( condorapi utils )
+add_dependencies( condorapi utils safe_open)
 
 if (HAVE_LIBDL)
 	set(APILIBDEP dl)
 endif()
 
-target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP})
+target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP};safe_open)
 
 if (WANT_FULL_DEPLOYMENT)
 	install (FILES MyString.h
