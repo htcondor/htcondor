@@ -1542,21 +1542,22 @@ param_with_default_abort(const char *name, int abort)
 		// something in the Default Table.
 
 		// The candidate wasn't in the Config Table, so check the Default Table
-		val = param_default_string(next_param_name);
-		if (val != NULL) {
+		const char * def = param_default_string(next_param_name);
+		if (def != NULL) {
 			// Yay! Found something! Add the entry found in the Default 
 			// Table to the Config Table. This could be adding an empty
 			// string. If a default found, the loop stops searching.
-			insert(next_param_name, val, ConfigTab, TABLESIZE);
+			insert(next_param_name, def, ConfigTab, TABLESIZE);
 			// also add it to the lame extra-info table
 			if (extra_info != NULL) {
 				extra_info->AddInternalParam(next_param_name);
 			}
-			if (val[0] == '\0') {
+			if (def[0] == '\0') {
 				// If indeed it was empty, then just bail since it was
 				// validly found in the Default Table, but empty.
 				return NULL;
 			}
+            val = const_cast<char*>(def); // TJ: this is naughty, but expand_macro will replace it soon.
 		}
 	}
 
@@ -2563,7 +2564,7 @@ write_config_file(const char* pathname) {
 }
 
 int
-write_config_variable(param_info_t* value, void* file_desc) {
+write_config_variable(const param_info_t* value, void* file_desc) {
 	int config_fd = *((int*) file_desc);
 	char* actual_value = param(value->name);
 	if(strcmp(actual_value, value->str_val) != 0) {

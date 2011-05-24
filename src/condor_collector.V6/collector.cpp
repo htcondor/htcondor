@@ -55,6 +55,9 @@
 
 #include "ccb_server.h"
 
+using std::vector;
+using std::string;
+
 //----------------------------------------------------------------
 
 extern "C" char* CondorVersion( void );
@@ -65,9 +68,8 @@ CollectorEngine CollectorDaemon::collector( &collectorStats );
 int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName;
-Daemon* CollectorDaemon::View_Collector;
-Sock* CollectorDaemon::view_sock;
 Timeslice CollectorDaemon::view_sock_timeslice;
+vector<CollectorDaemon::vc_entry> CollectorDaemon::vc_list;
 
 ClassAd* CollectorDaemon::__query__;
 int CollectorDaemon::__numAds__;
@@ -128,9 +130,7 @@ void CollectorDaemon::Init()
 	// read in various parameters from condor_config
 	CollectorName=NULL;
 	ad=NULL;
-	View_Collector=NULL;
 	viewCollectorTypes = NULL;
-	view_sock=NULL;
 	UpdateTimerId=-1;
 	updateCollectors = NULL;
 	updateRemoteCollector = NULL;
@@ -651,11 +651,9 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 		forward_classad_to_view_collector(command,
 										  ATTR_TARGET_TYPE,
 										  &cad);
-	} else
-	if(View_Collector && ((command == INVALIDATE_STARTD_ADS) ||
-		(command == INVALIDATE_SUBMITTOR_ADS)) ) {
-		send_classad_to_sock(command, View_Collector, &cad);
-	}	
+	} else if ((command == INVALIDATE_STARTD_ADS) || (command == INVALIDATE_SUBMITTOR_ADS)) {
+		send_classad_to_sock(command, &cad);
+    }
 
 	if( sock->type() == Stream::reli_sock ) {
 			// stash this socket for future updates...
@@ -719,11 +717,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 		forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
 										  cad);
-	} else
-	if(View_Collector && ((command == UPDATE_STARTD_AD) ||
-			(command == UPDATE_SUBMITTOR_AD)) ) {
-		send_classad_to_sock(command, View_Collector, cad);
-	}	
+	} else if ((command == UPDATE_STARTD_AD) || (command == UPDATE_SUBMITTOR_AD)) {
+        send_classad_to_sock(command, cad);
+	}
 
 	if( sock->type() == Stream::reli_sock ) {
 			// stash this socket for future updates...
@@ -852,9 +848,8 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 		forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
 										  cad);
-	} else
-    if( View_Collector && UPDATE_STARTD_AD_WITH_ACK == command ) {
-		send_classad_to_sock ( command, View_Collector, cad );
+	} else if (UPDATE_STARTD_AD_WITH_ACK == command) {
+		send_classad_to_sock(command, cad);
 	}
 
 	// let daemon core clean up the socket
@@ -1247,47 +1242,52 @@ void CollectorDaemon::Config()
 
     // if we're not the View Collector, let's set something up to forward
     // all of our ads to the view collector.
-    if(View_Collector) {
-        delete View_Collector;
+    for (vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
+        delete e->collector;
+        delete e->sock;
     }
-
-    if(view_sock) {
-        delete view_sock;
-    }	
+    vc_list.clear();
 
     tmp = param("CONDOR_VIEW_HOST");
-    if(tmp) {
-       View_Collector = new DCCollector( tmp );
-       Sinful view_addr( View_Collector->addr() );
-	   Sinful my_addr( daemonCore->publicNetworkIpAddr() );
+    if (tmp) {
+        StringList cvh(tmp);
+        free(tmp);
+        cvh.rewind();
+        while (char* vhost = cvh.next()) {
+            Daemon* vhd = new DCCollector(vhost);
+            Sinful view_addr( vhd->addr() );
+            Sinful my_addr( daemonCore->publicNetworkIpAddr() );
 
-       if( my_addr.addressPointsToMe( view_addr ) )
-       {
-       	     // Do not forward to myself.
-          dprintf(D_ALWAYS, "Not forwarding to View Server %s, because that's me!\n", tmp);
-          delete View_Collector;
-          View_Collector = NULL;
-       }
-       else {
-          dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", tmp);
-       }
-       free(tmp);
-       if(View_Collector) {
-		   if( View_Collector->hasUDPCommandPort() ) {
-			   view_sock = new SafeSock();
-		   }
-		   else {
-			   view_sock = new ReliSock();
-		   }
-			   // protect against frequent time-consuming reconnect attempts
-		   view_sock_timeslice.setTimeslice(0.05);
-		   view_sock_timeslice.setMaxInterval(1200);
-       }
+            if (my_addr.addressPointsToMe(view_addr)) {
+                dprintf(D_ALWAYS, "Not forwarding to View Server %s - self referential\n", vhost);
+                delete vhd;
+                continue;
+            }
+            dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", vhost);
+
+            Sock* vhsock = NULL;
+            if (vhd->hasUDPCommandPort()) {
+                vhsock = new SafeSock();
+            } else {
+                vhsock = new ReliSock();
+            }
+
+            vc_list.push_back(vc_entry());
+            vc_list.back().name = vhost;
+            vc_list.back().collector = vhd;
+            vc_list.back().sock = vhsock;
+        }
+    }
+
+    if (!vc_list.empty()) {
+        // protect against frequent time-consuming reconnect attempts
+        view_sock_timeslice.setTimeslice(0.05);
+        view_sock_timeslice.setMaxInterval(1200);
     }
 
 	if (viewCollectorTypes) delete viewCollectorTypes;
 	viewCollectorTypes = NULL;
-	if (View_Collector) {
+	if (!vc_list.empty()) {
 		tmp = param("CONDOR_VIEW_CLASSAD_TYPES");
 		if (tmp) {
 			viewCollectorTypes = new StringList(tmp);
@@ -1478,10 +1478,10 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 										   const char *filterAttr,
 										   ClassAd *ad)
 {
-	if (!View_Collector) return;
+	if (vc_list.empty()) return;
 
 	if (!filterAttr) {
-		send_classad_to_sock(cmd, View_Collector, ad);
+		send_classad_to_sock(cmd, ad);
 		return;
 	}
 
@@ -1494,102 +1494,93 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 	if (viewCollectorTypes->contains_anycase(type.c_str())) {
 		dprintf(D_ALWAYS, "Forwarding ad: type=%s command=%s\n",
 				type.c_str(), getCommandString(cmd));
-		send_classad_to_sock(cmd, View_Collector, ad);
+		send_classad_to_sock(cmd, ad);
 	}
 }
 
-void
-CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
-{
-    // view_sock is static
-    if(!view_sock) {
-	dprintf(D_ALWAYS, "Trying to forward ad on, but no connection to View "
-		"Collector!\n");
-        return;
-    }
-    if(!theAd) {
-	dprintf(D_ALWAYS, "Trying to forward ad on, but ad is NULL!!!\n");
-        return;
-    }
-	bool raw_command = false;
-	if( !view_sock->is_connected() ) {
-			// We must have gotten disconnected.  (Or this is the 1st time.)
 
-			// In case we keep getting disconnected or fail to connect,
-			// and each connection attempt takes a long time, restrict
-			// what fraction of our time we spend trying to reconnect.
+void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
+    if (vc_list.empty()) return;
 
-		char const *desc = d->idStr() ? d->idStr() : "(null)";
-		if( view_sock_timeslice.isTimeToRun() ) {
-			dprintf(D_ALWAYS,"Connecting to CONDOR_VIEW_HOST %s\n", desc );
-
-			view_sock_timeslice.setStartTimeNow();
-			d->connectSock(view_sock,20);
-			view_sock_timeslice.setFinishTimeNow();
-
-			if( !view_sock->is_connected() ) {
-				dprintf(D_ALWAYS,"Failed to connect to CONDOR_VIEW_HOST %s "
-						" so not forwarding ad.\n",
-						desc );
-				return;
-			}
-		}
-		else {
-			dprintf(D_FULLDEBUG,"Skipping forwarding of ad to CONDOR_VIEW_HOST %s, because reconnect is delayed for %us.\n", desc, view_sock_timeslice.getTimeToNextRun());
-			return;
-		}
-
-	}
-	else if( view_sock->type() == Stream::reli_sock ) {
-			// we already did the security handshake the last time
-			// we sent a command on this socket, so just send a
-			// raw command this time to avoid reauthenticating
-		raw_command = true;
-	}
-
-    if (! d->startCommand(cmd, view_sock, 20, NULL, NULL, raw_command)) {
-        dprintf( D_ALWAYS, "Can't send command %d to View Collector\n", cmd);
-        view_sock->end_of_message();
-		view_sock->close();
+    if (!theAd) {
+        dprintf(D_ALWAYS, "Trying to forward ad on, but ad is NULL\n");
         return;
     }
 
-    if( theAd ) {
-        if( ! theAd->put( *view_sock ) ) {
-            dprintf( D_ALWAYS, "Can't forward classad to View Collector\n");
+    for (vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
+        Daemon* view_coll = e->collector;
+        Sock* view_sock = e->sock;
+        const char* view_name = e->name.c_str();
+
+        bool raw_command = false;
+        if (!view_sock->is_connected()) {
+            // We must have gotten disconnected.  (Or this is the 1st time.)
+            // In case we keep getting disconnected or fail to connect,
+            // and each connection attempt takes a long time, restrict
+            // what fraction of our time we spend trying to reconnect.
+            if (view_sock_timeslice.isTimeToRun()) {
+                dprintf(D_ALWAYS,"Connecting to CONDOR_VIEW_HOST %s\n", view_name);
+
+                view_sock_timeslice.setStartTimeNow();
+                view_coll->connectSock(view_sock,20);
+                view_sock_timeslice.setFinishTimeNow();
+
+                if (!view_sock->is_connected()) {
+                    dprintf(D_ALWAYS,"Failed to connect to CONDOR_VIEW_HOST %s so not forwarding ad.\n", view_name);
+                    continue;
+                }
+            } else {
+                dprintf(D_FULLDEBUG,"Skipping forwarding of ad to CONDOR_VIEW_HOST %s, because reconnect is delayed for %us.\n", view_name, view_sock_timeslice.getTimeToNextRun());
+                continue;
+            }
+        } else if (view_sock->type() == Stream::reli_sock) {
+            // we already did the security handshake the last time
+            // we sent a command on this socket, so just send a
+            // raw command this time to avoid reauthenticating
+            raw_command = true;
+        }
+
+        if (! view_coll->startCommand(cmd, view_sock, 20, NULL, NULL, raw_command)) {
+            dprintf( D_ALWAYS, "Can't send command %d to View Collector %s\n", cmd, view_name);
             view_sock->end_of_message();
-			view_sock->close();
-            return;
+            view_sock->close();
+            continue;
+        }
+
+        if (theAd) {
+            if (!theAd->put(*view_sock)) {
+                dprintf( D_ALWAYS, "Can't forward classad to View Collector %s\n", view_name);
+                view_sock->end_of_message();
+                view_sock->close();
+                continue;
+            }
+        }
+
+        if (cmd == UPDATE_STARTD_AD) {
+            // Forward the startd private ad as well.  This allows the
+            // target collector to act as an aggregator for multiple collectors
+            // that balance the load of authenticating connections from
+            // the rest of the pool.
+            AdNameHashKey hk;
+            ClassAd *pvt_ad;
+            ASSERT( makeStartdAdHashKey (hk, theAd, NULL) );
+            pvt_ad = collector.lookup(STARTD_PVT_AD,hk);
+            if (pvt_ad) {
+                if (!pvt_ad->put(*view_sock)) {
+                    dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector %s\n", view_name);
+                    view_sock->end_of_message();
+                    view_sock->close();
+                    continue;
+                }
+            }
+        }
+
+        if (!view_sock->end_of_message()) {
+            dprintf(D_ALWAYS, "Can't send end_of_message to View Collector %s\n", view_name);
+            view_sock->close();
+            continue;
         }
     }
-
-	if( cmd == UPDATE_STARTD_AD ) {
-			// Forward the startd private ad as well.  This allows the
-			// target collector to act as an aggregator for multiple collectors
-			// that balance the load of authenticating connections from
-			// the rest of the pool.
-
-		AdNameHashKey		hk;
-		ClassAd *pvt_ad;
-
-		ASSERT( makeStartdAdHashKey (hk, theAd, condor_sockaddr::null) );
-		pvt_ad = collector.lookup(STARTD_PVT_AD,hk);
-		if( pvt_ad ) {
-			if( ! pvt_ad->put( *view_sock ) ) {
-				dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector\n");
-				view_sock->end_of_message();
-				view_sock->close();
-				return;
-			}
-		}
-	}
-
-    if( ! view_sock->end_of_message() ) {
-        dprintf( D_ALWAYS, "Can't send end_of_message to View Collector\n");
-		view_sock->close();
-        return;
-    }
-    return;
 }
 
 //  Collector stats on universes

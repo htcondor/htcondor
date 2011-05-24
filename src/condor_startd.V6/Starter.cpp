@@ -1213,10 +1213,13 @@ Starter::killHard( void )
 
 
 bool
-Starter::killSoft( void )
+Starter::killSoft( bool state_change )
 {
 	if( ! active() ) {
 		return true;
+	}
+	if( state_change ) {
+		daemonCore->Send_Signal( s_pid, DC_SIGSTATECHANGE );
 	}
 	if( ! kill(DC_SIGSOFTKILL) ) {
 		killpg( SIGKILL );

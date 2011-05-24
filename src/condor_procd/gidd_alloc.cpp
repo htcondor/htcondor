@@ -45,7 +45,7 @@
 char err_str[ERR_STRLEN + 1];
 
 void
-err_sprintf(char* fmt, ...)
+err_sprintf(const char* fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);

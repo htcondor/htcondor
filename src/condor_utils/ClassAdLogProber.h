@@ -78,7 +78,7 @@ public:
 
 private:
 		// information about a job_queue.log file and polling state
-	char			job_queue_name[_POSIX_PATH_MAX]; //!< job queue file path
+	char			job_queue_name[PATH_MAX]; //!< job queue file path
 		// stored metadata in DB
 	long int		last_mod_time;	//!< last modification time
 	long int		last_size;	//!< last size

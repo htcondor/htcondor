@@ -428,6 +428,7 @@ class BaseShadow : public Service
 	char *uidDomain;
 	int reconnect_ceiling;
 	double reconnect_e_factor;
+	bool m_RunAsNobody;
 
 	// job parameters
 	int cluster;

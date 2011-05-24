@@ -38,7 +38,8 @@ static const char* proc_family_error_strings[] = {
 	"ERROR: Bad login tracking information",
 	"ERROR: Bad information for using GLExec",
 	"ERROR: No group ID available for tracking",
-	"ERROR: This ProcD is not able to use GLExec"
+	"ERROR: This ProcD is not able to use GLExec",
+	"ERROR: No cgroup available for tracking"
 };
 
 // helper for looking up error strings

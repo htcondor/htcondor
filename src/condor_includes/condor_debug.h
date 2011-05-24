@@ -76,6 +76,12 @@
 extern "C" {
 #endif
 
+#if _MSC_VER >= 1400 /* VC++ 2005 version */
+#define PREFAST_NORETURN __declspec(noreturn)
+#else
+#define PREFAST_NORETURN
+#endif
+
 extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int DebugShouldLockToAppend; /* Should we lock the file before each write? */
@@ -93,7 +99,7 @@ void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 void dprintf_config( const char *subsys );
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
-void _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
+void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);
 void set_debug_flags( const char *strflags );
 void _condor_fd_panic( int line, const char *file );
@@ -132,6 +138,8 @@ double dprintf_get_lock_delay(void);
  */
 int fclose_wrapper( FILE *stream, int maxRetries );
 
+int debug_open_fds(int *open_fds);
+
 /*
 **	Definition of exception macro
 */
@@ -156,7 +164,7 @@ extern int	_EXCEPT_Line;			/* Line number of the exception    */
 extern const char	*_EXCEPT_File;		/* File name of the exception      */
 extern int	_EXCEPT_Errno;			/* errno from most recent system call */
 extern int (*_EXCEPT_Cleanup)(int,int,const char*);	/* Function to call to clean up (or NULL) */
-extern void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2);
+extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2);
 
 #if defined(__cplusplus)
 }

@@ -500,7 +500,7 @@ find_masters() {
 }
 
 # To the best of its ability, finds the active condor_master's PID.
-# echos the result, or an empty string if none was found.
+# Store the result in global variable MASTER_PIDS.
 # You can call this repeatedly to check for updates.
 # If we use the pid file the first time through, always use it --
 #  if it disappears, means that the Condor went bye-bye
@@ -560,7 +560,7 @@ wait_for_exit() {
     condor_master_pids
   done
   
-  if [ "`condor_master_pids`" = "" ]; then
+  if [ "$MASTER_PIDS" = "" ]; then
     return 0
   else
     return 1
@@ -684,8 +684,8 @@ xstop() {
 # This can fail for any number of reasons, and we wouldn't
 # detect it.
 #
-# As a possible improvement, we might send SIGHUP if `condor_master_pids`
-# is non-empty, only falling back on condor_reconfig if it is.
+# As a possible improvement, we might send SIGHUP if condor_master_pids
+# finds nothing, only falling back on condor_reconfig if it is.
 #
 # Also, detect the return code from CONDOR_RECONFIG; non-zero
 # indicates aproblem. (At the moment that never happens, but
@@ -712,7 +712,8 @@ reload() {
 # 3 not running
 # 4 unknown
 status() {
-  master_pid=`condor_master_pids`
+  condor_master_pids
+  master_pid="$MASTER_PIDS"
   if [ "$master_pid" != "" ]; then
     echo "Condor is running (pid $master_pid)"
     return 0
@@ -768,7 +769,8 @@ case "$INIT_COMMAND" in
     ;;
 
   'try-restart')
-    if [ "`condor_master_pids`" = "" ]; then exit 0; fi # Not running
+    condor_master_pids
+    if [ "$MASTER_PIDS" = "" ]; then exit 0; fi # Not running
     xstop
     start
     ;;

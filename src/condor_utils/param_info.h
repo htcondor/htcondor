@@ -30,40 +30,97 @@ typedef enum param_info_t_type_e {
 	PARAM_TYPE_DOUBLE = 3
 } param_info_t_type_t;
 
+// This struct is common to all params, int and double params
+// will be followed by an int or double when default_valid is true,
+// ranged params will have min and max values following that if range_valid is true.
 typedef struct param_info_t_s {
 
-	char const *	name;
-    char const * 	aliases;
-	union {
-		int 	int_val;
-		char const * 	str_val;
-		double  dbl_val;
-	} default_val;
-	char const *   str_val;
-	int		default_valid;
-    char const * 	range;
-	union {
-		int		int_min;
-		double	dbl_min;
-	} range_min;
-	union {
-		int		int_max;
-		double	dbl_max;
-	} range_max;
-	int 	range_valid;
+	char const *  name;
+    //char const *  aliases;
+	char const *  str_val;
+    char const *  version;
+    //char const *  range;
+    char const *  friendly_name;
+    char const *  usage;
+    char const *  url;
+    char const *  tags;
+
+    //int		id;
+
+    param_info_t_type_t  	type;
+    int 	state;
     int 	customization;
     int 	reconfig;
     int 	is_macro;
-    char const * 	version;
-    int 	state;
-    char const *   friendly_name;
-    param_info_t_type_t  	type;
-    int		id;
-    char const *   usage;
-    char const *   url;
-    char const *   tags;
+	int		default_valid;
+	int 	range_valid;
 
 } param_info_t;
+
+/*
+typedef struct param_info_default_val_ranged_int_t_s {
+   int int_val;
+   int int_min;
+   int int_max;
+} param_info_default_val_ranged_int_t;
+
+typedef struct param_info_default_val_int_t_s {
+   int int_val;
+} param_info_default_val_int_t;
+
+typedef struct param_info_default_val_ranged_dbl_t_s {
+   double dbl_val;
+   double dbl_min;
+   double dbl_max;
+} param_info_default_val_ranged_dbl_t;
+
+typedef struct param_info_default_val_dbl_t_s {
+   double dbl_val;
+} param_info_default_val_dbl_t;
+*/
+
+struct param_info_str_t_s {
+   param_info_t hdr;
+   const char * str_val;
+};
+
+struct param_info_str_ranged_t_s {
+   param_info_t hdr;
+   const char * str_val;
+   const char * range;
+};
+
+struct param_info_int_t_s {
+   param_info_t hdr;
+   int int_val;
+};
+
+struct param_info_int_ranged_t_s {
+   param_info_t hdr;
+   int int_val;
+   int int_min;
+   int int_max;
+};
+
+struct param_info_dbl_t_s {
+   param_info_t hdr;
+   double dbl_val;
+};
+
+struct param_info_dbl_ranged_t_s {
+   param_info_t hdr;
+   double dbl_val;
+   double dbl_min;
+   double dbl_max;
+};
+
+typedef struct param_info_str_t_s param_info_PARAM_TYPE_STRING;
+typedef struct param_info_int_t_s param_info_PARAM_TYPE_BOOL;
+typedef struct param_info_int_t_s param_info_PARAM_TYPE_INT;
+typedef struct param_info_dbl_t_s param_info_PARAM_TYPE_DOUBLE;
+typedef struct param_info_str_t_s        param_info_PARAM_TYPE_STRING_ranged;
+typedef struct param_info_int_ranged_t_s param_info_PARAM_TYPE_INT_ranged;
+typedef struct param_info_dbl_ranged_t_s param_info_PARAM_TYPE_DOUBLE_ranged;
 
 BEGIN_C_DECLS
 
@@ -88,7 +145,7 @@ BEGIN_C_DECLS
 	int param_default_boolean(const char* param, int* valid);
 	double param_default_double(const char* param, int* valid);
 	//returns pointer to internal object (or null), do not free
-	char* param_default_string(const char* param);
+	const char* param_default_string(const char* param);
 
 	// Returns -1 if param is not of the specified type.
 	// Otherwise, returns 0 and sets min and max to the minimum and maximum
@@ -99,7 +156,7 @@ BEGIN_C_DECLS
 	// Iterate the list of parameter information.
 	// See param_info_hash_iterate below.
 	void iterate_params(int (*callPerElement)
-			(param_info_t* /*value*/, void* /*user data*/), void* user_data);
+			(const param_info_t* /*value*/, void* /*user data*/), void* user_data);
 
 END_C_DECLS
 
@@ -111,17 +168,17 @@ END_C_DECLS
 #define PARAM_INFO_TABLE_SIZE	2048
 
 struct bucket_t {
-	param_info_t* param;
+	const param_info_t* param;
 	struct bucket_t* next;
 };
 typedef struct bucket_t bucket_t;
 
 typedef bucket_t** param_info_hash_t;
 
-void param_info_hash_insert(param_info_hash_t param_info, param_info_t* p);
+void param_info_hash_insert(param_info_hash_t param_info, const param_info_t* p);
 
 //returns a pointer to an internal object, do not free the returned pointer
-param_info_t* param_info_hash_lookup(param_info_hash_t param_info, const char* param);
+const param_info_t* param_info_hash_lookup(param_info_hash_t param_info, const char* param);
 
 //must call this on a param_info_hash_t* to initialize it
 void param_info_hash_create(param_info_hash_t* param_info);
@@ -134,7 +191,7 @@ void param_info_hash_create(param_info_hash_t* param_info);
 // Continues as long as callPerElement returns 0, or until it iterates
 // everything.  user_data is passed to every call of callPerElement.
 void param_info_hash_iterate(param_info_hash_t param_info,
-		int (*callPerElement) (param_info_t* /*value*/, void* /*user_data*/),
+		int (*callPerElement) (const param_info_t* /*value*/, void* /*user_data*/),
 		void* user_data);
 
 // Dump the whole hash table.
@@ -142,7 +199,7 @@ void param_info_hash_dump(param_info_hash_t param_info);
 
 // Print out information for one given value.  Typed to be used with
 // param_info_hash_iterate.
-int param_info_hash_dump_value(param_info_t* param_value, void* unused);
+int param_info_hash_dump_value(const param_info_t* param_value, void* unused);
 
 #endif
 

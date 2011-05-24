@@ -27,9 +27,9 @@ GroupTracker::GroupTracker(ProcFamilyMonitor* pfm,
                            gid_t max_gid,
 						   bool allocating) :
 	ProcFamilyTracker(pfm),
-	m_gid_pool(min_gid, max_gid, allocating),
 	// A GroupTracker is fixated to either be allocating or associating
 	// concerning the gids and process families.
+	m_gid_pool(min_gid, max_gid, allocating),
 	m_allocating(allocating)
 {
 }

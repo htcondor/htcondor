@@ -638,7 +638,7 @@ expand_macro( const char *value,
 	while( !all_done ) {		// loop until all done expanding
 		all_done = true;
 
-		if( !self && get_special_var("$ENV",true,tmp, &left, &name, &right) ) 
+		if( !self && find_special_config_macro("$ENV",true,tmp, &left, &name, &right) ) 
 		{
 			all_done = false;
 			tvalue = getenv(name);
@@ -653,7 +653,7 @@ expand_macro( const char *value,
 			tmp = rval;
 		}
 
-		if( !self && get_special_var("$RANDOM_CHOICE",false,tmp, &left, &name, 
+		if( !self && find_special_config_macro("$RANDOM_CHOICE",false,tmp, &left, &name, 
 			&right) ) 
 		{
 			all_done = false;
@@ -679,7 +679,7 @@ expand_macro( const char *value,
 			tmp = rval;
 		}
 
-		if( !self && get_special_var("$RANDOM_INTEGER",false,tmp, &left, &name, 
+		if( !self && find_special_config_macro("$RANDOM_INTEGER",false,tmp, &left, &name, 
 			&right) ) 
 		{
 			all_done = false;
@@ -730,7 +730,7 @@ expand_macro( const char *value,
 			tmp = rval;
 		}
 
-		if( get_var(tmp, &left, &name, &right, self) ) {
+		if( find_config_macro(tmp, &left, &name, &right, self) ) {
 			all_done = false;
 			tvalue = lookup_macro( name, table, table_size );
 
@@ -754,7 +754,7 @@ expand_macro( const char *value,
 
 	// Now, deal with the special $(DOLLAR) macro.
 	if (!self)
-	while( get_var(tmp, &left, &name, &right, DOLLAR_ID) ) {
+	while( find_config_macro(tmp, &left, &name, &right, DOLLAR_ID) ) {
 		rval = (char *)MALLOC( (unsigned)(strlen(left) + 1 +
 										  strlen(right) + 1));
 		(void)sprintf( rval, "%s$%s", left, right );
@@ -858,10 +858,10 @@ hash_iter_delete(HASHITER * iter)
 
 
 /*
-** Same as get_var() below, but finds special references like $ENV().
+** Same as find_config_macro() below, but finds special references like $ENV().
 */
 int
-get_special_var( const char *prefix, bool only_id_chars, register char *value, 
+find_special_config_macro( const char *prefix, bool only_id_chars, register char *value, 
 		register char **leftp, register char **namep, register char **rightp )
 {
 	char *left, *left_end, *name, *right;
@@ -922,11 +922,9 @@ tryagain:
 	return( 1 );
 }
 
-/*
-** If self is not NULL, then only look for the parameter specified by self.
-*/
+/* Docs are in /src/condor_includes/condor_config.h */
 int
-get_var( register char *value, register char **leftp, 
+find_config_macro( register char *value, register char **leftp, 
 		 register char **namep, register char **rightp,
 		 const char *self,
 		 bool getdollardollar, int search_pos)
@@ -979,7 +977,10 @@ tryagain:
 				// the terminating pattern, this $$ match fails, try again.
 
 				char * end_marker = strstr(value, "])");
-				if( end_marker == NULL ) { goto tryagain; }
+				if( end_marker == NULL ) {
+					tvalue = value;
+					goto tryagain;
+				}
 
 				left_end = value - 2;
 				name = ++value;
@@ -1026,7 +1027,7 @@ tryagain:
 							// $(DOLLAR) has special meaning; it is
 							// set to "$" and is _not_ recursively
 							// expanded.  To implement this, we have
-							// get_var() ignore $(DOLLAR) and we then
+							// find_config_macro() ignore $(DOLLAR) and we then
 							// handle it in expand_macro().
 							// Note that $$(DOLLARDOLLAR) is handled a little
 							// differently.  Instead of skipping over it,

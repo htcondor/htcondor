@@ -182,7 +182,6 @@ MPIShadow::getResources( void )
     char *claim_id = NULL;
     MpiResource *rr;
 	int job_cluster;
-	char buf[_POSIX_PATH_MAX];
 
     int numProcs=0;    // the # of procs to come
     int numInProc=0;   // the # in a particular proc.
@@ -277,11 +276,9 @@ MPIShadow::getResources( void )
 
 			replaceNode ( job_ad, nodenum );
 			rr->setNode( nodenum );
-			sprintf( buf, "%s = %d", ATTR_NODE, nodenum );
-			job_ad->InsertOrUpdate( buf );
-			sprintf( buf, "%s = \"%s\"", ATTR_MY_ADDRESS,
-					 daemonCore->InfoCommandSinfulString() );
-			job_ad->InsertOrUpdate( buf );
+			job_ad->Assign( ATTR_NODE, nodenum );
+			job_ad->Assign( ATTR_MY_ADDRESS,
+							daemonCore->InfoCommandSinfulString()  );
 			rr->setJobAd( job_ad );
 			nodenum++;
 

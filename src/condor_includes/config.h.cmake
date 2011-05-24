@@ -25,14 +25,6 @@
 /// TODO: OS VARS, may be able to ax with some smart mods
 /// the definitions
 /// I may be able to do away with all of this.
-///* Define if on FreeBSD4 */
-//#cmakedefine CONDOR_FREEBSD4
-///* Define if on FreeBSD5 */
-//#cmakedefine CONDOR_FREEBSD5
-///* Define if on FreeBSD6 */
-//#cmakedefine CONDOR_FREEBSD6
-///* Define if on FreeBSD7 */
-//#cmakedefine CONDOR_FREEBSD7
 ///* Define if on OS X 10.3 */
 //#cmakedefine Darwin_10_3
 ///* Define if on OS X 10.4 */
@@ -41,6 +33,28 @@
 //#cmakedefine Solaris28
 ///* Define if on Solaris29 (USED)*/
 //#cmakedefine Solaris29
+//////////////////////////////////////////////////
+
+//////////////////////////////////////////////////
+// Sadly, some of these are still in use
+/* Define if on FreeBSD 4 */
+#cmakedefine CONDOR_FREEBSD4
+/* Define if on FreeBSD 5 */
+#cmakedefine CONDOR_FREEBSD5
+/* Define if on FreeBSD 6 */
+#cmakedefine CONDOR_FREEBSD6
+/* Define if on FreeBSD 7 */
+#cmakedefine CONDOR_FREEBSD7
+///* Define if on FreeBSD 8 */
+#cmakedefine CONDOR_FREEBSD8
+///* Define if on FreeBSD */
+#cmakedefine CONDOR_FREEBSD
+///* Define release of FreeBSD (i.e. 7.4, 8.2) */
+#cmakedefine FREEBSD_RELEASE
+///* Define major release of FreeBSD */
+#cmakedefine FREEBSD_MAJOR
+///* Define minor release of FreeBSD */
+#cmakedefine FREEBSD_MINOR
 //////////////////////////////////////////////////
 
 //////////////////////////////////////////////////
@@ -304,6 +318,9 @@
 ///* Do we have the zlib external */
 #cmakedefine HAVE_EXT_ZLIB
 
+///* Do we have the libcgroup external */
+#cmakedefine HAVE_EXT_LIBCGROUP
+
 /* Define to 1 if you have the 'fstat64' function. (USED)*/
 #cmakedefine HAVE_FSTAT64 1
 
@@ -312,9 +329,6 @@
 
 /* Define to 1 if you have the 'getpagesize' function. (USED)*/
 #cmakedefine HAVE_GETPAGESIZE 1
-
-/* Define to 1 if you have the 'getwd' function. (USED)*/
-#cmakedefine HAVE_GETWD 1
 
 /* Define to 1 if you have the 'gettimeofday' function. (USED)*/
 #cmakedefine HAVE_GETTIMEOFDAY 1
@@ -555,5 +569,8 @@
 
 /* Define to 1 if the system has getifaddrs().*/
 #cmakedefine HAVE_GETIFADDRS 1
+
+/* Define to 1 if the system has proportional set size (PSS).*/
+#cmakedefine HAVE_PSS 1
 
 #endif

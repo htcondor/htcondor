@@ -1193,6 +1193,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	classad::Value val;
 	double doubleVal;
 	int intVal;
+	bool boolVal;
 
 	if( target == this || target == NULL ) {
 		getTheMyRef( this );
@@ -1203,6 +1204,10 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 			}
 			if( val.IsIntegerValue( intVal ) ) {
 				value = ( float )intVal;
+				rc = 1;
+			}
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = ( float )boolVal;
 				rc = 1;
 			}
 		}
@@ -1221,6 +1226,10 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 				value = ( float )intVal;
 				rc = 1;
 			}
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = ( float )boolVal;
+				rc = 1;
+			}
 		}
 	} else if( target->Lookup( name ) ) {
 		if( target->EvaluateAttr( name, val ) ) {
@@ -1230,6 +1239,10 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 			}
 			if( val.IsIntegerValue( intVal ) ) {
 				value = ( float )intVal;
+				rc = 1;
+			}
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = ( float )boolVal;
 				rc = 1;
 			}
 		}
@@ -2171,8 +2184,19 @@ _GetReferences(classad::ExprTree *tree,
 	classad::References ext_refs_set;
 	classad::References int_refs_set;
 	classad::References::iterator set_itr;
-	GetExternalReferences(tree, ext_refs_set, true);
-	GetInternalReferences(tree, int_refs_set, true);
+
+	bool ok = true;
+	if( !GetExternalReferences(tree, ext_refs_set, true) ) {
+		ok = false;
+	}
+	if( !GetInternalReferences(tree, int_refs_set, true) ) {
+		ok = false;
+	}
+	if( !ok ) {
+		dprintf(D_FULLDEBUG,"warning: failed to get all attribute references in ClassAd (perhaps caused by circular reference).\n");
+		dPrint(D_FULLDEBUG);
+		dprintf(D_FULLDEBUG,"End of offending ad.\n");
+	}
 
 		// We first process the references and save results in
 		// final_*_refs_set.  The processing may hit duplicates that

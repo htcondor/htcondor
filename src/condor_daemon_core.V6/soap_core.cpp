@@ -52,7 +52,7 @@ int get_handler(struct soap *soap);
 struct soap *
 dc_soap_accept(Sock *socket, const struct soap *soap)
 {
-	struct soap *cursoap = soap_copy(soap);
+	struct soap *cursoap = soap_copy(const_cast<struct soap*>(soap));
 	ASSERT(cursoap);
 
 		// Mimic a gsoap soap_accept as follows:
@@ -518,6 +518,10 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
     web_root_realpath = strdup(buf);
   }
   free(web_root_dir);
+
+  if (!web_root_realpath) {
+    return 404;
+  } 
   
   char * full_name = dircat(web_root_realpath,name);
   char * full_name_realpath = NULL;

@@ -127,7 +127,7 @@ private:
 		//
 		// data
 		//	
-	char	job_queue_name[_POSIX_PATH_MAX];//!< job queue log file path
+	char	job_queue_name[PATH_MAX];//!< job queue log file path
 	long	nextOffset;						//!< next offset
 
 	ClassAdLogEntry		curCALogEntry; 	//!< current ClassAd log entry

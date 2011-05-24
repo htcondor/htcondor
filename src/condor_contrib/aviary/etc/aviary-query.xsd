@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+ * Copyright 2000-2011 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:qry="http://query.aviary.grid.redhat.com" xmlns:mrg="http://common.aviary.grid.redhat.com" targetNamespace="http://query.aviary.grid.redhat.com">
+	<xs:import namespace="http://common.aviary.grid.redhat.com" schemaLocation="aviary-common.xsd"/>
+
+	<!-- declare  message-level elements using anonymous complex types for simpler generated types -->
+	<!-- use of refs, inheritance into anonymous types, etc. eschewed for simplicity and interop -->
+	<xs:element name="GetJobSummary">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="mrg:JobID" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetJobSummaryResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="jobs" type="mrg:JobSummary" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetJobStatus">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="mrg:JobID" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetJobStatusResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="jobs" type="mrg:JobStatus" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetJobDetails">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="mrg:JobID" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetJobDetailsResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="jobs" type="mrg:JobDetails" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetJobData">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="data" type="mrg:JobData"/>
+				<xs:element name="max_bytes" type="xs:integer" default="1024"/>
+				<xs:element name="from_end" type="xs:boolean" minOccurs="0" default="false"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetJobDataResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="data" type="mrg:JobData"/>
+				<xs:element name="status" type="mrg:Status"/>
+				<xs:element name="file_name" type="xs:string" minOccurs="0"/>
+				<xs:element name="file_size" type="xs:integer" minOccurs="0"/>
+				<!-- string for file content...we probably want to keep line feeds, etc. TODO: need to revisit this-->
+				<xs:element name="content" type="xs:string" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetSubmissionSummary">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="mrg:SubmissionID" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
+			<xs:attribute name="includeJobSummaries" type="xs:boolean" default="false"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetSubmissionSummaryResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="submissions" type="mrg:SubmissionSummary" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

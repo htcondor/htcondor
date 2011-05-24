@@ -140,9 +140,9 @@ CronJobParams::Initialize( void )
 
 
 	// Parse the environment.
-	if ( !InitEnv( param_args ) ) {
+	if ( !InitEnv( param_env ) ) {
 		dprintf( D_ALWAYS,
-				 "CronJobParams: Failed to initialize arguments for job %s\n",
+				 "CronJobParams: Failed to initialize environment for job %s\n",
 				 GetName() );
 		return false;
 	}

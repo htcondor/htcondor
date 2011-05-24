@@ -105,6 +105,20 @@ if( STD_UNIVERSE )
 	# now create the glorious syscall lib from various refs.
 	# behold the birth of frankenstein.
 	condor_static_lib( condorsyscall "senders.cpp;switches.cpp;${SyscallHdrs};${SyscallSrcs};${STDU_OBJS};${CKPT_REFS};${UTIL_REFS};${IO_REFS};${STDIO_REF}")
+	if (DOES_COMPRESS_CKPT)
+		# For condorzsyscall, pull in all the same objects as
+		# condorsyscall except use ZCKPT_REFS in place of
+		# CKPT_REFS
+		src_target_ref( zckpt "^.*$" ZCKPT_REFS)
+
+		# We need to compile condor-malloc.c with special preprocessor
+		# definitions.
+		src_target_ref( zckpt "malloc-condor.c" MALLOC_CONDOR_REF)
+		set_property(SOURCE ${MALLOC_CONDOR_REF} APPEND PROPERTY COMPILE_DEFINITIONS "MORECORE=condor_morecore;HAVE_MMAP=0;malloc_getpagesize=8192")
+
+		condor_static_lib( condorzsyscall "senders.cpp;switches.cpp;${SyscallHdrs};${SyscallSrcs};${STDU_OBJS};${ZCKPT_REFS};${UTIL_REFS};${IO_REFS};${STDIO_REF}")
+	endif()
+
 	# local library which the daemons can link without glibc tainting.
 	condor_static_lib( std_local_ref "senders.cpp;receivers.cpp;${CKPT_LOCAL_REFS};${SYSCALL_LOCAL_REFS}" )
 
@@ -112,7 +126,10 @@ if( STD_UNIVERSE )
 	# part 2:
 	# set dependencies to ensure build dep order for parallel builds
 	##################################################
-	add_dependencies( condorsyscall ckpt utils cedar stdunivio stub_gen )
+	add_dependencies( condorsyscall stub_gen )
+	if (DOES_COMPRESS_CKPT)
+		add_dependencies( condorzsyscall stub_gen )
+	endif()
 	add_dependencies( switches syscall_numbers stub_gen )
 	add_dependencies( senders syscall_numbers stub_gen )
 	add_dependencies( receivers syscall_numbers stub_gen )
@@ -121,6 +138,9 @@ if( STD_UNIVERSE )
 	#################################################
 	# here we begin the install target section
 	install ( TARGETS condorsyscall DESTINATION ${C_LIB} )
+	if (DOES_COMPRESS_CKPT)
+		install ( TARGETS condorzsyscall DESTINATION ${C_LIB} )
+	endif()
 	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condor_rt0.o DESTINATION ${C_LIB} )
 	install ( FILES ${LIBGCC} DESTINATION ${C_LIB} RENAME libcomp_libgcc.a )
 	install ( FILES ${LIBGCC_EH} DESTINATION ${C_LIB} RENAME libcomp_libgcc_eh.a )

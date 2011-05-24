@@ -377,8 +377,10 @@ bool JICShadow::allJobsDone( void )
 
 	r1 = JobInfoCommunicator::allJobsDone();
 
-	publishJobExitAd( &update_ad );
-	r2 = updateShadow( &update_ad, true );
+	if (!m_did_transfer) {
+		publishJobExitAd( &update_ad );
+		r2 = updateShadow( &update_ad, true );
+	}
 
 	return r1;
 }

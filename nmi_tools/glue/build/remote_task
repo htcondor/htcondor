@@ -72,7 +72,7 @@ print "Executing task '$taskname' on host '$hostname'\n";
 if( $taskname eq $EXTERNALS_TASK ) {
     # Since we do not declare the externals task on Windows, we don't have
     # to handle invoking the Windows build tools in this step.
-    $execstr = "make externals";
+    $execstr = "make VERBOSE=1 externals";
 }
 elsif ($taskname eq $UNSTRIPPED_TASK) {
     $execstr = get_cmake_args();

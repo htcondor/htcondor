@@ -135,7 +135,7 @@ public:
 	void publishCOD( ClassAd* );
 	void publishStateTimes( ClassAd* );
 
-	void dprintf( int, const char* ... );
+	void dprintf( int, const char* ... ) CHECK_PRINTF_FORMAT(3,4);
 
 	void refuseClaimRequest();
 
@@ -241,7 +241,7 @@ public:
 	bool resumeClaim( void );
 	bool starterKill( int sig );
 	bool starterKillPg( int sig );
-	bool starterKillSoft( void );
+	bool starterKillSoft( bool state_change = false );
 	bool starterKillHard( void );
 	void starterHoldJob( char const *hold_reason,int hold_code,int hold_subcode );
 	void makeStarterArgs( ArgList &args );

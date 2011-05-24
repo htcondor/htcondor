@@ -103,6 +103,16 @@ int getProcSetInfo_test(bool verbose) {
     success = -1;
   }
 
+#if HAVE_PSS
+  temp = pi_f->rssize;
+  if(pi_s->pssize < temp - temp * SET_INFO_RSS_MARGIN||
+     pi_s->pssize > temp + temp * SET_INFO_RSS_MARGIN){
+    printf("Error:\n");
+    printf("set info pss %d does not equal family info pss %d\n", pi_s->pssize, pi_f->pssize);
+    success = -1;
+  }
+#endif
+
   temp = pi_f->imgsize;
   if(pi_s->imgsize < temp - temp * SET_INFO_IMG_MARGIN||
      pi_s->imgsize > temp + temp * SET_INFO_IMG_MARGIN){

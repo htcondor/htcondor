@@ -208,9 +208,37 @@ VanillaProc::StartJob()
 	}
 #endif
 
+#if defined(HAVE_EXT_LIBCGROUP)
+	// Determine the cgroup
+	char* cgroup_base = param("BASE_CGROUP"), *cgroup = NULL;
+	int cluster, proc, bufpos=0, buflen=0;
+	if (cgroup_base && JobAd->LookupInteger(ATTR_CLUSTER_ID, cluster) &&
+			JobAd->LookupInteger(ATTR_PROC_ID, proc)) {
+		cgroup = (char *)malloc(sizeof(char)*80);
+		ASSERT (cgroup != NULL);
+		int rc = sprintf_realloc(&cgroup,&bufpos,&buflen,"%s%c%s%d%c%d",
+			cgroup_base, DIR_DELIM_CHAR, "job_",
+			cluster, '_', proc);
+		if (rc < 0) {
+			EXCEPT("Unable to determine the cgroup to use.");
+		} else {
+			fi.cgroup = cgroup;
+			dprintf(D_FULLDEBUG, "Requesting cgroup %s for job %d.%d.\n",
+				cgroup, cluster, proc);
+		}
+	}
+#endif
+
 	// have OsProc start the job
 	//
-	return OsProc::StartJob(&fi);
+	int retval = OsProc::StartJob(&fi);
+
+#if defined(HAVE_EXT_LIBCGROUP)
+	if (cgroup != NULL)
+		free(cgroup);
+#endif
+
+	return retval;
 }
 
 
@@ -244,6 +272,21 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	ad->InsertOrUpdate( buf );
 	sprintf( buf, "%s=%lu", ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size );
 	ad->InsertOrUpdate( buf );
+
+#if HAVE_PSS
+	if( usage->total_proportional_set_size_available ) {
+		ad->Assign( ATTR_PROPORTIONAL_SET_SIZE, usage->total_proportional_set_size );
+	}
+#endif
+
+	if (usage->block_read_bytes >= 0) {
+		sprintf( buf, "%s=%lu", ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes/1024 );
+		ad->InsertOrUpdate( buf );
+	}
+	if (usage->block_write_bytes >= 0) {
+		sprintf( buf, "%s=%lu", ATTR_BLOCK_WRITE_KBYTES, usage->block_write_bytes/1024 );
+		ad->InsertOrUpdate( buf );
+	}
 
 		// Update our knowledge of how many processes the job has
 	num_pids = usage->num_procs;
@@ -342,7 +385,11 @@ VanillaProc::ShutdownGraceful()
 	//
 	OsProc::ShutdownGraceful();
 #if !defined(WIN32)
-	startEscalationTimer();
+	if (Starter->remoteStateChanged() == false)
+	{
+		startEscalationTimer();
+	}
+	Starter->resetStateChanged();
 #endif
 	return false; // shutdown is pending (same as OsProc::ShutdownGraceful()
 }

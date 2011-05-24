@@ -238,7 +238,6 @@ Stream::~Stream(){};
 	int Stream::code(struct utimbuf &){ return not_impl(); }
 	int Stream::code(struct rlimit &){ return not_impl(); }
 	int Stream::code_array(gid_t *&, int &){ return not_impl(); }
-	int Stream::code(struct utsname &){ return not_impl(); }
 #endif // !defined(WIN32)
 #if HAS_64BIT_STRUCTS
 	int Stream::code(struct stat64 &){ return not_impl(); }

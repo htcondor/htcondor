@@ -119,6 +119,7 @@ set( C_INCLUDE		include)
 set( C_MAN			man)
 set( C_SRC			src)
 set( C_SQL			sql)
+set( C_SERVICES     services)
 
 set( C_INIT			etc/init.d )
 set( C_ETC			etc/examples )

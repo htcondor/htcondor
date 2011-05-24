@@ -84,6 +84,8 @@ bucket_t** param_info;
 
 //static int num_entries;
 
+#include "param_info_init.c"
+
 void
 param_info_init() 
 {
@@ -99,22 +101,19 @@ param_info_init()
 
 	param_info_hash_create(&param_info);
 
-	// due to #793 coupled with the fact that the new param code is disabled for
-	// the 7.4 series, and enabled for the 7.5 series, we short circuit the
-	// initialization of the table for the 7.4 series to save on ram in the
-	// shadow process.
-
-	// Normally, I'd use the CondorVersionInfo object here, but since this is
-	// A C file and I don't want to have to implement a C interface to the
-	// CondorVersionInfo object, this next line is commented out in the
-	// trunk, which represents the 7.5 series at the writing of this comment.
-/*	goto after_data_insertion;*/
-
-#include "param_info_init.c"
+    // eventually, we want to do a binary lookup in g_param_info_init_table rather than
+    // creating a hashtable from int and using the hash to do the lookup.  but in the
+    // interest in having minimal changes in this patch, we'll keep the hash table for now.
+    //
+    for (int ii = 0; ii < sizeof(g_param_info_init_table)/sizeof(g_param_info_init_table[0]); ++ii)
+       {
+       param_info_hash_insert(param_info, g_param_info_init_table[ii]);
+       }
 
 /* 	after_data_insertion: ; */
 }
 
+#if 0
 void
 param_info_insert(const char* param,
 				  const char* aliases,
@@ -254,13 +253,13 @@ param_info_insert(const char* param,
 
 	param_info_hash_insert(param_info, p);
 }
+#endif
 
-
-char*
+const char*
 param_default_string(const char* param)
 {
-	param_info_t *p;
-	char* ret = NULL;
+	const param_info_t *p;
+	const char* ret = NULL;
 
 	param_info_init();
 	p = param_info_hash_lookup(param_info, param);
@@ -268,7 +267,7 @@ param_default_string(const char* param)
 	// Don't check the type here, since this is used in param and is used
 	// to look up values for all types.
 	if (p && p->default_valid) {
-		ret = const_cast<char*>(p->str_val);
+		ret = p->str_val;
 	}
 
 	return ret;
@@ -276,16 +275,17 @@ param_default_string(const char* param)
 
 int
 param_default_integer(const char* param, int* valid) {
-	param_info_t* p;
+	const param_info_t* p;
 	int ret = 0;
 
 	param_info_init();
 
 	p = param_info_hash_lookup(param_info, param);
 
-	if (p) {
-		ret = p->default_val.int_val;
-		*valid = p->default_valid && (p->type == PARAM_TYPE_INT || p->type == PARAM_TYPE_BOOL);
+	if (p && (p->type == PARAM_TYPE_INT || p->type == PARAM_TYPE_BOOL)) {
+        *valid = p->default_valid;
+        if (*valid)
+            ret = reinterpret_cast<const param_info_PARAM_TYPE_INT*>(p)->int_val;
 	} else {
 		*valid = 0;
 	}
@@ -302,16 +302,17 @@ double
 param_default_double(const char* param, int* valid) {
 
 
-	param_info_t* p;
+	const param_info_t* p;
 	double ret = 0.0;
 
 	param_info_init();
 
 	p = param_info_hash_lookup(param_info, param);
 
-	if (p) {
-		ret = p->default_val.dbl_val;
-		*valid = p->default_valid && (p->type == PARAM_TYPE_DOUBLE);
+	if (p && (p->type == PARAM_TYPE_DOUBLE)) {
+		*valid = p->default_valid;
+        if (*valid)
+		    ret = reinterpret_cast<const param_info_PARAM_TYPE_DOUBLE*>(p)->dbl_val;
 	} else {
 		*valid = 0;
 	}
@@ -322,16 +323,21 @@ param_default_double(const char* param, int* valid) {
 int
 param_range_integer(const char* param, int* min, int* max) {
 
-	param_info_t* p;
+	const param_info_t* p;
 
 	p = param_info_hash_lookup(param_info, param);
 
 	if (p) {
-		if(p->type != PARAM_TYPE_INT) {
+		if (p->type != PARAM_TYPE_INT) {
 			return -1;
 		}
-		*min = p->range_min.int_min;
-		*max = p->range_max.int_max;
+        if ( ! p->range_valid) {
+            *min = INT_MIN;
+            *max = INT_MAX;
+        } else {
+		    *min = reinterpret_cast<const param_info_PARAM_TYPE_INT_ranged*>(p)->int_min;
+		    *max = reinterpret_cast<const param_info_PARAM_TYPE_INT_ranged*>(p)->int_max;
+        }
 	} else {
 		/* If the integer isn't known about, then don't assume a range for it */
 /*		EXCEPT("integer range for param '%s' not found", param);*/
@@ -343,7 +349,7 @@ param_range_integer(const char* param, int* min, int* max) {
 int
 param_range_double(const char* param, double* min, double* max) {
 
-	param_info_t* p;
+	const param_info_t* p;
 
 	p = param_info_hash_lookup(param_info, param);
 
@@ -351,8 +357,13 @@ param_range_double(const char* param, double* min, double* max) {
 		if(p->type != PARAM_TYPE_DOUBLE) {
 			return -1;
 		}
-		*min = p->range_min.dbl_min;
-		*max = p->range_max.dbl_max;
+        if ( ! p->range_valid) {
+            *min = DBL_MIN;
+            *max = DBL_MAX;
+        } else {
+		    *min = reinterpret_cast<const param_info_PARAM_TYPE_DOUBLE_ranged*>(p)->dbl_min;
+		    *max = reinterpret_cast<const param_info_PARAM_TYPE_DOUBLE_ranged*>(p)->dbl_max;
+        }
 	} else {
 		/* If the double isn't known about, then don't assume a range for it */
 /*		EXCEPT("double range for param '%s' not found", param);*/
@@ -554,7 +565,7 @@ validate_regex(const char* pattern, const char* subject) {
 
 void
 iterate_params(int (*callPerElement)
-							(param_info_t* /*value*/, void* /*user data*/),
+							(const param_info_t* /*value*/, void* /*user data*/),
 				void* user_data) {
 	param_info_hash_iterate(param_info, callPerElement, user_data);
 }

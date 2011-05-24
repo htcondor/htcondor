@@ -33,6 +33,10 @@
 #include "group_tracker.linux.h"
 #endif
 
+#if defined(HAVE_EXT_LIBCGROUP)
+#include "cgroup_tracker.linux.h"
+#endif
+
 ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
                                      birthday_t birthday,
                                      int snapshot_interval,
@@ -54,6 +58,9 @@ ProcFamilyMonitor::ProcFamilyMonitor(pid_t pid,
 	ASSERT(m_pid_tracker != NULL);
 #if defined(LINUX)
 	m_group_tracker = NULL;
+#endif
+#if defined(HAVE_EXT_LIBCGROUP)
+	m_cgroup_tracker = NULL;
 #endif
 	m_login_tracker = new LoginTracker(this);
 	ASSERT(m_login_tracker != NULL);
@@ -117,6 +124,11 @@ ProcFamilyMonitor::~ProcFamilyMonitor()
 		delete m_group_tracker;
 	}
 #endif
+#if defined(HAVE_EXT_LIBCGROUP)
+	if (m_cgroup_tracker != NULL) {
+		delete m_cgroup_tracker;
+	}
+#endif
 	delete m_pid_tracker;
 }
 
@@ -132,6 +144,16 @@ ProcFamilyMonitor::enable_group_tracking(gid_t min_tracking_gid,
 	                                   max_tracking_gid,
 									   allocating);
 	ASSERT(m_group_tracker != NULL);
+}
+#endif
+
+#if defined(HAVE_EXT_LIBCGROUP)
+void
+ProcFamilyMonitor::enable_cgroup_tracking()
+{
+	ASSERT(m_cgroup_tracker == NULL);
+	m_cgroup_tracker = new CGroupTracker(this);
+	ASSERT(m_cgroup_tracker != NULL);
 }
 #endif
 
@@ -328,6 +350,32 @@ ProcFamilyMonitor::track_family_via_supplementary_group(pid_t pid, gid_t& gid)
 }
 #endif
 
+#if defined(HAVE_EXT_LIBCGROUP)
+proc_family_error_t
+ProcFamilyMonitor::track_family_via_cgroup(pid_t pid, const char * cgroup)
+{
+	if (m_cgroup_tracker == NULL) {
+		return PROC_FAMILY_ERROR_NO_CGROUP_ID_AVAILABLE;
+	}
+
+	Tree<ProcFamily*>* tree = lookup_family(pid, true);
+	if (tree == NULL) {
+		dprintf(D_ALWAYS,
+			"track_family_via_cgroup failure: "
+				"family with root %u not found\n",
+			pid);
+		return PROC_FAMILY_ERROR_FAMILY_NOT_FOUND;
+	}
+
+	bool ok = m_cgroup_tracker->add_mapping(tree->get_data(), cgroup);
+	if (!ok) {
+		return PROC_FAMILY_ERROR_NO_CGROUP_ID_AVAILABLE;
+	}
+
+	return PROC_FAMILY_ERROR_SUCCESS;
+}
+#endif
+
 proc_family_error_t
 ProcFamilyMonitor::unregister_subfamily(pid_t pid)
 {
@@ -363,7 +411,7 @@ ProcFamilyMonitor::unregister_subfamily(pid_t pid)
 proc_family_error_t
 ProcFamilyMonitor::use_glexec_for_family(pid_t pid, char* proxy)
 {
-	// only allow this is the glexec_kill module has been
+	// only allow this if the glexec_kill module has been
 	// initialized
 	//
 	if (!glexec_kill_check()) {
@@ -466,7 +514,14 @@ ProcFamilyMonitor::get_family_usage(pid_t pid, ProcFamilyUsage* usage)
 	usage->sys_cpu_time = 0;
 	usage->percent_cpu = 0.0;
 	usage->total_image_size = 0;
-    usage->total_resident_set_size = 0;
+	usage->total_resident_set_size = 0;
+#if HAVE_PSS
+    usage->total_proportional_set_size = 0;
+    usage->total_proportional_set_size_available = false;
+#endif
+	// We initialize these to -1 to distinguish the "cannot record" and "no I/O" cases.
+	usage->block_read_bytes = -1;
+	usage->block_write_bytes = -1;
 	usage->num_procs = 0;
 	get_family_usage(tree, usage);
 
@@ -570,6 +625,11 @@ ProcFamilyMonitor::snapshot()
 #if defined(LINUX)
 	if (m_group_tracker != NULL) {
 		m_group_tracker->find_processes(pi_list);
+	}
+#endif
+#if defined(HAVE_EXT_LIBCGROUP)
+	if (m_cgroup_tracker != NULL) {
+		m_cgroup_tracker->find_processes(pi_list);
 	}
 #endif
 	m_login_tracker->find_processes(pi_list);
@@ -863,6 +923,11 @@ ProcFamilyMonitor::unregister_subfamily(Tree<ProcFamily*>* tree)
 #if defined(LINUX)
 	if (m_group_tracker != NULL) {
 		m_group_tracker->remove_mapping(tree->get_data());
+	}
+#endif
+#if defined(HAVE_EXT_LIBCGROUP)
+	if (m_cgroup_tracker != NULL) {
+		m_cgroup_tracker->remove_mapping(tree->get_data());
 	}
 #endif
 	m_login_tracker->remove_mapping(tree->get_data());

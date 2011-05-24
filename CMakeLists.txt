@@ -93,11 +93,14 @@ include (CheckCXXSourceCompiles)
 include (AddSubdirectories)
 include (CondorPLTest)
 include (CondorExeTest)
-include (CondorConfigure)     # will initiate the configure
 include (CondorStdExeTest)
 include (SrcTargetRef)
 include (DumpLocalFlags)
+include (CondorPreExternal)
+include (CondorPostExternal)
+include (CondorConfigure)     # will initiate the configure
 include (TarGz) # Must be after include(CondorPackageConfig)
+
 
 if ( WINDOWS )
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
