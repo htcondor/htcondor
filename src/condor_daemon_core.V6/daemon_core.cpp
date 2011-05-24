@@ -9921,6 +9921,19 @@ int DaemonCore::SendAliveToParent()
 		return FALSE;
 	}
 
+		/* Don't have the CGAHP and/or DAGMAN, which are launched as the user,
+		   attempt to send keep alives to daemon. Permissions are not likely to
+		   allow user proccesses to send signals to Condor daemons. 
+		   Note that we shouldn't have to check for DAGMan here as no
+		   daemon core info should have been inherited down to DAGMan, 
+		   but it doesn't hurt to be sure here since we already need
+		   to check for the CGAHP. */
+	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP) ||
+	  	get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN))
+	{
+		return FALSE;
+	}
+
 		/* Before we possibly block trying to send this alive message to our 
 		   parent, lets see if this parent pid (ppid) exists on this system.
 		   This protects, for instance, against us acting a bogus CONDOR_INHERIT
