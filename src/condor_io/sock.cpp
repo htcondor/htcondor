@@ -103,7 +103,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	connect_state.host = NULL;
 	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
-	memset( &_who, 0, sizeof( struct sockaddr_in ) );
+	_who.clear();
 
     crypto_ = NULL;
     mdMode_ = MD_OFF;
