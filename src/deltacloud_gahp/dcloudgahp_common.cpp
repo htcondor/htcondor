@@ -11,7 +11,7 @@ void dcloudprintf_internal(const char *function, const char *fmt, ...)
 {
     va_list va_args;
 
-    if ( logfp ) {
+    if (logfp) {
         pthread_mutex_lock(&dcloudprintf_mutex);
         fprintf(logfp, "%s: ", function);
         va_start(va_args, fmt);
@@ -37,9 +37,9 @@ std::string create_failure(const char *req_id, const char *err_msg, ...)
     va_end(ap);
 
     for (i = 0; i < strlen(tmp); i++) {
-      if (tmp[i] == ' ')
-          buffer += '\\';
-      buffer += tmp[i];
+        if (tmp[i] == ' ')
+            buffer += '\\';
+        buffer += tmp[i];
     }
     free(tmp);
 
@@ -68,16 +68,17 @@ Gahp_Args::~Gahp_Args()
 void
 Gahp_Args::reset()
 {
-    if ( argv == NULL ) {
-        return;
-    }
+    int i;
 
-    for ( int i = 0; i < argc; i++ ) {
-        free( argv[i] );
+    if (argv == NULL)
+        return;
+
+    for (i = 0; i < argc; i++) {
+        free(argv[i]);
         argv[i] = NULL;
     }
 
-    free( argv );
+    free(argv);
     argv = NULL;
     argv_size = 0;
     argc = 0;
@@ -89,14 +90,13 @@ Gahp_Args::reset()
  * you would typically give add_arg() a strdup()ed string.
  */
 void
-Gahp_Args::add_arg( char *new_arg )
+Gahp_Args::add_arg(char *new_arg)
 {
-    if ( new_arg == NULL ) {
+    if (new_arg == NULL)
         return;
-    }
-    if ( argc >= argv_size ) {
+    if (argc >= argv_size) {
         argv_size += 60;
-        argv = (char **)realloc( argv, argv_size * sizeof(char *) );
+        argv = (char **)realloc(argv, argv_size * sizeof(char *));
     }
     argv[argc] = new_arg;
     argc++;
