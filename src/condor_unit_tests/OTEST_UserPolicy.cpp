@@ -295,13 +295,13 @@ bool OTEST_UserPolicy(void) {
 //	driver.register_function(test_remove_macro_firing_expression_value);
 //	driver.register_function(test_remove_macro_firing_reason);
 /*	driver.register_function(test_release_macro_analyze_policy);*/
-	driver.register_function(test_release_macro_firing_expression);
+//	driver.register_function(test_release_macro_firing_expression);
 	driver.register_function(test_release_macro_firing_expression_value);
-	driver.register_function(test_release_macro_firing_reason);
+//	driver.register_function(test_release_macro_firing_reason);
 /*	driver.register_function(test_hold_macro_analyze_policy);*/
-	driver.register_function(test_hold_macro_firing_expression);
+//	driver.register_function(test_hold_macro_firing_expression);
 	driver.register_function(test_hold_macro_firing_expression_value);
-	driver.register_function(test_hold_macro_firing_reason);
+//	driver.register_function(test_hold_macro_firing_reason);
 	
 	return driver.do_all_functions();
 }
