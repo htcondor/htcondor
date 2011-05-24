@@ -1563,7 +1563,7 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
             // the rest of the pool.
             AdNameHashKey hk;
             ClassAd *pvt_ad;
-            ASSERT( makeStartdAdHashKey (hk, theAd, NULL) );
+            ASSERT( makeStartdAdHashKey (hk, theAd, condor_sockaddr::null) );
             pvt_ad = collector.lookup(STARTD_PVT_AD,hk);
             if (pvt_ad) {
                 if (!pvt_ad->put(*view_sock)) {
