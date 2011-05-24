@@ -41,6 +41,7 @@
 
 char	*MyName;
 char 	*actionReason = NULL;
+char    *holdReasonSubCode = NULL;
 JobAction mode;
 bool All = false;
 bool ConstraintArg = false;
@@ -123,6 +124,7 @@ usage()
 		fprintf( stderr, "  -reason reason      Use the given ReleaseReason\n");
 	} else if( mode == JA_HOLD_JOBS ) {
 		fprintf( stderr, "  -reason reason      Use the given HoldReason\n");
+		fprintf( stderr, "  -subcode number     Set HoldReasonSubCode\n");
 	}
 
 	if( mode == JA_REMOVE_JOBS || mode == JA_REMOVE_X_JOBS ) {
@@ -278,6 +280,22 @@ main( int argc, char *argv[] )
 					fprintf( stderr, "Out of memory!\n" );
 					exit(1);
 				}
+			} else if (match_prefix(arg, "-subcode")) {
+				argv++;
+				if( ! *argv ) {
+					fprintf( stderr, 
+							 "%s: -subcode requires another argument\n", 
+							 MyName);
+					exit(1);
+				}		
+				char *end = NULL;
+				long code = strtol(*argv,&end,10);
+				if( !end || *end || end==*argv ) {
+					fprintf( stderr, "Invalid -subcode %s!\n", *argv );
+					exit(1);
+				}
+				holdReasonSubCode = strdup(*argv);
+				ASSERT( holdReasonSubCode );
             } else if (match_prefix(arg, "-forcex")) {
 				if( mode == JA_REMOVE_JOBS ) {
 					mode = JA_REMOVE_X_JOBS;
@@ -472,7 +490,7 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 		ad = schedd->removeJobs( constraint, actionReason, errstack );
 		break;
 	case JA_HOLD_JOBS:
-		ad = schedd->holdJobs( constraint, actionReason, errstack );
+		ad = schedd->holdJobs( constraint, actionReason, holdReasonSubCode, errstack );
 		break;
 	default:
 		EXCEPT( "impossible: unknown mode in doWorkByConstraint" );
@@ -525,7 +543,7 @@ doWorkByList( StringList* ids, CondorError *errstack )
 		rval = schedd->removeJobs( ids, actionReason, errstack );
 		break;
 	case JA_HOLD_JOBS:
-		rval = schedd->holdJobs( ids, actionReason, errstack );
+		rval = schedd->holdJobs( ids, actionReason, holdReasonSubCode, errstack );
 		break;
 	default:
 		EXCEPT( "impossible: unknown mode in doWorkByList" );

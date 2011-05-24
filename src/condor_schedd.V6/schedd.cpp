@@ -3796,6 +3796,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	bool notify = true;
 	bool needs_transaction = true;
 	action_result_type_t result_type = AR_TOTALS;
+	int hold_reason_subcode = 0;
 
 		// Setup array to hold ids of the jobs we're acting on.
 	ExtArray<PROC_ID> jobs;
@@ -3855,6 +3856,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		   and one of: ATTR_REMOVE_REASON, ATTR_RELEASE_REASON, or
 		               ATTR_HOLD_REASON
 
+		   It may optionally contain ATTR_HOLD_REASON_SUBCODE.
 		*/
 	if( ! command_ad.LookupInteger(ATTR_JOB_ACTION, action_num) ) {
 		dprintf( D_ALWAYS, 
@@ -3915,6 +3917,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		sprintf( reason, "\"%s (by user %s)\"", tmp, owner );
 		free( tmp );
 		tmp = NULL;
+	}
+
+	if( action == JA_HOLD_JOBS ) {
+		command_ad.LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_reason_subcode);
 	}
 
 	int foo;
@@ -4058,79 +4064,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			if(	job_ad->LookupInteger(ATTR_CLUSTER_ID,tmp_id.cluster) &&
 				job_ad->LookupInteger(ATTR_PROC_ID,tmp_id.proc) ) 
 			{
-				if( action == JA_VACATE_JOBS || 
-					action == JA_VACATE_FAST_JOBS ) 
-				{
-						// vacate is a special case, since we're not
-						// trying to modify the job in the queue at
-						// all, so we just need to make sure we're
-						// authorized to vacate this job, and if so,
-						// record that we found this job_id and we're
-						// done.
-					if( !OwnerCheck(m_ad, rsock->getOwner()) ) {
-						results.record( tmp_id, AR_PERMISSION_DENIED );
-						continue;
-					}
-					results.record( tmp_id, AR_SUCCESS );
-					jobs[num_matches] = tmp_id;
-					num_matches++;
-					continue;
-				}
-
-				if( action == JA_RELEASE_JOBS ) {
-					new_status = IDLE;
-					GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
-							ATTR_JOB_STATUS_ON_RELEASE, &new_status);
-				}
-				if( action == JA_REMOVE_X_JOBS ) {
-					if( SetAttribute( tmp_id.cluster, tmp_id.proc,
-									  ATTR_JOB_LEAVE_IN_QUEUE, "False" ) < 0 ) {
-						results.record( tmp_id, AR_PERMISSION_DENIED );
-						continue;
-					}
-				}
-				if( action == JA_HOLD_JOBS ) {
-					int old_status = IDLE;
-					GetAttributeInt( tmp_id.cluster, tmp_id.proc,
-									 ATTR_JOB_STATUS, &old_status );
-					if ( old_status == REMOVED &&
-						 SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-										  ATTR_JOB_STATUS_ON_RELEASE,
-										  old_status ) < 0 ) {
-						results.record( tmp_id, AR_PERMISSION_DENIED );
-						continue;
-					}
-					if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-										 ATTR_HOLD_REASON_CODE,
-										 CONDOR_HOLD_CODE_UserRequest ) < 0 ) {
-						results.record( tmp_id, AR_PERMISSION_DENIED );
-						continue;
-					}
-				}
-				if( action == JA_CLEAR_DIRTY_JOB_ATTRS ) {
-					MarkJobClean( tmp_id.cluster, tmp_id.proc );
-					results.record( tmp_id, AR_SUCCESS );
-					jobs[num_matches] = tmp_id;
-					num_matches++;
-					continue;
-				}
-				if( SetAttributeInt(tmp_id.cluster, tmp_id.proc,
-									ATTR_JOB_STATUS, new_status) < 0 ) {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
-					continue;
-				}
-				if( reason ) {
-					if( SetAttribute(tmp_id.cluster, tmp_id.proc,
-									 reason_attr_name, reason) < 0 ) {
-							// TODO: record failure in response ad?
-					}
-				}
-				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-								 ATTR_ENTERED_CURRENT_STATUS, now );
-				fixReasonAttrs( tmp_id, action );
-				results.record( tmp_id, AR_SUCCESS );
-				jobs[num_matches] = tmp_id;
-				num_matches++;
+				jobs[num_matches++] = tmp_id;
 			} 
 		}
 		free( constraint );
@@ -4149,123 +4083,153 @@ Scheduler::actOnJobs(int, Stream* s)
 			if( tmp_id.cluster < 0 || tmp_id.proc < 0 ) {
 				continue;
 			}
-
-				// Check to make sure the job's status makes sense for
-				// the command we're trying to perform
-			int status;
-			int on_release_status = IDLE;
-			int hold_reason_code = -1;
-			if( GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
-								ATTR_JOB_STATUS, &status) < 0 ) {
-				results.record( tmp_id, AR_NOT_FOUND );
-				continue;
-			}
-			switch( action ) {
-			case JA_VACATE_JOBS:
-			case JA_VACATE_FAST_JOBS:
-				if( status != RUNNING && status != TRANSFERRING_OUTPUT ) {
-					results.record( tmp_id, AR_BAD_STATUS );
-					continue;
-				}
-				break;
-			case JA_RELEASE_JOBS:
-				GetAttributeInt(tmp_id.cluster, tmp_id.proc,
-								ATTR_HOLD_REASON_CODE, &hold_reason_code);
-				if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
-					results.record( tmp_id, AR_BAD_STATUS );
-					continue;
-				}
-				GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
-							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
-				new_status = on_release_status;
-				break;
-			case JA_REMOVE_JOBS:
-				if( status == REMOVED ) {
-					results.record( tmp_id, AR_ALREADY_DONE );
-					continue;
-				}
-				break;
-			case JA_REMOVE_X_JOBS:
-				if( status == HELD ) {
-					GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
-							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
-				}
-				if( (status!=REMOVED) && 
-					(status!=HELD || on_release_status!=REMOVED) ) 
-				{
-					results.record( tmp_id, AR_BAD_STATUS );
-					continue;
-				}
-					// set LeaveJobInQueue to false...
-				if( SetAttribute( tmp_id.cluster, tmp_id.proc,
-								  ATTR_JOB_LEAVE_IN_QUEUE, "False" ) < 0 ) {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
-					continue;
-				}
-				break;
-			case JA_HOLD_JOBS:
-				if( status == HELD ) {
-					results.record( tmp_id, AR_ALREADY_DONE );
-					continue;
-				}
-				if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-									 ATTR_HOLD_REASON_CODE,
-									 CONDOR_HOLD_CODE_UserRequest ) < 0 ) {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
-					continue;
-				}
-				break;
-			case JA_CLEAR_DIRTY_JOB_ATTRS:
-				MarkJobClean( tmp_id.cluster, tmp_id.proc );
-				results.record( tmp_id, AR_SUCCESS );
-				jobs[num_matches] = tmp_id;
-				num_matches++;
-				continue;
-			default:
-				EXCEPT( "impossible: unknown action (%d) in actOnJobs() "
-						"after it was already recognized", action_num );
-			}
-
-				// Ok, we're happy, do the deed.
-			if( action == JA_VACATE_JOBS || action == JA_VACATE_FAST_JOBS ) {
-					// vacate is a special case, since we're not
-					// trying to modify the job in the queue at
-					// all, so we just need to make sure we're
-					// authorized to vacate this job, and if so,
-					// record that we found this job_id and we're
-					// done.
-				ClassAd *cad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
-				if( ! cad ) {
-					EXCEPT( "impossible: GetJobAd(%d.%d) returned false "
-							"yet GetAttributeInt(%s) returned success",
-							tmp_id.cluster, tmp_id.proc, ATTR_JOB_STATUS );
-				}
-				if( !OwnerCheck(cad, rsock->getOwner()) ) {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
-					continue;
-				}
-				results.record( tmp_id, AR_SUCCESS );
-				jobs[num_matches] = tmp_id;
-				num_matches++;
-				continue;
-			}
-			if( SetAttributeInt(tmp_id.cluster, tmp_id.proc,
-								ATTR_JOB_STATUS, new_status) < 0 ) {
-				results.record( tmp_id, AR_PERMISSION_DENIED );
-				continue;
-			}
-			if( reason ) {
-				SetAttribute( tmp_id.cluster, tmp_id.proc,
-							  reason_attr_name, reason );
-					// TODO: deal w/ failure here, too?
-			}
-			SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-							 ATTR_ENTERED_CURRENT_STATUS, now );
-			fixReasonAttrs( tmp_id, action );
-			results.record( tmp_id, AR_SUCCESS );
-			jobs[num_matches] = tmp_id;
-			num_matches++;
+			jobs[num_matches++] = tmp_id;
 		}
+	}
+
+	int num_success = 0;
+	for( i=0; i<num_matches; i++ ) {
+		tmp_id = jobs[i];
+
+			// Check to make sure the job's status makes sense for
+			// the command we're trying to perform
+		int status;
+		int on_release_status = IDLE;
+		int hold_reason_code = -1;
+		if( GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
+							ATTR_JOB_STATUS, &status) < 0 ) {
+			results.record( tmp_id, AR_NOT_FOUND );
+			jobs[i].cluster = -1;
+			continue;
+		}
+		switch( action ) {
+		case JA_VACATE_JOBS:
+		case JA_VACATE_FAST_JOBS:
+			if( status != RUNNING && status != TRANSFERRING_OUTPUT ) {
+				results.record( tmp_id, AR_BAD_STATUS );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			break;
+		case JA_RELEASE_JOBS:
+			GetAttributeInt(tmp_id.cluster, tmp_id.proc,
+							ATTR_HOLD_REASON_CODE, &hold_reason_code);
+			if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+				results.record( tmp_id, AR_BAD_STATUS );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
+							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
+			new_status = on_release_status;
+			break;
+		case JA_REMOVE_JOBS:
+			if( status == REMOVED ) {
+				results.record( tmp_id, AR_ALREADY_DONE );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			break;
+		case JA_REMOVE_X_JOBS:
+			if( status == HELD ) {
+				GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
+								ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
+			}
+			if( (status!=REMOVED) && 
+				(status!=HELD || on_release_status!=REMOVED) ) 
+			{
+				results.record( tmp_id, AR_BAD_STATUS );
+				jobs[i].cluster = -1;
+				continue;
+			}
+				// set LeaveJobInQueue to false...
+			if( SetAttribute( tmp_id.cluster, tmp_id.proc,
+							  ATTR_JOB_LEAVE_IN_QUEUE, "False" ) < 0 ) {
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			break;
+		case JA_HOLD_JOBS:
+			if( status == HELD ) {
+				results.record( tmp_id, AR_ALREADY_DONE );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			if ( status == REMOVED &&
+				 SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+								  ATTR_JOB_STATUS_ON_RELEASE,
+								  status ) < 0 )
+			{
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+								 ATTR_HOLD_REASON_CODE,
+								 CONDOR_HOLD_CODE_UserRequest ) < 0 ) {
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+								 ATTR_HOLD_REASON_SUBCODE,
+								 hold_reason_subcode ) < 0 )
+			{
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			break;
+		case JA_CLEAR_DIRTY_JOB_ATTRS:
+			MarkJobClean( tmp_id.cluster, tmp_id.proc );
+			results.record( tmp_id, AR_SUCCESS );
+			num_success++;
+			continue;
+		default:
+			EXCEPT( "impossible: unknown action (%d) in actOnJobs() "
+					"after it was already recognized", action_num );
+		}
+
+			// Ok, we're happy, do the deed.
+		if( action == JA_VACATE_JOBS || action == JA_VACATE_FAST_JOBS ) {
+				// vacate is a special case, since we're not
+				// trying to modify the job in the queue at
+				// all, so we just need to make sure we're
+				// authorized to vacate this job, and if so,
+				// record that we found this job_id and we're
+				// done.
+			ClassAd *cad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
+			if( ! cad ) {
+				EXCEPT( "impossible: GetJobAd(%d.%d) returned false "
+						"yet GetAttributeInt(%s) returned success",
+						tmp_id.cluster, tmp_id.proc, ATTR_JOB_STATUS );
+			}
+			if( !OwnerCheck(cad, rsock->getOwner()) ) {
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			results.record( tmp_id, AR_SUCCESS );
+			num_success++;
+			continue;
+		}
+		if( SetAttributeInt(tmp_id.cluster, tmp_id.proc,
+							ATTR_JOB_STATUS, new_status) < 0 ) {
+			results.record( tmp_id, AR_PERMISSION_DENIED );
+			jobs[i].cluster = -1;
+			continue;
+		}
+		if( reason ) {
+			SetAttribute( tmp_id.cluster, tmp_id.proc,
+						  reason_attr_name, reason );
+				// TODO: deal w/ failure here, too?
+		}
+		SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+						 ATTR_ENTERED_CURRENT_STATUS, now );
+		fixReasonAttrs( tmp_id, action );
+		results.record( tmp_id, AR_SUCCESS );
+		num_success++;
 	}
 
 	if( reason ) { free( reason ); }
@@ -4279,7 +4243,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		// Set a single attribute which says if the action succeeded
 		// on at least one job or if it was a total failure
-	response_ad->Assign( ATTR_ACTION_RESULT, num_matches ? 1:0 );
+	response_ad->Assign( ATTR_ACTION_RESULT, num_success ? 1:0 );
 
 		// Return the number of jobs in the queue to the caller can
 		// determine appropriate actions
@@ -4303,7 +4267,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		return FALSE;
 	}
 
-	if( num_matches == 0 ) {
+	if( num_success == 0 ) {
 			// We didn't do anything, so we want to bail out now...
 		dprintf( D_FULLDEBUG, 
 				 "actOnJobs: didn't do any work, aborting\n" );
@@ -4352,6 +4316,9 @@ Scheduler::actOnJobs(int, Stream* s)
 		// the queue, we can do the final actions for these jobs,
 		// like killing shadows if needed...
 	for( i=0; i<num_matches; i++ ) {
+		if( jobs[i].cluster == -1 ) {
+			continue;
+		}
 		enqueueActOnJobMyself( jobs[i], action, notify );
 	}
 
