@@ -189,6 +189,38 @@ static std::string create_instance_output(char * reqid,
     return output_string;
 }
 
+static int assign_parameter(struct deltacloud_create_parameter **params,
+                            int *params_size, const char *name,
+                            const char *value)
+{
+    struct deltacloud_create_parameter *tmpparams;
+
+    if (STRCASEEQ(value, NULLSTRING))
+        return 0;
+
+    /* use a temporary variable here so that if we fail, we don't lose the
+     * pointer to params
+     */
+    tmpparams = (struct deltacloud_create_parameter *)realloc(*params,
+                                                              sizeof(struct deltacloud_create_parameter) * (*params_size + 1));
+    if (tmpparams == NULL)
+        return -1;
+
+    *params = tmpparams;
+
+    /* if prepare_parameter failed, then we have allocated additional memory
+     * for the array, but placed nothing inside the structure.  As long as we
+     * don't update params_size, it is safe to return here as the cleanup
+     * code will just free the other members, plus the array
+     */
+    if (deltacloud_prepare_parameter(*params + *params_size, name, value) < 0)
+        return -1;
+
+    (*params_size)++;
+
+    return 0;
+}
+
 /*
  * DELTACLOUD_VM_SUBMIT <reqid> <url> <user> <password_file> <image_id> <name> <realm_id> <hwp_id> <hwp_memory> <hwp_cpu> <hwp_storage> <keyname> <userdata>
  *  where all arguments are required.  <reqid>, <url>, <user>, <password_file>,
@@ -204,6 +236,10 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     struct deltacloud_api api;
     struct deltacloud_instance inst;
     bool ret = FALSE;
+    struct deltacloud_create_parameter *params = NULL;
+    int params_size = 0;
+    char *instid = NULL;
+    int i;
 
     if (!verify_number_args(14, argc)) {
         output_string = create_failure("0", "Wrong_Argument_Number");
@@ -244,23 +280,6 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
 
     if (STRCASEEQ(password_file, NULLSTRING))
         password_file = NULL;
-    if (STRCASEEQ(name, NULLSTRING))
-        name = NULL;
-    if (STRCASEEQ(realm_id, NULLSTRING))
-        realm_id = NULL;
-    if (STRCASEEQ(hwp_id, NULLSTRING))
-        hwp_id = NULL;
-    if (STRCASEEQ(hwp_memory, NULLSTRING))
-        hwp_memory = NULL;
-    if (STRCASEEQ(hwp_cpu, NULLSTRING))
-        hwp_cpu = NULL;
-    if (STRCASEEQ(hwp_storage, NULLSTRING))
-        hwp_storage = NULL;
-    if (STRCASEEQ(keyname, NULLSTRING))
-        keyname = NULL;
-    if (STRCASEEQ(userdata, NULLSTRING))
-        userdata = NULL;
-
     password = read_password_file(password_file);
     if (!password) {
         output_string = create_failure(reqid, "Invalid_Password_File");
@@ -273,9 +292,27 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
         goto cleanup_password;
     }
 
-    if (deltacloud_create_instance(&api, image_id, name, realm_id, hwp_id,
-                                   hwp_memory, hwp_cpu, hwp_storage, keyname,
-                                   userdata, &inst) < 0) {
+    if (assign_parameter(&params, &params_size, "name", name) < 0 ||
+        assign_parameter(&params, &params_size, "realm_id", realm_id) < 0 ||
+        assign_parameter(&params, &params_size, "keyname", keyname) < 0 ||
+        assign_parameter(&params, &params_size, "hwp_id", hwp_id) < 0 ||
+        assign_parameter(&params, &params_size, "hwp_memory", hwp_memory) < 0 ||
+        assign_parameter(&params, &params_size, "hwp_cpu", hwp_cpu) < 0 ||
+        assign_parameter(&params, &params_size, "hwp_storage", hwp_storage) < 0 ||
+        assign_parameter(&params, &params_size, "user_data", userdata) < 0) {
+        output_string = create_failure(reqid,
+                                       "Create_Instance_Failure: Failed to allocate parameter memory");
+        goto cleanup_library;
+    }
+
+    if (deltacloud_create_instance(&api, image_id, params, params_size,
+                                   &instid) < 0) {
+        output_string = create_failure(reqid, "Create_Instance_Failure: %s",
+                                       deltacloud_get_last_error_string());
+        goto cleanup_library;
+    }
+
+    if (deltacloud_get_instance_by_id(&api, instid, &inst) < 0) {
         output_string = create_failure(reqid, "Create_Instance_Failure: %s",
                                        deltacloud_get_last_error_string());
         goto cleanup_library;
@@ -288,6 +325,10 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     ret = TRUE;
 
 cleanup_library:
+    free(instid);
+    for (i = 0; i < params_size; i++)
+        deltacloud_free_parameter_value(&params[i]);
+    free(params);
     deltacloud_free(&api);
 
 cleanup_password:
