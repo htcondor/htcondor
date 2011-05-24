@@ -5226,7 +5226,7 @@ SetGridParams()
 
 	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
 		// check private key file can be opened
-		if ( !DisableFileChecks ) {
+		if ( !DisableFileChecks && !strstr( tmp, "$$" ) ) {
 			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
