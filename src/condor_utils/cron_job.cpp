@@ -347,19 +347,27 @@ CronJob::KillHandler( void )
 int
 CronJob::Reaper( int exitPid, int exitStatus )
 {
-	if( WIFSIGNALED(exitStatus) ) {
-		dprintf( D_FULLDEBUG, "CronJob: '%s' (pid %d) exit_signal=%d\n",
+	// If the exitPid==-1, that means that Create_Process failed, most
+	// likely because the executable does not exist, and the Reaper is being
+	// invoked not from DaemonCore but from another method within the
+	// CronJob class which saw Create_Process fail.
+	if ( exitPid != -1 ) {
+		if( WIFSIGNALED(exitStatus) ) {
+			dprintf( D_FULLDEBUG, "CronJob: '%s' (pid %d) exit_signal=%d\n",
 				 GetName(), exitPid, WTERMSIG(exitStatus) );
-	} else {
-		dprintf( D_FULLDEBUG, "CronJob: '%s' (pid %d) exit_status=%d\n",
+		} else {
+			dprintf( D_FULLDEBUG, "CronJob: '%s' (pid %d) exit_status=%d\n",
 				 GetName(), exitPid, WEXITSTATUS(exitStatus) );
+		}
+
+		// What if the PIDs don't match?!
+		if ( exitPid != m_pid ) {
+			dprintf( D_ALWAYS, 
+				"CronJob: WARNING: Child PID %d != Exit PID %d\n",
+				m_pid, exitPid );
+		}
 	}
 
-	// What if the PIDs don't match?!
-	if ( exitPid != m_pid ) {
-		dprintf( D_ALWAYS, "CronJob: WARNING: Child PID %d != Exit PID %d\n",
-				 m_pid, exitPid );
-	}
 	m_pid = 0;
 	m_last_exit_time = time(NULL);
 	m_run_load = 0.0;
@@ -545,7 +553,9 @@ CronJob::StartJobProcess( void )
 	// Did it work?
 	if ( m_pid <= 0 ) {
 		dprintf( D_ALWAYS, "CronJob: Error running job '%s'\n", GetName() );
-		CleanAll( );
+		// call reaper manually, since the reaper does all the cleanup
+		// and startd state transitioning
+		Reaper(-1,-1);
 		return -1;
 	}
 
