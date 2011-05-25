@@ -962,6 +962,25 @@ void round_for_precision(double& x) {
 }
 
 
+double starvation_ratio(double usage, double allocated) {
+    return (allocated > 0) ? (usage / allocated) : DBL_MAX;
+}
+
+struct starvation_order {
+    bool operator()(const GroupEntry* a, const GroupEntry* b) const {
+        // "starvation order" is ordering by the ratio usage/allocated, so that
+        // most-starved groups are allowed to negotiate first, to minimize group
+        // starvation over time.
+        double sa = starvation_ratio(a->usage, a->allocated);
+        double sb = starvation_ratio(b->usage, b->allocated);
+        if (sa < sb) return true;
+        if (sa > sb) return false;
+        // If ratios are the same, sub-order by group priority.
+        // Most likely to be relevant when comparing groups with zero usage.
+        return (a->priority < b->priority);
+    }
+};
+
 
 void Matchmaker::
 negotiationTime ()
@@ -1121,6 +1140,7 @@ negotiationTime ()
             group->submitterAds->Close();
 
             group->usage = accountant.GetWeightedResourcesUsed(group->name.c_str());
+            group->priority = accountant.GetPriority(group->name.c_str());
         }
 
 
@@ -1246,6 +1266,10 @@ negotiationTime ()
                 ninc = param_double("HFS_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
             }
 
+            // present accounting groups for negotiation in "starvation order":
+            vector<GroupEntry*> negotiating_groups(hgq_groups);
+            std::sort(negotiating_groups.begin(), negotiating_groups.end(), starvation_order());
+
             // This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
             // for same subset of available slots.  It gives greatest weight to groups with the greatest difference 
             // between allocated and their current usage
@@ -1257,8 +1281,11 @@ negotiationTime ()
                 dprintf(D_FULLDEBUG, "group quotas: entering RR iteration n= %g\n", n);
 
                 // Do the negotiations
-                for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                for (vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
                     GroupEntry* group = *j;
+
+                    dprintf(D_FULLDEBUG, "Group %s - starvation= %g (%g/%g)  prio= %g\n", 
+                            group->name.c_str(), starvation_ratio(group->usage, group->allocated), group->usage, group->allocated, group->priority);
 
                     if (group->allocated <= 0) {
                         dprintf(D_ALWAYS, "Group %s - skipping, zero slots allocated\n", group->name.c_str());
