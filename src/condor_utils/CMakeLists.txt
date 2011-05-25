@@ -33,27 +33,25 @@ add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c
 add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c)
 ############ end generate params
 
-condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )
-add_dependencies(utils utils_genparams syscall_numbers safe_open )
-
-target_link_libraries(utils safe_open)
+condor_static_lib( utils "${HeaderFiles};${SourceFiles};${SAFE_OPEN_SRC}" )
+add_dependencies(utils utils_genparams syscall_numbers )
 
 ##################################################
 # condorapi & tests
-condor_selective_glob("my_username.*;condor_event.*;file_sql.*;misc_utils.*;user_log_header.*;write_user_log*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf*;sig_install.*;basename.*;mkargv.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;setsyscalls.*;passwd_cache.*;uids.c*;chomp.*;subsystem_info.*;my_subsystem.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;seteuid.*;setegid.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;classad_oldnew.*;condor_snutils.*;stringSpace.*;string_list.*;MyString.*;condor_xml_classads.*;directory*" ApiSrcs)
+condor_selective_glob("my_username.*;condor_event.*;file_sql.*;misc_utils.*;user_log_header.*;write_user_log*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf*;sig_install.*;basename.*;mkargv.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;setsyscalls.*;passwd_cache.*;uids.c*;chomp.*;subsystem_info.*;my_subsystem.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;seteuid.*;setegid.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;classad_oldnew.*;condor_snutils.*;stringSpace.*;string_list.*;MyString.*;condor_xml_classads.*;directory*;${SAFE_OPEN_SRC}" ApiSrcs)
 if(WINDOWS)
     condor_selective_glob("directory.WINDOWS.*;directory_util.*;dynuser.WINDOWS.*;filename_tools.*;lock_file.WINDOWS.*;lsa_mgr.*;my_dynuser.*;ntsysinfo.WINDOWS.*;posix.WINDOWS.*;stat.WINDOWS.*;store_cred.*;token_cache.WINDOWS.*;truncate.WINDOWS.*" ApiSrcs)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
 endif()
 
 condor_static_lib( condorapi "${ApiSrcs}" )
-add_dependencies( condorapi utils safe_open)
+add_dependencies( condorapi utils )
 
 if (HAVE_LIBDL)
 	set(APILIBDEP dl)
 endif()
 
-target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP};safe_open)
+target_link_libraries(condorapi ${CLASSADS_FOUND};${APILIBDEP})
 
 if (WANT_FULL_DEPLOYMENT)
 	install (FILES MyString.h
