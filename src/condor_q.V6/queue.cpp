@@ -707,7 +707,8 @@ int main (int argc, char **argv)
 #ifdef HAVE_EXT_POSTGRESQL
 			case DIRECT_RDBMS:
 				if (useDB) {
-					if (sqfp(quillName, dbIpAddr, dbName, queryPassword, TRUE ))
+					if ( (retval = sqfp(quillName, dbIpAddr, dbName, 
+										queryPassword, TRUE) ) )
 					{
 						/* processed correctly, so do the next ad */
 						continue;
@@ -753,7 +754,8 @@ int main (int argc, char **argv)
 						didn't have a quill ad by that name. */
 
 					if((result2 == Q_OK) && quillAddr &&
-			   			sqfp(quillAddr, quillName, quillMachine, NULL, FALSE))
+			   			(retval = sqfp(quillAddr, quillName, quillMachine, 
+									   NULL, FALSE) ) )
 					{
 						/* processed correctly, so do the next ad */
 						continue;
