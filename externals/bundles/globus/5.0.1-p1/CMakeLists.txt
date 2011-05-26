@@ -120,7 +120,7 @@ if (WITH_GLOBUS)
 							LT_MULTI_MODULE=1 && export LT_MULTI_MODULE)
 		endif()
 
-		set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF} ${KRB5_REF})
+		set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF})
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
 		ExternalProject_Add(globus
