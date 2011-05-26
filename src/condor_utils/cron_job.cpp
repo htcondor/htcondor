@@ -548,6 +548,8 @@ CronJob::StartJobProcess( void )
 	if ( m_pid <= 0 ) {
 		dprintf( D_ALWAYS, "CronJob: Error running job '%s'\n", GetName() );
 		CleanAll();
+		SetState( CRON_IDLE );
+
 		// Finally, notify my manager to transition the startd
 		// from benchmarking back to idle activity if there are no
 		// more benchmarks to be scheduled.
