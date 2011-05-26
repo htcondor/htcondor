@@ -121,7 +121,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_spliceScope		  (spliceScope),
 	_recoveryMaxfakeID	  (0),
 	_maxJobHolds		  (0),
-	_reject				  (false)
+	_reject			  (false),
+	_postRun(true)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -1541,11 +1542,20 @@ Dag::PreScriptReaper( const char* nodeName, int status )
         job->_Status = Job::STATUS_ERROR;
 		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
-
 		if( job->GetRetries() < job->GetRetryMax() ) {
 			RestartNode( job, false );
 		} else {
-			_numNodesFailed++;
+			if( _postRun && job->_scriptPost ) {
+				// a POST script is specified for the job, so run it
+				// and we are told to ignore the result of the PRE script
+				job->_Status = Job::STATUS_POSTRUN;
+				_postRunNodeCount++;
+				job->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
+				(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+						_nfsLogIsError, _recovery, _defaultNodeLog );
+				_postScriptQ->Run( job->_scriptPost );
+			} else {
+				++_numNodesFailed;
 			if( job->GetRetryMax() > 0 ) {
 				// add # of retries to error_text
 				char *tmp = strnewp( job->error_text );
@@ -1554,6 +1564,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 						 job->GetRetries() );
 				delete [] tmp;   
 			}
+		}
 		}
 	} else {
 		debug_printf( DEBUG_NORMAL, "PRE Script of Node %s completed "
