@@ -30,7 +30,7 @@ extern int exprHash( const ExprTree* const&, int );
 
 static const int MAX_CLASSAD_RECURSION = 1000;
 
-void ExprTree::debug_print(const char *message) {
+void *ExprTree::debug_print(const char *message) {
 /* need to call the callback here instead
 	FILE *file = fopen("debug.out", "a");
 	if(file) {
@@ -38,6 +38,7 @@ void ExprTree::debug_print(const char *message) {
 		fclose(file);
 	}
 */
+	return NULL;
 }
 
 void ExprTree::debug_format_value(Value &value) const {
