@@ -47,6 +47,7 @@ class EvalState {
 		const ClassAd *curAd;
 
 		bool		flattenAndInline;	// NAC
+		bool		debug;
 
 		// Cache_to_free are the things in the cache that must be
 		// freed when this gets deleted. The problem is that we put
@@ -66,6 +67,7 @@ class EvalState {
 class ExprTree 
 {
   	public:
+		static void *debug_print(const char *message);
 			/// The kinds of nodes in expression trees
 		enum NodeKind {
 	    	/// Literal node (string, integer, real, boolean, undefined, error)
@@ -136,6 +138,7 @@ class ExprTree
         virtual bool SameAs(const ExprTree *tree) const = 0;
 
   	protected:
+		void debug_format_value(Value &value) const;
 		ExprTree ();
 
         /** Fill in this ExprTree with the contents of the other ExprTree.
