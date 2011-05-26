@@ -193,8 +193,8 @@ class Dagman {
 		// The maximum number of times a node job can go on hold before
 		// we declare it a failure and remove it; 0 means no limit.
 	int _maxJobHolds;
-
 	static strict_level_t _strict;
+	bool _runPost;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H
