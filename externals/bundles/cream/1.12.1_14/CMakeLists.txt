@@ -32,6 +32,8 @@ if ( WITH_CREAM )
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${CREAMSOAP_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CREAMSOAP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${CREAMSOAP_VER}.tar.gz
+				    #--Patch step ----------
+				    PATCH_COMMAND patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_cast.patch
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND cd gsoap-2.7 && ./configure --prefix=${CREAM_INSTALL_LOC}
 				    #--Build Step ----------
