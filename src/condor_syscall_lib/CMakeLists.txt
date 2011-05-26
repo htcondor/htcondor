@@ -103,7 +103,7 @@ if( STD_UNIVERSE )
 	##################################################
 	# now create the glorious syscall lib from various refs.
 	# behold the birth of frankenstein.
-	condor_static_lib( condorsyscall "senders.cpp;switches.cpp;${SyscallHdrs};${SyscallSrcs};${STDU_OBJS};${CKPT_REFS};${UTIL_REFS};${IO_REFS};${STDIO_REF}")
+	condor_static_lib( condorsyscall "senders.cpp;switches.cpp;${SyscallHdrs};${SyscallSrcs};${STDU_OBJS};${CKPT_REFS};${UTIL_REFS};${IO_REFS};${STDIO_REF};${SAFE_OPEN_SRC}")
 	if (DOES_COMPRESS_CKPT)
 		# For condorzsyscall, pull in all the same objects as
 		# condorsyscall except use ZCKPT_REFS in place of
@@ -115,7 +115,7 @@ if( STD_UNIVERSE )
 		src_target_ref( zckpt "malloc-condor.c" MALLOC_CONDOR_REF)
 		set_property(SOURCE ${MALLOC_CONDOR_REF} APPEND PROPERTY COMPILE_DEFINITIONS "MORECORE=condor_morecore;HAVE_MMAP=0;malloc_getpagesize=8192")
 
-		condor_static_lib( condorzsyscall "senders.cpp;switches.cpp;${SyscallHdrs};${SyscallSrcs};${STDU_OBJS};${ZCKPT_REFS};${UTIL_REFS};${IO_REFS};${STDIO_REF}")
+		condor_static_lib( condorzsyscall "senders.cpp;switches.cpp;${SyscallHdrs};${SyscallSrcs};${STDU_OBJS};${ZCKPT_REFS};${UTIL_REFS};${IO_REFS};${STDIO_REF};${SAFE_OPEN_SRC}")
 	endif()
 
 	# local library which the daemons can link without glibc tainting.

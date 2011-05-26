@@ -1726,7 +1726,7 @@ safe_exec_as_user(uid_t uid,
 
     return 0;
 }
-
+#ifdef OLD_SAFE
 /***********************************************************************
  *
  * Functions to check the safety of the directory or path
@@ -2945,7 +2945,7 @@ safe_is_path_trusted_r(const char *pathname, id_range_list *trusted_uids,
 
     return status;
 }
-
+#endif
 /***********************************************************************
  *
  * Functions to walk a directory tree

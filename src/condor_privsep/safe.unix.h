@@ -27,6 +27,7 @@
 #include <limits.h>
 
 #include "config.h"
+#include "safe_is_path_trusted.h"
 
 #if !HAVE_ID_T
 typedef uid_t id_t;
@@ -126,7 +127,7 @@ int safe_exec_as_user(uid_t uid,
 enum { PATH_UNTRUSTED =
         0, PATH_TRUSTED_STICKY_DIR, PATH_TRUSTED, PATH_TRUSTED_CONFIDENTIAL
 };
-
+/*
 int safe_is_path_trusted(const char *pathname,
                          id_range_list *trusted_uids,
                          id_range_list *trusted_gids);
@@ -144,5 +145,5 @@ int safe_dir_walk(const char *path, safe_dir_walk_func func, void *data,
                   int num_fds);
 
 int safe_open_no_follow(const char* path, int* fd_ptr, struct stat* st);
-
+*/
 #endif
