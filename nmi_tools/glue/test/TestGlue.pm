@@ -30,6 +30,7 @@ sub print_debug_header {
     my $cwd = Cwd::getcwd();
     
     print "----------- Debug Header ----------------\n";
+    print "Current time: " . scalar(localtime) . "\n";
     print "Current host: " . `/bin/hostname -f`;
     print "CWD: $cwd\n";
     print "Perl path: $^X\n";
