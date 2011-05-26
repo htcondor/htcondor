@@ -65,7 +65,11 @@ if (WITH_KRB5)
 							  ${CMAKE_CURRENT_SOURCE_DIR}/manifest.bat )
 
 		else()
-			set (KRB5_PATCH  cp ${CMAKE_CURRENT_SOURCE_DIR}/src.appl.telnet.configure src/appl/telnet/configure )
+			set (KRB5_PATCH  
+				cp ${CMAKE_CURRENT_SOURCE_DIR}/src.appl.telnet.configure src/appl/telnet/configure ${CMD_TERM} 
+				patch -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/eai_nodata.patch ${CMD_TERM}
+				patch -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/getline.patch )
+
 			set (KRB5_CONFIGURE src/configure --prefix=${KRB5_INSTALL_LOC} --without-tcl --enable-static --sysconfdir=/etc --disable-thread-support )
 			set (KRB5_MAKE make )
 			set (KRB5_INSTALL make install )
