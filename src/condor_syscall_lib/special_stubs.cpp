@@ -34,6 +34,7 @@
 #include "condor_netdb.h"
 #include "simplelist.h"
 #include "condor_sockaddr.h"
+#include <algorithm>
 
 extern	StdUnivSock* syscall_sock;
 
