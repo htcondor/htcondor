@@ -859,10 +859,14 @@ MachAttributes::start_benchmarks( Resource* rip, int &count )
 	// If StartBenchmarks() will return to idle activity upon failure
 	// to launch benchmarks, or upon completion of benchmarks 
 	// (in the reaper).
-	if ( count ) {
-		rip->change_state( benchmarking_act );
-	}
+	rip->change_state( benchmarking_act );
 	bench_job_mgr->StartBenchmarks( rip, count );
+	// However, if StartBenchmarks set count to zero, that means
+	// there are no benchmarks configured to run now. So set the activity
+	// back to idle.
+	if ( count == 0 ) {
+		rip->change_state( idle_act );
+	}
 
 }
 
