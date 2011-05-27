@@ -51,6 +51,9 @@
 #include "qmgmt.h"
 #include "schedd_negotiate.h"
 
+#include <vector>
+using std::vector;
+
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 extern char* Name;
@@ -3072,8 +3075,6 @@ void
 DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 {
 	AllocationNode* alloc;
-	MRecArray* matches;
-	int i, n, m;
 
 	if( ! srec ) {
 		EXCEPT( "DedicatedScheduler::shutdownMpiJob: srec is NULL!" );
@@ -3088,16 +3089,20 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 				srec->job_id.cluster ); 
 	}
 	alloc->status = A_DYING;
-	for( i=0; i<alloc->num_procs; i++ ) {
-		matches = (*alloc->matches)[i];
-		n = matches->getlast();
-		for( m=0 ; m <= n ; m++ ) {
-			if (kill) {
-				dprintf( D_ALWAYS, "Dedicated job abnormally ended, releasing claim\n");
-				releaseClaim( (*matches)[m], true );
-			} else {
-				deactivateClaim( (*matches)[m] );
-			}
+	for (int i=0; i<alloc->num_procs; i++ ) {
+        MRecArray* matches = (*alloc->matches)[i];
+        int n = matches->getlast();
+        vector<match_rec*> delmr;
+        // Save match_rec pointers into a vector, because deactivation of claims 
+        // alters the MRecArray object (*matches) destructively:
+        for (int j = 0;  j <= n;  ++j) delmr.push_back((*matches)[j]);
+        for (vector<match_rec*>::iterator mr(delmr.begin());  mr != delmr.end();  ++mr) {
+            if (kill) {
+                dprintf( D_ALWAYS, "Dedicated job abnormally ended, releasing claim\n");
+                releaseClaim(*mr, true );
+            } else {
+                deactivateClaim(*mr);
+            }
 		}
 	}
 }
