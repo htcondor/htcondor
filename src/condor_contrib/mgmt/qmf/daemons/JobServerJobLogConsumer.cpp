@@ -84,14 +84,14 @@ JobServerJobLogConsumer::NewClassAd(const char *_key,
 									const char */*target*/)
 {
 
-	const char* key_dup = strdup(_key);
-
 	dprintf(D_FULLDEBUG, "JobServerJobLogConsumer::NewClassAd processing _key='%s'\n", _key);
 
 	// ignore the marker
 	if (strcmp(_key,"0.0") == 0) {
 	  return true;
 	}
+
+	const char* key_dup = strdup(_key);
 
 	if ('0' == _key[0]) {
 		// Cluster ad
