@@ -35,6 +35,7 @@ sub print_debug_header {
     print "CWD: $cwd\n";
     print "Perl path: $^X\n";
     print "Perl version: $]\n";
+    print "Uptime: " . `uptime`;
     dir_listing(".");
     print "---------- End Debug Header --------------\n";
 }
