@@ -88,7 +88,7 @@ if(!-f $extractdone) {
     my $pattern = "public/condor-*-stripped.tar.gz";
     print "Extracting '$pattern', condor_examples, and condor_tests from results.tar.gz\n";
 
-    my $ret = system("tar -xvzf $results $pattern public/condor_tests public/condor_examples");
+    my $ret = system("tar -xvzf $results '$pattern' public/condor_tests public/condor_examples");
 
     if($ret) {
     	die "Could not extract tarball or test dir from $results: $!\n";
