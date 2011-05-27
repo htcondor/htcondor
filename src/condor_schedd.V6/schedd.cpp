@@ -1922,6 +1922,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				msg.sprintf("Unable to switch to user: %s", owner.Value());
 #endif
 				holdJob(job_id.cluster, job_id.proc, msg.Value(), 
+						CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
 					false, false, true, false, false);
 				return;
 			}
@@ -2095,7 +2096,10 @@ PeriodicExprEval( ClassAd *jobad )
 	action = policy.AnalyzePolicy(PERIODIC_ONLY);
 
 	// Build a "reason" string for logging
-	MyString reason = policy.FiringReason();
+	MyString reason;
+	int reason_code;
+	int reason_subcode;
+	policy.FiringReason(reason,reason_code,reason_subcode);
 	if ( reason == "" ) {
 		reason = "Unknown user policy expression";
 	}
@@ -2109,6 +2113,7 @@ PeriodicExprEval( ClassAd *jobad )
 		case HOLD_IN_QUEUE:
 			if(status!=HELD) {
 				holdJob(cluster, proc, reason.Value(),
+						reason_code, reason_subcode,
 						true, false, false, false, false);
 			}
 			break;
@@ -7002,6 +7007,7 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 		// hold the job, since we won't be able to run it without
 		// human intervention
 	holdJob( job_id.cluster, job_id.proc, hold_reason, 
+			 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
 			 true, true, true, *notify_admin );
 
 		// regardless of what it used to be, we need to record that we
@@ -7106,6 +7112,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 job_id->proc );
 		holdJob( job_id->cluster, job_id->proc,
 				 "No condor_starter installed that supports local universe",
+				 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
 				 false, true, notify_admin, true );
 		notify_admin = false;
 		return;
@@ -7327,6 +7334,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		tmpstr.sprintf("Unable to switch to user: %s", owner.Value());
 #endif
 		holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
+				CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
 				false, false, true, false, false);
 		goto wrapup;
 	}
@@ -7355,6 +7363,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 			holdJob(job_id->cluster, job_id->proc, 
 				"Spooled executable is not executable!",
+					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
 				false, false, true, false, false );
 
 			delete filestat;
@@ -7379,6 +7388,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, 
 				"Executable unknown - not specified in job ad!",
+					CONDOR_HOLD_CODE_FailedToCreateProcess, ENOENT,
 				false, false, true, false, false );
 			goto wrapup;
 		}
@@ -7395,6 +7405,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			tmpstr.sprintf( "File '%s' is missing or not executable", a_out_name.Value() );
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
+					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
 					false, false, true, false, false);
 			goto wrapup;
 		}
@@ -9467,13 +9478,15 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 
 	int action;
 	MyString reason;
+	int reason_code;
+	int reason_subcode;
 	ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
 	ASSERT( job_ad ); // No job ad?
 	{
 		UserPolicy policy;
 		policy.Init(job_ad);
 		action = policy.AnalyzePolicy(PERIODIC_THEN_EXIT);
-		reason = policy.FiringReason();
+		policy.FiringReason(reason,reason_code,reason_subcode);
 		if ( reason == "" ) {
 			reason = "Unknown user policy expression";
 		}
@@ -9494,6 +9507,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 
 		case HOLD_IN_QUEUE:
 			holdJob(job_id.cluster, job_id.proc, reason.Value(),
+					reason_code, reason_subcode,
 				true,false,false,false,false);
 			break;
 
@@ -9511,6 +9525,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"Putting job on hold.\n",
 				 job_id.cluster, job_id.proc, reason.Value());
 			holdJob(job_id.cluster, job_id.proc, reason.Value(),
+					reason_code, reason_subcode,
 				true,false,false,false,true);
 			break;
 
@@ -9524,6 +9539,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			reason2 += ") ";
 			reason2 += reason;
 			holdJob(job_id.cluster, job_id.proc, reason2.Value(),
+					CONDOR_HOLD_CODE_JobPolicyUndefined, 0,
 				true,false,false,false,true);
 			break;
 	}
@@ -12186,6 +12202,7 @@ Does not start or end a transaction.
 
 static bool
 holdJobRaw( int cluster, int proc, const char* reason,
+			int reason_code, int reason_subcode,
 		 bool notify_shadow, bool email_user,
 		 bool email_admin, bool system_hold )
 {
@@ -12231,6 +12248,18 @@ holdJobRaw( int cluster, int proc, const char* reason,
 					 "job %d.%d\n", ATTR_HOLD_REASON, reason, cluster,
 					 proc );
 		}
+	}
+
+	if( SetAttributeInt(cluster, proc, ATTR_HOLD_REASON_CODE, reason_code) < 0 ) {
+		dprintf( D_ALWAYS, "ERROR: Failed to set %s to %d for "
+				 "job %d.%d\n", ATTR_HOLD_REASON_CODE, reason_code, cluster, proc );
+		return false;
+	}
+
+	if( SetAttributeInt(cluster, proc, ATTR_HOLD_REASON_SUBCODE, reason_subcode) < 0 ) {
+		dprintf( D_ALWAYS, "ERROR: Failed to set %s to %d for "
+				 "job %d.%d\n", ATTR_HOLD_REASON_SUBCODE, reason_subcode, cluster, proc );
+		return false;
 	}
 
 	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, HELD) < 0 ) {
@@ -12312,6 +12341,7 @@ Performs a complete transaction if desired.
 
 bool
 holdJob( int cluster, int proc, const char* reason,
+		 int reason_code, int reason_subcode,
 		 bool use_transaction, bool notify_shadow, bool email_user,
 		 bool email_admin, bool system_hold )
 {
@@ -12321,7 +12351,7 @@ holdJob( int cluster, int proc, const char* reason,
 		BeginTransaction();
 	}
 
-	result = holdJobRaw(cluster,proc,reason,notify_shadow,email_user,email_admin,system_hold);
+	result = holdJobRaw(cluster,proc,reason,reason_code,reason_subcode,notify_shadow,email_user,email_admin,system_hold);
 
 	if(use_transaction) {
 		if(result) {
@@ -13090,6 +13120,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//	system_hold		- false
 			//
 		holdJob( id.cluster, id.proc, reason.Value(),
+				 CONDOR_HOLD_CODE_InvalidCronSettings, 0,
 				 true, false, true, false, false );
 	}
 	
