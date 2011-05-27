@@ -51,6 +51,7 @@ our %build_and_test_sets = (
 		'x86_rhap_5',
 		'x86_rhas_3',
 		'x86_winnt_5.1',
+		'x86_64_rhap_6.0-updated',
 	],
 
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
