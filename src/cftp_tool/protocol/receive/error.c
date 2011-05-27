@@ -6,9 +6,9 @@
 State_UnknownError
 
 */
-int State_UnknownError( ServerState* state )
+int State_UnknownError( TransferState* state )
 {
-	ENTER_STATE
+	ENTER_STATE;
 	if( state->error_string[0] )
 		fprintf( stderr, "ERROR: %s\n", state->error_string );
 	else
@@ -24,13 +24,13 @@ int State_UnknownError( ServerState* state )
 State_SendSessionClose
 
 */
-int State_SendSessionClose( ServerState* state )
+int State_SendSessionClose( TransferState* state )
 {
-	ENTER_STATE
+	ENTER_STATE;
 
 
 
-		LEAVE_STATE(0);
+	LEAVE_STATE(0);
 }
 
 

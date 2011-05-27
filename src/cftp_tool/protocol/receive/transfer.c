@@ -17,7 +17,7 @@ State_ReceiveDataBlock
 
 
  */
-int State_ReceiveDataBlock( ServerState* state )
+int State_ReceiveDataBlock( TransferState* state )
 {
 	ENTER_STATE
 
@@ -37,7 +37,7 @@ State_AcknowledgeDataBlock
 
 
  */
-int State_AcknowledgeDataBlock( ServerState* state )
+int State_AcknowledgeDataBlock( TransferState* state )
 {
 	ENTER_STATE;
 

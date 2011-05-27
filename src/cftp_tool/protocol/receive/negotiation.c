@@ -17,7 +17,7 @@
 State_ReceiveSessionParameters
 
  */
-int State_ReceiveSessionParameters( ServerState* state )
+int State_ReceiveSessionParameters( TransferState* state )
 {
 	ENTER_STATE
 
@@ -31,7 +31,7 @@ int State_ReceiveSessionParameters( ServerState* state )
 State_CheckSessionParameters
 
  */
-int State_CheckSessionParameters( ServerState* state )
+int State_CheckSessionParameters( TransferState* state )
 {
 	ENTER_STATE
 
@@ -101,7 +101,7 @@ int State_CheckSessionParameters( ServerState* state )
 		}
 	str_ptr = old_str_ptr;
 
-	sprintf( local_params->filename, "%s/%s", state->arguments->tpath, str_ptr );
+	sprintf( local_params->filename, "%s/%s", state->arguments->store_path, str_ptr );
 
 	local_params->filesize   = ntohll( recvd_params->filesize );
 	local_params->num_chunks = ntohll( recvd_params->num_chunks );
@@ -147,7 +147,7 @@ int State_CheckSessionParameters( ServerState* state )
 State_AcknowledgeSessionParameters
 
  */
-int State_AcknowledgeSessionParameters( ServerState* state )
+int State_AcknowledgeSessionParameters( TransferState* state )
 {
 	ENTER_STATE
 
@@ -205,7 +205,7 @@ int State_AcknowledgeSessionParameters( ServerState* state )
 State_ReceiveClientReady
 
  */
-int State_ReceiveClientReady( ServerState* state )
+int State_ReceiveClientReady( TransferState* state )
 {
 	ENTER_STATE
 		

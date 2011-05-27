@@ -19,7 +19,7 @@ State_ReceiveFileFinish
 
 
 */
-int State_ReceiveFileFinish( ServerState* state )
+int State_ReceiveFileFinish( TransferState* state )
 {
 	ENTER_STATE;
 
@@ -37,7 +37,7 @@ int State_ReceiveFileFinish( ServerState* state )
 State_AcknowledgeFileFinish
 
  */
-int State_AcknowledgeFileFinish( ServerState* state )
+int State_AcknowledgeFileFinish( TransferState* state )
 {
 	ENTER_STATE;	
 

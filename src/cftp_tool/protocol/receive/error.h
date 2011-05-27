@@ -1,7 +1,7 @@
 #ifndef CFTP_SERVER_SM_ERROR_H
 #define CFTP_SERVER_SM_ERROR_H
 
-#include "../server_sm_lib.h"
+#include "../receive.h"
 
 // Define State Codes
 #define S_UNKNOWN_ERROR 0
@@ -10,10 +10,10 @@
 // Declare State Actions
 
 //S_UNKNOWN_ERROR
-int State_UnknownError( ServerState* state );
+int State_UnknownError( TransferState* state );
 
 //S_SEND_SESSION_CLOSE
-int State_SendSessionClose( ServerState* state );
+int State_SendSessionClose( TransferState* state );
 
 
 
