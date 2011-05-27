@@ -52,6 +52,7 @@ our %build_and_test_sets = (
 		'x86_rhap_5',
 		'x86_rhas_3',
 		'x86_winnt_5.1',
+		'x86_64_rhap_6.0-updated',
 	],
 	
 	# NMI will need builds on a set of platforms that we do not provide in our
