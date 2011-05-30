@@ -419,35 +419,47 @@ if (PROPER)
 	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
 	find_path(HAVE_PCRE_H "pcre.h")
 	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
+	option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
 else()
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
+	option(CACHED_EXTERNALS "enable/disable cached externals" ON)
 endif(PROPER)
 
 if (WINDOWS)
-	# the environment variable CONDOR_BLD_EXTERNAL_STAGE will be set to the
-	# path for externals if the invoker wants shared externals. otherwise
-	# just build externals in a sub-directory of the project directory
-	#
-	set (EXTERNAL_STAGE $ENV{CONDOR_BLD_EXTERNAL_STAGE})
-	if (EXTERNAL_STAGE)
-        # cmake doesn't like windows paths, so make sure that this path separators are unix style
-	    string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
-	else()
-	   set (EXTERNAL_STAGE ${PROJECT_BINARY_DIR}/bld_external)
-    endif(EXTERNAL_STAGE)
+
+	if (NOT EXTERNAL_STAGE)
+		# the environment variable CONDOR_BLD_EXTERNAL_STAGE will be set to the
+		# path for externals if the invoker wants shared externals. otherwise
+		# just build externals in a sub-directory of the project directory
+		#
+		set (EXTERNAL_STAGE $ENV{CONDOR_BLD_EXTERNAL_STAGE})
+		if (EXTERNAL_STAGE)
+			# cmake doesn't like windows paths, so make sure that this path separators are unix style
+			string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
+		else()
+			set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/bld_external)
+		endif()
+
+	endif()
+
 else()
-	if (PROPER)
-		set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
-	else()
+	
+	if (NOT EXTERNAL_STAGE)
 		# temporarily disable AFS cache. 
 		#if ( EXISTS /p/condor/workspaces/externals  )
 		#	set (EXTERNAL_STAGE /p/condor/workspaces/externals/cmake/${OS_NAME}/${SYS_ARCH})
 		#else()
 			# in case someone tries something funky insert OS & ARCH in path
 			set (EXTERNAL_STAGE /scratch/condor_externals) #${OS_NAME}/${SYS_ARCH})
-		#endif()	
+		#endif()
 	endif()
+
 endif(WINDOWS)
+
+# instead of clausing above over-ride if not defined.
+if (NOT CACHED_EXTERNALS)
+	set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/bld_external)
+endif()
 
 dprint("EXTERNAL_STAGE=${EXTERNAL_STAGE}")
 if (NOT EXISTS ${EXTERNAL_STAGE})
@@ -469,12 +481,19 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 
 if (NOT WINDOWS)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
+
+	if (${SYSTEM_NAME} MATCHES "rhel3" AND ${SYS_ARCH} MATCHES "X86_64")
+		# The new version of 2011.05.24-r31 doesn't compile on rhel3/x86_64
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
+	else ()
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
+	endif()
+
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.7)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.8)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.37)
 
 	# globus is an odd *beast* which requires a bit more config.

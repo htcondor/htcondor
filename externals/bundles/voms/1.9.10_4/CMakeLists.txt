@@ -24,7 +24,7 @@ endif(LINUX OR DARWIN)
 if ( WITH_VOMS )
 
 	if (NOT PROPER)
-		if(${SYS_ARCH} MATCHES "X86_64")
+		if(${SYS_ARCH} MATCHES "X86_64" AND LINUX)
 			set(VOMS_LIB lib64)
 		else()
 			set(VOMS_LIB lib)

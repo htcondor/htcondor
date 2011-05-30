@@ -106,7 +106,9 @@ if (WITH_GLOBUS)
 
 		#CFLAGS=-I${}/include && export CFLAGS &&
 		#LDFLAGS=-L${GLOBUS_INSTALL_LOC}/lib && export LDFLAGS &&
-		set (GLOBUS_FLAGS OPENSSL_CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export OPENSSL_CFLAGS &&
+		set (GLOBUS_FLAGS CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export CFLAGS &&
+						LDFLAGS=-L${OPENSSL_INSTALL_LOC}/lib && export LDFLAGS &&
+						OPENSSL_CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export OPENSSL_CFLAGS &&
 						OPENSSL_LDFLAGS=-L${OPENSSL_INSTALL_LOC}/lib && export OPENSSL_LDFLAGS  )
 
 		if(LINUX)
@@ -118,7 +120,7 @@ if (WITH_GLOBUS)
 							LT_MULTI_MODULE=1 && export LT_MULTI_MODULE)
 		endif()
 
-		set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF} ${KRB5_REF})
+		set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF})
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
 		ExternalProject_Add(globus

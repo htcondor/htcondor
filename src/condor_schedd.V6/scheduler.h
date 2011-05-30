@@ -771,6 +771,7 @@ extern bool moveIntAttr( PROC_ID job_id, const char* old_attr,
 extern bool abortJob( int cluster, int proc, const char *reason, bool use_transaction );
 extern bool abortJobsByConstraint( const char *constraint, const char *reason, bool use_transaction );
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
+					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 
 					 bool notify_shadow = true,  
 					 bool email_user = false, bool email_admin = false,

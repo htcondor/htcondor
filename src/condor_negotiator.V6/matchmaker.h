@@ -63,6 +63,7 @@ struct GroupEntry {
     // current usage information coming into this negotiation cycle
     double usage;
     ClassAdList* submitterAds;
+    double priority;
 
     // slot quota as computed by HGQ
     double quota;
