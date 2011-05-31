@@ -71,7 +71,7 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.0.1 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.0.1-p1 "lib;include" "done")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
@@ -126,9 +126,9 @@ if (WITH_GLOBUS)
 		ExternalProject_Add(globus
 							DEPENDS ${GLOBUS_DEPENDS}
 							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GLOBUS_VER}.tar.gz ${CMD_TERM}
+							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/globus-5.0.1.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${GLOBUS_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/${GLOBUS_VER}.tar.gz
+							URL http://parrot.cs.wisc.edu/externals/globus-5.0.1.tar.gz
 							#--Patch step ----------
 							PATCH_COMMAND ${GLOBUS_PATCH}
 							#--Configure step ----------
