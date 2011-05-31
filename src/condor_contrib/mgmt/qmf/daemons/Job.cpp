@@ -81,6 +81,7 @@ Attribute::Attribute ( AttributeType _type, const char *_value ) :
 
 Attribute::~Attribute()
 {
+    delete [] m_value;
 }
 
 Attribute::AttributeType
@@ -185,7 +186,7 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new Attribute ( Attribute::STRING_TYPE, str.Value() );
+            _attribute = new Attribute ( Attribute::STRING_TYPE, str.StrDup() );
             return true;
         }
         default:
