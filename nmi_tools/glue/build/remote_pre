@@ -96,12 +96,12 @@ if ( defined($opt_clear_externals_cache)||defined($opt_clear_externals_cache_wee
 		print "cached externals is temporarily disabled on windows";
 	}
 	else {
-		print "deleting externals cache -- disabled\n";
-		#$exit_status = system("rm -rf $externals_loc/*");
+		print "deleting externals cache\n";
+		$exit_status = system("rm -rf /scratch/condor_externals");
 
-		#if( $exit_status ) {
-		#	die "failed with status $exit_status\n";
-		#}
+		if( $exit_status ) {
+			die "failed with status $exit_status\n";
+		}
 
 		#system("mkdir -p $externals_loc");
 		#system("chmod -f -R a+rwX $externals_loc");
