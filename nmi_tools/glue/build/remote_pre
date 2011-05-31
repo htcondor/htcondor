@@ -38,7 +38,7 @@ my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
 my $buildid_file = "BUILD-ID";
 my $buildid;
-my $externals_loc="/scratch/externals/cmake";
+my $externals_loc="/scratch/condor_externals";
 my $platform = "$ENV{NMI_PLATFORM}";
 my %defines = (
     prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
@@ -90,10 +90,14 @@ $defines{condor_platform} = "-DCONDOR_PLATFORM:STRING=$platform";
 ######################################################################
 # run cmake on the source tree
 ######################################################################
-if ( defined($opt_clear_externals_cache)||defined($opt_clear_externals_cache_weekly) ) {
+if ( defined($opt_clear_externals_cache) ) {
 
 	if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-		print "cached externals is temporarily disabled on windows";
+		print "deleting externals cache\n";
+		$exit_status = system("rd /s/q \"$externals_loc\"");
+		if( $exit_status ) {
+			die "failed with status $exit_status\n";
+		}
 	}
 	else {
 		print "deleting externals cache\n";
