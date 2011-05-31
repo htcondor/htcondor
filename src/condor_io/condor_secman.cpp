@@ -2017,7 +2017,8 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
 				//sockaddr_in tmp_sin = m_sock->peer_addr().to_sin();
-			KeyCacheEntry tmp_key( sesid, &m_sock->peer_addr(), m_private_key,
+			condor_sockaddr peer_addr = m_sock->peer_addr();
+			KeyCacheEntry tmp_key( sesid, &peer_addr, m_private_key,
 								   &m_auth_info, expiration_time,
 								   session_lease ); 
 			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid, dur, session_lease);
