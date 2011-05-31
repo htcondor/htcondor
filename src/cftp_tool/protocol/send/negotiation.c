@@ -36,17 +36,17 @@ int State_SendSessionParameters( TransferState* state )
 
 	memset( parameters, 0, sizeof( simple_parameters ) );
 	memcpy( parameters->filename, 
-            state->local_file->filename,
-            strlen( state->local_file->filename));
+            state->local_file.filename,
+            strlen( state->local_file.filename));
 	
-	parameters->filesize = htonll(state->local_file->file_size);
-	parameters->chunk_size = htonll(state->local_file->chunk_size);
-	parameters->num_chunks = htonll(state->local_file->num_chunks);
-	parameters->hash[0] = htonl( state->local_file->hash[0] );
-	parameters->hash[1] = htonl( state->local_file->hash[1] );
-	parameters->hash[2] = htonl( state->local_file->hash[2] );
-	parameters->hash[3] = htonl( state->local_file->hash[3] );
-	parameters->hash[4] = htonl( state->local_file->hash[4] );
+	parameters->filesize = htonll(state->local_file.file_size);
+	parameters->chunk_size = htonll(state->local_file.chunk_size);
+	parameters->num_chunks = htonll(state->local_file.num_chunks);
+	parameters->hash[0] = htonl( state->local_file.hash[0] );
+	parameters->hash[1] = htonl( state->local_file.hash[1] );
+	parameters->hash[2] = htonl( state->local_file.hash[2] );
+	parameters->hash[3] = htonl( state->local_file.hash[3] );
+	parameters->hash[4] = htonl( state->local_file.hash[4] );
 	
 	// Setup the message frame structure 
 

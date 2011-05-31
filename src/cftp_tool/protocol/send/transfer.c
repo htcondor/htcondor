@@ -13,15 +13,82 @@
 /*
 
 
-State_ReceiveDataBlock
+State_SendDataBlock
 
 
  */
-int State_ReceiveDataBlock( TransferState* state )
+
+
+int State_SendDataBlock( TransferState* state )
 {
-	ENTER_STATE
+	ENTER_STATE;
+
+	long chunk_size;
+	int read_bytes;
+
+	cftp_dtf_frame* dtf_frame;
+
+    if( state->retry_count == MAX_RETRIES )
+        LEAVE_STATE(-2);
+    
+    
+    if( state->retry_count == 0 )
+        {
+            VERBOSE( "Sending Chunk %ld/%ld of %s\n",
+                     state->current_chunk+1,
+                     state->local_file.num_chunks,
+                     state->local_file.filename );
+        }
+    else
+        {
+            VERBOSE( "Resending (%d) Chunk %ld/%ld of %s\n",
+                     state->retry_count,
+                     state->current_chunk+1,
+                     state->local_file.num_chunks,
+                     state->local_file.filename );
+        }
+
+    chunk_size = state->local_file.chunk_size;
+
+    // Prep DTF header
+    dtf_frame = (cftp_dtf_frame*)(&state->fsend_buf);
+    memset( dtf_frame, 0, sizeof( cftp_dtf_frame ));
+
+    dtf_frame->MessageType = DTF;
+    dtf_frame->ErrorCode = htons(NOERROR);
+    dtf_frame->SessionToken =  htons(state->session_token);
+    dtf_frame->DataSize = htons(chunk_size);
+    dtf_frame->BlockNum = htonll(state->current_chunk);
+
+    state->send_rdy = 1;
+    send_cftp_frame( state );
+
+    // And Data payload
+    if( state->data_buffer )
+        free( state->data_buffer );
+    state->data_buffer = malloc( chunk_size );
+
+    memset( state->data_buffer, 0, chunk_size );
+    read_bytes = fread( state->data_buffer, 1, chunk_size, state->local_file.fp );
+    if( read_bytes != chunk_size && !feof(state->local_file.fp) )
+        {
+            fprintf( stderr, "Error while reading %s. Error code %d (%s)",
+                     state->local_file.filename,
+                     ferror(state->local_file.fp),
+                     strerror( ferror(state->local_file.fp)));
+
+            LEAVE_STATE(-1);
+        }
+    
+    state->send_rdy = 1;
+    send_data_frame( state );
 
 
+
+
+    // Wait for server acknowledgement
+    state->retry_count += 1;
+    state->net_timeout = 30;
 	state->recv_rdy = 1;	
 
 
@@ -33,114 +100,44 @@ int State_ReceiveDataBlock( TransferState* state )
 /*
 
 
-State_AcknowledgeDataBlock
+State_RecvAckDataBlock
 
 
  */
-int State_AcknowledgeDataBlock( TransferState* state )
+int State_RecvAckDataBlock( TransferState* state )
 {
 	ENTER_STATE;
 
-	cftp_dtf_frame* dtf_frame;
     cftp_daf_frame* daf_frame;
-	char* chunk_data;
-	long chunk_size;
-	int recv_bytes;
-	int write_bytes;
-    int write_chunk = 0;
-	long length;
 
-	dtf_frame = (cftp_dtf_frame*)&(state->frecv_buf);
-	daf_frame = (cftp_daf_frame*)&(state->fsend_buf);
+    daf_frame = (cftp_daf_frame*)(&state->frecv_buf);
+    
+    if( ntohll(daf_frame->BlockNum) == state->current_chunk )
+        {
+            VERBOSE( "Recieved DAF for block %ld. Continuing...\n",
+                     state->current_chunk+1 );
+            
+            // Move onto the next block
+            state->current_chunk++;
+        }
+    else
+        {
+            VERBOSE( "Recieved DAF for block %ld. Correcting...\n",
+								 ntohll(daf_frame->BlockNum)+1 );
 
-	chunk_size = state->local_file.chunk_size;
-	chunk_data = malloc( chunk_size+1 );
-	chunk_data[chunk_size] = 0;
-	
-	state->data_buffer_size = chunk_size;
-	state->recv_rdy = 1;
-	recv_bytes = recv_data_frame( state );
-	memcpy( chunk_data, state->data_buffer, recv_bytes );
+            //TODO: We need smarter handling here for wrong chunk codes
+            //      Currently we only continue resending the current chunk
+            
+        }
 
-
-	if( recv_bytes != chunk_size )
-		{
-			sprintf( state->error_string,
-					 "Client sent partial data chunk. Error in receiving.");
-			free( chunk_data );
-			LEAVE_STATE(-1); //TODO, check the return codes here
-		}
-
-		//printf( "\tChunk Data:\n\n%s\n\n", chunk_data );
-
-	if( ntohll(dtf_frame->BlockNum) != state->current_chunk )
-		{	
-			if( state->current_chunk == 0 )
-				{
-					sprintf( state->error_string,
-							 "Client sent .");
-					free( chunk_data );	
-					LEAVE_STATE(-1); //TODO, check the return codes here			
-				}
-			else
-				{
-					fprintf( stderr, "Client sent the wrong block! Got %ld, but needed %ld. Acknowledging last chunk again.\n",
-							 ntohll(dtf_frame->BlockNum)+1,
-							 state->current_chunk+1 );
-					state->current_chunk--;
-				}		
-		}
-	else
-		{
-			write_chunk = 1;
-		}
+    
+    // If the DAF is not received or the wrong DAF is received, then we
+    // need to alter the next DTF such that its error code reflects the 
+    // previously failed DTF. Probably the error code should be set to TIMEOUT.
 
 
-	if( write_chunk )
-		{
+    // Send the next needed piece;
+    state->recv_rdy = 0;
 
-			if( state->local_file.file_size - state->data_written > chunk_size )
-				length = chunk_size;
-			else
-				length = state->local_file.file_size - state->data_written;
-
-			write_bytes = fwrite( chunk_data, 1, length, state->local_file.fp );
-			fflush( state->local_file.fp );
-
-			if( write_bytes != length )
-				{
-					sprintf( state->error_string, "Error writing chunk %ld to disk: %s. Aborting!\n",
-							 state->current_chunk, strerror( errno ) );
-					free( chunk_data );
-					LEAVE_STATE(-1);
-				}
-			state->data_written += write_bytes;
-			if( state->data_written > state->local_file.file_size )
-				{
-					sprintf( state->error_string, "Too much data written to disk. Aborting!\n" );
-					free( chunk_data );
-					LEAVE_STATE(-1);
-				}
-
-		}
-
-	
-	memset( daf_frame, 0 , sizeof( cftp_frame ) );
-	daf_frame->MessageType = DAF;
-	daf_frame->ErrorCode = htons(NOERROR);
-	daf_frame->SessionToken = dtf_frame->SessionToken;
-	daf_frame->BlockNum = htonll( state->current_chunk );
-
-	state->send_rdy = 1;
-	send_cftp_frame( state );
-	if( state->current_chunk == state->local_file.num_chunks-1)
-		{
-			free( chunk_data );
-			LEAVE_STATE(1);
-		}
-
-	state->current_chunk ++;
-
-	free( chunk_data );
 	LEAVE_STATE(0);
 }

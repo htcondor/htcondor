@@ -1,19 +1,24 @@
 #ifndef CFTP_SERVER_SM_TRANSFER_H
 #define CFTP_SERVER_SM_TRANSFER_H
 
-#include "../receive.h"
+#include "../send.h"
 
 // Define State Codes
-#define S_RECV_DATA_BLOCK 20
-#define S_ACK_DATA_BLOCK 21
+#define S_SEND_DATA_BLOCK 22
+#define S_RECV_ACK_DATA_BLOCK 23
+
+
+// TODO: Put this somewhere else, perferably in a config of some sort
+const int MAX_RETRIES = 10;
+
 
 // Declare State Actions
 
-//S_RECV_DATA_BLOCK
-int State_ReceiveDataBlock( TransferState* state );
+//S_SEND_DATA_BLOCK
+int State_SendDataBlock( TransferState* state );
 
-//S_ACK_DATA_BLOCK
-int State_AcknowledgeDataBlock( TransferState* state );
+//S_RECV_ACK_DATA_BLOCK
+int State_RecvAckDataBlock( TransferState* state );
 
 
 

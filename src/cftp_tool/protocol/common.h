@@ -73,6 +73,8 @@ typedef struct _TransferState
 	long         data_written;
 	int          retry_count;
 
+    int          net_timeout;
+
 	int          recv_rdy;
     int		     send_rdy;
 

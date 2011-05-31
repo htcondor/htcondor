@@ -24,8 +24,8 @@ void send_file( TransferArguments* args, SendResults* results)
 	SM_States[S_RECV_SESSION_ACK]           = &State_ReceiveSessionParametersAck;
 	SM_States[S_SEND_CLIENT_READY]          = &State_SendClientReady;
 
-	SM_States[S_RECV_DATA_BLOCK]            = &State_ReceiveDataBlock;
-	SM_States[S_ACK_DATA_BLOCK]             = &State_AcknowledgeDataBlock;
+	SM_States[S_SEND_DATA_BLOCK]            = &State_SendDataBlock;
+	SM_States[S_RECV_ACK_DATA_BLOCK]        = &State_RecvAckDataBlock;
 
 	SM_States[S_RECV_FILE_FINISH]           = &State_ReceiveFileFinish;
 	SM_States[S_ACK_FILE_FINISH]            = &State_AcknowledgeFileFinish;
