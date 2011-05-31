@@ -14,8 +14,6 @@ int transfer_file( char* server_name,
 				   char* server_port,
 				   char* localfile );
 
-FileRecord* open_file(  char* filename );
-
 ServerRecord* connect_to_server(  char* server_name, 
 								  char* server_port );
 

@@ -7,6 +7,86 @@
 #include <string.h>
 #include <errno.h>
 
+/*
+  open_file
+  
+  Opens a given filename and returns a FileRecord pointer.
+
+  Returns NULL if the file is unable to be opened.
+
+ */
+FileRecord* open_file( char* filename)
+{
+	FileRecord* record;
+	SHA1Context hashRecord;
+	unsigned char chunk;
+	unsigned int len;
+    char* str_ptr;	
+	char* old_str_ptr;
+	
+
+	record = (FileRecord*) malloc(sizeof(FileRecord));
+	memset( record, 0, sizeof( FileRecord ));
+
+
+		// Extract the base filename from the filepath given
+	old_str_ptr = str_ptr = filename;
+	while( str_ptr )
+		{
+			old_str_ptr = str_ptr;
+			str_ptr = strchr( str_ptr+1, '/' );
+			if( str_ptr )
+				str_ptr = str_ptr + 1;
+		}
+	str_ptr = old_str_ptr;
+    
+	record->filename = (char*)malloc( strlen(str_ptr)+1 );
+	strcpy( record->filename, str_ptr );
+
+	record->path = (char*)malloc( str_ptr - filename );
+	memcopy( record->path, filename, str_ptr - filename );
+
+
+	record->fp = fopen( filename, "rb" );
+	if( record->fp == NULL )
+		{
+			free(record);
+			return NULL;
+		}
+
+
+		// Calculate the hash code for the file data
+	SHA1Reset( &hashRecord );
+	chunk = fgetc( record->fp );
+	while( !feof(record->fp) )
+		{
+			SHA1Input( &hashRecord, &chunk, 1);			
+			chunk = fgetc( record->fp );
+		}
+
+
+	len = SHA1Result( &hashRecord );
+	if( len == 0 )
+		fprintf(stderr, "Error while constructing hash. Hash is not right!\n" );
+
+	rewind( record->fp);
+	memcpy( record->hash, hashRecord.Message_Digest, 5*sizeof(int) );
+	
+	fseek( record->fp, 0, SEEK_END );
+	record->file_size = ftell( record->fp );
+	rewind( record->fp);
+
+	record->chunk_size = 100; // Really bad hack
+	
+		// Count how many chunks there will be.
+	record->num_chunks = record->file_size/record->chunk_size;
+	if( record->file_size % record->chunk_size != 0 )
+	    record->num_chunks = record->num_chunks + 1;
+
+
+	return record;
+}
+
 
 //sendall - taken from the Beej guide to socket programming
 //http://beej.us/guide/bgnet/output/html/multipage/advanced.html#sendall

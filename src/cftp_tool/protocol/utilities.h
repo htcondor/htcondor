@@ -6,6 +6,17 @@
 #include <netdb.h>
 #include <stdio.h>
 
+typedef struct _FileRecord 
+{
+    char*          path;
+	char*          filename;
+	FILE*          fp;
+	unsigned long  file_size;
+	unsigned long  chunk_size;
+	unsigned long  num_chunks;   
+	unsigned int   hash[5];
+} FileRecord;
+
 //sendall - taken from the Beej guide to socket programming
 int sendall(int s, char *buf, int *len);
 
@@ -13,6 +24,8 @@ int sendall(int s, char *buf, int *len);
 int readOOB(int s, void* buf, int len, int flags,
 			struct sockaddr *from, socklen_t *fromlen,
 			int timeout, char termChar);
+
+FileRecord* open_file(  char* filename );
 
 //implement the host to network/network to host byte order 
 //conversions for long datatypes

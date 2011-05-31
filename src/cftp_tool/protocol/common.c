@@ -194,6 +194,14 @@ void desc_cftp_frame( ServerState* state, int send_or_recv)
 			break;
 		case SIF:
 			DEBUG("SIF frame.\n" );
+            DEBUG( "SIF error code: %d.\n",
+                   ntohs(((cftp_sif_frame*)frame)->ErrorCode) );
+            DEBUG( "SIF session token: %d.\n",
+                   ((cftp_sif_frame*)frame)->SessionToken );
+            DEBUG( "SIF parameter format: %d.\n",
+                   ntohs(((cftp_sif_frame*)frame)->ParameterFormat) );
+            DEBUG( "SIF parameter length: %d.\n",
+                   ntohs(((cftp_sif_frame*)frame)->ParameterLength) );
 			break;
 		case SAF:
 			DEBUG("SAF frame.\n" );

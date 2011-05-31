@@ -19,7 +19,7 @@ RECEIVE_SRC    = receive.c\
 		 receive/transfer.c\
 		 receive/teardown.c 
 
-SRC = $(RECEIVE_SRC) $(COMMON_SRC)
+SRC = $(RECEIVE_SRC) $(SEND_SRC) $(COMMON_SRC)
 
 
 SHA1_OBJ   = sha1.o
