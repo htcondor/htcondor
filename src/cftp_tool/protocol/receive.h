@@ -3,12 +3,6 @@
 
 #include "common.h"
 
-#include "receive/discovery.h"
-#include "receive/negotiation.h"
-#include "receive/transfer.h"
-#include "receive/teardown.h"
-#include "receive/error.h"
-
 
 typedef struct {
 		// TODO: Fill in needed result fields

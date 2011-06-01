@@ -1,3 +1,7 @@
+#include "utilities.h"
+
+#include "sha1-c/sha1.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -44,7 +48,7 @@ FileRecord* open_file( char* filename)
 	strcpy( record->filename, str_ptr );
 
 	record->path = (char*)malloc( str_ptr - filename );
-	memcopy( record->path, filename, str_ptr - filename );
+	memcpy( record->path, filename, str_ptr - filename );
 
 
 	record->fp = fopen( filename, "rb" );

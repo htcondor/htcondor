@@ -3,13 +3,6 @@
 
 #include "common.h"
 
-#include "send/discovery.h"
-#include "send/negotiation.h"
-#include "send/transfer.h"
-#include "send/teardown.h"
-#include "send/error.h"
-
-
 typedef struct {
     int success;
 		// TODO: Fill in needed result fields

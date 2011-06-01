@@ -1,5 +1,11 @@
 #include "send.h"
 
+#include "send/discovery.h"
+#include "send/negotiation.h"
+#include "send/transfer.h"
+#include "send/teardown.h"
+#include "send/error.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,14 +27,14 @@ void send_file( TransferArguments* args, SendResults* results)
 	SM_States[S_SEND_SESSION_CLOSE]         = &State_SendSessionClose;
 
 	SM_States[S_SEND_SESSION_PARAMETERS]    = &State_SendSessionParameters;
-	SM_States[S_RECV_SESSION_ACK]           = &State_ReceiveSessionParametersAck;
+	SM_States[S_RECV_ACK_SESSION]           = &State_ReceiveSessionParametersAck;
 	SM_States[S_SEND_CLIENT_READY]          = &State_SendClientReady;
 
 	SM_States[S_SEND_DATA_BLOCK]            = &State_SendDataBlock;
-	SM_States[S_RECV_ACK_DATA_BLOCK]        = &State_RecvAckDataBlock;
+	SM_States[S_RECV_ACK_DATA_BLOCK]        = &State_RecvDataBlockAck;
 
-	SM_States[S_RECV_FILE_FINISH]           = &State_ReceiveFileFinish;
-	SM_States[S_ACK_FILE_FINISH]            = &State_AcknowledgeFileFinish;
+	SM_States[S_SEND_FILE_FINISH]           = &State_SendFileFinish;
+	SM_States[S_RECV_ACK_FILE_FINISH]       = &State_ReceiveFileFinishAck;
 
     //------------------------------------------------------- 	
 
@@ -99,11 +105,11 @@ int send_transition_table( TransferState* state, int condition )
 					return S_UNKNOWN_ERROR;
 				}
 			else		
-				return S_RECV_SESSION_ACK;
+				return S_RECV_ACK_SESSION;
 			
 
 
-		case S_RECV_SESSION_ACK:
+		case S_RECV_ACK_SESSION:
 			if( condition == -1 ) // Something bad happened here
 				return S_UNKNOWN_ERROR;
 
@@ -117,8 +123,25 @@ int send_transition_table( TransferState* state, int condition )
             return S_SEND_DATA_BLOCK;
 
 
+        case S_SEND_DATA_BLOCK:
+			if( state->frecv_buf.MessageType != DAF )
+				{
+					sprintf( state->error_string, 
+							 "Wrong frame type recieved. Resending last DTF.");
+                    return S_SEND_DATA_BLOCK;
+				}
+            return S_RECV_ACK_DATA_BLOCK;
 
 
+        case S_RECV_ACK_DATA_BLOCK:
+            if( condition == 1 )
+                return S_SEND_FILE_FINISH;
+
+            return S_SEND_DATA_BLOCK;
+
+            
+        case S_SEND_FILE_FINISH:
+            return S_RECV_ACK_FILE_FINISH;
 
 			
 		case S_UNKNOWN_ERROR:

@@ -5,7 +5,7 @@
 
 // Define State Codes
 #define S_SEND_SESSION_PARAMETERS 14
-#define S_RECV_SESSION_ACK 15
+#define S_RECV_ACK_SESSION 15
 #define S_SEND_CLIENT_READY 16
 
 // Declare State Action

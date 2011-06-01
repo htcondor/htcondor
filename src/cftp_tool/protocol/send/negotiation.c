@@ -20,11 +20,7 @@ int State_SendSessionParameters( TransferState* state )
     ENTER_STATE;
 
 	cftp_sif_frame* sif_frame;
-
 	simple_parameters* parameters;
-	int parameter_length;
-
-	int length;
 
 
     // Set up parameter structure 

@@ -1,5 +1,11 @@
 #include "receive.h"
 
+#include "receive/discovery.h"
+#include "receive/negotiation.h"
+#include "receive/transfer.h"
+#include "receive/teardown.h"
+#include "receive/error.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

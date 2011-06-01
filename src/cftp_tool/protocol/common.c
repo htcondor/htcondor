@@ -1,5 +1,11 @@
 
+#include "common.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <limits.h>
 
 
 /*
@@ -9,7 +15,7 @@ recv_cftp_frame
 
 
 */
-int recv_cftp_frame( ServerState* state )
+int recv_cftp_frame( TransferState* state )
 {
 	if( !state->recv_rdy )
 		return -1;
@@ -37,7 +43,7 @@ recv_data_frame
 
 
 */
-int recv_data_frame( ServerState* state )
+int recv_data_frame( TransferState* state )
 {
 	if( !state->recv_rdy )
 		return -1;
@@ -83,7 +89,7 @@ int recv_data_frame( ServerState* state )
 send_cftp_frame
 
 */
-int send_cftp_frame( ServerState* state )
+int send_cftp_frame( TransferState* state )
 {
 	int length = 0;
 	int status = 0;
@@ -119,7 +125,7 @@ int send_cftp_frame( ServerState* state )
 send_data_frame
 
 */
-int send_data_frame( ServerState* state )
+int send_data_frame( TransferState* state )
 {
 	int length = 0;
 	int status = 0;
@@ -169,7 +175,7 @@ desc_cftp_frame
 
 
  */
-void desc_cftp_frame( ServerState* state, int send_or_recv)
+void desc_cftp_frame( TransferState* state, int send_or_recv)
 {
 	cftp_frame* frame;
 

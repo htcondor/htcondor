@@ -17,8 +17,8 @@ const int MAX_RETRIES = 10;
 //S_SEND_DATA_BLOCK
 int State_SendDataBlock( TransferState* state );
 
-//S_RECV_ACK_DATA_BLOCK
-int State_RecvAckDataBlock( TransferState* state );
+//S_RECV_DATA_BLOCK_ACK
+int State_RecvDataBlockAck( TransferState* state );
 
 
 

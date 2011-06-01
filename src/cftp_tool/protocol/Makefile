@@ -2,7 +2,7 @@
 
 CFLAGS =  -Wall -g -O0
 
-COMMON_SCR     = common.c\
+COMMON_SRC     = common.c\
 		 utilities.c
 
 SEND_SRC       = send.c\
@@ -19,7 +19,7 @@ RECEIVE_SRC    = receive.c\
 		 receive/transfer.c\
 		 receive/teardown.c 
 
-SRC = $(RECEIVE_SRC) $(SEND_SRC) $(COMMON_SRC)
+SRC = $(COMMON_SRC) $(RECEIVE_SRC) $(SEND_SRC) 
 
 
 SHA1_OBJ   = sha1.o

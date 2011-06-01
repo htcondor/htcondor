@@ -4,16 +4,16 @@
 #include "../receive.h"
 
 // Define State Codes
-#define S_RECV_FILE_FINISH 30
-#define S_ACK_FILE_FINISH 31
+#define S_SEND_FILE_FINISH 32
+#define S_RECV_ACK_FILE_FINISH 33
 
 // Declare State Actions
 
-//S_RECV_FILE_FINISH
-int State_ReceiveFileFinish( TransferState* state );
+//S_SEND_FILE_FINISH
+int State_SendFileFinish( TransferState* state );
 
-//S_ACK_FILE_FINISH
-int State_AcknowledgeFileFinish( TransferState* state );
+//S_RECV_ACK_FILE_FINISH
+int State_ReceiveFileFinishAck( TransferState* state );
 
 
 

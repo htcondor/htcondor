@@ -100,11 +100,11 @@ int State_SendDataBlock( TransferState* state )
 /*
 
 
-State_RecvAckDataBlock
+State_RecvDataBlockAck
 
 
  */
-int State_RecvAckDataBlock( TransferState* state )
+int State_RecvDataBlockAck( TransferState* state )
 {
 	ENTER_STATE;
 
@@ -119,6 +119,8 @@ int State_RecvAckDataBlock( TransferState* state )
             
             // Move onto the next block
             state->current_chunk++;
+            if( state->current_chunk >  state->local_file.num_chunks )
+                LEAVE_STATE(1);
         }
     else
         {
