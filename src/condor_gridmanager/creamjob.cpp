@@ -233,6 +233,8 @@ CreamJob::CreamJob( ClassAd *classad )
 	doActivePoll = false;
 	m_xfer_request = NULL;
 	m_numCleanupAttempts = 0;
+	resourceBatchSystemString = NULL;
+	resourceQueueString = NULL;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
