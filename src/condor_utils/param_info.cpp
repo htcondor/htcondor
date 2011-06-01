@@ -27,28 +27,6 @@
 #  include "pcre.h"
 #endif
 
-// parse the range and set range_start and range_end to pointers to strings
-// containing either the upper/lower bound of the range if valid or an empty
-// string if not valid
-static void compute_range(const char* range, char** range_start,
-	char** range_end);
-
-// take a string representation of the upper/lower limit and a pointer to an
-// int/double to store the value extracted from the string or the min/max for
-// int/double assumes no upper/lower bound if the string is empty return 1 if
-// string represents a valid bound, 0 otherwise
-static int validate_integer_range_upper_bound(const char* range_end,
-	int* max);
-static int validate_integer_range_lower_bound(const char* range_start,
-	int* min);
-static int validate_double_range_upper_bound(const char* range_end,
-	double* max);
-static int validate_double_range_lower_bound(const char* range_start,
-	double* min);
-
-// Ensure the subject matches the regex.
-static int validate_regex(const char* pattern, const char* subject);
-
 #define CUSTOMIZATION_SELDOM 	0
 
 #define RECONFIG_NORMAL 		0
@@ -58,31 +36,8 @@ static int validate_regex(const char* pattern, const char* subject);
 #define STATE_USER				2
 #define STATE_RUNTIME			3
 
-#if 0
-//allocate and copy src to dest
-#define CPY_STR(dst, src) \
-if (src) { \
-	dst = (char *) malloc(strlen(src)+1); \
-	strcpy(dst, src); \
-} else { \
-	dst = NULL;  \
-}
-#endif
-
-/* To save memory, assume src is a static buffer that will not go away,
-   so we can just point dst at it.  Currently, we never free dst, so this
-   is "safe". */
-#define CPY_STR(dst, src) \
-if (src) { \
-	dst = (char *) src;			\
-} else { \
-	dst = NULL;  \
-}
-
 //param_info_hash_t = bucket_t**
 bucket_t** param_info;
-
-//static int num_entries;
 
 #include "param_info_init.c"
 
@@ -110,150 +65,7 @@ param_info_init()
        param_info_hash_insert(param_info, g_param_info_init_table[ii]);
        }
 
-/* 	after_data_insertion: ; */
 }
-
-#if 0
-void
-param_info_insert(const char* param,
-				  const char* aliases,
-				  const char* value,
-				  const char* version,
-				  const char* range,
-				  int   state,
-				  int	type,
-				  int   is_macro,
-				  int   reconfig,
-				  int   customization,
-				  const char* friendly_name,
-				  const char* usage,
-				  const char* url,
-				  const char* tags)
-{
-	param_info_t* p;
-	char* range_start;
-	char* range_end;
-	
-	if (!param) {
-		EXCEPT("param passed to param_info_insert was NULL");
-	}
-
-	p = (param_info_t*)malloc(sizeof(param_info_t));
-
-	CPY_STR(p->name,  const_cast<char*>(param));
-	CPY_STR(p->aliases, const_cast<char*>(aliases));
-
-	if (!value) {
-		EXCEPT("value passed to param_info_insert was NULL");
-	}
-	if (!range) {
-		EXCEPT("range passed to param_info_insert was NULL");
-	}
-
-	CPY_STR(p->str_val, const_cast<char*>(value));
-
-	p->type = (param_info_t_type_t)type;
-	p->range_valid = 1;
-	p->default_valid = 1;
-	switch (type) {
-
-		case PARAM_TYPE_INT:
-
-			p->default_val.int_val = strtol(value, NULL, 10);
-			compute_range(range, &range_start, &range_end);
-			if (!validate_integer_range_lower_bound(range_start, &(p->range_min.int_min))) {
-/*				dprintf(D_ALWAYS, "invalid lower limit of range for '%s', assuming no lower bound\n", param);*/
-				p->range_valid = 0;
-			} else {
-				if (p->default_val.int_val < p->range_min.int_min) {
-					p->default_valid = 0;
-					p->default_val.int_val = p->range_min.int_min;
-/*					dprintf(D_ALWAYS, "default value for '%s': %d less than lower limit of: %d\n", param, p->default_val.int_val, p->range_min.int_min);*/
-				}
-			}
-			if (!validate_integer_range_upper_bound(range_end, &(p->range_max.int_max))) {
-/*				dprintf(D_ALWAYS, "invalid upper limit of range for '%s', assuming no uppper bound\n", param);*/
-				p->range_valid = 0;
-			} else {
-				if (p->default_val.int_val > p->range_max.int_max) {
-					p->default_valid = 0;
-					p->default_val.int_val = p->range_max.int_max;
-/*					dprintf(D_ALWAYS, "default value for '%s': %d greater than upper limit of: %d\n", param, p->default_val.int_val, p->range_max.int_max);*/
-				}
-			}
-
-			free(range_start);
-			free(range_end);
-
-			break;
-
-		case PARAM_TYPE_BOOL:
-
-			p->default_val.int_val = strtol(value, NULL, 10) != 0;
-
-			break;
-
-		case PARAM_TYPE_DOUBLE:
-
-			p->default_val.dbl_val = strtod(value, NULL);
-
-			compute_range(range, &range_start, &range_end);
-			if (!validate_double_range_lower_bound(range_start, &(p->range_min.dbl_min))) {
-/*				dprintf(D_ALWAYS, "invalid lower limit of range for '%s', assuming no lower bound\n", param);*/
-				p->range_valid = 0;
-			} else {
-				if (p->default_val.dbl_val < p->range_min.dbl_min) {
-					p->default_valid = 0;
-					p->default_val.dbl_val = p->range_min.dbl_min;
-/*					dprintf(D_ALWAYS, "default value for '%s': %f less than lower limit of: %f\n", param, p->default_val.dbl_val, p->range_min.dbl_min);*/
-				}
-			}
-			if (!validate_double_range_upper_bound(range_end, &(p->range_max.dbl_max))) {
-/*				dprintf(D_ALWAYS, "invalid upper limit of range for '%s', assuming no uppper bound\n", param);*/
-				p->range_valid = 0;
-			} else {
-				if (p->default_val.dbl_val > p->range_max.dbl_max) {
-					p->default_valid = 0;
-					p->default_val.dbl_val = p->range_max.dbl_max;
-/*					dprintf(D_ALWAYS, "default value for '%s': %f greater than upper limit of: %f\n", param, p->default_val.dbl_val, p->range_max.dbl_max);*/
-				}
-			}
-
-			free(range_start);
-			free(range_end);
-
-			break;
-
-		default:
-
-/*			dprintf(D_ALWAYS, "Invalid type specified for parameter '%s', defaulting to string\n", param);*/
-
-		case PARAM_TYPE_STRING:
-
-			if (validate_regex(range, value)) {
-				p->default_val.str_val = p->str_val;
-			} else {
-/*				dprintf(D_ALWAYS, "invalid default value: '%s', not in range '%s' for parameter '%s'\n", value, range, param);*/
-				p->default_valid = 0;
-			}
-
-			break;
-
-	}
-
-	p->state = state;
-	p->is_macro = is_macro;
-	p->reconfig = reconfig;
-	p->customization = customization;
-	CPY_STR(p->version, const_cast<char*>(version));
-	CPY_STR(p->friendly_name, const_cast<char*>(friendly_name));
-	CPY_STR(p->usage, const_cast<char*>(usage));
-	CPY_STR(p->url, const_cast<char*>(url));
-	CPY_STR(p->tags, const_cast<char*>(tags));
-
-	param_info_hash_insert(param_info, p);
-}
-#endif
 
 const char*
 param_default_string(const char* param)
@@ -372,6 +184,7 @@ param_range_double(const char* param, double* min, double* max) {
 	return 0;
 }
 
+#if 0
 /* XXX This function probably needs a lot of work. */
 static void
 compute_range(const char* range, char** range_start, char** range_end) {
@@ -562,10 +375,11 @@ validate_regex(const char* pattern, const char* subject) {
 
 	return is_valid;
 }
+#endif
 
 void
 iterate_params(int (*callPerElement)
-							(const param_info_t* /*value*/, void* /*user data*/),
+				(const param_info_t* /*value*/, void* /*user data*/),
 				void* user_data) {
 	param_info_hash_iterate(param_info, callPerElement, user_data);
 }
