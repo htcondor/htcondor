@@ -233,6 +233,8 @@ CreamJob::CreamJob( ClassAd *classad )
 	doActivePoll = false;
 	m_xfer_request = NULL;
 	m_numCleanupAttempts = 0;
+	resourceBatchSystemString = NULL;
+	resourceQueueString = NULL;
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -584,6 +586,7 @@ void CreamJob::doEvaluateState()
 			char *status = NULL;
 			char *fault = NULL;
 			int exit_code = -1;
+			int stagein_time = 0;
 			CHECK_PROXY;
 
 			rc = gahp->cream_job_status( resourceManagerString,
@@ -620,8 +623,12 @@ void CreamJob::doEvaluateState()
 			}
 
 			if ( remoteState == CREAM_JOB_STATE_REGISTERED ) {
-				probeNow = true;
-				gmState = GM_SUBMIT_COMMIT;
+				if ( jobAd->LookupInteger( ATTR_STAGE_IN_FINISH, stagein_time ) ) {
+					probeNow = true;
+					gmState = GM_SUBMIT_COMMIT;
+				} else {
+					gmState = GM_STAGE_IN;
+				}
 			} else {
 				gmState = GM_SUBMITTED;
 			}
@@ -747,6 +754,7 @@ void CreamJob::doEvaluateState()
 					jobAd->Assign( ATTR_CREAM_UPLOAD_URL, uploadUrl );
 					downloadUrl = download_url;
 					jobAd->Assign( ATTR_CREAM_DOWNLOAD_URL, downloadUrl );
+					jobAd->Assign( ATTR_STAGE_IN_START, now );
 					gmState = GM_SUBMIT_SAVE;				
 
 					UpdateJobLeaseSent(myResource->m_sharedLeaseExpiration);
@@ -802,6 +810,8 @@ void CreamJob::doEvaluateState()
 				if ( m_xfer_request->m_status == TransferRequest::TransferDone ) {
 					delete m_xfer_request;
 					m_xfer_request = NULL;
+					jobAd->Assign( ATTR_STAGE_IN_FINISH, now );
+					requestScheddUpdate( this, false );
 					gmState = GM_SUBMIT_COMMIT;
 				} else if ( m_xfer_request->m_status == TransferRequest::TransferFailed ) {
 					dprintf( D_ALWAYS, "(%d.%d) Stage-in failed: %s\n",
@@ -1186,6 +1196,14 @@ void CreamJob::doEvaluateState()
 			delete m_xfer_request;
 			m_xfer_request = NULL;
 			
+			int stage_time;
+			if ( jobAd->LookupInteger( ATTR_STAGE_IN_START, stage_time ) ) {
+				jobAd->Assign( ATTR_STAGE_IN_START, "Undefined" );
+			}
+			if ( jobAd->LookupInteger( ATTR_STAGE_IN_FINISH, stage_time ) ) {
+				jobAd->Assign( ATTR_STAGE_IN_FINISH, "Undefined" );
+			}
+
 			if ( wantRematch ) {
 				dprintf(D_ALWAYS,
 						"(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",

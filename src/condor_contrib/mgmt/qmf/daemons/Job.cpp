@@ -337,6 +337,16 @@ const ClassAd* LiveJobImpl::GetSummary ()
 		}
 	}
 
+    // make sure we're up-to-date with status even if we've cached the summary
+	m_summary_ad->Assign(ATTR_JOB_STATUS,this->GetStatus());
+    int i;
+    if ( m_full_ad->LookupInteger ( ATTR_ENTERED_CURRENT_STATUS, i ) ) {
+        m_summary_ad->Assign(ATTR_ENTERED_CURRENT_STATUS,i);
+    }
+    else {
+        dprintf(D_ALWAYS,"Unable to get ATTR_ENTERED_CURRENT_STATUS\n");
+    }
+
 	return m_summary_ad;
 }
 
