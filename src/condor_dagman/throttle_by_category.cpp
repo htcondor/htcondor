@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "condor_string.h"  /* for strnewp() */
 #include "throttle_by_category.h"
+#include "dagman_main.h"
 #include "debug.h"
 #include "MyString.h"
 
@@ -79,6 +80,7 @@ ThrottleByCategory::SetThrottle( const MyString *category, int maxJobs )
 			debug_printf( DEBUG_NORMAL, "Warning: new maxjobs value %d "
 						"for category %s overrides old value %d\n",
 						maxJobs, category->Value(), info->_maxJobs );
+			check_warning_strictness( DAG_STRICT_3 );
 		}
 		info->_maxJobs = maxJobs;
 	}

@@ -150,6 +150,20 @@ void debug_cache_stop_caching(void);
 void debug_cache_flush(void);
 void debug_cache_set_size(int size);
 
+/**
+ * The level of strictness in turning warnings into fatal errors.
+ */
+enum strict_level {
+	DAG_STRICT_0 = 0,	// No warnings are errors
+	DAG_STRICT_1 = 1,	// Most severe warnings are errors
+	DAG_STRICT_2 = 2,	// Medium-severity warnings are errors
+	DAG_STRICT_3 = 3	// Almost all warnings are errors
+};
+
+typedef enum strict_level strict_level_t;
+
+void check_warning_strictness( strict_level_t strictness );
+
 END_C_DECLS /* from condor_header_features.h */
 
 #endif /* ifndef DAGMAN_DEBUG_H */

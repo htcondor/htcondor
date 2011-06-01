@@ -819,7 +819,7 @@ Dag::RemoveBatchJob(Job *node) {
 	MyString display;
 	args.GetArgsStringForDisplay( &display );
 	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", display.Value() );
-	if ( util_popen( args ) ) {
+	if ( util_popen( args ) != 0 ) {
 			// Note: error here can't be fatal because there's a
 			// race condition where you could do a condor_rm on
 			// a job that already terminated.  wenger 2006-02-08.
@@ -1297,6 +1297,7 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 				debug_printf( DEBUG_QUIET, "Warning: searched for node for "
 							"cluster %d; got %d!!\n", condorID._cluster,
 							node->_CondorID._cluster );
+				check_warning_strictness( DAG_STRICT_3 );
 			}
 		}
 		ASSERT( isNoop == node->GetNoop() );
@@ -1732,7 +1733,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 		constraint.sprintf( "%s == %d", ATTR_DAGMAN_JOB_ID,
 					dm.DAGManJobId._cluster );
 		args.AppendArg( constraint.Value() );
-		if ( util_popen( args ) ) {
+		if ( util_popen( args ) != 0 ) {
 			debug_printf( DEBUG_NORMAL, "Error removing DAGMan jobs\n");
 		}
 	}
@@ -1751,7 +1752,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 			args.Clear();
 			args.AppendArg( dm.storkRmExe );
 			args.AppendArg( job->_CondorID._cluster );
-			if ( util_popen( args ) ) {
+			if ( util_popen( args ) != 0 ) {
 				debug_printf( DEBUG_NORMAL, "Error removing Stork job\n");
 			}
         }
@@ -2486,6 +2487,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		debug_printf( DEBUG_NORMAL,
 					  "Warning: can't create node status file '%s': %s\n", 
 					  tmpStatusFile.Value(), strerror( errno ) );
+		check_warning_strictness( DAG_STRICT_1 );
 		return;
 	}
 
@@ -2591,6 +2593,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 					  "file (%s) to permanent file (%s): %s\n",
 					  tmpStatusFile.Value(), _statusFileName,
 					  strerror( errno ) );
+		check_warning_strictness( DAG_STRICT_1 );
 		return;
 	}
 
@@ -2656,6 +2659,7 @@ Dag::CheckAllJobs()
 				result == CheckEvents::EVENT_WARNING ) {
 		debug_printf( DEBUG_NORMAL, "Warning checking Condor job events: %s\n",
 				jobError.Value() );
+		check_warning_strictness( DAG_STRICT_3 );
 	} else {
 		debug_printf( DEBUG_DEBUG_1, "All Condor job events okay\n");
 	}
@@ -2669,6 +2673,7 @@ Dag::CheckAllJobs()
 				result == CheckEvents::EVENT_WARNING ) {
 		debug_printf( DEBUG_NORMAL, "Warning checking Stork job events: %s\n",
 				jobError.Value() );
+		check_warning_strictness( DAG_STRICT_3 );
 	} else {
 		debug_printf( DEBUG_DEBUG_1, "All Stork job events okay\n");
 	}
@@ -2760,19 +2765,17 @@ Dag::CheckThrottleCats()
 					info->_totalJobs, info->_maxJobs );
 		ASSERT( info->_totalJobs >= 0 );
 		if ( info->_totalJobs < 1 ) {
-				// When we implement the -strict flag (see gittrac #1755)
-				// this should be a fatal error.
 			debug_printf( DEBUG_NORMAL, "Warning: category %s has no "
 						"assigned nodes, so the throttle setting (%d) "
 						"will have no effect\n", info->_category->Value(),
 						info->_maxJobs );
+			check_warning_strictness( DAG_STRICT_2 );
 		}
 
 		if ( !info->isSet() ) {
-				// When we implement the -strict flag (see gittrac #1755)
-				// this should be a fatal error.
 			debug_printf( DEBUG_NORMAL, "Warning: category %s has no "
 						"throttle value set\n", info->_category->Value() );
+			check_warning_strictness( DAG_STRICT_2 );
 		}
 	}
 }
@@ -3886,6 +3889,7 @@ Dag::AssumeOwnershipofNodes(const MyString &spliceName, OwnedMaterials *om)
 						mainThrottle->_maxJobs,
 						mainThrottle->_category->Value(),
 						spliceName.Value(), spliceThrottle->_maxJobs );
+			check_warning_strictness( DAG_STRICT_2 );
 		} else {
 			_catThrottles.SetThrottle( spliceThrottle->_category,
 						spliceThrottle->_maxJobs );

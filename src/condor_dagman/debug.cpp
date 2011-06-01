@@ -23,6 +23,7 @@
 #include "debug.h"
 #include "condor_daemon_core.h"
 #include "MyString.h"
+#include "dagman_main.h"
 
 debug_level_t debug_level    = DEBUG_NORMAL;
 const char *        debug_progname = NULL;
@@ -258,6 +259,12 @@ void debug_cache_set_size(int size)
 	cache_size = size;
 }
 
-
-
-
+/*--------------------------------------------------------------------------*/
+void check_warning_strictness( strict_level_t strictness )
+{
+	if ( Dagman::_strict >= strictness ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Warning is fatal "
+					"error because of DAGMAN_USE_STRICT setting\n" );
+		main_shutdown_rescue( EXIT_ERROR );
+	}
+}
