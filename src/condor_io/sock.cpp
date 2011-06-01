@@ -25,7 +25,7 @@
 #include "sock.h"
 #include "condor_network.h"
 #include "internet.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "condor_debug.h"
 #include "condor_socket_types.h"
 #include "get_port_range.h"
@@ -33,6 +33,7 @@
 #include "daemon_core_sock_adapter.h"
 #include "selector.h"
 #include "authentication.h"
+#include "condor_sockfunc.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -70,7 +71,7 @@ Sock::Sock() : Stream() {
 	connect_state.host = NULL;
 	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
-	memset(&_who, 0, sizeof(struct sockaddr_in));
+	_who.clear();
 
     crypto_ = NULL;
     mdMode_ = MD_OFF;
@@ -102,7 +103,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	connect_state.host = NULL;
 	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
-	memset( &_who, 0, sizeof( struct sockaddr_in ) );
+	_who.clear();
 
     crypto_ = NULL;
     mdMode_ = MD_OFF;
@@ -377,7 +378,7 @@ int Sock::move_descriptor_up()
 
 int Sock::assign(SOCKET sockd)
 {
-	int my_type = SOCK_DGRAM;
+	int		my_type;
 
 	if (_state != sock_virgin) return FALSE;
 
@@ -385,9 +386,8 @@ int Sock::assign(SOCKET sockd)
 		_sock = sockd;		/* Could we check for correct protocol ? */
 		_state = sock_assigned;
 
-		memset(&_who, 0, sizeof(struct sockaddr_in));
-		SOCKET_LENGTH_TYPE addrlen = sizeof(_who);
-		getpeername(_sock,(struct sockaddr *)&_who, (socklen_t*)&addrlen);
+		_who.clear();
+		condor_getpeername(_sock, _who);
 
 		if ( _timeout > 0 ) {
 			timeout_no_timeout_multiplier( _timeout );
@@ -472,17 +472,17 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 
 	int this_trial = start_trial;
 	do {
-		sockaddr_in		sin;
+		condor_sockaddr			addr;
 		int bind_return_val;
 
-		memset(&sin, 0, sizeof(sockaddr_in));
-		sin.sin_family = AF_INET;
+		addr.clear();
 		if( bind_all ) {
-			sin.sin_addr.s_addr = INADDR_ANY;
+			addr.set_ipv4();
+			addr.set_addr_any();
 		} else {
-			sin.sin_addr.s_addr = htonl(my_ip_addr());
+			addr = get_local_ipaddr();
 		}
-		sin.sin_port = htons((u_short)this_trial++);
+		addr.set_port((unsigned short)this_trial++);
 
 #ifndef WIN32
 		priv_state old_priv;
@@ -493,9 +493,7 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 		}
 #endif
 
-		bind_return_val = _bind_helper(_sock, 
-			(SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)&sin, 
-			sizeof(sockaddr_in), outbound, false);
+		bind_return_val = _bind_helper(_sock, addr, outbound, false);
 
         addr_changed();
 
@@ -531,7 +529,7 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 
 int Sock::bind(bool outbound, int port, bool loopback)
 {
-	sockaddr_in		sin;
+	condor_sockaddr addr;
 	int bind_return_value;
 
 	// Following lines are added because some functions in condor call
@@ -587,17 +585,16 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		}
 	} else {
 			// Bind to a dynamic port.
-		memset(&sin, 0, sizeof(sockaddr_in));
-		sin.sin_family = AF_INET;
+		addr.set_ipv4();
 		if( loopback ) {
-			sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+			addr.set_loopback();
 		}
 		else if( (bool)_condor_bind_all_interfaces() ) {
-			sin.sin_addr.s_addr = htonl(INADDR_ANY);
+			addr.set_addr_any();
 		} else {
-			sin.sin_addr.s_addr = htonl(my_ip_addr());
+			addr = get_local_ipaddr();
 		}
-		sin.sin_port = htons((u_short)port);
+		addr.set_port((unsigned short)port);
 
 #ifndef WIN32
 		priv_state old_priv;
@@ -608,7 +605,7 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		}
 #endif
 
-		bind_return_value = _bind_helper(_sock, (sockaddr *)&sin, sizeof(sockaddr_in), outbound, loopback);
+		bind_return_value = _bind_helper(_sock, addr, outbound, loopback);
 
         addr_changed();
 
@@ -721,40 +718,49 @@ int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 	return TRUE; 
 }
 
+bool Sock::guess_address_string(char const* host, int port, condor_sockaddr& addr) {
+	/* might be in <x.x.x.x:x> notation				*/
+	if (host[0] == '<') {
+		addr.from_sinful(host);
+	}
+	/* try to get a decimal notation 	 			*/
+	else if ( ipv6_is_ipaddr(host, addr) ) {
+			// nothing to do here
+		addr.set_port(port);
+	}
+	/* if dotted notation fails, try host database	*/
+	else{
+		std::vector<condor_sockaddr> addrs;
+		addrs = resolve_hostname(host);
+		if (addrs.empty())
+			return false;
+		addr = addrs.front();
+		addr.set_port(port);
+	}
+	return true;
+}
+
 int Sock::do_connect(
 	char const	*host,
 	int		port,
 	bool	non_blocking_flag
 	)
 {
-	hostent		*hostp;
-	unsigned long	inaddr;
-
 	if (!host || port < 0) return FALSE;
 
-	memset(&_who, 0, sizeof(sockaddr_in));
-	_who.sin_family = AF_INET;
-	_who.sin_port = htons((u_short)port);
+	_who.clear();
+	if (!guess_address_string(host, port, _who)) {
+		return FALSE;
+	}
 
-    int ret;
-
-	/* might be in <x.x.x.x:x> notation				*/
+		// current code handles sinful string and just hostname differently.
+		// however, why don't we just use sinful string at all?
 	if (host[0] == '<') {
-		string_to_sin(host, &_who);
 		set_connect_addr(host);
 	}
-	/* try to get a decimal notation 	 			*/
-	else if ( (ret = inet_pton(AF_INET, host, &inaddr)) > 0 ) {
-		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
-		set_connect_addr(sin_to_string(&_who));
+	else { // otherwise, just use ip string.
+		set_connect_addr(_who.to_ip_string().Value());
 	}
-	/* if dotted notation fails, try host database	*/
-	else{
-		if ((hostp = condor_gethostbyname(host)) == (hostent *)0) return FALSE;
-		memcpy(&_who.sin_addr, hostp->h_addr, hostp->h_length);
-		set_connect_addr(sin_to_string(&_who));
-	}
-
     addr_changed();
 
 	// now that we have set _who (useful for getting informative
@@ -1124,7 +1130,7 @@ bool Sock::do_connect_tryit()
 	}
 
 
-	if (::connect(_sock, (sockaddr *)&_who, sizeof(sockaddr_in)) == 0) {
+	if (condor_connect(_sock, _who) == 0) {
 		if ( connect_state.non_blocking_flag ) {
 			// Pretend that we haven't connected yet so that there is
 			// only one code path for all non-blocking connects.
@@ -1296,7 +1302,7 @@ int Sock::close()
         free(connect_state.host);
     }
 	connect_state.host = NULL;
-	memset(&_who, 0, sizeof( struct sockaddr_in ) );
+	_who.clear();
     addr_changed();
 	
 	return TRUE;
@@ -1772,36 +1778,47 @@ Sock::addr_changed()
     _sinful_peer_buf[0] = '\0';
 }
 
-struct sockaddr_in *
+condor_sockaddr
 Sock::peer_addr()
 {
-	return &_who;
+	return _who;
 }
 
 
 int
 Sock::peer_port()
 {
-	return (int) ntohs( _who.sin_port );
+		//return (int) ntohs( _who.sin_port );
+	return (int)(_who.get_port());
 }
 
 
+// [OBSOLETE]
+/*
 unsigned int
 Sock::peer_ip_int()
 {
 	return (unsigned int) ntohl( _who.sin_addr.s_addr );
 }
+*/
 
 
 const char *
 Sock::peer_ip_str()
 {
+	if (!_peer_ip_buf[0]) {
+		MyString peer_ip = _who.to_ip_string();
+		strcpy(_peer_ip_buf, peer_ip.Value());
+	}
+	return _peer_ip_buf;
+		/*
     if( _peer_ip_buf[0] ) {
         return _peer_ip_buf;
     }
     strncpy( _peer_ip_buf, inet_ntoa(_who.sin_addr), IP_STRING_BUF_SIZE );
     _peer_ip_buf[IP_STRING_BUF_SIZE-1] = '\0';
 	return _peer_ip_buf;
+		*/
 }
 
 // is peer a local interface, aka did this connection originate from a local process?
@@ -1810,6 +1827,34 @@ Sock::peer_ip_str()
 bool 
 Sock::peer_is_local()
 {
+		// peer_is_local is called rarely and by few call sites.
+		// making hashtable for both ipv4 and ipv6 addresses does seem to
+		// be worth implementation.
+
+	if (!peer_addr().is_valid())
+		return false;
+
+	bool result;
+	condor_sockaddr addr = peer_addr();
+		// ... but use any old ephemeral port.
+	addr.set_port(0);
+	int sock = ::socket(addr.get_aftype(), SOCK_DGRAM, IPPROTO_UDP);
+		// invoke OS bind, not cedar bind - cedar bind does not allow us
+		// to specify the local address.
+	if (condor_bind(sock, addr) < 0) {
+		// failed to bind.  assume we failed  because the peer address is
+		// not local.
+		result = false;
+	} else {
+		// bind worked, assume address has a local interface.
+		result = true;
+	}
+	// must not forget to close the socket we just created!
+	::closesocket(sock);
+	return result;
+	
+		/*
+
 	// Keep a static cache of results, since determining if the peer is local
 	// is somewhat expensive. Flush the cache every 20 min to deal w/
 	// interfaces on the machine being activated/deactivated during runtime.
@@ -1860,7 +1905,8 @@ Sock::peer_is_local()
         return false;
     }
 		// Bind to the *same address* as our peer ....
-	struct sockaddr_in mySockAddr = *( peer_addr() );
+		//struct sockaddr_in mySockAddr = *( peer_addr() );
+	sockaddr_in mySockAddr = peer_addr().to_sin();
 		// ... but use any old ephemeral port.
     mySockAddr.sin_port = htons( 0 );
 		// invoke OS bind, not cedar bind - cedar bind does not allow us
@@ -1883,66 +1929,48 @@ Sock::peer_is_local()
 
 	// return the result to the caller
 	return result;
+		*/
 }
 
-
-// my port and IP address in a struct sockaddr_in
-// @args: the address is returned via 'sin'
-// @ret: 0 if succeed, -1 if failed
-int
-Sock::my_addr( struct sockaddr_in *sin )
+condor_sockaddr
+Sock::my_addr() 
 {
-    struct sockaddr_in *tmp = getSockAddr(_sock);
-    if (tmp == NULL) return -1;
-
-    memcpy(sin, tmp, sizeof(struct sockaddr_in));
-    return 0;
+	condor_sockaddr addr;
+	int ret = condor_getsockname_ex(_sock, addr);
+	return addr;
 }
 
 const char *
 Sock::my_ip_str()
 {
-    if( _my_ip_buf[0] ) {
-        return _my_ip_buf;
-    }
-	struct sockaddr_in sin;
-	if(my_addr(&sin) == -1) {
-		return NULL;
+	if (!_my_ip_buf[0]) {
+		MyString ip_str = my_addr().to_ip_string();
+		strcpy(_my_ip_buf, ip_str.Value());
 	}
-    strncpy( _my_ip_buf, inet_ntoa(sin.sin_addr), IP_STRING_BUF_SIZE );
-    _my_ip_buf[IP_STRING_BUF_SIZE-1] = '\0';
 	return _my_ip_buf;
 }
 
 char *
 Sock::get_sinful()
 {       
-    if( _sinful_self_buf[0] ) {
-        return _sinful_self_buf;
+    if( !_sinful_self_buf[0] ) {
+		condor_sockaddr addr;
+		int ret = condor_getsockname_ex(_sock, addr);
+		if (ret == 0) {
+			MyString sinful_self = addr.to_sinful();
+			strcpy(_sinful_self_buf, sinful_self.Value());
     }
-    struct sockaddr_in *tmp = getSockAddr(_sock);
-    if (tmp == NULL) return NULL;
-    char const *s = sin_to_string(tmp);
-	if(!s) {
-		return NULL;
 	}
-	strncpy(_sinful_self_buf,s,SINFUL_STRING_BUF_SIZE);
-    _sinful_self_buf[SINFUL_STRING_BUF_SIZE-1] = '\0';
 	return _sinful_self_buf;
 }
 
 char *
 Sock::get_sinful_peer()
 {       
-    if( _sinful_peer_buf[0] ) {
-        return _sinful_peer_buf;
-    }
-	char const *s = sin_to_string(&_who);
-	if(!s) {
-		return NULL;
+	if ( !_sinful_peer_buf[0] ) {
+		MyString sinful_peer = _who.to_sinful();
+		strcpy(_sinful_peer_buf, sinful_peer.Value());
 	}
-	ASSERT(strlen(s) < sizeof(_sinful_peer_buf));
-	strcpy(_sinful_peer_buf,s);
 	return _sinful_peer_buf;
 }
 
@@ -1959,27 +1987,10 @@ Sock::default_peer_description()
 int
 Sock::get_port()
 {
-	sockaddr_in	addr;
-
-	SOCKET_LENGTH_TYPE addr_len;
-	
-	addr_len = sizeof(sockaddr_in);
-
-	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return -1;
-	return (int) ntohs(addr.sin_port);
-}
-
-
-unsigned int 
-Sock::get_ip_int()
-{
-	sockaddr_in	addr;
-	SOCKET_LENGTH_TYPE addr_len;
-
-	addr_len = sizeof(sockaddr_in);
-
-	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return 0;
-	return (unsigned int) ntohl(addr.sin_addr.s_addr);
+	condor_sockaddr addr;
+	if (condor_getsockname(_sock, addr) < 0)
+		return -1;
+	return addr.get_port();
 }
 
 #if !defined(WIN32)
@@ -2212,8 +2223,7 @@ bool Sock :: is_encrypt()
 
 
 int
-Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
-	SOCKET_LENGTH_TYPE len, bool outbound, bool loopback)
+Sock::_bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loopback)
 {
 	int rval;
 
@@ -2226,14 +2236,16 @@ Sock::_bind_helper(int fd, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE addr,
 				the functions signatures all the way down to the
 				the Generic_bind() call in the GCB
 				external. */
-			const_cast<struct sockaddr*>(addr),
-			len);
+                addr.to_sockaddr(),
+				addr.get_socklen());
 	}
 	else {
-		rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
+			//rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
+		rval = condor_bind(fd, addr);
 	}
 #else
-	rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
+		//rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
+	rval = condor_bind(fd, addr);
 #endif /* HAVE_EXT_GCB */
 	return rval;
 }

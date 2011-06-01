@@ -28,6 +28,7 @@
 #include "HashTable.h"
 #include "sock.h"
 #include "condor_secman.h"
+#include "ipv6_hostname.h"
 
 // Externs to Globals
 
@@ -36,10 +37,17 @@ const char TotallyWild[] = "*";
 
 // Hash function for Permission hash table
 static unsigned int
-compute_perm_hash(const struct in_addr &in_addr)
+compute_perm_hash(const in6_addr &in_addr)
 {
-	const unsigned int h = *((const unsigned int *)&in_addr);
-	return h;
+		// the hash function copied from MyString::Hash()
+	int Len = sizeof(in6_addr);
+	const unsigned char* Data = (const unsigned char*)&in_addr;
+	int i;
+	unsigned int result = 0;
+	for(i = 0; i < Len; i++) {
+		result = (result<<5) + result + Data[i];
+	}
+	return result;
 }
 
 // Hash function for HolePunchTable_t hash tables
@@ -50,8 +58,8 @@ compute_host_hash( const MyString & str )
 }
 
 // == operator for struct in_addr, also needed for hash table template
-bool operator==(const struct in_addr a, const struct in_addr b) {
-	return a.s_addr == b.s_addr;
+bool operator==(const in6_addr& a, const in6_addr& b) {
+	return IN6_ARE_ADDR_EQUAL(&a, &b);
 }
 
 // Constructor
@@ -76,7 +84,7 @@ IpVerify::~IpVerify()
 	// Clear the Permission Hash Table
 	if (PermHashTable) {
 		// iterate through the table and delete the entries
-		struct in_addr key;
+		in6_addr key;
 		UserPerm_t * value;
 		PermHashTable->startIterations();
 
@@ -115,7 +123,7 @@ IpVerify::Init()
 	// Clear the Permission Hash Table in case re-initializing
 	if (PermHashTable) {
 		// iterate through the table and delete the entries
-		struct in_addr key;
+		struct in6_addr key;
 		UserPerm_t * value;
 		PermHashTable->startIterations();
 
@@ -275,11 +283,11 @@ bool IpVerify :: has_user(UserPerm_t * perm, const char * user, perm_mask_t & ma
 
 
 bool
-IpVerify::LookupCachedVerifyResult( DCpermission perm, const struct in_addr &sin, const char * user, perm_mask_t & mask)
+IpVerify::LookupCachedVerifyResult( DCpermission perm, const struct in6_addr &sin6, const char * user, perm_mask_t & mask)
 {
     UserPerm_t * ptable = NULL;
 
-	if( PermHashTable->lookup(sin, ptable) != -1 ) {
+	if( PermHashTable->lookup(sin6, ptable) != -1 ) {
 
 		if (has_user(ptable, user, mask)) {
 
@@ -295,14 +303,14 @@ IpVerify::LookupCachedVerifyResult( DCpermission perm, const struct in_addr &sin
 }
 
 int
-IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, perm_mask_t new_mask)
+IpVerify::add_hash_entry(const struct in6_addr & sin6_addr, const char * user, perm_mask_t new_mask)
 {
     UserPerm_t * perm = NULL;
     perm_mask_t old_mask = 0;  // must init old_mask to zero!!!
     MyString user_key = user;
 
 	// assert(PermHashTable);
-	if ( PermHashTable->lookup(sin_addr, perm) != -1 ) {
+	if ( PermHashTable->lookup(sin6_addr, perm) != -1 ) {
 		// found an existing entry.  
 
 		if (has_user(perm, user, old_mask)) {
@@ -313,7 +321,7 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, per
 	}
     else {
         perm = new UserPerm_t(42, compute_host_hash);
-        if (PermHashTable->insert(sin_addr, perm) != 0) {
+        if (PermHashTable->insert(sin6_addr, perm) != 0) {
             delete perm;
             return FALSE;
         }
@@ -323,7 +331,7 @@ IpVerify::add_hash_entry(const struct in_addr & sin_addr, const char * user, per
 
 	if( DebugFlags & (D_FULLDEBUG|D_SECURITY) ) {
 		MyString auth_str;
-		AuthEntryToString(sin_addr,user,new_mask, auth_str);
+		AuthEntryToString(sin6_addr,user,new_mask, auth_str);
 		dprintf(D_FULLDEBUG|D_SECURITY,
 				"Adding to resolved authorization table: %s\n",
 				auth_str.Value());
@@ -378,19 +386,40 @@ IpVerify::UserHashToString(UserHash_t *user_hash, MyString &result)
 }
 
 void
-IpVerify::AuthEntryToString(const struct in_addr & host, const char * user, perm_mask_t mask, MyString &result)
+IpVerify::AuthEntryToString(const in6_addr & host, const char * user, perm_mask_t mask, MyString &result)
 {
+		// every address will be seen as IPv6 format. should do something
+		// to print IPv4 address neatly.
+	char buf[INET6_ADDRSTRLEN];
+	memset((void*)buf, 0, sizeof(buf));
+	uint32_t* addr = (uint32_t*)&host;
+		// checks if IPv4-mapped-IPv6 address
+	
+	const char* ret = NULL;
+	if (addr[0] == 0 && addr[1] == 0 & addr[2] == htonl(0xffff)) {
+		ret = inet_ntop(AF_INET, (const void*)&addr[3], buf, sizeof(buf));
+	} else {
+		ret = inet_ntop(AF_INET6, &host, buf, sizeof(buf));
+	}
+
+#ifndef WIN32
+	if (!ret) {
+		dprintf(D_HOSTNAME, "IP address conversion failed, errno = %d\n",
+				errno);
+	}
+#endif
+
 	MyString mask_str;
 	PermMaskToString( mask, mask_str );
 	result.sprintf("%s/%s: %s", /* NOTE: this does not need a '\n', all the call sites add one. */
 			user ? user : "(null)",
-			inet_ntoa(host),
+			buf,
 			mask_str.Value() );
 }
 
 void
 IpVerify::PrintAuthTable(int dprintf_level) {
-	struct in_addr host;
+	struct in6_addr host;
 	UserPerm_t * ptable;
 	PermHashTable->startIterations();
 
@@ -449,15 +478,13 @@ ExpandHostAddresses(char const *host,StringList *list)
 	if( strchr(host,'*') || strchr(host,'/') || is_valid_network(host,NULL,NULL) ) {
 		return; // not a valid hostname, so don't bother trying to look it up
 	}
-	struct hostent *h = condor_gethostbyname(host);
-	if(!h || h->h_addrtype != AF_INET || !h->h_addr_list) {
-		dprintf (D_ALWAYS, "IPVERIFY: unable to resolve IP address of %s\n", host);
-		return;
-	}
 
-	struct in_addr **addrs = (struct in_addr **)h->h_addr_list;
-	for(;*addrs;addrs++) {
-		list->append(inet_ntoa(**addrs));
+	std::vector<condor_sockaddr> addrs = resolve_hostname(host);
+	for (std::vector<condor_sockaddr>::iterator iter = addrs.begin();
+		 iter != addrs.end();
+		 ++iter) {
+		const condor_sockaddr& addr = *iter;
+		list->append(addr.to_ip_string().Value());
 	}
 }
 
@@ -627,12 +654,11 @@ IpVerify::refreshDNS() {
 }
 
 int
-IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user, MyString *allow_reason, MyString *deny_reason )
+IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * user, MyString *allow_reason, MyString *deny_reason )
 {
 	perm_mask_t mask;
-	struct in_addr sin_addr;
-	char *thehost;
-	char **aliases = NULL;
+	in6_addr sin6_addr;
+	const char *thehost;
     const char * who = user;
 	MyString peer_description; // we build this up as we go along (DNS etc.)
 
@@ -655,7 +681,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		break;
 	}
 
-	memcpy(&sin_addr,&sin->sin_addr,sizeof(sin_addr));
+	sin6_addr = addr.to_ipv6_address();
 	mask = 0;	// must initialize to zero because we logical-or bits into this
 
     if (who == NULL || *who == '\0') {
@@ -679,7 +705,8 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		//
 	if ( PunchedHoleArray[perm] != NULL ) {
 		HolePunchTable_t* hpt = PunchedHoleArray[perm];
-		char* ip_str = inet_ntoa(sin->sin_addr);
+		MyString ip_str_buf = addr.to_ip_string();
+		const char* ip_str = ip_str_buf.Value();
 		MyString id_with_ip;
 		MyString id;
 		int count;
@@ -735,7 +762,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		return USER_AUTH_FAILURE;
 	}
 		
-	if( LookupCachedVerifyResult(perm,sin_addr,who,mask) ) {
+	if( LookupCachedVerifyResult(perm,sin6_addr,who,mask) ) {
 		if( deny_reason && (mask&deny_mask(perm)) ) {
 			deny_reason->sprintf(
 				"cached result for %s; see first case for the full reason",
@@ -757,17 +784,17 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		perm_mask_t const allow_resolved = allow_mask(perm)|deny_mask(perm);
 
 			// check for matching subnets in ip/mask style
-		char ipstr[IP_STRING_BUF_SIZE];
-		sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
+		char ipstr[INET6_ADDRSTRLEN] = { 0, };
+   		addr.to_ip_string(ipstr, INET6_ADDRSTRLEN);
 
-		peer_description = ipstr;
+		peer_description = addr.to_ip_string();
 
 		if ( !(mask&deny_resolved) && lookup_user_ip_deny(perm,who,ipstr)) {
 			mask |= deny_mask(perm);
 			if( deny_reason ) {
 				deny_reason->sprintf(
 					"%s authorization policy denies IP address %s",
-					PermString(perm), ipstr );
+					PermString(perm), addr.to_ip_string().Value() );
 			}
 		}
 
@@ -776,19 +803,19 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			if( allow_reason ) {
 				allow_reason->sprintf(
 					"%s authorization policy allows IP address %s",
-					PermString(perm), ipstr );
+					PermString(perm), addr.to_ip_string().Value() );
 			}
 		}
 
 
+		std::vector<MyString> hostnames;
 		// now scan through hostname strings
 		if( !(mask&allow_resolved) || !(mask&deny_resolved) ) {
-			thehost = sin_to_hostname(sin,&aliases);
+			hostnames = get_hostname_with_alias(addr);
 		}
-		else {
-			thehost = NULL;
-		}
-		while ( thehost ) {
+
+		for (int i = 0; i < hostnames.size(); ++i) {
+			thehost = hostnames[i].Value();
 			peer_description.append_to_list(thehost);
 
 			if ( !(mask&deny_resolved) && lookup_user_host_deny(perm,who,thehost) ) {
@@ -808,11 +835,6 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 						PermString(perm), thehost );
 				}
 			}
-                
-				// check all aliases for this IP as well
-			if( aliases ) {
-				thehost = *(aliases++);
-			}
 		}
 			// if we found something via our hostname or subnet mactching, we now have 
 			// a mask, and we should add it into our table so we need not
@@ -826,7 +848,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		bool determined_by_parent = false;
 		if ( mask == 0 ) {
 			if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
-				dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who,sin_to_string(sin));
+				dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who, addr.to_sinful().Value());
 				if( allow_reason ) {
 					allow_reason->sprintf(
 						"%s authorization policy does not deny, so allowing",
@@ -840,10 +862,10 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 					hierarchy.getPermsIAmDirectlyImpliedBy();
 				bool parent_allowed = false;
 				for( ; *parent_perms != LAST_PERM; parent_perms++ ) {
-					if( Verify( *parent_perms, sin, user, allow_reason, NULL ) == USER_AUTH_SUCCESS ) {
+					if( Verify( *parent_perms, addr, user, allow_reason, NULL ) == USER_AUTH_SUCCESS ) {
 						determined_by_parent = true;
 						parent_allowed = true;
-						dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who,sin_to_string(sin),PermString(perm),PermString(*parent_perms));
+						dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who, addr.to_sinful().Value(),PermString(perm),PermString(*parent_perms));
 						if( allow_reason ) {
 							MyString tmp = *allow_reason;
 							allow_reason->sprintf(
@@ -870,9 +892,12 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 						deny_reason->sprintf(
 							"%s authorization policy contains no matching "
 							"ALLOW entry for this request"
-							"; identifiers used for this host: %s",
+							"; identifiers used for this host: %s, hostname size = %d, "
+							"original ip address = %s",
 							PermString(perm),
-							peer_description.Value());
+							peer_description.Value(),
+							hostnames.size(),
+							ipstr);
 					}
 				}
 			}
@@ -891,7 +916,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 		}
 
 			// finally, add the mask we computed into the table with this IP addr
-			add_hash_entry(sin->sin_addr, who, mask);			
+			add_hash_entry(sin6_addr, who, mask);			
 	}  // end of if find_match is FALSE
 
 		// decode the mask and return True or False to the user.

@@ -24,6 +24,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_md.h"       // Condor_MD_MAC
+#include "condor_sockfunc.h"
 
 #define USABLE_PACKET_SIZE SAFE_MSG_FRAGMENT_SIZE - SAFE_MSG_HEADER_SIZE
 const char THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD[] = "CRAP";
@@ -679,7 +680,7 @@ int _condorOutMsg::putn(const char *dta, const int size) {
  *	          -1, if fails
  */
 int _condorOutMsg::sendMsg(const int sock,
-                           const struct sockaddr* who,
+                           const condor_sockaddr& who,
                            _condorMsgID msgID,
                            unsigned char * mac)
 {
@@ -698,9 +699,11 @@ int _condorOutMsg::sendMsg(const int sock,
 		tempPkt->makeHeader(false, seqNo++, msgID, md);
 		msgLen    += tempPkt->length;
 
-		sent = sendto(sock, tempPkt->dataGram,
+		
+		sent = condor_sendto(sock, tempPkt->dataGram,
 		              tempPkt->length + SAFE_MSG_HEADER_SIZE,
-                      0, who, sizeof(struct sockaddr));
+                      0, who);
+
 		if(sent != tempPkt->length + SAFE_MSG_HEADER_SIZE) {
 			dprintf(D_ALWAYS, "sendMsg:sendto failed - errno: %d\n", errno);
 			headPacket = tempPkt;
@@ -716,7 +719,7 @@ int _condorOutMsg::sendMsg(const int sock,
 
 		dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
 		dprintf( D_NETWORK|D_NOHEADER, "%s\n",
-				 sin_to_string((sockaddr_in *)who) );
+				 who.to_sinful().Value());
 		total += sent;
 		delete tempPkt;
         md = 0;
@@ -732,8 +735,8 @@ int _condorOutMsg::sendMsg(const int sock,
 			// versions of Condor.  The crypto header may still
 			// be there, since that is in the buffer starting at
 			// the position pointed to by "data".
-		sent = sendto(sock, lastPacket->data, lastPacket->length,
-		              0, who, sizeof(struct sockaddr));
+		sent = condor_sendto(sock, lastPacket->data, lastPacket->length,
+							 0, who);
 		if(sent != lastPacket->length) {
 			dprintf( D_ALWAYS, 
 				 "SafeMsg: sending small msg failed. errno: %d\n",
@@ -747,15 +750,15 @@ int _condorOutMsg::sendMsg(const int sock,
         //}
         //dprintf(D_NETWORK, "--->packet [%d bytes]: %s\n", sent, str);
 		dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
-		dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string((sockaddr_in *)who) );
+		dprintf( D_NETWORK|D_NOHEADER, "%s\n", who.to_sinful().Value());
 		total = sent;
     }
     else {
         lastPacket->makeHeader(true, seqNo, msgID, md);
         msgLen += lastPacket->length;
-        sent = sendto(sock, lastPacket->dataGram,
+        sent = condor_sendto(sock, lastPacket->dataGram,
                       lastPacket->length + SAFE_MSG_HEADER_SIZE,
-                      0, who, sizeof(struct sockaddr));
+                      0, who);
         if(sent != lastPacket->length + SAFE_MSG_HEADER_SIZE) {
             dprintf( D_ALWAYS, "SafeMsg: sending last packet failed. errno: %d\n", errno );
             headPacket->reset();
@@ -767,7 +770,7 @@ int _condorOutMsg::sendMsg(const int sock,
         //}
         //dprintf(D_NETWORK, "--->packet [%d bytes]: %s\n", sent, str);
         dprintf( D_NETWORK, "SEND [%d] %s ", sent, sock_to_string(sock) );
-        dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string((sockaddr_in *)who) );
+        dprintf( D_NETWORK|D_NOHEADER, "%s\n", who.to_sinful().Value());
         total += sent;
     }
 

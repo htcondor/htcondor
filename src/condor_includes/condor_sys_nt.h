@@ -152,7 +152,9 @@ DLL_IMPORT_MAGIC int access(const char *, int);
 #define S_ISREG(mode) (((mode)&_S_IFREG) == _S_IFREG)
 #define rint(num) ((num<0.)? -floor(-num+.5):floor(num+.5))
 
+#ifndef ETIMEDOUT
 #define ETIMEDOUT ERROR_TIMEOUT
+#endif
 
 /* Some missing ERRNO values.... */
 #ifndef ETXTBSY
@@ -267,5 +269,6 @@ _Check_return_ inline int isdigit(_In_ char ch) {
 
 /* fix [f]stat on Windows */
 #include "stat.WINDOWS.h"
+#include "condor_ipv6.WINDOWS.h"
 
 #endif /* CONDOR_SYS_NT_H */

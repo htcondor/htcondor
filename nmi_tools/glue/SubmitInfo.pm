@@ -52,6 +52,7 @@ our %build_and_test_sets = (
 		'x86_rhap_5',
 		'x86_rhas_3',
 		'x86_winnt_5.1',
+		'x86_64_rhap_6.0-updated',
 	],
 	
 	# NMI will need builds on a set of platforms that we do not provide in our
@@ -59,8 +60,8 @@ our %build_and_test_sets = (
 	'nmi_one_offs' => [
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
-		'x86_freebsd_7.4',
-		'x86_64_freebsd_8.2',
+		'x86_freebsd_7.4-updated',
+		'x86_64_freebsd_8.2-updated',
 	],
 	
 	# We will build on a set of machines that we want to be sure continue building
@@ -954,7 +955,7 @@ our %submit_info = (
 	##########################################################################
 	# Platform FreeBSD 7.4 on x86
 	##########################################################################
-	'x86_freebsd_7.4'		=> {
+	'x86_freebsd_7.4-updated'		=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
@@ -996,9 +997,9 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-	'x86_64_freebsd_7.4'		=> 'x86_freebsd_7.4',
-	'x86_freebsd_8.2'			=> 'x86_freebsd_7.4',
-	'x86_64_freebsd_8.2'		=> 'x86_freebsd_7.4',
+	'x86_64_freebsd_7.4-updated'		=> 'x86_freebsd_7.4-updated',
+	'x86_freebsd_8.2-updated'			=> 'x86_freebsd_7.4-updated',
+	'x86_64_freebsd_8.2-updated'		=> 'x86_freebsd_7.4-updated',
 );
 
 while( 1 ) {

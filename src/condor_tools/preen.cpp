@@ -36,7 +36,6 @@
 #include "condor_qmgr.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
-#include "my_hostname.h"
 #include "condor_state.h"
 #include "sig_install.h"
 #include "condor_email.h"
@@ -49,6 +48,7 @@
 #include "file_lock.h"
 #include "../condor_privsep/condor_privsep.h"
 #include "filename_tools.h"
+#include "ipv6_hostname.h"
 
 State get_machine_state();
 
@@ -192,7 +192,8 @@ produce_output()
 		fprintf( mailer, "\n" );
 		fprintf( mailer,
 			 "The condor_preen process has found the following\n"
-			 "stale condor files on <%s>:\n\n", my_hostname() );
+			 "stale condor files on <%s>:\n\n", 
+			 get_local_hostname().Value() );
 	}
 
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
@@ -831,7 +832,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	MyString	buf;
 
 	if( is_relative_to_cwd( name ) ) {
-		pathname.sprintf( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+	pathname.sprintf( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
 	}
 	else {
 		pathname = name;

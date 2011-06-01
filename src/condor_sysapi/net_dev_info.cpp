@@ -24,6 +24,8 @@
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
+#include "condor_sockaddr.h"
+
 
 static bool net_devices_cached = false;
 static std::vector<NetworkDeviceInfo> net_devices_cache;
@@ -106,14 +108,16 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 		return false;
 	}
 	struct ifaddrs *ifap=ifap_list;
+	char ip_buf[INET6_ADDRSTRLEN];
 	for(ifap=ifap_list;
 		ifap;
 		ifap=ifap->ifa_next)
 	{
+		const char* ip = NULL;
 		char const *name = ifap->ifa_name;
-		char const *ip = NULL;
 		if( ifap->ifa_addr && ifap->ifa_addr->sa_family == AF_INET ) {
-			ip = inet_ntoa(((struct sockaddr_in *)ifap->ifa_addr)->sin_addr);
+			condor_sockaddr addr(ifap->ifa_addr);
+			ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
 		}
 		if( ip ) {
 			NetworkDeviceInfo inf(name,ip);
@@ -185,14 +189,16 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 
 	num_interfaces = ifc.ifc_len/sizeof(struct ifreq);
 
+	char ip_buf[INET6_ADDRSTRLEN];
 	int i;
 	for(i=0; i<num_interfaces; i++) {
 		struct ifreq *ifr = &ifc.ifc_req[i];
 		char const *name = ifr->ifr_name;
-		char const *ip = NULL;
+		const char* ip = NULL;
 
-		if( ifr->ifr_addr.sa_family == AF_INET ) {
-			ip = inet_ntoa(((struct sockaddr_in *)&ifr->ifr_addr)->sin_addr);
+		if( ifr->ifr_addr.sa_family == AF_INET ||ifr->ifr_addr.sa_family == AF_INET6 ) {
+			condor_sockaddr addr(&ifr->ifr_addr);
+			ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
 		}
 		if( ip ) {
 			NetworkDeviceInfo inf(name,ip);

@@ -61,6 +61,7 @@
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "condor_version.h"
 #include "util_lib_proto.h"
 #include "my_username.h"
@@ -697,10 +698,11 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		insert( "HOSTNAME", host, ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("HOSTNAME");
 	} else {
-		insert( "HOSTNAME", my_hostname(), ConfigTab, TABLESIZE );
+		insert( "HOSTNAME", get_local_hostname().Value(), ConfigTab,
+				TABLESIZE );
 		extra_info->AddInternalParam("HOSTNAME");
 	}
-	insert( "FULL_HOSTNAME", my_full_hostname(), ConfigTab, TABLESIZE );
+	insert( "FULL_HOSTNAME", get_local_fqdn().Value(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("FULL_HOSTNAME");
 
 		// Also insert tilde since we don't want that over-written.
@@ -801,6 +803,7 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		free( tmp );
 		init_full_hostname();
+		init_local_hostname();
 	}
 
 		// Also, we should be safe to process the NETWORK_INTERFACE
@@ -1337,8 +1340,8 @@ check_domain_attributes()
 
 	filesys_domain = param("FILESYSTEM_DOMAIN");
 	if( !filesys_domain ) {
-		filesys_domain = my_full_hostname();
-		insert( "FILESYSTEM_DOMAIN", filesys_domain, ConfigTab, TABLESIZE );
+		insert( "FILESYSTEM_DOMAIN", get_local_fqdn().Value(), 
+				ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("FILESYSTEM_DOMAIN");
 	} else {
 		free( filesys_domain );
@@ -1346,8 +1349,8 @@ check_domain_attributes()
 
 	uid_domain = param("UID_DOMAIN");
 	if( !uid_domain ) {
-		uid_domain = my_full_hostname();
-		insert( "UID_DOMAIN", uid_domain, ConfigTab, TABLESIZE );
+		insert( "UID_DOMAIN", get_local_fqdn().Value(), 
+				ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("UID_DOMAIN");
 	} else {
 		free( uid_domain );
@@ -1989,9 +1992,10 @@ reinsert_specials( char* host )
 	if( host ) {
 		insert( "HOSTNAME", host, ConfigTab, TABLESIZE );
 	} else {
-		insert( "HOSTNAME", my_hostname(), ConfigTab, TABLESIZE );
+		insert( "HOSTNAME", get_local_hostname().Value(), ConfigTab, 
+				TABLESIZE );
 	}
-	insert( "FULL_HOSTNAME", my_full_hostname(), ConfigTab, TABLESIZE );
+	insert( "FULL_HOSTNAME", get_local_fqdn().Value(), ConfigTab, TABLESIZE );
 	insert( "SUBSYSTEM", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("HOSTNAME");
 	extra_info->AddInternalParam("FULL_HOSTNAME");

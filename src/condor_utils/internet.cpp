@@ -720,6 +720,10 @@ string_to_hostname( const char* addr )
 }
 
 /* Bind the given fd to the correct local interface. */
+
+// _condor_local_bind(), get_port_range() and bindWithin()
+// should be ported to IPv6. However, it will be delayed until
+// internet.c becomes internet.cpp.
 int
 _condor_local_bind( int is_outgoing, int fd )
 {
@@ -739,11 +743,22 @@ _condor_local_bind( int is_outgoing, int fd )
         else
 			return FALSE;
 	} else {
-		struct sockaddr_in sa_in;
-
-		memset( (char *)&sa_in, 0, sizeof(sa_in) );
-		sa_in.sin_family = AF_INET;
-		sa_in.sin_port = 0;
+		struct sockaddr_storage ss;
+		socklen_t len = sizeof(ss);
+		int r = getsockname(fd, (struct sockaddr*)&ss, &len);
+		if (r != 0) {
+			dprintf(D_ALWAYS, "ERROR: getsockname fialed, errno: %d\n",
+					errno);
+			return FALSE;
+		}
+		
+			// this implementation should be changed to the one
+			// using condor_sockaddr class
+		if (ss.ss_family == AF_INET) {
+			struct sockaddr_in* sa_in = (struct sockaddr_in*)&ss;
+			memset( (char *)sa_in, 0, sizeof(struct sockaddr_in) );
+			sa_in->sin_family = AF_INET;
+			sa_in->sin_port = 0;
 			/*
 			  we don't want to honor BIND_ALL_INTERFACES == true in
 			  here.  this code is only used in the ckpt server (which
@@ -753,11 +768,20 @@ _condor_local_bind( int is_outgoing, int fd )
 			  binding to all interfaces in here...
 			  Derek <wright@cs.wisc.edu> 2005-09-20
 			*/
-		sa_in.sin_addr.s_addr = htonl(INADDR_ANY);
-
-		if( bind(fd, (struct sockaddr*)&sa_in, sizeof(sa_in)) < 0 ) {
-			dprintf( D_ALWAYS, "ERROR: bind(%s:%d) failed, errno: %d\n",
-					 inet_ntoa(sa_in.sin_addr), sa_in.sin_port, errno );
+			sa_in->sin_addr.s_addr = INADDR_ANY;
+		} else if (ss.ss_family == AF_INET6) {
+			struct sockaddr_in6* sin6 = (struct sockaddr_in6*)&ss;
+			sin6->sin6_addr = in6addr_any;
+			sin6->sin6_port = 0;
+		} else {
+			dprintf(D_ALWAYS, "ERROR: getsockname returned with unknown "
+					"socket type %d\n", ss.ss_family);
+			return FALSE;
+		}
+		
+		if( bind(fd, (struct sockaddr*)&ss, len) < 0 ) {
+			dprintf( D_ALWAYS, "ERROR: bind failed, errno: %d\n",
+					 errno );
 			return FALSE;
 		}
 	}

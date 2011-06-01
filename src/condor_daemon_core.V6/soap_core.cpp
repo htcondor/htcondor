@@ -29,6 +29,7 @@
 #include "condor_open.h"
 
 #include "mimetypes.h"
+#include "condor_sockfunc.h"
 
 #ifdef WIN32
 #define realpath(P,B) _fullpath((B),(P),_MAX_PATH)
@@ -60,7 +61,7 @@ dc_soap_accept(Sock *socket, const struct soap *soap)
 		//   3. increase size of send and receive buffers
 		//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
 	cursoap->socket = socket->get_file_desc();
-	cursoap->peer = *socket->peer_addr();
+	cursoap->peer = socket->peer_addr().to_sin();
 	cursoap->recvfd = soap->socket;
 	cursoap->sendfd = soap->socket;
 	if ( cursoap->recv_timeout > 0 ) {
@@ -224,21 +225,18 @@ dc_soap_init(struct soap *&soap)
 						(details && *details) ? *details : "No details.");
 			}
 
-			struct sockaddr_in sockaddr;
-			SOCKET_LENGTH_TYPE namelen = sizeof(struct sockaddr_in);
-			if (getsockname(sock_fd,
-							(struct sockaddr *) &sockaddr,
-							&namelen)) {
+			condor_sockaddr sockaddr;
+			if (condor_getsockname(sock_fd, sockaddr)) {
 				dprintf(D_ALWAYS, "Failed to get name of SOAP SSL socket\n");
-			} else if (sizeof(struct sockaddr_in) == namelen) {
-				dprintf(D_ALWAYS,
-						"Setup SOAP SSL on port %d\n",
-						ntohs(sockaddr.sin_port));
 			} else {
 				dprintf(D_ALWAYS,
-						"Failed to get name of SOAP SSL socket, "
-						"unknown sockaddr returned\n");
-			}
+						"Setup SOAP SSL on port %d\n",
+						sockaddr.get_port());
+			} //else {
+				//	dprintf(D_ALWAYS,
+				//		"Failed to get name of SOAP SSL socket, "
+				//		"unknown sockaddr returned\n");
+				//}
 
 			ReliSock *sock = new ReliSock;
 			if (!sock) {
@@ -327,6 +325,8 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 	sockaddr.sin_addr.s_addr = htonl(ssl_soap->ip);
 	sockaddr.sin_port = htons(ssl_soap->port);
 
+	condor_sockaddr addr(&sockaddr);
+
 	current_soap = soap_copy(ssl_soap);
 	ASSERT(current_soap);
 
@@ -342,7 +342,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 		const char **details = soap_faultdetail(current_soap);
 		dprintf(D_ALWAYS,
 				"SOAP SSL connection attempt from %s failed: %s\n",
-				sin_to_string(&sockaddr),
+				addr.to_sinful().Value(),
 				(details && *details) ? *details : "No details.");
 
 		soap_done(current_soap);
@@ -353,14 +353,14 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 
 	dprintf(D_ALWAYS,
 			"SOAP SSL connection attempt from %s succeeded\n",
-			sin_to_string(&sockaddr));
+			addr.to_sinful().Value());
 
 	if (X509_V_OK != SSL_get_verify_result((const SSL*)current_soap->ssl)) {
 		dprintf(D_ALWAYS,
 				"SOAP SSL connection attempt from %s failed "
 				"because the client's certificate was not "
 				"verified.\n",
-				sin_to_string(&sockaddr));
+				addr.to_sinful().Value());
 
 		soap_done(current_soap);
 		free(current_soap);
@@ -375,7 +375,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 		dprintf(D_ALWAYS,
 				"SOAP SSL connection attempt from %s failed "
 				"because the client did not send a certificate.\n",
-				sin_to_string(&sockaddr));
+				addr.to_sinful().Value());
 
 		soap_done(current_soap);
 		free(current_soap);
@@ -388,7 +388,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 				"SOAP SSL connection attempt from %s failed "
 				"because the client's certificate's subject was not "
 				"found.\n",
-				sin_to_string(&sockaddr));
+				addr.to_sinful().Value());
 
 		soap_done(current_soap);
 		free(current_soap);
@@ -407,7 +407,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 				"SOAP SSL connection attempt from %s failed "
 				"because the client's certificate's subject was not "
 				"oneline-able.\n",
-				sin_to_string(&sockaddr));
+				addr.to_sinful().Value());
 
 		soap_done(current_soap);
 		free(current_soap);
@@ -420,7 +420,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 	}
 	dprintf(D_FULLDEBUG,
 			"SOAP SSL connection from %s, X509 subject: %s\n",
-			sin_to_string(&sockaddr),
+			addr.to_sinful().Value(),
 			subject);
 
 	MyString canonical_user;
@@ -445,7 +445,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 			"SOAP SSL connection subject mapped to '%s'\n",
 			canonical_user.Value());
 
-	if (!daemonCore->Verify("SOAP SSL",SOAP_PERM, &sockaddr, canonical_user.Value())) {
+	if (!daemonCore->Verify("SOAP SSL",SOAP_PERM, addr, canonical_user.Value())) {
 
 		soap_done(current_soap);
 		free(current_soap);

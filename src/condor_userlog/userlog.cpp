@@ -24,6 +24,8 @@
 #include "classad_hashtable.h"
 #include "internet.h"
 #include "condor_distribution.h"
+#include "condor_sockaddr.h"
+#include "ipv6_hostname.h"
 
 /* 
 ** Job Record format: cluster.proc evict_time wall_time good_time cpu_usage
@@ -309,7 +311,7 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 	js->cpu_usage += cpu_usage;
 
 	char ip_addr[128];
-	// only use the IP address in the key
+	// only use the IP address in the key [TODO:IPV6] Parse IPv6 Addr
 	strcpy(ip_addr, host+1);
 	for (int i=0; i < 128; i++) {
 		if (ip_addr[i] == ':') {
@@ -320,11 +322,13 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 	HostStatistics *hs;
 	HashKey hostkey(ip_addr);
 	if (HStats.lookup(hostkey, hs) < 0) {
-		struct sockaddr_in sin;
-		string_to_sin(host, &sin);
-		char *hostname = NULL;
+		condor_sockaddr addr;
+		const char* hostname = NULL;
+		MyString hostname_str;
+		addr.from_sinful(host);
 		if (!avoid_dns) {
-			hostname = sin_to_hostname(&sin, NULL);
+			hostname_str = get_hostname(addr);
+			hostname = hostname_str.Value();
 		}
 		if (hostname == NULL) {
 			hostname = ip_addr;

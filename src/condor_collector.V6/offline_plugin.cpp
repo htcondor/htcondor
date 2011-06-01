@@ -155,7 +155,7 @@ OfflineCollectorPlugin::update (
 	if ( !makeStartdAdHashKey (
 		hashKey,
 		&ad,
-		NULL ) ) {
+		condor_sockaddr::null ) ) {
 
 		dprintf (
 			D_FULLDEBUG,
@@ -377,7 +377,7 @@ OfflineCollectorPlugin::invalidate (
 		if ( !makeStartdAdHashKey (
 			hashKey,
 			const_cast<ClassAd*> ( &ad ),
-			NULL ) ) {
+			condor_sockaddr::null ) ) {
 
 			dprintf (
 				D_FULLDEBUG,

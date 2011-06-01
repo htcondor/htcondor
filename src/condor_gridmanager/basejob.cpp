@@ -32,6 +32,7 @@
 #include "condor_email.h"
 #include "classad_helpers.h"
 #include "classad_merge.h"
+#include "condor_holdcodes.h"
 
 #define HASH_TABLE_SIZE			500
 
@@ -741,14 +742,19 @@ int BaseJob::EvalPeriodicJobExpr()
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
-	const char *reason = user_policy.FiringReason();
-	if ( reason == NULL ) {
+	MyString reason_buf;
+	int reason_code;
+	int reason_subcode;
+	user_policy.FiringReason(reason_buf,reason_code,reason_subcode);
+	char const *reason = reason_buf.Value();
+	if ( reason == NULL || !reason[0] ) {
 		reason = "Unknown user policy expression";
 	}
 
 	switch( action ) {
 	case UNDEFINED_EVAL:
-		JobHeld( reason );
+	case HOLD_IN_QUEUE:
+		JobHeld( reason, reason_code, reason_subcode );
 		SetEvaluateState();
 		break;
 	case STAYS_IN_QUEUE:
@@ -756,10 +762,6 @@ int BaseJob::EvalPeriodicJobExpr()
 		break;
 	case REMOVE_FROM_QUEUE:
 		JobRemoved( reason );
-		SetEvaluateState();
-		break;
-	case HOLD_IN_QUEUE:
-		JobHeld( reason );
 		SetEvaluateState();
 		break;
 	case RELEASE_FROM_HOLD:
@@ -812,23 +814,25 @@ int BaseJob::EvalOnExitJobExpr()
 		jobAd->AssignExpr( ATTR_ON_EXIT_SIGNAL, "Undefined" );
 	}
 
-	const char *reason = user_policy.FiringReason();
-	if ( reason == NULL ) {
+	MyString reason_buf;
+	int reason_code;
+	int reason_subcode;
+	user_policy.FiringReason(reason_buf,reason_code,reason_subcode);
+	const char *reason = reason_buf.Value();
+	if ( reason == NULL || !reason[0] ) {
 		reason = "Unknown user policy expression";
 	}
 
 	switch( action ) {
 	case UNDEFINED_EVAL:
-		JobHeld( reason );
+	case HOLD_IN_QUEUE:
+		JobHeld( reason, reason_code, reason_subcode );
 		break;
 	case STAYS_IN_QUEUE:
 			// clean up job but don't set status to complete
 		break;
 	case REMOVE_FROM_QUEUE:
 		JobCompleted();
-		break;
-	case HOLD_IN_QUEUE:
-		JobHeld( reason );
 		break;
 	default:
 		EXCEPT( "Unknown action (%d) in BaseJob::EvalAtExitJobExpr", 

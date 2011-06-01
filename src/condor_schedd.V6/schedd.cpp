@@ -35,7 +35,6 @@
 #include "condor_string.h"
 #include "condor_email.h"
 #include "condor_uid.h"
-#include "my_hostname.h"
 #include "get_daemon_name.h"
 #include "renice_self.h"
 #include "write_user_log.h"
@@ -90,6 +89,7 @@
 #include "condor_open.h"
 #include "schedd_negotiate.h"
 #include "filename_tools.h"
+#include "ipv6_hostname.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
@@ -1922,6 +1922,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				msg.sprintf("Unable to switch to user: %s", owner.Value());
 #endif
 				holdJob(job_id.cluster, job_id.proc, msg.Value(), 
+						CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
 					false, false, true, false, false);
 				return;
 			}
@@ -2095,7 +2096,10 @@ PeriodicExprEval( ClassAd *jobad )
 	action = policy.AnalyzePolicy(PERIODIC_ONLY);
 
 	// Build a "reason" string for logging
-	MyString reason = policy.FiringReason();
+	MyString reason;
+	int reason_code;
+	int reason_subcode;
+	policy.FiringReason(reason,reason_code,reason_subcode);
 	if ( reason == "" ) {
 		reason = "Unknown user policy expression";
 	}
@@ -2109,6 +2113,7 @@ PeriodicExprEval( ClassAd *jobad )
 		case HOLD_IN_QUEUE:
 			if(status!=HELD) {
 				holdJob(cluster, proc, reason.Value(),
+						reason_code, reason_subcode,
 						true, false, false, false, false);
 			}
 			break;
@@ -3796,6 +3801,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	bool notify = true;
 	bool needs_transaction = true;
 	action_result_type_t result_type = AR_TOTALS;
+	int hold_reason_subcode = 0;
 
 		// Setup array to hold ids of the jobs we're acting on.
 	ExtArray<PROC_ID> jobs;
@@ -3855,6 +3861,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		   and one of: ATTR_REMOVE_REASON, ATTR_RELEASE_REASON, or
 		               ATTR_HOLD_REASON
 
+		   It may optionally contain ATTR_HOLD_REASON_SUBCODE.
 		*/
 	if( ! command_ad.LookupInteger(ATTR_JOB_ACTION, action_num) ) {
 		dprintf( D_ALWAYS, 
@@ -3915,6 +3922,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		sprintf( reason, "\"%s (by user %s)\"", tmp, owner );
 		free( tmp );
 		tmp = NULL;
+	}
+
+	if( action == JA_HOLD_JOBS ) {
+		command_ad.LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_reason_subcode);
 	}
 
 	int foo;
@@ -4058,79 +4069,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			if(	job_ad->LookupInteger(ATTR_CLUSTER_ID,tmp_id.cluster) &&
 				job_ad->LookupInteger(ATTR_PROC_ID,tmp_id.proc) ) 
 			{
-				if( action == JA_VACATE_JOBS || 
-					action == JA_VACATE_FAST_JOBS ) 
-				{
-						// vacate is a special case, since we're not
-						// trying to modify the job in the queue at
-						// all, so we just need to make sure we're
-						// authorized to vacate this job, and if so,
-						// record that we found this job_id and we're
-						// done.
-					if( !OwnerCheck(m_ad, rsock->getOwner()) ) {
-						results.record( tmp_id, AR_PERMISSION_DENIED );
-						continue;
-					}
-					results.record( tmp_id, AR_SUCCESS );
-					jobs[num_matches] = tmp_id;
-					num_matches++;
-					continue;
-				}
-
-				if( action == JA_RELEASE_JOBS ) {
-					new_status = IDLE;
-					GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
-							ATTR_JOB_STATUS_ON_RELEASE, &new_status);
-				}
-				if( action == JA_REMOVE_X_JOBS ) {
-					if( SetAttribute( tmp_id.cluster, tmp_id.proc,
-									  ATTR_JOB_LEAVE_IN_QUEUE, "False" ) < 0 ) {
-						results.record( tmp_id, AR_PERMISSION_DENIED );
-						continue;
-					}
-				}
-				if( action == JA_HOLD_JOBS ) {
-					int old_status = IDLE;
-					GetAttributeInt( tmp_id.cluster, tmp_id.proc,
-									 ATTR_JOB_STATUS, &old_status );
-					if ( old_status == REMOVED &&
-						 SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-										  ATTR_JOB_STATUS_ON_RELEASE,
-										  old_status ) < 0 ) {
-						results.record( tmp_id, AR_PERMISSION_DENIED );
-						continue;
-					}
-					if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-										 ATTR_HOLD_REASON_CODE,
-										 CONDOR_HOLD_CODE_UserRequest ) < 0 ) {
-						results.record( tmp_id, AR_PERMISSION_DENIED );
-						continue;
-					}
-				}
-				if( action == JA_CLEAR_DIRTY_JOB_ATTRS ) {
-					MarkJobClean( tmp_id.cluster, tmp_id.proc );
-					results.record( tmp_id, AR_SUCCESS );
-					jobs[num_matches] = tmp_id;
-					num_matches++;
-					continue;
-				}
-				if( SetAttributeInt(tmp_id.cluster, tmp_id.proc,
-									ATTR_JOB_STATUS, new_status) < 0 ) {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
-					continue;
-				}
-				if( reason ) {
-					if( SetAttribute(tmp_id.cluster, tmp_id.proc,
-									 reason_attr_name, reason) < 0 ) {
-							// TODO: record failure in response ad?
-					}
-				}
-				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-								 ATTR_ENTERED_CURRENT_STATUS, now );
-				fixReasonAttrs( tmp_id, action );
-				results.record( tmp_id, AR_SUCCESS );
-				jobs[num_matches] = tmp_id;
-				num_matches++;
+				jobs[num_matches++] = tmp_id;
 			} 
 		}
 		free( constraint );
@@ -4149,123 +4088,153 @@ Scheduler::actOnJobs(int, Stream* s)
 			if( tmp_id.cluster < 0 || tmp_id.proc < 0 ) {
 				continue;
 			}
-
-				// Check to make sure the job's status makes sense for
-				// the command we're trying to perform
-			int status;
-			int on_release_status = IDLE;
-			int hold_reason_code = -1;
-			if( GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
-								ATTR_JOB_STATUS, &status) < 0 ) {
-				results.record( tmp_id, AR_NOT_FOUND );
-				continue;
-			}
-			switch( action ) {
-			case JA_VACATE_JOBS:
-			case JA_VACATE_FAST_JOBS:
-				if( status != RUNNING && status != TRANSFERRING_OUTPUT ) {
-					results.record( tmp_id, AR_BAD_STATUS );
-					continue;
-				}
-				break;
-			case JA_RELEASE_JOBS:
-				GetAttributeInt(tmp_id.cluster, tmp_id.proc,
-								ATTR_HOLD_REASON_CODE, &hold_reason_code);
-				if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
-					results.record( tmp_id, AR_BAD_STATUS );
-					continue;
-				}
-				GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
-							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
-				new_status = on_release_status;
-				break;
-			case JA_REMOVE_JOBS:
-				if( status == REMOVED ) {
-					results.record( tmp_id, AR_ALREADY_DONE );
-					continue;
-				}
-				break;
-			case JA_REMOVE_X_JOBS:
-				if( status == HELD ) {
-					GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
-							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
-				}
-				if( (status!=REMOVED) && 
-					(status!=HELD || on_release_status!=REMOVED) ) 
-				{
-					results.record( tmp_id, AR_BAD_STATUS );
-					continue;
-				}
-					// set LeaveJobInQueue to false...
-				if( SetAttribute( tmp_id.cluster, tmp_id.proc,
-								  ATTR_JOB_LEAVE_IN_QUEUE, "False" ) < 0 ) {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
-					continue;
-				}
-				break;
-			case JA_HOLD_JOBS:
-				if( status == HELD ) {
-					results.record( tmp_id, AR_ALREADY_DONE );
-					continue;
-				}
-				if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-									 ATTR_HOLD_REASON_CODE,
-									 CONDOR_HOLD_CODE_UserRequest ) < 0 ) {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
-					continue;
-				}
-				break;
-			case JA_CLEAR_DIRTY_JOB_ATTRS:
-				MarkJobClean( tmp_id.cluster, tmp_id.proc );
-				results.record( tmp_id, AR_SUCCESS );
-				jobs[num_matches] = tmp_id;
-				num_matches++;
-				continue;
-			default:
-				EXCEPT( "impossible: unknown action (%d) in actOnJobs() "
-						"after it was already recognized", action_num );
-			}
-
-				// Ok, we're happy, do the deed.
-			if( action == JA_VACATE_JOBS || action == JA_VACATE_FAST_JOBS ) {
-					// vacate is a special case, since we're not
-					// trying to modify the job in the queue at
-					// all, so we just need to make sure we're
-					// authorized to vacate this job, and if so,
-					// record that we found this job_id and we're
-					// done.
-				ClassAd *cad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
-				if( ! cad ) {
-					EXCEPT( "impossible: GetJobAd(%d.%d) returned false "
-							"yet GetAttributeInt(%s) returned success",
-							tmp_id.cluster, tmp_id.proc, ATTR_JOB_STATUS );
-				}
-				if( !OwnerCheck(cad, rsock->getOwner()) ) {
-					results.record( tmp_id, AR_PERMISSION_DENIED );
-					continue;
-				}
-				results.record( tmp_id, AR_SUCCESS );
-				jobs[num_matches] = tmp_id;
-				num_matches++;
-				continue;
-			}
-			if( SetAttributeInt(tmp_id.cluster, tmp_id.proc,
-								ATTR_JOB_STATUS, new_status) < 0 ) {
-				results.record( tmp_id, AR_PERMISSION_DENIED );
-				continue;
-			}
-			if( reason ) {
-				SetAttribute( tmp_id.cluster, tmp_id.proc,
-							  reason_attr_name, reason );
-					// TODO: deal w/ failure here, too?
-			}
-			SetAttributeInt( tmp_id.cluster, tmp_id.proc,
-							 ATTR_ENTERED_CURRENT_STATUS, now );
-			fixReasonAttrs( tmp_id, action );
-			results.record( tmp_id, AR_SUCCESS );
-			jobs[num_matches] = tmp_id;
-			num_matches++;
+			jobs[num_matches++] = tmp_id;
 		}
+	}
+
+	int num_success = 0;
+	for( i=0; i<num_matches; i++ ) {
+		tmp_id = jobs[i];
+
+			// Check to make sure the job's status makes sense for
+			// the command we're trying to perform
+		int status;
+		int on_release_status = IDLE;
+		int hold_reason_code = -1;
+		if( GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
+							ATTR_JOB_STATUS, &status) < 0 ) {
+			results.record( tmp_id, AR_NOT_FOUND );
+			jobs[i].cluster = -1;
+			continue;
+		}
+		switch( action ) {
+		case JA_VACATE_JOBS:
+		case JA_VACATE_FAST_JOBS:
+			if( status != RUNNING && status != TRANSFERRING_OUTPUT ) {
+				results.record( tmp_id, AR_BAD_STATUS );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			break;
+		case JA_RELEASE_JOBS:
+			GetAttributeInt(tmp_id.cluster, tmp_id.proc,
+							ATTR_HOLD_REASON_CODE, &hold_reason_code);
+			if( status != HELD || hold_reason_code == CONDOR_HOLD_CODE_SpoolingInput ) {
+				results.record( tmp_id, AR_BAD_STATUS );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
+							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
+			new_status = on_release_status;
+			break;
+		case JA_REMOVE_JOBS:
+			if( status == REMOVED ) {
+				results.record( tmp_id, AR_ALREADY_DONE );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			break;
+		case JA_REMOVE_X_JOBS:
+			if( status == HELD ) {
+				GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
+								ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
+			}
+			if( (status!=REMOVED) && 
+				(status!=HELD || on_release_status!=REMOVED) ) 
+			{
+				results.record( tmp_id, AR_BAD_STATUS );
+				jobs[i].cluster = -1;
+				continue;
+			}
+				// set LeaveJobInQueue to false...
+			if( SetAttribute( tmp_id.cluster, tmp_id.proc,
+							  ATTR_JOB_LEAVE_IN_QUEUE, "False" ) < 0 ) {
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			break;
+		case JA_HOLD_JOBS:
+			if( status == HELD ) {
+				results.record( tmp_id, AR_ALREADY_DONE );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			if ( status == REMOVED &&
+				 SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+								  ATTR_JOB_STATUS_ON_RELEASE,
+								  status ) < 0 )
+			{
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+								 ATTR_HOLD_REASON_CODE,
+								 CONDOR_HOLD_CODE_UserRequest ) < 0 ) {
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			if( SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+								 ATTR_HOLD_REASON_SUBCODE,
+								 hold_reason_subcode ) < 0 )
+			{
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			break;
+		case JA_CLEAR_DIRTY_JOB_ATTRS:
+			MarkJobClean( tmp_id.cluster, tmp_id.proc );
+			results.record( tmp_id, AR_SUCCESS );
+			num_success++;
+			continue;
+		default:
+			EXCEPT( "impossible: unknown action (%d) in actOnJobs() "
+					"after it was already recognized", action_num );
+		}
+
+			// Ok, we're happy, do the deed.
+		if( action == JA_VACATE_JOBS || action == JA_VACATE_FAST_JOBS ) {
+				// vacate is a special case, since we're not
+				// trying to modify the job in the queue at
+				// all, so we just need to make sure we're
+				// authorized to vacate this job, and if so,
+				// record that we found this job_id and we're
+				// done.
+			ClassAd *cad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
+			if( ! cad ) {
+				EXCEPT( "impossible: GetJobAd(%d.%d) returned false "
+						"yet GetAttributeInt(%s) returned success",
+						tmp_id.cluster, tmp_id.proc, ATTR_JOB_STATUS );
+			}
+			if( !OwnerCheck(cad, rsock->getOwner()) ) {
+				results.record( tmp_id, AR_PERMISSION_DENIED );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			results.record( tmp_id, AR_SUCCESS );
+			num_success++;
+			continue;
+		}
+		if( SetAttributeInt(tmp_id.cluster, tmp_id.proc,
+							ATTR_JOB_STATUS, new_status) < 0 ) {
+			results.record( tmp_id, AR_PERMISSION_DENIED );
+			jobs[i].cluster = -1;
+			continue;
+		}
+		if( reason ) {
+			SetAttribute( tmp_id.cluster, tmp_id.proc,
+						  reason_attr_name, reason );
+				// TODO: deal w/ failure here, too?
+		}
+		SetAttributeInt( tmp_id.cluster, tmp_id.proc,
+						 ATTR_ENTERED_CURRENT_STATUS, now );
+		fixReasonAttrs( tmp_id, action );
+		results.record( tmp_id, AR_SUCCESS );
+		num_success++;
 	}
 
 	if( reason ) { free( reason ); }
@@ -4279,7 +4248,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		// Set a single attribute which says if the action succeeded
 		// on at least one job or if it was a total failure
-	response_ad->Assign( ATTR_ACTION_RESULT, num_matches ? 1:0 );
+	response_ad->Assign( ATTR_ACTION_RESULT, num_success ? 1:0 );
 
 		// Return the number of jobs in the queue to the caller can
 		// determine appropriate actions
@@ -4303,7 +4272,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		return FALSE;
 	}
 
-	if( num_matches == 0 ) {
+	if( num_success == 0 ) {
 			// We didn't do anything, so we want to bail out now...
 		dprintf( D_FULLDEBUG, 
 				 "actOnJobs: didn't do any work, aborting\n" );
@@ -4352,6 +4321,9 @@ Scheduler::actOnJobs(int, Stream* s)
 		// the queue, we can do the final actions for these jobs,
 		// like killing shadows if needed...
 	for( i=0; i<num_matches; i++ ) {
+		if( jobs[i].cluster == -1 ) {
+			continue;
+		}
 		enqueueActOnJobMyself( jobs[i], action, notify );
 	}
 
@@ -5101,8 +5073,9 @@ Scheduler::negotiate(int command, Stream* s)
 			// and FLOCK_NEGOTIATOR_HOSTS.
 
 		// first, check if this is our local negotiator
-		struct in_addr endpoint_addr = (sock->peer_addr())->sin_addr;
-		struct hostent *hent;
+		condor_sockaddr endpoint_addr = sock->peer_addr();
+		std::vector<condor_sockaddr> addrs;
+		std::vector<condor_sockaddr>::iterator iter;
 		bool match = false;
 		Daemon negotiator (DT_NEGOTIATOR);
 		char *negotiator_hostname = negotiator.fullHostname();
@@ -5111,38 +5084,34 @@ Scheduler::negotiate(int command, Stream* s)
 			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
-		hent = condor_gethostbyname(negotiator_hostname);
-		if (!hent) {
+		addrs = resolve_hostname(negotiator_hostname);
+		if (addrs.empty()) {
 			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
 					"  Aborting negotiation.\n", negotiator_hostname);
 			free(sig_attrs_from_cm);
 			return (!(KEEP_STREAM));
 		}
-		char *addr;
-		if (hent->h_addrtype == AF_INET) {
-			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
-				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
+		for (iter = addrs.begin(); iter != addrs.end(); ++iter) {
+			const condor_sockaddr& addr = *iter;
+			if (addr.compare_address(endpoint_addr)) {
 					match = true;
+				break;
 				}
 			}
-		}
 		// if it isn't our local negotiator, check the FlockNegotiators list.
 		if (!match) {
 			int n;
 			for( n=1, FlockNegotiators->rewind();
 				 !match && FlockNegotiators->next(neg_host); n++) {
-				hent = condor_gethostbyname(neg_host->fullHostname());
-				if (hent && hent->h_addrtype == AF_INET) {
-					for (int a=0;
-						 !match && (addr = hent->h_addr_list[a]);
-						 a++) {
-						if (memcmp(addr, &endpoint_addr,
-									sizeof(struct in_addr)) == 0){
-							match = true;
-							which_negotiator = n;
-							remote_pool_buf = neg_host->pool();
-							remote_pool = remote_pool_buf.Value();
-						}
+				addrs = resolve_hostname(neg_host->fullHostname());
+				for (iter = addrs.begin(); iter != addrs.end(); ++iter) {
+					const condor_sockaddr& addr = *iter;
+					if (addr.compare_address(endpoint_addr)) {
+						match = true;
+						which_negotiator = n;
+						remote_pool_buf = neg_host->pool();
+						remote_pool = remote_pool_buf.Value();
+						break;
 					}
 				}
 			}
@@ -7035,6 +7004,7 @@ Scheduler::noShadowForJob( shadow_rec* srec, NoShadowFailure_t why )
 		// hold the job, since we won't be able to run it without
 		// human intervention
 	holdJob( job_id.cluster, job_id.proc, hold_reason, 
+			 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
 			 true, true, true, *notify_admin );
 
 		// regardless of what it used to be, we need to record that we
@@ -7139,6 +7109,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 job_id->proc );
 		holdJob( job_id->cluster, job_id->proc,
 				 "No condor_starter installed that supports local universe",
+				 CONDOR_HOLD_CODE_NoCompatibleShadow, 0,
 				 false, true, notify_admin, true );
 		notify_admin = false;
 		return;
@@ -7360,6 +7331,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		tmpstr.sprintf("Unable to switch to user: %s", owner.Value());
 #endif
 		holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
+				CONDOR_HOLD_CODE_FailedToAccessUserAccount, 0,
 				false, false, true, false, false);
 		goto wrapup;
 	}
@@ -7388,6 +7360,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 
 			holdJob(job_id->cluster, job_id->proc, 
 				"Spooled executable is not executable!",
+					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
 				false, false, true, false, false );
 
 			delete filestat;
@@ -7412,6 +7385,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, 
 				"Executable unknown - not specified in job ad!",
+					CONDOR_HOLD_CODE_FailedToCreateProcess, ENOENT,
 				false, false, true, false, false );
 			goto wrapup;
 		}
@@ -7428,6 +7402,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			tmpstr.sprintf( "File '%s' is missing or not executable", a_out_name.Value() );
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, tmpstr.Value(),
+					CONDOR_HOLD_CODE_FailedToCreateProcess, EACCES,
 					false, false, true, false, false);
 			goto wrapup;
 		}
@@ -7980,18 +7955,16 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 					 "for of remote resource for setting %s, using "
 					 "inferior alternatives!\n", ATTR_NAME, 
 					 ATTR_REMOTE_HOST );
-			struct sockaddr_in sin;
-			if( mrec->peer && mrec->peer[0] && 
-				string_to_sin(mrec->peer, &sin) == 1 ) {
+			condor_sockaddr addr;
+			if( mrec->peer && mrec->peer[0] && addr.from_sinful(mrec->peer) ) {
 					// make local copy of static hostname buffer
-				char *tmp, *hostname;
-				if( (tmp = sin_to_hostname(&sin, NULL)) ) {
-					hostname = strdup( tmp );
+				char *tmp;
+				MyString hostname = get_hostname(addr);
+				if (hostname.Length() > 0) {
 					SetAttributeString( cluster, proc, ATTR_REMOTE_HOST,
-										hostname );
+										hostname.Value() );
 					dprintf( D_FULLDEBUG, "Used inverse DNS lookup (%s)\n",
-							 hostname );
-					free(hostname);
+							 hostname.Value() );
 				} else {
 						// Error looking up host info...
 						// Just use the sinful string
@@ -9500,13 +9473,15 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 
 	int action;
 	MyString reason;
+	int reason_code;
+	int reason_subcode;
 	ClassAd * job_ad = GetJobAd( job_id.cluster, job_id.proc );
 	ASSERT( job_ad ); // No job ad?
 	{
 		UserPolicy policy;
 		policy.Init(job_ad);
 		action = policy.AnalyzePolicy(PERIODIC_THEN_EXIT);
-		reason = policy.FiringReason();
+		policy.FiringReason(reason,reason_code,reason_subcode);
 		if ( reason == "" ) {
 			reason = "Unknown user policy expression";
 		}
@@ -9527,6 +9502,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 
 		case HOLD_IN_QUEUE:
 			holdJob(job_id.cluster, job_id.proc, reason.Value(),
+					reason_code, reason_subcode,
 				true,false,false,false,false);
 			break;
 
@@ -9544,6 +9520,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 				"Putting job on hold.\n",
 				 job_id.cluster, job_id.proc, reason.Value());
 			holdJob(job_id.cluster, job_id.proc, reason.Value(),
+					reason_code, reason_subcode,
 				true,false,false,false,true);
 			break;
 
@@ -9557,6 +9534,7 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			reason2 += ") ";
 			reason2 += reason;
 			holdJob(job_id.cluster, job_id.proc, reason2.Value(),
+					CONDOR_HOLD_CODE_JobPolicyUndefined, 0,
 				true,false,false,false,true);
 			break;
 	}
@@ -11764,7 +11742,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			retry_is_sensible = true;
 		}
 		else {
-			startd_name = my_full_hostname();
+			startd_name = get_local_fqdn();
 				// NOTE: this does not get the CCB address of the starter.
 				// If there is one, we'll get it when we call the starter
 				// below.  (We don't need it ourself, because it is on the
@@ -12219,6 +12197,7 @@ Does not start or end a transaction.
 
 static bool
 holdJobRaw( int cluster, int proc, const char* reason,
+			int reason_code, int reason_subcode,
 		 bool notify_shadow, bool email_user,
 		 bool email_admin, bool system_hold )
 {
@@ -12264,6 +12243,18 @@ holdJobRaw( int cluster, int proc, const char* reason,
 					 "job %d.%d\n", ATTR_HOLD_REASON, reason, cluster,
 					 proc );
 		}
+	}
+
+	if( SetAttributeInt(cluster, proc, ATTR_HOLD_REASON_CODE, reason_code) < 0 ) {
+		dprintf( D_ALWAYS, "ERROR: Failed to set %s to %d for "
+				 "job %d.%d\n", ATTR_HOLD_REASON_CODE, reason_code, cluster, proc );
+		return false;
+	}
+
+	if( SetAttributeInt(cluster, proc, ATTR_HOLD_REASON_SUBCODE, reason_subcode) < 0 ) {
+		dprintf( D_ALWAYS, "ERROR: Failed to set %s to %d for "
+				 "job %d.%d\n", ATTR_HOLD_REASON_SUBCODE, reason_subcode, cluster, proc );
+		return false;
 	}
 
 	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, HELD) < 0 ) {
@@ -12345,6 +12336,7 @@ Performs a complete transaction if desired.
 
 bool
 holdJob( int cluster, int proc, const char* reason,
+		 int reason_code, int reason_subcode,
 		 bool use_transaction, bool notify_shadow, bool email_user,
 		 bool email_admin, bool system_hold )
 {
@@ -12354,7 +12346,7 @@ holdJob( int cluster, int proc, const char* reason,
 		BeginTransaction();
 	}
 
-	result = holdJobRaw(cluster,proc,reason,notify_shadow,email_user,email_admin,system_hold);
+	result = holdJobRaw(cluster,proc,reason,reason_code,reason_subcode,notify_shadow,email_user,email_admin,system_hold);
 
 	if(use_transaction) {
 		if(result) {
@@ -13123,6 +13115,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//	system_hold		- false
 			//
 		holdJob( id.cluster, id.proc, reason.Value(),
+				 CONDOR_HOLD_CODE_InvalidCronSettings, 0,
 				 true, false, true, false, false );
 	}
 	

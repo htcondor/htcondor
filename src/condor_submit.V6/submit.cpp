@@ -302,9 +302,13 @@ const char	*CopyToSpool = "copy_to_spool";
 const char	*LeaveInQueue = "leave_in_queue";
 
 const char	*PeriodicHoldCheck = "periodic_hold";
+const char	*PeriodicHoldReason = "periodic_hold_reason";
+const char	*PeriodicHoldSubCode = "periodic_hold_subcode";
 const char	*PeriodicReleaseCheck = "periodic_release";
 const char	*PeriodicRemoveCheck = "periodic_remove";
 const char	*OnExitHoldCheck = "on_exit_hold";
+const char	*OnExitHoldReason = "on_exit_hold_reason";
+const char	*OnExitHoldSubCode = "on_exit_hold_subcode";
 const char	*OnExitRemoveCheck = "on_exit_remove";
 const char	*Noop = "noop_job";
 const char	*NoopExitSignal = "noop_job_exit_signal";
@@ -3353,6 +3357,20 @@ SetPeriodicHoldCheck(void)
 
 	InsertJobExpr( buffer );
 
+	phc = condor_param(PeriodicHoldReason, ATTR_PERIODIC_HOLD_REASON);
+	if( phc ) {
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_HOLD_REASON, phc );
+		InsertJobExpr( buffer );
+		free(phc);
+	}
+
+	phc = condor_param(PeriodicHoldSubCode, ATTR_PERIODIC_HOLD_SUBCODE);
+	if( phc ) {
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_HOLD_SUBCODE, phc );
+		InsertJobExpr( buffer );
+		free(phc);
+	}
+
 	phc = condor_param(PeriodicReleaseCheck, ATTR_PERIODIC_RELEASE_CHECK);
 
 	if (phc == NULL)
@@ -3385,6 +3403,20 @@ SetPeriodicRemoveCheck(void)
 	{
 		/* user had a value for it, leave it alone */
 		buffer.sprintf( "%s = %s", ATTR_PERIODIC_REMOVE_CHECK, prc );
+		free(prc);
+	}
+
+	prc = condor_param(OnExitHoldReason, ATTR_ON_EXIT_HOLD_REASON);
+	if( prc ) {
+		buffer.sprintf( "%s = %s", ATTR_ON_EXIT_HOLD_REASON, prc );
+		InsertJobExpr( buffer );
+		free(prc);
+	}
+
+	prc = condor_param(OnExitHoldSubCode, ATTR_ON_EXIT_HOLD_SUBCODE);
+	if( prc ) {
+		buffer.sprintf( "%s = %s", ATTR_ON_EXIT_HOLD_SUBCODE, prc );
+		InsertJobExpr( buffer );
 		free(prc);
 	}
 

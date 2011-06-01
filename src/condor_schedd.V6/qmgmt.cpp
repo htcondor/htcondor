@@ -407,9 +407,9 @@ QmgmtPeer::set(ReliSock *input)
 }
 
 bool
-QmgmtPeer::set(const struct sockaddr_in *s, const char *o)
+QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 {
-	if ( !s || sock || myendpoint ) {
+	if ( !raddr.is_valid() || sock || myendpoint ) {
 		// already set, or no input
 		return false;
 	}
@@ -425,10 +425,8 @@ QmgmtPeer::set(const struct sockaddr_in *s, const char *o)
 		}
 	}
 
-	if ( s ) {
-		memcpy(&sockaddr,s,sizeof(struct sockaddr_in));
-		myendpoint = strnewp( inet_ntoa(s->sin_addr) );
-	}
+	addr = raddr;
+	myendpoint = strnewp(addr.to_ip_string().Value());
 
 	return true;
 }
@@ -481,13 +479,13 @@ QmgmtPeer::endpoint_ip_str() const
 	}
 }
 
-const struct sockaddr_in*
+const condor_sockaddr&
 QmgmtPeer::endpoint() const
 {
 	if ( sock ) {
 		return sock->peer_addr();
 	} else {
-		return &sockaddr;
+		return addr;
 	}
 }
 
@@ -1310,7 +1308,8 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// to the schedd.  we have to explicitly check here because all queue
 	// management commands come in via one sole daemon core command which
 	// has just READ permission.
-	if ( daemonCore->Verify("queue management", WRITE, Q_SOCK->endpoint(), Q_SOCK->getFullyQualifiedUser()) == FALSE ) {
+	condor_sockaddr addr = Q_SOCK->endpoint();
+	if ( daemonCore->Verify("queue management", WRITE, addr, Q_SOCK->getFullyQualifiedUser()) == FALSE ) {
 		// this machine does not have write permission; return failure
 		return false;
 	}

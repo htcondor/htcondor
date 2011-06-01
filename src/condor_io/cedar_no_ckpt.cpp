@@ -43,6 +43,7 @@
 #include "daemon_core_sock_adapter.h"
 #include "condor_netdb.h"
 #include "internet.h"
+#include "ipv6_hostname.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -914,23 +915,21 @@ Sock::get_sinful_public()
 	MyString tcp_forwarding_host;
 	param(tcp_forwarding_host,"TCP_FORWARDING_HOST");
 	if (!tcp_forwarding_host.IsEmpty()) {
-		struct sockaddr_in sin;
-		if (!is_ipaddr(tcp_forwarding_host.Value(), &sin.sin_addr)) {
-			struct hostent *he = condor_gethostbyname(tcp_forwarding_host.Value());
-			if (he == NULL) {
+		condor_sockaddr addr;
+		
+		if (!addr.from_ip_string(tcp_forwarding_host)) {
+			std::vector<condor_sockaddr> addrs = resolve_hostname(tcp_forwarding_host);
+			if (addrs.empty()) {
 				dprintf(D_ALWAYS,
 					"failed to resolve address of TCP_FORWARDING_HOST=%s\n",
 					tcp_forwarding_host.Value());
 				return NULL;
 			}
-			sin.sin_addr = *(in_addr*)(he->h_addr_list[0]);;
+			addr = addrs.front();
 		}
-		sin.sin_port = htons(get_port());
-		char const *addr = sin_to_string(&sin);
-		if( !addr ) {
-			return NULL;
-		}
-		strncpy(_sinful_public_buf,addr,SINFUL_STRING_BUF_SIZE);
+		addr.set_port(get_port());
+		strncpy(_sinful_public_buf, addr.to_sinful().Value(), 
+				SINFUL_STRING_BUF_SIZE);
 		_sinful_public_buf[SINFUL_STRING_BUF_SIZE-1] = '\0';
 		return _sinful_public_buf;
 	}

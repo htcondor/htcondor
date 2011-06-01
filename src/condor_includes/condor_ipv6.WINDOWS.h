@@ -37,7 +37,7 @@ __inline int win32_inet_pton(int af, const char *src, void *dst) {
 	} else if (af == AF_INET6) {
 		struct sockaddr_in6 sin6;
 		int sin6len = sizeof(sin6);
-		ret = WSAStringToAddress((char*)src, af, NULL,
+		ret = WSAStringToAddressA((char*)src, af, NULL,
 			(LPSOCKADDR)&sin6, &sin6len);
 		if (ret == 0) {
 			memcpy(dst, &sin6.sin6_addr, sizeof(sin6.sin6_addr));
@@ -47,8 +47,37 @@ __inline int win32_inet_pton(int af, const char *src, void *dst) {
 	return 0;
 }
 
-// Windows Server 2008 SDK defines inet_pton.
+__inline const char* win32_inet_ntop(int af, const void* src, char* dst, 
+							 socklen_t size) {
+	sockaddr_storage ss;
+	memset(&ss, 0, sizeof(ss));
+	LPSOCKADDR addr = (LPSOCKADDR)&ss;
+	DWORD addr_len = 0;
+	if (af == AF_INET) {
+		sockaddr_in* sin = (sockaddr_in*)&ss;
+		addr_len = sizeof(sockaddr_in);
+		sin->sin_family = AF_INET;
+		memcpy(&sin->sin_addr, src, sizeof(in_addr));
+ 	} else if (af == AF_INET6) {
+		sockaddr_in6* sin6 = (sockaddr_in6*)&ss;
+		addr_len = sizeof(sockaddr_in6);
+		sin6->sin6_family = AF_INET6;
+		memcpy(&sin6->sin6_addr, src, sizeof(in6_addr));
+	}
+	DWORD dst_len = size;
+	int ret = WSAAddressToStringA(addr, addr_len, NULL,
+								 dst, &dst_len);
+	if (ret == SOCKET_ERROR) {
+		return NULL;
+	}
+	
+	return dst;
+}
+
+// Windows Server 2008 SDK defines inet_pton() and inet_ntop(), while
+// 2003 SDK does not.
 // If Condor moves to 2008 SDK, it should be changed accordingly.
 #define inet_pton win32_inet_pton
+#define inet_ntop win32_inet_ntop
 
 #endif /* CONDOR_WIN_IPV6_H */

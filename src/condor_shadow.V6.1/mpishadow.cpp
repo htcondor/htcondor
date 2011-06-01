@@ -30,7 +30,7 @@
 #include "daemon.h"
 #include "env.h"
 #include "condor_claimid_parser.h"
-
+#include "ipv6_hostname.h"
 
 MPIShadow::MPIShadow() {
     nextResourceToStart = 0;
@@ -363,28 +363,30 @@ MPIShadow::startMaster()
 		return;
     }
         
-    char mach[128];
     char *sinful = new char[128];
-    struct sockaddr_in sin;
+	condor_sockaddr addr;
 
         // get the machine name (using string_to_sin and sin_to_hostname)
     rr = ResourceList[0];
     rr->getStartdAddress( sinful );
-    string_to_sin( sinful, &sin );
-    sprintf( mach, "%s", sin_to_hostname( &sin, NULL ));
-    fprintf( pg, "%s 0 condor_exec %s\n", mach, getOwner() );
+	addr.from_sinful(sinful);
+	MyString hostname = get_hostname(addr);
+    fprintf( pg, "%s 0 condor_exec %s\n", hostname.Value(), getOwner() );
 
     dprintf ( D_FULLDEBUG, "Procgroup file:\n" );
-    dprintf ( D_FULLDEBUG, "%s 0 condor_exec %s\n", mach, getOwner() );
+    dprintf ( D_FULLDEBUG, "%s 0 condor_exec %s\n", hostname.Value(),
+			  getOwner() );
 
         // for each resource, get machine name, make pgfile entry
     for ( int i=1 ; i<=ResourceList.getlast() ; i++ ) {
         rr = ResourceList[i];
         rr->getStartdAddress( sinful );
-        string_to_sin( sinful, &sin );
-        sprintf( mach, "%s", sin_to_hostname( &sin, NULL ) );
-        fprintf( pg, "%s 1 condor_exec %s\n", mach, getOwner() );
-        dprintf( D_FULLDEBUG, "%s 1 condor_exec %s\n", mach, getOwner() );
+		addr.from_sinful(sinful);
+		MyString hostname = get_hostname(addr);
+        fprintf( pg, "%s 1 condor_exec %s\n", hostname.Value(),
+				 getOwner() );
+        dprintf( D_FULLDEBUG, "%s 1 condor_exec %s\n", hostname.Value(),
+				 getOwner() );
     }
     delete [] sinful;
 

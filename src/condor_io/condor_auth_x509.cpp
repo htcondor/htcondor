@@ -30,6 +30,7 @@
 #include "setenv.h"
 #include "globus_utils.h"
 #include "condor_gssapi_openssl.h"
+#include "ipv6_hostname.h"
 
 #if defined(HAVE_EXT_VOMS)
 extern "C" {
@@ -481,7 +482,8 @@ StringList * getDaemonList(ReliSock * sock)
     // build a string list, then do a search to see if the target is 
     // in the list
     char * daemonNames = param( "GSI_DAEMON_NAME" );
-    char * fqh         = sin_to_hostname(sock->peer_addr(), NULL);
+	MyString fqh_str = get_hostname(sock->peer_addr());
+    const char * fqh  = fqh_str.Value();
     char * entry       = NULL;
 
 	if (!daemonNames) {

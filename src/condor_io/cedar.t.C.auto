@@ -43,7 +43,8 @@ int main()
 	cout << "Select: ";
 	cin >> op;
 
-	cout << "I am " << my_ip_addr() << endl;
+	// my_ip_addr() is obsolete
+	//cout << "I am " << my_ip_addr() << endl;
 	result = mySock.set_os_buffers(3000000, false);
 	cout << "buffer size set to " << result << endl;
 	switch(op) {

@@ -81,6 +81,7 @@ Attribute::Attribute ( AttributeType _type, const char *_value ) :
 
 Attribute::~Attribute()
 {
+    //
 }
 
 Attribute::AttributeType
@@ -92,7 +93,7 @@ Attribute::GetType() const
 const char *
 Attribute::GetValue() const
 {
-    return m_value;
+    return m_value.c_str();
 }
 
 //////////////
@@ -180,12 +181,12 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
         }
         case classad::Value::STRING_VALUE:
         {
-            MyString str;
+            std::string str;
             if ( !m_full_ad->LookupString ( _name, str ) )
             {
                 return false;
             }
-            _attribute = new Attribute ( Attribute::STRING_TYPE, str.Value() );
+            _attribute = new Attribute ( Attribute::STRING_TYPE, str.c_str() );
             return true;
         }
         default:

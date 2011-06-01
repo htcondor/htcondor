@@ -42,8 +42,8 @@ class CollectorEngine : public Service
 	int invalidateAds(AdTypes, ClassAd &);
 
 	// perform the collect operation of the given command
-	ClassAd *collect (int, Sock *, sockaddr_in *, int &);
-	ClassAd *collect (int, ClassAd *, sockaddr_in *, int &, Sock* = NULL);
+	ClassAd *collect (int, Sock *, const condor_sockaddr&, int &);
+	ClassAd *collect (int, ClassAd *, const condor_sockaddr&, int &, Sock* = NULL);
 
 	// lookup classad in the specified table with the given hashkey
 	ClassAd *lookup (AdTypes, AdNameHashKey &);
@@ -73,7 +73,7 @@ class CollectorEngine : public Service
 	bool setCollectorRequirements( char const *str, MyString &error_desc );
 
   private:
-	typedef bool (*HashFunc) (AdNameHashKey &, ClassAd *, sockaddr_in *);
+	typedef bool (*HashFunc) (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
 
 	bool LookupByAdType(AdTypes, CollectorHashTable *&, HashFunc &);
  
@@ -126,7 +126,7 @@ class CollectorEngine : public Service
 	void cleanHashTable (CollectorHashTable &, time_t, HashFunc);
 	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
 						   ClassAd*,AdNameHashKey&, const MyString &, int &, 
-						   const sockaddr_in * );
+						   const condor_sockaddr& );
 
 	ClassAd * mergeClassAd (CollectorHashTable &hashTable,
 							const char *adType,
@@ -135,7 +135,7 @@ class CollectorEngine : public Service
 							AdNameHashKey &hk,
 							const MyString &hashString,
 							int  &insert,
-							const sockaddr_in * /*from*/ );
+							const condor_sockaddr& /*from*/ );
 
 	// support for dynamically created tables
 	CollectorHashTable *findOrCreateTable(MyString &str);

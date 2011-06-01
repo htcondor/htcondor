@@ -23,7 +23,7 @@
 #include "condor_config.h"
 #include "util_lib_proto.h"
 #include "basename.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "condor_version.h"
 #include "limit.h"
 #include "condor_email.h"
@@ -644,7 +644,7 @@ handle_dynamic_dirs()
 	}
 	int mypid = daemonCore->getpid();
 	char buf[256];
-	sprintf( buf, "%s-%d", inet_ntoa(*(my_sin_addr())), mypid );
+	sprintf( buf, "%s-%d", get_local_ipaddr().to_ip_string().Value(), mypid );
 
 	set_dynamic_dir( "LOG", buf );
 	set_dynamic_dir( "SPOOL", buf );
