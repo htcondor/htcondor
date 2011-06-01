@@ -304,17 +304,11 @@ our %submit_info = (
 
 	##########################################################################
 	# Platform Debian 6.0 on x86_64
-	# As of this writing there is no x86_64_deb-6.0 (non updated) machine in 
-	# the NMI pool.	 When they include one we should switch this from using
-	# the updated machine to the non-updated machine.
 	##########################################################################
-	'x86_64_deb_6.0-updated' => {
+	'x86_64_deb_6.0' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-								  '-DWITH_KRB5:BOOL' => 'OFF',
-								  '-DWITH_CREAM:BOOL' => 'OFF',
-								  '-DWITH_COREDUMPER:BOOL'	=> 'OFF',
+								  '-DCLIPPED:BOOL' => 'ON',
 			},
 			'prereqs'	=> [ 'cmake-2.8.3' ],
 			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
@@ -327,8 +321,17 @@ our %submit_info = (
 		},
 	},
 
+
 	##########################################################################
-	# platform RHEL 6 on x86
+	# Platform DEB 6 on x86_64 (updated)
+	# As of this writing there is no x86_64_deb-6.0 (non updated) machine in 
+	# the NMI pool.	 When they include one we should switch this from using
+	# the updated machine to the non-updated machine.
+	##########################################################################
+	'x86_64_deb_6.0-updated' => 'x86_64_deb_6.0',
+
+	##########################################################################
+	# Platform RHEL 6 on x86
 	##########################################################################
 	'x86_rhap_6.0'	=> {
 		'build' => {
