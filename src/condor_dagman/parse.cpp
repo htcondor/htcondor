@@ -85,7 +85,7 @@ static bool parse_reject(Dag  *dag, const char *filename,
 		int  lineNumber);
 static bool parse_jobstate_log(Dag  *dag, const char *filename,
 		int  lineNumber);
-static bool parse_pre_skip(const char* endline, Dag *dag, const char* filename,
+static bool parse_pre_skip(Dag *dag, const char* filename,
 		int lineNumber);
 static MyString munge_job_name(const char *jobName);
 
@@ -328,7 +328,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		
 		// Handle a PRE_SKIP
 		else if(strcasecmp(token, "PRE_SKIP") == 0) {
-			parsed_line_successfully = parse_pre_skip(endline, dag,
+			parsed_line_successfully = parse_pre_skip(dag,
 				filename, lineNumber);
 		}
 
@@ -1780,8 +1780,7 @@ parse_jobstate_log(
 //           a certain code
 //-----------------------------------------------------------------------------
 bool 
-parse_pre_skip( const char* endline,
-	Dag  *dag, 
+parse_pre_skip( Dag  *dag, 
 	const char *filename, 
 	int  lineNumber)
 {
@@ -1789,26 +1788,25 @@ parse_pre_skip( const char* endline,
 	Job * job = NULL;
 	MyString whynot;
 
-	//
-	// second token is the JobName
-	//
-	const char *jobName = strtok(NULL, DELIMITERS);
+		//
+		// second token is the JobName
+		//
+	const char *jobName = strtok( NULL, DELIMITERS );
 	const char *jobNameOrig = jobName; // for error output
-	const char * rest = jobName; // For subsequent tokens
-	if (jobName == NULL) {
+	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
 					  filename, lineNumber );
-		exampleSyntax (example);
+		exampleSyntax( example );
 		return false;
-	} else if (isReservedWord(jobName)) {
+	} else if ( isReservedWord(jobName) ) {
 		debug_printf( DEBUG_QUIET,
 					  "%s (line %d): JobName cannot be a reserved word\n",
 					  filename, lineNumber );
-		exampleSyntax (example);
+		exampleSyntax( example );
 		return false;
 	} else {
-		debug_printf(DEBUG_DEBUG_1, "jobName: %s\n", jobName);
-		MyString tmpJobName = munge_job_name(jobName);
+		debug_printf( DEBUG_DEBUG_1, "jobName: %s\n", jobName );
+		MyString tmpJobName = munge_job_name( jobName );
 		jobName = tmpJobName.Value();
 
 		job = dag->FindNodeByName( jobName );
@@ -1820,50 +1818,39 @@ parse_pre_skip( const char* endline,
 		}
 	}
 	
-	//
-	// The rest of the line consists of the exitcode
-	//
-	
-	// first, skip over the token we already read...
-	while (*rest != '\0') rest++;
-	
-	// if we're not at the end of the line, move forward
-	// one character so we're looking at the rest of the
-	// line...
-	if( rest < endline ) {
-		rest++;
-	} else {
-		// if we're already at the end of the line, they
-		// must not have given us an exit code.
-		debug_printf( DEBUG_QUIET, "%s (line %d): "
-					  "You named a PRE_SCRIPT for node %s but "
-					  "did not provide an exit code.\n",
-					  filename, lineNumber, jobNameOrig );
+		//
+		// The rest of the line consists of the exitcode
+		//
+	const char *exitCodeStr = strtok( NULL, DELIMITERS );
+	if ( exitCodeStr == NULL ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Missing exit code\n",
+					  filename, lineNumber );
 		exampleSyntax( example );
 		return false;
 	}
-	
-	// quick hack to get this working for extra
-	// whitespace: make sure the "rest" of the line isn't
-	// starting with any delimiter...
-	while( *rest && isDelimiter(*rest) ) {
-		rest++;
-	}
-	
-	if( ! *rest ) {
-		// this means we only saw whitespace after the
-		// script.  however, because of how getline()
-		// works and our comparison to endline above, we
-		// should never hit this case.
-		debug_printf( DEBUG_QUIET, "%s (line %d): "
-					  "You noted a PRE_SCRIPT for node %s but "
-					  "did not provide an exit code.\n",
-					  filename, lineNumber, jobNameOrig);
+
+	char *tmp;
+	int exitCode = (int)strtol( exitCodeStr, &tmp, 10 );
+	if ( tmp == exitCodeStr ) {
+		debug_printf( DEBUG_QUIET,
+				  	"%s (line %d): Invalid exit code \"%s\"\n",
+				  	filename, lineNumber, exitCodeStr );
 		exampleSyntax( example );
 		return false;
 	}
-	
-	if( !job->AddPreSkip(rest, whynot ) ) {
+
+		//
+		// Anything else is garbage
+		//
+	const char *nextTok = strtok( NULL, DELIMITERS );
+	if ( nextTok ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+					"parameter \"%s\"\n", filename, lineNumber, nextTok );
+		exampleSyntax( example );
+		return false;
+	}
+
+	if ( !job->AddPreSkip( exitCode, whynot ) ) {
 		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): failed to add "
 					  "PRE_SKIP note to node %s: %s\n",
 					  filename, lineNumber, jobNameOrig,

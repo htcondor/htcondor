@@ -552,24 +552,26 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 }
 
 bool
-Job::AddPreSkip(const char *result, MyString &whynot )
+Job::AddPreSkip( int exitCode, MyString &whynot )
 {
-	if( !result || strcmp( result, "" ) == 0 ) {
-		whynot = "missing exit code";
+	if( exitCode < PRE_SKIP_MIN || exitCode > PRE_SKIP_MAX ) {
+		whynot.sprintf( "PRE_SKIP exit code must be between %d and %d\n",
+					PRE_SKIP_MIN, PRE_SKIP_MAX );
 		return false;
 	}
-	int res=atoi(result);
-	if(res == 0) {
-		debug_printf(DEBUG_NORMAL,"Exit code 0 for a pre_skip node "
-				"is weird.\n");
+
+	if( exitCode == 0 ) {
+		debug_printf( DEBUG_NORMAL, "Warning: exit code 0 for a PRE_SKIP "
+				"value is weird.\n");
 	}
-	// Return values from programs are all in the range 0-256
-	if(_preskip == -1){
-		_preskip = res;	
+
+	if( _preskip == -1 ) {
+		_preskip = exitCode;	
 	} else {
 		whynot = "Two definitions of PRE_SKIP for a node.\n";
 		return false;
 	}
+
 	whynot = "n/a";
 	return true;
 }
@@ -984,11 +986,13 @@ Job::SetLastEventTime( const ULogEvent *event )
 	_lastEventTime = mktime( &eventTm );
 }
 
+//---------------------------------------------------------------------------
 int
 Job::GetPreSkip() const
 {
-	if(!HasPreSkip()) {
-		debug_printf(DEBUG_QUIET,"Evaluating PRE_SKIP... It is not defined.\n");
+	if( !HasPreSkip() ) {
+		debug_printf( DEBUG_QUIET,
+					"Evaluating PRE_SKIP... It is not defined.\n" );
 	}
 	return _preskip;
 }
