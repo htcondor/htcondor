@@ -1,5 +1,5 @@
-#ifndef CFTP_SERVER_SM_NEGOTIATION_H
-#define CFTP_SERVER_SM_NEGOTIATION_H
+#ifndef CFTP_SEND_NEGOTIATION_H
+#define CFTP_SEND_NEGOTIATION_H
 
 #include "../send.h"
 

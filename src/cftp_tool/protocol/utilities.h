@@ -17,6 +17,19 @@ typedef struct _FileRecord
 	unsigned int   hash[5];
 } FileRecord;
 
+typedef struct {
+    int socket;
+    char* address;
+	int port;
+} Connection;
+
+typedef struct {
+    int socket;
+} Listener;
+
+int makeConnection( const char* address, int port, Connection* c );
+int closeConnection( Connection* c );
+
 //sendall - taken from the Beej guide to socket programming
 int sendall(int s, char *buf, int *len);
 
@@ -25,7 +38,7 @@ int readOOB(int s, void* buf, int len, int flags,
 			struct sockaddr *from, socklen_t *fromlen,
 			int timeout, char termChar);
 
-FileRecord* open_file(  char* filename );
+int open_file(  char* filename, FileRecord* record );
 
 //implement the host to network/network to host byte order 
 //conversions for long datatypes

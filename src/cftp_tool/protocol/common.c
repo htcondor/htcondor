@@ -23,7 +23,7 @@ int recv_cftp_frame( TransferState* state )
 
 	memset( &state->frecv_buf, 0, sizeof( cftp_frame ) );
 
-	recv( state->client_info.client_socket, 	
+	recv( state->arguments->local_socket.socket, 	
 		  &state->frecv_buf,	
 		  sizeof( cftp_frame ),
 		  MSG_WAITALL );
@@ -61,7 +61,7 @@ int recv_data_frame( TransferState* state )
 	state->data_buffer = (char*) malloc( state->data_buffer_size );
 	memset( state->data_buffer, 0, state->data_buffer_size );
 
-	recv_bytes = recv( state->client_info.client_socket, 	
+	recv_bytes = recv( state->arguments->local_socket.socket, 	
 					   state->data_buffer,	
 					   state->data_buffer_size,
 					   MSG_WAITALL );
@@ -99,7 +99,7 @@ int send_cftp_frame( TransferState* state )
 	state->send_rdy = 0;
 
 	length = sizeof( cftp_frame );
-	status = sendall( state->client_info.client_socket,
+	status = sendall( state->arguments->local_socket.socket,
 					  (char*)(&state->fsend_buf),
 					  &length );
 
@@ -146,7 +146,7 @@ int send_data_frame( TransferState* state )
 			return 0;
 		}
 
-	status = sendall( state->client_info.client_socket,
+	status = sendall( state->arguments->local_socket.socket,
 					  (char*)(&state->data_buffer),
 					  &length );
 
@@ -237,5 +237,26 @@ void desc_cftp_frame( TransferState* state, int send_or_recv)
 			break;
 		}
 
+
+}
+
+
+/*
+
+free_TransferState
+
+*/
+void free_TransferState( TransferState* state )
+{
+    if( state == NULL )
+        return;
+
+    if( state->session_parameters )
+        free( state->session_parameters );
+
+    if( state->data_buffer )
+        free( state->data_buffer );
+
+    free( state );
 
 }

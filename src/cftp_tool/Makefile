@@ -1,6 +1,6 @@
 .PHONY: clean
 
-CFLAGS =  -Wall -g -O0
+CFLAGS =  -Wall -g -O0 -I./protocol
 
 CLIENT_SRC     = client.c 
 SERVER_SRC     = server.c

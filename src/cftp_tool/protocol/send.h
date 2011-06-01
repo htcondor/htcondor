@@ -1,5 +1,5 @@
-#ifndef CFTP_PROTOCOL_RECEIVE_H_
-#define CFTP_PROTOCOL_RECEIVE_H_
+#ifndef CFTP_PROTOCOL_SEND_H_
+#define CFTP_PROTOCOL_SEND_H_
 
 #include "common.h"
 

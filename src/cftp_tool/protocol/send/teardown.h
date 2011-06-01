@@ -1,5 +1,5 @@
-#ifndef CFTP_SERVER_SM_TEARDOWN_H
-#define CFTP_SERVER_SM_TEARDOWN_H
+#ifndef CFTP_SEND_TEARDOWN_H
+#define CFTP_SEND_TEARDOWN_H
 
 #include "../receive.h"
 

@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include "frames.h"
-#include "client_lib.h"
+#include <string.h>
+#include "send.h"
 
 int main( int argc, char** argv )
 {
@@ -8,10 +8,10 @@ int main( int argc, char** argv )
 	int ret_code;
 
 	char* server_name;
-	char* server_port;
-	char* local_filename;
+	int   server_port;
 
-	int transfer_results;
+	SendResults transfer_results;   
+    TransferArguments args;
 
 	if( argc < 4 )
 		{
@@ -19,53 +19,25 @@ int main( int argc, char** argv )
 			return 1;	
 		}
 
+    memset( &transfer_results, 0, sizeof( SendResults ));
+    memset( &args, 0, sizeof(TransferArguments)); 
+
 	server_name = argv[1];
-	server_port = argv[2];
-	local_filename = argv[3];
+	sscanf( argv[2], "%d", &server_port);
+	args.file_path = argv[3];
 	
-	transfer_results = transfer_file(server_name, server_port, local_filename);
+    ret_code = makeConnection( server_name, server_port, &args.local_socket);
+    
+    if( ret_code )
+        {
+            printf("Unable to connect to server at %s:%d.\n", server_name, server_port);
+            closeConnection( &args.local_socket );
+            return 1;
+        }
 
-	ret_code = 1; //Assume failure
+	send_file( &args, &transfer_results);
 
-	switch( transfer_results )
-		{
-		case NOERROR:
-			printf("Transfer completed successfully.\n");
-			ret_code = 0;
-			break;
-		case CLIENT_TIMEOUT:
-			printf("Transfer Failed. Timeout occured when communicating with Server.\n");
-			break;
-		case SERVER_TIMEOUT:
-			printf("Transfer Failed. Timeout occured when communicating with Client.\n");
-			break;
-		case UNKNOWN_FORMAT:
-			printf("Transfer Failed. UNKNOWN_FORMAT\n");
-			break;
-		case OVERLOADED:
-			printf("Transfer Failed. OVERLOADED\n");
-			break;
-		case TIMEOUT:
-			printf("Transfer Failed. TIMEOUT\n");
-			break;
-		case DUPLICATE_SESSION_TOKEN:
-			printf("Transfer Failed. DUPLICATE_SESSION_TOKEN\n");
-			break;
-		case MISSING_PARAMETER:
-			printf("Transfer Failed. MISSING_PARAMETER\n");
-			break;
-		case NO_SESSION:
-			printf("Transfer Failed. NO_SESSION\n");
-			break;
-		case UNACCEPTABLE_PARAMETERS:
-			printf("Transfer Failed. UNACCEPTABLE_PARAMETERS\n");
-			break;
-		case NO_DISK_SPACE:
-			printf("Transfer Failed. NO_DISK_SPACE\n");
-			break;
-		}
-		
+    closeConnection( &args.local_socket );
 
-	return ret_code;
-
+    return 0;
 }

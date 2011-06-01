@@ -1,5 +1,5 @@
-#ifndef CFTP_SERVER_SM_ERROR_H
-#define CFTP_SERVER_SM_ERROR_H
+#ifndef CFTP_SEND_ERROR_H
+#define CFTP_SEND_ERROR_H
 
 #include "../receive.h"
 

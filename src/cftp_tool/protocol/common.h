@@ -1,9 +1,11 @@
 #ifndef CFTP_PROTOCOL_COMMON_H_
 #define CFTP_PROTOCOL_COMMON_H_
 
+#include "config.h"
 #include "frames.h"
 #include "utilities.h"
 #include "simple_parameters.h"
+
 
 #define PROTOCOL_DEBUG 1
 
@@ -34,7 +36,7 @@ enum Errors { NO_ERROR, };
 
 typedef struct {
 		// Common Options
-	int   local_socket;
+	Connection local_socket;
 	int   debug;
 	int   verbose;
 
@@ -61,7 +63,6 @@ typedef struct _TransferState
 	char         error_string[256];
 
 	FileRecord   local_file;
-	ClientRecord client_info;
 	TransferArguments*  arguments;
 
 	int          session_token;
@@ -94,5 +95,7 @@ int send_cftp_frame( TransferState* state );
 int send_data_frame( TransferState* state );
 
 void desc_cftp_frame( TransferState* state, int send_or_recv);
+
+void free_TransferState( TransferState* state);
 
 #endif

@@ -18,8 +18,11 @@ const int STATE_NUM = 100; // Will need to change this later
 void send_file( TransferArguments* args, SendResults* results)
 {
 	StateAction SM_States[STATE_NUM];
-	TransferState state;
-	state.arguments = (void*)args;
+	TransferState* state;
+    state = malloc( sizeof(TransferState) );
+    memset( &state, 0, sizeof(TransferState));
+
+	state->arguments = args;
 
 	//-------------- Initialize SM States -----------------
 	
@@ -38,25 +41,29 @@ void send_file( TransferArguments* args, SendResults* results)
 
     //------------------------------------------------------- 	
 
+    // Open file
+    open_file( state->arguments->file_path, &state->local_file);
 
 	//Prep structure for initial state
-	state.state = S_SEND_SESSION_PARAMETERS;	
-	state.phase = NEGOTIATION;
-	state.last_error = 0;
-	memset( state.error_string, 0, 256 );
+	state->state = S_SEND_SESSION_PARAMETERS;	
+	state->phase = NEGOTIATION;
+	state->last_error = 0;
+	memset( state->error_string, 0, 256 );
 
-	state.session_token    = 1;  //TODO: Need better token generator  
-	state.parameter_length = sizeof( simple_parameters );
-	state.parameter_format = SIMPLE;
+	state->session_token    = 1;  //TODO: Need better token generator  
+	state->parameter_length = sizeof( simple_parameters );
+	state->parameter_format = SIMPLE;
 
 
-	while( send_run_state_machine( SM_States, &state )==0 )
+	while( send_run_state_machine( SM_States, state )==0 )
 	{
 			// Do nothing here, we wait till the SM kills us.
 	}
 
 	// We may want some clean up based on
 	// the final condition of session_state.
+
+    free_TransferState( state ); 
 
 }
 

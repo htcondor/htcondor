@@ -12,6 +12,75 @@
 #include <errno.h>
 
 /*
+
+Establish a TCP connection to a remote service
+
+*/
+
+int makeConnection( const char* address, int port, Connection* c )
+{
+    
+ //Really rusty on socket api - refered to Beej's guide for this
+//http://beej.us/guide/bgnet/output/html/multipage/syscalls.html
+	
+	int status;	
+	int sock;
+	int connect_results;
+	struct addrinfo hints;
+	struct addrinfo *servinfo;  // will point to the results
+
+    char port_s[10];
+
+    // Initialize the Connection structure
+    if( c->address )
+        free( c->address );
+    c->address = malloc( strlen( address )+1 );
+    strcpy( c->address, address );
+    c->port = port; 
+    c->socket = -1;
+
+       
+    // Establish the connection
+
+	memset(&hints, 0, sizeof hints); // make sure the struct is empty
+	hints.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
+	hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
+	hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
+
+    sprintf( port_s, "%d", port );
+	if ((status = getaddrinfo(address,
+							  port_s,
+							  &hints,
+							  &servinfo)) != 0) {
+		fprintf(stderr, "Unable to resolve server: %s\n", gai_strerror(status));
+		return 1;
+	}
+
+	sock = socket( servinfo->ai_family, servinfo->ai_socktype, servinfo->ai_protocol);
+	if( sock == -1)
+		{
+			fprintf( stderr, "Error on creating socket: %s\n", strerror( errno ) );
+			freeaddrinfo(servinfo);
+			return 1;
+		}	
+
+	connect_results = connect( sock, servinfo->ai_addr, servinfo->ai_addrlen);
+	if( connect_results == -1)
+		{
+			fprintf( stderr, "Error on connecting with server: %s\n", strerror( errno ) );
+			freeaddrinfo(servinfo);	
+			return 1;
+		}
+	
+	c->socket = sock;
+	//We fill in a ServerRecord so we don't need this anymore.
+	freeaddrinfo(servinfo);
+
+	return 0;
+}
+
+
+/*
   open_file
   
   Opens a given filename and returns a FileRecord pointer.
@@ -19,9 +88,8 @@
   Returns NULL if the file is unable to be opened.
 
  */
-FileRecord* open_file( char* filename)
+int open_file( char* filename, FileRecord* record)
 {
-	FileRecord* record;
 	SHA1Context hashRecord;
 	unsigned char chunk;
 	unsigned int len;
@@ -29,7 +97,6 @@ FileRecord* open_file( char* filename)
 	char* old_str_ptr;
 	
 
-	record = (FileRecord*) malloc(sizeof(FileRecord));
 	memset( record, 0, sizeof( FileRecord ));
 
 
@@ -54,8 +121,7 @@ FileRecord* open_file( char* filename)
 	record->fp = fopen( filename, "rb" );
 	if( record->fp == NULL )
 		{
-			free(record);
-			return NULL;
+			return 1;
 		}
 
 
@@ -88,7 +154,7 @@ FileRecord* open_file( char* filename)
 	    record->num_chunks = record->num_chunks + 1;
 
 
-	return record;
+	return 0;
 }
 
 
@@ -171,4 +237,21 @@ int readOOB(int s, void* buf, int len, int flags,
 		}
 
 	return total_recvd;
+}
+
+
+/*
+
+closeConnection
+
+*/
+int closeConnection( Connection* c )
+{
+    if( c == NULL )
+        return 0;
+    
+    if( c->address )
+        free( c->address );
+
+    return 0;
 }
