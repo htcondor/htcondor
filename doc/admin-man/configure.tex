@@ -8295,6 +8295,20 @@ in section~\ref{sec:DAG-configuration}.
   Stork jobs (not Condor jobs).  The default value if not defined is
   \Expr{False}.
 
+\label{param:DAGManUseStrict}
+\item[\Macro{DAGMAN\_USE\_STRICT}]
+  An integer defining the level of strictness \Condor{dagman} will apply
+  in turning warnings into fatal errors, as follows:
+  \begin{itemize}
+    \item 0: no warnings become errors
+    \item 1: severe warnings become errors
+    \item 2: medium-severity warnings become errors
+    \item 3: almost all warnings become errors
+  \end{itemize}
+  Using a strictness value greater than 0 may help you find problems with
+  your DAG that may otherwise escape notice.
+  The default value if not defined is 0.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
