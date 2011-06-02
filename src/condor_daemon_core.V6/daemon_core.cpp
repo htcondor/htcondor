@@ -8887,7 +8887,7 @@ DaemonCore::Inherit( void )
 					inheritedSocks[numInheritedSocks++] = (Stream *)dc_ssock;
 					break;
 				default:
-					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks");
+					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks, not %c (%d)", *ptmp, (int)*ptmp);
 					break;
 			} // end of switch
 			ptmp=inherit_list.next();
