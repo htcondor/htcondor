@@ -44,18 +44,7 @@ typedef uid_t id_t;
 
 /* id used when an error occurs */
 extern const id_t err_id;
-/*
-typedef struct id_range_list_elem {
-    id_t min_value;
-    id_t max_value;
-} id_range_list_elem;
 
-typedef struct id_range_list {
-    int count;
-    int capacity;
-    id_range_list_elem *list;
-} id_range_list;
-*/
 typedef struct string_list {
     int count;
     int capacity;
@@ -73,30 +62,11 @@ void destroy_string_list(string_list *list);
 char **null_terminated_list_from_string_list(string_list *list);
 int is_string_in_list(string_list *list, const char *s);
 int is_string_list_empty(string_list *list);
-/*
-void init_id_range_list(safe_id_range_list *list);
-void add_id_range_to_list(safe_id_range_list *list, id_t min_id, id_t max_id);
-void add_id_to_list(safe_id_range_list *list, id_t id);
-void destroy_id_range_list(safe_id_range_list *list);
-int is_id_in_list(safe_id_range_list *list, id_t id);
-int is_id_list_empty(safe_id_range_list *list);
-*/
+
 const char *skip_whitespace_const(const char *s);
 char *skip_whitespace(char *s);
 char *trim_whitespace(const char *s, const char *endp);
-/*
-id_t parse_id(const char *value, const char **endptr);
-uid_t parse_uid(const char *value, const char **endptr);
-gid_t parse_gid(const char *value, const char **endptr);
-*/
-/*
-void parse_id_list(safe_id_range_list *list, const char *value,
-                   const char **endptr);
-void parse_uid_list(safe_id_range_list *list, const char *value,
-                    const char **endptr);
-void parse_gid_list(safe_id_range_list *list, const char *value,
-                    const char **endptr);
-*/
+
 int safe_reset_environment(void);
 int safe_close_fds_between(int min_fd, int max_fd);
 int safe_close_fds_starting_at(int min_fd);
@@ -127,20 +97,6 @@ int safe_exec_as_user(uid_t uid,
                       const char *initial_dir,
                       int is_std_univ);
 
-enum { PATH_UNTRUSTED =
-        0, PATH_TRUSTED_STICKY_DIR, PATH_TRUSTED, PATH_TRUSTED_CONFIDENTIAL
-};
-/*
-int safe_is_path_trusted(const char *pathname,
-                         safe_id_range_list *trusted_uids,
-                         safe_id_range_list *trusted_gids);
-int safe_is_path_trusted_fork(const char *pathname,
-                              safe_id_range_list *trusted_uids,
-                              safe_id_range_list *trusted_gids);
-int safe_is_path_trusted_r(const char *pathname,
-                           safe_id_range_list *trusted_uids,
-                           safe_id_range_list *trusted_gids);
-*/
 typedef int (*safe_dir_walk_func) (const char *path,
                                    const struct stat * sb, void *data);
 

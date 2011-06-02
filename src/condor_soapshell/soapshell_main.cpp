@@ -176,7 +176,7 @@ write_input_files(const ClassAd* inputAd, const char *iwd)
 			// Caller needs to free *output if non-NULL
 			condor_base64_decode(file_data,&output,&output_length);
 			if ( output ) {
-				fd = safe_open_wrapper( condor_basename(file_name), flags, 0666 );
+				fd = safe_open_wrapper_follow( condor_basename(file_name), flags, 0666 );
 				if ( fd > -1 ) {
 					write(fd,output,output_length);
 					close(fd);
@@ -197,7 +197,7 @@ write_input_files(const ClassAd* inputAd, const char *iwd)
 			file_data = NULL;
 		} else {
 			// INPUT_FILE_NAME specified, but no data... so just touch the file
-			fd = safe_open_wrapper( condor_basename(file_name), flags, 0666 );
+			fd = safe_open_wrapper_follow( condor_basename(file_name), flags, 0666 );
 			if ( fd > -1 ) {
 				close(fd);
 				dprintf(D_FULLDEBUG,"Wrote empty file %s%c%s\n",
@@ -324,7 +324,7 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 			// Caller needs to free *output if non-NULL
 			condor_base64_decode(input,&output,&output_length);
 			if ( output ) {
-				fd = safe_open_wrapper( jobstdin.Value(), flags, 0666 );
+				fd = safe_open_wrapper_follow( jobstdin.Value(), flags, 0666 );
 				if ( fd > -1 ) {
 					write(fd,output,output_length);
 					close(fd);
@@ -342,9 +342,9 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 		// initialize these to -2 to mean they're not specified.
 		// -1 will be treated as an error.
 	fds[0] = -2; fds[1] = -2; fds[2] = -2;	
-	fds[0] = safe_open_wrapper( jobstdin.Value(), O_RDONLY | O_LARGEFILE ); // stdin	
-	fds[1] = safe_open_wrapper( jobstdout.Value(), flags, 0666 );	// stdout
-	fds[2] = safe_open_wrapper( jobstderr.Value(), flags, 0666 );	// stderr
+	fds[0] = safe_open_wrapper_follow( jobstdin.Value(), O_RDONLY | O_LARGEFILE ); // stdin	
+	fds[1] = safe_open_wrapper_follow( jobstdout.Value(), flags, 0666 );	// stdout
+	fds[2] = safe_open_wrapper_follow( jobstderr.Value(), flags, 0666 );	// stderr
 	/* Bail out if we couldn't open stdout/err files correctly */
 	if( fds[1]==-1 || fds[2]==-1 ) {
 		/* only close ones that had been opened correctly */

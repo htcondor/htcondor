@@ -1441,7 +1441,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 {
 	int		fd;
 
-	if( (fd=safe_open_wrapper(name,mode)) < 0 ) {
+	if( (fd=safe_open_wrapper_follow(name,mode)) < 0 ) {
 		EXCEPT( "Can't open named pipe %s", name );
 	}
 
