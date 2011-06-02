@@ -43,6 +43,7 @@ our %build_and_test_sets = (
 	# NOTE: Keep the stable or developer release branches synchronized with
 	# https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=DeveloperReleasePlan
 	'official_ports' => [
+		'x86_64_deb_6.0-updated', # this will switch to non-updated when NMI has that platform
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
 		'x86_64_rhas_3',
@@ -313,6 +314,36 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+
+	##########################################################################
+	# Platform Debian 6.0 on x86_64
+	##########################################################################
+	'x86_64_deb_6.0' => {
+    	'build' => {
+        	'configure_args' => { @default_build_configure_args,
+                              	'-DCLIPPED:BOOL=ON' => undef,
+                              	'-DWITH_KRB5:BOOL=OFF' => undef,
+                              	'-DWITH_CREAM:BOOL=OFF' => undef,
+                              	'-DWITH_COREDUMPER:BOOL=OFF' => undef,
+        	},
+        	'prereqs'   => [ 'cmake-2.8.3' ],
+        	'xtests'    =>  [ 'x86_64_ubuntu_10.04', ],
+    	},
+	
+    	'test' => {
+        	'configure_args' => { @default_test_configure_args },
+        	'prereqs'   => [ 'java-1.4.2_05' ],
+        	'testclass' => [ @default_testclass ],
+    	},
+	},
+
+	##########################################################################
+	# Platform Debian 6.0 on x86_64
+	# As of this writing there is no x86_64_deb-6.0 (non updated) machine in 
+	# the NMI pool.  When they include one we should switch this from using
+	# the updated machine to the non-updated machine.
+	##########################################################################
+	'x86_64_deb_6.0-updated' => 'x86_64_deb_6.0',
 
 	##########################################################################
 	# Platform RHEL 6 on x86
