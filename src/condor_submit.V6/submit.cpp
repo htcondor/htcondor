@@ -5349,10 +5349,8 @@ SetGridParams()
 				resource.replaceString( "/cream-", "/ce-cream/services/CREAM2 ", pos );
 				pos += 26;
 				if ( ( pos2 = resource.find( "-", pos ) ) >= 0 ) {
-					resource[pos2] = ' ';
+					resource.setChar( pos2, ' ' );
 				}
-				//resource.replaceString( "-", " ", pos );
-				//resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
 
 				buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
 								resource.Value() );
