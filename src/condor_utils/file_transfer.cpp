@@ -2120,10 +2120,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 		buf.sprintf("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
 #if defined(WIN32)
-		if ((fd = safe_open_wrapper(buf.Value(), O_WRONLY | O_CREAT | O_TRUNC | 
+		if ((fd = safe_open_wrapper_follow(buf.Value(), O_WRONLY | O_CREAT | O_TRUNC | 
 			_O_BINARY | _O_SEQUENTIAL, 0644)) < 0)
 #else
-		if ((fd = safe_open_wrapper(buf.Value(), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
+		if ((fd = safe_open_wrapper_follow(buf.Value(), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
 #endif
 		{
 			dprintf(D_ALWAYS, 

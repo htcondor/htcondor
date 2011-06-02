@@ -6666,7 +6666,7 @@ check_open( const char *name, int flags )
 	}
 
 	if ( !DisableFileChecks ) {
-			if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+			if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
 			if( errno == EISDIR && (flags & O_WRONLY)) {
 					// Entries in the transfer output list may be
 					// files or directories; no way to tell in

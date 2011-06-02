@@ -497,7 +497,7 @@ WriteUserLog::openFile(
 		flags |= O_APPEND;
 	}
 	mode_t mode = 0664;
-	fd = safe_open_wrapper( file, flags, mode );
+	fd = safe_open_wrapper_follow( file, flags, mode );
 	if( fd < 0 ) {
 		dprintf( D_ALWAYS,
 		         "WriteUserLog::initialize: "

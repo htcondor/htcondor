@@ -1158,7 +1158,7 @@ find_file(const char *env_name, const char *file_name)
 				// if we can read it properly.
 			if (!locations[ctr].IsEmpty()) {
 				config_source = strdup(locations[ctr].Value());
-				if ((fd = safe_open_wrapper(config_source, O_RDONLY)) < 0) {
+				if ((fd = safe_open_wrapper_follow(config_source, O_RDONLY)) < 0) {
 					free(config_source);
 					config_source = NULL;
 				} else {
@@ -1241,7 +1241,7 @@ find_file(const char *env_name, const char *file_name)
 
 				if( !(is_piped_command(config_source) &&
 					  is_valid_command(config_source)) &&
-					(fd = safe_open_wrapper( config_source, O_RDONLY)) < 0 ) {
+					(fd = safe_open_wrapper_follow( config_source, O_RDONLY)) < 0 ) {
 
 					free( config_source );
 					config_source = NULL;
@@ -2253,7 +2253,7 @@ set_persistent_config(char *admin, char *config)
 		tmp_filename.sprintf( "%s.tmp", filename.Value() );
 		do {
 			unlink( tmp_filename.Value() );
-			fd = safe_open_wrapper( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
+			fd = safe_open_wrapper_follow( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 		} while (fd == -1 && errno == EEXIST);
 		if( fd < 0 ) {
 			dprintf( D_ALWAYS, "safe_open_wrapper(%s) returned %d '%s' (errno %d) in "
@@ -2305,7 +2305,7 @@ set_persistent_config(char *admin, char *config)
 	tmp_filename.sprintf( "%s.tmp", toplevel_persistent_config.Value() );
 	do {
 		unlink( tmp_filename.Value() );
-		fd = safe_open_wrapper( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
+		fd = safe_open_wrapper_follow( tmp_filename.Value(), O_WRONLY|O_CREAT|O_EXCL, 0644 );
 	} while (fd == -1 && errno == EEXIST);
 	if( fd < 0 ) {
 		dprintf( D_ALWAYS, "safe_open_wrapper(%s) returned %d '%s' (errno %d) in "

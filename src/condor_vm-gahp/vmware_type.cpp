@@ -66,7 +66,7 @@ change_monolithicSparse_snapshot_vmdk_file(const char* file, bool use_fullpath, 
 
 	// read snapshot vmdk file to find "parentFileNameHint"
 	int fd = -1;
-	fd = safe_open_wrapper(file, O_RDWR);
+	fd = safe_open_wrapper_follow(file, O_RDWR);
 	if( fd < 0 ) {
 		vmprintf(D_ALWAYS, "failed to safe_open_wrapper file(%s) : "
 				"safe_open_wrapper returns %s\n", file, strerror(errno));

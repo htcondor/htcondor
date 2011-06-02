@@ -413,7 +413,7 @@ submitDag( SubmitDagShallowOptions &shallowOpts )
 //---------------------------------------------------------------------------
 bool fileExists(const MyString &strFile)
 {
-	int fd = safe_open_wrapper(strFile.Value(), O_RDONLY);
+	int fd = safe_open_wrapper_follow(strFile.Value(), O_RDONLY);
 	if (fd == -1)
 		return false;
 	close(fd);

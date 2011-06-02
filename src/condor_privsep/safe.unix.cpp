@@ -351,6 +351,7 @@ int is_string_list_empty(string_list *list)
  * returns
  * 	nothing
  */
+#ifdef OLD_SAFE
 void init_id_range_list(id_range_list *list)
 {
     list->count = 0;
@@ -362,7 +363,7 @@ void init_id_range_list(id_range_list *list)
         fatal_error_exit(1, "malloc failed in init_id_range_list");
     }
 }
-
+#endif
 /*
  * add_id_range_to_list
  * 	Adds a range of ids (all the ids between min_id and max_id inclusive)
@@ -377,6 +378,7 @@ void init_id_range_list(id_range_list *list)
  * returns
  * 	nothing
  */
+#ifdef OLD_SAFE
 void add_id_range_to_list(id_range_list *list, id_t min_id, id_t max_id)
 {
     if (list->count == list->capacity) {
@@ -396,7 +398,7 @@ void add_id_range_to_list(id_range_list *list, id_t min_id, id_t max_id)
     list->list[list->count].min_value = min_id;
     list->list[list->count++].max_value = max_id;
 }
-
+#endif
 /*
  * add_id_to_list
  * 	Add the single id to the list.  This is the same as calling
@@ -409,11 +411,12 @@ void add_id_range_to_list(id_range_list *list, id_t min_id, id_t max_id)
  * returns
  * 	nothing
  */
+#ifdef OLD_SAFE
 void add_id_to_list(id_range_list *list, id_t id)
 {
     add_id_range_to_list(list, id, id);
 }
-
+#endif
 /*
  * destroy_id_range_list
  * 	Destroy a id_range_list, including any memory have acquired.
@@ -423,6 +426,7 @@ void add_id_to_list(id_range_list *list, id_t id)
  * returns
  * 	nothing
  */
+#ifdef OLD_SAFE
 void destroy_id_range_list(id_range_list *list)
 {
     list->capacity = 0;
@@ -430,7 +434,7 @@ void destroy_id_range_list(id_range_list *list)
     free(list->list);
     list->list = 0;
 }
-
+#endif
 /*
  * is_id_in_list
  * 	Check if the id is in one of the id ranges in the id range list.
@@ -442,6 +446,7 @@ void destroy_id_range_list(id_range_list *list)
  * returns
  * 	True if the id is in one of the ranges, false otherwise.
  */
+#ifdef OLD_SAFE
 int is_id_in_list(id_range_list *list, id_t id)
 {
     int i;
@@ -453,7 +458,7 @@ int is_id_in_list(id_range_list *list, id_t id)
 
     return 0;
 }
-
+#endif
 /*
  * is_id_list_empty
  * 	Returns true if the id_range_list contains 0 ranges.
@@ -463,11 +468,12 @@ int is_id_in_list(id_range_list *list, id_t id)
  * returns
  * 	boolean of (id_range_list is empty)
  */
+#ifdef OLD_SAFE
 int is_id_list_empty(id_range_list *list)
 {
     return (list->count == 0);
 }
-
+#endif
 /***********************************************************************
  *
  * Functions for parsing ids, id ranges and id lists of numbers, uids and gids
@@ -484,6 +490,7 @@ int is_id_list_empty(id_range_list *list)
  * returns
  * 	location of first non-whitespace
  */
+#ifdef OLD_SAFE
 const char *skip_whitespace_const(const char *s)
 {
     while (*s && isspace(*s)) {
@@ -492,7 +499,7 @@ const char *skip_whitespace_const(const char *s)
 
     return s;
 }
-
+#endif
 /*
  * skip_whitespace
  * 	Returns a pointer to the first non-whitespace character in the
@@ -556,13 +563,14 @@ char *trim_whitespace(const char *s, const char *endp)
  * returns
  * 	err_id and errno = EINVAL
  */
+#ifdef OLD_SAFE
 static id_t name_to_error(const char *name)
 {
     (void) name;
     errno = EINVAL;
     return err_id;
 }
-
+#endif
 /*
  * name_to_uid
  * 	Return the uid matching the name if it exists.  Return the same
@@ -575,6 +583,7 @@ static id_t name_to_error(const char *name)
  * 	the uid corresponding to name if it exists, or the same as
  * 	name_to_error if it does not.
  */
+#ifdef OLD_SAFE
 static id_t name_to_uid(const char *name)
 {
     struct passwd *pw = getpwnam(name);
@@ -587,7 +596,7 @@ static id_t name_to_uid(const char *name)
 
     return pw->pw_uid;
 }
-
+#endif
 /*
  * name_to_gid
  * 	Return the gid matching the name if it exists.  Return the same
@@ -600,6 +609,7 @@ static id_t name_to_uid(const char *name)
  * 	the gid corresponding to name if it exists, or the same as
  * 	name_to_error if it does not.
  */
+#ifdef OLD_SAFE
 static id_t name_to_gid(const char *name)
 {
     struct group *gr = getgrnam(name);
@@ -612,7 +622,7 @@ static id_t name_to_gid(const char *name)
 
     return gr->gr_gid;
 }
-
+#endif
 /*
  * strto_id
  * 	Return the id corresponding to the longest sequence of characters
@@ -645,6 +655,7 @@ static id_t name_to_gid(const char *name)
  * returns
  * 	the id, and sets *endptr, and errno
  */
+#ifdef OLD_SAFE
 typedef id_t (*lookup_func) (const char *);
 
 static id_t
@@ -695,7 +706,7 @@ strto_id(const char *value, const char **endptr,
     }
 	return id;
 }
-
+#endif
 /*
  * parse_uid
  * 	Parse the string value and return the user id of the first id in the
@@ -714,6 +725,7 @@ strto_id(const char *value, const char **endptr,
  * returns
  * 	the user id, also updates *endptr and errno
  */
+#ifdef OLD_SAFE
 uid_t parse_uid(const char *value, const char **endptr)
 {
     uid_t uid;
@@ -722,7 +734,7 @@ uid_t parse_uid(const char *value, const char **endptr)
 
     return uid;
 }
-
+#endif
 /*
  * parse_gid
  * 	Parse the string value and return the group id of the first id in the
@@ -741,6 +753,7 @@ uid_t parse_uid(const char *value, const char **endptr)
  * returns
  * 	the group id, also updates *endptr and errno
  */
+#ifdef OLD_SAFE
 gid_t parse_gid(const char *value, const char **endptr)
 {
     gid_t gid;
@@ -749,7 +762,7 @@ gid_t parse_gid(const char *value, const char **endptr)
 
     return gid;
 }
-
+#endif
 /*
  * parse_id
  * 	Parse the string value and return the the first number in the string as
@@ -768,6 +781,7 @@ gid_t parse_gid(const char *value, const char **endptr)
  * returns
  * 	the group id, also updates *endptr and errno
  */
+#ifdef OLD_SAFE
 id_t parse_id(const char *value, const char **endptr)
 {
     id_t id;
@@ -776,7 +790,7 @@ id_t parse_id(const char *value, const char **endptr)
 
     return id;
 }
-
+#endif
 /*
  * strto_id_range
  * 	Returns a pair of id's denoting a range of ids.  The form of the string
@@ -813,6 +827,7 @@ id_t parse_id(const char *value, const char **endptr)
  * returns
  * 	nothing, but sets *min_id, *max_id, *endptr, and errno
  */
+#ifdef OLD_SAFE
 static void
 strto_id_range(id_t *min_id, id_t *max_id, const char *value,
                const char **endptr, lookup_func lookup)
@@ -846,7 +861,7 @@ strto_id_range(id_t *min_id, id_t *max_id, const char *value,
         errno = EINVAL;
     }
 }
-
+#endif
 /*
  * strto_id_list
  * 	Adds the rnages in the value to the list.  Ranges are as specified in
@@ -877,6 +892,7 @@ strto_id_range(id_t *min_id, id_t *max_id, const char *value,
  * returns
  * 	nothing, but adds entries to *list, and sets *endptr, and errno
  */
+#ifdef OLD_SAFE
 static void
 strto_id_list(id_range_list *list, const char *value, const char **endptr,
               lookup_func lookup)
@@ -906,7 +922,7 @@ strto_id_list(id_range_list *list, const char *value, const char **endptr,
         *endptr = endp;
     }
 }
-
+#endif
 /*
  * parse_id_list
  * 	Parse the value and store the ranges in the range list in the list
@@ -933,12 +949,13 @@ strto_id_list(id_range_list *list, const char *value, const char **endptr,
  * returns
  * 	nothing, but adds entries to *list, and sets *endptr, and errno
  */
+#ifdef OLD_SAFE
 void
 parse_id_list(id_range_list *list, const char *value, const char **endptr)
 {
     strto_id_list(list, value, endptr, name_to_error);
 }
-
+#endif
 /*
  * parse_uid_list
  * 	Parse the value and store the ranges in the range list in the list
@@ -966,12 +983,13 @@ parse_id_list(id_range_list *list, const char *value, const char **endptr)
  * returns
  * 	nothing, but adds entries to *list, and sets *endptr, and errno
  */
+#ifdef OLD_SAFE
 void
 parse_uid_list(id_range_list *list, const char *value, const char **endptr)
 {
     strto_id_list(list, value, endptr, name_to_uid);
 }
-
+#endif
 /*
  * parse_gid_list
  * 	Parse the value and store the ranges in the range list in the list
@@ -999,12 +1017,13 @@ parse_uid_list(id_range_list *list, const char *value, const char **endptr)
  * returns
  * 	nothing, but adds entries to *list, and sets *endptr, and errno
  */
+#ifdef OLD_SAFE
 void
 parse_gid_list(id_range_list *list, const char *value, const char **endptr)
 {
     strto_id_list(list, value, endptr, name_to_gid);
 }
-
+#endif
 /***********************************************************************
  *
  * Environment related functions
@@ -1226,7 +1245,7 @@ int safe_close_fds_starting_at(int min_fd)
  * returns
  * 	0 on success, non-zero on failure
  */
-int safe_close_fds_except(id_range_list *ids)
+int safe_close_fds_except(safe_id_range_list *ids)
 {
     int fd;
     int open_max = get_open_max();
@@ -1236,7 +1255,7 @@ int safe_close_fds_except(id_range_list *ids)
     }
 
     for (fd = 0; fd < open_max; ++fd) {
-        if (!is_id_in_list(ids, fd)) {
+        if (!safe_is_id_in_list(ids, fd)) {
             int r = close(fd);
             /* EBADF means the descriptor was not open, which is ok */
             if (r == -1 && errno != EBADF) {
@@ -1377,8 +1396,8 @@ int safe_open_std_files_to_null()
 static int
 safe_checks_and_set_gids(uid_t uid,
                          gid_t tracking_gid,
-                         id_range_list *safe_uids,
-                         id_range_list *safe_gids,
+                         safe_id_range_list *safe_uids,
+                         safe_id_range_list *safe_gids,
                          gid_t * primary_gid)
 {
     struct passwd *pw;
@@ -1390,12 +1409,12 @@ safe_checks_and_set_gids(uid_t uid,
     int i;
 
     /* check uid is in safe_uids */
-    if (!is_id_in_list(safe_uids, uid)) {
+    if (!safe_is_id_in_list(safe_uids, uid)) {
         return -1;
     }
 
     /* check tracking GID, if given, is safe */
-    if ((tracking_gid != 0) && !is_id_in_list(safe_gids, tracking_gid)) {
+    if ((tracking_gid != 0) && !safe_is_id_in_list(safe_gids, tracking_gid)) {
 		return -8;
 	}
 
@@ -1409,7 +1428,7 @@ safe_checks_and_set_gids(uid_t uid,
     gid = pw->pw_gid;
 
     /* check primary group is in safe_gids */
-    if (!is_id_in_list(safe_gids, gid)) {
+    if (!safe_is_id_in_list(safe_gids, gid)) {
         return -3;
     }
 
@@ -1441,7 +1460,7 @@ safe_checks_and_set_gids(uid_t uid,
 
     /* verify that all supplementary groups are in safe_gids */
     for (i = 0; i < num_groups; ++i) {
-        if (!is_id_in_list(safe_gids, gids[i])) {
+        if (!safe_is_id_in_list(safe_gids, gids[i])) {
             free(gids);
             return -8;
         }
@@ -1489,8 +1508,8 @@ safe_checks_and_set_gids(uid_t uid,
 int
 safe_switch_to_uid(uid_t uid,
                    gid_t tracking_gid,
-                   id_range_list *safe_uids,
-                   id_range_list *safe_gids)
+                   safe_id_range_list *safe_uids,
+                   safe_id_range_list *safe_gids)
 {
     gid_t gid;
     int r;
@@ -1542,8 +1561,8 @@ safe_switch_to_uid(uid_t uid,
  * 	-10	couldn't set effective uid
  */
 int
-safe_switch_effective_to_uid(uid_t uid, id_range_list *safe_uids,
-                             id_range_list *safe_gids)
+safe_switch_effective_to_uid(uid_t uid, safe_id_range_list *safe_uids,
+                             safe_id_range_list *safe_gids)
 {
     gid_t gid;
     int r;
@@ -1638,12 +1657,12 @@ safe_switch_effective_to_uid(uid_t uid, id_range_list *safe_uids,
 int
 safe_exec_as_user(uid_t uid,
                   gid_t tracking_gid,
-                  id_range_list *safe_uids,
-                  id_range_list *safe_gids,
+                  safe_id_range_list *safe_uids,
+                  safe_id_range_list *safe_gids,
                   const char *exec_name,
                   char **args,
                   char **env,
-                  id_range_list *keep_open_fds,
+                  safe_id_range_list *keep_open_fds,
                   const char *stdin_filename,
                   const char *stdout_filename,
                   const char *stderr_filename,
@@ -1679,21 +1698,21 @@ safe_exec_as_user(uid_t uid,
 
     /* open standard file descriptors to those specified or /dev/null if NULL,
      * unless they are in keep_open_fds */
-    if (!is_id_in_list(keep_open_fds, 0)) {
+    if (!safe_is_id_in_list(keep_open_fds, 0)) {
         r = safe_open_std_file(0, stdin_filename);
         if (r == -1) {
             fatal_error_exit(1, "error opening stdin");
         }
     }
 
-    if (!is_id_in_list(keep_open_fds, 1)) {
+    if (!safe_is_id_in_list(keep_open_fds, 1)) {
         r = safe_open_std_file(1, stdout_filename);
         if (r == -1) {
             fatal_error_exit(1, "error opening stdout");
         }
     }
 
-    if (!is_id_in_list(keep_open_fds, 2)) {
+    if (!safe_is_id_in_list(keep_open_fds, 2)) {
         r = safe_open_std_file(2, stderr_filename);
         if (r == -1) {
             fatal_error_exit(1, "error opening stderr");
@@ -1751,15 +1770,15 @@ safe_exec_as_user(uid_t uid,
  *	3   PATH_TRUSTED_CONFIDENTIAL 
  */
 static int
-is_mode_trusted(struct stat *stat_buf, id_range_list *trusted_uids,
-                id_range_list *trusted_gids)
+is_mode_trusted(struct stat *stat_buf, safe_id_range_list *trusted_uids,
+                safe_id_range_list *trusted_gids)
 {
     mode_t mode = stat_buf->st_mode;
     uid_t uid = stat_buf->st_uid;
     gid_t gid = stat_buf->st_gid;
-    int is_untrusted_uid = (uid != 0 && !is_id_in_list(trusted_uids, uid));
+    int is_untrusted_uid = (uid != 0 && !safe_is_id_in_list(trusted_uids, uid));
     int is_dir = S_ISDIR(mode);
-    int is_untrusted_group = !is_id_in_list(trusted_gids, gid);
+    int is_untrusted_group = !safe_is_id_in_list(trusted_gids, gid);
     int is_untrusted_group_writable = is_untrusted_group
         && (mode & S_IWGRP);
     int is_other_writable = (mode & S_IWOTH);
@@ -1838,8 +1857,8 @@ static int trust_matrix[][4] = {
 static int
 is_component_in_dir_trusted(int parent_dir_trust,
                             struct stat *child_stat_buf,
-                            id_range_list *trusted_uids,
-                            id_range_list *trusted_gids)
+                            safe_id_range_list *trusted_uids,
+                            safe_id_range_list *trusted_gids)
 {
     int child_trust =
         is_mode_trusted(child_stat_buf, trusted_uids, trusted_gids);
@@ -1877,8 +1896,8 @@ is_component_in_dir_trusted(int parent_dir_trust,
  *	3   PATH_TRUSTED_CONFIDENTIAL 
  */
 static int
-is_current_working_directory_trusted(id_range_list *trusted_uids,
-                                     id_range_list *trusted_gids)
+is_current_working_directory_trusted(safe_id_range_list *trusted_uids,
+                                     safe_id_range_list *trusted_gids)
 {
     int saved_dir = -1;
     int parent_dir_fd = -1;
@@ -2007,8 +2026,8 @@ is_current_working_directory_trusted(id_range_list *trusted_uids,
  *	3   PATH_TRUSTED_CONFIDENTIAL 
  */
 static int
-is_current_working_directory_trusted_r(id_range_list *trusted_uids,
-                                       id_range_list *trusted_gids)
+is_current_working_directory_trusted_r(safe_id_range_list *trusted_uids,
+                                       safe_id_range_list *trusted_gids)
 {
     int r;
     int status = PATH_UNTRUSTED;        /* trust of cwd or error value */
@@ -2320,8 +2339,8 @@ static int is_stack_empty(dir_stack *stack)
  *	3   PATH_TRUSTED_CONFIDENTIAL 
  */
 int
-safe_is_path_trusted(const char *pathname, id_range_list *trusted_uids,
-                     id_range_list *trusted_gids)
+safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
+                     safe_id_range_list *trusted_gids)
 {
     int r;
     int status = -1;
@@ -2528,8 +2547,8 @@ safe_is_path_trusted(const char *pathname, id_range_list *trusted_uids,
  */
 int
 safe_is_path_trusted_fork(const char *pathname,
-                          id_range_list *trusted_uids,
-                          id_range_list *trusted_gids)
+                          safe_id_range_list *trusted_uids,
+                          safe_id_range_list *trusted_gids)
 {
     int r;
     int status = 0;
@@ -2793,8 +2812,8 @@ append_dir_entry_to_path(char *path, char **path_end, char *buf_end,
  *	3   PATH_TRUSTED_CONFIDENTIAL 
  */
 int
-safe_is_path_trusted_r(const char *pathname, id_range_list *trusted_uids,
-                       id_range_list *trusted_gids)
+safe_is_path_trusted_r(const char *pathname, safe_id_range_list *trusted_uids,
+                       safe_id_range_list *trusted_gids)
 {
     int r;
     int status = -1;

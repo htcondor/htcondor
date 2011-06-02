@@ -86,7 +86,7 @@ int mkstemp(char * ptemplate)
 		
 		RandomAscii(x);
 		
-		fd = safe_open_wrapper(ptemplate, O_CREAT|O_EXCL|O_RDWR, 0666);
+		fd = safe_open_wrapper_follow(ptemplate, O_CREAT|O_EXCL|O_RDWR, 0666);
 		if (fd >= 0 || errno != EEXIST) {
 			return fd;
 		}

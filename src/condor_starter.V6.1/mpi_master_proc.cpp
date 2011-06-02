@@ -236,7 +236,7 @@ MPIMasterProc::preparePortFile( void )
 
 		// For this stuff to work, we've got to create the file and
 		// have it be 0 bytes.
-	fd = safe_open_wrapper( port_file, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+	fd = safe_open_wrapper_follow( port_file, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 	if( fd < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: Can't create port file (%s)\n",
 				 port_file );

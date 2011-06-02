@@ -55,7 +55,7 @@ void simple_scramble(char* scrambled,  const char* orig, int len)
 //
 int write_password_file(const char* path, const char* password)
 {
-		int fd = safe_open_wrapper(path,
+		int fd = safe_open_wrapper_follow(path,
 		                           O_WRONLY | O_CREAT | O_TRUNC,
 		                           0600);
 		if (fd == -1) {

@@ -122,7 +122,7 @@ bool IOProxy::init( const char *config_file )
 		dprintf(D_ALWAYS,"IOProxy: couldn't create cookie: %s\n",strerror(errno));
 		goto failure;
 	}
-	fd = safe_open_wrapper(config_file,
+	fd = safe_open_wrapper_follow(config_file,
 	                       O_CREAT|O_TRUNC|O_WRONLY,
 	                       0700);
 	if(fd<0) {

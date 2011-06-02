@@ -60,7 +60,7 @@ const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
 
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
-    int fd = safe_open_wrapper(filename, O_RDWR | O_CREAT, 0600);
+    int fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT, 0600);
     if (fd == -1) {
         debug_error( 1, DEBUG_QUIET, "Error: can't open %s\n", filename );
     }

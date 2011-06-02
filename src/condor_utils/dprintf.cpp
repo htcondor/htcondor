@@ -545,7 +545,7 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 	}
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
-	lock_fd = safe_open_wrapper(filename,flags,perm);
+	lock_fd = safe_open_wrapper_follow(filename,flags,perm);
 	if( lock_fd < 0 ) {
 		save_errno = errno;
 		if( save_errno == ENOENT ) {
@@ -593,7 +593,7 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 			free( dirpath );
 		}
 		if( retry ) {
-			lock_fd = safe_open_wrapper(filename,flags,perm);
+			lock_fd = safe_open_wrapper_follow(filename,flags,perm);
 			if( lock_fd < 0 ) {
 				save_errno = errno;
 			}
@@ -1617,7 +1617,7 @@ dprintf_dump_stack(void) {
 			seteuid(getuid());
 		}
 
-		fd = safe_open_wrapper(DebugFile[0],O_APPEND|O_WRONLY|O_CREAT,0644);
+		fd = safe_open_wrapper_follow(DebugFile[0],O_APPEND|O_WRONLY|O_CREAT,0644);
 
 		if( orig_priv_state != PRIV_CONDOR ) {
 			setegid(orig_egid);

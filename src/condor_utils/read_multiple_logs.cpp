@@ -554,7 +554,7 @@ MultiLogFiles::readFile(char const *filename,std::string& buf)
     char chunk[4000];
 	MyString rtnVal;
 
-	int fd = safe_open_wrapper(filename, O_RDONLY);
+	int fd = safe_open_wrapper_follow(filename, O_RDONLY);
 	if (fd < 0) {
 		rtnVal.sprintf("error opening submit file %s: %s",
 				filename, strerror(errno) );

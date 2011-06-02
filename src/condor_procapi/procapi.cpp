@@ -212,7 +212,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 		// pids, memory usage, and age can be found in 'psinfo':
 	sprintf( path, "/proc/%d/psinfo", pid );
-	if( (fd = safe_open_wrapper(path, O_RDONLY)) < 0 ) {
+	if( (fd = safe_open_wrapper_follow(path, O_RDONLY)) < 0 ) {
 
 		switch(errno) {
 			case ENOENT:
@@ -268,7 +268,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
   // other than '0' in 2.6.  I have seen a value returned for 
   // major faults, but not that often.  These values are suspicious.
 	sprintf( path, "/proc/%d/usage", pid );
-	if( (fd = safe_open_wrapper(path, O_RDONLY) ) < 0 ) {
+	if( (fd = safe_open_wrapper_follow(path, O_RDONLY) ) < 0 ) {
 
 		switch(errno) {
 			case ENOENT:
@@ -745,7 +745,7 @@ ProcAPI::fillProcInfoEnv(piPTR pi)
 
 		// open the environment proc file
 	sprintf( path, "/proc/%d/environ", pi->pid );
-	fd = safe_open_wrapper(path, O_RDONLY);
+	fd = safe_open_wrapper_follow(path, O_RDONLY);
 
 	// Unlike other things set up into the pi structure, this is optional
 	// since it can only help us if it is here...
