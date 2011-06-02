@@ -55,7 +55,7 @@ const char* BASIC_REQ_FORMAT =
 ( TARGET.FileSystemDomain %s )";
 
 const char* BASIC_OS_FORMAT = "TARGET.OpSys == \"%s\"";
-const char* BASIC_WINOS_FORMAT = "TARGET.OpSys==\"WINNT51\" || TARGET.OpSys==\"WINNT52\" || TARGET.OpSys==\"WINNT60\"";
+const char* BASIC_WINOS_FORMAT = "TARGET.OpSys==\"WINNT51\" || TARGET.OpSys==\"WINNT52\" || TARGET.OpSys==\"WINNT60\" || TARGET.OpSys==\"WINNT61\"";
 const char* REQ_UNDEFINED = " =!= undefined ";
 const char* REQ_GTE_ZERO = " >= 0 ";
 
