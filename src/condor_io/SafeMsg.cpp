@@ -1178,15 +1178,13 @@ int _condorInMsg::getPtr(void *&buf, char delim)
 		} else if(!tempDir->dEntry[tempPkt].dGram) { // was the last packet
 			if( D_FULLDEBUG & DebugFlags )
 				dprintf(D_NETWORK,
-				        "\nSafeMsg::getPtr: get to end & '%c'\
-					  not found\n", delim);
+				        "SafeMsg::getPtr: get to end & '%c' not found\n", delim);
 			return -1;
 		}
 	}
 
 	if( D_FULLDEBUG & DebugFlags )
-		dprintf(D_NETWORK, "SafeMsg::_longMsg::getPtr:\
-		                    found delim = %c & length = %lu\n",
+		dprintf(D_NETWORK, "SafeMsg::_longMsg::getPtr: found delim = %c & length = %lu\n",
 			  delim, (unsigned long)n);
 	if( n > tempBufLen ) {
 		if(tempBuf) {
