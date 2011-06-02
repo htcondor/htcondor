@@ -194,9 +194,9 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 				continue;
 			}
 
-			dprintf( D_ALWAYS, "condor_read() failed: recv() returned %d, "
+			dprintf( D_ALWAYS, "condor_read() failed: recv(fd=%d) returned %d, "
 					 "errno = %d %s, reading %d bytes from %s.\n",
-					 nro, the_error, the_errorstr, sz,
+					 fd, nro, the_error, the_errorstr, sz,
 					 not_null_peer_description(peer_description,fd,sinbuf) );
 			return -1;
 		}
