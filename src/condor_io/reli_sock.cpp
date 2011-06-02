@@ -28,7 +28,6 @@
 #include "condor_md.h"
 #include "selector.h"
 #include "ccb_client.h"
-#include "condor_sockfunc.h"
 
 #define NORMAL_HEADER_SIZE 5
 #define MAX_HEADER_SIZE MAC_SIZE + NORMAL_HEADER_SIZE
@@ -143,6 +142,7 @@ int
 ReliSock::accept( ReliSock	&c )
 {
 	int c_sock;
+	SOCKET_LENGTH_TYPE addr_sz;
 
 	if (_state != sock_special || _special_state != relisock_listen ||
 													c._state != sock_virgin)
@@ -166,10 +166,11 @@ ReliSock::accept( ReliSock	&c )
 		}
 	}
 
+	addr_sz = sizeof(c._who);
 #ifndef WIN32 /* Unix */
 	errno = 0;
 #endif
-	if ((c_sock = condor_accept(_sock, &c._who)) < 0) {
+	if ((c_sock = ::accept(_sock, (sockaddr *)&c._who, (socklen_t*)&addr_sz)) < 0) {
 #ifndef WIN32 /* Unix */
 		if ( errno == EMFILE ) {
 			_condor_fd_panic ( __LINE__, __FILE__ ); /* This calls dprintf_exit! */
