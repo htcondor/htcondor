@@ -356,9 +356,10 @@ const char* condor_sockaddr::to_ip_string(char* buf, int len) const
 		}
 
 		return inet_ntop(AF_INET6, &v6.sin6_addr, buf, len);
-	}
-	else 
+	} else {
+		snprintf(buf, len, "%x INVALID ADDRESS FAMILY", (unsigned int)v4.sin_family);
 		return NULL;
+	}
 }
 
 MyString condor_sockaddr::to_ip_string() const
