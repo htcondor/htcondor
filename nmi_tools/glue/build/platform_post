@@ -29,7 +29,7 @@ use POSIX;
 use Getopt::Long;
 
 my $opt_without_tests;
-my $opt_test_args;
+my $opt_test_args = "";
 my $opt_submit_xtests;
 my $opt_git;
 my $opt_tests_at_once;
@@ -62,15 +62,16 @@ if( defined $opt_without_tests ) {
     exit 0;
 }   
 
-if( defined $opt_test_args ) {
+if(defined $opt_test_args) {
     print "--test-args specified on command-line, additional args for condor_nmi_submit:\n";
     print "\t'$opt_test_args'\n";
-}   
 
-if($opt_test_args =~ /^--workspace=.*/) {
-    print "Attempting workspace build auto test run!\n";
-    $mode = "workspace";
+    if($opt_test_args =~ /^--workspace=.*/) {
+        print "Attempting workspace build auto test run!\n";
+        $mode = "workspace";
+    }
 }
+
 
 my $tag    = $ENV{NMI_tag};
 my $module = $ENV{NMI_module};

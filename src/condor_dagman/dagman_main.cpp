@@ -55,6 +55,8 @@ static char* lockFileName = NULL;
 
 static Dagman dagman;
 
+strict_level_t Dagman::_strict = DAG_STRICT_0;
+
 //---------------------------------------------------------------------------
 static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
@@ -180,6 +182,11 @@ Dagman::Config()
 					NULL, true );
 	}
 
+	_strict = (strict_level_t)param_integer( "DAGMAN_USE_STRICT",
+				_strict, DAG_STRICT_0, DAG_STRICT_3 );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_USE_STRICT setting: %d\n",
+				_strict );
+
 	debug_level = (debug_level_t)param_integer( "DAGMAN_VERBOSITY",
 				debug_level, DEBUG_SILENT, DEBUG_DEBUG_4 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_VERBOSITY setting: %d\n",
@@ -249,6 +256,7 @@ Dagman::Config()
 		debug_printf( DEBUG_NORMAL, "Warning: "
 				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION "
 				"is deprecated -- used DAGMAN_ALLOW_EVENTS instead\n" );
+		check_warning_strictness( DAG_STRICT_1 );
 	}
 
 		// Now get the new DAGMAN_ALLOW_EVENTS value -- that can override
@@ -429,6 +437,12 @@ void main_shutdown_graceful() {
 }
 
 void main_shutdown_rescue( int exitVal ) {
+		// Avoid possible infinite recursion if you hit a fatal error
+		// while writing a rescue DAG.
+	static bool inShutdownRescue = false;
+	if ( inShutdownRescue) return;
+	inShutdownRescue = true;
+
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
 	if( dagman.dag ) {
 			// we write the rescue DAG *before* removing jobs because
@@ -462,11 +476,12 @@ void main_shutdown_rescue( int exitVal ) {
 			dagman.dag->RemoveRunningScripts();
 		}
 		dagman.dag->PrintDeferrals( DEBUG_NORMAL, true );
+		dagman.dag->DumpNodeStatus( false, true );
+		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
-	dagman.dag->DumpNodeStatus( false, true );
-	dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	unlink( lockFileName ); 
     dagman.CleanUp();
+	inShutdownRescue = false;
 	DC_Exit( exitVal );
 }
 
@@ -639,6 +654,7 @@ void main_init (int argc, char ** const argv) {
 			debug_printf( DEBUG_SILENT, "Warning: -NoEventChecks is "
 						"ignored; please use the DAGMAN_ALLOW_EVENTS "
 						"config parameter instead\n");
+			check_warning_strictness( DAG_STRICT_1 );
 
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
 			dagman.allowLogError = true;
@@ -808,6 +824,7 @@ void main_init (int argc, char ** const argv) {
         	debug_printf( DEBUG_NORMAL, "Warning: %s is newer than "
 						"condor_dagman version (%s)\n", versionMsg.Value(),
 						CondorVersion() );
+			check_warning_strictness( DAG_STRICT_3 );
 		} else {
         	debug_printf( DEBUG_NORMAL, "Note: %s differs from "
 						"condor_dagman version (%s), but the "
@@ -1241,6 +1258,7 @@ void condor_event_timer () {
 			debug_printf( DEBUG_NORMAL, "Warning:  DAGMan thinks there "
 						"are %d idle jobs, even though the DAG is "
 						"completed!\n", dagman.dag->NumIdleJobProcs() );
+			check_warning_strictness( DAG_STRICT_1 );
 		}
 		ExitSuccess();
 		return;

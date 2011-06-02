@@ -57,28 +57,6 @@ typedef struct param_info_t_s {
 
 } param_info_t;
 
-/*
-typedef struct param_info_default_val_ranged_int_t_s {
-   int int_val;
-   int int_min;
-   int int_max;
-} param_info_default_val_ranged_int_t;
-
-typedef struct param_info_default_val_int_t_s {
-   int int_val;
-} param_info_default_val_int_t;
-
-typedef struct param_info_default_val_ranged_dbl_t_s {
-   double dbl_val;
-   double dbl_min;
-   double dbl_max;
-} param_info_default_val_ranged_dbl_t;
-
-typedef struct param_info_default_val_dbl_t_s {
-   double dbl_val;
-} param_info_default_val_dbl_t;
-*/
-
 struct param_info_str_t_s {
    param_info_t hdr;
    const char * str_val;
@@ -123,21 +101,6 @@ typedef struct param_info_int_ranged_t_s param_info_PARAM_TYPE_INT_ranged;
 typedef struct param_info_dbl_ranged_t_s param_info_PARAM_TYPE_DOUBLE_ranged;
 
 BEGIN_C_DECLS
-
-	void param_info_insert(const char* param,
-						   const char* aliases,
-						   const char* value,
-						   const char* version,
-						   const char* range,
-						   int state,
-						   int type,
-						   int is_macro,
-						   int reconfig,
-						   int customization,
-						   const char* friendly_name,
-						   const char* usage,
-						   const char* url,
-						   const char* tags);
 
 	void param_info_init(void);
 

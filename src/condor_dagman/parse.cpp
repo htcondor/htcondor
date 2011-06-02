@@ -223,6 +223,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 				"Warning: the DAP token is deprecated and may be unsupported "
 				"in a future release.  Use the DATA token\n",
 				filename, lineNumber );
+			check_warning_strictness( DAG_STRICT_2 );
 		}
 
 		else if	(strcasecmp(token, "DATA") == 0) {
@@ -516,6 +517,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 		debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
 					"keyword for nested DAGs is deprecated; please "
 					"use SUBDAG EXTERNAL instead" );
+		check_warning_strictness( DAG_STRICT_3 );
 	}
 
 	// looks ok, so add it
@@ -1318,6 +1320,7 @@ parse_priority(
 		debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
 					"overrides old value %d\n", priorityVal,
 					job->GetJobName(), job->_nodePriority );
+		check_warning_strictness( DAG_STRICT_2 );
 	}
 	job->_hasNodePriority = true;
 	job->_nodePriority = priorityVal;

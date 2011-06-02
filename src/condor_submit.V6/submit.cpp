@@ -5330,7 +5330,7 @@ SetGridParams()
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
 	// Transform this representation into our regular form:
-	//   host.edu:8443 batchname queuename
+	//   host.edu:8443/ce-cream/services/CREAM2 batchname queuename
 	if ( JobGridType != NULL && strcasecmp (JobGridType, "cream") == MATCH ) {
 		tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
 		MyString resource = tmp;
@@ -5346,8 +5346,11 @@ SetGridParams()
 			}
 			if ( ( pos = resource.find( "/cream-", pos2 ) ) >= 0 ) {
 				// We found the shortened form
-				resource.replaceString( "-", " ", pos );
-				resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
+				resource.replaceString( "/cream-", "/ce-cream/services/CREAM2 ", pos );
+				pos += 26;
+				if ( ( pos2 = resource.find( "-", pos ) ) >= 0 ) {
+					resource.setChar( pos2, ' ' );
+				}
 
 				buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
 								resource.Value() );

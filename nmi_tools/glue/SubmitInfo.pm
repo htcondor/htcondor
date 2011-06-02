@@ -60,8 +60,8 @@ our %build_and_test_sets = (
 	'nmi_one_offs' => [
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
-		'x86_freebsd_7.4',
-		'x86_64_freebsd_8.2',
+		'x86_freebsd_7.4-updated',
+		'x86_64_freebsd_8.2-updated',
 	],
 	
 	# We will build on a set of machines that we want to be sure continue building
@@ -304,17 +304,11 @@ our %submit_info = (
 
 	##########################################################################
 	# Platform Debian 6.0 on x86_64
-	# As of this writing there is no x86_64_deb-6.0 (non updated) machine in 
-	# the NMI pool.	 When they include one we should switch this from using
-	# the updated machine to the non-updated machine.
 	##########################################################################
-	'x86_64_deb_6.0-updated' => {
+	'x86_64_deb_6.0' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'OFF',
-								  '-DWITH_KRB5:BOOL' => 'OFF',
-								  '-DWITH_CREAM:BOOL' => 'OFF',
-								  '-DWITH_COREDUMPER:BOOL'	=> 'OFF',
+								  '-DCLIPPED:BOOL' => 'ON',
 			},
 			'prereqs'	=> [ 'cmake-2.8.3' ],
 			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
@@ -327,8 +321,17 @@ our %submit_info = (
 		},
 	},
 
+
 	##########################################################################
-	# platform RHEL 6 on x86
+	# Platform DEB 6 on x86_64 (updated)
+	# As of this writing there is no x86_64_deb-6.0 (non updated) machine in 
+	# the NMI pool.	 When they include one we should switch this from using
+	# the updated machine to the non-updated machine.
+	##########################################################################
+	'x86_64_deb_6.0-updated' => 'x86_64_deb_6.0',
+
+	##########################################################################
+	# Platform RHEL 6 on x86
 	##########################################################################
 	'x86_rhap_6.0'	=> {
 		'build' => {
@@ -955,7 +958,7 @@ our %submit_info = (
 	##########################################################################
 	# Platform FreeBSD 7.4 on x86
 	##########################################################################
-	'x86_freebsd_7.4'		=> {
+	'x86_freebsd_7.4-updated'		=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
@@ -997,9 +1000,9 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-	'x86_64_freebsd_7.4'		=> 'x86_freebsd_7.4',
-	'x86_freebsd_8.2'			=> 'x86_freebsd_7.4',
-	'x86_64_freebsd_8.2'		=> 'x86_freebsd_7.4',
+	'x86_64_freebsd_7.4-updated'		=> 'x86_freebsd_7.4-updated',
+	'x86_freebsd_8.2-updated'			=> 'x86_freebsd_7.4-updated',
+	'x86_64_freebsd_8.2-updated'		=> 'x86_freebsd_7.4-updated',
 );
 
 while( 1 ) {
