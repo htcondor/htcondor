@@ -754,7 +754,7 @@ void CreamJob::doEvaluateState()
 					jobAd->Assign( ATTR_CREAM_UPLOAD_URL, uploadUrl );
 					downloadUrl = download_url;
 					jobAd->Assign( ATTR_CREAM_DOWNLOAD_URL, downloadUrl );
-					jobAd->Assign( ATTR_STAGE_IN_START, now );
+					jobAd->Assign( ATTR_STAGE_IN_START, (int)now );
 					gmState = GM_SUBMIT_SAVE;				
 
 					UpdateJobLeaseSent(myResource->m_sharedLeaseExpiration);
@@ -810,7 +810,7 @@ void CreamJob::doEvaluateState()
 				if ( m_xfer_request->m_status == TransferRequest::TransferDone ) {
 					delete m_xfer_request;
 					m_xfer_request = NULL;
-					jobAd->Assign( ATTR_STAGE_IN_FINISH, now );
+					jobAd->Assign( ATTR_STAGE_IN_FINISH, (int)now );
 					requestScheddUpdate( this, false );
 					gmState = GM_SUBMIT_COMMIT;
 				} else if ( m_xfer_request->m_status == TransferRequest::TransferFailed ) {
