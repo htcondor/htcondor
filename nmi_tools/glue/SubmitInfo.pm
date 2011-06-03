@@ -62,8 +62,8 @@ our %build_and_test_sets = (
 		'x86_64_opensuse_11.3-updated',
 		'x86_64_opensuse_11.4-updated',
 		'x86_64_fedora_12-updated',
-		'x86_freebsd_7.4',
-		'x86_64_freebsd_8.2',
+		'x86_freebsd_7.4-updated',
+		'x86_64_freebsd_8.2-updated',
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
 	],
@@ -955,7 +955,7 @@ our %submit_info = (
 	##########################################################################
 	# Platform FreeBSD 7.4 on x86
 	##########################################################################
-	'x86_freebsd_7.4'		=> {
+	'x86_freebsd_7.4-updated'		=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
@@ -997,9 +997,9 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
-	'x86_64_freebsd_7.4'		=> 'x86_freebsd_7.4',
-	'x86_freebsd_8.2'			=> 'x86_freebsd_7.4',
-	'x86_64_freebsd_8.2'		=> 'x86_freebsd_7.4',
+	'x86_64_freebsd_7.4-updated'		=> 'x86_freebsd_7.4-updated',
+	'x86_freebsd_8.2-updated'			=> 'x86_freebsd_7.4-updated',
+	'x86_64_freebsd_8.2-updated'		=> 'x86_freebsd_7.4-updated',
 );
 
 while( 1 ) {
