@@ -1,6 +1,6 @@
-executable = /bin/sh
+executable = /bin/echo
 output = $(job).out
 error = $(job).err
-arguments = "-c ''echo ""B is done""; exit 0;''"
+arguments = OK done with B
 universe = scheduler
 queue

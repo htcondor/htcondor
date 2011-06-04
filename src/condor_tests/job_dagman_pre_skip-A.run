@@ -60,48 +60,15 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing and failure\n",1);
 };
 
-$success = sub
-{
-	CondorTest::debug("executed successfully\n",1);
-	CondorTest::debug("Verifying output\n",1);
-	$diditpass = 1;
-	foreach $name (@outfiles) {
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name.out");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name.out>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /^OK.*$/ ) {
-				$passed = 1;
-				CondorTest::debug("$name.out: $line\n",1);
-			}
-		}
-		close(OUT);
-		if($passed == 1 ) {
-			;
-		} else {
-			CondorTest::debug("failed $name.out: $line\n",1);
-			$diditpass = 0;
-		}
-	}
-	# clean out old output files
-	foreach $name (@outfiles) {
-		runcmd("rm -f $name.out $name.err");
-	}
-	if($diditpass == 0) {
-		die "All expected files and correct output failed\n";
-	}
+$failure = sub {
+	my %info = shift;
+	print "Saw expected failure";
 };
 
-CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure );
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );

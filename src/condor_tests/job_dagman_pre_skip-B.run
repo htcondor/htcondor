@@ -26,7 +26,7 @@ $testdesc =  'Condor submit dag - basic pre_skip node test - scheduler U';
 $testname = "job_dagman_pre_skip-B";
 $dagman_args = "-verbose";
 
-@outfiles = ("A_A", "A_B");
+@outfiles = ("B_A", "B_B");
 
 my $killedchosen = 0;
 
@@ -95,6 +95,24 @@ $success = sub
 	# clean out old output files
 	foreach $name (@outfiles) {
 		runcmd("rm -f $name.out $name.err");
+	}
+	$passed = 0;
+	$canopen = open(OUT,"<$testname.dag.dagman.out");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Could not open outfile<$testname.dag.dagman.out>:$!\n",1);
+		$diditpass = 0;
+	}
+	while(<OUT>) {
+		if(/PRE_SKIP return value \d+ indicates we are done.+B_A/) {
+			CondorTest::debug("Saw PRE_SKIP trip correctly: $_\n",1);
+			$passed = 1;
+			last;
+		}
+	}
+	close(OUT);
+	if($passed != 1) {
+		CondorTest::debug("failed $testname.dag.dagman.out\n",1);
+		$diditpass = 0;
 	}
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
