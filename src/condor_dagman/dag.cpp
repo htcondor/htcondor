@@ -1528,24 +1528,19 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			job->retval = ( 0 - WTERMSIG(status ) );
 		} else if( (preskip_interrogator = WEXITSTATUS( status )) != 0 ) {
 			if( job->HasPreSkip() && preskip_interrogator == job->GetPreSkip() ){
-			//TEMPTEMP -- need to write something to jobstate.log?
-				//TEMPTEMP -- print PRE script exit code here
 				// We are exiting with a nonzero status In this
 				// case, it is expected.  We mark the job as a
 				// noop. Then jump below to where pre skip looks
 				// like it succeeded
+				const char* s = job->GetDagFile();
 				debug_printf( DEBUG_NORMAL, "PRE_SKIP return "
-					"value indicates we are done with this node\n" );
-					//TEMPTEMP -- this may break a rescue DAG
-				job->SetNoop(1);
-				// Also we need to turn off the POST script, if
-				// there is one.
-				if( job->_scriptPost ) {
-					//TEMPTEMP -- this may break a rescue DAG
-					delete job->_scriptPost;
-					job->_scriptPost = NULL;
-				}
-				//TEMPTEMP -- call TerminateJob here?  will that work? or will the job be left in some queue?
+					"value %d indicates we are done with node %s, "
+					"from dag file %s\n",
+					 preskip_interrogator, job->GetJobName(),
+					 s?s:"(unknown)");
+				job->retval = 0; // Job _is_ successful!
+				_jobstateLog.WriteJobSuccessOrFailure( job );
+				job->TerminateSuccess();
 				goto pre_skip_fake_success;
 			}
 			// if script returned failure
@@ -1589,13 +1584,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			_readyQ->Append( job, -job->_nodePriority );
 		}
 	}
-
-	bool abort = CheckForDagAbort(job, "PRE script");
+	CheckForDagAbort(job, "PRE script");
 	// if dag abort happened, we never return here!
-	if( abort ) {
-		return true;
-	}
-
 	return true;
 }
 
