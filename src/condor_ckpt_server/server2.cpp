@@ -46,6 +46,8 @@
 #include "classad_collection.h"
 #include "daemon.h"
 #include "protocol.h"
+#include "internet_obsolete.h"
+#include "condor_sockfunc.h"
 using namespace std;
 
 XferSummary	xfer_summary;
@@ -298,7 +300,7 @@ void Server::Init()
 
 int Server::SetUpPort(u_short port)
 {
-  struct sockaddr_in socket_addr;
+	condor_sockaddr socket_addr;
   int                temp_sd;
   int                ret_code;
 
@@ -311,13 +313,16 @@ int Server::SetUpPort(u_short port)
       dprintf(D_ALWAYS, "ERROR: cannot open a server request socket\n");
       exit(CKPT_SERVER_SOCKET_ERROR);
   }
-  memset((char*) &socket_addr, 0, sizeof(struct sockaddr_in));
-  socket_addr.sin_family = AF_INET;
-  socket_addr.sin_port = htons(port);
+  socket_addr.set_ipv4();
+  socket_addr.set_addr_any();
+  socket_addr.set_port(port);
+  //memset((char*) &socket_addr, 0, sizeof(struct sockaddr_in));
+  //socket_addr.sin_family = AF_INET;
+  //socket_addr.sin_port = htons(port);
   // Let OS choose address --Sonny 5/18/2005
   //memcpy((char*) &socket_addr.sin_addr, (char*) &server_addr, 
   //	 sizeof(struct in_addr));
-  if ((ret_code=I_bind(temp_sd, &socket_addr, TRUE)) != CKPT_OK) {
+  if ((ret_code=I_bind(temp_sd, socket_addr, TRUE)) != CKPT_OK) {
       dprintf(D_ALWAYS, "ERROR: I_bind() returned an error (#%d)\n", ret_code);
       exit(ret_code);
   }
@@ -325,7 +330,7 @@ int Server::SetUpPort(u_short port)
       dprintf(D_ALWAYS, "ERROR: I_listen() failed\n");
       exit(LISTEN_ERROR);
   }
-  if (ntohs(socket_addr.sin_port) != port) {
+  if (socket_addr.get_port() != port) {
       dprintf(D_ALWAYS, "ERROR: cannot use Condor well-known port\n");
       exit(BIND_ERROR);
   }
@@ -359,8 +364,12 @@ void Server::SetUpPeers()
 	peer_name_list.rewind();
 	while ((peer = peer_name_list.next()) != NULL) {
 		if( strcmp(peer, ckpt_host) ) {
-			sprintf(peer_addr, "<%s:%d>", peer, CKPT_SVR_REPLICATE_REQ_PORT);
-			string_to_sin(peer_addr, peer_addr_list+(num_peers++));
+			condor_sockaddr addr;
+			addr.from_ip_string(peer);
+			addr.set_port(CKPT_SVR_REPLICATE_REQ_PORT);
+			peer_addr_list[num_peers++] = addr.to_sin();
+			//sprintf(peer_addr, "<%s:%d>", peer, CKPT_SVR_REPLICATE_REQ_PORT);
+			//string_to_sin(peer_addr, peer_addr_list+(num_peers++));
 		}
 	}
 	free( ckpt_host );
@@ -530,8 +539,9 @@ void Server::Execute()
 void Server::HandleRequest(int req_sd,
 						   request_type req)
 {
-	struct sockaddr_in shadow_sa;
-	int                shadow_sa_len;
+	condor_sockaddr    shadow_sa;
+//	struct sockaddr_in shadow_sa;
+//	int                shadow_sa_len;
 	int                new_req_sd;
 	service_req_pkt    service_req;
 	store_req_pkt      store_req;
@@ -540,8 +550,7 @@ void Server::HandleRequest(int req_sd,
 	FDContext			fdc;
 	int					ret;
 	
-	shadow_sa_len = sizeof(shadow_sa);
-	if ((new_req_sd=I_accept(req_sd, &shadow_sa, &shadow_sa_len)) == 
+	if ((new_req_sd=I_accept(req_sd, shadow_sa)) ==
 		ACCEPT_ERROR) {
 		dprintf(D_ALWAYS, "I_accept failed.\n");
 		exit(ACCEPT_ERROR);
@@ -551,26 +560,26 @@ void Server::HandleRequest(int req_sd,
 	/* Set up our connection object */
 	fdc.fd = new_req_sd;
 	fdc.type = FDC_UNKNOWN;
-	fdc.who = shadow_sa.sin_addr;
+	fdc.who = shadow_sa.to_sin().sin_addr;
 	fdc.req_ID = req_ID;
 
 	dprintf(D_ALWAYS, "----------------------------------------------------\n");
 	switch (req) {
         case SERVICE_REQ:
 		    sprintf(log_msg, "%s%s", "Receiving SERVICE request from ", 
-					inet_ntoa(shadow_sa.sin_addr));
+					shadow_sa.to_ip_string().Value());
 			break;
 		case STORE_REQ:
 			sprintf(log_msg, "%s%s", "Receiving STORE request from ", 
-					inet_ntoa(shadow_sa.sin_addr));
+					shadow_sa.to_ip_string().Value());
 			break;
 		case RESTORE_REQ:
 			sprintf(log_msg, "%s%s", "Receiving RESTORE request from ", 
-					inet_ntoa(shadow_sa.sin_addr));
+					shadow_sa.to_ip_string().Value());
 			break;
 		case REPLICATE_REQ:
 			sprintf(log_msg, "%s%s", "Receiving REPLICATE request from ", 
-					inet_ntoa(shadow_sa.sin_addr));
+					shadow_sa.to_ip_string().Value());
 			break;
 		default:
 			dprintf(D_ALWAYS, "ERROR: invalid request type encountered (%d)\n", 
@@ -592,7 +601,7 @@ void Server::HandleRequest(int req_sd,
 				return;
 			}
 
-			ProcessServiceReq(req_ID, &fdc, shadow_sa.sin_addr, service_req);
+			ProcessServiceReq(req_ID, &fdc, shadow_sa.to_sin().sin_addr, service_req);
 
 			return;
 
@@ -626,7 +635,7 @@ void Server::HandleRequest(int req_sd,
 				return;
 			}
 
-			ProcessStoreReq(req_ID, &fdc, shadow_sa.sin_addr, store_req);
+			ProcessStoreReq(req_ID, &fdc, shadow_sa.to_sin().sin_addr, store_req);
 
 			return;
 			break;
@@ -660,7 +669,7 @@ void Server::HandleRequest(int req_sd,
 				return;
 			}
 
-			ProcessRestoreReq(req_ID, &fdc, shadow_sa.sin_addr, restore_req);
+			ProcessRestoreReq(req_ID, &fdc, shadow_sa.to_sin().sin_addr, restore_req);
 
 			return;
 			break;
@@ -681,7 +690,7 @@ void Server::ProcessServiceReq(int             req_id,
 {  
 	service_reply_pkt  service_reply;
 	char               log_msg[256];
-	struct sockaddr_in server_sa;
+	condor_sockaddr    server_sa;
 	int                data_conn_sd;
 	struct stat        chkpt_file_status;
 	char               pathname[MAX_PATHNAME_LENGTH];
@@ -839,14 +848,15 @@ void Server::ProcessServiceReq(int             req_id,
 					close(fdc->fd);
 					return;
 				}
-				memset((char*) &server_sa, 0, sizeof(server_sa));
-				server_sa.sin_family = AF_INET;
+				server_sa.clear();
+				server_sa.set_ipv4();
+				server_sa.set_addr_any();
 
                 // let OS choose address
 				//server_sa.sin_addr = server_addr;
 				//server_sa.sin_port = htons(0);
 
-				if ((ret_code=I_bind(data_conn_sd,&server_sa,FALSE)) != CKPT_OK)
+				if ((ret_code=I_bind(data_conn_sd,server_sa,FALSE)) != CKPT_OK)
 				{
 					dprintf( D_ALWAYS,
 							 "ERROR: I_bind() returned an error (#%d)\n", 
@@ -864,7 +874,7 @@ void Server::ProcessServiceReq(int             req_id,
 				// so the protocol layer does the right thing when I send
 				// the reply.
 				service_reply.server_addr.s_addr = ntohl(server_addr.s_addr);
-				service_reply.port = ntohs(server_sa.sin_port);
+				service_reply.port = server_sa.get_port();
 			} else {
 				service_reply.server_addr.s_addr = 0;
 				service_reply.port = 0;
@@ -1078,8 +1088,10 @@ void Server::ScheduleReplication(struct in_addr shadow_IP, char *owner,
 		e->ShadowIP(shadow_IP);
 		e->Owner(owner);
 		e->File(filename);
+
+		condor_sockaddr tmp_addr(&peer_addr_list[(first_peer+i)%num_peers]);
 		sprintf(log_msg, "Scheduling Replication: Prio=%d, Serv=%s, File=%s",
-				i, sin_to_string(peer_addr_list+((first_peer+i)%num_peers)),
+				i, tmp_addr.to_sinful().Value(),
 				filename);
 		Log(log_msg);
 		replication_schedule.InsertReplicationEvent(e);
@@ -1093,7 +1105,7 @@ void Server::Replicate()
 	char        		log_msg[256], buf[10240];
 	char				pathname[MAX_PATHNAME_LENGTH];
 	int 				server_sd, ret_code, fd;
-	struct sockaddr_in 	server_sa;
+	condor_sockaddr     server_sa;
 	struct stat 		chkpt_file_status;
 	time_t				file_timestamp;
 	replicate_req_pkt 	req;
@@ -1102,9 +1114,9 @@ void Server::Replicate()
 	Log("Checking replication schedule...");
 	ReplicationEvent *e = replication_schedule.GetNextReplicationEvent();
 	if (e) {
-		server_sa = e->ServerAddr();
+		server_sa = condor_sockaddr(&e->ServerAddr());
 		sprintf(log_msg, "Replicating: Prio=%d, Serv=%s, File=%s",
-				e->Prio(), sin_to_string(&server_sa), e->File());
+				e->Prio(), server_sa.to_sinful().Value(), e->File());
 		Log(log_msg);
 		sprintf(pathname, "%s%s/%s/%s", LOCAL_DRIVE_PREFIX,
 				inet_ntoa(e->ShadowIP()), e->Owner(), e->File());
@@ -1147,8 +1159,7 @@ void Server::Replicate()
 						ret_code, (int)sizeof(req));
 				exit(CHILDTERM_CANNOT_WRITE);
 			}
-			if (connect(server_sd, (struct sockaddr*) &server_sa,
-						sizeof(server_sa)) < 0) {
+			if (condor_connect(server_sd, server_sa) < 0) {
 				dprintf(D_ALWAYS, "ERROR: connect failed.\n");
 				exit(CONNECT_ERROR);
 			}
@@ -1180,13 +1191,18 @@ void Server::Replicate()
 						"ERROR: unable to bind new socket to local interface\n");
 				exit(1);
 			}
-			memset((char*) &server_sa, 0, sizeof(server_sa));
-			server_sa.sin_family = AF_INET;
-			memcpy((char *) &server_sa.sin_addr.s_addr,
-				   (char *) &reply.server_name, sizeof(reply.server_name));
-			server_sa.sin_port = reply.port;
-			if (connect(server_sd, (struct sockaddr*) &server_sa,
-						sizeof(server_sa)) < 0) {
+
+
+			server_sa = condor_sockaddr(reply.server_name, ntohs(reply.port));
+//			memset((char*) &server_sa, 0, sizeof(server_sa));
+//			server_sa.sin_family = AF_INET;
+//			memcpy((char *) &server_sa.sin_addr.s_addr,
+//				   (char *) &reply.server_name, sizeof(reply.server_name));
+
+			// this is quite strange. reply.port is network-ordered?
+			// why it does copy directly?
+//			server_sa.sin_port = reply.port;
+			if (condor_connect(server_sd, server_sa) < 0) {
 				dprintf(D_ALWAYS, "ERROR: Connect failed (line %d)\n",
 						__LINE__);
 				exit(CONNECT_ERROR);
@@ -1227,9 +1243,8 @@ void Server::Replicate()
 				dprintf(D_ALWAYS, "ERROR: unable to bind new socket to local interface\n");
 				exit(1);
 			}
-			server_sa.sin_port = htons(CKPT_SVR_SERVICE_REQ_PORT);
-			if (connect(server_sd, (struct sockaddr*) &server_sa,
-						sizeof(server_sa)) < 0) {
+			server_sa.set_port(CKPT_SVR_SERVICE_REQ_PORT);
+			if (condor_connect(server_sd, server_sa) < 0) {
 				dprintf(D_ALWAYS, "ERROR: Connect failed (line %d)\n",
 						__LINE__);
 				exit(CONNECT_ERROR);
@@ -1278,12 +1293,10 @@ void Server::Replicate()
 
 void Server::SendStatus(int data_conn_sd)
 {
-  struct sockaddr_in chkpt_addr;
-  int                chkpt_addr_len;
+  condor_sockaddr    chkpt_addr;
   int                xfer_sd;
 
-  chkpt_addr_len = sizeof(struct sockaddr_in);
-  if ((xfer_sd=I_accept(data_conn_sd, &chkpt_addr, &chkpt_addr_len)) ==
+  if ((xfer_sd=I_accept(data_conn_sd, chkpt_addr)) ==
       ACCEPT_ERROR)
     {
 	  dprintf(D_ALWAYS, "ERROR: I_accept failed.\n");
@@ -1327,7 +1340,7 @@ void Server::ProcessStoreReq(int            req_id,
 	int                ret_code;
 	store_reply_pkt    store_reply;
 	int                data_conn_sd;
-	struct sockaddr_in server_sa;
+	condor_sockaddr    server_sa;
 	int                child_pid;
 	char               pathname[MAX_PATHNAME_LENGTH];
 	char               log_msg[256];
@@ -1458,12 +1471,13 @@ void Server::ProcessStoreReq(int            req_id,
 		return;
 	}
 
-	memset((char*) &server_sa, 0, sizeof(server_sa));
-	server_sa.sin_family = AF_INET;
+	server_sa.clear();
+	server_sa.set_ipv4();
+	server_sa.set_addr_any();
     // Let OS choose address
 	//server_sa.sin_port = htons(0);
 	//server_sa.sin_addr = server_addr;
-	if ((err_code=I_bind(data_conn_sd, &server_sa,FALSE)) != CKPT_OK) {
+	if ((err_code=I_bind(data_conn_sd, server_sa,FALSE)) != CKPT_OK) {
 		sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", 
 				err_code);
 		Log(0, log_msg);
@@ -1484,7 +1498,7 @@ void Server::ProcessStoreReq(int            req_id,
 	// network-byte order, so we undo it since it gets redone in the writing of
 	// the packet.
 	store_reply.server_name.s_addr = ntohl(server_addr.s_addr);
-	store_reply.port = ntohs(server_sa.sin_port);
+	store_reply.port = server_sa.get_port();
 
 	store_reply.req_status = CKPT_OK;
 	sprintf(log_msg, "STORE service address: %s:%d", 
@@ -1640,7 +1654,7 @@ void Server::ProcessRestoreReq(int             req_id,
 							   restore_req_pkt restore_req)
 {
 	struct stat        chkpt_file_status;
-	struct sockaddr_in server_sa;
+	condor_sockaddr    server_sa;
 	int                ret_code;
 	restore_reply_pkt  restore_reply;
 	int                data_conn_sd;
@@ -1799,11 +1813,12 @@ void Server::ProcessRestoreReq(int             req_id,
 		  close(fdc->fd);
 		  return;
 	  }
-      memset((char*) &server_sa, 0, sizeof(server_sa));
-      server_sa.sin_family = AF_INET;
+      server_sa.clear();
+      server_sa.set_ipv4();
+      server_sa.set_addr_any();
       //server_sa.sin_port = 0;
       //server_sa.sin_addr = server_addr;
-      if ((err_code=I_bind(data_conn_sd, &server_sa,FALSE)) != CKPT_OK) {
+      if ((err_code=I_bind(data_conn_sd, server_sa,FALSE)) != CKPT_OK) {
 		  sprintf(log_msg, "ERROR: I_bind() returns an error (#%d)", err_code);
 		  Log(0, log_msg);
 		  exit(ret_code);
@@ -1817,7 +1832,7 @@ void Server::ProcessRestoreReq(int             req_id,
 	  // network-byte order, so we undo it since it gets redone in the
 	  // writing of the packet.
 	  restore_reply.server_name.s_addr = ntohl(server_addr.s_addr);
-      restore_reply.port = ntohs(server_sa.sin_port);  
+      restore_reply.port = server_sa.get_port();
 
       restore_reply.file_size = chkpt_file_status.st_size;
       restore_reply.req_status = CKPT_OK;

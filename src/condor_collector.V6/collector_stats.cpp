@@ -662,7 +662,9 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 	// get the IP and port of the daemon
 	if ( ad->LookupString (ATTR_MY_ADDRESS, buf, sizeof(buf) ) ) {
 		MyString	myString( buf );
-		parseIpPort( myString, key.ip_addr );
+		char* host = getHostFromAddr(myString.Value());
+		key.ip_addr = host;
+		free(host);
 	} else {
 		return false;
 	}

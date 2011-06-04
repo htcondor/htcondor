@@ -63,20 +63,21 @@
 #include <errno.h>
 #include "constants2.h"
 #include "condor_debug.h"
+#include "condor_sockfunc.h"
 
 /* P R O T O T Y P E S */
 char *param(void);
 
-char* GetIPName(struct in_addr machine_IP)
-{
-  char* temp_name;
-
-  temp_name = inet_ntoa(machine_IP);
-  if (temp_name == NULL)
-    return "<Unresolved IP>";
-  else
-    return temp_name;
-}
+//char* GetIPName(struct in_addr machine_IP)
+//{
+//  char* temp_name;
+//
+//  temp_name = inet_ntoa(machine_IP);
+//  if (temp_name == NULL)
+//    return "<Unresolved IP>";
+//  else
+//    return temp_name;
+//}
 
 
 /******************************************************************************
@@ -114,31 +115,30 @@ char* GetIPName(struct in_addr machine_IP)
 ******************************************************************************/
 
 
-int I_bind(int                 socket_desc,
-	    struct sockaddr_in* addr, int is_well_known)
+int I_bind(int socket_desc, condor_sockaddr& addr, int is_well_known)
 {
-  int temp;
+  //int temp;
   int					on = 1;
   struct linger		linger = {0, 0}; 
   int bind_return_value = 0;	
   int bind_port = 0;
   priv_state old_priv = PRIV_UNKNOWN;
 
-  temp = sizeof(struct sockaddr_in);
+  //temp = sizeof(struct sockaddr_in);
   setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on));
   setsockopt(socket_desc, SOL_SOCKET, SO_LINGER,
 			 (char*)&linger, sizeof(linger));
 
   // remember we did this transformation before calling this function...
   // so undo it here.
-  bind_port = ntohs(addr->sin_port);
+  bind_port = addr.get_port(); //ntohs(addr->sin_port);
   if (bind_port < 1024) {
     // use root priv for the call to bind to allow privileged ports
     old_priv = set_root_priv();
   }
 
 	if (is_well_known == TRUE) {
-		bind_return_value = bind(socket_desc, (struct sockaddr*)addr, temp)==0 ?
+		bind_return_value = condor_bind(socket_desc, addr) == 0 ?
  						TRUE : FALSE;
 	} else {
 		/* There is a good chance that this binding will be given to a
@@ -162,7 +162,8 @@ int I_bind(int                 socket_desc,
       fprintf(stderr, "ERROR:\n\n");
       return BIND_ERROR;
     }
-  if (getsockname(socket_desc, (struct sockaddr*)addr, (socklen_t *)&temp) < 0)
+
+  if (condor_getsockname(socket_desc, addr) < 0)
     {
       fprintf(stderr, "\nERROR:\n");
       fprintf(stderr, "ERROR:\n");
@@ -172,17 +173,17 @@ int I_bind(int                 socket_desc,
       fprintf(stderr, "ERROR:\n\n");
       return BAD_SOCKET_DESC_ERROR;
     }
-  if (temp != sizeof(struct sockaddr_in))
-    {
-      fprintf(stderr, "\nERROR:\n");
-      fprintf(stderr, "ERROR:\n");
-      fprintf(stderr, "ERROR: socket address (sd=%d, pid=%d) ", socket_desc,
-	      (int) getpid());
-      fprintf(stderr, "is not for TCP/IP\n");
-      fprintf(stderr, "ERROR:\n");
-      fprintf(stderr, "ERROR:\n\n");
-      return NOT_TCPIP;
-    }
+//  if (temp != sizeof(struct sockaddr_in))
+//    {
+//      fprintf(stderr, "\nERROR:\n");
+//      fprintf(stderr, "ERROR:\n");
+//      fprintf(stderr, "ERROR: socket address (sd=%d, pid=%d) ", socket_desc,
+//	      (int) getpid());
+//      fprintf(stderr, "is not for TCP/IP\n");
+//      fprintf(stderr, "ERROR:\n");
+//      fprintf(stderr, "ERROR:\n\n");
+//      return NOT_TCPIP;
+//    }
   return CKPT_OK;
 }
 
@@ -216,23 +217,23 @@ int I_bind(int                 socket_desc,
 ******************************************************************************/
 
 
-char* gethostnamebyaddr(struct in_addr* addr)
-{
-  struct hostent* h;
-
-  h = condor_gethostbyaddr((char*)addr, sizeof(struct in_addr), AF_INET);
-  if (h == NULL)
-    {
-      fprintf(stderr, "\nERROR:\n");
-      fprintf(stderr, "ERROR:\n");
-      fprintf(stderr, "ERROR: cannot get host information (pid=%d)\n", 
-	      (int) getpid());
-      fprintf(stderr, "ERROR:\n");
-      fprintf(stderr, "ERROR:\n\n");
-      return NULL;
-    }
-  return(h->h_name);
-}
+//char* gethostnamebyaddr(struct in_addr* addr)
+//{
+//  struct hostent* h;
+//
+//  h = condor_gethostbyaddr((char*)addr, sizeof(struct in_addr), AF_INET);
+//  if (h == NULL)
+//    {
+//      fprintf(stderr, "\nERROR:\n");
+//      fprintf(stderr, "ERROR:\n");
+//      fprintf(stderr, "ERROR: cannot get host information (pid=%d)\n",
+//	      (int) getpid());
+//      fprintf(stderr, "ERROR:\n");
+//      fprintf(stderr, "ERROR:\n\n");
+//      return NULL;
+//    }
+//  return(h->h_name);
+//}
 
 
 /******************************************************************************
@@ -258,7 +259,7 @@ char* gethostnamebyaddr(struct in_addr* addr)
 *                                                                             *
 ******************************************************************************/
 
-
+// [TODO:IPV6] how to deal with IPv6?
 int I_socket()
 {
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
@@ -380,14 +381,13 @@ int I_listen(int socket_desc,
 
 
 int I_accept(int                 socket_desc, 
-			 struct sockaddr_in* addr, 
-			 int*                addr_len)
+			 condor_sockaddr&    addr)
 {
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	int temp;
 	int on = 1;
 	
-	while ((temp=accept(socket_desc, (struct sockaddr*) addr, (socklen_t *) addr_len)) < 0) {
+	while ((temp=condor_accept(socket_desc, addr)) < 0) {
 		if (errno != EINTR) {
 			fprintf(stderr, "\nERROR:\n");
 			fprintf(stderr, "ERROR:\n");

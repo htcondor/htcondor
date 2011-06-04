@@ -1108,7 +1108,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 						tmp);
 			}
 			else {
-				private_sinful_string.sprintf("<%s:%d>", private_ip.c_str(), port);
+				private_sinful_string = generate_sinful(private_ip.c_str(), port);
 				sinful_private = strdup(private_sinful_string.Value());
 			}
 			free(tmp);
@@ -2900,6 +2900,7 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_s
 
 	if( reason ) {
 		char ipstr[IP_STRING_BUF_SIZE];
+		strcpy(ipstr, "(unknown)");
 		addr.to_ip_string(ipstr, sizeof(ipstr));
 	//sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
 

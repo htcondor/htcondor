@@ -2,9 +2,15 @@
 #include "MyString.h"
 #include "condor_sockfunc.h"
 #include "ipv6_hostname.h"
+#include "ipv6_interface.h"
 
 int condor_connect(int sockfd, const condor_sockaddr& addr)
 {
+	if (addr.is_ipv6() && addr.is_link_local()) {
+		condor_sockaddr connect_addr = addr;
+		connect_addr.set_scope_id(ipv6_get_scope_id());
+		return connect(sockfd, connect_addr.to_sockaddr(), connect_addr.get_socklen());
+	}
 	return connect(sockfd, addr.to_sockaddr(), addr.get_socklen());
 }
 
@@ -15,18 +21,7 @@ int condor_accept(int sockfd, condor_sockaddr& addr)
 	int ret = accept(sockfd, (sockaddr*)&st, &len);
 	
 	if (ret) {
-		if (st.ss_family == AF_INET) {
-			sockaddr_in* sin = (sockaddr_in*)&st;
-			addr = condor_sockaddr(sin);
-		}	
-		else if (st.ss_family == AF_INET6) {
-			sockaddr_in6* sin6 = (sockaddr_in6*)&st;
-			addr = condor_sockaddr(sin6);
-		}
-		else
-		{
-			// should output error message
-		}
+		addr = condor_sockaddr((sockaddr*)&st);
 	}
 	return ret;
 
@@ -34,6 +29,11 @@ int condor_accept(int sockfd, condor_sockaddr& addr)
 
 int condor_bind(int sockfd, const condor_sockaddr& addr)
 {
+	if (addr.is_ipv6() && addr.is_link_local()) {
+		condor_sockaddr bind_addr = addr;
+		bind_addr.set_scope_id(ipv6_get_scope_id());
+		return bind(sockfd, bind_addr.to_sockaddr(), bind_addr.get_socklen());
+	}
 	return bind(sockfd, addr.to_sockaddr(), addr.get_socklen());
 }
 
@@ -58,20 +58,28 @@ int condor_inet_pton(const char* src, condor_sockaddr& dest)
 	return ret;
 }
 
-int condor_socket(int socket_type, int protocol)
-{
-#ifdef CONDOR_IPV6
-	return socket(AF_INET6, socket_type, protocol);
-#else
-	return socket(AF_INET, socket_type, protocol);
-#endif
-}
+//int condor_socket(int socket_type, int protocol)
+//{
+//#ifdef CONDOR_IPV6
+//	return socket(AF_INET6, socket_type, protocol);
+//#else
+//	return socket(AF_INET, socket_type, protocol);
+//#endif
+//}
 
 int condor_sendto(int sockfd, const void* buf, size_t len, int flags,
 				  const condor_sockaddr& addr)
 {
-	int ret = sendto(sockfd, (const char*)buf, len, flags, addr.to_sockaddr(),
+	int ret;
+	if (addr.is_ipv6() && addr.is_link_local()) {
+		condor_sockaddr send_addr = addr;
+		send_addr.set_scope_id(ipv6_get_scope_id());
+		ret = sendto(sockfd, (const char*)buf, len, flags, send_addr.to_sockaddr(),
+				 send_addr.get_socklen());
+	} else {
+		ret = sendto(sockfd, (const char*)buf, len, flags, addr.to_sockaddr(),
 					 addr.get_socklen());
+	}
 	return ret;
 }
 
@@ -186,20 +194,20 @@ hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr)
 //	return hp->h_name;
 //}
 
-int ipv6_is_ipaddr(const char* host, condor_sockaddr& addr)
-{
-	int ret = FALSE;
-	in_addr v4_addr;
-	in6_addr v6_addr;
-
-	if ( inet_pton( AF_INET, host, &v4_addr) > 0 ) {
-		addr = condor_sockaddr(v4_addr, 0);
-		ret = TRUE;
-	}
-	else if ( inet_pton( AF_INET6, host, &v6_addr ) > 0 ) {
-		addr = condor_sockaddr(v6_addr, 0);
-		ret = TRUE;
-	}
-
-	return ret;
-}
+//int ipv6_is_ipaddr(const char* host, condor_sockaddr& addr)
+//{
+//	int ret = FALSE;
+//	in_addr v4_addr;
+//	in6_addr v6_addr;
+//
+//	if ( inet_pton( AF_INET, host, &v4_addr) > 0 ) {
+//		addr = condor_sockaddr(v4_addr, 0);
+//		ret = TRUE;
+//	}
+//	else if ( inet_pton( AF_INET6, host, &v6_addr ) > 0 ) {
+//		addr = condor_sockaddr(v6_addr, 0);
+//		ret = TRUE;
+//	}
+//
+//	return ret;
+//}

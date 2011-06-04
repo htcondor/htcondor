@@ -1449,7 +1449,9 @@ accept_request_claim( Resource* rip )
 	} else {
 		client_host = strdup( tmp );
 			// Try to make sure we've got a fully-qualified hostname.
-		full_client_host = get_full_hostname( (const char *) client_host );
+
+		MyString client_fqdn = get_fqdn_from_hostname(client_host);
+		full_client_host = strnewp(client_fqdn.Value()); //get_full_hostname( (const char *) client_host );
 		if( ! full_client_host ) {
 			rip->dprintf( D_ALWAYS, "Error finding full hostname of %s\n", 
 						  client_host );
@@ -1659,8 +1661,10 @@ activate_claim( Resource* rip, Stream* stream )
 		stRec.server_name = strdup( my_full_hostname() );
 	
 			// Send our local IP address, too.
-		memcpy( &stRec.ip_addr, my_sin_addr(), sizeof(struct in_addr) );
 		
+		condor_sockaddr local_addr = get_local_ipaddr();
+		memcpy( &stRec.ip_addr, &local_addr.to_sin().sin_addr, sizeof(struct in_addr) );
+
 		stream->encode();
 		if (!stream->code(stRec)) {
 			ABORT;

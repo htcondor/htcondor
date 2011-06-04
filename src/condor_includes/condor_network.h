@@ -45,11 +45,16 @@ extern "C" {
 #endif
 
 int do_connect ( const char *host, const char *service, u_short port );
-int tcp_accept_timeout( int ConnectionSock, struct sockaddr *sinful, 
+int tcp_accept_timeout( int ConnectionSock, struct sockaddr *sinful,
 						int *len, int timeout );
 
 #if defined(__cplusplus)
 }
 #endif
 
+#if defined(__cplusplus)
+class condor_sockaddr;
+int tcp_connect_timeout( int sockfd, const condor_sockaddr& serv_addr,
+						int timeout );
+#endif
 #endif /* _NETWORK */

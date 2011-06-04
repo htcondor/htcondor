@@ -24,6 +24,8 @@
 #include "internet.h"
 #include "condor_socket_types.h"
 #include "condor_netdb.h"
+#include "ipv6_hostname.h"
+#include "condor_sockfunc.h"
 
 #ifndef   NI_MAXHOST
 #define   NI_MAXHOST 1025
@@ -261,7 +263,9 @@ condor_gethostname(char *name, size_t namelen) {
 			// First, we try NETWORK_INTERFACE
 		if ( (param_buf = param( "NETWORK_INTERFACE" )) ) {
 			char ip_str[MAXHOSTNAMELEN];
-			struct in_addr sin_addr;
+
+			// reimplement with condor_sockaddr and to_ip_string()
+			condor_sockaddr addr;
 
 			dprintf( D_HOSTNAME, "NO_DNS: Using NETWORK_INTERFACE='%s' "
 					 "to determine hostname\n", param_buf );
@@ -269,20 +273,18 @@ condor_gethostname(char *name, size_t namelen) {
 			snprintf( ip_str, MAXHOSTNAMELEN, "%s", param_buf );
 			free( param_buf );
 
-			if ( !is_ipaddr( ip_str, &sin_addr ) ) {
+			if (!addr.from_ip_string(ip_str)) {
 				dprintf(D_HOSTNAME,
 						"NO_DNS: NETWORK_INTERFACE is invalid: %s\n",
 						ip_str);
 				return -1;
 			}
 
-			if (convert_ip_to_hostname((char *) &sin_addr,
-									   name,
-									   namelen)) {
-					// convert_ip_to_hostname() already printed an error
+			MyString hostname = convert_ipaddr_to_hostname(addr);
+			if (hostname.Length() >= namelen) {
 				return -1;
 			}
-
+			strcpy(name, hostname.Value());
 			return 0;
 		}
 
@@ -296,12 +298,15 @@ condor_gethostname(char *name, size_t namelen) {
 			// use to contact the COLLECTOR_HOST
 		if ( (param_buf = param( "COLLECTOR_HOST" )) ) {
 
-			struct hostent *collector_ent;
+			//struct hostent *collector_ent;
 			int s;
-			SOCKET_LENGTH_TYPE addr_len;
+			//SOCKET_LENGTH_TYPE addr_len;
 			char collector_host[MAXHOSTNAMELEN];
 			char *idx;
-			struct sockaddr_in addr, collector_addr;
+			//struct sockaddr_in addr, collector_addr;
+			condor_sockaddr collector_addr;
+			condor_sockaddr addr;
+			std::vector<condor_sockaddr> collector_addrs;
 
 			dprintf( D_HOSTNAME, "NO_DNS: Using COLLECTOR_HOST='%s' "
 					 "to determine hostname\n", param_buf );
@@ -314,7 +319,9 @@ condor_gethostname(char *name, size_t namelen) {
 			free( param_buf );
 
 				// Now that we have the name we need an IP
-			if (!(collector_ent = condor_gethostbyname(collector_host))) {
+
+			collector_addrs = resolve_hostname(collector_host);
+			if (collector_addrs.empty()) {
 				dprintf(D_HOSTNAME,
 						"NO_DNS: Failed to get IP address of collector "
 						"host '%s'\n", collector_host);
@@ -330,16 +337,10 @@ condor_gethostname(char *name, size_t namelen) {
 				return -1;
 			}
 
-			memset((char *) &collector_addr, 0, sizeof(struct sockaddr_in));
-			memcpy(&collector_addr.sin_addr,
-				   collector_ent->h_addr_list[0],
-				   sizeof(struct in_addr));
-				//collector_addr.sin_len = sizeof(struct sockaddr_in);
-			collector_addr.sin_family = AF_INET;
-			collector_addr.sin_port = htons(1980);
-			if (connect(s,
-						(struct sockaddr *) &collector_addr,
-						sizeof(struct sockaddr_in))) {
+			collector_addr = collector_addrs.front();
+			collector_addr.set_port(1980);
+
+			if (condor_connect(s, collector_addr)) {
 				perror("connect");
 				dprintf(D_HOSTNAME,
 						"NO_DNS: Failed to bind socket, errno=%d (%s)\n",
@@ -347,23 +348,18 @@ condor_gethostname(char *name, size_t namelen) {
 				return -1;
 			}
 
-			addr_len = sizeof(struct sockaddr_in);
-			if (getsockname(s,
-							(struct sockaddr *) &addr,
-							(socklen_t*) &addr_len)) {
+			if (condor_getsockname(s, addr)) {
 				dprintf(D_HOSTNAME,
 						"NO_DNS: Failed to get socket name, errno=%d (%s)\n",
 						errno, strerror(errno));
 				return -1;
 			}
 
-			if (convert_ip_to_hostname((char *) &addr.sin_addr,
-									   name,
-									   namelen)) {
-					// convert_ip_to_hostname() already printed an error
+			MyString hostname = convert_ipaddr_to_hostname(addr);
+			if (hostname.Length() >= namelen) {
 				return -1;
 			}
-
+			strcpy(name, hostname.Value());
 			return 0;
 		}
 
@@ -376,21 +372,21 @@ condor_gethostname(char *name, size_t namelen) {
 			dprintf( D_HOSTNAME, "NO_DNS: Using gethostname()='%s' "
 					 "to determine hostname\n", tmp );
 
-			if ( (h_ent = gethostbyname( tmp )) == NULL) {
+			std::vector<condor_sockaddr> addrs;
+			MyString my_hostname(tmp);
+			addrs = resolve_hostname_raw(my_hostname);
+			if (addrs.empty()) {
 				dprintf(D_HOSTNAME,
-						"NO_DNS: gethostbyname() failed, errno=%d (%s)\n",
-						errno, strerror(errno));
+						"NO_DNS: resolve_hostname_raw() failed, errno=%d"
+						" (%s)\n", errno, strerror(errno));
 				return -1;
 			}
 
-			inaddr = (struct in_addr *)h_ent->h_addr_list[0];
-			if (convert_ip_to_hostname((char *) inaddr,
-									   name,
-									   namelen)) {
-					// convert_ip_to_hostname() already printed an error
+			MyString hostname = convert_ipaddr_to_hostname(addrs.front());
+			if (hostname.Length() >= namelen) {
 				return -1;
 			}
-
+			strcpy(name, hostname.Value());
 			return 0;
 		}
 
@@ -399,9 +395,7 @@ condor_gethostname(char *name, size_t namelen) {
 		return -1;
 
 	} else {
-
 		return gethostname(name, namelen);
-
 	}
 }
 

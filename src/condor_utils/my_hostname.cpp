@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,23 +18,24 @@
  ***************************************************************/
 
 
- 
+
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "internet.h"
-#include "get_full_hostname.h"
+//#include "get_full_hostname.h"
 #include "my_hostname.h"
 #include "condor_attributes.h"
 #include "condor_netdb.h"
+#include "ipv6_hostname.h"
 
-static char* hostname = NULL;
-static char* full_hostname = NULL;
-static unsigned int ip_addr;
-static struct in_addr sin_addr;
-static bool has_sin_addr = false;
-static int hostnames_initialized = 0;
-static int ipaddr_initialized = 0;
+//static char* hostname = NULL;
+//static char* full_hostname = NULL;
+//static unsigned int ip_addr;
+//static struct in_addr sin_addr;
+//static bool has_sin_addr = false;
+//static int hostnames_initialized = 0;
+//static int ipaddr_initialized = 0;
 static bool enable_convert_default_IP_to_socket_IP = true;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
@@ -45,10 +46,13 @@ static void init_hostnames();
 char *
 my_hostname()
 {
-	if( ! hostnames_initialized ) {
-		init_hostnames();
-	}
-	return hostname;
+//	if( ! hostnames_initialized ) {
+//		init_hostnames();
+//	}
+//	return hostname;
+    static MyString __my_hostname;
+    __my_hostname = get_local_hostname();
+    return const_cast<char*>(__my_hostname.Value());
 }
 
 
@@ -56,77 +60,83 @@ my_hostname()
 char*
 my_full_hostname()
 {
-	if( ! hostnames_initialized ) {
-		init_hostnames();
-	}
-	return full_hostname;
+//	if( ! hostnames_initialized ) {
+//		init_hostnames();
+//	}
+//	return full_hostname;
+    static MyString __my_full_hostname;
+    __my_full_hostname = get_local_fqdn();
+    return const_cast<char*>(__my_full_hostname.Value());
 }
 
 
 // Return the host-ordered, unsigned int version of our hostname.
-unsigned int
-my_ip_addr()
-{
-	if( ! ipaddr_initialized ) {
-		init_ipaddr(0);
-	}
-	return ip_addr;
-}
+//unsigned int
+//my_ip_addr()
+//{
+//	if( ! ipaddr_initialized ) {
+//		init_ipaddr(0);
+//	}
+//	return ip_addr;
+//}
 
 
-struct in_addr*
-my_sin_addr()
-{
-	if( ! ipaddr_initialized ) {
-		init_ipaddr(0);
-	}
-	return &sin_addr;
-}
+//struct in_addr*
+//my_sin_addr()
+//{
+//	if( ! ipaddr_initialized ) {
+//		init_ipaddr(0);
+//	}
+//	return &sin_addr;
+//}
 
 
 char*
 my_ip_string()
 {
-	if( ! ipaddr_initialized ) {
-		init_ipaddr(0);
-	}
-
-		// It is too risky to return whatever inet_ntoa() returns
-		// directly, because the caller may unwittingly corrupt that
-		// value by calling inet_ntoa() again.
-
-	char const *str = inet_ntoa(sin_addr);
-	static char buf[IP_STRING_BUF_SIZE];
-
-	if(!str) {
-		return NULL;
-	}
-
-	ASSERT(strlen(str) < IP_STRING_BUF_SIZE);
-
-	strcpy(buf,str);
-	return buf;
+//	if( ! ipaddr_initialized ) {
+//		init_ipaddr(0);
+//	}
+//
+//		// It is too risky to return whatever inet_ntoa() returns
+//		// directly, because the caller may unwittingly corrupt that
+//		// value by calling inet_ntoa() again.
+//
+//	char const *str = inet_ntoa(sin_addr);
+//	static char buf[IP_STRING_BUF_SIZE];
+//
+//	if(!str) {
+//		return NULL;
+//	}
+//
+//	ASSERT(strlen(str) < IP_STRING_BUF_SIZE);
+//
+//	strcpy(buf,str);
+//	return buf;
+    static MyString __my_ip_string;
+    __my_ip_string = get_local_ipaddr().to_ip_string();
+    return const_cast<char*>(__my_ip_string.Value());
 }
 
-void
-init_full_hostname()
-{
-	char *tmp;
-
-	tmp = get_full_hostname( hostname );
-
-	if( full_hostname ) {
-		free( full_hostname );
-	}
-	if( tmp ) {
-			// Found it, use it.
-		full_hostname = strdup( tmp );
-		delete [] tmp;
-	} else {
-			// Couldn't find it, just use what we've already got. 
-		full_hostname = strdup( hostname );
-	}
-}
+//void
+//init_full_hostname()
+//{
+//	char *tmp;
+//
+//	tmp = get_full_hostname( hostname );
+//
+//	if( full_hostname ) {
+//		free( full_hostname );
+//	}
+//	if( tmp ) {
+//			// Found it, use it.
+//		full_hostname = strdup( tmp );
+//		delete [] tmp;
+//	} else {
+//			// Couldn't find it, just use what we've already got.
+//		full_hostname = strdup( hostname );
+//	}
+//}
 
 bool
 network_interface_to_ip(char const *interface_param_name,char const *interface_pattern,std::string &ip,std::set< std::string > *network_interface_ips)
@@ -140,7 +150,8 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		network_interface_ips->clear();
 	}
 
-	if( is_ipaddr_no_wildcard(interface_pattern,NULL) ) {
+	condor_sockaddr addr;
+	if (addr.from_ip_string(interface_pattern)) {
 		ip = interface_pattern;
 		if( network_interface_ips ) {
 			network_interface_ips->insert( ip );
@@ -186,8 +197,9 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			continue;
 		}
 
-		struct in_addr this_sin_addr;
-		if( !is_ipaddr_no_wildcard(dev->IP(),&this_sin_addr) ) {
+		condor_sockaddr this_addr;
+		if (!this_addr.from_ip_string(dev->IP())) {
+		//if( !is_ipaddr_no_wildcard(dev->IP(),&this_sin_addr) ) {
 			dprintf(D_HOSTNAME,"Ignoring network interface %s (%s) because it does not have a useable IP address.\n",
 					dev->name(), dev->IP());
 			continue;
@@ -206,10 +218,10 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 
 		int desireability;
 
-		if( is_loopback_net( ntohl(this_sin_addr.s_addr) ) ) {
+		if (this_addr.is_loopback()) {
 			desireability = 1;
 		}
-		else if( is_priv_net( ntohl(this_sin_addr.s_addr) ) ) {
+		else if (this_addr.is_private_network()) {
 			desireability = 2;
 		}
 		else {
@@ -241,13 +253,9 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 }
 
 void
-init_ipaddr( int config_done )
+init_network_interfaces( int config_done )
 {
-    if( ! hostname ) {
-		init_hostnames();
-	}
-
-	dprintf( D_HOSTNAME, "Trying to initialize local IP address (%s)\n", 
+	dprintf( D_HOSTNAME, "Trying to getting network interface informations (%s)\n",
 		 config_done ? "after reading config" : "config file not read" );
 
 	std::string network_interface;
@@ -273,16 +281,51 @@ init_ipaddr( int config_done )
 		EXCEPT("Failed to determine my IP address using NETWORK_INTERFACE=%s",
 			   network_interface.c_str());
 	}
-
-	if(!is_ipaddr(network_interface_ip.c_str(), &sin_addr) )
-	{
-		EXCEPT("My IP address is invalid: %s",network_interface_ip.c_str());
-	}
-
-	has_sin_addr = true;
-	ip_addr = ntohl( sin_addr.s_addr );
-	ipaddr_initialized = TRUE;
 }
+
+//void
+//init_ipaddr( int config_done )
+//{
+//    if( ! hostname ) {
+//		init_hostnames();
+//	}
+//
+//	dprintf( D_HOSTNAME, "Trying to initialize local IP address (%s)\n",
+//		 config_done ? "after reading config" : "config file not read" );
+//
+//	std::string network_interface;
+//
+//	if( config_done ) {
+//		param(network_interface,"NETWORK_INTERFACE");
+//	}
+//	if( network_interface.empty() ) {
+//		network_interface = "*";
+//	}
+//
+//	network_interface_matches_all = (network_interface == "*");
+//
+//	std::string network_interface_ip;
+//	bool ok;
+//	ok = network_interface_to_ip(
+//		"NETWORK_INTERFACE",
+//		network_interface.c_str(),
+//		network_interface_ip,
+//		&configured_network_interface_ips);
+//
+//	if( !ok ) {
+//		EXCEPT("Failed to determine my IP address using NETWORK_INTERFACE=%s",
+//			   network_interface.c_str());
+//	}
+//
+//	if(!is_ipaddr(network_interface_ip.c_str(), &sin_addr) )
+//	{
+//		EXCEPT("My IP address is invalid: %s",network_interface_ip.c_str());
+//	}
+//
+//	has_sin_addr = true;
+//	ip_addr = ntohl( sin_addr.s_addr );
+//	ipaddr_initialized = TRUE;
+//}
 
 #ifdef WIN32
 	// see below comment in init_hostname() to learn why we must
@@ -290,72 +333,72 @@ init_ipaddr( int config_done )
 #include "condor_io.h"
 #endif
 
-void
-init_hostnames()
-{
-    char *tmp, hostbuf[MAXHOSTNAMELEN];
-    hostbuf[0]='\0';
-#ifdef WIN32
-	// There are a  tools in Condor, like
-	// condor_history, which do not use any CEDAR sockets but which call
-	// some socket helper functions like gethostbyname().  These helper
-	// functions will fail unless WINSOCK is initialized.  WINSOCK
-	// is initialized via a global constructor in CEDAR, so we must
-	// make certain we call at least one CEDAR function so the linker
-	// brings in the global constructor to initialize WINSOCK! 
-	// In addition, some global constructors end up calling
-	// init_hostnames(), and thus will fail if the global constructor
-	// in CEDAR is not called first.  Instead of relying upon a
-	// specified global constructor ordering (which we cannot), 
-	// we explicitly invoke SockInitializer::init() right here -Todd T.
-	SockInitializer startmeup;
-	startmeup.init();
-#endif
-
-    if( hostname ) {
-        free( hostname );
-    }
-    if( full_hostname ) {
-        free( full_hostname );
-        full_hostname = NULL;
-    }
-
-	dprintf( D_HOSTNAME, "Finding local host information, "
-			 "calling gethostname()\n" );
-
-        // Get our local hostname, and strip off the domain if
-        // gethostname returns it.
-    if( condor_gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
-        if( hostbuf[0] ) {
-            if( (tmp = strchr(hostbuf, '.')) ) {
-                    // There's a '.' in the hostname, assume we've got
-                    // the full hostname here, save it, and trim the
-                    // domain off and save that as the hostname.
-                full_hostname = strdup( hostbuf );
-				dprintf( D_HOSTNAME, "gethostname() returned fully "
-						 "qualified name \"%s\"\n", hostbuf );
-                *tmp = '\0';
-            } else {
-				dprintf( D_HOSTNAME, "gethostname() returned a host "
-						 "with no domain \"%s\"\n", hostbuf );
-			}
-            hostname = strdup( hostbuf );
-        } else {
-            EXCEPT( "gethostname succeeded, but hostbuf is empty" );
-        }
-    } else {
-        EXCEPT( "gethostname failed, errno = %d",
-#ifndef WIN32
-                errno );
-#else
-                WSAGetLastError() );
-#endif
-    }
-    if( ! full_hostname ) {
-		init_full_hostname();
-	}
-	hostnames_initialized = TRUE;
-}
+//void
+//init_hostnames()
+//{
+//    char *tmp, hostbuf[MAXHOSTNAMELEN];
+//    hostbuf[0]='\0';
+//#ifdef WIN32
+//	// There are a  tools in Condor, like
+//	// condor_history, which do not use any CEDAR sockets but which call
+//	// some socket helper functions like gethostbyname().  These helper
+//	// functions will fail unless WINSOCK is initialized.  WINSOCK
+//	// is initialized via a global constructor in CEDAR, so we must
+//	// make certain we call at least one CEDAR function so the linker
+//	// brings in the global constructor to initialize WINSOCK!
+//	// In addition, some global constructors end up calling
+//	// init_hostnames(), and thus will fail if the global constructor
+//	// in CEDAR is not called first.  Instead of relying upon a
+//	// specified global constructor ordering (which we cannot),
+//	// we explicitly invoke SockInitializer::init() right here -Todd T.
+//	SockInitializer startmeup;
+//	startmeup.init();
+//#endif
+//
+//    if( hostname ) {
+//        free( hostname );
+//    }
+//    if( full_hostname ) {
+//        free( full_hostname );
+//        full_hostname = NULL;
+//    }
+//
+//	dprintf( D_HOSTNAME, "Finding local host information, "
+//			 "calling gethostname()\n" );
+//
+//        // Get our local hostname, and strip off the domain if
+//        // gethostname returns it.
+//    if( condor_gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
+//        if( hostbuf[0] ) {
+//            if( (tmp = strchr(hostbuf, '.')) ) {
+//                    // There's a '.' in the hostname, assume we've got
+//                    // the full hostname here, save it, and trim the
+//                    // domain off and save that as the hostname.
+//                full_hostname = strdup( hostbuf );
+//				dprintf( D_HOSTNAME, "gethostname() returned fully "
+//						 "qualified name \"%s\"\n", hostbuf );
+//                *tmp = '\0';
+//            } else {
+//				dprintf( D_HOSTNAME, "gethostname() returned a host "
+//						 "with no domain \"%s\"\n", hostbuf );
+//			}
+//            hostname = strdup( hostbuf );
+//        } else {
+//            EXCEPT( "gethostname succeeded, but hostbuf is empty" );
+//        }
+//    } else {
+//        EXCEPT( "gethostname failed, errno = %d",
+//#ifndef WIN32
+//                errno );
+//#else
+//                WSAGetLastError() );
+//#endif
+//    }
+//    if( ! full_hostname ) {
+//		init_full_hostname();
+//	}
+//	hostnames_initialized = TRUE;
+//}
 
 // Returns true if given attribute is used by Condor to advertise the
 // IP address of the sender.  This is used by
@@ -375,9 +418,11 @@ static bool is_sender_ip_attr(char const *attr_name)
 
 void ConfigConvertDefaultIPToSocketIP()
 {
-	if( ! ipaddr_initialized ) {
-		init_ipaddr(0);
-	}
+		// do not need to call init_ipaddr() since init_ipaddr() has no effect
+		// on this function.
+//	if( ! ipaddr_initialized ) {
+//		init_ipaddr(0);
+//	}
 
 	enable_convert_default_IP_to_socket_IP = true;
 
@@ -449,7 +494,9 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 	if(strcmp(my_default_ip,my_sock_ip) == 0) {
 		return;
 	}
-	if(is_loopback_net_str(my_sock_ip)) {
+	condor_sockaddr sock_addr;
+	//if(is_loopback_net_str(my_sock_ip)) {
+	if (sock_addr.from_ip_string(my_sock_ip) && sock_addr.is_loopback()) {
             // We must be talking to another daemon on the same
 			// machine as us.  We don't want to replace the default IP
 			// with this one, since nobody outside of this machine

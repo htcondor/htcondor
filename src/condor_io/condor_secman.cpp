@@ -1060,7 +1060,6 @@ SecManStartCommand::doCallback( StartCommandResult result )
 		}
 
 		MyString deny_reason;
-			//sockaddr_in tmp_sin = m_sock->peer_addr().to_sin();
 
 		int authorized = m_sec_man.Verify(
 			CLIENT_PERM,
@@ -2016,7 +2015,6 @@ SecManStartCommand::receivePostAuthInfo_inner()
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
-				//sockaddr_in tmp_sin = m_sock->peer_addr().to_sin();
 			KeyCacheEntry tmp_key( sesid, &m_sock->peer_addr(), m_private_key,
 								   &m_auth_info, expiration_time,
 								   session_lease ); 
@@ -2842,8 +2840,8 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	ASSERT(sesid);
 
-	sockaddr_in peer_addr;
-	if(peer_sinful && !string_to_sin(peer_sinful,&peer_addr)) {
+	condor_sockaddr peer_addr;
+	if(peer_sinful && peer_addr.from_sinful(peer_sinful)) {
 		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
 				"string_to_sin(%s) failed\n",sesid,peer_sinful);
 		return false;
@@ -2930,8 +2928,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
 	}
 
-	condor_sockaddr tmp_addr(&peer_addr);
-	KeyCacheEntry key(sesid,peer_sinful ? &tmp_addr : NULL,keyinfo,&policy,expiration_time,0);
+	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keyinfo,&policy,expiration_time,0);
 
 	if( !session_cache->insert(key) ) {
 		dprintf(D_SECURITY, "SECMAN: failed to create session %s.\n",

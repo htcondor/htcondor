@@ -251,7 +251,6 @@ public:
 	*/
 
     /// peer's port and IP address in a struct sockaddr_in.
-	//struct sockaddr_in *peer_addr();
 	condor_sockaddr peer_addr();
 
 	/// peer's port number 
@@ -261,7 +260,6 @@ public:
 	const char* peer_ip_str();
 
 	/// peer's IP address, integer version (e.g. 2154390801)
-	//unsigned int peer_ip_int();
 
 	/// is peer a local interface, aka did this connection originate from a local process?
 	bool peer_is_local();

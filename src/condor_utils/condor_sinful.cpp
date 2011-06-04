@@ -187,7 +187,16 @@ Sinful::Sinful(char const *sinful)
 
 		if( *sinful != '<' ) {
 			m_sinful = "<";
-			m_sinful += sinful;
+			// should be careful here
+			// if sinful is IPv6 address, it should be embraced by [ ]
+
+			// we assume it is IPv6 address if it contains ':'
+			if (strchr(sinful, ':') != NULL) {
+				m_sinful += "[";
+				m_sinful += sinful;
+				m_sinful += "]";
+			} else
+				m_sinful += sinful;
 			m_sinful += ">";
 		}
 		else {
@@ -344,7 +353,13 @@ Sinful::regenerateSinful()
 	// generate "<host:port?params>"
 
 	m_sinful = "<";
-	m_sinful += m_host;
+	if (m_host.find(':') != std::string::npos) {
+		m_sinful += "[";
+		m_sinful += m_host;
+		m_sinful += "]";
+	} else
+		m_sinful += m_host;
+
 	if( !m_port.empty() ) {
 		m_sinful += ":";
 		m_sinful += m_port;

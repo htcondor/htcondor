@@ -57,7 +57,10 @@ void SafeSock::init()
 	// initialize msgID
 	if(_outMsgID.msgNo == 0) { // first object of this class
 		// [TODO:IPv6] Remove it!
-		_outMsgID.ip_addr = (unsigned long)my_ip_addr();
+		//_outMsgID.ip_addr = (unsigned long)my_ip_addr();
+
+		// temp
+		_outMsgID.ip_addr = 1;
 		_outMsgID.pid = (short)getpid();
 		_outMsgID.time = (unsigned long)time(NULL);
 		_outMsgID.msgNo = (unsigned long)get_random_int();
@@ -134,7 +137,7 @@ int SafeSock::end_of_message()
                     if (mdChecker_) {
 	    		md = mdChecker_->computeMD();
 		    }
-                    sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, 
+                    sent = _outMsg.sendMsg(_sock, _who,
 				           _outMsgID, md);
 		    if (md) {
 		    	free(md);

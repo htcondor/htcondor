@@ -11,7 +11,7 @@ void condor_sockaddr::clear()
 }
 
 // init only accepts network-ordered ip and port
-void condor_sockaddr::init(int ip, unsigned port)
+void condor_sockaddr::init(int32_t ip, unsigned port)
 {
 	clear();
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
@@ -198,8 +198,8 @@ bool condor_sockaddr::from_sinful(const char* sinful)
 	addr++;
 	if ( *addr == '[' ) {
 		ipv6 = true;
-		addr_begin = addr;
 		addr++;
+		addr_begin = addr;
 
 		while( *addr && *addr != ']' )
 			addr++;
@@ -305,7 +305,7 @@ bool condor_sockaddr::from_ip_string(const char* ip_string)
 		v4.sin_family = AF_INET;
 		v4.sin_port = 0;
 		return true;
-	} else if (inet_pton(AF_INET, ip_string, &v6.sin6_addr) == 1) {
+	} else if (inet_pton(AF_INET6, ip_string, &v6.sin6_addr) == 1) {
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 		v6.sin6_len = sizeof(sockaddr_in);
 #endif
@@ -416,18 +416,40 @@ bool condor_sockaddr::is_private_network() const
 	return false;
 }
 
-void condor_sockaddr::set_ipv4() 
-{
+void condor_sockaddr::set_ipv4() {
 	v4.sin_family = AF_INET;
 }
 
-int condor_sockaddr::get_aftype() const
-{
+void condor_sockaddr::set_ipv6() {
+	v6.sin6_family = AF_INET6;
+}
+
+int condor_sockaddr::get_aftype() const {
 	if (is_ipv4())
 		return AF_INET;
 	else if (is_ipv6())
 		return AF_INET6;
 	return AF_UNSPEC;
+}
+
+const uint32_t* condor_sockaddr::get_address() const {
+	switch(v4.sin_family) {
+	case AF_INET:
+		return (const uint32_t*)&v4.sin_addr;
+	case AF_INET6:
+		return (const uint32_t*)&v6.sin6_addr;
+	}
+	return 0;
+}
+
+int condor_sockaddr::get_address_len() const {
+	switch(v4.sin_family) {
+	case AF_INET:
+		return 1;
+	case AF_INET6:
+		return 4;
+	}
+	return 0;
 }
 
 in6_addr condor_sockaddr::to_ipv6_address() const
@@ -442,6 +464,18 @@ in6_addr condor_sockaddr::to_ipv6_address() const
 	addr[2] = htonl(0xffff);
 	addr[3] = v4.sin_addr.s_addr;
 	return ret;
+}
+
+void condor_sockaddr::convert_to_ipv6() {
+	// only ipv4 addressn can be converted
+	if (!is_ipv4())
+		return;
+	in6_addr addr = to_ipv6_address();
+	unsigned short port = get_port();
+	clear();
+	set_ipv6();
+	set_port(port);
+	v6.sin6_addr = addr;
 }
 
 bool condor_sockaddr::compare_address(const condor_sockaddr& addr) const
@@ -477,4 +511,24 @@ bool condor_sockaddr::operator==(const condor_sockaddr& rhs) const
 	const void* l = (const void*)&storage;
 	const void* r = (const void*)&rhs.storage;
 	return memcmp(l, r, sizeof(sockaddr_storage)) == 0;
+}
+
+bool condor_sockaddr::is_link_local() const {
+	if (is_ipv4()) {
+		// it begins with 169.254 -> a9 fe
+		uint32_t mask = 0xa9fe0000;
+		return ((uint32_t)v4.sin_addr.s_addr & mask) == mask;
+	} else if (is_ipv6()) {
+		// it begins with fe80
+		return v6.sin6_addr.s6_addr[0] == 0xfe &&
+				v6.sin6_addr.s6_addr[1] == 0x80;
+	}
+	return false;
+}
+
+void condor_sockaddr::set_scope_id(uint32_t scope_id) {
+	if (!is_ipv6())
+		return;
+
+	v6.sin6_scope_id = scope_id;
 }

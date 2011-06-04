@@ -131,8 +131,110 @@ MyString get_local_fqdn()
 	return local_fqdn;
 }
 
-MyString get_hostname(const condor_sockaddr& addr)
-{
+MyString get_fqdn_from_hostname(const MyString& hostname) {
+	if (hostname.FindChar('.') != -1)
+		return hostname;
+
+	MyString ret;
+
+	if (!nodns_enabled()) {
+		addrinfo_iterator ai;
+		bool res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
+		if (res) {
+			return ret;
+		}
+
+		while (addrinfo* info = ai.next()) {
+			if (info->ai_canonname) {
+				if (strchr(info->ai_canonname, '.'))
+					return info->ai_canonname;
+			}
+		}
+
+		hostent* h = gethostbyname(hostname.Value());
+		if (h && h->h_aliases && *h->h_aliases) {
+			for (char** alias = h->h_aliases; *alias; ++alias) {
+				if (strchr(*alias, '.'))
+					return *alias;
+			}
+		}
+	}
+
+	MyString default_domain;
+	if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
+		ret = hostname;
+		if (ret[ret.Length() - 1] != '.')
+			ret += ".";
+		ret += default_domain;
+	}
+	return ret;
+}
+
+int get_fqdn_and_ip_from_hostname(const MyString& hostname,
+		MyString& fqdn, condor_sockaddr& addr) {
+
+	MyString ret;
+	condor_sockaddr ret_addr;
+	bool found_ip = false;
+
+	// if the hostname contains dot, hostname is assumed to be full hostname
+	if (hostname.FindChar('.') != -1) {
+		ret = hostname;
+	}
+
+	if (nodns_enabled()) {
+		// if nodns is enabled, convert hostname to ip address directly
+		ret_addr = convert_hostname_to_ipaddr(hostname);
+		found_ip = true;
+	} else {
+		// we look through getaddrinfo and gethostbyname
+		// to further seek fully-qualified domain name and corresponding
+		// ip address
+		addrinfo_iterator ai;
+		bool res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
+		if (res) {
+			return 0;
+		}
+
+		while (addrinfo* info = ai.next()) {
+			if (info->ai_canonname) {
+				fqdn = info->ai_canonname;
+				addr = condor_sockaddr(info->ai_addr);
+				return 1;
+			}
+		}
+
+		hostent* h = gethostbyname(hostname.Value());
+		if (h && h->h_aliases && *h->h_aliases) {
+			for (char** alias = h->h_aliases; *alias; ++alias) {
+				if (strchr(*alias, '.')) {
+					fqdn = *alias;
+					addr = condor_sockaddr((sockaddr*)h->h_addr);
+					return 1;
+				}
+			}
+		}
+	}
+
+	MyString default_domain;
+
+	// if FQDN is still unresolved, try DEFAULT_DOMAIN_NAME
+	if (ret.Length() == 0 && param(default_domain, "DEFAULT_DOMAIN_NAME")) {
+		ret = hostname;
+		if (ret[ret.Length() - 1] != '.')
+			ret += ".";
+		ret += default_domain;
+	}
+
+	if (ret.Length() > 0 && found_ip) {
+		fqdn = ret;
+		addr = ret_addr;
+		return 1;
+	}
+	return 0;
+}
+
+MyString get_hostname(const condor_sockaddr& addr) {
 	MyString ret;
 	if (nodns_enabled())
 		return convert_ipaddr_to_hostname(addr);
@@ -148,6 +250,12 @@ MyString get_hostname(const condor_sockaddr& addr)
 
 	int e;
 	char hostname[NI_MAXHOST];
+
+	// if given address is link-local IPv6 address, it will have %NICname
+	// at the end of string
+	// we would like to avoid it
+	if (targ_addr.is_ipv6())
+		targ_addr.set_scope_id(0);
 
 	e = condor_getnameinfo(targ_addr, hostname, sizeof(hostname), NULL, 0, 0);
 	if (e)
@@ -234,20 +342,27 @@ std::vector<condor_sockaddr> resolve_hostname(const MyString& hostname)
 		ret.push_back(addr);
 		return ret;
 	}
+	return resolve_hostname_raw(hostname);
+}
 
+std::vector<condor_sockaddr> resolve_hostname_raw(const MyString& hostname) {
+	std::vector<condor_sockaddr> ret;
 	addrinfo_iterator ai;
 	bool res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
 	if (res) {
 		return ret;
 	}
 	
-		// To eliminate duplicate address, here we use std::set
+		// To eliminate duplicate address, here we use std::set.
+		// we also want to maintain the order given by getaddrinfo.
 	std::set<condor_sockaddr> s;
 	while (addrinfo* info = ai.next()) {
-		s.insert(condor_sockaddr(info->ai_addr));
+		condor_sockaddr addr(info->ai_addr);
+		if (s.find(addr) == s.end()) {
+			ret.push_back(addr);
+			s.insert(addr);
+		}
 	}
-
-	ret.insert(ret.begin(), s.begin(), s.end());
 	return ret;
 }
 
@@ -290,12 +405,36 @@ condor_sockaddr convert_hostname_to_ipaddr(const MyString& fullname)
 	if (!truncated)
 		hostname = fullname;
 
-	char target_char = '.';
-		// [TODO] Implement a way to detect IPv6 address
-		//if (hostname.Length() > 15) { // assume we have IPv6 address
-		//target_char = ':';
-		//}
+	// detects if hostname is IPv6
+	//
+	// hostname is NODNS coded address
+	//
+	// for example,
+	// it could be 127-0-0-1 (127.0.0.1) as IPv4 address
+	// it could be fe80-3577--1234 ( fe80:3577::1234) as IPv6 address
+	//
+	// it is IPv6 address
+	// 1) if there are 7 '-'
+	// 2) if there are '--' which means compaction of zeroes in IPv6 adress
 
+	char target_char;
+	bool ipv6 = false;
+	if (hostname.find("--") != -1)
+		ipv6 = true;
+	else {
+		int dash_count = 0;
+		for (int i = 0; i < hostname.Length(); ++i)
+			if (hostname[i] == '-')
+				++dash_count;
+
+		if (dash_count == 7)
+			ipv6 = true;
+	}
+
+	if (ipv6)
+		target_char = ':';
+	else
+		target_char ='.';
 		// converts hostname to IP address string
 	for (int i = 0; i < hostname.Length(); ++i) {
 		if (hostname[i] == '-')

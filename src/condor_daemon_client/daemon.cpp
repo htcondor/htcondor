@@ -1091,21 +1091,22 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		// _name was explicitly specified as host:port, so this information can
 		// be used directly.  Further name resolution is not necessary.
 	if( nameHasPort ) {
-		struct in_addr sin_addr;
+		condor_sockaddr addr;
 		
 		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
 
-		if(host && is_ipaddr(host, &sin_addr) ) {
-			buf.sprintf( "<%s:%d>", host, _port );
+		if(host && addr.from_ip_string(host) ) {
+			buf = generate_sinful(host, _port);
 			New_addr( strnewp(buf.Value()) );
 			dprintf( D_HOSTNAME,
 					"Host info \"%s\" is an IP address\n", host );
 		} else {
 				// We were given a hostname, not an address.
+			MyString fqdn;
 			if(host) {
 				dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
 						 "finding IP address\n", host );
-				if((tmp = get_full_hostname( host, &sin_addr ))==0) {
+				if (!get_fqdn_and_ip_from_hostname(host, fqdn, addr)) {
 					// With a hostname, this is a fatal Daemon error.
 					buf.sprintf( "unknown host %s", host );
 					newError( CA_LOCATE_FAILED, buf.Value() );
@@ -1119,10 +1120,11 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 					return false;
 				}
 			} else return false;
-			buf.sprintf( "<%s:%d>", inet_ntoa(sin_addr), _port );
+			buf = generate_sinful(addr.to_ip_string().Value(), _port);
 			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.Value() );
 			New_addr( strnewp(buf.Value()) );
-			if(tmp) New_full_hostname( tmp );
+			if (fqdn.Length() > 0)
+				New_full_hostname(strnewp(fqdn.Value()));
 		}
 
 		if (host) free( host );
@@ -1399,7 +1401,7 @@ Daemon::findCmDaemon( const char* cm_name )
 {
 	char* host = NULL;
 	MyString buf;
-	struct in_addr sin_addr;
+	condor_sockaddr saddr;
 	char* tmp;
 
 	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", cm_name ); 
@@ -1461,15 +1463,17 @@ Daemon::findCmDaemon( const char* cm_name )
 	}
 
 
-	if( is_ipaddr(host, &sin_addr) ) {
+	if( saddr.from_ip_string(host) ) {
 		New_addr( strnewp( sinful.getSinful() ) );
 		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
 		dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
 				 "finding IP address\n", host );
-		tmp = get_full_hostname( host, &sin_addr );
-		if( ! tmp ) {
+
+		MyString fqdn;
+		int ret = get_fqdn_and_ip_from_hostname(host, fqdn, saddr);
+		if (!ret) {
 				// With a hostname, this is a fatal Daemon error.
 			buf.sprintf( "unknown host %s", host );
 			newError( CA_LOCATE_FAILED, buf.Value() );
@@ -1482,11 +1486,11 @@ Daemon::findCmDaemon( const char* cm_name )
 
 			return false;
 		}
-		sinful.setHost( inet_ntoa(sin_addr) );
+		sinful.setHost(saddr.to_ip_string().Value());
 		dprintf( D_HOSTNAME, "Found IP address and port %s\n",
 				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
 		New_addr( strnewp( sinful.getSinful() ) );
-		New_full_hostname( tmp );
+		New_full_hostname(strnewp(fqdn.Value()));
 	}
 
 		// If the pool was set, we want to use _name for that, too. 
@@ -1540,14 +1544,14 @@ Daemon::initHostname( void )
 	dprintf( D_HOSTNAME, "Address \"%s\" specified but no name, "
 			 "looking up host info\n", _addr );
 
-	condor_sockaddr addr;
-	addr.from_sinful(_addr);
-	MyString fqdn = get_full_hostname(addr);
+	condor_sockaddr saddr;
+	saddr.from_sinful(_addr);
+	MyString fqdn = get_full_hostname(saddr);
 	if (fqdn.IsEmpty()) {
 		New_hostname( NULL );
 		New_full_hostname( NULL );
 		dprintf(D_HOSTNAME, "get_full_hostname() failed for address %s",
-				addr.to_ip_string().Value());
+				saddr.to_ip_string().Value());
 		MyString err_msg = "can't find host info for ";
 		err_msg += _addr;
 		newError( CA_LOCATE_FAILED, err_msg.Value() );

@@ -43,6 +43,9 @@
 // see find_matches_withnetwork()
 //
 // current idea is to drop NetStringList completely.
+//
+// 04/19/2011, added IPv6 support
+// currently, it just accepts IPv6 format network address
 
 class NetStringList : public StringList {
 public:
