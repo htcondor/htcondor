@@ -1,27 +1,26 @@
 --- a/src/condor_sysapi/CMakeLists.txt
 +++ b/src/condor_sysapi/CMakeLists.txt
-@@ -16,8 +16,8 @@
-  # 
-  ############################################################### 
+@@ -18,7 +18,8 @@
  
--
+ set(BENCH_LINK_LIBS "${TOOL_LINK_LIBS}")
+ 
 -file( GLOB SysApiRmvElements *_t.cpp *.t.* dhry21b* *_main.cpp )
 + # exclude _main.cpp files to avoid duplicate and useless symbols
 +file( GLOB SysApiRmvElements *.t.* dhry21b* *_main.cpp )
  
  condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
  
-@@ -26,5 +26,10 @@
+@@ -27,5 +28,10 @@
  
  # there was a test target which was never used.
  # it makes the most sense to hook in a UT here instead of integ test
--condor_exe(condor_kflops "kflops_main.cpp" "${C_LIBEXEC}" "sysapi;condorapi;${TOOL_LINK_LIBS}" OFF)
--condor_exe(condor_mips "mips_main.cpp" "${C_LIBEXEC}" "sysapi;condorapi;${TOOL_LINK_LIBS}" OFF)
-+condor_exe(condor_kflops "kflops_main.cpp" "${C_LIBEXEC}" "utils;sysapi;condorapi;${TOOL_LINK_LIBS}" OFF)
+-condor_exe(condor_kflops "kflops_main.cpp" ${C_LIBEXEC} "sysapi;condorapi;${BENCH_LINK_LIBS}" OFF)
+-condor_exe(condor_mips "mips_main.cpp" ${C_LIBEXEC} "sysapi;condorapi;${BENCH_LINK_LIBS}" OFF)
++condor_exe(condor_kflops "kflops_main.cpp" ${C_LIBEXEC} "utils;sysapi;condorapi;${BENCH_LINK_LIBS}" OFF)
 +# unfortunately libutils comes with undefined symbols introduced by
 +# libdaemon_core (even when linking libutils to it)
 +target_link_libraries(condor_kflops -Wl,--allow-shlib-undefined)
-+condor_exe(condor_mips "mips_main.cpp" "${C_LIBEXEC}" "utils;sysapi;condorapi;${TOOL_LINK_LIBS}" OFF)
++condor_exe(condor_mips "mips_main.cpp" ${C_LIBEXEC} "utils;sysapi;condorapi;${BENCH_LINK_LIBS}" OFF)
 +# this is needed because libsysapi as a circular dependency on libutils
 +target_link_libraries(condor_mips utils -Wl,--allow-shlib-undefined)
 --- a/src/condor_chirp/CMakeLists.txt
@@ -325,7 +324,7 @@
 +condor_really_static_lib( condorapi "${ApiSrcs}" )
  add_dependencies( condorapi utils )
  
- if (NOT WINDOWS)
+ if (HAVE_LIBDL)
 --- a/src/deployment_tools/CMakeLists.txt
 +++ b/src/deployment_tools/CMakeLists.txt
 @@ -35,6 +35,9 @@
@@ -358,7 +357,7 @@
  	# set (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
  	# set (CMAKE_INSTALL_RPATH YOUR_LOC)
  	# set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-@@ -446,7 +446,8 @@
+@@ -456,7 +456,8 @@
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
@@ -368,7 +367,7 @@
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
-@@ -546,7 +547,7 @@
+@@ -557,7 +558,7 @@
  include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
  include_directories(${CONDOR_SOURCE_DIR}/src/h)
  include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)

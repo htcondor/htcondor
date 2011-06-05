@@ -1,3 +1,10 @@
+condor (7.6.1-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+  * Adjust shared library patch.
+
+ -- Michael Hanke <mih@debian.org>  Sat, 04 Jun 2011 20:36:29 -0400
+
 condor (7.6.0-1) UNRELEASED; urgency=low
 
   * New upstream stable release.

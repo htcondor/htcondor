@@ -11,7 +11,7 @@ Hardlinking at install time does not work as they end up as copies in the
 Debian package.
 --- a/build/cmake/macros/CloneInstall.cmake
 +++ b/build/cmake/macros/CloneInstall.cmake
-@@ -34,7 +34,11 @@ MACRO (CLONE_INSTALL _ORIG_TARGET _ORIG_INSTALL _NEWNAMES _INSTALL_LOC )
+@@ -34,7 +34,11 @@
          else()
              #install (CODE "execute_process(COMMAND cd \${CMAKE_INSTALL_PREFIX} && ${LN} -v -f ${_ORIG_INSTALL}/${_ORIG_TARGET} ${_INSTALL_LOC}/${new_target})")
              # because it's a hardlink absolute paths should not matter.
