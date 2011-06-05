@@ -23,6 +23,8 @@ option(WITH_CURL "Compiling with support for CURL" ON)
 if (WITH_CURL)
 
 	if ( NOT PROPER )
+		
+		condor_pre_external( CURL curl-7.19.6 "lib;include" "include/curl/curl.h")
 
 		if (WINDOWS)
 			set (CURL_PATCH pushd "lib" ${CMD_TERM}
@@ -30,26 +32,23 @@ if (WITH_CURL)
 						popd)
 			set (CURL_CONFIGURE echo "Nothing to configure")
 			set (CURL_MAKE pushd "lib" ${CMD_TERM}
-						nmake -f Makefile.vc9 CFG=release-ssl WINDOWS_SDK_PATH="${WIN_SDK_PATH}" OPENSSL_PATH="${EXTERNAL_STAGE}" ${CMD_TERM}
+						nmake -f Makefile.vc9 CFG=release-ssl WINDOWS_SDK_PATH="${WIN_SDK_PATH}" OPENSSL_PATH="${OPENSSL_INSTALL_LOC}" ${CMD_TERM}
 						popd ${CMD_TERM})
-			set (CURL_DEPENDS openssl)
-			set (CURL_INSTALL cp -f lib/lib*.lib ${EXTERNAL_STAGE}/lib && cp -rf include/curl ${EXTERNAL_STAGE}/include )
+			set (CURL_DEPENDS ${OPENSSL_REF})
+			set (CURL_INSTALL cp -f lib/lib*.lib ${CURL_INSTALL_LOC}/lib && cp -rf include/curl ${CURL_INSTALL_LOC}/include )
 		else()
 			set (CURL_PATCH echo "Nothing to patch on Unix")
-			set (CURL_CONFIGURE PKG_CONFIG_PATH=${EXTERNAL_STAGE} LIBS=-ldl ./configure --prefix=${EXTERNAL_STAGE} --with-ssl=${EXTERNAL_STAGE} --disable-shared --disable-ipv6 )
+			set (CURL_CONFIGURE PKG_CONFIG_PATH=${CURL_INSTALL_LOC} LIBS=-ldl ./configure --prefix=${CURL_INSTALL_LOC} --with-ssl=${OPENSSL_INSTALL_LOC} --disable-shared --disable-ipv6 --disable-ldap --disable-ldaps )
 			set (CURL_MAKE make)
 			set (CURL_INSTALL make install)
-			set (CURL_DEPENDS openssl zlib)
+			set (CURL_DEPENDS ${OPENSSL_REF} ${ZLIB_REF})
 		endif()
-
-		set (CURL_VER curl-7.19.6)
 
 		ExternalProject_Add(curl
 							DEPENDS ${CURL_DEPENDS}
-							PREFIX ${EXTERNAL_BUILD_PREFIX}/${CURL_VER}
 							#-- Download Step ----------
 							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${CURL_VER}.tar.gz ${CMD_TERM}
-							DOWNLOAD_DIR ${EXTERNAL_DL}
+							DOWNLOAD_DIR ${CURL_STAGE}/dl
 							URL http://parrot.cs.wisc.edu/externals/${CURL_VER}.tar.gz
 							#--Patch Step ----------
 							PATCH_COMMAND cd ${CURL_VER} ${CMD_TERM} ${CURL_PATCH}
@@ -59,22 +58,20 @@ if (WITH_CURL)
 							BUILD_COMMAND cd ${CURL_VER} && ${CURL_MAKE}
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
-							INSTALL_DIR ${EXTERNAL_STAGE}
+							INSTALL_DIR ${CURL_INSTALL_LOC}
 							INSTALL_COMMAND cd ${CURL_VER} && ${CURL_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)
-			set(CURL_FOUND "${EXTERNAL_STAGE}/lib/libcurl.lib")
-			set_property( TARGET curl PROPERTY FOLDER "externals" )
+			set(CURL_FOUND "${CURL_INSTALL_LOC}/lib/libcurl.lib")
 		else()
 			# libcurl is dependent on these libraries on some
 			# platforms.
 			find_multiple( "rt;idn" CURL_FOUND )
-			set(CURL_FOUND "${EXTERNAL_STAGE}/lib/libcurl.a;${CURL_FOUND}")
+			set(CURL_FOUND "${CURL_INSTALL_LOC}/lib/libcurl.a;${CURL_FOUND}")
 		endif()
-
-		append_var (CONDOR_EXTERNALS curl)
-
+		
+		condor_post_external( curl include OFF )
 
 	else( NOT PROPER )
 

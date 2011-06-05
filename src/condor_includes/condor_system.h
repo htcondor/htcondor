@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -169,7 +169,6 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
-#include <rpc/types.h>
 #if !defined(Darwin) && !defined(CONDOR_FREEBSD)
 #include <values.h>
 #endif

@@ -20,9 +20,10 @@ option(WITH_GSOAP "Compiling with support for GSOAP" ON)
 
 if (WITH_GSOAP)
 
-	if ( NOT PROPER )
+	# this is only done in proper mode to cache local mods which are done to gsoap
+	condor_pre_external( GSOAP gsoap-2.7.10 "src;include" "done")
 
-		set (GSOAP_VER gsoap-2.7.10)
+	if ( NOT PROPER )
 
 		if (WINDOWS)
 			set (GSOAP_PATCH cp ${CMAKE_CURRENT_SOURCE_DIR}/config.WINDOWS.h gsoap/src/config.h)
@@ -32,23 +33,24 @@ if (WITH_GSOAP)
 			set (GSOAP_MAKE set BISON_SIMPLE=${BISON_SIMPLE}\r\n
 			                gmake -f Makefile.win32 -C gsoap/src )
 			
-			set (GSOAP_INSTALL set PACKAGE_INSTALL_DIR=${EXTERNAL_STAGE}\r\n
+			set (GSOAP_INSTALL set PACKAGE_INSTALL_DIR=${GSOAP_INSTALL_LOC}\r\n
 			                   gmake -f Makefile.win32 install -C gsoap/src )
 		else(WINDOWS)
 			set (GSOAP_PATCH  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/install_soapcpp2_wsdl2h_aux-2.7.10-Makefile.in.patch &&
 							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/fix_xlocale_insanity.patch &&
 							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/nmi_prereq_hack.patch)
-			set (GSOAP_CONFIGURE ./configure --prefix=${EXTERNAL_STAGE} --disable-dependency-tracking CPPFLAGS=-I${EXTERNAL_STAGE}/include/)
+			set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/)
 			set (GSOAP_MAKE make )
 			set (GSOAP_INSTALL make install )
 		endif(WINDOWS)
 
+		message (STATUS "OPENSSL_INSTALL_LOC = ${OPENSSL_INSTALL_LOC}")
+
 		ExternalProject_Add( gsoap
-					DEPENDS openssl
-				    PREFIX ${EXTERNAL_BUILD_PREFIX}/${GSOAP_VER}
+				    DEPENDS ${OPENSSL_REF}
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GSOAP_VER}.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${EXTERNAL_DL}
+				    DOWNLOAD_DIR ${GSOAP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${GSOAP_VER}.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND cd ${GSOAP_VER} ${CMD_TERM} ${GSOAP_PATCH}
@@ -58,22 +60,25 @@ if (WITH_GSOAP)
 				    BUILD_COMMAND cd ${GSOAP_VER} ${CMD_TERM} ${GSOAP_MAKE}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_STAGE}
-				    INSTALL_COMMAND cd ${GSOAP_VER} ${CMD_TERM} ${GSOAP_INSTALL} )
+				    INSTALL_DIR ${GSOAP_INSTALL_LOC}
+				    INSTALL_COMMAND cd ${GSOAP_VER}
+				    ${CMD_TERM} ${GSOAP_INSTALL} ${CMD_TERM}
+				    touch ${GSOAP_INSTALL_LOC}/done )
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (NOT WINDOWS)
-			set(GSOAP_FOUND "${EXTERNAL_STAGE}/lib/libgsoapssl++.a")
-			set(SOAPCPP2 "${EXTERNAL_STAGE}/bin/soapcpp2")
+			set(GSOAP_FOUND "${GSOAP_INSTALL_LOC}/lib/libgsoapssl++.a")	
+			set(SOAPCPP2 "${GSOAP_INSTALL_LOC}/bin/soapcpp2")
+			condor_post_external( gsoap include OFF )
 		else(NOT WINDOWS)
+			condor_post_external( gsoap include OFF )
+			# gsoap is handled differently on windows
 			set(GSOAP_FOUND ON)
-			set(GSOAP_SRC "${EXTERNAL_STAGE}/src/stdsoap2.cpp" PARENT_SCOPE )
-			set(SOAPCPP2 "${EXTERNAL_STAGE}/soapcpp2.exe")
-			set_property( TARGET gsoap PROPERTY FOLDER "externals" )
-		endif(NOT WINDOWS)
-
-		set ( GSOAP_SHARE "${EXTERNAL_BUILD_PREFIX}/${GSOAP_VER}/src/gsoap/${GSOAP_VER}/gsoap" )
-		append_var (CONDOR_EXTERNALS gsoap)
+			set(GSOAP_SRC "${GSOAP_INSTALL_LOC}/src/stdsoap2.cpp" PARENT_SCOPE )
+			set(SOAPCPP2 "${GSOAP_INSTALL_LOC}/soapcpp2.exe")
+		endif(NOT WINDOWS)		
+		
+		set ( GSOAP_SHARE "${GSOAP_INSTALL_LOC}/share/gsoap" )
 		set(WSSEAPI "WSSEAPI-NOTFOUND")
 
 	else( NOT PROPER )
@@ -95,12 +100,12 @@ if (WITH_GSOAP)
 		find_file(WSSEAPI wsseapi.cpp HINTS ${GSOAP_SHARE}/plugin/ )
 
 		exec_program ( cp
-					   ARGS ${GSOAP_SHARE}/plugin/wsseapi.c ${EXTERNAL_STAGE}/src/wsseapi.cpp && patch -p3 ${EXTERNAL_STAGE}/src/wsseapi.cpp ${CMAKE_CURRENT_SOURCE_DIR}/wsseapi.patch
+					   ARGS ${GSOAP_SHARE}/plugin/wsseapi.c ${GSOAP_INSTALL_LOC}/src/wsseapi.cpp && patch -p3 ${GSOAP_INSTALL_LOC}/src/wsseapi.cpp ${CMAKE_CURRENT_SOURCE_DIR}/wsseapi.patch
 					   RETURN_VALUE WSSEAPI_PATCH )
 		
 		dprint("WSSEAPI_PATCH = ${WSSEAPI_PATCH}")
 		if (WSSEAPI_PATCH EQUAL 0)
-		  set(WSSEAPI ${EXTERNAL_STAGE}/src/wsseapi.cpp)
+		  set(WSSEAPI ${GSOAP_INSTALL_LOC}/src/wsseapi.cpp)
 		  set(PRE_WSEAPPI_CPP ON PARENT_SCOPE)
 		endif()
 
@@ -113,15 +118,15 @@ if (WITH_GSOAP)
 			set( GSOAP_FOUND ${GSOAP_FOUND} PARENT_SCOPE )
 
 			# removing dependencies from condor-proper.
-			command_target( cp_smdevp cp "${GSOAP_SHARE}/plugin/smdevp.c;${EXTERNAL_STAGE}/src/smdevp.cpp" "${EXTERNAL_STAGE}/src/smdevp.cpp" )
+			command_target( cp_smdevp cp "${GSOAP_SHARE}/plugin/smdevp.c;${GSOAP_INSTALL_LOC}/src/smdevp.cpp" "${GSOAP_INSTALL_LOC}/src/smdevp.cpp" )
 			append_var (CONDOR_EXTERNALS cp_smdevp)
 			add_dependencies(cp_smdevp gsoap)
 
 			if (${WSSEAPI} STREQUAL "WSSEAPI-NOTFOUND" )
 
-			  command_target(cp_wsseapi cp "${GSOAP_SHARE}/plugin/wsseapi.c;${EXTERNAL_STAGE}/src/wsseapi.cpp;&&;patch;-p3;${EXTERNAL_STAGE}/src/wsseapi.cpp;${CMAKE_CURRENT_SOURCE_DIR}/wsseapi.patch" "${EXTERNAL_STAGE}/src/wsseapi.cpp")
+			  command_target(cp_wsseapi cp "${GSOAP_SHARE}/plugin/wsseapi.c;${GSOAP_INSTALL_LOC}/src/wsseapi.cpp;&&;patch;-p3;${GSOAP_INSTALL_LOC}/src/wsseapi.cpp;${CMAKE_CURRENT_SOURCE_DIR}/wsseapi.patch" "${GSOAP_INSTALL_LOC}/src/wsseapi.cpp")
 
-			  set(WSSEAPI ${EXTERNAL_STAGE}/src/wsseapi.cpp)
+			  set(WSSEAPI ${GSOAP_INSTALL_LOC}/src/wsseapi.cpp)
 			  set(PRE_WSEAPPI_CPP ON PARENT_SCOPE)
 			  add_dependencies(cp_wsseapi gsoap)
 			  append_var (CONDOR_EXTERNALS cp_wsseapi)
@@ -129,7 +134,7 @@ if (WITH_GSOAP)
 			endif()
 
 			set( WSSEAPI ${WSSEAPI} PARENT_SCOPE )
-			set( SMDEVP  ${EXTERNAL_STAGE}/src/smdevp.cpp PARENT_SCOPE )
+			set( SMDEVP  ${GSOAP_INSTALL_LOC}/src/smdevp.cpp PARENT_SCOPE )
 		
 		endif(NOT WINDOWS)
 		

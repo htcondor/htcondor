@@ -255,16 +255,8 @@ private:
 // when the class instance is deleted
 class DeleteFileLater {
  public:
-	DeleteFileLater (const char * _name) {
-		filename = _name?strdup(_name):NULL;
-	}
-
-	~DeleteFileLater () {
-		if (filename) {
-			unlink(filename);
-			free (filename);
-		}
-	}
+	DeleteFileLater (const char * _name);
+	~DeleteFileLater ();
  protected:
 	char * filename;
 };

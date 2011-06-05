@@ -44,7 +44,7 @@ bool operator>=(const MyString& L, const std::string& R) { return R <= L.Value()
 bool operator>=(const std::string& L, const MyString& R) { return L >= R.Value(); }
 
 
-int sprintf(std::string& s, const char* format, va_list pargs) {
+int vsprintf(std::string& s, const char* format, va_list pargs) {
     char fixbuf[STL_STRING_UTILS_FIXBUF];
     const int fixlen = sizeof(fixbuf)/sizeof(fixbuf[0]);
 	int n;
@@ -105,7 +105,7 @@ int sprintf(std::string& s, const char* format, va_list pargs) {
 int sprintf(std::string& s, const char* format, ...) {
     va_list args;
     va_start(args, format);
-    int r = sprintf(s, format, args);
+    int r = vsprintf(s, format, args);
     va_end(args);
     return r;
 }
@@ -115,7 +115,7 @@ int sprintf(MyString& s, const char* format, ...) {
     std::string t;
     va_start(args, format);
     // this gets me the sprintf-standard return value (# chars printed)
-    int r = sprintf(t, format, args);
+    int r = vsprintf(t, format, args);
     va_end(args);
     assign(s, t);
     return r;
@@ -125,7 +125,7 @@ int sprintf_cat(std::string& s, const char* format, ...) {
     va_list args;
     std::string t;
     va_start(args, format);
-    int r = sprintf(t, format, args);
+    int r = vsprintf(t, format, args);
     va_end(args);
     s += t;
     return r;
@@ -135,7 +135,7 @@ int sprintf_cat(MyString& s, const char* format, ...) {
     va_list args;
     std::string t;
     va_start(args, format);
-    int r = sprintf(t, format, args);
+    int r = vsprintf(t, format, args);
     va_end(args);
     s += t.c_str();
     return r;

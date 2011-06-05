@@ -106,7 +106,8 @@ class FileTransfer {
 	int SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
 						 ReliSock *sock_to_use = NULL, 
 						 priv_state priv = PRIV_UNKNOWN,
-						 bool use_file_catalog = true);
+						 bool use_file_catalog = true,
+						 bool is_spool = false);
 
 	/** @param Ad contains filename remaps for downloaded files.
 		       If NULL, turns off remaps.

@@ -51,6 +51,9 @@
 #include "qmgmt.h"
 #include "schedd_negotiate.h"
 
+#include <vector>
+using std::vector;
+
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 extern char* Name;
@@ -3072,8 +3075,6 @@ void
 DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 {
 	AllocationNode* alloc;
-	MRecArray* matches;
-	int i, n, m;
 
 	if( ! srec ) {
 		EXCEPT( "DedicatedScheduler::shutdownMpiJob: srec is NULL!" );
@@ -3088,16 +3089,20 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 				srec->job_id.cluster ); 
 	}
 	alloc->status = A_DYING;
-	for( i=0; i<alloc->num_procs; i++ ) {
-		matches = (*alloc->matches)[i];
-		n = matches->getlast();
-		for( m=0 ; m <= n ; m++ ) {
-			if (kill) {
-				dprintf( D_ALWAYS, "Dedicated job abnormally ended, releasing claim\n");
-				releaseClaim( (*matches)[m], true );
-			} else {
-				deactivateClaim( (*matches)[m] );
-			}
+	for (int i=0; i<alloc->num_procs; i++ ) {
+        MRecArray* matches = (*alloc->matches)[i];
+        int n = matches->getlast();
+        vector<match_rec*> delmr;
+        // Save match_rec pointers into a vector, because deactivation of claims 
+        // alters the MRecArray object (*matches) destructively:
+        for (int j = 0;  j <= n;  ++j) delmr.push_back((*matches)[j]);
+        for (vector<match_rec*>::iterator mr(delmr.begin());  mr != delmr.end();  ++mr) {
+            if (kill) {
+                dprintf( D_ALWAYS, "Dedicated job abnormally ended, releasing claim\n");
+                releaseClaim(*mr, true );
+            } else {
+                deactivateClaim(*mr);
+            }
 		}
 	}
 }
@@ -3112,11 +3117,17 @@ DedicatedScheduler::AddMrec(
 	char const *remote_pool
 )
 {
+		// The dedicated scheduler expects the job id to not be set
+		// until this match is associated with a job.
+	PROC_ID empty_job_id;
+	empty_job_id.cluster = -1;
+	empty_job_id.proc = -1;
+
 		// Now, create a match_rec for this resource
 		// Note, we want to claim this startd as the
 		// "DedicatedScheduler" owner, which is why we call
 		// owner() here...
-	match_rec *mrec = new match_rec( claim_id, startd_addr, &job_id,
+	match_rec *mrec = new match_rec( claim_id, startd_addr, &empty_job_id,
 									 match_ad,owner(),remote_pool,true);
 
 	match_rec *existing_mrec;

@@ -167,8 +167,6 @@ static MyString
 static const char
 	*readme = "README";
 
-static time_t current_time;
-
 bool OTEST_Directory(void) {
 	emit_object("Directory");
 	emit_comment("Class to iterate filenames in a subdirectory.  Given a "
@@ -417,10 +415,6 @@ static void setup() {
 
 	// Close FILE* that was written to
 	cut_assert_z( fclose(file_1) );
-	
-	// Get the current time
-	current_time = time(NULL);
-
 }
 
 static void cleanup() {
@@ -1082,10 +1076,10 @@ static bool test_get_access_time_before() {
 	emit_output_expected_header();
 	emit_retval("%d", 0);
 	Directory dir(original_dir.Value());
-	time_t ret_val = dir.GetAccessTime();
+	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	if(ret_val != 0) {
+	emit_retval("%d", atime);
+	if(atime != 0) {
 		FAIL;
 	}
 	PASS;
@@ -1101,10 +1095,10 @@ static bool test_get_access_time_empty() {
 	emit_retval("%d", 0);
 	Directory dir(empty_dir.Value());
 	dir.Next();
-	time_t ret_val = dir.GetAccessTime();
+	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	if(ret_val != 0) {
+	emit_retval("%d", atime);
+	if(atime != 0) {
 		FAIL;
 	}
 	PASS;
@@ -1118,28 +1112,33 @@ static bool test_get_access_time_valid() {
 	Directory dir(original_dir.Value());
 	const char* next = dir.Next();
 	emit_param("Current File", "%s", next);
-	time_t ret_val = dir.GetAccessTime();
+	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	if(ret_val == 0) {
+	emit_retval("%d", atime);
+	if(atime == 0) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_access_time_close() {
-	emit_test("Test that GetAccessTime() returns a time close to the current "
-		"time for a file that was just created.");
+	emit_test("Test that GetAccessTime() returns the same time as stat() for a "
+		"file that was just created.");
 	emit_input_header();
 	emit_param("Directory", "%s", tmp_dir.Value());
 	Directory dir(tmp_dir.Value());
 	const char* next = dir.Next();
 	emit_param("Current File", "%s", next);
-	time_t ret_val = dir.GetAccessTime();
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_atime);
+	time_t atime = dir.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - ret_val) > 10) {
+	emit_retval("%d", atime);
+	if(atime != st.st_atime) {
 		FAIL;
 	}
 	PASS;
@@ -1153,10 +1152,10 @@ static bool test_get_modify_time_before() {
 	emit_output_expected_header();
 	emit_retval("%d", 0);
 	Directory dir(original_dir.Value());
-	time_t ret_val = dir.GetModifyTime();
+	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	if(ret_val != 0) {
+	emit_retval("%d", mtime);
+	if(mtime != 0) {
 		FAIL;
 	}
 	PASS;
@@ -1172,10 +1171,10 @@ static bool test_get_modify_time_empty() {
 	emit_retval("%d", 0);
 	Directory dir(empty_dir.Value());
 	dir.Next();
-	time_t ret_val = dir.GetModifyTime();
+	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	if(ret_val != 0) {
+	emit_retval("%d", mtime);
+	if(mtime != 0) {
 		FAIL;
 	}
 	PASS;
@@ -1189,10 +1188,10 @@ static bool test_get_modify_time_valid() {
 	Directory dir(original_dir.Value());
 	const char* next = dir.Next();
 	emit_param("Current File", "%s", next);
-	time_t ret_val = dir.GetModifyTime();
+	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	if(ret_val == 0) {
+	emit_retval("%d", mtime);
+	if(mtime == 0) {
 		FAIL;
 	}
 	PASS;
@@ -1206,11 +1205,16 @@ static bool test_get_modify_time_close() {
 	Directory dir(tmp_dir.Value());
 	const char* next = dir.Next();
 	emit_param("Current File", "%s", next);
-	time_t ret_val = dir.GetModifyTime();
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_mtime);
+	time_t mtime = dir.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - ret_val) > 10) {
+	emit_retval("%d", mtime);
+	if(mtime != st.st_mtime) {
 		FAIL;
 	}
 	PASS;
@@ -1224,10 +1228,10 @@ static bool test_get_create_time_before() {
 	emit_output_expected_header();
 	emit_retval("%d", 0);
 	Directory dir(original_dir.Value());
-	time_t ret_val = dir.GetCreateTime();
+	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	if(ret_val != 0) {
+	emit_retval("%d", ctime);
+	if(ctime != 0) {
 		FAIL;
 	}
 	PASS;
@@ -1243,10 +1247,10 @@ static bool test_get_create_time_empty() {
 	emit_retval("%d", 0);
 	Directory dir(empty_dir.Value());
 	dir.Next();
-	time_t ret_val = dir.GetCreateTime();
+	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	if(ret_val != 0) {
+	emit_retval("%d", ctime);
+	if(ctime != 0) {
 		FAIL;
 	}
 	PASS;
@@ -1260,10 +1264,10 @@ static bool test_get_create_time_valid() {
 	Directory dir(original_dir.Value());
 	const char* next = dir.Next();
 	emit_param("Current File", "%s", next);
-	time_t ret_val = dir.GetCreateTime();
+	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	if(ret_val == 0) {
+	emit_retval("%d", ctime);
+	if(ctime == 0) {
 		FAIL;
 	}
 	PASS;
@@ -1277,11 +1281,16 @@ static bool test_get_create_time_close() {
 	Directory dir(tmp_dir.Value());
 	const char* next = dir.Next();
 	emit_param("Current File", "%s", next);
-	time_t ret_val = dir.GetCreateTime();
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, next);
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_ctime);
+	time_t ctime = dir.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", ret_val);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - ret_val) > 10) {
+	emit_retval("%d", ctime);
+	if(ctime != st.st_ctime) {
 		FAIL;
 	}
 	PASS;

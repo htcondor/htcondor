@@ -29,7 +29,7 @@ set(PACKAGE "condor")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "7.6.0")
+set(VERSION "7.6.1")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This shuld be "PRE-RELEASE-UWCS most of the time, and OFF when
@@ -90,14 +90,17 @@ include (CondorStaticLib)
 include (CondorPlugin)
 include (CheckCXXCompilerFlag)
 include (CheckCXXSourceCompiles)
-include (CondorConfigure)     # will initiate the configure
 include (AddSubdirectories)
 include (CondorPLTest)
 include (CondorExeTest)
 include (CondorStdExeTest)
 include (SrcTargetRef)
 include (DumpLocalFlags)
+include (CondorPreExternal)
+include (CondorPostExternal)
+include (CondorConfigure)     # will initiate the configure
 include (TarGz) # Must be after include(CondorPackageConfig)
+
 
 if ( WINDOWS )
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)

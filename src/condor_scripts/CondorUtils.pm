@@ -257,7 +257,7 @@ sub runcmd {
 		}
 		$sz = $#errlines;
 		if($sz != -1) {
-			PrintStdOut(\@errlines);
+			PrintStdErr(\@errlines);
 		}
 		PrintFooter();
 	}

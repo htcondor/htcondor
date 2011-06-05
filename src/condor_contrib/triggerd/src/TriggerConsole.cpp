@@ -102,15 +102,37 @@ TriggerConsole::config(std::string host, int port, std::string user, std::string
    url << host << ":" << port;
    options << "{reconnect:True"; 
    if (!user.empty())
+   {
       options << ", username:'" << user << "', password:'" << passwd << "'";
+   }
    options << "}";
 
-   qpidConnection = qpid::messaging::Connection(url.str(), options.str());
-   qpidConnection.open();
+   try
+   {
+      qpidConnection = qpid::messaging::Connection(url.str(), options.str());
+      qpidConnection.open();
+   }
+   catch(...)
+   {
+      dprintf(D_ALWAYS, "Triggerd Error: Failed to contact AMQP broker on host '%s'.  Absent nodes detection disabled\n", host.c_str());
+      qpidConnection.close();
+   }
 
-   qmf2Session = qmf::ConsoleSession(qpidConnection);
-   qmf2Session.open();
-   qmf2Session.setAgentFilter("[and, [eq, _vendor, [quote, 'com.redhat.grid']], [eq, _product, [quote, 'master']]]");
+   if (true == qpidConnection.isOpen())
+   {
+      try
+      {
+         qmf2Session = qmf::ConsoleSession(qpidConnection);
+         qmf2Session.open();
+         qmf2Session.setAgentFilter("[and, [eq, _vendor, [quote, 'com.redhat.grid']], [eq, _product, [quote, 'master']]]");
+      }
+      catch(...)
+      {
+         dprintf(D_ALWAYS, "Triggerd Error: Failed to setup QMF connections\n");
+         qpidConnection.close();
+         qmf2Session.close();
+      }
+   }
 }
 
 
@@ -123,6 +145,12 @@ TriggerConsole::findAbsentNodes()
    std::set<std::string> nodes_in_pool;
    std::list<std::string> missing_nodes;
    uint64_t timeout(30);
+
+   // Only Perform the check if the qpid connection is valid
+   if (false == qpidConnection.isOpen())
+   {
+      return missing_nodes;
+   }
 
    // Drain the queue of pending console events.
    qmf::ConsoleEvent evt;

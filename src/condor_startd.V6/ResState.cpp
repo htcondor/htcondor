@@ -412,6 +412,25 @@ ResState::eval( void )
 		break;	
 
 	case owner_state:
+			// If the dynamic slot is allocated in the owner state
+			// (e.g. because of START expression contains attributes
+			// of job ClassAd), it may never go back to Unclaimed 
+			// state. So we need to delete the dynmaic slot in owner
+			// state.
+		if( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+#if HAVE_JOB_HOOKS
+				// If we're currently fetching we can't delete
+				// ourselves. If we do when the hook returns we won't
+				// be around to handle the response.
+			if( rip->isCurrentlyFetching() ) {
+				dprintf(D_ALWAYS, "State change: Owner -> Deleted delayed for outstanding work fetch\n");
+				break;
+			}
+#endif
+			change( delete_state );
+			return TRUE; // XXX: change TRUE
+		}
+
 		if( ! rip->eval_is_owner() ) {
 			dprintf( D_ALWAYS, "State change: IS_OWNER is false\n" );
 			change( unclaimed_state );
@@ -764,7 +783,7 @@ ResState::enter_action( State s, Activity a,
 				if( rip->preemptWasTrue() && rip->wants_hold() ) {
 					rip->hold_job();
 				}
-				else if( ! rip->r_cur->starterKillSoft() ) {
+				else if( ! rip->r_cur->starterKillSoft(true) ) {
 					rip->r_cur->starterKillPg( SIGKILL );
 					dprintf( D_ALWAYS,
 							 "State change: Error sending signals to starter\n" );

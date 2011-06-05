@@ -596,7 +596,7 @@ id=559
 
 [GSI_DAEMON_DIRECTORY]
 aliases=
-default=/etc/grid-security/
+default=
 version=0.0.0
 range=.*
 state=default
@@ -3558,7 +3558,7 @@ id=189
 
 [CREATE_CORE_FILES]
 aliases=
-default=false
+default=
 version=0.0.0
 range=.*
 state=default
@@ -9481,7 +9481,7 @@ id=555
 
 [GRIDMAP]
 aliases=
-default=$(GSI_DAEMON_DIRECTORY)/grid-mapfile
+default=
 version=0.0.0
 range=.*
 state=default
@@ -9497,7 +9497,7 @@ id=555
 
 [GSI_DAEMON_TRUSTED_CA_DIR]
 aliases=
-default=$(GSI_DAEMON_DIRECTORY)/certificates
+default=
 version=0.0.0
 range=.*
 state=default
@@ -10151,3 +10151,20 @@ usage=
 url=
 tags=
 id=601
+
+[SHADOW_RUN_UNKNOWN_USER_JOBS]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=Shadow Run Unknown User Jobs
+usage=
+url=
+tags=shadow
+id=602
+

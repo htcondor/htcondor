@@ -163,7 +163,8 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new Attribute ( Attribute::INTEGER_TYPE, to_string<int> ( i,std::dec ).c_str() );
+            const char* int_str = to_string<int> ( i,dec ).c_str();
+            _attribute = new Attribute ( Attribute::INTEGER_TYPE, int_str );
             return true;
         }
         case classad::Value::REAL_VALUE:
@@ -173,7 +174,8 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new Attribute ( Attribute::FLOAT_TYPE, to_string<float> ( f,std::dec ).c_str() );
+            const char* float_str = to_string<float> ( f,dec ).c_str();
+            _attribute = new Attribute ( Attribute::FLOAT_TYPE, float_str );
             return true;
         }
         case classad::Value::STRING_VALUE:
@@ -183,7 +185,7 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
             {
                 return false;
             }
-            _attribute = new Attribute ( Attribute::STRING_TYPE, str.StrDup() );
+            _attribute = new Attribute ( Attribute::STRING_TYPE, str.Value() );
             return true;
         }
         default:
@@ -205,7 +207,7 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
 
 int LiveJobImpl::GetStatus() const
 {
-    const Attribute* attr;
+    const Attribute* attr = NULL;
 
     if ( !this->Get ( ATTR_JOB_STATUS, attr ) )
     {
@@ -213,7 +215,10 @@ int LiveJobImpl::GetStatus() const
 	return JOB_STATUS_MIN;
     }
 
-    return strtol ( attr->GetValue(), ( char ** ) NULL, 10 );
+    int _status = strtol ( attr->GetValue(), ( char ** ) NULL, 10 );
+    delete attr;
+
+    return _status;
 }
 
 void
@@ -247,7 +252,8 @@ LiveJobImpl::Set ( const char *_name, const char *_value )
 	// if we are in here, we don't have m_submission
 	PROC_ID id = getProcByString(m_job->GetKey());
 	std::string val = TrimQuotes( _value );
-	g_ownerless[id.cluster] = strdup( val.c_str() );
+	g_ownerless_clusters[id.cluster] = val;
+	m_job->UpdateSubmission(id.cluster,val.c_str());
     }
 
     // parse the type
@@ -303,36 +309,34 @@ LiveJobImpl::Remove ( const char *_name )
 	m_full_ad->ChainToAd(cp);
 }
 
-const ClassAd* LiveJobImpl::GetSummary () const
+const ClassAd* LiveJobImpl::GetSummary ()
 {
-	ClassAd* _summary_ad = NULL;
 	if (!m_summary_ad) {
-		_summary_ad = new ClassAd();
-		_summary_ad->ResetExpr();
+		m_summary_ad = new ClassAd();
+		m_summary_ad->ResetExpr();
 		int i = 0;
 		while (NULL != ATTRS[i]) {
 			const Attribute* attr = NULL;
 			if (this->Get(ATTRS[i],attr)) {
 				switch (attr->GetType()) {
 					case Attribute::FLOAT_TYPE:
-						_summary_ad->Assign(ATTRS[i], atof(attr->GetValue()));
+						m_summary_ad->Assign(ATTRS[i], atof(attr->GetValue()));
 						break;
 					case Attribute::INTEGER_TYPE:
-						_summary_ad->Assign(ATTRS[i], atol(attr->GetValue()));
+						m_summary_ad->Assign(ATTRS[i], atol(attr->GetValue()));
 						break;
 					case Attribute::EXPR_TYPE:
 					case Attribute::STRING_TYPE:
 					default:
-						_summary_ad->Assign(ATTRS[i], strdup(attr->GetValue()));
+						m_summary_ad->Assign(ATTRS[i], attr->GetValue());
 				}
 			}
+		delete attr;
 		i++;
 		}
-	} else {
-		_summary_ad = m_summary_ad;
 	}
 
-	return _summary_ad;
+	return m_summary_ad;
 }
 
 const ClassAd* LiveJobImpl::GetFullAd () const
@@ -372,7 +376,7 @@ HistoryJobImpl::HistoryJobImpl ( const HistoryEntry& _he):
 	m_he(_he)
 {
     m_job = NULL;
-    g_ownerless[_he.cluster] = strdup(_he.owner.c_str());
+    g_ownerless_clusters[_he.cluster] = _he.owner;
     dprintf ( D_FULLDEBUG, "HistoryJobImpl created for '%d.%d'\n", _he.cluster, _he.proc );
 }
 
@@ -507,7 +511,7 @@ Job::~Job() {
 	delete m_live_job;
 	delete m_history_job;
 
-	delete m_key;
+	delete [] m_key;
 	// submissions are shared and can't be deleted here
 }
 
@@ -585,18 +589,26 @@ void Job::DecrementSubmission() {
 }
 
 void
+Job::UpdateSubmission ( int cluster, const char* owner )
+{
+	OwnerlessSubmissionType::const_iterator it = g_ownerless_submissions.find ( cluster );
+	if ( g_ownerless_submissions.end() != it ) {
+		SubmissionObject* submission = (*it).second;
+		submission->SetOwner(owner);
+		g_ownerless_submissions.erase(cluster);
+	}
+}
+
+void
 Job::SetSubmission ( const char* _subName, int cluster )
 {
 	const char* owner = NULL;
 
 	// need to see if someone has left us an owner
-	OwnerlessClusterType::const_iterator it = g_ownerless.find ( cluster );
-	if ( g_ownerless.end() == it )
+	OwnerlessClusterType::const_iterator it = g_ownerless_clusters.find ( cluster );
+	if ( g_ownerless_clusters.end() != it )
 	{
-		dprintf ( D_FULLDEBUG, "warning: unable to resolve owner for Job key '%s' and cluster '%d'\n", GetKey(), cluster );
-	}
-	else {
-		owner = ( *it ).second ;
+		owner = ( *it ).second.c_str() ;
 	}
 
 	SubmissionCollectionType::const_iterator element = g_submissions.find ( _subName );
@@ -617,7 +629,11 @@ Job::SetSubmission ( const char* _subName, int cluster )
 	if (owner) {
 		// ensure that the submission has an owner
 		m_submission->SetOwner ( owner );
-		g_ownerless.erase ( cluster );
+		g_ownerless_clusters.erase ( cluster );
+	}
+	else {
+		// add it to our list to be updated for owner
+		g_ownerless_submissions[cluster] = m_submission;
 	}
 
 }
@@ -682,7 +698,7 @@ void Job::GetSummary ( ClassAd& _ad) const
 {
 	//same thing as full ad
 	if (m_live_job) {
-		_ad = *(m_live_job->GetSummary());
+		_ad.CopyFrom(*m_live_job->GetSummary());
 	}
 	else {
 		m_history_job->GetSummary(_ad);

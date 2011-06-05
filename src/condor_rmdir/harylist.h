@@ -118,13 +118,13 @@ HRESULT FNEXPORT HaryList_InsertList (
 INLINE LPVOID HaryList_AllocItem(HARYLIST hlst, LONG cbItem) {
 	DASSERT(PCARYLIST_PTR(hlst)->cbItem == sizeof(void*));
 	DASSERT(PCARYLIST_PTR(hlst)->fdwOptions & ARYLIST_OPT_F_GPTRS);
-	return (LPVOID)GlobalAllocPtr(GPTR, cbItem);
+	return (LPVOID)malloc(cbItem);
 }
 
 INLINE void HaryList_FreeItem(HARYLIST hlst, LPVOID pvItem) {
 	DASSERT(PCARYLIST_PTR(hlst)->cbItem == sizeof(void*));
 	DASSERT(PCARYLIST_PTR(hlst)->fdwOptions & ARYLIST_OPT_F_GPTRS);
-	GlobalFreePtr(pvItem);
+	free(pvItem);
 }
 
 INLINE HRESULT HaryList_InsertItemCopy(HARYLIST hlst, LONG ix, LPCVOID pvItem) {
@@ -384,7 +384,7 @@ HRESULT FNEXPORT HaryList_Create (
 	else
 	{
 		*phlst = NULL;
-		plst = (PARYLIST)GlobalAllocPtr(GPTR, sizeof(*plst));
+		plst = (PARYLIST)malloc(sizeof(*plst));
 	}
 	if ( ! plst)
 		return E_OUTOFMEMORY;
@@ -407,7 +407,7 @@ HRESULT FNEXPORT HaryList_Create (
 	plst->cGrowBy    = cGrowBy;
 
     LONG cb = cAllocate * cbItem;
-    plst->pvList = (void**)GlobalAllocPtr(GPTR, cb);
+    plst->pvList = (void**)malloc(cb);
 
 	if (fdwOptions & ARYLIST_OPT_F_EMBEDDED)
 	{
@@ -417,7 +417,7 @@ HRESULT FNEXPORT HaryList_Create (
     DASSERT(plst->pvList);
     if ( ! plst->pvList)
     {
-        GlobalFreePtr(plst);
+        free(plst);
         return E_OUTOFMEMORY;
     }
 
@@ -445,12 +445,12 @@ HRESULT FNEXPORT HaryList_Destroy (HARYLIST hlst)
 				LPVOID pv = ppv[plst->cItems-1];
 				ppv[plst->cItems-1] = NULL;
 				if (pv)
-					GlobalFreePtr(pv);
+					free(pv);
 				--plst->cItems;
 			}
 		}
 
-        GlobalFreePtr(plst->pvList);
+        free(plst->pvList);
         plst->pvList = NULL;
     }
 
@@ -461,7 +461,7 @@ HRESULT FNEXPORT HaryList_Destroy (HARYLIST hlst)
     }
 
 	if ( ! (plst->fdwOptions & ARYLIST_OPT_F_EMBEDDED))
-		GlobalFreePtr(plst);
+		free(plst);
     return S_OK;
 }
 
@@ -485,12 +485,7 @@ HRESULT HaryList_GrowAllocated (
 
     LONG cbNewAlloc = (plst->cAllocated + cDelta) * plst->cbItem;
 
-    // 
-    // GlobalReAllocPtr can fail, will fail so we have to allocate
-    // a whole new buffer and copy the new data to it.
-    //pvNew = (LPVOID)GlobalReAllocPtr(plst->pvList, cb, GMEM_ZEROINIT);
-
-    void** pvNew = (void**)GlobalAllocPtr(GPTR, cbNewAlloc);
+    void** pvNew = (void**)malloc(cbNewAlloc);
     if ( ! pvNew)
     {
         hr = E_OUTOFMEMORY;
@@ -498,7 +493,7 @@ HRESULT HaryList_GrowAllocated (
     }
 
     RtlCopyMemory(pvNew, plst->pvList, plst->cAllocated * plst->cbItem);
-    GlobalFreePtr(plst->pvList);
+    free(plst->pvList);
 
     plst->pvList = pvNew;
     plst->cAllocated += cDelta;

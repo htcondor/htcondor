@@ -27,6 +27,8 @@ bool AddAttribute(compat_classad::ClassAd &ad, const char *name, qpid::types::Va
 
 bool IsValidGroupUserName(const std::string& _name, std::string& _text);
 
+bool IsValidParamName(const std::string& _name, std::string& _text);
+
 bool IsValidAttributeName(const std::string& _name, std::string& _text);
 
 bool CheckRequiredAttrs(compat_classad::ClassAd& ad, const char* attrs[], std::string& missing);

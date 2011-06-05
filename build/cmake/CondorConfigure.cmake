@@ -128,7 +128,15 @@ if( NOT WINDOWS)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
-	find_library(HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
+	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
+	find_library( LIBRESOLV_PATH resolv )
+    if( NOT "${LIBRESOLV_PATH}" MATCHES "-NOTFOUND" )
+      set(HAVE_LIBRESOLV ON)
+    endif()
+	find_library( LIBDL_PATH resolv )
+    if( NOT "${LIBDL_PATH}" MATCHES "-NOTFOUND" )
+      set(HAVE_LIBDL ON)
+    endif()
 	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
 
@@ -198,7 +206,11 @@ if( NOT WINDOWS)
 
 	check_struct_has_member("struct statfs" f_fstyp "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYP)
 	if (NOT ${OS_NAME} STREQUAL "DARWIN")
-		check_struct_has_member("struct statfs" f_fstypename "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYPENAME)
+  	  if( HAVE_SYS_STATFS_H )
+		check_struct_has_member("struct statfs" f_fstypename "sys/statfs.h" HAVE_STRUCT_STATFS_F_FSTYPENAME )
+	  else()
+		check_struct_has_member("struct statfs" f_fstypename "sys/mount.h" HAVE_STRUCT_STATFS_F_FSTYPENAME )
+	  endif()
 	endif()
 	check_struct_has_member("struct statfs" f_type "sys/statfs.h" HAVE_STRUCT_STATFS_F_TYPE)
 	check_struct_has_member("struct statvfs" f_basetype "sys/types.h;sys/statvfs.h" HAVE_STRUCT_STATVFS_F_BASETYPE)
@@ -322,6 +334,10 @@ elseif(${OS_NAME} STREQUAL "HPUX")
 	set(HPUX ON)
 	set(DOES_SAVE_SIGSTATE ON)
 	set(NEEDS_64BIT_STRUCTS ON)
+elseif(${OS_NAME} STREQUAL "HPUX")
+	set(HPUX ON)
+	set(DOES_SAVE_SIGSTATE ON)
+	set(NEEDS_64BIT_STRUCTS ON)
 endif()
 
 ##################################################
@@ -338,6 +354,7 @@ option(BUILD_TESTS "Will build internal test applications" ON)
 option(WANT_CONTRIB "Enable quill functionality" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
@@ -397,47 +414,40 @@ if (PROPER)
 	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
 	find_path(HAVE_PCRE_H "pcre.h")
 	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
-else(PROPER)
+else()
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
-	# temporarily disable cacheing externals on windows, primarily b/c of nmi.
-	option(SCRATCH_EXTERNALS "Will put the externals into scratch location" OFF)
-
 endif(PROPER)
 
-## this primarily exists for nmi cached building.. yuk!
-if (SCRATCH_EXTERNALS AND EXISTS "/scratch/externals/cmake")
-	if (WINDOWS)
-		set (EXTERNAL_STAGE C:/temp/${PACKAGE_NAME})
-		set (EXTERNAL_DL C:/temp/${PACKAGE_NAME}/download)
-	else(WINDOWS)
-		set (EXTERNAL_STAGE /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/stage/root)
-		set (EXTERNAL_DL /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/externals/stage/download)
-
-		set (EXTERNAL_MOD_DEP /scratch/externals/cmake/${PACKAGE_NAME}_${PACKAGE_VERSION}/mod.txt)
-		add_custom_command(
-		OUTPUT ${EXTERNAL_MOD_DEP}
-		COMMAND chmod
-		ARGS -f -R a+rwX /scratch/externals/cmake && touch ${EXTERNAL_MOD_DEP}
-		COMMENT "changing ownership on externals cache because so on multiple user machines they can take advantage" )
-	endif(WINDOWS)
+if (WINDOWS)
+	# the environment variable CONDOR_BLD_EXTERNAL_STAGE will be set to the
+	# path for externals if the invoker wants shared externals. otherwise
+	# just build externals in a sub-directory of the project directory
+	#
+	set (EXTERNAL_STAGE $ENV{CONDOR_BLD_EXTERNAL_STAGE})
+	if (EXTERNAL_STAGE)
+        # cmake doesn't like windows paths, so make sure that this path separators are unix style
+	    string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
+	else()
+	   set (EXTERNAL_STAGE ${PROJECT_BINARY_DIR}/bld_external)
+    endif(EXTERNAL_STAGE)
 else()
-	set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
-	set (EXTERNAL_DL ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/download/${PACKAGE_NAME}_${PACKAGE_VERSION})
-endif()
+	if (PROPER)
+		set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/externals/stage/root/${PACKAGE_NAME}_${PACKAGE_VERSION})
+	else()
+		# temporarily disable AFS cache. 
+		#if ( EXISTS /p/condor/workspaces/externals  )
+		#	set (EXTERNAL_STAGE /p/condor/workspaces/externals/cmake/${OS_NAME}/${SYS_ARCH})
+		#else()
+			# in case someone tries something funky insert OS & ARCH in path
+			set (EXTERNAL_STAGE /scratch/condor_externals) #${OS_NAME}/${SYS_ARCH})
+		#endif()	
+	endif()
+endif(WINDOWS)
 
 dprint("EXTERNAL_STAGE=${EXTERNAL_STAGE}")
-set (EXTERNAL_BUILD_PREFIX ${EXTERNAL_STAGE}/opt)
-
-# let cmake carve out the paths for the externals
-file (MAKE_DIRECTORY ${EXTERNAL_DL}
-	${EXTERNAL_STAGE}/include
-	${EXTERNAL_STAGE}/lib
-	${EXTERNAL_STAGE}/lib64
-	${EXTERNAL_STAGE}/opt
-	${EXTERNAL_STAGE}/src )
-
-include_directories( ${EXTERNAL_STAGE}/include )
-link_directories( ${EXTERNAL_STAGE}/lib64 ${EXTERNAL_STAGE}/lib )
+if (NOT EXISTS ${EXTERNAL_STAGE})
+	file ( MAKE_DIRECTORY ${EXTERNAL_STAGE} )
+endif()
 
 ###########################################
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.39.0)
@@ -466,6 +476,7 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/1.9.10_4)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
 
 	# the following logic if for standard universe *only*
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
@@ -528,8 +539,8 @@ add_definitions(-DHAVE_CONFIG_H)
 
 ###########################################
 # include and link locations
-include_directories(${EXTERNAL_STAGE}/include ${EXTERNAL_INCLUDES} )
-link_directories(${EXTERNAL_STAGE}/lib)
+include_directories( ${CONDOR_EXTERNAL_INCLUDE_DIRS} )
+link_directories( ${CONDOR_EXTERNAL_LINK_DIRS} )
 
 if ( $ENV{JAVA_HOME} )
 	include_directories($ENV{JAVA_HOME}/include)
@@ -669,7 +680,7 @@ else(MSVC)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--warn-once -Wl,--warn-common")
 	endif(LINUX)
 
-	if(HAVE_DLOPEN AND NOT DARWIN)
+	if( HAVE_LIBDL AND NOT BSD_UNIX )
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ldl")
 	endif()
 
@@ -678,7 +689,7 @@ else(MSVC)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -static-libgcc")
 	endif(AIX)
 
-	if (NOT PROPER AND NOT AIX)
+	if ( NOT PROPER AND HAVE_LIBRESOLV )
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lresolv")
 		if (NOT DARWIN)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lcrypt")
@@ -818,8 +829,14 @@ dprint ( "CONDOR_PACKAGE_NAME: ${CONDOR_PACKAGE_NAME}" )
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "UNIX: ${UNIX}" )
 
+# is TRUE on all BSD-derived UNIXen
+dprint ( "BSD_UNIX: ${BSD_UNIX}" )
+
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "Linux: ${LINUX_NAME}" )
+
+# Print FreeBSD info
+dprint ( "FreeBSD: ${FREEBSD_MAJOR}.${FREEBSD_MINOR}" )
 
 # is TRUE on Windows, including CygWin
 dprint ( "WIN32: ${WIN32}" )

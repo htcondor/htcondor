@@ -75,6 +75,7 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
     int size = 128;
     if( ! already_seeded ) {
         unsigned char * buf = (unsigned char *) malloc(size);
+        ASSERT(buf);
 		for (int i = 0; i < size; i++) {
 			buf[i] = get_random_int() & 0xFF;
 		}
@@ -118,6 +119,6 @@ unsigned char * Condor_Crypt_Base :: oneWayHashKey(const char * initialKey)
 #ifdef HAVE_EXT_OPENSSL
     return Condor_MD_MAC::computeOnce((unsigned char *)initialKey, strlen(initialKey));
 #else 
-    return 0;
+    return NULL;
 #endif
 }

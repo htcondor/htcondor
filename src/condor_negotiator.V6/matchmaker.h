@@ -63,6 +63,7 @@ struct GroupEntry {
     // current usage information coming into this negotiation cycle
     double usage;
     ClassAdList* submitterAds;
+    double priority;
 
     // slot quota as computed by HGQ
     double quota;
@@ -175,7 +176,7 @@ class Matchmaker : public Service
 								 double minSlotWeight,
 			ClassAdListDoesNotDeleteAds& startdAds, 
 			ClaimIdHash& claimIds, ClassAdListDoesNotDeleteAds& scheddAds, 
-			float groupQuota=INT_MAX, float groupusage=0, const char* groupAccountingName=NULL);
+			float groupQuota=INT_MAX, const char* groupName=NULL);
 
 		
 		ClassAd *matchmakingAlgorithm(const char*,const char*,ClassAd&,ClassAdListDoesNotDeleteAds&,
