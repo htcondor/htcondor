@@ -1366,6 +1366,11 @@ unix_sigusr2(int)
 
 
 void
+classad_debug_dprintf(const char *s) {
+	dprintf(D_FULLDEBUG, s);
+}
+
+void
 dc_reconfig()
 {
 		// do this first in case anything else depends on DNS
@@ -1927,6 +1932,7 @@ int main( int argc, char** argv )
 		
 			// Actually set up logging.
 		dprintf_config(get_mySubSystem()->getName() );
+		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -2048,6 +2054,7 @@ int main( int argc, char** argv )
 		
 			// Actually set up logging.
 		dprintf_config(get_mySubSystem()->getName() );
+		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 	}
 
 		// Now that we have the daemonCore object, we can finally

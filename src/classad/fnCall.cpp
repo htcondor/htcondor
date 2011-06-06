@@ -2341,7 +2341,6 @@ debug( const char* name,const ArgumentList &argList,EvalState &state,
 	state.debug = false;
 	result = arg;
 	argList[0]->debug_format_value(result);
-	debug_print("\n");
 	return true;
 }
 
