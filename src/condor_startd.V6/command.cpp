@@ -1662,6 +1662,8 @@ activate_claim( Resource* rip, Stream* stream )
 	
 			// Send our local IP address, too.
 		
+		// stRec.ip_addr actually is never used.
+		// Just make sure that it does not have 0 value.
 		condor_sockaddr local_addr = get_local_ipaddr();
 		memcpy( &stRec.ip_addr, &local_addr.to_sin().sin_addr, sizeof(struct in_addr) );
 

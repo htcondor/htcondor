@@ -23,19 +23,11 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "internet.h"
-//#include "get_full_hostname.h"
 #include "my_hostname.h"
 #include "condor_attributes.h"
 #include "condor_netdb.h"
 #include "ipv6_hostname.h"
 
-//static char* hostname = NULL;
-//static char* full_hostname = NULL;
-//static unsigned int ip_addr;
-//static struct in_addr sin_addr;
-//static bool has_sin_addr = false;
-//static int hostnames_initialized = 0;
-//static int ipaddr_initialized = 0;
 static bool enable_convert_default_IP_to_socket_IP = true;
 static std::set< std::string > configured_network_interface_ips;
 static bool network_interface_matches_all;
@@ -57,62 +49,13 @@ my_hostname()
 
 
 // Return our full hostname (with domain) in a static data buffer.
-char*
-my_full_hostname()
-{
-//	if( ! hostnames_initialized ) {
-//		init_hostnames();
-//	}
-//	return full_hostname;
+char* my_full_hostname() {
     static MyString __my_full_hostname;
     __my_full_hostname = get_local_fqdn();
     return const_cast<char*>(__my_full_hostname.Value());
 }
 
-
-// Return the host-ordered, unsigned int version of our hostname.
-//unsigned int
-//my_ip_addr()
-//{
-//	if( ! ipaddr_initialized ) {
-//		init_ipaddr(0);
-//	}
-//	return ip_addr;
-//}
-
-
-//struct in_addr*
-//my_sin_addr()
-//{
-//	if( ! ipaddr_initialized ) {
-//		init_ipaddr(0);
-//	}
-//	return &sin_addr;
-//}
-
-
-char*
-my_ip_string()
-{
-//	if( ! ipaddr_initialized ) {
-//		init_ipaddr(0);
-//	}
-//
-//		// It is too risky to return whatever inet_ntoa() returns
-//		// directly, because the caller may unwittingly corrupt that
-//		// value by calling inet_ntoa() again.
-//
-//	char const *str = inet_ntoa(sin_addr);
-//	static char buf[IP_STRING_BUF_SIZE];
-//
-//	if(!str) {
-//		return NULL;
-//	}
-//
-//	ASSERT(strlen(str) < IP_STRING_BUF_SIZE);
-//
-//	strcpy(buf,str);
-//	return buf;
+char* my_ip_string() {
     static MyString __my_ip_string;
     __my_ip_string = get_local_ipaddr().to_ip_string();
     return const_cast<char*>(__my_ip_string.Value());

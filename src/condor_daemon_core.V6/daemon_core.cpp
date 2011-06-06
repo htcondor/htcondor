@@ -9073,10 +9073,6 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// is misconfigured [to preempt RUST like rust-admin #2915]
 
 	if( dc_rsock ) {
-			//const unsigned int my_ip = dc_rsock->get_ip_int();
-			//const unsigned int loopback_ip = ntohl( INADDR_LOOPBACK );
-
-			//if( my_ip == loopback_ip ) {
 		if ( dc_rsock->my_addr().is_loopback() ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
 			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );

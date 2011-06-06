@@ -95,7 +95,7 @@ public:
 	/** Verify() method returns whether connection should be allowed or
 		refused.
 		@param perm		   Not_Yet_Ducumented
-		@param sockaddr_in Not_Yet_Ducumented
+		@param addr		   Not_Yet_Ducumented
 		@param user        NULL or "" or fully qualified username
 		@param allow_reasy NULL or buffer to write explanation into
 		@param deny_reason NULL or buffer to write explanation into
