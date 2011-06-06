@@ -2033,13 +2033,8 @@ int main( int argc, char** argv )
 
 		// Now that we've potentially forked, we have our real pid, so
 		// we can instantiate a daemon core and it'll have the right
-		// pid.  Have lots of pid table hash buckets if we're the
-		// SCHEDD, since the SCHEDD could have lots of children... 
-	if ( get_mySubSystem()->isType( SUBSYSTEM_TYPE_SCHEDD ) ) {
-		daemonCore = new DaemonCore(503);
-	} else {
-		daemonCore = new DaemonCore();
-	}
+		// pid. 
+	daemonCore = new DaemonCore();
 
 	if( DynamicDirs ) {
 			// If we want to use dynamic dirs for log, spool and
