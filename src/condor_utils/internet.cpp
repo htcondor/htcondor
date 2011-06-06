@@ -72,7 +72,7 @@ split_sin( const char *addr, char **host, char **port, char **params )
 	if (*addr == '[') {
 		addr++;
 		// ipv6 address
-		char* pos = strchr(addr, ']');
+		const char* pos = strchr(addr, ']');
 		if (!pos) {
 			// mis-match bracket
 			return 0;
