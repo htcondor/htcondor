@@ -203,6 +203,7 @@ class FunctionCall : public ExprTree
 
 	static bool eval( const char* name,const ArgumentList &argList,EvalState &state,Value &result );
 
+	static bool debug( const char* name,const ArgumentList &argList,EvalState &state,Value &result );
  	//static bool doReal(const char*,const ArgumentList&,EvalState&,Value&);
 };
 

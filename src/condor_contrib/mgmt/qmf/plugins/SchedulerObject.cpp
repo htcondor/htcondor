@@ -102,6 +102,29 @@ SchedulerObject::update(const ClassAd &ad)
 	INTEGER(TotalRemovedJobs);
 	INTEGER(TotalRunningJobs);
 
+    INTEGER(WindowedStatWidth);
+    INTEGER(UpdateInterval);
+
+    INTEGER(JobsSubmitted);
+    DOUBLE(JobSubmissionRate);
+    INTEGER(JobsCompleted);
+    DOUBLE(JobCompletionRate);
+    INTEGER(JobsExited);
+    INTEGER(ShadowExceptions);
+    INTEGER(JobsSubmittedCum);
+    INTEGER(JobsCompletedCum);
+    INTEGER(JobsExitedCum);
+    INTEGER(ShadowExceptionsCum);
+    INTEGER(JobsStartedCum);
+    INTEGER(JobsStarted);
+    DOUBLE(JobStartRate);
+    DOUBLE(MeanTimeToStartCum);
+    DOUBLE(MeanRunningTimeCum);
+    INTEGER64(SumTimeToStartCum);
+    INTEGER64(SumRunningTimeCum);
+    DOUBLE(MeanTimeToStart);
+    DOUBLE(MeanRunningTime);
+
 	mgmtObject->set_System(mgmtObject->get_Machine());
 
 	// debug

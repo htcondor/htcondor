@@ -22,10 +22,9 @@
 #include "condor_debug.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
+#include "test.h"
 #include "stdio.h"
 #include "string.h"
-
-int phys_memory_test(int trials, double warn_ok_ratio);
 
 int phys_memory_test(int trials, double warn_ok_ratio)
 {

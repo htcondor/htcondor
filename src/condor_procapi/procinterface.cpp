@@ -100,6 +100,12 @@ ClassAd * ProcAd::dumpToAd( piPTR pi ) {
   ad->Insert(line);
   sprintf ( line, "RESIDENT_SET_SIZE = %ld", (long)pi->rssize );
   ad->Insert(line);
+#if HAVE_PSS
+  if( pi->pssize_available ) {
+	  sprintf ( line, "PROPORTIONAL_SET_SIZE = %ld", (long)pi->pssize );
+	  ad->Insert(line);
+  }
+#endif
   sprintf ( line, "MAJOR_PAGE_FAULTS = %ld", (long)pi->majfault );
   ad->Insert(line);
   sprintf ( line, "MINOR_PAGE_FAULTS = %ld", (long)pi->minfault );

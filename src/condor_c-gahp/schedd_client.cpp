@@ -245,6 +245,7 @@ doContactSchedd()
 				dc_schedd.holdJobs (
 					&id_list,
 					this_reason,
+					NULL,
 			 		&errstack);
 		} else if (this_command == SchedDRequest::SDC_RELEASE_JOB)  {
 			errstack.clear();

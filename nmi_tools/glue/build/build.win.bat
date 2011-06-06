@@ -1,5 +1,7 @@
+@echo off
 @echo CD=%CD%
 @echo HOME=%HOME%
+@echo CONDOR_BLD_EXTERNAL_STAGE=%CONDOR_BLD_EXTERNAL_STAGE%
 @echo LIB=%LIB%
 @echo INCLUDE=%INCLUDE%
 @echo PATH=%PATH%
@@ -30,7 +32,11 @@ if "~%_NMI_PREREQ_7_Zip_ROOT%"=="~" (
 )
 set WIX_PATH=%WIX%
 set MSCONFIG_TOOLS_DIR=%BUILD_ROOT%\msconfig
-set CMAKE_BIN_DIR=%ProgramFiles%\CMake 2.8\bin
+if "~%_NMI_PREREQ_cmake_ROOT%"=="~" (
+   set CMAKE_BIN_DIR=%ProgramFiles%\CMake 2.8\bin
+) else (
+   set CMAKE_BIN_DIR=%_NMI_PREREQ_cmake_ROOT%\bin
+)
 
 set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN_DIR%;%ZIP_PATH%;%WIX_PATH%
 @echo PATH=%PATH%

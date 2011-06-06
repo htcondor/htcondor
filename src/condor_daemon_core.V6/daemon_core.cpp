@@ -6174,6 +6174,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             PidEnvID*   penvid,
                             const char* login,
                             gid_t*      group,
+			    const char* cgroup,
                             const char* glexec_proxy)
 {
 	bool success = false;
@@ -6221,6 +6222,21 @@ DaemonCore::Register_Family(pid_t       child_pid,
 #else
 		EXCEPT("Internal error: "
 		           "group-based tracking unsupported on this platform");
+#endif
+	}
+	if (cgroup != NULL) {
+#if defined(HAVE_EXT_LIBCGROUP)
+		if (!m_proc_family->track_family_via_cgroup(child_pid, cgroup))
+		{
+			dprintf(D_ALWAYS,
+				"Create_Process: error tracking family "
+				    "with root %u via cgroup %s\n",
+				child_pid, cgroup);
+			goto REGISTER_FAMILY_DONE;
+		}
+#else
+		EXCEPT("Internal error: "
+			    "cgroup-based tracking unsupported in this condor build");
 #endif
 	}
 	if (glexec_proxy != NULL) {
@@ -6751,6 +6767,7 @@ void CreateProcessForkit::exec() {
 				                            penvid_ptr,
 				                            m_family_info->login,
 				                            tracking_gid_ptr,
+							    m_family_info->cgroup,
 				                            m_family_info->glexec_proxy);
 			if (!ok) {
 				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
@@ -7545,16 +7562,20 @@ int DaemonCore::Create_Process(
 	// Check if it's a 16-bit application
 	bIs16Bit = false;
 	LOADED_IMAGE loaded;
+	BOOL map_and_load_result;
 	// NOTE (not in MSDN docs): Even when this function fails it still
 	// may have "failed" with LastError = "operation completed successfully"
 	// and still filled in our structure.  It also might really have
 	// failed.  So we init the part of the structure we care about and just
-	// ignore the return value.
+	// ignore the return value for purposes of setting bIs16Bit - we still
+	// must honor the return value for purposes of calling UnMapAndLoad() or
+	// else risk an access violation upon unmapping.
 	loaded.fDOSImage = FALSE;
-	MapAndLoad((char *)executable, NULL, &loaded, FALSE, TRUE);
+	map_and_load_result = MapAndLoad((char *)executable, NULL, &loaded, FALSE, TRUE);
 	if (loaded.fDOSImage == TRUE)
 		bIs16Bit = true;
-	UnMapAndLoad(&loaded);
+	if (map_and_load_result)
+		UnMapAndLoad(&loaded);
 
 	// Define a some short-hand variables for use bellow
 	namelen				= strlen(executable);
@@ -7912,6 +7933,7 @@ int DaemonCore::Create_Process(
 		                          NULL,
 		                          family_info->login,
 		                          NULL,
+					  family_info->cgroup,
 		                          family_info->glexec_proxy);
 		if (!ok) {
 			EXCEPT("error registering process family with procd");
@@ -8359,6 +8381,7 @@ int DaemonCore::Create_Process(
 		                &pidtmp->penvid,
 		                family_info->login,
 		                NULL,
+				family_info->cgroup,
 		                family_info->glexec_proxy);
 	}
 #endif
@@ -8865,7 +8888,7 @@ DaemonCore::Inherit( void )
 					inheritedSocks[numInheritedSocks++] = (Stream *)dc_ssock;
 					break;
 				default:
-					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks");
+					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks, not %c (%d)", *ptmp, (int)*ptmp);
 					break;
 			} // end of switch
 			ptmp=inherit_list.next();
@@ -9919,6 +9942,19 @@ int DaemonCore::SendAliveToParent()
 
 	if ( !ppid ) {
 		// no daemon core parent, nothing to send
+		return FALSE;
+	}
+
+		/* Don't have the CGAHP and/or DAGMAN, which are launched as the user,
+		   attempt to send keep alives to daemon. Permissions are not likely to
+		   allow user proccesses to send signals to Condor daemons. 
+		   Note that we shouldn't have to check for DAGMan here as no
+		   daemon core info should have been inherited down to DAGMan, 
+		   but it doesn't hurt to be sure here since we already need
+		   to check for the CGAHP. */
+	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP) ||
+	  	get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN))
+	{
 		return FALSE;
 	}
 

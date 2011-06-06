@@ -50,6 +50,20 @@
 	return i;
 // -----------------------------------------------
 
+DeleteFileLater::DeleteFileLater (const char * _name)
+{
+    filename = _name?strdup(_name):NULL;
+}
+
+DeleteFileLater::~DeleteFileLater ()
+{
+	if (filename) {
+        if (unlink(filename)) {  // conditional to defeat prefast warning.
+            dprintf(D_ALWAYS, "DeleteFileLater of %s failed err=%d", filename, errno);
+        }
+		free (filename);
+	}
+}
 
 
 #ifndef WIN32
@@ -616,8 +630,7 @@ Directory::setOwnerPriv( const char* path, si_error_t &err)
 			if (err == SINoFile) {
 				dprintf(D_FULLDEBUG, "Directory::setOwnerPriv() -- path %s does not exist (yet).\n", path);
 			} else {
-				dprintf( D_ALWAYS, "Directory::setOwnerPriv() -- failed to "
-					 "find owner of %s\n", path );
+				dprintf( D_ALWAYS, "Directory::setOwnerPriv() -- failed to find owner of %s\n", path );
 			}
 			return PRIV_UNKNOWN;
 		}

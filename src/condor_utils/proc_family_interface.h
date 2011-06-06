@@ -54,6 +54,10 @@ public:
 	virtual bool track_family_via_allocated_supplementary_group(pid_t, gid_t&) = 0;
 #endif
 
+#if defined(HAVE_EXT_LIBCGROUP)
+	virtual bool track_family_via_cgroup(pid_t, const char *) = 0;
+#endif
+
 	virtual bool get_usage(pid_t, ProcFamilyUsage&, bool) = 0;
 
 	virtual bool signal_process(pid_t, int) = 0;

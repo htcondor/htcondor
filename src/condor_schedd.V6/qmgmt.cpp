@@ -56,6 +56,7 @@
 #include "spool_version.h"
 #include "condor_holdcodes.h"
 #include "nullfile.h"
+#include "condor_url.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -100,6 +101,7 @@ static time_t xact_start_time = 0;	// time at which the current transaction was 
 static int cluster_initial_val = 1;		// first cluster number to use
 static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
 static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 'no max')
+static int job_queued_count = 0;
 
 static void AddOwnerHistory(const MyString &user);
 
@@ -1746,6 +1748,7 @@ NewProc(int cluster_id)
 	JobQueue->NewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
 
 	IncrementClusterSize(cluster_id);
+    job_queued_count += 1;
 
 		// now that we have a real job ad with a valid proc id, then
 		// also insert the appropriate GlobalJobId while we're at it.
@@ -2839,6 +2842,7 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					rewriteSpooledJobAd(procad, cluster_id, proc_id, false);
 					JobQueue->CommitNondurableTransaction();
 					ScheduleJobQueueLogFlush();
+					SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 				}
 
 				std::string version;
@@ -2848,7 +2852,6 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 					// they are responsible for writing the submit event
 					// to the user log.
 					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						SpooledJobFiles::createJobSpoolDirectory(procad,PRIV_UNKNOWN);
 						PROC_ID job_id;
 						job_id.cluster = cluster_id;
 						job_id.proc = proc_id;
@@ -2924,9 +2927,13 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		sscanf(attr_val, "%f", val);
+		ClassAd tmp_ad;
+		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		return 1;
+		if( tmp_ad.LookupFloat(attr_name, *val) == 1) {
+			return 1;
+		}
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -2948,9 +2955,13 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		sscanf(attr_val, "%d", val);
+		ClassAd tmp_ad;
+		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		return 1;
+		if( tmp_ad.LookupInteger(attr_name, *val) == 1) {
+			return 1;
+		}
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -2972,9 +2983,13 @@ GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		sscanf(attr_val, "%d", val);
+		ClassAd tmp_ad;
+		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		return 1;
+		if( tmp_ad.LookupBool(attr_name, *val) == 1) {
+			return 1;
+		}
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -3002,15 +3017,13 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		int attr_len = strlen( attr_val );
-		if ( attr_val[0] != '"' || attr_val[attr_len-1] != '"' ) {
-			free( attr_val );
-			return -1;
-		}
-		attr_val[attr_len - 1] = '\0';
-		*val = strdup(&attr_val[1]);
+		ClassAd tmp_ad;
+		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		return 1;
+		if( tmp_ad.LookupString(attr_name, val) == 1) {
+			return 1;
+		}
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -3037,16 +3050,14 @@ GetAttributeString( int cluster_id, int proc_id, const char *attr_name,
 	IdToStr(cluster_id,proc_id,key);
 
 	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
-		int attr_len = strlen( attr_val );
-		if ( attr_val[0] != '"' || attr_val[attr_len-1] != '"' ) {
-			free( attr_val );
-			val = "";
-			return -1;
-		}
-		attr_val[attr_len - 1] = '\0';
-		val = attr_val + 1;
+		ClassAd tmp_ad;
+		tmp_ad.AssignExpr(attr_name,attr_val);
 		free( attr_val );
-		return 1;
+		if( tmp_ad.LookupString(attr_name, val) == 1) {
+			return 1;
+		}
+		val = "";
+		return -1;
 	}
 
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -3349,7 +3360,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			bool expanded_something = false;
 			int search_pos = 0;
 			while( !attribute_not_found &&
-					get_var(attribute_value,&left,&name,&right,NULL,true,search_pos) )
+					find_config_macro(attribute_value,&left,&name,&right,NULL,true,search_pos) )
 			{
 				expanded_something = true;
 				
@@ -3878,7 +3889,9 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 		const char *base = NULL;
 		while ( (old_path_buf=old_paths.next()) ) {
 			base = condor_basename(old_path_buf);
-			if ( strcmp(base,old_path_buf)!=0 ) {
+			if ((AttrsToModify[attrIndex] == ATTR_TRANSFER_INPUT_FILES) && IsUrl(old_path_buf)) {
+				base = old_path_buf;
+			} else if ( strcmp(base,old_path_buf)!=0 ) {
 				changed = true;
 			}
 			new_paths.append(base);
@@ -4172,6 +4185,36 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 					        hash.c_str());
 					hash = "";
 			}
+
+			MyString cluster_owner;
+			if( GetAttributeString(active_cluster_num,-1,ATTR_OWNER,cluster_owner) == -1 ) {
+					// The owner is not set in the cluster ad.  We
+					// need it to be set so we can attempt to clean up
+					// the shared file when the cluster goes away.
+					// Setting the owner in the cluster ad to whatever
+					// it is in the ad we were given should be okay.
+					// If any other procs in this cluster have a
+					// different value for Owner, the cleanup will not
+					// be complete, but the files should eventually be
+					// cleaned by preen.  It would probably be a good
+					// idea to enforce the rule that all jobs in a
+					// cluster have the same Owner, but that is outside
+					// the scope of the code here.
+
+				rv = SetAttributeString(active_cluster_num,
+			                      -1,
+			                      ATTR_OWNER,
+			                      owner.Value());
+
+				if (rv < 0) {
+					dprintf(D_ALWAYS,
+					        "SendSpoolFileIfNeeded: unable to set %s to %s\n",
+					        ATTR_OWNER,
+					        owner.Value());
+					hash = "";
+				}
+			}
+
 			if (!hash.empty() &&
 			    ickpt_share_try_sharing(owner.Value(), hash, path))
 			{
@@ -4913,4 +4956,8 @@ void
 dirtyJobQueue()
 {
 	JobQueueDirty = true;
+}
+
+int GetJobQueuedCount() {
+    return job_queued_count;
 }

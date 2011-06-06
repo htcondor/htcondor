@@ -31,7 +31,6 @@ class StringList;
 void	cleanup_execute_dir(int pid, char const *exec_path);
 void	cleanup_execute_dirs( StringList &list );
 void	check_execute_dir_perms( StringList &list );
-float	compute_rank( ClassAd*, ClassAd* );
 int 	create_port( ReliSock* );
 bool	reply( Stream*, int );
 bool	refuse( Stream* );

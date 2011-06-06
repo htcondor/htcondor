@@ -52,7 +52,7 @@ private:
 
 	MyString *buf, *test_buf;
 
-	time_t start;
+	time_t start, global_start;
 
 	void print_result_failure(void);
 	

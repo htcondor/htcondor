@@ -113,11 +113,6 @@ Condor::DebugLevel(1);
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
 
-my $hostname = `hostname`; chomp $hostname;
-if ( ! ($hostname =~ /\./ ) ) {
-    warn "Warning: Host name '$hostname' is not an FQDN!!";
-    sleep( 10 );
-}
 my $iswindows = CondorTest::IsThisWindows();
 
 # configuration options
@@ -377,7 +372,7 @@ if(!($wantcurrentdaemons)) {
 
 }
 
-my @myfig = `condor_config_val -config`;
+my @myfig = `condor_config_val -config 2>&1`;
 debug("Current config settings are:\n",2);
 foreach my $fig (@myfig) {
 	debug("$fig\n",2);
@@ -617,33 +612,8 @@ foreach my $compiler (@compilers)
 					StartTestOutput($compiler,$test_program);
 
 					#print "Waiting on test\n";
-					my $child;
-	    			while( $child = wait() ) {
-
-	        			# if there are no more children, we're done
-	        			last if $child == -1;
-		
-						# ignore spurious children
-						if(! defined $test{$child}) {
-							debug("Can't find jobname for child? <ignore>\n",2);
-							next;
-						} else {
-							debug( "informed $child gone yeilding test $test{$child}\n",2);
-						}
-
-						#finally
-	        			(my $test_name) = $test{$child} =~ /(.*)\.run$/;
-						debug( "Done Waiting on test($test_name)\n",3);
-
-	        			# record the child's return status
-	        			my $status = $?;
-
-						CompleteTestOutput($compiler,$test_program,$child,$status);
-						delete $test{$child};
-						$hashsize = keys %test;
-						debug("Tests remaining:<<$hashsize>>\n",3);
-						last if $hashsize == 0;
-					}
+					wait_for_test_children(\%test, $compiler,
+						suppress_start_test_output=>1);
 				} else {
 	        		# if we're the child, start test program
 					DoChild($test_program, $test_retirement);
@@ -662,40 +632,17 @@ foreach my $compiler (@compilers)
 						debug( "current group: $currentgroup Limit: $groupsize\n",2);
 						if($currentgroup == $groupsize) {
 							debug( "wait for batch\n",2);
-    						while( my $child = wait() ) {
-        						# if there are no more children, we're done
-        						last if $child == -1;
-							
-        						# record the child's return status
-        						my $status = $?;
+							my $max_to_reap = 0; # unlimited;
+							if($currenttest <= $testspercompiler) {
+								$max_to_reap = 1;
+							}
+							my $reaped = wait_for_test_children(\%test, 
+								$compiler, max_to_reap => $max_to_reap);
+							debug( "wait returned test<$currentgroup>\n",2);
+							$currentgroup -= $reaped;
+							debug( "wait returned test new size<$currentgroup>\n",2);
+							debug("currenttest<$currenttest> testspercompiler<$testspercompiler>\n",2);
 
-	
-								if(! defined $test{$child}) {
-									debug("Can't find jobname for child?<ignore>\n",2);
-									next;
-								} else {
-									debug( "informed $child gone yeilding test $test{$child}\n",2);
-								}
-
-								debug( "wait returned test<$currentgroup>\n",2);
-								$currentgroup -= 1;
-								debug( "wait returned test new size<$currentgroup>\n",2);
-
-        						(my $test_name) = $test{$child} =~ /(.*)\.run$/;
-
-								StartTestOutput($compiler,$test_name);
-
-								CompleteTestOutput($compiler,$test_name,$child,$status);
-								delete $test{$child};
-								$hashsize = keys %test;
-								debug("Tests remaining:<<$hashsize>>\n",3);
-								last if $hashsize == 0;
-								# if we have more tests fire off another
-								# and don't wait for the last one
-								debug("currenttest<$currenttest> testspercompiler<$testspercompiler>\n",2);
-								last if $currenttest <= $testspercompiler;
-
-    						} # end while
 							#next;
 						} else {
 							# batch size not met yet
@@ -728,32 +675,8 @@ foreach my $compiler (@compilers)
 	debug("At end of compiler dir hash size <<$hashsize>>\n",2);
 	if(($kindwait == 0) && ($hashsize > 0)) {
 		debug("At end of compiler dir about to wait\n",2);
-    	while( my $child = wait() ) {
-        	# if there are no more children, we're done
-        	last if $child == -1;
-
-        	# record the child's return status
-        	my $status = $?;
-
-			$currentgroup -= 1;
-	
-			if(! defined $test{$child}) {
-				debug("Can't find jobname for child?<ignore>\n",2);
-				next;
-			} else {
-				debug( "informed $child gone yeilding test $test{$child}\n",2);
-			}
-
-        	( my $test_name) = $test{$child} =~ /(.*)\.run$/;
-
-			StartTestOutput($compiler,$test_name);
-
-			CompleteTestOutput($compiler,$test_name,$child,$status);
-			delete $test{$child};
-			$hashsize = keys %test;
-			debug("Tests remaining:<<$hashsize>>\n",2);
-			last if $hashsize == 0;
-    	} # end while
+		my $reaped = wait_for_test_children(\%test, $compiler);
+		$currentgroup -= $reaped;
 	}
 
 	if($hush == 0) {
@@ -1286,7 +1209,8 @@ sub IsPersonalRunning
 			last;
         }
     }
-    if ( close(CONFIG) && ($? != 13) ) {	# Ignore SIGPIPE
+        # TODO: Why would SIGPIPE cause close to return 13 (Perm denied?) $? should contain the exit status from condor_config_value
+    if ( (not close(CONFIG)) && ($? != 13) ) {	# Ignore SIGPIPE
 	warn "Error executing condor_config_val: '$?' '$!'"
     }
 
@@ -1518,6 +1442,82 @@ sub safe_copy {
         debug("Copied $src to $dest\n",2);
         return 1;
     }
+}
+
+# Returns a string describing the exit status.  The general form will be
+# "exited with value 4", "exited with signal 7", or "exited with signal 11
+# leaving a core file" and thus is suitable for concatenating into larger
+# messages.
+sub describe_exit_status {
+	my($status) = @_;
+	my $msg = 'exited with ';
+	if($status & 127) {
+		$msg .= sprintf('signal %d%s', $status & 127,
+			($status & 128) ? 'leaving a core file': '');
+	} else {
+		$msg .= 'value '.($status >> 8);
+	}
+	return $msg;
+}
+
+# Wait for and reap child processes, taking particular note of children that 
+# are tests.
+#
+# arguments:
+#   $test - reference to the %test has mapping PIDs to test names.
+#           Reaped tests will be deleted from this hash.
+#   $compiler - the compiler name/string 
+#   %options - All elements are optional
+#      - suppress_start_test_output=>1 - don't call StartTestOutput on
+#                  each test as it exits.  Defaults to calling StartTestOutput
+#      - max_to_reap - Maximum tests to reap. If not specified or 0,
+#                  will reap until no children are left.
+sub wait_for_test_children {
+	my($test, $compiler, %options) = @_;
+
+	my($max_to_reap) = $options{'max_to_reap'};
+	my($suppress_start_test_output) = $options{'suppress_start_test_output'};
+
+	my $tests_reaped = 0;
+	while( my $child = wait() ) {
+
+		# if there are no more children, we're done
+		last if $child == -1;
+
+		# record the child's return status
+		my $status = $?;
+
+		my $debug_message = "Child PID $child ".describe_exit_status($status);
+
+		# ignore spurious children
+		if(! defined $test->{$child}) {
+			debug($debug_message.". It was not known. Ignoring.\n", 2);
+			next;
+		} else {
+			debug($debug_message.". Test: $test->{$child}.\n", 2);
+		}
+
+		$tests_reaped++;
+
+		#finally
+		(my $test_name) = $test->{$child} =~ /(.*)\.run$/;
+		debug( "Done waiting on test $test_name\n",3);
+
+		StartTestOutput($compiler, $test_name) 
+			unless $suppress_start_test_output;
+
+		CompleteTestOutput($compiler, $test_name, $child, $status);
+		delete $test->{$child};
+		$hashsize = keys %{$test};
+		debug("Tests remaining: $hashsize\n",2);
+		last if $hashsize == 0;
+
+		last if defined $max_to_reap 
+			and $max_to_reap != 0
+			and $max_to_reap <= $tests_reaped;
+	}
+
+	return $tests_reaped;
 }
 
 1;

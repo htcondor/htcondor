@@ -398,6 +398,12 @@ main( int argc, char* argv[] )
 				while (collectors->next (collector)) {
 					if (collector->locate() &&
 					    sock.connect((char*) collector->addr(), 0)) {
+						// Do something with the connection, 
+						// such that we won't end up with 
+						// noise in the collector log
+						collector->startCommand( DC_NOP, &sock, 30 );
+						sock.encode();
+						sock.end_of_message();
 						// If we can connect to the
 						// collector, then we accept
 						// it as valid

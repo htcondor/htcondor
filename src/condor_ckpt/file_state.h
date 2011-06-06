@@ -27,9 +27,11 @@
 #include "condor_file.h"
 #include "syscall_numbers.h"
 #include "condor_syscall_mode.h"
+#include <sys/poll.h>
 
 class CondorFileInfo;
 class CondorFilePointer;
+
 
 /**
 This class multiplexes number of UNIX file system calls.

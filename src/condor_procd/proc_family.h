@@ -25,6 +25,10 @@
 #include "proc_family_member.h"
 #include "proc_family_io.h"
 
+#if defined(HAVE_EXT_LIBCGROUP)
+#include "libcgroup.h"
+#endif
+
 class ProcFamilyMonitor;
 
 class ProcFamily {
@@ -113,6 +117,11 @@ public:
 	void set_proxy(char*);
 #endif
 
+#if defined(HAVE_EXT_LIBCGROUP)
+	// Set the cgroup to use for this family
+	int set_cgroup(const char *);
+#endif
+
 	// dump info about all processes in this family
 	//
 	void dump(ProcFamilyDump& fam);
@@ -165,6 +174,27 @@ private:
 	// a proxy to hand to glexec
 	//
 	char* m_proxy;
+#endif
+
+#if defined(HAVE_EXT_LIBCGROUP)
+	static bool m_cgroup_initialized;
+	static bool m_cgroup_freezer_mounted;
+	static bool m_cgroup_cpuacct_mounted;
+	static bool m_cgroup_memory_mounted;
+	static bool m_cgroup_block_mounted;
+	char* m_cgroup_string;
+	struct cgroup* m_cgroup;
+	bool m_created_cgroup;
+	static long clock_tick;
+
+	int count_tasks_cgroup();
+	int aggregate_usage_cgroup_blockio(ProcFamilyUsage*);
+	int aggregate_usage_cgroup(ProcFamilyUsage*);
+	int freezer_cgroup(const char *);
+	int spree_cgroup(int);
+	int migrate_to_cgroup(pid_t);
+	void delete_cgroup(const char *);
+	void update_max_image_size_cgroup();
 #endif
 };
 

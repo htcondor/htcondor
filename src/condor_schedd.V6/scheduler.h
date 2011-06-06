@@ -29,6 +29,8 @@
 #ifndef _CONDOR_SCHED_H_
 #define _CONDOR_SCHED_H_
 
+#include <map>
+
 #include "dc_collector.h"
 #include "daemon.h"
 #include "daemon_list.h"
@@ -54,6 +56,9 @@
 #include "condor_timeslice.h"
 #include "condor_claimid_parser.h"
 #include "transfer_queue.h"
+#include "timed_queue.h"
+
+using std::map;
 
 extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -301,6 +306,7 @@ class Scheduler : public Service
 	friend	void	job_prio(ClassAd *);
 	friend  int		find_idle_local_jobs(ClassAd *);
 	friend	int		updateSchedDInterval( ClassAd* );
+    friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
 	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify );
@@ -536,6 +542,23 @@ private:
 	int				SchedUniverseJobsRunning;
 	int				LocalUniverseJobsIdle;
 	int				LocalUniverseJobsRunning;
+    time_t          LastUpdateTime;
+    int             JobsStartedCumulative;
+    double          TimeToStartCumulative;
+    double          RunningTimeCumulative;
+    int             JobsCompletedCumulative;
+    int             JobsExitedCumulative;
+    int             ShadowExceptionsCumulative;
+    map<int,int>    ExitCodesCumulative;
+    int             LastJobsQueued;
+    timed_queue<int>  JobsSubmittedTQ;
+    timed_queue<int>  JobsStartedTQ;
+    timed_queue<int>  JobsCompletedTQ;
+    timed_queue<int>  JobsExitedTQ;
+    timed_queue<int>  ShadowExceptionsTQ;
+    map<int,timed_queue<int> >  ExitCodesTQ;
+    timed_queue<double>  TimeToStartTQ;
+    timed_queue<double>  RunningTimeTQ;
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
@@ -752,6 +775,7 @@ extern bool moveIntAttr( PROC_ID job_id, const char* old_attr,
 extern bool abortJob( int cluster, int proc, const char *reason, bool use_transaction );
 extern bool abortJobsByConstraint( const char *constraint, const char *reason, bool use_transaction );
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
+					 int reason_code=0, int reason_subcode=0,
 					 bool use_transaction = false, 
 					 bool notify_shadow = true,  
 					 bool email_user = false, bool email_admin = false,

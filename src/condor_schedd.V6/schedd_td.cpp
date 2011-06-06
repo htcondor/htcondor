@@ -30,6 +30,7 @@
 #include "basename.h"
 #include "nullfile.h"
 #include "spooled_job_files.h"
+#include "condor_url.h"
 
 /* In this service function, the client tells the schedd a bunch of jobs
 	it would like to perform a transfer for into/out of a sandbox. The
@@ -868,7 +869,9 @@ Scheduler::treq_upload_update_callback(TransferRequest *treq,
 			MyString new_path_buf;
 			while ( (old_path_buf=old_paths.next()) ) {
 				base = condor_basename(old_path_buf);
-				if ( strcmp(base,old_path_buf)!=0 ) {
+				if ((AttrsToModify[index] == ATTR_TRANSFER_INPUT_FILES) && IsUrl(old_path_buf)) {
+					base = old_path_buf;
+				} else if ( strcmp(base,old_path_buf)!=0 ) {
 					new_path_buf.sprintf(
 						"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,base);
 					base = new_path_buf.Value();

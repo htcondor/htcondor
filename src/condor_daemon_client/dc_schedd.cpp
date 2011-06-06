@@ -49,6 +49,7 @@ DCSchedd::~DCSchedd( void )
 
 ClassAd*
 DCSchedd::holdJobs( const char* constraint, const char* reason,
+					const char *reason_code,
 					CondorError * errstack,
 					action_result_type_t result_type,
 					bool notify_scheduler )
@@ -59,7 +60,7 @@ DCSchedd::holdJobs( const char* constraint, const char* reason,
 		return NULL;
 	}
 	return actOnJobs( JA_HOLD_JOBS, constraint, NULL, 
-					  reason, ATTR_HOLD_REASON, result_type,
+					  reason, ATTR_HOLD_REASON, reason_code, ATTR_HOLD_REASON_SUBCODE, result_type,
 					  notify_scheduler, errstack );
 }
 
@@ -76,7 +77,7 @@ DCSchedd::removeJobs( const char* constraint, const char* reason,
 		return NULL;
 	}
 	return actOnJobs( JA_REMOVE_JOBS, constraint, NULL,
-					  reason, ATTR_REMOVE_REASON, result_type,
+					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  notify_scheduler, errstack );
 }
 
@@ -93,7 +94,7 @@ DCSchedd::removeXJobs( const char* constraint, const char* reason,
 		return NULL;
 	}
 	return actOnJobs( JA_REMOVE_X_JOBS, constraint, NULL,
-					  reason, ATTR_REMOVE_REASON, result_type,
+					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  notify_scheduler, errstack );
 }
 
@@ -110,13 +111,14 @@ DCSchedd::releaseJobs( const char* constraint, const char* reason,
 		return NULL;
 	}
 	return actOnJobs( JA_RELEASE_JOBS, constraint, NULL,
-					  reason, ATTR_RELEASE_REASON, result_type,
+					  reason, ATTR_RELEASE_REASON, NULL, NULL, result_type,
 					  notify_scheduler, errstack );
 }
 
 
 ClassAd*
 DCSchedd::holdJobs( StringList* ids, const char* reason,
+					const char* reason_code,
 					CondorError * errstack,
 					action_result_type_t result_type,
 					bool notify_scheduler )
@@ -127,7 +129,9 @@ DCSchedd::holdJobs( StringList* ids, const char* reason,
 		return NULL;
 	}
 	return actOnJobs( JA_HOLD_JOBS, NULL, ids, reason,
-					  ATTR_HOLD_REASON, result_type,
+					  ATTR_HOLD_REASON,
+					  reason_code, ATTR_HOLD_REASON_SUBCODE,
+					  result_type,
 					  notify_scheduler, errstack );
 }
 
@@ -144,7 +148,7 @@ DCSchedd::removeJobs( StringList* ids, const char* reason,
 		return NULL;
 	}
 	return actOnJobs( JA_REMOVE_JOBS, NULL, ids,
-					  reason, ATTR_REMOVE_REASON, result_type,
+					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  notify_scheduler, errstack );
 }
 
@@ -161,7 +165,7 @@ DCSchedd::removeXJobs( StringList* ids, const char* reason,
 		return NULL;
 	}
 	return actOnJobs( JA_REMOVE_X_JOBS, NULL, ids,
-					  reason, ATTR_REMOVE_REASON, result_type,
+					  reason, ATTR_REMOVE_REASON, NULL, NULL, result_type,
 					  notify_scheduler, errstack );
 }
 
@@ -178,7 +182,7 @@ DCSchedd::releaseJobs( StringList* ids, const char* reason,
 		return NULL;
 	}
 	return actOnJobs( JA_RELEASE_JOBS, NULL, ids,
-					  reason, ATTR_RELEASE_REASON, result_type,
+					  reason, ATTR_RELEASE_REASON, NULL, NULL, result_type,
 					  notify_scheduler, errstack );
 }
 
@@ -200,7 +204,7 @@ DCSchedd::vacateJobs( const char* constraint, VacateType vacate_type,
 	} else {
 		cmd = JA_VACATE_JOBS;
 	}
-	return actOnJobs( cmd, constraint, NULL, NULL, NULL,
+	return actOnJobs( cmd, constraint, NULL, NULL, NULL, NULL, NULL,
 					  result_type, notify_scheduler, errstack );
 }
 
@@ -222,7 +226,7 @@ DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
 	} else {
 		cmd = JA_VACATE_JOBS;
 	}
-	return actOnJobs( cmd, NULL, ids, NULL, NULL,
+	return actOnJobs( cmd, NULL, ids, NULL, NULL, NULL, NULL,
 					  result_type, notify_scheduler, errstack );
 }
 
@@ -237,7 +241,7 @@ DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
 		return NULL;
 	}
 	return actOnJobs( JA_CLEAR_DIRTY_JOB_ATTRS, NULL, ids, NULL, NULL,
-				result_type, false, errstack );
+					  NULL, NULL, result_type, false, errstack );
 }
 
 
@@ -933,7 +937,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 		// Now send all the files via the file transfer object
 	for (i=0; i<JobAdsArrayLen; i++) {
 		FileTransfer ftrans;
-		if ( !ftrans.SimpleInit(JobAdsArray[i], false, false, &rsock) ) {
+		if ( !ftrans.SimpleInit(JobAdsArray[i], false, false, &rsock, PRIV_UNKNOWN, false, true) ) {
 			if( errstack ) {
 				int cluster = -1, proc = -1;
 				if(JobAdsArray[i]) {
@@ -1131,6 +1135,7 @@ ClassAd*
 DCSchedd::actOnJobs( JobAction action,
 					 const char* constraint, StringList* ids, 
 					 const char* reason, const char* reason_attr,
+					 const char* reason_code, const char* reason_code_attr,
 					 action_result_type_t result_type,
 					 bool notify_scheduler,
 					 CondorError * errstack )
@@ -1206,6 +1211,10 @@ DCSchedd::actOnJobs( JobAction action,
 		cmd_ad.Insert( tmp );
 		free( tmp );
 		tmp = NULL;
+	}
+
+	if( reason_code_attr && reason_code ) {
+		cmd_ad.AssignExpr(reason_code_attr,reason_code);
 	}
 
 		// // // // // // // //

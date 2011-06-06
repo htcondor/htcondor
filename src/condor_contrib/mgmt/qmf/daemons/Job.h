@@ -58,7 +58,7 @@ class Attribute
 
     private:
         AttributeType m_type;
-        const char * m_value;
+        std::string m_value;
 };
 
 
@@ -83,7 +83,7 @@ class LiveJobImpl: public JobImpl
         LiveJobImpl ( const char*, ClusterJobImpl* );
         virtual ~LiveJobImpl();
         int GetStatus () const;
-        const ClassAd* GetSummary () const;
+        const ClassAd* GetSummary ();
         const ClassAd* GetFullAd () const;
         void Set ( const char* , const char* );
         bool Get ( const char * , const Attribute *& ) const;
@@ -149,6 +149,7 @@ class Job
         void Remove ( const char* );
 
         void SetSubmission ( const char*, int );
+        void UpdateSubmission ( int, const char* );
         void IncrementSubmission();
         void DecrementSubmission();
 

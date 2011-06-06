@@ -106,7 +106,8 @@ class FileTransfer {
 	int SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
 						 ReliSock *sock_to_use = NULL, 
 						 priv_state priv = PRIV_UNKNOWN,
-						 bool use_file_catalog = true);
+						 bool use_file_catalog = true,
+						 bool is_spool = false);
 
 	/** @param Ad contains filename remaps for downloaded files.
 		       If NULL, turns off remaps.
@@ -331,6 +332,9 @@ class FileTransfer {
 	TransferQueueContactInfo m_xfer_queue_contact_info;
 	MyString m_jobid; // what job we are working on, for informational purposes
 	char *m_sec_session_id;
+
+	// stores the path to the proxy after one is received
+	MyString LocalProxyName;
 
 	// called to construct the catalog of files in a direcotry
 	bool BuildFileCatalog(time_t spool_time = 0, const char* iwd = NULL, FileCatalogHashTable **catalog = NULL);

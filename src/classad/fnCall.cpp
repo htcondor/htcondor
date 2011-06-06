@@ -169,6 +169,7 @@ FunctionCall( )
 			// Note that many other string list functions are defined
 			// externally in the Condor classad compatibility layer.
 		functionTable["stringListsIntersect" ] = (void*)stringListsIntersect;
+        functionTable["debug"      ] = (void*)debug;
 
 		initialized = true;
 	}
@@ -2317,6 +2318,30 @@ interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	result.SetStringValue(strval);
 
     return true;
+}
+
+bool FunctionCall::
+debug( const char* name,const ArgumentList &argList,EvalState &state,
+	Value &result )
+{
+	Value	arg;
+
+	// takes exactly one argument
+	if( argList.size() != 1 ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+
+	state.debug = true;
+
+	if( !argList[0]->Evaluate( state, arg ) ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+	state.debug = false;
+	result = arg;
+	argList[0]->debug_format_value(result);
+	return true;
 }
 
 #if defined USE_POSIX_REGEX || defined USE_PCRE

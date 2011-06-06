@@ -511,9 +511,9 @@ void DCloudJob::doEvaluateState()
 
 					if ( rc == 0 ) {
 
+						WriteGridSubmitEventToUserLog(jobAd);
 						ProcessInstanceAttrs( instance_attrs );
 						ASSERT( m_instanceId );
-						WriteGridSubmitEventToUserLog(jobAd);
 
 						if ( remoteJobState == DCLOUD_VM_STATE_STOPPED ) {
 							gmState = GM_START_VM;

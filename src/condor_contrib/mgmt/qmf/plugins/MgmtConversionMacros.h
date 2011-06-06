@@ -71,6 +71,7 @@ if (ad.LookupString(#attr, &str)) {									\
 }
 
 #define INTEGER(attr) BASE(attr,Integer,num,(uint32_t) num,)
+#define INTEGER64(attr) BASE(attr,Float,flt,(uint64_t) flt,)
 #define INTEGER2(src,dest) BASE2(src,dest,Integer,num,(uint32_t) num,)
 #define OPT_INTEGER(attr) OPT_BASE(attr,Integer,num,(uint32_t) num,)
 #define DOUBLE(attr) BASE(attr,Float,flt,(double) flt,)

@@ -32,6 +32,9 @@ class PIDTracker;
 #if defined(LINUX)
 class GroupTracker;
 #endif
+#if defined(HAVE_EXT_LIBCGROUP)
+class CGroupTracker;
+#endif
 class LoginTracker;
 class EnvironmentTracker;
 class ParentTracker;
@@ -87,6 +90,14 @@ public:
 	// glexec to signal processes
 	//
 	proc_family_error_t use_glexec_for_family(pid_t, char* proxy);
+#endif
+
+#if defined(HAVE_EXT_LIBCGROUP)
+	// Turn on the ability to track via a cgroup
+	void enable_cgroup_tracking();
+
+	// Associate a cgroup with a family
+	proc_family_error_t track_family_via_cgroup(pid_t, const char*);
 #endif
 
 	// for sending signals to a single process
@@ -166,6 +177,9 @@ private:
 	PIDTracker*         m_pid_tracker;
 #if defined(LINUX)
 	GroupTracker*       m_group_tracker;
+#endif
+#if defined(HAVE_EXT_LIBCGROUP)
+	CGroupTracker*      m_cgroup_tracker;
 #endif
 	LoginTracker*       m_login_tracker;
 	EnvironmentTracker* m_environment_tracker;

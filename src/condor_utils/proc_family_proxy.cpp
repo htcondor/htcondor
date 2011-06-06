@@ -230,6 +230,22 @@ ProcFamilyProxy::track_family_via_allocated_supplementary_group(pid_t pid, gid_t
 }
 #endif
 
+#if defined(HAVE_EXT_LIBCGROUP)
+bool
+ProcFamilyProxy::track_family_via_cgroup(pid_t pid, const char* cgroup)
+{
+	bool response;
+	dprintf(D_FULLDEBUG, "track_family_via_cgroup: Tracking PID %u via cgroup %s.\n",
+		pid, cgroup);
+	if (!m_client->track_family_via_cgroup(pid, cgroup, response)) {
+		dprintf(D_ALWAYS,
+			"track_family_via_cgroup: ProcD communication error\n");
+		return false;
+	}
+	return response;
+}
+#endif
+
 bool
 ProcFamilyProxy::get_usage(pid_t pid, ProcFamilyUsage& usage, bool)
 {

@@ -82,14 +82,14 @@ JobServerJobLogConsumer::NewClassAd(const char *_key,
 									const char */*target*/)
 {
 
-	const char* key_dup = strdup(_key);
-
 	dprintf(D_FULLDEBUG, "JobServerJobLogConsumer::NewClassAd processing _key='%s'\n", _key);
 
 	// ignore the marker
 	if (strcmp(_key,"0.0") == 0) {
 	  return true;
 	}
+
+	const char* key_dup = strdup(_key);
 
 	if ('0' == _key[0]) {
 		// Cluster ad
@@ -116,9 +116,7 @@ JobServerJobLogConsumer::NewClassAd(const char *_key,
 		JobCollectionType::const_iterator element = g_jobs.find(cluster_dup);
         ClusterJobImpl* cluster_impl = NULL;
 
-		// TODO this code assumes that we will always get the parent 
-		// classad before its child from the job log...this is not strictly
-		// guaranteed (e.g., compressed log?)
+		// either find an existing cluster parent or create a new one
 		if (g_jobs.end() == element) {
 			// didn't find an existing job so create a new one
 			Job* new_cluster_job = new Job(cluster_dup);
@@ -133,13 +131,6 @@ JobServerJobLogConsumer::NewClassAd(const char *_key,
         Job* new_proc_job = new Job(key_dup);
         new_proc_job->SetImpl(new LiveJobImpl(key_dup, cluster_impl));
         g_jobs[key_dup] = new_proc_job;
-
-//		if (cluster_job) {
-//			ClassAd ad;
-//			cluster_job->GetFullAd(ad);
-//			dprintf(D_FULLDEBUG, "JobServerJobLogConsumer::NewClassAd found a parent ClassAd from cluster...\n");
-//			ad.dPrint(D_FULLDEBUG|D_NOHEADER);
-//		}
 
 	}
 

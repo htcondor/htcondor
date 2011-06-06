@@ -47,7 +47,7 @@ endif()
 condor_static_lib( condorapi "${ApiSrcs}" )
 add_dependencies( condorapi utils )
 
-if (NOT WINDOWS)
+if (HAVE_LIBDL)
 	set(APILIBDEP dl)
 endif()
 

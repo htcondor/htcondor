@@ -38,7 +38,7 @@ my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
 my $buildid_file = "BUILD-ID";
 my $buildid;
-my $externals_loc="/scratch/externals/cmake";
+my $externals_loc="/scratch/condor_externals";
 my $platform = "$ENV{NMI_PLATFORM}";
 my %defines = (
     prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
@@ -49,6 +49,8 @@ $| = 1;
 
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
+    $externals_loc   = "c:/temp/condor";
+    $ENV{CONDOR_BLD_EXTERNAL_STAGE} = "$externals_loc";
 } else {
 	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
 }
@@ -88,18 +90,22 @@ $defines{condor_platform} = "-DCONDOR_PLATFORM:STRING=$platform";
 ######################################################################
 # run cmake on the source tree
 ######################################################################
-if ( defined($opt_clear_externals_cache)||defined($opt_clear_externals_cache_weekly) ) {
+if ( defined($opt_clear_externals_cache) ) {
 
 	if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-		print "cached externals is temporarily disabled on windows";
+		print "deleting externals cache\n";
+		$exit_status = system("rd /s/q \"$externals_loc\"");
+		if( $exit_status ) {
+			die "failed with status $exit_status\n";
+		}
 	}
 	else {
-		print "deleting externals cache -- disabled\n";
-		#$exit_status = system("rm -rf $externals_loc/*");
+		print "deleting externals cache\n";
+		$exit_status = system("rm -rf /scratch/condor_externals");
 
-		#if( $exit_status ) {
-		#	die "failed with status $exit_status\n";
-		#}
+		if( $exit_status ) {
+			die "failed with status $exit_status\n";
+		}
 
 		#system("mkdir -p $externals_loc");
 		#system("chmod -f -R a+rwX $externals_loc");

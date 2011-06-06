@@ -23,7 +23,9 @@
 #include "condor_config.h"
 #include "user_job_policy.h"
 #include "proc.h"
+#include "condor_holdcodes.h"
 
+const char * ATTR_SCRATCH_EXPRESSION = "UserJobPolicyScratchExpression";
 const char * PARAM_SYSTEM_PERIODIC_REMOVE = "SYSTEM_PERIODIC_REMOVE";
 const char * PARAM_SYSTEM_PERIODIC_RELEASE = "SYSTEM_PERIODIC_RELEASE";
 const char * PARAM_SYSTEM_PERIODIC_HOLD = "SYSTEM_PERIODIC_HOLD";
@@ -575,7 +577,6 @@ bool UserPolicy::AnalyzeSinglePeriodicPolicy(const char * attrname, const char *
 		char * sysexpr = param(macroname);
 		if(sysexpr && sysexpr[0]) {
 			// Just temporarily toss the expression into the job ad
-			const char * ATTR_SCRATCH_EXPRESSION = "UserJobPolicyScratchExpression";
 			m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, sysexpr);
 			free(sysexpr);
 			sysexpr = NULL;
@@ -603,17 +604,22 @@ const char* UserPolicy::FiringExpression(void)
 	return m_fire_expr;
 }
 
-const char* UserPolicy::FiringReason()
+bool UserPolicy::FiringReason(MyString &reason,int &reason_code,int &reason_subcode)
 {
-	static MyString reason;
+	reason_code = 0;
+	reason_subcode = 0;
 
 	if ( m_ad == NULL || m_fire_expr == NULL ) {
-		return NULL;
+		return false;
 	}
 
 
 	const char * expr_src;
 	MyString exprString;
+	std::string reason_expr_param;
+	std::string reason_expr_attr;
+	std::string subcode_expr_param;
+	std::string subcode_expr_attr;
 	switch(m_fire_source) {
 		case FS_NotYet:
 			expr_src = "UNKNOWN (never set)";
@@ -629,6 +635,14 @@ const char* UserPolicy::FiringReason()
 			if( tree ) {
 				exprString = ExprTreeToString( tree );
 			}
+			if( m_fire_expr_val == -1 ) {
+				reason_code = CONDOR_HOLD_CODE_JobPolicyUndefined;
+			}
+			else {
+				reason_code = CONDOR_HOLD_CODE_JobPolicy;
+				sprintf(reason_expr_attr,"%sReason", m_fire_expr);
+				sprintf(subcode_expr_attr,"%sSubCode", m_fire_expr);
+			}
 			break;
 		}
 
@@ -638,12 +652,54 @@ const char* UserPolicy::FiringReason()
 			char * val = param(m_fire_expr);
 			exprString = val;
 			free(val);
+			if( m_fire_expr_val == -1 ) {
+				reason_code = CONDOR_HOLD_CODE_SystemPolicyUndefined;
+			}
+			else {
+				reason_code = CONDOR_HOLD_CODE_SystemPolicy;
+				sprintf(reason_expr_param,"%s_REASON", m_fire_expr);
+				sprintf(subcode_expr_param,"%s_SUBCODE", m_fire_expr);
+			}
 			break;
 		}
 
 		default:
 			expr_src = "UNKNOWN (bad value)";
 			break;
+	}
+
+	reason = "";
+
+	MyString subcode_expr;
+	if( !subcode_expr_param.empty() &&
+		param(subcode_expr,subcode_expr_param.c_str(),NULL) &&
+		!subcode_expr.IsEmpty())
+	{
+		m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, subcode_expr.Value());
+		m_ad->EvalInteger(ATTR_SCRATCH_EXPRESSION, m_ad, reason_subcode);
+		m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
+	}
+	else if( !subcode_expr_attr.empty() )
+	{
+		m_ad->EvalInteger(subcode_expr_attr.c_str(), m_ad, reason_subcode);
+	}
+
+	MyString reason_expr;
+	if( !reason_expr_param.empty() &&
+		param(reason_expr,reason_expr_param.c_str(),NULL) &&
+		!reason_expr.IsEmpty())
+	{
+		m_ad->AssignExpr(ATTR_SCRATCH_EXPRESSION, reason_expr.Value());
+		m_ad->EvalString(ATTR_SCRATCH_EXPRESSION, m_ad, reason);
+		m_ad->Delete(ATTR_SCRATCH_EXPRESSION);
+	}
+	else if( !reason_expr_attr.empty() )
+	{
+		m_ad->EvalString(reason_expr_attr.c_str(), m_ad, reason);
+	}
+
+	if( !reason.IsEmpty() ) {
+		return true;
 	}
 
 	// Format up the reason string
@@ -669,14 +725,5 @@ const char* UserPolicy::FiringReason()
 		break;
 	}
 
-	return reason.Value();
+	return true;
 }
-
-
-
-
-
-
-
-
-

@@ -133,8 +133,6 @@ static MyString
 static const char
 	*readme = "README";
 
-static time_t current_time;
-
 static int fd;
 
 bool OTEST_StatInfo(void) {
@@ -254,18 +252,18 @@ bool OTEST_StatInfo(void) {
 static void setup() {
 	int tmp_fd;
 
-	//Get the current working directory
+	// Get the current working directory
 	cut_assert_true( condor_getcwd(original_dir) );
 	original_dir += DIR_DELIM_CHAR;
 	
-	//Directory strings
+	// Directory strings
 	cut_assert_true( tmp.sprintf("testtmp%d", getpid()) );
 	
-	//Make a temporary directory to test
+	// Make a temporary directory to test
 	cut_assert_z( mkdir(tmp.Value(), 0700) );
 	cut_assert_z( chdir(tmp.Value()) );
 	
-	//Store some directories
+	// Store some directories
 	cut_assert_true( condor_getcwd(tmp_dir) );
 	tmp_dir += DIR_DELIM_CHAR;
 	cut_assert_true( empty_dir.sprintf("%s%s%c", tmp_dir.Value(), "empty_dir",
@@ -277,11 +275,11 @@ static void setup() {
 	cut_assert_true( file_dir.sprintf("%s%s%c", full_dir.Value(), "full_file",
 					 DIR_DELIM_CHAR) );
 	
-	//Put some files/directories in there
+	// Put some files/directories in there
 	cut_assert_z( mkdir("empty_dir", 0700) );
 	cut_assert_z( mkdir("full_dir", 0700) );
 	
-	//Create some symbolic links
+	// Create some symbolic links
 #ifndef WIN32
 	MyString link;
 	cut_assert_true( link.sprintf("%s%s", full_dir.Value(), "full_file") );
@@ -301,24 +299,21 @@ static void setup() {
 	cut_assert_z( mkdir("link_dir", 0700) );
 	fd = cut_assert_gez( safe_open_wrapper("empty_file", O_RDWR | O_CREAT) );
 
-	//Add some text
+	// Add some text
 	FILE* file_1 = safe_fopen_wrapper("full_file", "w+");
 	cut_assert_not_null( file_1 );
 	cut_assert_gz( fprintf(file_1, "This is some text!") );
 	cut_assert_z( chdir("..") );
 	
-	//Get back to original directory
+	// Get back to original directory
 	cut_assert_z( chdir("..") );
 
-	//Close FILE* that were written to
+	// Close FILE* that were written to
 	cut_assert_z( fclose(file_1) );
-	
-	//Get the current time
-	current_time = time(NULL);
 }
 
 static void cleanup() {
-	//Remove the created files/directories/symlinks
+	// Remove the created files/directories/symlinks
 	cut_assert_z( chdir(tmp.Value()) );
 	cut_assert_z( rmdir("empty_dir") );
 	cut_assert_z( remove("symlink_file") );
@@ -326,7 +321,7 @@ static void cleanup() {
 	cut_assert_z( chdir("full_dir") );
 	cut_assert_z( rmdir("link_dir") );
 	
-	//Just in case any of these weren't removed...
+	// Just in case any of these weren't removed...
 	remove("empty_file");
 	remove("full_file");
 	remove("executable_file");
@@ -863,27 +858,32 @@ static bool test_get_access_time_not_exist() {
 	emit_output_expected_header();
 	emit_retval("%d", 0);
 	StatInfo info("DoesNotExist", "DoesNotExist");
-	time_t time = info.GetAccessTime();
+	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	if(time != 0) {
+	emit_retval("%d", atime);
+	if(atime != 0) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_access_time_file() {
-	emit_test("Test that GetAccessTime() returns a time close to the current "
-		"time for a file that was just created.");
+	emit_test("Test that GetAccessTime() returns the same time as stat() for a "
+		"file that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", full_dir.Value());
 	emit_param("File Name", "empty_file");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_atime);
 	StatInfo info(full_dir.Value(), "empty_file");
-	time_t time = info.GetAccessTime();
+	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", atime);
+	if(atime != st.st_atime) {
 		FAIL;
 	}
 	PASS;
@@ -902,61 +902,76 @@ static bool test_get_access_time_file_old() {
 	emit_output_expected_header();
 	emit_retval("%d", st.st_atime);
 	StatInfo info(original_dir.Value(), readme);
-	time_t time = info.GetAccessTime();
+	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	if(time != st.st_atime) {
+	emit_retval("%d", atime);
+	if(atime != st.st_atime) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_access_time_dir() {
-	emit_test("Test that GetAccessTime() returns a time close to the current "
-		"time for a directory that was just created.");
+	emit_test("Test that GetAccessTime() returns the same time as stat() for a"
+		" directory that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "full_dir");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_atime);
 	StatInfo info(tmp_dir.Value(), "full_dir");
-	time_t time = info.GetAccessTime();
+	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", atime);
+	if(atime != st.st_atime) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_access_time_symlink_file() {
-	emit_test("Test that GetAccessTime() returns a time close to the current "
-		"time for a symlink to a file that was just created.");
+	emit_test("Test that GetAccessTime() returns the same time as stat() for a "
+		"symlink to a file that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_file");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_atime);
 	StatInfo info(tmp_dir.Value(), "symlink_file");
-	time_t time = info.GetAccessTime();
+	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", atime);
+	if(atime != st.st_atime) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_access_time_symlink_dir() {
-	emit_test("Test that GetAccessTime() returns a time close to the current "
-		"time for a symlink to a directory that was just created.");
+	emit_test("Test that GetAccessTime() returns the same time as stat() for a "
+		"symlink to a directory that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_dir");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_atime);
 	StatInfo info(tmp_dir.Value(), "symlink_dir");
-	time_t time = info.GetAccessTime();
+	time_t atime = info.GetAccessTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", atime);
+	if(atime != st.st_atime) {
 		FAIL;
 	}
 	PASS;
@@ -971,27 +986,32 @@ static bool test_get_modify_time_not_exist() {
 	emit_output_expected_header();
 	emit_retval("%d", 0);
 	StatInfo info("DoesNotExist", "DoesNotExist");
-	time_t time = info.GetModifyTime();
+	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	if(time != 0) {
+	emit_retval("%d", mtime);
+	if(mtime != 0) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_modify_time_file() {
-	emit_test("Test that GetModifyTime() returns a time close to the current "
-		"time for a file that was just created.");
+	emit_test("Test that GetModifyTime() returns the same time as stat() for a "
+		"file that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", full_dir.Value());
 	emit_param("File Name", "empty_file");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_mtime);
 	StatInfo info(full_dir.Value(), "empty_file");
-	time_t time = info.GetModifyTime();
+	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", mtime);
+	if(mtime != st.st_mtime) {
 		FAIL;
 	}
 	PASS;
@@ -1010,61 +1030,76 @@ static bool test_get_modify_time_file_old() {
 	emit_output_expected_header();
 	emit_retval("%d", st.st_mtime);
 	StatInfo info(original_dir.Value(), readme);
-	time_t time = info.GetModifyTime();
+	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	if(time != st.st_mtime) {
+	emit_retval("%d", mtime);
+	if(mtime != st.st_mtime) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_modify_time_dir() {
-	emit_test("Test that GetModifyTime() returns a time close to the current "
-		"time for a directory that was just created.");
+	emit_test("Test that GetModifyTime() returns the same time as stat() for a "
+		"directory that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "full_dir");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_mtime);
 	StatInfo info(tmp_dir.Value(), "full_dir");
-	time_t time = info.GetModifyTime();
+	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", mtime);
+	if(mtime != st.st_mtime) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_modify_time_symlink_file() {
-	emit_test("Test that GetModifyTime() returns a time close to the current "
-		"time for a symlink to a file that was just created.");
+	emit_test("Test that GetModifyTime() returns the same time as stat() for a "
+		"symlink to a file that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_file");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_mtime);
 	StatInfo info(tmp_dir.Value(), "symlink_file");
-	time_t time = info.GetModifyTime();
+	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", mtime);
+	if(mtime != st.st_mtime) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_modify_time_symlink_dir() {
-	emit_test("Test that GetModifyTime() returns a time close to the current "
-		"time for a symlink to a directory that was just created.");
+	emit_test("Test that GetModifyTime() returns the same time as stat() for a "
+		"symlink to a directory that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_dir");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_mtime);
 	StatInfo info(tmp_dir.Value(), "symlink_dir");
-	time_t time = info.GetModifyTime();
+	time_t mtime = info.GetModifyTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", mtime);
+	if(mtime != st.st_mtime) {
 		FAIL;
 	}
 	PASS;
@@ -1079,27 +1114,32 @@ static bool test_get_create_time_not_exist() {
 	emit_output_expected_header();
 	emit_retval("%d", 0);
 	StatInfo info("DoesNotExist", "DoesNotExist");
-	time_t time = info.GetCreateTime();
+	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	if(time != 0) {
+	emit_retval("%d", ctime);
+	if(ctime != 0) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_create_time_file() {
-	emit_test("Test that GetCreateTime() returns a time close to the current "
-		"time for a file that was just created.");
+	emit_test("Test that GetCreateTime() returns the same time as stat() for a "
+		"file that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", full_dir.Value());
 	emit_param("File Name", "empty_file");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", full_dir.Value(), DIR_DELIM_CHAR, "empty_file");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_ctime);
 	StatInfo info(full_dir.Value(), "empty_file");
-	time_t time = info.GetCreateTime();
+	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", ctime);
+	if(ctime != st.st_ctime) {
 		FAIL;
 	}
 	PASS;
@@ -1118,61 +1158,76 @@ static bool test_get_create_time_file_old() {
 	emit_output_expected_header();
 	emit_retval("%d", st.st_ctime);
 	StatInfo info(original_dir.Value(), readme);
-	time_t time = info.GetCreateTime();
+	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	if(time != st.st_ctime) {
+	emit_retval("%d", ctime);
+	if(ctime != st.st_ctime) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_create_time_dir() {
-	emit_test("Test that GetCreateTime() returns a time close to the current "
-		"time for a directory that was just created.");
+	emit_test("Test that GetCreateTime() returns the same time as stat() for a "
+		"directory that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "full_dir");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "full_dir");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_ctime);
 	StatInfo info(tmp_dir.Value(), "full_dir");
-	time_t time = info.GetCreateTime();
+	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", ctime);
+	if(ctime != st.st_ctime) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_create_time_symlink_file() {
-	emit_test("Test that GetCreateTime() returns a time close to the current "
-		"time for a symlink to a file that was just created.");
+	emit_test("Test that GetCreateTime() returns the same time as stat() for a "
+		"symlink to a file that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_file");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_file");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_ctime);
 	StatInfo info(tmp_dir.Value(), "symlink_file");
-	time_t time = info.GetCreateTime();
+	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", ctime);
+	if(ctime != st.st_ctime) {
 		FAIL;
 	}
 	PASS;
 }
 
 static bool test_get_create_time_symlink_dir() {
-	emit_test("Test that GetCreateTime() returns a time close to the current "
-		"time for a symlink to a directory that was just created.");
+	emit_test("Test that GetCreateTime() returns the same time as stat() for a "
+		"symlink to a directory that was just created.");
 	emit_input_header();
 	emit_param("Directory Path", "%s", tmp_dir.Value());
 	emit_param("File Name", "symlink_dir");
+	struct stat st;
+	MyString file;
+	file.sprintf("%s%c%s", tmp_dir.Value(), DIR_DELIM_CHAR, "symlink_dir");
+	stat(file.Value(), &st);
+	emit_output_expected_header();
+	emit_retval("%d", st.st_ctime);
 	StatInfo info(tmp_dir.Value(), "symlink_dir");
-	time_t time = info.GetCreateTime();
+	time_t ctime = info.GetCreateTime();
 	emit_output_actual_header();
-	emit_retval("%d", time);
-	emit_param("Current Time", "%d", current_time);
-	if(abs(current_time - time) > 10) {
+	emit_retval("%d", ctime);
+	if(ctime != st.st_ctime) {
 		FAIL;
 	}
 	PASS;

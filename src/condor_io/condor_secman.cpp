@@ -2015,7 +2015,8 @@ SecManStartCommand::receivePostAuthInfo_inner()
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
-			KeyCacheEntry tmp_key( sesid, &m_sock->peer_addr(), m_private_key,
+			condor_sockaddr peer_addr = m_sock->peer_addr();
+			KeyCacheEntry tmp_key( sesid, &peer_addr, m_private_key,
 								   &m_auth_info, expiration_time,
 								   session_lease ); 
 			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid, dur, session_lease);
@@ -2903,7 +2904,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	unsigned char* keybuf = Condor_Crypt_Base::oneWayHashKey(private_key);
 	if(!keybuf) {
 		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
-				"oneWayHashKey() failed.\n",sesid);
+				" oneWayHashKey() failed.\n",sesid);
 		return false;
 	}
 	KeyInfo *keyinfo = new KeyInfo(keybuf,keylen,crypt_protocol);

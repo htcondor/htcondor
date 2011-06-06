@@ -42,6 +42,7 @@
 // WINDOWS only
 #include "store_cred.h"
 #endif
+#include "internet.h"
 #include "my_hostname.h"
 #include "domain_tools.h"
 #include "get_daemon_name.h"
@@ -81,6 +82,8 @@
 #include "vm_univ_utils.h"
 #include "condor_md.h"
 
+#include <string>
+
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
 //   the case-insensitivity of hashFunction() doesn't complish anything.
@@ -108,6 +111,7 @@ char	*OperatingSystem;
 char	*Architecture;
 char	*Spool;
 char	*ScheddName = NULL;
+std::string ScheddAddr;
 char	*PoolName = NULL;
 DCSchedd* MySchedd = NULL;
 char	*My_fs_domain;
@@ -298,9 +302,13 @@ const char	*CopyToSpool = "copy_to_spool";
 const char	*LeaveInQueue = "leave_in_queue";
 
 const char	*PeriodicHoldCheck = "periodic_hold";
+const char	*PeriodicHoldReason = "periodic_hold_reason";
+const char	*PeriodicHoldSubCode = "periodic_hold_subcode";
 const char	*PeriodicReleaseCheck = "periodic_release";
 const char	*PeriodicRemoveCheck = "periodic_remove";
 const char	*OnExitHoldCheck = "on_exit_hold";
+const char	*OnExitHoldReason = "on_exit_hold_reason";
+const char	*OnExitHoldSubCode = "on_exit_hold_subcode";
 const char	*OnExitRemoveCheck = "on_exit_remove";
 const char	*Noop = "noop_job";
 const char	*NoopExitSignal = "noop_job_exit_signal";
@@ -813,6 +821,19 @@ main( int argc, char *argv[] )
 			} else if ( match_prefix( ptr[0], "-spool" ) ) {
 				Remote++;
 				DisableFileChecks = 1;
+            // can't use match_prefix() here, since '-a' already has popular semantic
+            } else if ( 0 == strcmp(ptr[0], "-addr") ) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf(stderr, "%s: -addr requires another argument\n", MyName);
+					exit(1);
+				}
+                if (!is_valid_sinful(*ptr)) {
+                    fprintf(stderr, "%s: \"%s\" is not a valid address\n", MyName, *ptr);
+                    fprintf(stderr, "Should be of the form <ip.address.here:port>\n");
+                    fprintf(stderr, "For example: <123.456.789.123:6789>\n");
+                    exit(1);
+                }
+                ScheddAddr = *ptr;
 			} else if ( match_prefix( ptr[0], "-remote" ) ) {
 				Remote++;
 				DisableFileChecks = 1;
@@ -952,7 +973,11 @@ main( int argc, char *argv[] )
 	if ( !DumpClassAdToFile ) {
 		// Instantiate our DCSchedd so we can locate and communicate
 		// with our schedd.  
-		MySchedd = new DCSchedd( ScheddName, PoolName );
+        if (!ScheddAddr.empty()) {
+            MySchedd = new DCSchedd(ScheddAddr.c_str());
+        } else {
+            MySchedd = new DCSchedd(ScheddName, PoolName);
+        }
 		if( ! MySchedd->locate() ) {
 			if( ScheddName ) {
 				fprintf( stderr, "\nERROR: Can't find address of schedd %s\n",
@@ -3332,6 +3357,20 @@ SetPeriodicHoldCheck(void)
 
 	InsertJobExpr( buffer );
 
+	phc = condor_param(PeriodicHoldReason, ATTR_PERIODIC_HOLD_REASON);
+	if( phc ) {
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_HOLD_REASON, phc );
+		InsertJobExpr( buffer );
+		free(phc);
+	}
+
+	phc = condor_param(PeriodicHoldSubCode, ATTR_PERIODIC_HOLD_SUBCODE);
+	if( phc ) {
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_HOLD_SUBCODE, phc );
+		InsertJobExpr( buffer );
+		free(phc);
+	}
+
 	phc = condor_param(PeriodicReleaseCheck, ATTR_PERIODIC_RELEASE_CHECK);
 
 	if (phc == NULL)
@@ -3364,6 +3403,20 @@ SetPeriodicRemoveCheck(void)
 	{
 		/* user had a value for it, leave it alone */
 		buffer.sprintf( "%s = %s", ATTR_PERIODIC_REMOVE_CHECK, prc );
+		free(prc);
+	}
+
+	prc = condor_param(OnExitHoldReason, ATTR_ON_EXIT_HOLD_REASON);
+	if( prc ) {
+		buffer.sprintf( "%s = %s", ATTR_ON_EXIT_HOLD_REASON, prc );
+		InsertJobExpr( buffer );
+		free(prc);
+	}
+
+	prc = condor_param(OnExitHoldSubCode, ATTR_ON_EXIT_HOLD_SUBCODE);
+	if( prc ) {
+		buffer.sprintf( "%s = %s", ATTR_ON_EXIT_HOLD_SUBCODE, prc );
+		InsertJobExpr( buffer );
 		free(prc);
 	}
 
@@ -5205,7 +5258,7 @@ SetGridParams()
 
 	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
 		// check private key file can be opened
-		if ( !DisableFileChecks ) {
+		if ( !DisableFileChecks && !strstr( tmp, "$$" ) ) {
 			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
@@ -5277,7 +5330,7 @@ SetGridParams()
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
 	// Transform this representation into our regular form:
-	//   host.edu:8443 batchname queuename
+	//   host.edu:8443/ce-cream/services/CREAM2 batchname queuename
 	if ( JobGridType != NULL && strcasecmp (JobGridType, "cream") == MATCH ) {
 		tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
 		MyString resource = tmp;
@@ -5293,8 +5346,11 @@ SetGridParams()
 			}
 			if ( ( pos = resource.find( "/cream-", pos2 ) ) >= 0 ) {
 				// We found the shortened form
-				resource.replaceString( "-", " ", pos );
-				resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
+				resource.replaceString( "/cream-", "/ce-cream/services/CREAM2 ", pos );
+				pos += 26;
+				if ( ( pos2 = resource.find( "-", pos ) ) >= 0 ) {
+					resource.setChar( pos2, ' ' );
+				}
 
 				buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
 								resource.Value() );
@@ -6695,6 +6751,7 @@ usage()
 	fprintf( stderr,
 			 "	-remote <name>\t\tsubmit to the specified remote schedd\n"
 			 "                \t\t(implies -spool)\n" );
+    fprintf( stderr, "\t-addr <ip:port>\t\tsubmit to schedd at given \"sinful string\"\n" );
 	fprintf( stderr,
 			 "	-append <line>\t\tadd line to submit file before processing\n"
 			 "                \t\t(overrides submit file; multiple -a lines ok)\n" );

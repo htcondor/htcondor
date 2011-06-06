@@ -1366,6 +1366,11 @@ unix_sigusr2(int)
 
 
 void
+classad_debug_dprintf(const char *s) {
+	dprintf(D_FULLDEBUG, "%s", s);
+}
+
+void
 dc_reconfig()
 {
 		// do this first in case anything else depends on DNS
@@ -1927,6 +1932,7 @@ int main( int argc, char** argv )
 		
 			// Actually set up logging.
 		dprintf_config(get_mySubSystem()->getName() );
+		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -2027,13 +2033,8 @@ int main( int argc, char** argv )
 
 		// Now that we've potentially forked, we have our real pid, so
 		// we can instantiate a daemon core and it'll have the right
-		// pid.  Have lots of pid table hash buckets if we're the
-		// SCHEDD, since the SCHEDD could have lots of children... 
-	if ( get_mySubSystem()->isType( SUBSYSTEM_TYPE_SCHEDD ) ) {
-		daemonCore = new DaemonCore(503);
-	} else {
-		daemonCore = new DaemonCore();
-	}
+		// pid. 
+	daemonCore = new DaemonCore();
 
 	if( DynamicDirs ) {
 			// If we want to use dynamic dirs for log, spool and
@@ -2048,6 +2049,7 @@ int main( int argc, char** argv )
 		
 			// Actually set up logging.
 		dprintf_config(get_mySubSystem()->getName() );
+		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 	}
 
 		// Now that we have the daemonCore object, we can finally

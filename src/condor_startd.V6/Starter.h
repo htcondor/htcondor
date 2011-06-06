@@ -64,7 +64,7 @@ public:
 	char const *executeDir();
 
 	bool	killHard( void );
-	bool	killSoft( void );
+	bool	killSoft( bool state_change = false );
 	bool	suspend( void );
 	bool	resume( void );
 

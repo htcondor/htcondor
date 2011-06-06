@@ -196,7 +196,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 		char const *name = ifr->ifr_name;
 		const char* ip = NULL;
 
-		if( ifr->ifr_addr.sa_family == AF_INET ||ifr->ifr.addr.sa_family == AF_INET6 ) {
+		if( ifr->ifr_addr.sa_family == AF_INET ||ifr->ifr_addr.sa_family == AF_INET6 ) {
 			condor_sockaddr addr(&ifr->ifr_addr);
 			ip = addr.to_ip_string(ip_buf, INET6_ADDRSTRLEN);
 		}

@@ -177,6 +177,7 @@ struct FamilyInfo {
 	gid_t* group_ptr;
 #endif
 	const char* glexec_proxy;
+	const char* cgroup;
 
 	FamilyInfo() {
 		max_snapshot_interval = -1;
@@ -185,6 +186,7 @@ struct FamilyInfo {
 		group_ptr = NULL;
 #endif
 		glexec_proxy = NULL;
+		cgroup = NULL;
 	}
 };
 
@@ -1511,6 +1513,7 @@ class DaemonCore : public Service
 	                     PidEnvID* penvid,
 	                     const char* login,
 	                     gid_t* group,
+			     const char* cgroup,
 	                     const char* glexec_proxy);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);

@@ -316,6 +316,7 @@ JobstateLog::WriteEvent( const ULogEvent *event, Job *node )
 	if ( strstr( eventName, prefix ) != eventName ) {
        	debug_printf( DEBUG_QUIET, "Warning: didn't find expected prefix "
 					"%s in event name %s\n", prefix, eventName );
+		check_warning_strictness( DAG_STRICT_1 );
 	} else {
 		eventName = eventName + strlen( prefix );
 	}
@@ -512,6 +513,7 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 	if ( (timestampTok == NULL) || (nodeNameTok == NULL) ) {
 		debug_printf( DEBUG_QUIET, "Warning: error parsing "
 					"jobstate.log file line <%s>\n", line.Value() );
+		check_warning_strictness( DAG_STRICT_1 );
 		return false;
 	}
 
@@ -520,6 +522,7 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 		debug_printf( DEBUG_QUIET, "Warning: error reading "
 					"timestamp in jobstate.log file line <%s>\n",
 					line.Value() );
+		check_warning_strictness( DAG_STRICT_1 );
 		return false;
 	}
 
@@ -532,6 +535,7 @@ JobstateLog::ParseLine( MyString &line, time_t &timestamp,
 			debug_printf( DEBUG_QUIET, "Warning: error reading "
 						"sequence number in jobstate.log file line <%s>\n",
 						line.Value() );
+			check_warning_strictness( DAG_STRICT_1 );
 			return false;
 		}
 	}

@@ -596,7 +596,7 @@ id=559
 
 [GSI_DAEMON_DIRECTORY]
 aliases=
-default=/etc/grid-security/
+default=
 version=0.0.0
 range=.*
 state=default
@@ -3558,7 +3558,7 @@ id=189
 
 [CREATE_CORE_FILES]
 aliases=
-default=false
+default=
 version=0.0.0
 range=.*
 state=default
@@ -7753,7 +7753,7 @@ id=465
 
 [VALID_SPOOL_FILES]
 aliases=
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad, OfflineLog
 version=0.0.0
 range=.*
 state=default
@@ -8537,7 +8537,8 @@ id=513
 
 [MAX_JOBS_RUNNING]
 aliases=
-default=ceiling(ifThenElse( regexp("WIN.*","$(OPSYS)"), 200, ifThenElse( $(DETECTED_MEMORY)*0.8*1024/800 < 10000, $(DETECTED_MEMORY)*0.8*1024/800, 10000 )))
+default=ceiling(ifThenElse( $(DETECTED_MEMORY)*0.8*1024/800 < 10000, $(DETECTED_MEMORY)*0.8*1024/800, 10000 ))
+win32_default=200
 version=0.0.0
 range=.*
 state=default
@@ -9481,7 +9482,7 @@ id=555
 
 [GRIDMAP]
 aliases=
-default=$(GSI_DAEMON_DIRECTORY)/grid-mapfile
+default=
 version=0.0.0
 range=.*
 state=default
@@ -9497,7 +9498,7 @@ id=555
 
 [GSI_DAEMON_TRUSTED_CA_DIR]
 aliases=
-default=$(GSI_DAEMON_DIRECTORY)/certificates
+default=
 version=0.0.0
 range=.*
 state=default
@@ -10136,6 +10137,22 @@ url=
 tags=
 id=601
 
+[WINDOWED_STAT_WIDTH]
+aliases=
+default=300
+version=0.0.0
+range=1,1000000000
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Windowed Statistic Width
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=scheduler
+id=602
+
 [SHADOW_CHECKPROXY_INTERVAL]
 aliases=
 default=600
@@ -10151,3 +10168,35 @@ usage=
 url=
 tags=
 id=601
+
+[SHADOW_RUN_UNKNOWN_USER_JOBS]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=Shadow Run Unknown User Jobs
+usage=
+url=
+tags=shadow
+id=602
+
+[SCHEDD_ROUND_ATTR_ProportionalSetSizeKb]
+aliases=
+default=25%
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=
+usage=
+url=
+tags=schedd
+id=602

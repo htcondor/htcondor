@@ -283,7 +283,7 @@ char* getStoredCredential(const char *username, const char *domain)
 		return NULL;
 	}
 
-	if ( _snprintf(pw, 511, "%S", w_pw) < 0 ) {
+	if ( _snprintf(pw, sizeof(pw), "%S", w_pw) < 0 ) {
 		return NULL;
 	}
 
@@ -927,7 +927,7 @@ read_from_keyboard(char* buf, int maxlength, bool echo) {
 	//Down convert the input into ASCII.
 	int converted = WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, wbuffer, -1, buf, maxlength, NULL, NULL);
 
-	delete wbuffer;
+	delete[] wbuffer;
 #endif
 
 	return TRUE;

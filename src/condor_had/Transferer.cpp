@@ -217,7 +217,7 @@ main_config()
 }
 
 void
-main_pre_dc_init( int argc, char* argv[] )
+main_pre_dc_init( int  /*argc*/ , char* /*argv*/ [] )
 {
 }
 

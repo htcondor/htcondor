@@ -128,6 +128,10 @@ ProcFamilyDirect::get_usage(pid_t pid, ProcFamilyUsage& usage, bool full)
 	usage.percent_cpu = 0.0;
 	usage.total_image_size = 0;
     usage.total_resident_set_size = 0;
+#if HAVE_PSS
+    usage.total_proportional_set_size = 0;
+    usage.total_proportional_set_size_available = false;
+#endif
 	if (full) {
 		pid_t* family_array;
 		int family_size = family->currentfamily(family_array);
@@ -143,6 +147,10 @@ ProcFamilyDirect::get_usage(pid_t pid, ProcFamilyUsage& usage, bool full)
 			usage.percent_cpu = proc_info.cpuusage;
 			usage.total_image_size = proc_info.imgsize;
             usage.total_resident_set_size = proc_info.rssize;
+#if HAVE_PSS
+            usage.total_proportional_set_size = proc_info.pssize;
+            usage.total_proportional_set_size_available = proc_info.pssize_available;
+#endif
 		}
 		else {
 			dprintf(D_ALWAYS,

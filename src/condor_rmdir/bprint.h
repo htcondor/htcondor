@@ -253,10 +253,10 @@ void bprint_Initialize(BPRINT_BUFFER & bp)
    if (bp.cchMax <= 0)
       bp.cchMax = 0x0FFFF;
    if ( ! bp.psz)
-      bp.psz = (LPTSTR) GlobalAllocPtr(GPTR, (bp.cchMax+1) * NUMBYTES(bp.psz[0]));
+      bp.psz = (LPTSTR) malloc((bp.cchMax+1) * NUMBYTES(bp.psz[0]));
   #ifdef UNICODE
    if ( ! bp.pszAscii)
-      bp.pszAscii = (LPSTR) GlobalAllocPtr(GPTR, (bp.cchMax+1) * 2);
+      bp.pszAscii = (LPSTR) malloc((bp.cchMax+1) * 2);
   #endif
    bp.cch = 0;
    bp.CodePage = CP_ACP;
@@ -466,9 +466,9 @@ void bprint_Terminate(BPRINT_BUFFER & bp, bool fFlush)
    if (fFlush)
       bprint_EndLine(bp);
    if (bp.psz)
-      GlobalFreePtr(bp.psz);
+      free(bp.psz);
    if (bp.pszAscii)
-      GlobalFreePtr(bp.pszAscii);
+      free(bp.pszAscii);
    if (bp.hOut && (bp.hOut != GetStdHandle(STD_OUTPUT_HANDLE)))
       CloseHandle(bp.hOut);
    ZeroStruct(&bp);

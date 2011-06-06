@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <schema package="com.redhat.grid">
 
 <!--
@@ -38,6 +39,8 @@
   <statistic name="MonitorSelfRegisteredSocketCount" type="uint32"/>
   <statistic name="MonitorSelfResidentSetSize" type="uint32" unit="KiB"/>
   <statistic name="MonitorSelfTime" type="absTime" unit="nanosecond"/>
+  <!-- DetectedMemory: detected machine RAM -->
+  <!-- DetectedCpus: detected machine cpus/cores -->
 </group>
 
 <group name="GridMethods">
@@ -501,6 +504,52 @@ Set by Collector:
     <statistic name="TotalJobAds" type="uint32"/>
     <statistic name="TotalRemovedJobs" type="uint32"/>
     <statistic name="TotalRunningJobs" type="uint32"/>    
+
+    <property name="WindowedStatWidth" type="uint32" unit="seconds"
+	    desc="The stat window width, config param WINDOWED_STAT_WIDTH"/>
+    <statistic name="UpdateInterval" type="uint32" unit="seconds"
+	     desc="Seconds between current publish and previous"/>
+
+    <statistic name="JobsSubmitted" type="uint32"
+	     desc="Number of jobs submitted over most recent sampling window"/>
+    <statistic name="JobSubmissionRate" type="double"
+	     desc="Rate of job submissions (jobs per second) over most recent sampling window"/>
+    <statistic name="JobsCompleted" type="uint32"
+	     desc="Number of jobs completed (successfully, shadow code=100 or 115) over most recent sampling window"/>
+    <statistic name="JobCompletionRate" type="double"
+	     desc="Rate of job completions (jobs per second) over most recent sampling window"/>
+    <statistic name="JobsExited" type="uint32"
+	     desc="Number of jobs that exited over most recent sampling window"/>
+    <statistic name="ShadowExceptions" type="uint32"
+	     desc="Number of shadow excptions over most recent sampling window"/>
+    <!-- ExitCodeXXX: number of jobs exited with code XXX (100, 115, etc) over window -->
+    <statistic name="JobsSubmittedCum" type="uint32"
+	     desc="Number of jobs submitted over lifetime of the Scheduler"/>
+    <statistic name="JobsCompletedCum" type="uint32"
+	     desc="Number of jobs successfully completed over lifetime of the Scheduler"/>
+    <statistic name="JobsExitedCum" type="uint32"
+	     desc="Number of jobs exited over the lifetime of the Scheduler"/>
+    <statistic name="ShadowExceptionsCum" type="uint32"
+	     desc="Number of shadow exceptions over the lifetime of the Scheduler"/>
+    <!-- ExitCodeCumXXX: number of jobs exited with code XXX over schedd lifetime -->
+    <statistic name="JobsStartedCum" type="uint32"
+	     desc="Number of jobs started over the lifetime of the Scheduler"/>
+    <statistic name="JobsStarted" type="uint32"
+	     desc="Number of jobs started over the lifetime of the Scheduler"/>
+    <statistic name="JobStartRate" type="double"
+	     desc="Rate of job starts (jobs per second) over the most recent sampling window"/>
+    <statistic name="MeanTimeToStartCum" type="double" unit="seconds"
+	     desc="Mean time a job waits in the Scheduler until first start, over the lifetime of the Scheduler"/>
+    <statistic name="MeanRunningTimeCum" type="double" unit="seconds"
+	     desc="Mean running time (wall-clock) for jobs in the Scheduler, over the lifetime of the Scheduler"/>
+    <statistic name="SumTimeToStartCum" type="uint64" unit="seconds"
+	     desc="Sum of job wait times to first start, over the lifetime of the Scheduler"/>
+    <statistic name="SumRunningTimeCum" type="uint64" unit="seconds"
+	     desc="Sum of job running times, over the lifetime of the Scheduler"/>
+    <statistic name="MeanTimeToStart" type="double" unit="seconds"
+	     desc="Mean time a job waits in the Scheduler until first start, over most recent sampling window"/>
+    <statistic name="MeanRunningTime" type="double" unit="seconds"
+	     desc="Mean running time (wall-clock) time of jobs in the Scheduler, over most recent sampling window"/>
 
     <method name="SubmitJob">
       <arg name="Ad" dir="I" type="map"/>

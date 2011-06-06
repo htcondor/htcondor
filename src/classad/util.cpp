@@ -200,7 +200,7 @@ void convert_escapes(string &text, bool &validStr)
 						sscanf(octal, "%o", &number);
 						new_char = number;
 					} else {
-						new_char = text[source];
+						number = new_char = text[source];
 					}
 					if(number == 0) { // "\\0" is an invalid substring within a string literal
 					  validStr = false;

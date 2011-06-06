@@ -22,11 +22,9 @@
 #include "condor_debug.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
+#include "test.h"
 #include "stdio.h"
 #include "math.h"
-
-int virt_memory_test(int test_blocksize, double max_sd_varation_ratio,
-					 					double max_failed_test_ratio);
 
 int virt_memory_test(int	test_blocksize,
 					 double max_sd_varation_ratio, 

@@ -764,6 +764,9 @@ ProcAPI::multiInfo( pid_t *pidlist, int numpids, piPTR &pi ) {
 				/ 1024;
 			pi->rssize   += (long) (*((long*)(ctrblk + offsets->rssize  ))) 
 				/ 1024;
+#if HAVE_PSS
+#error pssize not handled for this platform
+#endif
 			pi->user_time+= (long) (LI_to_double( ut ) / objectFrequency);
 			pi->sys_time += (long) (LI_to_double( st ) / objectFrequency);
 			/* we put the actual ag in here for do_usage_sampling
@@ -866,6 +869,12 @@ ProcAPI::getProcSetInfo( pid_t *pids, int numpids, piPTR& pi, int &status )
 
 				pi->imgsize   += temp->imgsize;
 				pi->rssize    += temp->rssize;
+#if HAVE_PSS
+				if( temp->pssize_available ) {
+					pi->pssize_available = true;
+					pi->pssize    += temp->pssize;
+				}
+#endif
 				pi->minfault  += temp->minfault;
 				pi->majfault  += temp->majfault;
 				pi->user_time += temp->user_time;

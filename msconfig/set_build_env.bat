@@ -41,46 +41,86 @@ REM   user's environments by the default compiler install.)
 REM
 REM
 
-REM assume that this file is in the msconfig subfolder of the condor
-REM sources or that MSCONFIG_TOOLS_DIR is set.
+:: check to see if MSCONFIG_TOOLS_DIR is set, if it is not set assume that it
+:: is where this file is. also strip off an trailing \ from the path.
+::
 if "~%MSCONFIG_TOOLS_DIR%"=="~" set MSCONFIG_TOOLS_DIR=%~sdp0
 if "~%MSCONFIG_TOOLS_DIR:~-1%"=="~\" Set MSCONFIG_TOOLS_DIR=%MSCONFIG_TOOLS_DIR:~0,-1%
-if not exist %MSCONFIG_TOOLS_DIR%\license.rtf echo MSCONFIG_TOOLS_DIR is not valid!
+if not exist %MSCONFIG_TOOLS_DIR%\license.rtf (
+   echo MSCONFIG_TOOLS_DIR is not valid!
+)
 
-REM cmake should be in the path, or CMAKE_BIN_DIR must be set,
-REM we don't want CMAKE_BIN_DIR to have a trailing slash.
+:: set CMAKE_BIN_DIR if it is not already set, look first in the path then
+:: in the registry and finally both of those fail just set it to C:\tools\cmake
+::
 if "~%CMAKE_BIN_DIR%"=="~" for %%I in (cmake.exe) DO Set CMAKE_BIN_DIR=%%~sdp$PATH:I
+if "~%CMAKE_BIN_DIR%"=="~" (
+   @echo Searching for CMake.exe...
+   for /F "tokens=1,2*" %%I in ('reg query "HKLM\SOFTWARE" /k /f "CMake*" /ve /s') do (
+      if "%%I"=="(Default)" (
+         if "%%J"=="REG_SZ" (
+            set CMAKE_BIN_DIR=%%K\bin
+            @echo found CMake in the registry at %%K
+         )
+      )
+   )
+)
 if "~%CMAKE_BIN_DIR%"=="~" set CMAKE_BIN_DIR=c:\Tools\CMake\bin
+
+:: we don't want CMAKE_BIN_DIR to have a trailing slash.
+::
 if "~%CMAKE_BIN_DIR:~-1%"=="~\" Set CMAKE_BIN_DIR=%CMAKE_BIN_DIR:~0,-1%
 echo CMAKE_BIN_DIR=%CMAKE_BIN_DIR%
-if not exist %CMAKE_BIN_DIR%\cmake.exe echo CMake is not in CMAKE_BIN_DIR!
+if not exist %CMAKE_BIN_DIR%\cmake.exe (
+  echo can't find CMake.exe, please set CMAKE_BIN_DIR to the path to it.
+)
 
-REM WiX should be in the path or WIX_BIN_DIR must be set
+:: find ActivePerl bin dir
+::
+:: set PERL_BIN_DIR=%SystemDrive%\Perl\bin
+if "~%PERL_BIN_DIR%"=="~" for %%I in (perl.exe) DO Set PERL_BIN_DIR=%%~sdp$PATH:I
+if "~%PERL_BIN_DIR%"=="~" (
+   @echo Searching for Perl.exe...
+   for /F "tokens=1,2*" %%I in ('reg query "HKLM\Software" /f "Perl.exe"') do (
+      if "%%I"=="BinDir" (
+         set PERL_BIN_DIR=%%~sfK
+      )
+   )
+)
+if "~%PERL_BIN_DIR:~-1%"=="~\" Set PERL_BIN_DIR=%PERL_BIN_DIR:~0,-1%
+echo PERL_BIN_DIR=%PERL_BIN_DIR%
+if not exist %PERL_BIN_DIR%\perl.exe echo could not find ActiveState Perl.exe, this is needed to build Condor
+
+:: WiX should be in the path or WIX_BIN_DIR must be set
+::
 if "~%WIX_BIN_DIR%"=="~" for %%I in (wix.dll) DO Set WIX_BIN_DIR=%%~sdp$PATH:I
 if "~%WIX_BIN_DIR%"=="~" set WIX_BIN_DIR=c:\Tools\WiX\bin
 if "~%WIX_BIN_DIR:~-1%"=="~\" Set WIX_BIN_DIR=%WIX_BIN_DIR:~0,-1%
 echo WIX_BIN_DIR=%WIX_BIN_DIR%
-if not exist %WIX_BIN_DIR%\wix.dll echo Wix is not in WIX_BIN_DIR!
+if not exist %WIX_BIN_DIR%\wix.dll echo could not find WiX binaries which are needed to create the Installer
 
-REM need the 7zip path also
+:: need the 7zip path also
+::
 if "~%ZIP_BIN_DIR%"=="~" for %%I in (7z.exe) do set ZIP_BIN_DIR=%%~sdp$PATH:I
 if "~%ZIP_BIN_DIR%"=="~" set ZIP_BIN_DIR=c:\Tools\7-zip
 if "~%ZIP_BIN_DIR:~-1%"=="~\" Set ZIP_BIN_DIR=%ZIP_BIN_DIR:~0,-1%
 echo ZIP_BIN_DIR=%ZIP_BIN_DIR%
-if not exist %ZIP_BIN_DIR%\7z.exe echo 7z.exe is not in ZIP_BIN_DIR!
+if not exist %ZIP_BIN_DIR%\7z.exe echo could not find 7z.exe, this is needed to PACKAGE condor
 
-REM setup GIT_BIN_DIR if we can find git
-REM
+:: setup GIT_BIN_DIR if we can find git. this isn't needed to build condor
+:: but it is needed to do condor development.
+::
 if "~%GIT_BIN_DIR%"=="~" for %%I in (git.exe) Do Set GIT_BIN_DIR=%%~sdp$PATH:I
 if "~%GIT_BIN_DIR%"=="~" set GIT_BIN_DIR=c:\Tools\Git\bin
 if "~%GIT_BIN_DIR:~-1%"=="~\" Set GIT_BIN_DIR=%GIT_BIN_DIR:~0,-1%
 echo GIT_BIN_DIR=%GIT_BIN_DIR%
-if not exist %GIT_BIN_DIR%\git.exe echo Git.exe is not in GIT_BIN_DIR!
+if not exist %GIT_BIN_DIR%\git.exe echo could not find Git.exe, (but it is not needed to build condor)
 
-REM set USER_TOOLS_DIR to point to c:\tools if it exists and doesn't
-REM already point to something.
+:: set USER_TOOLS_DIR if it isn't already set.  we point it at c:\tools if
+:: that directory exists.
+::
 if "~%USER_TOOLS_DIR%"=="~" (
-  if exist c:\Tools\NUL set USER_TOOLS_DIR=C:\Tools
+REM if exist c:\Tools\NUL set USER_TOOLS_DIR=C:\Tools
 )
 echo USER_TOOLS_DIR=%USER_TOOLS_DIR%
 
@@ -92,10 +132,14 @@ REM I'll harden it further if there is a requirement for it.)
 set PROGRAMS_DIR=%ProgramFiles%
 if not "~%ProgramFiles(x86)%"=="~" set PROGRAMS_DIR=%SystemDrive%\PROGRA~2
 
-
+:: If Visual Studio 2008 is installed, then VS90COMNTOOLS should be defined
+:: we can use that to setup the compiler environment. if it's not set
+:: then all we can do is choose default values for environment variables.
+::
 if "~%VS90COMNTOOLS%"=="~" goto use_default_paths
-REM don't guess about paths, derive them from available from VS90COMNTOOLS 
-REM
+
+:: derive from VS90COMNTOOLS
+::
 for /D %%I in ("%VS90COMNTOOLS%..") do set VS90ROOT=%%~sdpI
 set VS_DIR=%VS90ROOT:~0,-1%
 set VC_DIR=%VS_DIR%\VC
@@ -103,18 +147,27 @@ set VC_BIN=%VC_DIR%\bin
 set DBG_TOOLS_DIR=%ProgramFiles%\Debugging Tools for Windows (x86);%ProgramFiles%\Debugging Tools for Windows (x64)
 set DOTNET_DIRS=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
 
-if "~%SDK_DIR%"=="~"  set SDK_DIR=%SystemDrive%\PROGRA~1\MICROS~3\Windows\v7.0
-rem if "~%SDK_DIR%"=="~"  set SDK_DIR=%SystemDrive%\Win2003Sdk
-if "~%PERL_BIN_DIR%"=="~" set PERL_BIN_DIR=%SystemDrive%\Perl\bin
+:: find the latest windows SDK dir
+::
+::set SDK_DIR=%SystemDrive%\PROGRA~1\MICROS~3\Windows\v7.0
+if "~%SDK_DIR%"=="~" (
+   for /F "tokens=1,2*" %%I in ('reg query "HKLM\Software\Microsoft\Microsoft SDKs\Windows" /v "CurrentInstallFolder"') do (
+      if "%%I"=="CurrentInstallFolder" (
+         set SDK_DIR=%%~sfK
+      )
+   )
+)
+if "~%SDK_DIR:~-1%"=="~\" Set SDK_DIR=%SDK_DIR:~0,-1%
+
+
 goto got_paths
 
 
-REM don't have VS90COMNTOOLS defined, so we will have to assume default
-REM installation paths
-REM
+:: don't have VS90COMNTOOLS defined, so we will have to assume default
+:: installation paths for compiler
+::
 :use_default_paths
-
-REM Set paths to Visual C++, the Platform SDKs, and Perl
+:: Set default paths for Visual C++, the Platform SDKs, and Perl
 set VS_DIR=%PROGRAMS_DIR%\Microsoft Visual Studio 9.0
 set VC_DIR=%VS_DIR%\VC
 set VC_BIN=%VC_DIR%\bin
@@ -156,10 +209,25 @@ set LIB=%LIB%;%VC_DIR%\atlmfc\lib
 if NOT "~%SDK_DIR%"=="~" set LIB=%LIB%;%SDK_DIR%\lib
 
 REM Dump the Windows build environment at this point
-REM echo ----------------------- WIN ENV DUMP ----------------------
-@echo PATH=%PATH%
-@echo INCLUDE=%INCLUDE%
-@echo LIB=%LIB%
-REM echo ----------------------- WIN ENV DUMP ----------------------
+REM echo ----------------------- BUILD ENV ----------------------
+setlocal
+@echo PATH is
+set _remain_=%PATH%
+call :listenv
+@echo INCLUDE is
+set _remain_=%INCLUDE%
+call :listenv
+@echo LIB is
+set _remain_=%LIB%
+call :listenv
+REM echo --------------------------------------------------------
 
 exit /B 0
+
+:listenv
+if "~%_remain_%"=="~" goto :EOF
+for /F "delims=; tokens=1,*" %%I in ("%_remain_%") do (
+   set _remain_=%%J
+   echo.   %%I
+)
+goto listenv

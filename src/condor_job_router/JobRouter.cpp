@@ -39,7 +39,7 @@
 #include "user_job_policy.h"
 #include "get_daemon_name.h"
 #include "filename_tools.h"
-
+#include "condor_holdcodes.h"
 
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
@@ -451,6 +451,8 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	ClassAd converted_ad;
 	int action;
 	MyString reason;
+	int reason_code;
+	int reason_subcode;
 	bool ret_val = false;
 
 	if (false == new_to_old(job->src_ad, converted_ad))
@@ -463,7 +465,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 
 	action = user_policy.AnalyzePolicy(PERIODIC_ONLY);
 
-	reason = user_policy.FiringReason();
+	user_policy.FiringReason(reason,reason_code,reason_subcode);
 	if ( reason == "" ) {
 		reason = "Unknown user policy expression";
 	}
@@ -471,7 +473,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	switch(action)
 	{
 		case UNDEFINED_EVAL:
-			ret_val = SetJobHeld(job->src_ad, reason.Value());
+			ret_val = SetJobHeld(job->src_ad, reason.Value(), reason_code, reason_subcode);
 			break;
 		case STAYS_IN_QUEUE:
 			// do nothing
@@ -481,7 +483,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 			ret_val = SetJobRemoved(job->src_ad, reason.Value());
 			break;
 		case HOLD_IN_QUEUE:
-			ret_val = SetJobHeld(job->src_ad, reason.Value());
+			ret_val = SetJobHeld(job->src_ad, reason.Value(), reason_code, reason_subcode);
 			break;
 		case RELEASE_FROM_HOLD:
 			// When a job that is managed by the job router is
