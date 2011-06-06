@@ -1357,6 +1357,16 @@ check_domain_attributes()
 	}
 }
 
+// Sometimes tests want to be able to pretend that params were set
+// to a certain value by the user.  This function lets them do that.
+//
+void 
+param_insert(const char * name, const char * value)
+{
+	insert( name, value, ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam(name);
+}
+
 void
 init_config(bool wantExtraInfo  /* = true */)
 {
