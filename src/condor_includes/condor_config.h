@@ -162,6 +162,8 @@ extern "C" {
 	int  set_runtime_config(char *admin, char *config);
 	int is_valid_param_name(const char *name);
 	char * parse_param_name_from_config(const char *config);
+	// this function allows tests to pretend that a param was set to a given value.	
+    void  param_insert(const char * name, const char * value);
 	/** Expand parameter references of the form "left$(middle)right".  
 	
 	This is deceptively simple, but does handle multiple and or nested

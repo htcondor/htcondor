@@ -141,15 +141,15 @@ static bool test_firing_reason_exit_on_exit_remove(void);
 static bool test_custom_firing_reason_exit_on_exit_hold(void);
 static bool test_custom_firing_reason_exit_on_exit_remove(void);
 static bool test_firing_reason_exit_false(void);
-/*static bool test_remove_macro_analyze_policy(void);*/
+static bool test_remove_macro_analyze_policy(void);
 static bool test_remove_macro_firing_expression(void);
 static bool test_remove_macro_firing_expression_value(void);
 static bool test_remove_macro_firing_reason(void);
-/*static bool test_release_macro_analyze_policy(void);*/
+static bool test_release_macro_analyze_policy(void);
 static bool test_release_macro_firing_expression(void);
 static bool test_release_macro_firing_expression_value(void);
 static bool test_release_macro_firing_reason(void);
-/*static bool test_hold_macro_analyze_policy(void);*/
+static bool test_hold_macro_analyze_policy(void);
 static bool test_hold_macro_firing_expression(void);
 static bool test_hold_macro_firing_expression_value(void);
 static bool test_hold_macro_firing_reason(void);
@@ -300,18 +300,18 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_custom_firing_reason_exit_on_exit_hold);
 	driver.register_function(test_custom_firing_reason_exit_on_exit_remove);
 	driver.register_function(test_firing_reason_exit_false);
-/*	driver.register_function(test_remove_macro_analyze_policy);*/
+	driver.register_function(test_remove_macro_analyze_policy);
 //	driver.register_function(test_remove_macro_firing_expression);
 //	driver.register_function(test_remove_macro_firing_expression_value);
 //	driver.register_function(test_remove_macro_firing_reason);
-/*	driver.register_function(test_release_macro_analyze_policy);*/
-//	driver.register_function(test_release_macro_firing_expression);
+	driver.register_function(test_release_macro_analyze_policy);
+	driver.register_function(test_release_macro_firing_expression);
 	driver.register_function(test_release_macro_firing_expression_value);
-//	driver.register_function(test_release_macro_firing_reason);
-/*	driver.register_function(test_hold_macro_analyze_policy);*/
-//	driver.register_function(test_hold_macro_firing_expression);
+	driver.register_function(test_release_macro_firing_reason);
+	driver.register_function(test_hold_macro_analyze_policy);
+	driver.register_function(test_hold_macro_firing_expression);
 	driver.register_function(test_hold_macro_firing_expression_value);
-//	driver.register_function(test_hold_macro_firing_reason);
+	driver.register_function(test_hold_macro_firing_reason);
 	
 	return driver.do_all_functions();
 }
@@ -2929,7 +2929,7 @@ static bool test_firing_reason_exit_false() {
 	PASS;
 }
 
-#if 0
+#if 1
 static bool test_remove_macro_analyze_policy() {
 	emit_test("Test that AnalyzePolicy() returns REMOVE_FROM_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicRemove "
@@ -2942,8 +2942,9 @@ static bool test_remove_macro_analyze_policy() {
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_output_expected_header();
 	emit_retval("%d", REMOVE_FROM_QUEUE);
-	param_info_insert("SYSTEM_PERIODIC_REMOVE", NULL, "true", NULL, ".*", 
-					  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
+	param_insert("SYSTEM_PERIODIC_REMOVE", "true");
+	//param_info_insert("SYSTEM_PERIODIC_REMOVE", NULL, "true", NULL, ".*", 
+	//				  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
 	UserPolicy policy;
 	policy.Init(ad);
 	int ret_val = policy.AnalyzePolicy(PERIODIC_ONLY);
@@ -3040,7 +3041,7 @@ static bool test_remove_macro_firing_reason() {
 	PASS;
 }
 
-#if 0
+#if 1
 static bool test_release_macro_analyze_policy() {
 	emit_test("Test that AnalyzePolicy() returns RELEASE_FROM_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicRelease "
@@ -3053,8 +3054,9 @@ static bool test_release_macro_analyze_policy() {
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_output_expected_header();
 	emit_retval("%d", RELEASE_FROM_HOLD);
-	param_info_insert("SYSTEM_PERIODIC_RELEASE", NULL, "true", NULL, ".*", 
-					  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
+	param_insert("SYSTEM_PERIODIC_RELEASE", "true");
+	//param_info_insert("SYSTEM_PERIODIC_RELEASE", NULL, "true", NULL, ".*", 
+	//				  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
 	UserPolicy policy;
 	policy.Init(ad);
 	int ret_val = policy.AnalyzePolicy(PERIODIC_ONLY);
@@ -3151,7 +3153,7 @@ static bool test_release_macro_firing_reason() {
 	PASS;
 }
 
-#if 0
+#if 1
 static bool test_hold_macro_analyze_policy() {
 	emit_test("Test that AnalyzePolicy() returns RELEASE_FROM_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicHold "
@@ -3164,8 +3166,9 @@ static bool test_hold_macro_analyze_policy() {
 	emit_param("ClassAd", "%s", classad_string.c_str());
 	emit_output_expected_header();
 	emit_retval("%d", HOLD_IN_QUEUE);
-	param_info_insert("SYSTEM_PERIODIC_HOLD", NULL, "true", NULL, ".*", 
-					  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
+	param_insert("SYSTEM_PERIODIC_HOLD", "true");
+	//param_info_insert("SYSTEM_PERIODIC_HOLD", NULL, "true", NULL, ".*", 
+	//				  0, 0, 0, 0, 0, NULL, NULL, NULL, NULL);
 	UserPolicy policy;
 	policy.Init(ad);
 	int ret_val = policy.AnalyzePolicy(PERIODIC_ONLY);
