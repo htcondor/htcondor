@@ -21,7 +21,7 @@ definitions:
 	\item[\AdStr{INTEL}:] Intel x86 CPU (Pentium, Xeon, etc).
 	\item[\AdStr{X86\_64}:] AMD/Intel 64-bit X86
 	\end{description}
-These strings show definitions for architectures no longer suppported:
+These strings show definitions for architectures no longer supported:
 	\begin{description}
 	\item[\AdStr{IA64}:] Intel Itanium
 	\item[\AdStr{SUN4u}:] Sun UltraSparc CPU
@@ -72,6 +72,20 @@ the job in Kbytes ( e.g. 23000 = 23 megabytes ).  Specifically, this
 is the amount of disk space available in the directory specified in
 the Condor configuration files by the \Macro{EXECUTE} macro, minus any
 space reserved with the \Macro{RESERVED\_DISK} macro.
+%
+\index{ClassAd machine attribute!DotNetVersions}
+\item[\AdAttr{DotNetVersions}:] The .NET framework versions
+currently installed on this computer. 
+Default format is a comma delimited list. 
+Current definitions:
+  \begin{description}
+  \item[\AdStr{1.1}:] for .Net Framework 1.1
+  \item[\AdStr{2.0}:] for .Net Framework 2.0
+  \item[\AdStr{3.0}:] for .Net Framework 3.0
+  \item[\AdStr{3.5}:] for .Net Framework 3.5
+  \item[\AdStr{4.0Client}:] for .Net Framework 4.0 Client install
+  \item[\AdStr{4.0Full}:] for .Net Framework 4.0 Full install
+  \end{description}
 %
 \index{ClassAd machine attribute!DynamicSlot}
 \label{DynamicSlot-machine-attribute} 
@@ -204,7 +218,7 @@ definitions:
 	\item[\AdStr{WINNT60}:] for Windows Vista
 	\item[\AdStr{WINNT61}:] for Windows 7
 	\end{description}
-These strings show definitions for operating systems no longer suppported:
+These strings show definitions for operating systems no longer supported:
 	\begin{description}
 	\item[\AdStr{SOLARIS28}:] for Solaris 2.8 or 5.8
 	\item[\AdStr{SOLARIS29}:] for Solaris 2.9 or 5.9

@@ -1392,23 +1392,30 @@ of the subsystem corresponding to the daemon.
   file.  By default this setting is \Expr{False} for all daemons.
   
 \label{param:SubsysLogKeepOpen}
-\item[\Macro{<SUBSYS>\_LOG\_KEEP\_OPEN}]\
-  A boolean value that controls keeping the log file open between writes.
-  When true, the daemon will not constantly open and close the log file
+\item[\MacroB{<SUBSYS>\_LOG\_KEEP\_OPEN}]
+\index{SUBSYS\_LOG\_KEEP\_OPEN macro@\texttt{<SUBSYS>\_LOG\_KEEP\_OPEN} macro}
+  A boolean value that controls whether or not the log file is kept open 
+  between writes.
+  When \Expr{True}, the daemon will not open and close the log file
   between writes.  Instead the daemon will hold the log file open until the log
-  needs to be rotated. When false, the daemon reverts to the old behavior
-  of opening and closing the log file between writes.  When the
-  \MacroUNI{<SUBSYS>\_LOCK} macro is defined, setting
-  \MacroUNI{<SUBSYS>\_LOG\_KEEP\_OPEN} has  no effect as the daemon
+  needs to be rotated. 
+  When \Expr{False}, the daemon reverts to the previous behavior
+  of opening and closing the log file between writes.  
+  When the \MacroUNI{<SUBSYS>\_LOCK} macro is defined,
+  setting \MacroUNI{<SUBSYS>\_LOG\_KEEP\_OPEN} has no effect,
+  as the daemon
   will unconditionally revert back to the open/close between writes behavior.
-  On Windows the value defaults to true for all daemons. On Linux the value
-  defaults to true for all daemons except the shadow due to a
-  global file descriptor limit.
+  On Windows platforms,
+  the value defaults to \Expr{True} for all daemons. 
+  On Linux platforms,
+  the value defaults to \Expr{True} for all daemons,
+  except the \Condor{shadow},
+  due to a global file descriptor limit.
 
 \label{param:SubsysLock} 
 \item[\MacroB{<SUBSYS>\_LOCK}]
 \index{SUBSYS\_LOCK macro@\texttt{<SUBSYS>\_LOCK} macro}
-This macro
+  This macro
   specifies the lock file used to synchronize append operations to the
   log file for this subsystem.  It must be a separate file from the
   \MacroUNI{<SUBSYS>\_LOG} file, since the \MacroUNI{<SUBSYS>\_LOG} file may be
@@ -4349,18 +4356,24 @@ The following configuration variables control .NET version advertisement.
 \begin{description}
 \label{param:StartdPublishDotnet}
 \item[\Macro{STARTD\_PUBLISH\_DOTNET}]
-  A boolean value that controls the advertising of the .NET framework on Windows.
-  When set to true the startd will advertise all installed versions of the .NET framework
-  in the DotNetVersions attribute in the startd classad.  The default value is true.
-  Set to false to turn off .NET version advertising.
+  A boolean value that controls the advertising of the .NET framework 
+  on Windows platforms.
+  When \Expr{True}, the \Condor{startd} will advertise all installed versions 
+  of the .NET framework within the \Attr{DotNetVersions} attribute 
+  in the \Condor{startd} machine ClassAd.
+  The default value is \Expr{True}.
+  Set the value to \Expr{false} to turn off .NET version advertising.
   
 \label{param:DotNetVersions}
 \item[\Macro{DOT\_NET\_VERSIONS}]
-  A string expression that administrators can use to override the way .NET versions
-  are advertised.  If the administrator wishes to advertise .NET installations but wishes
-  to do so in a format different than what the startd publishes in its ads, setting a
-  string in this expression will result in the startd publishing the string when
-  \Macro{STARTD\_PUBLISH\_DOTNET} is true.  This value is empty by default.
+  A string expression that administrators can use to override the way that
+  .NET versions are advertised.  
+  If the administrator wishes to advertise .NET installations,
+  but wishes to do so in a format different than what the \Condor{startd}
+  publishes in its ClassAds,
+  setting a string in this expression will result in the \Condor{startd}
+  publishing the string when \Macro{STARTD\_PUBLISH\_DOTNET} is \Expr{True}.
+  No value is set by default.
 \end{description}
 
 These macros control the power management capabilities of the 
