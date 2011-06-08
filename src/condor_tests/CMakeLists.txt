@@ -291,6 +291,11 @@ if (BUILD_TESTS)
 	condor_pl_test(cmd_q_shows-xml "Condor_q shows xml" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-cputime "Condor_q shows cputime" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-format "Condor_q shows format" "core;quick;full;quicknolink")
+
+	if (NOT WINDOWS)
+          condor_pl_test(cmd_ssh_van "condor_ssh_to_job" "core;quick;full;quicknolink")
+	endif(NOT WINDOWS)
+
 	##### lib log tests
 	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full")
 	condor_pl_test(lib_eventlog "Basic Event Log Test" "core;quick;full")
