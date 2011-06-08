@@ -1702,7 +1702,7 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 // that is now in schedd.cpp.  We are keeping this here for now in case
 // someone needs to run a 7.5.6 DAGMan with an older schedd.
 // wenger 2011-01-26
-void Dag::RemoveRunningJobs ( const Dagman &dm) const {
+void Dag::RemoveRunningJobs ( const Dagman &dm, bool bForce) const {
 
 	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor/"
 				"Stork jobs...\n");
@@ -1712,7 +1712,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 		// first, remove all Condor jobs submitted by this DAGMan
 		// Make sure we have at least one Condor (not Stork) job before
 		// we call condor_rm...
-	bool	haveCondorJob = false;
+	bool	haveCondorJob = bForce;
     ListIterator<Job> jobList(_jobs);
     Job * job;
     while (jobList.Next(job)) {
@@ -1737,6 +1737,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 			debug_printf( DEBUG_NORMAL, "Error removing DAGMan jobs\n");
 		}
 	}
+		
 
 		// Okay, now remove any Stork jobs.
     ListIterator<Job> iList(_jobs);
