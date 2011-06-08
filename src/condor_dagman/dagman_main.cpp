@@ -1029,7 +1029,11 @@ void main_init (int argc, char ** const argv) {
 							dagman.multiDags, dagman.maxRescueDagNum,
 							true );
 			}
-
+			
+			dagman.dag->RemoveRunningJobs(dagman, true);
+			unlink( lockFileName );
+			dagman.CleanUp();
+			
 				// Note: debug_error calls DC_Exit().
         	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
 					 	dagFile );
