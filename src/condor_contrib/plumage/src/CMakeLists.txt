@@ -20,13 +20,13 @@
 ############################
 # file target references.
 ############################
-file( GLOB PLUGIN_SRCS Codec.cpp AviaryUtils.cpp SchedulerObject.cpp
+file( GLOB ETL_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp SchedulerObject.cpp
 			PROC_ID_comparator.cpp AviaryScheddPlugin*.cpp )
 
-file( GLOB SERVER_SRCS plumage_job_etl_main.cpp 
-					PlumageJobLogConsumer.cpp
-					PlumageHistoryFile.cpp PlumageHistoryUtils.cpp 
-					PlumageReaderWriter.cpp )
+file( GLOB ETL_SERVER_SRCS ods_job_etl_main.cpp 
+					ODSJobLogConsumer.cpp
+					ODSHistoryFile.cpp ODSHistoryUtils.cpp 
+					ODSReaderWriter.cpp )
 
 ############################
 # emitter plugin
@@ -34,12 +34,12 @@ file( GLOB SERVER_SRCS plumage_job_etl_main.cpp
 src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
 src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-condor_plugin( PlumageEmitterPlugin "${COLLECTOR_REF};${UTILS_REF};${PLUGIN_SRCS}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
+condor_plugin( ODSEmitterPlugin "${COLLECTOR_REF};${UTILS_REF};${ETL_PLUGIN_SRCS}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
 ############################
 # etl server
 ############################
-condor_exe( plumage_job_etl "${ETL_SERVER_SRCS}"
+condor_exe( ods_job_etl "${ETL_SERVER_SRCS}"
 			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${MONGODB_FOUND}" OFF )
 
 ############################
