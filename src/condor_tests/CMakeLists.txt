@@ -292,9 +292,9 @@ if (BUILD_TESTS)
 	condor_pl_test(cmd_q_shows-cputime "Condor_q shows cputime" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-format "Condor_q shows format" "core;quick;full;quicknolink")
 
-	if (NOT WINDOWS)
-          condor_pl_test(cmd_ssh_van "condor_ssh_to_job" "core;quick;full;quicknolink")
-	endif(NOT WINDOWS)
+	if (LINUX AND NOT ${SYSTEM_NAME} MATCHES "rhel3")
+          condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
+	endif(LINUX)
 
 	##### lib log tests
 	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full")

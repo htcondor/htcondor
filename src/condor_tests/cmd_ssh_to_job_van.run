@@ -1,0 +1,86 @@
+#!/usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+
+my $cluster = 1;
+my $temp_file = CondorTest::TempFileName("cmd_ssh_van.temp");
+
+$submit = sub {
+    # cluster should always be 1, but let's make sure
+    my %info = @_;
+    $cluster = $info{'cluster'};
+};
+
+$execute = sub {
+    # give the job a little time to fully start up
+    sleep 10;
+    
+    # check if shell environment is same as job
+    my $scratch_dir = `condor_ssh_to_job -auto-retry $cluster "pwd;echo \$_CONDOR_SCRATCH_DIR"`;
+    print "_CONDOR_SCRATCH_DIR: $scratch_dir\n";
+    
+    # check if simple command works
+    my $cmd = "condor_ssh_to_job -auto-retry $cluster \"echo ssh_to_job_success > ./$temp_file\"";
+    if(system($cmd)) {
+        die "'$cmd' failed: $?";
+    }
+    
+    my $result = ($scratch_dir ne "");
+    CondorTest::RegisterResult($result,
+                               (check_name => "shell environment",
+                                test_name => "cmd_ssh_van") );
+};
+
+$success = sub {
+    # remove temp file
+    system("/bin/rm $temp_file");
+    
+    CondorTest::EndTest();
+};
+
+CondorTest::StartCondorWithParams();
+
+my $testname = "cmd_ssh_van";
+CondorTest::RegisterSubmit( $testname, $submit );
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterExitedSuccess ($testname, $success);
+
+# submit file
+my $submit_fname = CondorTest::TempFileName("$testname.submit");
+open( SUBMIT, '>', $submit_fname ) || die "error writing to $submit_fname: $!\n";
+print SUBMIT "universe = vanilla\n";
+print SUBMIT "executable = cmd_ssh_van.pl\n";
+print SUBMIT "output = $testname.out\n";
+print SUBMIT "error = $testname.err\n";
+print SUBMIT "log = $testname.log\n";
+print SUBMIT "arguments = \"$temp_file\"\n";
+print SUBMIT "notification = never\n";
+print SUBMIT "queue\n";
+close( SUBMIT );
+
+# run test
+if( CondorTest::RunTest($testname, $submit_fname, 0) ) {
+    CondorTest::debug("$testname: SUCCESS\n",1);
+    exit(0);
+}
+else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
