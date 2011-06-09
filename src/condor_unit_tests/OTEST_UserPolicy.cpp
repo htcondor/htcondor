@@ -301,9 +301,9 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_custom_firing_reason_exit_on_exit_remove);
 	driver.register_function(test_firing_reason_exit_false);
 	driver.register_function(test_remove_macro_analyze_policy);
-//	driver.register_function(test_remove_macro_firing_expression);
-//	driver.register_function(test_remove_macro_firing_expression_value);
-//	driver.register_function(test_remove_macro_firing_reason);
+	driver.register_function(test_remove_macro_firing_expression);
+	driver.register_function(test_remove_macro_firing_expression_value);
+	driver.register_function(test_remove_macro_firing_reason);
 	driver.register_function(test_release_macro_analyze_policy);
 	driver.register_function(test_release_macro_firing_expression);
 	driver.register_function(test_release_macro_firing_expression_value);
@@ -2929,7 +2929,6 @@ static bool test_firing_reason_exit_false() {
 	PASS;
 }
 
-#if 1
 static bool test_remove_macro_analyze_policy() {
 	emit_test("Test that AnalyzePolicy() returns REMOVE_FROM_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicRemove "
@@ -2956,7 +2955,6 @@ static bool test_remove_macro_analyze_policy() {
 	}
 	PASS;
 }
-#endif
 
 static bool test_remove_macro_firing_expression() {
 	emit_test("Test that FiringExpression() returns SYSTEM_PERIODIC_REMOVE "
@@ -3041,7 +3039,6 @@ static bool test_remove_macro_firing_reason() {
 	PASS;
 }
 
-#if 1
 static bool test_release_macro_analyze_policy() {
 	emit_test("Test that AnalyzePolicy() returns RELEASE_FROM_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicRelease "
@@ -3068,7 +3065,6 @@ static bool test_release_macro_analyze_policy() {
 	}
 	PASS;
 }
-#endif
 
 static bool test_release_macro_firing_expression() {
 	emit_test("Test that FiringExpression() returns SYSTEM_PERIODIC_RELEASE "
@@ -3153,7 +3149,6 @@ static bool test_release_macro_firing_reason() {
 	PASS;
 }
 
-#if 1
 static bool test_hold_macro_analyze_policy() {
 	emit_test("Test that AnalyzePolicy() returns RELEASE_FROM_QUEUE when used"
 		" with the PERIODIC_ONLY mode and a ClassAd that has PeriodicHold "
@@ -3180,7 +3175,6 @@ static bool test_hold_macro_analyze_policy() {
 	}
 	PASS;
 }
-#endif
 
 static bool test_hold_macro_firing_expression() {
 	emit_test("Test that FiringExpression() returns SYSTEM_PERIODIC_HOLD "
