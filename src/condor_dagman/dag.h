@@ -422,7 +422,7 @@ class Dag {
         condor_rm.  This function <b>is not</b> called when the schedd
         kills Dagman.
     */
-    void RemoveRunningJobs ( const Dagman & ) const;
+    void RemoveRunningJobs ( const Dagman &, bool bForce=false) const;
 
     /** Remove all pre- and post-scripts that are currently running.
 	All currently running scripts will be killed via daemoncore.
