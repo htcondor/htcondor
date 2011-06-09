@@ -37,7 +37,9 @@ The details of each version are described below.
 % #1871 commit e4cce6996764a5eaabb28106c44f901c23dc4bae
 \item The new submit description file command \SubmitCmd{stack\_size} 
   applies to Linux jobs that are not running in the standard universe. 
-  This also advertises the job ClassAd attribute \AdAttr{StackSize}.
+  It sets the allocation of stack space to be other than the default
+  value of 512 Mbytes.
+  It also advertises the job ClassAd attribute \AdAttr{StackSize}.
 
 % gittrac #1550
 \item The new ClassAd function \Code{stringListsIntersect} evaluates to 

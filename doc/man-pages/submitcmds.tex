@@ -2906,6 +2906,18 @@ on page~\pageref{param:StarterAllowRunAsOwner} for a definition of
 \MacroNI{STARTER\_ALLOW\_RUNAS\_OWNER}.
 
 %%%%%%%%%%%%%%%%%%%
+%% stack_size
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!stack\_size}
+\item[stack\_size = $<$size in bytes$>$]
+This command applies only to Linux platform jobs that are not standard
+universe jobs.
+An integer number of bytes, representing the amount of stack space to be 
+allocated for the job.
+This value replaces the default allocation of 512 Mbytes of stack space.
+
+%%%%%%%%%%%%%%%%%%%
 %% submit_event_notes
 %%%%%%%%%%%%%%%%%%%
 

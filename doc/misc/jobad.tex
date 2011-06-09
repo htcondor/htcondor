@@ -1036,6 +1036,14 @@ Utilized when dynamic \Condor{startd} provisioning is enabled.
 \item[\AdAttr{ResidentSetSize}:]  Estimate of the physical memory
 in use by the job in Kbytes while it is running.
 
+%%% ClassAd attribute: StackSize
+\index{ClassAd job attribute!StackSize}
+\index{StackSize!job ClassAd attribute}
+\item[\AdAttr{StackSize}:]   
+Utilized for Linux jobs only, 
+the number of bytes allocated for stack space for this job.
+This number of bytes replaces the default allocation of 512 Mbytes.
+
 %%% ClassAd attribute: StageOutFinish
 \index{ClassAd job attribute!StageOutFinish}
 \index{StageOutFinish!job ClassAd attribute}
