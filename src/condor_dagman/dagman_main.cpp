@@ -1,3 +1,4 @@
+//TEMPTEMP -- first, remove "old rescue" stuff...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -64,7 +65,6 @@ static void Usage() {
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-CsdVersion <version string>\n"
             "\t\t[-Debug <level>]\n"
-            "\t\t[-Rescue <Rescue.dag>]\n"
             "\t\t[-MaxIdle <int N>]\n"
             "\t\t[-MaxJobs <int N>]\n"
             "\t\t[-MaxPre <int N>]\n"
@@ -607,13 +607,6 @@ void main_init (int argc, char ** const argv) {
                 Usage();
             }
 			dagman.dagFiles.append( argv[i] );
-        } else if( !strcasecmp( "-Rescue", argv[i] ) ) {
-            i++;
-            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
-                debug_printf( DEBUG_SILENT, "No Rescue DAG specified\n" );
-                Usage();
-            }
-			dagman.rescueFileToWrite = argv[i];
         } else if( !strcasecmp( "-MaxIdle", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -962,8 +955,6 @@ void main_init (int argc, char ** const argv) {
 		//
 	dagman._submitDagDeepOpts.bAllowLogError = dagman.allowLogError;
 	dagman._submitDagDeepOpts.useDagDir = dagman.useDagDir;
-	dagman._submitDagDeepOpts.oldRescue =
-				(dagman.rescueFileToWrite != NULL);
 	dagman._submitDagDeepOpts.autoRescue = dagman.autoRescue;
 	dagman._submitDagDeepOpts.doRescueFrom = dagman.doRescueFrom;
 	dagman._submitDagDeepOpts.allowVerMismatch = allowVerMismatch;

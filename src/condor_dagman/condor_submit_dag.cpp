@@ -446,12 +446,8 @@ void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 		unlink(shallowOpts.strSchedLog.Value());
 		unlink(shallowOpts.strLibOut.Value());
 		unlink(shallowOpts.strLibErr.Value());
-		if (deepOpts.oldRescue) {
-			unlink(shallowOpts.strRescueFile.Value());
-		} else {
-			RenameRescueDagsAfter(shallowOpts.primaryDagFile.Value(),
-						shallowOpts.dagFiles.number() > 1, 0, maxRescueDagNum);
-		}
+		RenameRescueDagsAfter(shallowOpts.primaryDagFile.Value(),
+					shallowOpts.dagFiles.number() > 1, 0, maxRescueDagNum);
 	}
 
 		// Check whether we're automatically running a rescue DAG -- if
@@ -727,10 +723,6 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(dagFile);
 	}
 
-	if(deepOpts.oldRescue) {
-		args.AppendArg("-Rescue");
-		args.AppendArg(shallowOpts.strRescueFile.Value());
-	}
     if(shallowOpts.iMaxIdle != 0) 
 	{
 		args.AppendArg("-MaxIdle");
@@ -1044,14 +1036,6 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				shallowOpts.appendFile = argv[iArg];
 			}
-			else if (strArg.find("-oldr") != -1) // -oldrescue
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-oldrescue argument needs a value\n");
-					printUsage();
-				}
-				deepOpts.oldRescue = (atoi(argv[++iArg]) != 0);
-			}
 			else if (strArg.find("-autor") != -1) // -autorescue
 			{
 				if (iArg + 1 >= argc) {
@@ -1119,13 +1103,6 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 	{
 		fprintf( stderr, "ERROR: no dag file specified; aborting.\n" );
 		printUsage();
-	}
-
-	if (deepOpts.oldRescue && deepOpts.autoRescue)
-	{
-		fprintf( stderr, "Error: DAGMAN_OLD_RESCUE and DAGMAN_AUTO_RESCUE "
-					"are both true.\n" );
-	    exit( 1 );
 	}
 
 	if (deepOpts.doRescueFrom < 0)
@@ -1228,8 +1205,6 @@ int printUsage()
     printf("    -config <filename>  (Specify a DAGMan configuration file)\n");
 	printf("    -append <command>   (Append specified command to .condor.sub file)\n");
 	printf("    -insert_sub_file <filename>   (Insert specified file into .condor.sub file)\n");
-	printf("    -OldRescue 0|1      (whether to write rescue DAG the old way;\n");
-	printf("         0 = false, 1 = true)\n");
 	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG;\n");
 	printf("         0 = false, 1 = true)\n");
 	printf("    -DoRescueFrom <number>  (run rescue DAG of given number)\n");
