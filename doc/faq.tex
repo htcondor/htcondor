@@ -742,8 +742,8 @@ On Linux, each thread appears to consume as much memory as the entire
 program consumes, so the image size appears to be (number-of-threads *
 image-size-of-program). If your program uses a lot of threads, your
 apparent image size balloons. You can see the image size that Condor
-believes your program has by using the -l option to condor\_q, and
-looking at the ImageSize attribute.
+believes your program has by using the -l option to \Condor{q}, and
+looking at the \Attr{ImageSize} attribute.
 
 When you submit your job, Condor creates or extends the requirements
 for your job. In particular, it adds a requirement that you job must
@@ -755,34 +755,34 @@ Requirements = ... ((Memory * 1024) >= ImageSize) ...
 \end{verbatim}
 \normalsize
 
-(Note that memory is the execution machine's memory in megabytes while
-ImageSize is in kilobytes). When your application is threaded, the
-image size appears to be much larger than it really is, and you may not
-have a machine with sufficient memory to handle this requirement.
+Note that memory is the execution machine's memory in Mbytes,
+while \Attr{ImageSize} is in Kbytes.
+\Attr{ImageSize} is not a perfect measure of the memory requirements of a job.
+It over-counts memory that is shared between processes.
+It may appear quite large if the job uses \Procedure{mmap} on a large file.
+It does not account for memory that the job uses indirectly in the operating
+system's file system cache.
 
-Unfortunately, calculating the correct ImageSize is rather hard to fix
-on Linux, and we do not yet have a good solution. Fortunately, there
-is a workaround while we work on a good solution for a future
-release.
-
-In the Requirements expression above, Condor added \Expr{(Memory * 1024) >=
-ImageSize)} on your behalf. You can prevent Condor from doing this by
-giving it your own expression about memory in your submit file, just
-as:
+In the Requirements expression above, 
+Condor added \Expr{(Memory * 1024) >= ImageSize)} on behalf of the job.
+To prevent Condor from doing this,
+provide your own expression about memory in the submit description file,
+as in this example:
 
 \begin{verbatim}
 Requirements = Memory > 1024
 \end{verbatim}
 
-You will need to change 1024 to a reasonably good estimate of the actual
-image size of your program, in kilobytes. This expression says that
-your program requires 1 megabyte of memory. If you underestimate the
-memory your application needs, you may have bad performance if you job
+You will need to change the value 1024 to a reasonably good estimate of 
+the actual
+memory requirements of the program, in Mbytes. This example says that
+the program requires 1 Gbyte of memory. If you underestimate the
+memory your application needs, you may have bad performance if the job
 runs on machines that have insufficient memory.
 
 In addition, if you have modified your machine policies to preempt
-jobs when they get big a ImageSize, you will need to change those
-policies.
+jobs when \Attr{ImageSize} is large,
+you will need to change those policies.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Why does the time output from \Condor{status} appear
