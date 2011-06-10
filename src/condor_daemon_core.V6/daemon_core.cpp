@@ -10467,7 +10467,7 @@ DaemonCore::InitSettableAttrsLists( void )
 		if( SettableAttrsLists[i] ) {
 			tmp = (SettableAttrsLists[i])->print_to_string();
 			dprintf( D_ALWAYS, "SettableAttrList[%s]: %s\n",
-					 PermString((DCpermission)i), tmp );
+					 PermString((DCpermission)i), tmp?tmp:"" );
 			free( tmp );
 		}
 	}

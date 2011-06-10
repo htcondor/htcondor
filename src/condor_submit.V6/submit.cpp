@@ -7362,10 +7362,12 @@ SetConcurrencyLimits()
 		list.qsort();
 
 		str = list.print_to_string();
-		tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
-		InsertJobExpr(tmp.Value());
+		if ( str ) {
+			tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
+			InsertJobExpr(tmp.Value());
 
-		free(str);
+			free(str);
+		}
 	}
 }
 
@@ -7753,9 +7755,11 @@ SetVMParams()
 		}
 
 		tmp_ptr = vmdk_files.print_to_string();
-		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
-		InsertJobExpr( buffer );
-		free( tmp_ptr );
+		if ( tmp_ptr ) {
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
+			InsertJobExpr( buffer );
+			free( tmp_ptr );
+		}
 	}
 
 	// Check if a job user defines 'Argument'.
