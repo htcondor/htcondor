@@ -1,5 +1,6 @@
 //TEMPTEMP -- first, remove "old rescue" stuff...
 //TEMPTEMP -- -DumpRescue should still write out a complete dag file...
+//TEMPTEMP -- think about how to make rescue dags work across dagman version upgrade
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -999,6 +1000,7 @@ void main_init (int argc, char ** const argv) {
     //
 	if ( dagman.dagFiles.number() < 2 ) dagman.mungeNodeNames = false;
 	parseSetDoNameMunge( dagman.mungeNodeNames );
+	parseSetDoNameMunge( false );//TEMPTEMP!!!!!
    	debug_printf( DEBUG_VERBOSE, "Parsing %d dagfiles\n", 
 		dagman.dagFiles.number() );
 	dagman.dagFiles.rewind();

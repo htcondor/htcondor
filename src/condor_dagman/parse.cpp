@@ -51,8 +51,7 @@ static ExtArray<char*> _spliceScope;
 static bool _useDagDir = false;
 
 static int _thisDagNum = -1;
-//TEMPTEMP static bool _mungeNames = true;
-static bool _mungeNames = false;//TEMPTEMP
+static bool _mungeNames = true;
 
 static bool parse_subdag( Dag *dag, Job::job_type_t nodeType,
 						const char* nodeTypeKeyword,
@@ -1857,7 +1856,6 @@ static MyString munge_job_name(const char *jobName)
 		//
 	MyString newName;
 
-	_mungeNames = false;//TEMPTEMP!!!!!!!
 	if ( _mungeNames ) {
 		newName = MyString(_thisDagNum) + "." + jobName;
 	} else {
