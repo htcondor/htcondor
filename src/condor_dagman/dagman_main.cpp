@@ -99,7 +99,7 @@ Dagman::Dagman() :
 	maxJobs (0),
 	maxPreScripts (0),
 	maxPostScripts (0),
-	rescueFileToWrite (NULL),
+	rescueFileToWrite (NULL),//TEMPTEMP -- get rid of this?
 	paused (false),
 	condorSubmitExe (NULL),
 	condorRmExe (NULL),
@@ -924,22 +924,24 @@ void main_init (int argc, char ** const argv) {
 		// If we are running a "new-style" rescue DAG, update our DAG
 		// files list accordingly.
 		//
+//TEMPTEMP -- okay, we just want to add the rescue DAG to the end of the DAG file list...
 	if ( rescueDagNum > 0 ) {
 		dagman.rescueFileToRun = RescueDagName(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum );
+		//TEMPTEMP -- change message here...
 		debug_printf ( DEBUG_QUIET, "%s; running %s instead of normal "
 					"DAG file%s\n", rescueDagMsg.Value(),
 					dagman.rescueFileToRun.Value(),
 					dagman.multiDags ? "s" : "");
 		debug_printf ( DEBUG_QUIET,
 					"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-		debug_printf ( DEBUG_QUIET, "RUNNING RESCUE DAG %s\n",
+		debug_printf ( DEBUG_QUIET, "USING RESCUE DAG %s\n",
 					dagman.rescueFileToRun.Value() );
 			// Note: if we ran multiple DAGs and they failed, the
 			// whole thing is condensed into a single rescue DAG.
 			// wenger 2007-02-27
-		dagman.dagFiles.clearAll();
+		//TEMPTEMP? dagman.dagFiles.clearAll();
 		dagman.dagFiles.append( dagman.rescueFileToRun.Value() );
 		dagman.dagFiles.rewind();
 

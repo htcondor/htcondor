@@ -1,4 +1,6 @@
 //TEMPTEMP -- make a test that checks that all possible stuff gets put into rescue DAG (old-style)
+//TEMPTEMP -- make sure this works with splices
+//TEMPTEMP -- maybe having a DONE line for a non-existant node should be warning, in case you removed a node from the "main" DAG
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1914,7 +1916,6 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
     //
     // Print per-node information.
     //
-	//TEMPTEMP -- maybe move this to a different method?  maybe in the Job class?
 	//TEMPTEMP -- need to print retry info if it's not being reset
     it.ToBeforeFirst();
     while (it.Next(job)) {
@@ -1926,28 +1927,32 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
     //
     // Print Dependency Section
     //
-    fprintf(fp, "\n");
-    it.ToBeforeFirst();
-    while (it.Next(job)) {
+	if ( !isNew ) {
+    	fprintf(fp, "\n");
+    	it.ToBeforeFirst();
+    	while (it.Next(job)) {
 
-        set<JobID_t> & _queue = job->GetQueueRef(Job::Q_CHILDREN);
-        if (!_queue.empty()) {
-            fprintf(fp, "PARENT %s CHILD", job->GetJobName());
+        	set<JobID_t> & _queue = job->GetQueueRef(Job::Q_CHILDREN);
+        	if (!_queue.empty()) {
+            	fprintf(fp, "PARENT %s CHILD", job->GetJobName());
 
-			set<JobID_t>::const_iterator qit;
-			for (qit = _queue.begin(); qit != _queue.end(); qit++) {
-                Job * child = FindNodeByNodeID( *qit );
-                ASSERT( child != NULL );
-                fprintf(fp, " %s", child->GetJobName());
-			}
-            fprintf(fp, "\n");
-        }
-    }
+				set<JobID_t>::const_iterator qit;
+				for (qit = _queue.begin(); qit != _queue.end(); qit++) {
+                	Job * child = FindNodeByNodeID( *qit );
+                	ASSERT( child != NULL );
+                	fprintf(fp, " %s", child->GetJobName());
+				}
+            	fprintf(fp, "\n");
+        	}
+    	}
+	}
 
 	//
 	// Print "throttle by node category" settings.
 	//
-	_catThrottles.PrintThrottles( fp );
+	if ( !isNew ) {
+		_catThrottles.PrintThrottles( fp );
+	}
 
     fclose( fp );
 }
@@ -1966,109 +1971,117 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 	} else {
 		EXCEPT( "Illegal node type (%d)\n", node->JobType() );
 	}
-	fprintf(fp, "%s %s %s ", keyword, node->GetJobName(),
-				node->GetDagFile() ? node->GetDagFile() :
-				node->GetCmdFile());
-	if ( strcmp( node->GetDirectory(), "" ) ) {
-		fprintf(fp, "DIR %s ", node->GetDirectory());
-	}
-	if ( node->GetNoop() ) {
-		fprintf( fp, "NOOP " );
-	}
-	fprintf(fp, "%s\n",
-				node->_Status == Job::STATUS_DONE ? "DONE" : "");
 
-		// Print the SCRIPT PRE line, if any.
-	if (node->_scriptPre != NULL) {
-		fprintf(fp, "SCRIPT PRE  %s %s\n", 
-		node->GetJobName(), node->_scriptPre->GetCmd());
-	}
-
-		// Print the SCRIPT POST line, if any.
-	if (node->_scriptPost != NULL) {
-		fprintf(fp, "SCRIPT POST %s %s\n", 
-		node->GetJobName(), node->_scriptPost->GetCmd());
-	}
-
-		// Print the RETRY line, if any.
-	if( node->retry_max > 0 ) {
-		int retriesLeft = (node->retry_max - node->retries);
-
-		if ( node->_Status == Job::STATUS_ERROR
-					&& node->retries < node->retry_max 
-					&& node->have_retry_abort_val
-					&& node->retval == node->retry_abort_val ) {
-			fprintf(fp, "# %d of %d retries performed; remaining attempts "
-						"aborted after node returned %d\n", 
-						node->retries, node->retry_max, node->retval );
-		} else {
-			if ( !reset_retries_upon_rescue ) {
-				fprintf( fp,
-							"# %d of %d retries already performed; %d remaining\n",
-							node->retries, node->retry_max, retriesLeft );
-			}
+	if ( !isNew ) {
+		fprintf( fp, "%s %s %s ", keyword, node->GetJobName(),
+					node->GetDagFile() ? node->GetDagFile() :
+					node->GetCmdFile() );
+		if ( strcmp( node->GetDirectory(), "" ) ) {
+			fprintf( fp, "DIR %s ", node->GetDirectory() );
 		}
-
-		ASSERT( node->retries <= node->retry_max );
-		if ( !reset_retries_upon_rescue ) {
-			fprintf( fp, "RETRY %s %d", node->GetJobName(), retriesLeft );
-		} else {
-			fprintf( fp, "RETRY %s %d", node->GetJobName(), node->retry_max );
-		}
-		if( node->have_retry_abort_val ) {
-			fprintf( fp, " UNLESS-EXIT %d", node->retry_abort_val );
+		if ( node->GetNoop() ) {
+			fprintf( fp, "NOOP " );
 		}
 		fprintf( fp, "\n" );
-	}
 
-		// Print the VARS line, if any.
-	if ( !node->varNamesFromDag->IsEmpty() ) {
-		fprintf(fp, "VARS %s", node->GetJobName());
-	
-		ListIterator<MyString> names( *node->varNamesFromDag );
-		ListIterator<MyString> vals( *node->varValsFromDag );
-		names.ToBeforeFirst();
-		vals.ToBeforeFirst();
-		MyString *strName, *strVal;
-		while ( (strName = names.Next() ) && (strVal = vals.Next()) ) {
-			fprintf(fp, " %s=\"", strName->Value());
-				// now we print the value, but we have to re-escape certain characters
-			for( int i = 0; i < strVal->Length(); i++ ) {
-				char c = (*strVal)[i];
-				if ( c == '\"' ) {
-					fprintf( fp, "\\\"" );
-				} else if (c == '\\') {
-					fprintf( fp, "\\\\" );
-				} else {
-					fprintf( fp, "%c", c );
+			// Print the SCRIPT PRE line, if any.
+		if ( node->_scriptPre != NULL ) {
+			fprintf( fp, "SCRIPT PRE  %s %s\n", 
+			node->GetJobName(), node->_scriptPre->GetCmd() );
+		}
+
+			// Print the SCRIPT POST line, if any.
+		if ( node->_scriptPost != NULL ) {
+			fprintf( fp, "SCRIPT POST %s %s\n", 
+						node->GetJobName(), node->_scriptPost->GetCmd() );
+		}
+
+			// Print the RETRY line, if any.
+		if( node->retry_max > 0 ) {
+			int retriesLeft = (node->retry_max - node->retries);
+
+			if ( node->_Status == Job::STATUS_ERROR
+						&& node->retries < node->retry_max 
+						&& node->have_retry_abort_val
+						&& node->retval == node->retry_abort_val ) {
+				fprintf( fp, "# %d of %d retries performed; remaining attempts "
+							"aborted after node returned %d\n", 
+							node->retries, node->retry_max, node->retval );
+			} else {
+				if ( !reset_retries_upon_rescue ) {
+					fprintf( fp,
+								"# %d of %d retries already performed; %d remaining\n",
+								node->retries, node->retry_max, retriesLeft );
 				}
 			}
-			fprintf( fp, "\"" );
+
+			ASSERT( node->retries <= node->retry_max );
+			if ( !reset_retries_upon_rescue ) {
+				fprintf( fp, "RETRY %s %d", node->GetJobName(), retriesLeft );
+			} else {
+				fprintf( fp, "RETRY %s %d", node->GetJobName(), node->retry_max );
+			}
+			if ( node->have_retry_abort_val ) {
+				fprintf( fp, " UNLESS-EXIT %d", node->retry_abort_val );
+			}
+			fprintf( fp, "\n" );
 		}
-		fprintf( fp, "\n" );
-	}
 
-		// Print the ABORT-DAG-ON line, if any.
-	if ( node->have_abort_dag_val ) {
-		fprintf( fp, "ABORT-DAG-ON %s %d", node->GetJobName(),
-					node->abort_dag_val );
-		if ( node->have_abort_dag_return_val ) {
-			fprintf( fp, " RETURN %d", node->abort_dag_return_val );
+			// Print the VARS line, if any.
+		if ( !node->varNamesFromDag->IsEmpty() ) {
+			fprintf( fp, "VARS %s", node->GetJobName() );
+	
+			ListIterator<MyString> names( *node->varNamesFromDag );
+			ListIterator<MyString> vals( *node->varValsFromDag );
+			names.ToBeforeFirst();
+			vals.ToBeforeFirst();
+			MyString *strName, *strVal;
+			while ( (strName = names.Next() ) && (strVal = vals.Next()) ) {
+				fprintf(fp, " %s=\"", strName->Value());
+					// now we print the value, but we have to re-escape certain characters
+				for( int i = 0; i < strVal->Length(); i++ ) {
+					char c = (*strVal)[i];
+					if ( c == '\"' ) {
+						fprintf( fp, "\\\"" );
+					} else if (c == '\\') {
+						fprintf( fp, "\\\\" );
+					} else {
+						fprintf( fp, "%c", c );
+					}
+				}
+				fprintf( fp, "\"" );
+			}
+			fprintf( fp, "\n" );
 		}
-		fprintf(fp, "\n");
+
+			// Print the ABORT-DAG-ON line, if any.
+		if ( node->have_abort_dag_val ) {
+			fprintf( fp, "ABORT-DAG-ON %s %d", node->GetJobName(),
+						node->abort_dag_val );
+			if ( node->have_abort_dag_return_val ) {
+				fprintf( fp, " RETURN %d", node->abort_dag_return_val );
+			}
+			fprintf( fp, "\n" );
+		}
+
+			// Print the PRIORITY line, if any.
+		if ( node->_hasNodePriority ) {
+			fprintf( fp, "PRIORITY %s %d\n", node->GetJobName(),
+						node->_nodePriority );
+		}
+
+			// Print the CATEGORY line, if any.
+		if ( node->GetThrottleInfo() ) {
+			fprintf( fp, "CATEGORY %s %s\n", node->GetJobName(),
+						node->GetThrottleInfo()->_category->Value() );
+		}
 	}
 
-		// Print the PRIORITY line, if any.
-	if ( node->_hasNodePriority ) {
-		fprintf( fp, "PRIORITY %s %d\n", node->GetJobName(),
-					node->_nodePriority );
+	if ( node->_Status == Job::STATUS_DONE ) {
+		fprintf(fp, "DONE %s\n", node->GetJobName() );
 	}
 
-		// Print the CATEGORY line, if any.
-	if ( node->GetThrottleInfo() ) {
-		fprintf( fp, "CATEGORY %s %s\n", node->GetJobName(),
-					node->GetThrottleInfo()->_category->Value() );
-	}
+	//TEMPTEMP -- print retry stuff here...
 
 	fprintf( fp, "\n" );
 }

@@ -51,7 +51,8 @@ static ExtArray<char*> _spliceScope;
 static bool _useDagDir = false;
 
 static int _thisDagNum = -1;
-static bool _mungeNames = true;
+//TEMPTEMP static bool _mungeNames = true;
+static bool _mungeNames = false;//TEMPTEMP
 
 static bool parse_subdag( Dag *dag, Job::job_type_t nodeType,
 						const char* nodeTypeKeyword,
@@ -87,6 +88,7 @@ static bool parse_reject(Dag  *dag, const char *filename,
 		int  lineNumber);
 static bool parse_jobstate_log(Dag  *dag, const char *filename,
 		int  lineNumber);
+static bool parse_done(Dag  *dag, const char *filename, int  lineNumber);
 static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
@@ -328,6 +330,12 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Handle a JOBSTATE_LOG spec
 		else if(strcasecmp(token, "JOBSTATE_LOG") == 0) {
 			parsed_line_successfully = parse_jobstate_log(dag,
+						filename, lineNumber);
+		}
+
+		// Handle a DONE spec
+		else if(strcasecmp(token, "DONE") == 0) {
+			parsed_line_successfully = parse_done(dag,
 						filename, lineNumber);
 		}
 
@@ -1799,6 +1807,49 @@ parse_jobstate_log(
 	return true;
 }
 
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_done
+// Purpose:  Parse a line of the format "Done jobname"
+// 
+//-----------------------------------------------------------------------------
+static bool 
+parse_done(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber)
+{
+	const char *example = "Done JobName";
+	
+	const char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobNameOrig = jobName; // for error output
+	if( jobName == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Missing job name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	MyString tmpJobName = munge_job_name( jobName );
+	jobName = tmpJobName.Value();
+		debug_printf( DEBUG_QUIET, "DIAG jobName: %s\n", jobName );//TEMPTEMP
+
+	Job *job = dag->FindNodeByName( jobName );
+	if( job == NULL ) {
+		debug_printf( DEBUG_QUIET, 
+					  "%s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobNameOrig );
+		return false;
+	}
+
+	//TEMPTEMP -- check for extra junk on the end?
+
+	job->SetStatus( Job::STATUS_DONE );
+	
+	return true;
+}
+
 static MyString munge_job_name(const char *jobName)
 {
 		//
@@ -1806,6 +1857,7 @@ static MyString munge_job_name(const char *jobName)
 		//
 	MyString newName;
 
+	_mungeNames = false;//TEMPTEMP!!!!!!!
 	if ( _mungeNames ) {
 		newName = MyString(_thisDagNum) + "." + jobName;
 	} else {
