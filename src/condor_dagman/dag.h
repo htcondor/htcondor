@@ -441,7 +441,8 @@ class Dag {
 		@param parseFailed whether parsing the DAG(s) failed
     */
     void Rescue (const char * dagFile, bool multiDags,
-				int maxRescueDagNum, bool parseFailed = false) /* const */;
+				int maxRescueDagNum, bool parseFailed = false,
+				bool isNew = false) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
@@ -450,7 +451,8 @@ class Dag {
 		@param parseFailed whether parsing the DAG(s) failed
     */
     void WriteRescue (const char * rescue_file,
-				const char * dagFile, bool parseFailed = false) /* const */;
+				const char * dagFile, bool parseFailed = false,
+				bool isNew = false) /* const */;
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
@@ -832,6 +834,10 @@ class Dag {
 	int CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
 
 	int StorkLogFileCount() { return _storkLogRdr.totalLogFileCount(); }
+
+		//TEMPTEMP -- document
+	void WriteNodeToRescue( FILE *fp, Job *node,
+				bool reset_retries_upon_rescue, bool isNew );
 
     /// List of Job objects
     List<Job>     _jobs;

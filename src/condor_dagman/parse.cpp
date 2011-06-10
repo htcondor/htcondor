@@ -1,3 +1,4 @@
+//TEMPTEMP -- have a "DONE" keyword for new-style rescue DAGs?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

@@ -1,4 +1,5 @@
 //TEMPTEMP -- first, remove "old rescue" stuff...
+//TEMPTEMP -- -DumpRescue should still write out a complete dag file...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -455,10 +456,11 @@ void main_shutdown_rescue( int exitVal ) {
 							"overriding automatic rescue DAG naming\n",
 							dagman.rescueFileToWrite );
 				dagman.dag->WriteRescue( dagman.rescueFileToWrite,
-							dagman.primaryDagFile.Value() );
+							dagman.primaryDagFile.Value(), false, true );
 			} else if ( dagman.maxRescueDagNum > 0 ) {
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-							dagman.multiDags, dagman.maxRescueDagNum );
+							dagman.multiDags, dagman.maxRescueDagNum,
+							false, true );
 			} else {
 				debug_printf( DEBUG_QUIET, "No rescue DAG written because "
 							"DAGMAN_MAX_RESCUE_NUM is 0\n" );
@@ -1018,7 +1020,7 @@ void main_init (int argc, char ** const argv) {
 							"because of -DumpRescue flag\n" );
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
-							true );
+							true, false );
 			}
 			
 			dagman.dag->RemoveRunningJobs(dagman, true);
@@ -1074,7 +1076,7 @@ void main_init (int argc, char ** const argv) {
     	debug_printf( DEBUG_QUIET, "Dumping rescue DAG and exiting "
 					"because of -DumpRescue flag\n" );
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-					dagman.multiDags, dagman.maxRescueDagNum );
+					dagman.multiDags, dagman.maxRescueDagNum, false, false );
 		ExitSuccess();
 		return;
 	}
