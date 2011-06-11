@@ -23,6 +23,7 @@
 // local includes
 #include "ODSMongodbRW.h"
 
+using namespace std;
 using namespace compat_classad;
 using namespace plumage::etl;
 
@@ -38,13 +39,13 @@ ODSMongodbReader::~ODSMongodbReader()
 
 
 bool
-ODSMongodbReader::readAttribute (const std::string& attr, classad::Value& value)
+ODSMongodbReader::readAttribute (const string& key, string& name, classad::Value& type, string& value)
 {
     return true;
 }
 
 bool
-ODSMongodbReader::readClassAd(const std::string& str, ClassAd& ad)
+ODSMongodbReader::readClassAd(const string& key, ClassAd& ad)
 {
     return true;
 }

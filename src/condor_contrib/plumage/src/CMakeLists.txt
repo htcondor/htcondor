@@ -16,33 +16,52 @@
  # 
  ###############################################################
 
+set (MONGODB_FOUND "-lmongoclient -lboost_system -lboost_filesystem")
 
 ############################
 # file target references.
 ############################
-file( GLOB ETL_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp SchedulerObject.cpp
-			PROC_ID_comparator.cpp AviaryScheddPlugin*.cpp )
+file( GLOB ETL_SCHEDD_SRCS ODSUtils.cpp PROC_ID_comparator.cpp ODSScheddPlugin*.cpp )
 
-file( GLOB ETL_SERVER_SRCS ods_job_etl_main.cpp 
+file( GLOB ETL_SERVER_SRCS ods_job_daemon_main.cpp 
 					ODSJobLogConsumer.cpp
 					ODSHistoryFile.cpp ODSHistoryUtils.cpp 
 					ODSReaderWriter.cpp )
 
 ############################
-# emitter plugin
+# daemon emitter plugins
 ############################
 src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
 src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-condor_plugin( ODSEmitterPlugin "${COLLECTOR_REF};${UTILS_REF};${ETL_PLUGIN_SRCS}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
+file( GLOB SchedSrcs ODSScheddPlugin*.cpp )
+#condor_plugin( ODSScheddPlugin "${SchedSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
+file( GLOB CollectorSrcs ODSCollectorPlugin.cpp )
+#condor_plugin( ODSCollectorPlugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
+
+file( GLOB NegotiatorSrcs ODSNegotiatorPlugin.cpp ODSMongodbWriter.cpp)
+condor_plugin( ODSNegotiatorPlugin "${NegotiatorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
+
+file( GLOB MasterSrcs ODSMasterPlugin.cpp ODSMongodbWriter.cpp)
+condor_plugin( ODSMasterPlugin "${MasterSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
+
+file( GLOB StartdSrcs ODSStartdPlugin.cpp ODSMongodbWriter.cpp)
+condor_plugin( ODSStartdPlugin "${StartdSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
+    
 ############################
 # etl server
 ############################
-condor_exe( ods_job_etl "${ETL_SERVER_SRCS}"
-			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${MONGODB_FOUND}" OFF )
+# condor_exe( ods_job_etl "${ETL_SERVER_SRCS}"
+# 			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${MONGODB_FOUND}" OFF )
+
+############################
+# history loader tool
+############################
+set(TOOL_LINK_LIBS "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}")
+condor_exe(ods_etl_history "ods_history_tool_main.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${MONGODB_FOUND}" OFF)
 
 ############################
 # install targets
 ############################
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/62plumage.config DESTINATION "${C_ETC_EXAMPLES}")
+#install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/62plumage.config DESTINATION "${C_ETC_EXAMPLES}")

@@ -372,7 +372,7 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
     return prevOffset;
 } 
 
-bool writeJobAd(ClassAd* ad) {
+void writeJobAd(ClassAd* ad) {
     clock_t start, end;
     double elapsed;
     ExprTree *expr;

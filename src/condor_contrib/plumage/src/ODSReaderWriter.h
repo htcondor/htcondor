@@ -21,30 +21,22 @@
 
 // condor includes
 #include <compat_classad.h>
-
-using namespace std;
-using namespace compat_classad;
+#include <classad/value.h>
 
 namespace plumage {
 namespace etl {
     
-class ODSDataSource {
-};
-
 class ODSClassAdWriter {
 public:
-    virtual bool writeAttribute(const char* name, AttributeMapType& _map) = 0;
-    virtual bool writeClassAd(const ClassAd* ad) = 0;
+    virtual bool writeAttribute(const std::string& key, const std::string& name, const classad::Value& type, const std::string& value) = 0;
+    virtual bool writeClassAd(const std::string& key, compat_classad::ClassAd* ad) = 0;
 
 };
 
 class ODSClassAdReader {
 public:
-    virtual bool readAttribute(const char* name, const char* value) = 0;
-    virtual bool readClassAd(ClassAd &ad) = 0;
-    
-private:
-    ODSDataSource m_source;
+    virtual bool readAttribute(const std::string& key, std::string& name, classad::Value& type, std::string& value) = 0;
+    virtual bool readClassAd(const std::string& key, compat_classad::ClassAd &ad) = 0;
 
 };
 

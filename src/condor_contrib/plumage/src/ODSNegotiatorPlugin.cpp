@@ -16,8 +16,8 @@
 
 #include "condor_common.h"
 
-// mongodb-devel includes
-#include <mongo/client/dbclient.h>
+// local includes
+#include "ODSMongodbRW.h"
 
 // seems boost meddles with assert defs
 #include "assert.h"
@@ -26,40 +26,13 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "get_daemon_name.h"
 
-using namespace mongo;
-DBClientConnection c;
-std::string db_name("condor.negotiator");
+using namespace plumage::etl;
 
-void writeJobAd(ClassAd* ad) {
-    clock_t start, end;
-    double elapsed;
-    ExprTree *expr;
-    const char *name;
-    ad->ResetExpr();
-    
-    BSONObjBuilder b;
-    start = clock();
-    while (ad->NextExpr(name,expr)) {        
-        b.append(name,ExprTreeToString(expr));
-    }
-    try {
-        c.insert(db_name, b.obj());
-    }
-    catch(DBException& e) {
-        cout << "caught DBException " << e.toString() << endl;
-    }
-    end = clock();
-    elapsed = ((float) (end - start)) / CLOCKS_PER_SEC;
-    std:string last_err = c.getLastError();
-    if (!last_err.empty()) {
-        printf("getLastError: %s\n",last_err.c_str());
-    }
-    printf("Time elapsed: %1.9f sec\n",elapsed);
-}
-
+ODSMongodbWriter* writer = NULL;
 
 struct ODSNegotiatorPlugin : public Service, NegotiatorPlugin
 {
+
 	void
 	initialize()
 	{
@@ -77,22 +50,24 @@ struct ODSNegotiatorPlugin : public Service, NegotiatorPlugin
 			free(tmp); tmp = NULL;
 		}
 		
-		c.connect("localhost");
+		writer = new ODSMongodbWriter("condor.negotiator");
+        writer->init("localhost");
+
 	}
 
 	void
 	shutdown()
 	{
 		dprintf(D_FULLDEBUG, "ODSNegotiatorPlugin: shutting down...\n");
+        delete writer;
 	}
 
 	void
 	update(const ClassAd &ad)
 	{
-		writeJobAd(const_cast<ClassAd*>(&ad));
+		writer->writeClassAd("",const_cast<ClassAd*>(&ad));
 	}
 
 };
 
 static ODSNegotiatorPlugin instance;
-

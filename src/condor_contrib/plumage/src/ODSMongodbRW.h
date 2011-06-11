@@ -28,36 +28,34 @@
 // local includes
 #include "ODSReaderWriter.h"
 
-using namespace std;
-using namespace compat_classad;
-using namespace mongo;
-
 namespace plumage {
 namespace etl {
     
-class ODSMongodbDataSource: public ODSDataSource {
-public:
-    void init();
-
-private:
-    DBClientConnection* m_dbConn;
-
-};
-
 class ODSMongodbWriter: public ODSClassAdWriter {
 public:
-    bool writeAttribute(const char* name, const ExprTree* exprTree);
-    bool writeClassAd(const ClassAd* ad);
+    ODSMongodbWriter(const std::string& db_name);
+    ~ODSMongodbWriter();
+    bool writeAttribute(const std::string& key, const std::string& name, const classad::Value& type, const std::string& value);
+    bool writeClassAd(const std::string& key, compat_classad::ClassAd* ad);
+    bool init(const std::string& loc);
+    
+protected:
+    mongo::DBClientConnection m_db_conn;
+    std::string m_db_name;
 
 };
 
 class ODSMongodbReader: public ODSClassAdReader {
 public:
-    bool readAttribute(const char* name, const char* value);
-    bool readClassAd(ClassAd& ad);
+    ODSMongodbReader(const std::string& db_name);
+    ~ODSMongodbReader();
+    bool readAttribute(const std::string& key, std::string& name, classad::Value& type, std::string& value);
+    bool readClassAd(const std::string& key, compat_classad::ClassAd& ad);
+    bool init(const std::string& loc);
     
-private:
-    ODSDataSource m_source;
+protected:
+    mongo::DBClientConnection m_db_conn;
+    std::string m_db_name;
 
 };
 
