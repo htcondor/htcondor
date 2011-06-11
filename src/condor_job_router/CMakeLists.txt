@@ -23,6 +23,5 @@ set (JR_LINK_LIBS "qmgmt;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FO
 condor_glob(JRHdrs JRSrcs "VanillaToGrid_main.cpp")
 
 condor_exe( condor_job_router "${JRHdrs};${JRSrcs}" ${C_LIBEXEC} "${JR_LINK_LIBS}" OFF )
-condor_exe( condor_router_q "${JRHdrs};${JRSrcs}" ${C_BIN} "${JR_LINK_LIBS}" OFF )
-condor_exe( condor_router_rm "${JRHdrs};${JRSrcs}" ${C_BIN} "${JR_LINK_LIBS}" OFF )
-condor_exe( condor_router_history "${JRHdrs};${JRSrcs}" ${C_BIN} "${JR_LINK_LIBS}" OFF )
+
+install ( FILES condor_router_history condor_router_q condor_router_rm DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

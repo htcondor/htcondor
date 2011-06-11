@@ -1039,7 +1039,8 @@ MyString DCloudJob::build_instance_name()
 		StringList collectors( pool_name );
 		free( pool_name );
 		pool_name = collectors.print_to_string();
-	} else {
+	}
+	if ( !pool_name ) {
 		pool_name = strdup( "NoPool" );
 	}
 
