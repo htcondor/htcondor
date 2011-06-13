@@ -904,6 +904,10 @@ void main_init (int argc, char ** const argv) {
 		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
 	}
 
+		// A rescue DAG doesn't count towards multiple DAGs, so we check
+		// the count here before we potentially add a rescue DAG to the list.
+	bool multipleDags = (dagman.dagFiles.number() > 1);
+
 		//
 		// If we are running a "new-style" rescue DAG, update our DAG
 		// files list accordingly.
@@ -920,6 +924,7 @@ void main_init (int argc, char ** const argv) {
 					dagman.multiDags ? "s" : "");
 		debug_printf ( DEBUG_QUIET,
 					"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+
 		debug_printf ( DEBUG_QUIET, "USING RESCUE DAG %s\n",
 					dagman.rescueFileToRun.Value() );
 			// Note: if we ran multiple DAGs and they failed, the
@@ -982,9 +987,9 @@ void main_init (int argc, char ** const argv) {
     // Parse the input files.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
     //
-	if ( dagman.dagFiles.number() < 2 ) dagman.mungeNodeNames = false;
+	dagman.mungeNodeNames = multipleDags;
 	parseSetDoNameMunge( dagman.mungeNodeNames );
-	parseSetDoNameMunge( false );//TEMPTEMP!!!!!
+	//parseSetDoNameMunge( false );//TEMPTEMP!!!!!
    	debug_printf( DEBUG_VERBOSE, "Parsing %d dagfiles\n", 
 		dagman.dagFiles.number() );
 	dagman.dagFiles.rewind();
@@ -997,8 +1002,17 @@ void main_init (int argc, char ** const argv) {
 	StringList sl(str);
 	free(str);
 	sl.rewind();
+	int dagNum = 0;
 	while ( (dagFile = sl.next()) != NULL ) {
     	debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagFile );
+		dagNum++;
+
+			// We don't want to munge the node names for a rescue DAG,
+			// because it will have node names that have already been
+			// munged.
+		if ( rescueDagNum > 0 && dagNum == dagman.dagFiles.number() ) {
+			parseSetDoNameMunge( false );
+		}
 
     	if( !parse( dagman.dag, dagFile, dagman.useDagDir ) ) {
 			if ( dagman.dumpRescueDag ) {
