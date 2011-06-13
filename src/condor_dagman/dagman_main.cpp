@@ -1,6 +1,7 @@
 //TEMPTEMP -- first, remove "old rescue" stuff...
 //TEMPTEMP -- -DumpRescue should still write out a complete dag file...
-//TEMPTEMP -- think about how to make rescue dags work across dagman version upgrade
+//TEMPTEMP -- think about how to make rescue dags work across dagman version upgrade -- maybe just do condor_submit_dag on the old rescue DAG
+//TEMPTEMP -- make sure this works right doing a rescue DAG with multiple DAGs
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -100,7 +101,6 @@ Dagman::Dagman() :
 	maxJobs (0),
 	maxPreScripts (0),
 	maxPostScripts (0),
-	rescueFileToWrite (NULL),//TEMPTEMP -- get rid of this?
 	paused (false),
 	condorSubmitExe (NULL),
 	condorRmExe (NULL),
@@ -452,13 +452,7 @@ void main_shutdown_rescue( int exitVal ) {
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
 		if( exitVal != 0 ) {
-			if( dagman.rescueFileToWrite ) {
-				debug_printf( DEBUG_NORMAL, "Rescue DAG file %s was specified; "
-							"overriding automatic rescue DAG naming\n",
-							dagman.rescueFileToWrite );
-				dagman.dag->WriteRescue( dagman.rescueFileToWrite,
-							dagman.primaryDagFile.Value(), false, true );
-			} else if ( dagman.maxRescueDagNum > 0 ) {
+			if ( dagman.maxRescueDagNum > 0 ) {
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
 							false, true );
@@ -855,12 +849,6 @@ void main_init (int argc, char ** const argv) {
         Usage();
     }
 
-	if (dagman.rescueFileToWrite && dagman.autoRescue) {
-    	debug_printf( DEBUG_QUIET, "Error: old-style rescue DAG specified "
-					"and DAGMAN_AUTO_RESCUE is true\n" );
-		DC_Exit( EXIT_ERROR );
-	}
-
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName );
 	if ( dagman.dagFiles.number() == 1 ) {
@@ -876,11 +864,6 @@ void main_init (int argc, char ** const argv) {
 		}
 		msg += "\n";
     	debug_printf( DEBUG_VERBOSE, "%s", msg.Value() );
-	}
-
-	if ( dagman.rescueFileToWrite ) {
-		debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
-				  	dagman.rescueFileToWrite );
 	}
 
 		// if requested, wait for someone to attach with a debugger...
@@ -946,6 +929,7 @@ void main_init (int argc, char ** const argv) {
 		dagman.dagFiles.append( dagman.rescueFileToRun.Value() );
 		dagman.dagFiles.rewind();
 
+		//TEMPTEMP -- we probably need to get rid of this...
 		if ( dagman.useDagDir ) {
 			debug_printf ( DEBUG_NORMAL,
 						"Unsetting -useDagDir flag because we're running "
