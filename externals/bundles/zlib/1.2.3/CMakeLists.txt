@@ -21,7 +21,7 @@ endif()
 
 if (WITH_ZLIB)
 
-	if ( NOT PROPER )
+	if ( NOT PROPER_KILL_ZLIB )
 
 		condor_pre_external( ZLIB  zlib-1.2.3 "lib;include" "lib/libz.a")
 
@@ -45,11 +45,11 @@ if (WITH_ZLIB)
 
 		install ( FILES "${ZLIB_INSTALL_LOC}/lib/libz.a" DESTINATION ${C_LIB} RENAME libcondor_z.a)
 
-	else( NOT PROPER )
+	else( NOT PROPER_KILL_ZLIB )
 
 		find_multiple( "z" ZLIB_FOUND )
 
-	endif( NOT PROPER )
+	endif( NOT PROPER_KILL_ZLIB )
 
 	message (STATUS "external configured (ZLIB_FOUND=${ZLIB_FOUND})")
 	set( ZLIB_FOUND ${ZLIB_FOUND} PARENT_SCOPE )
