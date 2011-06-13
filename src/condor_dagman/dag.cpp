@@ -1,6 +1,7 @@
 //TEMPTEMP -- make a test that checks that all possible stuff gets put into rescue DAG (old-style)
 //TEMPTEMP -- make sure this works with splices
 //TEMPTEMP -- maybe having a DONE line for a non-existant node should be warning, in case you removed a node from the "main" DAG
+//TEMPTEMP -- make sure retry stuff works right in the new rescue DAGs
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1829,6 +1830,8 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 	WriteRescue( rescueDagFile.Value(), dagFile, parseFailed, isNew );
 }
 
+static const char *RESCUE_DAG_VERSION = "2.0.0";
+
 //TEMPTEMP -- make a WriteNewRescue method?  Or have a new/old flag here???
 //TEMPTEMP -- maybe change isNew to isPartial?
 //-----------------------------------------------------------------------------
@@ -1864,6 +1867,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 	fprintf( fp, "# Created %d/%d/%d %02d:%02d:%02d UTC\n", tm->tm_mon + 1,
 				tm->tm_mday, tm->tm_year + 1900, tm->tm_hour, tm->tm_min,
 				tm->tm_sec );
+	fprintf( fp, "# Rescue DAG version: %s\n", RESCUE_DAG_VERSION );
 
     fprintf(fp, "#\n");
     fprintf(fp, "# Total number of Nodes: %d\n", NumNodes());
