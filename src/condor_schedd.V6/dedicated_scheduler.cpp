@@ -2107,6 +2107,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 		}
 
 		char *all_hosts_str = allRemoteHosts.print_to_string();
+		ASSERT( all_hosts_str );
 
 		for (int pNo = 0; pNo < allocation->num_procs; pNo++) {
 				SetAttributeString(allocation->cluster, pNo, ATTR_ALL_REMOTE_HOSTS, all_hosts_str);
