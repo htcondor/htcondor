@@ -468,8 +468,10 @@ void main_init(int argc, char *argv[])
 		write_to_daemoncore_pipe("%s = %s\n", ATTR_VM_NETWORKING,
 				gahpconfig->m_vm_networking? "TRUE":"FALSE");
 		if( gahpconfig->m_vm_networking ) {
+			char *tmp = gahpconfig->m_vm_networking_types.print_to_string();
 			write_to_daemoncore_pipe("%s = \"%s\"\n", ATTR_VM_NETWORKING_TYPES,
-				gahpconfig->m_vm_networking_types.print_to_string());
+									 tmp ? tmp : "");
+			free(tmp);
 		}
 		if( gahpconfig->m_vm_hardware_vt ) {
 			write_to_daemoncore_pipe("%s = TRUE\n", ATTR_VM_HARDWARE_VT);

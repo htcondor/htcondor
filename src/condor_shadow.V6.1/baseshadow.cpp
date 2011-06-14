@@ -156,8 +156,6 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	
 	config();
 
-	initUserLog();
-
 		// Make sure we've got enough swap space to run
 	checkSwap();
 
@@ -209,6 +207,9 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	} else {
 		job_updater = new NullQmgrJobUpdater( jobAd, scheddAddr, CondorVersion() );
 	}
+
+		// init user log; hold on failure
+	initUserLog();
 
 		// change directory; hold on failure
 	if ( cdToIwd() == -1 ) {
@@ -1178,6 +1179,8 @@ BaseShadow::updateJobInQueue( update_t type )
 	buf.sprintf( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
 											   bytesSent()) );
 	jobAd->Insert( buf.Value() );
+
+	ASSERT( job_updater );
 
 		// Now that the ad is current, just let our QmgrJobUpdater
 		// object take care of the rest...

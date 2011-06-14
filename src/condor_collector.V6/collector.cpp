@@ -1293,7 +1293,7 @@ void CollectorDaemon::Config()
 			viewCollectorTypes = new StringList(tmp);
 			char *printable_string = viewCollectorTypes->print_to_string();
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
-					printable_string);
+					printable_string?printable_string:"");
 			free(printable_string);
 		}
 	}
