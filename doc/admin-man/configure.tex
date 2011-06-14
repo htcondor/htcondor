@@ -6599,6 +6599,28 @@ These macros affect the \Condor{negotiator}.
   See section~\ref{sec:Grid-Matchmaking} on page~\pageref{sec:Grid-Matchmaking}
   in the subsection on Advertising Grid Resources to Condor for an example.
 
+\label{param:NegotiatorConsiderPreemption}
+\item[\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}]
+  For expert users only. A boolean value (defaults to \Expr{True}),
+  that when \Expr{False},
+  can cause the \Condor{negotiator} to run
+  faster and also have better spinning pie accuracy.
+  \emph{Only set this to \Expr{False} if \Macro{PREEMPTION\_REQUIREMENTS}
+  is \Expr{False},
+  and if all \Condor{startd} rank expressions are \Expr{False}.}
+
+\label{param:StartdAdReevalExpr}
+\item[\Macro{STARTD\_AD\_REEVAL\_EXPR}]
+  A boolean value evaluated in the context of each machine ClassAd within
+  a negotiation cycle that determines whether the ClassAd from the
+  \Condor{collector} is to replace the stashed ClassAd utilized during
+  the previous negotiation cycle.
+  When \Expr{True},
+  the ClassAd from the \Condor{collector} does replace the stashed one.
+  When not defined, the default value is to replace the stashed ClassAd
+  if the stashed ClassAd's sequence number is older than its potential
+  replacement.
+
 \end{description}
 
 The following configuration macros affect negotiation for group users.
@@ -6686,27 +6708,59 @@ The following configuration macros affect negotiation for group users.
   the default behavior is determined by \MacroNI{GROUP\_AUTOREGROUP},
   which in turn defaults to \Expr{False}.
 
-\label{param:NegotiatorConsiderPreemption}
-\item[\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}]
-  For expert users only. A boolean value (defaults to \Expr{True}),
-  that when \Expr{False},
-  can cause the negotiator to run
-  faster and also have better spinning pie accuracy.
-  \emph{Only set this to \Expr{False} if \Macro{PREEMPTION\_REQUIREMENTS}
-  is \Expr{False},
-  and if all \condor{startd} rank expressions are \Expr{False}.}
+\label{param:GroupAcceptSurplus}
+\item[\Macro{GROUP\_ACCEPT\_SURPLUS}]
+  A boolean value that, when \Expr{True}, specifies that groups should be 
+  allowed to use more than their configured quota when there is not enough 
+  demand from other groups to use all of the available machines.
+  The default value is \Expr{False}. 
 
-\label{param:StartdAdReevalExpr}
-\item[\Macro{STARTD\_AD\_REEVAL\_EXPR}]
-  A boolean value evaluated in the context of each machine ClassAd within
-  a negotiation cycle that determines whether the ClassAd from the
-  \Condor{collector} is to replace the stashed ClassAd utilized during
-  the previous negotiation cycle.
-  When \Expr{True},
-  the ClassAd from the \Condor{collector} does replace the stashed one.
-  When not defined, the default value is to replace the stashed ClassAd
-  if the stashed ClassAd's sequence number is older than its potential
-  replacement.
+\label{param:GroupAcceptSurplusGroupname}
+\item[\Macro{GROUP\_ACCEPT\_SURPLUS\_<groupname>}]
+  A boolean value applied as a group-specific version of 
+  \MacroNI{GROUP\_ACCEPT\_SURPLUS}.
+  When not specified, the value of \MacroNI{GROUP\_ACCEPT\_SURPLUS} applies
+  to the named group.
+
+\label{param:GroupQuotaRoundRobinRate}
+\item[\Macro{GROUP\_QUOTA\_ROUND\_ROBIN\_RATE}]
+  The maximum sum of weighted slots that should be handed out to an individual 
+  submitter in each iteration within a negotiation cycle. 
+  If slot weights are not being used by the \Condor{negotiator},
+  as specified by \Expr{NEGOTIATOR\_USE\_SLOT\_WEIGHTS = False},
+  then this value is just the (unweighted) number of slots. 
+  The default value is a very big number, effectively infinite. 
+  Setting the value to a number smaller than the size of the pool 
+  can help avoid starvation. 
+  An example of the starvation problem is when there are a subset of machines 
+  in a pool with large memory,
+  and there are multiple job submitters who desire all of these machines.
+  Normally, Condor will decide how much of the full pool each person should get,
+  and then attempt to hand out that number of resources to each person. 
+  Since the big memory machines are only a subset of pool, 
+  it may happen that they are all given to the first person contacted, 
+  and the remainder requiring large memory machines get nothing. 
+  Setting \MacroNI{GROUP\_QUOTA\_ROUND\_ROBIN\_RATE} to a value that is small 
+  compared to the size of subsets of machines will reduce starvation at the 
+  cost of possibly slowing down the rate at which resources are allocated.
+
+\label{param:GroupQuotaMaxAllocationRounds}
+\item[\Macro{GROUP\_QUOTA\_MAX\_ALLOCATION\_ROUNDS}]
+  An integer that specifies the maximum number of times within 
+  one negotiation cycle the \Condor{negotiator} will calculate how many 
+  slots each group deserves and attempt to allocate them. 
+  The default value is 3. 
+  The reason it may take more than one round is that some groups may not 
+  have jobs that match some of the available machines, 
+  so some of the slots that were withheld for those groups 
+  may not get allocated in any given round.
+
+\label{param:NegotiatorUseSlotWeights}
+\item[\Macro{NEGOTIATOR\_USE\_SLOT\_WEIGHTS}]
+  A boolean value with a default of \Expr{True}. 
+  When \Expr{True}, the \Condor{negotiator} pays attention to the
+  machine ClassAd attribute \Attr{SlotWeight}. 
+  When \Expr{False}, each slot effectively has a weight of 1.
 
 \end{description}
 
