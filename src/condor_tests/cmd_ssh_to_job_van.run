@@ -21,7 +21,7 @@
 use CondorTest;
 
 my $cluster = 1;
-my $temp_file = CondorTest::TempFileName("cmd_ssh_van.temp");
+my $temp_file = CondorTest::TempFileName("cmd_ssh_to_job_van.temp");
 
 $submit = sub {
     # cluster should always be 1, but let's make sure
@@ -46,7 +46,7 @@ $execute = sub {
     my $result = ($scratch_dir ne "");
     CondorTest::RegisterResult($result,
                                (check_name => "shell environment",
-                                test_name => "cmd_ssh_van") );
+                                test_name => "cmd_ssh_to_job_van") );
 };
 
 $success = sub {
@@ -58,7 +58,7 @@ $success = sub {
 
 CondorTest::StartCondorWithParams();
 
-my $testname = "cmd_ssh_van";
+my $testname = "cmd_ssh_to_job_van";
 CondorTest::RegisterSubmit( $testname, $submit );
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterExitedSuccess ($testname, $success);
@@ -67,7 +67,7 @@ CondorTest::RegisterExitedSuccess ($testname, $success);
 my $submit_fname = CondorTest::TempFileName("$testname.submit");
 open( SUBMIT, '>', $submit_fname ) || die "error writing to $submit_fname: $!\n";
 print SUBMIT "universe = vanilla\n";
-print SUBMIT "executable = cmd_ssh_van.pl\n";
+print SUBMIT "executable = cmd_ssh_to_job_van.pl\n";
 print SUBMIT "output = $testname.out\n";
 print SUBMIT "error = $testname.err\n";
 print SUBMIT "log = $testname.log\n";
