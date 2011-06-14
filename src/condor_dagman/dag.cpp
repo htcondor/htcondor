@@ -1950,7 +1950,9 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
             fprintf(fp, "SCRIPT PRE  %s %s\n", 
                      job->GetJobName(), job->_scriptPre->GetCmd());
         }
-
+	if ( job->HasPreSkip() != 0 ) {
+		fprintf( fp, "PRE_SKIP %s %d\n", job->GetJobName(), job->GetPreSkip() );
+	}
 			// Print the SCRIPT POST line, if any.
         if (job->_scriptPost != NULL) {
             fprintf(fp, "SCRIPT POST %s %s\n", 
