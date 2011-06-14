@@ -1540,7 +1540,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 					 s?s:"(unknown)");
 				job->retval = 0; // Job _is_ successful!
 				_jobstateLog.WriteJobSuccessOrFailure( job );
-				job->TerminateSuccess();
+				TerminateJob(job, 0, 0);
 				goto pre_skip_fake_success;
 			}
 			// if script returned failure
@@ -1573,16 +1573,16 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 	} else {
 		debug_printf( DEBUG_NORMAL, "PRE Script of Node %s completed "
 					  "successfully.\n", job->GetJobName() );
-	pre_skip_fake_success:
-		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
-		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( job, -job->_nodePriority );
 		} else {
 			_readyQ->Append( job, -job->_nodePriority );
 		}
+	pre_skip_fake_success:
+		_preRunNodeCount--;
+		job->retval = 0; // for safety on retries
 	}
 	CheckForDagAbort(job, "PRE script");
 	// if dag abort happened, we never return here!
