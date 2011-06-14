@@ -26,7 +26,7 @@ $testdesc =  'Condor submit dag - basic pre_skip node test - scheduler U';
 $testname = "job_dagman_pre_skip-C";
 $dagman_args = "-verbose";
 
-@outfiles = ("C_A", "C_B");
+@outfiles = ("C_B");
 
 my $killedchosen = 0;
 
@@ -68,6 +68,8 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
+	$diditpass = 0 if (-e "C_A.out");
+	$diditpass = 0 if (-e "C_C.out");
 	foreach $name (@outfiles) {
 		$line = "";
 		$passed = 0;

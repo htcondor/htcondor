@@ -26,7 +26,7 @@ $testdesc =  'Condor submit dag - basic pre_skip node test - scheduler U';
 $testname = "job_dagman_pre_skip-B";
 $dagman_args = "-verbose";
 
-@outfiles = ("B_A", "B_B");
+@outfiles = ("B_B");
 
 my $killedchosen = 0;
 
@@ -68,6 +68,8 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
+	# B_A.out should not exist
+	$diditpass = 0 if (-e "B_A.out");
 	foreach $name (@outfiles) {
 		$line = "";
 		$passed = 0;
@@ -85,9 +87,7 @@ $success = sub
 			}
 		}
 		close(OUT);
-		if($passed == 1 ) {
-			;
-		} else {
+		if($passed != 1 ) {
 			CondorTest::debug("failed $name.out: $line\n",1);
 			$diditpass = 0;
 		}
@@ -102,10 +102,18 @@ $success = sub
 		CondorTest::debug("Could not open outfile<$testname.dag.dagman.out>:$!\n",1);
 		$diditpass = 0;
 	}
-	while(<OUT>) {
+	my @outfile = <OUT>;
+	$passed = 1; # Let's be optimistic
+	foreach (@outfile) {
 		if(/PRE_SKIP return value \d+ indicates we are done.+B_A/) {
 			CondorTest::debug("Saw PRE_SKIP trip correctly: $_\n",1);
-			$passed = 1;
+			last;
+		}
+	}
+	foreach (@outfile) {
+		if(/ULOG_EXECUTE for.+Node B_A/) {
+			CondorTest::debug("Job B_A ran even though PRE_SKIP succeeded!\n",1);
+			$passed = 0;
 			last;
 		}
 	}
