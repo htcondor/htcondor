@@ -276,7 +276,9 @@ void Stop()
 		Dump();
 	}
 
-	consumer->Reset();
+	if (param_boolea("CLEANUP_ON_EXIT", false)) {
+		consumer->Reset();
+	}
 
 	mirror->stop();
 
