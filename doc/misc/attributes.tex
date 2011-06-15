@@ -125,13 +125,14 @@ configuration variable \MacroNI{COLLECTOR\_DAEMON\_STATS}.
 
 \index{ClassAd attribute added by the condor\_collector!UpdatesLost}
 \item[\AdAttr{UpdatesLost}:] An integer count of the number of updates
-  from the daemon that were lost since the \Condor{collector} started
-  running.
+  from the daemon that the \Condor{collector} can definitively determine
+  were lost since the \Condor{collector} started running.
 
 \index{ClassAd attribute added by the condor\_collector!UpdatesSequenced}
 \item[\AdAttr{UpdatesSequenced}:] An integer count of the number of updates
-  received from the daemon for which the \Condor{collector} can tell
-  how many were lost, since the \Condor{collector} started running.
+  received from the daemon,
+  for which the \Condor{collector} can tell how many were or were not lost,
+  since the \Condor{collector} started running.
 
 \index{ClassAd attribute added by the condor\_collector!UpdatesTotal}
 \item[\AdAttr{UpdatesTotal}:] An integer count started when the
