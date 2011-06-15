@@ -113,29 +113,28 @@ or administrators will ever have a use for this command.
 If it is desired to update or set a ClassAd attribute, the
 \Condor{config\_val} command is the proper command to use.
 
+For each of these attributes, 
+see section~\ref{sec:Collector-ClassAd-Attributes} for definitions.
+
+
 For those administrators who do need \Condor{advertise}, the following
 attributes may be included:
 
-\Attr{DaemonStartTime} - The time the service being advertised 
-started running.  Measured in seconds since the Unix epoch.
-
-\Attr{UpdateSequenceNumber} - An integer that begins at 0 and increments by
-one each time the same ClassAd is again advertised.
+\begin{description}
+\item[\Attr{DaemonStartTime}]
+\item[\Attr{UpdateSequenceNumber}]
+\end{description}
 
 If both of the above are included, the \Condor{collector} will
 automatically include the following attributes:
 
-\Attr{UpdatesTotal} - The actual number of advertisements for this
-daemon that the \Condor{collector} has seen.
-
-\Attr{UpdatesLost} - The number of advertisements that for this daemon
-that the \Condor{collector} expected to see, but did not.
-
-\Attr{UpdatesSequenced} - The total of \Attr{UpdatesTotal} and 
-\Attr{UpdatesLost}.
-
-\Attr{UpdatesHistory} - See \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE} in
-section~\ref{sec:Collector-Config-File-Entries}.
+\begin{description}
+\item[\Attr{UpdatesTotal}]
+\item[\Attr{UpdatesLost}]
+\item[\Attr{UpdatesSequenced}]
+\item[\Attr{UpdatesHistory}] Also see \Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}
+  in section~\ref{sec:Collector-Config-File-Entries}.
+\end{description}
 
 \Examples
 
