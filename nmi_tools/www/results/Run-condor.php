@@ -126,7 +126,7 @@ if(!$one_offs) {
   echo "<option>3</option>\n";
   echo "<option>4</option>\n";
   echo "<option>5</option>\n";
-  echo "</select><input type='submit' value='Show'></form>\n";
+  echo "</select><input type='submit' value='Show'></form><br>\n";
 
   $help_text = "<ul>\n";
   $help_text .= "  <li>The last $SPARK_DAYS days of results are shown for each platform.</li>\n";
@@ -135,7 +135,7 @@ if(!$one_offs) {
   $help_text .= "  <li>The number shown in the build line is the hour in which the test ran.</li>\n";
   $help_text .= "  <li>If a number is shown in the test line it is the number of tests that failed.</li>\n";
   $help_text .= "</ul>";
-  echo "<p><span class=\"link\" style=\"font-size:100%\"><a href=\"javascript: void(0)\" style=\"text-decoration:none\">Hover here to have this section explained<span style=\"width:450px;\">$help_text</span></a></span>";
+  echo "<span class=\"link\" style=\"font-size:100%\"><a href=\"javascript: void(0)\" style=\"text-decoration:none\">Hover here to have this section explained<span style=\"width:450px;\">$help_text</span></a></span>";
 
   echo "<table>\n";
 
