@@ -558,6 +558,21 @@ void dynuser::createaccount() {
 //
 ////
 
+// eventually this should go into some general loc. 
+BOOL Is64BitWindows()
+{
+#if defined(_WIN64)
+ return TRUE;  // 64-bit programs run only on Win64
+#elif defined(_WIN32)
+ // 32-bit programs run on both 32-bit and 64-bit Windows
+ // so must sniff
+ BOOL f64 = FALSE;
+ return IsWow64Process(GetCurrentProcess(), &f64) && f64;
+#else
+ return FALSE; // Win64 does not support Win16
+#endif
+}
+
 bool dynuser::hide_user() {
 
 	HKEY	subkey		= NULL;
@@ -565,15 +580,28 @@ bool dynuser::hide_user() {
 		"CurrentVersion\\Winlogon\\SpecialAccounts\\UserList";
 	DWORD	hide_user = 0;
 	LONG	ok			= ERROR_SUCCESS;
+	REGSAM rsAccessMask=0;
+	DWORD dwDisposition=0;
+
+	if (Is64BitWindows)
+		rsAccessMask = KEY_WOW64_64KEY;
+	
 	
 	__try {
 
 		/* create or open the registry sub-key for removing users
 			from the Windows */
-		ok = RegCreateKey (
+
+		ok = RegCreateKeyEx (
 			HKEY_LOCAL_MACHINE,
 			subkey_name,
-			&subkey );
+			0, // reserved
+			NULL, 
+			REG_OPTION_NON_VOLATILE, 
+			KEY_READ | KEY_WRITE | rsAccessMask,
+			NULL,
+			&subkey,
+			&dwDisposition );
 
 		if ( ERROR_SUCCESS != ok || NULL == subkey ) {
 			dprintf ( D_FULLDEBUG,"dynuser::hide_user() "
