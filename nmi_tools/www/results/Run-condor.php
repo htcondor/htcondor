@@ -11,7 +11,7 @@ require_once "./load_config.inc";
 load_config();
 include "dashboard.inc";
 
-$continuous_blacklist = Array( "x86_deb_5.0", "x86_64_rhap_5.3-updated");
+$continuous_blacklist = Array("x86_64_rhap_5.3-updated");
 ?>
 <html>
 <head>
@@ -236,7 +236,7 @@ if(!$one_offs) {
 if(!$one_offs) {
   echo "<h2>Auto builds - user '" . CONDOR_USER . "'</h2>\n";
   echo "<table border=1>\n";
-  echo "<tr><th>Branch</th><th>Runid</th><th>Submitted</th><th>Build Results</th><th>Test Results</th><th>Cross Test Results</th>\n";
+  echo "<tr><th>Branch</th><th>Build RunID</th><th>Submitted</th><th>Build Results</th><th>Test Results</th><th>Cross Test Results</th>\n";
   echo "</tr>\n";
   
   $branches = array_keys($cndrauto_buf);
