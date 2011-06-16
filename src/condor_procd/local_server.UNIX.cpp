@@ -191,7 +191,15 @@ LocalServer::accept_connection(int timeout, bool &accepted)
 	                                                client_sn);
 	if (!m_writer->initialize(client_addr)) {
 		delete[] client_addr;
-		return false;
+		delete m_writer;
+		m_writer = NULL;
+
+			// We can get here if the client got killed before we
+			// connected.  This should not be a fatal exception.  We
+			// used to return false, which was treated as fatal.
+
+		accepted = false;
+		return true;
 	}
 	delete[] client_addr;
 
