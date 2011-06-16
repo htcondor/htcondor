@@ -473,7 +473,7 @@ static int process_config_file(configuration *c, const char *filename)
         fatal_error_exit(1,
                          "error in checking safety of configuration file path (%s)",
                          filename);
-    } else if (r == PATH_UNTRUSTED) {
+    } else if (r == SAFE_PATH_UNTRUSTED) {
         fatal_error_exit(1,
                          "unsafe permissions in configuration file path (%s)",
                          filename);
@@ -783,7 +783,7 @@ static char *do_common_dir_cmd_tasks(configuration *c,
         fatal_error_exit(1,
                          "error in checking safety of directory parent (%s)",
                          dir_parent);
-    } else if (r == PATH_UNTRUSTED) {
+    } else if (r == SAFE_PATH_UNTRUSTED) {
         fatal_error_exit(1,
                          "unsafe permissions in directory parent (%s)",
                          dir_parent);
@@ -1052,7 +1052,7 @@ static void do_start_procd(configuration *c)
         fatal_error_exit(1,
                          "error in checking safety of procd file path (%s)",
                          procd_conf.exec_filename);
-    } else if (r == PATH_UNTRUSTED) {
+    } else if (r == SAFE_PATH_UNTRUSTED) {
         fatal_error_exit(1, "unsafe permissions procd file path (%s)",
                          procd_conf.exec_filename);
     }

@@ -334,6 +334,26 @@ int is_string_list_empty(string_list *list)
 {
     return (list->count == 0);
 }
+
+/*
+ * skip_whitespace_const
+ * 	Returns a pointer to the first non-whitespace character in the
+ * 	const string s.
+ * parameters
+ * 	s
+ * 		the string to skip whitespace
+ * returns
+ * 	location of first non-whitespace
+ */
+const char *skip_whitespace_const(const char *s)
+{
+    while (*s && isspace(*s)) {
+        ++s;
+    }
+
+    return s;
+}
+
 /*
  * skip_whitespace
  * 	Returns a pointer to the first non-whitespace character in the

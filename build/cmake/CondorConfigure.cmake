@@ -467,6 +467,7 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
 if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
@@ -517,7 +518,7 @@ if (NOT WINDOWS)
 	endif()
 
 endif(NOT WINDOWS)
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/safe_open)
+
 if (CONDOR_EXTERNALS AND NOT WINDOWS)
 	### addition of a single externals target which allows you to
 	add_custom_target( externals DEPENDS ${EXTERNAL_MOD_DEP} )
