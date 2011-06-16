@@ -10,6 +10,10 @@ load_config();
 
 include "dashboard.inc";
 
+// Cache the committers info in a persistent file on disk
+include "Committers.php";
+$committers = &new Committers();
+
 //
 // Grab GET/POST vars
 //
@@ -46,7 +50,7 @@ foreach ($arr AS $val) {
 <table border=1 width="85%">
   <tr>
     <th>Branch</th>
-    <th>Runid</th>
+    <th>Build<br>RunID</th>
     <th>Submitted</th>
     <th>Build Results</th>
     <th>Test Results</th>  
@@ -103,29 +107,16 @@ for ($i=0; $i < sizeof($info); $i++) {
   if( ( $i+1 < sizeof($info) ) && $run["sha1"] != $info[$i+1]["sha1"]) {
     $tmp_url = sprintf(GITSHA1SHORT, $run["sha1"], $info[$i+1]["sha1"]);
 
-    // Try to form a list of people who committed during this period
-    /*
-    $cmd = "cd /space/git/CONDOR_SRC.git; git log " . $info[$i+1]["sha1"] . ".." . $run["sha1"] . " 2>&1";
-    $log = preg_split("/\n/", `$cmd`);
-
-    $authors = Array();
-    foreach ($log as $line) {
-      if(preg_match("/^\s*Author:\s*(.+)(\s+\<(.+)\>)?$/", $line, $matches)) {
-        if(array_key_exists($matches[1], $authors)) {
-          $authors[$matches[1]]["count"] += 1;
-        }
-        else {
-          $authors[$matches[1]] = Array();
-          $authors[$matches[1]]["count"] = 1;
-          $authors[$matches[1]]["email"] = 0;
-        }
-      }
+    $authors = $committers->get_committers($info[$i+1]["sha1"], $run["sha1"]);
+    $names = array_keys($authors);
+    sort($names);
+    $list = "<table><tr><th>Committer</th><th>Count</th></tr>\n";
+    foreach ($names AS $name) {
+      $list .= "<tr><td>" . htmlspecialchars($name) . "</td><td style='text-align:center'>" . htmlspecialchars($authors[$name]["count"]) . "</td></tr>";
     }
-    $list = "<b>Committers:</b><br>" . implode("<br>", array_keys($authors));
-    */
-    $list = "Temporarily disabled (talk to Scot)";
+    $list .= "</table>";
 
-    $diffstr = "| <span class=\"link\" style=\"font-size:100%\"><a href=\"$tmp_url\" style=\"\">Log from previous<span style=\"width:200px;test-decoration:none;\">$list</span></a></span>";
+    $diffstr = "| <span class=\"link\" style=\"font-size:100%\"><a href=\"$tmp_url\" style=\"\">Log from previous<span style=\"width:300px;text-decoration:none;\">$list</span></a></span>";
   }
   $full_log_url = sprintf(GITSHA1, $run["sha1"]);  
 
