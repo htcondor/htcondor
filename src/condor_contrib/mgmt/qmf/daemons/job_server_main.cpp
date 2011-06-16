@@ -276,7 +276,7 @@ void Stop()
 		Dump();
 	}
 
-	if (param_boolea("CLEANUP_ON_EXIT", false)) {
+	if (param_boolean("CLEANUP_ON_EXIT", false)) {
 		consumer->Reset();
 	}
 
