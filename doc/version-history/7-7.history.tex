@@ -52,7 +52,7 @@ The details of each version are described below.
   resources.
 
 % gittrac #2090 commit 4e5a7301cef565e5df3c85c1b4500e15727c3aa9
-\item If you overwrite the VARS value in a DAG submit file, DAGman will write a
+\item If you overwrite the VARS value in a DAG submit file, Dogma will write a
 warning to the log, saying ``VAR $\langle$\texttt{variable}$\rangle$ is already
 defined in job $\langle$\texttt{jobname}$\rangle$.''
 
@@ -87,6 +87,38 @@ sharing the pages.
 % gittrac #1755
 \item The new configuration variable \Macro{DAGMAN\_USE\_STRICT} 
 turns warnings into errors, as defined in section~\ref{param:DAGManUseStrict}.
+
+% gittrac #2006
+\item The \Condor{schedd} now publishes performance-related statistics.
+  Page~\pageref{sec:Scheduler-ClassAd-Attributes} in Appendix A contains
+  definitions for these new attributes:
+  \begin{itemize}
+    \item \Attr{DetectedMemory}
+    \item \Attr{DetectedCpus}
+    \item \Attr{UpdateInterval}
+    \item \Attr{WindowedStatWidth}
+    \item \Attr{ExitCode<N>}
+    \item \Attr{ExitCodeCumulative<N>}
+    \item \Attr{JobsSubmitted}
+    \item \Attr{JobsSubmittedCumulative}
+    \item \Attr{JobsStarted}
+    \item \Attr{JobsStartedCumulative}
+    \item \Attr{JobsCompleted}
+    \item \Attr{JobsCompletedCumulative}
+    \item \Attr{JobsExited}
+    \item \Attr{JobsExitedCumulative}
+    \item \Attr{ShadowExceptions}
+    \item \Attr{ShadowExceptionsCumulative}
+    \item \Attr{JobSubmissionRate}
+    \item \Attr{JobStartRate}
+    \item \Attr{JobCompletionRate}
+    \item \Attr{MeanTimeToStart}
+    \item \Attr{MeanTimeToStartCumulative}
+    \item \Attr{MeanRunningTime}
+    \item \Attr{MeanRunningTimeCumulative}
+    \item \Attr{SumTimeToStartCumulative}
+    \item \Attr{SumRunningTimeCumulative}
+  \end{itemize}
 
 \end{itemize}
 
