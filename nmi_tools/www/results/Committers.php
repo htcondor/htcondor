@@ -29,20 +29,18 @@ class Committers {
 
     if(is_null($authors)) {
       // Try to form a list of people who committed during this period
-      $cmd = "cd /space/git/CONDOR_SRC.git; git log $hash1..$hash2 2>&1";
+      $cmd = "cd /space/git/CONDOR_SRC.git; git log --pretty=format:'%an' $hash1..$hash2 2>&1";
       $log = preg_split("/\n/", `$cmd`);
 
       $authors = Array();
       foreach ($log as $line) {
-        if(preg_match("/^\s*Author:\s*(.+)(\s+\<(.+)\>)?$/", $line, $matches)) {
-          if(array_key_exists($matches[1], $authors)) {
-            $authors[$matches[1]]["count"] += 1;
-          }
-          else {
-            $authors[$matches[1]] = Array();
-            $authors[$matches[1]]["count"] = 1;
-            $authors[$matches[1]]["email"] = 0;
-          }
+        if(array_key_exists($line, $authors)) {
+          $authors[$line]["count"] += 1;
+        }
+        else {
+          $authors[$line] = Array();
+          $authors[$line]["count"] = 1;
+          $authors[$line]["email"] = 0;
         }
       }
 
