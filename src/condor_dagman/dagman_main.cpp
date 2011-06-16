@@ -2,9 +2,9 @@
 //TEMPTEMP -- -DumpRescue should still write out a complete dag file...
 //TEMPTEMP -- think about how to make rescue dags work across dagman version upgrade -- maybe just do condor_submit_dag on the old rescue DAG
 //TEMPTEMP -- make sure this works right doing a rescue DAG with multiple DAGs
-//TEMPTEMP -- job_dagman_fullremove.run fails
 //TEMPTEMP -- job_dagman_retry.run fails
-//TEMPTEMP -- job_dagman_splice-P.run fails
+//TEMPTEMP -- job_dagman_unlessexit.run fails
+//TEMPTEMP -- make sure node jobs actually do not get re-run when rescue DAG is run!!
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
