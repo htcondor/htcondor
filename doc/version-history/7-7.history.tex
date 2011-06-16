@@ -143,17 +143,6 @@ sharing the pages.
 \item The new configuration variable \Macro{DAGMAN\_USE\_STRICT} 
 turns warnings into errors, as defined in section~\ref{param:DAGManUseStrict}.
 
-% gittrac #2057
-% commit bfb2f58403a7e183f7f2e630e0d5488fec6b9f0d
-% commit 37e2f9153dcaeb3d081a0b70cbf3715f19961ccf
-% commit 22652297344f093790a0a529512e2ea95b09c079
-% commit 06e795068dcc8f63affa96cf2ca6dc1492b3e489
-% commit 4d283d8f17ad168f12efeda5178a2c8b7aa87cf3
-Changed behavior of DAGman, so that by default POST scripts will be run
-regardless of the return value from the PRE script in the same node. This
-behavior can be returned to the old behavior of not running the POST script by
-either adding the \Opt{-no\_postrun} option to \Condor{submit\_dag} or setting
-the new configuration variable \Macro{DAGMAN\_POST\_IGNORE\_PRE} to False.
 \end{itemize}
 
 \noindent Bugs Fixed:
