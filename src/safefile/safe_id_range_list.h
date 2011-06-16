@@ -65,7 +65,6 @@ void    safe_strto_gid_list(safe_id_range_list *list, const char *value, const c
 int     safe_parse_id_list(safe_id_range_list *list, const char *value);
 int     safe_parse_uid_list(safe_id_range_list *list, const char *value);
 int     safe_parse_gid_list(safe_id_range_list *list, const char *value);
-const char *skip_whitespace_const(const char *s);//Hack to get this to link.
 #ifdef __cplusplus
 }
 #endif
