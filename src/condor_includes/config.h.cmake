@@ -315,9 +315,6 @@
 ///* Do we have the postgresql external*/
 #cmakedefine HAVE_EXT_POSTGRESQL
 
-///* Do we have the zlib external */
-#cmakedefine HAVE_EXT_ZLIB
-
 ///* Do we have the libcgroup external */
 #cmakedefine HAVE_EXT_LIBCGROUP
 
