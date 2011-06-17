@@ -3145,6 +3145,7 @@ DedicatedScheduler::AddMrec(
 
 	// Next, insert this match_rec into our hashtables
     ClassAd* job = GetJobAd(job_id.cluster, job_id.proc);
+	ASSERT( job );
     pending_requests[claim_id] = new ClassAd(*job);
 
     if (is_partitionable(match_ad)) {
