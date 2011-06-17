@@ -891,8 +891,13 @@ DedicatedScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID)
+DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
 {
+	ClassAd *jobad = GetJobAd(jobid.cluster,jobid.proc);
+	if( !jobad ) {
+		return true;
+	}
+	FreeJobAd( jobad );
 	return false;
 }
 
