@@ -34,7 +34,7 @@ if ( WITH_VOMS )
 		condor_pre_external( VOMS voms-1.9.10_4 "include;${VOMS_LIB}" "done")
 
 		ExternalProject_Add(voms
-							DEPENDS ${EXPAT_REF} ${OPENSSL_RED} ${GLOBUS_REF} ${ZLIB_REF}
+							DEPENDS ${EXPAT_REF} ${OPENSSL_RED} ${GLOBUS_REF}
 							#-- Download Step ----------
 							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${VOMS_VER}.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${VOMS_STAGE}/dl

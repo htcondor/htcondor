@@ -41,7 +41,7 @@ if (WITH_CURL)
 			set (CURL_CONFIGURE PKG_CONFIG_PATH=${CURL_INSTALL_LOC} LIBS=-ldl ./configure --prefix=${CURL_INSTALL_LOC} --with-ssl=${OPENSSL_INSTALL_LOC} --disable-shared --disable-ipv6 --disable-ldap --disable-ldaps )
 			set (CURL_MAKE make)
 			set (CURL_INSTALL make install)
-			set (CURL_DEPENDS ${OPENSSL_REF} ${ZLIB_REF})
+			set (CURL_DEPENDS ${OPENSSL_REF})
 		endif()
 
 		ExternalProject_Add(curl
