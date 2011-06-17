@@ -9261,7 +9261,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_NO_CKPT_FILE:
 		case JOB_KILLED:
 				// If the job isn't being HELD, we'll remove it
-			if ( q_status != HELD ) {
+			if ( q_status != HELD && q_status != IDLE ) {
 				set_job_status( job_id.cluster, job_id.proc, REMOVED );
 			}
 			break;
