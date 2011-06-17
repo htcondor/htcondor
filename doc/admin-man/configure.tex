@@ -4825,6 +4825,12 @@ MAX_JOBS_RUNNING	= \
   how often the \Condor{schedd} daemon evaluates jobs.  It is defined
   in terms of seconds and defaults to 300 (every 5 minutes).
 
+\label{param:WindowedStatWidth}
+\item[\Macro{WINDOWED\_STAT\_WIDTH}]
+  The number of seconds that forms a time window within which performance
+  statistics of the \Condor{schedd} daemon are calculated.
+  Defaults to 300 seconds.
+
 \label{param:ScheddIntervalTimeslice}
 \item[\Macro{SCHEDD\_INTERVAL\_TIMESLICE}]
   The bookkeeping done by the

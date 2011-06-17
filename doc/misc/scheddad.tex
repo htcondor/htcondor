@@ -6,8 +6,77 @@
   started, represented as the number of second elapsed since
     the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
+\index{ClassAd Scheduler attribute!DetectedCpus}
+\item[\AdAttr{DetectedCpus}:] The number of detected machine CPUs/cores.
+
+\index{ClassAd Scheduler attribute!DetectedMemory}
+\item[\AdAttr{DetectedMemory}:] The amount of detected machine RAM in MBytes.
+
+\index{ClassAd Scheduler attribute!ExitCode<N>}
+\item[\AdAttr{ExitCode<N>}:] The number of jobs with exit code
+  \Expr{<N>} from this \Condor{schedd},
+   within the last \Attr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!ExitCodeCumulative<N>}
+\item[\AdAttr{ExitCodeCumulative<N>}:] The number of jobs with exit 
+  code \Expr{<N>} from this \Condor{schedd}, over the lifetime of this
+  \Condor{schedd}.
+
 \index{ClassAd Scheduler attribute!JobQueueBirthdate}
 \item[\AdAttr{JobQueueBirthdate}:] Description is not yet written.
+
+\index{ClassAd Scheduler attribute!JobsCompleted}
+\item[\AdAttr{JobsCompleted}:] The number of jobs successfully completed
+  on this \Condor{schedd} in the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!JobsCompletedCumulative}
+\item[\AdAttr{JobsCompletedCumulative}:] The number of jobs 
+  successfully completed on this \Condor{schedd} over the lifetime of this 
+  \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!JobCompletionRate}
+\item[\AdAttr{JobCompletionRate}:] The rate at which jobs completed
+  successfully on this \Condor{schedd}, 
+  calculated over the previous \AdAttr{WindowedStatWidth} seconds.
+  Given in jobs per second.
+
+\index{ClassAd Scheduler attribute!JobsExited}
+\item[\AdAttr{JobsExited}:] The number of jobs that exited
+  on this \Condor{schedd}, successfully or otherwise, in the 
+  previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!JobsExitedCumulative}
+\item[\AdAttr{JobsExitedCumulative}:] The number of jobs that exited
+  on this \Condor{schedd}, successfully or otherwise, over
+  the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!JobsStarted}
+\item[\AdAttr{JobsStarted}:] The number of jobs started on this
+  \Condor{schedd} in the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!JobsStartedCumulative}
+\item[\AdAttr{JobsStartedCumulative}:] The number of jobs started on this
+  \Condor{schedd} over the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!JobsSubmitted}
+\item[\AdAttr{JobsSubmitted}:] The number of jobs submitted to
+  this \Condor{schedd} in the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!JobsSubmittedCumulative}
+\item[\AdAttr{JobsSubmittedCumulative}:] The number of jobs submitted to
+  this \Condor{schedd} over the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!JobStartRate}
+\item[\AdAttr{JobStartRate}:] The rate at which jobs were started
+  on this \Condor{schedd}, 
+  calculated over the previous \AdAttr{WindowedStatWidth} seconds.
+  Given in jobs per second.
+
+\index{ClassAd Scheduler attribute!JobSubmissionRate}
+\item[\AdAttr{JobSubmissionRate}:] The rate at which jobs were
+  submitted on this \Condor{schedd}, 
+  calculated over the previous \AdAttr{WindowedStatWidth} seconds.
+  Given in jobs per second.
 
 \index{ClassAd Scheduler attribute!Machine}
 \item[\AdAttr{Machine}:] A string with the machine's fully qualified 
@@ -18,6 +87,26 @@
   evaluation of the configuration variable \Macro{MAX\_JOBS\_RUNNING}.
   See the definition at section~\ref{param:MaxJobsRunning} on
   page~\pageref{param:MaxJobsRunning}.
+
+\index{ClassAd Scheduler attribute!MeanRunningTime}
+\item[\AdAttr{MeanRunningTime}:] Average time in seconds
+  from job start to job completion for all jobs
+  on this \Condor{schedd} over the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!MeanRunningTimeCumulative}
+\item[\AdAttr{MeanRunningTimeCumulative}:] Average time in seconds
+  from job start to job completion for all jobs
+  on this \Condor{schedd} over the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!MeanTimeToStart}
+\item[\AdAttr{MeanTimeToStart}:] Average time in seconds
+  from job submission to job start for all jobs
+  on this \Condor{schedd} over the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!MeanTimeToStartCumulative}
+\item[\AdAttr{MeanTimeToStartCumulative}:] Average time in seconds 
+  from job submission to job start 
+  for all jobs on this \Condor{schedd} over its lifetime.
 
 \index{ClassAd Scheduler attribute!MonitorSelfAge}
 \item[\AdAttr{MonitorSelfAge}:] The number of seconds that this daemon
@@ -88,6 +177,15 @@
 \index{ClassAd Scheduler attribute!ServerTime}
 \item[\AdAttr{ServerTime}:] Description is not yet written.
 
+\index{ClassAd Scheduler attribute!ShadowExceptions}
+\item[\AdAttr{ShadowExceptions}:] The number of \Condor{shadow} exceptions 
+  on this \Condor{schedd}, 
+  in the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!ShadowExceptionsCumulative}
+\item[\AdAttr{ShadowExceptionsCumulative}:] The number of \Condor{shadow} 
+  exceptions on this \Condor{schedd}, over the lifetime of this \Condor{schedd}.
+
 \index{ClassAd Scheduler attribute!StartLocalUniverse}
 \item[\AdAttr{StartLocalUniverse}:] The same boolean value as set in the
   configuration variable \Macro{START\_LOCAL\_UNIVERSE}.
@@ -99,6 +197,16 @@
   configuration variable \Macro{START\_SCHEDULER\_UNIVERSE}.
   See the definition at section~\ref{param:StartSchedulerUniverse} on
   page~\pageref{param:StartSchedulerUniverse}.
+
+\index{ClassAd Scheduler attribute!SumRunningTimeCumulative}
+\item[\AdAttr{SumRunningTimeCumulative}:] The sum in seconds
+  from job start to job completion for all jobs
+  on this \Condor{schedd} over the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!SumTimeToStartCumulative}
+\item[\AdAttr{SumTimeToStartCumulative}:] The sum in seconds
+  from job submission to job start for all jobs 
+  on this \Condor{schedd} over the lifetime of this \Condor{schedd}.
 
 \index{ClassAd Scheduler attribute!TotalFlockedJobs}
 \item[\AdAttr{TotalFlockedJobs}:] The total number of jobs from this
@@ -144,117 +252,10 @@
   \SubmitCmd{scheduler} \SubmitCmd{ universe} jobs from this
   \Condor{schedd} daemon that are currently running.
 
-\index{ClassAd Scheduler attribute!DetectedMemory}
-\item[\AdAttr{DetectedMemory}:] Detected Machine RAM (MB)
-
-\index{ClassAd Scheduler attribute!DetectedCpus}
-\item[\AdAttr{DetectedCpus}:] Detected Machine CPUs/cores.
-
 \index{ClassAd Scheduler attribute!UpdateInterval}
 \item[\AdAttr{UpdateInterval}:] The interval, in seconds,
-  between publication of this \Condor{schedd} ad and
+  between publication of this \Condor{schedd} ClassAd and
   the previous publication.
-
-\index{ClassAd Scheduler attribute!WindowedStatWidth}
-\item[\AdAttr{WindowedStatWidth}:] The time window, in seconds,
-  for window-based performance statistics on this
-  \Condor{schedd}.  Set by WINDOWED\_STAT\_WIDTH config param.
-
-\index{ClassAd Scheduler attribute!ExitCode<N>}
-\item[\AdAttr{ExitCode<N>}:] The number of jobs exited with code
-  \AdAttr{<N>} from this \Condor{schedd}, within the last 
-  \AdAttr{WindowedStatWidth} seconds.
-
-\index{ClassAd Scheduler attribute!ExitCodeCumulative<N>}
-\item[\AdAttr{ExitCodeCumulative<N>}:] The number of jobs exited 
-  with code \AdAttr{<N>} from this \Condor{schedd}, over its lifetime.
-
-\index{ClassAd Scheduler attribute!JobsSubmitted}
-\item[\AdAttr{JobsSubmitted}:] The number of jobs submitted to
-  this \Condor{schedd} in the previous \AdAttr{WindowedStatWidth}
-  seconds.
-
-\index{ClassAd Scheduler attribute!JobsSubmittedCumulative}
-\item[\AdAttr{JobsSubmittedCumulative}:] The number of jobs submitted to
-  this \Condor{schedd} over its lifetime.
-
-\index{ClassAd Scheduler attribute!JobsStarted}
-\item[\AdAttr{JobsStarted}:] The number of jobs started on this
-  \Condor{schedd} in the previous \AdAttr{WindowedStatWidth}
-  seconds.
-
-\index{ClassAd Scheduler attribute!JobsStartedCumulative}
-\item[\AdAttr{JobsStartedCumulative}:] The number of jobs started on this
-  \Condor{schedd} over its lifetime.
-
-\index{ClassAd Scheduler attribute!JobsCompleted}
-\item[\AdAttr{JobsCompleted}:] The number of jobs successfully completed
-  on this \Condor{schedd} in the previous \AdAttr{WindowedStatWidth}
-  seconds.
-
-\index{ClassAd Scheduler attribute!JobsCompletedCumulative}
-\item[\AdAttr{JobsCompletedCumulative}:] The number of jobs 
-  successfully completed on this \Condor{schedd} over its lifetime.
-
-\index{ClassAd Scheduler attribute!JobsExited}
-\item[\AdAttr{JobsExited}:] The number of jobs that exited
-  on this \Condor{schedd}, successfully or otherwise, in the 
-  previous \AdAttr{WindowedStatWidth} seconds.
-
-\index{ClassAd Scheduler attribute!JobsExitedCumulative}
-\item[\AdAttr{JobsExitedCumulative}:] The number of jobs that exited
-  on this \Condor{schedd}, successfully or otherwise, over
-  its lifetime.
-
-\index{ClassAd Scheduler attribute!ShadowExceptions}
-\item[\AdAttr{ShadowExceptions}:] The number of shadow 
-  exceptions on this \Condor{schedd}, in the 
-  previous \AdAttr{WindowedStatWidth} seconds.
-
-\index{ClassAd Scheduler attribute!ShadowExceptionsCumulative}
-\item[\AdAttr{ShadowExceptionsCumulative}:] The number of shadow 
-  exceptions on this \Condor{schedd}, over its lifetime.
-
-\index{ClassAd Scheduler attribute!JobSubmissionRate}
-\item[\AdAttr{JobSubmissionRate}:] The rate at which jobs were
-  submitted on this \Condor{schedd} over the previous 
-  \AdAttr{WindowedStatWidth} seconds.
-
-\index{ClassAd Scheduler attribute!JobStartRate}
-\item[\AdAttr{JobStartRate}:] The rate at which jobs were started
-  on this \Condor{schedd} over the previous 
-  \AdAttr{WindowedStatWidth} seconds.
-
-\index{ClassAd Scheduler attribute!JobCompletionRate}
-\item[\AdAttr{JobCompletionRate}:] The rate at which jobs completed
-  successfully on this \Condor{schedd} over the previous 
-  \AdAttr{WindowedStatWidth} seconds.
-
-\index{ClassAd Scheduler attribute!MeanTimeToStart}
-\item[\AdAttr{MeanTimeToStart}:] Average time from job submission
-  to job start on this \Condor{schedd} over the previous 
-  \AdAttr{WindowedStatWidth} seconds.
-
-\index{ClassAd Scheduler attribute!MeanTimeToStartCumulative}
-\item[\AdAttr{MeanTimeToStartCumulative}:] Average time from job submission
-  to job start on this \Condor{schedd} over its lifetime.
-
-\index{ClassAd Scheduler attribute!MeanRunningTime}
-\item[\AdAttr{MeanRunningTime}:] Average time from job start to
-  job completion on this \Condor{schedd} over the previous 
-  \AdAttr{WindowedStatWidth} seconds.
-
-\index{ClassAd Scheduler attribute!MeanRunningTimeCumulative}
-\item[\AdAttr{MeanRunningTimeCumulative}:] Average time from job start to
-  job completion on this \Condor{schedd} over its lifetime.
-
-\index{ClassAd Scheduler attribute!SumTimeToStartCumulative}
-\item[\AdAttr{SumTimeToStartCumulative}:] Sum of job wait times
-  to start on this \Condor{schedd} over its lifetime.
-
-\index{ClassAd Scheduler attribute!SumRunningTimeCumulative}
-\item[\AdAttr{SumRunningTimeCumulative}:] Sum of running times
-  on this \Condor{schedd} over its lifetime.
 
 \index{ClassAd Scheduler attribute!UpdateSequenceNumber}
 \item[\AdAttr{UpdateSequenceNumber}:] An integer, starting at zero,
@@ -269,6 +270,11 @@
 \item[\AdAttr{WantResAd}:] A boolean value that when \Expr{True}
   causes the \Condor{negotiator} daemon to send to this \Condor{schedd}
   daemon a full machine ClassAd corresponding to a matched job.
+
+\index{ClassAd Scheduler attribute!WindowedStatWidth}
+\item[\AdAttr{WindowedStatWidth}:] The time window, in seconds,
+  for window-based performance statistics on this \Condor{schedd}.
+  Set by the configuration variable \Macro{WINDOWED\_STAT\_WIDTH}.
 
 \end{description}
 
