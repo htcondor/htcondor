@@ -318,7 +318,7 @@ the POST script runs, and the node fails.
 The behavior of DAGMan can be changed by a \Arg{PRE\_SKIP} command. To use a
 \Arg{PRE\_SKIP} command, one first create a \Arg{PRE} script.  In some
 conditions, it may make sense for the \Arg{PRE} script to check conditions, and
-skip the node.  The \Arg{PRE} script can indicate this to DAGman by exiting
+skip the node.  The \Arg{PRE} script can indicate this to DAGMan by exiting
 with a non-zero exit code in a non-error failure state.  Then one specifies
 
 \Opt{PRE\_SKIP} \Arg{Jobname} \Arg{non-zero-exit-code}
@@ -895,7 +895,7 @@ If this abort occurs, the return value for the DAG is 1.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Variable Values Associated with Nodes}
+\subsubsection{\label{dagman:VARS}Variable Values Associated with Nodes}
 \index{DAGMan input file!VARS key word}
 
 \index{DAGMan!VARS (macro for submit description file)}
@@ -913,7 +913,8 @@ submit description file of the relevant node.  A \Arg{macroname}
 consists of alphanumeric characters (a..Z and 0..9),
 as well as the underscore character.
 The space character delimits macros,
-when there is more than one macro defined for a node.
+when there is more than one macro defined for a node on a single line.
+Multiple lines defining macros for the same node are permitted.
 
 Correct syntax requires that the \Arg{string} must be
 enclosed in double quotes.
@@ -1012,6 +1013,34 @@ For a DAG such as this one, but with thousands of nodes,
 being able to write and maintain a single submit description file 
 and a single, yet more complex, DAG input file is preferable.
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Multiple macroname definitions]
+\end{description}
+
+If a VARS macroname for a specific node in a DAG input file is defined
+more than once,
+as it would be with the partial file contents
+\begin{verbatim}
+  JOB job1 job.condor
+  VARS job1 a="foo"
+  VARS job1 a="bar"
+\end{verbatim}
+a warning is written to the log, of the format 
+\begin{verbatim}
+Warning: VAR <macroname> is already defined in job <JobName>
+Discovered at file "<DAG input file name>", line <line number>
+\end{verbatim}
+
+The behavior of DAGMan is such that all definitions for the macroname
+exist,
+but only the last one defined is used as the variable's value.
+For example, if the example is within the DAG input file,
+and the job's submit description file utilized the value with
+\begin{verbatim}
+  arguments = "$(a)"
+\end{verbatim}
+then the argument will be \Expr{bar}.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}

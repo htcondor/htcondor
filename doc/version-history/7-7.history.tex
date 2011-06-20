@@ -51,10 +51,16 @@ The details of each version are described below.
   which uses the EC2 Query (REST) API to start virtual machines on cloud
   resources.
 
-% gittrac #2090 commit 4e5a7301cef565e5df3c85c1b4500e15727c3aa9
-\item If you overwrite the VARS value in a DAG submit file, Dogma will write a
-warning to the log, saying ``VAR $\langle$\texttt{variable}$\rangle$ is already
-defined in job $\langle$\texttt{jobname}$\rangle$.''
+% gittrac #2090 
+\item The behavior of DAGMan has changed, 
+such that if multiple definitions of a VARS macroname 
+for a specific node within a DAG input exist,
+a warning is written to the log, of the format
+\begin{verbatim}
+Warning: VAR <macroname> is already defined in job <JobName>
+Discovered at file "<DAG input file name>", line <line number>
+\end{verbatim}
+See section ~\ref{dagman:VARS} for details.
 
 % gittrac #659 commit 551785beaa1c0d8689d44368030b9f561b5ddfee
 \item Filip Krikava supplied a patch that limits the number of file descriptors
