@@ -1222,7 +1222,9 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 		// This will be inefficient for jobs with lots of variables
 		// As in O(N^2)
 		job->varNamesFromDag->Rewind();
+		job->varValsFromDag->Rewind();
 		while(MyString* s = job->varNamesFromDag->Next()){
+			job->varValsFromDag->Next(); // To keep up with varNamesFromDag
 			if(varName == *s){
 				debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
 					"is already defined in job \"%s\" "
@@ -1230,6 +1232,10 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 					varName.Value(),job->GetJobName(),filename,
 					lineNumber);
 				check_warning_strictness( DAG_STRICT_2 );
+				debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
+					"= \"%s\"\n",varName.Value(),varValue.Value());
+				job->varNamesFromDag->DeleteCurrent();
+				job->varValsFromDag->DeleteCurrent();
 			}
 		}
 		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
