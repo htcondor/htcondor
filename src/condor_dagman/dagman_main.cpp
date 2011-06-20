@@ -1,10 +1,10 @@
-//TEMPTEMP -- first, remove "old rescue" stuff...
 //TEMPTEMP -- -DumpRescue should still write out a complete dag file...
 //TEMPTEMP -- think about how to make rescue dags work across dagman version upgrade -- maybe just do condor_submit_dag on the old rescue DAG
-//TEMPTEMP -- make sure this works right doing a rescue DAG with multiple DAGs
+//TEMPTEMP -- make sure this works right doing a rescue DAG with multiple DAGs -- I think I tried this...
 //TEMPTEMP -- job_dagman_retry.run fails
 //TEMPTEMP -- job_dagman_unlessexit.run fails
-//TEMPTEMP -- make sure node jobs actually do not get re-run when rescue DAG is run!!
+//TEMPTEMP -- make sure node jobs actually do not get re-run when rescue DAG is run!! -- done!
+//TEMPTEMP -- maybe warn if DAGMAN_OLD_RESCUE is set... -- or even have an error??
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -211,20 +211,24 @@ Dagman::Config()
 	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", submit_delay, 0, 60 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n",
 				submit_delay );
+
 	max_submit_attempts =
 		param_integer( "DAGMAN_MAX_SUBMIT_ATTEMPTS", max_submit_attempts,
 		1, 16 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMIT_ATTEMPTS setting: %d\n",
 				max_submit_attempts );
+
 	startup_cycle_detect =
 		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", startup_cycle_detect );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_STARTUP_CYCLE_DETECT setting: %s\n",
 				startup_cycle_detect ? "True" : "False" );
+
 	max_submits_per_interval =
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL",
 		max_submits_per_interval, 1, 1000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n",
 				max_submits_per_interval );
+
 	m_user_log_scan_interval =
 		param_integer( "DAGMAN_USER_LOG_SCAN_INTERVAL",
 		m_user_log_scan_interval, 1, INT_MAX);
@@ -267,7 +271,6 @@ Dagman::Config()
 		// Now get the new DAGMAN_ALLOW_EVENTS value -- that can override
 		// all of the previous stuff.
 	allow_events = param_integer("DAGMAN_ALLOW_EVENTS", allow_events);
-
 	debug_printf( DEBUG_NORMAL, "allow_events ("
 				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION, DAGMAN_ALLOW_EVENTS"
 				") setting: %d\n", allow_events );
@@ -365,6 +368,13 @@ Dagman::Config()
 				pendingReportInterval );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
+
+	bool oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", false );
+	if ( oldRescue ) {
+		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_OLD_RESCUE is "
+					"no longer supported\n" );
+		check_warning_strictness( DAG_STRICT_1 );
+	}
 
 	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", autoRescue );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n",
@@ -644,7 +654,7 @@ void main_init (int argc, char ** const argv) {
             }
             dagman.maxPostScripts = atoi( argv[i] );
         } else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
-			debug_printf( DEBUG_SILENT, "Warning: -NoEventChecks is "
+			debug_printf( DEBUG_QUIET, "Warning: -NoEventChecks is "
 						"ignored; please use the DAGMAN_ALLOW_EVENTS "
 						"config parameter instead\n");
 			check_warning_strictness( DAG_STRICT_1 );
