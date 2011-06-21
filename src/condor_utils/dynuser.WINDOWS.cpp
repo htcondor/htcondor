@@ -558,7 +558,8 @@ void dynuser::createaccount() {
 //
 ////
 
-// eventually this should go into some general loc. 
+// TODO: TSTCLAIR eventually this should go into some general loc. 
+/*
 BOOL Is64BitWindows()
 {
 #if defined(_WIN64)
@@ -572,6 +573,7 @@ BOOL Is64BitWindows()
  return FALSE; // Win64 does not support Win16
 #endif
 }
+*/
 
 bool dynuser::hide_user() {
 
@@ -583,7 +585,7 @@ bool dynuser::hide_user() {
 	REGSAM rsAccessMask=0;
 	DWORD dwDisposition=0;
 
-	if (Is64BitWindows)
+	//if (Is64BitWindows())
 		rsAccessMask = KEY_WOW64_64KEY;
 	
 	
