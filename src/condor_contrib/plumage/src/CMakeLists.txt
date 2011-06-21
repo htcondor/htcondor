@@ -26,7 +26,7 @@ file( GLOB ETL_SCHEDD_SRCS ODSUtils.cpp PROC_ID_comparator.cpp ODSScheddPlugin*.
 file( GLOB ETL_SERVER_SRCS ods_job_daemon_main.cpp 
 					ODSJobLogConsumer.cpp
 					ODSHistoryFile.cpp ODSHistoryUtils.cpp 
-					ODSReaderWriter.cpp )
+					ODSMongodbWriter.cpp )
 
 ############################
 # daemon emitter plugins
@@ -50,10 +50,10 @@ file( GLOB StartdSrcs ODSStartdPlugin.cpp ODSMongodbWriter.cpp)
 condor_plugin( ODSStartdPlugin "${StartdSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
     
 ############################
-# etl server
+# job etl daemon
 ############################
-# condor_exe( ods_job_etl "${ETL_SERVER_SRCS}"
-# 			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${MONGODB_FOUND}" OFF )
+condor_exe( ods_job_etl "${ETL_SERVER_SRCS}"
+  			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${MONGODB_FOUND}" OFF )
 
 ############################
 # history loader tool

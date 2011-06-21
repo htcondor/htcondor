@@ -29,6 +29,7 @@
 
 // local includes
 #include "ODSJobLogConsumer.h"
+#include "ODSHistoryUtils.h"
 
 // about self
 DECL_SUBSYSTEM("JOB_ETL_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
@@ -38,12 +39,13 @@ using namespace plumage::etl;
 
 ClassAd	*ad = NULL;
 JobLogMirror *mirror = NULL;
-JobServerJobLogConsumer *consumer = NULL;
+ODSJobLogConsumer *consumer = NULL;
 
 extern MyString m_path;
 
 void init_classad();
 void Dump();
+void ProcessHistoryTimer(Service*);
 
 //-------------------------------------------------------------
 
@@ -52,16 +54,11 @@ int main_init(int /* argc */, char * /* argv */ [])
 	dprintf(D_ALWAYS, "main_init() called\n");
 
 	// setup the job log consumer
-	consumer = new JobServerJobLogConsumer();
+	consumer = new ODSJobLogConsumer("localhost");
 	mirror = new JobLogMirror(consumer);
 	mirror->init();
 
 	init_classad();
-
-	ReliSock *sock = new ReliSock;
-	if (!sock) {
-		EXCEPT("Failed to allocate transport socket");
-	}
 
     // before doing any job history processing, set the location of the files
     // TODO: need to test mal-HISTORY values: HISTORY=/tmp/somewhere
@@ -70,36 +67,33 @@ int main_init(int /* argc */, char * /* argv */ [])
     tmp2 = si.DirPath ();
     if ( !tmp2 )
     {
-        dprintf ( D_ALWAYS, "warning: No HISTORY defined - Aviary Query Server will not process history jobs\n" );
+        dprintf ( D_ALWAYS, "warning: No HISTORY defined - ODS will not process history jobs\n" );
     }
     else
     {
         m_path = tmp2;
         dprintf ( D_FULLDEBUG, "HISTORY path is %s\n",tmp2 );
         // register a timer for processing of historical job files
-        if (-1 == (index =
-            daemonCore->Register_Timer(
+        daemonCore->Register_Timer(0, 120, (TimerHandler) ProcessHistoryTimer , "Timer for processing job history files");
+        int index;
+        if (-1 == (index = daemonCore->Register_Timer(
                 0,
                 param_integer("HISTORY_INTERVAL",120),
                 (TimerHandler)ProcessHistoryTimer,
                 "Timer for processing job history files"
-                ))) {
-        EXCEPT("Failed to register history timer");
+                ))) 
+        {
+            EXCEPT("Failed to register history timer");
         }
     }
 
-    // useful for testing job coalescing
-    // and potentially just useful
-	if (-1 == (index =
-		daemonCore->Register_Signal(SIGUSR1,
-				    "Forced Reset Signal",
-				    (SignalHandler)
-				    HandleResetSignal,
-				    "Handler for Reset signals"))) {
-		EXCEPT("Failed to register Reset signal");
-	}
-
 	return TRUE;
+}
+
+void ProcessHistoryTimer(Service*) {
+    dprintf(D_FULLDEBUG, "ProcessHistoryTimer() called\n");
+    processHistoryDirectory();
+    processCurrentHistory();
 }
 
 void
@@ -110,7 +104,7 @@ init_classad()
 	}
 	ad = new ClassAd();
 
-	ad->SetMyTypeName("QueryServer");
+	ad->SetMyTypeName("JobEtlServer");
 	ad->SetTargetTypeName("Daemon");
 
 	char* default_name = default_daemon_name();
@@ -145,7 +139,7 @@ void Stop()
 		Dump();
 	}
 
-	delete etl_processor;
+	//delete consumer;
 
 	DC_Exit(0);
 }
