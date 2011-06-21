@@ -302,37 +302,13 @@ the tape, and then removes both the staged input files and the output files.
 DAGMan takes note of the exit value of the
 scripts as well as the job or jobs within the cluster.
 A script with an exit value not equal to 0 fails.
-% See gnats PR 606.
 If the PRE script fails, then neither the job nor
 the POST script runs, and the node fails.
-
-% gittrac 2122 3adc8835a4ac04003c2837a3f305d2ad9404acb7
-% gittrac 2122 cf2612edf66f1852de66d43515854382574b63e0
-% gittrac 2122 c3fd6b54697b5df43dc9d4f0c71f21d803457b4e
-% gittrac 2122 4bdd101c370e1744cd5462b4bf7b537f62826e72
-% gittrac 2122 36e685e49a0a1fcbc66048429353e2f3c27cc841
-% gittrac 2122 4ea0c1c7a81e171a68af8fbef7bd742728a52c30
-% gittrac 2122 f92a448b312063610cf8f68452e504b6eab4cfd8
-% gittrac 2122 3f6d658ed567b81768c09a3e118a7e8be652018e
-% gittrac 2122 c35feb10554210bb2c4dd19b2781ca204b9b09aa
-The behavior of DAGMan can be changed by a \Arg{PRE\_SKIP} command. To use a
-\Arg{PRE\_SKIP} command, one first create a \Arg{PRE} script.  In some
-conditions, it may make sense for the \Arg{PRE} script to check conditions, and
-skip the node.  The \Arg{PRE} script can indicate this to DAGman by exiting
-with a non-zero exit code in a non-error failure state.  Then one specifies
-
-\Opt{PRE\_SKIP} \Arg{Jobname} \Arg{non-zero-exit-code}
-
-in the DAG input file.  If the script terminates with exit code
-\Arg{non-zero-exit-code}, this is interpreted by DAGMan as an indication that
-the node should skipped completely.  Both the job associated with the node and
-the \Arg{POST} script will then be skipped, but the node will be marked as
-successfully completing. In the absence of a \Arg{PRE\_SKIP} command, the
-following actions are taken: if the PRE script succeeds, the Condor or Stork
-job is submitted.  If the job or any one of the jobs within the single cluster
-fails and there is no POST script, the DAG node is marked as failed.  An exit
-value not equal to 0 indicates program failure.  It is therefore important that
-a successful program return the exit value 0.
+If the PRE script succeeds, the Condor or Stork job is submitted.
+If the job or any one of the jobs within the single cluster
+fails and there is no POST script, the DAG node is marked as failed.  
+An exit value not equal to 0 indicates program failure.
+It is therefore important that a successful program return the exit value 0.
 
 If the job fails and there is a POST script,
 node failure is determined by the exit value of the POST script.
@@ -895,7 +871,7 @@ If this abort occurs, the return value for the DAG is 1.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Variable Values Associated with Nodes}
+\subsubsection{\label{dagman:VARS}Variable Values Associated with Nodes}
 \index{DAGMan input file!VARS key word}
 
 \index{DAGMan!VARS (macro for submit description file)}
@@ -913,7 +889,8 @@ submit description file of the relevant node.  A \Arg{macroname}
 consists of alphanumeric characters (a..Z and 0..9),
 as well as the underscore character.
 The space character delimits macros,
-when there is more than one macro defined for a node.
+when there is more than one macro defined for a node on a single line.
+Multiple lines defining macros for the same node are permitted.
 
 Correct syntax requires that the \Arg{string} must be
 enclosed in double quotes.
@@ -1012,6 +989,34 @@ For a DAG such as this one, but with thousands of nodes,
 being able to write and maintain a single submit description file 
 and a single, yet more complex, DAG input file is preferable.
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Multiple macroname definitions]
+\end{description}
+
+If a VARS macroname for a specific node in a DAG input file is defined
+more than once,
+as it would be with the partial file contents
+\begin{verbatim}
+  JOB job1 job.condor
+  VARS job1 a="foo"
+  VARS job1 a="bar"
+\end{verbatim}
+a warning is written to the log, of the format 
+\begin{verbatim}
+Warning: VAR <macroname> is already defined in job <JobName>
+Discovered at file "<DAG input file name>", line <line number>
+\end{verbatim}
+
+The behavior of DAGMan is such that all definitions for the macroname
+exist,
+but only the last one defined is used as the variable's value.
+For example, if the example is within the DAG input file,
+and the job's submit description file utilized the value with
+\begin{verbatim}
+  arguments = "$(a)"
+\end{verbatim}
+then the argument will be \Expr{bar}.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
