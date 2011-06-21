@@ -7030,6 +7030,7 @@ int GahpClient::ec2_vm_start( const char * service_url,
 							  const char * user_data,
 							  const char * user_data_file,
 							  const char * instance_type,
+							  const char * availability_zone,
 							  StringList & groupnames,
 							  char * &instance_id,
 							  char * &error_code)
@@ -7074,8 +7075,9 @@ int GahpClient::ec2_vm_start( const char * service_url,
 	// 2. m1.large
 	// 3. m1.xlarge
 	char* esc8 = strdup( escapeGahpString(instance_type) );
+	char* esc9 = strdup( escapeGahpString(availability_zone) );
 
-	int x = sprintf(reqline, "%s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8);
+	int x = sprintf(reqline, "%s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9 );
 
 	free( esc1 );
 	free( esc2 );
@@ -7085,6 +7087,7 @@ int GahpClient::ec2_vm_start( const char * service_url,
 	free( esc6 );
 	free( esc7 );
 	free( esc8 );
+	free( esc9 );
 	ASSERT( x > 0 );
 
 	const char * group_name;
@@ -7726,8 +7729,7 @@ int GahpClient::ec2_associate_address(const char * service_url,
                                       StringList & returnStatus,
                                       char* & error_code )
 {
-// command line looks like:
-    // EC2_COMMAND_VM_STATUS <return 0;"EC2_VM_STATUS";
+
     static const char* command = "EC2_VM_ASSOCIATE_ADDRESS";
 
     int rc=0;
@@ -7758,6 +7760,101 @@ int GahpClient::ec2_associate_address(const char * service_url,
     free( esc3 );
     free( esc4 );
     free( esc5 );
+    ASSERT( x > 0 );
+    
+    const char *buf = reqline.c_str();
+        
+    // Check if this request is currently pending. If not, make it the pending request.
+    if ( !is_pending(command,buf) ) {
+        // Command is not pending, so go ahead and submit a new one if our command mode permits.
+        if ( m_mode == results_only ) {
+            return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+        }
+        now_pending(command, buf, deleg_proxy);
+    }
+    
+    // If we made it here, command is pending.
+
+    // Check first if command completed.
+    Gahp_Args* result = get_pending_result(command, buf);
+
+    if ( result ) {
+        // command completed and the return value looks like:
+        int rc = atoi(result->argv[1]);
+        
+        if (rc == 1) {
+            
+            if (result->argc == 2) {
+                error_string = "";
+            } else if (result->argc == 4) {
+                error_code = strdup(result->argv[2]);
+                error_string = result->argv[3];
+            } else {
+                EXCEPT("Bad %s Result",command);
+            }
+            
+        } else {    // rc == 0
+            
+            if ( ( (result->argc-2) % 2) != 0 ) {
+                EXCEPT("Bad %s Result",command);
+            } else {
+                // get the status info
+                for (int i=2; i<result->argc; i++) {
+                    returnStatus.append( strdup(result->argv[i]) );
+                }
+                returnStatus.rewind();
+            }
+        }       
+        
+        delete result;
+        
+    }
+    
+    return rc;
+
+}
+
+int GahpClient::ec2_attach_volume(const char * service_url,
+                              const char * publickeyfile,
+                              const char * privatekeyfile,
+                              const char * volume_id,
+							  const char * instance_id, 
+                              const char * device_id,
+                              StringList & returnStatus,
+                              char* & error_code )
+{
+    static const char* command = "EC_VM_ATTACH_VOLUME";
+
+    int rc=0;
+    
+    // check if this command is supported
+    if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    // check input arguments
+    if ( (service_url == NULL) || (publickeyfile == NULL) || (privatekeyfile == NULL) || (instance_id == NULL) || (volume_id == NULL) || (device_id == NULL) ){
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    // Generate request line
+    std::string reqline;
+
+    char* esc1 = strdup( escapeGahpString(service_url) );
+    char* esc2 = strdup( escapeGahpString(publickeyfile) );
+    char* esc3 = strdup( escapeGahpString(privatekeyfile) );
+    char* esc4 = strdup( escapeGahpString(volume_id) );
+	char* esc5 = strdup( escapeGahpString(instance_id) );
+    char* esc6 = strdup( escapeGahpString(device_id) );
+    
+    int x = sprintf(reqline, "%s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6 );
+    
+    free( esc1 );
+    free( esc2 );
+    free( esc3 );
+    free( esc4 );
+    free( esc5 );
+	free( esc6 );
     ASSERT( x > 0 );
     
     const char *buf = reqline.c_str();

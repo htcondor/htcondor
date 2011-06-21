@@ -395,6 +395,8 @@ const char* EC2SecurityGroups = "ec2_security_groups";
 const char* EC2KeyPairFile = "ec2_keypair_file";
 const char* EC2InstanceType = "ec2_instance_type";
 const char* EC2ElasticIP = "ec2_elastic_ip";
+const char* EC2EBSVolumes = "ec2_ebs_volumes";
+const char* EC2AvailabilityZone= "ec2_availability_zone";
 
 //
 // Deltacloud Parameters
@@ -519,7 +521,7 @@ void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
 void transfer_vm_file(const char *filename);
 bool make_vm_file_path(const char *filename, MyString& fixedname);
-bool validate_xen_disk_parm(const char *xen_disk, MyString &fixedname);
+bool validate_disk_parm(const char *disk, MyString &fixedname, int min_params=3, int max_params=4);
 
 char *owner = NULL;
 char *ntdomain = NULL;
@@ -5218,6 +5220,42 @@ SetGridParams()
         InsertJobExpr( buffer.Value() );
     }
 	
+	bool HasAvailabilityZone=false;
+	// EC2AvailabilityZone is not a necessary parameter
+    if( (tmp = condor_param( EC2AvailabilityZone, ATTR_EC2_AVAILABILITY_ZONE )) ) {
+        buffer.sprintf( "%s = \"%s\"", ATTR_EC2_AVAILABILITY_ZONE, tmp );
+        free( tmp );
+        InsertJobExpr( buffer.Value() );
+		HasAvailabilityZone=true;
+    }
+	
+	// EC2EBSVolumes is not a necessary parameter
+    if( (tmp = condor_param( EC2EBSVolumes, ATTR_EC2_EBS_VOLUMES )) ) {
+		MyString fixedvalue = delete_quotation_marks(tmp);
+		if( validate_disk_parm(fixedvalue.Value(), fixedvalue, 2, 2) == false ) 
+        {
+			fprintf(stderr, "\nERROR: 'ec2_ebs_volumes' has incorrect format.\n"
+					"The format shoud be like "
+					"\"<instance_id>:<devicename>\"\n"
+					"e.g.> For single volume: ec2_ebs_volumes = vol-35bcc15e:hda1\n"
+					"      For multiple disks: ec2_ebs_volumes = "
+					"vol-35bcc15e:hda1,vol-35bcc16f:hda2\n");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		
+		if (!HasAvailabilityZone)
+		{
+			fprintf(stderr, "\nERROR: 'ec2_ebs_volumes' requires 'ec2_availability_zone'\n");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		
+        buffer.sprintf( "%s = \"%s\"", ATTR_EC2_EBS_VOLUMES, tmp );
+        free( tmp );
+        InsertJobExpr( buffer.Value() );
+    }
+	
 	// EC2UserData is not a necessary parameter
 	if( (tmp = condor_param( EC2UserData, ATTR_EC2_USER_DATA )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_USER_DATA, tmp);
@@ -7335,20 +7373,20 @@ bool make_vm_file_path(const char *filename, MyString& fixedname)
 
 // this function parses and checks xen disk parameters
 bool
-validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
+validate_disk_parm(const char *pszDisk, MyString &fixed_disk, int min_params, int max_params)
 {
-	if( !xen_disk ) {
+	if( !pszDisk ) {
 		return false;
 	}
 
-	const char *ptr = xen_disk;
+	const char *ptr = pszDisk;
 	// skip leading white spaces
 	while( *ptr && ( *ptr == ' ' )) {
 		ptr++;
 	}
 
 	// parse each disk
-	// e.g.) xen_disk = filename1:hda1:w, filename2:hda2:w
+	// e.g.) disk = filename1:hda1:w, filename2:hda2:w
 	StringList disk_files(ptr, ",");
 	if( disk_files.isEmpty() ) {
 		return false;
@@ -7363,7 +7401,7 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 		// found disk file
 		StringList single_disk_file(one_disk, ":");
         int iNumDiskParams = single_disk_file.number();
-		if( iNumDiskParams < 3 || iNumDiskParams > 4 ) {
+		if( iNumDiskParams < min_params || iNumDiskParams > max_params ) {
 			return false;
 		}
 
@@ -7384,14 +7422,21 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 			if( fixed_disk.Length() > 0 ) {
 				fixed_disk += ",";
 			}
+			
 			// file name
 			fixed_disk += fixedname;
 			fixed_disk += ":";
+			
 			// device
 			fixed_disk += single_disk_file.next();
-			fixed_disk += ":";
-			// permission
-			fixed_disk += single_disk_file.next();
+			
+			if (iNumDiskParams >= 3)
+			{
+				// permission
+				fixed_disk += ":";
+				fixed_disk += single_disk_file.next();
+			}
+			
             if (iNumDiskParams == 4)
             {
                 // optional (format)
@@ -7792,7 +7837,7 @@ SetVMParams()
 			exit(1);
 		}else {
 			MyString fixedvalue = delete_quotation_marks(disk);
-			if( validate_xen_disk_parm(fixedvalue.Value(), fixedvalue) == false ) 
+			if( validate_disk_parm(fixedvalue.Value(), fixedvalue) == false ) 
             {
 				fprintf(stderr, "\nERROR: 'vm_disk' has incorrect format.\n"
 						"The format shoud be like "

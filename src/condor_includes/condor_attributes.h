@@ -811,6 +811,8 @@ extern const char * const ATTR_EC2_REMOTE_VM_NAME;
 extern const char * const ATTR_EC2_INSTANCE_TYPE;
 extern const char * const ATTR_EC2_INSTANCE_NAME;
 extern const char * const ATTR_EC2_ELASTIC_IP;
+extern const char * const ATTR_EC2_AVAILABILITY_ZONE;
+extern const char * const ATTR_EC2_EBS_VOLUMES;
 //************* End of changes for EC2 Jobs *****************//
 
 
