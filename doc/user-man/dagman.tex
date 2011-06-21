@@ -343,6 +343,22 @@ node  & S & F & F       & S & F & S & F & S & F & S & S & F & F  \\
 \end{table}
 \end{center}
 
+\index{DAGMan input file!PRE\_SKIP key word}
+\index{DAGMan!PRE\_SKIP command}
+The behavior of DAGMan with respect to node success or failure can be changed 
+with the addition of a \Arg{PRE\_SKIP} command. 
+A \Arg{PRE\_SKIP} line within the DAG input file uses the syntax: 
+
+\Opt{PRE\_SKIP} \Arg{JobName} \Arg{non-zero-exit-code}
+
+A DAG input file with this command uses the exit value from the
+PRE script of the node specified by \Arg{JobName}. 
+If the PRE script terminates with the exit code \Arg{non-zero-exit-code},
+then the remainder of the node is skipped entirely.  
+Both the job associated with the node and
+any \Arg{POST} script will not be executed,
+and the node will be marked as successful.
+
 Five variables (\Env{\$JOB}, \Env{\$JOBID}, \Env{\$RETRY},
 \Env{\$MAX\_RETRIES}, and
 \Env{\$RETURN}) can be used within the DAG input file

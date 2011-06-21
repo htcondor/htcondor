@@ -29,7 +29,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-% gettrac #2057
+% gittrac #2057
 \item The behavior of DAGMan is changed, such that, by default,
 POST scripts will be run regardless of the return value from the PRE script
 of the same node.
@@ -38,6 +38,11 @@ by either adding the \Opt{-no\_postrun} option to \Condor{submit\_dag},
 or by setting the new configuration variable 
 \Macro{DAGMAN\_POST\_IGNORE\_PRE} to \Expr{False}.
 
+% gittrac #2122
+\item The new \Arg{PRE\_SKIP} key word in DAGMan changes the
+behavior of DAG node execution such that the node's job and POST script
+may be skipped based on the exit value of the PRE script.
+See section ~\ref{dagman:SCRIPT} for details.
 
 \end{itemize}
 
