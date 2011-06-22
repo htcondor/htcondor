@@ -88,6 +88,25 @@ main(int argc, char* argv[])
 	get_std_fd(1, job_stdout);
 	get_std_fd(2, job_stderr);
 
+		// Now we do a little dance to replace the socketpair that we
+		// have been using to communicate with the starter with a new
+		// one.  Why?  Because, as of glexec 0.8, when glexec is
+		// configured with linger=on, some persistent process
+		// (glexec?, procd?) is keeping a handle to the wrapper's end
+		// of the socket open, so the starter hangs waiting for the
+		// socket to close when the job is executed.
+
+	int new_sock_fd = fdpass_recv(sock_fd);
+	if (new_sock_fd == -1) {
+		err = "fdpass_recv error on new_sock_fd";
+		fatal_error();
+	}
+	if (dup2(new_sock_fd,sock_fd) == -1 ) {
+		err = "dup2 error on new_sock_fd";
+		fatal_error();
+	}
+	close(new_sock_fd);
+
 	// set our UNIX domain socket end close-on-exec; if the Starter
 	// sees it close without seeing an error message first, it assumes
 	// that the job has begun execution
