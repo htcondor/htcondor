@@ -236,9 +236,10 @@ int safe_open_no_create(const char *fn, int flags)
 	    return -1;
 	}
     }
+	errno = saved_errno;
 #endif
     /* Success, restore the errno incase we had recoverable failures */
-    errno = saved_errno;
+    
 
     return f;
 }
