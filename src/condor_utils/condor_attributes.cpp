@@ -916,6 +916,8 @@ const char * const ATTR_EC2_REMOTE_VM_NAME = "EC2RemoteVirtualMachineName";
 const char * const ATTR_EC2_INSTANCE_TYPE = "EC2InstanceType";
 const char * const ATTR_EC2_INSTANCE_NAME = "EC2InstanceName";
 const char * const ATTR_EC2_ELASTIC_IP = "EC2ElasticIp";
+const char * const ATTR_EC2_EBS_VOLUMES = "EC2ElasticBlockStorageVolumes";
+const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailbityZone";
 //************* End of changes for EC2 Jobs *****************//
 
 //************* Added for Lease Manager *******************//

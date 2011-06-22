@@ -23,7 +23,7 @@
 # fixes necessary for compilation on RHEL 6 and it exists before the next
 # official release of Coredumper.
 
-if (LINUX AND ${SYS_ARCH} MATCHES "I386|X86_64")
+if (LINUX AND ${SYS_ARCH} MATCHES "X86_64|I386|I686")
   option(WITH_COREDUMPER "Compiling with support for COREDUMPER" ON)
 endif()
 

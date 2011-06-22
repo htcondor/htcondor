@@ -28,6 +28,10 @@ use warnings;
 use POSIX;
 use Getopt::Long;
 
+# For finding the scripts current directory
+use File::Basename;
+use File::Spec::Functions qw(rel2abs);
+
 my $opt_without_tests;
 my $opt_test_args = "";
 my $opt_submit_xtests;
@@ -87,7 +91,11 @@ print "ENV: _NMI_GID = $gid\n";
 print "ENV: _NMI_STEP_FAILED = $failed\n";
 print "\n";
 
+chomp(my $runid = `nmi_gid2runid $gid`);
+
 if(defined $failed) {
+    my $cwd = dirname(rel2abs($0));
+    system("$cwd/email_on_failure.py $runid");
     die "Stopping testing since step \"$failed\" failed\n";
 }
 
@@ -120,9 +128,9 @@ if($mode ne "workspace") {
 }
 $gid || die "No gid to use, NOT submitting tests\n";
 
-my $runid = `nmi_gid2runid $ENV{_NMI_GID}`;
-chomp $runid;
-$runid || die "Can't find runid from gid, NOT submitting tests\n";
+if(!$runid) {
+    die "Can't find runid from gid, NOT submitting tests\n";
+}
 
 print "Attempting to submit test job for platform: '$platform' runid: '$runid' ...\n";
 

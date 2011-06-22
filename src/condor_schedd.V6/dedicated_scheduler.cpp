@@ -891,8 +891,13 @@ DedicatedScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID)
+DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
 {
+	ClassAd *jobad = GetJobAd(jobid.cluster,jobid.proc);
+	if( !jobad ) {
+		return true;
+	}
+	FreeJobAd( jobad );
 	return false;
 }
 
@@ -3140,6 +3145,7 @@ DedicatedScheduler::AddMrec(
 
 	// Next, insert this match_rec into our hashtables
     ClassAd* job = GetJobAd(job_id.cluster, job_id.proc);
+	ASSERT( job );
     pending_requests[claim_id] = new ClassAd(*job);
 
     if (is_partitionable(match_ad)) {

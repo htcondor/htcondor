@@ -482,7 +482,7 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 
 if (NOT WINDOWS)
 
-	if (${SYSTEM_NAME} MATCHES "rhel3" AND ${SYS_ARCH} MATCHES "X86_64")
+	if (${SYSTEM_NAME} MATCHES "rhel3")
 		# The new version of 2011.05.24-r31 doesn't compile on rhel3/x86_64
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
 	else ()
