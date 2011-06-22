@@ -23,17 +23,34 @@ int State_SendSessionParameters( TransferState* state )
 	simple_parameters* parameters;
 
 
+
+	// Setup the message frame structure 
+
+	sif_frame = (cftp_sif_frame*)(&state->fsend_buf);
+	sif_frame->MessageType = SIF;
+	sif_frame->ErrorCode = htons(NOERROR);
+	sif_frame->SessionToken =    htons(state->session_token);
+    sif_frame->ParameterFormat = htons(state->parameter_format);
+    sif_frame->ParameterLength = htons(state->parameter_length);
+
+
+    // Send message frame
+    state->send_rdy = 1;
+    send_cftp_frame( state );
+
+
     // Set up parameter structure 
     if( state->data_buffer )
 		free( state->data_buffer );
 	state->data_buffer = malloc( state->parameter_length );
     parameters = (simple_parameters*)state->data_buffer;
+    state->data_buffer_size = state->parameter_length;
 
-
-	memset( parameters, 0, sizeof( simple_parameters ) );
-	memcpy( parameters->filename, 
+	memset( parameters, 0, state->parameter_length );
+	
+    memcpy( parameters->filename, 
             state->local_file.filename,
-            strlen( state->local_file.filename));
+            strlen(state->local_file.filename));
 	
 	parameters->filesize = htonll(state->local_file.file_size);
 	parameters->chunk_size = htonll(state->local_file.chunk_size);
@@ -43,21 +60,7 @@ int State_SendSessionParameters( TransferState* state )
 	parameters->hash[2] = htonl( state->local_file.hash[2] );
 	parameters->hash[3] = htonl( state->local_file.hash[3] );
 	parameters->hash[4] = htonl( state->local_file.hash[4] );
-	
-	// Setup the message frame structure 
-
-	sif_frame = (cftp_sif_frame*)(&state->fsend_buf);
-	sif_frame->MessageType = SIF;
-	sif_frame->ErrorCode = htons(NOERROR);
-	sif_frame->SessionToken =    htons(state->session_token);
-    sif_frame->ParameterFormat = htons(state->parameter_length);
-    sif_frame->ParameterLength = htons(state->parameter_format);
-
-
-    // Send message frame
-    state->send_rdy = 1;
-    send_cftp_frame( state );
-
+    
     // Send data frame
 	state->send_rdy = 1;
 	send_data_frame( state );
@@ -89,6 +92,9 @@ int State_ReceiveSessionParametersAck( TransferState* state )
     // returned to confirm they are still acceptable
     // to us as a client.
 
+    state->data_buffer_size = ntohs(saf_frame->ParameterLength);
+    state->recv_rdy = 1;
+    recv_data_frame( state );
 
     //Move directly to sending client ready
     state->recv_rdy = 0;
@@ -119,6 +125,7 @@ int State_SendClientReady( TransferState* state )
 
     //Send first file chunk; 
     state->recv_rdy = 0;
+    state->retry_count = 0;
 
 	LEAVE_STATE(0);
 }

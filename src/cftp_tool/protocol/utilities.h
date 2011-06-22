@@ -25,10 +25,30 @@ typedef struct {
 
 typedef struct {
     int socket;
+    char* address;
+	int port;
 } Listener;
 
-int makeConnection( const char* address, int port, Connection* c );
+typedef struct {
+    int socket;
+    char* address;
+	int port;
+} Endpoint;
+
+int establishListener( const char* address, int port, Listener* l );
+int acceptConnection( Listener* l, Connection* c, int timeout );
+int makeConnection( const char* address, int port, Connection* c);
+int startConnection( const char* address, int port, Connection* c);
+int finishConnection( Connection* c, int timeout, int finish);
 int closeConnection( Connection* c );
+
+int makeUDPEndpoint( const char* address, int port, Endpoint* e );
+int readUDPEndpoint( Endpoint* e, void* buffer, int len,
+                     char* address, int* port, int timeout );
+int writeUDPEndpoint( Endpoint* e, void* buffer, int len,
+                     const char* address, int port);
+
+void getAddressPort( struct sockaddr_storage* ss, char* address, int* port );
 
 //sendall - taken from the Beej guide to socket programming
 int sendall(int s, char *buf, int *len);

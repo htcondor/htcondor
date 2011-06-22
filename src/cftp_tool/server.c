@@ -38,13 +38,19 @@ static struct argp_option options[] = {
 	 'i',
 	 "TIMEOUT",
 	 0,
-	 "Do not wait forever for first client connection. Exit after TIMEOUT if no client connects."},
+	 "Do not wait forever for first client connection. Exit after TIMEOUT if no client connects. Implies single-client option."},
 
+    {"single-client",
+     's',
+     0,
+     0,
+     "Accept only a single client" },
+        
 	{"post-timeout",
 	 'I',
 	 "TIMEOUT[:MAX]",
 	 0,
-	 "Wait for TIMEOUT ( or randomly between TIMEOUT and TIMEOUT + MAX ) after transfer before terminating."},
+	 "Wait for TIMEOUT ( or randomly between TIMEOUT and TIMEOUT + MAX ) after transfer before terminating. Implies single-client option."},
 
 	{"disk-quota",
 	 'q',	
@@ -96,6 +102,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 		{
 		case 'i':
 			sscanf( arg, "%d", &arguments->itimeout );
+            arguments->single_client = 1;
 			break;
 
 		case 'I':
@@ -115,14 +122,18 @@ parse_opt (int key, char *arg, struct argp_state *state)
 				{
 					sscanf( arg, "%d", &arguments->ptimeout );
 				}
-			
-			
+	
+			arguments->single_client = 1;
 
 			break;
 
 		case 'v':
 			arguments->verbose = 1;
 			break;
+
+        case 's':
+            arguments->single_client=1;
+            break;
 
 		case 'd':
 			arguments->debug = 1;
@@ -138,7 +149,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 			if( sep_start)
 				{
 					(*sep_start) = 0;
-					strcpy( arguments->aport, sep_start+1 );
+					sscanf(sep_start+1, "%d", &arguments->aport );
 				}
 			strcpy( arguments->ahost, arg );
 			
@@ -150,7 +161,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 			if(sep_start)
 				{
 					(*sep_start) = 0;
-					strcpy( arguments->lport, sep_start+1 );
+					sscanf(sep_start+1, "%d", &arguments->lport );
 				}
 
 			strcpy( arguments->lhost, arg );
@@ -206,15 +217,13 @@ int main( int argc, char** argv )
 	arguments.ptimeout = 0;
 	arguments.quota = -1;
 	arguments.announce = 0;
+    arguments.single_client = 0;
 
-	arguments.aport = (char*)malloc( 16 );
-	memset( arguments.aport, 0, 16 );
+	arguments.aport = 0;
 	arguments.ahost = (char*)malloc( 256 );
 	memset( arguments.ahost, 0, 256 );
 
-	arguments.lport = (char*)malloc( 16 );
-	memset( arguments.lport, 0, 16 );
-	sprintf( arguments.lport, "0" ); // By default pick random port
+	arguments.lport = 0; // By default pick random port
 	arguments.lhost = (char*)malloc( 256 );
 	memset( arguments.lhost, 0, 256 );
 	sprintf( arguments.lhost, "localhost" );
@@ -244,21 +253,23 @@ int main( int argc, char** argv )
 				sprintf( quotaHR_str, "(%4f TB)", arguments.quota / 1073741824.0 );
 
 			printf ("\n--ARGUMENTS--\n"
-					"\tLISTEN PORT      = %s\n"
+					"\tLISTEN PORT      = %d\n"
 					"\tLISTEN INTERFACE = %s"
 					"\n\n--OPTIONS--\n"
 					"\tQUOTA            = %ld KB %s\n"
+                    "\tSINGLE CLIENT    = %s\n"
 					"\tINITIAL TIMEOUT  = %d sec\n"
 					"\tPOST TIMEOUT     = %d sec\n"
 					"\tVERBOSE          = %s\n"
 					"\tANNOUNCE HOST    = %s\n"
-					"\tANNOUNCE PORT    = %s\n"
+					"\tANNOUNCE PORT    = %d\n"
 					"\tTRANSFER PATH    = %s\n"
 					"\tUUID             = %s\n\n\n",
 					arguments.lport,
 					arguments.lhost,
 					arguments.quota,
 					quotaHR_str,
+                    arguments.single_client ? "yes" : "no",
 					arguments.itimeout,
 					arguments.ptimeout,
 					arguments.verbose ? "yes" : "no",
@@ -271,9 +282,7 @@ int main( int argc, char** argv )
 		//TODO: Write server main loop and associated handling code.
 	run_server(&arguments);
 
-	free( arguments.aport );
 	free( arguments.ahost );
-	free( arguments.lport );
 	free( arguments.lhost );
 	free( arguments.tpath );
 	free( arguments.uuid );

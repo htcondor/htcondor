@@ -45,12 +45,6 @@ int State_CheckSessionParameters( TransferState* state )
 
 	sif_frame = (cftp_sif_frame*)(&state->frecv_buf);
 	
-	DEBUG("MessageType: %d.\n",  sif_frame->MessageType );
-	DEBUG( "SIF error code: %d.\n", ntohs(sif_frame->ErrorCode) );
-	DEBUG( "SIF session token: %d.\n", sif_frame->SessionToken );
-	DEBUG( "SIF parameter format: %d.\n", ntohs(sif_frame->ParameterFormat) );
-	DEBUG( "SIF parameter length: %d.\n", ntohs(sif_frame->ParameterLength) );
- 
 		// Load parameters
 	state->session_token    = sif_frame->SessionToken;  
 	state->parameter_length = ntohs( sif_frame->ParameterLength );
@@ -85,25 +79,11 @@ int State_CheckSessionParameters( TransferState* state )
 	recvd_params = (simple_parameters*)(state->data_buffer);
 	local_params = (simple_parameters*)(state->session_parameters);
 
-		//memcpy( local_params->filename,
-		//		recvd_params->filename, 
-		//		512 );
+	memcpy( local_params->filename,
+			recvd_params->filename, 
+			512 );
 
- 
-		// Extract the base filename from the filepath given
-	old_str_ptr = str_ptr = recvd_params->filename;;
-	while( str_ptr )
-		{
-			old_str_ptr = str_ptr;
-			str_ptr = strchr( str_ptr+1, '/' );
-			if( str_ptr )
-				str_ptr = str_ptr + 1;
-		}
-	str_ptr = old_str_ptr;
-
-	sprintf( local_params->filename, "%s/%s", state->arguments->store_path, str_ptr );
-
-	local_params->filesize   = ntohll( recvd_params->filesize );
+ 	local_params->filesize   = ntohll( recvd_params->filesize );
 	local_params->num_chunks = ntohll( recvd_params->num_chunks );
 	local_params->chunk_size = ntohll( recvd_params->chunk_size );
 	
@@ -189,6 +169,8 @@ int State_AcknowledgeSessionParameters( TransferState* state )
 	send_parameters->hash[3] = htonl( local_parameters->hash[3] );
 	send_parameters->hash[4] = htonl( local_parameters->hash[4] );
 
+
+    state->data_buffer_size = state->parameter_length;
 	state->send_rdy = 1;
 	send_data_frame( state );
 
@@ -210,6 +192,8 @@ int State_ReceiveClientReady( TransferState* state )
 	ENTER_STATE
 		
 	simple_parameters* local_parameters;
+    char* filepath;
+    int pathlen;
 
 	local_parameters = (simple_parameters*)(state->session_parameters);
 
@@ -219,7 +203,19 @@ int State_ReceiveClientReady( TransferState* state )
 	memcpy( state->local_file.filename,
 			local_parameters->filename, 512 );
 
-	state->local_file.fp = fopen( state->local_file.filename, "wb" );
+    state->local_file.path = malloc(strlen(state->arguments->store_path)+1);
+    memset( state->local_file.path, 0, strlen(state->arguments->store_path)+1 );
+	memcpy( state->local_file.path,
+			state->arguments->store_path,
+            strlen(state->arguments->store_path));
+
+
+    pathlen = strlen(state->local_file.path)+1+strlen(state->local_file.filename)+1;
+    filepath = malloc(pathlen);
+    memset( filepath, 0, pathlen);
+    sprintf( filepath, "%s/%s", state->local_file.path, state->local_file.filename );
+
+	state->local_file.fp = fopen( filepath, "wb" );
 	if( state->local_file.fp == NULL )
 		{
 			sprintf( state->error_string,
@@ -237,6 +233,8 @@ int State_ReceiveClientReady( TransferState* state )
 	state->local_file.hash[2] = local_parameters->hash[2];
 	state->local_file.hash[3] = local_parameters->hash[3];
 	state->local_file.hash[4] = local_parameters->hash[4];
+
+    free( filepath );
 
 	VERBOSE( "Client Ready. Transfer Starting.\n");
 

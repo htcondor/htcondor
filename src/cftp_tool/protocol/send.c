@@ -11,6 +11,14 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <time.h>
+
+void wait ( int seconds )
+{
+  clock_t endwait;
+  endwait = clock () + seconds * CLOCKS_PER_SEC ;
+  while (clock() < endwait) {}
+}
 
 
 const int STATE_NUM = 100; // Will need to change this later
@@ -19,8 +27,8 @@ void send_file( TransferArguments* args, SendResults* results)
 {
 	StateAction SM_States[STATE_NUM];
 	TransferState* state;
-    state = malloc( sizeof(TransferState) );
-    memset( &state, 0, sizeof(TransferState));
+    state = (TransferState*)malloc( sizeof(TransferState) );
+    memset( state, 0, sizeof(TransferState));
 
 	state->arguments = args;
 
@@ -78,16 +86,18 @@ int send_run_state_machine( StateAction* states, TransferState* state )
 {
 	int condition;
 
-
 	if( state->state == -1 )
 		return 1; // We are done here
 	else	
 		{
 			condition = states[state->state]( state );
+            //wait(1);
 			recv_cftp_frame( state );
 			state->state = send_transition_table( state, condition );
 			return 0;
 		}
+
+    
 }
 
 
@@ -131,6 +141,11 @@ int send_transition_table( TransferState* state, int condition )
 
 
         case S_SEND_DATA_BLOCK:
+            if( condition == -2 ) // Max retries exceeded
+                {
+                    return S_UNKNOWN_ERROR;
+                }
+
 			if( state->frecv_buf.MessageType != DAF )
 				{
 					sprintf( state->error_string, 
@@ -149,6 +164,11 @@ int send_transition_table( TransferState* state, int condition )
             
         case S_SEND_FILE_FINISH:
             return S_RECV_ACK_FILE_FINISH;
+
+
+
+        case S_RECV_ACK_FILE_FINISH:
+            return -1;
 
 			
 		case S_UNKNOWN_ERROR:

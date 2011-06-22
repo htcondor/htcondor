@@ -28,8 +28,10 @@ int State_SendDataBlock( TransferState* state )
 
 	cftp_dtf_frame* dtf_frame;
 
-    if( state->retry_count == MAX_RETRIES )
-        LEAVE_STATE(-2);
+    if( state->retry_count >= 10 )
+        {
+            LEAVE_STATE(-2);
+        }
     
     
     if( state->retry_count == 0 )
@@ -67,8 +69,15 @@ int State_SendDataBlock( TransferState* state )
     if( state->data_buffer )
         free( state->data_buffer );
     state->data_buffer = malloc( chunk_size );
+    state->data_buffer_size = chunk_size;
 
     memset( state->data_buffer, 0, chunk_size );
+
+    //Move to chunk position
+    fseek( state->local_file.fp,
+           state->current_chunk*chunk_size,
+           SEEK_SET );
+
     read_bytes = fread( state->data_buffer, 1, chunk_size, state->local_file.fp );
     if( read_bytes != chunk_size && !feof(state->local_file.fp) )
         {
@@ -89,7 +98,9 @@ int State_SendDataBlock( TransferState* state )
     // Wait for server acknowledgement
     state->retry_count += 1;
     state->net_timeout = 30;
+    fprintf( stderr, "Ready for recv  " );
 	state->recv_rdy = 1;	
+    fprintf( stderr, "Set.\n" );
 
 
 	LEAVE_STATE(0);
@@ -114,21 +125,26 @@ int State_RecvDataBlockAck( TransferState* state )
     
     if( ntohll(daf_frame->BlockNum) == state->current_chunk )
         {
-            VERBOSE( "Recieved DAF for block %ld. Continuing...\n",
-                     state->current_chunk+1 );
+            VERBOSE( "Recieved DAF for block %ld/%ld. Continuing...\n",
+                     state->current_chunk+1,state->local_file.num_chunks  );
             
             // Move onto the next block
             state->current_chunk++;
-            if( state->current_chunk >  state->local_file.num_chunks )
-                LEAVE_STATE(1);
+            state->retry_count = 0;
+            if( state->current_chunk >= state->local_file.num_chunks )
+                {
+                    LEAVE_STATE(1);
+                }
         }
     else
         {
-            VERBOSE( "Recieved DAF for block %ld. Correcting...\n",
-								 ntohll(daf_frame->BlockNum)+1 );
+            VERBOSE( "Recieved DAF for block %ld. Preparing to send block %d.\n",
+                     ntohll(daf_frame->BlockNum)+1,
+                     ntohll(daf_frame->BlockNum)+2);
 
-            //TODO: We need smarter handling here for wrong chunk codes
-            //      Currently we only continue resending the current chunk
+
+            state->current_chunk = ntohll(daf_frame->BlockNum)+1;
+            state->retry_count = 0;
             
         }
 

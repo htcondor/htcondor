@@ -18,8 +18,10 @@ const int STATE_NUM = 100; // Will need to change this later
 void receive_file( TransferArguments* args, ReceiveResults* results)
 {
 	StateAction SM_States[STATE_NUM];
-	TransferState state;
-	state.arguments = (void*)args;
+	TransferState* state;
+    state = (TransferState*)malloc( sizeof(TransferState) );
+    memset( state, 0, sizeof(TransferState));
+	state->arguments = (void*)args;
 
 	//-------------- Initialize SM States -----------------
 	
@@ -41,16 +43,32 @@ void receive_file( TransferArguments* args, ReceiveResults* results)
 
 
 	//Prep structure for initial state
-	state.state = S_RECV_SESSION_PARAMETERS;	
-	state.phase = NEGOTIATION;
-	state.last_error = 0;
-	memset( state.error_string, 0, 256 );
+	state->state = S_RECV_SESSION_PARAMETERS;	
+	state->phase = NEGOTIATION;
+	state->last_error = 0;
+	memset( state->error_string, 0, 256 );
 
 
-	while( receive_run_state_machine( SM_States, &state )==0 )
+	while( receive_run_state_machine( SM_States, state )==0 )
 	{
 			// Do nothing here, we wait till the SM kills us.
 	}
+
+    // We finished with success
+    if( state->state == -2 && state->last_error == 0 )
+        {
+            results->success = 1;
+            results->filename = malloc( strlen( state->local_file.filename) +1);
+            strcpy(results->filename,
+                   state->local_file.filename );
+
+        }
+    else
+        {
+            results->success = 0;
+        }
+    
+
 
 	// We may want some clean up based on
 	// the final condition of session_state.
@@ -69,7 +87,7 @@ int receive_run_state_machine( StateAction* states, TransferState* state )
 	int condition;
 
 
-	if( state->state == -1 )
+	if( state->state < 0 )
 		return 1; // We are done here
 	else	
 		{
@@ -160,7 +178,8 @@ int receive_transition_table( TransferState* state, int condition )
 
 
 		case S_ACK_FILE_FINISH:
-			return -1; // Probably need to do more here, but thats for later
+            state->last_error = 0;
+			return -2; // Probably need to do more here, but thats for later
 
 					
 

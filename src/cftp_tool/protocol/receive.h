@@ -6,6 +6,10 @@
 
 typedef struct {
 		// TODO: Fill in needed result fields
+
+    int success;
+    char* filename;
+
 } ReceiveResults;
 
 

@@ -3,7 +3,7 @@
 CFLAGS =  -Wall -g -O0 -I./protocol
 
 CLIENT_SRC     = client.c 
-SERVER_SRC     = server.c
+SERVER_SRC     = server.c server_sm_lib.c
 
 SRC = $(CLIENT_SRC) $(SERVER_SRC)
 
