@@ -1772,7 +1772,7 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
     for (unsigned long j = 0;  j < (groups.size()-1);  ++j) {
         if (allocated[j] > 0) {
             double s = hgq_allocate_surplus(groups[j], allocated[j]);
-            if (fabs(surplus) > 0.00001) {
+            if (fabs(s) > 0.00001) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: allocate-surplus (3): surplus= %g\n", s);
             }
         }
