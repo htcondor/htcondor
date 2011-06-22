@@ -381,6 +381,35 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 		}
 	}
 
+		// Now we do a little dance to replace the socketpair that we
+		// have been using to communicate with the wrapper with a new
+		// one.  Why?  Because, as of glexec 0.8, when glexec is
+		// configured with linger=on, some persistent process
+		// (glexec?, procd?) is keeping a handle to the wrapper's end
+		// of the socket open, so the starter hangs waiting for the
+		// socket to close when the job is executed.
+
+	int old_sock_fd = sock_fds[0];
+	if (socketpair(PF_UNIX, SOCK_STREAM, 0, sock_fds) == -1)
+	{
+		dprintf(D_ALWAYS,
+		        "GLEXEC: socketpair error: %s\n",
+		        strerror(errno));
+		close(old_sock_fd);
+		return FALSE;
+	}
+	if (fdpass_send(old_sock_fd, sock_fds[1]) == -1) {
+		dprintf(D_ALWAYS, "GLEXEC: fdpass_send failed on new sock fd\n");
+		close(old_sock_fd);
+		close(sock_fds[0]);
+		close(sock_fds[1]);
+		return FALSE;
+	}
+		// close our handle to the wrapper's end of the socket
+	close(sock_fds[1]);
+		// close our old socket
+	close(old_sock_fd);
+
 	// now read any error messages produced by the wrapper
 	//
 	char err[256];
