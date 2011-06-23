@@ -3,7 +3,11 @@
 class Committers {
 
   var $committers_cache_file = "/tmp/committers-cache";
+
+  // It is important that these two variables are not initialized here.
+  // PHP4 has some weird OO behavior, and initializing these here makes them constant.
   var $committers;
+  var $save_needed;
 
   function Committers() {
     // PHP 4 does not have destructors so we register a destructor like this:
@@ -46,6 +50,7 @@ class Committers {
 
       // Store this in the cache
       $this->committers["$hash1$hash2"] = $authors;
+      $this->save_needed = 1;
     }
 
     return $authors;
@@ -61,9 +66,11 @@ class Committers {
 
 
   function store_committers_cache() {
-    $handle = fopen($this->committers_cache_file, "w");
-    fwrite($handle, serialize($this->committers));
-    fclose($handle);
+    if($this->save_needed == 1) {
+      $handle = fopen($this->committers_cache_file, "w");
+      fwrite($handle, serialize($this->committers));
+      fclose($handle);
+    }
   }
 
   // Load the file that holds the committers cache
