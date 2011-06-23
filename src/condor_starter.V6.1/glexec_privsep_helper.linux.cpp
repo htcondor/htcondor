@@ -552,6 +552,11 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 	if (bytes > 0) {
 		err[bytes] = '\0';
 		dprintf(D_ALWAYS, "GLEXEC: error from wrapper: %s\n", err);
+		if( error_msg ) {
+			error_msg->sprintf_cat("glexec_job_wrapper error: %s", err);
+		}
+			// prevent higher-level code from thinking this was a syscall error
+		errno = 0;
 		return FALSE;
 	}
 
