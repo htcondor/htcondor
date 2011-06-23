@@ -36,8 +36,7 @@ function make_cell($platform, $depth, $queue, $type) {
 
 <?php
 
-echo "<h2>NMI build queue depths:</h2>\n";
-echo "<p>This page contains depth information for jobs of type \"build\" only</p>\n";
+echo "<h2>NMI queue depths:</h2>\n";
 
 $roster_file = "/nmi/etc/nmi_platform_list";
 $handle = fopen($roster_file, "r");
