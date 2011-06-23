@@ -67,7 +67,13 @@ main(int argc, char* argv[])
 	char* job_stdout = argv[2];
 	char* job_stderr = argv[3];
 	char** job_argv = &argv[4];
-	
+
+	unsigned int hello = 0xdeadbeef;
+	if( write(sock_fd,&hello,sizeof(int)) != sizeof(int) ) {
+		err = "Failed to send hello";
+		fatal_error();
+	}
+
 	// set up an Env object that we'll use for the job. we'll initialize
 	// it with the environment that Condor sends us then merge on top of
 	// that the environment that glexec prepared for us
@@ -182,16 +188,13 @@ get_std_fd(int std_fd, char* name)
 {
 	int new_fd = std_fd;
 	if (strcmp(name, "-") == 0) {
-		if (std_fd == 0) {
-			// stdin is handled specially, since its "default"
-			// (if we were passed "-" on the command line) is
-			// to get passed the FD to use from the Starter
+			// if we were passed "-" on the command line,
+			// get the FD to use from the Starter
 			//
-			new_fd = fdpass_recv(sock_fd);
-			if (new_fd == -1) {
-				err = "fdpass_recv error";
-				fatal_error();
-			}
+		new_fd = fdpass_recv(sock_fd);
+		if (new_fd == -1) {
+			err = "fdpass_recv error";
+			fatal_error();
 		}
 	}
 	else {

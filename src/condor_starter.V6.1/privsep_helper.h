@@ -20,6 +20,8 @@
 #ifndef _PRIVSEP_HELPER_H
 #define _PRIVSEP_HELPER_H
 
+#include "MyString.h"
+
 class ArgList;
 class Env;
 struct FamilyInfo;
@@ -52,7 +54,8 @@ public:
 	                           int         reaper_id,
 	                           int         dc_job_opts,
 	                           FamilyInfo* family_info,
-							   int *       affinity_mask = 0) = 0;
+							   int *       affinity_mask = 0,
+							   MyString *  error_msg = NULL) = 0;
 
 	virtual ~PrivSepHelper() { }
 };
