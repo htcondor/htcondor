@@ -78,6 +78,28 @@ if any machine ClassAds contained cyclical attribute references.
 be charged to the user directly rather than `nice-user.\emph{user}'.
 This bug was introduced in the 7.5 series.
 
+%gittrac #2081
+\item Fixed bugs in the RPM init script that could cause some 
+shutdown failures to be unreported, 
+and they could cause status requests,
+such as \Expr{service condor status},
+to always report Condor as inactive.
+
+\item Fixed a bug in the \Condor{gridmanager} that could cause a crash 
+when a grid type \SubmitCmd{amazon} job was missing required attributes.
+
+%gittrac #2105
+\item Fixed bug in the \Condor{shadow}, in which it would treat 
+the closed socket to the execute machine as an error,
+after both it had asked for the claim to be deactivated and the 
+\Condor{schedd} daemon was busy.  
+As a result, a busy \Condor{schedd} could result in the job being re-run.
+
+%gittrac #2109
+\item The matchmaking attributes 
+\Attr{SubmitterUserResourcesInUse} and \Attr{RemoteUserResourcesInUse} 
+no longer ignore \Attr{SlotWeight}, if used by the \Condor{negotiator}.
+
 \end{itemize}
 
 \noindent Known Bugs:
