@@ -100,6 +100,26 @@ As a result, a busy \Condor{schedd} could result in the job being re-run.
 \Attr{SubmitterUserResourcesInUse} and \Attr{RemoteUserResourcesInUse} 
 no longer ignore \Attr{SlotWeight}, if used by the \Condor{negotiator}.
 
+%gittrac #2102
+\item On Windows, the \Condor{kbdd} daemon was missing changes to the
+port on which the \Condor{startd} was listening.
+This resulted in failure of the \Condor{kbdd} to send updates in 
+keyboard and mouse activity,
+further causing the failure of policy implementation that relied upon 
+knowledge of the activity.
+
+%gittrac #2163
+\item Fixed a bug present throughout ClassAds,
+in which expressions expecting a floating point value returned an error,
+if the expression actually evaluated to a boolean.
+This is most common in machine \MacroNI{RANK} expressions.
+
+%gittrac #2172
+\item Fixed a bug in the \Condor{negotiator} daemon,
+which caused a crash if the \Condor{negotiator} was reconfigured 
+during a negotiation cycle, 
+but only if hierarchical group quotas were in use.
+
 \end{itemize}
 
 \noindent Known Bugs:
