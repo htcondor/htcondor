@@ -64,7 +64,8 @@ public:
 	                   int         reaper_id,
 	                   int         dc_job_opts,
 	                   FamilyInfo* family_info,
-					   int *       affinity_mask = 0);
+					   int *       affinity_mask = 0,
+					   MyString *  error_msg = NULL);
 
 	// check if the proxy is currently valid
 	//
@@ -81,7 +82,9 @@ private:
 	                 int sock_fds[2],
 	                 Env& env,
 	                 int dc_job_opts,
-	                 int std_in);
+	                 int job_std_fds[3],
+					 int &glexec_err_fd,
+					 MyString *error_msg);
 
 	// set once we're initialized
 	//
