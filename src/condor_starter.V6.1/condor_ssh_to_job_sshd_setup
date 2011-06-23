@@ -66,8 +66,14 @@ sshd_config="${sshd_dir}/sshd_config"
       s|_INSERT_FORCE_COMMAND_|${force_command}|g"\
  || die "Failed to create ${sshd_config}"
 
+sshd_user=`/usr/bin/whoami` || die "Failed to run /usr/bin/whoami"
+
 # now transmit stuff back to our caller on stdout
 # the caller expects specific markers before and after each item
+
+echo "condor_ssh_to_job_sshd_setup SSHD USER BEGIN"
+echo "${sshd_user}"
+echo "condor_ssh_to_job_sshd_setup SSHD USER END"
 
 echo "condor_ssh_to_job_sshd_setup SSHD DIR BEGIN"
 echo "${sshd_dir}"
