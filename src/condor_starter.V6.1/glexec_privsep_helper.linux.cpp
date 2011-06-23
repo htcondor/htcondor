@@ -216,14 +216,15 @@ GLExecPrivSepHelper::create_process(const char* path,
                                     ArgList&    args,
                                     Env&        env,
                                     const char* iwd,
-                                    int         orig_std_fds[3],
+                                    int         job_std_fds[3],
                                     const char* std_file_names[3],
                                     int         nice_inc,
                                     size_t*     core_size_ptr,
                                     int         reaper_id,
                                     int         dc_job_opts,
                                     FamilyInfo* family_info,
-                                    int *)
+                                    int *,
+									MyString *error_msg)
 {
 	ASSERT(m_initialized);
 
@@ -235,9 +236,6 @@ GLExecPrivSepHelper::create_process(const char* path,
 	// make a copy of std FDs so we're not messing w/ our caller's
 	// memory
 	int std_fds[3] = {-1, -1, -1};
-	if (orig_std_fds != NULL) {
-		memcpy(std_fds, orig_std_fds, 3 * sizeof(int));
-	}
 
 	ArgList modified_args;
 	modified_args.AppendArg(m_run_script);
@@ -246,7 +244,7 @@ GLExecPrivSepHelper::create_process(const char* path,
 	modified_args.AppendArg(m_sandbox);
 	modified_args.AppendArg(m_wrapper_script);
 	for (int i = 0; i < 3; i++) {
-		modified_args.AppendArg((std_fds[i] == -1) ?
+		modified_args.AppendArg((job_std_fds == NULL || job_std_fds[i] == -1) ?
 		                            std_file_names[i] : "-");
 	}
 	modified_args.AppendArg(path);
@@ -266,8 +264,20 @@ GLExecPrivSepHelper::create_process(const char* path,
 		        strerror(errno));
 		return false;
 	}
-	int std_in = std_fds[0];
 	std_fds[0] = sock_fds[1];
+
+		// now create a pipe for receiving diagnostic stdout/stderr from glexec
+	int glexec_out_fds[2];
+	if (pipe(glexec_out_fds) < 0) {
+		dprintf(D_ALWAYS,
+				"GLEXEC: pipe() error: %s\n",
+				strerror(errno));
+		close(sock_fds[0]);
+		close(sock_fds[1]);
+		return false;
+	}
+	std_fds[1] = glexec_out_fds[1];
+	std_fds[2] = std_fds[1]; // collect glexec stderr and stdout together
 
 	FamilyInfo fi;
 	FamilyInfo* fi_ptr = (family_info != NULL) ? family_info : &fi;
@@ -289,9 +299,22 @@ GLExecPrivSepHelper::create_process(const char* path,
 	                                     nice_inc,
 	                                     NULL,
 	                                     dc_job_opts,
-	                                     core_size_ptr);
+	                                     core_size_ptr,
+										 NULL,
+										 NULL,
+										 error_msg);
 
-	return feed_wrapper(pid, sock_fds, env, dc_job_opts, std_in);
+		// close our handle to glexec's end of the diagnostic output pipe
+	close(glexec_out_fds[1]);
+
+	int ret_val = feed_wrapper(pid, sock_fds, env, dc_job_opts, job_std_fds, glexec_out_fds[0], error_msg);
+
+		// if not closed in feed_wrapper, close the glexec error pipe now
+	if( glexec_out_fds[0] != -1 ) {
+		close(glexec_out_fds[0]);
+	}
+
+	return ret_val;
 }
 
 // we launch the job via a wrapper. the full chain of exec() calls looks
@@ -317,7 +340,9 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
                                   int sock_fds[2],
                                   Env& env,
                                   int dc_job_opts,
-                                  int std_in)
+                                  int job_std_fds[3],
+								  int &glexec_err_fd,
+								  MyString *error_msg)
 {
 	// we can now close the end of the socket that we handed down
 	// to the wrapper; the other end we'll use to send stuff over
@@ -330,6 +355,105 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 	if (pid == FALSE) {
 		close(sock_fds[0]);
 		return pid;
+	}
+
+	unsigned int hello = 0;
+	ssize_t bytes = full_read(sock_fds[0], &hello, sizeof(int));
+	if (bytes != sizeof(int)) {
+		dprintf(D_ALWAYS,
+		        "GLEXEC: error reading hello from glexec_job_wrapper\n");
+		close(sock_fds[0]);
+
+		if( bytes <= 0 ) {
+				// Since we failed to read the expected hello bytes
+				// from the wrapper, this likely indicates that glexec
+				// failed to execute the wrapper.  Attempt to read an
+				// error message from glexec.
+			MyString glexec_stderr;
+			FILE *fp = fdopen(glexec_err_fd,"r");
+			if( fp ) {
+				while( glexec_stderr.readLine(fp,true) );
+				fclose(fp);
+				glexec_err_fd = -1; // fd is closed now
+			}
+
+				// Collect the exit status from glexec.  Since we
+				// created this process via
+				// DaemonCore::Create_Process() we could/should wait
+				// for DaemonCore to reap the process.  However, given
+				// the way this function is used in the starter, that
+				// happens too late.
+			int glexec_status = 0;
+			if (waitpid(pid,&glexec_status,0)==pid) {
+				if (WIFEXITED(glexec_status)) {
+					int status = WEXITSTATUS(glexec_status);
+					dprintf(D_ALWAYS,
+							"GLEXEC: glexec call exited with status %d\n",
+							status);
+					if( error_msg ) {
+						error_msg->sprintf_cat(
+							" glexec call exited with status %d",
+							status);
+					}
+				}
+				else if (WIFSIGNALED(glexec_status)) {
+					int sig = WTERMSIG(glexec_status);
+					dprintf(D_ALWAYS,
+							"GLEXEC: glexec call exited via signal %d\n",
+							sig);
+					if( error_msg ) {
+						error_msg->sprintf_cat(
+							" glexec call exited via signal %d",
+							sig);
+					}
+				}
+			}
+
+			if( !glexec_stderr.IsEmpty() ) {
+				glexec_stderr.trim();
+				StringList lines(glexec_stderr.Value(),"\n");
+				lines.rewind();
+				char const *line;
+
+				if( error_msg ) {
+					*error_msg += " and with error output (";
+				}
+				int line_count=0;
+				while( (line=lines.next()) ) {
+						// strip out the annoying line about pthread_mutex_init
+					if( strstr(line,"It appears that the value of pthread_mutex_init") ) {
+						continue;
+					}
+					line_count++;
+
+					if( !glexec_stderr.IsEmpty() ) {
+						glexec_stderr += "; ";
+					}
+					dprintf(D_ALWAYS,
+							"GLEXEC: error output: %s\n",line);
+
+					if( error_msg ) {
+						if( line_count>1 ) {
+							*error_msg += "; ";
+						}
+						*error_msg += line;
+					}
+				}
+				if( error_msg ) {
+					*error_msg += ")";
+				}
+			}
+
+		}
+		errno = 0; // avoid higher-level code thinking there was a syscall error
+		return FALSE;
+	}
+	if( hello != 0xdeadbeef ) {
+		dprintf(D_ALWAYS,
+				"GLEXEC: did not receive expected hello from wrapper: %x\n",
+				hello);
+		close(sock_fds[0]);
+		return FALSE;
 	}
 
 	// now send over the environment
@@ -367,17 +491,21 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 		return FALSE;
 	}
 
-	// now send over the FD that the Starter should use for stdin, if any
+	// now send over the FDs that the Starter should use for stdin/out/err
 	//
-	if (std_in != -1) {
-		int pipe_fd;
-		if (daemonCore->Get_Pipe_FD(std_in, &pipe_fd) == TRUE) {
-			std_in = pipe_fd;
-		}
-		if (fdpass_send(sock_fds[0], std_in) == -1) {
-			dprintf(D_ALWAYS, "GLEXEC: fdpass_send failed\n");
-			close(sock_fds[0]);
-			return FALSE;
+	int i;
+	for(i=0;i<3;i++) {
+		int std_fd = job_std_fds[i];
+		if (std_fd != -1) {
+			int pipe_fd;
+			if (daemonCore->Get_Pipe_FD(std_fd, &pipe_fd) == TRUE) {
+				std_fd = pipe_fd;
+			}
+			if (fdpass_send(sock_fds[0], std_fd) == -1) {
+				dprintf(D_ALWAYS, "GLEXEC: fdpass_send failed\n");
+				close(sock_fds[0]);
+				return FALSE;
+			}
 		}
 	}
 
@@ -413,7 +541,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 	// now read any error messages produced by the wrapper
 	//
 	char err[256];
-	ssize_t bytes = full_read(sock_fds[0], err, sizeof(err) - 1);
+	bytes = full_read(sock_fds[0], err, sizeof(err) - 1);
 	if (bytes == -1) {
 		dprintf(D_ALWAYS,
 		        "GLEXEC: error reading message from wrapper: %s\n",
@@ -424,6 +552,11 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 	if (bytes > 0) {
 		err[bytes] = '\0';
 		dprintf(D_ALWAYS, "GLEXEC: error from wrapper: %s\n", err);
+		if( error_msg ) {
+			error_msg->sprintf_cat("glexec_job_wrapper error: %s", err);
+		}
+			// prevent higher-level code from thinking this was a syscall error
+		errno = 0;
 		return FALSE;
 	}
 
