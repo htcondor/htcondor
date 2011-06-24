@@ -134,7 +134,7 @@ if (BUILD_TESTS)
 
         	# AFAIK, this test isn't platform- or external- dependent.
         	# Temporarily comment out until simulator is updated
-		# condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
+		condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
 
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
@@ -295,7 +295,7 @@ if (BUILD_TESTS)
 
 	if (LINUX AND NOT ${SYSTEM_NAME} MATCHES "rhel3")
           condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
-	endif(LINUX)
+	endif()
 
 	##### lib log tests
 	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full")

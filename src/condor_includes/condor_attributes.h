@@ -813,6 +813,8 @@ extern const char * const ATTR_EC2_INSTANCE_NAME;
 extern const char * const ATTR_EC2_ELASTIC_IP;
 extern const char * const ATTR_EC2_AVAILABILITY_ZONE;
 extern const char * const ATTR_EC2_EBS_VOLUMES;
+extern const char * const ATTR_EC2_VPC_SUBNET;
+extern const char * const ATTR_EC2_VPC_IP;
 //************* End of changes for EC2 Jobs *****************//
 
 

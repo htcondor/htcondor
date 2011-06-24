@@ -7031,6 +7031,8 @@ int GahpClient::ec2_vm_start( const char * service_url,
 							  const char * user_data_file,
 							  const char * instance_type,
 							  const char * availability_zone,
+							  const char * vpc_subnet,
+							  const char * vpc_ip,
 							  StringList & groupnames,
 							  char * &instance_id,
 							  char * &error_code)
@@ -7056,6 +7058,9 @@ int GahpClient::ec2_vm_start( const char * service_url,
 	if ( !user_data ) user_data = NULLSTRING;
 	if ( !user_data_file ) user_data_file = NULLSTRING;
 	if ( !instance_type ) instance_type = NULLSTRING;
+	if ( !availability_zone || 0==strlen(availability_zone) ) availability_zone = NULLSTRING;
+	if ( !vpc_subnet || 0==strlen(vpc_subnet) ) vpc_subnet = NULLSTRING;
+	if ( !vpc_ip || 0==strlen(vpc_ip) ) vpc_ip = NULLSTRING;
 
 	// groupnames is optional, but since it is the last argument, don't need to set it as "NULL"
 	// XXX: You probably should specify a NULL for all "optional" parameters -matt
@@ -7076,8 +7081,10 @@ int GahpClient::ec2_vm_start( const char * service_url,
 	// 3. m1.xlarge
 	char* esc8 = strdup( escapeGahpString(instance_type) );
 	char* esc9 = strdup( escapeGahpString(availability_zone) );
+	char* esc10 = strdup( escapeGahpString(vpc_subnet) );
+	char* esc11 = strdup( escapeGahpString(vpc_ip) );
 
-	int x = sprintf(reqline, "%s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9 );
+	int x = sprintf(reqline, "%s %s %s %s %s %s %s %s %s %s %s", esc1, esc2, esc3, esc4, esc5, esc6, esc7, esc8, esc9, esc10, esc11 );
 
 	free( esc1 );
 	free( esc2 );
@@ -7088,6 +7095,8 @@ int GahpClient::ec2_vm_start( const char * service_url,
 	free( esc7 );
 	free( esc8 );
 	free( esc9 );
+	free( esc10 );
+	free( esc11 );
 	ASSERT( x > 0 );
 
 	const char * group_name;

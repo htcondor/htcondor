@@ -513,10 +513,18 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     if( strcasecmp( argv[10], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "Placement.AvailabilityZone" ] = argv[10];
     }
+    
+    if( strcasecmp( argv[11], NULLSTRING ) ) {
+        vmStartRequest.query_parameters[ "SubnetId" ] = argv[11];
+    }
+    
+    if( strcasecmp( argv[12], NULLSTRING ) ) {
+        vmStartRequest.query_parameters[ "PrivateIpAddress" ] = argv[12];
+    }
 
-    for( int i = 11; i < argc; ++i ) {
+    for( int i = 13; i < argc; ++i ) {
         std::ostringstream groupName;
-        groupName << "SecurityGroup." << ( i - 10 + 1 );
+        groupName << "SecurityGroup." << ( i - 13 + 1 );
         vmStartRequest.query_parameters[ groupName.str() ] = argv[ i ];
     }    
 
@@ -1272,8 +1280,26 @@ bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &
     asRequest.secretKeyFile = argv[4];
     asRequest.query_parameters[ "Action" ] = "AssociateAddress";
     asRequest.query_parameters[ "InstanceId" ] = argv[5];
-    asRequest.query_parameters[ "PublicIp" ] = argv[6];
-
+	
+	// here it could be a standard ip or a vpc ip 
+	// vpc ip's will have a : separating 
+	const char * pszFullIPStr = argv[6];
+	const char * pszIPStr=0;
+	const char * pszAllocationId=0;
+	StringList elastic_ip_addr_info (pszFullIPStr, ":");
+	elastic_ip_addr_info.rewind();
+	pszIPStr = elastic_ip_addr_info.next();
+	pszAllocationId=elastic_ip_addr_info.next();
+	
+	if ( pszAllocationId )
+	{
+		asRequest.query_parameters[ "AllocationId" ] = pszAllocationId;
+	}
+	else
+	{
+		asRequest.query_parameters[ "PublicIp" ] = pszIPStr;
+	}
+	
     // Send the request.
     if( ! asRequest.SendRequest() ) {
         result_string = create_failure_result( requestID,

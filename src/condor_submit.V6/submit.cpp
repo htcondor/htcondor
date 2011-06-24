@@ -397,6 +397,9 @@ const char* EC2InstanceType = "ec2_instance_type";
 const char* EC2ElasticIP = "ec2_elastic_ip";
 const char* EC2EBSVolumes = "ec2_ebs_volumes";
 const char* EC2AvailabilityZone= "ec2_availability_zone";
+const char* EC2VpcSubnet = "ec2_vpc_subnet";
+const char* EC2VpcIP = "ec2_vpc_ip";
+
 
 //
 // Deltacloud Parameters
@@ -4927,6 +4930,10 @@ SetGridParams()
 			DoCleanup( 0, 0, NULL );
 			exit( 1 );
 		}
+		
+		// TODO: TSTCLAIR remove in 7.9 series.
+		if ( strcasecmp( tmp, "amazon" ) == 0 ) 
+			fprintf(stderr, "\nWARNING: Amazon grid jobs are no longer supported, please use EC2\n");
 
 		free( tmp );
 
@@ -5213,6 +5220,20 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 	
+	// EC2VpcSubnet is not a necessary parameter
+	if( (tmp = condor_param( EC2VpcSubnet, ATTR_EC2_VPC_SUBNET )) ) {
+		buffer.sprintf( "%s = \"%s\"",ATTR_EC2_VPC_SUBNET , tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// EC2VpcIP is not a necessary parameter
+	if( (tmp = condor_param( EC2VpcIP, ATTR_EC2_VPC_IP )) ) {
+		buffer.sprintf( "%s = \"%s\"",ATTR_EC2_VPC_IP , tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+		
 	// EC2ElasticIP is not a necessary parameter
     if( (tmp = condor_param( EC2ElasticIP, ATTR_EC2_ELASTIC_IP )) ) {
         buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ELASTIC_IP, tmp );

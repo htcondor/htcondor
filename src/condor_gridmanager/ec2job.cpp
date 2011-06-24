@@ -164,6 +164,8 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	m_availability_zone = NULL;
 	m_elastic_ip = NULL;
 	m_ebs_volumes = NULL;
+	m_vpc_subnet = NULL;
+	m_vpc_ip = NULL;
 	
 	// check the public_key_file
 	buff[0] = '\0';
@@ -196,11 +198,18 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 		m_ebs_volumes = new StringList (buff, ",");
 	}
 	
-
 	// lookup the elastic IP
     buff[0] = '\0';
     jobAd->LookupString( ATTR_EC2_AVAILABILITY_ZONE, buff );
     m_availability_zone = strdup(buff);
+	
+	buff[0] = '\0';
+    jobAd->LookupString( ATTR_EC2_VPC_SUBNET, buff );
+    m_vpc_subnet = strdup(buff);
+	
+	buff[0] = '\0';
+    jobAd->LookupString( ATTR_EC2_VPC_IP, buff );
+    m_vpc_ip = strdup(buff);
 	
 	
 		// XXX: Buffer Overflow if the user_data is > 16K? This code
@@ -392,6 +401,8 @@ EC2Job::~EC2Job()
     free(m_elastic_ip);
 	free(m_ebs_volumes);
 	free(m_availability_zone);
+	free(m_vpc_subnet);
+	free(m_vpc_ip);
 }
 
 
@@ -567,7 +578,8 @@ void EC2Job::doEvaluateState()
 					// ec2_vm_start() will check the input arguments
 					rc = gahp->ec2_vm_start( m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, 
 												m_ami_id.c_str(), m_key_pair.c_str(), 
-												m_user_data, m_user_data_file, m_instance_type,m_availability_zone, 
+												m_user_data, m_user_data_file, m_instance_type,
+												m_availability_zone,m_vpc_subnet,m_vpc_ip,
 												*m_group_names, instance_id, gahp_error_code);
 					
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {

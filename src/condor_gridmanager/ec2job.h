@@ -95,6 +95,8 @@ private:
     char * m_elastic_ip;
 	char * m_availability_zone;
 	StringList * m_ebs_volumes;
+	char * m_vpc_subnet;
+	char * m_vpc_ip;
 	
 	int m_vm_check_times;
 	int m_keypair_check_times;

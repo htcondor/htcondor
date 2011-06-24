@@ -682,6 +682,8 @@ class GahpClient : public Service {
 						  const char * user_data_file,
 						  const char * instance_type,
 						  const char * availability_zone,
+						  const char * vpc_subnet,
+						  const char * vpc_ip,
 						  StringList & groupnames,
 						  char* & instance_id,
 						  char* & error_code );
