@@ -17,6 +17,8 @@
 #ifndef _ODS_HISTORY_FILE_H
 #define _ODS_HISTORY_FILE_H
 
+#include "ODSMongodbOps.h"
+
 // c++ includes
 #include <string>
 #include <deque>
@@ -58,6 +60,8 @@ private:
     ODSHistoryEntryType m_entries;
 	StatStructType *m_stat;
 	FILE *m_file;
+    
+    ODSMongodbOps* m_writer;
 
 };
 

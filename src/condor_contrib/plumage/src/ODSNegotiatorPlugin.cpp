@@ -17,7 +17,7 @@
 #include "condor_common.h"
 
 // local includes
-#include "ODSMongodbRW.h"
+#include "ODSMongodbOps.h"
 
 // seems boost meddles with assert defs
 #include "assert.h"
@@ -26,31 +26,33 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "get_daemon_name.h"
 
+using namespace std;
+using namespace mongo;
 using namespace plumage::etl;
-
-ODSMongodbWriter* writer = NULL;
 
 struct ODSNegotiatorPlugin : public Service, NegotiatorPlugin
 {
+    
+    string n_name;
+    ODSMongodbOps* writer;
 
 	void
 	initialize()
 	{
 		char *tmp;
-		std::string mmName;
 
 		dprintf(D_FULLDEBUG, "ODSNegotiatorPlugin: Initializing...\n");
 
 		// pretty much what the daemon does
 		tmp = default_daemon_name();
 		if (NULL == tmp) {
-			mmName = "UNKNOWN NEGOTIATOR HOST";
+			n_name = "UNKNOWN NEGOTIATOR HOST";
 		} else {
-			mmName = tmp;
+			n_name = tmp;
 			free(tmp); tmp = NULL;
 		}
 		
-		writer = new ODSMongodbWriter("condor.negotiator");
+		writer = new ODSMongodbOps("condor.negotiator");
         writer->init("localhost");
 
 	}
@@ -65,7 +67,10 @@ struct ODSNegotiatorPlugin : public Service, NegotiatorPlugin
 	void
 	update(const ClassAd &ad)
 	{
-		writer->writeClassAd("",const_cast<ClassAd*>(&ad));
+        // write a new record
+        BSONObjBuilder key;
+        key.append("k",n_name+"#"+time_t_to_String());
+		writer->updateAd(key,const_cast<ClassAd*>(&ad));
 	}
 
 };

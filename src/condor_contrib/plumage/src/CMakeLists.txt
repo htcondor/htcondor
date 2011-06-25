@@ -21,12 +21,15 @@ set (MONGODB_FOUND "-lmongoclient -lboost_system -lboost_filesystem")
 ############################
 # file target references.
 ############################
-file( GLOB ETL_SCHEDD_SRCS ODSUtils.cpp PROC_ID_comparator.cpp ODSScheddPlugin*.cpp )
+
+file( GLOB ETL_COMMON_SRCS ODSMongodbOps.cpp )
+
+file( GLOB ETL_SCHEDD_SRCS ${ETL_COMMON_SRCS} PROC_ID_comparator.cpp ODSScheddPlugin*.cpp )
 
 file( GLOB ETL_SERVER_SRCS ods_job_daemon_main.cpp 
 					ODSJobLogConsumer.cpp
 					ODSHistoryFile.cpp ODSHistoryUtils.cpp 
-					ODSMongodbWriter.cpp )
+					${ETL_COMMON_SRCS} )
 
 ############################
 # daemon emitter plugins
@@ -40,26 +43,26 @@ file( GLOB SchedSrcs ODSScheddPlugin*.cpp )
 file( GLOB CollectorSrcs ODSCollectorPlugin.cpp )
 #condor_plugin( ODSCollectorPlugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
-file( GLOB NegotiatorSrcs ODSNegotiatorPlugin.cpp ODSMongodbWriter.cpp)
+file( GLOB NegotiatorSrcs ODSNegotiatorPlugin.cpp ${ETL_COMMON_SRCS})
 condor_plugin( ODSNegotiatorPlugin "${NegotiatorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
-file( GLOB MasterSrcs ODSMasterPlugin.cpp ODSMongodbWriter.cpp)
+file( GLOB MasterSrcs ODSMasterPlugin.cpp ${ETL_COMMON_SRCS})
 condor_plugin( ODSMasterPlugin "${MasterSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
-file( GLOB StartdSrcs ODSStartdPlugin.cpp ODSMongodbWriter.cpp)
+file( GLOB StartdSrcs ODSStartdPlugin.cpp ${ETL_COMMON_SRCS})
 condor_plugin( ODSStartdPlugin "${StartdSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
     
 ############################
 # job etl daemon
 ############################
-condor_exe( ods_job_etl "${ETL_SERVER_SRCS}"
+condor_exe( ods_job_etl_server "${ETL_SERVER_SRCS}"
   			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${MONGODB_FOUND}" OFF )
 
 ############################
 # history loader tool
 ############################
 set(TOOL_LINK_LIBS "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}")
-condor_exe(ods_etl_history "ods_history_tool_main.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${MONGODB_FOUND}" OFF)
+condor_exe(ods_job_etl_tool "ods_history_tool_main.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${MONGODB_FOUND}" OFF)
 
 ############################
 # install targets

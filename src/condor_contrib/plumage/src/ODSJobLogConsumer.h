@@ -19,11 +19,14 @@
 #ifndef _ODS_JOBLOG_CONSUMER_H
 #define _ODS_JOBLOG_CONSUMER_H
 
+#include "condor_common.h"
+
+// local includes
+#include "ODSMongodbOps.h"
+
 // condor includes
 #include "ClassAdLogReader.h"
 
-// local includes
-#include "ODSReaderWriter.h"
 
 namespace plumage {
 namespace etl {
@@ -49,7 +52,7 @@ public:
 
 private:
     ClassAdLogReader *m_reader;
-    ODSClassAdWriter* m_writer;
+    ODSMongodbOps* m_writer;
 };
 
 }}

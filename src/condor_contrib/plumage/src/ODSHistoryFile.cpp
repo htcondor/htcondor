@@ -17,7 +17,7 @@
 
 #include "condor_common.h"
 
-#include "mongo/client/dbclient.h"
+#include "ODSMongodbOps.h"
 
 // condor includes
 #include "condor_config.h"
@@ -35,34 +35,18 @@
 #include "ODSHistoryFile.h"
 #include "ODSHistoryUtils.h"
 
-const char DB_NAME[] = "condor.jobs";
-extern mongo::DBClientConnection* db_client;
+const char DB_NAME[] = "condor.jobs.history";
 
 using namespace std;
 using namespace mongo;
 using namespace bson;
 using namespace plumage::etl;
 
-// cleans up the quoted values from the job log reader
-static string trimQuotes(const char* str) {
-    string val = str;
-
-    size_t endpos = val.find_last_not_of("\\\"");
-    if( string::npos != endpos ) {
-        val = val.substr( 0, endpos+1 );
-    }
-    size_t startpos = val.find_first_not_of("\\\"");
-    if( string::npos != startpos ) {
-        val = val.substr( startpos );
-    }
-
-    return val;
-}
-
 ODSHistoryFile::ODSHistoryFile(const string name):
 	m_name(name),
 	m_stat(NULL),
-	m_file(NULL)
+	m_file(NULL),
+	m_writer(NULL)
 {
 }
 
@@ -137,6 +121,13 @@ ODSHistoryFile::init(CondorError &errstack)
 					   m_name.c_str(), errno, strerror(errno));
 		return false;
 	}
+	
+	m_writer = new ODSMongodbOps("condor.jobs.history");
+    if (!m_writer->init("localhost")) {
+        errstack.pushf("ODSHistoryFile::init", 5,
+                       "Unable to init ODS writer\n");
+        return false;
+    }
 
 	return true;
 }
@@ -191,63 +182,22 @@ ODSHistoryFile::poll(CondorError &/*errstack*/)
 		}
 
         // TODO: write the ad to db here
-        ExprTree *expr;
-        const char *name;
-        ad.ResetExpr();
-
-        BSONObjBuilder bsonBuilder;
+        BSONObjBuilder key;
         int cluster, proc;
-        while (ad.NextExpr(name,expr)) {
+        if (ad.LookupInteger(ATTR_CLUSTER_ID,cluster)) {
+            key.append(ATTR_CLUSTER_ID, cluster);
+        }
+        if (ad.LookupInteger(ATTR_PROC_ID,proc)) {
+            key.append(ATTR_PROC_ID, proc);
+        }
 
-            if (!(expr = ad.Lookup(name))) {
-                dprintf(D_FULLDEBUG, "Warning: failed to lookup attribute '%s' from ad\n", name);
-                continue;
-            }
-            
-            classad::Value value;
-            ad.EvaluateExpr(expr,value);
-            switch (value.GetType()) {
-                // seems this covers expressions also
-                case classad::Value::BOOLEAN_VALUE:
-                    bool _bool;
-                    ad.LookupBool(name,_bool);
-                    bsonBuilder.append(name,_bool);
-                    break;
-                case classad::Value::INTEGER_VALUE:
-                    int i;
-                    ad.LookupInteger(name,i);
-                    bsonBuilder.append(name,i);                    
-                    if (0 == strcmp(name,ATTR_CLUSTER_ID)) {
-                        cluster = i;
-                    }
-                    if (0 == strcmp(name,ATTR_PROC_ID)) {
-                        proc = i;
-                    }
-                    break;
-                case classad::Value::REAL_VALUE:
-                    float f;
-                    ad.LookupFloat(name,f);
-                    bsonBuilder.append(name,f);
-                    break;
-                case classad::Value::STRING_VALUE:
-                default:
-                    bsonBuilder.append(name,trimQuotes(ExprTreeToString(expr)));
-            }
-            
+        if (!m_writer->updateAd(key,&ad)) {
+            dprintf(D_ALWAYS, "ODSHistoryFile::poll: unable to write history job ad to ODS for '%d.%d'\n");
         }
-        try {
-                BSONObj queryObj = BSONObjBuilder().append(ATTR_CLUSTER_ID, cluster).append(ATTR_PROC_ID, proc).obj();
-                db_client->update(DB_NAME, queryObj, bsonBuilder.obj(), TRUE, FALSE);
-            }
-            catch(DBException& e) {
-            dprintf(D_ALWAYS,"ODSMongodbWriter::writeClassAd caught DBException: %s\n", e.toString().c_str());
-        }
-        string last_err = db_client->getLastError();
-        if (!last_err.empty()) {
-            dprintf(D_ALWAYS,"mongodb getLastError: %s\n",last_err.c_str());
+        else {
+            dprintf(D_FULLDEBUG, "ODSHistoryFile::poll: recorded job class ad for '%d.%d'\n", cluster,proc);
         }
         
-		
 		// record these so we know where we are?
 		HistoryEntry entry;
 		entry.file = m_name;
@@ -255,7 +205,6 @@ ODSHistoryFile::poll(CondorError &/*errstack*/)
 		entry.stop = stop;
 
 		m_entries.push_back(entry);
-
 	}
 
 		// Return iterators for newly read records

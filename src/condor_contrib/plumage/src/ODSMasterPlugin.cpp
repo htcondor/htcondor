@@ -17,7 +17,7 @@
 #include "condor_common.h"
 
 // local includes
-#include "ODSMongodbRW.h"
+#include "ODSMongodbOps.h"
 
 // seems boost meddles with assert defs
 #include "assert.h"
@@ -31,12 +31,15 @@
 extern DaemonCore *daemonCore;
 extern char	*MasterName;
 
+using namespace std;
+using namespace mongo;
 using namespace plumage::etl;
-
-ODSMongodbWriter* writer = NULL;
 
 struct ODSMasterPlugin : public Service, MasterPlugin
 {
+    string default_name;
+    ODSMongodbOps* writer;
+    
 	void
 	initialize()
 	{
@@ -45,18 +48,16 @@ struct ODSMasterPlugin : public Service, MasterPlugin
 		dprintf(D_FULLDEBUG, "ODSMasterPlugin: Initializing...\n");
 
 		// crib some stuff from master daemon
-		char* default_name = NULL;
 		if (MasterName) {
 			default_name = MasterName;
 		} else {
 			default_name = default_daemon_name();
-			if( ! default_name ) {
+			if( default_name.empty() ) {
 				EXCEPT( "default_daemon_name() returned NULL" );
 			}
 		}
-		delete [] default_name;
 
-        writer = new ODSMongodbWriter("condor.master");
+        writer = new ODSMongodbOps("condor.master");
         writer->init("localhost");
 	}
 
@@ -70,7 +71,10 @@ struct ODSMasterPlugin : public Service, MasterPlugin
 	void
 	update(const ClassAd *ad)
 	{
-		writer->writeClassAd("",const_cast<ClassAd*>(ad));
+        // write a new record
+        BSONObjBuilder key;
+        key.append("k",default_name+"#"+time_t_to_String());
+		writer->updateAd(key,const_cast<ClassAd*>(ad));
 	}
 
 };

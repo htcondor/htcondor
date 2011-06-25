@@ -18,6 +18,12 @@
 
 // condor includes
 #include "condor_common.h"
+
+// local includes
+#include "ODSJobLogConsumer.h"
+#include "ODSHistoryUtils.h"
+
+#include "assert.h"
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
@@ -26,10 +32,6 @@
 #include "condor_config.h"
 #include "stat_info.h"
 #include "JobLogMirror.h"
-
-// local includes
-#include "ODSJobLogConsumer.h"
-#include "ODSHistoryUtils.h"
 
 // about self
 DECL_SUBSYSTEM("JOB_ETL_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
@@ -186,4 +188,7 @@ void
 Dump()
 {
 	dprintf(D_ALWAYS|D_NOHEADER, "DUMP called\n");
+    if (ad) {
+        ad->Puke();
+    }
 }

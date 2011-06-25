@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _ODS_PROCESSING_UTILS_H
-#define _ODS_PROCESSING_UTILS_H
+#ifndef _ODS_HISTORY_UTILS_H
+#define _ODS_HISTORY_UTILS_H
 
 namespace plumage {
 namespace etl {
@@ -26,4 +26,4 @@ void processCurrentHistory(bool force_reset = false);
 
 }}
 
-#endif /* _ODS_PROCESSING_UTILS_H */
+#endif /* _ODS_HISTORY_UTILS_H */
