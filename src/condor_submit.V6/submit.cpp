@@ -2780,10 +2780,6 @@ SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
 		// here to avoid passing around uninitialized variables.
 
 	// User did not explicitly specify TransferFiles; choose a default
-#ifdef WIN32
-	should_transfer = STF_YES;
-	when_output = FTO_ON_EXIT;
-#else
 	if( in_files_specified || out_files_specified ) {
 		MyString err_msg;
 		err_msg += "\nERROR: you specified files you want Condor to "
@@ -2810,8 +2806,7 @@ SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
-	should_transfer = STF_NO;
-#endif
+
 		// now that we know what we want, call a shared method to
 		// actually insert the right classad attributes for it (since
 		// this stuff is shared, regardless of the old or new syntax).
