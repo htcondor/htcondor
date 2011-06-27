@@ -2404,9 +2404,7 @@ SetTransferFiles()
 		// right attributes controlling if and when to do the
 		// transfers.  if they didn't tell us what to do, in some
 		// cases, we can give reasonable defaults, but in others, it's
-		// a fatal error.  first we check for the new attribute names
-		// ("ShouldTransferFiles" and "WheToTransferOutput").  If
-		// those aren't defined, we look for the old "TransferFiles". 
+		// a fatal error.
 	SetNewTransferFiles();
 
 	if( should_transfer == STF_NO &&
