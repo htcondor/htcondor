@@ -281,7 +281,6 @@ const char	*SuspendJobAtExec = "suspend_job_at_exec";
 const char	*TransferInputFiles = "transfer_input_files";
 const char	*TransferOutputFiles = "transfer_output_files";
 const char    *TransferOutputRemaps = "transfer_output_remaps";
-const char	*TransferFiles = "transfer_files";
 const char	*TransferExecutable = "transfer_executable";
 const char	*TransferInput = "transfer_input";
 const char	*TransferOutput = "transfer_output";
@@ -2780,96 +2779,39 @@ SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
 		// appropriately.  however, just to be safe, we initialize it
 		// here to avoid passing around uninitialized variables.
 
-	macro_value = condor_param( TransferFiles, ATTR_TRANSFER_FILES );
-	if( macro_value ) {
-		// User explicitly specified TransferFiles; do what user says
-		switch ( macro_value[0] ) {
-				// Handle "Never"
-			case 'n':
-			case 'N':
-				// Handle "Never"
-				if( in_files_specified || out_files_specified ) {
-					MyString err_msg;
-					err_msg += "\nERROR: you specified \"";
-					err_msg += TransferFiles;
-					err_msg += " = Never\" but listed files you want "
-						"transfered via \"";
-					if( in_files_specified ) {
-						err_msg += "transfer_input_files";
-						if( out_files_specified ) {
-							err_msg += "\" and \"transfer_output_files\".";
-						} else {
-							err_msg += "\".";
-						}
-					} else {
-						ASSERT( out_files_specified );
-						err_msg += "transfer_output_files\".";
-					}
-					err_msg += "  Please remove this contradiction from "
-						"your submit file and try again.";
-					print_wrapped_text( err_msg.Value(), stderr );
-					DoCleanup(0,0,NULL);
-					exit( 1 );
-				}
-				should_transfer = STF_NO;
-				break;
-			case 'o':
-			case 'O':
-				// Handle "OnExit"
-				should_transfer = STF_YES;
-				when_output = FTO_ON_EXIT;
-				break;
-			case 'a':
-			case 'A':
-				// Handle "Always"
-				should_transfer = STF_YES;
-				when_output = FTO_ON_EXIT_OR_EVICT;
-				break;
-			default:
-				// Unrecognized
-				fprintf( stderr, "\nERROR: Unrecognized argument for "
-						 "parameter \"%s\"\n", TransferFiles );
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-				break;
-		}	// end of switch
-
-		free(macro_value);		// condor_param() calls malloc; free it!
-	} else {
-		// User did not explicitly specify TransferFiles; choose a default
+	// User did not explicitly specify TransferFiles; choose a default
 #ifdef WIN32
-		should_transfer = STF_YES;
-		when_output = FTO_ON_EXIT;
+	should_transfer = STF_YES;
+	when_output = FTO_ON_EXIT;
 #else
-		if( in_files_specified || out_files_specified ) {
-			MyString err_msg;
-			err_msg += "\nERROR: you specified files you want Condor to "
-				"transfer via \"";
-			if( in_files_specified ) {
-				err_msg += "transfer_input_files";
-				if( out_files_specified ) {
-					err_msg += "\" and \"transfer_output_files\",";
-				} else {
-					err_msg += "\",";
-				}
+	if( in_files_specified || out_files_specified ) {
+		MyString err_msg;
+		err_msg += "\nERROR: you specified files you want Condor to "
+			"transfer via \"";
+		if( in_files_specified ) {
+			err_msg += "transfer_input_files";
+			if( out_files_specified ) {
+				err_msg += "\" and \"transfer_output_files\",";
 			} else {
-				ASSERT( out_files_specified );
-				err_msg += "transfer_output_files\",";
+				err_msg += "\",";
 			}
-			err_msg += " but you did not specify *when* you want Condor to "
-				"transfer the files.  Please put either \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT\" or \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
-				"try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
+		} else {
+			ASSERT( out_files_specified );
+			err_msg += "transfer_output_files\",";
 		}
-		should_transfer = STF_NO;
-#endif
+		err_msg += " but you did not specify *when* you want Condor to "
+			"transfer the files.  Please put either \"";
+		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+		err_msg += " = ON_EXIT\" or \"";
+		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+		err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
+			"try again.";
+		print_wrapped_text( err_msg.Value(), stderr );
+		DoCleanup(0,0,NULL);
+		exit( 1 );
 	}
+	should_transfer = STF_NO;
+#endif
 		// now that we know what we want, call a shared method to
 		// actually insert the right classad attributes for it (since
 		// this stuff is shared, regardless of the old or new syntax).
@@ -2884,8 +2826,6 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 	should += " = \"";
 	MyString when = ATTR_WHEN_TO_TRANSFER_OUTPUT;
 	when += " = \"";
-	MyString ft = ATTR_TRANSFER_FILES;
-	ft += " = \"";
 	
 	should += getShouldTransferFilesString( should_transfer );
 	should += '"';
@@ -2896,19 +2836,11 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 		}
 		when += getFileTransferOutputString( when_output );
 		when += '"';
-		if( when_output == FTO_ON_EXIT ) {
-			ft += "ONEXIT\"";
-		} else {
-			ft += "ALWAYS\"";
-		}
-	} else {
-		ft += "NEVER\"";
 	}
 	InsertJobExpr( should.Value() );
 	if( should_transfer != STF_NO ) {
 		InsertJobExpr( when.Value() );
 	}
-	InsertJobExpr( ft.Value() );
 }
 
 
