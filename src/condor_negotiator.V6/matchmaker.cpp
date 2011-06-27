@@ -3235,14 +3235,11 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 bool Matchmaker::
 SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft) 
 {
-	float SlotWeight = accountant.GetSlotWeight(candidate);
-		// the use of a fudge-factor 0.99 in the following is to be
-		// generous in case of very small round-off differences
-		// that I have observed in tests
-	if((used + SlotWeight) <= 0.99*allowed) {
-		return true;
-	}
-	if( used == 0 && allowed > 0 && pieLeft >= 0.99*SlotWeight ) {
+    double SlotWeight = accountant.GetSlotWeight(candidate);
+    if ((used + SlotWeight) <= allowed) {
+        return true;
+    }
+    if ((used <= 0) && (allowed > 0) && (pieLeft >= 0.99*SlotWeight)) {
 
 		// Allow user to round up once per pie spin in order to avoid
 		// "crumbs" being left behind that couldn't be taken by anyone
