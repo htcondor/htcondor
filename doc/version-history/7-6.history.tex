@@ -53,6 +53,10 @@ The details of each version are described below.
 the job's requirements expression when the expression contained ClassAd
 function calls in some cases. 
 
+% gittrac #2192
+\item Fixed an incorrect exit code from \Condor{q} 
+when invoked with the \Opt{-name} option and using Quill.
+
 %gittrac #2013
 \item Fixed a segmentation fault bug introduced in Condor version 7.5.5,
 in the checkpoint and restart of jobs using compressed checkpoint images
@@ -138,6 +142,22 @@ authorization access to the \Condor{gridmanager}.
 \item On Windows platforms only, 
 fixed a bug that could cause a sporadic access violation 
 when a Condor daemon spawned another process.
+
+%gittrac #2191
+\item Fixed a bug that would cause the \Condor{startd} to 
+incorrectly report \Expr{Benchmarking} as its activity, instead of \Expr{Idle}
+when there was a problem launching the benchmarking programs. 
+
+%gittrac #2193
+\item Fixed a bug in which the \Condor{startd} can get stuck in a loop,
+trying to execute an invalid, non-existent Daemon ClassAd Hook job. 
+
+%gittrac #2088
+\item Fixed a bug in which the dedicated scheduler did not correctly 
+deactivate claims,
+tending to result in jobs that appear to move back and forth between
+the \Expr{Idle} and \Expr{Running} states,
+with the \Condor{shadow} daemon exiting each time with status 108.
 
 \end{itemize}
 
