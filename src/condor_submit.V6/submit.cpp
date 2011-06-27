@@ -459,7 +459,7 @@ void 	SetRequirements();
 void 	SetTransferFiles();
 void    process_input_file_list(StringList * input_list, char *input_files, bool * files_specified);
 void 	SetPerFileEncryption();
-bool 	SetNewTransferFiles( void );
+void 	SetNewTransferFiles( void );
 void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
@@ -2409,9 +2409,7 @@ SetTransferFiles()
 		// a fatal error.  first we check for the new attribute names
 		// ("ShouldTransferFiles" and "WheToTransferOutput").  If
 		// those aren't defined, we look for the old "TransferFiles". 
-	if( ! SetNewTransferFiles() ) {
-		SetOldTransferFiles( in_files_specified, out_files_specified );
-	}
+	SetNewTransferFiles();
 
 		/*
 		  If we're dealing w/ TDP and we might be transfering files,
@@ -2692,10 +2690,9 @@ void SetPerFileEncryption( void )
 	}
 }
 
-bool
+void
 SetNewTransferFiles( void )
 {
-	bool found_it = false;
 	char *should, *when;
 	FileTransferOutput_t when_output = FTO_NONE;
 	MyString err_msg;
@@ -2706,20 +2703,17 @@ SetNewTransferFiles( void )
 		should = "IF_NEEDED";
 	}
 
-	if( should ) {
-		should_transfer = getShouldTransferFilesNum( should );
-		if( should_transfer < 0 ) {
-			err_msg = "\nERROR: invalid value (\"";
-			err_msg += should;
-			err_msg += "\") for ";
-			err_msg += ATTR_SHOULD_TRANSFER_FILES;
-			err_msg += ".  Please either specify \"YES\", \"NO\", or ";
-			err_msg += "\"IF_NEEDED\" and try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		found_it = true;
+	should_transfer = getShouldTransferFilesNum( should );
+	if( should_transfer < 0 ) {
+		err_msg = "\nERROR: invalid value (\"";
+		err_msg += should;
+		err_msg += "\") for ";
+		err_msg += ATTR_SHOULD_TRANSFER_FILES;
+		err_msg += ".  Please either specify \"YES\", \"NO\", or ";
+		err_msg += "\"IF_NEEDED\" and try again.";
+		print_wrapped_text( err_msg.Value(), stderr );
+		DoCleanup(0,0,NULL);
+		exit( 1 );
 	}
 	
 	when = condor_param( ATTR_WHEN_TO_TRANSFER_OUTPUT, 
@@ -2741,12 +2735,6 @@ SetNewTransferFiles( void )
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
-			// if they gave us WhenToTransferOutput, but they didn't
-			// specify ShouldTransferFiles yet, give them a default of
-			// "YES", since that's the safest option.
-		if( ! found_it ) {
-			should_transfer = STF_YES;
-		}
 		if( should_transfer == STF_NO ) {
 			err_msg = "\nERROR: you specified ";
 			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
@@ -2760,9 +2748,8 @@ SetNewTransferFiles( void )
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
-		found_it = true;
 	} else {
-		if( found_it && should_transfer != STF_NO ) {
+		if( should_transfer != STF_NO ) {
 			err_msg = "\nERROR: you specified ";
 			err_msg += ATTR_SHOULD_TRANSFER_FILES;
 			err_msg += " to be \"";
@@ -2780,7 +2767,7 @@ SetNewTransferFiles( void )
 		}
 	}
 	
-	if( found_it && when_output == FTO_ON_EXIT_OR_EVICT && 
+	if( when_output == FTO_ON_EXIT_OR_EVICT && 
 		            should_transfer == STF_IF_NEEDED ) {
 			// error, these are incompatible!
 		err_msg = "\nERROR: \"when_to_transfer_output = ON_EXIT_OR_EVICT\" "
@@ -2798,12 +2785,7 @@ SetNewTransferFiles( void )
 		exit( 1 );
 	}
 
-		// if we found the new syntax, we're done, and we should now
-		// add the appropriate ClassAd attributes to the job.
-	if( found_it ) {
-		InsertFileTransAttrs( when_output );
-	}
-	return found_it;
+	InsertFileTransAttrs( when_output );
 }
 
 
