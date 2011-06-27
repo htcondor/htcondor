@@ -2746,6 +2746,20 @@ SetNewTransferFiles( void )
 						 "when_to_transfer_output" );
 	if (!when) {
 		when = "ON_EXIT";
+	} else {
+		if( should_transfer == STF_NO ) {
+			err_msg = "\nERROR: you specified ";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += " yet you defined ";
+			err_msg += ATTR_SHOULD_TRANSFER_FILES;
+			err_msg += " to be \"";
+			err_msg += should;
+			err_msg += "\".  Please remove this contradiction from ";
+			err_msg += "your submit file and try again.";
+			print_wrapped_text( err_msg.Value(), stderr );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 	}
 
 	when_output = getFileTransferOutputNum( when );
@@ -2756,19 +2770,6 @@ SetNewTransferFiles( void )
 		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
 		err_msg += ".  Please either specify \"ON_EXIT\", or ";
 		err_msg += "\"ON_EXIT_OR_EVICT\" and try again.";
-		print_wrapped_text( err_msg.Value(), stderr );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
-	if( should_transfer == STF_NO ) {
-		err_msg = "\nERROR: you specified ";
-		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-		err_msg += " yet you defined ";
-		err_msg += ATTR_SHOULD_TRANSFER_FILES;
-		err_msg += " to be \"";
-		err_msg += should;
-		err_msg += "\".  Please remove this contradiction from ";
-		err_msg += "your submit file and try again.";
 		print_wrapped_text( err_msg.Value(), stderr );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
