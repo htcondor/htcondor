@@ -2423,13 +2423,7 @@ SetTransferFiles()
 			ASSERT( out_files_specified );
 			err_msg += "transfer_output_files\",";
 		}
-		err_msg += " but you did not specify *when* you want Condor to "
-			"transfer the files.  Please put either \"";
-		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-		err_msg += " = ON_EXIT\" or \"";
-		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-		err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
-			"try again.";
+		err_msg += " but you disabled should_transfer_files.";
 		print_wrapped_text( err_msg.Value(), stderr );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
