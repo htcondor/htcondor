@@ -34,7 +34,7 @@ class SiteSummary:
 
 def Usage():
 	msg = """
-USAGE: router_history [OPTIONS]
+USAGE: condor_router_history [OPTIONS]
  --show_records             (show individual records in addition to summary)
  --show_iwd                 (when showing records, include working directory)
  --age=<days>               (how many days ago end time should be)
@@ -126,26 +126,31 @@ show_records = 0
 start_timestamp = None
 show_iwd = 0
 
-options,args = getopt.getopt(sys.argv[1:],"h",long_options)
-for option,value in options:
-	if option == "--help" or option == "-h":
-		Usage()
-		sys.exit(0)
-	if option == "--age":
-		end_timestamp = time.time() - 3600*24*float(value)
-	if option == "--start":
-		t = time.strptime(value,"%Y-%m-%d %H:%M")
-		a = []
-		for i in t:
-			a.append(i)
-		a[8] = -1 #unknown daylight savings time
-		start_timestamp = time.mktime(a)
-	if option == "--days":
-		report_period = 3600*24*float(value)
-	if option == "--show_records":
-		show_records = 1
-	if option == "--show_iwd":
-		show_iwd = 1
+try:
+    options,args = getopt.getopt(sys.argv[1:],"h",long_options)
+    for option,value in options:
+        if option == "--help" or option == "-h":
+            Usage()
+            sys.exit(0)
+        if option == "--age":
+            end_timestamp = time.time() - 3600*24*float(value)
+        if option == "--start":
+            t = time.strptime(value,"%Y-%m-%d %H:%M")
+            a = []
+            for i in t:
+                a.append(i)
+            a[8] = -1 #unknown daylight savings time
+            start_timestamp = time.mktime(a)
+        if option == "--days":
+            report_period = 3600*24*float(value)
+        if option == "--show_records":
+            show_records = 1
+        if option == "--show_iwd":
+            show_iwd = 1
+except Exception, e:
+    sys.stderr.write("Command line argument error: %s\n" % (e))
+    Usage()
+    sys.exit(1)
 
 show_summary = not show_records
 
