@@ -2702,6 +2702,10 @@ SetNewTransferFiles( void )
 	
 	should = condor_param( ATTR_SHOULD_TRANSFER_FILES, 
 						   "should_transfer_files" );
+	if (!should) {
+		should = "IF_NEEDED";
+	}
+
 	if( should ) {
 		should_transfer = getShouldTransferFilesNum( should );
 		if( should_transfer < 0 ) {
@@ -2720,6 +2724,10 @@ SetNewTransferFiles( void )
 	
 	when = condor_param( ATTR_WHEN_TO_TRANSFER_OUTPUT, 
 						 "when_to_transfer_output" );
+	if (!when) {
+		when = "ON_EXIT";
+	}
+
 	if( when ) {
 		when_output = getFileTransferOutputNum( when );
 		if( when_output < 0 ) {
