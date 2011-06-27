@@ -120,6 +120,25 @@ which caused a crash if the \Condor{negotiator} was reconfigured
 during a negotiation cycle, 
 but only if hierarchical group quotas were in use.
 
+%gittrac #2162
+\item Fixed a bug in which when submitting a job into the \Condor{schedd}
+remotely, or with spooling, 
+the file transfer plug-ins activated on the submit machine 
+and pulled down all the specified URLs in the transfer list 
+to the spool directory. 
+This behavior has been changed so that URLs are only downloaded 
+when the job is actually running with a \Condor{starter} above it. 
+This is usually on an execute node, but could also be in the local universe. 
+
+%gittrac #2178
+\item Removed the requirement that the Condor GAHP needs DAEMON-level 
+authorization access to the \Condor{gridmanager}. 
+
+%gittrac #2181
+\item On Windows platforms only, 
+fixed a bug that could cause a sporadic access violation 
+when a Condor daemon spawned another process.
+
 \end{itemize}
 
 \noindent Known Bugs:
