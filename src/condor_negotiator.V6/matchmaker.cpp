@@ -2003,6 +2003,22 @@ GroupEntry::~GroupEntry() {
 }
 
 
+void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
+	submitterAds.Open();
+	while (ClassAd* ad = submitterAds.Next()) {
+        int idle = 0;
+        ad->LookupInteger(ATTR_IDLE_JOBS, idle);
+
+        if (idle <= 0) {
+            std::string submitterName;
+            ad->LookupString(ATTR_NAME, submitterName);
+            dprintf(D_FULLDEBUG, "Ignoring submitter %s with no idle jobs\n", submitterName.c_str());
+            submitterAds.Remove(ad);
+        }
+    }
+}
+
+
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
 					 double untrimmedSlotWeightTotal,
@@ -2065,6 +2081,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			// have thrown out matches due to SlotWeight being too high
 			// given the schedd limit computed in the previous pie spin
 		DeleteMatchList();
+
+        // filter submitters with no idle jobs to avoid unneeded computations and log output
+        if (!ConsiderPreemption) {
+            filter_submitters_no_idle(scheddAds);
+        }
 
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
