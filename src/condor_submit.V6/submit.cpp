@@ -459,7 +459,6 @@ void 	SetTransferFiles();
 void    process_input_file_list(StringList * input_list, char *input_files, bool * files_specified);
 void 	SetPerFileEncryption();
 void 	SetNewTransferFiles( void );
-void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
 void	SetRunAsOwner();
@@ -2793,24 +2792,6 @@ SetNewTransferFiles( void )
 		exit( 1 );
 	}
 
-	InsertFileTransAttrs( when_output );
-}
-
-
-void
-SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
-{
-	char *macro_value;
-	FileTransferOutput_t when_output = FTO_NONE;
-		// this variable is never used (even once we pass it to
-		// InsertFileTransAttrs()) unless should_transfer is set
-		// appropriately.  however, just to be safe, we initialize it
-		// here to avoid passing around uninitialized variables.
-
-
-		// now that we know what we want, call a shared method to
-		// actually insert the right classad attributes for it (since
-		// this stuff is shared, regardless of the old or new syntax).
 	InsertFileTransAttrs( when_output );
 }
 
