@@ -2410,6 +2410,34 @@ SetTransferFiles()
 		// those aren't defined, we look for the old "TransferFiles". 
 	SetNewTransferFiles();
 
+	if( should_transfer == STF_NO &&
+		( in_files_specified || out_files_specified ) ) {
+		MyString err_msg;
+		err_msg += "\nERROR: you specified files you want Condor to "
+			"transfer via \"";
+		if( in_files_specified ) {
+			err_msg += "transfer_input_files";
+			if( out_files_specified ) {
+				err_msg += "\" and \"transfer_output_files\",";
+			} else {
+				err_msg += "\",";
+			}
+		} else {
+			ASSERT( out_files_specified );
+			err_msg += "transfer_output_files\",";
+		}
+		err_msg += " but you did not specify *when* you want Condor to "
+			"transfer the files.  Please put either \"";
+		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+		err_msg += " = ON_EXIT\" or \"";
+		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+		err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
+			"try again.";
+		print_wrapped_text( err_msg.Value(), stderr );
+		DoCleanup(0,0,NULL);
+		exit( 1 );
+	}
+
 		/*
 		  If we're dealing w/ TDP and we might be transfering files,
 		  we want to make sure the tool binary and input file (if
@@ -2779,33 +2807,6 @@ SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
 		// appropriately.  however, just to be safe, we initialize it
 		// here to avoid passing around uninitialized variables.
 
-	// User did not explicitly specify TransferFiles; choose a default
-	if( in_files_specified || out_files_specified ) {
-		MyString err_msg;
-		err_msg += "\nERROR: you specified files you want Condor to "
-			"transfer via \"";
-		if( in_files_specified ) {
-			err_msg += "transfer_input_files";
-			if( out_files_specified ) {
-				err_msg += "\" and \"transfer_output_files\",";
-			} else {
-				err_msg += "\",";
-			}
-		} else {
-			ASSERT( out_files_specified );
-			err_msg += "transfer_output_files\",";
-		}
-		err_msg += " but you did not specify *when* you want Condor to "
-			"transfer the files.  Please put either \"";
-		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-		err_msg += " = ON_EXIT\" or \"";
-		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-		err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
-			"try again.";
-		print_wrapped_text( err_msg.Value(), stderr );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
 
 		// now that we know what we want, call a shared method to
 		// actually insert the right classad attributes for it (since
