@@ -2398,90 +2398,54 @@ SetTransferFiles()
 		free(macro_value);
 	}
 
+	//
+	// START FILE TRANSFER VALIDATION
+	//
 		// now that we've gathered up all the possible info on files
 		// the user explicitly wants to transfer, see if they set the
 		// right attributes controlling if and when to do the
 		// transfers.  if they didn't tell us what to do, in some
 		// cases, we can give reasonable defaults, but in others, it's
 		// a fatal error.
-	char *should, *when;
-	FileTransferOutput_t when_output = FTO_NONE;
+		//
+		// SHOULD_TRANSFER_FILES (STF) defaults to IF_NEEDED (STF_IF_NEEDED)
+		// WHEN_TO_TRANSFER_OUTPUT (WTTO) defaults to ON_EXIT (FTO_ON_EXIT)
+		// 
+		// Error if:
+		//  (A) bad user input - getShouldTransferFilesNum fails
+		//  (B) bas user input - getFileTransferOutputNum fails
+		//  (C) STF is STF_NO and WTTO is not FTO_NONE
+		//  (D) STF is not STF_NO and WTTO is FTO_NONE
+		//  (E) STF is STF_IF_NEEDED and WTTO is FTO_ON_EXIT_OR_EVICT
+		//  (F) STF is STF_NO and transfer_input_files or transfer_output_files specified
+	char *should = "INTERNAL ERROR";
+	char *when = "INTERNAL ERROR";
+	should_transfer = STF_IF_NEEDED;
+	FileTransferOutput_t when_output = FTO_ON_EXIT;
 	MyString err_msg;
 	
-	should = condor_param( ATTR_SHOULD_TRANSFER_FILES, 
-						   "should_transfer_files" );
+	should = condor_param(ATTR_SHOULD_TRANSFER_FILES, 
+						  "should_transfer_files");
 	if (!should) {
 		should = "IF_NEEDED";
-	}
-
-	should_transfer = getShouldTransferFilesNum( should );
-	if( should_transfer < 0 ) {
-		err_msg = "\nERROR: invalid value (\"";
-		err_msg += should;
-		err_msg += "\") for ";
-		err_msg += ATTR_SHOULD_TRANSFER_FILES;
-		err_msg += ".  Please either specify \"YES\", \"NO\", or ";
-		err_msg += "\"IF_NEEDED\" and try again.";
-		print_wrapped_text( err_msg.Value(), stderr );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
-	
-	when = condor_param( ATTR_WHEN_TO_TRANSFER_OUTPUT, 
-						 "when_to_transfer_output" );
-	if (!when) {
-		when = "ON_EXIT";
+		should_transfer = STF_IF_NEEDED;
 	} else {
-		if( should_transfer == STF_NO ) {
-			err_msg = "\nERROR: you specified ";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " yet you defined ";
-			err_msg += ATTR_SHOULD_TRANSFER_FILES;
-			err_msg += " to be \"";
+		should_transfer = getShouldTransferFilesNum(should);
+		if (should_transfer < 0) { // (A)
+			err_msg = "\nERROR: invalid value (\"";
 			err_msg += should;
-			err_msg += "\".  Please remove this contradiction from ";
-			err_msg += "your submit file and try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
+			err_msg += "\") for ";
+			err_msg += ATTR_SHOULD_TRANSFER_FILES;
+			err_msg += ".  Please either specify \"YES\", \"NO\", or ";
+			err_msg += "\"IF_NEEDED\" and try again.";
+			print_wrapped_text(err_msg.Value(), stderr);
+			DoCleanup(0, 0, NULL);
+			exit(1);
 		}
 	}
 
-	when_output = getFileTransferOutputNum( when );
-	if( when_output < 0 ) {
-		err_msg = "\nERROR: invalid value (\"";
-		err_msg += when;
-		err_msg += "\") for ";
-		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-		err_msg += ".  Please either specify \"ON_EXIT\", or ";
-		err_msg += "\"ON_EXIT_OR_EVICT\" and try again.";
-		print_wrapped_text( err_msg.Value(), stderr );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
-	
-	if( when_output == FTO_ON_EXIT_OR_EVICT && 
-		            should_transfer == STF_IF_NEEDED ) {
-			// error, these are incompatible!
-		err_msg = "\nERROR: \"when_to_transfer_output = ON_EXIT_OR_EVICT\" "
-			"and \"should_transfer_files = IF_NEEDED\" are incompatible.  "
-			"The behavior of these two settings together would produce "
-			"incorrect file access in some cases.  Please decide which "
-			"one of those two settings you're more interested in. "
-			"If you really want \"IF_NEEDED\", set "
-			"\"when_to_transfer_output = ON_EXIT\".  If you really want "
-			"\"ON_EXIT_OR_EVICT\", please set \"should_transfer_files = "
-			"YES\".  After you have corrected this incompatibility, "
-			"please try running condor_submit again.\n";
-		print_wrapped_text( err_msg.Value(), stderr );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
-
-	InsertFileTransAttrs( when_output );
-
-	if( should_transfer == STF_NO &&
-		( in_files_specified || out_files_specified ) ) {
+	if (should_transfer == STF_NO &&
+		(in_files_specified || out_files_specified)) { // (F)
 		MyString err_msg;
 		err_msg += "\nERROR: you specified files you want Condor to "
 			"transfer via \"";
@@ -2497,10 +2461,71 @@ SetTransferFiles()
 			err_msg += "transfer_output_files\",";
 		}
 		err_msg += " but you disabled should_transfer_files.";
-		print_wrapped_text( err_msg.Value(), stderr );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
+		print_wrapped_text(err_msg.Value(), stderr);
+		DoCleanup(0, 0, NULL);
+		exit(1);
 	}
+
+	when = condor_param(ATTR_WHEN_TO_TRANSFER_OUTPUT, 
+						"when_to_transfer_output");
+	if (!when) {
+		when = "ON_EXIT";
+		when_output = FTO_ON_EXIT;
+	} else {
+		when_output = getFileTransferOutputNum(when);
+		if (when_output < 0) { // (B)
+			err_msg = "\nERROR: invalid value (\"";
+			err_msg += when;
+			err_msg += "\") for ";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += ".  Please either specify \"ON_EXIT\", or ";
+			err_msg += "\"ON_EXIT_OR_EVICT\" and try again.";
+			print_wrapped_text(err_msg.Value(), stderr);
+			DoCleanup(0, 0, NULL);
+			exit(1);
+		}
+
+		if ((should_transfer == STF_NO && when_output != FTO_NONE) || // (C)
+			(should_transfer != STF_NO && when_output == FTO_NONE)) { // (D)
+			err_msg = "\nERROR: ";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += " specified as \"";
+			err_msg += when;
+			err_msg += "\"";
+			err_msg += " yet ";
+			err_msg += ATTR_SHOULD_TRANSFER_FILES;
+			err_msg += " defined as \"";
+			err_msg += should;
+			err_msg += "\".  Please remove this contradiction from ";
+			err_msg += "your submit file and try again.";
+			print_wrapped_text(err_msg.Value(), stderr);
+			DoCleanup(0, 0, NULL);
+			exit(1);
+		}
+	}
+	
+	if (when_output == FTO_ON_EXIT_OR_EVICT && 
+		should_transfer == STF_IF_NEEDED) { // (E)
+			// error, these are incompatible!
+		err_msg = "\nERROR: \"when_to_transfer_output = ON_EXIT_OR_EVICT\" "
+			"and \"should_transfer_files = IF_NEEDED\" are incompatible.  "
+			"The behavior of these two settings together would produce "
+			"incorrect file access in some cases.  Please decide which "
+			"one of those two settings you're more interested in. "
+			"If you really want \"IF_NEEDED\", set "
+			"\"when_to_transfer_output = ON_EXIT\".  If you really want "
+			"\"ON_EXIT_OR_EVICT\", please set \"should_transfer_files = "
+			"YES\".  After you have corrected this incompatibility, "
+			"please try running condor_submit again.\n";
+		print_wrapped_text(err_msg.Value(), stderr);
+		DoCleanup(0, 0, NULL);
+		exit(1);
+	}
+
+	InsertFileTransAttrs(when_output);
+	//
+	// END FILE TRANSFER VALIDATION
+	//
 
 		/*
 		  If we're dealing w/ TDP and we might be transfering files,
