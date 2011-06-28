@@ -1296,7 +1296,12 @@ negotiationTime ()
                         dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g)\n", group->name.c_str(), group->usage);
                         continue;
                     }
-
+		    
+                    if (group->submitterAds->MyLength() <= 0) {
+                        dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
+                        continue;
+                    }
+		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
                     double delta = max(0.0, group->allocated - group->usage);
