@@ -1076,7 +1076,8 @@ negotiationTime ()
     // Restrict number of slots available for dynamic quotas.
     double hgq_total_quota = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)numDynGroupSlots;
     if ( numDynGroupSlots && DynQuotaMachConstraint ) {
-		int matchedSlots = startdAds.Count( DynQuotaMachConstraint );
+        bool remove = param_boolean("NEGOTIATOR_STARTD_CONSTRAINT_REMOVE", false);
+        int matchedSlots = startdAds.Count(DynQuotaMachConstraint, remove);
         if ( matchedSlots ) {
             dprintf(D_ALWAYS,"GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine "
                     "count from %d to %d\n", numDynGroupSlots, matchedSlots);

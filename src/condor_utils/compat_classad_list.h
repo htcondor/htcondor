@@ -109,7 +109,8 @@ public:
 		 */
 	void Sort(SortFunctionType smallerThan, void* userInfo = NULL);
 
-	int Count( classad::ExprTree *constraint );
+    // Count classads satisfying constraint.  Optionally remove ads that don't.
+    int Count(classad::ExprTree* constraint, bool remove = false);
 
 	void fPrintAttrListList(FILE* f, bool use_xml = false, StringList *attr_white_list = NULL);
 };
