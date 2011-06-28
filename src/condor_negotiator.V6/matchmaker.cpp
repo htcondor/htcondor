@@ -3554,7 +3554,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			}
 		}
 
-		if(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft))
+		/* Check that the submitter has suffient user priority to be matched with
+		   yet another machine. HOWEVER, do NOT perform this submitter limit
+		   check if we are negotiating only for startd rank, since startd rank
+		   preemptions should be allowed regardless of user priorities. 
+	    */
+		if( (!only_for_startdrank)  &&
+			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
 		{
 			rejForSubmitterLimit++;
 			continue;
