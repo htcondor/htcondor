@@ -2481,24 +2481,24 @@ SetTransferFiles()
 			DoCleanup(0, 0, NULL);
 			exit(1);
 		}
+	}
 
-		if ((should_transfer == STF_NO && when_output != FTO_NONE) || // (C)
-			(should_transfer != STF_NO && when_output == FTO_NONE)) { // (D)
-			err_msg = "\nERROR: ";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " specified as \"";
-			err_msg += when;
-			err_msg += "\"";
-			err_msg += " yet ";
-			err_msg += ATTR_SHOULD_TRANSFER_FILES;
-			err_msg += " defined as \"";
-			err_msg += should;
-			err_msg += "\".  Please remove this contradiction from ";
-			err_msg += "your submit file and try again.";
-			print_wrapped_text(err_msg.Value(), stderr);
-			DoCleanup(0, 0, NULL);
-			exit(1);
-		}
+	if ((should_transfer == STF_NO && when_output != FTO_NONE) || // (C)
+		(should_transfer != STF_NO && when_output == FTO_NONE)) { // (D)
+		err_msg = "\nERROR: ";
+		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+		err_msg += " specified as \"";
+		err_msg += when;
+		err_msg += "\"";
+		err_msg += " yet ";
+		err_msg += ATTR_SHOULD_TRANSFER_FILES;
+		err_msg += " defined as \"";
+		err_msg += should;
+		err_msg += "\".  Please remove this contradiction from ";
+		err_msg += "your submit file and try again.";
+		print_wrapped_text(err_msg.Value(), stderr);
+		DoCleanup(0, 0, NULL);
+		exit(1);
 	}
 	
 	if (when_output == FTO_ON_EXIT_OR_EVICT && 
