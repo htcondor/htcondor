@@ -113,6 +113,10 @@ as set with the \Condor{submit\_dag} command line option \Opt{-debug}.
 the job's requirements expression when the expression contained ClassAd
 function calls in some cases. 
 
+% gittrac #2192
+\item Fixed an incorrect exit code from \Condor{q} 
+when invoked with the \Opt{-name} option and using Quill.
+
 %gittrac #2013
 \item Fixed a segmentation fault bug introduced in Condor version 7.5.5,
 in the checkpoint and restart of jobs using compressed checkpoint images
@@ -137,6 +141,83 @@ if any machine ClassAds contained cyclical attribute references.
 \item Fixed a bug that caused usage by \SubmitCmd{nice\_user} jobs to
 be charged to the user directly rather than `nice-user.\emph{user}'.
 This bug was introduced in the 7.5 series.
+
+%gittrac #2081
+\item Fixed bugs in the RPM init script that could cause some 
+shutdown failures to be unreported, 
+and they could cause status requests,
+such as \Expr{service condor status},
+to always report Condor as inactive.
+
+\item Fixed a bug in the \Condor{gridmanager} that could cause a crash 
+when a grid type \SubmitCmd{amazon} job was missing required attributes.
+
+%gittrac #2105
+\item Fixed bug in the \Condor{shadow}, in which it would treat 
+the closed socket to the execute machine as an error,
+after both it had asked for the claim to be deactivated and the 
+\Condor{schedd} daemon was busy.  
+As a result, a busy \Condor{schedd} could result in the job being re-run.
+
+%gittrac #2109
+\item The matchmaking attributes 
+\Attr{SubmitterUserResourcesInUse} and \Attr{RemoteUserResourcesInUse} 
+no longer ignore \Attr{SlotWeight}, if used by the \Condor{negotiator}.
+
+%gittrac #2102
+\item On Windows, the \Condor{kbdd} daemon was missing changes to the
+port on which the \Condor{startd} was listening.
+This resulted in failure of the \Condor{kbdd} to send updates in 
+keyboard and mouse activity,
+further causing the failure of policy implementation that relied upon 
+knowledge of the activity.
+
+%gittrac #2163
+\item Fixed a bug present throughout ClassAds,
+in which expressions expecting a floating point value returned an error,
+if the expression actually evaluated to a boolean.
+This is most common in machine \MacroNI{RANK} expressions.
+
+%gittrac #2172
+\item Fixed a bug in the \Condor{negotiator} daemon,
+which caused a crash if the \Condor{negotiator} was reconfigured 
+during a negotiation cycle, 
+but only if hierarchical group quotas were in use.
+
+%gittrac #2162
+\item Fixed a bug in which when submitting a job into the \Condor{schedd}
+remotely, or with spooling, 
+the file transfer plug-ins activated on the submit machine 
+and pulled down all the specified URLs in the transfer list 
+to the spool directory. 
+This behavior has been changed so that URLs are only downloaded 
+when the job is actually running with a \Condor{starter} above it. 
+This is usually on an execute node, but could also be in the local universe. 
+
+%gittrac #2178
+\item Removed the requirement that the Condor GAHP needs DAEMON-level 
+authorization access to the \Condor{gridmanager}. 
+
+%gittrac #2181
+\item On Windows platforms only, 
+fixed a bug that could cause a sporadic access violation 
+when a Condor daemon spawned another process.
+
+%gittrac #2191
+\item Fixed a bug that would cause the \Condor{startd} to 
+incorrectly report \Expr{Benchmarking} as its activity, instead of \Expr{Idle}
+when there was a problem launching the benchmarking programs. 
+
+%gittrac #2193
+\item Fixed a bug in which the \Condor{startd} can get stuck in a loop,
+trying to execute an invalid, non-existent Daemon ClassAd Hook job. 
+
+%gittrac #2088
+\item Fixed a bug in which the dedicated scheduler did not correctly 
+deactivate claims,
+tending to result in jobs that appear to move back and forth between
+the \Expr{Idle} and \Expr{Running} states,
+with the \Condor{shadow} daemon exiting each time with status 108.
 
 \end{itemize}
 
