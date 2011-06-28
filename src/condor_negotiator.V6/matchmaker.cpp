@@ -1076,7 +1076,8 @@ negotiationTime ()
     // Restrict number of slots available for dynamic quotas.
     double hgq_total_quota = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)numDynGroupSlots;
     if ( numDynGroupSlots && DynQuotaMachConstraint ) {
-		int matchedSlots = startdAds.Count( DynQuotaMachConstraint );
+        bool remove = param_boolean("NEGOTIATOR_STARTD_CONSTRAINT_REMOVE", false);
+        int matchedSlots = startdAds.Count(DynQuotaMachConstraint, remove);
         if ( matchedSlots ) {
             dprintf(D_ALWAYS,"GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine "
                     "count from %d to %d\n", numDynGroupSlots, matchedSlots);
@@ -1296,7 +1297,12 @@ negotiationTime ()
                         dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g)\n", group->name.c_str(), group->usage);
                         continue;
                     }
-
+		    
+                    if (group->submitterAds->MyLength() <= 0) {
+                        dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
+                        continue;
+                    }
+		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
                     double delta = max(0.0, group->allocated - group->usage);
@@ -2003,6 +2009,22 @@ GroupEntry::~GroupEntry() {
 }
 
 
+void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
+	submitterAds.Open();
+	while (ClassAd* ad = submitterAds.Next()) {
+        int idle = 0;
+        ad->LookupInteger(ATTR_IDLE_JOBS, idle);
+
+        if (idle <= 0) {
+            std::string submitterName;
+            ad->LookupString(ATTR_NAME, submitterName);
+            dprintf(D_FULLDEBUG, "Ignoring submitter %s with no idle jobs\n", submitterName.c_str());
+            submitterAds.Remove(ad);
+        }
+    }
+}
+
+
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
 					 double untrimmedSlotWeightTotal,
@@ -2065,6 +2087,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			// have thrown out matches due to SlotWeight being too high
 			// given the schedd limit computed in the previous pie spin
 		DeleteMatchList();
+
+        // filter submitters with no idle jobs to avoid unneeded computations and log output
+        if (!ConsiderPreemption) {
+            filter_submitters_no_idle(scheddAds);
+        }
 
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
@@ -3134,6 +3161,19 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		if (result == MM_NO_MATCH) 
 		{
 			numMatched--;		// haven't used any resources this cycle
+
+            if (rejForSubmitterLimit && !ConsiderPreemption && !accountant.UsingWeightedSlots()) {
+                // If we aren't considering preemption and slots are unweighted, then we can
+                // be done with this submitter when it hits its submitter limit
+                dprintf (D_ALWAYS, "    Hit submitter limit: done negotiating\n");
+                // stop negotiation and return MM_RESUME
+                // we don't want to return with MM_DONE because
+                // we didn't get NO_MORE_JOBS: there are jobs that could match 
+                // in later cycles with a quota redistribution
+                break;
+            }
+
+            // Otherwise continue trying with this submitter
 			continue;
 		}
 
@@ -3210,14 +3250,11 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 bool Matchmaker::
 SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft) 
 {
-	float SlotWeight = accountant.GetSlotWeight(candidate);
-		// the use of a fudge-factor 0.99 in the following is to be
-		// generous in case of very small round-off differences
-		// that I have observed in tests
-	if((used + SlotWeight) <= 0.99*allowed) {
-		return true;
-	}
-	if( used == 0 && allowed > 0 && pieLeft >= 0.99*SlotWeight ) {
+    double SlotWeight = accountant.GetSlotWeight(candidate);
+    if ((used + SlotWeight) <= allowed) {
+        return true;
+    }
+    if ((used <= 0) && (allowed > 0) && (pieLeft >= 0.99*SlotWeight)) {
 
 		// Allow user to round up once per pie spin in order to avoid
 		// "crumbs" being left behind that couldn't be taken by anyone
