@@ -3559,7 +3559,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		   check if we are negotiating only for startd rank, since startd rank
 		   preemptions should be allowed regardless of user priorities. 
 	    */
-		if( (!only_for_startdrank)  &&
+		if( (candidatePreemptState != RANK_PREEMPTION) &&
 			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
 		{
 			rejForSubmitterLimit++;
