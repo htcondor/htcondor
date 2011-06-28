@@ -147,7 +147,7 @@ bool	NewExecutable = false;
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool    UseXMLInLog = false;
-ShouldTransferFiles_t should_transfer = STF_NO;
+ShouldTransferFiles_t should_transfer;
 bool stream_stdout_toggle = false;
 bool stream_stderr_toggle = false;
 bool    NeedsPerFileEncryption = false;
@@ -2327,8 +2327,6 @@ SetTransferFiles()
 	StringList output_file_list(NULL,",");
 	MyString output_remaps;
 
-	should_transfer = STF_YES;
-
 	macro_value = condor_param( TransferInputFiles, "TransferInputFiles" ) ;
 	TransferInputSize = 0;
 	if( macro_value ) {
@@ -2420,8 +2418,7 @@ SetTransferFiles()
 		//  (F) STF is STF_NO and transfer_input_files or transfer_output_files specified
 	char *should = "INTERNAL ERROR";
 	char *when = "INTERNAL ERROR";
-	should_transfer = STF_IF_NEEDED;
-	FileTransferOutput_t when_output = FTO_ON_EXIT;
+	FileTransferOutput_t when_output;
 	MyString err_msg;
 	
 	should = condor_param(ATTR_SHOULD_TRANSFER_FILES, 
