@@ -1076,8 +1076,7 @@ negotiationTime ()
     // Restrict number of slots available for dynamic quotas.
     double hgq_total_quota = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)numDynGroupSlots;
     if ( numDynGroupSlots && DynQuotaMachConstraint ) {
-        bool remove = param_boolean("NEGOTIATOR_STARTD_CONSTRAINT_REMOVE", false);
-        int matchedSlots = startdAds.Count(DynQuotaMachConstraint, remove);
+		int matchedSlots = startdAds.Count( DynQuotaMachConstraint );
         if ( matchedSlots ) {
             dprintf(D_ALWAYS,"GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine "
                     "count from %d to %d\n", numDynGroupSlots, matchedSlots);
@@ -3550,7 +3549,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			}
 		}
 
-		if(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft))
+		/* Check that the submitter has suffient user priority to be matched with
+		   yet another machine. HOWEVER, do NOT perform this submitter limit
+		   check if we are negotiating only for startd rank, since startd rank
+		   preemptions should be allowed regardless of user priorities. 
+	    */
+		if( (candidatePreemptState != RANK_PREEMPTION) &&
+			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
 		{
 			rejForSubmitterLimit++;
 			continue;
