@@ -21,7 +21,7 @@
 use CondorTest;
 
 $cmd      = 'job_filexfer_base-input4_van.cmd';
-$testdesc =  'Jobs run with imput when transfer_input = false - vanilla U';
+$testdesc =  'Jobs run with input when transfer_input = false - vanilla U';
 $testname = "job_filexfer_base-input4_van";
 
 # truly const variables in perl
