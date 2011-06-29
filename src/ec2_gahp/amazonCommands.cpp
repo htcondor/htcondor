@@ -166,6 +166,17 @@ AmazonRequest::AmazonRequest() { }
 
 AmazonRequest::~AmazonRequest() { }
 
+#define SET_CURL_SECURITY_OPTION( A, B, C ) { \
+    CURLcode rv##B = curl_easy_setopt( A, B, C ); \
+    if( rv##B != CURLE_OK ) { \
+        this->errorCode = "E_CURL_LIB"; \
+        this->errorMessage = "curl_easy_setopt( " #B " ) failed."; \
+        dprintf( D_ALWAYS, "curl_easy_setopt( %s ) failed (%d): '%s', failing.\n", \
+            #B, rv##B, curl_easy_strerror( rv##B ) ); \
+        return false; \
+    } \
+}
+
 bool AmazonRequest::SendRequest() {
     //
     // Every request must have the following parameters:
@@ -363,6 +374,26 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
     
+    SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYPEER, 1 );
+    SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYHOST, 2 );
+
+    // If we're doing X.509 mutual authentication.
+    if( 0 ) {
+        std::string userCertFileName = "FIXME";
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, userCertFileName.c_str() );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERTTYPE, "PEM" );
+        
+        std::string userKeyFileName = "FIXME";
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLKEY, userKeyFileName.c_str() );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLKEYTYPE, "PEM" );
+
+        // If Condor has been configured with a CA path.
+        if( 0 ) {
+            std::string caPath = "FIXME";
+            SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, caPath.c_str() );
+        }
+    }
+            
     amazon_gahp_release_big_mutex();
     rv = curl_easy_perform( curl );
     amazon_gahp_grab_big_mutex();

@@ -32,47 +32,6 @@ static std::string amazon_proxy_passwd;
 // List for all amazon commands
 static SimpleList<AmazonGahpCommand*> amazon_gahp_commands;
 
-static FILE *gahp_log_file = stderr;
-
-// This variable is defined in dprintf.c
-
-bool set_gahp_log_file(const char* logfile)
-{
-	static bool done_init = false;
-
-	Termlog = 1;
-
-	if( !done_init ) {
-		dprintf_config("");
-		set_debug_flags( "D_ALWAYS" );
-		done_init = true;
-	}
-
-	if( !logfile ) {
-		return false;
-	}
-
-	if( gahp_log_file && ( gahp_log_file != stderr ) ) {
-		fclose(gahp_log_file);
-		gahp_log_file = stderr;
-	}
-
-	FILE *fp = NULL;
-	fp = safe_fopen_wrapper(logfile, "a", 0644);
-
-	if( !fp ) {
-		fprintf(stderr, "failed to safe_fopen_wrapper %s in append mode: "
-				"safe_fopen_wrapper returns %s\n", logfile, strerror(errno));
-		return false;
-	}
-
-	gahp_log_file = fp;
-
-	//DebugLock = ;
-
-	return true;
-}
-
 void set_amazon_proxy_server(const char* url) 
 {
 	if( !url ) {
