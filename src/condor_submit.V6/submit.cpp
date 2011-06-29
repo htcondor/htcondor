@@ -2418,6 +2418,7 @@ SetTransferFiles()
 		//  (F) STF is STF_NO and transfer_input_files or transfer_output_files specified
 	char *should = "INTERNAL ERROR";
 	char *when = "INTERNAL ERROR";
+	bool default_should;
 	FileTransferOutput_t when_output;
 	MyString err_msg;
 	
@@ -2426,6 +2427,7 @@ SetTransferFiles()
 	if (!should) {
 		should = "IF_NEEDED";
 		should_transfer = STF_IF_NEEDED;
+		default_should = true;
 	} else {
 		should_transfer = getShouldTransferFilesNum(should);
 		if (should_transfer < 0) { // (A)
@@ -2439,6 +2441,7 @@ SetTransferFiles()
 			DoCleanup(0, 0, NULL);
 			exit(1);
 		}
+		default_should = false;
 	}
 
 	if (should_transfer == STF_NO &&
@@ -2500,7 +2503,19 @@ SetTransferFiles()
 		DoCleanup(0, 0, NULL);
 		exit(1);
 	}
-	
+
+		// for backward compatibility and user convenience -
+		// if the user specifies only when_to_transfer_output =
+		// ON_EXIT_OR_EVICT, which is incompatible with the default
+		// should_transfer_files of IF_NEEDED, we'll change
+		// should_transfer_files to YES for them.
+	if (default_should &&
+		when_output == FTO_ON_EXIT_OR_EVICT &&
+		should_transfer == STF_IF_NEEDED) {
+		should = "YES";
+		should_transfer = STF_YES;
+	}
+
 	if (when_output == FTO_ON_EXIT_OR_EVICT && 
 		should_transfer == STF_IF_NEEDED) { // (E)
 			// error, these are incompatible!
