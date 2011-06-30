@@ -224,8 +224,8 @@ bool AmazonRequest::SendRequest() {
     //
     std::string keyID;
     if( protocol == "x509" ) {
-        // FIXME: extract the DN from the certificate.
-        keyID = "";
+        keyID = getenv( "USER" );
+        dprintf( D_FULLDEBUG, "Using '%s' as access key ID for x.509\n", keyID.c_str() );
     } else {
         if( ! readShortFile( this->accessKeyFile, keyID ) ) {
             this->errorCode = "E_FILE_IO";
@@ -299,8 +299,12 @@ bool AmazonRequest::SendRequest() {
     // or SHA1 as the hash algorithm."
     std::string saKey;
     if( protocol == "x509" ) {
-        saKey = getenv( "USER" );
-        dprintf( D_FULLDEBUG, "Using '%s' as key material for x.509\n", saKey.c_str() );
+        // If we we ever support the UploadImage action, we'll need to
+        // extract the DN from the user's certificate here.  Otherwise,
+        // since the x.509 implementation ignores the AWSAccessKeyId
+        // and Signature, we can do whatever we want.
+        saKey = std::string( "<DN>/CN=UID:" ) + getenv( "USER" );
+        dprintf( D_FULLDEBUG, "Using '%s' as secret key for x.509\n", saKey.c_str() );
     } else {
         if( ! readShortFile( this->secretKeyFile, saKey ) ) {
             this->errorCode = "E_FILE_IO";
@@ -398,6 +402,7 @@ bool AmazonRequest::SendRequest() {
     SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYPEER, 1 );
     SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYHOST, 2 );
 
+    std::string CAPath = "/etc/grid-security/certificates";
     if( protocol == "x509" ) {
         dprintf( D_FULLDEBUG, "Configuring x.509...\n" );
 
@@ -407,9 +412,26 @@ bool AmazonRequest::SendRequest() {
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERTTYPE, "PEM" );
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, this->accessKeyFile.c_str() );
 
-        // FIXME: pull GSI_DAEMON_TRUSTED_CA_DIR or GSI_DAEMON_DIRECTORY
-        // via param()...
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, "/etc/grid-security/certificates" );
+        // Set CAPath.  The CAPath MUST remain in scope until after we
+        // call curl_easy_cleanup(), or else curl_perform() will fail with
+        // an error message claiming that there's a 'problem with the SSL
+        // CA cert', error 60.  The problem is that libcurl, contrary to
+        // the manual's assurances, doesn't strdup() strings passed to it,
+        // not anything with the certs.
+        char * gDTCD = param( "GSI_DAEMON_TRUSTED_CA_DIR" );
+        if( gDTCD != NULL ) {
+            CAPath = gDTCD;
+            free( gDTCD );
+        } else {
+            char * gDD = param( "GSI_DAEMON_DIRECTORY" );
+            if( gDD != NULL ) {
+                CAPath = gDD;
+                CAPath += "/certificates";
+                free( gDD );
+            }
+        }
+        dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
     }
             
     amazon_gahp_release_big_mutex();
