@@ -606,9 +606,17 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
             vmStartRequest.errorMessage.c_str(),
             vmStartRequest.errorCode.c_str() );
     } else {
-        StringList resultList;
-        resultList.append( vmStartRequest.instanceID.c_str() );
-        result_string = create_success_result( requestID, & resultList );
+        if( vmStartRequest.instanceID.empty() ) {
+            dprintf( D_ALWAYS, "Got result from endpoint that did not include an instance ID, failing.  Response follows.\n" );
+            dprintf( D_ALWAYS, "-- RESPONSE BEGINS --\n" );
+            dprintf( D_ALWAYS, vmStartRequest.resultString.c_str() );
+            dprintf( D_ALWAYS, "-- RESPONSE ENDS --\n" );
+            result_string = create_failure_result( requestID, "Could not find instance ID in response from server.  Check the EC2 GAHP log for details.", "E_NO_INSTANCE_ID" );
+        } else {
+            StringList resultList;
+            resultList.append( vmStartRequest.instanceID.c_str() );
+            result_string = create_success_result( requestID, & resultList );
+        }
     }
 
     return true;
