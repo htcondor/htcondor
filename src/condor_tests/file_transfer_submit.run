@@ -26,7 +26,7 @@ run_test ()
     echo "---"
     echo "should=$should, when=$when, expect=$expect, out=$out, in=$in"
     (
-    echo "cmd=/bin/true"
+    echo "cmd=/bin/echo"
     if [ ! -z "$should" ]; then
 	echo "should_transfer_files=$should"
     fi
