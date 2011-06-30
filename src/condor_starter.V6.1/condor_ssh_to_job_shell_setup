@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # set up the environment that was saved by sshd_setup
 if [ "$1" != "" ]; then
