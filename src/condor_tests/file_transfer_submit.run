@@ -27,6 +27,7 @@ run_test ()
     echo "should=$should, when=$when, expect=$expect, out=$out, in=$in"
     (
     echo "cmd=/bin/echo"
+    echo "periodic_remove = TRUE"
     if [ ! -z "$should" ]; then
 	echo "should_transfer_files=$should"
     fi
