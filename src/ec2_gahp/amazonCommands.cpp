@@ -192,18 +192,49 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
 
+    // We need to know right away if we're doing FermiLab-style authentication.
+    //
+    // While we're at it, extract "the value of the Host header in lowercase"
+    // and the "HTTP Request URI" from the service URL.  The service URL must
+    // be of the form '[http[s]|x509]://hostname[:port][/path]*'.
+    Regex r; int errCode = 0; const char * errString = 0;
+    bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
+    assert( patternOK );
+    ExtArray<MyString> groups(5);
+    bool matchFound = r.match( this->serviceURL.c_str(), & groups );
+    if( (! matchFound) || (groups[1] != "http" && groups[1] != "https" && groups[1] != "x509" ) ) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Failed to parse service URL.";
+        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
+        return false;
+    }
+    std::string protocol = groups[1];
+    std::string hostAndPath = groups[2];
+    std::string valueOfHostHeaderInLowercase = groups[3];
+    std::transform( valueOfHostHeaderInLowercase.begin(),
+                    valueOfHostHeaderInLowercase.end(),
+                    valueOfHostHeaderInLowercase.begin(),
+                    & tolower );
+    std::string httpRequestURI = groups[4];
+    if( httpRequestURI.empty() ) { httpRequestURI = "/"; }
+
     //
     // The AWSAccessKeyId is just the contents of this->accessKeyFile,
     // and are (currently) 20 characters long.
     //
     std::string keyID;
-    if( ! readShortFile( this->accessKeyFile, keyID ) ) {
-        this->errorCode = "E_FILE_IO";
-        this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
-        dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
-        return false;
-    }
-    if( keyID[ keyID.length() - 1 ] == '\n' ) { keyID.erase( keyID.length() - 1 ); }
+    if( protocol == "x509" ) {
+        // FIXME: extract the DN from the certificate.
+        keyID = "";
+    } else {
+        if( ! readShortFile( this->accessKeyFile, keyID ) ) {
+            this->errorCode = "E_FILE_IO";
+            this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
+            dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
+            return false;
+        }
+        if( keyID[ keyID.length() - 1 ] == '\n' ) { keyID.erase( keyID.length() - 1 ); }
+    }        
     query_parameters.insert( std::make_pair( "AWSAccessKeyId", keyID ) );
 
     //
@@ -256,27 +287,7 @@ bool AmazonRequest::SendRequest() {
     // We'll always have a superflous trailing ampersand.
     canonicalizedQueryString.erase( canonicalizedQueryString.end() - 1 );
     
-    // Step 2: Create the string to sign.  We extract "the value of the Host
-    // header in lowercase" and the "HTTP Request URI" from the service URL.
-    // The service URL must be of the form 'http[s]://hostname[:port][/path]*'.
-    Regex r; int errCode = 0; const char * errString = 0;
-    bool patternOK = r.compile( "https?://([^/]+)(/.*)?", & errString, & errCode );
-    assert( patternOK );
-    ExtArray<MyString> groups(4);
-    bool matchFound = r.match( this->serviceURL.c_str(), & groups );
-    if( ! matchFound ) {
-        this->errorCode = "E_INVALID_SERVICE_URL";
-        this->errorMessage = "Failed to parse service URL.";
-        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
-        return false;
-    }
-    std::string valueOfHostHeaderInLowercase = groups[1];
-    std::transform( valueOfHostHeaderInLowercase.begin(),
-                    valueOfHostHeaderInLowercase.end(),
-                    valueOfHostHeaderInLowercase.begin(),
-                    & tolower );
-    std::string httpRequestURI = groups[2];
-    if( httpRequestURI.empty() ) { httpRequestURI = "/"; }
+    // Step 2: Create the string to sign.
     std::string stringToSign = "GET\n"
                              + valueOfHostHeaderInLowercase + "\n"
                              + httpRequestURI + "\n"
@@ -287,15 +298,20 @@ bool AmazonRequest::SendRequest() {
     // you just created, your Secret Access Key as the key, and SHA256
     // or SHA1 as the hash algorithm."
     std::string saKey;
-    if( ! readShortFile( this->secretKeyFile, saKey ) ) {
-        this->errorCode = "E_FILE_IO";
-        this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
-        dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
-        return false;
+    if( protocol == "x509" ) {
+        saKey = getenv( "USER" );
+        dprintf( D_FULLDEBUG, "Using '%s' as key material for x.509\n", saKey.c_str() );
+    } else {
+        if( ! readShortFile( this->secretKeyFile, saKey ) ) {
+            this->errorCode = "E_FILE_IO";
+            this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
+            dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
+            return false;
+        }
+        // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
+        if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
+        // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
     }
-    // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
-    if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
-    // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
     
     unsigned int mdLength = 0;
     unsigned char messageDigest[EVP_MAX_MD_SIZE];
@@ -316,7 +332,12 @@ bool AmazonRequest::SendRequest() {
     
     // Generate the final URI.
     canonicalizedQueryString += "&Signature=" + amazonURLEncode( signatureInBase64 );
-    std::string finalURI = this->serviceURL + "?" + canonicalizedQueryString;
+    std::string finalURI;
+    if( protocol == "x509" ) {
+        finalURI = "https://" + hostAndPath + "?" + canonicalizedQueryString;
+    } else {
+        finalURI = this->serviceURL + "?" + canonicalizedQueryString;
+    }
     dprintf( D_FULLDEBUG, "Request URI is '%s'\n", finalURI.c_str() );
     
     // curl_global_init() is not thread-safe.  However, it's safe to call
@@ -377,21 +398,18 @@ bool AmazonRequest::SendRequest() {
     SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYPEER, 1 );
     SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYHOST, 2 );
 
-    // If we're doing X.509 mutual authentication.
-    if( 0 ) {
-        std::string userCertFileName = "FIXME";
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, userCertFileName.c_str() );
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERTTYPE, "PEM" );
-        
-        std::string userKeyFileName = "FIXME";
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLKEY, userKeyFileName.c_str() );
-        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLKEYTYPE, "PEM" );
+    if( protocol == "x509" ) {
+        dprintf( D_FULLDEBUG, "Configuring x.509...\n" );
 
-        // If Condor has been configured with a CA path.
-        if( 0 ) {
-            std::string caPath = "FIXME";
-            SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, caPath.c_str() );
-        }
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLKEYTYPE, "PEM" );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLKEY, this->secretKeyFile.c_str() );
+
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERTTYPE, "PEM" );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, this->accessKeyFile.c_str() );
+
+        // FIXME: pull GSI_DAEMON_TRUSTED_CA_DIR or GSI_DAEMON_DIRECTORY
+        // via param()...
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, "/etc/grid-security/certificates" );
     }
             
     amazon_gahp_release_big_mutex();
@@ -1382,4 +1400,3 @@ bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &resu
     return true;
 	
 }
-

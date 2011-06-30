@@ -239,7 +239,6 @@ main( int argc, char ** const argv )
 				if( my_optarg && *my_optarg ) {
 					set_debug_flags(my_optarg);
 				}
-
 				break;
 			case 'w':
 				// Minimum number of worker pools

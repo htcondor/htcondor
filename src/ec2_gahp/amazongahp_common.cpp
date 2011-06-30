@@ -301,10 +301,13 @@ verify_request_id (const char * s) {
 
 int
 verify_string_name(const char * s) {
-	if( !( (s != NULL) && (strlen(s) > 0) ) ) {
-		dprintf (D_ALWAYS, "NULL string\n");
-		return false;
-	}
+    if( s == NULL ) {
+        dprintf( D_ALWAYS, "verify_string_name() failed: string is NULL.\n" );
+        return false;
+    }
+    if( strlen(s) <= 0 ) {
+        dprintf( D_ALWAYS, "verify_string_name() failed: string is zero-length.\n" );
+    }        
     return true;
 }
 
