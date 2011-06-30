@@ -2419,6 +2419,7 @@ SetTransferFiles()
 	char *should = "INTERNAL ERROR";
 	char *when = "INTERNAL ERROR";
 	bool default_should;
+	bool default_when;
 	FileTransferOutput_t when_output;
 	MyString err_msg;
 	
@@ -2471,6 +2472,7 @@ SetTransferFiles()
 	if (!when) {
 		when = "ON_EXIT";
 		when_output = FTO_ON_EXIT;
+		default_when = true;
 	} else {
 		when_output = getFileTransferOutputNum(when);
 		if (when_output < 0) { // (B)
@@ -2484,6 +2486,18 @@ SetTransferFiles()
 			DoCleanup(0, 0, NULL);
 			exit(1);
 		}
+		default_when = false;
+	}
+
+		// for backward compatibility and user convenience -
+		// if the user specifies should_transfer_files = NO and has
+		// not specified when_to_transfer_output, we'll change
+		// when_to_transfer_output to NEVER and avoid an unhelpful
+		// error message later.
+	if (!default_should && default_when &&
+		should_transfer == STF_NO) {
+		when = "NEVER";
+		when_output = FTO_NONE;
 	}
 
 	if ((should_transfer == STF_NO && when_output != FTO_NONE) || // (C)
