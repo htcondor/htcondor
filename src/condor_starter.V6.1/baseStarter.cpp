@@ -2836,7 +2836,7 @@ CStarter::WriteAdFiles()
 	if (ad != NULL)
 	{
 		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
-		fp = safe_fopen_wrapper(filename.Value(), "w");
+		fp = safe_fopen_wrapper_follow(filename.Value(), "w");
 		if (!fp)
 		{
 			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write job ad: "
@@ -2863,7 +2863,7 @@ CStarter::WriteAdFiles()
 	if (ad != NULL)
 	{
 		filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, MACHINE_AD_FILENAME);
-		fp = safe_fopen_wrapper(filename.Value(), "w");
+		fp = safe_fopen_wrapper_follow(filename.Value(), "w");
 		if (!fp)
 		{
 			dprintf(D_ALWAYS, "Failed to open \"%s\" for to write machine "

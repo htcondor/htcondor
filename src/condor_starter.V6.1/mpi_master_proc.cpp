@@ -288,7 +288,7 @@ MPIMasterProc::checkPortFile( void )
 		EXCEPT( "checkPortFile(): no port_file defined!" );
 	}
 
-	fp = safe_fopen_wrapper( port_file, "r" );
+	fp = safe_fopen_wrapper_follow( port_file, "r" );
 	if( fp ) {
 			// check if there's anything there...
 		rval = fgets( buf, 100, fp );

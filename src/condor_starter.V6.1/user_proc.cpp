@@ -124,7 +124,7 @@ UserProc::JobReaper(int pid, int status)
 		// and EXCEPT, just as is done when an executable is unable
 		// to be run.  Ideally, both failure cases would propagate
 		// into the job ad
-		fp = safe_fopen_wrapper(filename.Value(), "r");
+		fp = safe_fopen_wrapper_follow(filename.Value(), "r");
 		if (!fp) {
 			dprintf(D_ALWAYS, "Unable to open \"%s\" for reading: "
 					"%s (errno %d)\n", filename.Value(),

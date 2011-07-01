@@ -1033,7 +1033,7 @@ main( int argc, char *argv[] )
 		// no file specified, read from stdin
 		fp = stdin;
 	} else {
-		if( (fp=safe_fopen_wrapper(cmd_file,"r")) == NULL ) {
+		if( (fp=safe_fopen_wrapper_follow(cmd_file,"r")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open command file (%s)\n",
 						strerror(errno));
 			exit(1);
@@ -1056,7 +1056,7 @@ main( int argc, char *argv[] )
 
 	// open the file we are to dump the ClassAds to...
 	if ( DumpClassAdToFile ) {
-		if( (DumpFile=safe_fopen_wrapper(DumpFileName.Value(),"w")) == NULL ) {
+		if( (DumpFile=safe_fopen_wrapper_follow(DumpFileName.Value(),"w")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open file to dump ClassAds into (%s)\n",
 				strerror(errno));
 			exit(1);
@@ -4675,7 +4675,7 @@ SetUserLog()
 
 			// check that the log is a valid path
 			if ( !DisableFileChecks ) {
-				FILE* test = safe_fopen_wrapper(ulog.Value(), "a+", 0664);
+				FILE* test = safe_fopen_wrapper_follow(ulog.Value(), "a+", 0664);
 				if (!test) {
 					fprintf(stderr,
 						"\nERROR: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
@@ -5014,7 +5014,7 @@ SetGridParams()
 	if ( (tmp = condor_param( AmazonPublicKey, ATTR_AMAZON_PUBLIC_KEY )) ) {
 		// check public key file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5033,7 +5033,7 @@ SetGridParams()
 	if ( (tmp = condor_param( AmazonPrivateKey, ATTR_AMAZON_PRIVATE_KEY )) ) {
 		// check private key file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5092,7 +5092,7 @@ SetGridParams()
 	if( (tmp = condor_param( AmazonUserDataFile, ATTR_AMAZON_USER_DATA_FILE )) ) {
 		// check user data file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
 								 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5112,7 +5112,7 @@ SetGridParams()
 	if ( (tmp = condor_param( EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID )) ) {
 		// check public key file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5131,7 +5131,7 @@ SetGridParams()
 	if ( (tmp = condor_param( EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY )) ) {
 		// check private key file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5197,7 +5197,7 @@ SetGridParams()
 	if( (tmp = condor_param( EC2UserDataFile, ATTR_EC2_USER_DATA_FILE )) ) {
 		// check user data file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
 								 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5227,7 +5227,7 @@ SetGridParams()
 	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
 		// check private key file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				exit(1);

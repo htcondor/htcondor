@@ -994,7 +994,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 		RealmMap = NULL;
     }
 
-    if ( !(fd = safe_fopen_wrapper(  filename, "r" ))  ) {
+    if ( !(fd = safe_fopen_wrapper_follow(  filename, "r" ))  ) {
         dprintf( D_SECURITY, "unable to open map file %s, errno %d\n", 
                  filename, errno );
 		free(filename);

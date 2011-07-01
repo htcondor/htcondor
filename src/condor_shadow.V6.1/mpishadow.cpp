@@ -356,7 +356,7 @@ MPIShadow::startMaster()
     char pgfilename[128];
     sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), 
 			 getProc() );
-    if( (pg=safe_fopen_wrapper( pgfilename, "w" )) == NULL ) {
+    if( (pg=safe_fopen_wrapper_follow( pgfilename, "w" )) == NULL ) {
         dprintf( D_ALWAYS, "Failure to open %s for writing, errno %d\n", 
                  pgfilename, errno );
         shutDown( JOB_NOT_STARTED );

@@ -387,7 +387,7 @@ drop_addr_file()
 	if( addrFile ) {
 		MyString newAddrFile;
 		newAddrFile.sprintf("%s.new",addrFile);
-		if( (ADDR_FILE = safe_fopen_wrapper(newAddrFile.Value(), "w")) ) {
+		if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
 			// Always prefer the local, private address if possible.
 			const char* addr = daemonCore->privateNetworkIpAddr();
 			if (!addr) {
@@ -422,7 +422,7 @@ drop_pid_file()
 		return;
 	}
 
-	if( (PID_FILE = safe_fopen_wrapper(pidFile, "w")) ) {
+	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "w")) ) {
 		fprintf( PID_FILE, "%lu\n", 
 				 (unsigned long)daemonCore->getpid() ); 
 		fclose( PID_FILE );
@@ -458,7 +458,7 @@ do_kill()
 			pidFile = tmp;
 		}
 	}
-	if( (PID_FILE = safe_fopen_wrapper(pidFile, "r")) ) {
+	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "r")) ) {
 		fscanf( PID_FILE, "%lu", &tmp_ul_int ); 
 		pid = (pid_t)tmp_ul_int;
 		fclose( PID_FILE );

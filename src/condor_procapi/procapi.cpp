@@ -500,7 +500,7 @@ ProcAPI::getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status )
 		procRaw.pssize = 0;
 		procRaw.pssize_available = false;
 
-		if( (fp = safe_fopen_wrapper(path, "r")) == NULL ) {
+		if( (fp = safe_fopen_wrapper_follow(path, "r")) == NULL ) {
 			if( errno == ENOENT ) {
 				// /proc/pid doesn't exist
 				// This system may simply not support smaps, so
@@ -627,7 +627,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 		// set the sample time
 		procRaw.sample_time = secsSinceEpoch();
 
-		if( (fp = safe_fopen_wrapper(path, "r")) == NULL ) {
+		if( (fp = safe_fopen_wrapper_follow(path, "r")) == NULL ) {
 			if( errno == ENOENT ) {
 				// /proc/pid doesn't exist
 				status = PROCAPI_NOPID;
@@ -866,7 +866,7 @@ ProcAPI::checkBootTime(long now)
 		unsigned long uptime_boottime = 0;
 
 		// get uptime_boottime
-		if( (fp = safe_fopen_wrapper("/proc/uptime","r")) ) {
+		if( (fp = safe_fopen_wrapper_follow("/proc/uptime","r")) ) {
 			double uptime=0;
 			double dummy=0;
 			fgets( s, 256, fp );
@@ -879,7 +879,7 @@ ProcAPI::checkBootTime(long now)
 		}
 
 		// get stat_boottime
-		if( (fp = safe_fopen_wrapper("/proc/stat", "r")) ) {
+		if( (fp = safe_fopen_wrapper_follow("/proc/stat", "r")) ) {
 			fgets( s, 256, fp );
 			while( strstr(s, "btime") == NULL ) {
 				fgets( s, 256, fp );
@@ -1488,7 +1488,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	char path[MAXPATHLEN];
 	struct procstat prs;
 	sprintf(path,"/proc/%d/status",pid);
-	if( (fp = safe_fopen_wrapper( path, "r" )) == NULL ) {
+	if( (fp = safe_fopen_wrapper_follow( path, "r" )) == NULL ) {
 		dprintf( D_FULLDEBUG, "ProcAPI: /proc/%d/status not found!\n", pid);
 		free(kp);
 		return PROCAPI_FAILURE;
@@ -3163,7 +3163,7 @@ int
 ProcAPI::generateConfirmTime(long& confirm_time, int& status){
 
 		// open the uptime file
-	FILE* fp = safe_fopen_wrapper("/proc/uptime", "r");
+	FILE* fp = safe_fopen_wrapper_follow("/proc/uptime", "r");
 	if( fp == NULL ) {
 		dprintf(D_ALWAYS, "Failed to open /proc/uptime: %s\n", 
 				strerror(errno)

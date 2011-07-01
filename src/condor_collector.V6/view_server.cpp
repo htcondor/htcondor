@@ -383,7 +383,7 @@ int ViewServer::SendListReply(Stream* sock,const MyString& FileName, int FromDat
 	}
 
 	// dprintf(D_ALWAYS,"Filename=%s\n",(const char*)FileName);
-	FILE* fp=safe_fopen_wrapper(FileName.Value(),"r");
+	FILE* fp=safe_fopen_wrapper_follow(FileName.Value(),"r");
 	if (!fp) return -1;
 
 		//find the offset to search at
@@ -472,7 +472,7 @@ int ViewServer::SendDataReply(Stream* sock,const MyString& FileName, int FromDat
 	}
 
 	OldTime = 0;
-	FILE* fp=safe_fopen_wrapper(FileName.Value(),"r");
+	FILE* fp=safe_fopen_wrapper_follow(FileName.Value(),"r");
 	if (!fp) return -1;
 
 		//find the offset to search at
@@ -636,7 +636,7 @@ int ViewServer::FindFileStartTime(const char *Name)
 {
 	char Line[200];
 	int T=-1;
-	FILE* fp=safe_fopen_wrapper(Name,"r");
+	FILE* fp=safe_fopen_wrapper_follow(Name,"r");
 	if (fp) {
 		fgets(Line,sizeof(Line),fp);
 		T=ReadTime(Line);
@@ -733,7 +733,7 @@ void ViewServer::WriteHistory()
 			if (DataSet[i][j].NumSamples<DataSet[i][j].MaxSamples) continue;
 			DataSet[i][j].NumSamples=0;
 			dprintf(D_FULLDEBUG,"Openning file %s\n",DataSet[i][j].NewFileName.Value());
-			DataFile=safe_fopen_wrapper(DataSet[i][j].NewFileName.Value(),"a");
+			DataFile=safe_fopen_wrapper_follow(DataSet[i][j].NewFileName.Value(),"a");
 			if (!DataFile) {
 				dprintf(D_ALWAYS,"Could not open data file %s for appending!!! errno=%d\n",DataSet[i][j].NewFileName.Value(),errno);
 				EXCEPT("Could not open data file appending!!!");

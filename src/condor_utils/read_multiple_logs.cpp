@@ -311,10 +311,10 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 	dprintf( D_FULLDEBUG, "MultiLogFiles::readFileToString(%s)\n",
 				strFilename.Value() );
 
-	FILE *pFile = safe_fopen_wrapper(strFilename.Value(), "r");
+	FILE *pFile = safe_fopen_wrapper_follow(strFilename.Value(), "r");
 	if (!pFile) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
-				"safe_fopen_wrapper(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				"safe_fopen_wrapper_follow(%s) failed with errno %d (%s)\n", strFilename.Value(),
 				errno, strerror(errno) );
 		return "";
 	}

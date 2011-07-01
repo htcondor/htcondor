@@ -246,7 +246,7 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 		if ( (mask_flags|flags) & D_FDS ) {
 			//Regardless of whether we're keeping the log file open our not, we open
 			//the NULL file for the FD number.
-			if( (local_fp=safe_fopen_wrapper(NULL_FILE,"r",0644)) == NULL )
+			if( (local_fp=safe_fopen_wrapper_follow(NULL_FILE,"r",0644)) == NULL )
 			{
 				local_fp = fp;
 				fopen_rc = 0;
@@ -1057,7 +1057,7 @@ _condor_fd_panic( int line, const char* file )
 		(void)close( i );
 	}
 	if( DebugFile[0] ) {
-		DebugFPs[0] = safe_fopen_wrapper(DebugFile[0], "a", 0644);
+		DebugFPs[0] = safe_fopen_wrapper_follow(DebugFile[0], "a", 0644);
 	}
 
 	if( DebugFPs[0] == NULL ) {
@@ -1124,7 +1124,7 @@ open_debug_file(int debug_level, const char flags[])
 	   since PRIV_CONDOR changes euid now. */
 
 	errno = 0;
-	if( (fp=safe_fopen_wrapper(DebugFile[debug_level],flags,0644)) == NULL ) {
+	if( (fp=safe_fopen_wrapper_follow(DebugFile[debug_level],flags,0644)) == NULL ) {
 		save_errno = errno;
 #if !defined(WIN32)
 		if( errno == EMFILE ) {
@@ -1203,7 +1203,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		if( tmp ) {
 			snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
 					  tmp, get_mySubSystemName() );
-			fail_fp = safe_fopen_wrapper( buf, "w",0644 );
+			fail_fp = safe_fopen_wrapper_follow( buf, "w",0644 );
 			if( fail_fp ) {
 				fprintf( fail_fp, "%s", header );
 				fprintf( fail_fp, "%s", msg );

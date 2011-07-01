@@ -116,7 +116,7 @@ char* getStoredCredential(const char *username, const char *domain)
 
 	// open the pool password file with root priv
 	priv_state priv = set_root_priv();
-	FILE* fp = safe_fopen_wrapper(filename, "r");
+	FILE* fp = safe_fopen_wrapper_follow(filename, "r");
 	set_priv(priv);
 	if (fp == NULL) {
 		dprintf(D_FULLDEBUG,

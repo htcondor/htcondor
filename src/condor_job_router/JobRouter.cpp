@@ -274,7 +274,7 @@ JobRouter::config() {
 	}
 
 	if( routing_file.size() ) {
-		FILE *fp = safe_fopen_wrapper(routing_file.c_str(),"r");
+		FILE *fp = safe_fopen_wrapper_follow(routing_file.c_str(),"r");
 		if( !fp ) {
 			EXCEPT("Failed to open '%s' file specified for %s.",
 				   routing_file.c_str(), PARAM_JOB_ROUTER_ENTRIES_FILE);

@@ -300,7 +300,7 @@ static void setup() {
 	fd = cut_assert_gez( safe_open_wrapper_follow("empty_file", O_RDWR | O_CREAT) );
 
 	// Add some text
-	FILE* file_1 = safe_fopen_wrapper("full_file", "w+");
+	FILE* file_1 = safe_fopen_wrapper_follow("full_file", "w+");
 	cut_assert_not_null( file_1 );
 	cut_assert_gz( fprintf(file_1, "This is some text!") );
 	cut_assert_z( chdir("..") );

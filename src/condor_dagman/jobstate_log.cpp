@@ -114,7 +114,7 @@ JobstateLog::InitializeRecovery()
 		// tested individually.
 		//
 
-	FILE *infile = safe_fopen_wrapper( _jobstateLogFile, "r" );
+	FILE *infile = safe_fopen_wrapper_follow( _jobstateLogFile, "r" );
 	if ( !infile ) {
 			// This is a fatal error, because by the time we get here,
 			// we should, at the very least, have written the
@@ -196,7 +196,7 @@ JobstateLog::InitializeRescue()
 		return;
 	}
 
-	FILE *infile = safe_fopen_wrapper( _jobstateLogFile, "r" );
+	FILE *infile = safe_fopen_wrapper_follow( _jobstateLogFile, "r" );
 	if ( !infile ) {
 			// This is a fatal error, because by the time we get here,
 			// we should, at the very least, have written the
@@ -467,7 +467,7 @@ JobstateLog::Write( const time_t *eventTimeP, const MyString &info )
 	}
 
 	if ( !_outfile ) {
-		_outfile = safe_fopen_wrapper( _jobstateLogFile, "a" );
+		_outfile = safe_fopen_wrapper_follow( _jobstateLogFile, "a" );
 		if ( !_outfile ) {
        		debug_printf( DEBUG_QUIET,
 						"Could not open jobstate log file %s for writing.\n",

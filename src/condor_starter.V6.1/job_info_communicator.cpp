@@ -381,7 +381,7 @@ JobInfoCommunicator::writeOutputAdFile( ClassAd* ad )
 		dprintf( D_ALWAYS, "Will write job output ClassAd to STDOUT\n" );
 		fp = stdout;
 	} else {
-		fp = safe_fopen_wrapper( job_output_ad_file, "a" );
+		fp = safe_fopen_wrapper_follow( job_output_ad_file, "a" );
 		if( ! fp ) {
 			dprintf( D_ALWAYS, "Failed to open job output ClassAd "
 					 "\"%s\": %s (errno %d)\n", job_output_ad_file, 
