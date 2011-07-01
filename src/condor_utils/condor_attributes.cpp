@@ -726,6 +726,9 @@ const char * const ATTR_UNCOMMITTED_SUSPENSION_TIME= "UncommittedSuspensionTime"
 const char * const ATTR_ON_EXIT_BY_SIGNAL        = "ExitBySignal";
 const char * const ATTR_ON_EXIT_CODE		     = "ExitCode";
 const char * const ATTR_ON_EXIT_HOLD_CHECK		 = "OnExitHold";
+const char * const ATTR_ON_EXIT_HOLD_REASON		 = "OnExitHoldReason";
+const char * const ATTR_ON_EXIT_HOLD_SUBCODE	 = "OnExitHoldSubCode";
+const char * const ATTR_ON_EXIT_REMOVE_REASON	 = "OnExitRemoveReason";
 const char * const ATTR_ON_EXIT_REMOVE_CHECK	 = "OnExitRemove";
 const char * const ATTR_ON_EXIT_SIGNAL		     = "ExitSignal";
 const char * const ATTR_POST_ON_EXIT_BY_SIGNAL	 = "PostExitBySignal";
@@ -735,6 +738,10 @@ const char * const ATTR_POST_EXIT_REASON		 = "PostExitReason";
 const char * const ATTR_PERIODIC_HOLD_CHECK		 = "PeriodicHold";
 const char * const ATTR_PERIODIC_RELEASE_CHECK	 = "PeriodicRelease";
 const char * const ATTR_PERIODIC_REMOVE_CHECK	 = "PeriodicRemove";
+const char * const ATTR_PERIODIC_HOLD_REASON     = "PeriodicHoldReason";
+const char * const ATTR_PERIODIC_HOLD_SUBCODE     = "PeriodicHoldSubCode";
+const char * const ATTR_PERIODIC_RELEASE_REASON     = "PeriodicReleaseReason";
+const char * const ATTR_PERIODIC_REMOVE_REASON     = "PeriodicRemoveReason";
 const char * const ATTR_RELEASE_CLAIM			 = "ReleaseClaim";
 const char * const ATTR_TIMER_REMOVE_CHECK		 = "TimerRemove";
 const char * const ATTR_TIMER_REMOVE_CHECK_SENT	 = "TimerRemoveSent";
@@ -909,6 +916,11 @@ const char * const ATTR_EC2_REMOTE_VM_NAME = "EC2RemoteVirtualMachineName";
 const char * const ATTR_EC2_INSTANCE_TYPE = "EC2InstanceType";
 const char * const ATTR_EC2_INSTANCE_NAME = "EC2InstanceName";
 const char * const ATTR_EC2_ELASTIC_IP = "EC2ElasticIp";
+const char * const ATTR_EC2_EBS_VOLUMES = "EC2ElasticBlockStorageVolumes";
+const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailbityZone";
+const char * const ATTR_EC2_VPC_SUBNET = "EC2VpcSubnet";
+const char * const ATTR_EC2_VPC_IP = "EC2VcpIp";
+
 //************* End of changes for EC2 Jobs *****************//
 
 //************* Added for Lease Manager *******************//

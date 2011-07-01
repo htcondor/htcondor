@@ -321,9 +321,10 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// if we don't have room for DAGParentNodeNames, leave it unset
 	if( cmdLineSize + reserveNeeded + DAGParentNodeNamesLen > maxCmdLine ) {
-		debug_printf( DEBUG_NORMAL, "WARNING: node %s has too many parents "
+		debug_printf( DEBUG_NORMAL, "Warning: node %s has too many parents "
 					  "to list in its classad; leaving its DAGParentNodeNames "
 					  "attribute undefined\n", DAGNodeName );
+		check_warning_strictness( DAG_STRICT_3 );
 	} else {
 		args.AppendArgsFromArgList( parentNameArgs );
 	}

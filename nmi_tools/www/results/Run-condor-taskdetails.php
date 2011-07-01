@@ -61,6 +61,7 @@ SELECT
   convert_tz(Task.finish, 'GMT', 'US/Central') as finish,
   timediff(Task.finish, Task.start) as duration,
   Task.result,
+  Task.host as taskhost,
   Run.host,
   Run.gid,
   Run.runid,
@@ -168,6 +169,7 @@ while( $myrow = mysql_fetch_array($result) ) {
     #echo "<tr><td>Run ID:</td><td><a href=\"http://$hostname/nmi/?page=results/runDetails&runid=".$myrow["runid"] 
   echo "<tr><td>Run ID:</td><td><a href=\"./Task-search.php?runid=".$myrow["runid"]."&Submit=Search+by+RunID" 
     ."\">".$myrow["runid"]."</a></td></tr>";
+  echo "<tr><td>Hostname:</td><td>" . $myrow["taskhost"] . "</td></tr>";
   echo "<tr><td>GID:</td><td>".$myrow["gid"] ."</td></tr>";
   echo "<tr><td>Task ID:</td><td>".$myrow["task_id"] ."</td></tr>";
   echo "<tr><td>Start:</td><td>".$myrow["start"] ."</td></tr>";

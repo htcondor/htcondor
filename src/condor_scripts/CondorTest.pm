@@ -2350,26 +2350,18 @@ sub CountRunningTests
 	return($count);
 }
 
-sub AddRunningTest
-{
-	my $test = shift;
-	my $runningfile = FindControlFile();
-	my $retRF;
-	my $tmpfile;
-	my $line = "";
-	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
-	runcmd("touch $runningfile/$test");
+sub AddRunningTest {
+    my $test = shift;
+    my $runningfile = FindControlFile();
+    debug( "Adding <$test> to running tests\n",$debuglevel);
+    runcmd("touch $runningfile/$test");
 }
 
-sub RemoveRunningTest
-{
-	my $test = shift;
-	my $runningfile = FindControlFile();
-	my $retRF;
-	my $tmpfile;
-	my $line = "";
-	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
-	runcmd("rm -f $runningfile/$test");
+sub RemoveRunningTest {
+    my $test = shift;
+    my $runningfile = FindControlFile();
+    debug( "Removing <$test> from running tests\n",$debuglevel);
+    unlink("$runningfile/$test");
 }
 
 sub IsThisWindows

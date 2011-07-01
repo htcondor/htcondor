@@ -23,6 +23,7 @@
 #include "condor_mkstemp.h"
 #include "startd.h"
 #include "vm_common.h"
+#include "ipv6_hostname.h"
 
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
@@ -1439,12 +1440,12 @@ accept_request_claim( Resource* rip )
 	}
 
 		// Figure out the hostname of our client.
-	if( ! (tmp = sin_to_hostname(sock->peer_addr(), NULL)) ) {
-		char *sinful = sin_to_string(sock->peer_addr());
-		char *ip = string_to_ipstr(sinful);
+	if(sock->peer_addr().is_valid()) {
+		MyString hostname_str = get_hostname(sock->peer_addr());
+		const char* hostname = hostname_str.Value();
 		rip->dprintf( D_FULLDEBUG,
-					  "Can't find hostname of client machine %s\n", ip );
-		rip->r_cur->client()->sethost( ip );
+					  "Can't find hostname of client machine %s\n", hostname );
+		rip->r_cur->client()->sethost(hostname);
 	} else {
 		client_host = strdup( tmp );
 			// Try to make sure we've got a fully-qualified hostname.
@@ -1516,13 +1517,13 @@ activate_claim( Resource* rip, Stream* stream )
 #ifndef WIN32
 	int sock_1, sock_2;
 	int fd_1, fd_2;
-	struct sockaddr_in frm;
+	struct sockaddr_storage frm;
 	int len = sizeof frm;	
 	StartdRec stRec;
 #endif
 	int starter = MAX_STARTERS;
 	Sock* sock = (Sock*)stream;
-	char* shadow_addr = strdup( sin_to_string( sock->peer_addr() ));
+	char* shadow_addr = strdup(sock->peer_addr().to_ip_string().Value());
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );

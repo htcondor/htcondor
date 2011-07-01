@@ -162,6 +162,8 @@ extern "C" {
 	int  set_runtime_config(char *admin, char *config);
 	int is_valid_param_name(const char *name);
 	char * parse_param_name_from_config(const char *config);
+	// this function allows tests to pretend that a param was set to a given value.	
+    void  param_insert(const char * name, const char * value);
 	/** Expand parameter references of the form "left$(middle)right".  
 	
 	This is deceptively simple, but does handle multiple and or nested
@@ -321,7 +323,7 @@ BEGIN_C_DECLS
 	int write_config_file( const char* pathname );
 	// Helper function, of form to iterate over the hash table of parameter
 	// information.  Returns 0 to continue, -1 to stop (i.e. on an error).
-	int write_config_variable(param_info_t* value, void* file_desc);
+	int write_config_variable(const param_info_t* value, void* file_desc);
 
 /* This function initialize GSI (maybe other) authentication related
    stuff Daemons that should use the condor daemon credentials should

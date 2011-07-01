@@ -161,7 +161,11 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	m_user_data_file = NULL;
 	m_group_names = NULL;
 	m_instance_type = NULL;
+	m_availability_zone = NULL;
 	m_elastic_ip = NULL;
+	m_ebs_volumes = NULL;
+	m_vpc_subnet = NULL;
+	m_vpc_ip = NULL;
 	
 	// check the public_key_file
 	buff[0] = '\0';
@@ -187,7 +191,27 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
     buff[0] = '\0';
     jobAd->LookupString( ATTR_EC2_ELASTIC_IP, buff );
     m_elastic_ip = strdup(buff);
-
+	
+	buff[0] = '\0';
+    if ( jobAd->LookupString( ATTR_EC2_EBS_VOLUMES, buff ) )
+	{
+		m_ebs_volumes = new StringList (buff, ",");
+	}
+	
+	// lookup the elastic IP
+    buff[0] = '\0';
+    jobAd->LookupString( ATTR_EC2_AVAILABILITY_ZONE, buff );
+    m_availability_zone = strdup(buff);
+	
+	buff[0] = '\0';
+    jobAd->LookupString( ATTR_EC2_VPC_SUBNET, buff );
+    m_vpc_subnet = strdup(buff);
+	
+	buff[0] = '\0';
+    jobAd->LookupString( ATTR_EC2_VPC_IP, buff );
+    m_vpc_ip = strdup(buff);
+	
+	
 		// XXX: Buffer Overflow if the user_data is > 16K? This code
 		// should be unprivileged.
 
@@ -375,6 +399,10 @@ EC2Job::~EC2Job()
 	free(m_user_data_file);
 	free(m_instance_type);
     free(m_elastic_ip);
+	free(m_ebs_volumes);
+	free(m_availability_zone);
+	free(m_vpc_subnet);
+	free(m_vpc_ip);
 }
 
 
@@ -550,7 +578,8 @@ void EC2Job::doEvaluateState()
 					// ec2_vm_start() will check the input arguments
 					rc = gahp->ec2_vm_start( m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, 
 												m_ami_id.c_str(), m_key_pair.c_str(), 
-												m_user_data, m_user_data_file, m_instance_type, 
+												m_user_data, m_user_data_file, m_instance_type,
+												m_availability_zone,m_vpc_subnet,m_vpc_ip,
 												*m_group_names, instance_id, gahp_error_code);
 					
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -905,31 +934,17 @@ void EC2Job::doEvaluateState()
 						if ( new_status != remoteJobState &&
 							 ( new_status == EC2_VM_STATE_RUNNING ||
 							   new_status == EC2_VM_STATE_SHUTTINGDOWN ||
-							   new_status == EC2_VM_STATE_TERMINATED ) ) {
+							   new_status == EC2_VM_STATE_TERMINATED ) ) 
+						{
 							JobRunning();
                             
-                            // if we have an elastic ip now we associate with a live running instance
-                            if ( new_status == EC2_VM_STATE_RUNNING && strlen(m_elastic_ip) )
+                            // On a state change to running we perform all associations
+							// the are non-blocking and we continue even if they fail.
+                            if ( new_status == EC2_VM_STATE_RUNNING )
                             {
-                                StringList returnStatus; 
-                                rc = gahp->ec2_associate_address(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, remoteJobId, m_elastic_ip, returnStatus, gahp_error_code );
-
-                                switch (rc)
-                                {
-                                    case 0:
-                                        break;
-                                    case GAHPCLIENT_COMMAND_PENDING:
-                                        break;
-                                    case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
-                                        if ( (condorState == REMOVED) || (condorState == HELD) ) 
-                                            gmState = GM_DELETE;
-                                        break;
-                                    default:
-                                        dprintf(D_ALWAYS, "Failed Association returned %s\n", gahp_error_code);
-                                        break;
-                                }
+								associate_n_attach(returnStatus);
                             }
-
+                            
 						}
 												
 						remoteJobState = new_status;
@@ -1335,4 +1350,67 @@ void EC2Job::print_error_code( const char* error_code,
 								  const char* function_name )
 {
 	dprintf( D_ALWAYS, "Receiving error code = %s from function %s !", error_code, function_name );	
+}
+
+void EC2Job::associate_n_attach(StringList & returnStatus)
+{
+
+	char *gahp_error_code = NULL;
+	int rc;
+
+	// associate the elastic ip with the now running instance.
+	if ( strlen(m_elastic_ip) )
+	{
+		rc = gahp->ec2_associate_address(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, remoteJobId, m_elastic_ip, returnStatus, gahp_error_code );
+
+		switch (rc)
+		{
+			case 0:
+				break;
+			case GAHPCLIENT_COMMAND_PENDING:
+				break;
+			case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
+				if ( (condorState == REMOVED) || (condorState == HELD) ) 
+					gmState = GM_DELETE;
+			default:
+				dprintf(D_ALWAYS, "Failed ec2_associate_address returned %s continuing w/job\n", gahp_error_code);
+				break;
+		}
+	}
+
+	if (m_ebs_volumes)
+	{
+		bool bcontinue=true;
+		// Need to loop through here parsing the volumes which we will send to the gahp
+		m_ebs_volumes->rewind();
+		
+		const char *volume_str = NULL;
+		while( bcontinue && (volume_str = m_ebs_volumes->next() ) != NULL ) 
+		{
+			StringList ebs_volume_params(volume_str, ":");
+			ebs_volume_params.rewind();
+
+			// Volumes consist of volume_id:device_id similar to vm_disks
+			char * volume_id = ebs_volume_params.next();
+			char * device_id = ebs_volume_params.next();
+
+			rc = gahp->ec2_attach_volume(m_serviceUrl.c_str(), m_public_key_file, m_private_key_file, volume_id, remoteJobId, device_id, returnStatus, gahp_error_code );
+
+			switch (rc)
+			{
+				case 0:
+					break;
+				case GAHPCLIENT_COMMAND_PENDING:
+					break;
+				case GAHPCLIENT_COMMAND_NOT_SUBMITTED:
+					if ( (condorState == REMOVED) || (condorState == HELD) ) 
+						gmState = GM_DELETE;
+				default:
+					bcontinue=false;
+					dprintf(D_ALWAYS, "Failed ec2_attach_volume returned %s continuing w/job\n", gahp_error_code);
+					break;
+			}
+		}
+	}
+
 }

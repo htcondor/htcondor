@@ -51,6 +51,9 @@
 #include "qmgmt.h"
 #include "schedd_negotiate.h"
 
+#include <vector>
+using std::vector;
+
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
 extern char* Name;
@@ -888,8 +891,13 @@ DedicatedScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID)
+DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
 {
+	ClassAd *jobad = GetJobAd(jobid.cluster,jobid.proc);
+	if( !jobad ) {
+		return true;
+	}
+	FreeJobAd( jobad );
 	return false;
 }
 
@@ -2104,6 +2112,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 		}
 
 		char *all_hosts_str = allRemoteHosts.print_to_string();
+		ASSERT( all_hosts_str );
 
 		for (int pNo = 0; pNo < allocation->num_procs; pNo++) {
 				SetAttributeString(allocation->cluster, pNo, ATTR_ALL_REMOTE_HOSTS, all_hosts_str);
@@ -3072,8 +3081,6 @@ void
 DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 {
 	AllocationNode* alloc;
-	MRecArray* matches;
-	int i, n, m;
 
 	if( ! srec ) {
 		EXCEPT( "DedicatedScheduler::shutdownMpiJob: srec is NULL!" );
@@ -3088,16 +3095,20 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 				srec->job_id.cluster ); 
 	}
 	alloc->status = A_DYING;
-	for( i=0; i<alloc->num_procs; i++ ) {
-		matches = (*alloc->matches)[i];
-		n = matches->getlast();
-		for( m=0 ; m <= n ; m++ ) {
-			if (kill) {
-				dprintf( D_ALWAYS, "Dedicated job abnormally ended, releasing claim\n");
-				releaseClaim( (*matches)[m], true );
-			} else {
-				deactivateClaim( (*matches)[m] );
-			}
+	for (int i=0; i<alloc->num_procs; i++ ) {
+        MRecArray* matches = (*alloc->matches)[i];
+        int n = matches->getlast();
+        vector<match_rec*> delmr;
+        // Save match_rec pointers into a vector, because deactivation of claims 
+        // alters the MRecArray object (*matches) destructively:
+        for (int j = 0;  j <= n;  ++j) delmr.push_back((*matches)[j]);
+        for (vector<match_rec*>::iterator mr(delmr.begin());  mr != delmr.end();  ++mr) {
+            if (kill) {
+                dprintf( D_ALWAYS, "Dedicated job abnormally ended, releasing claim\n");
+                releaseClaim(*mr, true );
+            } else {
+                deactivateClaim(*mr);
+            }
 		}
 	}
 }
@@ -3134,6 +3145,7 @@ DedicatedScheduler::AddMrec(
 
 	// Next, insert this match_rec into our hashtables
     ClassAd* job = GetJobAd(job_id.cluster, job_id.proc);
+	ASSERT( job );
     pending_requests[claim_id] = new ClassAd(*job);
 
     if (is_partitionable(match_ad)) {

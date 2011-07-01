@@ -509,10 +509,22 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     if( strcasecmp( argv[9], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "InstanceType" ] = argv[9];
     }
+    
+    if( strcasecmp( argv[10], NULLSTRING ) ) {
+        vmStartRequest.query_parameters[ "Placement.AvailabilityZone" ] = argv[10];
+    }
+    
+    if( strcasecmp( argv[11], NULLSTRING ) ) {
+        vmStartRequest.query_parameters[ "SubnetId" ] = argv[11];
+    }
+    
+    if( strcasecmp( argv[12], NULLSTRING ) ) {
+        vmStartRequest.query_parameters[ "PrivateIpAddress" ] = argv[12];
+    }
 
-    for( int i = 10; i < argc; ++i ) {
+    for( int i = 13; i < argc; ++i ) {
         std::ostringstream groupName;
-        groupName << "SecurityGroup." << ( i - 10 + 1 );
+        groupName << "SecurityGroup." << ( i - 13 + 1 );
         vmStartRequest.query_parameters[ groupName.str() ] = argv[ i ];
     }    
 
@@ -1268,9 +1280,64 @@ bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &
     asRequest.secretKeyFile = argv[4];
     asRequest.query_parameters[ "Action" ] = "AssociateAddress";
     asRequest.query_parameters[ "InstanceId" ] = argv[5];
-    asRequest.query_parameters[ "PublicIp" ] = argv[6];
-    //std::string instanceID = argv[5];
-    //std::string elasticIP = argv[6];
+	
+	// here it could be a standard ip or a vpc ip 
+	// vpc ip's will have a : separating 
+	const char * pszFullIPStr = argv[6];
+	const char * pszIPStr=0;
+	const char * pszAllocationId=0;
+	StringList elastic_ip_addr_info (pszFullIPStr, ":");
+	elastic_ip_addr_info.rewind();
+	pszIPStr = elastic_ip_addr_info.next();
+	pszAllocationId=elastic_ip_addr_info.next();
+	
+	if ( pszAllocationId )
+	{
+		asRequest.query_parameters[ "AllocationId" ] = pszAllocationId;
+	}
+	else
+	{
+		asRequest.query_parameters[ "PublicIp" ] = pszIPStr;
+	}
+	
+    // Send the request.
+    if( ! asRequest.SendRequest() ) {
+        result_string = create_failure_result( requestID,
+            asRequest.errorMessage.c_str(),
+            asRequest.errorCode.c_str() );
+    } else {
+        result_string = create_success_result( requestID, NULL );
+    }
+
+    return true;
+}
+
+AmazonAttachVolume::AmazonAttachVolume() { }
+
+AmazonAttachVolume::~AmazonAttachVolume() { }
+
+bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &result_string) 
+{
+	assert( strcmp( argv[0], "EC_VM_ATTACH_VOLUME" ) == 0 );
+	
+	int requestID;
+    get_int( argv[1], & requestID );
+    
+    if( ! verify_min_number_args( argc, 8 ) ) {
+        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 8, argv[0] );
+        return false;
+    }
+
+    // Fill in required attributes & parameters.
+    AmazonAttachVolume asRequest;
+    asRequest.serviceURL = argv[2];
+    asRequest.accessKeyFile = argv[3];
+    asRequest.secretKeyFile = argv[4];
+    asRequest.query_parameters[ "Action" ] = "AttachVolume";
+    asRequest.query_parameters[ "VolumeId" ] = argv[5];
+    asRequest.query_parameters[ "InstanceId" ] = argv[6];
+	asRequest.query_parameters[ "Device" ] = argv[7];
 
     // Send the request.
     if( ! asRequest.SendRequest() ) {
@@ -1282,5 +1349,6 @@ bool AmazonAssociateAddress::workerFunction(char **argv, int argc, std::string &
     }
 
     return true;
+	
 }
 

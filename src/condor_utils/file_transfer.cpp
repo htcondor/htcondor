@@ -331,7 +331,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->deleteCurrent();
 			}
 		}
-		dprintf(D_FULLDEBUG, "Input files: %s\n", InputFiles->print_to_string());
+		char *list = InputFiles->print_to_string();
+		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
+		free(list);
 	}
 	
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf) == 1 ) {

@@ -7,5 +7,6 @@ input = job_14675_dir/submit_filetrans_input14675.txt
 transfer_input_files = job_14675_dir/submit_filetrans_input14675a.txt,job_14675_dir/submit_filetrans_input14675b.txt,job_14675_dir/submit_filetrans_input14675c.txt
 Notification = NEVER
 arguments = --job=14675 --extrainput 
+should_transfer_files = NO
 queue
 

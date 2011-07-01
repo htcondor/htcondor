@@ -191,6 +191,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		if (line[0] == 0)       continue;  // Ignore blank lines
 		if (line[0] == COMMENT) continue;  // Ignore comments
 
+		debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
+
 			// Note: strtok() could be replaced by MyString::Tokenize(),
 			// which is much safer, but I don't want to deal with that
 			// right now.  wenger 2005-02-02.
@@ -221,6 +223,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 				"Warning: the DAP token is deprecated and may be unsupported "
 				"in a future release.  Use the DATA token\n",
 				filename, lineNumber );
+			check_warning_strictness( DAG_STRICT_2 );
 		}
 
 		else if	(strcasecmp(token, "DATA") == 0) {
@@ -401,11 +404,24 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 
 		// first token is the node name
 	const char *nodeName = strtok( NULL, DELIMITERS );
+	if ( !nodeName ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no node name "
+					"specified\n", dagFile, lineNum );
+		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		return false;
+	}
+
 	MyString tmpNodeName = munge_job_name(nodeName);
 	nodeName = tmpNodeName.Value();
 
 		// next token is the submit file name
 	const char *submitFile = strtok( NULL, DELIMITERS );
+	if ( !submitFile ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no submit file "
+					"specified\n", dagFile, lineNum );
+		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		return false;
+	}
 
 		// next token (if any) is "DIR" "NOOP", or "DONE" (in that order)
 	const char* nextTok = strtok( NULL, DELIMITERS );
@@ -501,6 +517,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 		debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
 					"keyword for nested DAGs is deprecated; please "
 					"use SUBDAG EXTERNAL instead" );
+		check_warning_strictness( DAG_STRICT_3 );
 	}
 
 	// looks ok, so add it
@@ -1202,6 +1219,25 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 						"names cannot begin with \"queue\"\n", varName.Value() );
 			return false;
 		}
+		// This will be inefficient for jobs with lots of variables
+		// As in O(N^2)
+		job->varNamesFromDag->Rewind();
+		job->varValsFromDag->Rewind();
+		while(MyString* s = job->varNamesFromDag->Next()){
+			job->varValsFromDag->Next(); // To keep up with varNamesFromDag
+			if(varName == *s){
+				debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
+					"is already defined in job \"%s\" "
+					"(Discovered at file \"%s\", line %d)\n",
+					varName.Value(),job->GetJobName(),filename,
+					lineNumber);
+				check_warning_strictness( DAG_STRICT_2 );
+				debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
+					"= \"%s\"\n",varName.Value(),varValue.Value());
+				job->varNamesFromDag->DeleteCurrent();
+				job->varValsFromDag->DeleteCurrent();
+			}
+		}
 		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
 		bool appendResult;
 		appendResult = job->varNamesFromDag->Append(new MyString(varName));
@@ -1303,6 +1339,7 @@ parse_priority(
 		debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
 					"overrides old value %d\n", priorityVal,
 					job->GetJobName(), job->_nodePriority );
+		check_warning_strictness( DAG_STRICT_2 );
 	}
 	job->_hasNodePriority = true;
 	job->_nodePriority = priorityVal;

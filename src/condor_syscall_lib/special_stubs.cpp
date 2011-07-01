@@ -33,8 +33,15 @@
 #include "get_port_range.h"
 #include "condor_netdb.h"
 #include "simplelist.h"
+#include "condor_sockaddr.h"
+#include <algorithm>
 
 extern	StdUnivSock* syscall_sock;
+
+condor_sockaddr
+get_local_ipaddr() {
+	return syscall_sock->my_addr();	
+}
 
 extern "C" {
 
@@ -239,4 +246,39 @@ my_ip_string()
 	memset( &addr, 0, sizeof(struct in_addr) );
 	addr.s_addr = syscall_sock->get_ip_int();
 	return inet_ntoa( addr );
+}
+
+std::vector<condor_sockaddr> resolve_hostname(const char* hostname) {
+	std::vector<condor_sockaddr> ret;
+	addrinfo* addrs = 0;
+	int result;
+
+	result = getaddrinfo(hostname, NULL, NULL, &addrs);
+	if (result != 0 || !addrs) {
+		return ret;
+	}
+
+	addrinfo* iter = addrs;
+	while (iter) {
+		ret.push_back(condor_sockaddr(iter->ai_addr));
+		iter = iter->ai_next;
+	}
+	freeaddrinfo(addrs);
+
+
+		// in order to completely eliminate duplicates, sort() should be 
+		// called before unique().
+
+		// however, we do not need strict uniqueness here.
+		// also, most of duplication comes from protocol variety.
+		// e.g. same address with different socket type such as 
+		// SOCK_STREAM, SOCK_DGRAM
+	std::vector<condor_sockaddr>::iterator it;
+	it = std::unique(ret.begin(), ret.end());
+	ret.resize(it - ret.begin());
+	return ret;
+}
+
+std::vector<condor_sockaddr> resolve_hostname(const MyString& hostname) {
+	return resolve_hostname(hostname.Value());
 }

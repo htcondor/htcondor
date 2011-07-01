@@ -32,6 +32,8 @@ if ( WITH_CREAM )
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${CREAMSOAP_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CREAMSOAP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${CREAMSOAP_VER}.tar.gz
+				    #--Patch step ----------
+				    PATCH_COMMAND patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_cast.patch
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND cd gsoap-2.7 && ./configure --prefix=${CREAM_INSTALL_LOC}
 				    #--Build Step ----------
@@ -89,8 +91,15 @@ if ( WITH_CREAM )
 ######################################### cream/gss packages.
 
 		condor_pre_external( GRIDSITE gridsite-1.6.0 "lib;include" "done")
+		if ( BUILDING_LIBXML2 )
+			set (GRIDSITE_DEPENDS ${LIBXML2_REF})
+			set (GRIDSITE_INCLUDE -I${LIBXML2_INSTALL_LOC}/include/libxml2)
+		else ()
+			set (GRIDSITE_DEPENDS "")
+			set (GRIDSITE_INCLUDE "")
+		endif ()
 		ExternalProject_Add(gridsite
-				    DEPENDS ${LIBXML2_REF}
+				    DEPENDS ${GRIDSITE_DEPENDS}
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GRIDSITE_VER}.src.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${GRIDSITE_STAGE}/dl
@@ -98,7 +107,7 @@ if ( WITH_CREAM )
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "no config"
 				    #--Build Step ----------
-				    BUILD_COMMAND export MYCFLAGS='-I. -I../interface -I${LIBXML2_INSTALL_LOC}/include/libxml2' &&
+				    BUILD_COMMAND export MYCFLAGS='-I. -I../interface ${GRIDSITE_INCLUDE}' &&
 					  export MYCFLAGS &&
 					  cd org.gridsite.core/src &&
 					  make libgridsite.a

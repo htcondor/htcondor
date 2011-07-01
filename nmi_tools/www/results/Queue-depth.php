@@ -15,6 +15,9 @@ if($_REQUEST["type"] != "") {
 else {
   $type = "build";
 }
+
+include "CondorQ.php";
+$condorq = &new CondorQ($type);
 ?>
 
 <html>
@@ -29,7 +32,7 @@ else {
 $db = mysql_connect(WEB_DB_HOST, DB_READER_USER, DB_READER_PASS) or die ("Could not connect : " . mysql_error());
 mysql_select_db(DB_NAME) or die("Could not select database");
 
-include "last.inc";
+include "dashboard.inc";
 
 // Create the sidebar
 echo "<div id='wrap'>";
@@ -84,17 +87,19 @@ foreach ($branches as $branch) {
   echo "<table border='0' cellspacing='0'>\n";
   echo "<tr>\n";
 
+  // Get the queue depths.  We do this ahead of time so we can do this in 
+  // a single condor_q command
+  foreach ($platforms AS $platform) {
+    $condorq->add_platform($platform);
+  }
+  $queues = $condorq->condor_q();
+
   // show link to run directory for each platform
   foreach ($platforms AS $platform) {
-    // We will remove 'nmi:' from the front of the platform and also split it 
-    // onto two separate lines because the length of the header determines the
-    // width of the resulting table column.
     $display = preg_replace("/nmi:/", "", $platform);
-    #$display = preg_replace("/_/", "_ ", $display, 1);
-    
-    $ret = get_queue_for_nmi_platform($platform, $type);
-    $depth = $ret[0];
-    $queue_depth = $ret[1];
+
+    $depth = $queues[$display][0];
+    $queue_depth = $queues[$display][1];
     
     $color = "";
     if($depth == 0) {
@@ -116,6 +121,8 @@ foreach ($branches as $branch) {
   echo "</table>\n";
 }
 mysql_close($db);
+
+
 ?>
 
 <p>Legend:

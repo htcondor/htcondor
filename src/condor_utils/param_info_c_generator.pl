@@ -107,12 +107,46 @@ use constant {
 # the name of the property to be substituted. 
 # (property types and names are defined farther below in $property_types) 
 ##################################################################################
-use constant { RECONSTITUTE_TEMPLATE => 
-'param_info_insert(%parameter_name%, %aliases%, %default%, %version%, %range%,
+use constant { RECONSTITUTE_TEMPLATE_FUNC => 
+'param_info_insert(%parameter_name%, %version%, %default%, %range%,
                   %state%, %type%, %is_macro%, %reconfig%, %customization%,
 				  %friendly_name%, %usage%,
 				  %url%,
 				  %tags%);
+'
+};
+
+use constant { RECONSTITUTE_TEMPLATE => 
+'static const param_info_%typequal% param_def_info_%parameter_var% = {
+	%parameter_name%, %default%, %version%, 
+	%friendly_name%, %usage%,
+	%url%, %tags%,
+	%type%, %state%, %customization%, %reconfig%, %is_macro%, %def_valid%, %range_valid%,
+	%cooked_values%
+	};
+'
+};
+
+use constant { RECONSTITUTE_TEMPLATE_WIN => 
+'static const param_info_%typequal% param_def_info_%parameter_var% = {
+	%parameter_name%, 
+#ifdef WIN32
+	%win32_default%,
+#else	
+	%default%, 
+#endif
+	%version%, 
+	%friendly_name%, %usage%,
+	%url%, %tags%,
+	%type%, %state%, %customization%, %reconfig%, %is_macro%, 
+#ifdef WIN32
+	%win_valid%, %range_valid%,
+	%win_cooked_values%
+#else	
+	%def_valid%, %range_valid%,
+	%cooked_values%, 
+#endif
+	};
 '
 };
 
@@ -125,8 +159,11 @@ use constant { RECONSTITUTE_TEMPLATE =>
 #      dont_trim =>   (Set this to 1 to not trim trailing whitespace on value.) 
 ##################################################################################
 my $property_types = {
+	daemon_name     => { type => "literal",	optional => 1  },
 	parameter_name 	=> { type => "char[]" },
+	parameter_var 	=> { type => "nodots" },
 	default 		=> { type => "char[]", dont_trim => 1  },
+#	win32_default	=> { type => "char[]", dont_trim => 1, optional => 1 },
 	friendly_name 	=> { type => "char[]" },
 	type 			=> { type => "param_type" },
 	state 			=> { type => "state_type" },
@@ -160,6 +197,7 @@ my $property_types = {
 ##################################################################################
 my $type_subs = { 
 	'char[]'  => sub { return '"'.escape($_[0]).'"'; },
+	'literal'  => sub { return $_[0]; },
 	'bool'  => sub { return enum($_[0],'true','false'); },
 	'int'  => sub { return $_[0]=~/^\d+$/?$_[0]:type_error($_[0], 'int'); },
 	'float'  => sub { return $_[0]=~/^\d+\.\d+$/?$_[0]:type_error($_[0], 'float'); },
@@ -168,6 +206,11 @@ my $type_subs = {
 	'state_type'  => sub {
 		my $state = enum($_[0],'USER','AUTODEFAULT','DEFAULT', 'RUNTIME');
 		return "STATE_".$state;
+	},
+	'nodots'  => sub { 
+	    my $param_var = $_[0];
+	    $param_var =~ s/\./_/g; 
+	    return $param_var;
 	},
 	'param_type' => sub { 
 		my $type = enum($_[0],'STRING','INT','BOOL', 'DOUBLE');
@@ -219,7 +262,7 @@ sub reconstitute {
 		my ($replace,$context) = @_;
 		while(my($key, $val) = each %{$replace} ) {
 			$key =~ s/\W/\\$&/mg;
-			$context =~ s/$key/$val/ ;
+			$context =~ s/$key/$val/g ;
 		}
 		return $context;
 	}
@@ -287,15 +330,46 @@ sub reconstitute {
 	
 	# Here we have the main logic of this function.
 	begin_output(); # opening the file, and beginning output
-
+	
+	my @var_names;
+	
 	# Loop through each of the parameters in the structure passed as an argument
 	while(my ($param_name, $sub_structure) = each %{$structure}){
 
+		#my $daemon_name = "";
+		#if ($param_name =~ /\./) {
+		#	my @aaa = split(/\./, $param_name);
+		#	$param_name = $aaa[1];
+		#	$daemon_name = $aaa[0];	
+		#	print "$aaa[1] of $aaa[0]\n";
+		#}
+		
 		my %replace=();
 		# Quickly add the pseudo-property "parameter_name" for the name of the 
 		# parameter, so that it can be treated just like any other property.
 		$sub_structure->{'parameter_name'} = $param_name;
+		$sub_structure->{'parameter_var'} = $param_name;
+		
+		my $typequal = "t";
+		my $cooked_values = "";
+		my $win_cooked_values = "";
+		my $typequal_ranged = "";
+		my $cooked_range = "";
+		my $range_max = "";
+		my $nix_default = $sub_structure->{'default'};
+		my $win_default = $sub_structure->{'win32_default'};
+		my $def_valid = (defined $nix_default && $nix_default ne "") ? "1" : "0";
+		my $win_valid = (defined $win_default && $win_default ne "") ? "1" : "0";
+		my $range_valid = "0";
+		my $var_name = $param_name;
+		
+		$var_name =~ s/\./_/g;
+		push @var_names, $var_name;
+		
+		print "$var_name has win32_default=$win_default\n" if $win_valid eq "1";
+		
 		print Dumper($sub_structure) if $options{debug};
+		
 		# Loop through each of the properties in the hash specifying property 
 		# rules. (This hash is defined at the top of this file and it details 
 		# how every property should be treated).
@@ -309,21 +383,67 @@ sub reconstitute {
 			$replace{"%$name%"}=do_one_property($sub_structure,$info,$name); 
 
 			# TYPECHECK: certain parameters types must have a non-empty default
+			# this is also where we set convert string default value to int or double as needed
+			# and decide whether to set the default_valid flag or not.
 			if ($name eq "type")
 			{
+				$typequal = do_one_property($sub_structure,$info,$name); 
+				
 				# Integer parameters
 				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_INT")
 				{
-					if ($sub_structure->{'default'} eq "") {
+					$range_max = "INT_MAX";
+				    $cooked_values = $nix_default;
+					if ($cooked_values =~ /^[0-9\-\*\/\(\) \t]*$/) {
+					    $def_valid = "1";
+					} else {
+						#print "$param_name default is expression $cooked_values\n";
+						$cooked_values = "0";
+						$def_valid = "0";
+					}
+					
+					if (defined $win_default)
+					{
+						$win_cooked_values = $win_default;
+						if ($win_cooked_values =~ /^[0-9\-\*\/\(\) \t]*$/) {
+							$win_valid = "1";
+						} else {
+							#print "$param_name default is expression $win_cooked_values\n";
+							$win_cooked_values = "0";
+							$win_valid = "0";
+						}
+					}
+									    
+					if ($nix_default eq "") {
 						print "ERROR: Integer parameter $param_name needs " .
 								"a default!\n";
 					}
+					#print "$param_name cooked is $cooked_values\n";
 				}
 
 				# Boolean parameters
 				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_BOOL")
 				{
-					if ($sub_structure->{'default'} eq "") {
+				    $cooked_values = $nix_default;
+					if ($cooked_values =~ /^[ \t]*TRUE|FALSE|true|false|0|1[ \t]*$/) {
+					    $def_valid = "1";
+					} else {
+						#print "$param_name default is expression $cooked_values\n";
+						$cooked_values = "0";
+						$def_valid = "0";
+					}
+					if (defined $win_default)
+					{
+						$win_cooked_values = $win_default;
+						if ($win_cooked_values =~ /^[ \t]*TRUE|FALSE|true|false|0|1[ \t]*$/) {
+							$win_valid = "1";
+						} else {
+							#print "$param_name default is expression $win_cooked_values\n";
+							$win_cooked_values = "0";
+							$win_valid = "0";
+						}
+					}
+					if ($nix_default eq "") {
 						print "ERROR: Boolean parameter $param_name needs " .
 								"a default!\n";
 					}
@@ -332,18 +452,96 @@ sub reconstitute {
 				# Double parameters
 				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_DOUBLE")
 				{
-					if ($sub_structure->{'default'} eq "") {
+					$range_max = "DBL_MAX";
+				    $cooked_values = $nix_default;
+					if ($cooked_values =~ /^[0-9\.\-eE+\*\/\(\) \t]*$/) {
+						$def_valid = "1";
+					} else {
+						#print "$param_name default is expression $cooked_values\n";
+						$cooked_values = "0";
+						$def_valid = "0";
+					}				    
+					if (defined $win_default)
+					{
+						$win_cooked_values = $nix_default;
+						if ($win_cooked_values =~ /^[0-9\.\-eE+\*\/\(\) \t]*$/) {
+							$win_valid = "1";
+						} else {
+							#print "$param_name default is expression $win_cooked_values\n";
+							$win_cooked_values = "0";
+							$win_valid = "0";
+						}				    
+					}
+					if ($nix_default eq "") {
 						print "ERROR: Double parameter $param_name needs " .
 								"a default!\n";
 					}
 				}
 			}
+			
+			# convert ranges from string to int or double if we can
+			# if range can be set a compile time, then we need to emit a xxx_ranged
+			# structure and two aditional data values. plus we set the 
+			# range_valid flag.
+			#
+			if ($name eq "range")
+			{
+				my $range_raw = ".*";
+				if (exists $sub_structure->{'range'}) {
+				   $range_raw = $sub_structure->{'range'};
+				}
+				   
+				if ($range_raw ne ".*")
+				{
+					if ($range_raw =~ /^[0-9\.\-eE+, \t]*$/)
+					{
+						#print "$param_name range is numeric $range_raw\n";
+						$typequal_ranged = "_ranged";	
+						$cooked_range = ", ".$range_raw;
+						$range_valid = "1";
+					}
+					else
+					{
+						#print "$param_name range is expression $range_raw\n";
+					}
+				}
+			}
 		}
+		
+		# if cooked_range ends in a ,  then the max value is missing, so
+		# append $range_max
+		#
+		if ($cooked_range =~ /,$/) {
+			$cooked_range = $cooked_range.$range_max;
+			#print "$param_name range is $cooked_range\n";
+		}
+		
+		$replace{"%def_valid%"} = $def_valid;
+		$replace{"%range_valid%"} = $range_valid;
+		
+		$replace{"%cooked_values%"} = $cooked_values.$cooked_range;
+		$replace{"%typequal%"} = $typequal.$typequal_ranged;
 
 		# Here we actually apply the template and output the parameter.
-		continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE));
+		if (defined $win_default) {
+		    $replace{"%win32_default%"} = '"'.escape($win_default).'"';
+			$replace{"%win_valid%"} = $win_valid;
+			$replace{"%win_cooked_values%"} = $win_cooked_values.$cooked_range;
+			continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE_WIN));
+		} else {
+			continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE));
+		}
 	}
-
+	
+	# output a sorted table of pointers to the param_info_t structures
+	# we will use this to do a binary lookup of the parameter by name.
+	#
+	continue_output("\n\nstatic const param_info_t * g_param_info_init_table[] = {\n");
+	for(sort @var_names) {
+		continue_output("	&param_def_info_$_.hdr,\n");
+	}
+	continue_output("\n};");
+	
 	# wrap things up. 
 	end_output();
 }

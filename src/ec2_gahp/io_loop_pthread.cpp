@@ -136,6 +136,9 @@ registerAllAmazonCommands(void)
     
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS, 
             AmazonAssociateAddress::ioCheck, AmazonAssociateAddress::workerFunction);
+	
+	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_ATTACH_VOLUME, 
+            AmazonAttachVolume::ioCheck, AmazonAttachVolume::workerFunction);
 
     //registerAmazonGahpCommand(AMAZON_COMMAND_VM_RELEASE_ADDRESS, 
     //        AmazonReleaseAddress::ioCheck, AmazonReleaseAddress::workerFunction);

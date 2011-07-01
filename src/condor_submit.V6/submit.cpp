@@ -147,7 +147,7 @@ bool	NewExecutable = false;
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool    UseXMLInLog = false;
-ShouldTransferFiles_t should_transfer = STF_NO;
+ShouldTransferFiles_t should_transfer;
 bool stream_stdout_toggle = false;
 bool stream_stderr_toggle = false;
 bool    NeedsPerFileEncryption = false;
@@ -281,7 +281,6 @@ const char	*SuspendJobAtExec = "suspend_job_at_exec";
 const char	*TransferInputFiles = "transfer_input_files";
 const char	*TransferOutputFiles = "transfer_output_files";
 const char    *TransferOutputRemaps = "transfer_output_remaps";
-const char	*TransferFiles = "transfer_files";
 const char	*TransferExecutable = "transfer_executable";
 const char	*TransferInput = "transfer_input";
 const char	*TransferOutput = "transfer_output";
@@ -302,9 +301,13 @@ const char	*CopyToSpool = "copy_to_spool";
 const char	*LeaveInQueue = "leave_in_queue";
 
 const char	*PeriodicHoldCheck = "periodic_hold";
+const char	*PeriodicHoldReason = "periodic_hold_reason";
+const char	*PeriodicHoldSubCode = "periodic_hold_subcode";
 const char	*PeriodicReleaseCheck = "periodic_release";
 const char	*PeriodicRemoveCheck = "periodic_remove";
 const char	*OnExitHoldCheck = "on_exit_hold";
+const char	*OnExitHoldReason = "on_exit_hold_reason";
+const char	*OnExitHoldSubCode = "on_exit_hold_subcode";
 const char	*OnExitRemoveCheck = "on_exit_remove";
 const char	*Noop = "noop_job";
 const char	*NoopExitSignal = "noop_job_exit_signal";
@@ -391,6 +394,11 @@ const char* EC2SecurityGroups = "ec2_security_groups";
 const char* EC2KeyPairFile = "ec2_keypair_file";
 const char* EC2InstanceType = "ec2_instance_type";
 const char* EC2ElasticIP = "ec2_elastic_ip";
+const char* EC2EBSVolumes = "ec2_ebs_volumes";
+const char* EC2AvailabilityZone= "ec2_availability_zone";
+const char* EC2VpcSubnet = "ec2_vpc_subnet";
+const char* EC2VpcIP = "ec2_vpc_ip";
+
 
 //
 // Deltacloud Parameters
@@ -450,8 +458,6 @@ void 	SetRequirements();
 void 	SetTransferFiles();
 void    process_input_file_list(StringList * input_list, char *input_files, bool * files_specified);
 void 	SetPerFileEncryption();
-bool 	SetNewTransferFiles( void );
-void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
 void	SetRunAsOwner();
@@ -515,7 +521,7 @@ void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
 void transfer_vm_file(const char *filename);
 bool make_vm_file_path(const char *filename, MyString& fixedname);
-bool validate_xen_disk_parm(const char *xen_disk, MyString &fixedname);
+bool validate_disk_parm(const char *disk, MyString &fixedname, int min_params=3, int max_params=4);
 
 char *owner = NULL;
 char *ntdomain = NULL;
@@ -2321,8 +2327,6 @@ SetTransferFiles()
 	StringList output_file_list(NULL,",");
 	MyString output_remaps;
 
-	should_transfer = STF_YES;
-
 	macro_value = condor_param( TransferInputFiles, "TransferInputFiles" ) ;
 	TransferInputSize = 0;
 	if( macro_value ) {
@@ -2392,17 +2396,162 @@ SetTransferFiles()
 		free(macro_value);
 	}
 
+	//
+	// START FILE TRANSFER VALIDATION
+	//
 		// now that we've gathered up all the possible info on files
 		// the user explicitly wants to transfer, see if they set the
 		// right attributes controlling if and when to do the
 		// transfers.  if they didn't tell us what to do, in some
 		// cases, we can give reasonable defaults, but in others, it's
-		// a fatal error.  first we check for the new attribute names
-		// ("ShouldTransferFiles" and "WheToTransferOutput").  If
-		// those aren't defined, we look for the old "TransferFiles". 
-	if( ! SetNewTransferFiles() ) {
-		SetOldTransferFiles( in_files_specified, out_files_specified );
+		// a fatal error.
+		//
+		// SHOULD_TRANSFER_FILES (STF) defaults to IF_NEEDED (STF_IF_NEEDED)
+		// WHEN_TO_TRANSFER_OUTPUT (WTTO) defaults to ON_EXIT (FTO_ON_EXIT)
+		// 
+		// Error if:
+		//  (A) bad user input - getShouldTransferFilesNum fails
+		//  (B) bas user input - getFileTransferOutputNum fails
+		//  (C) STF is STF_NO and WTTO is not FTO_NONE
+		//  (D) STF is not STF_NO and WTTO is FTO_NONE
+		//  (E) STF is STF_IF_NEEDED and WTTO is FTO_ON_EXIT_OR_EVICT
+		//  (F) STF is STF_NO and transfer_input_files or transfer_output_files specified
+	char *should = "INTERNAL ERROR";
+	char *when = "INTERNAL ERROR";
+	bool default_should;
+	bool default_when;
+	FileTransferOutput_t when_output;
+	MyString err_msg;
+	
+	should = condor_param(ATTR_SHOULD_TRANSFER_FILES, 
+						  "should_transfer_files");
+	if (!should) {
+		should = "IF_NEEDED";
+		should_transfer = STF_IF_NEEDED;
+		default_should = true;
+	} else {
+		should_transfer = getShouldTransferFilesNum(should);
+		if (should_transfer < 0) { // (A)
+			err_msg = "\nERROR: invalid value (\"";
+			err_msg += should;
+			err_msg += "\") for ";
+			err_msg += ATTR_SHOULD_TRANSFER_FILES;
+			err_msg += ".  Please either specify \"YES\", \"NO\", or ";
+			err_msg += "\"IF_NEEDED\" and try again.";
+			print_wrapped_text(err_msg.Value(), stderr);
+			DoCleanup(0, 0, NULL);
+			exit(1);
+		}
+		default_should = false;
 	}
+
+	if (should_transfer == STF_NO &&
+		(in_files_specified || out_files_specified)) { // (F)
+		MyString err_msg;
+		err_msg += "\nERROR: you specified files you want Condor to "
+			"transfer via \"";
+		if( in_files_specified ) {
+			err_msg += "transfer_input_files";
+			if( out_files_specified ) {
+				err_msg += "\" and \"transfer_output_files\",";
+			} else {
+				err_msg += "\",";
+			}
+		} else {
+			ASSERT( out_files_specified );
+			err_msg += "transfer_output_files\",";
+		}
+		err_msg += " but you disabled should_transfer_files.";
+		print_wrapped_text(err_msg.Value(), stderr);
+		DoCleanup(0, 0, NULL);
+		exit(1);
+	}
+
+	when = condor_param(ATTR_WHEN_TO_TRANSFER_OUTPUT, 
+						"when_to_transfer_output");
+	if (!when) {
+		when = "ON_EXIT";
+		when_output = FTO_ON_EXIT;
+		default_when = true;
+	} else {
+		when_output = getFileTransferOutputNum(when);
+		if (when_output < 0) { // (B)
+			err_msg = "\nERROR: invalid value (\"";
+			err_msg += when;
+			err_msg += "\") for ";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += ".  Please either specify \"ON_EXIT\", or ";
+			err_msg += "\"ON_EXIT_OR_EVICT\" and try again.";
+			print_wrapped_text(err_msg.Value(), stderr);
+			DoCleanup(0, 0, NULL);
+			exit(1);
+		}
+		default_when = false;
+	}
+
+		// for backward compatibility and user convenience -
+		// if the user specifies should_transfer_files = NO and has
+		// not specified when_to_transfer_output, we'll change
+		// when_to_transfer_output to NEVER and avoid an unhelpful
+		// error message later.
+	if (!default_should && default_when &&
+		should_transfer == STF_NO) {
+		when = "NEVER";
+		when_output = FTO_NONE;
+	}
+
+	if ((should_transfer == STF_NO && when_output != FTO_NONE) || // (C)
+		(should_transfer != STF_NO && when_output == FTO_NONE)) { // (D)
+		err_msg = "\nERROR: ";
+		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+		err_msg += " specified as \"";
+		err_msg += when;
+		err_msg += "\"";
+		err_msg += " yet ";
+		err_msg += ATTR_SHOULD_TRANSFER_FILES;
+		err_msg += " defined as \"";
+		err_msg += should;
+		err_msg += "\".  Please remove this contradiction from ";
+		err_msg += "your submit file and try again.";
+		print_wrapped_text(err_msg.Value(), stderr);
+		DoCleanup(0, 0, NULL);
+		exit(1);
+	}
+
+		// for backward compatibility and user convenience -
+		// if the user specifies only when_to_transfer_output =
+		// ON_EXIT_OR_EVICT, which is incompatible with the default
+		// should_transfer_files of IF_NEEDED, we'll change
+		// should_transfer_files to YES for them.
+	if (default_should &&
+		when_output == FTO_ON_EXIT_OR_EVICT &&
+		should_transfer == STF_IF_NEEDED) {
+		should = "YES";
+		should_transfer = STF_YES;
+	}
+
+	if (when_output == FTO_ON_EXIT_OR_EVICT && 
+		should_transfer == STF_IF_NEEDED) { // (E)
+			// error, these are incompatible!
+		err_msg = "\nERROR: \"when_to_transfer_output = ON_EXIT_OR_EVICT\" "
+			"and \"should_transfer_files = IF_NEEDED\" are incompatible.  "
+			"The behavior of these two settings together would produce "
+			"incorrect file access in some cases.  Please decide which "
+			"one of those two settings you're more interested in. "
+			"If you really want \"IF_NEEDED\", set "
+			"\"when_to_transfer_output = ON_EXIT\".  If you really want "
+			"\"ON_EXIT_OR_EVICT\", please set \"should_transfer_files = "
+			"YES\".  After you have corrected this incompatibility, "
+			"please try running condor_submit again.\n";
+		print_wrapped_text(err_msg.Value(), stderr);
+		DoCleanup(0, 0, NULL);
+		exit(1);
+	}
+
+	InsertFileTransAttrs(when_output);
+	//
+	// END FILE TRANSFER VALIDATION
+	//
 
 		/*
 		  If we're dealing w/ TDP and we might be transfering files,
@@ -2683,219 +2832,6 @@ void SetPerFileEncryption( void )
 	}
 }
 
-bool
-SetNewTransferFiles( void )
-{
-	bool found_it = false;
-	char *should, *when;
-	FileTransferOutput_t when_output = FTO_NONE;
-	MyString err_msg;
-	
-	should = condor_param( ATTR_SHOULD_TRANSFER_FILES, 
-						   "should_transfer_files" );
-	if( should ) {
-		should_transfer = getShouldTransferFilesNum( should );
-		if( should_transfer < 0 ) {
-			err_msg = "\nERROR: invalid value (\"";
-			err_msg += should;
-			err_msg += "\") for ";
-			err_msg += ATTR_SHOULD_TRANSFER_FILES;
-			err_msg += ".  Please either specify \"YES\", \"NO\", or ";
-			err_msg += "\"IF_NEEDED\" and try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		found_it = true;
-	}
-	
-	when = condor_param( ATTR_WHEN_TO_TRANSFER_OUTPUT, 
-						 "when_to_transfer_output" );
-	if( when ) {
-		when_output = getFileTransferOutputNum( when );
-		if( when_output < 0 ) {
-			err_msg = "\nERROR: invalid value (\"";
-			err_msg += when;
-			err_msg += "\") for ";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += ".  Please either specify \"ON_EXIT\", or ";
-			err_msg += "\"ON_EXIT_OR_EVICT\" and try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-			// if they gave us WhenToTransferOutput, but they didn't
-			// specify ShouldTransferFiles yet, give them a default of
-			// "YES", since that's the safest option.
-		if( ! found_it ) {
-			should_transfer = STF_YES;
-		}
-		if( should_transfer == STF_NO ) {
-			err_msg = "\nERROR: you specified ";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " yet you defined ";
-			err_msg += ATTR_SHOULD_TRANSFER_FILES;
-			err_msg += " to be \"";
-			err_msg += should;
-			err_msg += "\".  Please remove this contradiction from ";
-			err_msg += "your submit file and try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		found_it = true;
-	} else {
-		if( found_it && should_transfer != STF_NO ) {
-			err_msg = "\nERROR: you specified ";
-			err_msg += ATTR_SHOULD_TRANSFER_FILES;
-			err_msg += " to be \"";
-			err_msg += should;
-			err_msg += "\" but you did not specify *when* you want Condor "
-				"to transfer the output back.  Please put either \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT\" or \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
-				"try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-	}
-	
-	if( found_it && when_output == FTO_ON_EXIT_OR_EVICT && 
-		            should_transfer == STF_IF_NEEDED ) {
-			// error, these are incompatible!
-		err_msg = "\nERROR: \"when_to_transfer_output = ON_EXIT_OR_EVICT\" "
-			"and \"should_transfer_files = IF_NEEDED\" are incompatible.  "
-			"The behavior of these two settings together would produce "
-			"incorrect file access in some cases.  Please decide which "
-			"one of those two settings you're more interested in. "
-			"If you really want \"IF_NEEDED\", set "
-			"\"when_to_transfer_output = ON_EXIT\".  If you really want "
-			"\"ON_EXIT_OR_EVICT\", please set \"should_transfer_files = "
-			"YES\".  After you have corrected this incompatibility, "
-			"please try running condor_submit again.\n";
-		print_wrapped_text( err_msg.Value(), stderr );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
-
-		// if we found the new syntax, we're done, and we should now
-		// add the appropriate ClassAd attributes to the job.
-	if( found_it ) {
-		InsertFileTransAttrs( when_output );
-	}
-	return found_it;
-}
-
-
-void
-SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
-{
-	char *macro_value;
-	FileTransferOutput_t when_output = FTO_NONE;
-		// this variable is never used (even once we pass it to
-		// InsertFileTransAttrs()) unless should_transfer is set
-		// appropriately.  however, just to be safe, we initialize it
-		// here to avoid passing around uninitialized variables.
-
-	macro_value = condor_param( TransferFiles, ATTR_TRANSFER_FILES );
-	if( macro_value ) {
-		// User explicitly specified TransferFiles; do what user says
-		switch ( macro_value[0] ) {
-				// Handle "Never"
-			case 'n':
-			case 'N':
-				// Handle "Never"
-				if( in_files_specified || out_files_specified ) {
-					MyString err_msg;
-					err_msg += "\nERROR: you specified \"";
-					err_msg += TransferFiles;
-					err_msg += " = Never\" but listed files you want "
-						"transfered via \"";
-					if( in_files_specified ) {
-						err_msg += "transfer_input_files";
-						if( out_files_specified ) {
-							err_msg += "\" and \"transfer_output_files\".";
-						} else {
-							err_msg += "\".";
-						}
-					} else {
-						ASSERT( out_files_specified );
-						err_msg += "transfer_output_files\".";
-					}
-					err_msg += "  Please remove this contradiction from "
-						"your submit file and try again.";
-					print_wrapped_text( err_msg.Value(), stderr );
-					DoCleanup(0,0,NULL);
-					exit( 1 );
-				}
-				should_transfer = STF_NO;
-				break;
-			case 'o':
-			case 'O':
-				// Handle "OnExit"
-				should_transfer = STF_YES;
-				when_output = FTO_ON_EXIT;
-				break;
-			case 'a':
-			case 'A':
-				// Handle "Always"
-				should_transfer = STF_YES;
-				when_output = FTO_ON_EXIT_OR_EVICT;
-				break;
-			default:
-				// Unrecognized
-				fprintf( stderr, "\nERROR: Unrecognized argument for "
-						 "parameter \"%s\"\n", TransferFiles );
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-				break;
-		}	// end of switch
-
-		free(macro_value);		// condor_param() calls malloc; free it!
-	} else {
-		// User did not explicitly specify TransferFiles; choose a default
-#ifdef WIN32
-		should_transfer = STF_YES;
-		when_output = FTO_ON_EXIT;
-#else
-		if( in_files_specified || out_files_specified ) {
-			MyString err_msg;
-			err_msg += "\nERROR: you specified files you want Condor to "
-				"transfer via \"";
-			if( in_files_specified ) {
-				err_msg += "transfer_input_files";
-				if( out_files_specified ) {
-					err_msg += "\" and \"transfer_output_files\",";
-				} else {
-					err_msg += "\",";
-				}
-			} else {
-				ASSERT( out_files_specified );
-				err_msg += "transfer_output_files\",";
-			}
-			err_msg += " but you did not specify *when* you want Condor to "
-				"transfer the files.  Please put either \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT\" or \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
-				"try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		should_transfer = STF_NO;
-#endif
-	}
-		// now that we know what we want, call a shared method to
-		// actually insert the right classad attributes for it (since
-		// this stuff is shared, regardless of the old or new syntax).
-	InsertFileTransAttrs( when_output );
-}
-
 
 void
 InsertFileTransAttrs( FileTransferOutput_t when_output )
@@ -2904,8 +2840,6 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 	should += " = \"";
 	MyString when = ATTR_WHEN_TO_TRANSFER_OUTPUT;
 	when += " = \"";
-	MyString ft = ATTR_TRANSFER_FILES;
-	ft += " = \"";
 	
 	should += getShouldTransferFilesString( should_transfer );
 	should += '"';
@@ -2916,19 +2850,11 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 		}
 		when += getFileTransferOutputString( when_output );
 		when += '"';
-		if( when_output == FTO_ON_EXIT ) {
-			ft += "ONEXIT\"";
-		} else {
-			ft += "ALWAYS\"";
-		}
-	} else {
-		ft += "NEVER\"";
 	}
 	InsertJobExpr( should.Value() );
 	if( should_transfer != STF_NO ) {
 		InsertJobExpr( when.Value() );
 	}
-	InsertJobExpr( ft.Value() );
 }
 
 
@@ -3353,6 +3279,20 @@ SetPeriodicHoldCheck(void)
 
 	InsertJobExpr( buffer );
 
+	phc = condor_param(PeriodicHoldReason, ATTR_PERIODIC_HOLD_REASON);
+	if( phc ) {
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_HOLD_REASON, phc );
+		InsertJobExpr( buffer );
+		free(phc);
+	}
+
+	phc = condor_param(PeriodicHoldSubCode, ATTR_PERIODIC_HOLD_SUBCODE);
+	if( phc ) {
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_HOLD_SUBCODE, phc );
+		InsertJobExpr( buffer );
+		free(phc);
+	}
+
 	phc = condor_param(PeriodicReleaseCheck, ATTR_PERIODIC_RELEASE_CHECK);
 
 	if (phc == NULL)
@@ -3385,6 +3325,20 @@ SetPeriodicRemoveCheck(void)
 	{
 		/* user had a value for it, leave it alone */
 		buffer.sprintf( "%s = %s", ATTR_PERIODIC_REMOVE_CHECK, prc );
+		free(prc);
+	}
+
+	prc = condor_param(OnExitHoldReason, ATTR_ON_EXIT_HOLD_REASON);
+	if( prc ) {
+		buffer.sprintf( "%s = %s", ATTR_ON_EXIT_HOLD_REASON, prc );
+		InsertJobExpr( buffer );
+		free(prc);
+	}
+
+	prc = condor_param(OnExitHoldSubCode, ATTR_ON_EXIT_HOLD_SUBCODE);
+	if( prc ) {
+		buffer.sprintf( "%s = %s", ATTR_ON_EXIT_HOLD_SUBCODE, prc );
+		InsertJobExpr( buffer );
 		free(prc);
 	}
 
@@ -4690,12 +4644,12 @@ SetUserLog()
 			BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
 			BOOLEAN	nfs = FALSE;
 
-			if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
-				fprintf(stderr,
-					"\nWARNING: Can't determine whether log file %s is on NFS\n",
-					ulog.Value() );
-			} else if ( nfs ) {
-				if ( nfs_is_error ) {
+			if ( nfs_is_error ) {
+				if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
+					fprintf(stderr,
+						"\nWARNING: Can't determine whether log file %s is on NFS\n",
+						ulog.Value() );
+				} else if ( nfs ) {
 
 					fprintf(stderr,
 						"\nERROR: Log file %s is on NFS.\nThis could cause"
@@ -4893,6 +4847,10 @@ SetGridParams()
 			DoCleanup( 0, 0, NULL );
 			exit( 1 );
 		}
+		
+		// TODO: TSTCLAIR remove in 7.9 series.
+		if ( strcasecmp( tmp, "amazon" ) == 0 ) 
+			fprintf(stderr, "\nWARNING: Amazon grid jobs are no longer supported, please use EC2\n");
 
 		free( tmp );
 
@@ -5179,9 +5137,59 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 	
+	// EC2VpcSubnet is not a necessary parameter
+	if( (tmp = condor_param( EC2VpcSubnet, ATTR_EC2_VPC_SUBNET )) ) {
+		buffer.sprintf( "%s = \"%s\"",ATTR_EC2_VPC_SUBNET , tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// EC2VpcIP is not a necessary parameter
+	if( (tmp = condor_param( EC2VpcIP, ATTR_EC2_VPC_IP )) ) {
+		buffer.sprintf( "%s = \"%s\"",ATTR_EC2_VPC_IP , tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+		
 	// EC2ElasticIP is not a necessary parameter
     if( (tmp = condor_param( EC2ElasticIP, ATTR_EC2_ELASTIC_IP )) ) {
         buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ELASTIC_IP, tmp );
+        free( tmp );
+        InsertJobExpr( buffer.Value() );
+    }
+	
+	bool HasAvailabilityZone=false;
+	// EC2AvailabilityZone is not a necessary parameter
+    if( (tmp = condor_param( EC2AvailabilityZone, ATTR_EC2_AVAILABILITY_ZONE )) ) {
+        buffer.sprintf( "%s = \"%s\"", ATTR_EC2_AVAILABILITY_ZONE, tmp );
+        free( tmp );
+        InsertJobExpr( buffer.Value() );
+		HasAvailabilityZone=true;
+    }
+	
+	// EC2EBSVolumes is not a necessary parameter
+    if( (tmp = condor_param( EC2EBSVolumes, ATTR_EC2_EBS_VOLUMES )) ) {
+		MyString fixedvalue = delete_quotation_marks(tmp);
+		if( validate_disk_parm(fixedvalue.Value(), fixedvalue, 2, 2) == false ) 
+        {
+			fprintf(stderr, "\nERROR: 'ec2_ebs_volumes' has incorrect format.\n"
+					"The format shoud be like "
+					"\"<instance_id>:<devicename>\"\n"
+					"e.g.> For single volume: ec2_ebs_volumes = vol-35bcc15e:hda1\n"
+					"      For multiple disks: ec2_ebs_volumes = "
+					"vol-35bcc15e:hda1,vol-35bcc16f:hda2\n");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		
+		if (!HasAvailabilityZone)
+		{
+			fprintf(stderr, "\nERROR: 'ec2_ebs_volumes' requires 'ec2_availability_zone'\n");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		
+        buffer.sprintf( "%s = \"%s\"", ATTR_EC2_EBS_VOLUMES, tmp );
         free( tmp );
         InsertJobExpr( buffer.Value() );
     }
@@ -5226,7 +5234,7 @@ SetGridParams()
 
 	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
 		// check private key file can be opened
-		if ( !DisableFileChecks ) {
+		if ( !DisableFileChecks && !strstr( tmp, "$$" ) ) {
 			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
@@ -5298,7 +5306,7 @@ SetGridParams()
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
 	// Transform this representation into our regular form:
-	//   host.edu:8443 batchname queuename
+	//   host.edu:8443/ce-cream/services/CREAM2 batchname queuename
 	if ( JobGridType != NULL && strcasecmp (JobGridType, "cream") == MATCH ) {
 		tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
 		MyString resource = tmp;
@@ -5314,8 +5322,11 @@ SetGridParams()
 			}
 			if ( ( pos = resource.find( "/cream-", pos2 ) ) >= 0 ) {
 				// We found the shortened form
-				resource.replaceString( "-", " ", pos );
-				resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
+				resource.replaceString( "/cream-", "/ce-cream/services/CREAM2 ", pos );
+				pos += 26;
+				if ( ( pos2 = resource.find( "-", pos ) ) >= 0 ) {
+					resource.setChar( pos2, ' ' );
+				}
 
 				buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
 								resource.Value() );
@@ -7300,20 +7311,20 @@ bool make_vm_file_path(const char *filename, MyString& fixedname)
 
 // this function parses and checks xen disk parameters
 bool
-validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
+validate_disk_parm(const char *pszDisk, MyString &fixed_disk, int min_params, int max_params)
 {
-	if( !xen_disk ) {
+	if( !pszDisk ) {
 		return false;
 	}
 
-	const char *ptr = xen_disk;
+	const char *ptr = pszDisk;
 	// skip leading white spaces
 	while( *ptr && ( *ptr == ' ' )) {
 		ptr++;
 	}
 
 	// parse each disk
-	// e.g.) xen_disk = filename1:hda1:w, filename2:hda2:w
+	// e.g.) disk = filename1:hda1:w, filename2:hda2:w
 	StringList disk_files(ptr, ",");
 	if( disk_files.isEmpty() ) {
 		return false;
@@ -7328,7 +7339,7 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 		// found disk file
 		StringList single_disk_file(one_disk, ":");
         int iNumDiskParams = single_disk_file.number();
-		if( iNumDiskParams < 3 || iNumDiskParams > 4 ) {
+		if( iNumDiskParams < min_params || iNumDiskParams > max_params ) {
 			return false;
 		}
 
@@ -7349,14 +7360,21 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 			if( fixed_disk.Length() > 0 ) {
 				fixed_disk += ",";
 			}
+			
 			// file name
 			fixed_disk += fixedname;
 			fixed_disk += ":";
+			
 			// device
 			fixed_disk += single_disk_file.next();
-			fixed_disk += ":";
-			// permission
-			fixed_disk += single_disk_file.next();
+			
+			if (iNumDiskParams >= 3)
+			{
+				// permission
+				fixed_disk += ":";
+				fixed_disk += single_disk_file.next();
+			}
+			
             if (iNumDiskParams == 4)
             {
                 // optional (format)
@@ -7516,10 +7534,12 @@ SetConcurrencyLimits()
 		list.qsort();
 
 		str = list.print_to_string();
-		tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
-		InsertJobExpr(tmp.Value());
+		if ( str ) {
+			tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
+			InsertJobExpr(tmp.Value());
 
-		free(str);
+			free(str);
+		}
 	}
 }
 
@@ -7755,7 +7775,7 @@ SetVMParams()
 			exit(1);
 		}else {
 			MyString fixedvalue = delete_quotation_marks(disk);
-			if( validate_xen_disk_parm(fixedvalue.Value(), fixedvalue) == false ) 
+			if( validate_disk_parm(fixedvalue.Value(), fixedvalue) == false ) 
             {
 				fprintf(stderr, "\nERROR: 'vm_disk' has incorrect format.\n"
 						"The format shoud be like "
@@ -7907,9 +7927,11 @@ SetVMParams()
 		}
 
 		tmp_ptr = vmdk_files.print_to_string();
-		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
-		InsertJobExpr( buffer );
-		free( tmp_ptr );
+		if ( tmp_ptr ) {
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
+			InsertJobExpr( buffer );
+			free( tmp_ptr );
+		}
 	}
 
 	// Check if a job user defines 'Argument'.

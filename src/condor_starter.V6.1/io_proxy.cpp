@@ -22,6 +22,7 @@
 #include "condor_random_num.h"
 #include "io_proxy.h"
 #include "io_proxy_handler.h"
+#include "ipv6_hostname.h"
 
 #define IO_PROXY_COOKIE_SIZE 32
 
@@ -60,12 +61,13 @@ int IOProxy::connect_callback( Stream * /*stream*/ )
 
 	success = server->accept(*client);
 	if(success) {
-		if( my_ip_addr() != client->peer_ip_int() ) {
+		if(get_local_ipaddr().compare_address(client->peer_addr())) {
 			dprintf(D_ALWAYS,"IOProxy: rejecting connection from %s: invalid ip addr\n",client->peer_ip_str());
 		} else {
 			dprintf(D_ALWAYS,"IOProxy: accepting connection from %s\n",client->peer_ip_str());
 			accept_client = true;
 		}
+		accept_client = true;
 	} else {
 		dprintf(D_ALWAYS,"IOProxy: Couldn't accept connection: %s\n",strerror(errno));
 	}

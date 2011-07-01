@@ -113,6 +113,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_email.h"
 
 #include "valgrind.h"
+#include "ipv6_hostname.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -2882,7 +2883,7 @@ DaemonCore::ReloadSharedPortServerAddr()
 }
 
 int
-DaemonCore::Verify(char const *command_descrip,DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
+DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_sockaddr& addr, const char * fqu )
 {
 	MyString deny_reason; // always get 'deny' reason, if there is one
 	MyString *allow_reason = NULL;
@@ -2892,14 +2893,15 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const struct s
 		allow_reason = &allow_reason_buf;
 	}
 
-	int result = getSecMan()->Verify(perm, sin, fqu, allow_reason, &deny_reason);
+	int result = getSecMan()->Verify(perm, addr, fqu, allow_reason, &deny_reason);
 
 	MyString *reason = result ? allow_reason : &deny_reason;
 	char const *result_desc = result ? "GRANTED" : "DENIED";
 
 	if( reason ) {
 		char ipstr[IP_STRING_BUF_SIZE];
-		sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
+		addr.to_ip_string(ipstr, sizeof(ipstr));
+	//sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
 
 			// Note that although this says D_ALWAYS, when the result is
 			// ALLOW, we only get here if D_SECURITY is on.
@@ -3678,23 +3680,23 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 
 		// log a message
 	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
-	{
-		dprintf(D_DAEMONCORE,
-				"Calling Handler <%s> for Socket <%s>\n",
-				(*sockTable)[i].handler_descrip,
-				(*sockTable)[i].iosock_descrip);
-		handlerName = strdup((*sockTable)[i].handler_descrip);
-		dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
+		{
+			dprintf(D_DAEMONCORE,
+					"Calling Handler <%s> for Socket <%s>\n",
+					(*sockTable)[i].handler_descrip,
+					(*sockTable)[i].iosock_descrip);
+			handlerName = strdup((*sockTable)[i].handler_descrip);
+			dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
 
 		UtcTime handler_start_time;
 		handler_start_time.getTime();
 
-		if ( (*sockTable)[i].handler ) {
-				// a C handler
-			result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
-		} else if ( (*sockTable)[i].handlercpp ) {
-				// a C++ handler
-			result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
+	if ( (*sockTable)[i].handler ) {
+			// a C handler
+		result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
+	} else if ( (*sockTable)[i].handlercpp ) {
+			// a C++ handler
+		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
 		}
 
 		UtcTime handler_stop_time;
@@ -3908,7 +3910,7 @@ int DaemonCore::HandleReqSocketTimerHandler()
 		
 		// and blow it away
 	dprintf(D_ALWAYS,"Closing socket from %s - no data received\n",
-			sin_to_string(((Sock*)stream)->peer_addr()));
+			((Sock*)stream)->peer_addr().to_sinful().Value());
 	delete stream;
 
 	return TRUE;
@@ -4625,7 +4627,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					// generate a unique ID.
 					MyString tmpStr;
-					tmpStr.sprintf( "%s:%i:%i:%i", my_hostname(), mypid,
+					tmpStr.sprintf( "%s:%i:%i:%i", 
+									get_local_hostname().Value(), mypid,
 							 (int)time(0), ZZZ_always_increase() );
 					assert (the_sid == NULL);
 					the_sid = strdup(tmpStr.Value());
@@ -7558,16 +7561,20 @@ int DaemonCore::Create_Process(
 	// Check if it's a 16-bit application
 	bIs16Bit = false;
 	LOADED_IMAGE loaded;
+	BOOL map_and_load_result;
 	// NOTE (not in MSDN docs): Even when this function fails it still
 	// may have "failed" with LastError = "operation completed successfully"
 	// and still filled in our structure.  It also might really have
 	// failed.  So we init the part of the structure we care about and just
-	// ignore the return value.
+	// ignore the return value for purposes of setting bIs16Bit - we still
+	// must honor the return value for purposes of calling UnMapAndLoad() or
+	// else risk an access violation upon unmapping.
 	loaded.fDOSImage = FALSE;
-	MapAndLoad((char *)executable, NULL, &loaded, FALSE, TRUE);
+	map_and_load_result = MapAndLoad((char *)executable, NULL, &loaded, FALSE, TRUE);
 	if (loaded.fDOSImage == TRUE)
 		bIs16Bit = true;
-	UnMapAndLoad(&loaded);
+	if (map_and_load_result)
+		UnMapAndLoad(&loaded);
 
 	// Define a some short-hand variables for use bellow
 	namelen				= strlen(executable);
@@ -8880,7 +8887,7 @@ DaemonCore::Inherit( void )
 					inheritedSocks[numInheritedSocks++] = (Stream *)dc_ssock;
 					break;
 				default:
-					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks");
+					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks, not %c (%d)", *ptmp, (int)*ptmp);
 					break;
 			} // end of switch
 			ptmp=inherit_list.next();
@@ -8939,7 +8946,7 @@ DaemonCore::Inherit( void )
 	if(!privTmp)
 	{
 		return;
-	}
+		}
 
 	StringList private_list(privTmp, " ");
 	UnsetEnv( privEnvName );
@@ -9088,10 +9095,11 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// is misconfigured [to preempt RUST like rust-admin #2915]
 
 	if( dc_rsock ) {
-		const unsigned int my_ip = dc_rsock->get_ip_int();
-		const unsigned int loopback_ip = ntohl( INADDR_LOOPBACK );
+			//const unsigned int my_ip = dc_rsock->get_ip_int();
+			//const unsigned int loopback_ip = ntohl( INADDR_LOOPBACK );
 
-		if( my_ip == loopback_ip ) {
+			//if( my_ip == loopback_ip ) {
+		if ( dc_rsock->my_addr().is_loopback() ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
 			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
 		}
@@ -9849,7 +9857,7 @@ int DaemonCore::HungChildTimeout()
 		first_time = false;
 	}
 	else {
-		pidentry->was_not_responding = TRUE;
+	pidentry->was_not_responding = TRUE;
 	}
 
 	// now we give the child one last chance to save itself.  we do this by
@@ -9940,6 +9948,19 @@ int DaemonCore::SendAliveToParent()
 		return FALSE;
 	}
 
+		/* Don't have the CGAHP and/or DAGMAN, which are launched as the user,
+		   attempt to send keep alives to daemon. Permissions are not likely to
+		   allow user proccesses to send signals to Condor daemons. 
+		   Note that we shouldn't have to check for DAGMan here as no
+		   daemon core info should have been inherited down to DAGMan, 
+		   but it doesn't hurt to be sure here since we already need
+		   to check for the CGAHP. */
+	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP) ||
+	  	get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN))
+	{
+		return FALSE;
+	}
+
 		/* Before we possibly block trying to send this alive message to our 
 		   parent, lets see if this parent pid (ppid) exists on this system.
 		   This protects, for instance, against us acting a bogus CONDOR_INHERIT
@@ -9988,25 +10009,25 @@ int DaemonCore::SendAliveToParent()
 	int timeout = m_child_alive_period / number_of_tries;
 	if( timeout < 60 ) {
 		timeout = 60;
-	}
+		}
 	msg->setDeadlineTimeout( timeout );
 	msg->setTimeout( timeout );
 
 	if( blocking || !d->hasUDPCommandPort() || !m_wants_dc_udp ) {
 		msg->setStreamType( Stream::reli_sock );
-	}
+			}
 	else {
 		msg->setStreamType( Stream::safe_sock );
-	}
+		}
 
 	if( blocking ) {
 		d->sendBlockingMsg( msg.get() );
 		ret_val = msg->deliveryStatus() == DCMsg::DELIVERY_SUCCEEDED;
-	}
+			}
 	else {
 		d->sendMsg( msg.get() );
 		ret_val = TRUE;
-	}
+		}
 
 	if ( first_time ) {
 		first_time = false;
@@ -10469,7 +10490,7 @@ DaemonCore::InitSettableAttrsLists( void )
 		if( SettableAttrsLists[i] ) {
 			tmp = (SettableAttrsLists[i])->print_to_string();
 			dprintf( D_ALWAYS, "SettableAttrList[%s]: %s\n",
-					 PermString((DCpermission)i), tmp );
+					 PermString((DCpermission)i), tmp?tmp:"" );
 			free( tmp );
 		}
 	}
@@ -10763,7 +10784,7 @@ DaemonCore::publish(ClassAd *ad) {
 	ad->Assign(ATTR_MY_CURRENT_TIME, (int)time(NULL));
 
 		// Every daemon wants ATTR_MACHINE to be the full hostname:
-	ad->Assign(ATTR_MACHINE, my_full_hostname());
+	ad->Assign(ATTR_MACHINE, get_local_fqdn().Value());
 
 		// Publish our network identification attributes:
 	tmp = privateNetworkName();

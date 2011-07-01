@@ -664,6 +664,9 @@ extern const char * const  ATTR_UNCOMMITTED_SUSPENSION_TIME;
 extern const char * const  ATTR_ON_EXIT_BY_SIGNAL;
 extern const char * const  ATTR_ON_EXIT_CODE;
 extern const char * const  ATTR_ON_EXIT_HOLD_CHECK;
+extern const char * const  ATTR_ON_EXIT_HOLD_REASON;
+extern const char * const  ATTR_ON_EXIT_HOLD_SUBCODE;
+extern const char * const  ATTR_ON_EXIT_REMOVE_REASON;
 extern const char * const  ATTR_ON_EXIT_REMOVE_CHECK;
 extern const char * const  ATTR_ON_EXIT_SIGNAL;
 extern const char * const  ATTR_POST_ON_EXIT_BY_SIGNAL;
@@ -671,6 +674,10 @@ extern const char * const  ATTR_POST_ON_EXIT_SIGNAL;
 extern const char * const  ATTR_POST_ON_EXIT_CODE;
 extern const char * const  ATTR_POST_EXIT_REASON;
 extern const char * const  ATTR_PERIODIC_HOLD_CHECK;
+extern const char * const  ATTR_PERIODIC_HOLD_REASON;
+extern const char * const  ATTR_PERIODIC_HOLD_SUBCODE;
+extern const char * const  ATTR_PERIODIC_RELEASE_REASON;
+extern const char * const  ATTR_PERIODIC_REMOVE_REASON;
 extern const char * const  ATTR_PERIODIC_RELEASE_CHECK;
 extern const char * const  ATTR_PERIODIC_REMOVE_CHECK;
 extern const char * const  ATTR_TIMER_REMOVE_CHECK;
@@ -804,6 +811,10 @@ extern const char * const ATTR_EC2_REMOTE_VM_NAME;
 extern const char * const ATTR_EC2_INSTANCE_TYPE;
 extern const char * const ATTR_EC2_INSTANCE_NAME;
 extern const char * const ATTR_EC2_ELASTIC_IP;
+extern const char * const ATTR_EC2_AVAILABILITY_ZONE;
+extern const char * const ATTR_EC2_EBS_VOLUMES;
+extern const char * const ATTR_EC2_VPC_SUBNET;
+extern const char * const ATTR_EC2_VPC_IP;
 //************* End of changes for EC2 Jobs *****************//
 
 

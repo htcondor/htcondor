@@ -67,7 +67,13 @@ main(int argc, char* argv[])
 	char* job_stdout = argv[2];
 	char* job_stderr = argv[3];
 	char** job_argv = &argv[4];
-	
+
+	unsigned int hello = 0xdeadbeef;
+	if( write(sock_fd,&hello,sizeof(int)) != sizeof(int) ) {
+		err = "Failed to send hello";
+		fatal_error();
+	}
+
 	// set up an Env object that we'll use for the job. we'll initialize
 	// it with the environment that Condor sends us then merge on top of
 	// that the environment that glexec prepared for us
@@ -87,6 +93,25 @@ main(int argc, char* argv[])
 	get_std_fd(0, job_stdin);
 	get_std_fd(1, job_stdout);
 	get_std_fd(2, job_stderr);
+
+		// Now we do a little dance to replace the socketpair that we
+		// have been using to communicate with the starter with a new
+		// one.  Why?  Because, as of glexec 0.8, when glexec is
+		// configured with linger=on, some persistent process
+		// (glexec?, procd?) is keeping a handle to the wrapper's end
+		// of the socket open, so the starter hangs waiting for the
+		// socket to close when the job is executed.
+
+	int new_sock_fd = fdpass_recv(sock_fd);
+	if (new_sock_fd == -1) {
+		err = "fdpass_recv error on new_sock_fd";
+		fatal_error();
+	}
+	if (dup2(new_sock_fd,sock_fd) == -1 ) {
+		err = "dup2 error on new_sock_fd";
+		fatal_error();
+	}
+	close(new_sock_fd);
 
 	// set our UNIX domain socket end close-on-exec; if the Starter
 	// sees it close without seeing an error message first, it assumes
@@ -163,16 +188,13 @@ get_std_fd(int std_fd, char* name)
 {
 	int new_fd = std_fd;
 	if (strcmp(name, "-") == 0) {
-		if (std_fd == 0) {
-			// stdin is handled specially, since its "default"
-			// (if we were passed "-" on the command line) is
-			// to get passed the FD to use from the Starter
+			// if we were passed "-" on the command line,
+			// get the FD to use from the Starter
 			//
-			new_fd = fdpass_recv(sock_fd);
-			if (new_fd == -1) {
-				err = "fdpass_recv error";
-				fatal_error();
-			}
+		new_fd = fdpass_recv(sock_fd);
+		if (new_fd == -1) {
+			err = "fdpass_recv error";
+			fatal_error();
 		}
 	}
 	else {

@@ -256,34 +256,38 @@ ProcFamily::set_cgroup(const char * cgroup)
 	// Initialize library and data structures
 	if (m_cgroup_initialized == false) {
 		dprintf(D_PROCFAMILY, "Initializing cgroup library.\n");
-		m_cgroup_freezer_mounted = true;
-		m_cgroup_memory_mounted = true;
-		m_cgroup_cpuacct_mounted = true;
-		m_cgroup_block_mounted = true;
 		cgroup_init();
 		void *handle;
 		controller_data info;
 		int ret = cgroup_get_all_controller_begin(&handle, &info);
 		while (ret == 0) {
-			if ((strcmp(info.name, MEMORY_CONTROLLER) == 0) && (info.hierarchy == 0)) {
-				dprintf(D_ALWAYS, "Cgroup controller for memory accounting is not mounted; memory accounting will be inaccurate.\n");
-				m_cgroup_memory_mounted = false;
-			} else if ((strcmp(info.name, CPUACCT_CONTROLLER) == 0) && (info.hierarchy == 0)) {
-				dprintf(D_ALWAYS, "Cgroup controller for CPU accounting is not mounted; cpu accounting will be inaccurate.\n");
-				m_cgroup_cpuacct_mounted = false;
-			} else if ((strcmp(info.name, FREEZE_CONTROLLER) == 0) && (info.hierarchy == 0)) {
-				dprintf(D_ALWAYS, "Cgroup controller for process management is not mounted; process termination will be inaccurate.\n");
-				m_cgroup_freezer_mounted = false;
-			} else if ((strcmp(info.name, BLOCK_CONTROLLER) == 0) && (info.hierarchy == 0)) {
-				dprintf(D_ALWAYS, "Cgroup controller for I/O statistics is not mounted; accounting will be inaccurate.\n");
-				m_cgroup_block_mounted = false;
+			if (strcmp(info.name, MEMORY_CONTROLLER) == 0) {
+				m_cgroup_memory_mounted = (info.hierarchy != 0);
+			} else if (strcmp(info.name, CPUACCT_CONTROLLER) == 0) {
+				m_cgroup_cpuacct_mounted = (info.hierarchy != 0);
+			} else if (strcmp(info.name, FREEZE_CONTROLLER) == 0) {
+				m_cgroup_freezer_mounted = (info.hierarchy != 0);
+			} else if (strcmp(info.name, BLOCK_CONTROLLER) == 0) {
+				m_cgroup_block_mounted = (info.hierarchy != 0);
 			}
 			ret = cgroup_get_all_controller_next(&handle, &info);
+		}
+		cgroup_get_all_controller_end(&handle);
+		if (!m_cgroup_block_mounted) {
+			dprintf(D_ALWAYS, "Cgroup controller for I/O statistics is not mounted; accounting will be inaccurate.\n");
+		}
+		if (!m_cgroup_freezer_mounted) {
+			dprintf(D_ALWAYS, "Cgroup controller for process management is not mounted; process termination will be inaccurate.\n");
+		}
+		if (!m_cgroup_cpuacct_mounted) {
+			dprintf(D_ALWAYS, "Cgroup controller for CPU accounting is not mounted; cpu accounting will be inaccurate.\n");
+		}
+		if (!m_cgroup_memory_mounted) {
+			dprintf(D_ALWAYS, "Cgroup controller for memory accounting is not mounted; memory accounting will be inaccurate.\n");
 		}
 		if (ret != ECGEOF) {
 			dprintf(D_ALWAYS, "Error iterating through cgroups mount information: %s\n", cgroup_strerror(ret));
 		}
-		cgroup_get_all_controller_end(&handle);
 
 	}
 

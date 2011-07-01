@@ -58,7 +58,7 @@ class Attribute
 
     private:
         AttributeType m_type;
-        const char * m_value;
+        std::string m_value;
 };
 
 

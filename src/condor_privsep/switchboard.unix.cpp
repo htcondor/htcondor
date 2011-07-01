@@ -820,11 +820,6 @@ static void do_mkdir(configuration *c)
 
     dir_name = do_common_dir_cmd_tasks(c, &dir_cmd_conf, 0, 0);
 
-    r = mkdir(dir_name, 0755);
-    if (r == -1) {
-        fatal_error_exit(1, "error creating directory %s", dir_name);
-    }
-
     uid = dir_cmd_conf.user_uid;
     r = safe_switch_effective_to_uid(uid,
                                      &c->valid_target_uids,
@@ -844,6 +839,11 @@ static void do_mkdir(configuration *c)
     r = seteuid(0);
     if (r == -1) {
         fatal_error_exit(1, "error switching user to root");
+    }
+
+    r = mkdir(dir_name, 0755);
+    if (r == -1) {
+        fatal_error_exit(1, "error creating directory %s", dir_name);
     }
 
     r = chown(dir_name, uid, gid);

@@ -17,7 +17,7 @@
  ############################################################### 
 
 
-if (LINUX AND ${SYS_ARCH} MATCHES "I386|X86_64")
+if (LINUX AND ${SYS_ARCH} MATCHES "X86_64|I686|I386")
   option(WITH_COREDUMPER "Compiling with support for COREDUMPER" ON)
 endif()
 

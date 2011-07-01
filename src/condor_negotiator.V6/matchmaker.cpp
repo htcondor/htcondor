@@ -962,6 +962,25 @@ void round_for_precision(double& x) {
 }
 
 
+double starvation_ratio(double usage, double allocated) {
+    return (allocated > 0) ? (usage / allocated) : DBL_MAX;
+}
+
+struct starvation_order {
+    bool operator()(const GroupEntry* a, const GroupEntry* b) const {
+        // "starvation order" is ordering by the ratio usage/allocated, so that
+        // most-starved groups are allowed to negotiate first, to minimize group
+        // starvation over time.
+        double sa = starvation_ratio(a->usage, a->allocated);
+        double sb = starvation_ratio(b->usage, b->allocated);
+        if (sa < sb) return true;
+        if (sa > sb) return false;
+        // If ratios are the same, sub-order by group priority.
+        // Most likely to be relevant when comparing groups with zero usage.
+        return (a->priority < b->priority);
+    }
+};
+
 
 void Matchmaker::
 negotiationTime ()
@@ -1121,6 +1140,7 @@ negotiationTime ()
             group->submitterAds->Close();
 
             group->usage = accountant.GetWeightedResourcesUsed(group->name.c_str());
+            group->priority = accountant.GetPriority(group->name.c_str());
         }
 
 
@@ -1246,6 +1266,10 @@ negotiationTime ()
                 ninc = param_double("HFS_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
             }
 
+            // present accounting groups for negotiation in "starvation order":
+            vector<GroupEntry*> negotiating_groups(hgq_groups);
+            std::sort(negotiating_groups.begin(), negotiating_groups.end(), starvation_order());
+
             // This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
             // for same subset of available slots.  It gives greatest weight to groups with the greatest difference 
             // between allocated and their current usage
@@ -1257,8 +1281,11 @@ negotiationTime ()
                 dprintf(D_FULLDEBUG, "group quotas: entering RR iteration n= %g\n", n);
 
                 // Do the negotiations
-                for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                for (vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
                     GroupEntry* group = *j;
+
+                    dprintf(D_FULLDEBUG, "Group %s - starvation= %g (%g/%g)  prio= %g\n", 
+                            group->name.c_str(), starvation_ratio(group->usage, group->allocated), group->usage, group->allocated, group->priority);
 
                     if (group->allocated <= 0) {
                         dprintf(D_ALWAYS, "Group %s - skipping, zero slots allocated\n", group->name.c_str());
@@ -1269,7 +1296,12 @@ negotiationTime ()
                         dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g)\n", group->name.c_str(), group->usage);
                         continue;
                     }
-
+		    
+                    if (group->submitterAds->MyLength() <= 0) {
+                        dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
+                        continue;
+                    }
+		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
                     double delta = max(0.0, group->allocated - group->usage);
@@ -1745,7 +1777,7 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
     for (unsigned long j = 0;  j < (groups.size()-1);  ++j) {
         if (allocated[j] > 0) {
             double s = hgq_allocate_surplus(groups[j], allocated[j]);
-            if (fabs(surplus) > 0.00001) {
+            if (fabs(s) > 0.00001) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: allocate-surplus (3): surplus= %g\n", s);
             }
         }
@@ -1976,6 +2008,22 @@ GroupEntry::~GroupEntry() {
 }
 
 
+void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
+	submitterAds.Open();
+	while (ClassAd* ad = submitterAds.Next()) {
+        int idle = 0;
+        ad->LookupInteger(ATTR_IDLE_JOBS, idle);
+
+        if (idle <= 0) {
+            std::string submitterName;
+            ad->LookupString(ATTR_NAME, submitterName);
+            dprintf(D_FULLDEBUG, "Ignoring submitter %s with no idle jobs\n", submitterName.c_str());
+            submitterAds.Remove(ad);
+        }
+    }
+}
+
+
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
 					 double untrimmedSlotWeightTotal,
@@ -2004,7 +2052,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	double 		pieLeftOrig;
 	int         scheddAdsCountOrig;
 	int			totalTime;
-	bool ignore_schedd_limit;
 	int			num_idle_jobs;
 	time_t		startTime;
 	
@@ -2039,6 +2086,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			// have thrown out matches due to SlotWeight being too high
 			// given the schedd limit computed in the previous pie spin
 		DeleteMatchList();
+
+        // filter submitters with no idle jobs to avoid unneeded computations and log output
+        if (!ConsiderPreemption) {
+            filter_submitters_no_idle(scheddAds);
+        }
 
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
@@ -2228,7 +2280,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					result=negotiate( scheddName.Value(),schedd,submitterPrio,
 								  submitterAbsShare, submitterLimit,
 								  startdAds, claimIds, 
-								  scheddVersion, ignore_schedd_limit,
+								  scheddVersion, ignore_submitter_limit,
 								  startTime, numMatched, limitUsed, pieLeft);
 					updateNegCycleEndTime(startTime, schedd);
 				}
@@ -3108,6 +3160,19 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		if (result == MM_NO_MATCH) 
 		{
 			numMatched--;		// haven't used any resources this cycle
+
+            if (rejForSubmitterLimit && !ConsiderPreemption && !accountant.UsingWeightedSlots()) {
+                // If we aren't considering preemption and slots are unweighted, then we can
+                // be done with this submitter when it hits its submitter limit
+                dprintf (D_ALWAYS, "    Hit submitter limit: done negotiating\n");
+                // stop negotiation and return MM_RESUME
+                // we don't want to return with MM_DONE because
+                // we didn't get NO_MORE_JOBS: there are jobs that could match 
+                // in later cycles with a quota redistribution
+                break;
+            }
+
+            // Otherwise continue trying with this submitter
 			continue;
 		}
 
@@ -3184,14 +3249,11 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 bool Matchmaker::
 SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft) 
 {
-	float SlotWeight = accountant.GetSlotWeight(candidate);
-		// the use of a fudge-factor 0.99 in the following is to be
-		// generous in case of very small round-off differences
-		// that I have observed in tests
-	if((used + SlotWeight) <= 0.99*allowed) {
-		return true;
-	}
-	if( used == 0 && allowed > 0 && pieLeft >= 0.99*SlotWeight ) {
+    double SlotWeight = accountant.GetSlotWeight(candidate);
+    if ((used + SlotWeight) <= allowed) {
+        return true;
+    }
+    if ((used <= 0) && (allowed > 0) && (pieLeft >= 0.99*SlotWeight)) {
 
 		// Allow user to round up once per pie spin in order to avoid
 		// "crumbs" being left behind that couldn't be taken by anyone
@@ -3487,7 +3549,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			}
 		}
 
-		if(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft))
+		/* Check that the submitter has suffient user priority to be matched with
+		   yet another machine. HOWEVER, do NOT perform this submitter limit
+		   check if we are negotiating only for startd rank, since startd rank
+		   preemptions should be allowed regardless of user priorities. 
+	    */
+		if( (candidatePreemptState != RANK_PREEMPTION) &&
+			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
 		{
 			rejForSubmitterLimit++;
 			continue;

@@ -71,7 +71,7 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.0.1 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.0.1-p1 "lib;include" "done")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
@@ -106,7 +106,9 @@ if (WITH_GLOBUS)
 
 		#CFLAGS=-I${}/include && export CFLAGS &&
 		#LDFLAGS=-L${GLOBUS_INSTALL_LOC}/lib && export LDFLAGS &&
-		set (GLOBUS_FLAGS OPENSSL_CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export OPENSSL_CFLAGS &&
+		set (GLOBUS_FLAGS CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export CFLAGS &&
+						LDFLAGS=-L${OPENSSL_INSTALL_LOC}/lib && export LDFLAGS &&
+						OPENSSL_CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export OPENSSL_CFLAGS &&
 						OPENSSL_LDFLAGS=-L${OPENSSL_INSTALL_LOC}/lib && export OPENSSL_LDFLAGS  )
 
 		if(LINUX)
@@ -118,15 +120,15 @@ if (WITH_GLOBUS)
 							LT_MULTI_MODULE=1 && export LT_MULTI_MODULE)
 		endif()
 
-		set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF} ${KRB5_REF})
+		set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF})
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
 		ExternalProject_Add(globus
 							DEPENDS ${GLOBUS_DEPENDS}
 							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GLOBUS_VER}.tar.gz ${CMD_TERM}
+							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/globus-5.0.1.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${GLOBUS_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/${GLOBUS_VER}.tar.gz
+							URL http://parrot.cs.wisc.edu/externals/globus-5.0.1.tar.gz
 							#--Patch step ----------
 							PATCH_COMMAND ${GLOBUS_PATCH}
 							#--Configure step ----------

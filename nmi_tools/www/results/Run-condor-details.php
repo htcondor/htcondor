@@ -178,7 +178,12 @@ echo "<table border='0' cellspacing='0'>\n";
 echo "<tr>\n";
 echo "   <td>Name</td>\n";
 
-$hosts = get_hosts(Array($runid));
+if($type == "build") {
+  $hosts = get_hosts(Array($runid));
+}
+elseif($type == "test") {
+  $hosts = get_hosts(array_values($platform_runids));
+}
 
 // show link to run directory for each platform
 foreach ($platforms AS $platform) {
@@ -201,8 +206,9 @@ foreach ($platforms AS $platform) {
   }
 
   $remote_host = "";
-  if(array_key_exists($display, $hosts[$runid])) {
-    $remote_host = "<br><font style='font-size:75%'>" . $hosts[$runid][$display] . "</font>";
+  $true_runid = $platform_runids[$platform];
+  if(array_key_exists($display, $hosts[$true_runid])) {
+    $remote_host = "<br><font style='font-size:75%'>" . $hosts[$true_runid][$display] . "</font>";
   }
 
   $display = "<a href='$filepath/$mygid/userdir/$platform/' title='View Run Directory'>$display</a>";

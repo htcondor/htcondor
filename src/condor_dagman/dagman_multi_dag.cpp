@@ -155,6 +155,11 @@ FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
 					test );
 		if ( access( testName.Value(), F_OK ) == 0 ) {
 			if ( test > lastRescue + 1 ) {
+					// This should probably be a fatal error if
+					// DAGMAN_USE_STRICT is set, but I'm avoiding
+					// that for now because the fact that this code
+					// is used in both condor_dagman and condor_submit_dag
+					// makes that harder to implement. wenger 2011-01-28
 				dprintf( D_ALWAYS, "Warning: found rescue DAG "
 							"number %d, but not rescue DAG number %d\n",
 							test, test - 1);

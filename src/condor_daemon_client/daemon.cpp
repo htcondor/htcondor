@@ -32,7 +32,6 @@
 #include "condor_query.h"
 #include "get_daemon_name.h"
 #include "get_full_hostname.h"
-#include "my_hostname.h"
 #include "internet.h"
 #include "HashTable.h"
 #include "condor_daemon_core.h"
@@ -44,6 +43,7 @@
 #include "condor_sinful.h"
 
 #include "counted_ptr.h"
+#include "ipv6_hostname.h"
 
 void
 Daemon::common_init() {
@@ -1184,7 +1184,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
             // name
 		_is_local = true;
 		New_name( localName() );
-		New_full_hostname( strnewp(my_full_hostname()) );
+		New_full_hostname( strnewp(get_local_fqdn().Value()) );
 		dprintf( D_HOSTNAME, "Neither name nor addr specified, using local "
 				 "values - name: \"%s\", full host: \"%s\"\n", 
 				 _name, _full_hostname );
@@ -1371,8 +1371,8 @@ Daemon::getCmInfo( const char* subsys )
 				// everything else (port, hostname, etc), will be
 				// initialized and set correctly by our caller based
 				// on the fullname and the address.
-			New_name( strnewp(my_full_hostname()) );
-			New_full_hostname( strnewp(my_full_hostname()) );
+			New_name( strnewp(get_local_fqdn().Value()) );
+			New_full_hostname( strnewp(get_local_fqdn().Value()) );
 			free( host );
 			return true;
 		}
@@ -1429,8 +1429,8 @@ Daemon::findCmDaemon( const char* cm_name )
 	if( _port == 0 && readAddressFile(_subsys) ) {
 		dprintf( D_HOSTNAME, "Port 0 specified in name, "
 				 "IP/port found in address file\n" );
-		New_name( strnewp(my_full_hostname()) );
-		New_full_hostname( strnewp(my_full_hostname()) );
+		New_name( strnewp(get_local_fqdn().Value()) );
+		New_full_hostname( strnewp(get_local_fqdn().Value()) );
 		return true;
 	}
 
@@ -1540,26 +1540,21 @@ Daemon::initHostname( void )
 	dprintf( D_HOSTNAME, "Address \"%s\" specified but no name, "
 			 "looking up host info\n", _addr );
 
-	struct sockaddr_in sockaddr;
-	struct hostent* hostp;
-	string_to_sin( _addr, &sockaddr );
-	hostp = condor_gethostbyaddr( (char*)&sockaddr.sin_addr, 
-						   sizeof(struct in_addr), AF_INET ); 
-	if( ! hostp ) {
+	condor_sockaddr addr;
+	addr.from_sinful(_addr);
+	MyString fqdn = get_full_hostname(addr);
+	if (fqdn.IsEmpty()) {
 		New_hostname( NULL );
 		New_full_hostname( NULL );
-		dprintf( D_HOSTNAME, "gethostbyaddr() failed: %s (errno: %d)\n",
-				 strerror(errno), errno );
+		dprintf(D_HOSTNAME, "get_full_hostname() failed for address %s",
+				addr.to_ip_string().Value());
 		MyString err_msg = "can't find host info for ";
 		err_msg += _addr;
 		newError( CA_LOCATE_FAILED, err_msg.Value() );
 		return false;
 	}
 
-		// This will print all the D_HOSTNAME messages we need, and it
-		// returns a newly allocated string, so we won't need to
-		// strnewp() it again
-	char* tmp = get_full_hostname_from_hostent( hostp, NULL );
+	char* tmp = strnewp(fqdn.Value());
 	New_full_hostname( tmp );
 	initHostnameFromFull();
 	return true;
@@ -1690,7 +1685,7 @@ Daemon::localName( void )
 		my_name = build_valid_daemon_name( tmp );
 		free( tmp );
 	} else {
-		my_name = strnewp( my_full_hostname() );
+		my_name = strnewp( get_local_fqdn().Value() );
 	}
 	return my_name;
 }

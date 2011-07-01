@@ -247,7 +247,7 @@ class _condorOutMsg
 
 		// send message to the recipient addressed by (sock, who)
 		int sendMsg(const int sock,
-		            const struct sockaddr* who,
+		            const condor_sockaddr& who,
                     _condorMsgID msgID,
                     unsigned char * mac = 0);
 

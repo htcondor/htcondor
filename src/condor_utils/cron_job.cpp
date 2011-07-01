@@ -46,6 +46,7 @@ CronJob::CronJob( CronJobParams *params, CronJobMgr &mgr )
 		  m_killTimer( -1 ),
 		  m_num_outputs( 0 ),				// No data produced yet
 		  m_num_runs( 0 ),					// Hasn't run yet
+		  m_num_fails( 0 ),
 		  m_last_start_time( 0 ),
 		  m_last_exit_time( 0 ),
 		  m_run_load( 0.0 ),
@@ -181,14 +182,15 @@ CronJob::Schedule( void )
 {
 	dprintf( D_FULLDEBUG,
 			 "CronJob::Schedule '%s' "
-			 "IR=%c IP=%c IWE=%c IOS=%c IOD=%c nr=%d\n",
+			 "IR=%c IP=%c IWE=%c IOS=%c IOD=%c nr=%d nf=%d\n",
 			 GetName(),
 			 IsReady() ? 'T' : 'F',
 			 IsPeriodic() ? 'T' : 'F',
 			 IsWaitForExit() ? 'T' : 'F',
 			 IsOneShot() ? 'T' : 'F',
 			 IsOnDemand() ? 'T' : 'F',
-			 m_num_runs );
+			 m_num_runs,
+			 m_num_fails );
 
 	// If we're not initialized yet, do nothing...
 	if ( ! IsInitialized() ) {
@@ -207,21 +209,21 @@ CronJob::Schedule( void )
 	else if ( IsPeriodic() ) {
 
 		// Start the first run..
-		if ( 0 == m_num_runs ) {
+		if (  ( 0 == m_num_runs ) && ( 0 == m_num_fails )  ) {
 			status = RunJob( );
 		}
 	}
 
 	// "Wait for exit" job?  Start at init time
 	else if ( IsWaitForExit() ) {
-		if ( 0 == m_num_runs ) {
+		if (  ( 0 == m_num_runs ) && ( 0 == m_num_fails )  ) {
 			status = StartJob( );
 		}
 	}
 
 	// One shot?  Only start it if it hasn't been already run
 	else if ( IsOneShot() ) {
-		if ( 0 == m_num_runs ) {
+		if (  ( 0 == m_num_runs ) && ( 0 == m_num_fails )  ) {
 			status = StartJob( );
 		}
 	}
@@ -349,17 +351,19 @@ CronJob::Reaper( int exitPid, int exitStatus )
 {
 	if( WIFSIGNALED(exitStatus) ) {
 		dprintf( D_FULLDEBUG, "CronJob: '%s' (pid %d) exit_signal=%d\n",
-				 GetName(), exitPid, WTERMSIG(exitStatus) );
+			 GetName(), exitPid, WTERMSIG(exitStatus) );
 	} else {
 		dprintf( D_FULLDEBUG, "CronJob: '%s' (pid %d) exit_status=%d\n",
-				 GetName(), exitPid, WEXITSTATUS(exitStatus) );
+			 GetName(), exitPid, WEXITSTATUS(exitStatus) );
 	}
 
 	// What if the PIDs don't match?!
 	if ( exitPid != m_pid ) {
-		dprintf( D_ALWAYS, "CronJob: WARNING: Child PID %d != Exit PID %d\n",
-				 m_pid, exitPid );
+		dprintf( D_ALWAYS, 
+			"CronJob: WARNING: Child PID %d != Exit PID %d\n",
+			m_pid, exitPid );
 	}
+
 	m_pid = 0;
 	m_last_exit_time = time(NULL);
 	m_run_load = 0.0;
@@ -545,7 +549,14 @@ CronJob::StartJobProcess( void )
 	// Did it work?
 	if ( m_pid <= 0 ) {
 		dprintf( D_ALWAYS, "CronJob: Error running job '%s'\n", GetName() );
-		CleanAll( );
+		CleanAll();
+		SetState( CRON_IDLE );
+		m_num_fails++;
+
+		// Finally, notify my manager to transition the startd
+		// from benchmarking back to idle activity if there are no
+		// more benchmarks to be scheduled.
+		m_mgr.JobExited( *this );
 		return -1;
 	}
 

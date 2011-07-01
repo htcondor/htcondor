@@ -23,7 +23,7 @@
 #include "NTsenders.h"
 #include "condor_attributes.h"
 #include "condor_string.h"  // for strnewp
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "env.h"
 
 extern void main_shutdown_graceful();
@@ -304,7 +304,7 @@ MPIMasterProc::checkPortFile( void )
 				// syscall to tell the shadow.  First, create the
 				// string we need and stuff it in a ClassAd 
 			sprintf( buf, "%s=\"%s:%d\"", ATTR_MPI_MASTER_ADDR, 
-					 inet_ntoa(*(my_sin_addr())), port );
+					 get_local_ipaddr().to_ip_string().Value(), port );
 			ClassAd ad;
 			ad.Insert( buf );
 

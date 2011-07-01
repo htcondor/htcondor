@@ -47,6 +47,7 @@
 #define AMAZON_COMMAND_VM_DEREGISTER_IMAGE  "EC2_VM_DEREGISTER_IMAGE"
 #define AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS "EC2_VM_ASSOCIATE_ADDRESS"
 //#define AMAZON_COMMAND_VM_DISASSOCIATE_ADDRESS   "EC2_VM_DISASSOCIATE_ADDRESS"
+#define AMAZON_COMMAND_VM_ATTACH_VOLUME		"EC_VM_ATTACH_VOLUME"
 
 // S3 Commands
 #define AMAZON_COMMAND_S3_ALL_BUCKETS       "AMAZON_S3_ALL_BUCKETS"
@@ -199,6 +200,19 @@ class AmazonAssociateAddress : public AmazonRequest {
     public:
         AmazonAssociateAddress();
         virtual ~AmazonAssociateAddress();
+
+        static bool ioCheck(char **argv, int argc);
+        static bool workerFunction(char **argv, int argc, std::string &result_string);
+};
+
+/**
+ * AmazonAttachVolume - Will attempt to attach a running instance to an EBS volume
+ * @see http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/index.html?ApiReference-query-AttachVolume.html
+ */
+class AmazonAttachVolume : public AmazonRequest {
+    public:
+        AmazonAttachVolume();
+        virtual ~AmazonAttachVolume();
 
         static bool ioCheck(char **argv, int argc);
         static bool workerFunction(char **argv, int argc, std::string &result_string);
