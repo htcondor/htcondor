@@ -986,6 +986,20 @@ File System Configuration File Entries''.
   default value for \MacroNI{MAIL}, and the \Condor{schedd} will not
   function unless \MacroNI{MAIL} is defined.
 
+\label{param:MailFrom}
+\item[\Macro{MAIL\_FROM}]
+  The e-mail address that notification e-mails appear to come from.
+  Contents is that of the \Expr{From} header.
+  There is no default value; if undefined, the \Expr{From} header may
+  be nonsensical.
+
+\label{param:SMTPServer}
+\item[\Macro{SMTP\_SERVER}]
+  For Windows platforms only, the host name of the server through which
+  to route notification e-mail.
+  There is no default value; if undefined and the debug level is
+  at  \Expr{FULLDEBUG}, an error message will be generated.
+
 \label{param:ReservedSwap}
 \item[\Macro{RESERVED\_SWAP}]
   The amount of swap space in Mbytes to reserve for this machine.
