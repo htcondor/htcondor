@@ -86,7 +86,7 @@ AviaryScheddPlugin::earlyInitialize()
 	if (!sock) {
 		EXCEPT("Failed to allocate transport socket");
 	}
-	if (!sock->assign(provider->getHttpListenerSocket())) {
+	if (!sock->assign(provider->getListenerSocket())) {
 		EXCEPT("Failed to bind transport socket");
 	}
 	int index;
@@ -238,7 +238,7 @@ AviaryScheddPlugin::HandleTransportSocket(Stream *)
 {
     // TODO: respond to a transport callback here?
     string provider_error;
-    if (!provider->processHttpRequest(provider_error)) {
+    if (!provider->processRequest(provider_error)) {
         dprintf (D_ALWAYS,"Error processing request: %s\n",provider_error.c_str());
     }
 

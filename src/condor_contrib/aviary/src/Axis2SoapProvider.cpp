@@ -21,41 +21,8 @@
 #include <axutil_thread_pool.h>
 #include <axiom_xml_reader.h>
 #include <axutil_file_handler.h>
+
 #include "Axis2SoapProvider.h"
-
-// NOTE: these types are not in the public
-// Axis2/C API via headers but we need them;
-// review if there is a newer rev after 1.6
-
-// lifted out from http_receiver.c
-typedef struct
-{
-     axis2_transport_receiver_t http_server;
-     axis2_http_svr_thread_t *svr_thread;
-     int port;
-     axis2_conf_ctx_t *conf_ctx;
-     axis2_conf_ctx_t *conf_ctx_private;
-} axis2_http_server_impl_t;
- 
-#define AXIS2_INTF_TO_IMPL(http_server) \
- ((axis2_http_server_impl_t *)(http_server))
- 
-// lifted out from http_svr_thread.c
-struct axis2_http_svr_thread
-{
-    int listen_socket;
-    axis2_bool_t stopped;
-    axis2_http_worker_t *worker;
-    int port;
-};
-
-typedef struct axis2_http_svr_thd_args
-{
-    axutil_env_t *env;
-    axis2_socket_t socket;
-    axis2_http_worker_t *worker;
-    axutil_thread_t *thread;
-} axis2_http_svr_thd_args_t;
 
 using namespace aviary::soap;
 
@@ -71,7 +38,7 @@ Axis2SoapProvider::Axis2SoapProvider(int _log_level, const char* _log_file, cons
     m_env = NULL;
     m_http_server = NULL;
     m_svr_thread = NULL;
-    m_initialized = false;
+    m_init = false;
     m_http_socket_read_timeout = AXIS2_HTTP_DEFAULT_SO_TIMEOUT;
 }
 
@@ -79,6 +46,10 @@ Axis2SoapProvider::~Axis2SoapProvider()
 {
     if (m_http_server) {
         axis2_transport_receiver_free(m_http_server, m_env);
+    }
+    
+    if (m_svr_thread) {
+        axis2_http_svr_thread_free(m_svr_thread, m_env);
     }
 
     if (m_env) {
@@ -92,12 +63,14 @@ Axis2SoapProvider::~Axis2SoapProvider()
 bool
 Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
 {
+    m_http_socket_read_timeout = _read_timeout;
+    
     if (m_log_file.empty() || m_repo_path.empty()) {
         _error = "Log file or repo path is NULL";
         return false;
     }
 
-    if (!m_initialized) {
+    if (!m_init) {
         axutil_allocator_t* allocator = axutil_allocator_init(NULL);
         axutil_error_t *error = axutil_error_create(allocator);
         axutil_log_t *log = axutil_log_create(allocator, NULL, m_log_file.c_str());
@@ -118,7 +91,7 @@ Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
 			_error = m_repo_path;
 			_error += " does not exist or insufficient permissions";
             AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI,_error.c_str());
-            return m_initialized;
+            return m_init;
         }
 
         m_http_server = axis2_http_server_create_with_file(m_env, m_repo_path.c_str(), _port);
@@ -126,26 +99,26 @@ Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
 			_error =  AXIS2_ERROR_GET_MESSAGE(m_env->error);
             AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI, "HTTP server create failed: %d: %s",
                             m_env->error->error_number,_error.c_str());
-            return m_initialized;
+            return m_init;
         }
 
-        m_svr_thread = createHttpReceiver(m_env,m_http_server,_error); 
+        m_svr_thread = createReceiver(m_env,m_http_server,_error); 
         if (!m_svr_thread) {
 			_error =  AXIS2_ERROR_GET_MESSAGE(m_env->error);
 			AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI, "HTTP receiver create failed: %d: %s",
                             m_env->error->error_number,_error.c_str());
-            return m_initialized;
+            return m_init;
         }
 
-        m_initialized = true;
+        m_init = true;
     }
 
-    return m_initialized;
+    return m_init;
 
 }
 
 axis2_http_svr_thread_t*
-Axis2SoapProvider::createHttpReceiver(axutil_env_t* _env, axis2_transport_receiver_t* _server, std::string& _error)
+Axis2SoapProvider::createReceiver(axutil_env_t* _env, axis2_transport_receiver_t* _server, std::string& /*_error */)
 {
 
     axis2_http_server_impl_t *server_impl = NULL;
@@ -176,7 +149,7 @@ Axis2SoapProvider::createHttpReceiver(axutil_env_t* _env, axis2_transport_receiv
 }
 
 SOCKET
-Axis2SoapProvider::getHttpListenerSocket()
+Axis2SoapProvider::getListenerSocket()
 {
     SOCKET socket = INVALID_SOCKET;
     if (m_svr_thread) {
@@ -186,9 +159,9 @@ Axis2SoapProvider::getHttpListenerSocket()
 }
 
 bool
-Axis2SoapProvider::processHttpRequest(std::string& _error)
+Axis2SoapProvider::processRequest(std::string& _error)
 {
-    if (!m_initialized) {
+    if (!m_init) {
          _error = "Axis2SoapPovider has not been initialized yet";
         return false;
     }
@@ -199,7 +172,7 @@ Axis2SoapProvider::processHttpRequest(std::string& _error)
         int socket = INVALID_SOCKET;
         axis2_http_svr_thd_args_t *arg_list = NULL;
 
-        socket = (int)axutil_network_handler_svr_socket_accept(m_env, m_svr_thread->listen_socket);
+        socket = this->processAccept();
         if(!m_svr_thread->worker)
         {
             AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI,
@@ -221,15 +194,23 @@ Axis2SoapProvider::processHttpRequest(std::string& _error)
         arg_list->worker = m_svr_thread->worker;
 
         // single-threaded for DC
-        invokeHttpWorker(NULL, (void *)arg_list);
+        invokeWorker(NULL, (void *)arg_list);
     }
 
     return true;
 }
 
+SOCKET Axis2SoapProvider::processAccept() {
+    return (SOCKET)axutil_network_handler_svr_socket_accept(m_env, m_svr_thread->listen_socket);
+}
+
+void* Axis2SoapProvider::createServerConnection(axutil_env_t *thread_env, SOCKET socket) {
+    return axis2_simple_http_svr_conn_create(thread_env, (SOCKET)socket);
+}
+
 void *AXIS2_THREAD_FUNC
-Axis2SoapProvider::invokeHttpWorker(
-    axutil_thread_t * thd,
+Axis2SoapProvider::invokeWorker(
+    axutil_thread_t * /*thd */,
     void *data)
 {
     struct AXIS2_PLATFORM_TIMEB t1, t2;
@@ -265,7 +246,8 @@ Axis2SoapProvider::invokeHttpWorker(
     }
 
     socket = arg_list->socket;
-    svr_conn = axis2_simple_http_svr_conn_create(thread_env, (int)socket);
+    svr_conn = (axis2_simple_http_svr_conn_t*)(this->createServerConnection(thread_env, (int)socket));
+    
     if(!svr_conn)
     {
         AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI, "creating simple_http_svr_connection failed");
@@ -299,19 +281,13 @@ Axis2SoapProvider::invokeHttpWorker(
         }
         secs += millisecs / 1000.0;
 
-#if defined(WIN32)
-        AXIS2_LOG_DEBUG(thread_env->log, AXIS2_LOG_SI, "Request processed...");
-#else
         AXIS2_LOG_DEBUG(thread_env->log, AXIS2_LOG_SI, "Request processed in %.3f seconds", secs);
-#endif
     }
 
-    if(status == AXIS2_SUCCESS)
-    {
+    if(status == AXIS2_SUCCESS) {
         AXIS2_LOG_DEBUG(thread_env->log, AXIS2_LOG_SI, "Request served successfully");
     }
-    else
-    {
+    else {
         AXIS2_LOG_WARNING(thread_env->log, AXIS2_LOG_SI, "Error occurred in processing request ");
     }
 
@@ -322,8 +298,3 @@ Axis2SoapProvider::invokeHttpWorker(
 
     return NULL;
 }
-
-// TODO: need a public axis2_tcp_worker.h for this
-//Axis2SoapProvider::processTcpRequest() {
-//    axis2_tcp_worker_process_request();
-//}

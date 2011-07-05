@@ -34,7 +34,7 @@ cmds = ['getJobStatus', 'getJobSummary', 'getJobDetails']
 
 cmdarg = len(argv) > 1 and argv[1]
 cproc =  len(argv) > 2 and argv[2]
-job_url = len(argv) > 3 and argv[3] or "http://localhost:9091/services/query/"
+job_url = len(argv) > 3 and argv[3] or "https://localhost:9091/services/query/"
 
 if cmdarg not in cmds:
 	print "error unknown command: ", cmdarg

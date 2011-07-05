@@ -33,6 +33,7 @@
 #include "JobServerObject.h"
 #include "HistoryProcessingUtils.h"
 #include "Globals.h"
+#include "Axis2SslProvider.h"
 
 // about self
 DECL_SUBSYSTEM("QUERY_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
@@ -43,7 +44,7 @@ using namespace aviary::soap;
 using namespace aviary::history;
 
 ClassAd	*ad = NULL;
-Axis2SoapProvider* provider = NULL;
+Axis2SslProvider* provider = NULL;
 JobLogMirror *mirror = NULL;
 JobServerJobLogConsumer *consumer = NULL;
 JobServerObject *job_server = NULL;
@@ -86,12 +87,12 @@ int main_init(int /* argc */, char * /* argv */ [])
 	int level = param_integer("AXIS2_DEBUG_LEVEL",AXIS2_LOG_LEVEL_CRITICAL);
 
     // init transport here
-    provider = new Axis2SoapProvider(level,log_file,repo_path.c_str());
+    provider = new Axis2SslProvider(level,log_file,repo_path.c_str());
 
     std::string axis_error;
     if (!provider->init(port,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
 		dprintf(D_ALWAYS, "%s\n",axis_error.c_str());
-        EXCEPT("Failed to initialize Axis2SoapProvider");
+        EXCEPT("Failed to initialize Provider");
     }
 
 	init_classad();
@@ -101,7 +102,7 @@ int main_init(int /* argc */, char * /* argv */ [])
 		EXCEPT("Failed to allocate transport socket");
 	}
 
-	if (!sock->assign(provider->getHttpListenerSocket())) {
+	if (!sock->assign(provider->getListenerSocket())) {
 		EXCEPT("Failed to bind transport socket");
 	}
 	int index;
@@ -249,8 +250,9 @@ HandleTransportSocket(Service *, Stream *)
 {
 	// respond to a transport callback here
 	std::string provider_error;
-    if (!provider->processHttpRequest(provider_error)) {
+    if (!provider->processRequest(provider_error)) {
         dprintf (D_ALWAYS,"Error processing request: %s\n",provider_error.c_str());
+        Stop();
     }
 
 	return KEEP_STREAM;
