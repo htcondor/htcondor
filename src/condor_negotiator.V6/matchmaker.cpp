@@ -1296,7 +1296,12 @@ negotiationTime ()
                         dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g)\n", group->name.c_str(), group->usage);
                         continue;
                     }
-
+		    
+                    if (group->submitterAds->MyLength() <= 0) {
+                        dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
+                        continue;
+                    }
+		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
                     double delta = max(0.0, group->allocated - group->usage);
@@ -3159,6 +3164,19 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		if (result == MM_NO_MATCH) 
 		{
 			numMatched--;		// haven't used any resources this cycle
+
+            if (rejForSubmitterLimit && !ConsiderPreemption && !accountant.UsingWeightedSlots()) {
+                // If we aren't considering preemption and slots are unweighted, then we can
+                // be done with this submitter when it hits its submitter limit
+                dprintf (D_ALWAYS, "    Hit submitter limit: done negotiating\n");
+                // stop negotiation and return MM_RESUME
+                // we don't want to return with MM_DONE because
+                // we didn't get NO_MORE_JOBS: there are jobs that could match 
+                // in later cycles with a quota redistribution
+                break;
+            }
+
+            // Otherwise continue trying with this submitter
 			continue;
 		}
 
@@ -3535,7 +3553,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			}
 		}
 
-		if(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft))
+		/* Check that the submitter has suffient user priority to be matched with
+		   yet another machine. HOWEVER, do NOT perform this submitter limit
+		   check if we are negotiating only for startd rank, since startd rank
+		   preemptions should be allowed regardless of user priorities. 
+	    */
+		if( (candidatePreemptState != RANK_PREEMPTION) &&
+			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
 		{
 			rejForSubmitterLimit++;
 			continue;
