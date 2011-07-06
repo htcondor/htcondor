@@ -1,7 +1,7 @@
 //TEMPTEMP -- make a test that checks that all possible stuff gets put into rescue DAG (old-style)
 //TEMPTEMP -- make sure this works with splices
 //TEMPTEMP -- maybe having a DONE line for a non-existant node should be warning, in case you removed a node from the "main" DAG
-//TEMPTEMP -- make sure retry stuff works right in the new rescue DAGs
+//TEMPTEMP -- make sure retry stuff works right in the new rescue DAGs -- done
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1832,7 +1832,6 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 
 static const char *RESCUE_DAG_VERSION = "2.0.0";
 
-//TEMPTEMP -- make a WriteNewRescue method?  Or have a new/old flag here???
 //TEMPTEMP -- maybe change isNew to isPartial?
 //-----------------------------------------------------------------------------
 void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
@@ -1920,7 +1919,6 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
     //
     // Print per-node information.
     //
-	//TEMPTEMP -- need to print retry info if it's not being reset
     it.ToBeforeFirst();
     while (it.Next(job)) {
 		WriteNodeToRescue( fp, job, reset_retries_upon_rescue, isNew );
@@ -2000,37 +1998,6 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 						node->GetJobName(), node->_scriptPost->GetCmd() );
 		}
 
-			// Print the RETRY line, if any.
-		if( node->retry_max > 0 ) {
-			int retriesLeft = (node->retry_max - node->retries);
-
-			if ( node->_Status == Job::STATUS_ERROR
-						&& node->retries < node->retry_max 
-						&& node->have_retry_abort_val
-						&& node->retval == node->retry_abort_val ) {
-				fprintf( fp, "# %d of %d retries performed; remaining attempts "
-							"aborted after node returned %d\n", 
-							node->retries, node->retry_max, node->retval );
-			} else {
-				if ( !reset_retries_upon_rescue ) {
-					fprintf( fp,
-								"# %d of %d retries already performed; %d remaining\n",
-								node->retries, node->retry_max, retriesLeft );
-				}
-			}
-
-			ASSERT( node->retries <= node->retry_max );
-			if ( !reset_retries_upon_rescue ) {
-				fprintf( fp, "RETRY %s %d", node->GetJobName(), retriesLeft );
-			} else {
-				fprintf( fp, "RETRY %s %d", node->GetJobName(), node->retry_max );
-			}
-			if ( node->have_retry_abort_val ) {
-				fprintf( fp, " UNLESS-EXIT %d", node->retry_abort_val );
-			}
-			fprintf( fp, "\n" );
-		}
-
 			// Print the VARS line, if any.
 		if ( !node->varNamesFromDag->IsEmpty() ) {
 			fprintf( fp, "VARS %s", node->GetJobName() );
@@ -2085,7 +2052,37 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		fprintf(fp, "DONE %s\n", node->GetJobName() );
 	}
 
-	//TEMPTEMP -- print retry stuff here...
+		// Print the RETRY line, if any.
+	if( node->retry_max > 0 ) {
+		int retriesLeft = (node->retry_max - node->retries);
+
+		if ( node->_Status == Job::STATUS_ERROR
+					&& node->retries < node->retry_max 
+					&& node->have_retry_abort_val
+					&& node->retval == node->retry_abort_val ) {
+			fprintf( fp, "# %d of %d retries performed; remaining attempts "
+						"aborted after node returned %d\n", 
+						node->retries, node->retry_max, node->retval );
+		} else {
+			if ( !reset_retries_upon_rescue ) {
+				fprintf( fp,
+							"# %d of %d retries already performed; %d remaining\n",
+							node->retries, node->retry_max, retriesLeft );
+			}
+		}
+
+		ASSERT( node->retries <= node->retry_max );
+		if ( !reset_retries_upon_rescue ) {
+			fprintf( fp, "RETRY %s %d", node->GetJobName(), retriesLeft );
+		} else {
+			fprintf( fp, "RETRY %s %d", node->GetJobName(), node->retry_max );
+		}
+		if ( node->have_retry_abort_val ) {
+			fprintf( fp, " UNLESS-EXIT %d", node->retry_abort_val );
+		}
+		fprintf( fp, "\n" );
+	}
+
 
 	fprintf( fp, "\n" );
 }

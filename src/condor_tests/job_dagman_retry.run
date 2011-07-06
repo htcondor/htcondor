@@ -26,10 +26,11 @@ $testdesc =  'Condor submit dag - retry test - scheduler U';
 $testname = "job_dagman_retry";
 $dagman_args = "-verbose";
 
+#TEMPTEMP -- this comment doesn't match the test code...
 #	This test runs a single node which always fails.
 #	We asked for three retries and after the last,
 #	we will(had better see)have a rescue dag. In
-#	that dag we will scrap for three retries having been made.
+#	that dag we will scrape for three retries having been made.
 
 my $killedchosen = 0;
 
@@ -38,8 +39,10 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-my $rescuedag = $cmd . ".rescue";
+my $rescuedag = $cmd . ".rescue001";
 my $newrescuedag = $cmd . ".rescue" . ".new";
+
+#TEMPTEMP -- delete existing rescue dags...
 
 my %subinfo;
 
@@ -92,6 +95,7 @@ $failure = sub
 		my $result = `./x_read_joblog.exe $joblog RETURNVALUE`;
 		CondorTest::debug("Result of Dag is $result\n",1);
 		CondorTest::debug("Checking for retries.....\n",1);
+		#TEMPTEMP -- what is actually going on here with this rescue/newrescue stuff?
 		open( RESCUE, "<$rescuedag");
 		open( NEWRESCUE, ">$newrescuedag");
 		# write out a rescue dag where node always failing has 0 inserted for return
@@ -125,6 +129,7 @@ $failure = sub
 		close(RESCUE);
 		close(NEWRESCUE);
 		runcmd("mv $newrescuedag $rescuedag");
+		#TEMPTEMP -- does this do a rescursive submit?
 		if( CondorTest::RunDagTest($testname, $rescuedag, 0, $dagman_args) ) {
 			CondorTest::debug("$testname: SUCCESS\n",1);
 			exit(0);
