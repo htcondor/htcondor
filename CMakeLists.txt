@@ -19,7 +19,7 @@
 ##########################################################################
 # Set project
 project(CONDOR)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.6)
 
 ##########################################################################
 #Setup package meta-data (used in packaging)
