@@ -987,6 +987,20 @@ File System Configuration File Entries''.
   default value for \MacroNI{MAIL}, and the \Condor{schedd} will not
   function unless \MacroNI{MAIL} is defined.
 
+\label{param:MailFrom}
+\item[\Macro{MAIL\_FROM}]
+  The e-mail address that notification e-mails appear to come from.
+  Contents is that of the \Expr{From} header.
+  There is no default value; if undefined, the \Expr{From} header may
+  be nonsensical.
+
+\label{param:SMTPServer}
+\item[\Macro{SMTP\_SERVER}]
+  For Windows platforms only, the host name of the server through which
+  to route notification e-mail.
+  There is no default value; if undefined and the debug level is
+  at  \Expr{FULLDEBUG}, an error message will be generated.
+
 \label{param:ReservedSwap}
 \item[\Macro{RESERVED\_SWAP}]
   The amount of swap space in Mbytes to reserve for this machine.
@@ -5420,22 +5434,25 @@ SYSTEM_PERIODIC_REMOVE = \
 \item[\Macro{SCHEDD\_CLUSTER\_INITIAL\_VALUE}]
   An integer that specifies the initial cluster number value to use within a
   job id when a job is first submitted.
+  If the job cluster number reaches the value set by 
+  \MacroNI{SCHEDD\_CLUSTER\_MAXIMUM\_VALUE} and wraps,
+  it will be re-set to the value given by this variable.
   The default value is 1.
 
 \label{param:ScheddClusterIncrementValue}
 \item[\Macro{SCHEDD\_CLUSTER\_INCREMENT\_VALUE}]
   A positive integer that defaults to 1, representing a stride used
-  for assignment of cluster numbers within a job id.
+  for the assignment of cluster numbers within a job id.
   When a job is submitted, the job will be assigned a job id.  The cluster
   number of the job id will be equal to the previous cluster number used
-  plus the value of this setting.
+  plus the value of this variable.
 
 \label{param:ScheddClusterMaximumValue}
 \item[\Macro{SCHEDD\_CLUSTER\_MAXIMUM\_VALUE}]
   An integer that specifies an upper bound on assigned job cluster id values.
   For value $M$, the maximum job cluster id assigned to 
   any job will be $M-1$. When the maximum id is reached, cluster ids will 
-  continue assignment using \Macro{SCHEDD\_CLUSTER\_INITIAL\_VALUE}. The 
+  continue assignment using \MacroNI{SCHEDD\_CLUSTER\_INITIAL\_VALUE}. The 
   default value of this variable is zero,
   which represents the behavior of having no maximum cluster id value. 
 
