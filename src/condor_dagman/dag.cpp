@@ -1,7 +1,6 @@
 //TEMPTEMP -- make a test that checks that all possible stuff gets put into rescue DAG (old-style)
 //TEMPTEMP -- make sure this works with splices
 //TEMPTEMP -- maybe having a DONE line for a non-existant node should be warning, in case you removed a node from the "main" DAG
-//TEMPTEMP -- make sure retry stuff works right in the new rescue DAGs -- done
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

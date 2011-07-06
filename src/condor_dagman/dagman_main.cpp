@@ -1,8 +1,6 @@
 //TEMPTEMP -- -DumpRescue should still write out a complete dag file...
 //TEMPTEMP -- make sure this works right doing a rescue DAG with multiple DAGs -- I think I tried this...
-//TEMPTEMP -- job_dagman_retry.run fails -- works now, but the test still needs some cleanup
-//TEMPTEMP -- job_dagman_unlessexit.run fails -- okay, this one works now...
-//TEMPTEMP -- make sure node jobs actually do not get re-run when rescue DAG is run!! -- done!
+//TEMPTEMP -- job_dagman_retry.run fails -- the test still needs some cleanup
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -921,16 +919,15 @@ void main_init (int argc, char ** const argv) {
 
 		//
 		// If we are running a "new-style" rescue DAG, update our DAG
-		// files list accordingly.
+		// files list accordingly (we just add the rescue DAG to the
+		// end of the list of DAG files).
 		//
-//TEMPTEMP -- okay, we just want to add the rescue DAG to the end of the DAG file list...
 	if ( rescueDagNum > 0 ) {
 		dagman.rescueFileToRun = RescueDagName(
 					dagman.primaryDagFile.Value(),
 					dagman.multiDags, rescueDagNum );
-		//TEMPTEMP -- change message here...
-		debug_printf ( DEBUG_QUIET, "%s; running %s instead of normal "
-					"DAG file%s\n", rescueDagMsg.Value(),
+		debug_printf ( DEBUG_QUIET, "%s; running %s in combination with "
+					"normal DAG file%s\n", rescueDagMsg.Value(),
 					dagman.rescueFileToRun.Value(),
 					dagman.multiDags ? "s" : "");
 		debug_printf ( DEBUG_QUIET,
@@ -941,17 +938,8 @@ void main_init (int argc, char ** const argv) {
 			// Note: if we ran multiple DAGs and they failed, the
 			// whole thing is condensed into a single rescue DAG.
 			// wenger 2007-02-27
-		//TEMPTEMP? dagman.dagFiles.clearAll();
 		dagman.dagFiles.append( dagman.rescueFileToRun.Value() );
 		dagman.dagFiles.rewind();
-
-		//TEMPTEMP -- we probably need to get rid of this...
-		if ( dagman.useDagDir ) {
-			debug_printf ( DEBUG_NORMAL,
-						"Unsetting -useDagDir flag because we're running "
-						"a rescue DAG\n" );
-			dagman.useDagDir = false;
-		}
 	}
 
 		//
@@ -1000,7 +988,6 @@ void main_init (int argc, char ** const argv) {
     //
 	dagman.mungeNodeNames = multipleDags;
 	parseSetDoNameMunge( dagman.mungeNodeNames );
-	//parseSetDoNameMunge( false );//TEMPTEMP!!!!!
    	debug_printf( DEBUG_VERBOSE, "Parsing %d dagfiles\n", 
 		dagman.dagFiles.number() );
 	dagman.dagFiles.rewind();
