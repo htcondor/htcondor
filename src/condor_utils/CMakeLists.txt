@@ -34,7 +34,11 @@ add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param
 ############ end generate params
 
 condor_static_lib( utils "${HeaderFiles};${SourceFiles};${SAFE_OPEN_SRC}" )
-add_dependencies(utils utils_genparams syscall_numbers )
+if(WINDOWS)
+	add_dependencies(utils utils_genparams syscall_numbers )
+else()
+	add_dependencies(utils utils_genparams syscall_numbers configure_safefile)
+endif()
 
 ##################################################
 # condorapi & tests
