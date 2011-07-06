@@ -226,7 +226,7 @@ void ClassAdListDoesNotDeleteAds::fPrintAttrListList(FILE* f, bool use_xml, Stri
     Close();
 }
 
-int ClassAdListDoesNotDeleteAds::Count( classad::ExprTree *constraint )
+int ClassAdListDoesNotDeleteAds::Count(classad::ExprTree* constraint, bool remove)
 {
 	ClassAd *ad = NULL;
 	int matchCount  = 0;
@@ -240,7 +240,9 @@ int ClassAdListDoesNotDeleteAds::Count( classad::ExprTree *constraint )
 	while( (ad = Next()) ) {
 		if ( EvalBool(ad, constraint) ) {
 			matchCount++;
-		}
+        } else if (remove) {
+            Remove(ad);
+        }
 	}
 	return matchCount;
 }
