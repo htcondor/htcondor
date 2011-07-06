@@ -18,6 +18,9 @@ Hooks may also behave as a Job Router.
 The Daemon ClassAd hooks permit the \Condor{startd} and 
 the \Condor{schedd} daemons to execute hooks once or on a periodic basis.
 
+Note that standard universe jobs execute different \Condor{starter} and
+\Condor{shadow} daemons that do not implement any hook mechanisms.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{misc/job-hooks.tex}
