@@ -19,7 +19,8 @@
 ##**************************************************************
 
 # This tests part of the "allow PRE script to skip node job" feature
-# (gittrac #2122).  TEMPTEMP -- add more details here.
+# (gittrac #2122).  This makes sure the POST script also gets skipped
+# if the PRE script returns the skip value (for node A).
 
 use CondorTest;
 use CondorUtils;
@@ -29,7 +30,9 @@ $testdesc =  'Condor submit dag - basic pre_skip node test C - scheduler U';
 $testname = "job_dagman_pre_skip-C";
 $dagman_args = "-verbose";
 
-@outfiles = ("C_B");
+$logfile = "job_dagman_pre_skip-A.dag.dagman.out";
+@outfiles = ("job_dagman_pre_skip-C_A.out", "job_dagman_pre_skip-C_Apost.out",
+	"job_dagman_pre_skip-C_B.out");
 
 my $killedchosen = 0;
 
@@ -38,9 +41,18 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+# Get rid of any existing log and output files
+if (-e $logfile) {
+	runcmd("rm -f $logfile");
+}
+foreach $name (@outfiles) {
+	if (-e $name) {
+		runcmd("rm -f $name");
+	}
+}
+
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
@@ -71,35 +83,25 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
+
 	$diditpass = 0 if (-e "C_A.out");
-	$diditpass = 0 if (-e "C_C.out");
-	foreach $name (@outfiles) {
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name.out");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name.out>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /^OK.*$/ ) {
-				$passed = 1;
-				CondorTest::debug("$name.out: $line\n",1);
-			}
-		}
-		close(OUT);
-		if($passed == 1 ) {
-			;
-		} else {
-			CondorTest::debug("failed $name.out: $line\n",1);
-			$diditpass = 0;
-		}
+	if (-e "job_dagman_pre_skip-C_A.out") {
+		CondorTest::debug("Error: Node A was not skipped!\n");
+		$diditpass = 0;
+	} else {
+		 CondorTest::debug("Node A was correctly skipped\n");
 	}
-	# clean out old output files
-	foreach $name (@outfiles) {
-		runcmd("rm -f $name.out $name.err");
+	if (-e "job_dagman_pre_skip-C_Apost.out") {
+		CondorTest::debug("Error: Node A POST script was not skipped!\n");
+		$diditpass = 0;
+	} else {
+		CondorTest::debug("Node A POST script was correctly skipped\n");
+	}
+	if (! -e "job_dagman_pre_skip-C_B.out") {
+		CondorTest::debug("Node B was not run!!\n",1);
+		$diditpass = 0;
+	} else {
+		CondorTest::debug("Node B was run\n",1);
 	}
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
