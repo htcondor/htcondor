@@ -1,6 +1,4 @@
 #! /usr/bin/env perl
-#TEMPTEMP -- this fails sometimes but succeeds sometimes!!!
-#TEMPTEMP -- shit -- I think it failed because it doesn't delete the dagman.out file at the beginning!!!!!
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -33,7 +31,7 @@ $testname = "job_dagman_pre_skip-B";
 $dagman_args = "-verbose";
 
 $logfile = "job_dagman_pre_skip-B.dag.dagman.out";
-@outfiles = ("job_dagman_pre_skip-B_B.out");
+@outfiles = ("job_dagman_pre_skip-B_A.out", "job_dagman_pre_skip-B_B.out");
 
 my $killedchosen = 0;
 
@@ -46,10 +44,11 @@ sub RUNNING{2};
 if (-e $logfile) {
 	runcmd("rm -f $logfile");
 }
-
-
-#TEMPTEMP -- output file names should probably include the test name...
-#TEMPTEMP -- delete output files here, too, including B_A.out
+foreach $name (@outfiles) {
+	if (-e $name) {
+		runcmd("rm -f $name");
+	}
+}
 
 $abnormal = sub 
 {
@@ -83,60 +82,47 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-	# B_A.out should not exist -- if it does, it means that the
-	# job was not correctly skipped.
-	if (-e "B_A.out") {
-		CondorTest::debug("Node B_A not skipped!!\n",1);
+
+	# job_dagman_pre_skip-B_A.out should not exist -- if it does, it
+	# means that the job was not correctly skipped.
+	if (-e "job_dagman_pre_skip-B_A.out") {
+		CondorTest::debug("Node A was not skipped!!\n",1);
 		$diditpass = 0;
+	} else {
+		CondorTest::debug("Node A was correctly skipped\n",1);
 	}
-	foreach $name (@outfiles) {
-		print "DIAG <$name>\n";#TEMPTEMP
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /^OK.*$/ ) {
-				$passed = 1;
-				CondorTest::debug("$name.out: $line\n",1);
-			}
-		}
-		close(OUT);
-		if($passed != 1 ) {
-			CondorTest::debug("failed $name.out: $line\n",1);
-			$diditpass = 0;
-		}
+	if (! -e "job_dagman_pre_skip-B_B.out") {
+		CondorTest::debug("Node B was not run!!\n",1);
+		$diditpass = 0;
+	} else {
+		CondorTest::debug("Node B was run\n",1);
 	}
-	$passed = 0;
-	$canopen = open(OUT,"<$logfile");
+
+	$canopen = open(LOG,"<$logfile");
 	if( ! (defined $canopen)) {
-		CondorTest::debug("Could not open outfile<$logfile>:$!\n",1);
+		CondorTest::debug("Could not open logfile<$logfile>:$!\n",1);
 		$diditpass = 0;
 	}
-	my @outfile = <OUT>;
-	$passed = 1; # Let's be optimistic
-	foreach (@outfile) {
-		if(/PRE_SKIP return value \d+ indicates we are done.+B_A/) {
+	my @logoutput = <LOG>;
+	$passed = 0;
+	foreach (@logoutput) {
+		# We need to see this line...
+		if(/PRE_SKIP return value \d+ indicates we are done.+A/) {
 			CondorTest::debug("Saw PRE_SKIP trip correctly: $_\n",1);
+			$passed = 1;
 			last;
 		}
 	}
-	foreach (@outfile) {
-		if(/ULOG_EXECUTE for.+Node B_A/) {
-			CondorTest::debug("Job B_A ran even though PRE_SKIP succeeded!\n",1);
+	foreach (@logoutput) {
+		if(/ULOG_EXECUTE for.+Node A/) {
+			CondorTest::debug("Job A ran even though PRE_SKIP succeeded!\n",1);
 			$passed = 0;
 			last;
 		}
 	}
-	close(OUT);
+	close(LOG);
 	if($passed != 1) {
-		#TEMPTEMP -- change this...
-		CondorTest::debug("failed $logfile\n",1);
+		CondorTest::debug("failed to find correct output in $logfile\n",1);
 		$diditpass = 0;
 	}
 	if($diditpass == 0) {

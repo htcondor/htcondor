@@ -85,12 +85,16 @@ $failure = sub
 	$diditpass = 1;
 
 	if (! -e "job_dagman_pre_skip-A_A.out") {
-		CondorTest::debug("Node A was not run!\n");
+		CondorTest::debug("Error: Node A was not run!\n");
 		$diditpass = 0;
+	} else {
+		CondorTest::debug("Node A was run\n");
 	}
 	if (-e "job_dagman_pre_skip-A_B.out") {
-		CondorTest::debug("Node B was run!\n");
+		CondorTest::debug("Error: Node B was run!\n");
 		$diditpass = 0;
+	} else {
+		CondorTest::debug("Node B was correctly not run\n");
 	}
 };
 
