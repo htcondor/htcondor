@@ -18,16 +18,22 @@
 ##
 ##**************************************************************
 
+# This tests part of the "allow PRE script to skip node job" feature
+# (gittrac #2122).  Both nodes have the skip option enabled; node A's
+# job should be run because the PRE script returns 0; node B's job should
+# not be run because the PRE script returns a non-skip error -- therefore
+# the node (and the DAG) are considered failed.
+
 use CondorTest;
 use CondorUtils;
 
 $cmd = 'job_dagman_pre_skip-A.dag';
-$testdesc =  'Condor submit dag - basic pre_skip node test - scheduler U';
+$testdesc =  'Condor submit dag - basic pre_skip node test A - scheduler U';
 $testname = "job_dagman_pre_skip-A";
 $dagman_args = "-verbose";
 
-@outfiles = ("A_A", "A_B");
-
+$logfile = "job_dagman_pre_skip-A.dag.dagman.out";
+@outfiles = ("job_dagman_pre_skip-A_A.out", "job_dagman_pre_skip-A_B.out");
 my $killedchosen = 0;
 
 # truly const variables in perl
@@ -35,10 +41,19 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+# Get rid of any existing log and output files
+if (-e $logfile) {
+	runcmd("rm -f $logfile");
+}
+foreach $name (@outfiles) {
+	if (-e $name) {
+		runcmd("rm -f $name");
+	}
+}
+
 $abnormal = sub 
 {
-
-	die "Want to see only submit, execute and successful completion\n";
+	die "Want to see only submit, execute and failed completion\n";
 };
 
 $aborted = sub 
@@ -63,11 +78,28 @@ $submitted = sub
 	CondorTest::debug("submitted: This test will see submit, executing and failure\n",1);
 };
 
-$failure = sub {
-	my %info = shift;
-	print "Saw expected failure";
+$failure = sub
+{
+	CondorTest::debug("failed as expected\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	if (! -e "job_dagman_pre_skip-A_A.out") {
+		CondorTest::debug("Node A was not run!\n");
+		$diditpass = 0;
+	}
+	if (-e "job_dagman_pre_skip-A_B.out") {
+		CondorTest::debug("Node B was run!\n");
+		$diditpass = 0;
+	}
 };
 
+$success = sub
+{
+	die "Error: DAG should fail!\n";
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExitedFailure( $testname, $failure );
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );

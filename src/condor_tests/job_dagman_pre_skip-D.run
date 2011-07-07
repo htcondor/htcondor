@@ -18,6 +18,11 @@
 ##
 ##**************************************************************
 
+# This tests part of the "allow PRE script to skip node job" feature
+# (gittrac #2122).  TEMPTEMP -- add more details here.
+
+#TEMPTEMP -- we don't have a success subroutine
+
 use CondorTest;
 use CondorUtils;
 

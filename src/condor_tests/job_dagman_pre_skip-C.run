@@ -18,11 +18,14 @@
 ##
 ##**************************************************************
 
+# This tests part of the "allow PRE script to skip node job" feature
+# (gittrac #2122).  TEMPTEMP -- add more details here.
+
 use CondorTest;
 use CondorUtils;
 
 $cmd = 'job_dagman_pre_skip-C.dag';
-$testdesc =  'Condor submit dag - basic pre_skip node test - scheduler U';
+$testdesc =  'Condor submit dag - basic pre_skip node test C - scheduler U';
 $testname = "job_dagman_pre_skip-C";
 $dagman_args = "-verbose";
 

@@ -1,4 +1,6 @@
 #! /usr/bin/env perl
+#TEMPTEMP -- this fails sometimes but succeeds sometimes!!!
+#TEMPTEMP -- shit -- I think it failed because it doesn't delete the dagman.out file at the beginning!!!!!
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -18,15 +20,20 @@
 ##
 ##**************************************************************
 
+# This tests part of the "allow PRE script to skip node job" feature
+# (gittrac #2122).  The node job for node A should get skipped
+# because of the PRE script return value.
+
 use CondorTest;
 use CondorUtils;
 
 $cmd = 'job_dagman_pre_skip-B.dag';
-$testdesc =  'Condor submit dag - basic pre_skip node test - scheduler U';
+$testdesc =  'Condor submit dag - basic pre_skip node test B - scheduler U';
 $testname = "job_dagman_pre_skip-B";
 $dagman_args = "-verbose";
 
-@outfiles = ("B_B");
+$logfile = "job_dagman_pre_skip-B.dag.dagman.out";
+@outfiles = ("job_dagman_pre_skip-B_B.out");
 
 my $killedchosen = 0;
 
@@ -35,9 +42,17 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+# Get rid of any existing log and output files
+if (-e $logfile) {
+	runcmd("rm -f $logfile");
+}
+
+
+#TEMPTEMP -- output file names should probably include the test name...
+#TEMPTEMP -- delete output files here, too, including B_A.out
+
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
@@ -68,14 +83,19 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-	# B_A.out should not exist
-	$diditpass = 0 if (-e "B_A.out");
+	# B_A.out should not exist -- if it does, it means that the
+	# job was not correctly skipped.
+	if (-e "B_A.out") {
+		CondorTest::debug("Node B_A not skipped!!\n",1);
+		$diditpass = 0;
+	}
 	foreach $name (@outfiles) {
+		print "DIAG <$name>\n";#TEMPTEMP
 		$line = "";
 		$passed = 0;
-		$canopen = open(OUT,"<$name.out");
+		$canopen = open(OUT,"<$name");
 		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name.out>:$!\n",1);
+			CondorTest::debug("Can not open outfile<$name>:$!\n",1);
 			$diditpass = 0;
 		}
 		while(<OUT>) {
@@ -92,14 +112,10 @@ $success = sub
 			$diditpass = 0;
 		}
 	}
-	# clean out old output files
-	foreach $name (@outfiles) {
-		runcmd("rm -f $name.out $name.err");
-	}
 	$passed = 0;
-	$canopen = open(OUT,"<$testname.dag.dagman.out");
+	$canopen = open(OUT,"<$logfile");
 	if( ! (defined $canopen)) {
-		CondorTest::debug("Could not open outfile<$testname.dag.dagman.out>:$!\n",1);
+		CondorTest::debug("Could not open outfile<$logfile>:$!\n",1);
 		$diditpass = 0;
 	}
 	my @outfile = <OUT>;
@@ -119,7 +135,8 @@ $success = sub
 	}
 	close(OUT);
 	if($passed != 1) {
-		CondorTest::debug("failed $testname.dag.dagman.out\n",1);
+		#TEMPTEMP -- change this...
+		CondorTest::debug("failed $logfile\n",1);
 		$diditpass = 0;
 	}
 	if($diditpass == 0) {

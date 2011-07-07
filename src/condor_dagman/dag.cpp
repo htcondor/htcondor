@@ -1539,6 +1539,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 					 preskip_interrogator, job->GetJobName(),
 					 s?s:"(unknown)");
 				job->retval = 0; // Job _is_ successful!
+				//TEMPTEMP -- I'm not sure we want to write this...
 				_jobstateLog.WriteJobSuccessOrFailure( job );
 				TerminateJob(job, 0, 0);
 				goto pre_skip_fake_success;

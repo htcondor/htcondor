@@ -1,6 +1,6 @@
 executable = /bin/echo
-output = $(job).out
-error = $(job).err
+output = job_dagman_pre_skip-C_$(job).out
+error = job_dagman_pre_skip-C_$(job).err
 arguments = OK done with $(job)
 universe = scheduler
 queue
