@@ -16,6 +16,9 @@
  #
  ###############################################################
 
+# The source tarball for this external was pulled from
+# http://cdnetworks-us-1.dl.sourceforge.net/project/libcg/libcgroup/v0.37/libcgroup-0.37.tar.bz2
+
 if (LINUX)
 	option(WITH_LIBCGROUP "Compiling with support for libcgroup" ON)
 endif()
@@ -28,9 +31,9 @@ if (WITH_LIBCGROUP)
 
 		ExternalProject_Add( libcgroup
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://cdnetworks-us-1.dl.sourceforge.net/project/libcg/libcgroup/v0.37/${LIBCGROUP_VER}.tar.bz2 ${CMD_TERM}
+				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBCGROUP_VER}.tar.bz2 ${CMD_TERM}
 				    DOWNLOAD_DIR ${LIBCGROUP_STAGE}/dl
-				    URL http://cdnetworks-us-1.dl.sourceforge.net/project/libcg/libcgroup/v0.37/${LIBCGROUP_VER}.tar.bz2
+				    URL http://parrot.cs.wisc.edu/externals/${LIBCGROUP_VER}.tar.bz2
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND cd ${LIBCGROUP_VER} ${CMD_TERM} ./configure --prefix=${LIBCGROUP_INSTALL_LOC} --enable-static=yes --disable-dependency-tracking
 				    #--Build Step ----------
