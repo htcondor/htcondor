@@ -7769,7 +7769,7 @@ id=466
 
 [INVALID_LOG_FILES]
 aliases=
-default=core
+default=
 version=0.0.0
 range=.*
 state=default
