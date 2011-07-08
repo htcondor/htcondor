@@ -172,7 +172,11 @@ Axis2SoapProvider::processRequest(std::string& _error)
         int socket = INVALID_SOCKET;
         axis2_http_svr_thd_args_t *arg_list = NULL;
 
-        socket = this->processAccept();
+        if (INVALID_SOCKET == (socket = this->processAccept())) {
+            _error = "Failed to accept connection";
+            return false;
+        }
+
         if(!m_svr_thread->worker)
         {
             AXIS2_LOG_ERROR(m_env->log, AXIS2_LOG_SI,

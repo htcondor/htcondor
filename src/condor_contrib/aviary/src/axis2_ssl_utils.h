@@ -34,17 +34,12 @@ extern "C"
     axis2_ssl_utils_initialize_ctx(
         const axutil_env_t * env,
         axis2_char_t * server_cert,
-        axis2_char_t * key_file,
+        axis2_char_t * server_key,
+        axis2_char_t * ca_file,
         axis2_char_t * ssl_pp);
 
     AXIS2_EXTERN SSL *AXIS2_CALL
     axis2_ssl_utils_initialize_ssl(
-        const axutil_env_t * env,
-        SSL_CTX * ctx,
-        axis2_socket_t socket);
-    
-    AXIS2_EXTERN SSL *AXIS2_CALL
-    axis2_ssl_utils_initialize_ssl_server(
         const axutil_env_t * env,
         SSL_CTX * ctx,
         axis2_socket_t socket);

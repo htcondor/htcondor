@@ -66,55 +66,6 @@ int AXIS2_CALL axis2_ssl_stream_get_char(
     axutil_stream_t * stream,
     const axutil_env_t * env);
 
-AXIS2_EXTERN axutil_stream_t *AXIS2_CALL
-axutil_stream_create_ssl(
-    const axutil_env_t * env,
-    axis2_socket_t socket,
-    axis2_char_t * server_cert,
-    axis2_char_t * key_file,
-    axis2_char_t * ssl_pp)
-{
-    ssl_stream_impl_t *stream_impl = NULL;
-
-    stream_impl =
-    (ssl_stream_impl_t *) AXIS2_MALLOC(env->allocator,
-        sizeof(ssl_stream_impl_t));
-
-    if (!stream_impl)
-    {
-        AXIS2_HANDLE_ERROR(env, AXIS2_ERROR_NO_MEMORY, AXIS2_FAILURE);
-        return NULL;
-    }
-    memset ((void *)stream_impl, 0, sizeof (ssl_stream_impl_t));
-    stream_impl->socket = socket;
-    stream_impl->ctx = NULL;
-    stream_impl->ssl = NULL;
-
-    stream_impl->ctx = axis2_ssl_utils_initialize_ctx(env, server_cert,
-        key_file, ssl_pp);
-    if (!stream_impl->ctx)
-    {
-        axis2_ssl_stream_free((axutil_stream_t *) stream_impl, env);
-        AXIS2_HANDLE_ERROR(env, AXIS2_ERROR_SSL_ENGINE, AXIS2_FAILURE);
-        return NULL;
-    }
-    stream_impl->ssl = axis2_ssl_utils_initialize_ssl(env, stream_impl->ctx,
-        stream_impl->socket);
-    if (!stream_impl->ssl)
-    {
-        AXIS2_HANDLE_ERROR(env, AXIS2_ERROR_SSL_ENGINE, AXIS2_FAILURE);
-        return NULL;
-    }
-    stream_impl->stream_type = AXIS2_STREAM_MANAGED;
-
-    axutil_stream_set_read(&(stream_impl->stream), env, axis2_ssl_stream_read);
-    axutil_stream_set_write(&(stream_impl->stream), env,
-        axis2_ssl_stream_write);
-    axutil_stream_set_skip(&(stream_impl->stream), env, axis2_ssl_stream_skip);
-
-    return &(stream_impl->stream);
-}
-
 void AXIS2_CALL
 axis2_ssl_stream_free(
     axutil_stream_t * stream,
@@ -145,6 +96,42 @@ axis2_ssl_stream_read(
     SSL_set_mode(stream_impl->ssl, SSL_MODE_AUTO_RETRY);
 
     read = SSL_read(stream_impl->ssl, buffer, (int)count);
+    /* We are sure that the difference lies within the int range */
+    switch (SSL_get_error(stream_impl->ssl, read))
+    {
+        case SSL_ERROR_NONE:
+        len = read;
+        break;
+        case SSL_ERROR_ZERO_RETURN:
+        len = -1;
+        break;
+        case SSL_ERROR_SYSCALL:
+        AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI, "SSL Error: Premature close");
+        len = -1;
+        break;
+        default:
+        len = -1;
+        break;
+    }
+    return len;
+}
+
+int AXIS2_CALL
+axis2_ssl_stream_peek(
+    axutil_stream_t * stream,
+    const axutil_env_t * env,
+    void *buffer,
+    int count)
+{
+    ssl_stream_impl_t *stream_impl = NULL;
+    int read = -1;
+    int len = -1;
+
+    stream_impl = AXIS2_INTF_TO_IMPL(stream);
+
+    SSL_set_mode(stream_impl->ssl, SSL_MODE_AUTO_RETRY);
+
+    read = SSL_peek(stream_impl->ssl, buffer, (int)count);
     /* We are sure that the difference lies within the int range */
     switch (SSL_get_error(stream_impl->ssl, read))
     {
@@ -233,5 +220,3 @@ axis2_ssl_stream_get_type(
 {
     return AXIS2_INTF_TO_IMPL(stream)->stream_type;
 }
-
-

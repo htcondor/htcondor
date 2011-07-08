@@ -57,6 +57,13 @@ extern "C"
     axutil_stream_t * stream,
     const axutil_env_t * env,
     int count);
+    
+    int AXIS2_CALL
+    axis2_ssl_stream_peek(
+    axutil_stream_t * stream,
+    const axutil_env_t * env,
+    void *buffer,
+    int count);
 
 #ifdef __cplusplus
 }

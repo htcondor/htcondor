@@ -64,8 +64,9 @@ Axis2SslProvider::init(int _port, int _read_timeout, std::string& _error) {
     }
     
     // init the ssl lib, errors, etc.
-    m_ctx = axis2_ssl_utils_initialize_ctx(m_env,"/home/pmackinn/repos/uw/condor/CONDOR_SRC/src/condor_contrib/aviary/src/server.crt",
-                                               "/home/pmackinn/repos/uw/condor/CONDOR_SRC/src/condor_contrib/aviary/src/server.key",
+    m_ctx = axis2_ssl_utils_initialize_ctx(m_env,"/home/pmackinn/sslcert/server.crt",
+                                               "/home/pmackinn/sslcert/server.key",
+                                               "/home/pmackinn/sslcert/server.crt",
                                                "condor"); 
     if (!m_ctx) {
         dprintf(D_ALWAYS, "axis2_ssl_utils_initialize_ctx failed\n");
@@ -95,6 +96,7 @@ void* Axis2SslProvider::createServerConnection(axutil_env_t *thread_env, int soc
     }
     memset ((void *)stream_impl, 0, sizeof (ssl_stream_impl_t));
     stream_impl->socket = socket;
+    stream_impl->stream.socket = socket;
     stream_impl->ctx = NULL;
     stream_impl->ssl = NULL;
 
@@ -102,10 +104,12 @@ void* Axis2SslProvider::createServerConnection(axutil_env_t *thread_env, int soc
     
     stream_impl->ssl = m_ssl;
     stream_impl->stream_type = AXIS2_STREAM_MANAGED;
+    stream_impl->stream.stream_type = AXIS2_STREAM_MANAGED;
 
     axutil_stream_set_read(&(stream_impl->stream), m_env, axis2_ssl_stream_read);
     axutil_stream_set_write(&(stream_impl->stream), m_env, axis2_ssl_stream_write);
     axutil_stream_set_skip(&(stream_impl->stream), m_env, axis2_ssl_stream_skip);
+    axutil_stream_set_peek(&(stream_impl->stream), m_env, axis2_ssl_stream_peek);
     
     svr_conn->stream = &(stream_impl->stream);
 
@@ -118,13 +122,19 @@ Axis2SslProvider::processAccept() {
 
     if (!(m_ssl = axis2_ssl_utils_initialize_ssl(m_env,m_ctx,conn_socket))) {
         dprintf(D_ALWAYS, "axis2_ssl_utils_initialize_ssl failed\n");
-        return false;
+        return INVALID_SOCKET;
     }
-    return true;
+    return conn_socket;
 }
 
 bool
 Axis2SslProvider::processRequest(std::string& _error)
 {
-    return Axis2SoapProvider::processRequest(_error);
+    bool status = Axis2SoapProvider::processRequest(_error);
+    if (m_ssl) {
+        SSL_shutdown(m_ssl);
+        SSL_free(m_ssl);
+        m_ssl = NULL;
+    }
+    return status;
 }
