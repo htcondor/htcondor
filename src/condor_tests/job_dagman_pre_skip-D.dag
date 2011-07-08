@@ -1,7 +1,5 @@
 JOB A job_dagman_pre_skip-D_A.cmd
-VARS A job="$(JOB)"
 SCRIPT PRE A job_dagman_pre_skip-D_A.sh
 PRE_SKIP A 2
 JOB B job_dagman_pre_skip-D_B.cmd
-VARS B job="$(JOB)"
 PARENT A CHILD B

@@ -19,9 +19,8 @@
 ##**************************************************************
 
 # This tests part of the "allow PRE script to skip node job" feature
-# (gittrac #2122).  TEMPTEMP -- add more details here.
-
-#TEMPTEMP -- we don't have a success subroutine
+# (gittrac #2122).  This makes sure that the PRE_SKIP setting gets put
+# into a rescue DAG.
 
 use CondorTest;
 use CondorUtils;
@@ -31,7 +30,7 @@ $testdesc =  'Condor submit dag - basic pre_skip node with rescue DAG test - sch
 $testname = "job_dagman_pre_skip-D";
 $dagman_args = "-verbose";
 
-@outfiles = ("D_A", "D_B");
+$rescuedag = "job_dagman_pre_skip-D.dag.rescue001";
 
 my $killedchosen = 0;
 
@@ -40,9 +39,13 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+# Get rid of any existing rescue DAG file.
+if (-e $rescuedag) {
+    runcmd("rm -f $rescuedag");
+}
+
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
@@ -68,17 +71,35 @@ $submitted = sub
 	CondorTest::debug("submitted: This test will see submit, executing and failure\n",1);
 };
 
-$failure = sub {
+$failure = sub
+{
 	my %info = shift;
 	print "Saw expected failure";
-	open RESCUE,"<job_dagman_pre_skip-D.dag.rescue001";
 	$diditpass = 0;
+
+	$canopen = open(RESCUE,"<$rescuedag");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Error: cannot open rescue DAG <$name>:$!\n",1);
+	}
 	while(<RESCUE>){
-		$diditpass = 1 if(/PRE_SKIP D_A 2/);
+		if (/PRE_SKIP A 2/) {
+			CondorTest::debug("Found PRE_SKIP line in rescue DAG\n");
+			$diditpass = 1;
+		}
 	}
 	close(RESCUE);
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
 };
 
+$success = sub
+{
+	die "Error: DAG should fail!\n";
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExitedFailure( $testname, $failure );
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );

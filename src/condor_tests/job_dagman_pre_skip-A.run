@@ -96,6 +96,10 @@ $failure = sub
 	} else {
 		CondorTest::debug("Node B was correctly not run\n");
 	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
 };
 
 $success = sub
