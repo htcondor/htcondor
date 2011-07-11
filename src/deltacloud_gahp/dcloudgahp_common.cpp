@@ -22,34 +22,6 @@ void dcloudprintf_internal(const char *function, const char *fmt, ...)
     }
 }
 
-std::string create_failure(const char *req_id, const char *err_msg, ...)
-{
-    std::string buffer;
-    va_list ap;
-    char *tmp;
-    unsigned int i;
-
-    buffer += req_id;
-    buffer += ' ';
-
-    va_start(ap, err_msg);
-    vasprintf(&tmp, err_msg, ap);
-    va_end(ap);
-
-    for (i = 0; i < strlen(tmp); i++) {
-        if (tmp[i] == ' ')
-            buffer += '\\';
-        buffer += tmp[i];
-    }
-    free(tmp);
-
-    buffer += '\n';
-
-    dcloudprintf(buffer.c_str());
-
-    return buffer;
-}
-
 Gahp_Args::Gahp_Args()
 {
     argv = NULL;

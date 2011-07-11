@@ -281,7 +281,7 @@ static void *worker_function(void *ptr)
          * earlier, so there is no reason we can't parse it again.
          */
         dcloudprintf("Failed to parse command again\n");
-        output_string = create_failure("0", "Command_Parse_Failure");
+        output_string = "0 Command_Parse_Failure\n";
         goto cleanup;
     }
 

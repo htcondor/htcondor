@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdarg.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -132,6 +133,34 @@ static char *read_password_file(const char *path)
 cleanup:
     close(fd);
     return password;
+}
+
+static std::string create_failure(const char *req_id, const char *err_msg, ...)
+{
+    std::string buffer;
+    va_list ap;
+    char *tmp;
+    unsigned int i;
+
+    buffer += req_id;
+    buffer += ' ';
+
+    va_start(ap, err_msg);
+    vasprintf(&tmp, err_msg, ap);
+    va_end(ap);
+
+    for (i = 0; i < strlen(tmp); i++) {
+        if (tmp[i] == ' ')
+            buffer += '\\';
+        buffer += tmp[i];
+    }
+    free(tmp);
+
+    buffer += '\n';
+
+    dcloudprintf(buffer.c_str());
+
+    return buffer;
 }
 
 static std::string create_instance_output(char * reqid,
