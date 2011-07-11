@@ -210,16 +210,8 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 		}
 		ASSERT( job );
 
-		// Only update the status if it isn't RUNNING, in that case we want the
-		// GM_PROBE to get the status so we get all the information about the
-		// instance at once including the public IP address etc before setting
-		// the RUNNING state and writing to the event log.
-		if ( strcasecmp( status, "RUNNING" ) == 0 && job->condorState != RUNNING ) {
-			job->probeNow = true;
-			job->SetEvaluateState();
-		} else {
-			job->StatusUpdate( status );
-		}
+		job->StatusUpdate( status );
+
 		my_jobs.Delete( job );
 	}
 

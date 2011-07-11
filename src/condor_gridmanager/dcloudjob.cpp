@@ -49,6 +49,7 @@
 #define GM_SAVE_INSTANCE_NAME			13
 #define GM_CHECK_VM						14
 #define GM_START_VM						15
+#define GM_CHECK_AUTOSTART				16
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -67,6 +68,7 @@ static const char *GMStateNames[] = {
 	"GM_SAVE_INSTANCE_NAME",
 	"GM_CHECK_VM",
 	"GM_START_VM",
+	"GM_CHECK_AUTOSTART",
 };
 
 #define DCLOUD_VM_STATE_RUNNING			"RUNNING"
@@ -266,6 +268,10 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		if ( token ) {
 			SetInstanceId( token );
 		}
+	}
+
+	if ( !jobAd->LookupBool( ATTR_DELTACLOUD_NEEDS_START, m_needstart ) ) {
+		m_needstart = false;
 	}
 
 	myResource = DCloudResource::FindOrCreateResource( m_serviceUrl, m_username, m_password );
@@ -478,8 +484,8 @@ void DCloudJob::doEvaluateState()
 				gmState = GM_CREATE_VM;
 				break;
 
-			case GM_CREATE_VM:
-			{
+			case GM_CREATE_VM: {
+
 				if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
 					gmState = GM_HOLD;
 					break;
@@ -549,29 +555,60 @@ void DCloudJob::doEvaluateState()
 				ProcessInstanceAttrs( instance_attrs );
 				ASSERT( m_instanceId );
 
-				if ( remoteJobState == DCLOUD_VM_STATE_STOPPED ) {
-					gmState = GM_START_VM;
-				} else {
-					gmState = GM_SAVE_INSTANCE_ID;
-				}
+				gmState = GM_CHECK_AUTOSTART;
 
 				break;
 			}
 
-			case GM_START_VM:
+		case GM_CHECK_AUTOSTART: {
+			bool autostart;
 
+			if ( (condorState == REMOVED) || (condorState == HELD) ) {
+				gmState = GM_DELETE;
+				break;
+			}
+
+			rc = gahp->dcloud_start_auto( m_serviceUrl,
+										  m_username,
+										  m_password,
+										  &autostart );
+
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING )
+				break;
+
+			if ( rc != 0 ) {
+				errorString = gahp->getErrorString();
+				dprintf( D_ALWAYS,"(%d.%d) Finding autostart failed: %s\n",
+						 procID.cluster, procID.proc, errorString.Value() );
+				gmState = GM_HOLD;
+				break;
+			}
+
+			m_needstart = !autostart;
+			jobAd->Assign( ATTR_DELTACLOUD_NEEDS_START, m_needstart );
+
+			gmState = GM_SAVE_INSTANCE_ID;
+
+			break;
+		}
+
+		case GM_START_VM:
 				rc = gahp->dcloud_action( m_serviceUrl,
 										  m_username,
 										  m_password,
 										  m_instanceId,
 										  "start" );
+				jobAd->Assign( ATTR_DELTACLOUD_NEEDS_START, false );
+				m_needstart = false;
+
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 
 				if ( rc == 0 ) {
-					gmState = GM_SAVE_INSTANCE_ID;
+					gmState = GM_PROBE_JOB;
 				} else {
 					// What to do about a failed start?
 					errorString = gahp->getErrorString();
@@ -595,24 +632,21 @@ void DCloudJob::doEvaluateState()
 				break;
 
 			case GM_SUBMITTED:
-
-				// TODO Make sure instances that begin in the 'stopped'
-				//   state aren't flagged here.
-				if ( remoteJobState == DCLOUD_VM_STATE_FINISH ||
-					 remoteJobState == DCLOUD_VM_STATE_STOPPED ) {
-
-					gmState = GM_DONE_SAVE;
-
-				} else if ( condorState == REMOVED || condorState == HELD ) {
-
+				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
-
+				} else if ( remoteJobState == DCLOUD_VM_STATE_STOPPED ) {
+					if ( m_needstart ) {
+						gmState = GM_START_VM;
+					} else {
+						gmState = GM_DONE_SAVE;
+					}
+				} else if ( remoteJobState == DCLOUD_VM_STATE_FINISH ) {
+					gmState = GM_DONE_SAVE;
 				} else if ( probeNow ) {
 					gmState = GM_PROBE_JOB;
 				}
 
 				break;
-
 
 			case GM_DONE_SAVE:
 
@@ -751,8 +785,8 @@ void DCloudJob::doEvaluateState()
 
 				break;
 
-			case GM_PROBE_JOB:
-			{
+			case GM_PROBE_JOB: {
+
 				probeNow = false;
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
@@ -825,6 +859,7 @@ void DCloudJob::doEvaluateState()
 
 				break;
 			}
+
 			case GM_CANCEL:
 
 				rc = gahp->dcloud_action( m_serviceUrl,

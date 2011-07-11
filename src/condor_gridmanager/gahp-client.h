@@ -1095,6 +1095,11 @@ class GahpClient : public Service {
 									const char *password,
 									int *max_length );
 
+		int
+		dcloud_start_auto( const char *service_url,
+						   const char *username,
+						   const char *password,
+						   bool *autostart );
 
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...

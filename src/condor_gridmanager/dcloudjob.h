@@ -99,6 +99,8 @@ private:
 	char *m_keyname;
 	char *m_userdata;
 
+	bool m_needstart;
+
 	void ProcessInstanceAttrs( StringList &attrs );
 	MyString build_instance_name( int max_length );
 };
