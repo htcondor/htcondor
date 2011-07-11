@@ -501,9 +501,7 @@ void DCloudJob::doEvaluateState()
 						break;
 					}
 
-					if ( (lastSubmitAttempt + submitInterval) > now ) {
-						delay = (lastSubmitAttempt + submitInterval) - now;
-					}
+					delay = (lastSubmitAttempt + submitInterval) - now;
 					daemonCore->Reset_Timer( evaluateStateTid, delay );
 					break;
 				}
