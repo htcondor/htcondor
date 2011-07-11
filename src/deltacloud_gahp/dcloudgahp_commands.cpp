@@ -263,12 +263,12 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     char *hwp_id, *hwp_memory, *hwp_cpu, *hwp_storage, *reqid;
     char *keyname, *userdata;
     struct deltacloud_api api;
-    struct deltacloud_instance inst;
     bool ret = FALSE;
     struct deltacloud_create_parameter *params = NULL;
     int params_size = 0;
     char *instid = NULL;
     int i;
+    char *esc_id;
 
     if (!verify_number_args(14, argc)) {
         output_string = create_failure("0", "Wrong_Argument_Number");
@@ -341,15 +341,19 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
         goto cleanup_library;
     }
 
-    if (deltacloud_get_instance_by_id(&api, instid, &inst) < 0) {
-        output_string = create_failure(reqid, "Create_Instance_Failure: %s",
-                                       deltacloud_get_last_error_string());
-        goto cleanup_library;
-    }
+    /* deltacloud_create_instance only returns an ID to us.  Output that ID
+     * plus a hard-coded state of PENDING to the upper layers; it will be
+     * their responsibility to get the instance details as appropriate
+     */
 
-    output_string = create_instance_output(reqid, &inst);
+    output_string += reqid;
+    output_string += " NULL ";
 
-    deltacloud_free_instance(&inst);
+    esc_id = escape_id(instid);
+    output_string += "id=";
+    output_string += esc_id;
+    free(esc_id);
+    output_string += " state=PENDING\n";
 
     ret = TRUE;
 
