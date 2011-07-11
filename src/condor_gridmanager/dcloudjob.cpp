@@ -450,7 +450,30 @@ void DCloudJob::doEvaluateState()
 				}
 
 				if ( m_instanceName == NULL || strcmp(m_instanceName, "NULL") == 0) {
-					SetInstanceName( build_instance_name().Value() );
+					// start with the assumption that the maximum name length
+					// is 1024.  If the provider doesn't specify otherwise,
+					// this is long enough
+					int max_length = 1024;
+
+					rc = gahp->dcloud_get_max_name_length( m_serviceUrl,
+														   m_username,
+														   m_password,
+														   &max_length);
+
+					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+						 rc == GAHPCLIENT_COMMAND_PENDING )
+						break;
+
+					if ( rc != 0 ) {
+						errorString = gahp->getErrorString();
+						dprintf(D_ALWAYS,"(%d.%d) Maximum name length failed: %s\n",
+								procID.cluster, procID.proc,
+								errorString.Value() );
+						gmState = GM_HOLD;
+						break;
+					}
+
+					SetInstanceName( build_instance_name( max_length ).Value() );
 				}
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
 				if ( attr_exists && attr_dirty ) {
@@ -1021,7 +1044,7 @@ void DCloudJob::StatusUpdate( const char *new_status )
 	}
 }
 
-MyString DCloudJob::build_instance_name()
+MyString DCloudJob::build_instance_name( int max_length )
 {
 	// Build a name that will be unique to this job.
 	// We use a generated UUID
@@ -1035,6 +1058,14 @@ MyString DCloudJob::build_instance_name()
 	instance_name = (char *)malloc(37);
 
 	uuid_unparse(uuid, instance_name);
+
+	if (max_length < 36) {
+		// if the maximum length we can generate is less than 36
+		// characters, we have to truncate the UUID.  There's not much
+		// we can do to improve the uniqueness, so just lop off
+		// some bytes
+		instance_name[max_length] = '\0';
+	}
 
 	return instance_name;
 }

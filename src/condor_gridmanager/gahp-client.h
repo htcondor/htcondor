@@ -1089,6 +1089,12 @@ class GahpClient : public Service {
 					 char **instance_id );
 
 
+		int
+		dcloud_get_max_name_length( const char *service_url,
+									const char *username,
+									const char *password,
+									int *max_length );
+
 
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...

@@ -100,7 +100,7 @@ private:
 	char *m_userdata;
 
 	void ProcessInstanceAttrs( StringList &attrs );
-	MyString build_instance_name();
+	MyString build_instance_name( int max_length );
 };
 
 #endif
