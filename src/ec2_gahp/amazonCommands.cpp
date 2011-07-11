@@ -402,7 +402,8 @@ bool AmazonRequest::SendRequest() {
     SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYPEER, 1 );
     SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYHOST, 2 );
 
-    std::string CAPath = "/etc/grid-security/certificates";
+    std::string CAFile = "";
+    std::string CAPath = "";
     if( protocol == "x509" ) {
         dprintf( D_FULLDEBUG, "Configuring x.509...\n" );
 
@@ -418,20 +419,41 @@ bool AmazonRequest::SendRequest() {
         // CA cert', error 60.  The problem is that libcurl, contrary to
         // the manual's assurances, doesn't strdup() strings passed to it,
         // not anything with the certs.
-        char * gDTCD = param( "GSI_DAEMON_TRUSTED_CA_DIR" );
-        if( gDTCD != NULL ) {
-            CAPath = gDTCD;
-            free( gDTCD );
-        } else {
-            char * gDD = param( "GSI_DAEMON_DIRECTORY" );
-            if( gDD != NULL ) {
-                CAPath = gDD;
-                CAPath += "/certificates";
-                free( gDD );
+
+        char * x509_ca_dir = getenv( "X509_CERT_DIR" );
+        if( x509_ca_dir != NULL ) {
+            CAPath = x509_ca_dir;
+        }
+
+        char * x509_ca_file = getenv( "X509_CERT_FILE" );
+        if( x509_ca_file != NULL ) {
+            CAFile = x509_ca_file;
+        }
+        
+        if( CAPath.empty() ) {
+            char * soap_ssl_ca_dir = getenv( "SOAP_SSL_CA_DIR" );
+            if( soap_ssl_ca_dir != NULL ) {
+                CAPath = soap_ssl_ca_dir;
             }
+        }
+
+        if( CAFile.empty() ) {
+            char * soap_ssl_ca_file = getenv( "SOAP_SSL_CA_FILE" );
+            if( soap_ssl_ca_file != NULL ) {
+                CAFile = soap_ssl_ca_file;
+            }
+        }
+
+        if( CAPath.empty() ) {
+            CAPath = "/etc/grid-security/certificates";
         }
         dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
+        
+        if( ! CAFile.empty() ) {
+            dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", CAFile.c_str() );
+            SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAINFO, CAFile.c_str() );
+        }
     }
             
     amazon_gahp_release_big_mutex();
@@ -487,6 +509,20 @@ bool AmazonRequest::SendRequest() {
  * AmazonVMStatusAll.
  *
  * See 'http://xmlsoft.org/examples/xpath1.c', which looks a lot cleaner.
+ */
+
+/*
+ * FIXME: None of the ::SendRequest() methods verify that the 200/OK
+ * response they tried to parse contain(ed) the attribute(s) they
+ * were looking for.  Although, strictly speaking, this is a server-
+ * side problem, it seems prudent to check.
+ *
+ * In particular, this bug allows FermiLab's x509:// schema to work,
+ * since their server doesn't presently handle keypairs.  Note, however,
+ * that this severely limits (if not eliminates) the GridManager's
+ * crash recovery.  Newer version of the EC2 API will allow us to
+ * avoid this problem by using the ability to supply a name for the instance
+ * directly.
  */
 
 AmazonVMStart::AmazonVMStart() { }
