@@ -1048,6 +1048,9 @@ void DCloudJob::ProcessInstanceAttrs( StringList &attrs )
 		// Now that we have everything in the classad, do the job
 		// status update.
 		StatusUpdate( new_status );
+		if ( strcasecmp( new_status, DCLOUD_VM_STATE_RUNNING ) == 0 ) {
+			JobRunning();
+		}
 	}
 
 	if ( attrs.isEmpty() ) {
@@ -1063,10 +1066,6 @@ void DCloudJob::StatusUpdate( const char *new_status )
 		probeNow = true;
 		SetEvaluateState();
 	} else if ( SetRemoteJobStatus( new_status ) ) {
-		// TODO Should 'shutting-down' be treated as running?
-		if ( strcasecmp( new_status, DCLOUD_VM_STATE_RUNNING ) == 0 ) {
-			JobRunning();
-		}
 		remoteJobState = new_status;
 		probeNow = true;
 		SetEvaluateState();
