@@ -31,6 +31,8 @@
 #include "dcloudjob.h"
 #include "condor_config.h"
   
+#include <uuid/uuid.h>
+
 #define GM_INIT							0
 #define GM_UNSUBMITTED					1
 #define GM_CREATE_VM					2
@@ -1022,28 +1024,17 @@ void DCloudJob::StatusUpdate( const char *new_status )
 MyString DCloudJob::build_instance_name()
 {
 	// Build a name that will be unique to this job.
-	// Our pattern is Condor_<collector name>_<GlobalJobId>
+	// We use a generated UUID
 
-	// get condor pool name
-	// In case there are multiple collectors, strip out the spaces
-	// If there's no collector, insert a dummy name
-	char* pool_name = param( "COLLECTOR_HOST" );
-	if ( pool_name ) {
-		StringList collectors( pool_name );
-		free( pool_name );
-		pool_name = collectors.print_to_string();
-	}
-	if ( !pool_name ) {
-		pool_name = strdup( "NoPool" );
-	}
+	uuid_t uuid;
+	char *instance_name;
 
-	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id
-	MyString job_id;
-	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, job_id );
+	uuid_generate(uuid);
 
-	MyString instance_name;
-	instance_name.sprintf( "Condor_%s_%s", pool_name, job_id.Value() );
+	// A UUID parses out to 36 characters plus a \0, so allocate 37 here
+	instance_name = (char *)malloc(37);
 
-	free( pool_name );
+	uuid_unparse(uuid, instance_name);
+
 	return instance_name;
 }

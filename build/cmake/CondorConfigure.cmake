@@ -128,6 +128,7 @@ if( NOT WINDOWS)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
+	find_library( LIBUUID_FOUND uuid )
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_library( LIBRESOLV_PATH resolv )
     if( NOT "${LIBRESOLV_PATH}" MATCHES "-NOTFOUND" )
