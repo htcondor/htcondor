@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,6 @@
  *
  ***************************************************************/
 
-  
 #include "condor_common.h"
 #include "condor_config.h"
 #include "string_list.h"
@@ -27,20 +26,22 @@
 
 #define HASH_TABLE_SIZE	500
 
-HashTable <HashKey, DCloudResource *> 
+HashTable <HashKey, DCloudResource *>
 	DCloudResource::ResourcesByName( HASH_TABLE_SIZE, hashFunction );
 
 const char * DCloudResource::HashName( const char *resource_name,
-		const char *username, const char *password )
-{								 
+									   const char *username,
+									   const char *password )
+{
 	static MyString hash_name;
 	hash_name.sprintf( "%s#%s#%s", resource_name, username, password );
 	return hash_name.Value();
 }
 
 
-DCloudResource* DCloudResource::FindOrCreateResource(const char *resource_name, 
-	const char *username, const char *password )
+DCloudResource* DCloudResource::FindOrCreateResource(const char *resource_name,
+													 const char *username,
+													 const char *password )
 {
 	int rc;
 	MyString resource_key;
@@ -60,8 +61,8 @@ DCloudResource* DCloudResource::FindOrCreateResource(const char *resource_name,
 }
 
 
-DCloudResource::DCloudResource( const char *resource_name, 
-	const char *username, const char *password )
+DCloudResource::DCloudResource( const char *resource_name,
+								const char *username, const char *password )
 	: BaseResource( resource_name )
 {
 	// although no one will use resource_name, we still keep it for base class constructor
@@ -128,12 +129,12 @@ void DCloudResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( "DeltacloudUserName", m_username );
 }
 
-// we will use amazon command "status_all" to do the Ping work
+// we will use deltacloud command "status_all" to do the Ping work
 void DCloudResource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
 	if ( gahp->isStarted() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
-		ping_delay = 5;		
+		ping_delay = 5;
 		return;
 	}
 
@@ -174,7 +175,7 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 	int rc = status_gahp->dcloud_status_all( ResourceName(), m_username,
 											 m_password, instance_ids,
 											 statuses );
-	if ( rc == GAHPCLIENT_COMMAND_PENDING ) { 
+	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		return BSR_PENDING;
 	}
 	if ( rc != 0 ) {
@@ -198,7 +199,7 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 		hashname.sprintf( "%s#%s", ResourceName(), instance_id );
 		DCloudJob *job;
 
-			// TODO We can get rid of the hashtable.
+		// TODO We can get rid of the hashtable.
 		rc = DCloudJob::JobsByInstanceId.lookup(
 										HashKey( hashname.Value() ), job );
 		if ( rc != 0 ) {
@@ -209,10 +210,10 @@ DCloudResource::BatchStatusResult DCloudResource::StartBatchStatus()
 		}
 		ASSERT( job );
 
-			// Only update the status if it isn't RUNNING, in that case we want the
-			// GM_PROBE to get the status so we get all the information about the
-			// instance at once including the public IP address etc before setting
-			// the RUNNING state and writing to the event log.
+		// Only update the status if it isn't RUNNING, in that case we want the
+		// GM_PROBE to get the status so we get all the information about the
+		// instance at once including the public IP address etc before setting
+		// the RUNNING state and writing to the event log.
 		if ( strcasecmp( status, "RUNNING" ) == 0 && job->condorState != RUNNING ) {
 			job->probeNow = true;
 			job->SetEvaluateState();

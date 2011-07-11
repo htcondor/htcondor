@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,7 +17,7 @@
  *
  ***************************************************************/
 
-  
+
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_debug.h"
@@ -30,7 +30,7 @@
 #include "gridmanager.h"
 #include "dcloudjob.h"
 #include "condor_config.h"
-  
+
 #include <uuid/uuid.h>
 
 #define GM_INIT							0
@@ -94,13 +94,12 @@ void DCloudJobInit()
 {
 }
 
-
 void DCloudJobReconfig()
 {
 	// change interval time for 5 minute
-	int tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 60 * 5 ); 
+	int tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 60 * 5 );
 	DCloudJob::setProbeInterval( tmp_int );
-		
+
 	// Tell all the resource objects to deal with their new config values
 	DCloudResource *next_resource;
 
@@ -108,9 +107,8 @@ void DCloudJobReconfig()
 
 	while ( DCloudResource::ResourcesByName.iterate( next_resource ) != 0 ) {
 		next_resource->Reconfig();
-	}	
+	}
 }
-
 
 bool DCloudJobAdMatch( const ClassAd *job_ad )
 {
@@ -120,13 +118,12 @@ bool DCloudJobAdMatch( const ClassAd *job_ad )
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
 
-	if ( (universe == CONDOR_UNIVERSE_GRID) && (strncasecmp( resource.Value(), "deltacloud", 6 ) == 0) ) 
+	if ( (universe == CONDOR_UNIVERSE_GRID) && (strncasecmp( resource.Value(), "deltacloud", 6 ) == 0 ) )
 	{
 		return true;
 	}
 	return false;
 }
-
 
 BaseJob* DCloudJobCreate( ClassAd *jobad )
 {
@@ -202,7 +199,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		token = str.GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "deltacloud" ) ) {
 			sprintf( error_string, "%s not of type deltacloud",
-								  ATTR_GRID_RESOURCE );
+					 ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
@@ -256,7 +253,7 @@ DCloudJob::DCloudJob( ClassAd *classad )
 		token = str.GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "deltacloud" ) ) {
 			sprintf( error_string, "%s not of type deltacloud",
-								  ATTR_GRID_JOB_ID );
+					 ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
@@ -317,12 +314,10 @@ DCloudJob::~DCloudJob()
 	free( m_userdata );
 }
 
-
 void DCloudJob::Reconfig()
 {
 	BaseJob::Reconfig();
 }
-
 
 void DCloudJob::doEvaluateState()
 {
@@ -336,8 +331,8 @@ void DCloudJob::doEvaluateState()
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
 
-    dprintf(D_ALWAYS, "(%d.%d) doEvaluateState called: gmState %s, condorState %d\n",
-			procID.cluster,procID.proc,GMStateNames[gmState],condorState);
+	dprintf( D_ALWAYS, "(%d.%d) doEvaluateState called: gmState %s, condorState %d\n",
+			 procID.cluster,procID.proc,GMStateNames[gmState],condorState);
 
 	if ( gahp ) {
 		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
@@ -352,15 +347,16 @@ void DCloudJob::doEvaluateState()
 		reevaluate_state = false;
 		old_gm_state = gmState;
 
-		switch ( gmState ) 
+		switch ( gmState )
 		{
 			case GM_INIT:
-				// This is the state all jobs start in when the DCloudJob object
-				// is first created. Here, we do things that we didn't want to
-				// do in the constructor because they could block (the
+				// This is the state all jobs start in when the DCloudJob
+				// object is first created. Here, we do things that we didn't
+				// want to do in the constructor because they could block (the
 				// constructor is called while we're connected to the schedd).
 				if ( gahp->Startup() == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n", procID.cluster, procID.proc );
+					dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
+							 procID.cluster, procID.proc );
 					jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
 					gmState = GM_HOLD;
 					break;
@@ -373,7 +369,7 @@ void DCloudJob::doEvaluateState()
 
 				errorString = "";
 
-				if ( m_instanceName == NULL || strcmp(m_instanceName, "NULL") == 0) {
+				if ( m_instanceName == NULL || strcmp(m_instanceName, "NULL") == 0 ) {
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( m_instanceId == NULL ) {
 					gmState = GM_CHECK_VM;
@@ -396,11 +392,11 @@ void DCloudJob::doEvaluateState()
 										m_instanceName,
 										&instance_id );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
 
-				if (rc == 0) {
+				if (rc == 0 ) {
 					if ( instance_id && *instance_id ) {
 						SetInstanceId( instance_id );
 						free( instance_id );
@@ -412,9 +408,9 @@ void DCloudJob::doEvaluateState()
 					}
 				} else {
 					errorString = gahp->getErrorString();
-					dprintf(D_ALWAYS,"(%d.%d) VM check failed: %s\n",
-							procID.cluster, procID.proc,
-							errorString.Value() );
+					dprintf( D_ALWAYS,"(%d.%d) VM check failed: %s\n",
+							 procID.cluster, procID.proc,
+							 errorString.Value() );
 					gmState = GM_HOLD;
 				}
 
@@ -431,25 +427,22 @@ void DCloudJob::doEvaluateState()
 				break;
 
 			case GM_SAVE_INSTANCE_NAME:
-				// Create a unique name for this job
-				// and save it in GridJobId in the schedd. This
-				// will be our handle to the job until we get the instance
-				// id at the end of the submission process.
+				// Create a unique name for this job and save it in GridJobId
+				// in the schedd. This will be our handle to the job until we
+				// get the instance id at the end of the submission process.
 
-				if ( (condorState == REMOVED) ||
-					 (condorState == HELD) ) {
-
+				if ( (condorState == REMOVED) || (condorState == HELD) ) {
 					gmState = GM_DELETE;
 				}
 
 				// Once RequestSubmit() is called at least once, you must
-				// CancelSubmit() once the submission process is complete
-				// or aborted.
+				// CancelSubmit() once the submission process is complete or
+				// aborted.
 				if ( myResource->RequestSubmit( this ) == false ) {
 					break;
 				}
 
-				if ( m_instanceName == NULL || strcmp(m_instanceName, "NULL") == 0) {
+				if ( m_instanceName == NULL || strcmp(m_instanceName, "NULL") == 0 ) {
 					// start with the assumption that the maximum name length
 					// is 1024.  If the provider doesn't specify otherwise,
 					// this is long enough
@@ -477,8 +470,7 @@ void DCloudJob::doEvaluateState()
 				}
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
 				if ( attr_exists && attr_dirty ) {
-						// The instance name still needs to be saved to
-						//the schedd
+					// The instance name still needs to be saved to the schedd
 					requestScheddUpdate( this, true );
 					break;
 				}
@@ -492,17 +484,20 @@ void DCloudJob::doEvaluateState()
 					break;
 				}
 
-				// After a submit, wait at least submitInterval before trying another one.
+				// After a submit, wait at least submitInterval
+				// before trying another one.
 				if ( now >= lastSubmitAttempt + submitInterval ) {
 
-					// Once RequestSubmit() is called at least once, you must
-					// CancelSubmit() once you're done with the request call
+					// Once RequestSubmit() is called at
+					// least once, you must CancelSubmit()
+					// once you're done with the request
+					// call
 					if ( myResource->RequestSubmit( this ) == false ) {
-						// If we haven't started the START_VM call yet,
-						// we can abort the submission here for held and
-						// removed jobs.
-						if ( (condorState == REMOVED) ||
-							 (condorState == HELD) ) {
+						// If we haven't started the
+						// START_VM call yet, we can
+						// abort the submission here
+						// for held and removed jobs.
+						if ( (condorState == REMOVED) || (condorState == HELD) ) {
 
 							myResource->CancelSubmit( this );
 							gmState = GM_STOPPED;
@@ -513,20 +508,19 @@ void DCloudJob::doEvaluateState()
 					StringList instance_attrs;
 
 					rc = gahp->dcloud_submit( m_serviceUrl,
-											  m_username,
-											  m_password,
-											  m_imageId,
-											  m_instanceName,
-											  m_realmId,
-											  m_hwpId,
-											  m_hwpMemory,
-											  m_hwpCpu,
-											  m_hwpStorage,
-											  m_keyname,
-											  m_userdata,
-											  instance_attrs );
+								  m_username,
+								  m_password,
+								  m_imageId,
+								  m_instanceName,								  m_realmId,
+								  m_hwpId,
+								  m_hwpMemory,
+								  m_hwpCpu,
+								  m_hwpStorage,
+								  m_keyname,
+								  m_userdata,
+								  instance_attrs );
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-						 rc == GAHPCLIENT_COMMAND_PENDING ) {
+						rc == GAHPCLIENT_COMMAND_PENDING ) {
 						break;
 					}
 
@@ -546,9 +540,8 @@ void DCloudJob::doEvaluateState()
 
 					 } else {
 						errorString = gahp->getErrorString();
-						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s\n",
-								procID.cluster, procID.proc,
-								errorString.Value() );
+						dprintf( D_ALWAYS,"(%d.%d) job submit failed: %s\n",
+							 procID.cluster, procID.proc, errorString.Value() );
 						gmState = GM_HOLD;
 					}
 
@@ -561,7 +554,7 @@ void DCloudJob::doEvaluateState()
 					unsigned int delay = 0;
 					if ( (lastSubmitAttempt + submitInterval) > now ) {
 						delay = (lastSubmitAttempt + submitInterval) - now;
-					}				
+					}
 					daemonCore->Reset_Timer( evaluateStateTid, delay );
 				}
 
@@ -578,7 +571,7 @@ void DCloudJob::doEvaluateState()
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
-				} 
+				}
 
 				if ( rc == 0 ) {
 					gmState = GM_SAVE_INSTANCE_ID;
@@ -599,11 +592,10 @@ void DCloudJob::doEvaluateState()
 					// Wait for the instance id to be saved to the schedd
 					requestScheddUpdate( this, true );
 					break;
-				}					
+				}
 				gmState = GM_SUBMITTED;
 
 				break;
-
 
 			case GM_SUBMITTED:
 
@@ -644,7 +636,8 @@ void DCloudJob::doEvaluateState()
 					gmState = GM_STOPPED;
 				} else {
 					// Clear the contact string here because it may not get
-					// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
+					// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD
+					// first).
 					if ( m_instanceId != NULL ) {
 						SetInstanceId( NULL );
 						SetInstanceName( NULL );
@@ -658,40 +651,41 @@ void DCloudJob::doEvaluateState()
 			case GM_CLEAR_REQUEST:
 
 				// Remove all knowledge of any previous or present job
-				// submission, in both the gridmanager and the schedd.
-
-				// If we are doing a rematch, we are simply waiting around
-				// for the schedd to be updated and subsequently this dcloud job
+				// submission, in both the gridmanager and the schedd.  If we
+				// are doing a rematch, we are simply waiting around for the
+				// schedd to be updated and subsequently this dcloud job
 				// object to be destroyed.  So there is nothing to do.
 				if ( wantRematch ) {
 					break;
 				}
 
-				// For now, put problem jobs on hold instead of
-				// forgetting about current submission and trying again.
+				// For now, put problem jobs on hold instead of forgetting
+				// about current submission and trying again.
 				// TODO: Let our action here be dictated by the user preference
 				// expressed in the job ad.
-				if ( m_instanceId != NULL && condorState != REMOVED 
-					 && wantResubmit == 0 && doResubmit == 0 ) {
+				if ( m_instanceId != NULL && condorState != REMOVED
+					&& wantResubmit == 0 && doResubmit == 0 ) {
 					gmState = GM_HOLD;
 					break;
 				}
 
-				// Only allow a rematch *if* we are also going to perform a resubmit
+				// Only allow a rematch *if* we are also going to perform a
+				// resubmit
 				if ( wantResubmit || doResubmit ) {
 					jobAd->EvalBool(ATTR_REMATCH_CHECK,NULL,wantRematch);
 				}
 
 				if ( wantResubmit ) {
 					wantResubmit = 0;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Deltacloud because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
+					dprintf( D_ALWAYS, "(%d.%d) Resubmitting to Deltacloud because %s==TRUE\n",
+							 procID.cluster, procID.proc,
+							 ATTR_GLOBUS_RESUBMIT_CHECK );
 				}
 
 				if ( doResubmit ) {
 					doResubmit = 0;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Deltacloud (last submit failed)\n",
-						procID.cluster, procID.proc );
+					dprintf( D_ALWAYS, "(%d.%d) Resubmitting to Deltacloud (last submit failed)\n",
+							 procID.cluster, procID.proc );
 				}
 
 				errorString = "";
@@ -712,8 +706,8 @@ void DCloudJob::doEvaluateState()
 				}
 
 				if ( wantRematch ) {
-					dprintf(D_ALWAYS, "(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
+					dprintf( D_ALWAYS, "(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
+							 procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
 
 					// Set ad attributes so the schedd finds a new match.
 					int dummy;
@@ -723,16 +717,16 @@ void DCloudJob::doEvaluateState()
 					}
 
 					// If we are rematching, we need to forget about this job
-					// cuz we wanna pull a fresh new job ad, with a fresh new match,
-					// from the all-singing schedd.
+					// because we want to pull a fresh new job ad, with a
+					// fresh new match, from the all-singing schedd.
 					gmState = GM_DELETE;
 					break;
 				}
 
 				// If there are no updates to be done when we first enter this
-				// state, requestScheddUpdate will return done immediately
-				// and not waste time with a needless connection to the
-				// schedd. If updates need to be made, they won't show up in
+				// state, requestScheddUpdate will return done immediately and
+				// not waste time with a needless connection to the schedd.
+				// If updates need to be made, they won't show up in
 				// schedd_actions after the first pass through this state
 				// because we modified our local variables the first time
 				// through. However, since we registered update events the
@@ -759,78 +753,81 @@ void DCloudJob::doEvaluateState()
 				evictLogged = false;
 				gmState = GM_UNSUBMITTED;
 
-				break;				
+				break;
 
 			case GM_PROBE_JOB:
 
 				probeNow = false;
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
-				} else if ( lastProbeTime + 30 > now ) {
-					// Wait before trying another probe
-					unsigned int delay = (lastProbeTime + 30) - now;
-					daemonCore->Reset_Timer( evaluateStateTid, delay );
-				} else {
-
-					StringList attrs;
-					rc = gahp->dcloud_info( m_serviceUrl,
-											m_username,
-											m_password,
-											m_instanceId,
-											attrs );
-					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-						 rc == GAHPCLIENT_COMMAND_PENDING ) {
-						break;
-					}
-
-					lastProbeTime = now;
-					// processing error code received
-					if ( rc != 0 ) {
-						// What to do about failure?
-							//
-						// We want to wait a little bit before declaring a complete
-						// failure and going to HELD as some providers don't immediately
-						// show the instance in the list after creating it.
-						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s\n",
-								 procID.cluster, procID.proc,
-								 errorString.Value() );
-
-						if ( probeErrorTime == 0 ) {
-							probeErrorTime = time(NULL);
-							dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: Delaying HELD state, waiting for another probe..\n",
-									 procID.cluster, procID.proc, errorString.Value());
-						} else {
-							int retry_time; 
-
-							// probeErrorTime was set previously, check how long
-							// its been and see if we have to move to HELD.
-							if (jobAd->LookupInteger( ATTR_DELTACLOUD_RETRY_TIMEOUT, retry_time ) == FALSE) {
-								// Set default retry to 90s.
-								retry_time = 90;
-							}
-							if (now - probeErrorTime > retry_time) {
-								dprintf( D_ALWAYS, "(%d.%d): Moving job to HELD\n",
-										 procID.cluster, procID.proc );
-								gmState = GM_HOLD;
-							} else {
-								dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: HELD state delayed for %d of %d seconds.\n",
-										 procID.cluster, procID.proc,
-										 errorString.Value(), (int) (now - probeErrorTime), retry_time );
-								daemonCore->Reset_Timer( evaluateStateTid, 30 );
-							}
-						}
-						break;
-					} else {
-						probeErrorTime = 0;
-					}
-
-					ProcessInstanceAttrs( attrs );
-
-					gmState = GM_SUBMITTED;
+					break;
 				}
 
-				break;				
+				if ( lastProbeTime + 30 > now ) {
+					// Wait before trying another probe
+					unsigned int delay = ( lastProbeTime + 30 ) - now;
+					daemonCore->Reset_Timer( evaluateStateTid, delay );
+					break;
+				}
+
+				StringList attrs;
+				rc = gahp->dcloud_info( m_serviceUrl,
+										m_username,
+										m_password,
+										m_instanceId,
+										attrs );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+
+				lastProbeTime = now;
+				// processing error code received
+				if ( rc != 0 ) {
+					// What to do about failure?  We want to wait a little
+					// bit before declaring a complete failure and going to
+					// HELD as some providers don't immediately show the
+					// instance in the list after creating it.
+					errorString = gahp->getErrorString();
+					dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s\n",
+							 procID.cluster, procID.proc, errorString.Value() );
+
+					if ( probeErrorTime == 0 ) {
+						probeErrorTime = time(NULL);
+						dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: Delaying HELD state, waiting for another probe..\n",
+								 procID.cluster, procID.proc,
+								 errorString.Value());
+					} else {
+						int retry_time;
+
+						// probeErrorTime was set previously, check how long it
+						// has been and see if we have to move to HELD.
+						if ( jobAd->LookupInteger( ATTR_DELTACLOUD_RETRY_TIMEOUT, retry_time ) == FALSE ) {
+							// Set default retry to 90s
+							retry_time = 90;
+						}
+						if ( now - probeErrorTime > retry_time ) {
+							dprintf( D_ALWAYS, "(%d.%d): Moving job to HELD\n",
+									 procID.cluster, procID.proc );
+							gmState = GM_HOLD;
+						} else {
+							dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: HELD state delayed for %d of %d seconds.\n",
+									 procID.cluster, procID.proc,
+									 errorString.Value(),
+									 (int) (now - probeErrorTime), retry_time );
+							daemonCore->Reset_Timer( evaluateStateTid, 30 );
+						}
+					}
+					break;
+				} else {
+					probeErrorTime = 0;
+				}
+
+				ProcessInstanceAttrs( attrs );
+
+				gmState = GM_SUBMITTED;
+
+				break;
 
 			case GM_CANCEL:
 
@@ -842,7 +839,7 @@ void DCloudJob::doEvaluateState()
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
-				} 
+				}
 
 				if ( rc == 0 ) {
 					gmState = GM_STOPPED;
@@ -857,9 +854,9 @@ void DCloudJob::doEvaluateState()
 				break;
 
 			case GM_HOLD:
-				// Put the job on hold in the schedd.
-				// If the condor state is already HELD, then someone already
-				// HELD it, so don't update anything else.
+				// Put the job on hold in the schedd.  If the condor state is
+				// already HELD, then someone already HELD it, so don't update
+				// anything else.
 				if ( condorState != HELD ) {
 
 					// Set the hold reason as best we can
@@ -895,12 +892,14 @@ void DCloudJob::doEvaluateState()
 						break;
 					}
 
-					// We could check for a failed destroy here, but on some providers
-					// failure is normal as the instance is destroyed when it is stopped.
-					// Instead, we just say we are done.  If the destroy failed for some
-					// other reason, I'm not sure what we can really do about it..
-					// Note that we do catch the 'pending' and not submitted case above
-					// so I think that should cover network issues etc.
+					// We could check for a failed destroy here, but on some
+					// providers failure is normal as the instance is
+					// destroyed when it is stopped.  Instead, we just say we
+					// are done.  If the destroy failed for some other reason,
+					// I'm not sure what we can really do about it.
+					// Note that we do catch the 'pending' and not submitted
+					// case above so I think that should cover network
+					// issues etc.
 					StatusUpdate( DCLOUD_VM_STATE_FINISH );
 				}
 				myResource->CancelSubmit( this );
@@ -921,7 +920,7 @@ void DCloudJob::doEvaluateState()
 				// to the schedd, then delete this object.
 				DoneWithJob();
 				// This object will be deleted when the update occurs
-				break;							
+				break;
 
 
 			default:
@@ -931,21 +930,19 @@ void DCloudJob::doEvaluateState()
 
 		if ( gmState != old_gm_state ) {
 			reevaluate_state = true;
-			dprintf(D_FULLDEBUG, "(%d.%d) gm state change: %s -> %s\n",
-					procID.cluster, procID.proc, GMStateNames[old_gm_state], GMStateNames[gmState]);
+			dprintf( D_FULLDEBUG, "(%d.%d) gm state change: %s -> %s\n",
+					 procID.cluster, procID.proc, GMStateNames[old_gm_state], GMStateNames[gmState]);
 			enteredCurrentGmState = time(NULL);
 		}
 
 	} // end of do_while
-	while ( reevaluate_state );	
+	while ( reevaluate_state );
 }
-
 
 BaseResource* DCloudJob::GetResource()
 {
 	return (BaseResource *)myResource;
 }
-
 
 void DCloudJob::SetInstanceName( const char *instance_name )
 {
@@ -995,9 +992,9 @@ void DCloudJob::ProcessInstanceAttrs( StringList &attrs )
 	// NOTE: If attrlist is empty, treat as completed job
 	// Call StatusUpdate() with status from list
 	const char *line;
-		// We use a new_status flag here because we want to parse everything and get
-		// all the info into the classad before updating the status and producing an
-		// event log entry.
+	// We use a new_status flag here because we want to parse everything
+	// and get all the info into the classad before updating the status
+	// and producing an event log entry.
 	const char *new_status = NULL;
 
 	attrs.rewind();
@@ -1016,10 +1013,11 @@ void DCloudJob::ProcessInstanceAttrs( StringList &attrs )
 		}
 	}
 
-        if (new_status) {
-                // Now that we have everything in the classad, do the job status update.
-                StatusUpdate( new_status );
-        }
+	if ( new_status ) {
+		// Now that we have everything in the classad, do the job
+		// status update.
+		StatusUpdate( new_status );
+	}
 
 	if ( attrs.isEmpty() ) {
 		StatusUpdate( DCLOUD_VM_STATE_FINISH );
@@ -1029,8 +1027,8 @@ void DCloudJob::ProcessInstanceAttrs( StringList &attrs )
 void DCloudJob::StatusUpdate( const char *new_status )
 {
 	if ( new_status == NULL ) {
-			// TODO May need to prevent this firing if job was just
-			//   submitted, so it's not in the query
+		// TODO May need to prevent this firing if job was just
+		//   submitted, so it's not in the query
 		probeNow = true;
 		SetEvaluateState();
 	} else if ( SetRemoteJobStatus( new_status ) ) {
