@@ -1984,6 +1984,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 
 	// If we made it here, we did not find a shadow or other job manager 
 	// process for this job.  Just handle the operation ourselves.
+
+	// If there is a match record for this job, try to find a different
+	// job to run on it.
+	match_rec *mrec = scheduler.FindMrecByJobID(job_id);
+	if( mrec ) {
+		scheduler.FindRunnableJobForClaim( mrec );
+	}
+
 	if( mode == REMOVED ) {
 		if( !scheduler.WriteAbortToUserLog(job_id) ) {
 			dprintf( D_ALWAYS,"Failed to write abort event to the user log\n" );
@@ -1996,8 +2004,6 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 					 "Failed to write hold event to the user log\n" ); 
 		}
 	}
-
-	return;
 }
 
 } /* End of extern "C" */
@@ -5989,17 +5995,11 @@ Scheduler::StartJob(match_rec *rec)
 	if(!Runnable(&id)) {
 			// find the job in the cluster with the highest priority
 		id.proc = -1;
-		if( rec->my_match_ad ) {
-			FindRunnableJob(id,rec->my_match_ad,rec->user);
+		if( !FindRunnableJobForClaim(rec) ) {
+			return;
 		}
-	}
-	if(id.proc < 0) {
-			// no more jobs to run
-		dprintf(D_ALWAYS,
-				"match (%s) out of jobs; relinquishing\n",
-				rec->description() );
-		DelMrec(rec);
-		return;
+		id.cluster = rec->cluster;
+		id.proc = rec->proc;
 	}
 
 	if(!(rec->shadowRec = StartJob(rec, &id))) {
@@ -6042,15 +6042,46 @@ Scheduler::StartJob(match_rec *rec)
 	}
 	dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
 			rec->description(), id.cluster, id.proc);
-		// If we're reusing a match to start another job, then cluster
-		// and proc may have changed, so we keep them up-to-date here.
-		// This is important for Scheduler::AlreadyMatched(), and also
-		// for when we receive an alive command from the startd.
-	SetMrecJobID(rec,id);
+
 		// Now that the shadow has spawned, consider this match "ACTIVE"
 	rec->setStatus( M_ACTIVE );
 }
 
+bool
+Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
+{
+	ASSERT( mrec );
+
+	PROC_ID new_job_id;
+	new_job_id.cluster = -1;
+	new_job_id.proc = -1;
+
+	if( mrec->my_match_ad && !ExitWhenDone ) {
+		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
+	}
+	if( !accept_std_univ && new_job_id.proc == -1 ) {
+		int new_universe = -1;
+		GetAttributeInt(new_job_id.cluster,new_job_id.proc,ATTR_JOB_UNIVERSE,&new_universe);
+		if( new_universe == CONDOR_UNIVERSE_STANDARD ) {
+			new_job_id.proc = -1;
+		}
+	}
+	if( new_job_id.proc == -1 ) {
+			// no more jobs to run
+		dprintf(D_ALWAYS,
+				"match (%s) out of jobs; relinquishing\n",
+				mrec->description() );
+		DelMrec(mrec);
+		return false;
+	}
+
+	dprintf(D_ALWAYS,
+			"match (%s) switching to job %d.%d\n",
+			mrec->description(), new_job_id.cluster, new_job_id.proc );
+
+	SetMrecJobID(mrec,new_job_id);
+	return true;
+}
 
 void
 Scheduler::StartLocalJobs()
@@ -13277,31 +13308,21 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		srec->exit_already_handled = true;
 	}
 
-	new_job_id.cluster = -1;
-	new_job_id.proc = -1;
-	if( mrec->my_match_ad && !ExitWhenDone ) {
-		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
-	}
-
 		// The standard universe shadow never calls this function,
 		// and the shadow that does call this function is not capable of
 		// running standard universe jobs, so if the job we are trying
 		// to run next is standard universe, tell this shadow we are
 		// out of work.
-	if( new_job_id.proc != -1 ) {
-		int new_universe = -1;
-		GetAttributeInt(new_job_id.cluster,new_job_id.proc,ATTR_JOB_UNIVERSE,&new_universe);
-		if( new_universe == CONDOR_UNIVERSE_STANDARD ) {
-			new_job_id.proc = -1;
-		}
-	}
-	
+	const bool accept_std_univ = false;
 
-	if( new_job_id.proc == -1 ) {
+	if( !FindRunnableJobForClaim(mrec,accept_std_univ) ) {
 		stream->put((int)0);
 		stream->end_of_message();
 		return TRUE;
 	}
+
+	new_job_id.cluster = mrec->cluster;
+	new_job_id.proc = mrec->proc;
 
 	dprintf(D_ALWAYS,
 			"Shadow pid %d switching to job %d.%d.\n",
@@ -13321,7 +13342,6 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 
 	mark_serial_job_running(&new_job_id);
 
-	SetMrecJobID(mrec,new_job_id);
 	mrec->setStatus( M_ACTIVE );
 
 	callAboutToSpawnJobHandler(new_job_id.cluster, new_job_id.proc, srec);
