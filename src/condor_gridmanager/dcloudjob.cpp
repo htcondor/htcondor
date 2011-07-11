@@ -347,8 +347,6 @@ void DCloudJob::doEvaluateState()
 
 	do {
 
-		char *gahp_error_code = NULL;
-
 		reevaluate_state = false;
 		old_gm_state = gmState;
 
@@ -412,8 +410,8 @@ void DCloudJob::doEvaluateState()
 					}
 				} else {
 					errorString = gahp->getErrorString();
-					dprintf(D_ALWAYS,"(%d.%d) VM check failed: %s: %s\n",
-							procID.cluster, procID.proc, gahp_error_code,
+					dprintf(D_ALWAYS,"(%d.%d) VM check failed: %s\n",
+							procID.cluster, procID.proc,
 							errorString.Value() );
 					gmState = GM_HOLD;
 				}
@@ -523,8 +521,8 @@ void DCloudJob::doEvaluateState()
 
 					 } else {
 						errorString = gahp->getErrorString();
-						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s: %s\n",
-								procID.cluster, procID.proc, gahp_error_code,
+						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s\n",
+								procID.cluster, procID.proc,
 								errorString.Value() );
 						gmState = GM_HOLD;
 					}
@@ -562,8 +560,8 @@ void DCloudJob::doEvaluateState()
 				} else {
 					// What to do about a failed start?
 					errorString = gahp->getErrorString();
-					dprintf( D_ALWAYS, "(%d.%d) job start failed: %s: %s\n",
-							 procID.cluster, procID.proc, gahp_error_code,
+					dprintf( D_ALWAYS, "(%d.%d) job start failed: %s\n",
+							 procID.cluster, procID.proc,
 							 errorString.Value() );
 					gmState = GM_HOLD;
 				}
@@ -769,14 +767,14 @@ void DCloudJob::doEvaluateState()
 						// failure and going to HELD as some providers don't immediately
 						// show the instance in the list after creating it.
 						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s\n",
-								 procID.cluster, procID.proc, gahp_error_code,
+						dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s\n",
+								 procID.cluster, procID.proc,
 								 errorString.Value() );
 
 						if ( probeErrorTime == 0 ) {
 							probeErrorTime = time(NULL);
-							dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s: Delaying HELD state, waiting for another probe..\n",
-									 procID.cluster, procID.proc, gahp_error_code, errorString.Value());
+							dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: Delaying HELD state, waiting for another probe..\n",
+									 procID.cluster, procID.proc, errorString.Value());
 						} else {
 							int retry_time; 
 
@@ -791,8 +789,8 @@ void DCloudJob::doEvaluateState()
 										 procID.cluster, procID.proc );
 								gmState = GM_HOLD;
 							} else {
-								dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s: HELD state delayed for %d of %d seconds.\n",
-										 procID.cluster, procID.proc, gahp_error_code,
+								dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: HELD state delayed for %d of %d seconds.\n",
+										 procID.cluster, procID.proc,
 										 errorString.Value(), (int) (now - probeErrorTime), retry_time );
 								daemonCore->Reset_Timer( evaluateStateTid, 30 );
 							}
@@ -826,8 +824,8 @@ void DCloudJob::doEvaluateState()
 				} else {
 					// What to do about a failed cancel?
 					errorString = gahp->getErrorString();
-					dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
-							 procID.cluster, procID.proc, gahp_error_code,
+					dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s\n",
+							 procID.cluster, procID.proc,
 							 errorString.Value() );
 					gmState = GM_HOLD;
 				}
@@ -905,11 +903,6 @@ void DCloudJob::doEvaluateState()
 				EXCEPT( "(%d.%d) Unknown gmState %d!", procID.cluster, procID.proc, gmState );
 				break;
 		} // end of switch_case
-
-			// This string is used for gahp calls, but is never needed beyond
-			// this point. This should really be a MyString.
-		free( gahp_error_code );
-		gahp_error_code = NULL;
 
 		if ( gmState != old_gm_state ) {
 			reevaluate_state = true;
