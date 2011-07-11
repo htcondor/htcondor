@@ -490,7 +490,7 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.8)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.9)
 
 	# globus is an odd *beast* which requires a bit more config.
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.0.1-p1)
