@@ -481,6 +481,7 @@ class Scheduler : public Service
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
+	bool            FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ=true);
 	
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
@@ -685,6 +686,7 @@ private:
 	void claimedStartd( DCMsgCallback *cb );
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
+
 	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
 	shadow_rec*		start_local_universe_job(PROC_ID*);

@@ -10,5 +10,7 @@ transfer_output = false
 transfer_executable = true
 Notification = NEVER
 arguments  = --noextrainput
+should_transfer_files = NO
+when_to_transfer_output = NONE
 queue
 

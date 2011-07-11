@@ -25,9 +25,11 @@ use Cwd;
 
 use POSIX 'strftime';
 use Getopt::Long;
-use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache /;
+use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache $opt_clear_externals_cache_weekly /;
 # We use -- and everything after it will be configure arguments only.
 GetOptions(
+            'use_externals_cache' => \$opt_use_externals_cache,
+            'use-externals-cache' => \$opt_use_externals_cache,
             'clear_externals_cache' => \$opt_clear_externals_cache,
             'clear-externals-cache' => \$opt_clear_externals_cache,
             'clear_externals_cache_weekly' => \$opt_clear_externals_cache_weekly,
@@ -88,29 +90,45 @@ $defines{platform} = "-DPLATFORM:STRING=$platform";
 $defines{condor_platform} = "-DCONDOR_PLATFORM:STRING=$platform";
 
 ######################################################################
-# run cmake on the source tree
+# deal with the externals cache
 ######################################################################
-if ( defined($opt_clear_externals_cache) ) {
+if ( defined( $opt_use_externals_cache ) ) {
 
-	if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-		print "deleting externals cache\n";
-		$exit_status = system("rd /s/q \"$externals_loc\"");
-		if( $exit_status ) {
-			die "failed with status $exit_status\n";
+	if (defined($opt_clear_externals_cache_weekly)) {
+		print "Should we do weekly clearing of the externals cache?\n";
+		@now = localtime;
+		@then = localtime( (stat( $externals_loc ))[9] );
+		if ( ($now[7] - $now[6]) != ($then[7] - $then[6]) ) {
+			print "Doing weekly cache clearing\n";
+			$opt_clear_externals_cache = 1;
 		}
 	}
-	else {
-		print "deleting externals cache\n";
-		$exit_status = system("rm -rf /scratch/condor_externals");
 
-		if( $exit_status ) {
-			die "failed with status $exit_status\n";
+	if ( defined($opt_clear_externals_cache) ) {
+
+		if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+			print "deleting externals cache\n";
+			$exit_status = system("rd /s/q \"$externals_loc\"");
+			if( $exit_status ) {
+				die "failed with status $exit_status\n";
+			}
+		} else {
+			print "deleting externals cache\n";
+			$exit_status = system("rm -rf /scratch/condor_externals");
+
+			if( $exit_status ) {
+				die "failed with status $exit_status\n";
+			}
+
+			#system("mkdir -p $externals_loc");
+			#system("chmod -f -R a+rwX $externals_loc");
 		}
 
-		#system("mkdir -p $externals_loc");
-		#system("chmod -f -R a+rwX $externals_loc");
 	}
 
+	$defines{externals} = "-DCACHED_EXTERNALS:BOOL=TRUE";
+} else {
+	$defines{externals} = "-DCACHED_EXTERNALS:BOOL=FALSE";
 }
 
 ######################################################################
