@@ -2037,7 +2037,7 @@ id=95
 
 [PRIORITY_HALFLIFE]
 aliases=
-default=
+default=86400
 version=0.0.0
 range=.*
 state=default
