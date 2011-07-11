@@ -609,7 +609,6 @@ void DCloudJob::doEvaluateState()
 
 				} else if ( probeNow ) {
 					gmState = GM_PROBE_JOB;
-					break;
 				}
 
 				break;
