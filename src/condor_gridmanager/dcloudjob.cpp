@@ -725,6 +725,11 @@ void DCloudJob::doEvaluateState()
 
 				JobIdle();
 
+				if ( m_needstart ) {
+					jobAd->Assign( ATTR_DELTACLOUD_NEEDS_START, false );
+					m_needstart = false;
+				}
+
 				if ( submitLogged ) {
 					JobEvicted();
 					if ( !evictLogged ) {
