@@ -824,3 +824,98 @@ cleanup_password:
 
     return ret;
 }
+
+/*
+ * DELTACLOUD_START_AUTO <reqid> <url> <user> <password_file>
+ *  where reqid, url, user, and password_file have to be non-NULL.
+ */
+bool dcloud_start_auto_worker(int argc, char **argv,
+			      std::string &output_string)
+{
+    char *url, *user, *password_file, *password, *reqid;
+    struct deltacloud_api api;
+    struct deltacloud_instance_state *instance_states;
+    struct deltacloud_instance_state *state;
+    struct deltacloud_instance_state_transition *transition;
+    bool automatically = FALSE;
+    bool ret = FALSE;
+
+    if (!verify_number_args(5, argc)) {
+        output_string = create_failure("0", "Wrong_Argument_Number");
+        return FALSE;
+    }
+
+    reqid = argv[1];
+    url = argv[2];
+    user = argv[3];
+    password_file = argv[4];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s\n", reqid, url, user, password_file);
+
+    if (STRCASEEQ(url, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_URL");
+        return FALSE;
+    }
+    if (STRCASEEQ(user, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_User");
+        return FALSE;
+    }
+
+    if (STRCASEEQ(password_file, NULLSTRING))
+        password_file = NULL;
+
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
+
+    if (deltacloud_initialize(&api, url, user, password) < 0) {
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
+        goto cleanup_password;
+    }
+
+    if (deltacloud_get_instance_states(&api, &instance_states) < 0) {
+        output_string = create_failure(reqid, "Instance_State_Failure: %s",
+                                       deltacloud_get_last_error_string());
+        goto cleanup_library;
+    }
+
+    deltacloud_for_each(state, instance_states) {
+        if (STRCASENEQ(state->name, "pending"))
+            continue;
+
+        deltacloud_for_each(transition, state->transitions) {
+            if (STRCASEEQ(transition->to, "running") &&
+                transition->automatically != NULL &&
+                STRCASEEQ(transition->automatically, "true")) {
+                automatically = TRUE;
+                goto done;
+            }
+        }
+    }
+
+done:
+    output_string = reqid;
+    output_string += " NULL ";
+    if (automatically) {
+        output_string += "TRUE";
+    }
+    else {
+        output_string += "FALSE";
+    }
+    output_string += "\n";
+
+    deltacloud_free_instance_state_list(&instance_states);
+
+    ret = TRUE;
+
+cleanup_library:
+    deltacloud_free(&api);
+
+cleanup_password:
+    free(password);
+
+    return ret;
+}
