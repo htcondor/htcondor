@@ -433,6 +433,7 @@ void DCloudJob::doEvaluateState()
 
 				if ( (condorState == REMOVED) || (condorState == HELD) ) {
 					gmState = GM_DELETE;
+					break;
 				}
 
 				// Once RequestSubmit() is called at least once, you must
