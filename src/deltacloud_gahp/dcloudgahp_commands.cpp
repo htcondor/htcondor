@@ -695,3 +695,99 @@ cleanup_password:
 
     return ret;
 }
+
+/*
+ * DELTACLOUD_GET_MAX_NAME_LENGTH <reqid> <url> <user> <password_file>
+ *  where reqid, url, user, and password_file have to be non-NULL.
+ */
+bool dcloud_max_name_length_worker(int argc, char **argv,
+                                   std::string &output_string)
+{
+    char *url, *user, *password_file, *password, *reqid;
+    struct deltacloud_api api;
+    struct deltacloud_link *link;
+    struct deltacloud_feature *feature;
+    struct deltacloud_feature_constraint *constraint;
+    char *max = NULL;
+    bool ret = FALSE;
+
+    if (!verify_number_args(5, argc)) {
+        output_string = create_failure("0", "Wrong_Argument_Number");
+        return FALSE;
+    }
+
+    reqid = argv[1];
+    url = argv[2];
+    user = argv[3];
+    password_file = argv[4];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s\n", reqid, url, user, password_file);
+
+    if (STRCASEEQ(url, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_URL");
+        return FALSE;
+    }
+    if (STRCASEEQ(user, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_User");
+        return FALSE;
+    }
+
+    if (STRCASEEQ(password_file, NULLSTRING))
+        password_file = NULL;
+
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
+
+    if (deltacloud_initialize(&api, url, user, password) < 0) {
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
+        goto cleanup_password;
+    }
+
+    /* here, we search through the api.links->features->constraints to try and
+     * find a constraint of "max_length".  If we find it, we return it; if not
+     * we just let the higher layers choose a default
+     */
+    deltacloud_for_each(link, api.links) {
+        if (STRCASENEQ(link->rel, "instances"))
+            continue;
+
+        /* OK, we are in the instances collection.  Look at the features */
+        deltacloud_for_each(feature, link->features) {
+            if (STRCASENEQ(feature->name, "user_name"))
+                continue;
+
+            /* OK, we saw the user_name feature; see if it has a length */
+            deltacloud_for_each(constraint, feature->constraints) {
+                if (STRCASEEQ(constraint->name, "max_length")) {
+                    max = strdup(constraint->value);
+                    /* need to use goto here to break all of the loops */
+                    goto done;
+                }
+            }
+        }
+    }
+
+done:
+    output_string = reqid;
+    output_string += " NULL ";
+    if (max == NULL)
+        output_string += "NULL";
+    else {
+        output_string += max;
+        free(max);
+    }
+    output_string += "\n";
+
+    deltacloud_free(&api);
+
+    ret = TRUE;
+
+cleanup_password:
+    free(password);
+
+    return ret;
+}

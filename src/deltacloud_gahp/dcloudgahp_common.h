@@ -10,6 +10,7 @@
 void dcloudprintf_internal(const char *function, const char *fmt, ...);
 
 #define STRCASEEQ(a,b) (strcasecmp(a,b) == 0)
+#define STRCASENEQ(a, b) (strcasecmp(a, b) != 0)
 
 #define NULLSTRING "NULL"
 

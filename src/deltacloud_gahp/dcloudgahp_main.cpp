@@ -24,10 +24,11 @@
 #define GAHP_RESULT_FAILURE					"F"
 
 #define DCLOUD_COMMAND_VM_SUBMIT			"DELTACLOUD_VM_SUBMIT"
-#define DCLOUD_COMMAND_VM_STATUS_ALL		"DELTACLOUD_VM_STATUS_ALL"
+#define DCLOUD_COMMAND_VM_STATUS_ALL			"DELTACLOUD_VM_STATUS_ALL"
 #define DCLOUD_COMMAND_VM_ACTION			"DELTACLOUD_VM_ACTION"
 #define DCLOUD_COMMAND_VM_INFO				"DELTACLOUD_VM_INFO"
 #define DCLOUD_COMMAND_VM_FIND				"DELTACLOUD_VM_FIND"
+#define DCLOUD_COMMAND_GET_MAX_NAME_LENGTH		"DELTACLOUD_GET_MAX_NAME_LENGTH"
 
 const char * version = "$GahpVersion " DCLOUD_GAHP_VERSION " Feb 4 2010 Condor\\ DELTACLOUDGAHP $";
 
@@ -446,9 +447,12 @@ static void registerAllDcloudCommands(void)
     registerDcloudGahpCommand(DCLOUD_COMMAND_VM_INFO, dcloud_info_worker);
 
     registerDcloudGahpCommand(DCLOUD_COMMAND_VM_STATUS_ALL,
-			      dcloud_statusall_worker);
+                              dcloud_statusall_worker);
 
     registerDcloudGahpCommand(DCLOUD_COMMAND_VM_FIND, dcloud_find_worker);
+
+    registerDcloudGahpCommand(DCLOUD_COMMAND_GET_MAX_NAME_LENGTH,
+                              dcloud_max_name_length_worker);
 }
 
 int main(int argc, char *argv[])
