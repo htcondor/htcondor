@@ -1,27 +1,30 @@
 .PHONY: clean
 
-CFLAGS =  -Wall -g -O0 -I./protocol
+protocol_lib = lib/cftp_protocol.a
+transfer_tool_server = bin/server
+transfer_tool_client = bin/client
 
-CLIENT_SRC     = client.c 
-SERVER_SRC     = server.c server_sm_lib.c
+cftp_suite: $(transfer_tool_server) $(transfer_tool_client)
 
-SRC = $(CLIENT_SRC) $(SERVER_SRC)
 
-CLIENT_OBJ     = $(CLIENT_SRC:.c=.o)
-SERVER_OBJ     = $(SERVER_SRC:.c=.o)
 
-PROTOCOL_LIB = protocol/cftp_protocol.a 
-
-OBJ = $(CLIENT_OBJ) $(SERVER_OBJ) $(SHA1_OBJ)
-
-all: client server
-
-$(PROTOCOL_LIB):
+$(protocol_lib):
 	cd protocol; make
+	mkdir -p lib
+	cp protocol/cftp_protocol.a lib/cftp_protocol.a
 
-client: $(CLIENT_OBJ) $(PROTOCOL_LIB)
-server: $(SERVER_OBJ) $(PROTOCOL_LIB)
+$(transfer_tool_server): $(protocol_lib)
+	cd transfer_tool; make server
+	mkdir -p bin
+	cp transfer_tool/server bin/cftp_server
+
+$(transfer_tool_client): $(protocol_lib)
+	cd transfer_tool; make client
+	mkdir -p bin
+	cp transfer_tool/client bin/cftp_client
 
 clean:
-	rm -rf $(OBJ) client server *~
 	cd protocol; make clean
+	cd transfer_tool; make clean
+	rm -rf bin/*
+	rm -rf lib/*
