@@ -30,7 +30,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 ClassAdXMLParser::
 ClassAdXMLParser ()
@@ -464,4 +464,4 @@ SwallowEndTag(
     return;
 }
 
-END_NAMESPACE // classad
+} // classad

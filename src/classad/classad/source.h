@@ -25,7 +25,7 @@
 #include <iosfwd>
 #include "classad/lexer.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 class ClassAd;
 class ExprTree;
@@ -146,6 +146,6 @@ class ClassAdParser
 
 std::istream & operator>>(std::istream &stream, ClassAd &ad);
 
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_SOURCE_H__

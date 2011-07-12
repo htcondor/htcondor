@@ -27,7 +27,7 @@
 #include "classad/classad_stl.h"
 #include <sys/types.h>
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 typedef struct{
 	int offset;
@@ -67,6 +67,6 @@ class IndexFile {
 	int filed;
 };
 
-END_NAMESPACE
+}
 
 #endif //__CLASSAD_INDEXFILE_H__

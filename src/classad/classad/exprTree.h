@@ -25,7 +25,7 @@
 #include "classad/common.h"
 #include "classad/value.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 
 // forward declarations
@@ -198,7 +198,7 @@ class ExprTree
 
 std::ostream& operator<<(std::ostream &os, const ExprTree &expr);
 
-END_NAMESPACE // classad
+} // classad
 
 #include "classad/literals.h"
 #include "classad/attrrefs.h"

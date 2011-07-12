@@ -28,7 +28,7 @@
 
 class Sock;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 class ClassAd;
 class ClassAdCollection;
@@ -104,6 +104,6 @@ private:
 };
 
 
-END_NAMESPACE
+}
 
 #endif /* __CLASSAD_TRANSACTION_H__ */

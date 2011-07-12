@@ -22,7 +22,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE(classad)
+namespace classad {
 
 ClassAdBin::ClassAdBin( )
 {
@@ -107,4 +107,4 @@ Compress( ClassAdCollectionServer *server, LocalCollectionQuery *query,
     return( true );
 }
 
-END_NAMESPACE
+}

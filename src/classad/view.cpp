@@ -27,7 +27,7 @@ using namespace std;
 
 // ----------- <implementation of ViewMember class> -----------------
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 ViewMember::
 ViewMember( )
@@ -1181,4 +1181,4 @@ operator()( const ViewMember &vm1, const ViewMember &vm2 ) const
 	return lessThan;
 }
 
-END_NAMESPACE
+}

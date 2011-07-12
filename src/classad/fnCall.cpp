@@ -49,7 +49,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 bool FunctionCall::initialized = false;
 
@@ -3014,4 +3014,4 @@ stringListsIntersect(const char*,const ArgumentList &argList,EvalState &state,Va
 	return true;
 }
 
-END_NAMESPACE // classad
+} // classad

@@ -23,7 +23,7 @@
 
 #include "classad/common.h"
 
-BEGIN_NAMESPACE(classad)
+namespace classad {
 
 static const int ERR_OK						= 0;
 static const int ERR_MEM_ALLOC_FAILED		= 1;
@@ -71,7 +71,7 @@ static const int ERR_CACHE_FILE_ERROR           =294;
 static const int ERR_CACHE_CLASSAD_ERROR           =295;
 
 static const int ERR_CANT_LOAD_DYNAMIC_LIBRARY = 296;
-END_NAMESPACE //classad
+} //classad
 
 #endif
 

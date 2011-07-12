@@ -19,7 +19,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 #####################################################################
 ## set var using master config
-add_definitions(-DCLASSAD_DISTRIBUTION -DWANT_CLASSAD_NAMESPACE=1 )
+add_definitions(-DCLASSAD_DISTRIBUTION)
 
 # disable PCRE build unless dep added to externals.
 if(PCRE_FOUND)
@@ -46,17 +46,18 @@ endif (HAVE_LIBDL)
 
 #####################################################################
 # treat like an external for others to use
-condor_pre_external( CLASSADS classads-1.0.10 "lib;include" "alwaysbuild")
+condor_pre_external( CLASSADS classads-7.7.0 "lib;include" "alwaysbuild")
 #####################################################################
 
 if (NOT WINDOWS)
 
   condor_selective_glob("attrrefs.*;classad.*;collection.*;collectionBase.*;debug.*;exprList.*;exprTree.*;fnCall.*;indexfile.*;lexer.*;lexerSource.*;literals.*;matchClassad.*;operators.*;query.*;sink.*;source.*;transaction.*;util.*;value.*;view.*;xmlLexer.*;xmlSink.*;xmlSource.*;cclassad.*;common.*" ClassadSrcs)
   add_library( classads STATIC ${ClassadSrcs} )    # the one which all of condor depends upon
+  set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
   if (LINUX)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
-	set_target_properties( classad PROPERTIES VERSION 1.1.0 SOVERSION 1 )
+	set_target_properties( classad PROPERTIES VERSION 2.0.0 SOVERSION 2 )
 	install( TARGETS classad DESTINATION ${C_LIB} )
   endif()
 

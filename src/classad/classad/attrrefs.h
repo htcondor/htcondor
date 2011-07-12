@@ -21,7 +21,7 @@
 #ifndef __CLASSAD_ATTRREFS_H__
 #define __CLASSAD_ATTRREFS_H__
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 /// Represents a attribute reference node (like .b) in the expression tree
 class AttributeReference : public ExprTree 
@@ -99,6 +99,6 @@ class AttributeReference : public ExprTree
     	std::string attributeStr;
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_ATTRREFS_H__

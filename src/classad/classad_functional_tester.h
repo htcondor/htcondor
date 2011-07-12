@@ -21,9 +21,7 @@
 #include <map>
 #include "classad/classad_distribution.h"
 
-#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
-#endif
 
 class Variable
 {

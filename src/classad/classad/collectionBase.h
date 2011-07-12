@@ -31,7 +31,7 @@
 
 #define MaxCacheSize 5
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 class ServerTransaction;
 
@@ -229,6 +229,6 @@ protected:
     
 };
 
-END_NAMESPACE
+}
 
 #endif
