@@ -3181,7 +3181,7 @@ DedicatedScheduler::DelMrec( match_rec* rec )
 bool
 DedicatedScheduler::DelMrec( char const* id )
 {
-	match_rec* rec;
+	match_rec* rec = NULL;
 
 	char name_buf[256];
 	name_buf[0] = '\0';
@@ -3191,7 +3191,26 @@ DedicatedScheduler::DelMrec( char const* id )
 				 "match not deleted\n" );
 		return false;
 	}
-
+	// Check pending_matches
+	std::map<std::string,match_rec*>::iterator it;
+	if((it = pending_matches.find(id)) != pending_matches.end()){
+		rec = it->second;	
+		dprintf( D_FULLDEBUG, "Found record for claim %s in pending matches\n",id);
+		pending_matches.erase(it);
+		std::map<std::string,ClassAd*>::iterator rit;
+		if((rit = pending_requests.find(rec->publicClaimId())) != pending_requests.end()){
+			if(rit->second){
+				delete rit->second;
+				pending_requests.erase(rit);
+			}
+		}
+		std::map<std::string,std::string>::iterator cit;
+		if((cit = pending_claims.find(rec->publicClaimId())) != pending_claims.end()){
+			pending_claims.erase(cit);
+		}
+		delete rec;
+		return true;
+	}
 		// First, delete it from our table hashed on ClaimId. 
 	HashKey key( id );
 	if( all_matches_by_id->lookup(key, rec) < 0 ) {
