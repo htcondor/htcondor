@@ -556,13 +556,13 @@ Job::AddPreSkip( int exitCode, MyString &whynot )
 {
 	if( exitCode < PRE_SKIP_MIN || exitCode > PRE_SKIP_MAX ) {
 		whynot.sprintf( "PRE_SKIP exit code must be between %d and %d\n",
-					PRE_SKIP_MIN, PRE_SKIP_MAX );
+			PRE_SKIP_MIN, PRE_SKIP_MAX );
 		return false;
 	}
 
 	if( exitCode == 0 ) {
 		debug_printf( DEBUG_NORMAL, "Warning: exit code 0 for a PRE_SKIP "
-				"value is weird.\n");
+			"value is weird.\n");
 	}
 
 	if( _preskip == -1 ) {
@@ -571,7 +571,6 @@ Job::AddPreSkip( int exitCode, MyString &whynot )
 		whynot = "Two definitions of PRE_SKIP for a node.\n";
 		return false;
 	}
-
 	whynot = "n/a";
 	return true;
 }
@@ -580,7 +579,7 @@ bool
 Job::IsActive() const
 {
 	return  _Status == STATUS_PRERUN || _Status == STATUS_SUBMITTED ||
-			_Status == STATUS_POSTRUN;
+		_Status == STATUS_POSTRUN;
 }
 
 const char*
@@ -992,7 +991,7 @@ Job::GetPreSkip() const
 {
 	if( !HasPreSkip() ) {
 		debug_printf( DEBUG_QUIET,
-					"Evaluating PRE_SKIP... It is not defined.\n" );
+			"Evaluating PRE_SKIP... It is not defined.\n" );
 	}
 	return _preskip;
 }

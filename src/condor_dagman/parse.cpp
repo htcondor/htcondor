@@ -323,7 +323,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Handle a JOBSTATE_LOG spec
 		else if(strcasecmp(token, "JOBSTATE_LOG") == 0) {
 			parsed_line_successfully = parse_jobstate_log(dag,
-						filename, lineNumber);
+				filename, lineNumber);
 		}
 		
 		// Handle a PRE_SKIP
@@ -1795,13 +1795,13 @@ parse_pre_skip( Dag  *dag,
 	const char *jobNameOrig = jobName; // for error output
 	if ( jobName == NULL ) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
-					  filename, lineNumber );
+				filename, lineNumber );
 		exampleSyntax( example );
 		return false;
 	} else if ( isReservedWord(jobName) ) {
 		debug_printf( DEBUG_QUIET,
-					  "%s (line %d): JobName cannot be a reserved word\n",
-					  filename, lineNumber );
+				"%s (line %d): JobName cannot be a reserved word\n",
+				filename, lineNumber );
 		exampleSyntax( example );
 		return false;
 	} else {
@@ -1812,19 +1812,19 @@ parse_pre_skip( Dag  *dag,
 		job = dag->FindNodeByName( jobName );
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
-						  "%s (line %d): Unknown Job %s\n",
-						  filename, lineNumber, jobNameOrig );
+					"%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
 			return false;
 		}
 	}
-	
+
 		//
 		// The rest of the line consists of the exitcode
 		//
 	const char *exitCodeStr = strtok( NULL, DELIMITERS );
 	if ( exitCodeStr == NULL ) {
 		debug_printf( DEBUG_QUIET, "%s (line %d): Missing exit code\n",
-					  filename, lineNumber );
+				filename, lineNumber );
 		exampleSyntax( example );
 		return false;
 	}
@@ -1833,8 +1833,8 @@ parse_pre_skip( Dag  *dag,
 	int exitCode = (int)strtol( exitCodeStr, &tmp, 10 );
 	if ( tmp == exitCodeStr ) {
 		debug_printf( DEBUG_QUIET,
-				  	"%s (line %d): Invalid exit code \"%s\"\n",
-				  	filename, lineNumber, exitCodeStr );
+				"%s (line %d): Invalid exit code \"%s\"\n",
+				filename, lineNumber, exitCodeStr );
 		exampleSyntax( example );
 		return false;
 	}
@@ -1845,19 +1845,18 @@ parse_pre_skip( Dag  *dag,
 	const char *nextTok = strtok( NULL, DELIMITERS );
 	if ( nextTok ) {
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
-					"parameter \"%s\"\n", filename, lineNumber, nextTok );
+				"parameter \"%s\"\n", filename, lineNumber, nextTok );
 		exampleSyntax( example );
 		return false;
 	}
 
 	if ( !job->AddPreSkip( exitCode, whynot ) ) {
 		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): failed to add "
-					  "PRE_SKIP note to node %s: %s\n",
-					  filename, lineNumber, jobNameOrig,
-					  whynot.Value() );
+				"PRE_SKIP note to node %s: %s\n",
+				filename, lineNumber, jobNameOrig,
+				whynot.Value() );
 		return false;
 	}
-
 	return true;
 }
 
