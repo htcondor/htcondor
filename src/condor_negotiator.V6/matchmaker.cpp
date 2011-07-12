@@ -2114,6 +2114,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				/* result parameters: */
 			pieLeft);
 
+        if (!ConsiderPreemption && (pieLeft <= 0)) break;
+
         if (1 == spin_pie) {
             // Sort the schedd list in decreasing priority order
             // This only needs to be done once: do it on the 1st spin, prior to 
