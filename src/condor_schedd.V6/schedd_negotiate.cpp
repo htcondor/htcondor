@@ -130,6 +130,10 @@ ScheddNegotiate::nextJob()
 							m_current_job_id.cluster,m_current_job_id.proc);
 					}
 					else {
+						// Copy attributes from chained parent ad into our copy 
+						// so if parent is deleted before we finish negotiation,
+						// we don't crash trying to access a deleted parent ad.
+						m_current_job_ad.ChainCollapse();
 						return true;
 					}
 				}
