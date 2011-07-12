@@ -22,9 +22,7 @@
 #include <iostream>
 
 using namespace std;
-#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
-#endif
 
 enum Commands {
 	_NO_CMD_,

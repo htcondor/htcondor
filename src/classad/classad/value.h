@@ -24,7 +24,7 @@
 #include "classad/common.h"
 #include "classad/util.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 class Literal;
 class ExprList;
@@ -531,6 +531,6 @@ IsNumber( ) const
 {
 	return( valueType==INTEGER_VALUE || valueType==REAL_VALUE );
 }
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_VALUE_H__

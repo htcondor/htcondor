@@ -23,7 +23,7 @@
 
 #include <vector>
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 typedef std::vector<ExprTree*> ArgumentList;
 
@@ -136,6 +136,6 @@ class Literal : public ExprTree
 		Value::NumberFactor	factor;
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_LITERALS_H__

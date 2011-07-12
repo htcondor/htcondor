@@ -27,7 +27,7 @@ using namespace std;
 
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
@@ -1804,4 +1804,4 @@ bool ClassAd::IsAttributeDirty(const string &name)
 	return is_dirty;
 }
 
-END_NAMESPACE // classad
+} // classad

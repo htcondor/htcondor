@@ -27,7 +27,7 @@
 #include <utility>	// for pair template
 #include <string>
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 /// This converts a ClassAd into a string representing the %ClassAd
 class ClassAdUnParser
@@ -131,6 +131,6 @@ class PrettyPrint : public ClassAdUnParser
         int  indentLevel;
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_SINK_H__

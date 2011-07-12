@@ -28,7 +28,7 @@
 #include "classad/classad_stl.h"
 #include "classad/exprTree.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 typedef std::set<std::string, CaseIgnLTStr> References;
 typedef std::map<const ClassAd*, References> PortReferences;
@@ -691,7 +691,7 @@ e		*/
 		ClassAd       *chained_parent_ad;
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #include "classad/classadItor.h"
 

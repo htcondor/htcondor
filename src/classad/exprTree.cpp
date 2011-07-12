@@ -24,7 +24,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 extern int exprHash( const ExprTree* const&, int );
 
@@ -307,4 +307,4 @@ bool operator==(const ExprTree &tree1, const ExprTree &tree2)
     return tree1.SameAs(&tree2);
 }
 
-END_NAMESPACE // classad
+} // classad
