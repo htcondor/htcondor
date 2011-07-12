@@ -3148,6 +3148,10 @@ DedicatedScheduler::AddMrec(
 	ASSERT( job );
     pending_requests[claim_id] = new ClassAd(*job);
 
+	// Collapse the chained ad attributes into this copied ad,
+	// just in case the job is removed while the request is still pending.
+	pending_requests[claim_id]->ChainCollapse();
+
     if (is_partitionable(match_ad)) {
         pending_matches[claim_id] = mrec;
         pending_claims[mrec->publicClaimId()] = claim_id;
