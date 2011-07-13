@@ -57,7 +57,7 @@ static char * getWritePassword(const char *write_passwd_fname,
 
 	len = strlen(prefix);
 
-	fp = safe_fopen_wrapper(write_passwd_fname, "r");
+	fp = safe_fopen_wrapper_follow(write_passwd_fname, "r");
 
 	if(fp == NULL) {
 		EXCEPT("Unable to open password file %s\n", write_passwd_fname);

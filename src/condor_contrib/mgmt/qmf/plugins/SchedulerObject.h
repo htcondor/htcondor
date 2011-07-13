@@ -59,6 +59,7 @@ private:
 
 	qmf::com::redhat::grid::Scheduler *mgmtObject;
 
+#ifndef READ_ONLY_SCHEDULER_OBJECT
 	status_t Submit(Variant::Map &ad, std::string &id, std::string &text);
 
 	status_t GetJobs(std::string submission,
@@ -75,6 +76,7 @@ private:
 	status_t Release(std::string id, std::string &reason, std::string &text);
 
 	status_t Remove(std::string id, std::string &reason, std::string &text);
+#endif
 
 };
 

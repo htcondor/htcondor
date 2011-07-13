@@ -28,7 +28,7 @@ NamedPipeWriter::initialize(const char* addr)
 {
 	// open a write-only connection to the server
 	//
-	m_pipe = safe_open_wrapper(addr, O_WRONLY | O_NONBLOCK);
+	m_pipe = safe_open_wrapper_follow(addr, O_WRONLY | O_NONBLOCK);
 	if (m_pipe == -1) {
 		dprintf(D_ALWAYS,
 		        "error opening %s: %s (%d)\n",

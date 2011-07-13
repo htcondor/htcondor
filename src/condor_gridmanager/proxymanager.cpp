@@ -843,7 +843,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 		dprintf( D_ALWAYS, "Failed to create temp file");
 	} else {
 		chmod (myProxyEntry->get_delegation_err_filename, 0600);
-		myProxyEntry->get_delegation_err_fd = safe_open_wrapper(myProxyEntry->get_delegation_err_filename,O_RDWR);
+		myProxyEntry->get_delegation_err_fd = safe_open_wrapper_follow(myProxyEntry->get_delegation_err_filename,O_RDWR);
 		if (myProxyEntry->get_delegation_err_fd == -1) {
 			dprintf (D_ALWAYS, "Error opening file %s\n",
 					 myProxyEntry->get_delegation_err_filename);
@@ -962,7 +962,7 @@ int MyProxyGetDelegationReaper(Service *, int exitPid, int exitStatus)
 		char buff[500];
 		buff[0]='\0';
 		std::string output;
-		int fd = safe_open_wrapper(matched_entry->get_delegation_err_filename, O_RDONLY);
+		int fd = safe_open_wrapper_follow(matched_entry->get_delegation_err_filename, O_RDONLY);
 		if (fd != -1) {
 			int bytes_read;
 			do {

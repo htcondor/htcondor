@@ -142,7 +142,7 @@ bool Condor_MD_MAC::addMDFile(const char * filePathName)
 #ifdef HAVE_EXT_OPENSSL
 	int fd;
 
-    fd = safe_open_wrapper(filePathName, O_RDONLY | O_LARGEFILE, 0);
+    fd = safe_open_wrapper_follow(filePathName, O_RDONLY | O_LARGEFILE, 0);
     if (fd < 0) {
         dprintf(D_ALWAYS,
                 "addMDFile: can't open %s: %s\n",

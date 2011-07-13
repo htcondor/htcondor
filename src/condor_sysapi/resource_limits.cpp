@@ -32,6 +32,9 @@ void
 sysapi_set_resource_limits(int stack_size)
 {
 	rlim_t lim;
+	if(stack_size == 0) {
+		stack_size = (int) RLIM_INFINITY;
+	}
 	int free_blocks = sysapi_disk_space( "." );
 	unsigned long core_lim = (free_blocks - SLOP) * 1024;
 
@@ -44,7 +47,7 @@ sysapi_set_resource_limits(int stack_size)
 	limit( RLIMIT_CPU, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max cpu time" );
 	limit( RLIMIT_FSIZE, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max file size" );
 	limit( RLIMIT_DATA, RLIM_INFINITY, CONDOR_SOFT_LIMIT, "max data size" );
-	limit( RLIMIT_STACK, static_cast<rlim_t>(stack_size), CONDOR_SOFT_LIMIT, "max stack size" );
+	limit( RLIMIT_STACK, stack_size, CONDOR_SOFT_LIMIT, "max stack size" );
 	dprintf( D_ALWAYS, "Done setting resource limits\n" );
 }
 

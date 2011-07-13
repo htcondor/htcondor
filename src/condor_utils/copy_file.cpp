@@ -62,14 +62,14 @@ copy_file(const char *old_filename, const char *new_filename)
 	}
 	fs.st_mode &= S_IRWXU | S_IRWXG | S_IRWXO;
 
-	in_fd = safe_open_wrapper( old_filename, O_RDONLY | O_LARGEFILE, 0644 );
+	in_fd = safe_open_wrapper_follow( old_filename, O_RDONLY | O_LARGEFILE, 0644 );
 	if ( in_fd < 0 ) {
 		dprintf( D_ALWAYS, "safe_open_wrapper(%s, O_RDONLY|O_LARGEFILE) failed with errno %d\n",
 				 old_filename, errno );
 		goto copy_file_err;
 	}
 
-	out_fd = safe_open_wrapper( new_filename, O_WRONLY | O_CREAT | O_TRUNC | O_LARGEFILE, fs.st_mode );
+	out_fd = safe_open_wrapper_follow( new_filename, O_WRONLY | O_CREAT | O_TRUNC | O_LARGEFILE, fs.st_mode );
 	if ( out_fd < 0 ) {
 		dprintf( D_ALWAYS, "safe_open_wrapper(%s, O_WRONLY|O_CREAT|O_TRUNC|O_LARGEFILE, %d) failed with errno %d\n",
 				 new_filename, fs.st_mode, errno );

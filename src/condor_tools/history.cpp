@@ -742,7 +742,7 @@ static void readHistoryFromFile(char *JobHistoryFileName, const char* constraint
 			// offsets.
 		flags = O_LARGEFILE;
 	}
-	int LogFd = safe_open_wrapper(JobHistoryFileName,flags,0);
+	int LogFd = safe_open_wrapper_follow(JobHistoryFileName,flags,0);
 	if (LogFd < 0) {
 		fprintf(stderr,"Error opening history file %s: %s\n", JobHistoryFileName,strerror(errno));
 #ifdef EFBIG

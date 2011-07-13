@@ -395,7 +395,7 @@ static void setup() {
 	create_empty_file("delete_file_5");
 	create_empty_file("delete_file_6");
 	create_empty_file("empty_file");
-	FILE* file_1 = safe_fopen_wrapper("full_file", "w+");
+	FILE* file_1 = safe_fopen_wrapper_follow("full_file", "w+");
 
 	// Add some text
 	cut_assert_not_null( file_1 );

@@ -202,7 +202,7 @@ check_recovery_file( const char *execute_dir )
 
 		// TODO: check file ownership?
 
-	recovery_fp = safe_fopen_wrapper( recovery_file.Value(), "r" );
+	recovery_fp = safe_fopen_wrapper_follow( recovery_file.Value(), "r" );
 	if ( recovery_fp == NULL ) {
 		unlink( recovery_file.Value() );
 		return;
