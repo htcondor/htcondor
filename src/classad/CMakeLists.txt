@@ -17,10 +17,6 @@
  ############################################################### 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-#####################################################################
-## set var using master config
-add_definitions(-DCLASSAD_DISTRIBUTION)
-
 # disable PCRE build unless dep added to externals.
 if(PCRE_FOUND)
 	include_directories(${PCRE_INCLUDE})
