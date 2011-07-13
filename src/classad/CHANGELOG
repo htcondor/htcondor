@@ -1,3 +1,7 @@
+Post-1.0.10 changes
+* Do better input stream checking.
+* Fix infinite loop in GetInternalReferences() and GetExternalReferences().
+
 Changes for version 1.0.10 (Released 2011-04-08)
 * Fix infinite loop and bad iterator comparison in FunctionCall::SameAs().
 * Fix memory leak in FunctionCall::eval().
