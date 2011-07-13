@@ -312,7 +312,7 @@ BaseLinuxHibernator::writeSysFile ( const char *file, const char *str ) const
 	dprintf( D_FULLDEBUG,
 			 "LinuxHibernator: Writing '%s' to '%s'\n", str, file );
 	priv_state p = set_root_priv( );
-	int fd = safe_open_wrapper( file, O_WRONLY );
+	int fd = safe_open_wrapper_follow( file, O_WRONLY );
 	set_priv( p );
 	if ( fd < 0 ) {
 		dprintf( D_ALWAYS,

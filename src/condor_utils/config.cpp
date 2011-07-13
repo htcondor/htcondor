@@ -196,7 +196,7 @@ Read_config( const char* config_source, BUCKET** table,
 		}
 	} else {
 		is_pipe_cmd = false;
-		conf_fp = safe_fopen_wrapper(config_source, "r");
+		conf_fp = safe_fopen_wrapper_follow(config_source, "r");
 		if( conf_fp == NULL ) {
 			printf("Can't open file %s\n", config_source);
 			return( -1 );

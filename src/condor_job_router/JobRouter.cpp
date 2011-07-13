@@ -143,7 +143,7 @@ JobRouter::GetInstanceLock() {
 	ASSERT( !lock_fullname.empty() );
 	canonicalize_dir_delimiters((char *)lock_fullname.c_str());
 
-	m_router_lock_fd = safe_open_wrapper(lock_fullname.c_str(),O_CREAT|O_APPEND|O_WRONLY,0600);
+	m_router_lock_fd = safe_open_wrapper_follow(lock_fullname.c_str(),O_CREAT|O_APPEND|O_WRONLY,0600);
 	if(m_router_lock_fd == -1) {
 		EXCEPT("Failed to open lock file %s: %s",lock_fullname.c_str(),strerror(errno));
 	}
@@ -274,7 +274,7 @@ JobRouter::config() {
 	}
 
 	if( routing_file.size() ) {
-		FILE *fp = safe_fopen_wrapper(routing_file.c_str(),"r");
+		FILE *fp = safe_fopen_wrapper_follow(routing_file.c_str(),"r");
 		if( !fp ) {
 			EXCEPT("Failed to open '%s' file specified for %s.",
 				   routing_file.c_str(), PARAM_JOB_ROUTER_ENTRIES_FILE);

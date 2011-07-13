@@ -250,7 +250,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 
 	/* Now, let's go through and gather info from /proc/cpuinfo to the array */
 	if ( _SysapiProcCpuinfo.file ) {
-		fp = safe_fopen_wrapper( _SysapiProcCpuinfo.file, "r", 0644 );
+		fp = safe_fopen_wrapper_follow( _SysapiProcCpuinfo.file, "r", 0644 );
 		if( !fp ) {
 			free( array );
 			return -1;
@@ -261,7 +261,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 				 _SysapiProcCpuinfo.file, _SysapiProcCpuinfo.offset );
 	}
 	else {
-		fp = safe_fopen_wrapper( "/proc/cpuinfo", "r", 0644 );
+		fp = safe_fopen_wrapper_follow( "/proc/cpuinfo", "r", 0644 );
 		dprintf( D_FULLDEBUG, "Reading from /proc/cpuinfo\n" );
 	}
 	if( !fp ) {

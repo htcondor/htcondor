@@ -132,7 +132,7 @@ int main( int argc, char *argv[] )
 		file = stdin;
 		filename = "(stdin)";
 	} else {
-		file = safe_fopen_wrapper(filename,"r");
+		file = safe_fopen_wrapper_follow(filename,"r");
 	}
 	if(!file) {
 		fprintf(stderr,"couldn't open %s: %s\n",filename,strerror(errno));

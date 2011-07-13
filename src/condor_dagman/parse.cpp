@@ -160,7 +160,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		tmpFilename = condor_basename( filename );
 	}
 
-	FILE *fp = safe_fopen_wrapper(tmpFilename, "r");
+	FILE *fp = safe_fopen_wrapper_follow(tmpFilename, "r");
 	if(fp == NULL) {
 		MyString cwd;
 		condor_getcwd( cwd );

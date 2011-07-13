@@ -174,7 +174,7 @@ readJobAd( void )
 		is_stdin = true;
 	} else {
 		if (fp == NULL) {
-			fp = safe_fopen_wrapper( job_ad_file, "r" );
+			fp = safe_fopen_wrapper_follow( job_ad_file, "r" );
 			if( ! fp ) {
 				EXCEPT( "Failed to open ClassAd file (%s): %s (errno %d)",
 						job_ad_file, strerror(errno), errno );

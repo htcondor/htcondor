@@ -559,7 +559,7 @@ int serve_file(struct soap *soap, const char *name, const char *type) {
     return 403;
   }
 
-  fstr = safe_fopen_wrapper(full_name_realpath, "rb");
+  fstr = safe_fopen_wrapper_follow(full_name_realpath, "rb");
 
   free(full_name_realpath);
   free(web_root_realpath);
