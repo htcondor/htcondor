@@ -26,9 +26,6 @@
 #include "stat_wrapper.h"
 #include "condor_getcwd.h"
 
-#ifndef WANT_CLASSAD_NAMESPACE
-#define WANT_CLASSAD_NAMESPACE
-#endif
 #include <iostream>
 #include "classad/classad_distribution.h"
 

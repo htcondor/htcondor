@@ -25,7 +25,6 @@
 #include "get_daemon_name.h"
 #include "condor_config.h"
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
 #include "../classad_analysis/conversion.h"

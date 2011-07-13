@@ -26,7 +26,6 @@
 #include <list>
 #include <map>
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 using namespace std;
 
