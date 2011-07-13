@@ -225,8 +225,8 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 				 "Failed to initialize JobInfoCommunicator, aborting\n" );
 		return false;
 	}
-	if(jic) sysapi_set_resource_limits(jic->getStackSize());
-	else sysapi_set_resource_limits(0); // 0 says use the default stack size
+	// jic already assumed to be nonzero above
+	sysapi_set_resource_limits(jic->getStackSize());
 
 		// Now, ask our JobInfoCommunicator to setup the environment
 		// where our job is going to execute.  This might include

@@ -476,9 +476,9 @@ JobInfoCommunicator::initUserPrivNoOwner( void )
 
 int JobInfoCommunicator::getStackSize(void)
 {
-	int value=1<<29; // Take 512 MB to be default stack size
+	int value=0; // Return 0 by default
 	if(job_ad && !job_ad->LookupInteger(ATTR_STACK_SIZE,value))
-		value = 1<<29;
+		value = 0;
 	return value;
 }
 
