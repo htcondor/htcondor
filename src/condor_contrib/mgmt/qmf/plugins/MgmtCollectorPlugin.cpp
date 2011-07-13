@@ -247,9 +247,14 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 
 			if (negotiatorAds->lookup(hashKey, negotiatorObject)) {
 					// Key doesn't exist
+				if (!ad.LookupString(ATTR_NAME, name)) {
+					name = "UNKNOWN";
+				}
+				name.sprintf("Negotiator: %s", hashKey.name.Value());
+
 				negotiatorObject =
 					new NegotiatorObject(singleton->getInstance(),
-										 hashKey.name.Value());
+										 name.Value());
 
 					// Ignore old value, if it existed (returned)
 				negotiatorAds->insert(hashKey, negotiatorObject);
