@@ -8671,7 +8671,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 void
 send_vacate(match_rec* match,int cmd)
 {
-	classy_counted_ptr<DCStartd> startd = new DCStartd( match->peer );
+	classy_counted_ptr<DCStartd> startd = new DCStartd( match->description(),NULL,match->peer,match->claimId() );
 	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( cmd, match->claimId() );
 
 	msg->setSuccessDebugLevel(D_ALWAYS);
@@ -11351,7 +11351,7 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 bool
 sendAlive( match_rec* mrec )
 {
-	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->peer );
+	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->description(),NULL,mrec->peer,mrec->claimId() );
 	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( ALIVE, mrec->claimId() );
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
