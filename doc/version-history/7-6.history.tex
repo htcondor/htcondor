@@ -54,15 +54,15 @@ as set with the \Condor{submit\_dag} command line option \Opt{-debug}.
 
 \begin{itemize}
 
-% gittrac #2235 
-\item \Condor{ssh\_to\_job} did not work on systems using the 
-dash shell for \Prog{/bin/sh}.
-
 % gittrac #2275 
 \item Fixed a bug in the \Condor{negotiator} that impacted the processing 
 of machine \MacroNI{RANK} such that \Condor{startd} \MacroNI{RANK}
 preemption only occurred if the preempting user had sufficient user priority 
 to claim another machine. 
+
+% gittrac #2235 
+\item \Condor{ssh\_to\_job} did not work on systems using the 
+dash shell for \Prog{/bin/sh}.
 
 % gittrac #2263 
 \item \Condor{ssh\_to\_job} now works with jobs that are run via 
@@ -86,9 +86,15 @@ a warning to be logged, despite correct implementation.
 the \Opt{-debug} option causes \Procedure{dprintf} logging to \Code{stderr}. 
 
 % gittrac #2253 
+% gittrac #2294 
 \item Fixed a problem introduced in Condor version 7.5.5 
-that could cause the \Condor{schedd} to crash when 
-an idle parallel universe job left the queue. 
+that could cause the \Condor{schedd} to crash when a job was removed 
+during negotiation or when an idle parallel universe job left the queue. 
+
+% gittrac #2170 
+\item A bug introduced in Condor version 7.5.5 caused the \Condor{schedd}
+to die when its attempt to claim a slot for a parallel universe job 
+was rejected by the \Condor{startd}. 
 
 % gittrac #2247 
 \item Fixed a problem that sometimes caused the \Condor{procd} to die.
@@ -98,10 +104,6 @@ and the \Condor{procd} would die.
 Then \Condor{startd} logged the message
 \Expr{ProcD has failed} and the \Condor{startd} exited. 
 
-% gittrac #2248 
-\item PBS and LSF grid jobs that arrive in a queue via Condor-C
-or remote submission again work properly. 
-
 % gittrac #2233 
 \item Fixed a problem introduced in Condor version 7.6.1 
 that caused the \Condor{shadow} to crash without successfully putting the job 
@@ -110,6 +112,10 @@ on hold when the user log could not be opened for writing.
 % gittrac #2210 
 \item \Condor{history} no longer crashes when given a constraint expression 
 longer than 512 characters. 
+
+% gittrac #2248 
+\item PBS and LSF grid jobs that arrive in a queue via Condor-C
+or remote submission again work properly. 
 
 % gittrac #2210 
 \item Fix a bug that can cause the \Condor{gridmanager} to crash 
@@ -123,15 +129,35 @@ if the \Condor{gridmanager} crashed during transfer of those input files.
 \item Fix a bug in \Condor{submit} that caused grid jobs intended for 
 CREAM services whose names contain extra dashes to become held. 
 
+\item Fixed a bug in which \Condor{submit} would try, 
+but fail to open the Deltacloud password file,
+when the file name was dependent on an expression specified with \Expr{\$\$()}.
+
 % gittrac #2173 
 \item If the \Attr{Owner} attribute was not set in the ClassAd associated
 with a cluster of jobs,
 shared spooled executables were not correctly cleaned up.
 
-% gittrac #2170 
-\item A bug introduced in Condor version 7.5.5 caused the \Condor{schedd}
-to die when its attempt to claim a slot for a parallel universe job 
-was rejected by the \Condor{startd}. 
+% gittrac #2238 
+\item Fixed a bug for 64-bit versions of Windows in which the
+user \Login{condor-reuse-slot<N>} showed up on the login screen.
+
+% gittrac #2288 
+\item Fixed a bug introduced in Condor version 7.5.5,
+which changed the default value of the configuration variable
+\Macro{INVALID\_LOG\_FILES} from the empty set to a file called \File{core}.
+This resulted in core files being removed unexpectedly by \Condor{preen},
+and that complicated debugging of Condor.
+Previous behavior has been restored.
+
+% gittrac #2278 
+\item Fixed a bug existing since Condor version 7.5.5 on Windows platforms.
+The installer installed Java jar files in the correct \verb|$(BIN)| directory,
+while the value for the configuration variable 
+\MacroNI{JAVA\_CLASSPATH\_DEFAULT} utilized the obsolete \verb|$(LIB)|
+directory.
+The installer now correctly sets \MacroNI{JAVA\_CLASSPATH\_DEFAULT} 
+to the \verb|$(BIN)| directory.
 
 \end{itemize}
 
