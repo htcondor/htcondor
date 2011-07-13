@@ -30,11 +30,7 @@
  *
  *--------------------------------------------------------------------*/
 
-#if defined( CLASSAD_DISTRIBUTION )
 #include "classad/classad_distribution.h"
-#else
-#include "classad.h"
-#endif
 #include "classad/lexerSource.h"
 #include "classad/xmlSink.h"
 #include <fstream>
@@ -43,9 +39,7 @@
 #include <assert.h>
 
 using namespace std;
-#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
-#endif
 
 /*--------------------------------------------------------------------
  *

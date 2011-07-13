@@ -33,7 +33,6 @@
 #include "condor_arglist.h"
 #include "format_time.h"
 #include "set_user_priv_from_ad.h"
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 #include "set_user_from_ad.h"
 #include "file_transfer.h"

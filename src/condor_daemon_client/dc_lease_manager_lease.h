@@ -27,7 +27,6 @@
 #include <stdio.h>
 
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 
 

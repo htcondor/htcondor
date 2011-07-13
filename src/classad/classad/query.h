@@ -25,7 +25,7 @@
 #include <list>
 #include <string>
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 class ClassAdCollection;
 class ExprTree;
@@ -64,7 +64,7 @@ private:
 };
 
 
-END_NAMESPACE // classad
+} // classad
 
 #endif
 

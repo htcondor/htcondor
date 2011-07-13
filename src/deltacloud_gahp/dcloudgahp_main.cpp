@@ -24,10 +24,12 @@
 #define GAHP_RESULT_FAILURE					"F"
 
 #define DCLOUD_COMMAND_VM_SUBMIT			"DELTACLOUD_VM_SUBMIT"
-#define DCLOUD_COMMAND_VM_STATUS_ALL		"DELTACLOUD_VM_STATUS_ALL"
+#define DCLOUD_COMMAND_VM_STATUS_ALL			"DELTACLOUD_VM_STATUS_ALL"
 #define DCLOUD_COMMAND_VM_ACTION			"DELTACLOUD_VM_ACTION"
 #define DCLOUD_COMMAND_VM_INFO				"DELTACLOUD_VM_INFO"
 #define DCLOUD_COMMAND_VM_FIND				"DELTACLOUD_VM_FIND"
+#define DCLOUD_COMMAND_GET_MAX_NAME_LENGTH		"DELTACLOUD_GET_MAX_NAME_LENGTH"
+#define DCLOUD_COMMAND_START_AUTO			"DELTACLOUD_START_AUTO"
 
 const char * version = "$GahpVersion " DCLOUD_GAHP_VERSION " Feb 4 2010 Condor\\ DELTACLOUDGAHP $";
 
@@ -280,7 +282,7 @@ static void *worker_function(void *ptr)
          * earlier, so there is no reason we can't parse it again.
          */
         dcloudprintf("Failed to parse command again\n");
-        output_string = create_failure("0", "Command_Parse_Failure");
+        output_string = "0 Command_Parse_Failure\n";
         goto cleanup;
     }
 
@@ -446,9 +448,15 @@ static void registerAllDcloudCommands(void)
     registerDcloudGahpCommand(DCLOUD_COMMAND_VM_INFO, dcloud_info_worker);
 
     registerDcloudGahpCommand(DCLOUD_COMMAND_VM_STATUS_ALL,
-			      dcloud_statusall_worker);
+                              dcloud_statusall_worker);
 
     registerDcloudGahpCommand(DCLOUD_COMMAND_VM_FIND, dcloud_find_worker);
+
+    registerDcloudGahpCommand(DCLOUD_COMMAND_GET_MAX_NAME_LENGTH,
+                              dcloud_max_name_length_worker);
+
+    registerDcloudGahpCommand(DCLOUD_COMMAND_START_AUTO,
+                              dcloud_start_auto_worker);
 }
 
 int main(int argc, char *argv[])

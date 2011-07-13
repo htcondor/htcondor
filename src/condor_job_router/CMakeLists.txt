@@ -34,11 +34,11 @@ if (WINDOWS)
 
 	install ( FILES condor_router_q
 			DESTINATION ${C_BIN} 
-			RENAME condor_router_q.py)
+			RENAME condor_router_q.sh)
 
 	install ( FILES condor_router_rm
 			DESTINATION ${C_BIN} 
-			RENAME condor_router_rm.py)
+			RENAME condor_router_rm.sh)
 
 else()
 

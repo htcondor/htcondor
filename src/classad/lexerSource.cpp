@@ -22,7 +22,7 @@
 #include "classad/lexerSource.h"
 #include <iostream>
 using namespace std;
-BEGIN_NAMESPACE(classad)
+namespace classad {
 
 /*--------------------------------------------------------------------
  *
@@ -279,4 +279,4 @@ StringLexerSource::GetCurrentLocation(void) const
 	return _offset;
 }
 
-END_NAMESPACE
+}

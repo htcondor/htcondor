@@ -23,7 +23,7 @@
 
 #include "classad/xmlLexer.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 class ClassAd;
 
@@ -63,6 +63,6 @@ class ClassAdXMLParser
 		XMLLexer lexer;
 };
 
-END_NAMESPACE
+}
 
 #endif//__CLASSAD_XMLSOURCE_H__

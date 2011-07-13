@@ -27,7 +27,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 static bool identifierNeedsQuoting( const string & );
 
@@ -736,4 +736,4 @@ identifierNeedsQuoting( const string &str )
 	return needs_quoting;
 }
 
-END_NAMESPACE // classad
+} // classad

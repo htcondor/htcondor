@@ -25,7 +25,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 const double Value::ScaleFactor[] = {
 	1.0, 						// none
@@ -628,4 +628,4 @@ bool convertValueToStringValue(const Value value, Value &stringValue)
     return could_convert;
 }
 
-END_NAMESPACE // classad
+} // classad

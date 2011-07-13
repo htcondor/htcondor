@@ -22,9 +22,7 @@
 #include <iostream>
 
 using namespace std;
-#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
-#endif
 
 void test_old_time(void);
 

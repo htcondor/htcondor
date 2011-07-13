@@ -22,7 +22,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 
 bool getOldClassAd( Stream *sock, ClassAd& ad )
@@ -135,4 +135,4 @@ bool putOldClassAd ( Stream *sock, ClassAd& ad )
 	return true;
 }
 
-END_NAMESPACE // classad
+} // classad

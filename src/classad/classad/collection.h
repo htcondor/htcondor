@@ -25,7 +25,7 @@
 #include "classad/source.h"
 #include "classad/sink.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 
 class ClassAdCollectionInterface {
@@ -203,6 +203,6 @@ private:
 };
 
 
-END_NAMESPACE
+}
 
 #endif
