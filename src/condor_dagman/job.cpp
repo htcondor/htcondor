@@ -100,7 +100,7 @@ Job::~Job() {
 Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile,
 			bool prohibitMultiJobs ) :
-	_jobType( jobType ), _preskip(-1)
+	_jobType( jobType ), _preskip( PRE_SKIP_INVALID )
 {
 	Init( jobName, directory, cmdFile, prohibitMultiJobs );
 }
@@ -565,7 +565,7 @@ Job::AddPreSkip( int exitCode, MyString &whynot )
 			"value is weird.\n");
 	}
 
-	if( _preskip == -1 ) {
+	if( _preskip == PRE_SKIP_INVALID ) {
 		_preskip = exitCode;	
 	} else {
 		whynot = "Two definitions of PRE_SKIP for a node.\n";

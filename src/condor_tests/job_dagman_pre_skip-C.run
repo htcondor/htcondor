@@ -30,7 +30,7 @@ $testdesc =  'Condor submit dag - basic pre_skip node test C - scheduler U';
 $testname = "job_dagman_pre_skip-C";
 $dagman_args = "-verbose";
 
-$logfile = "job_dagman_pre_skip-A.dag.dagman.out";
+$logfile = "job_dagman_pre_skip-C.dag.dagman.out";
 @outfiles = ("job_dagman_pre_skip-C_A.out", "job_dagman_pre_skip-C_Apost.out",
 	"job_dagman_pre_skip-C_B.out");
 

@@ -1527,21 +1527,24 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				daemonCore->GetExceptionString(status) );
 			job->retval = ( 0 - WTERMSIG(status ) );
 		} else if( (preskip_interrogator = WEXITSTATUS( status )) != 0 ) {
+				// Implementation of PRE_SKIP option...
 			if( job->HasPreSkip() && preskip_interrogator == job->GetPreSkip() ){
-				// We are exiting with a nonzero status In this
-				// case, it is expected.  We mark the job as a
-				// noop. Then jump below to where pre skip looks
-				// like it succeeded
+					// The PRE script exited with a non-zero status, but
+					// because that status matches the PRE_SKIP value,
+					// we're skipping the node job (and POST script, if
+					// there is one) and considering the node successful.
 				const char* s = job->GetDagFile();
 				debug_printf( DEBUG_NORMAL, "PRE_SKIP return "
 					"value %d indicates we are done with node %s, "
 					"from dag file %s\n",
 					 preskip_interrogator, job->GetJobName(),
-					 s?s:"(unknown)");
+					 s?s:"(unknown)" );
 				job->retval = 0; // Job _is_ successful!
 				//TEMPTEMP -- I'm not sure we want to write this...
+				//TEMPTEMP -- test this!
+				_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 				_jobstateLog.WriteJobSuccessOrFailure( job );
-				TerminateJob(job, 0, 0);
+				TerminateJob( job, false, false );
 				goto pre_skip_fake_success;
 			}
 			// if script returned failure
