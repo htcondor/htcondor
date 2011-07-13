@@ -218,7 +218,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 				break;
 			}
 
-			if (!makeStartdAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+			if (!makeStartdAdHashKey(hashKey, ((ClassAd *) &ad))) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
@@ -241,7 +241,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 				break;
 			}
 
-			if (!makeNegotiatorAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+			if (!makeNegotiatorAdHashKey(hashKey, ((ClassAd *) &ad))) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
@@ -270,7 +270,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 				break;
 			}
 
-			if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+			if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad))) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
@@ -298,7 +298,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 		case UPDATE_GRID_AD:
 			dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received UPDATE_GRID_AD\n");
 
-			if (!makeGridAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+			if (!makeGridAdHashKey(hashKey, ((ClassAd *) &ad))) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
@@ -346,7 +346,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 		switch (command) {
 			case INVALIDATE_STARTD_ADS:
 				dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received INVALIDATE_STARTD_ADS\n");
-				if (!makeStartdAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+				if (!makeStartdAdHashKey(hashKey, ((ClassAd *) &ad))) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
@@ -360,7 +360,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 			break;
 			case INVALIDATE_NEGOTIATOR_ADS:
 				dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received INVALIDATE_NEGOTIATOR_ADS\n");
-				if (!makeNegotiatorAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+				if (!makeNegotiatorAdHashKey(hashKey, ((ClassAd *) &ad))) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
@@ -374,7 +374,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 			break;
 			case INVALIDATE_SCHEDD_ADS:
 				dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received INVALIDATE_SCHEDD_ADS\n");
-				if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+				if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad))) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
@@ -388,7 +388,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 			break;
 			case INVALIDATE_GRID_ADS:
 				dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received INVALIDATE_GRID_ADS\n");
-				if (!makeGridAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+				if (!makeGridAdHashKey(hashKey, ((ClassAd *) &ad))) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
