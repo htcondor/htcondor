@@ -305,7 +305,7 @@ bool condor_sockaddr::from_ip_string(const char* ip_string)
 		v4.sin_family = AF_INET;
 		v4.sin_port = 0;
 		return true;
-	} else if (inet_pton(AF_INET, ip_string, &v6.sin6_addr) == 1) {
+	} else if (inet_pton(AF_INET6, ip_string, &v6.sin6_addr) == 1) {
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 		v6.sin6_len = sizeof(sockaddr_in);
 #endif
