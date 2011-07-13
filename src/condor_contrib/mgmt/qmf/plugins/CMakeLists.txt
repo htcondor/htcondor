@@ -84,8 +84,9 @@ if (NOT WINDOWS)
     condor_plugin( MgmtScheddPlugin-plugin "${UTILS_REF};${BROKER_REF};${SchedSrcs};Scheduler.cpp;Submitter.cpp;Submission.cpp;JobServer.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
     add_dependencies( MgmtScheddPlugin-plugin qmf_gen_srcs )
 
-	file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* CollectorObject.* SlotObject.* PoolUtils.*)
-	condor_plugin( MgmtCollectorPlugin-plugin "${BROKER_REF};${CollectorSrcs};Grid.cpp;Collector.cpp;Slot.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+	file( GLOB CollectorSrcs MgmtCollectorPlugin.* GridObject.* NegotiatorObject.* CollectorObject.* SlotObject.* PoolUtils.*)
+	condor_plugin( MgmtCollectorPlugin-plugin "${BROKER_REF};${CollectorSrcs};Grid.cpp;Collector.cpp;Slot.cpp;Negotiator.cpp" "${C_LIBEXEC}" "${QPID_FOUND}" ON)
+	set_property(TARGET MgmtCollectorPlugin-plugin APPEND PROPERTY COMPILE_DEFINITIONS "READ_ONLY_NEGOTIATOR_OBJECT=1")
     add_dependencies( MgmtCollectorPlugin-plugin qmf_gen_srcs )
 
 	file( GLOB NegotiatorSrcs MgmtNegotiatorPlugin.* NegotiatorObject.* Utils.* PoolUtils.*)
