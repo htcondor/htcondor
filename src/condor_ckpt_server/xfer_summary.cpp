@@ -254,7 +254,7 @@ get_file_size(char *path)
 	int		fd;
 	unsigned long answer;
 
-	fd = safe_open_wrapper(path, O_RDONLY, 0);
+	fd = safe_open_wrapper_follow(path, O_RDONLY, 0);
 	if (fd < 0) {
 		return 0;
 	}

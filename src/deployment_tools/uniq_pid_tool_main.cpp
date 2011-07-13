@@ -345,7 +345,7 @@ createPidFile(const char* pidfile)
     S_IRUSR | S_IWUSR | // user read/write
     S_IRGRP | S_IWGRP | // group read/write
     S_IROTH | S_IWOTH;  // everyone read/write
-  int fd = safe_open_wrapper(pidfile, O_WRONLY | O_CREAT | O_EXCL, pidfile_mode);
+  int fd = safe_open_wrapper_follow(pidfile, O_WRONLY | O_CREAT | O_EXCL, pidfile_mode);
   if( fd == -1 ){
     perror("ERROR: Could not create the pid file");
     return NULL;

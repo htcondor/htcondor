@@ -413,7 +413,7 @@ submitDag( SubmitDagShallowOptions &shallowOpts )
 //---------------------------------------------------------------------------
 bool fileExists(const MyString &strFile)
 {
-	int fd = safe_open_wrapper(strFile.Value(), O_RDONLY);
+	int fd = safe_open_wrapper_follow(strFile.Value(), O_RDONLY);
 	if (fd == -1)
 		return false;
 	close(fd);
@@ -628,7 +628,7 @@ EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
 void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 			/* const */ SubmitDagShallowOptions &shallowOpts)
 {
-	FILE *pSubFile = safe_fopen_wrapper(shallowOpts.strSubFile.Value(), "w");
+	FILE *pSubFile = safe_fopen_wrapper_follow(shallowOpts.strSubFile.Value(), "w");
 	if (!pSubFile)
 	{
 		fprintf( stderr, "ERROR: unable to create submit file %s\n",
@@ -858,7 +858,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		// Append user-specified stuff to submit file...
 		// ...first, the insert file, if any...
 	if (shallowOpts.appendFile.Value() != "") {
-		FILE *aFile = safe_fopen_wrapper(shallowOpts.appendFile.Value(), "r");
+		FILE *aFile = safe_fopen_wrapper_follow(shallowOpts.appendFile.Value(), "r");
 		if (!aFile)
 		{
 			fprintf( stderr, "ERROR: unable to read submit append file (%s)\n",

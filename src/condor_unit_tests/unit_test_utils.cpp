@@ -156,13 +156,13 @@ compat_classad::ClassAd* get_classad_from_file(){
 		"MyType=\"foo\"\n TargetType=\"blah\"";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
-	classad_file = safe_fopen_wrapper("classad_file", "w");
+	classad_file = safe_fopen_wrapper_follow("classad_file", "w");
 	classad.fPrint(classad_file);
 	fprintf(classad_file, "***\n");
 	fclose(classad_file);
 
 	int iseof, error, empty;
-	classad_file = safe_fopen_wrapper("classad_file", "r");
+	classad_file = safe_fopen_wrapper_follow("classad_file", "r");
 	classad_from_file = new ClassAd(classad_file, "***", iseof, error, empty);
 	fclose(classad_file);
 
@@ -439,7 +439,7 @@ void cut_assert_null_impl(void *value, char *expr, char *file, int line) {
 void create_empty_file(char *file)
 {
 	FILE *f = NULL;
-	cut_assert_not_null( f = safe_fopen_wrapper(file, "w+") );
+	cut_assert_not_null( f = safe_fopen_wrapper_follow(file, "w+") );
 	cut_assert_z( fclose(f) );
 }
 

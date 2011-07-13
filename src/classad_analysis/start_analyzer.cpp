@@ -74,7 +74,7 @@ void usage( char *myName ) {
 
 int readFileIntoString(char* fileName, char* resultString, int size){
   // this is a retarded way to read the file, but it works.
-  int fd = safe_open_wrapper(fileName, O_RDONLY);
+  int fd = safe_open_wrapper_follow(fileName, O_RDONLY);
   if(fd < 0){
     cerr << "couldn't open" << fileName << endl;
     exit(1);

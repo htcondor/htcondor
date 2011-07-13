@@ -2595,7 +2595,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	}
 
 	// Create the file
-	int fd = safe_open_wrapper(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
+	int fd = safe_open_wrapper_follow(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -2680,7 +2680,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	
 	MyString filename;
 	filename.sprintf( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
-	int fd = safe_open_wrapper(filename.Value(), O_RDONLY);
+	int fd = safe_open_wrapper_follow(filename.Value(), O_RDONLY);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;

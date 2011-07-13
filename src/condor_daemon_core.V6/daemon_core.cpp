@@ -723,7 +723,7 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 #if !defined(WIN32)
 	if (fd == -1) {
 		// TODO If num_fds>1, should we call open() multiple times?
-		fd = safe_open_wrapper( NULL_FILE, O_RDONLY );
+		fd = safe_open_wrapper_follow( NULL_FILE, O_RDONLY );
 		if ( fd >= 0 ) {
 			close( fd );
 		}
@@ -6843,7 +6843,7 @@ void CreateProcessForkit::exec() {
 
 			// Re-open 'em to point at /dev/null as place holders
 		if ( num_closed ) {
-			int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
+			int	fd_null = safe_open_wrapper_follow( NULL_FILE, O_RDWR );
 			if ( fd_null < 0 ) {
 				dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE,
 						 strerror(errno) );
@@ -10742,7 +10742,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
     if( fname ) {
 		MyString newLocalAdFile;
 		newLocalAdFile.sprintf("%s.new",fname);
-        if( (AD_FILE = safe_fopen_wrapper(newLocalAdFile.Value(), "w")) ) {
+        if( (AD_FILE = safe_fopen_wrapper_follow(newLocalAdFile.Value(), "w")) ) {
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );
 			if( rotate_file(newLocalAdFile.Value(),fname)!=0 ) {

@@ -497,7 +497,7 @@ WriteUserLog::openFile(
 		flags |= O_APPEND;
 	}
 	mode_t mode = 0664;
-	fd = safe_open_wrapper( file, flags, mode );
+	fd = safe_open_wrapper_follow( file, flags, mode );
 	if( fd < 0 ) {
 		dprintf( D_ALWAYS,
 		         "WriteUserLog::initialize: "
@@ -521,10 +521,10 @@ WriteUserLog::openFile(
 # else
 	// Windows (Visual C++)
 	const char *fmode = append ? "a+tc" : "w+tc";
-	fp = safe_fopen_wrapper( file, fmode );
+	fp = safe_fopen_wrapper_follow( file, fmode );
 	if( NULL == fp ) {
 		dprintf( D_ALWAYS, "WriteUserLog::initialize: "
-				 "safe_fopen_wrapper(\"%s\",%s) failed - errno %d (%s)\n",
+				 "safe_fopen_wrapper_follow(\"%s\",%s) failed - errno %d (%s)\n",
 				 file, fmode, errno, strerror(errno) );
 		return false;
 	}
@@ -765,11 +765,11 @@ WriteUserLog::checkGlobalLogRotation( void )
 #endif
 
 	// Read the old header, use it to write an updated one
-	FILE *fp = safe_fopen_wrapper( m_global_path, "r" );
+	FILE *fp = safe_fopen_wrapper_follow( m_global_path, "r" );
 	if ( !fp ) {
 		dprintf( D_ALWAYS,
 				 "WriteUserLog: "
-				 "safe_fopen_wrapper(\"%s\") failed - errno %d (%s)\n",
+				 "safe_fopen_wrapper_follow(\"%s\") failed - errno %d (%s)\n",
 				 m_global_path, errno, strerror(errno) );
 	}
 	else {

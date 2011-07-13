@@ -163,7 +163,7 @@ int Condor_Diffie_Hellman :: initialize()
 
     FILE * fp = 0;
     if ( dh_config ) {
-        if ( (fp = safe_fopen_wrapper(dh_config, "r")) == NULL) {
+        if ( (fp = safe_fopen_wrapper_follow(dh_config, "r")) == NULL) {
             dprintf(D_ALWAYS, "Unable to open condor_dh_config file %s\n", dh_config);
             goto error;
         }

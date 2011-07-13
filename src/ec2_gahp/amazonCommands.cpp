@@ -90,7 +90,7 @@ std::string amazonURLEncode( const std::string & input )
 // Utility function.
 //
 bool writeShortFile( const std::string & fileName, const std::string & contents ) {
-    int fd = safe_open_wrapper( fileName.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600 );
+    int fd = safe_open_wrapper_follow( fileName.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600 );
 
     if( fd < 0 ) {
         dprintf( D_ALWAYS, "Failed to open file '%s' for writing: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
@@ -111,7 +111,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
 // Utility function; inefficient.
 //
 bool readShortFile( const std::string & fileName, std::string & contents ) {
-    int fd = safe_open_wrapper( fileName.c_str(), O_RDONLY, 0600 );
+    int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
 
     if( fd < 0 ) {
         dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
