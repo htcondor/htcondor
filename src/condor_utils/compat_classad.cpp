@@ -610,11 +610,17 @@ void registerStrlistFunctions()
 											 stringListRegexpMember_func );
 }
 
+void
+classad_debug_dprintf(const char *s) {
+	dprintf(D_FULLDEBUG, s);
+}
+
 ClassAd::ClassAd()
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
 		registerStrlistFunctions();
+		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 		m_initConfig = true;
 	}
 
