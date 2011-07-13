@@ -24,7 +24,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 // --- remote collection query implementation begins ---
 RemoteCollectionQuery::
@@ -303,4 +303,4 @@ IsAfterLast( ) const
 }
 
 
-END_NAMESPACE
+}	// namespace classad

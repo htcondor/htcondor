@@ -26,7 +26,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 //-------------collection server templates-------------
     // view content
@@ -56,5 +56,5 @@ template hash_map<string, ServerTransaction*, StringHash>::iterator;
     // operations in transaction
 template list<XactionRecord>;
 
-END_NAMESPACE
+}
 
