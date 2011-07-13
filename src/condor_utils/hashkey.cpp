@@ -334,7 +334,7 @@ makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad, const condor_sockaddr& /*from*
 }
 
 bool
-makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad, const condor_sockaddr& from)
+makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad, const condor_sockaddr& /*from*/)
 {
     MyString tmp;
     
