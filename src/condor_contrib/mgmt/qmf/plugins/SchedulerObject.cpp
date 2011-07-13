@@ -41,11 +41,13 @@
 
 #include "MgmtConversionMacros.h"
 
+#ifndef READ_ONLY_SCHEDULER_OBJECT
 // Global Scheduler object, used for needReschedule
 #include "../condor_schedd.V6/scheduler.h"
 extern Scheduler scheduler;
 extern char * Name;
 extern bool qmgmt_all_users_trusted;
+#endif
 
 using namespace com::redhat::grid;
 using namespace qmf::com::redhat::grid;
@@ -111,6 +113,7 @@ SchedulerObject::update(const ClassAd &ad)
 }
 
 
+#ifndef READ_ONLY_SCHEDULER_OBJECT
 Manageable::status_t
 SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &text)
 {
@@ -369,6 +372,7 @@ SchedulerObject::Remove(std::string key, std::string &reason, std::string &text)
 
 	return STATUS_OK;
 }
+#endif
 
 qpid::management::ManagementObject *
 SchedulerObject::GetManagementObject(void) const
@@ -382,6 +386,7 @@ SchedulerObject::ManagementMethod(uint32_t methodId,
 								  Args &args,
 								  std::string &text)
 {
+#ifndef READ_ONLY_SCHEDULER_OBJECT
 	Manageable::status_t result = STATUS_OK;
 	bool orig_qaut = qmgmt_all_users_trusted;
 	qmgmt_all_users_trusted = true;
@@ -421,6 +426,9 @@ SchedulerObject::ManagementMethod(uint32_t methodId,
 
 	qmgmt_all_users_trusted = orig_qaut;
 	return result;
+#else
+	return STATUS_NOT_IMPLEMENTED;
+#endif
 }
 
 bool

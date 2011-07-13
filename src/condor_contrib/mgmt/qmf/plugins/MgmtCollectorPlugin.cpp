@@ -28,6 +28,7 @@
 
 #include "SlotObject.h"
 #include "NegotiatorObject.h"
+#include "SchedulerObject.h"
 #include "CollectorObject.h"
 #include "GridObject.h"
 
@@ -56,6 +57,10 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
     // Why when there should be only one? Because the CollectorEngine does.
 	NegotiatorHashTable *negotiatorAds;
 
+	typedef HashTable<AdNameHashKey, SchedulerObject *> SchedulerHashTable;
+
+	SchedulerHashTable *schedulerAds;
+
 	typedef HashTable<AdNameHashKey, GridObject *> GridHashTable;
 
 	GridHashTable *gridAds;
@@ -82,12 +87,15 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 
 		negotiatorAds = new NegotiatorHashTable(3, &adNameHashFunction);
 
+		schedulerAds = new SchedulerHashTable(128, &adNameHashFunction);
+
 		gridAds = new GridHashTable(4096, &adNameHashFunction);
 
 		ManagementAgent *agent = singleton->getInstance();
 
 		Slot::registerSelf(agent);
 		Negotiator::registerSelf(agent);
+		Scheduler::registerSelf(agent);
 		Grid::registerSelf(agent);
 		Collector::registerSelf(agent);
 
@@ -164,6 +172,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 	void invalidate_all() {
 		startdAds->clear();
 		negotiatorAds->clear();
+		schedulerAds->clear();
 		gridAds->clear();
 	}
 
@@ -194,9 +203,11 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 	void
 	update(int command, const ClassAd &ad)
 	{
+		MyString name;
 		AdNameHashKey hashKey;
 		SlotObject *slotObject;
 		NegotiatorObject *negotiatorObject;
+		SchedulerObject *schedulerObject;
 		GridObject *gridObject;
 
 		switch (command) {
@@ -247,6 +258,38 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 			negotiatorObject->update(ad);
 
 			break;
+		case UPDATE_SCHEDD_AD:
+			dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received UPDATE_SCHEDD_AD\n");
+			if (param_boolean("QMF_IGNORE_UPDATE_SCHEDD_AD", true)) {
+				dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Configured to ignore UPDATE_SCHEDD_AD\n");
+				break;
+			}
+
+			if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad), NULL)) {
+				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
+			}
+
+				// The JobServer constructs a ref to the Scheduler
+				// based on this Schedd's name, thus we must construct
+				// the Scheduler's id in the same way or a disconnect
+				// will occur.
+			if (!ad.LookupString(ATTR_NAME, name)) {
+				name = "UNKNOWN";
+			}
+
+			if (schedulerAds->lookup(hashKey, schedulerObject)) {
+					// Key doesn't exist
+				schedulerObject =
+					new SchedulerObject(singleton->getInstance(),
+										 name.Value());
+
+					// Ignore old value, if it existed (returned)
+				schedulerAds->insert(hashKey, schedulerObject);
+			}
+
+			schedulerObject->update(ad);
+
+			break;
 		case UPDATE_GRID_AD:
 			dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received UPDATE_GRID_AD\n");
 
@@ -292,6 +335,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 		AdNameHashKey hashKey;
 		SlotObject *slotObject;
 		NegotiatorObject *negotaitorObject;
+		SchedulerObject *schedulerObject;
 		GridObject *gridObject;
 
 		switch (command) {
@@ -321,6 +365,20 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 				}
 				else {
 					dprintf(D_FULLDEBUG, "%s negotiator key not found for removal\n",HashString(hashKey).Value());
+				}
+			break;
+			case INVALIDATE_SCHEDD_ADS:
+				dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received INVALIDATE_SCHEDD_ADS\n");
+				if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad), NULL)) {
+					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
+					return;
+				}
+				if (0 == schedulerAds->lookup(hashKey, schedulerObject)) {
+					schedulerAds->remove(hashKey);
+					delete schedulerObject;
+				}
+				else {
+					dprintf(D_FULLDEBUG, "%s scheduler key not found for removal\n",HashString(hashKey).Value());
 				}
 			break;
 			case INVALIDATE_GRID_ADS:
