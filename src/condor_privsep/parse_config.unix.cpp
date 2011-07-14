@@ -215,6 +215,7 @@ int next_cf_value(config_file *cf, char **key, char **value)
             sep_ptr = *value;
             while ((sep_ptr = strchr(sep_ptr, '\n'))) {
                 ++cf->prev_value_extra_lines;
+                ++sep_ptr;
             }
 
             cf->bytes_read += value_length;
