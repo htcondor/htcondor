@@ -319,6 +319,7 @@ Dagman::Config()
 				submitDepthFirst );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %s\n",
 				submitDepthFirst ? "True" : "False" );
+
 	_runPost = param_boolean( "DAGMAN_POST_IGNORE_PRE", true );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_POST_IGNORE_PRE setting: %s\n",
 			_runPost ? "True" : "False" );
@@ -666,6 +667,7 @@ void main_init (int argc, char ** const argv) {
 
         } else if( !strcasecmp( "-NoPostRun",argv[i] ) ) {
 			dagman._runPost = false;
+
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
 

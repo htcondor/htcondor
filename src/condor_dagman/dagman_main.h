@@ -194,6 +194,9 @@ class Dagman {
 		// we declare it a failure and remove it; 0 means no limit.
 	int _maxJobHolds;
 	static strict_level_t _strict;
+
+		// If _runPost is true, we run a POST script even if the PRE
+		// script for the node fails.
 	bool _runPost;
 };
 
