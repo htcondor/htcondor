@@ -88,7 +88,7 @@ run_test IF_NEEDED NONE 1 ; fails=$((fails + $?))
 run_test IF_NEEDED ON_EXIT 0 ; fails=$((fails + $?))
 run_test IF_NEEDED ON_EXIT_OR_EVICT 1 ; fails=$((fails + $?))
 
-tmp=$(mktemp)
+tmp=$(mktemp /tmp/file_transfer_submit.XXXXXXXX)
 run_test YES ON_EXIT 0 $tmp "" ; fails=$((fails + $?))
 run_test YES ON_EXIT 0 "" $tmp ; fails=$((fails + $?))
 run_test NO NONE 1 $tmp "" ; fails=$((fails + $?))
