@@ -52,6 +52,7 @@ KeyCacheEntry::KeyCacheEntry( char const *id_param, struct sockaddr_in * addr_pa
 	_expiration = expiration_param;
 	_lease_interval = lease_interval;
 	_lease_expiration = 0;
+	_lingering = false;
 	renewLease();
 }
 
