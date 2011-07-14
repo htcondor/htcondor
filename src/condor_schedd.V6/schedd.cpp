@@ -348,6 +348,10 @@ match_rec::~match_rec()
 			// handle any final communication from the startd that may
 			// still be in flight.
 		daemonCore->getSecMan()->SetSessionExpiration(secSessionId(),time(NULL)+600);
+			// In case we get the same claim id again before the slop time
+			// expires, mark this session as "lingering" so we know it can
+			// be replaced.
+		daemonCore->getSecMan()->SetSessionLingerFlag(secSessionId());
 	}
 }
 

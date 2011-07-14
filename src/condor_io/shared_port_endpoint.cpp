@@ -610,11 +610,18 @@ SharedPortEndpoint::SocketCheck()
 		return;
 	}
 
-	if( utime(m_full_name.Value(), NULL) < 0 ) {
-		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to touch %s: %s\n",
-				m_full_name.Value(), strerror(errno));
+	priv_state orig_priv = set_condor_priv();
 
-		if( errno == ENOENT ) {
+	int rc = utime(m_full_name.Value(), NULL);
+
+	int utime_errno = errno;
+	set_priv(orig_priv);
+
+	if( rc < 0 ) {
+		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to touch %s: %s\n",
+				m_full_name.Value(), strerror(utime_errno));
+
+		if( utime_errno == ENOENT ) {
 			dprintf(D_ALWAYS,"SharedPortEndpoint: attempting to recreate vanished socket!\n");
 			StopListener();
 			if( !StartListener() ) {
