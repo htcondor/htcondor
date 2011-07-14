@@ -3,16 +3,16 @@
 
 \index{ClassAd Negotiator attribute!DaemonStartTime}
 \item[\AdAttr{DaemonStartTime}:] The time that this daemon was
-  started, represented as the number of second elapsed since
-    the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+started, represented as the number of second elapsed since
+the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
 \label{attr:LastNegotiationCycleActiveSubmitterCount<X>}
 \index{ClassAd Negotiator attribute!LastNegotiationCycleActiveSubmitterCount<X>}
-\item[\AdAttr{LastNegotiationCycleActiveSubmitterCount<X>}:] The integer
-  number of submitters
-  the \Condor{negotiator} attempted to negotiate with in the negotiation cycle.
-  The number \AdAttr{<X>} appended to the attribute name indicates how
-  many negotiation cycles ago this cycle happened.
+\item[\AdAttr{LastNegotiationCycleActiveSubmitterCount<X>}:] 
+The integer number of submitters
+the \Condor{negotiator} attempted to negotiate with in the negotiation cycle.
+The number \AdAttr{<X>} appended to the attribute name indicates how
+many negotiation cycles ago this cycle happened.
 
 \label{attr:LastNegotiationCycleCandidateSlots<X>}
 \index{ClassAd Negotiator attribute!LastNegotiationCycleCandidateSlots<X>}
@@ -41,9 +41,9 @@ indicates how many negotiation cycles ago this cycle happened.
 \label{attr:LastNegotiationCycleMatches<X>}
 \index{ClassAd Negotiator attribute!LastNegotiationCycleMatches<X>}
 \item[\AdAttr{LastNegotiationCycleMatches<X>}:] The number of successful
-  matches that were made in the negotiation cycle.  The number \AdAttr{<X>}
-  appended to the attribute name indicates how many negotiation cycles
-  ago this cycle happened.
+matches that were made in the negotiation cycle.
+The number \AdAttr{<X>} appended to the attribute name 
+indicates how many negotiation cycles ago this cycle happened.
 
 \label{attr:LastNegotiationCycleMatchRate<X>}
 \index{ClassAd Negotiator attribute!LastNegotiationCycleMatchRate<X>}
@@ -133,48 +133,55 @@ rejections that occurred in the negotiation cycle.  The number \AdAttr{<X>}
 appended to the attribute name indicates how many negotiation cycles
 ago this cycle happened.
 
-\label{attr:LastNegotiationCycleSlotShareIter}
-\index{ClassAd Negotiator attribute!LastNegotiationCycleSlotShareIter}
-\item[\AdAttr{LastNegotiationCycleSlotShareIter}:] 
-Description is not yet written.
-
-%\index{ClassAd Negotiator attribute!LastNegotiationCycleStartTime<X>}
-%\item[\AdAttr{LastNegotiationCycleStartTime<X>}:]
-  %The time, represented as the number of second elapsed since the Unix
-  %epoch (00:00:00 UTC, Jan 1, 1970), at which the negotiation cycle
-  %started.  The number \AdAttr{<X>} appended to the attribute name
-  %indicates how many negotiation cycles ago this cycle happened.
+\label{attr:LastNegotiationCycleSlotShareIter<X>}
+\index{ClassAd Negotiator attribute!LastNegotiationCycleSlotShareIter<X>}
+\item[\AdAttr{LastNegotiationCycleSlotShareIter<X>}:] 
+The number of iterations performed during the negotiation cycle.
+Each iteration includes the reallocation of remaining slots to 
+accounting groups,
+as defined by the implementation of hierarchical group quotas, 
+together with the negotiation for those slots.
+The maximum number of iterations is limited by the configuration variable
+\Macro{GROUP\_QUOTA\_MAX\_ALLOCATION\_ROUNDS}.
+The number \AdAttr{<X>} appended to the attribute name indicates 
+how many negotiation cycles ago this cycle happened.
 
 \label{attr:LastNegotiationCycleSubmittersFailed<X>}
 \index{ClassAd Negotiator attribute!LastNegotiationCycleSubmittersFailed<X>}
 \item[\AdAttr{LastNegotiationCycleSubmittersFailed<X>}:] A string containing
-  a space and comma-separated list of the names of all submitters who
-  failed to negotiate in the negotiation cycle.  One possible cause of
-  failure is a communication timeout.  This list does not include
-  submitters who ran out of time due
-  to \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}.  Those are listed
-  separately in \AdAttr{LastNegotiationCycleSubmittersOutOfTime<X>}.
-  The number \AdAttr{<X>} appended to the attribute name indicates how
-  many negotiation cycles ago this cycle happened.
+a space and comma-separated list of the names of all submitters who
+failed to negotiate in the negotiation cycle.  One possible cause of
+failure is a communication timeout.  This list does not include
+submitters who ran out of time due
+to \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}.  Those are listed
+separately in \AdAttr{LastNegotiationCycleSubmittersOutOfTime<X>}.
+The number \AdAttr{<X>} appended to the attribute name indicates how
+many negotiation cycles ago this cycle happened.
 
 \label{attr:LastNegotiationCycleSubmittersOutOfTime<X>}
 \index{ClassAd Negotiator attribute!LastNegotiationCycleSubmittersOutOfTime<X>}
 \item[\AdAttr{LastNegotiationCycleSubmittersOutOfTime<X>}:] A string containing
-  a space and comma-separated list of the names of all submitters who
-  ran out of time due to \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}
-  in the negotiation cycle.  The number \AdAttr{<X>} appended to the
-  attribute name indicates how many negotiation cycles ago this cycle
-  happened.
+a space and comma separated list of the names of all submitters who
+ran out of time due to \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}
+in the negotiation cycle.  The number \AdAttr{<X>} appended to the
+attribute name indicates how many negotiation cycles ago this cycle
+happened.
 
 \label{attr:LastNegotiationCycleSubmittersShareLimit}
 \index{ClassAd Negotiator attribute!LastNegotiationCycleSubmittersShareLimit}
 \item[\AdAttr{LastNegotiationCycleSubmittersShareLimit}:] 
-Description is not yet written.
+A string containing a space and comma separated list of names of submitters 
+who encountered their fair-share slot limit during the negotiation cycle.  
+The number \AdAttr{<X>} appended to the attribute name indicates how
+many negotiation cycles ago this cycle happened.
 
-\label{attr:LastNegotiationCycleTime}
-\index{ClassAd Negotiator attribute!LastNegotiationCycleTime}
-\item[\AdAttr{LastNegotiationCycleTime}:] 
-Description is not yet written.
+\label{attr:LastNegotiationCycleTime<X>}
+\index{ClassAd Negotiator attribute!LastNegotiationCycleTime<X>}
+\item[\AdAttr{LastNegotiationCycleTime<X>}:] 
+The time, represented as the number of second elapsed since the Unix
+epoch (00:00:00 UTC, Jan 1, 1970), at which the negotiation cycle started.
+The number \AdAttr{<X>} appended to the attribute name
+indicates how many negotiation cycles ago this cycle happened.
 
 \label{attr:LastNegotiationCycleTotalSlots<X>}
 \index{ClassAd Negotiator attribute!LastNegotiationCycleTotalSlots<X>}
@@ -193,26 +200,26 @@ how many negotiation cycles ago this cycle happened.
 
 \index{ClassAd Negotiator attribute!Machine}
 \item[\AdAttr{Machine}:] A string with the machine's fully qualified 
-  host name.
+host name.
 
 \index{ClassAd Negotiator attribute!MyAddress}
 \item[\AdAttr{MyAddress}:] Description is not yet written.
 
 \index{ClassAd Negotiator attribute!MyCurrentTime}
 \item[\AdAttr{MyCurrentTime}:]  The time, represented as the number of 
-  second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
-  at which the \Condor{schedd} daemon last sent a ClassAd update to the
-  \Condor{collector}.
+second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
+at which the \Condor{schedd} daemon last sent a ClassAd update to the
+\Condor{collector}.
 
 \index{ClassAd Negotiator attribute!Name}
 \item[\AdAttr{Name}:] The name of this resource; typically the same value as
-  the \AdAttr{Machine} attribute, but could be customized by the site
-  administrator.
-  On SMP machines, the \Condor{startd} will divide the CPUs up into separate
-  slots, each with with a unique name.
-  These names will be of the form ``slot\#@full.hostname'', for example,
-  ``slot1@vulture.cs.wisc.edu'', which signifies slot number 1 from
-  vulture.cs.wisc.edu.
+the \AdAttr{Machine} attribute, but could be customized by the site
+administrator.
+On SMP machines, the \Condor{startd} will divide the CPUs up into separate
+slots, each with with a unique name.
+These names will be of the form \Expr{slot\#@full.hostname}, for example,
+\Expr{slot1@vulture.cs.wisc.edu}, which signifies slot number 1 from
+\Expr{vulture.cs.wisc.edu}.
 
 \index{ClassAd Negotiator attribute!NegotiatorIpAddr}
 \item[\AdAttr{NegotiatorIpAddr}:] String with the IP and port address of the
@@ -223,9 +230,9 @@ how many negotiation cycles ago this cycle happened.
 
 \index{ClassAd Negotiator attribute!UpdateSequenceNumber}
 \item[\AdAttr{UpdateSequenceNumber}:] An integer, starting at zero,
-  and incremented with each ClassAd update sent to the \Condor{collector}.
-  The \Condor{collector} uses this value to sequence the updates it
-  receives.
+and incremented with each ClassAd update sent to the \Condor{collector}.
+The \Condor{collector} uses this value to sequence the updates it
+receives.
 
 \end{description}
 
