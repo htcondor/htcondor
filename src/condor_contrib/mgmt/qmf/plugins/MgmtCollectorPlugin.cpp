@@ -148,7 +148,6 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 
 		collector = new CollectorObject(agent, collName.c_str());
 
-/* disable for now
 		ReliSock *sock = new ReliSock;
 		if (!sock) {
 			EXCEPT("Failed to allocate Mgmt socket");
@@ -166,7 +165,6 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 											   this))) {
 			EXCEPT("Failed to register Mgmt socket");
 		}
-*/
 	}
 
 	void invalidate_all() {
@@ -409,7 +407,6 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 		}
 	}
 
-/* disable for now
 	int
 	HandleMgmtSocket(Service *, Stream *)
 	{
@@ -417,7 +414,6 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 
 		return KEEP_STREAM;
 	}
-*/
 };
 
 static MgmtCollectorPlugin instance;
