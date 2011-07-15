@@ -159,6 +159,11 @@ directory.
 The installer now correctly sets \MacroNI{JAVA\_CLASSPATH\_DEFAULT} 
 to the \verb|$(BIN)| directory.
 
+% gittrac #2308
+\item Fixed a problem causing Condor to fail to start when
+privsep was enabled and the environment had any variables
+containing newlines.
+
 \end{itemize}
 
 \noindent Known Bugs:
