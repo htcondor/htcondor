@@ -89,6 +89,9 @@ run_test IF_NEEDED ON_EXIT 0 ; fails=$((fails + $?))
 run_test IF_NEEDED ON_EXIT_OR_EVICT 1 ; fails=$((fails + $?))
 
 tmp=$(mktemp)
+echo "---"
+echo "Temp file: '$tmp'"
+if [ -z "$tmp" ]; then echo "FAILURE: mktemp failed"; fi
 run_test YES ON_EXIT 0 $tmp "" ; fails=$((fails + $?))
 run_test YES ON_EXIT 0 "" $tmp ; fails=$((fails + $?))
 run_test NO NONE 1 $tmp "" ; fails=$((fails + $?))
@@ -99,5 +102,3 @@ echo
 echo "$fails failures"
 
 exit $fails
-
-
