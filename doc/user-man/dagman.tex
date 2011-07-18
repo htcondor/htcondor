@@ -1153,6 +1153,26 @@ DAG
 This will cause node C to be submitted before node B (normally, node B
 would be submitted first).
 
+\index{DAGMan input file!PRIORITY key word with respect to SUBDAGs}
+Note that this node priority as specified in the DAG input file is \emph{not}
+propagated to SUBDAG execution.
+As an example, consider the portion of a DAG input file specifying
+\Arg{PRIORITY} for two SUBDAGs: 
+\footnotesize
+\begin{verbatim}
+    SUBDAG EXTERNAL  A  A.dag 
+    SUBDAG EXTERNAL  B  B.dag 
+    PRIORITY  A  100
+    PRIORITY  B  0
+\end{verbatim}
+\normalsize
+Once any node jobs of A and B are submitted, 
+this priority setting is completely irrelevant. 
+It is true that the first jobs of A are going to be submitted first,
+but other than that, 
+setting the \Arg{PRIORITY} of SUBDAG A and/or SUBDAG B has no effect
+on their priority for job submission.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-node-category}Limiting the Number of Submitted Job Clusters within a DAG}
 
