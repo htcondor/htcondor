@@ -91,11 +91,6 @@ the \Opt{-debug} option causes \Procedure{dprintf} logging to \Code{stderr}.
 that could cause the \Condor{schedd} to crash when a job was removed 
 during negotiation or when an idle parallel universe job left the queue. 
 
-% gittrac #2170 
-\item A bug introduced in Condor version 7.5.5 caused the \Condor{schedd}
-to die when its attempt to claim a slot for a parallel universe job 
-was rejected by the \Condor{startd}. 
-
 % gittrac #2247 
 \item Fixed a problem that sometimes caused the \Condor{procd} to die.
 The chain of events for this fixed bug were that
