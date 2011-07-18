@@ -22,7 +22,7 @@ use CondorTest;
 use strict;
 use warnings;
 
-#$cmd = 'job_amazon_basic.cmd';
+#$cmd = 'job_deltacloud_basic.cmd';
 my $cmd = $ARGV[0];
 my $debuglevel = 1;
 
@@ -33,8 +33,8 @@ my $condor_config = $ENV{CONDOR_CONFIG};
 
 CondorTest::debug("CONDOR_CONFIG = $condor_config\n",$debuglevel);
 
-my $testdesc =  'Amazon EC2 basic test';
-my $testname = "job_amazon_basic";
+my $testdesc =  'Deltacloud basic test';
+my $testname = "job_deltacloud_basic";
 
 my $aborted = sub {
 	my %info = @_;
@@ -50,7 +50,7 @@ my $held = sub {
 
 	CondorTest::debug( "Held event not expected: $holdreason \n",$debuglevel);
 	system("condor_status -any -l");
-	die "Amazon EC2 job being held not expected\n";
+	die "Deltacloud job being held not expected\n";
 };
 
 my $submit = sub
@@ -60,15 +60,20 @@ my $submit = sub
 	print "ok\n";
 };
 
-my $executed = sub
+my $execute = sub
 {
 	my %args = @_;
 	my $cluster = $args{"cluster"};
+
+	# TODO Shutdown instance directly
+	#   Find instance id from job ad or user log
+	#   wget --post-data= --user=mockuser --password=mockpassword \
+	#   http://localhost:3001/api/instances/<instance id>/stop
 };
 
 # Expect 8 Return Succes exchanges including a CreateKeyPair
 # and a DeleteKeyPair.
-my $ec2simout = "ec2_sim.out";
+my $deltacloudd_out = "deltacloudd.out";
 
 my $success = sub
 {
@@ -79,28 +84,29 @@ my $success = sub
 	my $keyspairs = 2;
 	my $successes = 8;
 
-	print "Checking simulator output - ";
-
-	open(EC2,"<$ec2simout") or die "Failed to open <$ec2simout>:$!\n";
-	while(<EC2>) {
-		chomp();
-		$line = $_;
-		if($line =~ /^CreateKeyPair/) {
-			$keypaircount += 1;
-		} elsif($line =~ /^DeleteKeyPair/) {
-			$keypaircount += 1;
-		} elsif($line =~ /^Return Success/) {
-			$successcount += 1;
-		} else {
-			# ignore the rest
-		}
-	}
-	close(EC2);
-	if(($successcount == $successes) && ($keypaircount == $keyspairs)) {
+	# TODO Is there anything useful to check in server output?
+#	print "Checking server output - ";
+#
+#	open(SERVER,"<$deltacloudd_out") or die "Failed to open <$deltacloudd_out>:$!\n";
+#	while(<SERVER>) {
+#		chomp();
+#		$line = $_;
+#		if($line =~ /^CreateKeyPair/) {
+#			$keypaircount += 1;
+#		} elsif($line =~ /^DeleteKeyPair/) {
+#			$keypaircount += 1;
+#		} elsif($line =~ /^Return Success/) {
+#			$successcount += 1;
+#		} else {
+#			# ignore the rest
+#		}
+#	}
+#	close(SERVER);
+#	if(($successcount == $successes) && ($keypaircount == $keyspairs)) {
 		print "ok\n";
-	} else {
-		print "bad\n";
-	}
+#	} else {
+#		print "bad\n";
+#	}
 
 
 	print "Job executed successfully\n";
@@ -109,7 +115,7 @@ my $success = sub
 
 CondorTest::RegisterSubmit( $testname, $submit );
 CondorTest::RegisterExitedSuccess( $testname, $success);
-CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterHold( $testname, $held );
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {

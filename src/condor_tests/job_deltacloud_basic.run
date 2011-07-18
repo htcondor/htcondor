@@ -33,6 +33,9 @@ my $testname = "job_deltacloud_basic";
 my $corename = "job_deltacloud_basic";
 my $debuglevel = 2;
 my $done = 0;
+my $cwd = `pwd`;
+chomp( $cwd );
+my $gem_home = "$cwd/deltacloud_gems";
 
 # where am I running
 my $currenthost = `hostname`;
@@ -56,57 +59,51 @@ my $submit_file = $corename . ".cmd";
 CondorTest::debug("Master PID is $mypid\n",$debuglevel);
 CondorTest::debug("Master PID submit file is $submit_file\n",$debuglevel);
 
-my $ec2_sim_port = 0;
-my $ec2_sim = "ec2_sim";
-if ( ! -x $ec2_sim ) {
-	die("$ec2_sim isn't executable!\n");
+print "Install ruby gems\n";
+mkdir( "$gem_home" );
+system( "gem install amazon-ec2 compass gherkin cucumber eventmachine haml json nokogiri rack rack-accept rack-test rake rcov rerun right_aws sinatra thin net-ssh" );
+$ENV{"PATH"} = "$gem_home/bin:" . $ENV{"PATH"};
+
+print "Install deltacloud server\n";
+system( "cp -r /p/condor/workspaces/jfrey/deltacloud-src/deltacloud ." );
+
+my $deltacloudd_port = 3001;
+my $deltacloudd = "deltacloud/server/bin/deltacloudd";
+if ( ! -x $deltacloudd ) {
+	die("$deltacloudd isn't executable!\n");
 }
-# Start ec2_sim
-print "fire up EC2 Simulator - ";
-my $ec2_sim_pid = fork();
-if ( $ec2_sim_pid == 0 ) {
+# Start deltacloud server
+print "fire up Deltacloudd - ";
+# TODO Add loop to try different ports?
+my $deltacloudd_pid = fork();
+if ( $deltacloudd_pid == 0 ) {
 	# Child
 	# It's important not to have shell meta-characters in our exec() line.
 	# Otherwise, perl will exec /bin/sh and ec2_sim will be a child process.
 	# Later on, we need to send a SIGTERM to ec2_sim, so we need to know
 	# its pid.
-	open STDOUT, ">ec2_sim.out";
-	open STDERR, ">ec2_sim.out";
-	exec( "$ec2_sim -p 0" ) or die "Failed to exec $ec2_sim\n";
-} elsif ( $ec2_sim_pid > 0 ) {
-	for ( my $i = 0; $i < 10 && $ec2_sim_port == 0; $i++ ) {
-		sleep 1;
-		if ( waitpid( $ec2_sim_pid, &POSIX::WNOHANG ) == $ec2_sim_pid ) {
-			print "bad\n";
-			die( "$ec2_sim died unexpectedly!\n" );
-		}
-		open EC2_OUT, "<ec2_sim.out" or next;
-		while ( <EC2_OUT> ) {
-			if ( s/Listening on port // ) {
-				chomp( $ec2_sim_port = $_ );
-				last;
-			}
-		}
-		close EC2_OUT;
-	}
-	if ( $ec2_sim_port == 0 ) { 
+	open STDOUT, ">deltacloudd.out";
+	open STDERR, ">deltacloudd.out";
+	exec( "$deltacloudd -i mock -p $deltacloudd_port" ) or die "Failed to exec $deltacloudd\n";
+} elsif ( $deltacloudd_pid > 0 ) {
+	sleep 1;
+	if ( waitpid( $deltacloudd_pid, &POSIX::WNOHANG ) == $deltacloudd_pid ) {
 		print "bad\n";
-		die("Failed to find port for $ec2_sim\n"); 
-	} else {
-		print "ok\n";
+		die( "$deltacloudd died unexpectedly!\n" );
 	}
+	print "ok\n";
 } else {
 	print "bad\n";
-	die( "Failed to fork() to spawn $ec2_sim!\n" );
+	die( "Failed to fork() to spawn $deltacloudd!\n" );
 }
 
 CondorTest::debug("Starting personal condor\n",$debuglevel);
 
-# Modify our submit file to include port of ec2_sim
-open(CMDSRC,"<job_amazon_basic.template") || die "Could not open job_amazon_basic.template: $!\n";
-open(CMDDST,">job_amazon_basic.cmd") || die "Could not open job_amazon_basic.cmd: $!\n";
+# Modify our submit file to include port of deltacloudd
+open(CMDSRC,"<job_deltacloud_basic.template") || die "Could not open job_deltacloud_basic.template: $!\n";
+open(CMDDST,">job_deltacloud_basic.cmd") || die "Could not open job_deltacloud_basic.cmd: $!\n";
 while(<CMDSRC>) {
-	s/xxxxxx/$ec2_sim_port/g;
+	s/xxxxxx/$deltacloudd_port/g;
 	print CMDDST $_;
 }
 close(CMDSRC);
@@ -114,7 +111,7 @@ close(CMDDST);
 
 print "Start up a configured personal condor pool - ";
 # get a local scheduler running (side a)
-my $configloc = CondorTest::StartPersonal( "job_amazon_basic", "x_param.amazon", "amazon");
+my $configloc = CondorTest::StartPersonal( "job_deltacloud_basic", "x_param.deltacloud", "deltacloud");
 my @local = split /\+/, $configloc;
 my $locconfig = shift @local;
 my $locport = shift @local;
@@ -128,8 +125,8 @@ $ENV{CONDOR_CONFIG} = $locconfig;
 if($done != 0) {
 	CondorTest::debug("We failed already, allow cleanup\n",$debuglevel);
 } else {
-	my $test_cmd = "./job_amazon_basic.pl $submit_file";
-	CondorTest::debug("About to run Amazon EC2 basic test: $test_cmd\n",$debuglevel);
+	my $test_cmd = "./job_deltacloud_basic.pl $submit_file";
+	CondorTest::debug("About to run Deltacloud basic test: $test_cmd\n",$debuglevel);
 	print scalar localtime() . "\n";
 
 	print "Submit test - ";
@@ -142,19 +139,19 @@ if($done != 0) {
 	print "ok\n";
 }
 
-CondorTest::debug("Killing ec2_sim pid $ec2_sim_pid\n",$debuglevel);
-kill 15, $ec2_sim_pid;
-if ( waitpid( $ec2_sim_pid, 0 ) != $ec2_sim_pid ) {
-	CondorTest::debug("Failed to reap ec2_sim\n",$debuglevel);
+CondorTest::debug("Killing deltacloudd pid $deltacloudd_pid\n",$debuglevel);
+kill 15, $deltacloudd_pid;
+if ( waitpid( $deltacloudd_pid, 0 ) != $deltacloudd_pid ) {
+	CondorTest::debug("Failed to reap deltacloudd\n",$debuglevel);
 } elsif ( $? != 0 ) {
-	CondorTest::debug("ec2_sim exited with non-zero status $?\n",$debuglevel);
+	CondorTest::debug("deltacloudd exited with non-zero status $?\n",$debuglevel);
 	$done = 1;
 }
-# TODO: checkout ec2_sim output "ec2_sim.out"
+# TODO: checkout deltacloudd output "deltacloudd.out"
 
 CondorTest::debug("Saving things and cleaning up.... done with return $done\n",$debuglevel);
 
-system("cp *job_amazon_basic* *ec2_sim* $mysaveme");
+system("cp *job_deltacloud_basic* *deltacloudd* $mysaveme");
 
 CondorTest::KillPersonal($locconfig);
 
@@ -162,11 +159,11 @@ print scalar localtime() . "\n";
 
 if( $done != 0 )
 {
-	CondorTest::debug("job_amazon_basic FAILED\n",$debuglevel);
+	CondorTest::debug("job_deltacloud_basic FAILED\n",$debuglevel);
 	# actual test failed but we allowed cleanup
 	exit(1);
 }
 
-CondorTest::debug("job_amazon_basic SUCCESS\n",$debuglevel);
+CondorTest::debug("job_deltacloud_basic SUCCESS\n",$debuglevel);
 print scalar localtime() . "\n";
 exit(0);
