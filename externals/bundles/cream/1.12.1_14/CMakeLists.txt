@@ -23,7 +23,7 @@ endif()
 if ( WITH_CREAM )
 
 		# we define cream 1st because other externals will place bits there.
-		condor_pre_external( CREAM org.glite.ce.cream-client-api-c-1.12.1-14 "lib;include;include/glite/security;opt" "done")
+		condor_pre_external( CREAM org.glite.ce.cream-client-api-c-1.12.1-14-p1 "lib;include;include/glite/security;opt" "done")
 
 #########################################
 		condor_pre_external( CREAMSOAP gsoap_2.7.6b "lib;include" "done")
