@@ -135,7 +135,7 @@ if ( WITH_CREAM )
 				    BUILD_COMMAND cd org.glite.security.gss/src && 
 					  gcc -g -O0 -W -Wall
 					  -Wno-unused-parameter -I../interface
-					  -I${CREAM_INSTALL_LOC}/include -I${KRB5_INSTALL_LOC}/include -I${GLOBUS_INSTALL_LOC}/include/${GLOBUS_FLAVOR}pthr -o glite_gss.thr.o -c glite_gss.c && 
+					  -I${CREAM_INSTALL_LOC}/include -I${KRB5_INSTALL_LOC}/include -I${OPENSSL_INSTALL_LOC} -I${GLOBUS_INSTALL_LOC}/include/${GLOBUS_FLAVOR}pthr -o glite_gss.thr.o -c glite_gss.c && 
 					  ar crv libglite_security_gss_${GLOBUS_FLAVOR}pthr.a glite_gss.thr.o &&
 					  ranlib libglite_security_gss_${GLOBUS_FLAVOR}pthr.a
 				    BUILD_IN_SOURCE 1
