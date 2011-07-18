@@ -211,6 +211,11 @@ containing newlines.
 
 \begin{itemize}
 
+% gittrac #2170 
+\item A bug introduced in Condor version 7.5.5 caused the \Condor{schedd}
+to die when its attempt to claim a slot for a parallel universe job 
+was rejected by the \Condor{startd}. 
+
 % gittrac #2059
 \item \Condor{q} \Opt{-analyze} failed to provide detailed analysis of
 the job's requirements expression when the expression contained ClassAd
