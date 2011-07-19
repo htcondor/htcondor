@@ -138,7 +138,8 @@ AddAttribute(compat_classad::ClassAd &ad, const char *name, Variant::Map &job)
     classad::Value value;
     ad.EvaluateExpr(expr,value);
 	switch (value.GetType()) {
-        // TODO: does this cover expressions also?
+        case classad::Value::ERROR_VALUE:
+        case classad::Value::UNDEFINED_VALUE:
         case classad::Value::BOOLEAN_VALUE:
 			{
 				if (!descriptors) {
