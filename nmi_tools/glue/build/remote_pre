@@ -25,7 +25,7 @@ use Cwd;
 
 use POSIX 'strftime';
 use Getopt::Long;
-use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache $opt_clear_externals_cache_weekly /;
+use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache $opt_clear_externals_cache_weekly $opt_clear_externals_cache_daily /;
 # We use -- and everything after it will be configure arguments only.
 GetOptions(
             'use_externals_cache' => \$opt_use_externals_cache,
@@ -34,6 +34,7 @@ GetOptions(
             'clear-externals-cache' => \$opt_clear_externals_cache,
             'clear_externals_cache_weekly' => \$opt_clear_externals_cache_weekly,
             'clear-externals-cache-weekly' => \$opt_clear_externals_cache_weekly,
+            'clear-externals-cache-daily' => \$opt_clear_externals_cache_daily,
 );
 
 my $BaseDir = getcwd();
@@ -100,6 +101,16 @@ if ( defined( $opt_use_externals_cache ) ) {
 		@then = localtime( (stat( $externals_loc ))[9] );
 		if ( ($now[7] - $now[6]) != ($then[7] - $then[6]) ) {
 			print "Doing weekly cache clearing\n";
+			$opt_clear_externals_cache = 1;
+		}
+	}
+
+	if (defined($opt_clear_externals_cache_daily)) {
+		print "Should we do daily clearing of the externals cache?\n";
+		@now = localtime;
+		@then = localtime( (stat( $externals_loc ))[9] );
+		if ( $then[7] < $now[7] || $then[5] < $now[5] ) {
+			print "Doing daily cache clearing\n";
 			$opt_clear_externals_cache = 1;
 		}
 	}
