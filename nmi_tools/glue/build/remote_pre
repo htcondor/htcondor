@@ -25,9 +25,11 @@ use Cwd;
 
 use POSIX 'strftime';
 use Getopt::Long;
-use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache /;
+use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache $opt_clear_externals_cache_weekly /;
 # We use -- and everything after it will be configure arguments only.
 GetOptions(
+            'use_externals_cache' => \$opt_use_externals_cache,
+            'use-externals-cache' => \$opt_use_externals_cache,
             'clear_externals_cache' => \$opt_clear_externals_cache,
             'clear-externals-cache' => \$opt_clear_externals_cache,
             'clear_externals_cache_weekly' => \$opt_clear_externals_cache_weekly,
@@ -86,8 +88,14 @@ $defines{platform} = "-DPLATFORM:STRING=$platform";
 $defines{condor_platform} = "-DCONDOR_PLATFORM:STRING=$platform";
 
 ######################################################################
-# run cmake on the source tree
+# deal with the externals cache
 ######################################################################
+if ( defined( $opt_use_externals_cache ) ) {
+	$defines{externals} = "-DCACHED_EXTERNALS:BOOL=TRUE";
+} else {
+	$defines{externals} = "-DCACHED_EXTERNALS:BOOL=FALSE";
+}
+
 if ( defined($opt_clear_externals_cache)||defined($opt_clear_externals_cache_weekly) ) {
 
 	if ($ENV{NMI_PLATFORM} =~ /winnt/) {

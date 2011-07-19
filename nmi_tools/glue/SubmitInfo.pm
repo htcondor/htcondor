@@ -52,7 +52,7 @@ our %build_and_test_sets = (
 		'x86_rhap_5',
 		'x86_rhas_3',
 		'x86_winnt_5.1',
-		'x86_64_rhap_6.0-updated',
+		'x86_64_rhap_6.1-updated',
 	],
 
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
@@ -376,8 +376,6 @@ our %submit_info = (
 	'x86_64_rhap_6.0'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
-				# Turn this back on when ready
-				# '-DCLIPPED:BOOL=OFF' => undef,
 			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
@@ -394,6 +392,11 @@ our %submit_info = (
 	# Platform RHEL 6 on x86_64. This one is continuously updated by the batlab.
 	##########################################################################
 	'x86_64_rhap_6.0-updated'	=> 'x86_64_rhap_6.0',
+
+	#################################################################
+	# Platform RHEL 6.1 on x86_64. This one is updated by the batlab.
+	#################################################################
+	'x86_64_rhap_6.1-updated'	=> 'x86_64_rhap_6.0',
 
 	##########################################################################
 	# Platform RHEL 5 on x86_64

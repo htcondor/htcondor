@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdarg.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -134,6 +135,34 @@ cleanup:
     return password;
 }
 
+static std::string create_failure(const char *req_id, const char *err_msg, ...)
+{
+    std::string buffer;
+    va_list ap;
+    char *tmp;
+    unsigned int i;
+
+    buffer += req_id;
+    buffer += ' ';
+
+    va_start(ap, err_msg);
+    vasprintf(&tmp, err_msg, ap);
+    va_end(ap);
+
+    for (i = 0; i < strlen(tmp); i++) {
+        if (tmp[i] == ' ')
+            buffer += '\\';
+        buffer += tmp[i];
+    }
+    free(tmp);
+
+    buffer += '\n';
+
+    dcloudprintf(buffer.c_str());
+
+    return buffer;
+}
+
 static std::string create_instance_output(char * reqid,
                                           struct deltacloud_instance *inst)
 {
@@ -234,12 +263,12 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     char *hwp_id, *hwp_memory, *hwp_cpu, *hwp_storage, *reqid;
     char *keyname, *userdata;
     struct deltacloud_api api;
-    struct deltacloud_instance inst;
     bool ret = FALSE;
     struct deltacloud_create_parameter *params = NULL;
     int params_size = 0;
     char *instid = NULL;
     int i;
+    char *esc_id;
 
     if (!verify_number_args(14, argc)) {
         output_string = create_failure("0", "Wrong_Argument_Number");
@@ -312,15 +341,19 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
         goto cleanup_library;
     }
 
-    if (deltacloud_get_instance_by_id(&api, instid, &inst) < 0) {
-        output_string = create_failure(reqid, "Create_Instance_Failure: %s",
-                                       deltacloud_get_last_error_string());
-        goto cleanup_library;
-    }
+    /* deltacloud_create_instance only returns an ID to us.  Output that ID
+     * plus a hard-coded state of PENDING to the upper layers; it will be
+     * their responsibility to get the instance details as appropriate
+     */
 
-    output_string = create_instance_output(reqid, &inst);
+    output_string += reqid;
+    output_string += " NULL ";
 
-    deltacloud_free_instance(&inst);
+    esc_id = escape_id(instid);
+    output_string += "id=";
+    output_string += esc_id;
+    free(esc_id);
+    output_string += " state=PENDING\n";
 
     ret = TRUE;
 
@@ -684,6 +717,197 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
             output_string += " NULL NULL\n";
         }
     }
+
+    ret = TRUE;
+
+cleanup_library:
+    deltacloud_free(&api);
+
+cleanup_password:
+    free(password);
+
+    return ret;
+}
+
+/*
+ * DELTACLOUD_GET_MAX_NAME_LENGTH <reqid> <url> <user> <password_file>
+ *  where reqid, url, user, and password_file have to be non-NULL.
+ */
+bool dcloud_max_name_length_worker(int argc, char **argv,
+                                   std::string &output_string)
+{
+    char *url, *user, *password_file, *password, *reqid;
+    struct deltacloud_api api;
+    struct deltacloud_link *link;
+    struct deltacloud_feature *feature;
+    struct deltacloud_feature_constraint *constraint;
+    char *max = NULL;
+    bool ret = FALSE;
+
+    if (!verify_number_args(5, argc)) {
+        output_string = create_failure("0", "Wrong_Argument_Number");
+        return FALSE;
+    }
+
+    reqid = argv[1];
+    url = argv[2];
+    user = argv[3];
+    password_file = argv[4];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s\n", reqid, url, user, password_file);
+
+    if (STRCASEEQ(url, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_URL");
+        return FALSE;
+    }
+    if (STRCASEEQ(user, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_User");
+        return FALSE;
+    }
+
+    if (STRCASEEQ(password_file, NULLSTRING))
+        password_file = NULL;
+
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
+
+    if (deltacloud_initialize(&api, url, user, password) < 0) {
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
+        goto cleanup_password;
+    }
+
+    /* here, we search through the api.links->features->constraints to try and
+     * find a constraint of "max_length".  If we find it, we return it; if not
+     * we just let the higher layers choose a default
+     */
+    deltacloud_for_each(link, api.links) {
+        if (STRCASENEQ(link->rel, "instances"))
+            continue;
+
+        /* OK, we are in the instances collection.  Look at the features */
+        deltacloud_for_each(feature, link->features) {
+            if (STRCASENEQ(feature->name, "user_name"))
+                continue;
+
+            /* OK, we saw the user_name feature; see if it has a length */
+            deltacloud_for_each(constraint, feature->constraints) {
+                if (STRCASEEQ(constraint->name, "max_length")) {
+                    max = strdup(constraint->value);
+                    /* need to use goto here to break all of the loops */
+                    goto done;
+                }
+            }
+        }
+    }
+
+done:
+    output_string = reqid;
+    output_string += " NULL ";
+    if (max == NULL)
+        output_string += "NULL";
+    else {
+        output_string += max;
+        free(max);
+    }
+    output_string += "\n";
+
+    deltacloud_free(&api);
+
+    ret = TRUE;
+
+cleanup_password:
+    free(password);
+
+    return ret;
+}
+
+/*
+ * DELTACLOUD_START_AUTO <reqid> <url> <user> <password_file>
+ *  where reqid, url, user, and password_file have to be non-NULL.
+ */
+bool dcloud_start_auto_worker(int argc, char **argv,
+			      std::string &output_string)
+{
+    char *url, *user, *password_file, *password, *reqid;
+    struct deltacloud_api api;
+    struct deltacloud_instance_state *instance_states;
+    struct deltacloud_instance_state *state;
+    struct deltacloud_instance_state_transition *transition;
+    bool automatically = FALSE;
+    bool ret = FALSE;
+
+    if (!verify_number_args(5, argc)) {
+        output_string = create_failure("0", "Wrong_Argument_Number");
+        return FALSE;
+    }
+
+    reqid = argv[1];
+    url = argv[2];
+    user = argv[3];
+    password_file = argv[4];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s\n", reqid, url, user, password_file);
+
+    if (STRCASEEQ(url, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_URL");
+        return FALSE;
+    }
+    if (STRCASEEQ(user, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_User");
+        return FALSE;
+    }
+
+    if (STRCASEEQ(password_file, NULLSTRING))
+        password_file = NULL;
+
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
+
+    if (deltacloud_initialize(&api, url, user, password) < 0) {
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
+        goto cleanup_password;
+    }
+
+    if (deltacloud_get_instance_states(&api, &instance_states) < 0) {
+        output_string = create_failure(reqid, "Instance_State_Failure: %s",
+                                       deltacloud_get_last_error_string());
+        goto cleanup_library;
+    }
+
+    deltacloud_for_each(state, instance_states) {
+        if (STRCASENEQ(state->name, "pending"))
+            continue;
+
+        deltacloud_for_each(transition, state->transitions) {
+            if (STRCASEEQ(transition->to, "running") &&
+                transition->automatically != NULL &&
+                STRCASEEQ(transition->automatically, "true")) {
+                automatically = TRUE;
+                goto done;
+            }
+        }
+    }
+
+done:
+    output_string = reqid;
+    output_string += " NULL ";
+    if (automatically) {
+        output_string += "TRUE";
+    }
+    else {
+        output_string += "FALSE";
+    }
+    output_string += "\n";
+
+    deltacloud_free_instance_state_list(&instance_states);
 
     ret = TRUE;
 
