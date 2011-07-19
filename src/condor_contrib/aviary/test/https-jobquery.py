@@ -82,7 +82,7 @@ if cmdarg not in cmds:
 	print "available commands are: ",cmds
 	exit(1)
 
-client = Client(job_wsdl,transport = HTTPSClientCertTransport('/home/pmackinn/sslcert/client.key', '/home/pmackinn/sslcert/client.crt'));
+client = Client(job_wsdl,transport = HTTPSClientCertTransport('/etc/pki/tls/certs/aviary_client.key', '/etc/pki/tls/certs/aviary_client.crt'));
 job_url += cmdarg
 client.set_options(location=job_url)
 

@@ -47,12 +47,12 @@ int verify_callback(int ok, X509_STORE_CTX *store)
         int  depth = X509_STORE_CTX_get_error_depth(store);
         int  err = X509_STORE_CTX_get_error(store);
 
-        AXIS2_LOG_INFO (local_log, "[ssl]error depth set to: %i", depth );
+        AXIS2_LOG_INFO (local_log, "[ssl] error depth set to: %i", depth );
         X509_NAME_oneline( X509_get_issuer_name( cert ), data, 256 );
         AXIS2_LOG_INFO (local_log, "[ssl]  issuer   = %s", data );
         X509_NAME_oneline( X509_get_subject_name( cert ), data, 256 );
         AXIS2_LOG_INFO (local_log, "[ssl]  subject  = %s", data );
-        AXIS2_LOG_INFO (local_log, "[ssl]  err %i:%s\n", err, X509_verify_cert_error_string( err ) );
+        AXIS2_LOG_INFO (local_log, "[ssl]  err %i:%s", err, X509_verify_cert_error_string( err ) );
     }
  
     return ok;
@@ -63,7 +63,7 @@ axis2_ssl_utils_initialize_ctx(
     const axutil_env_t * env,
     axis2_char_t * server_cert,
     axis2_char_t * server_key,
-    axis2_char_t *ca_file,
+    axis2_char_t *ca_dir,
     axis2_char_t * ssl_pp)
 {
     SSL_METHOD *meth = NULL;
@@ -71,7 +71,7 @@ axis2_ssl_utils_initialize_ctx(
     char* cipherlist = "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH";
     local_log = env->log;
 
-    if (!ca_file)
+    if (!ca_dir)
     {
         AXIS2_LOG_INFO(env->log, "[ssl] CA certificate not specified");
         AXIS2_HANDLE_ERROR(env, AXIS2_ERROR_SSL_NO_CA_FILE, AXIS2_FAILURE);
@@ -106,7 +106,7 @@ axis2_ssl_utils_initialize_ctx(
         SSL_CTX_set_default_passwd_cb_userdata(ctx, (void *) ssl_pp);
         SSL_CTX_set_default_passwd_cb(ctx, password_cb);
 
-        if (!(SSL_CTX_use_certificate_chain_file(ctx, ca_file)))
+        if (!(SSL_CTX_use_certificate_chain_file(ctx, server_cert)))
         {
             AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI,
                 "[ssl] Loading server certificate failed, key file %s", server_key);
@@ -129,20 +129,20 @@ axis2_ssl_utils_initialize_ctx(
     }
 
     /* Load the CAs we trust */
-    if (!(SSL_CTX_load_verify_locations(ctx, ca_file, 0)))
+    if (!(SSL_CTX_load_verify_locations(ctx, NULL, ca_dir)))
     {
         AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI,
-            "[ssl] Loading CA certificate failed, ca_file is %s", ca_file);
+            "[ssl] Loading CA certificate failed, ca_file is %s", ca_dir);
         SSL_CTX_free(ctx);
         return NULL;
     }
         
-    SSL_CTX_set_verify( ctx, SSL_VERIFY_PEER, verify_callback ); 
+    SSL_CTX_set_verify( ctx, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback );
     SSL_CTX_set_verify_depth( ctx, 4 );
     // prohibit v2 vulnerabilities
     SSL_CTX_set_options( ctx, SSL_OP_ALL|SSL_OP_NO_SSLv2 );
     if (SSL_CTX_set_cipher_list( ctx, cipherlist ) != 1 ) {
-        AXIS2_LOG_INFO (env->log, "[ssl] Error setting cipher list (no valid ciphers)\n" );
+        AXIS2_LOG_INFO (env->log, "[ssl] Error setting cipher list (no valid ciphers)" );
         SSL_CTX_free(ctx);
         return NULL;
     }
@@ -187,7 +187,7 @@ axis2_ssl_utils_initialize_ssl(
     if ((err = SSL_accept(ssl)) <= 0)
     {
         SSL_get_error(ssl,err);
-        AXIS2_LOG_ERROR (env->log, AXIS2_LOG_SI,"[ssl] SSL_accept failed = %d\n",err);
+        AXIS2_LOG_ERROR (env->log, AXIS2_LOG_SI,"[ssl] SSL_accept failed = %d",err);
         if (ssl) {
             SSL_shutdown(ssl);
             SSL_free(ssl);
@@ -199,14 +199,14 @@ axis2_ssl_utils_initialize_ssl(
     if ((peer = SSL_get_peer_certificate(ssl)) != NULL) {
         long int vok;
         if ((vok = SSL_get_verify_result(ssl)) == X509_V_OK) {
-            AXIS2_LOG_INFO (env->log, "[ssl] Client verified OK\n");
+            AXIS2_LOG_INFO (env->log, "[ssl] Client verified OK");
         }
         else {
-            AXIS2_LOG_ERROR (env->log, AXIS2_LOG_SI,"[ssl] Client verify failed: %d\n", vok);
+            AXIS2_LOG_ERROR (env->log, AXIS2_LOG_SI,"[ssl] Client verify failed: %d", vok);
         }
     }
     else {
-        AXIS2_LOG_ERROR (env->log, AXIS2_LOG_SI,"[ssl] Client certificate not presented\n");
+        AXIS2_LOG_ERROR (env->log, AXIS2_LOG_SI,"[ssl] Client certificate not presented");
         if (ssl) {
             SSL_shutdown(ssl);
             SSL_free(ssl);

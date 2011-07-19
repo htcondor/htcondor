@@ -64,10 +64,10 @@ Axis2SslProvider::init(int _port, int _read_timeout, std::string& _error) {
     }
     
     // init the ssl lib, errors, etc.
-    m_ctx = axis2_ssl_utils_initialize_ctx(m_env,"/home/pmackinn/sslcert/server.crt",
-                                               "/home/pmackinn/sslcert/server.key",
-                                               "/home/pmackinn/sslcert/server.crt",
-                                               "condor"); 
+    m_ctx = axis2_ssl_utils_initialize_ctx(m_env,"/etc/pki/tls/certs/aviary_server.crt",
+                                               "/etc/pki/tls/certs/aviary_server.key",
+                                               "/etc/pki/tls/certs",
+                                               "aviary");
     if (!m_ctx) {
         dprintf(D_ALWAYS, "axis2_ssl_utils_initialize_ctx failed\n");
         return false;
