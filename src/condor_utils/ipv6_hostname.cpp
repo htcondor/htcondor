@@ -31,6 +31,14 @@ void init_local_hostname()
 		// above them has duplicated code in many ways.
 		// so I aggregated all of them into here.
 
+		// Temporarily use the old functions to determine the local
+		// hostname and IP address. The code below needs several
+		// fixes. See gittrac #2216 for details.
+	condor_sockaddr addr( *my_sin_addr() );
+	local_ipaddr = addr;;
+	local_hostname = my_hostname();
+	local_fqdn = my_full_hostname();
+#if 0
 	bool ipaddr_inited = false;
 	char hostname[MAXHOSTNAMELEN];
 	int ret;
@@ -39,44 +47,23 @@ void init_local_hostname()
 		// reimplement it.
 	ret = condor_gethostname(hostname, sizeof(hostname));
 	if (ret) {
-		dprintf(D_ALWAYS, "condor_gethostname() failed. Cannot initialize "
+		dprintf(D_HOSTNAME, "condor_gethostname() failed. Cannot initialize "
 				"local hostname, ip address, FQDN.\n");
 		return;
 	}
 
-	dprintf(D_HOSTNAME, "condor_gethostname() claims we are %s\n", hostname);
-
-	// Fallback case.
-	local_hostname = hostname;
-
 		// if NETWORK_INTERFACE is defined, we use that as a local ip addr.
 	MyString network_interface;
-	if (param(network_interface, "NETWORK_INTERFACE", "*")) {
+	if (param(network_interface, "NETWORK_INTERFACE")) {
 		if (local_ipaddr.from_ip_string(network_interface))
 			ipaddr_inited = true;
-	}
-
-		// Dig around for an IP address in the interfaces
-		// TODO WARNING: Will only return IPv4 addresses!
-	if( ! ipaddr_inited ) {
-		std::string ip;
-		if( ! network_interface_to_ip("NETWORK_INTERFACE", network_interface.Value(), ip, NULL)) {
-			dprintf(D_ALWAYS, "Unable to identify IP address from interfaces.  None matches NETWORK_INTERFACE=%s. Problems are likely.\n", network_interface.Value());
-			return;
-		}
-		if ( ! local_ipaddr.from_ip_string(ip))
-		{
-			// Should not happen; means network_interface_to_ip returned
-			// invalid IP address.
-			ASSERT(FALSE);
-		}
-		ipaddr_inited = true;
 	}
 
 		// now initialize hostname and fqdn
 	if (nodns_enabled()) { // if nodns is enabled, we can cut some slack.
 			// condor_gethostname() returns a hostname with
 			// DEFAULT_DOMAIN_NAME. Thus, it is always fqdn
+		local_hostname = hostname;
 		local_fqdn = hostname;
 		if (!ipaddr_inited) {
 			local_ipaddr = convert_hostname_to_ipaddr(local_hostname);
@@ -93,41 +80,43 @@ void init_local_hostname()
 		return;
 	}
 	
-	int local_hostname_desireability = 0;
+	bool got_fqdn = false;
 	while (addrinfo* info = ai.next()) {
 		const char* name = info->ai_canonname;
 		if (!name)
 			continue;
+		const char* dotpos = strchr(name, '.');
 		condor_sockaddr addr(info->ai_addr);
 
-		int desireability = 0;
-		if (addr.is_loopback())            { desireability = 1; }
-		else if(addr.is_private_network()) { desireability = 2; }
-		else                               { desireability = 3; }
-		dprintf(D_HOSTNAME, "Considering %s (Ranked at %d) as possible local hostname versus %s/%s (%d)\n", name, desireability, local_hostname.Value(), local_fqdn.Value(), local_hostname_desireability);
-		if(desireability < local_hostname_desireability) { continue; }
-		local_hostname_desireability = desireability;
+		if (addr.is_loopback() || addr.is_private_network())
+			continue;
 
-		if (!ipaddr_inited)
-			local_ipaddr = addr;
-
-		const char* dotpos = strchr(name, '.');
-		if (dotpos) { // consider it as a FQDN
+		if (dotpos) {
+				// consider it as a FQDN
 			local_fqdn = name;
 			local_hostname = local_fqdn.Substr(0, dotpos-name-1);
-		} else {
+			if (!ipaddr_inited)
+				local_ipaddr = addr;
+			got_fqdn = true;
+			break;
+		}
+		else {
 			local_hostname = name;
-			local_fqdn = local_hostname;
-			MyString default_domain;
-			if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
-				if (default_domain[0] != '.')
-					local_fqdn += ".";
-				local_fqdn += default_domain;
-			}
+			if (!ipaddr_inited)
+				local_ipaddr = addr;
 		}
 	}
 
-	dprintf(D_HOSTNAME, "Identifying myself as: Short:: %s, Long: %s, IP: %s\n", local_hostname.Value(), local_fqdn.Value(), local_ipaddr.to_ip_string().Value());
+	if (!got_fqdn) {
+		local_fqdn = local_hostname;
+		MyString default_domain;
+		if (param(default_domain, "DEFAULT_DOMAIN_NAME")) {
+			if (default_domain[0] != '.')
+				local_fqdn += ".";
+			local_fqdn += default_domain;
+		}
+	}
+#endif
 	hostname_initialized = true;
 }
 
