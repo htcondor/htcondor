@@ -164,7 +164,20 @@ containing newlines.
 
 \begin{itemize}
 
-\item None.
+\item For Condor versions 7.6.2, 7.6.1, and 7.6.0,
+a bug causes parallel universe jobs to be preempted upon 
+expiration of the job lease, 
+which has a default value of 20 minutes, 
+essentially meaning that no parallel universe job that takes
+longer than 20 minutes can ever finish.
+The work around for this bug is to place the following
+configuration variable in the configuration of the submit machine:
+\begin{verbatim}
+  STARTD_SENDS_ALIVES = FALSE
+\end{verbatim}
+A \Condor{reconfig} is required, 
+after which the preempted parallel universe jobs will then be
+able to run to completion.
 
 \end{itemize}
 
