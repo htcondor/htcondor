@@ -1,6 +1,6 @@
 ALL_DEBUG = D_FULLDEBUG D_JOB D_MACHINE
 
-VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp
+VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp-vmware
 VM_TYPE = vmware
 
 VM_GAHP_LOG    = $(LOG)/VMGahpLog.$(USERNAME)

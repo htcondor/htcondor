@@ -342,7 +342,11 @@ VanillaProc::ShutdownGraceful()
 	//
 	OsProc::ShutdownGraceful();
 #if !defined(WIN32)
-	startEscalationTimer();
+	if (Starter->remoteStateChanged() == false)
+	{
+		startEscalationTimer();
+	}
+	Starter->resetStateChanged();
 #endif
 	return false; // shutdown is pending (same as OsProc::ShutdownGraceful()
 }

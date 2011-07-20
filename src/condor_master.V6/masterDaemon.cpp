@@ -39,6 +39,7 @@
 #include "file_lock.h"
 #include "stat_info.h"
 #include "shared_port_endpoint.h"
+#include "condor_fix_access.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -2330,8 +2331,7 @@ Daemons::StopDaemonsBeforeMasterStops()
 	std::map<std::string, class daemon*>::iterator iter;
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
-		if( ( iter->second->pid || iter->second->IsHA() )
-			&& iter->second->runs_here )
+		if( iter->second->pid && iter->second->runs_here )
 		{
 			iter->second->Stop();
 			running++;

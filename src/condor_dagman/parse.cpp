@@ -188,6 +188,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		if (line[0] == 0)       continue;  // Ignore blank lines
 		if (line[0] == COMMENT) continue;  // Ignore comments
 
+		debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
+
 			// Note: strtok() could be replaced by MyString::Tokenize(),
 			// which is much safer, but I don't want to deal with that
 			// right now.  wenger 2005-02-02.
@@ -398,11 +400,24 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 
 		// first token is the node name
 	const char *nodeName = strtok( NULL, DELIMITERS );
+	if ( !nodeName ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no node name "
+					"specified\n", dagFile, lineNum );
+		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		return false;
+	}
+
 	MyString tmpNodeName = munge_job_name(nodeName);
 	nodeName = tmpNodeName.Value();
 
 		// next token is the submit file name
 	const char *submitFile = strtok( NULL, DELIMITERS );
+	if ( !submitFile ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no submit file "
+					"specified\n", dagFile, lineNum );
+		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		return false;
+	}
 
 		// next token (if any) is "DIR" "NOOP", or "DONE" (in that order)
 	const char* nextTok = strtok( NULL, DELIMITERS );

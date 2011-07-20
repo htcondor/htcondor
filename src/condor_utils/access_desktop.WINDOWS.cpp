@@ -341,7 +341,7 @@ void RemoveSid(PSID *psid)
 BOOL AddTheAceWindowStation(HWINSTA hwinsta, PSID psid)
 {
 
-	ACCESS_ALLOWED_ACE   *pace;
+	ACCESS_ALLOWED_ACE  *pace      = NULL;
 	ACL_SIZE_INFORMATION aclSizeInfo;
 	BOOL                 bDaclExist;
 	BOOL                 bDaclPresent;
@@ -351,7 +351,7 @@ BOOL AddTheAceWindowStation(HWINSTA hwinsta, PSID psid)
 	DWORD                dwSidSize = 0;
 	DWORD                dwSdSizeNeeded;
 	PACL                 pacl;
-	PACL                 pNewAcl;
+	PACL                 pNewAcl   = NULL;
 	PSECURITY_DESCRIPTOR psd       = NULL;
 	PSECURITY_DESCRIPTOR psdNew    = NULL;
 	PVOID                pTempAce;
@@ -805,7 +805,7 @@ BOOL AddTheAceDesktop(HDESK hdesk, PSID psid)
 	DWORD                dwSidSize = 0;
 	DWORD                dwSdSizeNeeded;
 	PACL                 pacl;
-	PACL                 pNewAcl;
+	PACL                 pNewAcl   = NULL;
 	PSECURITY_DESCRIPTOR psd       = NULL;
 	PSECURITY_DESCRIPTOR psdNew    = NULL;
 	PVOID                pTempAce;

@@ -26,28 +26,38 @@ if (WITH_LIBVIRT)
 
 	if ( NOT PROPER AND NOT LIBVIRT_FOUND )
 
-		set (LIBVERT_VER libvirt-0.6.2)
+		set (LIBVIRT_REAL_VERSION libvirt-0.6.2)
 
+		condor_pre_external( LIBVIRT ${LIBVIRT_REAL_VERSION}-p1 "lib;include" "lib/libvirt.a" )
+
+		if ( BUILDING_LIBXML2 )
+			set (LIBVIRT_DEPENDS ${LIBXML2_REF})
+			set (LIBVIRT_CONFIGURE --with-libxml=${LIBXML2_INSTALL_LOC})
+		else ()
+			set (LIBVIRT_DEPENDS "")
+			set (LIBVIRT_CONFIGURE "")
+		endif ()
 		ExternalProject_Add(libvirt
-					DEPENDS libxml2
-				    PREFIX ${EXTERNAL_BUILD_PREFIX}/${LIBVERT_VER}
+					DEPENDS ${LIBVIRT_DEPENDS}
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBVERT_VER}.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${EXTERNAL_DL}
-				    URL http://parrot.cs.wisc.edu/externals/${LIBVERT_VER}.tar.gz
-					PATCH_COMMAND cd ${LIBVERT_VER} && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/no_gnutls.patch
+					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBVIRT_REAL_VERSION}.tar.gz ${CMD_TERM}
+				    DOWNLOAD_DIR ${LIBVIRT_STAGE}/dl
+				    URL http://parrot.cs.wisc.edu/externals/${LIBVIRT_REAL_VERSION}.tar.gz
+				    PATCH_COMMAND cd ${LIBVIRT_REAL_VERSION} && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/no_gnutls.patch
 					#--Configure step ----------
-				    CONFIGURE_COMMAND cd ${LIBVERT_VER} && ./configure --prefix=${EXTERNAL_STAGE} --disable-shared --without-python --without-xen --without-libvirtd --without-remote --without-test --without-uml --without-openvz --without-avahi --without-selinux --without-sasl --with-libxml=${EXTERNAL_STAGE}
+				    CONFIGURE_COMMAND cd ${LIBVIRT_REAL_VERSION} &&
+				    ./configure --prefix=${LIBVIRT_INSTALL_LOC} --without-python --without-xen --without-libvirtd --without-remote --without-test --without-uml --without-openvz --without-avahi --without-selinux --without-sasl ${LIBVIRT_CONFIGURE}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd ${LIBVERT_VER} && make
+				    BUILD_COMMAND cd ${LIBVIRT_REAL_VERSION} && make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_STAGE}
-				    INSTALL_COMMAND cd ${LIBVERT_VER} && make install )
+				    INSTALL_DIR ${LIBVIRT_INSTALL_LOC}
+				    INSTALL_COMMAND cd ${LIBVIRT_REAL_VERSION} && make install )
 
 		# Set the target dependencies which the rest of condor depends on.
-		set(LIBVIRT_FOUND "${EXTERNAL_STAGE}/lib/libvirt.a")
-		append_var(CONDOR_EXTERNALS libvirt)
+		set(LIBVIRT_FOUND "${LIBVIRT_INSTALL_LOC}/lib/libvirt.so")
+		
+		condor_post_external( libvirt include OFF )
 
 	endif( NOT PROPER AND NOT LIBVIRT_FOUND )
 

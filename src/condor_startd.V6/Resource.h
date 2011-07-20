@@ -189,6 +189,7 @@ public:
 	int		eval_start( void );			// returns -1 on undefined
 	int		eval_cpu_busy( void );		// returns FALSE on undefined
 	bool	willingToRun( ClassAd* request_ad );
+	float	compute_rank( ClassAd* req_classad );
 
 #if HAVE_BACKFILL
 	int		eval_start_backfill( void ); 

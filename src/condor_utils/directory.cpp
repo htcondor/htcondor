@@ -50,6 +50,20 @@
 	return i;
 // -----------------------------------------------
 
+DeleteFileLater::DeleteFileLater (const char * _name)
+{
+    filename = _name?strdup(_name):NULL;
+}
+
+DeleteFileLater::~DeleteFileLater ()
+{
+	if (filename) {
+        if (unlink(filename)) {  // conditional to defeat prefast warning.
+            dprintf(D_ALWAYS, "DeleteFileLater of %s failed err=%d", filename, errno);
+        }
+		free (filename);
+	}
+}
 
 
 #ifndef WIN32
@@ -287,6 +301,10 @@ Directory::do_remove_dir( const char* path )
 
 	char *usr, *dom;
 
+#if 0
+    extern int rmdir_with_acls_win32(const char * path);
+    rmdir_with_acls_win32( path );
+#else
 	usr = my_username();
 	dom = my_domainname();
 
@@ -295,6 +313,7 @@ Directory::do_remove_dir( const char* path )
 	free(dom);
 
 	rmdirAttempt( path, desired_priv_state );
+#endif
 
 	StatInfo si2( path );
 
@@ -507,13 +526,20 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
         char * rmdir_exe_p = param("WINDOWS_RMDIR");
         char * rmdir_opts_p = param("WINDOWS_RMDIR_OPTIONS");
         bool fNativeRmdir = false;
+        bool fCondorRmdir = false;
         if ( ! rmdir_exe_p || ! rmdir_exe_p[0])
            fNativeRmdir = true;
         else if ( ! strcasecmp(rmdir_exe_p, "rmdir") || ! strcasecmp(rmdir_exe_p, "rd"))
            fNativeRmdir = true;
         else if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(rmdir_exe_p)) {
            fNativeRmdir = true;
-           dprintf( D_ALWAYS, "Warning: '%s' is invalid RMDIR (0x%X)\n", rmdir_exe_p, GetLastError());
+           dprintf( D_ALWAYS, "Warning: WINDOWS_RMDIR - '%s' is not valid - Error %d\n", rmdir_exe_p, GetLastError());
+        } else {
+           // figure out if they are specifying condor_rmdir.exe, so we can default
+           // the options
+           MyString exe(rmdir_exe_p);
+           exe.lower_case();
+           fCondorRmdir = (exe.find("condor_rmdir.exe",0) >= 0);
         }
 
         if (fNativeRmdir) {
@@ -523,9 +549,14 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
         } else {
            rm_buf = rmdir_exe_p;
            rm_buf += " ";
-           if (rmdir_opts_p && rmdir_opts_p[0]) {
+           if (fCondorRmdir)
+              rm_buf += "/s "; // /s is recursive
+
+           if (rmdir_opts_p && rmdir_opts_p[0])
               rm_buf += rmdir_opts_p;
-           }
+           else if (fCondorRmdir)
+              rm_buf += " /c"; // /c is continue on error
+
            rm_buf += " \"";
            rm_buf += path;
            rm_buf += "\"";
@@ -599,8 +630,7 @@ Directory::setOwnerPriv( const char* path, si_error_t &err)
 			if (err == SINoFile) {
 				dprintf(D_FULLDEBUG, "Directory::setOwnerPriv() -- path %s does not exist (yet).\n", path);
 			} else {
-				dprintf( D_ALWAYS, "Directory::setOwnerPriv() -- failed to "
-					 "find owner of %s\n", path );
+				dprintf( D_ALWAYS, "Directory::setOwnerPriv() -- failed to find owner of %s\n", path );
 			}
 			return PRIV_UNKNOWN;
 		}

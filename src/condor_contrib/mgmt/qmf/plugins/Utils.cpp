@@ -22,6 +22,8 @@
 
 #include "condor_debug.h"
 
+#include "condor_config.h" // is_valid_param_name
+
 #include "compat_classad_util.h"
 
 
@@ -49,19 +51,33 @@ string TrimQuotes(const char* str) {
 }
 
 // validate that an incoming group/user name is
-// alphanumeric, underscores, or a dot separator
+// alphanumeric, underscores, @ or a dot separator
 bool IsValidGroupUserName(const std::string& _name, std::string& _text) {
 	const char* ptr = _name.c_str();
+
 	while( *ptr ) {
 		char c = *ptr++;
 		if (	('a' > c || c > 'z') &&
 			('A' > c || c > 'Z') &&
 			('0' > c || c > '9') &&
 			(c != '_' ) &&
+			(c != '@' ) &&
 			(c != '.' ) ) {
-			_text = "Invalid name for group/user - alphanumeric, underscore and dot characters only";
+			_text = "Invalid name for group/user - alphanumeric, underscore, @ and dot characters only";
 			return false;
 		}
+	}
+	return true;
+}
+
+// validate that an incoming group/user name is
+// alphanumeric, underscores, or a dot separator
+bool IsValidParamName(const std::string& _name, std::string& _text) {
+	const char* ptr = _name.c_str();
+
+	if (!is_valid_param_name(ptr)) {
+		_text = "Invalid name for group/user - alphanumeric, underscore, @ and dot characters only";
+		return false;
 	}
 	return true;
 }
@@ -122,7 +138,8 @@ AddAttribute(compat_classad::ClassAd &ad, const char *name, Variant::Map &job)
     classad::Value value;
     ad.EvaluateExpr(expr,value);
 	switch (value.GetType()) {
-        // TODO: does this cover expressions also?
+        case classad::Value::ERROR_VALUE:
+        case classad::Value::UNDEFINED_VALUE:
         case classad::Value::BOOLEAN_VALUE:
 			{
 				if (!descriptors) {
@@ -161,18 +178,14 @@ bool
 PopulateVariantMapFromAd(compat_classad::ClassAd &ad, Variant::Map &_map)
 {
 	ExprTree *expr;
-    ClassAd::iterator iter;
-
-    ad.ResetExpr();
-    _map.clear();
-    iter = ad.begin();
-    while (iter != ad.end()) {
-            string name = iter->first;
-            if (!AddAttribute(ad, name.c_str(), _map)) {
+	const char *name;
+	ad.ResetExpr();
+	_map.clear();
+	while (ad.NextExpr(name,expr)) {
+		if (!AddAttribute(ad, name, _map)) {
                     return false;
-            }
-            iter++;
-    }
+		}
+	}
 
 	// TODO: debug
 //	if (DebugFlags & D_FULLDEBUG) {

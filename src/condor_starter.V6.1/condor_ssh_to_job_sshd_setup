@@ -14,11 +14,11 @@ ssh_keygen="$4"
 num=1
 while [ 1 ]; do
   sshd_dir="${base_dir}/.condor_ssh_to_job_${num}"
-  if /bin/mkdir "${sshd_dir}" >& /dev/null; then
+  if /bin/mkdir "${sshd_dir}" > /dev/null 2>&1; then
     break
   fi
   if [ -e "${sshd_dir}" ]; then
-    let num=$num+1
+    num=$(($num+1))
     continue
   fi
   die "Failed to create ${sshd_dir}"
@@ -41,7 +41,7 @@ sshkey="${sshd_dir}/sshkey"
 ssh_keygen=$(echo "${ssh_keygen}" | "${SED}" 's|\([^%]\)%f|\1'"${sshkey}"'|g;s|%%|%|g')
 
 # run ssh-keygen
-eval $ssh_keygen >& "${sshd_dir}/keygen.log"
+eval $ssh_keygen > "${sshd_dir}/keygen.log" 2>&1
 
 if [ $? != 0 ]; then
   /bin/cat "${sshd_dir}/keygen.log"
@@ -66,8 +66,14 @@ sshd_config="${sshd_dir}/sshd_config"
       s|_INSERT_FORCE_COMMAND_|${force_command}|g"\
  || die "Failed to create ${sshd_config}"
 
+sshd_user=`/usr/bin/whoami` || die "Failed to run /usr/bin/whoami"
+
 # now transmit stuff back to our caller on stdout
 # the caller expects specific markers before and after each item
+
+echo "condor_ssh_to_job_sshd_setup SSHD USER BEGIN"
+echo "${sshd_user}"
+echo "condor_ssh_to_job_sshd_setup SSHD USER END"
 
 echo "condor_ssh_to_job_sshd_setup SSHD DIR BEGIN"
 echo "${sshd_dir}"

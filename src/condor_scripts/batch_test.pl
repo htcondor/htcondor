@@ -113,11 +113,6 @@ Condor::DebugLevel(1);
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
 
-my $hostname = `hostname`; chomp $hostname;
-if ( ! ($hostname =~ /\./ ) ) {
-    warn "Warning: Host name '$hostname' is not an FQDN!!";
-    sleep( 10 );
-}
 my $iswindows = CondorTest::IsThisWindows();
 
 # configuration options
@@ -377,7 +372,7 @@ if(!($wantcurrentdaemons)) {
 
 }
 
-my @myfig = `condor_config_val -config`;
+my @myfig = `condor_config_val -config 2>&1`;
 debug("Current config settings are:\n",2);
 foreach my $fig (@myfig) {
 	debug("$fig\n",2);
@@ -1286,7 +1281,8 @@ sub IsPersonalRunning
 			last;
         }
     }
-    if ( close(CONFIG) && ($? != 13) ) {	# Ignore SIGPIPE
+        # TODO: Why would SIGPIPE cause close to return 13 (Perm denied?) $? should contain the exit status from condor_config_value
+    if ( (not close(CONFIG)) && ($? != 13) ) {	# Ignore SIGPIPE
 	warn "Error executing condor_config_val: '$?' '$!'"
     }
 

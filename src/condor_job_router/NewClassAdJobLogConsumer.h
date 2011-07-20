@@ -27,7 +27,6 @@
 #include <string>
 
 #define WANT_CLASSAD_NAMESPACE
-#undef open
 #include "classad/classad_distribution.h"
 
 class NewClassAdJobLogConsumer: public ClassAdLogConsumer

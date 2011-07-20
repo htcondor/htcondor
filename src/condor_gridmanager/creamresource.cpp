@@ -175,7 +175,7 @@ dprintf(D_FULLDEBUG,"    deleting %s\n",next_deleg->deleg_uri?next_deleg->deleg_
 		free( serviceUri );
 	}
 
-	ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject ) ) );
+	ResourcesByName.remove( HashKey( HashName( resourceName, proxyFQAN ) ) );
 
 	daemonCore->Cancel_Timer( delegationTimerId );
 	if ( gahp != NULL ) {
@@ -234,7 +234,8 @@ bool CreamResource::Init()
 		StringList collectors( pool_name );
 		free( pool_name );
 		pool_name = collectors.print_to_string();
-	} else {
+	}
+	if ( !pool_name ) {
 		pool_name = strdup( "NoPool" );
 	}
 

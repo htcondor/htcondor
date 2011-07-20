@@ -124,6 +124,7 @@ FileTransfer::FileTransfer()
 	PeerDoesTransferAck = false;
 	PeerDoesGoAhead = false;
 	PeerUnderstandsMkdir = false;
+	TransferUserLog = false;
 	Iwd = NULL;
 	ExceptionFiles = NULL;
 	InputFiles = NULL;
@@ -236,7 +237,7 @@ FileTransfer::~FileTransfer()
 int
 FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
 						 ReliSock *sock_to_use, priv_state priv,
-						 bool use_file_catalog) 
+						 bool use_file_catalog, bool is_spool) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
@@ -318,13 +319,29 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 				InputFiles->append(buf);			
 		}
 	}
+
+	// If we are spooling, we want to ignore URLs
+	// We want the file transfer plugin to be invoked at the starter, not the schedd.
+	// See https://condor-wiki.cs.wisc.edu/index.cgi/tktview?tn=2162
+	if (IsClient() && simple_init && is_spool) {
+		InputFiles->rewind();
+		const char *x;
+		while ((x = InputFiles->next())) {
+			if (IsUrl(x)) {
+				InputFiles->deleteCurrent();
+			}
+		}
+		char *list = InputFiles->print_to_string();
+		dprintf(D_FULLDEBUG, "Input files: %s\n", list ? list : "" );
+		free(list);
+	}
+	
 	if ( Ad->LookupString(ATTR_ULOG_FILE, buf) == 1 ) {
 		UserLogFile = strdup(condor_basename(buf));
-			// add to input files if sending from submit to the schedd
-		if ( (simple_init) && (!nullFile(buf)) ) {			
-			if ( !InputFiles->file_contains(buf) )
-				InputFiles->append(buf);			
-		}
+		// For 7.5.6 and earlier, we want to transfer the user log as
+		// an input file if we're in condor_submit. Otherwise, we don't.
+		// At this point, we don't know what version our peer is,
+		// so we have to delay this decision until UploadFiles().
 	}
 	if ( Ad->LookupString(ATTR_X509_USER_PROXY, buf) == 1 ) {
 		X509UserProxy = strdup(buf);
@@ -467,6 +484,21 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
+		// add the spooled user log to the list of files to xfer
+		// (i.e. when sending output to condor_transfer_data)
+	MyString ulog;
+	if( jobAd.LookupString(ATTR_ULOG_FILE,ulog) ) {
+		if( outputFileIsSpooled(ulog.Value()) ) {
+			if( OutputFiles ) {
+				if( !OutputFiles->file_contains(ulog.Value()) ) {
+					OutputFiles->append(ulog.Value());
+				}
+			} else {
+				OutputFiles = new StringList(buf,",");
+			}
+		}
+	}
+
 	// Set EncryptInputFiles to be ATTR_ENCRYPT_INPUT_FILES if specified.
 	if (Ad->LookupString(ATTR_ENCRYPT_INPUT_FILES, buf) == 1) {
 		EncryptInputFiles = new StringList(buf,",");
@@ -513,7 +545,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 	bool spooling_output = false;
 	{
-		if (Spool) {
+		if (Iwd && Spool) {
 			if(!strncmp(Iwd,Spool,strlen(Spool))) {
 				// We are in the spool directory.
 				// Wish there was a better way to find this out!
@@ -1133,6 +1165,13 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		EXCEPT("FileTransfer: UploadFiles called on server side");
 	}
 
+	// If we're a client talking to a 7.5.6 or older schedd, we want
+	// to send the user log as an input file.
+	if ( UserLogFile && TransferUserLog && simple_init && !nullFile( UserLogFile ) ) {
+		if ( !InputFiles->file_contains( UserLogFile ) )
+			InputFiles->append( UserLogFile );
+	}
+
 	// set flag saying if this is the last upload (i.e. job exited)
 	m_final_transfer_flag = final_transfer ? 1 : 0;
 
@@ -1557,7 +1596,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	filesize_t bytes=0;
 	MyString filename;;
 	MyString fullname;
-	MyString LocalProxyName;
 	char *tmp_buf = NULL;
 	int final_transfer = 0;
 	bool download_success = true;
@@ -2747,19 +2785,25 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			// hook to move the output file"
 
 			if(file_subcommand == 7) {
-				// make the URL out of Attr OutputDestonation and filename
+				// make the URL out of Attr OutputDestination and filename
+				MyString source_filename;
+				source_filename = Iwd;
+				source_filename += DIR_DELIM_CHAR;
+				source_filename += filename;
+
 				MyString URL;
 				URL = OutputDestination;
-				URL += "/";
+				URL += DIR_DELIM_CHAR;
 				URL += filename;
 
 				// actually invoke the plugin.  this could block indefinitely.
-				dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", filename, URL.Value());
-				rc = InvokeFileTransferPlugin(errstack, filename, URL.Value());
-				dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", filename, URL.Value(), rc);
+				dprintf (D_FULLDEBUG, "DoUpload: calling IFTP(fn,U): fn\"%s\", U\"%s\"\n", source_filename.Value(), URL.Value());
+				dprintf (D_FULLDEBUG, "LocalProxyName: %s\n", LocalProxyName.Value());
+				rc = InvokeFileTransferPlugin(errstack, source_filename.Value(), URL.Value(), LocalProxyName.Value());
+				dprintf (D_FULLDEBUG, "DoUpload: IFTP(fn,U): fn\"%s\", U\"%s\" returns %i\n", source_filename.Value(), URL.Value(), rc);
 
 				// report the results:
-				file_info.Assign("Filename", dest_filename);
+				file_info.Assign("Filename", source_filename);
 				file_info.Assign("OutputDestination", URL);
 
 				// will either be 0 (success) or -4 (GET_FILE_PLUGIN_FAILED)
@@ -3480,6 +3524,12 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	else {
 		PeerUnderstandsMkdir = false;
 	}
+
+	if ( peer_version.built_since_version(7,6,0) ) {
+		TransferUserLog = false;
+	} else {
+		TransferUserLog = true;
+	}
 }
 
 
@@ -3672,16 +3722,16 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 
 	// add x509UserProxy if it's defined
 	if (proxy_filename && *proxy_filename) {
-		plugin_env.SetEnv("X509USERPROXY",proxy_filename);
-		dprintf(D_FULLDEBUG, "FILETRANSFER: setting x509UserProxy env to %s\n", proxy_filename);
+		plugin_env.SetEnv("X509_USER_PROXY",proxy_filename);
+		dprintf(D_FULLDEBUG, "FILETRANSFER: setting X509_USER_PROXY env to %s\n", proxy_filename);
 	}
 
 	// prepare args for the plugin
 	ArgList plugin_args;
 	plugin_args.AppendArg(plugin.Value());
-	plugin_args.AppendArg(URL);
+	plugin_args.AppendArg(source);
 	plugin_args.AppendArg(dest);
-	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s %s %s\n", plugin.Value(), URL, dest);
+	dprintf(D_FULLDEBUG, "FILETRANSFER: invoking: %s %s %s\n", plugin.Value(), source, dest);
 
 	// invoke it
 	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env);
@@ -4139,4 +4189,19 @@ void
 GetDelegatedProxyRenewalTime(ClassAd *jobAd)
 {
 	GetDelegatedProxyRenewalTime(GetDesiredDelegatedJobCredentialExpiration(jobAd));
+}
+
+bool
+FileTransfer::outputFileIsSpooled(char const *fname) {
+	if(fname) {
+		if( is_relative_to_cwd(fname) ) {
+			if( Iwd && SpoolSpace && strcmp(Iwd,SpoolSpace)==0 ) {
+				return true;
+			}
+		}
+		else if( SpoolSpace && strncmp(fname,SpoolSpace,strlen(SpoolSpace))==0 ) {
+			return true;
+		}
+	}
+	return false;
 }

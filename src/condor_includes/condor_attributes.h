@@ -129,6 +129,7 @@ extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY;
 extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE;
 extern const char * const  ATTR_DELTACLOUD_KEYNAME;
 extern const char * const  ATTR_DELTACLOUD_USER_DATA;
+extern const char * const  ATTR_DELTACLOUD_NEEDS_START;
 extern const char * const  ATTR_DESTINATION;
 extern const char * const  ATTR_DISK;
 extern const char * const  ATTR_DISK_USAGE;
@@ -833,6 +834,15 @@ extern const char * const ATTR_COMMITTED_SLOT_TIME;
 extern const char * const ATTR_HASH_NAME;
 extern const char * const ATTR_AUTHENTICATED_IDENTITY;
 extern const char * const ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME;
+
+extern const char * const ATTR_TRANSFER_QUEUE_NUM_UPLOADING;
+extern const char * const ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING;
+extern const char * const ATTR_TRANSFER_QUEUE_MAX_UPLOADING;
+extern const char * const ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING;
+extern const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD;
+extern const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD;
+extern const char * const ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME;
+extern const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

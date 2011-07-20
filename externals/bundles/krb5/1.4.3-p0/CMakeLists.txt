@@ -25,7 +25,7 @@ if (WITH_KRB5)
 
 	if ( NOT PROPER )
 
-		set (KRB5_VER krb5-1.4.3-p0)
+		condor_pre_external( KRB5 krb5-1.4.3-p0 "lib;include" "include/krb5.h")
 
 		if (WINDOWS)
 			# Just so it is noted this is a complete and total hack build of an arcane 
@@ -57,25 +57,28 @@ if (WITH_KRB5)
 			               nmake NODEBUG=1 "DEFS=-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_CRT_NON_CONFORMING_SWPRINTFS -wd4002 -wd4005 -wd4013 -wd4018 -wd4028 -wd4047 -wd4090 -wd4091 -wd4101 -wd4102 -wd4133 -wd4146 -wd4244 -wd4700 -wd4996")
 
 			# Something is wrong with the default install (make install suck-o)
-			set (KRB5_INSTALL cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${EXTERNAL_STAGE}/include/win-mac.h \r\n
-							  cp -r src/lib/obj/i386/rel/* ${EXTERNAL_STAGE}/lib \r\n
-							  cp -r src/include/* ${EXTERNAL_STAGE}/include \r\n
+			set (KRB5_INSTALL cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${KRB5_INSTALL_LOC}/include/win-mac.h \r\n
+							  cp -r src/lib/obj/i386/rel/* ${KRB5_INSTALL_LOC}/lib \r\n
+							  cp -r src/include/* ${KRB5_INSTALL_LOC}/include \r\n
 							  cd \"\\\" \r\n
-							  cd /D "${EXTERNAL_STAGE}/lib" \r\n 
+							  cd /D "${KRB5_INSTALL_LOC}/lib" \r\n 
 							  ${CMAKE_CURRENT_SOURCE_DIR}/manifest.bat )
 
 		else()
-			set (KRB5_PATCH  cp ${CMAKE_CURRENT_SOURCE_DIR}/src.appl.telnet.configure src/appl/telnet/configure )
-			set (KRB5_CONFIGURE src/configure --prefix=${EXTERNAL_STAGE} --without-tcl --enable-static --sysconfdir=/etc --disable-thread-support )
+			set (KRB5_PATCH  
+				cp ${CMAKE_CURRENT_SOURCE_DIR}/src.appl.telnet.configure src/appl/telnet/configure ${CMD_TERM} 
+				patch -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/eai_nodata.patch ${CMD_TERM}
+				patch -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/getline.patch )
+
+			set (KRB5_CONFIGURE src/configure --prefix=${KRB5_INSTALL_LOC} --without-tcl --enable-static --sysconfdir=/etc --disable-thread-support )
 			set (KRB5_MAKE make )
 			set (KRB5_INSTALL make install )
 		endif()
 
 		ExternalProject_Add(krb5
-				    PREFIX ${EXTERNAL_BUILD_PREFIX}/${KRB5_VER}
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${KRB5_VER}.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${EXTERNAL_DL}
+				    DOWNLOAD_DIR ${KRB5_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${KRB5_VER}.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND cd ${KRB5_VER} ${CMD_TERM} ${KRB5_PATCH}
@@ -85,31 +88,28 @@ if (WITH_KRB5)
 				    BUILD_COMMAND cd ${KRB5_VER} ${CMD_TERM} ${KRB5_MAKE}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_STAGE}
+				    INSTALL_DIR ${KRB5_INSTALL_LOC}
 				    INSTALL_COMMAND cd ${KRB5_VER} ${CMD_TERM} ${KRB5_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)
-			set(KRB5_FOUND "${EXTERNAL_STAGE}/lib/comerr32.lib;${EXTERNAL_STAGE}/lib/gssapi32.lib;${EXTERNAL_STAGE}/lib/k5sprt32.lib;${EXTERNAL_STAGE}/lib/krb5_32.lib;${EXTERNAL_STAGE}/lib/xpprof32.lib")
+			set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/comerr32.lib;${KRB5_INSTALL_LOC}/lib/gssapi32.lib;${KRB5_INSTALL_LOC}/lib/k5sprt32.lib;${KRB5_INSTALL_LOC}/lib/krb5_32.lib;${KRB5_INSTALL_LOC}/lib/xpprof32.lib")
 
 			#this may become the common case.
-			install ( FILES ${EXTERNAL_STAGE}/lib/comerr32.dll
-							${EXTERNAL_STAGE}/lib/gssapi32.dll
-							${EXTERNAL_STAGE}/lib/k5sprt32.dll
-							${EXTERNAL_STAGE}/lib/krb5_32.dll
-							${EXTERNAL_STAGE}/lib/xpprof32.dll
+			install ( FILES ${KRB5_INSTALL_LOC}/lib/comerr32.dll
+							${KRB5_INSTALL_LOC}/lib/gssapi32.dll
+							${KRB5_INSTALL_LOC}/lib/k5sprt32.dll
+							${KRB5_INSTALL_LOC}/lib/krb5_32.dll
+							${KRB5_INSTALL_LOC}/lib/xpprof32.dll
 					  DESTINATION ${C_LIB} )
-					  
-			set_property( TARGET krb5 PROPERTY FOLDER "externals" )
-
 		else()
-			set(KRB5_FOUND "${EXTERNAL_STAGE}/lib/libkrb5.a;${EXTERNAL_STAGE}/lib/libk5crypto.a;${EXTERNAL_STAGE}/lib/libcom_err.a;${EXTERNAL_STAGE}/lib/libkrb5support.a")
+			set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/libkrb5.a;${KRB5_INSTALL_LOC}/lib/libk5crypto.a;${KRB5_INSTALL_LOC}/lib/libcom_err.a;${KRB5_INSTALL_LOC}/lib/libkrb5support.a")
 			if ( AIX )
 				set (KRB5_FOUND "-Wl,-bstatic;${KRB5_FOUND};-Wl,-bdynamic")
 			endif()
 		endif()
 
-		append_var(CONDOR_EXTERNALS krb5)
+		condor_post_external( krb5 include OFF )
 
 	else( NOT PROPER )
 

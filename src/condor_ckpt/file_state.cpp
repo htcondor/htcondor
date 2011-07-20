@@ -531,7 +531,7 @@ CondorFile * CondorFileTable::open_url_retry( char const *url, int flags, int mo
 
 		if( strstr(url,"remote:") ) return 0;
 
-		path = strrchr(url,':');
+		path = (char*)strrchr(url,':');
 		if(!path) return 0;
 
 		path++;

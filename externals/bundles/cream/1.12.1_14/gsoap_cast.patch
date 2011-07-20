@@ -1,0 +1,12 @@
+diff -u -r gsoap-2.7/soapcpp2/stdsoap2.cpp gsoap-2.7-patched/soapcpp2/stdsoap2.cpp
+--- gsoap-2.7/soapcpp2/stdsoap2.cpp	2005-09-01 20:21:51.000000000 -0500
++++ gsoap-2.7-patched/soapcpp2/stdsoap2.cpp	2011-05-26 13:21:58.945680030 -0500
+@@ -9178,7 +9178,7 @@
+   {
+ #ifndef WITH_LEAN
+     if (s && (soap->mode & SOAP_XML_CANONICAL))
+-    { t = strchr(s, ':');
++    { t = strchr((char*)s, ':');
+       if (t)
+         soap_utilize_ns(soap, s, t - s);
+     }

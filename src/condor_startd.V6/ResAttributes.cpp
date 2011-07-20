@@ -854,12 +854,20 @@ MachAttributes::start_benchmarks( Resource* rip, int &count )
 	}
 
 	ASSERT( bench_job_mgr != NULL );
-	bench_job_mgr->StartBenchmarks( rip, count );
 
-	// Enter benchmarking activity
-	if ( count ) {
-		rip->change_state( benchmarking_act );
+	// Enter benchmarking activity BEFORE invoking StartBenchmarks().
+	// If StartBenchmarks() will return to idle activity upon failure
+	// to launch benchmarks, or upon completion of benchmarks 
+	// (in the reaper).
+	rip->change_state( benchmarking_act );
+	bench_job_mgr->StartBenchmarks( rip, count );
+	// However, if StartBenchmarks set count to zero, that means
+	// there are no benchmarks configured to run now. So set the activity
+	// back to idle.
+	if ( count == 0 ) {
+		rip->change_state( idle_act );
 	}
+
 }
 
 void

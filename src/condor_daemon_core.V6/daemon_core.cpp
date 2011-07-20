@@ -5669,7 +5669,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	else {
 		msg->setStreamType(Stream::reli_sock);
 	}
-	if(pidinfo->child_session_id)
+	if (pidinfo && pidinfo->child_session_id)
 	{
 		msg->setSecSessionId(pidinfo->child_session_id);
 	}
@@ -7541,16 +7541,20 @@ int DaemonCore::Create_Process(
 	// Check if it's a 16-bit application
 	bIs16Bit = false;
 	LOADED_IMAGE loaded;
+	BOOL map_and_load_result;
 	// NOTE (not in MSDN docs): Even when this function fails it still
 	// may have "failed" with LastError = "operation completed successfully"
 	// and still filled in our structure.  It also might really have
 	// failed.  So we init the part of the structure we care about and just
-	// ignore the return value.
+	// ignore the return value for purposes of setting bIs16Bit - we still
+	// must honor the return value for purposes of calling UnMapAndLoad() or
+	// else risk an access violation upon unmapping.
 	loaded.fDOSImage = FALSE;
-	MapAndLoad((char *)executable, NULL, &loaded, FALSE, TRUE);
+	map_and_load_result = MapAndLoad((char *)executable, NULL, &loaded, FALSE, TRUE);
 	if (loaded.fDOSImage == TRUE)
 		bIs16Bit = true;
-	UnMapAndLoad(&loaded);
+	if (map_and_load_result)
+		UnMapAndLoad(&loaded);
 
 	// Define a some short-hand variables for use bellow
 	namelen				= strlen(executable);
@@ -9921,6 +9925,19 @@ int DaemonCore::SendAliveToParent()
 		return FALSE;
 	}
 
+		/* Don't have the CGAHP and/or DAGMAN, which are launched as the user,
+		   attempt to send keep alives to daemon. Permissions are not likely to
+		   allow user proccesses to send signals to Condor daemons. 
+		   Note that we shouldn't have to check for DAGMan here as no
+		   daemon core info should have been inherited down to DAGMan, 
+		   but it doesn't hurt to be sure here since we already need
+		   to check for the CGAHP. */
+	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP) ||
+	  	get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN))
+	{
+		return FALSE;
+	}
+
 		/* Before we possibly block trying to send this alive message to our 
 		   parent, lets see if this parent pid (ppid) exists on this system.
 		   This protects, for instance, against us acting a bogus CONDOR_INHERIT
@@ -10450,7 +10467,7 @@ DaemonCore::InitSettableAttrsLists( void )
 		if( SettableAttrsLists[i] ) {
 			tmp = (SettableAttrsLists[i])->print_to_string();
 			dprintf( D_ALWAYS, "SettableAttrList[%s]: %s\n",
-					 PermString((DCpermission)i), tmp );
+					 PermString((DCpermission)i), tmp?tmp:"" );
 			free( tmp );
 		}
 	}

@@ -43,6 +43,7 @@ our %build_and_test_sets = (
 	# NOTE: Keep the stable or developer release branches synchronized with
 	# https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=DeveloperReleasePlan
 	'official_ports' => [
+		'x86_64_deb_6.0-updated', # this will switch to non-updated when NMI has that platform
 		'x86_64_deb_5.0',
 		'x86_64_rhap_5',
 		'x86_64_rhas_3',
@@ -50,8 +51,8 @@ our %build_and_test_sets = (
 		'x86_macos_10.4',
 		'x86_rhap_5',
 		'x86_rhas_3',
-		'x86_winnt_5.1-tst', 
-		#'x86_winnt_5.1',
+		'x86_winnt_5.1',
+		'x86_64_rhap_6.1-updated',
 	],
 
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
@@ -60,10 +61,16 @@ our %build_and_test_sets = (
 		'x86_64_rhap_5.3-updated',
 		'x86_64_opensuse_11.3-updated',
 		'x86_64_opensuse_11.4-updated',
+		'x86_64_fedora_12-updated',
+		'x86_freebsd_7.4-updated',
+		'x86_64_freebsd_8.2-updated',
 		'x86_64_sol_5.10',
 		'x86_64_sol_5.11',
-		'x86_64_fedora_12-updated',
 	],
+
+        # This is a placeholder that is intended to remain empty in V7_6-branch.
+        # It is populated in the master.
+        'extra_builds' => [],
 
 	'stduniv' => [
 		'x86_64_deb_5.0',
@@ -272,7 +279,7 @@ our %submit_info = (
 	# Microsoft Windows 5.1/2000/xp/whatever on x86
 	# prereqs testing configuration (also cmake)
 	##########################################################################
-	'x86_winnt_5.1-prereqs'	=> {
+	'x86_winnt_5.1'	=> {
 		'build' => {
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> [
@@ -308,6 +315,89 @@ our %submit_info = (
 		},
 	},
 
+	##########################################################################
+	# Platform Debian 6.0 on x86_64
+	##########################################################################
+	'x86_64_deb_6.0' => {
+    	'build' => {
+        	'configure_args' => { @default_build_configure_args,
+                              	'-DCLIPPED:BOOL=ON' => undef,
+                              	'-DWITH_KRB5:BOOL=OFF' => undef,
+                              	'-DWITH_CREAM:BOOL=OFF' => undef,
+                              	'-DWITH_COREDUMPER:BOOL=OFF' => undef,
+        	},
+        	'prereqs'   => [ 'cmake-2.8.3' ],
+        	'xtests'    =>  [ 'x86_64_ubuntu_10.04', ],
+    	},
+	
+    	'test' => {
+        	'configure_args' => { @default_test_configure_args },
+        	'prereqs'   => [ 'java-1.4.2_05' ],
+        	'testclass' => [ @default_testclass ],
+    	},
+	},
+
+	##########################################################################
+	# Platform Debian 6.0 on x86_64
+	# As of this writing there is no x86_64_deb-6.0 (non updated) machine in 
+	# the NMI pool.  When they include one we should switch this from using
+	# the updated machine to the non-updated machine.
+	##########################################################################
+	'x86_64_deb_6.0-updated' => 'x86_64_deb_6.0',
+
+	##########################################################################
+	# Platform RHEL 6 on x86
+	##########################################################################
+	'x86_rhap_6.0'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				# Turn this back on when ready
+				# '-DCLIPPED:BOOL=OFF' => undef,
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform RHEL 6 on x86. This one is continuously updated by the batlab.
+	##########################################################################
+	'x86_rhap_6.0-updated'	=> 'x86_rhap_6.0',
+
+	##########################################################################
+	# Platform RHEL 6 on x86_64
+	##########################################################################
+	'x86_64_rhap_6.0'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL=OFF' => undef,
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+
+	##########################################################################
+	# Platform RHEL 6 on x86_64. This one is continuously updated by the batlab.
+	##########################################################################
+	'x86_64_rhap_6.0-updated'	=> 'x86_64_rhap_6.0',
+
+	#################################################################
+	# Platform RHEL 6.1 on x86_64. This one is updated by the batlab.
+	#################################################################
+	'x86_64_rhap_6.1-updated'	=> 'x86_64_rhap_6.0',
 
 	##########################################################################
 	# Platform RHEL 5 on x86_64
@@ -321,7 +411,8 @@ our %submit_info = (
 			'xtests'	=> [ 
 				'x86_64_fedora_13', 'x86_64_rhap_5.2',
 				'x86_64_fedora_12', 'x86_64_fedora_12-updated', 
-				'x86_64_fedora_13-updated' ],
+				'x86_64_fedora_13-updated',
+				'x86_64_rhap_6.0-updated' ],
 		},
 
 		'test' => {
@@ -393,7 +484,7 @@ our %submit_info = (
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ 
 				@default_prereqs, 
-				'java-1.4.2_09', 
+				'java-1.4.2_12', 
 				'coreutils-5.2.1'
 			],
 			'testclass'	=> [ @default_testclass ],
@@ -497,7 +588,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5',
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.5',
 							'VMware-server-1.0.7' ],
 			'testclass'	=> [ @default_testclass ],
 		},
@@ -863,6 +954,56 @@ our %submit_info = (
 	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
 	'x86_64_opensuse_11.4'				=> 'x86_64_opensuse_11.3',
 	'x86_64_opensuse_11.4-updated'		=> 'x86_64_opensuse_11.4',
+
+
+	##########################################################################
+	# Platform FreeBSD 7.4 on x86
+	##########################################################################
+	'x86_freebsd_7.4-updated'		=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
+				'-DWITH_CURL:BOOL=OFF' => undef,
+				'-DWITH_EXPAT:BOOL=ON' => undef,
+				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
+				'-DWITH_LIBXML2:BOOL=ON' => undef,
+			},
+			'prereqs'	=> [ 'tar-1.14',
+							 'patch-2.6.1',
+							 'cmake-2.8.3',
+							 'flex-2.5.4a',
+							 'make-3.80',
+							 'byacc-1.9',
+							 'bison-1.25',
+							 'wget-1.9.1',
+							 'm4-1.4.1',
+				],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => {
+				@default_test_configure_args
+				
+			},
+			'prereqs'	=> [ 'tar-1.14',
+							 'patch-2.6.1',
+							 'cmake-2.8.3',
+							 'flex-2.5.4a',
+							 'make-3.80',
+							 'byacc-1.9',
+							 'bison-1.25',
+							 'wget-1.9.1',
+							 'm4-1.4.1',
+				],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
+	'x86_64_freebsd_7.4-updated'		=> 'x86_freebsd_7.4-updated',
+	'x86_freebsd_8.2-updated'			=> 'x86_freebsd_7.4-updated',
+	'x86_64_freebsd_8.2-updated'		=> 'x86_freebsd_7.4-updated',
 );
 
 while( 1 ) {
@@ -1129,3 +1270,8 @@ if (!defined($main::slaved_module)) {
 }
 
 1;
+
+### Local Variables: ***
+### mode:perl ***
+### tab-width: 4  ***
+### End: ***

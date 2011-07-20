@@ -1,0 +1,63 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use Condor;
+use CondorTest;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my $append_condor_config = '
+  RANK = TARGET.NiceUser =?= True
+  MaxJobRetirementTime = 0
+  PREEMPTION_REQUIREMENTS = False
+  NUM_CPUS = 1
+  DAEMON_LIST = MASTER,COLLECTOR,NEGOTIATOR,SCHEDD,STARTD
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+my $testname = CondorTest::GetDefaultTestName();
+
+my $not_nice_submit = CondorTest::TempFileName("$testname.not_nice.submit");
+
+open( SUBMIT, ">$not_nice_submit" ) || die "error writing to $not_nice_submit: $!\n";
+print SUBMIT "universe = vanilla\n";
+print SUBMIT "executable = x_sleep.pl\n";
+print SUBMIT "arguments = 600\n";
+print SUBMIT "notification = never\n";
+print SUBMIT "queue\n";
+close( SUBMIT );
+
+my $not_nice_jobid = Condor::Submit($not_nice_submit);
+
+# verify that a nice_user job runs
+SimpleJob::RunCheck(
+    append_submit_commands => "nice_user = true"
+);
+
+# verify that the startd preempted a job based on machine rank
+CondorLog::RunCheck(
+    daemon => "STARTD",
+    match_regexp => "preempting claim based on machine rank"
+);
+
+CondorTest::EndTest();

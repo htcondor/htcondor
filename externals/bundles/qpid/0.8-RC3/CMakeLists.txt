@@ -26,55 +26,53 @@ if (WITH_QPID)
 	if ( NOT PROPER )
 	
 		set (QPID_VER 0.8)
+		condor_pre_external( QPID qpid-0.8 "lib;include" "include/qpid")
 
 		if (NOT WINDOWS)
-			set (QPID_CONFIGURE ./bootstrap && ./configure --prefix=${EXTERNAL_STAGE} )
+			set (QPID_CONFIGURE ./bootstrap && ./configure --prefix=${QPID_INSTALL_LOC} )
 			set (QPID_BUILD make )
 			set (QPID_INSTALL make install )
 		else()
-			set (QPID_CONFIGURE cmake -DBOOST_ROOT:PATH=${BOOST_ROOT} -DCMAKE_INSTALL_PREFIX:PATH=${EXTERNAL_STAGE} -G \"Visual Studio 9 2008\" -DGEN_DOXYGEN:BOOL=OFF -DBoost_DEBUG:BOOL=TRUE )
+			set (QPID_CONFIGURE cmake -DBOOST_ROOT:PATH=${BOOST_ROOT} -DCMAKE_INSTALL_PREFIX:PATH=${QPID_INSTALL_LOC} -G \"Visual Studio 9 2008\" -DGEN_DOXYGEN:BOOL=OFF -DBoost_DEBUG:BOOL=TRUE )
 			set (QPID_BUILD devenv qpid-cpp.sln /Rebuild RelWithDebInfo /project INSTALL )
 			set (QPID_INSTALL echo "Done" )
 		endif()
 
 		ExternalProject_Add(qpid
 					DEPENDS boost
-				    PREFIX ${EXTERNAL_BUILD_PREFIX}/qpid-${QPID_VER}
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/qpid-${QPID_VER}.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${EXTERNAL_DL}
-				    URL http://parrot.cs.wisc.edu/externals/qpid-${QPID_VER}.tar.gz
+					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${QPID_VER}.tar.gz ${CMD_TERM}
+				    DOWNLOAD_DIR ${QPID_STAGE}/dl
+				    URL http://parrot.cs.wisc.edu/externals/${QPID_VER}.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd qpid-${QPID_VER}/cpp && ${QPID_CONFIGURE}
+				    CONFIGURE_COMMAND cd ${QPID_VER}/cpp && ${QPID_CONFIGURE}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd qpid-${QPID_VER}/cpp && ${QPID_BUILD}
+				    BUILD_COMMAND cd ${QPID_VER}/cpp && ${QPID_BUILD}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
-				    INSTALL_DIR ${EXTERNAL_STAGE}
-				    INSTALL_COMMAND cd qpid-${QPID_VER}/cpp && ${QPID_INSTALL} )
+				    INSTALL_DIR ${QPID_INSTALL_LOC}
+				    INSTALL_COMMAND cd ${QPID_VER}/cpp && ${QPID_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		# all of the below locations need to be verified.
 		if (WINDOWS)
-			set( QPID_FOUND "${EXTERNAL_STAGE}/bin/qpidcommon.lib;${EXTERNAL_STAGE}/bin/qpidclient.lib;${EXTERNAL_STAGE}/bin/qmf.lib;${EXTERNAL_STAGE}/bin/qpidtypes.lib" )
-			install ( FILES ${EXTERNAL_STAGE}/bin/qpidcommon.dll
-					  ${EXTERNAL_STAGE}/bin/qpidclient.dll
-					  ${EXTERNAL_STAGE}/bin/qmf.dll
-					  ${EXTERNAL_STAGE}/bin/qpidtypes.dll
+			set( QPID_FOUND "${QPID_INSTALL_LOC}/bin/qpidcommon.lib;${QPID_INSTALL_LOC}/bin/qpidclient.lib;${QPID_INSTALL_LOC}/bin/qmf.lib;${QPID_INSTALL_LOC}/bin/qpidtypes.lib" )
+			install ( FILES ${QPID_INSTALL_LOC}/bin/qpidcommon.dll
+					  ${QPID_INSTALL_LOC}/bin/qpidclient.dll
+					  ${QPID_INSTALL_LOC}/bin/qmf.dll
+					  ${QPID_INSTALL_LOC}/bin/qpidtypes.dll
 					  DESTINATION ${C_LIB} )
 					  
-			set( QMF_GEN ${EXTERNAL_STAGE}/managementgen/qmf-gen )
-			
-			set_property( TARGET qpid PROPERTY FOLDER "externals" )
+			set( QMF_GEN ${QPID_INSTALL_LOC}/managementgen/qmf-gen )
 			
 		else()
-			set( QPID_FOUND "${EXTERNAL_STAGE}/lib/libqpidcommon.so;${EXTERNAL_STAGE}/lib/libqpidclient.so;${EXTERNAL_STAGE}/lib/libqmf.so;${EXTERNAL_STAGE}/lib/libqpidtypes.so;${EXTERNAL_STAGE}/lib/qpidmessaging.so;${EXTERNAL_STAGE}/lib/libqmfconsole.so;${EXTERNAL_STAGE}/lib/libqmf2.so" )
+			set( QPID_FOUND "${QPID_INSTALL_LOC}/lib/libqpidcommon.so;${QPID_INSTALL_LOC}/lib/libqpidclient.so;${QPID_INSTALL_LOC}/lib/libqmf.so;${QPID_INSTALL_LOC}/lib/libqpidtypes.so;${QPID_INSTALL_LOC}/lib/qpidmessaging.so;${QPID_INSTALL_LOC}/lib/libqmfconsole.so;${QPID_INSTALL_LOC}/lib/libqmf2.so" )
 			# TODO: so are we going to need to install qpid.so's along with condor..? or should we -static the plugins.
 			# add linux install target
-			#set( QMF_GEN ${EXTERNAL_STAGE}/managementgen/qmf-gen ) ?
+			#set( QMF_GEN ${QPID_INSTALL_LOC}/managementgen/qmf-gen ) ?
 		endif()
 
-		append_var(CONDOR_EXTERNALS qpid)
+		condor_post_external( qpid include OFF )
 
 	else( NOT PROPER )
 
@@ -84,14 +82,17 @@ if (WITH_QPID)
 
 	endif( NOT PROPER )
 
+endif()
+
+# only enable if qpid and qmf bits are all present.
+if (QPID_FOUND AND NOT "${QMF_GEN}" MATCHES "-NOTFOUND" )
 	# you will need to update config.h.cmake with your var.
 	message (STATUS "external configured QPID_FOUND=(${QPID_FOUND}) QMF_GEN=(${QMF_GEN})")
 	set( HAVE_EXT_QPID ON PARENT_SCOPE )
 	set (QPID_FOUND ${QPID_FOUND} PARENT_SCOPE)
 	set (QMF_GEN ${QMF_GEN} PARENT_SCOPE)
-
-else(WITH_QPID)
+else()
 
 	message (STATUS "external skipped (qpid)")
 
-endif(WITH_QPID)
+endif()

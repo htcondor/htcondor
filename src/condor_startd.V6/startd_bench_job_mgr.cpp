@@ -115,7 +115,7 @@ StartdBenchJobMgr::Reconfig( void )
 				 " -- If there are additions to the benchmark list, these"
 				 " new benchmarks won't be run until the 'RunBenchmarks'"
 				 " expresion becomes true and all benchmarks are run.\n",
-				 before_str, after_str );
+				 before_str?before_str:"", after_str?after_str:"" );
 		free( before_str );
 		free( after_str );
 	}

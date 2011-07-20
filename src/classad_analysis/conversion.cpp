@@ -43,7 +43,7 @@ toNewClassAd( ClassAd *ad )
 	newAd = parser.ParseClassAd( buffer );
 
 	if( newAd == NULL ) {
-			// ad didn't parse so we try quoting atttibute names
+			// ad didn't parse so we try quoting attibute names
 		buffer = "[";
 		ad->ResetExpr( );
 		while( ad->NextExpr( name, expr ) ) {

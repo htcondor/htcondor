@@ -4644,12 +4644,12 @@ SetUserLog()
 			BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
 			BOOLEAN	nfs = FALSE;
 
-			if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
-				fprintf(stderr,
-					"\nWARNING: Can't determine whether log file %s is on NFS\n",
-					ulog.Value() );
-			} else if ( nfs ) {
-				if ( nfs_is_error ) {
+			if ( nfs_is_error ) {
+				if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
+					fprintf(stderr,
+						"\nWARNING: Can't determine whether log file %s is on NFS\n",
+						ulog.Value() );
+				} else if ( nfs ) {
 
 					fprintf(stderr,
 						"\nERROR: Log file %s is on NFS.\nThis could cause"
@@ -5080,7 +5080,7 @@ SetGridParams()
 
 	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
 		// check private key file can be opened
-		if ( !DisableFileChecks ) {
+		if ( !DisableFileChecks && !strstr( tmp, "$$" ) ) {
 			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
@@ -5152,7 +5152,7 @@ SetGridParams()
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
 	// Transform this representation into our regular form:
-	//   host.edu:8443 batchname queuename
+	//   host.edu:8443/ce-cream/services/CREAM2 batchname queuename
 	if ( JobGridType != NULL && strcasecmp (JobGridType, "cream") == MATCH ) {
 		tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
 		MyString resource = tmp;
@@ -5168,8 +5168,11 @@ SetGridParams()
 			}
 			if ( ( pos = resource.find( "/cream-", pos2 ) ) >= 0 ) {
 				// We found the shortened form
-				resource.replaceString( "-", " ", pos );
-				resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
+				resource.replaceString( "/cream-", "/ce-cream/services/CREAM2 ", pos );
+				pos += 26;
+				if ( ( pos2 = resource.find( "-", pos ) ) >= 0 ) {
+					resource.setChar( pos2, ' ' );
+				}
 
 				buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
 								resource.Value() );
@@ -7359,10 +7362,12 @@ SetConcurrencyLimits()
 		list.qsort();
 
 		str = list.print_to_string();
-		tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
-		InsertJobExpr(tmp.Value());
+		if ( str ) {
+			tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
+			InsertJobExpr(tmp.Value());
 
-		free(str);
+			free(str);
+		}
 	}
 }
 
@@ -7750,9 +7755,11 @@ SetVMParams()
 		}
 
 		tmp_ptr = vmdk_files.print_to_string();
-		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
-		InsertJobExpr( buffer );
-		free( tmp_ptr );
+		if ( tmp_ptr ) {
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
+			InsertJobExpr( buffer );
+			free( tmp_ptr );
+		}
 	}
 
 	// Check if a job user defines 'Argument'.

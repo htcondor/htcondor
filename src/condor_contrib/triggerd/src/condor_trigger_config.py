@@ -320,6 +320,9 @@ class TriggerConfigOptionParser(OptionParser):
         self.add_option("-i", "--init", action="store_true", help="add default triggers")
         self.add_option("-l", "--list", action="store_true", help="list installed triggers")
         self.add_option("-s", "--test", action="store_true", help="test triggers")
+        self.add_option("-U", "--user", action="store", help="The username used to authenticate with the broker")
+        self.add_option("-P", "--password", action="store", help="The password used to authenticate with the broker")
+        self.add_option("-m", "--auth-mechanism", action="store", help="A comma separated list of authentication mechanisms to use when communicating with the broker.  Supported mechanisms are: ANONYMOUS, PLAIN, GSSAPI", default="ANONYMOUS,PLAIN,GSSAPI")
 
     def is_valid(self, opts, args):
         valid = False
@@ -352,8 +355,13 @@ def main():
     session = TriggerConfig(opts.test)
 
     print "Connecting to broker '%s'..." % target
+    if opts.user != None and opts.password != None:
+       target = "%s/%s@%s" % (opts.user, opts.password, target)
+    elif opts.user != None:
+       target = "%s@%s" % (opts.user, target)
+
     try:
-        broker = session.addBroker(target)
+        broker = session.addBroker(target, mechanisms = opts.auth_mechanism.replace(',', ' '))
     except Exception, e:
         print e
         sys.exit(1)

@@ -755,7 +755,7 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 			// Insert the string into the classad
 		if( Insert( buffer.Value() ) == FALSE ) { 	
 				// print out where we barfed to the log file
-			dprintf(D_ALWAYS,"failed to create classad; bad expr = %s\n",
+			dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n",
 					buffer.Value());
 				// read until delimitor or EOF; whichever comes first
 			buffer = "";
@@ -820,7 +820,7 @@ ClassAd::Insert( const char *str )
 	for ( int i = 0; str[i] != '\0'; i++ ) {
         if (str[i] == '\\') {
 			if ( ( str[i + 1] != '"') ||
-				 ((str[i + 1] == '"') && IsStringEnd(str,2) )  )
+				 ((str[i + 1] == '"') && IsStringEnd(str + i,2) )  )
 			{
 				newAdStr.append( 1, '\\' );
 			}
@@ -1194,6 +1194,7 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 	classad::Value val;
 	double doubleVal;
 	int intVal;
+	bool boolVal;
 
 	if( target == this || target == NULL ) {
 		getTheMyRef( this );
@@ -1204,6 +1205,10 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 			}
 			if( val.IsIntegerValue( intVal ) ) {
 				value = ( float )intVal;
+				rc = 1;
+			}
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = ( float )boolVal;
 				rc = 1;
 			}
 		}
@@ -1222,6 +1227,10 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 				value = ( float )intVal;
 				rc = 1;
 			}
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = ( float )boolVal;
+				rc = 1;
+			}
 		}
 	} else if( target->Lookup( name ) ) {
 		if( target->EvaluateAttr( name, val ) ) {
@@ -1231,6 +1240,10 @@ EvalFloat (const char *name, classad::ClassAd *target, float &value)
 			}
 			if( val.IsIntegerValue( intVal ) ) {
 				value = ( float )intVal;
+				rc = 1;
+			}
+			if( val.IsBooleanValue( boolVal ) ) {
+				value = ( float )boolVal;
 				rc = 1;
 			}
 		}
@@ -1339,10 +1352,10 @@ initFromString( char const *str,MyString *err_msg )
 
 		if (!Insert(exprbuf)) {
 			if( err_msg ) {
-				err_msg->sprintf("Failed to parse ClassAd expression: %s",
+				err_msg->sprintf("Failed to parse ClassAd expression: '%s'",
 					exprbuf);
 			} else {
-				dprintf(D_ALWAYS,"Failed to parse ClassAd expression: %s\n",
+				dprintf(D_ALWAYS,"Failed to parse ClassAd expression: '%s'\n",
 					exprbuf);
 			}
 			succeeded = false;
@@ -1447,8 +1460,6 @@ sPrint( MyString &output, StringList *attr_white_list )
 	unp.SetOldClassAd( true );
 	string value;
 
-	output = "";
-
 	classad::ClassAd *parent = GetChainedParentAd();
 
 	if ( parent ) {
@@ -1487,7 +1498,7 @@ sPrint( std::string &output, StringList *attr_white_list )
 {
 	MyString myout = output;
 	int rc = sPrint( myout, attr_white_list );
-	output = myout;
+	output += myout;
 	return rc;
 }
 // Taken from the old classad's function. Got rid of incorrect documentation. 
@@ -2174,8 +2185,19 @@ _GetReferences(classad::ExprTree *tree,
 	classad::References ext_refs_set;
 	classad::References int_refs_set;
 	classad::References::iterator set_itr;
-	GetExternalReferences(tree, ext_refs_set, true);
-	GetInternalReferences(tree, int_refs_set, true);
+
+	bool ok = true;
+	if( !GetExternalReferences(tree, ext_refs_set, true) ) {
+		ok = false;
+	}
+	if( !GetInternalReferences(tree, int_refs_set, true) ) {
+		ok = false;
+	}
+	if( !ok ) {
+		dprintf(D_FULLDEBUG,"warning: failed to get all attribute references in ClassAd (perhaps caused by circular reference).\n");
+		dPrint(D_FULLDEBUG);
+		dprintf(D_FULLDEBUG,"End of offending ad.\n");
+	}
 
 		// We first process the references and save results in
 		// final_*_refs_set.  The processing may hit duplicates that

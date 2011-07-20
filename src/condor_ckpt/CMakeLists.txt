@@ -47,8 +47,6 @@ if( STD_UNIVERSE )
 
 	if (DOES_COMPRESS_CKPT)
 
-		set_source_files_properties(malloc-condor.c COMPILE_DEFINITIONS "MORECORE=condor_morecore;HAVE_MMAP=0;malloc_getpagesize=8192")
-
 		add_library(zckpt STATIC EXCLUDE_FROM_ALL ${CMAKE_CURRENT_SOURCE_DIR}/zimage.cpp;${CMAKE_CURRENT_SOURCE_DIR}/malloc-condor.c;${CommonCkptSrcs})
 
 		add_dependencies( zckpt syscall_numbers )

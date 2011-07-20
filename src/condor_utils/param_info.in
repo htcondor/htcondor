@@ -596,7 +596,7 @@ id=559
 
 [GSI_DAEMON_DIRECTORY]
 aliases=
-default=/etc/grid-security/
+default=
 version=0.0.0
 range=.*
 state=default
@@ -3558,7 +3558,7 @@ id=189
 
 [CREATE_CORE_FILES]
 aliases=
-default=false
+default=
 version=0.0.0
 range=.*
 state=default
@@ -4434,6 +4434,22 @@ friendly_name=Cream Gahp
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,creamjob
+id=247
+
+[DELTACLOUD_GAHP]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Deltacloud Gahp
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,deltacloudjob
 id=247
 
 [AMAZON_GAHP_LOG]
@@ -7001,7 +7017,7 @@ id=422
 
 [VM_GAHP_SEND_ALL_CLASSAD]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -7737,7 +7753,7 @@ id=465
 
 [VALID_SPOOL_FILES]
 aliases=
-default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
+default=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad, OfflineLog
 version=0.0.0
 range=.*
 state=default
@@ -7753,7 +7769,7 @@ id=466
 
 [INVALID_LOG_FILES]
 aliases=
-default=core
+default=
 version=0.0.0
 range=.*
 state=default
@@ -9465,7 +9481,7 @@ id=555
 
 [GRIDMAP]
 aliases=
-default=$(GSI_DAEMON_DIRECTORY)/grid-mapfile
+default=
 version=0.0.0
 range=.*
 state=default
@@ -9481,7 +9497,7 @@ id=555
 
 [GSI_DAEMON_TRUSTED_CA_DIR]
 aliases=
-default=$(GSI_DAEMON_DIRECTORY)/certificates
+default=
 version=0.0.0
 range=.*
 state=default
@@ -10135,3 +10151,20 @@ usage=
 url=
 tags=
 id=601
+
+[SHADOW_RUN_UNKNOWN_USER_JOBS]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=Shadow Run Unknown User Jobs
+usage=
+url=
+tags=shadow
+id=602
+

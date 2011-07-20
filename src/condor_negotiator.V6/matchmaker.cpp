@@ -321,12 +321,24 @@ initialize ()
 #endif
 }
 
+static bool delayReinit;
+
 int Matchmaker::
 reinitialize ()
 {
 	char *tmp;
 	static bool first_time = true;
 	ExprTree *tmp_expr;
+
+	// If we got reconfig'ed in the middle of the negotiation cycle,
+	// don't reconfig now.  This code isn't safe wrt CommandSocket re-entrancy
+
+	if (daemonCore->InServiceCommandSocket()) {
+		delayReinit = true;
+		return true;
+	} else {
+		delayReinit = false;
+	}
 
     // (re)build the HGQ group tree from configuration
     // need to do this prior to initializing the accountant
@@ -950,6 +962,25 @@ void round_for_precision(double& x) {
 }
 
 
+double starvation_ratio(double usage, double allocated) {
+    return (allocated > 0) ? (usage / allocated) : DBL_MAX;
+}
+
+struct starvation_order {
+    bool operator()(const GroupEntry* a, const GroupEntry* b) const {
+        // "starvation order" is ordering by the ratio usage/allocated, so that
+        // most-starved groups are allowed to negotiate first, to minimize group
+        // starvation over time.
+        double sa = starvation_ratio(a->usage, a->allocated);
+        double sb = starvation_ratio(b->usage, b->allocated);
+        if (sa < sb) return true;
+        if (sa > sb) return false;
+        // If ratios are the same, sub-order by group priority.
+        // Most likely to be relevant when comparing groups with zero usage.
+        return (a->priority < b->priority);
+    }
+};
+
 
 void Matchmaker::
 negotiationTime ()
@@ -1109,6 +1140,7 @@ negotiationTime ()
             group->submitterAds->Close();
 
             group->usage = accountant.GetWeightedResourcesUsed(group->name.c_str());
+            group->priority = accountant.GetPriority(group->name.c_str());
         }
 
 
@@ -1234,6 +1266,10 @@ negotiationTime ()
                 ninc = param_double("HFS_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
             }
 
+            // present accounting groups for negotiation in "starvation order":
+            vector<GroupEntry*> negotiating_groups(hgq_groups);
+            std::sort(negotiating_groups.begin(), negotiating_groups.end(), starvation_order());
+
             // This loop implements "weighted round-robin" behavior to gracefully handle case of multiple groups competing
             // for same subset of available slots.  It gives greatest weight to groups with the greatest difference 
             // between allocated and their current usage
@@ -1245,8 +1281,11 @@ negotiationTime ()
                 dprintf(D_FULLDEBUG, "group quotas: entering RR iteration n= %g\n", n);
 
                 // Do the negotiations
-                for (vector<GroupEntry*>::iterator j(hgq_groups.begin());  j != hgq_groups.end();  ++j) {
+                for (vector<GroupEntry*>::iterator j(negotiating_groups.begin());  j != negotiating_groups.end();  ++j) {
                     GroupEntry* group = *j;
+
+                    dprintf(D_FULLDEBUG, "Group %s - starvation= %g (%g/%g)  prio= %g\n", 
+                            group->name.c_str(), starvation_ratio(group->usage, group->allocated), group->usage, group->allocated, group->priority);
 
                     if (group->allocated <= 0) {
                         dprintf(D_ALWAYS, "Group %s - skipping, zero slots allocated\n", group->name.c_str());
@@ -1257,7 +1296,12 @@ negotiationTime ()
                         dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g)\n", group->name.c_str(), group->usage);
                         continue;
                     }
-
+		    
+                    if (group->submitterAds->MyLength() <= 0) {
+                        dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
+                        continue;
+                    }
+		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
                     double delta = max(0.0, group->allocated - group->usage);
@@ -1272,7 +1316,7 @@ negotiationTime ()
 
                     negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight,
                                        startdAds, claimIds, *(group->submitterAds), 
-                                       slots, group->usage, group->name.c_str());
+                                       slots, group->name.c_str());
                 }
 
                 // Halt when we have negotiated with full deltas
@@ -1333,6 +1377,10 @@ negotiationTime ()
     negotiation_cycle_stats[0]->duration_phase2 -= negotiation_cycle_stats[0]->duration_phase4;
 
     negotiation_cycle_stats[0]->duration = completedLastCycleTime - negotiation_cycle_stats[0]->start_time;
+
+	if (delayReinit) {
+		this->reinitialize();
+	}
 
 	if (param_boolean("NEGOTIATOR_UPDATE_AFTER_CYCLE", false)) {
 		updateCollector();
@@ -1729,7 +1777,7 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
     for (unsigned long j = 0;  j < (groups.size()-1);  ++j) {
         if (allocated[j] > 0) {
             double s = hgq_allocate_surplus(groups[j], allocated[j]);
-            if (fabs(surplus) > 0.00001) {
+            if (fabs(s) > 0.00001) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: allocate-surplus (3): surplus= %g\n", s);
             }
         }
@@ -1960,6 +2008,22 @@ GroupEntry::~GroupEntry() {
 }
 
 
+void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
+	submitterAds.Open();
+	while (ClassAd* ad = submitterAds.Next()) {
+        int idle = 0;
+        ad->LookupInteger(ATTR_IDLE_JOBS, idle);
+
+        if (idle <= 0) {
+            std::string submitterName;
+            ad->LookupString(ATTR_NAME, submitterName);
+            dprintf(D_FULLDEBUG, "Ignoring submitter %s with no idle jobs\n", submitterName.c_str());
+            submitterAds.Remove(ad);
+        }
+    }
+}
+
+
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
 					 double untrimmedSlotWeightTotal,
@@ -1967,7 +2031,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					 ClassAdListDoesNotDeleteAds& startdAds,
 					 ClaimIdHash& claimIds, 
 					 ClassAdListDoesNotDeleteAds& scheddAds, 
-					 float groupQuota, float groupusage,const char* groupAccountingName)
+					 float groupQuota, const char* groupName)
 {
     time_t start_time_phase3 = time(NULL);
 	ClassAd		*schedd;
@@ -1988,7 +2052,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	double 		pieLeftOrig;
 	int         scheddAdsCountOrig;
 	int			totalTime;
-	bool ignore_schedd_limit;
 	int			num_idle_jobs;
 	time_t		startTime;
 	
@@ -2006,11 +2069,28 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	do {
 		spin_pie++;
 
+        // On the first spin of the pie we tell the negotiate function to ignore the
+        // submitterLimit w/ respect to jobs which are strictly preferred by resource 
+        // offers (via startd rank).  However, if preemption is not being considered, 
+        // we respect submitter limits on all iterations.
+        const bool ignore_submitter_limit = ((spin_pie == 1) && ConsiderPreemption);
+
+        double groupusage = (NULL != groupName) ? accountant.GetWeightedResourcesUsed(groupName) : 0.0;
+        if (!ignore_submitter_limit && (NULL != groupName) && (groupusage >= groupQuota)) {
+            // If we've met the group quota, and if we are paying attention to submitter limits, halt now
+            dprintf(D_ALWAYS, "Group %s is using its quota %g - halting negotiation\n", groupName, groupQuota);
+            break;
+        }
 			// invalidate the MatchList cache, because even if it is valid
 			// for the next user+auto_cluster being considered, we might
 			// have thrown out matches due to SlotWeight being too high
 			// given the schedd limit computed in the previous pie spin
 		DeleteMatchList();
+
+        // filter submitters with no idle jobs to avoid unneeded computations and log output
+        if (!ConsiderPreemption) {
+            filter_submitters_no_idle(scheddAds);
+        }
 
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
@@ -2028,7 +2108,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
 		calculatePieLeft(
 			scheddAds,
-			groupAccountingName,
+			groupName,
 			groupQuota,
 			groupusage,
 			maxPrioValue,
@@ -2056,6 +2136,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
         // "schedd" seems to be used interchangeably with "submitter" here
 		while( (schedd = scheddAds.Next()) )
 		{
+            if (!ignore_submitter_limit && (NULL != groupName) && (accountant.GetWeightedResourcesUsed(groupName) >= groupQuota)) {
+                // If we met group quota, and if we're respecting submitter limits, halt.
+                // (output message at top of outer loop above)
+                break;
+            }
 			// get the name of the submitter and address of the schedd-daemon it came from
 			if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
 				!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
@@ -2100,7 +2185,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
 			calculateSubmitterLimit(
 				scheddName.Value(),
-				groupAccountingName,
+				groupName,
 				groupQuota,
 				groupusage,
 				maxPrioValue,
@@ -2184,11 +2269,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				if ( (submitterLimit <= 0 || pieLeft < minSlotWeight) && spin_pie > 1 ) {
 					result = MM_RESUME;
 				} else {
-					if ( spin_pie == 1 && ConsiderPreemption ) {
-						ignore_schedd_limit = true;
-					} else {
-						ignore_schedd_limit = false;
-					}
 					int numMatched = 0;
 					startTime = time(NULL);
 					double limitUsed = 0.0;
@@ -2200,7 +2280,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					result=negotiate( scheddName.Value(),schedd,submitterPrio,
 								  submitterAbsShare, submitterLimit,
 								  startdAds, claimIds, 
-								  scheddVersion, ignore_schedd_limit,
+								  scheddVersion, ignore_submitter_limit,
 								  startTime, numMatched, limitUsed, pieLeft);
 					updateNegCycleEndTime(startTime, schedd);
 				}
@@ -2247,7 +2327,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 		scheddAds.Close();
 		dprintf( D_FULLDEBUG, " resources used scheddUsed= %f\n",scheddUsed);
 
-		groupusage = scheddUsed;
 	} while ( ( pieLeft < pieLeftOrig || scheddAds.MyLength() < scheddAdsCountOrig )
 			  && (scheddAds.MyLength() > 0)
 			  && (startdAds.MyLength() > 0) );
@@ -2570,6 +2649,25 @@ obtainAdsFromCollector (
 				// CRUFT: Before 7.3.2, submitter ads had a MyType of
 				//   "Scheduler". The only way to tell the difference
 				//   was that submitter ads didn't have ATTR_NUM_USERS.
+
+            MyString subname;
+            if (!ad->LookupString(ATTR_NAME, subname)) {
+                dprintf(D_ALWAYS, "WARNING: ignoring submitter ad with no name\n");
+                continue;
+            }
+
+            int numidle=0;
+            ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
+            int numrunning=0;
+            ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
+            int requested = numrunning + numidle;
+
+            // This will avoid some wasted effort in negotiation looping
+            if (requested <= 0) {
+                dprintf(D_FULLDEBUG, "Ignoring submitter %s with no requested jobs\n", subname.Value());
+                continue;
+            }
+
     		ad->Assign(ATTR_TOTAL_TIME_IN_CYCLE, 0);
 			scheddAds.Insert(ad);
 		}
@@ -2808,6 +2906,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		// It also performs the important function of draining out
 		// any reschedule requests queued up on our command socket, so
 		// we do not negotiate over & over unnecesarily.
+
 		daemonCore->ServiceCommandSocket();
 
 		currentTime = time(NULL);
@@ -2921,7 +3020,7 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		request.Assign(ATTR_SUBMITTER_USER_PRIO , (float)priority );  
 		// next insert the submitter user usage attributes into the request
 		request.Assign(ATTR_SUBMITTER_USER_RESOURCES_IN_USE, 
-					   accountant.GetResourcesUsed ( scheddName ));
+					   accountant.GetWeightedResourcesUsed ( scheddName ));
 		float temp_groupQuota, temp_groupUsage;
 		bool is_group = false;
 		if (getGroupInfoFromUserId(scheddName,temp_groupQuota,temp_groupUsage))
@@ -3065,6 +3164,19 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		if (result == MM_NO_MATCH) 
 		{
 			numMatched--;		// haven't used any resources this cycle
+
+            if (rejForSubmitterLimit && !ConsiderPreemption && !accountant.UsingWeightedSlots()) {
+                // If we aren't considering preemption and slots are unweighted, then we can
+                // be done with this submitter when it hits its submitter limit
+                dprintf (D_ALWAYS, "    Hit submitter limit: done negotiating\n");
+                // stop negotiation and return MM_RESUME
+                // we don't want to return with MM_DONE because
+                // we didn't get NO_MORE_JOBS: there are jobs that could match 
+                // in later cycles with a quota redistribution
+                break;
+            }
+
+            // Otherwise continue trying with this submitter
 			continue;
 		}
 
@@ -3141,14 +3253,11 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 bool Matchmaker::
 SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft) 
 {
-	float SlotWeight = accountant.GetSlotWeight(candidate);
-		// the use of a fudge-factor 0.99 in the following is to be
-		// generous in case of very small round-off differences
-		// that I have observed in tests
-	if((used + SlotWeight) <= 0.99*allowed) {
-		return true;
-	}
-	if( used == 0 && allowed > 0 && pieLeft >= 0.99*SlotWeight ) {
+    double SlotWeight = accountant.GetSlotWeight(candidate);
+    if ((used + SlotWeight) <= allowed) {
+        return true;
+    }
+    if ((used <= 0) && (allowed > 0) && (pieLeft >= 0.99*SlotWeight)) {
 
 		// Allow user to round up once per pie spin in order to avoid
 		// "crumbs" being left behind that couldn't be taken by anyone
@@ -3444,7 +3553,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			}
 		}
 
-		if(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft))
+		/* Check that the submitter has suffient user priority to be matched with
+		   yet another machine. HOWEVER, do NOT perform this submitter limit
+		   check if we are negotiating only for startd rank, since startd rank
+		   preemptions should be allowed regardless of user priorities. 
+	    */
+		if( (candidatePreemptState != RANK_PREEMPTION) &&
+			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
 		{
 			rejForSubmitterLimit++;
 			continue;
@@ -4090,7 +4205,7 @@ addRemoteUserPrios( ClassAd	*ad )
 		prio = (float) accountant.GetPriority( remoteUser.Value() );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
 		ad->Assign(ATTR_REMOTE_USER_RESOURCES_IN_USE,
-			accountant.GetResourcesUsed( remoteUser.Value() ));
+			accountant.GetWeightedResourcesUsed( remoteUser.Value() ));
 		if (getGroupInfoFromUserId(remoteUser.Value(),
 									temp_groupQuota,temp_groupUsage))
 		{
@@ -4142,7 +4257,7 @@ addRemoteUserPrios( ClassAd	*ad )
 			buffer.sprintf("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_RESOURCES_IN_USE);
 			ad->Assign(buffer.Value(),
-					accountant.GetResourcesUsed(remoteUser.Value()));
+					accountant.GetWeightedResourcesUsed(remoteUser.Value()));
 			if (getGroupInfoFromUserId(remoteUser.Value(),
 										temp_groupQuota,temp_groupUsage))
 			{

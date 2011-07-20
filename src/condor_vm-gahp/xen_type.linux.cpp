@@ -372,8 +372,10 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
     }
   input_strings.append(classad_string.Value());
   
-  vmprintf(D_FULLDEBUG, "LIBVIRT_XML_SCRIPT_ARGS input_strings= %s\n", input_strings.print_to_string() );
-  
+  tmp = input_strings.print_to_string();
+  vmprintf(D_FULLDEBUG, "LIBVIRT_XML_SCRIPT_ARGS input_strings= %s\n", tmp);
+  free(tmp);
+
   int ret = systemCommand(args, PRIV_ROOT, &output_strings, &input_strings, &error_strings, false);
   error_strings.rewind();
   if(ret != 0)

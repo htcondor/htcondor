@@ -96,7 +96,10 @@ SetAttributeStringByConstraint(const char *con, const char *name,
 							 SetAttributeFlags_t flags)
 {
 	MyString buf;
+	MyString escape_buf;
 	int rval;
+
+	val = ClassAd::EscapeStringValue(val,escape_buf);
 
 	buf += '"';
 	buf +=  val;

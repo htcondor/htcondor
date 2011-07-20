@@ -996,7 +996,7 @@ void main_init (int argc, char ** const argv) {
 	// of the parsing, copies of the dagman.dagFile string list happen which
 	// mess up the iteration of this list.
 	char *str = dagman.dagFiles.print_to_delimed_string();
-	StringList sl(str);
+	StringList sl(str ? str : "");
 	free(str);
 	sl.rewind();
 	while ( (dagFile = sl.next()) != NULL ) {
@@ -1012,7 +1012,11 @@ void main_init (int argc, char ** const argv) {
 							dagman.multiDags, dagman.maxRescueDagNum,
 							true );
 			}
-
+			
+			dagman.dag->RemoveRunningJobs(dagman, true);
+			unlink( lockFileName );
+			dagman.CleanUp();
+			
 				// Note: debug_error calls DC_Exit().
         	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
 					 	dagFile );
