@@ -361,6 +361,7 @@ our %submit_info = (
 	'x86_64_rhap_6.0'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL' => 'OFF',
 			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,

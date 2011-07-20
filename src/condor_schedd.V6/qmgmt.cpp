@@ -2427,10 +2427,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	if( !PrioRecArrayIsDirty ) {
 		if( strcasecmp(attr_name, ATTR_ACCOUNTING_GROUP) == 0 ||
             strcasecmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
-			PrioRecArrayIsDirty = true;
+			DirtyPrioRecArray();
 		} else if( strcasecmp(attr_name, ATTR_JOB_STATUS) == 0 ) {
 			if( atoi(attr_value) == IDLE ) {
-				PrioRecArrayIsDirty = true;
+				DirtyPrioRecArray();
 			}
 		}
 		if(PrioRecArrayIsDirty) {
@@ -4766,7 +4766,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 						// is no longer AlreadyMatched() unless we
 						// set it here and keep rebuilding the array.
 
-					PrioRecArrayIsDirty = true;
+					DirtyPrioRecArray();
 				}
 				else {
 
