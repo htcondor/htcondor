@@ -137,24 +137,28 @@ AddAttribute(compat_classad::ClassAd &ad, const char *name, Variant::Map &job)
 
     classad::Value value;
     ad.EvaluateExpr(expr,value);
+
+		// Non-LITERAL_NODEs and LITERAL_NODES of type ERROR,
+		// UNDEFINED or BOOLEAN are Expressions.
+	if (expr->GetKind() != ExprTree::LITERAL_NODE ||
+		(expr->GetKind() == ExprTree::LITERAL_NODE &&
+		 (value.GetType() == classad::Value::ERROR_VALUE ||
+		  value.GetType() == classad::Value::UNDEFINED_VALUE ||
+		  value.GetType() == classad::Value::BOOLEAN_VALUE))) {
+		if (!descriptors) {
+				// start a new type map
+			descriptors = new Variant::Map();
+			(*descriptors)[name] = EXPR_TYPE;
+				// deep copy
+			job[TYPEMAP_KEY] = *descriptors;
+			delete descriptors;
+		}
+		else {
+			(*descriptors)[name] = EXPR_TYPE;
+		}
+	}
+
 	switch (value.GetType()) {
-        // TODO: does this cover expressions also?
-        case classad::Value::BOOLEAN_VALUE:
-			{
-				if (!descriptors) {
-					// start a new type map
-					descriptors = new Variant::Map();
-					(*descriptors)[name] = EXPR_TYPE;
-					// deep copy
-					job[TYPEMAP_KEY] = *descriptors;
-					delete descriptors;
-				}
-				else {
-					(*descriptors)[name] = EXPR_TYPE;
-				}
-				job[name] = TrimQuotes(ExprTreeToString(expr));
-			}
-			break;
         case classad::Value::INTEGER_VALUE:
             int i;
             value.IsIntegerValue (i);
@@ -165,6 +169,9 @@ AddAttribute(compat_classad::ClassAd &ad, const char *name, Variant::Map &job)
             value.IsRealValue(d);
 			job[name] = d;
 			break;
+        case classad::Value::ERROR_VALUE:
+        case classad::Value::UNDEFINED_VALUE:
+        case classad::Value::BOOLEAN_VALUE:
         case classad::Value::STRING_VALUE:
 		default:
             job[name] = TrimQuotes(ExprTreeToString(expr));
