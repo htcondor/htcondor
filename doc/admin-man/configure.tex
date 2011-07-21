@@ -5881,13 +5881,18 @@ do not specify their own with:
 
 \label{param:SubmitSkipFilechecks}
 \item[\Macro{SUBMIT\_SKIP\_FILECHECKS}]
-  If True, \Condor{submit} behaves as if the \Opt{-d} 
+  If \Expr{True}, \Condor{submit} behaves as if the \Opt{-disable} 
   command-line option is used.
-  This tells \Condor{submit} to disable file permission checks when
-  submitting a job.
+  This tells \Condor{submit} to disable file permission checks 
+  when submitting a job
+  for read permissions on all input files, such as those defined by
+  commands \SubmitCmd{input} and \SubmitCmd{transfer\_input\_files},
+  as well as write permission to output files, such as a
+  log file defined by \SubmitCmd{log} and output files defined with 
+  \SubmitCmd{output} or \SubmitCmd{transfer\_output\_files}.
   This can significantly decrease the amount of time required to submit
   a large group of jobs.
-  The default value is False.
+  The default value is \Expr{False}.
 
 \label{param:WarnOnUnusedSubmitFileMacros}
 \item[\Macro{WARN\_ON\_UNUSED\_SUBMIT\_FILE\_MACROS}]
