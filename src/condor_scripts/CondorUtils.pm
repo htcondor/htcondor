@@ -62,11 +62,11 @@ sub SIGNAL {
 		my $matches = scalar(grep(/^\Q$signal\E$/, @exsig));
 
 		#if ($matches == 0) {
-    		#print "Not found\n";
+    	#	print "SIGNAL: Not found exsig=@exsig signaled=$signaled signal=$signal return=$ret\n";
 		#} elsif ($matches == 1) {
-    		#print "Found\n";
+    	#	print "SIGNAL: Found exsig=@exsig signaled=$signaled signal=$signal return=$ret\n";
 		#} else {
-    		#die "Errant regex specification, matched too many!";
+    	#	die "SIGNAL: Errant regex specification, matched too many!";
 		#}
 
 		if($signaled && ($matches == 1)) {
@@ -104,6 +104,7 @@ sub SIGNAL {
 sub runcmd {
 	my $args = shift;
 	my $options = shift;
+	my $cmd = undef;
 	my $t0 = 0.1;
 	my $t1 = 0.1;
 	my $signal = 0;
@@ -131,6 +132,7 @@ sub runcmd {
 		emit_output
 		expect_result
 		use_system
+		sh_wrap
 		);
 
 	foreach my $key (keys %{$options}) {
@@ -145,7 +147,7 @@ sub runcmd {
 		#print "$key\n";
 	#}
 
-	my $rc = 0;
+	my $rc = undef;
 	my @outlines;
 	my @errlines;
 
@@ -162,7 +164,13 @@ sub runcmd {
 		$rc = system("$args");
 		$t1 = [Time::HiRes::gettimeofday];
 	} else {
-		$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, "/bin/sh -c \'$args\'");
+		if(${$options}{sh_wrap} == TRUE) {
+			$cmd = "/bin/sh -c \'$args\'";
+		} else {
+			$cmd = $args;
+		}
+
+		$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, $cmd);
 
 		my $bulkout = "";
 		my $bulkerror = "";
@@ -233,8 +241,9 @@ sub runcmd {
 		@errlines = split /\n/, $bulkerror;
 		map {$_.= "\n"} @errlines;
 
-		waitpid($childpid, 0);
-		$rc = $? & 0xffff;
+		die "ERROR: waitpid failed to reap pid $childpid!" 
+			if ($childpid != waitpid($childpid, 0));
+		$rc = $?;
 
 		$t1 = [Time::HiRes::gettimeofday];
 	}
@@ -276,25 +285,34 @@ sub runcmd {
 }
 
 sub ProcessReturn {
-	my $rc = shift;
+	my ($status) = @_;
+	my $rc = -1;
 	my $signal = 0;
 	my @result;
-	if ($rc == 0) {
-		#print "ran with normal exit\n";
-	} elsif ($rc == 0xff00) {
-		#print "command failed: $!\n";
-	} elsif (($rc & 0xff) == 0) {
-		$rc >>= 8;
-		#print "ran with non-zero exit status $rc\n";
+
+	#print "ProcessReturn: Entrance status " . sprintf("%x", $status) . "\n";
+	if ($status == -1) {
+		# failed to execute, how do I represent this? Choose -1 for now
+		# since that is an impossible unix return code.
+		$rc = -1;
+		#print "ProcessReturn: Process Failed to Execute.\n";
+	} elsif ($status & 0x7f) {
+		# died with signal and maybe coredump.
+		# Ignore the fact a coredump happened for now.
+
+		# XXX Stupidly, we also make the return code the same as the 
+		# signal. This is a legacy decision I don't want to change now because
+		# I don't know how big the ramifications will be.
+		$signal = $status & 0x7f;
+		$rc = $signal;
+		#print "ProcessReturn: Died with Signal: $signal\n";
 	} else {
-		#print "ran with ";
-		if ($rc &   0x80) {
-			$rc &= ~0x80;
-			#print "coredump from ";
-		}
-		#print "signal $rc\n";
-		$signal = $rc;
+		# Child returns valid exit code
+		$rc = $status >> 8;
+		#print "ProcessReturn: Exited normally $rc\n";
 	}
+
+	#print "ProcessReturn: return=$rc, signal=$signal\n";
 	push @result, $rc;
 	push @result, $signal;
 	return @result;
@@ -321,6 +339,11 @@ sub SetDefaults {
 	# use_system
 	if(!(exists ${$options}{use_system})) {
 		${$options}{use_system} = FALSE;
+	}
+
+	# sh_wrap: wrap the arguments to runcmd with "/bin/sh -c ..."
+	if(!(exists ${$options}{sh_wrap})) {
+		${$options}{sh_wrap} = TRUE;
 	}
 
 }
