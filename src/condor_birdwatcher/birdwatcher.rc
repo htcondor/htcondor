@@ -7,7 +7,23 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "winres.h"
+#include "winresrc.h"
+
+////////////////////////////////////////////////
+// crib'd hackery to support winresrc.h in newer SDK builds
+// operation messages sent to DLGINIT
+#define LB_ADDSTRING    (WM_USER+1)
+#define CB_ADDSTRING    (WM_USER+3)
+
+#ifdef APSTUDIO_INVOKED
+#undef APSTUDIO_HIDDEN_SYMBOLS
+#endif
+
+#ifdef IDC_STATIC
+#undef IDC_STATIC
+#endif
+#define IDC_STATIC      (-1)
+////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS

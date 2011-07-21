@@ -153,7 +153,9 @@ DLL_IMPORT_MAGIC int access(const char *, int);
 #define S_ISREG(mode) (((mode)&_S_IFREG) == _S_IFREG)
 #define rint(num) ((num<0.)? -floor(-num+.5):floor(num+.5))
 
+#ifndef ETIMEDOUT
 #define ETIMEDOUT ERROR_TIMEOUT
+#endif
 
 /* Some missing ERRNO values.... */
 #ifndef ETXTBSY

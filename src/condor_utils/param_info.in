@@ -3558,7 +3558,7 @@ id=189
 
 [CREATE_CORE_FILES]
 aliases=
-default=
+default=FALSE
 version=0.0.0
 range=.*
 state=default

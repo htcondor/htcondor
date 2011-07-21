@@ -99,6 +99,10 @@
 #endif
 #endif
 
+#if defined(WINDOWS) && !defined(MAXINT)
+	#define MAXINT INT_MAX
+#endif
+
 #define DEFAULT_SHADOW_SIZE 800
 #define DEFAULT_JOB_START_COUNT 1
 

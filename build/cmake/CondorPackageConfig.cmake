@@ -157,8 +157,8 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}")
 	set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CONDOR_VERSION}")
 
-	# create the WIX package input file (win.xsl) even if we aren't doing packaging.
-	#
+	############################################################
+	# create the WIX package input file (condor.xsl) even if we aren't doing packaging.
     set (CONDOR_WIX_LOC ${CONDOR_SOURCE_DIR}/msconfig/WiX)
 
     # branding and licensing
@@ -169,26 +169,35 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
     set (CPACK_WIX_UPGRADE_GUID "ef96d7c4-29df-403c-8fab-662386a089a4")
     
     set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorUpHostDlg.wxs)
-
-	# At present we only currently support VC90, but we could change
-    find_file( CPACK_VC_MERGE_MODULE 
-               Microsoft_VC90_CRT_x86.msm
-               "C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
-
-    find_file( CPACK_VC_POLICY_MODULE 
-               policy_9_0_Microsoft_VC90_CRT_x86.msm
-               "C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
-			   
 	set (CPACK_WIX_BITMAP_FOLDER Bitmaps)
-	configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl @ONLY)
-	
 	set (CPACK_WIX_BITMAP_FOLDER ${CONDOR_WIX_LOC}/Bitmaps)
 
-    # the configure file f(n) will replace @CMAKE_XYZ@ with their value
-    configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl @ONLY)
-        
-	set (CPACK_GENERATOR "ZIP")
-	
+	#setup all the merge module settings.
+	if (MSVC90)
+		set (VC_CRT_MSM Microsoft_VC90_CRT_x86.msm)
+		find_file( CPACK_VC_POLICY_MODULE 
+               policy_9_0_Microsoft_VC90_CRT_x86.msm
+               "C:/Program Files/Common Files/Merge #Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+		set (WIX_MERGE_MODLES "<Merge Id=\"VCPolicy\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_POLICY_MODULE}\"/>")
+		set (WIX_MERGE_REFS "<MergeRef Id=\"VCPolicy\"/>")
+	elseif(MSVC10)
+		set (VC_CRT_MSM Microsoft_VC100_CRT_x86.msm)
+	else()
+		message(FATAL_ERROR "unsupported compiler version")
+	endif()
+
+	# look for the all important C-runtime
+    find_file( CPACK_VC_MERGE_MODULE 
+               ${VC_CRT_MSM}
+               "C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+
+	set (WIX_MERGE_MODLES "<Merge Id=\"VCCRT\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_MERGE_MODULE}\"/>\n${WIX_MERGE_MODLES}")
+	set (WIX_MERGE_REFS "<MergeRef Id=\"VCCRT\"/>\n${WIX_MERGE_REFS}")
+    		   
+	configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl @ONLY)
+	    
+    set (CPACK_GENERATOR "ZIP")
+		
 	install ( FILES ${CPACK_WIX_WXS_FILES} ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl
 			DESTINATION ${C_ETC}/WiX/xml )
 	
