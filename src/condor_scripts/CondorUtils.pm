@@ -164,13 +164,7 @@ sub runcmd {
 		$rc = system("$args");
 		$t1 = [Time::HiRes::gettimeofday];
 	} else {
-		if(${$options}{sh_wrap} == TRUE) {
-			$cmd = "/bin/sh -c \'$args\'";
-		} else {
-			$cmd = $args;
-		}
-
-		$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, $cmd);
+		$childpid = IPC::Open3::open3(\*IN, \*OUT, \*ERR, $args);
 
 		my $bulkout = "";
 		my $bulkerror = "";

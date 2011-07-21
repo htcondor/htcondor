@@ -75,7 +75,7 @@ print "Starting standalone checkpointing test. Will checkpoint to $ckptfile.\n";
 $ret = runcmd("$pers_fix ./$testname -_condor_aggravate_bugs -_condor_D_CKPT " .
 			"-_condor_D_FULLDEBUG -_condor_D_ALWAYS " .
 			"-_condor_ckpt ./$ckptfile",
-		{expect_result => SIGNAL(12), sh_wrap => FALSE});
+		{expect_result => SIGNAL(12)});
 
 # Check the stderr, which contains the checkpoint debug output.
 $last = pop @{$ret->{'stderr'}};
@@ -102,7 +102,7 @@ print "Resuming standalone checkpointing test. Will resume from $ckptfile.\n";
 $ret = runcmd("$pers_fix ./$testname -_condor_aggravate_bugs -_condor_D_CKPT " .
 			"-_condor_D_FULLDEBUG -_condor_D_ALWAYS " .
 			"-_condor_restart ./$ckptfile",
-			{sh_wrap => FALSE});
+			{});
 
 # Check the stderr, which contains the resumed job debug output.
 $last = pop @{$ret->{'stderr'}};
