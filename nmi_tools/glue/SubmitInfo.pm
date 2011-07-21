@@ -308,7 +308,7 @@ our %submit_info = (
 	'x86_64_deb_6.0' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
-								  '-DCLIPPED:BOOL' => 'ON',
+								  '-DCLIPPED:BOOL' => 'OFF',
 			},
 			'prereqs'	=> [ 'cmake-2.8.3' ],
 			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
@@ -320,7 +320,6 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
-
 
 	##########################################################################
 	# Platform DEB 6 on x86_64 (updated)
