@@ -321,10 +321,7 @@ our %submit_info = (
 	'x86_64_deb_6.0' => {
     	'build' => {
         	'configure_args' => { @default_build_configure_args,
-                              	'-DCLIPPED:BOOL=ON' => undef,
-                              	'-DWITH_KRB5:BOOL=OFF' => undef,
-                              	'-DWITH_CREAM:BOOL=OFF' => undef,
-                              	'-DWITH_COREDUMPER:BOOL=OFF' => undef,
+                              	'-DCLIPPED:BOOL=OFF' => undef,
         	},
         	'prereqs'   => [ 'cmake-2.8.3' ],
         	'xtests'    =>  [ 'x86_64_ubuntu_10.04', ],
