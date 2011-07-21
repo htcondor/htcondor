@@ -178,6 +178,7 @@ class Job {
 	job_type_t JobType() const;
 
 	bool AddPreScript( const char *cmd, MyString &whynot );
+	bool AddPreSkip( int exitCode, MyString &whynot );
 	bool AddPostScript( const char *cmd, MyString &whynot );
 	bool AddScript( bool post, const char *cmd, MyString &whynot );
 
@@ -412,6 +413,9 @@ class Job {
 	*/
 	time_t GetLastEventTime() { return _lastEventTime; }
 
+	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
+	int GetPreSkip() const;
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -587,6 +591,16 @@ private:
 
 		// The time of the most recent event related to this job.
 	time_t _lastEventTime;
+
+		// Skip the rest of the node (and consider it successful) if the
+		// PRE script exits with this value.  (-1 means undefined.)
+	int _preskip;
+
+	enum {
+		PRE_SKIP_INVALID = -1,
+		PRE_SKIP_MIN = 0,
+		PRE_SKIP_MAX = 0xff
+	};
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

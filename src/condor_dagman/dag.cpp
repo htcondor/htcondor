@@ -1515,30 +1515,48 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		EXCEPT( "Error: node %s is not in PRERUN state", job->GetJobName() );
 	}
 
-	if( WIFSIGNALED( status ) || WEXITSTATUS( status ) != 0 ) {
+	if( WIFSIGNALED( status ) ||  WEXITSTATUS( status ) != 0 ) {
+		int preskip_interrogator = 0;
 		// if script returned failure or was killed by a signal
 		if( WIFSIGNALED( status ) ) {
 			// if script was killed by a signal
 			debug_printf( DEBUG_QUIET, "PRE Script of Job %s died on %s\n",
-						  job->GetJobName(),
-						  daemonCore->GetExceptionString(status) );
+				job->GetJobName(),
+				daemonCore->GetExceptionString(status) );
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-					"PRE Script died on %s",
-					daemonCore->GetExceptionString(status) );
-            job->retval = ( 0 - WTERMSIG(status ) );
-		}
-		else if( WEXITSTATUS( status ) != 0 ) {
+				"PRE Script died on %s",
+				daemonCore->GetExceptionString(status) );
+			job->retval = ( 0 - WTERMSIG(status ) );
+		} else if( (preskip_interrogator = WEXITSTATUS( status )) != 0 ) {
+				// Implementation of PRE_SKIP option...
+			if( job->HasPreSkip() && preskip_interrogator == job->GetPreSkip() ){
+					// The PRE script exited with a non-zero status, but
+					// because that status matches the PRE_SKIP value,
+					// we're skipping the node job (and POST script, if
+					// there is one) and considering the node successful.
+				const char* s = job->GetDagFile();
+				debug_printf( DEBUG_NORMAL, "PRE_SKIP return "
+					"value %d indicates we are done with node %s, "
+					"from dag file %s\n",
+					 preskip_interrogator, job->GetJobName(),
+					 s?s:"(unknown)" );
+				_jobstateLog.WriteScriptSuccessOrFailure( job, false );
+				job->retval = 0; // Job _is_ successful!
+				_jobstateLog.WriteJobSuccessOrFailure( job );
+				TerminateJob( job, false, false );
+				goto pre_skip_fake_success;
+			}
 			// if script returned failure
 			debug_printf( DEBUG_QUIET,
-						  "PRE Script of Job %s failed with status %d\n",
-						  job->GetJobName(), WEXITSTATUS(status) );
+					"PRE Script of Job %s failed with status %d\n",
+					job->GetJobName(), WEXITSTATUS(status) );
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
 					"PRE Script failed with status %d",
 					WEXITSTATUS(status) );
-            job->retval = WEXITSTATUS( status );
+			job->retval = WEXITSTATUS( status );
 		}
 
-        job->_Status = Job::STATUS_ERROR;
+		job->_Status = Job::STATUS_ERROR;
 		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 
@@ -1550,31 +1568,28 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				// add # of retries to error_text
 				char *tmp = strnewp( job->error_text );
 				snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-						 "%s (after %d node retries)", tmp,
-						 job->GetRetries() );
+						"%s (after %d node retries)", tmp,
+						job->GetRetries() );
 				delete [] tmp;   
 			}
 		}
 	} else {
 		debug_printf( DEBUG_NORMAL, "PRE Script of Node %s completed "
-					  "successfully.\n", job->GetJobName() );
+			"successfully.\n", job->GetJobName() );
 		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
-		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( job, -job->_nodePriority );
 		} else {
 			_readyQ->Append( job, -job->_nodePriority );
 		}
+	pre_skip_fake_success:
+		_preRunNodeCount--;
+		job->retval = 0; // for safety on retries
 	}
-
-	bool abort = CheckForDagAbort(job, "PRE script");
+	CheckForDagAbort(job, "PRE script");
 	// if dag abort happened, we never return here!
-	if( abort ) {
-		return true;
-	}
-
 	return true;
 }
 
@@ -1936,12 +1951,14 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 				job->_Status == Job::STATUS_DONE ? "DONE" : "");
 
 			// Print the SCRIPT PRE line, if any.
-        if (job->_scriptPre != NULL) {
-            fprintf(fp, "SCRIPT PRE  %s %s\n", 
-                     job->GetJobName(), job->_scriptPre->GetCmd());
-        }
-
-			// Print the SCRIPT POST line, if any.
+		if (job->_scriptPre != NULL) {
+			fprintf(fp, "SCRIPT PRE  %s %s\n", 
+				job->GetJobName(), job->_scriptPre->GetCmd());
+		}
+		if ( job->HasPreSkip() != 0 ) {
+			fprintf( fp, "PRE_SKIP %s %d\n", job->GetJobName(), job->GetPreSkip() );
+		}
+		// Print the SCRIPT POST line, if any.
         if (job->_scriptPost != NULL) {
             fprintf(fp, "SCRIPT POST %s %s\n", 
                      job->GetJobName(), job->_scriptPost->GetCmd());

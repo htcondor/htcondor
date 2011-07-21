@@ -86,6 +86,8 @@ static bool parse_reject(Dag  *dag, const char *filename,
 		int  lineNumber);
 static bool parse_jobstate_log(Dag  *dag, const char *filename,
 		int  lineNumber);
+static bool parse_pre_skip(Dag *dag, const char* filename,
+		int lineNumber);
 static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
@@ -327,7 +329,13 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Handle a JOBSTATE_LOG spec
 		else if(strcasecmp(token, "JOBSTATE_LOG") == 0) {
 			parsed_line_successfully = parse_jobstate_log(dag,
-						filename, lineNumber);
+				filename, lineNumber);
+		}
+		
+		// Handle a PRE_SKIP
+		else if(strcasecmp(token, "PRE_SKIP") == 0) {
+			parsed_line_successfully = parse_pre_skip(dag,
+				filename, lineNumber);
 		}
 
 		// None of the above means that there was bad input.
@@ -335,7 +343,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"Expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
 				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS, "
-				"CONFIG, SPLICE or NODE_STATUS_FILE token\n",
+				"CONFIG, SPLICE, NODE_STATUS_FILE, or PRE_SKIP token\n",
 				filename, lineNumber );
 			parsed_line_successfully = false;
 		}
@@ -1802,6 +1810,93 @@ parse_jobstate_log(
 	}
 
 	dag->SetJobstateLogFileName( logFileName );
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_pre_skip
+// Purpose:  Tell dagman to skip execution if the PRE script exits with a
+//           a certain code
+//-----------------------------------------------------------------------------
+bool 
+parse_pre_skip( Dag  *dag, 
+	const char *filename, 
+	int  lineNumber)
+{
+	const char * example = "PRE_SKIP JobName Exitcode";
+	Job * job = NULL;
+	MyString whynot;
+
+		//
+		// second token is the JobName
+		//
+	const char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobNameOrig = jobName; // for error output
+	if ( jobName == NULL ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
+				filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	} else if ( isReservedWord(jobName) ) {
+		debug_printf( DEBUG_QUIET,
+				"%s (line %d): JobName cannot be a reserved word\n",
+				filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	} else {
+		debug_printf( DEBUG_DEBUG_1, "jobName: %s\n", jobName );
+		MyString tmpJobName = munge_job_name( jobName );
+		jobName = tmpJobName.Value();
+
+		job = dag->FindNodeByName( jobName );
+		if (job == NULL) {
+			debug_printf( DEBUG_QUIET, 
+					"%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
+			return false;
+		}
+	}
+
+		//
+		// The rest of the line consists of the exitcode
+		//
+	const char *exitCodeStr = strtok( NULL, DELIMITERS );
+	if ( exitCodeStr == NULL ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Missing exit code\n",
+				filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	char *tmp;
+	int exitCode = (int)strtol( exitCodeStr, &tmp, 10 );
+	if ( tmp == exitCodeStr ) {
+		debug_printf( DEBUG_QUIET,
+				"%s (line %d): Invalid exit code \"%s\"\n",
+				filename, lineNumber, exitCodeStr );
+		exampleSyntax( example );
+		return false;
+	}
+
+		//
+		// Anything else is garbage
+		//
+	const char *nextTok = strtok( NULL, DELIMITERS );
+	if ( nextTok ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+				"parameter \"%s\"\n", filename, lineNumber, nextTok );
+		exampleSyntax( example );
+		return false;
+	}
+
+	if ( !job->AddPreSkip( exitCode, whynot ) ) {
+		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): failed to add "
+				"PRE_SKIP note to node %s: %s\n",
+				filename, lineNumber, jobNameOrig,
+				whynot.Value() );
+		return false;
+	}
 	return true;
 }
 

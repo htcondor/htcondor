@@ -1,0 +1,5 @@
+JOB A job_dagman_pre_skip-B_A.cmd
+SCRIPT PRE A job_dagman_pre_skip-B_A.sh
+PRE_SKIP A 1
+JOB B job_dagman_pre_skip-B_B.cmd
+PARENT A CHILD B
