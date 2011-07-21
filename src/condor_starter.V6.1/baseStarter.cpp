@@ -1529,7 +1529,15 @@ CStarter::jobEnvironmentReady( void )
 		if (!jic->jobClassAd()->LookupInteger(ATTR_JOB_UNIVERSE, univ) ||
 		    (univ != CONDOR_UNIVERSE_VM))
 		{
-			m_privsep_helper->chown_sandbox_to_user();
+			PrivSepError err;
+			if( !m_privsep_helper->chown_sandbox_to_user(err) ) {
+				jic->notifyStarterError(
+					err.holdReason(),
+					true,
+					err.holdCode(),
+					err.holdSubCode());
+				EXCEPT("failed to chown sandbox to user");
+			}
 		}
 		else if( univ == CONDOR_UNIVERSE_VM ) {
 				// the vmgahp will chown the sandbox to the user
@@ -2197,13 +2205,31 @@ CStarter::PeriodicCkpt( void )
 
 			CondorPrivSepHelper* cpsh = condorPrivSepHelper();
 			if (cpsh != NULL) {
-				cpsh->chown_sandbox_to_condor();
+				PrivSepError err;
+				if( !cpsh->chown_sandbox_to_condor(err) ) {
+					jic->notifyStarterError(
+						err.holdReason(),
+						false,
+						err.holdCode(),
+						err.holdSubCode());
+					dprintf(D_ALWAYS,"failed to change sandbox to condor ownership before checkpoint");
+					return false;
+				}
 			}
 
 			bool transfer_ok = jic->uploadWorkingFiles();
 
 			if (cpsh != NULL) {
-				cpsh->chown_sandbox_to_user();
+				PrivSepError err;
+				if( !cpsh->chown_sandbox_to_user(err) ) {
+					jic->notifyStarterError(
+						err.holdReason(),
+						true,
+						err.holdCode(),
+						err.holdSubCode());
+					EXCEPT("failed to restore sandbox to user ownership after checkpoint");
+					return false;
+				}
 			}
 
 			// checkpoint files are successfully generated
@@ -2330,7 +2356,15 @@ CStarter::allJobsDone( void )
 		// processing on files in the sandbox
 	if (m_privsep_helper != NULL) {
 		if (jobUniverse != CONDOR_UNIVERSE_VM) {
-			m_privsep_helper->chown_sandbox_to_condor();
+			PrivSepError err;
+			if( !m_privsep_helper->chown_sandbox_to_condor(err) ) {
+				jic->notifyStarterError(
+					err.holdReason(),
+					false,
+					err.holdCode(),
+					err.holdSubCode());
+				EXCEPT("failed to chown sandbox to condor after job completed");
+			}
 		}
 	}
 
