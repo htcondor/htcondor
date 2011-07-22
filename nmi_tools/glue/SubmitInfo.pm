@@ -398,7 +398,7 @@ our %submit_info = (
 				'x86_64_rhap_5.2', 'x86_64_rhap_5.3', 'x86_64_rhap_5.3-updated',
 				'x86_64_sl_5.5',
 				'x86_64_opensuse_11.3-updated', 'x86_64_opensuse_11.4-updated',
-				'x86_64_rhap_6.0-updated',
+				'x86_64_rhap_6.1-updated',
 				],
 		},
 
