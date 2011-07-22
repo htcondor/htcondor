@@ -409,7 +409,7 @@ our %submit_info = (
 				'x86_64_fedora_13', 'x86_64_rhap_5.2',
 				'x86_64_fedora_12', 'x86_64_fedora_12-updated', 
 				'x86_64_fedora_13-updated',
-				'x86_64_rhap_6.0-updated' ],
+				'x86_64_rhap_6.1-updated' ],
 		},
 
 		'test' => {
