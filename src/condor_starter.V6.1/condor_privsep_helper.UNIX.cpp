@@ -24,7 +24,6 @@
 #include "condor_uid.h"
 #include "condor_arglist.h"
 #include "condor_daemon_core.h"
-#include "condor_holdcodes.h"
 
 bool CondorPrivSepHelper::s_instantiated = false;
 
@@ -117,8 +116,8 @@ CondorPrivSepHelper::get_uid()
 	return m_uid;
 }
 
-bool
-CondorPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
+void
+CondorPrivSepHelper::chown_sandbox_to_user()
 {
 	ASSERT(m_sandbox_initialized);
 
@@ -126,23 +125,19 @@ CondorPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
 		dprintf(D_FULLDEBUG,
 		        "CondorPrivSepHelper::chown_sandbox_to_user: "
 		        	"sandbox already user-owned\n");
-		return true;
+		return;
 	}
 
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to the user\n");
 	if (!privsep_chown_dir(m_uid, get_condor_uid(), m_sandbox_path)) {
-		err.setHoldInfo(
-			CONDOR_HOLD_CODE_PrivsepChownSandboxToUser, 0,
-			"error changing sandbox ownership to the user" );
-		return false;
+		EXCEPT("error changing sandbox ownership to the user");
 	}
 
 	m_sandbox_owned_by_user = true;
-	return true;
 }
 
-bool
-CondorPrivSepHelper::chown_sandbox_to_condor(PrivSepError &err)
+void
+CondorPrivSepHelper::chown_sandbox_to_condor()
 {
 	ASSERT(m_sandbox_initialized);
 
@@ -150,19 +145,15 @@ CondorPrivSepHelper::chown_sandbox_to_condor(PrivSepError &err)
 		dprintf(D_FULLDEBUG,
 		        "CondorPrivSepHelper::chown_sandbox_to_condor: "
 		        	"sandbox already condor-owned\n");
-		return true;
+		return;
 	}
 
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to condor\n");
 	if (!privsep_chown_dir(get_condor_uid(), m_uid, m_sandbox_path)) {
-		err.setHoldInfo(
-			CONDOR_HOLD_CODE_PrivsepChownSandboxToCondor, 0,
-			"error changing sandbox ownership to condor");
-		return false;
+		EXCEPT("error changing sandbox ownership to condor");
 	}
 
 	m_sandbox_owned_by_user = false;
-	return true;
 }
 
 int

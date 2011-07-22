@@ -61,14 +61,14 @@ public:
 
 	// change ownership of the sandbox to the user
 	//
-	bool chown_sandbox_to_user(PrivSepError &err);
+	void chown_sandbox_to_user();
 
 	// change our state to "sandbox is owned by user"
 	void set_sandbox_owned_by_user() { m_sandbox_owned_by_user=true; }
 
 	// change ownership of the sandbox to condor
 	//
-	bool chown_sandbox_to_condor(PrivSepError &err);
+	void chown_sandbox_to_condor();
 
 	// launch the job as the user
 	//

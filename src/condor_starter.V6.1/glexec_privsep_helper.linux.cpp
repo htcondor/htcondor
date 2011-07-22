@@ -27,8 +27,6 @@
 #include "fdpass.h"
 #include "my_popen.h"
 #include "globus_utils.h"
-#include "condor_holdcodes.h"
-#include "basename.h"
 
 GLExecPrivSepHelper::GLExecPrivSepHelper() :
 	 m_initialized(false),m_glexec(0),  m_sandbox(0), m_proxy(0),m_sandbox_owned_by_user(false)
@@ -72,7 +70,7 @@ GLExecPrivSepHelper::proxy_valid_right_now()
 
 
 int
-GLExecPrivSepHelper::run_script(ArgList& args,MyString &error_desc)
+GLExecPrivSepHelper::run_script(ArgList& args)
 {
 	if (!proxy_valid_right_now()) {
 		dprintf(D_ALWAYS, "GLExecPrivSepHelper::run_script: not invoking glexec since the proxy is not valid!\n");
@@ -91,18 +89,12 @@ GLExecPrivSepHelper::run_script(ArgList& args,MyString &error_desc)
 	while (str.readLine(fp, true));
 	int ret = my_pclose(fp);
 	if (ret != 0) {
-		str.trim();
 		dprintf(D_ALWAYS,
 		        "GLExecPrivSepHelper::run_script: %s exited "
 		            "with status %d and following output:\n%s\n",
 		        args.GetArg(0),
 		        ret,
 		        str.Value());
-		error_desc.sprintf_cat("%s exited with status %d and the following output: %s",
-				       condor_basename(args.GetArg(0)),
-				       ret,
-				       str.Value());
-		error_desc.replaceString("\n","; ");
 	}
 	return ret;
 }
@@ -147,8 +139,8 @@ GLExecPrivSepHelper::initialize(const char* proxy, const char* sandbox)
 	m_initialized = true;
 }
 
-bool
-GLExecPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
+void
+GLExecPrivSepHelper::chown_sandbox_to_user()
 {
 	ASSERT(m_initialized);
 
@@ -156,7 +148,7 @@ GLExecPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
 		dprintf(D_FULLDEBUG,
 		        "GLExecPrivSepHelper::chown_sandbox_to_user: "
 		            "sandbox already user-owned\n");
-		return true;
+		return;
 	}
 
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to the user\n");
@@ -166,21 +158,15 @@ GLExecPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
 	args.AppendArg(m_glexec);
 	args.AppendArg(m_proxy);
 	args.AppendArg(m_sandbox);
-	MyString error_desc = "error changing sandbox ownership to the user: ";
-	int rc = run_script(args,error_desc);
-	if( rc != 0) {
-		err.setHoldInfo(
-						CONDOR_HOLD_CODE_GlexecChownSandboxToUser, rc,
-						error_desc.Value());
-		return false;
+	if (run_script(args) != 0) {
+		EXCEPT("error changing sandbox ownership to the user");
 	}
 
 	m_sandbox_owned_by_user = true;
-	return true;
 }
 
-bool
-GLExecPrivSepHelper::chown_sandbox_to_condor(PrivSepError &err)
+void
+GLExecPrivSepHelper::chown_sandbox_to_condor()
 {
 	ASSERT(m_initialized);
 
@@ -188,7 +174,7 @@ GLExecPrivSepHelper::chown_sandbox_to_condor(PrivSepError &err)
 		dprintf(D_FULLDEBUG,
 		        "GLExecPrivSepHelper::chown_sandbox_to_condor: "
 		            "sandbox already condor-owned\n");
-		return true;
+		return;
 	}
 
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to condor\n");
@@ -198,17 +184,11 @@ GLExecPrivSepHelper::chown_sandbox_to_condor(PrivSepError &err)
 	args.AppendArg(m_glexec);
 	args.AppendArg(m_proxy);
 	args.AppendArg(m_sandbox);
-	MyString error_desc = "error changing sandbox ownership to condor: ";
-	int rc = run_script(args,error_desc);
-	if( rc != 0) {
-		err.setHoldInfo(
-			CONDOR_HOLD_CODE_GlexecChownSandboxToCondor, rc,
-			error_desc.Value());
-		return false;
+	if (run_script(args) != 0) {
+		EXCEPT("error changing sandbox ownership to condor");
 	}
 
 	m_sandbox_owned_by_user = false;
-	return true;
 }
 
 bool
@@ -228,8 +208,7 @@ GLExecPrivSepHelper::update_proxy(const char* new_proxy)
 	args.AppendArg(m_proxy);
 	args.AppendArg(m_sandbox);
 
-	MyString error_desc;
-	return (run_script(args,error_desc) == 0);
+	return (run_script(args) == 0);
 }
 
 int

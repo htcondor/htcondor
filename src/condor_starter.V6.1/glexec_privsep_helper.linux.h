@@ -38,14 +38,14 @@ public:
 
 	// change ownership of the sandbox to the user
 	//
-	bool chown_sandbox_to_user(PrivSepError &err);
+	void chown_sandbox_to_user();
 
 	// change our state to "sandbox is owned by user"
 	void set_sandbox_owned_by_user() { m_sandbox_owned_by_user=true; }
 
 	// change ownership of the sandbox to condor
 	//
-	bool chown_sandbox_to_condor(PrivSepError &err);
+	void chown_sandbox_to_condor();
 
 	// drop an updated proxy into the job sandbox
 	//
@@ -75,7 +75,7 @@ private:
 
 	// helper for calling out to scripts
 	//
-	int run_script(ArgList&,MyString &error_desc);
+	int run_script(ArgList&);
 
 	// helper for interfacing with condor_glexec_wrapper
 	int feed_wrapper(int pid,
