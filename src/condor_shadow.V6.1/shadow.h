@@ -81,16 +81,6 @@ class UniShadow : public BaseShadow
 
 	bool supportsReconnect( void );
 
-	/**
-	 * override to allow starter+shadow to gracefully exit 
-	 */
-	virtual void removeJob( const char* reason );
-	
-	/**
-	 * override to allow starter+shadow to gracefully exit 
-	 */
-	virtual void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
-	
 		/**
 		 */
 	int handleJobRemoval(int sig);

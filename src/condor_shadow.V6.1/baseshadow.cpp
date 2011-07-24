@@ -398,7 +398,7 @@ BaseShadow::reconnectFailed( const char* reason )
 
 
 void
-BaseShadow::holdJobPre( const char* reason, int hold_reason_code, int hold_reason_subcode )
+BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
 	dprintf( D_ALWAYS, "Job %d.%d going into Hold state (code %d,%d): %s\n", 
 			 getCluster(), getProc(), hold_reason_code, hold_reason_subcode,reason );
@@ -425,14 +425,7 @@ BaseShadow::holdJobPre( const char* reason, int hold_reason_code, int hold_reaso
 		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
-}
-
-void
-BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
-{
-	this->holdJobPre(reason, hold_reason_code, hold_reason_subcode);
-	
-	// finally, exit and tell the schedd what to do
+		// finally, exit and tell the schedd what to do
 	DC_Exit( JOB_SHOULD_HOLD );
 }
 
@@ -482,7 +475,8 @@ BaseShadow::mockTerminateJob( MyString exit_reason,
 }
 
 
-void BaseShadow::removeJobPre( const char* reason )
+void
+BaseShadow::removeJob( const char* reason )
 {
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In removeJob() w/ NULL JobAd!" );
@@ -490,10 +484,10 @@ void BaseShadow::removeJobPre( const char* reason )
 	dprintf( D_ALWAYS, "Job %d.%d is being removed: %s\n", 
 			 getCluster(), getProc(), reason );
 
-	// cleanup this shadow (kill starters, etc)
+		// cleanup this shadow (kill starters, etc)
 	cleanUp();
 
-	// Put the reason in our job ad.
+		// Put the reason in our job ad.
 	int size = strlen( reason ) + strlen( ATTR_REMOVE_REASON ) + 4;
 	char* buf = (char*)malloc( size * sizeof(char) );
 	if( ! buf ) {
@@ -505,20 +499,15 @@ void BaseShadow::removeJobPre( const char* reason )
 
 	emailRemoveEvent( reason );
 
-	// update the job ad in the queue with some important final
-	// attributes so we know what happened to the job when using
-	// condor_history...
+		// update the job ad in the queue with some important final
+		// attributes so we know what happened to the job when using
+		// condor_history...
 	if( !updateJobInQueue(U_REMOVE) ) {
 			// trouble!  TODO: should we do anything else?
 		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
-}
 
-void BaseShadow::removeJob( const char* reason )
-{
-	this->removeJobPre(reason);
-	
-	// does not return.
+		// does not return.
 	DC_Exit( JOB_SHOULD_REMOVE );
 }
 
