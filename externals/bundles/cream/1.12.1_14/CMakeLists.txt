@@ -23,10 +23,10 @@ endif()
 if ( WITH_CREAM )
 
 		# we define cream 1st because other externals will place bits there.
-		condor_pre_external( CREAM org.glite.ce.cream-client-api-c-1.12.1-14-p1 "lib;include;include/glite/security;opt" "done")
+		condor_pre_external( CREAM org.glite.ce.cream-client-api-c-1.12.1-14-p3 "lib;include;include/glite/security;opt" "done")
 
 #########################################
-		condor_pre_external( CREAMSOAP gsoap_2.7.6b-p1 "lib;include" "done")
+		condor_pre_external( CREAMSOAP gsoap_2.7.6b-p3 "lib;include" "done")
 		ExternalProject_Add(creamsoap
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/gsoap_2.7.6b.tar.gz ${CMD_TERM}
@@ -50,7 +50,7 @@ if ( WITH_CREAM )
 
 #########################################
 
-		condor_pre_external( CARES c-ares-1.3.0-p1 "lib;include" "done")
+		condor_pre_external( CARES c-ares-1.3.0-p3 "lib;include" "done")
 		ExternalProject_Add(cares
 				    #-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/c-ares-1.3.0.tar.gz ${CMD_TERM}
@@ -90,7 +90,7 @@ if ( WITH_CREAM )
 
 ######################################### cream/gss packages.
 
-		condor_pre_external( GRIDSITE gridsite-1.6.0-p1 "lib;include" "done")
+		condor_pre_external( GRIDSITE gridsite-1.6.0-p3 "lib;include" "done")
 		if ( BUILDING_LIBXML2 )
 			set (GRIDSITE_DEPENDS ${LIBXML2_REF})
 			set (GRIDSITE_INCLUDE -I${LIBXML2_INSTALL_LOC}/include/libxml2)
@@ -122,7 +122,7 @@ if ( WITH_CREAM )
 
 #########################################
 
-		condor_pre_external( GLITE_SECURITY org.glite.security.gss-2.0.1-1-p1 "lib;include" "done")
+		condor_pre_external( GLITE_SECURITY org.glite.security.gss-2.0.1-1-p3 "lib;include" "done")
 		ExternalProject_Add(glite_security
 				    DEPENDS ${GLOBUS_REF} ${GRIDSITE_REF} ${CARES_REF}
 				    #-- Download Step ----------
@@ -135,7 +135,7 @@ if ( WITH_CREAM )
 				    BUILD_COMMAND cd org.glite.security.gss/src && 
 					  gcc -g -O0 -W -Wall
 					  -Wno-unused-parameter -I../interface
-					  -I${CREAM_INSTALL_LOC}/include -I${KRB5_INSTALL_LOC}/include -I${OPENSSL_INSTALL_LOC} -I${GLOBUS_INSTALL_LOC}/include/${GLOBUS_FLAVOR}pthr -o glite_gss.thr.o -c glite_gss.c && 
+					  -I${CREAM_INSTALL_LOC}/include -I${OPENSSL_INSTALL_LOC}/include -I${GLOBUS_INSTALL_LOC}/include/${GLOBUS_FLAVOR}pthr -o glite_gss.thr.o -c glite_gss.c && 
 					  ar crv libglite_security_gss_${GLOBUS_FLAVOR}pthr.a glite_gss.thr.o &&
 					  ranlib libglite_security_gss_${GLOBUS_FLAVOR}pthr.a
 				    BUILD_IN_SOURCE 1
@@ -151,7 +151,7 @@ if ( WITH_CREAM )
 
 		# build gsoap plugin.
 		set (CSP_CC_FLAGS -g -O0 -W -Wall -Wno-unused-parameter -I. -I../interface -DWITH_NONAMESPACES -I${CREAM_INSTALL_LOC}/include -D_GNU_SOURCE)
-		condor_pre_external( CREAM_SOAP_PLUGIN org.glite.security.gsoap-plugin-2.0.1-3-p1 "lib;include" "done")
+		condor_pre_external( CREAM_SOAP_PLUGIN org.glite.security.gsoap-plugin-2.0.1-3-p3 "lib;include" "done")
 		ExternalProject_Add(cream_soap_plugin
 					DEPENDS ${CREAMSOAP_REF} ${GLITE_SECURITY_REF}
 				    #-- Download Step ----------
@@ -176,7 +176,7 @@ if ( WITH_CREAM )
 						touch ${CREAM_SOAP_PLUGIN_INSTALL_LOC}/done )
 		condor_post_external( cream_soap_plugin OFF OFF )
 
-		condor_pre_external( CREAM_WSDL org.glite.ce.wsdl-1.12.1-14-p1 "lib;include" "done")
+		condor_pre_external( CREAM_WSDL org.glite.ce.wsdl-1.12.1-14-p3 "lib;include" "done")
 		ExternalProject_Add(cream_wsdl
 				    #-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/org.glite.ce.wsdl-1.12.1-14.tar.gz ${CMD_TERM}
