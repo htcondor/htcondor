@@ -24,7 +24,7 @@ if (WITH_LIBVIRT)
 
     find_multiple( "virt" LIBVIRT_FOUND )
 
-	if ( NOT PROPER AND "${RPM_SYSTEM_NAME}" MATCHES "rhel3" )
+	if ( NOT PROPER AND NOT LIBVIRT_FOUND )
 
 		set (LIBVIRT_REAL_VERSION libvirt-0.6.2)
 
@@ -59,7 +59,7 @@ if (WITH_LIBVIRT)
 		
 		condor_post_external( libvirt include OFF )
 
-	endif( NOT PROPER AND "${RPM_SYSTEM_NAME}" MATCHES "rhel3" )
+	endif( NOT PROPER AND NOT LIBVIRT_FOUND )
 
 endif(WITH_LIBVIRT)
 
