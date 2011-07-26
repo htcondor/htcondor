@@ -133,6 +133,7 @@ if (BUILD_TESTS)
 		endif()
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
+		condor_pl_test(job_deltacloud_basic "Deltacloud test" "core;quick;full;quicknolink")
 	endif()
 
 	# negative matches. test on everything but this

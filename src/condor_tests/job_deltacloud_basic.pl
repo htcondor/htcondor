@@ -65,14 +65,26 @@ my $execute = sub
 	my %args = @_;
 	my $cluster = $args{"cluster"};
 
-	# TODO Shutdown instance directly
-	#   Find instance id from job ad or user log
-	#   wget --post-data= --user=mockuser --password=mockpassword \
-	#   http://localhost:3001/api/instances/<instance id>/stop
+	my $service_url = `condor_q $cluster -format "%s" GridResource | sed 's/.* //'`;
+	chomp $service_url;
+	CondorTest::debug("Service URL is $service_url\n", $debuglevel);
+	my $instance_id = "";
+	my $cnt = 0;
+	while ( $instance_id eq "" && $cnt < 5 ) {
+		$instance_id = (split( " ", `condor_q $cluster -format "%s" GridJobId` ))[2];
+		chomp $instance_id;
+		sleep( 2 );
+	}
+	die "Failed to find instance id\n" if ( $service_url eq "" || $instance_id eq "" );
+	CondorTest::debug("Instance id is $instance_id\n", $debuglevel);
+
+	system( "wget --post-data= --http-user=mockuser --http-passwd=mockpassword $service_url/instances/$instance_id/stop" );
+	if ( $? != 0 ) {
+		#die "Failed to stop instance\n";
+		CondorTest::debug("Failed to stop instance, letting test continue...\n",$debuglevel);
+	}
 };
 
-# Expect 8 Return Succes exchanges including a CreateKeyPair
-# and a DeleteKeyPair.
 my $deltacloudd_out = "deltacloudd.out";
 
 my $success = sub

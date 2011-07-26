@@ -31,7 +31,7 @@ sub RUNNING{2};
 my $testdesc =  'job_deltacloud_basic';
 my $testname = "job_deltacloud_basic";
 my $corename = "job_deltacloud_basic";
-my $debuglevel = 2;
+my $debuglevel = 1;
 my $done = 0;
 my $cwd = `pwd`;
 chomp( $cwd );
@@ -59,13 +59,36 @@ my $submit_file = $corename . ".cmd";
 CondorTest::debug("Master PID is $mypid\n",$debuglevel);
 CondorTest::debug("Master PID submit file is $submit_file\n",$debuglevel);
 
+# TODO Installing these gems requires pull data from a remote server and
+#   takes 5 minutes. We should find a way to cache the installation.
 print "Install ruby gems\n";
 mkdir( "$gem_home" );
+$ENV{"GEM_HOME"} = $gem_home;
 system( "gem install amazon-ec2 compass gherkin cucumber eventmachine haml json nokogiri rack rack-accept rack-test rake rcov rerun right_aws sinatra thin net-ssh" );
 $ENV{"PATH"} = "$gem_home/bin:" . $ENV{"PATH"};
 
 print "Install deltacloud server\n";
-system( "cp -r /p/condor/workspaces/jfrey/deltacloud-src/deltacloud ." );
+my $tarball = "deltacloud-2011.07.13.tar.gz";
+my $fetch_prog;
+my $fetch_url = "http://parrot.cs.wisc.edu/externals/$tarball";
+if ( $^O eq "darwin" ) {
+    $fetch_prog = "curl -O";
+} else {
+    # Retry up to 5 times, waiting 10 seconds between tries
+    $fetch_prog = "wget --tries=5 --timeout=10";
+}
+CondorTest::debug("Fetching $fetch_url\n",1);
+my $rc = system( "$fetch_prog $fetch_url 2>&1" );
+if ($rc) {
+    my $status = $rc >> 8;
+    CondorTest::debug("URL retrieval failed: $status\n",1);
+    die "Deltacloud server code not fetched\n";
+}
+
+system("tar -zxvf $tarball");
+
+CondorTest::debug("Extracted Deltacloud server files\n",1);
+
 
 my $deltacloudd_port = 3001;
 my $deltacloudd = "deltacloud/server/bin/deltacloudd";
@@ -96,6 +119,7 @@ if ( $deltacloudd_pid == 0 ) {
 	print "bad\n";
 	die( "Failed to fork() to spawn $deltacloudd!\n" );
 }
+CondorTest::debug("deltacloudd pid is $deltacloudd_pid\n",$debuglevel);
 
 CondorTest::debug("Starting personal condor\n",$debuglevel);
 
@@ -140,14 +164,11 @@ if($done != 0) {
 }
 
 CondorTest::debug("Killing deltacloudd pid $deltacloudd_pid\n",$debuglevel);
-kill 15, $deltacloudd_pid;
+kill 2, $deltacloudd_pid;
 if ( waitpid( $deltacloudd_pid, 0 ) != $deltacloudd_pid ) {
 	CondorTest::debug("Failed to reap deltacloudd\n",$debuglevel);
-} elsif ( $? != 0 ) {
-	CondorTest::debug("deltacloudd exited with non-zero status $?\n",$debuglevel);
-	$done = 1;
 }
-# TODO: checkout deltacloudd output "deltacloudd.out"
+# TODO: checkout deltacloudd output "deltacloudd.out"?
 
 CondorTest::debug("Saving things and cleaning up.... done with return $done\n",$debuglevel);
 
