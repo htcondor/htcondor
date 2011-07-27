@@ -500,6 +500,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     vmStartRequest.query_parameters[ "ImageId" ] = argv[5];
     vmStartRequest.query_parameters[ "MinCount" ] = "1";
     vmStartRequest.query_parameters[ "MaxCount" ] = "1";
+	vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
     
     // Fill in optional parameters.
     if( strcasecmp( argv[6], NULLSTRING ) ) {
