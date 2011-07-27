@@ -162,6 +162,11 @@ sub findTests {
     my %tasklist = map { chomp; "$_$ext" => 1 } <LIST>;
     close(LIST);
 
+	# Crude hack to skip deltacloud test if we don't have ruby
+	if ( system( "ruby --version" ) != 0 ) {
+		delete $tasklist{"job_deltacloud_basic"};
+	}
+
     print join("\n", sort keys %tasklist) . "\n";
 
     my $total = scalar(keys %tasklist);
