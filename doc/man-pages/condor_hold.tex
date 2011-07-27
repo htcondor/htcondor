@@ -6,6 +6,7 @@
 \SynProg{\Condor{hold}}
 \ToolDebugOption
 \oOptArg{-reason}{reasonstring}
+\oOptArg{-subcode}{number}
 \ToolLocate 
 \ToolJobs
 $|$ \OptArg{-constraint}{expression} \Dots 
@@ -13,6 +14,7 @@ $|$ \OptArg{-constraint}{expression} \Dots
 \SynProg{\Condor{hold}}
 \ToolDebugOption
 \oOptArg{-reason}{reasonstring}
+\oOptArg{-subcode}{number}
 \ToolLocate 
 \ToolAll
 
@@ -49,6 +51,8 @@ allowing a checkpoint to be produced first.
     \Attr{HoldReason} to the value given by \Arg{reasonstring}.
     \Arg{reasonstring} will be delimited by double quote marks on the
     command line, if it contains space characters.} 
+  \OptItem{\OptArg{-subcode}{number}}{Sets the job ClassAd attribute
+    \Attr{HoldReasonSubCode} to the integer value given by \Arg{number}.}
   \OptItem{\Arg{cluster}}{Hold all jobs in the specified cluster}
   \OptItem{\Arg{cluster.process}}{Hold the specific job in the cluster}
   \OptItem{\Arg{user}}{Hold all jobs belonging to specified user}
