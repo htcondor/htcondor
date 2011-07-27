@@ -5263,20 +5263,20 @@ SYSTEM_PERIODIC_HOLD = \
 \label{param:SystemPeriodicHoldReason}
 \item[\Macro{SYSTEM\_PERIODIC\_HOLD\_REASON}]
   This string expression is evaluated when the job is placed on hold
-  due to \MacroNI{SYSTEM\_PERIODIC\_HOLD} becoming true.  If it
-  evaluates to a non-empty string, this value is used to set the
-  job attribute \AdAttr{HoldReason}.  Otherwise, a default
-  description is used.
+  due to \MacroNI{SYSTEM\_PERIODIC\_HOLD} evaluating to \Expr{True}.
+  If it evaluates to a non-empty string, this value is used to set the
+  job attribute \AdAttr{HoldReason}.
+  Otherwise, a default description is used.
 
 \label{param:SystemPeriodicHoldSubCode}
 \item[\Macro{SYSTEM\_PERIODIC\_HOLD\_SUBCODE}]
   This integer expression is evaluated when the job is placed on hold
-  due to \MacroNI{SYSTEM\_PERIODIC\_HOLD} becoming true.  If it
-  evaluates to a valid integer, this value is used to set the job
-  attribute \AdAttr{HoldReasonSubCode}.  Otherwise, a default of 0 is
-  used.  The attribute \AdAttr{HoldReasonCode} is set to 26, which
-  indicates that the job went on hold due to a system job policy
-  expression.
+  due to \MacroNI{SYSTEM\_PERIODIC\_HOLD} evaluating to \Expr{True}.
+  If it evaluates to a valid integer, this value is used to set the job
+  attribute \Attr{HoldReasonSubCode}.  
+  Otherwise, a default of 0 is used.
+  The attribute \AdAttr{HoldReasonCode} is set to 26, which
+  indicates that the job went on hold due to a system job policy expression.
 
 \label{param:SystemPeriodicRelease}
 \item[\Macro{SYSTEM\_PERIODIC\_RELEASE}]
@@ -5952,13 +5952,18 @@ do not specify their own with:
 
 \label{param:SubmitSkipFilechecks}
 \item[\Macro{SUBMIT\_SKIP\_FILECHECKS}]
-  If True, \Condor{submit} behaves as if the \Opt{-d} 
+  If \Expr{True}, \Condor{submit} behaves as if the \Opt{-disable} 
   command-line option is used.
-  This tells \Condor{submit} to disable file permission checks when
-  submitting a job.
+  This tells \Condor{submit} to disable file permission checks 
+  when submitting a job
+  for read permissions on all input files, such as those defined by
+  commands \SubmitCmd{input} and \SubmitCmd{transfer\_input\_files},
+  as well as write permission to output files, such as a
+  log file defined by \SubmitCmd{log} and output files defined with 
+  \SubmitCmd{output} or \SubmitCmd{transfer\_output\_files}.
   This can significantly decrease the amount of time required to submit
   a large group of jobs.
-  The default value is False.
+  The default value is \Expr{False}.
 
 \label{param:WarnOnUnusedSubmitFileMacros}
 \item[\Macro{WARN\_ON\_UNUSED\_SUBMIT\_FILE\_MACROS}]

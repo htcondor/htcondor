@@ -642,6 +642,22 @@ Note that \SubmitCmd{should\_transfer\_files} is not supported
 for jobs submitted to the grid universe.
 
 %%%%%%%%%%%%%%%%%%%
+%% skip_filechecks
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!skip\_filechecks}
+\item[skip\_filechecks = $<$True \Bar\ False$>$]
+When \Expr{True},
+file permission checks for the submitted job are disabled.
+When \Expr{False}, file permissions are checked; this is the behavior
+when this command is not present in the submit description file.
+File permissions are checked for read permissions on all input files,
+such as those defined by 
+commands \SubmitCmd{input} and \SubmitCmd{transfer\_input\_files},
+and for write permission to output files, 
+such as a log file defined by \SubmitCmd{log} and output files defined with
+\SubmitCmd{output} or \SubmitCmd{transfer\_output\_files}.
+
+%%%%%%%%%%%%%%%%%%%
 %% stream_error
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!stream\_error}
@@ -975,17 +991,17 @@ for the standard universe.
 \index{submit commands!on\_exit\_hold\_reason}
 \item[on\_exit\_hold\_reason = $<$ClassAd String Expression$>$]
 When the job is placed on hold due to the \SubmitCmd{on\_exit\_hold}
-expression becoming true, this expression is evaluated to
-set the value of \AdAttr{HoldReason} in the job ad.  If this
-expression is undefined or produces an empty of invalid string,
+expression becoming \Expr{True}, this expression is evaluated to
+set the value of \Attr{HoldReason} in the job ClassAd.
+If this expression is \Expr{UNDEFINED} or produces an empty or invalid string,
 a default description is used.
 
 \index{submit commands!on\_exit\_hold\_subcode}
 \item[on\_exit\_hold\_subcode = $<$ClassAd Integer Expression$>$]
 When the job is placed on hold due to the \SubmitCmd{on\_exit\_hold}
-expression becoming true, this expression is evaluated to set the
-value of \AdAttr{HoldReasonSubCode} in the job ad.  The default
-subcode is 0.  The \AdAttr{HoldReasonCode} will be set to 3, which
+expression becoming \Expr{True}, this expression is evaluated to set the
+value of \Attr{HoldReasonSubCode} in the job ClassAd.
+The default subcode is 0.  The \Attr{HoldReasonCode} will be set to 3, which
 indicates that the job went on hold due to a job policy expression.
 
 
@@ -1084,17 +1100,17 @@ these evaluations can be adjusted by setting the
 \index{submit commands!periodic\_hold\_reason}
 \item[periodic\_hold\_reason = $<$ClassAd String Expression$>$]
 When the job is placed on hold due to the \SubmitCmd{periodic\_hold}
-expression becoming true, this expression is evaluated to
-set the value of \AdAttr{HoldReason} in the job ad.  If this
-expression is undefined or produces an empty of invalid string,
+expression becoming \Expr{True}, this expression is evaluated to
+set the value of \Attr{HoldReason} in the job ClassAd.
+If this expression is \Expr{UNDEFINED} or produces an empty or invalid string,
 a default description is used.
 
 \index{submit commands!periodic\_hold\_subcode}
 \item[periodic\_hold\_subcode = $<$ClassAd Integer Expression$>$]
 When the job is placed on hold due to the \SubmitCmd{periodic\_hold}
 expression becoming true, this expression is evaluated to set the
-value of \AdAttr{HoldReasonSubCode} in the job ad.  The default
-subcode is 0.  The \AdAttr{HoldReasonCode} will be set to 3, which
+value of \AdAttr{HoldReasonSubCode} in the job ClassAd.
+The default subcode is 0.  The \Attr{HoldReasonCode} will be set to 3, which
 indicates that the job went on hold due to a job policy expression.
 
 %%%%%%%%%%%%%%%%%%%
