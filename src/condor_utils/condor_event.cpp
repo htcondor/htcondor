@@ -515,7 +515,7 @@ ULogEvent::insertCommonIdentifiers(ClassAd &adToFill)
 // ----- the SubmitEvent class
 SubmitEvent::SubmitEvent(void)
 {
-	submitHost [0] = '\0';
+	submitHost = NULL;
 	submitEventLogNotes = NULL;
 	submitEventUserNotes = NULL;
 	eventNumber = ULOG_SUBMIT;
@@ -523,6 +523,9 @@ SubmitEvent::SubmitEvent(void)
 
 SubmitEvent::~SubmitEvent(void)
 {
+	if( submitHost ) {
+		delete[] submitHost;
+	}
     if( submitEventLogNotes ) {
         delete[] submitEventLogNotes;
     }
@@ -531,9 +534,27 @@ SubmitEvent::~SubmitEvent(void)
     }
 }
 
+void
+SubmitEvent::setSubmitHost(char const *addr)
+{
+	if( submitHost ) {
+		delete[] submitHost;
+	}
+	if( addr ) {
+		submitHost = strnewp(addr);
+		ASSERT( submitHost );
+	}
+	else {
+		submitHost = NULL;
+	}
+}
+
 int
 SubmitEvent::writeEvent (FILE *file)
 {
+	if( !submitHost ) {
+		setSubmitHost("");
+	}
 	int retval = fprintf (file, "Job submitted from host: %s\n", submitHost);
 	if (retval < 0)
 	{
@@ -561,7 +582,12 @@ SubmitEvent::readEvent (FILE *file)
 	s[0] = '\0';
 	delete[] submitEventLogNotes;
 	submitEventLogNotes = NULL;
-	if( fscanf( file, "Job submitted from host: %s\n", submitHost ) != 1 ) {
+	MyString line;
+	if( !line.readLine(file) ) {
+		return 0;
+	}
+	setSubmitHost(line.Value()); // allocate memory
+	if( sscanf( line.Value(), "Job submitted from host: %s\n", submitHost ) != 1 ) {
 		return 0;
 	}
 
@@ -614,23 +640,16 @@ SubmitEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	if( submitHost[0] ) {
-		snprintf(buf0, 512, "SubmitHost = \"%s\"", submitHost);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+	if( submitHost && submitHost[0] ) {
+		if( !myad->Assign("SubmitHost",submitHost) ) return NULL;
 	}
 
 	if( submitEventLogNotes && submitEventLogNotes[0] ) {
-		MyString buf2;
-		buf2.sprintf("LogNotes = \"%s\"", submitEventLogNotes);
-		if( !myad->Insert(buf2.Value()) ) return NULL;
+		if( !myad->Assign("LogNotes",submitEventLogNotes) ) return NULL;
 	}
 	if( submitEventUserNotes && submitEventUserNotes[0] ) {
-		MyString buf3;
-		buf3.sprintf("UserNotes = \"%s\"", submitEventUserNotes);
-		if( !myad->Insert(buf3.Value()) ) return NULL;
+		if( !myad->Assign("UserNotes",submitEventUserNotes) ) return NULL;
 	}
 
 	return myad;
@@ -642,12 +661,15 @@ SubmitEvent::initFromClassAd(ClassAd* ad)
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
-	if( ad->LookupString("SubmitHost", submitHost, 128) ) {
-		submitHost[127] = 0;
+	char* mallocstr = NULL;
+	ad->LookupString("SubmitHost", &mallocstr);
+	if( mallocstr ) {
+		setSubmitHost(mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
 	}
 
 	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
 	ad->LookupString("LogNotes", &mallocstr);
 	if( mallocstr ) {
 		submitEventLogNotes = new char[strlen(mallocstr) + 1];
@@ -1428,15 +1450,60 @@ RemoteErrorEvent::setExecuteHost(char const *str)
 // ----- the ExecuteEvent class
 ExecuteEvent::ExecuteEvent(void)
 {
-	executeHost [0] = '\0';
-	remoteName [0] = '\0';
+	executeHost = NULL;
+	remoteName = NULL;
 	eventNumber = ULOG_EXECUTE;
 }
 
 ExecuteEvent::~ExecuteEvent(void)
 {
+	if( executeHost ) {
+		delete[] executeHost;
+	}
+	if( remoteName ) {
+		delete[] remoteName;
+	}
 }
 
+void
+ExecuteEvent::setExecuteHost(char const *addr)
+{
+	if( executeHost ) {
+		delete[] executeHost;
+	}
+	if( addr ) {
+		executeHost = strnewp(addr);
+		ASSERT( executeHost );
+	}
+	else {
+		executeHost = NULL;
+	}
+}
+
+void ExecuteEvent::setRemoteName(char const *name)
+{
+	if( remoteName ) {
+		delete[] remoteName;
+	}
+	if( name ) {
+		remoteName = strnewp(name);
+		ASSERT( remoteName );
+	}
+	else {
+		remoteName = NULL;
+	}
+}
+
+char const *
+ExecuteEvent::getExecuteHost()
+{
+	if( !executeHost ) {
+			// There are a few callers that do not expect NULL execute host,
+			// so set it to empty string.
+		setExecuteHost("");
+	}
+	return executeHost;
+}
 
 int
 ExecuteEvent::writeEvent (FILE *file)
@@ -1457,6 +1524,10 @@ ExecuteEvent::writeEvent (FILE *file)
 		dprintf(D_FULLDEBUG, "scheddname = %s\n", scheddname);
 	else
 		dprintf(D_FULLDEBUG, "scheddname is null\n");
+
+	if( !executeHost ) {
+		setExecuteHost("");
+	}
 
 	dprintf(D_FULLDEBUG, "executeHost = %s\n", executeHost);
 
@@ -1510,6 +1581,9 @@ ExecuteEvent::writeEvent (FILE *file)
 		}
 	}
 
+	if( !remoteName ) {
+		setRemoteName("");
+	}
 	tmpCl3.Assign("machine_id", remoteName);
 
 	// this inserts scheddname, cluster, proc, etc
@@ -1542,8 +1616,8 @@ ExecuteEvent::readEvent (FILE *file)
 		return 0; // EOF or error
 	}
 
-		// 127 is sizeof(executeHost)-1
-	int retval  = sscanf (line.Value(), "Job executing on host: %127[^\n]",
+	setExecuteHost(line.Value()); // allocate memory
+	int retval  = sscanf (line.Value(), "Job executing on host: %[^\n]",
 						  executeHost);
 	if (retval == 1)
 	{
@@ -1564,12 +1638,9 @@ ExecuteEvent::toClassAd(void)
 {
 	ClassAd* myad = ULogEvent::toClassAd();
 	if( !myad ) return NULL;
-	char buf0[512];
 
-	if( executeHost[0] ) {
-		snprintf(buf0, 512, "ExecuteHost = \"%s\"", executeHost);
-		buf0[511] = 0;
-		if( !myad->Insert(buf0) ) return NULL;
+	if( executeHost && executeHost[0] ) {
+		if( !myad->Assign("ExecuteHost",executeHost) ) return NULL;
 	}
 
 	return myad;
@@ -1582,8 +1653,12 @@ ExecuteEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( !ad->LookupString("ExecuteHost", executeHost, 128) ) {
-		executeHost[127] = 0;
+	char *mallocstr = NULL;
+	ad->LookupString("ExecuteHost", &mallocstr);
+	if( mallocstr ) {
+		setExecuteHost( mallocstr );
+		free( mallocstr );
+		mallocstr = NULL;
 	}
 }
 
@@ -3552,17 +3627,38 @@ NodeExecuteEvent::NodeExecuteEvent(void)
 	executeHost [0] = '\0';
 	eventNumber = ULOG_NODE_EXECUTE;
 	node = -1;
+	executeHost = NULL;
 }
 
 
 NodeExecuteEvent::~NodeExecuteEvent(void)
 {
+	if( executeHost ) {
+		delete[] executeHost;
+	}
 }
 
+void
+NodeExecuteEvent::setExecuteHost(char const *addr)
+{
+	if( executeHost ) {
+		delete[] executeHost;
+	}
+	if( addr ) {
+		executeHost = strnewp(addr);
+		ASSERT( executeHost );
+	}
+	else {
+		executeHost = NULL;
+	}
+}
 
 int
 NodeExecuteEvent::writeEvent (FILE *file)
 {
+	if( !executeHost ) {
+		setExecuteHost("");
+	}
 	return( fprintf(file, "Node %d executing on host: %s\n",
 					node, executeHost) >= 0 );
 }
@@ -3571,8 +3667,14 @@ NodeExecuteEvent::writeEvent (FILE *file)
 int
 NodeExecuteEvent::readEvent (FILE *file)
 {
-	return( fscanf(file, "Node %d executing on host: %s",
-				   &node, executeHost) != EOF );
+	MyString line;
+	if( !line.readLine(file) ) {
+		return 0; // EOF or error
+	}
+	setExecuteHost(line.Value()); // allocate memory
+	int retval = sscanf(line.Value(), "Node %d executing on host: %s",
+						&node, executeHost);
+	return retval == 2;
 }
 
 ClassAd*
@@ -3582,9 +3684,9 @@ NodeExecuteEvent::toClassAd(void)
 	if( !myad ) return NULL;
 	char buf0[512];
 
-	snprintf(buf0, 512, "ExecuteHost = \"%s\"", executeHost);
-	buf0[511] = 0;
-	if( !myad->Insert(buf0) ) return NULL;
+	if( executeHost ) {
+		if( !myad->Assign("ExecuteHost",executeHost) ) return NULL;
+	}
 	snprintf(buf0, 512, "Node = %d", node);
 	buf0[511] = 0;
 	if( !myad->Insert(buf0) ) return NULL;
@@ -3599,8 +3701,12 @@ NodeExecuteEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	if( ad->LookupString("ExecuteHost", executeHost, 128) ) {
-		executeHost[127] = 0;
+	char *mallocstr = NULL;
+	ad->LookupString("ExecuteHost", &mallocstr);
+	if( mallocstr ) {
+		setExecuteHost(mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
 	}
 
 	ad->LookupInteger("Node", node);

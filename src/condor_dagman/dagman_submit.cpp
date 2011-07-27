@@ -428,7 +428,7 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 
 		// We need some value for submitHost for the event to be read
 		// correctly.
-	sprintf( subEvent.submitHost, "<dummy-submit-for-noop-job>");
+	subEvent.setSubmitHost( "<dummy-submit-for-noop-job>" );
 
 	MyString subEventNotes("DAG Node: " );
 	subEventNotes += DAGNodeName;

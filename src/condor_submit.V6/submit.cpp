@@ -6910,9 +6910,9 @@ log_submit()
 		// anything since we will never communicate the resulting ad to 
 		// to anyone (we make the name obviously unresolvable so we know
 		// this was a generated file).
-		strcpy (jobSubmit.submitHost, "localhost-used-to-dump");
+		jobSubmit.setSubmitHost( "localhost-used-to-dump");
 	} else {
-		strcpy (jobSubmit.submitHost, MySchedd->addr());
+		jobSubmit.setSubmitHost( MySchedd->addr());
 	}
 
 	if( LogNotesVal ) {
