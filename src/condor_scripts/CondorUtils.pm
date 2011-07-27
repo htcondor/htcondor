@@ -112,8 +112,7 @@ sub runcmd {
 	local(*IN,*OUT,*ERR);
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my @abbr = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
-	my $realyear = sprintf("%02d", $year % 100);
-	my $date = "$mon/$mday/$realyear $hour:$min:$sec";
+	my $date = sprintf("%02d/%02d/%02d %02d:%02d:%02d", $mon, $mday, $year % 100, $hour, $min, $sec);
 	my $childpid;
 	my $local_expectation = FALSE;
 	my %altoptions;
