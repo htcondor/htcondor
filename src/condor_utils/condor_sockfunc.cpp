@@ -1,7 +1,6 @@
 #include "condor_common.h"
 #include "MyString.h"
 #include "condor_sockfunc.h"
-#include "ipv6_hostname.h"
 #include "ipv6_interface.h"
 
 int condor_connect(int sockfd, const condor_sockaddr& addr)
@@ -109,19 +108,6 @@ int condor_getsockname(int sockfd, condor_sockaddr& addr)
 	if (ret == 0) {
 		addr = condor_sockaddr((sockaddr*)&ss);
 	}
-	return ret;
-}
-
-int condor_getsockname_ex(int sockfd, condor_sockaddr& addr)
-{
-	int ret;
-	ret = condor_getsockname(sockfd, addr);
-	if (ret == 0 && addr.is_addr_any()) {
-		unsigned short portno = addr.get_port();
-		addr = get_local_ipaddr();
-		addr.set_port(portno);
-	}
-
 	return ret;
 }
 
