@@ -216,7 +216,7 @@ write_local_settings_from_file(FILE* out_fp,
 			return false;
 		}
 	}
-	FILE* in_fp = safe_fopen_wrapper(local_settings_file.Value(), "r");
+	FILE* in_fp = safe_fopen_wrapper_follow(local_settings_file.Value(), "r");
 	if (in_fp == NULL) {
 		vmprintf(D_ALWAYS,
 		         "fopen error on %s: %s\n",

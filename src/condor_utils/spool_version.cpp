@@ -31,7 +31,7 @@ CheckSpoolVersion(char const *spool, int spool_min_version_i_support, int spool_
 	std::string vers_fname;
 	sprintf(vers_fname,"%s%cspool_version",spool,DIR_DELIM_CHAR);
 
-	FILE *vers_file = safe_fopen_wrapper(vers_fname.c_str(),"r");
+	FILE *vers_file = safe_fopen_wrapper_follow(vers_fname.c_str(),"r");
 	if( vers_file ) {
 		if( 1 != fscanf(vers_file,
 						"minimum compatible spool version %d\n",

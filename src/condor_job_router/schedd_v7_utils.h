@@ -31,7 +31,6 @@ unsigned int hashFuncStdString(std::string const & key);
 
 #include "stream.h"
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 
 bool encode_classad(Stream *sock,classad::ClassAd *ad);

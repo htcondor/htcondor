@@ -26,7 +26,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 /*--------------------------------------------------------------------
  *
@@ -1370,4 +1370,4 @@ std::istream & operator>>(std::istream &stream, ClassAd &ad)
 }
 
 
-END_NAMESPACE // classad
+} // classad

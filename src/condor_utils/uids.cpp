@@ -1469,7 +1469,7 @@ set_owner_euid()
 {
 	if( !OwnerIdsInited ) {
 		dprintf( D_ALWAYS,
-				 "set_user_euid() called when OwnerIds not inited!\n" );
+				 "set_owner_euid() called when OwnerIds not inited!\n" );
 		return -1;
 	}
 	return SET_EFFECTIVE_UID(OwnerUid);

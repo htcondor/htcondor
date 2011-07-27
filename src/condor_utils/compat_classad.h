@@ -20,10 +20,6 @@
 #ifndef COMPAT_CLASSAD_H
 #define COMPAT_CLASSAD_H
 
-#ifndef WANT_CLASSAD_NAMESPACE
-#define WANT_CLASSAD_NAMESPACE
-#endif
-
 #include "classad/classad_distribution.h"
 #include "MyString.h"
 

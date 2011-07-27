@@ -124,7 +124,7 @@ UserProc::JobReaper(int pid, int status)
 		// and EXCEPT, just as is done when an executable is unable
 		// to be run.  Ideally, both failure cases would propagate
 		// into the job ad
-		fp = safe_fopen_wrapper(filename.Value(), "r");
+		fp = safe_fopen_wrapper_follow(filename.Value(), "r");
 		if (!fp) {
 			dprintf(D_ALWAYS, "Unable to open \"%s\" for reading: "
 					"%s (errno %d)\n", filename.Value(),
@@ -423,14 +423,14 @@ UserProc::openStdFile( std_file_type type,
 	bool is_output = (type != SFT_IN);
 	if( is_output ) {
 		int flags = O_WRONLY | O_CREAT | O_TRUNC | O_APPEND | O_LARGEFILE;
-		fd = safe_open_wrapper( filename.Value(), flags, 0666 );
+		fd = safe_open_wrapper_follow( filename.Value(), flags, 0666 );
 		if( fd < 0 ) {
 				// if failed, try again without O_TRUNC
 			flags &= ~O_TRUNC;
-			fd = safe_open_wrapper( filename.Value(), flags, 0666 );
+			fd = safe_open_wrapper_follow( filename.Value(), flags, 0666 );
 		}
 	} else {
-		fd = safe_open_wrapper( filename.Value(), O_RDONLY | O_LARGEFILE );
+		fd = safe_open_wrapper_follow( filename.Value(), O_RDONLY | O_LARGEFILE );
 	}
 	if( fd < 0 ) {
 		int open_errno = errno;

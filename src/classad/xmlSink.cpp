@@ -27,7 +27,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 static void add_tag(
     string &buffer, 
@@ -359,4 +359,4 @@ UnparseRelativeTime(string &buffer, time_t rsecs)
 }
 */
 
-END_NAMESPACE
+}

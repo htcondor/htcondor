@@ -26,7 +26,7 @@ using namespace std;
 
 static char const *ATTR_UNOPTIMIZED_REQUIREMENTS = "UnoptimizedRequirements";
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 MatchClassAd::
 MatchClassAd()
@@ -372,4 +372,4 @@ leftMatchesRight()
 	return EvalMatchExpr( left_matches_right );
 }
 
-END_NAMESPACE // classad
+} // classad

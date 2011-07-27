@@ -38,7 +38,7 @@ use vars qw/ $opt_build $opt_test
     $opt_submit_xtests $opt_configure $opt_src_tag $opt_other_tag
     $opt_nightly $opt_externals $opt_without_tests
     $opt_clear_externals_cache $opt_use_externals_cache
-    $opt_clear_externals_cache_weekly
+    $opt_clear_externals_cache_weekly $opt_clear_externals_cache_daily
     $opt_externals_only $opt_release_only $opt_version_buildid
     $opt_build_args
 	$opt_skip_doc $opt_sha1
@@ -346,6 +346,7 @@ sub parseOptions
            'clear-externals-cache' => \$opt_clear_externals_cache,
            'clear_externals_cache_weekly' => \$opt_clear_externals_cache_weekly,
            'clear-externals-cache-weekly' => \$opt_clear_externals_cache_weekly,
+           'clear-externals-cache-daily' => \$opt_clear_externals_cache_daily,
            'externals-only' => \$opt_externals_only,
 		   'release-only' => \$opt_release_only,
 		   'version-buildid=s' => \$opt_version_buildid,
@@ -425,6 +426,10 @@ sub parseOptions
         }
         if( defined($opt_clear_externals_cache_weekly) ) {
             print "ERROR: --clear-externals-cache-weekly is not valid with --test\n";
+            printUsage( 1 );
+        }
+        if( defined($opt_clear_externals_cache_daily) ) {
+            print "ERROR: --clear-externals-cache-daily is not valid with --test\n";
             printUsage( 1 );
         }
         if( defined($opt_externals_only) ) {
@@ -1305,17 +1310,19 @@ EOF
 	# tstclair: no longer needed.
 	# print $fh "post_all = nmi_tools/glue/build/post_all\n";
 
-	# tstclair: why is this even an option it should always be the case. 
-    # Pass common arguments to <platform>_remote_pre script
-    #if( defined($opt_use_externals_cache) ) {
-	#	$common_pre_args .= ' --use_externals_cache';
-    #}
-
+    if( defined($opt_use_externals_cache) ) {
+		$common_pre_args .= ' --use-externals-cache';
+    }
     if( defined($opt_clear_externals_cache) ) {
-		$common_pre_args .= ' --clear_externals_cache';
+		$common_pre_args .= ' --clear-externals-cache';
     }
     if( defined($opt_clear_externals_cache_weekly) ) {
 		$common_pre_args .= ' --clear-externals-cache-weekly';
+    }
+    if( defined($opt_clear_externals_cache_daily) ||
+		defined($opt_nightly) ) {
+
+		$common_pre_args .= ' --clear-externals-cache-daily';
     }
 	print $fh "\n";
 

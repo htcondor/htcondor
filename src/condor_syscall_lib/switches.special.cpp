@@ -147,7 +147,7 @@ int __have_no_getdents64;
 /* This is another C linkage type which brings in fork.o from libc on
 	glibc 2.5 machines, and causes conflicts. So here it gets
 	defined. */
-#if defined(GLIBC25) || defined(GLIBC27)
+#if defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
 void* __fork_handlers = NULL;
 #endif
 
@@ -694,7 +694,7 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
         return rval;
 }
 
-int munmap( MMAP_T addr, size_t length ) 
+int munmap( MMAP_T addr, size_t /* length */ ) 
 {
         if(addr) free(addr);
         return 0;
@@ -833,7 +833,7 @@ int __lxstat(int version, const char *path, struct stat *buf)
 	return _condor_lxstat( version, path, buf );
 }
 
-#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27)
+#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
 int _xstat64(int version, const char *path, struct stat64 *buf)
 {
 	return _condor_xstat64( version, path, buf );
@@ -925,7 +925,7 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 		target->__pad1 = 0;
 		target->__pad2 = 0;
 #endif
-		#if !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27)
+		#if !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27) && !defined(GLIBC211) && !defined(GLIBC212)
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
@@ -945,7 +945,7 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 	}
 }
 
-#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) ||defined(GLIBC25) || defined(GLIBC27)
+#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) ||defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
 void 
 _condor_k_stat_convert64( int version, const struct kernel_stat *source, 
 						struct stat64 *target )
@@ -986,7 +986,7 @@ _condor_k_stat_convert64( int version, const struct kernel_stat *source,
 		target->__pad1 = 0;
 		target->__pad2 = 0;
 #endif
-		#if !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27)
+		#if !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27) && !defined(GLIBC211) && !defined(GLIBC212)
 		/* glibc23 uses these fields */
 		target->__unused1 = 0;
 		target->__unused2 = 0;
@@ -1055,7 +1055,7 @@ _condor_s_stat_convert( int version, const struct stat *source,
 		target->__pad1 = 0;
 		target->__pad2 = 0;
 #endif
-		#if !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27)
+		#if !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27) && !defined(GLIBC211) && !defined(GLIBC212)
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
@@ -1073,7 +1073,7 @@ _condor_s_stat_convert( int version, const struct stat *source,
 	}
 }
 
-#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27)
+#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
 void 
 _condor_s_stat_convert64( int version, const struct stat *source, 
 						struct stat64 *target )
@@ -1114,7 +1114,7 @@ _condor_s_stat_convert64( int version, const struct stat *source,
 		target->__pad1 = 0;
 		target->__pad2 = 0;
 #endif
-		#if !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27)
+		#if !defined(GLIBC23) && !defined(GLIBC24) && !defined(GLIBC25) && !defined(GLIBC27) && !defined(GLIBC211) && !defined(GLIBC212)
 		/* glibc23 uses these fields */
 		target->__unused1 = 0;
 		target->__unused2 = 0;
@@ -1189,7 +1189,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27)
+#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
 extern "C" int REMOTE_CONDOR_stat( const char *, struct stat * );
 int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 {
@@ -1263,7 +1263,7 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27)
+#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
 extern "C" int REMOTE_CONDOR_fstat( int, struct stat * );
 int
 _condor_fxstat64(int version, int fd, struct stat64 *buf)
@@ -1337,7 +1337,7 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27)
+#if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
 extern "C" int REMOTE_CONDOR_lstat( const char *, struct stat *);
 int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 {

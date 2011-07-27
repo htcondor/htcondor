@@ -348,6 +348,10 @@ match_rec::~match_rec()
 			// handle any final communication from the startd that may
 			// still be in flight.
 		daemonCore->getSecMan()->SetSessionExpiration(secSessionId(),time(NULL)+600);
+			// In case we get the same claim id again before the slop time
+			// expires, mark this session as "lingering" so we know it can
+			// be replaced.
+		daemonCore->getSecMan()->SetSessionLingerFlag(secSessionId());
 	}
 }
 
@@ -1984,6 +1988,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 
 	// If we made it here, we did not find a shadow or other job manager 
 	// process for this job.  Just handle the operation ourselves.
+
+	// If there is a match record for this job, try to find a different
+	// job to run on it.
+	match_rec *mrec = scheduler.FindMrecByJobID(job_id);
+	if( mrec ) {
+		scheduler.FindRunnableJobForClaim( mrec );
+	}
+
 	if( mode == REMOVED ) {
 		if( !scheduler.WriteAbortToUserLog(job_id) ) {
 			dprintf( D_ALWAYS,"Failed to write abort event to the user log\n" );
@@ -1996,8 +2008,6 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 					 "Failed to write hold event to the user log\n" ); 
 		}
 	}
-
-	return;
 }
 
 } /* End of extern "C" */
@@ -5989,17 +5999,11 @@ Scheduler::StartJob(match_rec *rec)
 	if(!Runnable(&id)) {
 			// find the job in the cluster with the highest priority
 		id.proc = -1;
-		if( rec->my_match_ad ) {
-			FindRunnableJob(id,rec->my_match_ad,rec->user);
+		if( !FindRunnableJobForClaim(rec) ) {
+			return;
 		}
-	}
-	if(id.proc < 0) {
-			// no more jobs to run
-		dprintf(D_ALWAYS,
-				"match (%s) out of jobs; relinquishing\n",
-				rec->description() );
-		DelMrec(rec);
-		return;
+		id.cluster = rec->cluster;
+		id.proc = rec->proc;
 	}
 
 	if(!(rec->shadowRec = StartJob(rec, &id))) {
@@ -6042,15 +6046,46 @@ Scheduler::StartJob(match_rec *rec)
 	}
 	dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
 			rec->description(), id.cluster, id.proc);
-		// If we're reusing a match to start another job, then cluster
-		// and proc may have changed, so we keep them up-to-date here.
-		// This is important for Scheduler::AlreadyMatched(), and also
-		// for when we receive an alive command from the startd.
-	SetMrecJobID(rec,id);
+
 		// Now that the shadow has spawned, consider this match "ACTIVE"
 	rec->setStatus( M_ACTIVE );
 }
 
+bool
+Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
+{
+	ASSERT( mrec );
+
+	PROC_ID new_job_id;
+	new_job_id.cluster = -1;
+	new_job_id.proc = -1;
+
+	if( mrec->my_match_ad && !ExitWhenDone ) {
+		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
+	}
+	if( !accept_std_univ && new_job_id.proc == -1 ) {
+		int new_universe = -1;
+		GetAttributeInt(new_job_id.cluster,new_job_id.proc,ATTR_JOB_UNIVERSE,&new_universe);
+		if( new_universe == CONDOR_UNIVERSE_STANDARD ) {
+			new_job_id.proc = -1;
+		}
+	}
+	if( new_job_id.proc == -1 ) {
+			// no more jobs to run
+		dprintf(D_ALWAYS,
+				"match (%s) out of jobs; relinquishing\n",
+				mrec->description() );
+		DelMrec(mrec);
+		return false;
+	}
+
+	dprintf(D_ALWAYS,
+			"match (%s) switching to job %d.%d\n",
+			mrec->description(), new_job_id.cluster, new_job_id.proc );
+
+	SetMrecJobID(mrec,new_job_id);
+	return true;
+}
 
 void
 Scheduler::StartLocalJobs()
@@ -7462,15 +7497,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 #endif
 	
-	if ((inouterr[0] = safe_open_wrapper(input.Value(), O_RDONLY, S_IREAD)) < 0) {
+	if ((inouterr[0] = safe_open_wrapper_follow(input.Value(), O_RDONLY, S_IREAD)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input.Value(), errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[1] = safe_open_wrapper(output.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
+	if ((inouterr[1] = safe_open_wrapper_follow(output.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output.Value(), errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[2] = safe_open_wrapper(error.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
+	if ((inouterr[2] = safe_open_wrapper_follow(error.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error.Value(), errno );
 		cannot_open_files = true;
 	}
@@ -8640,7 +8675,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 void
 send_vacate(match_rec* match,int cmd)
 {
-	classy_counted_ptr<DCStartd> startd = new DCStartd( match->peer );
+	classy_counted_ptr<DCStartd> startd = new DCStartd( match->description(),NULL,match->peer,match->claimId() );
 	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( cmd, match->claimId() );
 
 	msg->setSuccessDebugLevel(D_ALWAYS);
@@ -9261,7 +9296,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_NO_CKPT_FILE:
 		case JOB_KILLED:
 				// If the job isn't being HELD, we'll remove it
-			if ( q_status != HELD ) {
+			if ( q_status != HELD && q_status != IDLE ) {
 				set_job_status( job_id.cluster, job_id.proc, REMOVED );
 			}
 			break;
@@ -11320,7 +11355,7 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 bool
 sendAlive( match_rec* mrec )
 {
-	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->peer );
+	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->description(),NULL,mrec->peer,mrec->claimId() );
 	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( ALIVE, mrec->claimId() );
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
@@ -12746,7 +12781,7 @@ Scheduler::claimLocalStartd()
 		claim_id[0] = '\0';	// so we notice if we fail to read
 			// note: claim file written w/ condor priv by the startd
 		priv_state old_priv = set_condor_priv(); 
-		FILE* fp=safe_fopen_wrapper(file_name,"r");
+		FILE* fp=safe_fopen_wrapper_follow(file_name,"r");
 		if ( fp ) {
 			fscanf(fp,"%150s\n",claim_id);
 			fclose(fp);
@@ -13277,31 +13312,21 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		srec->exit_already_handled = true;
 	}
 
-	new_job_id.cluster = -1;
-	new_job_id.proc = -1;
-	if( mrec->my_match_ad && !ExitWhenDone ) {
-		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
-	}
-
 		// The standard universe shadow never calls this function,
 		// and the shadow that does call this function is not capable of
 		// running standard universe jobs, so if the job we are trying
 		// to run next is standard universe, tell this shadow we are
 		// out of work.
-	if( new_job_id.proc != -1 ) {
-		int new_universe = -1;
-		GetAttributeInt(new_job_id.cluster,new_job_id.proc,ATTR_JOB_UNIVERSE,&new_universe);
-		if( new_universe == CONDOR_UNIVERSE_STANDARD ) {
-			new_job_id.proc = -1;
-		}
-	}
-	
+	const bool accept_std_univ = false;
 
-	if( new_job_id.proc == -1 ) {
+	if( !FindRunnableJobForClaim(mrec,accept_std_univ) ) {
 		stream->put((int)0);
 		stream->end_of_message();
 		return TRUE;
 	}
+
+	new_job_id.cluster = mrec->cluster;
+	new_job_id.proc = mrec->proc;
 
 	dprintf(D_ALWAYS,
 			"Shadow pid %d switching to job %d.%d.\n",
@@ -13321,7 +13346,6 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 
 	mark_serial_job_running(&new_job_id);
 
-	SetMrecJobID(mrec,new_job_id);
 	mrec->setStatus( M_ACTIVE );
 
 	callAboutToSpawnJobHandler(new_job_id.cluster, new_job_id.proc, srec);

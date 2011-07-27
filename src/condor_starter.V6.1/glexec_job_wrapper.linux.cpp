@@ -67,11 +67,23 @@ main(int argc, char* argv[])
 	char* job_stdout = argv[2];
 	char* job_stderr = argv[3];
 	char** job_argv = &argv[4];
-	
+
+	unsigned int hello = 0xdeadbeef;
+	if( write(sock_fd,&hello,sizeof(int)) != sizeof(int) ) {
+		err = "Failed to send hello";
+		fatal_error();
+	}
+
 	// set up an Env object that we'll use for the job. we'll initialize
 	// it with the environment that Condor sends us then merge on top of
 	// that the environment that glexec prepared for us
 	//
+	// Why?  I don't understand why we are overriding job environment
+	// set by condor with the environment set by glexec.  For now, we
+	// must make one exception: X509_USER_PROXY.  We want the job to
+	// use the proxy that is managed by Condor, not a copy of the
+	// proxy created by glexec or the proxy used by condor itself.
+
 	Env env;
 	char* env_buf = read_env();
 	MyString merge_err;
@@ -79,14 +91,46 @@ main(int argc, char* argv[])
 		err.sprintf("Env::MergeFromV2Raw error: %s", merge_err.Value());
 		fatal_error();
 	}
+
+	MyString user_proxy;
+	bool override_glexec_proxy_env = false;
+	if( env.GetEnv("X509_USER_PROXY",user_proxy) &&
+		getenv("X509_USER_PROXY") )
+	{
+		override_glexec_proxy_env = true;
+	}
+
 	env.MergeFrom(environ);
 	delete[] env_buf;
+
+	if( override_glexec_proxy_env ) {
+		env.SetEnv("X509_USER_PROXY",user_proxy.Value());
+	}
 
 	// now prepare the job's standard FDs
 	//
 	get_std_fd(0, job_stdin);
 	get_std_fd(1, job_stdout);
 	get_std_fd(2, job_stderr);
+
+		// Now we do a little dance to replace the socketpair that we
+		// have been using to communicate with the starter with a new
+		// one.  Why?  Because, as of glexec 0.8, when glexec is
+		// configured with linger=on, some persistent process
+		// (glexec?, procd?) is keeping a handle to the wrapper's end
+		// of the socket open, so the starter hangs waiting for the
+		// socket to close when the job is executed.
+
+	int new_sock_fd = fdpass_recv(sock_fd);
+	if (new_sock_fd == -1) {
+		err = "fdpass_recv error on new_sock_fd";
+		fatal_error();
+	}
+	if (dup2(new_sock_fd,sock_fd) == -1 ) {
+		err = "dup2 error on new_sock_fd";
+		fatal_error();
+	}
+	close(new_sock_fd);
 
 	// set our UNIX domain socket end close-on-exec; if the Starter
 	// sees it close without seeing an error message first, it assumes
@@ -163,16 +207,13 @@ get_std_fd(int std_fd, char* name)
 {
 	int new_fd = std_fd;
 	if (strcmp(name, "-") == 0) {
-		if (std_fd == 0) {
-			// stdin is handled specially, since its "default"
-			// (if we were passed "-" on the command line) is
-			// to get passed the FD to use from the Starter
+			// if we were passed "-" on the command line,
+			// get the FD to use from the Starter
 			//
-			new_fd = fdpass_recv(sock_fd);
-			if (new_fd == -1) {
-				err = "fdpass_recv error";
-				fatal_error();
-			}
+		new_fd = fdpass_recv(sock_fd);
+		if (new_fd == -1) {
+			err = "fdpass_recv error";
+			fatal_error();
 		}
 	}
 	else {
@@ -183,9 +224,9 @@ get_std_fd(int std_fd, char* name)
 		else {
 			flags = O_WRONLY | O_CREAT | O_TRUNC;
 		}
-		new_fd = safe_open_wrapper(name, flags, 0600);
+		new_fd = safe_open_wrapper_follow(name, flags, 0600);
 		if (new_fd == -1) {
-			err.sprintf("safe_open_wrapper error on %s: %s",
+			err.sprintf("safe_open_wrapper_follow error on %s: %s",
 			            name,
 			            strerror(errno));
 			fatal_error();

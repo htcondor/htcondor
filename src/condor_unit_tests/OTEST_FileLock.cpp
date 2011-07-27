@@ -91,9 +91,9 @@ bool OTEST_FileLock(void) {
 	driver.register_function(test_unlock_bad);
 	
 	fd1 = cut_assert_gez( 
-			safe_open_wrapper( created_file, O_RDWR | O_CREAT, 0664 ) );
+			safe_open_wrapper_follow( created_file, O_RDWR | O_CREAT, 0664 ) );
 	fd2 = cut_assert_gez(
-		safe_open_wrapper( existing_file, O_RDWR | O_CREAT, 0664 ) );
+		safe_open_wrapper_follow( existing_file, O_RDWR | O_CREAT, 0664 ) );
 	int status = driver.do_all_functions();
 	cut_assert_z( remove(created_file) );
 

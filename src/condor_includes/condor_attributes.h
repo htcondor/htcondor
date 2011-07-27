@@ -129,6 +129,7 @@ extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY;
 extern const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE;
 extern const char * const  ATTR_DELTACLOUD_KEYNAME;
 extern const char * const  ATTR_DELTACLOUD_USER_DATA;
+extern const char * const  ATTR_DELTACLOUD_NEEDS_START;
 extern const char * const  ATTR_DESTINATION;
 extern const char * const  ATTR_DISK;
 extern const char * const  ATTR_DISK_USAGE;
@@ -811,6 +812,10 @@ extern const char * const ATTR_EC2_REMOTE_VM_NAME;
 extern const char * const ATTR_EC2_INSTANCE_TYPE;
 extern const char * const ATTR_EC2_INSTANCE_NAME;
 extern const char * const ATTR_EC2_ELASTIC_IP;
+extern const char * const ATTR_EC2_AVAILABILITY_ZONE;
+extern const char * const ATTR_EC2_EBS_VOLUMES;
+extern const char * const ATTR_EC2_VPC_SUBNET;
+extern const char * const ATTR_EC2_VPC_IP;
 //************* End of changes for EC2 Jobs *****************//
 
 

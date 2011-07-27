@@ -45,6 +45,7 @@
 #include "classad_helpers.h"
 #include "condor_holdcodes.h"
 #include "basename.h"
+#include "MyString.h"
 
 
 extern "C" {
@@ -403,7 +404,7 @@ pseudo_send_a_file( const char *path, mode_t mode )
 	omask = umask( 022 );
 
 		/* Open the file for writing, send back status from the open */
-	if( (fd=safe_open_wrapper(path,O_WRONLY|O_CREAT|O_TRUNC,mode)) < 0 ) {
+	if( (fd=safe_open_wrapper_follow(path,O_WRONLY|O_CREAT|O_TRUNC,mode)) < 0 ) {
 		(void)umask(omask);
 		return -1;
 	}
@@ -458,14 +459,14 @@ pseudo_get_file( const char *name )
 
 		/* Open the remote file and return status from the open */
 	errno = 0;
-	fd = safe_open_wrapper( name, O_RDONLY, 0 );
+	fd = safe_open_wrapper_follow( name, O_RDONLY, 0 );
 	dprintf(D_SYSCALLS, "\topen(%s,O_RDONLY,0) = %d, errno = %d\n",
 														name, fd, errno );
 	if( fd < 0 ) {
 		return -1;
 	}
 
-		/* Send the status from safe_open_wrapper() so client knows we are going ahead */
+		/* Send the status from safe_open_wrapper_follow() so client knows we are going ahead */
 	syscall_sock->encode();
 	assert( syscall_sock->code(fd) );
 
@@ -766,7 +767,7 @@ pseudo_get_file_stream(
 		priv = set_condor_priv();
 	}
 
-	file_fd=safe_open_wrapper(file,O_RDONLY);
+	file_fd=safe_open_wrapper_follow(file,O_RDONLY);
 
 	if (CkptFile || ICkptFile) set_priv(priv); // restore user privileges
 
@@ -914,7 +915,7 @@ pseudo_put_file_stream(
 
 	int open_attempts=0;
 	for(open_attempts=0;open_attempts<100;open_attempts++) {
-		file_fd=safe_open_wrapper(file,O_WRONLY|O_CREAT|O_TRUNC,0664);
+		file_fd=safe_open_wrapper_follow(file,O_WRONLY|O_CREAT|O_TRUNC,0664);
 
 		if( file_fd < 0 && errno == ENOENT && (CkptFile || ICkptFile) ) {
 
@@ -1953,7 +1954,7 @@ simp_log( const char *msg )
 	omask = umask( 022 );
 
 	if( !fp ) {
-		if( (fd=safe_open_wrapper(name,O_WRONLY|O_CREAT,0666)) < 0 ) {
+		if( (fd=safe_open_wrapper_follow(name,O_WRONLY|O_CREAT,0666)) < 0 ) {
 			EXCEPT( "Can't create/open \"%s\"", name );
 		}
 		close( fd );
@@ -2140,44 +2141,86 @@ pseudo_register_opsys(const char *opsys)
 }
 
 int
-pseudo_register_syscall_version( const char *version )
+pseudo_register_syscall_version( const char *job_version )
 {
 	CondorVersionInfo versInfo;
-	if( versInfo.is_compatible(version) ) {
-		dprintf( D_FULLDEBUG, "User job is compatible with this shadow version\n" );
+	const char *shadow_version = NULL;
+	char *exec_path = NULL;
+	MyString novers = "[No Condor Version Available]";
+	MyString hold_msg;
+	MyString buf;
+	MyString line;
+
+	// Obviously, I'm in the shadow process when this is called. :)
+	shadow_version = CondorVersion();
+
+	if( versInfo.is_compatible(job_version) ) {
+		dprintf( D_FULLDEBUG, "User job version '%s' is compatible with this "
+			"shadow version '%s'\n", 
+			job_version?job_version:novers.Value(), 
+			shadow_version );
 		return 0;
 	} 
-		// Not compatible, we're screwed.
-	dprintf( D_ALWAYS, "ERROR: User job is NOT compatible with this shadow version\n" );
-	char buf[4096];
-	char line[256];
 
-	buf[0] = '\0';
-	line[0] = '\0';
-	strcat( buf, "Since the time that you ran condor_compile to link your job with\n" );
-	strcat( buf, "the Condor libraries, your local Condor administrator has\n" );
-	strcat( buf, "installed a different version of the condor_shadow program.\n" );
-	strcat( buf, "The version of the Condor libraries you linked in with your job,\n" );
-	strcat( buf, version );
-	strcat( buf, "\nis not compatible with the currently installed condor_shadow,\n" );
-	strcat( buf, CondorVersion() );
-	strcat( buf, "\n\nYou must do one of the following:\n\n" );
-	sprintf( line, "1) Remove your job (\"condor_rm %d.%d\"), re-link it with a\n",
-			 Proc->id.cluster, Proc->id.proc );
-	strcat( buf, line );
-	strcat( buf, "compatible version of the Condor libraries (rerun " );
-	strcat( buf, "\"condor_compile\")\nand re-submit it (rerun \"condor_submit\").\n" );
-	strcat( buf, "\nor\n\n" );
-	strcat( buf, "2) Have your Condor administrator install a different version\n" );
-	strcat( buf, "of the condor_shadow program on your submit machine.\n" );
-	strcat( buf, "In this case, once the compatible shadow is in place, you\n" );
-	sprintf( line, "can release your job with \"condor_release %d.%d\".\n",
-			 Proc->id.cluster, Proc->id.proc );
-	strcat( buf, line );
+	// Not compatible, we're screwed. Put the job on Hold.
 
-		// This sends the email and exits with JOB_SHOULD_HOLD. 
-	HoldJob( buf, "Job and shadow versions aren't compatible",
-			 CONDOR_HOLD_CODE_JobShadowMismatch, 0 );
+	dprintf( D_ALWAYS, "ERROR: User job (which was compiled with condor "
+		"version: %s) is NOT compatible with this shadow version which is "
+		"at version %s\n",
+		job_version?job_version:novers.Value(), shadow_version  );
+
+	buf +=
+		"Since the time that you ran condor_compile to link your job with\n"
+		"the Condor libraries, your local Condor administrator has\n"
+		"installed a different version of the condor_shadow program.\n"
+		"The version of the Condor libraries you linked in with your job,\n";
+	buf += job_version;
+	buf +=
+		"\nis not compatible with the currently installed condor_shadow,\n";
+	buf += shadow_version;
+	buf += "\n\nYou must do one of the following:\n\n";
+
+	line.sprintf(
+		"1) Remove your job (\"condor_rm %d.%d\"), re-link it with a\n",
+		 Proc->id.cluster, Proc->id.proc );
+	buf += line;
+
+	buf +=
+		"compatible version of the Condor libraries (rerun "
+		"\"condor_compile\")\nand re-submit it (rerun \"condor_submit\").\n"
+		"\nor\n\n"
+		"2) Have your Condor administrator install a different version\n"
+		"of the condor_shadow program on your submit machine.\n"
+		"In this case, once the compatible shadow is in place, you\n";
+
+	line.sprintf( "can release your job with \"condor_release %d.%d\".\n",
+			 Proc->id.cluster, Proc->id.proc );
+	buf += line;
+
+	// Create a good hold reason so the user knows exactly what happened.
+	hold_msg += 
+		"This standard universe job and shadow version aren't compatible. "
+		"The job was condor_compiled with Condor version '";
+	hold_msg += job_version;
+	hold_msg += "'. The condor_shadow version is '";
+	hold_msg += shadow_version;
+	hold_msg += 
+	"'. The path to the condor_shadow which acted on behalf of this job is ";
+
+	exec_path = getExecPath();
+	if (exec_path != NULL) {
+		hold_msg += "'";
+		hold_msg += exec_path;
+		hold_msg += "'.";
+		free(exec_path);
+	} else {
+		hold_msg += "not available.";
+	}
+
+	// This sends the email and exits with JOB_SHOULD_HOLD. 
+	HoldJob( buf.Value(), hold_msg.Value(), 
+		CONDOR_HOLD_CODE_JobShadowMismatch, 0 );
+
 	return 0;
 }
 

@@ -23,18 +23,15 @@
 
 #include "condor_common.h"
 #include "condor_io.h"
-#ifndef WANT_CLASSAD_NAMESPACE
-#define WANT_CLASSAD_NAMESPACE
-#endif
 #include <iostream>
 #include "classad/classad_distribution.h"
 
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 bool getOldClassAd( Stream *sock, ClassAd& ad );
 bool putOldClassAd ( Stream *sock, ClassAd& ad );
 
-END_NAMESPACE // classad
+} // classad
 #endif // __CLASSADUTIL_H__
 

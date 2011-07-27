@@ -103,7 +103,7 @@ class ParamValue {
 
 	ExtArray<ParamValue>* param_all(void);
 	char* param_or_except( const char *name );
-    int param_integer( const char *name, int default_value,
+    int param_integer( const char *name, int default_value = 0,
 					   int min_value = INT_MIN, int max_value = INT_MAX, bool use_param_table = true );
 	// Alternate param_integer():
 	bool param_integer( const char *name, int &value,
@@ -114,7 +114,7 @@ class ParamValue {
 						bool use_param_table = true );
 
 
-	double param_double(const char *name, double default_value,
+	double param_double(const char *name, double default_value = 0,
                         double min_value = -DBL_MAX, double max_value = DBL_MAX,
                         ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );

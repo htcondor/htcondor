@@ -681,6 +681,9 @@ class GahpClient : public Service {
 						  const char * user_data,
 						  const char * user_data_file,
 						  const char * instance_type,
+						  const char * availability_zone,
+						  const char * vpc_subnet,
+						  const char * vpc_ip,
 						  StringList & groupnames,
 						  char* & instance_id,
 						  char* & error_code );
@@ -731,6 +734,7 @@ class GahpClient : public Service {
                                   const char * elastic_ip,
                                   StringList & returnStatus,
                                   char* & error_code );
+		
         /**
          * Used to release an elastic ip from an instance
          * leaving around in case we ever need this. 
@@ -741,6 +745,18 @@ class GahpClient : public Service {
                                       const char * elastic_ip,
                                       StringList & returnStatus,
                                       char* & error_code ); */
+
+		/**
+		 * Used to attach to an ecs volume(s).
+		 */
+		int ec2_attach_volume(const char * service_url,
+                              const char * publickeyfile,
+                              const char * privatekeyfile,
+                              const char * volume_id,
+							  const char * instance_id, 
+                              const char * device_id,
+                              StringList & returnStatus,
+                              char* & error_code );
 
 		int
 		dcloud_submit( const char *service_url,
@@ -786,6 +802,17 @@ class GahpClient : public Service {
 					 char **instance_id );
 
 
+		int
+		dcloud_get_max_name_length( const char *service_url,
+									const char *username,
+									const char *password,
+									int *max_length );
+
+		int
+		dcloud_start_auto( const char *service_url,
+						   const char *username,
+						   const char *password,
+						   bool *autostart );
 
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...

@@ -132,11 +132,16 @@ if (BUILD_TESTS)
 			condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
 		endif()
 
-        # AFAIK, this test isn't platform- or external- dependent.
-        condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
+        	# AFAIK, this test isn't platform- or external- dependent.
+        	# Temporarily comment out until simulator is updated
+		condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
 
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
+		if ( NOT ${SYSTEM_NAME} MATCHES "rhel3" )
+			# This test fails on rhel3 for unknown reasons
+			condor_pl_test(job_deltacloud_basic "Deltacloud test" "core;quick;full;quicknolink")
+		endif()
 	endif()
 
 	# negative matches. test on everything but this
@@ -254,6 +259,10 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_splice-M "Simple Dagman Splice M" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_splice-N "Simple Dagman Splice N" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_splice-O "Simple Dagman Splice O" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_pre_skip-A "Simple Dagman Pre Skip A" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_pre_skip-B "Simple Dagman Pre Skip B" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_pre_skip-C "Simple Dagman Pre Skip C" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_pre_skip-D "Simple Dagman Pre Skip D" "core;dagman;quick;full;quicknolink")
 	##### generic lib tests
 	condor_pl_test(lib_classads "Run Classad Unit Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_unit_tests "Run Unit Tests Tests" "core;quick;full;quicknolink")
@@ -291,10 +300,11 @@ if (BUILD_TESTS)
 	condor_pl_test(cmd_q_shows-xml "Condor_q shows xml" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-cputime "Condor_q shows cputime" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-format "Condor_q shows format" "core;quick;full;quicknolink")
+	condor_pl_test(file_transfer_submit "condor_submit file transfer" "core;quick;full;quicknolink")
 
 	if (LINUX AND NOT ${SYSTEM_NAME} MATCHES "rhel3")
           condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
-	endif(LINUX)
+	endif()
 
 	##### lib log tests
 	condor_pl_test(lib_userlog "Exercise the userlog interface write and read all events" "lib;quick;full")
@@ -426,6 +436,7 @@ if (BUILD_TESTS)
 	condor_pl_test(job_filexfer_whento-withinput_van "Vanilla: Multiple input files arrive ok" "filexfer;quick;full;quicknolink")
 	condor_pl_test(job_filexfer_output_van "Vanilla: Are 6 output files returned" "filexfer;quick;full;quicknolink")
 	condor_pl_test(job_filexfer_md5-remote_van "Vanilla: Can we move 200 megs and not impact md5 checksum?" "filexfer;quick;full;quicknolink")
+	condor_pl_test(job_startd_rank_preempt "Does startd rank trump user priority?" "quick;full;quicknolink")
 	condor_pl_test(cmd_wait_shows-all "" "quick;full")
 	condor_pl_test(cmd_wait_shows-base "" "quick;full")
 	condor_pl_test(cmd_wait_shows-notimeout "" "quick;full")

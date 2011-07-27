@@ -963,7 +963,7 @@ void round_for_precision(double& x) {
 
 
 double starvation_ratio(double usage, double allocated) {
-    return (allocated > 0) ? (usage / allocated) : DBL_MAX;
+    return (allocated > 0) ? (usage / allocated) : FLT_MAX;
 }
 
 struct starvation_order {
@@ -1076,7 +1076,8 @@ negotiationTime ()
     // Restrict number of slots available for dynamic quotas.
     double hgq_total_quota = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)numDynGroupSlots;
     if ( numDynGroupSlots && DynQuotaMachConstraint ) {
-		int matchedSlots = startdAds.Count( DynQuotaMachConstraint );
+        bool remove = param_boolean("NEGOTIATOR_STARTD_CONSTRAINT_REMOVE", false);
+        int matchedSlots = startdAds.Count(DynQuotaMachConstraint, remove);
         if ( matchedSlots ) {
             dprintf(D_ALWAYS,"GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine "
                     "count from %d to %d\n", numDynGroupSlots, matchedSlots);
@@ -1296,7 +1297,12 @@ negotiationTime ()
                         dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g)\n", group->name.c_str(), group->usage);
                         continue;
                     }
-
+		    
+                    if (group->submitterAds->MyLength() <= 0) {
+                        dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
+                        continue;
+                    }
+		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
                     double delta = max(0.0, group->allocated - group->usage);
@@ -1772,7 +1778,7 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
     for (unsigned long j = 0;  j < (groups.size()-1);  ++j) {
         if (allocated[j] > 0) {
             double s = hgq_allocate_surplus(groups[j], allocated[j]);
-            if (fabs(surplus) > 0.00001) {
+            if (fabs(s) > 0.00001) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: allocate-surplus (3): surplus= %g\n", s);
             }
         }
@@ -2003,6 +2009,22 @@ GroupEntry::~GroupEntry() {
 }
 
 
+void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
+	submitterAds.Open();
+	while (ClassAd* ad = submitterAds.Next()) {
+        int idle = 0;
+        ad->LookupInteger(ATTR_IDLE_JOBS, idle);
+
+        if (idle <= 0) {
+            std::string submitterName;
+            ad->LookupString(ATTR_NAME, submitterName);
+            dprintf(D_FULLDEBUG, "Ignoring submitter %s with no idle jobs\n", submitterName.c_str());
+            submitterAds.Remove(ad);
+        }
+    }
+}
+
+
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
 					 double untrimmedSlotWeightTotal,
@@ -2012,7 +2034,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					 ClassAdListDoesNotDeleteAds& scheddAds, 
 					 float groupQuota, const char* groupName)
 {
-    time_t start_time_phase3 = time(NULL);
 	ClassAd		*schedd;
 	MyString    scheddName;
 	MyString    scheddAddr;
@@ -2035,13 +2056,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	time_t		startTime;
 	
 
-	// ----- Sort the schedd list in decreasing priority order
-	dprintf( D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n" );
-	scheddAds.Sort( (lessThanFunc)comparisonFunction, this );
-
-    // transition Phase 3 --> Phase 4
+    int duration_phase3 = 0;
     time_t start_time_phase4 = time(NULL);
-    negotiation_cycle_stats[0]->duration_phase3 += start_time_phase4 - start_time_phase3;
 
 	double scheddUsed=0;
 	int spin_pie=0;
@@ -2065,6 +2081,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			// have thrown out matches due to SlotWeight being too high
 			// given the schedd limit computed in the previous pie spin
 		DeleteMatchList();
+
+        // filter submitters with no idle jobs to avoid unneeded computations and log output
+        if (!ConsiderPreemption) {
+            filter_submitters_no_idle(scheddAds);
+        }
 
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
@@ -2092,6 +2113,20 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			slotWeightTotal,
 				/* result parameters: */
 			pieLeft);
+
+        if (!ConsiderPreemption && (pieLeft <= 0)) break;
+
+        if (1 == spin_pie) {
+            // Sort the schedd list in decreasing priority order
+            // This only needs to be done once: do it on the 1st spin, prior to 
+            // iterating over submitter ads so they negotiate in sorted order.
+            // The sort ordering function makes use of a submitter starvation
+            // attribute that is computed in calculatePieLeft, above
+            time_t start_time_phase3 = time(NULL);
+            dprintf(D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n");
+            scheddAds.Sort((lessThanFunc)comparisonFunction, this);
+            duration_phase3 += time(NULL) - start_time_phase3;
+        }
 
 		pieLeftOrig = pieLeft;
 		scheddAdsCountOrig = scheddAds.MyLength();
@@ -2307,7 +2342,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
 	dprintf( D_ALWAYS, " negotiateWithGroup resources used scheddAds length %d \n",scheddAds.MyLength());
 
-    negotiation_cycle_stats[0]->duration_phase4 += time(NULL) - start_time_phase4;    
+    negotiation_cycle_stats[0]->duration_phase3 += duration_phase3;
+    negotiation_cycle_stats[0]->duration_phase4 += (time(NULL) - start_time_phase4) - duration_phase3;
 
 	return TRUE;
 }
@@ -2315,57 +2351,40 @@ negotiateWithGroup ( int untrimmed_num_startds,
 static int
 comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
 {
-	char	*scheddName1 = NULL;
-	char	*scheddName2 = NULL;
-	double	prio1, prio2;
-	Matchmaker *mm = (Matchmaker *) m;
+	Matchmaker* mm = (Matchmaker*)m;
 
+    MyString subname1;
+    MyString subname2;
 
+    // nameless submitters are filtered elsewhere
+	ad1->LookupString(ATTR_NAME, subname1);
+	ad2->LookupString(ATTR_NAME, subname2);
+	double prio1 = mm->accountant.GetPriority(subname1);
+	double prio2 = mm->accountant.GetPriority(subname2);
 
-	if (!ad1->LookupString (ATTR_NAME, &scheddName1) ||
-		!ad2->LookupString (ATTR_NAME, &scheddName2))
-	{
-		if (scheddName1) free(scheddName1);
-		if (scheddName2) free(scheddName2);
-		return -1;
-	}
+    // primary sort on submitter priority
+    if (prio1 < prio2) return true;
+    if (prio1 > prio2) return false;
 
-	prio1 = mm->accountant.GetPriority(scheddName1);
-	prio2 = mm->accountant.GetPriority(scheddName2);
-	
-	// the scheddAds should be secondarily sorted based on ATTR_NAME
-	// because we assume in the code that follows that ads with the
-	// same ATTR_NAME are adjacent in the scheddAds list.  this is
-	// usually the case because 95% of the time each user in the
-	// system has a different priority.
+    float sr1 = FLT_MAX;
+    float sr2 = FLT_MAX;
 
-	if (prio1==prio2) {
-		int namecomp = strcmp(scheddName1,scheddName2);
-		free(scheddName1);
-		free(scheddName2);
-		if (namecomp != 0) return (namecomp < 0);
+    if (!ad1->LookupFloat("SubmitterStarvation", sr1)) sr1 = FLT_MAX;
+    if (!ad2->LookupFloat("SubmitterStarvation", sr2)) sr2 = FLT_MAX;
 
-			// We don't always want to negotiate with schedds with the
-			// same name in the same order or we might end up only
-			// running jobs this user has submitted to the first
-			// schedd.  The general problem is that we rely on the
-			// schedd to order each user's jobs, so when a user
-			// submits to multiple schedds, there is no guaranteed
-			// order.  Our hack is to order the schedds randomly,
-			// which should be a little bit better than always
-			// negotiating in the same order.  We use the timestamp on
-			// the classads to get a random ordering among the schedds
-			// (consistent throughout our sort).
+    // secondary sort on submitter starvation
+    if (sr1 < sr2) return true;
+    if (sr1 > sr2) return false;
 
-		int ts1=0, ts2=0;
-		ad1->LookupInteger (ATTR_LAST_HEARD_FROM, ts1);
-		ad2->LookupInteger (ATTR_LAST_HEARD_FROM, ts2);
-		return ( (ts1 % 1009) < (ts2 % 1009) );
-	}
+    int ts1=0;
+    int ts2=0;
+    ad1->LookupInteger(ATTR_LAST_HEARD_FROM, ts1);
+    ad2->LookupInteger(ATTR_LAST_HEARD_FROM, ts2);
 
-	free(scheddName1);
-	free(scheddName2);
-	return (prio1 < prio2);
+    // when submitters have same name from different schedd, their priorities
+    // and starvation ratios will be equal: fallback is to order them randomly
+    // to prevent long-term starvation of any one submitter
+    return (ts1 % 1009) < (ts2 % 1009);
 }
 
 int Matchmaker::
@@ -2910,6 +2929,10 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 
 
 		// 2a.  ask for job information
+		int sleepy = param_integer("NEG_SLEEP", 0);
+		if ( sleepy ) {
+			sleep(sleepy); // TODD DEBUG - allow schedd to do other things
+		}
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();
 		if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
@@ -3134,6 +3157,19 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		if (result == MM_NO_MATCH) 
 		{
 			numMatched--;		// haven't used any resources this cycle
+
+            if (rejForSubmitterLimit && !ConsiderPreemption && !accountant.UsingWeightedSlots()) {
+                // If we aren't considering preemption and slots are unweighted, then we can
+                // be done with this submitter when it hits its submitter limit
+                dprintf (D_ALWAYS, "    Hit submitter limit: done negotiating\n");
+                // stop negotiation and return MM_RESUME
+                // we don't want to return with MM_DONE because
+                // we didn't get NO_MORE_JOBS: there are jobs that could match 
+                // in later cycles with a quota redistribution
+                break;
+            }
+
+            // Otherwise continue trying with this submitter
 			continue;
 		}
 
@@ -3210,14 +3246,11 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 bool Matchmaker::
 SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft) 
 {
-	float SlotWeight = accountant.GetSlotWeight(candidate);
-		// the use of a fudge-factor 0.99 in the following is to be
-		// generous in case of very small round-off differences
-		// that I have observed in tests
-	if((used + SlotWeight) <= 0.99*allowed) {
-		return true;
-	}
-	if( used == 0 && allowed > 0 && pieLeft >= 0.99*SlotWeight ) {
+    double SlotWeight = accountant.GetSlotWeight(candidate);
+    if ((used + SlotWeight) <= allowed) {
+        return true;
+    }
+    if ((used <= 0) && (allowed > 0) && (pieLeft >= 0.99*SlotWeight)) {
 
 		// Allow user to round up once per pie spin in order to avoid
 		// "crumbs" being left behind that couldn't be taken by anyone
@@ -3513,7 +3546,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			}
 		}
 
-		if(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft))
+		/* Check that the submitter has suffient user priority to be matched with
+		   yet another machine. HOWEVER, do NOT perform this submitter limit
+		   check if we are negotiating only for startd rank, since startd rank
+		   preemptions should be allowed regardless of user priorities. 
+	    */
+		if( (candidatePreemptState != RANK_PREEMPTION) &&
+			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
 		{
 			rejForSubmitterLimit++;
 			continue;
@@ -4042,7 +4081,8 @@ Matchmaker::calculatePieLeft(
 			submitterAbsShare,
 			submitterPrio,
 			submitterPrioFactor);
-			
+
+        schedd->Assign("SubmitterStarvation", starvation_ratio(submitterUsage, submitterUsage+submitterLimit));
 			
 		pieLeft += submitterLimit;
         // account for expected group usage increases as we accumulate pie
@@ -4056,24 +4096,17 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
 							  double &max, double &normalFactor,
 							  double &maxAbs, double &normalAbsFactor)
 {
-	ClassAd *ad;
-	char	*scheddName = NULL;
-	double	prio, prioFactor;
-	char	*old_scheddName = NULL;
-
 	// find the maximum of the priority values (i.e., lowest priority)
 	max = maxAbs = DBL_MIN;
 	scheddAds.Open();
-	while ((ad = scheddAds.Next()))
-	{
+	while (ClassAd* ad = scheddAds.Next()) {
 		// this will succeed (comes from collector)
-		ad->LookupString (ATTR_NAME, &scheddName);
-		prio = accountant.GetPriority (scheddName);
+        MyString subname;
+		ad->LookupString(ATTR_NAME, subname);
+		double prio = accountant.GetPriority(subname);
 		if (prio > max) max = prio;
-		prioFactor = accountant.GetPriorityFactor (scheddName);
+		double prioFactor = accountant.GetPriorityFactor(subname);
 		if (prioFactor > maxAbs) maxAbs = prioFactor;
-		free(scheddName);
-		scheddName = NULL;
 	}
 	scheddAds.Close();
 
@@ -4081,41 +4114,23 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
 	// also, do not factor in ads with the same ATTR_NAME more than once -
 	// ads with the same ATTR_NAME signify the same user submitting from multiple
 	// machines.
+    set<MyString> names;
 	normalFactor = 0.0;
 	normalAbsFactor = 0.0;
 	scheddAds.Open();
-	while ((ad = scheddAds.Next()))
-	{
-		ad->LookupString (ATTR_NAME, &scheddName);
-		if ( scheddName != NULL && old_scheddName != NULL )
-		{
-			if ( strcmp(scheddName,old_scheddName) == 0 )
-			{
-				free(old_scheddName);
-				old_scheddName = scheddName;
-				continue;
-			}
-		}
-		if ( old_scheddName != NULL )
-		{
-			free(old_scheddName);
-			old_scheddName = NULL;
-		}
-		old_scheddName = scheddName;
-		prio = accountant.GetPriority (scheddName);
-		normalFactor = normalFactor + max/prio;
-		prioFactor = accountant.GetPriorityFactor (scheddName);
-		normalAbsFactor = normalAbsFactor + maxAbs/prioFactor;
-	}
-	if ( scheddName != NULL )
-	{
-		free(scheddName);
-		scheddName = NULL;
+	while (ClassAd* ad = scheddAds.Next()) {
+        MyString subname;
+		ad->LookupString(ATTR_NAME, subname);
+        std::pair<set<MyString>::iterator, bool> r = names.insert(subname);
+        // Only count each submitter once
+        if (!r.second) continue;
+
+		double prio = accountant.GetPriority(subname);
+		normalFactor += max/prio;
+		double prioFactor = accountant.GetPriorityFactor(subname);
+		normalAbsFactor += maxAbs/prioFactor;
 	}
 	scheddAds.Close();
-
-	// done
-	return;
 }
 
 

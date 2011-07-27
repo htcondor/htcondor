@@ -21,7 +21,7 @@
 #ifndef __CLASSAD_CLASSAD_ITOR_H__
 #define __CLASSAD_CLASSAD_ITOR_H__
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 /// An object for iterating over the attributes of a ClassAd--deprecated. 
 /// We recommend that you now use the STL-like iterators defined with
@@ -95,6 +95,6 @@ class ClassAdIterator
         const ClassAd   			*ad;
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_CLASSAD_ITOR_H__

@@ -52,6 +52,7 @@ private:
 
 	qmf::com::redhat::grid::Negotiator *mgmtObject;
 
+#ifndef READ_ONLY_NEGOTIATOR_OBJECT
 	status_t GetLimits(qpid::types::Variant::Map &limits, std::string &text);
 
 	status_t SetLimit(std::string &name, double max, std::string &text);
@@ -73,6 +74,7 @@ private:
 	status_t SetUsage(std::string &name, double &usage, std::string &text);
 
 	bool CanModifyRuntime(std::string &text);
+#endif
 };
 
 }}} /* com::redhat::grid */

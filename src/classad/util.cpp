@@ -54,7 +54,7 @@ static inline int isinf_d  (double      x) { return isnan (x - x); }
 static inline int isinf_ld (long double x) { return isnan (x - x); }
 #endif
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 #ifdef WIN32
 #define BIGGEST_RANDOM_INT RAND_MAX
@@ -456,5 +456,5 @@ int classad_isnan(double x)
     return isnan(x);
 }
 
-END_NAMESPACE // classad
+} // classad
 

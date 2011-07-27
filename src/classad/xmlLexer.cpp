@@ -25,7 +25,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 // Note that these must be in the same order as the enum TagID
 struct xml_tag_mapping tag_mappings[] = 
@@ -487,4 +487,4 @@ GrabText(void)
 	return have_token;
 }
 
-END_NAMESPACE // classad
+} // classad

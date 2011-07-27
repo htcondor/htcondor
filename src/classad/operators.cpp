@@ -24,7 +24,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 Operation::
 Operation ()
@@ -1830,4 +1830,4 @@ PrecedenceLevel( OpKind op )
 	}
 }
 
-END_NAMESPACE // classad
+} // classad

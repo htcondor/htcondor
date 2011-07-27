@@ -290,17 +290,17 @@ static void setup() {
 	cut_assert_z( chdir("full_dir") );
 #endif
 	// Make a zero length, but executable, file
-	tmp_fd = cut_assert_gez( safe_open_wrapper("executable_file", O_RDWR | 
+	tmp_fd = cut_assert_gez( safe_open_wrapper_follow("executable_file", O_RDWR | 
 							 O_CREAT) );
 	cut_assert_z( close(tmp_fd) );
 	cut_assert_z( chmod("executable_file", 0755) );
 
 	// Make an empty file, leave the fd open.
 	cut_assert_z( mkdir("link_dir", 0700) );
-	fd = cut_assert_gez( safe_open_wrapper("empty_file", O_RDWR | O_CREAT) );
+	fd = cut_assert_gez( safe_open_wrapper_follow("empty_file", O_RDWR | O_CREAT) );
 
 	// Add some text
-	FILE* file_1 = safe_fopen_wrapper("full_file", "w+");
+	FILE* file_1 = safe_fopen_wrapper_follow("full_file", "w+");
 	cut_assert_not_null( file_1 );
 	cut_assert_gz( fprintf(file_1, "This is some text!") );
 	cut_assert_z( chdir("..") );

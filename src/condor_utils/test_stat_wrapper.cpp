@@ -62,7 +62,7 @@ main( int argc, const char *argv[] )
 		Help( argv[0] );
 		exit( 1 );
 	}
-	fd = safe_open_wrapper( path, O_RDONLY );
+	fd = safe_open_wrapper_follow( path, O_RDONLY );
 	printf( "path set to '%s', fd to %d\n", path, fd );
 
 	int		argno;
@@ -97,7 +97,7 @@ main( int argc, const char *argv[] )
 				exit( 1 );
 			}
 			path = arg1;
-			fd = safe_open_wrapper( path, O_RDONLY );
+			fd = safe_open_wrapper_follow( path, O_RDONLY );
 			skip = 1;
 			printf( "path set to '%s', fd to %d\n", path, fd );
 		}

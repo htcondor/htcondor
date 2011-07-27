@@ -2037,11 +2037,11 @@ id=95
 
 [PRIORITY_HALFLIFE]
 aliases=
-default=
+default=86400
 version=0.0.0
-range=.*
+range=0.00001,
 state=default
-type=string
+type=double
 is_macro=false
 reconfig=true
 customization=seldom
@@ -3558,7 +3558,7 @@ id=189
 
 [CREATE_CORE_FILES]
 aliases=
-default=
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -7769,7 +7769,7 @@ id=466
 
 [INVALID_LOG_FILES]
 aliases=
-default=core
+default=
 version=0.0.0
 range=.*
 state=default

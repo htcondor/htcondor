@@ -3137,7 +3137,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
     ClassAd *classad;
     FILE *file;
 
-    file = safe_fopen_wrapper(filename, "r");
+    file = safe_fopen_wrapper_follow(filename, "r");
     if (file == NULL) {
         fprintf(stderr, "Can't open file of job ads: %s\n", filename);
 		return false;

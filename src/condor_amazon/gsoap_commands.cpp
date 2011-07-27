@@ -452,7 +452,7 @@ AmazonVMStart::gsoapRequest(void)
 
 		if ( user_data_file.empty() == false ) {
 			// Need to read file
-			fd = safe_open_wrapper(user_data_file.c_str(), O_RDONLY);
+			fd = safe_open_wrapper_follow(user_data_file.c_str(), O_RDONLY);
 			if( fd < 0 ) {
 				sprintf(m_error_msg,"failed to safe_open_wrapper file(%s) : "
 						"safe_open_wrapper returns %s", user_data_file.c_str(), 

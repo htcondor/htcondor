@@ -466,7 +466,7 @@ sysapi_test_dump_all(int argc, char** argv)
 			dprintf( D_ALWAYS, "Using the real /proc/cpuinfo\n" );
 		}
 
-		FILE	*fp = safe_fopen_wrapper( linux_cpuinfo_file, "r", 0644 );
+		FILE	*fp = safe_fopen_wrapper_follow( linux_cpuinfo_file, "r", 0644 );
 		if ( !fp ) {
 			dprintf(D_ALWAYS, "SysAPI: Can't open cpuinfo file '%s'.\n\n",
 					linux_cpuinfo_file);

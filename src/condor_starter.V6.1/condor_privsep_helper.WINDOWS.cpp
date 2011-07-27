@@ -61,16 +61,18 @@ CondorPrivSepHelper::initialize_sandbox(const char* path)
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 }
 
-void
-CondorPrivSepHelper::chown_sandbox_to_user()
+bool
+CondorPrivSepHelper::chown_sandbox_to_user(PrivSepError &)
 {
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
+	return false;
 }
 
-void
-CondorPrivSepHelper::chown_sandbox_to_condor()
+bool
+CondorPrivSepHelper::chown_sandbox_to_condor(PrivSepError &)
 {
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
+	return false;
 }
 
 int
@@ -85,7 +87,8 @@ CondorPrivSepHelper::create_process(const char*,
                                      int,
                                      int,
                                      FamilyInfo*,
-									 int *affinity_mask)
+                                     int *affinity_mask,
+                                     MyString *  error_msg /*= NULL*/)
 {
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 	return 0;

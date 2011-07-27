@@ -27,9 +27,9 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 //-------------common collection templates-------------
 
-END_NAMESPACE
+}
 

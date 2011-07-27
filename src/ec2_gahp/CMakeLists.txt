@@ -26,7 +26,7 @@ if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS AND H
     # Build the GAHP; curl requires libz on some systems.
 	condor_exe( ec2_gahp
     	"${HeaderFiles};${SourceFiles}"	${C_SBIN}
-	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${CURL_FOUND};${ZLIB_FOUND}"
+	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CURL_FOUND};${ZLIB_FOUND}"
     	OFF )
 
     # Build an executable needed by the tests.

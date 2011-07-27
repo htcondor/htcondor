@@ -179,16 +179,17 @@ const char * const ATTR_DELTACLOUD_PRIVATE_NETWORK_ADDRESSES = "DeltacloudPrivat
 const char * const ATTR_DELTACLOUD_PROVIDER_ID	 = "DeltacloudProviderId";
 const char * const ATTR_DELTACLOUD_PUBLIC_NETWORK_ADDRESSES = "DeltacloudPublicNetworkAddresses";
 const char * const ATTR_DELTACLOUD_RETRY_TIMEOUT = "DeltacloudRetryTimeout";
-const char * const  ATTR_DELTACLOUD_USERNAME	 = "DeltacloudUsername";
-const char * const  ATTR_DELTACLOUD_PASSWORD_FILE = "DeltacloudPasswordFile";
-const char * const  ATTR_DELTACLOUD_IMAGE_ID	 = "DeltacloudImageId";
-const char * const  ATTR_DELTACLOUD_REALM_ID	 = "DeltacloudRealmId";
-const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE = "DeltacloudHardwareProfile";
-const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU = "DeltacloudHardwareProfileCpu";
-const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY = "DeltacloudHardwareProfileMemory";
-const char * const  ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE = "DeltacloudHardwareProfileStorage";
-const char * const  ATTR_DELTACLOUD_KEYNAME		 = "DeltacloudKeyname";
-const char * const  ATTR_DELTACLOUD_USER_DATA	 = "DeltacloudUserData";
+const char * const ATTR_DELTACLOUD_USERNAME	 = "DeltacloudUsername";
+const char * const ATTR_DELTACLOUD_PASSWORD_FILE = "DeltacloudPasswordFile";
+const char * const ATTR_DELTACLOUD_IMAGE_ID	 = "DeltacloudImageId";
+const char * const ATTR_DELTACLOUD_REALM_ID	 = "DeltacloudRealmId";
+const char * const ATTR_DELTACLOUD_HARDWARE_PROFILE = "DeltacloudHardwareProfile";
+const char * const ATTR_DELTACLOUD_HARDWARE_PROFILE_CPU = "DeltacloudHardwareProfileCpu";
+const char * const ATTR_DELTACLOUD_HARDWARE_PROFILE_MEMORY = "DeltacloudHardwareProfileMemory";
+const char * const ATTR_DELTACLOUD_HARDWARE_PROFILE_STORAGE = "DeltacloudHardwareProfileStorage";
+const char * const ATTR_DELTACLOUD_KEYNAME		 = "DeltacloudKeyname";
+const char * const ATTR_DELTACLOUD_USER_DATA	 = "DeltacloudUserData";
+const char * const ATTR_DELTACLOUD_NEEDS_START = "DeltacloudNeedsStart";
 const char * const ATTR_DESTINATION				 = "Destination";
 const char * const ATTR_DISK                     = "Disk";
 const char * const ATTR_DISK_USAGE				 = "DiskUsage";
@@ -916,6 +917,11 @@ const char * const ATTR_EC2_REMOTE_VM_NAME = "EC2RemoteVirtualMachineName";
 const char * const ATTR_EC2_INSTANCE_TYPE = "EC2InstanceType";
 const char * const ATTR_EC2_INSTANCE_NAME = "EC2InstanceName";
 const char * const ATTR_EC2_ELASTIC_IP = "EC2ElasticIp";
+const char * const ATTR_EC2_EBS_VOLUMES = "EC2ElasticBlockStorageVolumes";
+const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailbityZone";
+const char * const ATTR_EC2_VPC_SUBNET = "EC2VpcSubnet";
+const char * const ATTR_EC2_VPC_IP = "EC2VpcIp";
+
 //************* End of changes for EC2 Jobs *****************//
 
 //************* Added for Lease Manager *******************//

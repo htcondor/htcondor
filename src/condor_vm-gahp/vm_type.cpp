@@ -211,10 +211,10 @@ VMType::parseCommonParamFromClassAd(bool is_root /*false*/)
 	if( m_classad_arg.IsEmpty() == false ) {
 
         // Create a file for arguments
-		FILE *argfile_fp = safe_fopen_wrapper(VM_UNIV_ARGUMENT_FILE, "w");
+		FILE *argfile_fp = safe_fopen_wrapper_follow(VM_UNIV_ARGUMENT_FILE, "w");
 		if( !argfile_fp ) {
 			vmprintf(D_ALWAYS, "failed to safe_fopen_wrapper the file "
-					"for arguments: safe_fopen_wrapper(%s) returns %s\n", 
+					"for arguments: safe_fopen_wrapper_follow(%s) returns %s\n", 
 					VM_UNIV_ARGUMENT_FILE, strerror(errno));
 			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
 			return false;

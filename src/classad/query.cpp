@@ -24,7 +24,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 // --- local collection query implementation begins ---
 
@@ -191,4 +191,4 @@ ToAfterLast(void)
 
 // --- local collection query implementation ends ---
 
-END_NAMESPACE
+}

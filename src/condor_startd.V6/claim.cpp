@@ -2302,7 +2302,7 @@ ClaimId::dropFile( int slot_id )
 
 	filename_new += ".new";
 
-	FILE* NEW_FILE = safe_fopen_wrapper( filename_new.Value(), "w", 0600 );
+	FILE* NEW_FILE = safe_fopen_wrapper_follow( filename_new.Value(), "w", 0600 );
 	if( ! NEW_FILE ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: can't open claim id file: %s: %s (errno: %d)\n",

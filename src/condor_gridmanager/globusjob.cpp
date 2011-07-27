@@ -408,7 +408,7 @@ static bool write_classad_input_file( ClassAd *classad,
 		procID.cluster, procID.proc, out_filename.c_str());
 
 	// TODO: Test for file's existance, complain and die on existance?
-	FILE * fp = safe_fopen_wrapper(out_filename_full.c_str(), "w");
+	FILE * fp = safe_fopen_wrapper_follow(out_filename_full.c_str(), "w");
 
 	if( ! fp )
 	{
@@ -572,7 +572,7 @@ static bool merge_file_into_classad(const char * filename, ClassAd * ad)
 			full_filename += filename;
 		}
 		
-		FILE * fp = safe_fopen_wrapper(full_filename.c_str(), "r");
+		FILE * fp = safe_fopen_wrapper_follow(full_filename.c_str(), "r");
 		if( ! fp ) {
 			dprintf(D_ALWAYS, "Unable to read output ClassAd at %s.  "
 				"Error number %d (%s).  "

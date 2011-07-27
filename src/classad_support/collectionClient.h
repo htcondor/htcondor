@@ -26,7 +26,7 @@
 
 class Sock;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 class ClientTransaction;
 
@@ -123,6 +123,6 @@ private:
 	FILE	*log_fp;
 };
 
-END_NAMESPACE
+}
 
 #endif

@@ -796,7 +796,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	int index;
 	const char *attrs_to_copy[] = {
-		ATTR_JOB_CMD,
+//		ATTR_JOB_CMD,
 		ATTR_JOB_ARGUMENTS1,
 		ATTR_JOB_ARGUMENTS2,
 		ATTR_JOB_ENVIRONMENT1,
@@ -829,6 +829,18 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		if ( ( next_expr = jobAd->LookupExpr( attrs_to_copy[index] ) ) != NULL ) {
 			submit_ad->Insert( attrs_to_copy[index], next_expr->Copy() );
 		}
+	}
+
+	// The blahp expects the Cmd attribute to contain the full pathname
+	// of the job executable.
+	jobAd->LookupString( ATTR_JOB_CMD, expr );
+	if ( expr.FindChar( '/' ) < 0 ) {
+		std::string fullpath;
+		jobAd->LookupString( ATTR_JOB_IWD, fullpath );
+		sprintf_cat( fullpath, "/%s", expr.Value() );
+		submit_ad->Assign( ATTR_JOB_CMD, fullpath );
+	} else {
+		submit_ad->Assign( ATTR_JOB_CMD, expr );
 	}
 
 		// CRUFT: In the current glite code, jobs have a grid-type of 'blah'

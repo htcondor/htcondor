@@ -398,7 +398,7 @@ static void readHistoryFromFile(char *JobHistoryFileName)
 
     MyString buf;
     
-    int fd = safe_open_wrapper(JobHistoryFileName, O_RDONLY | O_LARGEFILE);
+    int fd = safe_open_wrapper_follow(JobHistoryFileName, O_RDONLY | O_LARGEFILE);
 	if (fd < 0) {
         fprintf(stderr,"History file (%s) not found or empty.\n", JobHistoryFileName);
         exit(1);
