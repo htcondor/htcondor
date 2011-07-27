@@ -5263,20 +5263,20 @@ SYSTEM_PERIODIC_HOLD = \
 \label{param:SystemPeriodicHoldReason}
 \item[\Macro{SYSTEM\_PERIODIC\_HOLD\_REASON}]
   This string expression is evaluated when the job is placed on hold
-  due to \MacroNI{SYSTEM\_PERIODIC\_HOLD} becoming true.  If it
-  evaluates to a non-empty string, this value is used to set the
-  job attribute \AdAttr{HoldReason}.  Otherwise, a default
-  description is used.
+  due to \MacroNI{SYSTEM\_PERIODIC\_HOLD} evaluating to \Expr{True}.
+  If it evaluates to a non-empty string, this value is used to set the
+  job attribute \AdAttr{HoldReason}.
+  Otherwise, a default description is used.
 
 \label{param:SystemPeriodicHoldSubCode}
 \item[\Macro{SYSTEM\_PERIODIC\_HOLD\_SUBCODE}]
   This integer expression is evaluated when the job is placed on hold
-  due to \MacroNI{SYSTEM\_PERIODIC\_HOLD} becoming true.  If it
-  evaluates to a valid integer, this value is used to set the job
-  attribute \AdAttr{HoldReasonSubCode}.  Otherwise, a default of 0 is
-  used.  The attribute \AdAttr{HoldReasonCode} is set to 26, which
-  indicates that the job went on hold due to a system job policy
-  expression.
+  due to \MacroNI{SYSTEM\_PERIODIC\_HOLD} evaluating to \Expr{True}.
+  If it evaluates to a valid integer, this value is used to set the job
+  attribute \Attr{HoldReasonSubCode}.  
+  Otherwise, a default of 0 is used.
+  The attribute \AdAttr{HoldReasonCode} is set to 26, which
+  indicates that the job went on hold due to a system job policy expression.
 
 \label{param:SystemPeriodicRelease}
 \item[\Macro{SYSTEM\_PERIODIC\_RELEASE}]
