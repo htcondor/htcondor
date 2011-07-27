@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "MyString.h"
 #include "condor_sockfunc.h"
+#include "ipv6_hostname.h"
 #include "ipv6_interface.h"
 
 int condor_connect(int sockfd, const condor_sockaddr& addr)
@@ -100,28 +101,6 @@ int condor_recvfrom(int sockfd, void* buf, size_t buf_size, int flags,
 	return ret;
 }
 
-int condor_getsockname(int sockfd, condor_sockaddr& addr)
-{
-	sockaddr_storage ss;
-	socklen_t socklen = sizeof(ss);
-	int ret = getsockname(sockfd, (sockaddr*)&ss, &socklen);
-	if (ret == 0) {
-		addr = condor_sockaddr((sockaddr*)&ss);
-	}
-	return ret;
-}
-
-int condor_getpeername(int sockfd, condor_sockaddr& addr)
-{
-	sockaddr_storage ss;
-	socklen_t socklen = sizeof(ss);
-	int ret = getpeername(sockfd, (sockaddr*)&ss, &socklen);
-	if (ret == 0) {
-		addr = condor_sockaddr((sockaddr*)&ss);
-	}
-	return ret;
-}
-
 int condor_getnameinfo (const condor_sockaddr& addr,
 		                char * __host, socklen_t __hostlen,
 		                char * __serv, socklen_t __servlen,
@@ -167,6 +146,21 @@ hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr)
 	ret = gethostbyaddr(p_addr, len, type);
 	return ret;
 }
+
+int condor_getsockname_ex(int sockfd, condor_sockaddr& addr)
+{
+	int ret;
+	ret = condor_getsockname(sockfd, addr);
+	if (ret == 0 && addr.is_addr_any()) {
+		unsigned short portno = addr.get_port();
+		addr = get_local_ipaddr();
+		addr.set_port(portno);
+	}
+
+	return ret;
+}
+
+
 
 //const char* ipv6_addr_to_hostname(const condor_sockaddr& addr, char* buf, int len)
 //{

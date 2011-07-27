@@ -133,11 +133,10 @@ main( int argc, char* argv[] )
 		char const *ip = fields.next();
 		char const *expected = fields.next();
 
-		MyString sin_str;
-		sin_str.sprintf("<%s:0>",ip);
+		MyString sin_str = generate_sinful(ip, 0);
 
-		struct sockaddr_in sin;
-		if( !string_to_sin(sin_str.Value(),&sin) ) {
+		condor_sockaddr addr;
+		if( !addr.from_sinful(sin_str) ) {
 			fprintf(stderr,"Invalid ip address: %s\n",ip);
 			exit(1);
 		}
@@ -154,7 +153,7 @@ main( int argc, char* argv[] )
 
 		char const *result;
 		MyString reason;
-		if( ipverify.Verify(perm,&sin,fqu,&reason,&reason) != USER_AUTH_SUCCESS ) {
+		if( ipverify.Verify(perm,addr,fqu,&reason,&reason) != USER_AUTH_SUCCESS ) {
 			result = "DENIED";
 		}
 		else {

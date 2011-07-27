@@ -25,6 +25,8 @@ uint32_t find_scope_id(const condor_sockaddr& addr) {
 			return addr2.to_sin6().sin6_scope_id;
 		}
 	}
+
+	return (uint32_t)-1;
 }
 
 uint32_t ipv6_get_scope_id() {

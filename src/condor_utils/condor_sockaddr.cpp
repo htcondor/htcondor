@@ -185,6 +185,10 @@ const char* condor_sockaddr::to_sinful(char* buf, int len) const
 	return buf;
 }
 
+bool condor_sockaddr::from_sinful(const MyString& sinful) {
+	return from_sinful(sinful.Value());
+}
+
 // faithful reimplementation of 'string_to_sin' of internet.c
 bool condor_sockaddr::from_sinful(const char* sinful)
 {

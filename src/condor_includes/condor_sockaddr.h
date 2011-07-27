@@ -93,6 +93,7 @@ public:
 
 		// sinful string could contain either IP address or hostname.
 		// from_sinful() calls gethostbyname to resolve DNS name to IP addr.
+	bool from_sinful(const MyString& ip_string);
 	bool from_sinful(const char* sinful);
 	MyString to_sinful() const;
 	const char* to_sinful(char* buf, int len) const;

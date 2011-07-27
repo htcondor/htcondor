@@ -144,11 +144,11 @@ FILE *fopen_http( char *server, char *path )
 
 int open_tcp( char *server, int port )
 {
-	struct addrinfo* result = NULL;
+	struct addrinfo* res = NULL;
 	int fd;
 	int result = 0;
 
-	result = getaddrinfo(server, NULL, NULL, &result);
+	result = getaddrinfo(server, NULL, NULL, &res);
 	if (result != 0) {
 		printf("FAILURE: getaddrinfo failed: h_errno = %d\n", h_errno);
 		exit(EXIT_FAILURE);
@@ -159,14 +159,14 @@ int open_tcp( char *server, int port )
 		exit(EXIT_FAILURE);
 	}
 
-	fd = socket(resut->ai_family, SOCK_STREAM, 0);
+	fd = socket(res->ai_family, SOCK_STREAM, 0);
 	if(fd<0)
 	{
 		printf("FAILURE: socket(): %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
-	if(connect(fd, result->ai_addr, result->ai_addrlen)<0) {
+	if(connect(fd, res->ai_addr, res->ai_addrlen)<0) {
 		printf("FAILURE: connect(): %s\n", strerror(errno));
 		close(fd);
 		exit(EXIT_FAILURE);
