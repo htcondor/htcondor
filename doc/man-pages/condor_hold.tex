@@ -5,12 +5,14 @@
 
 \SynProg{\Condor{hold}}
 \ToolDebugOption
+\oOptArg{-reason}{reasonstring}
 \ToolLocate 
 \ToolJobs
 $|$ \OptArg{-constraint}{expression} \Dots 
 
 \SynProg{\Condor{hold}}
 \ToolDebugOption
+\oOptArg{-reason}{reasonstring}
 \ToolLocate 
 \ToolAll
 
@@ -40,18 +42,22 @@ allowing a checkpoint to be produced first.
 
 \begin{Options}
 
-	\ToolArgsBaseDesc
-	\ToolLocateDesc
-	\ToolDebugDesc
-        \OptItem{\Arg{cluster}}{Hold all jobs in the specified cluster}
-        \OptItem{\Arg{cluster.process}}{Hold the specific job in the cluster}
-        \OptItem{\Arg{user}}{Hold all jobs belonging to specified user}
-        \OptItem{\OptArg{-constraint}{expression}} {Hold all jobs which match
-	        the job ClassAd expression constraint (within quotation
-		marks).
-		Note that quotation marks must be escaped with the
-		backslash characters for most shells.  }
-        \OptItem{\Arg{-all}}{Hold all the jobs in the queue}
+  \ToolArgsBaseDesc
+  \ToolLocateDesc
+  \ToolDebugDesc
+  \OptItem{\OptArg{-reason}{reasonstring}}{Sets the job ClassAd attribute
+    \Attr{HoldReason} to the value given by \Arg{reasonstring}.
+    \Arg{reasonstring} will be delimited by double quote marks on the
+    command line, if it contains space characters.} 
+  \OptItem{\Arg{cluster}}{Hold all jobs in the specified cluster}
+  \OptItem{\Arg{cluster.process}}{Hold the specific job in the cluster}
+  \OptItem{\Arg{user}}{Hold all jobs belonging to specified user}
+  \OptItem{\OptArg{-constraint}{expression}} {Hold all jobs which match
+    the job ClassAd expression constraint (within quotation
+    marks).
+    Note that quotation marks must be escaped with the
+    backslash characters for most shells.  }
+  \OptItem{\Arg{-all}}{Hold all the jobs in the queue}
 
 \end{Options}
 
