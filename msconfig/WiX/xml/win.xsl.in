@@ -49,6 +49,9 @@
                  <RegistryValue Type="string" Name="HDFSPORT" Value="[HDFSPORT]" />
                  <RegistryValue Type="string" Name="HDFSWEBPORT" Value="[HDFSWEBPORT]" />
              </RegistryKey>
+			 <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\condor"  Action="createAndRemoveOnUninstall">
+               <RegistryValue Type="integer" Name="DelayedAutostart" Value="1" />
+             </RegistryKey>
              <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLDIR]bin\"/>
            </Component>
             <Component Id="CondorKBDDReg" Guid="3C40071C-6DB9-43AD-8058-920623026740">

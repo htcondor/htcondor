@@ -2940,6 +2940,10 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 
 
 		// 2a.  ask for job information
+		int sleepy = param_integer("NEG_SLEEP", 0);
+		if ( sleepy ) {
+			sleep(sleepy); // TODD DEBUG - allow schedd to do other things
+		}
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();
 		if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())

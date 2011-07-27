@@ -203,6 +203,14 @@ sub findTests () {
     while( <LIST> ) {
 		print;
 		chomp;
+
+		# Crude hack to skip deltacloud test if we don't have ruby
+		if ( $_ eq 'job_deltacloud_basic' ) {
+			if ( system( "ruby --version" ) != 0 ) {
+				next;
+			}
+		}
+
 		$taskname = $_ . $ext;
 		$total++;
 		$tasklist{$taskname} = 1;
