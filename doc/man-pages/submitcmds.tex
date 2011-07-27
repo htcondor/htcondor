@@ -642,6 +642,22 @@ Note that \SubmitCmd{should\_transfer\_files} is not supported
 for jobs submitted to the grid universe.
 
 %%%%%%%%%%%%%%%%%%%
+%% skip_filechecks
+%%%%%%%%%%%%%%%%%%%
+\index{submit commands!skip\_filechecks}
+\item[skip\_filechecks = $<$True \Bar\ False$>$]
+When \Expr{True},
+file permission checks for the submitted job are disabled.
+When \Expr{False}, file permissions are checked; this is the behavior
+when this command is not present in the submit description file.
+File permissions are checked for read permissions on all input files,
+such as those defined by 
+commands \SubmitCmd{input} and \SubmitCmd{transfer\_input\_files},
+and for write permission to output files, 
+such as a log file defined by \SubmitCmd{log} and output files defined with
+\SubmitCmd{output} or \SubmitCmd{transfer\_output\_files}.
+
+%%%%%%%%%%%%%%%%%%%
 %% stream_error
 %%%%%%%%%%%%%%%%%%%
 \index{submit commands!stream\_error}

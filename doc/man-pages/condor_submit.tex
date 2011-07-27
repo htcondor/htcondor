@@ -96,7 +96,13 @@ This option is equivalent to using both \Opt{-name} and \Opt{-spool}.}
 \Condor{schedd} to submit to.
 This option is used with \Opt{-name} or \Opt{-remote}.}
 
-\OptItem{\Opt{-disable}}{Disable file permission checks.}
+\OptItem{\Opt{-disable}}{Disable file permission checks
+  when submitting a job for read permissions on all input files, 
+  such as those defined by 
+  commands \SubmitCmd{input} and \SubmitCmd{transfer\_input\_files},
+  as well as write permission to output files, such as a
+  log file defined by \SubmitCmd{log} and output files defined with 
+  \SubmitCmd{output} or \SubmitCmd{transfer\_output\_files}.  }
 
 \OptItem{\OptArg{-password}{passphrase}}{Specify a password to the 
 \Prog{MyProxy} server. }
