@@ -25,6 +25,8 @@
 BIO *bio_err = 0;
 static axutil_log_t* local_log = NULL;
 
+/* disable password callbacks for now */
+/*
 static int
 password_cb(
     char *buf,
@@ -35,8 +37,8 @@ password_cb(
     strncpy(buf, (char *) passwd, size);
     buf[size - 1] = '\0';
     return (int)(strlen(buf));
-    /* We are sure that the difference lies within the int range */
 }
+*/
 
 int verify_callback(int ok, X509_STORE_CTX *store)
 {
@@ -63,6 +65,7 @@ axis2_ssl_utils_initialize_ctx(
     const axutil_env_t * env,
     axis2_char_t * server_cert,
     axis2_char_t * server_key,
+    axis2_char_t *ca_file,
     axis2_char_t *ca_dir,
     axis2_char_t * ssl_pp)
 {
@@ -97,6 +100,8 @@ axis2_ssl_utils_initialize_ctx(
      */
     if (server_key) /*can we check if the server needs client auth? */
     {
+/* disable password checking on the key for now...impractical for server-side */
+/*
         if (!ssl_pp)
         {
             AXIS2_LOG_INFO(env->log,
@@ -105,7 +110,7 @@ axis2_ssl_utils_initialize_ctx(
 
         SSL_CTX_set_default_passwd_cb_userdata(ctx, (void *) ssl_pp);
         SSL_CTX_set_default_passwd_cb(ctx, password_cb);
-
+*/
         if (!(SSL_CTX_use_certificate_chain_file(ctx, server_cert)))
         {
             AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI,

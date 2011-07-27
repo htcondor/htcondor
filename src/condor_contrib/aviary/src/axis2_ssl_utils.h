@@ -36,6 +36,7 @@ extern "C"
         axis2_char_t * server_cert,
         axis2_char_t * server_key,
         axis2_char_t * ca_file,
+        axis2_char_t * ca_dir,
         axis2_char_t * ssl_pp);
 
     AXIS2_EXTERN SSL *AXIS2_CALL

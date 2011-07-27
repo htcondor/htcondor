@@ -24,17 +24,22 @@ endif ()
 ############################
 # file target references.
 ############################
-file( GLOB SSL_SRCS ${CMAKE_CURRENT_SOURCE_DIR} axis2_ssl_*.c Axis2SslProvider.cpp)
+file( GLOB SOAP_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryProviderFactory.cpp Axis2SoapProvider.cpp)
 file( GLOB COMMON_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/common/src/*.cpp )
 file( GLOB JOB_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/job/src/*.cpp )
 file( GLOB JOB_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/AviaryJobService*.cpp )
 file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/query/src/*.cpp )
 file( GLOB QUERY_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryQueryService*.cpp )
 
-file( GLOB SCHED_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp SchedulerObject.cpp
-			PROC_ID_comparator.cpp Axis2SoapProvider.cpp AviaryScheddPlugin*.cpp )
+if (WITH_OPENSSL)
+    file( GLOB SSL_SRCS ${CMAKE_CURRENT_SOURCE_DIR} axis2_ssl_*.c Axis2SslProvider.cpp)
+    list(APPEND SOAP_SRCS ${SSL_SRCS} )
+endif(WITH_OPENSSL)
 
-file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp Axis2SoapProvider.cpp 
+file( GLOB SCHED_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp SchedulerObject.cpp
+			PROC_ID_comparator.cpp ${SOAP_SRCS} AviaryScheddPlugin*.cpp )
+
+file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
 							SubmissionObject.cpp JobServerJobLogConsumer.cpp
 							Job.cpp HistoryFile.cpp HistoryProcessingUtils.cpp Globals.cpp
 							Codec.cpp JobServerObject.cpp AviaryUtils.cpp )
@@ -59,7 +64,7 @@ target_link_libraries(AviaryScheddPlugin-plugin -Wl,--whole-archive -laxis2_engi
 add_library (aviary_query_axis SHARED ${COMMON_GEN_SRCS} ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
 target_link_libraries (aviary_query_axis ${WSO2_FOUND})
 
-condor_exe( aviary_query_server "${JOB_SERVER_SRCS};${SSL_SRCS}"
+condor_exe( aviary_query_server "${JOB_SERVER_SRCS}"
 			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${GCB_FOUND};${WSO2_FOUND}" OFF )
 
 ############################

@@ -18,6 +18,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 
 #include <axutil_error_default.h>
 #include <axutil_log_default.h>
@@ -43,9 +44,11 @@ struct ssl_stream_impl
     axis2_socket_t socket;
 };
 
+using namespace std;
 using namespace aviary::soap;
 
-Axis2SslProvider::Axis2SslProvider(int _log_level, const char* _log_file, const char* _repo_path)
+Axis2SslProvider::Axis2SslProvider(int _log_level, const char* _log_file, const char* _repo_path):
+    Axis2SoapProvider(_log_level,_log_file,_repo_path)
 {
 }
 
@@ -57,23 +60,41 @@ Axis2SslProvider::~Axis2SslProvider()
 bool 
 Axis2SslProvider::init(int _port, int _read_timeout, std::string& _error) {
 
+    char* tmp = NULL;
+    axis2_char_t *server_cert, *server_key, *ca_file, *ca_dir;
+
     // init our parent
     if (!Axis2SoapProvider::init(_port,_read_timeout,_error)) {
         dprintf(D_ALWAYS, "%s\n",_error.c_str());
         return false;
     }
+
+    // collect our certs, ca, etc.
+    if ((tmp = param("AVIARY_SSL_SERVER_CERT"))) {
+        server_cert = strdup(tmp);
+        free(tmp);
+    }
+    if ((tmp = param("AVIARY_SSL_SERVER_KEY"))) {
+        server_key = strdup(tmp);
+        free(tmp);
+    }
+    if ((tmp = param("AVIARY_SSL_CA_FILE"))) {
+        ca_file = strdup(tmp);
+        free(tmp);
+    }
+    if ((tmp = param("AVIARY_SSL_CA_DIR"))) {
+        ca_dir = strdup(tmp);
+        free(tmp);
+    }
     
     // init the ssl lib, errors, etc.
-    m_ctx = axis2_ssl_utils_initialize_ctx(m_env,"/etc/pki/tls/certs/aviary_server.crt",
-                                               "/etc/pki/tls/certs/aviary_server.key",
-                                               "/etc/pki/tls/certs",
-                                               "aviary");
+    m_ctx = axis2_ssl_utils_initialize_ctx(m_env,server_cert, server_key,
+                                               ca_file, ca_dir,
+                                               NULL);
     if (!m_ctx) {
         dprintf(D_ALWAYS, "axis2_ssl_utils_initialize_ctx failed\n");
         return false;
     }
-    
-    
 
     return true;
 }

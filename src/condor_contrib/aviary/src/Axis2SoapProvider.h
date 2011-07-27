@@ -19,6 +19,8 @@
 #ifndef _AXIS2_SOAP_PROVIDER_H
 #define _AXIS2_SOAP_PROVIDER_H
 
+#include "AviaryProvider.h"
+
 #include <string>
 #include <axis2_http_server.h>
 #include <axis2_http_transport.h>
@@ -29,16 +31,6 @@
 #include <apr-1/apr_poll.h>
 
 #include <openssl/ssl.h>
-
-// borrow what DC does
-#if !defined(WIN32)
-#  ifndef SOCKET
-#    define SOCKET int
-#  endif
-#  ifndef INVALID_SOCKET
-#    define INVALID_SOCKET -1
-#  endif
-#endif /* not WIN32 */
 
 #define DEFAULT_LOG_FILE "./axis2.log"
 #define DEFAULT_REPO_FILE "../axis2.xml"
@@ -86,10 +78,10 @@ namespace soap {
 // with DaemonCore socket registration
 // ./configure --enable-multi-thread=no
 
-class Axis2SoapProvider {
+class Axis2SoapProvider: public aviary::transport::AviaryProvider {
     public:
         Axis2SoapProvider(int _log_level=AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
-        ~Axis2SoapProvider();        
+        virtual ~Axis2SoapProvider();
         bool init(int _port, int _read_timeout, std::string& _error);        
         SOCKET getListenerSocket();
         bool processRequest(std::string& _error);
