@@ -396,7 +396,7 @@ IpVerify::AuthEntryToString(const in6_addr & host, const char * user, perm_mask_
 		// checks if IPv4-mapped-IPv6 address
 	
 	const char* ret = NULL;
-	if (addr[0] == 0 && addr[1] == 0 & addr[2] == htonl(0xffff)) {
+	if (addr[0] == 0 && addr[1] == 0 && addr[2] == htonl(0xffff)) {
 		ret = inet_ntop(AF_INET, (const void*)&addr[3], buf, sizeof(buf));
 	} else {
 		ret = inet_ntop(AF_INET6, &host, buf, sizeof(buf));
