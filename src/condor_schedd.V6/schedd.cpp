@@ -12719,12 +12719,8 @@ Scheduler::claimLocalStartd()
 	}
 
 		// Check when we last had a negotiation cycle; if recent, return.
-	int negotiator_interval = param_integer("NEGOTIATOR_INTERVAL",60);
 	int claimlocal_interval = param_integer("SCHEDD_ASSUME_NEGOTIATOR_GONE",
-				negotiator_interval * 20);
-				//,	// default (20 min usually)
-				//10 * 60,	// minimum = 10 minutes
-				//120 * 60);	// maximum = 120 minutes
+				20 * 60);
 	if ( time(NULL) - NegotiationRequestTime < claimlocal_interval ) {
 			// we have negotiated recently, no need to calim the local startd
 		return false;

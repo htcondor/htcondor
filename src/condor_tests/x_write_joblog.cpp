@@ -92,7 +92,7 @@ main(int argc, char **argv)
 int writeSubmitEvent()
 {
 	SubmitEvent submit;
-	strcpy(submit.submitHost, "<128.105.165.12:32779>");
+	submit.setSubmitHost("<128.105.165.12:32779>");
 	submit.submitEventLogNotes = strdup("DAGMan info");
 	submit.submitEventUserNotes = strdup("User info");
 	if ( !logFile.writeEvent(&submit) ) {
@@ -105,7 +105,7 @@ int writeSubmitEvent()
 int writeExecuteEvent()
 {
 	ExecuteEvent execute;
-	strcpy(execute.executeHost, "<128.105.165.12:32779>");
+	execute.setExecuteHost("<128.105.165.12:32779>");
 	if ( !logFile.writeEvent(&execute) ) {
 		printf("Complain about bad execute write\n");
 		exit(1);
@@ -352,8 +352,7 @@ int writeNodeExecuteEvent()
 {
 	NodeExecuteEvent nodeexecuteevent;
 	nodeexecuteevent.node = 49;
-	nodeexecuteevent.executeHost[0] = '\0';
-	strcat(nodeexecuteevent.executeHost,"<128.105.165.12:32779>");
+	nodeexecuteevent.setExecuteHost("<128.105.165.12:32779>");
 	if ( !logFile.writeEvent(&nodeexecuteevent) ) {
 		printf("Complain about bad nodeexecuteevent write\n");
 		exit(1);

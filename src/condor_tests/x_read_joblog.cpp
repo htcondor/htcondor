@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
 					case ULOG_EXECUTE:
 						//printf("Job executed\n");
 						//returnval = ((ExecuteEvent*)e)->return_value;
-						extractptr = hostmachine = ((ExecuteEvent*)e)->executeHost;
+						extractptr = hostmachine = (char *) ((ExecuteEvent*)e)->getExecuteHost();
 						placeptr =  machinedotaddr;
 						while(*extractptr != ':')
 						{
