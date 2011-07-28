@@ -913,11 +913,11 @@ sub Monitor
 	{
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
+	    $info{'sinful'} = $3;
 	    $info{'host'} = $3;
 	    # Strip off the < and > from a sinful string for 'host'
 	    # For grid universe jobs, there won't be any
 	    $info{'host'} =~ s/^<([^>]+)>/$1/;
-	    $info{'sinful'} = $3;
 	    
 	    debug( "Saw job executing\n" ,1);
 
