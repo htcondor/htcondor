@@ -22,6 +22,12 @@
   code \Expr{<N>} from this \Condor{schedd}, over the lifetime of this
   \Condor{schedd}.
 
+\index{ClassAd Scheduler attribute!JobCompletionRate}
+\item[\AdAttr{JobCompletionRate}:] The rate at which jobs completed
+  successfully on this \Condor{schedd}, 
+  calculated over the previous \AdAttr{WindowedStatWidth} seconds.
+  Given in jobs per second.
+
 \index{ClassAd Scheduler attribute!JobQueueBirthdate}
 \item[\AdAttr{JobQueueBirthdate}:] Description is not yet written.
 
@@ -33,12 +39,6 @@
 \item[\AdAttr{JobsCompletedCumulative}:] The number of jobs 
   successfully completed on this \Condor{schedd} over the lifetime of this 
   \Condor{schedd}.
-
-\index{ClassAd Scheduler attribute!JobCompletionRate}
-\item[\AdAttr{JobCompletionRate}:] The rate at which jobs completed
-  successfully on this \Condor{schedd}, 
-  calculated over the previous \AdAttr{WindowedStatWidth} seconds.
-  Given in jobs per second.
 
 \index{ClassAd Scheduler attribute!JobsExited}
 \item[\AdAttr{JobsExited}:] The number of jobs that exited
@@ -105,8 +105,9 @@
 
 \index{ClassAd Scheduler attribute!MeanTimeToStartCumulative}
 \item[\AdAttr{MeanTimeToStartCumulative}:] Average time in seconds 
-  from job submission to job start 
-  for all jobs on this \Condor{schedd} over its lifetime.
+  from job submission to job start, 
+  for all jobs on this \Condor{schedd} over the 
+  lifetime of this \Condor{schedd}.
 
 \index{ClassAd Scheduler attribute!MonitorSelfAge}
 \item[\AdAttr{MonitorSelfAge}:] The number of seconds that this daemon
