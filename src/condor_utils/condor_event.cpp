@@ -3624,10 +3624,9 @@ ULogEvent::strToRusage (char* rusageStr, rusage & usage)
 // ----- the NodeExecuteEvent class
 NodeExecuteEvent::NodeExecuteEvent(void)
 {
-	executeHost [0] = '\0';
+	executeHost = NULL;
 	eventNumber = ULOG_NODE_EXECUTE;
 	node = -1;
-	executeHost = NULL;
 }
 
 
