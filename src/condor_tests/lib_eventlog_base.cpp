@@ -134,7 +134,7 @@ WriteEventLog( const char *event_log, int &num_events )
 	num_events = 0;
 
 	SubmitEvent submit;
-	strcpy(submit.submitHost, "<127.0.0.1:1234>");
+	submit.setSubmitHost("<127.0.0.1:1234>");
 	submit.submitEventLogNotes = dupstr("Log info");
 	submit.submitEventUserNotes = dupstr("User info");
 	if ( !writer.writeEvent(&submit) ) {
@@ -151,7 +151,7 @@ WriteEventLog( const char *event_log, int &num_events )
 		errors++;
 	}
 	ExecuteEvent execute;
-	strcpy(execute.executeHost, "<127.0.0.1:2345>");
+	execute.setExecuteHost("<127.0.0.1:2345>");
 	if ( !writer.writeEvent(&execute) ) {
 		fprintf( stderr, "Failed to write execute event\n");
 		errors++;
