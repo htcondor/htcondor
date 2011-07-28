@@ -148,7 +148,7 @@ turns warnings into errors, as defined in section~\ref{param:DAGManUseStrict}.
 
 \begin{itemize}
 
-% gittrack 1928
+% gittrac #1928
 \item \AdAttr{JobUniverse} was effectively a required attribute for
   jobs created via the Fetch Work hook,
   due to the need to set the \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM}
@@ -156,13 +156,11 @@ turns warnings into errors, as defined in section~\ref{param:DAGManUseStrict}.
   Now the default \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM} expression
   evaluates to \Expr{True} when \AdAttr{JobUniverse} is not defined.
 
-% gittrack 1943
+% gittrac #1943
 \item When there are multiple cpus but only one slot, the slot name no
 longer begins with \Expr{slot1@}.
 
-% gittrac 1805 commit 931ca85d6bc483dc6af82d7000a3f5c9ee64dc07
-% gittrac 1805 commit e45ec5ff35e77533bfba3239dc3b71315d9d5afd
-% gittrac 1805 commit 7fe5d0c64562f59a7efafe77227995e4ada24e20
+% gittrac #1805 
 \item The tool \Condor{advertise} seemed to be trying too hard to resolve
 host names. This was fixed to only do the minimally necessary 
 number of look ups.
