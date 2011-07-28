@@ -328,17 +328,18 @@ condor_gethostname(char *name, size_t namelen) {
 				return -1;
 			}
 
+			collector_addr = collector_addrs.front();
+			collector_addr.set_port(1980);
+
 				// We are doing UDP, the benefit is connect will not send
 				// any network traffic on a UDP socket
-			if (-1 == (s = socket(AF_INET, SOCK_DGRAM, 0))) {
+			if (-1 == (s = socket(collector_addr.get_aftype(), 
+								  SOCK_DGRAM, 0))) {
 				dprintf(D_HOSTNAME,
 						"NO_DNS: Failed to create socket, errno=%d (%s)\n",
 						errno, strerror(errno));
 				return -1;
 			}
-
-			collector_addr = collector_addrs.front();
-			collector_addr.set_port(1980);
 
 			if (condor_connect(s, collector_addr)) {
 				perror("connect");
