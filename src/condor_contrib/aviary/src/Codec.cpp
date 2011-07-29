@@ -70,6 +70,8 @@ BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _
 	std::string key = name;
     switch (value.GetType()) {
         // seems this covers expressions also
+        case classad::Value::ERROR_VALUE:
+        case classad::Value::UNDEFINED_VALUE:
         case classad::Value::BOOLEAN_VALUE:
             _map[key] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
             break;

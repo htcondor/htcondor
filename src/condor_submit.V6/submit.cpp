@@ -4644,12 +4644,12 @@ SetUserLog()
 			BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
 			BOOLEAN	nfs = FALSE;
 
-			if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
-				fprintf(stderr,
-					"\nWARNING: Can't determine whether log file %s is on NFS\n",
-					ulog.Value() );
-			} else if ( nfs ) {
-				if ( nfs_is_error ) {
+			if ( nfs_is_error ) {
+				if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
+					fprintf(stderr,
+						"\nWARNING: Can't determine whether log file %s is on NFS\n",
+						ulog.Value() );
+				} else if ( nfs ) {
 
 					fprintf(stderr,
 						"\nERROR: Log file %s is on NFS.\nThis could cause"
@@ -6745,9 +6745,9 @@ log_submit()
 		// anything since we will never communicate the resulting ad to 
 		// to anyone (we make the name obviously unresolvable so we know
 		// this was a generated file).
-		strcpy (jobSubmit.submitHost, "localhost-used-to-dump");
+		jobSubmit.setSubmitHost( "localhost-used-to-dump");
 	} else {
-		strcpy (jobSubmit.submitHost, MySchedd->addr());
+		jobSubmit.setSubmitHost( MySchedd->addr());
 	}
 
 	if( LogNotesVal ) {

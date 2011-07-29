@@ -275,12 +275,39 @@ GLExecPrivSepHelper::create_process(const char* path,
 	proxy_path.sprintf("%s.condor/%s", m_sandbox, m_proxy);
 	fi_ptr->glexec_proxy = proxy_path.Value();
 
+	Env glexec_env;
+	MyString user_proxy;
+	char const *condor_proxy;
+
+		// Set up the environment to be used when invoking glexec.  I
+		// do not know why we use the job's environment for this
+		// purpose, because we also pass the job's environment to
+		// condor's glexec job wrapper, which sets up the job
+		// environment as desired without relying on environment
+		// inherited from glexec.  (In fact, glexec clears the
+		// environment.)  
+
+	glexec_env.MergeFrom(env);
+
+	if( glexec_env.GetEnv("X509_USER_PROXY",user_proxy) &&
+	    (condor_proxy = getenv("X509_USER_PROXY")) )
+	{
+		// glexec versions >= 0.7.0 may use X509_USER_PROXY to
+		// authenticate to the mapping service.  We are expected to
+		// set this to the glidein (aka pilot) proxy rather than the
+		// end-user proxy when invoking glexec.  Since we are invoking
+		// glexec with the job environment (see comment above), we
+		// must treat X509_USER_PROXY specially.
+
+		glexec_env.SetEnv("X509_USER_PROXY",condor_proxy);
+	}
+
 	int pid = daemonCore->Create_Process(m_run_script.Value(),
 	                                     modified_args,
 	                                     PRIV_USER_FINAL,
 	                                     reaper_id,
 	                                     FALSE,
-	                                     &env,
+	                                     &glexec_env,
 	                                     iwd,
 	                                     fi_ptr,
 	                                     NULL,
@@ -380,6 +407,35 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 			return FALSE;
 		}
 	}
+
+		// Now we do a little dance to replace the socketpair that we
+		// have been using to communicate with the wrapper with a new
+		// one.  Why?  Because, as of glexec 0.8, when glexec is
+		// configured with linger=on, some persistent process
+		// (glexec?, procd?) is keeping a handle to the wrapper's end
+		// of the socket open, so the starter hangs waiting for the
+		// socket to close when the job is executed.
+
+	int old_sock_fd = sock_fds[0];
+	if (socketpair(PF_UNIX, SOCK_STREAM, 0, sock_fds) == -1)
+	{
+		dprintf(D_ALWAYS,
+		        "GLEXEC: socketpair error: %s\n",
+		        strerror(errno));
+		close(old_sock_fd);
+		return FALSE;
+	}
+	if (fdpass_send(old_sock_fd, sock_fds[1]) == -1) {
+		dprintf(D_ALWAYS, "GLEXEC: fdpass_send failed on new sock fd\n");
+		close(old_sock_fd);
+		close(sock_fds[0]);
+		close(sock_fds[1]);
+		return FALSE;
+	}
+		// close our handle to the wrapper's end of the socket
+	close(sock_fds[1]);
+		// close our old socket
+	close(old_sock_fd);
 
 	// now read any error messages produced by the wrapper
 	//

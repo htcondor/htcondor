@@ -72,6 +72,12 @@ main(int argc, char* argv[])
 	// it with the environment that Condor sends us then merge on top of
 	// that the environment that glexec prepared for us
 	//
+	// Why?  I don't understand why we are overriding job environment
+	// set by condor with the environment set by glexec.  For now, we
+	// must make one exception: X509_USER_PROXY.  We want the job to
+	// use the proxy that is managed by Condor, not a copy of the
+	// proxy created by glexec or the proxy used by condor itself.
+
 	Env env;
 	char* env_buf = read_env();
 	MyString merge_err;
@@ -79,14 +85,46 @@ main(int argc, char* argv[])
 		err.sprintf("Env::MergeFromV2Raw error: %s", merge_err.Value());
 		fatal_error();
 	}
+
+	MyString user_proxy;
+	bool override_glexec_proxy_env = false;
+	if( env.GetEnv("X509_USER_PROXY",user_proxy) &&
+		getenv("X509_USER_PROXY") )
+	{
+		override_glexec_proxy_env = true;
+	}
+
 	env.MergeFrom(environ);
 	delete[] env_buf;
+
+	if( override_glexec_proxy_env ) {
+		env.SetEnv("X509_USER_PROXY",user_proxy.Value());
+	}
 
 	// now prepare the job's standard FDs
 	//
 	get_std_fd(0, job_stdin);
 	get_std_fd(1, job_stdout);
 	get_std_fd(2, job_stderr);
+
+		// Now we do a little dance to replace the socketpair that we
+		// have been using to communicate with the starter with a new
+		// one.  Why?  Because, as of glexec 0.8, when glexec is
+		// configured with linger=on, some persistent process
+		// (glexec?, procd?) is keeping a handle to the wrapper's end
+		// of the socket open, so the starter hangs waiting for the
+		// socket to close when the job is executed.
+
+	int new_sock_fd = fdpass_recv(sock_fd);
+	if (new_sock_fd == -1) {
+		err = "fdpass_recv error on new_sock_fd";
+		fatal_error();
+	}
+	if (dup2(new_sock_fd,sock_fd) == -1 ) {
+		err = "dup2 error on new_sock_fd";
+		fatal_error();
+	}
+	close(new_sock_fd);
 
 	// set our UNIX domain socket end close-on-exec; if the Starter
 	// sees it close without seeing an error message first, it assumes

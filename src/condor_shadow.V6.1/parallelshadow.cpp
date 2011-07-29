@@ -912,7 +912,7 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 			// All nodes in this computation are now running, so we 
 			// can finally log the execute event.
 		ExecuteEvent event;
-		strcpy( event.executeHost, "MPI_job" );
+		event.setExecuteHost( "MPI_job" );
 		if ( !uLog.writeEvent( &event, jobAd )) {
 			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
 		}

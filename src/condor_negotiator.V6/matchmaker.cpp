@@ -1296,7 +1296,12 @@ negotiationTime ()
                         dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g)\n", group->name.c_str(), group->usage);
                         continue;
                     }
-
+		    
+                    if (group->submitterAds->MyLength() <= 0) {
+                        dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
+                        continue;
+                    }
+		    
                     dprintf(D_ALWAYS, "Group %s - BEGIN NEGOTIATION\n", group->name.c_str());
 
                     double delta = max(0.0, group->allocated - group->usage);
@@ -1772,7 +1777,7 @@ double Matchmaker::hgq_allocate_surplus(GroupEntry* group, double surplus) {
     for (unsigned long j = 0;  j < (groups.size()-1);  ++j) {
         if (allocated[j] > 0) {
             double s = hgq_allocate_surplus(groups[j], allocated[j]);
-            if (fabs(surplus) > 0.00001) {
+            if (fabs(s) > 0.00001) {
                 dprintf(D_ALWAYS, "group quotas: WARNING: allocate-surplus (3): surplus= %g\n", s);
             }
         }
@@ -2003,6 +2008,22 @@ GroupEntry::~GroupEntry() {
 }
 
 
+void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
+	submitterAds.Open();
+	while (ClassAd* ad = submitterAds.Next()) {
+        int idle = 0;
+        ad->LookupInteger(ATTR_IDLE_JOBS, idle);
+
+        if (idle <= 0) {
+            std::string submitterName;
+            ad->LookupString(ATTR_NAME, submitterName);
+            dprintf(D_FULLDEBUG, "Ignoring submitter %s with no idle jobs\n", submitterName.c_str());
+            submitterAds.Remove(ad);
+        }
+    }
+}
+
+
 int Matchmaker::
 negotiateWithGroup ( int untrimmed_num_startds,
 					 double untrimmedSlotWeightTotal,
@@ -2065,6 +2086,11 @@ negotiateWithGroup ( int untrimmed_num_startds,
 			// have thrown out matches due to SlotWeight being too high
 			// given the schedd limit computed in the previous pie spin
 		DeleteMatchList();
+
+        // filter submitters with no idle jobs to avoid unneeded computations and log output
+        if (!ConsiderPreemption) {
+            filter_submitters_no_idle(scheddAds);
+        }
 
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
 									  maxAbsPrioValue, normalAbsFactor);
@@ -2914,6 +2940,10 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 
 
 		// 2a.  ask for job information
+		int sleepy = param_integer("NEG_SLEEP", 0);
+		if ( sleepy ) {
+			sleep(sleepy); // TODD DEBUG - allow schedd to do other things
+		}
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
 		sock->encode();
 		if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
@@ -3138,6 +3168,19 @@ negotiate( char const *scheddName, const ClassAd *scheddAd, double priority, dou
 		if (result == MM_NO_MATCH) 
 		{
 			numMatched--;		// haven't used any resources this cycle
+
+            if (rejForSubmitterLimit && !ConsiderPreemption && !accountant.UsingWeightedSlots()) {
+                // If we aren't considering preemption and slots are unweighted, then we can
+                // be done with this submitter when it hits its submitter limit
+                dprintf (D_ALWAYS, "    Hit submitter limit: done negotiating\n");
+                // stop negotiation and return MM_RESUME
+                // we don't want to return with MM_DONE because
+                // we didn't get NO_MORE_JOBS: there are jobs that could match 
+                // in later cycles with a quota redistribution
+                break;
+            }
+
+            // Otherwise continue trying with this submitter
 			continue;
 		}
 
@@ -3214,14 +3257,11 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 bool Matchmaker::
 SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft) 
 {
-	float SlotWeight = accountant.GetSlotWeight(candidate);
-		// the use of a fudge-factor 0.99 in the following is to be
-		// generous in case of very small round-off differences
-		// that I have observed in tests
-	if((used + SlotWeight) <= 0.99*allowed) {
-		return true;
-	}
-	if( used == 0 && allowed > 0 && pieLeft >= 0.99*SlotWeight ) {
+    double SlotWeight = accountant.GetSlotWeight(candidate);
+    if ((used + SlotWeight) <= allowed) {
+        return true;
+    }
+    if ((used <= 0) && (allowed > 0) && (pieLeft >= 0.99*SlotWeight)) {
 
 		// Allow user to round up once per pie spin in order to avoid
 		// "crumbs" being left behind that couldn't be taken by anyone
@@ -3517,7 +3557,13 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			}
 		}
 
-		if(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft))
+		/* Check that the submitter has suffient user priority to be matched with
+		   yet another machine. HOWEVER, do NOT perform this submitter limit
+		   check if we are negotiating only for startd rank, since startd rank
+		   preemptions should be allowed regardless of user priorities. 
+	    */
+		if( (candidatePreemptState != RANK_PREEMPTION) &&
+			(!SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) )
 		{
 			rejForSubmitterLimit++;
 			continue;

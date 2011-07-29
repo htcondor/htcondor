@@ -52,6 +52,8 @@ class KeyCacheEntry {
     int                   expiration();
 	char const *          expirationType();
 	void                  setExpiration(int new_expiration);
+	void                  setLingerFlag(bool flag) { _lingering = flag; }
+	bool                  getLingerFlag() { return _lingering; }
 
 	void                  renewLease();
  private:
@@ -66,6 +68,8 @@ class KeyCacheEntry {
     int                  _expiration;
 	int                  _lease_interval;   // max seconds of unused time
 	time_t               _lease_expiration; // time of lease expiration
+	bool                 _lingering; // true if session only exists
+	                                 // to catch lingering communication
 };
 
 

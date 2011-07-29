@@ -128,6 +128,7 @@ if( NOT WINDOWS)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
+	find_library( LIBUUID_FOUND uuid )
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_library( LIBRESOLV_PATH resolv )
     if( NOT "${LIBRESOLV_PATH}" MATCHES "-NOTFOUND" )
@@ -416,6 +417,7 @@ if (PROPER)
 	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
 	option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
 else()
+	cmake_minimum_required(VERSION 2.8)
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
 	option(CACHED_EXTERNALS "enable/disable cached externals" ON)
 endif(PROPER)
@@ -477,7 +479,7 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 
 if (NOT WINDOWS)
 
-	if (${SYSTEM_NAME} MATCHES "rhel3" AND ${SYS_ARCH} MATCHES "X86_64")
+	if (${SYSTEM_NAME} MATCHES "rhel3")
 		# The new version of 2011.05.24-r31 doesn't compile on rhel3/x86_64
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
 	else ()
@@ -488,7 +490,7 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.8)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.9)
 
 	# globus is an odd *beast* which requires a bit more config.
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.0.1-p1)

@@ -133,6 +133,10 @@ if (BUILD_TESTS)
 		endif()
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
+		if ( NOT ${SYSTEM_NAME} MATCHES "rhel3" )
+			# This test fails on rhel3 for unknown reasons
+			condor_pl_test(job_deltacloud_basic "Deltacloud test" "core;quick;full;quicknolink")
+		endif()
 	endif()
 
 	# negative matches. test on everything but this
@@ -414,6 +418,7 @@ if (BUILD_TESTS)
 	condor_pl_test(job_filexfer_whento-withinput_van "Vanilla: Multiple input files arrive ok" "filexfer;quick;full;quicknolink")
 	condor_pl_test(job_filexfer_output_van "Vanilla: Are 6 output files returned" "filexfer;quick;full;quicknolink")
 	condor_pl_test(job_filexfer_md5-remote_van "Vanilla: Can we move 200 megs and not impact md5 checksum?" "filexfer;quick;full;quicknolink")
+	condor_pl_test(job_startd_rank_preempt "Does startd rank trump user priority?" "quick;full;quicknolink")
 	condor_pl_test(cmd_wait_shows-all "" "quick;full")
 	condor_pl_test(cmd_wait_shows-base "" "quick;full")
 	condor_pl_test(cmd_wait_shows-notimeout "" "quick;full")

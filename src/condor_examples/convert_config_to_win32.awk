@@ -151,7 +151,12 @@ BEGIN {
 
 # Win32 has a path separator of ';', while on Unix it is ':'
 /^JAVA_CLASSPATH_SEPARATOR/ {
-	printf "%s= ;\n", $1
+	printf "JAVA_CLASSPATH_SEPARATOR= ;\n", $1
+}
+
+# Win32 has the jar files located in the bin directory.
+/^JAVA_CLASSPATH_DEFAULT/ {
+	print "JAVA_CLASSPATH_DEFAULT = $(BIN) $(BIN)/scimark2lib.jar ."
 	next
 }
 

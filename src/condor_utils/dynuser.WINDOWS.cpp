@@ -23,6 +23,7 @@
 #include "condor_config.h"
 #include "condor_daemon_core.h"
 #include "dynuser.h"
+#include "system_info.WINDOWS.h"
 #include <lmaccess.h>
 #include <lmerr.h>
 #include <lmwksta.h>
@@ -558,6 +559,7 @@ void dynuser::createaccount() {
 //
 ////
 
+
 bool dynuser::hide_user() {
 
 	HKEY	subkey		= NULL;
@@ -565,15 +567,27 @@ bool dynuser::hide_user() {
 		"CurrentVersion\\Winlogon\\SpecialAccounts\\UserList";
 	DWORD	hide_user = 0;
 	LONG	ok			= ERROR_SUCCESS;
+	REGSAM rsAccessMask=0;
+	DWORD dwDisposition=0;
+
+	//if (SystemInfoUtils::Is64BitWindows())
+		rsAccessMask = KEY_WOW64_64KEY;
 	
 	__try {
 
 		/* create or open the registry sub-key for removing users
 			from the Windows */
-		ok = RegCreateKey (
+
+		ok = RegCreateKeyEx (
 			HKEY_LOCAL_MACHINE,
 			subkey_name,
-			&subkey );
+			0, // reserved
+			NULL, 
+			REG_OPTION_NON_VOLATILE, 
+			KEY_READ | KEY_WRITE | rsAccessMask,
+			NULL,
+			&subkey,
+			&dwDisposition );
 
 		if ( ERROR_SUCCESS != ok || NULL == subkey ) {
 			dprintf ( D_FULLDEBUG,"dynuser::hide_user() "

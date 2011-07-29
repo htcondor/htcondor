@@ -349,6 +349,10 @@ match_rec::~match_rec()
 			// handle any final communication from the startd that may
 			// still be in flight.
 		daemonCore->getSecMan()->SetSessionExpiration(secSessionId(),time(NULL)+600);
+			// In case we get the same claim id again before the slop time
+			// expires, mark this session as "lingering" so we know it can
+			// be replaced.
+		daemonCore->getSecMan()->SetSessionLingerFlag(secSessionId());
 	}
 }
 
@@ -2549,7 +2553,7 @@ Scheduler::WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync )
 	SubmitEvent event;
 	ClassAd *job_ad = GetJobAd(job_id.cluster,job_id.proc);
 
-	strcpy (event.submitHost, daemonCore->privateNetworkIpAddr());
+	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
 	if ( job_ad->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
 		event.submitEventLogNotes = strnewp(submitEventNotes.c_str());
 	}
@@ -2698,7 +2702,7 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 	}
 
 	ExecuteEvent event;
-	strcpy( event.executeHost, host );
+	event.setExecuteHost( host );
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
@@ -9159,7 +9163,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_NO_CKPT_FILE:
 		case JOB_KILLED:
 				// If the job isn't being HELD, we'll remove it
-			if ( q_status != HELD ) {
+			if ( q_status != HELD && q_status != IDLE ) {
 				set_job_status( job_id.cluster, job_id.proc, REMOVED );
 			}
 			break;

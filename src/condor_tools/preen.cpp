@@ -137,6 +137,11 @@ main( int argc, char *argv[] )
 				RmFlag = TRUE;
 				break;
 
+              case 'd':
+                  Termlog = 1;
+                  dprintf_config("TOOL");
+                  break;
+
 			  default:
 				usage();
 

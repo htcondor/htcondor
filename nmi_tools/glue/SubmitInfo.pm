@@ -52,7 +52,7 @@ our %build_and_test_sets = (
 		'x86_rhap_5',
 		'x86_rhas_3',
 		'x86_winnt_5.1',
-		'x86_64_rhap_6.0-updated',
+		'x86_64_rhap_6.1-updated',
 	],
 
 	# Occasionally, NMI would like a port on a bunch of odd platforms. These
@@ -310,7 +310,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ 'java-1.4.2_05' ],
+			'prereqs'	=> [ 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -321,10 +321,7 @@ our %submit_info = (
 	'x86_64_deb_6.0' => {
     	'build' => {
         	'configure_args' => { @default_build_configure_args,
-                              	'-DCLIPPED:BOOL=ON' => undef,
-                              	'-DWITH_KRB5:BOOL=OFF' => undef,
-                              	'-DWITH_CREAM:BOOL=OFF' => undef,
-                              	'-DWITH_COREDUMPER:BOOL=OFF' => undef,
+                              	'-DCLIPPED:BOOL=OFF' => undef,
         	},
         	'prereqs'   => [ 'cmake-2.8.3' ],
         	'xtests'    =>  [ 'x86_64_ubuntu_10.04', ],
@@ -332,7 +329,7 @@ our %submit_info = (
 	
     	'test' => {
         	'configure_args' => { @default_test_configure_args },
-        	'prereqs'   => [ 'java-1.4.2_05' ],
+        	'prereqs'   => [ 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
         	'testclass' => [ @default_testclass ],
     	},
 	},
@@ -376,8 +373,7 @@ our %submit_info = (
 	'x86_64_rhap_6.0'	=> {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
-				# Turn this back on when ready
-				# '-DCLIPPED:BOOL=OFF' => undef,
+				'-DCLIPPED:BOOL=OFF' => undef,
 			 },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
@@ -385,7 +381,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -394,6 +390,11 @@ our %submit_info = (
 	# Platform RHEL 6 on x86_64. This one is continuously updated by the batlab.
 	##########################################################################
 	'x86_64_rhap_6.0-updated'	=> 'x86_64_rhap_6.0',
+
+	#################################################################
+	# Platform RHEL 6.1 on x86_64. This one is updated by the batlab.
+	#################################################################
+	'x86_64_rhap_6.1-updated'	=> 'x86_64_rhap_6.0',
 
 	##########################################################################
 	# Platform RHEL 5 on x86_64
@@ -408,12 +409,12 @@ our %submit_info = (
 				'x86_64_fedora_13', 'x86_64_rhap_5.2',
 				'x86_64_fedora_12', 'x86_64_fedora_12-updated', 
 				'x86_64_fedora_13-updated',
-				'x86_64_rhap_6.0-updated' ],
+				'x86_64_rhap_6.1-updated' ],
 		},
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -436,7 +437,7 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5',
-							'VMware-server-1.0.7' ],
+							'VMware-server-1.0.7', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -455,7 +456,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ 'java-1.4.2_05' ],
+			'prereqs'	=> [ 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -558,7 +559,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05'],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -584,8 +585,8 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5',
-							'VMware-server-1.0.7' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.5',
+							'VMware-server-1.0.7', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -654,7 +655,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -748,7 +749,7 @@ our %submit_info = (
 		
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -767,7 +768,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -786,7 +787,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -805,7 +806,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -842,7 +843,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.9' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.9', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -898,7 +899,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -916,7 +917,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5','ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},

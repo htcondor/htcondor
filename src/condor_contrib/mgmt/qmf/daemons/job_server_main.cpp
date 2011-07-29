@@ -223,7 +223,13 @@ void construct_schedd_ref(ObjectId*& _oid) {
 		schedd_name = default_daemon_name();
 	}
 
-	schedd_agent += schedd_name;
+	tmp = param("SCHEDULER_AGENT_ID");
+	if (tmp) {
+		schedd_agent = tmp;
+		free(tmp); tmp = NULL;
+	} else {
+		schedd_agent += schedd_name;
+	}
 	_oid = new ObjectId(schedd_agent,schedd_name);
 }
 
@@ -276,7 +282,9 @@ void Stop()
 		Dump();
 	}
 
-	consumer->Reset();
+	if (param_boolean("CLEANUP_ON_EXIT", false)) {
+		consumer->Reset();
+	}
 
 	mirror->stop();
 

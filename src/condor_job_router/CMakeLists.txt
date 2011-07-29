@@ -24,4 +24,31 @@ condor_glob(JRHdrs JRSrcs "VanillaToGrid_main.cpp")
 
 condor_exe( condor_job_router "${JRHdrs};${JRSrcs}" ${C_LIBEXEC} "${JR_LINK_LIBS}" OFF )
 
-install ( FILES condor_router_history condor_router_q condor_router_rm DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+if (WINDOWS)
+
+	# add clause logic for when to distribute.
+	if (NOT WIN_EXEC_NODE_ONLY)
+
+		# windows install requires scripts have the correct extension in order 
+		# to execute correctly by default.
+		install ( FILES condor_router_history
+				DESTINATION ${C_BIN} 
+				RENAME condor_router_history.py)
+
+		install ( FILES condor_router_q
+				DESTINATION ${C_BIN} 
+				RENAME condor_router_q.sh)
+
+		install ( FILES condor_router_rm
+				DESTINATION ${C_BIN} 
+				RENAME condor_router_rm.sh)
+
+	endif()
+
+else()
+
+	install ( FILES condor_router_history condor_router_q condor_router_rm 
+			DESTINATION ${C_BIN} 
+			PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+
+endif()

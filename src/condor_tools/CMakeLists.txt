@@ -46,15 +46,16 @@ endif(WANT_QUILL AND HAVE_EXT_POSTGRESQL)
 condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
 
 condor_exe(condor "tool.cpp" "${C_BIN}" "${TOOL_LINK_LIBS}" OFF)
-clone_install(condor "${C_BIN}" "condor_on;condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
+install(TARGETS condor DESTINATION "${C_SBIN}")
+clone_install(condor "${C_SBIN}" "condor_on;condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
 if (WANT_FULL_DEPLOYMENT)
-    clone_install(condor "${C_BIN}" "condor_set_shutdown" "${C_SBIN}")
+    clone_install(condor "${C_SBIN}" "condor_set_shutdown" "${C_SBIN}")
 endif(WANT_FULL_DEPLOYMENT)
 clone_install(condor "${C_BIN}" "condor_vacate;condor_reschedule" "${C_BIN}")
 
 if (NOT WINDOWS)
     if (WANT_FULL_DEPLOYMENT)
-        clone_install(condor "${C_BIN}" "condor_reconfig_schedd;condor_master_off" "${C_SBIN}") # legacy cruft?
+        clone_install(condor "${C_SBIN}" "condor_reconfig_schedd;condor_master_off" "${C_SBIN}") # legacy cruft?
     endif(WANT_FULL_DEPLOYMENT)
 	if (STD_UNIVERSE)
 		clone_install(condor "${C_BIN}" "condor_checkpoint" "${C_BIN}")
