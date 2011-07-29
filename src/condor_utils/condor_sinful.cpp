@@ -190,13 +190,21 @@ Sinful::Sinful(char const *sinful)
 			// should be careful here
 			// if sinful is IPv6 address, it should be embraced by [ ]
 
-			// we assume it is IPv6 address if it contains ':'
-			if (strchr(sinful, ':') != NULL) {
-				m_sinful += "[";
+			if(*sinful == '[') { // IPv6
 				m_sinful += sinful;
-				m_sinful += "]";
-			} else
+			} else {
+				// Double check it's not IPv6 lacking [brackets]
+				char * first_colon = strchr(sinful, ':');
+				if(first_colon && strchr(first_colon+1, ':')) {
+					// Why not treat it as an IPv6 address? Because
+					// We can't tell if 12AB::CDEF:1000 means
+					// 12AB:0000:0000:0000:0000:0000:0000:CDEF port 1000 or
+					// 12AB:0000:0000:0000:0000:0000:CDEF:1000 unknown port
+					m_valid = false;
+					return;
+				}
 				m_sinful += sinful;
+			}
 			m_sinful += ">";
 		}
 		else {
