@@ -46,7 +46,7 @@ class HTTPSClientCertTransport(HttpTransport):
         """
         Open a connection.
         @param u2request: A urllib2 request.
-        @type u2request: urllib2.Requet.
+        @type u2request: urllib2.Request.
         @return: The opened file-like urllib2 object.
         @rtype: fp
         """
