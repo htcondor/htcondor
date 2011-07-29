@@ -34,6 +34,6 @@ endif(DARWIN)
 condor_static_lib(daemon_core "${DCHeaderFiles};${DCSourceFiles}")
 
 if (WINDOWS)
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
 	condor_exe( condor_softkill "condor_softkill.WINDOWS.cpp;condor_softkill.h" ${C_SBIN} "${CONDOR_TOOL_LIBS};psapi" OFF )
+	set_target_properties (condor_softkill PROPERTIES WIN32_EXECUTABLE TRUE)
 endif(WINDOWS)
