@@ -21,7 +21,6 @@
 
 // local includes
 #include "ODSMongodbOps.h"
-#include "ODSClassAdUtils.h"
 #include "condor_debug.h"
 #include "condor_exprtype.h"
 #include "classad/literals.h"
@@ -37,6 +36,22 @@ using namespace plumage::etl;
         dprintf(D_ALWAYS,"mongodb getLastError: %s\n",last_err.c_str()); \
         return false; \
     }
+
+// cleans up the quoted values from the job log reader
+string trimQuotes(const char* str) {
+	string val = str;
+
+	size_t endpos = val.find_last_not_of("\\\"");
+	if( string::npos != endpos ) {
+		val = val.substr( 0, endpos+1 );
+	}
+	size_t startpos = val.find_first_not_of("\\\"");
+	if( string::npos != startpos ) {
+		val = val.substr( startpos );
+	}
+
+	return val;
+}
 
 ODSMongodbOps::ODSMongodbOps(const string& db_name)
 {
