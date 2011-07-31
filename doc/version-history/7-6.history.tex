@@ -1,0 +1,574 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-7-6}Stable Release Series 7.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is a stable release series of Condor.
+As usual, only bug fixes (and potentially, ports to new platforms)
+will be provided in future 7.6.x releases.
+New features will be added in the 7.7.x development series.
+
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-3}Version 7.6.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.3 not yet released.
+%\item Condor version 7.6.3 released on Month Date, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-2}Version 7.6.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.2 released on July 19, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Improved how \Condor{dagman} deals with certain parse errors:
+missing node name or submit description file in JOB lines.
+Also, \Condor{dagman}
+now prints DAG input file lines as they are parsed, 
+if the debug verbosity setting is 6 or above,
+as set with the \Condor{submit\_dag} command line option \Opt{-debug}.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+% gittrac #2275 
+\item Fixed a bug in the \Condor{negotiator} that impacted the processing 
+of machine \MacroNI{RANK} such that \Condor{startd} \MacroNI{RANK}
+preemption only occurred if the preempting user had sufficient user priority 
+to claim another machine. 
+
+% gittrac #2235 
+\item \Condor{ssh\_to\_job} did not work on systems using the 
+dash shell for \Prog{/bin/sh}.
+
+% gittrac #2263 
+\item \Condor{ssh\_to\_job} now works with jobs that are run via 
+\Prog{glexec}. Previously, it did not. 
+
+% gittrac #1642 
+\item When \Prog{glexec} was configured with \Expr{linger=on},
+the \Condor{starter} would become unresponsive for the duration of the job. 
+For jobs longer than the value set by configuration variable
+\MacroNI{NOT\_RESPONDING\_TIMEOUT},
+this caused the job to be aborted. 
+This also prevented job resource usage monitoring from working 
+while the job was running.
+
+% gittrac #2262 
+\item Fixed a bug in hierarchical group quotas that caused 
+a warning to be logged, despite correct implementation.
+
+% gittrac #2261 
+\item \Condor{preen} now properly respects the convention that
+the \Opt{-debug} option causes \Procedure{dprintf} logging to \Code{stderr}. 
+
+% gittrac #2253 
+% gittrac #2294 
+\item Fixed a problem introduced in Condor version 7.5.5 
+that could cause the \Condor{schedd} to crash when a job was removed 
+during negotiation or when an idle parallel universe job left the queue. 
+
+% gittrac #2247 
+\item Fixed a problem that sometimes caused the \Condor{procd} to die.
+The chain of events for this fixed bug were that
+the \Condor{startd} killed the \Condor{starter} due to unresponsiveness,
+and the \Condor{procd} would die.
+Then \Condor{startd} logged the message
+\Expr{ProcD has failed} and the \Condor{startd} exited. 
+
+% gittrac #2233 
+\item Fixed a problem introduced in Condor version 7.6.1 
+that caused the \Condor{shadow} to crash without successfully putting the job 
+on hold when the user log could not be opened for writing. 
+
+% gittrac #2210 
+\item \Condor{history} no longer crashes when given a constraint expression 
+longer than 512 characters. 
+
+% gittrac #2248 
+\item PBS and LSF grid jobs that arrive in a queue via Condor-C
+or remote submission again work properly. 
+
+% gittrac #2210 
+\item Fix a bug that can cause the \Condor{gridmanager} to crash 
+when a CREAM job ClassAd is missing the \Attr{X509UserProxy} attribute. 
+
+% gittrac #2202 
+\item Fix a bug that caused CREAM jobs to have incomplete input files,
+if the \Condor{gridmanager} crashed during transfer of those input files. 
+
+% gittrac #2201 
+\item Fix a bug in \Condor{submit} that caused grid jobs intended for 
+CREAM services whose names contain extra dashes to become held. 
+
+\item Fixed a bug in which \Condor{submit} would try, 
+but fail to open the Deltacloud password file,
+when the file name was dependent on an expression specified with \Expr{\$\$()}.
+
+% gittrac #2173 
+\item If the \Attr{Owner} attribute was not set in the ClassAd associated
+with a cluster of jobs,
+shared spooled executables were not correctly cleaned up.
+
+% gittrac #2238 
+\item Fixed a bug for 64-bit versions of Windows in which the
+user \Login{condor-reuse-slot<N>} showed up on the login screen.
+
+% gittrac #2288 
+\item Fixed a bug introduced in Condor version 7.5.5,
+which changed the default value of the configuration variable
+\Macro{INVALID\_LOG\_FILES} from the empty set to a file called \File{core}.
+This resulted in core files being removed unexpectedly by \Condor{preen},
+and that complicated debugging of Condor.
+Previous behavior has been restored.
+
+% gittrac #2278 
+\item Fixed a bug existing since Condor version 7.5.5 on Windows platforms.
+The installer installed Java jar files in the correct \verb|$(BIN)| directory,
+while the value for the configuration variable 
+\MacroNI{JAVA\_CLASSPATH\_DEFAULT} utilized the obsolete \verb|$(LIB)|
+directory.
+The installer now correctly sets \MacroNI{JAVA\_CLASSPATH\_DEFAULT} 
+to the \verb|$(BIN)| directory.
+
+% gittrac #2308
+\item Fixed a problem causing Condor to fail to start when
+privsep was enabled and the environment had any variables
+containing newlines.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item For Condor versions 7.6.2, 7.6.1, and 7.6.0,
+a bug causes parallel universe jobs to be preempted upon 
+expiration of the job lease, 
+which has a default value of 20 minutes, 
+essentially meaning that no parallel universe job that takes
+longer than 20 minutes can ever finish.
+The work around for this bug is to place the following
+configuration variable in the configuration of the submit machine:
+\begin{verbatim}
+  STARTD_SENDS_ALIVES = FALSE
+\end{verbatim}
+A \Condor{reconfig} is required, 
+after which the preempted parallel universe jobs will then be
+able to run to completion.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-1}Version 7.6.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.1 released on June 3, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+% gittrac #2170 
+\item A bug introduced in Condor version 7.5.5 caused the \Condor{schedd}
+to die when its attempt to claim a slot for a parallel universe job 
+was rejected by the \Condor{startd}. 
+
+% gittrac #2059
+\item \Condor{q} \Opt{-analyze} failed to provide detailed analysis of
+the job's requirements expression when the expression contained ClassAd
+function calls in some cases. 
+
+% gittrac #2192
+\item Fixed an incorrect exit code from \Condor{q} 
+when invoked with the \Opt{-name} option and using Quill.
+
+%gittrac #2013
+\item Fixed a segmentation fault bug introduced in Condor version 7.5.5,
+in the checkpoint and restart of jobs using compressed checkpoint images
+under the standard universe.
+By default, Condor will not compress checkpoints under the standard universe.
+Jobs which do not compress their checkpoints were immune to this bug.  
+Compressed checkpoints are only available in 32-bit versions of Condor.
+Generation of checkpoints in 64-bit versions of Condor are unaffected.
+
+% gittrac #2069
+\item In Condor version 7.6.0, the \Condor{schedd} would create a 
+spool directory for every job. The corrected and previous behavior 
+has now been restored, 
+which is to create a spool directory only when needed.
+
+%gittrac #2086
+\item Fixed a bug introduced in Condor version 7.5.2,
+that caused the \Condor{negotiator} daemon to crash
+if any machine ClassAds contained cyclical attribute references.
+
+%gittrac #2101
+\item Fixed a bug that caused usage by \SubmitCmd{nice\_user} jobs to
+be charged to the user directly rather than `nice-user.\emph{user}'.
+This bug was introduced in the 7.5 series.
+
+%gittrac #2081
+\item Fixed bugs in the RPM init script that could cause some 
+shutdown failures to be unreported, 
+and they could cause status requests,
+such as \Expr{service condor status},
+to always report Condor as inactive.
+
+\item Fixed a bug in the \Condor{gridmanager} that could cause a crash 
+when a grid type \SubmitCmd{amazon} job was missing required attributes.
+
+%gittrac #2105
+\item Fixed bug in the \Condor{shadow}, in which it would treat 
+the closed socket to the execute machine as an error,
+after both it had asked for the claim to be deactivated and the 
+\Condor{schedd} daemon was busy.  
+As a result, a busy \Condor{schedd} could result in the job being re-run.
+
+%gittrac #2109
+\item The matchmaking attributes 
+\Attr{SubmitterUserResourcesInUse} and \Attr{RemoteUserResourcesInUse} 
+no longer ignore \Attr{SlotWeight}, if used by the \Condor{negotiator}.
+
+%gittrac #2102
+\item On Windows, the \Condor{kbdd} daemon was missing changes to the
+port on which the \Condor{startd} was listening.
+This resulted in failure of the \Condor{kbdd} to send updates in 
+keyboard and mouse activity,
+further causing the failure of policy implementation that relied upon 
+knowledge of the activity.
+
+%gittrac #2163
+\item Fixed a bug present throughout ClassAds,
+in which expressions expecting a floating point value returned an error,
+if the expression actually evaluated to a boolean.
+This is most common in machine \MacroNI{RANK} expressions.
+
+%gittrac #2172
+\item Fixed a bug in the \Condor{negotiator} daemon,
+which caused a crash if the \Condor{negotiator} was reconfigured 
+during a negotiation cycle, 
+but only if hierarchical group quotas were in use.
+
+%gittrac #2162
+\item Fixed a bug in which when submitting a job into the \Condor{schedd}
+remotely, or with spooling, 
+the file transfer plug-ins activated on the submit machine 
+and pulled down all the specified URLs in the transfer list 
+to the spool directory. 
+This behavior has been changed so that URLs are only downloaded 
+when the job is actually running with a \Condor{starter} above it. 
+This is usually on an execute node, but could also be in the local universe. 
+
+%gittrac #2178
+\item Removed the requirement that the Condor GAHP needs DAEMON-level 
+authorization access to the \Condor{gridmanager}. 
+
+%gittrac #2181
+\item On Windows platforms only, 
+fixed a bug that could cause a sporadic access violation 
+when a Condor daemon spawned another process.
+
+%gittrac #2191
+\item Fixed a bug that would cause the \Condor{startd} to 
+incorrectly report \Expr{Benchmarking} as its activity, instead of \Expr{Idle}
+when there was a problem launching the benchmarking programs. 
+
+%gittrac #2193
+\item Fixed a bug in which the \Condor{startd} can get stuck in a loop,
+trying to execute an invalid, non-existent Daemon ClassAd Hook job. 
+
+%gittrac #2088
+\item Fixed a bug in which the dedicated scheduler did not correctly 
+deactivate claims,
+tending to result in jobs that appear to move back and forth between
+the \Expr{Idle} and \Expr{Running} states,
+with the \Condor{shadow} daemon exiting each time with status 108.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-0}Version 7.6.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.0 released on April 19, 2011.
+
+% gittrac #2016
+\item Prior to Condor version 7.5.0, commenting out \MacroNI{PREEN} in the
+  default configuration file disabled \Condor{preen}.  
+  Starting in Condor version 7.5.0,
+  there was an internal default value for \MacroNI{PREEN}, so if
+  the configuration variable was not set in any configuration file,
+  \Condor{preen} would still run.
+  To disable this functionality, \MacroNI{PREEN} can be explicitly set to
+  nothing.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Condor can now create and manage virtual machine instances in a
+cloud service via Deltacloud. This is done via the new
+\SubmitCmd{deltacloud} grid type in the grid universe.
+See section ~\ref{sec:Deltacloud} for details.
+
+% gittrac #1931
+\item Improved scalability of submission of cream grid type jobs.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable \Macro{DELTACLOUD\_GAHP} specifies
+where the \Prog{deltacloud\_gahp} binary is located. This binary is used to
+manage deltacloud grid type jobs in the grid universe.
+In a normal Condor installation, the value should be
+\File{\$(SBIN)/deltacloud\_gahp}.
+
+\item Several new job ClassAd attributes have been added to support
+the deltacloud grid type in the grid universe.
+These attributes are taken from the submit description file:
+\AdAttr{DeltacloudUsername},
+\AdAttr{DeltacloudPasswordFile},
+\AdAttr{DeltacloudImageId},
+\AdAttr{DeltacloudRealmId},
+\AdAttr{DeltacloudHardwareProfile},
+\AdAttr{DeltacloudHardwareProfileCpu},
+\AdAttr{DeltacloudHardwareProfileMemory},
+\AdAttr{DeltacloudHardwareProfileStorage},
+\AdAttr{DeltacloudKeyname}, and
+\AdAttr{DeltacloudUserData}.
+%\AdAttr{DeltacloudRetryTimeout},
+These attributes are set by Condor when the instance runs:
+\AdAttr{DeltacloudAvailableActions},
+\AdAttr{DeltacloudPrivateNetworkAddresses},
+\AdAttr{DeltacloudPublicNetworkAddresses}.
+See section ~\ref{sec:Deltacloud} for details of running jobs under
+Deltacloud, and see section ~\ref{sec:Job-ClassAd-Attributes}
+for definitions of these job ClassAd attributes.
+
+% gittrac #2024
+\item The configuration variable \Macro{JAVA\_MAXHEAP\_ARGUMENT} 
+  has been removed. 
+  This means that Java universe jobs will now run with the JVM's 
+  default maximum heap setting,
+  unless specified otherwise by the administrator using the configuration
+  of \Macro{JAVA\_EXTRA\_ARGUMENTS},
+  or by the job via 
+  \SubmitCmd{java\_vm\_args} in the submit description file
+  as described in section~\ref{sec:Java}.
+
+% gittrac #2066
+\item The configuration variable \Macro{TRUST\_UID\_DOMAIN}
+  was set to \Expr{True} in the default \File{condor\_config.local}
+  in the rpm and Debian packages.  This is no longer the case.
+  This setting will therefore use the default value \Expr{False}.
+
+\item The configuration variable \Macro{NEGOTIATOR\_INTERVAL} was set
+  to 20 in the default \File{condor\_config.local} in the rpm and
+  Debian packages.  This is no longer the case.  This setting
+  therefore will use the default value 60.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+% gittrac #1957
+\item Fixed a bug in \Condor{dagman} that caused it to fail when in recovery
+mode in the face of a specific combination of node job failures with
+retries.
+
+% gittrac #1991
+\item Fixed a bug that resulted in the spooled user log not being
+  fetched by \Condor{transfer\_data}.  Prior to Condor version 7.5.4, this
+  problem affected spooled jobs submitted with an explicit list of
+  output files to transfer.  In Condor version 7.5.4, this problem also
+  affected spooled jobs that auto-detected output files.
+
+% gittrac #1985
+\item When a job is submitted with the \Opt{-spool} option to \Condor{submit},
+the \Condor{schedd} now correctly writes the submit event to the user log 
+in its spool directory. 
+Previously, it would try to write the event using the user
+log path given to \Condor{submit} by the user, 
+which \Condor{submit} may not have access to.
+
+% gittrac #2001
+\item Fixed a file descriptor leak in the \Condor{vm-gahp}. The leak would
+cause the daemon to fail if a VMware job ran for more than 16 hours on a
+Linux machine.
+
+%gittrac #2017
+\item Fixed a bug in \Condor{dagman} that caused it to treat any dollar
+sign in the log file name of a node job's submit description file
+as an illegal \Condor{dagman} macro.
+Now only the sequence of characters \Expr{\$(} delimits a macro.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item There are two known issues related to the automatic creation
+of checkpoints with the Condor checkpointing library in 
+Condor version 7.6.0.
+The first is that compression of
+standalone checkpoints is disabled for 32-bit binaries.
+It was always disabled previously, for 64-bit binaries.
+A standalone checkpoint is one that is run outside
+of Condor's standard universe.  The second problem has to do with compressed
+32-bit checkpoint files within the standard universe.
+If a user requests a compressed 32-bit checkpoint in the standard universe,
+the resulting checkpoint will not be compressed.
+As with standalone checkpoints, this has never been supported
+in 64-bit binaries.  We hope to fix both problems in 
+Condor version 7.6.1.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+

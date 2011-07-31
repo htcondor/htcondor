@@ -1,0 +1,251 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Pool-Management}Pool Management}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{pool management}
+
+Condor provides administrative tools to help with
+pool management.
+This section describes some of these tasks.
+
+All of the commands described in this section are subject to the
+security policy chosen for the Condor pool.
+As such, the commands must be either run from a
+machine that has the proper authorization, 
+or run by a user that is authorized to issue the commands.
+Section~\ref{sec:Security} on
+page~\pageref{sec:Security} details the implementation of 
+security in Condor.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Pool-Upgrade}
+Upgrading -- Installing a New Version on an Existing Pool}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{pool management!installing a new version on an existing pool}
+\index{installation!installing a new version on an existing pool}
+
+An upgrade changes the running version of Condor
+from the current installation to a newer version.
+The safe method
+to install and start running a newer version of Condor
+in essence is:
+shut down the current installation of Condor,
+install the newer version,
+and then restart Condor using the newer version.
+To allow for falling back to the current version,
+place the new version in a separate directory.
+Copy the existing configuration files,
+and modify the copy to point to and use the new version,
+as well as incorporate any configuration variables that are new or changed
+in the new version.
+Set the \Env{CONDOR\_CONFIG} environment variable
+to point to the new copy of the configuration,
+so the new version of Condor will use the new configuration when restarted.
+
+When upgrading from a version of Condor earlier than 6.8 to more recent version,
+note that the configuration settings must be modified for security reasons.
+Specifically, the \Macro{HOSTALLOW\_WRITE} configuration variable
+must be explicitly changed,
+or no jobs may be submitted,
+and error messages will be issued by Condor tools.
+
+Another way to upgrade leaves Condor running. 
+Condor will automatically restart itself if the \Condor{master} binary
+is updated,
+and this method takes advantage of this. 
+Download the newer version, placing it such that it does not 
+overwrite the currently running version.
+With the download will be a new set of configuration files;
+update this new set with any specializations implemented in the currently
+running version of Condor.
+Then, modify the currently running installation by changing its
+configuration such that the path to binaries points instead
+to the new binaries.
+One way to do that (under Unix) is to use a symbolic link that points 
+to the current Condor installation directory (for example, \File{/opt/condor}).
+Change the symbolic link to point to the new directory. 
+If Condor is configured to locate its binaries via the symbolic link, 
+then after the symbolic link changes, 
+the \Condor{master} daemon notices the new binaries and restarts itself. 
+How frequently it checks is controlled by the configuration variable 
+\Macro{MASTER\_CHECK\_NEW\_EXEC\_INTERVAL}, which defaults 5 minutes.
+
+When the \Condor{master} notices new binaries, 
+it begins a graceful restart. 
+On an execute machine, 
+a graceful restart means that running jobs are preempted. 
+Standard universe jobs will attempt to take a checkpoint. 
+This could be a bottleneck if all machines in a large pool 
+attempt to do this at the same time. 
+If they do not complete within the cutoff time specified by the \MacroNI{KILL} 
+policy expression (defaults to 10 minutes), 
+then the jobs are killed without producing a checkpoint. 
+It may be appropriate to increase this cutoff time, 
+and a better approach may be to upgrade the pool in stages 
+rather than all at once. 
+
+For universes other than the standard universe, jobs are preempted. 
+If jobs have been guaranteed a certain amount of uninterrupted run time 
+with \MacroNI{MaxJobRetirementTime}, 
+then the job is not killed until the specified amount of 
+retirement time has been exceeded (which is 0 by default). 
+The first step of killing the job is a soft kill signal, 
+which can be intercepted by the job so that it can exit gracefully, 
+perhaps saving its state. 
+If the job has not gone away once the \MacroNI{KILL} expression fires 
+(10 minutes by default), 
+then the job is forcibly hard-killed. 
+Since the graceful shutdown of jobs may rely on shared resources such as disks 
+where state is saved, 
+the same reasoning applies as for the standard universe: 
+it may be appropriate to increase the cutoff time 
+for large pools, 
+and a better approach may be to upgrade the pool in stages 
+to avoid jobs running out of time. 
+
+Another time limit to be aware of is the configuration variable 
+\MacroNI{SHUTDOWN\_GRACEFUL\_TIMEOUT}. 
+This defaults to 30 minutes. 
+If the graceful restart is not completed within this time, 
+a fast restart ensues. 
+This causes jobs to be hard-killed. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Pool-Shutdown-and-Restart}
+Shutting Down and Restarting a Condor Pool}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{pool management!shutting down Condor}
+\index{pool management!restarting Condor}
+
+\begin{description}
+\item[Shutting Down Condor]
+There are a variety of ways to shut down all or parts of a Condor pool.
+All utilize the \Condor{off} tool.
+
+To stop a single execute machine from running jobs,
+the \Condor{off} command specifies the machine by host name.
+\begin{verbatim}
+  condor_off -startd <hostname>
+\end{verbatim}
+A running \SubmitCmd{standard} universe job will be allowed to 
+take a checkpoint before the job is killed.
+A running job under another universe will be killed.
+If it is instead desired that the machine stops running jobs
+only after the currently executing job completes, the command is
+\begin{verbatim}
+  condor_off -startd -peaceful <hostname>
+\end{verbatim}
+Note that this waits indefinitely for the running job to finish,
+before the \Condor{startd} daemon exits.
+
+Th shut down all execution machines within the pool,
+\begin{verbatim}
+  condor_off -all -startd
+\end{verbatim}
+
+To wait indefinitely for each machine in the pool to finish its current
+Condor job,
+shutting down all of the execute machines as they no longer
+have a running job,
+\begin{verbatim}
+  condor_off -all -startd -peaceful
+\end{verbatim}
+
+To shut down Condor on a machine from which jobs are submitted,
+\begin{verbatim}
+  condor_off -schedd <hostname>
+\end{verbatim}
+
+If it is instead desired that the submit machine shuts down
+only after all jobs that are currently in the queue are finished,
+first disable new submissions to the queue 
+by setting the configuration variable
+\begin{verbatim}
+  MAX_JOBS_SUBMITTED = 0
+\end{verbatim}
+See instructions below in section~\ref{sec:Reconfigure-Pool} for how
+to reconfigure a pool.
+After the reconfiguration, the command to wait for all jobs to complete
+and shut down the submission of jobs is
+\begin{verbatim}
+  condor_off -schedd -peaceful <hostname>
+\end{verbatim}
+
+Substitute the option \Opt{-all} for the host name,
+if all submit machines in the pool are to be shut down.
+
+\item[Restarting Condor, If Condor Daemons Are Not Running]
+If Condor is not running,
+perhaps because one of the \Condor{off} commands was used,
+then starting Condor daemons back up depends on which part of
+Condor is currently not running.
+
+If no Condor daemons are running, then starting Condor is a matter
+of executing the \Condor{master} daemon.
+The \Condor{master} daemon will then invoke all other specified daemons
+on that machine.
+The \Condor{master} daemon executes on every machine that is to run Condor.
+
+If a specific daemon needs to be started up, and the \Condor{master} daemon
+is already running, then issue the command on the specific machine with
+\begin{verbatim}
+  condor_on -subsystem <subsystemname>
+\end{verbatim}
+where \verb@<subsystemname>@ is replaced by the daemon's subsystem
+name.
+Or, this command might be issued from another machine in the pool
+(which has administrative authority) with
+\begin{verbatim}
+  condor_on <hostname> -subsystem <subsystemname>
+\end{verbatim}
+where \verb@<subsystemname>@ is replaced by the daemon's subsystem
+name, and \verb@<hostname>@ is replaced by the host name of the
+machine where this \Condor{on} command is to be directed.
+
+\item[Restarting Condor, If Condor Daemons Are Running]
+If Condor daemons are currently running, but need to be killed and
+newly invoked,
+the \Condor{restart} tool does this.
+This would be the case for a new value of a configuration variable for
+which using \Condor{reconfig} is inadequate.
+
+To restart all daemons on all machines in the pool,
+\begin{verbatim}
+  condor_restart -all
+\end{verbatim}
+
+To restart all daemons on a single machine in the pool,
+\begin{verbatim}
+  condor_restart <hostname>
+\end{verbatim}
+where \verb@<hostname>@ is replaced by the host name of the
+machine to be restarted.
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Reconfigure-Pool}Reconfiguring a Condor Pool}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{pool management!reconfiguration}
+
+To change a global configuration variable and have all the
+machines start to use the new setting, change the value within the file,
+and send a \Condor{reconfig} command to each host.
+Do this with a \emph{single} command,
+\begin{verbatim}
+  condor_reconfig -all
+\end{verbatim}
+
+If the global configuration file is not shared among all the machines,
+as it will be if using a shared file system,
+the change must be made to each copy of the global configuration file
+before issuing the \Condor{reconfig} command.
+
+Issuing a \Condor{reconfig} command is inadequate for some
+configuration variables.
+For those, a restart of Condor is required.
+Those configuration variables that require a restart are listed in
+section~\ref{sec:Macros-Requiring-Restart}
+on page~\pageref{sec:Macros-Requiring-Restart}.
+The manual page for \Condor{restart} is at
+~\ref{man-condor-restart}.
+

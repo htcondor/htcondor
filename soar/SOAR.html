@@ -1,0 +1,846 @@
+<html>
+<head>
+<title>SOAR</title>
+</head>
+<body>
+<h1>SOAR - System of Automatic Runs</h1>
+
+<h2>Overview</h2>
+<!--
+what it is
+how it works in general
+how it helps us solve problems
+-->
+
+<p>
+SOAR is a framework which automates the execution of groups of jobs.
+These jobs form a DAG (directed acyclic graph), are run under Condor,
+and SOAR assembles the results within single directory.
+<i>
+For information on Condor visit: http://www.cs.wisc.edu/condor
+</i>
+</p>
+<p>
+The system is flexible, 
+such that it can run all data sets at once,
+or it can keep track of completions,
+running new data sets on a periodic basis.
+It reports on the progress by both logging information
+and progressively plotting of the progress of the run
+in terms of how many jobs are running and how many are ready to run.
+The system becomes adapted and personalized for each project.
+</p>
+<h3>Theory</h3>
+<p>
+A single tie in so a program runs under SOAR does some things for you.
+It maps a location for data sources to a program. It make an easy way
+for you to either feed in new data sources or to create a new version
+of the program to run against the existing data sources. The third
+primary location(the tie to soar) is a set of scripts which fetch the data sources
+to the location needed for each job within the DAG and scrapes the expected
+results to the results location.
+</p>
+<h3>Operational Usage</h3>
+<p>
+SOAR is currently intended and written to be managed by one person
+or possible several through a shared account. The product is young
+but reliable and the focus has been on tools to easily automate
+research. In time work will be done to explore making the various systems
+of software play nicely in the area of multiple users and groups.
+</p>
+<p>
+Most projects once adapted to SOAR sit in a mode where additional
+jobs are automatically run as additional datasets are placed in that projects
+data area. Multiple people can run the same research by simply having
+a derived project thus establishing their own data and result locations
+via their own portion of the web interface. SOAR uses Condor's ability
+to run jobs on any sort of periodic basis needed. If the project needs
+a sweep for new data every 4 hours, it is trivial.
+</p>
+<p>
+SOAR is generally managed by a single person who watches over disk
+consumption, adapts new research to SOAR projects, assist with
+special runs and expediting software changes for projects that
+rapidly change the science they are doing on the data.
+</p>
+
+<h3>Web Interface</h3>
+<p>
+No matter how one starts the runs, the web interface allows four things:
+</p>
+<ul>
+<li>
+Access to where the DAG is running to inspect various things.
+<li>
+A profile showing the jobs ready vs currently running over time
+allowing one to estimate when all the results are available
+and the run completed.
+<li>
+A report showing current status of every job updated periodically
+just like the profile plot.
+<li>
+Access to where the results are stored so individual job's results
+can be looked at as soon as each job completes.
+</ul>
+<h3>Hey, I know how to submit clusters with one submit file, why do I want to use SOAR</h3>
+<p>
+There are some distinct advantages to using SOAR. And it very similar to
+having a folder with data(each in a distinct loaction) and a single submit
+file. The following are provided by SOAR only:
+</p>
+<ul>
+<li>
+Since SOAR uses DAGs and Condor_dagman, a SOAR run can be adjusted 
+to have a minimal impact on your network and submit machine while
+making runs easier. An example is that you can submit 1000s, but throttle
+it back to a reasonable number and make the submit node's performance
+be good for all.
+<li>
+There is a process which every 5 minutes produces a profile of the current 
+set of jobs and a report of the status of each job. The profile is a plot
+which shows number of jobs ready to run and the average number currently
+running. This makes it a predictable task to know when all the results are ready
+to be evaluated.
+<li>
+As jobs complete, each successful job has its data collected in a web accessible location
+freeing the need to collect results by hand.
+<li>
+When all the runs are complete, a collection of all the results for a run
+are either tared or zipped up into a single package for easy web access.
+<li>
+You'll never have to write another submit files again.
+<li>
+It's easy to start a new person using a particular application. One simply 
+makes them their own project. You can even seed it with appropriate data sets.
+From their they simply have to either modify the application and analysis
+or feed the project a different set of data sets.
+<li>
+It changes the focus from "How do I make Condor do what I want" to
+"What data do I want to run?", "How do I want to change the analysis?" 
+and "How can I process the results the best?".
+<li>
+One gets to focus on the science!
+</ul>
+
+
+<h2>Likely Steps towards SOARing</h2>
+<!--
+to organize the process for the beginner
+-->
+
+<p>
+Each project will have its own unique steps leading to automation
+and maintenance of the automated jobs.
+Accounting for the unique nature of jobs,
+each initial SOAR setup will follow these steps:  
+</p>
+<ol>
+<li> download and unpack
+<li> Follow the "<b>Installation</b>" steps below.
+<li> Adapt the Project to SOAR
+     <br>possibly modify the program to be automated, such that
+it can be automated
+<li> Adapt SOAR to the Project 
+     (ready everything for the project):
+   <br>copy and modify existing sample scripts and ???
+   <br>stage input data sets and executables
+   <br>set up time-based submission
+<li> run condor_submit
+</ol>
+<p>
+Steps 3, 4, and 5 will be repeated for each new project to be
+automated.
+</p>
+
+<h2>Installation</h2>
+<!--
+step by step
+-->
+<p>
+The first part to installing SOAR is deciding where to place things.
+SOAR requires a minimum of 2 installation locations and one URL up to
+four loactions and three URLS. This is a combination of limiting
+what the web interface can access combined with allowing for
+large amounts of disk to be consumed between initial datasets for
+projects and copious resulting data from a system allowing
+for an ease of doing research not easily reachable before.
+See <b>Configurable locations</b> below. 
+</p>
+<p><b>
+NOTE: SOAR is designed to leverage Condor_dagman within
+a Condor environment. The run location must be on local disk
+to avoid file locking issues with most shared file systems.
+</b></p>
+
+<ul>
+<li>
+Install Condor if you do not have it yet.
+<li>
+Get tar ball of SOAR distribution.
+<li>
+Configure a URL for the SOAR installation directory for Apache2.
+See SOAR.conf for an example in the top level of the SOAR tar ball.
+<li>
+Optionally configure a RUN url if you plan on locating the condorruns,
+tarcache and results folders other then in the installation directory.
+<li>
+Optionally configure a location for the results and a matching URL
+<li>
+Untar the tar ball and run ./soar_configure.pl --help to see current
+install options.
+<li>
+Run the base install ./soar_configure.pl --install-loc=/some/path 
+--soar-url=http://some path.
+<li>
+Edit per_plotsandreports per_runs so they have a good path and
+a valid CONDOR_CONFIG settings. Path has to include Condor
+binaries.
+
+</ul>
+
+
+<h3>
+Software needed to run SOAR
+</h3>
+<ul>
+<li>
+Perl
+<li>
+PHP enabled for the web browser.
+<li>
+date/Manip.pm Perl module
+<li>
+Gnuplot 4.2 or newer ( for profiling )
+<li>
+Convert by ImageMagick ( for profiling )
+</ul>
+
+<!-- edited to this point in file -->
+
+
+<h2>Adapting a Project to SOAR</h2>
+<!--
+requirements for the system, so the scientist/admin has a good
+idea if their code CAN be adapted, and what will be required
+of their code
+-->
+<p>
+To effectively do multiple datasets in any system
+you want your application to either 
+accept command line arguments and read parameters from one or more files.
+Anything hard coded into the program you are running can not be easily varied.
+
+<h3>Configurable locations</h3>
+<!--
+why we have an fsconfig file, and what it does for us
+syntax of the file
+contents of the file
+when and why we will modify this file in the future
+-->
+<p>
+The SOAR system utilizes and organizes various components related
+to a project's runs.
+As these components may be kept in a variety of locations,
+the file <tt>fsconfig</tt> identifies the component locations.
+Each component listed is also the directory name.
+Within the directory, each project may have its own subdirectory
+for project-specific versions of the component.
+</p>
+<ul>
+<li>
+<tt>soar</tt>: Directory holds start up files for web interface
+<li>
+<tt>control</tt>: Where the master scripts are all located
+<li>
+<tt>source</tt>: Where project code and glue scripts live
+<li>
+<tt>results</tt>: Where results go on a per project basis
+<li>
+<tt>tarcache</tt>: Where large data sets are stored in compressed format for additional use.
+<li>
+<tt>condorruns</tt>: Space used to run the jobs and collect logs
+<li>
+<tt>imageruns</tt>: Places data sets can be found
+</ul>
+
+<p>
+Additionally, each project can have its data location specified in this file in the format:
+
+<p>
+	Project_name,Location_holding _data_in _project_name_folder
+
+<p>
+Soar is told where to 
+find datasets for your jobs. These will be folders with unique names with the 
+variable data for your jobs or folders named datasetXXXXXXX which  will contain the 
+unique job folders. The code and jobs folders under sources contain the unchanging 
+parts for the first and the glue scripts in the second.
+</p>
+
+<h2>Adapting SOAR to a Project</h2>
+<h3>Source Directory code</h3>
+
+<p>
+This directory gets all the sources to make your job run. It also gets the results of 
+compiling if that is something your job needs be it Matlab or some regular computer 
+language. For security purposes it must have an .htaccess file or the code will not 
+be placed where it needs to be for the job to find it. This is to ensure that the sources 
+on the web are only accessible by authorized persons.
+</p>
+
+<p>
+Normally all files in the code directory are copied to the submit location where the 
+job is started. However any file listed in the file SKIP will not be moved.
+</p>
+
+<p>
+Another file called BLACKLIST must exist. It contains a name which starts with a number, 
+a colon the word blacklist and then a reason within [  ]. Here follows an example:
+</p>
+<pre>
+1000: blacklist [ condensation ]
+</pre>
+
+<h3>
+Source Directory jobs
+</h3>
+
+<p>
+This directory holds the glue scripts which adapt SOAR to handling the data sets 
+and the code of your research.  The glue scripts tie together the data sets to 
+whatever processing you want to do.
+</p>
+
+<h3>
+Glue Scripts and Interfacing files
+</h3>
+
+<p>
+A basic job consists of a single node which submits to a pool and then another analysis job 
+which could be run if desired based on results. A faulty start can have us execute a null 
+piece of work for the first node and we usually do a null follow-up node. After all the 
+jobs have run we have a report node,  an optional clean node, an after the report mode 
+which preps the data collected if we are delivering it and a push the data node.
+</p>
+
+<p>
+There are a number of scripts that run before or after which can or should be customized:
+</p>
+<ul>
+<li>
+<tt>Prejob.pl</tt>:  Get data files to run directories and can do some basic sanity checks
+<li>
+<tt>Postjob.pl</tt>:  Decide if analysis node will run and saves the desired results into the results location. It is the perfect place to trim out large files unique to your job from the run directory after you save them in results of course.
+<li>
+<tt>Postreport.pl</tt>:  save additional information into results and perhaps zip all the results up for easy web download
+<li>
+<tt>Pushdata.pl</tt>:  job submitted to pushdata which can be used to deliver the data remotely
+</ul>
+
+<p>
+All the template files are filled in with variable data.
+</p>
+
+<ul>
+<li>
+<tt>Doextract.template</tt>:   this is a template of the submit file for the job and is close to what will be moved to the run location. This file tells Condor what the job to execute. This file gets moved automatically. The executable  is almost always a script which extracts the data, runs the real job and if needed packages the results. This file dictates what gets run, what gets moved and how to run the job. The final submit file is completed by Make_job_submits.pl.
+<li>
+<tt>Doextractnull.template</tt>:  when we discover issues in prejob.pl we substitute a dummy job so as to not waste a jobs which we know will fail. Job is classified as failing.
+<li>
+<tt>Holdnode.template</tt>
+<li>
+<tt>Postmovie.template</tt>:  This is a job which could do further work after the job runs. It is almost always replaced by do nothing job but provides a place for some extra work.
+<li>
+<tt>Postmovienull.template</tt>:  This is what we normally do after the job.
+<li>
+<tt>Postreport.template</tt>:  Runs the final report
+</ul>
+
+<p>
+There are some additional files which allow extra features.
+</p>
+
+<ul>
+<li>
+<tt>Make_pushdata_submits.pl</tt>:  produce a customized node to push data somewhere
+<li>
+<tt>Make_job_dag_text.pl</tt>: though we normally run a single piece of work, we can insert between the prenode and postnode an arbitrarily complex dag for the actual work. Interesting note here is that this file writes a file called PROFILE. The name within will be used to find error, log and output files for profiling and plotting current status.
+<li>
+<tt>Make_job_submits.pl</tt>:  produce all job submits files from templates.
+</ul>
+
+<h3>
+How the report gets generated
+</h3>
+
+Either your job or postjob.pl glue script generates a file called RESULT which holds a 
+number. When the report  process runs, it looks this number up in the file RESULTVALUES in 
+your job directory which holds the glue scripts. This file has three fields separated 
+by /. Field one is a number. Field two is either passed or failed. The last filed is 
+the message which will be used to classify that result.
+
+<h3>
+Using SOAR
+</h3>
+
+<h3>
+Time activated tasks
+</h3>
+
+<p>
+The most convenient way to do production with SOAR is to place entries in a file which 
+condor manages the frequency of.  There are two included(per_runs and per_plotsandreports). 
+Per_runs fires off the commands in continuous.cron once a day and 
+per_plotsandreports fires off the commands in checkprogress.com every 5 minutes. 
+Setting this up is as easy as placing what you want done similar to the sample files 
+and submitting them with condor_submit(condor_submit per_runs). The first usually 
+contains usage of the control.pl script and --kind=new so tracking of datasets already done 
+has only new datasets run. The second as of version 0.7.5 is done for you. Every run
+gets an entry added when the run is started and is removed when the run completes.
+This allows us to use the information in the report system to accurately move jobs which were
+running to complete. This information allows the next run to search out all currently running jobs and not start them again.
+</p>
+<p>
+<b>If you need to remove a run, you must use the soar_rm.pl script to
+both extract this set of reports from the recheck interval or you waste
+the cycles on reports on a completed/removed run</b>.
+</p>
+<p>
+
+This way once you tie a project to do a particular job, you or the person doing the 
+research only need to worry about creating more data sets into the image location for 
+the project and pull results from the result location.
+</p>
+
+<h3>
+Automated Code Replacement
+</h3>
+<p>
+Input data for jobs in folders or folders in datasets are located either
+in the directory specified by IMAGERUNS is control/fsconfig, or in a location
+specified by the project name in the same location. Lets say your data is expected to 
+be in your home in a directory rundata. So job data for project redapple
+would be in /home/me/rundata/redapple.
+</p>
+<p>
+The way code replacement works is that anything placed in /home/me/rundata/redapple_objs
+is compared against the age of the current files for the currently requested version
+of your workflow code. Newer code from that location is inserted into your work flow.
+You have some control though its minimal at this point. The following four attributes 
+can be set in /home/me/rundata/redapple_objs/objconfig. The contents of this file will
+only be active if files are found to update.
+</p>
+
+</p>
+<ul>
+<li>
+kind = oneoff 
+<p>
+(maybe you usually run with --kind=new but you want to run all your data
+with the new code. This will run every data set you have.)
+</p>
+<li>
+limit = 2
+<p>
+You want to set up for rerunning all of your data but want to inspect results from just 2 runs
+first.
+</p>
+<li>
+version = v6
+<p>
+The changes are substantial enough that you want v5 to now become v6
+and you will run it as v6(Soar does that for you).
+</p>
+<li>
+whitelist = "comma separated list of jobs"
+<p>
+If, when doing a code update, one wants to run a few jobs they can
+be separated by commas. If the jobs are not in a dataset then they would
+be listed like this:<br>
+whitelist = job1,job2,job3,job4<br><br>
+If the jobs are in a dataset, it would be like this:<br>
+whitelist = dataset_XXXXXXX-job1,dataset_XXXXXXX-job2
+</p>
+<li>
+dataset = dataset_XXXXXXX
+<p>
+This will fire off one job for each job in the dataset.
+<b>(USING WHITELIST AND DATASET AT THE SAME TIME WILL
+BRING UNEXPECTED RESULTS. USE ONE OR THE OTHER)</B>
+</p>
+<li>
+matlabtarg = main.m,another.m
+<p>
+So we don't build software but the update works because we replace a binary
+with a binary or an R script with a newer one or we even replace Matlab 
+scripts/programs. In the last case all the scripts used by these two M files
+will be Matlab compiled before your jobs are run. At this point this is the only
+processing we do. Soar is not a build system but matlab jobs can not be run
+unless we compile them.
+</p>
+</ul>
+
+<h3>
+ Control Scripts
+</h3>
+
+Control.pl
+
+<ul>
+<li>
+	-b/--bail - Debug hook to stop just before submitting the dag which was built for the run
+<li>
+	--clean=s - A(ALL), D(DATA), C(CACHE), R(RESULTS), L(LOGS and misc in rundir) Be very careful with this as its intent is to save space after your results have been saved. The only safe options are C and L which are also the defaults.
+<li>
+	--code=s - used when one wants to change the contents of the code directory for a new version which uses the glue scripts from a previous version. 
+<li>
+	--debug -  removes the L option and leaves the entire run directory intact
+<li>
+	--cache -  removes the C option and leaves the entire tar cache intact
+<li>
+	-d/--datasets=s - run all the jobs in a particular dataset folder
+<li>
+	-f/--first - Create the ENVVARS project file for a new project
+<li>
+	-h/--help - See this
+<li>
+	-k/--kind=s - install, nightly, new, DATASET else a label for web
+	<p>DATASET: A file is located in the input location for the project called
+	DATASET. The dataset named in this file will be entered as if "--datasets=name"
+	had been entered and --kind will be set to "new".</p>
+<li>
+	-l/--limit=N - start this number of nodes in a Dag(acts like run)
+<li>
+	--maxpre=N - Throttle the prescripts to minimize submit node IO(default 10)
+<li>
+	--maxsubmits=N - By default Condor_dagman submits 5 nodes per scan interval which
+	defaults to 5 seconds. We don't have a knob for the scan interval but you can rev
+	up how many it will process each time through a cycle.
+<li>
+	--project=s - Run which project?
+<li>
+	-n/--newproject=s - New project derived from existing
+<li>
+	--preversion=s - Based on this earlier version
+<li>
+	-s/--softversion - print software version
+<li>
+	--type=s - One type of install is a new param.dat from the imagedir for the project to it's code location
+<li>
+	--throttle=s - Add throttling to particular portion of dag.
+<li>
+	-u/--update - Update the project ENVVARS file to the last run.
+<li>
+	-v/--version=s - Run which version(name this version for install)?
+<li>
+	-w/--white=s - File to use for a whitelist based project run
+</ul>
+
+<h3>
+Control.pl Examples
+</h3>
+
+<ul>
+<li>
+<pre>
+./control.pl --project=gravitropism --version=v3 --limit=10 --kind=oneoff --clean=CL
+</pre>
+The above will run an arbitrary 10 jobs from the available data sets for project
+gravitropism version v3 and after will clean the run directory some and clear
+any use of the tarcache space. Results and data sets are not touched.
+<li>
+<pre>
+./control.pl --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
+</pre>
+The above will run a predefined set of your data against a particular
+version of a particular project.
+<li>
+<pre>
+./control.pl --project=gravitropism --preversion=v3 --version=v4 --kind=install   --code=/tmp/code.tar.gz
+</pre>
+This script ...
+<li>
+<pre>
+./control.pl --project=gravitropism --version=v3 --kind=nightly # switches ENVVARS file
+</pre>
+This script ...
+<li>
+<pre>
+./control.pl --project=gravitropism --version=v3 --kind=new
+</pre>
+This is the most basic use. Run only data sets of this project and version
+which have not been run yet. If run once a day, new data can be prepared
+and placed in the projects data location and the new data sets will all
+be run.
+<li>
+<pre>
+./control.pl --project=gravitropism --version=v3 --kind=white --white=/tmp/whitelist
+</pre>
+This script ...
+<li>
+<pre>
+./control.pl --preproject=natehighres --preversion=v1 --project=DanLewisArabidopsis --version=v1 --kind=install
+</pre>
+<li>
+The above will create a new project based on an existing projects and place the version
+at any level desired. This is how one might create tracking and data set freedom for
+a number of people running the same job but with different data and parameters.
+<pre>
+./control.pl --project=gravitropism --version=v3 --kind=install --type=param.dat
+</pre>
+This script ...
+</ul>
+
+<p>
+Each project has a master file ENVVARS in the run directory,
+which is used  various things.
+It is changed out only for --kind=nightly and --kind=new for.
+However, if it comes out of sync or to make it the last "oneoff",
+the command is 
+<pre>
+./control.pl --project=gravitropism --update
+</pre>
+with one of the following additional command line options:
+<ul>
+<li>
+<pre>
+--kind=install
+</pre>
+to set up a new version of code and compile
+<li>
+<pre>
+--kind=nightly
+</pre>
+to change the production code
+<li>
+<pre>
+--kind=new
+</pre>
+to do all the new data sets since the ones run by <tt>--kind=nightly</tt> 
+<li>
+<pre>
+--kind='other text'
+</pre>
+to do a full run,
+unless limited with 'Other Text' labeling the web page for the run
+</ul>
+
+<h3>
+Status.pl
+</h3>
+<p>
+The framework usually runs this script at end of a job run.
+</p>
+<p>
+Its command line options are
+<ul>
+<li>
+<tt>-d</tt> or <tt>--display</tt>
+<br>display report file in REPORT....
+<li>
+<tt>-e</tt> or <tt>--env</tt>
+<br>run this environment file to find run
+<li>
+<tt>-h</tt> or <tt>--help</tt>
+<br>summarize the options and quit
+<li>
+<tt>-k</tt> or <tt>--kind</tt>
+<br>summary(report), profile(plot), whitelist, imagesz
+<li>
+<tt>-l</tt> or <tt>--last</tt>
+<br>find most recent environment file to find run
+<li>
+<tt>-m</tt> or <tt>--match</tt>
+<br>use this pattern to extract the whitelist
+<li>
+<tt>-p</tt> or <tt>--period</tt>
+<br>sample interval
+</ul>
+
+            
+<h3>
+Status.pl Examples
+</h3>
+
+<ul>
+<li>
+<pre>
+./status.pl --project=gravitropism --kind=profile --last
+</pre>
+Create the profile plot for the last or currently running set
+of jobs for this project.
+<li>
+<pre>
+./status.pl --project=gravitropism --kind=profile --env=run15523_8_24_2008
+</pre>
+Create a profile plot for a particular run.
+<li>
+<pre>
+./status.pl --project=gravitropism  --kind=summary --last
+</pre>
+Create the report for the last or currently running set
+of jobs for this project.
+<li>
+<pre>
+./status.pl --kind=summary --project=gravitropism --env=run6823_8_26_200
+</pre>
+Create a report for a particular run.
+<pre>
+./status.pl --kind=whitelist --project=med_mc2 --env=run12700_10_10_2009 --match="fail \[No result files\]"
+</pre>
+Create a white list from the section of the report labeled "fail [No result files]"
+</ul>
+
+<h3>
+soar_rm.pl Usage
+</h3>
+
+<p>
+When a run is started you are givin an environment strings which describes 
+where the data for that particular run is. "soar_rm.pl" uses this to both
+find the actual job id to use with "condor_rm", but also uses it to remove 
+the run specific periodic "status.pl" runs which update the plots and reports
+at some interval.
+</p>
+
+<ul>
+<li>
+./soar_rm.pl --project=gravitropism --env=run6823_8_26_200
+<pre>
+</pre>
+</ul>
+
+<h2>How do I ......</h2>
+<p>
+You probably have a project running in SOAR but you want one of the following changes:
+</p>
+<h3>Get someone else using the configured project</h3>
+<p>
+Base a new project on the current project.
+</p>
+<p>
+Let say you have a project <b>positioning</b> and the best version of it is
+<b>v3</b>. Your new user is <b>sam</b> and you want it to be called <b>
+sams_liquids</b>.
+</p>
+<ul>
+<li>
+Add a line in "control/fsconfig" to have a location for this persons
+data sets for their project. It would look like this: 
+<b>sams_liquids,/home/sam/imageruns</b>.
+<li>
+Enter the following command: <b>./control.pl --project=positioning --preversion=v3 
+--newproject=sams_liquisams_liquid --version=v1 --kind=install</b>
+</ul>
+<h3>Change how the application works(change the science)</h3>
+<p>
+Generate a new version of the code.
+</p>
+<p>
+This is very easy to do. If you make a new version you can name it 
+something meaningful to mimic why you created it. The new version
+now has access to all the project data allowing you to change the science
+you are doing. If the project is <b>positioning</b> and the old version
+is <b>v1</b> and you want the new version to be <b>surfaces</b> then
+go to "sources/positioning" and enter this command: <b>cp -r v1 surfaces</b>.
+</p>
+<p>
+Now simply place new binaries in "sources/positioning/surfaces/code".
+</p>
+<p>
+<i>NOTE if you change the behavior and files needed or created you'll likely need
+need to change the scripts "prejob.pl, postjob.pl and pushdata.pl".</i>
+</p>
+
+
+<h2>Web Interface</h2>
+<!--
+what can be seen
+how to see it
+-->
+<h3>Basics</h3>
+<p>
+The goal of the web interface is to inspect a run of data sets done
+as a single Condor DAG. One gets access to the run directory for the 
+DAG which has a subdirectory for each job, to the plot showing current progress
+of that DAG, a report which breaks out aspects of each job which has currently
+ended, and allows access to results for each job in the DAG when it completes.
+</p>
+<h3>index.html</h3>
+<p>
+This file sits at the top most level and has sample links to projects.php.
+These two files make it possible to have links created from the file
+<b>RUNS</b> in the top of the projects run directory which allow the links and access
+described above.
+</p>
+<h2>Release Notes</h2>
+<h3>Version 0.7.7</h3>
+<ul>
+<li>
+New systematic controls for storing, accessing and initializing 
+Completed Jobs and Running Jobs since last --kind=oneoff
+which resets to allow rerun of all jobs. In 7.6 and older
+we could loose track and run extra jobs already completed
+when running --kind=new in out automatic sweeps for new jobs
+on 15 minute intervals
+<li>
+Profiling understands new Dagman dagman.ou format where
+dates now have a 2 digit year at the beginning of each line
+which had profiling broken for a bit.
+</ul>
+
+<h3>Version 0.7.6</h3>
+<ul>
+<li>
+	Two new options add added to the automatic code updates.
+	Look in that section for use of <b>whitelist</b> and 
+	<b>dataset</b>.
+<li>
+	Projects running with datasets which have input data shared
+	across all of the jobs in one dataset, but different from
+	the contents of the same file for a different dataset can now
+	be run routinely for updates and have the automatics look
+	at only one dataset at a time. See "<b>--kind=DATASET</b> above.
+<li>
+	SOAR now uses a unique JOBID instead of the complicated
+	run name.
+<li> 
+	SOAR will now look for new code and will replace it and if it is matlab
+	re-compile a specified list of programs to make use of the new matlab files.
+	See "<b>Automatic Code Replacement</b> above.
+<li> 
+	We no longer will place Matlab source files into runtime directory(*.m);
+</ul>
+<h3>Version 0.7.5</h3>
+<ul>
+<li> 
+	Status.pl will now create whitelists from selected sections of the results.
+	See usage of status.pl for details.
+<li> 
+	Control.pl will ensure an entry in "checkprogress.cron" so the report
+	and progress plot will exist even if multiple data sets are running at the same time
+	for a single project. Previously only the most recent run got plots and reports.
+<li>
+	As reports are generated a constantly updated file in the project run contains a list
+	of all the currently running jobs. Thus we can now do runs for --kind=new and we won't
+	add any jobs which are still running. This means "continuous.cron" can be run frequently
+	and look for new data to start avoiding the need to have someone start runs manually
+	after all of the last run completed.
+<li>
+	A new tool, soar_rm.pl removes a project run, removes the request for reports
+	and plots for this run and removes the file which says these jobs are still
+	running so the next --kind=new will restart them.
+<li>
+	Syntax for derived projects has changed to:
+		./control.pl --preproject=oldproject --preversion=oldversion --project=new name
+		--version=newversion --install
+</ul>
+
+<h2>Wanted Features</h2>
+<ul>
+<li>
+	Allow a project specific timeout after which time the still remaining
+	jobs could be restarted with a --kind=new. Most have storage location.
+</ul>
+</body>
+</html>
