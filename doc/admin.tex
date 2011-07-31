@@ -1,0 +1,70 @@
+\documentclass[titlepage]{article}
+
+%
+%  For use with latex2html
+%
+\usepackage{html}
+\usepackage{graphics}
+
+%
+%  Set the size of the margins and text area
+%
+\setlength{\evensidemargin}{0.5in}
+\setlength{\oddsidemargin}{0.5in}
+\setlength{\textwidth}{5.5in}
+\setlength{\topmargin}{0.0in}
+\setlength{\headsep}{0.5in}
+\setlength{\topskip}{0in}
+\setlength{\marginparwidth}{1in}
+\setlength{\marginparsep}{0in}
+\setlength{\footskip}{0.75in}
+
+%
+%  Bring in Condor macros
+%
+\input{condor-macros.tex}
+
+%
+%  Fix the headers and footers
+%
+\latex{
+	\usepackage{fancyhdr}
+	\pagestyle{fancy}
+	\fancyhf{}
+	\renewcommand{\sectionmark}[1]{\markright{\thesection.\ #1}}
+\if@twoside
+	\fancyhead[LE,RO]{\thepage}
+	\fancyhead[RE]{\leftmark}
+	\fancyhead[LO]{\rightmark}
+\else
+	\fancyhead[R]{\thepage}
+	\fancyhead[L]{\rightmark}
+\fi
+
+	\fancyfoot[C]{Condor \VersionNotice, Administrators' Manual}
+	\renewcommand{\headrulewidth}{0.4pt}
+	\renewcommand{\footrulewidth}{0.4pt}
+	\addtolength{\headwidth}{\oddsidemargin}
+}
+
+\begin{document}
+
+\title{Condor \VersionNotice : Administrators' Manual}
+\author{\AuthorNotice}
+\maketitle
+
+\tableofcontents
+\newpage
+
+\sloppy
+%
+% This turns off the hbox underfull warnings, but
+% does not change the formatting of the text
+% default value is 1000
+\hbadness=10000
+
+
+
+\input{admin-man/admin.tex}
+
+\end{document}

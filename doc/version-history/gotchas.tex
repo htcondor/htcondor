@@ -1,0 +1,79 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:gotchas}Upgrading from the 7.4 series to the 7.6 series of Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{upgrading!items to be aware of}
+While upgrading from the 7.4 series of Condor to the 7.6 series will
+bring many new features and improvements introduced in the 7.5 series of
+Condor, it will also introduce changes that administrators of sites
+running from an older Condor version should be aware of when
+planning an upgrade.
+Here is a list of items that administrators should be aware of.
+
+\begin{itemize}
+
+\item  Previously, Condor's RPM packaging installed into \File{/opt}.
+  Now, the RPM install paths adhere to the Linux Standard Base File System
+  Hierarchy Standard (LSB-FHS), meaning Condor will be installed by default
+  into appropriate subdirectories within \File{/usr}.  
+  See section~\ref{sec:install-rpms} for updated RPM information. 
+
+\item  The feature set once known as the Startd Cron or as Hawkeye is now
+  called \Term{Daemon ClassAd Hooks}.  Besides the new name, the mechanisms
+  have been updated, and the configuration has changed.
+  Sites using this functionality are strongly encouraged to
+  update their configuration file to adhere to the new syntax. 
+  Configuration file syntax introduced in Condor version 7.2 
+  is still compatible with Condor version 7.6,
+  but the syntax of Condor version 7.0 is unlikely to work as expected.
+  See section~\ref{sec:daemon-classad-hooks} for documentation.
+
+\item  For those who compile Condor from the source code, 
+  rather than using packages of pre-built executables, 
+  Condor is now built using \Prog{cmake} on all platforms.
+  This means the process for building Condor from source code has changed.
+  For instructions, 
+  see the Condor Wiki at \URL{http://wiki.condorproject.org}, and follow 
+  the Wiki link to the section on Building and Testing Condor.
+
+\item  Quill and Stork are no longer included in the binary packages
+  released from the Condor Project. Instead, both are available as
+  \Term{Contribution Modules}. 
+  Contribution Modules are optional packages that add functionality to Condor,
+  but are provided and maintained outside of the core code base, 
+  often by third parties. 
+  To add Quill and/or Stork to Condor, 
+  see the Condor Wiki at \URL{http://wiki.condorproject.org}, follow 
+  the Wiki link, and see the section titled User FAQs.
+
+\item The layout in the \MacroNI{SPOOL} directory has changed.
+  As a result,
+  be certain to upgrade all Condor binaries on a given host at the same time.
+  That is, do not try to run Condor version 7.6 \Condor{schedd} daemons 
+  and Condor version 7.4 \Condor{shadow} daemons on the same machine.
+  Also, should you need to revert back to an older version of
+  Condor after running Condor version 7.6 (hopefully not the case!),
+  be aware of release notes for Condor version 7.5.5 regarding the 
+  \File{SPOOL} directory in section~\ref{sec:New-7-5-5}.
+
+\item Issues regarding the detection of keyboard activity on Linux and
+  especially on Windows Vista/7 have been addressed. Bottom line: if you
+  want Condor to detect keyboard/mouse activity on either of these
+  platforms, ensure that the subsystem \Expr{KBDD} is listed in the
+  \MacroNI{DAEMON\_LIST} configuration variable definition on start up.
+
+\item On Windows platforms,
+  the MSI installer has been rewritten (using WiX) to better
+  support Windows 7. While the installation process is essentially the same,
+  a handful of arguments that control an \emph{unattended} MSI installation
+  have changed, such as the arguments controlling HDFS installation.  See
+  section~\ref{sec:nt-unattended-install-procedure} for the updated list of
+  unattended installation arguments.
+
+\item The submit description file commands for grid jobs using a
+\SubmitCmd{grid\_resource} type of amazon has changed. Users will need to
+edit their submit description files for jobs destined for Amazon to
+include an EC2 URL. See section~\ref{sec:Amazon-submit}.
+
+\end{itemize}
+
