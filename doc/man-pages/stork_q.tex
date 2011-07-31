@@ -1,0 +1,36 @@
+\begin{ManPage}{\label{man-stork-q}\Stork{q}}{1}
+{Query active Stork data placement jobs.}
+\Synopsis \SynProg{\Stork{q}}
+\ToolArgsBase
+
+\SynProg{\Stork{q}}
+\oOpt{-debug}
+\Storkname
+
+
+\index{Condor commands!stork\_q}
+\index{Stork commands!stork\_q}
+\index{stork\_q command}
+
+\Description 
+
+\Stork{q} prints the entire queue of active Stork jobs.
+Output is provided in the syntax of the ClassAd language.
+See \URL{http://www.cs.wisc.edu/condor/classad} for information
+on the ClassAd language.  Completed jobs are not printed.
+If the \Opt{-name} option is specified, the named \Stork{server} is targeted
+for processing.  Otherwise, the local \Stork{server} is targeted.
+
+
+\begin{Options}
+	\ToolArgsBaseDesc
+	\OptItem{\Opt{-debug}}{Show extra debugging information.}
+	\StorknameDesc
+\end{Options}
+
+\ExitStatus
+
+\Stork{q} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

@@ -1,0 +1,144 @@
+\begin{ManPage}{\label{man-condor-userprio}\Condor{userprio}}{1}
+{Manage user priorities} 
+\Synopsis \SynProg{\Condor{userprio}}
+\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
+\oOpt{-all}
+\oOpt{-usage}
+\oOptArg{-setprio}{username value}
+\oOptArg{-setfactor}{username value}
+\oOptArg{-setaccum}{username value}
+\oOptArg{-setbegin}{username value}
+\oOptArg{-setlast}{username value}
+\oOptArg{-resetusage}{username}
+\oOpt{-resetall}
+\oOptArg{-delete}{username}
+\oOptArg{-getreslist}{username}
+\oOpt{-allusers}
+\oOptArg{-activefrom}{month day year}
+\oOpt{-l}
+
+\index{Condor commands!condor\_userprio}
+\index{condor\_userprio command}
+
+\Description 
+\Condor{userprio} with no arguments, lists the active users (see below) along with their
+priorities, in increasing priority order. The -all option can be used to display
+more detailed information about each user, which includes the following columns:
+
+\begin{description}
+\item[Effective Priority] The effective priority value of the user, which is used to
+calculate the user's share when allocating resources. A lower value means a higher
+priority, and the minimum value (highest priority) is 0.5. The effective priority is
+calculated by multiplying the real priority by the priority factor.
+\item[Real Priority] The value of the real priority of the user. This value follows the
+user's resource usage.
+\item[Priority Factor] The system administrator can set this value for each user, thus 
+controlling a user's effective priority relative to other users. This can be used to
+create different classes of users.
+\item[Res Used] The number of resources currently used (e.g. the number of running jobs
+for that user).
+\item[Accumulated Usage] The accumulated number of resource-hours used by the user since
+the usage start time.
+\item[Usage Start Time] The time since when usage has been recorded for the user. This time
+is set when a user job runs for the first time. It is reset to the present time when the
+usage for the user is reset (with the -resetusage or -resetall options).
+\item[Last Usage Time] The most recent time a resource usage has been recorded for the user.
+\end{description}
+
+The -usage option displays the username, accumulated usage, usage start time and last usage time
+for each user, sorted on accumulated usage.
+
+The -setprio, -setfactor options are used to change a user's real priority and priority factor.
+The -setaccum option sets a user's accumulated usage.
+The -setbegin, -setlast options are used to change a user's begin usage time and last usage time.
+The -setaccum option sets a user's accumulated usage.
+The -resetusage and -resetall options are used to reset the accumulated usage for users. The
+usage start time is set to the current time when the accumulated usage is reset. These
+options require administrator privileges.
+
+By default only users for whom usage was recorded in the last 24 hours or whose priority is
+greater than the minimum are listed. The -activefrom and -allusers options can be used
+to display users who had some usage since a specified date, or ever. The summary line for 
+last usage time will show this date.
+
+The -getreslist option is used to display the resources currently used by a user. The
+output includes the start time (the time the resource was allocated to the user), and
+the match time (how long has the resource been allocated to the user).
+
+Note that when specifying user names on the command line, the name must include the
+UID domain (e.g. user@uid-domain - exactly the same way user names are listed by the
+userprio command).
+
+The -pool option can be used to contact a different central-manager instead of
+the local one (the default).
+
+For security purposes (authentication and authorization),
+this command requires an administrator's level of access.
+See
+section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}
+for further explanation.
+
+\begin{Options}
+
+\OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+	{Contact specified \Arg{centralmanagerhostname} with an
+	optional port number instead of the local central
+	manager. This can be used to check other pools.  NOTE: The
+	host name (and optionally port) specified refer to the host name
+	(and port) of the \Condor{negotiator} to query for user
+	priorities.  This is slightly different than most Condor tools
+	that support -pool, which expect the host name (and optionally
+	port) of the \Condor{collector}, instead.}
+
+\OptItem{\Opt{-all}}
+	{Display detailed information about each user.}
+
+\OptItem{\Opt{-usage}}
+	{Display usage information for each user.}
+
+\OptItem{\OptArg{-setprio}{username value}}
+	{Set the real priority of the specified user to the specified value.}
+
+\OptItem{\OptArg{-setfactor}{username value}}
+	{Set the priority factor of the specified user to the specified value.}
+
+\OptItem{\OptArg{-setaccum}{username value}}
+	{Set the accumulated usage of the specified user to the specified floating
+     point value.}
+
+\OptItem{\OptArg{-setbegin}{username value}}
+	{Set the begin usage time of the specified user to the specified value.}
+
+\OptItem{\OptArg{-setlast}{username value}}
+	{Set the last usage time of the specified user to the specified value.}
+
+\OptItem{\OptArg{-resetusage}{username}}
+	{Reset the accumulated usage of the specified user to zero.}
+
+\OptItem{\Opt{-resetall}}
+	{Reset the accumulated usage of all the users to zero.}
+
+\OptItem{\OptArg{-delete}{username}}
+	{Remove the specified \Arg{username} from Condor's accounting.}
+
+\OptItem{\OptArg{-getreslist}{username}}
+	{Display all the resources currently allocated to the specified user.}
+
+\OptItem{\Opt{-allusers}}
+	{Display information for all the users who have some recorded accumulated usage.}
+
+\OptItem{\OptArg{-activefrom}{month day year}}
+	{Display information for users who have some recorded accumulated usage since
+the specified date.}
+
+\OptItem{\Opt{-l}}
+	{Show the class-ad which was received from the central-manager in long format.}
+
+\end{Options}
+
+\ExitStatus
+
+\Condor{userprio} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

@@ -1,0 +1,359 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:HTCBluegeneP}
+	Configuring Condor for HTC on the Blue Gene/P} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Blue Gene/P (BG/P) machine provides a high throughput computing
+(HTC) model which reconciles traditional cluster interface semantics
+with a massively parallel computing system. Condor takes advantage of
+this model by providing a wrapping layer for the BG/P HTC model similar
+to the notion of a``glidin factory''. At this time, the PowerPC binaries
+for the SLES 9 distribution of Condor is the necessary port in order to
+utilize this feature.
+
+The mechanism of Condor's interface to the BG/P is a new long-lived
+daemon, under the \Condor{master}, called the \Condor{startd\_factory}
+and a set of scripts invoked by said daemon to effect the BG/P partition
+changes with the BG/P HTC API.  The \Condor{startd\_factory} daemon's role
+is to periodically determine if there is more work in the participating
+\Condor{schedd}s than HTC resources available from the BG/P and if so
+boot and back (wrap the booted BG/P partition by a \Condor{startd})
+more partitions of the types needed by the jobs in the \Condor{schedd}.
+The partitions must have been previously generated at the correct size
+by the administrator of the BG/P prior to Condor utilizing them.
+
+Backed resources present with a slot per CPU matching the total number
+of compute nodes in the block. Each slot ad is born with attributes
+(described below) that only allow the jobs of the particular HTC flavor
+(SMP, DUAL, VN) to execute on the slot and which also describes the slot
+to the \Condor{startd\_factory}. This policy is implemented via custom
+classad attributes in the slot and job ad.
+
+Backed, but unused, partitions are released via a daemon termination
+timeout in the \Condor{startd} when its slots have not been utilized after
+a configurable amount of time.
+
+\subsubsection{\Condor{startd\_factory Daemon Configuration}}
+
+# These attributes describe the daemon similarly to other daemons in Condor
+# Just put STARTD_FACTORY into DAEMON_LIST to start the service.
+STARTD_FACTORY = $(SBIN)/condor_startd_factory
+STARTD_FACTORY_ARGS = -f
+STARTD_FACTORY_LOG = $(LOG)/StartdFactoryLog
+# MAX_STARTD_FACTORY_LOG = 10000000
+
+# The list of pregenerated partitions on the BG/P which may be booted and
+# backed by the condor_startd_factory daemon according to the workload.
+STARTD_FACTORY_BGP_PARTITION_LIST = R00-M00-N0, R00-M00-N1, ...
+
+# This says how often to determine the workload and adjust the partitions to
+# match it. It is an integer in seconds and defaults to 4200 seconds (7 minutes)
+# if not specified.
+# STARTD_FACTORY_ADJUSTMENT_INTERVAL = 4200
+
+# This will scrape all schedds cared about and provide a summary of the
+# work loads available.
+STARTD_FACTORY_SCRIPT_QUERY_WORK_LOADS = $(LIBEXEC)/bgp_query_work_loads
+
+# if any are already partitions created, what are they and what state
+# are they in?
+STARTD_FACTORY_SCRIPT_AVAILABLE_PARTITIONS = $(LIBEXEC)/bgp_available_partitions
+
+# Boot/free a known partition
+STARTD_FACTORY_SCRIPT_BOOT_PARTITION = $(LIBEXEC)/bgp_boot_partition
+STARTD_FACTORY_SCRIPT_SHUTDOWN_PARTITION = $(LIBEXEC)/bgp_shutdown_partition
+
+# create a startd which will back a partition with a known kind
+STARTD_FACTORY_SCRIPT_BACK_PARTITION = $(LIBEXEC)/bgp_back_partition
+
+There are two unused config file entries that may be supported in a future
+version of Condor.
+
+# This will create/destroy a parition on the BlueGene
+STARTD_FACTORY_SCRIPT_GENERATE_PARTITION = $(LIBEXEC)/bgp_generate_partition
+STARTD_FACTORY_SCRIPT_DESTROY_PARTITION =  $(LIBEXEC)/bgp_destroy_partition
+
+\subsubsection{Script Descriptions}
+
+Here we describe exactly what all of these scripts do at a high level
+and what inputs and outputs they expect as to interface with the
+\Condor{startd\_factory} daemon. 
+
+STARTD_FACTORY_SCRIPT_QUERY_WORK_LOADS
+	This blocking script queries the collector to find all
+	\Condor{schedd}s in the Condor pool, then queries each
+	\Condor{schedd} to find jobs with the BGP_BLOCK_TYPE attribute
+	paired with the current job status--idle or running.
+
+	Script command line arguments:
+		None
+	Script input:
+		Nothing
+	Script output:
+		A set of classads written to stdout representing the
+		work from each \Condor{schedd}. Each ad is separated
+		by the the characters --- occuring on a single line,
+		which must also terminate the set of classads.
+
+		The required attributes in the classads are:
+			WorkloadName 
+				The name of the source of the work, in this case the name of
+				a schedd. The value must be a string.
+
+			SMPIdle
+			SMPRunning
+				How many SMP jobs in the workload are idle/running.
+
+			DUALIdle
+			DUALRunning
+				How many DUAL jobs in the workload are idle/running.
+
+			VNIdle
+			VNRunning
+				How many VN jobs in the workload are idle/running.
+	
+	Example output of script:
+
+		WorkloadName = "psilord\@cs.wisc.edu"
+		SMPIdle = 100
+		SMPRunning = 0
+		DUALIdle = 0
+		DUALRunning = 0
+		VNIdle = 0
+		VNRunning = 0
+		---
+		WorkloadName = "gthain\@cs.wisc.edu"
+		SMPIdle = 1024
+		SMPRunning = 0
+		DUALIdle = 0
+		DUALRunning = 0
+		VNIdle = 256
+		VNRunning = 0
+		---
+
+STARTD_FACTORY_SCRIPT_AVAILABLE_PARTITIONS
+	This blocking script inspects the BG/P machine and the Condor
+	pool itself and, for each partition id, figures out the state
+	of the partition id (generated only, booted, or backed)
+
+	Script command line arguments:
+		--partition-ids-info <one or more partition ids>
+	
+	Script input:
+		None
+	
+	Script output:
+		A set of classads delimited by the characters --- occuring
+		on a line by itself, which must also terminate the set
+		of classads. The classads describe in what state each
+		partition exists. An example of each kind of state is
+		presented in the example output. Depending upon the state
+		of the partition, the required classad attributes change.
+
+		Attributes in emitted classad:
+
+		Partition
+			Always required.
+			A string which is the name of the partition id.
+
+		State
+			Always required
+			A string, either 
+			"INVALID", "NOT_GENERATED", "GENERATED", "BOOTED", or "BACKED".
+
+		Size
+			Required only of the partition is GENERATED, BOOTED, or BACKED.
+			An integer detailing the number of compute nodes.
+
+		Kind
+			Present only if the partition is BOOTED, or BACKED.
+			A string, either "SMP", "DUAL", or "VN".
+
+		Backer
+			Present only if the partition is BACKED.
+			A string which is the Name attribute of the startd backing
+			the resource.
+
+	Example script output:
+
+		Partition = "R00-M0-N00"
+		State = "BACKED"
+		Size = 64
+		Kind = "DUAL"
+		Backer = "R00-M0-N00\@fqdn.com"
+		---
+		Partition = "R00-M0-N01"
+		State = "BOOTED"
+		Size = 64
+		Kind = "DUAL"
+		---
+		Partition = "R00-M0-N02"
+		State = "GENERATED"
+		Size = 64
+		---
+		Partition = "R00-M0-N03"
+		State = "NOT_GENERATED"
+		---
+		Partition = "XXXXX"
+		State = "INVALID"
+		---
+
+STARTD_FACTORY_SCRIPT_BOOT_PARTITION
+	This blocking script takes a partition id and an HTC type and
+	boots the partition on the BG/P with the required type. The type
+	may be SMP, DUAL, or VN. This script may only boot a single partition
+	at a time.
+
+	Script command line arguments:
+		--boot <partitionid> --type <type>
+	
+	Script input:
+		None
+
+	Script output:
+		If the booting of the partition goes well, then "OK"
+		on a single line should be the output. Otherwise, lines
+		of descriptive output may be emitted ending with "NOT_OK"
+		on a single line after the text.
+
+STARTD_FACTORY_SCRIPT_SHUTDOWN_PARTITION
+	This blocking script is responsible for taking a partition id
+	which has already been booted and shutting it down. If the
+	partition is also backed, then this script should stop the
+	\Condor{startd} associated with the partition as well. When this
+	script finishes, the parition is only in the generated state.
+
+	Script command line arguments:
+		--partition-id <partitionid>
+	
+	Script input:
+		None:
+	
+	Script output:
+		If the booting of the partition goes well, then "OK"
+		on a single line should be the output. Otherwise, lines
+		of descriptive output may be emitted ending with "NOT_OK"
+		on a single line after the text.
+		
+STARTD_FACTORY_SCRIPT_BACK_PARTITION
+	This blocking script takes a partition, size, and type, and
+	starts a \Condor{startd} (doing all the work necessary, including
+	creating a specific confguration file and appropriate LOCAL_DIR)
+	which presents the same number of slots of the correct HTC type
+	as there are compute nodes in the partition.
+
+	Script command line arguments:
+		--partition-id <partitionid> --size <size> --type [SMP | DUAL | VN]
+	
+	Script input:
+		None:
+	
+	Script output:
+		If the backing of the partition goes well, then "OK"
+		on a single line should be the output. Otherwise, lines
+		of descriptive output may be emitted ending with "NOT_OK"
+		on a single line after the text.
+
+\subsubsection{\Condor(startd} Presentation}
+
+In the current implementation of STARTD_FACTORY_SCRIPT_BACK_PARTITION,
+each backing startd's LOCAL directory appears in a directory
+named /tmp/startd.<pid> where <pid> is the pid of the
+STARTD_FACTORY_SCRIPT_BACK_PARTITION process. A dynamic config file
+is constructed for the startd as well which defines some config
+file attributes that describe the backed partition. At this time, the
+/tmp/startd.<pid> directory and files are leaked in the file system--we
+will address this known problem in a future release of Condor.
+
+The attributes added/specified into the \Condor{startd}'s ad are:
+
+\begin{verbatim}
+STARTD_NAME = partition name
+PARTITION_NAME = partition name
+BGP_BLOCK_SIZE = block size
+BGP_BLOCK_TYPE = SMP | DUAL | VN
+\end{verbatim}
+
+The \Condor{startd} will report to the collector, as in a glide-in
+scenario, running jobs which match the BGP_CLOCK_TYPE. When all of the
+slots managed by a \Condor{startd} are continuously unclaimed/idle for at
+least STARTD_NOCLAIM_SHUTDOWN seconds (currently defaulting to 5 minutes),
+the startd self-terminates.
+
+\subsubsection{BG/P HTC Jobs in the Queue}
+
+Attributes in the job ad:
+BGP_BLOCK_TYPE = SMP | DUAL | VN
+
+The job types available with the BG/P HTC model are SMP, DUAL, and VN.
+Respectively, they mean a job that may be single threaded, dual threaded,
+or quad threaded. From the perspective of the user of these resources,
+each job ad destined for the BG/P resource must contain an attribute
+called \Macro{BGP\_BLOCK\_TYPE} which have the string values "SMP" or
+"DUAL" or "VN".
+
+This attribute can be added to the submit file as in this example:
+
+\begin{verbatim}
++BGP_BLOCK_TYPE = SMP
+\end{verbatim}
+
+\subsubsection{BG/P HTC Partition Scheduling}
+
+For the initial implementation of this feature, the
+\Condor{startd\_factory} uses a very simple, but hardcoded, algorithm
+for scheduling the generated partitions.
+
+0. Query the state of all available partitions with
+STARTD_FACTORY_SCRIPT_AVAILABLE_PARTITIONS. This allows the
+\Condor{startd\_factory} to know of a partitions is generated, or booted
+to a specific htc type, or backed. The \Condor{startd\_factory} keeps
+track of certain state changes of the partitions to ensure they are in
+the correct state at the time they are expected to be.
+
+1. Query all participating schedds (those who report to the collector)
+with STARTD_FACTORY_SCRIPT_QUERY_WORK_LOADS to see what kinds, how many,
+and in what states any submitted HTC jobs exist. The important states
+at this time are not present, idle, and running.
+
+2. If there are more idle jobs of any particular BGP_BLOCK_TYPE than there
+are unclaimed slots of that type, then follow this algorithm:
+
+	START_ALGORITHM
+
+	SCHED_SMP:
+		If the SMP idle count is greater than available SMP slots, then
+			If there exists a BOOTED/SMP partition, then
+				back it with a startd
+				goto SCHED_DUAL
+			else if there exists a generated partition, then
+				boot it as an SMP HTC type
+				goto SCHED_SMP
+	
+	SCHED_DUAL:
+		If the DUAL idle count is greater than available DUAL slots, then
+			If there exists a BOOTED/DUAL partition, then
+				back it with a startd
+				goto SCHED_VN
+			else if there exists a generated partition, then
+				boot it as an DUAL HTC type
+				goto SCHED_DUAL
+
+	SCHED_VN:
+		If the VN idle count is greater than available VN slots, then
+			If there exists a BOOTED/VN partition, then
+				back it with a startd
+				goto EVICT_UNEEDED:
+			else if there exists a generated partition, then
+				boot it as an DUAL VN type
+				goto SCHED_VN
+				
+	EVICT_UNEEDED:
+		If any partitions are booted and not backed after the scheduling
+		algorithm above finishes. We've overcommited the partitions so
+		for each of these partitions, shut them down.
+
+	END_ALGORITHM
+
+
+

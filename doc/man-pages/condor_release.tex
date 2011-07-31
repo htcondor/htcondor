@@ -1,0 +1,61 @@
+\begin{ManPage}{\label{man-condor-release}\Condor{release}}{1}
+{release held jobs in the Condor queue}
+\Synopsis \SynProg{\Condor{release}}
+\ToolArgsBase 
+
+\SynProg{\Condor{release}}
+\ToolDebugOption
+\ToolLocate
+\ToolJobs
+$|$ \OptArg{-constraint}{expression} \Dots
+
+\SynProg{\Condor{release}}
+\ToolDebugOption
+\ToolLocate
+\ToolAll
+
+\index{Condor commands!condor\_release}
+\index{condor\_release command}
+
+\Description
+
+\Condor{release} releases jobs from the Condor job queue that were 
+previously placed in hold state.  
+If the \Opt{-name} option is specified, the named \Condor{schedd} is targeted
+for processing.  
+Otherwise, the local \Condor{schedd} is targeted.
+The jobs to be released are identified by one or more job identifiers, as
+described below.
+For any given job, only the owner of the job or one of the queue super users
+(defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can release the job.
+
+\begin{Options}
+	\ToolArgsBaseDesc
+	\ToolLocateDesc
+	\ToolDebugDesc
+	\OptItem{\Arg{cluster}}{Release all jobs in the specified cluster}
+	\OptItem{\Arg{cluster.process}}{Release the specific job in the cluster}
+	\OptItem{\Arg{user}}{Release jobs belonging to specified user}
+	\OptItem{\OptArg{-constraint}{expression}} {Release all jobs which match
+	                the job ClassAd expression constraint}
+        \OptItem{\Arg{-all}}{Release all the jobs in the queue}
+\end{Options}
+
+\SeeAlso
+\Condor{hold} (on page~\pageref{man-condor-hold})
+
+
+\Examples
+To release all of the jobs of a user named Mary:
+\footnotesize
+\begin{verbatim}
+% condor_release Mary 
+\end{verbatim}
+\normalsize
+
+\ExitStatus
+
+\Condor{release} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

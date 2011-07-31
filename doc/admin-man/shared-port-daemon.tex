@@ -1,0 +1,130 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:shared-port-daemon}Reducing Port Usage with the \Condor{shared\_port} Daemon}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{Condor daemon!condor\_shared\_port@\Condor{shared\_port}}
+\index{daemon!condor\_shared\_port@\Condor{shared\_port}}
+\index{condor\_shared\_port daemon}
+The \Condor{shared\_port} is an optional daemon
+responsible for creating a TCP listener port shared by all of the
+Condor daemons for which the configuration variable
+\Macro{USE\_SHARED\_PORT} is \Expr{True}.
+The \Condor{master} will invoke the \Condor{shared\_port} daemon
+if it is listed in \MacroNI{DAEMON\_LIST}.
+
+The main purpose of the \Condor{shared\_port} daemon is to reduce the
+number of ports that must be opened when Condor needs to be
+accessible through a firewall.
+This has a greater security benefit
+than simply reducing the number of open ports.
+Without the \Condor{shared\_port} daemon,
+one can configure Condor to use a range of ports,
+but since some Condor daemons are created dynamically, 
+this full range of ports will not be in use by Condor at all times.
+This implies that other non-Condor processes not intended to be exposed to
+the outside network could unintentionally bind to ports in the range
+intended for Condor,
+unless additional steps are taken to control access to those ports.  
+While the \Condor{shared\_port} daemon is running,
+it is exclusively bound to its port, which means that other non-Condor
+processes cannot accidentally bind to that port.
+
+A secondary benefit of the \Condor{shared\_port} daemon
+is that it helps address the scalability issues of a submit machine.
+Without the \Condor{shared\_port} daemon,
+approximately 2.1 ephemeral ports per running job are required,
+and possibly more, depending on the rate of job completion.
+There are only 64K ports in total,
+and most standard Unix installations only allocate a subset of
+these as ephemeral ports.
+In practice, with long running jobs,
+and with between 11K and 14K simultaneously running jobs,
+port exhaustion has been observed in typical Linux installations.
+After increasing the ephemeral port range as to as many as possible,
+port exhaustion occurred between 20K and 25K running jobs.
+Using the \Condor{shared\_port} daemon,
+each running job requires fewer, approximately 1.1 ephemeral ports
+on the submit node, if Condor on the submit node connects directly
+to Condor on the execute node.
+If the submit node connects via CCB to the execute
+node, \emph{no} ports are required per running job; only the one port
+allocated to the \Condor{shared\_port} daemon is used.
+
+When CCB is utilized via setting the configuration variable
+\Macro{CCB\_ADDRESS},
+the \Condor{shared\_port} daemon registers with
+the CCB server on behalf of all daemons sharing the port.
+This means that it is not possible to individually enable or disable
+CCB connectivity to daemons that are using the shared port;
+they all effectively share the same setting,
+and the \Condor{shared\_port} daemon handles all CCB connection
+requests on their behalf.
+
+Condor's authentication and authorization steps are unchanged by the
+use of a shared port.  Each Condor daemon continues to operate
+according to its configured policy.  Requests for connections to the
+shared port are not authenticated or restricted by
+the \Condor{shared\_port} daemon.
+They are simply passed to the requested daemon,
+which is then responsible for enforcing the security policy.
+
+When the \Condor{master} is configured to use the shared port
+by setting the configuration variable
+\begin{verbatim}
+  USE_SHARED_PORT = True
+\end{verbatim}
+the \Condor{shared\_port} daemon is treated specially. 
+A command such as \Condor{off},
+which shuts down all daemons except for the \Condor{master},
+will also leave the \Condor{shared\_port} running.
+This prevents the \Condor{master} from getting into a state
+where it can no longer receive commands.
+
+The \Condor{collector} daemon typically has its own port;
+it uses 9618 by default.
+However, it can be configured to use a shared port.
+Since the address of the \Condor{collector} must be set in 
+the configuration file,
+it is necessary to specify the shared port socket name of 
+the \Condor{collector},
+so that connections to the shared port that are intended for 
+the \Condor{collector} can be forwarded to it.
+If the shared port number is 11000, a \Condor{collector} address using this
+shared port could be configured:
+
+\footnotesize
+\begin{verbatim}
+COLLECTOR_HOST = collector.host.name:11000?sock=collector
+\end{verbatim}
+\normalsize
+
+This configuration assumes that the socket name used by 
+the \Condor{collector} is \Expr{collector}.
+The \Condor{collector} that runs on \Expr{collector.host.name}
+will automatically choose this socket name if \MacroNI{COLLECTOR\_HOST}
+is configured as in the example above.
+If multiple \Condor{collector} daemons are started on the same
+machine, the socket name can be explicitly set in the daemon arguments,
+as in the example:
+
+\begin{verbatim}
+COLLECTOR_ARGS = -sock collector
+\end{verbatim}
+
+When the \Condor{collector} address is a shared port,
+TCP updates will be automatically used instead of UDP.
+Under Unix, this means that the
+\Condor{collector} daemon should be configured to have enough file descriptors.
+See section~\ref{sec:tcp-collector-update} for more information on using
+TCP within Condor.
+
+SOAP commands cannot be sent over a shared port.
+However, a daemon may be configured to open a fixed, non-shared port,
+in addition to using a shared port.
+This is done both by setting
+\Expr{USE\_SHARED\_PORT = True} and by specifying a fixed port for the daemon
+using \verb|<SUBSYS>_ARGS = -p <portnum>|.
+
+The TCP connections required to manage standard universe jobs do not
+make use of shared ports.
+
