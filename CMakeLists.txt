@@ -101,7 +101,6 @@ include (CondorPostExternal)
 include (CondorConfigure)     # will initiate the configure
 include (TarGz) # Must be after include(CondorPackageConfig)
 
-
 if ( WINDOWS )
 	set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif ( WINDOWS )
@@ -112,11 +111,26 @@ endif ( WINDOWS )
 # this way clean @ root cleans externals while clean @src cleans just the src.
 add_subdirectory (src)
 
-# if the man pages exist then install them
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
-  #Use trailing slash; otherwise, it will be C_MAN/man
-  install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/ DESTINATION ${C_MAN} )
+##########################################################################
+# the following are existing doc targets
+# ideally one would transform the building of the docs to cmake or a script
+
+# logic here to support old nmi builds
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
+
+	# NOTE: deps are not configured to detect file changes.
+	add_custom_command (OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1
+						COMMAND make
+						ARGS just-man-pages
+						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc )
+						#DEPENDS )
+
+	add_custom_target ( docs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1 )
+
 endif()
+
+#Use trailing slash; otherwise, it will be C_MAN/man
+install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/ DESTINATION ${C_MAN} )
 
 ##########################################################################
 # Must in included post *install targets
