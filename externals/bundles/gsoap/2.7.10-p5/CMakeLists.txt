@@ -21,7 +21,7 @@ option(WITH_GSOAP "Compiling with support for GSOAP" ON)
 if (WITH_GSOAP)
 
 	# this is only done in proper mode to cache local mods which are done to gsoap
-	condor_pre_external( GSOAP gsoap-2.7.10 "src;include" "done")
+	condor_pre_external( GSOAP gsoap-2.7.10-p1 "src;include" "done")
 
 	if ( NOT PROPER )
 
@@ -60,19 +60,19 @@ if (WITH_GSOAP)
 		ExternalProject_Add( gsoap
 				    DEPENDS ${GSOAP_DEPENDS}
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GSOAP_VER}.tar.gz ${CMD_TERM}
+				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/gsoap-2.7.10.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${GSOAP_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/${GSOAP_VER}.tar.gz
+				    URL http://parrot.cs.wisc.edu/externals/gsoap-2.7.10.tar.gz
 					#--Patch step ----------
-					PATCH_COMMAND cd ${GSOAP_VER} ${CMD_TERM} ${GSOAP_PATCH}
+					PATCH_COMMAND cd gsoap-2.7.10 ${CMD_TERM} ${GSOAP_PATCH}
 					#--Configure step ----------
-				    CONFIGURE_COMMAND cd ${GSOAP_VER} ${CMD_TERM} ${GSOAP_CONFIGURE}
+				    CONFIGURE_COMMAND cd gsoap-2.7.10 ${CMD_TERM} ${GSOAP_CONFIGURE}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd ${GSOAP_VER} ${CMD_TERM} ${GSOAP_MAKE}
+				    BUILD_COMMAND cd gsoap-2.7.10 ${CMD_TERM} ${GSOAP_MAKE}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${GSOAP_INSTALL_LOC}
-				    INSTALL_COMMAND cd ${GSOAP_VER}
+				    INSTALL_COMMAND cd gsoap-2.7.10
 				    ${CMD_TERM} ${GSOAP_INSTALL} ${CMD_TERM}
 				    touch ${GSOAP_INSTALL_LOC}/done )
 

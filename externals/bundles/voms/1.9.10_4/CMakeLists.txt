@@ -52,14 +52,14 @@ if ( WITH_VOMS )
 			endif()
 		endif()
 
-		condor_pre_external( VOMS voms-1.9.10_4 "include;${VOMS_LIB}" "done")
+		condor_pre_external( VOMS voms-1.9.10_4-p1 "include;${VOMS_LIB}" "done")
 
 		ExternalProject_Add(voms
 							DEPENDS ${VOMS_DEPENDS}
 							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${VOMS_VER}.tar.gz ${CMD_TERM}
+							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/voms-1.9.10_4.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${VOMS_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/${VOMS_VER}.tar.gz
+							URL http://parrot.cs.wisc.edu/externals/voms-1.9.10_4.tar.gz
 							#--Patch step ----------
 							PATCH_COMMAND ${VOMS_PATCH}
 							#--Configure step ----------
