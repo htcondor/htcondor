@@ -34,7 +34,7 @@ The details of each version are described below.
 POST scripts will be run regardless of the return value from the PRE script
 of the same node.
 The previous behavior of not running the POST script can be restored 
-by either adding the \Opt{-no\_postrun} option to \Condor{submit\_dag},
+by either adding the \Opt{-PostIgnorePre} option to \Condor{submit\_dag},
 or by setting the new configuration variable 
 \Macro{DAGMAN\_POST\_IGNORE\_PRE} to \Expr{False}.
 
