@@ -1,0 +1,147 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Glidein}Glidein}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{universe!grid}
+\index{Condor commands!condor\_glidein}
+\index{glidein}
+\index{grid computing!glidein}
+
+Glidein is a mechanism by which one or more grid resources (remote machines)
+temporarily join a local Condor pool. 
+The program \Condor{glidein} is used to add a machine
+to a Condor pool.
+During the period of time when the added resource is
+part of the local pool, the resource is visible 
+to users of the pool.
+But, by default, the resource is only available for
+use by the user
+that added the resource to the pool.
+
+After glidein, the user may submit jobs for execution on the
+added resource the same way that all Condor jobs are submitted.
+To force a submitted job to run on the added resource, the
+submit description file could contain a requirement that the job run 
+specifically on the added resource.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{What \Condor{glidein} Does}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Condor{glidein} works by installing and executing
+necessary Condor daemons and configuration on the remote resource,
+such that the resource reports to and joins the local pool.
+\Condor{glidein} accomplishes two separate tasks towards
+having a remote grid resource join the local Condor pool.
+They are the set up task and the execution task.
+
+The set up task generates necessary 
+configuration files and locates proper platform-dependent
+binaries for the Condor daemons.
+A script is also generated that can be used during
+the execution task to invoke the proper Condor daemons.
+These files are copied to the remote resource as necessary.
+The configuration variable \Macro{GLIDEIN\_SERVER\_URLS}
+defines a list of locations from which the necessary
+binaries are obtained.
+Default values cause binaries to be downloaded from the 
+UW site.
+See 
+section~\ref{param:GlideinServerURLS} 
+on page~\pageref{param:GlideinServerURLS}
+for a full definition of this configuration variable.
+
+When the files are correctly in place,
+the execution task starts the Condor daemons.
+\Condor{glidein} does this by submitting a Condor job
+to run under the grid universe.
+The job runs the \Condor{master} on the remote grid resource.
+The \Condor{master} invokes other daemons, which contact
+the local pool's \Condor{collector} to join the pool.
+The Condor daemons exit gracefully when no jobs run on the daemons for a
+preset period of time.
+
+Here is an example of how a glidein resource appears, similar to how
+any other machine appears.  The name has a
+slightly different form, in order to handle the possibility of
+multiple instances of glidein daemons inhabiting a multi-processor
+machine.
+
+\footnotesize
+\begin{verbatim}
+% condor_status | grep denal
+7591386@denal LINUX       INTEL  Unclaimed  Idle       3.700  24064  0+00:06:35
+
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Configuration Requirements in the Local Pool}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!for glidein}
+\index{glidein!configuration}
+
+As remote grid resources join the local pool,
+these resources must report to the local pool's \Condor{collector} daemon.
+Security demands that the local pool's \Condor{collector} 
+list all hosts from which they will accept communication.
+Therefore, all remote grid resources accepted for glidein
+must be given
+\Macro{HOSTALLOW\_WRITE} permission.
+An expected way to do this is to modify the empty variable
+(within the sample configuration file)
+\MacroNI{GLIDEIN\_SITES} to list all remote grid resources
+accepted for glidein.
+The list is a space or comma separated list of hosts.
+This list is then given the proper permissions by an additional
+redefinition of the \MacroNI{HOSTALLOW\_WRITE} configuration variable,
+to also include the list of hosts
+as in the following example.
+
+\footnotesize
+\begin{verbatim}
+GLIDEIN_SITES = A.example.com, B.example.com, C.example.com
+HOSTALLOW_WRITE = $(HOSTALLOW_WRITE) $(GLIDEIN_SITES)
+\end{verbatim}
+\normalsize
+Recall that for configuration file changes to take effect,
+\Condor{reconfig} must be run.
+
+If this configuration change to the security settings on
+the local Condor pool cannot be made,
+an additional Condor pool that utilizes
+personal Condor may be defined.
+The single machine pool
+may coexist with other instances of Condor.
+\Condor{glidein} is executed to have the remote grid
+resources join this personal Condor pool.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Running Jobs on the Remote Grid Resource After Glidein }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Once the Globus resource has been added to the local Condor
+pool with \Condor{glidein},
+job(s) may be submitted.
+To force a job to run on the Globus resource,
+specify that Globus resource as a machine requirement
+in the submit description file. 
+Here is an example from within the submit description file
+that forces submission to the Globus resource denali.mcs.anl.gov:
+\begin{verbatim}
+      requirements = ( machine == "denali.mcs.anl.gov" ) \
+         && FileSystemDomain != "" \
+         && Arch != "" && OpSys != ""
+\end{verbatim}
+This example requires that the job run only on denali.mcs.anl.gov,
+and it prevents Condor from inserting the file system domain,
+architecture, and operating system attributes as requirements
+in the matchmaking process.
+Condor must be told not to use the submission machine's
+attributes in those cases
+where the Globus resource's attributes
+do not match the submission machine's attributes and your job
+really is capable of running on the target machine.  You
+may want to use Condor's file-transfer capabilities in order
+to copy input and output files back and forth between the submission
+and execution machine.

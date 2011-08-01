@@ -1,0 +1,628 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Configuring-SMP}
+Configuring The Startd for SMP Machines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{SMP machines!configuration|(}
+This section describes how to configure the \Condor{startd} for SMP
+(Symmetric Multi-Processor) machines.
+Machines with more than one CPU may
+be configured to run more than one job at a time.
+As always, owners of the resources have great flexibility in defining
+the policy under which multiple jobs may run, suspend, vacate, etc.  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:How-Resources-Represented}
+How Shared Resources are Represented to Condor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The way SMP machines are represented to the Condor system is that
+the shared resources are broken up into individual \Term{slots}.
+Each slot can be matched and claimed by users.
+Each slot is represented by an individual ClassAd
+(see the ClassAd reference, section~\ref{sec:classad-reference}, for
+details). 
+In this way, each SMP machine will appear to the Condor system as
+a collection of separate slots.  
+As an example, an SMP machine named
+vulture.cs.wisc.edu would appear to Condor as the
+multiple machines, named slot1@vulture.cs.wisc.edu,
+slot2@vulture.cs.wisc.edu,
+slot3@vulture.cs.wisc.edu, and so on.
+
+The way that the \Condor{startd} breaks up the
+shared system resources into the different slots
+is configurable.
+All shared system resources (like RAM, disk space, swap space, etc.)
+can either be divided evenly among all the slots, with each
+CPU getting its own slot, or you can define your own
+\Term{slot types}, so that resources can be unevenly
+partitioned.  Regardless of the partitioning scheme used, it is important
+to remember the goal is to create a representative slot
+ClassAd, to be used for matchmaking with jobs.  Condor does not
+directly enforce slot shared resource allocations, and jobs
+are free to oversubscribe to shared resources.
+
+Consider an example where two slots are each defined with 50\Percent of
+available RAM.  The resultant ClassAd for each slot will advertise one
+half the available RAM.  Users may submit jobs with RAM requirements
+that match these slots.  However, jobs run on either slot are free to
+consume more than 50\Percent of available RAM.  Condor will not
+directly enforce a RAM utilization limit on either slot.  If a shared
+resource enforcement capability is needed, it is possible to write a
+Startd policy that will evict a job that oversubscribes to shared
+resources, see section \ref{sec:Config-SMP-Policy}.
+
+The following section gives details on how to configure Condor to
+divide the resources on an SMP machine into separate slots.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-Divide}
+Dividing System Resources in SMP Machines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section describes the settings that allow you to define your own
+slot types and to control how many slots of each
+type are reported to Condor.
+
+There are two main ways to go about partitioning an SMP machine:
+
+\begin{description}
+
+\item[Define your own slot types.]
+  By defining your own types, you can specify what fraction of shared
+  system resources (CPU, RAM, swap space and disk space) go to each
+  slot.
+  Once you define your own types, you can control how many of each
+  type are reported at any given time.
+
+\item[Evenly divide all resources.]  
+  If you do not define your own types, the \Condor{startd} will
+  automatically	partition your machine into slots for you.
+  It will do so by placing a single CPU in each slot, and evenly dividing
+  all shared resources among the slots.
+  With this default partitioning, you only specify how many
+  slots are reported at a time.
+  By default, all slots are reported to Condor.
+
+\end{description}
+
+The number of each type being
+reported can be changed at run-time, by issuing a reconfiguration
+command to
+the \Condor{startd} daemon (sending a SIGHUP or using \Condor{reconfig}).
+However, the definitions for the types themselves cannot be changed
+with reconfiguration.
+If you change any slot type definitions, you must use \Condor{restart}
+\begin{verbatim}
+condor_restart -startd
+\end{verbatim}
+for that change to take effect.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Slot-Type-Define}
+Defining Slot Types}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To define your own slot types, add configuration file
+parameters that list how much of each system resource you want in the
+given slot type.  Do this by defining configuration
+variables of the form
+\Macro{SLOT\_TYPE\_<N>}.
+The \verb@<N>@ represents an integer (for example, 
+\MacroNI{SLOT\_TYPE\_1}), which specifies the slot type defined.
+Note that there may be multiple slots of each type.  The number created
+is configured with \MacroNI{NUM\_SLOTS\_TYPE\_<N>} as described later in
+this section.
+
+A type describes what share of the total system resources a given
+slot has available to it.
+
+The type can be defined by:
+\begin{itemize}
+  % \frac{1}{4} doesn't work
+  %\item A simple fraction, such as \frac{1}{4}
+  \item A simple fraction, such as 1/4
+  \item A simple percentage, such as 25\Percent
+  \item A comma-separated list of attributes, with a percentage,
+	fraction, numerical value, or \Expr{auto} for each one.
+  \item A comma-separated list including a blanket value that serves
+        as a default for any resources not explicitly specified in the list.
+\end{itemize}
+A simple fraction or percentage causes an allocation
+of the total system resources.
+This includes the number of CPUs.
+A comma-separated list allows a fine-tuning of
+the amounts for specific attributes.
+
+The attributes that specify the number of CPUs
+and the total amount of RAM in
+the SMP machine do not change.
+For these attributes, specify either absolute values or
+percentages of the total available amount (or \Expr{auto}).  
+For example, in a machine with 128 Mbytes of RAM,
+all the following definitions result in the same allocation amount.
+\begin{verbatim}
+mem=64
+mem=1/2
+mem=50%
+mem=auto
+\end{verbatim}
+
+Other attributes are dynamic, such as disk space and swap space.
+For these, specify a percentage or fraction of the total
+value that is allocated to each slot, instead of specifying absolute values.
+As the total values of these resources change on your machine, each
+slot will take its fraction of the total and report that as its
+available amount.
+
+The disk space allocated to each slot is taken from the disk partition
+containing the slots execute directory (configured with
+\Macro{EXECUTE} or \Macro{SLOT<N>\_EXECUTE}).  If every slot is in a
+different partition, then each one may be defined with up to
+100\Percent for its disk share.  If some slots are in the same
+partition, then their total is not allowed to exceed 100\Percent.
+
+The four attribute names are case insensitive when defining slot types.
+The first letter of the attribute name distinguishes between
+the attributes.
+The four attributes, with several examples of acceptable names for
+each are
+\begin{itemize}
+  \item Cpus, C, c, cpu 
+  \item ram, RAM, MEMORY, memory, Mem, R, r, M, m
+  \item disk, Disk, D, d
+  \item swap, SWAP, S, s, VirtualMemory, V, v
+\end{itemize}
+
+As an example, consider a
+host of 4 CPUs and 256 megs of RAM.
+Here are valid example slot type definitions. 
+Types 1-3 are all equivalent to each other, as are types 4-6.  Note that
+in a real configuration, you would not use all of these slot types together
+because they add up to more than 100\Percent of the various system resources.
+Also note that in a real configuration, you would need to also define
+\MacroNI{NUM\_SLOTS\_TYPE\_<N>} for each slot type.
+
+\begin{verbatim}
+SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
+
+SLOT_TYPE_2 = cpus=1/2, memory=128, virt=25%, disk=50%
+
+SLOT_TYPE_3 = c=1/2, m=50%, v=1/4, disk=1/2
+
+SLOT_TYPE_4 = c=25%, m=64, v=1/4, d=25%
+
+SLOT_TYPE_5 = 25%
+
+SLOT_TYPE_6 = 1/4
+\end{verbatim}
+
+
+The default value for each resource share is \Expr{auto}.  The share
+may also be explicitly set to \Expr{auto}.  All slots with the value
+\Expr{auto} for a given type of resource will evenly divide
+whatever remains after subtracting out whatever was explicitly
+allocated in other slot definitions.  For example, if one slot is
+defined to use 10\Percent of the memory and the rest define it as
+\Expr{auto} (or leave it undefined), then the rest of the slots will
+evenly divide 90\Percent of the memory between themselves.
+
+In both of the following examples, the disk share is set to \Expr{auto},
+cpus is 1, and everything else is 50\Percent:
+
+\begin{verbatim}
+SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
+
+SLOT_TYPE_1 = cpus=1, disk=auto, 50%
+\end{verbatim}
+
+
+The number of slots of each type is set with the
+configuration variable
+\Macro{NUM\_SLOTS\_TYPE\_<N>},
+where N is the type as given in the
+\MacroNI{SLOT\_TYPE\_<N>}variable.
+
+Note that it is possible to set the configuration variables such
+that they specify an impossible configuration.
+If this occurs, the \Condor{startd} daemon fails after writing
+a message to its log attempting to indicate the configuration
+requirements that it could not implement.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-Slot-Number}
+Evenly Divided Resources}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+If you are not defining your own slot types, then all resources
+are divided equally among the slots.
+The number of slots within the SMP machine is the only attribute
+that needs to be defined.
+Its definition is accomplished by setting the configuration
+variable \Macro{NUM\_SLOTS} to the
+integer number of slots desired.
+If variable \MacroNI{NUM\_SLOTS} is not defined,
+it defaults to the number of CPUs within the SMP machine.
+You cannot use \MacroNI{NUM\_SLOTS} to make Condor advertise more
+slots than there are CPUs on the machine.
+To do that, use \Macro{NUM\_CPUS}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-SMP-Policy}
+Configuring Startd Policy for SMP Machines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration!SMP machines}
+Section~\ref{sec:Configuring-Policy} details the Startd
+Policy Configuration.
+This section continues the discussion with respect to SMP machines.
+
+Each slot within an SMP machine is treated as an
+independent machine,
+each with its own view of its machine state.
+There is a single set of policy expressions for the SMP machine
+as a whole.
+This policy may consider the slot state(s) in its expressions.
+This makes some policies easy to set, but it makes
+other policies difficult or impossible to set.
+
+An easy policy to set
+configures how many of the slots
+notice console or tty activity on the SMP as a whole.
+Slots that are not configured to notice any activity will report
+ConsoleIdle and KeyboardIdle times from when the
+\Condor{startd} daemon was started,
+(plus a configurable number of seconds).
+With this, you can set up a multiple CPU machine with
+the default policy
+settings plus add that the keyboard and console noticed by only one
+slot.
+Assuming a reasonable load average (see
+section~\ref{sec:SMP-Load} below on ``Load Average for SMP
+Machines''), only the one slot will suspend or vacate its job
+when the owner starts typing at their machine again.
+The rest of the slots could be matched with jobs and leave
+them running, even while the user was interactively using the
+machine. 
+If the default policy is used,
+all slots notice
+tty and console activity
+and
+currently running jobs would suspend or preempt.
+
+This example policy is
+controlled with the following configuration variables.
+\begin{itemize}
+\item \Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}
+\item \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}
+\item \Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}
+\end{itemize}
+
+These configuration variables are fully described in
+section~\ref{sec:Startd-Config-File-Entries} on
+page~\pageref{sec:Startd-Config-File-Entries} which lists all the
+configuration file settings for the \Condor{startd}.
+
+% Karen's edit goes to this line.
+% need discussion here about what canNOT be done given the single
+% set  of policy expressions.
+The configuration of slots allows each slot to advertise
+its own machine ClassAd.
+Yet, there is only one set of policy expressions for the SMP
+machine as a whole.
+This makes the implementation of certain types of policies impossible.
+While evaluating the state of one slot (within the SMP machine),
+the state of other slots (again within the SMP machine) are not
+available.
+Decisions for one slot cannot be based on what other machines within the SMP
+are doing.
+
+Specifically, the evaluation of a slot policy expression works in
+the following way.
+\begin{enumerate}
+\item 
+The configuration file specifies policy expressions that are shared among
+all of the slots on the SMP machine.
+\item 
+Each slot reads the configuration file and sets up its own machine ClassAd.
+\item 
+Each slot is now separate from the others.  It has a
+different state, a different machine ClassAd, and if there is a job
+running, a separate job ad.
+Each slot periodically
+evaluates the policy expressions, changing its own state
+as necessary.
+This occurs independently of the other slots on the machine.
+So, if the \Condor{startd} daemon is evaluating a policy expression
+on a specific slot,
+and the policy expression refers to \Attr{ProcID}, \Attr{Owner},
+or any attribute from a job ad,
+it \emph{always} refers to the ClassAd of the
+job running on the specific slot.
+\end{enumerate}
+
+To set a different policy for the slots within an SMP machine,
+a (\verb@SUSPEND@) policy will be of the form
+\begin{verbatim}
+SUSPEND = ( (SlotID == 1) && (PolicyForSlot1) ) || \
+            ( (SlotID == 2) && (PolicyForSlot2) )
+\end{verbatim}
+where \verb@(PolicyForSlot1)@ and \verb@(PolicyForSlot2)@ are the
+desired expressions for each slot.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-Load}
+Load Average for SMP Machines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Most operating systems define the load average for an SMP machine as
+the total load on all CPUs.
+For example, if you have a 4-CPU machine with 3 CPU-bound processes
+running at the same time, the load would be 3.0
+In Condor, we maintain this view of the total load average and publish
+it in all resource ClassAds as \Attr{TotalLoadAvg}.
+
+Condor also provides a per-CPU load average for SMP machines.
+This nicely represents the model that each node on an SMP is a slot,
+separate from the other nodes.
+All of the default, single-CPU policy expressions can be used directly
+on SMP machines, without modification, since the \Attr{LoadAvg} and
+\Attr{CondorLoadAvg} attributes are the per-slot versions,
+not the total, SMP-wide versions.
+
+The per-CPU load average on SMP machines is a Condor invention. 
+No system call exists to ask the operating system for this value.
+Condor already computes the load average generated by Condor on each
+slot.
+It does this by close monitoring of all processes spawned by any of the
+Condor daemons, even ones that are orphaned and then inherited by
+\Prog{init}. 
+This Condor load average per slot is reported as
+the attribute
+\Attr{CondorLoadAvg} in all resource ClassAds, and the total Condor
+load average for the entire machine is reported as
+\Attr{TotalCondorLoadAvg}. 
+The total, system-wide load average for the entire
+machine  is reported as \Attr{TotalLoadAvg}.
+Basically, Condor walks through all the slots and assigns out
+portions of the total load average to each one. 
+First, Condor assigns the known Condor load average to each node that
+is generating load.  
+If there's any load average left in the total system load, it is
+considered an owner load.
+Any slots Condor believes are in the Owner state (like
+ones that have keyboard activity), are the first to get assigned
+this owner load.
+Condor hands out owner load in increments of at most 1.0, so generally
+speaking, no slot has a load average above 1.0.
+If Condor runs out of total load average before it runs out of virtual
+machines, all the remaining machines believe that they have no load average
+at all.
+If, instead, Condor runs out of slots and it still has owner
+load remaining, Condor starts assigning that load to Condor nodes as
+well,
+giving individual nodes with a load average higher than 1.0.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-logging}
+Debug logging in the SMP Startd}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section describes how the \Condor{startd} daemon
+handles its debugging messages for SMP machines.
+In general, a given log message will either be something that is
+machine-wide (like reporting the total system load average), or it
+will be specific to a given slot.
+Any log entrees specific to a slot have an extra
+header printed out in the entry: \texttt{slot\#:}.  
+So, for example, here's the output about system resources that are
+being gathered (with \Dflag{FULLDEBUG} and \Dflag{LOAD} turned on) on
+a 2-CPU machine with no Condor activity, and the keyboard connected to
+both slots:
+\begin{verbatim}
+11/25 18:15 Swap space: 131064
+11/25 18:15 number of Kbytes available for (/home/condor/execute): 1345063
+11/25 18:15 Looking up RESERVED_DISK parameter
+11/25 18:15 Reserving 5120 Kbytes for file system
+11/25 18:15 Disk space: 1339943
+11/25 18:15 Load avg: 0.340000 0.800000 1.170000
+11/25 18:15 Idle Time: user= 0 , console= 4 seconds
+11/25 18:15 SystemLoad: 0.340   TotalCondorLoad: 0.000  TotalOwnerLoad: 0.340
+11/25 18:15 slot1: Idle time: Keyboard: 0        Console: 4
+11/25 18:15 slot1: SystemLoad: 0.340  CondorLoad: 0.000  OwnerLoad: 0.340
+11/25 18:15 slot2: Idle time: Keyboard: 0        Console: 4
+11/25 18:15 slot2: SystemLoad: 0.000  CondorLoad: 0.000  OwnerLoad: 0.000
+11/25 18:15 slot1: State: Owner           Activity: Idle
+11/25 18:15 slot2: State: Owner           Activity: Idle
+\end{verbatim}
+
+If, on the other hand, this machine only had one slot
+connected to the keyboard and console, and the other slot was running a
+job, it might look something like this:
+\begin{verbatim}
+11/25 18:19 Load avg: 1.250000 0.910000 1.090000
+11/25 18:19 Idle Time: user= 0 , console= 0 seconds
+11/25 18:19 SystemLoad: 1.250   TotalCondorLoad: 0.996  TotalOwnerLoad: 0.254
+11/25 18:19 slot1: Idle time: Keyboard: 0        Console: 0
+11/25 18:19 slot1: SystemLoad: 0.254  CondorLoad: 0.000  OwnerLoad: 0.254
+11/25 18:19 slot2: Idle time: Keyboard: 1496     Console: 1496
+11/25 18:19 slot2: SystemLoad: 0.996  CondorLoad: 0.996  OwnerLoad: 0.000
+11/25 18:19 slot1: State: Owner           Activity: Idle
+11/25 18:19 slot2: State: Claimed         Activity: Busy
+\end{verbatim}
+
+As you can see, shared system resources are printed without the header
+(like total swap space), and slot-specific messages (like the load
+average or state of each slot) get the special header appended.  
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-exprs}
+Configuring STARTD\_ATTRS on a per-slot basis}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \Macro{STARTD\_ATTRS} (and legacy \MacroNI{STARTD\_EXPRS}) settings
+can be configured on a per-slot basis.
+The \Condor{startd} daemon builds the list of items to
+advertise by combining the lists in this order:
+\begin{enumerate}
+\item{\MacroNI{STARTD\_ATTRS}}
+\item{\MacroNI{STARTD\_EXPRS}}
+\item{\MacroNI{SLOT<N>\_STARTD\_ATTRS}}
+\item{\MacroNI{SLOT<N>\_STARTD\_EXPRS}}
+\end{enumerate}
+
+For example, consider the following configuration:
+\begin{verbatim}
+STARTD_ATTRS = favorite_color, favorite_season
+SLOT1_STARTD_ATTRS = favorite_movie
+SLOT2_STARTD_ATTRS = favorite_song
+\end{verbatim}
+
+This will result in the \Condor{startd} ClassAd for
+slot1 defining values for
+\Attr{favorite\_color}, \Attr{favorite\_season},
+and \Attr{favorite\_movie}.
+slot2 will have values for
+\Attr{favorite\_color}, \Attr{favorite\_season}, and \Attr{favorite\_song}.
+
+Attributes themselves in the \Expr{STARTD\_ATTRS} list
+can also be defined on a per-slot basis.
+Here is another example:
+
+\begin{verbatim}
+favorite_color = "blue"
+favorite_season = "spring"
+STARTD_ATTRS = favorite_color, favorite_season
+SLOT2_favorite_color = "green"
+SLOT3_favorite_season = "summer"
+\end{verbatim}
+
+For this example, the \Condor{startd} ClassAds are
+\begin{description}
+\item{slot1}:
+\begin{verbatim}
+favorite_color = "blue"
+favorite_season = "spring"
+\end{verbatim}
+\item{slot2}:
+\begin{verbatim}
+favorite_color = "green"
+favorite_season = "spring"
+\end{verbatim}
+\item{slot3}:
+\begin{verbatim}
+favorite_color = "blue"
+favorite_season = "summer"
+\end{verbatim}
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:SMP-dynamicprovisioning}
+Dynamic \Condor{startd} Provisioning: Dynamic Slots}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{dynamic \Condor{startd} provisioning}
+\index{slots!dynamic \Condor{startd} provisioning}
+\index{slots!subdividing slots}
+
+\Term{Dynamic provisioning},
+also referred to as a partitionable \Condor{startd} or as dynamic slots,
+allows users to mark slots as partitionable. 
+This means that more than one job can occupy a single slot at any one time. 
+Typically, slots have a fixed set of resources,
+including the CPUs, memory and disk space. 
+By partitioning the slot, 
+these resources become more flexible and able to be better utilized.
+
+Dynamic provisioning provides powerful configuration
+possibilities, and so should be used with care. 
+Specifically, while preemption occurs for each individual dynamic slot,
+it cannot occur directly for the partitionable slot, 
+or for groups of dynamic slots. 
+For example, for a large number of jobs requiring 1GB of memory,
+a pool might be split up into 1GB dynamic slots. 
+In this instance a job requiring 2GB of memory will be starved
+and unable to run.
+
+Here is an example that demonstrates how more than one job
+can be matched to a single slot using dynamic provisioning.
+In this example, slot1 has the following resources:
+\begin{description}
+  \item{cpu=10}
+  \item{memory=10240}
+  \item{disk=BIG}
+\end{description}
+Assume that JobA is allocated to this slot.
+JobA includes the following requirements:
+\begin{description}
+  \item{cpu=3}
+  \item{memory=1024}
+  \item{disk=10240} 
+\end{description}
+The portion of the slot that is utilized is referred to as Slot1.1,
+and after allocation, the slot advertises that it has
+the following resources still available:
+\begin{description}
+  \item{cpu=7}
+  \item{memory=9216}
+  \item{disk=BIG-10240}
+\end{description}
+As each new job is allocated to Slot1,
+it breaks into Slot1.1, Slot1.2, etc., until the entire set of
+available resources have been consumed by jobs.
+
+To enable dynamic provisioning, 
+set the \Macro{SLOT\_TYPE\_<N>\_PARTITIONABLE} configuration variable 
+to \Expr{True}.
+The string \MacroNI{N} within the configuration variable name
+is the slot number.
+
+In a pool using dynamic provisioning, 
+jobs can have extra, and desired, resources specified in the submit
+description file:
+\begin{description}
+  \item{request\_cpus}
+  \item{request\_memory}
+  \item{request\_disk (in kilobytes)}
+\end{description}
+
+This example shows a portion of the job submit description file
+for use when submitting a job to a pool with dynamic provisioning.
+\begin{verbatim}
+universe = vanilla
+
+request_cpus = 3
+request_memory = 1024
+request_disk = 10240
+
+queue 
+\end{verbatim}
+
+For each type of slot,
+the original, partitionable slot and the new smaller, dynamic slots,
+an attribute is added to identify it.
+The original slot,
+as defined at page~\pageref{PartitionableSlot-machine-attribute},
+will have an attribute stating 
+\begin{verbatim}
+  PartitionableSlot = True
+\end{verbatim}
+and the dynamic slots will have an attribute, 
+as defined at page~\pageref{DynamicSlot-machine-attribute},
+\begin{verbatim}
+  DynamicSlot = True
+\end{verbatim}
+These attributes may be used in a \MacroNI{START} expression for 
+the purposes of creating detailed policies.
+
+A partitionable slot will always appear as though it is not running a job.
+It will eventually show as having no available resources, 
+which will prevent further matching to new jobs.
+Because it has been effectively broken up into smaller slots,
+these will show as running jobs directly.
+These dynamic slots can also be preempted in the same way as 
+nonpartitioned slots.
+
+\index{SMP machines!configuration|)}
