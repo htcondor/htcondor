@@ -116,21 +116,29 @@ add_subdirectory (src)
 # ideally one would transform the building of the docs to cmake or a script
 
 # logic here to support old nmi builds
-if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
+if (WINDOWS)
 
-	# NOTE: deps are not configured to detect file changes.
-	add_custom_command (OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1
-						COMMAND make
-						ARGS just-man-pages
-						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc )
-						#DEPENDS )
+	# do we want to do anything for windows?
 
-	add_custom_target ( docs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1 )
+else()
+
+	if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
+
+		# NOTE: deps are not configured to detect file changes.
+		add_custom_command (OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1
+							COMMAND make
+							ARGS just-man-pages
+							WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc )
+							#DEPENDS )
+
+		add_custom_target ( docs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1 )
+
+	endif()
+
+	#Use trailing slash; otherwise, it will be C_MAN/man
+	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/ DESTINATION ${C_MAN} )
 
 endif()
-
-#Use trailing slash; otherwise, it will be C_MAN/man
-install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/ DESTINATION ${C_MAN} )
 
 ##########################################################################
 # Must in included post *install targets
