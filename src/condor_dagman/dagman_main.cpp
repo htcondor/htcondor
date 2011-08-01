@@ -69,7 +69,7 @@ static void Usage() {
             "\t\t[-MaxJobs <int N>]\n"
             "\t\t[-MaxPre <int N>]\n"
             "\t\t[-MaxPost <int N>]\n"
-            "\t\t[-NoPostRun]\n"
+            "\t\t[-PostIgnorePre]\n"
             "\t\t[-WaitForDebug]\n"
             "\t\t[-NoEventChecks]\n"
             "\t\t[-AllowLogError]\n"
@@ -665,7 +665,7 @@ void main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
 			dagman.allowLogError = true;
 
-        } else if( !strcasecmp( "-NoPostRun",argv[i] ) ) {
+        } else if( !strcasecmp( "-PostIgnorePre",argv[i] ) ) {
 			dagman._runPost = false;
 
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {

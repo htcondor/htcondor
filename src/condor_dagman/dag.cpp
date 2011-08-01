@@ -122,7 +122,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_recoveryMaxfakeID	  (0),
 	_maxJobHolds		  (0),
 	_reject			  (false),
-	_postRun(true)
+	_postRun		  (true)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR

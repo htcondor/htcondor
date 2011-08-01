@@ -759,7 +759,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	}
 	if(!shallowOpts.bPostRun)
 	{
-		args.AppendArg("-NoPostRun");
+		args.AppendArg("-PostIgnorePre");
 	}
 	if(deepOpts.bAllowLogError)
 	{
@@ -1106,7 +1106,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				deepOpts.bVerbose = true;
 			}
-			else if ( (strArg.find("-no_pos") != -1) ) // -no_postrun
+			else if ( (strArg.find("-postignore") != -1) ) // PostIgnorePre
 			{
 				shallowOpts.bPostRun = false;
 			}
