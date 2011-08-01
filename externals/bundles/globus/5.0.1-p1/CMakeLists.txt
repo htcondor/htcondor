@@ -106,21 +106,26 @@ if (WITH_GLOBUS)
 
 		#CFLAGS=-I${}/include && export CFLAGS &&
 		#LDFLAGS=-L${GLOBUS_INSTALL_LOC}/lib && export LDFLAGS &&
-		set (GLOBUS_FLAGS CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export CFLAGS &&
+		if ( BUILDING_OPENSSL )
+			set (GLOBUS_FLAGS CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export CFLAGS &&
 						LDFLAGS=-L${OPENSSL_INSTALL_LOC}/lib && export LDFLAGS &&
 						OPENSSL_CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export OPENSSL_CFLAGS &&
 						OPENSSL_LDFLAGS=-L${OPENSSL_INSTALL_LOC}/lib && export OPENSSL_LDFLAGS  )
 
-		if(LINUX)
-			set (GLOBUS_FLAGS ${GLOBUS_FLAGS} && OPENSSL_LIBS='-lssl -lcrypto -ldl' && export OPENSSL_LIBS)
-		elseif(DARWIN)
-			set (GLOBUS_FLAGS ${GLOBUS_FLAGS} &&
+			if(LINUX)
+				set (GLOBUS_FLAGS ${GLOBUS_FLAGS} && OPENSSL_LIBS='-lssl -lcrypto -ldl' && export OPENSSL_LIBS)
+			elseif(DARWIN)
+				set (GLOBUS_FLAGS ${GLOBUS_FLAGS} &&
 							OPENSSL_LIBS='-lssl -lcrypto' && export OPENSSL_LIBS &&
 							OPENSSL_LDFLAGS='-L${OPENSSL_INSTALL_LOC}/lib -Wl,-search_paths_first' && export OPENSSL_LDFLAGS &&
 							LT_MULTI_MODULE=1 && export LT_MULTI_MODULE)
-		endif()
+			endif()
 
-		set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF})
+			set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF})
+		else()
+			set (GLOBUS_FLAGS true)
+			set (GLOBUS_DEPENDS ${GT4_REF} ${GT42_REF})
+		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
 		ExternalProject_Add(globus

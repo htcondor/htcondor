@@ -30,26 +30,44 @@ if ( WITH_VOMS )
 			set(VOMS_LIB lib)
 		endif()
 
-	
+		if ( BUILDING_OPENSSL )
+			set (VOMS_DEPENDS ${EXPAT_REF} ${OPENSSL_REF} ${GLOBUS_REF})
+			set (VOMS_PATCH patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/makefile.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
+								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
+			set (VOMS_OPENSSL_FLAG --with-openssl-prefix=${OPENSSL_INSTALL_LOC})
+		else()
+			set (VOMS_DEPENDS ${EXPAT_REF} ${GLOBUS_REF})
+			set (VOMS_PATCH patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure_openssl.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/makefile.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
+								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
+			if ( ${SYSTEM_NAME} MATCHES "rhel3" )
+				set (VOMS_OPENSSL_FLAG --with-openssl-prefix=/usr/kerberos)
+			else()
+				set (VOMS_OPENSSL_FLAG "")
+			endif()
+		endif()
+
 		condor_pre_external( VOMS voms-1.9.10_4 "include;${VOMS_LIB}" "done")
 
 		ExternalProject_Add(voms
-							DEPENDS ${EXPAT_REF} ${OPENSSL_RED} ${GLOBUS_REF}
+							DEPENDS ${VOMS_DEPENDS}
 							#-- Download Step ----------
 							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${VOMS_VER}.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${VOMS_STAGE}/dl
 							URL http://parrot.cs.wisc.edu/externals/${VOMS_VER}.tar.gz
 							#--Patch step ----------
-							PATCH_COMMAND patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/makefile.patch &&
-								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
-								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh
+							PATCH_COMMAND ${VOMS_PATCH}
 							#--Configure step ----------
 							CONFIGURE_COMMAND cd org.glite.security.voms &&
 								./configure
 								--prefix=${VOMS_INSTALL_LOC}
 								--with-api-only
-								--with-openssl-prefix=${OPENSSL_INSTALL_LOC}
+								${VOMS_OPENSSL_FLAG}
 								--with-expat-prefix=${EXPAT_INSTALL_LOC}
 								--with-globus-prefix=${GLOBUS_INSTALL_LOC}
 								--with-globus-flavor=${GLOBUS_FLAVOR} --disable-java --disable-docs --disable-glite

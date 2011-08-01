@@ -305,6 +305,12 @@ if (${OS_NAME} STREQUAL "SUNOS")
 elseif(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
+
+	if ( ${SYSTEM_NAME} MATCHES "rhel3" )
+		set(CMAKE_PREFIX_PATH /usr/kerberos)
+		include_directories(/usr/kerberos/include)
+	endif()
+
 	set(DOES_SAVE_SIGSTATE ON)
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)

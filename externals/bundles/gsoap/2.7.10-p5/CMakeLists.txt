@@ -38,16 +38,27 @@ if (WITH_GSOAP)
 		else(WINDOWS)
 			set (GSOAP_PATCH  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/install_soapcpp2_wsdl2h_aux-2.7.10-Makefile.in.patch &&
 							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/fix_xlocale_insanity.patch &&
-							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/nmi_prereq_hack.patch)
-			set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/)
+							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/nmi_prereq_hack.patch &&
+							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch)
+			if ( ${SYSTEM_NAME} MATCHES "rhel3" )
+				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I/usr/kerberos/include -I${OPENSSL_INSTALL_LOC}/include/" )
+			else()
+				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/" )
+			endif()
 			set (GSOAP_MAKE make )
 			set (GSOAP_INSTALL make install )
 		endif(WINDOWS)
 
+		if ( BUILDING_OPENSSL )
+			set (GSOAP_DEPENDS ${OPENSSL_REF})
+		else()
+			set (GSOAP_DEPENDS "")
+		endif()
+
 		message (STATUS "OPENSSL_INSTALL_LOC = ${OPENSSL_INSTALL_LOC}")
 
 		ExternalProject_Add( gsoap
-				    DEPENDS ${OPENSSL_REF}
+				    DEPENDS ${GSOAP_DEPENDS}
 				    #-- Download Step ----------
 				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GSOAP_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${GSOAP_STAGE}/dl

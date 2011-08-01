@@ -29,6 +29,9 @@
 
 extern "C" {
 #include "krb5.h"
+#if defined(Darwin)
+#include "com_err.h"
+#endif
 }
 
 class Condor_Auth_Kerberos : public Condor_Auth_Base {
