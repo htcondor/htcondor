@@ -148,7 +148,7 @@ if (WITH_GLOBUS)
 								make gpt gssapi_error globus-resource-management-sdk &&
 								GLOBUS_LOCATION=${GLOBUS_INSTALL_LOC} && export GLOBUS_LOCATION &&
 								make globus_gridftp_server &&
-								${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR} &&
+								LD_RUN_PATH='$$ORIGIN/../lib/condor' env && LD_RUN_PATH='$$ORIGIN/../lib/condor' ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR} &&
 								mv ${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server ${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server.dynamic
 							BUILD_IN_SOURCE 1
 							#--install Step ----------

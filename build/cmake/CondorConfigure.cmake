@@ -432,6 +432,12 @@ else()
 	cmake_minimum_required(VERSION 2.8)
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
 	option(CACHED_EXTERNALS "enable/disable cached externals" ON)
+
+	if (LINUX)
+		set(CMAKE_SKIP_RPATH FALSE)
+		set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/condor")
+		set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+	endif()
 endif(PROPER)
 
 if (WINDOWS)

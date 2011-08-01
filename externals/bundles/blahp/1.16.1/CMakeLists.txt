@@ -85,7 +85,7 @@ if ( WITH_BLAHP )
 							--with-globus-nothr-flavor=gcc${BIT_MODE}dbg
 							--prefix=${BLAHP_INSTALL_LOC}/opt/glite
 						#--Build Step ----------
-						BUILD_COMMAND cd org.glite.ce.blahp && make
+						BUILD_COMMAND cd org.glite.ce.blahp && LD_RUN_PATH='$$ORIGIN/../../lib/condor' make
 						BUILD_IN_SOURCE 1
 						#--install Step ----------
 						INSTALL_DIR ${BLAHP_INSTALL_LOC}
