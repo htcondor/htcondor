@@ -29,9 +29,9 @@
 #include "emit.h"
 #include "stat_info.h"
 #include "condor_getcwd.h"
-#ifdef WIN32
-__inline __int64 abs(__int64 x) { return _abs64(x); }
-#endif
+//#ifdef WIN32
+//__inline __int64 abs(__int64 x) { return _abs64(x); }
+//#endif
 
 static void setup(void);
 static void cleanup(void);

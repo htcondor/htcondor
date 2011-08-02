@@ -1,0 +1,265 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-7-7}Development Release Series 7.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is the development release series of Condor.
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-7-1}Version 7.7.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.7.1 not yet released.
+%\item Condor version 7.7.1 released on Month Date, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+% This is unlikely to make it into 7.7.1
+% Comment it out for now and plan to move it to 7.7.2
+% gittrac #2057
+%\item The behavior of DAGMan is changed, such that, by default,
+%POST scripts will be run regardless of the return value from the PRE script
+%of the same node.
+%The previous behavior of not running the POST script can be restored 
+%by either adding the \Opt{-no\_postrun} option to \Condor{submit\_dag},
+%or by setting the new configuration variable 
+%\Macro{DAGMAN\_POST\_IGNORE\_PRE} to \Expr{False}.
+
+% gittrac #2122
+\item The new \Arg{PRE\_SKIP} key word in DAGMan changes the
+behavior of DAG node execution such that the node's job and POST script
+may be skipped based on the exit value of the PRE script.
+See section ~\ref{dagman:SCRIPT} for details.
+
+% uncomment item, if it appears in 7.7.1
+% gittrac #659 
+%\item Filip Krikava supplied a patch that limits the number of 
+%file descriptors that DAGMan has open at a time.
+%The reason for creating this capability is that
+%DAGman tends to fail on wide DAGs, where many jobs are independent,
+%rather than being linear, where jobs have many dependencies.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-7-0}Version 7.7.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.7.0 released on July 27, 2011.
+This developer release contains all bug fixes from Condor version 7.6.2.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item \Condor{q} now supports the new option \Opt{-stream-results}.
+  When this option is specified, \Condor{q} displays results as they
+  are fetched from the job queue, rather than buffering up the query
+  results before displaying anything.
+
+% gittrac #1871 
+% gittrac #2295
+\item The new submit description file command \SubmitCmd{stack\_size} 
+  applies to Linux jobs that are not running in the standard universe. 
+  It sets the allocation of stack space to be other than the default
+  value, which is unlimited.
+  It also advertises the job ClassAd attribute \AdAttr{StackSize}.
+
+% gittrac #1550
+\item The new ClassAd function \Code{stringListsIntersect} evaluates to 
+  \Expr{True} if two strings of delimited elements have any matching elements,
+  and it evaluates to \Expr{False} otherwise.
+
+% gittrac #1821
+\item The grid universe now supports the \SubmitCmd{ec2} resource type,
+  which uses the EC2 Query (REST) API to start virtual machines on cloud
+  resources.
+
+% gittrac #2090 
+\item The behavior of DAGMan has changed, 
+such that if multiple definitions of a VARS macroname 
+for a specific node within a DAG input exist,
+a warning is written to the log, of the format
+\begin{verbatim}
+Warning: VAR <macroname> is already defined in job <JobName>
+Discovered at file "<DAG input file name>", line <line number>
+\end{verbatim}
+See section ~\ref{dagman:VARS} for details.
+
+% gittrac #2297
+\item The version number for ClassAds now matches the Condor version number. 
+
+% gittrac #2259
+\item When \Prog{glexec} fails to execute a job,
+diagnostic error messages produced by \Prog{glexec} used to be discarded.
+These error messages are now displayed in the log of the \Condor{starter} 
+and in the job's hold reason. 
+
+% gittrac #2185
+\item New submit description file commands
+\SubmitCmd{periodic\_hold\_reason}, \SubmitCmd{periodic\_hold\_subcode},
+\SubmitCmd{on\_exit\_hold\_reason}, and \SubmitCmd{on\_exit\_hold\_subcode}
+permit the job to set a hold reason string and subcode number.
+Similarly, the system job policy can specify the reason and subcode 
+using \Macro{SYSTEM\_PERIODIC\_HOLD\_REASON} and 
+\Macro{SYSTEM\_PERIODIC\_HOLD\_SUBCODE}.
+In addition, the \Condor{hold} command now accepts a \Opt{-subcode} option,
+which is used to set the job attribute \Attr{HoldReasonSubCode}. 
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item For a job with an X.509 proxy credential, the new job ClassAd
+attribute \AdAttr{X509UserProxyEmail} is the email address extracted
+from the proxy.
+
+% gittrac 2067
+\item On Linux execute machines with kernel version more recent than 2.6.27,
+the proportional set size (PSS) in Kbytes summed across all
+processes in the job is now reported in the attribute
+\AdAttr{ProportionalSetSizeKb}.  If the execute machine does not
+support monitoring of PSS or PSS has not yet been measured, this
+attribute will be undefined.  PSS differs from \AdAttr{ImageSize} in
+how memory shared between processes is accounted.  The PSS for one
+process is the sum of that process' memory pages divided by the
+number of processes sharing each of the pages.  \AdAttr{ImageSize} is
+the same, except there is no division by the number of processes
+sharing the pages.
+
+% gittrac #1755
+\item The new configuration variable \Macro{DAGMAN\_USE\_STRICT} 
+turns warnings into errors, as defined in section~\ref{param:DAGManUseStrict}.
+
+% gittrac #2006
+\item The \Condor{schedd} now publishes performance-related statistics.
+  Page~\pageref{sec:Scheduler-ClassAd-Attributes} in Appendix A contains
+  definitions for these new attributes:
+  \begin{itemize}
+    \item \Attr{DetectedMemory}
+    \item \Attr{DetectedCpus}
+    \item \Attr{UpdateInterval}
+    \item \Attr{WindowedStatWidth}
+    \item \Attr{ExitCode<N>}
+    \item \Attr{ExitCodeCumulative<N>}
+    \item \Attr{JobsSubmitted}
+    \item \Attr{JobsSubmittedCumulative}
+    \item \Attr{JobsStarted}
+    \item \Attr{JobsStartedCumulative}
+    \item \Attr{JobsCompleted}
+    \item \Attr{JobsCompletedCumulative}
+    \item \Attr{JobsExited}
+    \item \Attr{JobsExitedCumulative}
+    \item \Attr{ShadowExceptions}
+    \item \Attr{ShadowExceptionsCumulative}
+    \item \Attr{JobSubmissionRate}
+    \item \Attr{JobStartRate}
+    \item \Attr{JobCompletionRate}
+    \item \Attr{MeanTimeToStart}
+    \item \Attr{MeanTimeToStartCumulative}
+    \item \Attr{MeanRunningTime}
+    \item \Attr{MeanRunningTimeCumulative}
+    \item \Attr{SumTimeToStartCumulative}
+    \item \Attr{SumRunningTimeCumulative}
+  \end{itemize}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+% gittrack 1928
+\item \AdAttr{JobUniverse} was effectively a required attribute for
+  jobs created via the Fetch Work hook,
+  due to the need to set the \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM}
+  expression, such that it would not evaluate to \Expr{Undefined}.
+  Now the default \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM} expression
+  evaluates to \Expr{True} when \AdAttr{JobUniverse} is not defined.
+
+% gittrack 1943
+\item When there are multiple cpus but only one slot, the slot name no
+longer begins with \Expr{slot1@}.
+
+% gittrac 1805 commit 931ca85d6bc483dc6af82d7000a3f5c9ee64dc07
+% gittrac 1805 commit e45ec5ff35e77533bfba3239dc3b71315d9d5afd
+% gittrac 1805 commit 7fe5d0c64562f59a7efafe77227995e4ada24e20
+\item The tool \Condor{advertise} seemed to be trying too hard to resolve
+host names. This was fixed to only do the minimally necessary 
+number of look ups.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+

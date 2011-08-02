@@ -898,11 +898,9 @@ dprint ( "BORLAND: ${BORLAND}" )
 if (WINDOWS)
 	dprint ( "MSVC: ${MSVC}" )
 	dprint ( "MSVC_IDE: ${MSVC_IDE}" )
-	dprint ( "MSVC60: ${MSVC60}" )
-	dprint ( "MSVC70: ${MSVC70}" )
-	dprint ( "MSVC71: ${MSVC71}" )
-	dprint ( "MSVC80: ${MSVC80}" )
-	dprint ( "CMAKE_COMPILER_2005: ${CMAKE_COMPILER_2005}" )
+	# only supported compilers for condor build
+	dprint ( "MSVC90: ${MSVC90}" )
+	dprint ( "MSVC10: ${MSVC10}" )
 endif(WINDOWS)
 
 # set this to true if you don't want to rebuild the object files if the rules have changed,

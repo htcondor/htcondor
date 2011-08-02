@@ -193,7 +193,7 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
     m_elastic_ip = strdup(buff);
 	
 	buff[0] = '\0';
-    if ( jobAd->LookupString( ATTR_EC2_EBS_VOLUMES, buff ) )
+    jobAd->LookupString( ATTR_EC2_EBS_VOLUMES, buff );
 	m_ebs_volumes = strdup(buff);
 	
 	// lookup the elastic IP

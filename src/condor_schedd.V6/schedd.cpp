@@ -98,6 +98,10 @@
 #endif
 #endif
 
+#if defined(WINDOWS) && !defined(MAXINT)
+	#define MAXINT INT_MAX
+#endif
+
 #define DEFAULT_SHADOW_SIZE 800
 #define DEFAULT_JOB_START_COUNT 1
 
@@ -2675,7 +2679,7 @@ Scheduler::WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync )
 	SubmitEvent event;
 	ClassAd *job_ad = GetJobAd(job_id.cluster,job_id.proc);
 
-	strcpy (event.submitHost, daemonCore->privateNetworkIpAddr());
+	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
 	if ( job_ad->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
 		event.submitEventLogNotes = strnewp(submitEventNotes.c_str());
 	}
@@ -2824,7 +2828,7 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 	}
 
 	ExecuteEvent event;
-	strcpy( event.executeHost, host );
+	event.setExecuteHost( host );
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
@@ -12719,12 +12723,8 @@ Scheduler::claimLocalStartd()
 	}
 
 		// Check when we last had a negotiation cycle; if recent, return.
-	int negotiator_interval = param_integer("NEGOTIATOR_INTERVAL",60);
 	int claimlocal_interval = param_integer("SCHEDD_ASSUME_NEGOTIATOR_GONE",
-				negotiator_interval * 20);
-				//,	// default (20 min usually)
-				//10 * 60,	// minimum = 10 minutes
-				//120 * 60);	// maximum = 120 minutes
+				20 * 60);
 	if ( time(NULL) - NegotiationRequestTime < claimlocal_interval ) {
 			// we have negotiated recently, no need to calim the local startd
 		return false;
