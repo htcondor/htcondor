@@ -41,6 +41,7 @@ my $TAR_TASK              = "remote_task.create_tar";
 my $CHECK_TAR_TASK        = "remote_task.check_tar";
 my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
+my $TESTS_TASK            = "remote_task.build_tests";
 my $NATIVE_TASK           = "remote_task.create_native";
 my $CHECK_NATIVE_TASK     = "remote_task.check_native";
 
@@ -78,7 +79,7 @@ elsif ($taskname eq $UNSTRIPPED_TASK) {
     $execstr = get_cmake_args();
     
     #Append extra argument
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make --no-print-directory && make install && make targz && make tests";
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make --no-print-directory && make install && make targz";
 }
 elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
     my $tarball_check_script = get_tarball_check_script();
@@ -92,12 +93,15 @@ elsif ($taskname eq $TAR_TASK) {
     $execstr = get_cmake_args();
 
     # We can't call "make install" (which just calls "cmake -P cmake_install.cmake") because we need to add the CMAKE_INSTALL_DO_STRIP argument.
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz tests";
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=ON && make && cmake -DCMAKE_INSTALL_DO_STRIP:BOOL=ON -P cmake_install.cmake && make targz";
 }
 elsif ($taskname eq $CHECK_TAR_TASK) {
     my $tarball_check_script = get_tarball_check_script();
     my $tarball = get_tarball_name();
     $execstr = "$tarball_check_script $tarball";
+}
+elsif($taskname eq $TESTS_TASK) {
+    $execstr = "make tests";
 }
 elsif ($taskname eq $NATIVE_TASK) {
     # Create native packages on Red Hat and Debian

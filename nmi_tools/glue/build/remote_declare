@@ -29,6 +29,7 @@ my $TAR_TASK              = "remote_task.create_tar";
 my $CHECK_TAR_TASK        = "remote_task.check_tar";
 my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
+my $TESTS_TASK            = "remote_task.build_tests";
 my $NATIVE_TASK           = "remote_task.create_native";
 my $CHECK_NATIVE_TASK     = "remote_task.check_native";
 
@@ -53,6 +54,7 @@ else {
     print TASKLIST "$EXTERNALS_TASK\n";
     print TASKLIST "$UNSTRIPPED_TASK\n";
     print TASKLIST "$CHECK_UNSTRIPPED_TASK\n";
+    print TASKLIST "$TESTS_TASK\n";
     print TASKLIST "$NATIVE_TASK\n";
     print TASKLIST "$CHECK_NATIVE_TASK\n";
     print TASKLIST "$TAR_TASK\n";
