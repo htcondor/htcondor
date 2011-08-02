@@ -26,6 +26,9 @@ $testdesc =  'Condor DAGman test for always running the POST script - scheduler 
 $testname = "job_dagman_always_run_post-A";
 $dagman_args = "-verbose";
 
+$outfile = "job_dagman_always_run_post-A.dag.dagman.out";
+runcmd("rm -f $outfile");
+
 my $killedchosen = 0;
 
 # truly const variables in perl
