@@ -33,6 +33,7 @@
 \oOpt{-import\_env}
 \oOpt{-DumpRescue}
 \oOpt{-valgrind}
+\oOpt{-PostIgnorePre}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -260,6 +261,17 @@ description.
      Using the \Opt{-valgrind} option without the necessary
      \Prog{valgrind} software installed will cause the DAG to fail.
      If the DAG does run, it will run much more slowly than usual.
+  }
+  \OptItem{\Opt{-PostIgnorePre}}{This optional argument causes the submit
+     description file generated for the submission of \Condor{dagman} to
+     be modified.
+     This will pass the \Opt{-PostIgnorePre} flag in the arguments to
+     \Condor{dagman} in the submission file, which causes \Condor{dagman} to use the
+     return value from a PRE script to determine whether a POST script will run.  By
+     default, \Condor{dagman} runs the POST script regardless of the return value of
+     the PRE script. Old versions of \Condor{dagman}, prior to 7.7.2, would not
+     ignore the return value and would not run the POST script if the PRE script
+     failed.
   }
   \end{Options}
 

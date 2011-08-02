@@ -24,6 +24,7 @@
 \oOptArg{-outfile\_dir}{directory}
 \oOpt{-update\_submit}
 \oOpt{-import\_env}
+\oOpt{-PostIgnorePre}
 \OptArg{-dag}{dag\_file}
 \oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
 
@@ -233,6 +234,14 @@ output DAG input file lines as they are parsed
     \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
        DAG input file that is set as an argument to \Condor{submit\_dag},
        and passed to \Condor{dagman}.}
+    \OptItem{\Opt{-PostIgnorePre}}{Causes \Condor{dagman} to ignore
+       This will pass the \Opt{-PostIgnorePre} flag in the arguments to
+       \Condor{dagman} in the submission file, which causes \Condor{dagman} to use the
+       return value from a PRE script to determine whether a POST script will run.  By
+       default, \Condor{dagman} runs the POST script regardless of the return value of
+       the PRE script. Old versions of \Condor{dagman}, prior to 7.7.2, would not
+       ignore the return value and would not run the POST script if the PRE script
+       failed.}
 
 \end{Options}
 
