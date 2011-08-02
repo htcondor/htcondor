@@ -25,7 +25,7 @@
 #include "condor_netdb.h"
 #include "util_lib_proto.h"
 #include "condor_network.h"
-#include "condor_sockfunc.h""
+#include "condor_sockfunc.h"
 #include "ipv6_hostname.h"
 
 /*

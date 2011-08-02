@@ -194,7 +194,7 @@ Sinful::Sinful(char const *sinful)
 				m_sinful += sinful;
 			} else {
 				// Double check it's not IPv6 lacking [brackets]
-				char * first_colon = strchr(sinful, ':');
+				const char * first_colon = strchr(sinful, ':');
 				if(first_colon && strchr(first_colon+1, ':')) {
 					// Why not treat it as an IPv6 address? Because
 					// We can't tell if 12AB::CDEF:1000 means
