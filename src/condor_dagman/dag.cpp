@@ -1552,6 +1552,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 		if( job->GetRetries() < job->GetRetryMax() ) {
+			RunPostScript( job, _postRun, WEXITSTATUS( status ) );
 			RestartNode( job, false );
 		} else {
 			RunPostScript( job, _postRun, WEXITSTATUS( status ) );
