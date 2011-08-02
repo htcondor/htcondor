@@ -881,7 +881,7 @@ RemoteResource::setExitReason( int reason )
 	shadow->dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
 					 machineName ? machineName : "???", reason ); 
 
-	if( exit_reason != JOB_KILLED ) {
+	if( exit_reason != JOB_KILLED && -1 == exit_reason) {
 		exit_reason = reason;
 	}
 

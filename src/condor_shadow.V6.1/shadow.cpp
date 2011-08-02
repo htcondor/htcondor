@@ -244,6 +244,17 @@ UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 							  prev_run_bytes_recvd + bytesSent() );
 }
 
+void UniShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
+{
+	remRes->setExitReason( JOB_SHOULD_HOLD );
+	this->holdJobPre(reason, hold_reason_code, hold_reason_subcode);
+}
+
+void UniShadow::removeJob( const char* reason )
+{
+	remRes->setExitReason( JOB_SHOULD_REMOVE );
+	this->removeJobPre(reason);
+}
 
 int UniShadow::handleJobRemoval(int sig) {
     dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
