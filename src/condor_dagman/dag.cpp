@@ -1555,7 +1555,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			RestartNode( job, false );
 		} else {
 			RunPostScript( job, _postRun, WEXITSTATUS( status ) );
-			if( !_postRun || !job->scriptPost ) {
+			if( !_postRun || !job->_scriptPost ) {
 				++_numNodesFailed;
 				if( job->GetRetryMax() > 0 ) {
 					// add # of retries to error_text
@@ -1603,7 +1603,7 @@ void Dag::RunPostScript( Job *job, bool ignore_status, int status )
 			job->_scriptPost->_retValJob = status;
 		}
 	} else {
-		job->scriptPost->_retValJob = 0;
+		job->_scriptPost->_retValJob = 0;
 	}
 	(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 			_nfsLogIsError, _recovery, _defaultNodeLog );
@@ -3582,7 +3582,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 
 	_jobstateLog.WriteSubmitFailure( node );
 
-		// Set the times to wait twice as long as last time.
+	// Set the times to wait twice as long as last time.
 	int thisSubmitDelay = _nextSubmitDelay;
 	_nextSubmitTime = time(NULL) + thisSubmitDelay;
 	_nextSubmitDelay *= 2;
@@ -3590,42 +3590,40 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	(void)node->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
 
 	if ( node->_submitTries >= max_submit_attempts ) {
-			// We're out of submit attempts, treat this as a submit failure.
+		// We're out of submit attempts, treat this as a submit failure.
 
-			// To match the existing behavior, we're resetting the times
-			// here.
+		// To match the existing behavior, we're resetting the times
+		// here.
 		_nextSubmitTime = 0;
 		_nextSubmitDelay = 1;
 
 		debug_printf( DEBUG_QUIET, "Job submit failed after %d tr%s.\n",
-					node->_submitTries, node->_submitTries == 1 ? "y" : "ies" );
+				node->_submitTries, node->_submitTries == 1 ? "y" : "ies" );
 
 		snprintf( node->error_text, JOB_ERROR_TEXT_MAXLEN,
-					"Job submit failed" );
+				"Job submit failed" );
 
-			// NOTE: this failure short-circuits the "retry" feature
-			// because it's already exhausted a number of retries
-			// (maybe we should make sure max_submit_attempts >
-			// node->retries before assuming this is a good idea...)
+		// NOTE: this failure short-circuits the "retry" feature
+		// because it's already exhausted a number of retries
+		// (maybe we should make sure max_submit_attempts >
+		// node->retries before assuming this is a good idea...)
 		debug_printf( DEBUG_NORMAL, "Shortcutting node %s retries because "
-					"of submit failure(s)\n", node->GetJobName() );
+				"of submit failure(s)\n", node->GetJobName() );
 		node->retries = node->GetRetryMax();
 		RunPostScript( node, true, DAG_ERROR_CONDOR_SUBMIT_FAILED );
 		if( !node->_scriptPost )
 			node->_Status = Job::STATUS_ERROR;
-			_numNodesFailed++;
-		}
-
+		_numNodesFailed++;
 	} else {
-			// We have more submit attempts left, put this node back into the
-			// ready queue.
+		// We have more submit attempts left, put this node back into the
+		// ready queue.
 		debug_printf( DEBUG_NORMAL, "Job submit try %d/%d failed, "
-					"will try again in >= %d second%s.\n", node->_submitTries,
-					max_submit_attempts, thisSubmitDelay,
-					thisSubmitDelay == 1 ? "" : "s" );
+				"will try again in >= %d second%s.\n", node->_submitTries,
+				max_submit_attempts, thisSubmitDelay,
+				thisSubmitDelay == 1 ? "" : "s" );
 
 		if ( m_retrySubmitFirst ) {
- 			_readyQ->Prepend(node, -node->_nodePriority);
+			_readyQ->Prepend(node, -node->_nodePriority);
 		} else {
 			_readyQ->Append(node, -node->_nodePriority);
 		}
