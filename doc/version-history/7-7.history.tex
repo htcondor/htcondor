@@ -19,7 +19,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.7.0 released on July 27, 2011.
+\item Condor version 7.7.0 released on July 29, 2011.
 This developer release contains all bug fixes from Condor version 7.6.2.
 
 \end{itemize}
@@ -29,16 +29,15 @@ This developer release contains all bug fixes from Condor version 7.6.2.
 
 \begin{itemize}
 
-\item Full port of Condor to RHEL 6.
+\item A full port of Condor is available for RedHat Enterprise Linux 6
+on the x86\_64 processor.
+A full port includes support for the standard universe.
 
-\item The matchmaking attributes SubmittersUserResourcesInUse
-and RemoteuserResourcesInUser are now biased by slot weights.
+\item The matchmaking attributes \Attr{SubmittersUserResourcesInUse}
+and \Attr{RemoteuserResourcesInUser} are now biased by slot weights.
 
-\item On Windows, the startd publishes the installed
-.NET version.
-
-\item condor\_submit now accepts an -addr command line option
-naming the ip address of the schedd to submit to.
+\item \Condor{submit} now accepts the new command line option \Opt{-addr},
+naming the IP address of the \Condor{schedd} to submit to.
 
 \item CONDOR\_VIEW\_HOST can now support more than one condor view host.
 
@@ -196,6 +195,11 @@ turns warnings into errors, as defined in section~\ref{param:DAGManUseStrict}.
     \item \Attr{SumRunningTimeCumulative}
   \end{itemize}
 
+% gittrac #1930
+\item For Windows platforms, the \Condor{startd} now publishes the 
+ClassAd attribute \Attr{DotNetVersions},
+containing a comma separated list of installed .NET versions.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -240,7 +244,7 @@ timeout shutting down Condor.
 \item Fixed problem with detecting IBM Java Virtual Machines whose
 version strings have embedded newlines.
 
-\item condor\_q -analyze now works with new classad builtin functions.
+\item condor\_q -analyze now works with new classad built-in functions.
 
 \item Standalone checkpointing now works with compressed checkpoints again.
 This had been broken in 7.5.4
