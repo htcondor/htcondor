@@ -343,7 +343,9 @@ Intel x86 & - RedHat Enterprise Linux 3 \\
  & - Macintosh OS X 10.4 (clipped) \\ \hline
 Opteron x86\_64 & - Red Hat Enterprise Linux 3 \\ 
  & - Red Hat Enterprise Linux 5 \\
- & - Debian Linux 5.0 (lenny) \\ \hline 
+ & - Red Hat Enterprise Linux 6 \\
+ & - Debian Linux 5.0 (lenny) \\
+ & - Debian Linux 6.0 (squeeze) \\ \hline 
 \end{tabular}
 \caption{\label{supported-platforms}Condor \VersionNotice\ supported platforms}
 \end{table}
@@ -375,11 +377,15 @@ Other compilers may work, but are not supported.
 \begin{table}[hbt]
 \begin{tabular}{|ll|l|} \hline
 \textbf{Platform} & \textbf{Compiler} & \textbf{Notes}\\ \hline \hline
-Red Hat Enterprise Linux 3, 4, 5 on x86 & gcc, g++, and g77 & as shipped  \\ 
+Red Hat Enterprise Linux 3, 4, 5 on x86 and x86\_64 & gcc, g++, and g77 & as shipped  \\ 
 \hline
-Red Hat Debian Linux 5.0 (lenny) on x86 and x86\_64 & gcc, g++, gfortran & as shipped \\ 
+Red Hat Enterprise Linux 6 on x86\_64 & gcc, g++, and g77 & as shipped  \\ 
 \hline
-Fedora Core 1 - 11 on x86 & gcc, g++, and g77 & as shipped  \\ 
+Debian Linux 5.0 (lenny) on x86 and x86\_64 & gcc, g++, gfortran & as shipped \\ 
+\hline
+Debian Linux 6.0 (squeeze) on x86\_64 & gcc, g++, gfortran & as shipped \\ 
+\hline
+Fedora Core 1 - 11 on x86 and x86\_64 & gcc, g++, and g77 & as shipped  \\ 
 \hline
 \end{tabular}
 \caption{\label{supported-compile}Supported compilers under Condor \VersionNotice\ }
