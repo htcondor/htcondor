@@ -59,7 +59,7 @@ sub SRC 	{ 0; };
 ######################################################################
 
 # Root of the GIT Source repository
-my $GITROOT_SRC = "/space/git/CONDOR_SRC.git";
+my $GITROOT_SRC = $ENV{'GIT_DIR'} || "/space/git/CONDOR_SRC.git";
 
 # Root of the GIT Manual repository
 # my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
