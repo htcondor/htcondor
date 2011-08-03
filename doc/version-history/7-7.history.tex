@@ -29,6 +29,59 @@ This developer release contains all bug fixes from Condor version 7.6.2.
 
 \begin{itemize}
 
+\item Full port of Condor to RHEL 6.
+
+\item The matchmaking attributes SubmittersUserResourcesInUse
+and RemoteuserResourcesInUser are now biased by slot weights.
+
+\item On Windows, the startd publishes the installed
+.NET version.
+
+\item condor\_submit now accepts an -addr command line option
+naming the ip address of the schedd to submit to.
+
+\item CONDOR\_VIEW\_HOST can now support more than one condor view host.
+
+\item The vmgahp now is dynamically linked to libvirt.  We believe
+this makes it more portable.
+
+\item Removed the condor\_reschedule\_schedd and condor\_master\_off
+programs.  These have been replaced many years ago by the more general
+condor\_reschedule and condor\_off commands.
+
+\item New parameter SHADOW\_RUN\_UNKNOWN\_USER\_JOBS.  This defaults
+to false, when true, allows the shadow to run jobs remotely submitted
+from users not in the local passwd file.
+ 
+\item On Windows, improve the ability of the starter and shadow
+to clean up the execute directory if jobs have changed the ACLs
+or permissions on files they have created.
+
+\item The security parameters DENY\_CLIENT and HOSTDENY\_CLIENT
+now also look for the prefixes TOOL and SUBMIT.
+
+\item Condor\_submit now sets a default RequestMemory size.
+
+\item CREAM submission performance has been substantially
+improved by batching submit requests.
+
+\item condor\_q -better now has cleaner output, and informs
+the user when negotiation has not happened yet.
+
+\item Many improvements to the Condor init scripts.
+
+\item Deltacloud support updated to deltacloud version 0.8.
+
+\item New parameter NEGOTIATOR\_UPDATE\_AFTER\_CYCLE, defaults 
+to false.  If set to true, it will force the Negotiator to publish an update ad to the Collector at the end of every negotiation cycle. This is very useful
+    if monitoring LastNegotiationCycle statistics.
+
+% gittrac #1960
+\item VM universe submit files no longer supports
+automatic creation of cdrom images from text input file.
+Users must now explicitly create ISO images and transfer them
+with the job.
+
 \item \Condor{q} now supports the new option \Opt{-stream-results}.
   When this option is specified, \Condor{q} displays results as they
   are fetched from the job queue, rather than buffering up the query
@@ -84,6 +137,7 @@ In addition, the \Condor{hold} command now accepts a \Opt{-subcode} option,
 which is used to set the job attribute \Attr{HoldReasonSubCode}. 
 
 \end{itemize}
+
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
@@ -147,6 +201,59 @@ turns warnings into errors, as defined in section~\ref{param:DAGManUseStrict}.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in which the startd can get stuck in a
+loop trying to execute an invalid (i.e. non-existent) Daemon ClassAd Hook job.
+
+\item Fixed bug that would cause the Startd to incorrectly
+report Benchmarking activity instead of Idle activity when there
+is a problem launching the benchmarking programs.
+
+\item On Windows only, fixed a rare bug that could cause
+a sporadic access violation when a Condor daemon spawned another process.
+
+\item Fixed a bug introduced in 7.5.5 which caused the
+schedd to die managing parallel jobs.
+
+\item Fixed bug throughout classads where expressions expecting
+a floating point value returned an error if they got a boolean
+value.  This is common in RANK expressions.
+
+\item The Startd now looks up the Keyboard daemon address
+on every update.  This fixed problems if the Keyboard
+daemon is restarted during the startd lifespan.
+
+\item Fixed bug in Condor hold that happened if the hold
+reason contained a double quote character.
+
+\item Fixed a bug introduced in 7.5.6 that
+caused any startd cron job with non-empty ARGS to fail.
+Also, the ENV specified for startd cron jobs was ignored.
+
+\item Fixed bug in amazon grid manager which would cause it to crash.
+
+\item Fixed bug in rpm init script. A status request would always report Condor inactive, and a shutdown request would not report failure if there was a
+timeout shutting down Condor.
+
+\item File transfer plugins now have a correctly set environment.
+
+\item Fixed problem with detecting IBM Java Virtual Machines whose
+version strings have embedded newlines.
+
+\item condor\_q -analyze now works with new classad builtin functions.
+
+\item Standalone checkpointing now works with compressed checkpoints again.
+This had been broken in 7.5.4
+
+\item If the shadow cannot write to the user log, the job
+is now put on hold.
+
+%gittrac 1962
+\item On Windows, net stop condor would sometimes cause the
+master to crash.  This is now fixed.
+
+\item Fixed bug in condor\_q -run so that it displays
+the hostname correctly for local and scheduler universe jobs.
 
 % gittrac #1928
 \item \AdAttr{JobUniverse} was effectively a required attribute for
