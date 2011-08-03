@@ -100,6 +100,11 @@ my @default_prereqs = (
 	'm4-1.4.1',
 	);
 
+# Hackery to test running in new batlab
+if (`hostname -f` eq "submit-1.batlab.org\n") {
+@default_prereqs = ();
+} 
+
 ###############################################################################
 # Minimal build configuration
 # 
