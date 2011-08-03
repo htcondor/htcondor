@@ -160,7 +160,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 				   daemonCore->Register_Socket((Stream *) sock,
 											   "Mgmt Method Socket",
 											   (SocketHandlercpp)
-											   &MgmtCollectorPlugin::HandleMgmtSocket,
+											   (&MgmtCollectorPlugin::HandleMgmtSocket),
 											   "Handler for Mgmt Methods.",
 											   this))) {
 			EXCEPT("Failed to register Mgmt socket");
@@ -408,7 +408,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 	}
 
 	int
-	HandleMgmtSocket(Service *, Stream *)
+	HandleMgmtSocket(/*Service *,*/ Stream *)
 	{
 		singleton->getInstance()->pollCallbacks();
 
