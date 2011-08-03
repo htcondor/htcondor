@@ -952,10 +952,10 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => {
 				@default_test_configure_args
-					
+				
 			},
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass' => [ @default_testclass ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'testclass'	=> [ @default_testclass ],
 		},
 	},
 	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
