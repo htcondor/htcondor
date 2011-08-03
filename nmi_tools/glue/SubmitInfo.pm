@@ -74,6 +74,7 @@ our %build_and_test_sets = (
 		'x86_64_fedora_14-updated',
 		'x86_64_opensuse_11.3-updated',
 		'x86_64_opensuse_11.4-updated',
+		'x86_64_macos_10.5-updated',
 	],
 	
 	'stduniv' => [

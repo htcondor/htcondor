@@ -24,7 +24,7 @@ if (WITH_CURL)
 
 	if ( NOT PROPER )
 		
-		condor_pre_external( CURL curl-7.19.6 "lib;include" "include/curl/curl.h")
+		condor_pre_external( CURL curl-7.19.6-p1 "lib;include" "include/curl/curl.h")
 
 		if (WINDOWS)
 			set (CURL_PATCH pushd "lib" ${CMD_TERM}
@@ -38,28 +38,33 @@ if (WITH_CURL)
 			set (CURL_INSTALL cp -f lib/lib*.lib ${CURL_INSTALL_LOC}/lib && cp -rf include/curl ${CURL_INSTALL_LOC}/include )
 		else()
 			set (CURL_PATCH echo "Nothing to patch on Unix")
-			set (CURL_CONFIGURE PKG_CONFIG_PATH=${CURL_INSTALL_LOC} LIBS=-ldl ./configure --prefix=${CURL_INSTALL_LOC} --with-ssl=${OPENSSL_INSTALL_LOC} --disable-shared --disable-ipv6 --disable-ldap --disable-ldaps )
 			set (CURL_MAKE make)
 			set (CURL_INSTALL make install)
-			set (CURL_DEPENDS ${OPENSSL_REF} ${ZLIB_REF})
+			if ( BUILDING_OPENSSL )
+				set (CURL_DEPENDS ${OPENSSL_REF})
+				set (CURL_CONFIGURE PKG_CONFIG_PATH=${CURL_INSTALL_LOC} LIBS=-ldl ./configure --prefix=${CURL_INSTALL_LOC} --with-ssl=${OPENSSL_INSTALL_LOC} --disable-shared --disable-ipv6 --disable-ldap --disable-ldaps )
+			else()
+				set (CURL_DEPENDS "")
+				set (CURL_CONFIGURE LIBS=-ldl ./configure --prefix=${CURL_INSTALL_LOC} --disable-shared --disable-ipv6 --disable-ldap --disable-ldaps )
+			endif()
 		endif()
 
 		ExternalProject_Add(curl
 							DEPENDS ${CURL_DEPENDS}
 							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${CURL_VER}.tar.gz ${CMD_TERM}
+							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/curl-7.19.6.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${CURL_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/${CURL_VER}.tar.gz
+							URL http://parrot.cs.wisc.edu/externals/curl-7.19.6.tar.gz
 							#--Patch Step ----------
-							PATCH_COMMAND cd ${CURL_VER} ${CMD_TERM} ${CURL_PATCH}
+							PATCH_COMMAND cd curl-7.19.6 ${CMD_TERM} ${CURL_PATCH}
 							#--Configure step ----------
-							CONFIGURE_COMMAND cd ${CURL_VER} && ${CURL_CONFIGURE}
+							CONFIGURE_COMMAND cd curl-7.19.6 && ${CURL_CONFIGURE}
 							#--Build Step ----------
-							BUILD_COMMAND cd ${CURL_VER} && ${CURL_MAKE}
+							BUILD_COMMAND cd curl-7.19.6 && ${CURL_MAKE}
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${CURL_INSTALL_LOC}
-							INSTALL_COMMAND cd ${CURL_VER} && ${CURL_INSTALL} )
+							INSTALL_COMMAND cd curl-7.19.6 && ${CURL_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)

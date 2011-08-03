@@ -132,6 +132,15 @@ print "SETTING UP PERSONAL CONDOR\n";
 if( not TestGlue::is_windows() ) {
     mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
     system("mv $BaseDir/$version $BaseDir/condor" );
+
+	if ( `uname` =~ "Linux" ) {
+		# Extract system libraries from the build platform that are
+		# not present on this machine
+		system( dirname($0) . "/extract-libs systemlibs-*.tar.gz condor" );
+		# Let binaries in condor_tests that needs the extra system libraries
+		# above find them when looking under $ORIGIN/../lib/condor.
+		system( "ln -s condor/lib lib" );
+	}
     
     # Remove leftovers from extracting built binaries.
     print "Removing $version tar file and extraction\n";
