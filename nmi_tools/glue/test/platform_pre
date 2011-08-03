@@ -89,13 +89,8 @@ if(!-f $extractdone) {
 	my $syslibs_pattern = "public/systemlibs-*.tar.gz";
 	my $ret;
 
-	if ( `uname` =~ "Linux" ) {
-		print "Extracting '$release_pattern', '$syslibs_pattern', condor_examples, and condor_tests from results.tar.gz\n";
-		$ret = system("tar -xvzf $results '$release_pattern' '$syslibs_pattern' public/condor_tests public/condor_examples");
-	} else {
-		print "Extracting '$release_pattern', condor_examples, and condor_tests from results.tar.gz\n";
-		$ret = system("tar -xvzf $results '$release_pattern' public/condor_tests public/condor_examples");
-	}
+	print "Extracting '$release_pattern', condor_examples, and condor_tests from results.tar.gz\n";
+	$ret = system("tar -xvzf $results '$release_pattern' public/condor_tests public/condor_examples");
 
     if($ret) {
     	die "Could not extract tarball or test dir from $results: $!\n";
@@ -124,7 +119,11 @@ if(!-f $extractdone) {
     ######################################################################
        
     # Now, copy it to the parent
-	if ( `uname` =~ "Linux" ) {
+	print "Trying to extract '$syslibs_pattern' from results.tar.gz\n";
+	$ret = system("tar -xvzf $results '$syslibs_pattern'");
+	if ( $ret != 0 ) {
+		print "Extraction failed, assuming no $syslibs_pattern file\n";
+	} else {
 		my $syslibs_tarball = glob($syslibs_pattern);
 		print "Moving $syslibs_tarball to $BaseDir\n";
 		if(not rename($syslibs_tarball, "$BaseDir/".basename($syslibs_tarball))) {
