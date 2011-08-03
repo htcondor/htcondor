@@ -545,23 +545,6 @@ checkpoint file contains the job's memory image).
 A vanilla universe job's \AdAttr{ImageSize} is recomputed
 internally every 15 seconds.
 
-%%% ClassAd attribute: ProportionalSetSizeKb
-\index{ClassAd job attribute!ProportionalSetSizeKb}
-\index{ProportionalSetSizeKb!job ClassAd attribute}
-\item[\AdAttr{ProportionalSetSizeKb}:]
-On Linux execute machines with kernel version more recent than 2.6.27,
-the proportional set size (PSS) in kilobytes summed across all
-processes in the job is reported in the attribute
-\AdAttr{ProportionalSetSizeKb}.  If the execute machine does not
-support monitoring of PSS or PSS has not yet been measured, this
-attribute will be undefined.  PSS differs from \AdAttr{ImageSize} in
-how memory shared between processes is accounted.  The PSS for one
-process is the sum of that processes memory pages divided by the
-number of processes sharing each of the pages.  \AdAttr{ImageSize} is
-the same except there is no division by the number of processes
-sharing the pages.
-
-
 %%% ClassAd attribute: IwdFlushNFSCache
 \index{ClassAd job attribute!IwdFlushNFSCache}
 \index{IwdFlushNFSCache!job ClassAd attribute}
@@ -948,6 +931,22 @@ with the value 0.
 The job (process) identifier described here is unrelated to operating
 system PIDs.
 
+%%% ClassAd attribute: ProportionalSetSizeKb
+\index{ClassAd job attribute!ProportionalSetSizeKb}
+\index{ProportionalSetSizeKb!job ClassAd attribute}
+\item[\AdAttr{ProportionalSetSizeKb}:]
+On Linux execute machines with kernel version more recent than 2.6.27,
+this is the proportional set size (PSS) in Kbytes,
+summed across all processes in the job.
+If the execute machine does not
+support monitoring of PSS or PSS has not yet been measured,
+this attribute will be undefined.  
+PSS differs from \AdAttr{ImageSize} in how memory shared
+between processes is accounted.
+The PSS for one process is the sum of that process' memory pages 
+divided by the number of processes sharing each of the pages.
+\Attr{ImageSize} is the same,
+except there is no division by the number of processes sharing the pages.
 
 %%% ClassAd attribute: QDate
 \index{ClassAd job attribute!QDate}
