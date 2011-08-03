@@ -71,7 +71,14 @@
 #define D_UNUSED4       (1<<30)
 #define D_NOHEADER      (1<<31)
 #define D_ALL           (~(0) & (~(D_NOHEADER)))
-
+#include <string>
+#include <map>
+struct DebugFileInfo
+{
+	FILE *debugFP;
+	int debugFlags;
+	std::string logPath;
+};
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -138,8 +145,6 @@ double dprintf_get_lock_delay(void);
  */
 int fclose_wrapper( FILE *stream, int maxRetries );
 
-int debug_open_fds(int *open_fds);
-
 /*
 **	Definition of exception macro
 */
@@ -169,6 +174,8 @@ extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2)
 #if defined(__cplusplus)
 }
 #endif
+
+bool debug_open_fds(std::map<int,bool> &open_fds);
 
 #ifndef CONDOR_ASSERT
 #define CONDOR_ASSERT(cond) \

@@ -261,6 +261,8 @@ close_unused_file_descriptors()
 {
 	long		open_max;
 	long		i;
+	std::map<int,bool> open_fds;
+	bool need_open = false;
 
 
 		/* first find out how many fd's are available on this system */
@@ -275,27 +277,17 @@ close_unused_file_descriptors()
 		}
 	}
 
-	int fd_count = 0;
-	int *open_fds = (int*)malloc(sizeof(int) * (D_NUMLEVELS+1));
-	if(!open_fds)
-		EXCEPT("Out of memory!\n");
-
-	fd_count = debug_open_fds(open_fds);
+	need_open = debug_open_fds(open_fds);
 
 		/* now close everything except the ones we use */
 	for( i=0; i<open_max; i++ ) {
 		bool is_log = false;
-		if(fd_count > 0)
+		if(need_open)
 		{
-			for(int index = 0; index <= D_NUMLEVELS; index++)
-			{
-				if(i == open_fds[index])
-				{
-					is_log = true;
-				}
+			if(open_fds.find(i) != open_fds.ends())
+				is_log = true
 			}
 		}
-
 
 		if(!is_log && !needed_fd(i)) {
 			(void) close( i );

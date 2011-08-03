@@ -38,6 +38,7 @@ int		Termlog = 0;
 
 extern int		DebugFlags;
 extern FILE		*DebugFPs[D_NUMLEVELS+1];
+extern std::vector<DebugFileInfo> *DebugLogs;
 extern off_t		MaxLog[D_NUMLEVELS+1];
 extern int 			MaxLogNum[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
@@ -105,6 +106,12 @@ dprintf_config( const char *subsys )
 	int debug_level;
 	FILE *debug_file_fp;
 	int log_open_default = TRUE;
+	std::vector<DebugFileInfo> *debugLogsLocal = DebugLogs;
+	
+	if(debugLogsLocal == NULL)
+	{
+		debugLogsLocal = new std::vector<DebugFileInfo>();
+	}
 
 	/*  
 	**  We want to initialize this here so if we reconfig and the
@@ -150,7 +157,9 @@ dprintf_config( const char *subsys )
 	**	lock file (if it is specified).
 	*/
 	if( !( Termlog) ) {
+		std::vector<DebugFileInfo>::iterator it;
 		for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
+			std::string logPath;
 			want_truncate = 0;
 			if (debug_level == 0) {
 				/*
@@ -168,19 +177,15 @@ dprintf_config( const char *subsys )
 			// Hold a temporary copy of the old file pointer until
 			// *after* the param -- param can dprintf() in some cases
 			{
-				char	*tmp = DebugFile[debug_level];
-
 				// NEGOTIATOR_MATCH_LOG is necessary by default, but debug_level
 				// is not 0
+				char *logPathParam = NULL;
 				if(debug_level == 0)
 				{
-					char	*tmp2 = param(pname);
+					logPathParam = param(pname);
 
 					// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
-					if(!tmp2) {
-						// This char* will never be freed, but as long as
-						// defaults are defined in condor_c++_util/param_info.in
-						// we will never get here.
+					if(!logPathParam) {
 						char *str;
 						char *log = param("LOG");
 						char *lsubsys = param("SUBSYSTEM");
@@ -192,24 +197,51 @@ dprintf_config( const char *subsys )
 						sprintf(str, "%s%c%sLog", log, DIR_DELIM_CHAR, lsubsys);
 						
 						DebugFile[debug_level] = str;
-
+						
+						logPath.insert(0, str);
 						free(log);
 						free(lsubsys);
+						free(str);
 					}
 					else {
-						DebugFile[debug_level] = tmp2;
+						logPath.insert(0, logPathParam);
 					}
 				}
 				else {
 					// This is looking up configuration options that I can't
-					// find documentation for, so intead of coding in an
+					// find documentation for, so instead of coding in an
 					// incorrect default value, I'm gonna use 
 					// param_without_default.
 					// tristan 5/29/09
-					DebugFile[debug_level] = param_without_default(pname);
+					logPathParam = param_without_default(pname);
+					logPath.insert(0, logPathParam);
 				}
-				if ( tmp ) {
-					free( tmp );
+
+				if(!debugLogsLocal->empty())
+				{
+					for(it = debugLogsLocal->begin(); it < debugLogsLocal->end(); it++)
+					{
+						if((*it).logPath != logPath)
+						{
+							continue;
+						}
+						(*it).debugFlags |= debug_level;
+						break;
+					}
+				}
+				else
+				{
+					DebugFileInfo logFileInfo;
+					logFileInfo.debugFlags = debug_level;
+					logFileInfo.debugFP = NULL;
+					logFileInfo.logPath = logPath;
+					debugLogsLocal->push_back(logFileInfo);
+				}
+
+				if(logPathParam)
+				{
+					free(logPathParam);
+					logPathParam = NULL;
 				}
 			}
 
@@ -355,6 +387,12 @@ dprintf_config( const char *subsys )
 #if HAVE_BACKTRACE
 	install_backtrace_handler();
 #endif
+
+	if(DebugLogs)
+	{
+		delete DebugLogs;
+	}
+	DebugLogs = debugLogsLocal;
 
 	_condor_dprintf_saved_lines();
 }
