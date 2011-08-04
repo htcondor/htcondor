@@ -48,7 +48,7 @@ our %build_and_test_sets = (
 		'x86_64_rhap_5',
 		'x86_64_rhas_3',
 		'x86_deb_5.0',
-		'x86_macos_10.4',
+		'x86_macos_10.5-updated',
 		'x86_rhap_5',
 		'x86_rhas_3',
 		'x86_winnt_5.1',
@@ -74,7 +74,7 @@ our %build_and_test_sets = (
 		'x86_64_fedora_14-updated',
 		'x86_64_opensuse_11.3-updated',
 		'x86_64_opensuse_11.4-updated',
-		'x86_64_macos_10.5-updated',
+		'x86_64_macos_10.6-updated',
 	],
 	
 	'stduniv' => [
