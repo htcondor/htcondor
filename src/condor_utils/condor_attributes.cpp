@@ -603,6 +603,7 @@ const char * const ATTR_TOTAL_LOCAL_RUNNING_JOBS = "TotalLocalJobsRunning";
 const char * const ATTR_TOTAL_LOCAL_IDLE_JOBS	 = "TotalLocalJobsIdle";
 const char * const ATTR_TOTAL_SCHEDULER_RUNNING_JOBS = "TotalSchedulerJobsRunning";
 const char * const ATTR_TOTAL_SCHEDULER_IDLE_JOBS	 = "TotalSchedulerJobsIdle";
+#ifdef TICKET_2006
 const char * const ATTR_JOBS_SUBMITTED_CUMULATIVE = "JobsSubmittedCumulative";
 const char * const ATTR_JOBS_STARTED_CUMULATIVE = "JobsStartedCumulative";
 const char * const ATTR_JOBS_EXITED_CUMULATIVE = "JobsExitedCumulative";
@@ -624,6 +625,7 @@ const char * const ATTR_SHADOW_EXCEPTIONS = "ShadowExceptions";
 const char * const ATTR_MEAN_TIME_TO_START = "MeanTimeToStart";
 const char * const ATTR_MEAN_RUNNING_TIME = "MeanRunningTime";
 const char * const ATTR_EXIT_CODE = "ExitCode";
+#endif
 const char * const ATTR_TOTAL_SLOTS			 = "TotalSlots";
 const char * const ATTR_TOTAL_TIME_IN_CYCLE		   = "TotalTimeInCycle";	
 const char * const ATTR_TOTAL_TIME_BACKFILL_BUSY      = "TotalTimeBackfillBusy";
