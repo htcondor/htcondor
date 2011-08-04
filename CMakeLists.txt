@@ -116,28 +116,27 @@ add_subdirectory (src)
 # ideally one would transform the building of the docs to cmake or a script
 
 # logic here to support old nmi builds
-if (WINDOWS)
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
 
-	# do we want to do anything for windows?
-
-else()
-
-	if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
+	if (${LATEX} STREQUAL "LATEX-NOTFOUND" OR ${LATEX2HTML} STREQUAL "LATEX2HTML-NOTFOUND")
+		message(STATUS "Skipping Docs")
+	else()
 
 		# NOTE: deps are not configured to detect file changes.
 		add_custom_command (OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1
-							COMMAND make
-							ARGS just-man-pages
-							WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc )
-							#DEPENDS )
+						COMMAND make
+						ARGS just-man-pages
+						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc )
+						#DEPENDS )
 
 		add_custom_target ( docs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1 )
-
+		
+		install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/ DESTINATION ${C_MAN} )
 	endif()
 
+else()
 	#Use trailing slash; otherwise, it will be C_MAN/man
 	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/ DESTINATION ${C_MAN} )
-
 endif()
 
 ##########################################################################
