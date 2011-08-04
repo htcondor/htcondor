@@ -33,13 +33,12 @@ This developer release contains all bug fixes from Condor version 7.6.2.
 on the x86\_64 processor.
 A full port includes support for the standard universe.
 
-\item The matchmaking attributes \Attr{SubmittersUserResourcesInUse}
-and \Attr{RemoteuserResourcesInUser} are now biased by slot weights.
+\item The matchmaking attributes \Attr{SubmitterUserResourcesInUse}
+and \Attr{RemoteUserResourcesInUse} are now biased by slot weights.
 
+% gittrac #1971
 \item \Condor{submit} now accepts the new command line option \Opt{-addr},
 naming the IP address of the \Condor{schedd} to submit to.
-
-\item CONDOR\_VIEW\_HOST can now support more than one condor view host.
 
 \item The vmgahp now is dynamically linked to libvirt.  We believe
 this makes it more portable.
@@ -141,6 +140,10 @@ which is used to set the job attribute \Attr{HoldReasonSubCode}.
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+% gittrac #1249
+\item \Macro{CONDOR\_VIEW\_HOST} is now a comma and/or white space separated
+list of hosts, in order to support more than one CondorView host.
 
 \item For a job with an X.509 proxy credential, the new job ClassAd
 attribute \AdAttr{X509UserProxyEmail} is the email address extracted
