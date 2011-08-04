@@ -73,6 +73,14 @@ See section ~\ref{dagman:SCRIPT} for details.
 \Arg{PERIODIC\_RELEASE}) expressions could inadvertantly cause a claim to
 be released if shadow exits before waiting for final update from the starter. 
 
+% gittrac #2350
+\item \Condor{submit} previously could incorrectly detect references
+  in the requirements expression to special attributes such as
+  \Attr{Memory} when the name of the attribute happened to appear in a
+  string literal or as part of the name of some other attribute.  The
+  detection of references to various special attributes influences the
+  automatic requirements which are appended to the job requirements.
+
 \end{itemize}
 
 \noindent Known Bugs:
