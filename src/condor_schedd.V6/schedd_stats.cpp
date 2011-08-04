@@ -177,12 +177,14 @@ void ScheddStatistics::Tick()
 
 void ScheddStatistics::Accumulate(time_t now)
 {
-   if (this->PrevUpdateTime != now)
+   if (this->StatsUpdateTime != now)
       {
       Tick();
       }
    time_t tmin = now - this->RecentWindowMax;
-   generic_stats_AccumulateTQ(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char *)this, tmin);  
+
+   //schedd statistics doesn't have any timed_queues anymore.
+   //generic_stats_AccumulateTQ(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char *)this, tmin);  
 }
 
 void ScheddStatistics::Publish(ClassAd & ad) const

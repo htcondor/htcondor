@@ -59,7 +59,7 @@ public:
       return ret;
    }
 
-   bool Free() {
+   void Free() {
       ixFirst = 0;
       cItems = 0;
       cMax = 0;
@@ -285,7 +285,7 @@ public:
    // Advance to the next time slot and add a value.
    T Advance(T val) { 
       value += val; 
-      recent -= buf.Push(val)
+      recent -= buf.Push(val);
       recent += val;
       return value; 
    }
