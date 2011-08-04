@@ -118,10 +118,11 @@ add_subdirectory (src)
 # logic here to support old nmi builds
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
 
-	if (${LATEX} STREQUAL "LATEX-NOTFOUND" OR ${LATEX2HTML} STREQUAL "LATEX2HTML-NOTFOUND")
-		message(STATUS "Skipping Docs")
+	if (NOT WANT_MAN_PAGES OR ${LATEX} STREQUAL "LATEX-NOTFOUND" OR ${LATEX2HTML} STREQUAL "LATEX2HTML-NOTFOUND")
+		message(STATUS "NOTE: Skipping man-pages")
 	else()
-
+		
+		message(STATUS "NOTE: Will try building man-pages")
 		# NOTE: deps are not configured to detect file changes.
 		add_custom_command (OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/man1/condor_on.1
 						COMMAND make
@@ -135,6 +136,7 @@ if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/doc/man")
 	endif()
 
 else()
+	message(STATUS "NOTE: Will install prebuilt man-pages")
 	#Use trailing slash; otherwise, it will be C_MAN/man
 	install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc/man/ DESTINATION ${C_MAN} )
 endif()
