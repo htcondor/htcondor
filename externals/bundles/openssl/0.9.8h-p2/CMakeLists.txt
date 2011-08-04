@@ -93,7 +93,7 @@ if (WITH_OPENSSL)
 
 		set(BUILDING_OPENSSL ON PARENT_SCOPE)
 
-	endif( NOT OPENSSL_FOUND AND NOT PROPER )
+	endif( )
 
 	if (OPENSSL_FOUND)
 		message (STATUS "external configured (OPENSSL_FOUND=${OPENSSL_FOUND})")
