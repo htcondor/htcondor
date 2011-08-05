@@ -28,13 +28,6 @@
 //
 
 template <class T>
-int ring_buffer<T>::Unexpected()
-{
-   EXCEPT("Unexpected call to empty ring_buffer\n");
-   return 0;
-}
-
-template <class T>
 static timed_queue<T>* GetTQ(const GenericStatsEntry & entry, char * pdata)
 {
    if ( ! entry.off2 || ! (entry.units & IS_TIMED_QUEUE))

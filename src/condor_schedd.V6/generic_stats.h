@@ -122,7 +122,13 @@ public:
       return true;
    }
 
-   int Unexpected();
+   int Unexpected() {
+     #ifdef EXCEPT
+      EXCEPT("Unexpected call to empty ring_buffer\n");
+     #endif
+      return 0;
+   }
+
 
    // push a new latest item.
    T Push(T val) {
