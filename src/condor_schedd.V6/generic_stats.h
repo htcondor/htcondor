@@ -28,7 +28,7 @@
  #ifdef WIN32
   #define FIELDOFF(st,fld) FIELD_OFFSET(st, fld)
  #else
-  #define FIELDOFF(st,fld) ((long)(size_t)&(((type *)0)->fld))
+  #define FIELDOFF(st,fld) ((int)(size_t)&(((st *)0)->fld))
  #endif
  #define FIELDSIZ(st,fld) ((int)(sizeof(((st *)0)->fld)))
 #endif
@@ -87,7 +87,7 @@ public:
          // if there is an existing buffer copy items from it to the new buffer
          int cCopy = 0;
          if (pbuf) {
-            cCopy = min(cSize, cItems);
+            cCopy = cSize < cItems ? cSize : cItems;
             for (int ix = 0; ix < cCopy; ++ix) {
                p[ix] = (*this)[ix];
             }

@@ -170,7 +170,9 @@ void ScheddStatistics::Tick()
             }
          this->PrevUpdateTime = now - (delta % schedd_stats_window_quantum);
          }
-      this->RecentStatsWindowTime = min(this->RecentStatsWindowTime + now - this->StatsUpdateTime, this->RecentWindowMax);
+
+      time_t recent_window = (int)(this->RecentStatsWindowTime + now - this->StatsUpdateTime);
+      this->RecentStatsWindowTime = min(recent_window, (time_t)this->RecentWindowMax);
       this->StatsUpdateTime = now;
       }
 }
@@ -181,9 +183,9 @@ void ScheddStatistics::Accumulate(time_t now)
       {
       Tick();
       }
-   time_t tmin = now - this->RecentWindowMax;
 
    //schedd statistics doesn't have any timed_queues anymore.
+   //time_t tmin = now - this->RecentWindowMax;
    //generic_stats_AccumulateTQ(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char *)this, tmin);  
 }
 

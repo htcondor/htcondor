@@ -27,14 +27,11 @@
 // returns NULL if the entry does not have a timed_queue
 //
 
-int ring_buffer<int>::Unexpected()
+template <class T>
+int ring_buffer<T>::Unexpected()
 {
    EXCEPT("Unexpected call to empty ring_buffer\n");
-}
-
-int ring_buffer<time_t>::Unexpected()
-{
-   EXCEPT("Unexpected call to empty ring_buffer\n");
+   return 0;
 }
 
 template <class T>
@@ -187,8 +184,8 @@ void generic_stats_AccumulateTQ(const GenericStatsEntry * pTable, int cTable, ch
             Accumulate<int>(pTable[ii], pdata, tmin);
             break;
             }
-         case sizeof(time_t): {
-            Accumulate<time_t>(pTable[ii], pdata, tmin);
+         case sizeof(int64_t): {
+            Accumulate<int64_t>(pTable[ii], pdata, tmin);
             break;
             }
          }
@@ -211,8 +208,8 @@ void generic_stats_SetTQMax(const GenericStatsEntry * pTable, int cTable, char *
                pTQ->max_time(window);
                break;
                }
-            case sizeof(time_t): {
-               timed_queue<time_t>* pTQ = GetTQ<time_t>(pTable[ii], pdata);
+            case sizeof(int64_t): {
+               timed_queue<int64_t>* pTQ = GetTQ<int64_t>(pTable[ii], pdata);
                pTQ->max_time(window);
                break;
                }
@@ -236,8 +233,8 @@ void generic_stats_SetRBMax(const GenericStatsEntry * pTable, int cTable, char *
                prb->SetSize(cMax);
                break;
                }
-            case sizeof(time_t): {
-               ring_buffer<time_t>* prb = GetRB<time_t>(pTable[ii], pdata);
+            case sizeof(int64_t): {
+               ring_buffer<int64_t>* prb = GetRB<int64_t>(pTable[ii], pdata);
                prb->SetSize(cMax);
                break;
                }
@@ -281,8 +278,8 @@ void generic_stats_ClearRecent(const GenericStatsEntry * pTable, int cTable, cha
             ClearRecent<int>(pTable[ii], pdata);
             break;
             }
-         case sizeof(time_t): {
-            ClearRecent<time_t>(pTable[ii], pdata);
+         case sizeof(int64_t): {
+            ClearRecent<int64_t>(pTable[ii], pdata);
             break;
             }
          }
@@ -306,8 +303,8 @@ void generic_stats_AdvanceRecent(const GenericStatsEntry * pTable, int cTable, c
                AdvanceRecent<int>(pTable[ii], pdata, cAdvance);
                break;
                }
-            case sizeof(time_t): {
-               AdvanceRecent<time_t>(pTable[ii], pdata, cAdvance);
+            case sizeof(int64_t): {
+               AdvanceRecent<int64_t>(pTable[ii], pdata, cAdvance);
                break;
                }
             }
