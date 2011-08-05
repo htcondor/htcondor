@@ -57,6 +57,15 @@ suppressed, and in other cases not.  Now, the default
 are explicit references to \Attr{RequestMemory} in the job
 requirements.
 
+% gittrac #2340
+\item Fixed a bug that can cause Condor to crash when using LCMAPS with
+GSI authentication.
+
+% gittrac #2357
+\item Fixed a bug that caused the \Condor{collector} daemon to crash
+upon receiving a CCB command when \MacroNI{ENABLE\_CCB\_SERVER} was
+changed from true to false without restarting the daemon.
+
 \end{itemize}
 
 \noindent Known Bugs:

@@ -82,6 +82,20 @@ CCBServer::CCBServer():
 CCBServer::~CCBServer()
 {
 	CloseReconnectFile();
+	if( m_registered_handlers ) {
+		daemonCore->Cancel_Command(CCB_REGISTER);
+		daemonCore->Cancel_Command(CCB_REQUEST);
+		m_registered_handlers = false;
+	}
+	if( m_polling_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_polling_timer );
+		m_polling_timer = -1;
+	}
+	CCBTarget *target=NULL;
+	m_targets.startIterations();
+	while( m_targets.iterate(target) ) {
+		RemoveTarget(target);
+	}
 }
 
 void
