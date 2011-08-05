@@ -179,10 +179,10 @@ typedef struct _generic_stats_entry {
    int    off2;  // if non-zero, indicates that this value is baked down from a timed_queue.
    } GenericStatsEntry;
 
-#define GENERIC_STATS_ENTRY(st,name, as) #name, as, FIELDOFF(st, name), FIELDSIZ(st, name), 0
-#define GENERIC_STATS_ENTRY_TQ(st,name,as) "Recent" #name, as | IS_TIMED_QUEUE, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.tq)
-#define GENERIC_STATS_ENTRY_RECENT(st,name,as) "Recent" #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf)
-#define GENERIC_STATS_ENTRY_PEAK(st,name,as) #name "Peak" , as, FIELDOFF(st, name.largest), FIELDSIZ(st, name.largest), 0
+#define GENERIC_STATS_ENTRY(st,name, as) { #name, as, FIELDOFF(st, name), FIELDSIZ(st, name), 0}
+#define GENERIC_STATS_ENTRY_TQ(st,name,as) { "Recent" #name, as | IS_TIMED_QUEUE, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.tq) }
+#define GENERIC_STATS_ENTRY_RECENT(st,name,as) { "Recent" #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf) }
+#define GENERIC_STATS_ENTRY_PEAK(st,name,as) { #name "Peak" , as, FIELDOFF(st, name.largest), FIELDSIZ(st, name.largest), 0 }
 
 // These enums are for the units field of GenericStatEntry
 enum {
