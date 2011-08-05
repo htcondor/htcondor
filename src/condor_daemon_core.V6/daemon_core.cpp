@@ -4459,6 +4459,15 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		if (!reqFound) {
 			// we have no idea what command they want to send.
 			// too bad, bye bye
+
+			dprintf(D_ALWAYS,
+					"Received %s command (%d) (%s) from %s %s\n",
+					(is_tcp) ? "TCP" : "UDP",
+					tmp_cmd,
+					"UNREGISTERED COMMAND!",
+					user.Value(),
+					sock->peer_description());
+
 			result = FALSE;
 			goto finalize;
 		}
