@@ -1979,6 +1979,9 @@ main(int argc, char **argv)
 
 	for (;;) {
 		globus_poll_blocking();
+#if defined(HAVE_PTHREAD)
+		sleep(1);
+#endif
 	}
 
 	main_deactivate_globus();
