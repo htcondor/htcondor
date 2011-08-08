@@ -639,21 +639,23 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
  ********************************************************/
 int	DaemonCore::Register_Command(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip, Service* s,
-				DCpermission perm, int dprintf_flag, bool force_authentication)
+				DCpermission perm, int dprintf_flag, bool force_authentication,
+				int wait_for_payload)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, s,
-							 perm, dprintf_flag, FALSE, force_authentication) );
+							 perm, dprintf_flag, FALSE, force_authentication,
+							 wait_for_payload) );
 }
 
 int	DaemonCore::Register_Command(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
 				Service* s, DCpermission perm, int dprintf_flag,
-				bool force_authentication)
+				bool force_authentication, int wait_for_payload)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
 							 handler_descrip, s, perm, dprintf_flag, TRUE,
-							 force_authentication) );
+							 force_authentication, wait_for_payload) );
 }
 
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
@@ -917,7 +919,8 @@ bool DaemonCore::GetTimerTimeslice( int id, Timeslice &timeslice )
 int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
-				int dprintf_flag, int is_cpp, bool force_authentication)
+				int dprintf_flag, int is_cpp, bool force_authentication,
+				int wait_for_payload)
 {
     int     i;		// hash value
     int     j;		// for linear probing
@@ -967,6 +970,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].service = s;
 	comTable[i].data_ptr = NULL;
 	comTable[i].dprintf_flag = dprintf_flag;
+	comTable[i].wait_for_payload = wait_for_payload;
 	free(comTable[i].command_descrip);
 	if ( command_descrip )
 		comTable[i].command_descrip = strdup(command_descrip);
@@ -3774,14 +3778,116 @@ DaemonCore::CommandNumToTableIndex(int cmd,int *cmd_index)
 	return false;
 }
 
+struct CallCommandHandlerInfo {
+	CallCommandHandlerInfo(int req,time_t deadline,float time_spent_on_sec):
+		m_req(req),
+		m_deadline(deadline),
+		m_time_spent_on_sec(time_spent_on_sec)
+	{
+		m_start_time.getTime();
+	}
+	int m_req;
+	time_t m_deadline;
+	float m_time_spent_on_sec;
+	UtcTime m_start_time;
+};
+
 int
-DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream)
+DaemonCore::HandleReqPayloadReady(Stream *stream)
+{
+		// The command payload has arrived or the deadline has
+		// expired.
+	int result = FALSE;
+	CallCommandHandlerInfo *callback_info = (CallCommandHandlerInfo *)GetDataPtr();
+	int req = callback_info->m_req;
+	time_t orig_deadline = callback_info->m_deadline;
+	float time_spent_on_sec = callback_info->m_time_spent_on_sec;
+	UtcTime now;
+	now.getTime();
+	float time_waiting_for_payload = now.difference(callback_info->m_start_time);
+
+	delete callback_info;
+
+	Cancel_Socket( stream );
+
+	int index = 0;
+	bool reqFound = CommandNumToTableIndex(req,&index);
+
+	if( !reqFound ) {
+		dprintf(D_ALWAYS,
+				"Command %d from %s is no longer recognized!\n",
+				req,stream->peer_description());
+		goto wrapup;
+	}
+
+	if( stream->deadline_expired() ) {
+		dprintf(D_ALWAYS,
+				"Deadline expired after %.3fs waiting for %s "
+				"to send payload for command %d %s.\n",
+				time_waiting_for_payload,stream->peer_description(),
+				req,comTable[index].command_descrip);
+		goto wrapup;
+	}
+
+	stream->set_deadline( orig_deadline );
+
+	result = CallCommandHandler(req,stream,false,false,time_spent_on_sec,time_waiting_for_payload);
+
+ wrapup:
+	if( result != KEEP_STREAM ) {
+		delete stream;
+		result = KEEP_STREAM;
+	}
+	return result;
+}
+
+int
+DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool check_payload,float time_spent_on_sec,float time_spent_waiting_for_payload)
 {
 	int result = FALSE;
 	int index = 0;
 	bool reqFound = CommandNumToTableIndex(req,&index);
 
 	if ( reqFound ) {
+
+		if( stream  && stream->type() == Stream::reli_sock && \
+			comTable[index].wait_for_payload > 0 && check_payload )
+		{
+			Sock *sock = (Sock *)stream;
+			if( !sock->readReady() ) {
+				if( sock->deadline_expired() ) {
+					dprintf(D_ALWAYS,"The payload has not arrived for command %d from %s, but the deadline has expired, so continuing to the command handler.\n",req,stream->peer_description());
+				}
+				else {
+					time_t old_deadline = sock->get_deadline();
+					sock->set_deadline_timeout(comTable[index].wait_for_payload);
+
+					char callback_desc[50];
+					snprintf(callback_desc,50,"Waiting for command %d payload",req);
+					int rc = Register_Socket(
+						stream,
+						callback_desc,
+						(SocketHandlercpp) &DaemonCore::HandleReqPayloadReady,
+						"DaemonCore::HandleReqPayloadReady",
+						this);
+					if( rc >= 0 ) {
+						CallCommandHandlerInfo *callback_info = new CallCommandHandlerInfo(req,old_deadline,time_spent_on_sec);
+						Register_DataPtr((void *)callback_info);
+						return KEEP_STREAM;
+					}
+
+					dprintf(D_ALWAYS,"Failed to register callback to wait for command %d payload from %s.\n",req,stream->peer_description());
+					sock->set_deadline( old_deadline );
+						// just call the command handler
+				}
+			}
+		}
+
+		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d)\n", comTable[index].handler_descrip, inServiceCommandSocket_flag);
+
+		UtcTime handler_start_time;
+		handler_start_time.getTime();
+
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
 
@@ -3797,6 +3903,13 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream)
 
 		// clear curr_dataptr
 		curr_dataptr = NULL;
+
+		UtcTime handler_stop_time;
+		handler_stop_time.getTime();
+		float handler_time = handler_stop_time.difference(&handler_start_time);
+
+		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs, payload: %.3fs)\n", comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
+
 	}
 
 	if ( delete_stream && result != KEEP_STREAM ) {
@@ -5209,20 +5322,11 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// Handlers should start out w/ parallel mode disabled by default
 		ScopedEnableParallel(false);
 
-		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d)\n", comTable[index].handler_descrip, inServiceCommandSocket_flag);
-
 		UtcTime handler_start_time;
 		handler_start_time.getTime();
-
-		result = CallCommandHandler(req,sock,false /*do not delete sock*/);
-
-		UtcTime handler_stop_time;
-		handler_stop_time.getTime();
-		float handler_time = handler_stop_time.difference(&handler_start_time);
 		float sec_time = handler_start_time.difference(&handle_req_start_time);
 
-		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs)\n", comTable[index].handler_descrip, handler_time, sec_time);
-
+		result = CallCommandHandler(req,sock,false /*do not delete sock*/,true /*do check for payload*/,sec_time,0);
 	}
 
 finalize:

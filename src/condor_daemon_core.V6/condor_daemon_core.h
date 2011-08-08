@@ -322,6 +322,10 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @param perm            Not_Yet_Documented
         @param dprintf_flag    Not_Yet_Documented
+		@param force_authentication This command _must_ be authenticated.
+        @param wait_for_payload Do a non-blocking select for read for this
+                                many seconds (0 means none) before calling
+                                command handler.
         @return Not_Yet_Documented
     */
     int Register_Command (int             command,
@@ -331,7 +335,8 @@ class DaemonCore : public Service
                           Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
                           int             dprintf_flag     = D_COMMAND,
-                          bool            force_authentication = false);
+                          bool            force_authentication = false,
+						  int             wait_for_payload = 0);
     
     /** Not_Yet_Documented
         @param command         Not_Yet_Documented
@@ -341,6 +346,10 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @param perm            Not_Yet_Documented
         @param dprintf_flag    Not_Yet_Documented
+		@param force_authentication This command _must_ be authenticated.
+        @param wait_for_payload Do a non-blocking select for read for this
+                                many seconds (0 means none) before calling
+                                command handler.
         @return Not_Yet_Documented
     */
     int Register_Command (int                command,
@@ -350,7 +359,9 @@ class DaemonCore : public Service
                           Service *          s,
                           DCpermission       perm             = ALLOW,
                           int                dprintf_flag     = D_COMMAND,
-                          bool               force_authentication = false);
+                          bool               force_authentication = false,
+						  int                wait_for_payload = 0);
+
     
     /** Not_Yet_Documented
         @param command Not_Yet_Documented
@@ -669,7 +680,7 @@ class DaemonCore : public Service
 		// returns the return code of the handler
 		// if delete_stream is true and the command handler does not return
 		// KEEP_STREAM, the stream is deleted
-	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true);
+	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true,bool check_payload=true,float time_spent_on_sec=0,float time_spent_waiting_for_payload=0);
 
 
 	/**
@@ -1441,6 +1452,7 @@ class DaemonCore : public Service
 	int HandleReq(Stream *insock, Stream* accepted_sock=NULL);
 	int HandleReqSocketTimerHandler();
 	int HandleReqSocketHandler(Stream *stream);
+	int HandleReqPayloadReady(Stream *stream);
     int HandleSig(int command, int sig);
 
 	bool RegisterSocketForHandleReq(Stream *stream);
@@ -1461,7 +1473,8 @@ class DaemonCore : public Service
                          DCpermission perm,
                          int dprintf_flag,
                          int is_cpp,
-                         bool force_authentication);
+                         bool force_authentication,
+						 int wait_for_payload);
 
     int Register_Signal(int sig,
                         const char *sig_descip,
@@ -1541,6 +1554,7 @@ class DaemonCore : public Service
         char*           handler_descrip;
         void*           data_ptr;
         int             dprintf_flag;
+		int             wait_for_payload;
     };
 
     void                DumpCommandTable(int, const char* = NULL);

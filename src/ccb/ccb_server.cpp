@@ -112,7 +112,10 @@ CCBServer::RegisterHandlers()
 		(CommandHandlercpp)&CCBServer::HandleRegistration,
 		"CCBServer::HandleRegistration",
 		this,
-		DAEMON );
+		DAEMON,
+		D_COMMAND,
+		false,
+		STANDARD_COMMAND_PAYLOAD_TIMEOUT);
 	ASSERT( rc >= 0 );
 
 	rc = daemonCore->Register_Command(
@@ -121,7 +124,10 @@ CCBServer::RegisterHandlers()
 		(CommandHandlercpp)&CCBServer::HandleRequest,
 		"CCBServer::HandleRequest",
 		this,
-		READ );
+		READ,
+		D_COMMAND,
+		false,
+		STANDARD_COMMAND_PAYLOAD_TIMEOUT);
 	ASSERT( rc >= 0 );
 
 }
@@ -240,6 +246,11 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	ReliSock *sock = (ReliSock *)stream;
 	ASSERT( cmd == CCB_REGISTER );
 
+		// Avoid lengthy blocking on communication with our peer.
+		// This command-handler should not get called until data
+		// is ready to read.
+	sock->timeout(1);
+
 	ClassAd msg;
 	sock->decode();
 	if( !msg.initFromStream( *sock ) || !sock->end_of_message() ) {
@@ -322,6 +333,11 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 {
 	ReliSock *sock = (ReliSock *)stream;
 	ASSERT( cmd == CCB_REQUEST );
+
+		// Avoid lengthy blocking on communication with our peer.
+		// This command-handler should not get called until data
+		// is ready to read.
+	sock->timeout(1);
 
 	ClassAd msg;
 	sock->decode();
