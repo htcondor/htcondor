@@ -49,9 +49,12 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
+#include "subsystem_info.h"
 
 State get_machine_state();
 
+DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL);
+extern void		_condor_set_debug_flags( const char *strflags );
 
 // Define this to check for memory leaks
 
@@ -113,6 +116,9 @@ main( int argc, char *argv[] )
     install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	// initialize the config settings
+	config(false,false,false);
+	
 		// Initialize things
 	MyName = argv[0];
 	myDistro->Init( argc, argv );
@@ -125,6 +131,8 @@ main( int argc, char *argv[] )
 		if( (*argv)[0] == '-' ) {
 			switch( (*argv)[1] ) {
 			
+			  case 'd':
+                Termlog = 1;
 			  case 'v':
 				VerboseFlag = TRUE;
 				break;
@@ -137,11 +145,6 @@ main( int argc, char *argv[] )
 				RmFlag = TRUE;
 				break;
 
-              case 'd':
-                  Termlog = 1;
-                  dprintf_config("TOOL");
-                  break;
-
 			  default:
 				usage();
 
@@ -150,7 +153,26 @@ main( int argc, char *argv[] )
 			usage();
 		}
 	}
-
+	
+	dprintf_config("TOOL");
+	if (VerboseFlag)
+	{
+		// always append D_FULLDEBUG locally when verbose.
+		// shouldn't matter if it already exists.
+		std::string szVerbose="D_FULLDEBUG";
+		char * pval = param("TOOL_DEBUG");
+		if( pval ) {
+			szVerbose+="|";
+			szVerbose+=pval;
+			free( pval );
+		}
+		_condor_set_debug_flags( szVerbose.c_str() );
+		
+	}
+	dprintf( D_ALWAYS, "********************************\n");
+	dprintf( D_ALWAYS, "STARTING: condor_preen\n");
+	dprintf( D_ALWAYS, "********************************\n");
+	
 		// Do the file checking
 	check_spool_dir();
 	check_execute_dir();
@@ -166,6 +188,10 @@ main( int argc, char *argv[] )
 		// Clean up
 	delete BadFiles;
 
+	dprintf( D_ALWAYS, "********************************\n");
+	dprintf( D_ALWAYS, "ENDING: condor_preen\n");
+	dprintf( D_ALWAYS, "********************************\n");
+	
 	return 0;
 }
 
