@@ -209,6 +209,9 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 
 		// init user log; hold on failure
+		// NOTE: job_updater must be initialized _before_ initUserLog(),
+		// in order to handle the case of the job going on hold as a
+		// result of failure in initUserLog().
 	initUserLog();
 
 		// change directory; hold on failure
@@ -826,6 +829,11 @@ void BaseShadow::initUserLog()
 	MyString logfilename;
 	int  use_xml;
 	bool result;
+
+		// we expect job_updater to already be initialized, in case we
+		// need to put the job on hold as a result of failure to open
+		// the log
+	ASSERT( job_updater );
 
 	if ( getPathToUserLog(jobAd, logfilename) ) {
 		result = uLog.initialize (owner.Value(), domain.Value(), logfilename.Value(), cluster, proc, 0, gjid);
