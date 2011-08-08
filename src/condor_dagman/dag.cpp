@@ -1524,8 +1524,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			if( job->HasPreSkip() && preskip_interrogator == job->GetPreSkip() ){
 				// The PRE script exited with a non-zero status, but
 				// because that status matches the PRE_SKIP value,
-				// we're skipping the node job (and POST script, if
-				// there is one) and considering the node successful.
+				// we're skipping the node job (But NOT the POST script) i
+				// and considering the node successful.
 				const char* s = job->GetDagFile();
 				debug_printf( DEBUG_NORMAL, "PRE_SKIP return "
 						"value %d indicates we are done with node %s, "
@@ -1535,7 +1535,14 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 				job->retval = 0; // Job _is_ successful!
 				_jobstateLog.WriteJobSuccessOrFailure( job );
-				TerminateJob( job, false, false );
+				if( job->_scriptPost != NULL ) {
+					_preRunNodeCount--;
+					job->retval = 0; // for safety on retries
+					RunPostScript( job, _postRun, WEXITSTATUS( status ) );
+					goto check_for_abort;	
+				} else {
+					TerminateJob( job, false, false );
+				}
 				goto pre_skip_fake_success;
 			}
 			// if script returned failure
@@ -1545,27 +1552,27 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
 					"PRE Script failed with status %d",
 					WEXITSTATUS(status) );
+			if( job->_scriptPre && job->_scriptPost ) {
+					// If no PRE script, this assignment does not make sense
+					// If no POST script, this is never used.
+				job->_pre_status = WEXITSTATUS( status );
+			}	
 			job->retval = WEXITSTATUS( status );
 		}
 
 		job->_Status = Job::STATUS_ERROR;
 		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
-		if( job->GetRetries() < job->GetRetryMax() ) {
-			RunPostScript( job, _postRun, WEXITSTATUS( status ) );
-			RestartNode( job, false );
-		} else {
-			RunPostScript( job, _postRun, WEXITSTATUS( status ) );
-			if( !_postRun || !job->_scriptPost ) {
-				++_numNodesFailed;
-				if( job->GetRetryMax() > 0 ) {
-					// add # of retries to error_text
-					char *tmp = strnewp( job->error_text );
-					snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-							"%s (after %d node retries)", tmp,
-							job->GetRetries() );
-					delete [] tmp;   
-				}
+		RunPostScript( job, _postRun, WEXITSTATUS( status ) );
+		if( job->GetRetries() >= job->GetRetryMax() ) {
+			++_numNodesFailed;
+			if( job->GetRetryMax() > 0 ) {
+				// add # of retries to error_text
+				char *tmp = strnewp( job->error_text );
+				snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+						"%s (after %d node retries)", tmp,
+						job->GetRetries() );
+				delete [] tmp;   
 			}
 		}
 	} else {
@@ -1573,6 +1580,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				"successfully.\n", job->GetJobName() );
 		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
+		job->_pre_status = 0;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( job, -job->_nodePriority );
@@ -1583,10 +1591,14 @@ pre_skip_fake_success:
 		_preRunNodeCount--;
 		job->retval = 0; // for safety on retries
 	}
+check_for_abort:
 	CheckForDagAbort(job, "PRE script");
 	// if dag abort happened, we never return here!
 	return true;
 }
+
+// This is the only way a POST script runs, unless we are
+// in recovery mode
 
 void Dag::RunPostScript( Job *job, bool ignore_status, int status )
 {
@@ -1597,14 +1609,20 @@ void Dag::RunPostScript( Job *job, bool ignore_status, int status )
 	// We are told to ignore the result of the PRE script
 	job->_Status = Job::STATUS_POSTRUN;
 	_postRunNodeCount++;
-	if( status != 0 ) {
-		if( ignore_status && job->HasPreSkip() && status == job->GetPreSkip() ) {
-			job->_scriptPost->_retValJob = 0;
+	if( job->_pre_status != Job::NO_PRE_VALUE ) {
+			// Should only get here if the PRE script failed
+		if( job->HasPreSkip() && job->_pre_status == job->GetPreSkip() ) {
+				// We are triggering PRE_SKIP.
+				// The node is successful.
+				// The node job is not going to run
+				// POST script runs. Return value is 0 (success)
+			job->_scriptPost->_retValJob = job->retval = 0;
 		} else {
-			job->_scriptPost->_retValJob = status;
+			job->_scriptPost->_retValJob = job->_pre_status;
+			job->retval = job->_pre_status;
 		}
 	} else {
-		job->_scriptPost->_retValJob = 0;
+		job->_scriptPost->_retValJob = job->retval;
 	}
 	(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 			_nfsLogIsError, _recovery, _defaultNodeLog );
@@ -1635,6 +1653,18 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 	else {
 		e.normal = true;
 		e.returnValue = WEXITSTATUS( status );
+		if( e.returnValue == 0 ) { // Check PRE script return status
+			if( job->_pre_status != Job::NO_PRE_VALUE && job->_pre_status != 0 ) {
+					// PRE script failed (maybe)
+				if( job->HasPreSkip() ) {
+					if( job->_pre_status != job->GetPreSkip() ) {
+						e.returnValue = job->_pre_status;	
+					}
+				} else {
+					e.returnValue = job->_pre_status;	
+				}
+			}
+		}
 	}
 
 		// Note: after 6.7.15 is released, we'll be disabling the old-style
@@ -3612,8 +3642,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 				"of submit failure(s)\n", node->GetJobName() );
 		node->retries = node->GetRetryMax();
 		RunPostScript( node, true, DAG_ERROR_CONDOR_SUBMIT_FAILED );
-		if( !node->_scriptPost )
+		if( !node->_scriptPost ) {
 			node->_Status = Job::STATUS_ERROR;
+		}
 		_numNodesFailed++;
 	} else {
 		// We have more submit attempts left, put this node back into the
