@@ -23,70 +23,6 @@
 #include "timed_queue.h"
 #include "generic_stats.h"
 
-// get the timed_queue member of a generic statistics entry. 
-// returns NULL if the entry does not have a timed_queue
-//
-
-template <class T>
-static timed_queue<T>* GetTQ(const GenericStatsEntry & entry, char * pdata)
-{
-   if ( ! entry.off2 || ! (entry.units & IS_TIMED_QUEUE))
-      return NULL;
-   return (timed_queue<T>*)(pdata + entry.off2);
-}
-
-template <class T>
-static ring_buffer<T>* GetRB(const GenericStatsEntry & entry, char * pdata)
-{
-   if ( ! entry.off2 || ! (entry.units & IS_RINGBUF))
-      return NULL;
-   return (ring_buffer<T>*)(pdata + entry.off2);
-}
-
-template <class T>
-static T Accumulate(const GenericStatsEntry & entry, char * pdata, time_t first)
-{
-   if ( ! entry.off2)
-      return T(-1);
-
-   T ret(0);
-   T& recent = *(T*)(pdata + entry.off);
-
-   if (entry.units & IS_TIMED_QUEUE) {
-      timed_queue<T>& tq = *(timed_queue<T>*)(pdata + entry.off2);
-
-      tq.trim_time(first);
-
-      for (typename timed_queue<T>::iterator jj(tq.begin());  jj != tq.end();  ++jj) {
-         ret += jj->second;
-      }
-   } else if (entry.units & IS_RINGBUF) {
-      // we don't really need to Accumulate for ring buffers.
-      ret = recent;
-   }
-
-   recent = ret;
-   return ret;   
-
-}
-
-template <class T>
-static void ClearRecent(const GenericStatsEntry & entry, char * pdata)
-{
-   if ( ! entry.off2)
-      return;
-
-   T& recent = *(T*)(pdata + entry.off);
-   if (entry.units & IS_TIMED_QUEUE) {
-      timed_queue<T>& tq = *(timed_queue<T>*)(pdata + entry.off2);
-      tq.clear();
-   } else if (entry.units & IS_RINGBUF) {
-      ring_buffer<T>& rb = *(ring_buffer<T>*)(pdata + entry.off2);
-      rb.Clear();
-   }
-   recent = 0;
-}
-
 
 // advance the ring buffer and update the recent accumulator, this is called
 // each xxxx_stats_window_quantum of seconds, in case an Advance is skipped, 
@@ -164,6 +100,40 @@ void generic_stats_DeleteInClassAd(ClassAd & ad, const GenericStatsEntry * pTabl
       }
 }
 
+// Accumulate (sum) the Recent data buffer and use that to set the .recent field
+// for a generic statistics entry.  Note that only timed_queues need to be
+// Accumulated, ring_buffers keep track of accumulated values automatically.
+//
+template <class T>
+static T Accumulate(const GenericStatsEntry & entry, char * pdata, time_t first)
+{
+   if ( ! entry.off2)
+      return T(-1);
+
+   T ret(0);
+   T& recent = *(T*)(pdata + entry.off);
+
+   if (entry.units & IS_TIMED_QUEUE) {
+      timed_queue<T>& tq = *(timed_queue<T>*)(pdata + entry.off2);
+
+      tq.trim_time(first);
+
+      for (typename timed_queue<T>::iterator jj(tq.begin());  jj != tq.end();  ++jj) {
+         ret += jj->second;
+      }
+   } else if (entry.units & IS_RINGBUF) {
+      // we don't really need to Accumulate for ring buffers.
+      ret = recent;
+   }
+
+   recent = ret;
+   return ret;   
+
+}
+
+// Accumulate all of the timed_queue buffers and update their corresponding .recent fields
+// for the given set of statistics data.
+//
 void generic_stats_AccumulateTQ(const GenericStatsEntry * pTable, int cTable, char * pdata, time_t tmin)
 {
    for (int ii = 0; ii < cTable; ++ii)
@@ -183,6 +153,17 @@ void generic_stats_AccumulateTQ(const GenericStatsEntry * pTable, int cTable, ch
             }
          }
       }
+}
+
+// get the timed_queue member of a generic statistics entry. 
+// returns NULL if the entry does not have a timed_queue
+//
+template <class T>
+static timed_queue<T>* GetTQ(const GenericStatsEntry & entry, char * pdata)
+{
+   if ( ! entry.off2 || ! (entry.units & IS_TIMED_QUEUE))
+      return NULL;
+   return (timed_queue<T>*)(pdata + entry.off2);
 }
 
 void generic_stats_SetTQMax(const GenericStatsEntry * pTable, int cTable, char * pdata, int window)
@@ -211,6 +192,19 @@ void generic_stats_SetTQMax(const GenericStatsEntry * pTable, int cTable, char *
       }
 }
 
+// get the ring_buffer member of a generic statistics entry. 
+// returns NULL if the entry does not have a ring_buffer
+//
+template <class T>
+static ring_buffer<T>* GetRB(const GenericStatsEntry & entry, char * pdata)
+{
+   if ( ! entry.off2 || ! (entry.units & IS_RINGBUF))
+      return NULL;
+   return (ring_buffer<T>*)(pdata + entry.off2);
+}
+
+// set the size of the ring_buffers used to store Recent data for statistics entries.
+//
 void generic_stats_SetRBMax(const GenericStatsEntry * pTable, int cTable, char * pdata, int cMax)
 {
    for (int ii = 0; ii < cTable; ++ii)
@@ -236,6 +230,29 @@ void generic_stats_SetRBMax(const GenericStatsEntry * pTable, int cTable, char *
       }
 }
 
+// clear the Recent data for a statistics entry. works with timed_queue
+// and ring_buffer style Recent data. this does not free the ring_buffer
+//
+template <class T>
+static void ClearRecent(const GenericStatsEntry & entry, char * pdata)
+{
+   if ( ! entry.off2)
+      return;
+
+   T& recent = *(T*)(pdata + entry.off);
+   if (entry.units & IS_TIMED_QUEUE) {
+      timed_queue<T>& tq = *(timed_queue<T>*)(pdata + entry.off2);
+      tq.clear();
+   } else if (entry.units & IS_RINGBUF) {
+      ring_buffer<T>& rb = *(ring_buffer<T>*)(pdata + entry.off2);
+      rb.Clear();
+   }
+   recent = 0;
+}
+
+// clear all Recent data for a set of statistics. works with timed_queue
+// and ring_buffer style Recent data.  this does not free the ring_buffer
+//
 void generic_stats_ClearAll(const GenericStatsEntry * pTable, int cTable, char * pdata)
 {
    for (int ii = 0; ii < cTable; ++ii)
@@ -258,6 +275,9 @@ void generic_stats_ClearAll(const GenericStatsEntry * pTable, int cTable, char *
       }
 }
 
+// throw away all Recent (ring_buffer) data.  Note that this does not free or resize
+// the ring buffers.
+//
 void generic_stats_ClearRecent(const GenericStatsEntry * pTable, int cTable, char * pdata)
 {
    for (int ii = 0; ii < cTable; ++ii)

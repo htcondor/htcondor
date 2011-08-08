@@ -93,6 +93,11 @@ static const GenericStatsEntry ScheddStatsTable[] = {
    SCHEDD_STATS_ENTRY_RECENT(ShadowsReconnections,      AS_COUNT),
 
 };
+
+#ifndef NUMELMS
+ #define NUMELMS(aa) (sizeof(aa)/sizeof((aa)[0]))
+#endif
+
 static const int ScheddStatsEntryCount = NUMELMS(ScheddStatsTable);
 
 void generic_stats_SetWindowSize(const GenericStatsEntry * pTable, int cTable, char * pdata, int window);
@@ -177,6 +182,9 @@ void ScheddStatistics::Tick()
       }
 }
 
+// accumulate the values of timed_queue fields into their corresponding .recent field.
+//
+/* 
 void ScheddStatistics::Accumulate(time_t now)
 {
    if (this->StatsUpdateTime != now)
@@ -184,10 +192,11 @@ void ScheddStatistics::Accumulate(time_t now)
       Tick();
       }
 
-   //schedd statistics doesn't have any timed_queues anymore.
-   //time_t tmin = now - this->RecentWindowMax;
-   //generic_stats_AccumulateTQ(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char *)this, tmin);  
+   schedd statistics doesn't have any timed_queues anymore.
+   time_t tmin = now - this->RecentWindowMax;
+   generic_stats_AccumulateTQ(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char *)this, tmin);  
 }
+*/
 
 void ScheddStatistics::Publish(ClassAd & ad) const
 {
@@ -199,7 +208,7 @@ void ScheddStatistics::Unpublish(ClassAd & ad) const
    generic_stats_DeleteInClassAd(ad, ScheddStatsTable, NUMELMS(ScheddStatsTable), (const char *)this);  
 }
 
-void schedd_stat_unit_test (ClassAd * pad)
+void schedd_stats_unit_test (ClassAd * pad)
 {
    ScheddStatistics stats;
    stats.Init();
@@ -207,17 +216,19 @@ void schedd_stat_unit_test (ClassAd * pad)
    int stat_window = 300; //param_integer("WINDOWED_STAT_WIDTH", 300, 1, INT_MAX);
    stats.SetWindowSize(stat_window);
 
-
-   time_t now = time(NULL);
+   stats.Tick();
    stats.JobsStarted += 1;
    stats.JobsCompleted += 1;
 
    stats.ShadowsRunning = 32;
+
+   stats.Tick();
+
    stats.ShadowsRunning = 30;
+   stats.JobsStarted += 1;
+   stats.JobsCompleted += 1;
 
-   stats.StatsUpdateTime = now;
-
-   stats.Accumulate(now);
+   // stats.Accumulate();
 
    if (pad) {
       stats.Publish(*pad);

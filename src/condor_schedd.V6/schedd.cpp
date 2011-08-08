@@ -1053,12 +1053,9 @@ Scheduler::count_jobs()
     time_t curTime = time(NULL);
     stats.Tick();
     stats.JobsSubmitted = GetJobQueuedCount();
-    //int jobsQueued = GetJobQueuedCount();
-    //int jobsQueuedNew = stats.JobsSubmitted - jobsQueued;
-    //stats.JobsSubmitted = jobsQueued;
-    //update(stats.RecentJobsSubmittedTQ, jobsQueuedNew, curTime);
 
-    stats.Accumulate(curTime);
+    // we don't need to do this unless we have timed_queue fields.
+    //stats.Accumulate(curTime);
     stats.Publish(*m_ad);
    #endif // TICKET_2006
 

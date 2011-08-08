@@ -27,6 +27,11 @@
 // in the window ring_buffer.
 const int schedd_stats_window_quantum = 60;
 
+// this struct is used to contain statistics values for the Scheduler class.
+// the values are published using the names as shown here. so for instance
+// the ClassAd that we publish into will have "JobsSubmitted=32" if the
+// JobsSubmitted field below contains the value 32. 
+//
 typedef struct ScheddStatistics {
 
    time_t StatsUpdateTime;       // last time that statistics were last updated. (a freshness time)
@@ -76,7 +81,7 @@ typedef struct ScheddStatistics {
    void Clear();
    void Tick(); // call this when time may have changed to update StatsUpdateTime, etc.
    void SetWindowSize(int window);
-   void Accumulate(time_t now);
+   //void Accumulate(time_t now);
    void Publish(ClassAd & ad) const;
    void Unpublish(ClassAd & ad) const;
 

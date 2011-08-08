@@ -20,19 +20,151 @@
 #ifndef _GENERIC_STATS_H
 #define _GENERIC_STATS_H
 
-#ifndef NUMELMS
- #define NUMELMS(aa) (sizeof(aa)/sizeof((aa)[0]))
-#endif
+// To use generic statistics:
+//   * create a structure or class to hold your counters, 
+//     * use stats_entry_abs    for counters that are absolute values (i.e. number of jobs running)
+//     * use stats_entry_recent for counters that always increase (i.e. number of jobs that have finished)
+//   * use Add() or Set() methods of the counters to update the counters in your code
+//       these methods will automatically keep track of total value, as well as windowed
+//       values and/or peak values. 
+//   * create a const array of GenericStatsEntry structures, one for each Attribute
+//   * use generic_stats_PublishToClassAd passing the GenericStatsEntry and also your counters class 
+//     if you use the GENERIC_STATS_ENTRY macros to initialize the GenericStatsEntry structures,
+//     counters will be published as ClassAd attributes using their field names.
+//
+// For example:
+//
+// typedef struct MyStats {
+//     time_t                  UpdateTime                     
+//     stats_entry_abs<int>    JobsRunning;  // keep track of Peak value as well as absolete value
+//     stats_entry_recent<int> JobsRun;      // keep track of Recent values as well as accumulated value
+//
+//     void Publish(ClassAd & ad) const;
+// } MyStats;
+// 
+// static const GenericStatsEntry MyStatsTable[] = {
+//   GENERIC_STATS_ENTRY(MyStats, UpdateTime,     AS_ABSTIME), // publish "UpdateTime"
+//   GENERIC_STATS_ENTRY(MyStats, JobsRunning,      AS_COUNT), // publish "JobsRunning"
+//   GENERIC_STATS_ENTRY_PEAK(MyStats, JobsRunning, AS_COUNT), // publish "JobsRunningPeak" from JobsRunning
+//   GENERIC_STATS_ENTRY(MyStats, JobsRun,          AS_COUNT), // publish "JobsRun"
+//   GENERIC_STATS_ENTRY_RECENT(MyStats, JobsRun,   AS_COUNT), // publish "RecentJobsRun" from JobsRun
+//   };
+//
+// void MyStats::Publish(ClassAd & ad) const
+// {
+//    generic_stats_PublishToClassAd(ad, MyStatsTable, COUNTOF(MyStatsTable), (const char *)this);
+// }
+//
+// include an instance of MyStats in the class to be measured
+// 
+//  class MyClass {
+//      ...
+//      MyStats stats;
+//      ...
+//      void MyMethod() {
+//          stats.UpdateTime = time(NULL);
+//
+//           // this to update the absolute jobs running counter
+//          stats.JobsRunning.Set(jobs_running);
+//           // or this
+//          stats.JobsRunning = jobs_running; 
+//
+//           // this to increment the jobs that have run counter
+//          stats.JobsRun.Add(1);
+//           // or this 
+//          stats.JobsRun += 1;
+//
+//      }
+//
+//      void PublishMyStats(ClassAd & ad) const {
+//          stats.Publish(ad);
+//      }
+//  };
+//    
+//
 
-#ifndef FIELDOFF
- #ifdef WIN32
-  #define FIELDOFF(st,fld) FIELD_OFFSET(st, fld)
- #else
-  #define FIELDOFF(st,fld) ((int)(size_t)&(((st *)0)->fld))
- #endif
- #define FIELDSIZ(st,fld) ((int)(sizeof(((st *)0)->fld)))
-#endif
+// this structure is used to describe one field of a statistics structure
+// so that we can generically update and publish
+//
+typedef struct _generic_stats_entry {
+   char * pattr;  // name to be used when publishing the value
+   int    units;  // field type, AS_COUNT, AS_ABSTIME, etc. plus IS_xx, IF_xx flags
+   int    off;    // offset to statistics data value from start of data set
+   int    siz;    // size of statistics data value
+   int    off2;  // if non-zero, indicates that this value is baked down from a timed_queue.
+   } GenericStatsEntry;
 
+// These enums are for the units field of GenericStatEntry
+enum {
+   AS_COUNT   = 0,  // an int or int64 count of something
+   AS_ABSTIME,      // a time_t absoute timestamp (i.e. from time(NULL))
+   AS_RELTIME,      // a time_t time duration
+
+   AS_TYPE_MASK   = 0x00FF, // mask the units field with this to get AS_xxx 
+
+   // values above AS_TYPE_MASK are flags
+   //
+   IS_HISTOGRAM   = 0x0100, // value is a histogram
+   IS_TIMED_QUEUE = 0x1000, // recent value is derived from a timed_queue
+   IS_RINGBUF     = 0x2000, // recent value is derived from a ring_buffer
+
+   IF_NONZERO    = 0x10000, // only publish non-zero values.
+   IF_NEVER      = 0x20000, // set this flag to disable publishing of the item.
+   IF_PUBMASK    = IF_NEVER | IF_NONZERO, // flags that affect publication
+   };
+
+// publish items into a old-style ClassAd
+void generic_stats_PublishToClassAd(ClassAd & ad, const GenericStatsEntry * pTable, int cTable, const char * pdata);
+void generic_stats_DeleteInClassAd(ClassAd & ad, const GenericStatsEntry * pTable, int cTable, const char * pdata);
+
+// reset all counters to 0, including Recent buffers.
+void generic_stats_ClearAll(const GenericStatsEntry * pTable, int cTable, char * pdata);
+// clear the recent buffers
+void generic_stats_ClearRecent(const GenericStatsEntry * pTable, int cTable, char * pdata);
+
+// set the window size, and accumulate IS_TIMED_QUEUE entries from generic stats.
+void generic_stats_SetTQMax(const GenericStatsEntry * pTable, int cTable, char * pdata, int window);
+void generic_stats_AccumulateTQ(const GenericStatsEntry * pTable, int cTable, char * pdata, time_t tmin);
+
+// set the ring buffer size for IS_RINGBUF type generic stats. 
+void generic_stats_SetRBMax(const GenericStatsEntry * pTable, int cTable, char * pdata, int cMax);
+
+// each time the time quantum has passed, we wan to Advance the recent buffers
+void generic_stats_AdvanceRecent(const GenericStatsEntry * pTable, int cTable, char * pdata, int cAdvance);
+
+// Generic class for a ring buffer.  
+// 
+// A ring buffer does not grow except via the SetSize() method.
+// Push() advances the location of the head through the buffer until 
+// it gets to the last element at which point it wraps around to the first element.  
+// 
+// Once the size of the buffer is set, buffer entries can be accessed with the [] operator
+// where [0] accesses the current entry, and [-1] accesses the last entry. 
+//
+// the Add() method is used to add to the head element, it does not advance through the buffer.
+//
+// So after SetSize(6) we have 
+//
+//   pbuf:[a][b][c][d][e][f]
+//         ^              ^
+//         head           tail
+//   this[0] returns a
+//
+// After Add(2) we have
+//
+//   pbuf:[a+2][b][c][d][e][f]
+//         ^                ^
+//         head             tail
+//   this[0] returns a+2
+// 
+// After Advance() or Push(0) we have
+//
+//   pbuf:[a+2][0][c][d][e][f]
+//         ^    ^
+//         tail head
+//   this[0] returns 0
+// 
+//
 template <class T> class ring_buffer {
 public:
    ring_buffer() : cMax(0), cAlloc(0), ixFirst(0), cItems(0), pbuf(0) {};
@@ -45,7 +177,7 @@ public:
 
    T& operator[](int ix) { 
       if ( ! pbuf || ! cMax) return pbuf[0];
-      return pbuf[ix % cMax];
+      return pbuf[(ix+cMax) % cMax];
    }
 
    int Length() const { return cItems; } 
@@ -174,61 +306,6 @@ public:
    }
 };
 
-// this structure is used to describe one field of a statistics structure
-// so that we can generically update and publish
-//
-typedef struct _generic_stats_entry {
-   char * pattr;  // name to be used when publishing the value
-   int    units;  // field type, AS_COUNT, AS_ABSTIME, etc.
-   int    off;    // offset to statistics data value from start of data set
-   int    siz;    // size of statistics data value
-   int    off2;  // if non-zero, indicates that this value is baked down from a timed_queue.
-   } GenericStatsEntry;
-
-#define GENERIC_STATS_ENTRY(st,name, as) { #name, as, FIELDOFF(st, name), FIELDSIZ(st, name), 0}
-#define GENERIC_STATS_ENTRY_TQ(st,name,as) { "Recent" #name, as | IS_TIMED_QUEUE, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.tq) }
-#define GENERIC_STATS_ENTRY_RECENT(st,name,as) { "Recent" #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf) }
-#define GENERIC_STATS_ENTRY_PEAK(st,name,as) { #name "Peak" , as, FIELDOFF(st, name.largest), FIELDSIZ(st, name.largest), 0 }
-
-// These enums are for the units field of GenericStatEntry
-enum {
-   AS_COUNT   = 0,  // an int count of something
-   AS_ABSTIME,      // a time_t absoute timestamp (i.e. from time(NULL))
-   AS_RELTIME,      // a time_t time duration
-
-   AS_TYPE_MASK   = 0x00FF,
-   IS_HISTOGRAM   = 0x0100, // value is a histogram
-
-   IS_TIMED_QUEUE = 0x1000, // recent value is derived from a timed_queue
-   IS_RINGBUF     = 0x2000, // recent value is derived from a ring_buffer
-
-   IF_NONZERO    = 0x10000, // only publish non-zero values.
-   IF_NEVER      = 0x20000, // set this flag to disable publishing of the item.
-   IF_PUBMASK    = IF_NEVER | IF_NONZERO,
-   };
-
-// publish items into a old-style ClassAd
-void generic_stats_PublishToClassAd(ClassAd & ad, const GenericStatsEntry * pTable, int cTable, const char * pdata);
-void generic_stats_DeleteInClassAd(ClassAd & ad, const GenericStatsEntry * pTable, int cTable, const char * pdata);
-
-// reset all counters to 0, including Recent buffers.
-void generic_stats_ClearAll(const GenericStatsEntry * pTable, int cTable, char * pdata);
-// clear the recent buffers
-void generic_stats_ClearRecent(const GenericStatsEntry * pTable, int cTable, char * pdata);
-
-// set the window size, and accumulate IS_TIMED_QUEUE entries from generic stats.
-void generic_stats_SetTQMax(const GenericStatsEntry * pTable, int cTable, char * pdata, int window);
-void generic_stats_AccumulateTQ(const GenericStatsEntry * pTable, int cTable, char * pdata, time_t tmin);
-
-// set the ring buffer size for IS_RINGBUF type generic stats. 
-void generic_stats_SetRBMax(const GenericStatsEntry * pTable, int cTable, char * pdata, int cMax);
-
-// each time the time quantum has passed, we wan to Advance the recent buffers
-void generic_stats_AdvanceRecent(const GenericStatsEntry * pTable, int cTable, char * pdata, int cAdvance);
-
-
-// stats_entry_xxx classes are used for statistics entries.
-//
 
 // use stats_entry_abs for entries that have an absolute value such as Number of jobs currently running.
 // this entry keeps track of the largest value as the value changes.
@@ -357,5 +434,20 @@ public:
    void SetWindowSize(int size) { tq.max_time(size); }
 };
 
+#ifndef FIELDOFF
+ #ifdef WIN32
+  #define FIELDOFF(st,fld) FIELD_OFFSET(st, fld)
+ #else
+  #define FIELDOFF(st,fld) ((int)(size_t)&(((st *)0)->fld))
+ #endif
+ #define FIELDSIZ(st,fld) ((int)(sizeof(((st *)0)->fld)))
+#endif
+
+// use these to help initialize arrays of GenericStatsEntry's
+//
+#define GENERIC_STATS_ENTRY(st,name, as) { #name, as, FIELDOFF(st, name), FIELDSIZ(st, name), 0}
+#define GENERIC_STATS_ENTRY_TQ(st,name,as) { "Recent" #name, as | IS_TIMED_QUEUE, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.tq) }
+#define GENERIC_STATS_ENTRY_RECENT(st,name,as) { "Recent" #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf) }
+#define GENERIC_STATS_ENTRY_PEAK(st,name,as) { #name "Peak" , as, FIELDOFF(st, name.largest), FIELDSIZ(st, name.largest), 0 }
 
 #endif /* _GENERIC_STATS_H */
