@@ -185,8 +185,10 @@ class Job {
 	void SetNoop( bool value ) { _noop = value; }
 	bool GetNoop( void ) { return _noop; }
 
-    Script * _scriptPre;
-    Script * _scriptPost;
+	Script * _scriptPre;
+	Script * _scriptPost;
+	int _pre_status;
+
 
     ///
     inline set<JobID_t> & GetQueueRef (const queue_t queue) {
@@ -415,7 +417,7 @@ class Job {
 
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
 	int GetPreSkip() const;
-
+	
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -489,7 +491,7 @@ class Job {
 		// (Note: we may need to track the hold state of each proc in a
 		// cluster separately to correctly deal with multi-proc clusters.)
 	int _jobProcsOnHold;
-
+	enum { NO_PRE_VALUE = -1 };
 private:
 
 		// Note: Init moved to private section because calling int more than
