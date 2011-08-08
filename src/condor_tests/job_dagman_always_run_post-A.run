@@ -26,7 +26,16 @@ $testdesc =  'Condor DAGman test for always running the POST script - scheduler 
 $testname = "job_dagman_always_run_post-A";
 $dagman_args = "-verbose";
 
-$outfile = "job_dagman_always_run_post-A.dag.dagman.out";
+#**************************************************************
+#
+# Job to test always running post.
+# PRE script is expected to fail
+# Node Job is not to run
+# POST script runs, and the node fails.
+#
+#**************************************************************
+
+$outfile = "$testname.dag.dagman.out";
 runcmd("rm -f $outfile");
 
 my $killedchosen = 0;
@@ -60,41 +69,56 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing and failure on completion\n",1);
 };
 
 $success = sub
 {
-	CondorTest::debug("executed successfully\n",1);
+	die("Node is expected to fail.\n");
+};
+
+$failure = sub 
+{
+	CondorTest::debug("Execution was a failure ... as expected\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
 	# A_A.out should not exist
 	$diditpass = 0 if (-e "A_A.out");
-	$canopen = open(OUT,"<$testname.dag.dagman.out");
+	$canopen = open(OUT,"<$outfile");
 	if( ! (defined $canopen)) {
-		CondorTest::debug("Could not open outfile<$testname.dag.dagman.out>:$!\n",1);
+		CondorTest::debug("Could not open outfile<$outfile>:$!\n",1);
 		$diditpass = 0;
 	}
-	my @outfile = <OUT>;
+	my @outfilelist = <OUT>;
+	close(OUT);
 	$passed_first = 0; # Let's be optimistic
 	$passed_second = 0;
-	foreach (@outfile) {
-		if(/PRE Script.+Job A_A failed/) {
+	foreach (@outfilelist) {
+		if(/PRE Script of Job A_A failed/) {
 			CondorTest::debug("Saw PRE script A_A fail correctly: $_\n",1);
 			$passed_first = 1;
 			last;
 		}
 	}
-	foreach (@outfile) {
-		if(/Running POST script.+A_A/) {
+	foreach (@outfilelist) {
+		if(/Running POST script of Node A_A/) {
 			CondorTest::debug("Saw POST script A_A run!\n",1);
 			$passed_second = 1;
 			last;
 		}
 	}
-	close(OUT);
+	foreach (@outfilelist) {
+		if(/PRE Script of Node A_A completed successfully/) {
+			CondorTest::debug("PRE script is expected to fail.\n");
+			$diditpass = 0;		
+		}
+		if(/Submitting Condor Node A_A job/){
+			CondorTest::debug("Condor Node A_A job should not be submitted.\n");
+			$diditpass = 0;		
+		}
+	}
 	if($passed_first != 1 || $passed_second != 1) {
-		CondorTest::debug("failed $testname.dag.dagman.out\n",1);
+		CondorTest::debug("failed $outfile\n",1);
 		$diditpass = 0;
 	}
 	if($diditpass == 0) {
@@ -102,6 +126,7 @@ $success = sub
 	}
 };
 
+CondorTest::RegisterExitedFailure( $testname, $failure);
 CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
