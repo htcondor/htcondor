@@ -20,7 +20,7 @@
 #ifndef _SCHEDD_STATS_H
 #define _SCHEDD_STATS_H
 
-#include "generic_stats.h"
+#include <generic_stats.h>
 
 // the windowed schedd statistics are quantized to the nearest N seconds
 // WINDOWED_STAT_WIDTH/schedd_stats_window_quantum is the number of slots
