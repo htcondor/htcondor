@@ -426,20 +426,15 @@ Scheduler::Scheduler() :
 	SchedUniverseJobsRunning = 0;
 	LocalUniverseJobsIdle = 0;
 	LocalUniverseJobsRunning = 0;
+   #ifdef TICKET_2006
     ShadowExceptionsCumulative = 0;
     JobsCompletedCumulative = 0;
     JobsExitedCumulative = 0;
     JobsStartedCumulative = 0;
     TimeToStartCumulative = 0;
     RunningTimeCumulative = 0;
-    LastJobsQueued = 0;
     LastUpdateTime = time(NULL);
-	LocalUnivExecuteDir = NULL;
-	ReservedSwap = 0;
-	SwapSpace = 0;
-	RecentlyWarnedMaxJobsRunning = true;
-	m_need_reschedule = false;
-	m_send_reschedule_timer = -1;
+    LastJobsQueued = 0;
 
     // This defines the universe of recognized exit codes, and initializes
     // lifetime cumulative counts.
@@ -460,6 +455,16 @@ Scheduler::Scheduler() :
     ExitCodesCumulative[JOB_SHOULD_REMOVE] = 0;
     ExitCodesCumulative[JOB_MISSED_DEFERRAL_TIME] = 0;
     ExitCodesCumulative[JOB_EXITED_AND_CLAIM_CLOSING] = 0;
+   #else
+    stats.Init();
+   #endif
+	LocalUnivExecuteDir = NULL;
+	ReservedSwap = 0;
+	SwapSpace = 0;
+	RecentlyWarnedMaxJobsRunning = true;
+	m_need_reschedule = false;
+	m_send_reschedule_timer = -1;
+
 
 
 		//
@@ -986,13 +991,15 @@ Scheduler::count_jobs()
 	m_ad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD,num_waiting_to_download);
 	m_ad->Assign(ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME,upload_wait_time);
 	m_ad->Assign(ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME,download_wait_time);
+
+   #ifdef TICKET_2006
+    // one last check for any newly-queued jobs
+    // this count in cumulative within the qmgmt package
     time_t curTime = time(NULL);
     int updateInterval = max(int(curTime - LastUpdateTime), int(1));
     LastUpdateTime = curTime;
     m_ad->Assign(ATTR_UPDATE_INTERVAL, updateInterval);
 
-    // one last check for any newly-queued jobs
-    // this count in cumulative within the qmgmt package
     int jobsQueued = GetJobQueuedCount();
     update(JobsSubmittedTQ, jobsQueued - LastJobsQueued, curTime);
     LastJobsQueued = jobsQueued;
@@ -1040,6 +1047,17 @@ Scheduler::count_jobs()
         int n = accumulate(jj->second, curTime);
         m_ad->Assign(aname.c_str(), n);
     }
+   #else // TICKET_2006
+    // one last check for any newly-queued jobs
+    // this count is cumulative within the qmgmt package
+    time_t curTime = time(NULL);
+    stats.Tick();
+    stats.JobsSubmitted = GetJobQueuedCount();
+
+    // we don't need to do this unless we have timed_queue fields.
+    //stats.Accumulate(curTime);
+    stats.Publish(*m_ad);
+   #endif // TICKET_2006
 
     daemonCore->publish(m_ad);
     daemonCore->monitor_data.ExportData(m_ad);
@@ -1110,6 +1128,7 @@ Scheduler::count_jobs()
 	m_ad->Delete (ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
 	m_ad->Delete (ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
 
+   #ifdef TICKET_2006
     m_ad->Delete(ATTR_JOBS_SUBMITTED_CUMULATIVE);
     m_ad->Delete(ATTR_JOBS_STARTED_CUMULATIVE);
     m_ad->Delete(ATTR_JOBS_COMPLETED_CUMULATIVE);
@@ -1138,6 +1157,9 @@ Scheduler::count_jobs()
         sprintf(tmp, "%s%03d", ATTR_EXIT_CODE, jj->first);
         m_ad->Delete(tmp);
     }
+   #else  // TICKET_2006
+    stats.Unpublish(*m_ad);
+   #endif // TICKET_2006
 
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
 	m_ad->InsertOrUpdate(tmp);
@@ -6663,6 +6685,11 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			 "(shadow pid = %d)\n", job_id->cluster, job_id->proc,
 			 mrec->description(), srec->pid );
 
+    time_t now = time(NULL);
+    stats.Tick();
+    stats.ShadowsStarted += 1;
+    stats.ShadowsRunning = numShadows;
+
 		// If this is a reconnect shadow, update the mrec with some
 		// important info.  This usually happens in StartJobs(), but
 		// in the case of reconnect, we don't go through that code. 
@@ -6845,6 +6872,8 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 
 	srec->pid = 0; 
 	add_shadow_rec( srec );
+    stats.Tick();
+    stats.ShadowsRunning = numShadows;
 
 		// expand $$ stuff and persist expansions so they can be
 		// retrieved on restart for reconnect
@@ -7729,7 +7758,8 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 {
 	dprintf( D_ALWAYS, "Starting add_shadow_birthdate(%d.%d)\n",
 			 cluster, proc );
-	int current_time = (int)time(NULL);
+    time_t now = time(NULL);
+	int current_time = (int)now;
 	int job_start_date = 0;
 	SetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE, current_time);
 	if (GetAttributeInt(cluster, proc,
@@ -7739,10 +7769,16 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
         
         int qdate = 0;
         GetAttributeInt(cluster, proc, ATTR_Q_DATE, &qdate);
+       #ifdef TICKET_2006
         scheduler.JobsStartedCumulative += 1;
         scheduler.TimeToStartCumulative += current_time - qdate;
         update(scheduler.TimeToStartTQ, current_time - qdate, current_time);
         update(scheduler.JobsStartedTQ, 1, current_time);
+       #else
+        scheduler.stats.Tick();
+        scheduler.stats.JobsStarted += 1;
+        scheduler.stats.JobsAccumTimeToStart += (current_time - qdate);
+       #endif
 	}
 
 	// If we're reconnecting, the old ATTR_JOB_CURRENT_START_DATE is still
@@ -8507,6 +8543,7 @@ Scheduler::clean_shadow_recs()
 			//			delete_shadow_rec( rec->pid );
 		}
 	}
+    stats.ShadowsRunning = numShadows;
 	dprintf( D_FULLDEBUG, "============ End clean_shadow_recs =============\n" );
 }
 
@@ -9215,6 +9252,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	}
 
     // update exit code statistics
+   #ifdef TICKET_2006
     int start_date = 0;
     GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_START_DATE, &start_date);
     time_t updateTime = time(NULL);
@@ -9232,6 +9270,12 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
     int jobsQueued = GetJobQueuedCount();
     update(JobsSubmittedTQ, jobsQueued - LastJobsQueued, updateTime);
     LastJobsQueued = jobsQueued;    
+   #else
+    time_t updateTime = time(NULL);
+    stats.Tick();
+    stats.JobsExited += 1;
+    stats.JobsSubmitted = GetJobQueuedCount();
+   #endif
 
 		// We get the name of the daemon that had a problem for 
 		// nice log messages...
@@ -9256,18 +9300,19 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	switch( exit_code ) {
 		case JOB_NO_MEM:
 			this->swap_space_exhausted();
+            stats.JobsShadowNoMemory += 1;
 
 		case JOB_EXEC_FAILED:
 				//
 				// The calling function will make sure that
 				// we don't try to start new jobs
 				//
+            stats.JobsExecFailed += 1;
 			break;
 
 		case JOB_CKPTED:
 		case JOB_NOT_CKPTED:
 				// no break, fall through and do the action
-
 		// case JOB_SHOULD_REQUEUE:
 				// we can't have the same value twice in our
 				// switch, so we can't really have a valid case
@@ -9277,6 +9322,11 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			if( srec != NULL && !srec->removed && srec->match ) {
 				DelMrec(srec->match);
 			}
+            switch (exit_code) {
+               case JOB_CKPTED:         stats.JobsCheckpointed += 1; break;
+               case JOB_SHOULD_REQUEUE: stats.JobsShouldRequeue += 1; break;
+               case JOB_NOT_STARTED:    stats.JobsNotStarted += 1; break;
+               }
 			break;
 
 		case JOB_SHADOW_USAGE:
@@ -9295,6 +9345,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			if ( srec != NULL ) {
 				srec->removed = true;
 			}
+            stats.JobsShouldRemove += 1;
 				// no break, fall through and do the action
 
 		case JOB_NO_CKPT_FILE:
@@ -9303,6 +9354,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			if ( q_status != HELD && q_status != IDLE ) {
 				set_job_status( job_id.cluster, job_id.proc, REMOVED );
 			}
+            stats.JobsKilled += 1;
 			break;
 
 		case JOB_EXITED_AND_CLAIM_CLOSING:
@@ -9311,16 +9363,30 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				srec->match->needs_release_claim = false;
 				DelMrec(srec->match);
 			}
+            stats.JobsExitedAndClaimClosing += 1;
 				// no break, fall through
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
+           #ifdef TICKET_2006
             JobsCompletedCumulative += 1;
             update(JobsCompletedTQ, 1, updateTime);
             RunningTimeCumulative += updateTime - start_date;
             update(RunningTimeTQ, updateTime - start_date, updateTime);
+           #else
+            {
+            stats.JobsExitedNormally += 1;
+            stats.JobsCompleted += 1;
+            int start_date = 0;
+            GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_START_DATE, &start_date);
+            stats.JobsAccumRunningTime += (updateTime - start_date);
+            }
+           #endif
 				// no break, fall through and do the action
 
 		case JOB_COREDUMPED:
+            if (JOB_COREDUMPED == exit_code) {
+               stats.JobsCoredumped += 1;
+            }
 				// If the job isn't being HELD, set it to COMPLETED
 			if ( q_status != HELD ) {
 				set_job_status( job_id.cluster, job_id.proc, COMPLETED ); 
@@ -9328,6 +9394,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			break;
 
 		case JOB_MISSED_DEFERRAL_TIME: {
+
 				//
 				// Super Hack! - Missed Deferral Time
 				// The job missed the time that it was suppose to
@@ -9339,7 +9406,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// that never started
 				// Andy Pavlo - 01.24.2006 - pavlo@cs.wisc.edu
 				//
-			MyString _error("\"Job missed deferred execution time\"");
+            MyString _error("\"Job missed deferred execution time\"");
 			if ( SetAttribute( job_id.cluster, job_id.proc,
 					  		  ATTR_HOLD_REASON, _error.Value() ) < 0 ) {
 				dprintf( D_ALWAYS, "WARNING: Failed to set %s to %s for "
@@ -9382,6 +9449,11 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				}
 			} // CronTab
 
+            if (JOB_MISSED_DEFERRAL_TIME == exit_code) {
+               stats.JobsMissedDeferralTime += 1;
+            } else {
+               stats.JobsShouldHold += 1;
+            }
 			break;
 		}
 
@@ -9389,6 +9461,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 			dprintf( D_ALWAYS,
 					 "ERROR: %s had fatal error writing its log file\n",
 					 daemon_name.Value() );
+            stats.JobsDebugLogError += 1;
 			// We don't want to break, we want to fall through 
 			// and treat this like a shadow exception for now.
 
@@ -9416,6 +9489,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// moved down below. We just set this flag to 
 				// make sure we hit it
 			reportException = true;
+            stats.JobsExitException += 1;
 			break;
 	} // SWITCH
 	
@@ -9424,8 +9498,13 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// above, but we might need to do this in other cases in
 		// the future
 	if (reportException && srec != NULL) {
+       #ifdef TICKET_2006
         ShadowExceptionsCumulative += 1;
         update(ShadowExceptionsTQ, 1, updateTime);
+       #else
+        // this is the same as JobsExitException, so we don't need it.
+        //stats.ShadowExceptions += 1;
+       #endif
 			// Record the shadow exception in the job ad.
 		int num_excepts = 0;
 		GetAttributeInt(job_id.cluster, job_id.proc,
@@ -9433,7 +9512,6 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		num_excepts++;
 		SetAttributeInt(job_id.cluster, job_id.proc,
 						ATTR_NUM_SHADOW_EXCEPTIONS, num_excepts, NONDURABLE);
-
 		if (!srec->removed && srec->match) {
 				// Record that we had an exception.  This function will
 				// relinquish the match if we get too many exceptions 
@@ -10433,6 +10511,7 @@ Scheduler::Init()
     // These are best done here in Init(), since the windows may change on reconfig, and
     // it does not result in total loss of data, only some data if reconfiguring to smaller
     // window, in which case it was because the user requested it.
+   #ifdef TICKET_2006
     int event_stat_window = param_integer("WINDOWED_STAT_WIDTH", 300, 1, INT_MAX);
     JobsSubmittedTQ.max_time(event_stat_window);
     JobsStartedTQ.max_time(event_stat_window);
@@ -10445,6 +10524,10 @@ Scheduler::Init()
         // Note, this also will create the entries, first time.
         ExitCodesTQ[jj->first].max_time(event_stat_window);
     }
+   #else
+    int event_stat_window = param_integer("WINDOWED_STAT_WIDTH", 300, 1, INT_MAX);
+    stats.SetWindowSize(event_stat_window);
+   #endif
 
 	first_time_in_init = false;
 }
@@ -13331,6 +13414,11 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	dprintf(D_ALWAYS,
 			"Shadow pid %d switching to job %d.%d.\n",
 			shadow_pid, new_job_id.cluster, new_job_id.proc );
+
+    time_t now = time(NULL);
+    stats.Tick();
+    stats.ShadowsRecycled += 1;
+    stats.ShadowsRunning = numShadows;
 
 		// the add/delete_shadow_rec() functions update the job
 		// ads, so we need to do that here
