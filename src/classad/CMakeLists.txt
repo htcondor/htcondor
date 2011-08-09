@@ -42,7 +42,7 @@ endif (HAVE_LIBDL)
 
 #####################################################################
 # treat like an external for others to use
-condor_pre_external( CLASSADS classads-7.7.0 "lib;include" "alwaysbuild")
+condor_pre_external( CLASSADS classads-7.7.1 "lib;include" "alwaysbuild")
 #####################################################################
 
 if (NOT WINDOWS)
