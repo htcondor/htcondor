@@ -39,8 +39,6 @@ int		Termlog = 0;
 extern int		DebugFlags;
 extern FILE		*DebugFPs[D_NUMLEVELS+1];
 extern std::vector<DebugFileInfo> *DebugLogs;
-extern off_t		MaxLog[D_NUMLEVELS+1];
-extern int 			MaxLogNum[D_NUMLEVELS+1];
 extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
 extern const char		*_condor_DebugFlagNames[];
@@ -106,12 +104,11 @@ dprintf_config( const char *subsys )
 	int debug_level;
 	FILE *debug_file_fp;
 	int log_open_default = TRUE;
-	std::vector<DebugFileInfo> *debugLogsLocal = DebugLogs;
+	std::vector<DebugFileInfo> *debugLogsOld = DebugLogs;
+	bool debug_zero = false;	//This indicates whether debug level zero has been initialized.
 	
-	if(debugLogsLocal == NULL)
-	{
-		debugLogsLocal = new std::vector<DebugFileInfo>();
-	}
+
+	DebugLogs = new std::vector<DebugFileInfo>(D_NUMLEVELS + 1);
 
 	/*  
 	**  We want to initialize this here so if we reconfig and the
@@ -157,7 +154,7 @@ dprintf_config( const char *subsys )
 	**	lock file (if it is specified).
 	*/
 	if( !( Termlog) ) {
-		std::vector<DebugFileInfo>::iterator it;
+		std::vector<DebugFileInfo>::iterator it;	//iterator indicating the file we got to.
 		for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
 			std::string logPath;
 			want_truncate = 0;
@@ -180,6 +177,7 @@ dprintf_config( const char *subsys )
 				// NEGOTIATOR_MATCH_LOG is necessary by default, but debug_level
 				// is not 0
 				char *logPathParam = NULL;
+				bool file_found = false;
 				if(debug_level == 0)
 				{
 					logPathParam = param(pname);
@@ -193,15 +191,10 @@ dprintf_config( const char *subsys )
 							EXCEPT("Unable to find LOG or SUBSYSTEM.\n");
 						}
 						
-						str = (char*)malloc(strlen(log) + strlen(lsubsys) + 5);
-						sprintf(str, "%s%c%sLog", log, DIR_DELIM_CHAR, lsubsys);
-						
-						DebugFile[debug_level] = str;
-						
-						logPath.insert(0, str);
+						sprintf(logPath, "%s%c%sLog", log, DIR_DELIM_CHAR, lsubsys);
+
 						free(log);
 						free(lsubsys);
-						free(str);
 					}
 					else {
 						logPath.insert(0, logPathParam);
@@ -217,25 +210,26 @@ dprintf_config( const char *subsys )
 					logPath.insert(0, logPathParam);
 				}
 
-				if(!debugLogsLocal->empty())
+				if(!DebugLogs->empty())
 				{
-					for(it = debugLogsLocal->begin(); it < debugLogsLocal->end(); it++)
+					for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 					{
-						if((*it).logPath != logPath)
+						if(it->logPath != logPath)
 						{
 							continue;
 						}
-						(*it).debugFlags |= debug_level;
+						it->debugFlags |= debug_level;
+						file_found = true;
 						break;
 					}
 				}
-				else
+				if(!file_found)
 				{
 					DebugFileInfo logFileInfo;
 					logFileInfo.debugFlags = debug_level;
 					logFileInfo.debugFP = NULL;
 					logFileInfo.logPath = logPath;
-					debugLogsLocal->push_back(logFileInfo);
+					it = DebugLogs->insert(DebugLogs->end(), logFileInfo);
 				}
 
 				if(logPathParam)
@@ -245,13 +239,15 @@ dprintf_config( const char *subsys )
 				}
 			}
 
-			if( debug_level == 0 && DebugFile[0] == NULL ) {
+			debug_zero = true;
+
+			if( debug_level == 0 && !debug_zero ) {
 				EXCEPT("No '%s' parameter specified.", pname);
-			} else if ( DebugFile[debug_level] != NULL ) {
+			} else if ( !logPath.empty() ) {
 
 				if (debug_level == 0 && first_time) {
 					struct stat stat_buf;
-					if ( stat( DebugFile[debug_level], &stat_buf ) >= 0 ) {
+					if ( stat( logPath.c_str(), &stat_buf ) >= 0 ) {
 						DebugLastMod = stat_buf.st_mtime > stat_buf.st_ctime ? stat_buf.st_mtime : stat_buf.st_ctime;
 					} else {
 						DebugLastMod = -errno;
@@ -296,18 +292,13 @@ dprintf_config( const char *subsys )
 					if (DebugContinueOnOpenFailure) {
 
 						// change the debug file to point to the NUL device.
-						static const char strDevNull[] = "NUL";//"\\\\.\\Device\\Null";
-						char * psz = (char*)malloc(sizeof(strDevNull));
-						strcpy(psz, strDevNull);
-						if (DebugFile[debug_level]) 
-							free(DebugFile[debug_level]);
-						DebugFile[debug_level] = psz;
+						it->logPath.insert(0, NULL_FILE);
 
 					} else
                    #endif
 					{
 					    EXCEPT("Cannot open log file '%s'",
-						       DebugFile[debug_level]);
+							logPath.c_str());
 					}
 				}
 
@@ -322,10 +313,10 @@ dprintf_config( const char *subsys )
 				}
 				pval = param(pname);
 				if( pval != NULL ) {
-					MaxLog[debug_level] = atoi( pval );
+					it->maxLog = atoi( pval );
 					free(pval);
 				} else {
-					MaxLog[debug_level] = 1024*1024;
+					it->maxLog = 1024*1024;
 				}
 				
 				if (debug_level == 0) {
@@ -336,10 +327,10 @@ dprintf_config( const char *subsys )
 				}
 				pval = param(pname);
 				if (pval != NULL) {
-					MaxLogNum[debug_level] = atoi(pval);
+					it->maxLogNum = atoi(pval);
 					free(pval);
 				} else {
-					MaxLogNum[debug_level] = 1;
+					it->maxLogNum = 1;
 				}
 			}
 		}
@@ -388,11 +379,10 @@ dprintf_config( const char *subsys )
 	install_backtrace_handler();
 #endif
 
-	if(DebugLogs)
+	if(debugLogsOld)
 	{
-		delete DebugLogs;
+		delete debugLogsOld;
 	}
-	DebugLogs = debugLogsLocal;
 
 	_condor_dprintf_saved_lines();
 }

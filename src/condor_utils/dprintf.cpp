@@ -128,10 +128,6 @@ int      DebugContinueOnOpenFailure = 0;
 ** debug file for each level plus an additional catch-all debug file
 ** at index 0.
 */
-
-off_t	 MaxLog[D_NUMLEVELS+1] = { 0 };
-int		 MaxLogNum[D_NUMLEVELS+1] = { 0 };
-char	*DebugFile[D_NUMLEVELS+1] = { NULL };
 char	*DebugLock = NULL;
 
 int		(*DebugId)(char **buf,int *bufpos,int *buflen);
@@ -368,6 +364,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	priv_state	priv;
 	int debug_level;
 	FILE *debug_file_ptr = NULL;
+	std::vector<DebugFileInfo>::iterator it;
 
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
@@ -479,27 +476,21 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	
 			/* print debug message to catch-all debug file plus files */
 			/* registered for other debug levels */
-		for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
-			if ((debug_level == 0) ||
-				(DebugFile[debug_level] && (flags&(1<<(debug_level-1))))) {
-
-					/* Open and lock the log file */
-				debug_file_ptr = debug_lock(debug_level, NULL, 0);
-
-				if (debug_file_ptr) {
+		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+		{
+			if(((*it).debugFlags & debug_level) == 0)
+				continue;
+			/* Open and lock the log file */
+			debug_file_ptr = debug_lock(debug_level, NULL, 0);
+			if (debug_file_ptr) {
 #ifdef va_copy
-					va_list copyargs;
-					va_copy(copyargs, args);
-					_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,copyargs);
-					va_end(copyargs);
+				va_list copyargs;
+				va_copy(copyargs, args);
+				_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,copyargs);
+				va_end(copyargs);
 #else
-					_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,args);
+				_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,args);
 #endif
-				}
-
-					/* Close and unlock the log file */
-				debug_unlock(debug_level);
-
 			}
 		}
 
@@ -766,7 +757,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			}
 #endif
 			snprintf( msg_buf, sizeof(msg_buf), "Could not open DebugFile \"%s\"\n", 
-					 DebugFile[debug_level] );
+				it->logPath );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
@@ -783,7 +774,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 
-	if( MaxLog[debug_level] && length > MaxLog[debug_level] ) {
+	if( it->maxLog && length > it->maxLog ) {
 		if( !locked ) {
 			/*
 			 * We only need to redo everything if there is a lock defined
@@ -818,7 +809,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 		// long int, but I'm afraid of changing the output format.
 		// wenger 2009-02-24.
 		_condor_dfprintf( debug_file_ptr, "MaxLog = %d, length = %d\n",
-			(int) MaxLog[debug_level], (int)length );
+			(int) it->maxLog, (int)length );
 		
 		debug_file_ptr = preserve_log_file(debug_level);
 	}
@@ -977,7 +968,7 @@ preserve_log_file(int debug_level)
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 	(void)setBaseName(filePath.c_str());
-	timestamp = createRotateFilename(NULL, MaxLogNum[debug_level]);
+	timestamp = createRotateFilename(NULL, it->maxLogNum);
 	(void)sprintf( old, "%s.%s", filePath.c_str() , timestamp);
 	_condor_dfprintf( debug_file_ptr, "Saving log file to \"%s\"\n", old );
 	(void)fflush( debug_file_ptr );
@@ -986,7 +977,7 @@ preserve_log_file(int debug_level)
 	debug_file_ptr = NULL;
 	(*it).debugFP = debug_file_ptr;
 
-	result = rotateTimestamp(timestamp, MaxLogNum[debug_level]);
+	result = rotateTimestamp(timestamp, it->maxLogNum);
 
 #if defined(WIN32)
 	if (result < 0) { // MoveFileEx and Copy failed
@@ -1057,7 +1048,7 @@ preserve_log_file(int debug_level)
 	}
 
 	if ( !still_in_old_file ) {
-		_condor_dfprintf (debug_file_ptr, "Now in new log file %s\n", DebugFile[debug_level]);
+		_condor_dfprintf (debug_file_ptr, "Now in new log file %s\n", it->logPath);
 	}
 
 	// We may have a message left over from the succeeded rename after which the file
@@ -1077,7 +1068,7 @@ preserve_log_file(int debug_level)
 	}
 	
 	_set_priv(priv, __FILE__, __LINE__, 0);
-	cleanUp(MaxLogNum[debug_level]);
+	cleanUp(it->maxLogNum);
 
 	return debug_file_ptr;
 }
@@ -1344,16 +1335,18 @@ dprintf_last_modification()
 void
 dprintf_touch_log()
 {
+	std::vector<DebugFileInfo>::iterator it;
 	if ( _condor_dprintf_works ) {
-		if (DebugFile[0]) {
+		if (!DebugLogs->empty()) {
+			it = DebugLogs->begin();
 #ifdef WIN32
-			utime( DebugFile[0], NULL );
+			utime( it->logPath.c_str(), NULL );
 #else
 		/* The following updates the ctime without touching 
 			the mtime of the file.  This way, we can differentiate
 			a "heartbeat" touch from a append touch
 		*/
-			chmod( DebugFile[0], 0644);
+			chmod( it->logPath.c_str(), 0644);
 #endif
 		}
 	}
