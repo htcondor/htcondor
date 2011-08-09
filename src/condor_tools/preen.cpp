@@ -102,7 +102,7 @@ BOOLEAN touched_recently(char const *fname,time_t delta);
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [-mail] [-remove] [-verbose]\n", MyName );
+	fprintf( stderr, "Usage: %s [-mail] [-remove] [-verbose] [-debug]\n", MyName );
 	exit( 1 );
 }
 
@@ -206,7 +206,7 @@ produce_output()
 {
 	char	*str;
 	FILE	*mailer;
-	MyString subject;
+	MyString subject,szTmp;
 	subject.sprintf("condor_preen results %s: %d old file%s found", 
 		my_full_hostname(), BadFiles->number(), 
 		(BadFiles->number() > 1)?"s":"");
@@ -219,16 +219,18 @@ produce_output()
 		mailer = stdout;
 	}
 
+	szTmp.sprintf("The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().Value());
+	dprintf(D_ALWAYS, szTmp.Value()); 
+		
 	if( MailFlag ) {
 		fprintf( mailer, "\n" );
-		fprintf( mailer,
-			 "The condor_preen process has found the following\n"
-			 "stale condor files on <%s>:\n\n", 
-			 get_local_hostname().Value() );
+		fprintf( mailer, szTmp.Value());
 	}
 
+	szTmp.sprintf("  %s\n", str);
+	dprintf(D_ALWAYS, szTmp.Value() );
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
-		fprintf( mailer, "  %s\n", str );
+		fprintf( mailer, szTmp.Value() );
 	}
 
 	if( MailFlag ) {
@@ -849,6 +851,7 @@ good_file( const char *dir, const char *name )
 {
 	if( VerboseFlag ) {
 		printf( "%s%c%s - OK\n", dir, DIR_DELIM_CHAR, name );
+		dprintf( D_ALWAYS, "%s%c%s - OK\n", dir, DIR_DELIM_CHAR, name );
 	}
 }
 
@@ -872,6 +875,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 
 	if( VerboseFlag ) {
 		printf( "%s - BAD\n", pathname.Value() );
+		dprintf( D_ALWAYS, "%s - BAD\n", pathname.Value() );
 	}
 
 	if( RmFlag ) {
@@ -880,6 +884,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 			removed = privsep_remove_dir( pathname.Value() );
 			if( VerboseFlag ) {
 				if( removed ) {
+					dprintf( D_ALWAYS, "%s - failed to remove directly, but succeeded via privsep switchboard\n", pathname.Value() );
 					printf( "%s - failed to remove directly, but succeeded via privsep switchboard\n", pathname.Value() );
 				}
 			}
