@@ -1580,7 +1580,9 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				"successfully.\n", job->GetJobName() );
 		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
-		job->_pre_status = 0;
+		if( job->_scriptPre && job->_scriptPost ) {
+			job->_pre_status = 0;
+		}
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( job, -job->_nodePriority );
