@@ -46,7 +46,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item On \Condor{schedd} startup, with parallel universe jobs, the job
+  queue sanity checking code would change the \Attr{Scheduler}
+  attribute on jobs only to have the attribute changed later by the
+  dedicated scheduler. This was because of mismatched expectations
+  dating back to Apr 2001. The expectations are now resolved. See
+  GT2367.
+
+\item The dedicated scheduler used to attempt to change the
+  \Attr{Scheduler} attribute on all parallel job procs in a durable
+  fashion, resulting in an fsync() for each proc. This has been
+  changed to nondurable, reducing the number of fsync() calls without
+  impacting correctness. See GT2367.
 
 \end{itemize}
 
