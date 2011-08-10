@@ -972,11 +972,7 @@ void main_init (int argc, char ** const argv) {
 	// Here we make a copy of the dagFiles for iteration purposes. Deep inside
 	// of the parsing, copies of the dagman.dagFile string list happen which
 	// mess up the iteration of this list.
-//TEMPTEMP -- why don't we use the StringList copy constructor here?!?
-//TEMPTEMP -- test with multi DAGs
-	char *str = dagman.dagFiles.print_to_delimed_string();
-	StringList sl(str);
-	free(str);
+	StringList sl( dagman.dagFiles );
 	sl.rewind();
 	while ( (dagFile = sl.next()) != NULL ) {
     	debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagFile );
