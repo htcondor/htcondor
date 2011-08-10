@@ -302,6 +302,7 @@ bool Dag::Bootstrap (bool recovery)
 					_jobstateLog.WriteRecoveryFailure();
 					return false;
 				}
+				++_postRunNodeCount;
 				_postScriptQ->Run( job->_scriptPost );
 			}
 		}
@@ -917,6 +918,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			_postRunNodeCount--;
 		} else {
 			ASSERT( recovery );
+			_postRunNodeCount--;
 			// If we get here, it means that, in the run we're recovering,
 			// the POST script for a node was run without any indication
 			// in the log that the node was run.  This probably means that
@@ -1605,7 +1607,6 @@ void Dag::RunPostScript( Job *job, bool ignore_status, int rvj )
 	// a POST script is specified for the job, so run it
 	// We are told to ignore the result of the PRE script
 	job->_Status = Job::STATUS_POSTRUN;
-	_postRunNodeCount++;
 	job->_scriptPost->_retValJob = rvj;
 	if( !job->GetLogFile() ) {
 		// TEMPTEMP --- not sure what to do here
@@ -1617,6 +1618,7 @@ void Dag::RunPostScript( Job *job, bool ignore_status, int rvj )
 			return;
 		}
 	}
+	_postRunNodeCount++;
 	_postScriptQ->Run( job->_scriptPost );
 }
 //---------------------------------------------------------------------------
