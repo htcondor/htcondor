@@ -1607,6 +1607,16 @@ void Dag::RunPostScript( Job *job, bool ignore_status, int rvj )
 	job->_Status = Job::STATUS_POSTRUN;
 	_postRunNodeCount++;
 	job->_scriptPost->_retValJob = rvj;
+	if( !job->GetLogFile() ) {
+		// TEMPTEMP --- not sure what to do here
+		if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+				_nfsLogIsError, _recovery, _defaultNodeLog ) ) {
+			debug_printf(DEBUG_QUIET, "Do not have a user logfile for node %s\n",
+				job->GetJobName() );
+			debug_printf(DEBUG_QUIET, "Not running the POST script\n" );
+			return;
+		}
+	}
 	_postScriptQ->Run( job->_scriptPost );
 }
 //---------------------------------------------------------------------------
@@ -1676,6 +1686,9 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			// for "real" jobs, they are not significant.
 		int procID = job->GetNoop() ? job->_CondorID._proc : 0;
 		int subprocID = job->GetNoop() ? job->_CondorID._subproc : 0;
+		const char* s = job->GetLogFile();
+		debug_printf(DEBUG_QUIET,"Initializing logfile %s, %d, %d, %d\n",
+			s?s:"(unknown)",job->_CondorID._cluster,procID,subprocID);
 		ulog.initialize( job->GetLogFile(), job->_CondorID._cluster,
 					 	procID, subprocID, NULL );
 
