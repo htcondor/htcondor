@@ -137,7 +137,7 @@ See section ~\ref{dagman:SCRIPT} for details.
 
 % gittrac #2329
 \item ``\Arg{PERIODIC}\_$\ast$'' (e.g., \Arg{PERIODIC\_HOLD} and 
-\Arg{PERIODIC\_RELEASE}) expressions could inadvertantly cause a claim to
+\Arg{PERIODIC\_RELEASE}) expressions could inadvertently cause a claim to
 be released if shadow exits before waiting for final update from the starter. 
 
 % gittrac #2350
@@ -200,17 +200,14 @@ and \Attr{RemoteUserResourcesInUse} are now biased by slot weights.
 \item \Condor{submit} now accepts the new command line option \Opt{-addr},
 naming the IP address of the \Condor{schedd} to submit to.
 
-\item The vmgahp now is dynamically linked to libvirt.  We believe
-this makes it more portable.
+\item The \Condor{vm\_gahp} now is dynamically linked to libvirt.  
+We believe this makes it more portable.
 
-\item Removed the condor\_reschedule\_schedd and condor\_master\_off
-programs.  These have been replaced many years ago by the more general
-condor\_reschedule and condor\_off commands.
+\item Programs \Condor{reschedule\_schedd} and \Condor{master\_off}
+are no longer part of the distribution.
+These programs were replaced many years ago by the more general
+\Condor{reschedule} and \Condor{off} commands.
 
-\item New parameter SHADOW\_RUN\_UNKNOWN\_USER\_JOBS.  This defaults
-to false, when true, allows the shadow to run jobs remotely submitted
-from users not in the local passwd file.
- 
 \item On Windows, improve the ability of the starter and shadow
 to clean up the execute directory if jobs have changed the ACLs
 or permissions on files they have created.
@@ -301,6 +298,12 @@ which is used to set the job attribute \Attr{HoldReasonSubCode}.
 
 \begin{itemize}
 
+% gittrac #2004
+\item The new configuration variable \Macro{SHADOW\_RUN\_UNKNOWN\_USER\_JOBS}
+defaults to \Expr{False}.
+When \Expr{True}, it allows the \Condor{shadow} daemon to run jobs remotely 
+submitted from users not in the local password file.
+ 
 % gittrac #1249
 \item \Macro{CONDOR\_VIEW\_HOST} is now a comma and/or white space separated
 list of hosts, in order to support more than one CondorView host.
