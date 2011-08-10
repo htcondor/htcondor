@@ -615,7 +615,14 @@ SubmitEvent::readEvent (FILE *file)
 	// remove trailing newline
 	s[ strlen( s ) - 1 ] = '\0';
 
-	submitEventLogNotes = strnewp( s );
+		// some users of this library (dagman) depend on whitespace
+		// being stripped from the beginning of the log notes field
+	char const *strip_s = s;
+	while( *strip_s && isspace(*strip_s) ) {
+		strip_s++;
+	}
+
+	submitEventLogNotes = strnewp( strip_s );
 
 	// see if the next line contains an optional user event notes
 	// string, and, if not, rewind, because that means we slurped in
@@ -3624,10 +3631,9 @@ ULogEvent::strToRusage (char* rusageStr, rusage & usage)
 // ----- the NodeExecuteEvent class
 NodeExecuteEvent::NodeExecuteEvent(void)
 {
-	executeHost [0] = '\0';
+	executeHost = NULL;
 	eventNumber = ULOG_NODE_EXECUTE;
 	node = -1;
-	executeHost = NULL;
 }
 
 

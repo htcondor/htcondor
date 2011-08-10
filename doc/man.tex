@@ -1,0 +1,53 @@
+\documentclass[titlepage]{article}
+
+%
+%  Page layout
+%
+\setlength{\evensidemargin}{0.5in}
+\setlength{\oddsidemargin}{0.5in}
+\setlength{\textwidth}{5.5in}
+\setlength{\topmargin}{0.0in}
+\setlength{\headsep}{0.5in}
+\setlength{\topskip}{0in}
+\setlength{\marginparwidth}{1in}
+\setlength{\marginparsep}{0in}
+\setlength{\footskip}{0.75in}
+\setlength{\parindent}{0.0in}
+
+%
+%  Bring in the html package for use with latex2html
+%
+\usepackage{html}
+
+%
+%  Bring in the fancy header package for headers and footers
+%
+\latex{
+	\usepackage{fancyhdr}
+	\pagestyle{fancy}
+	\fancyhf{}
+	\renewcommand{\headrulewidth}{0.4pt}
+	\renewcommand{\footrulewidth}{0.4pt}
+	\addtolength{\headwidth}{\oddsidemargin}
+}
+
+
+\begin{document}
+
+%
+%  Bring in Condor documentation utils
+%
+\input{condor-macros.tex}
+\input{man-macros.tex}
+
+%
+%  Introduction,table of contents, etc.
+%
+\title{Condor \VersionNotice: Command Reference Manual}
+\author{\AuthorNotice}
+\maketitle
+\latex{\tableofcontents}
+
+\input{man-pages/man.tex}
+
+\end{document}

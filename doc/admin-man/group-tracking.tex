@@ -1,0 +1,61 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:GroupTracking}Group ID-Based Process Tracking} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+One function that Condor often must perform is keeping track of all
+processes created by a job. This is done so that Condor can provide
+resource usage statistics about jobs, and also so that Condor can properly
+clean up any processes that jobs leave behind when they exit.
+
+In general, tracking process families is difficult to do reliably.
+By default Condor uses a combination of process parent-child
+relationships, process groups, and information that Condor places in a
+job's environment to track process families on a best-effort
+basis. This usually works well, but it can falter for certain
+applications or for jobs that try to evade detection.
+
+Jobs that run with a user account dedicated for Condor's use
+can be reliably tracked, since all Condor needs to do is look for all
+processes running using the given account. Administrators must specify
+in Condor's configuration what accounts can be considered dedicated
+via the \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} setting. See
+Section~\ref{sec:RunAsNobody} for further details.
+
+Ideally, jobs can be reliably tracked regardless of the user account
+they execute under. This can be accomplished with group ID-based
+tracking. This method of tracking requires that a range of dedicated
+\emph{group} IDs (GID) be set aside for Condor's use. The number of GIDs
+that must be set aside for an execute machine is equal to its number
+of execution slots. GID-based tracking is only available on Linux, and
+it requires that Condor either runs as \Login{root} or uses privilege
+separation (see Section~\ref{sec:PrivSep}).
+
+GID-based tracking works by placing a dedicated GID in the
+supplementary group list of a job's initial process. Since modifying
+the supplementary group ID list requires
+\Login{root} privilege, the job will not be able to create processes
+that go unnoticed by Condor.
+
+Once a suitable GID range has been set aside for process tracking,
+GID-based tracking can be enabled via the
+\Macro{USE\_GID\_PROCESS\_TRACKING} parameter. The minimum and maximum
+GIDs included in the range are specified with the
+\Macro{MIN\_TRACKING\_GID} and \Macro{MAX\_TRACKING\_GID}
+settings. For example, the following would enable GID-based tracking
+for an execute machine with 8 slots.
+\begin{verbatim}
+USE_GID_PROCESS_TRACKING = True
+MIN_TRACKING_GID = 750
+MAX_TRACKING_GID = 757
+\end{verbatim}
+
+If the defined range is too small, such that there is not a GID available
+when starting a job,
+then the \Condor{starter} will fail as it tries to start the job.
+An error message will be logged stating that there are no more tracking GIDs.
+
+GID-based process tracking requires use of the \Condor{procd}. If
+\MacroNI{USE\_GID\_PROCESS\_TRACKING} is true, the \Condor{procd} will
+be used regardless of the \Macro{USE\_PROCD} setting.  Changes to
+\MacroNI{MIN\_TRACKING\_GID} and \MacroNI{MAX\_TRACKING\_GID} require
+a full restart of Condor.

@@ -85,20 +85,22 @@ print "Preparing input test job in $BaseDir\n";
 # 1) find the specific binary we care about
 ######################################################################
 if(!-f $extractdone) {
-    my $pattern = "public/condor-*-stripped.tar.gz";
-    print "Extracting '$pattern', condor_examples, and condor_tests from results.tar.gz\n";
+    my $release_pattern = "public/condor-*-stripped.tar.gz";
+	my $syslibs_pattern = "public/systemlibs-*.tar.gz";
+	my $ret;
 
-    my $ret = system("tar -xvzf $results '$pattern' public/condor_tests public/condor_examples");
+	print "Extracting '$release_pattern', condor_examples, and condor_tests from results.tar.gz\n";
+	$ret = system("tar -xvzf $results '$release_pattern' public/condor_tests public/condor_examples");
 
     if($ret) {
     	die "Could not extract tarball or test dir from $results: $!\n";
     }
     
     print "Time: " . scalar(localtime) . "\n\n";
-    my $saved_tarball = glob($pattern);
-    print "Tarball extracted: '$saved_tarball'\n";
+    my $saved_tarball = glob($release_pattern);
+    print "Release tarball extracted: '$saved_tarball'\n";
     my $tar_name = basename($saved_tarball);
-    print "Tarball name is: $tar_name\n";
+    print "Release tarball name is: $tar_name\n";
     
     ######################################################################
     # 2) Now that we found the binary we want, untar it from the tarball,
@@ -117,6 +119,18 @@ if(!-f $extractdone) {
     ######################################################################
        
     # Now, copy it to the parent
+	print "Trying to extract '$syslibs_pattern' from results.tar.gz\n";
+	$ret = system("tar -xvzf $results '$syslibs_pattern'");
+	if ( $ret != 0 ) {
+		print "Extraction failed, assuming no $syslibs_pattern file\n";
+	} else {
+		my $syslibs_tarball = glob($syslibs_pattern);
+		print "Moving $syslibs_tarball to $BaseDir\n";
+		if(not rename($syslibs_tarball, "$BaseDir/".basename($syslibs_tarball))) {
+			die "Could not move $syslibs_tarball into $BaseDir: $!\n";
+		}
+	}
+
     my $test_dir = "public/condor_tests";
     print "Moving $test_dir to $BaseDir\n";
     if(not rename($test_dir, "$BaseDir/condor_tests")) {

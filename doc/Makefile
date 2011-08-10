@@ -1,0 +1,200 @@
+SUBDIR = v7.7.2
+SUBVER = V7_7_2
+MANDIR = /p/condor/public/html/manual/$(SUBDIR)
+TARGETDIR = $(MANDIR).new
+LOCALDIR = ref-master
+MANPAGES = cleanup_release.html condor_advertise.html condor_checkpoint.html condor_check_userlogs.html condor_chirp.html condor_cod.html condor_cold_start.html condor_cold_stop.html condor_compile.html condor_config_bind.html condor_configure.html condor_config_val.html condor_convert_history.html condor_dagman.html condor_fetchlog.html condor_findhost.html condor_glidein.html condor_history.html condor_hold.html condor_load_history.html condor_master.html condor_off.html condor_on.html condor_power.html condor_preen.html condor_prio.html condor_qedit.html condor_q.html condor_reconfig.html condor_release.html condor_reschedule.html condor_restart.html condor_rm.html condor_router_history.html condor_procd.html condor_router_q.html condor_run.html condor_set_shutdown.html condor_ssh_to_job.html condor_stats.html condor_status.html condor_store_cred.html condor_submit_dag.html condor_submit.html condor_transfer_data.html condor_updates_stats.html condor_userlog.html condor_userprio.html condor_vacate.html condor_vacate_job.html condor_version.html condor_wait.html filelock_midwife.html filelock_undertaker.html gidd_alloc.html install_release.html procd_ctl.html uniq_pid_midwife.html uniq_pid_undertaker.html
+
+# NOTE: older latex versions do not support -halt-on-error
+#       including /p/condor/workspaces/build/bin/latex, unfortunately
+LATEXARGS := -file-line-error-style $(shell latex --help | grep -o -- -halt-on-error)
+
+all:  ref.dvi
+#all:  man.ps
+
+ref.pdf: clean
+	echo "\usepackage{times} \usepackage[latex2html,ps2pdf,bookmarks,bookmarksnumbered,plainpages=false,pdfpagelabels]{hyperref}" > timesfont.tex
+	rm -f fontsize.tex
+	rm -f symbol.tex
+	rm -f figuresizing.tex
+	ln -s regularfont.tex fontsize.tex
+	ln -s symbol-postscript.tex symbol.tex
+	ln -s figuresizing-latex.tex figuresizing.tex
+	make figures
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	makeindex ref
+	latex $(LATEXARGS)  ref.tex
+	rm -f ref.ps
+	dvips ref.dvi -o ref.ps
+	rm -f ref.pdf
+	gs -sDEVICE=pdfwrite -sOutputFile=ref.pdf -dNOPAUSE -dBATCH ref.ps
+	rm -f ref.dvi
+	rm -f ref.ps
+
+release-pdf: ref.pdf $(TARGETDIR)
+	cp ref.pdf $(TARGETDIR)/condor-$(SUBVER)-Manual.pdf
+
+ref.dvi: clean
+	echo "% do not want times" > timesfont.tex
+	rm -f fontsize.tex
+	rm -f symbol.tex
+	rm -f figuresizing.tex
+	ln -s smallfont.tex fontsize.tex
+	ln -s symbol-postscript.tex symbol.tex
+	ln -s figuresizing-latex.tex figuresizing.tex
+	make figures
+	latex $(LATEXARGS) ref.tex
+	latex $(LATEXARGS) ref.tex
+	latex $(LATEXARGS) ref.tex
+	latex $(LATEXARGS) ref.tex
+	latex $(LATEXARGS) ref.tex
+	makeindex ref
+	latex $(LATEXARGS) ref.tex
+
+ref.ps: ref.dvi
+	dvips ref.dvi -o ref.ps
+
+release-ps: ref.ps $(TARGETDIR)
+	cp ref.ps $(TARGETDIR)/ref.ps
+	cp $(TARGETDIR)/ref.ps $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+	compress $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+	cp $(TARGETDIR)/ref.ps $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+	gzip $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+	mv $(TARGETDIR)/ref.ps $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+
+ref.html: clean $(TARGETDIR)
+	echo "% do not want times" > timesfont.tex
+	rm -f fontsize.tex
+	rm -f symbol.tex
+	rm -f figuresizing.tex
+	ln -s regularfont.tex fontsize.tex
+	ln -s symbol-html.tex symbol.tex
+	ln -s figuresizing-html.tex figuresizing.tex
+	make figures
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	makeindex ref
+	latex $(LATEXARGS)  ref.tex
+	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	rm -f ref.dvi
+	mv ref condor-$(SUBVER)-Manual
+	tar cvf condor-$(SUBVER)-Manual.tar condor-$(SUBVER)-Manual
+
+	gzip -c condor-$(SUBVER)-Manual.tar > condor-$(SUBVER)-Manual.tar.gz
+	compress condor-$(SUBVER)-Manual.tar
+
+	mv condor-$(SUBVER)-Manual.tar.gz condor-$(SUBVER)-Manual
+	mv condor-$(SUBVER)-Manual.tar.Z condor-$(SUBVER)-Manual
+
+	mv condor-$(SUBVER)-Manual ref.new
+
+	mv -f ref.new/* $(TARGETDIR)
+	rmdir ref.new
+	touch ref.html
+
+local.html: $(wildcard *.tex) $(wildcard */*.tex)
+	echo "% do not want times" > timesfont.tex
+	rm -f fontsize.tex
+	rm -f symbol.tex
+	rm -f figuresizing.tex
+	ln -s regularfont.tex fontsize.tex
+	ln -s symbol-html.tex symbol.tex
+	ln -s figuresizing-html.tex figuresizing.tex
+	make figures
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	latex $(LATEXARGS)  ref.tex
+	makeindex ref
+	latex $(LATEXARGS)  ref.tex
+	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	rm -rf $(LOCALDIR)
+	mv    ref $(LOCALDIR)
+	touch local.html
+
+release-html: ref.html $(TARGETDIR)
+	rm -rf $(MANDIR).old
+	touch $(MANDIR)
+	mv -f $(MANDIR) $(MANDIR).old
+	mv -f $(TARGETDIR) $(MANDIR)
+	rm -f ref.html
+
+admin-man/pool-arch.eps: admin-man/pool-arch.fig
+	rm -f $@
+	fig2dev -L eps -m .4 $< > $@
+
+user-man/dagman-diamond.eps: user-man/dagman-diamond.fig
+	rm -f $@
+	fig2dev -L eps -m .6 $< > $@
+
+user-man/dagman-node.eps: user-man/dagman-node.fig
+	rm -f $@
+	fig2dev -L eps -m .6 $< > $@
+
+figures: admin-man/machine-states.eps admin-man/machine-activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps user-man/dagman-node.eps
+
+# commented out by Karen on Dec 14, 2010, as no one uses it, and it is wrong
+# for pulling manual pages.  Target 'just-man-pages' is used.
+#HTML_FOR_NROFF = $(shell \ls $(LOCALDIR)/condor_*.html)
+
+#nroff: local.html
+#	\rm -rf man
+#	mkdir man
+#	mkdir man/man1
+#	cd makeman && make clean
+#	cd makeman && make makeman
+#	cd ..
+#	for html in $(HTML_FOR_NROFF); do \
+		makeman/makeman -v -i $$html -s 1; \
+	done
+#	mv $(LOCALDIR)/*.1 man/man1/
+
+#ref.nroff: nroff $(TARGETDIR)
+#	rm -f condor-$(SUBVER)-man.tar.gz condor-$(SUBVER)-man.tar
+#	tar cf condor-$(SUBVER)-man.tar man
+#	gzip condor-$(SUBVER)-man.tar
+#	mv condor-$(SUBVER)-man.tar.gz $(TARGETDIR)
+
+$(TARGETDIR):
+	mkdir $(TARGETDIR)
+
+clean:
+	rm -rf $(LOCALDIR) ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps user-man/dagman-node.eps admin-man/pool-arch.eps *.out
+	cd makeman; make clean
+
+reallyclean: clean
+	rm -rf $(TARGETDIR)
+
+release:
+	make reallyclean
+	make release-ps
+	make release-pdf
+	make release-html
+
+.PHONY: just-man-pages
+
+just-man-pages:
+	echo "% do not want times" > timesfont.tex
+	rm -f fontsize.tex
+	rm -f symbol.tex
+	rm -f figuresizing.tex
+	ln -s regularfont.tex fontsize.tex
+	ln -s symbol-html.tex symbol.tex
+	ln -s figuresizing-html.tex figuresizing.tex
+	cd makeman && make clean makeman
+	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons just-man-pages.tex
+	for html in $(MANPAGES); do \
+		thisfile=just-man-pages/$$html; \
+		makeman/makeman -v -i $$thisfile -s 1; \
+	done
+	-mkdir man
+	-mkdir man/man1
+	mv just-man-pages/*.1 man/man1

@@ -48,11 +48,11 @@ our %build_and_test_sets = (
 		'x86_64_rhap_5',
 		'x86_64_rhas_3',
 		'x86_deb_5.0',
-		'x86_macos_10.4',
 		'x86_rhap_5',
 		'x86_rhas_3',
 		'x86_winnt_5.1',
 		'x86_64_rhap_6.1-updated',
+		'x86_64_macos_10.5-updated',
 	],
 	
 	# NMI will need builds on a set of platforms that we do not provide in our
@@ -74,6 +74,7 @@ our %build_and_test_sets = (
 		'x86_64_fedora_14-updated',
 		'x86_64_opensuse_11.3-updated',
 		'x86_64_opensuse_11.4-updated',
+		'x86_64_macos_10.6-updated',
 	],
 	
 	'stduniv' => [
@@ -99,6 +100,11 @@ my @default_prereqs = (
 	'wget-1.9.1',
 	'm4-1.4.1',
 	);
+
+# Hackery to test running in new batlab
+if (`hostname -f` eq "submit-1.batlab.org\n") {
+@default_prereqs = ();
+} 
 
 ###############################################################################
 # Minimal build configuration
@@ -947,10 +953,10 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => {
 				@default_test_configure_args
-					
+				
 			},
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
-			'testclass' => [ @default_testclass ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'testclass'	=> [ @default_testclass ],
 		},
 	},
 	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',

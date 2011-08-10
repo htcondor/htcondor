@@ -193,6 +193,8 @@ class FunctionCall : public ExprTree
 	static bool convBool(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool convTime(const char*,const ArgumentList&,EvalState&,Value&);
 	
+	static bool unparse(const char*,const ArgumentList&,EvalState&,Value&);
+	
 	// math (floor, ceil, round)
 	static bool doMath(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool random(const char*,const ArgumentList&,EvalState&,Value&);

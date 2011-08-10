@@ -18,8 +18,7 @@
           <Directory Id="INSTALLDIR" Name="condor">
 
            <!-- Merge module used to bind VC runtime *do not* copy in the files using include (InstallRequiredSystemLibraries) -->
-           <Merge Id="VCCRT" Language="1033" DiskId="1" SourceFile="@CPACK_VC_MERGE_MODULE@"/>
-           <Merge Id="VCPolicy" Language="1033" DiskId="1" SourceFile="@CPACK_VC_POLICY_MODULE@"/>
+            @WIX_MERGE_MODLES@
 
             <!-- Update the registry, ENV, and FW -->
            <Component Id="CondorRegNEnv" Guid="E282D017-976B-4685-A330-5180B27277C0">
@@ -49,8 +48,9 @@
                  <RegistryValue Type="string" Name="HDFSPORT" Value="[HDFSPORT]" />
                  <RegistryValue Type="string" Name="HDFSWEBPORT" Value="[HDFSWEBPORT]" />
              </RegistryKey>
-			 <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\condor"  Action="createAndRemoveOnUninstall">
+             <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\condor"  Action="createAndRemoveOnUninstall">
                <RegistryValue Type="integer" Name="DelayedAutostart" Value="1" />
+               <RegistryValue Type="multiString" Name="DependOnService" Value="Dhcp" />
              </RegistryKey>
              <Environment Id="CondorBin" Action="set" Name="PATH" Part="last" Permanent="no" System="yes" Value="[INSTALLDIR]bin\"/>
            </Component>
@@ -387,8 +387,8 @@
         <Feature Id="CondorWindows" Title="Condor Installation" Level="1" Display="expand">
           <Feature Id="Installation" Title="Condor Installation Files" Level="1"  ConfigurableDirectory="INSTALLDIR">
             <xsl:apply-templates select="wix:Fragment" mode="CompRef"/>
-            <MergeRef Id="VCCRT"/>
-            <MergeRef Id="VCPolicy"/>
+            <!-- Import any merge references -->
+            @WIX_MERGE_REFS@
             <ComponentRef Id="CondorRegNEnv" />
             <ComponentRef Id="CondorKBDDReg" />
             <ComponentRef Id="CreatingSpoolDir" />

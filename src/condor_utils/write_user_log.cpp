@@ -180,7 +180,7 @@ WriteUserLog::initialize( const char *file, int c, int p, int s,
 		// Save parameter info
 	FreeLocalResources( );
 	m_path = strdup( file );
-
+	Configure(false);
 	if ( m_userlog_enable &&
 		 !openFile(file, true, m_enable_locking, true, m_lock, m_fp) ) {
 		dprintf(D_ALWAYS, "WriteUserLog::initialize: failed to open file\n");
@@ -193,6 +193,7 @@ WriteUserLog::initialize( const char *file, int c, int p, int s,
 bool
 WriteUserLog::initialize( int c, int p, int s, const char *gjid )
 {
+	Configure(false);
 	return internalInitialize( c, p, s, gjid );
 }
 
@@ -200,7 +201,6 @@ WriteUserLog::initialize( int c, int p, int s, const char *gjid )
 bool
 WriteUserLog::internalInitialize( int c, int p, int s, const char *gjid )
 {
-	Configure( false );
 
 	m_cluster = c;
 	m_proc = p;

@@ -144,7 +144,7 @@ class BaseShadow : public Service
 			universe-specific code before we exit.
 			@param reason String describing why the job is held
 		*/
-	void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
+	virtual void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
 
 		/** Remove the job from the queue, if requested, notify the
 			user about it, and exit with the appropriate status so
@@ -153,7 +153,7 @@ class BaseShadow : public Service
 			universe-specific code before we exit.
 			@param reason String describing why the job is removed
 		*/
-	void removeJob( const char* reason );
+	virtual void removeJob( const char* reason );
 
 		/** The job exited, but we want to put it back in the job
 			queue so it will run again.  If requested, notify the user about
@@ -374,7 +374,7 @@ class BaseShadow : public Service
 	char const *getTransferQueueContactInfo() {return m_xfer_queue_contact_info.Value();}
 
  protected:
-	
+
 		/** Note that this is the base, "unexpanded" ClassAd for the job.
 			If we're a regular shadow, this pointer gets copied into the
 			remoteresource.  If we're an MPI job we expand it based on
@@ -398,6 +398,10 @@ class BaseShadow : public Service
 	void emailRemoveEvent( const char* reason );
 
 	void logRequeueEvent( const char* reason );
+	
+	void removeJobPre( const char* reason ); 
+	void holdJobPre ( const char* reason, int hold_reason_code, int hold_reason_subcode );
+	
 		// virtual void emailRequeueEvent( const char* reason );
 
 	void logTerminateEvent( int exitReason, update_style_t kind = US_NORMAL );

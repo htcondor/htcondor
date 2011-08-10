@@ -128,6 +128,7 @@ if( NOT WINDOWS)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
+	find_library( ZLIB_FOUND z )
 	find_library( LIBUUID_FOUND uuid )
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_library( LIBRESOLV_PATH resolv )
@@ -255,6 +256,8 @@ endif()
 
 find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
+find_program(LATEX2HTML latex2html)
+find_program(LATEX latex)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -304,6 +307,12 @@ if (${OS_NAME} STREQUAL "SUNOS")
 elseif(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
+
+	if ( ${SYSTEM_NAME} MATCHES "rhel3" )
+		set(CMAKE_PREFIX_PATH /usr/kerberos)
+		include_directories(/usr/kerberos/include)
+	endif()
+
 	set(DOES_SAVE_SIGSTATE ON)
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)
@@ -360,6 +369,7 @@ option(BUILD_TESTS "Will build internal test applications" ON)
 option(WANT_CONTRIB "Enable quill functionality" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 
 if (UW_BUILD OR WINDOWS)
@@ -425,6 +435,12 @@ else()
 	cmake_minimum_required(VERSION 2.8)
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
 	option(CACHED_EXTERNALS "enable/disable cached externals" ON)
+
+	if (LINUX)
+		set(CMAKE_SKIP_RPATH FALSE)
+		set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/condor")
+		set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+	endif()
 endif(PROPER)
 
 if (WINDOWS)
@@ -476,7 +492,6 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
@@ -757,6 +772,9 @@ message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
 message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
 message(STATUS "LN: ${LN}")
+message(STATUS "LATEX: ${LATEX}")
+message(STATUS "LATEX2HTML: ${LATEX2HTML}")
+
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree
 dprint ( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )
@@ -886,11 +904,9 @@ dprint ( "BORLAND: ${BORLAND}" )
 if (WINDOWS)
 	dprint ( "MSVC: ${MSVC}" )
 	dprint ( "MSVC_IDE: ${MSVC_IDE}" )
-	dprint ( "MSVC60: ${MSVC60}" )
-	dprint ( "MSVC70: ${MSVC70}" )
-	dprint ( "MSVC71: ${MSVC71}" )
-	dprint ( "MSVC80: ${MSVC80}" )
-	dprint ( "CMAKE_COMPILER_2005: ${CMAKE_COMPILER_2005}" )
+	# only supported compilers for condor build
+	dprint ( "MSVC90: ${MSVC90}" )
+	dprint ( "MSVC10: ${MSVC10}" )
 endif(WINDOWS)
 
 # set this to true if you don't want to rebuild the object files if the rules have changed,

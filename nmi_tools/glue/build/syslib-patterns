@@ -1,0 +1,6 @@
+libssl
+libcrypto
+libcom_err
+libgssapi_krb5
+libk5crypto
+libkrb5

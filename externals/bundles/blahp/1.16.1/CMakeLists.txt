@@ -48,10 +48,21 @@ if ( WITH_BLAHP )
 		condor_post_external( popt OFF OFF )
 
 		########################################
-		condor_pre_external( BLAHP blahp-1.16.1-p1 "lib;include" "done")
+		if ( BUILDING_OPENSSL )
+			set( BLAHP_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} ${POPT_REF} )
+			set( GLOBUS_M4_FILE globus.m4 )
+			set( OPENSSL_FLAG --with-openssl-prefix=${OPENSSL_INSTALL_LOC} )
+		else()
+			set( BLAHP_DEPENDS ${GLOBUS_REF} ${POPT_REF} )
+			set( GLOBUS_M4_FILE globus.m4.openssl )
+			set( OPENSSL_FLAG "" )
+		endif()
+
+
+		condor_pre_external( BLAHP blahp-1.16.1-p2 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
-						DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} ${POPT_REF}
+						DEPENDS ${BLAHP_DEPENDS}
 					    #-- Download Step ----------
 						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/blahp-1.16.1.tar.gz ${CMD_TERM}
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
@@ -62,19 +73,19 @@ if ( WITH_BLAHP )
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p0 && 
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p0 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 org.glite.ce.blahp/project &&
-							cp ${CMAKE_CURRENT_SOURCE_DIR}/globus.m4 org.glite.ce.blahp/project &&
+							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} org.glite.ce.blahp/project/globus.m4 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 org.glite.ce.blahp/project.&&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/name-change.patch -p0 &&
 							mv org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp/config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND cd org.glite.ce.blahp &&
 							./bootstrap || ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
-							--with-openssl-prefix=${OPENSSL_INSTALL_LOC}
+							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}
 							--with-globus-nothr-flavor=gcc${BIT_MODE}dbg
 							--prefix=${BLAHP_INSTALL_LOC}/opt/glite
 						#--Build Step ----------
-						BUILD_COMMAND cd org.glite.ce.blahp && make
+						BUILD_COMMAND cd org.glite.ce.blahp && LD_RUN_PATH='$$ORIGIN/../../lib/condor' make
 						BUILD_IN_SOURCE 1
 						#--install Step ----------
 						INSTALL_DIR ${BLAHP_INSTALL_LOC}

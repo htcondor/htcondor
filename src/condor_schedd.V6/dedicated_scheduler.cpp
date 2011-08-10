@@ -3557,7 +3557,7 @@ DedicatedScheduler::setScheduler( ClassAd* job_ad )
 	}
 
 	while( SetAttributeString(cluster, proc, ATTR_SCHEDULER,
-						   ds_name) ==  0 ) {
+							  ds_name, NONDURABLE) ==  0 ) {
 		proc++;
 	}
 	return true;

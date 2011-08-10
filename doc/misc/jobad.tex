@@ -1,0 +1,1295 @@
+\begin{description}
+
+\index{ClassAd!job attributes}
+
+%%% ClassAd attribute: AllRemoteHosts
+\index{ClassAd job attribute!AllRemoteHosts}
+\index{AllRemoteHosts!job ClassAd attribute}
+\item[\AdAttr{AllRemoteHosts}:]  String containing a comma-separated list
+of all the remote machines running a parallel or mpi universe job.
+
+%%% ClassAd attribute: Args
+\index{ClassAd job attribute!Args}
+\index{Args!job ClassAd attribute}
+\item[\AdAttr{Args}:]  String representing the arguments passed to the job.
+
+%%% ClassAd attribute: CkptArch
+\index{ClassAd job attribute!CkptArch}
+\index{CkptArch!job ClassAd attribute}
+\item[\AdAttr{CkptArch}:]  String describing the architecture of the machine
+this job executed on at the time it last produced a checkpoint.
+If the job has never produced a checkpoint,
+this attribute is \Expr{undefined}.
+
+%%% ClassAd attribute: CkptOpSys
+\index{ClassAd job attribute!CkptOpSys}
+\index{CkptOpSys!job ClassAd attribute}
+\item[\AdAttr{CkptOpSys}:]  String describing the operating system of
+the machine
+this job executed on at the time it last produced a checkpoint.
+If the job has never produced a checkpoint,
+this attribute is \Expr{undefined}.
+
+%%% ClassAd attribute: ClusterId
+\index{ClassAd job attribute!ClusterId}
+\index{ClusterId!job ClassAd attribute}
+\index{cluster!definition}
+\index{job ID!cluster identifier}
+\item[\AdAttr{ClusterId}:]  Integer cluster identifier for this job.
+A cluster is a group of jobs that were submitted together.  Each
+job has its own unique job identifier within the cluster, but shares a
+common cluster identifier.
+The value changes each time a job or set of jobs are queued for
+execution under Condor.
+
+%%% ClassAd attribute: Cmd
+\index{ClassAd job attribute!Cmd}
+\index{Cmd!job ClassAd attribute}
+\item[\AdAttr{Cmd}:]  The path to and the file name of the job to be executed.
+
+%%% ClassAd attribute: ConcurrencyLimits
+\index{ClassAd job attribute!ConcurrencyLimits}
+\index{ConcurrencyLimits!job ClassAd attribute}
+\item[\AdAttr{ConcurrencyLimits}:]  A string list,
+delimited by commas and space characters.
+The items in the list
+identify named resources that the job requires.
+
+%%% ClassAd attribute: CommittedTime
+\index{ClassAd job attribute!CommittedTime}
+\index{CommittedTime!job ClassAd attribute}
+\label{CommittedTime}
+\item[\AdAttr{CommittedTime}:] The number of seconds of wall clock time
+that the job has been allocated a machine,
+excluding the time spent on run attempts that
+were evicted without a checkpoint.  
+Like \AdAttr{RemoteWallClockTime},
+this includes time the job spent in a suspended state,
+so the total committed wall time spent running is 
+\begin{verbatim}
+CommittedTime - CommittedSuspensionTime
+\end{verbatim}
+
+%%% ClassAd attribute: CommittedSlotTime
+\index{ClassAd job attribute!CommittedSlotTime}
+\index{CommittedSlotTime!job ClassAd attribute}
+\label{CommittedSlotTime}
+\item[\AdAttr{CommittedSlotTime}:] This attribute is identical to
+\AdAttr{CommittedTime} except that the time is multiplied by the
+\AdAttr{SlotWeight} of the machine(s) that ran the job.  This relies
+on \AdAttr{SlotWeight} being listed in \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}.
+
+%%% ClassAd attribute: CumulativeSlotTime
+\index{ClassAd job attribute!CumulativeSlotTime}
+\index{CumulativeSlotTime!job ClassAd attribute}
+\label{CumulativeSlotTime}
+\item[\AdAttr{CumulativeSlotTime}:] This attribute is identical to
+\AdAttr{RemoteWallClockTime} except that the time is multiplied by the
+\AdAttr{SlotWeight} of the machine(s) that ran the job.  This relies
+on \AdAttr{SlotWeight} being listed in \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}.
+
+%%% ClassAd attribute: CompletionDate
+\index{ClassAd job attribute!CompletionDate}
+\index{CompletionDate!job ClassAd attribute}
+\item[\AdAttr{CompletionDate}:]  The time when the job completed,
+or the value 0 if the job has not yet completed.
+Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: CommittedSuspensionTime
+\index{ClassAd job attribute!CommittedSuspensionTime}
+\index{CommittedSuspensionTime!job ClassAd attribute}
+\item[\AdAttr{CommittedSuspensionTime}:]  A running total of the number of
+seconds the job has spent in suspension during time in which the job was
+not evicted without a checkpoint.  This number is updated when the job is
+checkpointed and when it exits.
+
+%%% ClassAd attribute: CumulativeSuspensionTime
+\index{ClassAd job attribute!CumulativeSuspensionTime}
+\index{CumulativeSuspensionTime!job ClassAd attribute}
+\item[\AdAttr{CumulativeSuspensionTime}:]  A running total of the number of
+seconds the job has spent in suspension for the life of the job.
+
+%%% ClassAd attribute: CurrentHosts
+\index{ClassAd job attribute!CurrentHosts}
+\index{CurrentHosts!job ClassAd attribute}
+\item[\AdAttr{CurrentHosts}:]  The number of hosts in the claimed state,
+due to this job.
+
+%%% ClassAd attribute: DAGManJobId
+\index{ClassAd job attribute!DAGManJobId}
+\index{DAGManJobId!job ClassAd attribute}
+\item[\AdAttr{DAGManJobId}:] For a DAGMan node job only,
+the \Attr{ClusterId} job ClassAd attribute
+of the \Condor{dagman} job which is the parent of this node job.
+It is only one layer deep for nested DAGs.
+
+%%% ClassAd attribute: DAGParentNodeNames
+\index{ClassAd job attribute!DAGParentNodeNames}
+\index{DAGParentNodeNames!job ClassAd attribute}
+\item[\AdAttr{DAGParentNodeNames}:] For a DAGMan node job only,
+a comma separated list of each \Arg{JobName} which is a parent node of
+this job's node.
+This attribute is passed through to the job via the \Condor{submit}
+command line, if it does not exceed the line length defined with
+\Code{\_POSIX\_ARG\_MAX}. For example, if a node job has two parents
+with \Arg{JobName}s B and C, the \Condor{submit} command line will 
+contain
+\begin{verbatim}
+  -append +DAGParentNodeNames=B,C
+\end{verbatim}
+
+%%% ClassAd attribute: DeltacloudAvailableActions
+\index{ClassAd job attribute!DeltacloudAvailableActions}
+\index{DeltacloudAvailableActions!job ClassAd attribute}
+\item[\AdAttr{DeltacloudAvailableActions}:] 
+Used for grid-type deltacloud jobs.
+For a running job,
+Condor sets this string to contain a comma-separated list of actions
+that can be performed on a Deltacloud instance, 
+as given by the selected service.
+
+%%% ClassAd attribute: DeltacloudHardwareProfile
+\index{ClassAd job attribute!DeltacloudHardwareProfile}
+\index{DeltacloudHardwareProfile!job ClassAd attribute}
+\item[\AdAttr{DeltacloudHardwareProfile}:] 
+String taken from the submit description file command
+\SubmitCmd{deltacloud\_hardware\_profile}. Specifies the
+hardware configuration to be used for a grid-type deltacloud
+job.
+
+%%% ClassAd attribute: DeltacloudHardwareProfileCpu
+\index{ClassAd job attribute!DeltacloudHardwareProfileCpu}
+\index{DeltacloudHardwareProfileCpu!job ClassAd attribute}
+\item[\AdAttr{DeltacloudHardwareProfileCpu}:] 
+String taken from the submit description file command
+\SubmitCmd{deltacloud\_hardware\_profile\_cpu}. Specifies CPU
+details in the hardware configuration to be used for a grid-type
+deltacloud job.
+
+%%% ClassAd attribute: DeltacloudHardwareProfileMemory
+\index{ClassAd job attribute!DeltacloudHardwareProfileMemory}
+\index{DeltacloudHardwareProfileMemory!job ClassAd attribute}
+\item[\AdAttr{DeltacloudHardwareProfileMemory}:] 
+String taken from the submit description file command
+\SubmitCmd{deltacloud\_hardware\_profile\_memory}. Specifies memory (RAM)
+details in the hardware configuration to be used for a grid-type
+deltacloud job.
+
+%%% ClassAd attribute: DeltacloudHardwareProfileStorage
+\index{ClassAd job attribute!DeltacloudHardwareProfileStorage}
+\index{DeltacloudHardwareProfileStorage!job ClassAd attribute}
+\item[\AdAttr{DeltacloudHardwareProfileStorage}:] 
+String taken from the submit description file command
+\SubmitCmd{deltacloud\_hardware\_profile\_storage}. Specifies memory (disk)
+details in the hardware configuration to be used for a grid-type
+deltacloud job.
+
+%%% ClassAd attribute: DeltacloudImageId
+\index{ClassAd job attribute!DeltacloudImageId}
+\index{DeltacloudImageId!job ClassAd attribute}
+\item[\AdAttr{DeltacloudImageId}:] 
+String taken from the submit description file command
+\SubmitCmd{deltacloud\_image\_id}.
+Specifies the virtual machine image to use for a grid-type deltacloud
+job.
+
+%%% ClassAd attribute: DeltacloudKeyname
+\index{ClassAd job attribute!DeltacloudKeyname}
+\index{DeltacloudKeyname!job ClassAd attribute}
+\item[\AdAttr{DeltacloudKeyname}:] 
+String taken from the submit description file command
+\SubmitCmd{deltacloud\_keyname}.
+Specifies the SSH key pair to use for a grid-type deltacloud job.
+
+%%% ClassAd attribute: DeltacloudPasswordFile
+\index{ClassAd job attribute!DeltacloudPasswordFile}
+\index{DeltacloudPasswordFile!job ClassAd attribute}
+\item[\AdAttr{DeltacloudPasswordFile}:] 
+String taken from the submit description file command
+\SubmitCmd{deltacloud\_password\_file}.
+Specifies a file containing the secret key to be used to authenticate
+with the Deltacloud service for a grid-type deltacloud job.
+
+%%% ClassAd attribute: DeltacloudPrivateNetworkAddresses
+\index{ClassAd job attribute!DeltacloudPrivateNetworkAddresses}
+\index{DeltacloudPrivateNetworkAddresses!job ClassAd attribute}
+\item[\AdAttr{DeltacloudPrivateNetworkAddresses}:] 
+For a running Deltacloud instance,
+Condor receives and sets this comma-separated list of the private IP addresses
+allocated to the running virtual machine.
+
+%%% ClassAd attribute: DeltacloudPublicNetworkAddresses
+\index{ClassAd job attribute!DeltacloudPublicNetworkAddresses}
+\index{DeltacloudPublicNetworkAddresses!job ClassAd attribute}
+\item[\AdAttr{DeltacloudPublicNetworkAddresses}:] 
+For a running Deltacloud instance,
+Condor receives and sets this comma-separated list of the public IP addresses
+allocated to the running virtual machine.
+
+%%% ClassAd attribute: DeltacloudRealmId
+\index{ClassAd job attribute!DeltacloudRealmId}
+\index{DeltacloudRealmId!job ClassAd attribute}
+\item[\AdAttr{DeltacloudRealmId}:] 
+String taken from the submit description file command
+\SubmitCmd{deltacloud\_ream\_id}.
+Specifies the realm to be used for a grid-type deltacloud job.
+
+%%% ClassAd attribute: DeltacloudUserData
+\index{ClassAd job attribute!DeltacloudUserData}
+\index{DeltacloudUserData!job ClassAd attribute}
+\item[\AdAttr{DeltacloudUserData}:] 
+String taken from the submit description file command
+\SubmitCmd{deltacloud\_user\_data}.
+Specifies a block of data to be provided to the instance
+for a grid-type deltacloud job.
+
+%%% ClassAd attribute: DeltacloudUsername
+\index{ClassAd job attribute!DeltacloudUsername}
+\index{DeltacloudUsername!job ClassAd attribute}
+\item[\AdAttr{DeltacloudUsername}:] 
+String taken from the submit description file command
+\SubmitCmd{deltacloud\_username}.
+Specifies the user name to be used to authenticate
+with the Deltacloud service for a grid-type deltacloud job.
+
+%%% ClassAd attribute: DiskUsage
+\index{ClassAd job attribute!DiskUsage}
+\index{DiskUsage!job ClassAd attribute}
+\item[\AdAttr{DiskUsage}:] Amount of disk space (Kbytes) in the Condor
+execute directory on the execute machine that this job has used.
+The initial estimate may be specified in the job
+submit file using the \SubmitCmd{request\_disk} command.
+If not initialized by the job's request,
+\SubmitCmd{vm} universe jobs will default to an initial value of the disk
+image size. 
+If not initialized by the job's request,
+non-\SubmitCmd{vm} universe jobs will default to an initial value of the 
+sum of the job's executable and all input files.
+
+%%% ClassAd attribute: EC2AccessKeyId
+\index{ClassAd job attribute!EC2AccessKeyId}
+\index{EC2AccessKeyId!job ClassAd attribute}
+\item[\AdAttr{EC2AccessKeyId}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_access\_key\_id}.
+Defines the path and file name of the file containing the EC2 Query API's
+access key.
+
+%%% ClassAd attribute: EC2AmiID
+\index{ClassAd job attribute!EC2AmiID}
+\index{EC2AmiID!job ClassAd attribute}
+\item[\AdAttr{EC2AmiID}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_ami\_id}.
+Identifies the machine image of the instance.
+
+%%% ClassAd attribute: EC2ElasticIp
+\index{ClassAd job attribute!EC2ElasticIp}
+\index{EC2ElasticIp!job ClassAd attribute}
+\item[\AdAttr{EC2ElasticIp}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_elastic\_ip}.
+Specifies an Elastic IP address to associate with the instance.
+
+%%% ClassAd attribute: EC2InstanceName
+\index{ClassAd job attribute!EC2InstanceName}
+\index{EC2InstanceName!job ClassAd attribute}
+\item[\AdAttr{EC2InstanceName}:] 
+Used for grid type ec2 jobs;
+a string set for the job once the instance starts running, 
+as assigned by the EC2 service, 
+that represents the unique ID assigned to the instance by the EC2 service.
+
+%%% ClassAd attribute: EC2InstanceType
+\index{ClassAd job attribute!EC2InstanceType}
+\index{EC2InstanceType!job ClassAd attribute}
+\item[\AdAttr{EC2InstanceType}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_instance\_type}.
+Specifies a service-specific instance type.
+
+%%% ClassAd attribute: EC2KeyPairFile
+\index{ClassAd job attribute!EC2KeyPairFile}
+\index{EC2KeyPairFile!job ClassAd attribute}
+\item[\AdAttr{EC2KeyPairFile}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_key\_pair\_file}.
+Defines that path and file name of the file 
+into which to write the SSH key used to access the image, once it is running. 
+
+%%% ClassAd attribute: EC2RemoteVirtualMachineName
+\index{ClassAd job attribute!EC2RemoteVirtualMachineName}
+\index{EC2RemoteVirtualMachineName!job ClassAd attribute}
+\item[\AdAttr{EC2RemoteVirtualMachineName}:] 
+Used for grid type ec2 jobs;
+a string set for the job once the instance starts running, 
+as assigned by the EC2 service, that represents
+the host name upon which the instance runs, such that the
+user can communicate with the running instance.
+
+%%% ClassAd attribute: EC2SecretAccessKey
+\index{ClassAd job attribute!EC2SecretAccessKey}
+\index{EC2SecretAccessKey!job ClassAd attribute}
+\item[\AdAttr{EC2SecretAccessKey}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_secret\_access\_key}.
+Defines that path and file name of the file 
+containing the EC2 Query API's secret access key.
+
+%%% ClassAd attribute: EC2SecurityGroups
+\index{ClassAd job attribute!EC2SecurityGroups}
+\index{EC2SecurityGroups!job ClassAd attribute}
+\item[\AdAttr{EC2SecurityGroups}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_security\_groups}.
+Defines the list of EC2 security groups which should be associated with the job.
+
+%%% ClassAd attribute: EC2UserData
+\index{ClassAd job attribute!EC2UserData}
+\index{EC2UserData!job ClassAd attribute}
+\item[\AdAttr{EC2UserData}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_user\_data}.
+Defines a block of data that can be accessed by the virtual machine.
+
+%%% ClassAd attribute: EC2UserDataFile
+\index{ClassAd job attribute!EC2UserDataFile}
+\index{EC2UserDataFile!job ClassAd attribute}
+\item[\AdAttr{EC2UserDataFile}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_user\_data\_file}.
+Specifies a path and file name of a file containing 
+data that can be accessed by the virtual machine.
+
+%%% ClassAd attribute: EmailAttributes
+\index{ClassAd job attribute!EmailAttributes}
+\index{EmailAttributes!job ClassAd attribute}
+\item[\AdAttr{EmailAttributes}:]  A string containing a comma-separated
+list of job ClassAd attributes. For each attribute name in the list,
+its value will be included in the e-mail notification upon job completion.
+
+%%% ClassAd attribute: EnteredCurrentStatus
+\index{ClassAd job attribute!EnteredCurrentStatus}
+\index{EnteredCurrentStatus!job ClassAd attribute}
+\item[\AdAttr{EnteredCurrentStatus}:]  An integer containing the
+epoch time of when the job entered into its current status
+So for example, if the job is on hold, the ClassAd expression
+\begin{verbatim}
+    CurrentTime - EnteredCurrentStatus
+\end{verbatim}
+will equal the number of seconds that the job has been on hold.
+
+%%% ClassAd attribute: ExecutableSize
+\index{ClassAd job attribute!ExecutableSize}
+\index{ExecutableSize!job ClassAd attribute}
+\item[\AdAttr{ExecutableSize}:]  Size of the executable in Kbytes.
+
+%%% ClassAd attribute: ExitBySignal
+\index{ClassAd job attribute!ExitBySignal}
+\index{ExitBySignal!job ClassAd attribute}
+\item[\AdAttr{ExitBySignal}:]  An attribute that is \Expr{True}
+when a user job exits via a signal and \Expr{False} otherwise.
+For some grid universe jobs, how the job exited is
+unavailable. In this case, \AdAttr{ExitBySignal} is set to  \Expr{False}.
+
+%%% ClassAd attribute: ExitCode
+\index{ClassAd job attribute!ExitCode}
+\index{ExitCode!job ClassAd attribute}
+\item[\AdAttr{ExitCode}:]  When a user job exits by means other than a signal,
+this is the exit return code of the user job.
+For some grid universe jobs, how the job exited is
+unavailable. In this case, \AdAttr{ExitCode} is set to  0.
+
+%%% ClassAd attribute: ExitSignal
+\index{ClassAd job attribute!ExitSignal}
+\index{ExitSignal!job ClassAd attribute}
+\item[\AdAttr{ExitSignal}:]  When a user job exits by means of an unhandled 
+signal, this attribute takes on the numeric value of the signal.
+For some grid universe jobs, how the job exited is
+unavailable. In this case, \AdAttr{ExitSignal} will be undefined.
+
+%% Karen added proper index entries up to this point in the file
+
+%%% ClassAd attribute: ExitStatus
+\index{ClassAd job attribute!ExitStatus}
+\index{ExitStatus!job ClassAd attribute}
+\item[\AdAttr{ExitStatus}:]  The way that Condor previously dealt with
+a job's exit status.
+This attribute should no longer be used.
+It is not always accurate in
+heterogeneous pools, or if the job exited with a signal.
+Instead, see the attributes: \AdAttr{ExitBySignal},
+\AdAttr{ExitCode}, and
+\AdAttr{ExitSignal}.
+
+%%% ClassAd attribute: GridJobStatus
+\index{ClassAd job attribute!GridJobStatus}
+\index{GridJobStatus!job ClassAd attribute}
+\item[\AdAttr{GridJobStatus}:] A string containing the job's status as
+reported by the remote job management system.
+
+%%% ClassAd attribute: GridResource
+\index{ClassAd job attribute!GridResource}
+\index{GridResource!job ClassAd attribute}
+\item[\AdAttr{GridResource}:] A string defined by the right hand side
+of the the submit description file command \SubmitCmd{grid\_resource}.
+It specifies the target grid type, plus additional parameters
+specific to the grid type.
+
+%%% ClassAd attribute: HoldKillSig
+\index{ClassAd job attribute!HoldKillSig}
+\index{HoldKillSig!job ClassAd attribute}
+\item[\AdAttr{HoldKillSig}:]    Currently only for scheduler and local
+universe jobs,
+a string containing a name of
+a signal to be sent to the job if the job is put on hold.
+
+%%% ClassAd attribute: HoldReason
+\index{ClassAd job attribute!HoldReason}
+\index{HoldReason!job ClassAd attribute}
+\item[\AdAttr{HoldReason}:]    A string containing a human-readable
+message about why a job is on hold.
+This is the message that will be displayed in response to
+the command \verb@condor_q -hold@.
+It can be used to determine if a job should be released or not.
+
+%%% ClassAd attribute: HoldReasonCode
+\index{ClassAd job attribute!HoldReasonCode}
+\index{HoldReasonCode!job ClassAd attribute}
+\item[\AdAttr{HoldReasonCode}:]    An integer value that represents the
+reason that a job was put on hold.
+
+%% Don't mess with the column widths, as they currently fit within the pdf,
+%% even if they look stupid in the html
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{2cm}p{9cm}|p{4cm}} \hline
+\emph{Integer Code} & \emph{Reason for Hold} & \emph{HoldReasonSubCode} \\ \hline \hline
+1 & The user put the job on hold with \Condor{hold}.  \\ \hline
+2 & Globus middleware reported an error. & 
+  The GRAM error number. \\ \hline
+3 & The \MacroNI{PERIODIC\_HOLD} expression evaluated to \Expr{True}.  \\ \hline
+4 & The credentials for the job are invalid. \\ \hline
+5 & A job policy expression evaluated to \Expr{Undefined}. \\ \hline
+6 & The \Condor{starter} failed to start the executable. &
+  The Unix  error number. \\ \hline
+7 & The standard output file for the job could not be opened. &
+  The Unix  error number. \\ \hline
+8 & The standard input file for the job could not be opened. &
+  The Unix  error number. \\ \hline
+9 & The standard output stream for the job could not be opened. &
+  The Unix  error number. \\ \hline
+10 & The standard input stream for the job could not be opened. &
+  The Unix  error number. \\ \hline
+11 & An internal Condor protocol error was encountered when transferring files. \\ \hline
+12 & The \Condor{starter} failed to download input files. &
+  The Unix  error number. \\ \hline
+13 & The \Condor{starter} failed to upload output files. &
+  The Unix  error number. \\ \hline
+14 & The initial working directory of the job cannot be accessed. &
+  The Unix  error number. \\ \hline
+15 & The user requested the job be submitted on hold. \\ \hline
+16 & Input files are being spooled. \\ \hline
+17 & A standard universe job is not compatible with the
+  \Condor{shadow} version available on the submitting machine.  \\ \hline
+18 & An internal Condor protocol error was encountered when transferring
+  files. \\ \hline
+19 & \Macro{<Keyword>\_HOOK\_PREPARE\_JOB} was defined but could not be executed or returned failure. \\ \hline
+20 & The job missed its deferred execution time and therefore failed to run. \\ \hline
+21 & The job was put on hold because \Macro{WANT\_HOLD} in the machine policy was true. \\ \hline
+22 & Unable to initialize user log. \\ \hline
+23 & Failed to access user account. \\ \hline
+24 & No compatible shadow. \\ \hline
+25 & Invalid cron settings. \\ \hline
+26 & \Macro{SYSTEM\_PERIODIC\_HOLD} evaluated to true. \\ \hline
+27 & The system periodic job policy evaluated to undefined. \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
+
+%%% ClassAd attribute: HoldReasonSubCode
+\index{ClassAd job attribute!HoldReasonSubCode}
+\index{HoldReasonSubCode!job ClassAd attribute}
+\item[\AdAttr{HoldReasonSubCode}:]    An integer value that represents further
+information to go along with the \Attr{HoldReasonCode}, for
+some values of \Attr{HoldReasonCode}.
+See \Attr{HoldReasonCode} for the values.
+
+%%% ClassAd attribute: HookKeyword
+\index{ClassAd machine attribute!HookKeyword}
+\item[\AdAttr{HookKeyword}:] A string that uniquely identifies
+a set of job hooks, and added to the ClassAd once a job is fetched.
+
+%%% ClassAd attribute: ImageSize
+\index{ClassAd job attribute!ImageSize}
+\index{ImageSize!job ClassAd attribute}
+\item[\AdAttr{ImageSize}:]  Estimate of the memory image size of the
+job in Kbytes.  The initial estimate may be specified in the job
+submit file using \SubmitCmd{request\_memory} or for \SubmitCmd{vm}
+universe jobs using \SubmitCmd{vm\_memory}.  
+Otherwise, the initial value is equal to the size of the
+executable for non-vm universe jobs, and 0 for vm universe jobs.
+When the job writes a checkpoint, the \AdAttr{ImageSize}
+attribute is set to the size of the checkpoint file (since the
+checkpoint file contains the job's memory image).
+A vanilla universe job's \AdAttr{ImageSize} is recomputed
+internally every 15 seconds.
+
+%%% ClassAd attribute: IwdFlushNFSCache
+\index{ClassAd job attribute!IwdFlushNFSCache}
+\index{IwdFlushNFSCache!job ClassAd attribute}
+\label{IwdFlushNFSCache-job-attribute}
+\item[\AdAttr{IwdFlushNFSCache}:]  A boolean expression that controls
+whether or not Condor attempts to flush a submit machine's NFS cache,
+in order to refresh a Condor job's initial working directory.
+The value will be \Expr{True}, unless a job explicitly adds this
+attribute, setting it to \Expr{False}.
+
+%%% ClassAd attriute: JobAdInformationAttrs
+\index{ClassAd job attribute!JobAdInformationAttrs}
+\index{JobAdInformationAttrs!job ClassAd attribute}
+\label{JobAdInformationAttrs-job-attribute}
+\item[\AdAttr{JobAdInformationAttrs}:] A comma-separated list
+of attribute names.  The named attributes and their values are written
+in the user log whenever any event is being written to the log.
+This is the same as the configuration setting
+\MacroNI{EVENT\_LOG\_INFORMATION\_ATTRS} (see
+page~\pageref{param:EventLogJobAdInformationAttrs}) but it applies to
+the user log instead of the system event log.
+
+
+%%% ClassAd attribute: JobLeaseDuration
+\index{ClassAd job attribute!JobLeaseDuration}
+\index{JobLeaseDuration!job ClassAd attribute}
+\item[\AdAttr{JobLeaseDuration}:]  The number of seconds set for
+a job lease, the amount of time that a job may continue running
+on a remote resource,
+despite its submitting machine's lack of response.
+See section~\ref{sec:Job-Lease} for details on job leases.
+
+%%% ClassAd attribute: JobPrio
+\index{ClassAd job attribute!JobPrio}
+\index{JobPrio!job ClassAd attribute}
+\item[\AdAttr{JobPrio}:]  Integer priority for this job, set by
+\Condor{submit} or \Condor{prio}.  The default value is 0.  The higher
+the number, the greater (better) the priority.
+
+%%% ClassAd attribute: JobRunCount
+\index{ClassAd job attribute!JobRunCount}
+\index{JobRunCount!job ClassAd attribute}
+\item[\AdAttr{JobRunCount}:]  This attribute is retained for backwards
+  compatibility.  It may go away in the future.  It is equivalent to
+  \AdAttr{NumShadowStarts} for all universes except \SubmitCmd{scheduler}.
+  For the \SubmitCmd{scheduler} universe, this attribute is equivalent to
+  \AdAttr{NumJobStarts}.
+
+%%% ClassAd attribute: JobStartDate
+\index{ClassAd job attribute!JobStartDate}
+\index{JobStartDate!job ClassAd attribute}
+\item[\AdAttr{JobStartDate}:]  Time at which the job first began
+running.  Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: JobStatus
+\index{ClassAd job attribute!JobStatus}
+\index{JobStatus!job ClassAd attribute}
+\index{job!state}
+\item[\AdAttr{JobStatus}:]  Integer which indicates the current
+status of the job.
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{2cm}p{10cm}|} \hline
+\emph{Value} & \emph{Status} \\ \hline \hline
+1 & Idle \\ \hline
+2 & Running \\ \hline
+3 & Removed \\ \hline
+4 & Completed \\ \hline
+5 & Held \\ \hline
+6 & Transferring Output \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
+
+%%% ClassAd attribute: JobUniverse
+\index{ClassAd job attribute!JobUniverse}
+\index{JobUniverse!job ClassAd attribute}
+\index{job!universe}
+\index{universe!job attribute definitions}
+\item[\AdAttr{JobUniverse}:]  Integer which indicates the job
+universe.
+
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{2cm}p{3cm}|} \hline
+\emph{Value} & \emph{Universe} \\ \hline \hline
+1 & standard \\ \hline
+5 & vanilla \\ \hline
+7 & scheduler \\ \hline
+8 & MPI \\ \hline
+9 & grid \\ \hline
+10 & java \\ \hline
+11 & parallel \\ \hline
+12 & local \\ \hline
+13 & vm \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
+
+%%% ClassAd attribute: KillSig
+\index{ClassAd job attribute!KillSig}
+\index{KillSig!job ClassAd attribute}
+\item[\AdAttr{KillSig}:]  The Unix signal number that the job wishes to be
+sent before being forcibly killed.
+It is relevant only for jobs running on Unix machines.
+
+%%% ClassAd attribute: KillSigTimeout
+\index{ClassAd job attribute!KillSigTimeout}
+\index{KillSigTimeout!job ClassAd attribute}
+\item[\AdAttr{KillSigTimeout}:]  The number of seconds that the job
+(other than the standard universe) requests the \Condor{starter} wait
+after sending the signal defined as \Attr{KillSig} and before forcibly
+removing the job.
+The actual amount of time will be the minimum of this value
+and the execute machine's configuration variable \Macro{KILLING\_TIMEOUT}.
+
+%%% ClassAd attribute: LastCheckpointPlatform
+\index{ClassAd job attribute!LastCheckpointPlatform}
+\index{LastCheckpointPlatform!job ClassAd attribute}
+\item[\AdAttr{LastCheckpointPlatform}:]  An opaque string which is the
+\AdAttr{CheckpointPlatform} identifier from the last machine where this
+standard universe job had successfully produced a checkpoint.
+
+%%% ClassAd attribute: LastCkptServer
+\index{ClassAd job attribute!LastCkptServer}
+\index{LastCkptServer!job ClassAd attribute}
+\item[\AdAttr{LastCkptServer}:]  Host name of the last checkpoint
+server used by this job.  When a pool is using multiple checkpoint
+servers, this tells the job where to find its checkpoint file.
+
+%%% ClassAd attribute: LastCkptTime
+\index{ClassAd job attribute!LastCkptTime}
+\index{LastCkptTime!job ClassAd attribute}
+\item[\AdAttr{LastCkptTime}:]  Time at which the job last performed a
+successful checkpoint.  Measured in the number of seconds since the
+epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: LastMatchTime
+\index{ClassAd job attribute!LastMatchTime}
+\index{LastMatchTime!job ClassAd attribute}
+\item[\AdAttr{LastMatchTime}:]  An integer containing the epoch time
+when the job was last successfully matched with a resource (gatekeeper) Ad.
+
+%%% ClassAd attribute: LastRejMatchReason
+\index{ClassAd job attribute!LastRejMatchReason}
+\index{LastRejMatchReason!job ClassAd attribute}
+\item[\AdAttr{LastRejMatchReason}:]   If, at any point in the past,
+this job failed to match with a resource ad,
+this attribute will contain a string with a
+human-readable message about why the match failed.
+
+%%% ClassAd attribute: LastRejMatchTime
+\index{ClassAd job attribute!LastRejMatchTime}
+\index{LastRejMatchTime!job ClassAd attribute}
+\item[\AdAttr{LastRejMatchTime}:]   An integer containing the epoch
+time when Condor-G last tried to find a match for the job,
+but failed to do so.
+
+%%% ClassAd attribute: LastSuspensionTime
+\index{ClassAd job attribute!LastSuspensionTime}
+\index{LastSuspensionTime!job ClassAd attribute}
+\item[\AdAttr{LastSuspensionTime}:]  Time at which the job last performed a
+successful suspension.  Measured in the number of seconds since the
+epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: LastVacateTime
+\index{ClassAd job attribute!LastVacateTime}
+\index{LastVacateTime!job ClassAd attribute}
+\item[\AdAttr{LastVacateTime}:]  Time at which the job was last
+evicted from a remote workstation.  Measured in the number of seconds
+since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: LeaveJobInQueue
+\index{ClassAd job attribute!LeaveJobInQueue}
+\index{LeaveJobInQueue!job ClassAd attribute}
+\item[\AdAttr{LeaveJobInQueue}:]  A boolean expression that defaults to
+\Expr{False}, causing the job to be removed from the queue upon completion.
+An exception is if the job is submitted using \Expr{condor\_submit -spool}.
+For this case, the default expression causes the job to be kept in the queue
+for 10 days after completion.
+
+%%% ClassAd attribute: LocalSysCpu
+\index{ClassAd job attribute!LocalSysCpu}
+\index{LocalSysCpu!job ClassAd attribute}
+\item[\AdAttr{LocalSysCpu}:]  An accumulated number of seconds of 
+system CPU time that the job caused to the machine upon which
+the job was submitted.
+
+%%% ClassAd attribute: LocalUserCpu
+\index{ClassAd job attribute!LocalUserCpu}
+\index{LocalUserCpu!job ClassAd attribute}
+\item[\AdAttr{LocalUserCpu}:]  An accumulated number of seconds of 
+user CPU time that the job caused to the machine upon which
+the job was submitted.
+
+%%% ClassAd attribute: MachineAttr<X><N>
+\index{ClassAd job attribute!MachineAttr<X><N>}
+\index{MachineAttr<X><N>!job ClassAd attribute}
+\item[\AdAttr{MachineAttr<X><N>}:] 
+Machine attribute of name \Attr{<X>} that is placed into this job ClassAd,
+as specified by the configuration variable
+\MacroNI{SYSTEM\_JOB\_MACHINE\_ATTRS}.
+With the potential for multiple run attempts, \Attr{<N>} represents
+an integer value providing historical values of this machine attribute
+for multiple runs.
+The most recent run will have a value of \Attr{<N>} equal to \Expr{0}.
+The next most recent run will have a value of \Attr{<N>} equal to \Expr{1}.
+
+%%% ClassAd attribute: MaxHosts
+\index{ClassAd job attribute!MaxHosts}
+\index{MaxHosts!job ClassAd attribute}
+\item[\AdAttr{MaxHosts}:]  The maximum number of hosts that this job would
+like to claim. As long as \AdAttr{CurrentHosts} is the same as
+\AdAttr{MaxHosts}, no more hosts are negotiated for.
+
+%%% ClassAd attribute: MaxJobRetirementTime
+\index{ClassAd job attribute!MaxJobRetirementTime}
+\index{MaxJobRetirementTime!job ClassAd attribute}
+\item[\AdAttr{MaxJobRetirementTime}:]  Maximum time in seconds to let this
+job run uninterrupted before kicking it off when it is being preempted.
+This can only decrease the amount of time from what the corresponding
+startd expression allows.
+
+%%% ClassAd attribute: MinHosts
+\index{ClassAd job attribute!MinHosts}
+\index{MinHosts!job ClassAd attribute}
+\item[\AdAttr{MinHosts}:]  The minimum number of hosts that must be in
+the claimed state for this job, before the job may enter the running state.
+
+%%% ClassAd attribute: NextJobStartDelay
+\index{ClassAd job attribute!NextJobStartDelay}
+\index{NextJobStartDelay!job ClassAd attribute}
+\item[\AdAttr{NextJobStartDelay}:]  An integer number of seconds delay time
+after this job starts until the next job is started. The value is limited
+by the configuration variable \Macro{MAX\_NEXT\_JOB\_START\_DELAY}.
+
+%%% ClassAd attribute: NiceUser
+\index{ClassAd job attribute!NiceUser}
+\index{NiceUser!job ClassAd attribute}
+\item[\AdAttr{NiceUser}:]  Boolean value which when \Expr{True} indicates
+that this job is a \emph{nice} job, raising its user priority value, 
+thus causing it to run on a machine only when no other Condor jobs want 
+the machine.
+
+%%% ClassAd attribute: NTDomain
+\index{ClassAd job attribute!NTDomain}
+\index{NTDomain!job ClassAd attribute}
+\item[\AdAttr{NTDomain}:]  A string that identifies the NT domain under
+which a job's owner authenticates on a platform running Windows.
+
+%%% ClassAd attribute: NumCkpts
+\index{ClassAd job attribute!NumCkpts}
+\index{NumCkpts!job ClassAd attribute}
+\item[\AdAttr{NumCkpts}:]  A count of the number of checkpoints
+written by this job during its lifetime.
+
+%%% ClassAd attribute: NumGlobusSubmits
+\index{ClassAd job attribute!NumGlobusSubmits}
+\index{NumGlobusSubmits!job ClassAd attribute}
+\item[\AdAttr{NumGlobusSubmits}:]   An integer that is incremented each
+time the \Condor{gridmanager} receives confirmation of a successful job
+submission into Globus.
+
+%%% ClassAd attribute: NumJobMatches
+\index{ClassAd job attribute!NumJobMatches}
+\index{NumJobMatches!job ClassAd attribute}
+\item[\AdAttr{NumJobMatches}:]  An integer that is incremented by the
+\Condor{schedd} each time the job is matched with a resource ad by the
+negotiator.
+
+%%% ClassAd attribute: NumJobStarts
+\index{ClassAd job attribute!NumJobStarts}
+\index{NumJobStarts!job ClassAd attribute}
+\item[\AdAttr{NumJobStarts}:]  An integer count of the number of times the
+  job started executing.
+  This is not (yet) defined for \SubmitCmd{standard} universe jobs.
+
+%%% ClassAd attribute: NumJobReconnects
+\index{ClassAd job attribute!NumJobReconnects}
+\index{NumJobReconnects!job ClassAd attribute}
+\item[\AdAttr{NumJobReconnects}:]  An integer count of the number of times a
+  job successfully reconnected after being disconnected.
+  This occurs when the
+  \Condor{shadow} and \Condor{starter} lose contact,
+  for example because of
+  transient network failures or a \Condor{shadow} or \Condor{schedd}
+  restart.
+  This attribute is only defined for jobs that can reconnected:
+  those in the \SubmitCmd{vanilla} and \SubmitCmd{java} universes.
+
+%%% ClassAd attribute: NumPids
+\index{ClassAd job attribute!NumPids}
+\index{NumPids!job ClassAd attribute}
+\item[\AdAttr{NumPids}:]  A count of the number of child processes that
+this job has.
+
+%%% ClassAd attribute: NumRestarts
+\index{ClassAd job attribute!NumRestarts}
+\index{NumRestarts!job ClassAd attribute}
+\item[\AdAttr{NumRestarts}:]  A count of the number of restarts from a
+checkpoint attempted by this job during its lifetime.
+
+%%% ClassAd attribute: NumShadowExceptions
+\index{ClassAd job attribute!NumShadowExceptions}
+\index{NumShadowExceptions!job ClassAd attribute}
+\item[\AdAttr{NumShadowExceptions}:]  An integer count of the number of
+  times the \Condor{shadow} daemon had a fatal error for a given job.
+
+%%% ClassAd attribute: NumShadowStarts
+\index{ClassAd job attribute!NumShadowStarts}
+\index{NumShadowStarts!job ClassAd attribute}
+\item[\AdAttr{NumShadowStarts}:]  An integer count of the number of
+  times a \Condor{shadow} daemon was started for a given job.
+  This attribute is not defined for
+  \SubmitCmd{scheduler} universe jobs, since
+  they do not have a \Condor{shadow} daemon associated with them.
+  For \SubmitCmd{local} universe jobs, this attribute \emph{is}
+  defined, even though the process that manages the job is technically
+  a \Condor{starter} rather than a \Condor{shadow}.  
+  This keeps the management of the
+  local universe and other universes as similar as possible.
+
+%%% ClassAd attribute: NumSystemHolds
+\index{ClassAd job attribute!NumSystemHolds}
+\index{NumSystemHolds!job ClassAd attribute}
+\item[\AdAttr{NumSystemHolds}:]   An integer that is incremented each time
+Condor-G places a job on hold due to some sort of error condition.  This
+counter is useful, since Condor-G will always place a job on hold when it
+gives up on some error condition.  Note that if the user places the job
+on hold using the \Condor{hold} command, this attribute is not incremented.
+
+%%% ClassAd attribute: OtherJobRemoveRequirements
+\label{attribute-OtherJobRemoveRequirements}
+\index{ClassAd job attribute!OtherJobRemoveRequirements}
+\index{OtherJobRemoveRequirements!job ClassAd attribute}
+\item[\AdAttr{OtherJobRemoveRequirements}:]
+A string that defines a list of jobs.
+When the job with this attribute defined is removed,
+all other jobs defined by the list are also removed.
+The string is an expression that defines a constraint equivalent to
+the one implied by the command 
+\begin{verbatim}
+  condor_rm -constraint <constraint>
+\end{verbatim}
+This attribute is used for jobs managed with \Condor{dagman} to ensure
+that node jobs of the DAG are removed when the \Condor{dagman} job
+itself is removed.  Note that the list of jobs defined by this attribute
+must not form a cyclic removal of jobs,
+or the \Condor{schedd} will go into an infinite loop 
+when any of the jobs is removed.
+
+%%% ClassAd attribute: Owner
+\index{ClassAd job attribute!Owner}
+\index{Owner!job ClassAd attribute}
+\item[\AdAttr{Owner}:]  String describing the user who submitted this
+job.
+
+%%% ClassAd attribute: ParallelShutdownPolicy
+\index{ClassAd job attribute!ParallelShutdownPolicy}
+\index{ParallelShutdownPolicy!job ClassAd attribute}
+\item[\AdAttr{ParallelShutdownPolicy}:]  A string that is only relevant
+to parallel universe jobs.  Without this attribute defined, the default
+policy applied to parallel universe jobs is to consider the whole job
+completed when the first node exits, killing processes running on
+all remaining nodes.  If defined to the following strings, Condor's
+behavior changes:
+  \begin{description}
+  \item[\AdStr{WAIT\_FOR\_ALL}] Condor will wait until every node in 
+  the parallel job has completed to consider the job finished.
+  \end{description}
+
+
+%%% ClassAd attribute: ProcId
+\index{ClassAd job attribute!ProcId}
+\index{ProcId!job ClassAd attribute}
+\index{process!definition for a submitted job}
+\index{job ID!process identifier}
+\item[\AdAttr{ProcId}:]  Integer process identifier for this job.
+Within a cluster of many jobs,
+each job has the same \Attr{ClusterId}, but will have a unique \Attr{ProcId}.
+Within a cluster, assignment of a \Attr{ProcId} value will start
+with the value 0.
+The job (process) identifier described here is unrelated to operating
+system PIDs.
+
+%%% ClassAd attribute: ProportionalSetSizeKb
+\index{ClassAd job attribute!ProportionalSetSizeKb}
+\index{ProportionalSetSizeKb!job ClassAd attribute}
+\item[\AdAttr{ProportionalSetSizeKb}:]
+On Linux execute machines with kernel version more recent than 2.6.27,
+this is the proportional set size (PSS) in Kbytes,
+summed across all processes in the job.
+If the execute machine does not
+support monitoring of PSS or PSS has not yet been measured,
+this attribute will be undefined.  
+PSS differs from \AdAttr{ImageSize} in how memory shared
+between processes is accounted.
+The PSS for one process is the sum of that process' memory pages 
+divided by the number of processes sharing each of the pages.
+\Attr{ImageSize} is the same,
+except there is no division by the number of processes sharing the pages.
+
+%%% ClassAd attribute: QDate
+\index{ClassAd job attribute!QDate}
+\index{QDate!job ClassAd attribute}
+\item[\AdAttr{QDate}:]  Time at which the job was submitted to the job
+queue.  Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: ReleaseReason
+\index{ClassAd job attribute!ReleaseReason}
+\index{ReleaseReason!job ClassAd attribute}
+\item[\AdAttr{ReleaseReason}:]     A string containing a human-readable
+message about why the job was released from hold.
+
+%%% ClassAd attribute: RemoteIwd
+\index{ClassAd job attribute!RemoteIwd}
+\index{RemoteIwd!job ClassAd attribute}
+\item[\AdAttr{RemoteIwd}:]  The path to the directory in which
+a job is to be executed on a remote machine.
+
+%%% ClassAd attribute: RemoteSysCpu
+\index{ClassAd job attribute!RemoteSysCpu}
+\index{RemoteSysCpu!job ClassAd attribute}
+\item[\AdAttr{RemoteSysCpu}:]  The total number of seconds
+of system CPU time (the time spent at system calls) the job used
+on remote machines.  This does not count time spent on run attempts that
+were evicted without a checkpoint.
+
+%%% ClassAd attribute: RemoteUserCpu
+\index{ClassAd job attribute!RemoteUserCpu}
+\index{RemoteUserCpu!job ClassAd attribute}
+\item[\AdAttr{RemoteUserCpu}:]  The total number of seconds
+of user CPU time the job used on remote machines.  This does not
+count time spent on run attempts that were evicted without a checkpoint.
+
+
+%%% ClassAd attribute: RemoteWallClockTime
+\index{ClassAd job attribute!RemoteWallClockTime}
+\index{RemoteWallClockTime!job ClassAd attribute}
+\label{RemoteWallClockTime}
+\item[\AdAttr{RemoteWallClockTime}:]  Cumulative number of seconds
+the job has been allocated a machine.
+This also includes time spent in suspension (if any),
+so the total real time spent running is 
+\begin{verbatim}
+RemoteWallClockTime - CumulativeSuspensionTime
+\end{verbatim}
+Note that this number does not get reset to
+zero when a job is forced to migrate from one machine to another.
+\AdAttr{CommittedTime}, on the other hand, is just like
+\AdAttr{RemoteWallClockTime} except it does get reset to 0 whenever
+the job is evicted without a checkpoint.
+
+%%% ClassAd attribute: RemoveKillSig
+\index{ClassAd job attribute!RemoveKillSig}
+\index{RemoveKillSig!job ClassAd attribute}
+\item[\AdAttr{RemoveKillSig}:]    Currently only for scheduler universe jobs,
+a string containing a name of
+a signal to be sent to the job if the job is removed.
+
+%%% ClassAd attribute: RequestCpus
+\index{ClassAd job attribute!RequestCpus}
+\index{RequestCpus!job ClassAd attribute}
+\item[\AdAttr{RequestCpus}:]  The number of CPUs requested for this job;
+utilized when dynamic \Condor{startd} provisioning is enabled.
+
+%%% ClassAd attribute: RequestDisk
+\index{ClassAd job attribute!RequestDisk}
+\index{RequestDisk!job ClassAd attribute}
+\item[\AdAttr{RequestDisk}:]  The amount of disk space in Kbytes requested 
+for this job; utilized when dynamic \Condor{startd} provisioning is enabled.
+
+%%% ClassAd attribute: RequestMemory
+\index{ClassAd job attribute!RequestMemory}
+\index{RequestMemory!job ClassAd attribute}
+\item[\AdAttr{RequestMemory}:]  The amount of memory space in Mbytes 
+requested for this job;
+results in setting an initial value for the job ClassAd attribute 
+\Attr{ImageSize}.
+Utilized when dynamic \Condor{startd} provisioning is enabled.
+
+%%% ClassAd attribute: ResidentSetSize
+\index{ClassAd job attribute!ResidentSetSize}
+\index{ResidentSetSize!job ClassAd attribute}
+\item[\AdAttr{ResidentSetSize}:]  Estimate of the physical memory
+in use by the job in Kbytes while it is running.
+
+%%% ClassAd attribute: StackSize
+\index{ClassAd job attribute!StackSize}
+\index{StackSize!job ClassAd attribute}
+\item[\AdAttr{StackSize}:]   
+Utilized for Linux jobs only, 
+the number of bytes allocated for stack space for this job.
+This number of bytes replaces the default allocation of 512 Mbytes.
+
+%%% ClassAd attribute: StageOutFinish
+\index{ClassAd job attribute!StageOutFinish}
+\index{StageOutFinish!job ClassAd attribute}
+\item[\AdAttr{StageOutFinish}:]   
+An attribute representing a Unix epoch time that is defined for a job that is
+spooled to a remote site using \Expr{condor\_submit -spool} or Condor-C
+and causes Condor to hold the output in the spool while the job waits 
+in the queue in the \Expr{Completed} state.
+This attribute is defined when retrieval of the output finishes.
+
+%%% ClassAd attribute: StageOutStart
+\index{ClassAd job attribute!StageOutStart}
+\index{StageOutStart!job ClassAd attribute}
+\item[\AdAttr{StageOutStart}:]   
+An attribute representing a Unix epoch time that is defined for a job that is
+spooled to a remote site using \Expr{condor\_submit -spool} or Condor-C
+and causes Condor to hold the output in the spool while the job waits 
+in the queue in the \Expr{Completed} state.
+This attribute is defined when retrieval of the output begins.
+
+%%% ClassAd attribute: StreamErr
+\index{ClassAd job attribute!StreamErr}
+\index{StreamErr!job ClassAd attribute}
+\item[\AdAttr{StreamErr}:]   
+An attribute utilized only for grid universe jobs.
+The default value is \Expr{True}.
+If \Expr{True}, and \Attr{TransferErr} is \Expr{True}, then 
+standard error is streamed back to the submit machine, instead
+of doing the transfer (as a whole) after the job completes.
+If \Expr{False}, then
+standard error is transferred back to the submit machine
+(as a whole) after the job completes.
+If \Attr{TransferErr} is \Expr{False}, then this job attribute is ignored.
+
+%%% ClassAd attribute: StreamOut
+\index{ClassAd job attribute!StreamOut}
+\index{StreamOut!job ClassAd attribute}
+\item[\AdAttr{StreamOut}:]   
+An attribute utilized only for grid universe jobs.
+The default value is \Expr{True}.
+If \Expr{True}, and \Attr{TransferOut} is \Expr{True}, then 
+job output is streamed back to the submit machine, instead
+of doing the transfer (as a whole) after the job completes.
+If \Expr{False}, then
+job output is transferred back to the submit machine
+(as a whole) after the job completes.
+If \Attr{TransferOut} is \Expr{False}, then this job attribute is ignored.
+
+%%% ClassAd attribute: TotalSuspensions
+\index{ClassAd job attribute!TotalSuspensions}
+\index{TotalSuspensions!job ClassAd attribute}
+\item[\AdAttr{TotalSuspensions}:]  A count of the number of times this job
+has been suspended during its lifetime.
+
+%%% ClassAd attribute: TransferErr
+\index{ClassAd job attribute!TransferErr}
+\index{TransferErr!job ClassAd attribute}
+\item[\AdAttr{TransferErr}:]   
+An attribute utilized only for grid universe jobs.
+The default value is \Expr{True}.
+If \Expr{True}, then the error output from the job
+is transferred from the remote machine back to the submit machine.
+The name of the file after transfer is the file referred to
+by job attribute \Attr{Err}.
+If \Expr{False}, no transfer takes place (remote to submit machine),
+and the name of the file is the file referred to
+by job attribute \Attr{Err}.
+
+%%% ClassAd attribute: TransferExecutable
+\index{ClassAd job attribute!TransferExecutable}
+\index{TransferExecutable!job ClassAd attribute}
+\item[\AdAttr{TransferExecutable}:]   
+An attribute utilized only for grid universe jobs.
+The default value is \Expr{True}.
+If \Expr{True}, then the job executable is transferred from the submit
+machine to the remote machine.
+The name of the file (on the submit machine)
+that is transferred is given by the
+job attribute \Attr{Cmd}.
+If \Expr{False}, no transfer takes place, and
+the name of the file used (on the remote machine) will be as
+given in the job attribute \Attr{Cmd}.
+
+%%% ClassAd attribute: TransferIn
+\index{ClassAd job attribute!TransferIn}
+\index{TransferIn!job ClassAd attribute}
+\item[\AdAttr{TransferIn}:]   
+An attribute utilized only for grid universe jobs.
+The default value is \Expr{True}.
+If \Expr{True}, then the job input is transferred from the submit
+machine to the remote machine.
+The name of the file that is transferred is given by the
+job attribute \Attr{In}.
+If \Expr{False}, then the job's input is taken from a file on the
+remote machine (pre-staged), and 
+the name of the file is given by the job attribute \Attr{In}.
+
+%%% ClassAd attribute: TransferOut
+\index{ClassAd job attribute!TransferOut}
+\index{TransferOut!job ClassAd attribute}
+\item[\AdAttr{TransferOut}:]   
+An attribute utilized only for grid universe jobs.
+The default value is \Expr{True}.
+If \Expr{True}, then the output from the job
+is transferred from the remote machine back to the submit machine.
+The name of the file after transfer is the file referred to
+by job attribute \Attr{Out}.
+If \Expr{False}, no transfer takes place (remote to submit machine),
+and the name of the file is the file referred to
+by job attribute \Attr{Out}.
+
+\index{ClassAd job attribute!WindowsBuildNumber}
+\item[\AdAttr{WindowsBuildNumber}:] An integer, extracted from the
+platform type of the machine upon which this job is submitted,
+representing a build number for a Windows operating system.
+This attribute only exists for jobs submitted from Windows machines.
+
+\index{ClassAd job attribute!WindowsMajorVersion}
+\item[\AdAttr{WindowsMajorVersion}:] An integer, extracted from the
+platform type of the machine upon which this job is submitted,
+representing a major version number (currently 5 or 6)
+for a Windows operating system.
+This attribute only exists for jobs submitted from Windows machines.
+
+\index{ClassAd job attribute!WindowsMinorVersion}
+\item[\AdAttr{WindowsMinorVersion}:] An integer, extracted from the
+platform type of the machine upon which this job is submitted, 
+representing a minor version number (currently 0, 1, or 2)
+for a Windows operating system.
+This attribute only exists for jobs submitted from Windows machines.
+
+%%% ClassAd attribute: X509UserProxy
+\index{ClassAd job attribute!X509UserProxy}
+\index{X509UserProxy!job ClassAd attribute}
+\item[\AdAttr{X509UserProxy}:]   
+The full path and file name of the file containing the X.509 user proxy.
+
+%%% ClassAd attribute: X509UserProxyExpiration
+\index{ClassAd job attribute!X509UserProxyExpiration}
+\index{X509UserProxyExpiration!job ClassAd attribute}
+\item[\AdAttr{X509UserProxyExpiration}:]   
+For a job that defines the submit description file command
+\SubmitCmd{x509userproxy}, this is the time at which the indicated
+X.509 proxy credential will expire, measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
+
+%%% ClassAd attribute: X509UserProxyEmail
+\index{ClassAd job attribute!X509UserProxyEmail}
+\index{X509UserProxyEmail!job ClassAd attribute}
+\item[\AdAttr{X509UserProxyEmail}:]   
+\item For a job with an X.509 proxy credential, this is the email
+address extracted from the proxy.
+
+%%% ClassAd attribute: X509UserProxyFirstFQAN
+\index{ClassAd job attribute!X509UserProxyFirstFQAN}
+\index{X509UserProxyFirstFQAN!job ClassAd attribute}
+\item[\AdAttr{X509UserProxyFirstFQAN}:]   
+For a vanilla or grid universe job that defines the submit description
+file command \SubmitCmd{x509userproxy}, 
+this is the VOMS Fully Qualified Attribute Name (FQAN) of
+the primary role of the credential. 
+A credential may have multiple roles defined, 
+but by convention the one listed first is the primary role. 
+
+%%% ClassAd attribute: X509UserProxyFQAN
+\index{ClassAd job attribute!X509UserProxyFQAN}
+\index{X509UserProxyFQAN!job ClassAd attribute}
+\item[\AdAttr{X509UserProxyFQAN}:]   
+For a vanilla or grid universe job that defines the submit description
+file command \SubmitCmd{x509userproxy}, 
+this is a serialized list of the DN and all FQAN.
+A comma is used as a separator,
+and any existing commas in the DN or FQAN are replaced with the string
+\Expr{\&comma;}.
+Likewise, any ampersands in the DN or FQAN are replaced with
+\Expr{\&amp;}.
+
+%%% ClassAd attribute: X509UserProxySubject
+\index{ClassAd job attribute!X509UserProxySubject}
+\index{X509UserProxySubject!job ClassAd attribute}
+\item[\AdAttr{X509UserProxySubject}:]   
+For a vanilla or grid universe job that defines the submit description
+file command \SubmitCmd{x509userproxy}, 
+this attribute contains the Distinguished Name (DN) of the credential
+used to submit the job.
+
+%%% ClassAd attribute: X509UserProxyVOName
+\index{ClassAd job attribute!X509UserProxyVOName}
+\index{X509UserProxyVOName!job ClassAd attribute}
+\item[\AdAttr{X509UserProxyVOName}:]   
+For a vanilla or grid universe job that defines the submit description
+file command \SubmitCmd{x509userproxy}, 
+this is the name of the VOMS virtual organization (VO) that 
+the user's credential is part of. 
+
+%%% ClassAd attribute: DelegateJobGSICredentialsLifetime
+\index{ClassAd job attribute!DelegateJobGSICredentialsLifetime}
+\index{DelegateJobGSICredentialsLifetime!job ClassAd attribute}
+\item[\AdAttr{DelegateJobGSICredentialsLifetime}:]   
+An integer that specifies the maximum number of seconds for which
+delegated proxies should be valid.  The default behavior is determined
+by the configuration
+setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}, which
+defaults to one day.  A value of 0 indicates that the delegated proxy
+should be valid for as long as allowed by the credential used to
+create the proxy.  This setting currently only applies to proxies
+delegated for non-grid jobs and Condor-C jobs.  It does not currently
+apply to globus grid jobs, which always behave as though this setting
+were 0.  This setting has no effect if the configuration
+setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false, because in
+that case the job proxy is copied rather than delegated.
+
+\end{description}
+
+The following job ClassAd attributes are relevant only for
+\SubmitCmd{vm} universe jobs.
+
+\begin {description}
+%%% ClassAd attribute: VM_Checkpoint
+%\index{ClassAd job attribute!VM\_Checkpoint}
+%\item[\AdAttr{VM\_Checkpoint}:] Definition here.
+
+%%% ClassAd attribute: VM_MACAddr
+\index{ClassAd job attribute!VM\_MACAddr}
+\item[\AdAttr{VM\_MACAddr}:] The MAC address of the virtual
+machine's network interface,
+in the standard format of six groups of
+two hexadecimal digits separated by colons.
+This attribute is currently limited to apply only to Xen virtual machines.
+
+%%% ClassAd attribute: VM_Memory
+%\index{ClassAd job attribute!VM\_Memory}
+%\item[\AdAttr{VM\_Memory}:] Definition here.
+
+%%% ClassAd attribute: VM_Networking
+%\index{ClassAd job attribute!VM\_Networking}
+%\item[\AdAttr{VM\_Networking}:] Definition here.
+
+%%% ClassAd attribute: VM_Networking_Type
+%\index{ClassAd job attribute!VM\_Networking\_Type}
+%\item[\AdAttr{VM\_Networking\_Type}:] Definition here.
+
+%%% ClassAd attribute: VM_Type
+%\index{ClassAd job attribute!VM\_Type}
+%\item[\AdAttr{VM\_Type}:] Definition here.
+
+%%% ClassAd attribute: VM_VCPUS
+%\index{ClassAd job attribute!VM\_VCPUS}
+%\item[\AdAttr{VM\_VCPUS}:] Definition here.
+
+\end{description}

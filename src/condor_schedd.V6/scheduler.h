@@ -57,6 +57,7 @@
 #include "condor_claimid_parser.h"
 #include "transfer_queue.h"
 #include "timed_queue.h"
+#include "schedd_stats.h"
 
 using std::map;
 
@@ -539,7 +540,10 @@ private:
 	int				SchedUniverseJobsRunning;
 	int				LocalUniverseJobsIdle;
 	int				LocalUniverseJobsRunning;
+
+   #ifdef TICKET_2006
     time_t          LastUpdateTime;
+    int             LastJobsQueued;
     int             JobsStartedCumulative;
     double          TimeToStartCumulative;
     double          RunningTimeCumulative;
@@ -547,7 +551,6 @@ private:
     int             JobsExitedCumulative;
     int             ShadowExceptionsCumulative;
     map<int,int>    ExitCodesCumulative;
-    int             LastJobsQueued;
     timed_queue<int>  JobsSubmittedTQ;
     timed_queue<int>  JobsStartedTQ;
     timed_queue<int>  JobsCompletedTQ;
@@ -556,6 +559,10 @@ private:
     map<int,timed_queue<int> >  ExitCodesTQ;
     timed_queue<double>  TimeToStartTQ;
     timed_queue<double>  RunningTimeTQ;
+   #else
+    ScheddStatistics stats;
+   #endif
+
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;

@@ -1,0 +1,45 @@
+%  Environment for a manual entry
+%
+\newenvironment{ManPage}[3]{% #1-Name, #2-Section, #3-Short description
+  \newpage
+  \latex
+    {
+	  \if@twoside
+      \fancyhead[LE,RO]{\thepage} \fancyhead[RE,LO]{#1 (#2)}    % only on latex
+	  \else
+      \fancyhead[R]{\thepage} \fancyhead[L]{#1 (#2)}    % only on latex
+      \fi
+      \fancyfoot[C]{Condor \VersionNotice, Command Reference}
+    }
+  \section*{#1} #3
+  % \latex{\addcontentsline{toc}{section}{#1\dotfill\ }}
+  \latex{\addcontentsline{toc}{section}{#1}}
+  \setlength{\parskip}{0.8em}
+  \setlength{\parindent}{0em}
+}{
+  \subsection*{Author} \AuthorNotice
+  \subsection*{Copyright} \CopyrightNotice
+}
+
+%
+%  Parts of the man page
+%
+\newcommand{\Synopsis}{\subsection*{Synopsis}}          % Synopsis
+\newcommand{\SynProg}[1]{\textbf{#1}}                   % Prog of the synopsis
+\newcommand{\Description}{\subsection*{Description}}    % Description
+\newenvironment{Options}{                               % Options table
+  \subsection*{Options}
+  \par
+  \begin{description}
+}{
+  \end{description}
+  \par
+}
+
+\newcommand{\OptItem}[2]{\item[#1] #2\\}                % Item in option table
+\newcommand{\Examples}{\subsection*{Examples}}          % Examples
+\newcommand{\Files}{\subsection*{Files}}                % Related files
+\newcommand{\SeeAlso}{\subsection*{See Also}}           % See Also
+\newcommand{\GenRem}{\subsection*{General Remarks}}     % General remarks
+\newcommand{\ExitStatus}{\subsection*{Exit Status}} 	% Exit Status
+

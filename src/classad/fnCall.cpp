@@ -152,6 +152,10 @@ FunctionCall( )
 		functionTable["bool"		] =	(void*)convBool;
 		functionTable["absTime"		] =	(void*)convTime;
 		functionTable["relTime"		] = (void*)convTime;
+		
+		// turn the contents of an expression into a string 
+		// but *do not* evaluate it
+		functionTable["unparse"		] =	(void*)unparse;
 
 			// mathematical functions
 		functionTable["floor"		] =	(void*)doMath;
@@ -1836,6 +1840,34 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 
     convertValueToStringValue(arg, result);
     return true;
+}
+
+bool FunctionCall::
+unparse(const char*, const ArgumentList &argList, EvalState &state, 
+	Value &result )
+{
+	
+	if( argList.size() != 1 ) {
+		result.SetErrorValue( );
+	}
+	else{
+	 
+		// use the printpretty on arg0 to spew out 
+		PrettyPrint     unp;
+		string          szAttribute,szValue;
+		ExprTree* 		pTree;
+		
+		unp.Unparse( szAttribute, argList[0] );
+		// look them up argument within context of the ad.
+		if ( state.curAd && (pTree = state.curAd->Lookup(szAttribute)) )
+		{
+			unp.Unparse( szValue, pTree );
+		}
+		
+		result.SetStringValue(szValue);
+	}
+	
+	return (true); 
 }
 
 bool FunctionCall::
