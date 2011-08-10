@@ -1851,13 +1851,20 @@ unparse(const char*, const ArgumentList &argList, EvalState &state,
 		result.SetErrorValue( );
 	}
 	else{
-		
+	 
 		// use the printpretty on arg0 to spew out 
 		PrettyPrint     unp;
-		string          buffer;
-		unp.Unparse( buffer, argList[0] );
+		string          szAttribute,szValue;
+		ExprTree* 		pTree;
 		
-		result.SetStringValue(buffer);
+		unp.Unparse( szAttribute, argList[0] );
+		// look them up argument within context of the ad.
+		if ( state.curAd && (pTree = state.curAd->Lookup(szAttribute)) )
+		{
+			unp.Unparse( szValue, pTree );
+		}
+		
+		result.SetStringValue(szValue);
 	}
 	
 	return (true); 
