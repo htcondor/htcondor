@@ -1,4 +1,5 @@
 //TEMPTEMP -- job_dagman_retry.run fails -- the test still needs some cleanup
+//TEMPTEMP -- re-test with multiple DAGs after splice fix...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -893,7 +894,7 @@ void main_init (int argc, char ** const argv) {
 
 		//
 		// Figure out the rescue DAG to run, if any (this is with "new-
-		// style" rescue DAGs.
+		// style" rescue DAGs).
 		//
 	int rescueDagNum = 0;
 	MyString rescueDagMsg;
@@ -911,34 +912,11 @@ void main_init (int argc, char ** const argv) {
 		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
 	}
 
+//TEMPTEMP -- stuff here should look a lot more like the old version...
+		//TEMPTEMP -- change this comment???
 		// A rescue DAG doesn't count towards multiple DAGs, so we check
 		// the count here before we potentially add a rescue DAG to the list.
 	bool multipleDags = (dagman.dagFiles.number() > 1);
-
-		//
-		// If we are running a "new-style" rescue DAG, update our DAG
-		// files list accordingly (we just add the rescue DAG to the
-		// end of the list of DAG files).
-		//
-	if ( rescueDagNum > 0 ) {
-		dagman.rescueFileToRun = RescueDagName(
-					dagman.primaryDagFile.Value(),
-					dagman.multiDags, rescueDagNum );
-		debug_printf ( DEBUG_QUIET, "%s; running %s in combination with "
-					"normal DAG file%s\n", rescueDagMsg.Value(),
-					dagman.rescueFileToRun.Value(),
-					dagman.multiDags ? "s" : "");
-		debug_printf ( DEBUG_QUIET,
-					"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-
-		debug_printf ( DEBUG_QUIET, "USING RESCUE DAG %s\n",
-					dagman.rescueFileToRun.Value() );
-			// Note: if we ran multiple DAGs and they failed, the
-			// whole thing is condensed into a single rescue DAG.
-			// wenger 2007-02-27
-		dagman.dagFiles.append( dagman.rescueFileToRun.Value() );
-		dagman.dagFiles.rewind();
-	}
 
 		//
 		// Fill in values in the deep submit options that we haven't
@@ -994,23 +972,19 @@ void main_init (int argc, char ** const argv) {
 	// Here we make a copy of the dagFiles for iteration purposes. Deep inside
 	// of the parsing, copies of the dagman.dagFile string list happen which
 	// mess up the iteration of this list.
+//TEMPTEMP -- why don't we use the StringList copy constructor here?!?
+//TEMPTEMP -- test with multi DAGs
 	char *str = dagman.dagFiles.print_to_delimed_string();
 	StringList sl(str);
 	free(str);
 	sl.rewind();
-	int dagNum = 0;
 	while ( (dagFile = sl.next()) != NULL ) {
     	debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagFile );
-		dagNum++;
 
-			// We don't want to munge the node names for a rescue DAG,
-			// because it will have node names that have already been
-			// munged.
-		if ( rescueDagNum > 0 && dagNum == dagman.dagFiles.number() ) {
-			parseSetDoNameMunge( false );
-		}
-
+//TEMPTEMP -- how does useDagDir interact with rescue DAGs?
     	if( !parse( dagman.dag, dagFile, dagman.useDagDir ) ) {
+//TEMPTEMP -- should -DumpRescue take effect after a rescue DAG is parsed?
+//TEMPTEMP -- seems like -DumpRescue may not work right on multiple DAGs...
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1039,6 +1013,53 @@ void main_init (int argc, char ** const argv) {
 
 	// lift the final set of splices into the main dag.
 	dagman.dag->LiftSplices(SELF);
+
+		//
+		// Actually parse the "new-new" style (partial DAG info only)
+		// rescue DAG here.
+		//
+	if ( rescueDagNum > 0 ) {
+		dagman.rescueFileToRun = RescueDagName(
+					dagman.primaryDagFile.Value(),
+					dagman.multiDags, rescueDagNum );
+		debug_printf ( DEBUG_QUIET, "%s; running %s in combination with "
+					"normal DAG file%s\n", rescueDagMsg.Value(),
+					dagman.rescueFileToRun.Value(),
+					dagman.multiDags ? "s" : "");
+		debug_printf ( DEBUG_QUIET,
+					"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+
+		debug_printf ( DEBUG_QUIET, "USING RESCUE DAG %s\n",
+					dagman.rescueFileToRun.Value() );
+
+			// Turn off node name munging for the rescue DAG, because
+			// it will already have munged node names.
+		parseSetDoNameMunge( false );
+
+//TEMPTEMP -- how does useDagDir interact with rescue DAGs?
+    	if( !parse( dagman.dag, dagman.rescueFileToRun.Value(),
+					dagman.useDagDir ) ) {
+//TEMPTEMP -- should -DumpRescue take effect after a rescue DAG is parsed?
+//TEMPTEMP -- seems like -DumpRescue may not work right on multiple DAGs...
+			if ( dagman.dumpRescueDag ) {
+					// Dump the rescue DAG so we can see what we got
+					// in the failed parse attempt.
+    			debug_printf( DEBUG_QUIET, "Dumping rescue DAG "
+							"because of -DumpRescue flag\n" );
+				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
+							dagman.multiDags, dagman.maxRescueDagNum,
+							true, false );
+			}
+			
+			dagman.dag->RemoveRunningJobs(dagman, true);
+			unlink( lockFileName );
+			dagman.CleanUp();
+			
+				// Note: debug_error calls DC_Exit().
+        	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
+					 	dagFile );
+    	}
+	}
 
 	dagman.dag->CheckThrottleCats();
 

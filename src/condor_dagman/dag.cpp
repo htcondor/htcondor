@@ -1,5 +1,5 @@
 //TEMPTEMP -- make a test that checks that all possible stuff gets put into rescue DAG (old-style)
-//TEMPTEMP -- make sure this works with splices
+//TEMPTEMP -- make sure this works with splices -- crap -- tried with splice-O: dagman.out file says 5 nodes are done, but rescue DAG only has 1!!!!  Also, parsing the rescue DAG fails -- looks like the rescue DAG has to be parsed after the splices are lifted!!
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
