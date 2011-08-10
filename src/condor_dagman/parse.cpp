@@ -1,4 +1,3 @@
-//TEMPTEMP -- have a "DONE" keyword for new-style rescue DAGs?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1832,17 +1831,30 @@ parse_done(
 
 	MyString tmpJobName = munge_job_name( jobName );
 	jobName = tmpJobName.Value();
-		debug_printf( DEBUG_QUIET, "DIAG jobName: %s\n", jobName );//TEMPTEMP
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *extraTok = strtok( NULL, DELIMITERS );
+	if ( extraTok != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Extra token (%s) on DONE line\n",
+					  filename, lineNumber, extraTok );
+		exampleSyntax( example );
+		return false;
+	}
 
 	Job *job = dag->FindNodeByName( jobName );
 	if( job == NULL ) {
 		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Unknown Job %s\n",
+					  "Warning: %s (line %d): Unknown Job %s\n",
 					  filename, lineNumber, jobNameOrig );
-		return false;
+		if ( check_warning_strictness( DAG_STRICT_1, false ) ) {
+			return false;
+		} else {
+			return true;
+		}
 	}
-
-	//TEMPTEMP -- check for extra junk on the end?
 
 	job->SetStatus( Job::STATUS_DONE );
 	
