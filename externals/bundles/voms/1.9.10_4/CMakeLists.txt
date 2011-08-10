@@ -79,9 +79,19 @@ if ( WITH_VOMS )
 							INSTALL_COMMAND cd org.glite.security.voms && make install && touch ${VOMS_INSTALL_LOC}/done
 				)
 
-		set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.a" )
+		if ( LINUX )
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.so" )
+		else()
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.a" )
+		endif()
 
 		condor_post_external( voms include/glite/security OFF )
+
+		if ( LINUX )
+			file( GLOB Libs "${VOMS_INSTALL_LOC}/lib/*.so*")
+			install( FILES ${Libs} DESTINATION "${C_LIB}/condor" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE )
+#			install( DIRECTORY "${GLOBUS_INSTALL_LOC}/lib" DESTINATION "${C_LIB}/condor" FILES_MATCHING PATTERN "*.so*" )
+		endif()
 
 	else(NOT PROPER)
 
