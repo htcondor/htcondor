@@ -141,30 +141,23 @@ are no longer part of the distribution.
 These programs were replaced many years ago by the more general
 \Condor{reschedule} and \Condor{off} commands.
 
-\item On Windows, improve the ability of the starter and shadow
-to clean up the execute directory if jobs have changed the ACLs
-or permissions on files they have created.
+\item On Windows platforms, improved the ability of the \Condor{starter}
+and \Condor{shadow} daemons to clean up the execute directory,
+if jobs have changed the ACLs or permissions on files they have created.
 
-\item The security parameters DENY\_CLIENT and HOSTDENY\_CLIENT
-now also look for the prefixes TOOL and SUBMIT.
+\item \Condor{submit} now sets a default value for job ClassAd attribute
+\Attr{RequestMemory}.
 
-\item Condor\_submit now sets a default RequestMemory size.
-
-\item CREAM submission performance has been substantially
+\item The submission performance of cream grid jobs has been substantially
 improved by batching submit requests.
 
-\item condor\_q -better now has cleaner output, and informs
-the user when negotiation has not happened yet.
+\item \Condor{q} \Opt{-better} now has cleaner output, and informs
+the user when negotiation has not yet occurred.
 
-\item Many improvements to the Condor init scripts.
+\item Implemented many improvements to the Condor \Prog{init} scripts.
 
-\item Deltacloud support updated to deltacloud version 0.8.
+\item Deltacloud support has been updated to deltacloud version 0.8.
 
-\item New parameter NEGOTIATOR\_UPDATE\_AFTER\_CYCLE, defaults 
-to false.  If set to true, it will force the Negotiator to publish an update ad to the Collector at the end of every negotiation cycle. This is very useful
-    if monitoring LastNegotiationCycle statistics.
-
-% gittrac #1960
 \item VM universe submit files no longer supports
 automatic creation of cdrom images from text input file.
 Users must now explicitly create ISO images and transfer them
@@ -231,11 +224,23 @@ which is used to set the job attribute \Attr{HoldReasonSubCode}.
 
 \begin{itemize}
 
+\item The new configuration variable \Macro{NEGOTIATOR\_UPDATE\_AFTER\_CYCLE}
+defaults to \Expr{False}.
+If set to \Expr{True}, it will force the \Condor{negotiator} daemon
+to publish an update ClassAd to the \Condor{collector} at the end of 
+every negotiation cycle. 
+This is useful if monitoring cycle-based statistics.
+
+% gittrac #1960
 % gittrac #2004
 \item The new configuration variable \Macro{SHADOW\_RUN\_UNKNOWN\_USER\_JOBS}
 defaults to \Expr{False}.
 When \Expr{True}, it allows the \Condor{shadow} daemon to run jobs remotely 
 submitted from users not in the local password file.
+
+\item The configuration variables for security 
+\Macro{DENY\_CLIENT} and \Macro{HOSTDENY\_CLIENT}
+now also look for the prefixes \Expr{TOOL} and \Expr{SUBMIT}.
  
 % gittrac #1249
 \item \Macro{CONDOR\_VIEW\_HOST} is now a comma and/or white space separated
