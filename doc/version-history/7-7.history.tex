@@ -158,7 +158,9 @@ the user when negotiation has not yet occurred.
 
 \item Deltacloud support has been updated to deltacloud version 0.8.
 
-\item VM universe submit files no longer supports
+% gittrac #1960
+\item As of Condor version 7.6.0,
+vm universe submit description files no longer support
 automatic creation of cdrom images from text input file.
 Users must now explicitly create ISO images and transfer them
 with the job.
@@ -216,6 +218,9 @@ using \Macro{SYSTEM\_PERIODIC\_HOLD\_REASON} and
 \Macro{SYSTEM\_PERIODIC\_HOLD\_SUBCODE}.
 In addition, the \Condor{hold} command now accepts a \Opt{-subcode} option,
 which is used to set the job attribute \Attr{HoldReasonSubCode}. 
+
+\item If the \Condor{shadow} cannot write to the user log, 
+the job is now put on hold.
 
 \end{itemize}
 
@@ -310,58 +315,64 @@ containing a comma separated list of installed .NET versions.
 
 \begin{itemize}
 
-\item Fixed a bug in which the startd can get stuck in a
-loop trying to execute an invalid (i.e. non-existent) Daemon ClassAd Hook job.
+\item Fixed a bug in which the \Condor{startd} daemon can get stuck in a
+loop trying to execute an invalid, 
+that is non-existent, Daemon ClassAd Hook job.
 
-\item Fixed bug that would cause the Startd to incorrectly
-report Benchmarking activity instead of Idle activity when there
-is a problem launching the benchmarking programs.
+\item Fixed bug that would cause the \Condor{startd} daemon to incorrectly
+report Benchmarking activity instead of Idle activity,
+when there is a problem launching the benchmarking programs.
 
 \item On Windows only, fixed a rare bug that could cause
 a sporadic access violation when a Condor daemon spawned another process.
 
-\item Fixed a bug introduced in 7.5.5 which caused the
-schedd to die managing parallel jobs.
+\item Fixed a bug introduced in Condor version 7.5.5,
+which caused the \Condor{schedd} to die managing parallel jobs.
 
-\item Fixed bug throughout classads where expressions expecting
-a floating point value returned an error if they got a boolean
-value.  This is common in RANK expressions.
+% commented out, as this bug fix is listed in the 7.6.1 version history.
+% \item Fixed bug present throughout ClassAds,
+% where expressions expecting a floating point value returned an error,
+% if they got a boolean value.  This is common in \MacroNI{RANK} expressions.
 
-\item The Startd now looks up the Keyboard daemon address
-on every update.  This fixed problems if the Keyboard
-daemon is restarted during the startd lifespan.
+\item The \Condor{startd} daemon now looks up the \Condor{kbdd} daemon address
+on every update.  
+This fixed problems if the \Condor{kbdd} daemon is restarted 
+during the \Condor{startd} lifespan.
 
-\item Fixed bug in Condor hold that happened if the hold
+\item Fixed bug in \Condor{hold} that happened if the hold
 reason contained a double quote character.
 
-\item Fixed a bug introduced in 7.5.6 that
-caused any startd cron job with non-empty ARGS to fail.
-Also, the ENV specified for startd cron jobs was ignored.
+\item Fixed a bug introduced in Condor version 7.5.6 that
+caused any Daemon ClassAd hook job with non-empty value for
+\MacroNI{STARTD\_CRON\_<JobName>\_ARGS},
+\MacroNI{SCHEDD\_CRON\_<JobName>\_ARGS}
+or \MacroNI{BENCHMARKS\_<JobName>\_ARGS} to fail.
+Also, the specification of 
+\MacroNI{STARTD\_CRON\_<JobName>\_ENV},
+\MacroNI{SCHEDD\_CRON\_<JobName>\_ENV},
+or \MacroNI{BENCHMARKS\_<JobName>\_ENV} for these jobs was ignored.
 
-\item Fixed bug in amazon grid manager which would cause it to crash.
-
-\item Fixed bug in rpm init script. A status request would always report Condor inactive, and a shutdown request would not report failure if there was a
+\item Fixed bug in the RPM \Prog{init} script. 
+A status request would always report Condor as inactive, 
+and a shutdown request would not report failure if there was a
 timeout shutting down Condor.
 
-\item File transfer plugins now have a correctly set environment.
+\item File transfer plug-ins now have a correctly set environment.
 
-\item Fixed problem with detecting IBM Java Virtual Machines whose
-version strings have embedded newlines.
+\item Fixed a problem with detecting IBM Java Virtual Machines whose
+version strings have embedded newline characters.
 
-\item condor\_q -analyze now works with new classad built-in functions.
+\item \Condor{q} \Opt{-analyze} now works with ClassAd built-in functions.
+
+\item Fixed bug in \Condor{q} \Opt{-run}, such that it displays
+the host name correctly for local and scheduler universe jobs.
 
 \item Standalone checkpointing now works with compressed checkpoints again.
-This had been broken in 7.5.4
-
-\item If the shadow cannot write to the user log, the job
-is now put on hold.
+This had been broken in Condor version 7.5.4.
 
 %gittrac 1962
-\item On Windows, net stop condor would sometimes cause the
-master to crash.  This is now fixed.
-
-\item Fixed bug in condor\_q -run so that it displays
-the hostname correctly for local and scheduler universe jobs.
+\item On Windows, \Prog{net stop condor} would sometimes cause the
+\Condor{master} daemon to crash.  This is now fixed.
 
 % gittrac #1928
 \item \AdAttr{JobUniverse} was effectively a required attribute for
