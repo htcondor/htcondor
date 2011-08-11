@@ -1,5 +1,4 @@
 //TEMPTEMP -- job_dagman_retry.run fails -- the test still needs some cleanup
-//TEMPTEMP -- re-test with multiple DAGs after splice fix...
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -912,12 +911,6 @@ void main_init (int argc, char ** const argv) {
 		rescueDagMsg.sprintf( "Found rescue DAG number %d", rescueDagNum );
 	}
 
-//TEMPTEMP -- stuff here should look a lot more like the old version...
-		//TEMPTEMP -- change this comment???
-		// A rescue DAG doesn't count towards multiple DAGs, so we check
-		// the count here before we potentially add a rescue DAG to the list.
-	bool multipleDags = (dagman.dagFiles.number() > 1);
-
 		//
 		// Fill in values in the deep submit options that we haven't
 		// already set.
@@ -962,7 +955,7 @@ void main_init (int argc, char ** const argv) {
     // Parse the input files.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
     //
-	dagman.mungeNodeNames = multipleDags;
+	dagman.mungeNodeNames = (dagman.dagFiles.number() > 1);
 	parseSetDoNameMunge( dagman.mungeNodeNames );
    	debug_printf( DEBUG_VERBOSE, "Parsing %d dagfiles\n", 
 		dagman.dagFiles.number() );
@@ -977,10 +970,7 @@ void main_init (int argc, char ** const argv) {
 	while ( (dagFile = sl.next()) != NULL ) {
     	debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagFile );
 
-//TEMPTEMP -- how does useDagDir interact with rescue DAGs?
     	if( !parse( dagman.dag, dagFile, dagman.useDagDir ) ) {
-//TEMPTEMP -- should -DumpRescue take effect after a rescue DAG is parsed?
-//TEMPTEMP -- seems like -DumpRescue may not work right on multiple DAGs...
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1012,7 +1002,8 @@ void main_init (int argc, char ** const argv) {
 
 		//
 		// Actually parse the "new-new" style (partial DAG info only)
-		// rescue DAG here.
+		// rescue DAG here.  Note: this *must* be done after splices
+		// are lifted!
 		//
 	if ( rescueDagNum > 0 ) {
 		dagman.rescueFileToRun = RescueDagName(
@@ -1032,11 +1023,8 @@ void main_init (int argc, char ** const argv) {
 			// it will already have munged node names.
 		parseSetDoNameMunge( false );
 
-//TEMPTEMP -- how does useDagDir interact with rescue DAGs?
     	if( !parse( dagman.dag, dagman.rescueFileToRun.Value(),
 					dagman.useDagDir ) ) {
-//TEMPTEMP -- should -DumpRescue take effect after a rescue DAG is parsed?
-//TEMPTEMP -- seems like -DumpRescue may not work right on multiple DAGs...
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.

@@ -439,20 +439,26 @@ class Dag {
 		@param multiDags Whether we have multiple DAGs
 		@param maxRescueDagNum the maximum legal rescue DAG number
 		@param parseFailed whether parsing the DAG(s) failed
+		@param isPartial whether the rescue DAG is only a partial
+			DAG file (needs to be parsed in combination with the original
+			DAG file)
     */
     void Rescue (const char * dagFile, bool multiDags,
 				int maxRescueDagNum, bool parseFailed = false,
-				bool isNew = false) /* const */;
+				bool isPartial = false) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
         @param rescue_file The name of the rescue file to generate
         @param datafile The original DAG file
 		@param parseFailed whether parsing the DAG(s) failed
+		@param isPartial whether the rescue DAG is only a partial
+			DAG file (needs to be parsed in combination with the original
+			DAG file)
     */
     void WriteRescue (const char * rescue_file,
 				const char * dagFile, bool parseFailed = false,
-				bool isNew = false) /* const */;
+				bool isPartial = false) /* const */;
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
@@ -835,9 +841,17 @@ class Dag {
 
 	int StorkLogFileCount() { return _storkLogRdr.totalLogFileCount(); }
 
-		//TEMPTEMP -- document
+		/** Write information for the given node to a rescue DAG.
+			@param fp: file pointer to the rescue DAG file
+			@param node: the node for which to write info
+			@param reset_retries_upon_rescue: whether to reset any
+				previous retries of a node
+			@param isPartial: whether the rescue DAG is only a partial
+				DAG file (needs to be parsed in combination with the
+				original DAG file)
+		*/
 	void WriteNodeToRescue( FILE *fp, Job *node,
-				bool reset_retries_upon_rescue, bool isNew );
+				bool reset_retries_upon_rescue, bool isPartial );
 
     /// List of Job objects
     List<Job>     _jobs;

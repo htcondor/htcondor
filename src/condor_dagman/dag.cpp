@@ -1,5 +1,4 @@
 //TEMPTEMP -- make a test that checks that all possible stuff gets put into rescue DAG (old-style)
-//TEMPTEMP -- make sure this works with splices -- crap -- tried with splice-O: dagman.out file says 5 nodes are done, but rescue DAG only has 1!!!!  Also, parsing the rescue DAG fails -- looks like the rescue DAG has to be parsed after the splices are lifted!!
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1807,7 +1806,7 @@ void Dag::RemoveRunningScripts ( ) const {
 
 //-----------------------------------------------------------------------------
 void Dag::Rescue ( const char * dagFile, bool multiDags,
-			int maxRescueDagNum, bool parseFailed, bool isNew ) /* const */
+			int maxRescueDagNum, bool parseFailed, bool isPartial ) /* const */
 {
 	MyString rescueDagFile;
 	if ( parseFailed ) {
@@ -1825,15 +1824,14 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 		// should be avoided by the lock file, though, so I'm not doing
 		// anything about it right now.  wenger 2007-02-27
 
-	WriteRescue( rescueDagFile.Value(), dagFile, parseFailed, isNew );
+	WriteRescue( rescueDagFile.Value(), dagFile, parseFailed, isPartial );
 }
 
 static const char *RESCUE_DAG_VERSION = "2.0.0";
 
-//TEMPTEMP -- maybe change isNew to isPartial?
 //-----------------------------------------------------------------------------
 void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
-			bool parseFailed, bool isNew) /* const */
+			bool parseFailed, bool isPartial) /* const */
 {
 	debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
 				rescue_file );
@@ -1888,14 +1886,14 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 	// REJECT tells DAGMan to reject this DAG if we try to run it
 	// (which we shouldn't).
 	//
-	if ( parseFailed && !isNew ) {
+	if ( parseFailed && !isPartial ) {
 		fprintf(fp, "REJECT\n\n");
 	}
 
 	//
 	// Print the CONFIG file, if any.
 	//
-	if ( _configFile && !isNew ) {
+	if ( _configFile && !isPartial ) {
     	fprintf( fp, "CONFIG %s\n\n", _configFile );
 		
 	}
@@ -1903,14 +1901,14 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 	//
 	// Print the node status file, if any.
 	//
-	if ( _statusFileName && !isNew ) {
+	if ( _statusFileName && !isPartial ) {
 		fprintf( fp, "NODE_STATUS_FILE %s\n\n", _statusFileName );
 	}
 
 	//
 	// Print the jobstate.log file, if any.
 	//
-	if ( _jobstateLog.LogFile() && !isNew ) {
+	if ( _jobstateLog.LogFile() && !isPartial ) {
 		fprintf( fp, "JOBSTATE_LOG %s\n\n", _jobstateLog.LogFile() );
 	}
 
@@ -1919,15 +1917,13 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
     //
     it.ToBeforeFirst();
     while (it.Next(job)) {
-		WriteNodeToRescue( fp, job, reset_retries_upon_rescue, isNew );
-
-        fprintf( fp, "\n" );
+		WriteNodeToRescue( fp, job, reset_retries_upon_rescue, isPartial );
     }
 
     //
     // Print Dependency Section
     //
-	if ( !isNew ) {
+	if ( !isPartial ) {
     	fprintf(fp, "\n");
     	it.ToBeforeFirst();
     	while (it.Next(job)) {
@@ -1950,7 +1946,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 	//
 	// Print "throttle by node category" settings.
 	//
-	if ( !isNew ) {
+	if ( !isPartial ) {
 		_catThrottles.PrintThrottles( fp );
 	}
 
@@ -1960,7 +1956,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 //-----------------------------------------------------------------------------
 void
 Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
-			bool isNew )
+			bool isPartial )
 {
 		// Print the JOB/DATA line.
 	const char *keyword = "";
@@ -1972,7 +1968,8 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		EXCEPT( "Illegal node type (%d)\n", node->JobType() );
 	}
 
-	if ( !isNew ) {
+	if ( !isPartial ) {
+        fprintf( fp, "\n" );
 		fprintf( fp, "%s %s %s ", keyword, node->GetJobName(),
 					node->GetDagFile() ? node->GetDagFile() :
 					node->GetCmdFile() );
@@ -2080,9 +2077,6 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		}
 		fprintf( fp, "\n" );
 	}
-
-
-	fprintf( fp, "\n" );
 }
 
 //===========================================================================
