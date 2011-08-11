@@ -1847,7 +1847,7 @@ unparse(const char*, const ArgumentList &argList, EvalState &state,
 	Value &result )
 {
 	
-	if( argList.size() != 1 ) {
+	if( argList.size() != 1 || argList[0]->GetKind() != ATTRREF_NODE ) {
 		result.SetErrorValue( );
 	}
 	else{
