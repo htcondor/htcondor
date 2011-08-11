@@ -64,7 +64,7 @@ CondorTest::debug("Master PID submit file is $submit_file\n",$debuglevel);
 print "Install ruby gems\n";
 mkdir( "$gem_home" );
 $ENV{"GEM_HOME"} = $gem_home;
-system( "gem install amazon-ec2 compass gherkin cucumber eventmachine haml json nokogiri rack rack-accept rack-test rake rcov rerun right_aws sinatra thin net-ssh" );
+system( "gem install --no-rdoc --no-ri amazon-ec2 compass eventmachine haml json nokogiri rack rack-accept rack-test rake rcov rerun right_aws sinatra thin net-ssh" );
 $ENV{"PATH"} = "$gem_home/bin:" . $ENV{"PATH"};
 
 print "Install deltacloud server\n";
