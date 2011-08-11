@@ -31,10 +31,12 @@ The details of each version are described below.
 \begin{itemize}
 
 \item The dedicated scheduler used to attempt to change the
-  \Attr{Scheduler} attribute on all parallel job procs in a durable
-  fashion, resulting in an fsync() for each proc. This has been
-  changed to nondurable, improving scalability by reducing the 
-	number of fsync() calls without impacting correctness. \Ticket{2367}
+\Attr{Scheduler} attribute on all parallel job processes in a durable fashion,
+resulting in an \Procedure{fsync} for each process.
+This has been changed to be not durable, 
+improving scalability by reducing the 
+number of \Procedure{fsync} calls without impacting correctness. 
+\Ticket{2367}
 
 \end{itemize}
 
@@ -42,7 +44,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item \Macro{COLLECTOR\_ADDRESS\_FILE} is now set in the example configuration, similar to \Macro{MASTER\_ADDRESS\_FILE}.  This configuration is required when  \Macro{COLLECTOR\_HOST} has the port set to 0 (``select any available port'')  In other environments it should have no visible impact.
+\item Configuration variable \Macro{COLLECTOR\_ADDRESS\_FILE} is now set 
+in the example configuration,
+similar to \MacroNI{MASTER\_ADDRESS\_FILE}.
+This configuration variable is required when \Macro{COLLECTOR\_HOST} 
+has the port set to 0, which means to select any available port.
+In other environments, it should have no visible impact.
+\Ticket{2375}
 
 \end{itemize}
 
@@ -50,12 +58,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item On \Condor{schedd} startup, with parallel universe jobs, the job
-  queue sanity checking code would change the \Attr{Scheduler}
-  attribute on jobs only to have the attribute changed later by the
-  dedicated scheduler. This was because of mismatched expectations
-  dating back to Apr 2001. The expectations are now resolved. 
-	\Ticket{2367}
+\item Fixed a bug existing since April 2001,
+in which on \Condor{schedd} startup, with parallel universe jobs, 
+the job queue sanity checking code would change the \Attr{Scheduler}
+attribute on jobs,
+only to have the attribute changed later by the dedicated scheduler.
+\Ticket{2367}
 
 
 \end{itemize}
