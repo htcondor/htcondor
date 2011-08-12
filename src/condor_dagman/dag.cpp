@@ -918,7 +918,6 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			_postRunNodeCount--;
 		} else {
 			ASSERT( recovery );
-			_postRunNodeCount--;
 			// If we get here, it means that, in the run we're recovering,
 			// the POST script for a node was run without any indication
 			// in the log that the node was run.  This probably means that
