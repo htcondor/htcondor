@@ -108,7 +108,7 @@ dprintf_config( const char *subsys )
 	bool debug_zero = false;	//This indicates whether debug level zero has been initialized.
 	
 
-	DebugLogs = new std::vector<DebugFileInfo>(D_NUMLEVELS + 1);
+	DebugLogs = new std::vector<DebugFileInfo>();
 
 	/*  
 	**  We want to initialize this here so if we reconfig and the
@@ -207,29 +207,33 @@ dprintf_config( const char *subsys )
 					// param_without_default.
 					// tristan 5/29/09
 					logPathParam = param_without_default(pname);
-					logPath.insert(0, logPathParam);
+					if(logPathParam)
+						logPath.insert(0, logPathParam);
 				}
 
-				if(!DebugLogs->empty())
+				if(!logPath.empty())
 				{
-					for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+					if(!DebugLogs->empty())
 					{
-						if(it->logPath != logPath)
+						for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 						{
-							continue;
+							if(it->logPath != logPath)
+							{
+								continue;
+							}
+							it->debugFlags |= debug_level;
+							file_found = true;
+							break;
 						}
-						it->debugFlags |= debug_level;
-						file_found = true;
-						break;
 					}
-				}
-				if(!file_found)
-				{
-					DebugFileInfo logFileInfo;
-					logFileInfo.debugFlags = debug_level;
-					logFileInfo.debugFP = NULL;
-					logFileInfo.logPath = logPath;
-					it = DebugLogs->insert(DebugLogs->end(), logFileInfo);
+					if(!file_found)
+					{
+						DebugFileInfo logFileInfo;
+						logFileInfo.debugFlags = debug_level;
+						logFileInfo.debugFP = NULL;
+						logFileInfo.logPath = logPath;
+						it = DebugLogs->insert(DebugLogs->end(), logFileInfo);
+					}
 				}
 
 				if(logPathParam)

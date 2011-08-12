@@ -478,10 +478,10 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 			/* registered for other debug levels */
 		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 		{
-			if(((*it).debugFlags & debug_level) == 0)
+			if(((*it).debugFlags & flags) == 0)
 				continue;
 			/* Open and lock the log file */
-			debug_file_ptr = debug_lock(debug_level, NULL, 0);
+			debug_file_ptr = debug_lock(flags, NULL, 0);
 			if (debug_file_ptr) {
 #ifdef va_copy
 				va_list copyargs;
@@ -1171,7 +1171,6 @@ open_debug_file(int debug_level, const char flags[])
 	std::string filePath;
 	std::vector<DebugFileInfo>::iterator it;
 
-	FILE* debug_file_fp;
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
 		if(((*it).debugFlags & debug_level) == 0)
@@ -1194,10 +1193,10 @@ open_debug_file(int debug_level, const char flags[])
 			_condor_fd_panic( __LINE__, __FILE__ );
 		}
 #endif
-		if (debug_file_fp == NULL) {
-			debug_file_fp = stderr;
+		if (fp == NULL) {
+			fp = stderr;
 		}
-		_condor_dfprintf( debug_file_fp, "Can't open \"%s\"\n", filePath.c_str() );
+		_condor_dfprintf( fp, "Can't open \"%s\"\n", filePath.c_str() );
 		if( debug_level == 0 ) {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
 					 filePath.c_str() );
