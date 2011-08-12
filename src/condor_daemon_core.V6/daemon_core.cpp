@@ -3847,13 +3847,14 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 	int result = FALSE;
 	int index = 0;
 	bool reqFound = CommandNumToTableIndex(req,&index);
+	char const *user = NULL;
+	Sock *sock = (Sock *)stream;
 
 	if ( reqFound ) {
 
 		if( stream  && stream->type() == Stream::reli_sock && \
 			comTable[index].wait_for_payload > 0 && check_payload )
 		{
-			Sock *sock = (Sock *)stream;
 			if( !sock->readReady() ) {
 				if( sock->deadline_expired() ) {
 					dprintf(D_ALWAYS,"The payload has not arrived for command %d from %s, but the deadline has expired, so continuing to the command handler.\n",req,stream->peer_description());
@@ -3883,7 +3884,17 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool ch
 			}
 		}
 
-		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d)\n", comTable[index].handler_descrip, inServiceCommandSocket_flag);
+		user = sock->getFullyQualifiedUser();
+		if( !user ) {
+			user = "";
+		}
+		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
+				comTable[index].handler_descrip,
+				inServiceCommandSocket_flag,
+				req,
+				comTable[index].command_descrip,
+				user,
+				stream->peer_description());
 
 		UtcTime handler_start_time;
 		handler_start_time.getTime();
