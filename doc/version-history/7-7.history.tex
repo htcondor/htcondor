@@ -54,6 +54,10 @@ See section ~\ref{dagman:SCRIPT} for details.
 %DAGman tends to fail on wide DAGs, where many jobs are independent,
 %rather than being linear, where jobs have many dependencies.
 
+% gittrac #1874
+\item Condor now uses the OS-provided versions of OpenSSL and Kerberos,
+rather than including it's own versions.\Ticket{1874}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
