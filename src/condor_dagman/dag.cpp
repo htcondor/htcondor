@@ -850,13 +850,8 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	// wenger 2006-02-15.
 	//
 
-	if ( failed ) {
-		if( job->_scriptPost != NULL ) {
-			//
-			// Fall thru and maybe run POST script below.
-			//
-
-		} else if( job->GetRetries() < job->GetRetryMax() ) {
+	if ( failed && job->_scriptPost == NULL ) {
+		if( job->GetRetries() < job->GetRetryMax() ) {
 			RestartNode( job, recovery );
 			return;
 
@@ -3639,8 +3634,8 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			RunPostScript( node, _postRun, DAG_ERROR_CONDOR_SUBMIT_FAILED );
 		} else {
 			node->_Status = Job::STATUS_ERROR;
+			_numNodesFailed++;
 		}
-		_numNodesFailed++;
 	} else {
 		// We have more submit attempts left, put this node back into the
 		// ready queue.
