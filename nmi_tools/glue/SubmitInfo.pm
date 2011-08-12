@@ -819,7 +819,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -894,7 +894,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
