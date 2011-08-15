@@ -11681,6 +11681,18 @@ Scheduler::publish( ClassAd *cad ) {
 		cad->Assign( ATTR_OPSYS, temp );
 		free( temp );
 	}
+
+	temp = param( "OPSYSVER" );
+	if ( temp ) {
+		cad->Assign( ATTR_OPSYSVER, temp );
+		free( temp );
+	}
+
+	temp = param( "OPSYS_AND_VER" );
+	if ( temp ) {
+		cad->Assign( ATTR_OPSYS_AND_VER, temp );
+		free( temp );
+	}
 	
 	unsigned long phys_mem = sysapi_phys_memory( );
 	cad->Assign( ATTR_MEMORY, (int)phys_mem );

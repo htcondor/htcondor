@@ -418,6 +418,8 @@ extern const char * const  ATTR_NUM_SYSTEM_HOLDS;
 extern const char * const  ATTR_NUM_USERS;
 extern const char * const  ATTR_OFFLINE;
 extern const char * const  ATTR_OPSYS;
+extern const char * const  ATTR_OPSYSVER;
+extern const char * const  ATTR_OPSYS_AND_VER;
 extern const char * const  ATTR_ORIG_MAX_HOSTS;
 extern const char * const  ATTR_OTHER_JOB_REMOVE_REQUIREMENTS;
 extern const char * const  ATTR_OUTPUT_DESTINATION;

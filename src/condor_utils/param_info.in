@@ -10200,3 +10200,20 @@ usage=
 url=
 tags=schedd
 id=602
+
+[ENABLE_VERSIONED_OPSYS]
+aliases=
+default=true
+win32_default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Append OS version to the value of OPSYS
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=602
