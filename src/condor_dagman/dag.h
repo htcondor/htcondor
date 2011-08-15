@@ -705,7 +705,7 @@ class Dag {
 	   @return true on success, false on failure
     */
     bool StartNode( Job *node, bool isRetry );
-	void RunPostScript( Job *job, bool ignore_status, int retvalJob );
+	void RunPostScript( Job *job, bool ignore_status, int status );
 	typedef enum {
 		SUBMIT_RESULT_OK,
 		SUBMIT_RESULT_FAILED,
