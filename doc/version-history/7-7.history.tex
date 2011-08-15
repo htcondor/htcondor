@@ -72,6 +72,12 @@ failures. See section ??? for details.
 
 \begin{itemize}
 
+\item Fixed a bug introduced in 7.7.0, in which the \Condor{startd} may
+erroneously report ``Can't find hostname of client machine.'' In
+cases where Condor was unable to identify the host name, the ClientMachine
+attribute in the Machine ClassAd would have gone unset.
+\Ticket{2382}
+
 \item Fixed a bug existing since April 2001,
 in which on \Condor{schedd} startup, with parallel universe jobs, 
 the job queue sanity checking code would change the \Attr{Scheduler}
