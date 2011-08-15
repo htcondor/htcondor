@@ -524,6 +524,7 @@ if (NOT WINDOWS)
 	# the following logic if for standard universe *only*
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
 
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
 
 		if (EXT_GLIBC_FOUND)

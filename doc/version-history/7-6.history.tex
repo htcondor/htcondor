@@ -66,6 +66,18 @@ GSI authentication.
 upon receiving a CCB command when \MacroNI{ENABLE\_CCB\_SERVER} was
 changed from true to false without restarting the daemon.
 
+% gittrac #2345
+\item The gahp\_server no longer consumes all of the cpu when compiled
+with threaded Globus libraries.
+
+%gittrac #2116
+\item Fixed a problem introduced in Condor version 7.5.6, which led to 
+local lock files for user log locking always being created whether or 
+not \MacroNI{ENABLE\_USERLOG\_LOCKING} was set to false.
+
+% gittrac #2318
+\item Windows service install default is now Automatic Delayed.
+
 \end{itemize}
 
 \noindent Known Bugs:

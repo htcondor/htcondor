@@ -48,11 +48,11 @@ our %build_and_test_sets = (
 		'x86_64_rhap_5',
 		'x86_64_rhas_3',
 		'x86_deb_5.0',
-		'x86_macos_10.5-updated',
 		'x86_rhap_5',
 		'x86_rhas_3',
 		'x86_winnt_5.1',
 		'x86_64_rhap_6.1-updated',
+		'x86_64_macos_10.5-updated',
 	],
 	
 	# NMI will need builds on a set of platforms that we do not provide in our
@@ -612,7 +612,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -629,7 +629,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -667,7 +667,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -819,7 +819,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -837,7 +837,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -894,7 +894,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
