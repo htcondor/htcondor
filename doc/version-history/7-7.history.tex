@@ -122,11 +122,11 @@ only to have the attribute changed later by the dedicated scheduler.
 %or by setting the new configuration variable 
 %\Macro{DAGMAN\_POST\_IGNORE\_PRE} to \Expr{False}.
 
-% gittrac #2122
 \item The new \Arg{PRE\_SKIP} key word in DAGMan changes the
 behavior of DAG node execution such that the node's job and POST script
 may be skipped based on the exit value of the PRE script.
 See section ~\ref{dagman:SCRIPT} for details.
+\Ticket{2122}
 
 % uncomment item, if it appears in 7.7.1
 % gittrac #659 
@@ -136,9 +136,9 @@ See section ~\ref{dagman:SCRIPT} for details.
 %DAGman tends to fail on wide DAGs, where many jobs are independent,
 %rather than being linear, where jobs have many dependencies.
 
-% gittrac #1874
 \item Condor now uses the OS-provided versions of OpenSSL and Kerberos,
-rather than including it's own versions.\Ticket{1874}
+rather than including its own versions.
+\Ticket{1874}
 
 \end{itemize}
 
@@ -154,22 +154,24 @@ rather than including it's own versions.\Ticket{1874}
 
 \begin{itemize}
 
-% gittrac #2329
-\item ``\Arg{PERIODIC}\_$\ast$'' (e.g., \Arg{PERIODIC\_HOLD} and 
-\Arg{PERIODIC\_RELEASE}) expressions could inadvertently cause a claim to
-be released if shadow exits before waiting for final update from the starter. 
+\item Expressions for periodic policies such as 
+\MacroNI{PERIODIC\_HOLD} and \MacroNI{PERIODIC\_RELEASE} 
+could inadvertently cause a claim to be released,
+ if the \Condor{shadow} exited before waiting for final update from the 
+\Condor{starter}. 
+\Ticket{2329}
 
-% gittrac #2350
 \item \Condor{submit} previously could incorrectly detect references
-  in the requirements expression to special attributes such as
-  \Attr{Memory} when the name of the attribute happened to appear in a
-  string literal or as part of the name of some other attribute.  The
-  detection of references to various special attributes influences the
-  automatic requirements which are appended to the job requirements.
+in the requirements expression to special attributes such as
+\Attr{Memory} when the name of the attribute happened to appear in a
+string literal or as part of the name of some other attribute.  
+The detection of references to various special attributes influences the
+automatic requirements which are appended to the job requirements.
+\Ticket{2350}
 
-% gittrac #2360
 \item In rare cases, CCB requests could cause the server to hang for
-20s while waiting for all of the request to arrive.
+20 seconds while waiting for all of the request to arrive.
+\Ticket{2360}
 
 \end{itemize}
 
