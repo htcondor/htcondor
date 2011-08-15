@@ -96,11 +96,15 @@ sysapi_uname_opsys(void)
 	return sysapi_opsys();
 }
 
+static int opsys_version = 0;
 
 const char *
-sysapi_opsys(void)
+sysapi_opsys_versioned(void)
 {
-	static char answer[1024];
+    static char answer[128] = {0};
+    if (answer[0])
+       return answer;
+
 	OSVERSIONINFO info;
 	info.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 	if (GetVersionEx(&info) > 0) {
@@ -118,11 +122,29 @@ sysapi_opsys(void)
 			sprintf(answer, "UNKNOWN");
 			break;
 		}
+        opsys_version = info.dwMajorVersion * 100 + info.dwMinorVersion;
 	} else {
 		sprintf(answer, "ERROR");
 	}
 
 	return answer;
+}
+
+const char *
+sysapi_opsys(void)
+{
+    if (_sysapi_opsys_is_versioned) {
+        return sysapi_opsys_versioned();
+    }
+    return "WINDOWS";
+}
+
+int sysapi_opsys_version()
+{
+    if ( ! opsys_version) {
+         sysapi_opsys_versioned(); // init opsys_version
+    }
+    return opsys_version;
 }
 
 #else
@@ -131,7 +153,9 @@ static int arch_inited = FALSE;
 static const char* arch = NULL;
 static const char* uname_arch = NULL;
 static const char* opsys = NULL;
+static const char* opsys_versioned = NULL;
 static const char* uname_opsys = NULL;
+static int opsys_version = 0;
 
 #ifdef HPUX
 const char* get_hpux_arch();
@@ -161,7 +185,9 @@ init_arch(void)
 	}
 
 	arch = sysapi_translate_arch( buf.machine, buf.sysname );
-	opsys = sysapi_translate_opsys( buf.sysname, buf.release, buf.version );
+	opsys = sysapi_translate_opsys( buf.sysname, buf.release, buf.version, _sysapi_opsys_is_versioned );
+	opsys_versioned = sysapi_translate_opsys( buf.sysname, buf.release, buf.version, true );
+    opsys_version = sysapi_translate_opsys_version( buf.sysname, buf.release, buf.version );
 
 	if ( arch && opsys ) {
 		arch_inited = TRUE;
@@ -287,9 +313,12 @@ sysapi_translate_arch( const char *machine, const char *)
 const char *
 sysapi_translate_opsys( const char *sysname,
 						const char *release,
-						const char *version )
+						const char *version,
+                        int         append_version)
 {
 	char tmp[64];
+    char ver[24];
+    const char * pver="";
 	char *tmpopsys;
 
 		// Get OPSYS
@@ -303,58 +332,60 @@ sysapi_translate_opsys( const char *sysname,
 	else if( !strcmp(sysname, "SunOS")
 		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
 	{
+        sprintf( tmp, "SOLARIS" );
 		if ( !strcmp(release, "2.10") //LDAP entry
 			|| !strcmp(release, "5.10") )
 		{
-			sprintf( tmp, "SOLARIS210" );
+			pver = "210";
 		}
 		else if ( !strcmp(release, "2.9") //LDAP entry
 			|| !strcmp(release, "5.9") )
 		{
-			sprintf( tmp, "SOLARIS29" );
+			pver = "29";
 		}
 		else if ( !strcmp(release, "2.8") //LDAP entry
 			|| !strcmp(release, "5.8") )
 		{
-			sprintf( tmp, "SOLARIS28" );
+			pver = "28";
 		}
 		else if ( !strcmp(release, "2.7") //LDAP entry
 			|| !strcmp(release, "5.7") )
 		{
-			sprintf( tmp, "SOLARIS27" );
+			pver = "27";
 		}
 		else if( !strcmp(release, "5.6")
 			||  !strcmp(release, "2.6") ) //LDAP entry
 		{
-			sprintf( tmp, "SOLARIS26" );
+			pver = "26";
 		}
 		else if ( !strcmp(release, "5.5.1")
 			|| !strcmp(release, "2.5.1") ) //LDAP entry
 		{
-			sprintf( tmp, "SOLARIS251" );
+			pver = "251";
 		}
 		else if ( !strcmp(release, "5.5")
 			|| !strcmp(release, "2.5") ) //LDAP entry
 		{
-			sprintf( tmp, "SOLARIS25" );
+			pver = "25";
 		}
 		else {
-			sprintf( tmp, "SOLARIS%s", release );
+            pver = release;
 		}
 	}
 
 	else if( !strcmp(sysname, "HP-UX") ) {
+        sprintf( tmp, "HPUX" );
 		if( !strcmp(release, "B.10.20") ) {
-			sprintf( tmp, "HPUX10" );
+			pver = "10";
 		}
 		else if( !strcmp(release, "B.11.00") ) {
-			sprintf( tmp, "HPUX11" );
+			pver = "11";
 		}
 		else if( !strcmp(release, "B.11.11") ) {
-			sprintf( tmp, "HPUX11" );
+			pver = "11";
 		}
 		else {
-			sprintf( tmp, "HPUX%s", release );
+			pver = release;
 		}
 	}
 	else if ( !strncmp(sysname, "Darwin", 6) ) {
@@ -363,20 +394,29 @@ sysapi_translate_opsys( const char *sysname,
 		sprintf( tmp, "OSX");
 	}
 	else if ( !strncmp(sysname, "AIX", 3) ) {
+        sprintf(tmp, "%s", sysname);
 		if ( !strcmp(version, "5") ) {
-			sprintf(tmp, "%s%s%s", sysname, version, release);
+			sprintf(ver, "%s%s", version, release);
+            pver = ver;
 		}
 	}
 	else if ( !strncmp(sysname, "FreeBSD", 7) ) {
 			//
 			// Pull the major version # out of the release information
 			//
-		sprintf( tmp, "FREEBSD%c", release[0]);
+		sprintf( tmp, "FREEBSD" );
+        sprintf( ver, "%c", release[0]);
+        pver = ver;
 	}
 	else {
 			// Unknown, just use what uname gave:
-		sprintf( tmp, "%s%s", sysname, release );
+		sprintf( tmp, "%s", sysname);
+        pver = release;
 	}
+    if (append_version && pver) {
+        strcat( tmp, pver );
+    }
+
 	tmpopsys = strdup( tmp );
 	if( !tmpopsys ) {
 		EXCEPT( "Out of memory!" );
@@ -384,6 +424,48 @@ sysapi_translate_opsys( const char *sysname,
 	return( tmpopsys );
 }
 
+int sysapi_translate_opsys_version( 
+    const char *sysname,
+	const char *release,
+	const char *version )
+{
+    const char * psz = release;
+
+    // skip any leading non-digits.
+    while (psz[0] && (psz[0] < '0' || psz[0] > '9')) {
+       ++psz;
+    }
+
+    // parse digits until the first non-digit as the
+    // major version number.
+    //
+    int major = 0;
+    while (psz[0]) {
+        if (psz[0] >= '0' && psz[0] <= '9') {
+            major = major * 10 + (psz[0] - '0');
+        } else {
+           break;
+        }
+        ++psz;
+    }
+
+    // if the major version number ended with '.' parse
+    // at most 2 more digits as the minor version number.
+    //
+    int minor = 0;
+    if (psz[0] == '.') {
+       ++psz;
+       if (psz[0] >= '0' && psz[0] <= '9') {
+          minor = psz[0] - '0';
+          ++psz;
+       }
+       if (psz[0] >= '0' && psz[0] <= '9') {
+          minor = minor * 10 + psz[0] - '0';
+       }
+    }
+
+    return (major * 100) + minor;
+}
 
 const char *
 sysapi_condor_arch(void)
@@ -404,6 +486,22 @@ sysapi_opsys(void)
 	return opsys;
 }
 
+int sysapi_opsys_version()
+{
+	if( ! arch_inited ) {
+		init_arch();
+	}
+    return opsys_version;
+}
+
+const char *
+sysapi_opsys_versioned(void)
+{
+	if( ! arch_inited ) {
+		init_arch();
+	}
+	return opsys_versioned;
+}
 
 const char *
 sysapi_uname_arch(void)
