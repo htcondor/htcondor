@@ -69,6 +69,7 @@ static void Usage() {
             "\t\t[-MaxJobs <int N>]\n"
             "\t\t[-MaxPre <int N>]\n"
             "\t\t[-MaxPost <int N>]\n"
+            "\t\t[-PostIgnorePre]\n"
             "\t\t[-WaitForDebug]\n"
             "\t\t[-NoEventChecks]\n"
             "\t\t[-AllowLogError]\n"
@@ -130,7 +131,8 @@ Dagman::Dagman() :
 	dumpRescueDag(false),
 	_defaultNodeLog(NULL),
 	_generateSubdagSubmits(true),
-	_maxJobHolds(100)
+	_maxJobHolds(100),
+	_runPost(true)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
@@ -317,6 +319,10 @@ Dagman::Config()
 				submitDepthFirst );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %s\n",
 				submitDepthFirst ? "True" : "False" );
+
+	_runPost = param_boolean( "DAGMAN_POST_IGNORE_PRE", true );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_POST_IGNORE_PRE setting: %s\n",
+			_runPost ? "True" : "False" );
 
 	free( condorSubmitExe );
 	condorSubmitExe = param( "DAGMAN_CONDOR_SUBMIT_EXE" );
@@ -659,6 +665,9 @@ void main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
 			dagman.allowLogError = true;
 
+        } else if( !strcasecmp( "-PostIgnorePre",argv[i] ) ) {
+			dagman._runPost = false;
+
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
 
@@ -997,7 +1006,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetAllowEvents( dagman.allow_events );
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
 	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
-
+	dagman.dag->SetPostRun(dagman._runPost);
     //
     // Parse the input files.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan

@@ -100,7 +100,7 @@ Job::~Job() {
 Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile,
 			bool prohibitMultiJobs ) :
-	_jobType( jobType ), _preskip( PRE_SKIP_INVALID )
+	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ), _pre_status( NO_PRE_VALUE )
 {
 	Init( jobName, directory, cmdFile, prohibitMultiJobs );
 }
@@ -995,4 +995,39 @@ Job::GetPreSkip() const
 			"Evaluating PRE_SKIP... It is not defined.\n" );
 	}
 	return _preskip;
+}
+
+//---------------------------------------------------------------------------
+int Job::GetPreStatus() const
+{
+	int ret = 0;
+	if( _scriptPre ) {
+		if( HasPreSkip() ) {
+			if( _pre_status != GetPreSkip() && _pre_status != NO_PRE_VALUE && _pre_status != 0) {
+				debug_printf( DEBUG_QUIET,
+					"PRE script not PRE_SKIP value in node %s: "
+					"Returning pre_status %d.\n",_jobName,_pre_status);
+				ret = _pre_status;
+			}
+		} else {
+			if( _pre_status != NO_PRE_VALUE && _pre_status != 0 ) {
+				debug_printf( DEBUG_QUIET,
+					"PRE script failed in node %s: "
+					"Returning pre_status %d.\n",_jobName,_pre_status);
+				ret = _pre_status;
+			}
+		}
+	}
+	return ret;
+}
+
+//---------------------------------------------------------------------------
+int Job::SetPreStatus(const int ps)
+{
+	int ret = 0;
+	if( _scriptPre ) {
+		debug_printf( DEBUG_QUIET, "Setting _pre_status to %d.\n",ps);	
+		ret = _pre_status = ps;
+	}
+	return ret;
 }

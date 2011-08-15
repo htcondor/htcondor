@@ -668,7 +668,8 @@ class Dag {
 	void SetMaxJobHolds(int maxJobHolds) { _maxJobHolds = maxJobHolds; }
 
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
-
+	bool GetPostRun() const { return _postRun; }
+	void SetPostRun(bool postRun) { _postRun = postRun; }	
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
@@ -704,7 +705,7 @@ class Dag {
 	   @return true on success, false on failure
     */
     bool StartNode( Job *node, bool isRetry );
-
+	void RunPostScript( Job *job, bool ignore_status, int status );
 	typedef enum {
 		SUBMIT_RESULT_OK,
 		SUBMIT_RESULT_FAILED,
@@ -1056,6 +1057,9 @@ class Dag {
 
 		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog _jobstateLog;
+	// If true, run the POST script, regardless of the exit status of the PRE script
+	// Defaults to true
+	bool _postRun;
 };
 
 #endif /* #ifndef DAG_H */

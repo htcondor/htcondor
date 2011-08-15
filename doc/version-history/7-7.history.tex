@@ -45,6 +45,51 @@ number of \Procedure{fsync} calls without impacting correctness.
   message distinguishes between safety check failures for the uid,
   tracking group id, primary group id, and supplementary group ids.
 
+% commit c3c0fe27f59e1807d77ce5709e965ed17629c223
+% commit 7c0e456f220670af3624b0192244093edcc768c0
+% commit 5732223317b7c459123aefdf6670fe4b825f7fe8
+% commit a46a255129ef2ec5c5a977ae1fc4fdb8683cfe6a
+% commit 74c9ac5086fd18527319e58e6d48ce7947951f0c
+% commit cbdf2f2a514d03f976bdaaf3d9c347fc3e705de2
+% commit bdb12c225d7f49fdcf1cd4396861cf630e8e76fc
+% commit 46dc3c3b930d9af0924f72377c66db3714d34330
+% commit 390506265d15b304f923ea8d44017b18018c97f6
+% commit e45222055d1541fcf28bf2ccbadec2790296ea0f
+% commit e8dd11b3b3a1c299cd202b7c4f4461fe253d2c3e
+% commit 44647837f105a057032d6a9048333818c15f57b8
+% commit d542c6c8f45f593eda489928a5a163c06bbcfeab
+% commit 7090363927f47fa35d0a7aea9b53b863e8eea858
+% commit 13ffba584f2d84527b3655d77c2d219f2bda136f
+% commit 7086d8947b4eba370e290a925190093e673f5ec4
+% commit 296a8686220827ea8f893c63e1cf1d12ee5cc026
+% commit 60e46cc4466d77507495ace11f10efed3084e39a
+% commit 68a8b39d11c39b1920747e80392fd20fc0b65133
+% commit f282314060ee8fa43504943e4ea96e013288718e
+% commit f31f33e08d9309d585a365509eb992cf045c54ae
+% commit 8487f22d60b2878516c8fdbd2c2bbdb9122c037d
+% commit 07cccd34924f347acc0f0044a724b9074056b318
+% commit b9a0f59111a04fcc2c81e8bf14b44786fc0aba5f
+% commit 32cdfb006ba46cb099442a7257f27f6ada0f347b
+% commit af3822ab2abe8781c532bdc217cdb6033329023b
+% commit 0736933d3ded193d84ffd604fe2a30d66b04f291
+% commit 4a55dcc8f433393939e6a2a154eb903cffc91f52
+% commit 16ccf652ad67416ce800bd703a48468dce490a45
+% commit 0c624cbf807fd23261aac540e78d9e2c663c4f84
+% commit 5fad7f81d9377f87cca4c0a44c68585250dc12e7
+% commit 69fceba06015c2a40c122fc829bb0ad58de176b4
+% commit 6c35cdd174f5459d39edf5b8a4a529a18c1fce5a
+% commit bfb2f58403a7e183f7f2e630e0d5488fec6b9f0d
+% commit 37e2f9153dcaeb3d081a0b70cbf3715f19961ccf
+% commit 22652297344f093790a0a529512e2ea95b09c079
+% commit 06e795068dcc8f63affa96cf2ca6dc1492b3e489
+% commit 4d283d8f17ad168f12efeda5178a2c8b7aa87cf3
+\item The behavior of DAGMan is changed, such that, by default, POST scripts
+  will be run regardless of the return value from the PRE script of the same
+  node.  The previous behavior of not running the POST script can be restored by
+  either adding the \Opt{-PostIgnorePre} option to \Condor{submit\_dag}, or by
+  setting the new configuration variable \Macro{DAGMAN\_POST\_IGNORE\_PRE} to
+  \Expr{False}. \Ticket{2057}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -109,17 +154,6 @@ only to have the attribute changed later by the dedicated scheduler.
 \noindent New Features:
 
 \begin{itemize}
-
-% This is unlikely to make it into 7.7.1
-% Comment it out for now and plan to move it to 7.7.2
-% gittrac #2057
-%\item The behavior of DAGMan is changed, such that, by default,
-%POST scripts will be run regardless of the return value from the PRE script
-%of the same node.
-%The previous behavior of not running the POST script can be restored 
-%by either adding the \Opt{-no\_postrun} option to \Condor{submit\_dag},
-%or by setting the new configuration variable 
-%\Macro{DAGMAN\_POST\_IGNORE\_PRE} to \Expr{False}.
 
 % gittrac #2122
 \item The new \Arg{PRE\_SKIP} key word in DAGMan changes the
