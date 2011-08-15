@@ -78,6 +78,12 @@ not \MacroNI{ENABLE\_USERLOG\_LOCKING} was set to false.
 % gittrac #2318
 \item Windows service install default is now Automatic Delayed.
 
+% gittrac #2376
+\item In privsep mode, if started as root, \Condor{master} re-executes
+itself as the condor user.  Previously, supplementary groups were
+preserved.  Now supplementary groups are cleared and set to the list of groups
+to which the condor user belongs.
+
 \end{itemize}
 
 \noindent Known Bugs:
