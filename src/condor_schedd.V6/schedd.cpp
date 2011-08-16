@@ -2553,7 +2553,7 @@ Scheduler::WriteSubmitToUserLog( PROC_ID job_id, bool do_fsync )
 	SubmitEvent event;
 	ClassAd *job_ad = GetJobAd(job_id.cluster,job_id.proc);
 
-	strcpy (event.submitHost, daemonCore->privateNetworkIpAddr());
+	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
 	if ( job_ad->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
 		event.submitEventLogNotes = strnewp(submitEventNotes.c_str());
 	}
@@ -2702,7 +2702,7 @@ Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
 	}
 
 	ExecuteEvent event;
-	strcpy( event.executeHost, host );
+	event.setExecuteHost( host );
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;

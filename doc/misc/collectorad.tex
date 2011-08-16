@@ -1,0 +1,103 @@
+\index{ClassAd!Collector attributes}
+\begin{description}
+
+\index{ClassAd Collector attribute!CollectorIpAddr}
+\item[\AdAttr{CollectorIpAddr}:] String with the IP and port address of the
+  \Condor{collector} daemon which is publishing this ClassAd.
+
+\index{ClassAd Collector attribute!CurrentJobsRunningAll}
+\item[\AdAttr{CurrentJobsRunningAll}:] An integer value representing the sum of
+  all jobs running under all universes.
+
+\index{ClassAd Collector attribute!CurrentJobsRunning<universe>}
+\item[\AdAttr{CurrentJobsRunning<universe>}:] An integer value representing
+  the current number of jobs running under the universe which forms 
+  the attribute name.  For example
+\begin{verbatim}
+  CurrentJobsRunningVanilla = 567
+\end{verbatim}
+  identifies that the \Condor{collector} counts 567 vanilla universe jobs
+  currently running.
+  \Attr{<universe>} is one of 
+  \Expr{Unknown}, \Expr{Standard}, \Expr{Vanilla}, \Expr{Scheduler},
+  \Expr{Java}, \Expr{Parallel}, \Expr{VM}, or \Expr{Local}.
+  There are other universes, but they are not listed here, as they represent
+  ones that are no longer used in Condor.
+
+\index{ClassAd Collector attribute!DaemonStartTime}
+\item[\AdAttr{DaemonStartTime}:] The time that this daemon was
+  started, represented as the number of second elapsed since
+  the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+
+\index{ClassAd Collector attribute!HostsClaimed}
+\item[\AdAttr{HostsClaimed}:] Description is not yet written.
+
+\index{ClassAd Collector attribute!HostsOwner}
+\item[\AdAttr{HostsOwner}:] Description is not yet written.
+
+\index{ClassAd Collector attribute!HostsTotal}
+\item[\AdAttr{HostsTotal}:] Description is not yet written.
+
+\index{ClassAd Collector attribute!HostsUnclaimed}
+\item[\AdAttr{HostsUnclaimed}:] Description is not yet written.
+
+\index{ClassAd Collector attribute!IdleJobs}
+\item[\AdAttr{IdleJobs}:] Description is not yet written.
+
+\index{ClassAd Collector attribute!Machine}
+\item[\AdAttr{Machine}:] A string with the machine's fully qualified 
+  host name.
+
+\index{ClassAd Collector attribute!MaxJobsRunningAll}
+\item[\AdAttr{MaxJobsRunning<universe}:] An integer value representing 
+  the sum of all \Attr{MaxJobsRunning<universe>} values.
+
+\index{ClassAd Collector attribute!MaxJobsRunning<universe>}
+\item[\AdAttr{MaxJobsRunning<universe>}:] An integer value representing 
+  largest number of currently running jobs ever seen
+  under the universe which forms the attribute name, 
+  over the life of this \Condor{collector} process.
+  For example
+\begin{verbatim}
+  MaxJobsRunningVanilla = 401
+\end{verbatim}
+  identifies that the \Condor{collector} saw 401 vanilla universe jobs
+  currently running at one point in time, and that was the largest
+  number it had encountered.
+  \Attr{<universe>} is one of 
+  \Expr{Unknown}, \Expr{Standard}, \Expr{Vanilla}, \Expr{Scheduler},
+  \Expr{Java}, \Expr{Parallel}, \Expr{VM}, or \Expr{Local}.
+  There are other universes, but they are not listed here, as they represent
+  ones that are no longer used in Condor.
+
+\index{ClassAd Collector attribute!MyAddress}
+\item[\AdAttr{MyAddress}:] Description is not yet written.
+
+\index{ClassAd Collector attribute!MyCurrentTime}
+\item[\AdAttr{MyCurrentTime}:]  The time, represented as the number of 
+  second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
+  at which the \Condor{schedd} daemon last sent a ClassAd update to the
+  \Condor{collector}.
+
+\index{ClassAd Collector attribute!Name}
+\item[\AdAttr{Name}:] The name of this resource; typically the same value as
+  the \AdAttr{Machine} attribute, but could be customized by the site
+  administrator.
+  On SMP machines, the \Condor{startd} will divide the CPUs up into separate
+  slots, each with with a unique name.
+  These names will be of the form ``slot\#@full.hostname'', for example,
+  ``slot1@vulture.cs.wisc.edu'', which signifies slot number 1 from
+  vulture.cs.wisc.edu.
+
+\index{ClassAd Collector attribute!RunningJobs}
+\item[\AdAttr{RunningJobs}:] Description is not yet written.
+
+\index{ClassAd Collector attribute!UpdateInterval}
+\item[\AdAttr{UpdateInterval}:] Description is not yet written.
+
+\index{ClassAd Collector attribute!UpdateSequenceNumber}
+\item[\AdAttr{UpdateSequenceNumber}:] An integer that begins at 0,
+   and increments by one each time the same ClassAd is again advertised.
+
+\end{description}
+

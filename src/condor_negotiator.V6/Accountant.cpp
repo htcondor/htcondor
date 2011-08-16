@@ -832,6 +832,11 @@ void Accountant::UpdatePriorities()
   float WeightedResourcesUsed;
   int BeginUsageTime;
 
+	  // Each iteration of the loop should be atomic for consistency,
+	  // but instead of doing one transaction per iteration, wrap the
+	  // whole loop in one transaction for efficiency.
+  AcctLog->BeginTransaction();
+
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
     MyString keybuf;
@@ -862,7 +867,6 @@ void Accountant::UpdatePriorities()
     AccumulatedUsage+=ResourcesUsed*TimePassed+UnchargedTime;
     WeightedAccumulatedUsage+=WeightedResourcesUsed*TimePassed+WeightedUnchargedTime;
 
-	AcctLog->BeginTransaction();
     SetAttributeFloat(key,PriorityAttr,Priority);
     SetAttributeFloat(key,AccumulatedUsageAttr,AccumulatedUsage);
     SetAttributeFloat(key,WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage);
@@ -876,12 +880,12 @@ void Accountant::UpdatePriorities()
 		DeleteClassAd(key);
 	}
 
-	AcctLog->CommitTransaction();
-	
     dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d , WeightedResourcesUsed=%f\n",key,OldPrio,Priority,ResourcesUsed,WeightedResourcesUsed);
     dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f (unweighted %8.3f), UnchargedTime=%8.3f (unweighted %d), AccumulatedUsage=%5.3f (unweighted %5.3f), BeginUsageTime=%d\n",WeightedRecentUsage,RecentUsage,WeightedUnchargedTime,UnchargedTime,WeightedAccumulatedUsage,AccumulatedUsage,BeginUsageTime);
 
   }
+
+  AcctLog->CommitTransaction();
 
   // Check if the log needs to be truncated
   struct stat statbuf;

@@ -271,7 +271,7 @@ display_stats()
 
 void
 new_record(int cluster, int proc, int start_time, int evict_time, 
-		   int good_time, int cpu_usage, char host[])
+		   int good_time, int cpu_usage, char const *host)
 {
 	static bool initialized = false;
 	char hash[40];
@@ -310,7 +310,8 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 
 	char ip_addr[128];
 	// only use the IP address in the key
-	strcpy(ip_addr, host+1);
+	strncpy(ip_addr, host+1, sizeof(ip_addr)-1);
+	ip_addr[sizeof(ip_addr)-1] = '\0';
 	for (int i=0; i < 128; i++) {
 		if (ip_addr[i] == ':') {
 			ip_addr[i] = '\0';
@@ -396,8 +397,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					// other event, so keeping the first execute event
 					// gives correct results for those shadows.
 					// Otherwise, we throw out the previous event.
-					if (!strcmp(((ExecuteEvent *)event)->executeHost,
-								execEvent->executeHost)) {
+					if (!strcmp(((ExecuteEvent *)event)->getExecuteHost(),
+								execEvent->getExecuteHost())) {
 						if (debug_mode) {
 							fprintf(stderr,
 									"warning: discarding execute event "
@@ -492,7 +493,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				new_record(event->cluster, event->proc, (int)start_time,
 						   (int)end_time,
 						   (int)ckpt_time-start_time, cpu_usage,
-						   execEvent->executeHost);
+						   execEvent->getExecuteHost());
 				delete execEvent;
 				delete event;
 				break;
@@ -532,7 +533,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 							   run_remote_rusage.ru_utime.tv_sec +
 							   terminateEvent->
 							   run_remote_rusage.ru_stime.tv_sec,
-							   execEvent->executeHost);
+							   execEvent->getExecuteHost());
 				}
 				delete execEvent;
 				delete event;
@@ -582,7 +583,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					new_record(event->cluster, event->proc, (int)start_time,
 							   (int)end_time,
 							   (int)ckpt_time-start_time, cpu_usage,
-							   execEvent->executeHost);
+							   execEvent->getExecuteHost());
 				}
 				delete execEvent;
 				delete event;

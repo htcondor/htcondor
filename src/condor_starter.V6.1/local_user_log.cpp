@@ -135,7 +135,7 @@ LocalUserLog::logExecute( ClassAd*  ad  )
 	}
 
 	ExecuteEvent event;
-	strcpy( event.executeHost, daemonCore->InfoCommandSinfulString() ); 
+	event.setExecuteHost( daemonCore->InfoCommandSinfulString() ); 
 
 	if( !u_log.writeEvent(&event,ad) ) {
         dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "

@@ -75,7 +75,7 @@ log_execute (char *host)
 	}
 	// log execute event
 	ExecuteEvent event;
-	strcpy (event.executeHost, host);
+	event.setExecuteHost(host);
 	if( !ULog.writeEvent(&event) ) {
 		dprintf (D_ALWAYS, "Unable to log ULOG_EXECUTE event\n");
 	} else {
