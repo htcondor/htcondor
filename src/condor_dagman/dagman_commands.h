@@ -35,7 +35,7 @@ bool AddNode( Dag *dag, Job::job_type_t type, const char *name,
 			  const char* directory,
 			  const char* submitFile,
 			  const char *precmd, const char *postcmd, bool noop,
-			  bool done, MyString &failReason );
+			  bool done, bool isSubDag, MyString &failReason );
 
 /** Set the DAG file (if any) for a node.
 	@param dag: the DAG this node is part of
