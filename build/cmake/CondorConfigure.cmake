@@ -436,7 +436,7 @@ else()
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
 	option(CACHED_EXTERNALS "enable/disable cached externals" ON)
 
-	if (LINUX)
+	if (LINUX AND NOT CONDOR_PACKAGE_BUILD)
 		set(CMAKE_SKIP_RPATH FALSE)
 		set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/condor")
 		set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
