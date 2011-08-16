@@ -687,8 +687,13 @@ globus_l_gass_server_ez_register_accept_callback(
 	if ( number_open > 1 ) {
 		try_to_listen();
 	} else {
+		/* In C++, casting from a 64-bit pointer to a 32-bit int is
+		 * illegal. But if you detour through a 64-bit integer type,
+		 * that's ok. The pointer started life as an int, so this
+		 * shouldn't cause any problems, though it is icky.
+		 */
 		globus_gass_transfer_register_listen(
-				(globus_gass_transfer_listener_t) listener,
+				(globus_gass_transfer_listener_t)(long) listener,
 				globus_l_gass_server_ez_listen_callback,
 				s->reqattr);
 	}
