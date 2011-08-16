@@ -22,7 +22,7 @@ set (MONGODB_FOUND "-lmongoclient -lboost_system -lboost_filesystem")
 # file target references.
 ############################
 
-file( GLOB ETL_COMMON_SRCS ODSMongodbOps.cpp )
+file( GLOB ETL_COMMON_SRCS ODSMongodbOps.cpp ODSPoolUtils.cpp)
 
 file( GLOB ETL_SCHEDD_SRCS ${ETL_COMMON_SRCS} PROC_ID_comparator.cpp ODSScheddPlugin*.cpp )
 
@@ -40,8 +40,8 @@ src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 file( GLOB SchedSrcs ODSScheddPlugin*.cpp )
 #condor_plugin( ODSScheddPlugin "${SchedSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
-file( GLOB CollectorSrcs ODSCollectorPlugin.cpp )
-#condor_plugin( ODSCollectorPlugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
+file( GLOB CollectorSrcs ODSCollectorPlugin.cpp ${ETL_COMMON_SRCS})
+condor_plugin( ODSCollectorPlugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
 file( GLOB NegotiatorSrcs ODSNegotiatorPlugin.cpp ${ETL_COMMON_SRCS})
 condor_plugin( ODSNegotiatorPlugin "${NegotiatorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
