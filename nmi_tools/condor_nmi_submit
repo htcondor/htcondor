@@ -51,7 +51,7 @@ sub FALSE { 0; };
 
 # Constants for use with makeFetchFileVCS to specify if fetching from
 # source (SRC), externals (EXT) or manual (DOC) repositories.
-sub DOC 	{ 1; };
+#sub DOC 	{ 1; };
 sub SRC 	{ 0; };
 
 ######################################################################
@@ -62,7 +62,7 @@ sub SRC 	{ 0; };
 my $GITROOT_SRC = "/space/git/CONDOR_SRC.git";
 
 # Root of the GIT Manual repository
-my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
+# my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
 
 # name of the submit_info file
 my $submit_info_basename = "SubmitInfo.pm";
@@ -1578,16 +1578,16 @@ sub generateBuildFetchFiles
 		# check the externals and manual out from different
 		# repositories than the source. Ideally, this would only be
 		# visible at the makeFetchFileVCS level.
-		if( defined $opt_git ) {
+#		if( defined $opt_git ) {
 #	    	my $extfile = "externals-$othertag.src";
 #	    	$extfile =~ s,/,,g;
 #	    	makeFetchFileVCS( $extfile, TRUE, EXT, $module, $othertag );
 #	    	push( @fetch_files, $extfile );
 	
-	    	my $docfile = "manual-$othertag.src";
-	    	$docfile =~ s,/,,g;
-	    	makeFetchFileVCS( $docfile, TRUE, DOC, $module, $othertag );
-	    	push( @fetch_files, $docfile );
+#	    	my $docfile = "manual-$othertag.src";
+#	    	$docfile =~ s,/,,g;
+#	    	makeFetchFileVCS( $docfile, TRUE, DOC, $module, $othertag );
+#	    	push( @fetch_files, $docfile );
 
 #	    	my $test_cnffile = "confidential-$othertag.src";
 #	    	$test_cnffile =~ s,/,,g;
@@ -1598,7 +1598,7 @@ sub generateBuildFetchFiles
 #	    	$test_cnffile =~ s,/,,g;
 #	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_LRG, $module, $othertag );
 #	    	push( @fetch_files, $test_cnffile );
-		}
+#		}
     } elsif( defined $src_workspace ) {
         # TODO: There is a race condition if the user also specified
         # --nmi-glue and this directory ($src_workspace) contains
@@ -1673,15 +1673,16 @@ sub makeFetchFileVCS
 #		if( EXT == $repo) {
 #			$gitroot = $GITROOT_EXT;
 #		} elsif(DOC == $repo) {
-		if(DOC == $repo) {
-			$gitroot = $GITROOT_DOC;
+#		if(DOC == $repo) {
+#			$gitroot = $GITROOT_DOC;
 #		} elsif(TST_CNF == $repo) {
 #			$gitroot = $GITROOT_TSTCNF;
 #		} elsif(TST_LRG == $repo) {
 #			$gitroot = $GITROOT_TSTLRG;
-		} else {
-			$gitroot = $GITROOT_SRC;
-		}
+#		} else {
+#			$gitroot = $GITROOT_SRC;
+#		}
+		$gitroot = $GITROOT_SRC;
 		print FILE "method = git\n";
 		print FILE "git_root = $gitroot\n";
 		print FILE "git_path = $module\n" unless $is_module;

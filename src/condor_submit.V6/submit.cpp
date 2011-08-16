@@ -6181,7 +6181,6 @@ check_requirements( char const *orig, MyString &answer )
 				// If it wasn't 't', we must have found it...
 			if( *(aptr-1) == 't' || *(aptr-1) == 'T' ) {
 					// Must be RequestMemory, keep searching...
-				checks_reqmem = true;
 				continue;
 			}	
 		
@@ -6189,7 +6188,9 @@ check_requirements( char const *orig, MyString &answer )
 			break;
 		}
 	}
- 
+
+	checks_reqmem = findClause(answer,ATTR_REQUEST_MEMORY);
+
 	if( JobUniverse == CONDOR_UNIVERSE_JAVA ) {
 		if( answer[0] ) {
 			answer += " && ";
@@ -6745,9 +6746,9 @@ log_submit()
 		// anything since we will never communicate the resulting ad to 
 		// to anyone (we make the name obviously unresolvable so we know
 		// this was a generated file).
-		strcpy (jobSubmit.submitHost, "localhost-used-to-dump");
+		jobSubmit.setSubmitHost( "localhost-used-to-dump");
 	} else {
-		strcpy (jobSubmit.submitHost, MySchedd->addr());
+		jobSubmit.setSubmitHost( MySchedd->addr());
 	}
 
 	if( LogNotesVal ) {

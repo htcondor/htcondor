@@ -311,6 +311,7 @@ void Hadoop::writeConfigFile() {
                         free(hdfs_allow);
                 }
                 char *tmp_str = allow_list.print_to_delimed_string(",");
+                ASSERT(tmp_str != NULL);
                 writeXMLParam("dfs.net.allow", tmp_str, &xml);
                 free(tmp_str);
         }
@@ -332,6 +333,7 @@ void Hadoop::writeConfigFile() {
                         free(hdfs_deny);
                 }
                 char *tmp_str = deny_list.print_to_delimed_string(",");
+                ASSERT(tmp_str != NULL);
                 writeXMLParam("dfs.net.deny", tmp_str, &xml);
                 free(tmp_str);
         }

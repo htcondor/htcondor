@@ -1,0 +1,405 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Admin-Intro}Introduction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is the Condor Administrator's Manual for Unix.
+Its purpose is to aid in
+the installation and administration of a Condor pool.  For help on
+using Condor, see the Condor User's Manual.  
+
+A Condor pool
+\index{Condor!pool}
+\index{pool of machines}
+is comprised of a single machine which serves as the
+\Term{central manager},
+\index{central manager}
+and an arbitrary number of other machines that
+have joined the pool.  Conceptually, the pool is a collection of
+resources (machines) and resource requests (jobs).  The role of Condor
+is to match waiting requests with available resources.  Every part of
+Condor sends periodic updates to the central manager, the centralized
+repository of information about the state of the pool.  Periodically,
+the central manager assesses the current state of the pool and tries
+to match pending requests with the appropriate resources.  
+
+Each resource has an owner,
+\index{resource!owner}
+\index{machine!owner}
+the user who works at the machine.  This
+person has absolute power over their own resource and Condor goes out
+of its way to minimize the impact on this owner caused by Condor.  It
+is up to the resource owner to define a policy for when Condor
+requests will
+serviced and when they will be denied.
+
+Each resource request has an owner as well: the
+user who submitted the job.  These people want Condor to provide as
+many CPU cycles as possible for their work.  Often the interests of
+the resource owners are in conflict with the interests of the resource
+requesters.  
+
+The job of the Condor administrator is to configure the Condor pool to
+find the happy medium that keeps both resource owners and users of
+resources satisfied.  The purpose of this manual is to help you
+understand the mechanisms that Condor provides to enable you to find
+this happy medium for your particular set of users and resource owners.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Machine-Roles}The Different Roles a Machine Can Play}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Every machine in a Condor pool can serve a variety of roles.  Most
+machines serve more than one role simultaneously.  Certain roles can
+only be performed by single machines in your pool.  The following list
+describes what these roles are and what resources are required on the
+machine that is providing that service:
+
+\begin{description} 
+
+\index{central manager}
+\index{machine!central manager}
+\item[Central Manager] There can be only one central manager for your
+pool.  The machine is the collector of information, and the negotiator
+between resources and resource requests.  These two halves of the
+central manager's responsibility are performed by separate daemons, so
+it would be possible to have different machines providing those two
+services.  However, normally they both live on the same machine.  This
+machine plays a very important part in the Condor pool and should be
+reliable.  If this machine crashes, no further matchmaking can be
+performed within the Condor system (although all current matches
+remain in effect until they are broken by either party involved in the
+match).  Therefore, choose for central manager
+a machine that is likely to be
+up and running all the time, or at least one that will be rebooted quickly if
+something goes wrong.
+The central manager will
+ideally have a good network connection to all the
+machines in your pool, since they all send updates over the network to
+the central manager. All queries go to the central manager. 
+
+% editted up to this point
+
+\index{execute machine}
+\index{machine!execute}
+\item[Execute] Any machine in your pool (including your Central
+Manager) can be configured for whether or not it should execute Condor
+jobs.  Obviously, some of your machines will have to serve this
+function or your pool won't be very useful.  Being an execute machine
+doesn't require many resources at all.  About the only resource that
+might matter is disk space, since if the remote job dumps core, that
+file is first dumped to the local disk of the execute machine before
+being sent back to the submit machine for the owner of the job.
+However, if there isn't much disk space, Condor will simply limit the
+size of the core file that a remote job will drop.  In general the
+more resources a machine has (swap space, real memory, CPU speed,
+etc.) the larger the resource requests it can serve.  However, if
+there are requests that don't require many resources, any machine
+in your pool could serve them.
+
+\index{submit machine}
+\index{machine!submit}
+\item[Submit] Any machine in your pool (including your Central
+Manager) can be configured for whether or not it should allow Condor
+jobs to be submitted.
+The resource requirements for a submit machine
+are actually much greater than the resource requirements for an
+execute machine.  First of all, every job that you submit that is
+currently running on a remote machine generates another process on
+your submit machine.  So, if you have lots of jobs running, you will
+need a fair amount of swap space and/or real memory.  In addition all
+the checkpoint files from your jobs are stored on the local disk of
+the machine you submit from.  Therefore, if your jobs have a large
+memory image and you submit a lot of them, you will need a lot of disk
+space to hold these files.  This disk space requirement can be
+somewhat alleviated with a checkpoint server (described below),
+however the binaries of the jobs you submit are still stored on the
+submit machine.
+
+\index{checkpoint server}
+\index{machine!checkpoint server}
+\item[Checkpoint Server] One machine in your pool can be configured as
+a checkpoint server.
+This is optional, and is not part of the
+standard Condor binary distribution.  The checkpoint server is a
+centralized machine that stores all the checkpoint files for the jobs
+submitted in your pool.  This machine should have lots of disk space
+and a good network connection to the rest of your pool, as the traffic
+can be quite heavy.
+
+\end{description}
+
+Now that you know the various roles a machine can play in a Condor
+pool, we will describe the actual daemons within Condor that implement
+these functions.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Condor-Daemons}The Condor Daemons}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Condor daemon!descriptions}
+\index{daemon!descriptions}
+
+The following list describes all the daemons and programs that could
+be started under Condor and what they do:
+
+\begin{description} 
+
+\index{Condor daemon!condor\_master@\Condor{master}}
+\index{daemon!condor\_master@\Condor{master}}
+\index{condor\_master daemon}
+\item[\Condor{master}] This daemon
+is responsible for keeping all the
+rest of the Condor daemons running on each machine in your pool.  It
+spawns the other daemons, and periodically checks to see if there are
+new binaries installed for any of them.  If there are, the master will
+restart the affected daemons.  In addition, if any daemon crashes, the
+master will send e-mail to the Condor Administrator of your pool and
+restart the daemon.  The \Condor{master} also supports various
+administrative commands that let you start, stop or reconfigure
+daemons remotely.  The \Condor{master} will run on every machine in
+your Condor pool, regardless of what functions each machine are
+performing.  
+
+\index{Condor daemon!condor\_startd@\Condor{startd}}
+\index{daemon!condor\_startd@\Condor{startd}}
+\index{condor\_startd daemon}
+\item[\Condor{startd}] This daemon
+represents a given resource
+(namely, a machine capable of running jobs) to the Condor pool.  It
+advertises certain attributes about that resource that are used to
+match it with pending resource requests.  The startd will run on any
+machine in your pool that you wish to be able to execute jobs.  It is
+responsible for enforcing the policy that resource owners configure
+which determines under what conditions remote jobs will be started,
+suspended, resumed, vacated, or killed.  When the startd is ready to
+execute a Condor job, it spawns the \Condor{starter}, described below.
+
+\index{Condor daemon!condor\_starter@\Condor{starter}}
+\index{daemon!condor\_starter@\Condor{starter}}
+\index{condor\_starter daemon}
+\item[\Condor{starter}] This program
+is the entity that actually
+spawns the remote Condor job on a given machine.  It sets up the
+execution environment and monitors the job once it is running.  When a
+job completes, the starter notices this, sends back any status
+information to the submitting machine, and exits.
+
+\index{Condor daemon!condor\_schedd@\Condor{schedd}}
+\index{daemon!condor\_schedd@\Condor{schedd}}
+\index{condor\_schedd daemon}
+\item[\Condor{schedd}] This daemon
+represents resource requests to
+the Condor pool.  Any machine that you wish to allow users to submit
+jobs from needs to have a \Condor{schedd} running.  When users submit
+jobs, they go to the schedd, where they are stored in the \Term{job
+queue}, which the schedd manages.  Various tools to view and
+manipulate the job queue (such as \Condor{submit}, \Condor{q}, or
+\Condor{rm}) all must connect to the schedd to do their work.  If the
+schedd is down on a given machine, none of these commands will work.  
+
+The \Condor{schedd} advertises the number of waiting jobs in its job queue and
+is responsible for claiming available resources to serve those
+requests.  Once a schedd has been matched with a given resource, the
+schedd spawns a \Condor{shadow} (described below) to serve that
+particular request.
+
+\index{Condor daemon!condor\_shadow@\Condor{shadow}}
+\index{daemon!condor\_shadow@\Condor{shadow}}
+\index{condor\_shadow daemon}
+\item[\Condor{shadow}] This program
+runs on the machine where a given
+request was submitted and acts as the resource manager for the
+request.  Jobs that are linked for Condor's standard universe, which
+perform remote system calls, do so via the \Condor{shadow}.  Any
+system call performed on the remote execute machine is sent over the
+network, back to the \Condor{shadow} which actually performs the
+system call (such as file I/O) on the submit machine, and the result
+is sent back over the network to the remote job.  In addition, the
+shadow is responsible for making decisions about the request (such as
+where checkpoint files should be stored, how certain files should be
+accessed, etc).  
+
+\index{Condor daemon!condor\_collector@\Condor{collector}}
+\index{daemon!condor\_collector@\Condor{collector}}
+\index{condor\_collector daemon}
+\item[\Condor{collector}] This daemon
+is responsible for collecting
+all the information about the status of a Condor pool.  All other
+daemons periodically send ClassAd updates to
+the collector.  These ClassAds contain all the information about the
+state of the daemons, the resources they represent or resource
+requests in the pool (such as jobs that have been submitted to a given
+schedd).  The \Condor{status} command can be used to query the
+collector for specific information about various parts of Condor.  In
+addition, the Condor daemons themselves query the collector for
+important information, such as what address to use for sending
+commands to a remote machine. 
+
+\index{Condor daemon!condor\_negotiator@\Condor{negotiator}}
+\index{daemon!condor\_negotiator@\Condor{negotiator}}
+\index{condor\_negotiator daemon}
+\item[\Condor{negotiator}] This daemon
+is responsible for all the
+match-making within the Condor system.  Periodically, the negotiator
+begins a \Term{negotiation cycle}, where it queries the collector for
+the current state of all the resources in the pool.  It contacts each
+schedd that has waiting resource requests in priority order, and tries
+to match available resources with those requests.  The negotiator is
+responsible for enforcing user priorities in the system, where the
+more resources a given user has claimed, the less priority they have
+to acquire more resources.  If a user with a better priority has jobs
+that are waiting to run, and resources are claimed by a user with a
+worse priority, the negotiator can preempt that resource and match it
+with the user with better priority.
+
+\Note A higher numerical value of the user priority in Condor
+translate into worse priority for that user.  The best priority you
+can have is 0.5, the lowest numerical value, and your priority gets
+worse as this number grows.
+
+\index{Condor daemon!condor\_kbdd@\Condor{kbdd}}
+\index{daemon!condor\_kbdd@\Condor{kbdd}}
+\index{condor\_kbdd daemon}
+\item[\Condor{kbdd}] This daemon
+is used on Linux and Windows.
+On those platforms, the \Condor{startd} frequently cannot determine
+console (keyboard or mouse) activity directly from the system, and
+requires a separate process to do so.
+On Linux, the
+\Condor{kbdd} connects to the X Server and periodically checks to see
+if there has been any activity.
+On Windows, the \Condor{kbdd} runs as the logged-in user and registers
+with the system to receive keyboard and mouse events.
+When it detects console activity, the \Condor{kbdd} sends a
+command to the startd.  That way, the startd knows the machine owner
+is using the machine again and can perform whatever actions are
+necessary, given the policy it has been configured to enforce.
+
+\index{Condor daemon!condor\_ckpt\_server@\Condor{ckpt\_server}}
+\index{daemon!condor\_ckpt\_server@\Condor{ckpt\_server}}
+\index{condor\_ckpt\_server daemon}
+\item[\Condor{ckpt\_server}] This is the checkpoint server.
+It services requests to store and retrieve checkpoint files.  If your
+pool is configured to use a checkpoint server but that machine (or the
+server itself is down) Condor will revert to sending the checkpoint
+files for a given job back to the submit machine.
+
+\index{Condor daemon!condor\_quill@\Condor{quill}}
+\index{daemon!condor\_quill@\Condor{quill}}
+\index{condor\_quill daemon}
+\item[\Condor{quill}] This daemon
+builds and manages a database that represents a copy of the 
+Condor job queue.
+The \Condor{q} and \Condor{history} tools can then query the database.
+
+\index{Condor daemon!condor\_dbmsd@\Condor{dbmsd}}
+\index{daemon!condor\_dbmsd@\Condor{dbmsd}}
+\index{condor\_dbmsd daemon}
+\item[\Condor{dbmsd}] This daemon
+assists the \Condor{quill} daemon.
+
+\index{Condor daemon!condor\_gridmanager@\Condor{gridmanager}}
+\index{daemon!condor\_gridmanager@\Condor{gridmanager}}
+\index{condor\_gridmanager daemon}
+\item[\Condor{gridmanager}] This daemon
+handles management and execution of all \SubmitCmd{grid}
+universe jobs.
+The \Condor{schedd} invokes the \Condor{gridmanager} when
+there are \SubmitCmd{grid} universe jobs in the queue,
+and the \Condor{gridmanager} exits when there are no more
+\SubmitCmd{grid} universe jobs in the queue.
+
+\index{Condor daemon!condor\_credd@\Condor{credd}}
+\index{daemon!condor\_credd@\Condor{credd}}
+\index{condor\_credd daemon}
+\item[\Condor{credd}] This daemon
+runs on Windows platforms to manage password storage in a secure manner.
+
+\index{Condor daemon!condor\_had@\Condor{had}}
+\index{daemon!condor\_had@\Condor{had}}
+\index{condor\_had daemon}
+\item[\Condor{had}] This daemon
+implements the high availability of a pool's central manager
+through monitoring the communication of necessary daemons.
+If the current, functioning, central manager machine
+stops working, then this daemon ensures that another 
+machine takes its place, and becomes the central manager of
+the pool.
+
+\index{Condor daemon!condor\_replication@\Condor{replication}}
+\index{daemon!condor\_replication@\Condor{replication}}
+\index{condor\_replication daemon}
+\item[\Condor{replication}] This daemon
+assists the \Condor{had} daemon by keeping an updated copy of the
+pool's state. This state provides a better transition
+from one machine to the next, in the event 
+that the central manager machine stops working.
+
+\index{Condor daemon!condor\_transferer@\Condor{transferer}}
+\index{daemon!condor\_transferer@\Condor{transferer}}
+\index{condor\_transferer daemon}
+\item[\Condor{transferer}] This short lived daemon is invoked by
+the \Condor{replication} daemon to accomplish the task of transferring
+a state file before exiting.
+
+\index{Condor daemon!condor\_procd@\Condor{procd}}
+\index{daemon!condor\_procd@\Condor{procd}}
+\index{condor\_procd daemon}
+\item[\Condor{procd}] This daemon
+controls and monitors process families within Condor. Its use
+is optional in general but it must be used if privilege separation
+(see Section~\ref{sec:PrivSep}) or group-ID based tracking (see
+Section~\ref{sec:GroupTracking}) is enabled.
+
+\index{Condor daemon!condor\_job\_router@\Condor{job\_router}}
+\index{daemon!condor\_job\_router@\Condor{job\_router}}
+\index{condor\_job\_router daemon} 
+\item[\Condor{job\_router}] This daemon 
+transforms \SubmitCmd{vanilla} universe jobs into \SubmitCmd{grid}
+universe jobs, such that the transformed jobs are capable
+of running elsewhere, as appropriate.
+
+\index{Condor daemon!condor\_lease\_manager@\Condor{lease\_manager}}
+\index{daemon!condor\_lease\_manager@\Condor{lease\_manager}}
+\index{condor\_lease\_manager daemon} 
+\item[\Condor{lease\_manager}] This daemon 
+manages leases in a persistent manner.
+Leases are represented by ClassAds.
+
+\index{Condor daemon!condor\_rooster@\Condor{rooster}}
+\index{daemon!condor\_rooster@\Condor{rooster}}
+\index{condor\_rooster daemon} 
+\item[\Condor{rooster}] This daemon wakes hibernating machines based
+upon configuration details.
+
+\index{Condor daemon!condor\_shared\_port@\Condor{shared\_port}}
+\index{daemon!condor\_shared\_port@\Condor{shared\_port}}
+\index{condor\_shared\_port daemon} 
+\item[\Condor{shared\_port}] This daemon listens for incoming TCP packets
+on behalf of Condor daemons, thereby reducing the number of required
+ports that must be opened when Condor is accessible through a firewall. 
+
+\index{Condor daemon!condor\_hdfs@\Condor{hdfs}}
+\index{daemon!condor\_hdfs@\Condor{hdfs}}
+\index{condor\_hdfs daemon} 
+\item[\Condor{hdfs}] This daemon manages the configuration of a
+Hadoop file system as well as the invocation of a properly configured
+Hadoop file system.
+
+
+%\index{Condor daemon!stork\_server@\Stork{server}}
+%\index{daemon!stork\_server@\Stork{server}}
+%\index{stork\_server daemon}
+%\item[\Stork{server}] This daemon
+%handles requests for Stork data placement jobs.
+
+\end{description} 
+
+
+See figure~\ref{fig:pool-arch} for a graphical representation of the
+pool architecture. 
+
+\begin{figure}[hbt]
+\centering
+\includegraphics{admin-man/pool-arch.eps}
+\caption{\label{fig:pool-arch}Pool Architecture}
+\end{figure}

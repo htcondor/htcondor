@@ -1,0 +1,38 @@
+\begin{ManPage}{\label{man-stork-list-cred}\Stork{list\_cred}}{1}
+{list all credentials of a user stored on the \Stork{credd} daemon on behalf of Stork}
+\Synopsis \SynProg{\Stork{list\_cred}}
+\ToolArgsBase
+
+\SynProg{\Stork{list\_cred}}
+\oOpt{-debug}
+\OptArg{-n}{hostname:portnumber}
+
+
+\index{Condor commands!stork\_list\_cred}
+\index{Stork commands!stork\_list\_cred}
+\index{stork\_list\_cred command}
+
+\Description 
+
+\Stork{list\_cred} lists all credentials stored on the \Stork{credd} daemon
+of the user issuing the \Stork{list\_cred} command.
+Two fields appear for each item listed:
+the unique name for the credential,
+and the string "X.509".
+As more credential types are handled by the \Stork{credd} daemon,
+this second field with identify the credential type.
+
+
+\begin{Options}
+  \ToolArgsBaseDesc
+  \OptItem{\Opt{-debug}}{Show extra debugging information.}
+  \OptItem{\OptArg{-n}{hostname:portnumber}}
+    {Identify the \Stork{credd} daemon by host name and port number.}
+\end{Options}
+
+\ExitStatus
+
+\Stork{list\_cred} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

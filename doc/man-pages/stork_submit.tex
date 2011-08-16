@@ -1,0 +1,254 @@
+\begin{ManPage}{\label{man-stork-submit}\Stork{submit}}{1}
+{submit a Stork job}
+\Synopsis \SynProg{\Stork{submit}}
+\ToolArgsBase
+
+\SynProg{\Stork{submit}}
+\oOpt{-debug}
+\oOpt{-stdin}
+\Storkname
+\oOptArg{-lognotes}{"prose"}
+\Arg{submit-descpription-file}
+
+
+\index{Condor commands!stork\_submit}
+\index{Stork commands!stork\_submit}
+\index{stork\_submit command}
+
+\Description 
+
+\Stork{submit} is used to submit a Stork data placement job.
+Upon job submission, an integer identifier is assigned to the
+submission,
+	and it is printed to standard output.
+This job identifier is required by other commands
+that manage Stork jobs.
+
+The name of the Stork submit description file is the single,
+required, command-line argument.
+Stork places no constraints on the submit
+description file name.
+See section \ref{sec:Stork}, for a more 
+complete description of Stork.
+
+\emph{STORK SUBMIT DESCRIPTION FILE COMMANDS}
+Stork submit description files use ClassAd syntax, different from Condor submit
+file syntax.  See \URL{http://www.cs.wisc.edu/condor/classad/}.
+
+\begin{description}
+
+%%%%%%%%%%%%%%%%%%%
+%% dap\_type
+%%%%%%%%%%%%%%%%%%%
+\item[dap\_type = transfer;]
+% only "transfer" for now
+%\item[dap\_type = $<$reserve \Bar\ release \Bar\ transfer \Bar\ stage \Bar\ remove $>$]
+\index{Stork submit commands!dap\_type}
+Required command identifying that there will be
+a transfer from source to destination.
+
+%%%%%%%%%%%%%%%%%%%
+%% arguments
+%%%%%%%%%%%%%%%%%%%
+
+\item[arguments = "$<$argument\_list$>$";]
+List of arguments to be supplied
+to the module on the command line.
+Arguments are delimited (separated) by space characters.
+
+%%%%%%%%%%%%%%%%%%%
+%% input
+%%%%%%%%%%%%%%%%%%%
+
+\item[input = "$<$pathname$>$";]
+Stork assumes that its jobs are
+long-running, and that the user will not wait at the terminal for their
+completion. Because of this, the standard files which normally access
+the terminal, (\File{stdin}, \File{stdout}, and \File{stderr}),
+must refer to files. Thus,
+the file name specified with \SubmitCmd{input} should contain any keyboard
+input the program requires (that is, this file becomes \File{stdin}).
+If not specified, the default value
+of \File{/dev/null} is used for submission to a Unix machine.
+%If not specified, input is ignored
+%for submission to a Windows machine.
+
+\Stork{submit} will prepend the current working directory if the pathname is
+relative (does not start with a / character).  This implies that the submit
+directory must be shared between \Stork{submit} and the Stork server host, when
+using relative paths.  All local file paths passed to Stork must be valid on
+the Stork server host.
+
+Note that this command does \emph{not} refer to the command-line
+arguments of the program.  The command-line arguments are specified by
+the \SubmitCmd{arguments} command.
+
+%%%%%%%%%%%%%%%%%%%
+%% output
+%%%%%%%%%%%%%%%%%%%
+
+\item[output = "$<$pathname$>$";]
+The \SubmitCmd{output} file name will capture
+any information the program would normally write to the screen
+(that is, this file becomes \File{stdout}).
+If not specified, the default value of
+\File{/dev/null} is used for submission to a Unix machine.
+%If not specified, output is ignored
+%for submission to a Windows machine.
+Multiple jobs should not use the same output
+file, since this will cause one job to overwrite the output of
+another.
+The output file and the error file should not be the same file
+as the outputs will overwrite each other or be lost.
+
+Note that if your program explicitly opens and writes to a file,
+that file should \emph{not} be specified as the output file.
+
+\Stork{submit} will prepend the current working directory if the pathname is
+relative (does not start with a / character).  This implies that the submit
+directory must be shared between \Stork{submit} and the Stork server host, when
+using relative paths.  All local file paths passed to Stork must be valid on
+the Stork server host.
+
+%%%%%%%%%%%%%%%%%%%
+%% error
+%%%%%%%%%%%%%%%%%%%
+
+\item[err = "$<$pathname$>$";]
+The \SubmitCmd{err} file name will capture any
+error messages the program would normally write to the screen
+(that is, this file becomes \File{stderr}).
+If not specified, the default value of
+\File{/dev/null} is used for submission to a Unix machine.
+%If not specified, error messages are ignored
+%for submission to a Windows machine.
+More than one job should not use the same error file, since
+this will cause one job to overwrite the errors of another.
+The error file and the output file should not be the same file
+as the outputs will overwrite each other or be lost.
+
+\Stork{submit} will prepend the current working directory if the pathname is
+relative (does not start with a / character).  This implies that the submit
+directory must be shared between \Stork{submit} and the Stork server host, when
+using relative paths.  All local file paths passed to Stork must be valid on
+the Stork server host.
+
+%%%%%%%%%%%%%%%%%%%
+%% log
+%%%%%%%%%%%%%%%%%%%
+
+\item[log = "$<$pathname$>$";]
+Use \SubmitCmd{log} to specify a file name where
+\index{submit commands!log}
+Stork will write a log file of what is happening with this job cluster.
+For example, Stork will log into this file when and where the job
+begins running, when the job is checkpointed and/or migrated, when the
+job completes, etc. Most users find specifying a \SubmitCmd{log} file to be very
+handy; its use is recommended. If no \SubmitCmd{log} entry is specified, 
+Stork does not create a log for this job.
+
+\Stork{submit} will prepend the current working directory if the pathname is
+relative (does not start with a / character).  This implies that the submit
+directory must be shared between \Stork{submit} and the Stork server host, when
+using relative paths.  All local file paths passed to Stork must be valid on
+the Stork server host.
+\SubmitCmd{log} file paths should not use NFS file systems.
+
+\item[log\_xml = "True"; \Bar\ "False";]
+If \SubmitCmd{log\_xml} is true, 
+then the log file will be written in ClassAd XML. If it isn't
+specified, XML is not used. Note that it's an XML fragment, and is
+missing the file header and footer. Also note that you should never
+mix XML and non-XML in a single file: if multiple jobs write to a
+single log file, it is up to you to make sure that all of them specify
+(or don't specify) this option in the same way.
+%%%%%%%%%%%%%%%%%%%
+% src_url
+%%%%%%%%%%%%%%%%%%%
+\item[src\_url = $<$protocol-name:URL$>$]
+\index{Stork submit commands!src\_url}
+A (required) URL to identify the data source, 
+as well as the protocol to be used at the source.
+\File{file:///} URLs must refer to valid paths on the Stork server host.
+
+%%%%%%%%%%%%%%%%%%%
+% dest_url
+%%%%%%%%%%%%%%%%%%%
+\item[dest\_url = $<$protocol-name:URL$>$]
+\index{Stork submit commands!dest\_url}
+A (required) URL to identify the data destination, 
+as well as the protocol to be used at the destination.
+\File{file:///} URLs must refer to valid paths on the Stork server host.
+
+%%%%%%%%%%%%%%%%%%%
+% reserve_id
+%%%%%%%%%%%%%%%%%%%
+%\item[reserve\_id = $<$ID$>$]
+%\index{Stork submit commands!reserve\_id}
+% Description of this command, including possible default if not present
+% but necessary.
+
+%%%%%%%%%%%%%%%%%%%
+% reserve_size
+%%%%%%%%%%%%%%%%%%%
+%\item[reserve\_size = $<$size-in-bytes$>$]
+%\index{Stork submit commands!reserve\_size}
+% Description of this command, including possible default if not present
+% but necessary.
+
+%%%%%%%%%%%%%%%%%%%
+% x509proxy
+%%%%%%%%%%%%%%%%%%%
+\item[x509proxy = $<$path-to-proxy$>$]
+\index{Stork submit commands!x509proxy}
+The path to and file name of an X.509 proxy when needed
+for GSI authentication.  A value of \SubmitCmd{"default"} directs Stork to
+search in the standard Globus GSI proxy locations.
+
+%%%%%%%%%%%%%%%%%%%
+% cred_name
+%%%%%%%%%%%%%%%%%%%
+\item[cred\_name = $<$credential-handle$>$]
+\index{Stork submit commands!cred\_name}
+Alternatively, a X.509 proxy may be managed via the Stork credential manager.
+The \SubmitCmd{cred\_name} specifies the name by which the credential was
+stored in the credential manager.  See the 
+\Prog{stork\_store\_cred} manual on page \pageref{man-stork-store-cred}.
+
+%%%%%%%%%%%%%%%%%%%
+% alt_protocols
+%%%%%%%%%%%%%%%%%%%
+\item[alt\_protocols = $<$sourceprotocol-desinationprotocol, sourceprotocol-desinationprotocol, ...$>$]
+\index{Stork submit commands!alt\_protocols}
+A comma separated list of alternative protocol pairings to be used
+when a data transfer fails.
+For each pair, the protocol to use at the source of the transfer
+is followed by a \verb@-@ (dash) and the protocol to be used
+at the destination of the transfer.
+The list is used
+(together with the original \SubmitCmd{src\_url}
+and \SubmitCmd{dest\_url} protocols)
+in a round robin fashion.
+The source and destination URLs are unchanged;
+only the protocols to be used are changed.
+
+
+\end{description}
+
+
+\begin{Options}
+  \ToolArgsBaseDesc
+  \OptItem{\Opt{-debug}}{Show extra debugging information.}
+  \OptItem{\Opt{-stdin}}{Read commands from \File{stdin} instead of from a file.}
+  \StorknameDesc
+  \OptItem{\OptArg{-lognotes}{"prose"}}{The string given within quote
+  marks is appended to the data placement ClassAd before
+  the job is submitted.}
+\end{Options}
+
+\ExitStatus
+
+\Stork{submit} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

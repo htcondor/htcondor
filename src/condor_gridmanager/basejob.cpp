@@ -1009,7 +1009,7 @@ WriteExecuteEventToUserLog( ClassAd *job_ad )
 						  sizeof(hostname) - 1 );
 
 	ExecuteEvent event;
-	strcpy( event.executeHost, hostname );
+	event.setExecuteHost( hostname );
 	int rc = ulog->writeEvent(&event,job_ad);
 	delete ulog;
 

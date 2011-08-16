@@ -35,7 +35,8 @@ my $CNS = "nmi_tools/condor_nmi_submit";
 my $tags_file = "/space/git/nwo-build-tags.git";
 my $GIT="/prereq/git-1.5.4/bin/git";
 my $GIT_SRC_ROOT="/space/git/CONDOR_SRC.git";
-my $GIT_DOC_ROOT="/space/git/CONDOR_DOC.git";
+# Don't need this after doc-src merge
+#my $GIT_DOC_ROOT="/space/git/CONDOR_DOC.git";
 # these next three are currently unused, but could be used for an older build
 my $GIT_EXT_ROOT="/space/git/CONDOR_EXT.git";
 my $GIT_TSTCNF_ROOT="/space/git/CONDOR_TEST_CNFDTL.git";

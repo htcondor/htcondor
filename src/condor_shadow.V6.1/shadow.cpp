@@ -151,10 +151,14 @@ void
 UniShadow::logExecuteEvent( void )
 {
 	ExecuteEvent event;
-	char* sinful = event.executeHost;
+	char* sinful = NULL;
 	remRes->getStartdAddress( sinful );
-	char* remote_name = event.remoteName;
+	event.setExecuteHost( sinful );
+	delete[] sinful;
+	char* remote_name = NULL;
 	remRes->getStartdName(remote_name);
+	event.setRemoteName(remote_name);
+	delete[] remote_name;
 	if( !uLog.writeEvent(&event, getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
 				 "can't write to UserLog!\n" );

@@ -1,0 +1,1177 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{API-WebService} Web Service}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{API!Web Service}
+\index{SOAP!Web Service API}
+\index{Simple Object Access Protocol(SOAP)}
+\index{Web Service API}
+
+Condor's Web Service (WS) API provides a way for application developers
+to interact with Condor, without needing to utilize
+Condor's command-line tools.
+In keeping with the Condor philosophy of reliability and fault-tolerance,
+this API is designed to provide a simple and powerful way
+to interact with Condor.
+Condor daemons understand and implement
+the SOAP (Simple Object Access Protocol) XML API
+to provide a web service interface for Condor job submission
+and management.
+
+To deal with the issues of reliability and fault-tolerance,
+a two-phase commit mechanism to provides a transaction-based protocol.  
+The following API description describes interaction
+between a client using the API and both the \Condor{schedd} and 
+\Condor{collector} daemons to illustrate transactions
+for use in job submission, queue management and ClassAd 
+management functions.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-Transactions} Transactions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Web Service API!transactions}
+
+All applications using the API to interact with the \Condor{schedd}
+will need to use transactions.
+A transaction is
+an ACID unit of work (atomic, consistent, isolated, and durable).
+The API limits the lifetime of a transaction,
+and both the client (application) and the server
+(the \Condor{schedd} daemon)
+may place a limit on the lifetime.
+The server reserves the right to specify a maximum
+duration for a transaction. 
+
+
+The client initiates a transaction using the
+\Procedure{beginTransaction} method. 
+It ends the transaction with either 
+a commit (using \Procedure{commitTransaction})
+or an abort (using \Procedure{abortTransaction}).
+
+% providing a timeout for the transaction.
+% The client is effectively granted a lease to a transaction. Instead
+% of providing a timeout that is a guess as to how long the transaction
+% is needed, the timeout is just the number of seconds that can elapse
+% between subsequent operations in a transaction. Essentially, a
+% transaction's timeout is extended each time the transaction is used.
+% The amount of time the transaction is extended is the timeout
+% initially passed to CreateTransaction(). If that timeout is not
+% sufficient there is also an ExtendTransaction() method that can be
+% used to modify the timeout. When a client is finished with a
+% transaction is will call either CommitTransaction() or
+% AbortTransaction(). In the former case, all the jobs submitted in the
+% transaction will be queued. In the latter case, everything that
+% occurred in the transaction will be undone. If a transaction expires,
+% i.e. its timeout is reached, AbortTransaction() is automatically
+% called on it.
+
+% This scheme provides a reasonable amount of utility for a client to
+% easily deal with transactions. To give the server some say in how its
+% resources will be utilized it reserves the right to specify a maximum
+% duration for a transaction. This happens when BeginTransaction() is
+% called by the client. The result of the call is not only a
+% transaction identifier for later use but also the timeout for the
+% transaction. That timeout is the actual timeout for the transaction.
+% It may be shorter or longer than what the client requested. Any
+% reasonable server will allow the timeout to be long enough for a
+% significant amount of work to be completed.
+
+Not all operations in the API need to be performed within a
+transaction.
+Some accept a null transaction.
+A null transaction is a SOAP message with
+\begin{verbatim}
+<transaction xsi:type="ns1:Transaction" xsi:nil="true"/> 
+\end{verbatim}
+Often this is achieved by passing the programming
+language's equivalent of \verb@null@ in place of a transaction identifier.
+It is possible that some operations will have access to more
+information when they are used inside a transaction. For instance, a
+\Procedure{getJobAds}.
+query would have access to the jobs that are pending in a
+transaction, which are not committed and therefore not visible
+outside of the transaction. 
+Transactions are as ACID compliant as possible. 
+Therefore, do not query for information
+outside of a transaction on which to make a decision inside a
+transaction based on the query's results.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-Submission} Job Submission}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Web Service API!job submission}
+
+A ClassAd is required to describe a job.
+The job ClassAd will be 
+submitted to the \Condor{schedd} within a transaction
+using the \Procedure{submit} method.
+The complexity of job ClassAd creation may be simplified
+by the \Procedure{createJobTemplate} method.
+It returns an instance of a ClassAd structure that may be
+further modified.
+A necessary part of the job ClassAd are the job attributes
+\Attr{ClusterId} and \Attr{ProcId}, which uniquely identify
+the cluster and the job within a cluster.
+Allocation and assignment of (monotonically increasing)
+\Attr{ClusterId} values utilize the \Procedure{newCluster} method.
+Jobs may be submitted within the assigned cluster only until
+the \Procedure{newCluster} method is invoked a subsequent time. 
+Each job is allocated and assigned a (monotonically increasing)
+\Attr{ProcId} within the current cluster using the \Procedure{newJob}
+method.
+Therefore, the sequence of method calls to submit a set of jobs
+initially calls \Procedure{newCluster}.
+This is followed by calls to \Procedure{newJob} and then \Procedure{submit}
+for each job within the cluster.
+
+As an example, here are sample cluster and job numbers that 
+result from the ordered calls to submission methods:
+\begin{enumerate}
+ \item
+ A call to \Procedure{newCluster}, assigns a \Attr{ClusterId} of 6.
+ \item
+ A call to \Procedure{newJob}, assigns a \Attr{ProcId} of 0, as
+ this is the first job within the cluster.
+ \item
+ A call to \Procedure{submit} results in a job submission numbered 6.0.
+ \item
+ A call to \Procedure{newJob}, assigns a \Attr{ProcId} of 1.
+ \item
+ A call to \Procedure{submit} results in a job submission numbered 6.1.
+ \item
+ A call to \Procedure{newJob}, assigns a \Attr{ProcId} of 2.
+ \item
+ A call to \Procedure{submit} results in a job submission numbered 6.2.
+ \item
+ A call to \Procedure{newCluster}, assigns a \Attr{ClusterId} of 7.
+ \item
+ A call to \Procedure{newJob}, assigns a \Attr{ProcId} of 0, as
+ this is the first job within the cluster.
+ \item
+ A call to \Procedure{submit} results in a job submission numbered 7.0.
+ \item
+ A call to \Procedure{newJob}, assigns a \Attr{ProcId} of 1.
+ \item
+ A call to \Procedure{submit} results in a job submission numbered 7.1.
+\end{enumerate}
+
+
+% The process of submitting a job involves more than creating a
+% job ClassAd and passing it to \Procedure{submit}.
+% Before Submit() can be called a
+% cluster and job identifier must have been allocated. This is achieved
+% through the use of NewCluster() and NewJob(). These two calls will
+% return identifiers to be used in Submit(). The sequence of operations
+% that will typically occur is NewCluster() -> NewJob() -> Submit() ->
+% NewJob() -> Submit() -> NewCluster -> NewJob() -> etc. This sequence
+% is very important because new jobs can only be submitted to the most
+% recently created cluster. If NewCluster() is called twice in a row
+% producing identifiers 1 and 2, jobs can only be submitted to cluster 2.
+
+% In the simplest submission case, a client creates a JobAd and passes
+% it to Submit() and is finished. In the most common case, this will
+% not be enough information for the job to be run. There will be a need
+% for the job's input files and the job's executable, known as the
+% sand, i.e. the sand of the job's sandbox, to be transferred along
+% with the JobAd. To deal with sand movement a client can use the file
+% transfer functions of the API, described below. Unfortunately, the
+% statement of create a JobAd is often easier said than done. There
+% are many things that must to be present in a JobAd for it to be
+% accepted by the Schedd. To alleviate the problem of creating a JobAd
+% the Schedd also provides a mechanism to create a template of a JobAd.
+% This method is called CreateJobTemplate() and it returns a JobAd
+% which can readily be sent to Submit().
+
+There is the
+potential that a call to \Procedure{submit} will fail.
+Failure means that the
+job is in the queue,
+and it typically indicates that
+something needed by the job has not been sent.
+As a result the job has no hope in successfully running.
+It is possible to recover from
+such a failure by trying to resend information that the job will
+need. It is also completely acceptable to abort and make another
+attempt. To simplify the client's effort in figuring out what the job
+requires, a \Procedure{discoverJobRequirements} method accepting a 
+job ClassAd and
+returning a list of things that should be sent along with the job is
+provided.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-File-Transfer} File Transfer}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Web Service API!file transfer}
+
+A common job submission case requires the job's
+executable and input files to be transferred
+from the machine where the application is running
+to the machine where the \Condor{schedd} daemon is running.
+This is the analogous situation to running \Condor{submit}
+using the \Opt{-spool} or \Opt{-remote} option.
+The executable and input files must be sent directly to
+the \Condor{schedd} daemon, which places all files
+in a spool location.
+
+The two methods 
+\Procedure{declareFile}
+and \Procedure{sendFile} work in tandem to transfer files
+to the \Condor{schedd} daemon.
+The \Procedure{declareFile} method causes the \Condor{schedd} daemon
+to create the file in its spool location,
+or indicate in its return value that the file already exists.
+This increases efficiency, 
+as resending an existing file is a waste of resources.
+The \Procedure{sendFile} method sends 
+base64 encoded data.
+\Procedure{sendFile} may be used to send an 
+entire file, or chunks of files as desired.
+% 
+% It is often the case that a job's sand will not already be present on
+% the machine where it will be executed. In this case it is necessary
+% to transfer the sand to the Schedd, where it will reside in a spool
+% location until needed. To transfer a job's sand the API provides two
+% methods, DeclareFile() and SendFile(), which work in tandem. For each
+% file needed by the job, a client should first call DeclareFile() and
+% then send the file's contents with SendFile(). The process of
+% transferring a file is broken into two operations because it is
+% entirely possible that files being sent to the Schedd may already
+% exist, and therefore resending a file is simply a waste of resources.
+% In such a case when a client performs a DeclareFile() it will be told
+% if it should bother sending the file or not. If the client is told to
+% send the file it can then use SendFile() which does not necessarily
+% send the entire file at one time. To deal with files that are more
+% than a few tens of megabytes the SendFile() operation works on chunks
+% of files, meaning a 100MB file can be sent in a series of SendFile()
+% calls. (NOTE: All data is base64 encoded before being sent with
+% SendFile(), which means there is a 33% increase in size for the data.)
+
+The \Procedure{declareFile} method has both required and
+optional arguments.
+\Procedure{declareFile} requires the name of the file
+and its size in bytes.
+The optional arguments relate hash information.
+A hash type of \Code{NOHASH} disables file verification;
+the \Condor{schedd} daemon will not have a reliable way
+to determine the existence of the file being declared.
+
+% The DeclareFile() operation takes a few critical arguments and a few
+% optional arguments. Firstly, the name of the file being sent and the
+% size of the file, in bytes, are critical. Second, the hash
+% information about the file is non-critical. The type of hash can be
+% specified as NOHASH for clients who just do not care to have their
+% files verified. Also, if NOHASH is used during DeclareFile(), there
+% is no reliable way for the server to discover if it already has the
+% file being declared.
+
+Methods for retrieving files are most useful when a job is completed.
+Consider the categorization of the typical life-cycle for a job:
+\begin{description}
+  \item[Birth:]
+  The birth of a job begins with \Procedure{submit}.
+  \item[Childhood:]
+  The job executes.
+  \item[Middle Age:]
+  A completed job waits to be removed.
+  As the job enters Middle Age,
+  its \Attr{JobStatus} ClassAd attribute becomes Completed (the value 4).
+  \item[Old Age:]
+  The job's information goes into the history log.
+\end{description}
+
+Once the job enters Middle Age,
+the \Procedure{getFile} method retrieves a file.
+The \Procedure{listSpool} method assists by providing
+a list of all the job's files in the spool location.
+
+The job enters Old Age by the application's use of the
+\Procedure{closeSpool} method.
+It causes  the \Condor{schedd} daemon to remove the 
+job from the queue, 
+and the job's spool files are no longer available.
+As there is no requirement for the application to invoke
+the \Procedure{closeSpool} method,
+jobs can potentially remain in the queue forever.
+The configuration variable \Macro{SOAP\_LEAVE\_IN\_QUEUE}
+may mitigate this problem.
+When this boolean variable evaluates to \Expr{False},
+a job enters Old Age.
+A reasonable example for this configuration variable is
+\footnotesize
+\begin{verbatim}
+SOAP_LEAVE_IN_QUEUE = ((JobStatus==4) && ((ServerTime - CompletionDate) < (60 * 60 * 24)))
+\end{verbatim}
+\normalsize
+This expression results in Old age for a job (removed from the queue),
+once the job has been Middle Aged (been completed) for 24 hours.
+
+% So far all the API methods have dealt with sending files to the
+% Schedd. There are also methods for retrieving files. These methods
+% are mostly useful after a job has completed. The typical life-cycle
+% of a job is: first, birth with Submit(); second, execution, where the
+% job is hopefully productive; third, middle-age, where the completed
+% job waits around to be removed; last, old-age, where the job hauled
+% off to a history log. When a job enters middle-age, which a client
+% can discover by look at its JobStatus attribute (4 indicates the
+% Completed state), a client can use the GetFile() method to start
+% retrieving files output by the job. In the case where the client does
+% not know exactly what the job output, ListSpool() can be used to
+% discover all the files related to the job. Finally, there are two
+% ways that a job can enter old-age. First, a client can politely force
+% the job into old-age by calling CloseSpool(). Once this is done the
+% job is removed from the Schedd's queue and its files are no longer
+% available via ListSpool() and GetFile(). The second way a job can
+% enter old-age is by a configuration option in the Schedd. The
+% \Macro{SOAP\_LEAVE\_IN\_QUEUE} option, in a configuration file, specifies an
+% expression that, when evaluating to FALSE, will force the job into
+% old-age. This configuration option is quite important for the Schedd
+% because clients may not ever bother to call CloseSpool() and as a
+% result all jobs could stay in middle-age forever. An example of
+% \Macro{SOAP\_LEAVE\_IN\_QUEUE} is 
+% \begin{verbatim}
+% ((JobStatus==4) && ((ServerTime - CompletionDate) < (60 * 60 * 24)))
+% \end{verbatim}
+% which specifies that all jobs
+% should be forced into old-age if they have been in middle-age for a day.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:WebService-Implementation} Implementation Details}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor daemons understand and communicate using the
+SOAP XML protocol.
+An application seeking to use this protocol
+will require code that handles the communication.
+The XML WSDL (Web Services Description Language)
+that Condor implements is included with the
+Condor distribution.
+It is in \File{\MacroUNI{RELEASE\_DIR}/lib/webservice}.
+The WSDL must be run through a toolkit to produce
+language-specific routines that do communication.
+The application is compiled with these routines.
+
+\index{Web Service API!\Condor{schedd} daemon command port}
+Condor must be configured to enable responses to SOAP calls.
+Please see 
+section~\ref{sec:API-Config-File-Entries} for definitions of the
+configuration variables related to the web services API.
+The WS interface is listening on the \Condor{schedd} daemon's command port. 
+To obtain a list of all the the \Condor{schedd} daemons in the
+pool with a WS interface, issue the command:
+\footnotesize
+\begin{verbatim}
+  %  condor_status -schedd -constraint "HasSOAPInterface=?=TRUE"
+\end{verbatim}
+\normalsize
+With this information,
+a further command locates the port number to use:
+\footnotesize
+\begin{verbatim}
+  % condor_status -schedd -constraint "HasSOAPInterface=?=TRUE" -l | grep MyAddress 
+\end{verbatim}
+\normalsize
+
+Condor's security configuration must be set up such that 
+access is authorized for the SOAP client.
+See Section~\ref{sec:Security-Authorization}
+for information on how to set the
+\MacroNI{ALLOW\_SOAP} and \MacroNI{DENY\_SOAP} configuration variables.
+
+
+The API's routines can be roughly categorized into ones that
+deal with
+\begin{itemize}
+  \item Transactions
+  \item Job Submission
+  \item File Transfer
+  \item Job Management
+  \item ClassAd Management
+  \item Version Information
+\end{itemize}
+The routines for each of these categories is detailed.
+Note that the signature provided will accurately 
+reflect a routine's name, 
+but that return values and parameter specification
+will vary according  to the target programming language.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-Gotchas} Get These Items Correct}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+\item For jobs that are to be executed on Windows platforms,
+  explicitly set the job ClassAd attribute \Attr{NTDomain}.
+  This attribute defines the NT domain within which the
+  job's owner authenticates.  The attribute is necessary,
+  and it is not set for the job by the \Procedure{createJobTemplate}
+  function.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-Transactions} Methods for Transaction Management}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%
+%  NOTE FROM KAREN:  Yes, this formatting looks somewhat poor in both
+%  the html and pdf versions.  However, please do not change it, and
+%  carefully follow the existing formatting, as the LaTeX to pdf and
+%  LaTeX to html translators do quite different things for lists.  This
+%  particular formatting at least works in both versions.
+%
+\begin{description}
+\item [\Code{beginTransaction}]
+  Begin a transaction.
+  A prototype is
+
+    \Code{StatusAndTransaction beginTransaction(int duration);} 
+
+  \begin{description}
+    \item[Parameters] 
+    \begin{itemize}
+      \item \Code{duration} The expected duration of the transaction.
+    \end{itemize}
+    \item[Return Value] 
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the new transaction.
+  \end{description}    
+  
+\item [\Code{commitTransaction}]
+  Commits a transaction.
+  A prototype is
+
+  \Code{Status commitTransaction(Transaction transaction);}
+
+  \begin{description}
+    \item[Parameters]
+    \begin{itemize}
+      \item \Code{transaction} The transaction to be committed.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+  \end{description}  
+
+\item [\Code{abortTransaction}]
+  Abort a transaction.
+  A prototype is
+
+  \Code{Status abortTransaction(Transaction transaction);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} The transaction to be aborted.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+  \end{description}  
+  
+\item [\Code{extendTransaction}]
+  Request an extension in duration for a specific transaction.
+  A prototype is
+
+  \Code{StatusAndTransaction extendTransaction(
+      Transaction transaction, int duration);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} The transaction to be extended.
+      \item \Code{duration} The duration of the extension.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the transaction with the extended
+      duration.
+  \end{description}  
+  
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-Submission} Methods for Job Submission}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{description}
+\item [\Code{submit}]
+  Submit a job.
+  A prototype is
+
+  \Code{StatusAndRequirements submit(Transaction transaction, 
+      int clusterId, int jobId, ClassAd jobAd);}
+  
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction}
+      The transaction in which the submission takes place.
+      \item \Code{clusterId} The cluster identifier.
+      \item \Code{jobId} The job identifier.
+      \item \Code{jobAd}
+      The ClassAd describing the job. Creation of this ClassAd can be simplified
+      with \Code{createJobTemplate();}.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      the return value contains the job's requirements.
+  \end{description}  
+
+\item [\Code{createJobTemplate}]
+  Request a job Class Ad, given some of the job requirements.
+  This job Class Ad will be suitable for use when submitting the job.
+  Note that the job attribute \Attr{NTDomain} is not set by this
+  function, but must be set for jobs that will execute on Windows
+  platforms.
+  A prototype is 
+
+  \Code{StatusAndClassAd createJobTemplate(int clusterId, 
+      int jobId, String owner, UniverseType type, String command, 
+      String arguments, String requirements);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{clusterId} The cluster identifier.
+      \item \Code{jobId} The job identifier.
+      \item \Code{owner} 
+      The name to be associated with the job.
+      \item \Code{type}
+      The universe under which the job will run, where \Code{type} can be
+      one of the following:
+
+      \Code{enum UniverseType \{ STANDARD = 1, VANILLA = 5,
+	SCHEDULER = 7, MPI = 8, GRID = 9, JAVA = 10,
+	PARALLEL = 11, LOCALUNIVERSE = 12, VM = 13 \};}
+      
+      \item \Code{command} 
+      The command to execute once the job has started.
+      \item \Code{arguments}
+      The command-line arguments for \Code{command}.
+      \item \Code{requirements}
+      The requirements expression for the job. For further details 
+      and examples of the expression syntax, please refer to 
+      section~\ref{sec:classad-reference}.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+  \end{description}
+ 
+\item [\Code{discoverJobRequirements}]
+  Discover the requirements of a job, given a Class Ad.  May be helpful 
+  in determining what should be sent along with the job. 
+  A prototype is 
+
+  \Code{StatusAndRequirements discoverJobRequirements(
+      ClassAd jobAd);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{jobAd} The ClassAd of the job.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the job's requirements.
+  \end{description}    
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-FileTransfer} Methods for File Transfer}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{description}
+\item [\Code{declareFile}]
+  Declare a file that may be used by a job.
+  A prototype is 
+
+  \Code{Status declareFile(Transaction transaction, int clusterId, 
+      int jobId, String name, int size, HashType hashType, String hash);}
+  
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      The transaction in which this file is declared.
+      \item \Code{clusterId} The cluster identifier.
+      \item \Code{jobId}
+      An identifier of the job that will use the file.
+      \item \Code{name} The name of the file.
+      \item \Code{size} The size of the file.
+      \item \Code{hashType}
+      The type of hash mechanism used to verify file integrity, where 
+      \Code{hashType} can be one of the following:
+
+      \Code{enum HashType \{ NOHASH, MD5HASH \};}
+      
+      \item \Code{hash}
+      An optionally zero-length string encoding of the file hash.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+  \end{description}   
+
+\item [\Code{sendFile}]
+  Send a file that a job may use.
+  A prototype is 
+
+  \Code{Status sendFile(Transaction transaction, int clusterId, 
+      int jobId, String name, int offset, Base64 data);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      The transaction in which this file is send.
+      \item \Code{clusterId} The cluster identifier.
+      \item \Code{jobId}
+      An identifier of the job that will use the file.
+      \item \Code{name}
+      The name of the file being sent.
+      \item \Code{offset} 
+      The starting offset within the file being sent.
+      \item \Code{length}
+      The length from the offset to send.
+      \item \Code{data}
+      The data block being sent.  This could be the entire file or a
+      sub-section of the file as defined by \Code{offset} and 
+      \Code{length}.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+  \end{description}  
+
+\item [\Code{getFile}]
+  Get a file from a job's spool.
+  A prototype is 
+
+  \Code{StatusAndBase64 getFile(Transaction transaction, 
+      int clusterId, int jobId, String name, int offset, int length);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item \Code{clusterId} The cluster in which to search.
+      \item \Code{jobId}
+      The job identifier the file is associated with.
+      \item \Code{name}
+      The name of the file to retrieve.
+      \item \Code{offset} 
+      The starting offset withing the file being retrieved.
+      \item \Code{length}
+      The length from the offset to retrieve.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the file or a sub-section of the
+      file as defined by \Code{offset} and \Code{length}.
+  \end{description}  
+  
+\item [\Code{closeSpool}]
+  Close a job's spool.
+  All the files in the job's spool can be deleted. 
+  %%  deleted before or after this method returns/is invoked?
+  A prototype is 
+
+  \Code{Status closeSpool(Transaction transaction, int clusterId, 
+      int jobId);}      
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item \Code{clusterId} 
+      The cluster identifier which the job is associated with. 
+      \item \Code{jobId}
+      The job identifier for which the spool is to be removed.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+  \end{description}  
+
+\item [\Code{listSpool}]
+  List the files in a job's spool.
+  A prototype is 
+
+  \Code{StatusAndFileInfoArray listSpool(Transaction transaction, 
+        int clusterId, int jobId);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item \Code{clusterId} The cluster in which to search.
+      \item \Code{jobId} The job identifier to search for.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains a list of files and their 
+      respective sizes.
+  \end{description}  
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-JobManagement} Methods for Job Management}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{description}
+\item [\Code{newCluster}]
+  Create a new job cluster.
+  A prototype is 
+
+  \Code{StatusAndInt newCluster(Transaction transaction);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      The transaction in which this cluster is created.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the cluster id.
+  \end{description}
+
+\item [\Code{removeCluster}]
+  Remove a job cluster, and all the jobs within it.
+  %% What does it mean within Condor to remove a cluster?  
+  A prototype is 
+
+  \Code{Status removeCluster(Transaction transaction, int clusterId,
+      String reason);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item \Code{clusterId} 
+      The cluster to remove.
+      \item \Code{reason}
+      The reason for the removal.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. 
+  \end{description}
+
+\item [\Code{newJob}]
+  Creates a new job within the most recently created job cluster.
+  %% Why pass the clusterId if there's only 1 that we can use?
+  %% Is this to mimic the behaviour of commands within a submit file
+  %%     WRT the queue command?
+  %%
+  %% The reason we pass the cluster id is because in the future it 
+  %% maybe not be an implementation restriction to use the most 
+  %% recently created cluster to run a new job under.
+  %% -Ben (from a convo with Matt)
+  A prototype is 
+
+  \Code{StatusAndInt newJob(Transaction transaction, int clusterId);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      The transaction in which this job is created.
+      \item \Code{clusterId} 
+      The cluster identifier of the most recently created cluster. 
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the job id.
+  \end{description}
+
+\item [\Code{removeJob}]
+  Remove a job, regardless of the job's state.
+  A prototype is 
+
+  \Code{Status removeJob(Transaction transaction, int clusterId, 
+      int jobId, String reason, boolean forceRemoval);}
+
+    \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item \Code{clusterId} The cluster identifier to search in.
+      \item \Code{jobId} The job identifier to search for.
+      \item \Code{reason} The reason for the release.
+      \item \Code{forceRemoval}
+      Set if the job should be forcibly removed.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+  \end{description}   
+
+
+\item [\Code{holdJob}]
+  Put a job into the Hold state, regardless of the job's current state.
+  A prototype is 
+
+  \Code{Status holdJob(Transaction transaction, int clusterId, 
+      int jobId, string reason, boolean emailUser, boolean emailAdmin,
+      boolean systemHold);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item \Code{clusterId} The cluster in which to search.
+      \item \Code{jobId} The job identifier to search for.
+      \item \Code{reason} The reason for the release.
+      \item \Code{emailUser}
+      Set if the submitting user should be notified.
+      \item \Code{emailAdmin}
+      Set if the administrator should be notified.
+      \item \Code{systemHold}
+      Set if the job should be put on hold.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+  \end{description}   
+
+
+\item [\Code{releaseJob}]
+  Release a job that has been in the Hold state.
+  A prototype is 
+
+  \Code{Status releaseJob(Transaction transaction, int clusterId, 
+      int jobId, String reason, boolean emailUser, boolean emailAdmin);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item \Code{clusterId} The cluster in which to search.
+      \item \Code{jobId} The job identifier to search for.
+      \item \Code{reason} The reason for the release.
+      \item \Code{emailUser}
+      Set if the submitting user should be notified.
+      \item \Code{emailAdmin}
+      Set if the administrator should be notified.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+  \end{description} 
+
+
+\item [\Code{getJobAds}]
+  %% Find them from where?  The API's set of cluster/jobs or Condor's?
+  A prototype is 
+
+  \Code{StatusAndClassAdArray getJobAds(Transaction transaction, 
+      String constraint);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item \Code{constraint} 
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classad-reference}.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains all job ClassAds matching the 
+      given constraint.
+  \end{description}     
+  
+\item [\Code{getJobAd}]
+  Finds a specific job ClassAd. 
+
+  This method does much the same as the first element from the array 
+  returned by
+
+\footnotesize
+\begin{verbatim}
+getJobAds(transaction, "(ClusterId==clusterId && JobId==jobId)")
+\end{verbatim}
+\normalsize
+
+  A prototype is 
+
+  \Code{StatusAndClassAd getJobAd(Transaction transaction, 
+      int clusterId, int jobId);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{transaction} 
+      An optionally nullable transaction, meaning this call does not 
+      need to occur in a transaction. 
+      \item \Code{clusterId} The cluster in which to search.
+      \item \Code{jobId} The job identifier to search for.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values. Additionally,
+      on success, the return value contains the requested ClassAd.
+  \end{description}
+
+
+\item [\Code{requestReschedule}]
+  Request a \Condor{reschedule} from the \Condor{schedd} daemon.
+  A prototype is 
+
+  \Code{Status requestReschedule();}
+
+  \begin{description}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+  \end{description} 
+
+   
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-ClassAdManagement} Methods for ClassAd Management}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ClassAdType
+% ClassAdStruct
+
+\begin{description}
+\item [\Code{insertAd}]
+  A prototype is 
+
+  \Code{Status insertAd(ClassAdType type, ClassAdStruct ad);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{type}
+      The type of ClassAd to insert, where \Code{type} can be one of the
+      following:
+
+      \Code{enum ClassAdType \{
+        STARTD\_AD\_TYPE, QUILL\_AD\_TYPE,
+        SCHEDD\_AD\_TYPE, SUBMITTOR\_AD\_TYPE,
+        LICENSE\_AD\_TYPE, MASTER\_AD\_TYPE,
+        CKPTSRVR\_AD\_TYPE, COLLECTOR\_AD\_TYPE,
+        STORAGE\_AD\_TYPE, NEGOTIATOR\_AD\_TYPE,
+        HAD\_AD\_TYPE, GENERIC\_AD\_TYPE \};}
+
+      \item \Code{ad} The ClassAd to insert.
+    \end{itemize}
+    \item[ Return Value]
+      If the function succeeds, the return value is \Code{SUCCESS}; 
+      otherwise, see \Code{StatusCode} for valid return values.
+  \end{description}
+
+\item [\Code{queryStartdAds}]
+  A prototype is 
+
+  \Code{ClassAdArray queryStartdAds(String constraint);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{constraint} 
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classad-reference}.
+    \end{itemize}
+    \item[ Return Value]
+      A list of all the \Condor{startd} ClassAds matching the 
+      given constraint.
+  \end{description}    
+
+\item [\Code{queryScheddAds}]
+  A prototype is 
+
+  \Code{ClassAdArray queryScheddAds(String constraint);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{constraint} 
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classad-reference}.
+    \end{itemize}
+    \item[ Return Value]
+      A list of all the \Condor{schedd} ClassAds matching the given 
+      constraint.
+  \end{description}   
+
+\item [\Code{queryMasterAds}]
+  A prototype is 
+
+  \Code{ClassAdArray queryMasterAds(String constraint);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{constraint} 
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classad-reference}.
+    \end{itemize}
+    \item[ Return Value]
+      A list of all the \Condor{master} ClassAds matching the given 
+      constraint.
+  \end{description}
+
+\item [\Code{querySubmittorAds}]
+  A prototype is 
+
+  \Code{ClassAdArray querySubmittorAds(String constraint);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{constraint} 
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classad-reference}.
+    \end{itemize}
+    \item[ Return Value]
+      A list of all the submitters ClassAds matching the given 
+      constraint.
+  \end{description}
+
+\item [\Code{queryLicenseAds}]
+  A prototype is 
+
+  \Code{ClassAdArray queryLicenseAds(String constraint);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{constraint} 
+      A string constraining the number ClassAds to return.For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classad-reference}.
+    \end{itemize}
+    \item[ Return Value]
+      A list of all the license ClassAds matching the given constraint.
+  \end{description}
+  
+\item [\Code{queryStorageAds}]
+  A prototype is 
+
+  \Code{ClassAdArray queryStorageAds(String constraint);}
+
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{constraint}
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classad-reference}.
+    \end{itemize}
+    \item[ Return Value]
+      A list of all the storage ClassAds matching the given constraint.
+  \end{description} 
+
+\item [\Code{queryAnyAds}]
+  A prototype is 
+
+  \Code{ClassAdArray queryAnyAds(String constraint);}
+  
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{constraint} 
+      A string constraining the number ClassAds to return. For further details 
+      and examples of the constraint syntax, please refer to 
+      section~\ref{sec:classad-reference}.
+    \end{itemize}
+    \item[ Return Value]
+      A list of all the ClassAds matching the given constraint.
+      to return.
+  \end{description}  
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-VersionInformation} Methods for Version Information}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{description}
+\item [\Code{getVersionString}]
+  A prototype is 
+
+  \Code{StatusAndString getVersionString();}
+
+  \begin{description}
+    \item[ Return Value]
+      Returns the Condor version as a string.
+  \end{description}  
+
+\item [\Code{getPlatformString}]
+  A prototype is 
+
+  \Code{StatusAndString getPlatformString();}
+
+  \begin{description}
+    \item[ Return Value]
+      Returns the platform information Condor is running on as string.
+  \end{description}  
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{WebService-DataStructures} Common Data Structures}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Many methods return a status.
+Table ~\ref{WebService-StatusCode} lists and defines the
+\Code{StatusCode} return values.
+
+
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|l|l|l|} \hline
+\textbf{Value} & \textbf{Identifier} & \textbf{Definition}\\ \hline \hline
+0  &  \Code{SUCCESS}           &  All OK \\             \hline
+1  &  \Code{FAIL}              &  An error occurred that is not specific to another error code   \\ \hline
+2  &  \Code{INVALIDTRANSACTION}&  No such transaction exists  \\ \hline
+3  &  \Code{UNKNOWNCLUSTER}    &  The specified cluster is not the currently active one  \\ \hline
+4  &  \Code{UNKNOWNJOB}        &  The specified job does not exist within the specified cluster \\ \hline
+5  &  \Code{UNKNOWNFILE}       &    \\ \hline
+6  &  \Code{INCOMPLETE}        &    \\ \hline
+7  &  \Code{INVALIDOFFSET}     &    \\ \hline
+8  &  \Code{ALREADYEXISTS}     &  For this job, the specified file already exists  \\ \hline
+\end{tabular}
+\caption{\label{WebService-StatusCode}\Code{StatusCode} definitions}
+\end{table}
+\end{center}

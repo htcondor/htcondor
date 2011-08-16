@@ -125,7 +125,7 @@ main(int argc, char **argv)
 int writeSubmitEvent(WriteUserLog *log)
 {
 	SubmitEvent submit;
-	strcpy(submit.submitHost, "<128.105.165.12:32779>");
+	submit.setSubmitHost("<128.105.165.12:32779>");
 	submit.submitEventLogNotes = strdup("DAGMan info");
 	submit.submitEventUserNotes = strdup("User info");
 	if ( !log->writeEvent(&submit) ) {
@@ -138,7 +138,7 @@ int writeSubmitEvent(WriteUserLog *log)
 int writeExecuteEvent(WriteUserLog *log)
 {
 	ExecuteEvent execute;
-	strcpy(execute.executeHost, "<128.105.165.12:32779>");
+	execute.setExecuteHost("<128.105.165.12:32779>");
 	if ( !log->writeEvent(&execute) ) {
 		printf("Bad execute write\n");
 		exit(1);
