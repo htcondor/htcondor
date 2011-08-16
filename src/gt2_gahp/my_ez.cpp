@@ -84,6 +84,7 @@ globus_version_t local_version =
 
 extern globus_gass_transfer_listener_t gassServerListeners[];
 static int number_listening;
+static int number_open;
 
 #include "globus_gram_client.h"
 #include "globus_gss_assist.h"
@@ -277,6 +278,7 @@ globus_gass_server_ez_init(globus_gass_transfer_listener_t * listener,
 					(void *)reqattr);
 
     number_listening=1;
+	number_open = 1;
 /* insert error handling here*/
 
     error_exit:
@@ -471,17 +473,18 @@ globus_l_gass_server_ez_listen_callback(
 				 globus_l_gass_server_ez_register_accept_callback,
 				 (void *)listener);
 
-    try_to_listen();
-#if 0
-    if(rc != GLOBUS_SUCCESS)
-    {
-	/* to listen for additional requests*/
-	globus_gass_transfer_register_listen(
-	    listener,
-	    globus_l_gass_server_ez_listen_callback,
-	    user_arg);
-    }
-#endif
+	if ( number_open > 1 ) {
+		try_to_listen();
+	} else {
+		if(rc != GLOBUS_SUCCESS)
+		{
+			/* to listen for additional requests*/
+			globus_gass_transfer_register_listen(
+												 listener,
+												 globus_l_gass_server_ez_listen_callback,
+												 user_arg);
+		}
+	}
 }
 
 
@@ -681,13 +684,14 @@ globus_l_gass_server_ez_register_accept_callback(
     globus_url_destroy(&parsed_url);
 
   reregister_nourl:
-    try_to_listen();
-/*
-    globus_gass_transfer_register_listen(
+	if ( number_open > 1 ) {
+		try_to_listen();
+	} else {
+		globus_gass_transfer_register_listen(
 				(globus_gass_transfer_listener_t) listener,
 				globus_l_gass_server_ez_listen_callback,
 				s->reqattr);
-*/
+	}
 
     if (path != GLOBUS_NULL) globus_free(path);
 
@@ -1006,6 +1010,7 @@ my_globus_gass_server_ez_init(globus_gass_transfer_listener_t * listener,
     server->reqattr=reqattr;
     server->callback=callback;
 
+	number_open++;
     globus_hashtable_insert(&globus_l_gass_server_ez_listeners,
 			    (void *)*listener,
 			    server);
@@ -1027,7 +1032,7 @@ void try_to_listen(void)
     if (number_listening>0) return;
 
     n=-1;
-    for(i=0;i<20;i++) {
+    for(i=0;i<number_open;i++) {
       globus_gass_transfer_listener_struct_t *l = (globus_gass_transfer_listener_struct_t *) globus_handle_table_lookup(&globus_i_gass_transfer_listener_handles, gassServerListeners[i]);
       if (l->status == GLOBUS_GASS_TRANSFER_LISTENER_STARTING) {
         n=i;
