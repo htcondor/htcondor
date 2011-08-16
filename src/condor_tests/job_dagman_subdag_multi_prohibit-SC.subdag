@@ -1,0 +1,2 @@
+CONFIG job_dagman_subdag_multi_prohibit-C.config
+JOB SC job_dagman_subdag_multi_prohibit-SC.cmd
