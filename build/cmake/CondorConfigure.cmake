@@ -256,6 +256,8 @@ endif()
 
 find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
+find_program(LATEX2HTML latex2html)
+find_program(LATEX latex)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -355,6 +357,7 @@ option(BUILD_TESTS "Will build internal test applications" ON)
 option(WANT_CONTRIB "Enable quill functionality" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 
 if (UW_BUILD OR WINDOWS)
@@ -748,6 +751,9 @@ message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
 message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
 message(STATUS "LN: ${LN}")
+message(STATUS "LATEX: ${LATEX}")
+message(STATUS "LATEX2HTML: ${LATEX2HTML}")
+
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree
 dprint ( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )

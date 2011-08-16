@@ -1,0 +1,1232 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:classad-reference}
+Condor's ClassAd Mechanism}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd|(}
+
+ClassAds are a flexible mechanism for representing the characteristics and
+constraints of machines and jobs in the Condor system.  ClassAds are used
+extensively in the Condor system to represent jobs, resources, submitters
+and other Condor daemons.  An understanding of this mechanism is required
+to harness the full flexibility of the Condor system.
+
+A ClassAd is is a set of uniquely named expressions.  Each named expression
+is called an \Term{attribute}.  Figure~\ref{ClassAd:example} shows an example 
+of a ClassAd with ten attributes.
+
+\begin{figure}[hbt]
+\footnotesize
+\begin{verbatim}
+MyType       = "Machine"
+TargetType   = "Job"
+Machine      = "froth.cs.wisc.edu"
+Arch         = "INTEL"
+OpSys        = "LINUX"
+Disk         = 35882
+Memory       = 128
+KeyboardIdle = 173
+LoadAvg      = 0.1000
+Requirements = TARGET.Owner=="smith" || LoadAvg<=0.3 && KeyboardIdle>15*60
+\end{verbatim}
+\normalsize
+\caption{\label{ClassAd:example}An example ClassAd}
+\end{figure}
+
+ClassAd expressions look very much like expressions in C, and are composed
+of literals and attribute references composed with operators 
+and functions.
+The difference
+between ClassAd expressions and C expressions arise from the fact that ClassAd
+expressions operate in a much more dynamic environment.  For example, an
+expression from a machine's ClassAd may refer to an attribute in a job's 
+ClassAd, such as \verb+TARGET.Owner+ in the above example.  The value and type 
+of the attribute is not known until the expression is evaluated in an 
+environment which pairs a specific job ClassAd with the machine ClassAd.
+
+ClassAd expressions handle these uncertainties by defining all operators
+to be \Term{total} operators, which means that they have well defined
+behavior regardless of supplied operands.  This functionality is provided
+through two distinguished values, \texttt{UNDEFINED} and \texttt{ERROR},
+and defining all operators so that they can operate on all possible values
+in the ClassAd system.  For example, the multiplication operator which usually
+only operates on numbers, has a well defined behavior if supplied with values
+which are not meaningful to multiply.  Thus, the expression 
+\verb+10 * "A string"+ evaluates to the value \texttt{ERROR}.  Most operators
+are \Term{strict} with respect to \texttt{ERROR}, which means that they evaluate
+to \texttt{ERROR} if any of their operands are \texttt{ERROR}.  Similarly,
+most operators are strict with respect to \texttt{UNDEFINED}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:classad-newandold}
+ClassAds: Old and New}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ClassAds have existed for quite some time in two forms:
+Old and New.
+Old ClassAds were the original form and were used in Condor
+until Condor version 7.5.0.
+They were heavily tied to the Condor development libraries.
+New ClassAds added new features
+and were designed as a stand-alone library that could be used apart
+from Condor.
+
+In Condor version 7.5.1, Condor switched the internal usage of
+ClassAds from Old to New.
+All user interaction with tools (such as \Condor{q}) as well as
+output of tools is still done as Old ClassAds.
+Before Condor version 7.5.1, New ClassAds were used in just a few places 
+within Condor, 
+for example, in the Job Router and  in \Condor{q} \Opt{-better-analyze}.
+There are some syntax and behavior differences between Old and New
+ClassAds,
+all of which will remain invisible to users of Condor for this version.
+A complete description of New ClassAds can be found at
+\URL{http://www.cs.wisc.edu/condor/classad/},
+and in the ClassAd Language Reference Manual found on this web page.
+
+Some of the features of New ClassAds that are \emph{not} in Old ClassAds are
+lists, nested ads, time values, and matching groups of ads.
+Condor will avoid using these features until the 7.7.x development series,
+as using them makes it difficult to interact with older versions of Condor.
+
+The syntax varies slightly between Old and New ClassAds.
+Here is an example ClassAd presented in both forms.
+The Old form:
+
+\begin{verbatim}
+Foo = 3
+Bar = "ab\"cd\ef"
+Moo = Foo =!= Undefined
+\end{verbatim}
+
+The New form:
+
+\begin{verbatim}
+[
+Foo = 3;
+Bar = "ab\"cd\\ef";
+Moo = Foo isnt Undefined;
+]
+\end{verbatim}
+
+Condor will convert to and from Old ClassAd syntax as needed.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{New ClassAd Attribute References}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Expressions often refer to ClassAd attributes.
+These attribute references work differently in Old ClassAds as compared
+with New ClassAds.
+In New ClassAds, 
+an unscoped reference is looked for only in the local ClassAd. 
+An \Term{unscoped reference} is an attribute that does not have a
+\Attr{MY.} or \Attr{TARGET.} prefix.
+The \Term{local ClassAd} may be described by an example.
+Matchmaking uses two ClassAds: the job ClassAd and the machine ClassAd. 
+The job ClassAd is evaluated to see if it is a match for the machine ClassAd.
+The job ClassAd is the local ClassAd.
+Therefore, in the \Attr{Requirements} attribute of the job ClassAd,
+any attribute without the prefix \Attr{TARGET.} is looked up only
+in the job ClassAd.
+With New ClassAd evaluation, the use of the prefix \Attr{MY.} is eliminated,
+as an unscoped reference can only refer to the local ClassAd.
+
+The \Attr{MY.} and \Attr{TARGET.} scoping prefixes
+only apply when evaluating an expression within the context of two ClassAds.
+Two examples that exemplify this are matchmaking and machine policy evaluation.
+When evaluating an expression within the context of a single ClassAd,
+\Attr{MY.} and \Attr{TARGET.} are not defined.
+Using them within the context of a single ClassAd will result
+in a value of \Expr{Undefined}.
+Two examples that exemplify evaluating an expression 
+within the context of a single ClassAd are 
+during user job policy evaluation,
+and with the \Opt{-constraint} option to command-line tools.
+
+New ClassAds have no \Attr{CurrentTime} attribute.
+If needed, use the \Procedure{time} function instead.
+In order to mimic Old ClassAd semantics in this Condor version 7.5.1 release,
+all ClassAds have an explicit \Attr{CurrentTime} attribute,
+with a value of \Procedure{time}.
+
+In this Condor version 7.5.1 release, 
+New ClassAds will mimic the evaluation behavior of Old ClassAds.
+No configuration variables or submit description file contents should
+need to be changed.
+To eliminate this behavior and use only the semantics of New ClassAds, 
+set the configuration variable
+\Macro{STRICT\_CLASSAD\_EVALUATION} to \Expr{True}.
+This permits testing expressions to see if any adjustment is required,
+before a future version of Condor potentially makes New ClassAds
+evaluation behavior the default or the only option. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Old ClassAd Syntax}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!expression syntax of Old ClassAds}
+ClassAd expressions are formed by composing literals, attribute references and 
+other sub-expressions with operators and functions. 
+\subsubsection{Literals}
+\label{ClassAd:literals}
+Literals in the ClassAd language may be of integer, real, string, undefined or 
+error types.  The syntax of these literals is as follows:
+\begin{description}
+	\item[Integer]  A sequence of continuous digits (i.e., \verb@[0-9]@).
+		Additionally, the keywords \verb+TRUE+ and \verb+FALSE+ (case
+		insensitive) are syntactic representations of the integers 1 and 0 
+		respectively.
+
+	\item[Real] Two sequences of continuous digits separated by a period
+		(i.e., \verb@[0-9]+.[0-9]+@).
+
+	\item[String] A double quote character, followed by an list of characters
+		terminated by a double quote character.  A backslash character inside
+		the string causes the following character to be considered as part of
+		the string, irrespective of what that character is.
+
+	\item[Undefined] The keyword \texttt{UNDEFINED} (case insensitive)
+		represents the \texttt{UNDEFINED} value.
+
+	\item[Error] The keyword \texttt{ERROR} (case insensitive)
+		represents the \texttt{ERROR} value.
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Attributes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!attributes}
+Every expression in a ClassAd is named by an \Term{attribute name}.  Together,
+the (name,expression) pair is called an \Term{attribute}.  An attributes may be
+referred to in other expressions through its attribute name.
+
+Attribute names are sequences of alphabetic characters, digits and underscores,
+and may not begin with a digit.  All characters in the name are significant,
+but case is \emph{not} significant.  Thus, \verb+Memory+, \verb+memory+ and 
+\verb+MeMoRy+ all refer to the same attribute.
+
+An \Term{attribute reference} consists of the name of the attribute being 
+referenced, and an optional \Term{scope resolution prefix}.  The 
+prefixes that may be used are \Attr{MY.} and \Attr{TARGET.}.
+The case used for these prefixes is \emph{not} significant.
+The semantics of supplying a prefix are discussed in 
+Section~\ref{ClassAd:evaluation}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Operators}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!expression operators}
+The operators that may be used in ClassAd expressions are similar to those
+available in C.  The available operators and their relative precedence is shown 
+in figure~\ref{ClassAd:operator-fig}.
+\begin{figure}[h]
+\begin{verbatim}
+  - (unary negation)   (high precedence)
+  *   / 
+  +   - (addition, subtraction)
+  <   <=   >=   >
+  ==  !=  =?=  =!=
+  &&
+  ||                   (low precedence) 
+\end{verbatim}
+\caption{\label{ClassAd:operator-fig}Relative precedence of ClassAd expression
+operators}
+\end{figure}
+The operator with the highest precedence is the unary minus operator.  The
+only operators which are unfamiliar are the \verb+=?=+ and \verb+=!=+
+operators, which are discussed in Section~\ref{ClassAd:evaluation-meta}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:classadFunctions}Predefined Functions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!expression functions}
+\index{ClassAd functions}
+Any ClassAd expression may utilize predefined functions.
+Function names are case insensitive.
+Parameters to functions 
+and a return value from a function 
+may be typed (as given) or not.
+Nested or recursive function calls are allowed.
+
+Here are descriptions of each of these predefined functions.
+The possible types are the same as itemized in 
+in Section~\ref{ClassAd:literals}.
+Where the type may be any of these literal types, it is
+called out as \verb@AnyType@.
+Where the type is \verb@Integer@, but only returns
+the value 1 or 0 (implying \Expr{True} or \Expr{False}),
+it is called out as \verb@Boolean@.
+The format of each function is given as
+
+\footnotesize
+\begin{verbatim}
+ReturnType FunctionName(ParameterType parameter1, ParameterType parameter2, ...)
+\end{verbatim}
+\normalsize
+Optional parameters are given within square brackets.
+
+\begin{description}
+  \index{ClassAd functions!eval()}
+  \item[\Code{AnyType eval(AnyType Expr)}]
+  Evaluates \Expr{Expr} as a string and then returns the result of
+  evaluating the \emph{contents} of the string as a ClassAd expression.
+  This is useful when referring to an attribute such as \Expr{slotX\_State}
+  where \Expr{X}, the desired slot number is an expression, such as
+  \Expr{SlotID+10}.  
+  In such a case, if attribute \Attr{SlotID} is 5,
+  the value of the attribute \Attr{slot15\_State} can
+  be referenced using the expression
+  \Expr{eval(strcat("slot", SlotID+10,"\_State"))}.
+  Function \Procedure{strcat} calls function \Procedure{string}
+  on the second parameter, which evaluates the expression,
+  and then converts the integer result 15 to the string "15."
+  The concatenated string returned by \Procedure{strcat} is
+  \verb@"slot15_State"@, and this string is then evaluated.
+
+  Note that referring to attributes of a job from within the string
+  passed to \Procedure{eval} in the \AdAttr{Requirements} or
+  \AdAttr{Rank} expressions could cause inaccuracies in Condor's
+  automatic auto-clustering of jobs into equivalent groups for
+  matchmaking purposes.  This is because Condor needs to determine
+  which ClassAd attributes are significant for matchmaking purposes,
+  and indirect references from within the string passed to \Procedure{eval}
+  will not be counted.
+
+  \index{ClassAd functions!ifThenElse()}
+  \item[\Code{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
+    A conditional expression is described by \Expr{IfExpr}.
+    The following defines return values, when \Expr{IfExpr}
+    evaluates to
+    \begin{itemize}
+    \item{\Expr{True}. Evaluate and return the value as given
+      by \Expr{ThenExpr}.}
+    \item{\Expr{False}. Evaluate and return the value as given
+      by \Expr{ElseExpr}.}
+    \item{\Expr{UNDEFINED}. Return the value \Expr{UNDEFINED}.}
+    \item{\Expr{ERROR}. Return the value \Expr{ERROR}.}
+    \item{\Expr{0.0}. Evaluate, and return the value as given
+      by \Expr{ElseExpr}.}
+    \item{non-\Expr{0.0} Real values. Evaluate, and return the value as given
+      by \Expr{ThenExpr}.}
+    \end{itemize}
+    Where \Expr{IfExpr} evaluates to give a value of type \Expr{String},
+    the function returns the value \Expr{ERROR}.
+    The implementation uses lazy evaluation, so expressions
+    are only evaluated as defined.
+
+    This function returns \Expr{ERROR} if other than exactly 3
+    arguments are given.
+
+
+  \index{ClassAd functions!isUndefined()}
+  \item[\Code{Boolean isUndefined(AnyType Expr)}]
+    Returns \Expr{True}, if \Expr{Expr} evaluates to \Expr{UNDEFINED}.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!isError()}
+  \item[\Code{Boolean isError(AnyType Expr)}]
+    Returns \Expr{True}, if \Expr{Expr} evaluates to \Expr{ERROR}.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!isString()}
+  \item[\Code{Boolean isString(AnyType Expr)}]
+    Returns \Expr{True}, if the evaluation of \Expr{Expr}
+    gives a value of type \Expr{String}.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!isInteger()}
+  \item[\Code{Boolean isInteger(AnyType Expr)}]
+    Returns \Expr{True}, if the evaluation of \Expr{Expr}
+    gives a value of type \Expr{Integer}.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!isReal()}
+  \item[\Code{Boolean isReal(AnyType Expr)}]
+    Returns \Expr{True}, if the evaluation of \Expr{Expr}
+    gives a value of type \Expr{Real}.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!isBoolean()}
+  \item[\Code{Boolean isBoolean(AnyType Expr)}]
+    Returns \Expr{True}, if the evaluation of \Expr{Expr}
+    gives the integer value 0 or 1.
+    Returns \Expr{False} in all other cases.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!int()}
+  \item[\Code{Integer int(AnyType Expr)}]
+    Returns the integer value as defined by \Expr{Expr}.
+    Where the type of the evaluated \Expr{Expr} is \Expr{Real},
+    the value is truncated (round towards zero) to an integer.
+    Where the type of the evaluated \Expr{Expr} is \Expr{String},
+    the string is converted to an integer using a C-like
+    \Procedure{atoi} function. When this result is not an integer,
+    \Expr{ERROR} is returned.
+    Where the evaluated \Expr{Expr} is \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!real()}
+  \item[\Code{Real real(AnyType Expr)}]
+    Returns the real value as defined by \Expr{Expr}.
+    Where the type of the evaluated \Expr{Expr} is \Expr{Integer},
+    the return value is the converted integer.
+    Where the type of the evaluated \Expr{Expr} is \Expr{String},
+    the string is converted to a real value using a C-like
+    \Procedure{atof} function. When this result is not a real,
+    \Expr{ERROR} is returned.
+    Where the evaluated \Expr{Expr} is \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!string()}
+  \item[\Code{String string(AnyType Expr)}]
+    Returns the string that results from the evaluation of \Expr{Expr}.
+    Converts a non-string value to a string.
+    Where the evaluated \Expr{Expr} is \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!floor()}
+  \item[\Code{Integer floor(AnyType Expr)}]
+    Returns the integer that results from the evaluation of \Expr{Expr},
+    where the type of the evaluated \Expr{Expr} is \Expr{Integer}.
+    Where the type of the evaluated \Expr{Expr} is \emph{not} \Expr{Integer},
+    function \Expr{real(Expr)} is called.
+    Its return value is then used to return the largest magnitude
+    integer that is not larger than the returned value. 
+    Where \Expr{real(Expr)} returns \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!ceiling()}
+  \item[\Code{Integer ceiling(AnyType Expr)}]
+    Returns the integer that results from the evaluation of \Expr{Expr},
+    where the type of the evaluated \Expr{Expr} is \Expr{Integer}.
+    Where the type of the evaluated \Expr{Expr} is \emph{not} \Expr{Integer},
+    function \Expr{real(Expr)} is called.
+    Its return value is then used to return the smallest magnitude
+    integer that is not less than the returned value. 
+    Where \Expr{real(Expr)} returns \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!round()}
+  \item[\Code{Integer round(AnyType Expr)}]
+    Returns the integer that results from the evaluation of \Expr{Expr},
+    where the type of the evaluated \Expr{Expr} is \Expr{Integer}.
+    Where the type of the evaluated \Expr{Expr} is \emph{not} \Expr{Integer},
+    function \Expr{real(Expr)} is called.
+    Its return value is then used to return the 
+    integer that results from a round-to-nearest rounding method. 
+    The nearest integer value to the return value is returned,
+    except in the case of the value at the exact midpoint between
+    two integer values.  
+    In this case, the even valued integer is returned.
+    Where \Expr{real(Expr)} returns \Expr{ERROR} or \Expr{UNDEFINED},
+    or the integer value does not fit into 32 bits,
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!random()}
+  \item[\Code{Integer random(\Lbr\ AnyType Expr \Rbr)}]
+    Where the optional argument \Expr{Expr} evaluates to type \Expr{Integer}
+    or type \Expr{Real}
+    (and called \Expr{x}),
+    the return value is the integer or real \Expr{r} randomly chosen
+    from the interval \Expr{0 <= r < x}.
+    With no argument, the return value is chosen with \Expr{random(1.0)}.
+    Returns \Expr{ERROR} in all other cases.
+
+    This function returns \Expr{ERROR} if greater than 1
+    argument is given.
+
+  \index{ClassAd functions!strcat()}
+  \item[\Code{String strcat(AnyType Expr1 \Lbr\ , AnyType Expr2 \Dots \Rbr)}]
+    Returns the string which is the concatenation of all arguments, where all arguments are 
+    converted to type \Expr{String} by function \Expr{string(Expr)}.
+    Returns \Expr{ERROR} if any argument evaluates to \Expr{UNDEFINED} or \Expr{ERROR}.
+
+  \index{ClassAd functions!substr()}
+  \item[\Code{String substr(String s, Integer offset \Lbr\ , Integer length  \Rbr)}]
+    Returns the substring of \Expr{s}, from the position indicated by \Expr{offset},
+    with (optional) \Expr{length} characters.
+    The first character within \Expr{s} is at offset 0.
+    If the optional \Expr{length} argument is not present, the substring extends to the
+    end of the string.
+    If \Expr{offset} is negative, the value \Expr{(length - offset)} is used for the offset.
+    If \Expr{length} is negative, an initial substring is computed, from the offset
+    to the end of the string.
+    Then, the absolute value of \Expr{length} characters are deleted from the
+    right end of the initial substring.
+    Further, where characters of this resulting substring lie outside the original
+    string, the part that lies within the original string is returned.
+    If the substring lies completely outside of the original string, the null string
+    is returned.
+
+    This function returns \Expr{ERROR} if greater than 3 or less than 2
+    arguments are given.
+    
+  \index{ClassAd functions!strcmp()}
+  \item[\Code{Integer strcmp(AnyType Expr1, AnyType Expr2)}]
+    Both arguments are converted to type \Expr{String} by function \Expr{string(Expr)}.
+    The return value is an integer that will be
+    \begin{itemize}
+      \item{less than 0},
+      if \Expr{Expr1} is lexicographically less than \Expr{Expr2}
+      \item{equal to 0},
+      if \Expr{Expr1} is lexicographically equal to \Expr{Expr2}
+      \item{greater than 0},
+      if \Expr{Expr1} is lexicographically greater than \Expr{Expr2}
+    \end{itemize}
+    Case is significant in the comparison.
+    Where either argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than 2 arguments are given.
+
+  \index{ClassAd functions!stricmp()}
+  \item[\Code{Integer stricmp(AnyType Expr1, AnyType Expr2)}]
+    This function is the same as \Expr{strcmp}, except that letter case is
+    \emph{not} significant.
+
+  \index{ClassAd functions!toUpper()}
+  \item[\Code{String toUpper(AnyType Expr)}]
+    The single argument is converted to type \Expr{String} by function \Expr{string(Expr)}.
+    The return value is this string, with all lower case letters converted to
+    upper case.
+    If the argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if greater than 1
+    argument is given.
+
+  \index{ClassAd functions!toLower()}
+  \item[\Code{String toLower(AnyType Expr)}]
+    The single argument is converted to type \Expr{String} by function \Expr{string(Expr)}.
+    The return value is this string, with all upper case letters converted to
+    lower case.
+    If the argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!size()}
+  \item[\Code{Integer size(AnyType Expr)}]
+    Returns the number of characters in the string, after calling function
+    \Expr{string(Expr)}.
+    If the argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
+    \Expr{ERROR} is returned.
+
+    This function returns \Expr{ERROR} if other than exactly 1
+    argument is given.
+
+  \index{ClassAd functions!time()}
+  \item[\Code{Integer time()}]
+    Returns the current coordinated universal time, which is the same
+    as the ClassAd attribute \Attr{CurrentTime}.
+    This is the time, in seconds, since midnight of January 1, 1970.
+
+  \index{ClassAd functions!formatTime()}
+  \item[\Code{String formatTime(\Lbr\ Integer time \Rbr\ \Lbr\ , String format \Rbr)}]
+
+    Returns a formatted string that is a representation of \Expr{time}.
+    The argument \Expr{time} is interpreted as coordinated universe time in
+    seconds, since midnight of January 1, 1970. If not specified,
+    \Expr{time} will default to the value of attribute \Attr{CurrentTime}.
+		
+    The argument \Expr{format} is interpreted similarly to the format
+    argument of the ANSI C strftime function. It consists of arbitrary text
+    plus placeholders for elements of the time. These placeholders are
+    percent signs (\Percent) followed by a single letter.
+    To have a percent sign in
+    the output, use a double percent sign (\Percent\Percent).  If
+    \Expr{format} is not specified, it defaults to \Expr{\%c}.
+
+    Because the implementation uses \Procedure{strftime} to implement this,
+    and some
+    versions implement extra, non-ANSI C options, the exact options
+    available to an implementation may vary. An implementation is only
+    required to implement the ANSI C options, which are: 
+    \begin{description}
+    \item[\Expr{\%a}] abbreviated weekday name
+    \item[\Expr{\%A}] full weekday name
+    \item[\Expr{\%b}] abbreviated month name
+    \item[\Expr{\%B}] full month name
+    \item[\Expr{\%c}] local date and time representation
+    \item[\Expr{\%d}] day of the month (01-31)
+    \item[\Expr{\%H}] hour in the 24-hour clock (0-23)
+    \item[\Expr{\%I}] hour in the 12-hour clock (01-12)
+    \item[\Expr{\%j}] day of the year (001-366)
+    \item[\Expr{\%m}] month (01-12)
+    \item[\Expr{\%M}] minute (00-59)
+    \item[\Expr{\%p}] local equivalent of AM or PM
+    \item[\Expr{\%S}] second (00-59)
+    \item[\Expr{\%U}] week number of the year (Sunday as first day of week) (00-53)
+    \item[\Expr{\%w}] weekday (0-6, Sunday is 0)
+    \item[\Expr{\%W}] week number of the year (Monday as first day of week) (00-53)
+    \item[\Expr{\%x}] local date representation
+    \item[\Expr{\%X}] local time representation
+    \item[\Expr{\%y}] year without century (00-99)
+    \item[\Expr{\%Y}] year with century
+    \item[\Expr{\%Z}] time zone name, if any
+    \end{description}
+
+  \index{ClassAd functions!interval()}
+  \item[\Code{String interval(Integer seconds)}]
+    Uses \Expr{seconds} to return a string of the form
+    \Expr{days+hh:mm:ss}.
+    This represents an interval of time.
+    Leading values that are zero are omitted from the string.
+    For example, \Expr{seconds} of 67 becomes "1:07".
+    A second example, \Expr{seconds} of 
+    1472523 = 17*24*60*60 + 1*60*60 + 2*60 + 3, results in the
+    string "17+1:02:03".
+
+  \index{ClassAd functions!debug()}
+  \item[\Code{AnyType debug(AnyType expression)}]
+     This function evaluates its argument, and it returns the result.
+     Thus, it is a no-operation.
+     However, a side-effect of the function is that information about
+     the evaluation is logged to the evaluating program's log file.
+     This is useful for determining why a given ClassAd expression
+     is evaluating the way it does.  
+     For example, if a \Condor{startd} \MacroNI{START} expression
+     is unexpectedly evaluating to \Expr{UNDEFINED},
+     then wrapping the expression in this \Procedure{debug} function will
+     log information about each component of the expression to the log file,
+     making it easier to understand the expression.
+
+\end{description}
+
+For the following functions, a delimiter is represented by a string.
+Each character within the delimiter string
+delimits individual strings within a list of strings 
+that is given by a single string.
+The default delimiter contains the comma and space characters.
+A string within the list is ended (delimited) by one or more
+characters within the delimiter string.
+
+\begin{description}
+  \index{ClassAd functions!stringListSize()}
+  \item[\Code{Integer stringListSize(String list \Lbr\ , String delimiter \Rbr)}]
+    Returns the number of elements in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    Returns \Expr{ERROR} if either argument is not a string.
+
+    This function returns \Expr{ERROR} if other than 1 or 2 arguments are given.
+
+  \index{ClassAd functions!stringListSum()}
+  \item[\Code{Integer stringListSum(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[OR \Code{Real stringListSum(String list \Lbr\ , String delimiter \Rbr)}]
+    Sums and returns the sum of all items in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    If all items in the list are integers, the return value is also
+    an integer.
+    If any item in the list is a real value (noninteger),
+    the return value is a real.
+    If any item does not represent an integer or real value,
+    the return value is \Expr{ERROR}.
+
+
+  \index{ClassAd functions!stringListAvg()}
+  \item[\Code{Real stringListAvg(String list \Lbr\ , String delimiter \Rbr)}]
+    Sums and returns the real-valued average of all items in the 
+    string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    If any item does not represent an integer or real value,
+    the return value is \Expr{ERROR}.
+    A list with 0 items (the empty list) returns the value 0.0.
+
+  \index{ClassAd functions!stringListMin()}
+  \item[\Code{Integer stringListMin(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[OR \Code{Real stringListMin(String list \Lbr\ , String delimiter \Rbr)}]
+    Finds and returns the minimum value from all items in the
+    string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    If all items in the list are integers, the return value is also
+    an integer.
+    If any item in the list is a real value (noninteger),
+    the return value is a real.
+    If any item does not represent an integer or real value,
+    the return value is \Expr{ERROR}.
+    A list with 0 items (the empty list) returns the value \Expr{UNDEFINED}.
+
+  \index{ClassAd functions!stringListMax()}
+  \item[\Code{Integer stringListMax(String list \Lbr\ , String delimiter \Rbr)}]
+  \item[OR \Code{Real stringListMax(String list \Lbr\ , String delimiter \Rbr)}]
+    Finds and returns the maximum value from all items in the
+    string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    If all items in the list are integers, the return value is also
+    an integer.
+    If any item in the list is a real value (noninteger),
+    the return value is a real.
+    If any item does not represent an integer or real value,
+    the return value is \Expr{ERROR}.
+    A list with 0 items (the empty list) returns the value \Expr{UNDEFINED}.
+
+  \index{ClassAd functions!stringListMember()}
+  \item[\Code{Boolean stringListMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
+    Returns \Expr{TRUE} if item \Expr{x} is in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    Returns \Expr{FALSE} if item \Expr{x} is not in the string \Expr{list}.
+    Comparison is done with \Expr{strcmp()}.
+    The return value is \Expr{ERROR}, if any of the arguments
+    are not strings.
+
+  \index{ClassAd functions!stringListIMember()}
+  \item[\Code{Boolean stringListIMember(String x, String list \Lbr\ , String delimiter \Rbr)}]
+    Same as \Code{stringListMember()}, but comparison is done
+    with \Expr{stricmp()}, so letter case is not relevant.
+
+  \index{ClassAd functions!stringList\_regexpMember()}
+  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr) \Lbr, String options \Rbr}]
+    Returns \Expr{TRUE} if the string \Expr{pattern} is a regular expression
+    that matches an item in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    String \Expr{options} modifies how the match is performed.
+    Returns \Expr{FALSE} if \Expr{pattern} does not match any entries in
+    \Expr{list}.
+    The return value is \Expr{ERROR}, if any of the arguments
+    are not strings, or if \Expr{pattern} is not a valid regular expression.
+
+\end{description}
+
+The following three functions utilize regular expressions as defined
+and supported by the PCRE library.
+See \URL{http://www.pcre.org} for complete documentation of
+regular expressions.
+
+The \Expr{options} argument to these functions is a string of 
+special characters that modify the use of the regular expressions.
+Inclusion of characters other than these as options are ignored.
+\begin{description}
+  \item[\Expr{I} or \Expr{i}]
+    Ignore letter case.
+  \item[\Expr{M} or \Expr{m}]
+    Modifies the interpretation of the carat (\verb@^@) and dollar sign
+    (\verb@$@) characters.
+    The carat character matches the start of a string, as well as
+    after each newline character.
+    The dollar sign character matches before a newline character.
+  \item[\Expr{S} or \Expr{s}]
+    The period matches any character, including the newline character. 
+%%% The X flag is not documented as it's basically useless without
+%%% the ability to have newlines in the regex.
+%  \item[\Expr{X} or \Expr{x}]
+%    Ignore both white space and comments within the pattern.
+%    A comment is defined by starting with the pound sign (\verb@#@)
+%    character, and continuing until the newline character.  Note that
+%    ClassAd values generally cannot contain newlines, limiting the
+%    usefulness of this option.
+\end{description}
+
+\begin{description}
+  \index{ClassAd functions!regexp()}
+  \item[\Code{Boolean regexp(String pattern, String target \Lbr\ , String options \Rbr)}]
+    Returns \Expr{TRUE} if the string \Expr{target} is 
+    a regular expression as described by \Expr{pattern}.
+    Returns \Expr{FALSE} otherwise.
+    If any argument is not a string, or if \Expr{pattern} does not describe
+    a valid regular expression, returns \Expr{ERROR}.
+
+  \index{ClassAd functions!regexps()}
+  \item[\Code{String regexps(String pattern, String target, String substitute,}]
+  \item[\Code{\Lbr\ String options \Rbr) } ]
+    The regular expression \Expr{pattern} is applied to \Expr{target}.
+    If the string \Expr{target} is a regular expression
+    as described by \Expr{pattern},
+    the string \Expr{substitute} is returned,
+    with backslash expansion performed.
+    The return value is \Expr{ERROR}, if any of the arguments
+    are not strings.
+
+  \index{ClassAd functions!stringListRegexpMember()}
+  \item[\Code{Boolean stringListRegexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ } ]
+  \item[\Code{\Lbr\ , String options \Rbr)}]
+    Returns \Expr{TRUE} if any of the strings within the
+    \Expr{list} is a regular expression as described by \Expr{pattern}.
+    Returns \Expr{FALSE} otherwise.
+    If any argument is not a string, or if \Expr{pattern} does not describe
+    a valid regular expression, returns \Expr{ERROR}.
+    To include the fourth (optional) argument \Expr{options}, a third argument
+    of \Expr{delimiter} is required.
+    A default value for a delimiter is " ,".
+
+\end{description}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Old ClassAd Evaluation Semantics}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{ClassAd:evaluation}
+The ClassAd mechanism's primary purpose is for matching entities that supply
+constraints on candidate matches.  The mechanism is therefore defined to
+carry out expression evaluations in the context of two ClassAds that are
+testing each other for a potential match.  For example, the \Condor{negotiator}
+evaluates the \Attr{Requirements} expressions of machine and job ClassAds to
+test if they can be matched.  The semantics of evaluating such constraints
+is defined below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Literals}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Literals are self-evaluating, Thus, integer, string, real, undefined and
+error values evaluate to themselves.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Attribute References}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!scope of evaluation, MY.}
+\index{ClassAd!scope of evaluation, TARGET.}
+\index{TARGET., ClassAd scope resolution prefix}
+\index{MY., ClassAd scope resolution prefix}
+Since the expression evaluation is being carried out in the context of two
+ClassAds, there is a potential for name space ambiguities.  The following
+rules define the semantics of attribute references made by ad $A$ that is being 
+evaluated in a context with another ad $B$:
+\begin{enumerate}
+    \item If the reference is prefixed by a scope resolution prefix, 
+    \begin{itemize}
+        \item If the prefix is \texttt{MY.}, the attribute is looked up in 
+        ClassAd $A$.  If the named attribute does not exist in $A$, the
+        value of the reference is \texttt{UNDEFINED}.  Otherwise, the
+        value of the reference is the value of the expression bound to
+        the attribute name.
+
+        \item Similarly, if the prefix is \texttt{TARGET.}, the attribute is 
+        looked up in ClassAd $B$.  If the named attribute does not exist in 
+        $B$, the value of the reference is \texttt{UNDEFINED}.  Otherwise, 
+        the value of the reference is the value of the expression bound to
+        the attribute name.
+
+    \end{itemize}
+
+    \item If the reference is not prefixed by a scope resolution prefix,
+    \begin{itemize}
+        \item If the attribute is defined in $A$, the value of the reference
+        is the value of the expression bound to the attribute name in $A$.
+        \item Otherwise, if the attribute is defined in $B$, the value of the
+        reference is the value of the expression bound to the attribute
+        name in $B$.
+        \item Otherwise, if the attribute is defined in the ClassAd environment, the
+        value from the environment is returned.
+        This is a special environment, to be
+        distinguished from the Unix environment.
+        Currently, the only attribute
+        of the environment is \Attr{CurrentTime}, which evaluates to the
+        integer value returned by the system call \texttt{time(2)}.
+        \item Otherwise, the value of the reference is \texttt{UNDEFINED}.
+    \end{itemize}
+
+    \item Finally, if the reference refers to an expression that is itself in 
+    the process of being evaluated, there is a circular dependency in the 
+    evaluation.  The value of the reference is \texttt{ERROR}.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Operators}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{ClassAd:evaluation-meta}
+\index{ClassAd!expression operators}
+All operators in the ClassAd language are \Term{total}, and thus have well
+defined behavior regardless of the supplied operands.  Furthermore, most
+operators are \Term{strict} with respect to \Expr{ERROR} and 
+\Expr{UNDEFINED}, and thus evaluate to \Expr{ERROR} or \Expr{UNDEFINED}
+if either of their operands have these exceptional values.
+
+\begin{itemize}
+	\item\textbf{Arithmetic operators:}  
+	\begin{enumerate}
+		\item The operators \verb@*@, \verb@/@, \verb@+@ and \verb@-@ operate 
+		arithmetically only on integers and reals.
+
+		\item Arithmetic is carried out in the same type as both operands,
+		and type promotions from integers to reals are performed if one operand 
+		is an integer and the other real.
+
+		\item The operators are strict with respect to both \Expr{UNDEFINED} 
+		and \Expr{ERROR}.  
+
+		\item If either operand is not a numerical type, the value of the
+		operation is \Expr{ERROR}.
+	\end{enumerate}
+
+	\item\textbf{Comparison operators:}
+	\begin{enumerate}
+		\item The comparison operators \verb@==@, \verb@!=@, \verb@<=@, 
+		\verb@<@, \verb@>=@ and \verb@>@ operate on integers, reals and strings.
+
+		\item String comparisons are case insensitive for most operators.  The only
+		exceptions are the operators \verb@=?=@ and \verb@=!=@, which do case sensitive
+		comparisons assuming both sides are strings. 
+
+		\item Comparisons are carried out in the same type as both operands,
+		and type promotions from integers to reals are performed if one operand
+		is a real, and the other an integer.  Strings may not be converted to
+		any other type, so comparing a string and an integer or a
+		string and a real results in \Expr{ERROR}.
+
+		\item The operators \verb@==@, \verb@!=@, \verb@<=@, \verb@<@ and 
+		\verb@>=@ \verb@>@ are strict with respect to both \Expr{UNDEFINED} 
+		and \Expr{ERROR}.
+
+		\item In addition, the operators \verb@=?=@ and \verb@=!=@ behave
+		similar to \verb@==@ and \verb@!=@, but are not strict.  Semantically,
+		the \verb@=?=@ tests if its operands are ``identical,'' i.e., have
+		the same type and the same value.  For example, \verb@10 == UNDEFINED@ 
+		and \verb@UNDEFINED == UNDEFINED@ both evaluate to \texttt{UNDEFINED},
+		but \verb@10 =?= UNDEFINED@ and \verb@UNDEFINED =?= UNDEFINED@ 
+		evaluate to \Expr{FALSE} and \Expr{TRUE} respectively.  The
+		\verb@=!=@ operator test for the ``is not identical to'' condition.
+	\end{enumerate}
+
+	\item\textbf{Logical operators:}
+	\begin{enumerate}
+		\item The logical operators \verb@&&@ and \verb@||@ operate on 
+		integers and reals.  The zero value of these types are considered 
+		\Expr{FALSE} and non-zero values \Expr{TRUE}.
+
+		\item The operators are \emph{not} strict, and exploit the 
+		``don't care'' properties of the operators to squash \Expr{UNDEFINED}
+		and \Expr{ERROR} values when possible.  For example,
+		\verb@UNDEFINED && FALSE@ evaluates to \Expr{FALSE}, but	
+		\verb@UNDEFINED || FALSE@ evaluates to \Expr{UNDEFINED}.
+
+		\item Any string operand is equivalent to an \Expr{ERROR} operand
+		for a logical operator.  In other words,
+		\verb@TRUE && "foobar"@ evaluates to \Expr{ERROR}.
+	\end{enumerate}
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Expression Examples}
+\label{ClassAd:examples}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd!expression examples}
+
+The \Expr{=?=} operator is similar to the \Expr{==} operator.
+It checks if the left hand side operand is identical in both type and value
+to the the right hand side operand, returning \Expr{TRUE} when they
+are identical.
+A key point in understanding is that
+the \Expr{=?=} operator only produces evaluation results of \Expr{TRUE}
+and \Expr{FALSE},
+where the \Expr{==} operator may produce evaluation results \Expr{TRUE},
+\Expr{FALSE}, \Expr{UNDEFINED}, or \Expr{ERROR}.
+Table~\ref{expr-examples-1} presents examples that define the
+outcome of the \Expr{==} operator.
+Table~\ref{expr-examples-2} presents examples that define the
+outcome of the \Expr{=?=} operator.
+
+% Karen's table of == expression examples
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{8cm}p{4cm}|} \hline
+\Bold{expression} & \Bold{evaluated result} \\ \hline \hline
+\Expr{(10 == 10)}                       & \Expr{TRUE}  \\
+\Expr{(10 == 5)}                        & \Expr{FALSE} \\
+\Expr{(10 == "ABC")}                    & \Expr{ERROR} \\
+\Expr{(10 == UNDEFINED)}                & \Expr{UNDEFINED} \\
+\Expr{(UNDEFINED == UNDEFINED)}         & \Expr{UNDEFINED}  \\ \hline
+\end{tabular}
+\caption{\label{expr-examples-1}Evaluation examples for the \Expr{==} operator}
+\end{table}
+\end{center}
+
+% Karen's table of =?= expression examples
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{8cm}p{4cm}|} \hline
+\Bold{expression} & \Bold{evaluated result} \\ \hline \hline
+\Expr{(10 =?= 10)}                       & \Expr{TRUE}  \\
+\Expr{(10 =?= 5)}                        & \Expr{FALSE} \\
+\Expr{(10 =?= "ABC")}                    & \Expr{FALSE} \\
+\Expr{(10 =?= UNDEFINED)}                & \Expr{FALSE} \\
+\Expr{(UNDEFINED =?= UNDEFINED)}         & \Expr{TRUE}  \\ \hline
+\end{tabular}
+\caption{\label{expr-examples-2}Evaluation examples for the \Expr{=?=} operator}
+\end{table}
+\end{center}
+
+The \Expr{=!=} operator is similar to the \Expr{!=} operator.
+It checks if the left hand side operand is \emph{not} identical 
+in both type and value to the the right hand side operand,
+returning \Expr{FALSE} when they are identical.
+A key point in understanding is that
+the \Expr{=!=} operator only produces evaluation results of \Expr{TRUE}
+and \Expr{FALSE},
+where the \Expr{!=} operator may produce evaluation results \Expr{TRUE},
+\Expr{FALSE}, \Expr{UNDEFINED}, or \Expr{ERROR}.
+Table~\ref{expr-examples-3} presents examples that define the
+outcome of the \Expr{!=} operator.
+Table~\ref{expr-examples-4} presents examples that define the
+outcome of the \Expr{=!=} operator.
+
+% Karen's table of != expression examples
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{8cm}p{4cm}|} \hline
+\Bold{expression} & \Bold{evaluated result} \\ \hline \hline
+\Expr{(10 != 10)}                       & \Expr{FALSE}  \\
+\Expr{(10 != 5)}                        & \Expr{TRUE} \\
+\Expr{(10 != "ABC")}                    & \Expr{ERROR} \\
+\Expr{(10 != UNDEFINED)}                & \Expr{UNDEFINED} \\
+\Expr{(UNDEFINED != UNDEFINED)}         & \Expr{UNDEFINED}  \\ \hline
+\end{tabular}
+\caption{\label{expr-examples-3}Evaluation examples for the \Expr{!=} operator}
+\end{table}
+\end{center}
+
+% Karen's table of =!= expression examples
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{8cm}p{4cm}|} \hline
+\Bold{expression} & \Bold{evaluated result} \\ \hline \hline
+\Expr{(10 =!= 10)}                       & \Expr{FALSE}  \\
+\Expr{(10 =!= 5)}                        & \Expr{TRUE} \\
+\Expr{(10 =!= "ABC")}                    & \Expr{TRUE} \\
+\Expr{(10 =!= UNDEFINED)}                & \Expr{TRUE} \\
+\Expr{(UNDEFINED =!= UNDEFINED)}         & \Expr{FALSE}  \\ \hline
+\end{tabular}
+\caption{\label{expr-examples-4}Evaluation examples for the \Expr{=!=} operator}
+\end{table}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Old ClassAds in the Condor System}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The simplicity and flexibility of ClassAds is heavily exploited in the Condor
+system.  ClassAds are not only used to represent machines and jobs in the 
+Condor pool, but also other entities that exist in the pool such as 
+checkpoint servers, submitters of jobs and master daemons.  Since arbitrary
+expressions may be supplied and evaluated over these ads, users have a uniform
+and powerful mechanism to specify constraints over these ads.  These constraints
+can take the form of \Attr{Requirements} expressions in resource and job ads,
+or queries over other ads.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Constraints and Preferences}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{ClassAd attribute!requirements}
+\index{ClassAd attribute!rank}
+The \AdAttr{requirements} and \AdAttr{rank} expressions
+within the submit description file
+are the mechanism
+by which users specify the constraints and preferences of jobs.
+For machines, the configuration determines both 
+constraints and preferences of the machines.
+
+\index{rank attribute!examples}
+\index{requirements attribute}
+For both machine and job, 
+the \Attr{rank} expression specifies
+the desirability of the match (where higher numbers mean better matches).
+For example, a job ad may contain the following expressions:
+\footnotesize
+\begin{verbatim}
+Requirements = Arch=="INTEL" && OpSys == "LINUX"
+Rank         = TARGET.Memory + TARGET.Mips
+\end{verbatim}
+\normalsize
+In this case, the job requires an Intel 32-bit computer running RHEL 3
+as its operating system.
+Among all such computers,
+the customer prefers those with large physical memories and high MIPS ratings.  
+Since the \Attr{Rank} is a user-specified metric,
+\emph{any} expression may be used to specify the
+perceived desirability of the match.
+The \Condor{negotiator} daemon runs algorithms
+to deliver the best resource (as defined by the \Attr{rank} expression)
+while satisfying other required criteria.
+
+Similarly, the machine may place constraints and preferences on 
+the jobs that it will run by setting the machine's configuration.
+For example,
+\footnotesize
+\begin{verbatim}
+    Friend        = Owner == "tannenba" || Owner == "wright"
+    ResearchGroup = Owner == "jbasney" || Owner == "raman"
+    Trusted       = Owner != "rival" && Owner != "riffraff"
+    START         = Trusted && ( ResearchGroup || LoadAvg < 0.3 &&
+                         KeyboardIdle > 15*60 )
+    RANK          = Friend + ResearchGroup*10
+\end{verbatim}
+\normalsize
+
+The above policy states that the computer will never run jobs owned by
+users rival and riffraff, while the computer will always run a 
+job submitted by members of the research group.
+Furthermore,
+jobs submitted by friends are preferred to other foreign jobs,
+and jobs submitted
+by the research group are preferred to jobs submitted by friends. 
+
+\textbf{Note:}  Because of the dynamic nature of ClassAd expressions, there
+is no \emph{a priori} notion of an integer-valued expression, a real-valued
+expression, etc.  However, it is intuitive to think of the \Attr{Requirements}
+and \Attr{Rank} expressions as integer-valued and real-valued expressions,
+respectively.  If the actual type of the expression is not of the expected 
+type, the value is assumed to be zero.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{classad-query-examples}Querying with ClassAd Expressions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The flexibility of this system may also be used when querying ClassAds
+through the \Condor{status} and \Condor{q} tools which allow users to
+supply ClassAd constraint expressions from the command line.
+
+Needed syntax is different on Unix and Windows platforms, 
+due to the interpretation of characters in forming command-line arguments.
+The expression must be a single command-line argument,
+and the resulting examples differ for the platforms.
+For Unix shells,
+single quote marks are used to delimit a single argument.
+For a Windows command window,
+double quote marks are used to delimit a single argument.
+Within the argument,
+Unix escapes the double quote mark by prepending a backslash to the double
+quote mark.
+Windows escapes the double quote mark by prepending another double
+quote mark. There may not be spaces in between.
+
+Here are several examples.
+To find all computers which have had their keyboards idle for 
+more than 20 minutes and have more than 100 MB of memory,
+the desired ClassAd expression is
+\footnotesize
+\begin{verbatim}
+KeyboardIdle > 20*60 && Memory > 100
+\end{verbatim}
+\normalsize
+On a Unix platform, the command appears as
+\footnotesize
+\begin{verbatim}
+% condor_status -const 'KeyboardIdle > 20*60 && Memory > 100'
+
+Name       Arch     OpSys        State      Activity   LoadAv Mem  ActvtyTime
+
+amul.cs.wi SUN4u    SOLARIS251   Claimed    Busy       1.000  128   0+03:45:01
+aura.cs.wi SUN4u    SOLARIS251   Claimed    Busy       1.000  128   0+00:15:01
+balder.cs. INTEL    SOLARIS251   Claimed    Busy       1.000  1024  0+01:05:00
+beatrice.c INTEL    SOLARIS251   Claimed    Busy       1.000  128   0+01:30:02
+...
+...
+                     Machines Owner Claimed Unclaimed Matched Preempting
+
+    SUN4u/SOLARIS251        3     0       3         0       0          0
+    INTEL/SOLARIS251       21     0      21         0       0          0
+    SUN4x/SOLARIS251        3     0       3         0       0          0
+       INTEL/WINNT51        1     0       0         1       0          0
+         INTEL/LINUX        1     0       1         0       0          0
+
+               Total       29     0      28         1       0          0
+\end{verbatim}
+\normalsize
+
+The Windows equivalent command is
+\footnotesize
+\begin{verbatim}
+>condor_status -const "KeyboardIdle > 20*60 && Memory > 100"
+\end{verbatim}
+\normalsize
+
+Here is an example for a Unix platform that utilizes a regular expression
+ClassAd function to list specific information.
+A file contains ClassAd information.
+\Condor{advertise} is used to inject this information,
+and \Condor{status} constrains the search with an expression
+that contains a ClassAd function.
+
+\footnotesize
+\begin{verbatim}
+% cat ad
+MyType = "Generic"
+FauxType = "DBMS"
+Name = "random-test"
+Machine = "f05.cs.wisc.edu"
+MyAddress = "<128.105.149.105:34000>"
+DaemonStartTime = 1153192799
+UpdateSequenceNumber = 1
+
+% condor_advertise UPDATE_AD_GENERIC ad
+
+% condor_status -any -constraint 'FauxType=="DBMS" && regexp("random.*", Name, "i")'
+
+MyType               TargetType           Name                          
+
+Generic              None                 random-test                   
+
+\end{verbatim}
+\normalsize
+
+The ClassAd expression describing a machine that
+advertises a Windows NT operating system:
+\footnotesize
+\begin{verbatim}
+OpSys == "WINNT51"
+\end{verbatim}
+\normalsize
+Here are three equivalent ways on a Unix platform to list all machines
+advertising a Windows NT operating system.
+Spaces appear in these examples to show where they are permitted.
+\footnotesize
+\begin{verbatim}
+% condor_status -constraint ' OpSys == "WINNT51"  '
+\end{verbatim}
+\normalsize
+\footnotesize
+\begin{verbatim}
+% condor_status -constraint OpSys==\"WINNT51\"
+\end{verbatim}
+\normalsize
+\footnotesize
+\begin{verbatim}
+% condor_status -constraint "OpSys==\"WINNT51\""
+\end{verbatim}
+\normalsize
+
+The equivalent command on a Windows platform to list all machines
+advertising a Windows NT operating system must delimit the single
+argument with double quote marks, and then escape the needed
+double quote marks that identify the string within the expression. 
+Spaces appear in this example where they are permitted.
+\footnotesize
+\begin{verbatim}
+>condor_status -constraint " OpSys == ""WINNT51"" "
+\end{verbatim}
+\normalsize
+
+\index{ClassAd|)}

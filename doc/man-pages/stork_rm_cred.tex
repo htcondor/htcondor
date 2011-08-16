@@ -1,0 +1,36 @@
+\begin{ManPage}{\label{man-stork-rm-cred}\Stork{rm\_cred}}{1}
+{cause the \Stork{credd} daemon to remove a credential}
+\Synopsis \SynProg{\Stork{rm\_cred}}
+\ToolArgsBase
+
+\SynProg{\Stork{rm\_cred}}
+\oOpt{-debug}
+\oOptArg{-N}{credential-name}
+\OptArg{-n}{hostname:portnumber}
+
+
+\index{Condor commands!stork\_rm\_cred}
+\index{Stork commands!stork\_rm\_cred}
+\index{stork\_rm\_cred command}
+
+\Description 
+
+\Stork{rm\_cred} removes a credential from the \Stork{credd} daemon.
+
+\begin{Options}
+  \ToolArgsBaseDesc
+  \OptItem{\Opt{-debug}}{Show extra debugging information.}
+  \OptItem{\OptArg{-n}{hostname:portnumber}}
+    {Identify the \Stork{credd} daemon
+    by host name and port number.}
+  \OptItem{\OptArg{-N}{credential-name}}{The unique name of
+    the credential to be removed.  When not specified,
+    the \Stork{credd} daemon uses the string "DEFAULT" as the unique name.}
+\end{Options}
+
+\ExitStatus
+
+\Stork{rm\_cred} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
