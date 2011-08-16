@@ -86,6 +86,12 @@ itself as the condor user.  Previously, supplementary groups were
 preserved.  Now supplementary groups are cleared and set to the list of groups
 to which the condor user belongs.
 
+% commit 3d145180fd55b0d50e74656765cebe561c840830
+% commit fea686687f5dda08908e03b5595c517b3ddda03a
+% gittrac #2331
+\item Fixed a bug where setting \MacroNI{DAGMAN\_PROHIBIT\_MULTI\_JOBS} to
+\MacroNI{True} causes subDAGs to stop working.
+
 \end{itemize}
 
 \noindent Known Bugs:
