@@ -17,41 +17,60 @@
 #
 
 # uses Suds - https://fedorahosted.org/suds/
+import logging
 from suds import *
 from suds.client import Client
 from sys import exit, argv, stdin
 import time
+from aviary.https import *
+import argparse
 
 # change these for other default locations and ports
-job_wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
+wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
+url = "http://localhost:9090/services/job/"
+key = '/etc/pki/tls/certs/client.key'
+cert = '/etc/pki/tls/certs/client.crt'
+client = Client(wsdl);
 
 cmds = ['holdJob', 'releaseJob', 'removeJob']
 
-cmdarg = len(argv) > 1 and argv[1]
-cproc =  len(argv) > 2 and argv[2]
-job_url = len(argv) > 3 and argv[3] or "http://localhost:9090/services/job/"
+parser = argparse.ArgumentParser(description='Control job state remotely via SOAP.')
+parser.add_argument('-q','--quiet', action="store_true",default=True, help='disable/enable SOAP logging')
+parser.add_argument('-u','--url', action="store", nargs='?', dest='url', help='http or https URL prefix to be added to cmd')
+parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
+parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
+parser.add_argument('cmd', action="store", choices=(cmds))
+parser.add_argument('cproc', action="store", help="a cluster.proc id like '1.0' or '5.3'")
+args =  parser.parse_args()
 
-if cmdarg not in cmds:
-	print "error unknown command: ", cmdarg
-	print "available commands are: ",cmds
-	exit(1)
+if args.url and "https://" in args.url:
+	url = args.url
+	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
 
-client = Client(job_wsdl);
-job_url += cmdarg
-client.set_options(location=job_url)
+url += args.cmd
+client.set_options(location=url)
+
+# enable to see service schema
+if args.verbose:
+	logging.basicConfig(level=logging.INFO)
+	logging.getLogger('suds.client').setLevel(logging.DEBUG)
+	print client
 
 # set up our JobID
 jobId = client.factory.create('ns0:JobID')
-jobId.job = cproc
+jobId.job = args.cproc
 
 try:
-	func = getattr(client.service, cmdarg, None)
+	func = getattr(client.service, args.cmd, None)
 	if callable(func):
-	    result = func(jobId,"test")
+		print 'invoking', url, 'for job', args.cproc
+		result = func(jobId,"test")
 except Exception, e:
-	print "unable to access scheduler at: ", job_url
+	print "unable to access scheduler at: ", url
 	print e
 	exit(1)
 
 if result.code != "OK":
-	print result.code,"; ", result.text
+	print result.code,":", result.text
+else:
+	print cmd, 'succeeded'
