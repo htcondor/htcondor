@@ -35,7 +35,8 @@
 \oOpt{-valgrind}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
-
+\oOptArg{-schedd-daemon-ad-file}{FileName}
+\oOptArg{-schedd-address-file}{FileName}
 
 \index{Condor commands!condor\_submit\_dag}
 \index{condor\_submit\_dag command}
@@ -260,6 +261,20 @@ description.
      Using the \Opt{-valgrind} option without the necessary
      \Prog{valgrind} software installed will cause the DAG to fail.
      If the DAG does run, it will run much more slowly than usual.
+  }
+  \OptItem{\OptArg{-schedd-daemon-ad-file}{FileName}}{
+    Specifies a full path to a daemon ad file dropped by a \Condor{schedd}.
+    Therefore this allows submission to a specific scheduler if several
+    are available without repeatedly querying the \Condor{collector}.
+    The value for this argument defaults to the configuration attribute
+    \MacroNI{SCHEDD\_DAEMON\_AD\_FILE}.
+  }
+   \OptItem{\OptArg{-schedd-address-file}{FileName}}{
+    Specifies a full path to an address file dropped by a \Condor{schedd}.
+    Therefore this allows submission to a specific scheduler if several
+    are available without repeatedly querying the \Condor{collector}.
+    The value for this argument defaults to the configuration attribute
+    \MacroNI{SCHEDD\_ADDRESS\_FILE}.
   }
   \end{Options}
 

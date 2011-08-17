@@ -3206,6 +3206,12 @@ SetJobStatus()
 	MyString buffer;
 
 	if( hold && (hold[0] == 'T' || hold[0] == 't') ) {
+		if ( Remote ) {
+			fprintf( stderr,"\nERROR: Cannot set '%s' to 'true' when using -remote or -spool\n", 
+					 Hold );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 		buffer.sprintf( "%s = %d", ATTR_JOB_STATUS, HELD);
 		InsertJobExpr (buffer, false);
 

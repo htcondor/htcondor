@@ -64,40 +64,53 @@ suppressed, and in other cases not.  Now, the default
 are explicit references to \Attr{RequestMemory} in the job
 requirements.
 
-% gittrac #2340
 \item Fixed a bug that could cause Condor to crash when using 
 the Local Credential Mapping Service (LCMAPS) with
 GSI authentication.
+\Ticket{2340}
 
-% gittrac #2357
 \item Fixed a bug that caused the \Condor{collector} daemon to crash
 upon receiving a CCB command,
 when \Macro{ENABLE\_CCB\_SERVER} was changed from \Expr{True} to \Expr{False}
 without restarting the daemon.
+\Ticket{2357}
 
-% gittrac #2345
-\item The gahp\_server no longer consumes all of the cpu when compiled
+\item The GT2 GAHP no longer consumes all of the CPU when compiled
 with threaded Globus libraries.
+\Ticket{2345}
 
-%gittrac #2116
 \item Fixed a problem introduced in Condor version 7.5.6, which led to 
 local lock files for user log locking always being created whether or 
-not \MacroNI{ENABLE\_USERLOG\_LOCKING} was set to false.
+not \MacroNI{ENABLE\_USERLOG\_LOCKING} was set to \Expr{false}.
+\Ticket{2116}
 
-% gittrac #2318
-\item Windows service install default is now Automatic Delayed.
+\item Installation as a service by the MSI installer on Windows platforms 
+now sets the default of Automatic Delayed.
+\Ticket{2318}
 
-% gittrac #2376
-\item In privsep mode, if started as root, \Condor{master} re-executes
-itself as the condor user.  Previously, supplementary groups were
-preserved.  Now supplementary groups are cleared and set to the list of groups
-to which the condor user belongs.
+\item In PrivSep mode, if started as \Login{root}, 
+the \Condor{master} re-executes itself as the \Login{condor} user.
+Previously, supplementary groups were preserved.
+Now supplementary groups are cleared and set to the list of groups
+to which the \Login{condor} user belongs.
+\Ticket{2376}
 
 % commit 3d145180fd55b0d50e74656765cebe561c840830
 % commit fea686687f5dda08908e03b5595c517b3ddda03a
-% gittrac #2331
-\item Fixed a bug where setting \MacroNI{DAGMAN\_PROHIBIT\_MULTI\_JOBS} to
-\MacroNI{True} causes subDAGs to stop working.
+\item Fixed a bug where setting \Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS} to
+\Expr{True} caused SUBDAGs to stop working.
+\Ticket{2331}
+
+\item Fixed a bug that caused scheduler universe jobs submitted via
+Condor-C or \Condor{submit} -spool to became held and be unable to run.
+The hold reason was ``File '...' is missing or not executable''.
+\Ticket{2396}
+
+\item \Condor{submit} now exits with an error if command \Macro{hold}
+is set to \Macro{true} when using the -spool or -remote command-line
+arguments. This combination of settings will result in jobs being unable
+to run.
+\Ticket{2398}
 
 \end{itemize}
 
