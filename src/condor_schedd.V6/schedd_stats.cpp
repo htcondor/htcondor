@@ -23,10 +23,10 @@
 #include "schedd_stats.h"
 
 
-#define SCHEDD_STATS_ENTRY(name, as)   GENERIC_STATS_ENTRY(ScheddStatistics, name, as)
-#define SCHEDD_STATS_ENTRY_TQ(name, as) GENERIC_STATS_ENTRY_TQ(ScheddStatistics, name, as)
-#define SCHEDD_STATS_ENTRY_RECENT(name, as) GENERIC_STATS_ENTRY_RECENT(ScheddStatistics, name, as)
-#define SCHEDD_STATS_ENTRY_PEAK(name, as) GENERIC_STATS_ENTRY_PEAK(ScheddStatistics, name, as)
+#define SCHEDD_STATS_ENTRY(name, as)   GENERIC_STATS_ENTRY(ScheddStatistics, "", name, as)
+//#define SCHEDD_STATS_ENTRY_TQ(name, as) GENERIC_STATS_ENTRY_TQ(ScheddStatistics, "", name, as)
+#define SCHEDD_STATS_ENTRY_RECENT(name, as) GENERIC_STATS_ENTRY_RECENT(ScheddStatistics, "", name, as)
+#define SCHEDD_STATS_ENTRY_PEAK(name, as) GENERIC_STATS_ENTRY_PEAK(ScheddStatistics, "", name, as)
 
 // this describes and refers to ScheddStatistics so that we can use
 // generic worker functions to update and publish it.

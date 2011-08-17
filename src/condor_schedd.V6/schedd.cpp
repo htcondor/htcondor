@@ -1060,6 +1060,7 @@ Scheduler::count_jobs()
    #endif // TICKET_2006
 
     daemonCore->publish(m_ad);
+    daemonCore->dc_stats.Publish(*m_ad);
     daemonCore->monitor_data.ExportData(m_ad);
 	extra_ads.Publish( m_ad );
     

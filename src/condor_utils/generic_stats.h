@@ -397,6 +397,7 @@ public:
 // obsolete: use stats_entry_tq for windowed values that need more time accuracy than
 // can be provided by the ring_buffer
 //
+#ifdef _timed_queue_h_
 template <class T> class stats_entry_tq {
 public:
    stats_entry_tq() : value(0), recent(0) {}
@@ -433,6 +434,7 @@ public:
    // can we get rid of this??
    void SetWindowSize(int size) { tq.max_time(size); }
 };
+#endif // _timed_queue_h_
 
 #ifndef FIELDOFF
  #ifdef WIN32
@@ -445,9 +447,9 @@ public:
 
 // use these to help initialize arrays of GenericStatsEntry's
 //
-#define GENERIC_STATS_ENTRY(st,name, as) { #name, as, FIELDOFF(st, name), FIELDSIZ(st, name), 0}
-#define GENERIC_STATS_ENTRY_TQ(st,name,as) { "Recent" #name, as | IS_TIMED_QUEUE, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.tq) }
-#define GENERIC_STATS_ENTRY_RECENT(st,name,as) { "Recent" #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf) }
-#define GENERIC_STATS_ENTRY_PEAK(st,name,as) { #name "Peak" , as, FIELDOFF(st, name.largest), FIELDSIZ(st, name.largest), 0 }
+#define GENERIC_STATS_ENTRY(st,pre,name,as) { pre #name, as, FIELDOFF(st, name), FIELDSIZ(st, name), 0}
+#define GENERIC_STATS_ENTRY_TQ(st,pre,name,as) { pre "Recent" #name, as | IS_TIMED_QUEUE, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.tq) }
+#define GENERIC_STATS_ENTRY_RECENT(st,pre,name,as) { pre "Recent" #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf) }
+#define GENERIC_STATS_ENTRY_PEAK(st,pre,name,as) { pre #name "Peak" , as, FIELDOFF(st, name.largest), FIELDSIZ(st, name.largest), 0 }
 
 #endif /* _GENERIC_STATS_H */

@@ -26,6 +26,8 @@
 static void self_monitor()
 {
     daemonCore->monitor_data.CollectData();
+    daemonCore->dc_stats.Tick();
+    daemonCore->dc_stats.DebugOuts += dprintf_getCount();
 }
 
 SelfMonitorData::SelfMonitorData()
@@ -123,3 +125,139 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
     return success;
 }
 
+//------------------------------------------------------------------------------------------
+//                          DaemonCore Statistics
+
+// this structure controls what members of dc_stats are published, and what names
+// they are published as. 
+//
+//
+#define DC_STATS_ENTRY(name, as)        GENERIC_STATS_ENTRY(DaemonCore::Stats, "DC", name, as)
+#define DC_STATS_ENTRY_RECENT(name, as) GENERIC_STATS_ENTRY_RECENT(DaemonCore::Stats, "DC", name, as)
+#define DC_STATS_ENTRY_PEAK(name, as)   GENERIC_STATS_ENTRY_PEAK(DaemonCore::Stats, "DC", name, as)
+
+static const GenericStatsEntry DCStatsTable[] = {
+   DC_STATS_ENTRY(StatsLifetime,         AS_RELTIME),
+   DC_STATS_ENTRY(StatsLastUpdateTime,   AS_ABSTIME),
+   DC_STATS_ENTRY(RecentStatsLifetime,   AS_RELTIME),
+   DC_STATS_ENTRY(RecentWindowMax,       AS_COUNT),
+
+   DC_STATS_ENTRY(SelectWaittime,  AS_RELTIME),
+   DC_STATS_ENTRY(SignalRuntime,   AS_RELTIME),
+   DC_STATS_ENTRY(TimerRuntime,    AS_RELTIME),
+   DC_STATS_ENTRY(SocketRuntime,   AS_RELTIME),
+   DC_STATS_ENTRY(PipeRuntime,     AS_RELTIME),
+
+   DC_STATS_ENTRY(Signals,       AS_COUNT),
+   DC_STATS_ENTRY(TimersFired,   AS_COUNT),
+   DC_STATS_ENTRY(SockMessages,  AS_COUNT),
+   DC_STATS_ENTRY(PipeMessages,  AS_COUNT),
+   //DC_STATS_ENTRY(SockBytes,     AS_COUNT),
+   //DC_STATS_ENTRY(PipeBytes,     AS_COUNT),
+   DC_STATS_ENTRY(DebugOuts,     AS_COUNT),
+
+   DC_STATS_ENTRY_RECENT(SelectWaittime,  AS_RELTIME),
+   DC_STATS_ENTRY_RECENT(SignalRuntime,   AS_RELTIME),
+   DC_STATS_ENTRY_RECENT(TimerRuntime,    AS_RELTIME),
+   DC_STATS_ENTRY_RECENT(SocketRuntime,   AS_RELTIME),
+   DC_STATS_ENTRY_RECENT(PipeRuntime,     AS_RELTIME),
+
+   DC_STATS_ENTRY_RECENT(Signals,       AS_COUNT),
+   DC_STATS_ENTRY_RECENT(TimersFired,   AS_COUNT),
+   DC_STATS_ENTRY_RECENT(SockMessages,  AS_COUNT),
+   DC_STATS_ENTRY_RECENT(PipeMessages,  AS_COUNT),
+   //DC_STATS_ENTRY_RECENT(SockBytes,     AS_COUNT),
+   //DC_STATS_ENTRY_RECENT(PipeBytes,     AS_COUNT),
+   DC_STATS_ENTRY_RECENT(DebugOuts,     AS_COUNT),
+};
+
+// the windowed schedd statistics are quantized to the nearest N seconds
+// WINDOWED_STAT_WIDTH/schedd_stats_window_quantum is the number of slots
+// in the window ring_buffer.
+const int dc_stats_window_quantum = 5*60; // 5min quantum
+
+
+void DaemonCore::Stats::SetWindowSize(int window)
+{
+   this->RecentWindowMax = window;
+   int cMax = window / dc_stats_window_quantum;
+   generic_stats_SetRBMax(DCStatsTable, COUNTOF(DCStatsTable), (char*)this, cMax);
+}
+
+// this is for first time initialization before calling SetWindowSize,
+// use the Clear() method to reset stats after the window size has been set.
+//
+void DaemonCore::Stats::Init() 
+{ 
+   // clear all data members between InitTime and RecentWindowMax.  
+   // note that this will leak Recent data if you do this after calling SetWindowSize.
+   int cb = (int)((char*)&this->RecentWindowMax - (char*)&this->InitTime);
+   memset((char*)&this->InitTime, 0, cb); 
+   this->InitTime = time(NULL); 
+   this->RecentWindowMax = dc_stats_window_quantum; 
+}
+
+void DaemonCore::Stats::Clear()
+{
+   generic_stats_ClearAll(DCStatsTable, COUNTOF(DCStatsTable), (char*)this);
+   this->InitTime = time(NULL);
+   this->StatsPrevUpdateTime = 0;
+   this->StatsLastUpdateTime = 0;
+   this->RecentStatsLifetime = 0;
+}
+
+void DaemonCore::Stats::Publish(ClassAd & ad) const
+{
+   generic_stats_PublishToClassAd(ad, DCStatsTable, COUNTOF(DCStatsTable), (const char *)this);  
+}
+
+void DaemonCore::Stats::Unpublish(ClassAd & ad) const
+{
+   generic_stats_DeleteInClassAd(ad, DCStatsTable, COUNTOF(DCStatsTable), (const char *)this);  
+}
+
+void DaemonCore::Stats::Tick()
+{
+   time_t now = time(NULL);
+
+   // when working from freshly initialized stats, the first Tick should not Advance.
+   //
+   if (this->StatsLastUpdateTime == 0)
+      {
+      this->StatsLastUpdateTime = now;
+      this->StatsPrevUpdateTime = now;
+      this->RecentStatsLifetime = 0;
+      return;
+      }
+
+   // whenever 'now' changes, we want to check to see how much time has passed
+   // since the last Advance, and if that time exceeds the quantum, we advance.
+   //
+   if (this->StatsLastUpdateTime != now) 
+      {
+      time_t delta = now - this->StatsPrevUpdateTime;
+
+      // if the time since last update exceeds the window size, just throw away the recent data
+      if (delta >= this->RecentWindowMax)
+         {
+         generic_stats_ClearRecent(DCStatsTable, COUNTOF(DCStatsTable), (char*)this);
+         this->StatsPrevUpdateTime = this->StatsLastUpdateTime;
+         this->RecentStatsLifetime = this->RecentWindowMax;
+         delta = 0;
+         }
+      else if (delta >= dc_stats_window_quantum)
+         {
+         for (int ii = 0; ii < delta / dc_stats_window_quantum; ++ii)
+            {
+            generic_stats_AdvanceRecent(DCStatsTable, COUNTOF(DCStatsTable), (char*)this, 1);
+            }
+         this->StatsPrevUpdateTime = now - (delta % dc_stats_window_quantum);
+         }
+
+      time_t recent_window = (int)(this->RecentStatsLifetime + now - this->StatsLastUpdateTime);
+      this->RecentStatsLifetime = min(recent_window, (time_t)this->RecentWindowMax);
+      this->StatsLastUpdateTime = now;
+      }
+
+   this->StatsLifetime = now - this->InitTime;
+}
