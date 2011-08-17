@@ -1,2 +1,502 @@
 Aviary - Simplified RPC Interface for Condor
---------------------------------------------
+............................................
+
+Overview
+========
+This contrib provides a simplified web service interface for job submission, 
+management, and queries. This interface was designed to abstract some of the 
+complexity of Condor while at the same time provide access through a 
+ubiquitous network transport such as HTTP. It currently uses SOAP for request 
+and response exchanges between the Condor Aviary-enabled components and generic 
+web service clients that can be developed using Java, Python, Ruby and other 
+languages. The target audience for Aviary are those developers who need to 
+quickly make use of Condor without having the time to consume the depth and 
+breadth of knowledge associated with its entire HTC capabilities.
+
+Birdbath versus Aviary
+======================
+Aviary is an alternative to the Birdbath SOAP interface. The key differences 
+are:
+	* Aviary uses WS02 and Axis2/C for its SOAP transport stack while Birdbath 
+	uses gSOAP
+	* The Aviary WSDL and XSD strives for simplicity while Birdbath offers a 
+	relatively fine-grained API
+	* Birdbath must be compiled into DaemonCore while Aviary is a contrib that 
+	can be mixed into existing deployments that support Condor dynamic library 
+	plug-ins
+	* WS02 and Axis2/C are ASL2 while gSOAP uses an assortment of commercial, 
+	public, and GPL v2 licenses
+
+WS02 and Axis2/C
+================
+Axis2/C is a C-based SOAP engine that supports several of the WS-* standards
+including WS-Addressing, WS-Security, and WS-Eventing:
+http://axis.apache.org/axis2/c/core/
+
+WS02 Web Services Framework for C++ is a C++ wrapper around Axis2/C. It 
+generates C++ types from WSDL and XSD:
+http://wso2.com/products/web-services-framework/cpp/
+
+Model
+=====
+The entities of this API are:
+
+    * job - A job is the basic unit of work. It has a minimum set of attributes, 
+    including the full path of the command to be executed, arguments to that 
+    command, the owner of the job, and requirements that provide information to 
+    Condor for matching to a resource that can execute the job.
+    * submission - A submission is an association of jobs under a common name 
+    key, like "my_submission_for_today". Aviary can generate a submission name 
+    if none is provided.
+    * attribute - Attributes describe aspects of a job. Some attributes can be 
+    set when the job is submitted or later edited when the job is still actively 
+    being processed in the Condor job queue. Condor will specify many job 
+    attributes after a submission but a user can also provide their own custom 
+    attributes if they are meaningful to the execution of the application that 
+    is represented by a job.
+
+SOAP and WSDL
+=============
+The API types are described using XML schema and the operations using WSDL. This 
+schema-based approach allows developers to generate the code for types and 
+operations into their preferred native programming language using a client web 
+service toolkit. Some popular web service toolkits:
+
+    * Apache Axis or CXF (Java)
+    * Suds (Python)
+    * Savon (Ruby)
+
+Installation
+============
+RPM
+---
+Install the condor-aviary package for RHEL/Fedora. This will install the 
+required software components, including the WSDL and schema files for Aviary:
+
+	/var/lib/condor/aviary/services/job/aviary-common.xsd
+	/var/lib/condor/aviary/services/job/aviary-job.wsdl
+	/var/lib/condor/aviary/services/job/aviary-job.xsd
+	/var/lib/condor/aviary/services/query/aviary-common.xsd
+	/var/lib/condor/aviary/services/query/aviary-query.wsdl
+	/var/lib/condor/aviary/services/query/aviary-query.xsd
+
+These files can be used to develop a remote web service client.
+
+NOTE: Currently, due to a limitation in the underlying web service stack 
+(Axis2/C), it is not possible to dynamically retrieve the WSDL and imported XSD 
+over HTTP using the ?wsdl URL syntax.
+
+Source
+------
+Aviary can be included in a Condor source build using the following variables 
+when cmake is invoked:
+
+	-DWANT_CONTRIB:BOOL=TRUE -DWITH_MANAGEMENT:BOOL=TRUE -DWITH_AVIARY:BOOL=TRUE
+
+Configuration
+=============
+Included is the Schedd plugin, AviaryScheddPlugin-plugin.so, and the aviary_query_server
+
+# The general Aviary config file for Axis2
+# axis2.xml has parameters that point to lib and services dir
+WSFCPP_HOME=/var/lib/condor/aviary/axis2.xml
+
+# Aviary Schedd plugin, provides submission and job control endpoint
+SCHEDD.PLUGINS = $(SCHEDD.PLUGINS) $(LIB)/plugins/AviaryScheddPlugin-plugin.so
+
+# Port the Aviary Schedd plugin listens on, default 9090
+#SCHEDD.HTTP_PORT = 9090
+
+# Aviary query server, provides endpoint for job and submission queries
+QUERY_SERVER = $(SBIN)/aviary_query_server
+QUERY_SERVER_ARGS = -f
+QUERY_SERVER.QUERY_SERVER_LOG = $(LOG)/QueryServerLog
+QUERY_SERVER.QUERY_SERVER_DEBUG = D_ALWAYS
+DAEMON_LIST = $(DAEMON_LIST), QUERY_SERVER
+
+# Port the QueryServer listens on, default 9091
+#QUERY_SERVER.HTTP_PORT = 9091
+
+# HISTORY_INTERVAL specifies the number of seconds between polls of the HISTORY file, default 120
+#QUERY_SERVER.HISTORY_INTERVAL = 120
+
+# If there is more than one Schedd on the system or if the Schedd and
+# QueryServer reside on different systems, it is necessary to tell the
+# QueryServer the name of the Schedd it is working with via
+# QUERY_SERVER.SCHEDD_NAME. This allows the QueryServer to provide
+# fully-qualified job ids, i.e. cluster.proc:pool:scheduler. Default
+# is constructed in the same way the Schedd constructs its name.
+#QUERY_SERVER.SCHEDD_NAME =
+
+Core Types
+==========
+The XML schema defines some core types which are meaningful in understanding how 
+the Aviary operations are to be invoked and their results interpreted.
+
+JobId
+-----
+A unit of information that fully describes a job's identity:
+
+    * job - The local identifier for a job assigned to a specific scheduler. It 
+    is a string that encodes two positive integers like "1.0", "84.3", 
+    "2001.68", etc. The first integer is a reference to a local job grouping 
+    that may have multiple parts with attributes in common that are enumerated 
+    by the second integer (for example, "1.0", "1.1", "1.2", "1.3", and so on). 
+    The most typical example is a group of jobs that share the same command but 
+    pass different arguments to the command, and in turn each job in the group 
+    writes its output to a different file.
+    * scheduler - A string that identifies where the job was submitted (schedd)
+    * pool - A string that identifies a particular Condor deployment (an arena 
+    of schedulers, job execution resources, and components that match jobs to 
+    those resources).
+
+SubmissionId
+------------
+A unit of information that describes a submission in two parts:
+
+    * name - A string provided by the user or one that has been generated on the 
+    user's behalf at submission time. Submission names can be thought of as a 
+    way to associate and aggregate jobs in a way meaningful to the developer, 
+    such as "my_submission_04302011". Since submissions are open-ended, a user 
+    could keep adding individual submissions to this aggregating name over time 
+    even though the individual jobs may have been scheduled and executed at 
+    different times by Condor. For example, the jobs "1.0", "79.0", "2011.0" 
+    could all be part of the submission named "my_submission_04302011".
+    * owner - A string identifying the name of the original submitter.
+
+Attribute
+---------
+An attribute is a type-coded piece of information used by Condor to evaluate, 
+organize and execute job matching and processing. Condor jobs have multiple 
+attributes, some of which are specified by the user prior to submission and many 
+which are attached to a job by the Condor infrastructure when it is added to the 
+job queue. Indeed, a Condor job is the sum of its attributes. An attribute 
+consists of:
+
+    * name - A string denoting the name of this attribute. Names are either 
+    pre-defined names understood by the Condor infrastructure or a custom 
+    attribute name.
+    * type - An enumerated string with values STRING, INTEGER, FLOAT, 
+    EXPRESSION, BOOLEAN
+    * value - The string form of the value.
+
+JobStatus
+---------
+A job can be in one of several states:
+
+    * idle - The job is in a state where it is not ready or able to be assigned 
+    to a resource yet.
+    * running - The job is assigned to a computational resource and executing 
+    there.
+    * held - The job exists in the Condor job queue but is being held back from 
+    execution.
+    * completed - The job ran to completion.
+    * removed - The job was deleted from the job queue by a user.
+
+ResourceConstraint
+------------------
+A ResourceConstraint is a basic quality that Condor should consider when 
+matching a new job to a resource. There are five enumerated basic constraints 
+defined in Aviary:
+
+    * OS - currently "LINUX" or WINDOWS" for the most prevalent operating 
+    systems
+    * ARCH - "INTEL" or "X86_64" for 32-bit or 64-pit platforms respectively, 
+    important when the executable needed by the job is compiled to a particular 
+    architecture
+    * MEMORY - expected total RAM required to run job
+    * DISK - expected total  disk space to run job
+    * FILESYSTEM - the domain name representing a uniformly mounted network file 
+    system, configured by a Condor administrator
+
+Job Submission and Management
+=============================
+
+Operations
+----------
+
+- submitJob
+
+Input:
+    * cmd - a string with the absolute path to an executable or script
+    * args - an optional string containing arguments for the cmd
+    * owner - a string identifying the submitter
+    * iwd - the initial working directory where the job will be executed
+    * submission_name - an optional string identifying the submission that 
+    should be created or that this job should be attached to
+    * requirements - an optional list of ResourceConstraints that specify what 
+    type of resource this job should be targetted toward
+    * extra - an optional list of Attributes that refine the submit request 
+    beyond the basic fields or supercede the Condor Attributes implied by the 
+    other basic fields in this submit request
+Output: OK or error with diagnostic text if a problem was encountered	
+
+Experienced Condor users who are familiar with crafting specific attributes such 
+as complex Requirements can do so using the extra Attributes field in 
+conjunction with the allowOverrides XML attribute in the request.
+
+- holdJob
+Input: a single JobId and a hold reason (string)	
+Output: OK, or error with text if job not found or parsed	
+
+A hold is a temporary interruption of execution of a job against a resource; 
+holds can be used to affect job attribute edits without going through 
+re-submission.
+
+- releaseJob
+Input: a single JobId and a release reason (string)
+Output: OK, or error with text if job not found or parsed
+
+Releasing a job is moving it out of the held state back to where it is ready to 
+be scheduled again with a resource.
+
+- removeJob
+Input: a single JobId and a remove reason (string)
+Output: OK, or error with text if job not found or parsed
+
+Removal of a job means that the job is prevented from executing to completion, 
+however its existence in the Condor job queue is still maintained as a matter of 
+record.
+
+- setJobAttribute
+Input: a single JobId and a single Attribute
+Output: OK, or error with text if job not found or parsed
+
+Attributes are predefined by Condor or can be created by the user, for example, 
+using a name/type/value shorthand:
+
+    * "JobPrio"/"INTEGER"/"2" - would be the shorthand for the job attribute 
+    predefined by Condor to control job priority, set to a value of 2 giving it 
+    higher priority than the default priority of 0
+    * "Recipe"/"STRING"/"secret sauce" - would be the shorthand for a custom 
+    job attribute provided by a user, only meaningful to their application and 
+    irrelevant to the Condor infrastructure
+
+Job Data Queries
+================
+
+Operations
+----------
+
+- getJobStatus
+
+Input: zero to many JobIds
+Ouput: returns the current status for each JobId input, or an error indicating 
+the job could not be parsed or found 
+
+This is the most efficient query since it returns the least amount of data per 
+job
+
+- getJobSummary
+
+Input: zero to many JobIds
+Output: returns a summary for each JobId input, or an error indicating the job 
+could not be parsed or found
+
+The summary will include the following:
+
+    * command
+    * command arguments
+    * scheduler local time when job was added to job queue
+    * scheduler local time of last update to job status
+    * job status
+    * reason why job was held, released, or removed
+
+- getJobDetails
+
+Input: zero to many JobIds
+Output: returns all the Attributes for each JobId input, or an error indicating 
+the job could not be parsed or found 
+
+This is a potentially expensive operation since one could request ALL the 
+attributes for ALL the jobs tracked in Condor; consider judicious use of 
+summaries for select job sets instead if performance is a concern
+
+- getJobData
+
+Input: a single JobId, the type of data file content requested (ERR, OUT, 
+LOG), the maximum number of bytes to be returned, and whether the file should be 
+read from the front or back	
+Output: the file content requested if successful
+
+Each job can specify an error file (ERR), a log file (LOG), or an output file 
+(OUT); the log file is used by Condor to monitor the progress of the job
+
+- getSubmissionSummaries
+
+Input: zero to many SubmissionIds
+Output: for each valid submission returned, the following job totals will be 
+listed:
+
+    * completed
+    * held
+    * idle
+    * removed
+    * running
+
+Individual job summaries can also be included in the response by setting the 
+XML attribute includeJobSummaries to be true in the request
+
+Security
+========
+
+Aviary provides transport-layer security via HTTPS mutual authentication. The CA
+of the client certificate must be registered with the Aviary services in order 
+to successfully invoke them when SSL is enabled. The SSL certificates and keys 
+can be configured with the following:
+
+AVIARY_SSL = TRUE
+AVIARY_SSL_SERVER_CERT = /path/to/server/certificate/file
+AVIARY_SSL_SERVER_KEY = /path/to/server/private/key/file
+AVIARY_SSL_CA_DIR = /path/to/server/ca/directory
+AVIARY_SSL_CA_FILE = /path/to/server/ca/file
+
+Note that the config value of HTTP_PORT applies in both cases regardless of
+whether SSL is enabled or not. So if SSL is enabled, the Aviary server will
+listen securely at the value of HTTP_PORT.
+
+OpenSSL provides utilities for managing PKI. The following link is a decent
+reference:
+http://www.madboa.com/geek/openssl/
+
+Client Examples
+===============
+
+SOAP
+----
+The following example shows the request and response SOAP XML for a job 
+submission.
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+	xmlns:job="http://job.aviary.grid.redhat.com">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <job:SubmitJob allowOverrides="false">
+         <cmd>/bin/sleep</cmd>
+         <!--Optional:-->
+         <args>40</args>
+         <owner>pmackinn</owner>
+         <iwd>/tmp</iwd>
+         <!--Optional:-->
+         <submission_name>my_submission</submission_name>
+         <!--Zero or more repetitions:-->
+         <requirements>
+            <type>OS</type>
+            <value>LINUX</value>
+         </requirements>
+         <!--Zero or more repetitions:-->
+         <extra>
+            <name>MYDATA</name>
+            <type>STRING</type>
+            <value>the data</value>
+         </extra>
+      </job:SubmitJob>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+   <soapenv:Body>
+      <n:SubmitJobResponse xmlns:n="http://job.aviary.grid.redhat.com">
+         <id>
+            <job>247.0</job>
+            <pool>localhost</pool>
+            <scheduler>pmackinn@localhost.localdomain</scheduler>
+            <submission>
+               <name>my_submission</name>
+               <owner>pmackinn</owner>
+            </submission>
+         </id>
+         <status>
+            <code>OK</code>
+            <text/>
+         </status>
+      </n:SubmitJobResponse>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+
+Ruby
+----
+The following example shows a Ruby Savon web service client that also generates 
+a basic submission.
+
+# uses Savon http://savonrb.com/
+require 'rubygems'
+# httpi >= 0.9.2
+require 'httpi'
+# savon >= 0.9.1
+require 'savon'
+require "openssl"
+
+client = Savon::Client.new do |wsdl|
+  wsdl.document = "/var/lib/condor/aviary/services/job/aviary-job.wsdl"
+  wsdl.endpoint = "http://localhost:9090/services/job/submitJob"
+end
+
+xml =  Builder::XmlMarkup.new
+xml.cmd("/bin/sleep")
+xml.args("40")
+xml.owner("condor")
+xml.iwd("/tmp")
+
+response = client.request :job, "SubmitJob" do
+    soap.namespaces["xmlns:job"] = "http://job.aviary.grid.redhat.com"
+    soap.body = xml.target!
+end
+
+
+Python
+------
+This example shows a Python Suds web service client that invokes one of the job 
+query operations based on user input. It also takes an optional job id argument.
+
+# uses Suds - https://fedorahosted.org/suds/
+import logging
+from suds import *
+from suds.client import Client
+from sys import exit, argv, stdin
+import time
+
+# enable these to see the SOAP messages
+#logging.basicConfig(level=logging.INFO)
+#logging.getLogger('suds.client').setLevel(logging.DEBUG)
+
+# change these for other default locations and ports
+job_wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
+
+cmds = ['getJobStatus', 'getJobSummary', 'getJobDetails']
+
+cmdarg = len(argv) > 1 and argv[1]
+cproc =  len(argv) > 2 and argv[2]
+job_url = len(argv) > 3 and argv[3] or "http://localhost:9091/services/query/"
+
+if cmdarg not in cmds:
+    print "error unknown command: ", cmdarg
+    print "available commands are: ",cmds
+    exit(1)
+
+client = Client(job_wsdl);
+job_url += cmdarg
+client.set_options(location=job_url)
+
+# enable to see service schema
+#print client
+
+# set up our JobID
+if cproc:
+    jobId = client.factory.create("ns0:JobID")
+    jobId.job = cproc
+else:
+    # returns all jobs
+    jobId = None
+
+try:
+    func = getattr(client.service, cmdarg, None)
+    if callable(func):
+        result = func(jobId)
+except Exception, e:
+    print "invocation failed: ", job_url
+    print e
+    exit(1)
+
+print result

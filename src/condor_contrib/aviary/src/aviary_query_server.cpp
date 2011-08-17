@@ -26,9 +26,10 @@
 #include "condor_config.h"
 #include "stat_info.h"
 #include "JobLogMirror.h"
+#include "stl_string_utils.h"
 
 // local includes
-#include "Axis2SoapProvider.h"
+#include "AviaryProvider.h"
 #include "JobServerJobLogConsumer.h"
 #include "JobServerObject.h"
 #include "HistoryProcessingUtils.h"
@@ -38,12 +39,12 @@
 DECL_SUBSYSTEM("QUERY_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
 using namespace std;
+using namespace aviary::transport;
 using namespace aviary::query;
-using namespace aviary::soap;
 using namespace aviary::history;
 
 ClassAd	*ad = NULL;
-Axis2SoapProvider* provider = NULL;
+AviaryProvider* provider = NULL;
 JobLogMirror *mirror = NULL;
 JobServerJobLogConsumer *consumer = NULL;
 JobServerObject *job_server = NULL;
@@ -67,41 +68,21 @@ int main_init(int /* argc */, char * /* argv */ [])
 	mirror = new JobLogMirror(consumer);
 	mirror->init();
 
-    // config then env for our all-important axis2 repo dir
-    const char* log_file = "./aviary_query.axis2.log";
-	string repo_path;
-	char *tmp = NULL;
-	if (tmp = param("WSFCPP_HOME")) {
-		repo_path = tmp;
-		free(tmp);
-	}
-	else if (tmp = getenv("WSFCPP_HOME")) {
-		repo_path = tmp;
-	}
-	else {
-		EXCEPT("No WSFCPP_HOME in config or env");
-	}
-
-	int port = param_integer("HTTP_PORT",9091);
-	int level = param_integer("AXIS2_DEBUG_LEVEL",AXIS2_LOG_LEVEL_CRITICAL);
-
-    // init transport here
-    provider = new Axis2SoapProvider(level,log_file,repo_path.c_str());
-
-    std::string axis_error;
-    if (!provider->init(port,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
-		dprintf(D_ALWAYS, "%s\n",axis_error.c_str());
-        EXCEPT("Failed to initialize Axis2SoapProvider");
-    }
-
 	init_classad();
+
+    string log_name;
+    sprintf(log_name,"aviary_query.%d",daemonCore->getpid());
+    provider = AviaryProviderFactory::create(log_name);
+    if (!provider) {
+        EXCEPT("Unable to configure AviaryProvider. Exiting...");
+    }
 
 	ReliSock *sock = new ReliSock;
 	if (!sock) {
 		EXCEPT("Failed to allocate transport socket");
 	}
 
-	if (!sock->assign(provider->getHttpListenerSocket())) {
+	if (!sock->assign(provider->getListenerSocket())) {
 		EXCEPT("Failed to bind transport socket");
 	}
 	int index;
@@ -115,8 +96,6 @@ int main_init(int /* argc */, char * /* argv */ [])
 	}
 
 	job_server = JobServerObject::getInstance();
-
-	dprintf(D_ALWAYS,"Axis2 listener on http port: %d\n",port);
 
     // before doing any job history processing, set the location of the files
     // TODO: need to test mal-HISTORY values: HISTORY=/tmp/somewhere
@@ -249,7 +228,7 @@ HandleTransportSocket(Service *, Stream *)
 {
 	// respond to a transport callback here
 	std::string provider_error;
-    if (!provider->processHttpRequest(provider_error)) {
+    if (!provider->processRequest(provider_error)) {
         dprintf (D_ALWAYS,"Error processing request: %s\n",provider_error.c_str());
     }
 
