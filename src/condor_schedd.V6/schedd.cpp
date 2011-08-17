@@ -12536,7 +12536,7 @@ Scheduler::claimLocalStartd()
 	q = query.fetchAds(result, startd_addr, &errstack);
 	if ( q != Q_OK ) {
 		dprintf(D_FULLDEBUG,
-				"ERROR: could not fetch ads from local startd : %s\n",
+				"ERROR: could not fetch ads from local startd : %s (%s)\n",
 				startd_addr, getStrQueryResult(q) );
 		return false;
 	}
