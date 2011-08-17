@@ -7370,6 +7370,17 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	userJob = GetJobAd(job_id->cluster,job_id->proc);
 	ASSERT(userJob);
 
+	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
+		iwd) < 0) {
+#ifndef WIN32
+		iwd = "/tmp";
+#else
+		// try to get the temp dir, otherwise just use the root directory
+		char* tempdir = getenv("TEMP");
+		iwd = ((tempdir) ? tempdir : "\\");
+#endif
+	}
+
 	// who is this job going to run as...
 	if (GetAttributeString(job_id->cluster, job_id->proc, 
 		ATTR_OWNER, owner) < 0) {
@@ -7457,6 +7468,13 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 				false, false, true, false, false );
 			goto wrapup;
 		}
+
+		// If the executable filename isn't an absolute path, prepend
+		// the IWD.
+		if ( !fullpath( a_out_name.Value() ) ) {
+			std::string tmp = a_out_name;
+			sprintf( a_out_name, "%s%c%s", iwd.Value(), DIR_DELIM_CHAR, tmp.c_str() );
+		}
 		
 		// Now check, as the user, if we may execute it.
 		filestat = new StatInfo(a_out_name.Value());
@@ -7490,18 +7508,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ERROR,
 		error) < 0) {
 		error = NULL_FILE;
-	}
-	
-	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
-		iwd) < 0) {
-#ifndef WIN32		
-		iwd = "/tmp";
-#else
-		// try to get the temp dir, otherwise just use the root directory
-		char* tempdir = getenv("TEMP");
-		iwd = ((tempdir) ? tempdir : "\\");
-		
-#endif
 	}
 	
 	//change to IWD before opening files, easier than prepending 
