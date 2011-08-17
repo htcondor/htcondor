@@ -35,11 +35,20 @@ using namespace plumage::etl;
 
 struct ODSCollectorPlugin : public Service, CollectorPlugin
 {
-private:
 	string m_name;
 	string m_ip;
+	ODSMongodbOps* m_writer;
 
-public:
+	// TODO: figure out our update/inavlidation strategy
+// 	typedef HashTable<AdNameHashKey, SlotObject *> SlotHashTable;
+// 	SlotHashTable *startdAds;
+// 	typedef HashTable<AdNameHashKey, NegotiatorObject *> NegotiatorHashTable;
+// 	NegotiatorHashTable *negotiatorAds;
+// 	typedef HashTable<AdNameHashKey, SchedulerObject *> SchedulerHashTable;
+// 	SchedulerHashTable *schedulerAds;
+// 	typedef HashTable<AdNameHashKey, GridObject *> GridHashTable;
+// 	GridHashTable *gridAds;
+
 	void
 	initialize()
 	{
@@ -48,6 +57,9 @@ public:
 
 		m_name = getPoolName();
 		m_ip = my_ip_string();
+
+		m_writer = new ODSMongodbOps("condor.collector");
+		m_writer->init("localhost");
 	}
 
 	void
@@ -55,6 +67,7 @@ public:
 	{
 
 		dprintf(D_FULLDEBUG, "ODSCollectorPlugin: shutting down...\n");
+		delete m_writer;
 
 	}
 
@@ -63,9 +76,11 @@ public:
 	{
 		MyString name;
 		AdNameHashKey hashKey;
-		
+
 		// TODO: const hack for make*HashKey and dPrint
 		ClassAd* _ad = const_cast<ClassAd *> (&ad);
+		BSONObjBuilder key;
+		key.append("k",m_name+"#"+time_t_to_String());
 
 		switch (command) {
 		case UPDATE_STARTD_AD:
@@ -79,7 +94,7 @@ public:
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
-			_ad->dPrint(D_FULLDEBUG|D_NOHEADER);
+			m_writer->updateAd(key,_ad);
 
 			break;
 		case UPDATE_NEGOTIATOR_AD:
@@ -93,7 +108,7 @@ public:
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
-			_ad->dPrint(D_FULLDEBUG|D_NOHEADER);
+			m_writer->updateAd(key,_ad);
 
 			break;
 		case UPDATE_SCHEDD_AD:
@@ -107,7 +122,7 @@ public:
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
-			_ad->dPrint(D_FULLDEBUG|D_NOHEADER);
+			m_writer->updateAd(key,_ad);
 
 			break;
 		case UPDATE_GRID_AD:
@@ -117,7 +132,7 @@ public:
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
-			_ad->dPrint(D_FULLDEBUG|D_NOHEADER);
+			m_writer->updateAd(key,_ad);
 
 			break;
 		case UPDATE_COLLECTOR_AD:
@@ -129,9 +144,9 @@ public:
 			if (ad.LookupString(ATTR_MY_ADDRESS, &str)) {
 				string public_addr(str);
 				free(str);
-				
+
 				if (public_addr != m_ip) {
-					_ad->dPrint(D_FULLDEBUG|D_NOHEADER);
+					m_writer->updateAd(key,_ad);
 				}
 			}
 			break;
@@ -146,20 +161,23 @@ public:
 	{
 		AdNameHashKey hashKey;
 
+		// TODO: const hack for make*HashKey
+		ClassAd* _ad = const_cast<ClassAd *> (&ad);
+
 		switch (command) {
 			case INVALIDATE_STARTD_ADS:
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_STARTD_ADS\n");
-				if (!makeStartdAdHashKey(hashKey, ((ClassAd *) &ad), NULL)) {
+				if (!makeStartdAdHashKey(hashKey, _ad, NULL)) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
 				else {
-					dprintf(D_FULLDEBUG, "'%'s startd key invalidated\n",HashString(hashKey).Value());
+					dprintf(D_FULLDEBUG, "'%s' startd key invalidated\n",HashString(hashKey).Value());
 				}
 			break;
 			case INVALIDATE_NEGOTIATOR_ADS:
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_NEGOTIATOR_ADS\n");
-				if (!makeNegotiatorAdHashKey(hashKey, ((ClassAd *) &ad), NULL)) {
+				if (!makeNegotiatorAdHashKey(hashKey, _ad, NULL)) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
@@ -169,7 +187,7 @@ public:
 			break;
 			case INVALIDATE_SCHEDD_ADS:
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_SCHEDD_ADS\n");
-				if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad), NULL)) {
+				if (!makeScheddAdHashKey(hashKey, _ad, NULL)) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
@@ -179,7 +197,7 @@ public:
 			break;
 			case INVALIDATE_GRID_ADS:
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_GRID_ADS\n");
-				if (!makeGridAdHashKey(hashKey, ((ClassAd *) &ad), NULL)) {
+				if (!makeGridAdHashKey(hashKey, _ad, NULL)) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
