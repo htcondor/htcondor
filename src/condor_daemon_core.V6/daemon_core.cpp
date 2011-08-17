@@ -254,6 +254,9 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		EXCEPT("Invalid argument(s) for DaemonCore constructor");
 	}
 
+    dc_stats.Init(); // initilize statistics.
+    dc_stats.SetWindowSize(20*60);
+
 		// Provide cedar sock with pointers to various daemonCore functions
 		// that cannot be directly referenced in cedar, because it
 		// is sometimes used in an application that is not linked with
@@ -3041,6 +3044,8 @@ void DaemonCore::Driver()
 
 	for(;;)
 	{
+        time_t now = time(NULL);
+
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
 			for (i=0;i<maxSig;i++) {
@@ -3051,6 +3056,8 @@ void DaemonCore::Driver()
 						sigTable[i].is_pending = 0;
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &(sigTable[i].data_ptr);
+                        // update statistics
+                        dc_stats.Signals += 1;
 						// log a message
 						dprintf(D_DAEMONCORE,
 										"Calling Handler <%s> for Signal %d <%s>\n",
@@ -3081,6 +3088,11 @@ void DaemonCore::Driver()
 		// windows version of this code is after selector.execute()
 #endif
 
+        // accumulate signal runtime (including timers) as SignalRuntime
+        time_t now2 = time(NULL);
+        dc_stats.SignalRuntime += (now2 - now);
+        now = now2;
+
 		// Prepare to enter main select()
 
 		// call Timeout() - this function does 2 things:
@@ -3094,7 +3106,10 @@ void DaemonCore::Driver()
 		//   and service this outstanding signal and yet we do not
 		//   starve commands...
 
-			timeout = t.Timeout();
+        int num_timers_fired = 0;
+		timeout = t.Timeout(&num_timers_fired);
+
+        dc_stats.TimersFired += num_timers_fired;
 
 		if ( sent_signal == TRUE ) {
 			timeout = 0;
@@ -3102,6 +3117,11 @@ void DaemonCore::Driver()
 		if ( timeout < 0 ) {
 			timeout = TIME_T_NEVER;
 		}
+
+        // accumulate signal runtime (including timers) as SignalRuntime
+        now2 = time(NULL);
+        dc_stats.TimerRuntime += (now2 - now);
+        now = now2;
 
 		// Setup what socket descriptors to select on.  We recompute this
 		// every time because 1) some timeout handler may have removed/added
@@ -3224,6 +3244,12 @@ void DaemonCore::Driver()
 
 		selector.execute();
 
+        // update statistics on time spent waiting in select.
+        now2 = time(NULL);
+        dc_stats.SelectWaittime += (now2 - time_before);
+        now = now2;
+        dc_stats.StatsLifetime = now - dc_stats.InitTime;
+
 		tmpErrno = errno;
 
 		CheckForTimeSkip(time_before, okay_delta);
@@ -3260,6 +3286,7 @@ void DaemonCore::Driver()
 		// in the signalled state in 7.5.5. 
 		if (selector.has_ready() &&
 			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
+            dc_stats.Signals += 1;
 			if ( ! async_pipe_signal) {
 				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.");
 			}
@@ -3302,7 +3329,7 @@ void DaemonCore::Driver()
 			// To avoid repeated calls to time(), store it once
 			// for the following loop; all uses of it below should
 			// be ok if it drifts a little into the past.
-			time_t now = time(NULL);
+			now = time(NULL);
 
 			bool recheck_status = false;
 			//bool call_soap_handler = false;
@@ -3353,6 +3380,10 @@ void DaemonCore::Driver()
 				}	// end of if valid sock entry
 			}	// end of for loop through all sock entries
 
+            now2 = time(NULL);
+            dc_stats.SocketRuntime += (now2 - now);
+            now = now2;
+
 			// scan through the pipe table to find which ones select() set
 			for(i = 0; i < nPipe; i++) {
 				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
@@ -3389,6 +3420,8 @@ void DaemonCore::Driver()
 					if ( (*pipeTable)[i].call_handler ) {
 
 						(*pipeTable)[i].call_handler = false;
+
+                        dc_stats.PipeMessages += 1;
 
 						// save the pentry on the stack, since we'd otherwise lose it
 						// if the user's handler call Cancel_Pipe().
@@ -3486,6 +3519,10 @@ void DaemonCore::Driver()
 			}	// for 0 thru nPipe checking if call_handler is true
 
 
+            now2 = time(NULL);
+            dc_stats.PipeRuntime += (now2 - now);
+            now = now2;
+
 			// Now loop through all sock entries, calling handlers if required.
 			for(i = 0; i < nSock; i++) {
 				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
@@ -3493,6 +3530,8 @@ void DaemonCore::Driver()
 					if ( (*sockTable)[i].call_handler ) {
 
 						(*sockTable)[i].call_handler = false;
+
+                        dc_stats.SockMessages += 1;
 
 						if ( recheck_status &&
 							 ((*sockTable)[i].is_connect_pending == false) )
@@ -3539,6 +3578,10 @@ void DaemonCore::Driver()
 					}	// if call_handler is True
 				}	// if valid entry in sockTable
 			}	// for 0 thru nSock checking if call_handler is true
+
+            now2 = time(NULL);
+            dc_stats.SocketRuntime += (now2 - now);
+            now = now2;
 
 		}	// if rv > 0
 

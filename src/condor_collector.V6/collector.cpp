@@ -1410,6 +1410,7 @@ void CollectorDaemon::sendCollectorAd()
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad );
 
+    daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
 
 	// Send the ad

@@ -2482,6 +2482,7 @@ Daemons::UpdateCollector()
 
 	Update(ad);
     daemonCore->publish(ad);
+    daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
 	daemonCore->sendUpdates(UPDATE_MASTER_AD, ad, NULL, true);
 

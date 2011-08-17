@@ -153,7 +153,7 @@ extern int vprintf_length(const char *format, va_list args);
 static HANDLE debug_win32_mutex = NULL;
 #endif
 static int use_kernel_mutex = -1;
-
+static int dprintf_count = 0;
 /*
 ** Note: setting this to true will avoid blocking signal handlers from running
 ** while we are printing log messages.  It's probably a good idea to block
@@ -344,6 +344,11 @@ _condor_dfprintf( FILE *fp, const char* fmt, ... )
     va_end( args );
 }
 
+int dprintf_getCount(void)
+{
+    return dprintf_count;
+}
+
 /*
 ** Print a nice log message, but only if "flags" are included in the
 ** current debugging flags.
@@ -503,6 +508,8 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 
 			/* restore privileges */
 		_set_priv(priv, __FILE__, __LINE__, 0);
+
+        dprintf_count += 1;
 
 		in_nonreentrant_part = 0;
 	}
