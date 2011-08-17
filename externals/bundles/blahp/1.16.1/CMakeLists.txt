@@ -59,7 +59,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.1-p2 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.1-p3 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -83,9 +83,10 @@ if ( WITH_BLAHP )
 							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}
 							--with-globus-nothr-flavor=gcc${BIT_MODE}dbg
-							--prefix=${BLAHP_INSTALL_LOC}/opt/glite
+							--prefix=${BLAHP_INSTALL_LOC}/opt/glite &&
+							sed -i 's/^hardcode_libdir_flag_spec=.*/hardcode_libdir_flag_spec=/' libtool
 						#--Build Step ----------
-						BUILD_COMMAND cd org.glite.ce.blahp && LD_RUN_PATH='$$ORIGIN/../../lib/condor' make
+						BUILD_COMMAND cd org.glite.ce.blahp && LD_RUN_PATH='${EXTERNALS_RPATH}' make
 						BUILD_IN_SOURCE 1
 						#--install Step ----------
 						INSTALL_DIR ${BLAHP_INSTALL_LOC}
@@ -95,6 +96,7 @@ if ( WITH_BLAHP )
 
 		### set the install
 		install ( DIRECTORY ${BLAHP_INSTALL_LOC}/opt/glite DESTINATION ${C_LIBEXEC} USE_SOURCE_PERMISSIONS )
+		install ( CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ../../lib ${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/glite/lib)" )
 
 		condor_post_external( blahp OFF OFF )
 

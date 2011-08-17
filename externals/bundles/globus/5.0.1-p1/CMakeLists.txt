@@ -71,7 +71,7 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.0.1-p2 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.0.1-p3 "lib;include" "done")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
@@ -112,6 +112,9 @@ if (WITH_GLOBUS)
 						OPENSSL_CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export OPENSSL_CFLAGS &&
 						OPENSSL_LDFLAGS=-L${OPENSSL_INSTALL_LOC}/lib && export OPENSSL_LDFLAGS  )
 
+			set (MODIFY_LIBTOOL true)
+			set (MAKE_GRIDFTP ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
+
 			if(LINUX)
 				set (GLOBUS_FLAGS ${GLOBUS_FLAGS} && OPENSSL_LIBS='-lssl -lcrypto -ldl' && export OPENSSL_LIBS)
 			elseif(DARWIN)
@@ -125,6 +128,14 @@ if (WITH_GLOBUS)
 		else()
 			set (GLOBUS_FLAGS true)
 			set (GLOBUS_DEPENDS ${GT4_REF} ${GT42_REF})
+
+			if (LINUX)
+				set (MODIFY_LIBTOOL sed -i 's/^hardcode_libdir_flag_spec=.*/hardcode_libdir_flag_spec=/' ${GLOBUS_INSTALL_LOC}/sbin/libtool-*)
+				set (MAKE_GRIDFTP LD_RUN_PATH='${EXTERNALS_RPATH}' ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -verbose -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
+			else()
+				set (MODIFY_LIBTOOL true)
+				set (MAKE_GRIDFTP ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -verbose -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
+			endif()
 		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
@@ -146,10 +157,10 @@ if (WITH_GLOBUS)
 								${GLOBUS_FLAGS} &&
 								./configure --prefix=${GLOBUS_INSTALL_LOC} --with-flavor=${GLOBUS_FLAVOR} &&
 								make gpt gssapi_error globus-resource-management-sdk &&
+								${MODIFY_LIBTOOL} &&
 								GLOBUS_LOCATION=${GLOBUS_INSTALL_LOC} && export GLOBUS_LOCATION &&
 								make globus_gridftp_server &&
-								LD_RUN_PATH='$$ORIGIN/../lib/condor' env && LD_RUN_PATH='$$ORIGIN/../lib/condor' ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR} &&
-								mv ${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server ${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server.dynamic
+								${MAKE_GRIDFTP}
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${GLOBUS_INSTALL_LOC}
@@ -197,11 +208,10 @@ if (WITH_GLOBUS)
 
 			condor_post_external( globus "include/${GLOBUS_FLAVOR}" OFF )
 
-			install ( PROGRAMS "${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server.dynamic" DESTINATION ${C_LIBEXEC} RENAME globus-gridftp-server )
+			install ( PROGRAMS "${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server" DESTINATION ${C_LIBEXEC} )
 			if ( LINUX )
 				file( GLOB Libs "${GLOBUS_INSTALL_LOC}/lib/*.so*")
 				install( FILES ${Libs} DESTINATION "${C_LIB}/condor" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE )
-#				install( DIRECTORY "${GLOBUS_INSTALL_LOC}/lib" DESTINATION "${C_LIB}/condor" FILES_MATCHING PATTERN "*.so*" )
 			endif()
 
 	else( NOT PROPER )

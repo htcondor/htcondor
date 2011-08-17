@@ -139,6 +139,26 @@ set( C_RUN_DIR		var/run/condor )
 # set a default generator
 set ( CPACK_GENERATOR "TGZ" )
 
+# CONDOR_RPATH will change depending on whether we're doing a package or
+# tarball build. EXTERNALS_RPATH must include both paths, as we build the
+# externals once for both types. The settings for EXTERNALS_RPATH must be
+# kept in synch with the C_LIB settings made below for package builds.
+# CONDOR_RPATH is modified below if we're doing a pacakge build.
+if ( ${OS_NAME} STREQUAL "LINUX" )
+	set( EXTERNALS_LIB "${C_LIB}/condor" )
+	set( CONDOR_RPATH "$ORIGIN/../lib/condor" )
+	set( EXTERNALS_RPATH "$$ORIGIN/../lib/condor" )
+	if ( ${LINUX_NAME} STREQUAL  "Debian" )
+		set( EXTERNALS_RPATH "${EXTERNALS_RPATH}:/usr/lib/condor" )
+	elseif ( RPM_SYSTEM_NAME )
+		if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
+			set( EXTERNALS_RPATH "${EXTERNALS_RPATH}:/usr/lib/condor" )
+		else()
+			set( EXTERNALS_RPATH "${EXTERNALS_RPATH}:/usr/lib64/condor" )
+		endif()
+	endif()
+endif()
+
 #this needs to be evaluated in order due to WIN collision.
 if(${OS_NAME} STREQUAL "DARWIN")
 	# enable if we desire native packaging.
@@ -355,6 +375,9 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set(CPACK_SET_DESTDIR "ON")
 
 	endif()
+
+	set( EXTERNALS_LIB "/${C_LIB}" )
+	set( CONDOR_RPATH "/${C_LIB}" )
 
 	# Generate empty folder to ship with package
 	# Local dir
