@@ -49,6 +49,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug causing parallel universe jobs to be preempted upon 
+renewal of the job lease, 
+which by default will happen within 20 minutes, 
+essentially meaning that no parallel universe job that takes
+longer than 20 minutes would ever finish.
+\Ticket{2317}
+
 \item When the specified job requirements expression contained a
 reference to \Attr{RequestMemory}, there was inconsistent behavior:
 in some cases the default \Attr{RequestMemory} requirements were
@@ -275,8 +282,8 @@ containing newlines.
 
 \item For Condor versions 7.6.2, 7.6.1, and 7.6.0,
 a bug causes parallel universe jobs to be preempted upon 
-expiration of the job lease, 
-which has a default value of 20 minutes, 
+renewal of the job lease, 
+which by default will happen within 20 minutes, 
 essentially meaning that no parallel universe job that takes
 longer than 20 minutes can ever finish.
 The work around for this bug is to place the following

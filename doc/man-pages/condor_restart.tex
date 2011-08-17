@@ -29,7 +29,7 @@ The \Condor{reconfigure} command cannot be used in the case where the
 
 The command
 \Condor{restart} with no arguments or with the 
-\OptArg{-subsystem}{master} option
+\OptArg{-daemon}{master} option
 will safely shut down all running jobs and all submitted
 jobs from the machine(s) being restarted, then shut down
 all the child daemons of the \Condor{master},
@@ -72,7 +72,7 @@ on the local host:
 
 To restart only the \Condor{startd} on a named machine:
 \begin{verbatim}
-% condor_restart -name bluejay -subsystem startd
+% condor_restart -name bluejay -daemon startd
 \end{verbatim}
 
 To restart a machine within a pool
