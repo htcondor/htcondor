@@ -660,7 +660,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
     free(str);
   }    
 
-  AcctLog->CommitTransaction();
+  AcctLog->CommitNondurableTransaction();
 
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Added match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
 }
@@ -750,7 +750,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
   SetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
   DeleteClassAd(ResourceRecord+ResourceName);
-  AcctLog->CommitTransaction();
+  AcctLog->CommitNondurableTransaction();
 
   dprintf(D_ACCOUNTANT, "(ACCOUNTANT) Removed match between customer %s and resource %s\n",
           CustomerName.Value(),ResourceName.Value());
