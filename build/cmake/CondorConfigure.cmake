@@ -436,7 +436,7 @@ else()
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
 	option(CACHED_EXTERNALS "enable/disable cached externals" ON)
 
-	if (LINUX)
+	if (LINUX AND NOT CONDOR_PACKAGE_BUILD)
 		set(CMAKE_SKIP_RPATH FALSE)
 		set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/condor")
 		set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
@@ -524,6 +524,7 @@ if (NOT WINDOWS)
 	# the following logic if for standard universe *only*
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
 
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
 
 		if (EXT_GLIBC_FOUND)

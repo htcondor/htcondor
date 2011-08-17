@@ -241,6 +241,8 @@ private:
 	int				m_phys_mem;
 	char*			m_arch;
 	char*			m_opsys;
+	int 			m_opsysver;
+	char*			m_opsys_and_ver;
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages

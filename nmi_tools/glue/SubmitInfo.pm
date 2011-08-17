@@ -612,7 +612,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -629,7 +629,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -667,7 +667,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -819,7 +819,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -837,7 +837,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -894,7 +894,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},

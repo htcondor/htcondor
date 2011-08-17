@@ -2249,7 +2249,7 @@ limit above the hard limit (on maximum open files) that it inherits.
 \item[\Macro{NETWORK\_INTERFACE}]
   An IP address of the form \Expr{123.123.123.123} or the name
   of a network device, as in the example \Expr{eth0}.
-  The wild card character (\verb|@|) may be used within either.
+  The wild card character (\Expr{*}) may be used within either.
   For example, \Expr{123.123.*} would match a network interface
   with an IP address of \Expr{123.123.123.123} or \Expr{123.123.100.100}.
   The default value is \Expr{*}, which matches all network interfaces.
@@ -7699,10 +7699,10 @@ the HDFS XML configuration.
   There is no default value for this required variable.
   Defines the value of \Expr{dfs.http.address} in the HDFS XML configuration.
 
-\label{param:HDFSNamenodeWeb}
+\label{param:HDFSDatanodeWeb}
 \item[\Macro{HDFS\_DATANODE\_WEB}]
   The IP address and port number for the HDFS embedded web server within the
-  Name node with the syntax of \Expr{a.b.c.d:portnumber}.
+  Data node with the syntax of \Expr{a.b.c.d:portnumber}.
   The default value for this optional variable is 0.0.0.0:0, which means
   bind to the default interface on a dynamic port.
   Defines the value of \Expr{dfs.datanode.http.address} in 

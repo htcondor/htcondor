@@ -815,7 +815,8 @@ For example, \File{path/to/output\_file} becomes \File{output\_file} in
 the job's initial working directory.
 The name and path of the file
 that is written on the submit side may be modified by
-using \SubmitCmd{transfer\_output\_remaps}.
+using \SubmitCmd{transfer\_output\_remaps}. Note that this remap
+function only works with files but not with directories. 
 
 A directory may be specified using a trailing path separator.
 An example of a trailing path separator is the slash character on Unix
@@ -858,6 +859,7 @@ to the job's initial working directory.
 Multiple remaps can be specified by separating each with a semicolon.
 If you wish to remap file names that contain equals signs or
 semicolons, these special characters may be escaped with a backslash.
+You cannot specify directories to be remapped. 
 
 
 %%%%%%%%%%%%%%%%%%%

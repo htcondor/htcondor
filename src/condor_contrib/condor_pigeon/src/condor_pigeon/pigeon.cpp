@@ -249,7 +249,10 @@ void Pigeon::writeConfigFile() {
       allow_list.append(qpid_allow);
       free(qpid_allow);
     }
-    writeXMLParam("dfs.net.allow", allow_list.print_to_delimed_string(","), &xml);
+    char *tmp_str = allow_list.print_to_delimed_string(",");
+    ASSERT(tmp_str !=  NULL);
+    writeXMLParam("dfs.net.allow", tmp_str , &xml);
+    free(tmp_str);
   }
 
   char *qpid_deny = param("QPID_DENY");
@@ -268,7 +271,10 @@ void Pigeon::writeConfigFile() {
       deny_list.append(qpid_deny); 
       free(qpid_deny);
     }
-    writeXMLParam("dfs.net.deny", deny_list.print_to_delimed_string(","), &xml);
+    char *tmp_str = deny_list.print_to_delimed_string(",");
+    ASSERT(tmp_str !=  NULL);
+    writeXMLParam("dfs.net.deny", tmp_str , &xml);
+    free(tmp_str);
   }
 
   //TODO these shouldn't be hard-coded

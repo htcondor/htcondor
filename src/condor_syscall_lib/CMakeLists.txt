@@ -146,10 +146,4 @@ if( STD_UNIVERSE )
 	install ( FILES ${LIBGCC_EH} DESTINATION ${C_LIB} RENAME libcomp_libgcc_eh.a )
 	install ( FILES ${STDCPLUS} DESTINATION ${C_LIB} RENAME libcomp_libstdc++.a )
 
-	if( ${BIT_MODE} STREQUAL "32" )
-		install ( FILES "/usr/lib/libz.a" DESTINATION ${C_LIB} RENAME libcondor_z.a)
-	else()
-		install ( FILES "/usr/lib64/libz.a" DESTINATION ${C_LIB} RENAME libcondor_z.a)
-	endif()
-	
 endif( STD_UNIVERSE )

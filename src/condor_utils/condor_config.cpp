@@ -1281,6 +1281,7 @@ fill_attributes()
 		   Amended -Pete Keller 06/01/99 */
 
 	const char *tmp;
+	MyString val;
 
 	if( (tmp = sysapi_condor_arch()) != NULL ) {
 		insert( "ARCH", tmp, ConfigTab, TABLESIZE );
@@ -1295,6 +1296,18 @@ fill_attributes()
 	if( (tmp = sysapi_opsys()) != NULL ) {
 		insert( "OPSYS", tmp, ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("OPSYS");
+
+		int ver = sysapi_opsys_version();
+		if (ver > 0) {
+			val.sprintf("%d", ver);
+			insert( "OPSYSVER", val.Value(), ConfigTab, TABLESIZE );
+			extra_info->AddInternalParam("OPSYSVER");
+		}
+	}
+
+	if( (tmp = sysapi_opsys_versioned()) != NULL ) {
+		insert( "OPSYS_AND_VER", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS_AND_VER");
 	}
 
 	if( (tmp = sysapi_uname_opsys()) != NULL ) {
@@ -1305,7 +1318,6 @@ fill_attributes()
 	insert( "SUBSYSTEM", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("SUBSYSTEM");
 
-	MyString val;
 	val.sprintf("%d",sysapi_phys_memory_raw_no_param());
 	insert( "DETECTED_MEMORY", val.Value(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("DETECTED_MEMORY");
