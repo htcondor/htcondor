@@ -33,6 +33,7 @@
 #include "globus_io.h"
 #include "globus_ftp_client.h"
 #include "globus_rsl.h"
+#include "globus_i_ftp_client.h"
 
 /* An extra globus_ftp_client call we've added for our use */
 globus_result_t

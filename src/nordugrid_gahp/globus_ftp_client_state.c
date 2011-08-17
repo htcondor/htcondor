@@ -336,7 +336,7 @@ globus_i_ftp_client_response_callback(
      * machine, which a few states will require.
      */
     
-    pathname =(char *) ((target->url.url_path) ? target->url.url_path : "/");
+    pathname = target->url.url_path ? target->url.url_path : "/";
     
 redo:
     switch(target->state)
@@ -1346,7 +1346,7 @@ redo:
 		const globus_byte_t * p;
 		globus_byte_t *q;
 
-		size = (globus_byte_t *) globus_libc_malloc(
+		size = globus_libc_malloc(
 		    strlen((char *) response->response_buffer+3));
 		for(p = response->response_buffer+4, q = size;
 		    isdigit(*p);
@@ -2247,7 +2247,7 @@ redo:
 	        globus_free(client_handle->pasv_address);
 	    }
 	    client_handle->pasv_address =
-	        (globus_ftp_control_host_port_t*)globus_libc_malloc(sizeof(globus_ftp_control_host_port_t));
+	        globus_libc_malloc(sizeof(globus_ftp_control_host_port_t));
 	    client_handle->num_pasv_addresses = 1;
             
 	    memset(client_handle->pasv_address, 0,
@@ -2295,7 +2295,7 @@ redo:
             goto skip_port;
         }
 
-	tmpstr = (char*) globus_libc_malloc(56 * client_handle->num_pasv_addresses
+	tmpstr = globus_libc_malloc(56 * client_handle->num_pasv_addresses
 				   + 7 /*SPOR|PORT|EPRT\r\n\0*/);
 	                             /* ' |2|<45>|<5>|' == 56 */
 	if(tmpstr == GLOBUS_NULL)
@@ -3759,7 +3759,7 @@ redo:
                 globus_i_ftp_client_url_ent_t * url_ent;
     
                 /* add the one we just sent to the response queue */
-                url_ent = (globus_i_ftp_client_url_ent_t*) globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
+                url_ent = globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
                 url_ent->source_url = NULL;
                 url_ent->dest_url = globus_libc_strdup(target->url_string);
                 globus_l_ftp_client_url_parse(
@@ -3906,7 +3906,7 @@ redo:
                 globus_i_ftp_client_url_ent_t * url_ent;
     
                 /* add the one we just sent to the response queue */
-                url_ent = (globus_i_ftp_client_url_ent_t*) globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
+                url_ent = globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
                 url_ent->source_url = globus_libc_strdup(target->url_string);
                 url_ent->dest_url = NULL;
                 globus_l_ftp_client_url_parse(
@@ -4412,7 +4412,7 @@ redo:
                     result = globus_l_ftp_client_pp_xfer_src_add(
                         client_handle, handle, target, &added);
 
-                    url_ent = (globus_i_ftp_client_url_ent_t*)globus_fifo_dequeue(
+                    url_ent = globus_fifo_dequeue(
                         &client_handle->src_response_pending_queue);
                     if(target->url_string)
                     {
@@ -4434,7 +4434,7 @@ redo:
                     result = globus_l_ftp_client_pp_xfer_dst_add(
                         client_handle, handle, target, &added);
 
-                    url_ent = (globus_i_ftp_client_url_ent_t*)globus_fifo_dequeue(
+                    url_ent = globus_fifo_dequeue(
                         &client_handle->dst_response_pending_queue);
                     if(target->url_string)
                     {
@@ -4658,9 +4658,9 @@ redo:
                     {
                         globus_i_ftp_client_feature_set(
                             client_handle->features_pointer,
-                            (globus_ftp_client_probed_feature_t)i,
+                            i,
                             globus_i_ftp_client_feature_get(
-                                target->features, (globus_ftp_client_probed_feature_t)i));
+                                target->features, i));
                     }
 		}
 		else if(client_handle->op == GLOBUS_FTP_CLIENT_CWD &&
@@ -5005,10 +5005,10 @@ globus_l_ftp_client_parse_feat(
 		i++)
 	    {
 		if(globus_i_ftp_client_feature_get(
-		    target->features, (globus_ftp_client_probed_feature_t)i) == GLOBUS_FTP_CLIENT_MAYBE)
+		    target->features, i) == GLOBUS_FTP_CLIENT_MAYBE)
 		{
 		    globus_i_ftp_client_feature_set(
-		        target->features, (globus_ftp_client_probed_feature_t) i, GLOBUS_FTP_CLIENT_FALSE);
+		        target->features, i, GLOBUS_FTP_CLIENT_FALSE);
 		}
 	    }
 	    return;
@@ -5099,10 +5099,10 @@ globus_l_ftp_client_parse_feat(
 		for(i = 0; i < GLOBUS_FTP_CLIENT_FEATURE_SBUF; i++)
 		{
 		    if(globus_i_ftp_client_feature_get(
-		        target->features, (globus_ftp_client_probed_feature_t)i) == GLOBUS_FTP_CLIENT_MAYBE)
+		        target->features, i) == GLOBUS_FTP_CLIENT_MAYBE)
 		    {
 		        globus_i_ftp_client_feature_set(
-		            target->features, (globus_ftp_client_probed_feature_t)i, GLOBUS_FTP_CLIENT_FALSE);
+		            target->features, i, GLOBUS_FTP_CLIENT_FALSE);
 		    }
 		}
 	    }
@@ -5225,7 +5225,8 @@ globus_l_ftp_client_parse_pasv(
 	    p++;
 	}
     }
-    (*host_port) = (globus_ftp_control_host_port_t*) globus_libc_calloc((*num_pasv_addresses), sizeof(globus_ftp_control_host_port_t));
+    (*host_port) = globus_libc_calloc((*num_pasv_addresses),
+				   sizeof(globus_ftp_control_host_port_t));
 
     if(isdigit(delim = *p))
     {
@@ -5355,7 +5356,7 @@ globus_l_ftp_client_layout_string(
 	if(target->layout.mode != GLOBUS_FTP_CONTROL_STRIPING_PARTITIONED)
 	{
 	    length += 11;	/* "Partitioned" */
-	    ptr = (char *) globus_libc_malloc(length);
+	    ptr = globus_libc_malloc(length);
 	    sprintf(ptr, "StripeLayout=Partitioned;");
 	}
 	break;
@@ -5369,7 +5370,7 @@ globus_l_ftp_client_layout_string(
 	    length +=
 		globus_i_ftp_client_count_digits(
 		    target->attr->layout.round_robin.block_size);
-	    ptr = (char *) globus_libc_malloc(length);
+	    ptr = globus_libc_malloc(length);
 	    sprintf(ptr, "StripeLayout=Blocked;BlockSize=%d;",
 		    (int) target->attr->layout.round_robin.block_size);
 	}
@@ -5412,7 +5413,7 @@ globus_l_ftp_client_parallelism_string(
 	    length += 3 *
 		globus_i_ftp_client_count_digits(
 		    target->attr->parallelism.fixed.size);
-	    ptr = (char *) globus_libc_malloc(length);
+	    ptr = globus_libc_malloc(length);
 	    sprintf(ptr, "Parallelism=%d,%d,%d;",
 		    (int) target->attr->parallelism.fixed.size,
 		    (int) target->attr->parallelism.fixed.size,
@@ -5725,7 +5726,7 @@ globus_l_ftp_client_guess_buffer_command(
     {
         globus_ftp_client_tristate_t            is_supported;
         
-        is_supported = globus_i_ftp_client_feature_get(target->features, (globus_ftp_client_probed_feature_t)i);
+        is_supported = globus_i_ftp_client_feature_get(target->features, i);
         
 	if(is_supported &&
 	   ((globus_l_ftp_client_buffer_cmd_info[i].stor_ok && stor_desired) ||
@@ -5795,13 +5796,13 @@ globus_l_ftp_client_update_buffer_feature(
 
     for(i = 0; i < GLOBUS_FTP_CLIENT_LAST_BUFFER_COMMAND; i++)
     {
-	if(globus_i_ftp_client_feature_get( target->features,(globus_ftp_client_probed_feature_t) i) &&
+	if(globus_i_ftp_client_feature_get( target->features, i) &&
 	   ((globus_l_ftp_client_buffer_cmd_info[i].stor_ok && stor_desired) ||
 	    (globus_l_ftp_client_buffer_cmd_info[i].retr_ok && retr_desired)))
 	{
-	    if(globus_i_ftp_client_feature_get(target->features, (globus_ftp_client_probed_feature_t)i) != ok)
+	    if(globus_i_ftp_client_feature_get(target->features, i) != ok)
 	    {
-	        globus_i_ftp_client_feature_set(target->features, (globus_ftp_client_probed_feature_t)i, ok);
+	        globus_i_ftp_client_feature_set(target->features, i, ok);
 		break;
 	    }
 	}
@@ -6349,7 +6350,7 @@ globus_l_ftp_client_pp_src_add(
         return GLOBUS_SUCCESS;
     }
 
-    url_ent = (globus_i_ftp_client_url_ent_t*) globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
+    url_ent = globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
 
     url_ent->source_url = globus_libc_strdup(pl_source_url);
     url_ent->dest_url = globus_libc_strdup(pl_dest_url);
@@ -6436,7 +6437,7 @@ globus_l_ftp_client_pp_dst_add(
     {
         return GLOBUS_SUCCESS;
     }
-    url_ent = (globus_i_ftp_client_url_ent_t*)globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
+    url_ent = globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
 
     url_ent->source_url = globus_libc_strdup(pl_source_url);
     url_ent->dest_url = globus_libc_strdup(pl_dest_url);
@@ -6518,7 +6519,7 @@ globus_l_ftp_client_pp_get_next(
     }
     else
     {
-        url_ent = (globus_i_ftp_client_url_ent_t*)globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
+        url_ent = globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
 
         url_ent->source_url = globus_libc_strdup(pl_source_url);
         url_ent->dest_url = globus_libc_strdup(pl_dest_url);
@@ -6539,7 +6540,7 @@ globus_l_ftp_client_pp_get_next(
         }
 
         globus_fifo_enqueue(&client_handle->dst_op_queue, url_ent);
-        src_url_ent = (globus_i_ftp_client_url_ent_t*)globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
+        src_url_ent = globus_malloc(sizeof(globus_i_ftp_client_url_ent_t));
         memcpy(src_url_ent, url_ent, sizeof(globus_i_ftp_client_url_ent_t));
         globus_fifo_enqueue(&client_handle->src_op_queue, src_url_ent);
     }
@@ -6791,7 +6792,7 @@ globus_l_ftp_client_send_get(
 
     client_handle = target->owner;
 
-    tmpstr = (char*) globus_libc_malloc(56 * client_handle->num_pasv_addresses + 6);
+    tmpstr = globus_libc_malloc(56 * client_handle->num_pasv_addresses + 6);
 
     if(tmpstr == GLOBUS_NULL)
     {
@@ -6876,7 +6877,7 @@ globus_l_ftp_client_send_put(
 
     client_handle = target->owner;
 
-    tmpstr = (char *) globus_libc_malloc(56 * client_handle->num_pasv_addresses + 6);
+    tmpstr = globus_libc_malloc(56 * client_handle->num_pasv_addresses + 6);
 
     if(tmpstr == GLOBUS_NULL)
     {
