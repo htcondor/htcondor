@@ -94,6 +94,11 @@ to which the \Login{condor} user belongs.
 \Expr{True} caused SUBDAGs to stop working.
 \Ticket{2331}
 
+\item Fixed a bug that caused scheduler universe jobs submitted via
+Condor-C or \Condor{submit} -spool to became held and be unable to run.
+The hold reason was ``File '...' is missing or not executable''.
+\Ticket{2396}
+
 \end{itemize}
 
 \noindent Known Bugs:
