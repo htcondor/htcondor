@@ -11507,8 +11507,14 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 	}
 	
 	if ( claim_id ) {
-		matches->lookup( HashKey(claim_id), match );
-		free(claim_id);
+		// Find out if this claim_id is still something we care about
+		// by first trying to find a match record. Note we also must
+		// check the dedicated scheduler data structs, since the dedicated
+		// scheduler keeps its own sets of match records.
+		match = scheduler.FindMrecByClaimID(claim_id);
+		if (!match) {
+			match = dedicated_scheduler.FindMrecByClaimID(claim_id);
+		}
 	}
 
 	if ( match ) {
@@ -11530,12 +11536,16 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 		}
 	} else {
 		ret_value = -1;
+		ClaimIdParser idp( claim_id );
+		dprintf(D_ALWAYS, "Received startd keepalive for unknown claimid %s\n",
+			idp.publicClaimId() );
 	}
 
 	s->encode();
 	s->code(ret_value);
 	s->end_of_message();
 
+	if (claim_id) free(claim_id);
 	return TRUE;
 }
 
@@ -12837,7 +12847,7 @@ Scheduler::claimLocalStartd()
 	q = query.fetchAds(result, startd_addr, &errstack);
 	if ( q != Q_OK ) {
 		dprintf(D_FULLDEBUG,
-				"ERROR: could not fetch ads from local startd : %s\n",
+				"ERROR: could not fetch ads from local startd : %s (%s)\n",
 				startd_addr, getStrQueryResult(q) );
 		return false;
 	}
