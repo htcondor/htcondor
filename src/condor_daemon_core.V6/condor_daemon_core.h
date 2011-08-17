@@ -1423,49 +1423,51 @@ class DaemonCore : public Service
 		*/
 	void ReloadSharedPortServerAddr();
 
-   //-----------------------------------------------------------------------------
-   /*
-     Statistical values for the operation of DaemonCore, to be published in the
-     ClassAd for the daemon.
-   */
-   class Stats {
-   public:
-      // InitTime should be the first data member, and RecentWindowMax the last data member..
-      time_t InitTime;            // last time we init'ed the structure
-      time_t StatsPrevUpdateTime; // the prior time that statistics were updated. 
 
-      // published values
-      time_t StatsLifetime;       // total time the daemon has been collecting statistics. (uptime)
-      time_t StatsLastUpdateTime; // last time that statistics were last updated. (a freshness time)
-      time_t RecentStatsLifetime; // actual time span of current DCRecentXXX data.
-      
-      stats_entry_recent<time_t> SelectWaittime; //  total time spent waiting in select
-      stats_entry_recent<time_t> SignalRuntime;  //  total time spent handling signals
-      stats_entry_recent<time_t> TimerRuntime;   //  total time spent handling timers
-      stats_entry_recent<time_t> SocketRuntime;  //  total time spent handling socket messages
-      stats_entry_recent<time_t> PipeRuntime;    //  total time spent handling pipe messages
+	//-----------------------------------------------------------------------------
+	/*
+  	 Statistical values for the operation of DaemonCore, to be published in the
+  	 ClassAd for the daemon.
+	*/
+	class Stats {
+	public:
+	   // InitTime should be the first data member, and RecentWindowMax the last data member..
+	   time_t InitTime;            // last time we init'ed the structure
+	   time_t StatsPrevUpdateTime; // the prior time that statistics were updated. 
 
-      stats_entry_recent<int> Signals;        //  number of signals handlers called
-      stats_entry_recent<int> TimersFired;    //  number of timer handlers called
-      stats_entry_recent<int> SockMessages;   //  number of socket handlers called
-      stats_entry_recent<int> PipeMessages;   //  number of pipe handlers called
-      //stats_entry_recent<int> SockBytes;      //  number of bytes passed though the socket (can we do this?)
-      //stats_entry_recent<int> PipeBytes;      //  number of bytes passed though the socket
-      stats_entry_recent<int> DebugOuts;      //  number of dprintf calls that were written to output.
+	   // published values
+	   time_t StatsLifetime;       // total time the daemon has been collecting statistics. (uptime)
+	   time_t StatsLastUpdateTime; // last time that statistics were last updated. (a freshness time)
+	   time_t RecentStatsLifetime; // actual time span of current DCRecentXXX data.
+   
+	   stats_entry_recent<time_t> SelectWaittime; //  total time spent waiting in select
+	   stats_entry_recent<time_t> SignalRuntime;  //  total time spent handling signals
+	   stats_entry_recent<time_t> TimerRuntime;   //  total time spent handling timers
+	   stats_entry_recent<time_t> SocketRuntime;  //  total time spent handling socket messages
+	   stats_entry_recent<time_t> PipeRuntime;    //  total time spent handling pipe messages
 
-      // InitTime should be the first data member, and RecentWindowMax the last data member..
-      int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+	   stats_entry_recent<int> Signals;        //  number of signals handlers called
+	   stats_entry_recent<int> TimersFired;    //  number of timer handlers called
+	   stats_entry_recent<int> SockMessages;   //  number of socket handlers called
+	   stats_entry_recent<int> PipeMessages;   //  number of pipe handlers called
+	   //stats_entry_recent<int> SockBytes;      //  number of bytes passed though the socket (can we do this?)
+	   //stats_entry_recent<int> PipeBytes;      //  number of bytes passed though the socket
+	   stats_entry_recent<int> DebugOuts;      //  number of dprintf calls that were written to output.
 
-      // helper methods
-      //Stats();
-      //~Stats();
-      void Init();
-      void Clear();
-      void Tick(); // call this when time may have changed to update StatsLastUpdateTime, etc.
-      void SetWindowSize(int window);
-      void Publish(ClassAd & ad) const;
-      void Unpublish(ClassAd & ad) const;
-   } dc_stats;
+	   // InitTime should be the first data member, and RecentWindowMax the last data member..
+	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+
+	   // helper methods
+	   //Stats();
+	   //~Stats();
+	   void Init();
+	   void Clear();
+	   void Tick(); // call this when time may have changed to update StatsLastUpdateTime, etc.
+	   void SetWindowSize(int window);
+	   void Publish(ClassAd & ad) const;
+	   void Unpublish(ClassAd & ad) const;
+
+	} dc_stats;
 
   private:      
 
@@ -1910,6 +1912,8 @@ class DaemonCore : public Service
 
 	void InitSharedPort(bool in_init_dc_command_socket=false);
 };
+
+
 
 #ifndef _NO_EXTERN_DAEMON_CORE
 

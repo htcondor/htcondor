@@ -440,7 +440,8 @@ public:
  #ifdef WIN32
   #define FIELDOFF(st,fld) FIELD_OFFSET(st, fld)
  #else
-  #define FIELDOFF(st,fld) ((int)(size_t)&(((st *)0)->fld))
+  //#define FIELDOFF(st,fld) ((int)(size_t)&(((st *)0)->fld))
+  #define FIELDOFF(st,fld) offsetof(st,fld)
  #endif
  #define FIELDSIZ(st,fld) ((int)(sizeof(((st *)0)->fld)))
 #endif

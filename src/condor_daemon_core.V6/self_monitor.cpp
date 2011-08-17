@@ -255,7 +255,7 @@ void DaemonCore::Stats::Tick()
          }
 
       time_t recent_window = (int)(this->RecentStatsLifetime + now - this->StatsLastUpdateTime);
-      this->RecentStatsLifetime = min(recent_window, (time_t)this->RecentWindowMax);
+      this->RecentStatsLifetime = (recent_window < this->RecentWindowMax) ? recent_window : this->RecentWindowMax;
       this->StatsLastUpdateTime = now;
       }
 
