@@ -99,6 +99,12 @@ Condor-C or \Condor{submit} -spool to became held and be unable to run.
 The hold reason was ``File '...' is missing or not executable''.
 \Ticket{2396}
 
+\item \Condor{submit} now exits with an error if command \Macro{hold}
+is set to \Macro{true} when using the -spool or -remote command-line
+arguments. This combination of settings will result in jobs being unable
+to run.
+\Ticket{2398}
+
 \end{itemize}
 
 \noindent Known Bugs:
