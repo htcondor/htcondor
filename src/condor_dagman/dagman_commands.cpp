@@ -65,7 +65,6 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		 const char* submitFile,
 		 const char *precmd, const char *postcmd, bool noop,
 		 bool done,
-		 bool isSubDag,
 		 MyString &failReason )
 {
 	MyString why;
@@ -77,8 +76,7 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		failReason = why;
 		return false;
 	}
-	Job* node = new Job( type, name, directory, submitFile,
-				dag->ProhibitMultiJobs() && !isSubDag);
+	Job* node = new Job( type, name, directory, submitFile );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in

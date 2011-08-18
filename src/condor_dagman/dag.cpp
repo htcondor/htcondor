@@ -3471,7 +3471,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
       			submit_success = condor_submit( dm, cmd_file.Value(), condorID,
 							node->GetJobName(), parents,
 							node->varNamesFromDag, node->varValsFromDag,
-							node->GetDirectory(), logFile );
+							node->GetDirectory(), logFile,
+							ProhibitMultiJobs() );
 			}
     	} else if( node->JobType() == Job::TYPE_STORK ) {
 	  		node->_submitTries++;
