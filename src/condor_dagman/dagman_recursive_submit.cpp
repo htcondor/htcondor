@@ -120,6 +120,10 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 	if ( deepOpts.updateSubmit ) {
 		args.AppendArg( "-update_submit" );
 	}
+	if( deepOpts.priority != 0) {
+		args.AppendArg( "-Priority" );
+		args.AppendArg( deepOpts.priority );
+	}
 
 	args.AppendArg( dagFile );
 
