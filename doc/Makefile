@@ -1,5 +1,5 @@
-SUBDIR = v7.6.3
-SUBVER = V7_6_3
+SUBDIR = v7.6.4
+SUBVER = V7_6_4
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
 LOCALDIR = ref-v76
