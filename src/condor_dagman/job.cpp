@@ -996,3 +996,23 @@ Job::GetPreSkip() const
 	}
 	return _preskip;
 }
+
+//---------------------------------------------------------------------------
+// If there is a cycle, could this enter an infinite loop?
+// No: If there is a cycle, there will be equality, and recursion will stop
+// It makes no sense to insert job priorities on linear DAGs;
+void
+Job::FixPriority(const int /* priority */,Dag& dag)
+{
+	set<JobID_t> parents = GetQueueRef(Q_PARENTS);
+	for(set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
+		Job* parent = dag.FindNodeByNodeID(*p);
+		if( parent->_hasNodePriority ) {
+			// Nothing to do if parent priority is small
+			if( parent->_nodePriority > _nodePriority ) {
+				_nodePriority = parent->_nodePriority;
+				_hasNodePriority = true;
+			}
+		}
+	}
+}
