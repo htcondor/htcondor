@@ -98,16 +98,15 @@ Job::~Job() {
 
 //---------------------------------------------------------------------------
 Job::Job( const job_type_t jobType, const char* jobName,
-			const char *directory, const char* cmdFile,
-			bool prohibitMultiJobs ) :
+			const char *directory, const char* cmdFile ) :
 	_jobType( jobType ), _preskip( PRE_SKIP_INVALID )
 {
-	Init( jobName, directory, cmdFile, prohibitMultiJobs );
+	Init( jobName, directory, cmdFile );
 }
 
 //---------------------------------------------------------------------------
 void Job::Init( const char* jobName, const char* directory,
-			const char* cmdFile, bool prohibitMultiJobs )
+			const char* cmdFile )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -128,24 +127,6 @@ void Job::Init( const char* jobName, const char* directory,
 	_throttleInfo = NULL;
 	_logIsMonitored = false;
 	_useDefaultLog = false;
-
-	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
-		MyString	errorMsg;
-		int queueCount = MultiLogFiles::getQueueCountFromSubmitFile(
-					MyString( _cmdFile ), MyString( _directory ),
-					errorMsg );
-		if ( queueCount == -1 ) {
-			debug_printf( DEBUG_QUIET, "ERROR in "
-						"MultiLogFiles::getQueueCountFromSubmitFile(): %s\n",
-						errorMsg.Value() );
-			main_shutdown_rescue( EXIT_ERROR );
-		} else if ( queueCount != 1 ) {
-			debug_printf( DEBUG_QUIET, "ERROR: node %s job queues %d "
-						"job procs, but DAGMAN_PROHIBIT_MULTI_JOBS is "
-						"set\n", _jobName, queueCount );
-			main_shutdown_rescue( EXIT_ERROR );
-		}
-	}
 
     // _condorID struct initializes itself
 

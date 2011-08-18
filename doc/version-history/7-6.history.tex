@@ -49,7 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% gittrac #2096
+\item Jobs run via glexec always had their \Env{PATH} environment
+variable cleared.  Now, if \Env{PATH} was specified for the job, (in
+any of the ways that job environment may be specified), this setting
+is used.
 
 \end{itemize}
 
