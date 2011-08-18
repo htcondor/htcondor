@@ -103,11 +103,11 @@ that type.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{ClassAd attribute added by the condor\_collector}
 
-These attributes are only added if \Macro{COLLECTOR\_DAEMON\_STATS} is True.
-See page~\pageref{param:CollectorDaemonStats} for more information on
-configuration variable \MacroNI{COLLECTOR\_DAEMON\_STATS}.
-
 \begin{description}
+
+\index{ClassAd attribute added by the condor\_collector!AuthenticatedIdentity}
+\item[\AdAttr{AuthenticatedIdentity}:] The authenticated name assigned
+  by the \Condor{collector} to the daemon that published the ClassAd.
 
 \index{ClassAd attribute added by the condor\_collector!LastHeardFrom}
 \item[\AdAttr{LastHeardFrom}:] The time inserted into a daemon's
@@ -115,6 +115,7 @@ configuration variable \MacroNI{COLLECTOR\_DAEMON\_STATS}.
   last received a message from the daemon.
   Time is  represented as the number of second elapsed since
   the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+  This attribute is added if \MacroNI{COLLECTOR\_DAEMON\_STATS} is \Expr{True}.
 
 \index{ClassAd attribute added by the condor\_collector!UpdatesHistory}
 \item[\AdAttr{UpdatesHistory}:] A bitmap representing the status of
@@ -123,23 +124,27 @@ configuration variable \MacroNI{COLLECTOR\_DAEMON\_STATS}.
   is non-zero. 
   See page~\pageref{param:CollectorDaemonHistorySize} for more information on
   this setting.
+  This attribute is added if \MacroNI{COLLECTOR\_DAEMON\_STATS} is \Expr{True}.
 
 \index{ClassAd attribute added by the condor\_collector!UpdatesLost}
 \item[\AdAttr{UpdatesLost}:] An integer count of the number of updates
   from the daemon that the \Condor{collector} can definitively determine
   were lost since the \Condor{collector} started running.
+  This attribute is added if \MacroNI{COLLECTOR\_DAEMON\_STATS} is \Expr{True}.
 
 \index{ClassAd attribute added by the condor\_collector!UpdatesSequenced}
 \item[\AdAttr{UpdatesSequenced}:] An integer count of the number of updates
   received from the daemon,
   for which the \Condor{collector} can tell how many were or were not lost,
   since the \Condor{collector} started running.
+  This attribute is added if \MacroNI{COLLECTOR\_DAEMON\_STATS} is \Expr{True}.
 
 \index{ClassAd attribute added by the condor\_collector!UpdatesTotal}
 \item[\AdAttr{UpdatesTotal}:] An integer count started when the
   \Condor{collector} started running, representing the sum
   of the number of updates actually received from the daemon plus
   the number of updates that the \Condor{collector} determined were lost.
+  This attribute is added if \MacroNI{COLLECTOR\_DAEMON\_STATS} is \Expr{True}.
 
 \end{description}
 

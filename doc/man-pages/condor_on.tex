@@ -19,11 +19,11 @@ running on the machine.
 If this is not the case, \Condor{on} will
 fail complaining that it cannot find the address of the master.
 The command \Condor{on} with no arguments or with
- the \OptArg{-subsystem}{master} option will
+ the \OptArg{-daemon}{master} option will
 tell the \Condor{master} to start up the Condor daemons specified
 in the configuration variable \MacroNI{DAEMON\_LIST}.
 If a daemon other than the \Condor{master} is specified
-with the \Opt{-subsystem} option,
+with the \Opt{-daemon} option,
 \Condor{on} starts up only that daemon.
 
 This command cannot be used to start up the \Condor{master} daemon.
@@ -56,7 +56,7 @@ on the local host:
 
 To start up only the \Condor{negotiator} on two named machines:
 \begin{verbatim}
-% condor_on  robin cardinal -subsystem negotiator
+% condor_on  robin cardinal -daemon negotiator
 \end{verbatim}
 
 To start up only a daemon within a pool of machines
@@ -69,7 +69,7 @@ on the single machine named \Opt{cae17} within the
 pool of machines that has \Opt{condor.cae.wisc.edu} as
 its central manager:
 \begin{verbatim}
-% condor_on -pool condor.cae.wisc.edu -name cae17 -subsystem schedd
+% condor_on -pool condor.cae.wisc.edu -name cae17 -daemon schedd
 \end{verbatim}
 
 \end{ManPage}
