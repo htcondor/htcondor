@@ -195,6 +195,7 @@ class Dagman {
 	int _maxJobHolds;
 
 	static strict_level_t _strict;
+	int _defaultPriority;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H
