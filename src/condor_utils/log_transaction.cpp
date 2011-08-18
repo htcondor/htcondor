@@ -23,6 +23,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_mkstemp.h"
+#include "condor_fsync.h"
 
 #define TRANSACTION_HASH_LEN 10000
 
@@ -336,7 +337,7 @@ fsync_with_status(stream_with_status_t* s)
        fileno.  Whether or not this is the right thing to do, it's at
        least backwards-compatible. */
 
-	if (fsync(fd) < 0) {
+	if (condor_fsync(fd) < 0) {
 	  s->why = WHY_FSYNC;
 	  s->err = errno;
 	  return -1;

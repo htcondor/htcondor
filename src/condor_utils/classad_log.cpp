@@ -27,6 +27,7 @@
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 #include "classad_merge.h"
+#include "condor_fsync.h"
 
 #if defined(HAVE_DLOPEN)
 #include "ClassAdLogPlugin.h"
@@ -203,7 +204,7 @@ ClassAdLog::AppendLog(LogRecord *log)
 					EXCEPT("flush to %s failed, errno = %d", logFilename(), errno);
 				}
 					//MD: syncing the data as done before
-				if (fsync(fileno(log_fp)) < 0) {
+				if (condor_fsync(fileno(log_fp)) < 0) {
 					EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
 				}
 			}
@@ -642,7 +643,7 @@ ClassAdLog::LogState(FILE *fp)
 	if (fflush(fp) !=0){
 	  EXCEPT("fflush of %s failed, errno = %d", logFilename(), errno);
 	}
-	if (fsync(fileno(fp)) < 0) {
+	if (condor_fsync(fileno(fp)) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
 	} 
 }
