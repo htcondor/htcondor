@@ -530,8 +530,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 
 	// looks ok, so add it
 	if( !AddNode( dag, nodeType, nodeName, directory,
-			submitFile, NULL, NULL, noop, done, strcasecmp( nodeTypeKeyword, "SUBDAG" ) == MATCH,
-			whynot ) )
+			submitFile, NULL, NULL, noop, done, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );

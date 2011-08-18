@@ -1,0 +1,3 @@
+Config job_dagman_lazy_submit_file.config
+Job LSA job_dagman_lazy_submit_file-node.cmd
+Script PRE LSA job_dagman_lazy_submit_file-pre.pl
