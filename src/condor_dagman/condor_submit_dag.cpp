@@ -806,6 +806,11 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg("-Import_env");
 	}
 
+	if( deepOpts.priority != 0 ) {
+		args.AppendArg("-Priority");
+		args.AppendArg(deepOpts.priority);
+	}
+
 	MyString arg_str,args_error;
 	if(!args.GetArgsStringV1WackedOrV2Quoted(&arg_str,&args_error)) {
 		fprintf(stderr,"Failed to insert arguments: %s",args_error.Value());
@@ -1107,6 +1112,14 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				// No-op here
 			}
+			else if( (strArg.find("-prio") != -1) ) // -priority
+			{
+				if(iArg + 1 >= argc) {
+					fprintf(stderr, "-priority argument needs a value\n");
+					printUsage();
+				}
+				deepOpts.priority = atoi(argv[++iArg]);
+			}
 			else
 			{
 				fprintf( stderr, "ERROR: unknown option %s\n", strArg.Value() );
@@ -1241,5 +1254,6 @@ int printUsage()
 	printf("    -import_env         (explicitly import env into submit file)\n");
 	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
 	printf("    -valgrind           (create submit file to run valgrind on DAGMan)\n");
+	printf("    -priority <priority> (jobs will run with this priority by default)\n");
 	exit(1);
 }
