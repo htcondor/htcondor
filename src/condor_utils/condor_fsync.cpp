@@ -3,7 +3,7 @@
 
 bool condor_fsync_on = true;
 
-int condor_fsync(int fd, const char* path)
+int condor_fsync(int fd, const char* /*path*/)
 {
 	if(!condor_fsync_on)
 		return 0;
