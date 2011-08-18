@@ -28,7 +28,6 @@
 #include <axis2_http_worker.h>
 #include <axutil_network_handler.h>
 #include <axis2_http_svr_thread.h>
-#include <apr-1/apr_poll.h>
 
 #include <openssl/ssl.h>
 
@@ -49,10 +48,10 @@ typedef struct
      axis2_conf_ctx_t *conf_ctx;
      axis2_conf_ctx_t *conf_ctx_private;
 } axis2_http_server_impl_t;
- 
+
 #define AXIS2_INTF_TO_IMPL(http_server) \
  ((axis2_http_server_impl_t *)(http_server))
- 
+
 // lifted out from http_svr_thread.c
 struct axis2_http_svr_thread
 {
@@ -72,7 +71,7 @@ typedef struct axis2_http_svr_thd_args
 
 namespace aviary {
 namespace soap {
-    
+
 // C++ wrapper around a SINGLE-THREADED
 // Axis2/C engine; suitable for integration
 // with DaemonCore socket registration
@@ -82,7 +81,7 @@ class Axis2SoapProvider: public aviary::transport::AviaryProvider {
     public:
         Axis2SoapProvider(int _log_level=AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
         virtual ~Axis2SoapProvider();
-        bool init(int _port, int _read_timeout, std::string& _error);        
+        bool init(int _port, int _read_timeout, std::string& _error);
         SOCKET getListenerSocket();
         bool processRequest(std::string& _error);
 
