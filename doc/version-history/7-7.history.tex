@@ -46,6 +46,14 @@ Now, the error message distinguishes between safety check failures
 for the UID, tracking group ID, primary group ID, and supplementary group IDs.
 \Ticket{2364}
 
+% gittrac #2167
+\item DAGman will now copy PRIORITY values from the DAG file to the JobPrio
+attribute in the JobAd.  Furthermore, the PRIORITY values are propogated to
+child nodes and subDAGs, so that child nodes always have priority at least that
+of the maximum of the priorities of its parents.  This has been a cause of
+confusion for DAGman users.
+\Ticket{2167}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
