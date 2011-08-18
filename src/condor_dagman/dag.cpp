@@ -79,7 +79,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 		  const char *storkRmExe, const CondorID *DAGManJobID,
 		  bool prohibitMultiJobs, bool submitDepthFirst,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
-		  const SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
+		  SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
 		  const MyString &spliceScope ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
@@ -1354,9 +1354,14 @@ Dag::StartNode( Job *node, bool isRetry )
 		return true;
     }
 	// no PRE script exists or is done, so add job to the queue of ready jobs
+	node->FixPriority(0,*this);
 	if ( isRetry && m_retryNodeFirst ) {
 		_readyQ->Prepend( node, -node->_nodePriority );
 	} else {
+		if(node->_hasNodePriority){
+			node->varNamesFromDag->Append(new MyString("priority"));
+			node->varValsFromDag->Append(new MyString(node->_nodePriority));
+		}
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( node, -node->_nodePriority );
 		} else {
@@ -3398,9 +3403,17 @@ Dag::GetEventIDHash(bool isNoop, int jobType) const
 // NOTE: dag addnode/removenode/adddep/removedep methods don't
 // necessarily insure internal consistency...that's currently up to
 // the higher level calling them to get right...
-
-
 //---------------------------------------------------------------------------
+
+namespace {
+void swap_priorities(Job* job, SubmitDagDeepOptions* sdo)
+{
+	int priority = job->_nodePriority;
+	job->_nodePriority = sdo->priority;
+	sdo->priority = priority;
+}
+}
+
 Dag::submit_result_t
 Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 {
@@ -3430,6 +3443,9 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
+		if( node->_hasNodePriority && node->_nodePriority > _submitDagDeepOpts->priority ){
+			swap_priorities(node,_submitDagDeepOpts);
+		}
 		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
 					node->GetDirectory(), isRetry ) != 0 ) {
 			debug_printf( DEBUG_QUIET,
@@ -3437,7 +3453,13 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 						"for node %s.\n", node->GetJobName() );
 				// Hmm -- should this be a node failure, since it probably
 				// won't work on retry?  wenger 2010-03-26
+			if( node->_hasNodePriority && node->_nodePriority < _submitDagDeepOpts->priority ){
+				swap_priorities(node,_submitDagDeepOpts);
+			}
 			return SUBMIT_RESULT_NO_SUBMIT;
+		}
+		if( node->_hasNodePriority && node->_nodePriority < _submitDagDeepOpts->priority ){
+			swap_priorities(node,_submitDagDeepOpts);
 		}
 	}
 
@@ -4005,5 +4027,22 @@ Dag::ResolveVarsInterpolations(void)
 	}
 }
 
-
-
+//---------------------------------------------------------------------------
+// Iterate over the jobs and set the default priority
+void Dag::SetDefaultPriorities()
+{
+	if(GetDefaultPriority() != 0) {
+		Job* job;
+		_jobs.Rewind();
+		while( (job = _jobs.Next()) != NULL ) {
+			// If the DAG file has already assigned a priority
+			// Leave this job alone for now
+			if( !job->_hasNodePriority ) {
+				job->_hasNodePriority = true;
+				job->_nodePriority = GetDefaultPriority();
+			} else if( GetDefaultPriority() > job->_nodePriority ) {
+				job->_nodePriority = GetDefaultPriority();
+			}
+		}
+	}
+}
