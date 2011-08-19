@@ -74,7 +74,7 @@ $submitted = sub
 
 $success = sub
 {
-	die("Node is expected to fail.\n");
+	die("DAG is expected to fail.\n");
 };
 
 $failure = sub 
@@ -82,8 +82,10 @@ $failure = sub
 	CondorTest::debug("Execution was a failure ... as expected\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-	# A_A.out should not exist
-	$diditpass = 0 if (-e "A_A.out");
+	if (-e "A_A.out") {
+		CondorTest::debug("A_A.out exists, but should not!\n",1);
+		$diditpass = 0;
+	}
 	$canopen = open(OUT,"<$outfile");
 	if( ! (defined $canopen)) {
 		CondorTest::debug("Could not open outfile<$outfile>:$!\n",1);
@@ -94,20 +96,15 @@ $failure = sub
 	$passed_first = 0; # Let's be optimistic
 	$passed_second = 0;
 	foreach (@outfilelist) {
+		chomp;
 		if(/PRE Script of Job A_A failed/) {
 			CondorTest::debug("Saw PRE script A_A fail correctly: $_\n",1);
 			$passed_first = 1;
-			last;
 		}
-	}
-	foreach (@outfilelist) {
 		if(/Running POST script of Node A_A/) {
 			CondorTest::debug("Saw POST script A_A run!\n",1);
 			$passed_second = 1;
-			last;
 		}
-	}
-	foreach (@outfilelist) {
 		if(/PRE Script of Node A_A completed successfully/) {
 			CondorTest::debug("PRE script is expected to fail.\n");
 			$diditpass = 0;		
@@ -117,10 +114,15 @@ $failure = sub
 			$diditpass = 0;		
 		}
 	}
-	if($passed_first != 1 || $passed_second != 1) {
-		CondorTest::debug("failed $outfile\n",1);
+	if($passed_first != 1) {
+		CondorTest::debug("Missing A_A PRE script failure!\n",1);
 		$diditpass = 0;
 	}
+	if($passed_second != 1) {
+		CondorTest::debug("Missing A_A POST script run!\n",1);
+		$diditpass = 0;
+	}
+
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}

@@ -72,27 +72,28 @@ $submitted = sub
 
 $failure = sub
 {
-	die("Node is expected to succeed.\n");
+	die("DAG is expected to succeed.\n");
 };
 
 $success = sub 
 {
 	CondorTest::debug("Execution was successful.\n",1);
 	CondorTest::debug("Verifying output in $outfile\n",1);
-	$diditpass = 0;
+	$diditpass = 1;
 	$canopen = open OUT,"<$outfile";
 	if( ! (defined $canopen)) {
 		CondorTest::debug("Could not open outfile<$outfile>:$!\n",1);
 		$diditpass = 0;
 	}
-	my @outfilelist = <OUT>;
+	my @outfilelines = <OUT>;
 	close(OUT);
 	$passed1 = 0; # Let's be optimistic
 	$passed2 = 0;
 	$passed3 = 0;
 	$passed4 = 0;
 	$passed5 = 0;
-	foreach (@outfilelist) {
+	foreach (@outfilelines) {
+		chomp;
 		if(/Retrying node E_A/) {
 			CondorTest::debug("Saw retry statement: $_\n",1);
 			$passed1 = 1;
@@ -119,10 +120,27 @@ $success = sub
 			next;
 		}
 	}
-	if($passed1 == 1 && $passed2 == 1 &&$passed3 == 1 && $passed4 == 1 && $passed5 == 1) {
-		CondorTest::debug("Succeeded in $outfile\n",1);
-		$diditpass = 1;
+	if ($passed1 != 1) {
+		CondorTest::debug("Missing retry\n",1);
+		$diditpass = 0;
 	}
+	if ($passed2 != 1) {
+		CondorTest::debug("Missing E_A POST script run\n",1);
+		$diditpass = 0;
+	}
+	if ($passed3 != 1) {
+		CondorTest::debug("Missing E_A PRE script success\n",1);
+		$diditpass = 0;
+	}
+	if ($passed4 != 1) {
+		CondorTest::debug("Missing E_A job submission\n",1);
+		$diditpass = 0;
+	}
+	if ($passed5 != 1) {
+		CondorTest::debug("Missing E_A POST script success\n",1);
+		$diditpass = 0;
+	}
+
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}
