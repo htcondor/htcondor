@@ -16,36 +16,89 @@
  # 
  ############################################################### 
 
-
 set(TOOL_LINK_LIBS "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}")
 
 condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_cod -Wl,--allow-shlib-undefined)
 condor_exe(condor_preen "preen.cpp" ${C_SBIN} "qmgmt;${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_preen -Wl,--allow-shlib-undefined)
 condor_exe(condor_advertise "advertise.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_advertise -Wl,--allow-shlib-undefined)
 condor_exe(condor_fetchlog "fetch_log.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_fetchlog -Wl,--allow-shlib-undefined)
 condor_exe(condor_config_val "config_val.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_config_val -Wl,--allow-shlib-undefined)
 condor_exe(condor_userprio "user_prio.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_userprio -Wl,--allow-shlib-undefined)
 condor_exe(condor_findhost "give_interactive.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_findhost -Wl,--allow-shlib-undefined)
 condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "qmgmt;${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_qedit -Wl,--allow-shlib-undefined)
 
 if (HAVE_SSH_TO_JOB)
 	condor_exe(condor_ssh_to_job "ssh_to_job.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+	# unfortunately libutils comes with undefined symbols introduced by
+	# libdaemon_core (even when linking libutils to it)
+	target_link_libraries(condor_ssh_to_job -Wl,--allow-shlib-undefined)
 endif(HAVE_SSH_TO_JOB)
 
 condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_transfer_data -Wl,--allow-shlib-undefined)
 condor_exe(condor_version "version.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_version -Wl,--allow-shlib-undefined)
 condor_exe(condor_wait "wait.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_wait -Wl,--allow-shlib-undefined)
 condor_exe(condor_history "history.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_history -Wl,--allow-shlib-undefined)
 
 if (WANT_QUILL AND HAVE_EXT_POSTGRESQL)
 	condor_exe(condor_load_history "load_history.cpp" ${C_BIN} "tt;${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
+	# unfortunately libutils comes with undefined symbols introduced by
+	# libdaemon_core (even when linking libutils to it)
+	target_link_libraries(condor_load_history -Wl,--allow-shlib-undefined)
 	condor_exe(condor_dump_history "dump_history.cpp" ${C_BIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
+	# unfortunately libutils comes with undefined symbols introduced by
+	# libdaemon_core (even when linking libutils to it)
+	target_link_libraries(condor_dump_history -Wl,--allow-shlib-undefined)
 	condor_exe(condor_convert_history "convert_history.cpp" ${C_SBIN} "${TOOL_LINK_LIBS};${POSTGRESQL_FOUND}" OFF)
+	# unfortunately libutils comes with undefined symbols introduced by
+	# libdaemon_core (even when linking libutils to it)
+	target_link_libraries(condor_convert_history -Wl,--allow-shlib-undefined)
 endif(WANT_QUILL AND HAVE_EXT_POSTGRESQL)
 
 condor_exe(condor_store_cred "store_cred_main.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_store_cred -Wl,--allow-shlib-undefined)
 
 condor_exe(condor "tool.cpp" "${C_BIN}" "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor -Wl,--allow-shlib-undefined)
 clone_install(condor "${C_BIN}" "condor_on;condor_off;condor_restart;condor_reconfig;condor_set_shutdown" "${C_SBIN}")
 if (WANT_FULL_DEPLOYMENT)
     clone_install(condor "${C_BIN}" "condor_set_shutdown" "${C_SBIN}")
@@ -64,6 +117,9 @@ else(NOT WINDOWS)
 endif(NOT WINDOWS)
 
 condor_exe(condor_stats "stats.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_stats -Wl,--allow-shlib-undefined)
 
 if( WINDOWS )
 	condor_exe(condor_setup "condor_setup.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)

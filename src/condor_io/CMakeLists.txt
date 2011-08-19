@@ -22,3 +22,4 @@ condor_glob( CedarHdrs CedarSrcs "${CeadarRmvSrcs}" )
 
 #create the library
 condor_static_lib(cedar "${CedarHdrs};${CedarSrcs}")
+target_link_libraries(cedar ${KRB5_FOUND} ${OPENSSL_FOUND})

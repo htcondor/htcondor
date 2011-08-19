@@ -27,6 +27,9 @@ if (HAVE_EXT_GLOBUS AND HAVE_LDAP_H AND LDAP_FOUND )
 				${C_SBIN}
 				"${GLOBUS_GRID_UNIVERSE_NORDUGRID};${GLOBUS_GRID_UNIVERSE_COMMON};${GLOBUS_FOUND};${OPENSSL_FOUND};${LDAP_FOUND}"
 				OFF )
+	# unfortunately libutils comes with undefined symbols introduced by
+	# libdaemon_core (even when linking libutils to it)
+	target_link_libraries(nordugrid_gahp -Wl,--allow-shlib-undefined)
 
 else()
 
