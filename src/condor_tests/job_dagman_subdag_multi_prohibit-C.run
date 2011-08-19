@@ -34,9 +34,9 @@ $testdesc =  'Condor submit dag - basic subdag_multi_prohibit test - scheduler U
 $testname = "job_dagman_subdag_multi_prohibit-C";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_subdag_multi_prohibit-C.dag", "job_dagman_subdag_multi_prohibit-SC.subdag");
+@dagfiles = ("job_dagman_subdag_multi_prohibit-C.dag", "job_dagman_subdag_multi_prohibit-C-sub.dag");
 
-foreach (@outfiles) {
+foreach (@dagfiles) {
 	runcmd("rm -f $_.dagman.out");
 }
 
@@ -47,7 +47,7 @@ sub RUNNING{2};
 
 $abnormal = sub 
 {
-	die "Want to see only submit, execute and successful completion\n";
+	die "Want to see only submit, execute and unsuccessful completion\n";
 };
 
 $aborted = sub 
@@ -80,7 +80,7 @@ $failure = sub
 	$passed_setting = 0;
 	$passed2 = 0;
 	$passed3 = 0;
-	foreach $name (@outfiles) {
+	foreach $name (@dagfiles) {
 		$line = "";
 		$canopen = open(OUT,"<$name.dagman.out");
 		if( ! (defined $canopen)) {
@@ -90,29 +90,41 @@ $failure = sub
 		while(<OUT>) {
 			chomp;
 			if(/DAGMAN_PROHIBIT_MULTI_JOBS.+True/){
-				CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is True, as expected.",1);
-				$passed_setting = 1;
+				CondorTest::debug("$name: $_\n",1);
+				CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is True, as expected.\n",1);
+				++$passed_setting;
 			}
 			if(/DAGMAN_PROHIBIT_MULTI_JOBS.+False/){
-				CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is False!",1);
+				CondorTest::debug("$name: $_\n",1);
+				CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is False!\n",1);
 				$passed_setting = 0;
-				die "Unexpected configuration setting";
+				die "DAGMAN_PROHIBIT_MULTI_JOBS should be true\n";
 			}
-			if(/Recursive submit command.+SC\.subdag/){
+			if(/Recursive submit command.+C-sub\.dag/){
+				CondorTest::debug("$name: $_\n",1);
 				CondorTest::debug("Saw recursive submit\n",1);
 				$passed2 = 1;
 			}
-			if(/node SC job queues.+job procs.+DAGMAN_PROHIBIT_MULTI_JOBS is set/) {
-				CondorTest::debug("Good: " . $_ . "\n",1);
+			if(/node C job queues.+job procs.+DAGMAN_PROHIBIT_MULTI_JOBS is set/) {
+				CondorTest::debug("$name: $_\n",1);
+				CondorTest::debug("Saw expected multi-job error message\n",1);
 				$passed3 = 1;
 			}
 		}
 		close(OUT);
 	}
-	if($passed_setting != 1 || $passed2 != 1 || $passed3 != 1){
+	if( $passed_setting != 2 ) {
+		CondorTest::debug("Didn't find expected DAGMAN_PROHIBIT_MULTI_JOBS settings\n",1);
 		$diditpass = 0;
 	}
-	# clean out old output files
+	if($passed2 != 1) {
+		CondorTest::debug("Didn't find expected recursive submit\n",1);
+		$diditpass = 0;
+	}
+	if($passed3 != 1) {
+		CondorTest::debug("Didn't find expected multi-job error message\n",1);
+		$diditpass = 0;
+	}
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}

@@ -230,7 +230,8 @@ bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString DAGParentNodeNames,
 			   List<MyString>* names, List<MyString>* vals,
-			   const char* directory, const char *logFile )
+			   const char* directory, const char *logFile,
+			   bool prohibitMultiJobs )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -239,6 +240,32 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				"Could not change to node directory %s: %s\n",
 				directory, errMsg.Value() );
 		return false;
+	}
+
+	if ( prohibitMultiJobs ) {
+		MyString	errorMsg;
+		int queueCount = MultiLogFiles::getQueueCountFromSubmitFile(
+					MyString( cmdFile ), MyString( directory ),
+					errorMsg );
+		if ( queueCount == -1 ) {
+			debug_printf( DEBUG_QUIET, "ERROR in "
+						"MultiLogFiles::getQueueCountFromSubmitFile(): %s\n",
+						errorMsg.Value() );
+				// We don't just return false here because that would
+				// cause us to re-try the submit, which would obviously
+				// just fail again.
+			main_shutdown_rescue( EXIT_ERROR );
+			return false; // We won't actually get to here.
+		} else if ( queueCount != 1 ) {
+			debug_printf( DEBUG_QUIET, "ERROR: node %s job queues %d "
+						"job procs, but DAGMAN_PROHIBIT_MULTI_JOBS is "
+						"set\n", DAGNodeName, queueCount );
+				// We don't just return false here because that would
+				// cause us to re-try the submit, which would obviously
+				// just fail again.
+			main_shutdown_rescue( EXIT_ERROR );
+			return false; // We won't actually get to here.
+		}
 	}
 
 	ArgList args;

@@ -50,7 +50,8 @@
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, MyString DAGParentNodeNames,
 					List<MyString>* names, List<MyString>* vals,
-					const char* directory, const char *logFile);
+					const char* directory, const char *logFile,
+					bool prohibitMultiJobs );
 
 bool stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				   const char* DAGNodeName, const char* directory );
