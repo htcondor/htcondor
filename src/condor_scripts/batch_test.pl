@@ -58,7 +58,7 @@
 #require 5.0;
 use File::Copy;
 use FileHandle;
-use POSIX "sys_wait_h";
+use POSIX qw/sys_wait_h strftime/;
 use Cwd;
 use CondorUtils;
 use CondorTest;
@@ -112,6 +112,9 @@ Condor::DebugLevel(1);
 #open(STDERR, ">&STDOUT");
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
+
+my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+print "$time: batch_test.pl starting up\n";
 
 my $iswindows = CondorTest::IsThisWindows();
 
