@@ -10,12 +10,11 @@
 void dcloudprintf_internal(const char *function, const char *fmt, ...);
 
 #define STRCASEEQ(a,b) (strcasecmp(a,b) == 0)
+#define STRCASENEQ(a, b) (strcasecmp(a, b) != 0)
 
 #define NULLSTRING "NULL"
 
 extern FILE *logfp;
-
-std::string create_failure(const char *req_id, const char *err_msg, ...);
 
 /* Users of GahpArgs should not manipulate the class data members directly.
  * Changing the object should only be done via the member functions.
@@ -27,13 +26,13 @@ std::string create_failure(const char *req_id, const char *err_msg, ...);
  */
 class Gahp_Args {
  public:
-	Gahp_Args();
-	~Gahp_Args();
-	void reset();
-	void add_arg( char *arg );
-	char **argv;
-	int argc;
-	int argv_size;
+    Gahp_Args();
+    ~Gahp_Args();
+    void reset();
+    void add_arg(char *arg);
+    char **argv;
+    int argc;
+    int argv_size;
 };
 
 #endif

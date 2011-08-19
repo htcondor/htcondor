@@ -474,7 +474,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                        1,
 		                                        job_opt_mask,
 		                                        family_info,
-												affinity_mask);
+												affinity_mask,
+												&create_process_err_msg);
 	}
 	else {
 		JobPid = daemonCore->Create_Process( JobName.Value(),
@@ -499,7 +500,6 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.
 	int create_process_errno = errno;
-	char const *create_process_error = NULL;
 
     // errno is 0 in the privsep case.  This executes for the daemon core create-process logic
     if ((FALSE == JobPid) && (0 != create_process_errno)) {
@@ -507,7 +507,6 @@ OsProc::StartJob(FamilyInfo* family_info)
         MyString errbuf;
         errbuf.sprintf("(errno=%d: '%s')", create_process_errno, strerror(create_process_errno));
         create_process_err_msg += errbuf;
-        create_process_error = create_process_err_msg.Value();       
     }
 
 	// now close the descriptors in fds array.  our child has inherited
@@ -525,7 +524,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 	if ( JobPid == FALSE ) {
 		JobPid = -1;
 
-		if(create_process_error) {
+		if(!create_process_err_msg.IsEmpty()) {
 
 			// if the reason Create_Process failed was that registering
 			// a family with the ProcD failed, it is indicative of a
@@ -547,7 +546,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 				err_msg += args_string.Value();
 			}
 			err_msg += ": ";
-			err_msg += create_process_error;
+			err_msg += create_process_err_msg;
 			if( !ThisProcRunsAlongsideMainProc() ) {
 				Starter->jic->notifyStarterError( err_msg.Value(),
 			    	                              true,
@@ -558,11 +557,11 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 		if( !ThisProcRunsAlongsideMainProc() ) {
 			EXCEPT("Create_Process(%s,%s, ...) failed: %s",
-				JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
+				   JobName.Value(), args_string.Value(), create_process_err_msg.Value());
 		}
 		else {
 			dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s",
-				JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
+					JobName.Value(), args_string.Value(), create_process_err_msg.Value());
 		}
 		return 0;
 	}

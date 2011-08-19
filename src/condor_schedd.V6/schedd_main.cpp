@@ -24,7 +24,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
-#include "my_hostname.h"
 #include "get_daemon_name.h"
 
 #include "exit.h"
@@ -39,6 +38,7 @@
 #include "grid_universe.h"
 #include "condor_netdb.h"
 #include "subsystem_info.h"
+#include "ipv6_hostname.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
@@ -142,13 +142,11 @@ main_init(int argc, char* argv[])
 	tmp = param( "SCHEDD_BACKUP_SPOOL" );
 	if ( tmp ) {
 		if ( (*tmp == 't') || (*tmp == 'T') ) {
-			char	hostname[128];
-			if ( condor_gethostname( hostname, sizeof( hostname ) ) ) {
-				strcpy( hostname, "" );
-			}
+			MyString hostname;
+			hostname = get_local_hostname();
 			MyString		job_queue_backup;
 			job_queue_backup.sprintf( "%s/job_queue.bak.%s",
-					Spool, hostname );
+									  Spool, hostname.Value() );
 			if ( copy_file( job_queue_name.Value(), job_queue_backup.Value() ) ) {
 				dprintf( D_ALWAYS, "Failed to backup spool to '%s'\n",
 						 job_queue_backup.Value() );

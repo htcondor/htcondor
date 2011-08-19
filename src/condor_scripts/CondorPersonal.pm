@@ -286,13 +286,8 @@ sub StartCondorWithParams
 	my $config_and_port = "";
 	my $winpath = "";
 
-	runcmd("mkdir -p $topleveldir");
-	$topleveldir = $topleveldir . "/$testname" . ".saveme";
-	runcmd("mkdir -p $topleveldir");
-	$topleveldir = $topleveldir . "/" . $mpid;
-	runcmd("mkdir -p $topleveldir");
-	$topleveldir = $topleveldir . "/" . $mpid . $version;
-	runcmd("mkdir -p $topleveldir");
+        $topleveldir = "$topleveldir/$testname.saveme/$mpid/$mpid$version";
+	runcmd("mkdir -p $topleveldir/$testname.saveme/$mpid/$mpid$version");
 
 	$procdaddress = $mpid . $version;
 
@@ -601,8 +596,9 @@ sub InstallPersonalCondor
 		close(CONFIG);
 		$personal_condor_params{"condortemplate"} = shift @configfiles;
 		$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
-		#
-		debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
+
+		debug("condor_q: $condorq\n",$debuglevel);
+                debug("topleveldir: $topleveldir",$debuglevel);
 
 		if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ ) {
 			debug( "Root path $1 and base $2\n",$debuglevel);
@@ -641,10 +637,7 @@ sub InstallPersonalCondor
 
 		debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
 
-		runcmd("mkdir -p $topleveldir/execute");
-		runcmd("mkdir -p $topleveldir/spool");
-		runcmd("mkdir -p $topleveldir/log");
-		runcmd("mkdir -p $topleveldir/log/tmp");
+		runcmd("cd $topleveldir && mkdir -p execute spool log log/tmp");
 	}
 	elsif( $condordistribution eq "nightlies" )
 	{
@@ -709,10 +702,7 @@ sub InstallPersonalCondor
 
 		debug( "Sandbox started rooted here: $topleveldir\n",$debuglevel);
 
-		runcmd("mkdir -p $topleveldir/execute");
-		runcmd("mkdir -p $topleveldir/spool");
-		runcmd("mkdir -p $topleveldir/log");
-		runcmd("mkdir -p $topleveldir/log/tmp");
+		runcmd("cd $topleveldir && mkdir -p execute spool log log/tmp");
 	}
 	elsif( -e $condordistribution )
 	{
@@ -724,14 +714,11 @@ sub InstallPersonalCondor
 		# run in the NWO.
 
 		my $res = chdir "$topleveldir";
-		if(! $res)
-		{
-			die "Relcation failed!\n";
+		if(!$res) {
+			die "chdir $topleveldir failed: $!\n";
 			exit(1);
 		}
-		runcmd("mkdir -p $topleveldir/execute");
-		runcmd("mkdir -p $topleveldir/spool");
-		runcmd("mkdir -p $topleveldir/log");
+		runcmd("cd $topleveldir && mkdir -p execute spool log");
 		runcmd("tar -xf $home/$condordistribution");
 		$sbinloc = $topleveldir; # local_dir is here
 		chdir "$home";

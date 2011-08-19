@@ -36,7 +36,6 @@
 #include "condor_qmgr.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
-#include "my_hostname.h"
 #include "condor_state.h"
 #include "sig_install.h"
 #include "condor_email.h"
@@ -49,6 +48,7 @@
 #include "file_lock.h"
 #include "../condor_privsep/condor_privsep.h"
 #include "filename_tools.h"
+#include "ipv6_hostname.h"
 
 State get_machine_state();
 
@@ -137,6 +137,11 @@ main( int argc, char *argv[] )
 				RmFlag = TRUE;
 				break;
 
+              case 'd':
+                  Termlog = 1;
+                  dprintf_config("TOOL");
+                  break;
+
 			  default:
 				usage();
 
@@ -192,7 +197,8 @@ produce_output()
 		fprintf( mailer, "\n" );
 		fprintf( mailer,
 			 "The condor_preen process has found the following\n"
-			 "stale condor files on <%s>:\n\n", my_hostname() );
+			 "stale condor files on <%s>:\n\n", 
+			 get_local_hostname().Value() );
 	}
 
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
@@ -312,13 +318,14 @@ check_spool_dir()
 	well_known_list.append( "Accountantnew.log" );
 	well_known_list.append( "local_univ_execute" );
 	well_known_list.append( "EventdShutdownRate.log" );
+	well_known_list.append( "OfflineLog" );
 		// SCHEDD.lock: High availability lock file.  Current
 		// manual recommends putting it in the spool, so avoid it.
 	well_known_list.append( "SCHEDD.lock" );
 		// These are Quill-related files
 	well_known_list.append( ".quillwritepassword" );
 	well_known_list.append( ".pgpass" );
-
+	
 	// connect to the Q manager
 	if (!(qmgr = ConnectQ (0))) {
 		dprintf( D_ALWAYS, "Not cleaning spool directory: Can't contact schedd\n" );
@@ -831,7 +838,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 	MyString	buf;
 
 	if( is_relative_to_cwd( name ) ) {
-		pathname.sprintf( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+	pathname.sprintf( "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
 	}
 	else {
 		pathname = name;

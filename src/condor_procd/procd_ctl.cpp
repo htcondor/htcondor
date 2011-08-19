@@ -25,6 +25,8 @@
 static int register_family(ProcFamilyClient& pfc, int argc, char* argv[]);
 static int track_by_associated_gid(ProcFamilyClient& pfc, int argc, 
 	char* argv[]);
+static int track_by_associated_cgroup(ProcFamilyClient& pfc, int argc,
+	char* argv[]);
 static int get_usage(ProcFamilyClient& pfc, int argc, char* argv[]);
 static int dump(ProcFamilyClient& pfc, int argc, char* argv[]);
 static int list(ProcFamilyClient& pfc, int argc, char* argv[]);
@@ -46,6 +48,7 @@ list_commands()
 	fprintf(stderr,
 		"    REGISTER_FAMILY <pid> <watcher_pid> <max_snapshot_interval>\n");
 	fprintf(stderr, "    TRACK_BY_ASSOCIATED_GID <gid> [<pid>]\n");
+	fprintf(stderr, "    TRACK_BY_ASSOCIATED_CGROUP <cgroup> [<pid>]\n");
 	fprintf(stderr, "    GET_USAGE [<pid>]\n");
 	fprintf(stderr, "    DUMP [<pid>]\n");
 	fprintf(stderr, "    LIST [<pid>]\n");
@@ -107,7 +110,7 @@ main(int argc, char* argv[])
 		}
 
 		// This is the failure case if we manage to pass all checks above.
-		fprintf(stderr, "error: Don't understand option %s\n", cmd_argv);
+		fprintf(stderr, "error: Don't understand option %s\n", cmd_argv[0]);
 		list_commands();
 		return 1;
 	}
@@ -146,6 +149,9 @@ main(int argc, char* argv[])
 	}
 	else if (strcasecmp(cmd_argv[0], "TRACK_BY_ASSOCIATED_GID") == 0) {
 		return track_by_associated_gid(pfc, cmd_argc, cmd_argv);
+	}
+	else if (strcasecmp(cmd_argv[0], "TRACK_BY_ASSOCIATED_CGROUP") == 0) {
+		return track_by_associated_cgroup(pfc, cmd_argc, cmd_argv);
 	}
 	else if (strcasecmp(cmd_argv[0], "GET_USAGE") == 0) {
 		return get_usage(pfc, cmd_argc, cmd_argv);
@@ -231,7 +237,7 @@ track_by_associated_gid(ProcFamilyClient& pfc, int argc, char* argv[])
 	pid_t pid = 0;
 	if (argc == 3) {
 		pid = atoi(argv[2]);
-		if (pid == 0) {
+		if (pid <= 0) {
 			fprintf(stderr, "error: invalid pid: %s\n", argv[2]);
 			return 1;
 		}
@@ -249,6 +255,46 @@ track_by_associated_gid(ProcFamilyClient& pfc, int argc, char* argv[])
 	}
 	return 0;
 }
+
+#if defined(HAVE_EXT_LIBCGROUP)
+static int
+track_by_associated_cgroup(ProcFamilyClient& pfc, int argc, char* argv[])
+{
+	if ((argc != 2) && (argc != 3)) {
+		fprintf(stderr,
+			"error: argument synopsis for %s: <cgroup> [<pid>]\n",
+			argv[0]);
+		return 1;
+	}
+	const char * cgroup = argv[1];
+	pid_t pid = 0;
+	if (argc == 3) {
+		pid = atoi(argv[2]);
+		if (pid <= 0) {
+			fprintf(stderr, "error: invalid pid: %s\n", argv[2]);
+			return 1;
+		}
+	}
+	bool success;
+	if (!pfc.track_family_via_cgroup(pid, cgroup, success)) {
+		fprintf(stderr, "error: communication error with ProcD\n");
+		return 1;
+	}
+	if (!success) {
+		fprintf(stderr,
+			"error: %s command failed with ProcD\n",
+			argv[0]);
+		return 1;
+	}
+	return 0;
+}
+#else
+static int
+track_by_associated_cgroup(ProcFamilyClient&, int, char**) {
+	fprintf(stderr, "error: cgroups not supported not compiled into this client\n");
+	return 1;
+}
+#endif
 
 static int
 dump(ProcFamilyClient& pfc, int argc, char* argv[])
@@ -380,6 +426,10 @@ get_usage(ProcFamilyClient& pfc, int argc, char* argv[])
 	printf("CPU Percentage (%%): %f\n", pfu.percent_cpu);
 	printf("Maximum Image Size (KB): %lu\n", pfu.max_image_size);
 	printf("Total Image Size(KB): %lu\n", pfu.total_image_size);
+	if (pfu.block_read_bytes >= 0)
+		printf("Bytes read from block devices (KB): %lu\n", pfu.block_read_bytes/1024);
+	if (pfu.block_write_bytes >= 0)
+		printf("Bytes written to block devices (KB): %lu\n", pfu.block_write_bytes/1024);
 	return 0;
 }
 

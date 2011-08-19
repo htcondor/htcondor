@@ -21,7 +21,7 @@
 #define FILESQL_H
 
 #include "condor_common.h"
-#include "condor_attrlist.h"
+#include "condor_classad.h"
 
 class FileLock;
 class MyString;

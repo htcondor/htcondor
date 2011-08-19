@@ -133,9 +133,11 @@ while( $myrow = mysql_fetch_array($result) ) {
   else {
     $stat = stat("$filepath.out");
     $stdout_size = $stat['size'];
+    $stdout_size_display = number_format($stdout_size);
     
     $stat = stat("$filepath.err");
     $stderr_size = $stat['size'];
+    $stderr_size_display = number_format($stderr_size);
     
     $stdout_url = "<a href=\"http://$hostname/$filepath.out\">".basename($filepath).".out</a>";
     $stderr_url = "<a href=\"http://$hostname/$filepath.err\">".basename($filepath).".err</a>";
@@ -160,34 +162,31 @@ while( $myrow = mysql_fetch_array($result) ) {
   
   $resultval = $myrow["result"];
   $test_results_url = "<a href=\"http://nmi.cs.wisc.edu/node/552\">".$resultval."</a>";
-  echo "<P>";
-  echo "<TABLE>";
-#    echo "<TR><TD>Run ID:</TD><TD><a href=\"http://$hostname/nmi/?page=results/runDetails&id=".$myrow["runid"] ."\">".$myrow["runid"]."</a></TD></TR>";
-    #echo "<TR><TD>Run ID:</TD><TD><a href=\"http://$hostname/nmi/?page=results/runDetails&runid=".$myrow["runid"] 
-  echo "<TR><TD>Run ID:</TD><TD><a href=\"./Task-search.php?runid=".$myrow["runid"]."&Submit=Search+by+RunID" 
-    ."\">".$myrow["runid"]."</a></TD></TR>";
-  echo "<TR><TD>GID:</TD><TD>".$myrow["gid"] ."</TD></TR>";
-  echo "<TR><TD>Task ID:</TD><TD>".$myrow["task_id"] ."</TD></TR>";
-  echo "<TR><TD>Start:</TD><TD>".$myrow["start"] ."</TD></TR>";
-  echo "<TR><TD>Finish:</TD><TD> ".$myrow["finish"] ."</TD></TR>";
-  echo "<TR><TD>Duration:</TD><TD> ".$myrow["duration"] ."</TD></TR>";
-  echo "<TR><TD>Result:</TD><TD> $test_results_url </TD></TR>";
-  echo "<TR><TD>Stdout:</TD><TD> $stdout_url - (size: $stdout_size bytes) </TD></TR>";
-  echo "<TR><TD>Stderr:</TD><TD> $stderr_url - (size: $stderr_size bytes) </TD></TR>";
-  echo "<TR><TD>Run Results:</TD><TD> $results_url</a></TD></TR>";
-  echo "<TR><TD># warnings STDOUT:</td><td>$num_warnings</td></tr>";
-  echo "<TR><TD># warnings STDERR:</td><td>$num_warnings_stderr</td></tr>";
-  echo "</TABLE>";
-  echo "</P>";
+  echo "<p>";
+  echo "<table>";
+#    echo "<tr><td>Run ID:</td><td><a href=\"http://$hostname/nmi/?page=results/runDetails&id=".$myrow["runid"] ."\">".$myrow["runid"]."</a></td></tr>";
+    #echo "<tr><td>Run ID:</td><td><a href=\"http://$hostname/nmi/?page=results/runDetails&runid=".$myrow["runid"] 
+  echo "<tr><td>Run ID:</td><td><a href=\"./Task-search.php?runid=".$myrow["runid"]."&Submit=Search+by+RunID" 
+    ."\">".$myrow["runid"]."</a></td></tr>";
+  echo "<tr><td>GID:</td><td>".$myrow["gid"] ."</td></tr>";
+  echo "<tr><td>Task ID:</td><td>".$myrow["task_id"] ."</td></tr>";
+  echo "<tr><td>Start:</td><td>".$myrow["start"] ."</td></tr>";
+  echo "<tr><td>Finish:</td><td> ".$myrow["finish"] ."</td></tr>";
+  echo "<tr><td>Duration:</td><td> ".$myrow["duration"] ."</td></tr>";
+  echo "<tr><td>Result:</td><td> $test_results_url </td></tr>";
+  echo "<tr><td>Stdout:</td><td> $stdout_url - (size: $stdout_size_display bytes) </td></tr>";
+  echo "<tr><td>Stderr:</td><td> $stderr_url - (size: $stderr_size_display bytes) </td></tr>";
+  echo "<tr><td>Run Results:</td><td> $results_url</a></td></tr>";
+  echo "<tr><td># warnings STDOUT:</td><td>$num_warnings</td></tr>";
+  echo "<tr><td># warnings STDERR:</td><td>$num_warnings_stderr</td></tr>";
+  echo "</table>";
+  echo "</p>";
 
   if($file_found) {
     if($stdout_size > 0) {
       show_file_content("STDOUT", "$filepath.out");
     }
     
-    if($stderr_size > 0) {
-      show_file_content("STDERR", "$filepath.err");
-    }
   }
 }
 
@@ -201,33 +200,19 @@ function show_file_content($header, $file) {
   if($_REQUEST["type"] == "build" && preg_match("/_win/", $_REQUEST["platform"])) {
     // For windows we have a script that does some smarter parsing
     $lines = `./parse-windows-build.pl $file`;
-    echo "<p style=\"font-size: 80%;\">Tried to do some smart parsing for Windows:\n";
-    echo "<p><a href=\"javascript:swap('$header')\">Click to show Windows build info</a>\n";
-    echo "<div id=\"$header\" style=\"display:none;\">\n";
     echo "<pre>$lines</pre>\n";
-    echo "</div>\n";
   }
   else {
-    // For linux we'll just grep for errors for now.  This can probably be improved
-    $lines = `grep -C 5 -i error $file`;
-    echo "<p style=\"font-size: 80%;\">Showing all instances of the word 'error' in $header:\n";
-    if(strlen($lines) > 0) {
-      $lines = preg_replace("/(error)/i", "<font class=\"hl\">$1</font>", $lines);
-      echo "<p><a href=\"javascript:swap('$header')\">Click to show errors in $header</a>\n";
-      echo "<div id=\"$header\" style=\"display:none;\">\n";
-      echo "<pre>$lines</pre>\n";
-      echo "</div>\n";
-    }
-    else {
-      echo "<p>The string 'error' was not present in $header\n";
-    }
+    // For linux show some lines from the bottom of the file
+    $count = 20;
+    $lines = `tail -$count $file`;
+
+    // Do some nice highlighting to make warnings/errors more obvious
+    $lines = preg_replace("/(error)/i", "<font style='background-color:red'>$1</font>", $lines);
+    echo "<p style=\"font-size: 80%;\">Last $count lines of $header:\n";
+    echo "<pre>$lines</pre>";
   }
 
-  // Always show the last 10 lines
-  $count = 10;
-  $lines = `tail -$count $file`;
-  echo "<p style=\"font-size: 80%;\">Last $count lines of $header:\n";
-  echo "<pre>$lines</pre>";
 }
 
 ?>

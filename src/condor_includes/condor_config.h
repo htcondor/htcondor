@@ -162,6 +162,8 @@ extern "C" {
 	int  set_runtime_config(char *admin, char *config);
 	int is_valid_param_name(const char *name);
 	char * parse_param_name_from_config(const char *config);
+	// this function allows tests to pretend that a param was set to a given value.	
+    void  param_insert(const char * name, const char * value);
 	/** Expand parameter references of the form "left$(middle)right".  
 	
 	This is deceptively simple, but does handle multiple and or nested
@@ -248,10 +250,37 @@ extern "C" {
 
 
 
-	int get_var( register char *value, register char **leftp,
+	/** Find next $(MACRO) or $$(MACRO) in a string
+
+	The caller is expected to concatenate *leftp, the evaluated
+	*namep, then *rightp to get the expanded setting.
+
+	- value - The null-terminated string to scan. WILL BE MODIFIED!
+
+	- leftp - OUTPUT. *leftp will be set to value+search_pos.  It
+	  will be null terminated at the $ for the first $(MACRO) found.
+
+	- namep - OUTPUT. The name of the MACRO (the bit between the
+	  parenthesis).  Pointer into value.  Null terminated at the
+	  closing parenthesis.
+
+	- rightp - OUTPUT. Everything to the right of the $(MACRO).
+	  Pointer into value.
+
+	- self - Default to null. If non-null, only macros whose name is
+	  identical to self will be expanded. (Used for the special
+	  $(DOLLAR) case?)
+
+	- getdollardollar - Defaults false. If true, scans for $$(MACRO)
+	  and $$([expression]) instead of $(MACRO)
+
+	- search_pos - 0-indexed position in value to start scanning at.
+	  Defaults to 0.
+	*/
+	int find_config_macro( register char *value, register char **leftp,
 		register char **namep, register char **rightp,
 		const char *self=NULL, bool getdollardollar=false, int search_pos=0);
-	int get_special_var( const char *prefix, bool only_id_chars,
+	int find_special_config_macro( const char *prefix, bool only_id_chars,
 		register char *value, register char **leftp,
 		register char **namep, register char **rightp);
 }
@@ -283,8 +312,8 @@ BEGIN_C_DECLS
 	char * macro_expand ( const char *name );
 	void init_config ( bool );
 	void clear_config ( void );
-	void set_debug_flags( const char * );
-	void config_insert( const char*, const char* );
+	void set_debug_flags( const char * strFlags);
+	void config_insert( const char* attrName, const char* attrValue);
 	int  param_boolean_int( const char *name, int default_value );
 	int  param_boolean_int_with_default( const char* name );
 	int  param_boolean_int_without_default( const char* name, int default_value );
@@ -294,7 +323,7 @@ BEGIN_C_DECLS
 	int write_config_file( const char* pathname );
 	// Helper function, of form to iterate over the hash table of parameter
 	// information.  Returns 0 to continue, -1 to stop (i.e. on an error).
-	int write_config_variable(param_info_t* value, void* file_desc);
+	int write_config_variable(const param_info_t* value, void* file_desc);
 
 /* This function initialize GSI (maybe other) authentication related
    stuff Daemons that should use the condor daemon credentials should

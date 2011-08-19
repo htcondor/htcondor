@@ -23,7 +23,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 int IndexFile::
 dump_index()
@@ -232,7 +232,7 @@ DeleteFromStorageFile(string key)
 #pragma warning(pop) // the seek, read, open, close, fileno, etc are deprecated, use _seek, etc instead.
 #endif
 
-END_NAMESPACE
+}
 
 
 

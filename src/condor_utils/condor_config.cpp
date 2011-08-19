@@ -61,6 +61,7 @@
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "condor_version.h"
 #include "util_lib_proto.h"
 #include "my_username.h"
@@ -69,7 +70,6 @@
 #	include <locale.h>
 #endif
 #include "directory.h"			// for StatInfo
-#include "condor_scanner.h"		// for MAXVARNAME, etc
 #include "condor_distribution.h"
 #include "condor_environ.h"
 #include "setenv.h"
@@ -698,10 +698,11 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		insert( "HOSTNAME", host, ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("HOSTNAME");
 	} else {
-		insert( "HOSTNAME", my_hostname(), ConfigTab, TABLESIZE );
+		insert( "HOSTNAME", get_local_hostname().Value(), ConfigTab,
+				TABLESIZE );
 		extra_info->AddInternalParam("HOSTNAME");
 	}
-	insert( "FULL_HOSTNAME", my_full_hostname(), ConfigTab, TABLESIZE );
+	insert( "FULL_HOSTNAME", get_local_fqdn().Value(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("FULL_HOSTNAME");
 
 		// Also insert tilde since we don't want that over-written.
@@ -802,6 +803,7 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
 		free( tmp );
 		init_full_hostname();
+		init_local_hostname();
 	}
 
 		// Also, we should be safe to process the NETWORK_INTERFACE
@@ -1338,8 +1340,8 @@ check_domain_attributes()
 
 	filesys_domain = param("FILESYSTEM_DOMAIN");
 	if( !filesys_domain ) {
-		filesys_domain = my_full_hostname();
-		insert( "FILESYSTEM_DOMAIN", filesys_domain, ConfigTab, TABLESIZE );
+		insert( "FILESYSTEM_DOMAIN", get_local_fqdn().Value(), 
+				ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("FILESYSTEM_DOMAIN");
 	} else {
 		free( filesys_domain );
@@ -1347,12 +1349,22 @@ check_domain_attributes()
 
 	uid_domain = param("UID_DOMAIN");
 	if( !uid_domain ) {
-		uid_domain = my_full_hostname();
-		insert( "UID_DOMAIN", uid_domain, ConfigTab, TABLESIZE );
+		insert( "UID_DOMAIN", get_local_fqdn().Value(), 
+				ConfigTab, TABLESIZE );
 		extra_info->AddInternalParam("UID_DOMAIN");
 	} else {
 		free( uid_domain );
 	}
+}
+
+// Sometimes tests want to be able to pretend that params were set
+// to a certain value by the user.  This function lets them do that.
+//
+void 
+param_insert(const char * name, const char * value)
+{
+	insert( name, value, ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam(name);
 }
 
 void
@@ -1540,21 +1552,22 @@ param_with_default_abort(const char *name, int abort)
 		// something in the Default Table.
 
 		// The candidate wasn't in the Config Table, so check the Default Table
-		val = param_default_string(next_param_name);
-		if (val != NULL) {
+		const char * def = param_default_string(next_param_name);
+		if (def != NULL) {
 			// Yay! Found something! Add the entry found in the Default 
 			// Table to the Config Table. This could be adding an empty
 			// string. If a default found, the loop stops searching.
-			insert(next_param_name, val, ConfigTab, TABLESIZE);
+			insert(next_param_name, def, ConfigTab, TABLESIZE);
 			// also add it to the lame extra-info table
 			if (extra_info != NULL) {
 				extra_info->AddInternalParam(next_param_name);
 			}
-			if (val[0] == '\0') {
+			if (def[0] == '\0') {
 				// If indeed it was empty, then just bail since it was
 				// validly found in the Default Table, but empty.
 				return NULL;
 			}
+            val = const_cast<char*>(def); // TJ: this is naughty, but expand_macro will replace it soon.
 		}
 	}
 
@@ -1989,9 +2002,10 @@ reinsert_specials( char* host )
 	if( host ) {
 		insert( "HOSTNAME", host, ConfigTab, TABLESIZE );
 	} else {
-		insert( "HOSTNAME", my_hostname(), ConfigTab, TABLESIZE );
+		insert( "HOSTNAME", get_local_hostname().Value(), ConfigTab, 
+				TABLESIZE );
 	}
-	insert( "FULL_HOSTNAME", my_full_hostname(), ConfigTab, TABLESIZE );
+	insert( "FULL_HOSTNAME", get_local_fqdn().Value(), ConfigTab, TABLESIZE );
 	insert( "SUBSYSTEM", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
 	extra_info->AddInternalParam("HOSTNAME");
 	extra_info->AddInternalParam("FULL_HOSTNAME");
@@ -2560,7 +2574,7 @@ write_config_file(const char* pathname) {
 }
 
 int
-write_config_variable(param_info_t* value, void* file_desc) {
+write_config_variable(const param_info_t* value, void* file_desc) {
 	int config_fd = *((int*) file_desc);
 	char* actual_value = param(value->name);
 	if(strcmp(actual_value, value->str_val) != 0) {

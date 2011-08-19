@@ -12,6 +12,7 @@ a:link { color: #1C3F75; }
 .noresults {
    background-color: #aaaaaa;
 }
+
 .details {
    font-size: 10px;
 }
@@ -21,14 +22,21 @@ a:link { color: #1C3F75; }
 .title {
    color: black;
 }
-TABLE {
+
+table {
     border-collapse: collapse;
     cellspacing: 0;
     cellpadding: 0;
     border: 1px solid grey;
 }
-TD {
+td {
     border: 1px solid grey;
+}
+.sparkheader {
+   font-size: 75%;
+   border-top-style: none;
+   border-bottom-style: none;
+   border-left-style: none;
 }
 
 
@@ -61,4 +69,25 @@ span.link a:hover span {
     font: 12px "Arial", sans-serif;
     text-align: left; 
     text-decoration: none;
+}
+
+
+// Page layout
+#wrap {
+    margin: 0 auto;
+}
+
+#nav {
+    padding: 10px;
+    width:125px;
+    float:left;
+}
+
+#main {
+    float:left;
+}
+
+#footer {
+    clear:both;
+    background: #ffffff;
 }

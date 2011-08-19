@@ -153,7 +153,7 @@ struct MgmtStartdPlugin : public Service, StartdPlugin
 		AdNameHashKey hashKey;
 		SlotObject *slotObject;
 
-		if (!makeStartdAdHashKey(hashKey, ((ClassAd *) ad), NULL)) {
+		if (!makeStartdAdHashKey(hashKey, ((ClassAd *) ad), condor_sockaddr::null)) {
 			dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			return;
 		}
@@ -175,7 +175,7 @@ struct MgmtStartdPlugin : public Service, StartdPlugin
 		AdNameHashKey hashKey;
 		SlotObject *slotObject;
 
-		if (!makeStartdAdHashKey(hashKey, ((ClassAd *) ad), NULL)) {
+		if (!makeStartdAdHashKey(hashKey, ((ClassAd *) ad), condor_sockaddr::null)) {
 			dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			return;
 		}

@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "match_prefix.h"
 #include "sysapi.h"
+#include "sysapi_externs.h"
 
 #if defined(Darwin)
 #include <sys/sysctl.h>

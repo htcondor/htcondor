@@ -1,0 +1,74 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my $append_condor_config = '
+  USE_SHARED_PORT = True
+  DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+
+  SHARED_PORT_DEBUG = D_COMMAND | D_FULLDEBUG
+
+  # set the collector to use the shared port
+  COLLECTOR_HOST = $(FULL_HOSTNAME):0?sock=collector
+
+  # named sockets cannot have very long paths (~100 chars), so put them
+  # in /tmp to avoid problems
+  DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+# verify that a job runs
+SimpleJob::RunCheck();
+
+# verify connection requests made via shared port server for each daemon
+CondorLog::RunCheck(
+    daemon => "SHARED_PORT",
+    match_regexp => "SharedPortServer: request from COLLECTOR"
+);
+CondorLog::RunCheck(
+    daemon => "SHARED_PORT",
+    match_regexp => "SharedPortServer: request from MASTER"
+);
+CondorLog::RunCheck(
+    daemon => "SHARED_PORT",
+    match_regexp => "SharedPortServer: request from SCHEDD"
+);
+CondorLog::RunCheck(
+    daemon => "SHARED_PORT",
+    match_regexp => "SharedPortServer: request from NEGOTIATOR"
+);
+CondorLog::RunCheck(
+    daemon => "SHARED_PORT",
+    match_regexp => "SharedPortServer: request from STARTD"
+);
+
+# verify that connection requests for collector go through shared_port
+CondorLog::RunCheck(
+    daemon => "SHARED_PORT",
+    match_regexp => "to connect to collector"
+);
+
+CondorTest::EndTest();

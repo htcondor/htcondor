@@ -41,7 +41,7 @@ using namespace std;
 #define DEREF_TYPEDEFS
 #endif
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 //-------------classad templates --------------
 
 template CLASS map<string, bool>;
@@ -105,11 +105,11 @@ template CLASS vector<ExprTree*>;
 
 template CLASS map<const ClassAd*, References>;
 
-END_NAMESPACE
+}
 template CLASS vector<string>;
 #include "classad/transaction.h"
 #include "classad/view.h"
-BEGIN_NAMESPACE(classad)
+namespace classad {
 
 // view content
 template CLASS multiset<ViewMember, ViewMemberLT>;
@@ -184,7 +184,7 @@ class _ClassAdInit
 		_ClassAdInit( ) { tzset( ); }
 } __ClassAdInit;
 
-END_NAMESPACE
+}
 
 #if (__GNUC__>=3) && USING_STLPORT
 template string std::operator+<char, std::char_traits<char>, std::allocator<char> >(const string&, const string&);

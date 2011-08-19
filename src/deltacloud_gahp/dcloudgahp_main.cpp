@@ -24,10 +24,12 @@
 #define GAHP_RESULT_FAILURE					"F"
 
 #define DCLOUD_COMMAND_VM_SUBMIT			"DELTACLOUD_VM_SUBMIT"
-#define DCLOUD_COMMAND_VM_STATUS_ALL		"DELTACLOUD_VM_STATUS_ALL"
+#define DCLOUD_COMMAND_VM_STATUS_ALL			"DELTACLOUD_VM_STATUS_ALL"
 #define DCLOUD_COMMAND_VM_ACTION			"DELTACLOUD_VM_ACTION"
 #define DCLOUD_COMMAND_VM_INFO				"DELTACLOUD_VM_INFO"
 #define DCLOUD_COMMAND_VM_FIND				"DELTACLOUD_VM_FIND"
+#define DCLOUD_COMMAND_GET_MAX_NAME_LENGTH		"DELTACLOUD_GET_MAX_NAME_LENGTH"
+#define DCLOUD_COMMAND_START_AUTO			"DELTACLOUD_START_AUTO"
 
 const char * version = "$GahpVersion " DCLOUD_GAHP_VERSION " Feb 4 2010 Condor\\ DELTACLOUDGAHP $";
 
@@ -96,21 +98,21 @@ static int parse_gahp_command(const char *raw, Gahp_Args *args)
             continue;
         }
 
-        if (raw[i] == '\\') {
+        if (raw[i] == '\\')
             in_escape = true;
-        } else if (raw[i] == ' ' || raw[i] == '\t' || raw[i] == '\r' ||
+        else if (raw[i] == ' ' || raw[i] == '\t' || raw[i] == '\r' ||
                    raw[i] == '\n') {
             buff[buff_len++] = '\0';
-            args->add_arg( strdup(buff) );
+            args->add_arg(strdup(buff));
             buff_len = 0; // re-set temporary buffer
-        } else {
-            buff[buff_len++] = raw[i];
         }
+        else
+            buff[buff_len++] = raw[i];
     }
 
     /* Copy the last portion */
     buff[buff_len++] = '\0';
-    args->add_arg( strdup(buff) );
+    args->add_arg(strdup(buff));
 
     free (buff);
     return TRUE;
@@ -149,9 +151,8 @@ static void unregisterAllDcloudCommands(void)
 {
     std::set<DcloudGahpCommand*>::iterator itr;
 
-    for (itr = dcloud_gahp_commands.begin(); itr != dcloud_gahp_commands.end(); itr++) {
+    for (itr = dcloud_gahp_commands.begin(); itr != dcloud_gahp_commands.end(); itr++)
         delete *itr;
-    }
 }
 
 static void handle_command_results(Gahp_Args *args)
@@ -281,7 +282,7 @@ static void *worker_function(void *ptr)
          * earlier, so there is no reason we can't parse it again.
          */
         dcloudprintf("Failed to parse command again\n");
-        output_string = create_failure("0", "Command_Parse_Failure");
+        output_string = "0 Command_Parse_Failure\n";
         goto cleanup;
     }
 
@@ -308,9 +309,8 @@ cleanup:
         async_results_signalled = true;
       }
     }
-    else {
+    else
         safe_printf("%s", output_string.c_str());
-    }
     pthread_mutex_unlock(&async_mutex);
 
     free(data->fullcommand);
@@ -354,9 +354,8 @@ static void handle_dcloud_commands(const char *cmd, const char *fullcommand)
                 pthread_detach(thread);
                 gahp_output_return_success();
             }
-            else {
+            else
                 pthread_join(thread, NULL);
-            }
 
             return;
         }
@@ -442,26 +441,28 @@ static void registerAllDcloudCommands(void)
         return;
     }
 
-    registerDcloudGahpCommand(DCLOUD_COMMAND_VM_SUBMIT,
-                              dcloud_start_worker);
+    registerDcloudGahpCommand(DCLOUD_COMMAND_VM_SUBMIT, dcloud_start_worker);
 
-    registerDcloudGahpCommand(DCLOUD_COMMAND_VM_ACTION,
-                              dcloud_action_worker);
+    registerDcloudGahpCommand(DCLOUD_COMMAND_VM_ACTION, dcloud_action_worker);
 
-    registerDcloudGahpCommand(DCLOUD_COMMAND_VM_INFO,
-                              dcloud_info_worker);
+    registerDcloudGahpCommand(DCLOUD_COMMAND_VM_INFO, dcloud_info_worker);
 
     registerDcloudGahpCommand(DCLOUD_COMMAND_VM_STATUS_ALL,
                               dcloud_statusall_worker);
 
-    registerDcloudGahpCommand(DCLOUD_COMMAND_VM_FIND,
-                              dcloud_find_worker);
+    registerDcloudGahpCommand(DCLOUD_COMMAND_VM_FIND, dcloud_find_worker);
+
+    registerDcloudGahpCommand(DCLOUD_COMMAND_GET_MAX_NAME_LENGTH,
+                              dcloud_max_name_length_worker);
+
+    registerDcloudGahpCommand(DCLOUD_COMMAND_START_AUTO,
+                              dcloud_start_auto_worker);
 }
 
 int main(int argc, char *argv[])
 {
     const char *debug_file = getenv("DELTACLOUD_GAHP_DEBUG_FILE");
-    if ( debug_file ) {
+    if (debug_file) {
         logfp = fopen(debug_file, "a");
         if (!logfp) {
             fprintf(stderr, "Could not open log file %s: %s\n",

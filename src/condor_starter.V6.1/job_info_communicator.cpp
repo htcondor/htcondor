@@ -474,6 +474,14 @@ JobInfoCommunicator::initUserPrivNoOwner( void )
 	return true;
 }
 
+int JobInfoCommunicator::getStackSize(void)
+{
+	int value=0; // Return 0 by default
+	if(job_ad && !job_ad->LookupInteger(ATTR_STACK_SIZE,value))
+		value = 0;
+	return value;
+}
+
 bool
 JobInfoCommunicator::allowRunAsOwner( bool default_allow, bool default_request )
 {

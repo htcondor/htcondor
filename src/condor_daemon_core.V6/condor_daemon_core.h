@@ -58,6 +58,7 @@
 #include "limit.h"
 #include "ccb_listener.h"
 #include "condor_sinful.h"
+#include "condor_sockaddr.h"
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -176,6 +177,7 @@ struct FamilyInfo {
 	gid_t* group_ptr;
 #endif
 	const char* glexec_proxy;
+	const char* cgroup;
 
 	FamilyInfo() {
 		max_snapshot_interval = -1;
@@ -184,6 +186,7 @@ struct FamilyInfo {
 		group_ptr = NULL;
 #endif
 		glexec_proxy = NULL;
+		cgroup = NULL;
 	}
 };
 
@@ -300,7 +303,7 @@ class DaemonCore : public Service
         @param sin  Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Verify (char const *command_descrip, DCpermission perm, const struct sockaddr_in *sin, const char * fqu);
+    int Verify (char const *command_descrip, DCpermission perm, const condor_sockaddr& addr, const char * fqu);
     int AddAllowHost( const char* host, DCpermission perm );
 
     /** clear all sessions associated with the child 
@@ -1510,6 +1513,7 @@ class DaemonCore : public Service
 	                     PidEnvID* penvid,
 	                     const char* login,
 	                     gid_t* group,
+			     const char* cgroup,
 	                     const char* glexec_proxy);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);

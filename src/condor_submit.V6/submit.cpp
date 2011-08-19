@@ -33,8 +33,6 @@
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
 #include "condor_io.h"
-#include "condor_parser.h"
-#include "condor_scanner.h"
 #include "condor_distribution.h"
 #include "condor_ver_info.h"
 #if !defined(WIN32)
@@ -44,6 +42,7 @@
 // WINDOWS only
 #include "store_cred.h"
 #endif
+#include "internet.h"
 #include "my_hostname.h"
 #include "domain_tools.h"
 #include "get_daemon_name.h"
@@ -83,6 +82,8 @@
 #include "vm_univ_utils.h"
 #include "condor_md.h"
 
+#include <string>
+
 // TODO: hashFunction() is case-insenstive, but when a MyString is the
 //   hash key, the comparison in HashTable is case-sensitive. Therefore,
 //   the case-insensitivity of hashFunction() doesn't complish anything.
@@ -110,6 +111,7 @@ char	*OperatingSystem;
 char	*Architecture;
 char	*Spool;
 char	*ScheddName = NULL;
+std::string ScheddAddr;
 char	*PoolName = NULL;
 DCSchedd* MySchedd = NULL;
 char	*My_fs_domain;
@@ -182,7 +184,7 @@ extern const int JOB_DEFERRAL_PREP_DEFAULT;
 
 char* LogNotesVal = NULL;
 char* UserNotesVal = NULL;
-
+char* StackSizeVal = NULL;
 List<char> extraLines;  // lines passed in via -a argument
 
 #define PROCVARSIZE	32
@@ -261,6 +263,7 @@ const char	*BufferFiles = "buffer_files";
 const char	*BufferSize = "buffer_size";
 const char	*BufferBlockSize = "buffer_block_size";
 
+const char	*StackSize = "stack_size";
 const char	*FetchFiles = "fetch_files";
 const char	*CompressFiles = "compress_files";
 const char	*AppendFiles = "append_files";
@@ -299,9 +302,13 @@ const char	*CopyToSpool = "copy_to_spool";
 const char	*LeaveInQueue = "leave_in_queue";
 
 const char	*PeriodicHoldCheck = "periodic_hold";
+const char	*PeriodicHoldReason = "periodic_hold_reason";
+const char	*PeriodicHoldSubCode = "periodic_hold_subcode";
 const char	*PeriodicReleaseCheck = "periodic_release";
 const char	*PeriodicRemoveCheck = "periodic_remove";
 const char	*OnExitHoldCheck = "on_exit_hold";
+const char	*OnExitHoldReason = "on_exit_hold_reason";
+const char	*OnExitHoldSubCode = "on_exit_hold_subcode";
 const char	*OnExitRemoveCheck = "on_exit_remove";
 const char	*Noop = "noop_job";
 const char	*NoopExitSignal = "noop_job_exit_signal";
@@ -365,7 +372,7 @@ const char    *VM_Networking = "vm_networking";
 const char    *VM_Networking_Type = "vm_networking_type";
 
 //
-// Amazon EC2 Parameters
+// Amazon EC2 SOAP Parameters
 //
 const char* AmazonPublicKey = "amazon_public_key";
 const char* AmazonPrivateKey = "amazon_private_key";
@@ -375,6 +382,19 @@ const char* AmazonUserDataFile = "amazon_user_data_file";
 const char* AmazonSecurityGroups = "amazon_security_groups";
 const char* AmazonKeyPairFile = "amazon_keypair_file";
 const char* AmazonInstanceType = "amazon_instance_type";
+
+//
+// EC2 Query Parameters
+//
+const char* EC2AccessKeyId = "ec2_access_key_id";
+const char* EC2SecretAccessKey = "ec2_secret_access_key";
+const char* EC2AmiID = "ec2_ami_id";
+const char* EC2UserData = "ec2_user_data";
+const char* EC2UserDataFile = "ec2_user_data_file";
+const char* EC2SecurityGroups = "ec2_security_groups";
+const char* EC2KeyPairFile = "ec2_keypair_file";
+const char* EC2InstanceType = "ec2_instance_type";
+const char* EC2ElasticIP = "ec2_elastic_ip";
 
 //
 // Deltacloud Parameters
@@ -801,6 +821,19 @@ main( int argc, char *argv[] )
 			} else if ( match_prefix( ptr[0], "-spool" ) ) {
 				Remote++;
 				DisableFileChecks = 1;
+            // can't use match_prefix() here, since '-a' already has popular semantic
+            } else if ( 0 == strcmp(ptr[0], "-addr") ) {
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf(stderr, "%s: -addr requires another argument\n", MyName);
+					exit(1);
+				}
+                if (!is_valid_sinful(*ptr)) {
+                    fprintf(stderr, "%s: \"%s\" is not a valid address\n", MyName, *ptr);
+                    fprintf(stderr, "Should be of the form <ip.address.here:port>\n");
+                    fprintf(stderr, "For example: <123.456.789.123:6789>\n");
+                    exit(1);
+                }
+                ScheddAddr = *ptr;
 			} else if ( match_prefix( ptr[0], "-remote" ) ) {
 				Remote++;
 				DisableFileChecks = 1;
@@ -940,7 +973,11 @@ main( int argc, char *argv[] )
 	if ( !DumpClassAdToFile ) {
 		// Instantiate our DCSchedd so we can locate and communicate
 		// with our schedd.  
-		MySchedd = new DCSchedd( ScheddName, PoolName );
+        if (!ScheddAddr.empty()) {
+            MySchedd = new DCSchedd(ScheddAddr.c_str());
+        } else {
+            MySchedd = new DCSchedd(ScheddName, PoolName);
+        }
 		if( ! MySchedd->locate() ) {
 			if( ScheddName ) {
 				fprintf( stderr, "\nERROR: Can't find address of schedd %s\n",
@@ -1460,6 +1497,7 @@ SetExecutable()
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "amazon" ) == MATCH ||
+			 strcasecmp( JobGridType, "ec2" ) == MATCH ||
 			 strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
@@ -1741,7 +1779,7 @@ SetUniverse()
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
 			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
-			//    amazon, unicore, cream, deltacloud
+			//    amazon, unicore, cream, deltacloud, ec2
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 			//   system names should be used (pbs, lsf). Glite are the only
@@ -1759,6 +1797,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
+				(strcasecmp (JobGridType, "ec2") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
@@ -1772,7 +1811,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
-						 "nqs, condor, nordugrid, unicore, amazon, deltacloud, or cream\n" );
+						 "nqs, condor, nordugrid, unicore, amazon, ec2, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -3318,6 +3357,20 @@ SetPeriodicHoldCheck(void)
 
 	InsertJobExpr( buffer );
 
+	phc = condor_param(PeriodicHoldReason, ATTR_PERIODIC_HOLD_REASON);
+	if( phc ) {
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_HOLD_REASON, phc );
+		InsertJobExpr( buffer );
+		free(phc);
+	}
+
+	phc = condor_param(PeriodicHoldSubCode, ATTR_PERIODIC_HOLD_SUBCODE);
+	if( phc ) {
+		buffer.sprintf( "%s = %s", ATTR_PERIODIC_HOLD_SUBCODE, phc );
+		InsertJobExpr( buffer );
+		free(phc);
+	}
+
 	phc = condor_param(PeriodicReleaseCheck, ATTR_PERIODIC_RELEASE_CHECK);
 
 	if (phc == NULL)
@@ -3350,6 +3403,20 @@ SetPeriodicRemoveCheck(void)
 	{
 		/* user had a value for it, leave it alone */
 		buffer.sprintf( "%s = %s", ATTR_PERIODIC_REMOVE_CHECK, prc );
+		free(prc);
+	}
+
+	prc = condor_param(OnExitHoldReason, ATTR_ON_EXIT_HOLD_REASON);
+	if( prc ) {
+		buffer.sprintf( "%s = %s", ATTR_ON_EXIT_HOLD_REASON, prc );
+		InsertJobExpr( buffer );
+		free(prc);
+	}
+
+	prc = condor_param(OnExitHoldSubCode, ATTR_ON_EXIT_HOLD_SUBCODE);
+	if( prc ) {
+		buffer.sprintf( "%s = %s", ATTR_ON_EXIT_HOLD_SUBCODE, prc );
+		InsertJobExpr( buffer );
 		free(prc);
 	}
 
@@ -3730,6 +3797,17 @@ SetUserNotes()
 	UserNotesVal = condor_param( UserNotesCommand, ATTR_SUBMIT_EVENT_USER_NOTES );
 	if ( UserNotesVal ) {
 		InsertJobExprString( ATTR_SUBMIT_EVENT_USER_NOTES, UserNotesVal );
+	}
+}
+
+void
+SetStackSize()
+{
+	StackSizeVal = condor_param(StackSize,ATTR_STACK_SIZE);
+	MyString buffer;
+	if( StackSizeVal ) {
+		(void) buffer.sprintf( "%s = %s", ATTR_STACK_SIZE, StackSizeVal);
+		InsertJobExpr(buffer);
 	}
 }
 
@@ -4644,12 +4722,12 @@ SetUserLog()
 			BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
 			BOOLEAN	nfs = FALSE;
 
-			if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
-				fprintf(stderr,
-					"\nWARNING: Can't determine whether log file %s is on NFS\n",
-					ulog.Value() );
-			} else if ( nfs ) {
-				if ( nfs_is_error ) {
+			if ( nfs_is_error ) {
+				if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
+					fprintf(stderr,
+						"\nWARNING: Can't determine whether log file %s is on NFS\n",
+						ulog.Value() );
+				} else if ( nfs ) {
 
 					fprintf(stderr,
 						"\nERROR: Log file %s is on NFS.\nThis could cause"
@@ -4840,7 +4918,8 @@ SetGridParams()
 			InsertJobExpr (buffer);
 		}
 
-		if ( strcasecmp( tmp, "amazon" ) == 0 ) {
+		if ( strcasecmp( tmp, "amazon" ) == 0 ||
+			 strcasecmp( tmp, "ec2" ) == 0 ) {
 			fprintf(stderr, "\nERROR: Amazon EC2 grid jobs require a "
 					"service URL\n");
 			DoCleanup( 0, 0, NULL );
@@ -5034,16 +5113,11 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 	
-	// AmazonUserData and AmazonUserDataFile cannot exist in the same submit file
-	bool has_userdata = false;
-	bool has_userdatafile = false;
-	
 	// AmazonUserData is not a necessary parameter
 	if( (tmp = condor_param( AmazonUserData, ATTR_AMAZON_USER_DATA )) ) {
 		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA, tmp);
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-		has_userdata = true;
 	}	
 
 	// AmazonUserDataFile is not a necessary parameter
@@ -5061,7 +5135,111 @@ SetGridParams()
 				full_path(tmp) );
 		free( tmp );
 		InsertJobExpr( buffer.Value() );
-		has_userdatafile = true;
+	}
+
+
+	//
+	// EC2 grid-type submit attributes
+	//
+	if ( (tmp = condor_param( EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID )) ) {
+		// check public key file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ACCESS_KEY_ID, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "ec2" ) == 0 ) {
+		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", EC2AccessKeyId );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	if ( (tmp = condor_param( EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY )) ) {
+		// check private key file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
+							 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_SECRET_ACCESS_KEY, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "ec2" ) == 0 ) {
+		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", EC2SecretAccessKey );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	// EC2KeyPairFile is not a necessary parameter
+	if( (tmp = condor_param( EC2KeyPairFile, ATTR_EC2_KEY_PAIR_FILE )) ) {
+		// for the relative path, the keypair output file will be written to the IWD
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_KEY_PAIR_FILE, full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// EC2GroupName is not a necessary parameter
+	if( (tmp = condor_param( EC2SecurityGroups, ATTR_EC2_SECURITY_GROUPS )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_SECURITY_GROUPS, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	if ( (tmp = condor_param( EC2AmiID, ATTR_EC2_AMI_ID )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_AMI_ID, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "ec2" ) == 0 ) {
+		fprintf(stderr, "\nERROR: EC2 jobs require a \"%s\" parameter\n", EC2AmiID );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+	
+	// EC2InstanceType is not a necessary parameter
+	if( (tmp = condor_param( EC2InstanceType, ATTR_EC2_INSTANCE_TYPE )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_INSTANCE_TYPE, tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// EC2ElasticIP is not a necessary parameter
+    if( (tmp = condor_param( EC2ElasticIP, ATTR_EC2_ELASTIC_IP )) ) {
+        buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ELASTIC_IP, tmp );
+        free( tmp );
+        InsertJobExpr( buffer.Value() );
+    }
+	
+	// EC2UserData is not a necessary parameter
+	if( (tmp = condor_param( EC2UserData, ATTR_EC2_USER_DATA )) ) {
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_USER_DATA, tmp);
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}	
+
+	// EC2UserDataFile is not a necessary parameter
+	if( (tmp = condor_param( EC2UserDataFile, ATTR_EC2_USER_DATA_FILE )) ) {
+		// check user data file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.sprintf( "%s = \"%s\"", ATTR_EC2_USER_DATA_FILE, 
+				full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
 	}
 	
 
@@ -5080,7 +5258,7 @@ SetGridParams()
 
 	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
 		// check private key file can be opened
-		if ( !DisableFileChecks ) {
+		if ( !DisableFileChecks && !strstr( tmp, "$$" ) ) {
 			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
@@ -5152,7 +5330,7 @@ SetGridParams()
 	// CREAM clients support an alternate representation for resources:
 	//   host.edu:8443/cream-batchname-queuename
 	// Transform this representation into our regular form:
-	//   host.edu:8443 batchname queuename
+	//   host.edu:8443/ce-cream/services/CREAM2 batchname queuename
 	if ( JobGridType != NULL && strcasecmp (JobGridType, "cream") == MATCH ) {
 		tmp = condor_param( GridResource, ATTR_GRID_RESOURCE );
 		MyString resource = tmp;
@@ -5168,8 +5346,11 @@ SetGridParams()
 			}
 			if ( ( pos = resource.find( "/cream-", pos2 ) ) >= 0 ) {
 				// We found the shortened form
-				resource.replaceString( "-", " ", pos );
-				resource.replaceString( "/cream ", "/ce-cream/services/CREAM2 ", pos );
+				resource.replaceString( "/cream-", "/ce-cream/services/CREAM2 ", pos );
+				pos += 26;
+				if ( ( pos2 = resource.find( "-", pos ) ) >= 0 ) {
+					resource.setChar( pos2, ' ' );
+				}
 
 				buffer.sprintf( "%s = \"%s\"", ATTR_GRID_RESOURCE,
 								resource.Value() );
@@ -5253,6 +5434,15 @@ SetGSICredentials()
 						   proxy_subject);
 			InsertJobExpr(buffer);	
 			free( proxy_subject );
+
+			/* Insert the proxy email into the ad */
+			char *proxy_email;
+			proxy_email = x509_proxy_email(proxy_file);
+
+			if ( proxy_email ) {
+				InsertJobExprString(ATTR_X509_USER_PROXY_EMAIL, proxy_email);
+				free( proxy_email );
+			}
 
 			/* Insert the VOMS attributes into the ad */
 			char *voname = NULL;
@@ -5927,6 +6117,7 @@ queue(int num)
 		SetVMParams();
 		SetLogNotes();
 		SetUserNotes();
+		SetStackSize();
 
 			// This must come after all things that modify the input file list
 		FixupTransferInputFiles();
@@ -6560,6 +6751,7 @@ usage()
 	fprintf( stderr,
 			 "	-remote <name>\t\tsubmit to the specified remote schedd\n"
 			 "                \t\t(implies -spool)\n" );
+    fprintf( stderr, "\t-addr <ip:port>\t\tsubmit to schedd at given \"sinful string\"\n" );
 	fprintf( stderr,
 			 "	-append <line>\t\tadd line to submit file before processing\n"
 			 "                \t\t(overrides submit file; multiple -a lines ok)\n" );
@@ -7359,10 +7551,12 @@ SetConcurrencyLimits()
 		list.qsort();
 
 		str = list.print_to_string();
-		tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
-		InsertJobExpr(tmp.Value());
+		if ( str ) {
+			tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
+			InsertJobExpr(tmp.Value());
 
-		free(str);
+			free(str);
+		}
 	}
 }
 
@@ -7750,9 +7944,11 @@ SetVMParams()
 		}
 
 		tmp_ptr = vmdk_files.print_to_string();
-		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
-		InsertJobExpr( buffer );
-		free( tmp_ptr );
+		if ( tmp_ptr ) {
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
+			InsertJobExpr( buffer );
+			free( tmp_ptr );
+		}
 	}
 
 	// Check if a job user defines 'Argument'.

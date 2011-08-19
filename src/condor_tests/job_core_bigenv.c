@@ -79,7 +79,8 @@ static int check_environment_variable(
 		printf("Failed: %s doesn't exist.\n", variable_name);
 		failed = 1;
 	} else if (strlen(value) != 1000) {
-		printf("Failed: %s is corrupt (bad length).\n", variable_name);
+		printf("Failed: %s is corrupt (bad length). hi Should be 1000 but %d, %s\n", 
+			   variable_name, strlen(value), value);
 		failed = 1;
 	} else {
 		while (*value != 0) {

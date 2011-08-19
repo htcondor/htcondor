@@ -27,7 +27,7 @@ else(WINDOWS)
     condor_selective_glob( "proc_family_client*;proc_family_io*;local_client.*;named_pipe_reader*;named_pipe_writer*;named_pipe_util*;named_pipe_watchdog*" ProcClientElements )
 endif(WINDOWS)
 
-condor_daemon(procd "${ProcdRmvElements}" "procapi;utils;${PROCD_WIN_LINK_LIBS}" "${C_SBIN}" OFF)
+condor_daemon(procd "${ProcdRmvElements}" "procapi;utils;${PROCD_WIN_LINK_LIBS};${LIBCGROUP_FOUND}" "${C_SBIN}" OFF)
 
 if (LINUX AND WANT_FULL_DEPLOYMENT)
 	condor_exe( procd_ctl "procd_ctl.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF)

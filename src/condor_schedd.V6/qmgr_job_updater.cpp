@@ -107,6 +107,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs = new StringList();
 	common_job_queue_attrs->insert( ATTR_IMAGE_SIZE );
 	common_job_queue_attrs->insert( ATTR_RESIDENT_SET_SIZE );
+	common_job_queue_attrs->insert( ATTR_PROPORTIONAL_SET_SIZE );
 	common_job_queue_attrs->insert( ATTR_DISK_USAGE );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_SYS_CPU );
 	common_job_queue_attrs->insert( ATTR_JOB_REMOTE_USER_CPU );
@@ -120,6 +121,8 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_JOB_COMMITTED_TIME );
 	common_job_queue_attrs->insert( ATTR_COMMITTED_SLOT_TIME );
 	common_job_queue_attrs->insert( ATTR_DELEGATED_PROXY_EXPIRATION );
+	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_KBYTES );
+	common_job_queue_attrs->insert( ATTR_BLOCK_READ_KBYTES );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );

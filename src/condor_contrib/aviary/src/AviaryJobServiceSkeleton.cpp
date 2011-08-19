@@ -55,7 +55,7 @@ const char* BASIC_REQ_FORMAT =
 ( TARGET.FileSystemDomain %s )";
 
 const char* BASIC_OS_FORMAT = "TARGET.OpSys == \"%s\"";
-const char* BASIC_WINOS_FORMAT = "TARGET.OpSys==\"WINNT51\" || TARGET.OpSys==\"WINNT52\" || TARGET.OpSys==\"WINNT60\"";
+const char* BASIC_WINOS_FORMAT = "TARGET.OpSys==\"WINNT51\" || TARGET.OpSys==\"WINNT52\" || TARGET.OpSys==\"WINNT60\" || TARGET.OpSys==\"WINNT61\"";
 const char* REQ_UNDEFINED = " =!= undefined ";
 const char* REQ_GTE_ZERO = " >= 0 ";
 
@@ -170,6 +170,27 @@ addExtraAttributes(const CommonAttributeCollection* extra_attrs, AttributeMapTyp
 	}
 }
 
+void
+addDefaultHiddenAttributes(AttributeMapType& attr_map) {
+
+    // need these for dynamic provisioning
+    if (attr_map.end() == attr_map.find(ATTR_REQUEST_CPUS)) {
+        attr_map[ATTR_REQUEST_CPUS] = new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,"1");
+    }
+    if (attr_map.end() == attr_map.find(ATTR_DISK_USAGE)) {
+        attr_map[ATTR_DISK_USAGE] = new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,"1");
+    }
+    if (attr_map.end() == attr_map.find(ATTR_IMAGE_SIZE)) {
+        attr_map[ATTR_IMAGE_SIZE] = new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,"0");
+    }
+    if (attr_map.end() == attr_map.find(ATTR_REQUEST_DISK)) {
+        attr_map[ATTR_REQUEST_DISK] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE,ATTR_DISK_USAGE);
+    }
+    if (attr_map.end() == attr_map.find(ATTR_REQUEST_MEMORY)) {
+        attr_map[ATTR_REQUEST_MEMORY] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE,"ceiling(ifThenElse(JobVMMemory =!= undefined,JobVMMemory,ImageSize / 1024.000000))");
+    }
+}
+
 //
 // Utility methods END
 //
@@ -223,7 +244,10 @@ AviaryJobServiceSkeleton::submitJob(wso2wsf::MessageContext* /*outCtx*/ ,AviaryJ
 			}
 		}
 	}
-	
+
+	// finally we'll add defaults for dynamic provisioning
+	addDefaultHiddenAttributes(attrMap);
+
     // invoke submit
     string jobId, error;
     // we need this since we don't have a trusted socket to the schedd,

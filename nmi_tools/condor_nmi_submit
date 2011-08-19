@@ -1305,14 +1305,11 @@ EOF
 	# tstclair: no longer needed.
 	# print $fh "post_all = nmi_tools/glue/build/post_all\n";
 
-	# tstclair: why is this even an option it should always be the case. 
-    # Pass common arguments to <platform>_remote_pre script
-    #if( defined($opt_use_externals_cache) ) {
-	#	$common_pre_args .= ' --use_externals_cache';
-    #}
-
+    if( defined($opt_use_externals_cache) ) {
+		$common_pre_args .= ' --use-externals-cache';
+    }
     if( defined($opt_clear_externals_cache) ) {
-		$common_pre_args .= ' --clear_externals_cache';
+		$common_pre_args .= ' --clear-externals-cache';
     }
     if( defined($opt_clear_externals_cache_weekly) ) {
 		$common_pre_args .= ' --clear-externals-cache-weekly';

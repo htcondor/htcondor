@@ -42,9 +42,8 @@
 #include "condor_universe.h"
 #include "globus_utils.h"
 #include "env.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "condor_ver_info.h"
-#include "condor_scanner.h"	// for Token, etc.
 #include "condor_string.h" // for strnewp, etc.
 #include "utc_time.h"
 #include "condor_crontab.h"
@@ -102,6 +101,7 @@ static time_t xact_start_time = 0;	// time at which the current transaction was 
 static int cluster_initial_val = 1;		// first cluster number to use
 static int cluster_increment_val = 1;	// increment for cluster numbers of successive submissions 
 static int cluster_maximum_val = 0;     // maximum cluster id (default is 0, or 'no max')
+static int job_queued_count = 0;
 
 static void AddOwnerHistory(const MyString &user);
 
@@ -407,9 +407,9 @@ QmgmtPeer::set(ReliSock *input)
 }
 
 bool
-QmgmtPeer::set(const struct sockaddr_in *s, const char *o)
+QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 {
-	if ( !s || sock || myendpoint ) {
+	if ( !raddr.is_valid() || sock || myendpoint ) {
 		// already set, or no input
 		return false;
 	}
@@ -425,10 +425,8 @@ QmgmtPeer::set(const struct sockaddr_in *s, const char *o)
 		}
 	}
 
-	if ( s ) {
-		memcpy(&sockaddr,s,sizeof(struct sockaddr_in));
-		myendpoint = strnewp( inet_ntoa(s->sin_addr) );
-	}
+	addr = raddr;
+	myendpoint = strnewp(addr.to_ip_string().Value());
 
 	return true;
 }
@@ -481,13 +479,13 @@ QmgmtPeer::endpoint_ip_str() const
 	}
 }
 
-const struct sockaddr_in*
+const condor_sockaddr&
 QmgmtPeer::endpoint() const
 {
 	if ( sock ) {
 		return sock->peer_addr();
 	} else {
-		return &sockaddr;
+		return addr;
 	}
 }
 
@@ -1081,7 +1079,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 //		JobQueue->AppendLog(log);
 		JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 	} else {
-		if ( next_cluster_num > stored_cluster_num ) {
+        // This sanity check is not applicable if a maximum cluster value was set,  
+        // since in that case wrapped cluster-ids are a valid condition.
+		if ((next_cluster_num > stored_cluster_num) && (cluster_maximum_val <= 0)) {
 			// Oh no!  Somehow the header ad in the queue says to reuse cluster nums!
 			EXCEPT("JOB QUEUE DAMAGED; header ad NEXT_CLUSTER_NUM invalid");
 		}
@@ -1310,7 +1310,8 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// to the schedd.  we have to explicitly check here because all queue
 	// management commands come in via one sole daemon core command which
 	// has just READ permission.
-	if ( daemonCore->Verify("queue management", WRITE, Q_SOCK->endpoint(), Q_SOCK->getFullyQualifiedUser()) == FALSE ) {
+	condor_sockaddr addr = Q_SOCK->endpoint();
+	if ( daemonCore->Verify("queue management", WRITE, addr, Q_SOCK->getFullyQualifiedUser()) == FALSE ) {
 		// this machine does not have write permission; return failure
 		return false;
 	}
@@ -1749,6 +1750,7 @@ NewProc(int cluster_id)
 	JobQueue->NewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
 
 	IncrementClusterSize(cluster_id);
+    job_queued_count += 1;
 
 		// now that we have a real job ad with a valid proc id, then
 		// also insert the appropriate GlobalJobId while we're at it.
@@ -2322,18 +2324,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	if( round_param && *round_param && strcmp(round_param,"0") ) {
 		LexemeType attr_type = LX_EOF;
-#ifdef WANT_OLD_CLASSADS
-		Token token;
-
-			// See if attr_value is a scalar (int or float) by
-			// invoking the ClassAd scanner.  We do it this way
-			// to make certain we scan the value the same way that
-			// the ClassAd library will (i.e. support exponential
-			// notation, etc).
-		char const *avalue = attr_value; // scanner will modify ptr, so save it
-		Scanner(avalue,token);
-		attr_type = token.type;
-#else
 		ExprTree *tree = NULL;
 		classad::Value val;
 		if ( ParseClassAdRvalExpr(attr_value, tree) == 0 &&
@@ -2346,7 +2336,6 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 		}
 		delete tree;
-#endif
 
 		if ( attr_type == LX_INTEGER || attr_type == LX_FLOAT ) {
 			// first, store the actual value
@@ -2367,18 +2356,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			double fvalue;
 
 			if ( attr_type == LX_INTEGER ) {
-#ifdef WANT_OLD_CLASSADS
-				ivalue = token.intVal;
-#else
 				val.IsIntegerValue( ivalue );
-#endif
 				fvalue = ivalue;
 			} else {
-#ifdef WANT_OLD_CLASSADS
-				fvalue = token.floatVal;
-#else
 				val.IsRealValue( fvalue );
-#endif
 				ivalue = (int) fvalue;	// truncation conversion
 			}
 
@@ -3381,7 +3362,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			bool expanded_something = false;
 			int search_pos = 0;
 			while( !attribute_not_found &&
-					get_var(attribute_value,&left,&name,&right,NULL,true,search_pos) )
+					find_config_macro(attribute_value,&left,&name,&right,NULL,true,search_pos) )
 			{
 				expanded_something = true;
 				
@@ -4206,6 +4187,36 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 					        hash.c_str());
 					hash = "";
 			}
+
+			MyString cluster_owner;
+			if( GetAttributeString(active_cluster_num,-1,ATTR_OWNER,cluster_owner) == -1 ) {
+					// The owner is not set in the cluster ad.  We
+					// need it to be set so we can attempt to clean up
+					// the shared file when the cluster goes away.
+					// Setting the owner in the cluster ad to whatever
+					// it is in the ad we were given should be okay.
+					// If any other procs in this cluster have a
+					// different value for Owner, the cleanup will not
+					// be complete, but the files should eventually be
+					// cleaned by preen.  It would probably be a good
+					// idea to enforce the rule that all jobs in a
+					// cluster have the same Owner, but that is outside
+					// the scope of the code here.
+
+				rv = SetAttributeString(active_cluster_num,
+			                      -1,
+			                      ATTR_OWNER,
+			                      owner.Value());
+
+				if (rv < 0) {
+					dprintf(D_ALWAYS,
+					        "SendSpoolFileIfNeeded: unable to set %s to %s\n",
+					        ATTR_OWNER,
+					        owner.Value());
+					hash = "";
+				}
+			}
+
 			if (!hash.empty() &&
 			    ickpt_share_try_sharing(owner.Value(), hash, path))
 			{
@@ -4256,16 +4267,20 @@ PrintQ()
 // seperate. 
 int get_job_prio(ClassAd *job)
 {
-    int job_prio;
-    int job_status;
+    int     job_prio, 
+            pre_job_prio1, 
+            pre_job_prio2, 
+            post_job_prio1, 
+            post_job_prio2;
+    int     job_status;
     PROC_ID id;
     int     q_date;
     char    buf[100];
-	char	owner[100];
+    char    owner[100];
     int     cur_hosts;
     int     max_hosts;
-	int 	niceUser;
-	int		universe;
+    int     niceUser;
+    int     universe;
 
 	ASSERT(job);
 
@@ -4301,9 +4316,24 @@ int get_job_prio(ClassAd *job)
         return cur_hosts;
 	}
 
-
 	// --- Insert this job into the PrioRec array ---
-
+     	
+       // If pre/post prios are not defined as forced attributes, set them to INT_MIN
+	// to flag priocompare routine to not use them.
+	 
+    if (!job->LookupInteger(ATTR_PRE_JOB_PRIO1, pre_job_prio1)) {
+         pre_job_prio1 = INT_MIN;
+    }
+    if (!job->LookupInteger(ATTR_PRE_JOB_PRIO2, pre_job_prio2)) {
+         pre_job_prio2 = INT_MIN;
+    } 
+    if (!job->LookupInteger(ATTR_POST_JOB_PRIO1, post_job_prio1)) {
+         post_job_prio1 = INT_MIN;
+    }	 
+    if (!job->LookupInteger(ATTR_POST_JOB_PRIO2, post_job_prio2)) {
+         post_job_prio2 = INT_MIN;
+    }
+		   
     job->LookupInteger(ATTR_JOB_PRIO, job_prio);
     job->LookupInteger(ATTR_Q_DATE, q_date);
 	if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
@@ -4327,11 +4357,15 @@ int get_job_prio(ClassAd *job)
     // Rather look at if it has all the hosts that it wanted.
     if (cur_hosts>=max_hosts || job_status==HELD)
         return cur_hosts;
-
-    PrioRec[N_PrioRecs].id       = id;
-    PrioRec[N_PrioRecs].job_prio = job_prio;
-    PrioRec[N_PrioRecs].status   = job_status;
-    PrioRec[N_PrioRecs].qdate    = q_date;
+	     
+    PrioRec[N_PrioRecs].id             = id;
+    PrioRec[N_PrioRecs].job_prio       = job_prio;
+    PrioRec[N_PrioRecs].pre_job_prio1  = pre_job_prio1;
+    PrioRec[N_PrioRecs].pre_job_prio2  = pre_job_prio2;
+    PrioRec[N_PrioRecs].post_job_prio1 = post_job_prio1;
+    PrioRec[N_PrioRecs].post_job_prio2 = post_job_prio2;
+    PrioRec[N_PrioRecs].status         = job_status;
+    PrioRec[N_PrioRecs].qdate          = q_date;
 	if ( auto_id == -1 ) {
 		PrioRec[N_PrioRecs].auto_cluster_id = id.cluster;
 	} else {
@@ -4924,4 +4958,8 @@ void
 dirtyJobQueue()
 {
 	JobQueueDirty = true;
+}
+
+int GetJobQueuedCount() {
+    return job_queued_count;
 }

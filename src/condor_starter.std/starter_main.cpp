@@ -164,7 +164,7 @@ init()
 {
 	move_to_execute_directory();
 	init_environment_info();
-	sysapi_set_resource_limits();
+	sysapi_set_resource_limits(1<<29);
 	close_unused_file_descriptors();
 
 	return DEFAULT;
@@ -275,12 +275,35 @@ close_unused_file_descriptors()
 		}
 	}
 
+	int fd_count = 0;
+	int *open_fds = (int*)malloc(sizeof(int) * (D_NUMLEVELS+1));
+	if(!open_fds)
+		EXCEPT("Out of memory!\n");
+
+	fd_count = debug_open_fds(open_fds);
+
 		/* now close everything except the ones we use */
 	for( i=0; i<open_max; i++ ) {
-		if( !needed_fd(i) ) {
+		bool is_log = false;
+		if(fd_count > 0)
+		{
+			for(int index = 0; index <= D_NUMLEVELS; index++)
+			{
+				if(i == open_fds[index])
+				{
+					is_log = true;
+				}
+			}
+		}
+
+
+		if(!is_log && !needed_fd(i)) {
 			(void) close( i );
 		}
 	}
+
+	free(open_fds);
+
 	dprintf( D_FULLDEBUG, "Done closing file descriptors\n" );
 }
 

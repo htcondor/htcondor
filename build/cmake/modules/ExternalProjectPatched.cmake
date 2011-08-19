@@ -264,6 +264,10 @@ function(_ep_write_extractfile_script script_filename filename tmp directory)
     set(args xfz)
   endif()
 
+  if(filename MATCHES ".bz2$")
+    set(args xfj)
+  endif()
+
   if(filename MATCHES ".tar.gz$")
     set(args xfz)
   endif()
@@ -650,7 +654,7 @@ function(_ep_add_download_command name)
     set(work_dir ${download_dir})
     
     string(REGEX MATCH "[^/]*$" fname "${url}")
-    if(NOT "${fname}" MATCHES "\\.(tar|tgz|zip|tar\\.gz)$")
+    if(NOT "${fname}" MATCHES "\\.(tar|tgz|zip|tar\\.gz|bz2)$")
 		message(FATAL_ERROR "Could not extract tarball filename from url:\n  ${url}")
     endif()
     

@@ -29,7 +29,7 @@
 #include "classad/exprTree.h"
 #include "classad/matchClassad.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 	// class declarations
 class ExprTree;
@@ -168,6 +168,6 @@ private:
 	MatchClassAd		evalEnviron;		// also stores view info
 };
 
-END_NAMESPACE
+}
 
 #endif // __CLASSAD_VIEW_H__

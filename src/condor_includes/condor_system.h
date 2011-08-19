@@ -28,8 +28,6 @@
 # include "condor_sys_nt.h"
 #endif
 
-
-
 /******************************
 ** Unix specifics
 ******************************/
@@ -44,7 +42,6 @@
 #ifndef UNIX
 # define UNIX
 #endif
-
 
 /**********************************************************************
 ** These system-specific files will "fix" anything that needs fixing,
@@ -159,7 +156,6 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
-#include <sys/utsname.h>		
 #include <sys/resource.h>
 #include <limits.h>
 #include <ctype.h>
@@ -169,14 +165,9 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
-#if !defined(Darwin) && !defined(CONDOR_FREEBSD)
-#include <values.h>
-#endif
+#include <float.h>
 #include <math.h>
 #include <utime.h>
-#if !defined(Darwin)
-#include <sys/poll.h>
-#endif
 
 /* select() on all our platforms takes an fd_set pointer, so we can
    just define this here for everyone.  We don't really need it

@@ -381,6 +381,7 @@ Job::AddParent( Job* parent, MyString &whynot )
 		debug_printf( DEBUG_QUIET,
 					"Warning: child %s already has parent %s\n",
 					GetJobName(), parent->GetJobName() );
+		check_warning_strictness( DAG_STRICT_3 );
 		return true;
 	}
 
@@ -453,6 +454,7 @@ Job::AddChild( Job* child, MyString &whynot )
 		debug_printf( DEBUG_NORMAL,
 					"Warning: parent %s already has child %s\n",
 					GetJobName(), child->GetJobName() );
+		check_warning_strictness( DAG_STRICT_3 );
 		return true;
 	}
 
@@ -708,11 +710,10 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 
 	if ( (_throttleInfo != NULL) &&
 				(tmpName != *(_throttleInfo->_category)) ) {
-			// When we implement the -strict flag (see gittrac # 1755),
-			// should this be a fatal error?
 		debug_printf( DEBUG_NORMAL, "Warning: new category %s for node %s "
 					"overrides old value %s\n", categoryName, GetJobName(),
 					_throttleInfo->_category->Value() );
+		check_warning_strictness( DAG_STRICT_3 );
 	}
 
 		// Note: we must assign a ThrottleInfo here even if the name

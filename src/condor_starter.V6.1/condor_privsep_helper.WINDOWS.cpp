@@ -85,7 +85,8 @@ CondorPrivSepHelper::create_process(const char*,
                                      int,
                                      int,
                                      FamilyInfo*,
-									 int *affinity_mask)
+                                     int *affinity_mask,
+                                     MyString *  error_msg /*= NULL*/)
 {
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 	return 0;

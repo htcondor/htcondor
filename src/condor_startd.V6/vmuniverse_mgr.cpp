@@ -106,9 +106,17 @@ VMStarterInfo::getUsageOfVM(ProcFamilyUsage &usage)
 	if( updated ) {
 		usage.total_image_size = m_vm_alive_pinfo.imgsize;
 		usage.total_resident_set_size = m_vm_alive_pinfo.rssize;
+#if HAVE_PSS
+		usage.total_proportional_set_size = m_vm_alive_pinfo.pssize;
+		usage.total_proportional_set_size = m_vm_alive_pinfo.pssize_available;
+#endif
 	}else {
 		usage.total_image_size = 0;
         usage.total_resident_set_size = 0;
+#if HAVE_PSS
+		usage.total_proportional_set_size = 0;
+		usage.total_proportional_set_size = false;
+#endif
 	}
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
@@ -141,6 +149,12 @@ VMStarterInfo::addProcessForVM(pid_t vm_pid)
 	if( m_vm_alive_pinfo.imgsize > m_vm_exited_pinfo.imgsize ) {
 		m_vm_exited_pinfo.imgsize = m_vm_alive_pinfo.imgsize;
 	}
+#if HAVE_PSS
+	if( m_vm_alive_pinfo.pssize_available && m_vm_alive_pinfo.pssize > m_vm_exited_pinfo.pssize ) {
+		m_vm_exited_pinfo.pssize_available = true;
+		m_vm_exited_pinfo.pssize = m_vm_alive_pinfo.pssize;
+	}
+#endif
 
 	// Reset usage of the current process for VM
 	memset(&m_vm_alive_pinfo, 0, sizeof(m_vm_alive_pinfo));
@@ -964,6 +978,12 @@ VMUniverseMgr::getUsageForVM(pid_t s_pid, ProcFamilyUsage &usage)
 	}
 	usage.total_image_size += vm_usage.total_image_size;
 	usage.total_resident_set_size += vm_usage.total_resident_set_size;
+#if HAVE_PSS
+	if( vm_usage.total_proportional_set_size_available ) {
+		usage.total_proportional_set_size_available = true;
+		usage.total_proportional_set_size += vm_usage.total_proportional_set_size;
+	}
+#endif
 	return true;
 }
 

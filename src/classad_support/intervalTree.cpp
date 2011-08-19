@@ -26,7 +26,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE(classad)
+namespace classad {
 
 IntervalTree::
 IntervalTree( )
@@ -505,5 +505,5 @@ Display( FILE* fp )
 	putc( '\n', fp );
 }
 
-END_NAMESPACE
+} // namespace classad
 

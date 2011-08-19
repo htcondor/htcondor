@@ -25,7 +25,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 #if defined ( WIN32 )
 #if !defined ( fileno )
@@ -346,4 +346,4 @@ LogAbort( FILE *fp, ClassAdUnParser *unp )
 	return( true );
 }
 
-END_NAMESPACE
+}

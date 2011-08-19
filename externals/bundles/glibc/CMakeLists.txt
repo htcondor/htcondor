@@ -91,6 +91,35 @@ if (NOT CLIPPED)
 
 		set (GLIBC_PATCH patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch )
 
+	elseif(${GLIBC_VERSION} STREQUAL "212")
+
+		if (${SYS_ARCH} STREQUAL "X86_64")
+			set (VER 2.12-2-x86_64)
+
+			set (GLIBC_FLAGS CC=gcc CXX=g++ AUTOCONF=false MAKEINFO=: CFLAGS='-mtune=generic -fasynchronous-unwind-tables -DNDEBUG -g -O3 ')
+
+            set (GLIBC_CONFIGURE ./configure CC=gcc CXX=g++ 'CFLAGS=-mtune=generic -fasynchronous-unwind-tables -DNDEBUG -g -O3 ' --enable-add-ons=nptl,rtkaio,c_stubs,libidn --without-cvs --enable-kernel=2.6.18 --with-headers=/usr/include --enable-bind-now --with-tls --with-__thread --build x86_64-redhat-linux --host x86_64-redhat-linux --enable-multi-arch --disable-profile --enable-experimental-malloc --enable-nss-crypt --enable-static-nss )
+
+			set (GLIBC_MAKE make -j2 -r)
+		else()
+			set (VER 2.12-2)
+
+			set (GLIBC_FLAGS CC=gcc-4.3 CXX=g++-4.3 AUTOCONF=false MAKEINFO=: CFLAGS='-mtune=generic -fasynchronous-unwind-tables -DNDEBUG -g -O3 ')
+
+			# XXX FIXME
+			set (GLIBC_CONFIGURE ./configure --host=i686-linux --build=i486-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --without-selinux --enable-kernel=2.6.8 --disable-profile --with-headers=${GLIBC_BUILD_PREFIX}/glibc-${VER}/debian/include --enable-bind-now --with-tls --with-__thread --enable-static-nss)
+
+			set (GLIBC_MAKE make -j2 -r 'CFLAGS=-pipe -O2 -fstrict-aliasing -g -march=i686 -mtune=i686 -O3 ' PARALLELMFLAGS=-s)
+		endif()
+
+		# TODO. Need to test disable nscd patch to see if it is still
+		# relevant.
+		#set (GLIBC_PATCH patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch )
+
+		# But the enable-static-nss patch still works...
+		set (GLIBC_PATCH patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch )
+
+
 	else()
 		message(STATUS "Condor can not build standard universe for glibc version:${GLIBC_VERSION}")
 		set(GLIBC_DETECTED OFF)
@@ -105,6 +134,7 @@ if (NOT CLIPPED)
 	  ExternalProject_Add(glibc
 					  #-- Download Step ----------
 					  DOWNLOAD_COMMAND wget -N
+					  #http://parrot.cs.wisc.edu/externals/${GLIBC_VER}.tar.gz ${CMD_TERM}
 					  http://parrot.cs.wisc.edu/externals/${GLIBC_VER}.tar.gz ${CMD_TERM}
 					  DOWNLOAD_DIR ${GLIBC_STAGE}/dl
 					  URL http://parrot.cs.wisc.edu/externals/${GLIBC_VER}.tar.gz

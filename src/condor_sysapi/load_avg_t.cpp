@@ -22,11 +22,10 @@
 #include "condor_debug.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
+#include "test.h"
 #include "stdio.h"
 
 #define ITERATIONS_PER_SECOND 10000000
-
-int load_avg_test(int trials, int interval, int num_children, double warn_ok_ratio);
 
 int load_avg_test(int trials, int interval, int num_children, double warn_ok_ratio) {
 	float		foo = 0;

@@ -144,6 +144,7 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	char *gahp_debug = NULL;
 	ArgList args;
 	std::string value;
+	char *buffer = NULL;
 	
 	remoteJobId = NULL;
 	remoteJobState = "";
@@ -212,9 +213,6 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 	m_keypair_check_times = 0;
 
 	// for SSH keypair output file
-	{
-	char* buffer = NULL;
-	
 	// Notice:
 	// 	we can have two kinds of SSH keypair output file names or the place where the 
 	// output private file should be written to, 
@@ -230,7 +228,6 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 		m_key_pair_file = NULL_FILE;
 	}
 	free (buffer);
-	}
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
@@ -362,13 +359,13 @@ dprintf( D_ALWAYS, "================================>  AmazonJob::AmazonJob 1 \n
 AmazonJob::~AmazonJob()
 {
 	if ( myResource ) myResource->UnregisterJob( this );
-	if ( remoteJobId ) free( remoteJobId );
+	free( remoteJobId );
 	
-	if ( gahp != NULL ) delete gahp;
+	delete gahp;
 	free (m_public_key_file);
 	free (m_private_key_file);
 	free (m_user_data);
-	if (m_group_names != NULL) delete m_group_names;
+	delete m_group_names;
 	free(m_user_data_file);
 	free(m_instance_type);
 }
@@ -1240,7 +1237,8 @@ std::string AmazonJob::build_keypair()
 		StringList collectors( pool_name );
 		free( pool_name );
 		pool_name = collectors.print_to_string();
-	} else {
+	}
+	if ( !pool_name ) {
 		pool_name = strdup( "NoPool" );
 	}
 

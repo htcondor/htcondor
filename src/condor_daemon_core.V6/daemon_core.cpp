@@ -113,6 +113,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_email.h"
 
 #include "valgrind.h"
+#include "ipv6_hostname.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -2633,9 +2634,9 @@ DaemonCore::reconfig(void) {
 	// by the time we get here, because it needs to be called early
 	// in the process.
 
-#if !defined(WANT_OLD_CLASSADS)
+	// This is the compatibility layer on top of new ClassAds.
+	// A few configuration parameters control its behavior.
 	ClassAd::Reconfig();
-#endif
 
 	m_dirty_sinful = true; // refresh our address in case config changes it
 
@@ -2882,7 +2883,7 @@ DaemonCore::ReloadSharedPortServerAddr()
 }
 
 int
-DaemonCore::Verify(char const *command_descrip,DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
+DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_sockaddr& addr, const char * fqu )
 {
 	MyString deny_reason; // always get 'deny' reason, if there is one
 	MyString *allow_reason = NULL;
@@ -2892,14 +2893,15 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const struct s
 		allow_reason = &allow_reason_buf;
 	}
 
-	int result = getSecMan()->Verify(perm, sin, fqu, allow_reason, &deny_reason);
+	int result = getSecMan()->Verify(perm, addr, fqu, allow_reason, &deny_reason);
 
 	MyString *reason = result ? allow_reason : &deny_reason;
 	char const *result_desc = result ? "GRANTED" : "DENIED";
 
 	if( reason ) {
 		char ipstr[IP_STRING_BUF_SIZE];
-		sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
+		addr.to_ip_string(ipstr, sizeof(ipstr));
+	//sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
 
 			// Note that although this says D_ALWAYS, when the result is
 			// ALLOW, we only get here if D_SECURITY is on.
@@ -3678,23 +3680,23 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 
 		// log a message
 	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
-	{
-		dprintf(D_DAEMONCORE,
-				"Calling Handler <%s> for Socket <%s>\n",
-				(*sockTable)[i].handler_descrip,
-				(*sockTable)[i].iosock_descrip);
-		handlerName = strdup((*sockTable)[i].handler_descrip);
-		dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
+		{
+			dprintf(D_DAEMONCORE,
+					"Calling Handler <%s> for Socket <%s>\n",
+					(*sockTable)[i].handler_descrip,
+					(*sockTable)[i].iosock_descrip);
+			handlerName = strdup((*sockTable)[i].handler_descrip);
+			dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
 
 		UtcTime handler_start_time;
 		handler_start_time.getTime();
 
-		if ( (*sockTable)[i].handler ) {
-				// a C handler
-			result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
-		} else if ( (*sockTable)[i].handlercpp ) {
-				// a C++ handler
-			result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
+	if ( (*sockTable)[i].handler ) {
+			// a C handler
+		result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
+	} else if ( (*sockTable)[i].handlercpp ) {
+			// a C++ handler
+		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
 		}
 
 		UtcTime handler_stop_time;
@@ -3908,7 +3910,7 @@ int DaemonCore::HandleReqSocketTimerHandler()
 		
 		// and blow it away
 	dprintf(D_ALWAYS,"Closing socket from %s - no data received\n",
-			sin_to_string(((Sock*)stream)->peer_addr()));
+			((Sock*)stream)->peer_addr().to_sinful().Value());
 	delete stream;
 
 	return TRUE;
@@ -4625,7 +4627,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					// generate a unique ID.
 					MyString tmpStr;
-					tmpStr.sprintf( "%s:%i:%i:%i", my_hostname(), mypid,
+					tmpStr.sprintf( "%s:%i:%i:%i", 
+									get_local_hostname().Value(), mypid,
 							 (int)time(0), ZZZ_always_increase() );
 					assert (the_sid == NULL);
 					the_sid = strdup(tmpStr.Value());
@@ -6170,6 +6173,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             PidEnvID*   penvid,
                             const char* login,
                             gid_t*      group,
+			    const char* cgroup,
                             const char* glexec_proxy)
 {
 	bool success = false;
@@ -6217,6 +6221,21 @@ DaemonCore::Register_Family(pid_t       child_pid,
 #else
 		EXCEPT("Internal error: "
 		           "group-based tracking unsupported on this platform");
+#endif
+	}
+	if (cgroup != NULL) {
+#if defined(HAVE_EXT_LIBCGROUP)
+		if (!m_proc_family->track_family_via_cgroup(child_pid, cgroup))
+		{
+			dprintf(D_ALWAYS,
+				"Create_Process: error tracking family "
+				    "with root %u via cgroup %s\n",
+				child_pid, cgroup);
+			goto REGISTER_FAMILY_DONE;
+		}
+#else
+		EXCEPT("Internal error: "
+			    "cgroup-based tracking unsupported in this condor build");
 #endif
 	}
 	if (glexec_proxy != NULL) {
@@ -6747,6 +6766,7 @@ void CreateProcessForkit::exec() {
 				                            penvid_ptr,
 				                            m_family_info->login,
 				                            tracking_gid_ptr,
+							    m_family_info->cgroup,
 				                            m_family_info->glexec_proxy);
 			if (!ok) {
 				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
@@ -7912,6 +7932,7 @@ int DaemonCore::Create_Process(
 		                          NULL,
 		                          family_info->login,
 		                          NULL,
+					  family_info->cgroup,
 		                          family_info->glexec_proxy);
 		if (!ok) {
 			EXCEPT("error registering process family with procd");
@@ -8359,6 +8380,7 @@ int DaemonCore::Create_Process(
 		                &pidtmp->penvid,
 		                family_info->login,
 		                NULL,
+				family_info->cgroup,
 		                family_info->glexec_proxy);
 	}
 #endif
@@ -8865,7 +8887,7 @@ DaemonCore::Inherit( void )
 					inheritedSocks[numInheritedSocks++] = (Stream *)dc_ssock;
 					break;
 				default:
-					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks");
+					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks, not %c (%d)", *ptmp, (int)*ptmp);
 					break;
 			} // end of switch
 			ptmp=inherit_list.next();
@@ -8924,7 +8946,7 @@ DaemonCore::Inherit( void )
 	if(!privTmp)
 	{
 		return;
-	}
+		}
 
 	StringList private_list(privTmp, " ");
 	UnsetEnv( privEnvName );
@@ -9073,10 +9095,11 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// is misconfigured [to preempt RUST like rust-admin #2915]
 
 	if( dc_rsock ) {
-		const unsigned int my_ip = dc_rsock->get_ip_int();
-		const unsigned int loopback_ip = ntohl( INADDR_LOOPBACK );
+			//const unsigned int my_ip = dc_rsock->get_ip_int();
+			//const unsigned int loopback_ip = ntohl( INADDR_LOOPBACK );
 
-		if( my_ip == loopback_ip ) {
+			//if( my_ip == loopback_ip ) {
+		if ( dc_rsock->my_addr().is_loopback() ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
 			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
 		}
@@ -9834,7 +9857,7 @@ int DaemonCore::HungChildTimeout()
 		first_time = false;
 	}
 	else {
-		pidentry->was_not_responding = TRUE;
+	pidentry->was_not_responding = TRUE;
 	}
 
 	// now we give the child one last chance to save itself.  we do this by
@@ -9986,25 +10009,25 @@ int DaemonCore::SendAliveToParent()
 	int timeout = m_child_alive_period / number_of_tries;
 	if( timeout < 60 ) {
 		timeout = 60;
-	}
+		}
 	msg->setDeadlineTimeout( timeout );
 	msg->setTimeout( timeout );
 
 	if( blocking || !d->hasUDPCommandPort() || !m_wants_dc_udp ) {
 		msg->setStreamType( Stream::reli_sock );
-	}
+			}
 	else {
 		msg->setStreamType( Stream::safe_sock );
-	}
+		}
 
 	if( blocking ) {
 		d->sendBlockingMsg( msg.get() );
 		ret_val = msg->deliveryStatus() == DCMsg::DELIVERY_SUCCEEDED;
-	}
+			}
 	else {
 		d->sendMsg( msg.get() );
 		ret_val = TRUE;
-	}
+		}
 
 	if ( first_time ) {
 		first_time = false;
@@ -10467,7 +10490,7 @@ DaemonCore::InitSettableAttrsLists( void )
 		if( SettableAttrsLists[i] ) {
 			tmp = (SettableAttrsLists[i])->print_to_string();
 			dprintf( D_ALWAYS, "SettableAttrList[%s]: %s\n",
-					 PermString((DCpermission)i), tmp );
+					 PermString((DCpermission)i), tmp?tmp:"" );
 			free( tmp );
 		}
 	}
@@ -10761,7 +10784,7 @@ DaemonCore::publish(ClassAd *ad) {
 	ad->Assign(ATTR_MY_CURRENT_TIME, (int)time(NULL));
 
 		// Every daemon wants ATTR_MACHINE to be the full hostname:
-	ad->Assign(ATTR_MACHINE, my_full_hostname());
+	ad->Assign(ATTR_MACHINE, get_local_fqdn().Value());
 
 		// Publish our network identification attributes:
 	tmp = privateNetworkName();

@@ -196,8 +196,8 @@ sub submit_builds
 		# that the condor_nmi_submit file should find its own nightly
 		# tags file.
 
-		"./$CNS --build --nightly --use-externals-cache " .
-		"--clear-externals-cache-weekly --submit-xtests " .
+		"./$CNS --build --nightly --clear-externals-cache " .
+		"--submit-xtests " .
 		"--notify=condor-builds\@cs.wisc.edu --notify-fail-only " . 
 		"--git " .
 		(defined $opt_platforms ? "--platforms=$opt_platforms " : "") .

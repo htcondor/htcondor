@@ -36,7 +36,7 @@
 
 extern FILESQL *FILEObj;
 
-Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
+Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* _parent )
 {
 	MyString tmp;
 	char* tmpName;
@@ -92,7 +92,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	} else {
 		tmpName = my_full_hostname();
 	}
-	if( resmgr->is_smp() ) {
+	if( multiple_slots || get_feature() == PARTITIONABLE_SLOT ) {
 		tmp.sprintf( "%s@%s", r_id_str, tmpName );
 		r_name = strdup( tmp.Value() );
 	} else {

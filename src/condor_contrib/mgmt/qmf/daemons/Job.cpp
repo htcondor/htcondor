@@ -20,7 +20,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "condor_parser.h"
+#include "condor_classad.h"
 #include "proc.h"
 
 #include "stringSpace.h"
@@ -81,6 +81,7 @@ Attribute::Attribute ( AttributeType _type, const char *_value ) :
 
 Attribute::~Attribute()
 {
+    //
 }
 
 Attribute::AttributeType
@@ -92,7 +93,7 @@ Attribute::GetType() const
 const char *
 Attribute::GetValue() const
 {
-    return m_value;
+    return m_value.c_str();
 }
 
 //////////////
@@ -180,12 +181,12 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
         }
         case classad::Value::STRING_VALUE:
         {
-            MyString str;
+            std::string str;
             if ( !m_full_ad->LookupString ( _name, str ) )
             {
                 return false;
             }
-            _attribute = new Attribute ( Attribute::STRING_TYPE, str.Value() );
+            _attribute = new Attribute ( Attribute::STRING_TYPE, str.c_str() );
             return true;
         }
         default:
@@ -335,6 +336,16 @@ const ClassAd* LiveJobImpl::GetSummary ()
 		i++;
 		}
 	}
+
+    // make sure we're up-to-date with status even if we've cached the summary
+	m_summary_ad->Assign(ATTR_JOB_STATUS,this->GetStatus());
+    int i;
+    if ( m_full_ad->LookupInteger ( ATTR_ENTERED_CURRENT_STATUS, i ) ) {
+        m_summary_ad->Assign(ATTR_ENTERED_CURRENT_STATUS,i);
+    }
+    else {
+        dprintf(D_ALWAYS,"Unable to get ATTR_ENTERED_CURRENT_STATUS\n");
+    }
 
 	return m_summary_ad;
 }

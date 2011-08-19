@@ -891,8 +891,13 @@ DedicatedScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID)
+DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
 {
+	ClassAd *jobad = GetJobAd(jobid.cluster,jobid.proc);
+	if( !jobad ) {
+		return true;
+	}
+	FreeJobAd( jobad );
 	return false;
 }
 
@@ -2107,6 +2112,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 		}
 
 		char *all_hosts_str = allRemoteHosts.print_to_string();
+		ASSERT( all_hosts_str );
 
 		for (int pNo = 0; pNo < allocation->num_procs; pNo++) {
 				SetAttributeString(allocation->cluster, pNo, ATTR_ALL_REMOTE_HOSTS, all_hosts_str);
@@ -3139,7 +3145,12 @@ DedicatedScheduler::AddMrec(
 
 	// Next, insert this match_rec into our hashtables
     ClassAd* job = GetJobAd(job_id.cluster, job_id.proc);
+	ASSERT( job );
     pending_requests[claim_id] = new ClassAd(*job);
+
+	// Collapse the chained ad attributes into this copied ad,
+	// just in case the job is removed while the request is still pending.
+	pending_requests[claim_id]->ChainCollapse();
 
     if (is_partitionable(match_ad)) {
         pending_matches[claim_id] = mrec;
@@ -3170,7 +3181,7 @@ DedicatedScheduler::DelMrec( match_rec* rec )
 bool
 DedicatedScheduler::DelMrec( char const* id )
 {
-	match_rec* rec;
+	match_rec* rec = NULL;
 
 	char name_buf[256];
 	name_buf[0] = '\0';
@@ -3180,7 +3191,26 @@ DedicatedScheduler::DelMrec( char const* id )
 				 "match not deleted\n" );
 		return false;
 	}
-
+	// Check pending_matches
+	std::map<std::string,match_rec*>::iterator it;
+	if((it = pending_matches.find(id)) != pending_matches.end()){
+		rec = it->second;	
+		dprintf( D_FULLDEBUG, "Found record for claim %s in pending matches\n",id);
+		pending_matches.erase(it);
+		std::map<std::string,ClassAd*>::iterator rit;
+		if((rit = pending_requests.find(rec->publicClaimId())) != pending_requests.end()){
+			if(rit->second){
+				delete rit->second;
+				pending_requests.erase(rit);
+			}
+		}
+		std::map<std::string,std::string>::iterator cit;
+		if((cit = pending_claims.find(rec->publicClaimId())) != pending_claims.end()){
+			pending_claims.erase(cit);
+		}
+		delete rec;
+		return true;
+	}
 		// First, delete it from our table hashed on ClaimId. 
 	HashKey key( id );
 	if( all_matches_by_id->lookup(key, rec) < 0 ) {
@@ -4258,27 +4288,71 @@ clusterSortByPrioAndDate( const void *ptr1, const void* ptr2 )
 {
 	int cluster1 = *((const int*)ptr1);
 	int cluster2 = *((const int*)ptr2);
-	int qdate1, qdate2;
+	int c1_qdate, c2_qdate;	
+	int c1_prio, c1_preprio1, c1_preprio2, c1_postprio1, c1_postprio2=0;	
+	int c2_prio, c2_preprio1, c2_preprio2, c2_postprio1, c2_postprio2=0;
 
-	int prio1, prio2;
-
-	if( (GetAttributeInt(cluster1, 0, ATTR_Q_DATE, &qdate1) < 0) || 
-		(GetAttributeInt(cluster2, 0, ATTR_Q_DATE, &qdate2) < 0) ||
-		(GetAttributeInt(cluster1, 0, ATTR_JOB_PRIO, &prio1) < 0) ||
-		(GetAttributeInt(cluster2, 0, ATTR_JOB_PRIO, &prio2) < 0)) {
+	if ((GetAttributeInt(cluster1, 0, ATTR_Q_DATE, &c1_qdate) < 0) || 
+	        (GetAttributeInt(cluster2, 0, ATTR_Q_DATE, &c2_qdate) < 0) ||
+	        (GetAttributeInt(cluster1, 0, ATTR_JOB_PRIO, &c1_prio) < 0) ||
+	        (GetAttributeInt(cluster2, 0, ATTR_JOB_PRIO, &c2_prio) < 0)) {
 		
 		return -1;
 	}
+	
+        if (GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO1, &c1_preprio1) > -1 &&
+	       GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO1, &c2_preprio1) > -1 ){
+	     if (c1_preprio1 < c2_preprio1) {
+		return 1;
+	     }
 
-	if (prio1 < prio2) {
+	     if (c1_preprio1 > c2_preprio1) {
+		return -1;
+	     }
+        }
+	
+	if (GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO2, &c1_preprio2) > -1 &&
+	       GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO2, &c2_preprio2) > -1 ) {
+	     if (c1_preprio2 < c2_preprio2) {
+		return 1;
+	     }
+
+	     if (c1_preprio2 > c2_preprio2) {
+		return -1;
+	     }
+        }
+	
+	if (c1_prio < c2_prio) {
 		return 1;
 	}
 
-	if (prio1 > prio2) {
+	if (c1_prio > c2_prio) {
 		return -1;
 	}
+	
+        if (GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO1, &c1_postprio1) > -1 &&
+	       GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO1, &c2_postprio1) > -1 ) { 
+	     if (c1_postprio1 < c2_postprio1) {
+		return 1;
+	     }
 
-	return (qdate1 - qdate2);
+	     if (c1_postprio1 > c2_postprio1) {
+		return -1;
+	     }
+        }
+	
+	if (GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO2, &c1_postprio2) > -1 &&
+	       GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO2, &c2_postprio2) > -1 ) {
+	     if (c1_postprio2 < c2_postprio2) {
+		return 1;
+	     }
+
+	     if (c1_postprio2 > c2_postprio2) {
+		return -1;
+	     }
+        }
+	
+	return (c1_qdate - c2_qdate);
 }
 
 

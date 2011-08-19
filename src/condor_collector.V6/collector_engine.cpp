@@ -24,7 +24,6 @@ extern "C" void event_mgr (void);
 //-------------------------------------------------------------
 
 #include "condor_classad.h"
-#include "condor_parser.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_network.h"
@@ -334,7 +333,7 @@ CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
 }
 
 ClassAd *CollectorEngine::
-collect (int command, Sock *sock, sockaddr_in *from, int &insert)
+collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 {
 	ClassAd	*clientAd;
 	ClassAd	*rval;
@@ -484,7 +483,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 }
 
 ClassAd *CollectorEngine::
-collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
+collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,Sock *sock)
 {
 	ClassAd		*retVal;
 	ClassAd		*pvtAd;
@@ -909,7 +908,7 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *q
 	{
 		ClassAd * pAd=0;
 		// try to create a hk from the query ad if it is possible.
-		if ( (*makeKey) (hk, const_cast<ClassAd*>(&c_query), NULL) ) {
+		if ( (*makeKey) (hk, const_cast<ClassAd*>(&c_query), condor_sockaddr::null) ) {
 			if( query_contains_hash_key ) {
 				*query_contains_hash_key = true;
 			}
@@ -946,7 +945,7 @@ updateClassAd (CollectorHashTable &hashTable,
 			   AdNameHashKey &hk,
 			   const MyString &hashString,
 			   int  &insert,
-			   const sockaddr_in * /*from*/ )
+			   const condor_sockaddr& /*from*/ )
 {
 	ClassAd		*old_ad, *new_ad;
 	MyString	buf;
@@ -1018,7 +1017,7 @@ mergeClassAd (CollectorHashTable &hashTable,
 			   AdNameHashKey &hk,
 			   const MyString &hashString,
 			   int  &insert,
-			   const sockaddr_in * /*from*/ )
+			   const condor_sockaddr& /*from*/ )
 {
 	ClassAd		*old_ad = NULL;
 
@@ -1159,7 +1158,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now, HashFunc makeKey)
 		if ( timeDiff > (double) max_lifetime )
 		{
 			// then remove it from the segregated table
-			(*makeKey) (hk, ad, NULL);
+			(*makeKey) (hk, ad, condor_sockaddr::null);
 			hk.sprint( hkString );
 			if( timeStamp == 0 ) {
 				dprintf (D_ALWAYS,"\t\t**** Removing invalidated ad: \"%s\"\n", hkString.Value() );

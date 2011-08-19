@@ -26,7 +26,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 // ctor
 Lexer::
@@ -866,4 +866,4 @@ strLexToken (int tokenValue)
 	}
 }
 
-END_NAMESPACE // classad
+} // classad

@@ -41,6 +41,7 @@
 #include "net_string_list.h"
 #include "MyString.h"
 #include "condor_perms.h"
+#include "condor_sockaddr.h"
 
 template <class Key, class Value> class HashTable; // forward declaration
 
@@ -101,7 +102,7 @@ public:
 		@return USER_AUTH_SUCCESS -- if success, USER_AUTH_FAILURE -- if failer
                 USER_ID_REQUIRED -- if user id is required but the caller did not pass in
 	*/
-	int Verify( DCpermission perm, const struct sockaddr_in *sin, const char * user, MyString *allow_reason, MyString *deny_reason );
+	int Verify( DCpermission perm, const condor_sockaddr& addr, const char * user, MyString *allow_reason, MyString *deny_reason );
 
 	/** Dynamically opens a hole in the authorization settings for the
 	    given (user, IP) at the given perm level.
@@ -153,8 +154,8 @@ private:
 	int Init();
 
     bool has_user(UserPerm_t * , const char *, perm_mask_t &);
-	bool LookupCachedVerifyResult( DCpermission perm, const struct in_addr &sin, const char * user, perm_mask_t & mask);
-	int add_hash_entry(const struct in_addr & sin_addr, const char * user, perm_mask_t new_mask);
+	bool LookupCachedVerifyResult( DCpermission perm, const struct in6_addr &sin6, const char * user, perm_mask_t & mask);
+	int add_hash_entry(const struct in6_addr & sin6_addr, const char * user, perm_mask_t new_mask);
 	void fill_table( PermTypeEntry * pentry, char * list, bool allow);
     void split_entry(const char * entry, char ** host, char ** user);
 	perm_mask_t allow_mask(DCpermission perm);
@@ -162,7 +163,7 @@ private:
 
 	void PermMaskToString(perm_mask_t mask, MyString &mask_str);
 	void UserHashToString(UserHash_t *user_hash, MyString &result);
-	void AuthEntryToString(const struct in_addr & host, const char * user, perm_mask_t mask, MyString &result);
+	void AuthEntryToString(const struct in6_addr & host, const char * user, perm_mask_t mask, MyString &result);
 	void PrintAuthTable(int dprintf_level);
 
 		// See if there is an authorization policy entry for a specific user at
@@ -182,7 +183,7 @@ private:
 
 	HolePunchTable_t* PunchedHoleArray[LAST_PERM];
 
-	typedef HashTable <struct in_addr, UserPerm_t *> PermHashTable_t;
+	typedef HashTable <struct in6_addr, UserPerm_t *> PermHashTable_t;
 	PermHashTable_t* PermHashTable;
 };
 	

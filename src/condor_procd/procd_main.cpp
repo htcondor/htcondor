@@ -320,11 +320,11 @@ get_parent_info(pid_t& parent_pid, birthday_t& parent_birthday)
 
 	int ignored;
 	if (ProcAPI::getProcInfo(getpid(), own_pi, ignored) != PROCAPI_SUCCESS) {
-		fprintf(stderr, "error: getProcInfo failed on own PID");
+		fprintf(stderr, "error: getProcInfo failed on own PID\n");
 		exit(1);
 	}
 	if (ProcAPI::getProcInfo(own_pi->ppid, parent_pi, ignored) != PROCAPI_SUCCESS) {
-		fprintf(stderr, "error: getProcInfo failed on parent PID");
+		fprintf(stderr, "error: getProcInfo failed on parent PID\n");
 		exit(1);
 	}
 
@@ -338,7 +338,7 @@ get_parent_info(pid_t& parent_pid, birthday_t& parent_birthday)
 		an escalation of privileges granted to the authorized process, we 
 		exit if we determine that our parent is init. */
 	if (own_pi->ppid == 1) {
-		fprintf(stderr, "error: Procd's ppid can't be 1!");
+		fprintf(stderr, "error: Procd's ppid can't be 1!\n");
 		exit(1);
 	}
 #endif
@@ -349,7 +349,7 @@ get_parent_info(pid_t& parent_pid, birthday_t& parent_birthday)
 		            PROCAPI_BIRTHDAY_FORMAT
 		            ") is later than our own ("
 		            PROCAPI_BIRTHDAY_FORMAT
-		            ")",
+		            ")\n",
 		       parent_pi->birthday,
 		       own_pi->birthday);
 		exit(1);
@@ -386,6 +386,12 @@ main(int argc, char* argv[])
 		int ignored;
 		int status = ProcAPI::getProcInfo(root_pid, pi, ignored);
 		if (status != PROCAPI_SUCCESS) {
+				if (pi != NULL) {
+					delete pi;
+				}
+				fprintf(stderr,
+					"getProcInfo failed on root PID %u\n",
+					 (unsigned)root_pid);
 				EXCEPT("getProcInfo failed on root PID %u",
 				(unsigned)root_pid);
 		}
@@ -403,7 +409,7 @@ main(int argc, char* argv[])
 		debug_fp = safe_fopen_wrapper(log_file_name, "a");
 		if (debug_fp == NULL) {
 			fprintf(stderr,
-			        "error: couldn't open file \"%s\" for logging: %s (%d)",
+			        "error: couldn't open file \"%s\" for logging: %s (%d)\n",
 					log_file_name,
 			        strerror(errno),
 			        errno);
@@ -427,7 +433,7 @@ main(int argc, char* argv[])
 	//
 	if (max_snapshot_interval < -1) {
 		fprintf(stderr,
-		        "error: maximum snapshot interval must be non-negative or -1");
+		        "error: maximum snapshot interval must be non-negative or -1\n");
 		exit(1);
 	}
 
@@ -492,6 +498,10 @@ main(int argc, char* argv[])
 			max_tracking_gid,
 			use_external_gid_association ? false : true);
 	}
+#endif
+
+#if defined(HAVE_EXT_LIBCGROUP)
+	monitor.enable_cgroup_tracking();
 #endif
 
 	// initialize the server for accepting requests from clients

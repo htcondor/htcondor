@@ -43,7 +43,9 @@ BaseReplicaTransferer::BaseReplicaTransferer(
 	char* stateFilePathsAsString = 
 		const_cast<StringList&>(pStateFilePathsList).print_to_string();
 	// copying the string lists
-	m_stateFilePathsList.initializeFromString( stateFilePathsAsString );
+	if ( stateFilePathsAsString ) {
+		m_stateFilePathsList.initializeFromString( stateFilePathsAsString );
+	}
 	free( stateFilePathsAsString );
 }
 

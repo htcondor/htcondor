@@ -100,7 +100,7 @@ class VMProc : public OsProc
 		void setVMIP(const char *ip);
 
 		void updateUsageOfVM();
-		void getUsageOfVM(long &sys_time, long& user_time, unsigned long &max_image, unsigned long& rss);
+		void getUsageOfVM(long &sys_time, long& user_time, unsigned long &max_image, unsigned long& rss, unsigned long &pss, bool& pss_available);
 		void killProcessForVM();
 
 		// If interal vmgahp error occurs, call this function 

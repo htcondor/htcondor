@@ -96,7 +96,10 @@ StarterUserPolicy::getJobBirthday( )
 void
 StarterUserPolicy::doAction( int action, bool is_periodic ) 
 {
-	MyString reason = this->user_policy.FiringReason();
+	MyString reason;
+	int reason_code;
+	int reason_subcode;
+	this->user_policy.FiringReason(reason,reason_code,reason_subcode);
 	if ( reason.IsEmpty() ) {
 		EXCEPT( "StarterUserPolicy: Empty FiringReason." );
 	}
@@ -106,17 +109,8 @@ StarterUserPolicy::doAction( int action, bool is_periodic )
 		// UNDEFINED_EVAL
 		// ---------------------------------
 		case UNDEFINED_EVAL:
-				//
-				// If a given policy expression was undefined, the user
-				// screwed something up and they better deal with it. We
-				// don't just want the job to leave the queue
-				// So the this case should fall through into HOLD_IN_QUEUE
-				//
-		// ---------------------------------
-		// HOLD_IN_QUEUE
-		// ---------------------------------
 		case HOLD_IN_QUEUE:
-			this->jic->holdJob( reason.Value(), CONDOR_HOLD_CODE_JobPolicy, 0 );
+			this->jic->holdJob( reason.Value(), reason_code, reason_subcode );
 			break;
 		// ---------------------------------
 		// REMOVE_FROM_QUEUE

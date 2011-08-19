@@ -34,7 +34,7 @@ param_info_hash(const char *str)
 }
 
 void
-param_info_hash_insert(param_info_hash_t param_info, param_info_t* p) {
+param_info_hash_insert(param_info_hash_t param_info, const param_info_t* p) {
 
 	unsigned int key;
 	bucket_t* b;
@@ -61,7 +61,7 @@ param_info_hash_insert(param_info_hash_t param_info, param_info_t* p) {
 	}
 }
 
-param_info_t*
+const param_info_t*
 param_info_hash_lookup(param_info_hash_t param_info, const char* param) {
 
 	unsigned int key;
@@ -82,8 +82,27 @@ param_info_hash_lookup(param_info_hash_t param_info, const char* param) {
 
 // of type to be used by param_info_hash_iterate
 int
-param_info_hash_dump_value(param_info_t* param_value, void* /*unused*/ ) {
+param_info_hash_dump_value(const param_info_t* param_value, void* /*unused*/ ) {
 	printf("%s:  default=", param_value->name);
+#if 1
+    if ( ! param_value->default_valid)
+       printf("<Undefined>");
+    else
+	switch (param_value->type) {
+		case PARAM_TYPE_STRING:
+			printf("%s", reinterpret_cast<const param_info_PARAM_TYPE_STRING*>(param_value)->str_val);
+			break;
+		case PARAM_TYPE_DOUBLE:
+			printf("%f", reinterpret_cast<const param_info_PARAM_TYPE_DOUBLE*>(param_value)->dbl_val);
+			break;
+		case PARAM_TYPE_INT:
+			printf("%d", reinterpret_cast<const param_info_PARAM_TYPE_INT*>(param_value)->int_val);
+			break;
+		case PARAM_TYPE_BOOL:
+			printf("%s", reinterpret_cast<const param_info_PARAM_TYPE_BOOL*>(param_value)->int_val == 0 ? "false" : "true");
+			break;
+	}
+#else
 	switch (param_value->type) {
 		case PARAM_TYPE_STRING:
 			printf("%s", param_value->default_val.str_val);
@@ -98,6 +117,7 @@ param_info_hash_dump_value(param_info_t* param_value, void* /*unused*/ ) {
 			printf("%s", param_value->default_val.int_val == 0 ? "false" : "true");
 			break;
 	}
+#endif
 	printf("\n");
 	return 0;
 }
@@ -109,7 +129,7 @@ param_info_hash_dump(param_info_hash_t param_info) {
 
 void
 param_info_hash_iterate(param_info_hash_t param_info, int (*callPerElement)
-			(param_info_t* /*value*/, void* /*user data*/), void* user_data) {
+			(const param_info_t* /*value*/, void* /*user data*/), void* user_data) {
 	int i;
 	int stop = 0;
 	for(i = 0; i < PARAM_INFO_TABLE_SIZE && stop == 0; i++) {

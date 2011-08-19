@@ -70,6 +70,11 @@ public:
 		bool&);
 #endif
 
+#if defined(HAVE_EXT_LIBCGROUP)
+	// Tell ProcD to track a given PID family by a cgroup.
+	bool track_family_via_cgroup(pid_t, const char *, bool&);
+#endif
+
 	// tell the ProcD it needs to use glexec (along with the given
 	// proxy) in order to signal the specified family
 	//

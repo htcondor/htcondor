@@ -55,7 +55,7 @@ int get_random_int( void )
 #if defined(WIN32)
 	return rand();
 #else
-	return (int) (lrand48() & MAXINT);
+	return (int) (lrand48() & INT_MAX);
 #endif
 }
 

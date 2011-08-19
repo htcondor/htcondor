@@ -436,8 +436,8 @@ GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageConte
 	JobServerObject* jso = JobServerObject::getInstance();
 
 	const char* job = _getJobData->getData()->getId()->getJob().c_str();
-	AviaryCommon::JobDataType* jdt = _getJobData->getData()->getType();
-	ADBJobDataTypeEnum file_type = jdt->getJobDataTypeEnum();
+    ADBJobDataTypeEnum file_type = _getJobData->getData()->getType()->getJobDataTypeEnum();
+    JobDataType* jdt = new JobDataType(_getJobData->getData()->getType()->getJobDataType());
 	AviaryStatus status;
 	status.type = AviaryStatus::FAIL;
 	string fname, content;

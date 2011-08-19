@@ -48,14 +48,14 @@ if ( WITH_BLAHP )
 		condor_post_external( popt OFF OFF )
 
 		########################################
-		condor_pre_external( BLAHP blahp-1.16.1 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.1-p1 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} ${POPT_REF}
 					    #-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${BLAHP_VER}.tar.gz ${CMD_TERM}
+						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/blahp-1.16.1.tar.gz ${CMD_TERM}
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
-						URL http://parrot.cs.wisc.edu/externals/${BLAHP_VER}.tar.gz
+						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.1.tar.gz
 						#--Patch step ----------
 						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&

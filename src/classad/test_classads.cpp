@@ -43,9 +43,7 @@
 #include <assert.h>
 
 using namespace std;
-#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
-#endif
 
 /*--------------------------------------------------------------------
  *

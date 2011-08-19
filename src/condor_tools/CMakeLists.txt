@@ -53,9 +53,6 @@ endif(WANT_FULL_DEPLOYMENT)
 clone_install(condor "${C_BIN}" "condor_vacate;condor_reschedule" "${C_BIN}")
 
 if (NOT WINDOWS)
-    if (WANT_FULL_DEPLOYMENT)
-        clone_install(condor "${C_BIN}" "condor_reconfig_schedd;condor_master_off" "${C_SBIN}") # legacy cruft?
-    endif(WANT_FULL_DEPLOYMENT)
 	if (STD_UNIVERSE)
 		clone_install(condor "${C_BIN}" "condor_checkpoint" "${C_BIN}")
 		src_target_ref( ckpt "maps" CKPT_REFS)
@@ -74,3 +71,4 @@ if( WINDOWS )
 endif()
 
 condor_exe_test(condor_test_auth "test_auth.cpp" "${TOOL_LINK_LIBS}")
+condor_exe(condor_test_match "condor_test_match.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)

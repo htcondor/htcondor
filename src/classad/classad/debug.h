@@ -23,7 +23,7 @@
 
 #include "classad/common.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 #define CLASSAD_EXCEPT \
     _except_line_number = __LINE__, \
@@ -34,6 +34,6 @@ extern int _except_line_number;
 extern const char *_except_file_name;
 void _classad_except(const char *format, ...);
 
-END_NAMESPACE
+}
 
 #endif /* __CLASSAD_DEBUG_H__ */

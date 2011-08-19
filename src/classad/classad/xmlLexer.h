@@ -25,7 +25,7 @@
 #include "classad/lexerSource.h"
 #include <map>
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 typedef std::map<std::string, std::string> XMLAttributes;
 typedef std::map<std::string, std::string>::iterator XMLAttributesIterator;
@@ -121,6 +121,6 @@ struct xml_tag_mapping
 extern struct xml_tag_mapping tag_mappings[];
 
 
-END_NAMESPACE // classad
+} // classad
 
 #endif //__CLASSAD_XMLLEXER_H__

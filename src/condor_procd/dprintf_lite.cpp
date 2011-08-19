@@ -90,7 +90,7 @@ _EXCEPT_(const char* format, ...)
 
 
 extern "C" FILE *
-open_debug_file(char flags[])
+open_debug_file(const char flags[])
 {
 	FILE		*fp;
 	int save_errno;

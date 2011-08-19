@@ -967,10 +967,9 @@ LookupInteger( const char *name, int &value ) const
 {
 	bool    boolVal;
 	int     haveInteger;
-	string  sName;
+	string  sName(name);
 	int		tmp_val;
 
-	sName = string(name);
 	if( EvaluateAttrInt(sName, tmp_val ) ) {
 		value = tmp_val;
 		haveInteger = TRUE;
@@ -2020,7 +2019,7 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 //////////////XML functions///////////
 
 int ClassAd::
-fPrintAsXML(FILE *fp)
+fPrintAsXML(FILE *fp, StringList *attr_white_list)
 {
     if(!fp)
     {
@@ -2028,7 +2027,7 @@ fPrintAsXML(FILE *fp)
     }
 
     MyString out;
-    sPrintAsXML(out);
+    sPrintAsXML(out,attr_white_list);
     fprintf(fp, "%s", out.Value());
     return TRUE;
 }

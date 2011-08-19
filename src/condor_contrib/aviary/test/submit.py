@@ -21,6 +21,22 @@ from suds import *
 from suds.client import Client
 from sys import exit, argv
 import time, pwd, os
+import logging
+
+# NOTE: Suds has had little support for adding attributes
+# to the request body until 0.4.1
+# uncomment the following to enable the allowOverrides attribute
+
+#from suds.plugin import MessagePlugin
+#from suds.sax.attribute import Attribute
+#class OverridesPlugin(MessagePlugin):
+    #def marshalled(self, context):
+        #sj_body = context.envelope.getChild('Body')[0]
+        #sj_body.attributes.append(Attribute("allowOverrides", "true"))
+
+# NOTE: enable these to see the SOAP messages
+#logging.basicConfig(level=logging.INFO)
+#logging.getLogger('suds.client').setLevel(logging.DEBUG)
 
 uid = pwd.getpwuid(os.getuid())[0]
 if not uid:
@@ -36,14 +52,17 @@ for arg in argv[1:]:
 	if arg == '-q':
 		quiet = True
 	if "http://" in arg:
-		url = arg
+		job_url = arg
 
 client = Client(job_wsdl);
+# NOTE: the following form to enable attribute additions
+# is only supported with suds >= 0.4.1
+#client = Client(job_wsdl,plugins=[OverridesPlugin()]);
 client.set_options(location=job_url)
 
 if not quiet:
 	print client
-	
+
 # add specific requirements here
 req1 = client.factory.create("ns0:ResourceConstraint")
 req1.type = 'OS'

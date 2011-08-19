@@ -53,36 +53,16 @@ dnl Use []s for quotes over `', ` is a pain to type
 changequote(`[', `]')dnl
 
 
-dnl Define _$1 to be a variable containing the proper name expansions
-dnl with respect to _ns, a suffix may also be given via $2. The idea
-dnl is to MF_DEFINE_NAME([something]) and then use the variable
-dnl $(_something) knowing that it will contain "something" and,
-dnl depending on ENABLE_ arguments, possible "something_ns"
-define([MF_DEFINE_NAME],
-  [MF_IF_NAMESPACE([_$1_ns$2=$1_ns$2])
-   _$1$2=$1$2 $(_$1_ns$2)])
-
-
-dnl Perform $1 if ENABLE_NAMESPACE is defined with AM_CONDITIONAL
-define([MF_IF_NAMESPACE],
-  [if ENABLE_NAMESPACE
-$1
-endif])
-
-
 dnl Define all the flavors of a program (given: $1). Optionally, add
 dnl extra source files (given: $2), if $1.cpp isn't enough. Also, it 
 dnl became useful to pass in the libname for extra_tests, so $3 is
-dnl added to CXXFLAGS and $4 is added to CXXFLAGS for the
-dnl ENABLE_NAMESPACE case
+dnl added to CXXFLAGS
 define([MF_DEFINE_PROGRAM],
   [# BEGIN MF_DEFINE_PROGRAM($1,$2,$3)
 $1_SOURCES = $1.cpp $2
 $1_CXXFLAGS = $3
 $1_LDADD = libclassad.la
-MF_IF_NAMESPACE([$1_ns_SOURCES = $($1_SOURCES)
-   $1_ns_CXXFLAGS = $(NAMESPACE) $4
-   $1_ns_LDADD = libclassad_ns.la])
+])
 # END MF_DEFINE_PROGRAM($1,$2,$3)])
 
 dnl
@@ -99,10 +79,7 @@ if ENABLE_EXPLICIT_TEMPLATES
   _libclassad_la_SOURCES = instantiations.cpp
 endif
 
-NAMESPACE = -DWANT_CLASSAD_NAMESPACE=1
-
-MF_DEFINE_NAME([libclassad], [.la])
-lib_LTLIBRARIES = $(_libclassad.la)
+lib_LTLIBRARIES = libclassad.la
 
 nobase_include_HEADERS =						\
 	classad/attrrefs.h classad/collectionBase.h classad/lexer.h	\
@@ -118,31 +95,23 @@ nobase_include_HEADERS =						\
 	classad/xmlSource.h classad/classad_stl.h classad/indexfile.h	\
 	classad/source.h
 
-MF_DEFINE_NAME([classad_functional_tester])
-MF_DEFINE_NAME([cxi])
-MF_DEFINE_NAME([classad_version])
 bin_PROGRAMS = 								\
-	$(_classad_functional_tester)					\
-	$(_cxi) 							\
-	$(_classad_version)
+	classad_functional_tester					\
+	cxi 								\
+	classad_version
 
-MF_DEFINE_NAME([classad_functional_tester], [_s])
-MF_DEFINE_NAME([classad_unit_tester])
-MF_DEFINE_NAME([test_xml])
-MF_DEFINE_NAME([sample])
-MF_DEFINE_NAME([extra_tests])
 TESTS =									\
-	$(_classad_functional_tester_s)					\
-	$(_classad_unit_tester)						\
-	$(_test_xml)							\
-	$(_sample)							\
-	$(_extra_tests)
+	classad_functional_tester_s					\
+	classad_unit_tester						\
+	test_xml							\
+	sample								\
+	extra_tests
 # This must be set because we are patching libtool to remove rpaths
 TESTS_ENVIRONMENT=LD_LIBRARY_PATH=.libs
 
 
 check_PROGRAMS =							\
-	$(_classad_functional_tester)					\
+	classad_functional_tester					\
 	$(TESTS)
 
 libclassad_la_SOURCES = \
@@ -152,11 +121,7 @@ libclassad_la_SOURCES = \
 	sink.cpp source.cpp transaction.cpp util.cpp value.cpp view.cpp xmlLexer.cpp	\
 	xmlSink.cpp xmlSource.cpp cclassad.cpp $(_libclassad_la_SOURCES)
 
-libclassad_la_LDFLAGS = -version-info 1:2:0
-libclassad_ns_la_LDFLAGS = -version-info 1:2:0
-
-MF_IF_NAMESPACE([libclassad_ns_la_SOURCES = $(libclassad_la_SOURCES)
-   libclassad_ns_la_CXXFLAGS = $(NAMESPACE)])
+libclassad_la_LDFLAGS = -version-info 2:0:0
 
 MF_DEFINE_PROGRAM([cxi])
 
@@ -176,8 +141,7 @@ MF_DEFINE_PROGRAM([test_xml])
 MF_DEFINE_PROGRAM([sample])
 
 MF_DEFINE_PROGRAM([extra_tests], [],
-  [-DTEST_LIBNAME='"shared.so"'],
-  [-DTEST_LIBNAME='"shared_ns.so"'])
+  [-DTEST_LIBNAME='"shared.so"'])
 
 # The following method of building the libraries for testing dlopen
 # does not work on all platforms, so it is disabled by default.
@@ -186,13 +150,9 @@ MF_DEFINE_PROGRAM([extra_tests], [],
 # to work.
 if ENABLE_DLOPEN_CHECK
 extra_tests_DEPENDENCIES = shared.so
-MF_IF_NAMESPACE([extra_tests_ns_DEPENDENCIES = shared_ns.so])
 
 shared.so:
 	$(CXXCOMPILE) -fPIC -shared -o shared.so shared.cpp -L.libs -lclassad
-
-shared_ns.so:
-	$(CXXCOMPILE) $(NAMESPACE) -fPIC -shared -o shared_ns.so shared.cpp -L.libs -lclassad_ns
 endif
 
 Makefile.am: Makefile.am.m4
@@ -205,9 +165,4 @@ classad_functional_tester_s: classad_functional_tester
 	echo "exec ./classad_functional_tester functional_tests.txt" >> classad_functional_tester_s
 	chmod a+x classad_functional_tester_s
 
-classad_functional_tester_ns_s: classad_functional_tester_ns
-	echo "#!/bin/sh" > classad_functional_tester_ns_s
-	echo "exec ./classad_functional_tester_ns functional_tests.txt" >> classad_functional_tester_ns_s
-	chmod a+x classad_functional_tester_ns_s
-
-CLEANFILES = shared.so shared_ns.so classad_functional_tester_s classad_functional_tester_ns_s 
+CLEANFILES = shared.so shared_ns.so classad_functional_tester_s

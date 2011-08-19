@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_classad_util.h"
+#include "condor_classad.h"
 #include "MyString.h"
 #include "condor_attributes.h"
 #include "basename.h"

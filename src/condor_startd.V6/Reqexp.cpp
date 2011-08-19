@@ -106,7 +106,7 @@ Reqexp::compute( amask_t how_much )
 			*/
 			const char *default_vcp_expr = 
 			"("
-			  "((TARGET.JobUniverse == 1) == FALSE) || "
+			  "TARGET.JobUniverse =!= 1 || "
 			  "("
 			    "(MY.CheckpointPlatform =!= UNDEFINED) &&"
 			    "("

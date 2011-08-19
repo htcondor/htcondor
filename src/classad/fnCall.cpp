@@ -49,7 +49,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 bool FunctionCall::initialized = false;
 
@@ -61,6 +61,8 @@ static void relTimeToClassAd(
     double rsecs, ClassAd * &splitClassAd);
 static void make_formatted_time(
     const struct tm &time_components, string &format, Value &result);
+static bool
+stringListsIntersect(const char*,const ArgumentList &argList,EvalState &state,Value &result);
 
 // start up with an argument list of size 4
 FunctionCall::
@@ -162,6 +164,12 @@ FunctionCall( )
 		functionTable["ifThenElse"  ] = (void*)ifThenElse;
 		functionTable["interval" ] = (void*)interval;
 		functionTable["eval"] = (void*)eval;
+
+			// string list functions:
+			// Note that many other string list functions are defined
+			// externally in the Condor classad compatibility layer.
+		functionTable["stringListsIntersect" ] = (void*)stringListsIntersect;
+        functionTable["debug"      ] = (void*)debug;
 
 		initialized = true;
 	}
@@ -2312,6 +2320,30 @@ interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
     return true;
 }
 
+bool FunctionCall::
+debug( const char* name,const ArgumentList &argList,EvalState &state,
+	Value &result )
+{
+	Value	arg;
+
+	// takes exactly one argument
+	if( argList.size() != 1 ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+
+	state.debug = true;
+
+	if( !argList[0]->Evaluate( state, arg ) ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+	state.debug = false;
+	result = arg;
+	argList[0]->debug_format_value(result);
+	return true;
+}
+
 #if defined USE_POSIX_REGEX || defined USE_PCRE
 static bool regexp_helper(const char *pattern, const char *target,
                           const char *replace,
@@ -2856,4 +2888,130 @@ make_formatted_time(const struct tm &time_components, string &format,
     return;
 }
 
-END_NAMESPACE // classad
+static void
+split_string_list(char const *str,char const *delim,vector< string > &list)
+{
+	if( !delim || !delim[0] ) {
+		delim = " ,";
+	}
+	if( !str ) {
+		return;
+	}
+	string item;
+	while( *str ) {
+		size_t len = strcspn(str,delim);
+		if( len > 0 ) {
+			item.assign(str,len);
+			list.push_back(item);
+			str += len;
+		}
+		if( *str ) {
+			str++;
+		}
+	}
+}
+
+static void
+split_string_set(char const *str,char const *delim,set< string > &string_set)
+{
+	if( !delim || !delim[0] ) {
+		delim = " ,";
+	}
+	if( !str ) {
+		return;
+	}
+	set<string>::value_type item;
+	while( *str ) {
+		size_t len = strcspn(str,delim);
+		if( len > 0 ) {
+			item.assign(str,len);
+			string_set.insert(item);
+			str += len;
+		}
+		if( *str ) {
+			str++;
+		}
+	}
+}
+
+static bool
+stringListsIntersect(const char*,const ArgumentList &argList,EvalState &state,Value &result)
+{
+	Value arg0, arg1, arg2;
+	bool have_delimiter;
+	string str0,str1,delimiter_string;
+
+    // need two or three arguments: pattern, list, optional settings
+	if( argList.size() != 2 && argList.size() != 3) {
+		result.SetErrorValue( );
+		return true;
+	}
+    if (argList.size() == 2) {
+        have_delimiter = false;
+    } else {
+        have_delimiter = true;
+    }
+
+		// Evaluate args
+	if( !argList[0]->Evaluate( state, arg0 ) || 
+		!argList[1]->Evaluate( state, arg1 ) ) {
+		result.SetErrorValue( );
+		return true;
+	}
+    if( have_delimiter && !argList[2]->Evaluate( state, arg2 ) ) {
+		result.SetErrorValue( );
+		return true;
+    }
+
+		// if either arg is error, the result is error
+	if( arg0.IsErrorValue( ) || arg1.IsErrorValue( ) ) {
+		result.SetErrorValue( );
+		return true;
+	}
+    if( have_delimiter && arg2.IsErrorValue( ) ) {
+        result.SetErrorValue( );
+        return true;
+    }
+
+		// if either arg is undefined, the result is undefined
+	if( arg0.IsUndefinedValue( ) || arg1.IsUndefinedValue( ) ) {
+		result.SetUndefinedValue( );
+		return true;
+	}
+    if( have_delimiter && arg2.IsUndefinedValue( ) ) {
+		result.SetUndefinedValue( );
+		return true;
+    } else if ( have_delimiter && !arg2.IsStringValue( delimiter_string ) ) {
+        result.SetErrorValue( );
+        return true;
+    }
+
+		// if the arguments are not of the correct types, the result
+		// is an error
+	if( !arg0.IsStringValue( str0 ) || !arg1.IsStringValue( str1 ) ) {
+		result.SetErrorValue( );
+		return true;
+	}
+    result.SetBooleanValue(false);
+
+	vector< string > list0;
+	set< string > set1;
+
+	split_string_list(str0.c_str(),delimiter_string.c_str(),list0);
+	split_string_set(str1.c_str(),delimiter_string.c_str(),set1);
+
+	vector< string >::iterator it;
+	for(it = list0.begin();
+		it != list0.end();
+		it++)
+	{
+		if( set1.count(*it) ) {
+			result.SetBooleanValue(true);
+			break;
+		}
+	}
+
+	return true;
+}
+
+} // classad

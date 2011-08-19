@@ -30,7 +30,7 @@ or other packages are necessary to use this interface.
 */
 
 #ifdef __cplusplus
-BEGIN_NAMESPACE( classad )
+namespace classad {
 extern "C" {
 #endif
 
@@ -101,8 +101,8 @@ int cclassad_evaluate_to_int( struct cclassad *c, const char *expr, int *result 
 int cclassad_evaluate_to_bool( struct cclassad *c, const char *expr, int *result );
 
 #ifdef __cplusplus
-}
-END_NAMESPACE
+} // extern "C"
+} // namespace classad
 #endif
 
 #endif
