@@ -1,0 +1,4 @@
+Job NodeA job_dagman_retry-B-nodeA.cmd
+Script Pre NodeA job_dagman_retry-B-nodeA-pre.pl $RETRY
+Script Post NodeA job_dagman_retry-B-nodeA-post.pl $RETRY
+Retry NodeA 3
