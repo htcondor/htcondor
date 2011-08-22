@@ -18,25 +18,19 @@
 ##
 ##**************************************************************
 
+## This makes sure that lazy creation of node job submit files works
+## properly.
+
 use CondorTest;
 use CondorUtils;
 
-##**************************************************************
-## The DAGMAN_PROHIBIT_MULTI_JOBS setting should not affect subdags.
-## This test confirms that this is true
-## Issue discussed in Gittrac #2331
-##**************************************************************
-
-$cmd = 'job_dagman_subdag_multi_prohibit-B.dag';
-$testdesc =  'Condor submit dag - basic subdag_multi_prohibit test - scheduler U';
-$testname = "job_dagman_subdag_multi_prohibit-B";
+$cmd = 'job_dagman_lazy_submit_file.dag';
+$testdesc =  'Condor submit dag - lazy submit file creation test - scheduler U';
+$testname = "job_dagman_lazy_submit_file";
 $dagman_args = "-verbose";
 
-@dagfiles = ("job_dagman_subdag_multi_prohibit-B.dag","job_dagman_subdag_multi_prohibit-B-sub.dag");
-
-foreach $name (@dagfiles) {
-	runcmd("rm -f $name.dagman.out $name.err");
-}
+@logfiles = ("job_dagman_lazy_submit_file.dag.dagman.out");
+$submitfile = "job_dagman_lazy_submit_file-node.cmd";
 
 my $killedchosen = 0;
 
@@ -44,6 +38,20 @@ my $killedchosen = 0;
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
+
+# Get rid of any existing log files.
+foreach $name (@logfiles) {
+	if (-e $name) {
+		runcmd("rm -f $name");
+	}
+}
+
+# Get rid of the submit file if it exists, so we truly test lazy submit
+# file creation (the node job submit file must not exist when the DAG
+# is submitted).
+if (-e $submitfile) {
+	runcmd("rm -f $submitfile");
+}
 
 $abnormal = sub 
 {
@@ -77,43 +85,32 @@ $success = sub
 	CondorTest::debug("executed successfully\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-	$passed_setting = 0;
-	$passed2 = 0;
-	foreach $name (@dagfiles) {
-		$canopen = open(OUT,"<$name.dagman.out");
+
+	foreach $name (@logfiles) {
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
 		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name.dagman.out>:$!\n",1);
+			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
 			$diditpass = 0;
 		}
 		while(<OUT>) {
-			chomp;
-			if(/DAGMAN_PROHIBIT_MULTI_JOBS.+True/){
-				CondorTest::debug("$name: $_\n",1);
-				CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is True, as expected\n",1);
-				++$passed_setting;
-			}
-			if(/DAGMAN_PROHIBIT_MULTI_JOBS.+False/){
-				CondorTest::debug("$name: $_\n",1);
-				CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is False!\n",1);
-				$passed_setting = 0;
-				die "DAGMAN_PROHBIT_MULTI_JOBS should be False\n";
-			}
-			if(/Recursive submit.+B-sub\.dag/){
-				CondorTest::debug("$name: $_\n",1);
-				CondorTest::debug("Good. Saw subdag submitted.\n");
-				$passed2 = 1;
+			chomp();
+			$line = $_;
+			if( $line =~ /^*.EXITING WITH STATUS 0*.$/ ) {
+				$passed = 1;
+				CondorTest::debug("$name: $line\n",1);
 			}
 		}
 		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("failed $name: $line\n",1);
+			$diditpass = 0;
+		}
 	}
-	if( $passed_setting != 2 ) {
-		CondorTest::debug("Didn't find expected DAGMAN_PROHIBIT_MULTI_JOBS settings\n",1);
-		$diditpass = 0;
-	}
-	if($passed2 != 1) {
-		CondorTest::debug("Didn't find expected recursive submit\n",1);
-		$diditpass = 0;
-	}
+
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}
@@ -125,11 +122,10 @@ CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
-
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
-	die "$testname: CondorTest::RunTest() failed\n";
+	die "$testname: CondorTest::RunDagTest() failed\n";
 }
 

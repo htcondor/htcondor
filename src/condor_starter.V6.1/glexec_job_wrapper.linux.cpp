@@ -80,9 +80,10 @@ main(int argc, char* argv[])
 	//
 	// Why?  I don't understand why we are overriding job environment
 	// set by condor with the environment set by glexec.  For now, we
-	// must make one exception: X509_USER_PROXY.  We want the job to
+	// must make two exceptions: X509_USER_PROXY and PATH.  We want the job to
 	// use the proxy that is managed by Condor, not a copy of the
 	// proxy created by glexec or the proxy used by condor itself.
+	// The overriding of PATH by glexec has also been probematic.
 
 	Env env;
 	char* env_buf = read_env();
@@ -100,11 +101,23 @@ main(int argc, char* argv[])
 		override_glexec_proxy_env = true;
 	}
 
+	MyString path;
+	bool override_path = false;
+	if( env.GetEnv("PATH",path) &&
+		getenv("PATH") )
+	{
+		override_path = true;
+	}
+
 	env.MergeFrom(environ);
 	delete[] env_buf;
 
 	if( override_glexec_proxy_env ) {
 		env.SetEnv("X509_USER_PROXY",user_proxy.Value());
+	}
+
+	if( override_path ) {
+		env.SetEnv("PATH",path.Value());
 	}
 
 	// now prepare the job's standard FDs
