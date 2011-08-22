@@ -316,7 +316,7 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
 			},
-			'prereqs'	=> [ 'cmake-2.8.3' ],
+			'prereqs'	=> [ ],
 			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
 		},
 
