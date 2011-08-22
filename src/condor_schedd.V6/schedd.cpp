@@ -299,6 +299,9 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 		// Don't know the version of the startd, assume false
 		m_startd_sends_alives = false;
 	}
+
+	keep_while_idle = 0;
+	idle_timer_deadline = 0;
 }
 
 void
@@ -6074,6 +6077,17 @@ Scheduler::StartJob(match_rec *rec)
 	dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
 			rec->description(), id.cluster, id.proc);
 
+               // We've commited to starting a job on this match, copy the
+               // job's keep_idle times to the match
+	int keep_claim_idle_time = 0;
+    GetAttributeInt(id.cluster,id.proc,ATTR_JOB_KEEP_CLAIM_IDLE,&keep_claim_idle_time);
+    if (keep_claim_idle_time > 0) {
+            rec->keep_while_idle = keep_claim_idle_time;
+    } else {
+            rec->keep_while_idle = 0;
+    }
+    rec->idle_timer_deadline = 0;
+
 		// Now that the shadow has spawned, consider this match "ACTIVE"
 	rec->setStatus( M_ACTIVE );
 }
@@ -6099,10 +6113,15 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
 	}
 	if( new_job_id.proc == -1 ) {
 			// no more jobs to run
-		dprintf(D_ALWAYS,
+		if (mrec->idle_timer_deadline < time(0))  {
+			dprintf(D_ALWAYS,
 				"match (%s) out of jobs; relinquishing\n",
 				mrec->description() );
-		DelMrec(mrec);
+			DelMrec(mrec);
+			return false;
+		} else {
+			dprintf(D_FULLDEBUG, "Job requested to keep this claim idle for next job for %d seconds\n", mrec->keep_while_idle);
+		}
 		return false;
 	}
 
@@ -9068,8 +9087,14 @@ Scheduler::child_exit(int pid, int status)
 
 	if( srec->exit_already_handled ) {
 		if( srec->match ) {
-			DelMrec( srec->match );
-			srec->match = NULL;
+			if (srec->match->keep_while_idle == 0) {
+				DelMrec( srec->match );
+			} else {
+				srec->match->status = M_CLAIMED;
+				srec->match->shadowRec = NULL;
+				srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
+				srec->match = NULL;
+			}
 		}
 		delete_shadow_rec( srec );
 		return;
@@ -11103,6 +11128,7 @@ Scheduler::reschedule_negotiator(int, Stream *s)
 
 	needReschedule();
 
+	StartJobs(); // now needed because of claim reuse, is this too expensive?
 	return 0;
 }
 
@@ -13430,6 +13456,10 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		// to run next is standard universe, tell this shadow we are
 		// out of work.
 	const bool accept_std_univ = false;
+
+	if (mrec->keep_while_idle) {
+		mrec->idle_timer_deadline = time(NULL) + mrec->keep_while_idle;
+	}
 
 	if( !FindRunnableJobForClaim(mrec,accept_std_univ) ) {
 		stream->put((int)0);
