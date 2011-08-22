@@ -18,19 +18,18 @@
 ##
 ##**************************************************************
 
-## This makes sure that node priorities work correctly.
+## This test checks various combinations of DAG node retries (with
+## and without PRE and POST scripts).
 
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_node_prio.dag';
-$testdesc =  'Condor submit dag - node-priority test - scheduler U';
-$testname = "job_dagman_node_prio";
+$cmd = 'job_dagman_retry-B.dag';
+$testdesc =  'Condor submit dag - retry B test - scheduler U';
+$testname = "job_dagman_retry-B";
 $dagman_args = "-verbose";
 
-@logfiles = ("job_dagman_node_prio.dag.dagman.out");
-
-@outfiles = ("job_dagman_node_prio.order");
+@logfiles = ("job_dagman_retry-B.dag.dagman.out");
 
 my $killedchosen = 0;
 
@@ -46,9 +45,12 @@ foreach $name (@logfiles) {
 	}
 }
 
+# Set up files to make node jobs fail the first time.
+runcmd("touch job_dagman_retry-B-nodeC.fail");
+runcmd("touch job_dagman_retry-B-nodeD.fail");
+
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
@@ -83,6 +85,13 @@ $success = sub
 	foreach $name (@logfiles) {
 		$line = "";
 		$passed = 0;
+		$retryA1 = 0;
+		$retryA2 = 0;
+		$retryA3 = 0;
+		$retryB1 = 0;
+		$retryB2 = 0;
+		$retryC1 = 0;
+		$retryD1 = 0;
 		$canopen = open(OUT,"<$name");
 		if( ! (defined $canopen)) {
 			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
@@ -91,46 +100,73 @@ $success = sub
 		while(<OUT>) {
 			chomp();
 			$line = $_;
+			if( $line =~ /^.*Retrying node NodeA \(retry #1 of 3\).*$/ ) {
+				$retryA1 = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+			if( $line =~ /^.*Retrying node NodeA \(retry #2 of 3\).*$/ ) {
+				$retryA2 = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+			if( $line =~ /^.*Retrying node NodeA \(retry #3 of 3\).*$/ ) {
+				$retryA3 = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+			if( $line =~ /^.*Retrying node NodeB \(retry #1 of 2\).*$/ ) {
+				$retryB1 = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+			if( $line =~ /^.*Retrying node NodeB \(retry #2 of 2\).*$/ ) {
+				$retryB2 = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+			if( $line =~ /^.*Retrying node NodeC \(retry #1 of 1\).*$/ ) {
+				$retryC1 = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
+			if( $line =~ /^.*Retrying node NodeD \(retry #1 of 1\).*$/ ) {
+				$retryD1 = 1;
+				CondorTest::debug("$name: $line\n",1);
+			}
 			if( $line =~ /^.*EXITING WITH STATUS 0.*$/ ) {
 				$passed = 1;
 				CondorTest::debug("$name: $line\n",1);
 			}
 		}
 		close(OUT);
-		if($passed == 1 ) {
-			;
-		} else {
-			CondorTest::debug("failed $name: $line\n",1);
+		if($retryA1 != 1 ) {
+			CondorTest::debug("Missing NodeA retry 1\n",1);
+			$diditpass = 0;
+		}
+		if($retryA2 != 1 ) {
+			CondorTest::debug("Missing NodeA retry 2\n",1);
+			$diditpass = 0;
+		}
+		if($retryA3 != 1 ) {
+			CondorTest::debug("Missing NodeA retry 3\n",1);
+			$diditpass = 0;
+		}
+		if($retryB1 != 1 ) {
+			CondorTest::debug("Missing NodeB retry 1\n",1);
+			$diditpass = 0;
+		}
+		if($retryB2 != 1 ) {
+			CondorTest::debug("Missing NodeB retry 2\n",1);
+			$diditpass = 0;
+		}
+		if($retryC1 != 1 ) {
+			CondorTest::debug("Missing NodeC retry 1\n",1);
+			$diditpass = 0;
+		}
+		if($retryD1 != 1 ) {
+			CondorTest::debug("Missing NodeD retry 1\n",1);
+			$diditpass = 0;
+		}
+		if($passed != 1 ) {
+			CondorTest::debug("DAG failed $name\n",1);
 			$diditpass = 0;
 		}
 	}
-
-	# Make sure nodes executed in correct order.
-	foreach $name (@outfiles) {
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /A B5 B7 B3 B9 B4 B1 B10 B2 B8 B6 C/ ) {
-				$passed = 1;
-				CondorTest::debug("$name: $line\n",1);
-			}
-		}
-		close(OUT);
-		if($passed == 1 ) {
-			;
-		} else {
-			CondorTest::debug("failed (wrong node order) $name: $line\n",1);
-			$diditpass = 0;
-		}
-	}
-
 
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";

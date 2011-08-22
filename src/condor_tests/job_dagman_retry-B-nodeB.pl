@@ -1,7 +1,7 @@
 #! /usr/bin/env perl
 
 $retry = 0;
-$file = "job_dagman_retry-B-nodeA.retry";
+$file = "job_dagman_retry-B-nodeB.retry";
 open (IN, "<$file") or die "Can't open $file\n";
 while (<IN>) {
 	chomp();
