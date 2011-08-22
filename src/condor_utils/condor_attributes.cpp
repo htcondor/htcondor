@@ -319,6 +319,7 @@ const char * const ATTR_JOB_ENVIRONMENT2		 = "Environment";
 const char * const ATTR_JOB_ERROR				 = "Err";
 const char * const ATTR_JOB_ERROR_ORIG			 = "ErrOrig";
 const char * const ATTR_JOB_ERROR_SIZE			 = "ErrSize";
+const char * const ATTR_JOB_KEEP_CLAIM_IDLE      = "KeepClaimIdle";
 const char * const ATTR_JOB_KEYWORD              = "JobKeyword";
 const char * const ATTR_JOB_LEASE_DURATION       = "JobLeaseDuration";
 const char * const ATTR_JOB_LEASE_EXPIRATION     = "JobLeaseExpiration";

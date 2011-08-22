@@ -259,6 +259,7 @@ extern const char * const  ATTR_JOB_ENVIRONMENT2;
 extern const char * const  ATTR_JOB_ERROR;
 extern const char * const  ATTR_JOB_ERROR_ORIG;
 extern const char * const  ATTR_JOB_ERROR_SIZE;
+extern const char * const  ATTR_JOB_KEEP_CLAIM_IDLE;
 extern const char * const  ATTR_JOB_KEYWORD;
 extern const char * const  ATTR_JOB_LEASE_DURATION;
 extern const char * const  ATTR_JOB_LEASE_EXPIRATION;
