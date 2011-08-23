@@ -1,3 +1,5 @@
+# Based on CMake 2.8.3, modified for use building Condor
+#
 # - The builtin (binary) CPack Deb generator (Unix only)
 # CPackDeb may be used to create Deb package using CPack.
 # CPackDeb is a CPack generator thus it uses the CPACK_XXX variables
