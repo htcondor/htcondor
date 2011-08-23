@@ -84,6 +84,7 @@ extern const char * const  ATTR_PREEMPTING_CONCURRENCY_LIMITS;
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 extern const char * const  ATTR_CONSOLE_IDLE;
 extern const char * const  ATTR_CONTINUE;
+extern const char * const  ATTR_CONTINUE_REASON;
 extern const char * const  ATTR_CORE_SIZE;
 extern const char * const  ATTR_CREAM_ATTRIBUTES;
 extern const char * const  ATTR_CRON_MINUTES;
@@ -514,6 +515,7 @@ extern const char * const  ATTR_SUBMITTER_GROUP_QUOTA;
 extern const char * const  ATTR_SUBNET;
 extern const char * const  ATTR_SUBNET_MASK;
 extern const char * const  ATTR_SUSPEND;
+extern const char * const  ATTR_SUSPEND_REASON;
 extern const char * const  ATTR_SUSPEND_JOB_AT_EXEC;
 extern const char * const  ATTR_TARGET_TYPE;
 extern const char * const  ATTR_TIME_TO_LIVE;

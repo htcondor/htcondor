@@ -313,6 +313,48 @@ RemoteResource::killStarter( bool graceful )
 	return true;
 }
 
+bool RemoteResource::suspend()
+{
+	bool bRet = false;
+	
+	if ( state!= RR_RECONNECT )
+	{
+		if ( dc_startd )
+		{
+
+			if ( dc_startd->_suspendClaim() )
+				bRet = true;
+			else
+				shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): dc_startd->suspendClaim FAILED!\n");
+
+		}
+		else
+			shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): DCStartd object NULL!\n");
+
+	}
+	else
+		shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): Not connected to resource!\n");
+
+	return (bRet);
+}
+
+bool RemoteResource::resume()
+{
+	bool bRet = false;
+	
+	if (state != RR_RECONNECT ) //&& state == RR_SUSPENDED)
+	{
+		if ( dc_startd->_continueClaim() )
+			bRet = true;
+		else
+			shadow->dprintf( D_ALWAYS, "RemoteResource::resume(): dc_startd->resume FAILED!\n");
+	}
+	else
+		shadow->dprintf( D_ALWAYS, "RemoteResource::resume(): Not connected to resource!\n");
+		
+	return (bRet);
+}
+
 
 void
 RemoteResource::dprintfSelf( int debugLevel )

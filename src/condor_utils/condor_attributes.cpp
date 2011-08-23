@@ -144,6 +144,7 @@ const char * const ATTR_PREEMPTING_CONCURRENCY_LIMITS = "PreemptingConcurrencyLi
 #define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 const char * const ATTR_CONSOLE_IDLE			 = "ConsoleIdle";
 const char * const ATTR_CONTINUE                 = "Continue";
+const char * const ATTR_CONTINUE_REASON          = "ContinueReason";
 const char * const ATTR_CORE_SIZE				 = "CoreSize";
 const char * const ATTR_CREAM_ATTRIBUTES		 = "CreamAttributes";
 const char * const ATTR_CRON_MINUTES			 = "CronMinute";
@@ -574,6 +575,7 @@ const char * const ATTR_SUBNET                   = "Subnet";
 const char * const ATTR_SUBNET_MASK              = "SubnetMask";
 const char * const ATTR_SUSPEND                  = "Suspend";
 const char * const ATTR_SUSPEND_JOB_AT_EXEC      = "SuspendJobAtExec";
+const char * const ATTR_SUSPEND_REASON           = "SuspendReason";
 const char * const ATTR_TARGET_TYPE				 = "TargetType";
 const char * const ATTR_TIME_TO_LIVE             = "TimeToLive";
 const char * const ATTR_TOTAL_CLAIM_RUN_TIME     = "TotalClaimRunTime";

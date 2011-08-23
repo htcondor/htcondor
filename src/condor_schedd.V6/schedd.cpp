@@ -117,6 +117,7 @@ extern GridUniverseLogic* _gridlogic;
 #include "condor_qmgr.h"
 #include "qmgmt.h"
 #include "condor_vm_universe_types.h"
+#include "enum_utils.h"
 
 extern "C"
 {
@@ -1842,11 +1843,13 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				// kill... we hit this case when we fail to expand a
 				// $$() attribute in the job, and put the job on hold
 				// before we exec the shadow.
+			dprintf ( D_ALWAYS, "abort_job_myself() - No shadow record found\n");
 			return;
 		}
 
 		// if we have already preempted this shadow, we're done.
 		if ( srec->preempted ) {
+			dprintf ( D_ALWAYS, "abort_job_myself() - already preempted\n");
 			return;
 		}
 
@@ -1917,6 +1920,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				shadow_sig = SIGUSR1;
 				shadow_sig_str = "SIGUSR1";
 				break;
+			case JA_SUSPEND_JOBS:
+				shadow_sig = DC_SIGSUSPEND;
+				shadow_sig_str = "DC_SIGSUSPEND";
+				break;
+			case JA_CONTINUE_JOBS:
+				shadow_sig = DC_SIGCONTINUE;
+				shadow_sig_str = "DC_SIGCONTINUE";
+				break;
 			case JA_VACATE_JOBS:
 				shadow_sig = SIGTERM;
 				shadow_sig_str = "SIGTERM";
@@ -1929,7 +1940,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 				EXCEPT( "unknown action (%d %s) in abort_job_myself()",
 						action, getJobActionString(action) );
 			}
-
+			
+			dprintf( D_FULLDEBUG, "Sending %s to shadow\n", shadow_sig_str );
 			scheduler.sendSignalToShadow(srec->pid,shadow_sig,job_id);
             
         } else {  // Scheduler universe job
@@ -3926,6 +3938,8 @@ Scheduler::actOnJobs(int, Stream* s)
 		new_status = REMOVED;
 		reason_attr_name = ATTR_REMOVE_REASON;
 		break;
+	case JA_SUSPEND_JOBS:
+	case JA_CONTINUE_JOBS:
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS:
 	case JA_CLEAR_DIRTY_JOB_ATTRS:
@@ -4024,6 +4038,7 @@ Scheduler::actOnJobs(int, Stream* s)
 					  HELD, ATTR_HOLD_REASON_CODE,
 					  CONDOR_HOLD_CODE_SpoolingInput );
 			break;
+		case JA_SUSPEND_JOBS:
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
 				// Only vacate running/staging jobs
@@ -4032,6 +4047,10 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_CLEAR_DIRTY_JOB_ATTRS:
 				// No need to further restrict jobs
+			break;
+		case JA_CONTINUE_JOBS:
+			// TBD: Only continue jobs which are suspended
+			snprintf( buf, 256, "(%s=%d) && (", ATTR_JOB_STATUS, RUNNING );
 			break;
 		default:
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
@@ -4144,6 +4163,15 @@ Scheduler::actOnJobs(int, Stream* s)
 			continue;
 		}
 		switch( action ) {
+		// TBD needs updating 
+		case JA_CONTINUE_JOBS:
+			if( status != RUNNING ) {
+				results.record( tmp_id, AR_BAD_STATUS );
+				jobs[i].cluster = -1;
+				continue;
+			}
+			break;
+		case JA_SUSPEND_JOBS:
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
 			if( status != RUNNING && status != TRANSFERRING_OUTPUT ) {
@@ -4233,7 +4261,10 @@ Scheduler::actOnJobs(int, Stream* s)
 		}
 
 			// Ok, we're happy, do the deed.
-		if( action == JA_VACATE_JOBS || action == JA_VACATE_FAST_JOBS ) {
+		if( action == JA_VACATE_JOBS || 
+			action == JA_VACATE_FAST_JOBS || 
+		    action == JA_SUSPEND_JOBS || 
+		    action == JA_CONTINUE_JOBS ) {
 				// vacate is a special case, since we're not
 				// trying to modify the job in the queue at
 				// all, so we just need to make sure we're
@@ -4421,7 +4452,9 @@ Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify 
 	if( action == JA_HOLD_JOBS ||
 		action == JA_REMOVE_JOBS ||
 		action == JA_VACATE_JOBS ||
-		action == JA_VACATE_FAST_JOBS )
+		action == JA_VACATE_FAST_JOBS ||
+	    action == JA_SUSPEND_JOBS ||
+		action == JA_CONTINUE_JOBS )
 	{
 		if( scheduler.FindSrecByProcID(job_id) ) {
 				// currently, only jobs with shadows are intended
@@ -4491,6 +4524,12 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	delete act_rec;
 
 	switch( action ) {
+	case JA_SUSPEND_JOBS:
+	case JA_CONTINUE_JOBS:
+		// suspend and continue don't actually abort but the code flow 
+		// is correct.  If anything abort_job_myself() should be renamed
+		// because we are sending an action through to a matching 
+		// shadow TSTCLAIR (tstclair@redhat.com) 
 	case JA_HOLD_JOBS:
 	case JA_REMOVE_JOBS:
 	case JA_VACATE_JOBS:
@@ -12079,6 +12118,11 @@ fixReasonAttrs( PROC_ID job_id, JobAction action )
 		DeleteAttribute(job_id.cluster,job_id.proc,
 					 ATTR_JOB_STATUS_ON_RELEASE);
 		break;
+	
+	case JA_SUSPEND_JOBS:
+	case JA_CONTINUE_JOBS:
+		//TBD
+		break;
 
 	default:
 		return;
@@ -13246,6 +13290,7 @@ public:
 		DCSignalMsg(pid,sig)
 	{
 		m_proc = proc;
+		m_sig = sig;
 	}
 
 	virtual MessageClosureEnum messageSent(
@@ -13253,13 +13298,21 @@ public:
 	{
 		shadow_rec *srec = scheduler.FindSrecByProcID( m_proc );
 		if( srec && srec->pid == thePid() ) {
-			srec->preempted = TRUE;
+			switch(m_sig)
+			{
+			case DC_SIGSUSPEND:
+			case DC_SIGCONTINUE:
+				break;
+			default:
+				srec->preempted = TRUE;
+			}
 		}
 		return DCSignalMsg::messageSent(messenger,sock);
 	}
 
 private:
 	PROC_ID m_proc;
+	int m_sig;
 };
 
 void
