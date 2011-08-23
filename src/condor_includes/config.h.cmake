@@ -294,9 +294,6 @@
 ///* Do we have the drmaa external (Imake)*/
 #cmakedefine HAVE_EXT_DRMAA
 
-///* Do we have the expat external (Imake)*/
-#cmakedefine HAVE_EXT_EXPAT
-
 ///* Do we have the glibc external*/
 #cmakedefine HAVE_EXT_GLIBC
 
