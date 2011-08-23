@@ -139,12 +139,12 @@ class ParallelShadow : public BaseShadow
 	/**
 	 * Handle the situation where the job is to be suspended
 	 */
-	virtual int JobSuspend(int sig){return 0;}
+	virtual int JobSuspend(int sig);
 	
 	/**
 	 * Handle the situation where the job is to be continued.
 	 */
-	virtual int JobResume(int sig){return 0;}
+	virtual int JobResume(int sig);
 
  protected:
 

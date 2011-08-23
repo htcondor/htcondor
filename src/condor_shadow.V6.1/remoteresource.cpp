@@ -342,7 +342,7 @@ bool RemoteResource::resume()
 {
 	bool bRet = false;
 	
-	if (state != RR_RECONNECT ) //&& state == RR_SUSPENDED)
+	if (state != RR_RECONNECT )
 	{
 		if ( dc_startd->_continueClaim() )
 			bRet = true;
