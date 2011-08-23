@@ -358,13 +358,13 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 	# Generate empty folder to ship with package
 	# Local dir
-	file (MAKE_DIRECTORY execute )
+	file (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/execute )
 	add_custom_target(	change_execute_folder_permission
 						ALL
-						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 						COMMAND chmod 1777 execute
-						DEPENDS execute)
-	install(DIRECTORY	execute
+						DEPENDS ${CMAKE_BINARY_DIR}/execute)
+	install(DIRECTORY	${CMAKE_BINARY_DIR}/execute
 			DESTINATION	"${C_LOCAL_DIR}"
 			DIRECTORY_PERMISSIONS	USE_SOURCE_PERMISSIONS)
 	# Blank directory means we are creating an emtpy directoy

@@ -61,11 +61,11 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 
 	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )	
 		add_custom_command( OUTPUT condor_config.patched
-						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp 
-						ARGS condor_config.generic condor_config.patched
+						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic condor_config.patched
 						COMMAND patch 
-						ARGS condor_config.patched condor_config.generic.rpm.patch )
+						ARGS condor_config.patched ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic.rpm.patch )
 
 		add_custom_target(	patch_configurations
 						ALL
@@ -77,19 +77,19 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 		#x86_64 use /usr/lib64 instead of /usr/lib
 		#we will apply 2 patches on condor_config file
 		add_custom_command( OUTPUT condor_config.patched
-						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp 
-						ARGS condor_config.generic condor_config.patched
+						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic condor_config.patched
 						COMMAND patch 
-						ARGS condor_config.patched condor_config.generic.rpm.patch )
+						ARGS condor_config.patched ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic.rpm.patch )
 
 		add_custom_command( OUTPUT condor_config.patched.x86_64
-						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp 
-						ARGS condor_config.patched condor_config.patched.x86_64
+						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.patched condor_config.patched.x86_64
 						DEPENDS condor_config.patched
 						COMMAND patch 
-						ARGS condor_config.patched.x86_64 condor_config.generic.rpm64.patch )
+						ARGS condor_config.patched.x86_64 ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic.rpm64.patch )
 	
 		add_custom_target(	patch_configurations_x86_64
 						ALL
@@ -108,11 +108,11 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
 
 	add_custom_command( OUTPUT condor_config.patched
-						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp
-						ARGS condor_config.generic condor_config.patched
+						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic condor_config.patched
 					    COMMAND patch
-						ARGS condor_config.patched condor_config.generic.debian.patch )
+						ARGS condor_config.patched ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic.debian.patch )
 
 	add_custom_target(	patch_configurations
 						ALL
@@ -124,11 +124,11 @@ elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
 
 	#Debian init script need to be patched because /etc/sysconfig/condor -> /etc/default/condor
 	add_custom_command( OUTPUT condor.boot.debian
-						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp
-						ARGS condor.boot.rpm condor.boot.debian
+						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.rpm condor.boot.debian
 						COMMAND patch
-						ARGS condor.boot.debian condor.boot.debian.patch )
+						ARGS condor.boot.debian ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.debian.patch )
 
 	add_custom_target(	patch_init_script
 						ALL
