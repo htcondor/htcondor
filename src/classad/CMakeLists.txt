@@ -17,6 +17,10 @@
  ############################################################### 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+#####################################################################
+## set var using master config
+add_definitions(-DCLASSAD_DISTRIBUTION -DWANT_CLASSAD_NAMESPACE=1 )
+
 # disable PCRE build unless dep added to externals.
 if(PCRE_FOUND)
 	include_directories(${PCRE_INCLUDE})
@@ -57,8 +61,8 @@ if (NOT WINDOWS)
 	install( TARGETS classad DESTINATION ${C_LIB} )
   endif()
 
-  ###### change here if you want to link condor to the shared version
-  set (CLASSADS_FOUND classads)
+  # set external reference to the shared library
+  set (CLASSADS_FOUND classad)
 
   ###### Test executables
   condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}")
@@ -77,7 +81,7 @@ else()
 
 endif()
 
-condor_post_external( ${CLASSADS_FOUND} include OFF )
+condor_post_external( classads include OFF )
 
 # standard output message used to slog users.  
 message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
