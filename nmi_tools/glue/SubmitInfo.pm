@@ -315,7 +315,7 @@ our %submit_info = (
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
 			},
-			'prereqs'	=> [ 'cmake-2.8.3' ],
+			'prereqs'	=> [ ],
 			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
 		},
 
@@ -646,7 +646,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs ],
 			'testclass' => [ @default_testclass ],
 		},
 	},

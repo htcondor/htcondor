@@ -4606,6 +4606,7 @@ Matchmaker::updateCollector() {
 	if( publicAd ) {
 		publishNegotiationCycleStats( publicAd );
 
+        daemonCore->dc_stats.Publish(*publicAd);
 		daemonCore->monitor_data.ExportData(publicAd);
 
 		// log classad into sql log so that it can be updated to DB

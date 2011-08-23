@@ -34,9 +34,9 @@ $testdesc =  'Condor submit dag - basic subdag_multi_prohibit test - scheduler U
 $testname = "job_dagman_subdag_multi_prohibit-A";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_subdag_multi_prohibit-A.dag", "job_dagman_subdag_multi_prohibit-SA.subdag");
+@dagfiles = ("job_dagman_subdag_multi_prohibit-A.dag", "job_dagman_subdag_multi_prohibit-A-sub.dag");
 
-foreach $name (@outfiles) {
+foreach $name (@dagfiles) {
 	runcmd("rm -f $name.dagman.out $name.err");
 }
 
@@ -81,34 +81,35 @@ $success = sub
 	$diditpass = 1;
 	$passed_setting = 0;
 	$passed_count = 0;
-	foreach $name (@outfiles) {
-		$line = "";
+	foreach $name (@dagfiles) {
 		$passed = 0;
 		$canopen = open(OUT,"<$name.dagman.out");
 		while(<OUT>) {
 			if( ! (defined $canopen)) {
-				CondorTest::debug("Can not open outfile<$name.dag.dagman.out>:$!\n",1);
+				CondorTest::debug("Can not open outfile<$name.dagman.out>:$!\n",1);
 				$diditpass = 0;
 			}
 			if(/DAGMAN_PROHIBIT_MULTI_JOBS.+False/){
+				CondorTest::debug("$name: $_\n",1);
 				CondorTest::debug("Saw that DAGMAN_PROHIBIT_MULTI_JOBS was set correctly\n",1);
-				$passed_setting = 1;
+				++$passed_setting;
 			}
 			if(/DAGMAN_PROHIBIT_MULTI_JOBS.+True/){
+				CondorTest::debug("$name: $_\n",1);
 				CondorTest::debug("Saw that DAGMAN_PROHIBIT_MULTI_JOBS was set incorrectly\n",1);
 				$passed_setting = 0;
 				die "DAGMAN_PROHIBIT_MULTI_JOBS should be false\n";
 			}
+			# Note: we only find this in the sub-DAG.
 			if(/Node A job proc.+completed successfully/){
-				CondorTest::debug($_,1);
+				CondorTest::debug("$name: $_\n",1);
 				++$passed_count;
 			}
 		}
 		close(OUT);
 	}
-	# clean out old output files
-	if( $passed_setting != 1 ) {
-		CondorTest::debug("Failed job_dagman_subdag_multi_prohibit-A\n",1);
+	if( $passed_setting != 2 ) {
+		CondorTest::debug("Didn't find expected DAGMAN_PROHIBIT_MULTI_JOBS settings\n",1);
 		$diditpass = 0;
 	}
 	if( $passed_count != 2 ) {

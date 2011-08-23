@@ -32,9 +32,9 @@ $testdesc =  'Condor submit dag - basic subdag_multi_prohibit test - scheduler U
 $testname = "job_dagman_subdag_multi_prohibit-B";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_subdag_multi_prohibit-B.dag","job_dagman_subdag_multi_prohibit-SB.subdag");
+@dagfiles = ("job_dagman_subdag_multi_prohibit-B.dag","job_dagman_subdag_multi_prohibit-B-sub.dag");
 
-foreach $name (@outfiles) {
+foreach $name (@dagfiles) {
 	runcmd("rm -f $name.dagman.out $name.err");
 }
 
@@ -79,36 +79,41 @@ $success = sub
 	$diditpass = 1;
 	$passed_setting = 0;
 	$passed2 = 0;
-	foreach $name (@outfiles) {
-		$line = "";
+	foreach $name (@dagfiles) {
 		$canopen = open(OUT,"<$name.dagman.out");
 		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name.out>:$!\n",1);
+			CondorTest::debug("Can not open outfile<$name.dagman.out>:$!\n",1);
 			$diditpass = 0;
 		}
 		while(<OUT>) {
 			chomp;
 			if(/DAGMAN_PROHIBIT_MULTI_JOBS.+True/){
+				CondorTest::debug("$name: $_\n",1);
 				CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is True, as expected\n",1);
-				$passed_setting = 1;
+				++$passed_setting;
 			}
 			if(/DAGMAN_PROHIBIT_MULTI_JOBS.+False/){
-                                CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is False!\n",1);
-                                $passed_setting = 0;
+				CondorTest::debug("$name: $_\n",1);
+				CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is False!\n",1);
+				$passed_setting = 0;
 				die "DAGMAN_PROHBIT_MULTI_JOBS should be False\n";
-                        }
-			if(/Recursive submit.+SB\.subdag/){
+			}
+			if(/Recursive submit.+B-sub\.dag/){
+				CondorTest::debug("$name: $_\n",1);
 				CondorTest::debug("Good. Saw subdag submitted.\n");
 				$passed2 = 1;
 			}
 		}
 		close(OUT);
 	}
-	if($passed_setting != 1 || $passed2 != 1) {
-		CondorTest::debug("Failed job_dagman_subdag_multi_prohibit-B",1);
+	if( $passed_setting != 2 ) {
+		CondorTest::debug("Didn't find expected DAGMAN_PROHIBIT_MULTI_JOBS settings\n",1);
 		$diditpass = 0;
 	}
-	# clean out old output files
+	if($passed2 != 1) {
+		CondorTest::debug("Didn't find expected recursive submit\n",1);
+		$diditpass = 0;
+	}
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}

@@ -41,7 +41,7 @@ $|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 
 %% Which daemons you wish to affect. XXX maybe split up nicer...
 \newcommand{\ToolArgsAffect}{
-\oOptArgnm{-subsystem}{subsystemname}
+\oOptArgnm{-daemon}{daemonname}
 }
 
 %% This is the common set of arguments
@@ -96,8 +96,8 @@ $|$ \OptArg{-name}{scheddname} \Rbr $|$ \oOptArg{-addr}{"\SinfulAny"}
 
 %% Descriptions of Affected Daemons
 \newcommand{\ToolArgsAffectDesc}{
-\OptItem{\OptArg{-subsystem}{subsystemname}}
-{Send the command to the named subsystem. Without this option,
+\OptItem{\OptArg{-daemon}{daemonname}}
+{Send the command to the named daemon. Without this option,
 the command is sent to the \Condor{master} daemon.}
 }
 

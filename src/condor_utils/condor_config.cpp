@@ -120,6 +120,7 @@ static ExtraParamTable *extra_info = NULL;
 static char* tilde = NULL;
 extern DLL_IMPORT_MAGIC char **environ;
 static bool have_config_source = true;
+extern bool condor_fsync_on;
 
 MyString global_config_source;
 StringList local_config_sources;
@@ -831,6 +832,11 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	condor_auth_config( false );
 
 	ConfigConvertDefaultIPToSocketIP();
+
+	//Configure condor_fsync
+	condor_fsync_on = param_boolean("CONDOR_FSYNC", true);
+	if(!condor_fsync_on)
+		dprintf(D_FULLDEBUG, "FSYNC while writing user logs turned off.\n");
 
 	(void)SetSyscalls( scm );
 }

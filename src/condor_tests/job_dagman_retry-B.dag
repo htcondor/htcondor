@@ -1,0 +1,32 @@
+Config job_dagman_retry-B.config
+
+# Retry 0: pre script fails
+# Retry 1: job fails
+# Retry 2: post script fails
+# Retry 3: success
+Job NodeA job_dagman_retry-B-nodeA.cmd
+Script Pre NodeA job_dagman_retry-B-nodeA-pre.pl $RETRY
+Script Post NodeA job_dagman_retry-B-nodeA-post.pl $RETRY
+Retry NodeA 3
+
+# Retry 0: pre script fails
+# Retry 1: job fails
+# Retry 2: success
+Job NodeB job_dagman_retry-B-nodeB.cmd
+Script Pre NodeB job_dagman_retry-B-nodeB-pre.pl $RETRY
+Retry NodeB 2
+
+# Retry 0: job and post script fail
+# Retry 1: success
+Job NodeC job_dagman_retry-B-nodeC.cmd
+Script Post NodeC job_dagman_retry-B-nodeC-post.pl $RETURN
+Retry NodeC 1
+
+# Retry 0: job fails
+# Retry 1: success
+Job NodeD job_dagman_retry-B-nodeD.cmd
+Retry NodeD 1
+
+Parent NodeA Child NodeB
+Parent NodeB Child NodeC
+Parent NodeC Child NodeD

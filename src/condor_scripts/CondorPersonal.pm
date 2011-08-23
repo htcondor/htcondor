@@ -1505,6 +1505,12 @@ sub IsRunningYet
 				$loopcount += 1;
 				my @cmd = `condor_status -startd -format \"%s\\n\" name`;
 
+				my $res = $?;
+				if ($res != 0) {
+					print "\ncondor_status returned error code $res The collector probably is not running after all, giving up\n";
+					return 1;
+				}
+
     			foreach my $line (@cmd)
     			{
         			if( $line =~ /^.*$currenthost.*/)

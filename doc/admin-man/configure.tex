@@ -372,7 +372,6 @@ Reconfiguration using \Condor{reconfig} will not be enough.
 
 \begin{itemize}
   \item \verb@BIND_ALL_INTERFACES@
-  \item \verb@DAEMON_LIST@
   \item \verb@FetchWorkDelay@
   \item \verb@MAX_NUM_CPUS@
   \item \verb@MAX_TRACKING_GID@
@@ -5326,11 +5325,8 @@ SYSTEM_PERIODIC_REMOVE = \
   initiate a negotiation cycle before the schedd will simply try to claim
   any local \Condor{startd}.  This allows for a machine that is acting as
   both a submit and execute node to run jobs locally if it cannot
-  communicate with the central manager.  The default value, if not
-  specified, is 4 x \MacroUNI{NEGOTIATOR\_INTERVAL}.  If
-  \MacroUNI{NEGOTIATOR\_INTERVAL} is not defined, then 
-  \MacroNI{SCHEDD\_ASSUME\_NEGOTIATOR\_GONE} will default to 1200 (20
-  minutes).
+  communicate with the central manager. The default value, if not
+  specified, is 1200 (20 minutes).
 
 \label{param:ScheddRoundAttr}
 \item[\Macro{SCHEDD\_ROUND\_ATTR\_<xxxx>}]

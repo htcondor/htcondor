@@ -48,6 +48,7 @@
 #include "stat_wrapper.h"
 #include "file_lock.h"
 #include "user_log_header.h"
+#include "condor_fsync.h"
 
 // Set to non-zero to enable fine-grained rotation debugging / timing
 #define ROTATION_TRACE	0
@@ -1121,7 +1122,10 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 	if ( (   is_global_event  && m_global_fsync_enable ) ||
 		 ( (!is_global_event) && m_enable_fsync ) ) {
 		before = time(NULL);
-		if ( fsync( fileno( fp ) ) != 0 ) {
+		char *fname;
+		if ( is_global_event ) fname = m_global_path;
+		else fname = m_path;
+		if ( condor_fsync( fileno( fp ), fname ) != 0 ) {
 		  dprintf( D_ALWAYS,
 				   "fsync() failed in WriteUserLog::writeEvent"
 				   " - errno %d (%s)\n",

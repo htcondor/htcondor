@@ -46,6 +46,14 @@ Now, the error message distinguishes between safety check failures
 for the UID, tracking group ID, primary group ID, and supplementary group IDs.
 \Ticket{2364}
 
+% gittrac #2096
+\item When using \Prog{glexec}, if there is a conflict between
+environment specified for the job and environment inherited from
+glexec, the former always takes precedence when running the job.
+Previously, the environment inherited from glexec took
+precedence.
+\Ticket{2096}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
