@@ -4050,7 +4050,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_CONTINUE_JOBS:
 			// TBD: Only continue jobs which are suspended
-			snprintf( buf, 256, "(%s=%d) && (", ATTR_JOB_STATUS, RUNNING );
+			snprintf( buf, 256, "(%s=%d) && (", ATTR_JOB_STATUS, SUSPENDED );
 			break;
 		default:
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
@@ -4162,10 +4162,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			jobs[i].cluster = -1;
 			continue;
 		}
-		switch( action ) {
-		// TBD needs updating 
+		switch( action ) { 
 		case JA_CONTINUE_JOBS:
-			if( status != RUNNING ) {
+			if( status != SUSPENDED ) {
 				results.record( tmp_id, AR_BAD_STATUS );
 				jobs[i].cluster = -1;
 				continue;
@@ -12119,10 +12118,10 @@ fixReasonAttrs( PROC_ID job_id, JobAction action )
 					 ATTR_JOB_STATUS_ON_RELEASE);
 		break;
 	
-	case JA_SUSPEND_JOBS:
-	case JA_CONTINUE_JOBS:
-		//TBD
-		break;
+	//case JA_SUSPEND_JOBS: //Nothing TBD
+	//case JA_CONTINUE_JOBS:
+	//	moveStrAttr( job_id, ATTR_SUSPEND_REASON, ATTR_LAST_SUSPEND_REASON, false );
+	//	break;
 
 	default:
 		return;
