@@ -97,7 +97,7 @@ if ( WITH_BLAHP )
 		### set the install
 		install ( DIRECTORY ${BLAHP_INSTALL_LOC}/opt/glite DESTINATION ${C_LIBEXEC} USE_SOURCE_PERMISSIONS )
 		install ( CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ../../lib ${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/glite/lib)" )
-		if ( CONDOR_STRIP_PACKAGES )
+		if ( CONDOR_STRIP_PACKAGES AND NOT CONDOR_PACKAGE_BUILD )
 			file( GLOB StripFiles "${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/glite/bin/[bBt]*" )
 			install( CODE "execute_process(COMMAND strip ${StripFiles})" )
 		endif()
