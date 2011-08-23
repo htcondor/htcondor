@@ -17,10 +17,10 @@ int condor_connect(int sockfd, const condor_sockaddr& addr)
 int condor_accept(int sockfd, condor_sockaddr& addr)
 {
 	sockaddr_storage st;
-	socklen_t len;
+	socklen_t len = sizeof(st);
 	int ret = accept(sockfd, (sockaddr*)&st, &len);
 	
-	if (ret) {
+	if (ret >= 0) {
 		addr = condor_sockaddr((sockaddr*)&st);
 	}
 	return ret;
