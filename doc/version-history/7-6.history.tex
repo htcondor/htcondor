@@ -49,16 +49,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-% gittrac #2096
-\item Jobs run via glexec always had their \Env{PATH} environment
-variable cleared.  Now, if \Env{PATH} was specified for the job, (in
-any of the ways that job environment may be specified), this setting
-is used.
+\item Jobs run via \Prog{glexec} always had their \Env{PATH} environment
+variable cleared.  Now, if \Env{PATH} was specified for the job, 
+in any of the ways that job environment may be specified, 
+this setting is used.
+\Ticket{2096}
 
-% gittrac #2413
 \item Fixed an infinite loop that could happen in Condor daemons
-shortly after receipt of a new connection.  This problem was
-introduced in 7.5.6.
+shortly after the receipt of a new connection.  
+This problem was introduced in Condor version 7.5.6.
+\Ticket{2413}
 
 \end{itemize}
 
