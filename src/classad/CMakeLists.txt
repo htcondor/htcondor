@@ -17,10 +17,6 @@
  ############################################################### 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-#####################################################################
-## set var using master config
-add_definitions(-DCLASSAD_DISTRIBUTION -DWANT_CLASSAD_NAMESPACE=1 )
-
 # disable PCRE build unless dep added to externals.
 if(PCRE_FOUND)
 	include_directories(${PCRE_INCLUDE})
@@ -58,7 +54,8 @@ if (NOT WINDOWS)
   if (LINUX)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
 	set_target_properties( classad PROPERTIES VERSION 2.0.0 SOVERSION 2 )
-	install( TARGETS classad DESTINATION ${C_LIB} )
+	condor_set_link_libs( classad "${PCRE_FOUND};${DL_FOUND}" )
+	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()
 
   # set external reference to the shared library
@@ -70,8 +67,8 @@ if (NOT WINDOWS)
   condor_exe( classad_version "classad_version.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
   
   ###### Install elements with our distribution
-  install( TARGETS classads DESTINATION ${C_LIB} )
-  install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${C_INCLUDE} )
+  install( TARGETS classads DESTINATION ${C_LIB_PUBLIC} )
+  install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/classad DESTINATION ${C_INCLUDE_PUBLIC} )
 
 else()	
 	# windows specific configuration.

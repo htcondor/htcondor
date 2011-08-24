@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-if ( NOT PROPER )
+if ( NOT PROPER AND NOT LINUX )
 
 	condor_pre_external( PCRE pcre-7.6 "lib;include" "include/pcre.h")
 
