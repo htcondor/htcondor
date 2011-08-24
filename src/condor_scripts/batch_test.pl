@@ -44,9 +44,7 @@
 #	etc. We will look for the existence of this location(TestingPersonalCondor)
 # 	and see if it's CONDOR_CONFIG is using it and if its live now.
 #	If all of those are not true, they will be remedied. Setting this up
-# 	will be different for the nightlies then for a workspace. However if 
-# 	we look at our current location and we find an "execute" directory in the
-#	path, we can assume it is a nightly test run.
+# 	will be different for the nightlies then for a workspace.
 # Nov 07 : Added repaeating a test n times by adding "-a n" to args
 # Nov 07 : Added condor_personal setup only by adding -p (pretest work);
 # Mar 17 : Added condor cleanup functionality by adding -c option.
@@ -315,7 +313,6 @@ my %test_suite = ();
 my $awkscript = "";
 my $genericconfig = "";
 my $genericlocalconfig = "";
-my $nightly = CondorTest::IsThisNightly($BaseDir);
 my $res = 0;
 
 if(!($wantcurrentdaemons)) {
@@ -323,11 +320,6 @@ if(!($wantcurrentdaemons)) {
 	$awkscript = "../condor_examples/convert_config_to_win32.awk";
 	$genericconfig = "../condor_examples/condor_config.generic";
 	$genericlocalconfig = "../condor_examples/condor_config.local.central.manager";
-
-
-	if($nightly == 1) {
-		print "This is a nightly test run\n";
-	}
 
 	$res = IsPersonalTestDirThere();
 	if($res != 0) {
@@ -370,9 +362,7 @@ if(!($wantcurrentdaemons)) {
 		}
 		debug("Done Starting Personal Condor\n",2);
 	}
-		
 	CondorPersonal::IsRunningYet() || die "Failed to start Condor";
-
 }
 
 my @myfig = `condor_config_val -config 2>&1`;
