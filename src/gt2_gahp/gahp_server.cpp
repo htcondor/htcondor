@@ -131,10 +131,12 @@ ptr_ref_count * current_cred = NULL;
 */ 
 static char *VersionString ="$GahpVersion: 1.1.3 " __DATE__ " UW\\ Gahp $";
 
+#define NUM_GASS_LISTENERS		20
+
 volatile int ResultsPending;
 volatile int AsyncResults;
 volatile int GlobusActive;
-globus_gass_transfer_listener_t gassServerListeners[20];
+globus_gass_transfer_listener_t gassServerListeners[NUM_GASS_LISTENERS];
 char *ResponsePrefix = NULL;
 
 /* These are all the command handlers. */
@@ -732,6 +734,25 @@ callback_gram_job_cancel(void *arg,
 }
 
 int
+version_in_range( globus_module_descriptor_t *module, int low_major,
+				  int low_minor, int high_major, int high_minor )
+{
+	int rc;
+	globus_version_t vers;
+	rc = globus_module_get_version( module, &vers );
+	if ( rc != GLOBUS_SUCCESS ) {
+		fprintf( stderr, "Failed to retrieve Globus version!\n" );
+		return 0;
+	}
+	int low = low_major * 100 + low_minor;
+	int high = high_major * 100 + high_minor;
+	int cur = vers.major * 100 + vers.minor;
+	fprintf( stderr, "Low=%d.%d, High=%d.%d, Curr=%d.%d\n", low_major,
+			 low_minor, high_major, high_minor, vers.major, vers.minor );
+	return ( low <= cur ) && ( cur <= high );
+}
+
+int
 handle_gass_server_init(void * user_arg)
 {
 	char **input_line = (char **) user_arg;
@@ -739,6 +760,7 @@ handle_gass_server_init(void * user_arg)
 	char *output, *req_id, *job_contact;
 	char *gassServerUrl = NULL;
 	int port;
+	int num_listeners = NUM_GASS_LISTENERS;
 
 	if( !process_string_arg(input_line[1], &req_id) ) {
 		HANDLE_SYNTAX_ERROR();
@@ -762,13 +784,27 @@ handle_gass_server_init(void * user_arg)
         return false; */
     }
 
+	// We use a crude hack to optimize GASS performance by doing up to
+	// 20 security authentications in parallel. Normally, globus_io only
+	// does 1 at a time per port. This requires digging into the bowels
+	// of globus_xio and globus_io internal data structures. Newer
+	// versions may change how the structures are layed out, since they're
+	// supposed to be private. So if we see a version we don't recgonize,
+	// disable our optimization.
+	if ( !version_in_range( GLOBUS_XIO_MODULE, 2, 8, 2, 9 ) ||
+		 !version_in_range( GLOBUS_IO_MODULE, 6, 3, 7, 1 ) ||
+		 !version_in_range( GLOBUS_GASS_TRANSFER_MODULE, 4, 3, 6, 0 ) ) {
+		fprintf( stderr, "Unexpected module version, using low-performance GASS server!\n" );
+		num_listeners = 1;
+	}
+
 		/* TODO This code requires 20 free ports to initialize, but only one
 		 *   port afterwards. If we're port-restricted, this may be a
 		 *   problem. We should close the additional ports as we're
 		 *   initializing the gass listeners.
 		 */
     result = GLOBUS_SUCCESS;
-    for(i=0;i<20;i++) {
+    for(i=0;i<num_listeners;i++) {
       int res;
       if (i==0) {
         res = globus_gass_server_ez_init( &gassServerListeners[i], NULL, NULL, NULL,
@@ -788,12 +824,12 @@ handle_gass_server_init(void * user_arg)
 
     output = (char *)globus_libc_malloc(500);
 
-    if (result == GLOBUS_SUCCESS)
+    if (result == GLOBUS_SUCCESS && num_listeners > 1)
     {
       globus_gass_transfer_listener_struct_t *l0 = (globus_gass_transfer_listener_struct_t *) globus_handle_table_lookup(&globus_i_gass_transfer_listener_handles, gassServerListeners[0]);
       int l0_fd = ((my_globus_l_server_t*)l0->proto->handle->xio_server->entry[1].server_handle)->listener_fd;
 
-      for(i=1;i<20;i++) {
+      for(i=1;i<num_listeners;i++) {
         globus_gass_transfer_listener_struct_t *l = (globus_gass_transfer_listener_struct_t *)
           globus_handle_table_lookup(&globus_i_gass_transfer_listener_handles, gassServerListeners[i]);
 
@@ -801,6 +837,8 @@ handle_gass_server_init(void * user_arg)
         ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_fd = l0_fd;
         ((my_globus_l_server_t*)l->proto->handle->xio_server->entry[1].server_handle)->listener_system->fd = l0_fd;
       }
+    }
+    if (result == GLOBUS_SUCCESS) {
       gassServerUrl = globus_gass_transfer_listener_get_base_url(gassServerListeners[0]);
     }
 

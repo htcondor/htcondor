@@ -851,7 +851,7 @@ globus_l_ftp_client_restart_no_connection(
 {
     globus_i_ftp_client_target_t *		target;
 
-    target = (globus_i_ftp_client_target_t *) user_arg;
+    target = user_arg;
 
     globus_i_ftp_client_force_close_callback(
 	    target,

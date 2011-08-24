@@ -126,7 +126,6 @@ my @minimal_build_configure_args =
 	 '-DWITH_COREDUMPER:BOOL'	 => 'OFF',
 	 '-DWITH_CREAM:BOOL'		 => 'OFF',
 	 '-DWITH_DRMAA:BOOL'		 => 'OFF',
-	 '-DWITH_EXPAT:BOOL'		 => 'OFF',
 	 '-DWITH_GCB:BOOL'			 => 'OFF',
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
 	 '-DWITH_GSOAP:BOOL'		 => 'OFF',
@@ -688,7 +687,6 @@ our %submit_info = (
 	'x86_64_fedora_14'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
-								  '-DWITH_EXPAT:BOOL' => 'ON',
 			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
@@ -707,7 +705,6 @@ our %submit_info = (
 	'x86_64_fedora_14-updated'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
-								  '-DWITH_EXPAT:BOOL' => 'ON',
 			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
@@ -990,7 +987,6 @@ our %submit_info = (
 								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
 								  '-DWITHOUT_AMAZON_TEST:BOOL' => 'ON',
 								  '-DWITH_CURL:BOOL' => 'ON',
-								  '-DWITH_EXPAT:BOOL' => 'ON',
 								  '-DWITH_LIBVIRT:BOOL' => 'ON',
 								  '-DWITH_LIBXML2:BOOL' => 'ON',
 			},
@@ -1022,7 +1018,6 @@ our %submit_info = (
 				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
 				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
 				'-DWITH_CURL:BOOL=OFF' => undef,
-				'-DWITH_EXPAT:BOOL=ON' => undef,
 				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
 				'-DWITH_LIBXML2:BOOL=ON' => undef,
 			},
