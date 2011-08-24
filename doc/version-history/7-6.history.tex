@@ -55,6 +55,11 @@ variable cleared.  Now, if \Env{PATH} was specified for the job, (in
 any of the ways that job environment may be specified), this setting
 is used.
 
+% gittrac #2413
+\item Fixed an infinite loop that could happen in Condor daemons
+shortly after receipt of a new connection.  This problem was
+introduced in 7.5.6.
+
 \end{itemize}
 
 \noindent Known Bugs:
