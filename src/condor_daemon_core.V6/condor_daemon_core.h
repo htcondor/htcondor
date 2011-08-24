@@ -1433,7 +1433,6 @@ class DaemonCore : public Service
 	public:
 	   // InitTime should be the first data member, and RecentWindowMax the last data member..
 	   time_t InitTime;            // last time we init'ed the structure
-	   time_t StatsPrevUpdateTime; // the prior time that statistics were updated. 
 
 	   // published values
 	   time_t StatsLifetime;       // total time the daemon has been collecting statistics. (uptime)
@@ -1453,9 +1452,16 @@ class DaemonCore : public Service
 	   //stats_entry_recent<int> SockBytes;      //  number of bytes passed though the socket (can we do this?)
 	   //stats_entry_recent<int> PipeBytes;      //  number of bytes passed though the socket
 	   stats_entry_recent<int> DebugOuts;      //  number of dprintf calls that were written to output.
+      #ifdef WIN32
+	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
+      #endif
 
 	   // InitTime should be the first data member, and RecentWindowMax the last data member..
 	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
+
+       stats_pool              Named;          // pool of named statistics entries.
+
 
 	   // helper methods
 	   //Stats();
@@ -1466,6 +1472,10 @@ class DaemonCore : public Service
 	   void SetWindowSize(int window);
 	   void Publish(ClassAd & ad) const;
 	   void Unpublish(ClassAd & ad) const;
+       void* New(const char * category, const char * name, int as);
+       void AddToNamed(const char * name, int val);
+       void AddToNamed(const char * name, int64_t val);
+       time_t AddRuntime(const char * name, time_t before); // returns current time.
 
 	} dc_stats;
 

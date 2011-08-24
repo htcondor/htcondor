@@ -1274,6 +1274,8 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		return -1;
     }
 
+    dc_stats.New("Signal", handler_descrip, AS_COUNT | IS_RINGBUF | IS_PROBE);
+
 	// Semantics dictate that certain signals CANNOT be caught!
 	// In addition, allow SIGCHLD to be automatically replaced (for backwards
 	// compatibility), so cancel any previous registration for SIGCHLD.
@@ -1449,6 +1451,11 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
         DumpSocketTable( D_ALWAYS );
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
+
+    dc_stats.New("Socket", handler_descrip, AS_COUNT | IS_RINGBUF | IS_PROBE);
+    if (iosock_descrip && iosock_descrip[0] && ! strcmp(handler_descrip, "DC Command Handler"))
+       dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RINGBUF | IS_PROBE);
+
 
 	// Verify that this socket has not already been registered
 	// Since we are scanning the entire table to do this (change this someday to a hash!),
@@ -1897,6 +1904,8 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 			EXCEPT("DaemonCore: Same pipe registered twice");
         }
 	}
+
+    dc_stats.New("Pipe", handler_descrip, AS_COUNT | IS_RINGBUF | IS_PROBE);
 
 	// Found a blank entry at index i. Now add in the new data.
 	(*pipeTable)[i].pentry = NULL;
@@ -3041,6 +3050,7 @@ void DaemonCore::Driver()
 	for(;;)
 	{
         time_t now = time(NULL);
+        time_t sigtime = now;
 
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
@@ -3054,6 +3064,7 @@ void DaemonCore::Driver()
 						curr_dataptr = &(sigTable[i].data_ptr);
                         // update statistics
                         dc_stats.Signals += 1;
+
 						// log a message
 						dprintf(D_DAEMONCORE,
 										"Calling Handler <%s> for Signal %d <%s>\n",
@@ -3068,6 +3079,9 @@ void DaemonCore::Driver()
 						curr_dataptr = NULL;
 						// Make sure we didn't leak our priv state
 						CheckPrivState();
+
+                        // update per-timer runtime and count statistics
+                        sigtime = dc_stats.AddRuntime(sigTable[i].handler_descrip, sigtime);
 					}
 				}
 			}
@@ -3282,7 +3296,7 @@ void DaemonCore::Driver()
 		// in the signalled state in 7.5.5. 
 		if (selector.has_ready() &&
 			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
-            dc_stats.Signals += 1;
+            dc_stats.AsyncPipe += 1;
 			if ( ! async_pipe_signal) {
 				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.");
 			}
@@ -3410,6 +3424,7 @@ void DaemonCore::Driver()
 
 
 			// Now loop through all pipe entries, calling handlers if required.
+            sigtime = now;
 			for(i = 0; i < nPipe; i++) {
 				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
 
@@ -3502,6 +3517,9 @@ void DaemonCore::Driver()
 						}
 #endif
 
+                        // update per-handler runtime statistics
+                        sigtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, sigtime);
+
 						if ( (*pipeTable)[i].call_handler == true ) {
 							// looks like the handler called Cancel_Pipe(),
 							// and now entry i no longer points to what we
@@ -3517,7 +3535,7 @@ void DaemonCore::Driver()
 
             now2 = time(NULL);
             dc_stats.PipeRuntime += (now2 - now);
-            now = now2;
+            sigtime = now = now2;
 
 			// Now loop through all sock entries, calling handlers if required.
 			for(i = 0; i < nSock; i++) {
@@ -3570,6 +3588,9 @@ void DaemonCore::Driver()
 
 						recheck_status = true;
 						CallSocketHandler( i, true );
+
+                        // update per-handler runtime statistics
+                        sigtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, sigtime);
 
 					}	// if call_handler is True
 				}	// if valid entry in sockTable
