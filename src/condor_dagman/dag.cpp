@@ -1968,8 +1968,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 	}
 
 	if ( !isPartial ) {
-        fprintf( fp, "\n" );
-		fprintf( fp, "%s %s %s ", keyword, node->GetJobName(),
+		fprintf( fp, "\n%s %s %s ", keyword, node->GetJobName(),
 					node->GetDagFile() ? node->GetDagFile() :
 					node->GetCmdFile() );
 		if ( strcmp( node->GetDirectory(), "" ) ) {
@@ -2030,6 +2029,9 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		}
 
 			// Print the PRIORITY line, if any.
+			// Note: when gittrac #2167 gets merged, we need to think
+			// about how this code will interact with that code.
+			// wenger/nwp 2011-08-24
 		if ( node->_hasNodePriority ) {
 			fprintf( fp, "PRIORITY %s %d\n", node->GetJobName(),
 						node->_nodePriority );

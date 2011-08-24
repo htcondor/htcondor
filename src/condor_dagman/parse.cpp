@@ -1849,11 +1849,7 @@ parse_done(
 		debug_printf( DEBUG_QUIET, 
 					  "Warning: %s (line %d): Unknown Job %s\n",
 					  filename, lineNumber, jobNameOrig );
-		if ( check_warning_strictness( DAG_STRICT_1, false ) ) {
-			return false;
-		} else {
-			return true;
-		}
+		return !check_warning_strictness( DAG_STRICT_1, false );
 	}
 
 	job->SetStatus( Job::STATUS_DONE );

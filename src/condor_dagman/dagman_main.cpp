@@ -362,8 +362,7 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
 
-	bool oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", false );
-	if ( oldRescue ) {
+	if ( param_boolean( "DAGMAN_OLD_RESCUE", false ) ) {
 		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_OLD_RESCUE is "
 					"no longer supported\n" );
 		check_warning_strictness( DAG_STRICT_1 );
