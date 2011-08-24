@@ -835,13 +835,6 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 						PermString(perm), thehost );
 				}
 			}
-				// check all aliases for this IP as well
-			if( aliases ) {
-				thehost = *(aliases++);
-			}
-			else {
-				thehost = NULL;
-			}
 		}
 			// if we found something via our hostname or subnet mactching, we now have 
 			// a mask, and we should add it into our table so we need not
