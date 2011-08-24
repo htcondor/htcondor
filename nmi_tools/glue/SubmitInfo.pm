@@ -310,9 +310,10 @@ our %submit_info = (
 
 
 	##########################################################################
-	# Platform Debian 6.0 on x86_64
+	# Platform Debian 6.0 on x86_64 (updated)
 	##########################################################################
-	'x86_64_deb_6.0' => {
+	# This is the name of the platform in old batlab
+	'x86_64_deb_6.0-updated' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
@@ -329,12 +330,25 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform DEB 6 on x86_64 (updated)
-	# As of this writing there is no x86_64_deb-6.0 (non updated) machine in 
-	# the NMI pool.	 When they include one we should switch this from using
-	# the updated machine to the non-updated machine.
+	# Platform DEB 6 on x86_64 
 	##########################################################################
-	'x86_64_deb_6.0-updated' => 'x86_64_deb_6.0',
+	# This is the name of the platform in new batlab
+	# It is actually updated, despite what the name says
+	'x86_64_deb_6.0' => {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
 
 	##########################################################################
 	# Platform RHEL 6 on x86
@@ -390,6 +404,22 @@ our %submit_info = (
 	#################################################################
 	'x86_64_rhap_6.1-updated'	=> 'x86_64_rhap_6.0',
 
+	# This is the new batlab one
+	'x86_64_rhap_6.1'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL' => 'OFF',
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
 	##########################################################################
 	# Platform RHEL 5 on x86_64
 	##########################################################################
@@ -412,6 +442,23 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+	# This is the new batlab one
+	'x86_64_rhap_5.7'		=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> [ ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
