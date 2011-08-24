@@ -102,7 +102,8 @@ my @default_prereqs = (
 	);
 
 # Hackery to test running in new batlab
-if (`hostname -f` eq "submit-1.batlab.org\n") {
+if ((`hostname -f` eq "submit-1.batlab.org\n") ||
+	(`hostname -f` eq "submit-2.batlab.org\n")) {
 @default_prereqs = ();
 } 
 
