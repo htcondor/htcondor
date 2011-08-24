@@ -41,11 +41,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Previously, in \Condor{hadoop} if \MacroNI{HDFS\_DENY} was
-undefined, \MacroNI{HOSTDENY\_WRITE} and \MacroNI{HOSTDENY\_READ}
-were used to build the deny list.  Now \MacroNI{DENY\_WRITE} and
-\MacroNI{DENY\_READ} are also used.
-\Ticket{2414}
+\item None.
 
 \end{itemize}
 
@@ -64,9 +60,14 @@ shortly after the receipt of a new connection.
 This problem was introduced in Condor version 7.5.6.
 \Ticket{2413}
 
-\item Fixed a problem in \Condor{hadoop} that caused it to exit shortly
-after starting up if \MacroNI{HDFS\_DENY}, \MacroNI{HOSTDENY\_WRITE}, and
-\MacroNI{HOSTDENY\_READ} were undefined.
+\item Fixed a problem in \Condor{hdfs} that caused it to exit shortly
+after starting up if the configuration variables 
+\MacroNI{HDFS\_DENY}, \MacroNI{HOSTDENY\_WRITE}, or \MacroNI{HOSTDENY\_READ} 
+were not defined.
+Previously, if \MacroNI{HDFS\_DENY} was
+not defined, \MacroNI{HOSTDENY\_WRITE} and \MacroNI{HOSTDENY\_READ}
+were used to build the deny list.  
+Now \MacroNI{DENY\_WRITE} and \MacroNI{DENY\_READ} are also used.
 \Ticket{2414}
 
 \end{itemize}
