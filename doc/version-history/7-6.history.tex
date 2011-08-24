@@ -49,11 +49,26 @@ The details of each version are described below.
 
 \begin{itemize}
 
-% gittrac #2096
-\item Jobs run via glexec always had their \Env{PATH} environment
-variable cleared.  Now, if \Env{PATH} was specified for the job, (in
-any of the ways that job environment may be specified), this setting
-is used.
+\item Jobs run via \Prog{glexec} always had their \Env{PATH} environment
+variable cleared.  Now, if \Env{PATH} was specified for the job, 
+in any of the ways that job environment may be specified, 
+this setting is used.
+\Ticket{2096}
+
+\item Fixed an infinite loop that could happen in Condor daemons
+shortly after the receipt of a new connection.  
+This problem was introduced in Condor version 7.5.6.
+\Ticket{2413}
+
+\item Fixed a problem in \Condor{hdfs} that caused it to exit shortly
+after starting up if the configuration variables 
+\MacroNI{HDFS\_DENY}, \MacroNI{HOSTDENY\_WRITE}, or \MacroNI{HOSTDENY\_READ} 
+were not defined.
+Previously, if \MacroNI{HDFS\_DENY} was
+not defined, \MacroNI{HOSTDENY\_WRITE} and \MacroNI{HOSTDENY\_READ}
+were used to build the deny list.  
+Now \MacroNI{DENY\_WRITE} and \MacroNI{DENY\_READ} are also used.
+\Ticket{2414}
 
 \end{itemize}
 
@@ -82,8 +97,7 @@ is used.
 
 \begin{itemize}
 
-\item Condor version 7.6.3 not yet released.
-%\item Condor version 7.6.3 released on Month Date, 2011.
+\item Condor version 7.6.3 released on August 23, 2011.
 
 \end{itemize}
 
@@ -110,8 +124,8 @@ is used.
 
 \item Fixed a bug causing parallel universe jobs to be preempted upon 
 renewal of the job lease, 
-which by default will happen within 20 minutes, 
-essentially meaning that no parallel universe job that takes
+which by default happens within 20 minutes. 
+This meant that essentially no parallel universe job that took
 longer than 20 minutes would ever finish.
 \Ticket{2317}
 
@@ -138,9 +152,10 @@ without restarting the daemon.
 with threaded Globus libraries.
 \Ticket{2345}
 
-\item Fixed a problem introduced in Condor version 7.5.6, which led to 
-local lock files for user log locking always being created whether or 
-not \MacroNI{ENABLE\_USERLOG\_LOCKING} was set to \Expr{false}.
+\item Fixed a problem introduced in Condor version 7.5.6, 
+which led to local lock files for user log locking always being created 
+whether or 
+not \MacroNI{ENABLE\_USERLOG\_LOCKING} was set to \Expr{False}.
 \Ticket{2116}
 
 \item Installation as a service by the MSI installer on Windows platforms 
@@ -161,14 +176,14 @@ to which the \Login{condor} user belongs.
 \Ticket{2331}
 
 \item Fixed a bug that caused scheduler universe jobs submitted via
-Condor-C or \Condor{submit} -spool to became held and be unable to run.
-The hold reason was ``File '...' is missing or not executable''.
+Condor-C or \Condor{submit} \Opt{-spool} to be held and be unable to run.
+The hold reason given was \Expr{File <filename> is missing or not executable}.
 \Ticket{2396}
 
-\item \Condor{submit} now exits with an error if command \Macro{hold}
-is set to \Macro{true} when using the -spool or -remote command-line
-arguments. This combination of settings will result in jobs being unable
-to run.
+\item \Condor{submit} now exits with an error,
+if the command \Expr{hold = True} is in the submit description file
+when using \Opt{-spool} or \Opt{-remote} as command-line arguments. 
+This combination of settings resulted in jobs being unable to run.
 \Ticket{2398}
 
 \end{itemize}
