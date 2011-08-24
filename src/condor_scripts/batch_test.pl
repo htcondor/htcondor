@@ -348,10 +348,10 @@ if(!($wantcurrentdaemons)) {
 		my $tmp = `cygpath -m $targetconfig`;
 		CondorTest::fullchomp($tmp);
 		$ENV{CONDOR_CONFIG} = $tmp;
-		$res = IsPersonalRunning($tmp);
+		$res = CondorPersonal::IsPersonalRunning($tmp);
 	} else {
 		$ENV{CONDOR_CONFIG} = $targetconfig;
-		$res = IsPersonalRunning($targetconfig);
+		$res = CondorPersonal::IsPersonalRunning($targetconfig);
 	}
 
 	# capture pid for master
@@ -1186,61 +1186,6 @@ sub CreateLocalConfig
 	close FIX; 
 }
 
-sub IsPersonalRunning
-{
-    my $pathtoconfig = shift @_;
-    my $line = "";
-    my $badness = "";
-    my $matchedconfig = "";
-
-    CondorTest::fullchomp($pathtoconfig);
-	if($iswindows == 1) {
-		$pathtoconfig =~ s/\\/\\\\/g;
-	}
-
-    open(CONFIG, "condor_config_val -config -master log 2>&1 |") || die "condor_config_val: $!\n";
-    while(<CONFIG>) {
-        CondorTest::fullchomp($_);
-        $line = $_;
-        debug ("--$line--\n",2);
-
-
-		debug("Looking to match \"$pathtoconfig\"\n",2);
-        if( $line =~ /^.*($pathtoconfig).*$/ ) {
-            $matchedconfig = $1;
-            debug ("Matched! $1\n",2);
-			last;
-        }
-    }
-        # TODO: Why would SIGPIPE cause close to return 13 (Perm denied?) $? should contain the exit status from condor_config_value
-    if ( (not close(CONFIG)) && ($? != 13) ) {	# Ignore SIGPIPE
-	warn "Error executing condor_config_val: '$?' '$!'"
-    }
-
-    if( $matchedconfig eq "" ) {
-        die	"lost: config does not match expected config setting......\n";
-    }
-
-	# find the master file to see if it exists and threrfore is running
-
-	open(MADDR,"condor_config_val MASTER_ADDRESS_FILE 2>&1 |") || die "condor_config_val: $
-	!\n";
-	while(<MADDR>) {
-        CondorTest::fullchomp($_);
-        $line = $_;
-		if($line =~ /^(.*master_address)$/) {
-			if(-f $1) {
-				debug("Master running\n",2);
-				return(1);
-			} else {
-				debug("Master not running\n",2);
-				return(0);
-			}
-		}
-	}
-	close(MADDR);
-}
-
 # StartTestOutput($compiler,$test_program);
 sub StartTestOutput
 {
@@ -1362,21 +1307,12 @@ sub DoChild
 
 			# generate file names
 
-			if( $nightly == 0) {
-				copy($log, $newlog);
-				copy($cmd, $newcmd);
-				copy($out, $newout);
-				copy($err, $newerr);
-				copy($runout, $newrunout);
-				copy($cmdout, $newcmdout);
-			} else {
-				copy($log, $newlog);
-				copy($cmd, $newcmd);
-				copy($out, $newout);
-				copy($err, $newerr);
-				copy($runout, $newrunout);
-				copy($cmdout, $newcmdout);
-			}
+			copy($log, $newlog);
+			copy($cmd, $newcmd);
+			copy($out, $newout);
+			copy($err, $newerr);
+			copy($runout, $newrunout);
+			copy($cmdout, $newcmdout);
 
 			if($repeat > 1) {
 				print "($$)";
