@@ -31,6 +31,7 @@
 
 #include "ClassAdLogEntry.h"
 #include "ClassAdLogParser.h"
+#include "classad_log.h"
 
 /***** Prevent calling free multiple times in this code *****/
 /* This fixes bugs where we would segfault when reading in
@@ -388,11 +389,21 @@ ClassAdLogParser::readNewClassAdBody(FILE *fp)
 		return rval;
 	}
 	rval1 = readword(fp, curCALogEntry.mytype);
+	if( curCALogEntry.mytype && strcmp(curCALogEntry.mytype,EMPTY_CLASSAD_TYPE_NAME)==0 ) {
+		free(curCALogEntry.mytype);
+		curCALogEntry.mytype = strdup("");
+		ASSERT( curCALogEntry.mytype );
+	}
 	if (rval1 < 0) {
 		return rval1;
 	}
 	rval += rval1;
 	rval1 = readword(fp, curCALogEntry.targettype);
+	if( curCALogEntry.targettype && strcmp(curCALogEntry.targettype,EMPTY_CLASSAD_TYPE_NAME)==0 ) {
+		free(curCALogEntry.targettype);
+		curCALogEntry.targettype = strdup("");
+		ASSERT( curCALogEntry.targettype );
+	}
 	if (rval1 < 0) {
 		return rval1;
 	}
