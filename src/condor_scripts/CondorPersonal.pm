@@ -1508,7 +1508,7 @@ sub IsRunningYet
 				my $res = $?;
 				if ($res != 0) {
 					print "\ncondor_status returned error code $res The collector probably is not running after all, giving up\n";
-					return 1;
+					return 0;
 				}
 
     			foreach my $line (@cmd)
