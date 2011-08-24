@@ -1,4 +1,3 @@
-//TEMPTEMP -- job_dagman_retry.run fails -- the test still needs some cleanup
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

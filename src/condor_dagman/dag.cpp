@@ -1,4 +1,3 @@
-//TEMPTEMP -- make a test that checks that all possible stuff gets put into rescue DAG (old-style)
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
