@@ -61,10 +61,10 @@ WindowsNetworkAdapter::WindowsNetworkAdapter (void) throw ()
     _description[0] = '\0';
 }
 
-WindowsNetworkAdapter::WindowsNetworkAdapter ( LPCSTR ip_addr,
-											   unsigned int /*ip*/) throw ()
+WindowsNetworkAdapter::WindowsNetworkAdapter ( const condor_sockaddr & ip_addr)
+	throw()
 : _exists ( false ) {
-    strncpy ( _ip_address, ip_addr, IP_STRING_BUF_SIZE );
+    strncpy ( _ip_address, ip_addr.to_ip_string().Value(), IP_STRING_BUF_SIZE );
     _description[0] = '\0';
 }
 

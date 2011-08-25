@@ -46,7 +46,7 @@ public:
 	WindowsNetworkAdapter () throw ();
 
 	/// Constructor
-	WindowsNetworkAdapter ( LPCSTR ip_addr, unsigned int ) throw ();
+	WindowsNetworkAdapter ( const condor_sockaddr & ipaddr) throw ();
 
 	/// Alternate
 	WindowsNetworkAdapter ( LPCSTR description ) throw ();
