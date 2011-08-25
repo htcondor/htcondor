@@ -868,7 +868,7 @@ int generic_stats_Tick(
 
 //
 // This is how you use the generic_stats_xxxx functions.
-#if 1
+#if 0
 
 class TestStats {
 public:

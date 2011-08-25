@@ -161,6 +161,7 @@ void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recen
    ad.Assign(pattr, str);
 }
 
+/* long conflicts with int64_t on some platforms.
 void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<long> & me)
 {
    MyString str;
@@ -173,7 +174,7 @@ void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recen
       }
    ad.Assign(pattr, str);
 }
-
+*/
 void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int64_t> & me)
 {
    MyString str;
@@ -187,13 +188,17 @@ void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recen
    ad.Assign(pattr, str);
 }
 
+template<class T>
+void GenericStatsPublish(const char * pdata, ClassAd & ad, const char * pattr) {
+   ClassAdAssign(ad, pattr, *(T*)pdata);
+}
+#define GENERIC_STATS_PUB_TYPE(st,pre,name,as,T) { pre #name, as | stats_entry_type<T>::id, FIELDOFF(st,name), &GenericStatsPublish<T> }
+#define GENERIC_STATS_PUB_RECENT_DEBUG(st,pre,name,as) { pre "Recent" #name "Debug", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishDebug }
 
 #define DC_STATS_PUB(name, as)        GENERIC_STATS_PUB(DaemonCore::Stats, "DC", name, as)
 #define DC_STATS_PUB_RECENT(name, as) GENERIC_STATS_PUB_RECENT(DaemonCore::Stats, "DC", name, as)
 #define DC_STATS_PUB_PEAK(name, as)   GENERIC_STATS_PUB_PEAK(DaemonCore::Stats, "DC", name, as)
 #define DC_STATS_PUB_TYPE(name,T,as)  GENERIC_STATS_PUB_TYPE(DaemonCore::Stats, "DC", name, as, T)
-
-#define GENERIC_STATS_PUB_RECENT_DEBUG(st,pre,name,as) { pre "Recent" #name "Debug", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishDebug }
 #define DC_STATS_PUB_RECENT_DEBUG(name, as) GENERIC_STATS_PUB_RECENT_DEBUG(DaemonCore::Stats, "DC", name, as)
 
 const GenericStatsPubItem DCStatsPub[] = {
@@ -233,7 +238,7 @@ const GenericStatsPubItem DCStatsPub[] = {
    DC_STATS_PUB_TYPE(RecentStatsTickTime, time_t,  AS_ABSTIME),
    DC_STATS_PUB_RECENT_DEBUG(DebugOuts, AS_COUNT),
    DC_STATS_PUB_RECENT_DEBUG(Signals, AS_COUNT),
-   DC_STATS_PUB_RECENT_DEBUG(SignalRuntime, AS_RELTIME),
+   //DC_STATS_PUB_RECENT_DEBUG(SignalRuntime, AS_RELTIME),
 
    #ifdef WIN32
     DC_STATS_PUB(AsyncPipe,     AS_COUNT),
@@ -406,10 +411,10 @@ void stats_recent_counter_timer::PublishValue(const char * me, ClassAd & ad, con
    ClassAdAssign(ad, str.Value(), pthis->runtime.value);
    ClassAdAssign(ad, strR.Value(), pthis->runtime.recent);
 
-   str.sprintf("Debug%s", pattr);
-   StatsPublishDebug(str.Value(), ad, pthis->count);
-   str += "Runtime";
-   StatsPublishDebug(str.Value(), ad, pthis->runtime);
+   //str.sprintf("Debug%s", pattr);
+   //StatsPublishDebug(str.Value(), ad, pthis->count);
+   //str += "Runtime";
+   //StatsPublishDebug(str.Value(), ad, pthis->runtime);
 }
 
 

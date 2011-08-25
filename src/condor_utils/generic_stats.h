@@ -742,12 +742,7 @@ int generic_stats_Tick(
 
 // use these to help initialize arrays of GenericStatsPubItem's
 //
-template<class T>
-void GenericStatsPublish(const char * pdata, ClassAd & ad, const char * pattr) {
-   ClassAdAssign(ad, pattr, *(T*)pdata);
-}
 #define GS_FIELD(st,fld) (((st *)0)->fld)
-#define GENERIC_STATS_PUB_TYPE(st,pre,name,as,T) { pre #name, as | stats_entry_type<T>::id, FIELDOFF(st,name), &GenericStatsPublish<T> }
 #define GENERIC_STATS_PUB(st,pre,name,as)        { pre #name, as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishValue }
 #define GENERIC_STATS_PUB_RECENT(st,pre,name,as) { pre "Recent" #name, as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishRecent }
 #define GENERIC_STATS_PUB_PEAK(st,pre,name,as)   { pre #name "Peak", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishLargest }
