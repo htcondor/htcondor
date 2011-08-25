@@ -28,7 +28,7 @@ use CondorUtils;
 $cmd = 'job_dagman_pre_skip-D.dag';
 $testdesc =  'Condor submit dag - basic pre_skip node with rescue DAG test - scheduler U';
 $testname = "job_dagman_pre_skip-D";
-$dagman_args = "-verbose";
+$dagman_args = "-verbose -dumprescue";
 
 $rescuedag = "job_dagman_pre_skip-D.dag.rescue001";
 
@@ -71,10 +71,11 @@ $submitted = sub
 	CondorTest::debug("submitted: This test will see submit, executing and failure\n",1);
 };
 
-$failure = sub
+$success = sub
 {
 	my %info = shift;
-	print "Saw expected failure";
+	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 0;
 
 	$canopen = open(RESCUE,"<$rescuedag");
@@ -94,13 +95,7 @@ $failure = sub
 	}
 };
 
-$success = sub
-{
-	die "Error: DAG should fail!\n";
-};
-
 CondorTest::RegisterExitedSuccess( $testname, $success);
-CondorTest::RegisterExitedFailure( $testname, $failure );
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
