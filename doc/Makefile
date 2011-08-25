@@ -1,8 +1,12 @@
-SUBDIR = v7.7.1
-SUBVER = V7_7_1
+# we expect grep to return set(VERSION "x.y.z")
+# we use $subst to convert () and " to spaces and then $word to extract x.y.z
+VERLINE = $(shell grep set.VERSION ../CMakeLists.txt)
+VERTEMP = ${word 3,${subst ",,${subst ),,${subst (, ,${VERLINE}}}}}
+SUBDIR  = v$(VERTEMP)
+SUBVER  = V$(subst .,_,$(VERTEMP))
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
-LOCALDIR = ref-v771
+LOCALDIR = ref-$(SUBDIR)
 MANPAGES = cleanup_release.html condor_advertise.html condor_checkpoint.html condor_check_userlogs.html condor_chirp.html condor_cod.html condor_cold_start.html condor_cold_stop.html condor_compile.html condor_config_bind.html condor_configure.html condor_config_val.html condor_convert_history.html condor_dagman.html condor_fetchlog.html condor_findhost.html condor_glidein.html condor_history.html condor_hold.html condor_load_history.html condor_master.html condor_off.html condor_on.html condor_power.html condor_preen.html condor_prio.html condor_qedit.html condor_q.html condor_reconfig.html condor_release.html condor_reschedule.html condor_restart.html condor_rm.html condor_router_history.html condor_procd.html condor_router_q.html condor_run.html condor_set_shutdown.html condor_ssh_to_job.html condor_stats.html condor_status.html condor_store_cred.html condor_submit_dag.html condor_submit.html condor_transfer_data.html condor_updates_stats.html condor_userlog.html condor_userprio.html condor_vacate.html condor_vacate_job.html condor_version.html condor_wait.html filelock_midwife.html filelock_undertaker.html gidd_alloc.html install_release.html procd_ctl.html uniq_pid_midwife.html uniq_pid_undertaker.html
 
 # NOTE: older latex versions do not support -halt-on-error
