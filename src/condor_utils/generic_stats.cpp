@@ -26,18 +26,6 @@
 // specialization of time_t values because ClassAd
 // doesn't currently handle 64 bit ints.
 //
-/*
-template <>
-void stats_entry_count<time_t>::Publish(ClassAd & ad, const char * pattr) const {
-   ad.Assign(pattr, (int)value);
-}
-
-template <>
-void stats_entry_count<time_t>::PublishValue(const char * me, ClassAd & ad, const char * pattr) {
-   const stats_entry_count<time_t> * pthis = (const stats_entry_count<time_t> *)me;
-   ad.Assign(pattr, (int)pthis->value);
-   }
-*/
 
 template <>
 void stats_entry_abs<time_t>::PublishLargest(const char * me, ClassAd & ad, const char * pattr) {
@@ -60,27 +48,6 @@ void generic_stats_force_refs()
    stats_entry_abs<time_t>::PublishLargest("",*pad,"");
    stats_entry_recent<time_t>::PublishRecent("",*pad,"");
 };
-
-/*
-template <> 
-void stats_entry_recent<time_t>::Publish(ClassAd &ad, const char *pattr) const
-{
-   ad.Assign(pattr, (int)value);
-}
-
-template <> 
-void stats_entry_abs<time_t>::Publish(ClassAd &ad, const char *pattr) const
-{
-   ad.Assign(pattr, (int)value);
-}
-
-template <>
-void stats_entry_tq<time_t>::Publish(ClassAd & ad, const char * pattr) const
-{
-   ad.Assign(pattr, (int)value);
-}
-*/
-
 
 // advance the ring buffer and update the recent accumulator, this is called
 // each xxxx_stats_window_quantum of seconds, in case an Advance is skipped, 

@@ -148,7 +148,7 @@ void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recen
    ad.Assign(pattr, str);
 }
 
-void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<float> & me)
+void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<double> & me)
 {
    MyString str;
    str.sprintf("%.3f %.3f {h:%d c:%d m:%d a:%d}", 
@@ -187,13 +187,6 @@ void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recen
       }
    ad.Assign(pattr, str);
 }
-
-template<class T>
-void GenericStatsPublish(const char * pdata, ClassAd & ad, const char * pattr) {
-   ClassAdAssign<T>(ad, pattr, *(T*)pdata);
-}
-#define GENERIC_STATS_PUB_TYPE(st,pre,name,as,T) { pre #name, as | stats_entry_type<T>::id, FIELDOFF(st,name), &GenericStatsPublish<T> }
-#define GENERIC_STATS_PUB_RECENT_DEBUG(st,pre,name,as) { pre "Recent" #name "Debug", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishDebug }
 
 #define DC_STATS_PUB(name, as)        GENERIC_STATS_PUB(DaemonCore::Stats, "DC", name, as)
 #define DC_STATS_PUB_RECENT(name, as) GENERIC_STATS_PUB_RECENT(DaemonCore::Stats, "DC", name, as)
@@ -373,7 +366,7 @@ const GenericStatsPubItem DCStatsTick[] = {
 class stats_recent_counter_timer {
 private:
    stats_entry_recent<int> count;
-   stats_entry_recent<float> runtime;
+   stats_entry_recent<double> runtime;
 
 public:
    stats_recent_counter_timer(int cRecentMax=0) 
@@ -382,14 +375,13 @@ public:
       {
       };
 
-   float  Add(float sec)     { count += 1; runtime += sec; return runtime.value; }
-   //time_t Add(time_t time)   { count += 1; runtime += float(time_t); }
+   double Add(double sec)     { count += 1; runtime += sec; return runtime.value; }
+   time_t Add(time_t time)    { count += 1; runtime += double(time); }
    void Clear()              { count.Clear(); runtime.Clear();}
    void ClearRecent()        { count.ClearRecent(); runtime.ClearRecent(); }
-   int AdvanceBy(int cSlots) { runtime.AdvanceBy(cSlots); return count.AdvanceBy(cSlots); }
+   void AdvanceBy(int cSlots) { count.AdvanceBy(cSlots); runtime.AdvanceBy(cSlots); }
    void SetRecentMax(int cMax)    { count.SetRecentMax(cMax); runtime.SetRecentMax(cMax); }
-   //time_t operator+=(time_t val)  { return Add(val); }
-   float operator+=(float val)    { return Add(val); }
+   double operator+=(double val)    { return Add(val); }
 
    static const int unit = 0x4000 | IS_RINGBUF | stats_entry_type<int>::id;
    static void PublishValue(const char * me, ClassAd & ad, const char * pattr);
@@ -438,9 +430,6 @@ int stats_pool::Remove (const char * name)
    return ret;
 }
 
-static const int* recent_int_unit = &stats_entry_recent<int>::unit;
-static const int* recent_time_t_unit = &stats_entry_recent<time_t>::unit;
-
 template <typename T> 
 T stats_pool::Add (
    const char * name, 
@@ -482,10 +471,12 @@ int stats_pool::Advance(int cAdvance)
    pool.startIterations();
    while (pool.iterate(pitem,units))
       {
-      if (units == stats_recent_counter_timer::unit) {
+      if (units == stats_recent_counter_timer::unit) 
+         {
          stats_recent_counter_timer * probe = (stats_recent_counter_timer *)pitem;
          probe->AdvanceBy(cAdvance);
-      } else
+         } 
+      else 
          generic_stats_itemAdvanceRecent(units,pitem,cAdvance);
       }
    return cAdvance;
@@ -536,12 +527,12 @@ void DaemonCore::Stats::AddToNamed(const char * name, int64_t val)
       pstat->Add(val);
 }
 
-time_t DaemonCore::Stats::AddRuntime(const char * name, time_t before)
+double DaemonCore::Stats::AddRuntime(const char * name, double before)
 {
-   time_t now = time(NULL);
+   double now = UtcTime::getTimeDouble();
    stats_recent_counter_timer * probe = Named.Get<stats_recent_counter_timer*>(name);
    if (probe)
-      probe->Add(float(now - before));
+      probe->Add(now - before);
    return now;
 }
 

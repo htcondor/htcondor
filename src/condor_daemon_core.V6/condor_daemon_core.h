@@ -1439,29 +1439,27 @@ class DaemonCore : public Service
 	   time_t StatsLastUpdateTime; // last time that statistics were last updated. (a freshness time)
 	   time_t RecentStatsLifetime; // actual time span of current DCRecentXXX data.
    
-	   stats_entry_recent<time_t> SelectWaittime; //  total time spent waiting in select
-	   stats_entry_recent<time_t> SignalRuntime;  //  total time spent handling signals
-	   stats_entry_recent<time_t> TimerRuntime;   //  total time spent handling timers
-	   stats_entry_recent<time_t> SocketRuntime;  //  total time spent handling socket messages
-	   stats_entry_recent<time_t> PipeRuntime;    //  total time spent handling pipe messages
+	   stats_entry_recent<double> SelectWaittime; //  total time spent waiting in select
+	   stats_entry_recent<double> SignalRuntime;  //  total time spent handling signals
+	   stats_entry_recent<double> TimerRuntime;   //  total time spent handling timers
+	   stats_entry_recent<double> SocketRuntime;  //  total time spent handling socket messages
+	   stats_entry_recent<double> PipeRuntime;    //  total time spent handling pipe messages
 
 	   stats_entry_recent<int> Signals;        //  number of signals handlers called
 	   stats_entry_recent<int> TimersFired;    //  number of timer handlers called
 	   stats_entry_recent<int> SockMessages;   //  number of socket handlers called
 	   stats_entry_recent<int> PipeMessages;   //  number of pipe handlers called
-	   //stats_entry_recent<int> SockBytes;      //  number of bytes passed though the socket (can we do this?)
-	   //stats_entry_recent<int> PipeBytes;      //  number of bytes passed though the socket
+	   //stats_entry_recent<int64_t> SockBytes;      //  number of bytes passed though the socket (can we do this?)
+	   //stats_entry_recent<int64_t> PipeBytes;      //  number of bytes passed though the socket
 	   stats_entry_recent<int> DebugOuts;      //  number of dprintf calls that were written to output.
       #ifdef WIN32
 	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
       #endif
 
-	   // InitTime should be the first data member, and RecentWindowMax the last data member..
-	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
-	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
-
        stats_pool              Named;          // pool of named statistics entries.
 
+	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
 
 	   // helper methods
 	   //Stats();
@@ -1475,7 +1473,7 @@ class DaemonCore : public Service
        void* New(const char * category, const char * name, int as);
        void AddToNamed(const char * name, int val);
        void AddToNamed(const char * name, int64_t val);
-       time_t AddRuntime(const char * name, time_t before); // returns current time.
+       double AddRuntime(const char * name, double before); // returns current time.
 
 	} dc_stats;
 

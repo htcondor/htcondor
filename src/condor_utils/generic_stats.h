@@ -357,6 +357,7 @@ inline int ClassAdAssign(ClassAd & ad, const char * pattr, time_t value) {
 template <class T> class stats_entry_recent;
 extern void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int> & me);
 extern void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<time_t> & me);
+extern void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<double> & me);
 
 // stats_entry_count holds a single value, that can only count up,
 // it is the simplist of all possible statistics values because
@@ -461,12 +462,11 @@ public:
    }
 
    // Advance by cSlots time slots
-   T AdvanceBy(int cSlots) { 
+   void AdvanceBy(int cSlots) { 
       while (cSlots > 0) {
          recent -= buf.Advance();
          --cSlots;
-         }
-      return this->value; 
+      }
    }
 
    T Set(T val) { 
@@ -728,8 +728,6 @@ int generic_stats_Tick(
    time_t & Lifetime,        // in,out
    time_t & RecentLifetime); // in,out
 
-
-
 #ifndef FIELDOFF
  #ifdef WIN32
   #define FIELDOFF(st,fld) FIELD_OFFSET(st, fld)
@@ -743,15 +741,19 @@ int generic_stats_Tick(
 // use these to help initialize arrays of GenericStatsPubItem's
 //
 #define GS_FIELD(st,fld) (((st *)0)->fld)
+
+#define GENERIC_STATS_PUB_TYPE(st,pre,name,as,T) { pre #name, as | stats_entry_type<T>::id, FIELDOFF(st,name), &stats_entry_count<T>::PublishValue }
 #define GENERIC_STATS_PUB(st,pre,name,as)        { pre #name, as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishValue }
-#define GENERIC_STATS_PUB_RECENT(st,pre,name,as) { pre "Recent" #name, as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishRecent }
 #define GENERIC_STATS_PUB_PEAK(st,pre,name,as)   { pre #name "Peak", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishLargest }
+#define GENERIC_STATS_PUB_AVG(st,pre,name,as)    { pre #name "Avg", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishAverage }
+#define GENERIC_STATS_PUB_RECENT(st,pre,name,as) { "Recent" pre #name, as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishRecent }
+#define GENERIC_STATS_PUB_RECENT_DEBUG(st,pre,name,as) { "Recent" pre #name "Debug", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishDebug }
 
 // use these to help initialize arrays of GenericStatsEntry's
 //
 #define GENERIC_STATS_ENTRY(st,pre,name,as) { pre #name, as, FIELDOFF(st, name), FIELDSIZ(st, name), 0}
-#define GENERIC_STATS_ENTRY_TQ(st,pre,name,as) { pre "Recent" #name, as | IS_TIMED_QUEUE, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.tq) }
-#define GENERIC_STATS_ENTRY_RECENT(st,pre,name,as) { pre "Recent" #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf) }
+#define GENERIC_STATS_ENTRY_TQ(st,pre,name,as) { "Recent" pre #name, as | IS_TIMED_QUEUE, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.tq) }
+#define GENERIC_STATS_ENTRY_RECENT(st,pre,name,as) { "Recent" pre #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf) }
 #define GENERIC_STATS_ENTRY_PEAK(st,pre,name,as) { pre #name "Peak" , as, FIELDOFF(st, name.largest), FIELDSIZ(st, name.largest), 0 }
 
 #endif /* _GENERIC_STATS_H */
