@@ -190,7 +190,7 @@ void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recen
 
 template<class T>
 void GenericStatsPublish(const char * pdata, ClassAd & ad, const char * pattr) {
-   ClassAdAssign(ad, pattr, *(T*)pdata);
+   ClassAdAssign<T>(ad, pattr, *(T*)pdata);
 }
 #define GENERIC_STATS_PUB_TYPE(st,pre,name,as,T) { pre #name, as | stats_entry_type<T>::id, FIELDOFF(st,name), &GenericStatsPublish<T> }
 #define GENERIC_STATS_PUB_RECENT_DEBUG(st,pre,name,as) { pre "Recent" #name "Debug", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishDebug }
