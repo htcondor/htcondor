@@ -222,7 +222,7 @@ void ManagedDatabase::PurgeDatabase() {
 
 			snprintf(msg_body, 4000, "Current database size (> %d MB) is "
 					 "bigger than 75 percent of the limit (%d GB). Please "
-					 "descrease the values of these parameters: "
+					 "decrease the values of these parameters: "
 					 "QUILL_RESOURCE_HISTORY_DURATION, "
 					 "QUILL_RUN_HISTORY_DURATION, "
 					 "QUILL_JOB_HISTORY_DURATION or QUILL_DBSIZE_LIMIT\n", 
