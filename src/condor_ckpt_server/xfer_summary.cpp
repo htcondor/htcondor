@@ -36,7 +36,6 @@
 
 XferSummary::XferSummary() 
 {
-	subnet = 0;
 	log_file = 0;
 	Collectors = NULL;
 	bytes_recv = 0;
@@ -56,7 +55,6 @@ XferSummary::XferSummary()
 XferSummary::~XferSummary() 
 {
 	if( log_file ) { fclose(log_file); }
-	if( subnet ) { free(subnet); }
 	if( Collectors ) { delete Collectors; }
 
 }
@@ -79,9 +77,6 @@ XferSummary::init()
 	if( ! Collectors ) {
 		Collectors = CollectorList::create();
 	}
-
-	if( subnet ) { free( subnet ); }
-	subnet = calc_subnet_name();
 
 	if( ! condor_getcwd( pwd ) ) {
 		EXCEPT( "Can't get working directory." );
@@ -149,8 +144,6 @@ XferSummary::time_out(time_t now, char *hostaddr)
 	sprintf(line, "%s = \"%s\"", ATTR_VERSION, CondorVersion() );
 	info.Insert(line);
 	sprintf(line, "%s = \"%s\"", ATTR_PLATFORM, CondorPlatform() );
-	info.Insert(line);
-	sprintf(line, "Subnet = \"%s\"", subnet);
 	info.Insert(line);
 	sprintf(line, "NumSends = %d", num_sends);
 	info.Insert(line);

@@ -325,6 +325,7 @@ sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown )
 //    }
 //}
 
+#if 0
 char *
 calc_subnet_name(void)
 {
@@ -355,6 +356,7 @@ calc_subnet_name(void)
 //	}
 //	return strdup("");
 }
+#endif
 
 int
 same_host(const char *h1, const char *h2)
@@ -644,7 +646,7 @@ is_valid_sinful( const char *sinful )
 		addr_end = tmp;
 		// too long
 		if (addr_end - addr_begin > INET6_ADDRSTRLEN) {
-			dprintf(D_HOSTNAME, "addr too long %d\n", addr_end - addr_begin);
+			dprintf(D_HOSTNAME, "addr too long %d\n", (int)(addr_end - addr_begin));
 			return FALSE;
 		}
 
@@ -747,7 +749,7 @@ string_to_port( const char* addr )
 //	return ip;
 //}
 
-
+#if 0
 char*
 string_to_ipstr( const char* addr )
 {
@@ -773,27 +775,7 @@ string_to_ipstr( const char* addr )
 //	return NULL;
 }
 
-/* This function has a unit test. */
-char*
-string_to_hostname( const char* addr )
-{
-//	char *tmp;
-//	static char result[MAXHOSTNAMELEN];
-//    struct sockaddr_in sa_in;
-//
-//	if( ! (addr && is_valid_sinful(addr)) ) {
-//		return NULL;
-//	}
-//
-//    string_to_sin( addr, &sa_in );
-//	if( (tmp = sin_to_hostname(&sa_in, NULL)) ) {
-//		strncpy( result, tmp, MAXHOSTNAMELEN );
-//		result[MAXHOSTNAMELEN-1] = '\0';
-//	} else {
-//		return NULL;
-//	}
-//	return result;
-}
+#endif
 
 /* Bind the given fd to the correct local interface. */
 
@@ -1190,6 +1172,15 @@ MyString generate_sinful(const char* ip, int port) {
 		buf.sprintf("<%s:%d>", ip, port);
 	}
 	return buf;
+}
+
+
+bool sinful_to_ipstr(const char * addr, MyString & ipout)
+{
+	condor_sockaddr sa;
+	if(!sa.from_sinful(addr)) { return false; }
+	ipout = sa.to_ip_string();
+	return true;
 }
 
 #endif

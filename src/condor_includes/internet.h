@@ -73,13 +73,6 @@ int string_to_port( const char* addr );
    and convert it to the unsigned int version from the ASCII version */
 //unsigned int string_to_ip( const char* addr );
 
-/* Extract the ip_addr from a string of the form "<xx.xx.xx.xx:pppp>"
-   and return a pointer to the ASCII version */
-char* string_to_ipstr( const char* addr );
-
-/* Convert a sinful string into a hostname. */
-char* string_to_hostname( const char* addr );
-
 /* Convert a hostname[:port] to sinful string */
 char * hostname_to_string (const char * hostname, const int default_port );
 
@@ -166,6 +159,12 @@ int generate_sinful(char* buf, int len, const char* ip, int port);
 }
 // MyString version is C++ only
 MyString generate_sinful(const char* ip, int port);
+
+/* Extract the IP address from a sinful string ("<xx.xx.xx.xx:pppp>")
+   and return it in ipout as an ASCII string ("xx.xx.xx.xx") and returns
+   true.  If the IP address is invalid, returns false and ipout is
+   left unchanged. */
+bool sinful_to_ipstr(const char * addr, MyString & ipout);
 #endif
 
 #endif /* INTERNET_H */
