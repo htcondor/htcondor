@@ -1,5 +1,9 @@
-SUBDIR = v7.6.4
-SUBVER = V7_6_4
+# we expect grep to return set(VERSION "x.y.z")
+# we use $subst to convert () and " to spaces and then $word to extract x.y.z
+VERLINE = $(shell grep set.VERSION ../CMakeLists.txt)
+VERTEMP = ${word 3,${subst ",,${subst ),,${subst (, ,${VERLINE}}}}}
+SUBDIR  = v$(VERTEMP)
+SUBVER  = V$(subst .,_,$(VERTEMP))
 MANDIR = /p/condor/public/html/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
 LOCALDIR = ref-$(SUBDIR)
