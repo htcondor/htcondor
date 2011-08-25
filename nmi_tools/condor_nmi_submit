@@ -1307,8 +1307,7 @@ EOF
     print $fh "remote_post = nmi_tools/glue/build/remote_post\n";
     print $fh "platform_post = nmi_tools/glue/build/platform_post\n";
 
-	# tstclair: no longer needed.
-	# print $fh "post_all = nmi_tools/glue/build/post_all\n";
+	print $fh "post_all = nmi_tools/glue/build/post_all\n";
 
     if( defined($opt_use_externals_cache) ) {
 		$common_pre_args .= ' --use-externals-cache';
