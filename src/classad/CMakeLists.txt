@@ -58,8 +58,13 @@ if (NOT WINDOWS)
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()
 
-  # set external reference to the shared library
-  set (CLASSADS_FOUND classad)
+  if ( LINUX )
+	# set external reference to the shared library for linux
+	set (CLASSADS_FOUND classad)
+  else()
+	# set external reference to the static library for non-linux
+	set (CLASSADS_FOUND classads)
+  endif()
 
   ###### Test executables
   condor_exe_test( classad_unit_tester "classad_unit_tester.cpp" "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}")

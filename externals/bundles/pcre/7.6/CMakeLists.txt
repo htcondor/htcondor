@@ -66,11 +66,11 @@ if ( NOT PROPER AND NOT LINUX )
 
 	condor_post_external( pcre include OFF )
 
-else( NOT PROPER )
+else( NOT PROPER AND NOT LINUX )
 
 	find_multiple( "pcre" PCRE_FOUND )
 
-endif( NOT PROPER )
+endif( NOT PROPER AND NOT LINUX )
 
 ##################### 
 ## Hard failure if there is no PCRE
