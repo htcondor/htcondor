@@ -73,7 +73,7 @@ class CondorQ {
     // Parse the output and format it
 
     $depth = sizeof($queue_contents);
-    $has_running_job = 0;
+    $running_jobs = 0;
     if($depth != 0) {
       $output = "<table><tr><th>State</th><th>ID</th><th>Owner</th><th>Submitted</th><th>Started</th></tr>\n";
       foreach ($queue_contents as $line) {
@@ -82,7 +82,7 @@ class CondorQ {
           $style = "background-color:#FFFFAA; text-decoration:none;";
           if($items[0] == "R") {
             $style = "background-color:#0097C5;";
-            $has_running_job++;
+            $running_jobs++;
           }
           else {
             // If the job is not running we don't care about 'EnteredCurrentStatus',
@@ -102,15 +102,13 @@ class CondorQ {
       $output = "No jobs in queue";
     }
     
-    $note = "";
-    if($has_running_job == 0 && $depth != 0) {
-      $note = "*";
+    if($running_jobs == 0 && $depth != 0) {
       $output = "<font style=\"color:red\">* No job is running!</font><br />$output";
     }
     
     $ret = Array();
     $ret[0] = $depth;
-    $ret[1] = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Q Depth: $depth$note<span>$output</span></a></span>";
+    $ret[1] = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Depth: $depth ($running_jobs)<span>$output</span></a></span>";
     return $ret;
   }
 }

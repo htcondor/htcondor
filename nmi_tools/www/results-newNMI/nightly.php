@@ -50,7 +50,7 @@ ORDER BY
 ";
 
 $results = $dash->db_query($query);
-$cndrauto_buf = Array();
+$condorauto_buf = Array();
 foreach ($results as $row) {
   $runid      = $row["runid"];
   $branch     = $row["branch"];
@@ -58,11 +58,11 @@ foreach ($results as $row) {
   $run_result = $row["result"];
 
   if(!preg_match("/Continuous/", $branch)) {
-    $cndrauto_buf[$branch] = Array();
-    $cndrauto_buf[$branch]["user"] = $user;
-    $cndrauto_buf[$branch]["start"] = $row["start"];
-    $cndrauto_buf[$branch]["start_epoch"] = $row["start_epoch"];
-    $cndrauto_buf[$branch]["results"] = get_results(&$cndrauto_buf[$branch], $runid, $user, $row["result"]);
+    $condorauto_buf[$branch] = Array();
+    $condorauto_buf[$branch]["user"] = $user;
+    $condorauto_buf[$branch]["start"] = $row["start"];
+    $condorauto_buf[$branch]["start_epoch"] = $row["start_epoch"];
+    $condorauto_buf[$branch]["results"] = get_results($dash, &$condorauto_buf[$branch], $runid, $user, $row["result"]);
   }
 }
 
@@ -70,17 +70,17 @@ foreach ($results as $row) {
 echo "<div id='main'>\n";
 
 //
-// 2) cndrauto builds
+// 2) condorauto builds
 //
 echo "<table border=1>\n";
 echo "<tr><th>Branch</th><th>Build RunID</th><th>Submitted</th><th>Build Results</th><th>Test Results</th><th>Cross Test Results</th>\n";
 echo "</tr>\n";
 
-$branches = array_keys($cndrauto_buf);
-usort($branches, "cndrauto_sort");
+$branches = array_keys($condorauto_buf);
+usort($branches, "condorauto_sort");
 
 foreach ($branches as $branch) {
-  $info = $cndrauto_buf[$branch];
+  $info = $condorauto_buf[$branch];
   $branch_url = sprintf(BRANCH_URL, $branch, $info["user"]);
   
   // Print a "warning" if this branch has not been submitted for >1 day.  This makes it easier to spot old
@@ -116,7 +116,7 @@ echo "</div>\n";
 
 // Define a custom sort that puts trunk ahead of other builds, and NMI immediately
 // after the matching core build.
-function cndrauto_sort($a, $b) {
+function condorauto_sort($a, $b) {
   $a_is_nmi = preg_match("/^NMI/", $a);
   $b_is_nmi = preg_match("/^NMI/", $b);
 

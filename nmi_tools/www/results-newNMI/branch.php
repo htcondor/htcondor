@@ -88,7 +88,7 @@ foreach ($results as $row) {
   $tmp["start"]     = $row["start"];
   $tmp["pin"]       = $row["archive_results_until"];
   $tmp["archived"]  = $row["archived"];
-  $tmp["results"]   = get_results(&$tmp, $row["runid"], $user, $row["result"]);
+  $tmp["results"]   = get_results($dash, &$tmp, $row["runid"], $user, $row["result"]);
 
   array_push($info, $tmp);
 }
@@ -125,9 +125,6 @@ for ($i=0; $i < sizeof($info); $i++) {
    
 echo "</table>";
 echo "</center>";
-
-mysql_free_result($results);
-mysql_close($db);
 
 ?>
 </body>

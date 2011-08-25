@@ -1,7 +1,4 @@
 <?php
-//
-// Configuration
-//
 define("NUM_SPARK_DAYS", 2);
 
 $SPARK_DAYS = array_key_exists("days", $_REQUEST) ? $_REQUEST["days"] : NUM_SPARK_DAYS;

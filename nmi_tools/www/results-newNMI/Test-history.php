@@ -248,7 +248,7 @@ foreach ($results as $runidrow) {
 	} // FOREACH 
 	echo "</tr>\n";
       }
-      $gotests = "<a href='task-details.php?runid=$runid&type=test&user=cndrauto'>";
+      $gotests = "<a href='task-details.php?runid=$runid&type=test&user=$user'>";
       echo "<tr><td><span title='$task'>$gotests".date("m/d/Y", $start)."</a></span></td>\n";
       
       foreach ($platforms AS $platform) {

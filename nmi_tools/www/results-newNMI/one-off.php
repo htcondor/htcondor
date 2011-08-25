@@ -1,17 +1,10 @@
 <?php
-//
-// Configuration
-//
-define("NUM_SPARK_DAYS", 2);
-
 include "dashboard.inc";
 
 include "Dashboard.php";
 $dash = new Dashboard();
 $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
-
-$continuous_blacklist = Array("x86_64_rhap_5.3-updated");
 ?>
 
 </head>
@@ -68,7 +61,7 @@ foreach ($results as $row) {
     $oneoff_buf[$key]["branch"]  = $branch;
     $oneoff_buf[$key]["user"]    = $user;
     $oneoff_buf[$key]["start"]   = $row["start"];
-    $oneoff_buf[$key]["results"] = get_results(&$oneoff_buf[$key], $runid, $user, $row["result"]);
+    $oneoff_buf[$key]["results"] = get_results($dash, &$oneoff_buf[$key], $runid, $user, $row["result"]);
   }
 }
 

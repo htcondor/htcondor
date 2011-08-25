@@ -1,5 +1,7 @@
 <?php
 
+include "CondorQ.php";
+
 define("AUTO_URL", "./nightlies.php");
 define("ONEOFFS_URL", "./one-offs.php");
 define("QUEUE_DEPTH_URL", "./nmi-status.php");
@@ -42,52 +44,14 @@ function get_queue_for_nmi_platform($platform, $type) {
   if($type == "crosstest") $type = "test";
 
   $platform_without_prefix = preg_replace("/nmi:/", "", $platform);
-  $output = `/usr/bin/condor_q -global -const 'nmi_target_platform=="$platform_without_prefix" && nmi_run_type=="$type"' -format '%-2s ' 'ifThenElse(JobStatus==0,"U",ifThenElse(JobStatus==1,"I",ifThenElse(JobStatus==2,"R",ifThenElse(JobStatus==3,"X",ifThenElse(JobStatus==4,"C",ifThenElse(JobStatus==5,"H",ifThenElse(JobStatus==6,"E",string(JobStatus))))))))' -format "%6d " ClusterId -format " %-14s " Owner -format '%-11s ' 'formatTime(QDate,"%0m/%d %H:%M")' -format '%-11s\n' 'formatTime(EnteredCurrentStatus,"%0m/%d %H:%M")'`;
-  $queue_contents = split("\n", $output);
-  $depth = sizeof($queue_contents) - 1;
-  $has_running_job = 0;
-  if($depth != 0) {
-    $output = "<table><tr><th>State</th><th>ID</th><th>Owner</th><th>Submitted</th><th>Started</th></tr>\n";
-    foreach ($queue_contents as $line) {
-      $items = preg_split("/\s+/", $line);
-      if(sizeof($items) == 7) {
-	$style = "background-color:#FFFFAA; text-decoration:none;";
-	if($items[0] == "R") {
-	  $style = "background-color:#0097C5;";
-	  $has_running_job++;
-	}
-	else {
-	  # If the job is not running we don't care about 'EnteredCurrentStatus',
-	  # a.k.a. "Start Time"
-	  $items[5] = "";
-	  $items[6] = "";
-	  if($items[0] == "H") {
-	    $style = "background-color:#A1A1A1;";
-	  }
-	}
-	$output .= "<tr style=\"$style\"><td style=\"text-align:center\">$items[0]</td><td>$items[1]</td><td>$items[2]</td><td>$items[3]&nbsp;$items[4]</td><td>$items[5]&nbsp;$items[6]</tr>\n";
-      }
-    }
-    $output .= "</table>\n";
-  }
-  else {
-    $output = "No jobs in queue";
-  }
-
-  $note = "";
-  if($has_running_job == 0 && $depth != 0) {
-    $note = "*";
-    $output = "<font style=\"color:red\">* No job is running!</font><br />$output";
-  }
-
-  $ret = Array();
-  $ret[0] = $depth;
-  $ret[1] = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Q Depth: $depth$note<span>$output</span></a></span>";
-  return $ret;
+  
+  $condorq = new CondorQ($type);
+  $condorq->add_platform($platform_without_prefix);
+  return $condorq->condor_q();
 }
 
 
-function get_results($info, $runid, $user, $run_result) {
+function get_results($dash, $info, $runid, $user, $run_result) {
   // We need to get information about the builds, tests, and crosstests for each run
   $html = ""; // the return information
 
@@ -101,11 +65,11 @@ function get_results($info, $runid, $user, $run_result) {
          " WHERE runid = $runid AND ".
          "       platform != 'local' ".
          " GROUP BY platform ";
-  $result2 = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+  $results = $dash->db_query($sql);
   $data["build"] = Array();
   $data["build"]["totals"] = Array("total" => 0, "failed" => 0, "pending" => 0, "passed" => 0);
   $data["build"]["platforms"] = Array();
-  while ($platforms = mysql_fetch_array($result2)) {
+  foreach ($results as $platforms) {
     $data["build"]["totals"]["total"]++;
     if($platforms["failed"] > 0) {
       $data["build"]["totals"]["failed"]++;
@@ -120,7 +84,6 @@ function get_results($info, $runid, $user, $run_result) {
       $data["build"]["platforms"][$platforms["platform"]] = "passed";       
     }
   }
-  mysql_free_result($result2);
 
   // --------------------------------
   // TESTS
@@ -137,11 +100,11 @@ function get_results($info, $runid, $user, $run_result) {
          "       Task.platform != 'local' AND ".
          "       ((Run.project_version = Run.component_version)  OR (Run.component_version = 'native' ))".
          " GROUP BY Task.platform ";
-  $result2 = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+  $results = $dash->db_query($sql);
   $data["test"] = Array();
   $data["test"]["totals"] = Array("total" => 0, "failed" => 0, "pending" => 0, "passed" => 0);
   $data["test"]["platforms"] = Array();
-  while ($platforms = mysql_fetch_array($result2)) {
+  foreach ($results as $platforms) {
     $data["test"]["totals"]["total"]++;
     if($platforms["failed"] > 0) {
       $data["test"]["totals"]["failed"]++;
@@ -156,7 +119,6 @@ function get_results($info, $runid, $user, $run_result) {
       $data["test"]["platforms"][$platforms["platform"]] = "passed";
     }
   }
-  mysql_free_result($result2);
 
   // --------------------------------
   // CROSS TESTS
@@ -174,11 +136,11 @@ function get_results($info, $runid, $user, $run_result) {
          "       project_version != component_version AND ".
          "	 component_version != 'native' ".
          " GROUP BY Task.platform ";
-  $result2 = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
+  $results = $dash->db_query($sql);
   $data["crosstest"] = Array();
   $data["crosstest"]["totals"] = Array("total" => 0, "failed" => 0, "pending" => 0, "passed" => 0);
   $data["crosstest"]["platforms"] = Array();
-  while ($platforms = mysql_fetch_array($result2)) {
+  foreach ($results as $platforms) {
     $data["crosstest"]["totals"]["total"]++;
     if($platforms["failed"] > 0) {
       $data["crosstest"]["totals"]["failed"]++;
@@ -193,7 +155,6 @@ function get_results($info, $runid, $user, $run_result) {
       $data["crosstest"]["platforms"][$platforms["platform"]] = "passed";
     }
   }
-  mysql_free_result($result2);
      
   //
   // If there's nothing at all, just skip
@@ -220,8 +181,8 @@ function get_results($info, $runid, $user, $run_result) {
             WHERE 
                    runid = $runid ";
   
-  $pincheck = mysql_query($findpin) or die ("Query $findpin failed : " . mysql_error());
-  while ($pindetails = mysql_fetch_array($pincheck)) {
+  $pincheck = $dash->db_query($findpin);
+  foreach ($pincheck as $pindetail) {
     $pin = $pindetails["archive_results_until"];
     $archived = $pindetails["archived"];
     $info["pin"] = "";
@@ -276,16 +237,6 @@ function get_results($info, $runid, $user, $run_result) {
     //
     if ($type == "test") {
       $no_test_cnt = 0;
-      //if (count($no_test_platforms)) {
-      //  $sql = "SELECT count(DISTINCT platform) AS count ".
-      //         "  FROM Run, Task ".
-      //         " WHERE Run.runid = $runid  AND ".
-      //         "       Task.runid = Run.runid AND ".
-      //         "       Task.platform IN ('".implode("','", $no_test_platforms)."') ";
-      //  $cnt_result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
-      //  $res = mysql_fetch_array($cnt_result);
-      //  $no_test_cnt = $res["count"];
-      //}
       $totals["missing"] = $data["build"]["totals"]["passed"] - $totals["total"] - $no_test_cnt;
       if ($totals["missing"] > 0) $color = "FAILED";
       elseif ($totals["missing"] < 0) $totals["missing"] = 0;

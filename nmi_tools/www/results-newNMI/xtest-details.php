@@ -1,14 +1,4 @@
 <?php   
-//
-// Configuration
-//
-define("HISTORY_URL", "./Test-history.php?branch=%s&test=%s");
-define("BRANCH_URL", "./branch.php?branch=%s&user=%s");
-define("DETAIL_URL", "./task-details.php?runid=%s&type=%s");
-define("CONDOR_USER", "cndrauto");
-
-$result_types = Array( "passed", "pending", "failed" );
-
 include "dashboard.inc";
 
 include "Dashboard.php";
@@ -143,8 +133,8 @@ foreach ($xrunids as $targets) {
     "  FROM Task ".
     " WHERE Task.runid = $targets ".
     "   AND Task.platform != 'local' ";
-  $result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
-  while ($row = mysql_fetch_array($result)) {
+  $results = $dash->db_query($sql);
+  foreach ($results as $row) {
     $tmpp = $platforms[] = $row["platform"];
   }
 }
@@ -161,8 +151,8 @@ $sql = "SELECT DISTINCT(Task.name) AS name ".
        " WHERE Task.runid = Method_nmi.runid ".
        "   AND Method_nmi.input_runid = $runid ".
        " ORDER BY Task.start ASC";
-$result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
-while ($row = mysql_fetch_array($result)) {
+$results = $dash->db_query($sql);
+foreach ($results as $row) {
   $task_name = $row["name"];
   //
   // Now for each task, get the status from the platforms
@@ -171,8 +161,8 @@ while ($row = mysql_fetch_array($result)) {
     "  FROM Task ".
     " WHERE Task.runid IN (".implode(",", $full_runids).") ".
     "   AND Task.name = '$task_name'";
-  $task_result = mysql_query($sql) or die ("Query $sql failed : " . mysql_error());
-  while ($task_row = mysql_fetch_array($task_result)) {
+  $task_results = $dash->db_query($sql);
+  foreach ($task_results as $task_row) {
     $platform = $task_row["platform"];
     $platform_runids[$platform] = $task_row["runid"];
     $result_value = $task_row["result"];
@@ -193,10 +183,8 @@ while ($row = mysql_fetch_array($result)) {
       $task_status[$task_name] = PLATFORM_PASSED;
     }
     $data[$row["name"]][$task_row["platform"]] = $result_value;
-  } // WHILE
-  mysql_free_result($task_result);
-} // WHILE
-mysql_free_result($result);
+  }
+}
 ?>
 
 <table border="0" cellspacing="0" >
@@ -213,17 +201,16 @@ foreach ($platforms AS $platform) {
   
   // have to lookup the file location now
   $filepath = "";
-  $loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
-  $loc_query_res = mysql_query($loc_query) or die ("Query failed : " . mysql_error());
-  while( $locrow = mysql_fetch_array($loc_query_res) ) {
-    $filepath = $locrow["filepath"];
+  $loc_query = "SELECT filepath FROM Run WHERE runid='$platform_runids[$platform]'";
+  $loc_query_results = $dash->db_query($loc_query);
+  foreach ($loc_query_results as $loc_row) {
+    $filepath = $loc_row["filepath"];
   }
 
   # Get the queue depth for the platform if it is pending
   $queue_depth = "";
   if($platform_status[$platform] == PLATFORM_PENDING) {
-    $ret = get_queue_for_nmi_platform($platform, $type);
-    $queue_depth = $ret[1];
+    $queue_depth = get_queue_for_nmi_platform($platform, $type);
   }
 
   $display = "<a href=\"$filepath/$gid/userdir/$platform/\" title=\"View Run Directory\">$display</a>";
@@ -266,9 +253,6 @@ function limitSize($str, $cnt) {
   }
   return ($str);
 }
-
-// done looking up locations.....mysql_close($db);
-mysql_close($db);
 
 ?>
 </body>

@@ -33,6 +33,10 @@ pre {
    word-wrap: break-word;       /* Internet Explorer 5.5+ */
 }
 
+td {
+   border: 0px;
+}  
+
 -->
 </style>
 
@@ -61,8 +65,8 @@ SELECT
 FROM
   Task LEFT JOIN Run USING (runid)
 WHERE 
-  Task.name='".$task."' AND
-  Task.platform='".$platform."'
+  Task.name='$task' AND
+  Task.platform='$platform'
 ";
 
 if ($runid) {
@@ -147,10 +151,10 @@ foreach ($results as $myrow) {
   }
   
   $resultval = $myrow["result"];
-  $test_results_url = "<a href=\"http://nmi.cs.wisc.edu/node/552\">".$resultval."</a>";
+  $test_results_url = "<a href=\"http://nmi.cs.wisc.edu/node/552\">$resultval</a>";
   $run_id = $myrow["runid"];
   echo "<p>";
-  echo "<table style='border-width:0px'>";
+  echo "<table style='border: 0px solid black'>";
   echo "<tr><td>Run ID:</td><td><a href=\"/nmi/results/details?runID=$run_id\">$run_id</a></td></tr>";
   echo "<tr><td>Hostname:</td><td>" . $myrow["taskhost"] . "</td></tr>";
   echo "<tr><td>GID:</td><td>".$myrow["gid"] ."</td></tr>";

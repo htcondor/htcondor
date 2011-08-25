@@ -1,6 +1,5 @@
 <?php
 
-# RIP5 condorauto or cndrauto?
 define("CONDOR_USER", "condorauto");
 
 include "NMI.php";

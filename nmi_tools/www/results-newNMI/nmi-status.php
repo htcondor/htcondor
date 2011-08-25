@@ -6,8 +6,8 @@ $dash = new Dashboard();
 $dash->print_header("NMI Pool Status");
 
 include "CondorQ.php";
-$condorq_build = &new CondorQ("build");
-$condorq_test = &new CondorQ("test");
+$condorq_build = new CondorQ("build");
+$condorq_test = new CondorQ("test");
 
 function make_cell($platform, $depth, $queue, $type) {
   $color = "";
