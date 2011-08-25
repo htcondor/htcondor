@@ -340,10 +340,10 @@ if(!($wantcurrentdaemons)) {
 		my $tmp = `cygpath -m $targetconfig`;
 		CondorTest::fullchomp($tmp);
 		$ENV{CONDOR_CONFIG} = $tmp;
-		$res = CondorPersonal::IsPersonalRunning($tmp);
+		$res = CondorPersonal::IsRunningYet($tmp);
 	} else {
 		$ENV{CONDOR_CONFIG} = $targetconfig;
-		$res = CondorPersonal::IsPersonalRunning($targetconfig);
+		$res = CondorPersonal::IsRunningYet($targetconfig);
 	}
 
 	# capture pid for master
@@ -351,6 +351,12 @@ if(!($wantcurrentdaemons)) {
 
 	if($res == 0) {
 		debug("Starting Personal Condor\n",2);
+		unlink("$testpersonalcondorlocation/local/log/.master_address");
+        unlink("$testpersonalcondorlocation/local/log/.collector_address");
+        unlink("$testpersonalcondorlocation/local/log/.negotiator_address");
+        unlink("$testpersonalcondorlocation/local/log/.startd_address");
+        unlink("$testpersonalcondorlocation/local/log/.schedd_address");
+
 		if($iswindows == 1) {
 			my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
 			$mcmd =~ s/\\/\//g;
