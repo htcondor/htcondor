@@ -366,8 +366,6 @@ sub reconstitute {
 		$var_name =~ s/\./_/g;
 		push @var_names, $var_name;
 		
-		print "$var_name has win32_default=$win_default\n" if $win_valid eq "1";
-		
 		print Dumper($sub_structure) if $options{debug};
 		
 		# Loop through each of the properties in the hash specifying property 
