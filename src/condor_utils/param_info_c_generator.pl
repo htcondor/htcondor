@@ -441,10 +441,6 @@ sub reconstitute {
 							$win_valid = "0";
 						}
 					}
-					if ($nix_default eq "") {
-						print "ERROR: Boolean parameter $param_name needs " .
-								"a default!\n";
-					}
 				}
 
 				# Double parameters
