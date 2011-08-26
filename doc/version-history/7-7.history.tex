@@ -29,6 +29,18 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item
+The new submit file option \Attr{+KeepClaimIdle}, which takes an integer
+number of seconds as an argument,  has been added to the submit
+file. If this is set, when the job exits, if there
+are no other jobs immediately ready to run for this user, the schedd,
+instead of relinquishing the claim back to the negotiator, will keep
+the claim for that many seconds.  This is useful if another job will
+be arriving soon, which can happen with linear DAGs.  The startd slot
+will go to the Claimed Idle state for at least that many seconds until
+either a new job arrives or the timeout occurs.
+\Ticket{2094}
+
 % This is unlikely to make it into 7.7.1
 % Comment it out for now and plan to move it to 7.7.2
 % gittrac #2057
