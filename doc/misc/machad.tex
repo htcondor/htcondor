@@ -54,8 +54,7 @@ from remote jobs or running benchmarks).
 console keyboard or console mouse has last been detected.
 %
 \index{ClassAd machine attribute!Cpus}
-\item[\AdAttr{Cpus}:] Number of CPUs in this machine, i.e. 1 = single CPU machine, 2 = dual
-CPUs, etc.
+\item[\AdAttr{Cpus}:] Number of CPUs in this slot. i.e. 1 = single CPU slot, 2 = dual CPU slot, etc.
 %
 \index{ClassAd machine attribute!CurrentRank}
 \item[\AdAttr{CurrentRank}:] A float which represents this machine
@@ -291,6 +290,11 @@ priority job or because the machine owner wants the machine back.
 \item[\AdAttr{TargetType}:] Describes what type of ClassAd to match with.
 Always set to the string literal \AdStr{Job}, because machine ClassAds
 always want to be matched with jobs, and vice-versa.
+%
+\index{ClassAd machine attribute!TotalCpus}
+\item[\AdAttr{TotalCpus}:] The number of CPUs that are on the machine.
+This is in contrast with \AdAttr{Cpus}, which is the number of CPUs in the
+slot.
 %
 \index{ClassAd machine attribute!TotalTimeBackfillBusy}
 \item[\AdAttr{TotalTimeBackfillBusy}:] The number of seconds
