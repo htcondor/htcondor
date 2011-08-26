@@ -478,10 +478,11 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 			/* registered for other debug levels */
 		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 		{
-			if(((*it).debugFlags & flags) == 0)
+			int debugFlags = (*it).debugFlags;
+			if((debugFlags != 0) && ((debugFlags & flags) != flags))
 				continue;
 			/* Open and lock the log file */
-			debug_file_ptr = debug_lock(flags, NULL, 0);
+			debug_file_ptr = debug_lock(debugFlags, NULL, 0);
 			if (debug_file_ptr) {
 #ifdef va_copy
 				va_list copyargs;
@@ -492,6 +493,8 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 				_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,args);
 #endif
 			}
+
+			debug_unlock(debugFlags);
 		}
 
 			/* restore privileges */
@@ -704,7 +707,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & debug_level) == 0)
+		if(((*it).debugFlags & debug_level) != debug_level)
 			continue;
 		debug_file_ptr = (*it).debugFP;
 		level_exists = true;
@@ -852,7 +855,7 @@ void debug_close_file(int debug_level)
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & debug_level) == 0)
+		if(((*it).debugFlags & debug_level) != debug_level)
 			continue;
 		debug_file_ptr = (*it).debugFP;
 		level_exists = true;
@@ -907,7 +910,7 @@ debug_unlock(int debug_level)
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & debug_level) == 0)
+		if(((*it).debugFlags & debug_level) != debug_level)
 			continue;
 		debug_file_ptr = (*it).debugFP;
 		level_exists = true;
@@ -959,7 +962,7 @@ preserve_log_file(int debug_level)
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & debug_level) == 0)
+		if(((*it).debugFlags & debug_level) != debug_level)
 			continue;
 		debug_file_ptr = (*it).debugFP;
 		filePath = (*it).logPath;
@@ -1104,7 +1107,7 @@ _condor_fd_panic( int line, const char* file )
 	}
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & D_ALWAYS) == 0)
+		if(((*it).debugFlags & D_ALWAYS) != D_ALWAYS)
 			continue;
 		filePath = (*it).logPath;
 		fileExists = true;
@@ -1173,7 +1176,7 @@ open_debug_file(int debug_level, const char flags[])
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & debug_level) == 0)
+		if(((*it).debugFlags & debug_level) != debug_level)
 			continue;
 		fp = (*it).debugFP;
 		filePath = (*it).logPath;
@@ -1291,12 +1294,8 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		DprintfBroken = 1;
 
 			/* Don't forget to unlock the log file, if possible! */
-		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-		{
-			if((*it).debugFP)
-				debug_close_lock();
-				debug_close_all_files();
-		}
+		debug_close_lock();
+		debug_close_all_files();
 	}
 
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
