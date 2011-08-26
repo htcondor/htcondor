@@ -227,7 +227,7 @@ public:
    }
 
    T Sum() {
-      T tot = 0;
+      T tot(0);
       for (int ix = 0; ix > (0 - cItems); --ix)
          tot += (*this)[ix];
       return tot;
@@ -606,7 +606,7 @@ public:
    T Add(T val) { 
       this->value += 1; // value is use to store the count of samples.
       if (val > Max) Max = val;
-      if (val < Max) Min = val;
+      if (val < Min) Min = val;
       Sum += val;
       SumSq += val*val;
       return Sum;

@@ -3599,7 +3599,7 @@ void DaemonCore::Driver()
 			}	// for 0 thru nSock checking if call_handler is true
 
             runtime = UtcTime::getTimeDouble();
-            dc_stats.SocketRuntime += (group_runtime - runtime);
+            dc_stats.SocketRuntime += (runtime - group_runtime);
             group_runtime = runtime;
 
 		}	// if rv > 0
