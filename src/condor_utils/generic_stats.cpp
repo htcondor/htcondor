@@ -53,6 +53,7 @@ void generic_stats_force_refs()
 // each xxxx_stats_window_quantum of seconds, in case an Advance is skipped, 
 // cAdvance is the number of times to advance.
 //
+/*
 template <class T>
 static T AdvanceRecent(const GenericStatsEntry & entry, char * pdata, int cAdvance)
 {
@@ -61,9 +62,9 @@ static T AdvanceRecent(const GenericStatsEntry & entry, char * pdata, int cAdvan
 
    T& recent = *(T*)(pdata + entry.off);
    T ret(recent);
-   if (entry.units & IS_TIMED_QUEUE) {
+   if ((entry.units & IS_CLASS_MASK) == IS_RECENTTQ) {
       // nothing to do.
-   } else if (entry.units & IS_RINGBUF) {
+   } else if ((entry.units & IS_CLASS_MASK) == IS_RECENT) {
       ring_buffer<T>& rb = *(ring_buffer<T>*)(pdata + entry.off2);
       if ( ! rb.empty()) {
          for (int ii = 0; ii < cAdvance; ++ii)
@@ -138,7 +139,7 @@ static T Accumulate(const GenericStatsEntry & entry, char * pdata, time_t first)
    T ret(0);
    T& recent = *(T*)(pdata + entry.off);
 
-   if (entry.units & IS_TIMED_QUEUE) {
+   if (entry.units & IS_RECENTTQ) {
       timed_queue<T>& tq = *(timed_queue<T>*)(pdata + entry.off2);
 
       tq.trim_time(first);
@@ -146,7 +147,7 @@ static T Accumulate(const GenericStatsEntry & entry, char * pdata, time_t first)
       for (typename timed_queue<T>::iterator jj(tq.begin());  jj != tq.end();  ++jj) {
          ret += jj->second;
       }
-   } else if (entry.units & IS_RINGBUF) {
+   } else if ((entry.units & IS_CLASS_MASK) == IS_RECENT) {
       // we don't really need to Accumulate for ring buffers.
       ret = recent;
    }
@@ -186,7 +187,7 @@ void generic_stats_AccumulateTQ(const GenericStatsEntry * pTable, int cTable, ch
 template <class T>
 static timed_queue<T>* GetTQ(const GenericStatsEntry & entry, char * pdata)
 {
-   if ( ! entry.off2 || ! (entry.units & IS_TIMED_QUEUE))
+   if ( ! entry.off2 || ! (entry.units & IS_RECENTTQ))
       return NULL;
    return (timed_queue<T>*)(pdata + entry.off2);
 }
@@ -198,7 +199,7 @@ void generic_stats_SetTQMax(const GenericStatsEntry * pTable, int cTable, char *
       if ( ! pTable[ii].off2)
          continue;
 
-      if (pTable[ii].units & IS_TIMED_QUEUE)
+      if (pTable[ii].units & IS_RECENTTQ)
          {
          switch (pTable[ii].siz)
             {
@@ -223,7 +224,7 @@ void generic_stats_SetTQMax(const GenericStatsEntry * pTable, int cTable, char *
 template <class T>
 static ring_buffer<T>* GetRB(const GenericStatsEntry & entry, char * pdata)
 {
-   if ( ! entry.off2 || ! (entry.units & IS_RINGBUF))
+   if ( ! entry.off2 || (entry.units & IS_CLASS_MASK) != IS_RECENT)
       return NULL;
    return (ring_buffer<T>*)(pdata + entry.off2);
 }
@@ -236,7 +237,7 @@ void generic_stats_SetRBMax(const GenericStatsEntry * pTable, int cTable, char *
       {
       if ( ! pTable[ii].off2)
          continue;
-      if (pTable[ii].units & IS_RINGBUF)
+      if ((pTable[ii].units & IS_CLASS_MASK) == IS_RECENT)
          {
          switch (pTable[ii].siz)
             {
@@ -265,10 +266,10 @@ static void ClearRecent(const GenericStatsEntry & entry, char * pdata)
       return;
 
    T& recent = *(T*)(pdata + entry.off);
-   if (entry.units & IS_TIMED_QUEUE) {
+   if ((entry.units & IS_CLASS_MASK) == IS_RECENTTQ) {
       timed_queue<T>& tq = *(timed_queue<T>*)(pdata + entry.off2);
       tq.clear();
-   } else if (entry.units & IS_RINGBUF) {
+   } else if ((entry.units & IS_CLASS_MASK) == IS_RECENT) {
       ring_buffer<T>& rb = *(ring_buffer<T>*)(pdata + entry.off2);
       rb.Clear();
    }
@@ -333,7 +334,7 @@ void generic_stats_AdvanceRecent(const GenericStatsEntry * pTable, int cTable, c
       if ( ! pTable[ii].off2)
          continue;
 
-      if (pTable[ii].units & IS_RINGBUF)
+      if ((pTable[ii].units & IS_CLASS_MASK) == IS_RECENT)
          {
          switch (pTable[ii].siz)
             {
@@ -349,11 +350,12 @@ void generic_stats_AdvanceRecent(const GenericStatsEntry * pTable, int cTable, c
          }
       }
 }
+*/
 
 template <class T>
 static stats_entry_abs<T>* GetAbs(const GenericStatsPubItem & entry, char * pstruct)
 {
-   if (!(entry.units & IS_ABS))
+   if ((entry.units & IS_CLASS_MASK) != IS_CLS_ABS)
       return NULL;
    return (stats_entry_abs<T>*)(pstruct + entry.off);
 }
@@ -361,7 +363,7 @@ static stats_entry_abs<T>* GetAbs(const GenericStatsPubItem & entry, char * pstr
 template <class T>
 static stats_entry_probe<T>* GetProbe(const GenericStatsPubItem & entry, char * pstruct)
 {
-   if (!(entry.units & IS_PROBE))
+   if ((entry.units & IS_CLASS_MASK) != IS_CLS_PROBE)
       return NULL;
    return (stats_entry_probe<T>*)(pstruct + entry.off);
 }
@@ -369,7 +371,7 @@ static stats_entry_probe<T>* GetProbe(const GenericStatsPubItem & entry, char * 
 template <class T>
 static stats_entry_recent<T>* GetRecent(const GenericStatsPubItem & entry, char * pstruct)
 {
-   if (!(entry.units & IS_RINGBUF))
+   if ((entry.units & IS_CLASS_MASK) != IS_RECENT)
       return NULL;
    return (stats_entry_recent<T>*)(pstruct + entry.off);
 }
@@ -378,7 +380,7 @@ static stats_entry_recent<T>* GetRecent(const GenericStatsPubItem & entry, char 
 template <class T>
 static stats_entry_tq<T>* GetTimedQ(const GenericStatsPubItem & entry, char * pstruct)
 {
-   if (!(entry.units & IS_TIMED_QUEUE))
+   if ((entry.units & IS_CLASS_MASK) != IS_RECENTTQ)
       return NULL;
    return (stats_entry_tq<T>*)(pstruct + entry.off);
 }
@@ -389,7 +391,8 @@ void generic_stats_itemFree(int units, void * pitem)
 {
 #undef DELETE_ITEM
 #define DELETE_ITEM(st,p) delete ((st*)p);
-   if (units & IS_ABS)
+   int cls = (units & IS_CLASS_MASK);
+   if (IS_CLS_ABS == cls)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -410,7 +413,7 @@ void generic_stats_itemFree(int units, void * pitem)
          default: { EXCEPT("invalid value in statistics pub table\n"); }
          }
       }
-   else if (units & IS_PROBE)
+   else if (IS_CLS_PROBE == cls)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -431,7 +434,7 @@ void generic_stats_itemFree(int units, void * pitem)
          default: { EXCEPT("invalid value in statistics pub table\n"); }
          }
       }
-   else if (units & IS_RINGBUF)
+   else if (IS_RECENT == cls)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -453,7 +456,7 @@ void generic_stats_itemFree(int units, void * pitem)
          }
       }
 #ifdef _timed_queue_h_
-   else if (units & IS_TIMED_QUEUE)
+   else if (IS_RECENTTQ == cls)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -475,7 +478,8 @@ void generic_stats_itemSetRecentMax(int units, void * pitem, int window, int qua
 int cRecent = quantum ? window / quantum : window;
 #undef SETSIZE_ITEM
 #define SETSIZE_ITEM(st,p) ((st*)p)->SetRecentMax(cRecent)
-   if (units & IS_RINGBUF)
+   int cls = (units & IS_CLASS_MASK);
+   if (cls == IS_RECENT)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -499,7 +503,7 @@ int cRecent = quantum ? window / quantum : window;
 #ifdef _timed_queue_h_
 #undef SETSIZE_ITEM
 #define SETSIZE_ITEM(st,p) ((st*)p)->SetMaxTime(window)
-   else if (units & IS_TIMED_QUEUE)
+   else if (cls == IS_RECENTTQ)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -557,7 +561,8 @@ void generic_stats_itemClear(int units, void * pitem)
 {
 #undef CLEAR_ITEM
 #define CLEAR_ITEM(st,p) ((st*)p)->Clear()
-   if (units & IS_ABS)
+   int cls = (units & IS_CLASS_MASK);
+   if (cls == IS_CLS_ABS)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -578,7 +583,7 @@ void generic_stats_itemClear(int units, void * pitem)
          default: { EXCEPT("invalid value in statistics pub table\n"); }
          }
       }
-   else if (units & IS_PROBE)
+   else if (cls == IS_CLS_PROBE)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -599,7 +604,7 @@ void generic_stats_itemClear(int units, void * pitem)
          default: { EXCEPT("invalid value in statistics pub table\n"); }
          }
       }
-   else if (units & IS_RINGBUF)
+   else if (cls == IS_RECENT)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -621,7 +626,7 @@ void generic_stats_itemClear(int units, void * pitem)
          }
       }
 #ifdef _timed_queue_h_
-   else if (units & IS_TIMED_QUEUE)
+   else if (cls == IS_RECENTTQ)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -651,8 +656,9 @@ void generic_stats_itemClearRecent(int units, char * pitem)
 {
 #undef CLEAR_ITEM
 #define CLEAR_ITEM(st,p) ((st*)p)->ClearRecent()
+   int cls = (units & IS_CLASS_MASK);
    /*
-   if (units & IS_ABS)
+   if (cls == IS_CLS_ABS)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -673,7 +679,7 @@ void generic_stats_itemClearRecent(int units, char * pitem)
          default: { EXCEPT("invalid value in statistics pub table\n"); }
          }
       }
-   else if (units & IS_PROBE)
+   else if (cls == IS_CLS_PROBE)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -696,7 +702,7 @@ void generic_stats_itemClearRecent(int units, char * pitem)
       }
    else 
    */
-   if (units & IS_RINGBUF)
+   if (cls == IS_RECENT)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -718,7 +724,7 @@ void generic_stats_itemClearRecent(int units, char * pitem)
          }
       }
 #ifdef _timed_queue_h_
-   else if (units & IS_TIMED_QUEUE)
+   else if (cls == IS_RECENTTQ)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {
@@ -748,7 +754,8 @@ void generic_stats_itemAdvanceRecent(int units, void * pitem, int cAdvance)
 {
 #undef ADVANCE_ITEM
 #define ADVANCE_ITEM(st,p) ((st*)p)->AdvanceBy(cAdvance)
-   if (units & IS_RINGBUF)
+   int cls = (units & IS_CLASS_MASK);
+   if (cls == IS_RECENT)
       {
       switch (units & AS_FUNDAMENTAL_TYPE_MASK)
          {

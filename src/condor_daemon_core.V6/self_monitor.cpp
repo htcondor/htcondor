@@ -383,7 +383,7 @@ public:
    void SetRecentMax(int cMax)    { count.SetRecentMax(cMax); runtime.SetRecentMax(cMax); }
    double operator+=(double val)    { return Add(val); }
 
-   static const int unit = 0x4000 | IS_RINGBUF | stats_entry_type<int>::id;
+   static const int unit = IS_RCT | stats_entry_type<int>::id;
    static void PublishValue(const char * me, ClassAd & ad, const char * pattr);
 };
 
@@ -557,12 +557,11 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
    int cRecent = this->RecentWindowMax / dc_stats_window_quantum;
    void * ret = NULL;
 
-   switch (as)
+   switch (as & (AS_TYPE_MASK | IS_CLASS_MASK))
       {
-      case AS_COUNT | IS_RINGBUF:
+      case AS_COUNT | IS_RECENT:
          {
          stats_entry_recent<int>* probe = new stats_entry_recent<int>(cRecent);
-         //probe->SetRecentMax(cRecent);
          Named.Add(name, as, probe, probe->unit, pattr);
          Named.Add(pattrRecent, as, probe, probe->unit, pattrRecent, &probe->PublishRecent);
          //attr += "Debug";
@@ -571,11 +570,10 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
          }
          break;
 
-      case AS_ABSTIME | IS_RINGBUF:
-      case AS_RELTIME | IS_RINGBUF:
+      case AS_ABSTIME | IS_RECENT:
+      case AS_RELTIME | IS_RECENT:
          {
          stats_entry_recent<time_t>* probe = new stats_entry_recent<time_t>(cRecent);
-         //probe->SetRecentMax(cRecent);
          Named.Add(name, as, probe, probe->unit, pattr);
          Named.Add(pattrRecent, as, probe, probe->unit, pattrRecent, &probe->PublishRecent);
          //attr += "Debug";
@@ -584,11 +582,11 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
          }
          break;
 
-      case AS_COUNT | IS_RINGBUF | IS_PROBE:
-      case AS_RELTIME | IS_RINGBUF | IS_PROBE:
+      case AS_COUNT | IS_RCT:
+      case AS_RELTIME | IS_RCT:
          {
          stats_recent_counter_timer * probe = new stats_recent_counter_timer(cRecent);
-         Named.Add(name, AS_COUNT | IS_RINGBUF | IS_PROBE, probe, probe->unit, pattr, &probe->PublishValue);
+         Named.Add(name, as, probe, probe->unit, pattr, &probe->PublishValue);
          }
          break;
 

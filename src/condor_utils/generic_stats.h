@@ -27,9 +27,9 @@
 //   * use Add() or Set() methods of the counters to update the counters in your code
 //       these methods will automatically keep track of total value, as well as windowed
 //       values and/or peak values. 
-//   * create a const array of GenericStatsEntry structures, one for each Attribute
-//   * use generic_stats_PublishToClassAd passing the GenericStatsEntry and also your counters class 
-//     if you use the GENERIC_STATS_ENTRY macros to initialize the GenericStatsEntry structures,
+//   * create a const array of GenericStatsPubItem structures, one for each Attribute
+//   * use generic_stats_PublishToClassAd passing the GenericStatsPubItem and also your counters class 
+//     if you use the GENERIC_STATS_ENTRY macros to initialize the GenericStatsPubItem structures,
 //     counters will be published as ClassAd attributes using their field names.
 //
 // For example:
@@ -42,17 +42,17 @@
 //     void Publish(ClassAd & ad) const;
 // } MyStats;
 // 
-// static const GenericStatsEntry MyStatsTable[] = {
-//   GENERIC_STATS_ENTRY(MyStats, UpdateTime,     AS_ABSTIME), // publish "UpdateTime"
-//   GENERIC_STATS_ENTRY(MyStats, JobsRunning,      AS_COUNT), // publish "JobsRunning"
-//   GENERIC_STATS_ENTRY_PEAK(MyStats, JobsRunning, AS_COUNT), // publish "JobsRunningPeak" from JobsRunning
-//   GENERIC_STATS_ENTRY(MyStats, JobsRun,          AS_COUNT), // publish "JobsRun"
-//   GENERIC_STATS_ENTRY_RECENT(MyStats, JobsRun,   AS_COUNT), // publish "RecentJobsRun" from JobsRun
+// static const GenericStatsPubItem MyStatsPub[] = {
+//   GENERIC_STATS_PUB_TYPE(MyStats, "My", UpdateTime, AS_ABSTIME, time_t), // publish "MyUpdateTime"
+//   GENERIC_STATS_PUB(MyStats, "My", JobsRunning,      AS_COUNT), // publish "MyJobsRunning"
+//   GENERIC_STATS_PUB_PEAK(MyStats, "My", JobsRunning, AS_COUNT), // publish "MyJobsRunningPeak" from JobsRunning
+//   GENERIC_STATS_PUB(MyStats, "My", JobsRun,          AS_COUNT), // publish "MyJobsRun"
+//   GENERIC_STATS_PUB_RECENT(MyStats, "My", JobsRun,   AS_COUNT), // publish "RecentMyJobsRun" from JobsRun
 //   };
 //
 // void MyStats::Publish(ClassAd & ad) const
 // {
-//    generic_stats_PublishToClassAd(ad, MyStatsTable, COUNTOF(MyStatsTable), (const char *)this);
+//    generic_stats_PublishToClassAd(ad, MyStatsPub, COUNTOF(MyStatsPub), (const char *)this);
 // }
 //
 // include an instance of MyStats in the class to be measured
@@ -86,6 +86,7 @@
 // this structure is used to describe one field of a statistics structure
 // so that we can generically update and publish
 //
+/*
 typedef struct _generic_stats_entry {
    char * pattr;  // name to be used when publishing the value
    int    units;  // field type, AS_COUNT, AS_ABSTIME, etc. plus IS_xx, IF_xx flags
@@ -93,6 +94,7 @@ typedef struct _generic_stats_entry {
    int    siz;    // size of statistics data value
    int    off2;  // if non-zero, indicates that this value is baked down from a timed_queue.
    } GenericStatsEntry;
+*/
 
 typedef void (*fn_generic_stats_publish)(const char * me, ClassAd & ad, const char * pattr);
 typedef struct _generic_stats_pubitem {
@@ -138,11 +140,14 @@ enum {
 
    // bits between 0x8000 and 0x0100 identify the probe class
    IS_CLASS_MASK  = 0xFF00, // 
-   IS_ABS         = 0x0100, // value has largest
-   IS_PROBE       = 0x0200, // value has min/max/avg/stddev
-   IS_HISTOGRAM   = 0x0400, // value is a histogram
-   IS_RINGBUF     = 0x1000, // has recent value derived from a ring_buffer
-   IS_TIMED_QUEUE = 0x2000, // has recent value derived from a timed_queue
+   IS_CLS_COUNT   = 0x0000, // is stats_entry_count (has simple value)
+   IS_CLS_ABS     = 0x0100, // is stats_entry_abs (has max)
+   IS_CLS_PROBE   = 0x0200, // is stats_entry_probe class (has min/max/avg/stddev)
+   IS_RECENT      = 0x0400, // is stats_entry_recent class (recent value derived from a ring_buffer)
+   IS_RECENTTQ    = 0x0500, // is stats_entry_tq class (recent value derived from a timed_queue)
+   IS_RCT         = 0x0600, // is stats_recent_counter_timer 
+   IS_REPROBE     = 0x0700, // is stats_entry_recent<Probe> class
+   IS_HISTOGRAM   = 0x0800, // is stats_entry_histgram class
 
    // values above AS_TYPE_MASK are flags
    //
@@ -359,10 +364,15 @@ extern void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entr
 extern void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<time_t> & me);
 extern void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<double> & me);
 
+// base class for all statistics entries
+class stats_entry_base {
+   static const int unit = 0;      
+};
+
 // stats_entry_count holds a single value, that can only count up,
 // it is the simplist of all possible statistics values because
 //
-template <class T> class stats_entry_count {
+template <class T> class stats_entry_count : public stats_entry_base {
 public:
    stats_entry_count() : value(0) {}
    T value;
@@ -370,7 +380,7 @@ public:
       ClassAdAssign(ad, pattr, value); 
       };
 
-   static const int unit = AS_COUNT | stats_entry_type<T>::id;
+   static const int unit = IS_CLS_COUNT | stats_entry_type<T>::id;
    static void PublishValue(const char * me, ClassAd & ad, const char * pattr) {
       const stats_entry_count<T> * pthis = (const stats_entry_count<T> *)me;
       ClassAdAssign(ad, pattr, pthis->value);
@@ -410,7 +420,7 @@ public:
 
    // these enable publishing using a static const table of GenericStatsPub entries.
    //
-   static const int unit = IS_ABS | stats_entry_type<T>::id;
+   static const int unit = IS_CLS_ABS | stats_entry_type<T>::id;
    static void PublishLargest(const char * me, ClassAd & ad, const char * pattr) {
       const stats_entry_abs<T> * pthis = (const stats_entry_abs<T> *)me;
       ClassAdAssign(ad, pattr, pthis->largest);
@@ -487,7 +497,7 @@ public:
 
    // these enable publishing using a static const table of GenericStatsPub entries.
    //
-   static const int unit = IS_RINGBUF | stats_entry_type<T>::id;
+   static const int unit = IS_RECENT | stats_entry_type<T>::id;
    static void PublishRecent(const char * me, ClassAd & ad, const char * pattr) {
       const stats_entry_recent<T> * pthis = (const stats_entry_recent<T> *)me;
       ClassAdAssign(ad, pattr, pthis->recent);
@@ -554,7 +564,7 @@ public:
 
    // these enable publishing using a static const table of GenericStatsPub entries.
    //
-   static const int unit = IS_TIMED_QUEUE | stats_entry_type<T>::id;
+   static const int unit = IS_RECENTTQ | stats_entry_type<T>::id;
    static void PublishRecent(const char * me, ClassAd & ad, const char * pattr) {
       const stats_entry_tq<T> * pthis = (const stats_entry_tq<T> *)me;
       ClassAdAssign(ad, pattr, pthis->recent);
@@ -644,7 +654,7 @@ public:
 
    // these enable publishing using a static const table of GenericStatsPub entries.
    //
-   static const int unit = IS_PROBE | stats_entry_type<T>::id;
+   static const int unit = IS_CLS_PROBE | stats_entry_type<T>::id;
    static void PublishLargest(const char * me, ClassAd & ad, const char * pattr) {
       const stats_entry_probe<T> * pthis = (const stats_entry_probe<T> *)me;
       ClassAdAssign(ad, pattr, pthis->Max);
@@ -663,6 +673,7 @@ public:
  */
 
 // publish items into a old-style ClassAd
+/*
 void generic_stats_PublishToClassAd(ClassAd & ad, const GenericStatsEntry * pTable, int cTable, const char * pdata);
 void generic_stats_DeleteInClassAd(ClassAd & ad, const GenericStatsEntry * pTable, int cTable, const char * pdata);
 
@@ -680,6 +691,7 @@ void generic_stats_SetRBMax(const GenericStatsEntry * pTable, int cTable, char *
 
 // each time the time quantum has passed, we wan to Advance the recent buffers
 void generic_stats_AdvanceRecent(const GenericStatsEntry * pTable, int cTable, char * pdata, int cAdvance);
+*/
 
 // functions for working with a statistics item when you have the type
 // encoded in 'units', but don't have a typed pointer.
@@ -692,7 +704,7 @@ void generic_stats_itemClear(int units, void * pitem);
 void generic_stats_itemClearRecent(int units, void * pitem);
 void generic_stats_itemAdvanceRecent(int units, void * pitem, int cAdvance);
 
-// set the ring buffer size for IS_RINGBUF type stats. and time window size for IS_TIMED_QUEUE stats
+// set the ring buffer size for IS_RECENT type stats. and time window size for IS_TIMED_QUEUE stats
 void generic_stats_SetRecentMax(
    const GenericStatsPubItem * pTable, 
    int    cTable, 
@@ -751,9 +763,11 @@ int generic_stats_Tick(
 
 // use these to help initialize arrays of GenericStatsEntry's
 //
+/*
 #define GENERIC_STATS_ENTRY(st,pre,name,as) { pre #name, as, FIELDOFF(st, name), FIELDSIZ(st, name), 0}
 #define GENERIC_STATS_ENTRY_TQ(st,pre,name,as) { "Recent" pre #name, as | IS_TIMED_QUEUE, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.tq) }
 #define GENERIC_STATS_ENTRY_RECENT(st,pre,name,as) { "Recent" pre #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf) }
 #define GENERIC_STATS_ENTRY_PEAK(st,pre,name,as) { pre #name "Peak" , as, FIELDOFF(st, name.largest), FIELDSIZ(st, name.largest), 0 }
+*/
 
 #endif /* _GENERIC_STATS_H */

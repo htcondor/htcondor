@@ -1274,7 +1274,7 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		return -1;
     }
 
-    dc_stats.New("Signal", handler_descrip, AS_COUNT | IS_RINGBUF | IS_PROBE);
+    dc_stats.New("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
 
 	// Semantics dictate that certain signals CANNOT be caught!
 	// In addition, allow SIGCHLD to be automatically replaced (for backwards
@@ -1452,9 +1452,9 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
 
-    dc_stats.New("Socket", handler_descrip, AS_COUNT | IS_RINGBUF | IS_PROBE);
+    dc_stats.New("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
     if (iosock_descrip && iosock_descrip[0] && ! strcmp(handler_descrip, "DC Command Handler"))
-       dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RINGBUF | IS_PROBE);
+       dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
 
 
 	// Verify that this socket has not already been registered
@@ -1905,7 +1905,7 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
         }
 	}
 
-    dc_stats.New("Pipe", handler_descrip, AS_COUNT | IS_RINGBUF | IS_PROBE);
+    dc_stats.New("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
 
 	// Found a blank entry at index i. Now add in the new data.
 	(*pipeTable)[i].pentry = NULL;

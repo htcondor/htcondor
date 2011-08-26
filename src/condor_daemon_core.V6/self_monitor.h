@@ -108,7 +108,9 @@ private:
       char * pattr;
       void (*pub)(const char * me, ClassAd & ad, const char * pattr); // publishing method
    };
+   // table of values to publish, possibly more than one for each item
    HashTable<MyString,pubitem> pub;
+   // table of unique statistical counters
    HashTable<void*,int> pool;
 };
 

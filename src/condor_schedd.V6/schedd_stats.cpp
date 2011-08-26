@@ -22,112 +22,107 @@
 #include "scheduler.h"
 #include "schedd_stats.h"
 
-
-#define SCHEDD_STATS_ENTRY(name, as)   GENERIC_STATS_ENTRY(ScheddStatistics, "", name, as)
-//#define SCHEDD_STATS_ENTRY_TQ(name, as) GENERIC_STATS_ENTRY_TQ(ScheddStatistics, "", name, as)
-#define SCHEDD_STATS_ENTRY_RECENT(name, as) GENERIC_STATS_ENTRY_RECENT(ScheddStatistics, "", name, as)
-#define SCHEDD_STATS_ENTRY_PEAK(name, as) GENERIC_STATS_ENTRY_PEAK(ScheddStatistics, "", name, as)
+#define SCHEDD_STATS_PUB(name, as)         GENERIC_STATS_PUB(ScheddStatistics, "", name, as)
+#define SCHEDD_STATS_PUB_RECENT(name, as)  GENERIC_STATS_PUB_RECENT(ScheddStatistics, "", name, as)
+#define SCHEDD_STATS_PUB_PEAK(name, as)    GENERIC_STATS_PUB_PEAK(ScheddStatistics, "", name, as)
+#define SCHEDD_STATS_PUB_TYPE(name, T, as) GENERIC_STATS_PUB_TYPE(ScheddStatistics, "", name, as, T)
 
 // this describes and refers to ScheddStatistics so that we can use
 // generic worker functions to update and publish it.
 //
-static const GenericStatsEntry ScheddStatsTable[] = {
-   SCHEDD_STATS_ENTRY(StatsUpdateTime,       AS_ABSTIME),
-   SCHEDD_STATS_ENTRY(RecentStatsWindowTime, AS_RELTIME),
+static const GenericStatsPubItem ScheddStatsPub[] = {
+   SCHEDD_STATS_PUB_TYPE(StatsLifetime,       time_t,  AS_RELTIME),
+   SCHEDD_STATS_PUB_TYPE(StatsLastUpdateTime, time_t,  AS_ABSTIME),
+   SCHEDD_STATS_PUB_TYPE(RecentStatsLifetime, time_t,  AS_RELTIME),
 
-   SCHEDD_STATS_ENTRY(JobsSubmitted,        AS_COUNT),
-   SCHEDD_STATS_ENTRY(JobsStarted,          AS_COUNT),
-   SCHEDD_STATS_ENTRY(JobsExited,           AS_COUNT),
-   SCHEDD_STATS_ENTRY(JobsCompleted,        AS_COUNT),
-   SCHEDD_STATS_ENTRY(JobsAccumTimeToStart, AS_RELTIME),
-   SCHEDD_STATS_ENTRY(JobsAccumRunningTime, AS_RELTIME),
+   SCHEDD_STATS_PUB(JobsSubmitted,        AS_COUNT),
+   SCHEDD_STATS_PUB(JobsStarted,          AS_COUNT),
+   SCHEDD_STATS_PUB(JobsExited,           AS_COUNT),
+   SCHEDD_STATS_PUB(JobsCompleted,        AS_COUNT),
+   SCHEDD_STATS_PUB(JobsAccumTimeToStart, AS_RELTIME),
+   SCHEDD_STATS_PUB(JobsAccumRunningTime, AS_RELTIME),
 
-   SCHEDD_STATS_ENTRY_RECENT(JobsSubmitted,  AS_COUNT),
-   SCHEDD_STATS_ENTRY_RECENT(JobsStarted,    AS_COUNT),
-   SCHEDD_STATS_ENTRY_RECENT(JobsExited,     AS_COUNT),
-   SCHEDD_STATS_ENTRY_RECENT(JobsCompleted,  AS_COUNT),
-   SCHEDD_STATS_ENTRY_RECENT(JobsAccumTimeToStart, AS_RELTIME),
-   SCHEDD_STATS_ENTRY_RECENT(JobsAccumRunningTime, AS_RELTIME),
+   SCHEDD_STATS_PUB_RECENT(JobsSubmitted,  AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsStarted,    AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsExited,     AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsCompleted,  AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsAccumTimeToStart, AS_RELTIME),
+   SCHEDD_STATS_PUB_RECENT(JobsAccumRunningTime, AS_RELTIME),
 
-   SCHEDD_STATS_ENTRY(JobsExitedNormally,        AS_COUNT),
-   SCHEDD_STATS_ENTRY(JobsKilled,                AS_COUNT),
-   SCHEDD_STATS_ENTRY(JobsExitException,         AS_COUNT),
-   SCHEDD_STATS_ENTRY(JobsExecFailed,            AS_COUNT),
-   SCHEDD_STATS_ENTRY(JobsCheckpointed,          AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY(JobsShadowNoMemory,        AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY(JobsShouldRequeue,         AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY(JobsNotStarted,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY(JobsShouldHold,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY(JobsShouldRemove,          AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY(JobsCoredumped,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY(JobsMissedDeferralTime,    AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY(JobsExitedAndClaimClosing, AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB(JobsExitedNormally,        AS_COUNT),
+   SCHEDD_STATS_PUB(JobsKilled,                AS_COUNT),
+   SCHEDD_STATS_PUB(JobsExitException,         AS_COUNT),
+   SCHEDD_STATS_PUB(JobsExecFailed,            AS_COUNT),
+   SCHEDD_STATS_PUB(JobsCheckpointed,          AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB(JobsShadowNoMemory,        AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB(JobsShouldRequeue,         AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB(JobsNotStarted,            AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB(JobsShouldHold,            AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB(JobsShouldRemove,          AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB(JobsCoredumped,            AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB(JobsMissedDeferralTime,    AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB(JobsExitedAndClaimClosing, AS_COUNT /*| IF_NONZERO*/),
 
-   SCHEDD_STATS_ENTRY_RECENT(JobsExitedNormally,        AS_COUNT),
-   SCHEDD_STATS_ENTRY_RECENT(JobsKilled,                AS_COUNT),
-   SCHEDD_STATS_ENTRY_RECENT(JobsExitException,         AS_COUNT),
-   SCHEDD_STATS_ENTRY_RECENT(JobsExecFailed,            AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsExitedNormally,        AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsKilled,                AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsExitException,         AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsExecFailed,            AS_COUNT),
 
-   SCHEDD_STATS_ENTRY_RECENT(JobsShadowNoMemory,        AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY_RECENT(JobsCheckpointed,          AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY_RECENT(JobsShouldRequeue,         AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY_RECENT(JobsNotStarted,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY_RECENT(JobsShouldRemove,          AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY_RECENT(JobsExitedAndClaimClosing, AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY_RECENT(JobsCoredumped,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY_RECENT(JobsMissedDeferralTime,    AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY_RECENT(JobsShouldHold,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_ENTRY_RECENT(JobsDebugLogError,         AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB_RECENT(JobsShadowNoMemory,        AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB_RECENT(JobsCheckpointed,          AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB_RECENT(JobsShouldRequeue,         AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB_RECENT(JobsNotStarted,            AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB_RECENT(JobsShouldRemove,          AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB_RECENT(JobsExitedAndClaimClosing, AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB_RECENT(JobsCoredumped,            AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB_RECENT(JobsMissedDeferralTime,    AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB_RECENT(JobsShouldHold,            AS_COUNT /*| IF_NONZERO*/),
+   SCHEDD_STATS_PUB_RECENT(JobsDebugLogError,         AS_COUNT /*| IF_NONZERO*/),
 
-   SCHEDD_STATS_ENTRY(ShadowsRunning,                   AS_COUNT),
-   SCHEDD_STATS_ENTRY_PEAK(ShadowsRunning,              AS_COUNT),
+   SCHEDD_STATS_PUB(ShadowsRunning,                   AS_COUNT),
+   SCHEDD_STATS_PUB_PEAK(ShadowsRunning,              AS_COUNT),
 
-   SCHEDD_STATS_ENTRY(ShadowsStarted,                   AS_COUNT),
-   SCHEDD_STATS_ENTRY(ShadowsRecycled,                  AS_COUNT),
-   //SCHEDD_STATS_ENTRY(ShadowExceptions,                 AS_COUNT),
-   SCHEDD_STATS_ENTRY(ShadowsReconnections,             AS_COUNT),
+   SCHEDD_STATS_PUB(ShadowsStarted,                   AS_COUNT),
+   SCHEDD_STATS_PUB(ShadowsRecycled,                  AS_COUNT),
+   //SCHEDD_STATS_PUB(ShadowExceptions,                 AS_COUNT),
+   SCHEDD_STATS_PUB(ShadowsReconnections,             AS_COUNT),
 
-   SCHEDD_STATS_ENTRY_RECENT(ShadowsStarted,            AS_COUNT),
-   SCHEDD_STATS_ENTRY_RECENT(ShadowsRecycled,           AS_COUNT),
-   //SCHEDD_STATS_ENTRY_RECENT(ShadowExceptions,          AS_COUNT),
-   SCHEDD_STATS_ENTRY_RECENT(ShadowsReconnections,      AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(ShadowsStarted,            AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(ShadowsRecycled,           AS_COUNT),
+   //SCHEDD_STATS_PUB_RECENT(ShadowExceptions,          AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(ShadowsReconnections,      AS_COUNT),
 
 };
 
-#ifndef NUMELMS
- #define NUMELMS(aa) (sizeof(aa)/sizeof((aa)[0]))
-#endif
-
-static const int ScheddStatsEntryCount = NUMELMS(ScheddStatsTable);
-
-void generic_stats_SetWindowSize(const GenericStatsEntry * pTable, int cTable, char * pdata, int window);
+static const int ScheddStatsEntryCount = COUNTOF(ScheddStatsPub);
 
 void ScheddStatistics::SetWindowSize(int window)
 {
    this->RecentWindowMax = window;
-
-   // TJ kill this when we get rid of timed queues.
-   // generic_stats_SetWindowSize(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char*)this, window);
-
-   int cMax = window / schedd_stats_window_quantum;
-   generic_stats_SetRBMax(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char*)this, cMax);
+   generic_stats_SetRecentMax(ScheddStatsPub, 
+                              COUNTOF(ScheddStatsPub), 
+                              (char *)this,
+                              window, 
+                              schedd_stats_window_quantum);
 }
 
 // NOTE: this is NOT safe to call after you have begun collecting data!!
 // 
 void ScheddStatistics::Init() 
 { 
-   memset((char*)this, 0, sizeof(*this)); 
-   this->InitTime = time(NULL); 
+   Clear();
+   // default window size to 1 quantum, we may set it to something else later.
+   this->RecentWindowMax = schedd_stats_window_quantum;
 }
 
 void ScheddStatistics::Clear()
 {
-   generic_stats_ClearAll(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char*)this);
+   generic_stats_Clear(ScheddStatsPub, COUNTOF(ScheddStatsPub), (char*)this);
    this->InitTime = time(NULL);
-   this->PrevUpdateTime = 0;
-   this->StatsUpdateTime = 0;
-   this->RecentStatsWindowTime = 0;
+   this->StatsLifetime = 0;
+   this->StatsLastUpdateTime = 0;
+   this->RecentStatsTickTime = 0;
+   this->RecentStatsLifetime = 0;
 }
 
 // call this when time may have changed to update StatsUpdateTime, etc.
@@ -136,10 +131,52 @@ void ScheddStatistics::Clear()
 // buffers so that we throw away the oldest value and begin accumulating the latest
 // value in a new slot. 
 //
-// we also need to advance/update StatsUpdateTime so that it has an 
-//
 void ScheddStatistics::Tick()
 {
+#if 1
+
+const GenericStatsPubItem StatsTick[] = {
+   SCHEDD_STATS_PUB_RECENT(JobsSubmitted,  AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsStarted,    AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsExited,     AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsCompleted,  AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsAccumTimeToStart, AS_RELTIME),
+   SCHEDD_STATS_PUB_RECENT(JobsAccumRunningTime, AS_RELTIME),
+
+   SCHEDD_STATS_PUB_RECENT(JobsExitedNormally,        AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsKilled,                AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsExitException,         AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsExecFailed,            AS_COUNT),
+
+   SCHEDD_STATS_PUB_RECENT(JobsShadowNoMemory,        AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsCheckpointed,          AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsShouldRequeue,         AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsNotStarted,            AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsShouldRemove,          AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsExitedAndClaimClosing, AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsCoredumped,            AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsMissedDeferralTime,    AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsShouldHold,            AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(JobsDebugLogError,         AS_COUNT),
+
+   SCHEDD_STATS_PUB_RECENT(ShadowsStarted,            AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(ShadowsRecycled,           AS_COUNT),
+   //SCHEDD_STATS_PUB_RECENT(ShadowExceptions,          AS_COUNT),
+   SCHEDD_STATS_PUB_RECENT(ShadowsReconnections,      AS_COUNT),
+   };
+
+   int cAdvance = generic_stats_Tick(
+      StatsTick, COUNTOF(StatsTick), 
+      (char*)this,
+      this->RecentWindowMax,   // RecentMaxTime
+      schedd_stats_window_quantum, // RecentQuantum
+      this->InitTime,
+      this->StatsLastUpdateTime,
+      this->RecentStatsTickTime,
+      this->StatsLifetime,
+      this->RecentStatsLifetime);
+#else
+
    time_t now = time(NULL);
 
    // when working from freshly initialized stats, the first Tick should not Advance.
@@ -162,7 +199,7 @@ void ScheddStatistics::Tick()
       // if the time since last update exceeds the window size, just throw away the recent data
       if (delta >= this->RecentWindowMax)
          {
-         generic_stats_ClearRecent(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char*)this);
+         generic_stats_ClearRecent(ScheddStatsTable, COUNTOF(ScheddStatsTable), (char*)this);
          this->PrevUpdateTime = this->StatsUpdateTime;
          this->RecentStatsWindowTime = this->RecentWindowMax;
          delta = 0;
@@ -171,7 +208,7 @@ void ScheddStatistics::Tick()
          {
          for (int ii = 0; ii < delta / schedd_stats_window_quantum; ++ii)
             {
-            generic_stats_AdvanceRecent(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char*)this, 1);
+            generic_stats_AdvanceRecent(ScheddStatsTable, COUNTOF(ScheddStatsTable), (char*)this, 1);
             }
          this->PrevUpdateTime = now - (delta % schedd_stats_window_quantum);
          }
@@ -180,32 +217,17 @@ void ScheddStatistics::Tick()
       this->RecentStatsWindowTime = min(recent_window, (time_t)this->RecentWindowMax);
       this->StatsUpdateTime = now;
       }
+#endif
 }
-
-// accumulate the values of timed_queue fields into their corresponding .recent field.
-//
-/* 
-void ScheddStatistics::Accumulate(time_t now)
-{
-   if (this->StatsUpdateTime != now)
-      {
-      Tick();
-      }
-
-   schedd statistics doesn't have any timed_queues anymore.
-   time_t tmin = now - this->RecentWindowMax;
-   generic_stats_AccumulateTQ(ScheddStatsTable, NUMELMS(ScheddStatsTable), (char *)this, tmin);  
-}
-*/
 
 void ScheddStatistics::Publish(ClassAd & ad) const
 {
-   generic_stats_PublishToClassAd(ad, ScheddStatsTable, NUMELMS(ScheddStatsTable), (const char *)this);  
+   generic_stats_PublishToClassAd(ad, ScheddStatsPub, COUNTOF(ScheddStatsPub), (const char *)this);  
 }
 
 void ScheddStatistics::Unpublish(ClassAd & ad) const
 {
-   generic_stats_DeleteInClassAd(ad, ScheddStatsTable, NUMELMS(ScheddStatsTable), (const char *)this);  
+   generic_stats_DeleteInClassAd(ad, ScheddStatsPub, COUNTOF(ScheddStatsPub), (const char *)this);  
 }
 
 void schedd_stats_unit_test (ClassAd * pad)
