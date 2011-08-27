@@ -24,7 +24,7 @@ use CondorUtils;
 $cmd = 'job_dagman_always_run_post-B.dag';
 $testdesc =  'Condor DAGman test for not running the POST script B- scheduler U';
 $testname = "job_dagman_always_run_post-B";
-$dagman_args = "-verbose -PostIgnorePre";
+$dagman_args = "-verbose -AlwaysRunPost";
 
 my $killedchosen = 0;
 
@@ -36,7 +36,7 @@ sub RUNNING{2};
 ##**************************************************************
 ##
 ## This test checks that the command line option 
-## -PostIgnorePre is not ignored by DAGman
+## -AlwaysRunPost is not ignored by DAGman
 ##
 ##**************************************************************
 

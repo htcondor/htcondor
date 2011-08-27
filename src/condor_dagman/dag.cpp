@@ -122,7 +122,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_recoveryMaxfakeID	  (0),
 	_maxJobHolds		  (0),
 	_reject			  (false),
-	_postRun		  (true)
+	_alwaysRunPost		  (true)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -880,7 +880,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 					_nfsLogIsError, _recovery, _defaultNodeLog );
 			if( !recovery ) {
-				RunPostScript( job, _postRun, 0 );
+				RunPostScript( job, _alwaysRunPost, 0 );
 			}
 		} else if( job->_Status != Job::STATUS_ERROR ) {
 			// no POST script was specified, so update DAG with
@@ -1502,7 +1502,6 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 	}
 
 	if( WIFSIGNALED( status ) ||  WEXITSTATUS( status ) != 0 ) {
-		int preskip_interrogator = WEXITSTATUS( status );
 		// if script returned failure or was killed by a signal
 		if( WIFSIGNALED( status ) ) {
 			// if script was killed by a signal
@@ -1513,7 +1512,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 					"PRE Script died on %s",
 					daemonCore->GetExceptionString(status) );
 			job->retval = ( 0 - WTERMSIG(status ) );
-		} else if( preskip_interrogator != 0 ) {
+		} else if(int preskip_interrogator = WEXITSTATUS( status ) ) {
 			// Implementation of PRE_SKIP option...
 			job->SetPreStatus( preskip_interrogator );
 				// GetPreStatus interprets PRE_SKIP value as success
@@ -1535,7 +1534,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 					_preRunNodeCount--;
 					job->retval = 0; // for safety on retries
 					job->_scriptPost->_retValJob = job->retval;
-					RunPostScript( job, _postRun, 0 );
+					RunPostScript( job, _alwaysRunPost, 0 );
 					goto check_for_abort;	
 				} else {
 					TerminateJob( job, false, false );
@@ -1553,8 +1552,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		}
 		_preRunNodeCount--;
 		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
-		if( _postRun && job->_scriptPost != NULL) {
-			RunPostScript( job, _postRun, job->GetPreStatus() );
+		if( _alwaysRunPost && job->_scriptPost != NULL) {
+			RunPostScript( job, _alwaysRunPost, job->GetPreStatus() );
 		} else {
 			if( job->GetRetries() < job->GetRetryMax() ) {
 				job->_Status = Job::STATUS_ERROR;
@@ -1598,21 +1597,21 @@ check_for_abort:
 
 void Dag::RunPostScript( Job *job, bool ignore_status, int status )
 {
+	// A little defensive programming. Just check that we are
+	// allowed to run this script.  Because callers can be a little
+        // sloppy...
 	if( ( !ignore_status && status != 0 ) || !job->_scriptPost ) {
 		return;
 	}
 	// a POST script is specified for the job, so run it
 	// We are told to ignore the result of the PRE script
 	job->_Status = Job::STATUS_POSTRUN;
-	if( !job->GetLogFile() ) {
-		// TEMPTEMP --- not sure what to do here
-		if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-				_nfsLogIsError, _recovery, _defaultNodeLog ) ) {
-			debug_printf(DEBUG_QUIET, "Do not have a user logfile for node %s\n",
-				job->GetJobName() );
-			debug_printf(DEBUG_QUIET, "Not running the POST script\n" );
-			return;
-		}
+	if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
+			_nfsLogIsError, _recovery, _defaultNodeLog ) ) {
+		debug_printf(DEBUG_QUIET, "Do not have a user logfile for node %s\n",
+			job->GetJobName() );
+		debug_printf(DEBUG_QUIET, "Not running the POST script\n" );
+		return;
 	}
 	_postRunNodeCount++;
 	_postScriptQ->Run( job->_scriptPost );
@@ -3624,7 +3623,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 			(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 					_nfsLogIsError, _recovery, _defaultNodeLog );
 			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
-			RunPostScript( node, _postRun, 0 );
+			RunPostScript( node, _alwaysRunPost, 0 );
 		} else {
 			node->_Status = Job::STATUS_ERROR;
 			_numNodesFailed++;

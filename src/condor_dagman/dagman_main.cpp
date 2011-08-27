@@ -69,7 +69,7 @@ static void Usage() {
             "\t\t[-MaxJobs <int N>]\n"
             "\t\t[-MaxPre <int N>]\n"
             "\t\t[-MaxPost <int N>]\n"
-            "\t\t[-PostIgnorePre]\n"
+            "\t\t[-AlwaysRunPost]\n"
             "\t\t[-WaitForDebug]\n"
             "\t\t[-NoEventChecks]\n"
             "\t\t[-AllowLogError]\n"
@@ -320,8 +320,8 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %s\n",
 				submitDepthFirst ? "True" : "False" );
 
-	_runPost = param_boolean( "DAGMAN_POST_IGNORE_PRE", true );
-	debug_printf( DEBUG_NORMAL, "DAGMAN_POST_IGNORE_PRE setting: %s\n",
+	_runPost = param_boolean( "DAGMAN_ALWAYS_RUN_POST", true );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_RUN_POST setting: %s\n",
 			_runPost ? "True" : "False" );
 
 	free( condorSubmitExe );
@@ -665,7 +665,7 @@ void main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
 			dagman.allowLogError = true;
 
-        } else if( !strcasecmp( "-PostIgnorePre",argv[i] ) ) {
+        } else if( !strcasecmp( "-AlwaysRunPost",argv[i] ) ) {
 			dagman._runPost = false;
 
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {

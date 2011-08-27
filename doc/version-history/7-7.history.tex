@@ -86,9 +86,11 @@ number of \Procedure{fsync} calls without impacting correctness.
 \item The behavior of DAGMan is changed, such that, by default, POST scripts
   will be run regardless of the return value from the PRE script of the same
   node.  The previous behavior of not running the POST script can be restored by
-  either adding the \Opt{-PostIgnorePre} option to \Condor{submit\_dag}, or by
-  setting the new configuration variable \Macro{DAGMAN\_POST\_IGNORE\_PRE} to
-  \Expr{False}. \Ticket{2057}
+  either adding the \Opt{-AlwaysRunPost} option to the \Condor{submit\_dag}
+  command line, or by setting the new configuration variable
+  \Macro{DAGMAN\_ALWAYS\_RUN\_POST} to \Expr{False}. See sections~\ref{dagman:SCRIPT}
+  and~\ref{param:DAGmanAlwaysRunPost} for details.
+  \Ticket{2057}
 
 \end{itemize}
 
