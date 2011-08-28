@@ -776,6 +776,7 @@ int safe_open_std_files_to_null()
  * 	-7	couldn't get supplementary groups
  * 	-8	a supplementary group was not safe
  * 	-12	the tracking GID could not be inserted
+ * 	-13  the tracking group was not safe
  */
 static int
 safe_checks_and_set_gids(uid_t uid,
@@ -799,7 +800,7 @@ safe_checks_and_set_gids(uid_t uid,
 
     /* check tracking GID, if given, is safe */
     if ((tracking_gid != 0) && !safe_is_id_in_list(safe_gids, tracking_gid)) {
-		return -8;
+		return -13;
 	}
 
     /* check uid is in the password file */
@@ -865,6 +866,28 @@ safe_checks_and_set_gids(uid_t uid,
     *primary_gid = gid;
 
     return 0;
+}
+
+char const *
+safe_switch_to_uid_strerror(int r)
+{
+	switch(r) {
+	case 0: return "success";
+	case -1: return "uid not safe";
+	case -2: return "uid not in password file";
+	case -3: return "primary group not safe";
+	case -4: return "failed to set supplementary groups";
+	case -5: return "failed to get number of supplementary groups";
+	case -6: return "malloc failed";
+	case -7: return "failed to get supplementary groups";
+	case -8: return "a supplementary group was not safe";
+	case -9: return "failed to set real gid";
+	case -10: return "failed to set real uid";
+	case -11: return "id did not change properly";
+	case -12: return "failed to insert tracking GID";
+	case -13: return "the tracking group was not safe";
+	}
+	return "";
 }
 
 /*
@@ -1059,8 +1082,12 @@ safe_exec_as_user(uid_t uid,
      * groups, verify that they are all safe */
     r = safe_switch_to_uid(uid, tracking_gid, safe_uids, safe_gids);
     if (r < 0) {
-        fatal_error_exit(1, "error switching to uid %lu",
-                         (unsigned long) uid);
+        char const *reason = safe_switch_to_uid_strerror(r);
+        if( !reason ) {
+            reason = "";
+        }
+        fatal_error_exit(1, "error switching to uid %lu, tracking gid %lu: code %d %s",
+                         (unsigned long) uid,tracking_gid,r,reason);
     }
 
     /* change the directory to initial_dir or "/" if NULL */

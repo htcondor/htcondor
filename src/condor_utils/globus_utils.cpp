@@ -578,7 +578,7 @@ x509_proxy_email( const char *proxy_file )
 		goto cleanup;
 	}
 
-	for(i = 0; i < sk_X509_num(cert_chain); ++i) {
+	for(i = 0; i < sk_X509_num(cert_chain) && email == NULL; ++i) {
 		if((cert = X509_dup(sk_X509_value(cert_chain, i))) == NULL) {
 			continue;
 		}
@@ -594,8 +594,8 @@ x509_proxy_email( const char *proxy_file )
 		}
 		gens = (GENERAL_NAMES *)X509_get_ext_d2i(cert, NID_subject_alt_name, 0, 0);
 		if (gens) {
-			for (j = 0; j < sk_GENERAL_NAME_num(gens); ++i) {
-				if ((gen = sk_GENERAL_NAME_value(gens, i)) == NULL) {
+			for (j = 0; j < sk_GENERAL_NAME_num(gens); ++j) {
+				if ((gen = sk_GENERAL_NAME_value(gens, j)) == NULL) {
 					continue;
 				}
 				if (gen->type != GEN_EMAIL) {

@@ -1484,7 +1484,7 @@ EventInfo::GenEventSubmit( void )
 	SetNote( buf );
 
 	SubmitEvent	*e = new SubmitEvent;
-	strcpy(e->submitHost, "<128.105.165.12:32779>");
+	e->setSubmitHost( "<128.105.165.12:32779>");
 
 		// Note: the line below is designed specifically to work with
 		// Kent's dummy stork_submit script for testing DAGs with
@@ -1502,8 +1502,7 @@ EventInfo::GenEventExecute( void )
 	SetNote( "<128.105.165.12:32779>" );
 
 	ExecuteEvent	*e = new ExecuteEvent;
-	strcpy(e->executeHost, GetNote() );
-
+	e->setExecuteHost(GetNote());
 	return SetEvent( e );
 }
 

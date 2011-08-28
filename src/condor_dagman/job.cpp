@@ -98,16 +98,15 @@ Job::~Job() {
 
 //---------------------------------------------------------------------------
 Job::Job( const job_type_t jobType, const char* jobName,
-			const char *directory, const char* cmdFile,
-			bool prohibitMultiJobs ) :
-	_jobType( jobType )
+			const char *directory, const char* cmdFile ) :
+	_jobType( jobType ), _preskip( PRE_SKIP_INVALID )
 {
-	Init( jobName, directory, cmdFile, prohibitMultiJobs );
+	Init( jobName, directory, cmdFile );
 }
 
 //---------------------------------------------------------------------------
 void Job::Init( const char* jobName, const char* directory,
-			const char* cmdFile, bool prohibitMultiJobs )
+			const char* cmdFile )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -128,24 +127,6 @@ void Job::Init( const char* jobName, const char* directory,
 	_throttleInfo = NULL;
 	_logIsMonitored = false;
 	_useDefaultLog = false;
-
-	if ( (_jobType == TYPE_CONDOR) && prohibitMultiJobs ) {
-		MyString	errorMsg;
-		int queueCount = MultiLogFiles::getQueueCountFromSubmitFile(
-					MyString( _cmdFile ), MyString( _directory ),
-					errorMsg );
-		if ( queueCount == -1 ) {
-			debug_printf( DEBUG_QUIET, "ERROR in "
-						"MultiLogFiles::getQueueCountFromSubmitFile(): %s\n",
-						errorMsg.Value() );
-			main_shutdown_rescue( EXIT_ERROR );
-		} else if ( queueCount != 1 ) {
-			debug_printf( DEBUG_QUIET, "ERROR: node %s job queues %d "
-						"job procs, but DAGMAN_PROHIBIT_MULTI_JOBS is "
-						"set\n", _jobName, queueCount );
-			main_shutdown_rescue( EXIT_ERROR );
-		}
-	}
 
     // _condorID struct initializes itself
 
@@ -554,14 +535,34 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 }
 
 bool
+Job::AddPreSkip( int exitCode, MyString &whynot )
+{
+	if( exitCode < PRE_SKIP_MIN || exitCode > PRE_SKIP_MAX ) {
+		whynot.sprintf( "PRE_SKIP exit code must be between %d and %d\n",
+			PRE_SKIP_MIN, PRE_SKIP_MAX );
+		return false;
+	}
+
+	if( exitCode == 0 ) {
+		debug_printf( DEBUG_NORMAL, "Warning: exit code 0 for a PRE_SKIP "
+			"value is weird.\n");
+	}
+
+	if( _preskip == PRE_SKIP_INVALID ) {
+		_preskip = exitCode;	
+	} else {
+		whynot = "Two definitions of PRE_SKIP for a node.\n";
+		return false;
+	}
+	whynot = "n/a";
+	return true;
+}
+
+bool
 Job::IsActive() const
 {
-	if( _Status == STATUS_PRERUN ||
-		_Status == STATUS_SUBMITTED ||
-		_Status == STATUS_POSTRUN ) {
-		return true;
-	}
-	return false;
+	return  _Status == STATUS_PRERUN || _Status == STATUS_SUBMITTED ||
+		_Status == STATUS_POSTRUN;
 }
 
 const char*
@@ -964,4 +965,15 @@ Job::SetLastEventTime( const ULogEvent *event )
 {
 	struct tm eventTm = event->eventTime;
 	_lastEventTime = mktime( &eventTm );
+}
+
+//---------------------------------------------------------------------------
+int
+Job::GetPreSkip() const
+{
+	if( !HasPreSkip() ) {
+		debug_printf( DEBUG_QUIET,
+			"Evaluating PRE_SKIP... It is not defined.\n" );
+	}
+	return _preskip;
 }

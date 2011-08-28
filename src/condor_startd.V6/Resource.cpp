@@ -1781,6 +1781,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	resmgr->adlist_publish( r_id, cap, mask );
 
     // Publish the monitoring information
+    daemonCore->dc_stats.Publish(*cap);
     daemonCore->monitor_data.ExportData( cap );
 
 	if( IS_PUBLIC(mask) && IS_SHARED_SLOT(mask) ) {

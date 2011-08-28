@@ -7868,17 +7868,16 @@ int GahpClient::ec2_attach_volume(const char * service_url,
     
     const char *buf = reqline.c_str();
         
-    // Check if this request is currently pending. If not, make it the pending request.
-    if ( !is_pending(command,buf) ) {
-        // Command is not pending, so go ahead and submit a new one if our command mode permits.
-        if ( m_mode == results_only ) {
-            return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
-        }
-        now_pending(command, buf, deleg_proxy);
-    }
     
-    // If we made it here, command is pending.
-
+    if ( m_mode == results_only ) 
+	{
+		return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+	}
+	else
+	{
+        now_pending(command, buf, deleg_proxy);
+	}
+    
     // Check first if command completed.
     Gahp_Args* result = get_pending_result(command, buf);
 

@@ -325,13 +325,18 @@ class SubmitEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
-    char submitHost[128];
+	void setSubmitHost(char const *addr);
+
+	char const *getSubmitHost() { return submitHost; }
 
     // dagman-supplied text to include in the log event
     char* submitEventLogNotes;
     // user-supplied text to include in the log event
     char* submitEventUserNotes;
+
+ private:
+    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
+    char *submitHost;
 };
 
 //----------------------------------------------------------------------------
@@ -487,6 +492,15 @@ class ExecuteEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
+		/** @return execute host or empty string (never NULL) */
+	char const *getExecuteHost();
+
+	char const *getRemoteName() { return remoteName; }
+
+	void setExecuteHost(char const *addr);
+	void setRemoteName(char const *name);
+
+ private:
 	/** Identifier for the machine the job executed on.
 		For Vanilla, Standard, and other non-Grid Universes, a
 		host string in the form: "<128.105.165.12:32779>".
@@ -494,8 +508,8 @@ class ExecuteEvent : public ULogEvent
 		This may be an empty string for some JobUniverses
 		or GridTyps.
 	*/
-    char executeHost[128];
-	char remoteName[256];
+    char *executeHost;
+	char *remoteName;
 };
 
 //----------------------------------------------------------------------------
@@ -1399,11 +1413,16 @@ class NodeExecuteEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
-    char executeHost[128];
+	void setExecuteHost(char const *addr);
+
+	char const *getExecuteHost() { return executeHost; }
 
 		/// Node identifier
 	int node;
+
+ private:
+    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
+    char *executeHost;
 };
 
 

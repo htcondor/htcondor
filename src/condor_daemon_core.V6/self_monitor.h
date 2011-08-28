@@ -77,4 +77,41 @@ private:
     bool          _monitoring_is_on;
 };
 
+unsigned int hashFuncVoidPtr( void* const & pv );
+
+// TJ - move this to generic_stats.h/cpp
+//
+class stats_pool {
+public:
+   stats_pool(int size=30) 
+      : pub(size, MyStringHash, updateDuplicateKeys) 
+      , pool(size, hashFuncVoidPtr, updateDuplicateKeys) 
+      {
+      };
+   template <typename T> T Add (
+      const char * name, 
+      int as, 
+      T probe, 
+      int unit,
+      const char * pattr=NULL,
+      void (*fnpub)(const char * me, ClassAd & ad, const char * pattr)=NULL);
+   template <typename T> T Get(const char * name);
+   int Remove (const char * name);
+   int  Advance(int cAdvance);
+   void Publish(ClassAd & ad) const;
+   void Unpublish(ClassAd & ad) const;
+
+private:
+   struct pubitem {
+      int    units;    // one or more of AS_COUNT, etc and IS_RINGBUF, etc
+      void * pitem;    // offset of the stats_entry_xxx field within the containing class/struct
+      char * pattr;
+      void (*pub)(const char * me, ClassAd & ad, const char * pattr); // publishing method
+   };
+   HashTable<MyString,pubitem> pub;
+   HashTable<void*,int> pool;
+};
+
+
+
 #endif

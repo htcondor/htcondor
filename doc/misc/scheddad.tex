@@ -1,0 +1,281 @@
+\index{ClassAd!Scheduler attributes}
+\begin{description}
+
+\index{ClassAd Scheduler attribute!DaemonStartTime}
+\item[\AdAttr{DaemonStartTime}:] The time that this daemon was
+  started, represented as the number of second elapsed since
+    the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+
+\index{ClassAd Scheduler attribute!DetectedCpus}
+\item[\AdAttr{DetectedCpus}:] The number of detected machine CPUs/cores.
+
+\index{ClassAd Scheduler attribute!DetectedMemory}
+\item[\AdAttr{DetectedMemory}:] The amount of detected machine RAM in MBytes.
+
+\index{ClassAd Scheduler attribute!ExitCode<N>}
+\item[\AdAttr{ExitCode<N>}:] The number of jobs with exit code
+  \Expr{<N>} from this \Condor{schedd},
+   within the last \Attr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!ExitCodeCumulative<N>}
+\item[\AdAttr{ExitCodeCumulative<N>}:] The number of jobs with exit 
+  code \Expr{<N>} from this \Condor{schedd}, over the lifetime of this
+  \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!JobCompletionRate}
+\item[\AdAttr{JobCompletionRate}:] The rate at which jobs completed
+  successfully on this \Condor{schedd}, 
+  calculated over the previous \AdAttr{WindowedStatWidth} seconds.
+  Given in jobs per second.
+
+\index{ClassAd Scheduler attribute!JobQueueBirthdate}
+\item[\AdAttr{JobQueueBirthdate}:] Description is not yet written.
+
+\index{ClassAd Scheduler attribute!JobsCompleted}
+\item[\AdAttr{JobsCompleted}:] The number of jobs successfully completed
+  on this \Condor{schedd} in the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!JobsCompletedCumulative}
+\item[\AdAttr{JobsCompletedCumulative}:] The number of jobs 
+  successfully completed on this \Condor{schedd} over the lifetime of this 
+  \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!JobsExited}
+\item[\AdAttr{JobsExited}:] The number of jobs that exited
+  on this \Condor{schedd}, successfully or otherwise, in the 
+  previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!JobsExitedCumulative}
+\item[\AdAttr{JobsExitedCumulative}:] The number of jobs that exited
+  on this \Condor{schedd}, successfully or otherwise, over
+  the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!JobsStarted}
+\item[\AdAttr{JobsStarted}:] The number of jobs started on this
+  \Condor{schedd} in the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!JobsStartedCumulative}
+\item[\AdAttr{JobsStartedCumulative}:] The number of jobs started on this
+  \Condor{schedd} over the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!JobsSubmitted}
+\item[\AdAttr{JobsSubmitted}:] The number of jobs submitted to
+  this \Condor{schedd} in the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!JobsSubmittedCumulative}
+\item[\AdAttr{JobsSubmittedCumulative}:] The number of jobs submitted to
+  this \Condor{schedd} over the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!JobStartRate}
+\item[\AdAttr{JobStartRate}:] The rate at which jobs were started
+  on this \Condor{schedd}, 
+  calculated over the previous \AdAttr{WindowedStatWidth} seconds.
+  Given in jobs per second.
+
+\index{ClassAd Scheduler attribute!JobSubmissionRate}
+\item[\AdAttr{JobSubmissionRate}:] The rate at which jobs were
+  submitted on this \Condor{schedd}, 
+  calculated over the previous \AdAttr{WindowedStatWidth} seconds.
+  Given in jobs per second.
+
+\index{ClassAd Scheduler attribute!Machine}
+\item[\AdAttr{Machine}:] A string with the machine's fully qualified 
+  host name.
+
+\index{ClassAd Scheduler attribute!MaxJobsRunning}
+\item[\AdAttr{MaxJobsRunning}:] The same integer value as set by the
+  evaluation of the configuration variable \Macro{MAX\_JOBS\_RUNNING}.
+  See the definition at section~\ref{param:MaxJobsRunning} on
+  page~\pageref{param:MaxJobsRunning}.
+
+\index{ClassAd Scheduler attribute!MeanRunningTime}
+\item[\AdAttr{MeanRunningTime}:] Average time in seconds
+  from job start to job completion for all jobs
+  on this \Condor{schedd} over the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!MeanRunningTimeCumulative}
+\item[\AdAttr{MeanRunningTimeCumulative}:] Average time in seconds
+  from job start to job completion for all jobs
+  on this \Condor{schedd} over the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!MeanTimeToStart}
+\item[\AdAttr{MeanTimeToStart}:] Average time in seconds
+  from job submission to job start for all jobs
+  on this \Condor{schedd} over the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!MeanTimeToStartCumulative}
+\item[\AdAttr{MeanTimeToStartCumulative}:] Average time in seconds 
+  from job submission to job start, 
+  for all jobs on this \Condor{schedd} over the 
+  lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!MonitorSelfAge}
+\item[\AdAttr{MonitorSelfAge}:] The number of seconds that this daemon
+  has been running.
+
+\index{ClassAd Scheduler attribute!MonitorSelfCPUUsage}
+\item[\AdAttr{MonitorSelfCPUUsage}:] The fraction of recent CPU time utilized
+  by this daemon. 
+
+\index{ClassAd Scheduler attribute!MonitorSelfImageSize}
+\item[\AdAttr{MonitorSelfImageSize}:] The amount of virtual memory consumed by
+  this daemon in Kbytes.
+
+\index{ClassAd Scheduler attribute!MonitorSelfRegisteredSocketCount}
+\item[\AdAttr{MonitorSelfRegisteredSocketCount}:] The current number of sockets
+  registered by this daemon.
+
+\index{ClassAd Scheduler attribute!MonitorSelfResidentSetSize}
+\item[\AdAttr{MonitorSelfResidentSetSize}:] The amount of resident memory
+  used by this daemon in Kbytes.
+
+\index{ClassAd Scheduler attribute!MonitorSelfSecuritySessions}
+\item[\AdAttr{MonitorSelfSecuritySessions}:] The number of open (cached)
+  security sessions for this daemon.
+
+\index{ClassAd Scheduler attribute!MonitorSelfTime}
+\item[\AdAttr{MonitorSelfTime}:] The  time, represented as the number of
+  second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
+  at which this daemon last checked and set the attributes with names that
+  begin with the string \Attr{MonitorSelf}.
+  
+\index{ClassAd Scheduler attribute!MyAddress}
+\item[\AdAttr{MyAddress}:] Description is not yet written.
+
+\index{ClassAd Scheduler attribute!MyCurrentTime}
+\item[\AdAttr{MyCurrentTime}:]  The time, represented as the number of 
+  second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970),
+  at which the \Condor{schedd} daemon last sent a ClassAd update to the
+  \Condor{collector}.
+
+\index{ClassAd Scheduler attribute!Name}
+\item[\AdAttr{Name}:] The name of this resource; typically the same value as
+  the \AdAttr{Machine} attribute, but could be customized by the site
+  administrator.
+  On SMP machines, the \Condor{startd} will divide the CPUs up into separate
+  slots, each with with a unique name.
+  These names will be of the form ``slot\#@full.hostname'', for example,
+  ``slot1@vulture.cs.wisc.edu'', which signifies slot number 1 from
+  vulture.cs.wisc.edu.
+
+\index{ClassAd Scheduler attribute!NumUsers}
+\item[\AdAttr{NumUsers}:] The integer number of distinct users with jobs in
+  this \Condor{schedd}'s queue.
+
+\index{ClassAd Scheduler attribute!PublicNetworkIpAddr}
+\item[\AdAttr{PublicNetworkIpAddr}:] Description is not yet written.
+
+\index{ClassAd Scheduler attribute!QuillEnabled}
+\item[\AdAttr{QuillEnabled}:] The same boolean value as set in the
+  configuration variable \Macro{QUILL\_ENABLED}.
+  See the definition at section~\ref{param:QuillEnabled} on
+  page~\pageref{param:QuillEnabled}.
+
+\index{ClassAd Scheduler attribute!ScheddIpAddr}
+\item[\AdAttr{ScheddIpAddr}:] String with the IP and port address of the
+\Condor{schedd} daemon which is publishing this Scheduler ClassAd.
+
+\index{ClassAd Scheduler attribute!ServerTime}
+\item[\AdAttr{ServerTime}:] Description is not yet written.
+
+\index{ClassAd Scheduler attribute!ShadowExceptions}
+\item[\AdAttr{ShadowExceptions}:] The number of \Condor{shadow} exceptions 
+  on this \Condor{schedd}, 
+  in the previous \AdAttr{WindowedStatWidth} seconds.
+
+\index{ClassAd Scheduler attribute!ShadowExceptionsCumulative}
+\item[\AdAttr{ShadowExceptionsCumulative}:] The number of \Condor{shadow} 
+  exceptions on this \Condor{schedd}, over the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!StartLocalUniverse}
+\item[\AdAttr{StartLocalUniverse}:] The same boolean value as set in the
+  configuration variable \Macro{START\_LOCAL\_UNIVERSE}.
+  See the definition at section~\ref{param:StartLocalUniverse} on
+  page~\pageref{param:StartLocalUniverse}.
+
+\index{ClassAd Scheduler attribute!StartSchedulerUniverse}
+\item[\AdAttr{StartSchedulerUniverse}:] The same boolean value as set in the
+  configuration variable \Macro{START\_SCHEDULER\_UNIVERSE}.
+  See the definition at section~\ref{param:StartSchedulerUniverse} on
+  page~\pageref{param:StartSchedulerUniverse}.
+
+\index{ClassAd Scheduler attribute!SumRunningTimeCumulative}
+\item[\AdAttr{SumRunningTimeCumulative}:] The sum in seconds
+  from job start to job completion for all jobs
+  on this \Condor{schedd} over the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!SumTimeToStartCumulative}
+\item[\AdAttr{SumTimeToStartCumulative}:] The sum in seconds
+  from job submission to job start for all jobs 
+  on this \Condor{schedd} over the lifetime of this \Condor{schedd}.
+
+\index{ClassAd Scheduler attribute!TotalFlockedJobs}
+\item[\AdAttr{TotalFlockedJobs}:] The total number of jobs from this
+  \Condor{schedd} daemon that are currently flocked to other pools.
+
+\index{ClassAd Scheduler attribute!TotalHeldJobs}
+\item[\AdAttr{TotalHeldJobs}:] The total number of jobs from this
+  \Condor{schedd} daemon that are currently on hold.
+
+\index{ClassAd Scheduler attribute!TotalIdleJobs}
+\item[\AdAttr{TotalIdleJobs}:] The total number of jobs from this
+  \Condor{schedd} daemon that are currently idle.
+
+\index{ClassAd Scheduler attribute!TotalJobAds}
+\item[\AdAttr{TotalJobAds}:] The total number of all jobs (in all 
+  states) from this \Condor{schedd} daemon.
+
+\index{ClassAd Scheduler attribute!TotalLocalIdleJobs}
+\item[\AdAttr{TotalLocalIdleJobs}:] The total number of 
+  \SubmitCmd{local} \SubmitCmd{ universe} jobs from this
+  \Condor{schedd} daemon that are currently idle.
+
+\index{ClassAd Scheduler attribute!TotalLocalRunningJobs}
+\item[\AdAttr{TotalLocalRunningJobs}:] The total number of 
+  \SubmitCmd{local} \SubmitCmd{ universe} jobs from this
+  \Condor{schedd} daemon that are currently running.
+
+\index{ClassAd Scheduler attribute!TotalRemovedJobs}
+\item[\AdAttr{TotalRemovedJobs}:] The current number of all running jobs
+  from this \Condor{schedd} daemon that have remove requests.
+
+\index{ClassAd Scheduler attribute!TotalRunningJobs}
+\item[\AdAttr{TotalRunningJobs}:] The total number of jobs from this
+  \Condor{schedd} daemon that are currently running.
+
+\index{ClassAd Scheduler attribute!TotalSchedulerIdleJobs}
+\item[\AdAttr{TotalSchedulerIdleJobs}:] The total number of 
+  \SubmitCmd{scheduler} \SubmitCmd{ universe} jobs from this
+  \Condor{schedd} daemon that are currently idle.
+
+\index{ClassAd Scheduler attribute!TotalSchedulerRunningJobs}
+\item[\AdAttr{TotalSchedulerRunningJobs}:] The total number of 
+  \SubmitCmd{scheduler} \SubmitCmd{ universe} jobs from this
+  \Condor{schedd} daemon that are currently running.
+
+\index{ClassAd Scheduler attribute!UpdateInterval}
+\item[\AdAttr{UpdateInterval}:] The interval, in seconds,
+  between publication of this \Condor{schedd} ClassAd and
+  the previous publication.
+
+\index{ClassAd Scheduler attribute!UpdateSequenceNumber}
+\item[\AdAttr{UpdateSequenceNumber}:] An integer, starting at zero,
+  and incremented with each ClassAd update sent to the \Condor{collector}.
+  The \Condor{collector} uses this value to sequence the updates it
+  receives.
+
+\index{ClassAd Scheduler attribute!VirtualMemory}
+\item[\AdAttr{VirtualMemory}:] Description is not yet written.
+
+\index{ClassAd Scheduler attribute!WantResAd}
+\item[\AdAttr{WantResAd}:] A boolean value that when \Expr{True}
+  causes the \Condor{negotiator} daemon to send to this \Condor{schedd}
+  daemon a full machine ClassAd corresponding to a matched job.
+
+\index{ClassAd Scheduler attribute!WindowedStatWidth}
+\item[\AdAttr{WindowedStatWidth}:] The time window, in seconds,
+  for window-based performance statistics on this \Condor{schedd}.
+  Set by the configuration variable \Macro{WINDOWED\_STAT\_WIDTH}.
+
+\end{description}
+

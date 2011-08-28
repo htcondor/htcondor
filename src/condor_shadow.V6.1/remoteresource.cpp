@@ -878,14 +878,14 @@ RemoteResource::setExitReason( int reason )
 	// JOB_NOT_CKPTED or some such when the starter gets killed
 	// and the syscall sock goes away.
 
-	shadow->dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
+	if( exit_reason != JOB_KILLED && -1 == exit_reason) {
+		shadow->dprintf( D_FULLDEBUG, "setting exit reason on %s to %d\n", 
 					 machineName ? machineName : "???", reason ); 
-
-	if( exit_reason != JOB_KILLED ) {
+			
 		exit_reason = reason;
 	}
 
-		// record that this resource is really finished
+	// record that this resource is really finished
 	setResourceState( RR_FINISHED );
 }
 
@@ -1490,12 +1490,15 @@ RemoteResource::resourceExit( int reason_for_exit, int exit_status )
 void 
 RemoteResource::setResourceState( ResourceState s )
 {
-	shadow->dprintf( D_FULLDEBUG,
-					 "Resource %s changing state from %s to %s\n",
-					 machineName ? machineName : "???", 
-					 rrStateToString(state), 
-					 rrStateToString(s) );
-	state = s;
+	if ( state != s )
+	{
+		shadow->dprintf( D_FULLDEBUG,
+						"Resource %s changing state from %s to %s\n",
+						machineName ? machineName : "???", 
+						rrStateToString(state), 
+						rrStateToString(s) );
+		state = s;
+	}
 }
 
 

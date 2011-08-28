@@ -355,7 +355,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 			"SOAP SSL connection attempt from %s succeeded\n",
 			addr.to_sinful().Value());
 
-	if (X509_V_OK != SSL_get_verify_result((const SSL*)current_soap->ssl)) {
+	if (X509_V_OK != SSL_get_verify_result((SSL*)current_soap->ssl)) {
 		dprintf(D_ALWAYS,
 				"SOAP SSL connection attempt from %s failed "
 				"because the client's certificate was not "
@@ -370,7 +370,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 
 	X509 *peer_cert;
 	X509_NAME *peer_subject;
-	peer_cert = SSL_get_peer_certificate((const SSL*)current_soap->ssl);
+	peer_cert = SSL_get_peer_certificate((SSL*)current_soap->ssl);
 	if (NULL == peer_cert) {
 		dprintf(D_ALWAYS,
 				"SOAP SSL connection attempt from %s failed "

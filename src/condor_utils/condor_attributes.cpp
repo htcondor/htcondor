@@ -319,6 +319,7 @@ const char * const ATTR_JOB_ENVIRONMENT2		 = "Environment";
 const char * const ATTR_JOB_ERROR				 = "Err";
 const char * const ATTR_JOB_ERROR_ORIG			 = "ErrOrig";
 const char * const ATTR_JOB_ERROR_SIZE			 = "ErrSize";
+const char * const ATTR_JOB_KEEP_CLAIM_IDLE      = "KeepClaimIdle";
 const char * const ATTR_JOB_KEYWORD              = "JobKeyword";
 const char * const ATTR_JOB_LEASE_DURATION       = "JobLeaseDuration";
 const char * const ATTR_JOB_LEASE_EXPIRATION     = "JobLeaseExpiration";
@@ -480,6 +481,8 @@ const char * const ATTR_NUM_SYSTEM_HOLDS		 = "NumSystemHolds";
 const char * const ATTR_NUM_USERS                = "NumUsers";
 const char * const ATTR_OFFLINE                  ="Offline";
 const char * const ATTR_OPSYS                    = "OpSys";
+const char * const ATTR_OPSYSVER                 = "OpSysVer";
+const char * const ATTR_OPSYS_AND_VER            = "OpSysAndVer";
 const char * const ATTR_ORIG_MAX_HOSTS			 = "OrigMaxHosts";
 const char * const ATTR_OTHER_JOB_REMOVE_REQUIREMENTS    = "OtherJobRemoveRequirements"; 
 const char * const ATTR_OWNER                    = "Owner"; 
@@ -603,6 +606,7 @@ const char * const ATTR_TOTAL_LOCAL_RUNNING_JOBS = "TotalLocalJobsRunning";
 const char * const ATTR_TOTAL_LOCAL_IDLE_JOBS	 = "TotalLocalJobsIdle";
 const char * const ATTR_TOTAL_SCHEDULER_RUNNING_JOBS = "TotalSchedulerJobsRunning";
 const char * const ATTR_TOTAL_SCHEDULER_IDLE_JOBS	 = "TotalSchedulerJobsIdle";
+#ifdef TICKET_2006
 const char * const ATTR_JOBS_SUBMITTED_CUMULATIVE = "JobsSubmittedCumulative";
 const char * const ATTR_JOBS_STARTED_CUMULATIVE = "JobsStartedCumulative";
 const char * const ATTR_JOBS_EXITED_CUMULATIVE = "JobsExitedCumulative";
@@ -624,6 +628,7 @@ const char * const ATTR_SHADOW_EXCEPTIONS = "ShadowExceptions";
 const char * const ATTR_MEAN_TIME_TO_START = "MeanTimeToStart";
 const char * const ATTR_MEAN_RUNNING_TIME = "MeanRunningTime";
 const char * const ATTR_EXIT_CODE = "ExitCode";
+#endif
 const char * const ATTR_TOTAL_SLOTS			 = "TotalSlots";
 const char * const ATTR_TOTAL_TIME_IN_CYCLE		   = "TotalTimeInCycle";	
 const char * const ATTR_TOTAL_TIME_BACKFILL_BUSY      = "TotalTimeBackfillBusy";
@@ -920,7 +925,7 @@ const char * const ATTR_EC2_ELASTIC_IP = "EC2ElasticIp";
 const char * const ATTR_EC2_EBS_VOLUMES = "EC2ElasticBlockStorageVolumes";
 const char * const ATTR_EC2_AVAILABILITY_ZONE = "EC2AvailbityZone";
 const char * const ATTR_EC2_VPC_SUBNET = "EC2VpcSubnet";
-const char * const ATTR_EC2_VPC_IP = "EC2VcpIp";
+const char * const ATTR_EC2_VPC_IP = "EC2VpcIp";
 
 //************* End of changes for EC2 Jobs *****************//
 

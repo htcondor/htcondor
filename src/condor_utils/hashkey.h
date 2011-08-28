@@ -52,20 +52,20 @@ typedef HashTable <AdNameHashKey, ClassAd *> CollectorHashTable;
 typedef HashTable <MyString, CollectorHashTable *> GenericAdHashTable;
 
 // functions to make the hashkeys
-bool makeStartdAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeQuillAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeScheddAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeLicenseAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeMasterAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeCkptSrvrAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeCollectorAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeStorageAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeHadAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeXferServiceAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeLeaseManagerAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeGridAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
-bool makeGenericAdHashKey (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
+bool makeStartdAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeQuillAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeScheddAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeLicenseAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeMasterAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeCkptSrvrAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeCollectorAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeStorageAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeHadAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeXferServiceAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeLeaseManagerAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeGridAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeGenericAdHashKey (AdNameHashKey &, ClassAd *);
 
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
 // [OBSOLETE] do not use it. specification of sinful string is changed

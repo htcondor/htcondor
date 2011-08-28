@@ -27,6 +27,7 @@
 #include "condor_debug.h"
 #include "util_lib_proto.h"
 #include "classad_merge.h"
+#include "condor_fsync.h"
 
 #if defined(HAVE_DLOPEN)
 #include "ClassAdLogPlugin.h"
@@ -50,6 +51,8 @@ ptr = NULL;
 /************************************************************/
 
 #define CLASSAD_LOG_HASHTABLE_SIZE 20000
+
+const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
 
 ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 {
@@ -203,7 +206,7 @@ ClassAdLog::AppendLog(LogRecord *log)
 					EXCEPT("flush to %s failed, errno = %d", logFilename(), errno);
 				}
 					//MD: syncing the data as done before
-				if (fsync(fileno(log_fp)) < 0) {
+				if (condor_fsync(fileno(log_fp)) < 0) {
 					EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
 				}
 			}
@@ -642,7 +645,7 @@ ClassAdLog::LogState(FILE *fp)
 	if (fflush(fp) !=0){
 	  EXCEPT("fflush of %s failed, errno = %d", logFilename(), errno);
 	}
-	if (fsync(fileno(fp)) < 0) {
+	if (condor_fsync(fileno(fp)) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", logFilename(), errno);
 	} 
 }
@@ -735,10 +738,20 @@ LogNewClassAd::ReadBody(FILE* fp)
 	if (rval < 0) return rval;
 	free(mytype);
 	rval1 = readword(fp, mytype);
+	if( mytype && strcmp(mytype,EMPTY_CLASSAD_TYPE_NAME)==0 ) {
+		free(mytype);
+		mytype = strdup("");
+		ASSERT( mytype );
+	}
 	if (rval1 < 0) return rval1;
 	rval += rval1;
 	free(targettype);
 	rval1 = readword(fp, targettype);
+	if( targettype && strcmp(targettype,EMPTY_CLASSAD_TYPE_NAME)==0 ) {
+		free(targettype);
+		targettype = strdup("");
+		ASSERT( targettype );
+	}
 	if (rval1 < 0) return rval1;
 	return rval + rval1;
 }
@@ -752,14 +765,28 @@ LogNewClassAd::WriteBody(FILE* fp)
 	rval1 = fwrite( " ", sizeof(char), 1, fp);
 	if (rval1 < 1) return -1;
 	rval += rval1;
-	rval1 = fwrite(mytype, sizeof(char), strlen(mytype), fp);
-	if (rval1 < (int)strlen(mytype)) return -1;
+	char const *s = mytype;
+	if( !s || !s[0] ) {
+			// Because writing an empty string would result
+			// in a log entry with the wrong number of fields,
+			// we write a placeholder.
+		s = EMPTY_CLASSAD_TYPE_NAME;
+	}
+	rval1 = fwrite(s, sizeof(char), strlen(s), fp);
+	if (rval1 < (int)strlen(s)) return -1;
 	rval += rval1;
 	rval1 = fwrite(" ", sizeof(char), 1, fp);
 	if (rval1 < 1) return -1;
 	rval += rval1;
-	rval1 = fwrite(targettype, sizeof(char), strlen(targettype),fp);
-	if (rval1 < (int)strlen(targettype)) return -1;
+	s = targettype;
+	if( !s || !s[0] ) {
+			// Because writing an empty string would result
+			// in a log entry with the wrong number of fields,
+			// we write a placeholder.
+		s = EMPTY_CLASSAD_TYPE_NAME;
+	}
+	rval1 = fwrite(s, sizeof(char), strlen(s),fp);
+	if (rval1 < (int)strlen(s)) return -1;
 	return rval + rval1;
 }
 

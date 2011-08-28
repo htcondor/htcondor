@@ -156,12 +156,9 @@ class Job {
 		@param directory Directory to run the node in, "" if current
 		       directory.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
-		@param prohibitMultiJobs whether submit files queueing multiple
-			   job procs are prohibited.
     */
     Job( const job_type_t jobType, const char* jobName,
-				const char* directory, const char* cmdFile,
-				bool prohibitMultiJobs );
+				const char* directory, const char* cmdFile ); 
   
     ~Job();
 
@@ -178,6 +175,7 @@ class Job {
 	job_type_t JobType() const;
 
 	bool AddPreScript( const char *cmd, MyString &whynot );
+	bool AddPreSkip( int exitCode, MyString &whynot );
 	bool AddPostScript( const char *cmd, MyString &whynot );
 	bool AddScript( bool post, const char *cmd, MyString &whynot );
 
@@ -412,6 +410,9 @@ class Job {
 	*/
 	time_t GetLastEventTime() { return _lastEventTime; }
 
+	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
+	int GetPreSkip() const;
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -491,7 +492,7 @@ private:
 		// Note: Init moved to private section because calling int more than
 		// once will cause a memory leak.  wenger 2005-06-24.
 	void Init( const char* jobName, const char *directory,
-				const char* cmdFile, bool prohibitMultiJobs );
+				const char* cmdFile );
   
 		// Mark this node as failed because of an error in monitoring
 		// the log file.
@@ -587,6 +588,16 @@ private:
 
 		// The time of the most recent event related to this job.
 	time_t _lastEventTime;
+
+		// Skip the rest of the node (and consider it successful) if the
+		// PRE script exits with this value.  (-1 means undefined.)
+	int _preskip;
+
+	enum {
+		PRE_SKIP_INVALID = -1,
+		PRE_SKIP_MIN = 0,
+		PRE_SKIP_MAX = 0xff
+	};
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

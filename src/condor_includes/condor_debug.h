@@ -143,6 +143,10 @@ void dprintf_reset_lock_delay(void);
    start of program or last call to dprintf_reset_lock_delay */
 double dprintf_get_lock_delay(void);
 
+/* get a count of dprintf messages written (for statistics)
+*/
+int dprintf_getCount(void);
+
 /* wrapper for fclose() that soaks up EINTRs up to maxRetries number of times.
  */
 int fclose_wrapper( FILE *stream, int maxRetries );

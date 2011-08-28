@@ -29,7 +29,7 @@ $dagman_args = "-verbose";
 #	This test runs a single node which always fails.
 #	We asked for three retries and after the last,
 #	we will(had better see)have a rescue dag. In
-#	that dag we will scrap for three retries having been made.
+#	that dag we will scrape for three retries having been made.
 
 my $killedchosen = 0;
 
@@ -38,7 +38,7 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-my $rescuedag = $cmd . ".rescue";
+my $rescuedag = $cmd . ".rescue001";
 my $newrescuedag = $cmd . ".rescue" . ".new";
 
 my %subinfo;

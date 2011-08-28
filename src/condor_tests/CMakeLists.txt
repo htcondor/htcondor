@@ -132,12 +132,18 @@ if (BUILD_TESTS)
 			condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
 		endif()
 
-        	# AFAIK, this test isn't platform- or external- dependent.
-        	# Temporarily comment out until simulator is updated
-		condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
+		# Openssl on rhel3 doesn't have EVP_sha256(),
+		# which the ec2_gahp uses.
+		if ( NOT ${SYSTEM_NAME} MATCHES "rhel3" )
+			condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
+		endif()
 
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
+		if ( NOT ${SYSTEM_NAME} MATCHES "rhel3" )
+			# This test fails on rhel3 for unknown reasons
+			condor_pl_test(job_deltacloud_basic "Deltacloud test" "core;quick;full;quicknolink")
+		endif()
 	endif()
 
 	# negative matches. test on everything but this
@@ -255,6 +261,10 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_splice-M "Simple Dagman Splice M" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_splice-N "Simple Dagman Splice N" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_splice-O "Simple Dagman Splice O" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_pre_skip-A "Simple Dagman Pre Skip A" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_pre_skip-B "Simple Dagman Pre Skip B" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_pre_skip-C "Simple Dagman Pre Skip C" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_pre_skip-D "Simple Dagman Pre Skip D" "core;dagman;quick;full;quicknolink")
 	##### generic lib tests
 	condor_pl_test(lib_classads "Run Classad Unit Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_unit_tests "Run Unit Tests Tests" "core;quick;full;quicknolink")
@@ -440,7 +450,7 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_maxpostscripts "Check that throttling by post scripts works" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_maxprescripts "Check that throttling by pre scripts works" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_prepost "Run a dag and verify each nodes pre and post scripts ran" "dagman;quick;full;quicknolink")
-	condor_pl_test(job_dagman_retry "Make sure a retry dag runs correctly." "dagman;quick;full;quicknolink")
+	# condor_pl_test(job_dagman_retry "Make sure a retry dag runs correctly." "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_throttle "Test Dagman throttling ability" "dagman;long;full")
 	condor_pl_test(job_dagman_uncomlog "Test Dagmans ability to have sepaarate job log files" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_unlessexit "Test that the retries can be stopped with particular exit values from node." "dagman;quick;full;quicknolink")
@@ -476,6 +486,11 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_jobstate_log "Test writing the jobstate.log file, including rescue DAG and recovery mode" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_gt1957 "Test gittrac #1957 fix" "dagman;quick;full;quicknolink")
 	#condor_pl_test(perf_busy_lynn_100_100_500_sched "Generated cpu loading performance test" "performance;long")
+	condor_pl_test(job_dagman_subdag_multi_prohibit-A "Test multi setting prohibiting subdags A" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_subdag_multi_prohibit-B "Test multi setting prohibiting subdags B" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_subdag_multi_prohibit-C "Test multi setting prohibiting subdags C" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_lazy_submit_file "Test lazy submit file creation in DAGMan" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_retry-B "Test node retries in DAGMan" "dagman;quick;full;quicknolink")
 	#condor_pl_test(perf_jobs_sue_10_10_30_van "Generated jobs performance test" "performance;long")
 	#condor_pl_test(perf_xfer_deb_10_10_30_van "Generated transfer performance test" "performance;long")
 	condor_pl_test(job_filexfer_sandbox-empty_van "Are job sandboxes with bad permissions cleaned up?" "framework;quick;full;quicknolink")

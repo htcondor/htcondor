@@ -107,6 +107,7 @@ void init_local_hostname()
 		}
 	}
 
+	dprintf(D_HOSTNAME, "Identifying myself as: Short: %s, Long: %s, IP: %s\n", local_hostname.Value(), local_fqdn.Value(), local_ipaddr.to_ip_string().Value());
 	if (!got_fqdn) {
 		local_fqdn = local_hostname;
 		MyString default_domain;
