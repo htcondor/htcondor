@@ -79,6 +79,13 @@ precedence.
 
 \begin{itemize}
 
+% gittrac #2354
+\item Attributes have been added to all daemons to publish statistics about
+the the number of timers, signals, socket and pipe messages that have been handled
+and the amount of time spent handling them.	Statistics attributes for daemon core
+have names that begin with \Attr{DC} or \Attr{RecentDC}.
+\Ticket{2354}
+
 \item Configuration variable \Macro{COLLECTOR\_ADDRESS\_FILE} is now set 
 in the example configuration,
 similar to \MacroNI{MASTER\_ADDRESS\_FILE}.
@@ -88,7 +95,7 @@ In other environments, it should have no visible impact.
 \Ticket{2375}
 
 % gittrac #2197
-\item Attributes have been added to the SCHEDD to publish aggregate statistics
+\item Attributes have been added to the \Condor{schedd} to publish aggregate statistics
 about jobs that are running and have completed, as well as counts of various
 failures. See section ??? for details.
 \Ticket{2197}
