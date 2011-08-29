@@ -230,7 +230,6 @@ dprintf_config( const char *subsys )
 					{
 						DebugFileInfo logFileInfo;
 						logFileInfo.debugFlags = debug_level;
-						logFileInfo.debugFP = NULL;
 						logFileInfo.logPath = logPath;
 						it = DebugLogs->insert(DebugLogs->end(), logFileInfo);
 					}

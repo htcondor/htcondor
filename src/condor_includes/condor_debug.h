@@ -80,6 +80,9 @@ struct DebugFileInfo
 	std::string logPath;
 	off_t maxLog;
 	int maxLogNum;
+
+	DebugFileInfo();
+	~DebugFileInfo();
 };
 #if defined(__cplusplus)
 extern "C" {

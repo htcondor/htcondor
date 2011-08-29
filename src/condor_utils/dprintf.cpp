@@ -165,6 +165,19 @@ int InDBX = 0;
 
 #define FCLOSE_RETRY_MAX 10
 
+DebugFileInfo::DebugFileInfo()
+{
+	debugFP = NULL;
+}
+
+DebugFileInfo::~DebugFileInfo()
+{
+	if(debugFP)
+	{
+		fclose(debugFP);
+		debugFP = NULL;
+	}
+}
 
 static char *formatTimeHeader(struct tm *tm) {
 	static char timebuf[80];
@@ -1028,7 +1041,7 @@ preserve_log_file(int debug_level)
 
 	if( DebugLock && DebugShouldLockToAppend ) {
 		errno = 0;
-		if (stat (DebugFile[debug_level], &buf) >= 0)
+		if (stat (filePath.c_str(), &buf) >= 0)
 		{
 			file_there = 1;
 			save_errno = errno;
@@ -1098,7 +1111,7 @@ _condor_fd_panic( int line, const char* file )
 	char panic_msg[DPRINTF_ERR_MAX];
 	int save_errno;
 	std::vector<DebugFileInfo>::iterator it;
-	string filePath;
+	std::string filePath;
 	bool fileExists = false;
 	FILE* debug_file_ptr;
 
@@ -1661,7 +1674,7 @@ dprintf_dump_stack(void) {
 		   could be fatal, since the heap may be trashed.  Therefore,
 		   we dispense with some of the formalities... */
 
-	if (DprintfBroken || !_condor_dprintf_works || !DebugFile[0]) {
+	if (DprintfBroken || !_condor_dprintf_works || DebugLogs->empty()) {
 			// Note that although this would appear to enable
 			// backtrace printing to stderr before dprintf is
 			// configured, the backtrace sighandler is only installed
@@ -1686,7 +1699,7 @@ dprintf_dump_stack(void) {
 			seteuid(getuid());
 		}
 
-		fd = safe_open_wrapper_follow(DebugFile[0],O_APPEND|O_WRONLY|O_CREAT,0644);
+		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|O_CREAT,0644);
 
 		if( orig_priv_state != PRIV_CONDOR ) {
 			setegid(orig_egid);
@@ -1724,9 +1737,9 @@ bool debug_open_fds(std::map<int,bool> &open_fds)
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(!(*it).debugFP)
+		if(!it->debugFP)
 			continue;
-		open_fds.insert(std::pair<int,bool>((int)(*it).debugFP,true));
+		open_fds.insert(std::pair<int,bool>(fileno(it->debugFP),true));
 		found = true;
 	}
 
