@@ -18,19 +18,12 @@
 ##
 ##**************************************************************
 
-my $tag = $ENV{"NMI_tag"};
 my $pwd = `pwd`;
 chop($pwd);
 
-if ( ! defined ($tag)) {
-	$tag = "workspace";
-}
-
-$tag =~ s/origin//g;
-$tag =~ s/\///g;
-$tag =~ s/-branch//g;
-$tag =~ s/_/\./g;
-$tag =~ s/^[Vv]//;
+$tag = "unknown";
+$tag = `sed -ne 's/^set(VERSION *"\\([^"]*\\)".*/\\1/p' CMakeLists.txt`;
+chop($tag);
 
 print "tag is $tag\n";
 print "pwd is $pwd\n";
