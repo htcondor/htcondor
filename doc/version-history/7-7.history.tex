@@ -87,15 +87,19 @@ have names that begin with \Attr{DC} or \Attr{RecentDC}.
 \Ticket{2354}
 
 % gittrac #2366
-\item The default value of \Attr{OpSys} on Windows machines has been changed to
-"Windows", and a new attribute \Attr{OpSysVer} has been added that contains the version
-number of the operating system.  This behavior is controlled by a new parameter
-\Macro{ENABLE\_VERSIONED\_OPSYS} which defaults to false on Windows and true on
-other platforms.  A new attribute \Attr{OpSys_And_Ver} will always contain the
-versioned operating system.  Note that this change could cause problems with mixed pools
-because version 7.7.2 \Condor{submit} may add \Attr{OpSys}="Windows" but machines running
-versions prior to 7.7.2 will be publising a versioned \Attr{OpSys} value unless there is
-an override in the config file.
+\item The default value of \Attr{OpSys} on Windows machines has been changed
+ to \AdStr{WINDOWS}, and a new attribute \Attr{OpSysVer} has been added 
+that contains the version number of the operating system.  
+This behavior is controlled by a new configuration variable
+\Macro{ENABLE\_VERSIONED\_OPSYS} which defaults to \Expr{False} on Windows 
+and to \Expr{True} on other platforms.  
+The new machine ClassAd attribute \Attr{OpSys\_And\_Ver} will always contain 
+the versioned operating system.  
+Note that this change could cause problems with mixed pools,
+because Condor version 7.7.2 \Condor{submit} may add \Expr{OpSys="WINDOWS"}, 
+but machines running Condor versions prior to 7.7.2 will be publishing 
+a versioned \Attr{OpSys} value,
+unless there is an override in the configuration.
 \Ticket{2366}
 
 \item Configuration variable \Macro{COLLECTOR\_ADDRESS\_FILE} is now set 
