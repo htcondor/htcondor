@@ -213,16 +213,36 @@ definitions:
 	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x,
 	LINUX 2.4.x, or LINUX 2.6.x kernel systems
 	\item[\AdStr{OSX}:] for Darwin
+	\item[\AdStr{WINDOWS}:] for all versions of Windows
+	\end{description}
+These strings show definitions for operating systems no longer supported:
+	\begin{description}
+	\item[\AdStr{SOLARIS28}:] for Solaris 2.8 or 5.8
+	\item[\AdStr{SOLARIS29}:] for Solaris 2.9 or 5.9
+	\end{description}
+%
+\index{ClassAd machine attribute!OpSysAndVer}
+\item[\AdAttr{OpSysAndVer}:] A string with previously implemented values
+for the \Attr{OpSys} attribute.
+String definitions for operating systems have the following values:
+	\begin{description}
 	\item[\AdStr{WINNT50}:] for Windows 2000
 	\item[\AdStr{WINNT51}:] for Windows XP
 	\item[\AdStr{WINNT52}:] for Windows Server 2003
 	\item[\AdStr{WINNT60}:] for Windows Vista
 	\item[\AdStr{WINNT61}:] for Windows 7
 	\end{description}
-These strings show definitions for operating systems no longer supported:
+%
+\index{ClassAd machine attribute!OpSysVer}
+\item[\AdAttr{OpSysVer}:] An integer value representing the operating system
+version number.
+Currently supported operating systems have the following values:
 	\begin{description}
-	\item[\AdStr{SOLARIS28}:] for Solaris 2.8 or 5.8
-	\item[\AdStr{SOLARIS29}:] for Solaris 2.9 or 5.9
+	\item[\Expr{500}:] for Windows 2000 
+	\item[\Expr{501}:] for Windows XP
+	\item[\Expr{502}:] for Windows Server 2003
+	\item[\Expr{600}:] for Windows Vista or Windows Server 2008
+	\item[\Expr{601}:] for Windows 7 or Windows Server 2008
 	\end{description}
 %
 \index{ClassAd machine attribute!Requirements}
