@@ -86,6 +86,18 @@ and the amount of time spent handling them.	Statistics attributes for daemon cor
 have names that begin with \Attr{DC} or \Attr{RecentDC}.
 \Ticket{2354}
 
+% gittrac #2366
+\item The default value of \Attr{OpSys} on Windows machines has been changed to
+"Windows", and a new attribute \Attr{OpSysVer} has been added that contains the version
+number of the operating system.  This behavior is controlled by a new parameter
+\Macro{ENABLE\_VERSIONED\_OPSYS} which defaults to false on Windows and true on
+other platforms.  A new attribute \Attr{OpSys_And_Ver} will always contain the
+versioned operating system.  Note that this change could cause problems with mixed pools
+because version 7.7.2 \Condor{submit} may add \Attr{OpSys}="Windows" but machines running
+versions prior to 7.7.2 will be publising a versioned \Attr{OpSys} value unless there is
+an override in the config file.
+\Ticket{2366}
+
 \item Configuration variable \Macro{COLLECTOR\_ADDRESS\_FILE} is now set 
 in the example configuration,
 similar to \MacroNI{MASTER\_ADDRESS\_FILE}.
