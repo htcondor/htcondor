@@ -3739,6 +3739,17 @@ WANT_HOLD_REASON = \
   A boolean expression that, when \Expr{True}, defines that a preempted
   Condor job is to be vacated, instead of killed.
 
+\label{param:EnableVersionedOpsys}
+\item[\Macro{ENABLE\_VERSIONED\_OPSYS}]
+  A boolean expression that determines whether pre-7.7.2 strings used for
+  the machine ClassAd attribute \Attr{OpSys} are used or not.
+  Defaults to \Expr{False} on Windows platforms, meaning that the newer
+  behavior of setting \Expr{OpSys = "WINDOWS"} and \Expr{OpSysVer = 601}
+  (for example), while \Expr{OpSysAndVer = "WINNT61"}.
+  On platforms \emph{other} than Windows, the default value is \Expr{True},
+  meaning that the values for \Attr{OpSys} and \Attr{OpSysAndVer} are the same,
+  implementing the pre-7.7.2 behavior.
+
 \label{param:IsOwner}
 \item[\Macro{IS\_OWNER}]
   A boolean expression that defaults to being defined as
