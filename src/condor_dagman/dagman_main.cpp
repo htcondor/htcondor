@@ -126,6 +126,7 @@ Dagman::Dagman() :
 	maxRescueDagNum(MAX_RESCUE_DAG_DEFAULT),
 	rescueFileToRun(""),
 	dumpRescueDag(false),
+	_writePartialRescueDag(true),
 	_defaultNodeLog(NULL),
 	_generateSubdagSubmits(true),
 	_maxJobHolds(100)
@@ -377,6 +378,11 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
 				maxRescueDagNum );
 
+	_writePartialRescueDag = param_boolean( "DAGMAN_WRITE_PARTIAL_RESCUE",
+				_writePartialRescueDag );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
+				_writePartialRescueDag ? "True" : "False" );
+
 	free( _defaultNodeLog );
 	_defaultNodeLog = param( "DAGMAN_DEFAULT_NODE_LOG" );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n",
@@ -460,7 +466,7 @@ void main_shutdown_rescue( int exitVal ) {
 			if ( dagman.maxRescueDagNum > 0 ) {
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
-							false, true );
+							false, dagman._writePartialRescueDag );
 			} else {
 				debug_printf( DEBUG_QUIET, "No rescue DAG written because "
 							"DAGMAN_MAX_RESCUE_NUM is 0\n" );

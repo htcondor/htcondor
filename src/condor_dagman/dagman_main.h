@@ -50,7 +50,6 @@ class Dagman {
     int maxJobs;  // Maximum number of Jobs to run at once
     int maxPreScripts;  // max. number of PRE scripts to run at once
     int maxPostScripts;  // max. number of POST scripts to run at once
-	char *rescueFileToWrite; // "old style" of rescue DAG -- null for new
 	bool paused;
 
 	char* condorSubmitExe;
@@ -173,6 +172,10 @@ class Dagman {
 		// Whether to dump a rescue DAG and exit after parsing the input
 		// DAG(s).
 	bool dumpRescueDag;
+
+		// Whether the rescue DAG we write will be only a partial DAG file
+		// (new for 7.7.2).
+	bool _writePartialRescueDag;
 
 		// The default log file for node jobs that don't specify a
 		// log file.

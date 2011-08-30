@@ -29,6 +29,8 @@ $cmd = 'job_dagman_pre_skip-C.dag';
 $testdesc =  'Condor submit dag - basic pre_skip node with rescue DAG test - scheduler U';
 $testname = "job_dagman_pre_skip-C";
 $dagman_args = "-verbose";
+# Tell DAGMan to write complete (old-style) rescue DAGs.
+$ENV{_CONDOR_DAGMAN_WRITE_PARTIAL_RESCUE} = 0; 
 
 $rescuedag = "job_dagman_pre_skip-C.dag.rescue001";
 
@@ -74,7 +76,7 @@ $submitted = sub
 $failure = sub
 {
 	my %info = shift;
-	print "Saw expected failure";
+	print "Saw expected failure\n";
 	$diditpass = 0;
 
 	$canopen = open(RESCUE,"<$rescuedag");
