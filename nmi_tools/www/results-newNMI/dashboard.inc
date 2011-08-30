@@ -47,7 +47,9 @@ function get_queue_for_nmi_platform($platform, $type) {
   
   $condorq = new CondorQ($type);
   $condorq->add_platform($platform_without_prefix);
-  return $condorq->condor_q();
+  $per_platform_queues = $condorq->condor_q();
+  
+  return $per_platform_queues[$platform_without_prefix][1];
 }
 
 

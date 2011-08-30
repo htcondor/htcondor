@@ -1,5 +1,5 @@
 <?php
-define("NUM_SPARK_DAYS", 2);
+define("NUM_SPARK_DAYS", 3);
 
 $SPARK_DAYS = array_key_exists("days", $_REQUEST) ? $_REQUEST["days"] : NUM_SPARK_DAYS;
 
@@ -10,7 +10,7 @@ $dash = new Dashboard();
 $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
 
-$continuous_blacklist = Array();
+$continuous_blacklist = Array("Deb6", "Fedora", "RHAP61", "RHEL57", "SL6");
 ?>
 
 <script type="text/javascript">
@@ -233,7 +233,6 @@ function create_sparkline($dash, $branch, $num_spark_days) {
   // First get all the recent build runs.  We'll use the runids from the
   // build runs to determine which tests to match to them
 
-  /* Use this query once timezone issues are fixed in NMI
   $sql = "SELECT runid, result, project_version, 
                  convert_tz(start, 'GMT', 'US/Central') as start
           FROM Run
@@ -243,14 +242,6 @@ function create_sparkline($dash, $branch, $num_spark_days) {
                 DATE_SUB(CURDATE(), INTERVAL $num_spark_days DAY) <= start AND
                 Description = '$branch'
                 ORDER BY runid DESC";
-  */
-  $sql = "SELECT runid, result, project_version, start
-          FROM Run
-          WHERE run_type='build' AND
-                component='condor' AND
-                project='condor' AND
-                Description = '$branch'
-                ORDER BY runid DESC LIMIT 30";
 
 
   $results = $dash->db_query($sql);
