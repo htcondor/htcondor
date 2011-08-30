@@ -25,13 +25,14 @@ $dash->print_header("Condor Build and Test Dashboard");
       $("#main5").hide();
   }
 
+  $(document).ajaxStart(function() {
+      $('#loading').show();
+    }).ajaxStop(function() {
+      $('#loading').hide();
+      });
+
   $(document).ready(function(){
 
-    $("#loading").ajaxStart(function(){
-      $(this).show();
-    }).ajaxStop(function(){
-      $(this).hide();
-    });
 
     $("#main1").load('continuous.php');
     $("#menu1").css("background-color", "#ff0000");
