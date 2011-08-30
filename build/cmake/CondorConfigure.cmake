@@ -128,6 +128,10 @@ if( NOT WINDOWS)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
+	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
+	find_path(HAVE_PCRE_H "pcre.h")
+	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
+
 	find_library( ZLIB_FOUND z )
 	find_library( EXPAT_FOUND expat )
 	find_library( LIBUUID_FOUND uuid )
@@ -428,9 +432,6 @@ endif(BUILD_TESTS)
 # external to the tree itself.
 if (PROPER)
 	message(STATUS "********* Configuring externals using [local env] a.k.a. PROPER *********")
-	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
-	find_path(HAVE_PCRE_H "pcre.h")
-	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
 	option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
 else()
 	cmake_minimum_required(VERSION 2.8)

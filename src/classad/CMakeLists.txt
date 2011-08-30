@@ -105,18 +105,24 @@ if (NOT PROPER)
 		LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
 		RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
 		OUTPUT_NAME classad)
+	if ( LINUX )
+		set_target_properties( classad
+			PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
+			LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
+			RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib)
+	endif()
 
-        add_custom_command (OUTPUT ${CLASSADS_INSTALL_LOC}/lib/libpcre.a
+	if (PCRE_REF)
+		add_custom_command (OUTPUT ${CLASSADS_INSTALL_LOC}/lib/libpcre.a
                     COMMAND cp
                     ARGS -f ${PCRE_FOUND} ${CLASSADS_INSTALL_LOC}/lib)
 
-        add_custom_target( pcre_coinstall ALL DEPENDS ${CLASSADS_INSTALL_LOC}/lib/libpcre.a )
+		add_custom_target( pcre_coinstall ALL DEPENDS ${CLASSADS_INSTALL_LOC}/lib/libpcre.a )
 
-	if (PCRE_REF)
 		add_dependencies( pcre_coinstall ${PCRE_REF} )
-	endif()
 
-        add_dependencies( ${CLASSADS_FOUND} pcre_coinstall )
+		add_dependencies( ${CLASSADS_FOUND} pcre_coinstall )
+	endif()
 
   endif()
 
