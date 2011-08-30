@@ -5,6 +5,7 @@
 \oOpt{-unused}
 \oOptArg{-name}{schedd\_name}
 \oOptArg{-remote}{schedd\_name}
+\oOptArg{-addr}{\Sinful{ip:port}}
 \oOptArg{-pool}{pool\_name}
 \oOpt{-disable}
 \oOptArg{-password}{passphrase}
@@ -91,6 +92,10 @@ the machine where the \Condor{schedd} daemon runs.}
 \Arg{schedd\_name} is the value of the \Attr{Name} ClassAd attribute
 on the machine where the \Condor{schedd} daemon runs.
 This option is equivalent to using both \Opt{-name} and \Opt{-spool}.}
+
+\OptItem{\OptArg{-addr}{\Sinful{ip:port}}}{Submit to the \Condor{schedd} at
+the IP address and port given by the \Term{sinful string} argument 
+\Arg{\Sinful{ip:port}}.}
 
 \OptItem{\OptArg{-pool}{pool\_name}}{Look in the specified pool for the 
 \Condor{schedd} to submit to.

@@ -1522,6 +1522,15 @@ set_condor_rgid()
 		init_condor_ids();
 	}
 
+	if( CondorUserName ) {
+		errno = 0;
+		if(!(pcache()->init_groups(CondorUserName)) ) {
+			dprintf( D_ALWAYS, 
+					 "set_condor_rgid - ERROR: initgroups(%s) failed, "
+					 "errno: %s\n", CondorUserName, strerror(errno) );
+		}                       
+	}
+
 	return SET_REAL_GID(CondorGid);
 }
 

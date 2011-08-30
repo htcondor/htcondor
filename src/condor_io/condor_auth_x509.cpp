@@ -48,6 +48,8 @@ StringList * getDaemonList(ReliSock * sock);
 HashTable<MyString, MyString> * Condor_Auth_X509::GridMap = 0;
 #endif
 
+bool Condor_Auth_X509::m_globusActivated = false;
+
 //----------------------------------------------------------------------
 // Implementation
 //----------------------------------------------------------------------
@@ -62,6 +64,11 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 #ifdef WIN32
 	ParseMapFile();
 #endif
+	if ( !m_globusActivated ) {
+		globus_module_activate( GLOBUS_GSI_GSSAPI_MODULE );
+		globus_module_activate( GLOBUS_GSI_GSS_ASSIST_MODULE );
+		m_globusActivated = true;
+	}
 }
 
 Condor_Auth_X509 ::  ~Condor_Auth_X509()

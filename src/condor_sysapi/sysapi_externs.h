@@ -89,6 +89,8 @@ extern int _sysapi_getload;
 extern int _sysapi_count_hyperthread_cpus;
 #endif
 
+/* needed by arch.cpp */
+extern bool _sysapi_opsys_is_versioned;
 
 EXTERN_C_END
 

@@ -23,7 +23,7 @@ endif()
   
 if (WITH_KRB5)
 
-	find_multiple( "krb5;k5crypto;krb5support" KRB5_FOUND )
+	find_multiple( "krb5;com_err;k5crypto;krb5support" KRB5_FOUND )
 
 	if ( NOT KRB5_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
 
@@ -113,7 +113,7 @@ if (WITH_KRB5)
 
 		condor_post_external( krb5 include OFF )
 
-	endif( NOT KRB5_FOUND AND NOT PROPER )
+	endif( )
 
 	if (KRB5_FOUND)
 		message (STATUS "external configured (KRB5_FOUND=${KRB5_FOUND})")

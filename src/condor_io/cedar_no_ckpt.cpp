@@ -44,6 +44,7 @@
 #include "condor_netdb.h"
 #include "internet.h"
 #include "ipv6_hostname.h"
+#include "condor_fsync.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -225,7 +226,7 @@ ReliSock::get_file( filesize_t *size, int fd,
 	}
 
 	if (flush_buffers && fd != GET_FILE_NULL_FD ) {
-		fsync(fd);
+		condor_fsync(fd);
 	}
 
 	if( fd == GET_FILE_NULL_FD ) {
@@ -598,7 +599,7 @@ ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
 		if ( fd < 0 ) {
 			rc = fd;
 		} else {
-			rc = fsync( fd );
+			rc = condor_fsync( fd, destination );
 			::close( fd );
 		}
 		if ( rc < 0 ) {

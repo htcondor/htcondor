@@ -1,0 +1,5 @@
+CONFIG job_dagman_subdag_multi_prohibit-B.config
+SUBDAG EXTERNAL Bsub job_dagman_subdag_multi_prohibit-B-sub.dag
+JOB B_A job_dagman_subdag_multi_prohibit-B-nodeA.cmd
+VARS B_A nodename="B_A"
+PARENT B_A CHILD Bsub

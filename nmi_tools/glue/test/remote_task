@@ -38,6 +38,7 @@ use strict;
 use warnings;
 use File::Copy;
 use File::Basename;
+use POSIX qw/strftime/;
 
 my $dir = dirname($0);
 unshift @INC, $dir;
@@ -50,7 +51,7 @@ if( ! defined $ENV{_NMI_TASKNAME} ) {
 }
 my $fulltestname = $ENV{_NMI_TASKNAME};
 
-print "Test environment variable GCBTARGET = '$ENV{GCBTARGET}'\n";
+out("Test environment variable GCBTARGET = '$ENV{GCBTARGET}'");
 
 if( $fulltestname =~ /remote_task/) {
     die "_NMI_TASKNAME set to remote_task meaning 0 tests seen!\n";
@@ -58,7 +59,7 @@ if( $fulltestname =~ /remote_task/) {
 
 if( ! $fulltestname ) {
     # if we have no task, just return success immediately
-    print "No tasks specified, returning SUCCESS\n";
+    out("No tasks specified, returning SUCCESS");
     exit 0;
 }
 
@@ -91,10 +92,10 @@ if( ! $testname ) {
 #track time.....
 print scalar(localtime);
 
-print "Testname: '$testname'\n";
+out("Testname: '$testname'");
 if( not TestGlue::is_windows() ) {
     if( $compiler ) {
-        print "compiler is $compiler\n";
+        out("compiler is $compiler");
     }
     else {
         $compiler = ".";
@@ -113,12 +114,12 @@ else {
 # Up the tool timeout multipler to try to deal with this.
 $ENV{_condor_TOOL_TIMEOUT_MULTIPLIER}="4";
 
-print "RUNNING $testname\n";
+out("RUNNING $testname");
 chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
 
 # -b means build & test and ensures the first time that we have our testing
 # personal condor configured from release generic config files.
-print "About to run batch_test.pl\n";
+out("About to run batch_test.pl");
 
 system("perl batch_test.pl --no-error -d $compiler -t $testname -b");
 my $batchteststatus = $?;
@@ -155,13 +156,13 @@ if( ! -f $run_out_path ) {
         # if the test failed, this isn't suprising.  we can print it, 
         # but we should just treat it as if the test failed, not an
         # internal error. 
-        print "\n\nTest failed and $run_out does not exist\n";
+        out("\n\nTest failed and $run_out does not exist");
     }
 }
 else {
     # spit out the contents of the run.out file to the stdout of the task
     if( open(RES, '<', $run_out_path) ) {
-        print "\n\n----- Start of $run_out -----\n";
+        out("\n\n----- Start of $run_out -----");
         while(<RES>) {
             print "$_";
         }
@@ -169,7 +170,7 @@ else {
         print "\n----- End of $run_out -----\n";
     }
     else {
-        print "\n\nERROR: failed to open $run_out_path: $!\n";
+        out("\n\nERROR: failed to open $run_out_path: $!");
     }
 }
 
@@ -177,7 +178,7 @@ else {
 
 # spit out the contents of the test.out file to the stdout of the task
 if( open(RES, '<', $test_out_path) ) {
-    print "\n\n----- Start of $test_out -----\n";
+    out("\n\n----- Start of $test_out -----");
     while(<RES>) {
         print "$_";
     }
@@ -185,12 +186,12 @@ if( open(RES, '<', $test_out_path) ) {
     print "\n----- End of $test_out -----\n";
 }
 else {
-    print "\n\nERROR: failed to open $test_out_path: $!\n";
+    out("\n\nERROR: failed to open $test_out_path: $!");
 }
 
 # spit err the contents of the test.err file to the stdout of the task
 if( open(RES, '<', $test_err_path) ) {
-    print "\n\n----- Start of $test_err -----\n";
+    out("\n\n----- Start of $test_err -----");
     while(<RES>) {
         print "$_";
     }
@@ -198,7 +199,7 @@ if( open(RES, '<', $test_err_path) ) {
     print "\n----- End of $test_err -----\n";
 }
 else {
-    print "\n\nERROR: failed to open $test_err_path: $!\n";
+    out("\n\nERROR: failed to open $test_err_path: $!");
 }
 
 exit $teststatus;
@@ -208,7 +209,13 @@ exit $teststatus;
 ######################################################################
 
 sub c_die {
-    my( $msg ) = @_;
-    print $msg;
+    my($msg) = @_;
+    out($msg);
     exit 3;
+}
+
+sub out {
+    my ($msg) = @_;
+    my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    print "$time: $msg\n";
 }

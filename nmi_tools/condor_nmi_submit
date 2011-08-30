@@ -1307,8 +1307,7 @@ EOF
     print $fh "remote_post = nmi_tools/glue/build/remote_post\n";
     print $fh "platform_post = nmi_tools/glue/build/platform_post\n";
 
-	# tstclair: no longer needed.
-	# print $fh "post_all = nmi_tools/glue/build/post_all\n";
+	print $fh "post_all = nmi_tools/glue/build/post_all\n";
 
     if( defined($opt_use_externals_cache) ) {
 		$common_pre_args .= ' --use-externals-cache';
@@ -1630,13 +1629,6 @@ sub generateBuildFetchFiles
 #        makeFetchFileVCS( $ext_file, TRUE, EXT, $opt_externals );
 #        push( @fetch_files, "$ext_file" );
 #    }
-
-	# If the $srctag is available, then use it for where to get the nmi tools.
-	# In general, we'd like to match the branch of the glue to the branch we're
-	# building.
-    my $nmi_tools_file = "nmi_tools.src";
-    makeFetchFileVCS( $nmi_tools_file, FALSE, SRC, $cvs_condor_nmi_submit, $srctag );
-    push( @fetch_files, $nmi_tools_file );
 
     return @fetch_files;
 }

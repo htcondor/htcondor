@@ -899,7 +899,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// all jobs, we only have to figure it out once.  We use '%'
 		// as the delimiter, since ATTR_NAME might already have '@' in
 		// it, and we don't want to confuse things any further.
-	correct_scheduler.sprintf( "DedicatedScheduler!%s", Name );
+	correct_scheduler.sprintf( "DedicatedScheduler@%s", Name );
 
 	next_cluster_num = cluster_initial_val;
 	JobQueue->StartIterateAllClassAds();

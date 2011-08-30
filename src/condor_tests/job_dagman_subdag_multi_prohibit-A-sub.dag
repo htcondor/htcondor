@@ -1,0 +1,2 @@
+CONFIG job_dagman_subdag_multi_prohibit-A.config
+JOB A job_dagman_subdag_multi_prohibit-A-subnode.cmd

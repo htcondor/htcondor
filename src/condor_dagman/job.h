@@ -156,12 +156,9 @@ class Job {
 		@param directory Directory to run the node in, "" if current
 		       directory.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
-		@param prohibitMultiJobs whether submit files queueing multiple
-			   job procs are prohibited.
     */
     Job( const job_type_t jobType, const char* jobName,
-				const char* directory, const char* cmdFile,
-				bool prohibitMultiJobs );
+				const char* directory, const char* cmdFile ); 
   
     ~Job();
 
@@ -495,7 +492,7 @@ private:
 		// Note: Init moved to private section because calling int more than
 		// once will cause a memory leak.  wenger 2005-06-24.
 	void Init( const char* jobName, const char *directory,
-				const char* cmdFile, bool prohibitMultiJobs );
+				const char* cmdFile );
   
 		// Mark this node as failed because of an error in monitoring
 		// the log file.
