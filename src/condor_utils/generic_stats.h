@@ -370,11 +370,11 @@ inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2
    return ClassAdAssign2(ad, pattr1, pattr2, (int)value);
 }
 
-template <class T> class stats_entry_recent;
-void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int> & me);
-void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int64_t> & me);
-void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<double> & me);
-void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<long> & me);
+//template <class T> class stats_entry_recent;
+//void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int> & me);
+//void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int64_t> & me);
+//void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<double> & me);
+//void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<long> & me);
 
 // base class for all statistics entries
 class stats_entry_base {
@@ -414,12 +414,14 @@ public:
 
    static const int PubValue = 1;
    static const int PubLargest = 2;
-   static const int AppendToAttr = 0x100;
+   static const int PubDecorateAttr = 0x100;
+   static const int PubDefault = PubValue | PubLargest | PubDecorateAttr;
    void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+      if ( ! flags) flags = PubDefault;
       if (flags & this->PubValue)
          ClassAdAssign(ad, pattr, this->value); 
       if (flags & this->PubLargest) {
-         if (flags & this->AppendToAttr)
+         if (flags & this->PubDecorateAttr)
             ClassAdAssign2(ad, pattr, "Peak", largest);
          else
             ClassAdAssign(ad, pattr, largest); 
@@ -469,13 +471,16 @@ public:
 
    static const int PubValue = 1;
    static const int PubRecent = 2;
-   static const int PubDebug = 4;
-   static const int AppendToAttr = 0x100;
+   static const int PubDebug = 0x80;
+   static const int PubDecorateAttr = 0x100;
+   static const int PubValueAndRecent = PubValue | PubRecent | PubDecorateAttr;
+   static const int PubDefault = PubValueAndRecent;
    void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+      if ( ! flags) flags = PubDefault;
       if (flags & this->PubValue)
          ClassAdAssign(ad, pattr, this->value); 
       if (flags & this->PubRecent) {
-         if (flags & this->AppendToAttr)
+         if (flags & this->PubDecorateAttr)
             ClassAdAssign2(ad, "Recent", pattr, recent);
          else
             ClassAdAssign(ad, pattr, recent); 
@@ -557,10 +562,6 @@ public:
       const stats_entry_recent<T> * pthis = (const stats_entry_recent<T> *)me;
       ClassAdAssign(ad, pattr, pthis->recent);
       }
-   static void PublishDebug(const char * me, ClassAd & ad, const char * pattr) {
-      const stats_entry_recent<T> * pthis = (const stats_entry_recent<T> *)me;
-      StatsPublishDebug(pattr, ad, *pthis);
-      }
    static void Delete(stats_entry_recent<T> * probe) { delete probe; }
 };
 
@@ -579,11 +580,22 @@ public:
    T recent;
    timed_queue<T> tq;
 
+   static const int PubValue = 1;
+   static const int PubRecent = 2;
+   static const int PubDebug = 4;
+   static const int PubDecorateAttr = 0x100;
+   static const int PubValueAndRecent = PubValue | PubRecent | PubDecorateAttr;
+   static const int PubDefault = PubValueAndRecent;
    void Publish(ClassAd & ad, const char * pattr, int flags) const { 
-      if (flags & IS_RECENT)
-         ClassAdAssign(ad, pattr, recent); 
-      else
+      if ( ! flags) flags = PubDefault;
+      if (flags & this->PubValue)
          ClassAdAssign(ad, pattr, this->value); 
+      if (flags & this->PubRecent) {
+         if (flags & this->PubDecorateAttr)
+            ClassAdAssign2(ad, "Recent", pattr, recent);
+         else
+            ClassAdAssign(ad, pattr, recent); 
+      }
    }
 
    void Clear() {
@@ -669,6 +681,8 @@ protected:
    T SumSq;      // Sum of samples squared
 
 public:
+   void Publish(ClassAd & ad, const char * pattr, int flags) const;
+
    void Clear() {
       this->value = 0; // value is use to store the count of samples.
       Max = std::numeric_limits<T>::min();
@@ -867,6 +881,7 @@ int generic_stats_Tick(
 class stats_entry_base;
 typedef void (stats_entry_base::*FN_STATS_ENTRY_PUBLISH)(ClassAd & ad, const char * pattr, int flags) const;
 typedef void (stats_entry_base::*FN_STATS_ENTRY_ADVANCE)(int cAdvance);
+typedef void (stats_entry_base::*FN_STATS_ENTRY_SETRECENTMAX)(int cRecent);
 typedef void (stats_entry_base::*FN_STATS_ENTRY_CLEAR)(void);
 typedef void (*FN_STATS_ENTRY_DELETE)(void* probe);
 
@@ -896,6 +911,7 @@ public:
                   (FN_STATS_ENTRY_PUBLISH)&T::Publish,
                   (FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
                   (FN_STATS_ENTRY_CLEAR)&T::Clear,
+                  (FN_STATS_ENTRY_SETRECENTMAX)&T::SetRecentMax,
                   (FN_STATS_ENTRY_DELETE)&T::Delete);
       return probe;
    }
@@ -923,10 +939,27 @@ public:
                   fOwnedByPool,
                   pattr, 
                   flags,
-                  (FN_STATS_ENTRY_PUBLISH)&T::Publish,
+                  fnpub ? fnpub : (FN_STATS_ENTRY_PUBLISH)&T::Publish,
                   (FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
                   (FN_STATS_ENTRY_CLEAR)&T::Clear,
+                  (FN_STATS_ENTRY_SETRECENTMAX)&T::SetRecentMax,
                   NULL);
+      return probe;
+   }
+
+   template <typename T> T* AddPublish (
+      const char * name,       // unique name for the probe
+      T*           probe,      // the probe, usually a member of a class/struct
+      const char * pattr,      // unique attr, must not be the same as a probe name.
+      int          flags=0,    // flags to control publishing
+      FN_STATS_ENTRY_PUBLISH fnpub=NULL) // publish method
+   {
+      bool fOwnedByPool = false;
+      InsertPublish(name, T::unit, (void*)probe, 
+                    fOwnedByPool,
+                    pattr, 
+                    flags,
+                    fnpub ? fnpub : (FN_STATS_ENTRY_PUBLISH)&T::Publish);
       return probe;
    }
 
@@ -938,6 +971,7 @@ public:
 
    void Clear();
    void ClearRecent();
+   void SetRecentMax(int window, int quantum);
    int  Advance(int cAdvance);
    void Publish(ClassAd & ad) const;
    void Unpublish(ClassAd & ad) const;
@@ -956,6 +990,7 @@ private:
       int fOwnedByPool; // true if created and owned by this, otherise owned by some other code.
       FN_STATS_ENTRY_ADVANCE Advance;
       FN_STATS_ENTRY_CLEAR   Clear;
+      FN_STATS_ENTRY_SETRECENTMAX SetRecentMax;
       FN_STATS_ENTRY_DELETE  Delete;
    };
    // table of values to publish, possibly more than one for each probe
@@ -974,7 +1009,17 @@ private:
       FN_STATS_ENTRY_PUBLISH fnpub, // publish method
       FN_STATS_ENTRY_ADVANCE fnadv, // Advance method
       FN_STATS_ENTRY_CLEAR   fnclr, // Clear method
+      FN_STATS_ENTRY_SETRECENTMAX fnsrm,
       FN_STATS_ENTRY_DELETE  fndel); // static Delete method
+
+   void InsertPublish (
+      const char * name,       // unique name for the probe
+      int          unit,       // identifies the probe class/type
+      void*        probe,      // the probe, usually a member of a class/struct
+      bool         fOwned,     // probe and pattr string are owned by the pool
+      const char * pattr,      // publish attribute name
+      int          flags,      // flags to control publishing
+      FN_STATS_ENTRY_PUBLISH fnpub); // publish method
 
 };
 

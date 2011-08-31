@@ -135,7 +135,7 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
 // they are published as. 
 //
 //
-
+#if 0
 #define DC_STATS_PUB(name, as)        GENERIC_STATS_PUB(DaemonCore::Stats, "DC", name, as)
 #define DC_STATS_PUB_RECENT(name, as) GENERIC_STATS_PUB_RECENT(DaemonCore::Stats, "DC", name, as)
 #define DC_STATS_PUB_PEAK(name, as)   GENERIC_STATS_PUB_PEAK(DaemonCore::Stats, "DC", name, as)
@@ -186,6 +186,7 @@ const GenericStatsPubItem DCStatsPub[] = {
     DC_STATS_PUB_RECENT(AsyncPipe,     AS_COUNT),
    #endif
    };
+#endif
 
 // the windowed schedd statistics are quantized to the nearest N seconds
 // WINDOWED_STAT_WIDTH/schedd_stats_window_quantum is the number of slots
@@ -195,22 +196,22 @@ const int dc_stats_window_quantum = 4*60; // 4min quantum
 void DaemonCore::Stats::SetWindowSize(int window)
 {
    this->RecentWindowMax = window;
-   generic_stats_SetRecentMax(DCStatsPub, COUNTOF(DCStatsPub), (char*)this, 
-                              window, dc_stats_window_quantum);
+   //generic_stats_SetRecentMax(DCStatsPub, COUNTOF(DCStatsPub), (char*)this, 
+   //                           window, dc_stats_window_quantum);
+   Named.SetRecentMax(window, dc_stats_window_quantum);
 }
 
-#define GENERIC_STATS_INSERT(fn,pre,name,as)        this->fn(#name, &name, pre #name, name.PubValue)
-#define GENERIC_STATS_INSERT_ALL(fn,pre,name,as)    this->fn(#name, &name, pre #name, name.AppendToAttr | 0x0F)
-#define GENERIC_STATS_INSERT_PEAK(fn,pre,name,as)   this->fn(#name, &name, pre #name "Peak", name.PubLargest)
-#define GENERIC_STATS_INSERT_AVG(fn,pre,name,as)    this->fn(#name, &name, pre #name "Avg", name.PubAvg)
-#define GENERIC_STATS_INSERT_RECENT(fn,pre,name,as) this->fn(#name, &name, "Recent" pre #name, name.PubRecent)
-#define GENERIC_STATS_INSERT_DEBUG(fn,pre,name,as)  this->fn(#name, &name, "Recent" pre #name, name.PubDebug)
+#define STATS_POOL_ADD_VAL(fn,pre,name,as)    (fn)(#name, &name, pre #name, name.PubValue)
+#define STATS_POOL_ADD(fn,pre,name,as)        (fn)(#name, &name, pre #name, name.PubDefault)
 
-#define DC_STATS_INSERT(name,as)         GENERIC_STATS_INSERT(Named.AddProbe, "DC", name,as) 
-#define DC_STATS_INSERT_PEAK(name,as)    GENERIC_STATS_INSERT_PEAK(Named.AddProbe, "DC", name,as) 
-#define DC_STATS_INSERT_AVG(name,as)     GENERIC_STATS_INSERT_AVG(Named.AddProbe, "DC", name,as) 
-#define DC_STATS_INSERT_RECENT(name,as)  GENERIC_STATS_INSERT_RECENT(Named.AddProbe, "DC", name,as) 
-#define DC_STATS_INSERT_DEBUG(name,as)   GENERIC_STATS_INSERT_RECENT_DEBUG(Named.AddProbe, "DC", name,as) 
+#define STATS_POOL_ADD_PEAK(fn,pre,name,as)   (fn)(#name "Peak", &name, pre #name "Peak", name.PubLargest)
+#define STATS_POOL_ADD_RECENT(fn,pre,name,as) (fn)("Recent" #name, &name, "Recent" pre #name, name.PubRecent)
+#define STATS_POOL_ADD_DEBUG(fn,pre,name,as)  (fn)(#name "Debug", &name, pre #name "Debug", name.PubDebug)
+
+#define DC_STATS_ADD_VAL(pool,name,as)     STATS_POOL_ADD_VAL((pool).AddProbe, "DC", name, as) 
+#define DC_STATS_ADD_PEAK(pool,name,as)    STATS_POOL_ADD_PEAK((pool).AddPublish, "DC", name, as) 
+#define DC_STATS_ADD_RECENT(pool,name,as)  STATS_POOL_ADD_RECENT((pool).AddPublish, "DC", name, as) 
+#define DC_STATS_ADD_DEBUG(pool,name,as)   STATS_POOL_ADD_DEBUG((pool).AddPublish, "DC", name, as) 
 
 // this is for first time initialization before calling SetWindowSize,
 // use the Clear() method to reset stats after the window size has been set.
@@ -221,24 +222,55 @@ void DaemonCore::Stats::Init()
    this->RecentWindowMax = dc_stats_window_quantum; 
 
    // insert static items into the named item pool so we can use the pool 
-   // to Advance and Clear. 
-   DC_STATS_INSERT(SelectWaittime,  AS_RELTIME);
-   DC_STATS_INSERT(SignalRuntime,   AS_RELTIME);
-   DC_STATS_INSERT(TimerRuntime,    AS_RELTIME);
-   DC_STATS_INSERT(SocketRuntime,   AS_RELTIME);
-   DC_STATS_INSERT(PipeRuntime,     AS_RELTIME);
-   DC_STATS_INSERT(Signals,       AS_COUNT);
-   DC_STATS_INSERT(TimersFired,   AS_COUNT);
-   DC_STATS_INSERT(SockMessages,  AS_COUNT);
-   DC_STATS_INSERT(PipeMessages,  AS_COUNT);
-   //DC_STATS_INSERT(SockBytes,     AS_COUNT);
-   //DC_STATS_INSERT(PipeBytes,     AS_COUNT);
-   DC_STATS_INSERT(DebugOuts,     AS_COUNT);
+   // to Advance and Clear.  these items also publish the overall value
+   DC_STATS_ADD_VAL(Named, SelectWaittime,  0);
+   DC_STATS_ADD_VAL(Named, SignalRuntime,   0);
+   DC_STATS_ADD_VAL(Named, TimerRuntime,    0);
+   DC_STATS_ADD_VAL(Named, SocketRuntime,   0);
+   DC_STATS_ADD_VAL(Named, PipeRuntime,     0);
+   DC_STATS_ADD_VAL(Named, Signals,       0);
+   DC_STATS_ADD_VAL(Named, TimersFired,   0);
+   DC_STATS_ADD_VAL(Named, SockMessages,  0);
+   DC_STATS_ADD_VAL(Named, PipeMessages,  0);
+   //DC_STATS_ADD_VAL(Named, SockBytes,     0);
+   //DC_STATS_ADD_VAL(Named, PipeBytes,     0);
+   DC_STATS_ADD_VAL(Named, DebugOuts,     0);
+
+   // Insert additional publish entries for the RecentXXX values
+   //
+   DC_STATS_ADD_RECENT(Named, SelectWaittime,  0);
+   DC_STATS_ADD_RECENT(Named, SignalRuntime,   0);
+   DC_STATS_ADD_RECENT(Named, TimerRuntime,    0);
+   DC_STATS_ADD_RECENT(Named, SocketRuntime,   0);
+   DC_STATS_ADD_RECENT(Named, PipeRuntime,     0);
+   DC_STATS_ADD_RECENT(Named, Signals,       0);
+   DC_STATS_ADD_RECENT(Named, TimersFired,   0);
+   DC_STATS_ADD_RECENT(Named, SockMessages,  0);
+   DC_STATS_ADD_RECENT(Named, PipeMessages,  0);
+   //DC_STATS_ADD_RECENT(Named, SockBytes,     0);
+   //DC_STATS_ADD_RECENT(Named, PipeBytes,     0);
+   DC_STATS_ADD_RECENT(Named, DebugOuts,     0);
+
+   // Insert additional publish entries for the XXXDebug values
+   //
+#if 0 //def DEBUG
+   DC_STATS_ADD_DEBUG(Named, SelectWaittime,  0);
+   DC_STATS_ADD_DEBUG(Named, SignalRuntime,   0);
+   DC_STATS_ADD_DEBUG(Named, TimerRuntime,    0);
+   DC_STATS_ADD_DEBUG(Named, SocketRuntime,   0);
+   DC_STATS_ADD_DEBUG(Named, PipeRuntime,     0);
+   DC_STATS_ADD_DEBUG(Named, Signals,       0);
+   DC_STATS_ADD_DEBUG(Named, TimersFired,   0);
+   DC_STATS_ADD_DEBUG(Named, SockMessages,  0);
+   DC_STATS_ADD_DEBUG(Named, PipeMessages,  0);
+   //DC_STATS_ADD_DEBUG(Named, SockBytes,     0);
+   //DC_STATS_ADD_DEBUG(Named, PipeBytes,     0);
+   DC_STATS_ADD_DEBUG(Named, DebugOuts,     0);
+#endif
 }
 
 void DaemonCore::Stats::Clear()
 {
-   //generic_stats_Clear(DCStatsPub, COUNTOF(DCStatsPub), (char*)this);
    this->InitTime = time(NULL);
    this->StatsLifetime = 0;
    this->StatsLastUpdateTime = 0;
@@ -249,7 +281,6 @@ void DaemonCore::Stats::Clear()
 
 void DaemonCore::Stats::Publish(ClassAd & ad) const
 {
-   //generic_stats_PublishToClassAd(ad, DCStatsPub, COUNTOF(DCStatsPub), (const char *)this);  
    ad.Assign("DCStatsLifetime", (int)StatsLifetime);
    ad.Assign("DCStatsLastUpdateTime", (int)StatsLastUpdateTime);
    ad.Assign("DCRecentStatsLifetime", (int)RecentStatsLifetime);
@@ -260,7 +291,6 @@ void DaemonCore::Stats::Publish(ClassAd & ad) const
 
 void DaemonCore::Stats::Unpublish(ClassAd & ad) const
 {
-   //generic_stats_DeleteInClassAd(ad, DCStatsPub, COUNTOF(DCStatsPub), (const char *)this);  
    ad.Delete("DCStatsLifetime");
    ad.Delete("DCStatsLastUpdateTime");
    ad.Delete("DCRecentStatsLifetime");
@@ -271,26 +301,8 @@ void DaemonCore::Stats::Unpublish(ClassAd & ad) const
 
 void DaemonCore::Stats::Tick()
 {
-#if 1
-
-const GenericStatsPubItem DCStatsTick[] = {
-	   DC_STATS_PUB_RECENT(SelectWaittime, 0),
-	   DC_STATS_PUB_RECENT(SignalRuntime, 0),
-	   DC_STATS_PUB_RECENT(TimerRuntime, 0),
-	   DC_STATS_PUB_RECENT(SocketRuntime, 0),
-	   DC_STATS_PUB_RECENT(PipeRuntime, 0),
-
-	   DC_STATS_PUB_RECENT(Signals, 0),
-	   DC_STATS_PUB_RECENT(TimersFired, 0),
-	   DC_STATS_PUB_RECENT(SockMessages, 0),
-	   DC_STATS_PUB_RECENT(PipeMessages, 0),
-	   //DC_STATS_PUB_RECENT(SockBytes, 0),
-	   //DC_STATS_PUB_RECENT(PipeBytes, 0),
-	   DC_STATS_PUB_RECENT(DebugOuts, 0),
-   };
-
    int cAdvance = generic_stats_Tick(
-      NULL, 0, //DCStatsTick, COUNTOF(DCStatsTick), 
+      NULL, 0,
       (char*)this,
       this->RecentWindowMax,   // RecentMaxTime
       dc_stats_window_quantum, // RecentQuantum
@@ -302,50 +314,6 @@ const GenericStatsPubItem DCStatsTick[] = {
 
    if (cAdvance)
       Named.Advance(cAdvance);
-#else
-   time_t now = time(NULL);
-
-   // when working from freshly initialized stats, the first Tick should not Advance.
-   //
-   if (this->StatsLastUpdateTime == 0)
-      {
-      this->StatsLastUpdateTime = now;
-      this->RecentStatsTickTime = now;
-      this->RecentStatsLifetime = 0;
-      return;
-      }
-
-   // whenever 'now' changes, we want to check to see how much time has passed
-   // since the last Advance, and if that time exceeds the quantum, we advance.
-   //
-   if (this->StatsLastUpdateTime != now) 
-      {
-      time_t delta = now - this->RecentStatsTickTime;
-
-      // if the time since last update exceeds the window size, just throw away the recent data
-      if (delta >= this->RecentWindowMax)
-         {
-         generic_stats_ClearRecent(DCStatsPub, COUNTOF(DCStatsPub), (char*)this);
-         this->RecentStatsTickTime = now;
-         this->RecentStatsLifetime = this->RecentWindowMax;
-         delta = 0;
-         }
-      else if (delta >= dc_stats_window_quantum)
-         {
-         for (int ii = 0; ii < delta / dc_stats_window_quantum; ++ii)
-            {
-            generic_stats_AdvanceRecent(DCStatsPub, COUNTOF(DCStatsPub), (char*)this, 1);
-            }
-         this->RecentStatsTickTime = now - (delta % dc_stats_window_quantum);
-         }
-
-      time_t recent_window = (int)(this->RecentStatsLifetime + now - this->RecentStatsTickTime);
-      this->RecentStatsLifetime = (recent_window < this->RecentWindowMax) ? recent_window : this->RecentWindowMax;
-      this->StatsLastUpdateTime = now;
-      }
-
-   this->StatsLifetime = now - this->InitTime;
-#endif
 }
 
 
