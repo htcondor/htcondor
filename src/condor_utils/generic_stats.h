@@ -355,14 +355,26 @@ inline int ClassAdAssign(ClassAd & ad, const char * pattr, T value) {
    return ad.Assign(pattr, value);
 }
 template <>
-inline int ClassAdAssign(ClassAd & ad, const char * pattr, time_t value) {
+inline int ClassAdAssign(ClassAd & ad, const char * pattr, int64_t value) {
    return ad.Assign(pattr, (int)value);
 }
 
+template <class T>
+inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2, T value) {
+   MyString attr(pattr1);
+   attr += pattr2;
+   return ad.Assign(attr.Value(), value);
+}
+template <>
+inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2, int64_t value) {
+   return ClassAdAssign2(ad, pattr1, pattr2, (int)value);
+}
+
 template <class T> class stats_entry_recent;
-extern void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int> & me);
-extern void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<time_t> & me);
-extern void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<double> & me);
+void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int> & me);
+void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int64_t> & me);
+void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<double> & me);
+void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<long> & me);
 
 // base class for all statistics entries
 class stats_entry_base {
@@ -376,7 +388,7 @@ template <class T> class stats_entry_count : public stats_entry_base {
 public:
    stats_entry_count() : value(0) {}
    T value;
-   void Publish(ClassAd & ad, const char * pattr) const { 
+   void Publish(ClassAd & ad, const char * pattr, int flags) const { 
       ClassAdAssign(ad, pattr, value); 
       };
 
@@ -399,6 +411,20 @@ template <class T> class stats_entry_abs : public stats_entry_count<T> {
 public:
    stats_entry_abs() : largest(0) {}
    T largest;
+
+   static const int PubValue = 1;
+   static const int PubLargest = 2;
+   static const int AppendToAttr = 0x100;
+   void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+      if (flags & this->PubValue)
+         ClassAdAssign(ad, pattr, this->value); 
+      if (flags & this->PubLargest) {
+         if (flags & this->AppendToAttr)
+            ClassAdAssign2(ad, pattr, "Peak", largest);
+         else
+            ClassAdAssign(ad, pattr, largest); 
+      }
+   }
 
    void Clear() {
       this->value = 0;
@@ -441,6 +467,26 @@ public:
    T recent;            // the up-to-date recent value (for publishing)
    ring_buffer<T> buf;  // use to store a buffer of older values
 
+   static const int PubValue = 1;
+   static const int PubRecent = 2;
+   static const int PubDebug = 4;
+   static const int AppendToAttr = 0x100;
+   void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+      if (flags & this->PubValue)
+         ClassAdAssign(ad, pattr, this->value); 
+      if (flags & this->PubRecent) {
+         if (flags & this->AppendToAttr)
+            ClassAdAssign2(ad, "Recent", pattr, recent);
+         else
+            ClassAdAssign(ad, pattr, recent); 
+      }
+      if (flags & this->PubDebug) {
+         PublishDebug(ad, pattr, flags);
+      }
+   }
+
+   void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
+
    void Clear() {
       this->value = 0;
       recent = 0;
@@ -454,7 +500,7 @@ public:
    T Add(T val) { 
       this->value += val; 
       recent += val;
-      if (val != 0 && buf.MaxSize() > 0) {
+      if (buf.MaxSize() > 0) {
          if (buf.empty())
             buf.Push(val);
          else
@@ -466,16 +512,25 @@ public:
    // Advance to the next time slot and add a value.
    T Advance(T val) { 
       this->value += val; 
-      recent -= buf.Push(val);
-      recent += val;
+      if (buf.MaxSize() > 0) {
+         recent -= buf.Push(val);
+         recent += val;
+      } else {
+         recent = val;
+      }
       return this->value; 
    }
 
    // Advance by cSlots time slots
    void AdvanceBy(int cSlots) { 
-      while (cSlots > 0) {
-         recent -= buf.Advance();
-         --cSlots;
+      if (cSlots < buf.MaxSize()) {
+         while (cSlots > 0) {
+            recent -= buf.Advance();
+            --cSlots;
+         }
+      } else {
+         recent = 0;
+         buf.Clear();
       }
    }
 
@@ -522,6 +577,13 @@ public:
    stats_entry_tq() : recent(0) {}
    T recent;
    timed_queue<T> tq;
+
+   void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+      if (flags & IS_RECENT)
+         ClassAdAssign(ad, pattr, recent); 
+      else
+         ClassAdAssign(ad, pattr, this->value); 
+   }
 
    void Clear() {
       this->value = 0;
@@ -665,6 +727,33 @@ public:
       }
 };
 
+class stats_recent_counter_timer : public stats_entry_base {
+private:
+   stats_entry_recent<int> count;
+   stats_entry_recent<double> runtime;
+
+public:
+   stats_recent_counter_timer(int cRecentMax=0) 
+      : count(cRecentMax)
+      , runtime(cRecentMax) 
+      {
+      };
+
+   double Add(double sec)     { count += 1; runtime += sec; return runtime.value; }
+   time_t Add(time_t time)    { count += 1; runtime += double(time); return (time_t)runtime.value; }
+   void Clear()              { count.Clear(); runtime.Clear();}
+   void ClearRecent()        { count.ClearRecent(); runtime.ClearRecent(); }
+   void AdvanceBy(int cSlots) { count.AdvanceBy(cSlots); runtime.AdvanceBy(cSlots); }
+   void SetRecentMax(int cMax)    { count.SetRecentMax(cMax); runtime.SetRecentMax(cMax); }
+   double operator+=(double val)    { return Add(val); }
+
+   void Publish(ClassAd & ad, const char * pattr, int flags) const;
+
+   static const int unit = IS_RCT | stats_entry_type<int>::id;
+   static void PublishValue(const char * me, ClassAd & ad, const char * pattr);
+};
+
+
 /* ----------------------------------------------------------------------------- 
  * helper functions for dealing with collections of statistics 
  * these functions expect to be passed and array of GenericStatsPubItem
@@ -769,5 +858,79 @@ int generic_stats_Tick(
 #define GENERIC_STATS_ENTRY_RECENT(st,pre,name,as) { "Recent" pre #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf) }
 #define GENERIC_STATS_ENTRY_PEAK(st,pre,name,as) { pre #name "Peak" , as, FIELDOFF(st, name.largest), FIELDSIZ(st, name.largest), 0 }
 */
+
+
+class stats_entry_base;
+typedef void (stats_entry_base::*FN_STATS_ENTRY_PUBLISH)(ClassAd & ad, const char * pattr, int flags) const;
+typedef void (stats_entry_base::*FN_STATS_ENTRY_ADVANCE)(int cAdvance);
+typedef void (stats_entry_base::*FN_STATS_ENTRY_CLEAR)(void);
+
+// TJ - move this to generic_stats.h/cpp
+//
+class stats_pool {
+public:
+   stats_pool(int size=30) 
+      : pub(size, MyStringHash, updateDuplicateKeys) 
+      , pool(size, hashFuncVoidPtr, updateDuplicateKeys) 
+      {
+      };
+   /*
+   template <typename T> T Add (
+      const char * name, 
+      int as, 
+      T probe, 
+      int unit,
+      const char * pattr=NULL,
+      void (*fnpub)(const char * me, ClassAd & ad, const char * pattr)=NULL);
+   template <typename T> T AddProbe (
+      const char * name, 
+      int as, 
+      T probe, 
+      FN_STATS_ENTRY_ADVANCE fnadv=NULL,
+      const char * pattr=NULL,
+      FN_STATS_ENTRY_PUBLISH fnpub=NULL);
+   */
+   template <typename T> T* AddProbe (
+      const char * name, // unique name for the probe
+      T* probe, 
+      const char * pattr=NULL, // publish attribute name
+      int flags=0);            // flags to control publishing
+
+   template <typename T> T* NewProbe(const char * name, const char * pattr=NULL, int flags=0);
+   template <typename T> T* GetProbe(const char * name);
+   int RemoveProbe (const char * name); // remove from pool, will delete if owned by pool
+
+   double  SetSample(const char * probe_name, double sample);
+   int     SetSample(const char * probe_name, int sample);
+   int64_t SetSample(const char * probe_name, int64_t sample);
+
+   void Clear();
+   void ClearRecent();
+   int  Advance(int cAdvance);
+   void Publish(ClassAd & ad) const;
+   void Unpublish(ClassAd & ad) const;
+
+private:
+   struct pubitem {
+      int    units;    // copied from the class->unit, identifies the class and type of probe
+      int    flags;    // passed to Publish
+      void * pitem;    // pointer to stats_entry_base derived class instance class/struct
+      const char * pattr; // if non-null passed to Publish, if null name is passed.
+      FN_STATS_ENTRY_PUBLISH Publish;
+   };
+   struct poolitem {
+      int units;
+      int fOwnedByPool; // true if created and owned by this, otherise owned by some other code.
+      FN_STATS_ENTRY_ADVANCE Advance;
+      FN_STATS_ENTRY_CLEAR   Clear;
+   };
+   // table of values to publish, possibly more than one for each probe
+   HashTable<MyString,pubitem> pub;
+
+   // table of unique probes counters, used to Advance and Clear the items.
+   HashTable<void*,poolitem> pool;
+};
+
+
 
 #endif /* _GENERIC_STATS_H */

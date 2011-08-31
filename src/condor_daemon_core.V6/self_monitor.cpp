@@ -135,58 +135,6 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
 // they are published as. 
 //
 //
-void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int> & me)
-{
-   MyString str;
-   str.sprintf("%d %d {h:%d c:%d m:%d a:%d}", 
-                 me.value, me.recent, me.buf.ixHead, me.buf.cItems, me.buf.cMax, me.buf.cAlloc);
-   if (me.buf.pbuf) {
-      for (int ix = 0; ix < me.buf.cAlloc; ++ix)
-         str.sprintf_cat(!ix ? "[%d" : (ix == me.buf.cMax ? "|%d" : ",%d"), me.buf.pbuf[ix]);
-      str.sprintf_cat("]");
-      }
-   ad.Assign(pattr, str);
-}
-
-void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<double> & me)
-{
-   MyString str;
-   str.sprintf("%.3f %.3f {h:%d c:%d m:%d a:%d}", 
-                 me.value, me.recent, me.buf.ixHead, me.buf.cItems, me.buf.cMax, me.buf.cAlloc);
-   if (me.buf.pbuf) {
-      for (int ix = 0; ix < me.buf.cAlloc; ++ix)
-         str.sprintf_cat(!ix ? "[%.3f" : (ix == me.buf.cMax ? "|%.3f" : ",%.3f"), me.buf.pbuf[ix]);
-      str.sprintf_cat("]");
-      }
-   ad.Assign(pattr, str);
-}
-
-/* long conflicts with int64_t on some platforms.
-void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<long> & me)
-{
-   MyString str;
-   str.sprintf("%d %d {h:%d c:%d m:%d a:%d}", 
-                 (int)me.value, (int)me.recent, (int)me.buf.ixHead, (int)me.buf.cItems, (int)me.buf.cMax, (int)me.buf.cAlloc);
-   if (me.buf.pbuf) {
-      for (int ix = 0; ix < me.buf.cAlloc; ++ix)
-         str.sprintf_cat(!ix ? "[%d" : (ix == me.buf.cMax ? "|%d" : ",%d"), (int)me.buf.pbuf[ix]);
-      str.sprintf_cat("]");
-      }
-   ad.Assign(pattr, str);
-}
-*/
-void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int64_t> & me)
-{
-   MyString str;
-   str.sprintf("%d %d {h:%d c:%d m:%d a:%d}", 
-                 (int)me.value, (int)me.recent, (int)me.buf.ixHead, (int)me.buf.cItems, (int)me.buf.cMax, (int)me.buf.cAlloc);
-   if (me.buf.pbuf) {
-      for (int ix = 0; ix < me.buf.cAlloc; ++ix)
-         str.sprintf_cat(!ix ? "[%d" : (ix == me.buf.cMax ? "|%d" : ",%d"), (int)me.buf.pbuf[ix]);
-      str.sprintf_cat("]");
-      }
-   ad.Assign(pattr, str);
-}
 
 #define DC_STATS_PUB(name, as)        GENERIC_STATS_PUB(DaemonCore::Stats, "DC", name, as)
 #define DC_STATS_PUB_RECENT(name, as) GENERIC_STATS_PUB_RECENT(DaemonCore::Stats, "DC", name, as)
@@ -229,8 +177,8 @@ const GenericStatsPubItem DCStatsPub[] = {
    DC_STATS_PUB_RECENT(DebugOuts,     AS_COUNT),
 
    DC_STATS_PUB_TYPE(RecentStatsTickTime, time_t,  AS_ABSTIME),
-   DC_STATS_PUB_RECENT_DEBUG(DebugOuts, AS_COUNT),
-   DC_STATS_PUB_RECENT_DEBUG(Signals, AS_COUNT),
+   //DC_STATS_PUB_RECENT_DEBUG(DebugOuts, AS_COUNT),
+   //DC_STATS_PUB_RECENT_DEBUG(Signals, AS_COUNT),
    //DC_STATS_PUB_RECENT_DEBUG(SignalRuntime, AS_RELTIME),
 
    #ifdef WIN32
@@ -251,36 +199,73 @@ void DaemonCore::Stats::SetWindowSize(int window)
                               window, dc_stats_window_quantum);
 }
 
+#define GENERIC_STATS_INSERT(fn,pre,name,as)        this->fn(#name, &name, pre #name, name.PubValue)
+#define GENERIC_STATS_INSERT_ALL(fn,pre,name,as)    this->fn(#name, &name, pre #name, name.AppendToAttr | 0x0F)
+#define GENERIC_STATS_INSERT_PEAK(fn,pre,name,as)   this->fn(#name, &name, pre #name "Peak", name.PubLargest)
+#define GENERIC_STATS_INSERT_AVG(fn,pre,name,as)    this->fn(#name, &name, pre #name "Avg", name.PubAvg)
+#define GENERIC_STATS_INSERT_RECENT(fn,pre,name,as) this->fn(#name, &name, "Recent" pre #name, name.PubRecent)
+#define GENERIC_STATS_INSERT_DEBUG(fn,pre,name,as)  this->fn(#name, &name, "Recent" pre #name, name.PubDebug)
+
+#define DC_STATS_INSERT(name,as)         GENERIC_STATS_INSERT(Named.AddProbe, "DC", name,as) 
+#define DC_STATS_INSERT_PEAK(name,as)    GENERIC_STATS_INSERT_PEAK(Named.AddProbe, "DC", name,as) 
+#define DC_STATS_INSERT_AVG(name,as)     GENERIC_STATS_INSERT_AVG(Named.AddProbe, "DC", name,as) 
+#define DC_STATS_INSERT_RECENT(name,as)  GENERIC_STATS_INSERT_RECENT(Named.AddProbe, "DC", name,as) 
+#define DC_STATS_INSERT_DEBUG(name,as)   GENERIC_STATS_INSERT_RECENT_DEBUG(Named.AddProbe, "DC", name,as) 
+
 // this is for first time initialization before calling SetWindowSize,
 // use the Clear() method to reset stats after the window size has been set.
 //
 void DaemonCore::Stats::Init() 
 { 
-   // clear all data members between InitTime and RecentWindowMax.  
-   // note that this will leak Recent data if you do this after calling SetWindowSize.
    Clear();
    this->RecentWindowMax = dc_stats_window_quantum; 
+
+   // insert static items into the named item pool so we can use the pool 
+   // to Advance and Clear. 
+   DC_STATS_INSERT(SelectWaittime,  AS_RELTIME);
+   DC_STATS_INSERT(SignalRuntime,   AS_RELTIME);
+   DC_STATS_INSERT(TimerRuntime,    AS_RELTIME);
+   DC_STATS_INSERT(SocketRuntime,   AS_RELTIME);
+   DC_STATS_INSERT(PipeRuntime,     AS_RELTIME);
+   DC_STATS_INSERT(Signals,       AS_COUNT);
+   DC_STATS_INSERT(TimersFired,   AS_COUNT);
+   DC_STATS_INSERT(SockMessages,  AS_COUNT);
+   DC_STATS_INSERT(PipeMessages,  AS_COUNT);
+   //DC_STATS_INSERT(SockBytes,     AS_COUNT);
+   //DC_STATS_INSERT(PipeBytes,     AS_COUNT);
+   DC_STATS_INSERT(DebugOuts,     AS_COUNT);
 }
 
 void DaemonCore::Stats::Clear()
 {
-   generic_stats_Clear(DCStatsPub, COUNTOF(DCStatsPub), (char*)this);
+   //generic_stats_Clear(DCStatsPub, COUNTOF(DCStatsPub), (char*)this);
    this->InitTime = time(NULL);
    this->StatsLifetime = 0;
    this->StatsLastUpdateTime = 0;
    this->RecentStatsTickTime = 0;
    this->RecentStatsLifetime = 0;
+   Named.Clear();
 }
 
 void DaemonCore::Stats::Publish(ClassAd & ad) const
 {
-   generic_stats_PublishToClassAd(ad, DCStatsPub, COUNTOF(DCStatsPub), (const char *)this);  
+   //generic_stats_PublishToClassAd(ad, DCStatsPub, COUNTOF(DCStatsPub), (const char *)this);  
+   ad.Assign("DCStatsLifetime", (int)StatsLifetime);
+   ad.Assign("DCStatsLastUpdateTime", (int)StatsLastUpdateTime);
+   ad.Assign("DCRecentStatsLifetime", (int)RecentStatsLifetime);
+   ad.Assign("DCRecentStatsTickTime", (int)RecentStatsTickTime);
+   ad.Assign("DCRecentWindowMax", (int)RecentWindowMax);
    Named.Publish(ad);
 }
 
 void DaemonCore::Stats::Unpublish(ClassAd & ad) const
 {
-   generic_stats_DeleteInClassAd(ad, DCStatsPub, COUNTOF(DCStatsPub), (const char *)this);  
+   //generic_stats_DeleteInClassAd(ad, DCStatsPub, COUNTOF(DCStatsPub), (const char *)this);  
+   ad.Delete("DCStatsLifetime");
+   ad.Delete("DCStatsLastUpdateTime");
+   ad.Delete("DCRecentStatsLifetime");
+   ad.Delete("DCRecentStatsTickTime");
+   ad.Delete("DCRecentWindowMax");
    Named.Unpublish(ad);
 }
 
@@ -305,7 +290,7 @@ const GenericStatsPubItem DCStatsTick[] = {
    };
 
    int cAdvance = generic_stats_Tick(
-      DCStatsTick, COUNTOF(DCStatsTick), 
+      NULL, 0, //DCStatsTick, COUNTOF(DCStatsTick), 
       (char*)this,
       this->RecentWindowMax,   // RecentMaxTime
       dc_stats_window_quantum, // RecentQuantum
@@ -363,166 +348,17 @@ const GenericStatsPubItem DCStatsTick[] = {
 #endif
 }
 
-class stats_recent_counter_timer {
-private:
-   stats_entry_recent<int> count;
-   stats_entry_recent<double> runtime;
-
-public:
-   stats_recent_counter_timer(int cRecentMax=0) 
-      : count(cRecentMax)
-      , runtime(cRecentMax) 
-      {
-      };
-
-   double Add(double sec)     { count += 1; runtime += sec; return runtime.value; }
-   time_t Add(time_t time)    { count += 1; runtime += double(time); }
-   void Clear()              { count.Clear(); runtime.Clear();}
-   void ClearRecent()        { count.ClearRecent(); runtime.ClearRecent(); }
-   void AdvanceBy(int cSlots) { count.AdvanceBy(cSlots); runtime.AdvanceBy(cSlots); }
-   void SetRecentMax(int cMax)    { count.SetRecentMax(cMax); runtime.SetRecentMax(cMax); }
-   double operator+=(double val)    { return Add(val); }
-
-   static const int unit = IS_RCT | stats_entry_type<int>::id;
-   static void PublishValue(const char * me, ClassAd & ad, const char * pattr);
-};
-
-void stats_recent_counter_timer::PublishValue(const char * me, ClassAd & ad, const char * pattr)
-{
-   const stats_recent_counter_timer * pthis = (const stats_recent_counter_timer *)me;
-
-   MyString str(pattr);
-   MyString strR("Recent");
-   strR += pattr;
-
-   ClassAdAssign(ad, str.Value(), pthis->count.value);
-   ClassAdAssign(ad, strR.Value(), pthis->count.recent);
-
-   str += "Runtime";
-   strR += "Runtime";
-   ClassAdAssign(ad, str.Value(), pthis->runtime.value);
-   ClassAdAssign(ad, strR.Value(), pthis->runtime.recent);
-
-   //str.sprintf("Debug%s", pattr);
-   //StatsPublishDebug(str.Value(), ad, pthis->count);
-   //str += "Runtime";
-   //StatsPublishDebug(str.Value(), ad, pthis->runtime);
-}
-
-
-unsigned int hashFuncVoidPtr( void* const & pv )
-{
-   unsigned int ui = 0;
-   for (int ix = 0; ix < (int)(sizeof(void*) / sizeof(int)); ++ix)
-      {
-      ui += ((int*)&pv)[ix];
-      }
-   return ui;
-}
-
-int stats_pool::Remove (const char * name)
-{
-   pubitem item = { 0, NULL, NULL };
-   if (pub.lookup(name, item) < 0)
-      return 0;
-   int ret =  pub.remove(name);
-   //generic_stats_itemFree(item.units, item.pitem);
-   return ret;
-}
-
-template <typename T> 
-T stats_pool::Add (
-   const char * name, 
-   int as, 
-   T probe, 
-   int unit,
-   const char * pattr/*=NULL*/,
-   void (*fnpub)(const char * me, ClassAd & ad, const char * pattr)/*=NULL*/) 
-{
-   pubitem item = { 
-      as | unit, 
-      (void *)probe, 
-      pattr ? strdup(pattr) : NULL, 
-      fnpub ? fnpub : probe->PublishValue 
-      };
-   pub.insert(name, item);
-   pool.insert((void*)probe, unit);
-   return probe;
-}
-
-template <typename T> 
-T stats_pool::Get(const char * name) 
-{
-   pubitem item = { 0, NULL, NULL, NULL };
-   if (pub.lookup(name, item) >= 0) {
-      return (T)item.pitem;
-      }
-   return 0;
-}
-
-
-int stats_pool::Advance(int cAdvance)
-{
-   if (cAdvance <= 0)
-      return cAdvance;
-
-   void* pitem;
-   int   units;
-   pool.startIterations();
-   while (pool.iterate(pitem,units))
-      {
-      if (units == stats_recent_counter_timer::unit) 
-         {
-         stats_recent_counter_timer * probe = (stats_recent_counter_timer *)pitem;
-         probe->AdvanceBy(cAdvance);
-         } 
-      else 
-         generic_stats_itemAdvanceRecent(units,pitem,cAdvance);
-      }
-   return cAdvance;
-}
-
-void stats_pool::Publish(ClassAd & ad) const
-{
-   pubitem item;
-   MyString name;
-
-   // boo! HashTable doesn't support const, so I have to remove const from this
-   // to make the compiler happy.
-   stats_pool * pthis = const_cast<stats_pool*>(this);
-   pthis->pub.startIterations();
-   while (pthis->pub.iterate(name,item)) 
-      {
-      if (item.pub)
-         item.pub((const char *)item.pitem, ad, item.pattr ? item.pattr : name.Value());
-      }
-}
-
-void stats_pool::Unpublish(ClassAd & ad) const
-{
-   pubitem item;
-   MyString name;
-
-   // boo! HashTable doesn't support const, so I have to remove const from this
-   // to make the compiler happy.
-   stats_pool * pthis = const_cast<stats_pool*>(this);
-   pthis->pub.startIterations();
-   while (pthis->pub.iterate(name,item)) 
-      {
-      ad.Delete(item.pattr ? item.pattr : name.Value());
-      }
-}
 
 void DaemonCore::Stats::AddToNamed(const char * name, int val)
 {
-   stats_entry_recent<int>* pstat = Named.Get<stats_entry_recent<int>*>(name);
+   stats_entry_recent<int>* pstat = Named.GetProbe<stats_entry_recent<int> >(name);
    if (pstat)
       pstat->Add(val);
 }
 
 void DaemonCore::Stats::AddToNamed(const char * name, int64_t val)
 {
-   stats_entry_recent<int64_t>* pstat = Named.Get<stats_entry_recent<int64_t>*>(name);
+   stats_entry_recent<int64_t>* pstat = Named.GetProbe<stats_entry_recent<int64_t> >(name);
    if (pstat)
       pstat->Add(val);
 }
@@ -530,7 +366,7 @@ void DaemonCore::Stats::AddToNamed(const char * name, int64_t val)
 double DaemonCore::Stats::AddRuntime(const char * name, double before)
 {
    double now = UtcTime::getTimeDouble();
-   stats_recent_counter_timer * probe = Named.Get<stats_recent_counter_timer*>(name);
+   stats_recent_counter_timer * probe = Named.GetProbe<stats_recent_counter_timer>(name);
    if (probe)
       probe->Add(now - before);
    return now;
@@ -561,41 +397,56 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
       {
       case AS_COUNT | IS_RECENT:
          {
+        #if 1
+         ret = Named.NewProbe< stats_entry_recent<int> >(name,  pattr, 1 | 2 | 4);
+        #else
          stats_entry_recent<int>* probe = new stats_entry_recent<int>(cRecent);
          Named.Add(name, as, probe, probe->unit, pattr);
          Named.Add(pattrRecent, as, probe, probe->unit, pattrRecent, &probe->PublishRecent);
          //attr += "Debug";
          //Named.Add(attr.Value(), as, probe, probe->unit, attr.Value(), &probe->PublishDebug);
          ret = probe;
+        #endif
          }
          break;
 
       case AS_ABSTIME | IS_RECENT:
       case AS_RELTIME | IS_RECENT:
          {
+        #if 1
+         ret = Named.NewProbe< stats_entry_recent<time_t> >(name,  pattr, 1 | 2 | 4);
+        #else
          stats_entry_recent<time_t>* probe = new stats_entry_recent<time_t>(cRecent);
          Named.Add(name, as, probe, probe->unit, pattr);
          Named.Add(pattrRecent, as, probe, probe->unit, pattrRecent, &probe->PublishRecent);
          //attr += "Debug";
          //Named.Add(attr.Value(), as, probe,  probe->unit, attr.Value(), &probe->PublishDebug);
          ret = probe;
+        #endif
          }
          break;
 
       case AS_COUNT | IS_RCT:
       case AS_RELTIME | IS_RCT:
          {
+        #if 1
+         ret = Named.NewProbe<stats_recent_counter_timer>(name, pattr);
+        #else
          stats_recent_counter_timer * probe = new stats_recent_counter_timer(cRecent);
-         Named.Add(name, as, probe, probe->unit, pattr, &probe->PublishValue);
+         Named.AddProbe(name, as, probe, 
+                        (FN_STATS_ENTRY_ADVANCE)&stats_recent_counter_timer::AdvanceBy, 
+                        pattr, 
+                        (FN_STATS_ENTRY_PUBLISH)&stats_recent_counter_timer::Publish);
+        #endif
          }
          break;
 
       case -1:
          {
          // force references to the unit members, g++ is giving a linker error if I don't.
-         stats_entry_recent<int>* foo = Named.Get<stats_entry_recent<int>*>(name);
-         stats_entry_recent<time_t>* bar = Named.Get<stats_entry_recent<time_t>*>(name);
-         ret = (void*)(foo->unit + bar->unit);
+         //stats_entry_recent<int>* foo = Named.GetProbe<stats_entry_recent<int> >(name);
+         //stats_entry_recent<time_t>* bar = Named.GetProbe<stats_entry_recent<time_t> >(name);
+         //ret = (void*)(foo->unit + bar->unit);
          }
          break;
 

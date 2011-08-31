@@ -39,6 +39,48 @@ void stats_entry_recent<time_t>::PublishRecent(const char * me, ClassAd & ad, co
    ad.Assign(pattr, (int)pthis->recent);
 }
 
+template <>
+void stats_entry_count<time_t>::PublishValue(const char * me, ClassAd & ad, const char * pattr) {
+   const stats_entry_count<time_t> * pthis = (const stats_entry_count<time_t> *)me;
+   ad.Assign(pattr, (int)pthis->value);
+}
+
+template <class T>
+void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
+   MyString str;
+   str += this->value;
+   str += " ";
+   str += this->recent;
+   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+                   this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
+   if (this->buf.pbuf) {
+      for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
+         str += !ix ? "[" : (ix == this->buf.cMax ? "|" : ",");
+         str += this->buf.pbuf[ix];
+         }
+      str += "]";
+      }
+   ad.Assign(pattr, str);
+}
+
+template <>
+void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
+   MyString str;
+   str += (long)this->value;
+   str += " ";
+   str += (long)this->recent;
+   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+                   this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
+   if (this->buf.pbuf) {
+      for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
+         str += !ix ? "[" : (ix == this->buf.cMax ? "|" : ",");
+         str += (long)this->buf.pbuf[ix];
+         }
+      str += "]";
+      }
+   ad.Assign(pattr, str);
+}
+
 // force the static members to be instantiated in the library.
 //
 void generic_stats_force_refs()
@@ -47,6 +89,34 @@ void generic_stats_force_refs()
    stats_entry_count<time_t>::PublishValue("",*pad,"");
    stats_entry_abs<time_t>::PublishLargest("",*pad,"");
    stats_entry_recent<time_t>::PublishRecent("",*pad,"");
+
+   stats_entry_recent<int>* pi = NULL;
+   stats_entry_recent<long>* pl = NULL;
+   stats_entry_recent<int64_t>* pt = NULL;
+   stats_entry_recent<double>* pd = NULL;
+   stats_recent_counter_timer* pc = NULL;
+
+   stats_pool dummy;
+   dummy.GetProbe<stats_entry_recent<int> >("");
+   dummy.GetProbe<stats_entry_recent<int64_t> >("");
+   dummy.GetProbe<stats_entry_recent<long> >("");
+   dummy.GetProbe<stats_entry_recent<double> >("");
+   dummy.GetProbe<stats_recent_counter_timer>("");
+
+   dummy.NewProbe<stats_entry_recent<int> >("");
+   dummy.NewProbe<stats_entry_recent<int64_t> >("");
+   dummy.NewProbe<stats_entry_recent<long> >("");
+   dummy.NewProbe<stats_entry_recent<double> >("");
+   dummy.NewProbe<stats_recent_counter_timer>("");
+   //dummy.Add<stats_entry_recent<int>*>("",0,pi,0,"",NULL);
+   //dummy.Add<stats_entry_recent<long>*>("",0,pl,0,"",NULL);
+   //dummy.Add<stats_entry_recent<int64_t>*>("",0,pt,0,"",NULL);
+   //dummy.Add<stats_recent_counter_timer*>("",0,pc,0,"",NULL);
+   dummy.AddProbe("",pi,NULL,0);
+   dummy.AddProbe("",pl,NULL,0);
+   dummy.AddProbe("",pt,NULL,0);
+   dummy.AddProbe("",pc,NULL,0);
+   dummy.AddProbe("",pd,NULL,0);
 };
 
 // advance the ring buffer and update the recent accumulator, this is called
@@ -527,7 +597,7 @@ void generic_stats_SetRecentMax(
    int    window, 
    int    quantum)
 {
-   int cRecent = quantum ? window / quantum : window;
+   //int cRecent = quantum ? window / quantum : window;
 
    for (int ii = 0; ii < cTable; ++ii)
       {
@@ -838,6 +908,251 @@ int generic_stats_Tick(
 
    Lifetime = now - InitTime;
    return cTicks;
+}
+
+//----------------------------------------------------------------------------------------------
+//
+void stats_recent_counter_timer::Publish(ClassAd & ad, const char * pattr, int flags) const
+{
+
+   MyString str(pattr);
+   MyString strR("Recent");
+   strR += pattr;
+
+   ClassAdAssign(ad, str.Value(), this->count.value);
+   ClassAdAssign(ad, strR.Value(), this->count.recent);
+
+   str += "Runtime";
+   strR += "Runtime";
+   ClassAdAssign(ad, str.Value(), this->runtime.value);
+   ClassAdAssign(ad, strR.Value(), this->runtime.recent);
+
+   //str.sprintf("Debug%s", pattr);
+   //StatsPublishDebug(str.Value(), ad, this->count);
+   //str += "Runtime";
+   //StatsPublishDebug(str.Value(), ad, this->runtime);
+}
+
+void stats_recent_counter_timer::PublishValue(const char * me, ClassAd & ad, const char * pattr)
+{
+   const stats_recent_counter_timer * pthis = (const stats_recent_counter_timer *)me;
+   pthis->Publish(ad, pattr, 0);
+}
+
+
+//----------------------------------------------------------------------------------------------
+// methods for the stats_pool class.  stats_pool is a collection of statistics that 
+// share a recent time quantum and are intended to be published/Advanced/Cleared
+// together.
+//
+int stats_pool::RemoveProbe (const char * name)
+{
+   pubitem item = { 0, NULL, NULL };
+   if (pub.lookup(name, item) < 0)
+      return 0;
+   int ret =  pub.remove(name);
+   //generic_stats_itemFree(item.units, item.pitem);
+   return ret;
+}
+
+#if 0
+template <typename T> 
+T stats_pool::Add (
+   const char * name, 
+   int as, 
+   T probe, 
+   int unit,
+   const char * pattr/*=NULL*/,
+   void (*fnpub)(const char * me, ClassAd & ad, const char * pattr)/*=NULL*/) 
+{
+   pubitem item = { 
+      as | unit, 
+      (void *)probe, 
+      pattr ? strdup(pattr) : NULL, 
+      fnpub ? fnpub : probe->PublishValue,
+      NULL,
+      };
+   pub.insert(name, item);
+   pool.insert((void*)probe, unit);
+   return probe;
+}
+
+template <typename T> 
+T stats_pool::AddProbe (
+   const char * name, 
+   int as, 
+   T probe, 
+   FN_STATS_ENTRY_ADVANCE fnadv/*=NULL*/,
+   const char * pattr/*=NULL*/,
+   FN_STATS_ENTRY_PUBLISH fnpub/*=NULL*/)
+{
+   int unit = probe->unit;
+   pubitem item = { 
+      as | unit, 
+      (void *)probe, 
+      pattr ? strdup(pattr) : NULL, 
+      NULL,
+      fnpub,
+      };
+   pub.insert(name, item);
+   poolitem pi = { unit, fnadv };
+   pool.insert((void*)probe, pi.units);
+   return probe;
+}
+#endif
+
+template <typename T> 
+T* stats_pool::AddProbe (
+   const char * name, 
+   T* probe, 
+   const char * pattr/*=NULL*/,
+   int flags /*=0*/)
+{
+   pubitem item = { 
+      T::unit, flags,
+      (void *)probe, 
+      pattr,  // this should be a const string
+      (FN_STATS_ENTRY_PUBLISH)&T::Publish,
+      };
+   pub.insert(name, item);
+   poolitem pi = { 
+      T::unit, 
+      false,
+      (FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy,
+      (FN_STATS_ENTRY_CLEAR)&T::Clear,
+      };
+   pool.insert((void*)probe, pi);
+   return probe;
+}
+
+template <typename T> 
+T* stats_pool::NewProbe(const char * name, const char * pattr/*=NULL*/, int flags/*=0*/)
+{
+   T* probe = new T();
+   pubitem item = { 
+      T::unit, flags,
+      (void *)probe, 
+      pattr ? strdup(pattr) : NULL, 
+      (FN_STATS_ENTRY_PUBLISH)&T::Publish,
+      };
+   pub.insert(name, item);
+   poolitem pi = { 
+      T::unit, 
+      true,
+      (FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
+      (FN_STATS_ENTRY_CLEAR)&T::Clear,
+      };
+   pool.insert((void*)probe, pi);
+   return 0;
+}
+
+template <typename T> 
+T* stats_pool::GetProbe(const char * name) 
+{
+   pubitem item = { 0, 0, NULL, NULL, NULL};
+   if (pub.lookup(name, item) >= 0) {
+      return (T*)item.pitem;
+      }
+   return 0;
+}
+
+double stats_pool::SetSample(const char * probe_name, double sample)
+{
+   return sample;
+}
+
+int stats_pool::SetSample(const char * probe_name, int sample)
+{
+   return sample;
+}
+
+int64_t stats_pool::SetSample(const char * probe_name, int64_t sample)
+{
+   return sample;
+}
+
+int stats_pool::Advance(int cAdvance)
+{
+   if (cAdvance <= 0)
+      return cAdvance;
+
+   void* pitem;
+   poolitem item;
+   pool.startIterations();
+   while (pool.iterate(pitem,item))
+      {
+#if 1
+      if (pitem && item.Advance) {
+         stats_entry_base * probe = (stats_entry_base *)pitem;
+         (probe->*(item.Advance))(cAdvance);
+         }
+#else
+      if (units == stats_recent_counter_timer::unit) 
+         {
+         stats_recent_counter_timer * probe = (stats_recent_counter_timer *)pitem;
+         probe->AdvanceBy(cAdvance);
+         } 
+      else 
+         generic_stats_itemAdvanceRecent(units,pitem,cAdvance);
+#endif
+      }
+   return cAdvance;
+}
+
+void stats_pool::Clear()
+{
+   void* pitem;
+   poolitem item;
+   pool.startIterations();
+   while (pool.iterate(pitem,item))
+      {
+      if (pitem && item.Clear) {
+         stats_entry_base * probe = (stats_entry_base *)pitem;
+         (probe->*(item.Clear))();
+         }
+      }
+}
+
+void stats_pool::ClearRecent()
+{
+}
+
+void stats_pool::Publish(ClassAd & ad) const
+{
+   pubitem item;
+   MyString name;
+
+   // boo! HashTable doesn't support const, so I have to remove const from this
+   // to make the compiler happy.
+   stats_pool * pthis = const_cast<stats_pool*>(this);
+   pthis->pub.startIterations();
+   while (pthis->pub.iterate(name,item)) 
+      {
+#if 1
+      if (item.Publish) {
+         stats_entry_base * probe = (stats_entry_base *)item.pitem;
+         (probe->*(item.Publish))(ad, item.pattr ? item.pattr : name.Value(), item.flags);
+         }
+#else
+      if (item.pub)
+         item.pub((const char *)item.pitem, ad, item.pattr ? item.pattr : name.Value());
+#endif
+      }
+}
+
+void stats_pool::Unpublish(ClassAd & ad) const
+{
+   pubitem item;
+   MyString name;
+
+   // boo! HashTable doesn't support const, so I have to remove const from this
+   // to make the compiler happy.
+   stats_pool * pthis = const_cast<stats_pool*>(this);
+   pthis->pub.startIterations();
+   while (pthis->pub.iterate(name,item)) 
+      {
+      ad.Delete(item.pattr ? item.pattr : name.Value());
+      }
 }
 
 //
