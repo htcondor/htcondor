@@ -96,6 +96,7 @@ typedef struct _generic_stats_entry {
    } GenericStatsEntry;
 */
 
+/*
 typedef void (*fn_generic_stats_publish)(const char * me, ClassAd & ad, const char * pattr);
 typedef struct _generic_stats_pubitem {
    char * pattr;  // name to be used when publishing the value
@@ -103,6 +104,7 @@ typedef struct _generic_stats_pubitem {
    int    off;    // offset of the stats_entry_xxx field within the containing class/struct
    fn_generic_stats_publish pub; // static method for publishing
    } GenericStatsPubItem;
+*/
 
 // this is used to identify the fundamental type of a statistics entry so
 // that we can use generic data driven code to publish and clear collections
@@ -370,16 +372,24 @@ inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2
    return ClassAdAssign2(ad, pattr1, pattr2, (int)value);
 }
 
-//template <class T> class stats_entry_recent;
-//void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int> & me);
-//void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<int64_t> & me);
-//void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<double> & me);
-//void StatsPublishDebug(const char * pattr, ClassAd & ad, const stats_entry_recent<long> & me);
+// base class for all statistics probes
+//
+class stats_entry_base;
+typedef void (stats_entry_base::*FN_STATS_ENTRY_PUBLISH)(ClassAd & ad, const char * pattr, int flags) const;
+typedef void (stats_entry_base::*FN_STATS_ENTRY_ADVANCE)(int cAdvance);
+typedef void (stats_entry_base::*FN_STATS_ENTRY_SETRECENTMAX)(int cRecent);
+typedef void (stats_entry_base::*FN_STATS_ENTRY_CLEAR)(void);
+typedef void (*FN_STATS_ENTRY_DELETE)(void* probe);
 
-// base class for all statistics entries
 class stats_entry_base {
-   static const int unit = 0;      
+public:
+   static const int unit = 0;
+   //void AdvanceBy(int cSlots) {};
+   //void SetRecentMax(int cRecentMax) {};
+   static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return NULL; };
+   static FN_STATS_ENTRY_SETRECENTMAX GetFnSetRecentMax() { return NULL; };
 };
+
 
 // stats_entry_count holds a single value, that can only count up,
 // it is the simplist of all possible statistics values because
@@ -398,11 +408,6 @@ public:
       ClassAdAssign(ad, pattr, pthis->value);
       }
 };
-
-// specialize for time_t because ClassAd doesn't currently handle 64 bit ints.
-//template <> void stats_entry_count<time_t>::Publish(ClassAd & ad, const char * pattr) const;
-//template <> void stats_entry_count<time_t>::PublishValue(const char * me, ClassAd & ad, const char * pattr);
-
 
 // use stats_entry_abs for entries that have an absolute value such as Number of jobs currently running.
 // this entry keeps track of the largest value as the value changes.
@@ -454,9 +459,6 @@ public:
       ClassAdAssign(ad, pattr, pthis->largest);
       }
 };
-
-// specialize for time_t because ClassAd doesn't handle 64 bit ints
-//template <> void stats_entry_abs<time_t>::PublishLargest(const char * me, ClassAd & ad, const char * pattr);
 
 // use stats_entry_recent for values that are constantly increasing, such 
 // as number of jobs run.  this class keeps track of a the recent total
@@ -562,11 +564,10 @@ public:
       const stats_entry_recent<T> * pthis = (const stats_entry_recent<T> *)me;
       ClassAdAssign(ad, pattr, pthis->recent);
       }
+   static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return (FN_STATS_ENTRY_ADVANCE)&stats_entry_recent<T>::AdvanceBy; };
+   static FN_STATS_ENTRY_SETRECENTMAX GetFnSetRecentMax() { return (FN_STATS_ENTRY_SETRECENTMAX)&stats_entry_recent<T>::SetRecentMax; };
    static void Delete(stats_entry_recent<T> * probe) { delete probe; }
 };
-
-// specialize for time_t because ClassAd doesn't handle 64 bit ints
-//template <> void stats_entry_recent<time_t>::PublishRecent(const char * me, ClassAd & ad, const char * pattr);
 
 // use timed_queue to keep track of recent windowed values.
 // obsolete: use stats_entry_tq for windowed values that need more time accuracy than
@@ -744,6 +745,10 @@ public:
    static void Delete(stats_entry_probe<T> * probe) { delete probe; }
 };
 
+// A statistics probe designed to keep track of accumulated running time
+// of a data set.  keeps a count of times that time was added and
+// a running total of time
+//
 class stats_recent_counter_timer : public stats_entry_base {
 private:
    stats_entry_recent<int> count;
@@ -779,39 +784,8 @@ public:
  * and a pointer to the base address of the statistics data. 
  */
 
-// publish items into a old-style ClassAd
-/*
-void generic_stats_PublishToClassAd(ClassAd & ad, const GenericStatsEntry * pTable, int cTable, const char * pdata);
-void generic_stats_DeleteInClassAd(ClassAd & ad, const GenericStatsEntry * pTable, int cTable, const char * pdata);
-
-// reset all counters to 0, including Recent buffers.
-void generic_stats_ClearAll(const GenericStatsEntry * pTable, int cTable, char * pdata);
-// clear the recent buffers
-void generic_stats_ClearRecent(const GenericStatsEntry * pTable, int cTable, char * pdata);
-
-// set the window size, and accumulate IS_TIMED_QUEUE entries from generic stats.
-void generic_stats_SetTQMax(const GenericStatsEntry * pTable, int cTable, char * pdata, int window);
-void generic_stats_AccumulateTQ(const GenericStatsEntry * pTable, int cTable, char * pdata, time_t tmin);
-
-// set the ring buffer size for IS_RINGBUF type generic stats. 
-void generic_stats_SetRBMax(const GenericStatsEntry * pTable, int cTable, char * pdata, int cMax);
-
-// each time the time quantum has passed, we wan to Advance the recent buffers
-void generic_stats_AdvanceRecent(const GenericStatsEntry * pTable, int cTable, char * pdata, int cAdvance);
-*/
-
-// functions for working with a statistics item when you have the type
-// encoded in 'units', but don't have a typed pointer.
-//
-// destroy and free a statistics item 
-// (calls delete (type*)pitem) where type is determined from the units code
-void generic_stats_itemFree(int units, void * pitem);
-void generic_stats_itemSetRecentMax(int units, void * pitem, int window, int quantum);
-void generic_stats_itemClear(int units, void * pitem);
-void generic_stats_itemClearRecent(int units, void * pitem);
-void generic_stats_itemAdvanceRecent(int units, void * pitem, int cAdvance);
-
 // set the ring buffer size for IS_RECENT type stats. and time window size for IS_TIMED_QUEUE stats
+/*
 void generic_stats_SetRecentMax(
    const GenericStatsPubItem * pTable, 
    int    cTable, 
@@ -846,6 +820,16 @@ int generic_stats_Tick(
    time_t & RecentTickTime,  // in,out
    time_t & Lifetime,        // in,out
    time_t & RecentLifetime); // in,out
+*/
+
+int generic_stats_Tick(
+   int    RecentMaxTime,
+   int    RecentQuantum,
+   time_t InitTime,
+   time_t & LastUpdateTime,  // in,out
+   time_t & RecentTickTime,  // in,out
+   time_t & Lifetime,        // in,out
+   time_t & RecentLifetime); // in,out
 
 #ifndef FIELDOFF
  #ifdef WIN32
@@ -868,25 +852,16 @@ int generic_stats_Tick(
 #define GENERIC_STATS_PUB_RECENT(st,pre,name,as) { "Recent" pre #name, as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishRecent }
 #define GENERIC_STATS_PUB_RECENT_DEBUG(st,pre,name,as) { "Recent" pre #name "Debug", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishDebug }
 
-// use these to help initialize arrays of GenericStatsEntry's
+// the stats_pool class is used to hold a collection of statistics probes of various types
+// probes in the pool can be Cleared, Advanced and Published as a group. 
 //
-/*
-#define GENERIC_STATS_ENTRY(st,pre,name,as) { pre #name, as, FIELDOFF(st, name), FIELDSIZ(st, name), 0}
-#define GENERIC_STATS_ENTRY_TQ(st,pre,name,as) { "Recent" pre #name, as | IS_TIMED_QUEUE, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.tq) }
-#define GENERIC_STATS_ENTRY_RECENT(st,pre,name,as) { "Recent" pre #name, as | IS_RINGBUF, FIELDOFF(st, name.recent), FIELDSIZ(st, name.recent), FIELDOFF(st, name.buf) }
-#define GENERIC_STATS_ENTRY_PEAK(st,pre,name,as) { pre #name "Peak" , as, FIELDOFF(st, name.largest), FIELDSIZ(st, name.largest), 0 }
-*/
-
-
-class stats_entry_base;
-typedef void (stats_entry_base::*FN_STATS_ENTRY_PUBLISH)(ClassAd & ad, const char * pattr, int flags) const;
-typedef void (stats_entry_base::*FN_STATS_ENTRY_ADVANCE)(int cAdvance);
-typedef void (stats_entry_base::*FN_STATS_ENTRY_SETRECENTMAX)(int cRecent);
-typedef void (stats_entry_base::*FN_STATS_ENTRY_CLEAR)(void);
-typedef void (*FN_STATS_ENTRY_DELETE)(void* probe);
-
-// TJ - move this to generic_stats.h/cpp
+// Probes may be created by the pool, in which case they will be deleted when the pool is 
+// destroyed.  Or they can be created externally and added to the pool, in which case the
+// creator is responsible for destroying them.  This allows probes to be defined as member
+// variables to a class, then added to the pool to get the benefit of pool Publish, Advance
+// and Clear methods.
 //
+
 class stats_pool {
 public:
    stats_pool(int size=30) 
@@ -902,23 +877,29 @@ public:
       const char * pattr=NULL, // publish attribute name
       int          flags=0)    // flags to control publishing
    {
-      T* probe = new T();
+      T* probe = GetProbe<T>(name);
+      if (probe)
+         return probe;
+
+      probe = new T();
       bool fOwnedByPool = true;
       InsertProbe(name, T::unit, (void*)probe, 
                   fOwnedByPool,
                   pattr ? strdup(pattr) : NULL, 
                   flags,
                   (FN_STATS_ENTRY_PUBLISH)&T::Publish,
-                  (FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
+                  T::GetFnAdvance(), //(FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
                   (FN_STATS_ENTRY_CLEAR)&T::Clear,
-                  (FN_STATS_ENTRY_SETRECENTMAX)&T::SetRecentMax,
+                  T::GetFnSetRecentMax(), //(FN_STATS_ENTRY_SETRECENTMAX)&T::SetRecentMax,
                   (FN_STATS_ENTRY_DELETE)&T::Delete);
       return probe;
    }
 
+   // lookup a probe by name
+   //
    template <typename T> T* GetProbe(const char * name)
    {
-      pubitem item = { 0, 0, NULL, NULL, NULL};
+      pubitem item;
       if (pub.lookup(name, item) >= 0)
          return (T*)item.pitem;
       return 0;
@@ -934,19 +915,25 @@ public:
       int          flags=0,    // flags to control publishing
       FN_STATS_ENTRY_PUBLISH fnpub=NULL) // publish method
    {
+      T* probeExist = GetProbe<T>(name);
+      if (probeExist)
+         return probeExist;
+
       bool fOwnedByPool = false;
       InsertProbe(name, T::unit, (void*)probe, 
                   fOwnedByPool,
                   pattr, 
                   flags,
                   fnpub ? fnpub : (FN_STATS_ENTRY_PUBLISH)&T::Publish,
-                  (FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
+                  T::GetFnAdvance(), //(FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
                   (FN_STATS_ENTRY_CLEAR)&T::Clear,
-                  (FN_STATS_ENTRY_SETRECENTMAX)&T::SetRecentMax,
+                  T::GetFnSetRecentMax(), //(FN_STATS_ENTRY_SETRECENTMAX)&T::SetRecentMax,
                   NULL);
       return probe;
    }
 
+   // add an additional publishing entry for a probe that is already in the pool
+   //
    template <typename T> T* AddPublish (
       const char * name,       // unique name for the probe
       T*           probe,      // the probe, usually a member of a class/struct
@@ -954,6 +941,10 @@ public:
       int          flags=0,    // flags to control publishing
       FN_STATS_ENTRY_PUBLISH fnpub=NULL) // publish method
    {
+      T* probeExist = GetProbe<T>(name);
+      if (probeExist)
+         return probeExist;
+
       bool fOwnedByPool = false;
       InsertPublish(name, T::unit, (void*)probe, 
                     fOwnedByPool,
@@ -1022,6 +1013,15 @@ private:
       FN_STATS_ENTRY_PUBLISH fnpub); // publish method
 
 };
+
+// the macros help to add statistics probe defined as class or struct members to
+// a stats_pool. use STATS_POOL_ADD or STATS_POOL_ADD_VAL to add a probe to the pool
+// then use STATS_POOL_PUB_xxx to add additional Publish entries as needed.
+#define STATS_POOL_ADD(pool,pre,name,as)        (pool).AddProbe(#name, &name, pre #name, name.PubDefault)
+#define STATS_POOL_ADD_VAL(pool,pre,name,as)    (pool).AddProbe(#name, &name, pre #name, name.PubValue)
+#define STATS_POOL_PUB_PEAK(pool,pre,name,as)   (pool).AddPublish(#name "Peak", &name, pre #name "Peak", name.PubLargest)
+#define STATS_POOL_PUB_RECENT(pool,pre,name,as) (pool).AddPublish("Recent" #name, &name, "Recent" pre #name, name.PubRecent)
+#define STATS_POOL_PUB_DEBUG(pool,pre,name,as)  (pool).AddPublish(#name "Debug", &name, pre #name "Debug", name.PubDebug)
 
 
 

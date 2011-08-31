@@ -22,6 +22,7 @@
 #include "scheduler.h"
 #include "schedd_stats.h"
 
+#if 0
 #define SCHEDD_STATS_PUB(name, as)         GENERIC_STATS_PUB(ScheddStatistics, "", name, as)
 #define SCHEDD_STATS_PUB_RECENT(name, as)  GENERIC_STATS_PUB_RECENT(ScheddStatistics, "", name, as)
 #define SCHEDD_STATS_PUB_PEAK(name, as)    GENERIC_STATS_PUB_PEAK(ScheddStatistics, "", name, as)
@@ -95,34 +96,129 @@ static const GenericStatsPubItem ScheddStatsPub[] = {
 };
 
 static const int ScheddStatsEntryCount = COUNTOF(ScheddStatsPub);
+#endif 
 
 void ScheddStatistics::SetWindowSize(int window)
 {
    this->RecentWindowMax = window;
+   Pool.SetRecentMax(window, schedd_stats_window_quantum);
+   /*
    generic_stats_SetRecentMax(ScheddStatsPub, 
                               COUNTOF(ScheddStatsPub), 
                               (char *)this,
                               window, 
                               schedd_stats_window_quantum);
+   */
 }
 
-// NOTE: this is NOT safe to call after you have begun collecting data!!
+#if 0
+template <> stats_entry_abs<int>* stats_pool::AddProbe (
+   const char * name,       // unique name for the probe
+   stats_entry_abs<int>* probe,      // the probe, usually a member of a class/struct
+   const char * pattr/*=NULL*/, // publish attribute name
+   int          flags/*=0*/,    // flags to control publishing
+   FN_STATS_ENTRY_PUBLISH fnpub/*=NULL*/) // publish method
+{
+   stats_entry_abs<int>* probeExist = GetProbe< stats_entry_abs<int> >(name);
+   if (probeExist)
+      return probeExist;
+
+   bool fOwnedByPool = false;
+   InsertProbe(name, stats_entry_abs<int>::unit, (void*)probe, 
+               fOwnedByPool,
+               pattr, 
+               flags,
+               fnpub ? fnpub : (FN_STATS_ENTRY_PUBLISH)&stats_entry_abs<int>::Publish,
+               (FN_STATS_ENTRY_ADVANCE)NULL, 
+               (FN_STATS_ENTRY_CLEAR)&stats_entry_abs<int>::Clear,
+               (FN_STATS_ENTRY_SETRECENTMAX)NULL,
+               NULL);
+   return probe;
+}
+#endif
+
+#define SCHEDD_STATS_ADD_VAL(pool,name,as)     STATS_POOL_ADD_VAL(pool, "", name, as) 
+#define SCHEDD_STATS_PUB_PEAK(pool,name,as)    STATS_POOL_PUB_PEAK(pool, "", name, as) 
+#define SCHEDD_STATS_PUB_RECENT(pool,name,as)  STATS_POOL_PUB_RECENT(pool, "", name, as) 
+#define SCHEDD_STATS_PUB_DEBUG(pool,name,as)   STATS_POOL_PUB_DEBUG(pool, "", name, as) 
+
+// 
 // 
 void ScheddStatistics::Init() 
 { 
    Clear();
    // default window size to 1 quantum, we may set it to something else later.
    this->RecentWindowMax = schedd_stats_window_quantum;
+
+   // insert static items into the stats pool so we can use the pool 
+   // to Advance and Clear.  these items also publish the overall value
+   SCHEDD_STATS_ADD_VAL(Pool, JobsSubmitted, 0);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsStarted,          0);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsExited,           0);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsCompleted,        0);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsAccumTimeToStart, 0);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsAccumRunningTime, 0);
+
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsSubmitted,  0);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsStarted,    0);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsExited,     0);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsCompleted,  0);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsAccumTimeToStart, 0);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsAccumRunningTime, 0);
+
+   SCHEDD_STATS_ADD_VAL(Pool, JobsExitedNormally,        0);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsKilled,                0);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsExitException,         0);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsExecFailed,            0);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsCheckpointed,          0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsShadowNoMemory,        0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsShouldRequeue,         0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsNotStarted,            0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsShouldHold,            0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsShouldRemove,          0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsCoredumped,            0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsMissedDeferralTime,    0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsExitedAndClaimClosing, 0 /*| IF_NONZERO*/);
+
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsExitedNormally,        0);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsKilled,                0);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsExitException,         0);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsExecFailed,            0);
+
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsShadowNoMemory,        0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsCheckpointed,          0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsShouldRequeue,         0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsNotStarted,            0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsShouldRemove,          0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsExitedAndClaimClosing, 0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsCoredumped,            0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsMissedDeferralTime,    0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsShouldHold,            0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_PUB_RECENT(Pool, JobsDebugLogError,         0 /*| IF_NONZERO*/);
+
+   SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               0);
+   SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              0);
+
+   SCHEDD_STATS_ADD_VAL(Pool, ShadowsStarted,                   0);
+   SCHEDD_STATS_ADD_VAL(Pool, ShadowsRecycled,                  0);
+   //SCHEDD_STATS_ADD_VAL(Pool, ShadowExceptions,                 0);
+   SCHEDD_STATS_ADD_VAL(Pool, ShadowsReconnections,             0);
+
+   SCHEDD_STATS_PUB_RECENT(Pool, ShadowsStarted,            0);
+   SCHEDD_STATS_PUB_RECENT(Pool, ShadowsRecycled,           0);
+   //SCHEDD_STATS_PUB_RECENT(Pool, ShadowExceptions,          0);
+   SCHEDD_STATS_PUB_RECENT(Pool, ShadowsReconnections,      0);
 }
 
 void ScheddStatistics::Clear()
 {
-   generic_stats_Clear(ScheddStatsPub, COUNTOF(ScheddStatsPub), (char*)this);
+   //generic_stats_Clear(ScheddStatsPub, COUNTOF(ScheddStatsPub), (char*)this);
    this->InitTime = time(NULL);
    this->StatsLifetime = 0;
    this->StatsLastUpdateTime = 0;
    this->RecentStatsTickTime = 0;
    this->RecentStatsLifetime = 0;
+   Pool.Clear();
 }
 
 // call this when time may have changed to update StatsUpdateTime, etc.
@@ -134,6 +230,18 @@ void ScheddStatistics::Clear()
 void ScheddStatistics::Tick()
 {
 #if 1
+   int cAdvance = generic_stats_Tick(
+      this->RecentWindowMax,   // RecentMaxTime
+      schedd_stats_window_quantum, // RecentQuantum
+      this->InitTime,
+      this->StatsLastUpdateTime,
+      this->RecentStatsTickTime,
+      this->StatsLifetime,
+      this->RecentStatsLifetime);
+
+   if (cAdvance)
+      Pool.Advance(cAdvance);
+#elif 1
 
 const GenericStatsPubItem StatsTick[] = {
    SCHEDD_STATS_PUB_RECENT(JobsSubmitted,  AS_COUNT),
@@ -222,12 +330,24 @@ const GenericStatsPubItem StatsTick[] = {
 
 void ScheddStatistics::Publish(ClassAd & ad) const
 {
-   generic_stats_PublishToClassAd(ad, ScheddStatsPub, COUNTOF(ScheddStatsPub), (const char *)this);  
+   //generic_stats_PublishToClassAd(ad, ScheddStatsPub, COUNTOF(ScheddStatsPub), (const char *)this);  
+   ad.Assign("StatsLifetime", (int)StatsLifetime);
+   ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
+   ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
+   ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
+   ad.Assign("RecentWindowMax", (int)RecentWindowMax);
+   Pool.Publish(ad);
 }
 
 void ScheddStatistics::Unpublish(ClassAd & ad) const
 {
-   generic_stats_DeleteInClassAd(ad, ScheddStatsPub, COUNTOF(ScheddStatsPub), (const char *)this);  
+   //generic_stats_DeleteInClassAd(ad, ScheddStatsPub, COUNTOF(ScheddStatsPub), (const char *)this);  
+   ad.Delete("StatsLifetime");
+   ad.Delete("StatsLastUpdateTime");
+   ad.Delete("RecentStatsLifetime");
+   ad.Delete("RecentStatsTickTime");
+   ad.Delete("RecentWindowMax");
+   Pool.Unpublish(ad);
 }
 
 void schedd_stats_unit_test (ClassAd * pad)

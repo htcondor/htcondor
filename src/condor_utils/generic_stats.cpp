@@ -112,6 +112,8 @@ void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, 
    ad.Assign(pattr, str);
 }
 
+#if 0
+
 // advance the ring buffer and update the recent accumulator, this is called
 // each xxxx_stats_window_quantum of seconds, in case an Advance is skipped, 
 // cAdvance is the number of times to advance.
@@ -149,6 +151,18 @@ static stats_entry_tq<T>* GetTimedQ(const GenericStatsPubItem & entry, char * ps
    return (stats_entry_tq<T>*)(pstruct + entry.off);
 }
 #endif
+
+// functions for working with a statistics item when you have the type
+// encoded in 'units', but don't have a typed pointer.
+//
+// destroy and free a statistics item 
+// (calls delete (type*)pitem) where type is determined from the units code
+void generic_stats_itemFree(int units, void * pitem);
+void generic_stats_itemSetRecentMax(int units, void * pitem, int window, int quantum);
+void generic_stats_itemClear(int units, void * pitem);
+void generic_stats_itemClearRecent(int units, void * pitem);
+void generic_stats_itemAdvanceRecent(int units, void * pitem, int cAdvance);
+
 
 // reset all counters to 0, including Recent buffers.
 void generic_stats_itemFree(int units, void * pitem)
@@ -551,11 +565,9 @@ void generic_stats_AdvanceRecent(const GenericStatsPubItem * pTable, int cTable,
       }
 }
 
+#endif
 
 int generic_stats_Tick(
-   const GenericStatsPubItem * pPub, 
-   int    cPub, 
-   char * pdata,
    int    RecentMaxTime,
    int    RecentQuantum,
    time_t InitTime,
@@ -590,8 +602,6 @@ int generic_stats_Tick(
       if (delta >= RecentQuantum)
          {
          cTicks = delta / RecentQuantum;
-         if (pPub && cPub)
-            generic_stats_AdvanceRecent(pPub, cPub, pdata, delta / RecentQuantum);
          RecentTickTime = now - (delta % RecentQuantum);
          }
 
@@ -645,7 +655,7 @@ void stats_recent_counter_timer::PublishValue(const char * me, ClassAd & ad, con
 //
 int stats_pool::RemoveProbe (const char * name)
 {
-   pubitem item = { 0 };
+   pubitem item;
    if (pub.lookup(name, item) < 0)
       return 0;
    int ret =  pub.remove(name);

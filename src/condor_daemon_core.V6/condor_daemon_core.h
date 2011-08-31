@@ -1467,7 +1467,7 @@ class DaemonCore : public Service
 	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
       #endif
 
-       stats_pool              Named;          // pool of named statistics entries.
+       stats_pool              Pool;          // pool of statistics probes and Publish attrib names
 
 	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
 	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
@@ -1482,8 +1482,8 @@ class DaemonCore : public Service
 	   void Publish(ClassAd & ad) const;
 	   void Unpublish(ClassAd & ad) const;
        void* New(const char * category, const char * name, int as);
-       void AddToNamed(const char * name, int val);
-       void AddToNamed(const char * name, int64_t val);
+       void AddToProbe(const char * name, int val);
+       void AddToProbe(const char * name, int64_t val);
        double AddRuntime(const char * name, double before); // returns current time.
 
 	} dc_stats;

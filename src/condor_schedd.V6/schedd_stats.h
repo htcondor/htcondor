@@ -34,6 +34,7 @@ const int schedd_stats_window_quantum = 60;
 //
 typedef struct ScheddStatistics {
 
+   // these are used by generic tick
    time_t StatsLifetime;         // the total time covered by this set of statistics
    time_t StatsLastUpdateTime;   // last time that statistics were last updated. (a freshness time)
    time_t RecentStatsLifetime;   // actual time span of current RecentXXX data.
@@ -75,6 +76,8 @@ typedef struct ScheddStatistics {
    // non-published values
    time_t InitTime;            // last time we init'ed the structure
    int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+
+   stats_pool              Pool;          // pool of statistics probes and Publish attrib names
 
    // methods
    //
