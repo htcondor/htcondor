@@ -17,7 +17,7 @@
  ############################################################### 
 
 # Openssl on rhel3 doesn't have EVP_sha256(), which the ec2_gahp uses.
-if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS AND HAVE_EXT_EXPAT AND NOT ${SYSTEM_NAME} MATCHES "rhel3" )
+if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS AND NOT ${SYSTEM_NAME} MATCHES "rhel3" )
 
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})

@@ -70,6 +70,9 @@ typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
 
 MyString SlotWeightAttr = ATTR_SLOT_WEIGHT;
 
+char const *RESOURCES_IN_USE_BY_USER_FN_NAME = "ResourcesInUseByUser";
+char const *RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME = "ResourcesInUseByUsersGroup";
+
 class NegotiationCycleStats
 {
 public:
@@ -150,6 +153,81 @@ static MyString MachineAdID(ClassAd * ad)
 	return ID;
 }
 
+static Matchmaker *matchmaker_for_classad_func;
+
+static
+bool ResourcesInUseByUser_classad_func( const char * /*name*/,
+										 const classad::ArgumentList &arg_list,
+										 classad::EvalState &state, classad::Value &result )
+{
+	classad::Value arg0;
+	std::string user;
+
+	ASSERT( matchmaker_for_classad_func );
+
+	// Must have one argument
+	if ( arg_list.size() != 1 ) {
+		result.SetErrorValue();
+		return( true );
+	}
+
+	// Evaluate argument
+	if( !arg_list[0]->Evaluate( state, arg0 ) ) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If argument isn't a string, then the result is an error.
+	if( !arg0.IsStringValue( user ) ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	float usage = matchmaker_for_classad_func->getAccountant().GetWeightedResourcesUsed(user.c_str());
+
+	result.SetRealValue( usage );
+	return true;
+}
+
+static
+bool ResourcesInUseByUsersGroup_classad_func( const char * /*name*/,
+												const classad::ArgumentList &arg_list,
+												classad::EvalState &state, classad::Value &result )
+{
+	classad::Value arg0;
+	std::string user;
+
+	ASSERT( matchmaker_for_classad_func );
+
+	// Must have one argument
+	if ( arg_list.size() != 1 ) {
+		result.SetErrorValue();
+		return( true );
+	}
+
+	// Evaluate argument
+	if( !arg_list[0]->Evaluate( state, arg0 ) ) {
+		result.SetErrorValue();
+		return false;
+	}
+
+	// If argument isn't a string, then the result is an error.
+	if( !arg0.IsStringValue( user ) ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	float group_quota = 0;
+	float group_usage = 0;
+	if( !matchmaker_for_classad_func->getGroupInfoFromUserId(user.c_str(),group_quota,group_usage) ) {
+		result.SetErrorValue();
+		return true;
+	}
+
+	result.SetRealValue( group_usage );
+	return true;
+}
+
 Matchmaker::
 Matchmaker ()
 {
@@ -223,8 +301,17 @@ Matchmaker ()
  	NegotiatorInterval = 60;
  	MaxTimePerSubmitter = 31536000;
  	MaxTimePerSpin = 31536000;
-}
 
+	ASSERT( matchmaker_for_classad_func == NULL );
+	matchmaker_for_classad_func = this;
+	std::string name;
+	name = RESOURCES_IN_USE_BY_USER_FN_NAME;
+	classad::FunctionCall::RegisterFunction( name,
+											 ResourcesInUseByUser_classad_func );
+	name = RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME;
+	classad::FunctionCall::RegisterFunction( name,
+											 ResourcesInUseByUsersGroup_classad_func );
+}
 
 Matchmaker::
 ~Matchmaker()
@@ -258,6 +345,8 @@ Matchmaker::
 	}
 
     if (NULL != hgq_root_group) delete hgq_root_group;
+
+	matchmaker_for_classad_func = NULL;
 }
 
 
@@ -1112,6 +1201,10 @@ negotiationTime ()
 		// matching contexts, the negotiator match exprs are in different
 		// ads, but they should always be in at least one.
 	insertNegotiatorMatchExprs( startdAds );
+
+	// insert RemoteUserPrio and related attributes so they are
+	// available during matchmaking
+	addRemoteUserPrios( startdAds );
 
     if (hgq_groups.size() <= 1) {
         // If there is only one group (the root group) we are in traditional non-HGQ mode.
@@ -3429,13 +3522,6 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
-			// this will insert remote user priority information into the 
-			// startd ad (if it is currently running a job), which can then
-			// be referenced via the various PREEMPTION_REQUIREMENTS expressions.
-			// we now need to do this inside the inner loop because we insert
-			// usage information 
-		addRemoteUserPrios(candidate);
-
 		if( (DebugFlags & D_MACHINE) && (DebugFlags & D_FULLDEBUG) ) {
 			dprintf(D_MACHINE,"Testing whether the job matches with the following machine ad:\n");
 			candidate->dPrint(D_MACHINE);
@@ -4146,11 +4232,23 @@ Matchmaker::getClaimId (const char *startdName, const char *startdAddr, ClaimIdH
 }
 
 void Matchmaker::
+addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal )
+{
+	ClassAd *ad;
+	cal.Open();
+	while( ( ad = cal.Next() ) ) {
+		addRemoteUserPrios(ad);
+	}
+	cal.Close();
+}
+
+void Matchmaker::
 addRemoteUserPrios( ClassAd	*ad )
 {	
 	MyString	remoteUser;
 	MyString	buffer,buffer1,buffer2,buffer3;
 	MyString    slot_prefix;
+	MyString    expr,expr_buffer;
 	float	prio;
 	int     total_slots, i;
 	float     preemptingRank;
@@ -4171,13 +4269,14 @@ addRemoteUserPrios( ClassAd	*ad )
 	{
 		prio = (float) accountant.GetPriority( remoteUser.Value() );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
-		ad->Assign(ATTR_REMOTE_USER_RESOURCES_IN_USE,
-			accountant.GetWeightedResourcesUsed( remoteUser.Value() ));
+		expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.Value());
 		if (getGroupInfoFromUserId(remoteUser.Value(),
 									temp_groupQuota,temp_groupUsage))
 		{
 			// this is a group, so enter group usage info
-			ad->Assign(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,temp_groupUsage);
+			expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+			ad->AssignExpr(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,expr.Value());
 			ad->Assign(ATTR_REMOTE_GROUP_QUOTA,temp_groupQuota);
 		}
 	}
@@ -4223,15 +4322,16 @@ addRemoteUserPrios( ClassAd	*ad )
 			ad->Assign(buffer.Value(),prio);
 			buffer.sprintf("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_RESOURCES_IN_USE);
-			ad->Assign(buffer.Value(),
-					accountant.GetWeightedResourcesUsed(remoteUser.Value()));
+			expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+			ad->AssignExpr(buffer.Value(),expr.Value());
 			if (getGroupInfoFromUserId(remoteUser.Value(),
 										temp_groupQuota,temp_groupUsage))
 			{
 					// this is a group, so enter group usage info
 				buffer.sprintf("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
-				ad->Assign( buffer.Value(), temp_groupUsage );
+				expr.sprintf("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+				ad->AssignExpr( buffer.Value(), expr.Value() );
 				buffer.sprintf("%s%s", slot_prefix.Value(),
 					ATTR_REMOTE_GROUP_QUOTA);
 				ad->Assign( buffer.Value(), temp_groupQuota );

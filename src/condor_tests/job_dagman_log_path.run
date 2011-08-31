@@ -102,7 +102,7 @@ $success = sub
 		while(<OUT>) {
 			chomp();
 			$line = $_;
-			if( $line =~ /^*.EXITING WITH STATUS 0*.$/ ) {
+			if( $line =~ /^.*EXITING WITH STATUS 0.*$/ ) {
 				$passed = 1;
 				CondorTest::debug("$name: $line\n",1);
 			}

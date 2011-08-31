@@ -31,7 +31,7 @@ restarting the daemons.
 
 The command 
 \Condor{reconfig}
-with no arguments or with the \OptArg{-subsystem}{master} option 
+with no arguments or with the \OptArg{-daemon}{master} option 
 will cause the reconfiguration of the \Condor{master}
 daemon and all the child processes of the \Condor{master}.
 
@@ -62,7 +62,7 @@ on the local host:
 
 To reconfigure only the \Condor{startd} on a named machine:
 \begin{verbatim}
-% condor_reconfig -name bluejay -subsystem startd
+% condor_reconfig -name bluejay -daemon startd
 \end{verbatim}
 
 To reconfigure a machine within a pool

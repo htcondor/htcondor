@@ -94,9 +94,6 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( deepOpts.strOutfileDir.Value() );
 	}
 
-	args.AppendArg( "-oldrescue" );
-	args.AppendArg( deepOpts.oldRescue );
-
 	args.AppendArg( "-autorescue" );
 	args.AppendArg( deepOpts.autoRescue );
 

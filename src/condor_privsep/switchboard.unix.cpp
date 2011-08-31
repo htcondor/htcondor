@@ -353,7 +353,7 @@ config_parse_uid(uid_t * uid, const char *key, const char *value,
 {
     const char *endptr;
 
-    *uid = safe_strto_id(value, &endptr);
+    *uid = safe_strto_uid(value, &endptr);
 
     check_id_error(key, value, cf, endptr, "uid");
 }

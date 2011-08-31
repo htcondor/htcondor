@@ -16,15 +16,15 @@ New features will be added in the 7.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-6-3}Version 7.6.3}
+\subsection*{\label{sec:New-7-6-4}Version 7.6.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Condor version 7.6.3 not yet released.
-%\item Condor version 7.6.3 released on Month Date, 2011.
+\item Condor version 7.6.4 not yet released.
+%\item Condor version 7.6.4 released on Month Date, 2011.
 
 \end{itemize}
 
@@ -49,6 +49,86 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Jobs run via \Prog{glexec} always had their \Env{PATH} environment
+variable cleared.  Now, if \Env{PATH} was specified for the job, 
+in any of the ways that job environment may be specified, 
+this setting is used.
+\Ticket{2096}
+
+\item Fixed an infinite loop that could happen in Condor daemons
+shortly after the receipt of a new connection.  
+This problem was introduced in Condor version 7.5.6.
+\Ticket{2413}
+
+\item Fixed a problem in \Condor{hdfs} that caused it to exit shortly
+after starting up if the configuration variables 
+\MacroNI{HDFS\_DENY}, \MacroNI{HOSTDENY\_WRITE}, or \MacroNI{HOSTDENY\_READ} 
+were not defined.
+Previously, if \MacroNI{HDFS\_DENY} was
+not defined, \MacroNI{HOSTDENY\_WRITE} and \MacroNI{HOSTDENY\_READ}
+were used to build the deny list.  
+Now \MacroNI{DENY\_WRITE} and \MacroNI{DENY\_READ} are also used.
+\Ticket{2414}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-3}Version 7.6.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.3 released on August 23, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug causing parallel universe jobs to be preempted upon 
+renewal of the job lease, 
+which by default happens within 20 minutes. 
+This meant that essentially no parallel universe job that took
+longer than 20 minutes would ever finish.
+\Ticket{2317}
+
 \item When the specified job requirements expression contained a
 reference to \Attr{RequestMemory}, there was inconsistent behavior:
 in some cases the default \Attr{RequestMemory} requirements were
@@ -56,6 +136,55 @@ suppressed, and in other cases not.  Now, the default
 \Attr{RequestMemory} requirements are always suppressed when there
 are explicit references to \Attr{RequestMemory} in the job
 requirements.
+
+\item Fixed a bug that could cause Condor to crash when using 
+the Local Credential Mapping Service (LCMAPS) with
+GSI authentication.
+\Ticket{2340}
+
+\item Fixed a bug that caused the \Condor{collector} daemon to crash
+upon receiving a CCB command,
+when \Macro{ENABLE\_CCB\_SERVER} was changed from \Expr{True} to \Expr{False}
+without restarting the daemon.
+\Ticket{2357}
+
+\item The GT2 GAHP no longer consumes all of the CPU when compiled
+with threaded Globus libraries.
+\Ticket{2345}
+
+\item Fixed a problem introduced in Condor version 7.5.6, 
+which led to local lock files for user log locking always being created 
+whether or 
+not \MacroNI{ENABLE\_USERLOG\_LOCKING} was set to \Expr{False}.
+\Ticket{2116}
+
+\item Installation as a service by the MSI installer on Windows platforms 
+now sets the default of Automatic Delayed.
+\Ticket{2318}
+
+\item In PrivSep mode, if started as \Login{root}, 
+the \Condor{master} re-executes itself as the \Login{condor} user.
+Previously, supplementary groups were preserved.
+Now supplementary groups are cleared and set to the list of groups
+to which the \Login{condor} user belongs.
+\Ticket{2376}
+
+% commit 3d145180fd55b0d50e74656765cebe561c840830
+% commit fea686687f5dda08908e03b5595c517b3ddda03a
+\item Fixed a bug where setting \Macro{DAGMAN\_PROHIBIT\_MULTI\_JOBS} to
+\Expr{True} caused SUBDAGs to stop working.
+\Ticket{2331}
+
+\item Fixed a bug that caused scheduler universe jobs submitted via
+Condor-C or \Condor{submit} \Opt{-spool} to be held and be unable to run.
+The hold reason given was \Expr{File <filename> is missing or not executable}.
+\Ticket{2396}
+
+\item \Condor{submit} now exits with an error,
+if the command \Expr{hold = True} is in the submit description file
+when using \Opt{-spool} or \Opt{-remote} as command-line arguments. 
+This combination of settings resulted in jobs being unable to run.
+\Ticket{2398}
 
 \end{itemize}
 
@@ -227,8 +356,8 @@ containing newlines.
 
 \item For Condor versions 7.6.2, 7.6.1, and 7.6.0,
 a bug causes parallel universe jobs to be preempted upon 
-expiration of the job lease, 
-which has a default value of 20 minutes, 
+renewal of the job lease, 
+which by default will happen within 20 minutes, 
 essentially meaning that no parallel universe job that takes
 longer than 20 minutes can ever finish.
 The work around for this bug is to place the following

@@ -129,6 +129,7 @@ if( NOT WINDOWS)
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
 	find_library( ZLIB_FOUND z )
+	find_library( EXPAT_FOUND expat )
 	find_library( LIBUUID_FOUND uuid )
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_library( LIBRESOLV_PATH resolv )
@@ -256,6 +257,8 @@ endif()
 
 find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
+find_program(LATEX2HTML latex2html)
+find_program(LATEX latex)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -367,6 +370,7 @@ option(BUILD_TESTS "Will build internal test applications" ON)
 option(WANT_CONTRIB "Enable quill functionality" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
+option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 
 if (UW_BUILD OR WINDOWS)
@@ -435,7 +439,7 @@ else()
 
 	if (LINUX)
 		set(CMAKE_SKIP_RPATH FALSE)
-		set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib/condor")
+		set(CMAKE_INSTALL_RPATH ${CONDOR_RPATH})
 		set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 	endif()
 endif(PROPER)
@@ -505,7 +509,6 @@ if (NOT WINDOWS)
 	endif()
 
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.9)
@@ -521,6 +524,7 @@ if (NOT WINDOWS)
 	# the following logic if for standard universe *only*
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
 
+		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
 
 		if (EXT_GLIBC_FOUND)
@@ -769,6 +773,9 @@ message(STATUS "----- End compiler options/flags check -----")
 message(STATUS "----- Begin CMake Var DUMP -----")
 message(STATUS "CMAKE_STRIP: ${CMAKE_STRIP}")
 message(STATUS "LN: ${LN}")
+message(STATUS "LATEX: ${LATEX}")
+message(STATUS "LATEX2HTML: ${LATEX2HTML}")
+
 # if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise
 # this is the top level directory of your build tree
 dprint ( "CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}" )

@@ -299,6 +299,9 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 		// Don't know the version of the startd, assume false
 		m_startd_sends_alives = false;
 	}
+
+	keep_while_idle = 0;
+	idle_timer_deadline = 0;
 }
 
 void
@@ -6074,6 +6077,17 @@ Scheduler::StartJob(match_rec *rec)
 	dprintf(D_FULLDEBUG, "Match (%s) - running %d.%d\n",
 			rec->description(), id.cluster, id.proc);
 
+               // We've commited to starting a job on this match, copy the
+               // job's keep_idle times to the match
+	int keep_claim_idle_time = 0;
+    GetAttributeInt(id.cluster,id.proc,ATTR_JOB_KEEP_CLAIM_IDLE,&keep_claim_idle_time);
+    if (keep_claim_idle_time > 0) {
+            rec->keep_while_idle = keep_claim_idle_time;
+    } else {
+            rec->keep_while_idle = 0;
+    }
+    rec->idle_timer_deadline = 0;
+
 		// Now that the shadow has spawned, consider this match "ACTIVE"
 	rec->setStatus( M_ACTIVE );
 }
@@ -6099,10 +6113,15 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
 	}
 	if( new_job_id.proc == -1 ) {
 			// no more jobs to run
-		dprintf(D_ALWAYS,
+		if (mrec->idle_timer_deadline < time(0))  {
+			dprintf(D_ALWAYS,
 				"match (%s) out of jobs; relinquishing\n",
 				mrec->description() );
-		DelMrec(mrec);
+			DelMrec(mrec);
+			return false;
+		} else {
+			dprintf(D_FULLDEBUG, "Job requested to keep this claim idle for next job for %d seconds\n", mrec->keep_while_idle);
+		}
 		return false;
 	}
 
@@ -7371,6 +7390,17 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	userJob = GetJobAd(job_id->cluster,job_id->proc);
 	ASSERT(userJob);
 
+	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
+		iwd) < 0) {
+#ifndef WIN32
+		iwd = "/tmp";
+#else
+		// try to get the temp dir, otherwise just use the root directory
+		char* tempdir = getenv("TEMP");
+		iwd = ((tempdir) ? tempdir : "\\");
+#endif
+	}
+
 	// who is this job going to run as...
 	if (GetAttributeString(job_id->cluster, job_id->proc, 
 		ATTR_OWNER, owner) < 0) {
@@ -7458,6 +7488,13 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 				false, false, true, false, false );
 			goto wrapup;
 		}
+
+		// If the executable filename isn't an absolute path, prepend
+		// the IWD.
+		if ( !fullpath( a_out_name.Value() ) ) {
+			std::string tmp = a_out_name;
+			sprintf( a_out_name, "%s%c%s", iwd.Value(), DIR_DELIM_CHAR, tmp.c_str() );
+		}
 		
 		// Now check, as the user, if we may execute it.
 		filestat = new StatInfo(a_out_name.Value());
@@ -7491,18 +7528,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ERROR,
 		error) < 0) {
 		error = NULL_FILE;
-	}
-	
-	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
-		iwd) < 0) {
-#ifndef WIN32		
-		iwd = "/tmp";
-#else
-		// try to get the temp dir, otherwise just use the root directory
-		char* tempdir = getenv("TEMP");
-		iwd = ((tempdir) ? tempdir : "\\");
-		
-#endif
 	}
 	
 	//change to IWD before opening files, easier than prepending 
@@ -9062,8 +9087,14 @@ Scheduler::child_exit(int pid, int status)
 
 	if( srec->exit_already_handled ) {
 		if( srec->match ) {
-			DelMrec( srec->match );
-			srec->match = NULL;
+			if (srec->match->keep_while_idle == 0) {
+				DelMrec( srec->match );
+			} else {
+				srec->match->status = M_CLAIMED;
+				srec->match->shadowRec = NULL;
+				srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
+				srec->match = NULL;
+			}
 		}
 		delete_shadow_rec( srec );
 		return;
@@ -11097,6 +11128,7 @@ Scheduler::reschedule_negotiator(int, Stream *s)
 
 	needReschedule();
 
+	StartJobs(); // now needed because of claim reuse, is this too expensive?
 	return 0;
 }
 
@@ -11502,8 +11534,14 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 	}
 	
 	if ( claim_id ) {
-		matches->lookup( HashKey(claim_id), match );
-		free(claim_id);
+		// Find out if this claim_id is still something we care about
+		// by first trying to find a match record. Note we also must
+		// check the dedicated scheduler data structs, since the dedicated
+		// scheduler keeps its own sets of match records.
+		match = scheduler.FindMrecByClaimID(claim_id);
+		if (!match) {
+			match = dedicated_scheduler.FindMrecByClaimID(claim_id);
+		}
 	}
 
 	if ( match ) {
@@ -11525,12 +11563,16 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 		}
 	} else {
 		ret_value = -1;
+		ClaimIdParser idp( claim_id );
+		dprintf(D_ALWAYS, "Received startd keepalive for unknown claimid %s\n",
+			idp.publicClaimId() );
 	}
 
 	s->encode();
 	s->code(ret_value);
 	s->end_of_message();
 
+	if (claim_id) free(claim_id);
 	return TRUE;
 }
 
@@ -11680,6 +11722,18 @@ Scheduler::publish( ClassAd *cad ) {
 	temp = param( "OPSYS" );
 	if ( temp ) {
 		cad->Assign( ATTR_OPSYS, temp );
+		free( temp );
+	}
+
+	temp = param( "OPSYSVER" );
+	if ( temp ) {
+		cad->Assign( ATTR_OPSYSVER, temp );
+		free( temp );
+	}
+
+	temp = param( "OPSYS_AND_VER" );
+	if ( temp ) {
+		cad->Assign( ATTR_OPSYS_AND_VER, temp );
 		free( temp );
 	}
 	
@@ -12832,7 +12886,7 @@ Scheduler::claimLocalStartd()
 	q = query.fetchAds(result, startd_addr, &errstack);
 	if ( q != Q_OK ) {
 		dprintf(D_FULLDEBUG,
-				"ERROR: could not fetch ads from local startd : %s\n",
+				"ERROR: could not fetch ads from local startd : %s (%s)\n",
 				startd_addr, getStrQueryResult(q) );
 		return false;
 	}
@@ -13402,6 +13456,10 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		// to run next is standard universe, tell this shadow we are
 		// out of work.
 	const bool accept_std_univ = false;
+
+	if (mrec->keep_while_idle) {
+		mrec->idle_timer_deadline = time(NULL) + mrec->keep_while_idle;
+	}
 
 	if( !FindRunnableJobForClaim(mrec,accept_std_univ) ) {
 		stream->put((int)0);

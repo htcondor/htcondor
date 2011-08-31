@@ -1384,7 +1384,7 @@ bool
 accept_request_claim( Resource* rip )
 {
 	int interval = -1;
-	char *client_addr = NULL, *client_host, *full_client_host, *tmp;
+	char *client_addr = NULL, *tmp;
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
 
@@ -1440,25 +1440,14 @@ accept_request_claim( Resource* rip )
 	}
 
 		// Figure out the hostname of our client.
-	if(sock->peer_addr().is_valid()) {
-		MyString hostname_str = get_hostname(sock->peer_addr());
-		const char* hostname = hostname_str.Value();
+	MyString hostname = get_full_hostname(sock->peer_addr());
+	if(hostname.IsEmpty()) {
+		MyString ip = sock->peer_addr().to_ip_string();
 		rip->dprintf( D_FULLDEBUG,
-					  "Can't find hostname of client machine %s\n", hostname );
-		rip->r_cur->client()->sethost(hostname);
+					  "Can't find hostname of client machine %s\n", ip.Value() );
+		rip->r_cur->client()->sethost(ip.Value());
 	} else {
-		client_host = strdup( tmp );
-			// Try to make sure we've got a fully-qualified hostname.
-		full_client_host = get_full_hostname( (const char *) client_host );
-		if( ! full_client_host ) {
-			rip->dprintf( D_ALWAYS, "Error finding full hostname of %s\n", 
-						  client_host );
-			rip->r_cur->client()->sethost( client_host );
-		} else {
-			rip->r_cur->client()->sethost( full_client_host );
-			delete [] full_client_host;
-		}
-		free( client_host );
+		rip->r_cur->client()->sethost( hostname.Value() );
 	}
 
 		// Get the owner of this claim out of the request classad.

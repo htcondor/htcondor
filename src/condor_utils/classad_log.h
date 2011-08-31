@@ -57,6 +57,8 @@
 
 typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 
+extern const char *EMPTY_CLASSAD_TYPE_NAME;
+
 class ClassAdLog {
 public:
 	ClassAdLog();

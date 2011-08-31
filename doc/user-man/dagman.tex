@@ -308,7 +308,11 @@ If the PRE script succeeds, the Condor or Stork job is submitted.
 If the job or any one of the jobs within the single cluster
 fails and there is no POST script, the DAG node is marked as failed.  
 An exit value not equal to 0 indicates program failure.
-It is therefore important that a successful program return the exit value 0.
+It is therefore important that a successful program return the exit
+value 0. It is good practice to always explicitly specify a return 
+value in the PRE script (0 in case of success). 
+Otherwise the return code of the last completed process 
+is returned, which can lead to unexpected results. 
 
 If the job fails and there is a POST script,
 node failure is determined by the exit value of the POST script.
@@ -319,7 +323,10 @@ Therefore, the POST script may need to consider the return
 value from the job.
 
 By default, the POST script is run regardless of the job's
-return value.
+return value. As for the PRE script, it is recommended to 
+specify return values explicitly in the POST script. 
+Otherwise the return code of the last completed process 
+is returned, which can lead to unexpected results. 
 
 A node not marked as failed at any point is successful.
 Table~\ref{Node-success-failure}

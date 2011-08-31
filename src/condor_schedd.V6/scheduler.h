@@ -167,6 +167,9 @@ class match_rec: public ClaimIdParser
 
 	bool m_startd_sends_alives;
 
+	int keep_while_idle; // number of seconds to hold onto an idle claim
+	int idle_timer_deadline; // if the above is nonzero, abstime to hold claim
+
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
 	void	setStatus( int stat );

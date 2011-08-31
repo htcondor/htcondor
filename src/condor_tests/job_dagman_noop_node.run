@@ -132,7 +132,7 @@ $success = sub
 			chomp();
 			$line = $_;
 
-			if( $line =~ /^*.EXITING WITH STATUS 0*.$/ ) {
+			if( $line =~ /^.*EXITING WITH STATUS 0.*$/ ) {
 				$passed = 1;
 				CondorTest::debug("$name: $line\n",1);
 			} elsif( $line =~ /Assertion ERROR/ ) {

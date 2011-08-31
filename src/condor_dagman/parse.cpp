@@ -88,6 +88,7 @@ static bool parse_jobstate_log(Dag  *dag, const char *filename,
 		int  lineNumber);
 static bool parse_pre_skip(Dag *dag, const char* filename,
 		int lineNumber);
+static bool parse_done(Dag  *dag, const char *filename, int  lineNumber);
 static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
@@ -338,6 +339,12 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 				filename, lineNumber);
 		}
 
+		// Handle a DONE spec
+		else if(strcasecmp(token, "DONE") == 0) {
+			parsed_line_successfully = parse_done(dag,
+						filename, lineNumber);
+		}
+
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
@@ -530,7 +537,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 
 	// looks ok, so add it
 	if( !AddNode( dag, nodeType, nodeName, directory,
-				submitFile, NULL, NULL, noop, done, whynot ) )
+			submitFile, NULL, NULL, noop, done, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
@@ -1897,6 +1904,58 @@ parse_pre_skip( Dag  *dag,
 				whynot.Value() );
 		return false;
 	}
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_done
+// Purpose:  Parse a line of the format "Done jobname"
+// 
+//-----------------------------------------------------------------------------
+static bool 
+parse_done(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber)
+{
+	const char *example = "Done JobName";
+	
+	const char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobNameOrig = jobName; // for error output
+	if( jobName == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Missing job name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	MyString tmpJobName = munge_job_name( jobName );
+	jobName = tmpJobName.Value();
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *extraTok = strtok( NULL, DELIMITERS );
+	if ( extraTok != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Extra token (%s) on DONE line\n",
+					  filename, lineNumber, extraTok );
+		exampleSyntax( example );
+		return false;
+	}
+
+	Job *job = dag->FindNodeByName( jobName );
+	if( job == NULL ) {
+		debug_printf( DEBUG_QUIET, 
+					  "Warning: %s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobNameOrig );
+		return !check_warning_strictness( DAG_STRICT_1, false );
+	}
+
+	job->SetStatus( Job::STATUS_DONE );
+	
 	return true;
 }
 

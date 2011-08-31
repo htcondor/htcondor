@@ -162,7 +162,15 @@ enum strict_level {
 
 typedef enum strict_level strict_level_t;
 
-void check_warning_strictness( strict_level_t strictness );
+/** Determine whether the strictness setting turns a warning into a fatal
+	error.
+	@param strictness: The strictness level of the warning.
+	@param quit_if_error: Whether to exit immediately if the warning is
+		treated as an error
+	@return true iff the warning is treated as an error
+*/
+bool check_warning_strictness( strict_level_t strictness,
+			bool quit_if_error = true );
 
 END_C_DECLS /* from condor_header_features.h */
 

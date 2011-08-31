@@ -74,38 +74,23 @@ main(int argc, char* argv[])
 		fatal_error();
 	}
 
-	// set up an Env object that we'll use for the job. we'll initialize
-	// it with the environment that Condor sends us then merge on top of
-	// that the environment that glexec prepared for us
-	//
-	// Why?  I don't understand why we are overriding job environment
-	// set by condor with the environment set by glexec.  For now, we
-	// must make one exception: X509_USER_PROXY.  We want the job to
-	// use the proxy that is managed by Condor, not a copy of the
-	// proxy created by glexec or the proxy used by condor itself.
+	// set up an Env object that we'll use for the job. We'll
+	// merge the environment that Condor sends us on top of that
+	// the environment that glexec prepared for us.  Therefore,
+	// settings from Condor win in case of conflict.  This is
+	// important for X509_USER_PROXY and for PATH.
 
 	Env env;
+
+	env.MergeFrom(environ); // glexec environment
+
 	char* env_buf = read_env();
 	MyString merge_err;
 	if (!env.MergeFromV2Raw(env_buf, &merge_err)) {
 		err.sprintf("Env::MergeFromV2Raw error: %s", merge_err.Value());
 		fatal_error();
 	}
-
-	MyString user_proxy;
-	bool override_glexec_proxy_env = false;
-	if( env.GetEnv("X509_USER_PROXY",user_proxy) &&
-		getenv("X509_USER_PROXY") )
-	{
-		override_glexec_proxy_env = true;
-	}
-
-	env.MergeFrom(environ);
 	delete[] env_buf;
-
-	if( override_glexec_proxy_env ) {
-		env.SetEnv("X509_USER_PROXY",user_proxy.Value());
-	}
 
 	// now prepare the job's standard FDs
 	//

@@ -48,11 +48,11 @@ our %build_and_test_sets = (
 		'x86_64_rhap_5',
 		'x86_64_rhas_3',
 		'x86_deb_5.0',
-		'x86_macos_10.4',
 		'x86_rhap_5',
 		'x86_rhas_3',
 		'x86_winnt_5.1',
 		'x86_64_rhap_6.1-updated',
+		'x86_64_macos_10.5-updated',
 	],
 	
 	# NMI will need builds on a set of platforms that we do not provide in our
@@ -74,7 +74,7 @@ our %build_and_test_sets = (
 		'x86_64_fedora_14-updated',
 		'x86_64_opensuse_11.3-updated',
 		'x86_64_opensuse_11.4-updated',
-		'x86_64_macos_10.5-updated',
+		'x86_64_macos_10.6-updated',
 	],
 	
 	'stduniv' => [
@@ -102,7 +102,8 @@ my @default_prereqs = (
 	);
 
 # Hackery to test running in new batlab
-if (`hostname -f` eq "submit-1.batlab.org\n") {
+if ((`hostname -f` eq "submit-1.batlab.org\n") ||
+	(`hostname -f` eq "submit-2.batlab.org\n")) {
 @default_prereqs = ();
 } 
 
@@ -125,7 +126,6 @@ my @minimal_build_configure_args =
 	 '-DWITH_COREDUMPER:BOOL'	 => 'OFF',
 	 '-DWITH_CREAM:BOOL'		 => 'OFF',
 	 '-DWITH_DRMAA:BOOL'		 => 'OFF',
-	 '-DWITH_EXPAT:BOOL'		 => 'OFF',
 	 '-DWITH_GCB:BOOL'			 => 'OFF',
 	 '-DWITH_GLOBUS:BOOL'		 => 'OFF',
 	 '-DWITH_GSOAP:BOOL'		 => 'OFF',
@@ -309,14 +309,15 @@ our %submit_info = (
 
 
 	##########################################################################
-	# Platform Debian 6.0 on x86_64
+	# Platform Debian 6.0 on x86_64 (updated)
 	##########################################################################
-	'x86_64_deb_6.0' => {
+	# This is the name of the platform in old batlab
+	'x86_64_deb_6.0-updated' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args,
 								  '-DCLIPPED:BOOL' => 'OFF',
 			},
-			'prereqs'	=> [ 'cmake-2.8.3' ],
+			'prereqs'	=> [ ],
 			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
 		},
 
@@ -328,12 +329,25 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Platform DEB 6 on x86_64 (updated)
-	# As of this writing there is no x86_64_deb-6.0 (non updated) machine in 
-	# the NMI pool.	 When they include one we should switch this from using
-	# the updated machine to the non-updated machine.
+	# Platform DEB 6 on x86_64 
 	##########################################################################
-	'x86_64_deb_6.0-updated' => 'x86_64_deb_6.0',
+	# This is the name of the platform in new batlab
+	# It is actually updated, despite what the name says
+	'x86_64_deb_6.0' => {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=>	[ 'x86_64_ubuntu_10.04', ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
 
 	##########################################################################
 	# Platform RHEL 6 on x86
@@ -389,6 +403,22 @@ our %submit_info = (
 	#################################################################
 	'x86_64_rhap_6.1-updated'	=> 'x86_64_rhap_6.0',
 
+	# This is the new batlab one
+	'x86_64_rhap_6.1'	=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+				'-DCLIPPED:BOOL' => 'OFF',
+			 },
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
 	##########################################################################
 	# Platform RHEL 5 on x86_64
 	##########################################################################
@@ -411,6 +441,23 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
+	# This is the new batlab one
+	'x86_64_rhap_5.7'		=> {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
+			'prereqs'	=> [ @default_prereqs ],
+			'xtests'	=> [ ],
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs, ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -612,7 +659,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -629,7 +676,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -640,7 +687,6 @@ our %submit_info = (
 	'x86_64_fedora_14'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
-								  '-DWITH_EXPAT:BOOL' => 'ON',
 			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
@@ -648,7 +694,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -659,7 +705,6 @@ our %submit_info = (
 	'x86_64_fedora_14-updated'	=> {
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
-								  '-DWITH_EXPAT:BOOL' => 'ON',
 			},
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
@@ -667,7 +712,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -819,7 +864,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -837,7 +882,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -894,7 +939,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -942,7 +987,6 @@ our %submit_info = (
 								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
 								  '-DWITHOUT_AMAZON_TEST:BOOL' => 'ON',
 								  '-DWITH_CURL:BOOL' => 'ON',
-								  '-DWITH_EXPAT:BOOL' => 'ON',
 								  '-DWITH_LIBVIRT:BOOL' => 'ON',
 								  '-DWITH_LIBXML2:BOOL' => 'ON',
 			},
@@ -974,7 +1018,6 @@ our %submit_info = (
 				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
 				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
 				'-DWITH_CURL:BOOL=OFF' => undef,
-				'-DWITH_EXPAT:BOOL=ON' => undef,
 				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
 				'-DWITH_LIBXML2:BOOL=ON' => undef,
 			},
