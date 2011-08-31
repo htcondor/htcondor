@@ -561,6 +561,7 @@ public:
       const stats_entry_recent<T> * pthis = (const stats_entry_recent<T> *)me;
       StatsPublishDebug(pattr, ad, *pthis);
       }
+   static void Delete(stats_entry_recent<T> * probe) { delete probe; }
 };
 
 // specialize for time_t because ClassAd doesn't handle 64 bit ints
@@ -631,6 +632,7 @@ public:
       const stats_entry_tq<T> * pthis = (const stats_entry_tq<T> *)me;
       ClassAdAssign(ad, pattr, pthis->recent);
       }
+   static void Delete(stats_entry_tq<T> * probe) { delete probe; }
 };
 
 // specialize for time_t because ClassAd doesn't handle 64 bit ints
@@ -725,6 +727,7 @@ public:
       const stats_entry_probe<T> * pthis = (const stats_entry_probe<T> *)me;
       ClassAdAssign(ad, pattr, pthis->Avg());
       }
+   static void Delete(stats_entry_probe<T> * probe) { delete probe; }
 };
 
 class stats_recent_counter_timer : public stats_entry_base {
@@ -751,6 +754,7 @@ public:
 
    static const int unit = IS_RCT | stats_entry_type<int>::id;
    static void PublishValue(const char * me, ClassAd & ad, const char * pattr);
+   static void Delete(stats_recent_counter_timer * pthis);
 };
 
 
@@ -864,6 +868,7 @@ class stats_entry_base;
 typedef void (stats_entry_base::*FN_STATS_ENTRY_PUBLISH)(ClassAd & ad, const char * pattr, int flags) const;
 typedef void (stats_entry_base::*FN_STATS_ENTRY_ADVANCE)(int cAdvance);
 typedef void (stats_entry_base::*FN_STATS_ENTRY_CLEAR)(void);
+typedef void (*FN_STATS_ENTRY_DELETE)(void* probe);
 
 // TJ - move this to generic_stats.h/cpp
 //
@@ -874,30 +879,57 @@ public:
       , pool(size, hashFuncVoidPtr, updateDuplicateKeys) 
       {
       };
-   /*
-   template <typename T> T Add (
-      const char * name, 
-      int as, 
-      T probe, 
-      int unit,
-      const char * pattr=NULL,
-      void (*fnpub)(const char * me, ClassAd & ad, const char * pattr)=NULL);
-   template <typename T> T AddProbe (
-      const char * name, 
-      int as, 
-      T probe, 
-      FN_STATS_ENTRY_ADVANCE fnadv=NULL,
-      const char * pattr=NULL,
-      FN_STATS_ENTRY_PUBLISH fnpub=NULL);
-   */
-   template <typename T> T* AddProbe (
-      const char * name, // unique name for the probe
-      T* probe, 
-      const char * pattr=NULL, // publish attribute name
-      int flags=0);            // flags to control publishing
 
-   template <typename T> T* NewProbe(const char * name, const char * pattr=NULL, int flags=0);
-   template <typename T> T* GetProbe(const char * name);
+   // allocate a probe and insert it into the pool.
+   //
+   template <typename T> T* NewProbe(
+      const char * name,       // unique name for the probe
+      const char * pattr=NULL, // publish attribute name
+      int          flags=0)    // flags to control publishing
+   {
+      T* probe = new T();
+      bool fOwnedByPool = true;
+      InsertProbe(name, T::unit, (void*)probe, 
+                  fOwnedByPool,
+                  pattr ? strdup(pattr) : NULL, 
+                  flags,
+                  (FN_STATS_ENTRY_PUBLISH)&T::Publish,
+                  (FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
+                  (FN_STATS_ENTRY_CLEAR)&T::Clear,
+                  (FN_STATS_ENTRY_DELETE)&T::Delete);
+      return probe;
+   }
+
+   template <typename T> T* GetProbe(const char * name)
+   {
+      pubitem item = { 0, 0, NULL, NULL, NULL};
+      if (pub.lookup(name, item) >= 0)
+         return (T*)item.pitem;
+      return 0;
+   }
+
+   // add an externally created probe to the pool
+   // so we can use pool functions to Advance/Clear/Publish
+   //
+   template <typename T> T* AddProbe (
+      const char * name,       // unique name for the probe
+      T*           probe,      // the probe, usually a member of a class/struct
+      const char * pattr=NULL, // publish attribute name
+      int          flags=0,    // flags to control publishing
+      FN_STATS_ENTRY_PUBLISH fnpub=NULL) // publish method
+   {
+      bool fOwnedByPool = false;
+      InsertProbe(name, T::unit, (void*)probe, 
+                  fOwnedByPool,
+                  pattr, 
+                  flags,
+                  (FN_STATS_ENTRY_PUBLISH)&T::Publish,
+                  (FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
+                  (FN_STATS_ENTRY_CLEAR)&T::Clear,
+                  NULL);
+      return probe;
+   }
+
    int RemoveProbe (const char * name); // remove from pool, will delete if owned by pool
 
    double  SetSample(const char * probe_name, double sample);
@@ -914,6 +946,7 @@ private:
    struct pubitem {
       int    units;    // copied from the class->unit, identifies the class and type of probe
       int    flags;    // passed to Publish
+      int    fOwnedByPool;
       void * pitem;    // pointer to stats_entry_base derived class instance class/struct
       const char * pattr; // if non-null passed to Publish, if null name is passed.
       FN_STATS_ENTRY_PUBLISH Publish;
@@ -923,12 +956,26 @@ private:
       int fOwnedByPool; // true if created and owned by this, otherise owned by some other code.
       FN_STATS_ENTRY_ADVANCE Advance;
       FN_STATS_ENTRY_CLEAR   Clear;
+      FN_STATS_ENTRY_DELETE  Delete;
    };
    // table of values to publish, possibly more than one for each probe
    HashTable<MyString,pubitem> pub;
 
    // table of unique probes counters, used to Advance and Clear the items.
    HashTable<void*,poolitem> pool;
+
+   void InsertProbe (
+      const char * name,       // unique name for the probe
+      int          unit,       // identifies the probe class/type
+      void*        probe,      // the probe, usually a member of a class/struct
+      bool         fOwned,     // probe and pattr string are owned by the pool
+      const char * pattr,      // publish attribute name
+      int          flags,      // flags to control publishing
+      FN_STATS_ENTRY_PUBLISH fnpub, // publish method
+      FN_STATS_ENTRY_ADVANCE fnadv, // Advance method
+      FN_STATS_ENTRY_CLEAR   fnclr, // Clear method
+      FN_STATS_ENTRY_DELETE  fndel); // static Delete method
+
 };
 
 
