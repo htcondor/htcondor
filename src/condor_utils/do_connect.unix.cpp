@@ -74,7 +74,6 @@ do_connect_with_timeout( const char* host, const char* service,
 		if (addrs.empty()) {
 			dprintf( D_ALWAYS, "Can't find host \"%s\" (Nameserver down?)\n",
 								host );
-			close(fd);
 			return( -1 );
 		}
 		port = find_port_num( service, port );
