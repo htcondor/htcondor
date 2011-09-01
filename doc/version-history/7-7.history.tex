@@ -79,6 +79,10 @@ changes to the original DAG input file take effect when running a Rescue DAG.
 %DAGman tends to fail on wide DAGs, where many jobs are independent,
 %rather than being linear, where jobs have many dependencies.
 
+\item A matchmaking optimization has significantly improved speed of matching
+when there are machines with many slots.
+\Ticket{2403}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
