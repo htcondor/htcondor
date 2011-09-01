@@ -35,6 +35,8 @@ $dagman_args = "-verbose";
 #
 #**************************************************************
 
+# TEMP -- to-do: add check of jobstate.log file.
+
 $outfile = "$testname.dag.dagman.out";
 runcmd("rm -f $outfile");
 

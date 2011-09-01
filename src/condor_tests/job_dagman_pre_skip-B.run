@@ -22,6 +22,8 @@
 # (gittrac #2122).  The node job for node A should get skipped
 # because of the PRE script return value.
 
+# TEMP -- to-do: add check of jobstate.log file.
+
 use CondorTest;
 use CondorUtils;
 

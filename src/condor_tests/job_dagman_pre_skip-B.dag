@@ -1,3 +1,5 @@
+JOBSTATE_LOG job_dagman_pre_skip-B.jobstate.log
+
 JOB A job_dagman_pre_skip-B_A.cmd
 SCRIPT PRE A job_dagman_pre_skip-B_A.sh
 PRE_SKIP A 1

@@ -1,7 +1,7 @@
 //TEMPTEMP -- to-do: take advantage of Dag::RunPostScript always monitoring log file -- mostly done
 //TEMPTEMP -- to-do: PRE_SKIP should skip post script (manual needs fix) -- done except for manual
 //TEMPTEMP -- to-do: change tests to make sure PRE_SKIP skips POST script -- done
-//TEMPTEMP -- to-do: refactor Dag::PreScriptReaper()
+//TEMPTEMP -- to-do: refactor Dag::PreScriptReaper() -- in progress
 //TEMPTEMP -- to-do: check other stuff from code review emails
 //TEMPTEMP -- to-do: fix "recovery in runpost" problem (see recov1.dag)
 //TEMPTEMP -- to-do: separate $RETURN and $PRE_SCRIPT_RETURN (or something) for POST script
@@ -1508,89 +1508,101 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		EXCEPT( "Error: node %s is not in PRERUN state", job->GetJobName() );
 	}
 
-	if( WIFSIGNALED( status ) ||  WEXITSTATUS( status ) != 0 ) {
-		// if script returned failure or was killed by a signal
-		if( WIFSIGNALED( status ) ) {
+	_preRunNodeCount--;
+	//TEMPTEMP -- unmonitor log file here???
+
+	bool preScriptFailed = false;
+	if ( WIFSIGNALED( status ) ) {
 			// if script was killed by a signal
-			debug_printf( DEBUG_QUIET, "PRE Script of Job %s died on %s\n",
-					job->GetJobName(),
-					daemonCore->GetExceptionString(status) );
-			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-					"PRE Script died on %s",
-					daemonCore->GetExceptionString(status) );
-			job->retval = ( 0 - WTERMSIG(status ) );
-		} else if(int preskip_interrogator = WEXITSTATUS( status ) ) {
-			// Implementation of PRE_SKIP option...
-			job->SetPreStatus( preskip_interrogator );
-				// GetPreStatus interprets PRE_SKIP value as success
-			if( job->GetPreStatus() == 0 ) {
+		preScriptFailed = true;
+		debug_printf( DEBUG_QUIET, "PRE Script of Job %s died on %s\n",
+					  job->GetJobName(),
+					  daemonCore->GetExceptionString(status) );
+		snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+				"PRE Script died on %s",
+				daemonCore->GetExceptionString(status) );
+		job->retval = ( 0 - WTERMSIG(status ) );
+	} else if ( WEXITSTATUS( status ) != 0 ) {
+			// if script returned failure
+		preScriptFailed = true;
+		debug_printf( DEBUG_QUIET,
+					  "PRE Script of Job %s failed with status %d\n",
+					  job->GetJobName(), WEXITSTATUS(status) );
+		snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+				"PRE Script failed with status %d",
+				WEXITSTATUS(status) );
+		job->retval = WEXITSTATUS( status );
+	} else {
+			// if script succeeded
+		job->retval = 0;
+	}
+
+	_jobstateLog.WriteScriptSuccessOrFailure( job, false );
+
+	if ( preScriptFailed ) {
+		job->_Status = Job::STATUS_ERROR;
+
+			// Check for PRE_SKIP.
+		if ( job->HasPreSkip() && job->GetPreSkip() == job->retval ) {
 				// The PRE script exited with a non-zero status, but
 				// because that status matches the PRE_SKIP value,
-				// we're skipping the node job (But NOT the POST script) i
+				// we're skipping the node job and the POST script
 				// and considering the node successful.
-				const char* s = job->GetDagFile();
-				debug_printf( DEBUG_NORMAL, "PRE_SKIP return "
-						"value %d indicates we are done with node %s, "
-						"from dag file %s\n",
-						preskip_interrogator, job->GetJobName(),
-						s?s:"(unknown)" );
-				_jobstateLog.WriteScriptSuccessOrFailure( job, false );
-				job->retval = 0; // Job _is_ successful!
-					//TEMPTEMP -- do we really want to write this???
-				_jobstateLog.WriteJobSuccessOrFailure( job );
-				TerminateJob( job, false, false );
-				goto pre_skip_fake_success;
-			}
-			// if script returned failure
-			debug_printf( DEBUG_QUIET,
-					"PRE Script of Job %s failed with status %d\n",
-					job->GetJobName(), preskip_interrogator );
-			snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-					"PRE Script failed with status %d",
-					preskip_interrogator );
-			job->retval = preskip_interrogator;
+			debug_printf( DEBUG_NORMAL, "PRE_SKIP return "
+					"value %d indicates we are done (successfully) with node %s\n",
+					job->retval, job->GetJobName() );
+			job->retval = 0; // Job _is_ successful!
+				// TEMP -- we probably need to write something to the
+				// jobstate.log file here, but JOB_SUCCESS is not the
+				// right thing.  wenger 2011-09-01
+			// _jobstateLog.WriteJobSuccessOrFailure( job );
+			TerminateJob( job, false, false );
 		}
-		_preRunNodeCount--;
-		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
-		if( _alwaysRunPost && job->_scriptPost != NULL) {
-			(void)RunPostScript( job, _alwaysRunPost, job->GetPreStatus() );
-		} else {
-			if( job->GetRetries() < job->GetRetryMax() ) {
-				job->_Status = Job::STATUS_ERROR;
-				RestartNode( job, false );
-			} else {
-				_numNodesFailed++;
-				if( job->GetRetryMax() > 0 ) {
-					// add # of retries to error_text
-					char *tmp = strnewp( job->error_text );
-					snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
-							"%s (after %d node retries)", tmp,
-							job->GetRetries() );
-					delete [] tmp;   
-				}
+
+			// Check for POST script.
+		else if ( _alwaysRunPost && job->_scriptPost != NULL ) {
+			RunPostScript( job, _alwaysRunPost, job->retval );
+		}
+
+			// Check for retries.
+		else if( job->GetRetries() < job->GetRetryMax() ) {
+			//TEMPTEMP -- make sure this works...
+			job->_Status = Job::STATUS_ERROR;
+			RestartNode( job, false );
+		}
+
+			// None of the above apply -- the node has failed.
+		else {
+			_numNodesFailed++;
+			if( job->GetRetryMax() > 0 ) {
+				// add # of retries to error_text
+				char *tmp = strnewp( job->error_text );
+				snprintf( job->error_text, JOB_ERROR_TEXT_MAXLEN,
+						"%s (after %d node retries)", tmp,
+						job->GetRetries() );
+				delete [] tmp;   
 			}
 		}
+
 	} else {
 		debug_printf( DEBUG_NORMAL, "PRE Script of Node %s completed "
 				"successfully.\n", job->GetJobName() );
 		job->retval = 0; // for safety on retries
 		job->_Status = Job::STATUS_READY;
-		job->SetPreStatus( 0 );
-		_jobstateLog.WriteScriptSuccessOrFailure( job, false );
+		//TEMPTEMP? job->SetPreStatus( 0 );
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( job, -job->_nodePriority );
 		} else {
 			_readyQ->Append( job, -job->_nodePriority );
 		}
-pre_skip_fake_success:
-		_preRunNodeCount--;
-		job->retval = 0; // for safety on retries
 	}
+
 	CheckForDagAbort(job, "PRE script");
 	// if dag abort happened, we never return here!
 	return true;
 }
 
+//---------------------------------------------------------------------------
 // This is the only way a POST script runs.
 
 bool Dag::RunPostScript( Job *job, bool ignore_status, int status )

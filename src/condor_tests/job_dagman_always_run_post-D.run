@@ -89,18 +89,10 @@ $success = sub
 	my @outfilelist = <OUT>;
 	close(OUT);
 	$passed_first = 0; # Let's be optimistic
-	$passed_second = 0;
 	foreach (@outfilelist) {
-		if(/PRE_SKIP return value.+indicates we are done with node D_A/) {
+		if(/PRE_SKIP return value.+indicates we are done \(successfully\) with node D_A/) {
 			CondorTest::debug("Saw PRE_SKIP for D_A trigger correctly: $_\n",1);
 			$passed_first = 1;
-			last;
-		}
-	}
-	foreach (@outfilelist) {
-		if(/Running POST script of Node D_A/) {
-			CondorTest::debug("Saw POST script D_A run!\n",1);
-			$passed_second = 1;
 			last;
 		}
 	}
@@ -114,7 +106,7 @@ $success = sub
 			$diditpass = 0;		
 		}
 	}
-	if($passed_first != 1 || $passed_second != 1) {
+	if($passed_first != 1) {
 		CondorTest::debug("failed $outfile\n",1);
 		$diditpass = 0;
 	}

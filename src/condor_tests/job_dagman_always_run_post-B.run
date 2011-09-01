@@ -24,7 +24,7 @@ use CondorUtils;
 $cmd = 'job_dagman_always_run_post-B.dag';
 $testdesc =  'Condor DAGman test for not running the POST script B- scheduler U';
 $testname = "job_dagman_always_run_post-B";
-$dagman_args = "-verbose -AlwaysRunPost";
+$dagman_args = "-verbose -DontAlwaysRunPost";
 
 my $killedchosen = 0;
 
@@ -39,6 +39,8 @@ sub RUNNING{2};
 ## -AlwaysRunPost is not ignored by DAGman
 ##
 ##**************************************************************
+
+# TEMP -- to-do: add check of jobstate.log file.
 
 runcmd("rm -f $testname.dag.dagman.out");
 

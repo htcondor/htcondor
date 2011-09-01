@@ -33,7 +33,7 @@
 \oOpt{-import\_env}
 \oOpt{-DumpRescue}
 \oOpt{-valgrind}
-\oOpt{-AlwaysRunPost}
+\oOpt{-DontAlwaysRunPost}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
@@ -262,9 +262,9 @@ description.
      \Prog{valgrind} software installed will cause the DAG to fail.
      If the DAG does run, it will run much more slowly than usual.
   }
-  \OptItem{\Opt{-AlwaysRunPost}}{This optional argument causes the submit
+  \OptItem{\Opt{-DontAlwaysRunPost}}{This optional argument causes the submit
      description file generated for the submission of \Condor{dagman} to
-     be modified.  This will pass the \Opt{-AlwaysRunPost} flag in the
+     be modified.  This will pass the \Opt{-DontAlwaysRunPost} flag in the
      arguments to \Condor{dagman} in the submission file, which causes
      \Condor{dagman} to use the return value from a PRE script to determine
      whether a POST script will run.  By default, \Condor{dagman} runs the
