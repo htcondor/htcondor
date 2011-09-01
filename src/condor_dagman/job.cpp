@@ -998,6 +998,9 @@ Job::GetPreSkip() const
 }
 
 //---------------------------------------------------------------------------
+// Wrap the return value from the PRE script.  If it is the PRE_SKIP value,
+// return 0.  Otherwise, return the exit value of the PRE script.  Returns
+// 0 if there was not a PRE script.
 int Job::GetPreStatus() const
 {
 	int ret = 0;

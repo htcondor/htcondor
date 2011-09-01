@@ -533,6 +533,7 @@ class Dag {
 	static const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
 	static const int DAG_ERROR_CONDOR_JOB_ABORTED;
 	static const int DAG_ERROR_LOG_MONITOR_ERROR;
+	static const int DAG_ERROR_JOB_SKIPPED;
 
 		// The maximum signal we can deal with in the error-reporting
 		// code.

@@ -416,6 +416,13 @@ class Job {
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
 	int GetPreSkip() const;
 	
+	/** GetPreStatus() is a wrapper.  It protects callers checking the PRE
+	    script return value from having to know about the PRE_SKIP return
+            value.
+		@return 0 if the PRE script returns 0 or the PRE_SKIP value, and
+			returns the PRE script exit value otherwise. Returns 0
+			if there was not a PRE script.
+	*/
 	int GetPreStatus() const;
 	int SetPreStatus(const int ps);
     /** */ CondorID _CondorID;

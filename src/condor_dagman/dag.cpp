@@ -57,6 +57,7 @@ const CondorID Dag::_defaultCondorId;
 const int Dag::DAG_ERROR_CONDOR_SUBMIT_FAILED = -1001;
 const int Dag::DAG_ERROR_CONDOR_JOB_ABORTED = -1002;
 const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
+const int Dag::DAG_ERROR_JOB_SKIPPED = -1004;
 
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
@@ -1533,7 +1534,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 				if( job->_scriptPost != NULL ) {
 					_preRunNodeCount--;
 					job->retval = 0; // for safety on retries
-					job->_scriptPost->_retValJob = job->retval;
+					// Notify the POST script that the job was skipped
+					job->_scriptPost->_retValJob = DAG_ERROR_JOB_SKIPPED;
 					RunPostScript( job, _alwaysRunPost, 0 );
 					goto check_for_abort;	
 				} else {
