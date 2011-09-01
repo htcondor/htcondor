@@ -416,9 +416,6 @@ class Job {
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
 	int GetPreSkip() const;
 	
-	//TEMPTEMP -- eliminate these?
-	int GetPreStatus() const;
-	int SetPreStatus(const int ps);
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 

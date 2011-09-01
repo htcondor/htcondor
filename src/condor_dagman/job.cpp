@@ -996,38 +996,3 @@ Job::GetPreSkip() const
 	}
 	return _preskip;
 }
-
-//---------------------------------------------------------------------------
-int Job::GetPreStatus() const
-{
-	int ret = 0;
-	if( _scriptPre ) {
-		if( HasPreSkip() ) {
-			if( _pre_status != GetPreSkip() && _pre_status != NO_PRE_VALUE && _pre_status != 0) {
-				debug_printf( DEBUG_QUIET,
-					"PRE script not PRE_SKIP value in node %s: "
-					"Returning pre_status %d.\n",_jobName,_pre_status);
-				ret = _pre_status;
-			}
-		} else {
-			if( _pre_status != NO_PRE_VALUE && _pre_status != 0 ) {
-				debug_printf( DEBUG_QUIET,
-					"PRE script failed in node %s: "
-					"Returning pre_status %d.\n",_jobName,_pre_status);
-				ret = _pre_status;
-			}
-		}
-	}
-	return ret;
-}
-
-//---------------------------------------------------------------------------
-int Job::SetPreStatus(const int ps)
-{
-	int ret = 0;
-	if( _scriptPre ) {
-		debug_printf( DEBUG_QUIET, "Setting _pre_status to %d.\n",ps);	
-		ret = _pre_status = ps;
-	}
-	return ret;
-}
