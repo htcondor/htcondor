@@ -90,7 +90,7 @@ void CondorFileCompress::end_compression()
 
 /* Set up the decompression stream to read from the desired offset, and then decompress. */
 
-int CondorFileCompress::read( int offset, char *data, int length )
+int CondorFileCompress::read( off_t offset, char *data, int length )
 {
 	if( offset>=voffset && last_action==READ ) {
 
@@ -308,7 +308,7 @@ void CondorFileCompress::read_string()
 
 /* Set up the decompression stream to work from the given offset, and then compress. */
 
-int CondorFileCompress::write( int offset, char *data, int length )
+int CondorFileCompress::write( off_t offset, char *data, int length )
 {
 	if( offset==voffset && last_action==WRITE ) {
 
@@ -504,7 +504,7 @@ int CondorFileCompress::is_seekable()
 
 /* Getting the size of the uncompressed file is impossible without actually reading it. */
 
-int CondorFileCompress::get_size()
+off_t CondorFileCompress::get_size()
 {
 	return -1;
 }

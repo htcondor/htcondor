@@ -44,6 +44,7 @@ struct node {
 	int		is_ptr;
 	int		is_const;
 	int		is_const_ptr;
+	int		is_hidden_ptr; /* used for types like caddr_t which are ptrs */
 	int		is_tabled;
 	int		is_array;
 	int		is_ref;

@@ -104,7 +104,7 @@ int UserProc::proc_index = 1;
 
 /* These are the remote system calls we use in this file */
 extern "C" int REMOTE_CONDOR_get_a_out_name(char *&path);
-extern "C" int REMOTE_CONDOR_getwd(char *&path_name);
+extern "C" int REMOTE_CONDOR_getwd_special (char *&path_name);
 extern "C" int REMOTE_CONDOR_free_fs_blocks(char *pathname);
 extern "C" int REMOTE_CONDOR_get_std_file_info(int fd, char *&logical_name);
 extern "C" int REMOTE_CONDOR_get_file_info_new(char *logical_name,
@@ -1141,8 +1141,8 @@ UserProc::store_core()
 		}
 	}
 
-	if( REMOTE_CONDOR_getwd(virtual_working_dir) < 0 ) {
-		EXCEPT( "REMOTE_CONDOR_getwd(virtual_working_dir = %s)",
+	if( REMOTE_CONDOR_getwd_special(virtual_working_dir) < 0 ) {
+		EXCEPT( "REMOTE_CONDOR_getwd_special(virtual_working_dir = %s)",
 			(virtual_working_dir != NULL)?virtual_working_dir:"(null)");
 	}
 

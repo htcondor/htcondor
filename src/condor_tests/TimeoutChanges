@@ -5,3 +5,4 @@ lib_auth_protocol-negot-prt3 40
 lib_auth_protocol-negot-prt4 40
 job_dagman_splice-N 40
 job_dagman_splice-O 40
+job_ckpt_lfs_std 40

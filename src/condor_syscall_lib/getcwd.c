@@ -34,7 +34,7 @@ char* _getwd( char* );
 char* __getwd( char* );
 
 /* remote system call externs */
-extern int REMOTE_CONDOR_getwd(char **path_name);
+extern int REMOTE_CONDOR_getwd_special(char **path_name);
 
 
 /* Definitions of the getwd() and getcwd() that the user job will
@@ -47,7 +47,7 @@ getwd( char *path )
 		return GETCWD( path, _POSIX_PATH_MAX );
 	} else {
 		char *p = NULL;
-		REMOTE_CONDOR_getwd( &p );
+		REMOTE_CONDOR_getwd_special( &p );
 			/* We do not know how big the supplied buffer is.  If
 			   we assume it is only _POSIX_PATH_MAX, this could cause
 			   failure when, in fact, more space is needed and more
@@ -76,7 +76,7 @@ getcwd( char *path, size_t size )
 			return NULL;
 		}
 
-		REMOTE_CONDOR_getwd( &tmpbuf );
+		REMOTE_CONDOR_getwd_special( &tmpbuf );
 		if ( tmpbuf == NULL || tmpbuf[0] == '\0' ) {
 			// our remote syscall failed somehow
 			free( tmpbuf );

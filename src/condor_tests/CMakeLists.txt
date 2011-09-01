@@ -69,9 +69,18 @@ if (BUILD_TESTS)
 		# disable any optimizations + compile with specific fla
 		set( CMAKE_BUILD_TYPE Debug )
 		add_library( stdulib STATIC EXCLUDE_FROM_ALL "x_waste_second.c" )
+		add_dependencies( stdulib condorsyscall)
 		set( STDU_LDD_FLAGS -lm;-ldl;-lcrypt;libstdulib.a )
 
 		# C-Tests
+		if(${SYS_ARCH} MATCHES "X86_64")
+			# Only x86_64 machines get to run this test. On 32-bit machines,
+			# we still have a 2GB limit for the file size. See gt2337.
+			# Mainly, the submit side AND the application both must be 64-bit
+			# applications.
+			condor_std_exe_test(job_ckpt_lfs_std "${CMAKE_C_COMPILER}" "job_ckpt_lfs_std.c" "${STDU_LDD_FLAGS}")
+		endif()
+
 		condor_std_exe_test(job_core_compressfiles "${CMAKE_C_COMPILER}" "job_core_compressfiles.c" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_core_coredump "${CMAKE_C_COMPILER}" "job_core_coredump.c" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_rsc_binary-io_std "${CMAKE_C_COMPILER}" "job_rsc_binary-io_std.c" "${STDU_LDD_FLAGS}")
@@ -193,6 +202,11 @@ if (BUILD_TESTS)
 
 	if (STD_UNIVERSE)
 		# C-Tests
+
+		if(${SYS_ARCH} MATCHES "X86_64")
+			condor_pl_test(job_ckpt_lfs_std "Do we handle files with larger than 32-bit file offsets?" "stduniv;quick;full")
+		endif()
+
 		condor_pl_test(job_core_compressfiles_std "Do we handle compressed files made by standard jobs?" "stduniv;core;quick;full")
 		condor_pl_test(job_core_coredump_std "Do we handle core files made by standard jobs?" "stduniv;framework;quick;full")
 		condor_pl_test(job_rsc_binary-io_std "Do we handle binary io in standard jobs?" "stduniv;framework;quick;full")

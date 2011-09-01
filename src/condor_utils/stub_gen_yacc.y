@@ -9,6 +9,7 @@
 %token DL_EXTRACT
 %token PSEUDO
 %token NO_SYS_CHK
+%token HIDDEN_PTR
 %token ARRAY
 %token IN
 %token OUT
@@ -34,7 +35,7 @@
 %type <node> stub_body action_func_list
 %type <node> action_param action_param_list action_func xfer_func alloc_func
 %type <node> return_func null_alloc_func
-%type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN FILE_TABLE DL_EXTRACT NO_SYS_CHK ARRAY opt_mult
+%type <tok> TYPE_NAME CONST IDENTIFIER UNKNOWN FILE_TABLE DL_EXTRACT NO_SYS_CHK ARRAY HIDDEN_PTR opt_mult
 %type <bool> opt_const opt_ptr opt_ptr_to_const opt_array
 %type <bool> opt_reference
 %type <param_mode> use_type
@@ -76,6 +77,7 @@ struct node *mk_list();
 void copy_file( FILE *in_fp, FILE *out_fp );
 FILE * open_file( char *name );
 char * mk_upper();
+int is_void( struct node *n ); /* return true if type is only "void" */
 char * node_type( struct node *n );
 char * abbreviate( char *type_name );
 void Trace( char *msg );
@@ -104,6 +106,7 @@ int IsDLExtracted = FALSE;
 int IsPseudo = FALSE;
 int IsIndirect = FALSE;
 int DoSysChk = TRUE;
+int HiddenPtr = FALSE;
 int IsTabled = FALSE;
 int IsVararg = FALSE;
 int UseAltRemoteName = FALSE;
@@ -377,6 +380,11 @@ option
 		{
 		Trace( "option (3)" );
 		DoSysChk = FALSE;
+		}
+	|  HIDDEN_PTR
+		{
+		Trace( "option (3)" );
+		HiddenPtr = TRUE;
 		}
 	| FILE_TABLE
 		{
@@ -707,6 +715,8 @@ mk_func_node( char *type, char *name, struct node * p_list,
 	answer->type_name = type;
 	answer->id = name;
 	answer->is_ptr = is_ptr;
+	answer->is_hidden_ptr = HiddenPtr;
+	HiddenPtr = FALSE;
 	answer->is_ref = 0;
 	answer->is_array = 0;
 	answer->is_const = 0;
@@ -874,6 +884,55 @@ char * node_type( struct node *n )
 	return buffer;
 }
 
+int is_void(struct node *n )
+{
+	if (strcmp(n->type_name, "void") == MATCH && n->is_ptr == FALSE &&
+		n->is_hidden_ptr == FALSE)
+	{
+		return TRUE;
+	}
+	
+	return FALSE;
+}
+
+/* This returns a string that either casts something to void if the return
+	value is actually void, or stores it in a variable called rval after
+	casting it (the later code that comes after this string) to the
+	correct type.
+*/
+char* consider_return_value_named_with_typecast( struct node *n, int emit_type,
+	char *varname )
+{
+	static char str[1024] = {'\0'};
+
+	if (is_void(n)) {
+		if (emit_type == TRUE) {
+			return "(void)";
+		} else {
+			return "";
+		}
+	}
+
+	if (emit_type == TRUE) {
+		sprintf(str, "%s = (%s)", varname, node_type(n));
+	} else {
+		sprintf(str, "%s = ", varname, node_type(n));
+	}
+
+	return str;
+}
+
+char* consider_return_value( struct node *n )
+{
+	return consider_return_value_named_with_typecast( n, TRUE, "rval" );
+}
+
+char* consider_return_value_no_typecast( struct node *n )
+{
+	return consider_return_value_named_with_typecast( n, FALSE, "rval" );
+}
+
+
 char * node_type_noconst ( struct node *n )
 {
 	static char buffer[1024];
@@ -1032,11 +1091,16 @@ output_local_call( struct node *n, struct node *list )
 		}
 		printf(" };\n");
 
-		printf("\t\t\trval = syscall( SYS_socketcall, SYS_%s, args );\n", mk_upper(n->local_name) );
+		printf("\t\t\%s syscall( SYS_socketcall, SYS_%s, args );\n",
+			consider_return_value(n),
+			mk_upper(n->local_name) );
 
 	} else {
 
-		printf("\t\t\trval = syscall( SYS_%s", n->local_name );
+		printf("\t\t\t%s syscall( SYS_%s",
+			consider_return_value(n),
+			n->local_name );
+
 		if( !is_empty_list(list) ) {
 			printf( ", " );
 		}
@@ -1049,7 +1113,7 @@ void
 output_remote_extern(struct node *n, struct node *list)
 {
 	/* spew some pseudo-ansi C-like stuff out to define function before use */
-	printf("extern \"C\" int REMOTE_CONDOR_%s( ", n->sender_name);
+	printf("extern \"C\" %s REMOTE_CONDOR_%s( ", node_type(n), n->sender_name);
 	output_type_list( list, 1, 0);
 	printf(");\n");
 }
@@ -1058,7 +1122,9 @@ void
 output_remote_call( struct node *n, struct node *list )
 {
 	/* the actual call */
-	printf("\t\t\trval = REMOTE_CONDOR_%s( ", n->sender_name );
+	printf("\t\t\t%s REMOTE_CONDOR_%s( ",
+		consider_return_value_no_typecast(n),
+		n->sender_name );
 	output_param_list( list, 1, 0 );
 	printf( " );\n" );
 }
@@ -1067,7 +1133,13 @@ void
 output_tabled_call( struct node *n, struct node *list )
 {
 	printf( "\t\t_condor_file_table_init();\n");
-	printf( "\t\trval = FileTab -> %s ( ", n->table_name );
+
+	printf("\t\t/* The FileTab prototypes must match the type of the rval! */\n");
+
+	printf( "\t\t%s FileTab -> %s ( ",
+		consider_return_value_named_with_typecast(n, FALSE, "rval"),
+		n->table_name );
+
 	output_param_list( list, 1, 0 );
 	printf( " );\n");
 }
@@ -1075,7 +1147,10 @@ output_tabled_call( struct node *n, struct node *list )
 void
 output_extracted_call( struct node *n, struct node *list )
 {
-	printf("\t\t\trval = (int) %s(", mk_upper(n->id) );
+	printf("\t\t\t%s %s(", 
+		consider_return_value(n),
+		mk_upper(n->id) );
+
 	if( !is_empty_list(list) ) {
 		printf( " " );
 	}
@@ -1228,6 +1303,30 @@ output_mapping( char *func_type_name, int is_ptr,  struct node *list )
 }
 
 /*
+	Return an expression that is true for failure of a returned value from
+	a syscall. In the UNIX API, an rval < 0 of int-like return values usually
+	means failure. For functions that return pointers, rval == NULL usually
+	means failure.
+*/
+char* syscall_validity_check_named( struct node *n, char *varname )
+{
+	static char str[1024] = {'\0'};
+
+	if ( n->is_ptr || n->is_hidden_ptr ) {
+		sprintf(str, " %s == NULL ", varname);
+	} else {
+		sprintf(str, " %s < 0 ", varname);
+	}
+
+	return str;
+}
+
+char* syscall_validity_check( struct node *n )
+{
+	return syscall_validity_check_named(n, "rval");
+}
+
+/*
   Output code for one system call receiver.
 */
 void
@@ -1272,6 +1371,11 @@ output_receiver( struct node *n )
 			
 	printf( "	  {\n" );
 
+		/* output a local variable to hold the return value o the syscall */
+	if (!is_void(n)) {
+		printf("\t\t%s ret_val;\n", node_type(n));
+	}
+
 		/* output a local variable decl for each param of the sys call */
 	for( p=param_list->next; p != param_list; p = p->next ) {
 		if(!p->rdiscard) printf("\t\t%s %s;\n",node_type_noconst_noref(p),p->id);
@@ -1294,12 +1398,15 @@ output_receiver( struct node *n )
 			p->id 
 		);
 		if ((strcmp(p->type_name, "int") == MATCH) ||
-			(strcmp(p->type_name, "open_flags_t") == MATCH) ||
-			(strcmp(p->type_name, "off_t") == MATCH) ||
-			(strcmp(p->type_name, "size_t") == MATCH)) {
+			(strcmp(p->type_name, "open_flags_t") == MATCH)) {
 			printf( "\t\tdprintf( D_SYSCALLS, \"\t%s = %%d\\n\", %s );\n",
-				   p->id, p->id
-			);
+				   p->id, p->id);
+		} else if (	(strcmp(p->type_name, "off_t") == MATCH) ||
+					(strcmp(p->type_name, "size_t") == MATCH) ) {
+			/* unsigned quantities get typecast into an unsigned long
+				for outputting, this is mostly correct */
+			printf( "\t\tdprintf( D_SYSCALLS, \"\t%s = %%lu\\n\", %s );\n",
+				   p->id, (unsigned long)p->id);
 		}
 	}
 
@@ -1366,13 +1473,27 @@ output_receiver( struct node *n )
 	printf( "\n" );
 	printf( "\t\terrno = (condor_errno_t)0;\n" );
 	if( !Supported  ) {
-		printf( "\t\trval = CONDOR_NotSupported( CONDOR_%s );\n", n->remote_name  );
+		printf( "\t\t%s CONDOR_NotSupported( CONDOR_%s );\n",
+			consider_return_value_named_with_typecast(n, TRUE, "ret_val"),
+			n->remote_name  );
+
 	} else if( Ignored ) {
-		printf( "\t\trval = CONDOR_Ignored( CONDOR_%s );\n", n->remote_name  );
+		printf( "\t\t%s CONDOR_Ignored( CONDOR_%s );\n",
+			consider_return_value_named_with_typecast(n, TRUE, "ret_val"),
+			n->remote_name  );
 	} else {
 
 		printf( "\t\t%s%s%s( ",
-			!strcmp(n->type_name,"void") ? "" : "rval = ",
+			/* XXX Hrm, changing the TRUE to FALSE would be more correct
+				since the return type of the system call should match the
+				type of the variable holding the return value, but
+				it would require moderate changes to the pseduo_* functions
+				to make the return values type correct. For now, I'm
+				leaving the type cast here until I get a chance to
+				fix it in the future.
+					-psilord 8/9/11
+			*/
+			consider_return_value_named_with_typecast(n, TRUE, "ret_val"),
 			n->pseudo ? "pseudo_" : "",
 			n->id
 		);
@@ -1380,23 +1501,40 @@ output_receiver( struct node *n )
 		printf( ");\n" );
 	}
 	printf( "\t\tterrno = (condor_errno_t)errno;\n" );
-	printf( "\t\tdprintf( D_SYSCALLS, \"\\trval = %%d, errno = %%d\\n\", rval, (int)terrno );\n" );
+
+	if (is_void(n)) {
+		printf( "\t\tdprintf( D_SYSCALLS, \"\\tret_val = (void), errno = N/A\\n\" );\n" );
+	} else {
+		printf( "\t\tdprintf( D_SYSCALLS, \"\\tret_val = %%d, errno = %%d\\n\", ret_val, (int)terrno );\n" );
+	}
+
 	printf( "\n" );
 
 
+	if (!is_void(n) || has_out_params(n->action_func_list)) {
+		/* Only if we got something from the system call, either a return value
+			or OUT parameters, do we even try to shove anything back to the
+			sender which ultimately invoked this receiver. */
+		printf( "\t\tsyscall_sock->encode();\n" );
+	}
+
 		/* Send system call return value, and errno if needed */
-	printf( "\t\tsyscall_sock->encode();\n" );
-	printf( "\t\tassert( syscall_sock->code(rval) );\n" );
-	printf( "\t\tif( rval < 0 ) {\n" );
-	printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
-	printf( "\t\t}\n" );
+	if (!is_void(n)) {
+		printf( "\t\tassert( syscall_sock->code(ret_val) );\n" );
+		printf( "\t\tif( %s ) {\n",
+			syscall_validity_check_named(n, "ret_val") );
+		printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
+		printf( "\t\t}\n" );
+	}
 
 		/*
 		Send out results in any OUT parameters - these are the ones with an
 		OUT action function defined in the template file.
 		*/
 	if( has_out_params(n->action_func_list) ) {
-		printf( "\t\tif( rval >= 0 ) {\n" );
+		printf( "\t\tif( !(%s) ) {\n", 
+			syscall_validity_check_named(n, "ret_val") );
+
 		for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
 			if( p->node_type != XFER_FUNC || p->out_param == FALSE ) {
 				continue;
@@ -1425,7 +1563,10 @@ output_receiver( struct node *n )
 		printf( "\t\tfree( (char *)%s );\n", var->id );
 	}
 
-	printf( "\t\tassert( syscall_sock->end_of_message() );;\n" );
+	if (!is_void(n) || has_out_params(n->action_func_list)) {
+		/* This end_of_message is paired with the block above */
+		printf( "\t\tassert( syscall_sock->end_of_message() );;\n" );
+	}
 
 		/*
 		Check for special return value
@@ -1494,7 +1635,7 @@ output_sender( struct node *n )
 	}
 
 	/* spit out the shiny sender function */
-	printf("int\nREMOTE_CONDOR_%s(", n->sender_name);
+	printf("%s\nREMOTE_CONDOR_%s(", node_type(n), n->sender_name);
 	for( p=param_list->next; p != param_list; p = p->next ) {
 		/* only discard remote args since a sender can ONLY do a remote call. */
 		if(p->rdiscard ) continue;
@@ -1506,8 +1647,13 @@ output_sender( struct node *n )
 
 	/* argument declarations */
 	printf( "\tint	scm;\n");
-	printf( "\tint	rval;\n");
-	printf( "\tcondor_errno_t	terrno;\n");
+
+	if (!is_void(n)) {
+		/* void functions don't need this */
+		printf( "\t%s   rval;\n", node_type(n));
+		printf( "\tcondor_errno_t   terrno;\n");
+	}
+
 	printf( "\tsigset_t	omask;\n");
 	printf( "\n");
 
@@ -1559,43 +1705,57 @@ output_sender( struct node *n )
 		/* Complete the XDR record, and flush */
 	printf( "\tassert( syscall_sock->end_of_message() );\n\n" );
 
-    printf( "\tsyscall_sock->decode();\n" );
-	printf( "\tassert( syscall_sock->code(rval) );\n" );
-	
-	printf( "\tif( rval < 0 ) {\n" );
-	printf( "\t\tassert( syscall_sock->code(terrno) );\n" );
-	printf( "\t\tassert( syscall_sock->end_of_message() );\n" );
-	printf( "\t\t_condor_signals_enable( omask );\n");
-	printf( "\t\tSetSyscalls( scm );\n");
-	printf( "\t\terrno = (int)terrno;\n" );
-	printf( "\t\treturn rval;\n" );
-	printf( "\t}\n" );
+	if (!is_void(n) || has_out_params(n->action_func_list)) {
+		/* Only if the receiver actually produced a return value or OUT
+			parameters do we even expect anything back. */
+    	printf( "\tsyscall_sock->decode();\n" );
+	}
+
+	if (!is_void(n)) {
+		/* only read the rval from the other side if the function isn't void */
+		printf( "\tassert( syscall_sock->code(rval) );\n" );
+		printf( "\tif( %s ) {\n", syscall_validity_check(n) );
+		printf( "\t\tassert( syscall_sock->code(terrno) );\n" );
+		printf( "\t\tassert( syscall_sock->end_of_message() );\n" );
+		printf( "\t\t_condor_signals_enable( omask );\n");
+		printf( "\t\tSetSyscalls( scm );\n");
+		printf( "\t\terrno = (int)terrno;\n" );
+		printf( "\t\treturn rval;\n" );
+		printf( "\t}\n" );
+	}
 
 		/*
 		Gather up results in any OUT parameters - these are the ones with an
 		OUT action function defined in the template file.
 		*/
-	for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
-		if( p->node_type != XFER_FUNC || p->out_param == FALSE ) {
-			continue;
+	if( has_out_params(n->action_func_list) ) {
+		for( p=n->action_func_list->next; p->node_type != DUMMY; p = p->next ) {
+			if( p->node_type != XFER_FUNC || p->out_param == FALSE ) {
+				continue;
+			}
+			printf( "\tassert( syscall_sock->%s(", p->SOCK_FUNC );
+			for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
+				assert( q->node_type == ACTION_PARAM );
+				printf( "%s%s", 
+					q->id,
+					q->next->node_type == DUMMY ? "" : ", "
+				);
+			}
+			printf( ") );\n" );
 		}
-		printf( "\tassert( syscall_sock->%s(", p->SOCK_FUNC );
-		for( q=p->param_list->next; q->node_type != DUMMY; q = q->next ) {
-			assert( q->node_type == ACTION_PARAM );
-			printf( "%s%s", 
-				q->id,
-				q->next->node_type == DUMMY ? "" : ", "
-			);
-		}
-		printf( ") );\n" );
 	}
 
-	printf( "\tassert( syscall_sock->end_of_message() );\n" );
+	if (!is_void(n) || has_out_params(n->action_func_list)) {
+		/* Paired with the above decode() call */
+		printf( "\tassert( syscall_sock->end_of_message() );\n" );
+	}
 
 	printf( "\t_condor_signals_enable( omask );\n");
 	printf( "\tSetSyscalls( scm );\n");
 
-	printf( "\treturn rval;\n" );
+	if (!is_void(n)) {
+		printf( "\treturn rval;\n" );
+	}
 
 	/* end of function */
 	printf( "}\n\n" );
@@ -1645,7 +1805,16 @@ output_switch( struct node *n )
 	printf( "%s %s ", node_type(n), n->id );
 	output_switch_decl( n->param_list );
 
-	printf("{\n\tint rval,do_local=0;\n");
+	/* start of switch function */
+	printf("{\n");
+
+	/* The return value of the system/remote call, if any. */
+	if (!is_void(n)) {
+		printf("\t%s rval;\n", node_type(n));
+	}
+
+	printf("\tint do_local=0;\n\n");
+
 	printf( "\terrno = 0;\n\n" );
 
 	/* Notice this: The vararg generator only does enough to
@@ -1710,7 +1879,8 @@ output_switch( struct node *n )
 			output_local_call( n, n->param_list );
 		}
 		if(did_map_name) {
-			printf("\t\t\tif( rval<0 && !LocalSysCalls() && do_local ) {\n");
+			printf("\t\t\tif( %s && !LocalSysCalls() && do_local ) {\n",
+				syscall_validity_check(n));
 			printf("\t");
 			output_remote_call( n, n->param_list );
 			printf("\t\t\t}\n");
@@ -1744,11 +1914,11 @@ output_switch( struct node *n )
 
 	printf( "\t_condor_signals_enable( condor_omask );\n");
 
-	if( strcmp(n->type_name,"void") || n->is_ptr) {
-		printf("\n\treturn (%s) rval;\n",node_type(n));
+	if (!is_void(n)) {
+		printf("\n\treturn rval;\n");
 	}
-	printf( "}\n\n" );
 
+	printf( "}\n\n" );
 
 	if( n->pseudo || !Do_SYS_check || !n->sys_chk ) {
 		printf( "\n" );
@@ -1854,8 +2024,11 @@ output_send_stub( struct node *n )
 	printf( "\t\tassert( syscall_sock->end_of_message() );\n\n" );
 
 	printf( "\t\tsyscall_sock->decode();\n" );
+	/* XXX bug? Shouldn't this only do it is the function is non void? */
+
+	printf( "\t\t/* XXX possible bug! Also this code isn't generated! */\n" );
 	printf( "\t\tassert( syscall_sock->code(rval) );\n" );
-	printf( "\t\tif( rval < 0 ) {\n" );
+	printf( "\t\tif( %s ) {\n", syscall_validity_check(n) );
 	printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
 	printf( "\t\t\tassert( syscall_sock->end_of_message() );\n" );
 	printf( "\t\t\terrno = (int)terrno;\n" );
@@ -1883,6 +2056,7 @@ output_send_stub( struct node *n )
 
 	printf( "\t\tassert( syscall_sock->end_of_message() );\n" );
 
+	/* XXX make this into a function and use it! */
 	if( strcmp(n->type_name,"void") != 0 ) {
 		printf( "\n" );
 		if( strcmp(n->type_name,"int") == 0 ) {

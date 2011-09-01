@@ -378,7 +378,7 @@ pseudo_report_file_info_new( char *name, long long open_count, long long read_co
 }
 
 int
-pseudo_getwd( char *&path )
+pseudo_getwd_special( char *&path )
 {
 	path = strdup( CurrentWorkingDir.Value() );
 	return 1;
@@ -2062,7 +2062,11 @@ pseudo_subproc_status(int subproc, int *statp, struct rusage *rusagep)
 
 #endif /* PVM_RECEIVE */
 
-int
+/* XXX Hrm, there is a type size mismatch between the off_t and the ssize_t
+	from read's return type for this function. That is annoying. At
+	least they are both of the right signedness.
+*/
+off_t
 pseudo_lseekread(int fd, off_t offset, int whence, void *buf, size_t len)
 {
         int rval;
@@ -2075,7 +2079,11 @@ pseudo_lseekread(int fd, off_t offset, int whence, void *buf, size_t len)
         return rval;    
 }
 
-int
+/* XXX Hrm, there is a type size mismatch between the off_t and the ssize_t
+	from write's return type for this function. That is annoying. At
+	least they are both of the right signedness.
+*/
+off_t
 pseudo_lseekwrite(int fd, off_t offset, int whence, const void *buf, size_t len)
 {
 	int rval;
