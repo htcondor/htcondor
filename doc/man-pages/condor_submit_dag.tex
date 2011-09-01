@@ -136,11 +136,11 @@ description.
      Passes the the \Arg{level} of debugging output desired to
      \Condor{dagman}.  \Arg{level} is an integer, with values of
      0-7 inclusive, where 7 is the most verbose output.
-     A default value of 3 is passed to \Condor{dagman} when not
-     specified with this option.
      See the 
      \Condor{dagman} manual page on page~\pageref{man-condor-dagman}
      for detailed descriptions of these values.
+     If not specified, no \OptArg{-debug} value is passed to
+     \Condor{dagman}.
      }
   \OptItem{\Opt{-usedagdir}}{This optional argument causes
      \Condor{dagman} to run each specified DAG as if \Condor{submit\_dag}

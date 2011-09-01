@@ -54,6 +54,13 @@ Previously, the environment inherited from glexec took
 precedence.
 \Ticket{2096}
 
+%gittrac #2165
+\item \Condor{dagman} now defaults to writing a partial DAG file, as
+opposed to a full DAG file, for a rescue DAG.  The rescue DAG file is
+parsed in combination with the original DAG file, meaning that any
+changes to the original DAG file take effect when running a rescue DAG.
+\Ticket{2165}
+
 % Moved to 7.7.2
 % gittrac #2057
 %\item The behavior of DAGMan is changed, such that, by default,
@@ -79,6 +86,29 @@ precedence.
 
 \begin{itemize}
 
+% gittrac #2354
+\item Attributes have been added to all daemons to publish statistics about
+the the number of timers, signals, socket and pipe messages that have been handled
+and the amount of time spent handling them.	Statistics attributes for daemon core
+have names that begin with \Attr{DC} or \Attr{RecentDC}.
+\Ticket{2354}
+
+% gittrac #2366
+\item The default value of \Attr{OpSys} on Windows machines has been changed
+ to \AdStr{WINDOWS}, and a new attribute \Attr{OpSysVer} has been added 
+that contains the version number of the operating system.  
+This behavior is controlled by a new configuration variable
+\Macro{ENABLE\_VERSIONED\_OPSYS} which defaults to \Expr{False} on Windows 
+and to \Expr{True} on other platforms.  
+The new machine ClassAd attribute \Attr{OpSys\_And\_Ver} will always contain 
+the versioned operating system.  
+Note that this change could cause problems with mixed pools,
+because Condor version 7.7.2 \Condor{submit} may add \Expr{OpSys="WINDOWS"}, 
+but machines running Condor versions prior to 7.7.2 will be publishing 
+a versioned \Attr{OpSys} value,
+unless there is an override in the configuration.
+\Ticket{2366}
+
 \item Configuration variable \Macro{COLLECTOR\_ADDRESS\_FILE} is now set 
 in the example configuration,
 similar to \MacroNI{MASTER\_ADDRESS\_FILE}.
@@ -88,10 +118,19 @@ In other environments, it should have no visible impact.
 \Ticket{2375}
 
 % gittrac #2197
-\item Attributes have been added to the SCHEDD to publish aggregate statistics
+\item Attributes have been added to the \Condor{schedd} to publish aggregate statistics
 about jobs that are running and have completed, as well as counts of various
 failures. See section ??? for details.
 \Ticket{2197}
+
+%gittrac #2165
+\item The new configuration variable \Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE}
+enables the new feature of writing a partial DAG file, instead of a full
+DAG file, as a rescue DAG.  See section~\ref{param:DAGManWritePartialRescue}
+for details.  Also, the previously-existing configuration variable
+\MacroNI{DAGMAN\_OLD\_RESCUE} has been removed, because it is incompatible
+with the new partial rescue DAGs.
+\Ticket{2165}
 
 \end{itemize}
 

@@ -488,6 +488,14 @@ determined automatically at run time but which can be overwritten.
   automatically insert the operating system of this machine as
   determined by \Prog{uname}.
 
+\label{param:OpSysVer}
+\item[\MacroU{OPSYS\_VER}]
+  Defines the integer used to identify the operating system version number.
+
+\label{param:OpSysAndVer}
+\item[\MacroU{OPSYS\_AND\_VER}]
+  Defines the string used prior to Condor version 7.7.2 as \MacroUNI{OPSYS}.
+
 \label{param:UnameArch}
 \item[\MacroU{UNAME\_ARCH}]
   The architecture as reported by \Prog{uname}(2)'s \Code{machine} field.
@@ -3730,6 +3738,17 @@ WANT_HOLD_REASON = \
 \item[\Macro{WANT\_VACATE}]
   A boolean expression that, when \Expr{True}, defines that a preempted
   Condor job is to be vacated, instead of killed.
+
+\label{param:EnableVersionedOpsys}
+\item[\Macro{ENABLE\_VERSIONED\_OPSYS}]
+  A boolean expression that determines whether pre-7.7.2 strings used for
+  the machine ClassAd attribute \Attr{OpSys} are used or not.
+  Defaults to \Expr{False} on Windows platforms, meaning that the newer
+  behavior of setting \Expr{OpSys = "WINDOWS"} and \Expr{OpSysVer = 601}
+  (for example), while \Expr{OpSysAndVer = "WINNT61"}.
+  On platforms \emph{other} than Windows, the default value is \Expr{True},
+  meaning that the values for \Attr{OpSys} and \Attr{OpSysAndVer} are the same,
+  implementing the pre-7.7.2 behavior.
 
 \label{param:IsOwner}
 \item[\Macro{IS\_OWNER}]
@@ -8334,23 +8353,6 @@ in section~\ref{sec:DAG-configuration}.
   Note that the \MacroNI{DAGMAN\_INSERT\_SUB\_FILE} value can be overridden
   by the \Condor{submit\_dag} \Opt{-insert\_sub\_file} command line option.
 
-\label{param:DAGManOldRescue}
-\item[\Macro{DAGMAN\_OLD\_RESCUE}]
-  A boolean value that controls whether \Condor{dagman} uses 
-  Rescue DAG naming as defined in Condor versions from before 7.1.0 
-  when creating a Rescue DAG.
-  When \Expr{True}, the older style naming is used.
-  In this older style Rescue DAG file naming,
-  if a DAG input file is named \File{my.dag}, the rescue DAG file will
-  be \File{my.dag.rescue}, and that file will be overwritten if the re-run
-  \File{my.dag} fails again.  
-  With the current Rescue DAG file naming,
-  the first time a Rescue DAG is created for \File{my.dag}, it will be
-  named \File{my.dag.rescue001}, and subsequent failures of
-  \File{my.dag} will produce Rescue DAGs named \File{my.dag.rescue002},
-  \File{my.dag.rescue003}, etc.
-  If not defined, \MacroNI{DAGMAN\_OLD\_RESCUE} defaults to \Expr{False}.
-
 \label{param:DAGManAutoRescue}
 \item[\Macro{DAGMAN\_AUTO\_RESCUE}]
   A boolean value that controls whether \Condor{dagman} automatically
@@ -8360,9 +8362,6 @@ in section~\ref{sec:DAG-configuration}.
   \File{my.dag.rescue002} exists, 
   then the largest magnitude Rescue DAG will be run.
   If not defined, \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to \Expr{True}.
-
-  Note: having \MacroNI{DAGMAN\_OLD\_RESCUE} and
-  \MacroNI{DAGMAN\_AUTO\_RESCUE} both set to \Expr{True} is a fatal error.
 
 \label{param:DAGManMaxRescueNum}
 \item[\Macro{DAGMAN\_MAX\_RESCUE\_NUM}]
@@ -8374,6 +8373,24 @@ in section~\ref{sec:DAG-configuration}.
   which prevents a rescue DAG from being written at all,
   or automatically run.
   If not defined, \MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} defaults to 100.
+
+\label{param:DAGManWritePartialRescue}
+\item[\Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE}]
+  A boolean value that controls whether \Condor{dagman} writes a partial
+  or full DAG file as a rescue DAG.  As of version 7.2.2, writing a partial
+  DAG is preferred.
+  If not defined, \MacroNI{DAGMAN\_WRITE\_PARTIAL\_RESCUE} defaults to
+  \Expr{True}.
+
+\label{param:DAGManResetRetriesUponRescue}
+\item[\Macro{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE}]
+  A boolean value that controls whether node retries are reset in a rescue
+  DAG.  If this value is \Expr{False}, the number of node retries written
+  in a rescue DAG is decreased if any retries were used in the original
+  run of the DAG; otherwise, the original number of retries is allowed
+  when running the rescue DAG.
+  If not defined, \MacroNI{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE} defaults to
+  \Expr{True}.
 
 \label{param:DAGManCopyToSpool}
 \item[\Macro{DAGMAN\_COPY\_TO\_SPOOL}]

@@ -1876,7 +1876,8 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 	fprintf( fp, "# Created %d/%d/%d %02d:%02d:%02d UTC\n", tm->tm_mon + 1,
 				tm->tm_mday, tm->tm_year + 1900, tm->tm_hour, tm->tm_min,
 				tm->tm_sec );
-	fprintf( fp, "# Rescue DAG version: %s\n", RESCUE_DAG_VERSION );
+	fprintf( fp, "# Rescue DAG version: %s (%s)\n", RESCUE_DAG_VERSION,
+				isPartial ? "partial" : "full" );
 
     fprintf(fp, "#\n");
     fprintf(fp, "# Total number of Nodes: %d\n", NumNodes());
