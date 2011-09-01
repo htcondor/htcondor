@@ -1,10 +1,10 @@
-//TEMPTEMP -- to-do: take advantage of Dag::RunPostScript always monitoring log file
-//TEMPTEMP -- to-do: PRE_SKIP should skip post script (manual needs fix)
+//TEMPTEMP -- to-do: take advantage of Dag::RunPostScript always monitoring log file -- mostly done
+//TEMPTEMP -- to-do: PRE_SKIP should skip post script (manual needs fix) -- done except for manual
+//TEMPTEMP -- to-do: change tests to make sure PRE_SKIP skips POST script -- done
 //TEMPTEMP -- to-do: refactor Dag::PreScriptReaper()
 //TEMPTEMP -- to-do: check other stuff from code review emails
 //TEMPTEMP -- to-do: fix "recovery in runpost" problem (see recov1.dag)
 //TEMPTEMP -- to-do: separate $RETURN and $PRE_SCRIPT_RETURN (or something) for POST script
-//TEMPTEMP -- to-do: change tests to make sure PRE_SKIP skips POST script
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1536,16 +1536,9 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 						s?s:"(unknown)" );
 				_jobstateLog.WriteScriptSuccessOrFailure( job, false );
 				job->retval = 0; // Job _is_ successful!
+					//TEMPTEMP -- do we really want to write this???
 				_jobstateLog.WriteJobSuccessOrFailure( job );
-				if( job->_scriptPost != NULL ) {
-					_preRunNodeCount--;
-					job->retval = 0; // for safety on retries
-					job->_scriptPost->_retValJob = job->retval;
-					(void)RunPostScript( job, _alwaysRunPost, 0 );
-					goto check_for_abort;	
-				} else {
-					TerminateJob( job, false, false );
-				}
+				TerminateJob( job, false, false );
 				goto pre_skip_fake_success;
 			}
 			// if script returned failure
@@ -1593,7 +1586,6 @@ pre_skip_fake_success:
 		_preRunNodeCount--;
 		job->retval = 0; // for safety on retries
 	}
-check_for_abort:
 	CheckForDagAbort(job, "PRE script");
 	// if dag abort happened, we never return here!
 	return true;
