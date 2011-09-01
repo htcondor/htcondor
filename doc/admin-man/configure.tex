@@ -8377,18 +8377,19 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManWritePartialRescue}
 \item[\Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE}]
   A boolean value that controls whether \Condor{dagman} writes a partial
-  or full DAG file as a rescue DAG.  As of version 7.2.2, writing a partial
-  DAG is preferred.
+  or a full DAG file as a Rescue DAG.  
+  As of Condor version 7.2.2, writing a partial DAG is preferred.
   If not defined, \MacroNI{DAGMAN\_WRITE\_PARTIAL\_RESCUE} defaults to
   \Expr{True}.
 
 \label{param:DAGManResetRetriesUponRescue}
 \item[\Macro{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE}]
-  A boolean value that controls whether node retries are reset in a rescue
+  A boolean value that controls whether node retries are reset in a Rescue
   DAG.  If this value is \Expr{False}, the number of node retries written
-  in a rescue DAG is decreased if any retries were used in the original
-  run of the DAG; otherwise, the original number of retries is allowed
-  when running the rescue DAG.
+  in a Rescue DAG is decreased,
+  if any retries were used in the original run of the DAG; 
+  otherwise, the original number of retries is allowed
+  when running the Rescue DAG.
   If not defined, \MacroNI{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE} defaults to
   \Expr{True}.
 

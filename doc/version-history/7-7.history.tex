@@ -54,11 +54,10 @@ Previously, the environment inherited from glexec took
 precedence.
 \Ticket{2096}
 
-%gittrac #2165
 \item \Condor{dagman} now defaults to writing a partial DAG file, as
-opposed to a full DAG file, for a rescue DAG.  The rescue DAG file is
+opposed to a full DAG file, for a Rescue DAG.  The Rescue DAG file is
 parsed in combination with the original DAG file, meaning that any
-changes to the original DAG file take effect when running a rescue DAG.
+changes to the original DAG input file take effect when running a Rescue DAG.
 \Ticket{2165}
 
 % Moved to 7.7.2
@@ -123,13 +122,13 @@ about jobs that are running and have completed, as well as counts of various
 failures. See section ??? for details.
 \Ticket{2197}
 
-%gittrac #2165
 \item The new configuration variable \Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE}
 enables the new feature of writing a partial DAG file, instead of a full
-DAG file, as a rescue DAG.  See section~\ref{param:DAGManWritePartialRescue}
-for details.  Also, the previously-existing configuration variable
-\MacroNI{DAGMAN\_OLD\_RESCUE} has been removed, because it is incompatible
-with the new partial rescue DAGs.
+DAG input file, as a Rescue DAG.  
+See section~\ref{param:DAGManWritePartialRescue} for a definition.
+Also, the configuration variable
+\Macro{DAGMAN\_OLD\_RESCUE} no longer exists,
+as it is incompatible with the implementation of partial Rescue DAGs.
 \Ticket{2165}
 
 \end{itemize}
