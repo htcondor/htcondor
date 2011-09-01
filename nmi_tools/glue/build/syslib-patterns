@@ -6,3 +6,5 @@ libk5crypto
 libkrb5
 libexpat
 libpcre
+libldap
+liblber
