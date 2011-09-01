@@ -167,7 +167,19 @@ int InDBX = 0;
 
 DebugFileInfo::DebugFileInfo()
 {
+	debugFlags = 0;
 	debugFP = NULL;
+	maxLog = 0;
+	maxLogNum = 0;
+}
+
+DebugFileInfo::DebugFileInfo(const DebugFileInfo &debugFileInfo)
+{
+	this->debugFlags = debugFileInfo.debugFlags;
+	this->logPath = std::string(debugFileInfo.logPath);
+	this->maxLog = debugFileInfo.maxLog;
+	this->maxLogNum = debugFileInfo.maxLogNum;
+	this->debugFP = NULL;
 }
 
 DebugFileInfo::~DebugFileInfo()
@@ -1046,7 +1058,7 @@ preserve_log_file(int debug_level)
 			file_there = 1;
 			save_errno = errno;
 			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!\n", 
-					 DebugFile[debug_level] );
+					 filePath.c_str() );
 			/* We should not exit here - file did rotate but something else created it newly. We
 			 therefore won't grow without bounds, we "just" lost control over creating the file.
 			 We should happily continue anyway and just put a log message into the system telling
@@ -1134,12 +1146,12 @@ _condor_fd_panic( int line, const char* file )
 		break;
 	}
 	if( fileExists ) {
-		debug_file_ptr = safe_fopen_wrapper_follow(DebugFile[0], "a", 0644);
+		debug_file_ptr = safe_fopen_wrapper_follow(filePath.c_str(), "a", 0644);
 	}
 
 	if( !debug_file_ptr ) {
 		save_errno = errno;
-		snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", DebugFile[0],
+		snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", filePath.c_str(),
 				 panic_msg ); 
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
@@ -1198,7 +1210,6 @@ open_debug_file(int debug_level, const char flags[])
 	{
 		if(((*it).debugFlags & debug_level) != debug_level)
 			continue;
-		fp = (*it).debugFP;
 		filePath = (*it).logPath;
 		break;
 	}
@@ -1232,7 +1243,7 @@ open_debug_file(int debug_level, const char flags[])
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
-	(*it).debugFP = fp;
+	it->debugFP = fp;
 
 	return fp;
 }

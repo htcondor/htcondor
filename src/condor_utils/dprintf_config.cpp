@@ -24,7 +24,10 @@
 **	Set up the various dprintf variables based on the configuration file.
 **
 ************************************************************************/
-
+/*
+ * The below define is needed because dprintf operates o n
+ */
+#define _FILE_OFFSET_BITS 64
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_string.h" 
@@ -218,9 +221,7 @@ dprintf_config( const char *subsys )
 						for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 						{
 							if(it->logPath != logPath)
-							{
 								continue;
-							}
 							it->debugFlags |= debug_level;
 							file_found = true;
 							break;

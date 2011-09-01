@@ -284,8 +284,8 @@ close_unused_file_descriptors()
 		bool is_log = false;
 		if(need_open)
 		{
-			if(open_fds.find(i) != open_fds.ends())
-				is_log = true
+			if(open_fds.find(i) != open_fds.end()) {
+				is_log = true;
 			}
 		}
 
@@ -293,8 +293,6 @@ close_unused_file_descriptors()
 			(void) close( i );
 		}
 	}
-
-	free(open_fds);
 
 	dprintf( D_FULLDEBUG, "Done closing file descriptors\n" );
 }
