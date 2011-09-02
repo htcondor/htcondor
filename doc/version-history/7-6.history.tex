@@ -112,6 +112,11 @@ when using \Opt{-spool} or \Opt{-remote} as command-line arguments.
 This combination of settings resulted in jobs being unable to run.
 \Ticket{2398}
 
+\item Fixed a problem that caused the \Condor{schedd} to crash when
+writing to some userlogs with specific names.  The specific names that
+caused crashes are not easy to describe.
+\Ticket{2439}
+
 \end{itemize}
 
 \noindent Known Bugs:
