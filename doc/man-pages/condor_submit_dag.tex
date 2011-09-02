@@ -23,7 +23,6 @@
 \oOptArg{-config}{ConfigFileName}
 \oOptArg{-insert\_sub\_file}{FileName}
 \oOptArg{-append}{Command}
-\oOptArg{-oldrescue}{0|1}
 \oOptArg{-autorescue}{0|1}
 \oOptArg{-dorescuefrom}{number}
 \oOpt{-allowversionmismatch}
@@ -190,10 +189,6 @@ description.
     DAGMAN\_INSERT\_SUB\_FILE configuration variable, so the \Opt{-append}
     command(s) will override commands from the inserted file if the commands
     conflict.
-  }
-  \OptItem{\OptArg{-oldrescue}{0|1}}{Whether to use "old-style" rescue
-    DAG naming (see section~\ref{sec:DAGMan-rescue}) when creating a
-    rescue DAG (0 = \Expr{false}, 1 = \Expr{true}).
   }
   \OptItem{\OptArg{-autorescue}{0|1}}{Whether to automatically run the
     newest rescue DAG for the given DAG file, if one exists
