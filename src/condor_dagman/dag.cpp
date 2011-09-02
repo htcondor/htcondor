@@ -1,5 +1,3 @@
-//TEMPTEMP -- to-do: PRE_SKIP should skip post script (manual needs fix) -- done except for manual
-//TEMPTEMP -- to-do: separate $RETURN and $PRE_SCRIPT_RETURN (or something) for POST script
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1529,6 +1527,9 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		job->retval = WEXITSTATUS( status );
 	} else {
 			// if script succeeded
+		if( job->_scriptPost != NULL ) {
+			job->_scriptPost->_retValScript = 0;
+		}
 		job->retval = 0;
 	}
 
@@ -1556,6 +1557,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 
 			// Check for POST script.
 		else if ( _alwaysRunPost && job->_scriptPost != NULL ) {
+				// PRE script Failed.  The return code is in retval member.
+			job->_scriptPost->_retValScript = job->retval;
 			RunPostScript( job, _alwaysRunPost, job->retval );
 		}
 
