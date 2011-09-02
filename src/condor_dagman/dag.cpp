@@ -1,9 +1,9 @@
 //TEMPTEMP -- to-do: take advantage of Dag::RunPostScript always monitoring log file -- mostly done
 //TEMPTEMP -- to-do: PRE_SKIP should skip post script (manual needs fix) -- done except for manual
 //TEMPTEMP -- to-do: change tests to make sure PRE_SKIP skips POST script -- done
-//TEMPTEMP -- to-do: refactor Dag::PreScriptReaper() -- in progress
+//TEMPTEMP -- to-do: refactor Dag::PreScriptReaper() -- done
 //TEMPTEMP -- to-do: check other stuff from code review emails
-//TEMPTEMP -- to-do: fix "recovery in runpost" problem (see recov1.dag) -- increment _postRunNodeCount at the same time as the old code
+//TEMPTEMP -- to-do: fix "recovery in runpost" problem (see recov1.dag) -- increment _postRunNodeCount at the same time as the old code -- done
 //TEMPTEMP -- to-do: separate $RETURN and $PRE_SCRIPT_RETURN (or something) for POST script
 /***************************************************************
  *
@@ -303,7 +303,7 @@ bool Dag::Bootstrap (bool recovery)
 		jobs.ToBeforeFirst();
 		while( jobs.Next( job ) ) {
 			if( job->GetStatus() == Job::STATUS_POSTRUN ) {
-				if ( !RunPostScript( job, _alwaysRunPost, 0 ) ) {
+				if ( !RunPostScript( job, _alwaysRunPost, 0, false ) ) {
 					debug_cache_stop_caching();
 					_jobstateLog.WriteRecoveryFailure();
 					return false;
@@ -881,18 +881,14 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 
 			// if a POST script is specified for the job, run it
 		if(job->_scriptPost != NULL) {
-#if 0 //TEMPTEMP?
-			(void)RunPostScript( job, _alwaysRunPost, 0, recovery );
-#else //TEMPTEMP?
-			if ( recovery ) {//TEMPTEMP -- move this logic inside RunPostScript??
-				job->_Status = Job::STATUS_POSTRUN;//TEMPTEMP?
-				//_postRunNodeCount++;//TEMPTEMP?
+			if ( recovery ) {
+				job->_Status = Job::STATUS_POSTRUN;
+				_postRunNodeCount++;
 				(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 						_nfsLogIsError, _recovery, _defaultNodeLog );
 			} else {
 				(void)RunPostScript( job, _alwaysRunPost, 0 );
 			}
-#endif //TEMPTEMP?
 		} else if( job->_Status != Job::STATUS_ERROR ) {
 			// no POST script was specified, so update DAG with
 			// node's successful completion if the node succeeded.
@@ -917,7 +913,6 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			// and can think the post script was run before all retries
 			// were exhausted.  wenger 2004-11-23.
 		if ( job->GetStatus() == Job::STATUS_POSTRUN ) {
-	debug_printf( DEBUG_NORMAL, "DIAG 1010\n" );//TEMPTEMP
 			_postRunNodeCount--;
 		} else {
 			ASSERT( recovery );
@@ -1607,7 +1602,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 //---------------------------------------------------------------------------
 // This is the only way a POST script runs.
 
-bool Dag::RunPostScript( Job *job, bool ignore_status, int status )
+bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
+			bool incrementRunCount )
 {
 	// A little defensive programming. Just check that we are
 	// allowed to run this script.  Because callers can be a little
@@ -1625,8 +1621,9 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status )
 		debug_printf(DEBUG_QUIET, "Not running the POST script\n" );
 		return false;
 	}
-	debug_printf( DEBUG_NORMAL, "DIAG 1110\n" );//TEMPTEMP
-	_postRunNodeCount++;
+	if ( incrementRunCount ) {
+		_postRunNodeCount++;
+	}
 	_postScriptQ->Run( job->_scriptPost );
 
 	return true;

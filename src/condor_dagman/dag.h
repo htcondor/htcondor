@@ -713,9 +713,12 @@ class Dag {
            @param The status; usually the result of the PRE script.
               The POST script will not run if ignore_status is false
               and status is nonzero.
+			@param Whether to increment the run count when we run the
+				script
 			@return true if successful, false otherwise
     */
-	bool RunPostScript( Job *job, bool ignore_status, int status );
+	bool RunPostScript( Job *job, bool ignore_status, int status,
+				bool incrementRunCount = true );
 
 	typedef enum {
 		SUBMIT_RESULT_OK,
