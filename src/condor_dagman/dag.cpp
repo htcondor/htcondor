@@ -1,9 +1,4 @@
-//TEMPTEMP -- to-do: take advantage of Dag::RunPostScript always monitoring log file -- mostly done
 //TEMPTEMP -- to-do: PRE_SKIP should skip post script (manual needs fix) -- done except for manual
-//TEMPTEMP -- to-do: change tests to make sure PRE_SKIP skips POST script -- done
-//TEMPTEMP -- to-do: refactor Dag::PreScriptReaper() -- done
-//TEMPTEMP -- to-do: check other stuff from code review emails
-//TEMPTEMP -- to-do: fix "recovery in runpost" problem (see recov1.dag) -- increment _postRunNodeCount at the same time as the old code -- done
 //TEMPTEMP -- to-do: separate $RETURN and $PRE_SCRIPT_RETURN (or something) for POST script
 /***************************************************************
  *
