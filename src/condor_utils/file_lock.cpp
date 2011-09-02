@@ -710,7 +710,7 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 	char hashVal[256] = {0};
 	sprintf(hashVal, "%lu", hash);
 	while (strlen(hashVal) < 5)
-		sprintf(hashVal+strlen(hashVal), "%s", hashVal);
+		sprintf(hashVal+strlen(hashVal), "%lu", hash);
 
 	int len = strlen(path) + strlen(hashVal) + 20;
 	
