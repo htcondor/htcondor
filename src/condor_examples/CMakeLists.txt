@@ -87,7 +87,7 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp 
 						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.patched condor_config.patched.x86_64
-						DEPENDS c${CMAKE_CURRENT_BINARY_DIR}/ondor_config.patched
+						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 						COMMAND patch 
 						ARGS condor_config.patched.x86_64 ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic.rpm64.patch )
 	
