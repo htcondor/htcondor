@@ -59,6 +59,7 @@ const CondorID Dag::_defaultCondorId;
 const int Dag::DAG_ERROR_CONDOR_SUBMIT_FAILED = -1001;
 const int Dag::DAG_ERROR_CONDOR_JOB_ABORTED = -1002;
 const int Dag::DAG_ERROR_LOG_MONITOR_ERROR = -1003;
+const int Dag::DAG_ERROR_JOB_SKIPPED = -1004;
 
 //---------------------------------------------------------------------------
 void touch (const char * filename) {
