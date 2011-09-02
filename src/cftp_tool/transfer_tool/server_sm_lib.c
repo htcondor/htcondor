@@ -188,7 +188,7 @@ int confirm_arguments( ServerArguments* arg)
 		// Do we have a quota to check for?
 	if( arg->quota != -1 )
 		{
-			if( statvfs( "./", &fiData ) < 0 )
+			if( statvfs( arg->tpath, &fiData ) < 0 )
 				{
 					fprintf( stderr, "Unable to confirm quota. Stat failed for './' \n" );
 					return -1;
