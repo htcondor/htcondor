@@ -144,9 +144,7 @@ void DaemonCore::Stats::SetWindowSize(int window)
    Pool.SetRecentMax(window, dc_stats_window_quantum);
 }
 
-#define DC_STATS_ADD_VAL(pool,name,as)     STATS_POOL_ADD_VAL(pool, "DC", name, as) 
-#define DC_STATS_PUB_PEAK(pool,name,as)    STATS_POOL_PUB_PEAK(pool, "DC", name, as) 
-#define DC_STATS_PUB_RECENT(pool,name,as)  STATS_POOL_PUB_RECENT(pool, "DC", name, as) 
+#define DC_STATS_ADD_RECENT(pool,name,as)  STATS_POOL_ADD_VAL_PUB_RECENT(pool, "DC", name, as) 
 #define DC_STATS_PUB_DEBUG(pool,name,as)   STATS_POOL_PUB_DEBUG(pool, "DC", name, as) 
 
 // this is for first time initialization before calling SetWindowSize,
@@ -159,33 +157,20 @@ void DaemonCore::Stats::Init()
 
    // insert static items into the stats pool so we can use the pool 
    // to Advance and Clear.  these items also publish the overall value
-   DC_STATS_ADD_VAL(Pool, SelectWaittime,  0);
-   DC_STATS_ADD_VAL(Pool, SignalRuntime,   0);
-   DC_STATS_ADD_VAL(Pool, TimerRuntime,    0);
-   DC_STATS_ADD_VAL(Pool, SocketRuntime,   0);
-   DC_STATS_ADD_VAL(Pool, PipeRuntime,     0);
-   DC_STATS_ADD_VAL(Pool, Signals,       0);
-   DC_STATS_ADD_VAL(Pool, TimersFired,   0);
-   DC_STATS_ADD_VAL(Pool, SockMessages,  0);
-   DC_STATS_ADD_VAL(Pool, PipeMessages,  0);
-   //DC_STATS_ADD_VAL(Pool, SockBytes,     0);
-   //DC_STATS_ADD_VAL(Pool, PipeBytes,     0);
-   DC_STATS_ADD_VAL(Pool, DebugOuts,     0);
-
-   // Insert additional publish entries for the RecentXXX values
+   // and the Recent value
    //
-   DC_STATS_PUB_RECENT(Pool, SelectWaittime,  0);
-   DC_STATS_PUB_RECENT(Pool, SignalRuntime,   0);
-   DC_STATS_PUB_RECENT(Pool, TimerRuntime,    0);
-   DC_STATS_PUB_RECENT(Pool, SocketRuntime,   0);
-   DC_STATS_PUB_RECENT(Pool, PipeRuntime,     0);
-   DC_STATS_PUB_RECENT(Pool, Signals,       0);
-   DC_STATS_PUB_RECENT(Pool, TimersFired,   0);
-   DC_STATS_PUB_RECENT(Pool, SockMessages,  0);
-   DC_STATS_PUB_RECENT(Pool, PipeMessages,  0);
-   //DC_STATS_PUB_RECENT(Pool, SockBytes,     0);
-   //DC_STATS_PUB_RECENT(Pool, PipeBytes,     0);
-   DC_STATS_PUB_RECENT(Pool, DebugOuts,     0);
+   DC_STATS_ADD_RECENT(Pool, SelectWaittime,  0);
+   DC_STATS_ADD_RECENT(Pool, SignalRuntime,   0);
+   DC_STATS_ADD_RECENT(Pool, TimerRuntime,    0);
+   DC_STATS_ADD_RECENT(Pool, SocketRuntime,   0);
+   DC_STATS_ADD_RECENT(Pool, PipeRuntime,     0);
+   DC_STATS_ADD_RECENT(Pool, Signals,       0);
+   DC_STATS_ADD_RECENT(Pool, TimersFired,   0);
+   DC_STATS_ADD_RECENT(Pool, SockMessages,  0);
+   DC_STATS_ADD_RECENT(Pool, PipeMessages,  0);
+   //DC_STATS_ADD_RECENT(Pool, SockBytes,     0);
+   //DC_STATS_ADD_RECENT(Pool, PipeBytes,     0);
+   DC_STATS_ADD_RECENT(Pool, DebugOuts,     0);
 
    // Insert additional publish entries for the XXXDebug values
    //

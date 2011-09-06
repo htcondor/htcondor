@@ -77,7 +77,7 @@ typedef struct ScheddStatistics {
    time_t InitTime;            // last time we init'ed the structure
    int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
 
-   stats_pool              Pool;          // pool of statistics probes and Publish attrib names
+   StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
 
    // methods
    //

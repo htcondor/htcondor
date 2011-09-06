@@ -1467,7 +1467,7 @@ class DaemonCore : public Service
 	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
       #endif
 
-       stats_pool              Pool;          // pool of statistics probes and Publish attrib names
+       StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
 
 	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
 	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
