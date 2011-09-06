@@ -10,7 +10,7 @@ $dash = new Dashboard();
 $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
 
-$continuous_blacklist = Array("Deb6", "Fedora", "RHAP61", "RHEL57", "SL6");
+$continuous_blacklist = Array();
 ?>
 
 <script type="text/javascript">
@@ -263,29 +263,20 @@ function create_sparkline($dash, $branch, $num_spark_days) {
   ///////////////////////////////////////////////////////////
 
   // Query the DB for all tests that used the above builds as an input
-  $runids_list = implode(", ", $runids);
-  $sql = "SELECT
-                 gjl_input_from_nmi.run_id AS build_run_id, 
-                 gjl_input.run_id as test_run_id
-          FROM gjl_input 
-          LEFT OUTER JOIN gjl_input_from_nmi ON gjl_input.id = input_id 
-          WHERE gjl_input_from_nmi.run_id IN ($runids_list)";
+  if($runids) {
+    $runids_list = implode(", ", $runids);
+    $sql = "SELECT
+                   gjl_input_from_nmi.run_id AS build_run_id, 
+                   gjl_input.run_id as test_run_id
+            FROM gjl_input 
+            LEFT OUTER JOIN gjl_input_from_nmi ON gjl_input.id = input_id 
+            WHERE gjl_input_from_nmi.run_id IN ($runids_list)";
 
-  $results = $dash->db_query($sql);
-
-  // And now for the tests.  This is trickier because we have to line it up
-  // with the builds above
-  /*
-  $sql = "SELECT runid,result,description," .
-         "       convert_tz(start, 'GMT', 'US/Central') as start " .
-         "FROM Run ".
-         "WHERE run_type = 'TEST' AND " .
-         "      component = 'condor' AND " .
-         "      project = 'condor' AND " .
-         "      DATE_SUB(CURDATE(), INTERVAL $num_spark_days DAY) <= start AND " .
-         "      description LIKE 'Auto-Test Suite for ($platform, %' " .
-         "ORDER BY description DESC";
-  */
+    $results = $dash->db_query($sql);
+  }
+  else {
+    $results = Array();
+  }
 
   $runids = Array();
   $tests = Array();
