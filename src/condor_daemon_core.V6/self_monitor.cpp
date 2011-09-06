@@ -21,6 +21,7 @@
 #include "condor_common.h"
 #include "self_monitor.h"
 #include "condor_daemon_core.h"
+#include "classad_helpers.h" // for cleanStringForUseAsAttr
 #include "../condor_procapi/procapi.h"
 #undef min
 #undef max
@@ -131,62 +132,6 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
 //------------------------------------------------------------------------------------------
 //                          DaemonCore Statistics
 
-// this structure controls what members of dc_stats are published, and what names
-// they are published as. 
-//
-//
-#if 0
-#define DC_STATS_PUB(name, as)        GENERIC_STATS_PUB(DaemonCore::Stats, "DC", name, as)
-#define DC_STATS_PUB_RECENT(name, as) GENERIC_STATS_PUB_RECENT(DaemonCore::Stats, "DC", name, as)
-#define DC_STATS_PUB_PEAK(name, as)   GENERIC_STATS_PUB_PEAK(DaemonCore::Stats, "DC", name, as)
-#define DC_STATS_PUB_TYPE(name,T,as)  GENERIC_STATS_PUB_TYPE(DaemonCore::Stats, "DC", name, as, T)
-#define DC_STATS_PUB_RECENT_DEBUG(name, as) GENERIC_STATS_PUB_RECENT_DEBUG(DaemonCore::Stats, "DC", name, as)
-
-const GenericStatsPubItem DCStatsPub[] = {
-   DC_STATS_PUB_TYPE(StatsLifetime,       time_t,  AS_RELTIME),
-   DC_STATS_PUB_TYPE(StatsLastUpdateTime, time_t,  AS_ABSTIME),
-   DC_STATS_PUB_TYPE(RecentStatsLifetime, time_t,  AS_RELTIME),
-   DC_STATS_PUB_TYPE(RecentWindowMax,     int,     AS_COUNT),
-
-   DC_STATS_PUB(SelectWaittime,  AS_RELTIME),
-   DC_STATS_PUB(SignalRuntime,   AS_RELTIME),
-   DC_STATS_PUB(TimerRuntime,    AS_RELTIME),
-   DC_STATS_PUB(SocketRuntime,   AS_RELTIME),
-   DC_STATS_PUB(PipeRuntime,     AS_RELTIME),
-
-   DC_STATS_PUB(Signals,       AS_COUNT),
-   DC_STATS_PUB(TimersFired,   AS_COUNT),
-   DC_STATS_PUB(SockMessages,  AS_COUNT),
-   DC_STATS_PUB(PipeMessages,  AS_COUNT),
-   //DC_STATS_PUB(SockBytes,     AS_COUNT),
-   //DC_STATS_PUB(PipeBytes,     AS_COUNT),
-   DC_STATS_PUB(DebugOuts,     AS_COUNT),
-
-   DC_STATS_PUB_RECENT(SelectWaittime,  AS_RELTIME),
-   DC_STATS_PUB_RECENT(SignalRuntime,   AS_RELTIME),
-   DC_STATS_PUB_RECENT(TimerRuntime,    AS_RELTIME),
-   DC_STATS_PUB_RECENT(SocketRuntime,   AS_RELTIME),
-   DC_STATS_PUB_RECENT(PipeRuntime,     AS_RELTIME),
-
-   DC_STATS_PUB_RECENT(Signals,       AS_COUNT),
-   DC_STATS_PUB_RECENT(TimersFired,   AS_COUNT),
-   DC_STATS_PUB_RECENT(SockMessages,  AS_COUNT),
-   DC_STATS_PUB_RECENT(PipeMessages,  AS_COUNT),
-   //DC_STATS_PUB_RECENT(SockBytes,     AS_COUNT),
-   //DC_STATS_PUB_RECENT(PipeBytes,     AS_COUNT),
-   DC_STATS_PUB_RECENT(DebugOuts,     AS_COUNT),
-
-   DC_STATS_PUB_TYPE(RecentStatsTickTime, time_t,  AS_ABSTIME),
-   //DC_STATS_PUB_RECENT_DEBUG(DebugOuts, AS_COUNT),
-   //DC_STATS_PUB_RECENT_DEBUG(Signals, AS_COUNT),
-   //DC_STATS_PUB_RECENT_DEBUG(SignalRuntime, AS_RELTIME),
-
-   #ifdef WIN32
-    DC_STATS_PUB(AsyncPipe,     AS_COUNT),
-    DC_STATS_PUB_RECENT(AsyncPipe,     AS_COUNT),
-   #endif
-   };
-#endif
 
 // the windowed schedd statistics are quantized to the nearest N seconds
 // WINDOWED_STAT_WIDTH/schedd_stats_window_quantum is the number of slots
@@ -331,19 +276,9 @@ double DaemonCore::Stats::AddRuntime(const char * name, double before)
 
 void* DaemonCore::Stats::New(const char * category, const char * name, int as)
 {
-   MyString clean; // use this to construct a attribute-safe name from the input 
-   clean += name;
-   for (int ii = 0; ii < clean.Length(); ++ii) {
-      char ch = clean[ii];
-      if (ch == '_' || ch >= '0' && ch <= '9' || ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z')
-         continue;
-      clean.setChar(ii,' ');
-      }
-   clean.replaceString(" ","");
-   clean.trim();
-
    MyString attr;
-   attr.sprintf("RecentDC%s_%s", category, clean.Value());
+   attr.sprintf("DC%s_%s", category, name);
+   cleanStringForUseAsAttr(attr);
 
    void * ret = NULL;
    switch (as & (AS_TYPE_MASK | IS_CLASS_MASK))
@@ -363,7 +298,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
          break;
 
       default:
-         EXCEPT("invalid probe type\r");
+         EXCEPT("unsupported probe type\n");
          break;
       }
 
