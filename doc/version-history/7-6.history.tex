@@ -71,8 +71,13 @@ Now \MacroNI{DENY\_WRITE} and \MacroNI{DENY\_READ} are also used.
 \Ticket{2414}
 
 \item Removed an extra copy of the java files required to run gt4 and gt42
-grid universe jobs. This doesn't affect Condor's operation.
+grid universe jobs. This does not affect Condor's operation.
 \Ticket{2435}
+
+\item Fixed a problem that caused the \Condor{schedd} to crash when
+writing to some user logs with specific names.  The specific names that
+caused crashes are not easy to describe.
+\Ticket{2439}
 
 \end{itemize}
 
