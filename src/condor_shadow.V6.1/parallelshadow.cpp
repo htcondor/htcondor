@@ -418,7 +418,7 @@ int ParallelShadow::JobSuspend(int sig)
 	int i;
     for( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 		r = ResourceList[i];
-		if (!r->suspend())
+		if (!r || !r->suspend())
 		{
 			iRet = 1;
 			dprintf ( D_ALWAYS, "ParallelShadow::JobSuspend() sig %d FAILED\n", sig );
@@ -436,7 +436,7 @@ int ParallelShadow::JobResume(int sig)
 	int i;
     for( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 		r = ResourceList[i];
-		if (!r->resume())
+		if (!r || !r->resume())
 		{
 			iRet = 1;
 			dprintf ( D_ALWAYS, "ParallelShadow::JobResume() sig %d FAILED\n", sig );

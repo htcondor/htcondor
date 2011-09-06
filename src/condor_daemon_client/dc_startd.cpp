@@ -799,17 +799,6 @@ DCStartd::_suspendClaim( )
 		return false;
 	}
 	
-	/*reli_sock.decode();
-	ClassAd response_ad;
-	if( !response_ad.initFromStream(reli_sock) || !reli_sock.end_of_message() ) {
-		dprintf( D_FULLDEBUG, "DCStartd::_suspendClaim: failed to read response ad.\n");
-			// The response ad is not critical and is expected to be missing
-			// if the startd is from before 7.0.5.
-	}
-	else {
-		// read any response_ad information
-	}*/
-	
 	return true;
 }
 

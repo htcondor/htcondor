@@ -4049,7 +4049,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// No need to further restrict jobs
 			break;
 		case JA_CONTINUE_JOBS:
-			// TBD: Only continue jobs which are suspended
+			// Only continue jobs which are suspended
 			snprintf( buf, 256, "(%s=%d) && (", ATTR_JOB_STATUS, SUSPENDED );
 			break;
 		default:
@@ -12117,11 +12117,10 @@ fixReasonAttrs( PROC_ID job_id, JobAction action )
 		DeleteAttribute(job_id.cluster,job_id.proc,
 					 ATTR_JOB_STATUS_ON_RELEASE);
 		break;
-	
-	//case JA_SUSPEND_JOBS: //Nothing TBD
+
+	//Don't do anything for the items below, here for completeness	
+	//case JA_SUSPEND_JOBS: 
 	//case JA_CONTINUE_JOBS:
-	//	moveStrAttr( job_id, ATTR_SUSPEND_REASON, ATTR_LAST_SUSPEND_REASON, false );
-	//	break;
 
 	default:
 		return;
