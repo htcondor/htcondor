@@ -23,6 +23,7 @@
 \oOptArg{-outfile\_dir}{directory}
 \oOpt{-update\_submit}
 \oOpt{-import\_env}
+\oOpt{-DontAlwaysRunPost}
 \OptArg{-dag}{dag\_file}
 \oArg{\OptArg{-dag}{dag\_file\_2} \Dots \OptArg{-dag}{dag\_file\_n} }
 
@@ -223,6 +224,14 @@ output DAG input file lines as they are parsed
     \OptItem{\OptArg{-dag}{filename}}{\Arg{filename} is the name of the
        DAG input file that is set as an argument to \Condor{submit\_dag},
        and passed to \Condor{dagman}.}
+    \OptItem{\Opt{-DontAlwaysRunPost}}{This flag causes \Condor{dagman} to
+       observe the exit status of the PRE script when deciding to run the POST
+       script.  Versions of \Condor{dagman} older than 7.7.2 would not run the
+       POST script if the PRE script exited with a nonzero status, but this
+       default has been changed so that the POST script will run, regardless
+       of the exit status of the PRE script. Using this flag restores the old
+       behavior, where \Condor{dagman} will not run the POST script if the PRE
+       script fails.}
 
 \end{Options}
 

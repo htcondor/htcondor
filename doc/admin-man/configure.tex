@@ -8493,6 +8493,15 @@ in section~\ref{sec:DAG-configuration}.
   a DAG that may otherwise escape notice.
   The default value if not defined is 0.
 
+\label{param:DAGmanAlwaysRunPost}
+\item[\Macro{DAGMAN\_ALWAYS\_RUN\_POST}]
+  A boolean value defining whether \Condor{dagman} will ignore the return value
+  of a PRE script when deciding to run a POST script.  The default is
+  \Expr{True}, which says that the POST script will run regardless of the return
+  value of the PRE script. Changing this to \Expr{False} will restore old
+  behavior of \Condor{dagman}, which is that the failure of a PRE script causes
+  the POST script to not be executed.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

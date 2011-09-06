@@ -18,22 +18,27 @@
 ##
 ##**************************************************************
 
-# This tests part of the "allow PRE script to skip node job" feature
-# (gittrac #2122).  The node job for node A should get skipped
-# because of the PRE script return value.
-
-# TEMP -- to-do: add check of jobstate.log file.
-
 use CondorTest;
 use CondorUtils;
 
-$cmd = 'job_dagman_pre_skip-B.dag';
-$testdesc =  'Condor submit dag - basic pre_skip node test B - scheduler U';
-$testname = "job_dagman_pre_skip-B";
+$cmd = 'job_dagman_always_run_post-A.dag';
+$testdesc =  'Condor DAGman test for always running the POST script - scheduler U';
+$testname = "job_dagman_always_run_post-A";
 $dagman_args = "-verbose";
 
-$logfile = "job_dagman_pre_skip-B.dag.dagman.out";
-@outfiles = ("job_dagman_pre_skip-B_A.out", "job_dagman_pre_skip-B_B.out");
+#**************************************************************
+#
+# Job to test always running post.
+# PRE script is expected to fail
+# Node Job is not to run
+# POST script runs, and the node fails.
+#
+#**************************************************************
+
+# TEMP -- to-do: add check of jobstate.log file.
+
+$outfile = "$testname.dag.dagman.out";
+runcmd("rm -f $outfile");
 
 my $killedchosen = 0;
 
@@ -41,16 +46,6 @@ my $killedchosen = 0;
 sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
-
-# Get rid of any existing log and output files
-if (-e $logfile) {
-	runcmd("rm -f $logfile");
-}
-foreach $name (@outfiles) {
-	if (-e $name) {
-		runcmd("rm -f $name");
-	}
-}
 
 $abnormal = sub 
 {
@@ -76,62 +71,66 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing and failure on completion\n",1);
 };
 
 $success = sub
 {
-	CondorTest::debug("executed successfully\n",1);
+	die("DAG is expected to fail.\n");
+};
+
+$failure = sub 
+{
+	CondorTest::debug("Execution was a failure ... as expected\n",1);
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
-
-	# job_dagman_pre_skip-B_A.out should not exist -- if it does, it
-	# means that the job was not correctly skipped.
-	if (-e "job_dagman_pre_skip-B_A.out") {
-		CondorTest::debug("Node A was not skipped!!\n",1);
+	if (-e "A_A.out") {
+		CondorTest::debug("A_A.out exists, but should not!\n",1);
 		$diditpass = 0;
-	} else {
-		CondorTest::debug("Node A was correctly skipped\n",1);
 	}
-	if (! -e "job_dagman_pre_skip-B_B.out") {
-		CondorTest::debug("Node B was not run!!\n",1);
-		$diditpass = 0;
-	} else {
-		CondorTest::debug("Node B was run\n",1);
-	}
-
-	$canopen = open(LOG,"<$logfile");
+	$canopen = open(OUT,"<$outfile");
 	if( ! (defined $canopen)) {
-		CondorTest::debug("Could not open logfile<$logfile>:$!\n",1);
+		CondorTest::debug("Could not open outfile<$outfile>:$!\n",1);
 		$diditpass = 0;
 	}
-	my @logoutput = <LOG>;
-	$passed = 0;
-	foreach (@logoutput) {
-		# We need to see this line...
-		if(/PRE_SKIP return value \d+ indicates we are done.+A/) {
-			CondorTest::debug("Saw PRE_SKIP trip correctly: $_\n",1);
-			$passed = 1;
-			last;
+	my @outfilelist = <OUT>;
+	close(OUT);
+	$passed_first = 0; # Let's be optimistic
+	$passed_second = 0;
+	foreach (@outfilelist) {
+		chomp;
+		if(/PRE Script of Job A_A failed/) {
+			CondorTest::debug("Saw PRE script A_A fail correctly: $_\n",1);
+			$passed_first = 1;
+		}
+		if(/Running POST script of Node A_A/) {
+			CondorTest::debug("Saw POST script A_A run!\n",1);
+			$passed_second = 1;
+		}
+		if(/PRE Script of Node A_A completed successfully/) {
+			CondorTest::debug("PRE script is expected to fail.\n");
+			$diditpass = 0;		
+		}
+		if(/Submitting Condor Node A_A job/){
+			CondorTest::debug("Condor Node A_A job should not be submitted.\n");
+			$diditpass = 0;		
 		}
 	}
-	foreach (@logoutput) {
-		if(/ULOG_EXECUTE for.+Node A/) {
-			CondorTest::debug("Job A ran even though PRE_SKIP succeeded!\n",1);
-			$passed = 0;
-			last;
-		}
-	}
-	close(LOG);
-	if($passed != 1) {
-		CondorTest::debug("failed to find correct output in $logfile\n",1);
+	if($passed_first != 1) {
+		CondorTest::debug("Missing A_A PRE script failure!\n",1);
 		$diditpass = 0;
 	}
+	if($passed_second != 1) {
+		CondorTest::debug("Missing A_A POST script run!\n",1);
+		$diditpass = 0;
+	}
+
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}
 };
 
+CondorTest::RegisterExitedFailure( $testname, $failure);
 CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
@@ -145,4 +144,3 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
 }
-

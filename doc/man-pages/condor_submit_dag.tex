@@ -32,6 +32,7 @@
 \oOpt{-import\_env}
 \oOpt{-DumpRescue}
 \oOpt{-valgrind}
+\oOpt{-DontAlwaysRunPost}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 \oOptArg{-schedd-daemon-ad-file}{FileName}
@@ -271,6 +272,15 @@ description.
     The value for this argument defaults to the configuration attribute
     \MacroNI{SCHEDD\_ADDRESS\_FILE}.
   }
+  \OptItem{\Opt{-DontAlwaysRunPost}}{This optional argument causes the submit
+     description file generated for the submission of \Condor{dagman} to
+     be modified.  This will pass the \Opt{-DontAlwaysRunPost} flag in the
+     arguments to \Condor{dagman} in the submission file, which causes
+     \Condor{dagman} to use the return value from a PRE script to determine
+     whether a POST script will run.  By default, \Condor{dagman} runs the
+     POST script regardless of the return value of the PRE script. Old
+     versions of \Condor{dagman}, prior to 7.7.2, did not ignore the return
+     value and would not run the POST script if the PRE script failed.}
   \end{Options}
 
 \SeeAlso

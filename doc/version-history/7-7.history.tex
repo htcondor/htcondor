@@ -60,17 +60,6 @@ parsed in combination with the original DAG file, meaning that any
 changes to the original DAG input file take effect when running a Rescue DAG.
 \Ticket{2165}
 
-% Moved to 7.7.2
-% gittrac #2057
-%\item The behavior of DAGMan is changed, such that, by default,
-%POST scripts will be run regardless of the return value from the PRE script
-%of the same node.
-%The previous behavior of not running the POST script can be restored 
-%by either adding the \Opt{-no\_postrun} option to \Condor{submit\_dag},
-%or by setting the new configuration variable 
-%\Macro{DAGMAN\_POST\_IGNORE\_PRE} to \Expr{False}.
-%\Ticket{2057}
-
 % moved to 7.7.2 
 % gittrac #659 
 %\item Filip Krikava supplied a patch that limits the number of 
@@ -82,6 +71,16 @@ changes to the original DAG input file take effect when running a Rescue DAG.
 \item A matchmaking optimization has significantly improved speed of matching
 when there are machines with many slots.
 \Ticket{2403}
+
+% gittrac #2057
+\item The behavior of DAGMan is changed, such that, by default, POST scripts
+  will be run regardless of the return value from the PRE script of the same
+  node.  The previous behavior of not running the POST script can be restored by
+  either adding the \Opt{-AlwaysRunPost} option to the \Condor{submit\_dag}
+  command line, or by setting the new configuration variable
+  \Macro{DAGMAN\_ALWAYS\_RUN\_POST} to \Expr{False}. See sections~\ref{dagman:SCRIPT}
+  and~\ref{param:DAGmanAlwaysRunPost} for details.
+  \Ticket{2057}
 
 \end{itemize}
 
@@ -217,6 +216,7 @@ the unnumbered Appendix A for a complete definition of this
 job ClassAd attribute.
 \Ticket{2094}
 
+% gittrac #2122
 \item The new \Arg{PRE\_SKIP} key word in DAGMan changes the
 behavior of DAG node execution such that the node's job and POST script
 may be skipped based on the exit value of the PRE script.
