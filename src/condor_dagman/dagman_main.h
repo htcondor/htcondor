@@ -195,6 +195,7 @@ class Dagman {
 	int _maxJobHolds;
 
 	static strict_level_t _strict;
+		// Default priority that DAGman uses for nodes.
 	int _defaultPriority;
 };
 

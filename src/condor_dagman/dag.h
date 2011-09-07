@@ -1059,6 +1059,7 @@ class Dag {
 
 		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog _jobstateLog;
+		// The default priority for nodes in this DAG. (defaults to 0)
 	int _defaultPriority;
 };
 
