@@ -38,7 +38,6 @@ improving scalability by reducing the
 number of \Procedure{fsync} calls without impacting correctness. 
 \Ticket{2367}
 
-% gittrac #2364
 \item In privsep mode, when an error is encountered when trying to
 switch to the user account chosen for running the job, 
 the error message has been improved to make debugging easier.  
@@ -46,7 +45,6 @@ Now, the error message distinguishes between safety check failures
 for the UID, tracking group ID, primary group ID, and supplementary group IDs.
 \Ticket{2364}
 
-% gittrac #2096
 \item When using \Prog{glexec}, if there is a conflict between
 environment specified for the job and environment inherited from
 glexec, the former always takes precedence when running the job.
@@ -60,6 +58,18 @@ parsed in combination with the original DAG file, meaning that any
 changes to the original DAG input file take effect when running a Rescue DAG.
 \Ticket{2165}
 
+\item The behavior of DAGMan is changed, such that, by default, 
+POST scripts will be run regardless of the return value from 
+the PRE script of the same node
+as described in section~\ref{dagman:SCRIPT}.  
+The previous behavior of not running the POST script can be restored by
+either adding the \Opt{-AlwaysRunPost} option to the \Condor{submit\_dag}
+command line, 
+or by setting the new configuration variable
+\Macro{DAGMAN\_ALWAYS\_RUN\_POST} to \Expr{False}, 
+as defined at~\ref{param:DAGmanAlwaysRunPost}.
+\Ticket{2057}
+
 % moved to 7.7.2 
 % gittrac #659 
 %\item Filip Krikava supplied a patch that limits the number of 
@@ -71,16 +81,6 @@ changes to the original DAG input file take effect when running a Rescue DAG.
 \item A matchmaking optimization has significantly improved speed of matching
 when there are machines with many slots.
 \Ticket{2403}
-
-% gittrac #2057
-\item The behavior of DAGMan is changed, such that, by default, POST scripts
-  will be run regardless of the return value from the PRE script of the same
-  node.  The previous behavior of not running the POST script can be restored by
-  either adding the \Opt{-AlwaysRunPost} option to the \Condor{submit\_dag}
-  command line, or by setting the new configuration variable
-  \Macro{DAGMAN\_ALWAYS\_RUN\_POST} to \Expr{False}. See sections~\ref{dagman:SCRIPT}
-  and~\ref{param:DAGmanAlwaysRunPost} for details.
-  \Ticket{2057}
 
 \end{itemize}
 
