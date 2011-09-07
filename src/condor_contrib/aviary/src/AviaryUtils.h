@@ -38,6 +38,10 @@ bool isValidAttributeName(const string& _name, string& _text);
 
 bool checkRequiredAttrs(ClassAd& ad, const char* attrs[], string& missing);
 
+bool isKeyword(const char* kw);
+
+bool isSubmissionChange(const char* attr);
+
 }}
 
 #endif /* _AVIARYUTILS_H */
