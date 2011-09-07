@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Corrected a check in the accountant that allowed submitter records
+to be deleted if the submitter's priority factor was explicitly set and
+the value was equal to \MacroNI{DEFAULT\_PRIO\_FACTOR}.
+\Ticket{2442}
+
 \item Fixed CPU detection on Windows so that the correct number is detected
 when there are more than 32 CPUs.
 \Ticket{2381}
