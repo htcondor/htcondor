@@ -23,29 +23,22 @@
 #include "timed_queue.h"
 #include "generic_stats.h"
 
-// specialization of time_t values because ClassAd
-// doesn't currently handle 64 bit ints.
+// use these to help initialize static const arrays arrays of 
 //
-#if 0
-template <>
-void stats_entry_abs<time_t>::PublishLargest(const char * me, ClassAd & ad, const char * pattr) {
-   const stats_entry_abs<time_t> * pthis = (const stats_entry_abs<time_t> *)me;
-   ad.Assign(pattr, (int)pthis->largest);
-   }
-
-template <>
-void stats_entry_recent<time_t>::PublishRecent(const char * me, ClassAd & ad, const char * pattr) {
-   const stats_entry_recent<time_t> * pthis = (const stats_entry_recent<time_t> *)me;
-   ad.Assign(pattr, (int)pthis->recent);
-}
-
-template <>
-void stats_entry_count<time_t>::PublishValue(const char * me, ClassAd & ad, const char * pattr) {
-   const stats_entry_count<time_t> * pthis = (const stats_entry_count<time_t> *)me;
-   ad.Assign(pattr, (int)pthis->value);
-}
+#ifndef FIELDOFF
+ #ifdef WIN32
+  #define FIELDOFF(st,fld) FIELD_OFFSET(st, fld)
+ #else
+  //#define FIELDOFF(st,fld) ((int)(size_t)&(((st *)0)->fld))
+  #define FIELDOFF(st,fld) offsetof(st,fld)
+ #endif
+ #define FIELDSIZ(st,fld) ((int)(sizeof(((st *)0)->fld)))
 #endif
+#define GS_FIELD(st,fld) (((st *)0)->fld)
 
+// specialization of PublishDebug to dump the internal data storage
+// of stats_entry_recent. 
+//
 template <class T>
 void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
    MyString str;
@@ -113,7 +106,12 @@ void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, 
    ad.Assign(pattr, str);
 }
 
-
+// Determine if enough time has passed to Advance the recent buffers,
+// returns an advance count. 
+// 
+// note that the caller must insure that all 5 time_t values are preserved
+// between calls to this function.  
+//
 int generic_stats_Tick(
    int    RecentMaxTime,
    int    RecentQuantum,
@@ -188,13 +186,124 @@ void stats_recent_counter_timer::Publish(ClassAd & ad, const char * pattr, int f
    //StatsPublishDebug(str.Value(), ad, this->runtime);
 }
 
-#if 0
-void stats_recent_counter_timer::PublishValue(const char * me, ClassAd & ad, const char * pattr)
+// the Probe class is designed to be instantiated with
+// the stats_entry_recent template,  i.e. stats_entry_recent<Probe>
+// creates a probe that does full statistical sampling (min,max,avg,std)
+// with an overall value and a recent-window'd value.
+//
+void Probe::Clear() 
 {
-   const stats_recent_counter_timer * pthis = (const stats_recent_counter_timer *)me;
-   pthis->Publish(ad, pattr, 0);
+   Count = 0; // value is use to store the count of samples.
+   Max = std::numeric_limits<double>::min();
+   Min = std::numeric_limits<double>::max();
+   SumSq = Sum = 0.0;
 }
-#endif
+
+double Probe::Add(double val) 
+{ 
+   Count += 1; // value is use to store the count of samples.
+   if (val > Max) Max = val;
+   if (val < Min) Min = val;
+   Sum += val;
+   SumSq += val*val;
+   return Sum;
+}
+
+Probe & Probe::Add(const Probe & val) 
+{ 
+   if (val.Count >= 1) {
+      Count += val.Count;
+      if (val.Max > Max) Max = val.Max;
+      if (val.Min < Min) Min = val.Min;
+      Sum += val.Sum;
+      SumSq += val.SumSq;
+      }
+   return *this;
+}
+
+double Probe::Avg() const 
+{
+   if (Count > 0) {
+      return this->Sum / this->Count;
+   } else {
+      return this->Sum;
+   }
+}
+
+double Probe::Var() const
+{
+   if (Count <= 1) {
+      return this->Min;
+   } else {
+      // Var == (SumSQ - count*Avg*Avg)/(count -1)
+      return (this->SumSq - this->Sum * (this->Sum / this->Count))/(this->Count - 1);
+   }
+}
+
+double Probe::Std() const
+{
+   if (Count <= 1) {
+      return this->Min;
+   } else {
+      return sqrt(this->Var());
+   }
+}
+
+template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots) { 
+   if (cSlots <= 0) 
+      return;
+
+   // remove the values associated with the slot being overwritten
+   // from the aggregate value.
+   while (cSlots > 0) {
+      buf.Advance();
+      --cSlots;
+      }
+
+   recent = buf.Sum();
+}
+
+template <> int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe) {
+   MyString attr(pattr);
+   ad.Assign(pattr, probe.Count);
+   attr += "Runtime";
+   int ret = ad.Assign(attr.Value(), probe.Sum);
+   if (probe.Count > 0)
+      {
+      int pos = attr.Length();
+      attr += "Avg";
+      ad.Assign(attr.Value(), probe.Avg());
+
+      attr.replaceString("Avg","Min",pos);
+      ad.Assign(attr.Value(), probe.Min);
+
+      attr.replaceString("Min","Max",pos);
+      ad.Assign(attr.Value(), probe.Max);
+
+      attr.replaceString("Max","Std",pos);
+      ad.Assign(attr.Value(), probe.Std());
+      }
+   return ret;
+}
+
+#include "utc_time.h"
+void TestProbe()
+{
+   struct {
+      stats_entry_recent<Probe> Runtime;
+   } stats;
+
+   stats.Runtime.SetRecentMax(5);
+
+   double runtime = UtcTime::getTimeDouble();
+
+   sleep(2);
+   double now = UtcTime::getTimeDouble();
+   stats.Runtime += (now - runtime);
+   now = runtime;
+
+   stats.Runtime.AdvanceBy(1);
+}
 
 //----------------------------------------------------------------------------------------------
 // methods for the StatisticsPool class.  StatisticsPool is a collection of statistics that 
@@ -406,13 +515,6 @@ void StatisticsPool::Unpublish(ClassAd & ad) const
 //
 void generic_stats_force_refs()
 {
-  #if 0
-   ClassAd * pad = NULL;
-   stats_entry_count<time_t>::PublishValue("",*pad,"");
-   stats_entry_abs<time_t>::PublishLargest("",*pad,"");
-   stats_entry_recent<time_t>::PublishRecent("",*pad,"");
-  #endif
-
    stats_entry_recent<int>* pi = NULL;
    stats_entry_recent<long>* pl = NULL;
    stats_entry_recent<int64_t>* pt = NULL;
@@ -443,8 +545,8 @@ void generic_stats_force_refs()
 };
 
 //
-// This is how you use the generic_stats_xxxx functions.
-#if 0
+// This is how you use the generic_stats functions.
+#ifdef UNIT_TESTS
 
 class TestStats {
 public:

@@ -21,18 +21,17 @@
 #define _GENERIC_STATS_H
 
 // To use generic statistics:
-//   * create a structure or class to hold your counters, 
-//     * use stats_entry_abs    for counters that are absolute values (i.e. number of jobs running)
-//     * use stats_entry_recent for counters that always increase (i.e. number of jobs that have finished)
-//   * use Add() or Set() methods of the counters to update the counters in your code
-//       these methods will automatically keep track of total value, as well as windowed
-//       values and/or peak values. 
+//   * declare your probes as class (or struct) members
+//     * use stats_entry_abs<T>    for probes that need a value and a max value (i.e. number of shadows processes)
+//     * use stats_entry_recent<T> for probes that need a value and a recent value (i.e. number of jobs that have finished)
+//     * use stats_entry_recent<Probe> for general statistics value (min,max,avg,std)
+//     * use stats_recent_counter_timer for runtime accumulators (int count, double runtime with overall and recent)
+//   * use Add() or Set() methods of the probes (+= and =) to update the probe
+//       probes will calculate total value, as well as windowed values and/or min/max,std, or peak values. 
 //   * Then EITHER
-//      * implement Publish,Clear and Advance methods in your statistics class
-//        that call the Publish,Clear and AdvanceBy methods of the individual counters
+//      * call the Publish, Clear, and AdvanceBy methods of the counters as needed
 //     OR
-//      * give your statistics class a StatisticsPool member
-//      * add counters to the StatisticsPool on Init
+//      * add your probes to an instance of StatisticsPool 
 //      * use the Publish,Clear and AdvanceBy methods of the StatisticsPool
 //
 // For example:
@@ -42,13 +41,28 @@
 //     stats_entry_abs<int>    JobsRunning;  // keep track of Peak value as well as absolete value
 //     stats_entry_recent<int> JobsRun;      // keep track of Recent values as well as accumulated value
 //
+//     StatisticsPool Pool;                  // optional
 //     void Publish(ClassAd & ad) const;
 // } MyStats;
 // 
+// EITHER this way works if you have only a few probes
+//
 // void MyStats::Publish(ClassAd & ad) const
 // {
 //    JobsRunning.Publish(ad, "JobsRunning", 0);
 //    JobsRunning.Publish(ad, "JobsRun", 0);
+// }
+//
+// OR otherwise this way is better
+//
+// void MyStats::Init()
+// {
+//     Pool.AddProbe("JobsRunning", JobsRunning);
+//     Pool.AddProbe("JobsRun", JobsRun);
+// }
+// void MyStats::Publish(ClassAd & ad) const
+// {
+//     Pool.Publish(ad);
 // }
 //
 // include an instance of MyStats in the class to be measured
@@ -721,6 +735,43 @@ public:
    static void Delete(stats_entry_probe<T> * probe) { delete probe; }
 };
 
+class Probe {
+public:
+   Probe(int=0) 
+      : Count(0)
+      , Max(std::numeric_limits<double>::min())
+      , Min(std::numeric_limits<double>::max())
+      , Sum(0.0)
+      , SumSq(0.0) 
+   {
+   }
+   Probe(double val) : Count(1), Max(val), Min(val), Sum(val), SumSq(val*val) {}
+
+public:
+   int    Count;      // count of samples 
+   double Max;        // max sample so far
+   double Min;        // min sample so far
+   double Sum;        // Sum of samples
+   double SumSq;      // Sum of samples squared
+
+public:
+   void Clear();
+   double Add(double val);
+   Probe & Add(const Probe & val);
+   double Avg() const;
+   double Var() const;
+   double Std() const;
+
+   // operator overloads
+   Probe& operator+=(double val) { Add(val); return *this; }
+   Probe& operator+=(const Probe & val) { Add(val); return *this; }
+   //Probe& operator-=(const Probe & val) { Remove(val); return *this; }
+   //bool   operator!=(const int val) const { return this->Sum != val; }
+};
+
+template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots);
+template <> int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe);
+
 // A statistics probe designed to keep track of accumulated running time
 // of a data set.  keeps a count of times that time was added and
 // a running total of time
@@ -766,28 +817,6 @@ int generic_stats_Tick(
    time_t & RecentTickTime,  // in,out
    time_t & Lifetime,        // in,out
    time_t & RecentLifetime); // in,out
-
-// use these to help initialize arrays of GenericStatsPubItem's
-//
-#ifndef FIELDOFF
- #ifdef WIN32
-  #define FIELDOFF(st,fld) FIELD_OFFSET(st, fld)
- #else
-  //#define FIELDOFF(st,fld) ((int)(size_t)&(((st *)0)->fld))
-  #define FIELDOFF(st,fld) offsetof(st,fld)
- #endif
- #define FIELDSIZ(st,fld) ((int)(sizeof(((st *)0)->fld)))
-#endif
-#define GS_FIELD(st,fld) (((st *)0)->fld)
-
-#if 0
-#define GENERIC_STATS_PUB_TYPE(st,pre,name,as,T) { pre #name, as | stats_entry_type<T>::id, FIELDOFF(st,name), &stats_entry_count<T>::PublishValue }
-#define GENERIC_STATS_PUB(st,pre,name,as)        { pre #name, as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishValue }
-#define GENERIC_STATS_PUB_PEAK(st,pre,name,as)   { pre #name "Peak", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishLargest }
-#define GENERIC_STATS_PUB_AVG(st,pre,name,as)    { pre #name "Avg", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishAverage }
-#define GENERIC_STATS_PUB_RECENT(st,pre,name,as) { "Recent" pre #name, as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishRecent }
-#define GENERIC_STATS_PUB_RECENT_DEBUG(st,pre,name,as) { "Recent" pre #name "Debug", as | GS_FIELD(st,name).unit, FIELDOFF(st,name), &GS_FIELD(st,name).PublishDebug }
-#endif
 
 // the StatisticsPool class is used to hold a collection of statistics probes of various types
 // probes in the pool can be Cleared, Advanced and Published as a group. 

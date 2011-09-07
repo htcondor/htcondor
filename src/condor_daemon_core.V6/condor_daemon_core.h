@@ -1442,9 +1442,6 @@ class DaemonCore : public Service
 	*/
 	class Stats {
 	public:
-	   // InitTime should be the first data member, and RecentWindowMax the last data member..
-	   time_t InitTime;            // last time we init'ed the structure
-
 	   // published values
 	   time_t StatsLifetime;       // total time the daemon has been collecting statistics. (uptime)
 	   time_t StatsLastUpdateTime; // last time that statistics were last updated. (a freshness time)
@@ -1469,6 +1466,7 @@ class DaemonCore : public Service
 
        StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
 
+	   time_t InitTime;            // last time we init'ed the structure
 	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
 	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
 

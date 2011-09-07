@@ -22,82 +22,6 @@
 #include "scheduler.h"
 #include "schedd_stats.h"
 
-#if 0
-#define SCHEDD_STATS_PUB(name, as)         GENERIC_STATS_PUB(ScheddStatistics, "", name, as)
-#define SCHEDD_STATS_PUB_RECENT(name, as)  GENERIC_STATS_PUB_RECENT(ScheddStatistics, "", name, as)
-#define SCHEDD_STATS_PUB_PEAK(name, as)    GENERIC_STATS_PUB_PEAK(ScheddStatistics, "", name, as)
-#define SCHEDD_STATS_PUB_TYPE(name, T, as) GENERIC_STATS_PUB_TYPE(ScheddStatistics, "", name, as, T)
-
-// this describes and refers to ScheddStatistics so that we can use
-// generic worker functions to update and publish it.
-//
-static const GenericStatsPubItem ScheddStatsPub[] = {
-   SCHEDD_STATS_PUB_TYPE(StatsLifetime,       time_t,  AS_RELTIME),
-   SCHEDD_STATS_PUB_TYPE(StatsLastUpdateTime, time_t,  AS_ABSTIME),
-   SCHEDD_STATS_PUB_TYPE(RecentStatsLifetime, time_t,  AS_RELTIME),
-
-   SCHEDD_STATS_PUB(JobsSubmitted,        AS_COUNT),
-   SCHEDD_STATS_PUB(JobsStarted,          AS_COUNT),
-   SCHEDD_STATS_PUB(JobsExited,           AS_COUNT),
-   SCHEDD_STATS_PUB(JobsCompleted,        AS_COUNT),
-   SCHEDD_STATS_PUB(JobsAccumTimeToStart, AS_RELTIME),
-   SCHEDD_STATS_PUB(JobsAccumRunningTime, AS_RELTIME),
-
-   SCHEDD_STATS_PUB_RECENT(JobsSubmitted,  AS_COUNT),
-   SCHEDD_STATS_PUB_RECENT(JobsStarted,    AS_COUNT),
-   SCHEDD_STATS_PUB_RECENT(JobsExited,     AS_COUNT),
-   SCHEDD_STATS_PUB_RECENT(JobsCompleted,  AS_COUNT),
-   SCHEDD_STATS_PUB_RECENT(JobsAccumTimeToStart, AS_RELTIME),
-   SCHEDD_STATS_PUB_RECENT(JobsAccumRunningTime, AS_RELTIME),
-
-   SCHEDD_STATS_PUB(JobsExitedNormally,        AS_COUNT),
-   SCHEDD_STATS_PUB(JobsKilled,                AS_COUNT),
-   SCHEDD_STATS_PUB(JobsExitException,         AS_COUNT),
-   SCHEDD_STATS_PUB(JobsExecFailed,            AS_COUNT),
-   SCHEDD_STATS_PUB(JobsCheckpointed,          AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB(JobsShadowNoMemory,        AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB(JobsShouldRequeue,         AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB(JobsNotStarted,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB(JobsShouldHold,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB(JobsShouldRemove,          AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB(JobsCoredumped,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB(JobsMissedDeferralTime,    AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB(JobsExitedAndClaimClosing, AS_COUNT /*| IF_NONZERO*/),
-
-   SCHEDD_STATS_PUB_RECENT(JobsExitedNormally,        AS_COUNT),
-   SCHEDD_STATS_PUB_RECENT(JobsKilled,                AS_COUNT),
-   SCHEDD_STATS_PUB_RECENT(JobsExitException,         AS_COUNT),
-   SCHEDD_STATS_PUB_RECENT(JobsExecFailed,            AS_COUNT),
-
-   SCHEDD_STATS_PUB_RECENT(JobsShadowNoMemory,        AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB_RECENT(JobsCheckpointed,          AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB_RECENT(JobsShouldRequeue,         AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB_RECENT(JobsNotStarted,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB_RECENT(JobsShouldRemove,          AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB_RECENT(JobsExitedAndClaimClosing, AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB_RECENT(JobsCoredumped,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB_RECENT(JobsMissedDeferralTime,    AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB_RECENT(JobsShouldHold,            AS_COUNT /*| IF_NONZERO*/),
-   SCHEDD_STATS_PUB_RECENT(JobsDebugLogError,         AS_COUNT /*| IF_NONZERO*/),
-
-   SCHEDD_STATS_PUB(ShadowsRunning,                   AS_COUNT),
-   SCHEDD_STATS_PUB_PEAK(ShadowsRunning,              AS_COUNT),
-
-   SCHEDD_STATS_PUB(ShadowsStarted,                   AS_COUNT),
-   SCHEDD_STATS_PUB(ShadowsRecycled,                  AS_COUNT),
-   //SCHEDD_STATS_PUB(ShadowExceptions,                 AS_COUNT),
-   SCHEDD_STATS_PUB(ShadowsReconnections,             AS_COUNT),
-
-   SCHEDD_STATS_PUB_RECENT(ShadowsStarted,            AS_COUNT),
-   SCHEDD_STATS_PUB_RECENT(ShadowsRecycled,           AS_COUNT),
-   //SCHEDD_STATS_PUB_RECENT(ShadowExceptions,          AS_COUNT),
-   SCHEDD_STATS_PUB_RECENT(ShadowsReconnections,      AS_COUNT),
-
-};
-
-static const int ScheddStatsEntryCount = COUNTOF(ScheddStatsPub);
-#endif 
-
 void ScheddStatistics::SetWindowSize(int window)
 {
    this->RecentWindowMax = window;
@@ -201,6 +125,7 @@ void ScheddStatistics::Unpublish(ClassAd & ad) const
    Pool.Unpublish(ad);
 }
 
+#ifdef UNIT_TEST
 void schedd_stats_unit_test (ClassAd * pad)
 {
    ScheddStatistics stats;
@@ -225,3 +150,4 @@ void schedd_stats_unit_test (ClassAd * pad)
       stats.Publish(*pad);
    }
 }
+#endif
