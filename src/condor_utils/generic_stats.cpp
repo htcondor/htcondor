@@ -23,768 +23,96 @@
 #include "timed_queue.h"
 #include "generic_stats.h"
 
-// specialization of time_t values because ClassAd
-// doesn't currently handle 64 bit ints.
+// use these to help initialize static const arrays arrays of 
 //
+#ifndef FIELDOFF
+ #ifdef WIN32
+  #define FIELDOFF(st,fld) FIELD_OFFSET(st, fld)
+ #else
+  //#define FIELDOFF(st,fld) ((int)(size_t)&(((st *)0)->fld))
+  #define FIELDOFF(st,fld) offsetof(st,fld)
+ #endif
+ #define FIELDSIZ(st,fld) ((int)(sizeof(((st *)0)->fld)))
+#endif
+#define GS_FIELD(st,fld) (((st *)0)->fld)
+
+// specialization of PublishDebug to dump the internal data storage
+// of stats_entry_recent. 
+//
+template <class T>
+void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
+   MyString str;
+      
+   str += this->value;
+   str += " ";
+   str += this->recent;
+   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+                   this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
+   if (this->buf.pbuf) {
+      for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
+         str += !ix ? "[" : (ix == this->buf.cMax ? "|" : ",");
+         str += this->buf.pbuf[ix];
+         }
+      str += "]";
+      }
+
+   MyString attr(pattr);
+   if (flags & this->PubDecorateAttr)
+      attr += "Debug";
+
+   ad.Assign(pattr, str);
+}
 
 template <>
-void stats_entry_abs<time_t>::PublishLargest(const char * me, ClassAd & ad, const char * pattr) {
-   const stats_entry_abs<time_t> * pthis = (const stats_entry_abs<time_t> *)me;
-   ad.Assign(pattr, (int)pthis->largest);
-   }
+void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
+   MyString str;
+   str += (long)this->value;
+   str += " ";
+   str += (long)this->recent;
+   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+                   this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
+   if (this->buf.pbuf) {
+      for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
+         str += !ix ? "[" : (ix == this->buf.cMax ? "|" : ",");
+         str += (long)this->buf.pbuf[ix];
+         }
+      str += "]";
+      }
+
+   MyString attr(pattr);
+   if (flags & this->PubDecorateAttr)
+      attr += "Debug";
+
+   ad.Assign(pattr, str);
+}
 
 template <>
-void stats_entry_recent<time_t>::PublishRecent(const char * me, ClassAd & ad, const char * pattr) {
-   const stats_entry_recent<time_t> * pthis = (const stats_entry_recent<time_t> *)me;
-   ad.Assign(pattr, (int)pthis->recent);
+void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
+   MyString str;
+   str.sprintf_cat("%g %g", this->value, this->recent);
+   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+                   this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
+   if (this->buf.pbuf) {
+      for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
+         str.sprintf_cat(!ix ? "[%g" : (ix == this->buf.cMax ? "|%g" : ",%g"), this->buf.pbuf[ix]);
+         }
+      str += "]";
+      }
+
+   MyString attr(pattr);
+   if (flags & this->PubDecorateAttr)
+      attr += "Debug";
+
+   ad.Assign(pattr, str);
 }
 
-// force the static members to be instantiated in the library.
+// Determine if enough time has passed to Advance the recent buffers,
+// returns an advance count. 
+// 
+// note that the caller must insure that all 5 time_t values are preserved
+// between calls to this function.  
 //
-void generic_stats_force_refs()
-{
-   ClassAd * pad = NULL;
-   stats_entry_count<time_t>::PublishValue("",*pad,"");
-   stats_entry_abs<time_t>::PublishLargest("",*pad,"");
-   stats_entry_recent<time_t>::PublishRecent("",*pad,"");
-};
-
-// advance the ring buffer and update the recent accumulator, this is called
-// each xxxx_stats_window_quantum of seconds, in case an Advance is skipped, 
-// cAdvance is the number of times to advance.
-//
-template <class T>
-static T AdvanceRecent(const GenericStatsEntry & entry, char * pdata, int cAdvance)
-{
-   if ( ! entry.off2)
-      return T(0);
-
-   T& recent = *(T*)(pdata + entry.off);
-   T ret(recent);
-   if (entry.units & IS_TIMED_QUEUE) {
-      // nothing to do.
-   } else if (entry.units & IS_RINGBUF) {
-      ring_buffer<T>& rb = *(ring_buffer<T>*)(pdata + entry.off2);
-      if ( ! rb.empty()) {
-         for (int ii = 0; ii < cAdvance; ++ii)
-            ret -= rb.Push(0);
-      }
-   }
-   recent = ret;
-   return ret;
-}
-
-void generic_stats_PublishToClassAd(ClassAd & ad, const GenericStatsEntry * pTable, int cTable, const char * pdata)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      if (pTable[ii].units & IF_NEVER)
-         continue;
-
-      switch (pTable[ii].units & AS_TYPE_MASK)
-         {
-         case AS_COUNT: {
-            int val = ((const int*)(pdata + pTable[ii].off))[0];
-            if ((pTable[ii].units & IF_NONZERO) && ! val)
-               ad.Delete(pTable[ii].pattr);
-            else
-               ad.Assign(pTable[ii].pattr, val);
-            break;
-            }
-
-         case AS_RELTIME:
-         case AS_ABSTIME: {
-            // for old class ads, we publish time_t as an int because we can't use the
-            // TIME types (new classads only) and we don't have access to int64 types.
-            int val = ((const int*)(pdata + pTable[ii].off))[0];
-            if ((pTable[ii].units & IF_NONZERO) && ! val)
-               ad.Delete(pTable[ii].pattr);
-            else
-               ad.Assign(pTable[ii].pattr, val);
-            break;
-            }
-         }
-      }
-}
-
-void generic_stats_DeleteInClassAd(ClassAd & ad, const GenericStatsEntry * pTable, int cTable, const char * pdata)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      switch (pTable[ii].units & AS_TYPE_MASK)
-         {
-         case AS_COUNT:
-            ad.Delete(pTable[ii].pattr);
-            break;
-
-         case AS_RELTIME:
-         case AS_ABSTIME:
-            ad.Delete(pTable[ii].pattr);
-            break;
-         }
-      }
-}
-
-// Accumulate (sum) the Recent data buffer and use that to set the .recent field
-// for a generic statistics entry.  Note that only timed_queues need to be
-// Accumulated, ring_buffers keep track of accumulated values automatically.
-//
-template <class T>
-static T Accumulate(const GenericStatsEntry & entry, char * pdata, time_t first)
-{
-   if ( ! entry.off2)
-      return T(-1);
-
-   T ret(0);
-   T& recent = *(T*)(pdata + entry.off);
-
-   if (entry.units & IS_TIMED_QUEUE) {
-      timed_queue<T>& tq = *(timed_queue<T>*)(pdata + entry.off2);
-
-      tq.trim_time(first);
-
-      for (typename timed_queue<T>::iterator jj(tq.begin());  jj != tq.end();  ++jj) {
-         ret += jj->second;
-      }
-   } else if (entry.units & IS_RINGBUF) {
-      // we don't really need to Accumulate for ring buffers.
-      ret = recent;
-   }
-
-   recent = ret;
-   return ret;   
-
-}
-
-// Accumulate all of the timed_queue buffers and update their corresponding .recent fields
-// for the given set of statistics data.
-//
-void generic_stats_AccumulateTQ(const GenericStatsEntry * pTable, int cTable, char * pdata, time_t tmin)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      if ( ! pTable[ii].off2)
-         continue;
-
-      switch (pTable[ii].siz)
-         {
-         case sizeof(int): {
-            Accumulate<int>(pTable[ii], pdata, tmin);
-            break;
-            }
-         case sizeof(int64_t): {
-            Accumulate<int64_t>(pTable[ii], pdata, tmin);
-            break;
-            }
-         }
-      }
-}
-
-// get the timed_queue member of a generic statistics entry. 
-// returns NULL if the entry does not have a timed_queue
-//
-template <class T>
-static timed_queue<T>* GetTQ(const GenericStatsEntry & entry, char * pdata)
-{
-   if ( ! entry.off2 || ! (entry.units & IS_TIMED_QUEUE))
-      return NULL;
-   return (timed_queue<T>*)(pdata + entry.off2);
-}
-
-void generic_stats_SetTQMax(const GenericStatsEntry * pTable, int cTable, char * pdata, int window)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      if ( ! pTable[ii].off2)
-         continue;
-
-      if (pTable[ii].units & IS_TIMED_QUEUE)
-         {
-         switch (pTable[ii].siz)
-            {
-            case sizeof(int): {
-               timed_queue<int>* pTQ = GetTQ<int>(pTable[ii], pdata);
-               pTQ->max_time(window);
-               break;
-               }
-            case sizeof(int64_t): {
-               timed_queue<int64_t>* pTQ = GetTQ<int64_t>(pTable[ii], pdata);
-               pTQ->max_time(window);
-               break;
-               }
-            }
-         }
-      }
-}
-
-// get the ring_buffer member of a generic statistics entry. 
-// returns NULL if the entry does not have a ring_buffer
-//
-template <class T>
-static ring_buffer<T>* GetRB(const GenericStatsEntry & entry, char * pdata)
-{
-   if ( ! entry.off2 || ! (entry.units & IS_RINGBUF))
-      return NULL;
-   return (ring_buffer<T>*)(pdata + entry.off2);
-}
-
-// set the size of the ring_buffers used to store Recent data for statistics entries.
-//
-void generic_stats_SetRBMax(const GenericStatsEntry * pTable, int cTable, char * pdata, int cMax)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      if ( ! pTable[ii].off2)
-         continue;
-      if (pTable[ii].units & IS_RINGBUF)
-         {
-         switch (pTable[ii].siz)
-            {
-            case sizeof(int): {
-               ring_buffer<int>* prb = GetRB<int>(pTable[ii], pdata);
-               prb->SetSize(cMax);
-               break;
-               }
-            case sizeof(int64_t): {
-               ring_buffer<int64_t>* prb = GetRB<int64_t>(pTable[ii], pdata);
-               prb->SetSize(cMax);
-               break;
-               }
-            }
-         }
-      }
-}
-
-// clear the Recent data for a statistics entry. works with timed_queue
-// and ring_buffer style Recent data. this does not free the ring_buffer
-//
-template <class T>
-static void ClearRecent(const GenericStatsEntry & entry, char * pdata)
-{
-   if ( ! entry.off2)
-      return;
-
-   T& recent = *(T*)(pdata + entry.off);
-   if (entry.units & IS_TIMED_QUEUE) {
-      timed_queue<T>& tq = *(timed_queue<T>*)(pdata + entry.off2);
-      tq.clear();
-   } else if (entry.units & IS_RINGBUF) {
-      ring_buffer<T>& rb = *(ring_buffer<T>*)(pdata + entry.off2);
-      rb.Clear();
-   }
-   recent = 0;
-}
-
-// clear all Recent data for a set of statistics. works with timed_queue
-// and ring_buffer style Recent data.  this does not free the ring_buffer
-//
-void generic_stats_ClearAll(const GenericStatsEntry * pTable, int cTable, char * pdata)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      switch (pTable[ii].units & AS_TYPE_MASK)
-         {
-         case AS_COUNT: {
-            ((int*)(pdata + pTable[ii].off))[0] = 0;
-            if (pTable[ii].off2) ClearRecent<int>(pTable[ii], pdata);
-            break;
-            }
-
-         case AS_RELTIME:
-         case AS_ABSTIME: {
-            ((time_t*)(pdata + pTable[ii].off))[0] = 0;
-            if (pTable[ii].off2) ClearRecent<time_t>(pTable[ii], pdata);
-            break;
-            }
-         }
-      }
-}
-
-// throw away all Recent (ring_buffer) data.  Note that this does not free or resize
-// the ring buffers.
-//
-void generic_stats_ClearRecent(const GenericStatsEntry * pTable, int cTable, char * pdata)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      if ( ! pTable[ii].off2)
-         continue;
-
-      switch (pTable[ii].siz)
-         {
-         case sizeof(int): {
-            ClearRecent<int>(pTable[ii], pdata);
-            break;
-            }
-         case sizeof(int64_t): {
-            ClearRecent<int64_t>(pTable[ii], pdata);
-            break;
-            }
-         }
-      }
-}
-
-// advance the ring buffers to the next slot.  we do this when time is larger than the quantum
-//
-void generic_stats_AdvanceRecent(const GenericStatsEntry * pTable, int cTable, char * pdata, int cAdvance)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      if ( ! pTable[ii].off2)
-         continue;
-
-      if (pTable[ii].units & IS_RINGBUF)
-         {
-         switch (pTable[ii].siz)
-            {
-            case sizeof(int): {
-               AdvanceRecent<int>(pTable[ii], pdata, cAdvance);
-               break;
-               }
-            case sizeof(int64_t): {
-               AdvanceRecent<int64_t>(pTable[ii], pdata, cAdvance);
-               break;
-               }
-            }
-         }
-      }
-}
-
-template <class T>
-static stats_entry_abs<T>* GetAbs(const GenericStatsPubItem & entry, char * pstruct)
-{
-   if (!(entry.units & IS_ABS))
-      return NULL;
-   return (stats_entry_abs<T>*)(pstruct + entry.off);
-}
-
-template <class T>
-static stats_entry_probe<T>* GetProbe(const GenericStatsPubItem & entry, char * pstruct)
-{
-   if (!(entry.units & IS_PROBE))
-      return NULL;
-   return (stats_entry_probe<T>*)(pstruct + entry.off);
-}
-
-template <class T>
-static stats_entry_recent<T>* GetRecent(const GenericStatsPubItem & entry, char * pstruct)
-{
-   if (!(entry.units & IS_RINGBUF))
-      return NULL;
-   return (stats_entry_recent<T>*)(pstruct + entry.off);
-}
-
-#ifdef _timed_queue_h_
-template <class T>
-static stats_entry_tq<T>* GetTimedQ(const GenericStatsPubItem & entry, char * pstruct)
-{
-   if (!(entry.units & IS_TIMED_QUEUE))
-      return NULL;
-   return (stats_entry_tq<T>*)(pstruct + entry.off);
-}
-#endif
-
-// reset all counters to 0, including Recent buffers.
-void generic_stats_itemFree(int units, void * pitem)
-{
-#undef DELETE_ITEM
-#define DELETE_ITEM(st,p) delete ((st*)p);
-   if (units & IS_ABS)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32:
-            DELETE_ITEM(stats_entry_abs<int>, pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            DELETE_ITEM(stats_entry_abs<int64_t>, pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            DELETE_ITEM(stats_entry_abs<float>, pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            DELETE_ITEM(stats_entry_abs<double>, pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-   else if (units & IS_PROBE)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32:
-            DELETE_ITEM(stats_entry_probe<int>, pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            DELETE_ITEM(stats_entry_probe<int64_t>, pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            DELETE_ITEM(stats_entry_probe<float>, pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            DELETE_ITEM(stats_entry_probe<double>, pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-   else if (units & IS_RINGBUF)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32:
-            DELETE_ITEM(stats_entry_recent<int>, pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            DELETE_ITEM(stats_entry_recent<int64_t>, pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            DELETE_ITEM(stats_entry_recent<float>, pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            DELETE_ITEM(stats_entry_recent<double>, pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-#ifdef _timed_queue_h_
-   else if (units & IS_TIMED_QUEUE)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_INT32:
-            DELETE_ITEM(stats_entry_tq<int>, pitem);
-            break;
-         case STATS_ENTRY_TYPE_INT64:
-            DELETE_ITEM(stats_entry_tq<int64_t>, pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-#endif
-#undef DELETE_ITEM
-}
-
-void generic_stats_itemSetRecentMax(int units, void * pitem, int window, int quantum)
-{
-int cRecent = quantum ? window / quantum : window;
-#undef SETSIZE_ITEM
-#define SETSIZE_ITEM(st,p) ((st*)p)->SetRecentMax(cRecent)
-   if (units & IS_RINGBUF)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32:
-            SETSIZE_ITEM(stats_entry_recent<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            SETSIZE_ITEM(stats_entry_recent<int64_t>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            SETSIZE_ITEM(stats_entry_recent<float>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            SETSIZE_ITEM(stats_entry_recent<double>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-#ifdef _timed_queue_h_
-#undef SETSIZE_ITEM
-#define SETSIZE_ITEM(st,p) ((st*)p)->SetMaxTime(window)
-   else if (units & IS_TIMED_QUEUE)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_INT32:
-            SETSIZE_ITEM(stats_entry_tq<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_INT64:
-            SETSIZE_ITEM(stats_entry_tq<int64_t>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-#endif
-#undef SETSIZE_ITEM 
-}
-
-void generic_stats_SetRecentMax(
-   const GenericStatsPubItem * pTable, 
-   int    cTable, 
-   char * pstruct, 
-   int    window, 
-   int    quantum)
-{
-   int cRecent = quantum ? window / quantum : window;
-
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      generic_stats_itemSetRecentMax(pTable[ii].units, pstruct + pTable[ii].off, window, quantum);
-      }
-}
-
-// publish items into a old-style ClassAd
-void generic_stats_PublishToClassAd(ClassAd & ad, const GenericStatsPubItem * pTable, int cTable, const char * pdata)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      if (pTable[ii].units & IF_NEVER)
-         continue;
-
-      if (pTable[ii].pub)
-         pTable[ii].pub(pdata + pTable[ii].off, ad, pTable[ii].pattr);
-      }
-}
-
-void generic_stats_DeleteInClassAd(ClassAd & ad, const GenericStatsPubItem * pTable, int cTable, const char * pdata)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      if (pTable[ii].pattr)
-         ad.Delete(pTable[ii].pattr);
-      }
-}
-
-void generic_stats_itemClear(int units, void * pitem)
-{
-#undef CLEAR_ITEM
-#define CLEAR_ITEM(st,p) ((st*)p)->Clear()
-   if (units & IS_ABS)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32: 
-            CLEAR_ITEM(stats_entry_abs<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            CLEAR_ITEM(stats_entry_abs<int64_t>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            CLEAR_ITEM(stats_entry_abs<float>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            CLEAR_ITEM(stats_entry_abs<double>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-   else if (units & IS_PROBE)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32:
-            CLEAR_ITEM(stats_entry_probe<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            CLEAR_ITEM(stats_entry_probe<int64_t>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            CLEAR_ITEM(stats_entry_probe<float>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            CLEAR_ITEM(stats_entry_probe<double>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-   else if (units & IS_RINGBUF)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32:
-            CLEAR_ITEM(stats_entry_recent<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            CLEAR_ITEM(stats_entry_recent<int64_t>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            CLEAR_ITEM(stats_entry_recent<float>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            CLEAR_ITEM(stats_entry_recent<double>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-#ifdef _timed_queue_h_
-   else if (units & IS_TIMED_QUEUE)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_INT32:
-            CLEAR_ITEM(stats_entry_tq<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_INT64:
-            CLEAR_ITEM(stats_entry_tq<int64_t>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-#endif
-#undef CLEAR_ITEM
-}
-
-// reset all counters to 0, including Recent buffers.
-void generic_stats_Clear(const GenericStatsPubItem * pTable, int cTable, char * pdata)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      generic_stats_itemClear(pTable[ii].units, pdata + pTable[ii].off);
-      }
-}
-
-void generic_stats_itemClearRecent(int units, char * pitem)
-{
-#undef CLEAR_ITEM
-#define CLEAR_ITEM(st,p) ((st*)p)->ClearRecent()
-   /*
-   if (units & IS_ABS)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32: 
-            CLEAR_ITEM(stats_entry_abs<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            CLEAR_ITEM(stats_entry_abs<int64_t>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            CLEAR_ITEM(stats_entry_abs<float>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            CLEAR_ITEM(stats_entry_abs<double>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-   else if (units & IS_PROBE)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32:
-            CLEAR_ITEM(stats_entry_probe<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            CLEAR_ITEM(stats_entry_probe<int64_t>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            CLEAR_ITEM(stats_entry_probe<float>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            CLEAR_ITEM(stats_entry_probe<double>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-   else 
-   */
-   if (units & IS_RINGBUF)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32:
-            CLEAR_ITEM(stats_entry_recent<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            CLEAR_ITEM(stats_entry_recent<int64_t>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            CLEAR_ITEM(stats_entry_recent<float>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            CLEAR_ITEM(stats_entry_recent<double>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-#ifdef _timed_queue_h_
-   else if (units & IS_TIMED_QUEUE)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_INT32:
-            CLEAR_ITEM(stats_entry_tq<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_INT64:
-            CLEAR_ITEM(stats_entry_tq<int64_t>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-#endif
-#undef CLEAR_ITEM
-}
-// clear the recent buffers
-void generic_stats_ClearRecent(const GenericStatsPubItem * pTable, int cTable, char * pdata)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      generic_stats_itemClearRecent(pTable[ii].units, pdata + pTable[ii].off);
-      }
-}
-
-// each time the time quantum has passed, we wan to Advance the recent buffers
-void generic_stats_itemAdvanceRecent(int units, void * pitem, int cAdvance)
-{
-#undef ADVANCE_ITEM
-#define ADVANCE_ITEM(st,p) ((st*)p)->AdvanceBy(cAdvance)
-   if (units & IS_RINGBUF)
-      {
-      switch (units & AS_FUNDAMENTAL_TYPE_MASK)
-         {
-         case STATS_ENTRY_TYPE_UINT32: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT32:
-            ADVANCE_ITEM(stats_entry_recent<int>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_UINT64: // we can overload signed and unsigned because they are the same size.
-         case STATS_ENTRY_TYPE_INT64:
-            ADVANCE_ITEM(stats_entry_recent<int64_t>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_FLOAT:
-            ADVANCE_ITEM(stats_entry_recent<float>,pitem);
-            break;
-         case STATS_ENTRY_TYPE_DOUBLE:
-            ADVANCE_ITEM(stats_entry_recent<double>,pitem);
-            break;
-         default: { EXCEPT("invalid value in statistics pub table\n"); }
-         }
-      }
-#undef ADVANCE_ITEM
-}
-
-void generic_stats_AdvanceRecent(const GenericStatsPubItem * pTable, int cTable, char * pdata, int cAdvance)
-{
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      generic_stats_itemAdvanceRecent(pTable[ii].units, pdata + pTable[ii].off, cAdvance);
-      }
-}
-
-
 int generic_stats_Tick(
-   const GenericStatsPubItem * pPub, 
-   int    cPub, 
-   char * pdata,
    int    RecentMaxTime,
    int    RecentQuantum,
    time_t InitTime,
@@ -819,8 +147,6 @@ int generic_stats_Tick(
       if (delta >= RecentQuantum)
          {
          cTicks = delta / RecentQuantum;
-         if (pPub && cPub)
-            generic_stats_AdvanceRecent(pPub, cPub, pdata, delta / RecentQuantum);
          RecentTickTime = now - (delta % RecentQuantum);
          }
 
@@ -833,9 +159,394 @@ int generic_stats_Tick(
    return cTicks;
 }
 
+//----------------------------------------------------------------------------------------------
 //
-// This is how you use the generic_stats_xxxx functions.
-#if 0
+void stats_recent_counter_timer::Delete(stats_recent_counter_timer * probe) {
+   delete probe;
+}
+
+void stats_recent_counter_timer::Publish(ClassAd & ad, const char * pattr, int flags) const
+{
+
+   MyString str(pattr);
+   MyString strR("Recent");
+   strR += pattr;
+
+   ClassAdAssign(ad, str.Value(), this->count.value);
+   ClassAdAssign(ad, strR.Value(), this->count.recent);
+
+   str += "Runtime";
+   strR += "Runtime";
+   ClassAdAssign(ad, str.Value(), this->runtime.value);
+   ClassAdAssign(ad, strR.Value(), this->runtime.recent);
+
+   //str.sprintf("Debug%s", pattr);
+   //StatsPublishDebug(str.Value(), ad, this->count);
+   //str += "Runtime";
+   //StatsPublishDebug(str.Value(), ad, this->runtime);
+}
+
+// the Probe class is designed to be instantiated with
+// the stats_entry_recent template,  i.e. stats_entry_recent<Probe>
+// creates a probe that does full statistical sampling (min,max,avg,std)
+// with an overall value and a recent-window'd value.
+//
+void Probe::Clear() 
+{
+   Count = 0; // value is use to store the count of samples.
+   Max = std::numeric_limits<double>::min();
+   Min = std::numeric_limits<double>::max();
+   SumSq = Sum = 0.0;
+}
+
+double Probe::Add(double val) 
+{ 
+   Count += 1; // value is use to store the count of samples.
+   if (val > Max) Max = val;
+   if (val < Min) Min = val;
+   Sum += val;
+   SumSq += val*val;
+   return Sum;
+}
+
+Probe & Probe::Add(const Probe & val) 
+{ 
+   if (val.Count >= 1) {
+      Count += val.Count;
+      if (val.Max > Max) Max = val.Max;
+      if (val.Min < Min) Min = val.Min;
+      Sum += val.Sum;
+      SumSq += val.SumSq;
+      }
+   return *this;
+}
+
+double Probe::Avg() const 
+{
+   if (Count > 0) {
+      return this->Sum / this->Count;
+   } else {
+      return this->Sum;
+   }
+}
+
+double Probe::Var() const
+{
+   if (Count <= 1) {
+      return this->Min;
+   } else {
+      // Var == (SumSQ - count*Avg*Avg)/(count -1)
+      return (this->SumSq - this->Sum * (this->Sum / this->Count))/(this->Count - 1);
+   }
+}
+
+double Probe::Std() const
+{
+   if (Count <= 1) {
+      return this->Min;
+   } else {
+      return sqrt(this->Var());
+   }
+}
+
+template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots) { 
+   if (cSlots <= 0) 
+      return;
+
+   // remove the values associated with the slot being overwritten
+   // from the aggregate value.
+   while (cSlots > 0) {
+      buf.Advance();
+      --cSlots;
+      }
+
+   recent = buf.Sum();
+}
+
+template <> int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe) {
+   MyString attr(pattr);
+   ad.Assign(pattr, probe.Count);
+   attr += "Runtime";
+   int ret = ad.Assign(attr.Value(), probe.Sum);
+   if (probe.Count > 0)
+      {
+      int pos = attr.Length();
+      attr += "Avg";
+      ad.Assign(attr.Value(), probe.Avg());
+
+      attr.replaceString("Avg","Min",pos);
+      ad.Assign(attr.Value(), probe.Min);
+
+      attr.replaceString("Min","Max",pos);
+      ad.Assign(attr.Value(), probe.Max);
+
+      attr.replaceString("Max","Std",pos);
+      ad.Assign(attr.Value(), probe.Std());
+      }
+   return ret;
+}
+
+#include "utc_time.h"
+void TestProbe()
+{
+   struct {
+      stats_entry_recent<Probe> Runtime;
+   } stats;
+
+   stats.Runtime.SetRecentMax(5);
+
+   double runtime = UtcTime::getTimeDouble();
+
+   sleep(2);
+   double now = UtcTime::getTimeDouble();
+   stats.Runtime += (now - runtime);
+   now = runtime;
+
+   stats.Runtime.AdvanceBy(1);
+}
+
+//----------------------------------------------------------------------------------------------
+// methods for the StatisticsPool class.  StatisticsPool is a collection of statistics that 
+// share a recent time quantum and are intended to be published/Advanced/Cleared
+// together.
+//
+StatisticsPool::~StatisticsPool()
+{
+   // first delete all of the publish entries.
+   MyString name;
+   pubitem item;
+   pub.startIterations();
+   while (pub.iterate(name,item))
+      {
+      pub.remove(name);
+      if (item.fOwnedByPool && item.pattr)
+         free((void*)item.pattr);
+      }
+
+   // then all of the probes. 
+   void* probe;
+   poolitem pi;
+   pool.startIterations();
+   while (pool.iterate(probe,pi))
+      {
+      pool.remove(probe);
+      if (pi.Delete)
+         pi.Delete(probe);
+      }
+}
+
+int StatisticsPool::RemoveProbe (const char * name)
+{
+   pubitem item;
+   if (pub.lookup(name, item) < 0)
+      return 0;
+   int ret =  pub.remove(name);
+
+   void * probe = item.pitem;
+   bool fOwnedByPool = item.fOwnedByPool;
+   if (fOwnedByPool) {
+      if (item.pattr) free((void*)item.pattr);
+   }
+
+   // remove the probe from the pool (if it's still there)
+   poolitem pi;
+   if (pool.lookup(probe, pi) >= 0) {
+      pool.remove(probe);
+      if (pi.Delete) {
+         pi.Delete(probe);
+      }
+   }
+
+   // clear out any dangling references to the probe in the pub list.
+   // 
+   /*
+   StatisticsPool * pthis = const_cast<StatisticsPool*>(this);
+   MyString key;
+   pthis->pub.startIterations();
+   while (pthis->pub.iterate(key,item)) {
+      if (item.pitem == probe)
+         pthis->pub.remove(key);
+   }
+
+   if (fOwnedByPool) {
+      delete pitem;
+   }
+   */
+   return ret;
+}
+
+void StatisticsPool::InsertProbe (
+   const char * name,       // unique name for the probe
+   int          unit,       // identifies the probe class/type
+   void*        probe,      // the probe, usually a member of a class/struct
+   bool         fOwned,     // probe and pattr string are owned by the pool
+   const char * pattr,      // publish attribute name
+   int          flags,      // flags to control publishing
+   FN_STATS_ENTRY_PUBLISH fnpub, // publish method
+   FN_STATS_ENTRY_ADVANCE fnadv, // Advance method
+   FN_STATS_ENTRY_CLEAR   fnclr,  // Clear method
+   FN_STATS_ENTRY_SETRECENTMAX fnsrm,
+   FN_STATS_ENTRY_DELETE  fndel) // Destructor
+{
+   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub };
+   pub.insert(name, item);
+
+   poolitem pi = { unit, fOwned, fnadv, fnclr, fnsrm, fndel };
+   pool.insert(probe, pi);
+}
+
+void StatisticsPool::InsertPublish (
+   const char * name,       // unique name for the probe
+   int          unit,       // identifies the probe class/type
+   void*        probe,      // the probe, usually a member of a class/struct
+   bool         fOwned,     // probe and pattr string are owned by the pool
+   const char * pattr,      // publish attribute name
+   int          flags,      // flags to control publishing
+   FN_STATS_ENTRY_PUBLISH fnpub) // publish method
+{
+   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub };
+   pub.insert(name, item);
+}
+
+double StatisticsPool::SetSample(const char * probe_name, double sample)
+{
+   return sample;
+}
+
+int StatisticsPool::SetSample(const char * probe_name, int sample)
+{
+   return sample;
+}
+
+int64_t StatisticsPool::SetSample(const char * probe_name, int64_t sample)
+{
+   return sample;
+}
+
+int StatisticsPool::Advance(int cAdvance)
+{
+   if (cAdvance <= 0)
+      return cAdvance;
+
+   void* pitem;
+   poolitem item;
+   pool.startIterations();
+   while (pool.iterate(pitem,item))
+      {
+      if (pitem && item.Advance) {
+         stats_entry_base * probe = (stats_entry_base *)pitem;
+         (probe->*(item.Advance))(cAdvance);
+         }
+      }
+   return cAdvance;
+}
+
+void StatisticsPool::Clear()
+{
+   void* pitem;
+   poolitem item;
+   pool.startIterations();
+   while (pool.iterate(pitem,item))
+      {
+      if (pitem && item.Clear) {
+         stats_entry_base * probe = (stats_entry_base *)pitem;
+         (probe->*(item.Clear))();
+         }
+      }
+}
+
+void StatisticsPool::ClearRecent()
+{
+   EXCEPT("StatisticsPool::ClearRecent has not been implemented");
+}
+
+void StatisticsPool::SetRecentMax(int window, int quantum)
+{
+   int cRecent = quantum ? window / quantum : window;
+
+   void* pitem;
+   poolitem item;
+   pool.startIterations();
+   while (pool.iterate(pitem,item))
+      {
+      if (pitem && item.SetRecentMax) {
+         stats_entry_base * probe = (stats_entry_base *)pitem;
+         (probe->*(item.SetRecentMax))(cRecent);
+         }
+      }
+}
+
+void StatisticsPool::Publish(ClassAd & ad) const
+{
+   pubitem item;
+   MyString name;
+
+   // boo! HashTable doesn't support const, so I have to remove const from this
+   // to make the compiler happy.
+   StatisticsPool * pthis = const_cast<StatisticsPool*>(this);
+   pthis->pub.startIterations();
+   while (pthis->pub.iterate(name,item)) 
+      {
+      if (item.Publish) {
+         stats_entry_base * probe = (stats_entry_base *)item.pitem;
+         (probe->*(item.Publish))(ad, item.pattr ? item.pattr : name.Value(), item.flags);
+         }
+      }
+}
+
+void StatisticsPool::Unpublish(ClassAd & ad) const
+{
+   pubitem item;
+   MyString name;
+
+   // boo! HashTable doesn't support const, so I have to remove const from this
+   // to make the compiler happy.
+   StatisticsPool * pthis = const_cast<StatisticsPool*>(this);
+   pthis->pub.startIterations();
+   while (pthis->pub.iterate(name,item)) 
+      {
+      ad.Delete(item.pattr ? item.pattr : name.Value());
+      }
+}
+
+// some compiler/linkers need us to force template instantiation
+// since the template code isn't in a header file.
+// force the static members to be instantiated in the library.
+//
+void generic_stats_force_refs()
+{
+   stats_entry_recent<int>* pi = NULL;
+   stats_entry_recent<long>* pl = NULL;
+   stats_entry_recent<int64_t>* pt = NULL;
+   stats_entry_recent<double>* pd = NULL;
+   stats_recent_counter_timer* pc = NULL;
+
+   StatisticsPool dummy;
+   dummy.GetProbe<stats_entry_recent<int> >("");
+   dummy.GetProbe<stats_entry_recent<int64_t> >("");
+   dummy.GetProbe<stats_entry_recent<long> >("");
+   dummy.GetProbe<stats_entry_recent<double> >("");
+   dummy.GetProbe<stats_recent_counter_timer>("");
+
+   dummy.NewProbe<stats_entry_recent<int> >("");
+   dummy.NewProbe<stats_entry_recent<int64_t> >("");
+   dummy.NewProbe<stats_entry_recent<long> >("");
+   dummy.NewProbe<stats_entry_recent<double> >("");
+   dummy.NewProbe<stats_recent_counter_timer>("");
+   //dummy.Add<stats_entry_recent<int>*>("",0,pi,0,"",NULL);
+   //dummy.Add<stats_entry_recent<long>*>("",0,pl,0,"",NULL);
+   //dummy.Add<stats_entry_recent<int64_t>*>("",0,pt,0,"",NULL);
+   //dummy.Add<stats_recent_counter_timer*>("",0,pc,0,"",NULL);
+   dummy.AddProbe("",pi,NULL,0);
+   dummy.AddProbe("",pl,NULL,0);
+   dummy.AddProbe("",pt,NULL,0);
+   dummy.AddProbe("",pc,NULL,0);
+   dummy.AddProbe("",pd,NULL,0);
+};
+
+//
+// This is how you use the generic_stats functions.
+#ifdef UNIT_TESTS
 
 class TestStats {
 public:
@@ -853,6 +564,8 @@ public:
    stats_entry_recent<int>    Signals; 
    stats_entry_recent<time_t> SignalRuntime;
 
+   StatisticsPool Pool;           // pool of statistics probes and Publish attrib names
+
    void Init();
    void Clear();
    void Tick(); // call this when time may have changed to update StatsLastUpdateTime, etc.
@@ -862,42 +575,25 @@ public:
 };
 
 
-#define TEST_STATS_PUB(name, as)        GENERIC_STATS_PUB(TestStats, "Test", name, as)
-#define TEST_STATS_PUB_RECENT(name, as) GENERIC_STATS_PUB_RECENT(TestStats, "Test", name, as)
-#define TEST_STATS_PUB_PEAK(name, as)   GENERIC_STATS_PUB_PEAK(TestStats, "Test", name, as)
-#define TEST_STATS_PUB_TYPE(name,T,as)  GENERIC_STATS_PUB_TYPE(TestStats, "Test", name, as, T)
-
-static const GenericStatsPubItem TestStatsPub[] = {
-   TEST_STATS_PUB_TYPE(StatsLifetime,       time_t,  AS_RELTIME),
-   TEST_STATS_PUB_TYPE(RecentStatsLifetime, time_t,  AS_RELTIME),
-
-   TEST_STATS_PUB_TYPE(InitTime,            time_t,  AS_ABSTIME),
-
-   TEST_STATS_PUB(Signals,               AS_COUNT),
-   TEST_STATS_PUB(SignalRuntime,         AS_RELTIME),
-
-   TEST_STATS_PUB_RECENT(Signals,        AS_COUNT),
-   TEST_STATS_PUB_RECENT(SignalRuntime,  AS_RELTIME),
-   };
-
 const int test_stats_window_quantum = 60;
 
 void TestStats::SetWindowSize(int window)
 {
    this->RecentWindowMax = window;
-   generic_stats_SetRecentMax(TestStatsPub, COUNTOF(TestStatsPub), (char*)this, 
-                              window, test_stats_window_quantum);
+   Pool.SetRecentMax(window, test_stats_window_quantum);
 }
 
 void TestStats::Init()
 {
    Clear();
    this->RecentWindowMax = test_stats_window_quantum; 
+
+   STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "Test", Signals, 0);
+   STATS_POOL_ADD_VAL_PUB_RECENT(Pool, "Test", SignalRuntime, 0);
 }
 
 void TestStats::Clear()
 {
-   generic_stats_Clear(TestStatsPub, COUNTOF(TestStatsPub), (char*)this);
    this->InitTime = time(NULL);
    this->StatsLifetime = 0;
    this->StatsLastUpdateTime = 0;
@@ -907,9 +603,7 @@ void TestStats::Clear()
 
 void TestStats::Tick()
 {
-   generic_stats_Tick(
-      TestStatsPub, COUNTOF(TestStatsPub), 
-      (char*)this,
+   int cAdvance = generic_stats_Tick(
       this->RecentWindowMax,     // RecentMaxTime
       test_stats_window_quantum, // RecentQuantum
       this->InitTime,
@@ -917,27 +611,18 @@ void TestStats::Tick()
       this->RecentStatsTickTime,
       this->StatsLifetime,
       this->RecentStatsLifetime);
-
+   if (cAdvance > 0)
+      Pool.Advance(cAdvance);
 }
 
 void TestStats::Unpublish(ClassAd & ad) const
 {
-   generic_stats_DeleteInClassAd(ad, TestStatsPub, COUNTOF(TestStatsPub), (const char *)this);  
+   Pool.Publish(ad);
 }
 
 
 void TestStats::Publish(ClassAd & ad) const
 {
-   generic_stats_PublishToClassAd(ad, TestStatsPub, COUNTOF(TestStatsPub), (const char *)this);  
-/*
-   const GenericStatsPubItem * pTable = PubTable;
-   int                         cTable = COUNTOF(PubTable);
-
-   for (int ii = 0; ii < cTable; ++ii)
-      {
-      if (pTable[ii].pub)
-         pTable[ii].pub((const char *)this + pTable[ii].off, ad, pTable[ii].pattr);
-      }
-*/
+   Pool.Unpublish(ad);
 }
 #endif

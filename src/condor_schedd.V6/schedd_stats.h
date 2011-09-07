@@ -34,9 +34,11 @@ const int schedd_stats_window_quantum = 60;
 //
 typedef struct ScheddStatistics {
 
-   time_t StatsUpdateTime;       // last time that statistics were last updated. (a freshness time)
-   time_t PrevUpdateTime;        // the prior time that statistics were updated. 
-   time_t RecentStatsWindowTime; // actual time span of current RecentXXX data.
+   // these are used by generic tick
+   time_t StatsLifetime;         // the total time covered by this set of statistics
+   time_t StatsLastUpdateTime;   // last time that statistics were last updated. (a freshness time)
+   time_t RecentStatsLifetime;   // actual time span of current RecentXXX data.
+   time_t RecentStatsTickTime;   // last time Recent values Advanced
 
    // basic job counts
    stats_entry_recent<int> JobsSubmitted;        // jobs submitted over lifetime of schedd
@@ -75,13 +77,14 @@ typedef struct ScheddStatistics {
    time_t InitTime;            // last time we init'ed the structure
    int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
 
+   StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
+
    // methods
    //
    void Init();
    void Clear();
    void Tick(); // call this when time may have changed to update StatsUpdateTime, etc.
    void SetWindowSize(int window);
-   //void Accumulate(time_t now);
    void Publish(ClassAd & ad) const;
    void Unpublish(ClassAd & ad) const;
 

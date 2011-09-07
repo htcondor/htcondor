@@ -40,6 +40,18 @@ int findHoldKillSig( ClassAd* ad );
 // the appropriate string describing the fate of the job...
 bool printExitString( ClassAd* ad, int exit_reason, MyString &str );
 
+// Remove/replace characters from the string so it can be used as an attribute name
+// it changes the string that is passed to it.  first leading an trailing spaces
+// are removed, then Characters that are invalid in compatible classads 
+// (basically anthing but [a-zA-Z0-9_]) is replaced with chReplace.
+// if chReplace is 0, then invalid characters are removed. 
+// if compact is true, then multiple consecutive runs of chReplace
+// are changed to a single instance.
+// return value is the length of the resulting string.
+//
+int cleanStringForUseAsAttr(MyString &str, char chReplace=0, bool compact=true);
+bool canStringBeUsedAsAttr(const char * pattr);
+
 // Create an empty job ad, with sensible defaults for all of the attributes
 // that the schedd expects to be set, like condor_submit would set them.
 // owner, universe, and cmd are the only attributes that require an
