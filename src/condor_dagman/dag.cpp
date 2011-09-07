@@ -1559,6 +1559,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		else if ( _alwaysRunPost && job->_scriptPost != NULL ) {
 				// PRE script Failed.  The return code is in retval member.
 			job->_scriptPost->_retValScript = job->retval;
+			job->_scriptPost->_retValJob = DAG_ERROR_JOB_SKIPPED;
 			RunPostScript( job, _alwaysRunPost, job->retval );
 		}
 

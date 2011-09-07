@@ -308,8 +308,8 @@ The exit value of the POST script determines the success of the job.
 If this behavior is not desired, 
 the configuration variable \MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} 
 should be set to \Expr{False};
-then \Condor{dagman} will not run the POST script if the PRE script fails.
-The node will instead simply fail, 
+then \Condor{dagman} will not run the POST script if the PRE script fails---%
+the node will instead simply fail, 
 with neither the job nor the POST script being executed.
 If the PRE script succeeds, the Condor or Stork job is submitted.
 If the job or any one of the jobs within the single cluster fails and there is
@@ -348,16 +348,19 @@ summarizes the success or failure of an entire node
 for all possibilities.
 An \Arg{S} stands for success,
 an \Arg{F} stands for failure,
-and the dash character (\Arg{-}) identifies that there is no script.
+and the dash character (\Arg{-}) identifies that there is no script. The
+asterisk (${}^\ast$) indicates that the POST script is run, unless
+\MacroNI{DAGMAN\_ALWAYS\_RUN\_POST} is \Expr{False}, in which case the node
+will simply fail, as described above.
 
 \begin{center}
 \begin{table}[hbt]
 \begin{tabular}{|c||cccccccccccccc|} \hline
-PRE   & - & - & F       & F       & S & S & - & - & - & - & S & S & S & S  \\
-JOB   & S & F & not run & not run & S & F & S & S & F & F & S & F & F & S  \\
-POST  & - & - & S       & F       & - & - & S & F & S & F & S & S & F & F  \\
+PRE   & - & - & F          & F          & S & S & - & - & - & - & S & S & S & S  \\
+JOB   & S & F & not run    & not run    & S & F & S & S & F & F & S & F & F & S  \\
+POST  & - & - & S${}^\ast$ & F${}^\ast$ & - & - & S & F & S & F & S & S & F & F  \\
 \hline \hline
-node  & S & F & S       & F       & S & F & S & F & S & F & S & S & F & F  \\
+node  & S & F & S${}^\ast$ & F          & S & F & S & F & S & F & S & S & F & F  \\
 \hline
 \end{tabular}
 \caption{\label{Node-success-failure}Node success or failure definition }
@@ -443,10 +446,14 @@ For use as an argument to POST scripts only,
 the \Env{\$PRE\_SCRIPT\_RETURN}
 variable evaluates to the return value of the PRE script of a node, 
 if there is one.
-If there is no PRE script, this value will be $-1$. 
-The POST script can use this to see if the PRE script exited with 
-an error condition,
-and assign success or failure to the node, as appropriate.
+If there is no PRE script, this value will be $-1$.
+If the node job was skipped because of failure of the PRE script,
+the value of \Env{\$RETURN} will be $-1004$
+and the value of \Env{\$PRE\_SCRIPT\_RETURN} will be the exit value
+of the PRE script;
+the POST script can use this to see if the PRE script exited
+with an error condition, and assign success or failure to the node, as
+appropriate.
 
 As an example, consider the diamond-shaped DAG example.
 Suppose the PRE script expands a compressed file 
