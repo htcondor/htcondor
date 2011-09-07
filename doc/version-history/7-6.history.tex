@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed CPU detection on Windows so that the correct number is detected
+when there are more than 32 CPUs.
+\Ticket{2381}
+
 \item Fixed a memory leak in the \Condor{negotiator} caused by failure to
 free memory returned from some calls to param\_without\_default().
 \Ticket{2299}

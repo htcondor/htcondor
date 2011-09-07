@@ -77,7 +77,7 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
 #elif defined(WIN32)
 	SYSTEM_INFO info;
-	GetSystemInfo(&info);
+	GetNativeSystemInfo(&info);
 	if( num_cpus ) *num_cpus = info.dwNumberOfProcessors;
 	if( num_hyperthread_cpus ) *num_hyperthread_cpus = info.dwNumberOfProcessors;
 #elif defined(LINUX)
