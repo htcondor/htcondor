@@ -49,6 +49,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed CPU detection on Windows so that the correct number is detected
+when there are more than 32 CPUs.
+\Ticket{2381}
+
+\item Fixed a memory leak in the \Condor{negotiator} caused by failure to
+free memory returned from some calls to param\_without\_default().
+\Ticket{2299}
+
 \item Jobs run via \Prog{glexec} always had their \Env{PATH} environment
 variable cleared.  Now, if \Env{PATH} was specified for the job, 
 in any of the ways that job environment may be specified, 
@@ -69,6 +77,15 @@ not defined, \MacroNI{HOSTDENY\_WRITE} and \MacroNI{HOSTDENY\_READ}
 were used to build the deny list.  
 Now \MacroNI{DENY\_WRITE} and \MacroNI{DENY\_READ} are also used.
 \Ticket{2414}
+
+\item Removed an extra copy of the java files required to run gt4 and gt42
+grid universe jobs. This does not affect Condor's operation.
+\Ticket{2435}
+
+\item Fixed a problem that caused the \Condor{schedd} to crash when
+writing to some user logs with specific names.  The specific names that
+caused crashes are not easy to describe.
+\Ticket{2439}
 
 \end{itemize}
 

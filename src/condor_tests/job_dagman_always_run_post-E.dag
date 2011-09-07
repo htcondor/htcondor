@@ -1,0 +1,4 @@
+Job E_A job_dagman_always_run_post-E_A.cmd
+SCRIPT PRE E_A job_dagman_always_run_post-E_A_pre.sh $RETRY
+SCRIPT POST E_A job_dagman_always_run_post-E_A_post.sh $RETRY
+RETRY E_A 3

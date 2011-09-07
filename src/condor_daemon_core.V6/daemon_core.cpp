@@ -1278,6 +1278,8 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		return -1;
     }
 
+    dc_stats.New("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
+
 	// Semantics dictate that certain signals CANNOT be caught!
 	// In addition, allow SIGCHLD to be automatically replaced (for backwards
 	// compatibility), so cancel any previous registration for SIGCHLD.
@@ -1453,6 +1455,11 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
         DumpSocketTable( D_ALWAYS );
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
+
+    dc_stats.New("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
+    if (iosock_descrip && iosock_descrip[0] && ! strcmp(handler_descrip, "DC Command Handler"))
+       dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
+
 
 	// Verify that this socket has not already been registered
 	// Since we are scanning the entire table to do this (change this someday to a hash!),
@@ -1901,6 +1908,8 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 			EXCEPT("DaemonCore: Same pipe registered twice");
         }
 	}
+
+    dc_stats.New("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
 
 	// Found a blank entry at index i. Now add in the new data.
 	(*pipeTable)[i].pentry = NULL;
@@ -3044,7 +3053,8 @@ void DaemonCore::Driver()
 
 	for(;;)
 	{
-        time_t now = time(NULL);
+        double runtime = UtcTime::getTimeDouble();
+        double group_runtime = runtime;
 
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
@@ -3058,6 +3068,7 @@ void DaemonCore::Driver()
 						curr_dataptr = &(sigTable[i].data_ptr);
                         // update statistics
                         dc_stats.Signals += 1;
+
 						// log a message
 						dprintf(D_DAEMONCORE,
 										"Calling Handler <%s> for Signal %d <%s>\n",
@@ -3072,6 +3083,9 @@ void DaemonCore::Driver()
 						curr_dataptr = NULL;
 						// Make sure we didn't leak our priv state
 						CheckPrivState();
+
+                        // update per-timer runtime and count statistics
+                        runtime = dc_stats.AddRuntime(sigTable[i].handler_descrip, runtime);
 					}
 				}
 			}
@@ -3089,9 +3103,9 @@ void DaemonCore::Driver()
 #endif
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        time_t now2 = time(NULL);
-        dc_stats.SignalRuntime += (now2 - now);
-        now = now2;
+        runtime = UtcTime::getTimeDouble();
+        dc_stats.SignalRuntime += (runtime - group_runtime);
+        group_runtime = runtime;
 
 		// Prepare to enter main select()
 
@@ -3119,9 +3133,9 @@ void DaemonCore::Driver()
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        now2 = time(NULL);
-        dc_stats.TimerRuntime += (now2 - now);
-        now = now2;
+        runtime = UtcTime::getTimeDouble();
+        dc_stats.TimerRuntime += (runtime - group_runtime);
+        group_runtime = runtime;
 
 		// Setup what socket descriptors to select on.  We recompute this
 		// every time because 1) some timeout handler may have removed/added
@@ -3245,10 +3259,10 @@ void DaemonCore::Driver()
 		selector.execute();
 
         // update statistics on time spent waiting in select.
-        now2 = time(NULL);
-        dc_stats.SelectWaittime += (now2 - time_before);
-        now = now2;
-        dc_stats.StatsLifetime = now - dc_stats.InitTime;
+        runtime = UtcTime::getTimeDouble();
+        dc_stats.SelectWaittime += (runtime - group_runtime);
+        group_runtime = runtime;
+        //dc_stats.StatsLifetime = now - dc_stats.InitTime;
 
 		tmpErrno = errno;
 
@@ -3286,7 +3300,7 @@ void DaemonCore::Driver()
 		// in the signalled state in 7.5.5. 
 		if (selector.has_ready() &&
 			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
-            dc_stats.Signals += 1;
+            dc_stats.AsyncPipe += 1;
 			if ( ! async_pipe_signal) {
 				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.");
 			}
@@ -3319,6 +3333,8 @@ void DaemonCore::Driver()
 		// in the main loop.
 		CondorThreads::enable_parallel(false);
 
+        runtime = group_runtime = UtcTime::getTimeDouble();
+
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
 			   min_deadline && min_deadline < time(NULL) ) )
@@ -3329,7 +3345,7 @@ void DaemonCore::Driver()
 			// To avoid repeated calls to time(), store it once
 			// for the following loop; all uses of it below should
 			// be ok if it drifts a little into the past.
-			now = time(NULL);
+			time_t now = time(NULL);
 
 			bool recheck_status = false;
 			//bool call_soap_handler = false;
@@ -3380,9 +3396,9 @@ void DaemonCore::Driver()
 				}	// end of if valid sock entry
 			}	// end of for loop through all sock entries
 
-            now2 = time(NULL);
-            dc_stats.SocketRuntime += (now2 - now);
-            now = now2;
+            runtime = UtcTime::getTimeDouble();
+            dc_stats.SocketRuntime += (runtime - group_runtime);
+            group_runtime = runtime;
 
 			// scan through the pipe table to find which ones select() set
 			for(i = 0; i < nPipe; i++) {
@@ -3414,6 +3430,7 @@ void DaemonCore::Driver()
 
 
 			// Now loop through all pipe entries, calling handlers if required.
+            runtime = UtcTime::getTimeDouble();
 			for(i = 0; i < nPipe; i++) {
 				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
 
@@ -3506,6 +3523,9 @@ void DaemonCore::Driver()
 						}
 #endif
 
+                        // update per-handler runtime statistics
+                        runtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, runtime);
+
 						if ( (*pipeTable)[i].call_handler == true ) {
 							// looks like the handler called Cancel_Pipe(),
 							// and now entry i no longer points to what we
@@ -3519,9 +3539,9 @@ void DaemonCore::Driver()
 			}	// for 0 thru nPipe checking if call_handler is true
 
 
-            now2 = time(NULL);
-            dc_stats.PipeRuntime += (now2 - now);
-            now = now2;
+            runtime = UtcTime::getTimeDouble();
+            dc_stats.PipeRuntime += (runtime - group_runtime);
+            group_runtime = runtime;
 
 			// Now loop through all sock entries, calling handlers if required.
 			for(i = 0; i < nSock; i++) {
@@ -3575,13 +3595,16 @@ void DaemonCore::Driver()
 						recheck_status = true;
 						CallSocketHandler( i, true );
 
+                        // update per-handler runtime statistics
+                        runtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, runtime);
+
 					}	// if call_handler is True
 				}	// if valid entry in sockTable
 			}	// for 0 thru nSock checking if call_handler is true
 
-            now2 = time(NULL);
-            dc_stats.SocketRuntime += (now2 - now);
-            now = now2;
+            runtime = UtcTime::getTimeDouble();
+            dc_stats.SocketRuntime += (runtime - group_runtime);
+            group_runtime = runtime;
 
 		}	// if rv > 0
 

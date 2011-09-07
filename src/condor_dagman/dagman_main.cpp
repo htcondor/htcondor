@@ -68,6 +68,7 @@ static void Usage() {
             "\t\t[-MaxJobs <int N>]\n"
             "\t\t[-MaxPre <int N>]\n"
             "\t\t[-MaxPost <int N>]\n"
+            "\t\t[-DontAlwaysRunPost]\n"
             "\t\t[-WaitForDebug]\n"
             "\t\t[-NoEventChecks]\n"
             "\t\t[-AllowLogError]\n"
@@ -126,9 +127,11 @@ Dagman::Dagman() :
 	maxRescueDagNum(MAX_RESCUE_DAG_DEFAULT),
 	rescueFileToRun(""),
 	dumpRescueDag(false),
+	_writePartialRescueDag(true),
 	_defaultNodeLog(NULL),
 	_generateSubdagSubmits(true),
-	_maxJobHolds(100)
+	_maxJobHolds(100),
+	_runPost(true)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
@@ -319,6 +322,10 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %s\n",
 				submitDepthFirst ? "True" : "False" );
 
+	_runPost = param_boolean( "DAGMAN_ALWAYS_RUN_POST", true );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_RUN_POST setting: %s\n",
+			_runPost ? "True" : "False" );
+
 	free( condorSubmitExe );
 	condorSubmitExe = param( "DAGMAN_CONDOR_SUBMIT_EXE" );
 	if( !condorSubmitExe ) {
@@ -376,6 +383,11 @@ Dagman::Config()
 				maxRescueDagNum, 0, ABS_MAX_RESCUE_DAG_NUM );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
 				maxRescueDagNum );
+
+	_writePartialRescueDag = param_boolean( "DAGMAN_WRITE_PARTIAL_RESCUE",
+				_writePartialRescueDag );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
+				_writePartialRescueDag ? "True" : "False" );
 
 	free( _defaultNodeLog );
 	_defaultNodeLog = param( "DAGMAN_DEFAULT_NODE_LOG" );
@@ -460,7 +472,7 @@ void main_shutdown_rescue( int exitVal ) {
 			if ( dagman.maxRescueDagNum > 0 ) {
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
-							false, true );
+							false, dagman._writePartialRescueDag );
 			} else {
 				debug_printf( DEBUG_QUIET, "No rescue DAG written because "
 							"DAGMAN_MAX_RESCUE_NUM is 0\n" );
@@ -653,6 +665,9 @@ void main_init (int argc, char ** const argv) {
 
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
 			dagman.allowLogError = true;
+
+        } else if( !strcasecmp( "-DontAlwaysRunPost",argv[i] ) ) {
+			dagman._runPost = false;
 
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
@@ -948,7 +963,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetAllowEvents( dagman.allow_events );
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
 	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
-
+	dagman.dag->SetPostRun(dagman._runPost);
     //
     // Parse the input files.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan

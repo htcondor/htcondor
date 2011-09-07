@@ -38,7 +38,6 @@ improving scalability by reducing the
 number of \Procedure{fsync} calls without impacting correctness. 
 \Ticket{2367}
 
-% gittrac #2364
 \item In privsep mode, when an error is encountered when trying to
 switch to the user account chosen for running the job, 
 the error message has been improved to make debugging easier.  
@@ -46,7 +45,6 @@ Now, the error message distinguishes between safety check failures
 for the UID, tracking group ID, primary group ID, and supplementary group IDs.
 \Ticket{2364}
 
-% gittrac #2096
 \item When using \Prog{glexec}, if there is a conflict between
 environment specified for the job and environment inherited from
 glexec, the former always takes precedence when running the job.
@@ -54,11 +52,64 @@ Previously, the environment inherited from glexec took
 precedence.
 \Ticket{2096}
 
+\item \Condor{dagman} now defaults to writing a partial DAG file, as
+opposed to a full DAG file, for a Rescue DAG.  The Rescue DAG file is
+parsed in combination with the original DAG file, meaning that any
+changes to the original DAG input file take effect when running a Rescue DAG.
+\Ticket{2165}
+
+\item The behavior of DAGMan is changed, such that, by default, 
+POST scripts will be run regardless of the return value from 
+the PRE script of the same node
+as described in section~\ref{dagman:SCRIPT}.  
+The previous behavior of not running the POST script can be restored by
+either adding the \Opt{-AlwaysRunPost} option to the \Condor{submit\_dag}
+command line, 
+or by setting the new configuration variable
+\Macro{DAGMAN\_ALWAYS\_RUN\_POST} to \Expr{False}, 
+as defined at~\ref{param:DAGmanAlwaysRunPost}.
+\Ticket{2057}
+
+% moved to 7.7.2 
+% gittrac #659 
+%\item Filip Krikava supplied a patch that limits the number of 
+%file descriptors that DAGMan has open at a time.
+%The reason for creating this capability is that
+%DAGman tends to fail on wide DAGs, where many jobs are independent,
+%rather than being linear, where jobs have many dependencies.
+
+\item A matchmaking optimization has significantly improved speed of matching
+when there are machines with many slots.
+\Ticket{2403}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+% gittrac #2354
+\item Attributes have been added to all daemons to publish statistics about
+the the number of timers, signals, socket and pipe messages that have been handled
+and the amount of time spent handling them.	Statistics attributes for daemon core
+have names that begin with \Attr{DC} or \Attr{RecentDC}.
+\Ticket{2354}
+
+% gittrac #2366
+\item The default value of \Attr{OpSys} on Windows machines has been changed
+ to \AdStr{WINDOWS}, and a new attribute \Attr{OpSysVer} has been added 
+that contains the version number of the operating system.  
+This behavior is controlled by a new configuration variable
+\Macro{ENABLE\_VERSIONED\_OPSYS} which defaults to \Expr{False} on Windows 
+and to \Expr{True} on other platforms.  
+The new machine ClassAd attribute \Attr{OpSys\_And\_Ver} will always contain 
+the versioned operating system.  
+Note that this change could cause problems with mixed pools,
+because Condor version 7.7.2 \Condor{submit} may add \Expr{OpSys="WINDOWS"}, 
+but machines running Condor versions prior to 7.7.2 will be publishing 
+a versioned \Attr{OpSys} value,
+unless there is an override in the configuration.
+\Ticket{2366}
 
 \item Configuration variable \Macro{COLLECTOR\_ADDRESS\_FILE} is now set 
 in the example configuration,
@@ -69,10 +120,19 @@ In other environments, it should have no visible impact.
 \Ticket{2375}
 
 % gittrac #2197
-\item Attributes have been added to the SCHEDD to publish aggregate statistics
+\item Attributes have been added to the \Condor{schedd} to publish aggregate statistics
 about jobs that are running and have completed, as well as counts of various
 failures. See section ??? for details.
 \Ticket{2197}
+
+\item The new configuration variable \Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE}
+enables the new feature of writing a partial DAG file, instead of a full
+DAG input file, as a Rescue DAG.  
+See section~\ref{param:DAGManWritePartialRescue} for a definition.
+Also, the configuration variable
+\Macro{DAGMAN\_OLD\_RESCUE} no longer exists,
+as it is incompatible with the implementation of partial Rescue DAGs.
+\Ticket{2165}
 
 \end{itemize}
 
@@ -126,6 +186,7 @@ the \Condor{collector} to fail to start when it was next restarted.
 
 \item Condor version 7.7.1 not yet released.
 %\item Condor version 7.7.1 released on Month Date, 2011.
+This developer release contains all bug fixes from Condor version ?.
 
 \end{itemize}
 
@@ -134,30 +195,33 @@ the \Condor{collector} to fail to start when it was next restarted.
 
 \begin{itemize}
 
-% This is unlikely to make it into 7.7.1
-% Comment it out for now and plan to move it to 7.7.2
-% gittrac #2057
-%\item The behavior of DAGMan is changed, such that, by default,
-%POST scripts will be run regardless of the return value from the PRE script
-%of the same node.
-%The previous behavior of not running the POST script can be restored 
-%by either adding the \Opt{-no\_postrun} option to \Condor{submit\_dag},
-%or by setting the new configuration variable 
-%\Macro{DAGMAN\_POST\_IGNORE\_PRE} to \Expr{False}.
+\item
+The new job ClassAd attribute \Attr{KeepClaimIdle} is defined with an integer
+number of seconds in the job submit description file, as the example:
+\begin{verbatim}
+  +KeepClaimIdle = 300
+\end{verbatim}
+If set, then when the job exits, 
+if there are no other jobs immediately ready to run for this user, 
+the \Condor{schedd} daemon,
+instead of relinquishing the claim back to the \Condor{negotiator}, 
+will keep the claim for the specified number of seconds.  
+This is useful if another job will be arriving soon, 
+which can happen with linear DAGs.  
+The \Condor{startd} slot
+will go to the Claimed Idle state for at least that many seconds until
+either a new job arrives or the timeout occurs.
+See page~\pageref{sec:Job-ClassAd-Attributes},
+the unnumbered Appendix A for a complete definition of this
+job ClassAd attribute.
+\Ticket{2094}
 
+% gittrac #2122
 \item The new \Arg{PRE\_SKIP} key word in DAGMan changes the
 behavior of DAG node execution such that the node's job and POST script
 may be skipped based on the exit value of the PRE script.
 See section ~\ref{dagman:SCRIPT} for details.
 \Ticket{2122}
-
-% uncomment item, if it appears in 7.7.1
-% gittrac #659 
-%\item Filip Krikava supplied a patch that limits the number of 
-%file descriptors that DAGMan has open at a time.
-%The reason for creating this capability is that
-%DAGman tends to fail on wide DAGs, where many jobs are independent,
-%rather than being linear, where jobs have many dependencies.
 
 \item Condor now uses the OS-provided versions of OpenSSL and Kerberos,
 rather than including its own versions.

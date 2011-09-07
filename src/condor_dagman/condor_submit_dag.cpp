@@ -749,6 +749,10 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		printf( "Warning: -NoEventChecks is ignored; please use "
 					"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
 	}
+	if(!shallowOpts.bPostRun)
+	{
+		args.AppendArg("-DontAlwaysRunPost");
+	}
 	if(deepOpts.bAllowLogError)
 	{
 		args.AppendArg("-AllowLogError");
@@ -1085,6 +1089,10 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			else if ( (strArg.find("-v") != -1) ) // -verbose
 			{
 				deepOpts.bVerbose = true;
+			}
+			else if ( (strArg.find("-dontalwaysrun") != -1) ) // DontAlwaysRunPost
+			{
+				shallowOpts.bPostRun = false;
 			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv,
 						shallowOpts) )

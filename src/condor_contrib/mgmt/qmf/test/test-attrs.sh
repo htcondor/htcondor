@@ -43,4 +43,11 @@ echo "attr test - step #4 failed"
 exit 1
 fi
 
+echo "step #5 - set reserved attribute name"
+./setattr.py $job_id "iSNt" "Value" amqp://cumin/cumin@localhost:5672 > ./test-attr.5.out 2>&1
+if [ $? -eq 0 ] ; then
+echo "attr test - step #5 failed"
+exit 1
+fi
+
 echo "all tests passed"

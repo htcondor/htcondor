@@ -1,0 +1,89 @@
+body { font-family: Sans-Serif; font-size: 11px; }
+a:link { color: #1C3F75; }
+.passed {
+   background-color: #55ff55;
+}
+.failed {
+   background-color: #ff5555;
+}
+.pending {
+   background-color: #ffff55;
+}
+.noresults {
+   background-color: #aaaaaa;
+}
+
+.details {
+   font-size: 10px;
+}
+.detail_url {
+   font-weight: bold;
+}
+.title {
+   color: black;
+}
+
+table {
+    border-collapse: collapse;
+    padding: 0;
+    border: 1px solid grey;
+}
+td {
+    border: 1px solid grey;
+}
+.sparkheader {
+   font-size: 75%;
+}
+
+
+
+span.link {
+    position: relative;
+    font-size: 75%;
+}
+
+span.link a span {
+    display: none;
+    text-decoration: none;
+}
+
+span.link a:hover {
+    font-size: 99%;
+    color: #000000;
+}
+
+span.link a:hover span { 
+    display: block; 
+    position: absolute; 
+    margin-top: 10px; 
+    margin-left: -10px; 
+    /*width: 180px; */
+    padding: 5px; 
+    z-index: 100; 
+    color: #000000; 
+    background: #FFFFAA; 
+    font: 12px "Arial", sans-serif;
+    text-align: left; 
+    text-decoration: none;
+}
+
+
+/* Page layout */
+#wrap {
+    margin: 0 auto;
+}
+
+#nav {
+    padding: 10px;
+    width:125px;
+    float:left;
+}
+
+#main {
+    float:left;
+}
+
+#footer {
+    clear:both;
+    background: #ffffff;
+}

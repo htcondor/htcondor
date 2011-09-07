@@ -26,9 +26,13 @@
 
 #include "compat_classad_util.h"
 
+#include "condor_attributes.h"
+
 
 static const std::string EXPR_TYPE = "com.redhat.grid.Expression";
 static const std::string TYPEMAP_KEY = "!!descriptors";
+
+const char* RESERVED[] = {"error", "false", "is", "isnt", "parent", "true","undefined", NULL};
 
 using namespace std;
 using namespace qpid::types;
@@ -111,6 +115,26 @@ bool CheckRequiredAttrs(compat_classad::ClassAd& ad, const char* attrs[], std::s
 		i++;
 	}
 	return status;
+}
+
+// checks if the attribute name is reserved
+bool IsKeyword(const char* kw) {
+	int i = 0;
+	while (NULL != RESERVED[i]) {
+		if (strcasecmp(kw,RESERVED[i]) == 0) {
+			return true;
+		}
+		i++;
+	}
+	return false;
+}
+
+// checks to see if ATTR_JOB_SUBMISSION is being changed post-submission
+bool IsSubmissionChange(const char* attr) {
+	if (strcasecmp(attr,ATTR_JOB_SUBMISSION)==0) {
+		return true;
+	}
+	return false;
 }
 
 bool
@@ -203,7 +227,7 @@ PopulateVariantMapFromAd(compat_classad::ClassAd &ad, Variant::Map &_map)
 
 
 bool
-PopulateAdFromVariantMap(Variant::Map &_map, compat_classad::ClassAd &ad)
+PopulateAdFromVariantMap(Variant::Map &_map, compat_classad::ClassAd &ad, std::string& text)
 {
 	Variant::Map* descriptors = NULL;
 	// grab the descriptor map if there is one
@@ -214,6 +238,12 @@ PopulateAdFromVariantMap(Variant::Map &_map, compat_classad::ClassAd &ad)
 
 	for (Variant::Map::const_iterator entry = _map.begin(); _map.end() != entry; entry++) {
 		const char* name = entry->first.c_str();
+
+		if (IsKeyword(name)) {
+			text = "Reserved ClassAd keyword cannot be an attribute name: "+ entry->first;
+			return false;
+		}
+
 		Variant value = _map[entry->first];
 
 		// skip the hidden tag

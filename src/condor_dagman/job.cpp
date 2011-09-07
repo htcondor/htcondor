@@ -99,7 +99,7 @@ Job::~Job() {
 //---------------------------------------------------------------------------
 Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile ) :
-	_jobType( jobType ), _preskip( PRE_SKIP_INVALID )
+	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ), _pre_status( NO_PRE_VALUE )
 {
 	Init( jobName, directory, cmdFile );
 }

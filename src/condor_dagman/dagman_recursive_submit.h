@@ -63,10 +63,12 @@ struct SubmitDagShallowOptions
 	MyString strLockFile;
 	bool copyToSpool;
 	int iDebugLevel;
+	bool bPostRun;
 
 	SubmitDagShallowOptions() 
 	{ 
 		bSubmit = true;
+		bPostRun = true;
 		strRemoteSchedd = "";
 		strScheddDaemonAdFile = "";
 		strScheddAddressFile = "";

@@ -160,9 +160,8 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
     // without good priv
     ad.Assign(ATTR_SHOULD_TRANSFER_FILES, "NO");
 
-	if (!m_codec->mapToClassAd(jobAdMap, ad)) {
+	if (!m_codec->mapToClassAd(jobAdMap, ad, text)) {
 		AbortTransaction();
-		text = "Failed to parse job ad";
 		return false;
 	}
 
@@ -236,7 +235,7 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
 
 		// Could check for some invalid attributes, e.g
 		//  JobUniverse <= CONDOR_UNIVERSE_MIN or >= CONDOR_UNIVERSE_MAX
-	
+
 		// 5. Commit transaction
 	CommitTransaction();
 
@@ -270,6 +269,16 @@ SchedulerObject::setAttribute(std::string key,
 		return false;
 	}
 
+	if (isSubmissionChange(name.c_str())) {
+		text = "Changes to submission name not allowed";
+		return false;
+	}
+
+	if (isKeyword(name.c_str())) {
+		text = "Attribute name is reserved: " + name;
+		return false;
+	}
+
 	if (!isValidAttributeName(name,text)) {
 		return false;
 	}
@@ -298,7 +307,7 @@ SchedulerObject::hold(std::string key, std::string &reason, std::string &text)
 		dprintf(D_FULLDEBUG, "Hold: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
-	}	
+	}
 
 	if (!holdJob(id.cluster,
 				 id.proc,
@@ -348,7 +357,7 @@ SchedulerObject::remove(std::string key, std::string &reason, std::string &text)
 		dprintf(D_FULLDEBUG, "Remove: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
-	}	
+	}
 
 	if (!abortJob(id.cluster,
 				  id.proc,

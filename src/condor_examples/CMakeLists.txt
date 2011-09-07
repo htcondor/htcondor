@@ -60,7 +60,7 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 
 
 	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )	
-		add_custom_command( OUTPUT condor_config.patched
+		add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp 
 						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic condor_config.patched
@@ -70,32 +70,32 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 		add_custom_target(	patch_configurations
 						ALL
 						DEPENDS condor_config.patched)
-		install(FILES		condor_config.patched
+		install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 				DESTINATION	"${C_ETC}"
 				RENAME	condor_config)
 	else()
 		#x86_64 use /usr/lib64 instead of /usr/lib
 		#we will apply 2 patches on condor_config file
-		add_custom_command( OUTPUT condor_config.patched
+		add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp 
 						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic condor_config.patched
 						COMMAND patch 
 						ARGS condor_config.patched ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic.rpm.patch )
 
-		add_custom_command( OUTPUT condor_config.patched.x86_64
+		add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched.x86_64
 						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp 
 						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.patched condor_config.patched.x86_64
-						DEPENDS condor_config.patched
+						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 						COMMAND patch 
 						ARGS condor_config.patched.x86_64 ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic.rpm64.patch )
 	
 		add_custom_target(	patch_configurations_x86_64
 						ALL
-						DEPENDS condor_config.patched.x86_64)
+						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched.x86_64)
 		
-		install(FILES	condor_config.patched.x86_64
+		install(FILES	${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched.x86_64
 						DESTINATION	"${C_ETC}"
 						RENAME	condor_config)					
 	endif ()					
@@ -107,7 +107,7 @@ if ( RPM_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 
 elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
 
-	add_custom_command( OUTPUT condor_config.patched
+	add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp
 						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor_config.generic condor_config.patched
@@ -116,14 +116,14 @@ elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
 
 	add_custom_target(	patch_configurations
 						ALL
-						DEPENDS condor_config.patched)
+						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched)
 
-	install(FILES		condor_config.patched
+	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor_config.patched
 						DESTINATION	"${C_ETC}"
 						RENAME	condor_config)
 
 	#Debian init script need to be patched because /etc/sysconfig/condor -> /etc/default/condor
-	add_custom_command( OUTPUT condor.boot.debian
+	add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian
 						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 						COMMAND cp
 						ARGS ${CMAKE_CURRENT_SOURCE_DIR}/condor.boot.rpm condor.boot.debian
@@ -132,9 +132,9 @@ elseif ( ${LINUX_NAME} STREQUAL "Debian" AND CONDOR_PACKAGE_BUILD)
 
 	add_custom_target(	patch_init_script
 						ALL
-						DEPENDS condor.boot.debian)
+						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian)
 
-	install(FILES		condor.boot.debian
+	install(FILES		${CMAKE_CURRENT_BINARY_DIR}/condor.boot.debian
 			DESTINATION	"${C_INIT}"
 			PERMISSIONS ${CONDOR_SCRIPT_PERMS}
 			RENAME	condor)
@@ -152,7 +152,7 @@ else()
 endif()
 else()
 						 
-    add_custom_command ( OUTPUT condor_config.win
+    add_custom_command ( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/condor_config.win
 						 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 						 COMMAND awk
 						 ARGS -f convert_config_to_win32.awk condor_config.generic > "${CMAKE_CURRENT_BINARY_DIR}/condor_config.win"

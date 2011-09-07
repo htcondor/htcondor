@@ -488,6 +488,14 @@ determined automatically at run time but which can be overwritten.
   automatically insert the operating system of this machine as
   determined by \Prog{uname}.
 
+\label{param:OpSysVer}
+\item[\MacroU{OPSYS\_VER}]
+  Defines the integer used to identify the operating system version number.
+
+\label{param:OpSysAndVer}
+\item[\MacroU{OPSYS\_AND\_VER}]
+  Defines the string used prior to Condor version 7.7.2 as \MacroUNI{OPSYS}.
+
 \label{param:UnameArch}
 \item[\MacroU{UNAME\_ARCH}]
   The architecture as reported by \Prog{uname}(2)'s \Code{machine} field.
@@ -3731,6 +3739,17 @@ WANT_HOLD_REASON = \
   A boolean expression that, when \Expr{True}, defines that a preempted
   Condor job is to be vacated, instead of killed.
 
+\label{param:EnableVersionedOpsys}
+\item[\Macro{ENABLE\_VERSIONED\_OPSYS}]
+  A boolean expression that determines whether pre-7.7.2 strings used for
+  the machine ClassAd attribute \Attr{OpSys} are used or not.
+  Defaults to \Expr{False} on Windows platforms, meaning that the newer
+  behavior of setting \Expr{OpSys = "WINDOWS"} and \Expr{OpSysVer = 601}
+  (for example), while \Expr{OpSysAndVer = "WINNT61"}.
+  On platforms \emph{other} than Windows, the default value is \Expr{True},
+  meaning that the values for \Attr{OpSys} and \Attr{OpSysAndVer} are the same,
+  implementing the pre-7.7.2 behavior.
+
 \label{param:IsOwner}
 \item[\Macro{IS\_OWNER}]
   A boolean expression that defaults to being defined as
@@ -4094,6 +4113,67 @@ WANT_HOLD_REASON = \
   shutting Condor down on this machine.  Defaults to unset, which
   means to never shut down.  This is primarily intended for \condor{glidein}.
   Use in other situations is not recommended.
+
+\label{param:StartdPublishWinreg}
+\item[\Macro{STARTD\_PUBLISH\_WINREG}]
+  A string containing a semicolon-separated list of Windows registry key names.
+  For each registry key, the contents of the registry key are published in
+  the machine ClassAd.
+  All attribute names are prefixed with \Expr{WINREG\_}. 
+  The remainder of the attribute name is formed in one of two ways.
+  The first way explicitly specifies the name within the list with the
+  syntax
+\begin{verbatim}
+  STARTD_PUBLISH_WINREG = AttrName1 = KeyName1; AttrName2 = KeyName2
+\end{verbatim}
+
+  The second way of forming the attribute name derives the attribute names
+  from the key names in the list.
+  The derivation uses the last three path elements in the key name and changes
+  each illegal character to an underscore character.
+  Illegal characters are essentially any non-alphanumeric character. 
+  In addition, the percent character (\verb@%@) is replaced by the
+  string \Expr{Percent},
+  and the string \Expr{/sec} is replaced by the string \Expr{\_Per\_Sec}.
+
+  Condor expects that the hive identifier, 
+  which is the first element in the full path given by a key name,
+  will be the valid abbreviation.
+  Here is a list of abbreviations:
+  \begin{description}
+    \item \Expr{HKLM} is the abbreviation for  \Expr{HKEY\_LOCAL\_MACHINE}
+    \item \Expr{HKCR} is the abbreviation for  \Expr{HKEY\_CLASSES\_ROOT}
+    \item \Expr{HKCU} is the abbreviation for  \Expr{HKEY\_CURRENT\_USER}
+    \item \Expr{HKPD} is the abbreviation for  \Expr{HKEY\_PERFORMANCE\_DATA}
+    \item \Expr{HKCC} is the abbreviation for  \Expr{HKEY\_CURRENT\_CONFIG}
+    \item \Expr{HKU} is the abbreviation for  \Expr{HKEY\_USERS}
+  \end{description}
+  The \Expr{HKPD} key names are unusual, 
+  as they are not shown in \Prog{regedit}.
+  Their values are periodically updated at the interval defined by 
+  \MacroNI{UPDATE\_INTERVAL}. 
+  The others are not updated until \Condor{reconfig} is issued.
+
+  Here is a complete example of the configuration variable definition,
+\begin{verbatim}
+    STARTD_PUBLISH_WINREG = HKLM\Software\Perl\BinDir; \
+     BATFile_RunAs_Command = HKCR\batFile\shell\RunAs\command; \
+     HKPD\Memory\Available MBytes; \
+     BytesAvail = HKPD\Memory\Available Bytes; \
+     HKPD\Terminal Services\Total Sessions; \
+     HKPD\Processor\% Idle Time; \
+     HKPD\System\Processes
+\end{verbatim}
+  which generates the following portion of a machine ClassAd: 
+\begin{verbatim}
+  WINREG_Software_Perl_BinDir = "C:\Perl\bin\perl.exe"
+  WINREG_BATFile_RunAs_Command = "%SystemRoot%\System32\cmd.exe /C \"%1\" %*"
+  WINREG_Memory_Available_MBytes = 5331
+  WINREG_BytesAvail = 5590536192.000000
+  WINREG_Terminal_Services_Total_Sessions = 2
+  WINREG_Processor_Percent_Idle_Time = 72.350384
+  WINREG_System_Processes = 166
+\end{verbatim}
 
 \end{description}
 
@@ -8273,23 +8353,6 @@ in section~\ref{sec:DAG-configuration}.
   Note that the \MacroNI{DAGMAN\_INSERT\_SUB\_FILE} value can be overridden
   by the \Condor{submit\_dag} \Opt{-insert\_sub\_file} command line option.
 
-\label{param:DAGManOldRescue}
-\item[\Macro{DAGMAN\_OLD\_RESCUE}]
-  A boolean value that controls whether \Condor{dagman} uses 
-  Rescue DAG naming as defined in Condor versions from before 7.1.0 
-  when creating a Rescue DAG.
-  When \Expr{True}, the older style naming is used.
-  In this older style Rescue DAG file naming,
-  if a DAG input file is named \File{my.dag}, the rescue DAG file will
-  be \File{my.dag.rescue}, and that file will be overwritten if the re-run
-  \File{my.dag} fails again.  
-  With the current Rescue DAG file naming,
-  the first time a Rescue DAG is created for \File{my.dag}, it will be
-  named \File{my.dag.rescue001}, and subsequent failures of
-  \File{my.dag} will produce Rescue DAGs named \File{my.dag.rescue002},
-  \File{my.dag.rescue003}, etc.
-  If not defined, \MacroNI{DAGMAN\_OLD\_RESCUE} defaults to \Expr{False}.
-
 \label{param:DAGManAutoRescue}
 \item[\Macro{DAGMAN\_AUTO\_RESCUE}]
   A boolean value that controls whether \Condor{dagman} automatically
@@ -8299,9 +8362,6 @@ in section~\ref{sec:DAG-configuration}.
   \File{my.dag.rescue002} exists, 
   then the largest magnitude Rescue DAG will be run.
   If not defined, \MacroNI{DAGMAN\_AUTO\_RESCUE} defaults to \Expr{True}.
-
-  Note: having \MacroNI{DAGMAN\_OLD\_RESCUE} and
-  \MacroNI{DAGMAN\_AUTO\_RESCUE} both set to \Expr{True} is a fatal error.
 
 \label{param:DAGManMaxRescueNum}
 \item[\Macro{DAGMAN\_MAX\_RESCUE\_NUM}]
@@ -8313,6 +8373,25 @@ in section~\ref{sec:DAG-configuration}.
   which prevents a rescue DAG from being written at all,
   or automatically run.
   If not defined, \MacroNI{DAGMAN\_MAX\_RESCUE\_NUM} defaults to 100.
+
+\label{param:DAGManWritePartialRescue}
+\item[\Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE}]
+  A boolean value that controls whether \Condor{dagman} writes a partial
+  or a full DAG file as a Rescue DAG.  
+  As of Condor version 7.2.2, writing a partial DAG is preferred.
+  If not defined, \MacroNI{DAGMAN\_WRITE\_PARTIAL\_RESCUE} defaults to
+  \Expr{True}.
+
+\label{param:DAGManResetRetriesUponRescue}
+\item[\Macro{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE}]
+  A boolean value that controls whether node retries are reset in a Rescue
+  DAG.  If this value is \Expr{False}, the number of node retries written
+  in a Rescue DAG is decreased,
+  if any retries were used in the original run of the DAG; 
+  otherwise, the original number of retries is allowed
+  when running the Rescue DAG.
+  If not defined, \MacroNI{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE} defaults to
+  \Expr{True}.
 
 \label{param:DAGManCopyToSpool}
 \item[\Macro{DAGMAN\_COPY\_TO\_SPOOL}]
@@ -8413,6 +8492,15 @@ in section~\ref{sec:DAG-configuration}.
   Using a strictness value greater than 0 may help find problems with
   a DAG that may otherwise escape notice.
   The default value if not defined is 0.
+
+\label{param:DAGmanAlwaysRunPost}
+\item[\Macro{DAGMAN\_ALWAYS\_RUN\_POST}]
+  A boolean value defining whether \Condor{dagman} will ignore the return value
+  of a PRE script when deciding to run a POST script.  The default is
+  \Expr{True}, which says that the POST script will run regardless of the return
+  value of the PRE script. Changing this to \Expr{False} will restore old
+  behavior of \Condor{dagman}, which is that the failure of a PRE script causes
+  the POST script to not be executed.
 
 \end{description}
 

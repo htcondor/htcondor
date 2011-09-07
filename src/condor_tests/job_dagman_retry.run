@@ -25,6 +25,8 @@ $cmd = 'job_dagman_retry.dag';
 $testdesc =  'Condor submit dag - retry test - scheduler U';
 $testname = "job_dagman_retry";
 $dagman_args = "-verbose";
+# Tell DAGMan to write complete (old-style) rescue DAGs.
+$ENV{_CONDOR_DAGMAN_WRITE_PARTIAL_RESCUE} = 0;
 
 #	This test runs a single node which always fails.
 #	We asked for three retries and after the last,

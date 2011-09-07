@@ -541,6 +541,7 @@ class Dag {
 	static const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
 	static const int DAG_ERROR_CONDOR_JOB_ABORTED;
 	static const int DAG_ERROR_LOG_MONITOR_ERROR;
+	static const int DAG_ERROR_JOB_SKIPPED;
 
 		// The maximum signal we can deal with in the error-reporting
 		// code.
@@ -676,7 +677,8 @@ class Dag {
 	void SetMaxJobHolds(int maxJobHolds) { _maxJobHolds = maxJobHolds; }
 
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
-
+	bool GetPostRun() const { return _alwaysRunPost; }
+	void SetPostRun(bool postRun) { _alwaysRunPost = postRun; }	
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
@@ -712,6 +714,20 @@ class Dag {
 	   @return true on success, false on failure
     */
     bool StartNode( Job *node, bool isRetry );
+
+    /* A helper function to run the POST script, if one exists.
+           @param The job owning the POST script
+           @param Whether to use the status variable in determining
+              if we should run the POST script
+           @param The status; usually the result of the PRE script.
+              The POST script will not run if ignore_status is false
+              and status is nonzero.
+			@param Whether to increment the run count when we run the
+				script
+			@return true if successful, false otherwise
+    */
+	bool RunPostScript( Job *job, bool ignore_status, int status,
+				bool incrementRunCount = true );
 
 	typedef enum {
 		SUBMIT_RESULT_OK,
@@ -1076,6 +1092,9 @@ class Dag {
 
 		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog _jobstateLog;
+	// If true, run the POST script, regardless of the exit status of the PRE script
+	// Defaults to true
+	bool _alwaysRunPost;
 };
 
 #endif /* #ifndef DAG_H */
