@@ -32,7 +32,7 @@ if (NOT CLIPPED)
 	string(SUBSTRING ${CMAKE_C_COMPILER_VERSION} 0 2 GCC_VER_CHECK)
 	# corner off glibc b/c it effect  
 	set(GLIBC_DETECTED ON)
-        set(GLIBC_BUILD_PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/glibc-prefix/src/glibc)
+        set(GLIBC_BUILD_PREFIX ${CMAKE_CURRENT_BINARY_DIR}/glibc-prefix/src/glibc)
 
 	if (${GLIBC_VERSION} STREQUAL "23")
 		set (VER 2.3.2.27.9.7)

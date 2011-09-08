@@ -21,7 +21,11 @@
 #include "condor_common.h"
 #include "self_monitor.h"
 #include "condor_daemon_core.h"
+#include "classad_helpers.h" // for cleanStringForUseAsAttr
 #include "../condor_procapi/procapi.h"
+#undef min
+#undef max
+#include <limits>
 
 static void self_monitor()
 {
@@ -128,136 +132,161 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
 //------------------------------------------------------------------------------------------
 //                          DaemonCore Statistics
 
-// this structure controls what members of dc_stats are published, and what names
-// they are published as. 
-//
-//
-#define DC_STATS_ENTRY(name, as)        GENERIC_STATS_ENTRY(DaemonCore::Stats, "DC", name, as)
-#define DC_STATS_ENTRY_RECENT(name, as) GENERIC_STATS_ENTRY_RECENT(DaemonCore::Stats, "DC", name, as)
-#define DC_STATS_ENTRY_PEAK(name, as)   GENERIC_STATS_ENTRY_PEAK(DaemonCore::Stats, "DC", name, as)
-
-static const GenericStatsEntry DCStatsTable[] = {
-   DC_STATS_ENTRY(StatsLifetime,         AS_RELTIME),
-   DC_STATS_ENTRY(StatsLastUpdateTime,   AS_ABSTIME),
-   DC_STATS_ENTRY(RecentStatsLifetime,   AS_RELTIME),
-   DC_STATS_ENTRY(RecentWindowMax,       AS_COUNT),
-
-   DC_STATS_ENTRY(SelectWaittime,  AS_RELTIME),
-   DC_STATS_ENTRY(SignalRuntime,   AS_RELTIME),
-   DC_STATS_ENTRY(TimerRuntime,    AS_RELTIME),
-   DC_STATS_ENTRY(SocketRuntime,   AS_RELTIME),
-   DC_STATS_ENTRY(PipeRuntime,     AS_RELTIME),
-
-   DC_STATS_ENTRY(Signals,       AS_COUNT),
-   DC_STATS_ENTRY(TimersFired,   AS_COUNT),
-   DC_STATS_ENTRY(SockMessages,  AS_COUNT),
-   DC_STATS_ENTRY(PipeMessages,  AS_COUNT),
-   //DC_STATS_ENTRY(SockBytes,     AS_COUNT),
-   //DC_STATS_ENTRY(PipeBytes,     AS_COUNT),
-   DC_STATS_ENTRY(DebugOuts,     AS_COUNT),
-
-   DC_STATS_ENTRY_RECENT(SelectWaittime,  AS_RELTIME),
-   DC_STATS_ENTRY_RECENT(SignalRuntime,   AS_RELTIME),
-   DC_STATS_ENTRY_RECENT(TimerRuntime,    AS_RELTIME),
-   DC_STATS_ENTRY_RECENT(SocketRuntime,   AS_RELTIME),
-   DC_STATS_ENTRY_RECENT(PipeRuntime,     AS_RELTIME),
-
-   DC_STATS_ENTRY_RECENT(Signals,       AS_COUNT),
-   DC_STATS_ENTRY_RECENT(TimersFired,   AS_COUNT),
-   DC_STATS_ENTRY_RECENT(SockMessages,  AS_COUNT),
-   DC_STATS_ENTRY_RECENT(PipeMessages,  AS_COUNT),
-   //DC_STATS_ENTRY_RECENT(SockBytes,     AS_COUNT),
-   //DC_STATS_ENTRY_RECENT(PipeBytes,     AS_COUNT),
-   DC_STATS_ENTRY_RECENT(DebugOuts,     AS_COUNT),
-};
 
 // the windowed schedd statistics are quantized to the nearest N seconds
 // WINDOWED_STAT_WIDTH/schedd_stats_window_quantum is the number of slots
 // in the window ring_buffer.
-const int dc_stats_window_quantum = 5*60; // 5min quantum
-
+const int dc_stats_window_quantum = 4*60; // 4min quantum
 
 void DaemonCore::Stats::SetWindowSize(int window)
 {
    this->RecentWindowMax = window;
-   int cMax = window / dc_stats_window_quantum;
-   generic_stats_SetRBMax(DCStatsTable, COUNTOF(DCStatsTable), (char*)this, cMax);
+   Pool.SetRecentMax(window, dc_stats_window_quantum);
 }
+
+#define DC_STATS_ADD_RECENT(pool,name,as)  STATS_POOL_ADD_VAL_PUB_RECENT(pool, "DC", name, as) 
+#define DC_STATS_PUB_DEBUG(pool,name,as)   STATS_POOL_PUB_DEBUG(pool, "DC", name, as) 
 
 // this is for first time initialization before calling SetWindowSize,
 // use the Clear() method to reset stats after the window size has been set.
 //
 void DaemonCore::Stats::Init() 
 { 
-   // clear all data members between InitTime and RecentWindowMax.  
-   // note that this will leak Recent data if you do this after calling SetWindowSize.
-   int cb = (int)((char*)&this->RecentWindowMax - (char*)&this->InitTime);
-   memset((char*)&this->InitTime, 0, cb); 
-   this->InitTime = time(NULL); 
+   Clear();
    this->RecentWindowMax = dc_stats_window_quantum; 
+
+   // insert static items into the stats pool so we can use the pool 
+   // to Advance and Clear.  these items also publish the overall value
+   // and the Recent value
+   //
+   DC_STATS_ADD_RECENT(Pool, SelectWaittime,  0);
+   DC_STATS_ADD_RECENT(Pool, SignalRuntime,   0);
+   DC_STATS_ADD_RECENT(Pool, TimerRuntime,    0);
+   DC_STATS_ADD_RECENT(Pool, SocketRuntime,   0);
+   DC_STATS_ADD_RECENT(Pool, PipeRuntime,     0);
+   DC_STATS_ADD_RECENT(Pool, Signals,       0);
+   DC_STATS_ADD_RECENT(Pool, TimersFired,   0);
+   DC_STATS_ADD_RECENT(Pool, SockMessages,  0);
+   DC_STATS_ADD_RECENT(Pool, PipeMessages,  0);
+   //DC_STATS_ADD_RECENT(Pool, SockBytes,     0);
+   //DC_STATS_ADD_RECENT(Pool, PipeBytes,     0);
+   DC_STATS_ADD_RECENT(Pool, DebugOuts,     0);
+
+   // Insert additional publish entries for the XXXDebug values
+   //
+#if 0 //def DEBUG
+   DC_STATS_PUB_DEBUG(Pool, SelectWaittime,  0);
+   DC_STATS_PUB_DEBUG(Pool, SignalRuntime,   0);
+   DC_STATS_PUB_DEBUG(Pool, TimerRuntime,    0);
+   DC_STATS_PUB_DEBUG(Pool, SocketRuntime,   0);
+   DC_STATS_PUB_DEBUG(Pool, PipeRuntime,     0);
+   DC_STATS_PUB_DEBUG(Pool, Signals,       0);
+   DC_STATS_PUB_DEBUG(Pool, TimersFired,   0);
+   DC_STATS_PUB_DEBUG(Pool, SockMessages,  0);
+   DC_STATS_PUB_DEBUG(Pool, PipeMessages,  0);
+   //DC_STATS_PUB_DEBUG(Pool, SockBytes,     0);
+   //DC_STATS_PUB_DEBUG(Pool, PipeBytes,     0);
+   DC_STATS_PUB_DEBUG(Pool, DebugOuts,     0);
+#endif
 }
 
 void DaemonCore::Stats::Clear()
 {
-   generic_stats_ClearAll(DCStatsTable, COUNTOF(DCStatsTable), (char*)this);
    this->InitTime = time(NULL);
-   this->StatsPrevUpdateTime = 0;
+   this->StatsLifetime = 0;
    this->StatsLastUpdateTime = 0;
+   this->RecentStatsTickTime = 0;
    this->RecentStatsLifetime = 0;
+   Pool.Clear();
 }
 
 void DaemonCore::Stats::Publish(ClassAd & ad) const
 {
-   generic_stats_PublishToClassAd(ad, DCStatsTable, COUNTOF(DCStatsTable), (const char *)this);  
+   ad.Assign("DCStatsLifetime", (int)StatsLifetime);
+   ad.Assign("DCStatsLastUpdateTime", (int)StatsLastUpdateTime);
+   ad.Assign("DCRecentStatsLifetime", (int)RecentStatsLifetime);
+   ad.Assign("DCRecentStatsTickTime", (int)RecentStatsTickTime);
+   ad.Assign("DCRecentWindowMax", (int)RecentWindowMax);
+   Pool.Publish(ad);
 }
 
 void DaemonCore::Stats::Unpublish(ClassAd & ad) const
 {
-   generic_stats_DeleteInClassAd(ad, DCStatsTable, COUNTOF(DCStatsTable), (const char *)this);  
+   ad.Delete("DCStatsLifetime");
+   ad.Delete("DCStatsLastUpdateTime");
+   ad.Delete("DCRecentStatsLifetime");
+   ad.Delete("DCRecentStatsTickTime");
+   ad.Delete("DCRecentWindowMax");
+   Pool.Unpublish(ad);
 }
 
 void DaemonCore::Stats::Tick()
 {
-   time_t now = time(NULL);
+   int cAdvance = generic_stats_Tick(
+      this->RecentWindowMax,   // RecentMaxTime
+      dc_stats_window_quantum, // RecentQuantum
+      this->InitTime,
+      this->StatsLastUpdateTime,
+      this->RecentStatsTickTime,
+      this->StatsLifetime,
+      this->RecentStatsLifetime);
 
-   // when working from freshly initialized stats, the first Tick should not Advance.
-   //
-   if (this->StatsLastUpdateTime == 0)
-      {
-      this->StatsLastUpdateTime = now;
-      this->StatsPrevUpdateTime = now;
-      this->RecentStatsLifetime = 0;
-      return;
-      }
-
-   // whenever 'now' changes, we want to check to see how much time has passed
-   // since the last Advance, and if that time exceeds the quantum, we advance.
-   //
-   if (this->StatsLastUpdateTime != now) 
-      {
-      time_t delta = now - this->StatsPrevUpdateTime;
-
-      // if the time since last update exceeds the window size, just throw away the recent data
-      if (delta >= this->RecentWindowMax)
-         {
-         generic_stats_ClearRecent(DCStatsTable, COUNTOF(DCStatsTable), (char*)this);
-         this->StatsPrevUpdateTime = this->StatsLastUpdateTime;
-         this->RecentStatsLifetime = this->RecentWindowMax;
-         delta = 0;
-         }
-      else if (delta >= dc_stats_window_quantum)
-         {
-         for (int ii = 0; ii < delta / dc_stats_window_quantum; ++ii)
-            {
-            generic_stats_AdvanceRecent(DCStatsTable, COUNTOF(DCStatsTable), (char*)this, 1);
-            }
-         this->StatsPrevUpdateTime = now - (delta % dc_stats_window_quantum);
-         }
-
-      time_t recent_window = (int)(this->RecentStatsLifetime + now - this->StatsLastUpdateTime);
-      this->RecentStatsLifetime = (recent_window < this->RecentWindowMax) ? recent_window : this->RecentWindowMax;
-      this->StatsLastUpdateTime = now;
-      }
-
-   this->StatsLifetime = now - this->InitTime;
+   if (cAdvance)
+      Pool.Advance(cAdvance);
 }
+
+
+void DaemonCore::Stats::AddToProbe(const char * name, int val)
+{
+   stats_entry_recent<int>* pstat = Pool.GetProbe<stats_entry_recent<int> >(name);
+   if (pstat)
+      pstat->Add(val);
+}
+
+void DaemonCore::Stats::AddToProbe(const char * name, int64_t val)
+{
+   stats_entry_recent<int64_t>* pstat = Pool.GetProbe<stats_entry_recent<int64_t> >(name);
+   if (pstat)
+      pstat->Add(val);
+}
+
+double DaemonCore::Stats::AddRuntime(const char * name, double before)
+{
+   double now = UtcTime::getTimeDouble();
+   stats_recent_counter_timer * probe = Pool.GetProbe<stats_recent_counter_timer>(name);
+   if (probe)
+      probe->Add(now - before);
+   return now;
+}
+
+void* DaemonCore::Stats::New(const char * category, const char * name, int as)
+{
+   MyString attr;
+   attr.sprintf("DC%s_%s", category, name);
+   cleanStringForUseAsAttr(attr);
+
+   void * ret = NULL;
+   switch (as & (AS_TYPE_MASK | IS_CLASS_MASK))
+      {
+      case AS_COUNT | IS_RECENT:
+         ret = Pool.NewProbe< stats_entry_recent<int> >(name,  attr.Value(), 0);
+         break;
+
+      case AS_ABSTIME | IS_RECENT:
+      case AS_RELTIME | IS_RECENT:
+         ret = Pool.NewProbe< stats_entry_recent<time_t> >(name,  attr.Value(), 0);
+         break;
+
+      case AS_COUNT | IS_RCT:
+      case AS_RELTIME | IS_RCT:
+         ret = Pool.NewProbe<stats_recent_counter_timer>(name, attr.Value());
+         break;
+
+      default:
+         EXCEPT("unsupported probe type\n");
+         break;
+      }
+
+   return ret;
+}
+

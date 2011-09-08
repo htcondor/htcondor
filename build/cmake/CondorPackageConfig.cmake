@@ -141,23 +141,19 @@ set( C_RUN_DIR		var/run/condor )
 # set a default generator
 set ( CPACK_GENERATOR "TGZ" )
 
-# CONDOR_RPATH will change depending on whether we're doing a package or
-# tarball build. EXTERNALS_RPATH must include both paths, as we build the
-# externals once for both types. The settings for EXTERNALS_RPATH must be
-# kept in synch with the C_LIB settings made below for package builds.
-# CONDOR_RPATH is modified below if we're doing a pacakge build.
+# Here, we set CONDOR_RPATH for the tarball build. If we're doing a native
+# package build, it'll be overwritten further below. EXTERNALS_RPATH must
+# include both paths, as we build the externals once for both types. The
+# settings for EXTERNALS_RPATH must be kept in synch with the C_LIB
+# settings made below for package builds.
 if ( ${OS_NAME} STREQUAL "LINUX" )
 	set( EXTERNALS_LIB "${C_LIB}/condor" )
-	set( CONDOR_RPATH "$ORIGIN/../lib:$ORIGIN/../lib/condor" )
-	set( EXTERNALS_RPATH "$$ORIGIN/../lib:$$ORIGIN/../lib/condor" )
-	if ( ${LINUX_NAME} STREQUAL  "Debian" )
-		set( EXTERNALS_RPATH "${EXTERNALS_RPATH}:/usr/lib/condor" )
-	elseif ( RPM_SYSTEM_NAME )
-		if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
-			set( EXTERNALS_RPATH "${EXTERNALS_RPATH}:/usr/lib/condor" )
-		else()
-			set( EXTERNALS_RPATH "${EXTERNALS_RPATH}:/usr/lib64/condor" )
-		endif()
+	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
+		set( CONDOR_RPATH "/lib:/usr/lib:$ORIGIN/../lib:$ORIGIN/../lib/condor" )
+		set( EXTERNALS_RPATH "/lib:/usr/lib:$$ORIGIN/../lib:$$ORIGIN/../lib/condor:/usr/lib/condor" )
+	else()
+		set( CONDOR_RPATH "/lib64:/usr/lib64:$ORIGIN/../lib:$ORIGIN/../lib/condor" )
+		set( EXTERNALS_RPATH "/lib64:/usr/lib64:$$ORIGIN/../lib:$$ORIGIN/../lib/condor:/usr/lib64/condor" )
 	endif()
 endif()
 

@@ -645,6 +645,21 @@ universe.
 \end{table}
 \end{center}
 
+%%% ClassAd attribute: KeepClaimIdle
+\index{ClassAd job attribute!KeepClaimIdle}
+\index{KeepClaimIdle!job ClassAd attribute}
+\item[\AdAttr{KeepClaimIdle}:]  An integer value that represents the number
+of seconds that the \Condor{schedd} will continue to keep a claim,
+in the Claimed Idle state,
+after the job with this attribute defined completes, 
+and there are no other jobs ready to run from this user.
+This attribute may improve the performance of linear DAGs,
+in the case when a dependent job can not be scheduled until its
+parent has completed.
+Extending the claim on the machine may permit the dependent job to be
+scheduled with less delay than with waiting for the \Condor{negotiator}
+to match with a new machine. 
+
 %%% ClassAd attribute: KillSig
 \index{ClassAd job attribute!KillSig}
 \index{KillSig!job ClassAd attribute}

@@ -19,20 +19,20 @@
 ##**************************************************************
 
 # This tests part of the "allow PRE script to skip node job" feature
-# (gittrac #2122).  This makes sure the POST script also gets skipped
-# if the PRE script returns the skip value (for node A).
+# (gittrac #2122).  This makes sure that the PRE_SKIP setting gets put
+# into a rescue DAG.
 
 use CondorTest;
 use CondorUtils;
 
 $cmd = 'job_dagman_pre_skip-C.dag';
-$testdesc =  'Condor submit dag - basic pre_skip node test C - scheduler U';
+$testdesc =  'Condor submit dag - basic pre_skip node with rescue DAG test - scheduler U';
 $testname = "job_dagman_pre_skip-C";
 $dagman_args = "-verbose";
+# Tell DAGMan to write complete (old-style) rescue DAGs.
+$ENV{_CONDOR_DAGMAN_WRITE_PARTIAL_RESCUE} = 0; 
 
-$logfile = "job_dagman_pre_skip-C.dag.dagman.out";
-@outfiles = ("job_dagman_pre_skip-C_A.out", "job_dagman_pre_skip-C_Apost.out",
-	"job_dagman_pre_skip-C_B.out");
+$rescuedag = "job_dagman_pre_skip-C.dag.rescue001";
 
 my $killedchosen = 0;
 
@@ -41,14 +41,9 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-# Get rid of any existing log and output files
-if (-e $logfile) {
-	runcmd("rm -f $logfile");
-}
-foreach $name (@outfiles) {
-	if (-e $name) {
-		runcmd("rm -f $name");
-	}
+# Get rid of any existing rescue DAG file.
+if (-e $rescuedag) {
+    runcmd("rm -f $rescuedag");
 }
 
 $abnormal = sub 
@@ -75,40 +70,39 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+	CondorTest::debug("submitted: This test will see submit, executing and failure\n",1);
 };
 
-$success = sub
+$failure = sub
 {
-	CondorTest::debug("executed successfully\n",1);
-	CondorTest::debug("Verifying output\n",1);
-	$diditpass = 1;
+	my %info = shift;
+	print "Saw expected failure\n";
+	$diditpass = 0;
 
-	$diditpass = 0 if (-e "C_A.out");
-	if (-e "job_dagman_pre_skip-C_A.out") {
-		CondorTest::debug("Error: Node A was not skipped!\n");
-		$diditpass = 0;
-	} else {
-		 CondorTest::debug("Node A was correctly skipped\n");
+	$canopen = open(RESCUE,"<$rescuedag");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Error: cannot open rescue DAG <$name>:$!\n",1);
 	}
-	if (-e "job_dagman_pre_skip-C_Apost.out") {
-		CondorTest::debug("Error: Node A POST script was not skipped!\n");
-		$diditpass = 0;
-	} else {
-		CondorTest::debug("Node A POST script was correctly skipped\n");
+	while(<RESCUE>){
+		if (/PRE_SKIP A 2/) {
+			CondorTest::debug("Found PRE_SKIP line in rescue DAG\n");
+			$diditpass = 1;
+		}
 	}
-	if (! -e "job_dagman_pre_skip-C_B.out") {
-		CondorTest::debug("Node B was not run!!\n",1);
-		$diditpass = 0;
-	} else {
-		CondorTest::debug("Node B was run\n",1);
-	}
+	close(RESCUE);
+
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}
 };
 
+$success = sub
+{
+	die "Error: DAG should fail!\n";
+};
+
 CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExitedFailure( $testname, $failure );
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
@@ -121,4 +115,3 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 } else {
 	die "$testname: CondorTest::RunTest() failed\n";
 }
-

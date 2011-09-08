@@ -73,3 +73,15 @@ endif()
 
 condor_exe_test(condor_test_auth "test_auth.cpp" "${TOOL_LINK_LIBS}")
 condor_exe(condor_test_match "condor_test_match.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
+
+# Check condor_version's shared library dependencies and copy a specific
+# subset of those libraries into <release>/lib/condor
+if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
+	set( SRC_DIR ${CMAKE_SOURCE_DIR} )
+	set( BIN_DIR ${CMAKE_BINARY_DIR} )
+	install( CODE "execute_process(COMMAND echo JEF ${SRC_DIR} ${BIN_DIR} ${CMAKE_INSTALL_PREFIX} OUTPUT_FILE /tmp/cmake.out)" )
+	install( CODE "execute_process(COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/lib/condor)" )
+	install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${BIN_DIR}/src/condor_tools/condor_version ${SRC_DIR}/src/condor_scripts/syslib-patterns
+		 COMMAND xargs -isrc cp src ${CMAKE_INSTALL_PREFIX}/lib/condor
+		 )" )
+endif()

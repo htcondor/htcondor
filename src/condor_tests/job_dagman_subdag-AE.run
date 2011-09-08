@@ -32,7 +32,7 @@ $testname = "job_dagman_subdag-AE";
 # DAGs.  We're just passing in non-default values here so that we can
 # check that the get passed down properly and inserted into the generated
 # .condor.sub files.
-$dagman_args = "-verbose -do_recurse -notification never -allowlogerror -outfile_dir . -oldrescue 1 -autorescue 0 -allowversionmismatch -update_submit -import_env";
+$dagman_args = "-verbose -do_recurse -notification never -allowlogerror -outfile_dir . -autorescue 0 -allowversionmismatch -update_submit -import_env";
 # Tell DAGMan to not generate the .condor.sub files for nested DAGs itself.
 $ENV{_CONDOR_DAGMAN_GENERATE_SUBDAG_SUBMITS} = 0;
 
@@ -191,8 +191,6 @@ $success = sub
 					CondorTest::debug("failed: missing '-allowlogerror' in line <$line>\n");
 				} elsif( index($line, "-outfile_dir .") lt 0) {
 					CondorTest::debug("failed: missing '-outfile_dir .' in line <$line>\n");
-				} elsif( index($line, "-rescue") lt 0) {
-					CondorTest::debug("failed: missing '-rescue' in line <$line>\n");
 				} elsif( index($line, "-autorescue 0") lt 0) {
 					CondorTest::debug("failed: missing '-autorescue 0' in line <$line>\n");
 				} elsif( index($line, "-allowversionmismatch") lt 0) {

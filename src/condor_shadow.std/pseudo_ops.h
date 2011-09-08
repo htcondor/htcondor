@@ -49,7 +49,7 @@ int pseudo_send_rusage( struct rusage *use_p );
 int pseudo_report_error( char *msg );
 int pseudo_report_file_info( char *kind, char *name, int open_count, int read_count, int write_count, int seek_count, int read_bytes, int write_bytes );
 int pseudo_report_file_info_new( char *name, long long open_count, long long read_count, long long write_count, long long seek_count, long long read_bytes, long long write_bytes );
-int pseudo_getwd( char *&path );
+int pseudo_getwd_special( char *&path );
 int pseudo_send_a_file( const char *path, mode_t mode );
 int pseudo_get_file( const char *name );
 #if !defined(PVM_RECEIVE)
@@ -85,8 +85,8 @@ int pseudo_pvm_task_info(int pid, int task_tid);
 int pseudo_suspended(int suspended);
 int pseudo_subproc_status(int subproc, int *statp, struct rusage *rusagep);
 #endif /* PVM_RECEIVE */
-int pseudo_lseekread(int fd, off_t offset, int whence, void *buf, size_t len);
-int pseudo_lseekwrite(int fd, off_t offset, int whence, const void *buf, size_t len);
+off_t pseudo_lseekread(int fd, off_t offset, int whence, void *buf, size_t len);
+off_t pseudo_lseekwrite(int fd, off_t offset, int whence, const void *buf, size_t len);
 
 int CONDOR_NotSupported();
 int SYSCALL(...);

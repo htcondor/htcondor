@@ -1,0 +1,131 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+
+$cmd = 'job_dagman_always_run_post-D.dag';
+$testdesc =  'Condor DAGman test for always running the POST script - scheduler U';
+$testname = "job_dagman_always_run_post-D";
+$dagman_args = "-verbose";
+
+$outfile = "$testname.dag.dagman.out";
+runcmd("rm -f $outfile");
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+##***********************************************************
+## We test here that PRE_SKIP works correctly in the presence
+## of having the POST script run unconditionally.
+##**********************************************************
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and failure on completion\n",1);
+};
+
+$failure = sub
+{
+	die("Node is expected to succeed.\n");
+};
+
+$success = sub 
+{
+	CondorTest::debug("Execution was a failure ... as expected\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+	# D_A.out should not exist
+	# As the job was skipped
+	$diditpass = 0 if (-e "D_A.out");
+	$canopen = open(OUT,"<$outfile");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Could not open outfile<$outfile>:$!\n",1);
+		$diditpass = 0;
+	}
+	my @outfilelist = <OUT>;
+	close(OUT);
+	$passed_first = 0; # Let's be optimistic
+	foreach (@outfilelist) {
+		if(/PRE_SKIP return value.+indicates we are done \(successfully\) with node D_A/) {
+			CondorTest::debug("Saw PRE_SKIP for D_A trigger correctly: $_\n",1);
+			$passed_first = 1;
+			last;
+		}
+	}
+	foreach (@outfilelist) {
+		if(/PRE Script of Node D_A completed successfully/) {
+			CondorTest::debug("PRE script is expected to fail.\n");
+			$diditpass = 0;		
+		}
+		if(/Submitting Condor Node D_A job/){
+			CondorTest::debug("Condor Node D_A job should not be submitted.\n");
+			$diditpass = 0;		
+		}
+	}
+	if($passed_first != 1) {
+		CondorTest::debug("failed $outfile\n",1);
+		$diditpass = 0;
+	}
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+CondorTest::RegisterExitedFailure( $testname, $failure);
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}

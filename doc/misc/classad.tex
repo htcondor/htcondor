@@ -1156,7 +1156,7 @@ beatrice.c INTEL    SOLARIS251   Claimed    Busy       1.000  128   0+01:30:02
     SUN4u/SOLARIS251        3     0       3         0       0          0
     INTEL/SOLARIS251       21     0      21         0       0          0
     SUN4x/SOLARIS251        3     0       3         0       0          0
-       INTEL/WINNT51        1     0       0         1       0          0
+       INTEL/WINDOWS        1     0       0         1       0          0
          INTEL/LINUX        1     0       1         0       0          0
 
                Total       29     0      28         1       0          0
@@ -1203,7 +1203,7 @@ The ClassAd expression describing a machine that
 advertises a Windows NT operating system:
 \footnotesize
 \begin{verbatim}
-OpSys == "WINNT51"
+OpSys == "WINDOWS"
 \end{verbatim}
 \normalsize
 Here are three equivalent ways on a Unix platform to list all machines
@@ -1211,17 +1211,17 @@ advertising a Windows NT operating system.
 Spaces appear in these examples to show where they are permitted.
 \footnotesize
 \begin{verbatim}
-% condor_status -constraint ' OpSys == "WINNT51"  '
+% condor_status -constraint ' OpSys == "WINDOWS"  '
 \end{verbatim}
 \normalsize
 \footnotesize
 \begin{verbatim}
-% condor_status -constraint OpSys==\"WINNT51\"
+% condor_status -constraint OpSys==\"WINDOWS\"
 \end{verbatim}
 \normalsize
 \footnotesize
 \begin{verbatim}
-% condor_status -constraint "OpSys==\"WINNT51\""
+% condor_status -constraint "OpSys==\"WINDOWS\""
 \end{verbatim}
 \normalsize
 
@@ -1232,7 +1232,7 @@ double quote marks that identify the string within the expression.
 Spaces appear in this example where they are permitted.
 \footnotesize
 \begin{verbatim}
->condor_status -constraint " OpSys == ""WINNT51"" "
+>condor_status -constraint " OpSys == ""WINDOWS"" "
 \end{verbatim}
 \normalsize
 

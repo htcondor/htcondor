@@ -61,12 +61,12 @@ int CondorFileAppend::close()
 	return original->close();
 }
 
-int CondorFileAppend::read( int offset, char *data, int length )
+int CondorFileAppend::read( off_t offset, char *data, int length )
 {
 	return original->read(offset,data,length);
 }
 
-int CondorFileAppend::write( int offset, char *data, int length )
+int CondorFileAppend::write( off_t offset, char *data, int length )
 {
 	return original->write(offset,data,length);
 }
@@ -116,7 +116,7 @@ int CondorFileAppend::is_seekable()
 	return original->is_seekable();
 }
 
-int CondorFileAppend::get_size()
+off_t CondorFileAppend::get_size()
 {
 	return original->get_size();
 }

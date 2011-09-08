@@ -25,11 +25,13 @@ $cmd = 'job_dagman_retry.dag';
 $testdesc =  'Condor submit dag - retry test - scheduler U';
 $testname = "job_dagman_retry";
 $dagman_args = "-verbose";
+# Tell DAGMan to write complete (old-style) rescue DAGs.
+$ENV{_CONDOR_DAGMAN_WRITE_PARTIAL_RESCUE} = 0;
 
 #	This test runs a single node which always fails.
 #	We asked for three retries and after the last,
 #	we will(had better see)have a rescue dag. In
-#	that dag we will scrap for three retries having been made.
+#	that dag we will scrape for three retries having been made.
 
 my $killedchosen = 0;
 
@@ -38,7 +40,7 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
-my $rescuedag = $cmd . ".rescue";
+my $rescuedag = $cmd . ".rescue001";
 my $newrescuedag = $cmd . ".rescue" . ".new";
 
 my %subinfo;

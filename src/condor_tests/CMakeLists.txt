@@ -69,9 +69,18 @@ if (BUILD_TESTS)
 		# disable any optimizations + compile with specific fla
 		set( CMAKE_BUILD_TYPE Debug )
 		add_library( stdulib STATIC EXCLUDE_FROM_ALL "x_waste_second.c" )
+		add_dependencies( stdulib condorsyscall)
 		set( STDU_LDD_FLAGS -lm;-ldl;-lcrypt;libstdulib.a )
 
 		# C-Tests
+		if(${SYS_ARCH} MATCHES "X86_64")
+			# Only x86_64 machines get to run this test. On 32-bit machines,
+			# we still have a 2GB limit for the file size. See gt2337.
+			# Mainly, the submit side AND the application both must be 64-bit
+			# applications.
+			condor_std_exe_test(job_ckpt_lfs_std "${CMAKE_C_COMPILER}" "job_ckpt_lfs_std.c" "${STDU_LDD_FLAGS}")
+		endif()
+
 		condor_std_exe_test(job_core_compressfiles "${CMAKE_C_COMPILER}" "job_core_compressfiles.c" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_core_coredump "${CMAKE_C_COMPILER}" "job_core_coredump.c" "${STDU_LDD_FLAGS}")
 		condor_std_exe_test(job_rsc_binary-io_std "${CMAKE_C_COMPILER}" "job_rsc_binary-io_std.c" "${STDU_LDD_FLAGS}")
@@ -193,6 +202,11 @@ if (BUILD_TESTS)
 
 	if (STD_UNIVERSE)
 		# C-Tests
+
+		if(${SYS_ARCH} MATCHES "X86_64")
+			condor_pl_test(job_ckpt_lfs_std "Do we handle files with larger than 32-bit file offsets?" "stduniv;quick;full")
+		endif()
+
 		condor_pl_test(job_core_compressfiles_std "Do we handle compressed files made by standard jobs?" "stduniv;core;quick;full")
 		condor_pl_test(job_core_coredump_std "Do we handle core files made by standard jobs?" "stduniv;framework;quick;full")
 		condor_pl_test(job_rsc_binary-io_std "Do we handle binary io in standard jobs?" "stduniv;framework;quick;full")
@@ -264,7 +278,11 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_pre_skip-A "Simple Dagman Pre Skip A" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_pre_skip-B "Simple Dagman Pre Skip B" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_pre_skip-C "Simple Dagman Pre Skip C" "core;dagman;quick;full;quicknolink")
-	condor_pl_test(job_dagman_pre_skip-D "Simple Dagman Pre Skip D" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_always_run_post-A "Always run post A" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_always_run_post-B "Always run post B" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_always_run_post-C "Always run post C" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_always_run_post-D "Always run post D" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_always_run_post-E "Always run post E" "core;dagman;quick;full;quicknolink")
 	##### generic lib tests
 	condor_pl_test(lib_classads "Run Classad Unit Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_unit_tests "Run Unit Tests Tests" "core;quick;full;quicknolink")
@@ -302,7 +320,8 @@ if (BUILD_TESTS)
 	condor_pl_test(cmd_q_shows-xml "Condor_q shows xml" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-cputime "Condor_q shows cputime" "core;quick;full;quicknolink")
 	condor_pl_test(cmd_q_shows-format "Condor_q shows format" "core;quick;full;quicknolink")
-	condor_pl_test(file_transfer_submit "condor_submit file transfer" "core;quick;full;quicknolink")
+# This one doesn't work until the file transfer default changes back to if_needed
+#	condor_pl_test(file_transfer_submit "condor_submit file transfer" "core;quick;full;quicknolink")
 
 	if (LINUX AND NOT ${SYSTEM_NAME} MATCHES "rhel3")
           condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
@@ -428,7 +447,8 @@ if (BUILD_TESTS)
 	condor_pl_test(job_schedd_restart-holdjobs-ok "Held queue ok after schedd restart" "core;quick;full;quicknolink")
 	#condor_pl_test(job_schedd_restart-runningjobs-ok "Running queue ok after schedd restart" "core;quick;full;quicknolink")
 	condor_pl_test(job_filexfer_base-input1_van "Vanilla: Tests input file does not make it with filetransfer off" "filexfer;quick;full;quicknolink")
-	condor_pl_test(job_filexfer_base-input4_van "Vanilla: Verifies submit fails with input list and with filetransfer off" "filexfer;quick;full;quicknolink")
+	# Turn this one back on in 7.7.2 after the file xfer kerfuffle is over
+	#condor_pl_test(job_filexfer_base-input4_van "Vanilla: Verifies submit fails with input list and with filetransfer off" "filexfer;quick;full;quicknolink")
 	condor_pl_test(job_filexfer_base_van "Vanilla: Is executable moved correctly to initialdir/sandbox?" "filexfer;quick;full;quicknolink")
 	condor_pl_test(job_filexfer_input-onegone_van "Vanilla: test for failure when specified input file is missing" "filexfer;quick;full;quicknolink")
 	condor_pl_test(job_filexfer_limitback_van "Vanilla: ask for exactly 2 files returned" "filexfer;quick;full;quicknolink")

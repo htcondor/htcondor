@@ -50,7 +50,6 @@ class Dagman {
     int maxJobs;  // Maximum number of Jobs to run at once
     int maxPreScripts;  // max. number of PRE scripts to run at once
     int maxPostScripts;  // max. number of POST scripts to run at once
-	char *rescueFileToWrite; // "old style" of rescue DAG -- null for new
 	bool paused;
 
 	char* condorSubmitExe;
@@ -174,6 +173,10 @@ class Dagman {
 		// DAG(s).
 	bool dumpRescueDag;
 
+		// Whether the rescue DAG we write will be only a partial DAG file
+		// (new for 7.7.2).
+	bool _writePartialRescueDag;
+
 		// The default log file for node jobs that don't specify a
 		// log file.
 	char * _defaultNodeLog;
@@ -193,8 +196,11 @@ class Dagman {
 		// The maximum number of times a node job can go on hold before
 		// we declare it a failure and remove it; 0 means no limit.
 	int _maxJobHolds;
-
 	static strict_level_t _strict;
+
+		// If _runPost is true, we run a POST script even if the PRE
+		// script for the node fails.
+	bool _runPost;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

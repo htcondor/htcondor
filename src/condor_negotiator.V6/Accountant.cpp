@@ -841,8 +841,12 @@ void Accountant::UpdatePriorities()
 	if (Priority<MinPriority) Priority=MinPriority;
     OldPrio=Priority;
 
+    // set_prio_factor indicates whether a priority factor has been explicitly set,
+    // in which case the record should be kept to preserve the setting
+    bool set_prio_factor = true;
     if (ad->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) {
 	   	PriorityFactor = DefaultPriorityFactor;
+        set_prio_factor = false;
 	}
 
     if (ad->LookupInteger(UnchargedTimeAttr,UnchargedTime)==0) UnchargedTime=0;
@@ -867,8 +871,7 @@ void Accountant::UpdatePriorities()
     SetAttributeInt(key,UnchargedTimeAttr,0);
     SetAttributeFloat(key,WeightedUnchargedTimeAttr,0.0);
 
-    if (Priority<MinPriority && ResourcesUsed==0 &&
-		   	AccumulatedUsage==0 && PriorityFactor==DefaultPriorityFactor ) {
+    if (Priority<MinPriority && ResourcesUsed==0 && AccumulatedUsage==0 && !set_prio_factor) {
 		DeleteClassAd(key);
 	}
 

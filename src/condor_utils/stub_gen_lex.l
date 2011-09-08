@@ -128,6 +128,7 @@ return				return grab( RETURN );
 extract				return grab( EXTRACT );
 dl_extract			return grab( DL_EXTRACT );
 no_sys_chk			return grab( NO_SYS_CHK );
+hidden_ptr			return grab( HIDDEN_PTR );
 pseudo				return grab( PSEUDO );
 not_supported		return grab( NOSUPP );
 ignored				return grab( IGNORE );
