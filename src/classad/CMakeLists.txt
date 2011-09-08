@@ -47,7 +47,7 @@ endif (HAVE_LIBDL)
 
 #####################################################################
 # treat like an external for others to use
-condor_pre_external( CLASSADS classads-7.7.2 "lib;include" "alwaysbuild")
+condor_pre_external( CLASSADS classads-${PACKAGE_VERSION} "lib;include" "alwaysbuild")
 #####################################################################
 
 if (NOT WINDOWS)
@@ -58,7 +58,7 @@ if (NOT WINDOWS)
 
   if (LINUX)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
-	set_target_properties( classad PROPERTIES VERSION 2.0.0 SOVERSION 2 )
+	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 2 )
 	condor_set_link_libs( classad "${PCRE_FOUND};${DL_FOUND}" )
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()
