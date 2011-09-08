@@ -453,6 +453,33 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 	set_priv ( priv );
 
+#if defined(LINUX)
+	if( Starter->glexecPrivSepHelper() ) {
+			// TODO: if there is some way to figure out the final username,
+			// print it out here or after starting the job.
+		dprintf(D_ALWAYS,"Running job via glexec\n");
+	}
+#else
+	if( false ) {
+	}
+#endif
+	else {
+		char const *username = NULL;
+		char const *how = "";
+		CondorPrivSepHelper* cpsh = Starter->condorPrivSepHelper();
+		if( cpsh ) {
+			username = cpsh->get_user_name();
+			how = "via privsep switchboard ";
+		}
+		else {
+			username = get_real_username();
+		}
+		if( !username ) {
+			username = "(null)";
+		}
+		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
+	}
+
     // use this to return more detailed and reliable error message info
     // from create-process operation.
     MyString create_process_err_msg;
