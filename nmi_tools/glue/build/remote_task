@@ -84,9 +84,6 @@ elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
     my $tarball_check_script = get_tarball_check_script();
     my $tarball = get_tarball_name();
     $execstr = "$tarball_check_script $tarball";
-	if ( `uname` =~ "Linux" ) {
-		$execstr .= " && " . dirname($0) . "/save-libs systemlibs-" . $ENV{NMI_PLATFORM} . ".tar.gz release_dir " . dirname($0) . "/syslib-patterns";
-	}
 }
 elsif ($taskname eq $TAR_TASK) { 
     #Normal build -> create tar.gz package (The only reason install is done is for the std:u:tests) 
