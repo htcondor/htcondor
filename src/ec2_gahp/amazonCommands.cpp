@@ -363,6 +363,9 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
 
+    char errorBuffer[CURL_ERROR_SIZE];
+    rv = curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errorBuffer );
+
     rv = curl_easy_setopt( curl, CURLOPT_URL, finalURI.c_str() );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
@@ -454,6 +457,10 @@ bool AmazonRequest::SendRequest() {
             dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", CAFile.c_str() );
             SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAINFO, CAFile.c_str() );
         }
+        
+        if( setenv( "OPENSSL_ALLOW_PROXY", "1", 0 ) != 0 ) {
+            dprintf( D_FULLDEBUG, "Failed to set OPENSSL_ALLOW_PROXY.\n" );
+        }
     }
             
     amazon_gahp_release_big_mutex();
@@ -465,6 +472,7 @@ bool AmazonRequest::SendRequest() {
         error << "curl_easy_perform() failed (" << rv << "): '" << curl_easy_strerror( rv ) << "'.";
         this->errorMessage = error.str();
         dprintf( D_ALWAYS, "%s\n", this->errorMessage.c_str() );
+        dprintf( D_FULLDEBUG, "%s\n", errorBuffer );
         return false;
     }
 
