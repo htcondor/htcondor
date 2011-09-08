@@ -139,6 +139,21 @@ set( C_RUN_DIR		var/run/condor )
 # set a default generator
 set ( CPACK_GENERATOR "TGZ" )
 
+# Set rpath to standard system locataions, followed by
+# $ORIGIN/../lib/condor. This makes it easy to run Condor binaries on a
+# flavor of linux other than where it was built by including the libraries
+# from the build machine, but prefering to using the local system's
+# libraries if they're compatible.
+if ( ${OS_NAME} STREQUAL "LINUX" )
+	if ( ${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
+		set( CONDOR_RPATH "/lib:/usr/lib:$ORIGIN/../lib/condor" )
+		set( EXTERNALS_RPATH "/lib:/usr/lib:$$ORIGIN/../lib/condor" )
+	else()
+		set( CONDOR_RPATH "/lib64:/usr/lib64:$ORIGIN/../lib/condor" )
+		set( EXTERNALS_RPATH "/lib64:/usr/lib64:$$ORIGIN/../lib/condor" )
+	endif()
+endif()
+
 #this needs to be evaluated in order due to WIN collision.
 if(${OS_NAME} STREQUAL "DARWIN")
 	# enable if we desire native packaging.

@@ -134,11 +134,9 @@ if( not TestGlue::is_windows() ) {
     system("mv $BaseDir/$version $BaseDir/condor" );
 
 	if ( `uname` =~ "Linux" ) {
-		# Extract system libraries from the build platform that are
-		# not present on this machine
-		system( dirname($0) . "/extract-libs systemlibs-*.tar.gz condor" );
-		# Let binaries in condor_tests that needs the extra system libraries
-		# above find them when looking under $ORIGIN/../lib/condor.
+		# On cross-platform testing, the binaries in condor_tests may need
+		# to find the extra system libraries we include. Let them find them
+		# when looking under $ORIGIN/../lib/condor.
 		system( "ln -s condor/lib lib" );
 	}
     
