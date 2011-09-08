@@ -393,10 +393,7 @@ public:
       };
 
    static const int unit = IS_CLS_COUNT | stats_entry_type<T>::id;
-   //static void PublishValue(const char * me, ClassAd & ad, const char * pattr) {
-   //   const stats_entry_count<T> * pthis = (const stats_entry_count<T> *)me;
-   //   ClassAdAssign(ad, pattr, pthis->value);
-   //   }
+   static void Delete(stats_entry_count<T> * probe) { delete probe; }
 };
 
 // use stats_entry_abs for entries that have an absolute value such as Number of jobs currently running.
@@ -441,13 +438,9 @@ public:
    stats_entry_abs<T>& operator=(T val)  { Set(val); return *this; }
    stats_entry_abs<T>& operator+=(T val) { Add(val); return *this; }
 
-   // these enable publishing using a static const table of GenericStatsPub entries.
-   //
+   // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_CLS_ABS | stats_entry_type<T>::id;
-   //static void PublishLargest(const char * me, ClassAd & ad, const char * pattr) {
-   //   const stats_entry_abs<T> * pthis = (const stats_entry_abs<T> *)me;
-   //   ClassAdAssign(ad, pattr, pthis->largest);
-   //   }
+   static void Delete(stats_entry_abs<T> * probe) { delete probe; }
 };
 
 // use stats_entry_recent for values that are constantly increasing, such 
@@ -547,13 +540,8 @@ public:
    stats_entry_recent<T>& operator=(T val)  { Set(val); return *this; }
    stats_entry_recent<T>& operator+=(T val) { Add(val); return *this; }
 
-   // these enable publishing using a static const table of GenericStatsPub entries.
-   //
+   // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_RECENT | stats_entry_type<T>::id;
-   //static void PublishRecent(const char * me, ClassAd & ad, const char * pattr) {
-   //   const stats_entry_recent<T> * pthis = (const stats_entry_recent<T> *)me;
-   //   ClassAdAssign(ad, pattr, pthis->recent);
-   //   }
    static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return (FN_STATS_ENTRY_ADVANCE)&stats_entry_recent<T>::AdvanceBy; };
    static FN_STATS_ENTRY_SETRECENTMAX GetFnSetRecentMax() { return (FN_STATS_ENTRY_SETRECENTMAX)&stats_entry_recent<T>::SetRecentMax; };
    static void Delete(stats_entry_recent<T> * probe) { delete probe; }
@@ -628,18 +616,11 @@ public:
    // the the max size of the 
    void SetMaxTime(int size) { tq.max_time(size); }
 
-   // these enable publishing using a static const table of GenericStatsPub entries.
-   //
+   // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_RECENTTQ | stats_entry_type<T>::id;
-   //static void PublishRecent(const char * me, ClassAd & ad, const char * pattr) {
-   //   const stats_entry_tq<T> * pthis = (const stats_entry_tq<T> *)me;
-   //   ClassAdAssign(ad, pattr, pthis->recent);
-   //   }
    static void Delete(stats_entry_tq<T> * probe) { delete probe; }
 };
 
-// specialize for time_t because ClassAd doesn't handle 64 bit ints
-// template <> void stats_entry_tq<time_t>::PublishRecent(const char * me, ClassAd & ad, const char * pattr);
 
 #endif // _timed_queue_h_
 
@@ -721,17 +702,8 @@ public:
    // operator overloads
    stats_entry_probe<T>& operator+=(T val) { Add(val); return *this; }
 
-   // these enable publishing using a static const table of GenericStatsPub entries.
-   //
+   // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_CLS_PROBE | stats_entry_type<T>::id;
-   //static void PublishLargest(const char * me, ClassAd & ad, const char * pattr) {
-   //   const stats_entry_probe<T> * pthis = (const stats_entry_probe<T> *)me;
-   //   ClassAdAssign(ad, pattr, pthis->Max);
-   //   }
-   //static void PublishAverage(const char * me, ClassAd & ad, const char * pattr) {
-   //   const stats_entry_probe<T> * pthis = (const stats_entry_probe<T> *)me;
-   //   ClassAdAssign(ad, pattr, pthis->Avg());
-   //   }
    static void Delete(stats_entry_probe<T> * probe) { delete probe; }
 };
 
@@ -767,6 +739,8 @@ public:
    Probe& operator+=(const Probe & val) { Add(val); return *this; }
    //Probe& operator-=(const Probe & val) { Remove(val); return *this; }
    //bool   operator!=(const int val) const { return this->Sum != val; }
+
+   static const int unit = IS_CLS_PROBE;
 };
 
 template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots);
@@ -798,8 +772,10 @@ public:
 
    void Publish(ClassAd & ad, const char * pattr, int flags) const;
 
+   // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_RCT | stats_entry_type<int>::id;
-   //static void PublishValue(const char * me, ClassAd & ad, const char * pattr);
+   static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return (FN_STATS_ENTRY_ADVANCE)&stats_recent_counter_timer::AdvanceBy; };
+   static FN_STATS_ENTRY_SETRECENTMAX GetFnSetRecentMax() { return (FN_STATS_ENTRY_SETRECENTMAX)&stats_recent_counter_timer::SetRecentMax; };
    static void Delete(stats_recent_counter_timer * pthis);
 };
 
