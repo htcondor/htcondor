@@ -97,28 +97,6 @@ port 12345.
 \end{verbatim}
 \normalsize
 
-An example configuration for multiple CondorView servers:
-\footnotesize
-\begin{verbatim}
-VIEWSERV01 = $(COLLECTOR)
-VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01
-VIEWSERV01_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog01"
-VIEWSERV01.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist01
-VIEWSERV01.KEEP_POOL_HISTORY = TRUE
-VIEWSERV01.CONDOR_VIEW_HOST =
-
-VIEWSERV02 = $(COLLECTOR)
-VIEWSERV02_ARGS = -f -p 24680 -local-name VIEWSERV02
-VIEWSERV02_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog02"
-VIEWSERV02.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist02
-VIEWSERV02.KEEP_POOL_HISTORY = TRUE
-VIEWSERV02.CONDOR_VIEW_HOST =
-
-CONDOR_VIEW_HOST = localhost.localdomain:12345 localhost.localdomain:24680
-DAEMON_LIST = $(DAEMON_LIST) VIEWSERV01 VIEWSERV02
-\end{verbatim}
-\normalsize
-
 
 For this change to take effect, restart the
 \Condor{master} on this host.
@@ -171,3 +149,40 @@ A query example:
   condor_status -pool condor.view.host[:portnumber]
 \end{verbatim}
 \normalsize
+
+
+A \Condor{collector} may also be configured to report to multiple CondorView
+servers.  The configuration variable \Macro{CONDOR\_VIEW\_HOST} can be
+given as a list of CondorView servers separated by commas and/or spaces.
+
+The following demonstrates an example configuration for two CondorView servers,
+where both CondorView servers (and the \Condor{collector}) are running on the
+same machine, localhost.localdomain:
+
+\footnotesize
+\begin{verbatim}
+VIEWSERV01 = $(COLLECTOR)
+VIEWSERV01_ARGS = -f -p 12345 -local-name VIEWSERV01
+VIEWSERV01_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog01"
+VIEWSERV01.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist01
+VIEWSERV01.KEEP_POOL_HISTORY = TRUE
+VIEWSERV01.CONDOR_VIEW_HOST =
+
+VIEWSERV02 = $(COLLECTOR)
+VIEWSERV02_ARGS = -f -p 24680 -local-name VIEWSERV02
+VIEWSERV02_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog02"
+VIEWSERV02.POOL_HISTORY_DIR = $(LOCAL_DIR)/poolhist02
+VIEWSERV02.KEEP_POOL_HISTORY = TRUE
+VIEWSERV02.CONDOR_VIEW_HOST =
+
+CONDOR_VIEW_HOST = localhost.localdomain:12345 localhost.localdomain:24680
+DAEMON_LIST = $(DAEMON_LIST) VIEWSERV01 VIEWSERV02
+\end{verbatim}
+\normalsize
+
+Note that the value of \Macro{CONDOR\_VIEW\_HOST} for VIEWSERV01 and VIEWSERV02
+is unset, to prevent them from inheriting the global value of
+\MacroNI{CONDOR\_VIEW\_HOST} and attempting to report to themselves 
+or each other.  If the CondorView servers are running on different machines where
+there is no global value for \MacroNI{CONDOR\_VIEW\_HOST}, this precaution
+is not required.
