@@ -1211,7 +1211,7 @@ void
 UserProc::suspend()
 {
 	send_sig( SIGSTOP );
-	state = SUSPENDED;
+	state = _SUSPENDED;
 }
 
 void
