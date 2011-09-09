@@ -451,8 +451,7 @@ OsProc::StartJob(FamilyInfo* family_info)
     }
 #endif
 
-	set_priv ( priv );
-
+		// While we are still in user priv, print out the username
 #if defined(LINUX)
 	if( Starter->glexecPrivSepHelper() ) {
 			// TODO: if there is some way to figure out the final username,
@@ -479,6 +478,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 		}
 		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
 	}
+
+	set_priv ( priv );
 
     // use this to return more detailed and reliable error message info
     // from create-process operation.
