@@ -381,8 +381,8 @@ public:
 };
 
 
-// stats_entry_count holds a single value, that can only count up,
-// it is the simplist of all possible statistics values because
+// stats_entry_count holds a single value
+// it is the simplist of all possible statistics probes
 //
 template <class T> class stats_entry_count : public stats_entry_base {
 public:
@@ -771,6 +771,7 @@ public:
    double operator+=(double val)    { return Add(val); }
 
    void Publish(ClassAd & ad, const char * pattr, int flags) const;
+   void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
 
    // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_RCT | stats_entry_type<int>::id;

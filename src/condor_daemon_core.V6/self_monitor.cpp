@@ -174,7 +174,7 @@ void DaemonCore::Stats::Init()
 
    // Insert additional publish entries for the XXXDebug values
    //
-#if 0 //def DEBUG
+#if 1 //def DEBUG
    DC_STATS_PUB_DEBUG(Pool, SelectWaittime,  0);
    DC_STATS_PUB_DEBUG(Pool, SignalRuntime,   0);
    DC_STATS_PUB_DEBUG(Pool, TimerRuntime,    0);
@@ -269,17 +269,37 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
    switch (as & (AS_TYPE_MASK | IS_CLASS_MASK))
       {
       case AS_COUNT | IS_RECENT:
-         ret = Pool.NewProbe< stats_entry_recent<int> >(name,  attr.Value(), 0);
+         {
+         stats_entry_recent<int> * probe = 
+         Pool.NewProbe< stats_entry_recent<int> >(name,  attr.Value(), 0);
+         probe->SetRecentMax(this->RecentWindowMax / dc_stats_window_quantum);
+         ret = probe;
+         }
          break;
 
       case AS_ABSTIME | IS_RECENT:
       case AS_RELTIME | IS_RECENT:
-         ret = Pool.NewProbe< stats_entry_recent<time_t> >(name,  attr.Value(), 0);
+         {
+         stats_entry_recent<time_t> * probe =
+         Pool.NewProbe< stats_entry_recent<time_t> >(name,  attr.Value(), 0);
+         probe->SetRecentMax(this->RecentWindowMax / dc_stats_window_quantum);
+         ret = probe;
+         }
          break;
 
       case AS_COUNT | IS_RCT:
       case AS_RELTIME | IS_RCT:
-         ret = Pool.NewProbe<stats_recent_counter_timer>(name, attr.Value());
+         {
+         stats_recent_counter_timer * probe = 
+         Pool.NewProbe<stats_recent_counter_timer>(name, attr.Value());
+        #if 0 // def DEBUG
+         attr += "Debug";
+         Pool.AddPublish(attr.Value(), probe, NULL, 0, 
+                       (FN_STATS_ENTRY_PUBLISH)&stats_recent_counter_timer::PublishDebug);
+        #endif
+         probe->SetRecentMax(this->RecentWindowMax / dc_stats_window_quantum);
+         ret = probe;
+         }
          break;
 
       default:
