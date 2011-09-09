@@ -84,4 +84,7 @@ if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
 	install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${BIN_DIR}/src/condor_tools/condor_version ${SRC_DIR}/src/condor_scripts/syslib-patterns
 		 COMMAND xargs -isrc cp src ${CMAKE_INSTALL_PREFIX}/lib/condor
 		 )" )
+	# This is required for opensuse, where the system's libssl and
+	# libcrypto files don't have owner write permission.
+	install( CODE "execute_process(COMMAND chmod -R u+w ${CMAKE_INSTALL_PREFIX}/lib/condor/)" )
 endif()
