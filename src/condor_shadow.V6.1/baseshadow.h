@@ -246,6 +246,16 @@ class BaseShadow : public Service
 		 */
 	virtual int handleJobRemoval(int sig) = 0;
 
+	/**
+	 * Handle the situation where the job is to be suspended
+	 */
+	virtual int JobSuspend(int sig)=0;
+	
+	/**
+	 * Handle the situation where the job is to be continued.
+	 */
+	virtual int JobResume(int sig)=0;
+	
 		/** Update this job.
 		 */
 	int handleUpdateJobAd(int sig);

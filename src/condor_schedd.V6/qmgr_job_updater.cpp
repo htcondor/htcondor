@@ -105,6 +105,7 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	delete m_pull_attrs;
 
 	common_job_queue_attrs = new StringList();
+	common_job_queue_attrs->insert( ATTR_JOB_STATUS );
 	common_job_queue_attrs->insert( ATTR_IMAGE_SIZE );
 	common_job_queue_attrs->insert( ATTR_RESIDENT_SET_SIZE );
 	common_job_queue_attrs->insert( ATTR_PROPORTIONAL_SET_SIZE );

@@ -313,6 +313,48 @@ RemoteResource::killStarter( bool graceful )
 	return true;
 }
 
+bool RemoteResource::suspend()
+{
+	bool bRet = false;
+	
+	if ( state!= RR_RECONNECT )
+	{
+		if ( dc_startd )
+		{
+
+			if ( dc_startd->_suspendClaim() )
+				bRet = true;
+			else
+				shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): dc_startd->suspendClaim FAILED!\n");
+
+		}
+		else
+			shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): DCStartd object NULL!\n");
+
+	}
+	else
+		shadow->dprintf( D_ALWAYS, "RemoteResource::suspend(): Not connected to resource!\n");
+
+	return (bRet);
+}
+
+bool RemoteResource::resume()
+{
+	bool bRet = false;
+	
+	if (state != RR_RECONNECT )
+	{
+		if ( dc_startd->_continueClaim() )
+			bRet = true;
+		else
+			shadow->dprintf( D_ALWAYS, "RemoteResource::resume(): dc_startd->resume FAILED!\n");
+	}
+	else
+		shadow->dprintf( D_ALWAYS, "RemoteResource::resume(): Not connected to resource!\n");
+		
+	return (bRet);
+}
+
 
 void
 RemoteResource::dprintfSelf( int debugLevel )
@@ -1187,19 +1229,14 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 	sprintf( tmp, "%s = %d", ATTR_LAST_SUSPENSION_TIME, now );
 	jobAd->Insert( tmp );
 
-		// Log stuff so we can check our sanity
+	// Log stuff so we can check our sanity
 	printSuspendStats( D_FULLDEBUG );
-
-	/* If we have been asked to record the state of these suspend/resume
-		events in realtime, then update the schedd right now */
-	rt = param( "REAL_TIME_JOB_SUSPEND_UPDATES" );
-	if( rt != NULL ) {
-		if (strcasecmp(rt, "true") == MATCH) {
-			shadow->updateJobInQueue(U_PERIODIC);
-		}
-		free(rt);
-		rt = NULL;
-	}
+	
+	// TSTCLAIR: In promotion to 1st class status we *must* 
+	// update the job in the queue
+	sprintf( tmp, "%s = %d", ATTR_JOB_STATUS , SUSPENDED );
+	jobAd->Insert( tmp );
+	shadow->updateJobInQueue(U_PERIODIC);
 	
 	return rval;
 }
@@ -1251,16 +1288,11 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 		// Log stuff so we can check our sanity
 	printSuspendStats( D_FULLDEBUG );
 
-	/* If we have been asked to record the state of these suspend/resume
-		events in realtime, then update the schedd right now */
-	rt = param( "REAL_TIME_JOB_SUSPEND_UPDATES" );
-	if( rt != NULL ) {
-		if (strcasecmp(rt, "true") == MATCH) {
-			shadow->updateJobInQueue(U_PERIODIC);
-		}
-		free(rt);
-		rt = NULL;
-	}
+	// TSTCLAIR: In promotion to 1st class status we *must* 
+	// update the job in the queue
+	sprintf( tmp, "%s = %d", ATTR_JOB_STATUS , RUNNING );
+	jobAd->Insert( tmp );
+	shadow->updateJobInQueue(U_PERIODIC);
 
 	return rval;
 }
