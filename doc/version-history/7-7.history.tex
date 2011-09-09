@@ -31,6 +31,18 @@ This developer release contains all bug fixes from Condor version ?.
 \begin{itemize}
 
 \item
+Condor now dynamically links with the OpenSSL and Kerberos security
+libraries, and Condor will use the operating system's version of these
+libraries,  when they are available. 
+The tarball release of Condor on Linux platforms includes 
+a copy of these libraries.  
+If the operating system's version is incompatible with Condor, 
+Condor will use its own copy instead.
+Condor's copy of these libraries is located under \File{lib/condor/}.
+To prevent Condor from considering using them, delete these libraries.
+\Ticket{1874}
+
+\item
 The new job ClassAd attribute \Attr{KeepClaimIdle} is defined with an integer
 number of seconds in the job submit description file, as the example:
 \begin{verbatim}
@@ -75,10 +87,6 @@ See section ~\ref{dagman:SCRIPT} for details.
 %The reason for creating this capability is that
 %DAGman tends to fail on wide DAGs, where many jobs are independent,
 %rather than being linear, where jobs have many dependencies.
-
-\item Condor now uses the OS-provided versions of OpenSSL and Kerberos,
-rather than including its own versions.
-\Ticket{1874}
 
 \end{itemize}
 
