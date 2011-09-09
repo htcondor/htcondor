@@ -22,6 +22,7 @@
 #include <map>
 #include "timed_queue.h"
 #include "generic_stats.h"
+#include "classad_helpers.h" // for canStringForUseAsAttr
 
 // use these to help initialize static const arrays arrays of 
 //
@@ -167,23 +168,33 @@ void stats_recent_counter_timer::Delete(stats_recent_counter_timer * probe) {
 
 void stats_recent_counter_timer::Publish(ClassAd & ad, const char * pattr, int flags) const
 {
+   if ((flags & IF_NONZERO) && (this->count.value == 0) && (this->count.recent == 0))
+      return;
 
-   MyString str(pattr);
-   MyString strR("Recent");
-   strR += pattr;
+   MyString attr(pattr);
+   MyString attrR("Recent");
+   attrR += pattr;
 
-   ClassAdAssign(ad, str.Value(), this->count.value);
-   ClassAdAssign(ad, strR.Value(), this->count.recent);
+   ClassAdAssign(ad, attr.Value(), this->count.value);
+   ClassAdAssign(ad, attrR.Value(), this->count.recent);
 
-   str += "Runtime";
-   strR += "Runtime";
-   ClassAdAssign(ad, str.Value(), this->runtime.value);
-   ClassAdAssign(ad, strR.Value(), this->runtime.recent);
+   attr += "Runtime";
+   attrR += "Runtime";
+   ClassAdAssign(ad, attr.Value(), this->runtime.value);
+   ClassAdAssign(ad, attrR.Value(), this->runtime.recent);
 
-   //str.sprintf("Debug%s", pattr);
-   //StatsPublishDebug(str.Value(), ad, this->count);
-   //str += "Runtime";
-   //StatsPublishDebug(str.Value(), ad, this->runtime);
+}
+
+void stats_recent_counter_timer::PublishDebug(ClassAd & ad, const char * pattr, int flags) const
+{
+   if ( ! canStringBeUsedAsAttr(pattr))
+      return;
+
+   this->count.PublishDebug(ad, pattr, flags);
+
+   MyString attr(pattr);
+   attr += "Runtime";
+   this->runtime.PublishDebug(ad, attr.Value(), flags);
 }
 
 // the Probe class is designed to be instantiated with
