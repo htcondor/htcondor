@@ -678,9 +678,9 @@ File System Configuration File Entries''.
 
 \label{param:CondorViewHost}
 \item[\Macro{CONDOR\_VIEW\_HOST}]
-  A space separated list of the host name of the machine, 
-  optionally appended by a colon and the port number, 
-  where a CondorView server is running.
+  A list of CondorView servers, separated by commas and/or spaces.
+  Each CondorView server is denoted by the host name of the machine
+  it is running on, optionally appended by a colon and the port number.
   This service is optional, and requires additional configuration 
   to enable it.  There is no default value for
   \MacroNI{CONDOR\_VIEW\_HOST}.  If \MacroNI{CONDOR\_VIEW\_HOST} is not
