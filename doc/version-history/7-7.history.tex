@@ -237,7 +237,10 @@ rather than including its own versions.
 
 \begin{itemize}
 
-\item None
+\item The configuratino parameter NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE has been added.  This defaults to false,
+if true, then any ads not satisfying the expression in GROUP\_DYNAMIC\_MACH\_CONSTRAINT are removed from the
+list of startd ads considered for negotiation.
+\Ticket{2232}
 
 \end{itemize}
 
