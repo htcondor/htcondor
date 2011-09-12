@@ -86,6 +86,11 @@ when there are machines with many slots.
 the starter log, except when using glexec.
 \Ticket{2268}
 
+\item When the \Condor{schedd} is starting up and it encounters corruption
+in its job transaction log, the error message in the log file now reports
+the offset into the file where the problem was encountered.
+\Ticket{2450}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
