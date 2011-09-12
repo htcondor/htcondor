@@ -52,7 +52,7 @@ LogRecord::readword(FILE *fp, char * &str)
 	// ignore leading whitespace but don't pass newline
 	do {
 		ch = fgetc( fp );
-		if( ch == EOF ) {
+		if( ch == EOF || ch == '\0' ) {
 			free( buf );
 			return( -1 );
 		}
@@ -95,7 +95,7 @@ LogRecord::readline(FILE *fp, char * &str)
 
 	// ignore one leading whitespace character but don't pass newline
 	ch = fgetc( fp );
-	if( ch == EOF ) {
+	if( ch == EOF || ch == '\0' ) {
 		free( buf );
 		return( -1 );
 	}
