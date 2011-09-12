@@ -52,6 +52,7 @@ KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr
 	_expiration = expiration_param;
 	_lease_interval = lease_interval;
 	_lease_expiration = 0;
+	_lingering = false;
 	renewLease();
 }
 

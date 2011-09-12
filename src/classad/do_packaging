@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DIST_VERSION=7.7.0
+DIST_VERSION=7.7.2
 DISTRIBUTION_DIR=classads-${DIST_VERSION}
 
 EXCLUDE_LIST="do_packaging CMakeLists.txt README.packaging TAGS TODO man_cache_test.cpp test_classads.cpp"

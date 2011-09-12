@@ -106,6 +106,11 @@ static int not_impl(void)
 	return -1;
 }
 
+int condor_fsync(int, const char*)
+{
+	return 0;
+}
+
 BEGIN_C_DECLS
 void
 config( int, bool )

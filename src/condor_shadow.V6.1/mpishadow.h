@@ -161,6 +161,16 @@ class MPIShadow : public BaseShadow
 	virtual void resourceReconnected( RemoteResource* rr );
 
 	virtual void logDisconnectedEvent( const char* reason );
+	
+	/**
+	 * Handle the situation where the job is to be suspended
+	 */
+	virtual int JobSuspend( int sig ){ return 0; }
+	
+	/**
+	 * Handle the situation where the job is to be continued.
+	 */
+	virtual int JobResume( int sig ){ return 0; }
 
  protected:
 

@@ -1,0 +1,190 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use strict;
+use warnings;
+
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $testdesc =  'job_deltacloud_basic';
+my $testname = "job_deltacloud_basic";
+my $corename = "job_deltacloud_basic";
+my $debuglevel = 1;
+my $done = 0;
+my $cwd = `pwd`;
+chomp( $cwd );
+my $gem_home = "$cwd/deltacloud_gems";
+
+# where am I running
+my $currenthost = `hostname`;
+chomp($currenthost);
+my $primarycollector = $currenthost;
+my @adarray;
+
+CondorTest::fullchomp($currenthost);
+
+print scalar localtime() . "\n";
+
+my $mypid = $$;
+my $mysaveme = $corename . ".saveme";
+
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
+
+my $submit_file = $corename . ".cmd";
+
+CondorTest::debug("Master PID is $mypid\n",$debuglevel);
+CondorTest::debug("Master PID submit file is $submit_file\n",$debuglevel);
+
+# TODO Installing these gems requires pull data from a remote server and
+#   takes 5 minutes. We should find a way to cache the installation.
+print "Install ruby gems\n";
+mkdir( "$gem_home" );
+$ENV{"GEM_HOME"} = $gem_home;
+system( "gem install --no-rdoc --no-ri amazon-ec2 compass eventmachine haml json nokogiri rack rack-accept rack-test rake rcov rerun right_aws sinatra thin net-ssh" );
+$ENV{"PATH"} = "$gem_home/bin:" . $ENV{"PATH"};
+
+print "Install deltacloud server\n";
+my $tarball = "deltacloud-2011.07.13.tar.gz";
+my $fetch_prog;
+my $fetch_url = "http://parrot.cs.wisc.edu/externals/$tarball";
+if ( $^O eq "darwin" ) {
+    $fetch_prog = "curl -O";
+} else {
+    # Retry up to 5 times, waiting 10 seconds between tries
+    $fetch_prog = "wget --tries=5 --timeout=10";
+}
+CondorTest::debug("Fetching $fetch_url\n",1);
+my $rc = system( "$fetch_prog $fetch_url 2>&1" );
+if ($rc) {
+    my $status = $rc >> 8;
+    CondorTest::debug("URL retrieval failed: $status\n",1);
+    die "Deltacloud server code not fetched\n";
+}
+
+system("tar -zxvf $tarball");
+
+CondorTest::debug("Extracted Deltacloud server files\n",1);
+
+
+my $deltacloudd_port = 3001;
+my $deltacloudd = "deltacloud/server/bin/deltacloudd";
+if ( ! -x $deltacloudd ) {
+	die("$deltacloudd isn't executable!\n");
+}
+# Start deltacloud server
+print "fire up Deltacloudd - ";
+# TODO Add loop to try different ports?
+my $deltacloudd_pid = fork();
+if ( $deltacloudd_pid == 0 ) {
+	# Child
+	# It's important not to have shell meta-characters in our exec() line.
+	# Otherwise, perl will exec /bin/sh and ec2_sim will be a child process.
+	# Later on, we need to send a SIGTERM to ec2_sim, so we need to know
+	# its pid.
+	open STDOUT, ">deltacloudd.out";
+	open STDERR, ">deltacloudd.out";
+	exec( "$deltacloudd -i mock -p $deltacloudd_port" ) or die "Failed to exec $deltacloudd\n";
+} elsif ( $deltacloudd_pid > 0 ) {
+	sleep 1;
+	if ( waitpid( $deltacloudd_pid, &POSIX::WNOHANG ) == $deltacloudd_pid ) {
+		print "bad\n";
+		die( "$deltacloudd died unexpectedly!\n" );
+	}
+	print "ok\n";
+} else {
+	print "bad\n";
+	die( "Failed to fork() to spawn $deltacloudd!\n" );
+}
+CondorTest::debug("deltacloudd pid is $deltacloudd_pid\n",$debuglevel);
+
+CondorTest::debug("Starting personal condor\n",$debuglevel);
+
+# Modify our submit file to include port of deltacloudd
+open(CMDSRC,"<job_deltacloud_basic.template") || die "Could not open job_deltacloud_basic.template: $!\n";
+open(CMDDST,">job_deltacloud_basic.cmd") || die "Could not open job_deltacloud_basic.cmd: $!\n";
+while(<CMDSRC>) {
+	s/xxxxxx/$deltacloudd_port/g;
+	print CMDDST $_;
+}
+close(CMDSRC);
+close(CMDDST);
+
+print "Start up a configured personal condor pool - ";
+# get a local scheduler running (side a)
+my $configloc = CondorTest::StartPersonal( "job_deltacloud_basic", "x_param.deltacloud", "deltacloud");
+my @local = split /\+/, $configloc;
+my $locconfig = shift @local;
+my $locport = shift @local;
+
+print "ok\n";
+
+CondorTest::debug("---local config is $locconfig and local port is $locport---\n",$debuglevel);
+
+$ENV{CONDOR_CONFIG} = $locconfig;
+
+if($done != 0) {
+	CondorTest::debug("We failed already, allow cleanup\n",$debuglevel);
+} else {
+	my $test_cmd = "./job_deltacloud_basic.pl $submit_file";
+	CondorTest::debug("About to run Deltacloud basic test: $test_cmd\n",$debuglevel);
+	print scalar localtime() . "\n";
+
+	print "Submit test - ";
+	$done = system("$test_cmd");
+}
+
+if($done != 0) {
+	print "bad\n";
+} else {
+	print "ok\n";
+}
+
+CondorTest::debug("Killing deltacloudd pid $deltacloudd_pid\n",$debuglevel);
+kill 2, $deltacloudd_pid;
+if ( waitpid( $deltacloudd_pid, 0 ) != $deltacloudd_pid ) {
+	CondorTest::debug("Failed to reap deltacloudd\n",$debuglevel);
+}
+# TODO: checkout deltacloudd output "deltacloudd.out"?
+
+CondorTest::debug("Saving things and cleaning up.... done with return $done\n",$debuglevel);
+
+system("cp *job_deltacloud_basic* *deltacloudd* $mysaveme");
+
+CondorTest::KillPersonal($locconfig);
+
+print scalar localtime() . "\n";
+
+if( $done != 0 )
+{
+	CondorTest::debug("job_deltacloud_basic FAILED\n",$debuglevel);
+	# actual test failed but we allowed cleanup
+	exit(1);
+}
+
+CondorTest::debug("job_deltacloud_basic SUCCESS\n",$debuglevel);
+print scalar localtime() . "\n";
+exit(0);

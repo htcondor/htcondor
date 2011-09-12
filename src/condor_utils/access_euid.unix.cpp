@@ -147,7 +147,7 @@ access_euid(const char *path, int mode)
 	}
 
 	if ((R_OK == 0) || (mode & R_OK)) {
-		f = safe_fopen_wrapper(path, "r", 0644);
+		f = safe_fopen_wrapper_follow(path, "r", 0644);
 		if (f == NULL) {
 			if( errno == EISDIR ) {
 				return access_euid_dir(path,mode,NULL);
@@ -163,7 +163,7 @@ access_euid(const char *path, int mode)
 	}
 
 	if ((W_OK == 0) || (mode & W_OK)) {
-		f = safe_fopen_wrapper(path, "a", 0644); /* don't truncate the file! */
+		f = safe_fopen_wrapper_follow(path, "a", 0644); /* don't truncate the file! */
 		if (f == NULL) {
 			if( errno == EISDIR ) {
 				return access_euid_dir(path,mode,NULL);

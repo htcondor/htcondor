@@ -27,7 +27,6 @@
 #include "my_hostname.h"
 #include "condor_attributes.h"
 #include "condor_netdb.h"
-#include "condor_sockaddr.h"
 
 static char* hostname = NULL;
 static char* full_hostname = NULL;
@@ -169,19 +168,6 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		dev != dev_list.end();
 		dev++)
 	{
-		condor_sockaddr addr;
-		if( ! addr.from_ip_string(dev->IP()) ) {
-			// When would this ever be reasonable?
-			ASSERT(false);
-			//dprintf(D_ALWAYS,"Ignoring network interface %s (%s) because it does not have a useable IP address.\n",
-			//		dev->name(), dev->IP());
-			//continue;
-		}
-		if( ! addr.is_ipv4() ) {
-			dprintf(D_HOSTNAME,"Ignoring network interface %s (%s) because it it not an IPv4 address.\n", dev->name(), dev->IP());
-			continue;
-		}
-
 		bool matches = false;
 		if( strcmp(dev->name(),"")!=0 &&
 			pattern.contains_anycase_withwildcard(dev->name()) )
@@ -200,6 +186,13 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			continue;
 		}
 
+		struct in_addr this_sin_addr;
+		if( !is_ipaddr_no_wildcard(dev->IP(),&this_sin_addr) ) {
+			dprintf(D_HOSTNAME,"Ignoring network interface %s (%s) because it does not have a useable IP address.\n",
+					dev->name(), dev->IP());
+			continue;
+		}
+
 		if( matches_str.size() ) {
 			matches_str += ", ";
 		}
@@ -213,17 +206,17 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 
 		int desireability;
 
-		if( addr.is_loopback() ) {
+		if( is_loopback_net( ntohl(this_sin_addr.s_addr) ) ) {
 			desireability = 1;
 		}
-		else if( addr.is_private_network() ) {
+		else if( is_priv_net( ntohl(this_sin_addr.s_addr) ) ) {
 			desireability = 2;
 		}
 		else {
 			desireability = 3;
 		}
 
-		//dprintf(D_HOSTNAME,"%s: desireability %d\n",dev->IP(),desireability);
+		//dprintf(D_HOSTNAME, "Considering %s (Ranked at %d) as possible local hostname versus %s (%d)\n", addr.to_ip_string().Value(), desireability, ip.c_str(), desireability);
 
 		if( desireability > best_so_far ) {
 			best_so_far = desireability;

@@ -649,6 +649,8 @@ encode_status( int status )
 		return 'H';
 	  case TRANSFERRING_OUTPUT:
 		return '>';
+	  case SUSPENDED:
+		return 'S';
 	  default:
 		return ' ';
 	}

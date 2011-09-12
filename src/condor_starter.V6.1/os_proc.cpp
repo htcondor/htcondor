@@ -451,6 +451,34 @@ OsProc::StartJob(FamilyInfo* family_info)
     }
 #endif
 
+		// While we are still in user priv, print out the username
+#if defined(LINUX)
+	if( Starter->glexecPrivSepHelper() ) {
+			// TODO: if there is some way to figure out the final username,
+			// print it out here or after starting the job.
+		dprintf(D_ALWAYS,"Running job via glexec\n");
+	}
+#else
+	if( false ) {
+	}
+#endif
+	else {
+		char const *username = NULL;
+		char const *how = "";
+		CondorPrivSepHelper* cpsh = Starter->condorPrivSepHelper();
+		if( cpsh ) {
+			username = cpsh->get_user_name();
+			how = "via privsep switchboard ";
+		}
+		else {
+			username = get_real_username();
+		}
+		if( !username ) {
+			username = "(null)";
+		}
+		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
+	}
+
 	set_priv ( priv );
 
     // use this to return more detailed and reliable error message info

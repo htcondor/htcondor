@@ -63,10 +63,12 @@ struct SubmitDagShallowOptions
 	MyString strLockFile;
 	bool copyToSpool;
 	int iDebugLevel;
+	bool bPostRun;
 
 	SubmitDagShallowOptions() 
 	{ 
 		bSubmit = true;
+		bPostRun = true;
 		strRemoteSchedd = "";
 		strScheddDaemonAdFile = "";
 		strScheddAddressFile = "";
@@ -100,7 +102,6 @@ struct SubmitDagDeepOptions
 	MyString strDagmanPath; // path to dagman binary
 	bool useDagDir;
 	MyString strOutfileDir;
-	bool oldRescue;
 	bool autoRescue;
 	int doRescueFrom;
 	bool allowVerMismatch;
@@ -115,7 +116,6 @@ struct SubmitDagDeepOptions
 		strNotification = "";
 		bAllowLogError = false;
 		useDagDir = false;
-		oldRescue = param_boolean( "DAGMAN_OLD_RESCUE", false );
 		autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
 		doRescueFrom = 0; // 0 means no rescue DAG specified
 		allowVerMismatch = false;

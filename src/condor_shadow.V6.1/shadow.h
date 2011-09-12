@@ -81,6 +81,16 @@ class UniShadow : public BaseShadow
 
 	bool supportsReconnect( void );
 
+	/**
+	 * override to allow starter+shadow to gracefully exit 
+	 */
+	virtual void removeJob( const char* reason );
+	
+	/**
+	 * override to allow starter+shadow to gracefully exit 
+	 */
+	virtual void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
+	
 		/**
 		 */
 	int handleJobRemoval(int sig);
@@ -144,6 +154,16 @@ class UniShadow : public BaseShadow
 	virtual void logDisconnectedEvent( const char* reason );
 
 	virtual bool getMachineName( MyString &machineName );
+	
+	/**
+	 * Handle the situation where the job is to be suspended
+	 */
+	virtual int JobSuspend(int sig);
+	
+	/**
+	 * Handle the situation where the job is to be continued.
+	 */
+	virtual int JobResume(int sig);
 
  protected:
 

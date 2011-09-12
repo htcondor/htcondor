@@ -98,6 +98,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
     }
     
     unsigned long written = full_write( fd, contents.c_str(), contents.length() );
+    close( fd );
     if( written != contents.length() ) {
         dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
             fileName.c_str(), contents.length(), written );
@@ -124,6 +125,7 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
     char * rawBuffer = (char *)malloc( fileSize + 1 );
     assert( rawBuffer != NULL );
     unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
+    close( fd );
     if( totalRead != fileSize ) {
         dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
             fileName.c_str(), fileSize, totalRead );
@@ -615,6 +617,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     vmStartRequest.query_parameters[ "ImageId" ] = argv[5];
     vmStartRequest.query_parameters[ "MinCount" ] = "1";
     vmStartRequest.query_parameters[ "MaxCount" ] = "1";
+	vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
     
     // Fill in optional parameters.
     if( strcasecmp( argv[6], NULLSTRING ) ) {

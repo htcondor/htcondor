@@ -1,0 +1,619 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-7-7}Development Release Series 7.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is the development release series of Condor.
+The details of each version are described below.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-7-2}Version 7.7.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.7.2 not yet released.
+%\item Condor version 7.7.2 released on Month Date, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The dedicated scheduler used to attempt to change the
+\Attr{Scheduler} attribute on all parallel job processes in a durable fashion,
+resulting in an \Procedure{fsync} for each process.
+This has been changed to be not durable, 
+improving scalability by reducing the 
+number of \Procedure{fsync} calls without impacting correctness. 
+\Ticket{2367}
+
+\item In privsep mode, when an error is encountered when trying to
+switch to the user account chosen for running the job, 
+the error message has been improved to make debugging easier.  
+Now, the error message distinguishes between safety check failures 
+for the UID, tracking group ID, primary group ID, and supplementary group IDs.
+\Ticket{2364}
+
+\item When using \Prog{glexec}, if there is a conflict between
+environment specified for the job and environment inherited from
+glexec, the former always takes precedence when running the job.
+Previously, the environment inherited from glexec took
+precedence.
+\Ticket{2096}
+
+\item \Condor{dagman} now defaults to writing a partial DAG file, as
+opposed to a full DAG file, for a Rescue DAG.  The Rescue DAG file is
+parsed in combination with the original DAG file, meaning that any
+changes to the original DAG input file take effect when running a Rescue DAG.
+\Ticket{2165}
+
+\item The behavior of DAGMan is changed, such that, by default, 
+POST scripts will be run regardless of the return value from 
+the PRE script of the same node
+as described in section~\ref{dagman:SCRIPT}.  
+The previous behavior of not running the POST script can be restored by
+either adding the \Opt{-AlwaysRunPost} option to the \Condor{submit\_dag}
+command line, 
+or by setting the new configuration variable
+\Macro{DAGMAN\_ALWAYS\_RUN\_POST} to \Expr{False}, 
+as defined at~\ref{param:DAGmanAlwaysRunPost}.
+\Ticket{2057}
+
+% moved to 7.7.2 
+% gittrac #659 
+%\item Filip Krikava supplied a patch that limits the number of 
+%file descriptors that DAGMan has open at a time.
+%The reason for creating this capability is that
+%DAGman tends to fail on wide DAGs, where many jobs are independent,
+%rather than being linear, where jobs have many dependencies.
+
+\item A matchmaking optimization has significantly improved speed of matching
+when there are machines with many slots.
+\Ticket{2403}
+
+\item The name of the user used to execute the job is now logged in
+the starter log, except when using glexec.
+\Ticket{2268}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+% gittrac #2354
+\item Attributes have been added to all daemons to publish statistics about
+the the number of timers, signals, socket and pipe messages that have been handled
+and the amount of time spent handling them.	Statistics attributes for daemon core
+have names that begin with \Attr{DC} or \Attr{RecentDC}.
+\Ticket{2354}
+
+% gittrac #2366
+\item The default value of \Attr{OpSys} on Windows machines has been changed
+ to \AdStr{WINDOWS}, and a new attribute \Attr{OpSysVer} has been added 
+that contains the version number of the operating system.  
+This behavior is controlled by a new configuration variable
+\Macro{ENABLE\_VERSIONED\_OPSYS} which defaults to \Expr{False} on Windows 
+and to \Expr{True} on other platforms.  
+The new machine ClassAd attribute \Attr{OpSys\_And\_Ver} will always contain 
+the versioned operating system.  
+Note that this change could cause problems with mixed pools,
+because Condor version 7.7.2 \Condor{submit} may add \Expr{OpSys="WINDOWS"}, 
+but machines running Condor versions prior to 7.7.2 will be publishing 
+a versioned \Attr{OpSys} value,
+unless there is an override in the configuration.
+\Ticket{2366}
+
+\item Configuration variable \Macro{COLLECTOR\_ADDRESS\_FILE} is now set 
+in the example configuration,
+similar to \MacroNI{MASTER\_ADDRESS\_FILE}.
+This configuration variable is required when \Macro{COLLECTOR\_HOST} 
+has the port set to 0, which means to select any available port.
+In other environments, it should have no visible impact.
+\Ticket{2375}
+
+% gittrac #2197
+\item Attributes have been added to the \Condor{schedd} to publish aggregate statistics
+about jobs that are running and have completed, as well as counts of various
+failures. See section ??? for details.
+\Ticket{2197}
+
+\item The new configuration variable \Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE}
+enables the new feature of writing a partial DAG file, instead of a full
+DAG input file, as a Rescue DAG.  
+See section~\ref{param:DAGManWritePartialRescue} for a definition.
+Also, the configuration variable
+\Macro{DAGMAN\_OLD\_RESCUE} no longer exists,
+as it is incompatible with the implementation of partial Rescue DAGs.
+\Ticket{2165}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug introduced in 7.7.0, in which the \Condor{startd} may
+erroneously report ``Can't find hostname of client machine.'' In
+cases where Condor was unable to identify the host name, the ClientMachine
+attribute in the Machine ClassAd would have gone unset.
+\Ticket{2382}
+
+\item Add command line support to suspend and continue jobs. 
+\Ticket{2368}
+
+\item Fixed a bug existing since April 2001,
+in which on \Condor{schedd} startup, with parallel universe jobs, 
+the job queue sanity checking code would change the \Attr{Scheduler}
+attribute on jobs,
+only to have the attribute changed later by the dedicated scheduler.
+\Ticket{2367}
+
+\item Offline ads with no \Attr{MyType} or no \Attr{TargetType} caused
+the \Condor{collector} to fail to start when it was next restarted.
+\Ticket{2417}
+
+\item Fixed a file descriptor leak in the ec2\_gahp which would cause
+grid-type ec2 jobs to become held. The \Attr{HoldReason} for most such 
+jobs would be ``Unable to read from accesskey file''.
+\Ticket{2447}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-7-1}Version 7.7.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.7.1 not yet released.
+%\item Condor version 7.7.1 released on Month Date, 2011.
+This developer release contains all bug fixes from Condor version ?.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item
+Condor now dynamically links with the OpenSSL and Kerberos security
+libraries, and Condor will use the operating system's version of these
+libraries,  when they are available. 
+The tarball release of Condor on Linux platforms includes 
+a copy of these libraries.  
+If the operating system's version is incompatible with Condor, 
+Condor will use its own copy instead.
+Condor's copy of these libraries is located under \File{lib/condor/}.
+To prevent Condor from considering using them, delete these libraries.
+\Ticket{1874}
+
+\item
+The new job ClassAd attribute \Attr{KeepClaimIdle} is defined with an integer
+number of seconds in the job submit description file, as the example:
+\begin{verbatim}
+  +KeepClaimIdle = 300
+\end{verbatim}
+If set, then when the job exits, 
+if there are no other jobs immediately ready to run for this user, 
+the \Condor{schedd} daemon,
+instead of relinquishing the claim back to the \Condor{negotiator}, 
+will keep the claim for the specified number of seconds.  
+This is useful if another job will be arriving soon, 
+which can happen with linear DAGs.  
+The \Condor{startd} slot
+will go to the Claimed Idle state for at least that many seconds until
+either a new job arrives or the timeout occurs.
+See page~\pageref{sec:Job-ClassAd-Attributes},
+the unnumbered Appendix A for a complete definition of this
+job ClassAd attribute.
+\Ticket{2094}
+
+% gittrac #2122
+\item The new \Arg{PRE\_SKIP} key word in DAGMan changes the
+behavior of DAG node execution such that the node's job and POST script
+may be skipped based on the exit value of the PRE script.
+See section ~\ref{dagman:SCRIPT} for details.
+\Ticket{2122}
+
+% uncomment item, if it appears in 7.7.1
+% gittrac #659 
+%\item Filip Krikava supplied a patch that limits the number of 
+%file descriptors that DAGMan has open at a time.
+%The reason for creating this capability is that
+%DAGman tends to fail on wide DAGs, where many jobs are independent,
+%rather than being linear, where jobs have many dependencies.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable 
+\Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE} defaults to \Expr{False}.
+When \Expr{True}, any ClassAds not satisfying the expression 
+in \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} are removed from the
+list of \Condor{startd} ClassAds considered for negotiation.
+\Ticket{2232}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Expressions for periodic policies such as 
+\MacroNI{PERIODIC\_HOLD} and \MacroNI{PERIODIC\_RELEASE} 
+could inadvertently cause a claim to be released,
+ if the \Condor{shadow} exited before waiting for final update from the 
+\Condor{starter}. 
+\Ticket{2329}
+
+\item \Condor{submit} previously could incorrectly detect references
+in the requirements expression to special attributes such as
+\Attr{Memory} when the name of the attribute happened to appear in a
+string literal or as part of the name of some other attribute.  
+The detection of references to various special attributes influences the
+automatic requirements which are appended to the job requirements.
+\Ticket{2350}
+
+\item In rare cases, CCB requests could cause the server to hang for
+20 seconds while waiting for all of the request to arrive.
+\Ticket{2360}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-7-0}Version 7.7.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.7.0 released on July 29, 2011.
+This developer release contains all bug fixes from Condor version 7.6.2.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item A full port of Condor is available for RedHat Enterprise Linux 6
+on the x86\_64 processor.
+A full port includes support for the standard universe.
+
+\item The matchmaking attributes \Attr{SubmitterUserResourcesInUse}
+and \Attr{RemoteUserResourcesInUse} are now biased by slot weights.
+
+% gittrac #1971
+\item \Condor{submit} now accepts the new command line option \Opt{-addr},
+naming the IP address of the \Condor{schedd} to submit to.
+
+\item The \Condor{vm\_gahp} now is dynamically linked to libvirt.  
+We believe this makes it more portable.
+
+\item Programs \Condor{reconfig\_schedd} and \Condor{master\_off}
+are no longer part of the distribution.
+These programs were replaced many years ago by the more general
+\Condor{reconfig} and \Condor{off} commands.
+
+\item On Windows platforms, improved the ability of the \Condor{starter}
+and \Condor{shadow} daemons to clean up the execute directory,
+if jobs have changed the ACLs or permissions on files they have created.
+
+\item \Condor{submit} now sets a default value for job ClassAd attribute
+\Attr{RequestMemory}.
+
+\item The submission performance of cream grid jobs has been substantially
+improved by batching submit requests.
+
+\item \Condor{q} \Opt{-better} now has cleaner output, and informs
+the user when negotiation has not yet occurred.
+
+\item Implemented many improvements to the Condor \Prog{init} scripts.
+
+\item Deltacloud support has been updated to deltacloud version 0.8.
+
+% gittrac #1960
+\item As of Condor version 7.6.0,
+vm universe submit description files no longer support
+automatic creation of cdrom images from text input file.
+Users must now explicitly create ISO images and transfer them
+with the job.
+
+\item \Condor{q} now supports the new option \Opt{-stream-results}.
+  When this option is specified, \Condor{q} displays results as they
+  are fetched from the job queue, rather than buffering up the query
+  results before displaying anything.
+
+% gittrac #1871 
+% gittrac #2295
+\item The new submit description file command \SubmitCmd{stack\_size} 
+  applies to Linux jobs that are not running in the standard universe. 
+  It sets the allocation of stack space to be other than the default
+  value, which is unlimited.
+  It also advertises the job ClassAd attribute \AdAttr{StackSize}.
+
+% gittrac #1550
+\item The new ClassAd function \Code{stringListsIntersect} evaluates to 
+  \Expr{True} if two strings of delimited elements have any matching elements,
+  and it evaluates to \Expr{False} otherwise.
+
+% gittrac #1821
+\item The grid universe now supports the \SubmitCmd{ec2} resource type,
+  which uses the EC2 Query (REST) API to start virtual machines on cloud
+  resources.
+
+% gittrac #2090 
+\item The behavior of DAGMan has changed, 
+such that if multiple definitions of a VARS macroname 
+for a specific node within a DAG input exist,
+a warning is written to the log, of the format
+\begin{verbatim}
+Warning: VAR <macroname> is already defined in job <JobName>
+Discovered at file "<DAG input file name>", line <line number>
+\end{verbatim}
+See section ~\ref{dagman:VARS} for details.
+
+% gittrac #2297
+\item The version number for ClassAds now matches the Condor version number. 
+
+% gittrac #2259
+\item When \Prog{glexec} fails to execute a job,
+diagnostic error messages produced by \Prog{glexec} used to be discarded.
+These error messages are now displayed in the log of the \Condor{starter} 
+and in the job's hold reason. 
+
+% gittrac #2185
+\item New submit description file commands
+\SubmitCmd{periodic\_hold\_reason}, \SubmitCmd{periodic\_hold\_subcode},
+\SubmitCmd{on\_exit\_hold\_reason}, and \SubmitCmd{on\_exit\_hold\_subcode}
+permit the job to set a hold reason string and subcode number.
+Similarly, the system job policy can specify the reason and subcode 
+using \Macro{SYSTEM\_PERIODIC\_HOLD\_REASON} and 
+\Macro{SYSTEM\_PERIODIC\_HOLD\_SUBCODE}.
+In addition, the \Condor{hold} command now accepts a \Opt{-subcode} option,
+which is used to set the job attribute \Attr{HoldReasonSubCode}. 
+
+\item If the \Condor{shadow} cannot write to the user log, 
+the job is now put on hold.
+
+\end{itemize}
+
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable \Macro{NEGOTIATOR\_UPDATE\_AFTER\_CYCLE}
+defaults to \Expr{False}.
+If set to \Expr{True}, it will force the \Condor{negotiator} daemon
+to publish an update ClassAd to the \Condor{collector} at the end of 
+every negotiation cycle. 
+This is useful if monitoring cycle-based statistics.
+
+% gittrac #1960
+% gittrac #2004
+\item The new configuration variable \Macro{SHADOW\_RUN\_UNKNOWN\_USER\_JOBS}
+defaults to \Expr{False}.
+When \Expr{True}, it allows the \Condor{shadow} daemon to run jobs remotely 
+submitted from users not in the local password file.
+
+\item The configuration variables for security 
+\Macro{DENY\_CLIENT} and \Macro{HOSTDENY\_CLIENT}
+now also look for the prefixes \Expr{TOOL} and \Expr{SUBMIT}.
+ 
+% gittrac #1249
+\item \Macro{CONDOR\_VIEW\_HOST} is now a comma and/or white space separated
+list of hosts, in order to support more than one CondorView host.
+
+\item For a job with an X.509 proxy credential, the new job ClassAd
+attribute \AdAttr{X509UserProxyEmail} is the email address extracted
+from the proxy.
+
+% gittrac 2067
+\item On Linux execute machines with kernel version more recent than 2.6.27,
+the proportional set size (PSS) in Kbytes summed across all
+processes in the job is now reported in the attribute
+\AdAttr{ProportionalSetSizeKb}.  If the execute machine does not
+support monitoring of PSS or PSS has not yet been measured, this
+attribute will be undefined.  PSS differs from \AdAttr{ImageSize} in
+how memory shared between processes is accounted.  The PSS for one
+process is the sum of that process' memory pages divided by the
+number of processes sharing each of the pages.  \AdAttr{ImageSize} is
+the same, except there is no division by the number of processes
+sharing the pages.
+
+% gittrac #1755
+\item The new configuration variable \Macro{DAGMAN\_USE\_STRICT} 
+turns warnings into errors, as defined in section~\ref{param:DAGManUseStrict}.
+
+% gittrac #2006
+\item The \Condor{schedd} now publishes performance-related statistics.
+  Page~\pageref{sec:Scheduler-ClassAd-Attributes} in Appendix A contains
+  definitions for these new attributes:
+  \begin{itemize}
+    \item \Attr{DetectedMemory}
+    \item \Attr{DetectedCpus}
+    \item \Attr{UpdateInterval}
+    \item \Attr{WindowedStatWidth}
+    \item \Attr{ExitCode<N>}
+    \item \Attr{ExitCodeCumulative<N>}
+    \item \Attr{JobsSubmitted}
+    \item \Attr{JobsSubmittedCumulative}
+    \item \Attr{JobsStarted}
+    \item \Attr{JobsStartedCumulative}
+    \item \Attr{JobsCompleted}
+    \item \Attr{JobsCompletedCumulative}
+    \item \Attr{JobsExited}
+    \item \Attr{JobsExitedCumulative}
+    \item \Attr{ShadowExceptions}
+    \item \Attr{ShadowExceptionsCumulative}
+    \item \Attr{JobSubmissionRate}
+    \item \Attr{JobStartRate}
+    \item \Attr{JobCompletionRate}
+    \item \Attr{MeanTimeToStart}
+    \item \Attr{MeanTimeToStartCumulative}
+    \item \Attr{MeanRunningTime}
+    \item \Attr{MeanRunningTimeCumulative}
+    \item \Attr{SumTimeToStartCumulative}
+    \item \Attr{SumRunningTimeCumulative}
+  \end{itemize}
+
+% gittrac #1930
+\item For Windows platforms, the \Condor{startd} now publishes the 
+ClassAd attribute \Attr{DotNetVersions},
+containing a comma separated list of installed .NET versions.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug in which the \Condor{startd} daemon can get stuck in a
+loop trying to execute an invalid, 
+that is non-existent, Daemon ClassAd Hook job.
+
+\item Fixed bug that would cause the \Condor{startd} daemon to incorrectly
+report Benchmarking activity instead of Idle activity,
+when there is a problem launching the benchmarking programs.
+
+\item On Windows only, fixed a rare bug that could cause
+a sporadic access violation when a Condor daemon spawned another process.
+
+\item Fixed a bug introduced in Condor version 7.5.5,
+which caused the \Condor{schedd} to die managing parallel jobs.
+
+% commented out, as this bug fix is listed in the 7.6.1 version history.
+% \item Fixed bug present throughout ClassAds,
+% where expressions expecting a floating point value returned an error,
+% if they got a boolean value.  This is common in \MacroNI{RANK} expressions.
+
+\item The \Condor{startd} daemon now looks up the \Condor{kbdd} daemon address
+on every update.  
+This fixed problems if the \Condor{kbdd} daemon is restarted 
+during the \Condor{startd} lifespan.
+
+\item Fixed bug in \Condor{hold} that happened if the hold
+reason contained a double quote character.
+
+\item Fixed a bug introduced in Condor version 7.5.6 that
+caused any Daemon ClassAd hook job with non-empty value for
+\MacroNI{STARTD\_CRON\_<JobName>\_ARGS},
+\MacroNI{SCHEDD\_CRON\_<JobName>\_ARGS}
+or \MacroNI{BENCHMARKS\_<JobName>\_ARGS} to fail.
+Also, the specification of 
+\MacroNI{STARTD\_CRON\_<JobName>\_ENV},
+\MacroNI{SCHEDD\_CRON\_<JobName>\_ENV},
+or \MacroNI{BENCHMARKS\_<JobName>\_ENV} for these jobs was ignored.
+
+\item Fixed bug in the RPM \Prog{init} script. 
+A status request would always report Condor as inactive, 
+and a shutdown request would not report failure if there was a
+timeout shutting down Condor.
+
+\item File transfer plug-ins now have a correctly set environment.
+
+\item Fixed a problem with detecting IBM Java Virtual Machines whose
+version strings have embedded newline characters.
+
+\item \Condor{q} \Opt{-analyze} now works with ClassAd built-in functions.
+
+\item Fixed bug in \Condor{q} \Opt{-run}, such that it displays
+the host name correctly for local and scheduler universe jobs.
+
+\item Standalone checkpointing now works with compressed checkpoints again.
+This had been broken in Condor version 7.5.4.
+
+%gittrac 1962
+\item On Windows, \Prog{net stop condor} would sometimes cause the
+\Condor{master} daemon to crash.  This is now fixed.
+
+% gittrac #1928
+\item \AdAttr{JobUniverse} was effectively a required attribute for
+  jobs created via the Fetch Work hook,
+  due to the need to set the \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM}
+  expression, such that it would not evaluate to \Expr{Undefined}.
+  Now the default \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM} expression
+  evaluates to \Expr{True} when \AdAttr{JobUniverse} is not defined.
+
+% gittrac #1943
+\item When there are multiple cpus but only one slot, the slot name no
+longer begins with \Expr{slot1@}.
+
+% gittrac #1805 
+\item The tool \Condor{advertise} seemed to be trying too hard to resolve
+host names. This was fixed to only do the minimally necessary 
+number of look ups.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+

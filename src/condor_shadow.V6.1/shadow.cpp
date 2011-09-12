@@ -151,10 +151,14 @@ void
 UniShadow::logExecuteEvent( void )
 {
 	ExecuteEvent event;
-	char* sinful = event.executeHost;
+	char* sinful = NULL;
 	remRes->getStartdAddress( sinful );
-	char* remote_name = event.remoteName;
+	event.setExecuteHost( sinful );
+	delete[] sinful;
+	char* remote_name = NULL;
 	remRes->getStartdName(remote_name);
+	event.setRemoteName(remote_name);
+	delete[] remote_name;
 	if( !uLog.writeEvent(&event, getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
 				 "can't write to UserLog!\n" );
@@ -240,6 +244,36 @@ UniShadow::emailTerminateEvent( int exitReason, update_style_t kind )
 							  prev_run_bytes_recvd + bytesSent() );
 }
 
+void UniShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
+{
+	int iPrevExitReason=remRes->getExitReason();
+	
+	remRes->setExitReason( JOB_SHOULD_HOLD );
+	this->holdJobPre(reason, hold_reason_code, hold_reason_subcode);
+
+	// exit immediately if the remote side is failing out or has already exited.
+        if ( hold_reason_subcode != 0 ||
+	   ( iPrevExitReason != JOB_SHOULD_HOLD && iPrevExitReason != -1 ))
+	{
+		// don't wait for final update b/c there isn't one.
+		DC_Exit( JOB_SHOULD_HOLD );
+	}
+}
+
+void UniShadow::removeJob( const char* reason )
+{
+	int iPrevExitReason=remRes->getExitReason();
+	
+	remRes->setExitReason( JOB_SHOULD_REMOVE );
+	this->removeJobPre(reason);
+	
+	// exit immediately if the remote side is failing out or has already exited.
+	if ( iPrevExitReason != JOB_SHOULD_REMOVE && iPrevExitReason != -1)
+	{
+		// don't wait for final update b/c there isn't one.
+		DC_Exit( JOB_SHOULD_REMOVE );
+	}
+}
 
 int UniShadow::handleJobRemoval(int sig) {
     dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
@@ -256,6 +290,30 @@ int UniShadow::handleJobRemoval(int sig) {
 	return 0;
 }
 
+
+int UniShadow::JobSuspend( int sig )
+{
+	int iRet=1;
+	
+	if ( remRes->suspend() )
+		iRet = 0;
+	else
+		dprintf ( D_ALWAYS, "JobSuspend() sig %d FAILED\n", sig );
+	
+	return iRet;
+}
+
+int UniShadow::JobResume( int sig )
+{
+	int iRet =1;
+	
+	if ( remRes->resume() )
+		iRet =0;
+	else
+		dprintf ( D_ALWAYS, "JobResume() sig %d FAILED\n", sig );
+	
+	return iRet;
+}
 
 float
 UniShadow::bytesSent()

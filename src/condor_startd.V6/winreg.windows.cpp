@@ -1584,7 +1584,7 @@ bool update_windows_performance_result(WinPerf_QueryResult & result)
 	do 
 	{
 		if (cbAlloc < 0x10000) cbAlloc *= 2;
-		cbAlloc += max(cbAlloc, 0x200);
+        cbAlloc += (cbAlloc > 0x200) ? cbAlloc : 0x200;
 
 		if (pdata) 
 			free(pdata);

@@ -1,0 +1,5 @@
+JOBSTATE_LOG job_dagman_always_run_post-A.jobstate.log
+
+Job A_A job_dagman_always_run_post-A_A.cmd
+SCRIPT PRE A_A job_dagman_always_run_post-A_A_pre.sh
+SCRIPT POST A_A job_dagman_always_run_post-A_A_post.sh

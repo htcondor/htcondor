@@ -254,6 +254,9 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		EXCEPT("Invalid argument(s) for DaemonCore constructor");
 	}
 
+    dc_stats.Init(); // initilize statistics.
+    dc_stats.SetWindowSize(20*60);
+
 		// Provide cedar sock with pointers to various daemonCore functions
 		// that cannot be directly referenced in cedar, because it
 		// is sometimes used in an application that is not linked with
@@ -410,7 +413,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
-    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 4);
+    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 8);
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
@@ -639,21 +642,23 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
  ********************************************************/
 int	DaemonCore::Register_Command(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip, Service* s,
-				DCpermission perm, int dprintf_flag, bool force_authentication)
+				DCpermission perm, int dprintf_flag, bool force_authentication,
+				int wait_for_payload)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, s,
-							 perm, dprintf_flag, FALSE, force_authentication) );
+							 perm, dprintf_flag, FALSE, force_authentication,
+							 wait_for_payload) );
 }
 
 int	DaemonCore::Register_Command(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
 				Service* s, DCpermission perm, int dprintf_flag,
-				bool force_authentication)
+				bool force_authentication, int wait_for_payload)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
 							 handler_descrip, s, perm, dprintf_flag, TRUE,
-							 force_authentication) );
+							 force_authentication, wait_for_payload) );
 }
 
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
@@ -917,7 +922,8 @@ bool DaemonCore::GetTimerTimeslice( int id, Timeslice &timeslice )
 int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
-				int dprintf_flag, int is_cpp, bool force_authentication)
+				int dprintf_flag, int is_cpp, bool force_authentication,
+				int wait_for_payload)
 {
     int     i;		// hash value
     int     j;		// for linear probing
@@ -967,6 +973,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].service = s;
 	comTable[i].data_ptr = NULL;
 	comTable[i].dprintf_flag = dprintf_flag;
+	comTable[i].wait_for_payload = wait_for_payload;
 	free(comTable[i].command_descrip);
 	if ( command_descrip )
 		comTable[i].command_descrip = strdup(command_descrip);
@@ -1271,6 +1278,8 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		return -1;
     }
 
+    dc_stats.New("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
+
 	// Semantics dictate that certain signals CANNOT be caught!
 	// In addition, allow SIGCHLD to be automatically replaced (for backwards
 	// compatibility), so cancel any previous registration for SIGCHLD.
@@ -1446,6 +1455,11 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
         DumpSocketTable( D_ALWAYS );
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
+
+    dc_stats.New("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
+    if (iosock_descrip && iosock_descrip[0] && ! strcmp(handler_descrip, "DC Command Handler"))
+       dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
+
 
 	// Verify that this socket has not already been registered
 	// Since we are scanning the entire table to do this (change this someday to a hash!),
@@ -1894,6 +1908,8 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 			EXCEPT("DaemonCore: Same pipe registered twice");
         }
 	}
+
+    dc_stats.New("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
 
 	// Found a blank entry at index i. Now add in the new data.
 	(*pipeTable)[i].pentry = NULL;
@@ -2665,7 +2681,7 @@ DaemonCore::reconfig(void) {
 	// Default is 10k (10*1024 bytes)
 	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
 
-    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 4);
+    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 8);
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
@@ -3037,6 +3053,9 @@ void DaemonCore::Driver()
 
 	for(;;)
 	{
+        double runtime = UtcTime::getTimeDouble();
+        double group_runtime = runtime;
+
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
 			for (i=0;i<maxSig;i++) {
@@ -3047,6 +3066,9 @@ void DaemonCore::Driver()
 						sigTable[i].is_pending = 0;
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &(sigTable[i].data_ptr);
+                        // update statistics
+                        dc_stats.Signals += 1;
+
 						// log a message
 						dprintf(D_DAEMONCORE,
 										"Calling Handler <%s> for Signal %d <%s>\n",
@@ -3061,6 +3083,9 @@ void DaemonCore::Driver()
 						curr_dataptr = NULL;
 						// Make sure we didn't leak our priv state
 						CheckPrivState();
+
+                        // update per-timer runtime and count statistics
+                        runtime = dc_stats.AddRuntime(sigTable[i].handler_descrip, runtime);
 					}
 				}
 			}
@@ -3077,6 +3102,11 @@ void DaemonCore::Driver()
 		// windows version of this code is after selector.execute()
 #endif
 
+        // accumulate signal runtime (including timers) as SignalRuntime
+        runtime = UtcTime::getTimeDouble();
+        dc_stats.SignalRuntime += (runtime - group_runtime);
+        group_runtime = runtime;
+
 		// Prepare to enter main select()
 
 		// call Timeout() - this function does 2 things:
@@ -3090,7 +3120,10 @@ void DaemonCore::Driver()
 		//   and service this outstanding signal and yet we do not
 		//   starve commands...
 
-			timeout = t.Timeout();
+        int num_timers_fired = 0;
+		timeout = t.Timeout(&num_timers_fired);
+
+        dc_stats.TimersFired += num_timers_fired;
 
 		if ( sent_signal == TRUE ) {
 			timeout = 0;
@@ -3098,6 +3131,11 @@ void DaemonCore::Driver()
 		if ( timeout < 0 ) {
 			timeout = TIME_T_NEVER;
 		}
+
+        // accumulate signal runtime (including timers) as SignalRuntime
+        runtime = UtcTime::getTimeDouble();
+        dc_stats.TimerRuntime += (runtime - group_runtime);
+        group_runtime = runtime;
 
 		// Setup what socket descriptors to select on.  We recompute this
 		// every time because 1) some timeout handler may have removed/added
@@ -3220,6 +3258,12 @@ void DaemonCore::Driver()
 
 		selector.execute();
 
+        // update statistics on time spent waiting in select.
+        runtime = UtcTime::getTimeDouble();
+        dc_stats.SelectWaittime += (runtime - group_runtime);
+        group_runtime = runtime;
+        //dc_stats.StatsLifetime = now - dc_stats.InitTime;
+
 		tmpErrno = errno;
 
 		CheckForTimeSkip(time_before, okay_delta);
@@ -3256,6 +3300,7 @@ void DaemonCore::Driver()
 		// in the signalled state in 7.5.5. 
 		if (selector.has_ready() &&
 			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
+            dc_stats.AsyncPipe += 1;
 			if ( ! async_pipe_signal) {
 				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.");
 			}
@@ -3287,6 +3332,8 @@ void DaemonCore::Driver()
 		// For now, do not let other threads run while we are processing
 		// in the main loop.
 		CondorThreads::enable_parallel(false);
+
+        runtime = group_runtime = UtcTime::getTimeDouble();
 
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
@@ -3349,6 +3396,10 @@ void DaemonCore::Driver()
 				}	// end of if valid sock entry
 			}	// end of for loop through all sock entries
 
+            runtime = UtcTime::getTimeDouble();
+            dc_stats.SocketRuntime += (runtime - group_runtime);
+            group_runtime = runtime;
+
 			// scan through the pipe table to find which ones select() set
 			for(i = 0; i < nPipe; i++) {
 				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
@@ -3379,12 +3430,15 @@ void DaemonCore::Driver()
 
 
 			// Now loop through all pipe entries, calling handlers if required.
+            runtime = UtcTime::getTimeDouble();
 			for(i = 0; i < nPipe; i++) {
 				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
 
 					if ( (*pipeTable)[i].call_handler ) {
 
 						(*pipeTable)[i].call_handler = false;
+
+                        dc_stats.PipeMessages += 1;
 
 						// save the pentry on the stack, since we'd otherwise lose it
 						// if the user's handler call Cancel_Pipe().
@@ -3469,6 +3523,9 @@ void DaemonCore::Driver()
 						}
 #endif
 
+                        // update per-handler runtime statistics
+                        runtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, runtime);
+
 						if ( (*pipeTable)[i].call_handler == true ) {
 							// looks like the handler called Cancel_Pipe(),
 							// and now entry i no longer points to what we
@@ -3482,6 +3539,10 @@ void DaemonCore::Driver()
 			}	// for 0 thru nPipe checking if call_handler is true
 
 
+            runtime = UtcTime::getTimeDouble();
+            dc_stats.PipeRuntime += (runtime - group_runtime);
+            group_runtime = runtime;
+
 			// Now loop through all sock entries, calling handlers if required.
 			for(i = 0; i < nSock; i++) {
 				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
@@ -3489,6 +3550,8 @@ void DaemonCore::Driver()
 					if ( (*sockTable)[i].call_handler ) {
 
 						(*sockTable)[i].call_handler = false;
+
+                        dc_stats.SockMessages += 1;
 
 						if ( recheck_status &&
 							 ((*sockTable)[i].is_connect_pending == false) )
@@ -3532,9 +3595,16 @@ void DaemonCore::Driver()
 						recheck_status = true;
 						CallSocketHandler( i, true );
 
+                        // update per-handler runtime statistics
+                        runtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, runtime);
+
 					}	// if call_handler is True
 				}	// if valid entry in sockTable
 			}	// for 0 thru nSock checking if call_handler is true
+
+            runtime = UtcTime::getTimeDouble();
+            dc_stats.SocketRuntime += (runtime - group_runtime);
+            group_runtime = runtime;
 
 		}	// if rv > 0
 
@@ -3774,14 +3844,127 @@ DaemonCore::CommandNumToTableIndex(int cmd,int *cmd_index)
 	return false;
 }
 
+struct CallCommandHandlerInfo {
+	CallCommandHandlerInfo(int req,time_t deadline,float time_spent_on_sec):
+		m_req(req),
+		m_deadline(deadline),
+		m_time_spent_on_sec(time_spent_on_sec)
+	{
+		m_start_time.getTime();
+	}
+	int m_req;
+	time_t m_deadline;
+	float m_time_spent_on_sec;
+	UtcTime m_start_time;
+};
+
 int
-DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream)
+DaemonCore::HandleReqPayloadReady(Stream *stream)
+{
+		// The command payload has arrived or the deadline has
+		// expired.
+	int result = FALSE;
+	CallCommandHandlerInfo *callback_info = (CallCommandHandlerInfo *)GetDataPtr();
+	int req = callback_info->m_req;
+	time_t orig_deadline = callback_info->m_deadline;
+	float time_spent_on_sec = callback_info->m_time_spent_on_sec;
+	UtcTime now;
+	now.getTime();
+	float time_waiting_for_payload = now.difference(callback_info->m_start_time);
+
+	delete callback_info;
+
+	Cancel_Socket( stream );
+
+	int index = 0;
+	bool reqFound = CommandNumToTableIndex(req,&index);
+
+	if( !reqFound ) {
+		dprintf(D_ALWAYS,
+				"Command %d from %s is no longer recognized!\n",
+				req,stream->peer_description());
+		goto wrapup;
+	}
+
+	if( stream->deadline_expired() ) {
+		dprintf(D_ALWAYS,
+				"Deadline expired after %.3fs waiting for %s "
+				"to send payload for command %d %s.\n",
+				time_waiting_for_payload,stream->peer_description(),
+				req,comTable[index].command_descrip);
+		goto wrapup;
+	}
+
+	stream->set_deadline( orig_deadline );
+
+	result = CallCommandHandler(req,stream,false,false,time_spent_on_sec,time_waiting_for_payload);
+
+ wrapup:
+	if( result != KEEP_STREAM ) {
+		delete stream;
+		result = KEEP_STREAM;
+	}
+	return result;
+}
+
+int
+DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool check_payload,float time_spent_on_sec,float time_spent_waiting_for_payload)
 {
 	int result = FALSE;
 	int index = 0;
 	bool reqFound = CommandNumToTableIndex(req,&index);
+	char const *user = NULL;
+	Sock *sock = (Sock *)stream;
 
 	if ( reqFound ) {
+
+		if( stream  && stream->type() == Stream::reli_sock && \
+			comTable[index].wait_for_payload > 0 && check_payload )
+		{
+			if( !sock->readReady() ) {
+				if( sock->deadline_expired() ) {
+					dprintf(D_ALWAYS,"The payload has not arrived for command %d from %s, but the deadline has expired, so continuing to the command handler.\n",req,stream->peer_description());
+				}
+				else {
+					time_t old_deadline = sock->get_deadline();
+					sock->set_deadline_timeout(comTable[index].wait_for_payload);
+
+					char callback_desc[50];
+					snprintf(callback_desc,50,"Waiting for command %d payload",req);
+					int rc = Register_Socket(
+						stream,
+						callback_desc,
+						(SocketHandlercpp) &DaemonCore::HandleReqPayloadReady,
+						"DaemonCore::HandleReqPayloadReady",
+						this);
+					if( rc >= 0 ) {
+						CallCommandHandlerInfo *callback_info = new CallCommandHandlerInfo(req,old_deadline,time_spent_on_sec);
+						Register_DataPtr((void *)callback_info);
+						return KEEP_STREAM;
+					}
+
+					dprintf(D_ALWAYS,"Failed to register callback to wait for command %d payload from %s.\n",req,stream->peer_description());
+					sock->set_deadline( old_deadline );
+						// just call the command handler
+				}
+			}
+		}
+
+		user = sock->getFullyQualifiedUser();
+		if( !user ) {
+			user = "";
+		}
+		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
+				comTable[index].handler_descrip,
+				inServiceCommandSocket_flag,
+				req,
+				comTable[index].command_descrip,
+				user,
+				stream->peer_description());
+
+		UtcTime handler_start_time;
+		handler_start_time.getTime();
+
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
 
@@ -3797,6 +3980,13 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream)
 
 		// clear curr_dataptr
 		curr_dataptr = NULL;
+
+		UtcTime handler_stop_time;
+		handler_stop_time.getTime();
+		float handler_time = handler_stop_time.difference(&handler_start_time);
+
+		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs, payload: %.3fs)\n", comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
+
 	}
 
 	if ( delete_stream && result != KEEP_STREAM ) {
@@ -4459,6 +4649,15 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		if (!reqFound) {
 			// we have no idea what command they want to send.
 			// too bad, bye bye
+
+			dprintf(D_ALWAYS,
+					"Received %s command (%d) (%s) from %s %s\n",
+					(is_tcp) ? "TCP" : "UDP",
+					tmp_cmd,
+					"UNREGISTERED COMMAND!",
+					user.Value(),
+					sock->peer_description());
+
 			result = FALSE;
 			goto finalize;
 		}
@@ -5200,20 +5399,11 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// Handlers should start out w/ parallel mode disabled by default
 		ScopedEnableParallel(false);
 
-		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d)\n", comTable[index].handler_descrip, inServiceCommandSocket_flag);
-
 		UtcTime handler_start_time;
 		handler_start_time.getTime();
-
-		result = CallCommandHandler(req,sock,false /*do not delete sock*/);
-
-		UtcTime handler_stop_time;
-		handler_stop_time.getTime();
-		float handler_time = handler_stop_time.difference(&handler_start_time);
 		float sec_time = handler_start_time.difference(&handle_req_start_time);
 
-		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs)\n", comTable[index].handler_descrip, handler_time, sec_time);
-
+		result = CallCommandHandler(req,sock,false /*do not delete sock*/,true /*do check for payload*/,sec_time,0);
 	}
 
 finalize:

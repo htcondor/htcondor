@@ -1,0 +1,90 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Concurrency-Limits}Concurrency Limits} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{concurrency limits}
+
+Condor's implementation of the mechanism called \Term{concurrency limits}
+allows an administrator to define and set integer limits on
+consumable resources.
+These limits are utilized during matchmaking, preventing matches when
+the resources are allocated.
+Typical uses of this mechanism will include
+the management of software licenses, database connections,
+and any other consumable resource external to Condor.
+
+Use of the concurrency limits mechanism requires configuration variables
+to set distinct limits,
+while jobs must identify the need for a specific resource.
+
+In the configuration, a string must be chosen as a name for the
+particular resource.
+This name is used in the configuration of a \Condor{negotiator} daemon
+variable that defines the concurrency limit, or integer quantity
+available of this resource.
+For example, assume that there are 3 licenses for the X software.
+The configuration variable concurrency limit may be:
+\begin{verbatim}
+XSW_LIMIT = 3
+\end{verbatim}
+where \AdStr{XSW} is the invented name of this resource,
+which is appended with the string \MacroNI{\_LIMIT}.
+With this limit, a maximum of 3 jobs declaring that they need this
+resource may be executed concurrently.
+
+In addition to named limits, such as in the example named limit \MacroNI{XSW},
+configuration may specify a concurrency limit for all resources
+that are not covered by specifically-named limits.
+The configuration variable \Macro{CONCURRENCY\_LIMIT\_DEFAULT} sets
+this value.  For example,
+\begin{verbatim}
+CONCURRENCY_LIMIT_DEFAULT = 1
+\end{verbatim}
+sets a limit of 1 job in execution for any job that declares its
+requirement for a resource that is not named in the configuration.
+If \MacroNI{CONCURRENCY\_LIMIT\_DEFAULT} is omitted  from the
+configuration, then no limits are placed on the number of 
+concurrently executing jobs of resources for which there is no
+specifically named concurrency limit. 
+
+The job must declare its need for a resource by placing a command
+in its submit description file or adding an attribute to the
+job ClassAd.
+In the submit description file, an example job that requires
+the X software adds:
+\begin{verbatim}
+concurrency_limits = XSW
+\end{verbatim}
+This results in the job ClassAd attribute
+\begin{verbatim}
+ConcurrencyLimits = "XSW"
+\end{verbatim}
+
+The implementation of the job ClassAd attribute \Attr{ConcurrencyLimits}
+has a more general implementation.
+It is either a string or a string list.
+A list contains items delimited by space characters and comma characters.
+Therefore, a job that requires the 3 separate resources 
+named as  \AdStr{XSW}, \AdStr{y}, and  \AdStr{Z}, 
+will contain in its submit description file:
+\begin{verbatim}
+concurrency_limits = y,XSW,Z
+\end{verbatim}
+
+Additionally, a numerical value identifying the number of resources
+required may be specified in the definition of a resource,
+following the resource name by a colon character and the integer
+number of resources.
+Modifying the given example to specify that 3 of 
+the \AdStr{XSW} resource are needed results in: 
+\begin{verbatim}
+concurrency_limits = y,XSW:3,Z
+\end{verbatim}
+
+Note that the maximum for any given limit,
+as specified with the configuration variable \MacroNI{<*>\_LIMIT},
+is as strictly enforced \Bold{as possible}.
+In the presence of preemption and dropped updates from
+the \Condor{startd} daemon to the \Condor{collector} daemon,
+it is possible for the limit to be exceeded.
+Condor will never kill a job to free up a limit,
+including the case where a limit maximum is exceeded. 

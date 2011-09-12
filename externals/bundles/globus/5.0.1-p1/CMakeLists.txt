@@ -25,7 +25,7 @@ if (WITH_GLOBUS)
 	if (NOT PROPER)
 
 		###################################################
-		condor_pre_external( GT4 globus-4.0.8 "lib;include" "lib/gt4/gt4-java")
+		condor_pre_external( GT4 globus-4.0.8 "lib;include" "lib/gt4")
 		ExternalProject_Add(gt4
 					#-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GT4_VER}-java.tar.gz ${CMD_TERM}
@@ -38,12 +38,12 @@ if (WITH_GLOBUS)
 					BUILD_IN_SOURCE 1
 					#--install Step ----------
 					INSTALL_DIR ${GT4_INSTALL_LOC}/lib
-					INSTALL_COMMAND cp -r gt4-java ${GT4_INSTALL_LOC}/lib/gt4 )
+					INSTALL_COMMAND mkdir -p ${GT4_INSTALL_LOC}/lib/gt4 && cp -r gt4-java/* ${GT4_INSTALL_LOC}/lib/gt4 )
 		
 		install ( DIRECTORY ${GT4_INSTALL_LOC}/lib/gt4 DESTINATION ${C_LIB} )
 		condor_post_external( gt4 OFF OFF )
 		###################################################
-		condor_pre_external( GT42 globus-4.2.1 "lib;include" "lib/gt42/gt42-java")
+		condor_pre_external( GT42 globus-4.2.1 "lib;include" "lib/gt42")
 
 		ExternalProject_Add(gt42
 							#-- Download Step ----------
@@ -57,7 +57,7 @@ if (WITH_GLOBUS)
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${GT42_INSTALL_LOC}/lib
-							INSTALL_COMMAND cp -r gt42-java ${GT42_INSTALL_LOC}/lib/gt42 )
+							INSTALL_COMMAND mkdir -p ${GT42_INSTALL_LOC}/lib/gt42 && cp -r gt42-java/* ${GT42_INSTALL_LOC}/lib/gt42 )
 
 		install ( DIRECTORY ${GT42_INSTALL_LOC}/lib/gt42 DESTINATION ${C_LIB} )
 		condor_post_external( gt42 OFF OFF )
@@ -71,7 +71,7 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.0.1-p1 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.0.1-p5 "lib;include" "done")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
@@ -106,21 +106,37 @@ if (WITH_GLOBUS)
 
 		#CFLAGS=-I${}/include && export CFLAGS &&
 		#LDFLAGS=-L${GLOBUS_INSTALL_LOC}/lib && export LDFLAGS &&
-		set (GLOBUS_FLAGS CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export CFLAGS &&
+		if ( BUILDING_OPENSSL )
+			set (GLOBUS_FLAGS CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export CFLAGS &&
 						LDFLAGS=-L${OPENSSL_INSTALL_LOC}/lib && export LDFLAGS &&
 						OPENSSL_CFLAGS=-I${OPENSSL_INSTALL_LOC}/include && export OPENSSL_CFLAGS &&
 						OPENSSL_LDFLAGS=-L${OPENSSL_INSTALL_LOC}/lib && export OPENSSL_LDFLAGS  )
 
-		if(LINUX)
-			set (GLOBUS_FLAGS ${GLOBUS_FLAGS} && OPENSSL_LIBS='-lssl -lcrypto -ldl' && export OPENSSL_LIBS)
-		elseif(DARWIN)
-			set (GLOBUS_FLAGS ${GLOBUS_FLAGS} &&
+			set (MODIFY_LIBTOOL true)
+			set (MAKE_GRIDFTP ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
+
+			if(LINUX)
+				set (GLOBUS_FLAGS ${GLOBUS_FLAGS} && OPENSSL_LIBS='-lssl -lcrypto -ldl' && export OPENSSL_LIBS)
+			elseif(DARWIN)
+				set (GLOBUS_FLAGS ${GLOBUS_FLAGS} &&
 							OPENSSL_LIBS='-lssl -lcrypto' && export OPENSSL_LIBS &&
 							OPENSSL_LDFLAGS='-L${OPENSSL_INSTALL_LOC}/lib -Wl,-search_paths_first' && export OPENSSL_LDFLAGS &&
 							LT_MULTI_MODULE=1 && export LT_MULTI_MODULE)
-		endif()
+			endif()
 
-		set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF})
+			set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF})
+		else()
+			set (GLOBUS_FLAGS true)
+			set (GLOBUS_DEPENDS ${GT4_REF} ${GT42_REF})
+
+			if (LINUX)
+				set (MODIFY_LIBTOOL sed -i 's/^hardcode_libdir_flag_spec=.*/hardcode_libdir_flag_spec=/' ${GLOBUS_INSTALL_LOC}/sbin/libtool-*)
+				set (MAKE_GRIDFTP LD_RUN_PATH='${EXTERNALS_RPATH}' ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -verbose -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
+			else()
+				set (MODIFY_LIBTOOL true)
+				set (MAKE_GRIDFTP ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -verbose -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
+			endif()
+		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
 		ExternalProject_Add(globus
@@ -141,17 +157,21 @@ if (WITH_GLOBUS)
 								${GLOBUS_FLAGS} &&
 								./configure --prefix=${GLOBUS_INSTALL_LOC} --with-flavor=${GLOBUS_FLAVOR} &&
 								make gpt gssapi_error globus-resource-management-sdk &&
+								${MODIFY_LIBTOOL} &&
 								GLOBUS_LOCATION=${GLOBUS_INSTALL_LOC} && export GLOBUS_LOCATION &&
 								make globus_gridftp_server &&
-								${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR} &&
-								mv ${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server ${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server.dynamic
+								${MAKE_GRIDFTP}
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${GLOBUS_INSTALL_LOC}
 							INSTALL_COMMAND touch ${GLOBUS_INSTALL_LOC}/done)
 
 			## Set all the config information
-			set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libltdl_${GLOBUS_FLAVOR}.a")
+			if ( LINUX )
+				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_common_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libltdl_${GLOBUS_FLAVOR}.so")
+			else()
+				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libltdl_${GLOBUS_FLAVOR}.a")
+			endif()
 			
 			# primarily used by cream 
 			foreach (_glob_lib ${GLOBUS_FOUND})
@@ -159,28 +179,54 @@ if (WITH_GLOBUS)
 				append_var(GLOBUS_THR_FOUND "${_glob_thr_lib}")
 			endforeach(_glob_lib)
 
-			set (GLOBUS_GRID_UNIVERSE_COMMON
-			"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_io_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl_${GLOBUS_FLAVOR}.a")
+			if ( LINUX )
+				set (GLOBUS_GRID_UNIVERSE_COMMON
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_io_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl_${GLOBUS_FLAVOR}.so")
+			else()
+				set (GLOBUS_GRID_UNIVERSE_COMMON
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_io_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl_${GLOBUS_FLAVOR}.a")
+			endif()
 			
-			set (GLOBUS_GRID_UNIVERSE_GT2
-			"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol_${GLOBUS_FLAVOR}.a")
+			if ( LINUX )
+				set (GLOBUS_GRID_UNIVERSE_GT2
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol_${GLOBUS_FLAVOR}.so")
+			else()
+				set (GLOBUS_GRID_UNIVERSE_GT2
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol_${GLOBUS_FLAVOR}.a")
+			endif()
 
-			set (GLOBUS_GRID_UNIVERSE_NORDUGRID
-			"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control_${GLOBUS_FLAVOR}.a")
+			if ( LINUX )
+				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control_${GLOBUS_FLAVOR}.so")
+			else()
+				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control_${GLOBUS_FLAVOR}.a")
+			endif()
 			if ( AIX )
 				set (GLOBUS_GRID_UNIVERSE_NORDUGRID "-Wl,-bstatic;${GLOBUS_GRID_UNIVERSE_NORDUGRID};-Wl,-bdynamic")
 			endif()
 
 			condor_post_external( globus "include/${GLOBUS_FLAVOR}" OFF )
 
-			install ( PROGRAMS "${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server.dynamic" DESTINATION ${C_LIBEXEC} RENAME globus-gridftp-server )
+			install ( PROGRAMS "${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server" DESTINATION ${C_LIBEXEC} )
+			if ( CONDOR_STRIP_PACKAGES AND NOT CONDOR_PACKAGE_BUILD )
+				install( CODE "execute_process(COMMAND strip ${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/globus-gridftp-server)" )
+			endif()
+			if ( LINUX )
+				file( GLOB Libs "${GLOBUS_INSTALL_LOC}/lib/*.so*")
+				install( FILES ${Libs} DESTINATION "${EXTERNALS_LIB}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE )
+				if ( CONDOR_STRIP_PACKAGES AND NOT CONDOR_PACKAGE_BUILD )
+					file( GLOB StripFiles "${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB}/libglobus*.so*" "${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB}/libltdl*.so*" )
+					install( CODE "execute_process(COMMAND strip ${StripFiles})" )
+				endif()
+			endif()
 
 	else( NOT PROPER )
 
 		find_multiple( "globus_gss_assist;globus_gssapi_gsi;globus_gsi_proxy_core;globus_gsi_credential;globus_gsi_callback;globus_gsi_sysconfig;globus_oldgaa;globus_gsi_cert_utils;globus_openssl;globus_openssl_error;globus_proxy_ssl;globus_callout;globus_common;ltdl" GLOBUS_FOUND )
 		find_multiple( "globus_gssapi_error;globus_xio;globus_io;globus_rsl" GLOBUS_GRID_UNIVERSE_COMMON )
 		find_multiple( "globus_gass_transfer;globus_gram_client;globus_gram_protocol" GLOBUS_GRID_UNIVERSE_GT2 )
-		find_multiple( "globus_ftp_client;globus_ftp_control" GLOBUS_GRID_UNIVERSE_NORDUGRID)
+		find_multiple( "globus_ftp_control" GLOBUS_GRID_UNIVERSE_NORDUGRID)
 		if (GLOBUS_FOUND)
 		  append_var (CONDOR_EXTERNAL_INCLUDE_DIRS "/usr/include/globus;/usr/lib64/globus/include;/usr/lib/globus/include")
 		endif(GLOBUS_FOUND)

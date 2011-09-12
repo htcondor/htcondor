@@ -94,7 +94,7 @@ private:
 	char * m_instance_type;
     char * m_elastic_ip;
 	char * m_availability_zone;
-	StringList * m_ebs_volumes;
+	char * m_ebs_volumes;
 	char * m_vpc_subnet;
 	char * m_vpc_ip;
 	

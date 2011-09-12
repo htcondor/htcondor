@@ -30,27 +30,44 @@ if ( WITH_VOMS )
 			set(VOMS_LIB lib)
 		endif()
 
-	
-		condor_pre_external( VOMS voms-1.9.10_4 "include;${VOMS_LIB}" "done")
-
-		ExternalProject_Add(voms
-							DEPENDS ${EXPAT_REF} ${OPENSSL_RED} ${GLOBUS_REF} ${ZLIB_REF}
-							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${VOMS_VER}.tar.gz ${CMD_TERM}
-							DOWNLOAD_DIR ${VOMS_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/${VOMS_VER}.tar.gz
-							#--Patch step ----------
-							PATCH_COMMAND patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
+		if ( BUILDING_OPENSSL )
+			set (VOMS_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF})
+			set (VOMS_PATCH patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
 								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/makefile.patch &&
 								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
-								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh
+								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
+			set (VOMS_OPENSSL_FLAG --with-openssl-prefix=${OPENSSL_INSTALL_LOC})
+		else()
+			set (VOMS_DEPENDS ${GLOBUS_REF})
+			set (VOMS_PATCH patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure_openssl.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/configure.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/makefile.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/private.patch &&
+								patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
+								${CMAKE_CURRENT_SOURCE_DIR}/voms_file_patch.sh )
+			if ( ${SYSTEM_NAME} MATCHES "rhel3" )
+				set (VOMS_OPENSSL_FLAG --with-openssl-prefix=/usr/kerberos)
+			else()
+				set (VOMS_OPENSSL_FLAG "")
+			endif()
+		endif()
+
+		condor_pre_external( VOMS voms-1.9.10_4-p2 "include;${VOMS_LIB}" "done")
+
+		ExternalProject_Add(voms
+							DEPENDS ${VOMS_DEPENDS}
+							#-- Download Step ----------
+							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/voms-1.9.10_4.tar.gz ${CMD_TERM}
+							DOWNLOAD_DIR ${VOMS_STAGE}/dl
+							URL http://parrot.cs.wisc.edu/externals/voms-1.9.10_4.tar.gz
+							#--Patch step ----------
+							PATCH_COMMAND ${VOMS_PATCH}
 							#--Configure step ----------
 							CONFIGURE_COMMAND cd org.glite.security.voms &&
 								./configure
 								--prefix=${VOMS_INSTALL_LOC}
 								--with-api-only
-								--with-openssl-prefix=${OPENSSL_INSTALL_LOC}
-								--with-expat-prefix=${EXPAT_INSTALL_LOC}
+								${VOMS_OPENSSL_FLAG}
 								--with-globus-prefix=${GLOBUS_INSTALL_LOC}
 								--with-globus-flavor=${GLOBUS_FLAVOR} --disable-java --disable-docs --disable-glite
 							#--Build Step ----------
@@ -61,9 +78,22 @@ if ( WITH_VOMS )
 							INSTALL_COMMAND cd org.glite.security.voms && make install && touch ${VOMS_INSTALL_LOC}/done
 				)
 
-		set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.a" )
+		if ( LINUX )
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.so" )
+		else()
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.a" )
+		endif()
 
 		condor_post_external( voms include/glite/security OFF )
+
+		if ( LINUX )
+			file( GLOB Libs "${VOMS_INSTALL_LOC}/${VOMS_LIB}/*.so*")
+			install( FILES ${Libs} DESTINATION "${EXTERNALS_LIB}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE )
+			if ( CONDOR_STRIP_PACKAGES AND NOT CONDOR_PACKAGE_BUILD )
+				file( GLOB StripFiles "${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB}/libvoms*.so*" )
+				install( CODE "execute_process(COMMAND strip ${StripFiles})" )
+			endif()
+		endif()
 
 	else(NOT PROPER)
 

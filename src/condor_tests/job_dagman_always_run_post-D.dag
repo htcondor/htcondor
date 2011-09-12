@@ -1,0 +1,4 @@
+Job D_A job_dagman_always_run_post-D_A.cmd
+SCRIPT PRE D_A job_dagman_always_run_post-D_A_pre.sh
+SCRIPT POST D_A job_dagman_always_run_post-D_A_post.sh
+PRE_SKIP D_A 1

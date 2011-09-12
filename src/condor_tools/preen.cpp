@@ -49,9 +49,12 @@
 #include "../condor_privsep/condor_privsep.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
+#include "subsystem_info.h"
 
 State get_machine_state();
 
+DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL);
+extern void		_condor_set_debug_flags( const char *strflags );
 
 // Define this to check for memory leaks
 
@@ -99,7 +102,7 @@ BOOLEAN touched_recently(char const *fname,time_t delta);
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [-mail] [-remove] [-verbose]\n", MyName );
+	fprintf( stderr, "Usage: %s [-mail] [-remove] [-verbose] [-debug]\n", MyName );
 	exit( 1 );
 }
 
@@ -113,6 +116,9 @@ main( int argc, char *argv[] )
     install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	// initialize the config settings
+	config(false,false,false);
+	
 		// Initialize things
 	MyName = argv[0];
 	myDistro->Init( argc, argv );
@@ -125,6 +131,8 @@ main( int argc, char *argv[] )
 		if( (*argv)[0] == '-' ) {
 			switch( (*argv)[1] ) {
 			
+			  case 'd':
+                Termlog = 1;
 			  case 'v':
 				VerboseFlag = TRUE;
 				break;
@@ -137,11 +145,6 @@ main( int argc, char *argv[] )
 				RmFlag = TRUE;
 				break;
 
-              case 'd':
-                  Termlog = 1;
-                  dprintf_config("TOOL");
-                  break;
-
 			  default:
 				usage();
 
@@ -150,7 +153,26 @@ main( int argc, char *argv[] )
 			usage();
 		}
 	}
-
+	
+	dprintf_config("TOOL");
+	if (VerboseFlag)
+	{
+		// always append D_FULLDEBUG locally when verbose.
+		// shouldn't matter if it already exists.
+		std::string szVerbose="D_FULLDEBUG";
+		char * pval = param("TOOL_DEBUG");
+		if( pval ) {
+			szVerbose+="|";
+			szVerbose+=pval;
+			free( pval );
+		}
+		_condor_set_debug_flags( szVerbose.c_str() );
+		
+	}
+	dprintf( D_ALWAYS, "********************************\n");
+	dprintf( D_ALWAYS, "STARTING: condor_preen\n");
+	dprintf( D_ALWAYS, "********************************\n");
+	
 		// Do the file checking
 	check_spool_dir();
 	check_execute_dir();
@@ -166,6 +188,10 @@ main( int argc, char *argv[] )
 		// Clean up
 	delete BadFiles;
 
+	dprintf( D_ALWAYS, "********************************\n");
+	dprintf( D_ALWAYS, "ENDING: condor_preen\n");
+	dprintf( D_ALWAYS, "********************************\n");
+	
 	return 0;
 }
 
@@ -180,7 +206,7 @@ produce_output()
 {
 	char	*str;
 	FILE	*mailer;
-	MyString subject;
+	MyString subject,szTmp;
 	subject.sprintf("condor_preen results %s: %d old file%s found", 
 		my_full_hostname(), BadFiles->number(), 
 		(BadFiles->number() > 1)?"s":"");
@@ -193,16 +219,18 @@ produce_output()
 		mailer = stdout;
 	}
 
+	szTmp.sprintf("The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().Value());
+	dprintf(D_ALWAYS, szTmp.Value()); 
+		
 	if( MailFlag ) {
 		fprintf( mailer, "\n" );
-		fprintf( mailer,
-			 "The condor_preen process has found the following\n"
-			 "stale condor files on <%s>:\n\n", 
-			 get_local_hostname().Value() );
+		fprintf( mailer, szTmp.Value());
 	}
 
+	szTmp.sprintf("  %s\n", str);
+	dprintf(D_ALWAYS, szTmp.Value() );
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
-		fprintf( mailer, "  %s\n", str );
+		fprintf( mailer, szTmp.Value() );
 	}
 
 	if( MailFlag ) {
@@ -823,6 +851,7 @@ good_file( const char *dir, const char *name )
 {
 	if( VerboseFlag ) {
 		printf( "%s%c%s - OK\n", dir, DIR_DELIM_CHAR, name );
+		dprintf( D_ALWAYS, "%s%c%s - OK\n", dir, DIR_DELIM_CHAR, name );
 	}
 }
 
@@ -846,6 +875,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 
 	if( VerboseFlag ) {
 		printf( "%s - BAD\n", pathname.Value() );
+		dprintf( D_ALWAYS, "%s - BAD\n", pathname.Value() );
 	}
 
 	if( RmFlag ) {
@@ -854,6 +884,7 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 			removed = privsep_remove_dir( pathname.Value() );
 			if( VerboseFlag ) {
 				if( removed ) {
+					dprintf( D_ALWAYS, "%s - failed to remove directly, but succeeded via privsep switchboard\n", pathname.Value() );
 					printf( "%s - failed to remove directly, but succeeded via privsep switchboard\n", pathname.Value() );
 				}
 			}

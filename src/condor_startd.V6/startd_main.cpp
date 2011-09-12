@@ -290,6 +290,13 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
 								  (CommandHandler)command_release_claim,
 								  "command_release_claim", 0, DAEMON );
+	daemonCore->Register_Command( SUSPEND_CLAIM, "SUSPEND_CLAIM", 
+								  (CommandHandler)command_suspend_claim,
+								  "command_suspend_claim", 0, DAEMON );
+	daemonCore->Register_Command( CONTINUE_CLAIM, "CONTINUE_CLAIM", 
+								  (CommandHandler)command_continue_claim,
+								  "command_continue_claim", 0, DAEMON );	
+	
 	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
 								  "X_EVENT_NOTIFICATION",
 								  (CommandHandler)command_x_event,

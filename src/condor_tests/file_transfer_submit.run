@@ -57,47 +57,45 @@ run_test ()
 
 fails=0
 # OLD, defaults NO NONE
-#run_test "" "" 0 ; fails=$((fails + $?))
-#run_test "" NONE 0 ; fails=$((fails + $?))
-#run_test "" ON_EXIT 0 ; fails=$((fails + $?))
-#run_test "" ON_EXIT_OR_EVICT 0 ; fails=$((fails + $?))
-#run_test YES "" 1 ; fails=$((fails + $?))
-#run_test NO "" 0 ; fails=$((fails + $?))
-#run_test IF_NEEDED "" 1 ; fails=$((fails + $?))
+#run_test "" NONE 0 ; fails=`expr $fails + $?`
+#run_test YES "" 1 ; fails=`expr $fails + $?`
+#run_test IF_NEEDED "" 1 ; fails=`expr $fails + $?`
 
 # NEW, defaults IF_NEEDED ON_EXIT
-run_test "" "" 0 ; fails=$((fails + $?))
-run_test "" NONE 1 ; fails=$((fails + $?))
-run_test "" ON_EXIT 0 ; fails=$((fails + $?))
-run_test "" ON_EXIT_OR_EVICT 0 ; fails=$((fails + $?))
-run_test YES "" 0 ; fails=$((fails + $?))
-run_test NO "" 0 ; fails=$((fails + $?))
-run_test IF_NEEDED "" 0 ; fails=$((fails + $?))
+run_test "" NONE 1 ; fails=`expr $fails + $?`
+run_test YES "" 0 ; fails=`expr $fails + $?`
+run_test IF_NEEDED "" 0 ; fails=`expr $fails + $?`
 
 # General expectations -
 
-run_test YES NONE 1 ; fails=$((fails + $?))
-run_test YES ON_EXIT 0 ; fails=$((fails + $?))
-run_test YES ON_EXIT_OR_EVICT 0 ; fails=$((fails + $?))
+run_test "" "" 0 ; fails=`expr $fails + $?`
+run_test "" ON_EXIT 0 ; fails=`expr $fails + $?`
+run_test "" ON_EXIT_OR_EVICT 0 ; fails=`expr $fails + $?`
+run_test NO "" 0 ; fails=`expr $fails + $?`
 
-run_test NO NONE 0 ; fails=$((fails + $?))
-run_test NO ON_EXIT 1 ; fails=$((fails + $?))
-run_test NO ON_EXIT_OR_EVICT 1 ; fails=$((fails + $?))
+run_test YES NONE 1 ; fails=`expr $fails + $?`
+run_test YES ON_EXIT 0 ; fails=`expr $fails + $?`
+run_test YES ON_EXIT_OR_EVICT 0 ; fails=`expr $fails + $?`
 
-run_test IF_NEEDED NONE 1 ; fails=$((fails + $?))
-run_test IF_NEEDED ON_EXIT 0 ; fails=$((fails + $?))
-run_test IF_NEEDED ON_EXIT_OR_EVICT 1 ; fails=$((fails + $?))
+run_test NO NONE 0 ; fails=`expr $fails + $?`
+run_test NO ON_EXIT 1 ; fails=`expr $fails + $?`
+run_test NO ON_EXIT_OR_EVICT 1 ; fails=`expr $fails + $?`
 
-tmp=$(mktemp)
-run_test YES ON_EXIT 0 $tmp "" ; fails=$((fails + $?))
-run_test YES ON_EXIT 0 "" $tmp ; fails=$((fails + $?))
-run_test NO NONE 1 $tmp "" ; fails=$((fails + $?))
-run_test NO NONE 1 "" $tmp ; fails=$((fails + $?))
+run_test IF_NEEDED NONE 1 ; fails=`expr $fails + $?`
+run_test IF_NEEDED ON_EXIT 0 ; fails=`expr $fails + $?`
+run_test IF_NEEDED ON_EXIT_OR_EVICT 1 ; fails=`expr $fails + $?`
+
+tmp=$(mktemp submit.XXXXXX)
+echo "---"
+echo "Temp file: '$tmp'"
+if [ -z "$tmp" ]; then echo "FAILURE: mktemp failed"; fi
+run_test YES ON_EXIT 0 $tmp "" ; fails=`expr $fails + $?`
+run_test YES ON_EXIT 0 "" $tmp ; fails=`expr $fails + $?`
+run_test NO NONE 1 $tmp "" ; fails=`expr $fails + $?`
+run_test NO NONE 1 "" $tmp ; fails=`expr $fails + $?`
 rm -f $tmp
 
 echo
 echo "$fails failures"
 
 exit $fails
-
-

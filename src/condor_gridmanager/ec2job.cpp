@@ -193,10 +193,8 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
     m_elastic_ip = strdup(buff);
 	
 	buff[0] = '\0';
-    if ( jobAd->LookupString( ATTR_EC2_EBS_VOLUMES, buff ) )
-	{
-		m_ebs_volumes = new StringList (buff, ",");
-	}
+    jobAd->LookupString( ATTR_EC2_EBS_VOLUMES, buff );
+	m_ebs_volumes = strdup(buff);
 	
 	// lookup the elastic IP
     buff[0] = '\0';
@@ -1378,14 +1376,15 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 		}
 	}
 
-	if (m_ebs_volumes)
+	if (strlen(m_ebs_volumes))
 	{
 		bool bcontinue=true;
+		StringList vols(m_ebs_volumes, ",");
 		// Need to loop through here parsing the volumes which we will send to the gahp
-		m_ebs_volumes->rewind();
+		vols.rewind();
 		
 		const char *volume_str = NULL;
-		while( bcontinue && (volume_str = m_ebs_volumes->next() ) != NULL ) 
+		while( bcontinue && (volume_str = vols.next() ) != NULL ) 
 		{
 			StringList ebs_volume_params(volume_str, ":");
 			ebs_volume_params.rewind();

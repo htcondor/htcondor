@@ -188,7 +188,7 @@ int CondorFileAgent::close()
 	return 0;
 }
 
-int CondorFileAgent::read( int offset, char *data, int length )
+int CondorFileAgent::read( off_t offset, char *data, int length )
 {
 	if( is_readable() ) {
 		return local_copy->read( offset, data, length );
@@ -198,7 +198,7 @@ int CondorFileAgent::read( int offset, char *data, int length )
 	}
 }
 
-int CondorFileAgent::write( int offset, char *data, int length )
+int CondorFileAgent::write( off_t offset, char *data, int length )
 {
 	if( is_writeable() ) {
 		return local_copy->write( offset,data, length );
@@ -270,7 +270,7 @@ int CondorFileAgent::is_seekable()
 	return 1;
 }
 
-int CondorFileAgent::get_size()
+off_t CondorFileAgent::get_size()
 {
 	return local_copy->get_size();
 }

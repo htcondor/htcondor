@@ -322,11 +322,13 @@ void TimerManager::CancelAllTimers()
 // called while a handler is active (i.e. handler calls Timeout;
 // Timeout is not re-entrant).
 int
-TimerManager::Timeout()
+TimerManager::Timeout(int * pNumFired /*= NULL*/)
 {
 	int				result, timer_check_cntr;
 	time_t			now, time_sample;
 	int				num_fires = 0;	// num of handlers called in this timeout
+
+    if (pNumFired) *pNumFired = 0;
 
 	if ( in_timeout != NULL ) {
 		dprintf(D_DAEMONCORE,"DaemonCore Timeout() called and in_timeout is non-NULL\n");
@@ -494,6 +496,7 @@ TimerManager::Timeout()
 	}
 
 	dprintf( D_DAEMONCORE, "DaemonCore Timeout() Complete, returning %d \n",result);
+    if (pNumFired) *pNumFired = num_fires;
 	in_timeout = NULL;
 	return(result);
 }

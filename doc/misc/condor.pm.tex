@@ -1,0 +1,520 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:condor-pm} The Condor Perl Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Perl module}
+\index{API!Perl module}
+
+% intro and what it does
+The Condor Perl module facilitates automatic submitting and monitoring of
+Condor jobs, along with automated administration of Condor.
+The most common
+use of this module is the monitoring of Condor jobs.
+The Condor Perl module can be used as a meta scheduler for the submission
+of Condor jobs.
+
+% installation?
+% use
+% the subroutines
+The Condor Perl module provides several subroutines.
+Some of the subroutines are used as callbacks;
+an event triggers the execution of a specific subroutine.
+Other of the subroutines denote actions to be taken by Perl.
+Some of these subroutines take other subroutines as arguments.
+
+\subsubsection{Subroutines}
+\begin{description}
+	\item [\Code{Submit(submit\_description\_file)}]
+	This subroutine takes the action of submitting a job to Condor.
+	The argument is the name of a submit description file.
+	The \Condor{submit} program should be in the
+	path of the user.  If the user wishes to monitor the job with condor
+	they must specify a log file in the command file.  The cluster
+	submitted is returned. For more information
+	see the \Condor{submit} man page.
+	
+	\item [\Code{Vacate(machine)}]
+	This subroutine takes the action of sending a
+	\Condor{vacate} command to the machine specified as an argument.
+	The machine may be specified
+	either by host name, or by \Term{sinful string}.  For more information
+	see the \Condor{vacate} man page.
+
+	\item [\Code{Reschedule(machine)}]
+	This subroutine takes the action of sending a
+	\Condor{reschedule} command to the machine specified as an argument.
+	The machine may be specified either
+ 	by host name, or by \Term{sinful string}.  For more information see
+	the \Condor{reschedule} man page.
+
+	\item [\Code{Monitor(cluster)}]
+	Takes the action of monitoring this cluster.
+	It returns when all jobs in cluster terminate.
+	
+	\item [\Code{Wait()}] 
+	Takes the action of waiting until all monitor subroutines finish,
+	and then exits the Perl script.
+
+	\item [\Code{DebugOn()}]
+	Takes the action of turning debug messages on.
+	This may be useful when attempting to debug the Perl script.
+
+	\item [\Code{DebugOff()}]
+	Takes the action of turning debug messages off.
+
+	\item [\Code{RegisterEvicted(sub)}]
+	Register a subroutine (called \Code{sub})
+	to be used as a callback when a job from
+	a specified cluster is evicted.  The subroutine will be
+	called with two arguments: cluster and job. The cluster
+	and job are the cluster number and process number of the job that
+	was evicted.
+	
+	\item [\Code{RegisterEvictedWithCheckpoint(sub)}]
+	Same as RegisterEvicted except that the handler is called when the 
+	evicted job was checkpointed.
+
+	\item [\Code{RegisterEvictedWithoutCheckpoint(sub)}]
+	Same as RegisterEvicted except that the handler is called when the
+	evicted job was not checkpointed.
+
+	\item [\Code{RegisterExit(sub)}]
+	Register a termination handler that is called when a job exits.
+	The termination handler will be called with two arguments: cluster and
+	job. The cluster and job are the cluster and process numbers of the
+	existing job. 
+	
+	\item [\Code{RegisterExitSuccess(sub)}]
+	Register a termination handler that is called when a job exits without
+	errors. The termination handler will be called with two arguments: 
+	cluster and job  The cluster and job are the cluster and process
+	numbers of the existing job. 
+
+	\item [\Code{RegisterExitFailure(sub)}]
+	Register a termination handler that is called when a job exits with 
+	errors. The termination handler will be called with three arguments:
+	cluster, job and retval. The cluster and job are the cluster 
+	and process numbers of the existing job and the retval is the exit
+	code of the job.
+
+	\item [\Code{RegisterExitAbnormal(sub)}]
+	Register an termination handler that is called when a job abnormally
+	exits (segmentation fault, bus error, ...). The termination handler
+	will be called with four arguments: cluster, job  signal and
+	core. The cluster and job are the cluster and process numbers of 
+	the existing job. The signal indicates the signal that the job
+	died with and core indicates whether a core file was created and if 
+	so, what the full path to the core file is.
+
+	\item [\Code{RegisterAbort(sub)}]
+	Register a handler that is called when a job is aborted by a user.
+
+	\item [\Code{RegisterJobErr(sub)}]
+	Register a handler that is called when a job is not executable.
+
+	\item [\Code{RegisterExecute(sub)}]
+	Register an execution handler that is called whenever a job starts
+	running on a given host.  The handler is called with four arguments:
+	cluster, job  host, and sinful.  Cluster and job are the cluster and
+	process numbers for the job, host is the Internet address of the
+	machine running the job, and sinful is the Internet address and 
+	command port of the \Condor{starter} supervising the job.
+
+	\item [\Code{RegisterSubmit(sub)}]
+	Register a submit handler that is called whenever a job is submitted
+	with the given cluster.  The handler is called with cluster, job 
+	host, and sinful. Cluster and job are the cluster and
+	process numbers for the job, host is the Internet address of the
+	machine running the job, and sinful is the Internet address and
+	command port of the \Condor{schedd} responsible for the job.
+
+	\item [\Code{Monitor(cluster)}]
+	Begin monitoring this cluster. Returns when all jobs in cluster
+	terminate.  \\
+	
+	\item [\Code{Wait()}]
+	Wait until all monitors finish and exit.
+
+	\item [\Code{DebugOn()}]
+	Turn debug messages on.  This may be useful if you don't understand
+	what your script is doing.	
+
+	\item [\Code{DebugOff()}]
+	Turn debug messages off.
+
+  \item [\Code{TestSubmit(command\_file)}]
+  This subroutine submits a job to Condor for testing, and places
+  all variables from the command file into
+  the Perl hash \Code{\%submit\_info}.
+  Does not reset the state of variables, so that testing preserves
+  callbacks.
+
+  \item [\Code{SubmitDagman(DAG\_file, DAGMan\_args)}]
+  Takes the action of submitting a DAG using \Condor{dagman}.
+  The first argument is the name of the DAG input file, 
+  and the second argument is the command line arguments for 
+  \Condor{dagman}.
+  Information from the submit description file generated by
+  \Condor{dagman} is placed into the Perl hash \Code{\%submit\_info}
+  for access during callbacks.
+
+  \item [\Code{TestSubmitDagman(DAG\_file, DAGMan\_args)}]
+  This subroutine submits a \Condor{dagman} to Condor for testing,
+  and places information from the submit description file generated by
+  \Condor{dagman} into the Perl hash \Code{\%submit\_info}
+  for access during callbacks.
+  The first argument is the name of the DAG input file, 
+  and the second argument is the command line arguments for 
+  \Condor{dagman}.
+  Does not reset the state of variables, so that testing preserves
+  callbacks.
+
+  \item [\Code{RegisterEvictedWithRequeue(sub)}]
+  Register a subroutine (called \Code{sub})
+  to be used as a callback when a job from
+  a specified cluster is requeued.  The subroutine will be
+  called with two arguments: cluster and job. The cluster
+  and job are the cluster number and process number of the job that
+  was requeued.
+
+  \item [\Code{RegisterShadow(sub)}]
+  Register a subroutine (called \Code{sub})
+  to be used as a callback when a shadow exception occurs.
+
+  \item [\Code{RegisterHold(sub)}]
+  Register a subroutine (called \Code{sub})
+  to be used as a callback when a job enters the hold state.
+
+  \item [\Code{RegisterRelease(sub)}]
+  Register a subroutine (called \Code{sub})
+  to be used as a callback when a job is released.
+
+  \item [\Code{RegisterWantError(sub)}]
+  Register a subroutine (called \Code{sub})
+  to be used as a callback when a system call invoked using \Code{runCommand}
+  experiences an error.
+
+  \item [\Code{runCommand(string)}]
+  \Code{string} identifies a syscall that is invoked.
+  If the syscall exits abnormally or exits with an error, the callback
+  registered with \Procedure{RegisterWantError} is called, and
+  an error message is issued.
+
+  \item [\Code{RegisterTimed(sub, seconds)}]
+  Register a subroutine (called \Code{sub})
+  to be called back at a delay of \Code{seconds} time from
+  this registration time.  Only one callback may be registered,
+  as subsequent calls modify the timer only.
+
+  \item [\Code{RemoveTimed()}]
+  Remove the single, timed callback registered with \Procedure{RegisterTimed}.
+
+\end{description}
+
+
+\subsubsection{Examples}
+\index{Perl module!examples}
+
+The following is an example that uses the Condor Perl module.
+The example uses the submit description file 
+\File{mycmdfile.cmd} to specify the submission of a job.
+As the job is matched with a machine and begins to execute,
+a callback  subroutine (called \verb@execute@)
+sends a \Condor{vacate} signal to the job,
+and it increments a counter which keeps track of the
+number of times this callback executes.
+A second callback keeps a count of the number of times
+that the job was evicted before the job completes.
+After the job completes, the termination
+callback (called \verb@normal@) prints out a summary of what happened.
+
+\footnotesize
+\begin{verbatim}
+#!/usr/bin/perl
+use Condor;
+
+$CMD_FILE = 'mycmdfile.cmd';
+$evicts = 0;
+$vacates = 0;
+
+# A subroutine that will be used as the normal execution callback
+$normal = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    print "Job $cluster.$job exited normally without errors.\n";
+    print "Job was vacated $vacates times and evicted $evicts times\n";
+    exit(0);
+};	
+
+$evicted = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    print "Job $cluster, $job was evicted.\n";
+    $evicts++;
+    &Condor::Reschedule();	
+};
+
+$execute = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+    $host = $parameters{'host'};
+    $sinful = $parameters{'sinful'};
+
+    print "Job running on $sinful, vacating...\n";
+    &Condor::Vacate($sinful);
+    $vacates++;
+};
+
+$cluster = Condor::Submit($CMD_FILE);
+printf("Could not open. Access Denied\n");
+			break;
+&Condor::RegisterExitSuccess($normal);
+&Condor::RegisterEvicted($evicted);
+&Condor::RegisterExecute($execute);
+&Condor::Monitor($cluster);
+&Condor::Wait();
+\end{verbatim}
+\normalsize
+
+This example program will submit the command file 'mycmdfile.cmd' and attempt
+to vacate any machine that the job runs on. The termination
+handler then prints out a summary of what has happened.
+
+
+A second example Perl script facilitates the meta-scheduling of
+two of Condor jobs.
+It submits a second job if the first job successfully completes.
+
+\footnotesize
+\begin{verbatim}
+#!/s/std/bin/perl
+
+# tell Perl where to find the Condor library
+use lib '/unsup/condor/lib';
+# tell Perl to use what it finds in the Condor library
+use Condor;
+
+$SUBMIT_FILE1 = 'Asubmit.cmd';
+$SUBMIT_FILE2 = 'Bsubmit.cmd';
+
+# Callback used when first job exits without errors.
+$firstOK = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    $cluster = Condor::Submit($SUBMIT_FILE2);
+    if (($cluster) == 0)
+    {
+        printf("Could not open $SUBMIT_FILE2.\n");
+    }
+
+    &Condor::RegisterExitSuccess($secondOK);
+    &Condor::RegisterExitFailure($secondfails);
+    &Condor::Monitor($cluster);
+};	
+
+$firstfails = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    print "The first job, $cluster.$job failed, exiting with an error. \n";
+    exit(0);
+};	
+
+# Callback used when second job exits without errors.
+$secondOK = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    print "The second job, $cluster.$job successfully completed. \n";
+    exit(0);
+};	
+
+# Callback used when second job exits WITH an error.
+$secondfails = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    print "The second job ($cluster.$job) failed. \n";
+    exit(0);
+};	
+
+
+$cluster = Condor::Submit($SUBMIT_FILE1);
+if (($cluster) == 0)
+{
+    printf("Could not open $SUBMIT_FILE1. \n");
+}
+&Condor::RegisterExitSuccess($firstOK);
+&Condor::RegisterExitFailure($firstfails);
+
+
+&Condor::Monitor($cluster);
+&Condor::Wait();
+\end{verbatim}
+\normalsize
+
+Some notes are in order about this example.
+The same task could be accomplished using the Condor DAGMan
+metascheduler.
+The first job is the parent, and the second job is the child.
+The input file to DAGMan is significantly simpler than this
+Perl script.
+
+A third example using the Condor Perl module
+expands upon the second example.
+Whereas the second example could have been more easily
+implemented using DAGMan, this third example shows
+the versatility of using Perl as a metascheduler.
+
+In this example, the result generated from the successful completion of
+the first job are used to decide which subsequent job should be
+submitted.
+This is a very simple example of a branch and bound technique,
+to focus the search for a problem solution.
+
+\footnotesize
+\begin{verbatim}
+#!/s/std/bin/perl
+
+# tell Perl where to find the Condor library
+use lib '/unsup/condor/lib';
+# tell Perl to use what it finds in the Condor library
+use Condor;
+
+$SUBMIT_FILE1 = 'Asubmit.cmd';
+$SUBMIT_FILE2 = 'Bsubmit.cmd';
+$SUBMIT_FILE3 = 'Csubmit.cmd';
+
+# Callback used when first job exits without errors.
+$firstOK = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    # open output file from first job, and read the result
+    if ( -f "A.output" )
+    {
+        open(RESULTFILE, "A.output") or die "Could not open result file.";
+        $result = <RESULTFILE>;
+        close(RESULTFILE);
+        # next job to submit is based on output from first job
+        if ($result < 100)
+        {
+            $cluster = Condor::Submit($SUBMIT_FILE2);
+            if (($cluster) == 0)
+            {
+                printf("Could not open $SUBMIT_FILE2.\n");
+            }
+
+            &Condor::RegisterExitSuccess($secondOK);
+            &Condor::RegisterExitFailure($secondfails);
+            &Condor::Monitor($cluster);
+        }
+        else
+        {
+            $cluster = Condor::Submit($SUBMIT_FILE3);
+            if (($cluster) == 0)
+            {
+                printf("Could not open $SUBMIT_FILE3.\n");
+            }
+
+            &Condor::RegisterExitSuccess($thirdOK);
+            &Condor::RegisterExitFailure($thirdfails);
+            &Condor::Monitor($cluster);
+        }
+    }
+    else
+    {
+        
+        printf("Results file does not exist.\n");
+    }
+};	
+
+$firstfails = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    print "The first job, $cluster.$job failed, exiting with an error. \n";
+    exit(0);
+};	
+
+
+# Callback used when second job exits without errors.
+$secondOK = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    print "The second job, $cluster.$job successfully completed. \n";
+    exit(0);
+};	
+
+
+# Callback used when third job exits without errors.
+$thirdOK = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    print "The third job, $cluster.$job successfully completed. \n";
+    exit(0);
+};	
+
+
+# Callback used when second job exits WITH an error.
+$secondfails = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    print "The second job ($cluster.$job) failed. \n";
+    exit(0);
+};	
+
+# Callback used when third job exits WITH an error.
+$thirdfails = sub
+{
+    %parameters = @_;
+    $cluster = $parameters{'cluster'};
+    $job = $parameters{'job'};
+
+    print "The third job ($cluster.$job) failed. \n";
+    exit(0);
+};	
+
+
+$cluster = Condor::Submit($SUBMIT_FILE1);
+if (($cluster) == 0)
+{
+    printf("Could not open $SUBMIT_FILE1. \n");
+}
+&Condor::RegisterExitSuccess($firstOK);
+&Condor::RegisterExitFailure($firstfails);
+
+
+&Condor::Monitor($cluster);
+&Condor::Wait();
+\end{verbatim}
+\normalsize
