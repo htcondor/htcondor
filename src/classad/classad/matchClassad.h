@@ -23,7 +23,7 @@
 
 #include "classad/classad.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 /** Special case of a ClassAd which make it easy to do matching.  
     The top-level ClassAd equivalent to the following, with some
@@ -220,6 +220,6 @@ class MatchClassAd : public ClassAd
 		bool EvalMatchExpr(ExprTree *match_expr);
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #endif

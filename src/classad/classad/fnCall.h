@@ -25,7 +25,7 @@
 #include <vector>
 #include "classad/classad.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 typedef std::vector<ExprTree*> ArgumentList;
 
@@ -207,6 +207,6 @@ class FunctionCall : public ExprTree
  	//static bool doReal(const char*,const ArgumentList&,EvalState&,Value&);
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_FN_CALL_H__

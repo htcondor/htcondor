@@ -27,7 +27,7 @@
 #include <utility>	// for pair template
 #include <string>
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 /// This converts a ClassAd into an XML string representing the %ClassAd
 class ClassAdXMLUnParser
@@ -67,6 +67,6 @@ class ClassAdXMLUnParser
 };
 
 
-END_NAMESPACE // classad
+} // classad
 
 #endif /*__CLASSAD_XMLSINK_H__ */

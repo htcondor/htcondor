@@ -115,7 +115,7 @@ QuillErrCode FILESQL::file_open()
 		return QUILL_FAILURE;
 	}
 
-	outfiledes = safe_open_wrapper(outfilename,fileflags,0644);
+	outfiledes = safe_open_wrapper_follow(outfilename,fileflags,0644);
 
 	if(outfiledes < 0)
 	{

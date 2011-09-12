@@ -23,7 +23,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 ExprList::
 ExprList()
@@ -490,4 +490,4 @@ IsAfterLast( ) const
 	return( l && itr == l->exprList.end( ) );
 }
 
-END_NAMESPACE // classad
+} // classad

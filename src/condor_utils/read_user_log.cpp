@@ -482,7 +482,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 		}
 	}
 
-	m_fd = safe_open_wrapper( m_state->CurPath(),
+	m_fd = safe_open_wrapper_follow( m_state->CurPath(),
 							  m_read_only ? O_RDONLY : O_RDWR,
 							  0 );
 	if ( m_fd < 0 ) {

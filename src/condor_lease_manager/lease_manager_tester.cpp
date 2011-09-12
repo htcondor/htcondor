@@ -27,7 +27,6 @@
 #include "dc_lease_manager.h"
 #include "simple_arg.h"
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
 //#include "conversion.h"

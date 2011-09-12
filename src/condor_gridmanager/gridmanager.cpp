@@ -45,10 +45,13 @@
 
 #include "amazonjob.h"
 #include "ec2job.h"
-#include "dcloudjob.h"
 
 #if !defined(WIN32)
 #  include "creamjob.h"
+#endif
+
+#if defined( LINUX )
+#  include "dcloudjob.h"
 #endif
 
 #define QMGMT_TIMEOUT 15
@@ -357,6 +360,7 @@ Init()
 	new_type->CreateFunc = AmazonJobCreate;
 	jobTypes.Append( new_type );
 	
+#if defined( LINUX )
 	new_type = new JobType;
 	new_type->Name = strdup( "EC2" );
 	new_type->InitFunc = EC2JobInit;
@@ -372,6 +376,7 @@ Init()
 	new_type->AdMatchFunc = DCloudJobAdMatch;
 	new_type->CreateFunc = DCloudJobCreate;
 	jobTypes.Append( new_type );
+#endif
 	
 	new_type = new JobType;
 	new_type->Name = strdup( "Unicore" );

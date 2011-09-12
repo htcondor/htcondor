@@ -30,11 +30,11 @@ using namespace std;
 #define CLASS class
 #endif
 
-BEGIN_NAMESPACE(classad)
+namespace classad {
 
 template CLASS map<string, Variable *>;
 template CLASS map<string, ClassAd *>;
 template CLASS map<string, ClassAdCollection *>;
 
-END_NAMESPACE
+}
 

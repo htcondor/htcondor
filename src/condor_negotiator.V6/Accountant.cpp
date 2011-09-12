@@ -104,7 +104,6 @@ void Accountant::Initialize(GroupEntry* root_group)
   NiceUserPriorityFactor=10000000;
   RemoteUserPriorityFactor=10000;
   DefaultPriorityFactor=1;
-  HalfLifePeriod=86400;
 
   // Set up HGQ accounting-group related information
   hgq_root_group = root_group;
@@ -121,14 +120,7 @@ void Accountant::Initialize(GroupEntry* root_group)
       }
   }
   
- 
- // get half life period
-  
-  tmp = param("PRIORITY_HALFLIFE");
-  if(tmp) {
-	  HalfLifePeriod=(float)atof(tmp);
-	  free(tmp);
-  }
+  HalfLifePeriod = param_double("PRIORITY_HALFLIFE");
 
   // get nice users priority factor
 

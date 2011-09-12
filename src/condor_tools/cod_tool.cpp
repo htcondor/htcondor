@@ -875,7 +875,7 @@ parseArgv( int argc, char* argv[] )
 		if( ! strcmp(jobad_path, "-") ) {
 			JOBAD_PATH = stdin;
 		} else {
-			JOBAD_PATH = safe_fopen_wrapper( jobad_path, "r" );
+			JOBAD_PATH = safe_fopen_wrapper_follow( jobad_path, "r" );
 			if( !JOBAD_PATH ) {
 				fprintf( stderr,
 						 "ERROR: failed to open '%s': errno %d (%s)\n",
@@ -886,7 +886,7 @@ parseArgv( int argc, char* argv[] )
 	}
 
 	if( classad_path ) { 
-		CA_PATH = safe_fopen_wrapper( classad_path, "w" );
+		CA_PATH = safe_fopen_wrapper_follow( classad_path, "w" );
 		if( !CA_PATH ) {
 			fprintf( stderr, 
 					 "ERROR: failed to open '%s': errno %d (%s)\n",

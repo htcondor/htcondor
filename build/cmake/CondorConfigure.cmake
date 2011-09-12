@@ -128,6 +128,7 @@ if( NOT WINDOWS)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
+	find_library( LIBUUID_FOUND uuid )
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_library( LIBRESOLV_PATH resolv )
     if( NOT "${LIBRESOLV_PATH}" MATCHES "-NOTFOUND" )
@@ -480,6 +481,7 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
 if (NOT WINDOWS)
 
@@ -494,7 +496,7 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/expat/2.0.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.8)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libdeltacloud/0.9)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.37)
 
 	# globus is an odd *beast* which requires a bit more config.
@@ -584,6 +586,8 @@ include_directories(${CONDOR_SOURCE_DIR}/src/condor_io)
 include_directories(${CONDOR_SOURCE_DIR}/src/h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/h)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
+include_directories(${CONDOR_SOURCE_DIR}/src/safefile)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/safefile)
 if (WANT_CONTRIB)
     include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
 endif(WANT_CONTRIB)

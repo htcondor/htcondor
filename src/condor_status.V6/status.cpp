@@ -579,7 +579,7 @@ firstPass (int argc, char *argv[])
 			}
 			i += 1;
 			target = argv[i];
-			FILE *targetFile = safe_fopen_wrapper(target, "r");
+			FILE *targetFile = safe_fopen_wrapper_follow(target, "r");
 			int iseof, iserror, empty;
 			targetAd = new ClassAd(targetFile, "\n\n", iseof, iserror, empty);
 			fclose(targetFile);

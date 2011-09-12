@@ -205,9 +205,9 @@ get_std_fd(int std_fd, char* name)
 		else {
 			flags = O_WRONLY | O_CREAT | O_TRUNC;
 		}
-		new_fd = safe_open_wrapper(name, flags, 0600);
+		new_fd = safe_open_wrapper_follow(name, flags, 0600);
 		if (new_fd == -1) {
-			err.sprintf("safe_open_wrapper error on %s: %s",
+			err.sprintf("safe_open_wrapper_follow error on %s: %s",
 			            name,
 			            strerror(errno));
 			fatal_error();

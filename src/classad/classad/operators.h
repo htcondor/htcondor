@@ -23,7 +23,7 @@
 
 #include "classad/exprTree.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 /** Represents a node of the expression tree which is an operation applied to
 	expression operands, like 3 + 2
@@ -224,6 +224,6 @@ class Operation : public ExprTree
 		ExprTree	*child3;
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_OPERATORS_H__

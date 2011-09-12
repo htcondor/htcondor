@@ -26,7 +26,7 @@
 #include <string>
 #include "condor_io.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 class ClassAdCollectionServer;
 class ExprTree;
@@ -72,7 +72,7 @@ private:
 	ClassAdParser				parser;
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #endif
 

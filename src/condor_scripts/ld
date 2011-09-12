@@ -203,15 +203,15 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
      fi
      shift
   done
-  # Now loop through all the ld arguments
+
   for argument in $newargs
   do
+
 	 # Strip off any pathnames so we can recognize crt[01].o sans paths...
      brokenbase=`basename /stupidbasename/$argument`
      if [ A$brokenbase = A ]; then
         brokenbase=$argument
      fi
-
 
      case $brokenbase in
 
@@ -253,8 +253,29 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 			ldargs=`echo $ldargs $argument`
 		fi
 		;;
-		
 	
+	-dynamic-linker )
+		if [ $os = "Linux" ]; then
+			# don't save this since we're not dynamically linking
+			ldargs=`echo $ldargs`
+			ignore=true
+		fi
+		;;
+	
+	-ldl )
+		if [ $os = "Linux" ]; then
+			# don't save this since we're not dynamically linking
+			ldargs=`echo $ldargs`
+		fi
+		;;
+	
+	--as-needed | --no-as-needed )
+		if [ $os = "Linux" ]; then
+			# don't save this since we're not dynamically linking
+			ldargs=`echo $ldargs`
+		fi
+		;;
+
 	 # Throw out options that ask for shared libs on gcc3+ with linux
 	 -shared )
 	 		if [ $os = "Linux" ]; then

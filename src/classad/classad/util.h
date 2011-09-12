@@ -23,7 +23,7 @@
 
 #include "classad/common.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 // macro for recognising octal digits
 #define isodigit(x) (( (x) - '0' < 8 ) && ((x) - '0' >= 0))
@@ -66,6 +66,6 @@ bool is_leap_year(int year);
 int classad_isinf(double x);
 int classad_isnan(double x);
 
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_UTIL_H__

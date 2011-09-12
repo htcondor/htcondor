@@ -387,7 +387,7 @@ drop_addr_file()
 	if( addrFile ) {
 		MyString newAddrFile;
 		newAddrFile.sprintf("%s.new",addrFile);
-		if( (ADDR_FILE = safe_fopen_wrapper(newAddrFile.Value(), "w")) ) {
+		if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
 			// Always prefer the local, private address if possible.
 			const char* addr = daemonCore->privateNetworkIpAddr();
 			if (!addr) {
@@ -422,7 +422,7 @@ drop_pid_file()
 		return;
 	}
 
-	if( (PID_FILE = safe_fopen_wrapper(pidFile, "w")) ) {
+	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "w")) ) {
 		fprintf( PID_FILE, "%lu\n", 
 				 (unsigned long)daemonCore->getpid() ); 
 		fclose( PID_FILE );
@@ -458,7 +458,7 @@ do_kill()
 			pidFile = tmp;
 		}
 	}
-	if( (PID_FILE = safe_fopen_wrapper(pidFile, "r")) ) {
+	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "r")) ) {
 		fscanf( PID_FILE, "%lu", &tmp_ul_int ); 
 		pid = (pid_t)tmp_ul_int;
 		fclose( PID_FILE );
@@ -984,7 +984,7 @@ handle_fetch_log( Service *, int, ReliSock *stream )
 		}
 	}
 
-	int fd = safe_open_wrapper(full_filename.Value(),O_RDONLY);
+	int fd = safe_open_wrapper_follow(full_filename.Value(),O_RDONLY);
 	if(fd<0) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.Value());
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
@@ -1035,7 +1035,7 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 		stream->end_of_message();
 		return FALSE;
 	}
-	int fd = safe_open_wrapper(history_file,O_RDONLY);
+	int fd = safe_open_wrapper_follow(history_file,O_RDONLY);
 	free(history_file);
 	if(fd<0) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: can't open history file\n");
@@ -1084,7 +1084,7 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 		MyString fullPath(dirName);
 		fullPath += "/";
 		fullPath += filename;
-		int fd = safe_open_wrapper(fullPath.Value(),O_RDONLY);
+		int fd = safe_open_wrapper_follow(fullPath.Value(),O_RDONLY);
 		if (fd > 0) {
 			filesize_t size;
 			stream->put_file(&size, fd);
@@ -1364,11 +1364,6 @@ unix_sigusr2(int)
 #endif /* ! WIN32 */
 
 
-
-void
-classad_debug_dprintf(const char *s) {
-	dprintf(D_FULLDEBUG, "%s", s);
-}
 
 void
 dc_reconfig()
@@ -1932,7 +1927,6 @@ int main( int argc, char** argv )
 		
 			// Actually set up logging.
 		dprintf_config(get_mySubSystem()->getName() );
-		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -1993,7 +1987,7 @@ int main( int argc, char** argv )
 		// /dev/null.
 
 		if ( get_mySubSystem()->isType( SUBSYSTEM_TYPE_MASTER ) ) {
-			int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
+			int	fd_null = safe_open_wrapper_follow( NULL_FILE, O_RDWR );
 			if ( fd_null < 0 ) {
 				fprintf( stderr, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
 				dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
@@ -2049,7 +2043,6 @@ int main( int argc, char** argv )
 		
 			// Actually set up logging.
 		dprintf_config(get_mySubSystem()->getName() );
-		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 	}
 
 		// Now that we have the daemonCore object, we can finally

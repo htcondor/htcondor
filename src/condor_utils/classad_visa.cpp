@@ -102,7 +102,7 @@ classad_visa_write(ClassAd* ad,
 	filename.sprintf("jobad.%d.%d", cluster, proc);
 	ASSERT(dir_path != NULL);
 	file_path = dircat(dir_path, filename.Value());
-	while (-1 == (fd = safe_open_wrapper(file_path,
+	while (-1 == (fd = safe_open_wrapper_follow(file_path,
 	                                     O_WRONLY|O_CREAT|O_EXCL))) {
 		if (EEXIST != errno) {
 			dprintf(D_ALWAYS | D_FAILURE,

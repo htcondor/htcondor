@@ -7493,15 +7493,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	
 #endif
 	
-	if ((inouterr[0] = safe_open_wrapper(input.Value(), O_RDONLY, S_IREAD)) < 0) {
+	if ((inouterr[0] = safe_open_wrapper_follow(input.Value(), O_RDONLY, S_IREAD)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input.Value(), errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[1] = safe_open_wrapper(output.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
+	if ((inouterr[1] = safe_open_wrapper_follow(output.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output.Value(), errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[2] = safe_open_wrapper(error.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
+	if ((inouterr[2] = safe_open_wrapper_follow(error.Value(), O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, S_IREAD|S_IWRITE)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error.Value(), errno );
 		cannot_open_files = true;
 	}
@@ -8671,7 +8671,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 void
 send_vacate(match_rec* match,int cmd)
 {
-	classy_counted_ptr<DCStartd> startd = new DCStartd( match->peer );
+	classy_counted_ptr<DCStartd> startd = new DCStartd( match->description(),NULL,match->peer,match->claimId() );
 	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( cmd, match->claimId() );
 
 	msg->setSuccessDebugLevel(D_ALWAYS);
@@ -11351,7 +11351,7 @@ Scheduler::AlreadyMatched(PROC_ID* id)
 bool
 sendAlive( match_rec* mrec )
 {
-	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->peer );
+	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->description(),NULL,mrec->peer,mrec->claimId() );
 	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( ALIVE, mrec->claimId() );
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
@@ -12777,7 +12777,7 @@ Scheduler::claimLocalStartd()
 		claim_id[0] = '\0';	// so we notice if we fail to read
 			// note: claim file written w/ condor priv by the startd
 		priv_state old_priv = set_condor_priv(); 
-		FILE* fp=safe_fopen_wrapper(file_name,"r");
+		FILE* fp=safe_fopen_wrapper_follow(file_name,"r");
 		if ( fp ) {
 			fscanf(fp,"%150s\n",claim_id);
 			fclose(fp);

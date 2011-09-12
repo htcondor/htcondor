@@ -854,7 +854,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 
 	// Read the persisted file (if specified)
 	if ( opts->m_persistFile ) {
-		FILE	*fp = safe_fopen_wrapper( opts->m_persistFile, "r" );
+		FILE	*fp = safe_fopen_wrapper_follow( opts->m_persistFile, "r" );
 		if ( fp ) {
 			int		cluster, proc, subproc;
 			if ( 3 == fscanf( fp, "%d.%d.%d", &cluster, &proc, &subproc ) ) {
@@ -868,7 +868,7 @@ GlobalOptions::parseArgs( int argc, const char **argv )
 
 	// Update the persisted file (if specified)
 	if ( opts->m_persistFile ) {
-		FILE	*fp = safe_fopen_wrapper( opts->m_persistFile, "w" );
+		FILE	*fp = safe_fopen_wrapper_follow( opts->m_persistFile, "w" );
 		if ( fp ) {
 			fprintf( fp, "%d.%d.%d",
 					 opts->m_cluster+1, opts->m_proc, opts->m_subProc );

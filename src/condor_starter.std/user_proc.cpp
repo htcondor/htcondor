@@ -1320,12 +1320,12 @@ open_std_file( int fd )
 
 	/* Now, really open the file. */
 
-	real_fd = safe_open_wrapper(file_name,flags,0);
+	real_fd = safe_open_wrapper_follow(file_name,flags,0);
 	if(real_fd<0) {
 		// Some things, like /dev/null, can't be truncated, so
 		// try again w/o O_TRUNC. Jim, Todd and Derek 5/26/99
 		flags = flags & ~O_TRUNC;
-		real_fd = safe_open_wrapper(file_name,flags,0);
+		real_fd = safe_open_wrapper_follow(file_name,flags,0);
 	}
 
 	if(real_fd<0) {

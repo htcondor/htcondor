@@ -355,7 +355,7 @@ stdin_password(const char * prompt) {
 bool
 read_file (const char * filename, char *& data, int & size) {
 
-	int fd = safe_open_wrapper(filename, O_RDONLY);
+	int fd = safe_open_wrapper_follow(filename, O_RDONLY);
 	if (fd == -1) {
 		return false;
 	}

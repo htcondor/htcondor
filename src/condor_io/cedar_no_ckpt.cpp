@@ -72,7 +72,7 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 
 	// Open the file
 	errno = 0;
-	fd = ::safe_open_wrapper( destination, flags, 0600 );
+	fd = ::safe_open_wrapper_follow( destination, flags, 0600 );
 
 	// Handle open failure; it's bad....
 	if ( fd < 0 )
@@ -272,7 +272,7 @@ ReliSock::put_file( filesize_t *size, const char *source, filesize_t offset)
 	int result;
 
 	// Open the file, handle failure
-	fd = safe_open_wrapper(source, O_RDONLY | O_LARGEFILE | _O_BINARY | _O_SEQUENTIAL, 0);
+	fd = safe_open_wrapper_follow(source, O_RDONLY | O_LARGEFILE | _O_BINARY | _O_SEQUENTIAL, 0);
 	if ( fd < 0 )
 	{
 		dprintf(D_ALWAYS,
@@ -594,7 +594,7 @@ ReliSock::get_x509_delegation( filesize_t *size, const char *destination,
 
 	if ( flush_buffers ) {
 		int rc = 0;
-		int fd = safe_open_wrapper( destination, O_WRONLY, 0 );
+		int fd = safe_open_wrapper_follow( destination, O_WRONLY, 0 );
 		if ( fd < 0 ) {
 			rc = fd;
 		} else {

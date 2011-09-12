@@ -27,7 +27,7 @@ NamedPipeWatchdog::initialize(const char* path)
 {
 	ASSERT(!m_initialized);
 
-	m_pipe_fd = safe_open_wrapper(path, O_RDONLY | O_NONBLOCK);
+	m_pipe_fd = safe_open_wrapper_follow(path, O_RDONLY | O_NONBLOCK);
 	if (m_pipe_fd == -1) {
 		dprintf(D_ALWAYS,
 		        "error opening watchdog pipe %s: %s (%d)\n",

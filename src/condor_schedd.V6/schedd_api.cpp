@@ -229,7 +229,7 @@ Job::declare_file(const MyString &name,
 	jobFile.name = name;
 
 	jobFile.file =
-		safe_open_wrapper((spoolDirectory + DIR_DELIM_STRING + jobFile.name).Value(),
+		safe_open_wrapper_follow((spoolDirectory + DIR_DELIM_STRING + jobFile.name).Value(),
 			 O_WRONLY | O_CREAT | _O_BINARY,
 			 0600);
 	if (-1 != jobFile.file) {
@@ -458,7 +458,7 @@ Job::get_file(const MyString &name,
               unsigned char *&data,
 			  CondorError &errstack)
 {
-	int file = safe_open_wrapper((spoolDirectory + DIR_DELIM_STRING + name).Value(),
+	int file = safe_open_wrapper_follow((spoolDirectory + DIR_DELIM_STRING + name).Value(),
 					O_RDONLY | _O_BINARY,
 					0);
 

@@ -26,9 +26,6 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
-#ifndef WANT_CLASSAD_NAMESPACE
-# define WANT_CLASSAD_NAMESPACE
-#endif
 #include "classad/classad_distribution.h"
 
 #include "lease_manager_lease.h"

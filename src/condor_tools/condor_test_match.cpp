@@ -462,7 +462,7 @@ MatchTest::read_classad_file(const char *filename, ExprTree *constraint_expr, bo
     FILE *file;
     long ad_pos = 0;
 
-    file = safe_fopen_wrapper(filename, "r", O_LARGEFILE);
+    file = safe_fopen_wrapper_follow(filename, "r", O_LARGEFILE);
     if (file == NULL) {
         fprintf(stderr, "Can't open file of ClassAds: %s\n", filename);
         return false;

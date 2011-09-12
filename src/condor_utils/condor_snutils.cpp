@@ -205,7 +205,7 @@ vprintf_length(const char *format, va_list args)
 	static FILE  *null_output = NULL;
 
 	if(null_output == NULL) {
-		null_output = safe_fopen_wrapper((const char*)NULL_FILE, "w", 0644);
+		null_output = safe_fopen_wrapper_follow((const char*)NULL_FILE, "w", 0644);
 		if(NULL == null_output) {
 			/* We used to return -1 in this case, but realistically, 
 			 * what is our caller going to do?  Indeed, at least some

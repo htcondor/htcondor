@@ -1079,7 +1079,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 //		JobQueue->AppendLog(log);
 		JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 	} else {
-		if ( next_cluster_num > stored_cluster_num ) {
+        // This sanity check is not applicable if a maximum cluster value was set,  
+        // since in that case wrapped cluster-ids are a valid condition.
+		if ((next_cluster_num > stored_cluster_num) && (cluster_maximum_val <= 0)) {
 			// Oh no!  Somehow the header ad in the queue says to reuse cluster nums!
 			EXCEPT("JOB QUEUE DAMAGED; header ad NEXT_CLUSTER_NUM invalid");
 		}
@@ -2593,7 +2595,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	}
 
 	// Create the file
-	int fd = safe_open_wrapper(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
+	int fd = safe_open_wrapper_follow(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -2678,7 +2680,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	
 	MyString filename;
 	filename.sprintf( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
-	int fd = safe_open_wrapper(filename.Value(), O_RDONLY);
+	int fd = safe_open_wrapper_follow(filename.Value(), O_RDONLY);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;

@@ -120,7 +120,7 @@ ClassAdLogParser::openFile() {
 #ifdef _NO_CONDOR_
     log_fp = fopen(job_queue_name, "r");
 #else
-    log_fp = safe_fopen_wrapper(job_queue_name, "r");
+    log_fp = safe_fopen_wrapper_follow(job_queue_name, "r");
 #endif
 
     if (log_fp == NULL) {
