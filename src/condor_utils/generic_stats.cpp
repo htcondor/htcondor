@@ -555,6 +555,96 @@ void generic_stats_force_refs()
    dummy.AddProbe("",pd,NULL,0);
 };
 
+template <class T>
+stats_histogram<T>::~stats_histogram()
+{
+		delete [] data;
+		delete [] levels;
+}
+template<class T>
+stats_histogram<T>::stats_histogram(int num,T* ilevels) : cItems(num)
+{
+	if(ilevels){
+		data = new int[cItems+2];
+		levels = new T[cItems];
+		for(int i=0;i<cItems;++i){
+			levels[i] = ilevels[i];
+			data[i] = 0;
+		}
+	}
+}
+template<class T>
+T stats_histogram<T>::get_level(int n) const
+{
+	if(0 <= n && n < cItems){
+		return levels[n];
+	}
+	if(n >= cItems) {
+		return std::numeric_limits<T>::max();
+	} else {
+		return std::numeric_limits<T>::min();
+	}
+}
+
+template<class T>
+bool stats_histogram<T>::set_level(int n, T val)
+{
+	bool ret = false;
+	if(0 < n && n < cItems - 1){
+		if(val > levels[n-1] && val < levels[n+1]) {
+			levels[n] = val;
+			Clear();
+			ret = true;
+		}
+	} else if(n == 0 && cItems >=2 ) {
+		if(val < levels[1]){
+			levels[0] = val;
+			Clear();
+			ret = true;
+		}
+	} else if(n == cItems - 1 && cItems >= 2) {
+		if(val > levels[n-1]) {
+			levels[n] = val;
+			Clear();
+			ret = true;
+		}
+	}
+	return ret;
+}	
+
+template<class T>
+void stats_histogram<T>::Clear()
+{
+	for(int i=0;i<cItems;++i){
+		data[i] = 0;
+	}
+	return true;
+}
+
+template<class T>
+T stats_histogram<T>::Add(T val)
+{
+	if(val < levels[0]){
+		++data[0];
+	} else if(val >= levels[cItems - 1]){
+		++data[cItems];
+	} else {
+		int count = cItems - 1;
+		for(int i=1;i<=count;++i){
+			if(val >= levels[i-1] && val < levels[i]){
+				++data[i];
+			}
+		}
+	}
+	return val;
+}
+
+template<class T>
+void stats_histogram<T>::Publish(ClassAd& ad, const char* pattr, int flags) const 
+{
+	
+}
+
 //
 // This is how you use the generic_stats functions.
 #ifdef UNIT_TESTS

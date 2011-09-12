@@ -780,6 +780,22 @@ public:
    static void Delete(stats_recent_counter_timer * pthis);
 };
 
+template <class T>
+class stats_histogram : public stats_entry_base {
+public:
+	static const int unit = IS_HISTOGRAM | stats_entry_type<T>::id;
+	~stats_histogram();
+	stats_histogram(int num,T* ilevels = 0);
+	T get_level(int n) const;
+	bool set_level(int n, T val);
+	void Clear();
+	T Add(T val);
+	void Publish(ClassAd& ad, const char* pattr, int flags) const;
+private:
+	int cItems;
+	int* data;
+	T* levels;
+};
 // a helper function for determining if enough time has passed so that we
 // should Advance the recent buffers.  returns an Advance count that you
 // should pass to the AdvancBy methods of your stats_entry_recent<T> counters
