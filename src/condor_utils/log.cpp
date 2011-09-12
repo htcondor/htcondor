@@ -46,32 +46,35 @@ int
 LogRecord::readword(FILE *fp, char * &str)
 {
 	int		i, bufsize = 1024;
-	signed char	*buf = (signed char *)malloc(bufsize);
+	char	*buf = (char *)malloc(bufsize);
+	int ch;
 
 	// ignore leading whitespace but don't pass newline
 	do {
-		buf[0] = fgetc( fp );
-		if( buf[0] == EOF && !feof( fp ) ) {
+		ch = fgetc( fp );
+		if( ch == EOF ) {
 			free( buf );
 			return( -1 );
 		}
-	} while (isspace(buf[0]) && buf[0]!=EOF && buf[0]!='\n' );
+		buf[0] = ch;
+	} while (isspace(buf[0]) && buf[0]!='\n' );
 
 	// read until whitespace
-	for (i = 1; !isspace(buf[i-1]) && buf[i-1]!='\0' && buf[i-1]!=EOF; i++) {
+	for (i = 1; !isspace(buf[i-1]); i++) {
 		if (i == bufsize) {
-			buf = (signed char *)realloc(buf, bufsize*2);
+			buf = (char *)realloc(buf, bufsize*2);
 			bufsize *= 2;
 		} 
-		buf[i] = fgetc( fp );
-		if( buf[i] == EOF && !feof( fp ) ) {
+		ch = fgetc( fp );
+		if( ch == EOF || ch == '\0' ) {
 			free( buf );
 			return( -1 );
 		}
+		buf[i] = ch;
 	}
 
 		// no input is also an error
-	if( feof( fp ) || i==1 ) {
+	if( i==1 ) {
 		free( buf );
 		return( -1 );
 	}
@@ -87,30 +90,33 @@ int
 LogRecord::readline(FILE *fp, char * &str)
 {
 	int		i, bufsize = 1024;
-	signed char	*buf = (signed char *)malloc(bufsize);
+	char	*buf = (char *)malloc(bufsize);
+	int ch;
 
 	// ignore one leading whitespace character but don't pass newline
-	buf[0] = fgetc( fp );
-	if( buf[0] == EOF && !feof( fp ) ) {
+	ch = fgetc( fp );
+	if( ch == EOF ) {
 		free( buf );
 		return( -1 );
 	}
+	buf[0] = ch;
 
 	// read until newline
-	for (i = 1; buf[i-1]!='\n' && buf[i-1] != '\0' && buf[i-1] != EOF; i++) {
+	for (i = 1; buf[i-1]!='\n'; i++) {
 		if (i == bufsize) {
-			buf = (signed char *)realloc(buf, bufsize*2);
+			buf = (char *)realloc(buf, bufsize*2);
 			bufsize *= 2;
 		} 
-		buf[i] = fgetc( fp );
-		if( buf[i] == EOF && !feof( fp ) ) {
+		ch = fgetc( fp );
+		if( ch == EOF || ch == '\0' ) {
 			free( buf );
 			return( -1 );
 		}
+		buf[i] = ch;
 	}
 
 		// treat no input as newline
-	if( feof( fp ) || i==1 ) {
+	if( i==1 ) {
 		free( buf );
 		return( -1 );
 	}
