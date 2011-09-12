@@ -1195,7 +1195,7 @@ negotiationTime ()
         // A user/admin can set this to > 1, to allow the algorithm an opportunity to re-distribute
         // slots that were not used due to rejection.
         int maxrounds = 0;
-        if (NULL != param_without_default("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS")) {
+        if (param_defined("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS")) {
             maxrounds = param_integer("GROUP_QUOTA_MAX_ALLOCATION_ROUNDS", 3, 1, INT_MAX);
         } else {
             // backward compatability
@@ -1260,7 +1260,7 @@ negotiationTime ()
             // user is concerned about the "overlapping effective pool" problem, they can decrease this 
             // increment so that round robin happens, and competing groups will not starve one another.
             double ninc = 0;
-            if (NULL != param_without_default("GROUP_QUOTA_ROUND_ROBIN_RATE")) {
+            if (param_defined("GROUP_QUOTA_ROUND_ROBIN_RATE")) {
                 ninc = param_double("GROUP_QUOTA_ROUND_ROBIN_RATE", DBL_MAX, 1.0, DBL_MAX);
             } else {
                 // backward compatability 
@@ -1434,7 +1434,7 @@ void Matchmaker::hgq_construct_tree() {
     group_entry_map[hgq_root_name] = hgq_root_group;
 
     bool tdas = false;
-    if (NULL != param_without_default("GROUP_ACCEPT_SURPLUS")) {
+    if (param_defined("GROUP_ACCEPT_SURPLUS")) {
         tdas = param_boolean("GROUP_ACCEPT_SURPLUS", false);
     } else {
         // backward compatability
@@ -1510,7 +1510,7 @@ void Matchmaker::hgq_construct_tree() {
 
         // accept surplus
 	    vname.sprintf("GROUP_ACCEPT_SURPLUS_%s", gname.c_str());
-        if (NULL != param_without_default(vname.Value())) {
+        if (param_defined(vname.Value())) {
             group->accept_surplus = param_boolean(vname.Value(), default_accept_surplus);
         } else {
             // backward compatability
