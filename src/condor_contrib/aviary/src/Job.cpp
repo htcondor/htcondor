@@ -197,6 +197,19 @@ int LiveJobImpl::getStatus() const
     return strtol ( attr->getValue(), ( char ** ) NULL, 10 );
 }
 
+int LiveJobImpl::getQDate() const
+{
+	const AviaryAttribute* attr = NULL;
+
+	if ( !this->get ( ATTR_Q_DATE, attr ) )
+	{
+		// default to 0?
+		return 0;
+	}
+
+	return strtol ( attr->getValue(), ( char ** ) NULL, 10 );
+}
+
 void
 LiveJobImpl::set ( const char *_name, const char *_value )
 {
@@ -379,6 +392,11 @@ int HistoryJobImpl::getStatus() const
 int HistoryJobImpl::getCluster() const
 {
 	return m_he.cluster;
+}
+
+int HistoryJobImpl::getQDate() const
+{
+	return m_he.q_date;
 }
 
 const char* HistoryJobImpl::getSubmissionId() const
@@ -620,6 +638,9 @@ Job::setSubmission ( const char* _subName, int cluster )
 		g_ownerless_submissions[cluster] = m_submission;
 	}
 
+	// finally update the overall submission qdate
+	m_submission->setOldest(this->getQDate());
+
 }
 
 bool ClusterJobImpl::destroy()
@@ -692,6 +713,16 @@ void Job::getSummary ( ClassAd& _ad) const
 int Job::getStatus() const
 {
 	return m_status;
+}
+
+int Job::getQDate() const
+{
+	if (m_live_job) {
+		return m_live_job->getQDate();
+	}
+	else {
+		return m_history_job->getQDate();
+	}
 }
 
 JobImpl* Job::getImpl() {
