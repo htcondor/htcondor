@@ -10579,3 +10579,27 @@ on page~\pageref{sec:daemon-classad-hooks}.
 
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-hooks}Configuration File Entries Only for Windows Platforms}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!Windows platform configuration variables}
+These macros are utilized only on Windows platforms.
+
+\begin{description}
+
+\label{param:WindowsRmdir}
+\item[\Macro{WINDOWS\_RMDIR}] The complete path and executable name of the
+  Condor version of the built-in \Prog{rmdir} program.
+  The Condor version will not fail when the directory contains files that have
+  ACLs that deny the SYSTEM process delete access.
+  If not defined, the built-in Windows \Prog{rmdir} program is invoked,
+  and a value defined for \Macro{WINDOWS\_RMDIR\_OPTIONS} is ignored.
+
+\label{param:WindowsRmdirOptions}
+\item[\Macro{WINDOWS\_RMDIR\_OPTIONS}] Command line options to be specified
+  when configuration variable \MacroNI{WINDOWS\_RMDIR} is defined.
+  Defaults to \Opt{/S} \Opt{/C} when configuration variable 
+  \MacroNI{WINDOWS\_RMDIR} is defined and its definition contains the
+  string \AdStr{condor\_rmdir.exe}.
+
+\end{description}
