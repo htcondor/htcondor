@@ -1354,7 +1354,7 @@ Dag::StartNode( Job *node, bool isRetry )
 		return true;
     }
 	// no PRE script exists or is done, so add job to the queue of ready jobs
-	node->FixPriority(0,*this);
+	node->FixPriority(*this);
 	if ( isRetry && m_retryNodeFirst ) {
 		_readyQ->Prepend( node, -node->_nodePriority );
 	} else {

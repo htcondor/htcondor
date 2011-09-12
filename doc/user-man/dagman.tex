@@ -1189,7 +1189,11 @@ since the declared priority of node D is at least as big as that of node C,
 node D is assigned a priority of 100; all nodes in the D subdag will have
 priority at least 100.  This priority is assigned by DAGman; there is not a way
 to change the priority in the condor submit file for a job, as DAGman will
-override any such \AdAttr{priority} directives in the submit file.
+override any such \AdAttr{priority} directives in the submit file. This means
+that for DAGs with a large number of edges (representing dependencies), the
+priorities of child nodes far from the root nodes will tend to be homogeneous.
+The priorities of a tree, or DAGs with a relatively small number of
+dependencies, will tend to have varying priorities.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-node-category}Limiting the Number of Submitted Job Clusters within a DAG}
