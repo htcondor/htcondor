@@ -94,9 +94,11 @@ See section ~\ref{dagman:SCRIPT} for details.
 
 \begin{itemize}
 
-\item The configuration parameter NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE has been added.  This defaults to false,
-if true, then any ads not satisfying the expression in GROUP\_DYNAMIC\_MACH\_CONSTRAINT are removed from the
-list of startd ads considered for negotiation.
+\item The new configuration variable 
+\Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE} defaults to \Expr{False}.
+When \Expr{True}, any ClassAds not satisfying the expression 
+in \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} are removed from the
+list of \Condor{startd} ClassAds considered for negotiation.
 \Ticket{2232}
 
 \end{itemize}
