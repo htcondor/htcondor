@@ -164,6 +164,11 @@ only to have the attribute changed later by the dedicated scheduler.
 the \Condor{collector} to fail to start when it was next restarted.
 \Ticket{2417}
 
+\item Fixed a file descriptor leak in the ec2\_gahp which would cause
+grid-type ec2 jobs to become held. The \Attr{HoldReason} for most such 
+jobs would be ``Unable to read from accesskey file''.
+\Ticket{2447}
+
 \end{itemize}
 
 \noindent Known Bugs:
