@@ -6703,6 +6703,13 @@ These macros affect the \Condor{negotiator}.
   only normal slots should be counted when computing how big each group's 
   share of the pool should be.
 
+\label{param:NegotiatorStartdConstraintRemove}
+\item[\Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, any ClassAds not satisfying the expression 
+  in \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} are removed from the
+  list of \Condor{startd} ClassAds considered for negotiation.
+
 \label{param:NegotiatorDebug}
 \item[\Macro{NEGOTIATOR\_DEBUG}]
   This macro (and other settings related to debug logging in the negotiator) is
