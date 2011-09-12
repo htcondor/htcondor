@@ -219,3 +219,16 @@ SubmissionObject::getJobSummaries ( JobSummaryPairCollection &jobs)
     }
 
 }
+
+// setter/getters for tracking oldest job in submission
+int
+SubmissionObject::getOldest() {
+	return m_oldest_qdate;
+}
+
+void
+SubmissionObject::setOldest(int qdate) {
+	if (qdate < m_oldest_qdate) {
+		m_oldest_qdate = qdate;
+	}
+}

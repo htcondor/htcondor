@@ -77,7 +77,7 @@ SubmissionObject::GetManagementObject(void) const
 
 
 void
-SubmissionObject::update(const PROC_ID &id,
+SubmissionObject::updateStatus(const PROC_ID &id,
 						 const char *attr,
 						 int value)
 {
@@ -137,6 +137,19 @@ SubmissionObject::update(const PROC_ID &id,
 			dprintf(D_ALWAYS, "error: Unknown %s of %d on %d.%d\n",
 					ATTR_JOB_STATUS, value, id.cluster, id.proc);
 			break;
+		}
+	}
+
+}
+
+// update the oldest job qdate for this submission
+void
+SubmissionObject::updateQdate(const PROC_ID &id) {
+	int q_date, old;
+	if (GetAttributeInt(id.cluster, id.proc, ATTR_Q_DATE, &q_date) >= 0) {
+		old = mgmtObject->get_QDate();
+		if ((q_date < old) || (old <= 0)) {
+			mgmtObject->set_QDate((uint64_t) q_date*1000000000);
 		}
 	}
 }
