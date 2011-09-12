@@ -285,8 +285,8 @@ machine's Condor configuration file:
 
 \footnotesize
 \begin{verbatim}
-START = ( (RemoteUser == "userfoo@baz.edu") || \
-          (RemoteUser == "userbar@baz.edu") )
+START = ( (User == "userfoo@baz.edu") || \
+          (User == "userbar@baz.edu") )
 \end{verbatim}
 \normalsize
 
@@ -305,8 +305,8 @@ the \MacroNI{START} variable easier to read.
 # 3) the load average is low enough OR the machine is currently
 #    running a Condor job, and would therefore accept running
 #    a different one
-AllowedUser    = ( (RemoteUser == "userfoo@baz.edu") || \
-                   (RemoteUser == "userbar@baz.edu") )
+AllowedUser    = ( (User == "userfoo@baz.edu") || \
+                   (User == "userbar@baz.edu") )
 KeyboardUnused = (KeyboardIdle > $(StartIdleTime))
 NoOwnerLoad    = ($(CPUIdle) || (State != "Unclaimed" && State != "Owner"))
 START          = $(AllowedUser) && $(KeyboardUnused) && $(NoOwnerLoad)
