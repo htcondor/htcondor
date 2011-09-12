@@ -151,6 +151,7 @@
 		<xs:sequence>
 			<xs:element name="id" type="tns:SubmissionID"/>
 			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="qdate" type="xs:int"/>
 			<xs:element name="completed" type="xs:int"/>
 			<xs:element name="held" type="xs:int"/>
 			<xs:element name="idle" type="xs:int"/>
