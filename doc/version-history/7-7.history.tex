@@ -19,9 +19,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Condor version 7.7.1 not yet released.
-%\item Condor version 7.7.1 released on Month Date, 2011.
-This developer release contains all bug fixes from Condor version ?.
+%\item Condor version 7.7.1 not yet released.
+\item Condor version 7.7.1 released on Sep 12, 2011.
+This developer release contains all bug fixes from Condor version 7.6.3
 
 \end{itemize}
 
@@ -29,6 +29,11 @@ This developer release contains all bug fixes from Condor version ?.
 \noindent New Features:
 
 \begin{itemize}
+
+\item 
+The Classad language now has an unparse function.  This converts an expression
+into a string, which is handy with the new eval function.
+\Ticket{1613}
 
 \item
 Condor now dynamically links with the OpenSSL and Kerberos security
@@ -100,6 +105,11 @@ When \Expr{True}, any ClassAds not satisfying the expression
 in \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} are removed from the
 list of \Condor{startd} ClassAds considered for negotiation.
 \Ticket{2232}
+
+\item The new configuration parameter \Macro{NEGOTIATOR\_UPDATE\_AFTER\_CYCLE}
+which defaults to false has been added.  When true, this forces the negotiator
+to update the negotiator ad in the collector at the end of every negotiation 
+cycle.  This is handy for monitoring and debugging activities.
 
 \end{itemize}
 
