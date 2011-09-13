@@ -20,8 +20,8 @@ The details of each version are described below.
 \begin{itemize}
 
 %\item Condor version 7.7.1 not yet released.
-\item Condor version 7.7.1 released on Sep 12, 2011.
-This developer release contains all bug fixes from Condor version 7.6.3
+\item Condor version 7.7.1 released on September 12, 2011.
+This developer release contains all bug fixes from Condor version 7.6.3.
 
 \end{itemize}
 
@@ -30,15 +30,10 @@ This developer release contains all bug fixes from Condor version 7.6.3
 
 \begin{itemize}
 
-\item 
-The Classad language now has an unparse function.  This converts an expression
-into a string, which is handy with the new eval function.
-\Ticket{1613}
-
 \item
-Condor now dynamically links with the OpenSSL and Kerberos security
+\emph{Condor now dynamically links with the OpenSSL and Kerberos security
 libraries, and Condor will use the operating system's version of these
-libraries,  when they are available. 
+libraries,  when they are available.} 
 The tarball release of Condor on Linux platforms includes 
 a copy of these libraries.  
 If the operating system's version is incompatible with Condor, 
@@ -46,6 +41,12 @@ Condor will use its own copy instead.
 Condor's copy of these libraries is located under \File{lib/condor/}.
 To prevent Condor from considering using them, delete these libraries.
 \Ticket{1874}
+
+\item 
+The ClassAd language now has an \Procedure{unparse} function.  
+It converts an expression into a string, 
+which is handy with the new \Procedure{eval} function.
+\Ticket{1613}
 
 \item
 The new job ClassAd attribute \Attr{KeepClaimIdle} is defined with an integer
@@ -106,10 +107,13 @@ in \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} are removed from the
 list of \Condor{startd} ClassAds considered for negotiation.
 \Ticket{2232}
 
-\item The new configuration parameter \Macro{NEGOTIATOR\_UPDATE\_AFTER\_CYCLE}
-which defaults to false has been added.  When true, this forces the negotiator
-to update the negotiator ad in the collector at the end of every negotiation 
-cycle.  This is handy for monitoring and debugging activities.
+\item The new configuration variable
+\Macro{NEGOTIATOR\_UPDATE\_AFTER\_CYCLE} defaults to \Expr{False}.
+When \Expr{True}, it forces the \Condor{negotiator} daemon
+to update the negotiator ClassAd in the \Condor{collector} daemon
+at the end of every negotiation cycle.  
+This is handy for monitoring and debugging activities.
+\Ticket{2373}
 
 \end{itemize}
 
