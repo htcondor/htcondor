@@ -174,7 +174,7 @@ void DaemonCore::Stats::Init()
 
    // Insert additional publish entries for the XXXDebug values
    //
-#if 1 //def DEBUG
+#if 0 //def DEBUG
    DC_STATS_PUB_DEBUG(Pool, SelectWaittime,  0);
    DC_STATS_PUB_DEBUG(Pool, SignalRuntime,   0);
    DC_STATS_PUB_DEBUG(Pool, TimerRuntime,    0);

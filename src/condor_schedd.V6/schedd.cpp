@@ -10557,7 +10557,7 @@ Scheduler::Init()
         ExitCodesTQ[jj->first].max_time(event_stat_window);
     }
    #else
-    int event_stat_window = param_integer("WINDOWED_STAT_WIDTH", 300, 1, INT_MAX);
+    int event_stat_window = param_integer("WINDOWED_STAT_WIDTH", 1200, 1, INT_MAX);
     stats.SetWindowSize(event_stat_window);
    #endif
 
