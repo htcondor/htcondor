@@ -3,6 +3,7 @@
 #include "condor_sockfunc.h"
 #include "ipv6_hostname.h"
 #include "ipv6_interface.h"
+#include "condor_debug.h"
 
 int condor_connect(int sockfd, const condor_sockaddr& addr)
 {
@@ -141,6 +142,10 @@ hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr)
 		sockaddr_in6* sin6 = (sockaddr_in6*)sa;
 		p_addr = (const char*)&sin6->sin6_addr;
 		len = sizeof(in6_addr);
+	} else {
+		dprintf(D_ALWAYS, "condor_gethostbyaddr_ipv6 was passed an sa_family of %d. Only AF_INET (%d) and AF_INET6 (%d) can be handled.", type, int(AF_INET), int(AF_INET6));
+		h_errno = NO_RECOVERY;
+		return NULL;
 	}
 
 	ret = gethostbyaddr(p_addr, len, type);
