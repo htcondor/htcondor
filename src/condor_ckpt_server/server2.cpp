@@ -365,7 +365,9 @@ void Server::SetUpPeers()
 	while ((peer = peer_name_list.next()) != NULL) {
 		if( strcmp(peer, ckpt_host) ) {
 			condor_sockaddr addr;
-			addr.from_ip_string(peer);
+			if( ! addr.from_ip_string(peer) ) {
+				EXCEPT("Unable to parse IP string %s from CKPT_SERVER_HOST/CKPT_SERVER_HOSTS", peer);
+			}
 			addr.set_port(CKPT_SVR_REPLICATE_REQ_PORT);
 			peer_addr_list[num_peers++] = addr.to_sin();
 			//sprintf(peer_addr, "<%s:%d>", peer, CKPT_SVR_REPLICATE_REQ_PORT);
