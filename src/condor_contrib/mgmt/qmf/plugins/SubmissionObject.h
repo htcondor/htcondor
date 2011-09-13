@@ -61,7 +61,8 @@ public:
 
 	ManagementObject *GetManagementObject(void) const;
 
-	void update(const PROC_ID &id, const char *attr, int value);
+	void updateStatus(const PROC_ID &id, const char *attr, int value);
+	void updateQdate(const PROC_ID &id);
 
 	status_t ManagementMethod(uint32_t methodId,
 							  Args &args,

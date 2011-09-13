@@ -102,35 +102,35 @@ void createBadJobResponse(JobBase& jb, const char* job_id, const AviaryStatus& e
 }
 
 // unfortunately no convenience functions from WS02 for dateTime
-axutil_date_time_t* encodeDateTime(const time_t* _time) {
-	struct tm _tm;
+axutil_date_time_t* encodeDateTime(const time_t& ts) {
+	struct tm the_tm;
 
 	// need the re-entrant version because axutil_date_time_create
 	// calls time() again and overwrites static tm
-	localtime_r(_time,&_tm);
+	localtime_r(&ts,&the_tm);
 	// get our Axis2 env for the allocator
-	const axutil_env_t* _env = provider->getEnv();
+	const axutil_env_t* env = provider->getEnv();
 
-	axutil_date_time_t* _value = NULL;
-	_value = axutil_date_time_create(_env);
+	axutil_date_time_t* time_value = NULL;
+	time_value = axutil_date_time_create(env);
 
-    if (!_value)
+	if (!time_value)
     {
-        AXIS2_ERROR_SET(_env->error, AXIS2_ERROR_NO_MEMORY, AXIS2_FAILURE);
-        AXIS2_LOG_ERROR(_env->log, AXIS2_LOG_SI, "Out of memory");
+        AXIS2_ERROR_SET(env->error, AXIS2_ERROR_NO_MEMORY, AXIS2_FAILURE);
+        AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI, "Out of memory");
         return NULL;
     }
 
 	// play their game with adjusting the year and month offset
-	axutil_date_time_set_date_time(_value,_env,
-								   _tm.tm_year+1900,
-								   _tm.tm_mon+1,
-								   _tm.tm_mday,
-								   _tm.tm_hour,
-								   _tm.tm_min,
-								   _tm.tm_sec,
+	axutil_date_time_set_date_time(time_value,env,
+								   the_tm.tm_year+1900,
+								   the_tm.tm_mon+1,
+								   the_tm.tm_mday,
+								   the_tm.tm_hour,
+								   the_tm.tm_min,
+								   the_tm.tm_sec,
 								   0);
-	return _value;
+	return time_value;
 };
 
 void mapFieldsToSummary(const JobSummaryFields& fields, JobSummary* _summary) {
@@ -141,8 +141,8 @@ void mapFieldsToSummary(const JobSummaryFields& fields, JobSummary* _summary) {
 	sid->setOwner(fields.owner);
 	_summary->getId()->setSubmission(sid);
 	// do date/time conversion
-	_summary->setQueued(encodeDateTime((const time_t*)&fields.queued));
-	_summary->setLast_update(encodeDateTime((const time_t*)&fields.last_update));
+	_summary->setQueued(encodeDateTime(fields.queued));
+	_summary->setLast_update(encodeDateTime(fields.last_update));
 	JobStatusType* jst = new JobStatusType;
 	jst->setJobStatusType(getJobStatusString(fields.status));
 	_summary->setJob_status(jst);
@@ -240,6 +240,8 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 			sid->setName(submission->getName());
 			sid->setOwner(submission->getOwner());
 			summary->setId(sid);
+			// TODO: fully implement getOldest
+			summary->setQdate(submission->getOldest());
 			summary->setCompleted(submission->getCompleted().size());
 			summary->setHeld(submission->getHeld().size());
 			summary->setIdle(submission->getIdle().size());
@@ -332,7 +334,7 @@ GetJobSummaryResponse* AviaryQueryServiceSkeleton::getJobSummary(wso2wsf::Messag
 	GetJobSummaryResponse* jobSummaryResponse = new GetJobSummaryResponse;
 	JobServerObject* jso = JobServerObject::getInstance();
 	JobSummaryCollection* job_results = new JobSummaryCollection;
-	
+
 	IdCollection id_set;
 
 	if (_getJobSummary->isIdsNil() || _getJobSummary->getIds()->size() == 0) {
@@ -351,7 +353,7 @@ GetJobSummaryResponse* AviaryQueryServiceSkeleton::getJobSummary(wso2wsf::Messag
 			id_set.insert((*i)->getJob().c_str());
 		}
 	}
-	
+
 	for (IdCollection::const_iterator i = id_set.begin(); id_set.end() != i; i++) {
 		JobSummary* js = new JobSummary;
 		const char* job = *i;

@@ -12,10 +12,10 @@ admin-man/pool-arch.eps
 figuresizing.tex
 fontsize.tex
 local.html
-ref-master/
-ref-v761/
-ref-v76/
-ref-v770/
+ref-v7.6.3/
+ref-v7.6.4/
+ref-v7.7.1/
+ref-v7.7.2/
 ref.dvi
 symbol.tex
 timesfont.tex

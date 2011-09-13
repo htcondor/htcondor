@@ -112,11 +112,17 @@ BaseCodec::classAdToMap(ClassAd& ad, AttributeMapType& _map)
 
 
 bool
-BaseCodec::mapToClassAd(AttributeMapType& _map, ClassAd& ad)
+BaseCodec::mapToClassAd(AttributeMapType& _map, ClassAd& ad, string& text)
 {
 
     for (AttributeMapIterator entry = _map.begin(); _map.end() != entry; entry++) {
         const char* name = entry->first.c_str();
+
+		if (isKeyword(name)) {
+			text = "Reserved ClassAd keyword cannot be an attribute name: "+ entry->first;
+			return false;
+		}
+
         AviaryAttribute* value = entry->second;
 
         switch (value->getType()) {

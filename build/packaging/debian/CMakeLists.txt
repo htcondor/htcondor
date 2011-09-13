@@ -23,17 +23,12 @@ configure_file( changelog.in changelog.Debian @ONLY )
 
 add_custom_target( generate_changelog
 		   ALL
-		   WORKING_DIRECTORY	${CMAKE_CURRENT_SOURCE_DIR}
+		   WORKING_DIRECTORY	${CMAKE_CURRENT_BINARY_DIR}
 		   COMMAND rm -f changelog.Debian.gz
 		   COMMAND gzip -9c changelog.Debian > changelog.Debian.gz )
 
 install(FILES		copyright
         DESTINATION	"${C_DOC}" )
 
-install(FILES		changelog.Debian.gz
+install(FILES		${CMAKE_CURRENT_BINARY_DIR}/changelog.Debian.gz
         DESTINATION	"${C_DOC}" )
-
-add_custom_target( set_config_execute_permission
-		   ALL
-		   WORKING_DIRECTORY	${CMAKE_CURRENT_SOURCE_DIR}
-		   COMMAND chmod a+x postinst postrm preinst prerm)

@@ -808,6 +808,9 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 			if( aliases ) {
 				thehost = *(aliases++);
 			}
+			else {
+				thehost = NULL;
+			}
 		}
 			// if we found something via our hostname or subnet mactching, we now have 
 			// a mask, and we should add it into our table so we need not

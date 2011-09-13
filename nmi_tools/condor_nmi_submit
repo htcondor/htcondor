@@ -1621,13 +1621,6 @@ sub generateBuildFetchFiles
 #        push( @fetch_files, "$ext_file" );
 #    }
 
-	# If the $srctag is available, then use it for where to get the nmi tools.
-	# In general, we'd like to match the branch of the glue to the branch we're
-	# building.
-    my $nmi_tools_file = "nmi_tools.src";
-    makeFetchFileVCS( $nmi_tools_file, FALSE, SRC, $cvs_condor_nmi_submit, $srctag );
-    push( @fetch_files, $nmi_tools_file );
-
     return @fetch_files;
 }
 

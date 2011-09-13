@@ -36,6 +36,8 @@ GetOptions(
             'clear-externals-cache-weekly' => \$opt_clear_externals_cache_weekly,
 );
 
+my $installcmakecmd = "./nmi_tools/glue/build/install_cmake";
+my $cmake = undef;
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
 my $buildid_file = "BUILD-ID";
@@ -61,8 +63,34 @@ foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
 print "------------------------- ENV DUMP ------------------------\n";
 print "Configure args: " . join(' ', @ARGV) . "\n";
 
+######################################################################
+# Determine the right cmake to use. Either the one on the machine is
+# sufficient, or we download and build one. Either way, we know the
+# absolute path to cmake.
+######################################################################
+
+# See gt 2344 for this block of code
+if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+	# Terrible hack for now. The real solution is $installcmakecmd should
+	# be a batch file which forms the same work as the unix side. And then
+	# only the else case in this 'if' gets run. This if would then appear
+	# in the definition of $installcmakecmd to point to the correct
+	# thing.
+	$cmake = "cmake";
+} else {
+	$cmake = `$installcmakecmd ${CONDOR_SCRATCH_DIR} 2>&1 | tail -n 1`;
+	if ($? != 0 || !defined($cmake) || $cmake =~ m/^FAILURE:/) {
+		die "Cannot find a usable cmake install.";
+	}
+	chomp $cmake;
+	# Get just the real path from the output of the above script.
+	$cmake =~ s/SUCCESS: //g;
+}
+
+print "Using cmake: $cmake\n";
+
 # very useful when we land on windows if/when cygwin is in PATH
-system("cmake --version");
+system("$cmake --version");
 
 ######################################################################
 # grab out the build id so we can tell cmake what to use for buildid
@@ -117,8 +145,11 @@ if ( defined($opt_clear_externals_cache)||defined($opt_clear_externals_cache_wee
 
 ######################################################################
 # run cmake on the source tree
+# Note: This stores the absolute path to cmake, which could be either
+# on the machine, or in a prereq, or downloaded and built by our
+# invocation of $installcmakecmd above.
 ######################################################################
-my @command = ( "cmake",
+my @command = ( $cmake,
 		".",
 		join(" ", values(%defines)),
 		join(' ', @ARGV)

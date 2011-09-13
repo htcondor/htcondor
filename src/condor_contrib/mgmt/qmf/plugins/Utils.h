@@ -33,8 +33,12 @@ bool IsValidAttributeName(const std::string& _name, std::string& _text);
 
 bool CheckRequiredAttrs(compat_classad::ClassAd& ad, const char* attrs[], std::string& missing);
 
+bool IsKeyword(const char* kw);
+
+bool IsSubmissionChange(const char* attr);
+
 bool PopulateVariantMapFromAd(compat_classad::ClassAd &ad, qpid::types::Variant::Map &_map);
 
-bool PopulateAdFromVariantMap(qpid::types::Variant::Map &_map, compat_classad::ClassAd &ad);
+bool PopulateAdFromVariantMap(qpid::types::Variant::Map &_map, compat_classad::ClassAd &ad, std::string& text);
 
 #endif /* _UTILS_H */

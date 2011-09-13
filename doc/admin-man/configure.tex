@@ -4073,6 +4073,67 @@ WANT_HOLD_REASON = \
   means to never shut down.  This is primarily intended for \condor{glidein}.
   Use in other situations is not recommended.
 
+\label{param:StartdPublishWinreg}
+\item[\Macro{STARTD\_PUBLISH\_WINREG}]
+  A string containing a semicolon-separated list of Windows registry key names.
+  For each registry key, the contents of the registry key are published in
+  the machine ClassAd.
+  All attribute names are prefixed with \Expr{WINREG\_}. 
+  The remainder of the attribute name is formed in one of two ways.
+  The first way explicitly specifies the name within the list with the
+  syntax
+\begin{verbatim}
+  STARTD_PUBLISH_WINREG = AttrName1 = KeyName1; AttrName2 = KeyName2
+\end{verbatim}
+
+  The second way of forming the attribute name derives the attribute names
+  from the key names in the list.
+  The derivation uses the last three path elements in the key name and changes
+  each illegal character to an underscore character.
+  Illegal characters are essentially any non-alphanumeric character. 
+  In addition, the percent character (\verb@%@) is replaced by the
+  string \Expr{Percent},
+  and the string \Expr{/sec} is replaced by the string \Expr{\_Per\_Sec}.
+
+  Condor expects that the hive identifier, 
+  which is the first element in the full path given by a key name,
+  will be the valid abbreviation.
+  Here is a list of abbreviations:
+  \begin{description}
+    \item \Expr{HKLM} is the abbreviation for  \Expr{HKEY\_LOCAL\_MACHINE}
+    \item \Expr{HKCR} is the abbreviation for  \Expr{HKEY\_CLASSES\_ROOT}
+    \item \Expr{HKCU} is the abbreviation for  \Expr{HKEY\_CURRENT\_USER}
+    \item \Expr{HKPD} is the abbreviation for  \Expr{HKEY\_PERFORMANCE\_DATA}
+    \item \Expr{HKCC} is the abbreviation for  \Expr{HKEY\_CURRENT\_CONFIG}
+    \item \Expr{HKU} is the abbreviation for  \Expr{HKEY\_USERS}
+  \end{description}
+  The \Expr{HKPD} key names are unusual, 
+  as they are not shown in \Prog{regedit}.
+  Their values are periodically updated at the interval defined by 
+  \MacroNI{UPDATE\_INTERVAL}. 
+  The others are not updated until \Condor{reconfig} is issued.
+
+  Here is a complete example of the configuration variable definition,
+\begin{verbatim}
+    STARTD_PUBLISH_WINREG = HKLM\Software\Perl\BinDir; \
+     BATFile_RunAs_Command = HKCR\batFile\shell\RunAs\command; \
+     HKPD\Memory\Available MBytes; \
+     BytesAvail = HKPD\Memory\Available Bytes; \
+     HKPD\Terminal Services\Total Sessions; \
+     HKPD\Processor\% Idle Time; \
+     HKPD\System\Processes
+\end{verbatim}
+  which generates the following portion of a machine ClassAd: 
+\begin{verbatim}
+  WINREG_Software_Perl_BinDir = "C:\Perl\bin\perl.exe"
+  WINREG_BATFile_RunAs_Command = "%SystemRoot%\System32\cmd.exe /C \"%1\" %*"
+  WINREG_Memory_Available_MBytes = 5331
+  WINREG_BytesAvail = 5590536192.000000
+  WINREG_Terminal_Services_Total_Sessions = 2
+  WINREG_Processor_Percent_Idle_Time = 72.350384
+  WINREG_System_Processes = 166
+\end{verbatim}
+
 \end{description}
 
 These macros control if the \Condor{startd} daemon should perform
@@ -10518,3 +10579,27 @@ on page~\pageref{sec:daemon-classad-hooks}.
 
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-hooks}Configuration File Entries Only for Windows Platforms}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!Windows platform configuration variables}
+These macros are utilized only on Windows platforms.
+
+\begin{description}
+
+\label{param:WindowsRmdir}
+\item[\Macro{WINDOWS\_RMDIR}] The complete path and executable name of the
+  Condor version of the built-in \Prog{rmdir} program.
+  The Condor version will not fail when the directory contains files that have
+  ACLs that deny the SYSTEM process delete access.
+  If not defined, the built-in Windows \Prog{rmdir} program is invoked,
+  and a value defined for \Macro{WINDOWS\_RMDIR\_OPTIONS} is ignored.
+
+\label{param:WindowsRmdirOptions}
+\item[\Macro{WINDOWS\_RMDIR\_OPTIONS}] Command line options to be specified
+  when configuration variable \MacroNI{WINDOWS\_RMDIR} is defined.
+  Defaults to \Opt{/S} \Opt{/C} when configuration variable 
+  \MacroNI{WINDOWS\_RMDIR} is defined and its definition contains the
+  string \AdStr{condor\_rmdir.exe}.
+
+\end{description}

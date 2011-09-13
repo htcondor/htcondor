@@ -25,7 +25,7 @@ if (WITH_GLOBUS)
 	if (NOT PROPER)
 
 		###################################################
-		condor_pre_external( GT4 globus-4.0.8 "lib;include" "lib/gt4/gt4-java")
+		condor_pre_external( GT4 globus-4.0.8 "lib;include" "lib/gt4")
 		ExternalProject_Add(gt4
 					#-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GT4_VER}-java.tar.gz ${CMD_TERM}
@@ -38,12 +38,12 @@ if (WITH_GLOBUS)
 					BUILD_IN_SOURCE 1
 					#--install Step ----------
 					INSTALL_DIR ${GT4_INSTALL_LOC}/lib
-					INSTALL_COMMAND cp -r gt4-java ${GT4_INSTALL_LOC}/lib/gt4 )
+					INSTALL_COMMAND mkdir -p ${GT4_INSTALL_LOC}/lib/gt4 && cp -r gt4-java/* ${GT4_INSTALL_LOC}/lib/gt4 )
 		
 		install ( DIRECTORY ${GT4_INSTALL_LOC}/lib/gt4 DESTINATION ${C_LIB} )
 		condor_post_external( gt4 OFF OFF )
 		###################################################
-		condor_pre_external( GT42 globus-4.2.1 "lib;include" "lib/gt42/gt42-java")
+		condor_pre_external( GT42 globus-4.2.1 "lib;include" "lib/gt42")
 
 		ExternalProject_Add(gt42
 							#-- Download Step ----------
@@ -57,7 +57,7 @@ if (WITH_GLOBUS)
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${GT42_INSTALL_LOC}/lib
-							INSTALL_COMMAND cp -r gt42-java ${GT42_INSTALL_LOC}/lib/gt42 )
+							INSTALL_COMMAND mkdir -p ${GT42_INSTALL_LOC}/lib/gt42 && cp -r gt42-java/* ${GT42_INSTALL_LOC}/lib/gt42 )
 
 		install ( DIRECTORY ${GT42_INSTALL_LOC}/lib/gt42 DESTINATION ${C_LIB} )
 		condor_post_external( gt42 OFF OFF )
