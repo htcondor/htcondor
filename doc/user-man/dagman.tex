@@ -1190,25 +1190,40 @@ DAG
 This will cause node C to be submitted before node B (normally, node B
 would be submitted first).
 
-\index{DAGMan input file!PRIORITY key word with respect to SUBDAGs}
-Note that this node priority as specified in the DAG input file is \emph{not}
-propagated to SUBDAG execution.
-As an example, consider the portion of a DAG input file specifying
-\Arg{PRIORITY} for two SUBDAGs: 
+Priorities are propogated to children, to SUBDAGs, and to the Condor job itself,
+via the \Attr{JobPrio} attribute in the job's ClassAd. The priority is defined to
+be the maximum of the DAG PRIORITY directive for the job itself and the PRIORITYs
+of all its parents. Here is an example to clarify:
+
 \footnotesize
 \begin{verbatim}
-    SUBDAG EXTERNAL  A  A.dag 
-    SUBDAG EXTERNAL  B  B.dag 
-    PRIORITY  A  100
-    PRIORITY  B  0
+    # File name: priorities.dag
+    #
+JOB A A.condor
+JOB B B.condor
+JOB C C.condor
+SUBDAG EXTERNAL D SD.subdag
+PARENT A C CHILD B
+PARENT C CHILD D
+PRIORITY A 60
+PRIORITY B 0
+PRIORITY C 5
+PRIORITY D 100
 \end{verbatim}
 \normalsize
-Once any node jobs of A and B are submitted, 
-this priority setting is completely irrelevant. 
-It is true that the first jobs of A are going to be submitted first,
-but other than that, 
-setting the \Arg{PRIORITY} of SUBDAG A and/or SUBDAG B has no effect
-on their priority for job submission.
+
+In this example, node B is a child of nodes A and C. \textit{a priori}, the
+priority of node B is 0, but gets assigned priority 60 because that is the
+maximum of the priorities of its parents. Node D is a child of node C only:
+since the declared priority of node D is at least as big as that of node C,
+node D is assigned a priority of 100; all nodes in the D subdag will have
+priority at least 100.  This priority is assigned by DAGman; there is not a way
+to change the priority in the condor submit file for a job, as DAGman will
+override any such \AdAttr{priority} directives in the submit file. This means
+that for DAGs with a large number of edges (representing dependencies), the
+priorities of child nodes far from the root nodes will tend to be homogeneous.
+The priorities of a tree, or DAGs with a relatively small number of
+dependencies, will tend to have varying priorities.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-node-category}Limiting the Number of Submitted Job Clusters within a DAG}

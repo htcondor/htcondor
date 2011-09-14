@@ -138,7 +138,7 @@ class Dag {
 		 const char *storkRmExe, const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
-		 const SubmitDagDeepOptions *submitDagDeepOpts,
+		 SubmitDagDeepOptions *submitDagDeepOpts,
 		 bool isSplice = false, const MyString &spliceScope = "root" );
 
     ///
@@ -679,6 +679,10 @@ class Dag {
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
 	bool GetPostRun() const { return _alwaysRunPost; }
 	void SetPostRun(bool postRun) { _alwaysRunPost = postRun; }	
+	void SetDefaultPriorities();
+	void SetDefaultPriority(const int prio) { _defaultPriority = prio; }
+	int GetDefaultPriority() const { return _defaultPriority; }
+
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
@@ -1057,7 +1061,7 @@ class Dag {
 	bool	_generateSubdagSubmits;
 
 		// Options for running condor_submit_dag on nested DAGs.
-	const SubmitDagDeepOptions *_submitDagDeepOpts;
+	SubmitDagDeepOptions *_submitDagDeepOpts;
 
 		// Dag objects are used to parse splice files, which are like include
 		// files that ultimately result in a larger in memory dag. To toplevel
@@ -1095,6 +1099,8 @@ class Dag {
 	// If true, run the POST script, regardless of the exit status of the PRE script
 	// Defaults to true
 	bool _alwaysRunPost;
+		// The default priority for nodes in this DAG. (defaults to 0)
+	int _defaultPriority;
 };
 
 #endif /* #ifndef DAG_H */

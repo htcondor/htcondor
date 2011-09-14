@@ -201,6 +201,8 @@ class Dagman {
 		// If _runPost is true, we run a POST script even if the PRE
 		// script for the node fails.
 	bool _runPost;
+		// Default priority that DAGman uses for nodes.
+	int _defaultPriority;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H
