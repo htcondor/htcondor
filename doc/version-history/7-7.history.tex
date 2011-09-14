@@ -95,6 +95,14 @@ in its job transaction log, the error message in the log file now reports
 the offset into the file where the problem was encountered.
 \Ticket{2450}
 
+% gittrac #2167
+\item DAGman will now copy PRIORITY values from the DAG file to the JobPrio
+attribute in the JobAd.  Furthermore, the PRIORITY values are propogated to
+child nodes and subDAGs, so that child nodes always have priority at least that
+of the maximum of the priorities of its parents.  This has been a cause of
+confusion for DAGman users.
+\Ticket{2167}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
