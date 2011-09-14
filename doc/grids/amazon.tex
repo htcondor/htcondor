@@ -60,10 +60,9 @@ amazon_private_key = /path/to/private/key
 \end{verbatim}
 
 The \SubmitCmd{ec2} grid type has two different authentication methods.
-
-The first uses the EC2 API's built-in authentication.  Specify the 
-service with 'http://' or 'https://' URL (as usual), and the EC2 access
-key and secret access key as follows:
+The first authentication method uses the EC2 API's built-in authentication.
+Specify the service with expected \Expr{http://} or \Expr{https://} URL,
+and set the EC2 access key and secret access key as follows:
 
 \begin{verbatim}
 ec2_access_key_id = /path/to/access.key
@@ -73,12 +72,13 @@ ec2_secret_access_key = /path/to/secret.key
 While both pairs of files may be associated with the same account, 
 the credentials are not the same.
 
-The second authentication method for the EC2 grid type is X.509.  You 
-must specify the service with an \verb|x509://| URL, even if the URL was 
-given to you in another form.  Use \SubmitCmd{ec2\_access\_key\_id} to 
-specify the path to the X.509 public key ('certificate'), and 
-\SubmitCmd{ec2\_secret\_access\_key} to specify the path to X.509 
-private key:
+The second authentication method for the EC2 grid type is X.509.
+Specify the service with an \Expr{x509://} URL, 
+even if the URL was given in another form.  
+Use \SubmitCmd{ec2\_access\_key\_id} to 
+specify the path to the X.509 public key (certificate),
+and \SubmitCmd{ec2\_secret\_access\_key} specifies the path to the X.509 
+private key as in the following example:
 
 \begin{verbatim}
 grid_resource = ec2 x509://service.example
@@ -86,7 +86,7 @@ ec2_access_key_id = /path/to/x.509/public.key
 ec2_secret_access_key = /path/to/x.509/private.key
 \end{verbatim}
 
-If you're using an X.509 proxy, specify the proxy in both places.
+If using an X.509 proxy, specify the proxy in both places.
 
 Condor can use the EC2 API to create an SSH key pair that allows
 secure log in to the virtual machine once it is running.
