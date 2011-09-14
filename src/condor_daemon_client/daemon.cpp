@@ -1713,7 +1713,7 @@ Daemon::readAddressFile( const char* subsys )
 	dprintf( D_HOSTNAME, "Finding address for local daemon, "
 			 "%s is \"%s\"\n", param_name.Value(), addr_file );
 
-	if( ! (addr_fp = safe_fopen_wrapper(addr_file, "r")) ) {
+	if( ! (addr_fp = safe_fopen_wrapper_follow(addr_file, "r")) ) {
 		dprintf( D_HOSTNAME,
 				 "Failed to open address file %s: %s (errno %d)\n",
 				 addr_file, strerror(errno), errno );
@@ -1778,7 +1778,7 @@ Daemon::readLocalClassAd( const char* subsys )
 	dprintf( D_HOSTNAME, "Finding classad for local daemon, "
 			 "%s is \"%s\"\n", param_name.Value(), addr_file );
 
-	if( ! (addr_fp = safe_fopen_wrapper(addr_file, "r")) ) {
+	if( ! (addr_fp = safe_fopen_wrapper_follow(addr_file, "r")) ) {
 		dprintf( D_HOSTNAME,
 				 "Failed to open classad file %s: %s (errno %d)\n",
 				 addr_file, strerror(errno), errno );

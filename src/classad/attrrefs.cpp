@@ -23,7 +23,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 AttributeReference::
 AttributeReference()
@@ -451,4 +451,4 @@ MakeAttributeReference(ExprTree *tree, const string &attrStr, bool absolut)
 	return( new AttributeReference( tree, attrStr, absolut ) );
 }
 
-END_NAMESPACE // classad
+} // classad

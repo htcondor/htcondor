@@ -25,7 +25,7 @@
 #include "classad/value.h"
 #include "classad/lexerSource.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 
 // the lexical analyzer class
@@ -249,6 +249,6 @@ class Lexer
 		int         tokenizeString(char delim);//string constants
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #endif //__CLASSAD_LEXER_H__

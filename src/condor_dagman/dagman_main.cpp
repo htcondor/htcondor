@@ -64,17 +64,18 @@ static void Usage() {
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-CsdVersion <version string>\n"
             "\t\t[-Debug <level>]\n"
-            "\t\t[-Rescue <Rescue.dag>]\n"
             "\t\t[-MaxIdle <int N>]\n"
             "\t\t[-MaxJobs <int N>]\n"
             "\t\t[-MaxPre <int N>]\n"
             "\t\t[-MaxPost <int N>]\n"
+            "\t\t[-DontAlwaysRunPost]\n"
             "\t\t[-WaitForDebug]\n"
             "\t\t[-NoEventChecks]\n"
             "\t\t[-AllowLogError]\n"
             "\t\t[-UseDagDir]\n"
             "\t\t[-AutoRescue <0|1>]\n"
             "\t\t[-DoRescueFrom <int N>]\n"
+            "\t\t[-Priority <int N>]\n"
 			"\t\t[-AllowVersionMismatch]\n"
 			"\t\t[-DumpRescue]\n"
 			"\t\t[-Verbose]\n"
@@ -98,7 +99,6 @@ Dagman::Dagman() :
 	maxJobs (0),
 	maxPreScripts (0),
 	maxPostScripts (0),
-	rescueFileToWrite (NULL),
 	paused (false),
 	condorSubmitExe (NULL),
 	condorRmExe (NULL),
@@ -128,9 +128,12 @@ Dagman::Dagman() :
 	maxRescueDagNum(MAX_RESCUE_DAG_DEFAULT),
 	rescueFileToRun(""),
 	dumpRescueDag(false),
+	_writePartialRescueDag(true),
 	_defaultNodeLog(NULL),
 	_generateSubdagSubmits(true),
-	_maxJobHolds(100)
+	_maxJobHolds(100),
+	_runPost(true),
+	_defaultPriority(0)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
@@ -206,25 +209,31 @@ Dagman::Config()
 	submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", submit_delay, 0, 60 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DELAY setting: %d\n",
 				submit_delay );
+
 	max_submit_attempts =
 		param_integer( "DAGMAN_MAX_SUBMIT_ATTEMPTS", max_submit_attempts,
 		1, 16 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMIT_ATTEMPTS setting: %d\n",
 				max_submit_attempts );
+
 	startup_cycle_detect =
 		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", startup_cycle_detect );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_STARTUP_CYCLE_DETECT setting: %s\n",
 				startup_cycle_detect ? "True" : "False" );
+
 	max_submits_per_interval =
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL",
 		max_submits_per_interval, 1, 1000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_SUBMITS_PER_INTERVAL setting: %d\n",
 				max_submits_per_interval );
+
 	m_user_log_scan_interval =
 		param_integer( "DAGMAN_USER_LOG_SCAN_INTERVAL",
 		m_user_log_scan_interval, 1, INT_MAX);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n",
 				m_user_log_scan_interval );
+	_defaultPriority = param_integer("DAGMAN_DEFAULT_PRIORITY", 0, INT_MIN,
+		INT_MAX, false);
 
 
 		// Event checking setup...
@@ -262,7 +271,6 @@ Dagman::Config()
 		// Now get the new DAGMAN_ALLOW_EVENTS value -- that can override
 		// all of the previous stuff.
 	allow_events = param_integer("DAGMAN_ALLOW_EVENTS", allow_events);
-
 	debug_printf( DEBUG_NORMAL, "allow_events ("
 				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION, DAGMAN_ALLOW_EVENTS"
 				") setting: %d\n", allow_events );
@@ -318,6 +326,10 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_SUBMIT_DEPTH_FIRST setting: %s\n",
 				submitDepthFirst ? "True" : "False" );
 
+	_runPost = param_boolean( "DAGMAN_ALWAYS_RUN_POST", true );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_RUN_POST setting: %s\n",
+			_runPost ? "True" : "False" );
+
 	free( condorSubmitExe );
 	condorSubmitExe = param( "DAGMAN_CONDOR_SUBMIT_EXE" );
 	if( !condorSubmitExe ) {
@@ -361,6 +373,12 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
 
+	if ( param_boolean( "DAGMAN_OLD_RESCUE", false ) ) {
+		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_OLD_RESCUE is "
+					"no longer supported\n" );
+		check_warning_strictness( DAG_STRICT_1 );
+	}
+
 	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", autoRescue );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n",
 				autoRescue ? "True" : "False" );
@@ -369,6 +387,11 @@ Dagman::Config()
 				maxRescueDagNum, 0, ABS_MAX_RESCUE_DAG_NUM );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_RESCUE_NUM setting: %d\n",
 				maxRescueDagNum );
+
+	_writePartialRescueDag = param_boolean( "DAGMAN_WRITE_PARTIAL_RESCUE",
+				_writePartialRescueDag );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
+				_writePartialRescueDag ? "True" : "False" );
 
 	free( _defaultNodeLog );
 	_defaultNodeLog = param( "DAGMAN_DEFAULT_NODE_LOG" );
@@ -450,15 +473,10 @@ void main_shutdown_rescue( int exitVal ) {
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
 		if( exitVal != 0 ) {
-			if( dagman.rescueFileToWrite ) {
-				debug_printf( DEBUG_NORMAL, "Rescue DAG file %s was specified; "
-							"overriding automatic rescue DAG naming\n",
-							dagman.rescueFileToWrite );
-				dagman.dag->WriteRescue( dagman.rescueFileToWrite,
-							dagman.primaryDagFile.Value() );
-			} else if ( dagman.maxRescueDagNum > 0 ) {
+			if ( dagman.maxRescueDagNum > 0 ) {
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-							dagman.multiDags, dagman.maxRescueDagNum );
+							dagman.multiDags, dagman.maxRescueDagNum,
+							false, dagman._writePartialRescueDag );
 			} else {
 				debug_printf( DEBUG_QUIET, "No rescue DAG written because "
 							"DAGMAN_MAX_RESCUE_NUM is 0\n" );
@@ -607,13 +625,6 @@ void main_init (int argc, char ** const argv) {
                 Usage();
             }
 			dagman.dagFiles.append( argv[i] );
-        } else if( !strcasecmp( "-Rescue", argv[i] ) ) {
-            i++;
-            if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
-                debug_printf( DEBUG_SILENT, "No Rescue DAG specified\n" );
-                Usage();
-            }
-			dagman.rescueFileToWrite = argv[i];
         } else if( !strcasecmp( "-MaxIdle", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -651,13 +662,16 @@ void main_init (int argc, char ** const argv) {
             }
             dagman.maxPostScripts = atoi( argv[i] );
         } else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
-			debug_printf( DEBUG_SILENT, "Warning: -NoEventChecks is "
+			debug_printf( DEBUG_QUIET, "Warning: -NoEventChecks is "
 						"ignored; please use the DAGMAN_ALLOW_EVENTS "
 						"config parameter instead\n");
 			check_warning_strictness( DAG_STRICT_1 );
 
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
 			dagman.allowLogError = true;
+
+        } else if( !strcasecmp( "-DontAlwaysRunPost",argv[i] ) ) {
+			dagman._runPost = false;
 
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
@@ -731,6 +745,13 @@ void main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-import_env", argv[i] ) ) {
 			dagman._submitDagDeepOpts.importEnv = true;
 
+        } else if( !strcasecmp( "-priority", argv[i] ) ) {
+		++i;
+		if( i >= argc || strcmp( argv[i], "" ) == 0 ) {
+			debug_printf( DEBUG_NORMAL, "No priority value specified\n");
+			Usage();
+		}
+		dagman._submitDagDeepOpts.priority = atoi(argv[i]);
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -859,12 +880,6 @@ void main_init (int argc, char ** const argv) {
         Usage();
     }
 
-	if (dagman.rescueFileToWrite && dagman.autoRescue) {
-    	debug_printf( DEBUG_QUIET, "Error: old-style rescue DAG specified "
-					"and DAGMAN_AUTO_RESCUE is true\n" );
-		DC_Exit( EXIT_ERROR );
-	}
-
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName );
 	if ( dagman.dagFiles.number() == 1 ) {
@@ -880,11 +895,6 @@ void main_init (int argc, char ** const argv) {
 		}
 		msg += "\n";
     	debug_printf( DEBUG_VERBOSE, "%s", msg.Value() );
-	}
-
-	if ( dagman.rescueFileToWrite ) {
-		debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
-				  	dagman.rescueFileToWrite );
 	}
 
 		// if requested, wait for someone to attach with a debugger...
@@ -907,7 +917,7 @@ void main_init (int argc, char ** const argv) {
 
 		//
 		// Figure out the rescue DAG to run, if any (this is with "new-
-		// style" rescue DAGs.
+		// style" rescue DAGs).
 		//
 	int rescueDagNum = 0;
 	MyString rescueDagMsg;
@@ -926,44 +936,11 @@ void main_init (int argc, char ** const argv) {
 	}
 
 		//
-		// If we are running a "new-style" rescue DAG, update our DAG
-		// files list accordingly.
-		//
-	if ( rescueDagNum > 0 ) {
-		dagman.rescueFileToRun = RescueDagName(
-					dagman.primaryDagFile.Value(),
-					dagman.multiDags, rescueDagNum );
-		debug_printf ( DEBUG_QUIET, "%s; running %s instead of normal "
-					"DAG file%s\n", rescueDagMsg.Value(),
-					dagman.rescueFileToRun.Value(),
-					dagman.multiDags ? "s" : "");
-		debug_printf ( DEBUG_QUIET,
-					"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-		debug_printf ( DEBUG_QUIET, "RUNNING RESCUE DAG %s\n",
-					dagman.rescueFileToRun.Value() );
-			// Note: if we ran multiple DAGs and they failed, the
-			// whole thing is condensed into a single rescue DAG.
-			// wenger 2007-02-27
-		dagman.dagFiles.clearAll();
-		dagman.dagFiles.append( dagman.rescueFileToRun.Value() );
-		dagman.dagFiles.rewind();
-
-		if ( dagman.useDagDir ) {
-			debug_printf ( DEBUG_NORMAL,
-						"Unsetting -useDagDir flag because we're running "
-						"a rescue DAG\n" );
-			dagman.useDagDir = false;
-		}
-	}
-
-		//
 		// Fill in values in the deep submit options that we haven't
 		// already set.
 		//
 	dagman._submitDagDeepOpts.bAllowLogError = dagman.allowLogError;
 	dagman._submitDagDeepOpts.useDagDir = dagman.useDagDir;
-	dagman._submitDagDeepOpts.oldRescue =
-				(dagman.rescueFileToWrite != NULL);
 	dagman._submitDagDeepOpts.autoRescue = dagman.autoRescue;
 	dagman._submitDagDeepOpts.doRescueFrom = dagman.doRescueFrom;
 	dagman._submitDagDeepOpts.allowVerMismatch = allowVerMismatch;
@@ -997,12 +974,19 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetAllowEvents( dagman.allow_events );
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
 	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
+	dagman.dag->SetPostRun(dagman._runPost);
+	if( dagman._submitDagDeepOpts.priority != 0 ) { // From command line
+		dagman.dag->SetDefaultPriority(dagman._submitDagDeepOpts.priority);
+	} else if( dagman._defaultPriority != 0 ) { // From config file
+		dagman.dag->SetDefaultPriority(dagman._defaultPriority);
+		dagman._submitDagDeepOpts.priority = dagman._defaultPriority;
+	}
 
     //
     // Parse the input files.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
     //
-	if ( dagman.dagFiles.number() < 2 ) dagman.mungeNodeNames = false;
+	dagman.mungeNodeNames = (dagman.dagFiles.number() > 1);
 	parseSetDoNameMunge( dagman.mungeNodeNames );
    	debug_printf( DEBUG_VERBOSE, "Parsing %d dagfiles\n", 
 		dagman.dagFiles.number() );
@@ -1012,9 +996,7 @@ void main_init (int argc, char ** const argv) {
 	// Here we make a copy of the dagFiles for iteration purposes. Deep inside
 	// of the parsing, copies of the dagman.dagFile string list happen which
 	// mess up the iteration of this list.
-	char *str = dagman.dagFiles.print_to_delimed_string();
-	StringList sl(str);
-	free(str);
+	StringList sl( dagman.dagFiles );
 	sl.rewind();
 	while ( (dagFile = sl.next()) != NULL ) {
     	debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagFile );
@@ -1027,15 +1009,21 @@ void main_init (int argc, char ** const argv) {
 							"because of -DumpRescue flag\n" );
 				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 							dagman.multiDags, dagman.maxRescueDagNum,
-							true );
+							true, false );
 			}
-
+			
+			dagman.dag->RemoveRunningJobs(dagman, true);
+			unlink( lockFileName );
+			dagman.CleanUp();
+			
 				// Note: debug_error calls DC_Exit().
         	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
 					 	dagFile );
     	}
 	}
-
+	if( dagman.dag->GetDefaultPriority() != 0 ) {
+		dagman.dag->SetDefaultPriorities(); // Applies to the nodes of the dag
+	}
 	dagman.dag->GetJobstateLog().WriteDagmanStarted( dagman.DAGManJobId );
 	if ( rescueDagNum > 0 ) {
 			// Get our Pegasus sequence numbers set correctly.
@@ -1044,6 +1032,51 @@ void main_init (int argc, char ** const argv) {
 
 	// lift the final set of splices into the main dag.
 	dagman.dag->LiftSplices(SELF);
+
+		//
+		// Actually parse the "new-new" style (partial DAG info only)
+		// rescue DAG here.  Note: this *must* be done after splices
+		// are lifted!
+		//
+	if ( rescueDagNum > 0 ) {
+		dagman.rescueFileToRun = RescueDagName(
+					dagman.primaryDagFile.Value(),
+					dagman.multiDags, rescueDagNum );
+		debug_printf ( DEBUG_QUIET, "%s; running %s in combination with "
+					"normal DAG file%s\n", rescueDagMsg.Value(),
+					dagman.rescueFileToRun.Value(),
+					dagman.multiDags ? "s" : "");
+		debug_printf ( DEBUG_QUIET,
+					"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+
+		debug_printf ( DEBUG_QUIET, "USING RESCUE DAG %s\n",
+					dagman.rescueFileToRun.Value() );
+
+			// Turn off node name munging for the rescue DAG, because
+			// it will already have munged node names.
+		parseSetDoNameMunge( false );
+
+    	if( !parse( dagman.dag, dagman.rescueFileToRun.Value(),
+					dagman.useDagDir ) ) {
+			if ( dagman.dumpRescueDag ) {
+					// Dump the rescue DAG so we can see what we got
+					// in the failed parse attempt.
+    			debug_printf( DEBUG_QUIET, "Dumping rescue DAG "
+							"because of -DumpRescue flag\n" );
+				dagman.dag->Rescue( dagman.primaryDagFile.Value(),
+							dagman.multiDags, dagman.maxRescueDagNum,
+							true, false );
+			}
+			
+			dagman.dag->RemoveRunningJobs(dagman, true);
+			unlink( lockFileName );
+			dagman.CleanUp();
+			
+				// Note: debug_error calls DC_Exit().
+        	debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
+					 	dagFile );
+    	}
+	}
 
 	dagman.dag->CheckThrottleCats();
 
@@ -1079,7 +1112,7 @@ void main_init (int argc, char ** const argv) {
     	debug_printf( DEBUG_QUIET, "Dumping rescue DAG and exiting "
 					"because of -DumpRescue flag\n" );
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
-					dagman.multiDags, dagman.maxRescueDagNum );
+					dagman.multiDags, dagman.maxRescueDagNum, false, false );
 		ExitSuccess();
 		return;
 	}

@@ -38,6 +38,20 @@ int command_handler( Service*, int, Stream* );
 */
 int command_activate_claim( Service*, int, Stream* );
 
+/*
+  SUSPEND_CLAIM is a special case of the above case, in that more
+  stuff is sent over the wire than just the command and the
+  ClaimId, and if anything goes wrong, the shadow wants a reply. 
+*/
+int command_suspend_claim( Service*, int, Stream* );
+
+/*
+  CONTINUE_CLAIM is a special case of the above case, in that more
+  stuff is sent over the wire than just the command and the
+  ClaimId, and if anything goes wrong, the shadow wants a reply. 
+*/
+int command_continue_claim( Service*, int, Stream* );
+
 #if !defined(WIN32)
 /*
   DELEGATE_GSI_CRED_STARTD is called by the shadow before the claim is

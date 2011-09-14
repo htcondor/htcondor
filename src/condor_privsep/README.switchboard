@@ -217,7 +217,7 @@ exec-stdin=path			string
 exec-stdout=path		string
     filename to open for stdout for the process.  If not set /dev/null is used.
 
-exec-stderr=pth			string
+exec-stderr=path		string
     filename to open for stderr for the process.  If not set /dev/null is used.
 
 exec-is-std-univ=bool		boolean
@@ -227,10 +227,25 @@ exec-is-std-univ=bool		boolean
 exec-keep-open-fd=nr		id list
     file descriptor t be kept open.  All other file descriptors
     will be closed.  This value overrides exec-std{in,out,err} options.
+    Note that the file descriptor used by the switchboard for error output
+    (i.e. the second file descriptor specified on the command line) is
+    always closed when the job starts, even if it is added to this list.
+    This behavior may change in future versions.  If you want error output
+    from the switchboard to be combined with stderr output from the job,
+    dup the stderr file descriptor to a new descriptor and specify this new
+    descriptor as the error descriptor for the switchboard.
 
 
+Example that combines error output of switchboard and executed command
+----------------------------------------------------------------------
 
-Simple one line example
+/usr/sbin/condor_root_switchboard exec 0 3 3>&2 <<EOF
+user-uid=slot1
+exec-init-dir=/var/lib/condor/execute/slot1
+exec-path=/tmp/testscript
+exec-keep-open-fd=1 : 2
+EOF
+
+Simple example of rmdir
 -----------------------
-echo "user-dir=/var/sandbox/work123" | /opt/condor/sbin/condor_root_switchboard rmdir 0 2
-
+echo "user-dir=/var/sandbox/work123" | /usr/sbin/condor_root_switchboard rmdir 0 2

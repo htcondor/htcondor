@@ -68,7 +68,7 @@ ForkWorker::Fork( void )
 	} else {
 		// Parent
 		parent = getpid( );
-		dprintf( D_JOB, "ForkWorker::Fork: New child of %d = %d\n",
+		dprintf( D_FULLDEBUG, "ForkWorker::Fork: New child of %d = %d\n",
 				 parent,  pid );
 		return FORK_PARENT;
 	}
@@ -123,7 +123,7 @@ ForkWork::setMaxWorkers( int max_workers )
 # endif
 	maxWorkers = max_workers;
 	if ( workerList.Number() > maxWorkers ) {
-		dprintf( D_JOB, "Warning: # forked workers exceeds max\n" );
+		dprintf( D_FULLDEBUG, "Warning: # forked workers (%d) exceeds new max (%d)\n", workerList.Number(), maxWorkers );
 	}
 }
 
@@ -169,7 +169,7 @@ ForkWork::KillAll( bool force )
 
 	// If we killed some, log it...
 	if ( num_killed ) {
-		dprintf( D_JOB, "ForkWork %d: Killed %d jobs\n",
+		dprintf( D_ALWAYS, "ForkWork %d: Killed %d jobs\n",
 				 mypid, workerList.Number() );
 	}
 	return 0;
@@ -182,7 +182,7 @@ ForkWork::NewJob( void )
 	// Any open slots?
 	if ( workerList.Number() >= maxWorkers ) {
 		if ( maxWorkers ) {
-			dprintf( D_JOB, "ForkWork: busy\n" );
+			dprintf( D_ALWAYS, "ForkWork: not forking because reached max workers %d\n", maxWorkers );
 		}
 		return FORK_BUSY;
 	}
@@ -208,7 +208,7 @@ ForkWork::NewJob( void )
 void
 ForkWork::WorkerDone( int exit_status )
 {
-	dprintf( D_JOB,
+	dprintf( D_FULLDEBUG,
 			 "ForkWork: Child %d done, status %d\n",
 			 getpid(), exit_status );
 	exit( exit_status );

@@ -413,7 +413,7 @@ submitDag( SubmitDagShallowOptions &shallowOpts )
 //---------------------------------------------------------------------------
 bool fileExists(const MyString &strFile)
 {
-	int fd = safe_open_wrapper(strFile.Value(), O_RDONLY);
+	int fd = safe_open_wrapper_follow(strFile.Value(), O_RDONLY);
 	if (fd == -1)
 		return false;
 	close(fd);
@@ -446,12 +446,8 @@ void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 		unlink(shallowOpts.strSchedLog.Value());
 		unlink(shallowOpts.strLibOut.Value());
 		unlink(shallowOpts.strLibErr.Value());
-		if (deepOpts.oldRescue) {
-			unlink(shallowOpts.strRescueFile.Value());
-		} else {
-			RenameRescueDagsAfter(shallowOpts.primaryDagFile.Value(),
-						shallowOpts.dagFiles.number() > 1, 0, maxRescueDagNum);
-		}
+		RenameRescueDagsAfter(shallowOpts.primaryDagFile.Value(),
+					shallowOpts.dagFiles.number() > 1, 0, maxRescueDagNum);
 	}
 
 		// Check whether we're automatically running a rescue DAG -- if
@@ -628,7 +624,7 @@ EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
 void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 			/* const */ SubmitDagShallowOptions &shallowOpts)
 {
-	FILE *pSubFile = safe_fopen_wrapper(shallowOpts.strSubFile.Value(), "w");
+	FILE *pSubFile = safe_fopen_wrapper_follow(shallowOpts.strSubFile.Value(), "w");
 	if (!pSubFile)
 	{
 		fprintf( stderr, "ERROR: unable to create submit file %s\n",
@@ -727,10 +723,6 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(dagFile);
 	}
 
-	if(deepOpts.oldRescue) {
-		args.AppendArg("-Rescue");
-		args.AppendArg(shallowOpts.strRescueFile.Value());
-	}
     if(shallowOpts.iMaxIdle != 0) 
 	{
 		args.AppendArg("-MaxIdle");
@@ -756,6 +748,10 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		// strArgs += " -NoEventChecks";
 		printf( "Warning: -NoEventChecks is ignored; please use "
 					"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
+	}
+	if(!shallowOpts.bPostRun)
+	{
+		args.AppendArg("-DontAlwaysRunPost");
 	}
 	if(deepOpts.bAllowLogError)
 	{
@@ -804,6 +800,11 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 
 	if(deepOpts.importEnv) {
 		args.AppendArg("-Import_env");
+	}
+
+	if( deepOpts.priority != 0 ) {
+		args.AppendArg("-Priority");
+		args.AppendArg(deepOpts.priority);
 	}
 
 	MyString arg_str,args_error;
@@ -858,7 +859,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		// Append user-specified stuff to submit file...
 		// ...first, the insert file, if any...
 	if (shallowOpts.appendFile.Value() != "") {
-		FILE *aFile = safe_fopen_wrapper(shallowOpts.appendFile.Value(), "r");
+		FILE *aFile = safe_fopen_wrapper_follow(shallowOpts.appendFile.Value(), "r");
 		if (!aFile)
 		{
 			fprintf( stderr, "ERROR: unable to read submit append file (%s)\n",
@@ -1044,14 +1045,6 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				shallowOpts.appendFile = argv[iArg];
 			}
-			else if (strArg.find("-oldr") != -1) // -oldrescue
-			{
-				if (iArg + 1 >= argc) {
-					fprintf(stderr, "-oldrescue argument needs a value\n");
-					printUsage();
-				}
-				deepOpts.oldRescue = (atoi(argv[++iArg]) != 0);
-			}
 			else if (strArg.find("-autor") != -1) // -autorescue
 			{
 				if (iArg + 1 >= argc) {
@@ -1102,10 +1095,22 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				deepOpts.bVerbose = true;
 			}
+			else if ( (strArg.find("-dontalwaysrun") != -1) ) // DontAlwaysRunPost
+			{
+				shallowOpts.bPostRun = false;
+			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv,
 						shallowOpts) )
 			{
 				// No-op here
+			}
+			else if( (strArg.find("-prio") != -1) ) // -priority
+			{
+				if(iArg + 1 >= argc) {
+					fprintf(stderr, "-priority argument needs a value\n");
+					printUsage();
+				}
+				deepOpts.priority = atoi(argv[++iArg]);
 			}
 			else
 			{
@@ -1119,13 +1124,6 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 	{
 		fprintf( stderr, "ERROR: no dag file specified; aborting.\n" );
 		printUsage();
-	}
-
-	if (deepOpts.oldRescue && deepOpts.autoRescue)
-	{
-		fprintf( stderr, "Error: DAGMAN_OLD_RESCUE and DAGMAN_AUTO_RESCUE "
-					"are both true.\n" );
-	    exit( 1 );
 	}
 
 	if (deepOpts.doRescueFrom < 0)
@@ -1228,8 +1226,6 @@ int printUsage()
     printf("    -config <filename>  (Specify a DAGMan configuration file)\n");
 	printf("    -append <command>   (Append specified command to .condor.sub file)\n");
 	printf("    -insert_sub_file <filename>   (Insert specified file into .condor.sub file)\n");
-	printf("    -OldRescue 0|1      (whether to write rescue DAG the old way;\n");
-	printf("         0 = false, 1 = true)\n");
 	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG;\n");
 	printf("         0 = false, 1 = true)\n");
 	printf("    -DoRescueFrom <number>  (run rescue DAG of given number)\n");
@@ -1241,5 +1237,6 @@ int printUsage()
 	printf("    -import_env         (explicitly import env into submit file)\n");
 	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
 	printf("    -valgrind           (create submit file to run valgrind on DAGMan)\n");
+	printf("    -priority <priority> (jobs will run with this priority by default)\n");
 	exit(1);
 }

@@ -38,14 +38,14 @@ public:
 
 	// change ownership of the sandbox to the user
 	//
-	void chown_sandbox_to_user();
+	bool chown_sandbox_to_user(PrivSepError &err);
 
 	// change our state to "sandbox is owned by user"
 	void set_sandbox_owned_by_user() { m_sandbox_owned_by_user=true; }
 
 	// change ownership of the sandbox to condor
 	//
-	void chown_sandbox_to_condor();
+	bool chown_sandbox_to_condor(PrivSepError &err);
 
 	// drop an updated proxy into the job sandbox
 	//
@@ -64,7 +64,8 @@ public:
 	                   int         reaper_id,
 	                   int         dc_job_opts,
 	                   FamilyInfo* family_info,
-					   int *       affinity_mask = 0);
+					   int *       affinity_mask = 0,
+					   MyString *  error_msg = NULL);
 
 	// check if the proxy is currently valid
 	//
@@ -74,14 +75,16 @@ private:
 
 	// helper for calling out to scripts
 	//
-	int run_script(ArgList&);
+	int run_script(ArgList&,MyString &error_desc);
 
 	// helper for interfacing with condor_glexec_wrapper
 	int feed_wrapper(int pid,
 	                 int sock_fds[2],
 	                 Env& env,
 	                 int dc_job_opts,
-	                 int std_in);
+	                 int job_std_fds[3],
+					 int &glexec_err_fd,
+					 MyString *error_msg);
 
 	// set once we're initialized
 	//

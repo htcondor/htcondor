@@ -25,7 +25,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 ClassAdCollectionClient::
 ClassAdCollectionClient( )
@@ -1174,4 +1174,4 @@ LogState( FILE* fp )
 	return( true );
 }
 
-END_NAMESPACE	// classad
+}	// classad

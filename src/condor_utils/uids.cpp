@@ -1469,7 +1469,7 @@ set_owner_euid()
 {
 	if( !OwnerIdsInited ) {
 		dprintf( D_ALWAYS,
-				 "set_user_euid() called when OwnerIds not inited!\n" );
+				 "set_owner_euid() called when OwnerIds not inited!\n" );
 		return -1;
 	}
 	return SET_EFFECTIVE_UID(OwnerUid);
@@ -1520,6 +1520,15 @@ set_condor_rgid()
 {
 	if( !CondorIdsInited ) {
 		init_condor_ids();
+	}
+
+	if( CondorUserName ) {
+		errno = 0;
+		if(!(pcache()->init_groups(CondorUserName)) ) {
+			dprintf( D_ALWAYS, 
+					 "set_condor_rgid - ERROR: initgroups(%s) failed, "
+					 "errno: %s\n", CondorUserName, strerror(errno) );
+		}                       
 	}
 
 	return SET_REAL_GID(CondorGid);

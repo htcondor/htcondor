@@ -28,7 +28,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 ClassAdCollectionServer::
 ClassAdCollectionServer( ) : ClassAdCollection()
@@ -591,4 +591,4 @@ HandleReadOnlyCommands( int command, ClassAd *rec, Sock *clientSock )
 
 
 
-END_NAMESPACE
+}

@@ -77,7 +77,7 @@ char *_sysapi_ckptpltfrm = NULL;
 int _sysapi_getload = 0;
 
 bool _sysapi_net_devices_cached = false;
-
+bool _sysapi_opsys_is_versioned = false;
 
 extern "C"
 {
@@ -91,7 +91,12 @@ sysapi_reconfig(void)
 {
 	char *tmp = NULL;
 
-#ifndef WIN32
+#ifdef WIN32
+    /* configuration set up to enable legacy OpSys values (WINNT51 etc) */
+    _sysapi_opsys_is_versioned = param_boolean( "ENABLE_VERSIONED_OPSYS", false );
+#else
+    _sysapi_opsys_is_versioned = param_boolean( "ENABLE_VERSIONED_OPSYS", true );
+
 	/* configuration set up for idle_time.C */
     if( _sysapi_console_devices ) {
         delete( _sysapi_console_devices );

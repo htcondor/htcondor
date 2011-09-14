@@ -899,7 +899,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// all jobs, we only have to figure it out once.  We use '%'
 		// as the delimiter, since ATTR_NAME might already have '@' in
 		// it, and we don't want to confuse things any further.
-	correct_scheduler.sprintf( "DedicatedScheduler!%s", Name );
+	correct_scheduler.sprintf( "DedicatedScheduler@%s", Name );
 
 	next_cluster_num = cluster_initial_val;
 	JobQueue->StartIterateAllClassAds();
@@ -1079,7 +1079,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 //		JobQueue->AppendLog(log);
 		JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 	} else {
-		if ( next_cluster_num > stored_cluster_num ) {
+        // This sanity check is not applicable if a maximum cluster value was set,  
+        // since in that case wrapped cluster-ids are a valid condition.
+		if ((next_cluster_num > stored_cluster_num) && (cluster_maximum_val <= 0)) {
 			// Oh no!  Somehow the header ad in the queue says to reuse cluster nums!
 			EXCEPT("JOB QUEUE DAMAGED; header ad NEXT_CLUSTER_NUM invalid");
 		}
@@ -2425,10 +2427,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	if( !PrioRecArrayIsDirty ) {
 		if( strcasecmp(attr_name, ATTR_ACCOUNTING_GROUP) == 0 ||
             strcasecmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
-			PrioRecArrayIsDirty = true;
+			DirtyPrioRecArray();
 		} else if( strcasecmp(attr_name, ATTR_JOB_STATUS) == 0 ) {
 			if( atoi(attr_value) == IDLE ) {
-				PrioRecArrayIsDirty = true;
+				DirtyPrioRecArray();
 			}
 		}
 		if(PrioRecArrayIsDirty) {
@@ -2593,7 +2595,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	}
 
 	// Create the file
-	int fd = safe_open_wrapper(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
+	int fd = safe_open_wrapper_follow(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -2678,7 +2680,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	
 	MyString filename;
 	filename.sprintf( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
-	int fd = safe_open_wrapper(filename.Value(), O_RDONLY);
+	int fd = safe_open_wrapper_follow(filename.Value(), O_RDONLY);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -4764,7 +4766,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 						// is no longer AlreadyMatched() unless we
 						// set it here and keep rebuilding the array.
 
-					PrioRecArrayIsDirty = true;
+					DirtyPrioRecArray();
 				}
 				else {
 

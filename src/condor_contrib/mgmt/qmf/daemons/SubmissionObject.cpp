@@ -51,6 +51,7 @@ SubmissionObject::SubmissionObject ( ManagementAgent *agent,
         SetOwner ( "Unknown" );
         ownerSet = false;
     }
+    mgmtObject->set_QDate(0);
 
     // By default the submission will be persistent.
     bool _lifetime = param_boolean("QMF_IS_PERSISTENT", true);
@@ -185,6 +186,15 @@ SubmissionObject::SetOwner ( const char *owner )
         mgmtObject->set_Owner ( string(owner) );
         ownerSet = true;
     }
+}
+
+// update the oldest job qdate for this submission
+void
+SubmissionObject::UpdateQdate(int q_date) {
+	int old = mgmtObject->get_QDate();
+	if ((q_date < old) || (old <= 0)) {
+			mgmtObject->set_QDate((uint64_t) q_date*1000000000);
+	}
 }
 
 Manageable::status_t

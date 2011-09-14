@@ -254,9 +254,13 @@ void bprint_Initialize(BPRINT_BUFFER & bp)
       bp.cchMax = 0x0FFFF;
    if ( ! bp.psz)
       bp.psz = (LPTSTR) malloc((bp.cchMax+1) * NUMBYTES(bp.psz[0]));
+   if (bp.psz)
+      bp.psz[0] = 0;
   #ifdef UNICODE
    if ( ! bp.pszAscii)
       bp.pszAscii = (LPSTR) malloc((bp.cchMax+1) * 2);
+   if (bp.pszAscii)
+      bp.pszAscii[0] = 0;
   #endif
    bp.cch = 0;
    bp.CodePage = CP_ACP;

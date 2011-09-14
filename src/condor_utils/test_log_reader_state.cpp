@@ -332,7 +332,7 @@ ReadState(const Options				&opts,
 	ReadUserLog::InitFileState( state );
 
 	printf( "Reading state %s\n", opts.getFile() );
-	int	fd = safe_open_wrapper( opts.getFile(), O_RDONLY, 0 );
+	int	fd = safe_open_wrapper_follow( opts.getFile(), O_RDONLY, 0 );
 	if ( fd < 0 ) {
 		fprintf( stderr, "Failed to read state file %s\n", opts.getFile() );
 		return -1;

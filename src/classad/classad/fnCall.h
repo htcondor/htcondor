@@ -25,7 +25,7 @@
 #include <vector>
 #include "classad/classad.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 typedef std::vector<ExprTree*> ArgumentList;
 
@@ -193,6 +193,8 @@ class FunctionCall : public ExprTree
 	static bool convBool(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool convTime(const char*,const ArgumentList&,EvalState&,Value&);
 	
+	static bool unparse(const char*,const ArgumentList&,EvalState&,Value&);
+	
 	// math (floor, ceil, round)
 	static bool doMath(const char*,const ArgumentList&,EvalState&,Value&);
 	static bool random(const char*,const ArgumentList&,EvalState&,Value&);
@@ -207,6 +209,6 @@ class FunctionCall : public ExprTree
  	//static bool doReal(const char*,const ArgumentList&,EvalState&,Value&);
 };
 
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_FN_CALL_H__

@@ -418,6 +418,84 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	return FALSE;
 }
 
+int command_suspend_claim( Service*, int cmd, Stream* stream )
+{
+	char* id = NULL;
+	Resource* rip;
+	int rval=FALSE;
+
+	if( ! stream->get_secret(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		if( id ) { 
+			free( id );
+		}
+		refuse( stream );
+		return FALSE;
+	}
+
+	rip = resmgr->get_by_any_id( id );
+	if( !rip ) {
+		ClaimIdParser idp( id );
+		dprintf( D_ALWAYS, "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+	
+	State s = rip->state();
+	switch( s ) {
+	case claimed_state:
+		rip->dprintf( D_ALWAYS, "State change: received SUSPEND_CLAIM command\n" );
+		rval = rip->suspend_claim();
+		break;
+	default:
+		rip->log_ignore( cmd, s );
+		return FALSE;
+	}
+
+	return rval;
+}
+
+int command_continue_claim( Service*, int cmd, Stream* stream )
+{
+	char* id = NULL;
+	Resource* rip;
+	int rval=FALSE;
+	
+	if( ! stream->get_secret(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		if( id ) { 
+			free( id );
+		}
+		refuse( stream );
+		return FALSE;
+	}
+
+	rip = resmgr->get_by_any_id( id );
+	if( !rip ) 
+	{
+		ClaimIdParser idp( id );
+		dprintf( D_ALWAYS, "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+	
+	State s = rip->state();
+	switch( rip->activity() ) {
+		case suspended_act:
+			rip->dprintf( D_ALWAYS, "State change: received CONTINUE_CLAIM command\n" );
+			rval=rip->continue_claim();
+			break;
+		default:
+			rip->log_ignore( cmd, s );
+			return FALSE;
+	}		
+	
+	return rval;
+}
+
+
 int
 command_name_handler( Service*, int cmd, Stream* stream ) 
 {
@@ -1445,7 +1523,7 @@ accept_request_claim( Resource* rip )
 	if(hostname.IsEmpty()) {
 		MyString ip = sock->peer_addr().to_ip_string();
 		rip->dprintf( D_FULLDEBUG,
-					  "Can't find hostname of client machine %s\n", ip.Value());
+					  "Can't find hostname of client machine %s\n", ip.Value() );
 		rip->r_cur->client()->sethost(ip.Value());
 	} else {
 		rip->r_cur->client()->sethost( hostname.Value() );

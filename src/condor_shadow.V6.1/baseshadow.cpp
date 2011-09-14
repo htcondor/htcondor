@@ -156,8 +156,6 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	
 	config();
 
-	initUserLog();
-
 		// Make sure we've got enough swap space to run
 	checkSwap();
 
@@ -209,6 +207,12 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	} else {
 		job_updater = new NullQmgrJobUpdater( jobAd, scheddAddr, CondorVersion() );
 	}
+
+		// init user log; hold on failure
+		// NOTE: job_updater must be initialized _before_ initUserLog(),
+		// in order to handle the case of the job going on hold as a
+		// result of failure in initUserLog().
+	initUserLog();
 
 		// change directory; hold on failure
 	if ( cdToIwd() == -1 ) {
@@ -397,7 +401,7 @@ BaseShadow::reconnectFailed( const char* reason )
 
 
 void
-BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
+BaseShadow::holdJobPre( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
 	dprintf( D_ALWAYS, "Job %d.%d going into Hold state (code %d,%d): %s\n", 
 			 getCluster(), getProc(), hold_reason_code, hold_reason_subcode,reason );
@@ -424,7 +428,14 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
-		// finally, exit and tell the schedd what to do
+}
+
+void
+BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
+{
+	this->holdJobPre(reason, hold_reason_code, hold_reason_subcode);
+	
+	// finally, exit and tell the schedd what to do
 	DC_Exit( JOB_SHOULD_HOLD );
 }
 
@@ -474,8 +485,7 @@ BaseShadow::mockTerminateJob( MyString exit_reason,
 }
 
 
-void
-BaseShadow::removeJob( const char* reason )
+void BaseShadow::removeJobPre( const char* reason )
 {
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In removeJob() w/ NULL JobAd!" );
@@ -483,10 +493,10 @@ BaseShadow::removeJob( const char* reason )
 	dprintf( D_ALWAYS, "Job %d.%d is being removed: %s\n", 
 			 getCluster(), getProc(), reason );
 
-		// cleanup this shadow (kill starters, etc)
+	// cleanup this shadow (kill starters, etc)
 	cleanUp();
 
-		// Put the reason in our job ad.
+	// Put the reason in our job ad.
 	int size = strlen( reason ) + strlen( ATTR_REMOVE_REASON ) + 4;
 	char* buf = (char*)malloc( size * sizeof(char) );
 	if( ! buf ) {
@@ -498,15 +508,20 @@ BaseShadow::removeJob( const char* reason )
 
 	emailRemoveEvent( reason );
 
-		// update the job ad in the queue with some important final
-		// attributes so we know what happened to the job when using
-		// condor_history...
+	// update the job ad in the queue with some important final
+	// attributes so we know what happened to the job when using
+	// condor_history...
 	if( !updateJobInQueue(U_REMOVE) ) {
 			// trouble!  TODO: should we do anything else?
 		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
+}
 
-		// does not return.
+void BaseShadow::removeJob( const char* reason )
+{
+	this->removeJobPre(reason);
+	
+	// does not return.
 	DC_Exit( JOB_SHOULD_REMOVE );
 }
 
@@ -814,6 +829,11 @@ void BaseShadow::initUserLog()
 	MyString logfilename;
 	int  use_xml;
 	bool result;
+
+		// we expect job_updater to already be initialized, in case we
+		// need to put the job on hold as a result of failure to open
+		// the log
+	ASSERT( job_updater );
 
 	if ( getPathToUserLog(jobAd, logfilename) ) {
 		result = uLog.initialize (owner.Value(), domain.Value(), logfilename.Value(), cluster, proc, 0, gjid);
@@ -1178,6 +1198,8 @@ BaseShadow::updateJobInQueue( update_t type )
 	buf.sprintf( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
 											   bytesSent()) );
 	jobAd->Insert( buf.Value() );
+
+	ASSERT( job_updater );
 
 		// Now that the ad is current, just let our QmgrJobUpdater
 		// object take care of the rest...

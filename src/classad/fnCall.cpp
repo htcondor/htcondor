@@ -49,7 +49,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 bool FunctionCall::initialized = false;
 
@@ -152,6 +152,10 @@ FunctionCall( )
 		functionTable["bool"		] =	(void*)convBool;
 		functionTable["absTime"		] =	(void*)convTime;
 		functionTable["relTime"		] = (void*)convTime;
+		
+		// turn the contents of an expression into a string 
+		// but *do not* evaluate it
+		functionTable["unparse"		] =	(void*)unparse;
 
 			// mathematical functions
 		functionTable["floor"		] =	(void*)doMath;
@@ -1839,6 +1843,34 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 }
 
 bool FunctionCall::
+unparse(const char*, const ArgumentList &argList, EvalState &state, 
+	Value &result )
+{
+	
+	if( argList.size() != 1 || argList[0]->GetKind() != ATTRREF_NODE ) {
+		result.SetErrorValue( );
+	}
+	else{
+	 
+		// use the printpretty on arg0 to spew out 
+		PrettyPrint     unp;
+		string          szAttribute,szValue;
+		ExprTree* 		pTree;
+		
+		unp.Unparse( szAttribute, argList[0] );
+		// look them up argument within context of the ad.
+		if ( state.curAd && (pTree = state.curAd->Lookup(szAttribute)) )
+		{
+			unp.Unparse( szValue, pTree );
+		}
+		
+		result.SetStringValue(szValue);
+	}
+	
+	return (true); 
+}
+
+bool FunctionCall::
 convBool( const char*, const ArgumentList &argList, EvalState &state, 
 	Value &result )
 {
@@ -2332,13 +2364,14 @@ debug( const char* name,const ArgumentList &argList,EvalState &state,
 		return( true );
 	}
 
+	bool old_debug = state.debug;
 	state.debug = true;
 
 	if( !argList[0]->Evaluate( state, arg ) ) {
 		result.SetErrorValue( );
 		return( false );
 	}
-	state.debug = false;
+	state.debug = old_debug;
 	result = arg;
 	argList[0]->debug_format_value(result);
 	return true;
@@ -3014,4 +3047,4 @@ stringListsIntersect(const char*,const ArgumentList &argList,EvalState &state,Va
 	return true;
 }
 
-END_NAMESPACE // classad
+} // classad

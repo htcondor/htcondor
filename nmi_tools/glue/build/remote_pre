@@ -25,15 +25,20 @@ use Cwd;
 
 use POSIX 'strftime';
 use Getopt::Long;
-use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache /;
+use vars qw/ $opt_use_externals_cache $opt_clear_externals_cache $opt_clear_externals_cache_weekly $opt_clear_externals_cache_daily /;
 # We use -- and everything after it will be configure arguments only.
 GetOptions(
+            'use_externals_cache' => \$opt_use_externals_cache,
+            'use-externals-cache' => \$opt_use_externals_cache,
             'clear_externals_cache' => \$opt_clear_externals_cache,
             'clear-externals-cache' => \$opt_clear_externals_cache,
             'clear_externals_cache_weekly' => \$opt_clear_externals_cache_weekly,
             'clear-externals-cache-weekly' => \$opt_clear_externals_cache_weekly,
+            'clear-externals-cache-daily' => \$opt_clear_externals_cache_daily,
 );
 
+my $installcmakecmd = "./nmi_tools/glue/build/install_cmake";
+my $cmake = undef;
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
 my $buildid_file = "BUILD-ID";
@@ -61,8 +66,34 @@ foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
 print "------------------------- ENV DUMP ------------------------\n";
 print "Configure args: " . join(' ', @ARGV) . "\n";
 
+######################################################################
+# Determine the right cmake to use. Either the one on the machine is
+# sufficient, or we download and build one. Either way, we know the
+# absolute path to cmake.
+######################################################################
+
+# See gt 2344 for this block of code
+if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+	# Terrible hack for now. The real solution is $installcmakecmd should
+	# be a batch file which forms the same work as the unix side. And then
+	# only the else case in this 'if' gets run. This if would then appear
+	# in the definition of $installcmakecmd to point to the correct
+	# thing.
+	$cmake = "cmake";
+} else {
+	$cmake = `$installcmakecmd ${CONDOR_SCRATCH_DIR} 2>&1 | tail -n 1`;
+	if ($? != 0 || !defined($cmake) || $cmake =~ m/^FAILURE:/) {
+		die "Cannot find a usable cmake install.";
+	}
+	chomp $cmake;
+	# Get just the real path from the output of the above script.
+	$cmake =~ s/SUCCESS: //g;
+}
+
+print "Using cmake: $cmake\n";
+
 # very useful when we land on windows if/when cygwin is in PATH
-system("cmake --version");
+system("$cmake --version");
 
 ######################################################################
 # grab out the build id so we can tell cmake what to use for buildid
@@ -88,35 +119,64 @@ $defines{platform} = "-DPLATFORM:STRING=$platform";
 $defines{condor_platform} = "-DCONDOR_PLATFORM:STRING=$platform";
 
 ######################################################################
-# run cmake on the source tree
+# deal with the externals cache
 ######################################################################
-if ( defined($opt_clear_externals_cache) ) {
+if ( defined( $opt_use_externals_cache ) ) {
 
-	if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-		print "deleting externals cache\n";
-		$exit_status = system("rd /s/q \"$externals_loc\"");
-		if( $exit_status ) {
-			die "failed with status $exit_status\n";
+	if (defined($opt_clear_externals_cache_weekly)) {
+		print "Should we do weekly clearing of the externals cache?\n";
+		@now = localtime;
+		@then = localtime( (stat( $externals_loc ))[9] );
+		if ( ($now[7] - $now[6]) != ($then[7] - $then[6]) ) {
+			print "Doing weekly cache clearing\n";
+			$opt_clear_externals_cache = 1;
 		}
 	}
-	else {
-		print "deleting externals cache\n";
-		$exit_status = system("rm -rf /scratch/condor_externals");
 
-		if( $exit_status ) {
-			die "failed with status $exit_status\n";
+	if (defined($opt_clear_externals_cache_daily)) {
+		print "Should we do daily clearing of the externals cache?\n";
+		@now = localtime;
+		@then = localtime( (stat( $externals_loc ))[9] );
+		if ( $then[7] < $now[7] || $then[5] < $now[5] ) {
+			print "Doing daily cache clearing\n";
+			$opt_clear_externals_cache = 1;
 		}
-
-		#system("mkdir -p $externals_loc");
-		#system("chmod -f -R a+rwX $externals_loc");
 	}
 
+	if ( defined($opt_clear_externals_cache) ) {
+
+		if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+			print "deleting externals cache\n";
+			$exit_status = system("rd /s/q \"$externals_loc\"");
+			if( $exit_status ) {
+				die "failed with status $exit_status\n";
+			}
+		} else {
+			print "deleting externals cache\n";
+			$exit_status = system("rm -rf /scratch/condor_externals");
+
+			if( $exit_status ) {
+				die "failed with status $exit_status\n";
+			}
+
+			#system("mkdir -p $externals_loc");
+			#system("chmod -f -R a+rwX $externals_loc");
+		}
+
+	}
+
+	$defines{externals} = "-DCACHED_EXTERNALS:BOOL=TRUE";
+} else {
+	$defines{externals} = "-DCACHED_EXTERNALS:BOOL=FALSE";
 }
 
 ######################################################################
 # run cmake on the source tree
+# Note: This stores the absolute path to cmake, which could be either
+# on the machine, or in a prereq, or downloaded and built by our
+# invocation of $installcmakecmd above.
 ######################################################################
-my @command = ( "cmake",
+my @command = ( $cmake,
 		".",
 		join(" ", values(%defines)),
 		join(' ', @ARGV)

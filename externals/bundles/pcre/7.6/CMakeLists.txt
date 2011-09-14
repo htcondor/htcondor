@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-if ( NOT PROPER )
+if ( NOT PROPER AND NOT LINUX )
 
 	condor_pre_external( PCRE pcre-7.6 "lib;include" "include/pcre.h")
 
@@ -66,11 +66,13 @@ if ( NOT PROPER )
 
 	condor_post_external( pcre include OFF )
 
-else( NOT PROPER )
+	set( HAVE_PCRE_H ON PARENT_SCOPE )
+
+else( NOT PROPER AND NOT LINUX )
 
 	find_multiple( "pcre" PCRE_FOUND )
 
-endif( NOT PROPER )
+endif( NOT PROPER AND NOT LINUX )
 
 ##################### 
 ## Hard failure if there is no PCRE
@@ -78,7 +80,6 @@ if (PCRE_FOUND)
 	message (STATUS "external configured (PCRE_FOUND=${PCRE_FOUND})")
 	set( PCRE_FOUND ${PCRE_FOUND} PARENT_SCOPE )
 	set( HAVE_EXT_PCRE ON PARENT_SCOPE )
-	set( HAVE_PCRE_H ON PARENT_SCOPE )
 else()
 	message (FATAL_ERROR "pcre not found and is required to build")
 endif(PCRE_FOUND)

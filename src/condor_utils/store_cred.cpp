@@ -56,7 +56,7 @@ void simple_scramble(char* scrambled,  const char* orig, int len)
 //
 int write_password_file(const char* path, const char* password)
 {
-		int fd = safe_open_wrapper(path,
+		int fd = safe_open_wrapper_follow(path,
 		                           O_WRONLY | O_CREAT | O_TRUNC,
 		                           0600);
 		if (fd == -1) {
@@ -117,7 +117,7 @@ char* getStoredCredential(const char *username, const char *domain)
 
 	// open the pool password file with root priv
 	priv_state priv = set_root_priv();
-	FILE* fp = safe_fopen_wrapper(filename, "r");
+	FILE* fp = safe_fopen_wrapper_follow(filename, "r");
 	set_priv(priv);
 	if (fp == NULL) {
 		dprintf(D_FULLDEBUG,

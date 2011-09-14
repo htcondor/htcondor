@@ -111,11 +111,13 @@ option(CONDOR_PACKAGE_BUILD "Enables a package build" OFF)
 # 1st set the location of the install targets, these are the defaults for
 set( C_BIN			bin)
 set( C_LIB			lib)
+set( C_LIB_PUBLIC		lib)
 set( C_LIB32		lib)
 set( C_LIBEXEC		libexec )
 set( C_SBIN			sbin)
 
 set( C_INCLUDE		include)
+set( C_INCLUDE_PUBLIC		include)
 set( C_MAN			man)
 set( C_SRC			src)
 set( C_SQL			sql)
@@ -139,6 +141,22 @@ set( C_RUN_DIR		var/run/condor )
 # set a default generator
 set ( CPACK_GENERATOR "TGZ" )
 
+# Here, we set CONDOR_RPATH for the tarball build. If we're doing a native
+# package build, it'll be overwritten further below. EXTERNALS_RPATH must
+# include both paths, as we build the externals once for both types. The
+# settings for EXTERNALS_RPATH must be kept in synch with the C_LIB
+# settings made below for package builds.
+if ( ${OS_NAME} STREQUAL "LINUX" )
+	set( EXTERNALS_LIB "${C_LIB}/condor" )
+	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
+		set( CONDOR_RPATH "/lib:/usr/lib:$ORIGIN/../lib:$ORIGIN/../lib/condor" )
+		set( EXTERNALS_RPATH "/lib:/usr/lib:$$ORIGIN/../lib:$$ORIGIN/../lib/condor:/usr/lib/condor" )
+	else()
+		set( CONDOR_RPATH "/lib64:/usr/lib64:$ORIGIN/../lib:$ORIGIN/../lib/condor" )
+		set( EXTERNALS_RPATH "/lib64:/usr/lib64:$$ORIGIN/../lib:$$ORIGIN/../lib/condor:/usr/lib64/condor" )
+	endif()
+endif()
+
 #this needs to be evaluated in order due to WIN collision.
 if(${OS_NAME} STREQUAL "DARWIN")
 	# enable if we desire native packaging.
@@ -149,6 +167,7 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	# override for windows.
 	set( C_BIN bin )
 	set( C_LIB bin )
+	set( C_LIB_PUBLIC bin )
 	set( C_LIBEXEC bin )
 	set( C_SBIN bin )
 	set( C_ETC etc )
@@ -158,38 +177,47 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set (CPACK_PACKAGE_FILE_NAME "${CONDOR_PACKAGE_NAME}")
 	set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CONDOR_VERSION}")
 
-	# create the WIX package input file (win.xsl) even if we aren't doing packaging.
-	#
-    set (CONDOR_WIX_LOC ${CONDOR_SOURCE_DIR}/msconfig/WiX)
+	############################################################
+	# create the WIX package input file (condor.xsl) even if we aren't doing packaging.
+	set (CONDOR_WIX_LOC ${CONDOR_SOURCE_DIR}/msconfig/WiX)
 
-    # branding and licensing
-    set (CPACK_PACKAGE_ICON ${CONDOR_WIX_LOC}/Bitmaps/dlgbmp.bmp)
-    set (CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/msconfig/license.rtf")
+	# branding and licensing
+	set (CPACK_PACKAGE_ICON ${CONDOR_WIX_LOC}/Bitmaps/dlgbmp.bmp)
+	set (CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/msconfig/license.rtf")
 
-    set (CPACK_WIX_PRODUCT_GUID "792D07D2-0D3B-46C4-ABBE-849374A8E0B3")
-    set (CPACK_WIX_UPGRADE_GUID "ef96d7c4-29df-403c-8fab-662386a089a4")
+	set (CPACK_WIX_PRODUCT_GUID "792D07D2-0D3B-46C4-ABBE-849374A8E0B3")
+	set (CPACK_WIX_UPGRADE_GUID "ef96d7c4-29df-403c-8fab-662386a089a4")
     
-    set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorUpHostDlg.wxs)
-
-	# At present we only currently support VC90, but we could change
-    find_file( CPACK_VC_MERGE_MODULE 
-               Microsoft_VC90_CRT_x86.msm
-               "C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
-
-    find_file( CPACK_VC_POLICY_MODULE 
-               policy_9_0_Microsoft_VC90_CRT_x86.msm
-               "C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
-			   
+	set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorUpHostDlg.wxs)
 	set (CPACK_WIX_BITMAP_FOLDER Bitmaps)
-	configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl @ONLY)
-	
 	set (CPACK_WIX_BITMAP_FOLDER ${CONDOR_WIX_LOC}/Bitmaps)
 
-    # the configure file f(n) will replace @CMAKE_XYZ@ with their value
-    configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/win.xsl @ONLY)
-        
+	#setup all the merge module settings.
+	if (MSVC90)
+		set (VC_CRT_MSM Microsoft_VC90_CRT_x86.msm)
+		find_file( CPACK_VC_POLICY_MODULE 
+			policy_9_0_Microsoft_VC90_CRT_x86.msm
+               		"C:/Program Files/Common Files/Merge #Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+		set (WIX_MERGE_MODLES "<Merge Id=\"VCPolicy\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_POLICY_MODULE}\"/>")
+		set (WIX_MERGE_REFS "<MergeRef Id=\"VCPolicy\"/>")
+	elseif(MSVC10)
+		set (VC_CRT_MSM Microsoft_VC100_CRT_x86.msm)
+	else()
+		message(FATAL_ERROR "unsupported compiler version")
+	endif()
+
+	# look for the all important C-runtime
+	find_file( CPACK_VC_MERGE_MODULE 
+		${VC_CRT_MSM}
+		"C:/Program Files/Common Files/Merge Modules";"C:/Program Files (x86)/Common Files/Merge Modules" )
+
+	set (WIX_MERGE_MODLES "<Merge Id=\"VCCRT\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_MERGE_MODULE}\"/>\n${WIX_MERGE_MODLES}")
+	set (WIX_MERGE_REFS "<MergeRef Id=\"VCCRT\"/>\n${WIX_MERGE_REFS}")
+    		   
+	configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl @ONLY)
+	    
 	set (CPACK_GENERATOR "ZIP")
-	
+		
 	install ( FILES ${CPACK_WIX_WXS_FILES} ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl
 			DESTINATION ${C_ETC}/WiX/xml )
 	
@@ -199,10 +227,10 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	install ( FILES ${CONDOR_SOURCE_DIR}/msconfig/license.rtf ${CONDOR_SOURCE_DIR}/msconfig/do_wix.bat
 			  DESTINATION ${C_ETC}/WiX )
 
-    # the following will dump a header used to insert file info into bin's
-    set ( WINVER ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/condor_winver.h)
-    file( WRITE ${WINVER} "#define CONDOR_VERSION \"${PACKAGE_VERSION}\"\n")
-    #file( APPEND ${WINVER} "#define CONDOR_BLAH \"${YOUR_VAR}\"\n")
+	# the following will dump a header used to insert file info into bin's
+	set ( WINVER ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/condor_winver.h)
+	file( WRITE ${WINVER} "#define CONDOR_VERSION \"${PACKAGE_VERSION}\"\n")
+	#file( APPEND ${WINVER} "#define CONDOR_BLAH \"${YOUR_VAR}\"\n")
 
 	option(WIN_EXEC_NODE_ONLY "Minimal Package Win exec node only" OFF)
 
@@ -250,9 +278,11 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		#Same as RPM
 		set( C_BIN			usr/bin )
 		set( C_LIB			usr/lib/condor )
+		set( C_LIB_PUBLIC		usr/lib )
 		set( C_LIB32		usr/lib/condor )
 		set( C_SBIN			usr/sbin )
 		set( C_INCLUDE		usr/include/condor )
+		set( C_INCLUDE_PUBLIC		usr/include )
 		set( C_MAN			usr/share/man )
 		set( C_SRC			usr/src)
 		set( C_SQL			usr/share/condor/sql)
@@ -299,10 +329,6 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set ( CPACK_RPM_PACKAGE_VENDOR ${CPACK_PACKAGE_VENDOR})
 		set ( CPACK_RPM_PACKAGE_URL ${URL})
 		set ( CPACK_RPM_PACKAGE_DESCRIPTION ${CPACK_PACKAGE_DESCRIPTION})
-		set ( CPACK_RPM_SPEC_IGNORE_FILES
-			"/etc/condor/condor_config"
-			"/etc/condor/condor_config.local"
-			"/etc/init.d/condor")
 
 		PackageDate( RPM CPACK_RPM_DATE)
 
@@ -313,13 +339,15 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 		if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
 			set( C_LIB			usr/lib/condor )
+			set( C_LIB_PUBLIC		usr/lib )
 			set( C_LIB32		usr/lib/condor )
 		else()
 			set( C_LIB			usr/lib64/condor )
+			set( C_LIB_PUBLIC		usr/lib64 )
 			set( C_LIB32		usr/lib/condor )
 		endif ()
 
-        if ( ${LINUX_NAME} MATCHES "openSUSE"  OR  ${LINUX_NAME} MATCHES "sles" )
+		if ( ${LINUX_NAME} MATCHES "openSUSE"  OR  ${LINUX_NAME} MATCHES "sles" )
 			set( CPACK_RPM_SHADOW_PACKAGE "pwdutils" )
 		else()
 			set( CPACK_RPM_SHADOW_PACKAGE "shadow-utils" )
@@ -329,6 +357,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_LIBEXEC		usr/libexec/condor )
 		set( C_SBIN			usr/sbin )
 		set( C_INCLUDE		usr/include/condor )
+		set( C_INCLUDE_PUBLIC		usr/include )
 		set( C_MAN			usr/share/man )
 		set( C_SRC			usr/src)
 		set( C_SQL			usr/share/condor/sql)
@@ -347,15 +376,18 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 	endif()
 
+	set( EXTERNALS_LIB "${C_LIB}" )
+	set( CONDOR_RPATH "/${C_LIB}" )
+
 	# Generate empty folder to ship with package
 	# Local dir
-	file (MAKE_DIRECTORY execute )
+	file (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/execute )
 	add_custom_target(	change_execute_folder_permission
 						ALL
-						WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+						WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 						COMMAND chmod 1777 execute
-						DEPENDS execute)
-	install(DIRECTORY	execute
+						DEPENDS ${CMAKE_BINARY_DIR}/execute)
+	install(DIRECTORY	${CMAKE_BINARY_DIR}/execute
 			DESTINATION	"${C_LOCAL_DIR}"
 			DIRECTORY_PERMISSIONS	USE_SOURCE_PERMISSIONS)
 	# Blank directory means we are creating an emtpy directoy

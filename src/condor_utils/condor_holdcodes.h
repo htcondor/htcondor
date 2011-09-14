@@ -120,4 +120,12 @@ const int CONDOR_HOLD_CODE_SystemPolicy = 26;
 
 const int CONDOR_HOLD_CODE_SystemPolicyUndefined = 27;
 
+const int CONDOR_HOLD_CODE_GlexecChownSandboxToUser = 28;
+
+const int CONDOR_HOLD_CODE_PrivsepChownSandboxToUser = 29;
+
+const int CONDOR_HOLD_CODE_GlexecChownSandboxToCondor = 30;
+
+const int CONDOR_HOLD_CODE_PrivsepChownSandboxToCondor = 31;
+
 #endif

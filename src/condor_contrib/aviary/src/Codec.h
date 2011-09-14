@@ -87,7 +87,7 @@ class Codec {
 public:
     virtual bool addAttributeToMap(ClassAd& ad, const char* name, AttributeMapType& _map) = 0;
     virtual bool classAdToMap(ClassAd &ad, AttributeMapType &_map) = 0;
-    virtual bool mapToClassAd(AttributeMapType &_map, ClassAd &ad) = 0;
+    virtual bool mapToClassAd(AttributeMapType &_map, ClassAd &ad, std::string& text) = 0;
 
 };
 
@@ -95,9 +95,9 @@ public:
 //class CodecFactory {
 // public:
 //     virtual Codec* createCodec() = 0;
-// 
+//
 // };
-// 
+//
 // class DefaultCodecFactory: public CodecFactory {
 // public:
 //     virtual Codec* createCodec();
@@ -110,7 +110,7 @@ public:
     //friend class DefaultCodecFactory;
     virtual bool addAttributeToMap(ClassAd& ad, const char* name, AttributeMapType& _map);
     virtual bool classAdToMap(ClassAd &ad, AttributeMapType &_map);
-    virtual bool mapToClassAd(AttributeMapType &_map, ClassAd &ad);
+	virtual bool mapToClassAd(AttributeMapType &_map, ClassAd &ad, std::string& text);
 
 //protected:
     BaseCodec();

@@ -7,6 +7,7 @@
 #include "condor_sockfunc.h"
 #include "ipv6_hostname.h"
 #include "ipv6_addrinfo.h"
+#include "my_hostname.h"
 
 static condor_sockaddr local_ipaddr;
 static MyString local_hostname;
@@ -30,6 +31,14 @@ void init_local_hostname()
 		// above them has duplicated code in many ways.
 		// so I aggregated all of them into here.
 
+		// Temporarily use the old functions to determine the local
+		// hostname and IP address. The code below needs several
+		// fixes. See gittrac #2216 for details.
+	condor_sockaddr addr( *my_sin_addr() );
+	local_ipaddr = addr;;
+	local_hostname = my_hostname();
+	local_fqdn = my_full_hostname();
+#if 0
 	bool ipaddr_inited = false;
 	char hostname[MAXHOSTNAMELEN];
 	int ret;
@@ -98,6 +107,7 @@ void init_local_hostname()
 		}
 	}
 
+	dprintf(D_HOSTNAME, "Identifying myself as: Short: %s, Long: %s, IP: %s\n", local_hostname.Value(), local_fqdn.Value(), local_ipaddr.to_ip_string().Value());
 	if (!got_fqdn) {
 		local_fqdn = local_hostname;
 		MyString default_domain;
@@ -107,6 +117,7 @@ void init_local_hostname()
 			local_fqdn += default_domain;
 		}
 	}
+#endif
 	hostname_initialized = true;
 }
 

@@ -2917,7 +2917,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
 		if( duration < 0 ) {
-			dprintf(D_SECURITY,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
+			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
 			delete keyinfo;
 			return false;
 		}
@@ -2932,10 +2932,41 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keyinfo,&policy,expiration_time,0);
 
 	if( !session_cache->insert(key) ) {
-		dprintf(D_SECURITY, "SECMAN: failed to create session %s.\n",
-				sesid);
-		delete keyinfo;
-		return false;
+		KeyCacheEntry *existing = NULL;
+		bool fixed = false;
+		if( !session_cache->lookup(sesid,existing) ) {
+			existing = NULL;
+		}
+		if( existing ) {
+			if( !LookupNonExpiredSession(sesid,existing) ) {
+					// the existing session must have expired, so try again
+				existing = NULL;
+				if( session_cache->insert(key) ) {
+					fixed = true;
+				}
+			}
+			else if( existing && existing->getLingerFlag() ) {
+				dprintf(D_ALWAYS,"SECMAN: removing lingering non-negotiated security session %s because it conflicts with new request\n",sesid);
+				session_cache->expire(existing);
+				existing = NULL;
+				if( session_cache->insert(key) ) {
+					fixed = true;
+				}
+			}
+		}
+
+		if( !fixed ) {
+			dprintf(D_ALWAYS, "SECMAN: failed to create session %s%s.\n",
+					sesid,
+					existing ? " (key already exists)" : "");
+			ClassAd *existing_policy = existing->policy();
+			if( existing_policy ) {
+				dprintf(D_ALWAYS,"SECMAN: existing session %s:\n", sesid);
+				existing_policy->dPrint(D_SECURITY);
+			}
+			delete keyinfo;
+			return false;
+		}
 	}
 
 	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
@@ -3059,6 +3090,21 @@ SecMan::SetSessionExpiration(char const *session_id,time_t expiration_time) {
 	session_key->setExpiration(expiration_time);
 
 	dprintf(D_SECURITY,"Set expiration time for security session %s to %ds\n",session_id,(int)(expiration_time-time(NULL)));
+
+	return true;
+}
+
+bool
+SecMan::SetSessionLingerFlag(char const *session_id) {
+	ASSERT( session_id );
+
+	KeyCacheEntry *session_key = NULL;
+	if(!session_cache->lookup(session_id,session_key)) {
+		dprintf(D_ALWAYS,"SECMAN: SetSessionLingerFlag failed to find "
+				"session %s\n",session_id);
+		return false;
+	}
+	session_key->setLingerFlag(true);
 
 	return true;
 }

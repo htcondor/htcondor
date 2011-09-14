@@ -19,7 +19,7 @@
 
 #include "classad/common.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 const char * const ATTR_AD					= "Ad";
 const char * const ATTR_CONTEXT				= "Context";
@@ -48,4 +48,4 @@ const char * const ATTR_XACTION_NAME			= "XactionName";
 const char * const ATTR_REQUIREMENTS			= "Requirements";
 const char * const ATTR_RANK					= "Rank";
 
-END_NAMESPACE // classad
+} // classad

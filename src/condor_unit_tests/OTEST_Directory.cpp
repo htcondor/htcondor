@@ -29,9 +29,9 @@
 #include "emit.h"
 #include "directory.h"
 #include "condor_getcwd.h"
-#ifdef WIN32
-__inline __int64 abs(__int64 x) { return _abs64(x); }
-#endif
+//#ifdef WIN32
+//__inline __int64 abs(__int64 x) { return _abs64(x); }
+//#endif
 
 static void setup(void);
 static void cleanup(void);
@@ -395,7 +395,7 @@ static void setup() {
 	create_empty_file("delete_file_5");
 	create_empty_file("delete_file_6");
 	create_empty_file("empty_file");
-	FILE* file_1 = safe_fopen_wrapper("full_file", "w+");
+	FILE* file_1 = safe_fopen_wrapper_follow("full_file", "w+");
 
 	// Add some text
 	cut_assert_not_null( file_1 );

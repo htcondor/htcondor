@@ -376,7 +376,16 @@ class RemoteResource : public Service {
 			but should be safe if you really feel like calling it yourself.
 		*/
 	virtual void checkX509Proxy( void );
-
+	
+	/**
+	 * used to suspend a remotely running job
+	 */ 
+	virtual bool suspend();
+	
+	/**
+	 * used to resume a job which has been suspended
+	 */ 
+	virtual bool resume();
 
 		// Try to send an updated X509 proxy down to the starter
 	bool updateX509Proxy(const char * filename);

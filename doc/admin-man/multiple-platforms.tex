@@ -1,0 +1,193 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Multiple-Platforms}Configuring Condor for
+Multiple Platforms} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A single, global
+configuration file may be used for all platforms in a Condor pool, with only
+platform-specific settings placed in separate files.  This greatly
+simplifies administration of a heterogeneous pool by allowing
+changes of platform-independent, global settings in one place, instead of
+separately for each platform.  This is made possible by treating the
+\Macro{LOCAL\_CONFIG\_FILE} configuration variable as a
+list of files, instead of a single file.  Of course, this only
+helps when using a shared file system for the machines in the
+pool, so that multiple machines can actually share a single set of
+configuration files.
+
+With multiple platforms, put all
+platform-independent settings (the vast majority) into the regular
+\File{condor\_config} file, which would be shared by all platforms.
+This global file would be the one that is found with the
+\Env{CONDOR\_CONFIG} environment variable, the user \Login{condor}'s home
+directory, or \File{/etc/condor/condor\_config}.
+
+Then set the \MacroNI{LOCAL\_CONFIG\_FILE} configuration variable from that
+global configuration file to specify both a platform-specific
+configuration file and
+optionally, a local, machine-specific configuration file (this parameter is
+described in section~\ref{sec:Condor-wide-Config-File-Entries} on
+``Condor-wide Configuration File Entries'').
+
+The order of file specification in the
+\MacroNI{LOCAL\_CONFIG\_FILE} configuration variable is important,
+because settings
+in files at the beginning of the list are overridden if the same
+settings occur in files later within the list.  So, if specifying the
+platform-specific file and then the machine-specific file, settings in
+the machine-specific file would override those in the
+platform-specific file (as is likely desired).  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Specify-Platform-Files}Utilizing a
+Platform-Specific Configuration File} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The name of 
+platform-specific configuration files may be specified by using the
+\MacroNI{ARCH} and \MacroNI{OPSYS} configuration variables, as are defined
+automatically by Condor.
+For example, for 32-bit Intel Windows 7
+machines and 64-bit Intel Linux machines,
+the files ought to be named:
+
+\begin{verbatim}
+  condor_config.INTEL.WINDOWS
+  condor_config.X86_64.LINUX
+\end{verbatim}
+
+Then, assuming these files are in the directory defined by the
+\MacroNI{ETC} configuration macro,
+and machine-specific configuration files are in
+the same directory, named by each machine's host name, the
+\Macro{LOCAL\_CONFIG\_FILE} configuration macro should be:
+
+\footnotesize
+\begin{verbatim}
+LOCAL_CONFIG_FILE = $(ETC)/condor_config.$(ARCH).$(OPSYS), \
+                    $(ETC)/$(HOSTNAME).local
+\end{verbatim}
+\normalsize
+
+Alternatively, when using AFS, an ``@sys link'' may be used to
+specify the platform-specific configuration file,
+and let AFS resolve this link differently on different systems.
+For example, consider
+a soft link named \File{condor\_config.platform} that points to
+\File{condor\_config.@sys}.  In this case, the files might be named:
+
+\begin{verbatim}
+  condor_config.i386_linux2
+  condor_config.platform -> condor_config.@sys
+\end{verbatim}
+
+and the \MacroNI{LOCAL\_CONFIG\_FILE} configuration variable would be set to:
+
+\footnotesize
+\begin{verbatim}
+LOCAL_CONFIG_FILE = $(ETC)/condor_config.platform, \
+                    $(ETC)/$(HOSTNAME).local
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Platform-Specific-Settings}Platform-Specific
+Configuration File Settings}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The configuration variables that are truly platform-specific are:
+
+\begin{description}
+
+\item[\Macro{RELEASE\_DIR}] Full path to to the installed
+  Condor binaries.  While the configuration files may be shared among
+  different platforms, the binaries certainly cannot.  Therefore,
+  maintain separate release directories for each platform
+  in the pool.  See section~\ref{sec:Condor-wide-Config-File-Entries}
+  on ``Condor-wide Configuration File Entries'' for details.
+
+\item[\Macro{MAIL}] The full path to the mail program.  See
+  section~\ref{sec:Condor-wide-Config-File-Entries} on ``Condor-wide
+  Configuration File Entries'' for details.
+
+\item[\Macro{CONSOLE\_DEVICES}] Which devices in \File{/dev} should be
+  treated as console devices.  See
+  section~\ref{sec:Startd-Config-File-Entries} on ``\condor{startd}
+  Configuration File Entries'' for details.
+
+\item[\Macro{DAEMON\_LIST}] Which daemons the \Condor{master} should
+  start up.  The reason this setting is platform-specific is
+  to distinguish the \Condor{kbdd}.
+  It is needed on many Linux and Windows machines,
+  and it is not needed on other platforms.
+  See section~\ref{sec:Master-Config-File-Entries} on
+  for details.
+
+\end{description}
+
+Reasonable defaults for all of these configuration variables
+will be found in the
+default configuration files inside a given platform's binary distribution
+(except the \MacroNI{RELEASE\_DIR}, since 
+the location of the Condor binaries and libraries is installation specific).
+With multiple platforms,
+use one of the \File{condor\_config} files from
+either running \Condor{configure} or from the
+\Release{etc/examples/condor\_config.generic} file,
+take these settings out,
+save them into a platform-specific file,
+and install the resulting platform-independent file as the global
+configuration file.
+Then,
+find the same settings from the configuration files for any other platforms
+to be set up, and put them in their own platform-specific files.
+Finally, set the \MacroNI{LOCAL\_CONFIG\_FILE} configuration variable
+to point to
+the appropriate platform-specific file, as described above.
+
+Not even all of these configuration variables are necessarily
+going to be different.
+For example, if an installed mail program understands the
+\Opt{-s} option in \File{/usr/local/bin/mail} on all platforms,
+the \MacroNI{MAIL} macro may be set to that in the global configuration
+file, and not define it anywhere else.
+For a pool with only Linux or Windows machines,
+the \MacroNI{DAEMON\_LIST} will be the same for each, so there is no
+reason not to put that in the global configuration file.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Other-Uses-for-Platform-Files}Other Uses for
+Platform-Specific Configuration Files} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+It is certainly possible that an installation may want other 
+configuration variables to be platform-specific as well.
+Perhaps a different policy is desired for
+one of the platforms.
+Perhaps different people should get the
+e-mail about problems with the different platforms.
+There is nothing hard-coded about any of this.
+What is shared and
+what should not shared is entirely configurable.
+
+Since the \Macro{LOCAL\_CONFIG\_FILE} macro can be an arbitrary
+list of files, an installation can even break up the global,
+platform-independent settings into separate files.
+In fact, the global configuration file might
+only contain a definition for \MacroNI{LOCAL\_CONFIG\_FILE}, and all
+other configuration variables would be placed in separate files.  
+
+Different people may be given different permissions to change different
+Condor settings.  For example, if a user is to be able to
+change certain settings, but nothing else, those
+settings may be placed in a file which was early
+in the \MacroNI{LOCAL\_CONFIG\_FILE} list,
+to give that user write permission on that file, then include all
+the other files after that one.  In this way, if the user was trying to
+change settings she/he should not, they would simply be overridden.  
+
+This mechanism is quite flexible and powerful.  For
+very specific configuration needs, they can probably be met by
+using file permissions, the \MacroNI{LOCAL\_CONFIG\_FILE} configuration
+variable, and imagination.
+

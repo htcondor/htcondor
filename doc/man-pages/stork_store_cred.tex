@@ -1,0 +1,53 @@
+\begin{ManPage}{\label{man-stork-store-cred}\Stork{store\_cred}}{1}
+{store a credential on the \Stork{credd} daemon for use by Stork}
+\Synopsis \SynProg{\Stork{store\_cred}}
+\ToolArgsBase
+
+\SynProg{\Stork{store\_cred}}
+\oOpt{-debug}
+\oOptArg{-N}{credential-name}
+\oOptArg{-m}{\Lbr user@\Rbr hostname\Lbr :portnumber\Rbr}
+\oOptArg{-D}{proxy-server-name}
+\oOpt{-S}
+\OptArg{-n}{hostname:portnumber}
+\OptArg{-f}{filename}
+\Opt{-t x509}
+
+
+\index{Condor commands!stork\_store\_cred}
+\index{Stork commands!stork\_store\_cred}
+\index{stork\_store\_cred command}
+
+\Description 
+
+\Stork{store\_cred} stores a credential to a \Stork{credd}
+daemon.
+
+The required \Opt{-t} option identifies that the credential
+is an X.509 certificate.
+
+\begin{Options}
+  \ToolArgsBaseDesc
+  \OptItem{\Opt{-debug}}{Show extra debugging information.}
+  \OptItem{\OptArg{-n}{hostname:portnumber}}{Identify the \Stork{credd} daemon
+    by host name and port number.}
+  \OptItem{\OptArg{-f}{filename}}{A full path and file name where the
+    credential is stored.}
+  \OptItem{\OptArg{-N}{credential-name}}{A unique name used by
+    the \Stork{credd} daemon to identify the credential.
+    When not specified, the \Stork{credd} daemon uses the string
+    "DEFAULT" as the unique name.}
+  \OptItem{\OptArg{-m}{\Lbr user@\Rbr hostname\Lbr :portnumber\Rbr}}
+    {An identification of the \Prog{MyProxy} server. }
+  \OptItem{\OptArg{-D}{proxy-server-name}}{The distinguished name of
+    the \Prog{MyProxy} server.}
+  \OptItem{\Opt{-S}}{Read the \Prog{MyProxy} password from
+  standard input.}
+\end{Options}
+
+\ExitStatus
+
+\Stork{store\_cred} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

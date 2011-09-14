@@ -311,6 +311,10 @@ void Hadoop::writeConfigFile() {
                         free(hdfs_allow);
                 }
                 char *tmp_str = allow_list.print_to_delimed_string(",");
+                if( tmp_str == NULL ) {
+                    tmp_str = strdup("");
+                }
+                ASSERT(tmp_str != NULL);
                 writeXMLParam("dfs.net.allow", tmp_str, &xml);
                 free(tmp_str);
         }
@@ -321,7 +325,17 @@ void Hadoop::writeConfigFile() {
                 free(hdfs_deny);
         } else {
                 StringList deny_list;
+                hdfs_deny = param("DENY_READ");
+                if (hdfs_deny != NULL) {
+                        deny_list.append(hdfs_deny);
+                        free(hdfs_deny);
+                }
                 hdfs_deny = param("HOSTDENY_READ");
+                if (hdfs_deny != NULL) {
+                        deny_list.append(hdfs_deny);
+                        free(hdfs_deny);
+                }
+                hdfs_deny = param("DENY_WRITE");
                 if (hdfs_deny != NULL) {
                         deny_list.append(hdfs_deny);
                         free(hdfs_deny);
@@ -332,6 +346,10 @@ void Hadoop::writeConfigFile() {
                         free(hdfs_deny);
                 }
                 char *tmp_str = deny_list.print_to_delimed_string(",");
+                if( tmp_str == NULL ) {
+                    tmp_str = strdup("");
+                }
+                ASSERT(tmp_str != NULL);
                 writeXMLParam("dfs.net.deny", tmp_str, &xml);
                 free(tmp_str);
         }
@@ -472,7 +490,11 @@ void Hadoop::startService( NodeType type ) {
 		    }
         }
         else if (type == HDFS_DATANODE) {
-                arglist.AppendArg(m_dataNodeClass);
+		// somewhere the first argument still gets stripped out, therefore this line is needed 
+		// until somebody figures out what the -classpath arg is eaten by - not pretty but makes
+		// it work for now. Sigh.
+                arglist.InsertArg("-cp", 0);
+		arglist.AppendArg(m_dataNodeClass);
         }
 
         int stdoutFds[2];
@@ -514,7 +536,6 @@ void Hadoop::startService( NodeType type ) {
         if (type == HDFS_NAMENODE ){
         	mkdir( m_nameNodeDir.Value(), 0700);
         	if( m_namenodeRole == ACTIVE) {
-                arglist.RemoveArg(0);
                 arglist.InsertArg(m_java.Value(), 0);
 
                 if (dir.Next() == NULL) {
@@ -585,7 +606,7 @@ void Hadoop::startService( NodeType type ) {
         m_state = STATE_RUNNING;
 }
 
-MyString Hadoop::runDFSAdmin( const char * cmd) {
+MyString Hadoop::runDFSAdmin( const char * cmd, const char *attr) {
 
         MyString result;
 
@@ -593,25 +614,23 @@ MyString Hadoop::runDFSAdmin( const char * cmd) {
 
         java_config(m_java, &arglist, &m_classpath);
       
-        arglist.RemoveArg(0);
         arglist.InsertArg(m_java.Value(), 0);
         
         arglist.AppendArg(m_dfsAdminClass);
         arglist.AppendArg(cmd);
-
-        MyString argString;
+        if (attr != NULL)
+		arglist.AppendArg(attr);
+	MyString argString;
         arglist.GetArgsStringForDisplay(&argString);
         dprintf(D_FULLDEBUG, "%s\n", argString.Value());
 
-        char ** args = arglist.GetStringArray();
 
         FILE* fp;
-	fp = my_popenv( args, "r", FALSE );
+	fp = my_popen( arglist, "r", FALSE );
 	if( ! fp ) {
 	       dprintf( D_ALWAYS, "Failed to execute %s %s\n",
                      arglist.GetArg( arglist.Count()-2), 
                      arglist.GetArg( arglist.Count()-1) );
-		   free(args);
 	       return "";
 	}
 
@@ -630,7 +649,6 @@ MyString Hadoop::runDFSAdmin( const char * cmd) {
                 break;
         }
         my_pclose( fp );
-        free( args );
         dprintf(D_FULLDEBUG,"RESULT:%s\n", result.Value());
         return result;
 }
@@ -708,7 +726,7 @@ void Hadoop::updateClassAd( MyString safemode, MyString stats) {
 void Hadoop::publishClassAd() {
 
        if( m_nodeType == HDFS_NAMENODE) {
-           MyString mode  = runDFSAdmin("-safemode get");
+           MyString mode  = runDFSAdmin("-safemode", "get");
            MyString stats = runDFSAdmin("-report");
 
            updateClassAd( mode, stats );

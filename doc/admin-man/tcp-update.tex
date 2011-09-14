@@ -1,0 +1,70 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:tcp-collector-update}Using TCP to Send Updates to
+the \Condor{collector}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{TCP}
+\index{TCP!sending updates}
+\index{UDP}
+\index{UDP!lost datagrams}
+\index{condor\_collector}
+
+TCP sockets are reliable, connection-based sockets that guarantee
+the delivery of any data sent.
+However, TCP sockets are fairly expensive to establish, and there is more
+network overhead involved in sending and receiving messages.
+
+UDP sockets are datagrams, and are not reliable.
+There is very little overhead in establishing or using a UDP socket,
+but there is also no guarantee that the data will be delivered.
+Typically, the lack of guaranteed delivery for UDP does not cause
+problems for Condor.
+
+Condor can be configured to use TCP
+sockets to send updates to the \Condor{collector} instead of
+UDP datagrams.
+This feature is intended for sites where UDP updates are
+lost because of the underlying network.
+An example where this may happen is if the pool is comprised of
+machines across a wide area network (WAN) where UDP packets are
+observed to be frequently dropped.
+
+To enable the use of TCP sockets, the following configuration
+setting is used:
+
+\begin{description}
+
+\item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
+  When set to \Expr{True}, the Condor daemons to use TCP to
+  update the \Condor{collector}, instead of the default UDP.
+  Defaults to \Expr{False}.
+
+\end{description}
+
+When there are sufficient file descriptors, the \Condor{collector} leaves
+established TCP sockets open, facilitating better performance.
+Subsequent updates can reuse an already open socket.
+
+Each Condor daemon will have 1 socket open to the \Condor{collector}.
+So, in a pool with N machines, each of them running a \Condor{master},
+\Condor{schedd}, and \Condor{startd}, the \Condor{collector} would
+need at least 3*N file descriptors.  If the \Condor{collector} is also
+acting as a CCB server, it will require an additional file descriptor for
+each registered daemon.  In typical Unix installations,
+the default number of file descriptors available to the \Condor{collector}
+ is only 1024.
+  This can be modified with a configuration setting such as the following:
+
+\begin{verbatim}
+COLLECTOR_MAX_FILE_DESCRIPTORS = 1600
+\end{verbatim}
+
+If there are not sufficient file descriptors for all of the daemons
+sending updates to the \Condor{collector}, a warning will be printed in the
+\Condor{collector} log file.  Look for the string
+\Expr{file descriptor safety level exceeded}.
+
+\Note At this time, \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP} only
+affects the main \Condor{collector} for the site, not any sites that
+a \Condor{schedd} might flock to.
+

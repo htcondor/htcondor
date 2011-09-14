@@ -85,6 +85,7 @@ class LiveJobImpl: public JobImpl
         int GetStatus () const;
         const ClassAd* GetSummary ();
         const ClassAd* GetFullAd () const;
+		int GetQDate() const;
         void Set ( const char* , const char* );
         bool Get ( const char * , const Attribute *& ) const;
         void Remove ( const char* );
@@ -122,6 +123,7 @@ class HistoryJobImpl: public JobImpl
         void GetFullAd ( ClassAd& ) const;
         int  GetCluster() const;
         const char* GetSubmissionId () const;
+		int GetQDate() const;
 
     private:
         HistoryEntry m_he;
@@ -144,6 +146,7 @@ class Job
         void GetSummary (ClassAd&) const;
         void GetFullAd (ClassAd&) const;
         const ClassAd* GetClassAd() const;
+        int GetQDate() const;
 
         void Set ( const char* , const char* );
         void Remove ( const char* );

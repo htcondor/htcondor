@@ -891,8 +891,13 @@ DedicatedScheddNegotiate::scheduler_getJobAd( PROC_ID job_id, ClassAd &job_ad )
 }
 
 bool
-DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID)
+DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
 {
+	ClassAd *jobad = GetJobAd(jobid.cluster,jobid.proc);
+	if( !jobad ) {
+		return true;
+	}
+	FreeJobAd( jobad );
 	return false;
 }
 
@@ -2107,6 +2112,7 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 		}
 
 		char *all_hosts_str = allRemoteHosts.print_to_string();
+		ASSERT( all_hosts_str );
 
 		for (int pNo = 0; pNo < allocation->num_procs; pNo++) {
 				SetAttributeString(allocation->cluster, pNo, ATTR_ALL_REMOTE_HOSTS, all_hosts_str);
@@ -3139,7 +3145,12 @@ DedicatedScheduler::AddMrec(
 
 	// Next, insert this match_rec into our hashtables
     ClassAd* job = GetJobAd(job_id.cluster, job_id.proc);
+	ASSERT( job );
     pending_requests[claim_id] = new ClassAd(*job);
+
+	// Collapse the chained ad attributes into this copied ad,
+	// just in case the job is removed while the request is still pending.
+	pending_requests[claim_id]->ChainCollapse();
 
     if (is_partitionable(match_ad)) {
         pending_matches[claim_id] = mrec;
@@ -3170,7 +3181,7 @@ DedicatedScheduler::DelMrec( match_rec* rec )
 bool
 DedicatedScheduler::DelMrec( char const* id )
 {
-	match_rec* rec;
+	match_rec* rec = NULL;
 
 	char name_buf[256];
 	name_buf[0] = '\0';
@@ -3180,7 +3191,26 @@ DedicatedScheduler::DelMrec( char const* id )
 				 "match not deleted\n" );
 		return false;
 	}
-
+	// Check pending_matches
+	std::map<std::string,match_rec*>::iterator it;
+	if((it = pending_matches.find(id)) != pending_matches.end()){
+		rec = it->second;	
+		dprintf( D_FULLDEBUG, "Found record for claim %s in pending matches\n",id);
+		pending_matches.erase(it);
+		std::map<std::string,ClassAd*>::iterator rit;
+		if((rit = pending_requests.find(rec->publicClaimId())) != pending_requests.end()){
+			if(rit->second){
+				delete rit->second;
+				pending_requests.erase(rit);
+			}
+		}
+		std::map<std::string,std::string>::iterator cit;
+		if((cit = pending_claims.find(rec->publicClaimId())) != pending_claims.end()){
+			pending_claims.erase(cit);
+		}
+		delete rec;
+		return true;
+	}
 		// First, delete it from our table hashed on ClaimId. 
 	HashKey key( id );
 	if( all_matches_by_id->lookup(key, rec) < 0 ) {
@@ -3527,7 +3557,7 @@ DedicatedScheduler::setScheduler( ClassAd* job_ad )
 	}
 
 	while( SetAttributeString(cluster, proc, ATTR_SCHEDULER,
-						   ds_name) ==  0 ) {
+							  ds_name, NONDURABLE) ==  0 ) {
 		proc++;
 	}
 	return true;

@@ -97,7 +97,7 @@ chirp_client_connect_starter()
 		dir = ".";
 	}
 	path.sprintf( "%s%c%s",dir,DIR_DELIM_CHAR,"chirp.config");
-    file = safe_fopen_wrapper(path.Value(),"r");
+    file = safe_fopen_wrapper_follow(path.Value(),"r");
     if(!file) {
 		fprintf(stderr, "Can't open %s file\n",path.Value());
 		return 0;
@@ -139,7 +139,7 @@ chirp_get_one_file(char *remote, char *local) {
 	if (strcmp(local, "-") == 0) {
 		wfd = stdout;
 	} else {
-		wfd = ::safe_fopen_wrapper(local, "wb+");
+		wfd = ::safe_fopen_wrapper_follow(local, "wb+");
 	}
 
 	if (wfd == NULL) {
@@ -176,7 +176,7 @@ chirp_put_one_file(char *local, char *remote, char *mode, int perm) {
 	if (strcmp(local, "-") == 0) {
 		rfd = stdin;
 	} else {
-		rfd = ::safe_fopen_wrapper(local, "rb");
+		rfd = ::safe_fopen_wrapper_follow(local, "rb");
 	}
 
 	if (rfd == NULL) {
@@ -227,7 +227,7 @@ chirp_put_one_file(char *local, char *remote, int perm) {
 
 	CONNECT_STARTER(client);
 
-	FILE *rfd = ::safe_fopen_wrapper(local, "rb");
+	FILE *rfd = ::safe_fopen_wrapper_follow(local, "rb");
 
 
 	if (rfd == NULL) {
@@ -526,7 +526,7 @@ int chirp_write(int argc, char **argv) {
 	if (strcmp(local_file, "-") == 0) {
 		rfd = stdin;
 	} else {
-		rfd = ::safe_fopen_wrapper(local_file, "rb");
+		rfd = ::safe_fopen_wrapper_follow(local_file, "rb");
 		if (!rfd) {
 			free((char*)buf);
 			fprintf(stderr, "Can't open local file %s\n", local_file);

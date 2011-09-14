@@ -379,7 +379,7 @@ ReadEvents(Options &opts, int &totalEvents)
 
 	// Initialize the reader from the persisted state
 	if ( opts.readPersist ) {
-		int	fd = safe_open_wrapper( opts.persistFile, O_RDONLY, 0 );
+		int	fd = safe_open_wrapper_follow( opts.persistFile, O_RDONLY, 0 );
 		if ( fd >= 0 ) {
 			if ( read( fd, state.buf, state.size ) != state.size ) {
 				fprintf( stderr, "Failed reading persistent file\n" );
@@ -631,7 +631,7 @@ ReadEvents(Options &opts, int &totalEvents)
 
 			// Store off the persisted state
 			if ( opts.writePersist && reader.GetFileState( state ) ) {
-				int	fd = safe_open_wrapper( opts.persistFile,
+				int	fd = safe_open_wrapper_follow( opts.persistFile,
 											O_WRONLY|O_CREAT,
 #ifdef WIN32
 											_S_IWRITE);
@@ -702,7 +702,7 @@ ReadEvents(Options &opts, int &totalEvents)
 
 	if ( opts.writePersist ) {
 		fputs( "\nStoring final state...", stdout );
-		int	fd = safe_open_wrapper( opts.persistFile,
+		int	fd = safe_open_wrapper_follow( opts.persistFile,
 									O_WRONLY|O_CREAT,
 #ifdef WIN32
 									_S_IWRITE);

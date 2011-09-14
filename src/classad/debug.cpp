@@ -22,7 +22,7 @@
 #include <stdarg.h>
 
 using namespace std;
-BEGIN_NAMESPACE(classad)
+namespace classad {
 
 int  _except_line_number = -1;
 const char *_except_file_name = NULL;
@@ -41,4 +41,4 @@ void _classad_except(const char *format, ...)
 	exit(1);
 	return;
 }
-END_NAMESPACE
+}

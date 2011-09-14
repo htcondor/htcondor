@@ -114,6 +114,14 @@ Script::BackgroundRun( int reaperId )
 			}
 			arg += _retValJob;
 
+		} else if (!strcasecmp( token, "$PRE_SCRIPT_RETURN" ) ) {
+			if ( !_post ) {
+				debug_printf( DEBUG_QUIET, "Warning: $RETURN macro should "
+						"not be used as a PRE script argument!\n" );
+				check_warning_strictness( DAG_STRICT_1 );
+			}
+			arg += _retValScript;
+
 		} else if (token[0] == '$') {
 			// This should probably be a fatal error when -strict is
 			// implemented.

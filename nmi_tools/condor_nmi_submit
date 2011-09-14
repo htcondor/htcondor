@@ -38,7 +38,7 @@ use vars qw/ $opt_build $opt_test
     $opt_submit_xtests $opt_configure $opt_src_tag $opt_other_tag
     $opt_nightly $opt_externals $opt_without_tests
     $opt_clear_externals_cache $opt_use_externals_cache
-    $opt_clear_externals_cache_weekly
+    $opt_clear_externals_cache_weekly $opt_clear_externals_cache_daily
     $opt_externals_only $opt_release_only $opt_version_buildid
     $opt_build_args
 	$opt_skip_doc $opt_sha1
@@ -51,7 +51,7 @@ sub FALSE { 0; };
 
 # Constants for use with makeFetchFileVCS to specify if fetching from
 # source (SRC), externals (EXT) or manual (DOC) repositories.
-sub DOC 	{ 1; };
+#sub DOC 	{ 1; };
 sub SRC 	{ 0; };
 
 ######################################################################
@@ -59,10 +59,10 @@ sub SRC 	{ 0; };
 ######################################################################
 
 # Root of the GIT Source repository
-my $GITROOT_SRC = "/space/git/CONDOR_SRC.git";
+my $GITROOT_SRC = $ENV{'GIT_DIR'} || "/space/git/CONDOR_SRC.git";
 
 # Root of the GIT Manual repository
-my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
+# my $GITROOT_DOC = "/space/git/CONDOR_DOC.git";
 
 # name of the submit_info file
 my $submit_info_basename = "SubmitInfo.pm";
@@ -346,6 +346,7 @@ sub parseOptions
            'clear-externals-cache' => \$opt_clear_externals_cache,
            'clear_externals_cache_weekly' => \$opt_clear_externals_cache_weekly,
            'clear-externals-cache-weekly' => \$opt_clear_externals_cache_weekly,
+           'clear-externals-cache-daily' => \$opt_clear_externals_cache_daily,
            'externals-only' => \$opt_externals_only,
 		   'release-only' => \$opt_release_only,
 		   'version-buildid=s' => \$opt_version_buildid,
@@ -425,6 +426,10 @@ sub parseOptions
         }
         if( defined($opt_clear_externals_cache_weekly) ) {
             print "ERROR: --clear-externals-cache-weekly is not valid with --test\n";
+            printUsage( 1 );
+        }
+        if( defined($opt_clear_externals_cache_daily) ) {
+            print "ERROR: --clear-externals-cache-daily is not valid with --test\n";
             printUsage( 1 );
         }
         if( defined($opt_externals_only) ) {
@@ -1302,20 +1307,21 @@ EOF
     print $fh "remote_post = nmi_tools/glue/build/remote_post\n";
     print $fh "platform_post = nmi_tools/glue/build/platform_post\n";
 
-	# tstclair: no longer needed.
-	# print $fh "post_all = nmi_tools/glue/build/post_all\n";
+	print $fh "post_all = nmi_tools/glue/build/post_all\n";
 
-	# tstclair: why is this even an option it should always be the case. 
-    # Pass common arguments to <platform>_remote_pre script
-    #if( defined($opt_use_externals_cache) ) {
-	#	$common_pre_args .= ' --use_externals_cache';
-    #}
-
+    if( defined($opt_use_externals_cache) ) {
+		$common_pre_args .= ' --use-externals-cache';
+    }
     if( defined($opt_clear_externals_cache) ) {
-		$common_pre_args .= ' --clear_externals_cache';
+		$common_pre_args .= ' --clear-externals-cache';
     }
     if( defined($opt_clear_externals_cache_weekly) ) {
 		$common_pre_args .= ' --clear-externals-cache-weekly';
+    }
+    if( defined($opt_clear_externals_cache_daily) ||
+		defined($opt_nightly) ) {
+
+		$common_pre_args .= ' --clear-externals-cache-daily';
     }
 	print $fh "\n";
 
@@ -1581,16 +1587,16 @@ sub generateBuildFetchFiles
 		# check the externals and manual out from different
 		# repositories than the source. Ideally, this would only be
 		# visible at the makeFetchFileVCS level.
-		if( defined $opt_git ) {
+#		if( defined $opt_git ) {
 #	    	my $extfile = "externals-$othertag.src";
 #	    	$extfile =~ s,/,,g;
 #	    	makeFetchFileVCS( $extfile, TRUE, EXT, $module, $othertag );
 #	    	push( @fetch_files, $extfile );
 	
-	    	my $docfile = "manual-$othertag.src";
-	    	$docfile =~ s,/,,g;
-	    	makeFetchFileVCS( $docfile, TRUE, DOC, $module, $othertag );
-	    	push( @fetch_files, $docfile );
+#	    	my $docfile = "manual-$othertag.src";
+#	    	$docfile =~ s,/,,g;
+#	    	makeFetchFileVCS( $docfile, TRUE, DOC, $module, $othertag );
+#	    	push( @fetch_files, $docfile );
 
 #	    	my $test_cnffile = "confidential-$othertag.src";
 #	    	$test_cnffile =~ s,/,,g;
@@ -1601,7 +1607,7 @@ sub generateBuildFetchFiles
 #	    	$test_cnffile =~ s,/,,g;
 #	    	makeFetchFileVCS( $test_cnffile, TRUE, TST_LRG, $module, $othertag );
 #	    	push( @fetch_files, $test_cnffile );
-		}
+#		}
     } elsif( defined $src_workspace ) {
         # TODO: There is a race condition if the user also specified
         # --nmi-glue and this directory ($src_workspace) contains
@@ -1623,13 +1629,6 @@ sub generateBuildFetchFiles
 #        makeFetchFileVCS( $ext_file, TRUE, EXT, $opt_externals );
 #        push( @fetch_files, "$ext_file" );
 #    }
-
-	# If the $srctag is available, then use it for where to get the nmi tools.
-	# In general, we'd like to match the branch of the glue to the branch we're
-	# building.
-    my $nmi_tools_file = "nmi_tools.src";
-    makeFetchFileVCS( $nmi_tools_file, FALSE, SRC, $cvs_condor_nmi_submit, $srctag );
-    push( @fetch_files, $nmi_tools_file );
 
     return @fetch_files;
 }
@@ -1676,15 +1675,16 @@ sub makeFetchFileVCS
 #		if( EXT == $repo) {
 #			$gitroot = $GITROOT_EXT;
 #		} elsif(DOC == $repo) {
-		if(DOC == $repo) {
-			$gitroot = $GITROOT_DOC;
+#		if(DOC == $repo) {
+#			$gitroot = $GITROOT_DOC;
 #		} elsif(TST_CNF == $repo) {
 #			$gitroot = $GITROOT_TSTCNF;
 #		} elsif(TST_LRG == $repo) {
 #			$gitroot = $GITROOT_TSTLRG;
-		} else {
-			$gitroot = $GITROOT_SRC;
-		}
+#		} else {
+#			$gitroot = $GITROOT_SRC;
+#		}
+		$gitroot = $GITROOT_SRC;
 		print FILE "method = git\n";
 		print FILE "git_root = $gitroot\n";
 		print FILE "git_path = $module\n" unless $is_module;

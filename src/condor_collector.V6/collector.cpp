@@ -1293,7 +1293,7 @@ void CollectorDaemon::Config()
 			viewCollectorTypes = new StringList(tmp);
 			char *printable_string = viewCollectorTypes->print_to_string();
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
-					printable_string);
+					printable_string?printable_string:"");
 			free(printable_string);
 		}
 	}
@@ -1410,6 +1410,7 @@ void CollectorDaemon::sendCollectorAd()
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad );
 
+    daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
 
 	// Send the ad
@@ -1563,7 +1564,7 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
             // the rest of the pool.
             AdNameHashKey hk;
             ClassAd *pvt_ad;
-            ASSERT( makeStartdAdHashKey (hk, theAd, condor_sockaddr::null) );
+            ASSERT( makeStartdAdHashKey (hk, theAd) );
             pvt_ad = collector.lookup(STARTD_PVT_AD,hk);
             if (pvt_ad) {
                 if (!pvt_ad->put(*view_sock)) {

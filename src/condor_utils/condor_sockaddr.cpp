@@ -113,7 +113,7 @@ void condor_sockaddr::set_addr_any()
 bool condor_sockaddr::is_loopback() const
 {
 	if (is_ipv4()) {
-		return v4.sin_addr.s_addr == ntohl(INADDR_LOOPBACK);
+    	return ((v4.sin_addr.s_addr & 0xFF) == 0x7F); // 127/8
 	}
 	else {
 		return IN6_IS_ADDR_LOOPBACK( &v6.sin6_addr );

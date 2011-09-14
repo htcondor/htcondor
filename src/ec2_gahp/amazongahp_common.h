@@ -71,8 +71,6 @@ bool check_access_and_secret_key_file(const char* accesskeyfile, const char* sec
 std::string create_failure_result( int req_id, const char *err_msg, const char* err_code = NULL);
 std::string create_success_result( int req_id, StringList *result_list);
 
-bool set_gahp_log_file(const char* logfile);
-
 void set_amazon_proxy_server(const char* url);
 bool get_amazon_proxy_server(const char* &host_name, int& port, const char* &user_name, const char* &passwd );
 

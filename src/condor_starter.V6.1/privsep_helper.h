@@ -20,9 +20,28 @@
 #ifndef _PRIVSEP_HELPER_H
 #define _PRIVSEP_HELPER_H
 
+#include "MyString.h"
+
 class ArgList;
 class Env;
 struct FamilyInfo;
+
+class PrivSepError {
+ public:
+	PrivSepError();
+
+	void setHoldInfo(int hold_code,int hold_subcode,char const *hold_reason);
+
+	char const *holdReason() { return hold_reason.c_str(); }
+	int holdCode() { return hold_code; }
+	int holdSubCode() { return hold_subcode; }
+
+ private:
+	int hold_code;
+	int hold_subcode;
+	std::string hold_reason;
+
+};
 
 class PrivSepHelper {
 
@@ -30,11 +49,11 @@ public:
 
 	// change ownership of the sandbox to the user
 	//
-	virtual void chown_sandbox_to_user() = 0;
+	virtual bool chown_sandbox_to_user(PrivSepError &err) = 0;
 
 	// change ownership of the sandbox to condor
 	//
-	virtual void chown_sandbox_to_condor() = 0;
+	virtual bool chown_sandbox_to_condor(PrivSepError &err) = 0;
 
 	// change our state to "sandbox is owned by user"
 	virtual void set_sandbox_owned_by_user() = 0;
@@ -52,7 +71,8 @@ public:
 	                           int         reaper_id,
 	                           int         dc_job_opts,
 	                           FamilyInfo* family_info,
-							   int *       affinity_mask = 0) = 0;
+							   int *       affinity_mask = 0,
+							   MyString *  error_msg = NULL) = 0;
 
 	virtual ~PrivSepHelper() { }
 };

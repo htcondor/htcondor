@@ -1,0 +1,525 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Quill}Quill}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Quill|(}
+\index{Condor daemon!condor\_quill@\Condor{quill}}
+\index{daemon!condor\_quill@\Condor{quill}}
+\index{condor\_quill daemon}
+\index{Condor daemon!condor\_dbmsd@\Condor{dbmsd}}
+\index{daemon!condor\_dbmsd@\Condor{dbmsd}}
+\index{condor\_dbmsd daemon}
+Quill is an optional component of Condor that maintains a mirror 
+of Condor operational data
+in a relational database.  The \Condor{quill} daemon updates
+the data in the relation database, and the \Condor{dbmsd} daemon
+maintains the database itself.
+
+As of Condor version 7.5.5,
+Quill is distributed only with the source code.
+It is not included in the builds of Condor provided by UW,
+but it is available as a feature that can be enabled by those who compile
+Condor from the source code.
+Find the code within the \File{condor\_contrib} directory, 
+in the directories \File{condor\_tt} and \File{condor\_dbmsd}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Quill-Installation}Installation and Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Quill uses the \Prog{PostgreSQL} database management system.
+Quill uses the \Prog{PostgreSQL} server as its back end
+and client library, 
+\Prog{libpq} to talk to the server.
+We \Bold{strongly recommend} the use of version 
+8.2 or later due to its integrated facilities of certain key 
+database maintenance tasks, and stronger security features.
+
+Obtain \Prog{PostgreSQL} from
+
+\URL{http://www.postgresql.org/ftp/source/}
+
+Installation instructions are detailed in:
+\URL{http://www.postgresql.org/docs/8.2/static/installation.html}
+
+Configure \Prog{PostgreSQL} after installation:
+
+\begin{enumerate}
+
+\item Initialize the database with the \Prog{PostgreSQL} command 
+\verb@initdb@.
+
+\item Configure to accept TCP/IP connections.
+For \Prog{PostgreSQL} version 8,
+use the \Code{listen\_addresses} variable in 
+\File{postgresql.conf} file as a guide.
+For example,
+\Code{listen\_addresses = '*'}
+means listen on any IP interface.
+
+\item Configure automatic vacuuming.
+Ensure that these variables with these defaults are
+commented in and/or set properly in the 
+\File{postgresql.conf} configuration file:
+\begin{verbatim}
+# Turn on/off automatic vacuuming
+autovacuum = on
+
+# time between autovacuum runs, in secs
+autovacuum_naptime = 60
+
+# min # of tuple updates before vacuum
+autovacuum_vacuum_threshold = 1000
+
+# min # of tuple updates before analyze
+autovacuum_analyze_threshold = 500
+
+# fraction of rel size before vacuum
+autovacuum_vacuum_scale_factor = 0.4 
+
+# fraction of rel size before analyze
+autovacuum_analyze_scale_factor = 0.2
+
+# default vacuum cost delay for 
+   # autovac, -1 means use 
+   # vacuum_cost_delay
+autovacuum_vacuum_cost_delay = -1  
+
+# default vacuum cost limit for 
+   # autovac, -1 means use
+   # vacuum_cost_limit
+autovacuum_vacuum_cost_limit = -1   
+\end{verbatim}
+
+
+\item Configure \Prog{PostgreSQL} to accept TCP/IP connections from 
+specific hosts.
+Modify the \File{pg\_hba.conf} file 
+(which usually resides in the \Prog{PostgreSQL} server's data directory).
+Access is required by the \Condor{quill} daemon,
+as well as the database users
+\Username{quillreader} and \Username{quillwriter}.
+For example, to give
+database users \Username{quillreader} and \Username{quillwriter}
+password-enabled access to all databases on current machine from any
+machine in the 128.105.0.0/16 subnet, add the following:
+
+\begin{tabular}{llllll}
+host&all&quillreader&128.105.0.0&255.255.0.0&md5\\
+host&all&quillwriter&128.105.0.0&255.255.0.0&md5
+\end{tabular}
+
+Note that in addition to the database specified by
+the configuration variable \MacroNI{QUILL\_DB\_NAME},
+the \Condor{quill} daemon also needs access to the database
+"template1".
+In order to create the database in the first place, 
+the \Condor{quill} daemon needs to connect to the database.
+
+\item Start the \Prog{PostgreSQL} server service. See the
+installation instructions for the appropriate method to start the service at
+\URL{http://www.postgresql.org/docs/8.2/static/installation.html}
+
+\item The \Condor{quill} and \Condor{dbmsd} daemons and client tools connect
+to the database as users \Username{quillreader} and 
+\Username{quillwriter}.
+These are database users, not operating system users.
+The two types of users are quite different from each other.
+If these database users do not exist,
+add them using the 
+\Prog{createuser} command supplied with the installation.
+Assign them with appropriate passwords;
+these passwords will be used by the Quill tools to connect
+to the database in a secure way.
+User \Username{quillreader} should not be allowed to create
+more databases nor create more users.
+User \Username{quillwriter} should
+not be allowed to create more users,
+however it should be allowed to create more databases.
+The following commands create the two users
+with the appropriate permissions,
+and be ready to enter the corresponding passwords when prompted.
+
+\footnotesize
+\begin{verbatim}
+/path/to/postgreSQL/bin/directory/createuser quillreader \
+	--no-createdb --no-createrole --pwprompt
+
+/path/to/postgreSQL/bin/directory/createuser quillwriter \
+	--createdb --no-createrole --pwprompt
+\end{verbatim}
+\normalsize
+
+Answer ``no'' to the question about the ability for role creation.
+
+\item Create a database for Quill to store data in
+with the \verb@createdb@ command. 
+Create this database with the \Username{quillwriter} user as the owner.
+A sample command to do this is
+\footnotesize
+\begin{verbatim}
+createdb -O quillwriter quill
+\end{verbatim}
+\normalsize
+\verb@quill@ is the database name to use with the \MacroNI{QUILL\_DB\_NAME}
+configuration variable.
+
+\item The \Condor{quill} and \Condor{dbmsd} daemons need read and write access
+to the database.
+They connect as user \Username{quillwriter},
+which has owner privileges to the database.
+Since this gives all access to the \Username{quillwriter} user,
+its password cannot be stored in a public place 
+(such as in a ClassAd).
+For this reason, the \Username{quillwriter} password is stored
+in a file named \File{.pgpass} in the Condor spool directory.
+Appropriate protections on this file guarantee secure access to the database.
+This file must be created and protected by the site administrator;
+if this file does not exist as and where expected, the \Condor{quill}
+and \Condor{dbmsd} daemons log an error and exit.
+The \File{.pgpass} file contains a single line that
+has fields separated by colons and is properly terminated by
+an operating system specific newline character (Unix) or CRLF (Windows).
+The first field may be either the machine name and fully qualified domain,
+or it may be a dotted quad IP address.
+This is followed by four fields containing:
+the TCP port number, 
+the name of the database,
+the "quillwriter" user name,
+and the password.
+The form used in the first field must exactly match the value set for 
+the configuration variable \Macro{QUILL\_DB\_IP\_ADDR}.
+Condor uses a string comparison between the two, and it does not resolve the
+host names to compare IP addresses.
+Example:
+\footnotesize
+\begin{verbatim}
+machinename.cs.wisc.edu:5432:quill:quillwriter:password
+\end{verbatim}
+\normalsize
+
+\end{enumerate}
+
+After the \Prog{PostgreSQL} database is initialized and running, 
+the Quill schema
+must be loaded into it.  First, load the plsql programming language
+into the server:
+
+\begin{verbatim}
+createlang plpgsql [databasename]
+\end{verbatim}
+
+Then, load the Quill schema from the sql files in the \File{sql} subdirectory
+of the Condor release directory:
+
+\begin{verbatim}
+psql [databasename] [username] < common_createddl.sql
+psql [databasename] [username] < pgsql_createddl.sql
+\end{verbatim}
+where \verb@[username]@ will be \verb@quillwriter@.
+
+
+After \Prog{PostgreSQL} is configured and running, Condor must also be
+configured to use Quill, since by default Quill is configured to be off.
+
+\begin{description}
+\item Add the file \File{.pgpass} to the 
+  \MacroNI{VALID\_SPOOL\_FILES} variable, since \Condor{preen} must
+  be told not to delete this file.
+  This step may not be necessary, depending on which version of Condor 
+  you are upgrading from. 
+ 
+\item Set up configuration variables that are specific to the installation,
+and check that the \MacroNI{HISTORY} variable is set.
+\footnotesize
+\begin{verbatim}
+HISTORY                 = $(SPOOL)/history
+QUILL_ENABLED           = TRUE
+QUILL_USE_SQL_LOG       = FALSE
+QUILL_NAME              = some-unique-quill-name.cs.wisc.edu
+QUILL_DB_USER           = quillwriter
+QUILL_DB_NAME           = database-for-some-unique-quill-name
+QUILL_DB_IP_ADDR        = databaseIPaddress:port
+# the following parameter's units is in seconds
+QUILL_POLLING_PERIOD    = 10
+QUILL_HISTORY_DURATION 	= 30
+QUILL_MANAGE_VACUUM     = FALSE
+QUILL_IS_REMOTELY_QUERYABLE = TRUE
+QUILL_DB_QUERY_PASSWORD =  password-for-database-user-quillreader
+QUILL_ADDRESS_FILE      = $(LOG)/.quill_address
+QUILL_DB_TYPE           = PGSQL
+# The Purge and Reindex intervals are in seconds
+DATABASE_PURGE_INTERVAL	= 86400
+DATABASE_REINDEX_INTERVAL = 86400
+# The History durations are all in days 
+QUILL_RESOURCE_HISTORY_DURATION  = 7
+QUILL_RUN_HISTORY_DURATION = 7
+QUILL_JOB_HISTORY_DURATION = 3650
+#The DB Size limit is in gigabytes
+QUILL_DBSIZE_LIMIT      = 20
+QUILL_MAINTAIN_DB_CONN  = TRUE
+SCHEDD_SQLLOG           = $(LOG)/schedd_sql.log
+SCHEDD_DAEMON_AD_FILE   = $(LOG)/.schedd_classad
+
+\end{verbatim}
+\normalsize
+
+\end{description}
+
+The default Condor configuration file should already contain definitions
+for \MacroNI{QUILL} and \MacroNI{QUILL\_LOG}.  
+When upgrading from a previous version that did not have Quill to
+a new one that does, define these two configuration variables.
+
+Only one machine should run the \Condor{dbmsd} daemon.  
+On this machine, add it to the \MacroNI{DAEMON\_LIST} configuration variable.
+All Quill-enabled machines should also run the \Condor{quill} daemon.
+The machine running the \Condor{dbmsd} daemon can also 
+run a \Condor{quill} daemon.  An example \MacroNI{DAEMON\_LIST}
+for a machine running both daemons,
+and acting as both a submit machine and a central manager might 
+look like the following:
+
+\footnotesize
+\begin{verbatim}
+DAEMON_LIST  = MASTER, SCHEDD, COLLECTOR, NEGOTIATOR, DBMSD, QUILL
+\end{verbatim}
+\normalsize
+
+The \Condor{dbmsd} daemon will need configuration file entries
+common to all daemons.
+If not already in the configuration file, add the following entries:
+
+\begin{verbatim}
+DBMSD = $(SBIN)/condor_dbmsd
+DBMSD_ARGS = -f
+DBMSD_LOG = $(LOG)/DbmsdLog
+MAX_DBMSD_LOG = 10000000
+\end{verbatim}
+
+Descriptions of these and other configuration variables are in
+section~\ref{sec:Quill-Config-File-Entries}.
+Here are further brief details:
+
+\begin{description}
+
+\item[\Macro{QUILL\_DB\_NAME} and \Macro{QUILL\_DB\_IP\_ADDR}]
+These two variables are used to determine the location of the database
+server that this Quill would talk to, and the name of the database that
+it creates.  More than one Quill server can talk to the same database
+server.  This can be accomplished by letting all the 
+\MacroNI{QUILL\_DB\_IP\_ADDR} values point to the same database server.
+
+\item[\Macro{QUILL\_DB\_USER}] 
+This is the \Prog{PostgreSQL} user that Quill will connect as to the database.
+We recommend \Username{quillwriter} for this setting. 
+There is no default setting for \MacroNI{QUILL\_DB\_USER}, so it must
+be specified in the configuration file. 
+
+\item[\Macro{QUILL\_NAME}]
+Each \Condor{quill} daemon in the pool has to be uniquely named.
+
+\item[\Macro{QUILL\_POLLING\_PERIOD}]
+This controls the frequency with which Quill polls the
+\File{job\_queue.log} file.  By default, it is 10 seconds.  Since Quill
+works by periodically sniffing the log file for updates and then sending
+those updates to the database, this variable controls the trade off between
+the currency of query results and Quill's load on the system, which
+is usually negligible.
+
+\item[ \Macro{QUILL\_RESOURCE\_HISTORY\_DURATION}, 
+		\Macro{QUILL\_RUN\_HISTORY\_DURATION}, and
+		\Macro{QUILL\_JOB\_HISTORY\_DURATION}]
+These three variables control the deletion of historical information from the
+database. 
+\MacroNI{QUILL\_RESOURCE\_HISTORY\_DURATION} is the number of days
+historical information about the state of a resource will be kept in the 
+database. 
+The default for resource history is 7 days.
+An example of a resource is the ClassAd for a compute slot.
+\MacroNI{QUILL\_RUN\_HISTORY\_DURATION} is the number of days
+after completion that auxiliary information about a  given job will stay in 
+the database.  
+This includes user log events, file transfers performed by the job, the matches
+that were made for a job, et cetera. 
+The default for run history is 7 days.
+\MacroNI{QUILL\_JOB\_HISTORY\_DURATION} is the number of days
+after completion that a given job will stay in the database.  
+A more precise definition is the number of days since the history ad got 
+into the history database; those two might be different,
+if a job is completed but stays in the queue for a while.
+The default for job history is 3,650 days (about 10 years.)
+
+\item[\Macro{DATABASE\_PURGE\_INTERVAL}]
+As scanning the entire database for old jobs can be expensive,
+the other variable \MacroNI{DATABASE\_PURGE\_INTERVAL}
+is the number of seconds between two successive scans.  
+\MacroNI{DATABASE\_PURGE\_INTERVAL} is set to 86400 seconds, or one day.
+
+\item[\Macro{DATABASE\_REINDEX\_INTERVAL}]
+\Prog{PostgreSQL} does not aggressively maintain the index structures for
+deleted tuples. This can lead to bloated index structures.
+Quill can periodically reindex the database, which is controlled by the
+variable \MacroNI{DATABASE\_REINDEX\_INTERVAL}.
+\MacroNI{DATABASE\_PURGE\_INTERVAL} is set to 86400 seconds, or one day.
+
+\item[\Macro{QUILL\_DBSIZE\_LIMIT}]
+Quill can estimate the size of the database, and send email to the Condor
+administrator if the database size exceeds this threshold. 
+The estimate is checked after every \MacroNI{DATABASE\_PURGE\_INTERVAL}.
+The limit is given as gigabytes, and the default is 20.
+
+\item[\Macro{QUILL\_MAINTAIN\_DB\_CONN}]
+Quill can maintain an open connection the database server, which speeds up
+updates to the database. 
+However, each open connection consumes resources at the database server.
+The default is TRUE, but for large pools we recommend setting this 
+FALSE.
+
+\item[\Macro{QUILL\_MANAGE\_VACUUM}]
+Set to \Expr{False} by default, this variable determines whether Quill is to 
+perform vacuuming tasks on its tables or not. Vacuuming is a maintenance 
+task that needs to be performed on tables in \Prog{PostgreSQL}. The 
+frequency with which a table is vacuumed typically depends on the number 
+of updates (inserts/deletes) performed on the table. Fortunately, with 
+\Prog{PostgreSQL} version 8.1, vacuuming tasks can be configured to be 
+performed automatically by the database server. We recommend that users 
+upgrade to 8.1 and use the integrated vacuuming facilities of the database 
+server, instead of having Quill do them. If the user does prefer having 
+Quill perform those vacuuming tasks, it can be achieved by setting this 
+variable to Expr{True}. However, it cannot be overstated that Quill's vacuuming 
+policy is quite rudimentary as compared to the integrated facilities 
+of the database server, and under high update workloads, can prove to 
+be a bottleneck on the Quill daemon. As such, setting this variable to 
+Expr{True} results in some warning messages in the log file regarding this 
+issue.
+
+\item[\Macro{QUILL\_IS\_REMOTELY\_QUERYABLE}]
+Thanks to 
+\Prog{PostgreSQL},
+one can now remotely query both the job queue and the
+history tables. This variable controls whether this remote querying 
+feature should be enabled.  By default it is \Expr{True}.  Note that even if 
+this is \Expr{False}, one can still query the job queue 
+at the remote \Condor{schedd} daemon.
+This variable only controls whether the database tables are remotely queryable.
+
+\item[\Macro{QUILL\_DB\_QUERY\_PASSWORD}]
+In order for the query tools to connect to a database, they need to provide
+the password that is assigned to the database user \Username{quillreader}. 
+This variable is then advertised by the \Condor{quill} daemon
+to the \Condor{collector}.  
+This facility enables remote querying: remote \Condor{q} query tools first 
+ask the \Condor{collector} for
+the password associated with a particular Quill database, 
+and then query that database.  Users who do not have access to the 
+\Condor{collector} 
+cannot view the password, and as such cannot query the database.  Again, this 
+password only provides read access to the database.
+
+\item[\Macro{QUILL\_ADDRESS\_FILE}]
+When Quill starts up, it can place its address (IP and port)
+into a file.  This way, tools running on the local machine do not
+need to query the central manager to find Quill.  This 
+feature can be turned off by commenting out the variable.
+
+\end{description}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Quill-Example}Four Usage Examples}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{enumerate}
+\item Query a remote Quill daemon on \File{regular.cs.wisc.edu}
+for all the jobs in the queue
+\begin{verbatim}
+	condor_q -name quill@regular.cs.wisc.edu
+	condor_q -name schedd@regular.cs.wisc.edu
+
+\end{verbatim}
+There are two ways to get to a Quill daemon: directly using its name as 
+specified in the \MacroNI{QUILL\_NAME} configuration variable, or indirectly
+by querying the \Condor{schedd} daemon using its name.
+In the latter case, \Condor{q} will detect 
+if that \Condor{schedd} daemon is being serviced by a database, and if so, directly query it.
+In both cases, the IP address and port of the database server hosting the data of 
+this particular remote Quill daemon can be figured out by the \MacroNI{QUILL\_DB\_IP\_ADDR} 
+and \MacroNI{QUILL\_DB\_NAME} variables specified in the \MacroNI{QUILL\_AD}
+sent by the quill daemon to the collector and in the \MacroNI{SCHEDD\_AD} sent by
+the \Condor{schedd} daemon.  
+
+\item Query a remote Quill daemon on \File{regular.cs.wisc.edu} for all historical 
+jobs belonging to owner einstein.
+\begin{verbatim}
+	condor_history -name quill@regular.cs.wisc.edu einstein
+\end{verbatim}
+
+\item Query the local Quill daemon for the average time spent in the queue 
+for all non-completed jobs. 
+\begin{verbatim}
+	condor_q -avgqueuetime 
+\end{verbatim}
+The average queue time is defined as the average of
+\Expr{(currenttime - jobsubmissiontime)} over all jobs which are neither
+completed \Expr{(JobStatus == 4)} or removed \Expr{(JobStatus == 3)}.
+
+\item Query the local Quill daemon for all historical jobs completed since 
+Apr 1, 2005 at 13h 00m.
+\begin{verbatim}
+	condor_history -completedsince '04/01/2005 13:00'
+\end{verbatim}
+It fetches all jobs
+which got into the 'Completed' state on or after the
+specified time stamp.  It use the \Prog{PostgreSQL} date/time
+syntax rules, as it encompasses most format options.  See
+\URL{http://www.postgresql.org/docs/8.2/static/datatype-datetime.html}
+for the various time stamp formats.
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Quill-Security}Quill and Security}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+There are several layers of security in Quill, some provided by Condor and
+others provided by the database.  First, all accesses to the database
+are password-protected.
+
+\begin{enumerate}
+\item The query tools, \Condor{q} and
+\Condor{history} connect to the database as user \Username{quillreader}.
+The password for this user can vary from one database to another and
+as such, each Quill daemon advertises this password to the collector.
+The query tools then obtain this password from the collector and
+connect successfully to the database.  Access to the database by the
+\Username{quillreader} user is read-only, as this is sufficient for the
+query tools.  The \Condor{quill} daemon ensures this protected access using the sql
+GRANT command when it first creates the tables in the database.  Note that
+access to the \Username{quillreader} password itself can be blocked by
+blocking access to the collector, a feature already supported in Condor.
+
+\item The \Condor{quill} and \Condor{dbmsd} daemons, on the other hand,
+need read and write access to the database.
+As such, they connect as user \Username{quillwriter},
+who has owner privileges to the database.  Since this gives all
+access to the \Username{quillwriter} user, this password cannot
+be stored in a public place (such as the collector).  For this
+reason, the \Username{quillwriter} password is stored in a file called
+\File{.pgpass} in the Condor spool directory.
+Appropriate protections on this file guarantee secure access to the database.
+This file must be created and protected by the site administrator;
+if this file does not exist as and where expected, the \Condor{quill}
+daemon logs an error and exits.
+
+\item The \Attr{IsRemotelyQueryable} attribute in the Quill ClassAd advertised
+by the Quill daemon to the collector can be used by site administrators
+to disallow the database from being read by all remote Condor query tools.
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Quill-Schema}Quill and Its RDBMS Schema}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{admin-man/quill-schema.tex}

@@ -27,7 +27,6 @@ if (WITH_LIBXML2)
 		condor_pre_external( LIBXML2 libxml2-2.7.3 "lib;include" "lib/libxml2")
 
 		ExternalProject_Add( libxml2
-					DEPENDS ${ZLIB_REF}
 				    #-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBXML2_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${LIBXML2_STAGE}/dl

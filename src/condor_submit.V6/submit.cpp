@@ -395,6 +395,11 @@ const char* EC2SecurityGroups = "ec2_security_groups";
 const char* EC2KeyPairFile = "ec2_keypair_file";
 const char* EC2InstanceType = "ec2_instance_type";
 const char* EC2ElasticIP = "ec2_elastic_ip";
+const char* EC2EBSVolumes = "ec2_ebs_volumes";
+const char* EC2AvailabilityZone= "ec2_availability_zone";
+const char* EC2VpcSubnet = "ec2_vpc_subnet";
+const char* EC2VpcIP = "ec2_vpc_ip";
+
 
 //
 // Deltacloud Parameters
@@ -519,7 +524,7 @@ void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
 void transfer_vm_file(const char *filename);
 bool make_vm_file_path(const char *filename, MyString& fixedname);
-bool validate_xen_disk_parm(const char *xen_disk, MyString &fixedname);
+bool validate_disk_parm(const char *disk, MyString &fixedname, int min_params=3, int max_params=4);
 
 char *owner = NULL;
 char *ntdomain = NULL;
@@ -1037,7 +1042,7 @@ main( int argc, char *argv[] )
 		// no file specified, read from stdin
 		fp = stdin;
 	} else {
-		if( (fp=safe_fopen_wrapper(cmd_file,"r")) == NULL ) {
+		if( (fp=safe_fopen_wrapper_follow(cmd_file,"r")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open command file (%s)\n",
 						strerror(errno));
 			exit(1);
@@ -1060,7 +1065,7 @@ main( int argc, char *argv[] )
 
 	// open the file we are to dump the ClassAds to...
 	if ( DumpClassAdToFile ) {
-		if( (DumpFile=safe_fopen_wrapper(DumpFileName.Value(),"w")) == NULL ) {
+		if( (DumpFile=safe_fopen_wrapper_follow(DumpFileName.Value(),"w")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open file to dump ClassAds into (%s)\n",
 				strerror(errno));
 			exit(1);
@@ -3245,6 +3250,12 @@ SetJobStatus()
 	MyString buffer;
 
 	if( hold && (hold[0] == 'T' || hold[0] == 't') ) {
+		if ( Remote ) {
+			fprintf( stderr,"\nERROR: Cannot set '%s' to 'true' when using -remote or -spool\n", 
+					 Hold );
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
 		buffer.sprintf( "%s = %d", ATTR_JOB_STATUS, HELD);
 		InsertJobExpr (buffer, false);
 
@@ -4707,7 +4718,7 @@ SetUserLog()
 
 			// check that the log is a valid path
 			if ( !DisableFileChecks ) {
-				FILE* test = safe_fopen_wrapper(ulog.Value(), "a+", 0664);
+				FILE* test = safe_fopen_wrapper_follow(ulog.Value(), "a+", 0664);
 				if (!test) {
 					fprintf(stderr,
 						"\nERROR: Invalid log file: \"%s\" (%s)\n", ulog.Value(),
@@ -4722,12 +4733,12 @@ SetUserLog()
 			BOOLEAN nfs_is_error = param_boolean("LOG_ON_NFS_IS_ERROR", false);
 			BOOLEAN	nfs = FALSE;
 
-			if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
-				fprintf(stderr,
-					"\nWARNING: Can't determine whether log file %s is on NFS\n",
-					ulog.Value() );
-			} else if ( nfs ) {
-				if ( nfs_is_error ) {
+			if ( nfs_is_error ) {
+				if ( fs_detect_nfs( ulog.Value(), &nfs ) != 0 ) {
+					fprintf(stderr,
+						"\nWARNING: Can't determine whether log file %s is on NFS\n",
+						ulog.Value() );
+				} else if ( nfs ) {
 
 					fprintf(stderr,
 						"\nERROR: Log file %s is on NFS.\nThis could cause"
@@ -4925,6 +4936,10 @@ SetGridParams()
 			DoCleanup( 0, 0, NULL );
 			exit( 1 );
 		}
+		
+		// TODO: TSTCLAIR remove in 7.9 series.
+		if ( strcasecmp( tmp, "amazon" ) == 0 ) 
+			fprintf(stderr, "\nWARNING: Amazon grid jobs are no longer supported, please use EC2\n");
 
 		free( tmp );
 
@@ -5046,7 +5061,7 @@ SetGridParams()
 	if ( (tmp = condor_param( AmazonPublicKey, ATTR_AMAZON_PUBLIC_KEY )) ) {
 		// check public key file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5065,7 +5080,7 @@ SetGridParams()
 	if ( (tmp = condor_param( AmazonPrivateKey, ATTR_AMAZON_PRIVATE_KEY )) ) {
 		// check private key file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5124,7 +5139,7 @@ SetGridParams()
 	if( (tmp = condor_param( AmazonUserDataFile, ATTR_AMAZON_USER_DATA_FILE )) ) {
 		// check user data file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
 								 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5144,7 +5159,7 @@ SetGridParams()
 	if ( (tmp = condor_param( EC2AccessKeyId, ATTR_EC2_ACCESS_KEY_ID )) ) {
 		// check public key file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5163,7 +5178,7 @@ SetGridParams()
 	if ( (tmp = condor_param( EC2SecretAccessKey, ATTR_EC2_SECRET_ACCESS_KEY )) ) {
 		// check private key file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5211,9 +5226,59 @@ SetGridParams()
 		InsertJobExpr( buffer.Value() );
 	}
 	
+	// EC2VpcSubnet is not a necessary parameter
+	if( (tmp = condor_param( EC2VpcSubnet, ATTR_EC2_VPC_SUBNET )) ) {
+		buffer.sprintf( "%s = \"%s\"",ATTR_EC2_VPC_SUBNET , tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+	
+	// EC2VpcIP is not a necessary parameter
+	if( (tmp = condor_param( EC2VpcIP, ATTR_EC2_VPC_IP )) ) {
+		buffer.sprintf( "%s = \"%s\"",ATTR_EC2_VPC_IP , tmp );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+		
 	// EC2ElasticIP is not a necessary parameter
     if( (tmp = condor_param( EC2ElasticIP, ATTR_EC2_ELASTIC_IP )) ) {
         buffer.sprintf( "%s = \"%s\"", ATTR_EC2_ELASTIC_IP, tmp );
+        free( tmp );
+        InsertJobExpr( buffer.Value() );
+    }
+	
+	bool HasAvailabilityZone=false;
+	// EC2AvailabilityZone is not a necessary parameter
+    if( (tmp = condor_param( EC2AvailabilityZone, ATTR_EC2_AVAILABILITY_ZONE )) ) {
+        buffer.sprintf( "%s = \"%s\"", ATTR_EC2_AVAILABILITY_ZONE, tmp );
+        free( tmp );
+        InsertJobExpr( buffer.Value() );
+		HasAvailabilityZone=true;
+    }
+	
+	// EC2EBSVolumes is not a necessary parameter
+    if( (tmp = condor_param( EC2EBSVolumes, ATTR_EC2_EBS_VOLUMES )) ) {
+		MyString fixedvalue = delete_quotation_marks(tmp);
+		if( validate_disk_parm(fixedvalue.Value(), fixedvalue, 2, 2) == false ) 
+        {
+			fprintf(stderr, "\nERROR: 'ec2_ebs_volumes' has incorrect format.\n"
+					"The format shoud be like "
+					"\"<instance_id>:<devicename>\"\n"
+					"e.g.> For single volume: ec2_ebs_volumes = vol-35bcc15e:hda1\n"
+					"      For multiple disks: ec2_ebs_volumes = "
+					"vol-35bcc15e:hda1,vol-35bcc16f:hda2\n");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		
+		if (!HasAvailabilityZone)
+		{
+			fprintf(stderr, "\nERROR: 'ec2_ebs_volumes' requires 'ec2_availability_zone'\n");
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
+		
+        buffer.sprintf( "%s = \"%s\"", ATTR_EC2_EBS_VOLUMES, tmp );
         free( tmp );
         InsertJobExpr( buffer.Value() );
     }
@@ -5229,7 +5294,7 @@ SetGridParams()
 	if( (tmp = condor_param( EC2UserDataFile, ATTR_EC2_USER_DATA_FILE )) ) {
 		// check user data file can be opened
 		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
 								 full_path(tmp), strerror(errno));
 				exit(1);
@@ -5259,7 +5324,7 @@ SetGridParams()
 	if ( (tmp = condor_param( DeltacloudPasswordFile, ATTR_DELTACLOUD_PASSWORD_FILE )) ) {
 		// check private key file can be opened
 		if ( !DisableFileChecks && !strstr( tmp, "$$" ) ) {
-			if( ( fp=safe_fopen_wrapper(full_path(tmp),"r") ) == NULL ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
 				fprintf( stderr, "\nERROR: Failed to open password file %s (%s)\n", 
 							 full_path(tmp), strerror(errno));
 				exit(1);
@@ -6228,26 +6293,6 @@ queue(int num)
 }
 
 bool
-findClause( const char* buffer, const char* attr_name )
-{
-	const char* ptr;
-	int len = strlen( attr_name );
-	for( ptr = buffer; *ptr; ptr++ ) {
-		if( strncasecmp(attr_name,ptr,len) == MATCH ) {
-			return true;
-		}
-	}
-	return false;
-}
-
-bool
-findClause( MyString const &buffer, char const *attr_name )
-{
-	return findClause( buffer.Value(), attr_name );
-}
-
-
-bool
 check_requirements( char const *orig, MyString &answer )
 {
 	bool	checks_opsys = false;
@@ -6318,66 +6363,51 @@ check_requirements( char const *orig, MyString &answer )
 		return true;
 	}
 
-	checks_arch = findClause( answer, ATTR_ARCH );
-	checks_opsys = findClause( answer, ATTR_OPSYS );
-	checks_disk =  findClause( answer, ATTR_DISK );
-	checks_tdp =  findClause( answer, ATTR_HAS_TDP );
+	ClassAd req_ad;
+	StringList job_refs;      // job attrs referenced by requirements
+	StringList machine_refs;  // machine attrs referenced by requirements
+
+		// Insert dummy values for attributes of the job to which we
+		// want to detect references.  Otherwise, unqualified references
+		// get classified as external references.
+	req_ad.Assign(ATTR_REQUEST_MEMORY,0);
+	req_ad.Assign(ATTR_CKPT_ARCH,"");
+
+	req_ad.GetExprReferences(answer.Value(),job_refs,machine_refs);
+
+	checks_arch = machine_refs.contains_anycase( ATTR_ARCH );
+	checks_opsys = machine_refs.contains_anycase( ATTR_OPSYS );
+	checks_disk =  machine_refs.contains_anycase( ATTR_DISK );
+	checks_tdp =  machine_refs.contains_anycase( ATTR_HAS_TDP );
 #if defined(WIN32)
-	checks_credd = findClause( answer, ATTR_LOCAL_CREDD );
+	checks_credd = machine_refs.contains_anycase( ATTR_LOCAL_CREDD );
 #endif
 
 	if( JobUniverse == CONDOR_UNIVERSE_STANDARD ) {
-		checks_ckpt_arch = findClause( answer, ATTR_CKPT_ARCH );
+		checks_ckpt_arch = job_refs.contains_anycase( ATTR_CKPT_ARCH );
 	}
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		checks_mpi = findClause( answer, ATTR_HAS_MPI );
+		checks_mpi = machine_refs.contains_anycase( ATTR_HAS_MPI );
 	}
 	if( mightTransfer(JobUniverse) ) { 
 		switch( should_transfer ) {
 		case STF_IF_NEEDED:
 		case STF_NO:
-			checks_fsdomain = findClause( answer,
+			checks_fsdomain = machine_refs.contains_anycase(
 										  ATTR_FILE_SYSTEM_DOMAIN ); 
 			break;
 		case STF_YES:
-			checks_file_transfer = findClause( answer,
+			checks_file_transfer = machine_refs.contains_anycase(
 											   ATTR_HAS_FILE_TRANSFER );
-			checks_per_file_encryption = findClause( answer,
+			checks_per_file_encryption = machine_refs.contains_anycase(
 										   ATTR_HAS_PER_FILE_ENCRYPTION );
 			break;
 		}
 	}
 
-		// because of the special-case nature of "Memory" and
-		// "VirtualMemory", we have to do this one manually...
-	char const *aptr;
-	for( aptr = answer.Value(); *aptr; aptr++ ) {
-		if( strncasecmp(ATTR_MEMORY,aptr,5) == MATCH ) {
-				// We found "Memory", but we need to make sure that's
-				// not part of "VirtualMemory"...
-			if( aptr == answer.Value() ) {
-					// We're at the beginning, must be Memory, since
-					// there's nothing before it.
-				checks_mem = true;
-				break;
-			}
-				// Otherwise, it's safe to go back one position:
-			if( *(aptr-1) == 'l' || *(aptr-1) == 'L' ) {
-					// Must be VirtualMemory, keep searching...
-				continue;
-			}
-				// If it wasn't 't', we must have found it...
-			if( *(aptr-1) == 't' || *(aptr-1) == 'T' ) {
-					// Must be RequestMemory, keep searching...
-				checks_reqmem = true;
-				continue;
-			}	
-		
-			checks_mem = true;
-			break;
-		}
-	}
- 
+	checks_mem = machine_refs.contains_anycase(ATTR_MEMORY);
+	checks_reqmem = job_refs.contains_anycase(ATTR_REQUEST_MEMORY);
+
 	if( JobUniverse == CONDOR_UNIVERSE_JAVA ) {
 		if( answer[0] ) {
 			answer += " && ";
@@ -6397,7 +6427,7 @@ check_requirements( char const *orig, MyString &answer )
 		}
 		// add HasVM to requirements
 		bool checks_vm = false;
-		checks_vm = findClause( answer, ATTR_HAS_VM );
+		checks_vm = machine_refs.contains_anycase( ATTR_HAS_VM );
 		if( !checks_vm ) {
 			answer += "&& (TARGET.";
 			answer += ATTR_HAS_VM;
@@ -6405,7 +6435,7 @@ check_requirements( char const *orig, MyString &answer )
 		}
 		// add vm_type to requirements
 		bool checks_vmtype = false;
-		checks_vmtype = findClause( answer, ATTR_VM_TYPE);
+		checks_vmtype = machine_refs.contains_anycase( ATTR_VM_TYPE);
 		if( !checks_vmtype ) {
 			answer += " && (TARGET.";
 			answer += ATTR_VM_TYPE;
@@ -6415,7 +6445,7 @@ check_requirements( char const *orig, MyString &answer )
 		}
 		// check if the number of executable VM is more than 0
 		bool checks_avail = false;
-		checks_avail = findClause(answer, ATTR_VM_AVAIL_NUM);
+		checks_avail = machine_refs.contains_anycase(ATTR_VM_AVAIL_NUM);
 		if( !checks_avail ) {
 			answer += " && (TARGET.";
 			answer += ATTR_VM_AVAIL_NUM;
@@ -6701,7 +6731,7 @@ check_open( const char *name, int flags )
 	}
 
 	if ( !DisableFileChecks ) {
-			if( (fd=safe_open_wrapper(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
+			if( (fd=safe_open_wrapper_follow(strPathname.Value(),flags | O_LARGEFILE,0664)) < 0 ) {
 			if( errno == EISDIR && (flags & O_WRONLY)) {
 					// Entries in the transfer output list may be
 					// files or directories; no way to tell in
@@ -6934,9 +6964,9 @@ log_submit()
 		// anything since we will never communicate the resulting ad to 
 		// to anyone (we make the name obviously unresolvable so we know
 		// this was a generated file).
-		strcpy (jobSubmit.submitHost, "localhost-used-to-dump");
+		jobSubmit.setSubmitHost( "localhost-used-to-dump");
 	} else {
-		strcpy (jobSubmit.submitHost, MySchedd->addr());
+		jobSubmit.setSubmitHost( MySchedd->addr());
 	}
 
 	if( LogNotesVal ) {
@@ -7335,20 +7365,20 @@ bool make_vm_file_path(const char *filename, MyString& fixedname)
 
 // this function parses and checks xen disk parameters
 bool
-validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
+validate_disk_parm(const char *pszDisk, MyString &fixed_disk, int min_params, int max_params)
 {
-	if( !xen_disk ) {
+	if( !pszDisk ) {
 		return false;
 	}
 
-	const char *ptr = xen_disk;
+	const char *ptr = pszDisk;
 	// skip leading white spaces
 	while( *ptr && ( *ptr == ' ' )) {
 		ptr++;
 	}
 
 	// parse each disk
-	// e.g.) xen_disk = filename1:hda1:w, filename2:hda2:w
+	// e.g.) disk = filename1:hda1:w, filename2:hda2:w
 	StringList disk_files(ptr, ",");
 	if( disk_files.isEmpty() ) {
 		return false;
@@ -7363,7 +7393,7 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 		// found disk file
 		StringList single_disk_file(one_disk, ":");
         int iNumDiskParams = single_disk_file.number();
-		if( iNumDiskParams < 3 || iNumDiskParams > 4 ) {
+		if( iNumDiskParams < min_params || iNumDiskParams > max_params ) {
 			return false;
 		}
 
@@ -7384,14 +7414,21 @@ validate_xen_disk_parm(const char *xen_disk, MyString &fixed_disk)
 			if( fixed_disk.Length() > 0 ) {
 				fixed_disk += ",";
 			}
+			
 			// file name
 			fixed_disk += fixedname;
 			fixed_disk += ":";
+			
 			// device
 			fixed_disk += single_disk_file.next();
-			fixed_disk += ":";
-			// permission
-			fixed_disk += single_disk_file.next();
+			
+			if (iNumDiskParams >= 3)
+			{
+				// permission
+				fixed_disk += ":";
+				fixed_disk += single_disk_file.next();
+			}
+			
             if (iNumDiskParams == 4)
             {
                 // optional (format)
@@ -7416,12 +7453,24 @@ void SetVMRequirements()
 	vmanswer += JobRequirements;
 	vmanswer += ")";
 
+	ClassAd req_ad;
+	StringList job_refs;      // job attrs referenced by requirements
+	StringList machine_refs;  // machine attrs referenced by requirements
+
+		// Insert dummy values for attributes of the job to which we
+		// want to detect references.  Otherwise, unqualified references
+		// get classified as external references.
+	req_ad.Assign(ATTR_CKPT_ARCH,"");
+	req_ad.Assign(ATTR_VM_CKPT_MAC,"");
+
+	req_ad.GetExprReferences(vmanswer.Value(),job_refs,machine_refs);
+
 	// check file system domain
 	if( vm_need_fsdomain ) {
 		// some files don't use file transfer.
 		// so we need the same file system domain
 		bool checks_fsdomain = false;
-		checks_fsdomain = findClause( vmanswer, ATTR_FILE_SYSTEM_DOMAIN ); 
+		checks_fsdomain = machine_refs.contains_anycase( ATTR_FILE_SYSTEM_DOMAIN ); 
 
 		if( !checks_fsdomain ) {
 			vmanswer += " && (TARGET.";
@@ -7451,7 +7500,7 @@ void SetVMRequirements()
 		// the number of ATTR_VM_AVAIL_NUM.
 		// Generally ATTR_VM_AVAIL_NUM must be less than the number of 
 		// Condor slot.
-		vmanswer += " && (";
+		vmanswer += " && (TARGET.";
 		vmanswer += ATTR_TOTAL_MEMORY;
 		vmanswer += " >= ";
 
@@ -7463,9 +7512,9 @@ void SetVMRequirements()
 
 	// add vm_memory to requirements
 	bool checks_vmmemory = false;
-	checks_vmmemory = findClause(vmanswer, ATTR_VM_MEMORY);
+	checks_vmmemory = machine_refs.contains_anycase(ATTR_VM_MEMORY);
 	if( !checks_vmmemory ) {
-		vmanswer += " && (";
+		vmanswer += " && (TARGET.";
 		vmanswer += ATTR_VM_MEMORY;
 		vmanswer += " >= ";
 
@@ -7477,11 +7526,11 @@ void SetVMRequirements()
 
 	if( VMHardwareVT ) {
 		bool checks_hardware_vt = false;
-		checks_hardware_vt = findClause( vmanswer, ATTR_VM_HARDWARE_VT);
+		checks_hardware_vt = machine_refs.contains_anycase(ATTR_VM_HARDWARE_VT);
 
 		if( !checks_hardware_vt ) {
 			// add hardware vt to requirements
-			vmanswer += " && (";
+			vmanswer += " && (TARGET.";
 			vmanswer += ATTR_VM_HARDWARE_VT;
 			vmanswer += ")";
 		}
@@ -7489,11 +7538,11 @@ void SetVMRequirements()
 
 	if( VMNetworking ) {
 		bool checks_vmnetworking = false;
-		checks_vmnetworking = findClause( vmanswer, ATTR_VM_NETWORKING);
+		checks_vmnetworking = machine_refs.contains_anycase(ATTR_VM_NETWORKING);
 
 		if( !checks_vmnetworking ) {
 			// add vm_networking to requirements
-			vmanswer += " && (";
+			vmanswer += " && (TARGET.";
 			vmanswer += ATTR_VM_NETWORKING;
 			vmanswer += ")";
 		}
@@ -7512,8 +7561,8 @@ void SetVMRequirements()
 	if( VMCheckpoint ) {
 		bool checks_ckpt_arch = false;
 		bool checks_vm_ckpt_mac = false;
-		checks_ckpt_arch = findClause( vmanswer, ATTR_CKPT_ARCH );
-		checks_vm_ckpt_mac = findClause( vmanswer, ATTR_VM_CKPT_MAC );
+		checks_ckpt_arch = job_refs.contains_anycase( ATTR_CKPT_ARCH );
+		checks_vm_ckpt_mac = job_refs.contains_anycase( ATTR_VM_CKPT_MAC );
 
 		if( !checks_ckpt_arch ) {
 			// VM checkpoint files created on AMD 
@@ -7551,10 +7600,12 @@ SetConcurrencyLimits()
 		list.qsort();
 
 		str = list.print_to_string();
-		tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
-		InsertJobExpr(tmp.Value());
+		if ( str ) {
+			tmp.sprintf("%s = \"%s\"", ATTR_CONCURRENCY_LIMITS, str);
+			InsertJobExpr(tmp.Value());
 
-		free(str);
+			free(str);
+		}
 	}
 }
 
@@ -7790,7 +7841,7 @@ SetVMParams()
 			exit(1);
 		}else {
 			MyString fixedvalue = delete_quotation_marks(disk);
-			if( validate_xen_disk_parm(fixedvalue.Value(), fixedvalue) == false ) 
+			if( validate_disk_parm(fixedvalue.Value(), fixedvalue) == false ) 
             {
 				fprintf(stderr, "\nERROR: 'vm_disk' has incorrect format.\n"
 						"The format shoud be like "
@@ -7942,9 +7993,11 @@ SetVMParams()
 		}
 
 		tmp_ptr = vmdk_files.print_to_string();
-		buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
-		InsertJobExpr( buffer );
-		free( tmp_ptr );
+		if ( tmp_ptr ) {
+			buffer.sprintf( "%s = \"%s\"", VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
+			InsertJobExpr( buffer );
+			free( tmp_ptr );
+		}
 	}
 
 	// Check if a job user defines 'Argument'.
