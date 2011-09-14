@@ -240,6 +240,8 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 			sid->setName(submission->getName());
 			sid->setOwner(submission->getOwner());
 			summary->setId(sid);
+			// TODO: fully implement getOldest
+			summary->setQdate(submission->getOldest());
 			summary->setCompleted(submission->getCompleted().size());
 			summary->setHeld(submission->getHeld().size());
 			summary->setIdle(submission->getIdle().size());

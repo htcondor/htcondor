@@ -387,7 +387,7 @@ ReadUserLog::InternalInitialize ( int max_rotations,
 		}
 		else if ( status != ULOG_OK ) {
 			dprintf( D_ALWAYS,
-					 "ReadUserLog::initialize: error re-opening file\n" );
+					 "ReadUserLog::initialize: error re-opening file: %d (%d @ %d)\n", status, m_error, m_line_num );
 			releaseResources();
 			Error( LOG_ERROR_FILE_NOT_FOUND, __LINE__ );
 			return false;
@@ -486,12 +486,14 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 							  m_read_only ? O_RDONLY : O_RDWR,
 							  0 );
 	if ( m_fd < 0 ) {
+		dprintf(D_ALWAYS, "ReadUserLog::OpenLogFile safe_open_wrapper on %s returns %d: error %d(%s)\n", m_state->CurPath(), m_fd, errno, strerror(errno));
 		return ULOG_RD_ERROR;
 	}
 
 	m_fp = fdopen( m_fd, "r" );
 	if ( m_fp == NULL ) {
 		CloseLogFile( true );
+		dprintf(D_ALWAYS, "ReadUserLog::OpenLogFile fdopen returns NULL\n");
 	    return ULOG_RD_ERROR;
 	}
 
@@ -499,6 +501,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 	if ( do_seek && m_state->Offset() ) {
 		if( fseek( m_fp, m_state->Offset(), SEEK_SET) ) {
 			CloseLogFile( true );
+			dprintf(D_ALWAYS, "ReadUserLog::OpenLogFile fseek returns NULL\n");
 			return ULOG_RD_ERROR;
 		}
 	}
@@ -533,6 +536,7 @@ ReadUserLog::OpenLogFile( bool do_seek, bool read_header )
 			}
 			if( ! m_lock ) {
 				CloseLogFile( true );
+				dprintf(D_ALWAYS, "ReadUserLog::OpenLogFile FileLock returns NULL\n");
 				return ULOG_RD_ERROR;
 			}
 			m_lock_rot = m_state->Rotation( );

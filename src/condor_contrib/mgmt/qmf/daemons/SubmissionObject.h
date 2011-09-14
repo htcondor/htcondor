@@ -70,6 +70,7 @@ public:
 	ManagementObject *GetManagementObject(void) const;
 
 	void SetOwner(const char *owner);
+	void UpdateQdate(int q_date);
 
     status_t ManagementMethod(uint32_t methodId,
                               Args &args,

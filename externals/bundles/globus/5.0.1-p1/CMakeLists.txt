@@ -213,11 +213,23 @@ if (WITH_GLOBUS)
 				install( CODE "execute_process(COMMAND strip ${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/globus-gridftp-server)" )
 			endif()
 			if ( LINUX )
-				file( GLOB Libs "${GLOBUS_INSTALL_LOC}/lib/*.so*")
-				install( FILES ${Libs} DESTINATION "${EXTERNALS_LIB}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE )
-				if ( CONDOR_STRIP_PACKAGES AND NOT CONDOR_PACKAGE_BUILD )
-					file( GLOB StripFiles "${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB}/libglobus*.so*" "${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB}/libltdl*.so*" )
-					install( CODE "execute_process(COMMAND strip ${StripFiles})" )
+				# Install the VOMS libraries manually.
+				# In order to use an install(FILES) command,
+				# we'd have to explicitly list evey file.
+				# We can't use a file(GLOB) because that's
+				# evaluated when cmake is run, which may be
+				# before the external is built.
+				install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+				install( CODE "execute_process(COMMAND find ${GLOBUS_INSTALL_LOC}/lib -maxdepth 1 -name *.so*
+					COMMAND xargs -isrc cp -a src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+				if ( CONDOR_STRIP_PACKAGES )
+					# Strip the libraries manually.
+					# Since cmake didn't create the libraries
+					# itself, it doesn't know to strip them.
+					install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libglobus*.so*
+						COMMAND xargs strip)" )
+					install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libltdl*.so*
+                                                COMMAND xargs strip)" )
 				endif()
 			endif()
 

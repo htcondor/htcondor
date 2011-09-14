@@ -97,6 +97,7 @@
 
   <property name="Name" type="sstr" index="y"/>
   <property name="Owner" type="sstr" index="y"/>
+  <property name="QDate" type="absTime" desc="Oldest QDate of member jobs"/>
 
   <statistic name="Idle" type="count32"/>
   <statistic name="Running" type="count32"/>

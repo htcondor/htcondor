@@ -42,6 +42,13 @@ if (HAVE_LIBDL)
 	set (DL_FOUND -ldl)
 endif (HAVE_LIBDL)
 
+if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
+	add_definitions( -DCLASSAD_VERSION="${PACKAGE_VERSION}"
+		-DCLASSAD_VERSION_MAJOR=${CMAKE_MATCH_1}
+		-DCLASSAD_VERSION_MINOR=${CMAKE_MATCH_2}
+		-DCLASSAD_VERSION_PATCH=${CMAKE_MATCH_3} )
+endif()
+
 ##
 #####################################################################
 

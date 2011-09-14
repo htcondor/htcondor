@@ -410,8 +410,9 @@ For example,
 registry hive.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Details on how Condor for Windows starts/stops a job}
+\subsection{How Condor for Windows Starts and Stops a Job}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Windows!starting and stopping a job}
 
 This section provides some details on how Condor starts and stops jobs.
 This discussion is geared for the Condor administrator or advanced user who is
@@ -425,57 +426,60 @@ creates:
 \begin{enumerate}
 
 \item a run account on the machine with a login name of
-``condor-reuse-slotX'', where X is the slot number of the
+\Login{condor-reuse-slot<X>}, where \Expr{<X>} is the slot number of the
 \Condor{starter}.  This account is added to group Users.  This step is
-skipped if the job is to be run using the submitting user's account
-(see section \ref{sec:windows-run-as-owner}).
+skipped if the job is to be run using the submitting user's account,
+as specified in section \ref{sec:windows-run-as-owner}.
 
 \item a new temporary working directory for the job on the execute machine.
 This directory is
-named ``dir\_XXX'', where XXX is the process ID of the \Condor{starter}.
-The directory is created in the \MacroUNI{EXECUTE} directory as
-specified in Condor's configuration file.  Condor then grants write
+named \File{dir\_XXX}, where \Expr{XXX} is the process ID of the 
+\Condor{starter}.
+The directory is created in the \MacroUNI{EXECUTE} directory,
+as specified in Condor's configuration file.  
+Condor then grants write
 permission to this directory for the user account newly created for the
 job.
 
 \item a new, non-visible Window Station and Desktop for the job.
 Permissions are set so that only the account that will run the job has
 access rights to this Desktop.  Any windows created by this job are
-not seen by anyone; the job is run in the background.  (Note: Setting
-\Macro{USE\_VISIBLE\_DESKTOP} to True will allow the job to access the
-default desktop instead of a newly created one.)
+not seen by anyone; the job is run in the background.
+Setting \Macro{USE\_VISIBLE\_DESKTOP} to \Expr{True}
+will allow the job to access the
+default desktop instead of a newly created one.
 
 \end{enumerate}
 
-Next, the \Condor{starter} (called the starter) contacts the
-\Condor{shadow} (called the shadow) process, which is running on the
-submitting machine, and pulls over the job's executable and input
-files.  These files are placed into the temporary working directory
-for the job.  After all files have been received, the starter spawns
+Next, the \Condor{starter} daemon contacts the \Condor{shadow} daemon, 
+which is running on the submitting machine, 
+and the \Condor{starter} pulls over the job's executable and input files.
+These files are placed into the temporary working directory
+for the job.  After all files have been received, the \Condor{starter} spawns
 the user's executable.  Its current working directory set to the
-temporary working directory (that is, \MacroUNI{EXECUTE}/dir\_XXX,
-where XXX is the process id of the \Condor{starter} daemon).
+temporary working directory.
 
-While the job is running, the starter closely monitors the CPU
+While the job is running, the \Condor{starter} closely monitors the CPU
 usage and image size of all processes started by the job.
-Every 20 minutes the starter sends this information,
+Every 20 minutes the \Condor{starter} sends this information,
 along with the total size of all files contained in the job's
-temporary working directory, to the shadow.
-The shadow then
+temporary working directory, to the \Condor{shadow}.
+The \Condor{shadow} then
 inserts this information into the job's ClassAd so that policy and
 scheduling expressions can make use of this dynamic information.
 
 If the job exits of its own accord (that is, the job completes),
-the starter
+the \Condor{starter}
 first terminates any processes started by the job which could still be
 around if the job did not clean up after itself.
-The starter examines the job's temporary working directory for any
+The \Condor{starter} examines the job's temporary working directory for any
 files which have been created or modified and sends these files back
-to the shadow running on the submit machine.
-The shadow
-places these files into the \Opt{initialdir} specified in the
-submit description file; if no \Opt{initialdir} was specified, the files go
-into the directory where the user invoked \Condor{submit}.
+to the \Condor{shadow} running on the submit machine.
+The \Condor{shadow}
+places these files into the \SubmitCmd{initialdir} specified in the
+submit description file; 
+if no \SubmitCmd{initialdir} was specified,
+the files go into the directory where the user invoked \Condor{submit}.
 Once all the output files are safely transferred back,
 the job is removed from the queue.
 If, however, the \Condor{startd} forcibly kills the job before all output files
@@ -483,25 +487,25 @@ could be transferred, the job is not removed from the queue but instead
 switches back to the Idle state.  
 
 If the \Condor{startd} decides to vacate a job prematurely,
-the starter sends a WM\_CLOSE message to the job.
+the \Condor{starter} sends a WM\_CLOSE message to the job.
 If the job spawned multiple child processes, the WM\_CLOSE message is only
-sent to the parent process (that is, the one started by the starter).
-The
-WM\_CLOSE message is the preferred way to terminate a process on Windows,
-since this method allows the job to cleanup and free any resources it may
+sent to the parent process.
+This is the one started by the \Condor{starter}.
+The WM\_CLOSE message is the preferred way to terminate a process on Windows,
+since this method allows the job to clean up and free any resources it may
 have allocated.
-When the job exits, the starter cleans up any processes left behind.
-At this point, if \Opt{transfer\_files} is set to
-\Arg{ONEXIT} (the default) in the job's submit description file,
-the job switches from states, from Running to Idle,
+When the job exits, the \Condor{starter} cleans up any processes left behind.
+At this point, if \SubmitCmd{when\_to\_transfer\_output} is set to
+\Expr{ON\_EXIT} (the default) in the job's submit description file,
+the job switches states, from Running to Idle,
 and no files are transferred back.
-If \Opt{transfer\_files} is set to \Arg{ALWAYS}, then any files
+If \SubmitCmd{when\_to\_transfer\_output} is set to \Expr{ON\_EXIT\_OR\_EVICT},
+then any files
 in the job's temporary working directory which were changed or modified are
 first sent back to the submitting machine.
-But this time, the shadow places these
-so-called intermediate files into a subdirectory created in the
-\MacroUNI{SPOOL} directory on the submitting machine
-(\MacroUNI{SPOOL} is specified in Condor's configuration file).
+But this time, the \Condor{shadow} places these
+intermediate files into a subdirectory created in the
+\MacroUNI{SPOOL} directory on the submitting machine.
 The job is then switched back to the Idle state until Condor finds
 a different machine on which to run.
 When the job is started again,
@@ -510,24 +514,26 @@ and input files as before,
 \emph{plus} any files stored in the submit machine's \MacroUNI{SPOOL} directory for that job.  
 
 \Note A Windows console process can intercept a WM\_CLOSE message
-via the Win32 SetConsoleCtrlHandler() function if it needs to do special
-cleanup work at vacate time; a WM\_CLOSE message
-generates a CTRL\_CLOSE\_EVENT.  See SetConsoleCtrlHandler() in the Win32
+via the Win32 \Procedure{SetConsoleCtrlHandler} function,
+if it needs to do special cleanup work at vacate time; 
+a WM\_CLOSE message generates a CTRL\_CLOSE\_EVENT.
+See \Procedure{SetConsoleCtrlHandler} in the Win32
 documentation for more info.
 
 \Note The default handler in Windows for a WM\_CLOSE message is for the
 process to exit.  Of course, the job could be coded to ignore it and not
 exit, but eventually the \Condor{startd} will become impatient and hard-kill
-the job (if that is the policy desired by the administrator).
+the job, if that is the policy desired by the administrator.
 
-Finally, after the job has left and any files transferred back, the
-starter deletes the temporary working directory, the temporary account
-(if one was created), the WindowStation, and the Desktop before
-exiting.  If the starter should terminate abnormally, the
-\Condor{startd} attempts the clean up.  If for some reason the
-\Condor{startd} should disappear as well (that is, if the entire
-machine was power-cycled hard), the \Condor{startd} will clean up when
-Condor is restarted.
+Finally, after the job has left and any files transferred back, 
+the \Condor{starter} deletes the temporary working directory, 
+the temporary account if one was created,
+the Window Station and the Desktop before exiting. 
+If the \Condor{starter} should terminate abnormally, 
+the \Condor{startd} attempts the clean up.  
+If for some reason the \Condor{startd} should disappear as well
+(that is, if the entire machine was power-cycled hard),
+the \Condor{startd} will clean up when Condor is restarted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Security Considerations in Condor for Windows}
