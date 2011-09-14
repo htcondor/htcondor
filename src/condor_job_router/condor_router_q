@@ -79,9 +79,9 @@ while true; do
 done
 
 if [ "$show_route_summary" = "1" ]; then
-  awk 'BEGIN {printf("%7s %2s %-10s %s\n","JOBS","ST","Route","GridResource")}'
-  condor_q -constraint "$CONSTRAINT" -f "%s" JobStatus -f " %s" RouteName -f " %s" GridResource -f "\n" eol |
-    awk '{
+  awk 'BEGIN {printf("%7s %2s %-20s %s\n","JOBS","ST","Route","GridResource")}'
+  condor_q -constraint "$CONSTRAINT" -f "%s," JobStatus -f "%s," RouteName -f "%s" GridResource -f "\n" eol |
+    awk -F, '{
       jobstatus=$1;
       if(jobstatus == 0) jobstatus = "U";
       if(jobstatus == 1) jobstatus = "I";
@@ -90,7 +90,7 @@ if [ "$show_route_summary" = "1" ]; then
       if(jobstatus == 4) jobstatus = "C";
       if(jobstatus == 5) jobstatus = "H";
       if(jobstatus == 6) jobstatus = "E";
-      printf("%2s %-10s %s\n",jobstatus,$2,$4);
+      printf("%2s %-20s %s\n",jobstatus,$2,$3);
     }' | sort | uniq -c | sort -k 3
   exit 0
 fi
