@@ -74,20 +74,6 @@
 #if defined(__cplusplus)
 #include <string>
 #include <map>
-struct DebugFileInfo
-{
-	FILE *debugFP;
-	int debugFlags;
-	std::string logPath;
-	off_t maxLog;
-	int maxLogNum;
-
-	DebugFileInfo();
-	DebugFileInfo(const DebugFileInfo &debugFileInfo);
-	~DebugFileInfo();
-};
-#endif
-#if defined(__cplusplus)
 extern "C" {
 #endif
 

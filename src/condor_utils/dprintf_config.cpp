@@ -24,14 +24,11 @@
 **	Set up the various dprintf variables based on the configuration file.
 **
 ************************************************************************/
-/*
- * The below define is needed because dprintf operates o n
- */
-#define _FILE_OFFSET_BITS 64
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_string.h" 
 #include "condor_sys_types.h"
+#include "dprintf_internal.h"
 
 #if HAVE_BACKTRACE
 #include "sig_install.h"
@@ -42,7 +39,6 @@ int		Termlog = 0;
 extern int		DebugFlags;
 extern FILE		*DebugFPs[D_NUMLEVELS+1];
 extern std::vector<DebugFileInfo> *DebugLogs;
-extern char		*DebugFile[D_NUMLEVELS+1];
 extern char		*DebugLock;
 extern const char		*_condor_DebugFlagNames[];
 extern int		_condor_dprintf_works;

@@ -36,7 +36,6 @@
 **
 ************************************************************************/
 
-#define _FILE_OFFSET_BITS 64
 #include "condor_common.h"
 #include "condor_sys_types.h"
 #include "condor_debug.h"
@@ -52,7 +51,7 @@
 #include "util_lib_proto.h"		// for mkargv() proto
 #include "condor_threads.h"
 #include "log_rotate.h"
-#include <map>
+#include "dprintf_internal.h"
 
 FILE *debug_lock(int debug_level, const char *mode, int force_lock);
 FILE *open_debug_file( int debug_level, const char flags[] );
@@ -97,7 +96,6 @@ static time_t DebugLockDelayPeriodStarted = 0;
  * limit to FDs.  Windows can open as many as you want short of running
  * out of physical resources like memory.
  */
-FILE	*DebugFPs[D_NUMLEVELS+1] = { NULL };
 std::vector<DebugFileInfo> * DebugLogs = NULL;
 /*
  * This is last modification time of the main debug file as returned
@@ -792,7 +790,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			}
 #endif
 			snprintf( msg_buf, sizeof(msg_buf), "Could not open DebugFile \"%s\"\n", 
-				it->logPath );
+				it->logPath.c_str() );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
@@ -1083,7 +1081,7 @@ preserve_log_file(int debug_level)
 	}
 
 	if ( !still_in_old_file ) {
-		_condor_dfprintf (debug_file_ptr, "Now in new log file %s\n", it->logPath);
+		_condor_dfprintf (debug_file_ptr, "Now in new log file %s\n", it->logPath.c_str());
 	}
 
 	// We may have a message left over from the succeeded rename after which the file
@@ -1104,6 +1102,7 @@ preserve_log_file(int debug_level)
 	
 	_set_priv(priv, __FILE__, __LINE__, 0);
 	cleanUp(it->maxLogNum);
+	(*it).debugFP = debug_file_ptr;
 
 	return debug_file_ptr;
 }
