@@ -29,7 +29,7 @@ EC2 Query API.
 Condor jobs are submitted to Amazon's EC2
 with the \SubmitCmd{grid} universe, and setting the
 \SubmitCmd{grid\_resource} command to either
-\SubmitCmd{amazon}  or \SubmitCmd{ec2}, followed by the service's URL.
+\SubmitCmd{amazon} or \SubmitCmd{ec2}, followed by the service's URL.
 For example,
 partial contents of the submit description file may be
 \begin{verbatim}
@@ -52,20 +52,41 @@ as appropriate.
 
 Both of these grid types require access to user authentication information,
 in the form of path names to files containing the appropriate keys.
+
 For the \SubmitCmd{amazon} grid type:
 \begin{verbatim}
 amazon_public_key = /path/to/x509/cert
 amazon_private_key = /path/to/private/key
 \end{verbatim}
 
-For the \SubmitCmd{ec2} grid type:
+The \SubmitCmd{ec2} grid type has two different authentication methods.
+
+The first uses the EC2 API's built-in authentication.  Specify the 
+service with 'http://' or 'https://' URL (as usual), and the EC2 access
+key and secret access key as follows:
+
 \begin{verbatim}
-ec2_access_key = /path/to/access.key
+ec2_access_key_id = /path/to/access.key
 ec2_secret_access_key = /path/to/secret.key
 \end{verbatim}
 
 While both pairs of files may be associated with the same account, 
 the credentials are not the same.
+
+The second authentication method for the EC2 grid type is X.509.  You 
+must specify the service with an \verb|x509://| URL, even if the URL was 
+given to you in another form.  Use \SubmitCmd{ec2\_access\_key\_id} to 
+specify the path to the X.509 public key ('certificate'), and 
+\SubmitCmd{ec2\_secret\_access\_key} to specify the path to X.509 
+private key:
+
+\begin{verbatim}
+grid_resource = ec2 x509://service.example
+ec2_access_key_id = /path/to/x.509/public.key
+ec2_secret_access_key = /path/to/x.509/private.key
+\end{verbatim}
+
+If you're using an X.509 proxy, specify the proxy in both places.
 
 Condor can use the EC2 API to create an SSH key pair that allows
 secure log in to the virtual machine once it is running.
@@ -146,3 +167,4 @@ EC2_GAHP_LOG = /tmp/EC2GahpLog.$(USERNAME)
 
 The \SubmitCmd{ec2} grid type does not presently permit the explicit use 
 of an HTTP proxy.
+
