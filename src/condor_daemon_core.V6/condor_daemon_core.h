@@ -1467,13 +1467,15 @@ class DaemonCore : public Service
        StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
 
 	   time_t InitTime;            // last time we init'ed the structure
-	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
 	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
+	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+       int    PublishFlags;        // verbositiy of publishing
 
 	   // helper methods
 	   //Stats();
 	   //~Stats();
 	   void Init();
+       void Reconfig();
 	   void Clear();
 	   void Tick(); // call this when time may have changed to update StatsLastUpdateTime, etc.
 	   void SetWindowSize(int window);
