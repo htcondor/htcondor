@@ -5850,6 +5850,24 @@ These settings affect the \Condor{starter}.
   a batch script (with a file extension of \File{.bat} or \File{.cmd})
   or an executable (with a file extension of \File{.exe} or \File{.com}).
 
+  When a wrapper is in use, the executable of a job submission may be
+  kept relative and resolved by the user's path by setting:
+\begin{verbatim}
+        +PreserveRelativeExecutable = True
+\end{verbatim}
+  in the job submission file.  If this is set, then the executable does
+  not need to be fully qualified, for example
+\begin{verbatim}
+        # Let this exectuable be resolved by user's path in the wrapper
+        cmd = sleep
+\end{verbatim}
+  As opposed to
+\begin{verbatim}
+        # A typical fully-qualified executable path
+        cmd = /bin/sleep
+\end{verbatim}
+
+
 \label{param:UseVisibleDesktop} 
 \item[\Macro{USE\_VISIBLE\_DESKTOP}]
   This setting is only meaningful on Windows machines.  If True, Condor will
