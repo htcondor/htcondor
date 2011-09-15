@@ -30,6 +30,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item New attribute on the job classad \Attr{PreserveRelativeExecutable}, 
+which when set to \Expr{True} will prevent the \Condor{starter} from 
+prepending \Attr{Iwd} to the command executable \Attr{Cmd}, when
+when \AdAttr{Cmd} is a relative pathname and \AdAttr{TransferExecutable} 
+is \Expr{False}.
+\Ticket{2460}
+
 \item The EC2 GAHP now supports X.509 for connecting to and authenticating
 with EC2 services.  See section~\ref{sec:Amazon-submit} for details
 on using the X.509 protocol.
