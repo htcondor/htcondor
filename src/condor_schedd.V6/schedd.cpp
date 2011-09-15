@@ -4054,7 +4054,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_CONTINUE_JOBS:
 			// Only continue jobs which are suspended
-			snprintf( buf, 256, "(%s=%d) && (", ATTR_JOB_STATUS, SUSPENDED );
+			snprintf( buf, 256, "(%s==%d) && (", ATTR_JOB_STATUS, SUSPENDED );
 			break;
 		default:
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "

@@ -64,4 +64,4 @@ while true; do
   break
 done
 
-condor_rm -constraint "$CONSTRAINT" "$@"
+condor_rm "$@" -constraint "$CONSTRAINT" 
