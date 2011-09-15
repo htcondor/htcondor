@@ -9899,6 +9899,8 @@ Scheduler::Init()
 		// Grab all the essential parameters we need from the config file.
 		////////////////////////////////////////////////////////////////////
 
+    stats.Reconfig();
+
 		// set defaults for rounding attributes for autoclustering
 		// only set these values if nothing is specified in condor_config.
 	MyString tmpstr;
@@ -10557,8 +10559,6 @@ Scheduler::Init()
         ExitCodesTQ[jj->first].max_time(event_stat_window);
     }
    #else
-    int event_stat_window = param_integer("WINDOWED_STAT_WIDTH", 1200, 1, INT_MAX);
-    stats.SetWindowSize(event_stat_window);
    #endif
 
 	first_time_in_init = false;

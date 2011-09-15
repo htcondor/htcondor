@@ -140,9 +140,17 @@ enum {
 
    // values above AS_TYPE_MASK are flags
    //
-   IF_NONZERO    = 0x10000, // only publish non-zero values.
-   IF_NEVER      = 0x20000, // set this flag to disable publishing of the item.
-   IF_PUBMASK    = IF_NEVER | IF_NONZERO, // flags that affect publication
+   IF_ALWAYS     = 0x0000000, // publish regardless of publishing request
+   IF_BASICPUB   = 0x0010000, // publish if 'basic' publishing is requested
+   IF_VERBOSEPUB = 0x0020000, // publish if 'verbose' publishing is requested.
+   IF_NEVER      = 0x0030000, // publish if 'diagnostic' publishing is requested
+   IF_RECENTPUB  = 0x0040000, // publish if 'recent' publishing is requested.
+   IF_DEBUGPUB   = 0x0080000, // publish if 'debug' publishing is requested.
+   IF_PUBLEVEL   = 0x0030000, // level bits
+   IF_PUBKIND    = 0x0F00000, // category bits
+   IF_NONZERO    = 0x1000000, // only publish non-zero values.
+   IF_NOLIFETIME = 0x2000000, // don't publish lifetime values
+   IF_PUBMASK    = 0x0FF0000, // bits that affect publication
    };
 
 
@@ -462,6 +470,7 @@ public:
    static const int PubDefault = PubValueAndRecent;
    void Publish(ClassAd & ad, const char * pattr, int flags) const { 
       if ( ! flags) flags = PubDefault;
+      if ((flags & IF_NONZERO) && this->value == T(0)) return;
       if (flags & this->PubValue)
          ClassAdAssign(ad, pattr, this->value); 
       if (flags & this->PubRecent) {
@@ -785,17 +794,25 @@ class stats_histogram : public stats_entry_base {
 public:
 	static const int unit = IS_HISTOGRAM | stats_entry_type<T>::id;
 	~stats_histogram();
-	stats_histogram(int num,T* ilevels = 0);
+	stats_histogram(int num=0,const T* ilevels = 0);
 	T get_level(int n) const;
+    bool set_levels(int num, const T* ilevels);
 	bool set_level(int n, T val);
 	void Clear();
 	T Add(T val);
-	void Publish(ClassAd& ad, const char* pattr, int flags) const;
-private:
+    stats_histogram<T>& operator+=(const stats_histogram<T>& sh);
+    T operator+=(T val) { return Add(val); }
+//private:
 	int cItems;
 	int* data;
 	T* levels;
 };
+
+template <> void stats_entry_recent< stats_histogram<int64_t> >::AdvanceBy(int cSlots);
+template <> void stats_entry_recent< stats_histogram<double> >::AdvanceBy(int cSlots);
+template <> void stats_entry_recent< stats_histogram<int> >::AdvanceBy(int cSlots);
+template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd& ad, const char * pattr, int flags) const;
+
 // a helper function for determining if enough time has passed so that we
 // should Advance the recent buffers.  returns an Advance count that you
 // should pass to the AdvancBy methods of your stats_entry_recent<T> counters
@@ -810,6 +827,28 @@ int generic_stats_Tick(
    time_t & RecentTickTime,  // in,out
    time_t & Lifetime,        // in,out
    time_t & RecentLifetime); // in,out
+
+// parse a configuration string in the form "ALL:opt, CAT:opt, ALT:opt"
+// where opt can be one or more of 
+//   0-3   verbosity level, 0 is least and 3 is most. default is usually 1
+//   NONE  disable all 
+//   ALL   enable all
+//   R     enable Recent (default)
+//   !R    disable Recent
+//   D     enable Debug
+//   !D    disable Debug (default)
+//   Z     publish values even when stats pool has IF_NONZERO set and value is 0
+//   !Z    honor the IF_NONZERO publishing option.
+//   L     publish lifetime values (default)
+//   !L    don't publish lifetime values
+// 
+// return value is the PublishFlags that should be passed in to StatisticsPool::Publish
+// for this category.
+int generic_stats_ParseConfigString(
+   const char * pconfig, // name of the string parameter to read from the config file
+   const char * ppool_name, // name of the stats pool/category of stats to look for 
+   const char * ppool_alt,  // alternate name of the category to look for
+   int          def_flags); // default value for publish flags for this pool
 
 // the StatisticsPool class is used to hold a collection of statistics probes of various types
 // probes in the pool can be Cleared, Advanced and Published as a group. 
@@ -924,7 +963,7 @@ public:
    void ClearRecent();
    void SetRecentMax(int window, int quantum);
    int  Advance(int cAdvance);
-   void Publish(ClassAd & ad) const;
+   void Publish(ClassAd & ad, int flags) const;
    void Unpublish(ClassAd & ad) const;
 
 private:
@@ -977,14 +1016,14 @@ private:
 // the macros help to add statistics probe defined as class or struct members to
 // a StatisticsPool. use STATS_POOL_ADD or STATS_POOL_ADD_VAL to add a probe to the pool
 // then use STATS_POOL_PUB_xxx to add additional Publish entries as needed.
-#define STATS_POOL_ADD(pool,pre,name,as)        (pool).AddProbe(#name, &name, pre #name, name.PubDefault)
-#define STATS_POOL_ADD_VAL(pool,pre,name,as)    (pool).AddProbe(#name, &name, pre #name, name.PubValue)
-#define STATS_POOL_PUB_PEAK(pool,pre,name,as)   (pool).AddPublish(#name "Peak", &name, pre #name "Peak", name.PubLargest)
-#define STATS_POOL_PUB_RECENT(pool,pre,name,as) (pool).AddPublish("Recent" #name, &name, "Recent" pre #name, name.PubRecent)
-#define STATS_POOL_PUB_DEBUG(pool,pre,name,as)  (pool).AddPublish(#name "Debug", &name, pre #name "Debug", name.PubDebug)
+#define STATS_POOL_ADD(pool,pre,name,as)        (pool).AddProbe(#name, &name, pre #name, as | name.PubDefault)
+#define STATS_POOL_ADD_VAL(pool,pre,name,as)    (pool).AddProbe(#name, &name, pre #name, as | name.PubValue)
+#define STATS_POOL_PUB_PEAK(pool,pre,name,as)   (pool).AddPublish(#name "Peak", &name, pre #name "Peak", as | name.PubLargest)
+#define STATS_POOL_PUB_RECENT(pool,pre,name,as) (pool).AddPublish("Recent" #name, &name, "Recent" pre #name, IF_RECENTPUB | as | name.PubRecent)
+#define STATS_POOL_PUB_DEBUG(pool,pre,name,as)  (pool).AddPublish(#name "Debug", &name, pre #name "Debug", IF_DEBUGPUB | as | name.PubDebug)
 #define STATS_POOL_ADD_VAL_PUB_RECENT(pool,pre,name,as) \
-   (pool).AddProbe(#name, &name, pre #name, name.PubValue); \
-   (pool).AddPublish("Recent" #name, &name, "Recent" pre #name, name.PubRecent)
+   (pool).AddProbe(#name, &name, pre #name, as | name.PubValue); \
+   (pool).AddPublish("Recent" #name, &name, "Recent" pre #name, IF_RECENTPUB | as | name.PubRecent)
 
 
 
