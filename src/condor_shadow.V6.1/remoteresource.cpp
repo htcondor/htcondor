@@ -1865,6 +1865,19 @@ RemoteResource::requestReconnect( void )
 			ATTR_TRANSFER_SOCKET );
 	}
 
+	// Add extra remaps for the canonical stdout/err filenames.
+	// If using the FileTransfer object, the starter will rename the
+	// stdout/err files, and we need to remap them back here.
+	std::string file;
+	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, file ) &&
+		 strcmp( file.c_str(), StdoutRemapName ) ) {
+		filetrans.AddDownloadFilenameRemap( StdoutRemapName, file.c_str() );
+	}
+	if ( jobAd->LookupString( ATTR_JOB_ERROR, file ) &&
+		 strcmp( file.c_str(), StderrRemapName ) ) {
+		filetrans.AddDownloadFilenameRemap( StderrRemapName, file.c_str() );
+	}
+
 		// Use 30s timeout, because we don't want to block forever
 		// trying to connect and reestablish contact.  We'll retry if
 		// we have to.

@@ -1399,6 +1399,30 @@ JICShadow::initWithFileTransfer()
 		// if we're here, it means we're transfering files, so we need
 		// to reset the job's iwd to the starter directory
 
+	// When using file transfer, always rename the stdout/err files to
+	// the special names StdoutRemapName and StderrRemapName.
+	// The shadow will remap these to the original names when transferring
+	// the output.
+	if ( shadow_version->built_since_version( 7, 7, 2 ) ) {
+		bool stream;
+		std::string stdout_name;
+		std::string stderr_name;
+		job_ad->LookupString( ATTR_JOB_OUTPUT, stdout_name );
+		job_ad->LookupString( ATTR_JOB_ERROR, stderr_name );
+		if ( job_ad->LookupBool( ATTR_STREAM_OUTPUT, stream ) && !stream &&
+			 !nullFile( stdout_name.c_str() ) ) {
+			job_ad->Assign( ATTR_JOB_OUTPUT, StdoutRemapName );
+		}
+		if ( job_ad->LookupBool( ATTR_STREAM_ERROR, stream ) && !stream &&
+			 !nullFile( stderr_name.c_str() ) ) {
+			if ( stdout_name == stderr_name ) {
+				job_ad->Assign( ATTR_JOB_ERROR, StdoutRemapName );
+			} else {
+				job_ad->Assign( ATTR_JOB_ERROR, StderrRemapName );
+			}
+		}
+	}
+
 	wants_file_transfer = true;
 	change_iwd = true;
 	job_iwd = strdup( Starter->GetWorkingDir() );

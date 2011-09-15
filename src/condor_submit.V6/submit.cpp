@@ -2509,7 +2509,12 @@ SetTransferFiles()
 	// object will take care of transferring the data back to the
 	// correct path.
 
-	if ( (should_transfer != STF_NO && JobUniverse != CONDOR_UNIVERSE_GRID &&
+	// Starting with Condor 7.7.2, we only do this remapping if we're
+	// spooling files to the schedd. The shadow/starter will do any
+	// required renaming in the non-spooling case.
+	CondorVersionInfo cvi(MySchedd->version());
+	if ( (!cvi.built_since_version(7, 7, 2) && should_transfer != STF_NO &&
+		  JobUniverse != CONDOR_UNIVERSE_GRID &&
 		  JobUniverse != CONDOR_UNIVERSE_STANDARD) ||
 		 Remote ) {
 
@@ -2522,7 +2527,7 @@ SetTransferFiles()
 		if(output.Length() && output != condor_basename(output.Value()) && 
 		   strcmp(output.Value(),"/dev/null") != 0 && !stream_stdout_toggle)
 		{
-			char const *working_name = "_condor_stdout";
+			char const *working_name = StdoutRemapName;
 				//Force setting value, even if we have already set it
 				//in the cluster ad, because whatever was in the
 				//cluster ad may have been overwritten (e.g. by a
@@ -2538,11 +2543,11 @@ SetTransferFiles()
 		if(error.Length() && error != condor_basename(error.Value()) && 
 		   strcmp(error.Value(),"/dev/null") != 0 && !stream_stderr_toggle)
 		{
-			char const *working_name = "_condor_stderr";
+			char const *working_name = StderrRemapName;
 
 			if(error == output) {
 				//stderr will use same file as stdout
-				working_name = "_condor_stdout";
+				working_name = StdoutRemapName;
 			}
 				//Force setting value, even if we have already set it
 				//in the cluster ad, because whatever was in the

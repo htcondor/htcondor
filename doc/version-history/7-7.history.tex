@@ -194,6 +194,15 @@ grid-type ec2 jobs to become held. The \Attr{HoldReason} for most such
 jobs would be ``Unable to read from accesskey file''.
 \Ticket{2447}
 
+\item Fixed a bug that could cause a job's standard output and error to
+be written to the wrong location when \Attr{should\_transfer\_files} is
+set to
+\Arg{IF\_NEEDED} and the job runs on the machine where file transfer isn't
+needed. If the standard output or error filenames contained any
+path information, the output would be written to \File{\_condor\_stdout} or
+\File{\_condor\_stderr} in the job's initial working directory.
+\Ticket{1811}
+
 \end{itemize}
 
 \noindent Known Bugs:
