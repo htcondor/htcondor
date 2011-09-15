@@ -30,6 +30,10 @@ PrintUsage() {
   echo "  -held          remove only held jobs"
   echo "  -constraint X  remove jobs matching specified constraint"
   echo
+  echo "NOTE: If you wish to remove based on job.id or username simply"
+  echo "execute:"
+  echo "   condor_rm job.id, or condor_rm username"
+  echo 
   echo "Usage for condor_rm follows:"
   condor_rm -h
 }
