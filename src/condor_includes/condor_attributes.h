@@ -647,6 +647,7 @@ extern const char * const  ATTR_TRANSFER_INPUT_FILES;
 extern const char * const  ATTR_TRANSFER_INTERMEDIATE_FILES;
 extern const char * const  ATTR_TRANSFER_OUTPUT_FILES;
 extern const char * const  ATTR_TRANSFER_OUTPUT_REMAPS;
+extern const char * const  ATTR_PRESERVE_RELATIVE_EXECUTABLE;
 extern const char * const  ATTR_SPOOLED_OUTPUT_FILES;
 extern const char * const  ATTR_ENCRYPT_INPUT_FILES;
 extern const char * const  ATTR_ENCRYPT_OUTPUT_FILES;
