@@ -34,7 +34,7 @@ client = Client(wsdl);
 cmds = ['holdJob', 'releaseJob', 'removeJob']
 
 parser = argparse.ArgumentParser(description='Control job state remotely via SOAP.')
-parser.add_argument('-q','--quiet', action="store_true",default=True, help='disable/enable SOAP logging')
+parser.add_argument('-q','--quiet', action="store_true",default=False, help='disable/enable SOAP logging')
 parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
 		    default="http://localhost:9090/services/job/",
 		    help='http or https URL prefix to be added to cmd')
@@ -53,7 +53,7 @@ args.url += args.cmd
 client.set_options(location=args.url)
 
 # enable to see service schema
-if args.verbose:
+if not args.quiet:
 	logging.basicConfig(level=logging.INFO)
 	logging.getLogger('suds.client').setLevel(logging.DEBUG)
 	print client
