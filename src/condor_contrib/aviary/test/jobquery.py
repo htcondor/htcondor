@@ -27,27 +27,28 @@ from aviary.https import *
 
 # change these for other default locations and ports
 wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
-url = 'http://localhost:9091/services/query/'
 key = '/etc/pki/tls/certs/client.key'
 cert = '/etc/pki/tls/certs/client.crt'
 cmds = ['getJobStatus', 'getJobSummary', 'getJobDetails']
-client = Client(wsdl);
 
 parser = argparse.ArgumentParser(description='Query jobs remotely via SOAP.')
 parser.add_argument('-v','--verbose', action="store_true",default=False, help='enable SOAP logging')
-parser.add_argument('-u','--url', action="store", nargs='?', dest='url', help='http or https URL prefix to be added to cmd')
+parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
+		    default='http://localhost:9091/services/query/',
+		    help='http or https URL prefix to be added to cmd')
 parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
 parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
 parser.add_argument('cmd', action="store", choices=(cmds))
 parser.add_argument('cproc', action="store", help="a cluster.proc id like '1.0' or '5.3'")
 args =  parser.parse_args()
 
-if args.url and "https://" in args.url:
-	url = args.url
+if "https://" in args.url:
 	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
+else:
+	client = Client(wsdl)
 
-url += args.cmd
-client.set_options(location=url)
+args.url += args.cmd
+client.set_options(location=args.url)
 
 # enable to see service schema
 if args.verbose:
@@ -66,10 +67,10 @@ else:
 try:
 	func = getattr(client.service, args.cmd, None)
 	if callable(func):
-		print 'invoking', url, 'for job', args.cproc
+		print 'invoking', args.url, 'for job', args.cproc
 		result = func(jobId)
 except Exception, e:
-	print "invocation failed: ", url
+	print "invocation failed: ", args.url
 	print e
 	exit(1)
 
