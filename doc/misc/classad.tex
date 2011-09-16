@@ -711,17 +711,6 @@ characters within the delimiter string.
     Same as \Code{stringListMember()}, but comparison is done
     with \Expr{stricmp()}, so letter case is not relevant.
 
-  \index{ClassAd functions!stringList\_regexpMember()}
-  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr) \Lbr, String options \Rbr}]
-    Returns \Expr{TRUE} if the string \Expr{pattern} is a regular expression
-    that matches an item in the string \Expr{list},
-    as delimited by the optional \Expr{delimiter} string.
-    String \Expr{options} modifies how the match is performed.
-    Returns \Expr{FALSE} if \Expr{pattern} does not match any entries in
-    \Expr{list}.
-    The return value is \Expr{ERROR}, if any of the arguments
-    are not strings, or if \Expr{pattern} is not a valid regular expression.
-
 \end{description}
 
 The following three functions utilize regular expressions as defined
@@ -773,17 +762,16 @@ Inclusion of characters other than these as options are ignored.
     The return value is \Expr{ERROR}, if any of the arguments
     are not strings.
 
-  \index{ClassAd functions!stringListRegexpMember()}
-  \item[\Code{Boolean stringListRegexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ } ]
-  \item[\Code{\Lbr\ , String options \Rbr)}]
-    Returns \Expr{TRUE} if any of the strings within the
-    \Expr{list} is a regular expression as described by \Expr{pattern}.
-    Returns \Expr{FALSE} otherwise.
-    If any argument is not a string, or if \Expr{pattern} does not describe
-    a valid regular expression, returns \Expr{ERROR}.
-    To include the fourth (optional) argument \Expr{options}, a third argument
-    of \Expr{delimiter} is required.
-    A default value for a delimiter is " ,".
+  \index{ClassAd functions!stringList\_regexpMember()}
+  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr \Lbr, String options \Rbr})]
+    Returns \Expr{TRUE} if the string \Expr{pattern} is a regular expression
+    that matches an item in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    String \Expr{options} modifies how the match is performed.
+    Returns \Expr{FALSE} if \Expr{pattern} does not match any entries in
+    \Expr{list}.
+    The return value is \Expr{ERROR}, if any of the arguments
+    are not strings, or if \Expr{pattern} is not a valid regular expression.
 
 \end{description}
 
