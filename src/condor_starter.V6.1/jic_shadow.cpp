@@ -1446,21 +1446,14 @@ JICShadow::initStdFiles( void )
 		// now that we know about file transfer and the real iwd we'll
 		// be using, we can initialize the std files... 
 	if( ! job_input_name ) {
-		job_input_name = getJobStdFile( ATTR_JOB_INPUT, NULL );
+		job_input_name = getJobStdFile( ATTR_JOB_INPUT );
 	}
-
-	// NOTE: We only need to look at _ORIG values for backwards
-	// compatibility with old submitters (pre 6.7.14).  Modern
-	// submitters do not mess with the filename when streaming
-	// is being used, so there will be no _ORIG attribute.
 
 	if( ! job_output_name ) {
-		job_output_name = getJobStdFile( ATTR_JOB_OUTPUT,
-										 ATTR_JOB_OUTPUT_ORIG );
+		job_output_name = getJobStdFile( ATTR_JOB_OUTPUT );
 	}
 	if( ! job_error_name ) {
-		job_error_name = getJobStdFile( ATTR_JOB_ERROR,
-										ATTR_JOB_ERROR_ORIG );
+		job_error_name = getJobStdFile( ATTR_JOB_ERROR );
 	}
 
 		// so long as all of the above are initialized, we were
@@ -1470,20 +1463,15 @@ JICShadow::initStdFiles( void )
 
 
 char* 
-JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
+JICShadow::getJobStdFile( const char* attr_name )
 {
 	char* tmp = NULL;
 	const char* base = NULL;
 	MyString filename;
 
 	if(streamStdFile(attr_name)) {
-		if(!tmp && alt_name) job_ad->LookupString(alt_name,&tmp);
 		if(!tmp && attr_name) job_ad->LookupString(attr_name,&tmp);
 		return tmp;
-	}
-
-	if( ! wants_file_transfer && alt_name ) {
-		job_ad->LookupString( alt_name, &tmp );
 	}
 
 	if( !tmp ) {

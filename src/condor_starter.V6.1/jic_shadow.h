@@ -76,12 +76,10 @@ public:
 			attribute (see comment for initStdFiles() for more
 			details). 
 			@param attr_name The ClassAd attribute name to lookup
-			@param alt_name The alternate attribute name we might need
 			@return a strdup() allocated string for the filename we 
 			        care about, or NULL if it's not in the job ad.
 		*/
-	char* getJobStdFile( const char* attr_name,
-						 const char* alt_name = NULL );
+	char* getJobStdFile( const char* attr_name );
 
 		// // // // // // // // // // // //
 		// Job Actions
