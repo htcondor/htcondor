@@ -1132,6 +1132,8 @@ Scheduler::count_jobs()
 	m_ad->Delete (ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
 	m_ad->Delete (ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
 
+    daemonCore->dc_stats.Unpublish(*m_ad);
+
    #ifdef TICKET_2006
     m_ad->Delete(ATTR_JOBS_SUBMITTED_CUMULATIVE);
     m_ad->Delete(ATTR_JOBS_STARTED_CUMULATIVE);
