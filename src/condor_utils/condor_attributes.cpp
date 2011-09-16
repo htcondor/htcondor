@@ -698,7 +698,6 @@ const char * const ATTR_VIRTUAL_MACHINE_ID		 = "VirtualMachineID";
 const char * const ATTR_SHOULD_TRANSFER_FILES    = "ShouldTransferFiles";
 const char * const ATTR_WHEN_TO_TRANSFER_OUTPUT  = "WhenToTransferOutput";
 const char * const ATTR_TRANSFER_TYPE			 = "TransferType";
-const char * const ATTR_TRANSFER_FILES			 = "TransferFiles";
 const char * const ATTR_TRANSFER_KEY			 = "TransferKey";
 const char * const ATTR_TRANSFER_EXECUTABLE		 = "TransferExecutable";
 const char * const ATTR_TRANSFER_INPUT			 = "TransferIn";

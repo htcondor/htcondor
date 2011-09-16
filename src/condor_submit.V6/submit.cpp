@@ -281,7 +281,6 @@ const char	*SuspendJobAtExec = "suspend_job_at_exec";
 const char	*TransferInputFiles = "transfer_input_files";
 const char	*TransferOutputFiles = "transfer_output_files";
 const char    *TransferOutputRemaps = "transfer_output_remaps";
-const char	*TransferFiles = "transfer_files";
 const char	*TransferExecutable = "transfer_executable";
 const char	*TransferInput = "transfer_input";
 const char	*TransferOutput = "transfer_output";
@@ -457,11 +456,9 @@ void 	SetRootDir();
 #endif
 void 	SetRequirements();
 void 	SetTransferFiles();
-void    process_input_file_list(StringList * input_list, char *input_files, bool * files_specified);
+void    process_input_file_list(StringList * input_list, char *input_files);
 void 	SetPerFileEncryption();
 bool 	SetNewTransferFiles( void );
-void 	SetOldTransferFiles( bool, bool );
-void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
 void	SetRunAsOwner();
 void    SetLoadProfile();
@@ -2274,7 +2271,7 @@ calc_image_size( const char *name)
 }
 
 void
-process_input_file_list(StringList * input_list, MyString *input_files, bool * files_specified)
+process_input_file_list(StringList * input_list, MyString *input_files)
 {
 	int count;
 	MyString tmp;
@@ -2299,7 +2296,6 @@ process_input_file_list(StringList * input_list, MyString *input_files, bool * f
 			input_files->sprintf( "%s = \"%s\"",
 				ATTR_TRANSFER_INPUT_FILES, tmp_ptr );
 			free( tmp_ptr );
-			*files_specified = true;
 		}
 	}
 }
@@ -2322,8 +2318,6 @@ SetTransferFiles()
 	int count;
 	MyString tmp;
 	char* tmp_ptr;
-	bool in_files_specified = false;
-	bool out_files_specified = false;
 	MyString	 input_files;
 	MyString	 output_files;
 	StringList input_file_list(NULL, ",");
@@ -2369,7 +2363,7 @@ SetTransferFiles()
 #endif /* WIN32 */
 
 	if( ! input_file_list.isEmpty() ) {
-		process_input_file_list(&input_file_list, &input_files, &in_files_specified);
+		process_input_file_list(&input_file_list, &input_files);
 	}
 
 
@@ -2396,7 +2390,6 @@ SetTransferFiles()
 				ATTR_TRANSFER_OUTPUT_FILES, tmp_ptr);
 			free(tmp_ptr);
 			tmp_ptr = NULL;
-			out_files_specified = true;
 		}
 		free(macro_value);
 	}
@@ -2406,12 +2399,8 @@ SetTransferFiles()
 		// right attributes controlling if and when to do the
 		// transfers.  if they didn't tell us what to do, in some
 		// cases, we can give reasonable defaults, but in others, it's
-		// a fatal error.  first we check for the new attribute names
-		// ("ShouldTransferFiles" and "WheToTransferOutput").  If
-		// those aren't defined, we look for the old "TransferFiles". 
-	if( ! SetNewTransferFiles() ) {
-		SetOldTransferFiles( in_files_specified, out_files_specified );
-	}
+		// a fatal error.
+	SetNewTransferFiles();
 
 		/*
 		  If we're dealing w/ TDP and we might be transfering files,
@@ -2492,7 +2481,7 @@ SetTransferFiles()
 		}
 
 		if( ! input_file_list.isEmpty() ) {
-			process_input_file_list(&input_file_list, &input_files, &in_files_specified);
+			process_input_file_list(&input_file_list, &input_files);
 		}
 
 		InsertJobExprString( ATTR_JOB_CMD, "java");
@@ -2795,154 +2784,20 @@ SetNewTransferFiles( void )
 		exit( 1 );
 	}
 
-		// if we found the new syntax, we're done, and we should now
 		// add the appropriate ClassAd attributes to the job.
 	if( found_it ) {
-		InsertFileTransAttrs( when_output );
+		std::string buf;
+		sprintf( buf, "%s=\"%s\"", ATTR_SHOULD_TRANSFER_FILES,
+				 getShouldTransferFilesString( should_transfer ) );
+		InsertJobExpr( buf.c_str() );
+
+		if ( should_transfer != STF_NO ) {
+			sprintf( buf, "%s=\"%s\"", ATTR_WHEN_TO_TRANSFER_OUTPUT,
+					 getFileTransferOutputString( when_output ) );
+			InsertJobExpr( buf.c_str() );
+		}
 	}
 	return found_it;
-}
-
-
-void
-SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
-{
-	char *macro_value;
-	FileTransferOutput_t when_output = FTO_NONE;
-		// this variable is never used (even once we pass it to
-		// InsertFileTransAttrs()) unless should_transfer is set
-		// appropriately.  however, just to be safe, we initialize it
-		// here to avoid passing around uninitialized variables.
-
-	macro_value = condor_param( TransferFiles, ATTR_TRANSFER_FILES );
-	if( macro_value ) {
-		// User explicitly specified TransferFiles; do what user says
-		switch ( macro_value[0] ) {
-				// Handle "Never"
-			case 'n':
-			case 'N':
-				// Handle "Never"
-				if( in_files_specified || out_files_specified ) {
-					MyString err_msg;
-					err_msg += "\nERROR: you specified \"";
-					err_msg += TransferFiles;
-					err_msg += " = Never\" but listed files you want "
-						"transfered via \"";
-					if( in_files_specified ) {
-						err_msg += "transfer_input_files";
-						if( out_files_specified ) {
-							err_msg += "\" and \"transfer_output_files\".";
-						} else {
-							err_msg += "\".";
-						}
-					} else {
-						ASSERT( out_files_specified );
-						err_msg += "transfer_output_files\".";
-					}
-					err_msg += "  Please remove this contradiction from "
-						"your submit file and try again.";
-					print_wrapped_text( err_msg.Value(), stderr );
-					DoCleanup(0,0,NULL);
-					exit( 1 );
-				}
-				should_transfer = STF_NO;
-				break;
-			case 'o':
-			case 'O':
-				// Handle "OnExit"
-				should_transfer = STF_YES;
-				when_output = FTO_ON_EXIT;
-				break;
-			case 'a':
-			case 'A':
-				// Handle "Always"
-				should_transfer = STF_YES;
-				when_output = FTO_ON_EXIT_OR_EVICT;
-				break;
-			default:
-				// Unrecognized
-				fprintf( stderr, "\nERROR: Unrecognized argument for "
-						 "parameter \"%s\"\n", TransferFiles );
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-				break;
-		}	// end of switch
-
-		free(macro_value);		// condor_param() calls malloc; free it!
-	} else {
-		// User did not explicitly specify TransferFiles; choose a default
-#ifdef WIN32
-		should_transfer = STF_YES;
-		when_output = FTO_ON_EXIT;
-#else
-		if( in_files_specified || out_files_specified ) {
-			MyString err_msg;
-			err_msg += "\nERROR: you specified files you want Condor to "
-				"transfer via \"";
-			if( in_files_specified ) {
-				err_msg += "transfer_input_files";
-				if( out_files_specified ) {
-					err_msg += "\" and \"transfer_output_files\",";
-				} else {
-					err_msg += "\",";
-				}
-			} else {
-				ASSERT( out_files_specified );
-				err_msg += "transfer_output_files\",";
-			}
-			err_msg += " but you did not specify *when* you want Condor to "
-				"transfer the files.  Please put either \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT\" or \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
-				"try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		should_transfer = STF_NO;
-#endif
-	}
-		// now that we know what we want, call a shared method to
-		// actually insert the right classad attributes for it (since
-		// this stuff is shared, regardless of the old or new syntax).
-	InsertFileTransAttrs( when_output );
-}
-
-
-void
-InsertFileTransAttrs( FileTransferOutput_t when_output )
-{
-	MyString should = ATTR_SHOULD_TRANSFER_FILES;
-	should += " = \"";
-	MyString when = ATTR_WHEN_TO_TRANSFER_OUTPUT;
-	when += " = \"";
-	MyString ft = ATTR_TRANSFER_FILES;
-	ft += " = \"";
-	
-	should += getShouldTransferFilesString( should_transfer );
-	should += '"';
-	if( should_transfer != STF_NO ) {
-		if( ! when_output ) {
-			EXCEPT( "InsertFileTransAttrs() called we might transfer "
-					"files but when_output hasn't been set" );
-		}
-		when += getFileTransferOutputString( when_output );
-		when += '"';
-		if( when_output == FTO_ON_EXIT ) {
-			ft += "ONEXIT\"";
-		} else {
-			ft += "ALWAYS\"";
-		}
-	} else {
-		ft += "NEVER\"";
-	}
-	InsertJobExpr( should.Value() );
-	if( should_transfer != STF_NO ) {
-		InsertJobExpr( when.Value() );
-	}
-	InsertJobExpr( ft.Value() );
 }
 
 
