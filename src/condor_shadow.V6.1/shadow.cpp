@@ -291,6 +291,30 @@ int UniShadow::handleJobRemoval(int sig) {
 }
 
 
+int UniShadow::JobSuspend( int sig )
+{
+	int iRet=1;
+	
+	if ( remRes->suspend() )
+		iRet = 0;
+	else
+		dprintf ( D_ALWAYS, "JobSuspend() sig %d FAILED\n", sig );
+	
+	return iRet;
+}
+
+int UniShadow::JobResume( int sig )
+{
+	int iRet =1;
+	
+	if ( remRes->resume() )
+		iRet =0;
+	else
+		dprintf ( D_ALWAYS, "JobResume() sig %d FAILED\n", sig );
+	
+	return iRet;
+}
+
 float
 UniShadow::bytesSent()
 {

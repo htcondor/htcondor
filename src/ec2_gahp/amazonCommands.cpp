@@ -98,6 +98,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
     }
     
     unsigned long written = full_write( fd, contents.c_str(), contents.length() );
+    close( fd );
     if( written != contents.length() ) {
         dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
             fileName.c_str(), contents.length(), written );
@@ -124,6 +125,7 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
     char * rawBuffer = (char *)malloc( fileSize + 1 );
     assert( rawBuffer != NULL );
     unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
+    close( fd );
     if( totalRead != fileSize ) {
         dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
             fileName.c_str(), fileSize, totalRead );
@@ -166,6 +168,17 @@ AmazonRequest::AmazonRequest() { }
 
 AmazonRequest::~AmazonRequest() { }
 
+#define SET_CURL_SECURITY_OPTION( A, B, C ) { \
+    CURLcode rv##B = curl_easy_setopt( A, B, C ); \
+    if( rv##B != CURLE_OK ) { \
+        this->errorCode = "E_CURL_LIB"; \
+        this->errorMessage = "curl_easy_setopt( " #B " ) failed."; \
+        dprintf( D_ALWAYS, "curl_easy_setopt( %s ) failed (%d): '%s', failing.\n", \
+            #B, rv##B, curl_easy_strerror( rv##B ) ); \
+        return false; \
+    } \
+}
+
 bool AmazonRequest::SendRequest() {
     //
     // Every request must have the following parameters:
@@ -181,18 +194,49 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
 
+    // We need to know right away if we're doing FermiLab-style authentication.
+    //
+    // While we're at it, extract "the value of the Host header in lowercase"
+    // and the "HTTP Request URI" from the service URL.  The service URL must
+    // be of the form '[http[s]|x509]://hostname[:port][/path]*'.
+    Regex r; int errCode = 0; const char * errString = 0;
+    bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
+    assert( patternOK );
+    ExtArray<MyString> groups(5);
+    bool matchFound = r.match( this->serviceURL.c_str(), & groups );
+    if( (! matchFound) || (groups[1] != "http" && groups[1] != "https" && groups[1] != "x509" ) ) {
+        this->errorCode = "E_INVALID_SERVICE_URL";
+        this->errorMessage = "Failed to parse service URL.";
+        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
+        return false;
+    }
+    std::string protocol = groups[1];
+    std::string hostAndPath = groups[2];
+    std::string valueOfHostHeaderInLowercase = groups[3];
+    std::transform( valueOfHostHeaderInLowercase.begin(),
+                    valueOfHostHeaderInLowercase.end(),
+                    valueOfHostHeaderInLowercase.begin(),
+                    & tolower );
+    std::string httpRequestURI = groups[4];
+    if( httpRequestURI.empty() ) { httpRequestURI = "/"; }
+
     //
     // The AWSAccessKeyId is just the contents of this->accessKeyFile,
     // and are (currently) 20 characters long.
     //
     std::string keyID;
-    if( ! readShortFile( this->accessKeyFile, keyID ) ) {
-        this->errorCode = "E_FILE_IO";
-        this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
-        dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
-        return false;
-    }
-    if( keyID[ keyID.length() - 1 ] == '\n' ) { keyID.erase( keyID.length() - 1 ); }
+    if( protocol == "x509" ) {
+        keyID = getenv( "USER" );
+        dprintf( D_FULLDEBUG, "Using '%s' as access key ID for x.509\n", keyID.c_str() );
+    } else {
+        if( ! readShortFile( this->accessKeyFile, keyID ) ) {
+            this->errorCode = "E_FILE_IO";
+            this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
+            dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
+            return false;
+        }
+        if( keyID[ keyID.length() - 1 ] == '\n' ) { keyID.erase( keyID.length() - 1 ); }
+    }        
     query_parameters.insert( std::make_pair( "AWSAccessKeyId", keyID ) );
 
     //
@@ -245,27 +289,7 @@ bool AmazonRequest::SendRequest() {
     // We'll always have a superflous trailing ampersand.
     canonicalizedQueryString.erase( canonicalizedQueryString.end() - 1 );
     
-    // Step 2: Create the string to sign.  We extract "the value of the Host
-    // header in lowercase" and the "HTTP Request URI" from the service URL.
-    // The service URL must be of the form 'http[s]://hostname[:port][/path]*'.
-    Regex r; int errCode = 0; const char * errString = 0;
-    bool patternOK = r.compile( "https?://([^/]+)(/.*)?", & errString, & errCode );
-    assert( patternOK );
-    ExtArray<MyString> groups(4);
-    bool matchFound = r.match( this->serviceURL.c_str(), & groups );
-    if( ! matchFound ) {
-        this->errorCode = "E_INVALID_SERVICE_URL";
-        this->errorMessage = "Failed to parse service URL.";
-        dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
-        return false;
-    }
-    std::string valueOfHostHeaderInLowercase = groups[1];
-    std::transform( valueOfHostHeaderInLowercase.begin(),
-                    valueOfHostHeaderInLowercase.end(),
-                    valueOfHostHeaderInLowercase.begin(),
-                    & tolower );
-    std::string httpRequestURI = groups[2];
-    if( httpRequestURI.empty() ) { httpRequestURI = "/"; }
+    // Step 2: Create the string to sign.
     std::string stringToSign = "GET\n"
                              + valueOfHostHeaderInLowercase + "\n"
                              + httpRequestURI + "\n"
@@ -276,15 +300,24 @@ bool AmazonRequest::SendRequest() {
     // you just created, your Secret Access Key as the key, and SHA256
     // or SHA1 as the hash algorithm."
     std::string saKey;
-    if( ! readShortFile( this->secretKeyFile, saKey ) ) {
-        this->errorCode = "E_FILE_IO";
-        this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
-        dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
-        return false;
+    if( protocol == "x509" ) {
+        // If we we ever support the UploadImage action, we'll need to
+        // extract the DN from the user's certificate here.  Otherwise,
+        // since the x.509 implementation ignores the AWSAccessKeyId
+        // and Signature, we can do whatever we want.
+        saKey = std::string( "<DN>/CN=UID:" ) + getenv( "USER" );
+        dprintf( D_FULLDEBUG, "Using '%s' as secret key for x.509\n", saKey.c_str() );
+    } else {
+        if( ! readShortFile( this->secretKeyFile, saKey ) ) {
+            this->errorCode = "E_FILE_IO";
+            this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
+            dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
+            return false;
+        }
+        // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
+        if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
+        // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
     }
-    // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
-    if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
-    // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
     
     unsigned int mdLength = 0;
     unsigned char messageDigest[EVP_MAX_MD_SIZE];
@@ -305,7 +338,12 @@ bool AmazonRequest::SendRequest() {
     
     // Generate the final URI.
     canonicalizedQueryString += "&Signature=" + amazonURLEncode( signatureInBase64 );
-    std::string finalURI = this->serviceURL + "?" + canonicalizedQueryString;
+    std::string finalURI;
+    if( protocol == "x509" ) {
+        finalURI = "https://" + hostAndPath + "?" + canonicalizedQueryString;
+    } else {
+        finalURI = this->serviceURL + "?" + canonicalizedQueryString;
+    }
     dprintf( D_FULLDEBUG, "Request URI is '%s'\n", finalURI.c_str() );
     
     // curl_global_init() is not thread-safe.  However, it's safe to call
@@ -326,6 +364,9 @@ bool AmazonRequest::SendRequest() {
         dprintf( D_ALWAYS, "curl_easy_init() failed, failing.\n" );
         return false;
     }
+
+    char errorBuffer[CURL_ERROR_SIZE];
+    rv = curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errorBuffer );
 
     rv = curl_easy_setopt( curl, CURLOPT_URL, finalURI.c_str() );
     if( rv != CURLE_OK ) {
@@ -363,6 +404,67 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
     
+    SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYPEER, 1 );
+    SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSL_VERIFYHOST, 2 );
+
+    std::string CAFile = "";
+    std::string CAPath = "";
+    if( protocol == "x509" ) {
+        dprintf( D_FULLDEBUG, "Configuring x.509...\n" );
+
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLKEYTYPE, "PEM" );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLKEY, this->secretKeyFile.c_str() );
+
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERTTYPE, "PEM" );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, this->accessKeyFile.c_str() );
+
+        // Set CAPath.  The CAPath MUST remain in scope until after we
+        // call curl_easy_cleanup(), or else curl_perform() will fail with
+        // an error message claiming that there's a 'problem with the SSL
+        // CA cert', error 60.  The problem is that libcurl, contrary to
+        // the manual's assurances, doesn't strdup() strings passed to it,
+        // not anything with the certs.
+
+        char * x509_ca_dir = getenv( "X509_CERT_DIR" );
+        if( x509_ca_dir != NULL ) {
+            CAPath = x509_ca_dir;
+        }
+
+        char * x509_ca_file = getenv( "X509_CERT_FILE" );
+        if( x509_ca_file != NULL ) {
+            CAFile = x509_ca_file;
+        }
+        
+        if( CAPath.empty() ) {
+            char * soap_ssl_ca_dir = getenv( "SOAP_SSL_CA_DIR" );
+            if( soap_ssl_ca_dir != NULL ) {
+                CAPath = soap_ssl_ca_dir;
+            }
+        }
+
+        if( CAFile.empty() ) {
+            char * soap_ssl_ca_file = getenv( "SOAP_SSL_CA_FILE" );
+            if( soap_ssl_ca_file != NULL ) {
+                CAFile = soap_ssl_ca_file;
+            }
+        }
+
+        if( CAPath.empty() ) {
+            CAPath = "/etc/grid-security/certificates";
+        }
+        dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
+        
+        if( ! CAFile.empty() ) {
+            dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", CAFile.c_str() );
+            SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAINFO, CAFile.c_str() );
+        }
+        
+        if( setenv( "OPENSSL_ALLOW_PROXY", "1", 0 ) != 0 ) {
+            dprintf( D_FULLDEBUG, "Failed to set OPENSSL_ALLOW_PROXY.\n" );
+        }
+    }
+            
     amazon_gahp_release_big_mutex();
     rv = curl_easy_perform( curl );
     amazon_gahp_grab_big_mutex();
@@ -372,6 +474,7 @@ bool AmazonRequest::SendRequest() {
         error << "curl_easy_perform() failed (" << rv << "): '" << curl_easy_strerror( rv ) << "'.";
         this->errorMessage = error.str();
         dprintf( D_ALWAYS, "%s\n", this->errorMessage.c_str() );
+        dprintf( D_FULLDEBUG, "%s\n", errorBuffer );
         return false;
     }
 
@@ -416,6 +519,20 @@ bool AmazonRequest::SendRequest() {
  * AmazonVMStatusAll.
  *
  * See 'http://xmlsoft.org/examples/xpath1.c', which looks a lot cleaner.
+ */
+
+/*
+ * FIXME: None of the ::SendRequest() methods verify that the 200/OK
+ * response they tried to parse contain(ed) the attribute(s) they
+ * were looking for.  Although, strictly speaking, this is a server-
+ * side problem, it seems prudent to check.
+ *
+ * In particular, this bug allows FermiLab's x509:// schema to work,
+ * since their server doesn't presently handle keypairs.  Note, however,
+ * that this severely limits (if not eliminates) the GridManager's
+ * crash recovery.  Newer version of the EC2 API will allow us to
+ * avoid this problem by using the ability to supply a name for the instance
+ * directly.
  */
 
 AmazonVMStart::AmazonVMStart() { }
@@ -558,9 +675,17 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
             vmStartRequest.errorMessage.c_str(),
             vmStartRequest.errorCode.c_str() );
     } else {
-        StringList resultList;
-        resultList.append( vmStartRequest.instanceID.c_str() );
-        result_string = create_success_result( requestID, & resultList );
+        if( vmStartRequest.instanceID.empty() ) {
+            dprintf( D_ALWAYS, "Got result from endpoint that did not include an instance ID, failing.  Response follows.\n" );
+            dprintf( D_ALWAYS, "-- RESPONSE BEGINS --\n" );
+            dprintf( D_ALWAYS, vmStartRequest.resultString.c_str() );
+            dprintf( D_ALWAYS, "-- RESPONSE ENDS --\n" );
+            result_string = create_failure_result( requestID, "Could not find instance ID in response from server.  Check the EC2 GAHP log for details.", "E_NO_INSTANCE_ID" );
+        } else {
+            StringList resultList;
+            resultList.append( vmStartRequest.instanceID.c_str() );
+            result_string = create_success_result( requestID, & resultList );
+        }
     }
 
     return true;
@@ -1352,4 +1477,3 @@ bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &resu
     return true;
 	
 }
-

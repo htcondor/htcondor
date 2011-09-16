@@ -45,6 +45,9 @@
 #include "my_popen.h"
 #include <list>
 
+const char * const StdoutRemapName = "_condor_stdout";
+const char * const StderrRemapName = "_condor_stderr";
+
 #define COMMIT_FILENAME ".ccommit.con"
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
@@ -125,6 +128,7 @@ FileTransfer::FileTransfer()
 	PeerDoesGoAhead = false;
 	PeerUnderstandsMkdir = false;
 	TransferUserLog = false;
+	m_StarterRenamesStdio = false;
 	Iwd = NULL;
 	ExceptionFiles = NULL;
 	InputFiles = NULL;
@@ -448,12 +452,12 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	int streaming = 0;
 	JobStdoutFile = "";
 	if(Ad->LookupString(ATTR_JOB_OUTPUT, buf) == 1 ) {
+		JobStdoutFile = buf;
 		Ad->LookupBool( ATTR_STREAM_OUTPUT, streaming );
 		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
 				// not streaming it, add it to our list if we're not
 				// just going to transfer anything that was changed.
 				// only add to list if not NULL_FILE (i.e. /dev/null)
-			JobStdoutFile = buf;
 			if( OutputFiles ) {
 				if( !OutputFiles->file_contains(buf) ) {
 					OutputFiles->append( buf );
@@ -468,12 +472,12 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	streaming = 0;
 	JobStderrFile = "";
 	if( Ad->LookupString(ATTR_JOB_ERROR, buf) == 1 ) {
+		JobStderrFile = buf;
 		Ad->LookupBool( ATTR_STREAM_ERROR, streaming );
 		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
 				// not streaming it, add it to our list if we're not
 				// just going to transfer anything that was changed.
 				// only add to list if not NULL_FILE (i.e. /dev/null)
-			JobStderrFile = buf;
 			if( OutputFiles ) {
 				if( !OutputFiles->file_contains(buf) ) {
 					OutputFiles->append( buf );
@@ -3529,6 +3533,15 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 		TransferUserLog = false;
 	} else {
 		TransferUserLog = true;
+	}
+
+	// Since 7.7.2, the starter renames stdout/err to _condor_stdout/err
+	// when using file transfer. These names get remapped to the original
+	// filenames by the shadow.
+	if ( peer_version.built_since_version(7,7,2) ) {
+		m_StarterRenamesStdio = true;
+	} else {
+		m_StarterRenamesStdio = false;
 	}
 }
 

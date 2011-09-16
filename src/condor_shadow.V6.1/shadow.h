@@ -154,6 +154,16 @@ class UniShadow : public BaseShadow
 	virtual void logDisconnectedEvent( const char* reason );
 
 	virtual bool getMachineName( MyString &machineName );
+	
+	/**
+	 * Handle the situation where the job is to be suspended
+	 */
+	virtual int JobSuspend(int sig);
+	
+	/**
+	 * Handle the situation where the job is to be continued.
+	 */
+	virtual int JobResume(int sig);
 
  protected:
 

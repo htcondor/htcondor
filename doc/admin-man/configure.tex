@@ -686,8 +686,9 @@ File System Configuration File Entries''.
 
 \label{param:CondorViewHost}
 \item[\Macro{CONDOR\_VIEW\_HOST}]
-  The host name of the machine, optionally appended by a colon and the
-  port number, where the CondorView server is running.
+  A list of CondorView servers, separated by commas and/or spaces.
+  Each CondorView server is denoted by the host name of the machine
+  it is running on, optionally appended by a colon and the port number.
   This service is optional, and requires additional configuration 
   to enable it.  There is no default value for
   \MacroNI{CONDOR\_VIEW\_HOST}.  If \MacroNI{CONDOR\_VIEW\_HOST} is not
@@ -5849,6 +5850,24 @@ These settings affect the \Condor{starter}.
   a batch script (with a file extension of \File{.bat} or \File{.cmd})
   or an executable (with a file extension of \File{.exe} or \File{.com}).
 
+  When a wrapper is in use, the executable of a job submission may be
+  kept relative and resolved by the user's path by setting:
+\begin{verbatim}
+        +PreserveRelativeExecutable = True
+\end{verbatim}
+  in the job submission file.  If this is set, then the executable does
+  not need to be fully qualified, for example
+\begin{verbatim}
+        # Let this exectuable be resolved by user's path in the wrapper
+        cmd = sleep
+\end{verbatim}
+  As opposed to
+\begin{verbatim}
+        # A typical fully-qualified executable path
+        cmd = /bin/sleep
+\end{verbatim}
+
+
 \label{param:UseVisibleDesktop} 
 \item[\Macro{USE\_VISIBLE\_DESKTOP}]
   This setting is only meaningful on Windows machines.  If True, Condor will
@@ -6701,6 +6720,13 @@ These macros affect the \Condor{negotiator}.
   this expression can be used to inform the \Condor{negotiator} that 
   only normal slots should be counted when computing how big each group's 
   share of the pool should be.
+
+\label{param:NegotiatorStartdConstraintRemove}
+\item[\Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, any ClassAds not satisfying the expression 
+  in \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} are removed from the
+  list of \Condor{startd} ClassAds considered for negotiation.
 
 \label{param:NegotiatorDebug}
 \item[\Macro{NEGOTIATOR\_DEBUG}]
@@ -8377,18 +8403,19 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManWritePartialRescue}
 \item[\Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE}]
   A boolean value that controls whether \Condor{dagman} writes a partial
-  or full DAG file as a rescue DAG.  As of version 7.2.2, writing a partial
-  DAG is preferred.
+  or a full DAG file as a Rescue DAG.  
+  As of Condor version 7.2.2, writing a partial DAG is preferred.
   If not defined, \MacroNI{DAGMAN\_WRITE\_PARTIAL\_RESCUE} defaults to
   \Expr{True}.
 
 \label{param:DAGManResetRetriesUponRescue}
 \item[\Macro{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE}]
-  A boolean value that controls whether node retries are reset in a rescue
+  A boolean value that controls whether node retries are reset in a Rescue
   DAG.  If this value is \Expr{False}, the number of node retries written
-  in a rescue DAG is decreased if any retries were used in the original
-  run of the DAG; otherwise, the original number of retries is allowed
-  when running the rescue DAG.
+  in a Rescue DAG is decreased,
+  if any retries were used in the original run of the DAG; 
+  otherwise, the original number of retries is allowed
+  when running the Rescue DAG.
   If not defined, \MacroNI{DAGMAN\_RESET\_RETRIES\_UPON\_RESCUE} defaults to
   \Expr{True}.
 
@@ -8491,6 +8518,15 @@ in section~\ref{sec:DAG-configuration}.
   Using a strictness value greater than 0 may help find problems with
   a DAG that may otherwise escape notice.
   The default value if not defined is 0.
+
+\label{param:DAGmanAlwaysRunPost}
+\item[\Macro{DAGMAN\_ALWAYS\_RUN\_POST}]
+  A boolean value defining whether \Condor{dagman} will ignore the return value
+  of a PRE script when deciding to run a POST script.  The default is
+  \Expr{True}, which says that the POST script will run regardless of the return
+  value of the PRE script. Changing this to \Expr{False} will restore old
+  behavior of \Condor{dagman}, which is that the failure of a PRE script causes
+  the POST script to not be executed.
 
 \end{description}
 
@@ -10684,3 +10720,27 @@ on page~\pageref{sec:daemon-classad-hooks}.
 
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-hooks}Configuration File Entries Only for Windows Platforms}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{configuration!Windows platform configuration variables}
+These macros are utilized only on Windows platforms.
+
+\begin{description}
+
+\label{param:WindowsRmdir}
+\item[\Macro{WINDOWS\_RMDIR}] The complete path and executable name of the
+  Condor version of the built-in \Prog{rmdir} program.
+  The Condor version will not fail when the directory contains files that have
+  ACLs that deny the SYSTEM process delete access.
+  If not defined, the built-in Windows \Prog{rmdir} program is invoked,
+  and a value defined for \Macro{WINDOWS\_RMDIR\_OPTIONS} is ignored.
+
+\label{param:WindowsRmdirOptions}
+\item[\Macro{WINDOWS\_RMDIR\_OPTIONS}] Command line options to be specified
+  when configuration variable \MacroNI{WINDOWS\_RMDIR} is defined.
+  Defaults to \Opt{/S} \Opt{/C} when configuration variable 
+  \MacroNI{WINDOWS\_RMDIR} is defined and its definition contains the
+  string \AdStr{condor\_rmdir.exe}.
+
+\end{description}

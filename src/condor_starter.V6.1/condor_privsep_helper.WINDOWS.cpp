@@ -55,6 +55,13 @@ CondorPrivSepHelper::initialize_user(const char* name)
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 }
 
+char const *
+CondorPrivSepHelper::get_user_name()
+{
+	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
+	return m_user_name;
+}
+
 void
 CondorPrivSepHelper::initialize_sandbox(const char* path)
 {

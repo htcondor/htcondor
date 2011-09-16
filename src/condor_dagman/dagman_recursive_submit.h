@@ -63,10 +63,12 @@ struct SubmitDagShallowOptions
 	MyString strLockFile;
 	bool copyToSpool;
 	int iDebugLevel;
+	bool bPostRun;
 
 	SubmitDagShallowOptions() 
 	{ 
 		bSubmit = true;
+		bPostRun = true;
 		strRemoteSchedd = "";
 		strScheddDaemonAdFile = "";
 		strScheddAddressFile = "";
@@ -106,6 +108,7 @@ struct SubmitDagDeepOptions
 	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
 	bool updateSubmit; // allow updating submit file w/o -force
 	bool importEnv; // explicitly import environment into .condor.sub file
+	int priority; // Priority of parent of DAG node
 	
 	SubmitDagDeepOptions() 
 	{ 
@@ -120,6 +123,7 @@ struct SubmitDagDeepOptions
 		recurse = false;
 		updateSubmit = false;
 		importEnv = false;
+		priority = 0;
 	}
 };
 

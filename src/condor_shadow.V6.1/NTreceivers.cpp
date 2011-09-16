@@ -282,12 +282,13 @@ do_REMOTE_syscall()
 	case CONDOR_get_job_info:
 	{
 		ClassAd *ad = NULL;
+		bool delete_ad;
 
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
 		errno = 0;
-		rval = pseudo_get_job_info(ad);
+		rval = pseudo_get_job_info(ad, delete_ad);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -303,6 +304,9 @@ do_REMOTE_syscall()
 		}
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
+		if ( delete_ad ) {
+			delete ad;
+		}
 		return 0;
 	}
 

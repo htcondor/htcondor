@@ -42,8 +42,8 @@ public:
 
 	virtual int open( const char *url, int flags, int mode );
 	virtual int close();
-	virtual int read( int offset, char *data, int length );
-	virtual int write( int offset, char *data, int length );
+	virtual int read( off_t offset, char *data, int length );
+	virtual int write( off_t offset, char *data, int length );
 
 	virtual int fcntl( int cmd, int arg );
 	virtual int ioctl( int cmd, long arg );
@@ -56,7 +56,7 @@ public:
 	virtual int	is_writeable();
 	virtual int	is_seekable();
 
-	virtual int	get_size();
+	virtual off_t	get_size();
 	virtual char const	*get_url();
 
 	virtual int get_unmapped_fd();

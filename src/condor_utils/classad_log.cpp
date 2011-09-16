@@ -1062,6 +1062,8 @@ InstantiateLogEntry(FILE *fp, int type)
 			break;
 	}
 
+	long pos = ftell(fp);
+
 		// check if we got a bogus record indicating a bad log file
 	if( log_rec->ReadBody(fp) < 0 ) {
 
@@ -1084,7 +1086,7 @@ InstantiateLogEntry(FILE *fp, int type)
 			}
 			if( op == CondorLogOp_EndTransaction ) {
 					// aargh!  bad record in transaction.  abort!
-				EXCEPT("Error: bad record with op=%d in corrupt logfile",type);
+				EXCEPT("Error: bad record with op=%d (at byte offset %ld) in corrupt logfile",type,pos);
 			}
 		}
 

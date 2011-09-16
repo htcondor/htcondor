@@ -191,9 +191,8 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 	ClassAd ad;
 	int universe;
 
-	if (!PopulateAdFromVariantMap(jobAdMap, ad)) {
+	if (!PopulateAdFromVariantMap(jobAdMap, ad, text)) {
 		AbortTransaction();
-		text = "Failed to parse job ad";
 		return STATUS_USER + 3;
 	}
 
@@ -270,7 +269,7 @@ SchedulerObject::Submit(Variant::Map &jobAdMap, std::string &id, std::string &te
 
 		// Could check for some invalid attributes, e.g
 		//  JobUniverse <= CONDOR_UNIVERSE_MIN or >= CONDOR_UNIVERSE_MAX
-	
+
 		// 5. Commit transaction
 	CommitTransaction();
 
@@ -301,8 +300,18 @@ SchedulerObject::SetAttribute(std::string key,
 		return STATUS_USER + 0;
 	}
 
-	if (!IsValidAttributeName(name,text)) {
+	if (IsSubmissionChange(name.c_str())) {
+		text = "Changes to submission name not allowed";
 		return STATUS_USER + 1;
+	}
+
+	if (IsKeyword(name.c_str())) {
+		text = "Attribute name is reserved: " + name;
+		return STATUS_USER + 2;
+	}
+
+	if (!IsValidAttributeName(name,text)) {
+		return STATUS_USER + 3;
 	}
 
 		// All values are strings in the eyes of
@@ -315,7 +324,7 @@ SchedulerObject::SetAttribute(std::string key,
 					   name.c_str(),
 					   value.c_str())) {
 		text = "Failed to set attribute " + name + " to " + value;
-		return STATUS_USER + 2;
+		return STATUS_USER + 4;
 	}
 
 	return STATUS_OK;
@@ -330,7 +339,7 @@ SchedulerObject::Hold(std::string key, std::string &reason, std::string &text)
 		dprintf(D_FULLDEBUG, "Hold: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return STATUS_USER + 0;
-	}	
+	}
 
 	if (!holdJob(id.cluster,
 				 id.proc,
@@ -357,7 +366,7 @@ SchedulerObject::Release(std::string key, std::string &reason, std::string &text
 		dprintf(D_FULLDEBUG, "Release: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return STATUS_USER + 0;
-	}	
+	}
 
 	if (!releaseJob(id.cluster,
 					id.proc,
@@ -382,7 +391,7 @@ SchedulerObject::Remove(std::string key, std::string &reason, std::string &text)
 		dprintf(D_FULLDEBUG, "Remove: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return STATUS_USER + 0;
-	}	
+	}
 
 	if (!abortJob(id.cluster,
 				  id.proc,

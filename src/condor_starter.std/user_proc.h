@@ -38,7 +38,7 @@ typedef enum {
 	NON_RUNNABLE,	// process kicked off due to non-condor work
 	NORMAL_EXIT,	// process exited normally with some status value
 	RUNNABLE,		// ready to go, but not running
-	SUSPENDED		// process is stopped
+	_SUSPENDED		// process is stopped
 } PROC_STATE;
 
 	// N.B. This name table *must* match the above enumerator.
@@ -53,7 +53,7 @@ static NAME_VALUE	ProcStateNames[] = {
 	{ NON_RUNNABLE,		"NON_RUNNABLE",		},
 	{ NORMAL_EXIT,		"NORMAL_EXIT",		},
 	{ RUNNABLE,			"RUNNABLE",			},
-	{ SUSPENDED,		"SUSPENDED",		},
+	{ _SUSPENDED,		"SUSPENDED",		},
 	{ -1,				"(UNKNOWN)"			}
 };
 NameTable ProcStates( ProcStateNames );
@@ -114,7 +114,7 @@ public:
 	JOB_CLASS	get_class() { return job_class; }
 	int		is_runnable() { return state == RUNNABLE; }
 	int		is_running() { return state == EXECUTING; }
-	int		is_suspended() { return state == SUSPENDED; }
+	int		is_suspended() { return state == _SUSPENDED; }
 	int		is_checkpointing() { return state == CHECKPOINTING; }
 	int		exited_normally() { return state == NORMAL_EXIT; }
 	int		exited_abnormally() { return state == ABNORMAL_EXIT; }

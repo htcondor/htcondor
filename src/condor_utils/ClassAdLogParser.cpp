@@ -549,92 +549,11 @@ ClassAdLogParser::readHeader(FILE *fp, int& op_type)
 int
 ClassAdLogParser::readword(FILE *fp, char * &str)
 {
-	int		ch, i, bufsize = 1024;
-
-	char	*buf = (char *)malloc(bufsize);
-
-	// ignore leading whitespace but don't pass newline
-	do {
-		ch = fgetc( fp );
-		if( ch == EOF ) {
-			free( buf );
-			return( -1 );
-		}
-		buf[0] = ch;
-	} while (isspace(buf[0]) && buf[0]!='\n' );
-
-	// read until whitespace
-	for (i = 1; !isspace(buf[i-1]) && buf[i-1]!='\0'; i++) {
-		if (i == bufsize) {
-			buf = (char *)realloc(buf, bufsize*2);
-			assert(buf);
-			bufsize *= 2;
-		} 
-		ch = fgetc( fp );
-		if( ch == EOF ) {
-			free( buf );
-			return( -1 );
-		}
-		buf[i] = ch;
-	}
-
-		// no input is also an error
-	if( feof( fp ) || i==1 ) {
-		free( buf );
-		return( -1 );
-	}
-
-	buf[i-1] = '\0';
-
-	if(str != NULL) {
-		free(str);
-	}
-	str = strdup(buf);
-	free(buf);
-	return i-1;
+	return LogRecord::readword(fp,str);
 }
-
-
 
 int
 ClassAdLogParser::readline(FILE *fp, char * &str)
 {
-	int		ch, i, bufsize = 4096;
-	char	*buf = (char *)malloc(bufsize);
-
-	// ignore leading whitespace but don't pass newline
-	do {
-		ch = fgetc( fp );
-		if( ch == EOF ) {
-			free( buf );
-			return( -1 );
-		}
-		buf[0] = ch;
-	} while( isspace(buf[0]) && buf[0] != '\n' );
-
-	// read until newline
-	for (i = 1; buf[i-1]!='\n' && buf[i-1] != '\0'; i++) {
-		if (i == bufsize) {
-			buf = (char *)realloc(buf, bufsize*2);
-			assert(buf);
-			bufsize *= 2;
-		} 
-		ch = fgetc( fp );
-		if( ch == EOF ) {
-			free( buf );
-			return( -1 );
-		}
-		buf[i] = ch;
-	}
-
-		// treat no input as newline
-	if( feof( fp ) || i==1 ) {
-		free( buf );
-		return( -1 );
-	}
-
-	buf[i-1] = '\0';
-	str = strdup(buf);
-	free(buf);
-	return i-1;
+	return LogRecord::readline(fp,str);
 }

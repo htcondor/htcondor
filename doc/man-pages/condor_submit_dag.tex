@@ -23,7 +23,6 @@
 \oOptArg{-config}{ConfigFileName}
 \oOptArg{-insert\_sub\_file}{FileName}
 \oOptArg{-append}{Command}
-\oOptArg{-oldrescue}{0|1}
 \oOptArg{-autorescue}{0|1}
 \oOptArg{-dorescuefrom}{number}
 \oOpt{-allowversionmismatch}
@@ -33,6 +32,7 @@
 \oOpt{-import\_env}
 \oOpt{-DumpRescue}
 \oOpt{-valgrind}
+\oOpt{-DontAlwaysRunPost}
 \Arg{DAGInputFile1}
 \oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 \oOptArg{-schedd-daemon-ad-file}{FileName}
@@ -191,10 +191,6 @@ description.
     command(s) will override commands from the inserted file if the commands
     conflict.
   }
-  \OptItem{\OptArg{-oldrescue}{0|1}}{Whether to use "old-style" rescue
-    DAG naming (see section~\ref{sec:DAGMan-rescue}) when creating a
-    rescue DAG (0 = \Expr{false}, 1 = \Expr{true}).
-  }
   \OptItem{\OptArg{-autorescue}{0|1}}{Whether to automatically run the
     newest rescue DAG for the given DAG file, if one exists
     (0 = \Expr{false}, 1 = \Expr{true}).
@@ -262,6 +258,17 @@ description.
      \Prog{valgrind} software installed will cause the DAG to fail.
      If the DAG does run, it will run much more slowly than usual.
   }
+  \OptItem{\Opt{-DontAlwaysRunPost}}{This option causes the submit
+     description file generated for the submission of \Condor{dagman} to
+     be modified.  
+     It causes the \Opt{-DontAlwaysRunPost} option to be in the
+     arguments to \Condor{dagman} in the submit description file, 
+     which causes \Condor{dagman} to use the return value from a PRE script 
+     to determine whether or not a POST script will run.  
+     By default, \Condor{dagman} runs the
+     POST script regardless of the return value of the PRE script. 
+     Versions of \Condor{dagman} prior to 7.7.2 did not ignore the return
+     value and would not run the POST script if the PRE script failed.}
   \OptItem{\OptArg{-schedd-daemon-ad-file}{FileName}}{
     Specifies a full path to a daemon ad file dropped by a \Condor{schedd}.
     Therefore this allows submission to a specific scheduler if several

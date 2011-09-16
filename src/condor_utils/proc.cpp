@@ -75,6 +75,7 @@ static const char* JobStatusNames[] = {
     "COMPLETED",
 	"HELD",
 	"TRANSFERRING_OUTPUT",
+	"SUSPENDED",
 };
 
 

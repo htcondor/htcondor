@@ -1442,9 +1442,6 @@ class DaemonCore : public Service
 	*/
 	class Stats {
 	public:
-	   // InitTime should be the first data member, and RecentWindowMax the last data member..
-	   time_t InitTime;            // last time we init'ed the structure
-
 	   // published values
 	   time_t StatsLifetime;       // total time the daemon has been collecting statistics. (uptime)
 	   time_t StatsLastUpdateTime; // last time that statistics were last updated. (a freshness time)
@@ -1467,23 +1464,26 @@ class DaemonCore : public Service
 	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
       #endif
 
-       stats_pool              Named;          // pool of named statistics entries.
+       StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
 
-	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+	   time_t InitTime;            // last time we init'ed the structure
 	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
+	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+       int    PublishFlags;        // verbositiy of publishing
 
 	   // helper methods
 	   //Stats();
 	   //~Stats();
 	   void Init();
+       void Reconfig();
 	   void Clear();
 	   void Tick(); // call this when time may have changed to update StatsLastUpdateTime, etc.
 	   void SetWindowSize(int window);
 	   void Publish(ClassAd & ad) const;
 	   void Unpublish(ClassAd & ad) const;
        void* New(const char * category, const char * name, int as);
-       void AddToNamed(const char * name, int val);
-       void AddToNamed(const char * name, int64_t val);
+       void AddToProbe(const char * name, int val);
+       void AddToProbe(const char * name, int64_t val);
        double AddRuntime(const char * name, double before); // returns current time.
 
 	} dc_stats;

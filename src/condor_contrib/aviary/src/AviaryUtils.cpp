@@ -20,6 +20,7 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "compat_classad_util.h"
+#include "condor_attributes.h"
 #include "condor_qmgr.h"
 #include "get_daemon_name.h"
 
@@ -31,6 +32,8 @@
 
 using namespace std;
 using namespace compat_classad;
+
+const char* RESERVED[] = {"error", "false", "is", "isnt", "parent", "true","undefined", NULL};
 
 string
 aviary::util::getPoolName()
@@ -128,3 +131,24 @@ bool aviary::util::checkRequiredAttrs(compat_classad::ClassAd& ad, const char* a
 	}
 	return status;
 }
+
+// checks if the attribute name is reserved
+bool aviary::util::isKeyword(const char* kw) {
+	int i = 0;
+	while (NULL != RESERVED[i]) {
+		if (strcasecmp(kw,RESERVED[i]) == 0) {
+			return true;
+		}
+		i++;
+	}
+	return false;
+}
+
+// checks to see if ATTR_JOB_SUBMISSION is being changed post-submission
+bool aviary::util::isSubmissionChange(const char* attr) {
+	if (strcasecmp(attr,ATTR_JOB_SUBMISSION)==0) {
+		return true;
+	}
+	return false;
+}
+

@@ -190,7 +190,7 @@ int CondorFileBasic::is_seekable()
 	return 1;
 }
 
-int CondorFileBasic::get_size()
+off_t CondorFileBasic::get_size()
 {
 	return size;
 }

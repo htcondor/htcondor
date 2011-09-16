@@ -749,6 +749,10 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		printf( "Warning: -NoEventChecks is ignored; please use "
 					"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
 	}
+	if(!shallowOpts.bPostRun)
+	{
+		args.AppendArg("-DontAlwaysRunPost");
+	}
 	if(deepOpts.bAllowLogError)
 	{
 		args.AppendArg("-AllowLogError");
@@ -796,6 +800,11 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 
 	if(deepOpts.importEnv) {
 		args.AppendArg("-Import_env");
+	}
+
+	if( deepOpts.priority != 0 ) {
+		args.AppendArg("-Priority");
+		args.AppendArg(deepOpts.priority);
 	}
 
 	MyString arg_str,args_error;
@@ -1086,10 +1095,22 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				deepOpts.bVerbose = true;
 			}
+			else if ( (strArg.find("-dontalwaysrun") != -1) ) // DontAlwaysRunPost
+			{
+				shallowOpts.bPostRun = false;
+			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv,
 						shallowOpts) )
 			{
 				// No-op here
+			}
+			else if( (strArg.find("-prio") != -1) ) // -priority
+			{
+				if(iArg + 1 >= argc) {
+					fprintf(stderr, "-priority argument needs a value\n");
+					printUsage();
+				}
+				deepOpts.priority = atoi(argv[++iArg]);
 			}
 			else
 			{
@@ -1216,5 +1237,6 @@ int printUsage()
 	printf("    -import_env         (explicitly import env into submit file)\n");
 	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
 	printf("    -valgrind           (create submit file to run valgrind on DAGMan)\n");
+	printf("    -priority <priority> (jobs will run with this priority by default)\n");
 	exit(1);
 }

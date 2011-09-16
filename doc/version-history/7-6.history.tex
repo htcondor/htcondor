@@ -33,7 +33,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new Windows-only \Condor{rmdir} was included in Condor version 7.6.0,
+but there was no version history entry for this introduced tool at release.
+This item attempts to correct that oversight, 
+as well as identify that usage of \Condor{rmdir},
+instead of the built-in Windows \Prog{rmdir}, 
+is enabled by default.
+\Condor{rmdir} worked correctly in Condor version 7.6.0, 
+contained a bug in Condor version 7.6.1,
+and was fixed in Condor version 7.6.2.
+\Ticket{1877}
+
 
 \end{itemize}
 
@@ -48,6 +58,19 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Corrected a check in the accountant that allowed submitter records
+to be deleted if the submitter's priority factor was explicitly set and
+the value was equal to \MacroNI{DEFAULT\_PRIO\_FACTOR}.
+\Ticket{2442}
+
+\item Fixed CPU detection on Windows so that the correct number is detected
+when there are more than 32 CPUs.
+\Ticket{2381}
+
+\item Fixed a memory leak in the \Condor{negotiator} caused by failure to
+free memory returned from some calls to param\_without\_default().
+\Ticket{2299}
 
 \item Jobs run via \Prog{glexec} always had their \Env{PATH} environment
 variable cleared.  Now, if \Env{PATH} was specified for the job, 
@@ -70,6 +93,19 @@ were used to build the deny list.
 Now \MacroNI{DENY\_WRITE} and \MacroNI{DENY\_READ} are also used.
 \Ticket{2414}
 
+\item Removed an extra copy of the java files required to run gt4 and gt42
+grid universe jobs. This does not affect Condor's operation.
+\Ticket{2435}
+
+\item Fixed a problem that caused the \Condor{schedd} to crash when
+writing to some user logs with specific names.  The specific names that
+caused crashes are not easy to describe.
+\Ticket{2439}
+
+\item The \Condor{schedd} failed to start up when any job ClassAd
+value contained ASCII character 255.
+\Ticket{2450}
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -84,7 +120,9 @@ Now \MacroNI{DENY\_WRITE} and \MacroNI{DENY\_READ} are also used.
 
 \begin{itemize}
 
-\item None.
+\item The manual now contains a manual page for \Condor{rmdir},
+a Windows only replacement for the built-in Windows \Prog{rmdir}
+introduced in Condor version 7.6.0.
 
 \end{itemize}
 

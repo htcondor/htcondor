@@ -30,6 +30,7 @@
 #include "exit.h"
 #include "filename_tools.h"
 #include "basename.h"
+#include "nullfile.h"
 
 extern ReliSock *syscall_sock;
 extern BaseShadow *Shadow;
@@ -91,10 +92,15 @@ pseudo_begin_execution()
 }
 
 
+// In rare instances, the ad this function returns will need to be
+// deleted by the caller. In those cases, delete_ad will be set to true.
+// Otherwise, delete_ad will be set to false and the returned ad should
+// not be deleted.
 int
-pseudo_get_job_info(ClassAd *&ad)
+pseudo_get_job_info(ClassAd *&ad, bool &delete_ad)
 {
 	ClassAd * the_ad;
+	delete_ad = false;
 
 	the_ad = thisRemoteResource->getJobAd();
 	ASSERT( the_ad );
@@ -107,9 +113,64 @@ pseudo_get_job_info(ClassAd *&ad)
 		// the pesky perm object to get it right.
 	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, false );
 
+	// Add extra remaps for the canonical stdout/err filenames.
+	// If using the FileTransfer object, the starter will rename the
+	// stdout/err files, and we need to remap them back here.
+	std::string file;
+	if ( the_ad->LookupString( ATTR_JOB_OUTPUT, file ) &&
+		 strcmp( file.c_str(), StdoutRemapName ) ) {
+
+		thisRemoteResource->filetrans.AddDownloadFilenameRemap( StdoutRemapName, file.c_str() );
+	}
+	if ( the_ad->LookupString( ATTR_JOB_ERROR, file ) &&
+		 strcmp( file.c_str(), StderrRemapName ) ) {
+
+		thisRemoteResource->filetrans.AddDownloadFilenameRemap( StderrRemapName, file.c_str() );
+	}
+
 	Shadow->publishShadowAttrs( the_ad );
 
 	ad = the_ad;
+
+	// If we're dealing with an old starter (pre 7.7.2) and file transfer
+	// may be used, we need to rename the stdout/err files to
+	// StdoutRemapName and StderrRemapName. Otherwise, they won't transfer
+	// back correctly if they contain any path information.
+	if ( !thisRemoteResource->filetrans.getStarterRenamesStdio() ) {
+		std::string value;
+		ad->LookupString( ATTR_SHOULD_TRANSFER_FILES, value );
+		ShouldTransferFiles_t should_transfer = getShouldTransferFilesNum( value.c_str() );
+
+		if ( should_transfer == STF_IF_NEEDED || should_transfer == STF_YES ) {
+			ad = new ClassAd( *ad );
+			delete_ad = true;
+
+			// This is the same modification a modern starter will do when
+			// using file transfer in JICShadow::initWithFileTransfer()
+			bool stream;
+			std::string stdout_name;
+			std::string stderr_name;
+			ad->LookupString( ATTR_JOB_OUTPUT, stdout_name );
+			ad->LookupString( ATTR_JOB_ERROR, stderr_name );
+			if ( ad->LookupBool( ATTR_STREAM_OUTPUT, stream ) && !stream &&
+				 !nullFile( stdout_name.c_str() ) ) {
+				ad->Assign( ATTR_JOB_OUTPUT, StdoutRemapName );
+			}
+			if ( ad->LookupBool( ATTR_STREAM_ERROR, stream ) && !stream &&
+				 !nullFile( stderr_name.c_str() ) ) {
+				if ( stdout_name == stderr_name ) {
+					ad->Assign( ATTR_JOB_ERROR, StdoutRemapName );
+				} else {
+					ad->Assign( ATTR_JOB_ERROR, StderrRemapName );
+				}
+			}
+		} else if ( should_transfer != STF_NO ) {
+			dprintf( D_ALWAYS, "pseudo_get_job_info(): Unexpected value for %s: %s (%d)!\n",
+					 ATTR_SHOULD_TRANSFER_FILES, value.c_str(),
+					 should_transfer );
+		}
+	}
+
 	return 0;
 }
 

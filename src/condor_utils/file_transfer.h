@@ -33,6 +33,10 @@
 #include "dc_transfer_queue.h"
 #include <list>
 
+
+extern const char * const StdoutRemapName;
+extern const char * const StderrRemapName;
+
 class FileTransfer;	// forward declatation
 class FileTransferItem;
 typedef std::list<FileTransferItem> FileTransferList;
@@ -242,6 +246,18 @@ class FileTransfer {
 		// Returns false on failure and sets error_msg.
 	static bool ExpandInputFileList( ClassAd *job, MyString &error_msg );
 
+	// When downloading files, store files matching source_name as the name
+	// specified by target_name.
+	void AddDownloadFilenameRemap(char const *source_name,char const *target_name);
+
+	// Add any number of download remaps, encoded in the form:
+	// "source1 = target1; source2 = target2; ..."
+	// or in other words, the format expected by the util function
+	// filename_remap_find().
+	void AddDownloadFilenameRemaps(char const *remaps);
+
+	bool getStarterRenamesStdio() { return m_StarterRenamesStdio; }
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
@@ -260,16 +276,6 @@ class FileTransfer {
 	float bytesSent, bytesRcvd;
 	StringList* InputFiles;
 
-	// When downloading files, store files matching source_name as the name
-	// specified by target_name.
-	void AddDownloadFilenameRemap(char const *source_name,char const *target_name);
-
-	// Add any number of download remaps, encoded in the form:
-	// "source1 = target1; source2 = target2; ..."
-	// or in other words, the format expected by the util function
-	// filename_remap_find().
-	void AddDownloadFilenameRemaps(char const *remaps);
-
   private:
 
 	bool TransferFilePermissions;
@@ -278,6 +284,7 @@ class FileTransfer {
 	bool PeerDoesGoAhead;
 	bool PeerUnderstandsMkdir;
 	bool TransferUserLog;
+	bool m_StarterRenamesStdio;
 	char* Iwd;
 	StringList* ExceptionFiles;
 	StringList* OutputFiles;
@@ -294,8 +301,8 @@ class FileTransfer {
 	char* ExecFile;
 	char* UserLogFile;
 	char* X509UserProxy;
-	MyString JobStdoutFile; // only initialized if we are transferring this
-	MyString JobStderrFile; // only initialized if we are transferring this
+	MyString JobStdoutFile;
+	MyString JobStderrFile;
 	char* TransSock;
 	char* TransKey;
 	char* SpoolSpace;

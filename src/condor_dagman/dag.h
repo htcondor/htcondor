@@ -138,7 +138,7 @@ class Dag {
 		 const char *storkRmExe, const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
-		 const SubmitDagDeepOptions *submitDagDeepOpts,
+		 SubmitDagDeepOptions *submitDagDeepOpts,
 		 bool isSplice = false, const MyString &spliceScope = "root" );
 
     ///
@@ -541,6 +541,7 @@ class Dag {
 	static const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
 	static const int DAG_ERROR_CONDOR_JOB_ABORTED;
 	static const int DAG_ERROR_LOG_MONITOR_ERROR;
+	static const int DAG_ERROR_JOB_SKIPPED;
 
 		// The maximum signal we can deal with in the error-reporting
 		// code.
@@ -676,6 +677,11 @@ class Dag {
 	void SetMaxJobHolds(int maxJobHolds) { _maxJobHolds = maxJobHolds; }
 
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
+	bool GetPostRun() const { return _alwaysRunPost; }
+	void SetPostRun(bool postRun) { _alwaysRunPost = postRun; }	
+	void SetDefaultPriorities();
+	void SetDefaultPriority(const int prio) { _defaultPriority = prio; }
+	int GetDefaultPriority() const { return _defaultPriority; }
 
   private:
 
@@ -712,6 +718,20 @@ class Dag {
 	   @return true on success, false on failure
     */
     bool StartNode( Job *node, bool isRetry );
+
+    /* A helper function to run the POST script, if one exists.
+           @param The job owning the POST script
+           @param Whether to use the status variable in determining
+              if we should run the POST script
+           @param The status; usually the result of the PRE script.
+              The POST script will not run if ignore_status is false
+              and status is nonzero.
+			@param Whether to increment the run count when we run the
+				script
+			@return true if successful, false otherwise
+    */
+	bool RunPostScript( Job *job, bool ignore_status, int status,
+				bool incrementRunCount = true );
 
 	typedef enum {
 		SUBMIT_RESULT_OK,
@@ -1041,7 +1061,7 @@ class Dag {
 	bool	_generateSubdagSubmits;
 
 		// Options for running condor_submit_dag on nested DAGs.
-	const SubmitDagDeepOptions *_submitDagDeepOpts;
+	SubmitDagDeepOptions *_submitDagDeepOpts;
 
 		// Dag objects are used to parse splice files, which are like include
 		// files that ultimately result in a larger in memory dag. To toplevel
@@ -1076,6 +1096,11 @@ class Dag {
 
 		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog _jobstateLog;
+	// If true, run the POST script, regardless of the exit status of the PRE script
+	// Defaults to true
+	bool _alwaysRunPost;
+		// The default priority for nodes in this DAG. (defaults to 0)
+	int _defaultPriority;
 };
 
 #endif /* #ifndef DAG_H */

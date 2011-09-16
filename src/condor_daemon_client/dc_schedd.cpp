@@ -232,6 +232,73 @@ DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
 
 
 ClassAd*
+DCSchedd::suspendJobs( StringList* ids, const char* reason,
+					CondorError * errstack,
+					action_result_type_t result_type,
+					bool notify_scheduler )
+{
+	if( ! ids ) {
+		dprintf( D_ALWAYS, "DCSchedd::suspendJobs: "
+				 "list of jobs is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_SUSPEND_JOBS, NULL, ids,
+					  reason, ATTR_SUSPEND_REASON, NULL, NULL, result_type,
+					  notify_scheduler, errstack );
+}
+
+
+ClassAd*
+DCSchedd::suspendJobs( const char* constraint, const char* reason,
+					  CondorError * errstack,
+					  action_result_type_t result_type,
+					  bool notify_scheduler )
+{
+	if( ! constraint ) {
+		dprintf( D_ALWAYS, "DCSchedd::suspendJobs: "
+				 "constraint is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_SUSPEND_JOBS, constraint, NULL,
+					  reason, ATTR_SUSPEND_REASON, NULL, NULL, result_type,
+					  notify_scheduler, errstack );
+}
+
+ClassAd*
+DCSchedd::continueJobs( StringList* ids, const char* reason,
+					CondorError * errstack,
+					action_result_type_t result_type,
+					bool notify_scheduler )
+{
+	if( ! ids ) {
+		dprintf( D_ALWAYS, "DCSchedd::continueJobs: "
+				 "list of jobs is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_CONTINUE_JOBS, NULL, ids,
+					  reason, ATTR_CONTINUE_REASON, NULL, NULL, result_type,
+					  notify_scheduler, errstack );
+}
+
+
+ClassAd*
+DCSchedd::continueJobs( const char* constraint, const char* reason,
+					  CondorError * errstack,
+					  action_result_type_t result_type,
+					  bool notify_scheduler )
+{
+	if( ! constraint ) {
+		dprintf( D_ALWAYS, "DCSchedd::continueJobs: "
+				 "constraint is NULL, aborting\n" );
+		return NULL;
+	}
+	return actOnJobs( JA_CONTINUE_JOBS, constraint, NULL,
+					  reason, ATTR_CONTINUE_REASON, NULL, NULL, result_type,
+					  notify_scheduler, errstack );
+}
+
+
+ClassAd*
 DCSchedd::clearDirtyAttrs( StringList* ids, CondorError * errstack,
                                          action_result_type_t result_type )
 {
@@ -1387,6 +1454,8 @@ JobActionResults::readResults( ClassAd* ad )
 		case JA_RELEASE_JOBS:
 		case JA_VACATE_JOBS:
 		case JA_VACATE_FAST_JOBS:
+		case JA_SUSPEND_JOBS:
+		case JA_CONTINUE_JOBS:
 			action = (JobAction)tmp;
 			break;
 		default:
@@ -1514,6 +1583,8 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 				 "removed locally (remote state unknown)":
 				 (action==JA_HOLD_JOBS)?"held":
 				 (action==JA_RELEASE_JOBS)?"released":
+				 (action==JA_SUSPEND_JOBS)?"suspended":
+				 (action==JA_CONTINUE_JOBS)?"continued":
 				 (action==JA_VACATE_JOBS)?"vacated":
 				 (action==JA_VACATE_FAST_JOBS)?"fast-vacated":"ERROR" );
 		rval = true;
@@ -1536,6 +1607,8 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 				 (action==JA_HOLD_JOBS)?"hold":
 				 (action==JA_RELEASE_JOBS)?"release":
 				 (action==JA_VACATE_JOBS)?"vacate":
+				 (action==JA_SUSPEND_JOBS)?"suspend":
+				 (action==JA_CONTINUE_JOBS)?"continue":
 				 (action==JA_VACATE_FAST_JOBS)?"fast-vacate":"ERROR",
 				 job_id.cluster, job_id.proc );
 		break;
@@ -1553,6 +1626,12 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		} else if( action == JA_VACATE_FAST_JOBS ) {
 			sprintf( buf, "Job %d.%d not running to be fast-vacated", 
 					 job_id.cluster, job_id.proc );
+		}else if( action == JA_SUSPEND_JOBS ) {
+			sprintf( buf, "Job %d.%d not running to be suspended", 
+					 job_id.cluster, job_id.proc );
+		}else if( action == JA_CONTINUE_JOBS ) {
+			sprintf( buf, "Job %d.%d not running to be continued", 
+					 job_id.cluster, job_id.proc );
 		} else {
 				// Nothing else should use this.
 			sprintf( buf, "Invalid result for job %d.%d", 
@@ -1566,6 +1645,12 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 					 job_id.cluster, job_id.proc );
 		} else if( action == JA_REMOVE_JOBS ) { 
 			sprintf( buf, "Job %d.%d already marked for removal",
+					 job_id.cluster, job_id.proc );
+		}else if( action == JA_SUSPEND_JOBS ) { 
+			sprintf( buf, "Job %d.%d already suspended",
+					 job_id.cluster, job_id.proc );
+		}else if( action == JA_CONTINUE_JOBS ) { 
+			sprintf( buf, "Job %d.%d already running",
 					 job_id.cluster, job_id.proc );
 		} else if( action == JA_REMOVE_X_JOBS ) { 
 				// pfc: due to the immediate nature of a forced

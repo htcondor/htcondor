@@ -64,13 +64,13 @@
 #define GENERAL_GAHP_ERROR_MSG              "GAHP_ERROR"
 
 class AmazonRequest {
-	public:
-		AmazonRequest();
-		virtual ~AmazonRequest();
+    public:
+        AmazonRequest();
+        virtual ~AmazonRequest();
 
         virtual bool SendRequest();
 
-    protected:
+    protected:    
         typedef std::map< std::string, std::string > AttributeValueMap;
         AttributeValueMap query_parameters;
         

@@ -25,7 +25,7 @@ if (WITH_GLOBUS)
 	if (NOT PROPER)
 
 		###################################################
-		condor_pre_external( GT4 globus-4.0.8 "lib;include" "lib/gt4/gt4-java")
+		condor_pre_external( GT4 globus-4.0.8 "lib;include" "lib/gt4")
 		ExternalProject_Add(gt4
 					#-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${GT4_VER}-java.tar.gz ${CMD_TERM}
@@ -38,12 +38,12 @@ if (WITH_GLOBUS)
 					BUILD_IN_SOURCE 1
 					#--install Step ----------
 					INSTALL_DIR ${GT4_INSTALL_LOC}/lib
-					INSTALL_COMMAND cp -r gt4-java ${GT4_INSTALL_LOC}/lib/gt4 )
+					INSTALL_COMMAND mkdir -p ${GT4_INSTALL_LOC}/lib/gt4 && cp -r gt4-java/* ${GT4_INSTALL_LOC}/lib/gt4 )
 		
 		install ( DIRECTORY ${GT4_INSTALL_LOC}/lib/gt4 DESTINATION ${C_LIB} )
 		condor_post_external( gt4 OFF OFF )
 		###################################################
-		condor_pre_external( GT42 globus-4.2.1 "lib;include" "lib/gt42/gt42-java")
+		condor_pre_external( GT42 globus-4.2.1 "lib;include" "lib/gt42")
 
 		ExternalProject_Add(gt42
 							#-- Download Step ----------
@@ -57,7 +57,7 @@ if (WITH_GLOBUS)
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${GT42_INSTALL_LOC}/lib
-							INSTALL_COMMAND cp -r gt42-java ${GT42_INSTALL_LOC}/lib/gt42 )
+							INSTALL_COMMAND mkdir -p ${GT42_INSTALL_LOC}/lib/gt42 && cp -r gt42-java/* ${GT42_INSTALL_LOC}/lib/gt42 )
 
 		install ( DIRECTORY ${GT42_INSTALL_LOC}/lib/gt42 DESTINATION ${C_LIB} )
 		condor_post_external( gt42 OFF OFF )
@@ -71,7 +71,7 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.0.1-p3 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.0.1-p5 "lib;include" "done")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
@@ -213,11 +213,23 @@ if (WITH_GLOBUS)
 				install( CODE "execute_process(COMMAND strip ${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/globus-gridftp-server)" )
 			endif()
 			if ( LINUX )
-				file( GLOB Libs "${GLOBUS_INSTALL_LOC}/lib/*.so*")
-				install( FILES ${Libs} DESTINATION "${EXTERNALS_LIB}" PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE )
-				if ( CONDOR_STRIP_PACKAGES AND NOT CONDOR_PACKAGE_BUILD )
-					file( GLOB StripFiles "${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB}/libglobus*.so*" "${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB}/libltdl*.so*" )
-					install( CODE "execute_process(COMMAND strip ${StripFiles})" )
+				# Install the VOMS libraries manually.
+				# In order to use an install(FILES) command,
+				# we'd have to explicitly list evey file.
+				# We can't use a file(GLOB) because that's
+				# evaluated when cmake is run, which may be
+				# before the external is built.
+				install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+				install( CODE "execute_process(COMMAND find ${GLOBUS_INSTALL_LOC}/lib -maxdepth 1 -name *.so*
+					COMMAND xargs -isrc cp -a src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+				if ( CONDOR_STRIP_PACKAGES )
+					# Strip the libraries manually.
+					# Since cmake didn't create the libraries
+					# itself, it doesn't know to strip them.
+					install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libglobus*.so*
+						COMMAND xargs strip)" )
+					install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libltdl*.so*
+                                                COMMAND xargs strip)" )
 				endif()
 			endif()
 

@@ -1485,7 +1485,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	if ( strcmp( filename.c_str(), condor_basename( filename.c_str() ) ) &&
 		 !nullFile( filename.c_str() ) ) {
 
-		char const *working_name = "_condor_stdout";
+		char const *working_name = StdoutRemapName;
 		if ( !output_remaps.empty() ) output_remaps += ";";
 		sprintf_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
 		submit_ad->Assign( ATTR_JOB_OUTPUT, working_name );
@@ -1495,7 +1495,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	if ( strcmp( filename.c_str(), condor_basename( filename.c_str() ) ) &&
 		 !nullFile( filename.c_str() ) ) {
 
-		char const *working_name = "_condor_stderr";
+		char const *working_name = StderrRemapName;
 		if ( !output_remaps.empty() ) output_remaps += ";";
 		sprintf_cat( output_remaps, "%s=%s", working_name, filename.c_str() );
 		submit_ad->Assign( ATTR_JOB_ERROR, working_name );
