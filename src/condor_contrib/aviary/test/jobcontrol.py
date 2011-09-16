@@ -27,7 +27,6 @@ import argparse
 
 # change these for other default locations and ports
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
-url = "http://localhost:9090/services/job/"
 key = '/etc/pki/tls/certs/client.key'
 cert = '/etc/pki/tls/certs/client.crt'
 client = Client(wsdl);
@@ -35,23 +34,26 @@ client = Client(wsdl);
 cmds = ['holdJob', 'releaseJob', 'removeJob']
 
 parser = argparse.ArgumentParser(description='Control job state remotely via SOAP.')
-parser.add_argument('-q','--quiet', action="store_true",default=True, help='disable/enable SOAP logging')
-parser.add_argument('-u','--url', action="store", nargs='?', dest='url', help='http or https URL prefix to be added to cmd')
+parser.add_argument('-q','--quiet', action="store_true",default=False, help='disable/enable SOAP logging')
+parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
+		    default="http://localhost:9090/services/job/",
+		    help='http or https URL prefix to be added to cmd')
 parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
 parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
 parser.add_argument('cmd', action="store", choices=(cmds))
 parser.add_argument('cproc', action="store", help="a cluster.proc id like '1.0' or '5.3'")
 args =  parser.parse_args()
 
-if args.url and "https://" in args.url:
-	url = args.url
+if "https://" in args.url:
 	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
+else:
+	client = Client(wsdl)
 
-url += args.cmd
-client.set_options(location=url)
+args.url += args.cmd
+client.set_options(location=args.url)
 
 # enable to see service schema
-if args.verbose:
+if not args.quiet:
 	logging.basicConfig(level=logging.INFO)
 	logging.getLogger('suds.client').setLevel(logging.DEBUG)
 	print client
@@ -63,10 +65,10 @@ jobId.job = args.cproc
 try:
 	func = getattr(client.service, args.cmd, None)
 	if callable(func):
-		print 'invoking', url, 'for job', args.cproc
+		print 'invoking', args.url, 'for job', args.cproc
 		result = func(jobId,"test")
 except Exception, e:
-	print "unable to access scheduler at: ", url
+	print "unable to access scheduler at: ", args.url
 	print e
 	exit(1)
 
