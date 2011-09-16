@@ -495,7 +495,7 @@ MPIShadow::hackMasterAd( ClassAd *ad )
 		// include the procgroup file in the list of input files.
 		// This is only needed on the master.
 	char *transfer_files = NULL;
-	if( !ad->LookupString(ATTR_SHOULD_TRANSFER_FILES, &transfer_files) ) {
+	if( !ad->LookupString(ATTR_TRANSFER_FILES, &transfer_files) ) {
 			// Nothing, we're done.
 		return;
 	}
