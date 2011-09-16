@@ -504,6 +504,18 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	
 			/* print debug message to catch-all debug file plus files */
 			/* registered for other debug levels */
+		if(!DebugLogs->size())
+		{
+			debug_file_ptr = stderr;
+#ifdef va_copy
+			va_list copyargs;
+			va_copy(copyargs, args);
+			_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,copyargs);
+			va_end(copyargs);
+#else
+			_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,args);
+#endif
+		}
 		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 		{
 			int debugFlags = (*it).debugFlags;
