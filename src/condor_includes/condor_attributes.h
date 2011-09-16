@@ -635,7 +635,6 @@ extern const char * const  ATTR_VIRTUAL_MACHINE_ID;
 extern const char * const  ATTR_SHOULD_TRANSFER_FILES;
 extern const char * const  ATTR_WHEN_TO_TRANSFER_OUTPUT;
 extern const char * const  ATTR_TRANSFER_TYPE;
-extern const char * const  ATTR_TRANSFER_FILES;
 extern const char * const  ATTR_TRANSFER_KEY;
 extern const char * const  ATTR_TRANSFER_EXECUTABLE;
 extern const char * const  ATTR_TRANSFER_INPUT;
