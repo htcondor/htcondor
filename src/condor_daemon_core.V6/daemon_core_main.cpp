@@ -1479,12 +1479,7 @@ handle_dc_sigterm( Service*, int )
 				 "Peaceful shutdown in effect.  No timeout enforced.\n");
 	}
 	else {
-		int timeout = 30 * MINUTE;
-		char* tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
-		if( tmp ) {
-			timeout = atoi( tmp );
-			free( tmp );
-		}
+		int timeout = param_integer("SHUTDOWN_GRACEFUL_TIMEOUT", 30 * MINUTE);
 		daemonCore->Register_Timer( timeout, 0, 
 									TimerHandler_main_shutdown_fast,
 									"main_shutdown_fast" );
