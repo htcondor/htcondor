@@ -154,24 +154,23 @@ a summary of information from
 ClassAds about the resources available in your pool.
 Type \Condor{status} and hit enter to see a summary 
 similar to the following:
-\begin{center}
 %\small       too big
 %\tiny        too small
 \footnotesize
 \begin{verbatim}
-Name       Arch     OpSys        State      Activity   LoadAv Mem  ActvtyTime
+Name               OpSys      Arch   State     Activity LoadAv Mem   ActvtyTime
 
-adriana.cs INTEL    SOLARIS251   Claimed    Busy       1.000  64    0+01:10:00
-alfred.cs. INTEL    SOLARIS251   Claimed    Busy       1.000  64    0+00:40:00
-amul.cs.wi SUN4u    SOLARIS251   Owner      Idle       1.000  128   0+06:20:04
-anfrom.cs. SUN4x    SOLARIS251   Claimed    Busy       1.000  32    0+05:16:22
-anthrax.cs INTEL    SOLARIS251   Claimed    Busy       0.285  64    0+00:00:00
-astro.cs.w INTEL    SOLARIS251   Claimed    Busy       0.949  64    0+05:30:00
-aura.cs.wi SUN4u    SOLARIS251   Owner      Idle       1.043  128   0+14:40:15
+amul.cs.wisc.edu   LINUX      INTEL  Claimed   Busy     0.990  1896  0+00:07:04
+slot1@amundsen.cs. LINUX      INTEL  Owner     Idle     0.000  1456  0+00:21:58
+slot2@amundsen.cs. LINUX      INTEL  Owner     Idle     0.110  1456  0+00:21:59
+angus.cs.wisc.edu  LINUX      INTEL  Claimed   Busy     0.940   873  0+00:02:54
+anhai.cs.wisc.edu  LINUX      INTEL  Claimed   Busy     1.400  1896  0+00:03:03
+apollo.cs.wisc.edu LINUX      INTEL  Unclaimed Idle     1.000  3032  0+00:00:04
+arragon.cs.wisc.ed LINUX      INTEL  Claimed   Busy     0.980   873  0+00:04:29
+bamba.cs.wisc.edu  LINUX      INTEL  Owner     Idle     0.040  3032 15+20:10:19
 \end{verbatim}
 \normalsize
 \Dots 
-\end{center}
 
 
 The \Condor{status} command has options that summarize machine ads 
@@ -182,7 +181,7 @@ For example,
 willing to run jobs now. 
 \item[\Condor{status -run}] shows only machines
 which are currently running jobs.  
-\item[\Condor{status -l}] lists the machine ClassAds for all machines
+\item[\Condor{status -long}] lists the machine ClassAds for all machines
 in the pool.
 \end{description}
 
@@ -190,61 +189,55 @@ Refer to the \Condor{status} command
 reference page located on page~\pageref{man-condor-status}
 for a complete description of the \Condor{status} command.
 
-Figure~\ref{fig:CondorStatusL} shows the complete machine ClassAd
+The following shows a portion of a machine ClassAd
 \index{ClassAd!machine example}
 \index{machine ClassAd}
-for a single workstation: alfred.cs.wisc.edu. Some of the listed
+for a single machine: turunmaa.cs.wisc.edu. Some of the listed
 attributes are used by
 Condor for scheduling. Other attributes are for information purposes.
 An important point is that \emph{any} of the attributes in a
-machine ad can be utilized at job submission time as part of a request
+machine ClassAd can be utilized at job submission time as part of a request
 or preference on what machine to use. Additional attributes
 can be easily added. For example, your site administrator can
 add a physical location attribute to your machine ClassAds.
 
-%
-% figures for this section
-%
-% condor_status -l alfred
-%
-\begin{center}
-\begin{figure}
-\small
+% condor_status -long turunmaa.cs.wisc.edu
+
+\footnotesize
 \begin{verbatim}
-MyType = "Machine"
-TargetType = "Job"
-Name = "alfred.cs.wisc.edu"
-Machine = "alfred.cs.wisc.edu"
-StartdIpAddr = "<128.105.83.11:32780>"
-Arch = "INTEL"
-OpSys = "SOLARIS251"
-UidDomain = "cs.wisc.edu"
+Machine = "turunmaa.cs.wisc.edu"
 FileSystemDomain = "cs.wisc.edu"
-State = "Unclaimed"
-EnteredCurrentState = 892191963
-Activity = "Idle"
-EnteredCurrentActivity = 892191062
-VirtualMemory = 185264
-Disk = 35259
-KFlops = 19992
-Mips = 201
-LoadAvg = 0.019531
-CondorLoadAvg = 0.000000
-KeyboardIdle = 5124
-ConsoleIdle = 27592
+Name = "turunmaa.cs.wisc.edu"
+CondorPlatform = "$CondorPlatform: x86_rhap_5 $"
 Cpus = 1
-Memory = 64
-AFSCell = "cs.wisc.edu"
-START = LoadAvg - CondorLoadAvg <= 0.300000 && KeyboardIdle > 15 * 60
-Requirements = TRUE
-Rank = Owner == "johndoe" || Owner == "friendofjohn" 
-CurrentRank =  - 1.000000
-LastHeardFrom = 892191963
+IsValidCheckpointPlatform = ( ( ( TARGET.JobUniverse == 1 ) == false ) || 
+ ( ( MY.CheckpointPlatform =!= undefined ) && 
+ ( ( TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform ) || 
+ ( TARGET.NumCkpts == 0 ) ) ) )
+CondorVersion = "$CondorVersion: 7.6.3 Aug 18 2011 BuildID: 361356 $"
+Requirements = ( START ) && ( IsValidCheckpointPlatform )
+EnteredCurrentActivity = 1316094896
+MyAddress = "<128.105.175.125:58026>"
+EnteredCurrentState = 1316094896
+Memory = 1897
+CkptServer = "pitcher.cs.wisc.edu"
+OpSys = "LINUX"
+State = "Owner"
+START = true
+Arch = "INTEL"
+Mips = 2634
+Activity = "Idle"
+StartdIpAddr = "<128.105.175.125:58026>"
+TargetType = "Job"
+LoadAvg = 0.210000
+CheckpointPlatform = "LINUX INTEL 2.6.x normal 0x40000000"
+Disk = 92309744
+VirtualMemory = 2069476
+TotalSlots = 1
+UidDomain = "cs.wisc.edu"
+MyType = "Machine"
 \end{verbatim}
 \normalsize
-\caption{\label{fig:CondorStatusL}Sample output from \Condor{status -l alfred}}
-\end{figure}
-\end{center}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
