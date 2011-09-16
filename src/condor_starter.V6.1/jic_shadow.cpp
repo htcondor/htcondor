@@ -1286,14 +1286,9 @@ JICShadow::initFileTransfer( void )
 			return false;
 		}
 	} else { 
-			// new attribute is not defined, use the old method.  we
-			// just want to call the initWithFileTransfer() method,
-			// since it will check the ATTR_TRANSFER_FILES if it can't
-			// find ATTR_WHEN_TO_TRANSFER_OUTPUT...
-		dprintf( D_FULLDEBUG, "No %s specified, looking for deprecated %s "
-				 "attribute\n", ATTR_SHOULD_TRANSFER_FILES, 
-				 ATTR_TRANSFER_FILES );
-		return initWithFileTransfer();
+		dprintf( D_ALWAYS, "ERROR: No file transfer attributes in job "
+				 "ad, aborting\n" );
+		return false;
 	}
 
 	switch( should_transfer ) {
@@ -1371,29 +1366,9 @@ JICShadow::initWithFileTransfer()
 			transfer_at_vacate = true;
 		}
 	} else { 
-			// no new attribute, try the old...
-		char* tmp = NULL;
-		job_ad->LookupString( ATTR_TRANSFER_FILES, &tmp );
-		if ( tmp == NULL ) {
-			dprintf( D_ALWAYS, "ERROR: No file transfer attributes in job "
-					 "ad, aborting\n" );
-			return false;
-		}
-
-		char firstCharOfTF = tmp[0];
-		free(tmp);
-
-			// if set to "ALWAYS", then set transfer_at_vacate to true
-		switch ( firstCharOfTF ) {
-		case 'a':
-		case 'A':
-			transfer_at_vacate = true;
-			break;
-		case 'n':  /* for "Never" */
-		case 'N':
-			return initNoFileTransfer();
-			break;
-		}
+		dprintf( D_ALWAYS, "ERROR: %s attribute missing from job "
+				 "ad, aborting\n", ATTR_WHEN_TO_TRANSFER_OUTPUT );
+		return false;
 	}
 
 		// if we're here, it means we're transfering files, so we need
