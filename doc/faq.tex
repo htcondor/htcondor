@@ -1041,9 +1041,10 @@ pointing to shadow exceptions.
 
 This difficulty stems from the defaults for whether file transfer
 takes place.
-The workaround for this problem is to place the line
+The workaround for this problem is to place the lines
 \begin{verbatim}
-   TRANSFER_FILES  = ALWAYS
+   should_transfer_files = YES
+   when_to_transfer_output = ON_EXIT
 \end{verbatim}
 into the submit description file for jobs submitted from a Unix
 machine for execution on a Windows machine.
