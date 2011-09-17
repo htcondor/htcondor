@@ -32,4 +32,4 @@ if (NOT WIN_EXEC_NODE_ONLY)
 
 endif(NOT WIN_EXEC_NODE_ONLY)
 
-condor_static_lib( qmgmt "${qmgmtElements};qmgmt_common.cpp" )
+condor_shared_lib( qmgmt "${qmgmtElements};qmgmt_common.cpp" )

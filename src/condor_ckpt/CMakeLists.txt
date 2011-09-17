@@ -41,7 +41,7 @@ if( STD_UNIVERSE )
 
 	# we create a local lib, but it's never actually used
 	# instead condorsyscall will rip out the target refs.
-	#condor_static_lib( ckpt "${CommonCkptSrcs};${CompressSrcs}")
+	#condor_shared_lib( ckpt "${CommonCkptSrcs};${CompressSrcs}")
 	add_library(ckpt STATIC EXCLUDE_FROM_ALL ${CMAKE_CURRENT_SOURCE_DIR}/image.cpp;${CommonCkptSrcs})
 	add_dependencies( ckpt syscall_numbers )
 

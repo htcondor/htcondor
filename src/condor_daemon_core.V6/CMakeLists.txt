@@ -31,7 +31,7 @@ if (DARWIN)
 endif(DARWIN)
 
 #create the library
-condor_static_lib(daemon_core "${DCHeaderFiles};${DCSourceFiles}")
+condor_shared_lib(daemon_core "${DCHeaderFiles};${DCSourceFiles}")
 target_link_libraries(daemon_core ccb)
 
 if (WINDOWS)

@@ -37,7 +37,7 @@ add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c
 add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c)
 ############ end generate params
 
-condor_static_lib( utils "${HeaderFiles};${SourceFiles};${SAFE_OPEN_SRC}" )
+condor_shared_lib( utils "${HeaderFiles};${SourceFiles};${SAFE_OPEN_SRC}" )
 add_dependencies(utils utils_genparams syscall_numbers )
 # this shouldn't be linked against libdaemon_core, because it introduces
 # undefined symbols that can only be resolved by actual daemons, but it needs
@@ -57,7 +57,7 @@ if(WINDOWS)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
 endif()
 
-condor_really_static_lib( condorapi "${ApiSrcs}" )
+condor_static_lib( condorapi "${ApiSrcs}" )
 add_dependencies( condorapi utils )
 
 if (HAVE_LIBDL)

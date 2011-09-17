@@ -99,7 +99,9 @@ set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
 # set to true to enable printing of make actions
 set( CMAKE_VERBOSE_MAKEFILE FALSE )
-#set( BUILD_SHARED_LIBS FALSE )
+
+# set to true if we should build and use shared libraries where appropriate
+set( CONDOR_BUILD_SHARED_LIBS FALSE )
 
 # Windows is so different perform the check 1st and start setting the vars.
 if( NOT WINDOWS)
@@ -317,6 +319,8 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 		set(CMAKE_PREFIX_PATH /usr/kerberos)
 		include_directories(/usr/kerberos/include)
 	endif()
+
+	set( CONDOR_BUILD_SHARED_LIBS TRUE )
 
 	set(DOES_SAVE_SIGSTATE ON)
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
