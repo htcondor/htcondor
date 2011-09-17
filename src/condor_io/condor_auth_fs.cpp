@@ -23,8 +23,8 @@
 #include "condor_string.h"
 #include "condor_environ.h"
 #include "CondorError.h"
-#include "my_hostname.h"
 #include "condor_mkstemp.h"
+#include "ipv6_hostname.h"
 
 Condor_Auth_FS :: Condor_Auth_FS(ReliSock * sock, int remote)
     : Condor_Auth_Base    ( sock, CAUTH_FILESYSTEM ),
@@ -160,7 +160,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				filename = "/tmp";
 			}
 			filename += "/FS_REMOTE_";
-			filename += my_hostname();
+			filename += get_local_hostname();
 			filename += "_";
 			filename += mypid;
 			filename += "_XXXXXXXXX";
@@ -278,7 +278,7 @@ int Condor_Auth_FS::authenticate(const char * /* remoteHost */, CondorError* err
 				// in so we create a dup of it just in case MyString does
 				// anything funny or uses string spaces, etc.
 				filename_template += "/FS_REMOTE_";
-				filename_template += my_hostname();
+				filename_template += get_local_hostname();
 				filename_template += "_";
 				filename_template += mypid;
 				filename_template += "_XXXXXX";

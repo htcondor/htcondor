@@ -138,7 +138,7 @@ class Dag {
 		 const char *storkRmExe, const CondorID *DAGManJobId,
 		 bool prohibitMultiJobs, bool submitDepthFirst,
 		 const char *defaultNodeLog, bool generateSubdagSubmits,
-		 const SubmitDagDeepOptions *submitDagDeepOpts,
+		 SubmitDagDeepOptions *submitDagDeepOpts,
 		 bool isSplice = false, const MyString &spliceScope = "root" );
 
     ///
@@ -422,7 +422,7 @@ class Dag {
         condor_rm.  This function <b>is not</b> called when the schedd
         kills Dagman.
     */
-    void RemoveRunningJobs ( const Dagman & ) const;
+    void RemoveRunningJobs ( const Dagman &, bool bForce=false) const;
 
     /** Remove all pre- and post-scripts that are currently running.
 	All currently running scripts will be killed via daemoncore.
@@ -439,18 +439,26 @@ class Dag {
 		@param multiDags Whether we have multiple DAGs
 		@param maxRescueDagNum the maximum legal rescue DAG number
 		@param parseFailed whether parsing the DAG(s) failed
+		@param isPartial whether the rescue DAG is only a partial
+			DAG file (needs to be parsed in combination with the original
+			DAG file)
     */
     void Rescue (const char * dagFile, bool multiDags,
-				int maxRescueDagNum, bool parseFailed = false) /* const */;
+				int maxRescueDagNum, bool parseFailed = false,
+				bool isPartial = false) /* const */;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.
         @param rescue_file The name of the rescue file to generate
         @param datafile The original DAG file
 		@param parseFailed whether parsing the DAG(s) failed
+		@param isPartial whether the rescue DAG is only a partial
+			DAG file (needs to be parsed in combination with the original
+			DAG file)
     */
     void WriteRescue (const char * rescue_file,
-				const char * dagFile, bool parseFailed = false) /* const */;
+				const char * dagFile, bool parseFailed = false,
+				bool isPartial = false) /* const */;
 
 	int PreScriptReaper( const char* nodeName, int status );
 	int PostScriptReaper( const char* nodeName, int status );
@@ -533,6 +541,7 @@ class Dag {
 	static const int DAG_ERROR_CONDOR_SUBMIT_FAILED;
 	static const int DAG_ERROR_CONDOR_JOB_ABORTED;
 	static const int DAG_ERROR_LOG_MONITOR_ERROR;
+	static const int DAG_ERROR_JOB_SKIPPED;
 
 		// The maximum signal we can deal with in the error-reporting
 		// code.
@@ -668,6 +677,11 @@ class Dag {
 	void SetMaxJobHolds(int maxJobHolds) { _maxJobHolds = maxJobHolds; }
 
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
+	bool GetPostRun() const { return _alwaysRunPost; }
+	void SetPostRun(bool postRun) { _alwaysRunPost = postRun; }	
+	void SetDefaultPriorities();
+	void SetDefaultPriority(const int prio) { _defaultPriority = prio; }
+	int GetDefaultPriority() const { return _defaultPriority; }
 
   private:
 
@@ -704,6 +718,20 @@ class Dag {
 	   @return true on success, false on failure
     */
     bool StartNode( Job *node, bool isRetry );
+
+    /* A helper function to run the POST script, if one exists.
+           @param The job owning the POST script
+           @param Whether to use the status variable in determining
+              if we should run the POST script
+           @param The status; usually the result of the PRE script.
+              The POST script will not run if ignore_status is false
+              and status is nonzero.
+			@param Whether to increment the run count when we run the
+				script
+			@return true if successful, false otherwise
+    */
+	bool RunPostScript( Job *job, bool ignore_status, int status,
+				bool incrementRunCount = true );
 
 	typedef enum {
 		SUBMIT_RESULT_OK,
@@ -832,6 +860,18 @@ class Dag {
 	int CondorLogFileCount() { return _condorLogRdr.totalLogFileCount(); }
 
 	int StorkLogFileCount() { return _storkLogRdr.totalLogFileCount(); }
+
+		/** Write information for the given node to a rescue DAG.
+			@param fp: file pointer to the rescue DAG file
+			@param node: the node for which to write info
+			@param reset_retries_upon_rescue: whether to reset any
+				previous retries of a node
+			@param isPartial: whether the rescue DAG is only a partial
+				DAG file (needs to be parsed in combination with the
+				original DAG file)
+		*/
+	void WriteNodeToRescue( FILE *fp, Job *node,
+				bool reset_retries_upon_rescue, bool isPartial );
 
     /// List of Job objects
     List<Job>     _jobs;
@@ -1021,7 +1061,7 @@ class Dag {
 	bool	_generateSubdagSubmits;
 
 		// Options for running condor_submit_dag on nested DAGs.
-	const SubmitDagDeepOptions *_submitDagDeepOpts;
+	SubmitDagDeepOptions *_submitDagDeepOpts;
 
 		// Dag objects are used to parse splice files, which are like include
 		// files that ultimately result in a larger in memory dag. To toplevel
@@ -1056,6 +1096,11 @@ class Dag {
 
 		// The object for logging to the jobstate.log file (for Pegasus).
 	JobstateLog _jobstateLog;
+	// If true, run the POST script, regardless of the exit status of the PRE script
+	// Defaults to true
+	bool _alwaysRunPost;
+		// The default priority for nodes in this DAG. (defaults to 0)
+	int _defaultPriority;
 };
 
 #endif /* #ifndef DAG_H */

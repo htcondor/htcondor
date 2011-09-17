@@ -25,7 +25,6 @@
 #include "enum_utils.h"
 #include "RoutedJob.h"
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 
 

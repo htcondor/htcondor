@@ -81,6 +81,7 @@ Attribute::Attribute ( AttributeType _type, const char *_value ) :
 
 Attribute::~Attribute()
 {
+    //
 }
 
 Attribute::AttributeType
@@ -92,7 +93,7 @@ Attribute::GetType() const
 const char *
 Attribute::GetValue() const
 {
-    return m_value;
+    return m_value.c_str();
 }
 
 //////////////
@@ -180,12 +181,12 @@ LiveJobImpl::Get ( const char *_name, const Attribute *&_attribute ) const
         }
         case classad::Value::STRING_VALUE:
         {
-            MyString str;
+            std::string str;
             if ( !m_full_ad->LookupString ( _name, str ) )
             {
                 return false;
             }
-            _attribute = new Attribute ( Attribute::STRING_TYPE, str.Value() );
+            _attribute = new Attribute ( Attribute::STRING_TYPE, str.c_str() );
             return true;
         }
         default:
@@ -219,6 +220,19 @@ int LiveJobImpl::GetStatus() const
     delete attr;
 
     return _status;
+}
+
+int LiveJobImpl::GetQDate() const
+{
+	const Attribute* attr = NULL;
+
+	if ( !this->Get ( ATTR_Q_DATE, attr ) )
+	{
+		// default to 0?
+		return 0;
+	}
+
+	return strtol ( attr->GetValue(), ( char ** ) NULL, 10 );
 }
 
 void
@@ -336,6 +350,16 @@ const ClassAd* LiveJobImpl::GetSummary ()
 		}
 	}
 
+    // make sure we're up-to-date with status even if we've cached the summary
+	m_summary_ad->Assign(ATTR_JOB_STATUS,this->GetStatus());
+    int i;
+    if ( m_full_ad->LookupInteger ( ATTR_ENTERED_CURRENT_STATUS, i ) ) {
+        m_summary_ad->Assign(ATTR_ENTERED_CURRENT_STATUS,i);
+    }
+    else {
+        dprintf(D_ALWAYS,"Unable to get ATTR_ENTERED_CURRENT_STATUS\n");
+    }
+
 	return m_summary_ad;
 }
 
@@ -393,6 +417,11 @@ int HistoryJobImpl::GetStatus() const
 int HistoryJobImpl::GetCluster() const
 {
 	return m_he.cluster;
+}
+
+int HistoryJobImpl::GetQDate() const
+{
+	return m_he.q_date;
 }
 
 const char* HistoryJobImpl::GetSubmissionId() const
@@ -636,6 +665,9 @@ Job::SetSubmission ( const char* _subName, int cluster )
 		g_ownerless_submissions[cluster] = m_submission;
 	}
 
+	// finally update the overall submission qdate
+	m_submission->UpdateQdate(this->GetQDate());
+
 }
 
 bool ClusterJobImpl::Destroy()
@@ -708,6 +740,16 @@ void Job::GetSummary ( ClassAd& _ad) const
 int Job::GetStatus() const
 {
 	return m_status;
+}
+
+int Job::GetQDate() const
+{
+	if (m_live_job) {
+		return m_live_job->GetQDate();
+	}
+	else {
+		return m_history_job->GetQDate();
+	}
 }
 
 JobImpl* Job::GetImpl() {

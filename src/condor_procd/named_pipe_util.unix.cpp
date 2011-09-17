@@ -106,7 +106,7 @@ named_pipe_create(const char* name, int& read_fd, int& write_fd)
 	// (we do this with O_NONBLOCK because otherwise we'd deadlock
 	// waiting for someone to open the pipe for writing)
 	//
-	read_fd_tmp = safe_open_wrapper(name, O_RDONLY | O_NONBLOCK);
+	read_fd_tmp = safe_open_wrapper_follow(name, O_RDONLY | O_NONBLOCK);
 	if (read_fd_tmp == -1) {
 		dprintf(D_ALWAYS,
 		        "open for read-only of %s failed: %s (%d)\n",
@@ -140,7 +140,7 @@ named_pipe_create(const char* name, int& read_fd, int& write_fd)
 	// to this FD, but we keep this open to prevent EOF from ever being
 	// read from read_fd
 	//
-	write_fd_tmp = safe_open_wrapper(name, O_WRONLY);
+	write_fd_tmp = safe_open_wrapper_follow(name, O_WRONLY);
 	if (write_fd_tmp == -1) {
 		dprintf(D_ALWAYS,
 		        "open for write-only of %s failed: %s (%d)\n",

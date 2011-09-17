@@ -29,7 +29,6 @@
 #include "condor_string.h"
 #include "condor_attributes.h"
 #include "match_prefix.h"
-#include "my_hostname.h"
 #include "get_daemon_name.h"
 #include "MyString.h"
 #include "extArray.h"
@@ -39,7 +38,6 @@
 #include "format_time.h"
 #include "daemon.h"
 #include "dc_collector.h"
-#include "my_hostname.h"
 #include "basename.h"
 #include "metric_units.h"
 #include "globus_utils.h"
@@ -51,6 +49,8 @@
 #include "subsystem_info.h"
 #include "condor_xml_classads.h"
 #include "condor_open.h"
+#include "condor_sockaddr.h"
+#include "ipv6_hostname.h"
 
 #include "../classad_analysis/analysis.h"
 
@@ -709,7 +709,8 @@ int main (int argc, char **argv)
 #ifdef HAVE_EXT_POSTGRESQL
 			case DIRECT_RDBMS:
 				if (useDB) {
-					if (sqfp(quillName, dbIpAddr, dbName, queryPassword, TRUE ))
+					if ( (retval = sqfp(quillName, dbIpAddr, dbName, 
+										queryPassword, TRUE) ) )
 					{
 						/* processed correctly, so do the next ad */
 						continue;
@@ -755,7 +756,8 @@ int main (int argc, char **argv)
 						didn't have a quill ad by that name. */
 
 					if((result2 == Q_OK) && quillAddr &&
-			   			sqfp(quillAddr, quillName, quillMachine, NULL, FALSE))
+			   			(retval = sqfp(quillAddr, quillName, quillMachine, 
+									   NULL, FALSE) ) )
 					{
 						/* processed correctly, so do the next ad */
 						continue;
@@ -1199,8 +1201,8 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (match_prefix( arg, "run")) {
 			std::string expr;
-			sprintf( expr, "%s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
-					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT );
+			sprintf( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
+					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
 			Q.addAND( expr.c_str() );
 			run = true;
 			attrs.append( ATTR_REMOTE_HOST );
@@ -1354,7 +1356,7 @@ job_time(float cpu_time,ClassAd *ad)
 	 * is not zero and the job status is RUNNING.  -Todd <tannenba@cs.wisc.edu>
 	 */
 	float total_wall_time = previous_runs;
-	if ( ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT ) && shadow_bday ) {
+	if ( ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday ) {
 		total_wall_time += cur_time - shadow_bday;
 	}
 
@@ -1575,14 +1577,15 @@ format_remote_host (char *, AttrList *ad)
 	static char host_result[MAXHOSTNAMELEN];
 	static char unknownHost [] = "[????????????????]";
 	char* tmp;
-	struct sockaddr_in sin;
+	condor_sockaddr addr;
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	if (universe == CONDOR_UNIVERSE_SCHEDULER &&
-		string_to_sin(scheddAddr, &sin) == 1) {
-		if( (tmp = sin_to_hostname(&sin, NULL)) ) {
-			strcpy( host_result, tmp );
+		addr.from_sinful(scheddAddr) == true) {
+		MyString hostname = get_hostname(addr);
+		if (hostname.Length() > 0) {
+			strcpy( host_result, hostname.Value() );
 			return host_result;
 		} else {
 			return unknownHost;
@@ -1596,9 +1599,10 @@ format_remote_host (char *, AttrList *ad)
 
 	if (ad->LookupString(ATTR_REMOTE_HOST, host_result) == 1) {
 		if( is_valid_sinful(host_result) && 
-			(string_to_sin(host_result, &sin) == 1) ) {  
-			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
-				strcpy( host_result, tmp );
+			addr.from_sinful(host_result) == true ) {
+			MyString hostname = get_hostname(addr);
+			if (hostname.Length() > 0) {
+				strcpy(host_result, hostname.Value());
 			} else {
 				return unknownHost;
 			}
@@ -1624,7 +1628,7 @@ format_goodput (int job_status, AttrList *ad)
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
 	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
-	if ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) &&
+	if ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) &&
 		shadow_bday && last_ckpt > shadow_bday)
 	{
 		wall_clock += last_ckpt - shadow_bday;
@@ -1647,7 +1651,7 @@ format_mbps (float bytes_sent, AttrList *ad)
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
 	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
-	if ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) && shadow_bday && last_ckpt > shadow_bday) {
+	if ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday && last_ckpt > shadow_bday) {
 		wall_clock += last_ckpt - shadow_bday;
 	}
 	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
@@ -1943,9 +1947,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	const char *scheddName;
 	const char *scheddMachine;
 
-	const char *quill_name;
-	const char *db_ipAddr;
-	const char *db_name;
+	const char *quill_name = 0;
+	const char *db_ipAddr = 0;
+	const char *db_name = 0;
 	const char *query_password;
 	int i;
 
@@ -2184,8 +2188,9 @@ process_buffer_line( ClassAd *job )
 	switch (status)
 	{
 		case IDLE:                idle++;      break;
+		case TRANSFERRING_OUTPUT: 
+		case SUSPENDED:
 		case RUNNING:             running++;   break;
-		case TRANSFERRING_OUTPUT: running++;   break;
 		case HELD:		          held++;	   break;
 	}
 
@@ -2719,7 +2724,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	request->LookupInteger( ATTR_PROC_ID, proc );
 	request->LookupInteger( ATTR_JOB_STATUS, jobState );
 	request->LookupBool( ATTR_JOB_MATCHED, jobMatched );
-	if( jobState == RUNNING || jobState == TRANSFERRING_OUTPUT ) {
+	if( jobState == RUNNING || jobState == TRANSFERRING_OUTPUT || jobState == SUSPENDED) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
 			proc );
@@ -3133,7 +3138,7 @@ static bool read_classad_file(const char *filename, ClassAdList &classads)
     ClassAd *classad;
     FILE *file;
 
-    file = safe_fopen_wrapper(filename, "r");
+    file = safe_fopen_wrapper_follow(filename, "r");
     if (file == NULL) {
         fprintf(stderr, "Can't open file of job ads: %s\n", filename);
 		return false;
@@ -3317,7 +3322,7 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 
 		int status = -1;
 		job->LookupInteger(ATTR_JOB_STATUS,status);
-		if( status != RUNNING && status != TRANSFERRING_OUTPUT ) {
+		if( status != RUNNING && status != TRANSFERRING_OUTPUT && status != SUSPENDED ) {
 
 			int universe = -1;
 			job->LookupInteger(ATTR_JOB_UNIVERSE,universe);

@@ -39,7 +39,7 @@
 #include "user_job_policy.h"
 #include "get_daemon_name.h"
 #include "filename_tools.h"
-
+#include "condor_holdcodes.h"
 
 
 const char JR_ATTR_MAX_JOBS[] = "MaxJobs";
@@ -143,7 +143,7 @@ JobRouter::GetInstanceLock() {
 	ASSERT( !lock_fullname.empty() );
 	canonicalize_dir_delimiters((char *)lock_fullname.c_str());
 
-	m_router_lock_fd = safe_open_wrapper(lock_fullname.c_str(),O_CREAT|O_APPEND|O_WRONLY,0600);
+	m_router_lock_fd = safe_open_wrapper_follow(lock_fullname.c_str(),O_CREAT|O_APPEND|O_WRONLY,0600);
 	if(m_router_lock_fd == -1) {
 		EXCEPT("Failed to open lock file %s: %s",lock_fullname.c_str(),strerror(errno));
 	}
@@ -274,7 +274,7 @@ JobRouter::config() {
 	}
 
 	if( routing_file.size() ) {
-		FILE *fp = safe_fopen_wrapper(routing_file.c_str(),"r");
+		FILE *fp = safe_fopen_wrapper_follow(routing_file.c_str(),"r");
 		if( !fp ) {
 			EXCEPT("Failed to open '%s' file specified for %s.",
 				   routing_file.c_str(), PARAM_JOB_ROUTER_ENTRIES_FILE);
@@ -451,6 +451,8 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	ClassAd converted_ad;
 	int action;
 	MyString reason;
+	int reason_code;
+	int reason_subcode;
 	bool ret_val = false;
 
 	if (false == new_to_old(job->src_ad, converted_ad))
@@ -463,7 +465,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 
 	action = user_policy.AnalyzePolicy(PERIODIC_ONLY);
 
-	reason = user_policy.FiringReason();
+	user_policy.FiringReason(reason,reason_code,reason_subcode);
 	if ( reason == "" ) {
 		reason = "Unknown user policy expression";
 	}
@@ -471,7 +473,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 	switch(action)
 	{
 		case UNDEFINED_EVAL:
-			ret_val = SetJobHeld(job->src_ad, reason.Value());
+			ret_val = SetJobHeld(job->src_ad, reason.Value(), reason_code, reason_subcode);
 			break;
 		case STAYS_IN_QUEUE:
 			// do nothing
@@ -481,7 +483,7 @@ JobRouter::EvalSrcJobPeriodicExpr(RoutedJob* job)
 			ret_val = SetJobRemoved(job->src_ad, reason.Value());
 			break;
 		case HOLD_IN_QUEUE:
-			ret_val = SetJobHeld(job->src_ad, reason.Value());
+			ret_val = SetJobHeld(job->src_ad, reason.Value(), reason_code, reason_subcode);
 			break;
 		case RELEASE_FROM_HOLD:
 			// When a job that is managed by the job router is

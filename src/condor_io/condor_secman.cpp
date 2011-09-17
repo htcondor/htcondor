@@ -41,6 +41,7 @@
 #include "daemon_core_sock_adapter.h"
 #include "subsystem_info.h"
 #include "setenv.h"
+#include "ipv6_hostname.h"
 
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
@@ -1059,6 +1060,7 @@ SecManStartCommand::doCallback( StartCommandResult result )
 		}
 
 		MyString deny_reason;
+			//sockaddr_in tmp_sin = m_sock->peer_addr().to_sin();
 
 		int authorized = m_sec_man.Verify(
 			CLIENT_PERM,
@@ -2014,7 +2016,9 @@ SecManStartCommand::receivePostAuthInfo_inner()
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
-			KeyCacheEntry tmp_key( sesid, m_sock->peer_addr(), m_private_key,
+				//sockaddr_in tmp_sin = m_sock->peer_addr().to_sin();
+			condor_sockaddr peer_addr = m_sock->peer_addr();
+			KeyCacheEntry tmp_key( sesid, &peer_addr, m_private_key,
 								   &m_auth_info, expiration_time,
 								   session_lease ); 
 			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid, dur, session_lease);
@@ -2416,7 +2420,9 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
     if (keyEntry) {
         char * commands = NULL;
         keyEntry->policy()->LookupString(ATTR_SEC_VALID_COMMANDS, &commands);
-        char * addr = strdup(sin_to_string(keyEntry->addr()));
+		MyString addr;
+		if (keyEntry->addr())
+			addr = keyEntry->addr()->to_sinful();
     
         // Remove all commands from the command map
         if (commands) {
@@ -2429,12 +2435,11 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
                 char * cmd = NULL;
                 while ( (cmd = cmd_list.next()) ) {
                     memset(keybuf, 0, 128);
-                    sprintf (keybuf, "{%s,<%s>}", addr, cmd);
+                    sprintf (keybuf, "{%s,<%s>}", addr.Value(), cmd);
                     command_map->remove(keybuf);
                 }
             }
         }
-        free(addr);
     }
 }
 
@@ -2599,11 +2604,11 @@ SecMan::getIpVerify()
 }
 
 int
-SecMan::Verify(DCpermission perm, const struct sockaddr_in *sin, const char * fqu, MyString *allow_reason, MyString *deny_reason )
+SecMan::Verify(DCpermission perm, const condor_sockaddr& addr, const char * fqu, MyString *allow_reason, MyString *deny_reason )
 {
 	IpVerify *ipverify = getIpVerify();
 	ASSERT( ipverify );
-	return ipverify->Verify(perm,sin,fqu,allow_reason,deny_reason);
+	return ipverify->Verify(perm,addr,fqu,allow_reason,deny_reason);
 }
 
 
@@ -2745,7 +2750,8 @@ char* SecMan::my_unique_id() {
 #endif
 
         MyString tid;
-        tid.sprintf( "%s:%i:%i", my_hostname(), mypid, (int)time(0));
+        tid.sprintf( "%s:%i:%i", get_local_hostname().Value(), mypid, 
+					 (int)time(0));
 
         _my_unique_id = strdup(tid.Value());
     }
@@ -2913,7 +2919,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
 		if( duration < 0 ) {
-			dprintf(D_SECURITY,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
+			dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because duration = %d\n",sesid,duration);
 			delete keyinfo;
 			return false;
 		}
@@ -2925,13 +2931,45 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		policy.Assign(ATTR_SEC_SESSION_EXPIRES,expiration_time);
 	}
 
-	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keyinfo,&policy,expiration_time,0);
+	condor_sockaddr tmp_addr(&peer_addr);
+	KeyCacheEntry key(sesid,peer_sinful ? &tmp_addr : NULL,keyinfo,&policy,expiration_time,0);
 
 	if( !session_cache->insert(key) ) {
-		dprintf(D_SECURITY, "SECMAN: failed to create session %s.\n",
-				sesid);
-		delete keyinfo;
-		return false;
+		KeyCacheEntry *existing = NULL;
+		bool fixed = false;
+		if( !session_cache->lookup(sesid,existing) ) {
+			existing = NULL;
+		}
+		if( existing ) {
+			if( !LookupNonExpiredSession(sesid,existing) ) {
+					// the existing session must have expired, so try again
+				existing = NULL;
+				if( session_cache->insert(key) ) {
+					fixed = true;
+				}
+			}
+			else if( existing && existing->getLingerFlag() ) {
+				dprintf(D_ALWAYS,"SECMAN: removing lingering non-negotiated security session %s because it conflicts with new request\n",sesid);
+				session_cache->expire(existing);
+				existing = NULL;
+				if( session_cache->insert(key) ) {
+					fixed = true;
+				}
+			}
+		}
+
+		if( !fixed ) {
+			dprintf(D_ALWAYS, "SECMAN: failed to create session %s%s.\n",
+					sesid,
+					existing ? " (key already exists)" : "");
+			ClassAd *existing_policy = existing->policy();
+			if( existing_policy ) {
+				dprintf(D_ALWAYS,"SECMAN: existing session %s:\n", sesid);
+				existing_policy->dPrint(D_SECURITY);
+			}
+			delete keyinfo;
+			return false;
+		}
 	}
 
 	dprintf(D_SECURITY, "SECMAN: created non-negotiated security session %s for %d %sseconds."
@@ -3055,6 +3093,21 @@ SecMan::SetSessionExpiration(char const *session_id,time_t expiration_time) {
 	session_key->setExpiration(expiration_time);
 
 	dprintf(D_SECURITY,"Set expiration time for security session %s to %ds\n",session_id,(int)(expiration_time-time(NULL)));
+
+	return true;
+}
+
+bool
+SecMan::SetSessionLingerFlag(char const *session_id) {
+	ASSERT( session_id );
+
+	KeyCacheEntry *session_key = NULL;
+	if(!session_cache->lookup(session_id,session_key)) {
+		dprintf(D_ALWAYS,"SECMAN: SetSessionLingerFlag failed to find "
+				"session %s\n",session_id);
+		return false;
+	}
+	session_key->setLingerFlag(true);
 
 	return true;
 }

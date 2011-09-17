@@ -407,9 +407,9 @@ QmgmtPeer::set(ReliSock *input)
 }
 
 bool
-QmgmtPeer::set(const struct sockaddr_in *s, const char *o)
+QmgmtPeer::set(const condor_sockaddr& raddr, const char *o)
 {
-	if ( !s || sock || myendpoint ) {
+	if ( !raddr.is_valid() || sock || myendpoint ) {
 		// already set, or no input
 		return false;
 	}
@@ -425,10 +425,8 @@ QmgmtPeer::set(const struct sockaddr_in *s, const char *o)
 		}
 	}
 
-	if ( s ) {
-		memcpy(&sockaddr,s,sizeof(struct sockaddr_in));
-		myendpoint = strnewp( inet_ntoa(s->sin_addr) );
-	}
+	addr = raddr;
+	myendpoint = strnewp(addr.to_ip_string().Value());
 
 	return true;
 }
@@ -481,13 +479,13 @@ QmgmtPeer::endpoint_ip_str() const
 	}
 }
 
-const struct sockaddr_in*
+const condor_sockaddr&
 QmgmtPeer::endpoint() const
 {
 	if ( sock ) {
 		return sock->peer_addr();
 	} else {
-		return &sockaddr;
+		return addr;
 	}
 }
 
@@ -901,7 +899,7 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		// all jobs, we only have to figure it out once.  We use '%'
 		// as the delimiter, since ATTR_NAME might already have '@' in
 		// it, and we don't want to confuse things any further.
-	correct_scheduler.sprintf( "DedicatedScheduler!%s", Name );
+	correct_scheduler.sprintf( "DedicatedScheduler@%s", Name );
 
 	next_cluster_num = cluster_initial_val;
 	JobQueue->StartIterateAllClassAds();
@@ -1081,7 +1079,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 //		JobQueue->AppendLog(log);
 		JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 	} else {
-		if ( next_cluster_num > stored_cluster_num ) {
+        // This sanity check is not applicable if a maximum cluster value was set,  
+        // since in that case wrapped cluster-ids are a valid condition.
+		if ((next_cluster_num > stored_cluster_num) && (cluster_maximum_val <= 0)) {
 			// Oh no!  Somehow the header ad in the queue says to reuse cluster nums!
 			EXCEPT("JOB QUEUE DAMAGED; header ad NEXT_CLUSTER_NUM invalid");
 		}
@@ -1310,7 +1310,8 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// to the schedd.  we have to explicitly check here because all queue
 	// management commands come in via one sole daemon core command which
 	// has just READ permission.
-	if ( daemonCore->Verify("queue management", WRITE, Q_SOCK->endpoint(), Q_SOCK->getFullyQualifiedUser()) == FALSE ) {
+	condor_sockaddr addr = Q_SOCK->endpoint();
+	if ( daemonCore->Verify("queue management", WRITE, addr, Q_SOCK->getFullyQualifiedUser()) == FALSE ) {
 		// this machine does not have write permission; return failure
 		return false;
 	}
@@ -2426,10 +2427,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	if( !PrioRecArrayIsDirty ) {
 		if( strcasecmp(attr_name, ATTR_ACCOUNTING_GROUP) == 0 ||
             strcasecmp(attr_name, ATTR_JOB_PRIO) == 0 ) {
-			PrioRecArrayIsDirty = true;
+			DirtyPrioRecArray();
 		} else if( strcasecmp(attr_name, ATTR_JOB_STATUS) == 0 ) {
 			if( atoi(attr_value) == IDLE ) {
-				PrioRecArrayIsDirty = true;
+				DirtyPrioRecArray();
 			}
 		}
 		if(PrioRecArrayIsDirty) {
@@ -2594,7 +2595,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	}
 
 	// Create the file
-	int fd = safe_open_wrapper(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
+	int fd = safe_open_wrapper_follow(filename.Value(), O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -2679,7 +2680,7 @@ int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
 	
 	MyString filename;
 	filename.sprintf( "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
-	int fd = safe_open_wrapper(filename.Value(), O_RDONLY);
+	int fd = safe_open_wrapper_follow(filename.Value(), O_RDONLY);
 	if (fd < 0) {
 		set_priv(old_priv);
 		return -1;
@@ -4186,6 +4187,36 @@ SendSpoolFileIfNeeded(ClassAd& ad)
 					        hash.c_str());
 					hash = "";
 			}
+
+			MyString cluster_owner;
+			if( GetAttributeString(active_cluster_num,-1,ATTR_OWNER,cluster_owner) == -1 ) {
+					// The owner is not set in the cluster ad.  We
+					// need it to be set so we can attempt to clean up
+					// the shared file when the cluster goes away.
+					// Setting the owner in the cluster ad to whatever
+					// it is in the ad we were given should be okay.
+					// If any other procs in this cluster have a
+					// different value for Owner, the cleanup will not
+					// be complete, but the files should eventually be
+					// cleaned by preen.  It would probably be a good
+					// idea to enforce the rule that all jobs in a
+					// cluster have the same Owner, but that is outside
+					// the scope of the code here.
+
+				rv = SetAttributeString(active_cluster_num,
+			                      -1,
+			                      ATTR_OWNER,
+			                      owner.Value());
+
+				if (rv < 0) {
+					dprintf(D_ALWAYS,
+					        "SendSpoolFileIfNeeded: unable to set %s to %s\n",
+					        ATTR_OWNER,
+					        owner.Value());
+					hash = "";
+				}
+			}
+
 			if (!hash.empty() &&
 			    ickpt_share_try_sharing(owner.Value(), hash, path))
 			{
@@ -4735,7 +4766,7 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 						// is no longer AlreadyMatched() unless we
 						// set it here and keep rebuilding the array.
 
-					PrioRecArrayIsDirty = true;
+					DirtyPrioRecArray();
 				}
 				else {
 

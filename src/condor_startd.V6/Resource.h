@@ -47,6 +47,8 @@ public:
 	int		got_alive( void );		// You got a keep alive command
 	int 	periodic_checkpoint( void );	// Do a periodic checkpoint
 	void	void_periodic_checkpoint( void ) { (void)periodic_checkpoint(); }
+	int 	suspend_claim(); // suspend the claim
+	int 	continue_claim(); // continue the claim
 
 		// Multi-shadow wants to run more processes.  Send a SIGHUP to
 		// the starter

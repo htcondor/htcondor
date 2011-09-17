@@ -23,7 +23,9 @@ endif()
   
 if (WITH_KRB5)
 
-	if ( NOT PROPER )
+	find_multiple( "krb5;com_err;k5crypto;krb5support" KRB5_FOUND )
+
+	if ( NOT KRB5_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
 
 		condor_pre_external( KRB5 krb5-1.4.3-p0 "lib;include" "include/krb5.h")
 
@@ -65,7 +67,11 @@ if (WITH_KRB5)
 							  ${CMAKE_CURRENT_SOURCE_DIR}/manifest.bat )
 
 		else()
-			set (KRB5_PATCH  cp ${CMAKE_CURRENT_SOURCE_DIR}/src.appl.telnet.configure src/appl/telnet/configure )
+			set (KRB5_PATCH  
+				cp ${CMAKE_CURRENT_SOURCE_DIR}/src.appl.telnet.configure src/appl/telnet/configure ${CMD_TERM} 
+				patch -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/eai_nodata.patch ${CMD_TERM}
+				patch -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/getline.patch )
+
 			set (KRB5_CONFIGURE src/configure --prefix=${KRB5_INSTALL_LOC} --without-tcl --enable-static --sysconfdir=/etc --disable-thread-support )
 			set (KRB5_MAKE make )
 			set (KRB5_INSTALL make install )
@@ -107,11 +113,7 @@ if (WITH_KRB5)
 
 		condor_post_external( krb5 include OFF )
 
-	else( NOT PROPER )
-
-		find_multiple( "krb5;com_err;k5crypto;krb5support" KRB5_FOUND )
-
-	endif( NOT PROPER )
+	endif( )
 
 	if (KRB5_FOUND)
 		message (STATUS "external configured (KRB5_FOUND=${KRB5_FOUND})")

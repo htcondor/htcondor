@@ -24,7 +24,7 @@
 #include "classad/common.h"
 #include <iosfwd>
 
-BEGIN_NAMESPACE(classad)
+namespace classad {
 
 /*
  * LexerSource is a class that provides an abstract interface to the
@@ -154,6 +154,6 @@ private:
     StringLexerSource &operator=(const StringLexerSource &) { return *this; }
 };
 
-END_NAMESPACE
+}
 
 #endif /* __CLASSAD_LEXER_SOURCE_H__ */

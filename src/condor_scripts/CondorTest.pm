@@ -32,6 +32,7 @@ use Condor;
 use CondorPersonal;
 use FileHandle;
 use POSIX;
+use POSIX qw/strftime/;
 use Net::Domain qw(hostfqdn);
 use Cwd;
 use Time::Local;
@@ -1902,22 +1903,27 @@ sub GetPersonalCondorWithConfig
     }
 }
 
-sub StartPersonal
-{
-    my $testname = shift;
-    my $paramfile = shift;
-    my $version = shift;
+sub StartPersonal {
+    my ($testname, $paramfile, $version) = @_;
 
-	$handle = $testname;
+    $handle = $testname;
     debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
+    my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
     my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
+    $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
 
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
     my $collector_port = shift @condor_info;
 
+    $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
     $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_port, 1 );
+    $time = strftime("%y/%m/%d %H:%M:%S", localtime);
+    print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
 
     return($condor_info);
 }
@@ -2350,26 +2356,18 @@ sub CountRunningTests
 	return($count);
 }
 
-sub AddRunningTest
-{
-	my $test = shift;
-	my $runningfile = FindControlFile();
-	my $retRF;
-	my $tmpfile;
-	my $line = "";
-	debug( "Wanting to add <$test> to running tests\n",$debuglevel);
-	runcmd("touch $runningfile/$test");
+sub AddRunningTest {
+    my $test = shift;
+    my $runningfile = FindControlFile();
+    debug( "Adding <$test> to running tests\n",$debuglevel);
+    runcmd("touch $runningfile/$test");
 }
 
-sub RemoveRunningTest
-{
-	my $test = shift;
-	my $runningfile = FindControlFile();
-	my $retRF;
-	my $tmpfile;
-	my $line = "";
-	debug( "Wanting to remove <$test> from running tests\n",$debuglevel);
-	runcmd("rm -f $runningfile/$test");
+sub RemoveRunningTest {
+    my $test = shift;
+    my $runningfile = FindControlFile();
+    debug( "Removing <$test> from running tests\n",$debuglevel);
+    unlink("$runningfile/$test");
 }
 
 sub IsThisWindows

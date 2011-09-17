@@ -22,11 +22,11 @@ if(NOT WIN_EXEC_NODE_ONLY)
 	condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 
 	condor_exe( condor_vm-gahp "${HeaderFiles};${SourceFiles}" ${C_SBIN}
-	"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${LIBVIRT_FOUND};${LIBXML2_FOUND};${COREDUMPER_FOUND};${ZLIB_FOUND}"
+	"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${LIBVIRT_FOUND};${LIBXML2_FOUND};${COREDUMPER_FOUND}"
 	OFF )
 
     if (LINUX AND WANT_FULL_DEPLOYMENT)
-        condor_exe( condor_vm-gahp-vmware "${HeaderFiles};${SourceFiles}" ${C_SBIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND};${ZLIB_FOUND}" OFF )
+        condor_exe( condor_vm-gahp-vmware "${HeaderFiles};${SourceFiles}" ${C_SBIN} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF )
         set_property( TARGET condor_vm-gahp-vmware APPEND PROPERTY COMPILE_DEFINITIONS VMWARE_ONLY)
         install ( FILES condor_vm_vmware.pl DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     endif()

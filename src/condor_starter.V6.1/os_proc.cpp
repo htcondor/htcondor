@@ -104,13 +104,29 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// prepend the full path to this name so that we
 		// don't have to rely on the PATH inside the
 		// USER_JOB_WRAPPER or for exec().
-	if ( strcmp(CONDOR_EXEC,JobName.Value()) == 0 ) {
+
+    bool transfer_exe = false;
+    if (!JobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, transfer_exe)) {
+        transfer_exe = false;
+    }
+
+    bool preserve_rel = false;
+    if (!JobAd->LookupBool(ATTR_PRESERVE_RELATIVE_EXECUTABLE, preserve_rel)) {
+        preserve_rel = false;
+    }
+
+    bool relative_exe = is_relative_to_cwd(JobName.Value());
+
+    if (relative_exe && preserve_rel && !transfer_exe) {
+        dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.Value());
+    }
+	else if ( strcmp(CONDOR_EXEC,JobName.Value()) == 0 ) {
 		JobName.sprintf( "%s%c%s",
 		                 Starter->GetWorkingDir(),
 		                 DIR_DELIM_CHAR,
 		                 CONDOR_EXEC );
-        }
-	else if (is_relative_to_cwd(JobName.Value()) && job_iwd && *job_iwd) {
+    }
+	else if (relative_exe && job_iwd && *job_iwd) {
 		MyString full_name;
 		full_name.sprintf("%s%c%s",
 		                  job_iwd,
@@ -451,6 +467,34 @@ OsProc::StartJob(FamilyInfo* family_info)
     }
 #endif
 
+		// While we are still in user priv, print out the username
+#if defined(LINUX)
+	if( Starter->glexecPrivSepHelper() ) {
+			// TODO: if there is some way to figure out the final username,
+			// print it out here or after starting the job.
+		dprintf(D_ALWAYS,"Running job via glexec\n");
+	}
+#else
+	if( false ) {
+	}
+#endif
+	else {
+		char const *username = NULL;
+		char const *how = "";
+		CondorPrivSepHelper* cpsh = Starter->condorPrivSepHelper();
+		if( cpsh ) {
+			username = cpsh->get_user_name();
+			how = "via privsep switchboard ";
+		}
+		else {
+			username = get_real_username();
+		}
+		if( !username ) {
+			username = "(null)";
+		}
+		dprintf(D_ALWAYS,"Running job %sas user %s\n",how,username);
+	}
+
 	set_priv ( priv );
 
     // use this to return more detailed and reliable error message info
@@ -474,7 +518,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 		                                        1,
 		                                        job_opt_mask,
 		                                        family_info,
-												affinity_mask);
+												affinity_mask,
+												&create_process_err_msg);
 	}
 	else {
 		JobPid = daemonCore->Create_Process( JobName.Value(),
@@ -499,7 +544,6 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.
 	int create_process_errno = errno;
-	char const *create_process_error = NULL;
 
     // errno is 0 in the privsep case.  This executes for the daemon core create-process logic
     if ((FALSE == JobPid) && (0 != create_process_errno)) {
@@ -507,7 +551,6 @@ OsProc::StartJob(FamilyInfo* family_info)
         MyString errbuf;
         errbuf.sprintf("(errno=%d: '%s')", create_process_errno, strerror(create_process_errno));
         create_process_err_msg += errbuf;
-        create_process_error = create_process_err_msg.Value();       
     }
 
 	// now close the descriptors in fds array.  our child has inherited
@@ -525,7 +568,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 	if ( JobPid == FALSE ) {
 		JobPid = -1;
 
-		if(create_process_error) {
+		if(!create_process_err_msg.IsEmpty()) {
 
 			// if the reason Create_Process failed was that registering
 			// a family with the ProcD failed, it is indicative of a
@@ -547,7 +590,7 @@ OsProc::StartJob(FamilyInfo* family_info)
 				err_msg += args_string.Value();
 			}
 			err_msg += ": ";
-			err_msg += create_process_error;
+			err_msg += create_process_err_msg;
 			if( !ThisProcRunsAlongsideMainProc() ) {
 				Starter->jic->notifyStarterError( err_msg.Value(),
 			    	                              true,
@@ -558,11 +601,11 @@ OsProc::StartJob(FamilyInfo* family_info)
 
 		if( !ThisProcRunsAlongsideMainProc() ) {
 			EXCEPT("Create_Process(%s,%s, ...) failed: %s",
-				JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
+				   JobName.Value(), args_string.Value(), create_process_err_msg.Value());
 		}
 		else {
 			dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s",
-				JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
+					JobName.Value(), args_string.Value(), create_process_err_msg.Value());
 		}
 		return 0;
 	}

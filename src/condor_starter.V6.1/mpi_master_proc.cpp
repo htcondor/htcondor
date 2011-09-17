@@ -23,7 +23,7 @@
 #include "NTsenders.h"
 #include "condor_attributes.h"
 #include "condor_string.h"  // for strnewp
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "env.h"
 
 extern void main_shutdown_graceful();
@@ -236,7 +236,7 @@ MPIMasterProc::preparePortFile( void )
 
 		// For this stuff to work, we've got to create the file and
 		// have it be 0 bytes.
-	fd = safe_open_wrapper( port_file, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+	fd = safe_open_wrapper_follow( port_file, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
 	if( fd < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: Can't create port file (%s)\n",
 				 port_file );
@@ -288,7 +288,7 @@ MPIMasterProc::checkPortFile( void )
 		EXCEPT( "checkPortFile(): no port_file defined!" );
 	}
 
-	fp = safe_fopen_wrapper( port_file, "r" );
+	fp = safe_fopen_wrapper_follow( port_file, "r" );
 	if( fp ) {
 			// check if there's anything there...
 		rval = fgets( buf, 100, fp );
@@ -304,7 +304,7 @@ MPIMasterProc::checkPortFile( void )
 				// syscall to tell the shadow.  First, create the
 				// string we need and stuff it in a ClassAd 
 			sprintf( buf, "%s=\"%s:%d\"", ATTR_MPI_MASTER_ADDR, 
-					 inet_ntoa(*(my_sin_addr())), port );
+					 get_local_ipaddr().to_ip_string().Value(), port );
 			ClassAd ad;
 			ad.Insert( buf );
 

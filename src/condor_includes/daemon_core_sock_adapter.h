@@ -36,7 +36,7 @@ class DaemonCoreSockAdapterClass {
 	typedef int (DaemonCore::*Register_Socket_fnptr)(Stream*,const char*,SocketHandlercpp,const char*,Service*,DCpermission);
 	typedef int (DaemonCore::*Cancel_Socket_fnptr)( Stream *sock );
 	typedef void (DaemonCore::*CallSocketHandler_fnptr)( Stream *sock, bool default_to_HandleCommand );
-	typedef int (DaemonCore::*CallCommandHandler_fnptr)( int cmd, Stream *stream, bool delete_stream);
+	typedef int (DaemonCore::*CallCommandHandler_fnptr)( int cmd, Stream *stream, bool delete_stream, bool check_payload, float time_spent_on_sec, float time_spent_waiting_for_payload);
 	typedef void (DaemonCore::*HandleReqAsync_fnptr)(Stream *stream);
     typedef int (DaemonCore::*Register_DataPtr_fnptr)( void *data );
     typedef void *(DaemonCore::*GetDataPtr_fnptr)();
@@ -56,7 +56,8 @@ class DaemonCoreSockAdapterClass {
 		Service *       s,
 		DCpermission    perm,
 		int             dprintf_flag,
-		bool            force_authentication);
+		bool            force_authentication,
+		int             wait_for_payload);
 	typedef void (DaemonCore::*daemonContactInfoChanged_fnptr)();
 
 
@@ -164,10 +165,10 @@ class DaemonCoreSockAdapterClass {
 		(m_daemonCore->*m_CallSocketHandler_fnptr)(stream,default_to_HandleCommand);
 	}
 
-	int CallCommandHandler( int cmd, Stream *stream, bool delete_stream=true )
+	int CallCommandHandler( int cmd, Stream *stream, bool delete_stream=true, bool check_payload=true, float time_spent_on_sec=0, float time_spent_waiting_for_payload=0 )
 	{
 		ASSERT(m_daemonCore);
-		return (m_daemonCore->*m_CallCommandHandler_fnptr)(cmd,stream,delete_stream);
+		return (m_daemonCore->*m_CallCommandHandler_fnptr)(cmd,stream,delete_stream,check_payload,time_spent_on_sec,time_spent_waiting_for_payload);
 	}
 
 	void HandleReqAsync(Stream *stream)
@@ -251,10 +252,11 @@ class DaemonCoreSockAdapterClass {
                           Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
                           int             dprintf_flag     = D_COMMAND,
-						  bool            force_authentication = false)
+						  bool            force_authentication = false,
+						  int             wait_for_payload = 0)
 	{
 		ASSERT(m_daemonCore);
-		return (m_daemonCore->*m_Register_Command_fnptr)(command,com_descrip,handler,handler_descrip,s,perm,dprintf_flag,force_authentication);
+		return (m_daemonCore->*m_Register_Command_fnptr)(command,com_descrip,handler,handler_descrip,s,perm,dprintf_flag,force_authentication,wait_for_payload);
 	}
 
 	void daemonContactInfoChanged() {

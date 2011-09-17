@@ -113,6 +113,7 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "condor_email.h"
 
 #include "valgrind.h"
+#include "ipv6_hostname.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -252,6 +253,9 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	{
 		EXCEPT("Invalid argument(s) for DaemonCore constructor");
 	}
+
+    dc_stats.Init(); // initilize statistics.
+    dc_stats.SetWindowSize(20*60);
 
 		// Provide cedar sock with pointers to various daemonCore functions
 		// that cannot be directly referenced in cedar, because it
@@ -409,7 +413,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
-    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 4);
+    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 8);
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
@@ -638,21 +642,23 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
  ********************************************************/
 int	DaemonCore::Register_Command(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip, Service* s,
-				DCpermission perm, int dprintf_flag, bool force_authentication)
+				DCpermission perm, int dprintf_flag, bool force_authentication,
+				int wait_for_payload)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, s,
-							 perm, dprintf_flag, FALSE, force_authentication) );
+							 perm, dprintf_flag, FALSE, force_authentication,
+							 wait_for_payload) );
 }
 
 int	DaemonCore::Register_Command(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
 				Service* s, DCpermission perm, int dprintf_flag,
-				bool force_authentication)
+				bool force_authentication, int wait_for_payload)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
 							 handler_descrip, s, perm, dprintf_flag, TRUE,
-							 force_authentication) );
+							 force_authentication, wait_for_payload) );
 }
 
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
@@ -722,7 +728,7 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 #if !defined(WIN32)
 	if (fd == -1) {
 		// TODO If num_fds>1, should we call open() multiple times?
-		fd = safe_open_wrapper( NULL_FILE, O_RDONLY );
+		fd = safe_open_wrapper_follow( NULL_FILE, O_RDONLY );
 		if ( fd >= 0 ) {
 			close( fd );
 		}
@@ -916,7 +922,8 @@ bool DaemonCore::GetTimerTimeslice( int id, Timeslice &timeslice )
 int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
-				int dprintf_flag, int is_cpp, bool force_authentication)
+				int dprintf_flag, int is_cpp, bool force_authentication,
+				int wait_for_payload)
 {
     int     i;		// hash value
     int     j;		// for linear probing
@@ -966,6 +973,7 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].service = s;
 	comTable[i].data_ptr = NULL;
 	comTable[i].dprintf_flag = dprintf_flag;
+	comTable[i].wait_for_payload = wait_for_payload;
 	free(comTable[i].command_descrip);
 	if ( command_descrip )
 		comTable[i].command_descrip = strdup(command_descrip);
@@ -1270,6 +1278,8 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		return -1;
     }
 
+    dc_stats.New("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+
 	// Semantics dictate that certain signals CANNOT be caught!
 	// In addition, allow SIGCHLD to be automatically replaced (for backwards
 	// compatibility), so cancel any previous registration for SIGCHLD.
@@ -1445,6 +1455,11 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
         DumpSocketTable( D_ALWAYS );
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
+
+    dc_stats.New("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+    //if (iosock_descrip && iosock_descrip[0] && ! strcmp(handler_descrip, "DC Command Handler"))
+    //   dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+
 
 	// Verify that this socket has not already been registered
 	// Since we are scanning the entire table to do this (change this someday to a hash!),
@@ -1893,6 +1908,8 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 			EXCEPT("DaemonCore: Same pipe registered twice");
         }
 	}
+
+    dc_stats.New("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 	// Found a blank entry at index i. Now add in the new data.
 	(*pipeTable)[i].pentry = NULL;
@@ -2637,6 +2654,9 @@ DaemonCore::reconfig(void) {
 	// A few configuration parameters control its behavior.
 	ClassAd::Reconfig();
 
+    // publication and window size of daemon core stats are controlled by params
+    dc_stats.Reconfig();
+
 	m_dirty_sinful = true; // refresh our address in case config changes it
 
 	SecMan *secman = getSecMan();
@@ -2664,7 +2684,7 @@ DaemonCore::reconfig(void) {
 	// Default is 10k (10*1024 bytes)
 	maxPipeBuffer = param_integer("PIPE_BUFFER_MAX", 10240);
 
-    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 4);
+    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 8);
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
@@ -2882,7 +2902,7 @@ DaemonCore::ReloadSharedPortServerAddr()
 }
 
 int
-DaemonCore::Verify(char const *command_descrip,DCpermission perm, const struct sockaddr_in *sin, const char * fqu )
+DaemonCore::Verify(char const *command_descrip,DCpermission perm, const condor_sockaddr& addr, const char * fqu )
 {
 	MyString deny_reason; // always get 'deny' reason, if there is one
 	MyString *allow_reason = NULL;
@@ -2892,14 +2912,15 @@ DaemonCore::Verify(char const *command_descrip,DCpermission perm, const struct s
 		allow_reason = &allow_reason_buf;
 	}
 
-	int result = getSecMan()->Verify(perm, sin, fqu, allow_reason, &deny_reason);
+	int result = getSecMan()->Verify(perm, addr, fqu, allow_reason, &deny_reason);
 
 	MyString *reason = result ? allow_reason : &deny_reason;
 	char const *result_desc = result ? "GRANTED" : "DENIED";
 
 	if( reason ) {
 		char ipstr[IP_STRING_BUF_SIZE];
-		sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
+		addr.to_ip_string(ipstr, sizeof(ipstr));
+	//sin_to_ipstring(sin,ipstr,IP_STRING_BUF_SIZE);
 
 			// Note that although this says D_ALWAYS, when the result is
 			// ALLOW, we only get here if D_SECURITY is on.
@@ -3035,6 +3056,9 @@ void DaemonCore::Driver()
 
 	for(;;)
 	{
+        double runtime = UtcTime::getTimeDouble();
+        double group_runtime = runtime;
+
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
 			for (i=0;i<maxSig;i++) {
@@ -3045,6 +3069,9 @@ void DaemonCore::Driver()
 						sigTable[i].is_pending = 0;
 						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &(sigTable[i].data_ptr);
+                        // update statistics
+                        dc_stats.Signals += 1;
+
 						// log a message
 						dprintf(D_DAEMONCORE,
 										"Calling Handler <%s> for Signal %d <%s>\n",
@@ -3059,6 +3086,9 @@ void DaemonCore::Driver()
 						curr_dataptr = NULL;
 						// Make sure we didn't leak our priv state
 						CheckPrivState();
+
+                        // update per-timer runtime and count statistics
+                        runtime = dc_stats.AddRuntime(sigTable[i].handler_descrip, runtime);
 					}
 				}
 			}
@@ -3075,6 +3105,11 @@ void DaemonCore::Driver()
 		// windows version of this code is after selector.execute()
 #endif
 
+        // accumulate signal runtime (including timers) as SignalRuntime
+        runtime = UtcTime::getTimeDouble();
+        dc_stats.SignalRuntime += (runtime - group_runtime);
+        group_runtime = runtime;
+
 		// Prepare to enter main select()
 
 		// call Timeout() - this function does 2 things:
@@ -3088,7 +3123,10 @@ void DaemonCore::Driver()
 		//   and service this outstanding signal and yet we do not
 		//   starve commands...
 
-			timeout = t.Timeout();
+        int num_timers_fired = 0;
+		timeout = t.Timeout(&num_timers_fired, &runtime);
+
+        dc_stats.TimersFired += num_timers_fired;
 
 		if ( sent_signal == TRUE ) {
 			timeout = 0;
@@ -3096,6 +3134,11 @@ void DaemonCore::Driver()
 		if ( timeout < 0 ) {
 			timeout = TIME_T_NEVER;
 		}
+
+        // accumulate signal runtime (including timers) as SignalRuntime
+        //runtime = UtcTime::getTimeDouble();
+        dc_stats.TimerRuntime += (runtime - group_runtime);
+        group_runtime = runtime;
 
 		// Setup what socket descriptors to select on.  We recompute this
 		// every time because 1) some timeout handler may have removed/added
@@ -3218,6 +3261,12 @@ void DaemonCore::Driver()
 
 		selector.execute();
 
+        // update statistics on time spent waiting in select.
+        runtime = UtcTime::getTimeDouble();
+        dc_stats.SelectWaittime += (runtime - group_runtime);
+        group_runtime = runtime;
+        //dc_stats.StatsLifetime = now - dc_stats.InitTime;
+
 		tmpErrno = errno;
 
 		CheckForTimeSkip(time_before, okay_delta);
@@ -3254,6 +3303,7 @@ void DaemonCore::Driver()
 		// in the signalled state in 7.5.5. 
 		if (selector.has_ready() &&
 			selector.fd_ready(async_pipe[0].get_file_desc(), Selector::IO_READ)) {
+            dc_stats.AsyncPipe += 1;
 			if ( ! async_pipe_signal) {
 				dprintf(D_ALWAYS, "DaemonCore: async_pipe is signalled, but async_pipe_signal is false.");
 			}
@@ -3285,6 +3335,8 @@ void DaemonCore::Driver()
 		// For now, do not let other threads run while we are processing
 		// in the main loop.
 		CondorThreads::enable_parallel(false);
+
+        runtime = group_runtime = UtcTime::getTimeDouble();
 
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
@@ -3347,6 +3399,10 @@ void DaemonCore::Driver()
 				}	// end of if valid sock entry
 			}	// end of for loop through all sock entries
 
+            runtime = UtcTime::getTimeDouble();
+            dc_stats.SocketRuntime += (runtime - group_runtime);
+            group_runtime = runtime;
+
 			// scan through the pipe table to find which ones select() set
 			for(i = 0; i < nPipe; i++) {
 				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
@@ -3377,12 +3433,15 @@ void DaemonCore::Driver()
 
 
 			// Now loop through all pipe entries, calling handlers if required.
+            runtime = UtcTime::getTimeDouble();
 			for(i = 0; i < nPipe; i++) {
 				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
 
 					if ( (*pipeTable)[i].call_handler ) {
 
 						(*pipeTable)[i].call_handler = false;
+
+                        dc_stats.PipeMessages += 1;
 
 						// save the pentry on the stack, since we'd otherwise lose it
 						// if the user's handler call Cancel_Pipe().
@@ -3467,6 +3526,9 @@ void DaemonCore::Driver()
 						}
 #endif
 
+                        // update per-handler runtime statistics
+                        runtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, runtime);
+
 						if ( (*pipeTable)[i].call_handler == true ) {
 							// looks like the handler called Cancel_Pipe(),
 							// and now entry i no longer points to what we
@@ -3480,6 +3542,10 @@ void DaemonCore::Driver()
 			}	// for 0 thru nPipe checking if call_handler is true
 
 
+            runtime = UtcTime::getTimeDouble();
+            dc_stats.PipeRuntime += (runtime - group_runtime);
+            group_runtime = runtime;
+
 			// Now loop through all sock entries, calling handlers if required.
 			for(i = 0; i < nSock; i++) {
 				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
@@ -3487,6 +3553,8 @@ void DaemonCore::Driver()
 					if ( (*sockTable)[i].call_handler ) {
 
 						(*sockTable)[i].call_handler = false;
+
+                        dc_stats.SockMessages += 1;
 
 						if ( recheck_status &&
 							 ((*sockTable)[i].is_connect_pending == false) )
@@ -3530,9 +3598,16 @@ void DaemonCore::Driver()
 						recheck_status = true;
 						CallSocketHandler( i, true );
 
+                        // update per-handler runtime statistics
+                        runtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, runtime);
+
 					}	// if call_handler is True
 				}	// if valid entry in sockTable
 			}	// for 0 thru nSock checking if call_handler is true
+
+            runtime = UtcTime::getTimeDouble();
+            dc_stats.SocketRuntime += (runtime - group_runtime);
+            group_runtime = runtime;
 
 		}	// if rv > 0
 
@@ -3678,23 +3753,23 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 
 		// log a message
 	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
-	{
-		dprintf(D_DAEMONCORE,
-				"Calling Handler <%s> for Socket <%s>\n",
-				(*sockTable)[i].handler_descrip,
-				(*sockTable)[i].iosock_descrip);
-		handlerName = strdup((*sockTable)[i].handler_descrip);
-		dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
+		{
+			dprintf(D_DAEMONCORE,
+					"Calling Handler <%s> for Socket <%s>\n",
+					(*sockTable)[i].handler_descrip,
+					(*sockTable)[i].iosock_descrip);
+			handlerName = strdup((*sockTable)[i].handler_descrip);
+			dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
 
 		UtcTime handler_start_time;
 		handler_start_time.getTime();
 
-		if ( (*sockTable)[i].handler ) {
-				// a C handler
-			result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
-		} else if ( (*sockTable)[i].handlercpp ) {
-				// a C++ handler
-			result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
+	if ( (*sockTable)[i].handler ) {
+			// a C handler
+		result = (*( (*sockTable)[i].handler))( (*sockTable)[i].service, (*sockTable)[i].iosock);
+	} else if ( (*sockTable)[i].handlercpp ) {
+			// a C++ handler
+		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
 		}
 
 		UtcTime handler_stop_time;
@@ -3772,14 +3847,127 @@ DaemonCore::CommandNumToTableIndex(int cmd,int *cmd_index)
 	return false;
 }
 
+struct CallCommandHandlerInfo {
+	CallCommandHandlerInfo(int req,time_t deadline,float time_spent_on_sec):
+		m_req(req),
+		m_deadline(deadline),
+		m_time_spent_on_sec(time_spent_on_sec)
+	{
+		m_start_time.getTime();
+	}
+	int m_req;
+	time_t m_deadline;
+	float m_time_spent_on_sec;
+	UtcTime m_start_time;
+};
+
 int
-DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream)
+DaemonCore::HandleReqPayloadReady(Stream *stream)
+{
+		// The command payload has arrived or the deadline has
+		// expired.
+	int result = FALSE;
+	CallCommandHandlerInfo *callback_info = (CallCommandHandlerInfo *)GetDataPtr();
+	int req = callback_info->m_req;
+	time_t orig_deadline = callback_info->m_deadline;
+	float time_spent_on_sec = callback_info->m_time_spent_on_sec;
+	UtcTime now;
+	now.getTime();
+	float time_waiting_for_payload = now.difference(callback_info->m_start_time);
+
+	delete callback_info;
+
+	Cancel_Socket( stream );
+
+	int index = 0;
+	bool reqFound = CommandNumToTableIndex(req,&index);
+
+	if( !reqFound ) {
+		dprintf(D_ALWAYS,
+				"Command %d from %s is no longer recognized!\n",
+				req,stream->peer_description());
+		goto wrapup;
+	}
+
+	if( stream->deadline_expired() ) {
+		dprintf(D_ALWAYS,
+				"Deadline expired after %.3fs waiting for %s "
+				"to send payload for command %d %s.\n",
+				time_waiting_for_payload,stream->peer_description(),
+				req,comTable[index].command_descrip);
+		goto wrapup;
+	}
+
+	stream->set_deadline( orig_deadline );
+
+	result = CallCommandHandler(req,stream,false,false,time_spent_on_sec,time_waiting_for_payload);
+
+ wrapup:
+	if( result != KEEP_STREAM ) {
+		delete stream;
+		result = KEEP_STREAM;
+	}
+	return result;
+}
+
+int
+DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream,bool check_payload,float time_spent_on_sec,float time_spent_waiting_for_payload)
 {
 	int result = FALSE;
 	int index = 0;
 	bool reqFound = CommandNumToTableIndex(req,&index);
+	char const *user = NULL;
+	Sock *sock = (Sock *)stream;
 
 	if ( reqFound ) {
+
+		if( stream  && stream->type() == Stream::reli_sock && \
+			comTable[index].wait_for_payload > 0 && check_payload )
+		{
+			if( !sock->readReady() ) {
+				if( sock->deadline_expired() ) {
+					dprintf(D_ALWAYS,"The payload has not arrived for command %d from %s, but the deadline has expired, so continuing to the command handler.\n",req,stream->peer_description());
+				}
+				else {
+					time_t old_deadline = sock->get_deadline();
+					sock->set_deadline_timeout(comTable[index].wait_for_payload);
+
+					char callback_desc[50];
+					snprintf(callback_desc,50,"Waiting for command %d payload",req);
+					int rc = Register_Socket(
+						stream,
+						callback_desc,
+						(SocketHandlercpp) &DaemonCore::HandleReqPayloadReady,
+						"DaemonCore::HandleReqPayloadReady",
+						this);
+					if( rc >= 0 ) {
+						CallCommandHandlerInfo *callback_info = new CallCommandHandlerInfo(req,old_deadline,time_spent_on_sec);
+						Register_DataPtr((void *)callback_info);
+						return KEEP_STREAM;
+					}
+
+					dprintf(D_ALWAYS,"Failed to register callback to wait for command %d payload from %s.\n",req,stream->peer_description());
+					sock->set_deadline( old_deadline );
+						// just call the command handler
+				}
+			}
+		}
+
+		user = sock->getFullyQualifiedUser();
+		if( !user ) {
+			user = "";
+		}
+		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d) for command %d (%s) from %s %s\n",
+				comTable[index].handler_descrip,
+				inServiceCommandSocket_flag,
+				req,
+				comTable[index].command_descrip,
+				user,
+				stream->peer_description());
+
+		UtcTime handler_start_time;
+		handler_start_time.getTime();
+
 		// call the handler function; first curr_dataptr for GetDataPtr()
 		curr_dataptr = &(comTable[index].data_ptr);
 
@@ -3795,6 +3983,13 @@ DaemonCore::CallCommandHandler(int req,Stream *stream,bool delete_stream)
 
 		// clear curr_dataptr
 		curr_dataptr = NULL;
+
+		UtcTime handler_stop_time;
+		handler_stop_time.getTime();
+		float handler_time = handler_stop_time.difference(&handler_start_time);
+
+		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs, payload: %.3fs)\n", comTable[index].handler_descrip, handler_time, time_spent_on_sec, time_spent_waiting_for_payload );
+
 	}
 
 	if ( delete_stream && result != KEEP_STREAM ) {
@@ -3908,7 +4103,7 @@ int DaemonCore::HandleReqSocketTimerHandler()
 		
 		// and blow it away
 	dprintf(D_ALWAYS,"Closing socket from %s - no data received\n",
-			sin_to_string(((Sock*)stream)->peer_addr()));
+			((Sock*)stream)->peer_addr().to_sinful().Value());
 	delete stream;
 
 	return TRUE;
@@ -4457,6 +4652,15 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		if (!reqFound) {
 			// we have no idea what command they want to send.
 			// too bad, bye bye
+
+			dprintf(D_ALWAYS,
+					"Received %s command (%d) (%s) from %s %s\n",
+					(is_tcp) ? "TCP" : "UDP",
+					tmp_cmd,
+					"UNREGISTERED COMMAND!",
+					user.Value(),
+					sock->peer_description());
+
 			result = FALSE;
 			goto finalize;
 		}
@@ -4625,7 +4829,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 
 					// generate a unique ID.
 					MyString tmpStr;
-					tmpStr.sprintf( "%s:%i:%i:%i", my_hostname(), mypid,
+					tmpStr.sprintf( "%s:%i:%i:%i", 
+									get_local_hostname().Value(), mypid,
 							 (int)time(0), ZZZ_always_increase() );
 					assert (the_sid == NULL);
 					the_sid = strdup(tmpStr.Value());
@@ -5197,20 +5402,11 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		// Handlers should start out w/ parallel mode disabled by default
 		ScopedEnableParallel(false);
 
-		dprintf(D_COMMAND, "Calling HandleReq <%s> (%d)\n", comTable[index].handler_descrip, inServiceCommandSocket_flag);
-
 		UtcTime handler_start_time;
 		handler_start_time.getTime();
-
-		result = CallCommandHandler(req,sock,false /*do not delete sock*/);
-
-		UtcTime handler_stop_time;
-		handler_stop_time.getTime();
-		float handler_time = handler_stop_time.difference(&handler_start_time);
 		float sec_time = handler_start_time.difference(&handle_req_start_time);
 
-		dprintf(D_COMMAND, "Return from HandleReq <%s> (handler: %.3fs, sec: %.3fs)\n", comTable[index].handler_descrip, handler_time, sec_time);
-
+		result = CallCommandHandler(req,sock,false /*do not delete sock*/,true /*do check for payload*/,sec_time,0);
 	}
 
 finalize:
@@ -6840,7 +7036,7 @@ void CreateProcessForkit::exec() {
 
 			// Re-open 'em to point at /dev/null as place holders
 		if ( num_closed ) {
-			int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
+			int	fd_null = safe_open_wrapper_follow( NULL_FILE, O_RDWR );
 			if ( fd_null < 0 ) {
 				dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE,
 						 strerror(errno) );
@@ -7558,16 +7754,20 @@ int DaemonCore::Create_Process(
 	// Check if it's a 16-bit application
 	bIs16Bit = false;
 	LOADED_IMAGE loaded;
+	BOOL map_and_load_result;
 	// NOTE (not in MSDN docs): Even when this function fails it still
 	// may have "failed" with LastError = "operation completed successfully"
 	// and still filled in our structure.  It also might really have
 	// failed.  So we init the part of the structure we care about and just
-	// ignore the return value.
+	// ignore the return value for purposes of setting bIs16Bit - we still
+	// must honor the return value for purposes of calling UnMapAndLoad() or
+	// else risk an access violation upon unmapping.
 	loaded.fDOSImage = FALSE;
-	MapAndLoad((char *)executable, NULL, &loaded, FALSE, TRUE);
+	map_and_load_result = MapAndLoad((char *)executable, NULL, &loaded, FALSE, TRUE);
 	if (loaded.fDOSImage == TRUE)
 		bIs16Bit = true;
-	UnMapAndLoad(&loaded);
+	if (map_and_load_result)
+		UnMapAndLoad(&loaded);
 
 	// Define a some short-hand variables for use bellow
 	namelen				= strlen(executable);
@@ -8880,7 +9080,7 @@ DaemonCore::Inherit( void )
 					inheritedSocks[numInheritedSocks++] = (Stream *)dc_ssock;
 					break;
 				default:
-					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks");
+					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks, not %c (%d)", *ptmp, (int)*ptmp);
 					break;
 			} // end of switch
 			ptmp=inherit_list.next();
@@ -8939,7 +9139,7 @@ DaemonCore::Inherit( void )
 	if(!privTmp)
 	{
 		return;
-	}
+		}
 
 	StringList private_list(privTmp, " ");
 	UnsetEnv( privEnvName );
@@ -9088,10 +9288,11 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// is misconfigured [to preempt RUST like rust-admin #2915]
 
 	if( dc_rsock ) {
-		const unsigned int my_ip = dc_rsock->get_ip_int();
-		const unsigned int loopback_ip = ntohl( INADDR_LOOPBACK );
+			//const unsigned int my_ip = dc_rsock->get_ip_int();
+			//const unsigned int loopback_ip = ntohl( INADDR_LOOPBACK );
 
-		if( my_ip == loopback_ip ) {
+			//if( my_ip == loopback_ip ) {
+		if ( dc_rsock->my_addr().is_loopback() ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
 			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
 		}
@@ -9849,7 +10050,7 @@ int DaemonCore::HungChildTimeout()
 		first_time = false;
 	}
 	else {
-		pidentry->was_not_responding = TRUE;
+	pidentry->was_not_responding = TRUE;
 	}
 
 	// now we give the child one last chance to save itself.  we do this by
@@ -9940,6 +10141,19 @@ int DaemonCore::SendAliveToParent()
 		return FALSE;
 	}
 
+		/* Don't have the CGAHP and/or DAGMAN, which are launched as the user,
+		   attempt to send keep alives to daemon. Permissions are not likely to
+		   allow user proccesses to send signals to Condor daemons. 
+		   Note that we shouldn't have to check for DAGMan here as no
+		   daemon core info should have been inherited down to DAGMan, 
+		   but it doesn't hurt to be sure here since we already need
+		   to check for the CGAHP. */
+	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_GAHP) ||
+	  	get_mySubSystem()->isType(SUBSYSTEM_TYPE_DAGMAN))
+	{
+		return FALSE;
+	}
+
 		/* Before we possibly block trying to send this alive message to our 
 		   parent, lets see if this parent pid (ppid) exists on this system.
 		   This protects, for instance, against us acting a bogus CONDOR_INHERIT
@@ -9988,25 +10202,25 @@ int DaemonCore::SendAliveToParent()
 	int timeout = m_child_alive_period / number_of_tries;
 	if( timeout < 60 ) {
 		timeout = 60;
-	}
+		}
 	msg->setDeadlineTimeout( timeout );
 	msg->setTimeout( timeout );
 
 	if( blocking || !d->hasUDPCommandPort() || !m_wants_dc_udp ) {
 		msg->setStreamType( Stream::reli_sock );
-	}
+			}
 	else {
 		msg->setStreamType( Stream::safe_sock );
-	}
+		}
 
 	if( blocking ) {
 		d->sendBlockingMsg( msg.get() );
 		ret_val = msg->deliveryStatus() == DCMsg::DELIVERY_SUCCEEDED;
-	}
+			}
 	else {
 		d->sendMsg( msg.get() );
 		ret_val = TRUE;
-	}
+		}
 
 	if ( first_time ) {
 		first_time = false;
@@ -10469,7 +10683,7 @@ DaemonCore::InitSettableAttrsLists( void )
 		if( SettableAttrsLists[i] ) {
 			tmp = (SettableAttrsLists[i])->print_to_string();
 			dprintf( D_ALWAYS, "SettableAttrList[%s]: %s\n",
-					 PermString((DCpermission)i), tmp );
+					 PermString((DCpermission)i), tmp?tmp:"" );
 			free( tmp );
 		}
 	}
@@ -10721,7 +10935,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
     if( fname ) {
 		MyString newLocalAdFile;
 		newLocalAdFile.sprintf("%s.new",fname);
-        if( (AD_FILE = safe_fopen_wrapper(newLocalAdFile.Value(), "w")) ) {
+        if( (AD_FILE = safe_fopen_wrapper_follow(newLocalAdFile.Value(), "w")) ) {
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );
 			if( rotate_file(newLocalAdFile.Value(),fname)!=0 ) {
@@ -10763,7 +10977,7 @@ DaemonCore::publish(ClassAd *ad) {
 	ad->Assign(ATTR_MY_CURRENT_TIME, (int)time(NULL));
 
 		// Every daemon wants ATTR_MACHINE to be the full hostname:
-	ad->Assign(ATTR_MACHINE, my_full_hostname());
+	ad->Assign(ATTR_MACHINE, get_local_fqdn().Value());
 
 		// Publish our network identification attributes:
 	tmp = privateNetworkName();

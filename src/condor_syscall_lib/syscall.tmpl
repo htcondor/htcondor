@@ -54,6 +54,14 @@
   generate correct switches, senders, and receivers.  Each type of
   augmenting information is described here:
 
+  : hidden_ptr
+	  Sometimes the return value of a system call is actually a pointer,
+	  but hidden in a system type. caddr_t is an example. So, for 
+	  syscalls which return pointers types that aren't identified via
+	  <type> * constructs, we must label the call with a 'hidden_ptr'
+	  option so the stub generator knows how to check the return value of
+	  the syscall for validity.
+
   : extract
 	  Some system calls cannot be successfully executed by the syscall()
 	  routine.  This is generally becuase syscall() expects that every
@@ -363,7 +371,7 @@ All of these calls manipulate the open file table.
 	      at least 32 bit offsets work now. :) 
 	      Derek Wright <wright@cs.wisc.edu> 2/4/00
 	   */
-#		if defined(GLIBC22) || defined(GLIBC23) || defined (GLIBC24) || defined(GLIBC25) || defined(GLIBC27)
+#		if defined(GLIBC22) || defined(GLIBC23) || defined (GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) 
 			off64_t llseek( int fd, off64_t offset, int whence )
 				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
 				local_name(lseek);
@@ -490,7 +498,7 @@ version.
 	Most of the switches are special.
 	*/
 
-#	if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27))
+#	if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212))
 #		define STAT_NEEDS_SPECIAL_SWITCH
 #	endif
 
@@ -652,14 +660,14 @@ version.
 
 #	if !defined(SWITCH)
 
-		int lseekread( int fd, off_t offset, int whence, void *buf, size_t len )
+		off_t lseekread( int fd, off_t offset, int whence, void *buf, size_t len )
 			: pseudo
 		{
 			out code_bytes_bool( buf, len );
 			alloc( buf, len );
 		}
 
-		int lseekwrite( int fd, off_t offset, int whence, const void *buf, size_t len )
+		off_t lseekwrite( int fd, off_t offset, int whence, const void *buf, size_t len )
 			: pseudo
 		{
 			in code_bytes_bool( buf, len );
@@ -799,7 +807,7 @@ report an error if reside on different devices.
 	}
 
 
-#if	defined(LINUX) && (defined(GLIBC25) || defined(GLIBC27))
+#if	defined(LINUX) && (defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212))
 	ssize_t readlink( map_name(const char *path), char *buf, size_t buf_size ) {
 #else
 	int readlink( map_name(const char *path), char *buf, size_t buf_size ) {
@@ -884,7 +892,15 @@ either file names or file descriptors.
 #endif /* REMOTE_SYSCALLS and not CLIP */
 
 #	if !defined(SWITCH)
-		char * getwd( char *&path_name ) : pseudo {
+		/* We only define a sender/receiver pair for getwd(). This is so
+			we can deal with the path variable properly in the remote i/o
+			stubs without also having to mess with the char * return
+			parameter of getwd(). The special hand written switch for 
+			getwd() will deal with the correct return type of getwd().
+		*/
+		int getwd_special( char *&path_name ) : pseudo, 
+			also_implements(getwd) 
+		{
 			GET_PATH( path_name );
 			ALLOC_PATH( path_name );
 		}
@@ -945,7 +961,7 @@ They are not needed for remote I/O or for the condor daemons.
 	int getpagesize();
 
 	int getgroups( int gidsetsize, gid_t grouplist[] ) 
-#if defined(LINUX) && (defined(GLIBC25) || defined(GLIBC27)) && defined(I386)
+#if defined(LINUX) && (defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)) && defined(I386)
 	/* I'm not sure why, but SYS_getgroups32 seems to be in fashion for this
 		glibc revision in the i386. The normal SYS_getgroups just returns
 		garbage... */
@@ -1456,8 +1472,8 @@ not_supported {
 		int swapon( const char *path, int swapflags );
 		int swapoff( const char *path );
 		int bdflush( int func, long data );
-		caddr_t create_module( const char* name, size_t size );
-		caddr_t delete_module( const char* name ); 
+		caddr_t create_module( const char* name, size_t size ) : hidden_ptr;
+		caddr_t delete_module( const char* name ) : hidden_ptr; 
 		int init_module( const char* name, struct module* image ); 
 		int iopl( int level );
 		void idle();
@@ -1487,7 +1503,7 @@ not_supported {
 not_supported {
 	pid_t fork() : EXTRACT;
 #	if defined(LINUX)
-#		if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27)
+#		if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
 			/* XXX the stub generator doesn't understand function prototypes */
 /*			pid_t clone(int (*)(void*), void *sp, int *, void *);*/
 #		else

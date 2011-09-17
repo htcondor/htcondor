@@ -38,6 +38,8 @@ MachAttributes::MachAttributes()
 
 	m_arch = NULL;
 	m_opsys = NULL;
+	m_opsysver = 0;
+	m_opsys_and_ver = NULL;
 	m_uid_domain = NULL;
 	m_filesystem_domain = NULL;
 	m_idle_interval = -1;
@@ -108,6 +110,7 @@ MachAttributes::~MachAttributes()
 {
 	if( m_arch ) free( m_arch );
 	if( m_opsys ) free( m_opsys );
+	if( m_opsys_and_ver ) free( m_opsys_and_ver );
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_ckptpltfrm ) free( m_ckptpltfrm );
@@ -319,6 +322,12 @@ MachAttributes::compute( amask_t how_much )
 			free( m_opsys );
 		}
 		m_opsys = param( "OPSYS" );
+		m_opsysver = param_integer( "OPSYSVER", 0 );
+
+		if( m_opsys_and_ver ) {
+			free( m_opsys_and_ver );
+		}
+		m_opsys_and_ver = param( "OPSYS_AND_VER" );
 
 		if( m_uid_domain ) {
 			free( m_uid_domain );
@@ -438,6 +447,10 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
         cp->Assign( ATTR_ARCH, m_arch );
 
 		cp->Assign( ATTR_OPSYS, m_opsys );
+        if (m_opsysver) {
+			cp->Assign( ATTR_OPSYSVER, m_opsysver );
+        }
+		cp->Assign( ATTR_OPSYS_AND_VER, m_opsys_and_ver );
 
 		cp->Assign( ATTR_UID_DOMAIN, m_uid_domain );
 
@@ -625,12 +638,20 @@ MachAttributes::start_benchmarks( Resource* rip, int &count )
 	}
 
 	ASSERT( bench_job_mgr != NULL );
-	bench_job_mgr->StartBenchmarks( rip, count );
 
-	// Enter benchmarking activity
-	if ( count ) {
-		rip->change_state( benchmarking_act );
+	// Enter benchmarking activity BEFORE invoking StartBenchmarks().
+	// If StartBenchmarks() will return to idle activity upon failure
+	// to launch benchmarks, or upon completion of benchmarks 
+	// (in the reaper).
+	rip->change_state( benchmarking_act );
+	bench_job_mgr->StartBenchmarks( rip, count );
+	// However, if StartBenchmarks set count to zero, that means
+	// there are no benchmarks configured to run now. So set the activity
+	// back to idle.
+	if ( count == 0 ) {
+		rip->change_state( idle_act );
 	}
+
 }
 
 void

@@ -86,6 +86,9 @@ static bool parse_reject(Dag  *dag, const char *filename,
 		int  lineNumber);
 static bool parse_jobstate_log(Dag  *dag, const char *filename,
 		int  lineNumber);
+static bool parse_pre_skip(Dag *dag, const char* filename,
+		int lineNumber);
+static bool parse_done(Dag  *dag, const char *filename, int  lineNumber);
 static MyString munge_job_name(const char *jobName);
 
 static MyString current_splice_scope(void);
@@ -160,7 +163,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		tmpFilename = condor_basename( filename );
 	}
 
-	FILE *fp = safe_fopen_wrapper(tmpFilename, "r");
+	FILE *fp = safe_fopen_wrapper_follow(tmpFilename, "r");
 	if(fp == NULL) {
 		MyString cwd;
 		condor_getcwd( cwd );
@@ -190,6 +193,8 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// so we don't need to do that before checking for empty lines or comments.
 		if (line[0] == 0)       continue;  // Ignore blank lines
 		if (line[0] == COMMENT) continue;  // Ignore comments
+
+		debug_printf( DEBUG_DEBUG_3, "Parsing line <%s>\n", line );
 
 			// Note: strtok() could be replaced by MyString::Tokenize(),
 			// which is much safer, but I don't want to deal with that
@@ -221,6 +226,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 				"Warning: the DAP token is deprecated and may be unsupported "
 				"in a future release.  Use the DATA token\n",
 				filename, lineNumber );
+			check_warning_strictness( DAG_STRICT_2 );
 		}
 
 		else if	(strcasecmp(token, "DATA") == 0) {
@@ -324,6 +330,18 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 		// Handle a JOBSTATE_LOG spec
 		else if(strcasecmp(token, "JOBSTATE_LOG") == 0) {
 			parsed_line_successfully = parse_jobstate_log(dag,
+				filename, lineNumber);
+		}
+		
+		// Handle a PRE_SKIP
+		else if(strcasecmp(token, "PRE_SKIP") == 0) {
+			parsed_line_successfully = parse_pre_skip(dag,
+				filename, lineNumber);
+		}
+
+		// Handle a DONE spec
+		else if(strcasecmp(token, "DONE") == 0) {
+			parsed_line_successfully = parse_done(dag,
 						filename, lineNumber);
 		}
 
@@ -332,7 +350,7 @@ bool parse (Dag *dag, const char *filename, bool useDagDir) {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
 				"Expected JOB, DATA, SUBDAG, SCRIPT, PARENT, RETRY, "
 				"ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, MAXJOBS, "
-				"CONFIG, SPLICE or NODE_STATUS_FILE token\n",
+				"CONFIG, SPLICE, NODE_STATUS_FILE, or PRE_SKIP token\n",
 				filename, lineNumber );
 			parsed_line_successfully = false;
 		}
@@ -401,11 +419,24 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 
 		// first token is the node name
 	const char *nodeName = strtok( NULL, DELIMITERS );
+	if ( !nodeName ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no node name "
+					"specified\n", dagFile, lineNum );
+		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		return false;
+	}
+
 	MyString tmpNodeName = munge_job_name(nodeName);
 	nodeName = tmpNodeName.Value();
 
 		// next token is the submit file name
 	const char *submitFile = strtok( NULL, DELIMITERS );
+	if ( !submitFile ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): no submit file "
+					"specified\n", dagFile, lineNum );
+		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+		return false;
+	}
 
 		// next token (if any) is "DIR" "NOOP", or "DONE" (in that order)
 	const char* nextTok = strtok( NULL, DELIMITERS );
@@ -501,11 +532,12 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 		debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
 					"keyword for nested DAGs is deprecated; please "
 					"use SUBDAG EXTERNAL instead" );
+		check_warning_strictness( DAG_STRICT_3 );
 	}
 
 	// looks ok, so add it
 	if( !AddNode( dag, nodeType, nodeName, directory,
-				submitFile, NULL, NULL, noop, done, whynot ) )
+			submitFile, NULL, NULL, noop, done, whynot ) )
 	{
 		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
 					  dagFile, lineNum, whynot.Value() );
@@ -1202,6 +1234,25 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber) {
 						"names cannot begin with \"queue\"\n", varName.Value() );
 			return false;
 		}
+		// This will be inefficient for jobs with lots of variables
+		// As in O(N^2)
+		job->varNamesFromDag->Rewind();
+		job->varValsFromDag->Rewind();
+		while(MyString* s = job->varNamesFromDag->Next()){
+			job->varValsFromDag->Next(); // To keep up with varNamesFromDag
+			if(varName == *s){
+				debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
+					"is already defined in job \"%s\" "
+					"(Discovered at file \"%s\", line %d)\n",
+					varName.Value(),job->GetJobName(),filename,
+					lineNumber);
+				check_warning_strictness( DAG_STRICT_2 );
+				debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
+					"= \"%s\"\n",varName.Value(),varValue.Value());
+				job->varNamesFromDag->DeleteCurrent();
+				job->varValsFromDag->DeleteCurrent();
+			}
+		}
 		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
 		bool appendResult;
 		appendResult = job->varNamesFromDag->Append(new MyString(varName));
@@ -1303,6 +1354,7 @@ parse_priority(
 		debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
 					"overrides old value %d\n", priorityVal,
 					job->GetJobName(), job->_nodePriority );
+		check_warning_strictness( DAG_STRICT_2 );
 	}
 	job->_hasNodePriority = true;
 	job->_nodePriority = priorityVal;
@@ -1765,6 +1817,145 @@ parse_jobstate_log(
 	}
 
 	dag->SetJobstateLogFileName( logFileName );
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_pre_skip
+// Purpose:  Tell dagman to skip execution if the PRE script exits with a
+//           a certain code
+//-----------------------------------------------------------------------------
+bool 
+parse_pre_skip( Dag  *dag, 
+	const char *filename, 
+	int  lineNumber)
+{
+	const char * example = "PRE_SKIP JobName Exitcode";
+	Job * job = NULL;
+	MyString whynot;
+
+		//
+		// second token is the JobName
+		//
+	const char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobNameOrig = jobName; // for error output
+	if ( jobName == NULL ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Missing job name\n",
+				filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	} else if ( isReservedWord(jobName) ) {
+		debug_printf( DEBUG_QUIET,
+				"%s (line %d): JobName cannot be a reserved word\n",
+				filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	} else {
+		debug_printf( DEBUG_DEBUG_1, "jobName: %s\n", jobName );
+		MyString tmpJobName = munge_job_name( jobName );
+		jobName = tmpJobName.Value();
+
+		job = dag->FindNodeByName( jobName );
+		if (job == NULL) {
+			debug_printf( DEBUG_QUIET, 
+					"%s (line %d): Unknown Job %s\n",
+					filename, lineNumber, jobNameOrig );
+			return false;
+		}
+	}
+
+		//
+		// The rest of the line consists of the exitcode
+		//
+	const char *exitCodeStr = strtok( NULL, DELIMITERS );
+	if ( exitCodeStr == NULL ) {
+		debug_printf( DEBUG_QUIET, "%s (line %d): Missing exit code\n",
+				filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	char *tmp;
+	int exitCode = (int)strtol( exitCodeStr, &tmp, 10 );
+	if ( tmp == exitCodeStr ) {
+		debug_printf( DEBUG_QUIET,
+				"%s (line %d): Invalid exit code \"%s\"\n",
+				filename, lineNumber, exitCodeStr );
+		exampleSyntax( example );
+		return false;
+	}
+
+		//
+		// Anything else is garbage
+		//
+	const char *nextTok = strtok( NULL, DELIMITERS );
+	if ( nextTok ) {
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+				"parameter \"%s\"\n", filename, lineNumber, nextTok );
+		exampleSyntax( example );
+		return false;
+	}
+
+	if ( !job->AddPreSkip( exitCode, whynot ) ) {
+		debug_printf( DEBUG_SILENT, "ERROR: %s (line %d): failed to add "
+				"PRE_SKIP note to node %s: %s\n",
+				filename, lineNumber, jobNameOrig,
+				whynot.Value() );
+		return false;
+	}
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_done
+// Purpose:  Parse a line of the format "Done jobname"
+// 
+//-----------------------------------------------------------------------------
+static bool 
+parse_done(
+	Dag  *dag, 
+	const char *filename, 
+	int  lineNumber)
+{
+	const char *example = "Done JobName";
+	
+	const char *jobName = strtok( NULL, DELIMITERS );
+	const char *jobNameOrig = jobName; // for error output
+	if( jobName == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Missing job name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+
+	MyString tmpJobName = munge_job_name( jobName );
+	jobName = tmpJobName.Value();
+
+	//
+	// Check for illegal extra tokens.
+	//
+	char *extraTok = strtok( NULL, DELIMITERS );
+	if ( extraTok != NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Extra token (%s) on DONE line\n",
+					  filename, lineNumber, extraTok );
+		exampleSyntax( example );
+		return false;
+	}
+
+	Job *job = dag->FindNodeByName( jobName );
+	if( job == NULL ) {
+		debug_printf( DEBUG_QUIET, 
+					  "Warning: %s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobNameOrig );
+		return !check_warning_strictness( DAG_STRICT_1, false );
+	}
+
+	job->SetStatus( Job::STATUS_DONE );
+	
 	return true;
 }
 

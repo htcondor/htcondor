@@ -610,11 +610,17 @@ void registerStrlistFunctions()
 											 stringListRegexpMember_func );
 }
 
+void
+classad_debug_dprintf(const char *s) {
+	dprintf(D_FULLDEBUG, s);
+}
+
 ClassAd::ClassAd()
 {
 	if ( !m_initConfig ) {
 		this->Reconfig();
 		registerStrlistFunctions();
+		classad::ExprTree::set_user_debug_function(classad_debug_dprintf);
 		m_initConfig = true;
 	}
 
@@ -2563,7 +2569,6 @@ static const char *job_attrs_list[]  = {
 	ATTR_ENCRYPT_OUTPUT_FILES,
 	ATTR_DONT_ENCRYPT_INPUT_FILES,
 	ATTR_DONT_ENCRYPT_OUTPUT_FILES,
-	ATTR_TRANSFER_FILES,
 	ATTR_FETCH_FILES,
 	ATTR_COMPRESS_FILES,
 	ATTR_APPEND_FILES,

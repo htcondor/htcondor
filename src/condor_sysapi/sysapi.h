@@ -87,6 +87,8 @@ const char* sysapi_condor_arch(void);
 const char* sysapi_uname_arch(void);
 const char* sysapi_opsys(void);
 const char* sysapi_uname_opsys(void);
+const char* sysapi_opsys_versioned(void);
+        int sysapi_opsys_version(void);
 
 /* return information about how many 1K blocks of swap space there are.
 	If there are more 1K blocks than INT_MAX, then INT_MAX is returned */
@@ -104,7 +106,11 @@ const char *sysapi_translate_arch( const char *machine,
 								   const char *sysname );
 const char *sysapi_translate_opsys( const char *sysname,
 									const char *release,
-									const char *version );
+									const char *version,
+                                    int         append_version);
+int sysapi_translate_opsys_version( const char *sysname,
+									const char *release,
+									const char *version);
 
 /* set appropriate resource limits on each platform */
 void sysapi_set_resource_limits( int stack_size );

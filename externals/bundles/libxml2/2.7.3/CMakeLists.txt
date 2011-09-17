@@ -22,18 +22,17 @@ endif()
 
 if (WITH_LIBXML2)
 
-	if ( NOT PROPER )
+	if ( NOT PROPER AND "${RPM_SYSTEM_NAME}" MATCHES "rhel3" )
 
 		condor_pre_external( LIBXML2 libxml2-2.7.3 "lib;include" "lib/libxml2")
 
 		ExternalProject_Add( libxml2
-					DEPENDS ${ZLIB_REF}
 				    #-- Download Step ----------
 					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBXML2_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${LIBXML2_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${LIBXML2_VER}.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${LIBXML2_VER} && ./configure --prefix=${LIBXML2_INSTALL_LOC} --disable-shared --with-zlib=${ZLIB_INSTALL_LOC}
+				    CONFIGURE_COMMAND cd ${LIBXML2_VER} && ./configure --prefix=${LIBXML2_INSTALL_LOC}
 				    #--Build Step ----------
 				    BUILD_COMMAND cd ${LIBXML2_VER} && make
 				    BUILD_IN_SOURCE 1
@@ -43,6 +42,7 @@ if (WITH_LIBXML2)
 
 		# Set the target dependencies which the rest of condor depends on.
 		set(LIBXML2_FOUND "${LIBXML2_INSTALL_LOC}/lib/libxml2.a")
+		set(BUILDING_LIBXML2 ON PARENT_SCOPE)
 
 		condor_post_external( libxml2 OFF OFF )
 
@@ -50,7 +50,7 @@ if (WITH_LIBXML2)
 	
     	find_multiple( "xml2" LIBXML2_FOUND )
 
-	endif( NOT PROPER )
+	endif( NOT PROPER AND "${RPM_SYSTEM_NAME}" MATCHES "rhel3" )
 
 endif(WITH_LIBXML2)
 

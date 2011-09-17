@@ -23,6 +23,7 @@
 #include "condor_mkstemp.h"
 #include "startd.h"
 #include "vm_common.h"
+#include "ipv6_hostname.h"
 
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
@@ -416,6 +417,84 @@ command_release_claim( Service*, int cmd, Stream* stream )
 	EXCEPT("Neither pre nor cur claim matches claim id: %s",id);
 	return FALSE;
 }
+
+int command_suspend_claim( Service*, int cmd, Stream* stream )
+{
+	char* id = NULL;
+	Resource* rip;
+	int rval=FALSE;
+
+	if( ! stream->get_secret(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		if( id ) { 
+			free( id );
+		}
+		refuse( stream );
+		return FALSE;
+	}
+
+	rip = resmgr->get_by_any_id( id );
+	if( !rip ) {
+		ClaimIdParser idp( id );
+		dprintf( D_ALWAYS, "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+	
+	State s = rip->state();
+	switch( s ) {
+	case claimed_state:
+		rip->dprintf( D_ALWAYS, "State change: received SUSPEND_CLAIM command\n" );
+		rval = rip->suspend_claim();
+		break;
+	default:
+		rip->log_ignore( cmd, s );
+		return FALSE;
+	}
+
+	return rval;
+}
+
+int command_continue_claim( Service*, int cmd, Stream* stream )
+{
+	char* id = NULL;
+	Resource* rip;
+	int rval=FALSE;
+	
+	if( ! stream->get_secret(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		if( id ) { 
+			free( id );
+		}
+		refuse( stream );
+		return FALSE;
+	}
+
+	rip = resmgr->get_by_any_id( id );
+	if( !rip ) 
+	{
+		ClaimIdParser idp( id );
+		dprintf( D_ALWAYS, "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+	
+	State s = rip->state();
+	switch( rip->activity() ) {
+		case suspended_act:
+			rip->dprintf( D_ALWAYS, "State change: received CONTINUE_CLAIM command\n" );
+			rval=rip->continue_claim();
+			break;
+		default:
+			rip->log_ignore( cmd, s );
+			return FALSE;
+	}		
+	
+	return rval;
+}
+
 
 int
 command_name_handler( Service*, int cmd, Stream* stream ) 
@@ -1383,7 +1462,7 @@ bool
 accept_request_claim( Resource* rip )
 {
 	int interval = -1;
-	char *client_addr = NULL, *client_host, *full_client_host, *tmp;
+	char *client_addr = NULL, *tmp;
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
 
@@ -1439,25 +1518,14 @@ accept_request_claim( Resource* rip )
 	}
 
 		// Figure out the hostname of our client.
-	if( ! (tmp = sin_to_hostname(sock->peer_addr(), NULL)) ) {
-		char *sinful = sin_to_string(sock->peer_addr());
-		char *ip = string_to_ipstr(sinful);
+	MyString hostname = get_full_hostname(sock->peer_addr());
+	if(hostname.IsEmpty()) {
+		MyString ip = sock->peer_addr().to_ip_string();
 		rip->dprintf( D_FULLDEBUG,
-					  "Can't find hostname of client machine %s\n", ip );
-		rip->r_cur->client()->sethost( ip );
+					  "Can't find hostname of client machine %s\n", ip.Value() );
+		rip->r_cur->client()->sethost(ip.Value());
 	} else {
-		client_host = strdup( tmp );
-			// Try to make sure we've got a fully-qualified hostname.
-		full_client_host = get_full_hostname( (const char *) client_host );
-		if( ! full_client_host ) {
-			rip->dprintf( D_ALWAYS, "Error finding full hostname of %s\n", 
-						  client_host );
-			rip->r_cur->client()->sethost( client_host );
-		} else {
-			rip->r_cur->client()->sethost( full_client_host );
-			delete [] full_client_host;
-		}
-		free( client_host );
+		rip->r_cur->client()->sethost( hostname.Value() );
 	}
 
 		// Get the owner of this claim out of the request classad.
@@ -1516,13 +1584,13 @@ activate_claim( Resource* rip, Stream* stream )
 #ifndef WIN32
 	int sock_1, sock_2;
 	int fd_1, fd_2;
-	struct sockaddr_in frm;
+	struct sockaddr_storage frm;
 	int len = sizeof frm;	
 	StartdRec stRec;
 #endif
 	int starter = MAX_STARTERS;
 	Sock* sock = (Sock*)stream;
-	char* shadow_addr = strdup( sin_to_string( sock->peer_addr() ));
+	char* shadow_addr = strdup(sock->peer_addr().to_ip_string().Value());
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );

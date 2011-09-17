@@ -23,9 +23,9 @@
 #include "condor_debug.h"
 #include "condor_uid.h"
 #include "condor_email.h"
-#include "my_hostname.h"
 #include "my_popen.h"
 #include "subsystem_info.h"
+#include "ipv6_hostname.h"
 
 #define EMAIL_SUBJECT_PROLOG "[Condor] "
 
@@ -184,7 +184,7 @@ email_open( const char *email_addr, const char *subject )
 
 	if ( mailerstream ) {
 		fprintf(mailerstream,"This is an automated email from the Condor "
-			"system\non machine \"%s\".  Do not reply.\n\n",my_full_hostname());
+			"system\non machine \"%s\".  Do not reply.\n\n",get_local_fqdn().Value());
 	}
 
 	/* free up everything we strdup-ed and param-ed, and return result */

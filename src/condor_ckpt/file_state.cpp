@@ -236,7 +236,7 @@ void CondorFileTable::dump()
 			dprintf(D_ALWAYS,"\topen flags:   0x%x\n",p->flags);
 			if( p->file ) {
 				dprintf(D_ALWAYS,"\turl:          %s\n",p->file->get_url());
-				dprintf(D_ALWAYS,"\tsize:         %d\n",p->file->get_size());
+				dprintf(D_ALWAYS,"\tsize:         %ld\n",(long)p->file->get_size());
 				dprintf(D_ALWAYS,"\topens:        %d\n",count_file_uses(p->file));
 			} else {
 				dprintf(D_ALWAYS,"\tnot currently bound to a url.\n");
@@ -531,7 +531,7 @@ CondorFile * CondorFileTable::open_url_retry( char const *url, int flags, int mo
 
 		if( strstr(url,"remote:") ) return 0;
 
-		path = strrchr(url,':');
+		path = (char*)strrchr(url,':');
 		if(!path) return 0;
 
 		path++;
@@ -921,7 +921,7 @@ off_t CondorFileTable::lseek( int fd, off_t offset, int whence )
 
 	CondorFilePointer *fp = pointers[fd];
 	CondorFile *f = fp->file;
-	int temp;
+	off_t temp;
 
 	// This error could conceivably be simply a warning and return with errno=ESPIPE.
 	// Despite this, most programs assume that a seek performed on a regular file

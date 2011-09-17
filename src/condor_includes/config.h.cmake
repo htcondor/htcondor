@@ -294,9 +294,6 @@
 ///* Do we have the drmaa external (Imake)*/
 #cmakedefine HAVE_EXT_DRMAA
 
-///* Do we have the expat external (Imake)*/
-#cmakedefine HAVE_EXT_EXPAT
-
 ///* Do we have the glibc external*/
 #cmakedefine HAVE_EXT_GLIBC
 
@@ -314,9 +311,6 @@
 
 ///* Do we have the postgresql external*/
 #cmakedefine HAVE_EXT_POSTGRESQL
-
-///* Do we have the zlib external */
-#cmakedefine HAVE_EXT_ZLIB
 
 ///* Do we have the libcgroup external */
 #cmakedefine HAVE_EXT_LIBCGROUP

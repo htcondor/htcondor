@@ -31,7 +31,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 #include <assert.h>
 
@@ -1974,4 +1974,4 @@ dump_collection(){
 	 return true;
 }
 
-END_NAMESPACE
+}

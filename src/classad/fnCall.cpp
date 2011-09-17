@@ -49,7 +49,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 bool FunctionCall::initialized = false;
 
@@ -152,6 +152,10 @@ FunctionCall( )
 		functionTable["bool"		] =	(void*)convBool;
 		functionTable["absTime"		] =	(void*)convTime;
 		functionTable["relTime"		] = (void*)convTime;
+		
+		// turn the contents of an expression into a string 
+		// but *do not* evaluate it
+		functionTable["unparse"		] =	(void*)unparse;
 
 			// mathematical functions
 		functionTable["floor"		] =	(void*)doMath;
@@ -169,6 +173,7 @@ FunctionCall( )
 			// Note that many other string list functions are defined
 			// externally in the Condor classad compatibility layer.
 		functionTable["stringListsIntersect" ] = (void*)stringListsIntersect;
+        functionTable["debug"      ] = (void*)debug;
 
 		initialized = true;
 	}
@@ -1838,6 +1843,34 @@ convString(const char*, const ArgumentList &argList, EvalState &state,
 }
 
 bool FunctionCall::
+unparse(const char*, const ArgumentList &argList, EvalState &state, 
+	Value &result )
+{
+	
+	if( argList.size() != 1 || argList[0]->GetKind() != ATTRREF_NODE ) {
+		result.SetErrorValue( );
+	}
+	else{
+	 
+		// use the printpretty on arg0 to spew out 
+		PrettyPrint     unp;
+		string          szAttribute,szValue;
+		ExprTree* 		pTree;
+		
+		unp.Unparse( szAttribute, argList[0] );
+		// look them up argument within context of the ad.
+		if ( state.curAd && (pTree = state.curAd->Lookup(szAttribute)) )
+		{
+			unp.Unparse( szValue, pTree );
+		}
+		
+		result.SetStringValue(szValue);
+	}
+	
+	return (true); 
+}
+
+bool FunctionCall::
 convBool( const char*, const ArgumentList &argList, EvalState &state, 
 	Value &result )
 {
@@ -2317,6 +2350,31 @@ interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	result.SetStringValue(strval);
 
     return true;
+}
+
+bool FunctionCall::
+debug( const char* name,const ArgumentList &argList,EvalState &state,
+	Value &result )
+{
+	Value	arg;
+
+	// takes exactly one argument
+	if( argList.size() != 1 ) {
+		result.SetErrorValue( );
+		return( true );
+	}
+
+	bool old_debug = state.debug;
+	state.debug = true;
+
+	if( !argList[0]->Evaluate( state, arg ) ) {
+		result.SetErrorValue( );
+		return( false );
+	}
+	state.debug = old_debug;
+	result = arg;
+	argList[0]->debug_format_value(result);
+	return true;
 }
 
 #if defined USE_POSIX_REGEX || defined USE_PCRE
@@ -2989,4 +3047,4 @@ stringListsIntersect(const char*,const ArgumentList &argList,EvalState &state,Va
 	return true;
 }
 
-END_NAMESPACE // classad
+} // classad

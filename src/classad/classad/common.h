@@ -26,14 +26,6 @@
 #include <strings.h>
 #endif
 
-#if defined( WANT_CLASSAD_NAMESPACE ) && defined(__cplusplus)
-#define BEGIN_NAMESPACE( x ) namespace x {
-#define END_NAMESPACE }
-#else
-#define BEGIN_NAMESPACE( x )
-#define END_NAMESPACE
-#endif
-
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* to get definition for strptime on Linux */
 #endif
@@ -114,7 +106,7 @@
 #include <cstring>
 #include <string.h>
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 extern const char * const ATTR_AD;
 extern const char * const ATTR_CONTEXT;
@@ -200,7 +192,7 @@ extern std::string       CondorErrMsg;
 
 extern int 		CondorErrno;
 
-END_NAMESPACE // classad
+} // classad
 
 char* strnewp( const char* );
 

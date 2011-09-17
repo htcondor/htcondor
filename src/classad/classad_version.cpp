@@ -27,9 +27,7 @@
 #include <iostream>
 
 using namespace std;
-#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
-#endif
 
 int main(int, char **)
 {
@@ -41,11 +39,7 @@ int main(int, char **)
 
     /* ----- Namespace support ----- */
     cout << "  Classad namespace:               ";
-#if defined WANT_CLASSAD_NAMESPACE
     cout << "yes\n";
-#else
-    cout << "no\n";
-#endif
 
     /* ----- Shared library function support ----- */
     cout << "  Shared library function support: ";

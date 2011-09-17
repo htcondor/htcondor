@@ -1,0 +1,166 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:vm-install}Virtual Machines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{virtual machines}
+\index{installation!for the vm universe}
+
+Virtual machines can be executed on any execution site with VMware, Xen
+(via \Prog{libvirt}), or KVM.
+To do this, Condor must be informed of some details of the 
+virtual machine installation, and the execution machines must
+be configured correctly.
+This permits the execution of \SubmitCmd{vm} universe jobs.
+
+What follows is not a comprehensive list of the options that
+help set up to use the \SubmitCmd{vm} universe; rather,
+it is intended to serve as a starting point for those users interested in
+getting \SubmitCmd{vm} universe jobs up and running quickly.
+Details of configuration variables are in section~\ref{sec:Config-VMs}.
+
+Begin by installing the virtualization package on all execute machines,
+according to the vendor's instructions.
+We have successfully used VMware Server, Xen, and KVM.
+If considering running on a Windows system, 
+a \Prog{Perl} distribution will also need to be installed;
+we have successfully used \Prog{ActivePerl}. 
+
+For VMware, \Prog{VMware Server 1} must be installed
+and running on the execute machine.
+
+For Xen, there are three things that must exist on 
+an execute machine to fully support \SubmitCmd{vm} universe jobs. 
+\begin{enumerate}
+\item
+A Xen-enabled kernel must be running. 
+This running Xen kernel acts as Dom0, in Xen terminology, 
+under which all VMs are started, called DomUs Xen terminology. 
+
+\item
+The \Prog{libvirtd} daemon must be available,
+and \Prog{Xend} services must be running. 
+
+\item
+The \Prog{pygrub} program must be available,
+for execution of VMs whose disks contain the kernel they will run.
+\end{enumerate}
+
+For KVM, there are two things that must exist on
+an execute machine to fully support \SubmitCmd{vm} universe jobs. 
+\begin{enumerate}
+\item
+The machine must have the KVM kernel module installed and running.
+
+\item
+The \Prog{libvirtd} daemon must be installed and running.
+
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Configuration Variables}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+There are configuration variables related to the virtual machines
+for \SubmitCmd{vm} universe jobs.
+Some options are required, while others are optional.
+Here we only discuss those that are required.
+
+First, the type of virtual machine that is installed on the
+execute machine must be specified. 
+For now, only one type can be utilized per machine.
+For instance, the following tells Condor to use VMware:
+
+\begin{verbatim}
+VM_TYPE = vmware
+\end{verbatim}
+
+The location of the \Condor{vm-gahp} and
+its log file must also be specified on the execute machine.
+On a Windows installation, these options would look like this:
+
+\begin{verbatim}
+VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe
+VM_GAHP_LOG = $(LOG)/VMGahpLog
+\end{verbatim}
+
+%You must also provide a version string for the Virtual Machine software
+%you are using:
+
+%\begin{verbatim}
+%VM_VERSION = server1.0.4
+%\end{verbatim}
+
+%While required, this option does not alter the behavior of Condor.
+%Instead, it is added to the ClassAd for the machine, so it 
+%can be matched against.  This way, if future releases of VMware/Xen support
+%new features that are desirable for your job, you can match on this string.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{VMware-Specific Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To use VMware, identify the location of the \Prog{Perl} executable
+on the execute machine.
+In most cases, the default value should suffice:
+
+\begin{verbatim}
+VMWARE_PERL = perl
+\end{verbatim}
+
+This, of course, assumes the \Prog{Perl} executable is in the path
+of the \Condor{master} daemon.
+If this is not the case,
+then a full path to the \Prog{Perl} executable will be required.
+
+The final required configuration is the location of the VMware control script
+used by the \Condor{vm-gahp} on the execute machine
+to talk to the virtual machine hypervisor.
+It is located in Condor's \File{sbin} directory:
+
+\begin{verbatim}
+VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware.pl
+\end{verbatim}
+
+Note that an execute machine's \MacroNI{EXECUTE} variable should not
+contain any symbolic links in its path,
+if the machine is configured to run VMware \SubmitCmd{vm} universe jobs.
+See the FAQ entry in section~\ref{sec:vmware-symlink-bug} for details.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Xen-Specific and KVM-Specific Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Once the configuration options have been set, restart the \Condor{startd} 
+daemon on that host.  For example:
+
+\begin{verbatim}
+> condor_restart -startd leovinus
+\end{verbatim}
+
+The \Condor{startd} daemon takes a few moments to exercise the VM
+capabilities of the \Condor{vm-gahp}, query its properties, and then 
+advertise the machine to the pool as VM-capable.
+If the set up succeeded,
+ then \Condor{status} will reveal that the host is now 
+VM-capable by printing the VM type and the version number:
+
+\begin{verbatim}
+> condor_status -vm leovinus
+\end{verbatim}
+
+After a suitable amount of time, if this command does not give any output,
+then the \Condor{vm-gahp} is having difficulty executing the VM software.
+The exact cause of the problem depends on the details of the VM, the local 
+installation, and a variety of other factors. We can offer only limited 
+advice on these matters:
+
+For Xen and KVM,
+the \SubmitCmd{vm} universe is only available when \Login{root} starts Condor.
+This is a restriction currently imposed because root privileges are 
+required to create a virtual machine on top of a Xen-enabled kernel.
+Specifically, root is needed 
+to properly use the \Prog{libvirt} utility that controls 
+creation and management of Xen and KVM guest virtual machines.
+This restriction may be lifted in future versions,
+depending on features provided by the underlying tool \Prog{libvirt}.

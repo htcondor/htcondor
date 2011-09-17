@@ -118,7 +118,10 @@ HRESULT FNEXPORT HaryList_InsertList (
 INLINE LPVOID HaryList_AllocItem(HARYLIST hlst, LONG cbItem) {
 	DASSERT(PCARYLIST_PTR(hlst)->cbItem == sizeof(void*));
 	DASSERT(PCARYLIST_PTR(hlst)->fdwOptions & ARYLIST_OPT_F_GPTRS);
-	return (LPVOID)malloc(cbItem);
+	LPVOID pv = (LPVOID)malloc(cbItem);
+    if (pv)
+       ZeroMemory(pv, cbItem);
+    return pv;
 }
 
 INLINE void HaryList_FreeItem(HARYLIST hlst, LPVOID pvItem) {
@@ -385,6 +388,8 @@ HRESULT FNEXPORT HaryList_Create (
 	{
 		*phlst = NULL;
 		plst = (PARYLIST)malloc(sizeof(*plst));
+        if (plst)
+           ZeroMemory(plst, sizeof(*plst));
 	}
 	if ( ! plst)
 		return E_OUTOFMEMORY;
@@ -408,6 +413,8 @@ HRESULT FNEXPORT HaryList_Create (
 
     LONG cb = cAllocate * cbItem;
     plst->pvList = (void**)malloc(cb);
+    if (plst->pvList)
+       ZeroMemory(plst->pvList, cb);
 
 	if (fdwOptions & ARYLIST_OPT_F_EMBEDDED)
 	{
@@ -492,6 +499,7 @@ HRESULT HaryList_GrowAllocated (
         goto bail;
     }
 
+    ZeroMemory((char *)pvNew + plst->cAllocated * plst->cbItem, cbNewAlloc - plst->cAllocated * plst->cbItem);
     RtlCopyMemory(pvNew, plst->pvList, plst->cAllocated * plst->cbItem);
     free(plst->pvList);
 

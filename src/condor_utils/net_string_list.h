@@ -35,6 +35,15 @@
   use this string_withnetwork() method in a single place in the code
   (condor_daemon_core.V6/condor_ipverify.C). 
 */
+
+// [m.] Totally IPv6 uncompatible.
+// It stores IP address as string representation. Then, convert it to
+// numerical representation whenever needed it.
+//
+// see find_matches_withnetwork()
+//
+// current idea is to drop NetStringList completely.
+
 class NetStringList : public StringList {
 public:
 	NetStringList(const char *s = NULL, const char *delim = " ," ); 

@@ -213,12 +213,10 @@ class UserPolicy
 		   return -1. */
         int FiringExpressionValue( void ) { return m_fire_expr_val; };
 	
-		/* This returns a string explaining what expression fired, useful
+		/* This constructs the string explaining what expression fired, useful
 		   for a Reason string in the job ad. If no firing expression
-		   occurred, then NULL is returned. The user does NOT free this
-		   memory and it is overwritten when FiringReason() is called
-		   again (for any UserPolicy object). */
-		const char* FiringReason(void);
+		   occurred, then false is returned. */
+		bool FiringReason(MyString &reason,int &reason_code,int &reason_subcode);
 
 	private: /* functions */
 		/* This function inserts the five of the six (all but TimerRemove) user

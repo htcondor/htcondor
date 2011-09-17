@@ -169,6 +169,14 @@ NamedPipeReader::poll(int timeout, bool& ready)
 
 	int ret = select(m_pipe + 1, &read_fd_set, NULL, NULL, tv_ptr);
 	if (ret == -1) {
+		if( errno == EINTR ) {
+				// We could keep looping until all of the time has passed,
+				// but currently nothing depends on this, so just return
+				// true here to avoid having the whole procd die when
+				// somebody attaches with a debugger.
+			ready = false;
+			return true;
+		}
 		dprintf(D_ALWAYS,
 		        "select error: %s (%d)\n",
 		        strerror(errno),

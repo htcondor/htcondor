@@ -70,7 +70,7 @@ static void io_process_exit(int exit_num)
 void
 usage()
 {
-	dprintf( D_ALWAYS, "Usage: amazon_gahp -f logfile -d debuglevel -w min_worker_nums -m max_worker_nums\n");
+	dprintf( D_ALWAYS, "Usage: amazon_gahp -d debuglevel -w min_worker_nums -m max_worker_nums\n");
 	exit(1);
 }
 
@@ -136,6 +136,9 @@ registerAllAmazonCommands(void)
     
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS, 
             AmazonAssociateAddress::ioCheck, AmazonAssociateAddress::workerFunction);
+	
+	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_ATTACH_VOLUME, 
+            AmazonAttachVolume::ioCheck, AmazonAttachVolume::workerFunction);
 
     //registerAmazonGahpCommand(AMAZON_COMMAND_VM_RELEASE_ADDRESS, 
     //        AmazonReleaseAddress::ioCheck, AmazonReleaseAddress::workerFunction);
@@ -192,9 +195,6 @@ quit_on_signal(int sig)
 int
 main( int argc, char ** const argv )
 {
-	// All log should be printed to stderr
-	set_gahp_log_file(NULL);
-
 #ifndef WIN32
 	/* Add the signals we want unblocked into sigSet */
 	sigset_t sigSet;
@@ -219,11 +219,12 @@ main( int argc, char ** const argv )
 	sigprocmask( SIG_UNBLOCK, &sigSet, NULL );
 #endif
 
-	// get env
-	const char *debug_string = getenv("DebugLevel");
-	if( debug_string && *debug_string ) {
-		set_debug_flags(debug_string);
-	}
+    config();
+    dprintf_config( "EC2_GAHP" );
+    const char * debug_string = getenv( "DebugLevel" );
+    if( debug_string && * debug_string ) {
+        set_debug_flags( debug_string );
+    }
 
 	int min_workers = MIN_NUMBER_WORKERS;
 	int max_workers = -1;
@@ -232,21 +233,12 @@ main( int argc, char ** const argv )
 	while ( (c = my_getopt(argc, argv, "f:d:w:m:" )) != -1 ) {
 		switch(c) {
 			case 'f':
-				// Log file
-				if ( my_optarg ) {
-					if( !set_gahp_log_file(my_optarg) ) {
-						fprintf(stderr, "Can't create the log file(%s)\n", 
-								my_optarg);
-						exit(1);
-					}
-				}
 				break;
 			case 'd':
 				// Debug Level
 				if( my_optarg && *my_optarg ) {
 					set_debug_flags(my_optarg);
 				}
-
 				break;
 			case 'w':
 				// Minimum number of worker pools
@@ -267,7 +259,7 @@ main( int argc, char ** const argv )
 		}
 	}
 
-	dprintf(D_FULLDEBUG, "Welcome to the AMAZON-GAHP\n");
+	dprintf(D_FULLDEBUG, "Welcome to the EC2 GAHP\n");
 
 	const char *buff;
 
@@ -299,7 +291,7 @@ main( int argc, char ** const argv )
 	printf ("%s\n", version);
 	fflush(stdout);
 
-	dprintf (D_FULLDEBUG, "AMAZON-GAHP initialized\n");
+	dprintf (D_FULLDEBUG, "EC2 GAHP initialized\n");
 
 		/* Our main thread should grab the mutex first.  We will then
 		 * release it and let other threads run when we would otherwise

@@ -32,9 +32,7 @@
 #include <ctype.h>
 
 using namespace std;
-#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
-#endif
 
 // Note that we are careful to leave no space between the first and 
 // second ClassAd. This is to test that we put back a character correctly

@@ -25,7 +25,7 @@
 #include "classad/common.h"
 #include "classad/value.h"
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 
 // forward declarations
@@ -47,6 +47,7 @@ class EvalState {
 		const ClassAd *curAd;
 
 		bool		flattenAndInline;	// NAC
+		bool		debug;
 
 		// Cache_to_free are the things in the cache that must be
 		// freed when this gets deleted. The problem is that we put
@@ -135,7 +136,15 @@ class ExprTree
          */
         virtual bool SameAs(const ExprTree *tree) const = 0;
 
+		// Pass in a pointer to a function taking a const char *, which will
+		// print it out somewhere useful, when the classad debug() function
+		// is called
+
+		static void set_user_debug_function(void (*dbf)(const char *));
+
   	protected:
+		void debug_print(const char *message) const;
+		void debug_format_value(Value &value) const;
 		ExprTree ();
 
         /** Fill in this ExprTree with the contents of the other ExprTree.
@@ -181,11 +190,15 @@ class ExprTree
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* )const=0;
 
         friend bool operator==(const ExprTree &tree1, const ExprTree &tree2);
+
+		// To avoid making classads depend on a condor debug function,
+		// have the user set a function to call to debug classads
+		static void (*user_debug_function)(const char *);
 };
 
 std::ostream& operator<<(std::ostream &os, const ExprTree &expr);
 
-END_NAMESPACE // classad
+} // classad
 
 #include "classad/literals.h"
 #include "classad/attrrefs.h"

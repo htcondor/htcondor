@@ -42,7 +42,7 @@
 #include "condor_uid.h"
 #include "condor_adtypes.h"
 #include "condor_universe.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "condor_threads.h"
 
 #include "collector.h"
@@ -289,7 +289,8 @@ void CollectorDaemon::Init()
     offline_plugin_.rewind ();
     while ( offline_plugin_.iterate ( ad ) ) {
 		ad = new ClassAd(*ad);
-	    if ( !collector.collect ( UPDATE_STARTD_AD, ad, NULL, insert ) ) {
+	    if ( !collector.collect (UPDATE_STARTD_AD, ad, condor_sockaddr::null,
+								 insert ) ) {
 		    
             if ( -3 == insert ) {
 
@@ -667,14 +668,13 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 {
     int	insert;
-	sockaddr_in *from;
 	ClassAd *cad;
 
 	/* assume the ad is malformed... other functions set this value */
 	insert = -3;
 
 	// get endpoint
-	from = ((Sock*)sock)->peer_addr();
+	condor_sockaddr from = ((Sock*)sock)->peer_addr();
 
     // process the given command
 	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
@@ -762,7 +762,7 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
     int insert = -3;
     
     /* get peer's IP/port */
-    sockaddr_in *from = socket->peer_addr();
+	condor_sockaddr from = socket->peer_addr();
 
     /* "collect" the ad */
     ClassAd *cad = collector.collect ( 
@@ -1111,7 +1111,7 @@ void CollectorDaemon::reportToDevelopers (void)
 	ustatsMonthly.setMax( ustatsAccum );
 
 	sprintf( buffer, "Collector (%s):  Monthly report",
-			 my_full_hostname() );
+			 get_local_fqdn().Value() );
 	if( ( mailer = email_developers_open(buffer) ) == NULL ) {
 		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open mailer)\n");		
 		return;
@@ -1293,7 +1293,7 @@ void CollectorDaemon::Config()
 			viewCollectorTypes = new StringList(tmp);
 			char *printable_string = viewCollectorTypes->print_to_string();
 			dprintf(D_ALWAYS, "CONDOR_VIEW_CLASSAD_TYPES configured, will forward ad types: %s\n",
-					printable_string);
+					printable_string?printable_string:"");
 			free(printable_string);
 		}
 	}
@@ -1410,6 +1410,7 @@ void CollectorDaemon::sendCollectorAd()
 	// Collector engine stats, too
 	collectorStats.publishGlobal( ad );
 
+    daemonCore->dc_stats.Publish(*ad);
     daemonCore->monitor_data.ExportData(ad);
 
 	// Send the ad
@@ -1455,10 +1456,10 @@ void CollectorDaemon::init_classad(int interval)
             if( strchr( CollectorName, '@' ) ) {
                id.sprintf( "%s", CollectorName );
             } else {
-               id.sprintf( "%s@%s", CollectorName, my_full_hostname() );
+               id.sprintf( "%s@%s", CollectorName, get_local_fqdn().Value() );
             }
     } else {
-            id.sprintf( "%s", my_full_hostname() );
+            id.sprintf( "%s", get_local_fqdn().Value() );
     }
     ad->Assign( ATTR_NAME, id.Value() );
 
@@ -1563,7 +1564,7 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
             // the rest of the pool.
             AdNameHashKey hk;
             ClassAd *pvt_ad;
-            ASSERT( makeStartdAdHashKey (hk, theAd, NULL) );
+            ASSERT( makeStartdAdHashKey (hk, theAd) );
             pvt_ad = collector.lookup(STARTD_PVT_AD,hk);
             if (pvt_ad) {
                 if (!pvt_ad->put(*view_sock)) {

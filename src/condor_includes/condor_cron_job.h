@@ -174,8 +174,9 @@ class CronJob : public Service
 	int				 m_killTimer;		// Make sure it dies
 	int				 m_num_outputs;		// # output blocks have we processed?
 	int				 m_num_runs;		// # of times the job has run
+	int				 m_num_fails;		// # of times we failed to exec it
 	unsigned		 m_last_start_time;	// Last run time
-	unsigned		 m_last_exit_time;	// Last run time
+	unsigned		 m_last_exit_time;	// Last exit time
 	double			 m_run_load;		// Run load of the job
 	bool			 m_marked;			// Is this one marked?
 	unsigned		 m_old_period;		// Period before reconfig

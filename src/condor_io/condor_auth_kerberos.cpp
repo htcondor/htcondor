@@ -29,6 +29,7 @@
 #include "CondorError.h"
 #include "condor_netdb.h"
 #include "subsystem_info.h"
+#include "ipv6_hostname.h"
 
 const char STR_KERBEROS_SERVER_KEYTAB[]   = "KERBEROS_SERVER_KEYTAB";
 const char STR_KERBEROS_SERVER_PRINCIPAL[]= "KERBEROS_SERVER_PRINCIPAL";
@@ -994,7 +995,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 		RealmMap = NULL;
     }
 
-    if ( !(fd = safe_fopen_wrapper(  filename, "r" ))  ) {
+    if ( !(fd = safe_fopen_wrapper_follow(  filename, "r" ))  ) {
         dprintf( D_SECURITY, "unable to open map file %s, errno %d\n", 
                  filename, errno );
 		free(filename);
@@ -1106,7 +1107,9 @@ int Condor_Auth_Kerberos :: init_server_info()
 		free (serverPrincipal);
     } else {
 		int  size;
-		char *name = 0, *instance = 0;
+		char *name = 0;
+		const char *instance = 0;
+		MyString hostname;
 
 		serverPrincipal = param(STR_KERBEROS_SERVER_SERVICE);
 		if(!serverPrincipal) {
@@ -1126,11 +1129,8 @@ int Condor_Auth_Kerberos :: init_server_info()
 
 		if (mySock_->isClient()) {
 			if (instance == 0) {
-				struct hostent * hp;
-				hp = condor_gethostbyaddr((char *) &(mySock_->peer_addr())->sin_addr, 
-								   sizeof (struct in_addr),
-								   mySock_->peer_addr()->sin_family);
-				instance = hp->h_name;
+				hostname = get_hostname(mySock_->peer_addr());
+				instance = hostname.Value();
 			}
 		}
 
@@ -1167,22 +1167,24 @@ int Condor_Auth_Kerberos :: forward_tgt_creds(krb5_creds      * cred,
     krb5_error_code  code;
     krb5_data        request;
     int              message, rc = 1;
+	MyString         hostname;
     struct hostent * hp;
     
-    hp = condor_gethostbyaddr((char *) &(mySock_->peer_addr())->sin_addr, 		  
-                       sizeof (struct in_addr), 
-                       mySock_->peer_addr()->sin_family);
+	hostname = get_hostname(mySock_->peer_addr());
+	char* hostname_char = strdup(hostname.Value());
     
     if ((code = krb5_fwd_tgt_creds(krb_context_, 
                                   auth_context_,
-                                  hp->h_name,
+	                              hostname_char,
                                   cred->client, 
                                   cred->server,
                                   ccache, 
                                   KDC_OPT_FORWARDABLE,
                                   &request))) {
+		free(hostname_char);
         goto error;
     }
+	free(hostname_char);
     
     // Now, send it
     

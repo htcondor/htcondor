@@ -26,7 +26,7 @@
 #include "condor_io.h"
 
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 class ClassAdCollectionServer : public ClassAdCollection {
 public:
@@ -55,6 +55,6 @@ private:
 
 };
 
-END_NAMESPACE
+}
 
 #endif

@@ -1,0 +1,9 @@
+JOBSTATE_LOG job_dagman_pre_skip-B.jobstate.log
+
+JOB A job_dagman_pre_skip-B_A.cmd
+SCRIPT PRE A job_dagman_pre_skip-B_A.sh
+PRE_SKIP A 1
+# Note this script should get skipped -- it will fail if it's run.
+SCRIPT POST A job_dagman_pre_skip-B_A-post.sh
+JOB B job_dagman_pre_skip-B_B.cmd
+PARENT A CHILD B

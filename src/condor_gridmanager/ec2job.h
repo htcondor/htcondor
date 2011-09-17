@@ -93,6 +93,10 @@ private:
 	char * m_user_data_file;
 	char * m_instance_type;
     char * m_elastic_ip;
+	char * m_availability_zone;
+	char * m_ebs_volumes;
+	char * m_vpc_subnet;
+	char * m_vpc_ip;
 	
 	int m_vm_check_times;
 	int m_keypair_check_times;
@@ -104,6 +108,12 @@ private:
 	
 	// remove created temporary keypair file
 	bool remove_keypair_file(const char* filename);
+	
+	/**
+	 * associate_n_attach - sends the gahp commands to associate addresses and volumes
+	 * with a running instance.
+	 */ 
+	void associate_n_attach(StringList & returnStatus);
 
 	// print out error codes returned from grid_manager
 	void print_error_code( const char* error_code, const char* function_name );

@@ -781,7 +781,7 @@ int RefreshProxyThruMyProxy(X509CredentialWrapper * proxy)
   }
 
 
-  proxy->get_delegation_err_fd = safe_open_wrapper(proxy->get_delegation_err_filename,O_RDWR);
+  proxy->get_delegation_err_fd = safe_open_wrapper_follow(proxy->get_delegation_err_filename,O_RDWR);
   if (proxy->get_delegation_err_fd == -1) {
     dprintf (D_ALWAYS, "Error opening get_delegation file %s: %s\n",
 	     proxy->get_delegation_err_filename, strerror(errno) );
@@ -1015,7 +1015,7 @@ Init() {
   if (stat (cred_index_file, &stat_buff)) {
     dprintf (D_ALWAYS, "Creating credential index file %s\n", cred_index_file);
     priv_state priv = set_root_priv();
-    int fd = safe_open_wrapper(cred_index_file, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    int fd = safe_open_wrapper_follow(cred_index_file, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (fd != -1) {
       close (fd);
       set_priv (priv);
@@ -1046,7 +1046,7 @@ StoreData (const char * file_name, const void * data, const int data_size) {
   priv_state priv = set_root_priv();
   dprintf (D_FULLDEBUG, "in StoreData(), euid=%d\n", geteuid());
 
-  int fd = safe_open_wrapper(file_name, O_WRONLY | O_CREAT | O_TRUNC, 0600 );
+  int fd = safe_open_wrapper_follow(file_name, O_WRONLY | O_CREAT | O_TRUNC, 0600 );
   if (fd == -1) {
     dprintf (D_ALWAYS, "Unable to store in %s\n", file_name);
     set_priv(priv);
@@ -1069,7 +1069,7 @@ int
 LoadData (const char * file_name, void *& data, int & data_size) {
   priv_state priv = set_root_priv();
   
-  int fd = safe_open_wrapper(file_name, O_RDONLY);
+  int fd = safe_open_wrapper_follow(file_name, O_RDONLY);
   if (fd == -1) {
     fprintf (stderr, "Can't open %s\n", file_name);
     set_priv (priv);

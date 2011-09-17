@@ -23,7 +23,7 @@
 #include "VMMachine.h"
 #include "VMManager.h"
 #include "vm_common.h"
-#include "condor_netdb.h"
+#include "ipv6_addrinfo.h"
 
 #define VM_UNREGISTER_TIMEOUT 3*vm_register_interval
 
@@ -223,22 +223,15 @@ vmapi_create_vmmanager(char *list)
 	tmplist.rewind();
 	while( (vm_name = tmplist.next()) ) {
 		// checking valid IP
-		if( !is_ipaddr(vm_name, NULL) ) {
-			// hostname format
-			if( (he1 = condor_gethostbyname(vm_name)) == NULL )
-				continue;
+		addrinfo_iterator iter;
+		int ret;
+		ret = ipv6_getaddrinfo(vm_name, NULL, iter);
+		if (ret != 0) continue;
 
-			struct sockaddr_in sin;
-			memset(&sin, 0, sizeof(sin));
-			sin.sin_addr = *(struct in_addr *)(he1->h_addr_list[0]);
-
-			char *hostip;
-			hostip = inet_ntoa(sin.sin_addr);
-
-			vm_list->append(strdup(hostip));
-		}else {
-			// IP address format
-			vm_list->append(strdup(vm_name));
+		addrinfo* ai = iter.next();
+		if (ai) {
+			condor_sockaddr addr(ai->ai_addr);
+			vm_list->append(strdup(addr.to_ip_string().Value()));
 		}
 	}
 

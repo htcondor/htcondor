@@ -23,7 +23,7 @@ SET(_SRCS ${ARGN})
 # ADD_PRECOMPILED_HEADER macro expects to operate on a global _SRCS
 ADD_PRECOMPILED_HEADER()
 
-add_library(${_CNDR_TARGET} ${_SRCS})
+add_library(${_CNDR_TARGET} SHARED ${_SRCS})
 
 install(TARGETS ${_CNDR_TARGET} DESTINATION ${C_LIB})
 

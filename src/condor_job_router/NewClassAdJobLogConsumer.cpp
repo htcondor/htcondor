@@ -26,7 +26,6 @@
 
 #include <string>
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 
 NewClassAdJobLogConsumer::NewClassAdJobLogConsumer() : m_reader(0) { }

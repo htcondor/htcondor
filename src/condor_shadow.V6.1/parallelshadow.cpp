@@ -402,7 +402,7 @@ ParallelShadow::spawnNode( MpiResource* rr )
 void 
 ParallelShadow::cleanUp( void )
 {
-		// kill all the starters
+	// kill all the starters
 	MpiResource *r;
 	int i;
     for( i=0 ; i<=ResourceList.getlast() ; i++ ) {
@@ -410,6 +410,42 @@ ParallelShadow::cleanUp( void )
 		r->killStarter();
 	}		
 }
+
+int ParallelShadow::JobSuspend(int sig)
+{
+	int iRet = 0;
+	MpiResource *r;
+	int i;
+    for( i=0 ; i<=ResourceList.getlast() ; i++ ) {
+		r = ResourceList[i];
+		if (!r || !r->suspend())
+		{
+			iRet = 1;
+			dprintf ( D_ALWAYS, "ParallelShadow::JobSuspend() sig %d FAILED\n", sig );
+		}
+	}		
+	
+	return iRet;
+	
+}
+
+int ParallelShadow::JobResume(int sig)
+{
+	int iRet = 0;
+	MpiResource *r;
+	int i;
+    for( i=0 ; i<=ResourceList.getlast() ; i++ ) {
+		r = ResourceList[i];
+		if (!r || !r->resume())
+		{
+			iRet = 1;
+			dprintf ( D_ALWAYS, "ParallelShadow::JobResume() sig %d FAILED\n", sig );
+		}
+	}
+	
+	return iRet;
+}
+
 
 bool
 ParallelShadow::claimIsClosing( void )
@@ -912,7 +948,7 @@ ParallelShadow::resourceBeganExecution( RemoteResource* rr )
 			// All nodes in this computation are now running, so we 
 			// can finally log the execute event.
 		ExecuteEvent event;
-		strcpy( event.executeHost, "MPI_job" );
+		event.setExecuteHost( "MPI_job" );
 		if ( !uLog.writeEvent( &event, jobAd )) {
 			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
 		}

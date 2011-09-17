@@ -29,7 +29,7 @@ A linked list of CondorChunks is kept as the recently-used data.
 
 class CondorChunk {
 public:
-	CondorChunk( int b, int s, int m) {
+	CondorChunk( off_t b, off_t s, off_t m) {
 		begin = b;
 		size = s;
 		last_used = 0;
@@ -43,12 +43,20 @@ public:
 		delete [] data;
 	}
 
-	int begin;
-	int size;
-	int max_size;
+	/* The position in the file for which this chunk is allocated */
+	off_t begin;
+	/* How much has been written into this chunk */
+	off_t size;
+	/* How big the chunk can be */
+	off_t max_size;
+	/* when was the chunk last used */
 	int last_used;
+	/* chunk data */
 	char *data;
+	/* if the chunk has been written to, but not synched to disk, then it is
+		dirty */
 	int dirty;
+
 	CondorChunk *next;
 };
 
@@ -58,7 +66,7 @@ Take two CondorChunks and combine them into one.
 
 static CondorChunk * combine( CondorChunk *a, CondorChunk *b )
 {
-	int begin, end;
+	off_t begin, end;
 	CondorChunk *r;
 
 	begin = MIN(a->begin,b->begin);
@@ -116,7 +124,7 @@ static int adjacent( CondorChunk *a, CondorChunk *b )
 Return true if this chunk contains this integer offset
 */
 
-static int contains( CondorChunk *c, int position )
+static int contains( CondorChunk *c, off_t position )
 {
 	return
 		(c->begin<=position)
@@ -265,12 +273,12 @@ Read data from this buffer.  Attempt to satisfy from the data in memory,
 but resort to the original file object if necessary.
 */
 
-int CondorFileBuffer::read(int offset, char *data, int length)
+int CondorFileBuffer::read(off_t offset, char *data, int length)
 {
 	CondorChunk *c=0;
-	int piece=0;
+	off_t piece=0;
 	int bytes_read=0;
-	int hole_top;
+	off_t hole_top;
 
 	// If the user is attempting to read past the end
 	// of the file, chop off that access here.
@@ -355,7 +363,7 @@ If the resulting list is larger than the required buffer size,
 select a block to write to disk.
 */
 
-int CondorFileBuffer::write(int offset, char *data, int length)
+int CondorFileBuffer::write(off_t offset, char *data, int length)
 {
 	CondorChunk *c=0;
 
@@ -432,7 +440,7 @@ int CondorFileBuffer::is_seekable()
 	return original->is_seekable();
 }
 
-int CondorFileBuffer::get_size()
+off_t CondorFileBuffer::get_size()
 {
 	return size;
 }
@@ -460,7 +468,7 @@ select the block that is least recently used, and write it out.
 void CondorFileBuffer::trim()
 {
 	CondorChunk *best_chunk,*i;
-	int space_used;
+	off_t space_used;
 
 	while(1) {
 		space_used = 0;
@@ -504,8 +512,10 @@ Clean this chunk by writing it out to disk.
 
 void CondorFileBuffer::clean( CondorChunk *c )
 {
+	off_t result;
+
 	if(c && c->dirty) {
-		int result = original->write(c->begin,c->data,c->size);
+		result = original->write(c->begin,c->data,c->size);
 		if(result!=c->size) _condor_error_retry("Unable to write buffered data to %s! (%s)",original->get_url(),strerror(errno));
 		c->dirty = 0;
 	}

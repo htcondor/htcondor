@@ -174,7 +174,7 @@ readJobAd( void )
 		is_stdin = true;
 	} else {
 		if (fp == NULL) {
-			fp = safe_fopen_wrapper( job_ad_file, "r" );
+			fp = safe_fopen_wrapper_follow( job_ad_file, "r" );
 			if( ! fp ) {
 				EXCEPT( "Failed to open ClassAd file (%s): %s (errno %d)",
 						job_ad_file, strerror(errno), errno );
@@ -315,14 +315,38 @@ int handleJobRemoval(Service*,int sig)
 }
 
 
-int handleUpdateJobAd(Service*,int sig)
-//int handleUpdateJobAd(Service*,int sig, Stream *sock)
+int handleSignals(Service*,int sig)
 {
-	if( Shadow ) {
-		return Shadow->handleUpdateJobAd(sig);
+	int iRet =0;
+	if( Shadow ) 
+	{
+		
+		switch (sig)
+		{
+			case SIGUSR1: // remove the job
+				iRet =  Shadow->handleJobRemoval(sig);
+				break;
+			case DC_SIGSUSPEND: // send down a signal to suspend the job
+				dprintf( D_ALWAYS, "***SUSPEND THE JOB\n");
+				iRet =  Shadow->JobSuspend(sig);
+				break;
+			case DC_SIGCONTINUE: // send down a signal to continue the job
+				dprintf( D_ALWAYS, "***CONTINUE THE JOB\n");
+				iRet =  Shadow->JobResume(sig);
+				break;
+			case UPDATE_JOBAD:
+				iRet =  Shadow->handleUpdateJobAd(sig);
+				break;
+			default: 
+				break;
+				
+		}
+		
 	}
-	return 0;
+	return iRet;
 }
+
+
 
 
 void
@@ -345,14 +369,15 @@ main_init(int argc, char *argv[])
 
 		// register SIGUSR1 (condor_rm) for shutdown...
 	daemonCore->Register_Signal( SIGUSR1, "SIGUSR1", 
-		(SignalHandler)&handleJobRemoval,"handleJobRemoval");
-
-		// ragister UPDATE_JOBAD for qedit changes
+		(SignalHandler)&handleSignals,"handleSignals");
+		// register UPDATE_JOBAD for qedit changes
 	daemonCore->Register_Signal( UPDATE_JOBAD, "UPDATE_JOBAD", 
-		(SignalHandler)&handleUpdateJobAd,"handleUpdateJobAd");
-//	daemonCore->Register_Command( UPDATE_JOBAD, "UPDATE_JOBAD",
-//		(CommandHandler)&handleUpdateJobAd, "handleUpdateJobAd", NULL,
-//		WRITE, D_FULLDEBUG);
+		(SignalHandler)&handleSignals,"handleSignals");
+		// handle daemoncore signals which are passed down
+	daemonCore->Register_Signal( DC_SIGSUSPEND, "DC_SIGSUSPEND", 
+		(SignalHandler)&handleSignals,"handleSignals");
+	daemonCore->Register_Signal( DC_SIGCONTINUE, "DC_SIGCONTINUE", 
+		(SignalHandler)&handleSignals,"handleSignals");
 
 	int shadow_worklife = param_integer( "SHADOW_WORKLIFE", 3600 );
 	if( shadow_worklife > 0 ) {

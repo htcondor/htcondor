@@ -1,0 +1,302 @@
+\begin{ManPage}{\label{man-condor-submit}\Condor{submit}}{1}
+{Queue jobs for execution under Condor}
+\Synopsis \SynProg{\Condor{submit}}
+\oOpt{-verbose}
+\oOpt{-unused}
+\oOptArg{-name}{schedd\_name}
+\oOptArg{-remote}{schedd\_name}
+\oOptArg{-addr}{\Sinful{ip:port}}
+\oOptArg{-pool}{pool\_name}
+\oOpt{-disable}
+\oOptArg{-password}{passphrase}
+\ToolDebugOption
+% this option needs the dots in boldface, so using the macro oOptArg won't work
+\Lbr\Opt{-append} \Arg{command} \Opt{\Dots}\Rbr 
+\oOpt{-spool}
+\oOptArg{-dump}{filename}
+\oArg{submit description file}
+
+\index{Condor commands!condor\_submit}
+\index{condor\_submit command}
+
+\Description
+
+\Condor{submit} is the program for submitting jobs for execution
+under Condor.
+\Condor{submit} requires a submit description file which contains commands
+to direct the queuing of jobs.
+One submit description file may contain
+specifications for the queuing of many Condor jobs at once.
+A single invocation of \Condor{submit} may cause one or
+more clusters.
+A cluster is a set of jobs
+specified in the submit description file
+between \SubmitCmd{queue} commands for which the executable is not changed.
+It is advantageous to submit
+multiple jobs as a single cluster because:
+\begin{itemize}
+\item Only one copy of the checkpoint file is needed to 
+represent all jobs in a cluster until they begin execution.
+\item There is much less overhead involved for Condor to start the next
+job in a cluster than for Condor to start a new cluster.  This can make
+a big difference when submitting lots of short jobs.
+\end{itemize}
+
+Multiple clusters may be specified within a single
+submit description file.
+Each cluster must specify a single executable.
+
+The job ClassAd attribute \Attr{ClusterId} identifies a cluster.
+See specifics for this attribute
+in the Appendix on page~\pageref{sec:Job-ClassAd-Attributes}.
+
+Note that submission of jobs from a Windows machine requires
+a stashed password to allow Condor to impersonate the user submitting
+the job.
+To stash a password, use the \Condor{store\_cred} command.
+See the manual page at
+page~\pageref{man-condor-store-cred} for details.
+
+For lengthy lines within the submit description file,
+the backslash (\Bs) is a line continuation character.
+Placing the backslash at the end of a line causes the current line's command
+to be continued with the next line of the file.
+Submit description files may contain comments.
+A comment is any line beginning with a pound character (\verb@#@). 
+
+Here is a list of
+the commands that may be placed in the submit description file
+to direct the submission of a job.
+
+\begin{Options}
+
+\OptItem{\Opt{-verbose}}{Verbose output - display the created job ClassAd}
+
+\OptItem{\Opt{-unused}}{As a default, causes no warnings to be issued about
+  user-defined macros not being used within the submit description file.
+  The meaning reverses (toggles) when
+  the configuration variable \Macro{WARN\_ON\_UNUSED\_SUBMIT\_FILE\_MACROS}
+  is set to the nondefault value of \Expr{False}.
+  Printing the warnings can help identify spelling
+  errors of submit description file commands.  The warnings are sent
+  to stderr. }
+
+\OptItem{\OptArg{-name}{schedd\_name}}{Submit to the specified \Condor{schedd}.
+Use this option to submit to a \Condor{schedd} other than the default local one.
+\Arg{schedd\_name} is the value of the \Attr{Name} ClassAd attribute on
+the machine where the \Condor{schedd} daemon runs.}
+
+
+\OptItem{\OptArg{-remote}{schedd\_name}}{Submit to the specified
+\Condor{schedd}, spooling all required input files over the network connection.
+\Arg{schedd\_name} is the value of the \Attr{Name} ClassAd attribute
+on the machine where the \Condor{schedd} daemon runs.
+This option is equivalent to using both \Opt{-name} and \Opt{-spool}.}
+
+\OptItem{\OptArg{-addr}{\Sinful{ip:port}}}{Submit to the \Condor{schedd} at
+the IP address and port given by the \Term{sinful string} argument 
+\Arg{\Sinful{ip:port}}.}
+
+\OptItem{\OptArg{-pool}{pool\_name}}{Look in the specified pool for the 
+\Condor{schedd} to submit to.
+This option is used with \Opt{-name} or \Opt{-remote}.}
+
+\OptItem{\Opt{-disable}}{Disable file permission checks
+  when submitting a job for read permissions on all input files, 
+  such as those defined by 
+  commands \SubmitCmd{input} and \SubmitCmd{transfer\_input\_files},
+  as well as write permission to output files, such as a
+  log file defined by \SubmitCmd{log} and output files defined with 
+  \SubmitCmd{output} or \SubmitCmd{transfer\_output\_files}.  }
+
+\OptItem{\OptArg{-password}{passphrase}}{Specify a password to the 
+\Prog{MyProxy} server. }
+
+\OptItem{\Opt{-debug}}{Cause debugging information to be sent to \File{stderr},
+based on the value of the configuration variable \MacroNI{TOOL\_DEBUG}.}
+
+\OptItem{\OptArg{-append}{command}}{Augment the commands in the submit 
+description file with the given command.
+This command will be considered to immediately precede the Queue
+command within the submit description file, and come after all other
+previous commands.
+The submit description file is not modified.
+Multiple commands are specified by using the \Opt{-append} option multiple times.
+Each new command is given in a separate \Opt{-append} option.
+Commands with spaces in them will need to be enclosed in double quote
+marks.}
+
+\OptItem{\Opt{-spool}}{Spool all required input files, user log, and
+proxy over the connection to the \Condor{schedd}.
+After submission, modify
+local copies of the files without affecting your jobs. Any output
+files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
+
+\OptItem{\OptArg{-dump}{filename}}{Sends all ClassAds to the specified
+  file, instead of to the \Condor{schedd}.}
+
+\OptItem{\Arg{submit description file}}{The pathname to the submit description
+file. If this optional argument is missing or equal to ``-'', then the commands
+are taken from standard input.}
+
+\end{Options}
+
+\subsection*{Submit Description File Commands}
+\index{submit commands}
+\input{man-pages/submitcmds.tex}
+
+\ExitStatus
+
+\Condor{submit} will exit with a status value of 0 (zero) upon success, and a
+non-zero value upon failure.
+
+\label{condor-submit-examples}
+\Examples
+
+\begin{itemize} 
+\item{Submit Description File Example 1:} This example queues three jobs for
+execution by Condor. The first will be given command line arguments of
+\Arg{15} and \Arg{2000}, and it will write its standard output
+to \File{foo.out1}.
+The second will be given command line arguments of 
+\Arg{30} and \Arg{2000}, and it will
+write its standard output to \File{foo.out2}.
+Similarly the third will have
+arguments of 
+\Arg{45} and \Arg{6000}, and it will use \File{foo.out3} for its standard
+output. Standard error output (if any) from all three programs will
+appear in \File{foo.error}.
+
+\footnotesize
+\begin{verbatim}
+      ####################
+      #
+      # submit description file
+      # Example 1: queuing multiple jobs with differing
+      # command line arguments and output files.
+      #                                                                      
+      ####################                                                   
+                                                                         
+      Executable     = foo                                                   
+      Universe       = standard
+                                                                         
+      Arguments      = 15 2000                                               
+      Output  = foo.out1                                                     
+      Error   = foo.err1
+      Queue                                                                  
+                                                                         
+      Arguments      = 30 2000                                               
+      Output  = foo.out2                                                     
+      Error   = foo.err2
+      Queue                                                                  
+                                                                         
+      Arguments      = 45 6000                                               
+      Output  = foo.out3                                                     
+      Error   = foo.err3
+      Queue                   
+\end{verbatim}
+\normalsize
+
+\item{Submit Description File Example 2:} This submit description file
+example queues 150
+runs of program \Prog{foo} which must have been compiled and linked for
+an Intel x86 processor running RHEL 3.
+Condor will not attempt
+to run the processes on machines which have less than 32 Megabytes of
+physical memory, and it will run them on machines which have at least 64
+Megabytes, if such machines are available.
+Stdin, stdout, and stderr will
+refer to \File{in.0}, \File{out.0}, and \File{err.0} for the first run
+of this program (process 0).
+Stdin, stdout, and stderr will refer to
+\File{in.1}, \File{out.1}, and \File{err.1} for process 1, and so forth.
+A log file containing entries
+about where and when Condor runs, takes checkpoints, and migrates processes
+in this cluster will be written into file \File{foo.log}.
+
+\footnotesize
+\begin{verbatim}
+      ####################                                                    
+      #                                                                       
+      # Example 2: Show off some fancy features including
+      # use of pre-defined macros and logging.                                
+      #                                                                       
+      ####################                                                    
+                                                                          
+      Executable     = foo                                                    
+      Universe       = standard
+      Requirements   = Memory >= 32 && OpSys == "LINUX" && Arch =="INTEL"     
+      Rank           = Memory >= 64
+      Image_Size     = 28 Meg                                                 
+                                                                          
+      Error   = err.$(Process)                                                
+      Input   = in.$(Process)                                                 
+      Output  = out.$(Process)                                                
+      Log = foo.log                                                                       
+                                                                          
+      Queue 150
+\end{verbatim}
+\normalsize
+
+\item{Command Line example:} The following command uses the
+\Opt{-append} option to add two commands before the job(s) is queued.
+A log file and an error log file are specified.
+The submit description file is unchanged.
+\footnotesize
+\begin{verbatim}
+condor_submit -a "log = out.log" -a "error = error.log" mysubmitfile
+\end{verbatim}
+\normalsize
+Note that each of the added commands is contained within quote marks
+because there are space characters within the command.
+
+\item{\AdAttr{periodic\_remove} example:}
+A job should be removed from the queue,
+if the total suspension time of the job
+is more than half of the run time of the job.
+
+Including the command
+\footnotesize
+\begin{verbatim}
+   periodic_remove = CumulativeSuspensionTime > 
+                     ((RemoteWallClockTime - CumulativeSuspensionTime) / 2.0)
+\end{verbatim}
+\normalsize
+in the submit description file causes this to happen.
+
+\end{itemize} 
+
+
+\GenRem
+\begin{itemize}
+
+\item For security reasons, Condor will refuse to run any jobs submitted
+by user root (UID = 0) or by a user whose default group is group wheel
+(GID = 0). Jobs submitted by user root or a user with a default group of
+wheel will appear to sit forever in the queue in an idle state. 
+
+\item All path names specified in the submit description file must be
+less than 256 characters in length, and command line arguments must be
+less than 4096 characters in length; otherwise, \Condor{submit} gives a
+warning message but the jobs will not execute properly. 
+
+\item Somewhat understandably, behavior gets bizarre if the user makes
+the mistake of requesting multiple Condor jobs to write to the
+same file, and/or if the user alters any files that need to be accessed
+by a Condor job which is still in the queue.
+For example, the compressing of data or
+output files before a Condor job has completed is a common mistake.
+
+\item To disable checkpointing for Standard Universe jobs, include the
+line:
+\begin{verbatim}
+      +WantCheckpoint = False
+\end{verbatim}
+in the submit description file before the queue command(s).
+\end{itemize}
+
+\SeeAlso
+Condor User Manual
+
+\end{ManPage}
+

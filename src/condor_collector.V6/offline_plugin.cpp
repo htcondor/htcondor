@@ -154,8 +154,7 @@ OfflineCollectorPlugin::update (
 	AdNameHashKey hashKey;
 	if ( !makeStartdAdHashKey (
 		hashKey,
-		&ad,
-		NULL ) ) {
+		&ad ) ) {
 
 		dprintf (
 			D_FULLDEBUG,
@@ -376,8 +375,7 @@ OfflineCollectorPlugin::invalidate (
 		AdNameHashKey hashKey;
 		if ( !makeStartdAdHashKey (
 			hashKey,
-			const_cast<ClassAd*> ( &ad ),
-			NULL ) ) {
+			const_cast<ClassAd*> ( &ad ) ) ) {
 
 			dprintf (
 				D_FULLDEBUG,

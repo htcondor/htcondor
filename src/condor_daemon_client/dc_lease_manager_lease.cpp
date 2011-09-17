@@ -28,7 +28,6 @@
 #include "daemon.h"
 #include "dc_lease_manager.h"
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 #include "newclassad_stream.unix.h"
 using namespace std;

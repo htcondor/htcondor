@@ -36,8 +36,8 @@ public:
 	CondorFileRemote();
 	virtual ~CondorFileRemote();
 
-	virtual int read(int offset, char *data, int length);
-	virtual int write(int offset, char *data, int length);
+	virtual int read(off_t offset, char *data, int length);
+	virtual int write(off_t offset, char *data, int length);
 
 	virtual int fcntl( int cmd, int arg );
 	virtual int ioctl( int cmd, long arg );

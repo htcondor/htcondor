@@ -23,7 +23,7 @@
 
 #include <vector>
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 class ExprListIterator;
 
@@ -233,6 +233,6 @@ class ExprListIterator
 };	
 
 
-END_NAMESPACE // classad
+} // classad
 
 #endif//__CLASSAD_EXPR_LIST_H__

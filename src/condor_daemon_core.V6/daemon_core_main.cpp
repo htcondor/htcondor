@@ -23,7 +23,7 @@
 #include "condor_config.h"
 #include "util_lib_proto.h"
 #include "basename.h"
-#include "my_hostname.h"
+#include "ipv6_hostname.h"
 #include "condor_version.h"
 #include "limit.h"
 #include "condor_email.h"
@@ -387,7 +387,7 @@ drop_addr_file()
 	if( addrFile ) {
 		MyString newAddrFile;
 		newAddrFile.sprintf("%s.new",addrFile);
-		if( (ADDR_FILE = safe_fopen_wrapper(newAddrFile.Value(), "w")) ) {
+		if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
 			// Always prefer the local, private address if possible.
 			const char* addr = daemonCore->privateNetworkIpAddr();
 			if (!addr) {
@@ -422,7 +422,7 @@ drop_pid_file()
 		return;
 	}
 
-	if( (PID_FILE = safe_fopen_wrapper(pidFile, "w")) ) {
+	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "w")) ) {
 		fprintf( PID_FILE, "%lu\n", 
 				 (unsigned long)daemonCore->getpid() ); 
 		fclose( PID_FILE );
@@ -458,7 +458,7 @@ do_kill()
 			pidFile = tmp;
 		}
 	}
-	if( (PID_FILE = safe_fopen_wrapper(pidFile, "r")) ) {
+	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "r")) ) {
 		fscanf( PID_FILE, "%lu", &tmp_ul_int ); 
 		pid = (pid_t)tmp_ul_int;
 		fclose( PID_FILE );
@@ -644,7 +644,7 @@ handle_dynamic_dirs()
 	}
 	int mypid = daemonCore->getpid();
 	char buf[256];
-	sprintf( buf, "%s-%d", inet_ntoa(*(my_sin_addr())), mypid );
+	sprintf( buf, "%s-%d", get_local_ipaddr().to_ip_string().Value(), mypid );
 
 	set_dynamic_dir( "LOG", buf );
 	set_dynamic_dir( "SPOOL", buf );
@@ -984,7 +984,7 @@ handle_fetch_log( Service *, int, ReliSock *stream )
 		}
 	}
 
-	int fd = safe_open_wrapper(full_filename.Value(),O_RDONLY);
+	int fd = safe_open_wrapper_follow(full_filename.Value(),O_RDONLY);
 	if(fd<0) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log: can't open file %s\n",full_filename.Value());
 		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
@@ -1035,7 +1035,7 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 		stream->end_of_message();
 		return FALSE;
 	}
-	int fd = safe_open_wrapper(history_file,O_RDONLY);
+	int fd = safe_open_wrapper_follow(history_file,O_RDONLY);
 	free(history_file);
 	if(fd<0) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: can't open history file\n");
@@ -1084,7 +1084,7 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 		MyString fullPath(dirName);
 		fullPath += "/";
 		fullPath += filename;
-		int fd = safe_open_wrapper(fullPath.Value(),O_RDONLY);
+		int fd = safe_open_wrapper_follow(fullPath.Value(),O_RDONLY);
 		if (fd > 0) {
 			filesize_t size;
 			stream->put_file(&size, fd);
@@ -1987,7 +1987,7 @@ int main( int argc, char** argv )
 		// /dev/null.
 
 		if ( get_mySubSystem()->isType( SUBSYSTEM_TYPE_MASTER ) ) {
-			int	fd_null = safe_open_wrapper( NULL_FILE, O_RDWR );
+			int	fd_null = safe_open_wrapper_follow( NULL_FILE, O_RDWR );
 			if ( fd_null < 0 ) {
 				fprintf( stderr, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
 				dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
@@ -2027,13 +2027,8 @@ int main( int argc, char** argv )
 
 		// Now that we've potentially forked, we have our real pid, so
 		// we can instantiate a daemon core and it'll have the right
-		// pid.  Have lots of pid table hash buckets if we're the
-		// SCHEDD, since the SCHEDD could have lots of children... 
-	if ( get_mySubSystem()->isType( SUBSYSTEM_TYPE_SCHEDD ) ) {
-		daemonCore = new DaemonCore(503);
-	} else {
-		daemonCore = new DaemonCore();
-	}
+		// pid. 
+	daemonCore = new DaemonCore();
 
 	if( DynamicDirs ) {
 			// If we want to use dynamic dirs for log, spool and

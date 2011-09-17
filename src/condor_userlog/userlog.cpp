@@ -24,6 +24,8 @@
 #include "classad_hashtable.h"
 #include "internet.h"
 #include "condor_distribution.h"
+#include "condor_sockaddr.h"
+#include "ipv6_hostname.h"
 
 /* 
 ** Job Record format: cluster.proc evict_time wall_time good_time cpu_usage
@@ -271,7 +273,7 @@ display_stats()
 
 void
 new_record(int cluster, int proc, int start_time, int evict_time, 
-		   int good_time, int cpu_usage, char host[])
+		   int good_time, int cpu_usage, char const *host)
 {
 	static bool initialized = false;
 	char hash[40];
@@ -309,8 +311,9 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 	js->cpu_usage += cpu_usage;
 
 	char ip_addr[128];
-	// only use the IP address in the key
-	strcpy(ip_addr, host+1);
+	// only use the IP address in the key [TODO:IPV6] Parse IPv6 Addr
+	strncpy(ip_addr, host+1, sizeof(ip_addr)-1);
+	ip_addr[sizeof(ip_addr)-1] = '\0';
 	for (int i=0; i < 128; i++) {
 		if (ip_addr[i] == ':') {
 			ip_addr[i] = '\0';
@@ -320,11 +323,13 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 	HostStatistics *hs;
 	HashKey hostkey(ip_addr);
 	if (HStats.lookup(hostkey, hs) < 0) {
-		struct sockaddr_in sin;
-		string_to_sin(host, &sin);
-		char *hostname = NULL;
+		condor_sockaddr addr;
+		const char* hostname = NULL;
+		MyString hostname_str;
+		addr.from_sinful(host);
 		if (!avoid_dns) {
-			hostname = sin_to_hostname(&sin, NULL);
+			hostname_str = get_hostname(addr);
+			hostname = hostname_str.Value();
 		}
 		if (hostname == NULL) {
 			hostname = ip_addr;
@@ -396,8 +401,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					// other event, so keeping the first execute event
 					// gives correct results for those shadows.
 					// Otherwise, we throw out the previous event.
-					if (!strcmp(((ExecuteEvent *)event)->executeHost,
-								execEvent->executeHost)) {
+					if (!strcmp(((ExecuteEvent *)event)->getExecuteHost(),
+								execEvent->getExecuteHost())) {
 						if (debug_mode) {
 							fprintf(stderr,
 									"warning: discarding execute event "
@@ -492,7 +497,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				new_record(event->cluster, event->proc, (int)start_time,
 						   (int)end_time,
 						   (int)ckpt_time-start_time, cpu_usage,
-						   execEvent->executeHost);
+						   execEvent->getExecuteHost());
 				delete execEvent;
 				delete event;
 				break;
@@ -532,7 +537,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 							   run_remote_rusage.ru_utime.tv_sec +
 							   terminateEvent->
 							   run_remote_rusage.ru_stime.tv_sec,
-							   execEvent->executeHost);
+							   execEvent->getExecuteHost());
 				}
 				delete execEvent;
 				delete event;
@@ -582,7 +587,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					new_record(event->cluster, event->proc, (int)start_time,
 							   (int)end_time,
 							   (int)ckpt_time-start_time, cpu_usage,
-							   execEvent->executeHost);
+							   execEvent->getExecuteHost());
 				}
 				delete execEvent;
 				delete event;

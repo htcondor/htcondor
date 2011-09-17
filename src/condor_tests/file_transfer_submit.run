@@ -1,0 +1,101 @@
+#!/bin/sh
+##**************************************************************
+## Copyright 2011 Red Hat, Inc.
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##**************************************************************
+
+run_test ()
+{
+    should=$1
+    when=$2
+    expect=$3
+    out=$4
+    in=$5
+
+    echo "---"
+    echo "should=$should, when=$when, expect=$expect, out=$out, in=$in"
+    (
+    echo "cmd=/bin/echo"
+    echo "periodic_remove = TRUE"
+    if [ ! -z "$should" ]; then
+	echo "should_transfer_files=$should"
+    fi
+    if [ ! -z "$when" ]; then
+	echo "when_to_transfer_output=$when"
+    fi
+    if [ ! -z "$out" ]; then
+	echo "transfer_output_files=$out"
+    fi
+    if [ ! -z "$in" ]; then
+	echo "transfer_input_files=$in"
+    fi
+    echo "queue"
+    ) | condor_submit
+    result=$?
+
+    echo -n "result=$result :: "
+
+    if [ $expect -eq $result ]; then
+	echo "SUCCESS"
+	return 0
+    else
+	echo "FAIL"
+	return 1
+    fi
+}
+
+fails=0
+# OLD, defaults NO NONE
+#run_test "" NONE 0 ; fails=`expr $fails + $?`
+#run_test YES "" 1 ; fails=`expr $fails + $?`
+#run_test IF_NEEDED "" 1 ; fails=`expr $fails + $?`
+
+# NEW, defaults IF_NEEDED ON_EXIT
+run_test "" NONE 1 ; fails=`expr $fails + $?`
+run_test YES "" 0 ; fails=`expr $fails + $?`
+run_test IF_NEEDED "" 0 ; fails=`expr $fails + $?`
+
+# General expectations -
+
+run_test "" "" 0 ; fails=`expr $fails + $?`
+run_test "" ON_EXIT 0 ; fails=`expr $fails + $?`
+run_test "" ON_EXIT_OR_EVICT 0 ; fails=`expr $fails + $?`
+run_test NO "" 0 ; fails=`expr $fails + $?`
+
+run_test YES NONE 1 ; fails=`expr $fails + $?`
+run_test YES ON_EXIT 0 ; fails=`expr $fails + $?`
+run_test YES ON_EXIT_OR_EVICT 0 ; fails=`expr $fails + $?`
+
+run_test NO NONE 0 ; fails=`expr $fails + $?`
+run_test NO ON_EXIT 1 ; fails=`expr $fails + $?`
+run_test NO ON_EXIT_OR_EVICT 1 ; fails=`expr $fails + $?`
+
+run_test IF_NEEDED NONE 1 ; fails=`expr $fails + $?`
+run_test IF_NEEDED ON_EXIT 0 ; fails=`expr $fails + $?`
+run_test IF_NEEDED ON_EXIT_OR_EVICT 1 ; fails=`expr $fails + $?`
+
+tmp=$(mktemp submit.XXXXXX)
+echo "---"
+echo "Temp file: '$tmp'"
+if [ -z "$tmp" ]; then echo "FAILURE: mktemp failed"; fi
+run_test YES ON_EXIT 0 $tmp "" ; fails=`expr $fails + $?`
+run_test YES ON_EXIT 0 "" $tmp ; fails=`expr $fails + $?`
+run_test NO NONE 1 $tmp "" ; fails=`expr $fails + $?`
+run_test NO NONE 1 "" $tmp ; fails=`expr $fails + $?`
+rm -f $tmp
+
+echo
+echo "$fails failures"
+
+exit $fails

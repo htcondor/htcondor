@@ -229,13 +229,13 @@ CondorVersionInfo::get_version_from_file(const char* filename,
 	static const char *readonly = "r";
 #endif
 
-	FILE *fp = safe_fopen_wrapper(filename,readonly);
+	FILE *fp = safe_fopen_wrapper_follow(filename,readonly);
 
 	if (!fp) {
 		// file not found, try alternate exec pathname
 		char *altname = alternate_exec_pathname( filename );
 		if ( altname ) {
-			fp = safe_fopen_wrapper(altname,readonly);
+			fp = safe_fopen_wrapper_follow(altname,readonly);
 			free(altname);
 		}
 	}
@@ -320,13 +320,13 @@ CondorVersionInfo::get_platform_from_file(const char* filename,
 	static const char *readonly = "r";
 #endif
 
-	FILE *fp = safe_fopen_wrapper(filename,readonly);
+	FILE *fp = safe_fopen_wrapper_follow(filename,readonly);
 
 	if (!fp) {
 		// file not found, try alternate exec pathname
 		char *altname = alternate_exec_pathname( filename );
 		if ( altname ) {
-			fp = safe_fopen_wrapper(altname,readonly);
+			fp = safe_fopen_wrapper_follow(altname,readonly);
 			free(altname);
 		}
 	}

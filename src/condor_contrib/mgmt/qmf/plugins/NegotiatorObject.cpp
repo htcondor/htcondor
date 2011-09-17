@@ -38,13 +38,14 @@
 
 #include "MgmtConversionMacros.h"
 
-
+#ifndef READ_ONLY_NEGOTIATOR_OBJECT
 // Global from condor_negotiator, the matchMaker, holds the Accountant
 extern Matchmaker matchMaker;
 
 extern int main_shutdown_graceful();
 
 void dc_reconfig();
+#endif
 
 
 using namespace com::redhat::grid;
@@ -138,6 +139,7 @@ NegotiatorObject::update(const ClassAd &ad)
 }
 
 
+#ifndef READ_ONLY_NEGOTIATOR_OBJECT
 Manageable::status_t
 NegotiatorObject::GetLimits(Variant::Map &limits, std::string &/*text*/)
 {
@@ -318,6 +320,7 @@ NegotiatorObject::SetUsage(std::string &name, double &usage, std::string &text)
 
 	return STATUS_OK;
 }
+#endif
 
 
 Manageable::status_t
@@ -325,6 +328,7 @@ NegotiatorObject::ManagementMethod(uint32_t methodId,
 								   Args &args,
 								   std::string &text)
 {
+#ifndef READ_ONLY_NEGOTIATOR_OBJECT
 	switch (methodId) {
 	case qmf::com::redhat::grid::Negotiator::METHOD_ECHO:
 		return STATUS_OK;
@@ -361,7 +365,7 @@ NegotiatorObject::ManagementMethod(uint32_t methodId,
 						((ArgsNegotiatorSetUsage &) args).i_Usage,
 						text);
 	}
+#endif
 
 	return STATUS_NOT_IMPLEMENTED;
 }
-

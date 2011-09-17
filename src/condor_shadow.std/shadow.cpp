@@ -30,7 +30,6 @@
 #include "condor_attributes.h"
 #include "condor_commands.h"
 #include "condor_config.h"
-#include "my_hostname.h"
 #include "../condor_ckpt_server/server_interface.h"
 #include "sig_install.h"
 #include "job_report.h"
@@ -39,6 +38,7 @@
 #include "condor_environ.h"
 #include "condor_holdcodes.h"
 #include "subsystem_info.h"
+#include "ipv6_hostname.h"
 
 #include "user_job_policy.h"
 
@@ -1416,7 +1416,7 @@ pipe_setup( char *cluster, char *proc, char *capability )
 		EXCEPT( "Spool directory not specified in config file" );
 	}
 
-	snprintf( host, 1024, "%s", my_hostname() );
+	snprintf( host, 1024, "%s", get_local_hostname().Value() );
 	ExecutingHost = host;
 
 	open_named_pipe( "/tmp/syscall_req", O_RDONLY, REQ_SOCK );
@@ -1441,7 +1441,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 {
 	int		fd;
 
-	if( (fd=safe_open_wrapper(name,mode)) < 0 ) {
+	if( (fd=safe_open_wrapper_follow(name,mode)) < 0 ) {
 		EXCEPT( "Can't open named pipe %s", name );
 	}
 

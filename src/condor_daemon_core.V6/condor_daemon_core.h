@@ -58,6 +58,8 @@
 #include "limit.h"
 #include "ccb_listener.h"
 #include "condor_sinful.h"
+#include "condor_sockaddr.h"
+#include "generic_stats.h"
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -258,6 +260,7 @@ class DCSignalMsg: public DCMsg {
 	bool m_messenger_delivery;
 };
 
+
 //-----------------------------------------------------------------------------
 /** This class badly needs documentation, doesn't it? 
     This file contains the definition for class DaemonCore. This is the
@@ -302,7 +305,7 @@ class DaemonCore : public Service
         @param sin  Not_Yet_Documented
         @return Not_Yet_Documented
     */
-    int Verify (char const *command_descrip, DCpermission perm, const struct sockaddr_in *sin, const char * fqu);
+    int Verify (char const *command_descrip, DCpermission perm, const condor_sockaddr& addr, const char * fqu);
     int AddAllowHost( const char* host, DCpermission perm );
 
     /** clear all sessions associated with the child 
@@ -321,6 +324,10 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @param perm            Not_Yet_Documented
         @param dprintf_flag    Not_Yet_Documented
+		@param force_authentication This command _must_ be authenticated.
+        @param wait_for_payload Do a non-blocking select for read for this
+                                many seconds (0 means none) before calling
+                                command handler.
         @return Not_Yet_Documented
     */
     int Register_Command (int             command,
@@ -330,7 +337,8 @@ class DaemonCore : public Service
                           Service *       s                = NULL,
                           DCpermission    perm             = ALLOW,
                           int             dprintf_flag     = D_COMMAND,
-                          bool            force_authentication = false);
+                          bool            force_authentication = false,
+						  int             wait_for_payload = 0);
     
     /** Not_Yet_Documented
         @param command         Not_Yet_Documented
@@ -340,6 +348,10 @@ class DaemonCore : public Service
         @param s               Not_Yet_Documented
         @param perm            Not_Yet_Documented
         @param dprintf_flag    Not_Yet_Documented
+		@param force_authentication This command _must_ be authenticated.
+        @param wait_for_payload Do a non-blocking select for read for this
+                                many seconds (0 means none) before calling
+                                command handler.
         @return Not_Yet_Documented
     */
     int Register_Command (int                command,
@@ -349,7 +361,9 @@ class DaemonCore : public Service
                           Service *          s,
                           DCpermission       perm             = ALLOW,
                           int                dprintf_flag     = D_COMMAND,
-                          bool               force_authentication = false);
+                          bool               force_authentication = false,
+						  int                wait_for_payload = 0);
+
     
     /** Not_Yet_Documented
         @param command Not_Yet_Documented
@@ -668,7 +682,7 @@ class DaemonCore : public Service
 		// returns the return code of the handler
 		// if delete_stream is true and the command handler does not return
 		// KEEP_STREAM, the stream is deleted
-	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true);
+	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true,bool check_payload=true,float time_spent_on_sec=0,float time_spent_waiting_for_payload=0);
 
 
 	/**
@@ -1420,6 +1434,60 @@ class DaemonCore : public Service
 		*/
 	void ReloadSharedPortServerAddr();
 
+
+	//-----------------------------------------------------------------------------
+	/*
+  	 Statistical values for the operation of DaemonCore, to be published in the
+  	 ClassAd for the daemon.
+	*/
+	class Stats {
+	public:
+	   // published values
+	   time_t StatsLifetime;       // total time the daemon has been collecting statistics. (uptime)
+	   time_t StatsLastUpdateTime; // last time that statistics were last updated. (a freshness time)
+	   time_t RecentStatsLifetime; // actual time span of current DCRecentXXX data.
+   
+	   stats_entry_recent<double> SelectWaittime; //  total time spent waiting in select
+	   stats_entry_recent<double> SignalRuntime;  //  total time spent handling signals
+	   stats_entry_recent<double> TimerRuntime;   //  total time spent handling timers
+	   stats_entry_recent<double> SocketRuntime;  //  total time spent handling socket messages
+	   stats_entry_recent<double> PipeRuntime;    //  total time spent handling pipe messages
+
+	   stats_entry_recent<int> Signals;        //  number of signals handlers called
+	   stats_entry_recent<int> TimersFired;    //  number of timer handlers called
+	   stats_entry_recent<int> SockMessages;   //  number of socket handlers called
+	   stats_entry_recent<int> PipeMessages;   //  number of pipe handlers called
+	   //stats_entry_recent<int64_t> SockBytes;      //  number of bytes passed though the socket (can we do this?)
+	   //stats_entry_recent<int64_t> PipeBytes;      //  number of bytes passed though the socket
+	   stats_entry_recent<int> DebugOuts;      //  number of dprintf calls that were written to output.
+      #ifdef WIN32
+	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
+      #endif
+
+       StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
+
+	   time_t InitTime;            // last time we init'ed the structure
+	   time_t RecentStatsTickTime; // time of the latest recent buffer Advance
+	   int    RecentWindowMax;     // size of the time window over which RecentXXX values are calculated.
+       int    PublishFlags;        // verbositiy of publishing
+
+	   // helper methods
+	   //Stats();
+	   //~Stats();
+	   void Init();
+       void Reconfig();
+	   void Clear();
+	   void Tick(); // call this when time may have changed to update StatsLastUpdateTime, etc.
+	   void SetWindowSize(int window);
+	   void Publish(ClassAd & ad) const;
+	   void Unpublish(ClassAd & ad) const;
+       void* New(const char * category, const char * name, int as);
+       void AddToProbe(const char * name, int val);
+       void AddToProbe(const char * name, int64_t val);
+       double AddRuntime(const char * name, double before); // returns current time.
+
+	} dc_stats;
+
   private:      
 
 		// do and our parents/children want/have a udp comment socket?
@@ -1440,6 +1508,7 @@ class DaemonCore : public Service
 	int HandleReq(Stream *insock, Stream* accepted_sock=NULL);
 	int HandleReqSocketTimerHandler();
 	int HandleReqSocketHandler(Stream *stream);
+	int HandleReqPayloadReady(Stream *stream);
     int HandleSig(int command, int sig);
 
 	bool RegisterSocketForHandleReq(Stream *stream);
@@ -1460,7 +1529,8 @@ class DaemonCore : public Service
                          DCpermission perm,
                          int dprintf_flag,
                          int is_cpp,
-                         bool force_authentication);
+                         bool force_authentication,
+						 int wait_for_payload);
 
     int Register_Signal(int sig,
                         const char *sig_descip,
@@ -1540,6 +1610,7 @@ class DaemonCore : public Service
         char*           handler_descrip;
         void*           data_ptr;
         int             dprintf_flag;
+		int             wait_for_payload;
     };
 
     void                DumpCommandTable(int, const char* = NULL);
@@ -1863,6 +1934,8 @@ class DaemonCore : public Service
 
 	void InitSharedPort(bool in_init_dc_command_socket=false);
 };
+
+
 
 #ifndef _NO_EXTERN_DAEMON_CORE
 

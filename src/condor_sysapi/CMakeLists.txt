@@ -19,7 +19,7 @@
 
 set(BENCH_LINK_LIBS "${TOOL_LINK_LIBS}")
 
-file( GLOB SysApiRmvElements *_t.cpp *.t.* dhry21b* *_main.cpp )
+file( GLOB SysApiRmvElements *.t.* dhry21b* *_main.cpp )
 
 condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
 
@@ -28,13 +28,13 @@ condor_static_lib(sysapi "${SysapiHeaderFiles};${SysapiSourceFiles}")
 
 # there was a test target which was never used.
 # it makes the most sense to hook in a UT here instead of integ test
-condor_exe(condor_kflops "kflops_main.cpp" ${C_LIBEXEC} "sysapi;condorapi;${BENCH_LINK_LIBS}" OFF)
+condor_exe(condor_kflops "kflops_main.cpp" ${C_LIBEXEC} "utils;sysapi;condorapi;${BENCH_LINK_LIBS}" OFF)
 
 # unfortunately libutils comes with undefined symbols introduced by
 # libdaemon_core (even when linking libutils to it)
 target_link_libraries(condor_kflops -Wl,--allow-shlib-undefined)
 
-condor_exe(condor_mips "mips_main.cpp" ${C_LIBEXEC} "sysapi;condorapi;${BENCH_LINK_LIBS}" OFF)
+condor_exe(condor_mips "mips_main.cpp" ${C_LIBEXEC} "utils;sysapi;condorapi;${BENCH_LINK_LIBS}" OFF)
 
 # this is needed because libsysapi as a circular dependency on libutils
 target_link_libraries(condor_mips utils -Wl,--allow-shlib-undefined)

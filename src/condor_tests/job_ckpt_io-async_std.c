@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
@@ -46,6 +47,14 @@ int		Data[ 4096 ];
 
 void init_data( int *data, unsigned len );
 void do_it( int data[], int fd, unsigned len );
+
+const char* create_unique_name(const char* prefix) {
+	// time_t could be either 32bit or 64bit. so we change it to 64bit
+	uint64_t timestamp = (uint64_t)time(NULL);
+	static char buf[256];
+	sprintf(buf, "%s_%lld", prefix, timestamp);
+	return buf;
+}
 
 int
 main( int argc, char *argv[] )
@@ -66,8 +75,9 @@ main( int argc, char *argv[] )
 		exit( 1 );
 	}
 
-	if( (fd=open("tmp",O_CREAT|O_TRUNC|O_RDWR,0664)) < 0 ) {
-		perror( "tmp" );
+	const char* tmp_dir = create_unique_name("tmp");
+	if( (fd=open(tmp_dir,O_CREAT|O_TRUNC|O_RDWR,0664)) < 0 ) {
+		perror( "tmp directory creation failed" );
 		exit( 1 );
 	}
 

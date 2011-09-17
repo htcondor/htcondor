@@ -284,7 +284,8 @@ stub_prefix(const char* stub_name,   // IN
 			ASSERT(entry->qmgmt_state);
 				// tell qmgmt info about our client - addr and user
 			ASSERT(soap);
-			entry->qmgmt_state->set(&soap->peer,(const char*)soap->user);
+			condor_sockaddr addr(&soap->peer);
+			entry->qmgmt_state->set(addr, (const char*)soap->user);
 		}
 
 		// set the state of qmgmt

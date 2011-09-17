@@ -22,9 +22,9 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "directory.h"
-#include "my_hostname.h"
 #include "MyString.h"
 #include "classad_visa.h"
+#include "ipv6_hostname.h"
 
 bool
 classad_visa_write(ClassAd* ad,
@@ -80,7 +80,7 @@ classad_visa_write(ClassAd* ad,
 		        ATTR_VISA_DAEMON_PID);
 		goto EXIT;
 	}
-	if (visa_ad.Assign(ATTR_VISA_HOSTNAME, my_full_hostname()) != TRUE) {
+	if (visa_ad.Assign(ATTR_VISA_HOSTNAME, get_local_fqdn()) != TRUE) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "classad_visa_write ERROR: could not add attribute %s\n",
 		        ATTR_VISA_HOSTNAME);
@@ -102,7 +102,7 @@ classad_visa_write(ClassAd* ad,
 	filename.sprintf("jobad.%d.%d", cluster, proc);
 	ASSERT(dir_path != NULL);
 	file_path = dircat(dir_path, filename.Value());
-	while (-1 == (fd = safe_open_wrapper(file_path,
+	while (-1 == (fd = safe_open_wrapper_follow(file_path,
 	                                     O_WRONLY|O_CREAT|O_EXCL))) {
 		if (EEXIST != errno) {
 			dprintf(D_ALWAYS | D_FAILURE,

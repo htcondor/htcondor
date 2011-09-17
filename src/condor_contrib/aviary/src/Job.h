@@ -75,6 +75,7 @@ class LiveJobImpl: public JobImpl
         void set ( const char* , const char* );
         bool get ( const char * , const AviaryAttribute *& ) const;
         void remove ( const char* );
+		int getQDate() const;
 
         virtual bool destroy();
 
@@ -109,6 +110,7 @@ class HistoryJobImpl: public JobImpl
         void getFullAd ( ClassAd& ) const;
         int  getCluster() const;
         const char* getSubmissionId () const;
+		int getQDate() const;
 
     private:
         HistoryEntry m_he;
@@ -131,6 +133,7 @@ class Job
         void getSummary (ClassAd&) const;
         void getFullAd (ClassAd&) const;
         const ClassAd* getClassAd() const;
+        int getQDate() const;
 
         void set ( const char* , const char* );
         void remove ( const char* );

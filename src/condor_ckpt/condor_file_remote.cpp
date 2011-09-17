@@ -47,14 +47,14 @@ CondorFileRemote::~CondorFileRemote()
 
 /* A read results in a CONDOR_lseekread */
 
-int CondorFileRemote::read(int pos, char *data, int length) 
+int CondorFileRemote::read(off_t pos, char *data, int length) 
 {
 	return REMOTE_CONDOR_lseekread( fd, pos, SEEK_SET, data, length );
 }
 
 /* A write results in a CONDOR_lseekwrite */
 
-int CondorFileRemote::write(int pos, char *data, int length)
+int CondorFileRemote::write(off_t pos, char *data, int length)
 {
 	int result;
 	result = REMOTE_CONDOR_lseekwrite( fd, pos, SEEK_SET, data, length );

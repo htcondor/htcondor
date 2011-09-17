@@ -28,6 +28,7 @@
 #include "my_popen.h"
 #include "../condor_procapi/processid.h"
 #include "../condor_procapi/procapi.h"
+#include "dagman_main.h"
 
 //-----------------------------------------------------------------------------
 int util_popen (ArgList &args) {
@@ -39,11 +40,18 @@ int util_popen (ArgList &args) {
 
     int r = 0;
     if (fp == NULL || (r = my_pclose(fp) & 0xff) != 0) {
-		debug_printf( DEBUG_QUIET, "WARNING: failure: %s\n", cmd.Value() );
+		debug_printf( DEBUG_QUIET, "Warning: failure: %s\n", cmd.Value() );
 		if( fp != NULL ) {
-			debug_printf ( DEBUG_QUIET, "\t(my_pclose() returned %d (errno %d, %s)\n",
-			r, errno, strerror( errno ) );
+			debug_printf ( DEBUG_QUIET,
+						"\t(my_pclose() returned %d (errno %d, %s))\n",
+						r, errno, strerror( errno ) );
+		} else {
+			debug_printf ( DEBUG_QUIET,
+						"\t(my_popen() returned NULL (errno %d, %s))\n",
+						errno, strerror( errno ) );
+			r = -1;
 		}
+		check_warning_strictness( DAG_STRICT_1 );
     }
     return r;
 }
@@ -53,7 +61,7 @@ int util_popen (ArgList &args) {
 int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 	int result = 0;
 
-	FILE *fp = safe_fopen_wrapper( lockFileName, "w" );
+	FILE *fp = safe_fopen_wrapper_follow( lockFileName, "w" );
 	if ( fp == NULL ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: could not open lock file %s for writing.\n",
@@ -93,9 +101,10 @@ int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 		int sleepTime = procId->computeWaitTime();
 
 		if ( sleepTime > maxSleepTime ) {
-			debug_printf( DEBUG_NORMAL, "WARNING: ProcessId computed sleep "
+			debug_printf( DEBUG_QUIET, "Warning: ProcessId computed sleep "
 						"time (%d) exceeds maximum (%d); skipping sleep/"
 						"confirm step\n", sleepTime, maxSleepTime );
+			check_warning_strictness( DAG_STRICT_3 );
 		} else {
 			debug_printf( DEBUG_NORMAL, "Sleeping for %d seconds to "
 						"ensure ProcessId uniqueness\n", sleepTime );
@@ -112,12 +121,14 @@ int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 			int status;
 			if ( ProcAPI::confirmProcessId( *procId, status ) !=
 						PROCAPI_SUCCESS ) {
-				debug_printf( DEBUG_QUIET, "WARNING: ProcAPI::"
+				debug_printf( DEBUG_QUIET, "Warning: ProcAPI::"
 							"confirmProcessId() failed; %d\n", status );
+				check_warning_strictness( DAG_STRICT_3 );
 			} else {
 				if ( !procId->isConfirmed() ) {
-					debug_printf( DEBUG_QUIET, "WARNING: ProcessId not "
+					debug_printf( DEBUG_QUIET, "Warning: ProcessId not "
 								"confirmed unique\n" );
+					check_warning_strictness( DAG_STRICT_3 );
 				} else {
 
 						//
@@ -152,7 +163,7 @@ int util_create_lock_file(const char *lockFileName, bool abortDuplicates) {
 int util_check_lock_file(const char *lockFileName) {
 	int result = 0;
 
-	FILE *fp = safe_fopen_wrapper( lockFileName, "r" );
+	FILE *fp = safe_fopen_wrapper_follow( lockFileName, "r" );
 	if ( fp == NULL ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: could not open lock file %s for reading.\n",

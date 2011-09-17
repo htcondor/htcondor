@@ -109,4 +109,23 @@ const int CONDOR_HOLD_CODE_StartdHeldJob = 21;
 // the user log for writing.
 const int CONDOR_HOLD_CODE_UnableToInitUserLog = 22;
 
+const int CONDOR_HOLD_CODE_FailedToAccessUserAccount = 23;
+
+const int CONDOR_HOLD_CODE_NoCompatibleShadow = 24;
+
+const int CONDOR_HOLD_CODE_InvalidCronSettings = 25;
+
+// The SYSTEM_PERIODIC_HOLD expression put the job on hold
+const int CONDOR_HOLD_CODE_SystemPolicy = 26;
+
+const int CONDOR_HOLD_CODE_SystemPolicyUndefined = 27;
+
+const int CONDOR_HOLD_CODE_GlexecChownSandboxToUser = 28;
+
+const int CONDOR_HOLD_CODE_PrivsepChownSandboxToUser = 29;
+
+const int CONDOR_HOLD_CODE_GlexecChownSandboxToCondor = 30;
+
+const int CONDOR_HOLD_CODE_PrivsepChownSandboxToCondor = 31;
+
 #endif

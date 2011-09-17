@@ -1,0 +1,13 @@
+JOB nodeA job_dagman_propogate_priorities-A.cmd
+VARS nodeA jobname="job_dagman_propogate_priorities-A"
+JOB nodeB job_dagman_propogate_priorities-B.cmd
+VARS nodeB jobname="job_dagman_propogate_priorities-B"
+JOB nodeC job_dagman_propogate_priorities-C.cmd
+VARS nodeC jobname="job_dagman_propogate_priorities-C"
+SUBDAG EXTERNAL subdagD job_dagman_propogate_priorities.subdag
+PARENT nodeA CHILD nodeB
+PARENT nodeC CHILD subdagD
+PRIORITY nodeA 60
+PRIORITY nodeB 0
+PRIORITY nodeC 5
+PRIORITY subdagD 100

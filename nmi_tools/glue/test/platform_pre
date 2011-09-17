@@ -88,12 +88,13 @@ if(!-f $extractdone) {
     my $pattern = "public/condor-*-stripped.tar.gz";
     print "Extracting '$pattern', condor_examples, and condor_tests from results.tar.gz\n";
 
-    my $ret = system("tar -xvzf $results $pattern public/condor_tests public/condor_examples");
+    my $ret = system("tar -xvzf $results '$pattern' public/condor_tests public/condor_examples");
 
     if($ret) {
     	die "Could not extract tarball or test dir from $results: $!\n";
     }
     
+    print "Time: " . scalar(localtime) . "\n\n";
     my $saved_tarball = glob($pattern);
     print "Tarball extracted: '$saved_tarball'\n";
     my $tar_name = basename($saved_tarball);
@@ -104,6 +105,7 @@ if(!-f $extractdone) {
     #    move it to this parent directory.
     ######################################################################
     
+    print "\n";
     print "Moving $tar_name to $BaseDir\n";
     if(not rename($saved_tarball, "$BaseDir/$tar_name")) {
     	die "Could not move $saved_tarball to $BaseDir: $!";
@@ -145,4 +147,5 @@ if( $? ) {
 }
 
 print "All steps completed successfully\n";
+print "End time: " . scalar(localtime) . "\n";
 exit 0;

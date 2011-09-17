@@ -37,10 +37,12 @@
 #include "condor_distribution.h"
 #include "CondorError.h"
 #include "str_isxxx.h"
+#include "enum_utils.h"
 
 
 char	*MyName;
 char 	*actionReason = NULL;
+char    *holdReasonSubCode = NULL;
 JobAction mode;
 bool All = false;
 bool ConstraintArg = false;
@@ -76,6 +78,14 @@ actionWord( JobAction action, bool past )
 
 	case JA_HOLD_JOBS:
 		return past ? "held" : "hold";
+		break;
+	
+	case JA_SUSPEND_JOBS:
+		return past ? "suspended" : "suspend";
+		break;
+		
+	case JA_CONTINUE_JOBS:
+		return past ? "continued" : "continue";
 		break;
 
 	case JA_REMOVE_JOBS:
@@ -123,6 +133,7 @@ usage()
 		fprintf( stderr, "  -reason reason      Use the given ReleaseReason\n");
 	} else if( mode == JA_HOLD_JOBS ) {
 		fprintf( stderr, "  -reason reason      Use the given HoldReason\n");
+		fprintf( stderr, "  -subcode number     Set HoldReasonSubCode\n");
 	}
 
 	if( mode == JA_REMOVE_JOBS || mode == JA_REMOVE_X_JOBS ) {
@@ -192,6 +203,16 @@ main( int argc, char *argv[] )
 		mode = JA_RELEASE_JOBS;
 
 	} else if ( cmd_str && 
+			strncasecmp( cmd_str, "_suspend", strlen("_suspend") ) == MATCH ) {
+
+		mode = JA_SUSPEND_JOBS;
+
+	} else if ( cmd_str && 
+			strncasecmp( cmd_str, "_continue", strlen("_continue") ) == MATCH ) {
+
+		mode = JA_CONTINUE_JOBS;
+
+	}else if ( cmd_str && 
 			strncasecmp( cmd_str, "_rm", strlen("_rm") ) == MATCH ) {
 
 		mode = JA_REMOVE_JOBS;
@@ -278,6 +299,22 @@ main( int argc, char *argv[] )
 					fprintf( stderr, "Out of memory!\n" );
 					exit(1);
 				}
+			} else if (match_prefix(arg, "-subcode")) {
+				argv++;
+				if( ! *argv ) {
+					fprintf( stderr, 
+							 "%s: -subcode requires another argument\n", 
+							 MyName);
+					exit(1);
+				}		
+				char *end = NULL;
+				long code = strtol(*argv,&end,10);
+				if( !end || *end || end==*argv ) {
+					fprintf( stderr, "Invalid -subcode %s!\n", *argv );
+					exit(1);
+				}
+				holdReasonSubCode = strdup(*argv);
+				ASSERT( holdReasonSubCode );
             } else if (match_prefix(arg, "-forcex")) {
 				if( mode == JA_REMOVE_JOBS ) {
 					mode = JA_REMOVE_X_JOBS;
@@ -369,6 +406,12 @@ main( int argc, char *argv[] )
 		case JA_HOLD_JOBS:
 			actionReason = "via condor_hold";
 			break;
+		case JA_SUSPEND_JOBS:
+			actionReason = "via condor_suspend";
+			break;
+		case JA_CONTINUE_JOBS:
+			actionReason = "via condor_continue";
+			break;
 		default:
 			actionReason = NULL;
 		}
@@ -459,8 +502,7 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 		ad = schedd->releaseJobs( constraint, actionReason, errstack );
 		break;
 	case JA_REMOVE_X_JOBS:
-		ad = schedd->removeXJobs( constraint, actionReason,
-								  errstack );
+		ad = schedd->removeXJobs( constraint, actionReason, errstack );
 		break;
 	case JA_VACATE_JOBS:
 		ad = schedd->vacateJobs( constraint, VACATE_GRACEFUL, errstack );
@@ -472,7 +514,13 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 		ad = schedd->removeJobs( constraint, actionReason, errstack );
 		break;
 	case JA_HOLD_JOBS:
-		ad = schedd->holdJobs( constraint, actionReason, errstack );
+		ad = schedd->holdJobs( constraint, actionReason, holdReasonSubCode, errstack );
+		break;
+	case JA_SUSPEND_JOBS:
+		ad = schedd->suspendJobs( constraint, actionReason, errstack );
+		break;
+	case JA_CONTINUE_JOBS:
+		ad = schedd->continueJobs( constraint, actionReason, errstack );
 		break;
 	default:
 		EXCEPT( "impossible: unknown mode in doWorkByConstraint" );
@@ -525,7 +573,13 @@ doWorkByList( StringList* ids, CondorError *errstack )
 		rval = schedd->removeJobs( ids, actionReason, errstack );
 		break;
 	case JA_HOLD_JOBS:
-		rval = schedd->holdJobs( ids, actionReason, errstack );
+		rval = schedd->holdJobs( ids, actionReason, holdReasonSubCode, errstack );
+		break;
+	case JA_SUSPEND_JOBS:
+		rval = schedd->suspendJobs( ids, actionReason, errstack );
+		break;
+	case JA_CONTINUE_JOBS:
+		rval = schedd->continueJobs( ids, actionReason, errstack );
 		break;
 	default:
 		EXCEPT( "impossible: unknown mode in doWorkByList" );

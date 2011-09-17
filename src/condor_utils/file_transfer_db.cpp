@@ -25,10 +25,10 @@
 #include "pgsqldatabase.h"
 #include "basename.h"
 #include "nullfile.h"
-#include "my_hostname.h"
 #include "internet.h"
 #include "file_sql.h"
 #include "subsystem_info.h"
+#include "ipv6_hostname.h"
 
 #ifdef HAVE_EXT_POSTGRESQL
 extern FILESQL *FILEObj;
@@ -64,7 +64,7 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 
 	char src_host[MAXMACHNAME];
 	bool inStarter  = FALSE;
-	char *tmpp;
+		//char *tmpp;
 	char *dir_tmp;
 
 	struct stat file_status;
@@ -98,9 +98,9 @@ void file_transfer_db(file_transfer_record *rp, ClassAd *ad)
 
 		// src_host
 	src_host[0] = '\0';
-	if (rp->sockp && 
-		(tmpp = sin_to_hostname(rp->sockp->peer_addr(), NULL))) {
-		snprintf(src_host, MAXMACHNAME, "%s", tmpp);
+	if (rp->sockp) {
+		MyString tmpp = get_hostname(rp->sockp->peer_addr());
+		snprintf(src_host, MAXMACHNAME, "%s", tmpp.Value());
 		dst_port = rp->sockp->get_port(); /* get_port retrieves the local port */
 		src_port = rp->sockp->peer_port();
 		isEncrypted = (!rp->sockp->get_encryption())?"FALSE":"TRUE";

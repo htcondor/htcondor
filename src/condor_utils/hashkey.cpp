@@ -29,9 +29,6 @@
 #include <netinet/in.h>
 #endif
 
-extern "C" char * sin_to_string(struct sockaddr_in *);
-
-
 void AdNameHashKey::sprint (MyString &s)
 {
 	if (ip_addr.Length() )
@@ -177,7 +174,7 @@ getIpAddr( const char *ad_type,
 // functions to make the hashkeys ...
 // make hashkeys from the obtained ad
 bool
-makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
+makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 {
 
 	// get the name of the startd;
@@ -219,7 +216,7 @@ makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 
 #ifdef HAVE_EXT_POSTGRESQL
 bool
-makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
+makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 {
 
 	// get the name of the quill daemon
@@ -242,7 +239,7 @@ makeQuillAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 #endif /* HAVE_EXT_POSTGRESQL */
 
 bool
-makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
+makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 {
 
 	// get the name of the schedd
@@ -274,7 +271,7 @@ makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 
 
 bool
-makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
+makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 {
 
 	// get the name of the license
@@ -292,7 +289,7 @@ makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 
 
 bool
-makeMasterAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
+makeMasterAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 {
 	hk.ip_addr = "";
 	return adLookup( "Master", ad, ATTR_NAME, ATTR_MACHINE, hk.name );
@@ -300,21 +297,21 @@ makeMasterAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
 
 
 bool
-makeCkptSrvrAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/)
+makeCkptSrvrAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "CheckpointServer", ad, ATTR_MACHINE, NULL, hk.name );
 }
 
 bool
-makeCollectorAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/)
+makeCollectorAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "Collector", ad, ATTR_MACHINE, NULL, hk.name );
 }
 
 bool
-makeStorageAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/)
+makeStorageAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "Storage", ad, ATTR_NAME, NULL, hk.name );
@@ -322,7 +319,7 @@ makeStorageAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/)
 
 
 bool
-makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in* /*from*/)
+makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "Negotiator",  ad, ATTR_NAME, NULL, hk.name );
@@ -330,14 +327,14 @@ makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in* /*from*/)
 
 
 bool
-makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/)
+makeHadAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 {
 	hk.ip_addr = "";
 	return adLookup( "HAD", ad, ATTR_NAME, NULL, hk.name );
 }
 
 bool
-makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 {
     MyString tmp;
     
@@ -373,23 +370,23 @@ makeGridAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 // (e.g. this wouldn't work for submitter ads - see code for
 // makeScheddAdHashKey above)
 bool
-makeGenericAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in * /*from*/ )
+makeGenericAdHashKey (AdNameHashKey &hk, ClassAd *ad )
 {
 	hk.ip_addr = "";
 	return adLookup( "Generic", ad, ATTR_NAME, NULL, hk.name );
 }
 
 bool
-makeXferServiceAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeXferServiceAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 {
-	return makeNegotiatorAdHashKey( hk, ad, from );
+	return makeNegotiatorAdHashKey( hk, ad );
 }
 
 
 bool
-makeLeaseManagerAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeLeaseManagerAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 {
-	return makeNegotiatorAdHashKey( hk, ad, from );
+	return makeNegotiatorAdHashKey( hk, ad );
 }
 
 

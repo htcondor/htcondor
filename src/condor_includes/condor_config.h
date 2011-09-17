@@ -102,8 +102,9 @@ class ParamValue {
 	extern StringList local_config_sources;
 
 	ExtArray<ParamValue>* param_all(void);
+    bool param_defined(const char* name);
 	char* param_or_except( const char *name );
-    int param_integer( const char *name, int default_value,
+    int param_integer( const char *name, int default_value = 0,
 					   int min_value = INT_MIN, int max_value = INT_MAX, bool use_param_table = true );
 	// Alternate param_integer():
 	bool param_integer( const char *name, int &value,
@@ -114,7 +115,7 @@ class ParamValue {
 						bool use_param_table = true );
 
 
-	double param_double(const char *name, double default_value,
+	double param_double(const char *name, double default_value = 0,
                         double min_value = -DBL_MAX, double max_value = DBL_MAX,
                         ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
@@ -162,6 +163,8 @@ extern "C" {
 	int  set_runtime_config(char *admin, char *config);
 	int is_valid_param_name(const char *name);
 	char * parse_param_name_from_config(const char *config);
+	// this function allows tests to pretend that a param was set to a given value.	
+    void  param_insert(const char * name, const char * value);
 	/** Expand parameter references of the form "left$(middle)right".  
 	
 	This is deceptively simple, but does handle multiple and or nested
@@ -321,7 +324,7 @@ BEGIN_C_DECLS
 	int write_config_file( const char* pathname );
 	// Helper function, of form to iterate over the hash table of parameter
 	// information.  Returns 0 to continue, -1 to stop (i.e. on an error).
-	int write_config_variable(param_info_t* value, void* file_desc);
+	int write_config_variable(const param_info_t* value, void* file_desc);
 
 /* This function initialize GSI (maybe other) authentication related
    stuff Daemons that should use the condor daemon credentials should

@@ -61,19 +61,18 @@ ShadowUserPolicy::getJobBirthday( )
 void
 ShadowUserPolicy::doAction( int action, bool is_periodic ) 
 {
-	MyString reason = this->user_policy.FiringReason();
+	MyString reason;
+	int reason_code;
+	int reason_subcode;
+	this->user_policy.FiringReason(reason,reason_code,reason_subcode);
 	if ( reason.IsEmpty() ) {
 		EXCEPT( "ShadowUserPolicy: Empty FiringReason." );
 	}
 
 	switch( action ) {
 	case UNDEFINED_EVAL:
-			/* 
-			   If a given policy expression was undefined, the user
-			   screwed something up and they better deal with it.  We
-			   don't just want the job to leave the queue...
-			*/
-		shadow->holdJob( reason.Value(), CONDOR_HOLD_CODE_JobPolicyUndefined, 0 );
+	case HOLD_IN_QUEUE:
+		shadow->holdJob( reason.Value(), reason_code, reason_subcode );
 		break;
 
 	case REMOVE_FROM_QUEUE:
@@ -90,10 +89,6 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 					"periodic doAction()" );
 		}
 		this->shadow->requeueJob( reason.Value() );
-		break;
-
-	case HOLD_IN_QUEUE:
-		shadow->holdJob( reason.Value(), CONDOR_HOLD_CODE_JobPolicy, 0 );
 		break;
 
 	default:

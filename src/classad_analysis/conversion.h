@@ -21,7 +21,6 @@
 #ifndef __CONVERSION_H__
 #define __CONVERSION_H__
 
-#define WANT_CLASSAD_NAMESPACE
 #include <iostream>
 #include "classad/classad_distribution.h"
 #include "condor_classad.h"

@@ -21,7 +21,7 @@
 
 // local includes
 #include "AviaryScheddPlugin.h"
-#include "Axis2SoapProvider.h"
+#include "AviaryProvider.h"
 #include "SchedulerObject.h"
 
 // Global from the condor_schedd, it's name
@@ -33,11 +33,11 @@ extern char * Name;
 
 using namespace std;
 using namespace aviary::job;
-using namespace aviary::soap;
+using namespace aviary::transport;
 
 // global SchedulerObject
 // TODO: convert to singleton
-Axis2SoapProvider* provider = NULL;
+AviaryProvider* provider = NULL;
 SchedulerObject* schedulerObj = NULL;
 
 void
@@ -50,30 +50,11 @@ AviaryScheddPlugin::earlyInitialize()
 	static bool skip = false;
 	if (skip) return; skip = true;
 
-	// config then env for our all-important axis2 repo dir
-    const char* log_file = "./aviary_job.axis2.log";
-	string repo_path;
-	char *tmp = NULL;
-	if (tmp = param("WSFCPP_HOME")) {
-		repo_path = tmp;
-		free(tmp);
-	}
-	else if (tmp = getenv("WSFCPP_HOME")) {
-		repo_path = tmp;
-	}
-	else {
-		EXCEPT("No WSFCPP_HOME in config or env");
-	}
-
-	int port = param_integer("HTTP_PORT",9090);
-	int level = param_integer("AXIS2_DEBUG_LEVEL",AXIS2_LOG_LEVEL_CRITICAL);
-
-    // init transport here
-    provider = new Axis2SoapProvider(level,log_file,repo_path.c_str());
-    string axis_error;
-    if (!provider->init(port,AXIS2_HTTP_DEFAULT_SO_TIMEOUT,axis_error)) {
-		dprintf(D_ALWAYS, "%s\n",axis_error.c_str());
-        EXCEPT("Failed to initialize Axis2SoapProvider");
+    string log_name;
+    sprintf(log_name,"aviary_job.%d",daemonCore->getpid());
+    provider = AviaryProviderFactory::create(log_name);
+    if (!provider) {
+        EXCEPT("Unable to configure AviaryProvider. Exiting...");
     }
 
 	schedulerObj = SchedulerObject::getInstance();
@@ -86,7 +67,7 @@ AviaryScheddPlugin::earlyInitialize()
 	if (!sock) {
 		EXCEPT("Failed to allocate transport socket");
 	}
-	if (!sock->assign(provider->getHttpListenerSocket())) {
+	if (!sock->assign(provider->getListenerSocket())) {
 		EXCEPT("Failed to bind transport socket");
 	}
 	int index;
@@ -98,8 +79,6 @@ AviaryScheddPlugin::earlyInitialize()
 										   this))) {
 		EXCEPT("Failed to register transport socket");
 	}
-
-	dprintf(D_ALWAYS,"Axis2 listener on http port: %d\n",port);
 
 	m_initialized = false;
 }
@@ -238,7 +217,7 @@ AviaryScheddPlugin::HandleTransportSocket(Stream *)
 {
     // TODO: respond to a transport callback here?
     string provider_error;
-    if (!provider->processHttpRequest(provider_error)) {
+    if (!provider->processRequest(provider_error)) {
         dprintf (D_ALWAYS,"Error processing request: %s\n",provider_error.c_str());
     }
 

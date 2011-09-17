@@ -10,7 +10,7 @@ diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.C org.glite.ce.blahp.
  #include "classad_binary_op_unwind.h"
  
 -#ifdef WANT_NAMESPACES
-+#ifdef WANT_CLASSAD_NAMESPACE
++#if 1
  namespace classad {
  #endif
  
@@ -19,7 +19,7 @@ diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.C org.glite.ce.blahp.
  }
  
 -#ifdef WANT_NAMESPACES
-+#ifdef WANT_CLASSAD_NAMESPACE
++#if 1
  } // end of classad namespace
  #endif
 diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.h org.glite.ce.blahp.patched/src/classad_binary_op_unwind.h
@@ -36,7 +36,7 @@ diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.h org.glite.ce.blahp.
  #define __CLASSAD_BINARY_OP_UNWIND_H__
  
 -#ifdef WANT_NAMESPACES
-+#ifdef WANT_CLASSAD_NAMESPACE
++#if 1
  using namespace classad;
  
  namespace classad {
@@ -45,7 +45,7 @@ diff -u -r org.glite.ce.blahp/src/classad_binary_op_unwind.h org.glite.ce.blahp.
  };
  
 -#ifdef WANT_NAMESPACES
-+#ifdef WANT_CLASSAD_NAMESPACE
++#if 1
  } // end of classad namespace
  #endif
  
@@ -61,7 +61,7 @@ diff -u -r org.glite.ce.blahp/src/classad_c_helper.C org.glite.ce.blahp.patched/
  #include "classad_binary_op_unwind.h"
  
 -#ifdef WANT_NAMESPACES
-+#ifdef WANT_CLASSAD_NAMESPACE
++#if 1
  using namespace classad;
  #endif
  

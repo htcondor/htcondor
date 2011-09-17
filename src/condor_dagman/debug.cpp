@@ -23,6 +23,7 @@
 #include "debug.h"
 #include "condor_daemon_core.h"
 #include "MyString.h"
+#include "dagman_main.h"
 
 debug_level_t debug_level    = DEBUG_NORMAL;
 const char *        debug_progname = NULL;
@@ -44,7 +45,6 @@ static int cache_size = 0;
 //extern "C" {
 extern int DebugFlags;
 extern int DebugUseTimestamps;
-extern FILE *DebugFP;
 //}
 
 static void debug_cache_insert(int flags, const char *fmt, va_list args);
@@ -194,7 +194,11 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 		}
 
 		if ((DebugFlags|flags) & D_FDS) {
-			fds.sprintf("(fd:%d) ", fileno(DebugFP) );
+				// Because of Z's dprintf changes, we no longer have
+				// access to the dprintf FP.  For now we're just going
+				// to skip figuring out the FD *while caching*.
+				// wenger 2011-05-18
+			fds.sprintf("(fd:?) " );
 		}
 
 		if ((DebugFlags|flags) & D_PID) {
@@ -255,6 +259,18 @@ void debug_cache_set_size(int size)
 	cache_size = size;
 }
 
+/*--------------------------------------------------------------------------*/
+bool check_warning_strictness( strict_level_t strictness, bool quit_if_error )
+{
+	if ( Dagman::_strict >= strictness ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Warning is fatal "
+					"error because of DAGMAN_USE_STRICT setting\n" );
+		if ( quit_if_error ) {
+			main_shutdown_rescue( EXIT_ERROR );
+		}
 
+		return true;
+	}
 
-
+	return false;
+}

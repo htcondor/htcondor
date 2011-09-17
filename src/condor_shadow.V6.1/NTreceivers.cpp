@@ -282,12 +282,13 @@ do_REMOTE_syscall()
 	case CONDOR_get_job_info:
 	{
 		ClassAd *ad = NULL;
+		bool delete_ad;
 
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
 		errno = 0;
-		rval = pseudo_get_job_info(ad);
+		rval = pseudo_get_job_info(ad, delete_ad);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -303,6 +304,9 @@ do_REMOTE_syscall()
 		}
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
+		if ( delete_ad ) {
+			delete ad;
+		}
 		return 0;
 	}
 
@@ -442,7 +446,7 @@ do_REMOTE_syscall()
 
 		errno = 0;
 		if ( access_ok ) {
-			rval = safe_open_wrapper( path , flags , lastarg);
+			rval = safe_open_wrapper_follow( path , flags , lastarg);
 		} else {
 			rval = -1;
 			errno = EACCES;
@@ -1230,7 +1234,7 @@ case CONDOR_getfile:
 		ASSERT( result );
 		
 		errno = 0;
-		fd = safe_open_wrapper( path, O_RDONLY );
+		fd = safe_open_wrapper_follow( path, O_RDONLY );
 		if(fd >= 0) {
 			struct stat info;
 			stat(path, &info);
@@ -1278,7 +1282,7 @@ case CONDOR_putfile:
 		ASSERT( result );
 		
 		errno = 0;
-		fd = safe_open_wrapper(path, O_CREAT | O_WRONLY | O_TRUNC, mode);
+		fd = safe_open_wrapper_follow(path, O_CREAT | O_WRONLY | O_TRUNC, mode);
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		

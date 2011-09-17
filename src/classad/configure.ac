@@ -164,12 +164,6 @@ AS_IF([test "x$enable_explicit_templates" = xyes],
 #AM_CONDITIONAL([ENABLE_SHLIB], [test "x$enable_shlib" = xyes])
 
 
-AC_ARG_ENABLE([namespace],
-  AC_HELP_STRING([--enable-namespace],
-    [Use the classad namespace (default: no)]))
-
-AM_CONDITIONAL([ENABLE_NAMESPACE], [test "x$enable_namespace" = xyes])
-
 AC_ARG_ENABLE([dlopen-check],
   AC_HELP_STRING([--enable-dlopen-check],
     [Test dlopen (default: no)]))

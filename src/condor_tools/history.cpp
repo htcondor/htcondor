@@ -78,8 +78,8 @@ static bool checkDBconfig();
 static	QueryResult result;
 #endif /* HAVE_EXT_POSTGRESQL */
 
-static void readHistoryFromFiles(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr);
-static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromFiles(char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromFile(char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 
 //------------------------------------------------------------------------
 
@@ -120,10 +120,10 @@ main(int argc, char* argv[])
   char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
 
 
-  char* constraint=NULL;
+  std::string constraint;
   ExprTree *constraintExpr=NULL;
 
-  char tmp[512];
+  std::string tmp;
 
   int i;
   parameters = (void **) malloc(NUM_PARAMETERS * sizeof(void *));
@@ -197,7 +197,7 @@ main(int argc, char* argv[])
 		quillName = argv[i];
 
 		sprintf (tmp, "%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
-		quillQuery.addORConstraint (tmp);
+		quillQuery.addORConstraint (tmp.c_str());
 
 		remotequill = false;
 		readfromfile = false;
@@ -226,9 +226,8 @@ main(int argc, char* argv[])
 		i += 2;
     }
     else if (match_prefix(argv[i],"-constraint")) {
-		if (i+1==argc || constraint) break;
-		sprintf(tmp,"(%s)",argv[i+1]);
-		constraint=tmp;
+		if (i+1==argc || constraint!="") break;
+		sprintf(constraint,"(%s)",argv[i+1]);
 		i++;
 		//readfromfile = true;
     }
@@ -244,8 +243,7 @@ main(int argc, char* argv[])
 			exit(1);
 		}
 		
-		if (constraint) break;
-		constraint = completedsince;
+		if (constraint!="") break;
 		completedsince = strdup(argv[i]);
 		parameters[0] = completedsince;
 		queryhor.setQuery(HISTORY_COMPLETEDSINCE_HOR,parameters);
@@ -254,13 +252,12 @@ main(int argc, char* argv[])
 #endif /* HAVE_EXT_POSTGRESQL */
 
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
-		if (constraint) {
+		if (constraint!="") {
 			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>.<proc>\n");
 			break;
 		}
-		sprintf (tmp, "((%s == %d) && (%s == %d))", 
+		sprintf (constraint, "((%s == %d) && (%s == %d))", 
 				 ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
-		constraint=tmp;
 		parameters[0] = &cluster;
 		parameters[1] = &proc;
 #ifdef HAVE_EXT_POSTGRESQL
@@ -269,12 +266,11 @@ main(int argc, char* argv[])
 #endif /* HAVE_EXT_POSTGRESQL */
     }
     else if (sscanf (argv[i], "%d", &cluster) == 1) {
-		if (constraint) {
+		if (constraint!="") {
 			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>\n");
 			break;
 		}
-		sprintf (tmp, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
-		constraint=tmp;
+		sprintf (constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
 		parameters[0] = &cluster;
 #ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_CLUSTER_HOR, parameters);
@@ -287,14 +283,13 @@ main(int argc, char* argv[])
           dprintf_config ("TOOL");
     }
     else {
-		if (constraint) {
+		if (constraint!="") {
 			fprintf(stderr, "Error: Cannot provide both -constraint and <owner>\n");
 			break;
 		}
 		owner = (char *) malloc(512 * sizeof(char));
 		sscanf(argv[i], "%s", owner);	
-		sprintf(tmp, "(%s == \"%s\")", ATTR_OWNER, owner);
-		constraint=tmp;
+		sprintf(constraint, "(%s == \"%s\")", ATTR_OWNER, owner);
 		parameters[0] = owner;
 #ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_OWNER_HOR, parameters);
@@ -305,8 +300,8 @@ main(int argc, char* argv[])
   if (i<argc) Usage(argv[0]);
   
   
-  if( constraint && ParseClassAdRvalExpr( constraint, constraintExpr ) ) {
-	  fprintf( stderr, "Error:  could not parse constraint %s\n", constraint );
+  if( constraint!="" && ParseClassAdRvalExpr( constraint.c_str(), constraintExpr ) ) {
+	  fprintf( stderr, "Error:  could not parse constraint %s\n", constraint.c_str() );
 	  exit( 1 );
   }
 
@@ -397,7 +392,7 @@ main(int argc, char* argv[])
 	  queryver.prepareQuery();
 	  
 	  st = historySnapshot->sendQuery(&queryhor, &queryver, longformat,
-	  	false, customFormat, &mask, constraint);
+		false, customFormat, &mask, constraint.c_str());
 
 		  //if there's a failure here and if we're not posing a query on a 
 		  //remote quill daemon, we should instead query the local file
@@ -425,7 +420,7 @@ main(int argc, char* argv[])
   }
   
   if(readfromfile == true) {
-      readHistoryFromFiles(JobHistoryFileName, constraint, constraintExpr);
+      readHistoryFromFiles(JobHistoryFileName, constraint.c_str(), constraintExpr);
   }
   
   
@@ -566,7 +561,7 @@ static char * getDBConnStr(char *&quillName,
 
 // Read the history from the specified history file, or from all the history files.
 // There are multiple history files because we do rotation. 
-static void readHistoryFromFiles(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr)
+static void readHistoryFromFiles(char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
 {
     // Print header
     if ((!longformat) && (!customFormat)) {
@@ -729,7 +724,7 @@ static long findPrevDelimiter(FILE *fd, char* filename, long currOffset)
 } 
 
 // Read the history from a single file and print it out. 
-static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, ExprTree *constraintExpr)
+static void readHistoryFromFile(char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
 {
     int EndFlag   = 0;
     int ErrorFlag = 0;
@@ -747,7 +742,7 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
 			// offsets.
 		flags = O_LARGEFILE;
 	}
-	int LogFd = safe_open_wrapper(JobHistoryFileName,flags,0);
+	int LogFd = safe_open_wrapper_follow(JobHistoryFileName,flags,0);
 	if (LogFd < 0) {
 		fprintf(stderr,"Error opening history file %s: %s\n", JobHistoryFileName,strerror(errno));
 #ifdef EFBIG
@@ -825,7 +820,7 @@ static void readHistoryFromFile(char *JobHistoryFileName, char* constraint, Expr
             }
             continue;
         }
-        if (!constraint || EvalBool(ad, constraintExpr)) {
+        if (!constraint || constraint[0]=='\0' || EvalBool(ad, constraintExpr)) {
             if (longformat) { 
 				if( use_xml ) {
 					ad->fPrintAsXML(stdout);

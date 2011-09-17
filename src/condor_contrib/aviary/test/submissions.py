@@ -21,26 +21,40 @@ import logging
 from suds import *
 from suds.client import Client
 from sys import exit, argv
+import argparse
+from aviary.https import *
 
-# enable these to see the SOAP messages
-#logging.basicConfig(level=logging.INFO)
-#logging.getLogger('suds.client').setLevel(logging.DEBUG)
+wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
+key = '/etc/pki/tls/certs/client.key'
+cert = '/etc/pki/tls/certs/client.crt'
 
-query_wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
+parser = argparse.ArgumentParser(description='Query submissions remotely via SOAP.')
+parser.add_argument('-v','--verbose', action="store_true",default=False, help='enable SOAP logging')
+parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
+		    default='http://localhost:9091/services/query/getSubmissionSummary',
+		    help='http or https URL prefix to be added to cmd')
+parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
+parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
+parser.add_argument('name', action="store", nargs='?', help='submission name')
+args =  parser.parse_args()
 
-sub_name = len(argv) > 1 and argv[1]
-query_url = len(argv) > 2 and argv[2] or 'http://localhost:9091/services/query/getSubmissionSummary'
+if "https://" in args.url:
+	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
+else:
+	client = Client(wsdl)
 
-client = Client(query_wsdl);
-client.set_options(location=query_url)
+client.set_options(location=args.url)
 
 # enable to see service schema
-#print client
+if args.verbose:
+	logging.basicConfig(level=logging.INFO)
+	logging.getLogger('suds.client').setLevel(logging.DEBUG)
+	print client
 
 # set up our ID
-if sub_name:
+if args.name:
 	subId = client.factory.create("ns0:SubmissionID")
-	subId.name = sub_name
+	subId.name = args.name
 else:
 	# returns all jobs
 	subId = None
@@ -48,7 +62,7 @@ else:
 try:
 	submissions = client.service.getSubmissionSummary(subId)
 except Exception, e:
-	print "invocation failed: ", query_url
+	print "invocation failed: ", args.url
 	print e
 	exit(1)
 

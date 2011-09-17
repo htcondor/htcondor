@@ -27,6 +27,7 @@
 #include <netinet/in.h>
 #endif
 #include "condor_classad.h"
+#include "condor_sockaddr.h"
 
 #include "HashTable.h"
 
@@ -51,22 +52,24 @@ typedef HashTable <AdNameHashKey, ClassAd *> CollectorHashTable;
 typedef HashTable <MyString, CollectorHashTable *> GenericAdHashTable;
 
 // functions to make the hashkeys
-bool makeStartdAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeQuillAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeScheddAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeLicenseAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeMasterAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeCkptSrvrAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeCollectorAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeStorageAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeHadAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeXferServiceAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeLeaseManagerAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeGridAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
-bool makeGenericAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeStartdAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeQuillAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeScheddAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeLicenseAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeMasterAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeCkptSrvrAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeCollectorAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeStorageAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeHadAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeXferServiceAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeLeaseManagerAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeGridAdHashKey (AdNameHashKey &, ClassAd *);
+bool makeGenericAdHashKey (AdNameHashKey &, ClassAd *);
 
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
+// [OBSOLETE] do not use it. specification of sinful string is changed
+// over time but this function does not handle correctly.
 bool parseIpPort( const MyString &ip_port_pair, MyString &ip_addr );
 
 class HashString : public MyString

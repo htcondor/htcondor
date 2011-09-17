@@ -26,12 +26,12 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 //-------------collection client templates---------------
     // client-side transaction registry
 template hash_map<string, ClientTransaction*, StringHash>;
 template hash_map<string, ClientTransaction*, StringHash>::iterator;
 
-END_NAMESPACE
+}
 

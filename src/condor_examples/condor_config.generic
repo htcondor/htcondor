@@ -1176,6 +1176,14 @@ PREEN_ARGS			= -m -r
 ## your pool.
 #CONDOR_DEVELOPERS_COLLECTOR = condor.cs.wisc.edu
 
+##  When the collector starts up, it can place it's address (IP and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need to query the central manager to find the collector.  This
+##  feature can be turned off by commenting out this setting.
+##  This is essential when using a port of "0" (automatic) for the
+##  COLLECTOR_HOST, a useful technique for personal Condor installs.
+COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
+
 
 ##--------------------------------------------------------------------
 ##  condor_negotiator

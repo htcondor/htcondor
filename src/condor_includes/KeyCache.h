@@ -28,13 +28,14 @@
 #include "HashTable.h"
 #include "string_list.h"
 #include "simplelist.h"
+#include "condor_sockaddr.h"
 
 class SecMan;
 class KeyCacheEntry {
  public:
     KeyCacheEntry(
 			char const * id,
-			struct sockaddr_in * addr,
+			const condor_sockaddr* addr,
 			KeyInfo * key,
 			ClassAd * policy,
 			int expiration,
@@ -46,12 +47,14 @@ class KeyCacheEntry {
 	const KeyCacheEntry& operator=(const KeyCacheEntry &kc);
 
     char*                 id();
-    struct sockaddr_in *  addr();
+	const condor_sockaddr*         addr();
     KeyInfo*              key();
     ClassAd*              policy();
     int                   expiration();
 	char const *          expirationType();
 	void                  setExpiration(int new_expiration);
+	void                  setLingerFlag(bool flag) { _lingering = flag; }
+	bool                  getLingerFlag() { return _lingering; }
 
 	void                  renewLease();
  private:
@@ -60,12 +63,14 @@ class KeyCacheEntry {
 	void copy_storage(const KeyCacheEntry &);
 
     char *               _id;
-    struct sockaddr_in * _addr;
+    condor_sockaddr*              _addr;
     KeyInfo*             _key;
     ClassAd*             _policy;
     int                  _expiration;
 	int                  _lease_interval;   // max seconds of unused time
 	time_t               _lease_expiration; // time of lease expiration
+	bool                 _lingering; // true if session only exists
+	                                 // to catch lingering communication
 };
 
 

@@ -24,7 +24,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 static bool string_is_empty(const string &text);
  
@@ -511,4 +511,4 @@ static bool string_is_empty(const string &text)
 	return is_empty;
 }
 
-END_NAMESPACE
+}

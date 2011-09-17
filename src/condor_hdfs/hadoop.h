@@ -130,7 +130,7 @@ class Hadoop : public Service {
 
         void startService( NodeType );
 
-        MyString runDFSAdmin( const char *);
+        MyString runDFSAdmin( const char *, const char * = NULL);
 
         void writeXMLParam(const char *key, const char *value, StringList *buff);
 

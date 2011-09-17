@@ -26,6 +26,7 @@
 #include "my_username.h"
 #include "internet.h"
 #include "condor_getcwd.h"
+#include "ipv6_hostname.h"
 
 SshdWrapper::SshdWrapper()
 {
@@ -225,11 +226,11 @@ bool
 SshdWrapper::getSshRuntimeInfo(char* & sinful_string, char* & dir, char* & 
 					   username)
 {
-	char hostname[CONDOR_HOSTNAME_MAX];
-	condor_gethostname(hostname, CONDOR_HOSTNAME_MAX);
+	MyString hostname;
+	hostname = get_local_hostname();
 
-	sinful_string = (char *) malloc(strlen(hostname) + 10);
-	sprintf(sinful_string, "<%s:%d>", hostname, port);
+	sinful_string = (char *) malloc(hostname.Length() + 10);
+	sprintf(sinful_string, "<%s:%d>", hostname.Value(), port);
 
 		// Is the dir the cwd?
 	MyString wd;

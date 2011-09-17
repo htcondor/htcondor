@@ -24,11 +24,91 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 extern int exprHash( const ExprTree* const&, int );
 
 static const int MAX_CLASSAD_RECURSION = 1000;
+
+void (*ExprTree::user_debug_function)(const char *) = 0;
+
+/* static */ void 
+ExprTree:: set_user_debug_function(void (*dbf)(const char *)) {
+	user_debug_function = dbf;
+}
+
+void ExprTree::debug_print(const char *message) const {
+	if (user_debug_function != 0) {
+		user_debug_function(message);
+	}
+}
+
+void ExprTree::debug_format_value(Value &value) const {
+		bool boolValue = false;
+		int intValue = 0;
+		double doubleValue = 0;
+		string stringValue = "";
+
+		PrettyPrint	unp;
+		string		buffer;
+		unp.Unparse( buffer, this );
+
+		std::string result("Classad debug: ");
+		result += buffer;
+		result += " --> ";
+
+		switch(value.GetType()) {
+			case Value::NULL_VALUE:
+				result += "NULL\n";
+				break;
+			case Value::ERROR_VALUE:
+				result += "ERROR\n";
+				break;
+			case Value::UNDEFINED_VALUE:
+				result += "UNDEFINED\n";
+				break;
+			case Value::BOOLEAN_VALUE:
+				if(value.IsBooleanValue(boolValue))
+					result += boolValue ? "TRUE\n" : "FALSE\n";
+				break;
+			case Value::INTEGER_VALUE:
+				if(value.IsIntegerValue(intValue)) {
+					char buf[12];
+					sprintf(buf, "%d", intValue);
+					result += buf;
+					result += "\n";
+				}
+				break;
+					
+			case Value::REAL_VALUE:
+				if(value.IsRealValue(doubleValue)) {
+					char buf[24];
+					sprintf(buf, "%g", doubleValue);
+					result += buf;
+					result += "\n";
+				}
+				break;
+			case Value::RELATIVE_TIME_VALUE:
+				result += "RELATIVE TIME\n";
+				break;
+			case Value::ABSOLUTE_TIME_VALUE:
+				result += "ABSOLUTE TIME\n";
+				break;
+			case Value::STRING_VALUE:
+				if(value.IsStringValue(stringValue)) {
+					result += stringValue;	
+					result += "\n";
+				}
+				break;
+			case Value::CLASSAD_VALUE:
+				result += "CLASSAD\n";
+				break;
+			case Value::LIST_VALUE:
+				result += "LIST\n";
+				break;
+		}
+		debug_print(result.c_str());
+}
 
 ExprTree::
 ExprTree ()
@@ -55,13 +135,29 @@ CopyFrom(const ExprTree &tree)
 bool ExprTree::
 Evaluate (EvalState &state, Value &val) const
 {
-	return( _Evaluate( state, val ) );
+	bool eval = _Evaluate( state, val );
+
+	if(state.debug && GetKind() != ExprTree::LITERAL_NODE &&
+			GetKind() != ExprTree::OP_NODE)
+	{
+		debug_format_value(val);
+	}
+
+	return eval;
 }
 
 bool ExprTree::
 Evaluate( EvalState &state, Value &val, ExprTree *&sig ) const
 {
-	return( _Evaluate( state, val, sig ) );
+	bool eval = _Evaluate( state, val, sig );
+
+	if(state.debug && GetKind() != ExprTree::LITERAL_NODE &&
+			GetKind() != ExprTree::OP_NODE)
+	{
+		debug_format_value(val);
+	}
+
+	return eval;
 }
 
 
@@ -146,6 +242,7 @@ EvalState( )
 
 	depth_remaining = MAX_CLASSAD_RECURSION;
 	flattenAndInline = false;	// NAC
+	debug = false;
 }
 
 EvalState::
@@ -210,4 +307,4 @@ bool operator==(const ExprTree &tree1, const ExprTree &tree2)
     return tree1.SameAs(&tree2);
 }
 
-END_NAMESPACE // classad
+} // classad

@@ -1,0 +1,58 @@
+\begin{ManPage}{\label{man-condor-power}\Condor{power}}{1}
+{send packet intended to wake a machine from a low power state}
+\Synopsis 
+\SynProg{\Condor{power}}
+\oOpt{-h}
+
+\SynProg{\Condor{power}}
+\oOpt{-d}
+\oOptArg{-m}{MACaddress}
+\oOptArg{-s}{subnet}
+\oArg{ClassAdFile}
+
+
+\index{Condor commands!condor\_power}
+\index{condor\_power command}
+
+\Description
+
+\Condor{power} sends one UDP Wake on LAN (WOL) packet to a machine
+specified either by command line arguments or by the contents
+of a machine ClassAd.
+The machine ClassAd may be in a file, where the 
+file name specified by the optional argument \Arg{ClassAdFile} 
+is given on the command line.
+With no command line arguments to specify the machine,
+and no file specified, \Condor{power} quietly presumes that standard input
+is the file source which will
+specify the machine ClassAd that includes the public IP address
+and subnet of the machine.
+
+\Condor{power} needs a complete specification of the machine to
+be successful.
+If a MAC address is provided on the command line, but no subnet is given,
+then the default value for the subnet is used.
+If a subnet is provided on the command line, but no MAC address is given,
+then \Condor{power} falls back to taking its information in the form
+of the machine ClassAd as provided in a file or on standard input.
+Note that this case implies that the command line specification of the 
+subnet is ignored.
+
+
+\begin{Options}
+  \OptItem{\Opt{-h}}{Print usage information and exit.}
+  \OptItem{\Opt{-d}}{Enable debugging messages.}
+  \OptItem{\OptArg{-m}{MACaddress}} {Specify the MAC address in the standard
+    format of six groups of two hexadecimal digits separated by colons. }
+  \OptItem{\OptArg{-s}{subnet}}{Specify the subnet in the standard form
+    of an IP address.
+    Without this option, the default subnet used will be
+    255.255.255.255, causing a broadcast. }
+\end{Options}
+
+\ExitStatus
+
+\Condor{power} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

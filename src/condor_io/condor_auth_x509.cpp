@@ -30,6 +30,7 @@
 #include "setenv.h"
 #include "globus_utils.h"
 #include "condor_gssapi_openssl.h"
+#include "ipv6_hostname.h"
 
 #if defined(HAVE_EXT_VOMS)
 extern "C" {
@@ -47,6 +48,8 @@ StringList * getDaemonList(ReliSock * sock);
 HashTable<MyString, MyString> * Condor_Auth_X509::GridMap = 0;
 #endif
 
+bool Condor_Auth_X509::m_globusActivated = false;
+
 //----------------------------------------------------------------------
 // Implementation
 //----------------------------------------------------------------------
@@ -61,6 +64,11 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
 #ifdef WIN32
 	ParseMapFile();
 #endif
+	if ( !m_globusActivated ) {
+		globus_module_activate( GLOBUS_GSI_GSSAPI_MODULE );
+		globus_module_activate( GLOBUS_GSI_GSS_ASSIST_MODULE );
+		m_globusActivated = true;
+	}
 }
 
 Condor_Auth_X509 ::  ~Condor_Auth_X509()
@@ -305,7 +313,7 @@ int Condor_Auth_X509::ParseMapFile() {
 		return FALSE;
 	}
 
-	if ( !(fd = safe_fopen_wrapper(  filename, "r" ) ) ) {
+	if ( !(fd = safe_fopen_wrapper_follow(  filename, "r" ) ) ) {
 		dprintf( D_ALWAYS, "GSI: unable to open map file %s, errno %d\n", 
 			filename, errno );
 		free(filename);
@@ -481,7 +489,8 @@ StringList * getDaemonList(ReliSock * sock)
     // build a string list, then do a search to see if the target is 
     // in the list
     char * daemonNames = param( "GSI_DAEMON_NAME" );
-    char * fqh         = sin_to_hostname(sock->peer_addr(), NULL);
+	MyString fqh_str = get_hostname(sock->peer_addr());
+    const char * fqh  = fqh_str.Value();
     char * entry       = NULL;
 
 	if (!daemonNames) {

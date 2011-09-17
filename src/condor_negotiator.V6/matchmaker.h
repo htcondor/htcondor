@@ -63,6 +63,7 @@ struct GroupEntry {
     // current usage information coming into this negotiation cycle
     double usage;
     ClassAdList* submitterAds;
+    double priority;
 
     // slot quota as computed by HGQ
     double quota;
@@ -127,6 +128,10 @@ class Matchmaker : public Service
 		Accountant & getAccountant() { return accountant; }
 		static float EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 		                              ClassAd &request,ClassAd *resource);
+
+		bool getGroupInfoFromUserId( const char *user, float & groupQuota, 
+			 float & groupUsage );
+		
 
     protected:
 		char * NegotiatorName;
@@ -253,6 +258,7 @@ class Matchmaker : public Service
 		void MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds);
 		char const *getClaimId (const char *, const char *, ClaimIdHash &, MyString &);
 		void addRemoteUserPrios( ClassAd* ad );
+		void addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal );
 		void insertNegotiatorMatchExprs(ClassAd *ad);
 		void insertNegotiatorMatchExprs( ClassAdListDoesNotDeleteAds &cal );
 		void reeval( ClassAd *ad );
@@ -308,9 +314,6 @@ class Matchmaker : public Service
 		typedef HashTable<MyString, float> groupQuotasHashType;
 		groupQuotasHashType *groupQuotasHash;
 
-		bool getGroupInfoFromUserId( const char *user, float & groupQuota, 
-			 float & groupUsage );
-		
 
 
 		// rank condition on matches

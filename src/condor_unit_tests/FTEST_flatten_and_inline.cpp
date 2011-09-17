@@ -32,9 +32,7 @@
 
 using namespace std;
 
-#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
-#endif
 
 static bool test_empty_simple_return(void);
 static bool test_empty_simple_value(void);

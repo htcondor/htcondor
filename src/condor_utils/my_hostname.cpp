@@ -216,7 +216,7 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 			desireability = 3;
 		}
 
-		//dprintf(D_HOSTNAME,"%s: desireability %d\n",dev->IP(),desireability);
+		//dprintf(D_HOSTNAME, "Considering %s (Ranked at %d) as possible local hostname versus %s (%d)\n", addr.to_ip_string().Value(), desireability, ip.c_str(), desireability);
 
 		if( desireability > best_so_far ) {
 			best_so_far = desireability;

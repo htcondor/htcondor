@@ -1,0 +1,8 @@
+type = jobs
+
+ports = dynamic
+condor = nightlies
+localpostsrc = x_deltacloud_configpostsrc
+nameschedd = parent;
+daemon_list = master,collector,schedd
+slots	= 1

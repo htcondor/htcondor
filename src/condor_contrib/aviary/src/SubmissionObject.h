@@ -64,6 +64,9 @@ public:
 	const char* getName() { return m_name.c_str(); }
 	void getJobSummaries(JobSummaryPairCollection& _jobs);
 
+	int getOldest();
+	void setOldest(int qdate);
+
 protected:
 	void increment(const Job *job);
 	void decrement(const Job *job);
@@ -76,6 +79,7 @@ private:
 	JobSet m_held;
 
 	bool ownerSet;
+	int  m_oldest_qdate;
 
 	string m_name;
 	string m_owner;

@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdarg.h>
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -63,74 +64,107 @@ static char *escape_id(const char *id)
     return ret;
 }
 
-static ssize_t
-full_read(int fd, void *ptr, size_t nbytes)
+static ssize_t full_read(int fd, void *ptr, size_t nbytes)
 {
-	int nleft, nread;
+    int nleft, nread;
 
-	nleft = nbytes;
-	while (nleft > 0) {
-
-#ifndef WIN32
-		REISSUE_READ: 
-#endif
-		nread = read(fd, ptr, nleft);
-		if (nread < 0) {
+    nleft = nbytes;
+    while (nleft > 0) {
 
 #ifndef WIN32
-			/* error happened, ignore if EINTR, otherwise inform the caller */
-			if (errno == EINTR) {
-				goto REISSUE_READ;
-			}
+    REISSUE_READ:
 #endif
-			/* The caller has no idea how much was actually read in this
-				scenario and the file offset is undefined */
-			return -1;
+        nread = read(fd, ptr, nleft);
+        if (nread < 0) {
 
-		} else if (nread == 0) {
-			/* We've reached the end of file marker, so stop looping. */
-			break;
-		}
+#ifndef WIN32
+            /* error happened, ignore if EINTR, otherwise inform the caller */
+            if (errno == EINTR)
+                goto REISSUE_READ;
+#endif
+            /* The caller has no idea how much was actually read in this
+             * scenario and the file offset is undefined */
+            return -1;
+        }
+        else if (nread == 0)
+            /* We've reached the end of file marker, so stop looping. */
+            break;
 
-		nleft -= nread;
-			/* On Win32, void* does not default to "byte", so we cast it */
-		ptr = ((char *)ptr) + nread;
-	}
+        nleft -= nread;
+        /* On Win32, void* does not default to "byte", so we cast it */
+        ptr = ((char *)ptr) + nread;
+    }
 
-	/* return how much was actually read, which could include 0 in an
-		EOF situation */
-	return (nbytes - nleft);	 
+    /* return how much was actually read, which could include 0 in an
+     * EOF situation */
+    return (nbytes - nleft);
 }
 
-static char *read_file( const char *path )
+static char *read_password_file(const char *path)
 {
-	if ( path == NULL ) {
-		return NULL;
-	}
+    int fd;
+    struct stat stat_buf;
+    char *password = NULL;
+    int idx;
 
-	int fd = open( path, O_RDONLY );
-	if ( fd < 0 ) {
-		return NULL;
-	}
-	struct stat stat_buf;
-	if ( fstat( fd, &stat_buf ) < 0 ) {
-		close( fd );
-		return NULL;
-	}
+    if (path == NULL)
+        return NULL;
 
-	char *data = (char *)calloc( stat_buf.st_size + 1, 1 );
-	if ( full_read( fd, data, stat_buf.st_size ) < 0 ) {
-		close( fd );
-		free( data );
-		return NULL;
-	}
+    fd = open(path, O_RDONLY);
+    if (fd < 0)
+        return NULL;
 
-	close( fd );
-	return data;
+    if (fstat(fd, &stat_buf) < 0)
+        goto cleanup;
+
+    password = (char *)calloc(stat_buf.st_size + 1, 1);
+    if (password == NULL)
+        goto cleanup;
+
+    if (full_read(fd, password, stat_buf.st_size) < 0) {
+        free(password);
+        password = NULL;
+        goto cleanup;
+    }
+
+    for (idx = strlen(password) - 1; idx >= 0 && isspace(password[idx]); idx--)
+        password[idx] = '\0';
+
+cleanup:
+    close(fd);
+    return password;
+}
+
+static std::string create_failure(const char *req_id, const char *err_msg, ...)
+{
+    std::string buffer;
+    va_list ap;
+    char *tmp;
+    unsigned int i;
+
+    buffer += req_id;
+    buffer += ' ';
+
+    va_start(ap, err_msg);
+    vasprintf(&tmp, err_msg, ap);
+    va_end(ap);
+
+    for (i = 0; i < strlen(tmp); i++) {
+        if (tmp[i] == ' ')
+            buffer += '\\';
+        buffer += tmp[i];
+    }
+    free(tmp);
+
+    buffer += '\n';
+
+    dcloudprintf(buffer.c_str());
+
+    return buffer;
 }
 
 static std::string create_instance_output(char * reqid,
-					  struct deltacloud_instance *inst)
+                                          struct deltacloud_instance *inst)
 {
     struct deltacloud_action *act;
     struct deltacloud_address *addr;
@@ -184,21 +218,57 @@ static std::string create_instance_output(char * reqid,
     return output_string;
 }
 
+static int assign_parameter(struct deltacloud_create_parameter **params,
+                            int *params_size, const char *name,
+                            const char *value)
+{
+    struct deltacloud_create_parameter *tmpparams;
+
+    if (STRCASEEQ(value, NULLSTRING))
+        return 0;
+
+    /* use a temporary variable here so that if we fail, we don't lose the
+     * pointer to params
+     */
+    tmpparams = (struct deltacloud_create_parameter *)realloc(*params,
+                                                              sizeof(struct deltacloud_create_parameter) * (*params_size + 1));
+    if (tmpparams == NULL)
+        return -1;
+
+    *params = tmpparams;
+
+    /* if prepare_parameter failed, then we have allocated additional memory
+     * for the array, but placed nothing inside the structure.  As long as we
+     * don't update params_size, it is safe to return here as the cleanup
+     * code will just free the other members, plus the array
+     */
+    if (deltacloud_prepare_parameter(*params + *params_size, name, value) < 0)
+        return -1;
+
+    (*params_size)++;
+
+    return 0;
+}
+
 /*
- * DELTACLOUD_VM_SUBMIT <reqid> <url> <user> <password> <image_id> <name> <realm_id> <hwp_id> <hwp_memory> <hwp_cpu> <hwp_storage> <keyname> <userdata>
- *  where all arguments are required.  <reqid>, <url>, <user>, <password>, and
- *  <image_id> all have to be non-NULL; <name>, <realm_id>, <hwp_id>,
- *  <keyname>, and <userdata> should either be the string "NULL" to let
- *  deltacloud pick, or a particular name, realm_id, hwp_id, or keyname to
- *  specify.
+ * DELTACLOUD_VM_SUBMIT <reqid> <url> <user> <password_file> <image_id> <name> <realm_id> <hwp_id> <hwp_memory> <hwp_cpu> <hwp_storage> <keyname> <userdata>
+ *  where all arguments are required.  <reqid>, <url>, <user>, <password_file>,
+ *  and <image_id> all have to be non-NULL; <name>, <realm_id>, <hwp_id>,
+ *  <hwp_memory>, <hwp_cpu>, <hwp_storage>, <keyname>, and <userdata> should
+ *  either be the string "NULL" to let deltacloud pick, or a particular value.
  */
 bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
 {
-    char *url, *user, *password_file, *password, *image_id, *name, *realm_id, *hwp_id, *hwp_memory, *hwp_cpu, *hwp_storage, *reqid;
+    char *url, *user, *password_file, *password, *image_id, *name, *realm_id;
+    char *hwp_id, *hwp_memory, *hwp_cpu, *hwp_storage, *reqid;
     char *keyname, *userdata;
     struct deltacloud_api api;
-    struct deltacloud_instance inst;
     bool ret = FALSE;
+    struct deltacloud_create_parameter *params = NULL;
+    int params_size = 0;
+    char *instid = NULL;
+    int i;
+    char *esc_id;
 
     if (!verify_number_args(14, argc)) {
         output_string = create_failure("0", "Wrong_Argument_Number");
@@ -219,7 +289,9 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
     keyname = argv[12];
     userdata = argv[13];
 
-	dcloudprintf("Arguments: reqid %s, url %s, user %s, password %s, image_id %s, name %s, realm_id %s, hwp_id %s, hwp_memory %s, hwp_cpu %s, hwp_storage %s, keyname %s\n", reqid, url, user, password_file, image_id, name, realm_id, hwp_id, hwp_memory, hwp_cpu, hwp_storage, keyname);
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s, image_id %s, name %s, realm_id %s, hwp_id %s, hwp_memory %s, hwp_cpu %s, hwp_storage %s, keyname %s, userdata %s\n",
+                 reqid, url, user, password_file, image_id, name, realm_id,
+                 hwp_id, hwp_memory, hwp_cpu, hwp_storage, keyname, userdata);
 
 
     if (STRCASEEQ(url, NULLSTRING)) {
@@ -237,62 +309,71 @@ bool dcloud_start_worker(int argc, char **argv, std::string &output_string)
 
     if (STRCASEEQ(password_file, NULLSTRING))
         password_file = NULL;
-    if (STRCASEEQ(name, NULLSTRING))
-        name = NULL;
-    if (STRCASEEQ(realm_id, NULLSTRING))
-        realm_id = NULL;
-    if (STRCASEEQ(hwp_id, NULLSTRING))
-        hwp_id = NULL;
-    if (STRCASEEQ(hwp_memory, NULLSTRING))
-        hwp_memory = NULL;
-    if (STRCASEEQ(hwp_cpu, NULLSTRING))
-        hwp_cpu = NULL;
-    if (STRCASEEQ(hwp_storage, NULLSTRING))
-        hwp_storage = NULL;
-    if (STRCASEEQ(keyname, NULLSTRING))
-        keyname = NULL;
-    if (STRCASEEQ(userdata, NULLSTRING))
-        userdata = NULL;
-
-    password = read_file( password_file );
-	if ( !password ) {
-		output_string = create_failure(reqid, "Invalid_Password_File");
-		return FALSE;
-	}
-	for ( int idx = strlen( password ) - 1; idx >= 0 && isspace( password[idx] ); idx-- ) {
-		password[idx] = '\0';
-	}
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
                                        deltacloud_get_last_error_string());
-        return FALSE;
+        goto cleanup_password;
     }
 
-	free( password );
+    if (assign_parameter(&params, &params_size, "name", name) < 0 ||
+        assign_parameter(&params, &params_size, "realm_id", realm_id) < 0 ||
+        assign_parameter(&params, &params_size, "keyname", keyname) < 0 ||
+        assign_parameter(&params, &params_size, "hwp_id", hwp_id) < 0 ||
+        assign_parameter(&params, &params_size, "hwp_memory", hwp_memory) < 0 ||
+        assign_parameter(&params, &params_size, "hwp_cpu", hwp_cpu) < 0 ||
+        assign_parameter(&params, &params_size, "hwp_storage", hwp_storage) < 0 ||
+        assign_parameter(&params, &params_size, "user_data", userdata) < 0) {
+        output_string = create_failure(reqid,
+                                       "Create_Instance_Failure: Failed to allocate parameter memory");
+        goto cleanup_library;
+    }
 
-    if (deltacloud_create_instance(&api, image_id, name, realm_id, hwp_id, hwp_memory,
-                                   hwp_cpu, hwp_storage, keyname, userdata, &inst) < 0) {
+    if (deltacloud_create_instance(&api, image_id, params, params_size,
+                                   &instid) < 0) {
         output_string = create_failure(reqid, "Create_Instance_Failure: %s",
                                        deltacloud_get_last_error_string());
         goto cleanup_library;
     }
 
-    output_string = create_instance_output(reqid, &inst);
+    /* deltacloud_create_instance only returns an ID to us.  Output that ID
+     * plus a hard-coded state of PENDING to the upper layers; it will be
+     * their responsibility to get the instance details as appropriate
+     */
 
-    deltacloud_free_instance(&inst);
+    output_string += reqid;
+    output_string += " NULL ";
+
+    esc_id = escape_id(instid);
+    output_string += "id=";
+    output_string += esc_id;
+    free(esc_id);
+    output_string += " state=PENDING\n";
 
     ret = TRUE;
 
- cleanup_library:
+cleanup_library:
+    free(instid);
+    for (i = 0; i < params_size; i++)
+        deltacloud_free_parameter_value(&params[i]);
+    free(params);
     deltacloud_free(&api);
+
+cleanup_password:
+    free(password);
 
     return ret;
 }
 
 /*
- * DELTACLOUD_VM_ACTION <reqid> <url> <user> <password> <instance_id> <action>
- *  where reqid, url, user, password, instance_id, and action have to be non-NULL
+ * DELTACLOUD_VM_ACTION <reqid> <url> <user> <password_file> <instance_id> <action>
+ *  where reqid, url, user, password_file, instance_id, and action have to be
+ *  non-NULL.
  */
 bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
 {
@@ -314,7 +395,7 @@ bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
     instance_id = argv[5];
     action = argv[6];
 
-    dcloudprintf("Arguments: reqid %s, url %s, user %s, password %s, instance_id %s, action %s\n", reqid, url, user, password_file, instance_id, action);
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s, instance_id %s, action %s\n", reqid, url, user, password_file, instance_id, action);
 
     if (STRCASEEQ(url, NULLSTRING)) {
         output_string = create_failure(reqid, "Invalid_URL");
@@ -336,22 +417,17 @@ bool dcloud_action_worker(int argc, char **argv, std::string &output_string)
     if (STRCASEEQ(password_file, NULLSTRING))
         password_file = NULL;
 
-    password = read_file( password_file );
-	if ( !password ) {
-		output_string = create_failure(reqid, "Invalid_Password_File");
-		return FALSE;
-	}
-	for ( int idx = strlen( password ) - 1; idx >= 0 && isspace( password[idx] ); idx-- ) {
-		password[idx] = '\0';
-	}
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
                                        deltacloud_get_last_error_string());
-        return FALSE;
+        goto cleanup_password;
     }
-
-	free( password );
 
     if (deltacloud_get_instance_by_id(&api, instance_id, &instance) < 0) {
         output_string = create_failure(reqid, "Instance_Lookup_Failure: %s",
@@ -391,12 +467,15 @@ cleanup_instance:
 cleanup_library:
     deltacloud_free(&api);
 
+cleanup_password:
+    free(password);
+
     return ret;
 }
 
 /*
- * DELTACLOUD_VM_INFO <reqid> <url> <user> <password> <instance_id>
- *  where reqid, url, user, password, and instance_id have to be non-NULL
+ * DELTACLOUD_VM_INFO <reqid> <url> <user> <password_file> <instance_id>
+ *  where reqid, url, user, password_file, and instance_id have to be non-NULL.
  */
 bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
 {
@@ -416,7 +495,7 @@ bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
     password_file = argv[4];
     instance_id = argv[5];
 
-    dcloudprintf("Arguments: reqid %s, url %s, user %s, password %s, instance_id %s\n", reqid, url, user, password_file, instance_id);
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s, instance_id %s\n", reqid, url, user, password_file, instance_id);
 
     if (STRCASEEQ(url, NULLSTRING)) {
         output_string = create_failure(reqid, "Invalid_URL");
@@ -434,22 +513,17 @@ bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
     if (STRCASEEQ(password_file, NULLSTRING))
         password_file = NULL;
 
-    password = read_file( password_file );
-	if ( !password ) {
-		output_string = create_failure(reqid, "Invalid_Password_File");
-		return FALSE;
-	}
-	for ( int idx = strlen( password ) - 1; idx >= 0 && isspace( password[idx] ); idx-- ) {
-		password[idx] = '\0';
-	}
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
                                        deltacloud_get_last_error_string());
-        return FALSE;
+        goto cleanup_password;
     }
-
-	free( password );
 
     if (deltacloud_get_instance_by_id(&api, instance_id, &inst) < 0) {
         output_string = create_failure(reqid, "Instance_Lookup_Failure %s: %s",
@@ -467,12 +541,15 @@ bool dcloud_info_worker(int argc, char **argv, std::string &output_string)
 cleanup_library:
     deltacloud_free(&api);
 
+cleanup_password:
+    free(password);
+
     return ret;
 }
 
 /*
- * DELTACLOUD_VM_STATUS_ALL <reqid> <url> <user> <password>
- *  where reqid, url, user, and password have to be non-NULL.
+ * DELTACLOUD_VM_STATUS_ALL <reqid> <url> <user> <password_file>
+ *  where reqid, url, user, and password_file have to be non-NULL.
  */
 bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
 {
@@ -493,7 +570,7 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
     user = argv[3];
     password_file = argv[4];
 
-    dcloudprintf("Arguments: reqid %s, url %s, user %s, password %s\n", reqid, url, user, password_file);
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s\n", reqid, url, user, password_file);
 
     if (STRCASEEQ(url, NULLSTRING)) {
         output_string = create_failure(reqid, "Invalid_URL");
@@ -507,22 +584,17 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
     if (STRCASEEQ(password_file, NULLSTRING))
         password_file = NULL;
 
-    password = read_file( password_file );
-	if ( !password ) {
-		output_string = create_failure(reqid, "Invalid_Password_File");
-		return FALSE;
-	}
-	for ( int idx = strlen( password ) - 1; idx >= 0 && isspace( password[idx] ); idx-- ) {
-		password[idx] = '\0';
-	}
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
                                        deltacloud_get_last_error_string());
-        return FALSE;
+        goto cleanup_password;
     }
-
-	free( password );
 
     if (deltacloud_get_instances(&api, &instances) < 0) {
         output_string = create_failure(reqid, "Instance_Fetch_Failure: %s",
@@ -552,12 +624,15 @@ bool dcloud_statusall_worker(int argc, char **argv, std::string &output_string)
 cleanup_library:
     deltacloud_free(&api);
 
+cleanup_password:
+    free(password);
+
     return ret;
 }
 
 /*
- * DELTACLOUD_VM_FIND <reqid> <url> <user> <password> <name>
- *  where reqid, url, user, password, and name have to be non-NULL.
+ * DELTACLOUD_VM_FIND <reqid> <url> <user> <password_file> <name>
+ *  where reqid, url, user, password_file, and name have to be non-NULL.
  */
 bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
 {
@@ -580,7 +655,7 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     password_file = argv[4];
     name = argv[5];
 
-    dcloudprintf("Arguments: reqid %s, url %s, user %s, password %s, name %s\n", reqid, url, user, password_file, name);
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s, name %s\n", reqid, url, user, password_file, name);
 
     if (STRCASEEQ(url, NULLSTRING)) {
         output_string = create_failure(reqid, "Invalid_URL");
@@ -598,22 +673,17 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
     if (STRCASEEQ(password_file, NULLSTRING))
         password_file = NULL;
 
-    password = read_file( password_file );
-	if ( !password ) {
-		output_string = create_failure(reqid, "Invalid_Password_File");
-		return FALSE;
-	}
-	for ( int idx = strlen( password ) - 1; idx >= 0 && isspace( password[idx] ); idx-- ) {
-		password[idx] = '\0';
-	}
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
 
     if (deltacloud_initialize(&api, url, user, password) < 0) {
         output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
                                        deltacloud_get_last_error_string());
-        return FALSE;
+        goto cleanup_password;
     }
-
-	free( password );
 
     rc = deltacloud_get_instance_by_name(&api, name, &inst);
     if (rc == 0) {
@@ -633,8 +703,8 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
                                            "Instance_Fetch_Failure %s",
                                            name);
             goto cleanup_library;
-		}
-		else if(last->error_num != DELTACLOUD_NAME_NOT_FOUND_ERROR) {
+        }
+        else if(last->error_num != DELTACLOUD_NAME_NOT_FOUND_ERROR) {
             /* failed to find the instance, output an error */
             output_string = create_failure(reqid,
                                            "Instance_Fetch_Failure %s: %s",
@@ -652,6 +722,200 @@ bool dcloud_find_worker(int argc, char **argv, std::string &output_string)
 
 cleanup_library:
     deltacloud_free(&api);
+
+cleanup_password:
+    free(password);
+
+    return ret;
+}
+
+/*
+ * DELTACLOUD_GET_MAX_NAME_LENGTH <reqid> <url> <user> <password_file>
+ *  where reqid, url, user, and password_file have to be non-NULL.
+ */
+bool dcloud_max_name_length_worker(int argc, char **argv,
+                                   std::string &output_string)
+{
+    char *url, *user, *password_file, *password, *reqid;
+    struct deltacloud_api api;
+    struct deltacloud_link *link;
+    struct deltacloud_feature *feature;
+    struct deltacloud_feature_constraint *constraint;
+    char *max = NULL;
+    bool ret = FALSE;
+
+    if (!verify_number_args(5, argc)) {
+        output_string = create_failure("0", "Wrong_Argument_Number");
+        return FALSE;
+    }
+
+    reqid = argv[1];
+    url = argv[2];
+    user = argv[3];
+    password_file = argv[4];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s\n", reqid, url, user, password_file);
+
+    if (STRCASEEQ(url, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_URL");
+        return FALSE;
+    }
+    if (STRCASEEQ(user, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_User");
+        return FALSE;
+    }
+
+    if (STRCASEEQ(password_file, NULLSTRING))
+        password_file = NULL;
+
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
+
+    if (deltacloud_initialize(&api, url, user, password) < 0) {
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
+        goto cleanup_password;
+    }
+
+    /* here, we search through the api.links->features->constraints to try and
+     * find a constraint of "max_length".  If we find it, we return it; if not
+     * we just let the higher layers choose a default
+     */
+    deltacloud_for_each(link, api.links) {
+        if (STRCASENEQ(link->rel, "instances"))
+            continue;
+
+        /* OK, we are in the instances collection.  Look at the features */
+        deltacloud_for_each(feature, link->features) {
+            if (STRCASENEQ(feature->name, "user_name"))
+                continue;
+
+            /* OK, we saw the user_name feature; see if it has a length */
+            deltacloud_for_each(constraint, feature->constraints) {
+                if (STRCASEEQ(constraint->name, "max_length")) {
+                    max = strdup(constraint->value);
+                    /* need to use goto here to break all of the loops */
+                    goto done;
+                }
+            }
+        }
+    }
+
+done:
+    output_string = reqid;
+    output_string += " NULL ";
+    if (max == NULL)
+        output_string += "NULL";
+    else {
+        output_string += max;
+        free(max);
+    }
+    output_string += "\n";
+
+    deltacloud_free(&api);
+
+    ret = TRUE;
+
+cleanup_password:
+    free(password);
+
+    return ret;
+}
+
+/*
+ * DELTACLOUD_START_AUTO <reqid> <url> <user> <password_file>
+ *  where reqid, url, user, and password_file have to be non-NULL.
+ */
+bool dcloud_start_auto_worker(int argc, char **argv,
+			      std::string &output_string)
+{
+    char *url, *user, *password_file, *password, *reqid;
+    struct deltacloud_api api;
+    struct deltacloud_instance_state *instance_states;
+    struct deltacloud_instance_state *state;
+    struct deltacloud_instance_state_transition *transition;
+    bool automatically = FALSE;
+    bool ret = FALSE;
+
+    if (!verify_number_args(5, argc)) {
+        output_string = create_failure("0", "Wrong_Argument_Number");
+        return FALSE;
+    }
+
+    reqid = argv[1];
+    url = argv[2];
+    user = argv[3];
+    password_file = argv[4];
+
+    dcloudprintf("Arguments: reqid %s, url %s, user %s, password_file %s\n", reqid, url, user, password_file);
+
+    if (STRCASEEQ(url, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_URL");
+        return FALSE;
+    }
+    if (STRCASEEQ(user, NULLSTRING)) {
+        output_string = create_failure(reqid, "Invalid_User");
+        return FALSE;
+    }
+
+    if (STRCASEEQ(password_file, NULLSTRING))
+        password_file = NULL;
+
+    password = read_password_file(password_file);
+    if (!password) {
+        output_string = create_failure(reqid, "Invalid_Password_File");
+        return FALSE;
+    }
+
+    if (deltacloud_initialize(&api, url, user, password) < 0) {
+        output_string = create_failure(reqid, "Deltacloud_Init_Failure: %s",
+                                       deltacloud_get_last_error_string());
+        goto cleanup_password;
+    }
+
+    if (deltacloud_get_instance_states(&api, &instance_states) < 0) {
+        output_string = create_failure(reqid, "Instance_State_Failure: %s",
+                                       deltacloud_get_last_error_string());
+        goto cleanup_library;
+    }
+
+    deltacloud_for_each(state, instance_states) {
+        if (STRCASENEQ(state->name, "pending"))
+            continue;
+
+        deltacloud_for_each(transition, state->transitions) {
+            if (STRCASEEQ(transition->to, "running") &&
+                transition->automatically != NULL &&
+                STRCASEEQ(transition->automatically, "true")) {
+                automatically = TRUE;
+                goto done;
+            }
+        }
+    }
+
+done:
+    output_string = reqid;
+    output_string += " NULL ";
+    if (automatically) {
+        output_string += "TRUE";
+    }
+    else {
+        output_string += "FALSE";
+    }
+    output_string += "\n";
+
+    deltacloud_free_instance_state_list(&instance_states);
+
+    ret = TRUE;
+
+cleanup_library:
+    deltacloud_free(&api);
+
+cleanup_password:
+    free(password);
 
     return ret;
 }

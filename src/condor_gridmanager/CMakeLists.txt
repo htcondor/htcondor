@@ -20,10 +20,18 @@
 if(NOT WIN_EXEC_NODE_ONLY)
 	set (GM_LINK_LIBS "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}")
 
-	file( GLOB RmvSrcs *_gahp_wrapper* )
+	if ( LINUX )
+		file( GLOB RmvSrcs *_gahp_wrapper* )
+	else()
+		file( GLOB RmvSrcs *_gahp_wrapper* *dcloud* )
+	endif()
 	condor_glob( GMHDRS GMSRCS "${RmvSrcs}" )
 
-	condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "qmgmt;daemon_core;${GM_LINK_LIBS}" OFF )
+	if ( LINUX )
+		condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "qmgmt;daemon_core;${GM_LINK_LIBS};${LIBUUID_FOUND}" OFF )
+	else()
+		condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "qmgmt;daemon_core;${GM_LINK_LIBS}" OFF )
+	endif()
 
 	if (NOT WINDOWS)
         if (HAVE_EXT_GLOBUS)
@@ -53,6 +61,9 @@ if(NOT WIN_EXEC_NODE_ONLY)
 
         if (HAVE_EXT_UNICOREGAHP)
             condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
+            # unfortunately libutils comes with undefined symbols introduced by
+            # libdaemon_core (even when linking libutils to it)
+            target_link_libraries(unicore_gahp -Wl,--allow-shlib-undefined)
         endif()
 
         if (HAVE_EXT_BLAHP)

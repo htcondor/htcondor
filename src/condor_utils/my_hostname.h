@@ -20,6 +20,7 @@
 #ifndef MY_HOSTNAME_H
 #define MY_HOSTNAME_H
 
+// every func here will be obsolete.
 extern	char*	my_hostname( void );
 extern	char*	my_full_hostname( void );
 extern	unsigned int	my_ip_addr( void );

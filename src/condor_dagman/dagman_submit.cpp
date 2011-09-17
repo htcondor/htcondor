@@ -230,7 +230,8 @@ bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString DAGParentNodeNames,
 			   List<MyString>* names, List<MyString>* vals,
-			   const char* directory, const char *logFile )
+			   const char* directory, const char *logFile,
+			   bool prohibitMultiJobs )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -239,6 +240,32 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				"Could not change to node directory %s: %s\n",
 				directory, errMsg.Value() );
 		return false;
+	}
+
+	if ( prohibitMultiJobs ) {
+		MyString	errorMsg;
+		int queueCount = MultiLogFiles::getQueueCountFromSubmitFile(
+					MyString( cmdFile ), MyString( directory ),
+					errorMsg );
+		if ( queueCount == -1 ) {
+			debug_printf( DEBUG_QUIET, "ERROR in "
+						"MultiLogFiles::getQueueCountFromSubmitFile(): %s\n",
+						errorMsg.Value() );
+				// We don't just return false here because that would
+				// cause us to re-try the submit, which would obviously
+				// just fail again.
+			main_shutdown_rescue( EXIT_ERROR );
+			return false; // We won't actually get to here.
+		} else if ( queueCount != 1 ) {
+			debug_printf( DEBUG_QUIET, "ERROR: node %s job queues %d "
+						"job procs, but DAGMAN_PROHIBIT_MULTI_JOBS is "
+						"set\n", DAGNodeName, queueCount );
+				// We don't just return false here because that would
+				// cause us to re-try the submit, which would obviously
+				// just fail again.
+			main_shutdown_rescue( EXIT_ERROR );
+			return false; // We won't actually get to here.
+		}
 	}
 
 	ArgList args;
@@ -321,9 +348,10 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// if we don't have room for DAGParentNodeNames, leave it unset
 	if( cmdLineSize + reserveNeeded + DAGParentNodeNamesLen > maxCmdLine ) {
-		debug_printf( DEBUG_NORMAL, "WARNING: node %s has too many parents "
+		debug_printf( DEBUG_NORMAL, "Warning: node %s has too many parents "
 					  "to list in its classad; leaving its DAGParentNodeNames "
 					  "attribute undefined\n", DAGNodeName );
+		check_warning_strictness( DAG_STRICT_3 );
 	} else {
 		args.AppendArgsFromArgList( parentNameArgs );
 	}
@@ -427,7 +455,7 @@ fake_condor_submit( CondorID& condorID, const char* DAGNodeName,
 
 		// We need some value for submitHost for the event to be read
 		// correctly.
-	sprintf( subEvent.submitHost, "<dummy-submit-for-noop-job>");
+	subEvent.setSubmitHost( "<dummy-submit-for-noop-job>" );
 
 	MyString subEventNotes("DAG Node: " );
 	subEventNotes += DAGNodeName;

@@ -57,7 +57,7 @@ email_corefile_tail( FILE* output, const char * subsystem_name )
 		sprintf(file,"%s\\core.%s.WIN32",ptmp,
 			subsystem_name);
 		free(ptmp);
-		if( (input=safe_fopen_wrapper(file,"r",0644)) == NULL ) {
+		if( (input=safe_fopen_wrapper_follow(file,"r",0644)) == NULL ) {
 			dprintf( D_FULLDEBUG, 
 				"Failed to email %s: cannot open file\n", file );
 			return;
@@ -112,7 +112,7 @@ email_asciifile_tail( FILE* output, const char* file, int lines )
 		return;
 	}		
 
-	if( (input=safe_fopen_wrapper(file,"r",0644)) == NULL ) {
+	if( (input=safe_fopen_wrapper_follow(file,"r",0644)) == NULL ) {
 		dprintf( D_FULLDEBUG, 
 			"Failed to email %s: cannot open file\n", file );
 		return;

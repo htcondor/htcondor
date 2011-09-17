@@ -465,7 +465,9 @@ MgmtScheddPlugin::processJob(const char *key,
 
     // Call some add() function on submission, which adds SubmissionId, help avoid letting the secret out about the SubmissionId
 
-	submission->update(id, name, value);
+	submission->updateStatus(id, name, value);
+
+	submission->updateQdate(id);
 
 	// TODO:
 	// after the update, see where we are

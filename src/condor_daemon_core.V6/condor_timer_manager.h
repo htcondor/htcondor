@@ -210,7 +210,7 @@ class TimerManager
     /** Not_Yet_Documented.
         @return Not_Yet_Documented
     */
-    int Timeout(); 
+    int Timeout(int * pNumFired = NULL, double * pruntime = NULL); 
 
     /// Not_Yet_Documented.
     void Start();

@@ -30,7 +30,7 @@
 #include "daemon.h"
 #include "env.h"
 #include "condor_claimid_parser.h"
-
+#include "ipv6_hostname.h"
 
 MPIShadow::MPIShadow() {
     nextResourceToStart = 0;
@@ -356,35 +356,37 @@ MPIShadow::startMaster()
     char pgfilename[128];
     sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), 
 			 getProc() );
-    if( (pg=safe_fopen_wrapper( pgfilename, "w" )) == NULL ) {
+    if( (pg=safe_fopen_wrapper_follow( pgfilename, "w" )) == NULL ) {
         dprintf( D_ALWAYS, "Failure to open %s for writing, errno %d\n", 
                  pgfilename, errno );
         shutDown( JOB_NOT_STARTED );
 		return;
     }
         
-    char mach[128];
     char *sinful = new char[128];
-    struct sockaddr_in sin;
+	condor_sockaddr addr;
 
         // get the machine name (using string_to_sin and sin_to_hostname)
     rr = ResourceList[0];
     rr->getStartdAddress( sinful );
-    string_to_sin( sinful, &sin );
-    sprintf( mach, "%s", sin_to_hostname( &sin, NULL ));
-    fprintf( pg, "%s 0 condor_exec %s\n", mach, getOwner() );
+	addr.from_sinful(sinful);
+	MyString hostname = get_hostname(addr);
+    fprintf( pg, "%s 0 condor_exec %s\n", hostname.Value(), getOwner() );
 
     dprintf ( D_FULLDEBUG, "Procgroup file:\n" );
-    dprintf ( D_FULLDEBUG, "%s 0 condor_exec %s\n", mach, getOwner() );
+    dprintf ( D_FULLDEBUG, "%s 0 condor_exec %s\n", hostname.Value(),
+			  getOwner() );
 
         // for each resource, get machine name, make pgfile entry
     for ( int i=1 ; i<=ResourceList.getlast() ; i++ ) {
         rr = ResourceList[i];
         rr->getStartdAddress( sinful );
-        string_to_sin( sinful, &sin );
-        sprintf( mach, "%s", sin_to_hostname( &sin, NULL ) );
-        fprintf( pg, "%s 1 condor_exec %s\n", mach, getOwner() );
-        dprintf( D_FULLDEBUG, "%s 1 condor_exec %s\n", mach, getOwner() );
+		addr.from_sinful(sinful);
+		MyString hostname = get_hostname(addr);
+        fprintf( pg, "%s 1 condor_exec %s\n", hostname.Value(),
+				 getOwner() );
+        dprintf( D_FULLDEBUG, "%s 1 condor_exec %s\n", hostname.Value(),
+				 getOwner() );
     }
     delete [] sinful;
 
@@ -493,7 +495,7 @@ MPIShadow::hackMasterAd( ClassAd *ad )
 		// include the procgroup file in the list of input files.
 		// This is only needed on the master.
 	char *transfer_files = NULL;
-	if( !ad->LookupString(ATTR_TRANSFER_FILES, &transfer_files) ) {
+	if( !ad->LookupString(ATTR_SHOULD_TRANSFER_FILES, &transfer_files) ) {
 			// Nothing, we're done.
 		return;
 	}
@@ -1213,7 +1215,7 @@ MPIShadow::resourceBeganExecution( RemoteResource* rr )
 			// All nodes in this computation are now running, so we 
 			// can finally log the execute event.
 		ExecuteEvent event;
-		strcpy( event.executeHost, "MPI_job" );
+		event.setExecuteHost( "MPI_job" );
 		if ( !uLog.writeEvent( &event, jobAd )) {
 			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
 		}

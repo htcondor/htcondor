@@ -27,7 +27,7 @@
 
 using namespace std;
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 struct cclassad {
 	ClassAd *ad;
@@ -237,4 +237,4 @@ int cclassad_evaluate_to_bool( struct cclassad *c, const char *expr, int *result
 	return 0;
 }
 
-END_NAMESPACE
+}

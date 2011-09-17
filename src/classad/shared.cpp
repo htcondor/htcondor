@@ -33,9 +33,7 @@
  ***************************************************************************/
 
 using namespace std;
-#ifdef WANT_CLASSAD_NAMESPACE
 using namespace classad;
-#endif
 
 static bool todays_date(const char *name, const ArgumentList &arguments,
     EvalState &state, Value  &result);

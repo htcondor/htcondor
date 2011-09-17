@@ -1,0 +1,135 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+
+##**************************************************************
+## The DAGMAN_PROHIBIT_MULTI_JOBS setting should not affect subdags.
+## This test confirms that this is true
+## Issue discussed in Gittrac #2331
+##**************************************************************
+
+$cmd = 'job_dagman_subdag_multi_prohibit-B.dag';
+$testdesc =  'Condor submit dag - basic subdag_multi_prohibit test - scheduler U';
+$testname = "job_dagman_subdag_multi_prohibit-B";
+$dagman_args = "-verbose";
+
+@dagfiles = ("job_dagman_subdag_multi_prohibit-B.dag","job_dagman_subdag_multi_prohibit-B-sub.dag");
+
+foreach $name (@dagfiles) {
+	runcmd("rm -f $name.dagman.out $name.err");
+}
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing and successful completion\n",1);
+};
+
+$success = sub
+{
+	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+	$passed_setting = 0;
+	$passed2 = 0;
+	foreach $name (@dagfiles) {
+		$canopen = open(OUT,"<$name.dagman.out");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open outfile<$name.dagman.out>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp;
+			if(/DAGMAN_PROHIBIT_MULTI_JOBS.+True/){
+				CondorTest::debug("$name: $_\n",1);
+				CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is True, as expected\n",1);
+				++$passed_setting;
+			}
+			if(/DAGMAN_PROHIBIT_MULTI_JOBS.+False/){
+				CondorTest::debug("$name: $_\n",1);
+				CondorTest::debug("DAGMAN_PROHIBIT_MULTI_JOBS is False!\n",1);
+				$passed_setting = 0;
+				die "DAGMAN_PROHBIT_MULTI_JOBS should be False\n";
+			}
+			if(/Recursive submit.+B-sub\.dag/){
+				CondorTest::debug("$name: $_\n",1);
+				CondorTest::debug("Good. Saw subdag submitted.\n");
+				$passed2 = 1;
+			}
+		}
+		close(OUT);
+	}
+	if( $passed_setting != 2 ) {
+		CondorTest::debug("Didn't find expected DAGMAN_PROHIBIT_MULTI_JOBS settings\n",1);
+		$diditpass = 0;
+	}
+	if($passed2 != 1) {
+		CondorTest::debug("Didn't find expected recursive submit\n",1);
+		$diditpass = 0;
+	}
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

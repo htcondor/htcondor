@@ -724,5 +724,7 @@ unsigned int hashFuncChars( char const *key );
 /// hash function for Mystring string
 unsigned int hashFuncMyString( const MyString &key );
 
+/// hash function for a pointer
+unsigned int hashFuncVoidPtr( void* const & pv );
 
 #endif // HASH_H

@@ -69,7 +69,7 @@ StartdHibernator::update( void )
 		}
 		m_plugin_path  = tmp;
 		m_plugin_path += "/";
-		m_plugin_path += "power_state";
+		m_plugin_path += "condor_power_state";
 		free( tmp );
 	}
 

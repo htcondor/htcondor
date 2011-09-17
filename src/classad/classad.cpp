@@ -27,7 +27,7 @@ using namespace std;
 
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 
-BEGIN_NAMESPACE( classad )
+namespace classad {
 
 // This flag is only meant for use in Condor, which is transitioning
 // from an older version of ClassAds with slightly different evaluation
@@ -42,15 +42,15 @@ int CondorErrno;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch)
 {
-    major = 1;
-    minor = 0;
-    patch = 10;
+    major = CLASSAD_VERSION_MAJOR;
+    minor = CLASSAD_VERSION_MINOR;
+    patch = CLASSAD_VERSION_PATCH;
     return;
 }
 
 void ClassAdLibraryVersion(string &version_string)
 {
-    version_string = "1.0.10";
+    version_string = CLASSAD_VERSION;
     return;
 }
 
@@ -1804,4 +1804,4 @@ bool ClassAd::IsAttributeDirty(const string &name)
 	return is_dirty;
 }
 
-END_NAMESPACE // classad
+} // classad

@@ -29,12 +29,12 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 
-// Expecting:EC2_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <groupname> <groupname> ..
+// Expecting:EC2_VM_START <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <ami-id> <keypair> <userdata> <userdatafile> <instancetype> <availability_zone> <vpc_subnet> <vpc_ip> <groupname> <groupname> ..
 // <groupname> are optional ones.
 // we support multiple groupnames
 bool AmazonVMStart::ioCheck(char **argv, int argc)
 {
-	return verify_min_number_args(argc, 10) &&
+	return verify_min_number_args(argc, 13) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
@@ -43,7 +43,10 @@ bool AmazonVMStart::ioCheck(char **argv, int argc)
 		verify_string_name(argv[6]) &&
 		verify_string_name(argv[7]) &&
 		verify_string_name(argv[8]) &&
-		verify_string_name(argv[9]);
+		verify_string_name(argv[9]) && 
+		verify_string_name(argv[10]) &&
+		verify_string_name(argv[11]) &&
+		verify_string_name(argv[12]);
 }
 
 // Expecting:EC2_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
@@ -68,7 +71,7 @@ bool AmazonVMStatus::ioCheck(char **argv, int argc)
 		verify_string_name(argv[5]);
 }
 
-// Expecting:EC2_VM_STATUS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <elastic-ip>
+// Expecting:EC2_VM_ASSOCIATE_ADDRESS  <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <elastic-ip> 
 bool AmazonAssociateAddress::ioCheck(char **argv, int argc)
 {
     return verify_number_args(argc, 7) &&
@@ -78,6 +81,19 @@ bool AmazonAssociateAddress::ioCheck(char **argv, int argc)
         verify_string_name(argv[4]) &&
         verify_string_name(argv[5]) && 
         verify_string_name(argv[6]);
+}
+
+// Expecting:EC_VM_ATTACH_VOLUME <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <volume-id> <instance-id> <device-id>
+bool AmazonAttachVolume::ioCheck(char **argv, int argc)
+{
+    return verify_number_args(argc, 8) &&
+        verify_request_id(argv[1]) &&
+        verify_string_name(argv[2]) &&
+        verify_string_name(argv[3]) &&
+        verify_string_name(argv[4]) &&
+        verify_string_name(argv[5]) && 
+        verify_string_name(argv[6]) && 
+        verify_string_name(argv[7]);
 }
 
 // Expecting:EC2_VM_STATUS_ALL <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>

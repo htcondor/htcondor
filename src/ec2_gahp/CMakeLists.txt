@@ -16,7 +16,8 @@
  # 
  ############################################################### 
 
-if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS AND HAVE_EXT_EXPAT )
+# Openssl on rhel3 doesn't have EVP_sha256(), which the ec2_gahp uses.
+if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS AND NOT ${SYSTEM_NAME} MATCHES "rhel3" )
 
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -26,8 +27,11 @@ if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS AND H
     # Build the GAHP; curl requires libz on some systems.
 	condor_exe( ec2_gahp
     	"${HeaderFiles};${SourceFiles}"	${C_SBIN}
-	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${CURL_FOUND};${ZLIB_FOUND}"
+	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CURL_FOUND};${ZLIB_FOUND}"
     	OFF )
+	# unfortunately libutils comes with undefined symbols introduced by
+	# libdaemon_core (even when linking libutils to it)
+	target_link_libraries(ec2_gahp -Wl,--allow-shlib-undefined)
 
     # Build an executable needed by the tests.
 	condor_exe_test( queryAPI-sim
