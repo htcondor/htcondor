@@ -1056,6 +1056,7 @@ our %submit_info = (
 	'x86_freebsd_8.2-updated'			=> 'x86_freebsd_7.4-updated',
 	'x86_64_freebsd_8.2-updated'		=> 'x86_freebsd_7.4-updated',
 	'x86_64_freebsd_8.3'				=> 'x86_freebsd_7.4-updated',
+	'x86_64_freebsd_8.2'				=> 'x86_freebsd_7.4-updated',
 );
 
 while( 1 ) {
