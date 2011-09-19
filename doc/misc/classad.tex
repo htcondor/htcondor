@@ -293,6 +293,17 @@ Optional parameters are given within square brackets.
   and indirect references from within the string passed to \Procedure{eval}
   will not be counted.
 
+  \index{ClassAd functions!unparse()}
+  \item[\Code{String unparse(Attribute attr)}]
+  This function looks up the value of the provided attribute and returns
+  the unparsed version as a string. The attribute's value is not evaluated.
+  If the attribute's value is \Expr{x + 3}, then the function would return
+  the string ``x + 3''.
+  If the provided attribute can't be found, an empty string is returned.
+
+  This function returns \Expr{ERROR} if other than exactly 1 argument is
+  given or the argument isn't an attribute reference.
+
   \index{ClassAd functions!ifThenElse()}
   \item[\Code{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
     A conditional expression is described by \Expr{IfExpr}.
