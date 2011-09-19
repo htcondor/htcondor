@@ -2251,7 +2251,8 @@ Resource::willingToRun(ClassAd* request_ad)
 
 			// Since we have a request ad, we can also check its requirements.
 		Starter* tmp_starter;
-		tmp_starter = resmgr->starter_mgr.findStarter(request_ad, r_classad);
+		bool no_starter = false;
+		tmp_starter = resmgr->starter_mgr.findStarter(request_ad, r_classad, no_starter );
 		if (!tmp_starter) {
 			req_requirements = 0;
 		}
@@ -2270,7 +2271,10 @@ Resource::willingToRun(ClassAd* request_ad)
 			if (!slot_requirements) {
 				dprintf(D_FAILURE|D_ALWAYS, "Slot requirements not satisfied.\n");
 			}
-			if (!req_requirements) {
+			if (no_starter) {
+				dprintf(D_FAILURE|D_ALWAYS, "No starter found to run this job!  Is something wrong with your Condor installation?\n");
+			}
+			else if (!req_requirements) {
 				dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
 			}
 		}
@@ -2352,7 +2356,8 @@ Resource::spawnFetchedWork(void)
 {
         // First, we have to find a Starter that will work.
     Starter* tmp_starter;
-    tmp_starter = resmgr->starter_mgr.findStarter(r_cur->ad(), r_classad);
+	bool no_starter = false;
+    tmp_starter = resmgr->starter_mgr.findStarter(r_cur->ad(), r_classad, no_starter);
 	if( ! tmp_starter ) {
 		dprintf(D_ALWAYS|D_FAILURE, "ERROR: Could not find a starter that can run fetched work request, aborting.\n");
 		change_state(owner_state);
