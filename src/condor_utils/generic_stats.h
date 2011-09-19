@@ -753,7 +753,8 @@ public:
 };
 
 template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots);
-template <> int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe);
+template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pattr, int flags) const;
+int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe);
 
 // A statistics probe designed to keep track of accumulated running time
 // of a data set.  keeps a count of times that time was added and
@@ -820,6 +821,7 @@ template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd
 // the counters).
 //
 int generic_stats_Tick(
+   time_t now,              // In, if 0 time(NULL) is called inside generic_stats_Tick
    int    RecentMaxTime,
    int    RecentQuantum,
    time_t InitTime,

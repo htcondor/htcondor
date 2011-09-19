@@ -115,6 +115,7 @@ void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, 
 // between calls to this function.  
 //
 int generic_stats_Tick(
+   time_t now, // now==0 means call time(NULL) yourself
    int    RecentMaxTime,
    int    RecentQuantum,
    time_t InitTime,
@@ -123,7 +124,7 @@ int generic_stats_Tick(
    time_t & Lifetime,
    time_t & RecentLifetime)
 {
-   time_t now = time(NULL);
+   if ( ! now) now = time(NULL);
 
    // when working from freshly initialized stats, the first Tick should not Advance.
    //
@@ -247,7 +248,7 @@ int generic_stats_ParseConfigString(
                 } else if (ch == 'z' || ch == 'Z') {
                    flags = bang ? (flags & ~IF_NONZERO) : (flags | IF_NONZERO);
                 } else if (ch == 'l' || ch == 'L') {
-                   flags = bang ? (flags | IF_NOLIFETIME) : (flags &= ~IF_NOLIFETIME);
+                   flags = bang ? (flags | IF_NOLIFETIME) : (flags & ~IF_NOLIFETIME);
                 } else {
                    if ( ! parse_error) parse_error = popt;
                 }
@@ -427,15 +428,19 @@ template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd
 }
 
 
-template <> int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe) {
-   MyString attr(pattr);
-   ad.Assign(pattr, probe.Count);
-   attr += "Runtime";
+int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe) 
+{
+   MyString attr;
+   attr.sprintf("%sCount", pattr);
+   ad.Assign(attr.Value(), probe.Count);
+
+   attr.sprintf("%sSum", pattr);
    int ret = ad.Assign(attr.Value(), probe.Sum);
+
    if (probe.Count > 0)
       {
       int pos = attr.Length();
-      attr += "Avg";
+      attr.sprintf("%sAvg", pattr);
       ad.Assign(attr.Value(), probe.Avg());
 
       attr.replaceString("Avg","Min",pos);
@@ -448,6 +453,36 @@ template <> int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& pro
       ad.Assign(attr.Value(), probe.Std());
       }
    return ret;
+}
+
+template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pattr, int flags) const
+{
+   if ( ! flags) flags = PubDefault;
+   if ((flags & IF_NONZERO) && this->value.Count == 0) return;
+
+   if ((flags & IF_PUBLEVEL) <= IF_BASICPUB) {
+      if (flags & this->PubValue)
+         ClassAdAssign(ad, pattr, this->value.Avg());
+      if (flags & this->PubRecent) {
+         if (flags & this->PubDecorateAttr)
+            ClassAdAssign2(ad, "Recent", pattr, this->recent.Avg());
+         else
+            ClassAdAssign(ad, pattr, this->recent.Avg());
+      }
+      return;
+   }
+
+   if (flags & this->PubValue)
+      ClassAdAssign(ad, pattr, this->value); 
+
+   if (flags & this->PubRecent) {
+      MyString attr(pattr);
+      if (flags & this->PubDecorateAttr) {
+         attr = "Recent";
+         attr += pattr;
+      }
+      ClassAdAssign(ad, attr.Value(), recent); 
+   }
 }
 
 #include "utc_time.h"
@@ -692,6 +727,7 @@ void generic_stats_force_refs()
    stats_entry_recent<long>* pl = NULL;
    stats_entry_recent<int64_t>* pt = NULL;
    stats_entry_recent<double>* pd = NULL;
+   stats_entry_recent<Probe>* pp = NULL;
    stats_entry_recent< stats_histogram<int64_t> >* ph = new stats_entry_recent< stats_histogram<int64_t> >();
    stats_recent_counter_timer* pc = NULL;
 
@@ -718,6 +754,7 @@ void generic_stats_force_refs()
    dummy.AddProbe("",pt,NULL,0);
    dummy.AddProbe("",pc,NULL,0);
    dummy.AddProbe("",pd,NULL,0);
+   dummy.AddProbe("",pp,NULL,0);
    dummy.AddProbe("",ph,NULL,0);
 };
 
@@ -932,7 +969,9 @@ void TestStats::Clear()
 
 void TestStats::Tick()
 {
+   time_t now = time(NULL);
    int cAdvance = generic_stats_Tick(
+      now,
       this->RecentWindowMax,     // RecentMaxTime
       test_stats_window_quantum, // RecentQuantum
       this->InitTime,

@@ -31,7 +31,7 @@
 static void self_monitor()
 {
     daemonCore->monitor_data.CollectData();
-    daemonCore->dc_stats.Tick();
+    daemonCore->dc_stats.Tick(daemonCore->monitor_data.last_sample_time);
     daemonCore->dc_stats.DebugOuts += dprintf_getCount();
 }
 
@@ -135,7 +135,7 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
 
 
 // the windowed schedd statistics are quantized to the nearest N seconds
-// WINDOWED_STAT_WIDTH/schedd_stats_window_quantum is the number of slots
+// STATISTICS_WINDOW_SECONDS/schedd_stats_window_quantum is the number of slots
 // in the window ring_buffer.
 const int dc_stats_window_quantum = 4*60; // == 240 4min quantum, same as SelfMonitor
 
@@ -148,7 +148,7 @@ void DaemonCore::Stats::Reconfig()
     int quantum = dc_stats_window_quantum;
     this->RecentWindowMax = (window + quantum - 1) / quantum * quantum;
 
-    this->PublishFlags    = IF_BASICPUB | IF_RECENTPUB;
+    this->PublishFlags    = 0 | IF_RECENTPUB;
     char * tmp = param("STATISTICS_TO_PUBLISH");
     if (tmp) {
        this->PublishFlags = generic_stats_ParseConfigString(tmp, "DC", "DAEMONCORE", this->PublishFlags);
@@ -191,6 +191,7 @@ void DaemonCore::Stats::Init()
    //DC_STATS_ADD_RECENT(Pool, SockBytes,     IF_BASICPUB);
    //DC_STATS_ADD_RECENT(Pool, PipeBytes,     IF_BASICPUB);
    DC_STATS_ADD_RECENT(Pool, DebugOuts,     IF_VERBOSEPUB);
+   DC_STATS_ADD_RECENT(Pool, PumpCycle,     IF_VERBOSEPUB);
 
    // Insert additional publish entries for the XXXDebug values
    //
@@ -233,6 +234,18 @@ void DaemonCore::Stats::Publish(ClassAd & ad) const
          }
       }
    }
+   double dDutyCycle = 0.0;
+   if (this->PumpCycle.value.Count) {
+      if (this->PumpCycle.value.Sum > 1e-9)
+         dDutyCycle = 1.0 - (this->SelectWaittime.value / this->PumpCycle.value.Sum);
+   }
+   ad.Assign("DaemonCoreDutyCycle", dDutyCycle);
+   dDutyCycle = 0.0;
+   if (this->PumpCycle.recent.Count) {
+      dDutyCycle = 1.0 - (this->SelectWaittime.recent / this->PumpCycle.recent.Sum);
+   }
+   ad.Assign("RecentDaemonCoreDutyCycle", dDutyCycle);
+
    Pool.Publish(ad, this->PublishFlags);
 }
 
@@ -243,12 +256,17 @@ void DaemonCore::Stats::Unpublish(ClassAd & ad) const
    ad.Delete("DCRecentStatsLifetime");
    ad.Delete("DCRecentStatsTickTime");
    ad.Delete("DCRecentWindowMax");
+   ad.Delete("DaemonCoreDutyCycle");
+   ad.Delete("RecentDaemonCoreDutyCycle");
    Pool.Unpublish(ad);
 }
 
-void DaemonCore::Stats::Tick()
+time_t DaemonCore::Stats::Tick(time_t now)
 {
+   if ( ! now) now = time(NULL);
+
    int cAdvance = generic_stats_Tick(
+      now,
       this->RecentWindowMax,   // RecentMaxTime
       dc_stats_window_quantum, // RecentQuantum
       this->InitTime,
@@ -259,6 +277,8 @@ void DaemonCore::Stats::Tick()
 
    if (cAdvance)
       Pool.Advance(cAdvance);
+
+   return now;
 }
 
 

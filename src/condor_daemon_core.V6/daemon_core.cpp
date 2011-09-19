@@ -3054,10 +3054,12 @@ void DaemonCore::Driver()
 		dprintf( D_ALWAYS, "Done with stdout & stderr tests\n" );
 	}
 
+	double runtime = UtcTime::getTimeDouble();
+	double group_runtime = runtime;
+    double pump_cycle_begin_time = runtime;
+
 	for(;;)
 	{
-        double runtime = UtcTime::getTimeDouble();
-        double group_runtime = runtime;
 
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
@@ -3264,7 +3266,6 @@ void DaemonCore::Driver()
         // update statistics on time spent waiting in select.
         runtime = UtcTime::getTimeDouble();
         dc_stats.SelectWaittime += (runtime - group_runtime);
-        group_runtime = runtime;
         //dc_stats.StatsLifetime = now - dc_stats.InitTime;
 
 		tmpErrno = errno;
@@ -3609,7 +3610,11 @@ void DaemonCore::Driver()
             dc_stats.SocketRuntime += (runtime - group_runtime);
             group_runtime = runtime;
 
+
 		}	// if rv > 0
+
+        dc_stats.PumpCycle += (runtime - pump_cycle_begin_time);
+        pump_cycle_begin_time = runtime;
 
 	}	// end of infinite for loop
 }

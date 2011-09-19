@@ -581,7 +581,7 @@ extern const char * const  ATTR_TOTAL_TIME_PREEMPTING_KILLING;
 extern const char * const  ATTR_TOTAL_TIME_PREEMPTING_VACATING;
 extern const char * const  ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING;
 extern const char * const  ATTR_TOTAL_TIME_UNCLAIMED_IDLE;
-extern const char * const  ATTR_WINDOWED_STAT_WIDTH;
+//extern const char * const  ATTR_WINDOWED_STAT_WIDTH;
 
 // Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
 extern const char * const  ATTR_TOTAL_VIRTUAL_MACHINES;
