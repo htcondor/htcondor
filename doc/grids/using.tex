@@ -86,36 +86,28 @@ The GRAM protocol is also used to when monitoring the job's progress.
 Condor detects and intelligently handles cases
 such as if the remote resource crashes.
 
-There are now three different versions of the GRAM protocol.
-Condor supports both the \SubmitCmd{gt2} and \SubmitCmd{gt4}
-protocols.  It does not support \SubmitCmd{gt3}.
+There are now three different versions of the GRAM protocol in common
+usage: \SubmitCmd{gt2}, \SubmitCmd{gt4}, and \SubmitCmd{gt5}.
+Condor supports all of them.
 \begin{description}
 \item[gt2]
 This initial GRAM protocol is used in Globus Toolkit versions 1 and 2.
 It is still used by many production systems.
 Where available in the other, more recent versions of the protocol,
 \SubmitCmd{gt2} is referred to as the pre-web services GRAM 
-(or pre-WS GRAM).
-\item[gt3]
-\SubmitCmd{gt3} corresponds to
-Globus Toolkit version 3 as part of
-Globus' shift to web services-based protocols.
-It is replaced by  the Globus Toolkit version 4.
-An installation of the Globus Toolkit version 3 
-(or OSGA GRAM) may also
-include the the pre-web services GRAM.
+(or pre-WS GRAM) or GRAM2.
 \item[gt4]
-This GRAM protocol was introduced in Globus Toolkit version 4.0 as a more
-standards-compliant version of the GT3 web services-based GRAM.
-It is also called WS GRAM. A slightly different version of this GRAM
+This GRAM protocol was introduced in Globus Toolkit version 4.0.
+It is a Web Services-based protocol intended to replace GRAM2.
+It is typically called WS GRAM or GRAM4.
+A slightly different version of this GRAM
 protocol was introduced in Globus Toolkit 4.2 due to a change in the
 underlying Web Services standards.
 An installation of the Globus Toolkit version 4 may also
 include the the pre-web services GRAM.
 \item[gt5]
-This new GRAM5 protocol is still in alpha testing.
-It is an extension of the pre-WS GRAM protocol,
-and it attempts to fix lingering problems.
+This latest GRAM protocol is an extension of GRAM2 that is intended to
+be more scalable and robust. It's usually referred to as GRAM5.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -125,8 +117,8 @@ and it attempts to fix lingering problems.
 \index{universe!grid, grid type gt2}
 \index{grid computing!submitting jobs to gt2}
 Condor-G supports submitting jobs to remote resources running
-the Globus Toolkit versions 1 and 2, also called the pre-web
-services GRAM (or pre-WS GRAM).
+the Globus Toolkit's GRAM2 (or pre-WS GRAM) service. This flavor of GRAM
+is the most common.
 These Condor-G jobs are submitted the same as any other Condor job.
 The \SubmitCmd{universe} is \SubmitCmd{grid},
 and the pre-web services GRAM protocol is specified by
@@ -205,23 +197,6 @@ to perform.
 Other \verb@jobmanagername@ strings are used,
 where additional services are defined and implemented.
 
-
-No input file is specified for this example job.
-Any output (file specified by an \SubmitCmd{output} command)
-or error (file specified by an \SubmitCmd{error} command)
-is transferred 
-from the remote machine to the local machine as it is generated.
-This implies that these files may be incomplete in the case
-where the executable does not finish running on the remote resource.
-The ability to transfer standard output and standard error as
-they are produced may be disabled by adding to the submit
-description file:
-\begin{verbatim}
-stream_output = False
-stream_error  = False
-\end{verbatim}
-As a result, standard output and standard error will be transferred
-only after the job completes.
 
 The job log file is maintained on the submit machine.
 
@@ -469,10 +444,8 @@ This example's attribute name for the additional RSL is
 
 % since version 6.7.6
 Condor-G supports submitting jobs to remote resources running
-the Globus Toolkit version 4, which speak a protocol called
-WS GRAM.
-Please note that this Globus Toolkit version
-is \emph{not} compatible with the Globus Toolkit version 3.0 or 3.2.
+the Globus Toolkit's Web Services-based GRAM (also called WS GRAM or
+GRAM4), introduced in Globus Toolkit 4.0.
 Globus Toolkit versions 4.0 and 4.2 use slightly different (and
 incompatible) versions of WS GRAM, due to a change in the underlying
 Web Services standards. Condor is able to detect the difference and
@@ -578,6 +551,13 @@ Globus job managers are not stopped and restarted.
 The configuration variable \Macro{GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE} 
 is not applied (for gt5 jobs).
 \end{itemize}
+
+Normally, Condor will automatically detect whether a service is GRAM2 or
+GRAM5 and interact with it accordingly. It doesn't matter whether you
+say the resource is gt2 or gt5. You can disable this detection by setting
+the configuation parameter \Macro{GRAM\_VERSION\_DETECTION} to \Expr{False}.
+But then you must accurately identify each resource as either gt2 or gt5
+in your \Macro{grid\_resource} submit attribute.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:My-Proxy}Credential Management with \Prog{MyProxy}}
