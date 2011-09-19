@@ -3124,7 +3124,7 @@ void DaemonCore::Driver()
 		//   starve commands...
 
         int num_timers_fired = 0;
-		timeout = t.Timeout(&num_timers_fired);
+		timeout = t.Timeout(&num_timers_fired, &runtime);
 
         dc_stats.TimersFired += num_timers_fired;
 
@@ -3136,7 +3136,7 @@ void DaemonCore::Driver()
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        runtime = UtcTime::getTimeDouble();
+        //runtime = UtcTime::getTimeDouble();
         dc_stats.TimerRuntime += (runtime - group_runtime);
         group_runtime = runtime;
 

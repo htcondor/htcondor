@@ -78,7 +78,7 @@ elsif ($taskname eq $UNSTRIPPED_TASK) {
     $execstr = get_cmake_args();
     
     #Append extra argument
-    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make --no-print-directory && make install && make targz && make tests";
+    $execstr = $execstr . " -DCONDOR_PACKAGE_BUILD:BOOL=OFF -DCONDOR_STRIP_PACKAGES:BOOL=OFF && make && make install && make targz && make tests";
 }
 elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
     my $tarball_check_script = get_tarball_check_script();

@@ -600,28 +600,6 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 		remap_fname = NULL;
 	}
 
-	// NOTE: We only pay attention to _ORIG values here for backwards
-	// compatibility with jobs that were submitted by versions of
-	// Condor submit prior to ATTR_TRANSFER_OUTPUT_REMAPS (pre 6.7.14).
-
-	if (Ad->LookupString(ATTR_JOB_OUTPUT_ORIG,&remap_fname)) {
-		char *output_fname = NULL;
-		if (Ad->LookupString(ATTR_JOB_OUTPUT,&output_fname)) {
-			AddDownloadFilenameRemap(output_fname,remap_fname);
-			free(output_fname);
-		}
-		free(remap_fname);
-		remap_fname = NULL;
-	}
-	if (Ad->LookupString(ATTR_JOB_ERROR_ORIG,&remap_fname)) {
-		char *error_fname = NULL;
-		if (Ad->LookupString(ATTR_JOB_ERROR,&error_fname)) {
-			AddDownloadFilenameRemap(error_fname,remap_fname);
-			free(error_fname);
-		}
-		free(remap_fname);
-		remap_fname = NULL;
-	}
 	if(!download_filename_remaps.IsEmpty()) {
 		dprintf(D_FULLDEBUG, "FileTransfer: output file remaps: %s\n",download_filename_remaps.Value());
 	}

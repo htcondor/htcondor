@@ -30,8 +30,10 @@ if ( NOT PROPER AND NOT LINUX )
 						  cp libpcre.dll ${PCRE_INSTALL_LOC}/lib \r\n
 						  cp pcre.h ${PCRE_INSTALL_LOC}/include )
 	else()
-		set (PCRE_PATCH  patch --binary -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/longlong.patch &&
-						 patch --binary -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/unittests.patch )
+# I believe we only neede the longlong patch on HPUX, but not willing to turn it off and potentially
+# break other stuff just yet...
+		set (PCRE_PATCH  patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/longlong.patch &&
+						 patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/unittests.patch )
 		set (PCRE_CONFIGURE ./configure --prefix=${PCRE_INSTALL_LOC} --disable-cpp )
 		set (PCRE_MAKE make && make test )
 		set (PCRE_INSTALL make install )
