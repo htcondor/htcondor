@@ -68,11 +68,10 @@ static  char *BaseJobHistoryFileName = NULL;
 static int cluster=-1, proc=-1;
 static int specifiedMatch = 0, matchCount = 0;
 
-const char DEFAULT_DB_PATH[] = "/var/db";
 char* schedd_name = NULL;
 
 DBClientConnection c;
-std::string db_name("condor.jobs");
+std::string db_name("condor_jobs.history");
 
 int
 main(int argc, char* argv[])

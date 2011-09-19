@@ -35,7 +35,7 @@
 #include "ODSHistoryFile.h"
 #include "ODSHistoryUtils.h"
 
-const char DB_NAME[] = "condor.jobs.history";
+const char DB_NAME[] = "condor_jobs.history";
 
 using namespace std;
 using namespace mongo;
@@ -122,7 +122,7 @@ ODSHistoryFile::init(CondorError &errstack)
 		return false;
 	}
 	
-	m_writer = new ODSMongodbOps("condor.jobs.history");
+	m_writer = new ODSMongodbOps(DB_NAME);
     if (!m_writer->init("localhost")) {
         errstack.pushf("ODSHistoryFile::init", 5,
                        "Unable to init ODS writer\n");

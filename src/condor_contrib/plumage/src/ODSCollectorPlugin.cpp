@@ -33,21 +33,31 @@ using namespace std;
 using namespace mongo;
 using namespace plumage::etl;
 
+int historyInterval;
+int initialDelay;
+int historyTimer;
+
+void
+processSubmitterStats() {
+}
+
+void
+processMachineStats() {
+}
+
+void
+processStatsTimer(Service*) {
+    dprintf(D_FULLDEBUG, "processStatsTimer() called\n");
+    processSubmitterStats();
+    processMachineStats();
+}
+
 struct ODSCollectorPlugin : public Service, CollectorPlugin
 {
 	string m_name;
 	string m_ip;
-	ODSMongodbOps* m_writer;
-
-	// TODO: figure out our update/inavlidation strategy
-// 	typedef HashTable<AdNameHashKey, SlotObject *> SlotHashTable;
-// 	SlotHashTable *startdAds;
-// 	typedef HashTable<AdNameHashKey, NegotiatorObject *> NegotiatorHashTable;
-// 	NegotiatorHashTable *negotiatorAds;
-// 	typedef HashTable<AdNameHashKey, SchedulerObject *> SchedulerHashTable;
-// 	SchedulerHashTable *schedulerAds;
-// 	typedef HashTable<AdNameHashKey, GridObject *> GridHashTable;
-// 	GridHashTable *gridAds;
+	ODSMongodbOps* m_raw_writer;
+    ODSMongodbOps* m_stats_writer;
 
 	void
 	initialize()
@@ -58,8 +68,25 @@ struct ODSCollectorPlugin : public Service, CollectorPlugin
 		m_name = getPoolName();
 		m_ip = my_ip_string();
 
-		m_writer = new ODSMongodbOps("condor.collector");
-		m_writer->init("localhost");
+		m_raw_writer = new ODSMongodbOps("condor_raw.ads");
+		m_raw_writer->init("localhost");
+
+        m_stats_writer = new ODSMongodbOps("condor_stats.samples");
+        m_stats_writer->init("localhost");
+
+        historyInterval = param_integer("POOL_HISTORY_SAMPLING_INTERVAL",60);
+        initialDelay=param_integer("UPDATE_INTERVAL",300);
+
+        // Register timer for writing stats to DB
+        if (-1 == (historyTimer =
+            daemonCore->Register_Timer(
+                initialDelay,
+                historyInterval,
+                (TimerHandler)processStatsTimer,
+                "Timer for collecting ODS stats"
+            ))) {
+            EXCEPT("Failed to register ODS stats timer");
+            }
 	}
 
 	void
@@ -67,7 +94,8 @@ struct ODSCollectorPlugin : public Service, CollectorPlugin
 	{
 
 		dprintf(D_FULLDEBUG, "ODSCollectorPlugin: shutting down...\n");
-		delete m_writer;
+		delete m_raw_writer;
+        delete m_stats_writer;
 
 	}
 
@@ -94,12 +122,26 @@ struct ODSCollectorPlugin : public Service, CollectorPlugin
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
-			m_writer->updateAd(key,_ad);
+			m_raw_writer->updateAd(key,_ad);
 
 			break;
+        case UPDATE_SUBMITTOR_AD:
+            dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_SUBMITTOR_AD\n");
+            if (param_boolean("ODS_IGNORE_UPDATE_SUBMITTOR_AD", FALSE)) {
+                dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_SUBMITTOR_AD\n");
+                break;
+            }
+
+            if (!makeStartdAdHashKey(hashKey, _ad, NULL)) {
+                dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
+            }
+
+            m_raw_writer->updateAd(key,_ad);
+
+            break;
 		case UPDATE_NEGOTIATOR_AD:
 			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_NEGOTIATOR_AD\n");
-			if (param_boolean("ODS_IGNORE_UPDATE_NEGOTIATOR_AD", FALSE)) {
+			if (param_boolean("ODS_IGNORE_UPDATE_NEGOTIATOR_AD", TRUE)) {
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_NEGOTIATOR_AD\n");
 				break;
 			}
@@ -108,12 +150,12 @@ struct ODSCollectorPlugin : public Service, CollectorPlugin
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
-			m_writer->updateAd(key,_ad);
+			m_raw_writer->updateAd(key,_ad);
 
 			break;
 		case UPDATE_SCHEDD_AD:
 			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_SCHEDD_AD\n");
-			if (param_boolean("ODS_IGNORE_UPDATE_SCHEDD_AD", FALSE)) {
+			if (param_boolean("ODS_IGNORE_UPDATE_SCHEDD_AD", TRUE)) {
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_SCHEDD_AD\n");
 				break;
 			}
@@ -122,21 +164,29 @@ struct ODSCollectorPlugin : public Service, CollectorPlugin
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
-			m_writer->updateAd(key,_ad);
+			m_raw_writer->updateAd(key,_ad);
 
 			break;
 		case UPDATE_GRID_AD:
 			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_GRID_AD\n");
+            if (param_boolean("ODS_IGNORE_UPDATE_GRID_AD", TRUE)) {
+                dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_GRID_AD\n");
+                break;
+            }
 
 			if (!makeGridAdHashKey(hashKey, _ad, NULL)) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
-			m_writer->updateAd(key,_ad);
+			m_raw_writer->updateAd(key,_ad);
 
 			break;
 		case UPDATE_COLLECTOR_AD:
-			dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_COLLECTOR_AD\n");
+            dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received UPDATE_COLLECTOR_AD\n");
+            if (param_boolean("ODS_IGNORE_UPDATE_COLLECTOR_AD", TRUE)) {
+                dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Configured to ignore UPDATE_COLLECTOR_AD\n");
+                break;
+            }
 				// We could receive collector ads from many
 				// collectors, but we only maintain our own. So,
 				// ignore all others.
@@ -146,7 +196,7 @@ struct ODSCollectorPlugin : public Service, CollectorPlugin
 				free(str);
 
 				if (public_addr != m_ip) {
-					m_writer->updateAd(key,_ad);
+					m_raw_writer->updateAd(key,_ad);
 				}
 			}
 			break;

@@ -52,6 +52,9 @@ namespace etl {
         bool updateAd(mongo::BSONObjBuilder& key, compat_classad::ClassAd* ad);
         bool deleteAd(mongo::BSONObjBuilder& key);
         
+        // raw record write
+        bool createRecord(mongo::BSONObjBuilder& bob);
+
     protected:
         mongo::DBClientConnection m_db_conn;
         std::string m_db_name;

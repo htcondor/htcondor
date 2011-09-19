@@ -201,7 +201,7 @@ ODSMongodbOps::updateAd(BSONObjBuilder& key, ClassAd* ad)
             case classad::Value::INTEGER_VALUE:
                 int i;
                 ad->LookupInteger(name,i);
-                bob.append(name,i);                    
+                bob.append(name,i);
                 break;
             case classad::Value::REAL_VALUE:
                 float f;
@@ -224,6 +224,22 @@ ODSMongodbOps::updateAd(BSONObjBuilder& key, ClassAd* ad)
     }
     catch(DBException& e) {
         dprintf(D_ALWAYS,"ODSMongodbOps::updateAd caught DBException: %s\n", e.toString().c_str());
+        return false;
+    }
+
+    LAST_DB_ERROR();
+
+    return true;
+}
+
+bool
+ODSMongodbOps::createRecord(BSONObjBuilder& bob)
+{
+    try {
+        m_db_conn.insert(m_db_name, bob.obj());
+    }
+    catch(DBException& e) {
+        dprintf(D_ALWAYS,"ODSMongodbOps::createRecord caught DBException: %s\n", e.toString().c_str());
         return false;
     }
 

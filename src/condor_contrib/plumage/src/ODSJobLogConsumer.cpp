@@ -31,11 +31,13 @@ using namespace std;
 using namespace mongo;
 using namespace plumage::etl;
 
+const char DB_NAME[] = "condor_jobs.active";
+
 #define IS_JOB(key) ((key) && '0' != (key)[0])
 
 ODSJobLogConsumer::ODSJobLogConsumer(const string& url): m_reader(NULL)
 { 
-    m_writer = new ODSMongodbOps("condor.jobs.active");
+    m_writer = new ODSMongodbOps(DB_NAME);
     m_writer->init(url);
 }
 
