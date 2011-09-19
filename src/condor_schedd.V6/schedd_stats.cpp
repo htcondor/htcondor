@@ -121,9 +121,12 @@ void ScheddStatistics::Clear()
 // buffers so that we throw away the oldest value and begin accumulating the latest
 // value in a new slot. 
 //
-void ScheddStatistics::Tick()
+time_t ScheddStatistics::Tick(time_t now)
 {
+   if ( ! now) now = time(NULL);
+
    int cAdvance = generic_stats_Tick(
+      now,
       this->RecentWindowMax,   // RecentMaxTime
       schedd_stats_window_quantum, // RecentQuantum
       this->InitTime,
@@ -134,6 +137,8 @@ void ScheddStatistics::Tick()
 
    if (cAdvance)
       Pool.Advance(cAdvance);
+
+   return now;
 }
 
 void ScheddStatistics::Publish(ClassAd & ad) const
@@ -170,7 +175,7 @@ void schedd_stats_unit_test (ClassAd * pad)
    ScheddStatistics stats;
    stats.Init();
 
-   int stat_window = 300; //param_integer("WINDOWED_STAT_WIDTH", 300, 1, INT_MAX);
+   int stat_window = 300; //param_integer("STATISTICS_WINDOW_SECONDS", 1200, 1, INT_MAX);
    stats.SetWindowSize(stat_window);
 
    stats.Tick();

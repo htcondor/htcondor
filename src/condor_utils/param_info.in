@@ -10137,9 +10137,9 @@ url=
 tags=
 id=601
 
-[WINDOWED_STAT_WIDTH]
+[STATISTICS_WINDOW_SECONDS]
 aliases=
-default=300
+default=1200
 version=0.0.0
 range=1,1000000000
 state=default
@@ -10147,7 +10147,23 @@ type=int
 is_macro=false
 reconfig=true
 customization=seldom
-friendly_name=Windowed Statistic Width
+friendly_name=Size of Recent Statistics Window
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=scheduler
+id=602
+
+[DCSTATISTICS_WINDOW_SECONDS]
+aliases=
+default=1200
+version=0.0.0
+range=1,1000000000
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Size of Recent Statistics Window for DaemonCore Stats
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=scheduler

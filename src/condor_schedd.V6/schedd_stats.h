@@ -23,7 +23,7 @@
 #include <generic_stats.h>
 
 // the windowed schedd statistics are quantized to the nearest N seconds
-// WINDOWED_STAT_WIDTH/schedd_stats_window_quantum is the number of slots
+// STATISTICS_WINDOW_SECONDS/schedd_stats_window_quantum is the number of slots
 // in the window ring_buffer.
 const int schedd_stats_window_quantum = 200;
 
@@ -84,7 +84,7 @@ typedef struct ScheddStatistics {
    //
    void Init();
    void Clear();
-   void Tick(); // call this when time may have changed to update StatsUpdateTime, etc.
+   time_t Tick(time_t now=0); // call this when time may have changed to update StatsUpdateTime, etc.
    void Reconfig();
    void SetWindowSize(int window);
    void Publish(ClassAd & ad) const;
