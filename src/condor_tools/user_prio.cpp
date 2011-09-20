@@ -86,7 +86,7 @@ main(int argc, char* argv[])
   int SetLast=0;
   bool ResetAll=false;
   int GetResList=0;
-  char* pool = NULL;
+  std::string pool;
 
   myDistro->Init( argc, argv );
   config();
@@ -171,9 +171,10 @@ main(int argc, char* argv[])
   //----------------------------------------------------------
 
 	  // Get info on our negotiator
-  Daemon negotiator( DT_NEGOTIATOR, NULL, pool );
-  if( ! negotiator.locate() ) {
-	  fprintf( stderr, "%s: %s\n", argv[0], negotiator.error() );
+  Daemon negotiator(DT_NEGOTIATOR, NULL, (pool != "") ? pool.c_str() : NULL);
+  if (!negotiator.locate()) {
+	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
+              argv[0], (pool != "") ? pool.c_str() : "local pool");
 	  exit(1);
   }
 
