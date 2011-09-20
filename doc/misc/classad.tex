@@ -280,13 +280,13 @@ Optional parameters are given within square brackets.
   \Expr{eval(strcat("slot", SlotID+10,"\_State"))}.
   Function \Procedure{strcat} calls function \Procedure{string}
   on the second parameter, which evaluates the expression,
-  and then converts the integer result 15 to the string "15."
+  and then converts the integer result 15 to the string \AdStr{15}.
   The concatenated string returned by \Procedure{strcat} is
-  \verb@"slot15_State"@, and this string is then evaluated.
+  \AdStr{slot15\_State}, and this string is then evaluated.
 
   Note that referring to attributes of a job from within the string
-  passed to \Procedure{eval} in the \AdAttr{Requirements} or
-  \AdAttr{Rank} expressions could cause inaccuracies in Condor's
+  passed to \Procedure{eval} in the \Attr{Requirements} or
+  \Attr{Rank} expressions could cause inaccuracies in Condor's
   automatic auto-clustering of jobs into equivalent groups for
   matchmaking purposes.  This is because Condor needs to determine
   which ClassAd attributes are significant for matchmaking purposes,
@@ -298,11 +298,11 @@ Optional parameters are given within square brackets.
   This function looks up the value of the provided attribute and returns
   the unparsed version as a string. The attribute's value is not evaluated.
   If the attribute's value is \Expr{x + 3}, then the function would return
-  the string ``x + 3''.
-  If the provided attribute can't be found, an empty string is returned.
+  the string \AdStr{x + 3}.
+  If the provided attribute cannot be found, an empty string is returned.
 
   This function returns \Expr{ERROR} if other than exactly 1 argument is
-  given or the argument isn't an attribute reference.
+  given or the argument is not an attribute reference.
 
   \index{ClassAd functions!ifThenElse()}
   \item[\Code{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
