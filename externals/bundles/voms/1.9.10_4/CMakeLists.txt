@@ -80,6 +80,8 @@ if ( WITH_VOMS )
 
 		if ( LINUX )
 			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.so" )
+		elseif ( DARWIN )
+			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.dylib" )
 		else()
 			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/${VOMS_LIB}/libvomsapi_${GLOBUS_FLAVOR}.a" )
 		endif()
@@ -102,6 +104,29 @@ if ( WITH_VOMS )
 				# itself, it doesn't know to strip them.
 				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libvoms*.so*
 					COMMAND xargs strip)" )
+			endif()
+		endif()
+		if ( DARWIN )
+			# Install the VOMS libraries manually.
+			# In order to use an install(FILES) command, we'd
+			# have to explicitly list evey file.
+			# We can't use a file(GLOB) because that's evaluated
+			# when cmake is run, which may be before the
+			# external is built.
+			install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+			install( CODE "execute_process(COMMAND find ${VOMS_INSTALL_LOC}/${VOMS_LIB} -maxdepth 1 -name *.dylib*
+				COMMAND xargs -I src cp -pPR src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+
+				# Fix up the share library dependencies
+				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libvoms*.dylib*
+					 COMMAND xargs ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs)" )
+
+			if ( CONDOR_STRIP_PACKAGES )
+				# Strip the libraries manually.
+				# Since cmake didn't create the libraries
+				# itself, it doesn't know to strip them.
+				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libvoms*.dylib*
+					COMMAND xargs strip -x)" )
 			endif()
 		endif()
 
