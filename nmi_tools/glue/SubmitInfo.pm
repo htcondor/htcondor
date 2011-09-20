@@ -1052,11 +1052,33 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+	'x86_64_freebsd_8.2'				=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
+				'-DWITH_CURL:BOOL=OFF' => undef,
+				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
+				'-DWITH_LIBXML2:BOOL=ON' => undef,
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => {
+				@default_test_configure_args
+				
+			},
+			'prereqs'	=> [ ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
 	'x86_64_freebsd_7.4-updated'		=> 'x86_freebsd_7.4-updated',
 	'x86_freebsd_8.2-updated'			=> 'x86_freebsd_7.4-updated',
 	'x86_64_freebsd_8.2-updated'		=> 'x86_freebsd_7.4-updated',
 	'x86_64_freebsd_8.3'				=> 'x86_freebsd_7.4-updated',
-	'x86_64_freebsd_8.2'				=> 'x86_freebsd_7.4-updated',
 );
 
 while( 1 ) {
