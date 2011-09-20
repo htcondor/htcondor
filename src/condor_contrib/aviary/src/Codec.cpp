@@ -76,11 +76,23 @@ BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _
             _map[key] = new AviaryAttribute(AviaryAttribute::EXPR_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
             break;
         case classad::Value::INTEGER_VALUE:
-            _map[key] = new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,ExprTreeToString(expr));
+        {
+            int i;
+            value.IsIntegerValue (i);
+            string i_str;
+            sprintf(i_str,"%d",i);
+            _map[key] = new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,i_str.c_str());
             break;
+        }
         case classad::Value::REAL_VALUE:
-            _map[key] = new AviaryAttribute(AviaryAttribute::FLOAT_TYPE,ExprTreeToString(expr));
+        {
+            double d;
+            value.IsRealValue(d);
+            string d_str;
+            sprintf(d_str,"%f",d);
+            _map[key] = new AviaryAttribute(AviaryAttribute::FLOAT_TYPE,d_str.c_str());
             break;
+        }
         case classad::Value::STRING_VALUE:
         default:
             _map[key] = new AviaryAttribute(AviaryAttribute::STRING_TYPE,trimQuotes(ExprTreeToString(expr)).c_str());
