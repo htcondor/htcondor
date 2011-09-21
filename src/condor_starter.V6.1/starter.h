@@ -288,6 +288,7 @@ protected:
 	List<UserProc> m_job_list;
 	List<UserProc> m_reaped_job_list;
 
+	bool m_deferred_job_update;
 private:
 
 		// // // // // // // //

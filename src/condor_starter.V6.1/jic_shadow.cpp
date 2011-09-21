@@ -736,6 +736,7 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 		}
 	}
 
+	dprintf( D_FULLDEBUG, "Notifying exit status=%d reason=%d\n",exit_status,reason );
 	updateStartd(&ad, true);
 
 	if( !had_hold ) {
