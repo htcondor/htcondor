@@ -133,7 +133,7 @@ if( not TestGlue::is_windows() ) {
     mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
     system("mv $BaseDir/$version $BaseDir/condor" );
 
-	if ( `uname` =~ "Linux" ) {
+	if ( `uname` =~ "Linux" || `uname` =~ "Darwin" ) {
 		# On cross-platform testing, the binaries in condor_tests may need
 		# to find the extra system libraries we include. Let them find them
 		# when looking under $ORIGIN/../lib/condor.
