@@ -1267,6 +1267,13 @@ sub determine_missing_libs
 					# ignore other lines...
 					if (/^\s+(.*)\s+\(.*$/ ) {
 						$lib = $1;
+
+						# convert @executable_path in the library path
+						# to the path to the executable
+						my $executable_path = $p;
+						$executable_path =~ s|(.*)/[^/]*|$1|;
+						$lib =~ s|\@executable_path|$executable_path|;
+
 						if ( ! -f $lib ) {
 							$libref->{$lib} = $lib;
 							$$num_ref++;
