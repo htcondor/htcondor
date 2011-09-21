@@ -735,7 +735,7 @@ and/or object code to \Prog{mathematica} is not available.
 The submit description file for Example 3 queues 150
 \index{running multiple programs}
 runs of program \Prog{foo} which has been compiled and linked for
-RHEL 3 running on a 32-bit Intel processor.
+LINUX running on a 32-bit Intel processor.
 This job requires Condor to run the program on machines which have
 greater than 32 megabytes of physical memory, and expresses a
 preference to run the program on machines with more than 64 megabytes.
@@ -765,7 +765,7 @@ will be written into the single file \File{foo.log}.
   Universe      = standard                                                    
   Requirements  = Memory >= 32 && OpSys == "LINUX" && Arch =="INTEL"     
   Rank          = Memory >= 64
-  Image_Size    = 28 Meg                                                 
+  Image_Size    = 28000
 
   Error   = err.$(Process)                                                
   Input   = in.$(Process)                                                 
@@ -854,24 +854,24 @@ the user's priority and the machine's rank of the job.
 The rank expressions, simple or complex, define a numerical value
 that expresses preferences.
 
-The job's \AdAttr{rank} expression evaluates to one of three values.
+The job's \Attr{Rank} expression evaluates to one of three values.
 It can be UNDEFINED, ERROR, or a floating point value.
-If \AdAttr{rank} evaluates to a floating point value,
+If \Attr{Rank} evaluates to a floating point value,
 the best match will be the one with the largest, positive value.
-If no \AdAttr{rank} is given 
+If no \Attr{Rank} is given 
 in the submit description file,
 then Condor substitutes a default value of 0.0 when considering
 machines to match.
-If the job's \AdAttr{rank} of a given machine evaluates
+If the job's \Attr{Rank} of a given machine evaluates
 to UNDEFINED or ERROR,
 this same value of 0.0 is used.
 Therefore, the machine is still considered for a match,
-but has no rank above any other.
+but has no ranking above any other.
 
 A boolean expression evaluates to the numerical value of 1.0
 if true, and 0.0 if false.
 
-The following \AdAttr{rank} expressions provide examples to
+The following \Attr{Rank} expressions provide examples to
 follow.
 
 For a job that desires the machine with the most available memory:
@@ -898,25 +898,25 @@ performance (on Linpack benchmarks):
 \begin{verbatim}
    Rank = kflops
 \end{verbatim}
-This particular example highlights a difficulty with rank expression
+This particular example highlights a difficulty with \Attr{Rank} expression
 evaluation as currently defined.
 While all machines have floating point processing ability,
-not all machines will have the \AdAttr{kflops} attribute defined.
+not all machines will have the \Attr{kflops} attribute defined.
 For machines where this attribute is not defined,
-\AdAttr{Rank} will evaluate to the value UNDEFINED, and
+\Attr{Rank} will evaluate to the value UNDEFINED, and
 Condor will use a default rank of the machine of 0.0.
-The \AdAttr{rank} attribute will only rank machines where
+The \Attr{Rank} attribute will only rank machines where
 the attribute is defined.
 Therefore, the machine with the highest floating point
 performance may not be the one given the highest rank.
 
-So, it is wise when writing a \AdAttr{rank} expression to check
+So, it is wise when writing a \Attr{Rank} expression to check
 if the expression's evaluation will lead to the expected
 resulting ranking of machines.
 This can be accomplished using the \Condor{status} command with the
 \Arg{-constraint} argument.  This allows the user to see a list of
 machines that fit a constraint.
-To see which machines in the pool have \AdAttr{kflops} defined,
+To see which machines in the pool have \Attr{kflops} defined,
 use
 \begin{verbatim}
 condor_status -constraint kflops
@@ -933,7 +933,7 @@ For a job that prefers specific machines in a specific order:
           ((machine == "friend2.cs.wisc.edu")*2) +
            (machine == "friend3.cs.wisc.edu")
 \end{verbatim}
-If the machine being ranked is \AdStr{friend1.cs.wisc.edu}, then the
+If the machine being ranked is \Expr{friend1.cs.wisc.edu}, then the
 expression
 \begin{verbatim}
    (machine == "friend1.cs.wisc.edu")
@@ -948,12 +948,12 @@ and
    (machine == "friend3.cs.wisc.edu")
 \end{verbatim}
 are false, and give the value 0.0.
-Therefore, \AdAttr{rank} evaluates to the value 3.0.
-In this way, machine \AdStr{friend1.cs.wisc.edu} is ranked higher than
-machine \AdStr{friend2.cs.wisc.edu},
-machine \AdStr{friend2.cs.wisc.edu}
+Therefore, \Attr{Rank} evaluates to the value 3.0.
+In this way, machine \Expr{friend1.cs.wisc.edu} is ranked higher than
+machine \Expr{friend2.cs.wisc.edu},
+machine \Expr{friend2.cs.wisc.edu}
 is ranked higher than 
-machine \AdStr{friend3.cs.wisc.edu},
+machine \Expr{friend3.cs.wisc.edu},
 and all three of these machines are ranked higher than others.
 
 %%%%%%%%%%%% 
