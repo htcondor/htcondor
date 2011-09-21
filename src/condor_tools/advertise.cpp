@@ -257,8 +257,19 @@ int main( int argc, char *argv[] )
 
 			success_count++;
 		}
-		delete sock;
-		sock = NULL;
+		if( sock ) {
+			CondorVersionInfo const *ver = sock->get_peer_version();
+			if( !ver || ver->built_since_version(7,7,3) ) {
+					// graceful hangup so the collector knows we are done
+				sock->encode();
+				command = DC_NOP;
+				sock->put(command);
+				sock->end_of_message();
+			}
+
+			delete sock;
+			sock = NULL;
+		}
 
 		printf("Sent %d of %d ad%s to %s.\n",
 			   success_count,
