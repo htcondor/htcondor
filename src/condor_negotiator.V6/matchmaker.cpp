@@ -389,6 +389,9 @@ initialize ()
     daemonCore->Register_Command (GET_PRIORITY, "GetPriority",
 		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_commandHandler, 
 			"GET_PRIORITY_commandHandler", this, READ);
+    daemonCore->Register_Command (GET_PRIORITY_ROLLUP, "GetPriorityRollup",
+		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_ROLLUP_commandHandler, 
+			"GET_PRIORITY_ROLLUP_commandHandler", this, READ);
     daemonCore->Register_Command (GET_RESLIST, "GetResList",
 		(CommandHandlercpp) &Matchmaker::GET_RESLIST_commandHandler, 
 			"GET_RESLIST_commandHandler", this, READ);
@@ -894,6 +897,30 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	delete ad;
 
 	return TRUE;
+}
+
+
+int Matchmaker::
+GET_PRIORITY_ROLLUP_commandHandler(int, Stream *strm) {
+    // read the required data off the wire
+    if (!strm->end_of_message()) {
+        dprintf (D_ALWAYS, "GET_PRIORITY_ROLLUP: Could not read eom\n");
+        return FALSE;
+    }
+
+    // get the priority
+    dprintf(D_ALWAYS, "Getting state information from the accountant\n");
+    AttrList* ad = accountant.ReportState(true);
+
+    if (!ad->putAttrList(*strm) ||
+        !strm->end_of_message()) {
+        dprintf (D_ALWAYS, "Could not send priority information\n");
+        delete ad;
+        return FALSE;
+	}
+
+    delete ad;
+    return TRUE;
 }
 
 
