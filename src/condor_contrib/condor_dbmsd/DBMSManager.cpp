@@ -128,12 +128,7 @@ DBMSManager::config() {
 	}
 
 		/* register the database purging callback */
-	int purge_interval = 86400; // default of 24 hours
-	char *purge_interval_str = param("DATABASE_PURGE_INTERVAL");
-	if(purge_interval_str) {
-		purge_interval = atoi(purge_interval_str);
-		free(purge_interval_str);
-	}
+	int purge_interval = param_integer("DATABASE_PURGE_INTERVAL", 86400); // 24 hours
 
 	if(m_database_purge_interval != purge_interval) {
 		m_database_purge_interval = purge_interval;
