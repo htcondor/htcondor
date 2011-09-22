@@ -86,14 +86,8 @@ ManagedDatabase::ManagedDatabase() {
 			/* default to 10 years of job history */
 	jobHistoryDuration = param_integer("QUILL_JOB_HISTORY_DURATION", 3650);
 
-	tmp = param("QUILL_DBSIZE_LIMIT");	
-	if (tmp) {
-		dbSizeLimit= atoi(tmp);
-		free(tmp);
-	} else {
 			/* default to 20 GB */
-		dbSizeLimit = 20;
-	}
+	dbSizeLimit = param_integer("QUILL_DBSIZE_LIMIT", 20);	
 		
 		/* check if schema version is ok */
 	ret_st = DBObj->connectDB();
