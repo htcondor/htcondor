@@ -109,12 +109,7 @@ DBMSManager::config() {
 
 	InitPublicAd();
 
-	int update_interval = 60; // default of 60 seconds
-	char *update_interval_str = param("UPDATE_INTERVAL");
-	if(update_interval_str) {
-		update_interval = atoi(update_interval_str);
-		free(update_interval_str);
-	}
+	int update_interval = param_integer("UPDATE_INTERVAL", 60);
 	if(m_public_ad_update_interval != update_interval) {
 		m_public_ad_update_interval = update_interval;
 
