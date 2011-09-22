@@ -143,19 +143,33 @@ time_t ScheddStatistics::Tick(time_t now)
 
 void ScheddStatistics::Publish(ClassAd & ad) const
 {
-   if ((this->PublishFlags & IF_PUBLEVEL) > 0) {
+   this->Publish(ad, this->PublishFlags);
+}
+
+void ScheddStatistics::Publish(ClassAd & ad, const char * config) const
+{
+   int flags = this->PublishFlags;
+   if (config && config[0]) {
+      flags = generic_stats_ParseConfigString(config, "SCHEDD", "SCHEDULER", IF_BASICPUB | IF_RECENTPUB);
+   }
+   this->Publish(ad, flags);
+}
+
+void ScheddStatistics::Publish(ClassAd & ad, int flags) const
+{
+   if ((flags & IF_PUBLEVEL) > 0) {
       ad.Assign("StatsLifetime", (int)StatsLifetime);
-      if (this->PublishFlags & IF_VERBOSEPUB)
+      if (flags & IF_VERBOSEPUB)
          ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
-      if (this->PublishFlags & IF_RECENTPUB) {
+      if (flags & IF_RECENTPUB) {
          ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
-         if (this->PublishFlags & IF_VERBOSEPUB) {
+         if (flags & IF_VERBOSEPUB) {
             ad.Assign("RecentWindowMax", (int)RecentWindowMax);
             ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
          }
       }
    }
-   Pool.Publish(ad, this->PublishFlags);
+   Pool.Publish(ad, flags);
 }
 
 void ScheddStatistics::Unpublish(ClassAd & ad) const
