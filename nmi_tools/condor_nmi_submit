@@ -1529,6 +1529,8 @@ sub generateTestFetchFiles
     print RUNIDFILE "method = nmi\n";
     print RUNIDFILE "input_runids = $opt_buildid\n";
     print RUNIDFILE "untar_results = false\n";     
+	print RUNIDFILE "block_until_exists = true\n";
+	print RUNIDFILE "timeout = 24h\n";
 
 	# allow non-matching test bimaries for cross tests
 	if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
