@@ -5362,6 +5362,9 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	description.sprintf( "%s %d.%d", mrec->description(),
 						 mrec->cluster, mrec->proc ); 
 
+	int cluster = mrec->cluster;
+	int proc = mrec->proc;
+
 		// We need an expanded job ad here so that the startd can see
 		// NegotiatorMatchExpr values.
 	ClassAd *jobAd;
@@ -5372,9 +5375,13 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		jobAd = GetJobAd( mrec->cluster, mrec->proc, true, false );
 	}
 	if( ! jobAd ) {
+			// The match rec may have been deleted by now if the job
+			// was put on hold in GetJobAd().
+		mrec = NULL;
+
 		char const *reason = "find/expand";
-		if( !mrec->is_dedicated ) {
-			if( GetJobAd( mrec->cluster, mrec->proc, false ) ) {
+		if( !args->isDedicated() ) {
+			if( GetJobAd( cluster, proc, false ) ) {
 				reason = "expand";
 			}
 			else {
@@ -5382,10 +5389,19 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 			}
 		}
 		dprintf( D_ALWAYS,
-				 "Failed to %s job %d.%d when starting to request claim %s\n",
-				 reason, mrec->cluster, mrec->proc,
-				 mrec->description() ); 
-		DelMrec( mrec );
+				 "Failed to %s job when requesting claim %s\n",
+				 reason, description.Value() );
+
+		if( args->isDedicated() ) {
+			mrec = dedicated_scheduler.FindMrecByClaimID(args->claimId());
+		}
+		else {
+			mrec = scheduler.FindMrecByClaimID(args->claimId());
+		}
+
+		if( mrec ) {
+			DelMrec( mrec );
+		}
 		return;
 	}
 
