@@ -6,9 +6,6 @@ class CondorQ {
   var $type;
 
   function CondorQ($run_type) {
-    // PHP 4 does not have destructors so we register a destructor like this:
-    register_shutdown_function(array(&$this, '_CondorQ'));
-
     // In NMI, crosstests will be listed as 'test'
     if($run_type == "crosstest") $type = "test";
     $this->type = $run_type;
@@ -112,5 +109,6 @@ class CondorQ {
     return $ret;
   }
 }
+
 
 ?>

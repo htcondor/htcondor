@@ -37,6 +37,9 @@ function make_cell($platform, $depth, $queue, $type) {
 
 <?php
 
+// Get the current platforms in the pool
+$pool_platforms = $dash->condor_status();
+
 echo "<h2>NMI queue depths:</h2>\n";
 
 $roster_file = "/usr/local/nmi/etc/nmi_platform_list";
@@ -80,7 +83,13 @@ foreach ($platforms AS $platform) {
   $test_depth = $test_queues[$platform][0];
   $test_queue = $test_queues[$platform][1];
 
-  echo "<td><table><tr><td colspan=2>$platform</td></tr><tr>";
+  // We want to make it obvious if a platform is not in the pool
+  $style = "";
+  if(!$pool_platforms[$platform]) {
+    $style = "background-color:#B8002E";
+  }
+
+  echo "<td><table><tr><td colspan=2 style=\"$style\">$platform</td></tr><tr>";
   echo make_cell($platform, $build_depth, $build_queue, "Builds");
   echo make_cell($platform, $test_depth, $test_queue, "Tests");
   echo "</tr></table></td>";
@@ -98,10 +107,18 @@ echo "</table>\n";
 <p>Legend:
 <table>
 <tr>
-<td style="background-color:#00FFFF">Depth 0</td>
-<td style="background-color:#00FF00">Depth 1-2</td>
-<td style="background-color:#FFFF00">Depth 3-5</td>
-<td style="background-color:#FF0000">Depth 6+</td>
+  <td style="background-color:#00FFFF">Depth 0</td>
+  <td style="background-color:#00FF00">Depth 1-2</td>
+  <td style="background-color:#FFFF00">Depth 3-5</td>
+  <td style="background-color:#FF0000">Depth 6+</td>
+</tr>
+<tr>
+  <td colspan="4" style="height:4px;size=2px;">&nbsp;</td>
+</tr>
+<tr>
+  <td colspan="4" style="background-color:#B8002E">Platform missing from pool</td>
+</tr>
+</table>
 
 </body>
 </html>

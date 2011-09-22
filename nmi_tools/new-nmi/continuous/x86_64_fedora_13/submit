@@ -1,0 +1,27 @@
+universe = local
+
+BASE=/home/condorauto/continuous/x86_64_fedora_13
+
+executable = $(BASE)/SubmitContinuous.sh
+
+output = $(BASE)/output
+error  = $(BASE)/error
+log    = $(BASE)/log
+
+# This isn't necessary to work properly, it is just in place to make
+# the condor_q command easily show which job is for which platform.
+Args = x86_64_fedora_13
+
+CronHour    = 1,4,7,9,10,11,12,13,14,15,16,17,18,19,20
+CronMinute  = 10
+CronDayOfMonth  = *
+CronMonth       = *
+CronDayOfWeek   = *
+
+notification = never
+getenv = true
+
+CronPrepTime = 6
+deferral_window = 300
+on_exit_remove = false
+queue
