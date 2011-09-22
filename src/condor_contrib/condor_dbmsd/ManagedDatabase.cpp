@@ -83,14 +83,8 @@ ManagedDatabase::ManagedDatabase() {
 			/* default to a week of job run information */
 	runHistoryDuration = param_integer("QUILL_RUN_HISTORY_DURATION", 7);
 
-	tmp = param("QUILL_JOB_HISTORY_DURATION");	
-	if (tmp) {
-		jobHistoryDuration= atoi(tmp);
-		free(tmp);
-	} else {
 			/* default to 10 years of job history */
-		jobHistoryDuration = 3650;
-	}
+	jobHistoryDuration = param_integer("QUILL_JOB_HISTORY_DURATION", 3650);
 
 	tmp = param("QUILL_DBSIZE_LIMIT");	
 	if (tmp) {
