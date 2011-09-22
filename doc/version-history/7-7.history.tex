@@ -46,7 +46,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When \Condor{advertise} is used with the \Opt{-tcp} option, this
+used to cause the following log message to appear in the \Condor{collector}
+log:
+\begin{verbatim}
+DaemonCore: Can't receive command request from IP (perhaps a timeout?)
+\end{verbatim}
+\Ticket{2483}
 
 \end{itemize}
 

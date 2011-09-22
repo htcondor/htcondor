@@ -1358,6 +1358,14 @@ File System Configuration File Entries''.
 \item[\Macro{CLASSAD\_USER\_LIBS}]
   A comma separated list of paths to shared libraries that contain
   additional ClassAd functions to be used during ClassAd evaluation.
+  
+\label{param:CondorFsync}
+\item[\Macro{CONDOR\_FSYNC}]
+  A boolean value that controls whether Condor calls fsync when
+  writing the user job and transaction logs.  Setting this value to false
+  will disable calls to fsync, which can help performance for schedd
+  log writes at the cost of some durability of the log contents should
+  there be a power or hardware failure.  This value is true by default.
 
 \end{description}
 

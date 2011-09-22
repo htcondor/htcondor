@@ -207,6 +207,7 @@ void DaemonCore::Stats::Init()
    //DC_STATS_PUB_DEBUG(Pool, SockBytes,     IF_BASICPUB);
    //DC_STATS_PUB_DEBUG(Pool, PipeBytes,     IF_BASICPUB);
    DC_STATS_PUB_DEBUG(Pool, DebugOuts,     IF_VERBOSEPUB);
+   DC_STATS_PUB_DEBUG(Pool, PumpCycle,     IF_VERBOSEPUB);
 }
 
 void DaemonCore::Stats::Clear()
@@ -221,14 +222,28 @@ void DaemonCore::Stats::Clear()
 
 void DaemonCore::Stats::Publish(ClassAd & ad) const
 {
-   if ((this->PublishFlags & IF_PUBLEVEL) > 0) {
+   this->Publish(ad, this->PublishFlags);
+}
+
+void DaemonCore::Stats::Publish(ClassAd & ad, const char * config) const
+{
+   int flags = this->PublishFlags;
+   if (config && config[0]) {
+      flags = generic_stats_ParseConfigString(config, "DC", "DAEMONCORE", 0 | IF_RECENTPUB);
+   }
+   this->Publish(ad, flags);
+}
+
+void DaemonCore::Stats::Publish(ClassAd & ad, int flags) const
+{
+   if ((flags & IF_PUBLEVEL) > 0) {
       ad.Assign("DCStatsLifetime", (int)StatsLifetime);
-      if (this->PublishFlags & IF_VERBOSEPUB)
+      if (flags & IF_VERBOSEPUB)
          ad.Assign("DCStatsLastUpdateTime", (int)StatsLastUpdateTime);
 
-      if (this->PublishFlags & IF_RECENTPUB) {
+      if (flags & IF_RECENTPUB) {
          ad.Assign("DCRecentStatsLifetime", (int)RecentStatsLifetime);
-         if (this->PublishFlags & IF_VERBOSEPUB) {
+         if (flags & IF_VERBOSEPUB) {
             ad.Assign("DCRecentStatsTickTime", (int)RecentStatsTickTime);
             ad.Assign("DCRecentWindowMax", (int)RecentWindowMax);
          }
@@ -246,7 +261,7 @@ void DaemonCore::Stats::Publish(ClassAd & ad) const
    }
    ad.Assign("RecentDaemonCoreDutyCycle", dDutyCycle);
 
-   Pool.Publish(ad, this->PublishFlags);
+   Pool.Publish(ad, flags);
 }
 
 void DaemonCore::Stats::Unpublish(ClassAd & ad) const

@@ -88,6 +88,8 @@ typedef struct ScheddStatistics {
    void Reconfig();
    void SetWindowSize(int window);
    void Publish(ClassAd & ad) const;
+   void Publish(ClassAd & ad, int flags) const;
+   void Publish(ClassAd & ad, const char * config) const;
    void Unpublish(ClassAd & ad) const;
 
    } ScheddStatistics;
