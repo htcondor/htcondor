@@ -8,6 +8,7 @@ my @default_paths = (
 	"/bin",
 	"/usr/bin",
 	"/usr/local/bin",
+	"/opt/local/bin",   # Mac.  Think different.
 );
 
 # return undef if not found, or a path if found and better than 2.8.3.
