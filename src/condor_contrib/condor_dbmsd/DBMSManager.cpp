@@ -148,12 +148,7 @@ DBMSManager::config() {
 	}
 
 		/* register the database reindexing callback */
-	int reindex_interval = 86400; // default of 24 hours
-	char *reindex_interval_str = param("DATABASE_REINDEX_INTERVAL");
-	if(reindex_interval_str) {
-		reindex_interval = atoi(reindex_interval_str);
-		free(reindex_interval_str);
-	}
+	int reindex_interval = param_integer("DATABASE_REINDEX_INTERVAL", 86400); // 24 hours
 
 	if(m_database_reindex_interval != reindex_interval) {
 		m_database_reindex_interval = reindex_interval;
