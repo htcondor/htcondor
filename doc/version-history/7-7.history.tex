@@ -273,6 +273,11 @@ the output would be written to \File{\_condor\_stdout} or
 \File{\_condor\_stderr} in the job's initial working directory.
 \Ticket{1811}
 
+\item Fixed a bug that could cause the \Condor{schedd} to crash after
+failing to expand a \verb@$$@ macro in the job ad.  This problem was
+introduced in 7.7.1.
+\Ticket{2491}
+
 \end{itemize}
 
 \noindent Known Bugs:
