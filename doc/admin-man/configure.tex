@@ -699,11 +699,13 @@ File System Configuration File Entries''.
 \label{param:ScheddHost}
 \item[\Macro{SCHEDD\_HOST}]
   The host name of the machine where the \Condor{schedd} is running for
-  your pool.  This is the host that queues submitted jobs.  Note that,
-  in most condor installations, there is a \Condor{schedd} running on
+  your pool.  This is the host that queues submitted jobs.
+  If the host specifies \Macro{SCHEDD\_NAME} or \Macro{MASTER\_NAME}, that
+  name must be included in the form name\verb$@$hostname.
+  In most condor installations, there is a \Condor{schedd} running on
   each host from which jobs are submitted.  The default value of
-  \Macro{SCHEDD\_HOST} is the current host.  For most pools, this
-  macro is not defined.
+  \Macro{SCHEDD\_HOST} is the current host with the optional name included.  For most pools, this
+  macro is not defined, nor does it need to be defined..
 
 \label{param:ReleaseDir}
 \item[\Macro{RELEASE\_DIR}]
@@ -9144,12 +9146,6 @@ virtual machine software.
 \item[\Macro{XEN\_BOOTLOADER}]
   A required full path and executable for the Xen bootloader,
   if the kernel image includes a disk image.
-
-\label{param:XenLocalSettingsFile}
-\item[\Macro{XEN\_LOCAL\_SETTINGS\_FILE}]
-  A complete path and file name. The file's contents will be included in
-  the Xen configuration file that Condor writes to run the virtual machine.
-  This parameter is optional.
 
 \end{description}
 
