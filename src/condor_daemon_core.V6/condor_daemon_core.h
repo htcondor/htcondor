@@ -1482,6 +1482,8 @@ class DaemonCore : public Service
 	   time_t Tick(time_t now=0); // call this when time may have changed to update StatsLastUpdateTime, etc.
 	   void SetWindowSize(int window);
 	   void Publish(ClassAd & ad) const;
+	   void Publish(ClassAd & ad, int flags) const;
+       void Publish(ClassAd & ad, const char * config) const;
 	   void Unpublish(ClassAd & ad) const;
        void* New(const char * category, const char * name, int as);
        void AddToProbe(const char * name, int val);
