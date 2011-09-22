@@ -80,14 +80,8 @@ ManagedDatabase::ManagedDatabase() {
 			/* default to a week of resource history info */
 	resourceHistoryDuration = param_integer("QUILL_RESOURCE_HISTORY_DURATION", 7);
 
-	tmp = param("QUILL_RUN_HISTORY_DURATION");
-	if (tmp) {
-		runHistoryDuration= atoi(tmp);
-		free(tmp);
-	} else {
 			/* default to a week of job run information */
-		runHistoryDuration = 7;
-	}
+	runHistoryDuration = param_integer("QUILL_RUN_HISTORY_DURATION", 7);
 
 	tmp = param("QUILL_JOB_HISTORY_DURATION");	
 	if (tmp) {
