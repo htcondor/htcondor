@@ -7479,8 +7479,8 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=452
 
-[GROUP_DYNAMIC_MACH_CONSTRAINT]
-aliases=
+[NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT]
+aliases=GROUP_DYNAMIC_MACH_CONSTRAINT
 default=
 version=0.0.0
 range=.*
@@ -7494,6 +7494,22 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=453
+
+[NEGOTIATOR_SLOT_CONSTRAINT]
+aliases=GROUP_DYNAMIC_MACH_CONSTRAINT
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Constrain Negotiator Query for Startd Ads
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
 
 [GROUP_AUTOREGROUP]
 aliases=
