@@ -38,7 +38,20 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item A new configuration variable \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} 
+can contain an expression which is passed from the Negotiator to the 
+Collector when it fetches ClassAds for the negotiation cycle. 
+\Ticket{2277}
+
+\item A new configuration variable \Macro{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} 
+replaces \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}, which has been retained as a
+alternate name.  The poolsize resulting from applying this constraint is used
+to determine quotas for both dynamic groups and when there are no groups.
+\Ticket{2277}
+
+\item The configuration variable \Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE} 
+was made obsolete by \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} so it has been removed.
+\Ticket{2277}
 
 \end{itemize}
 
