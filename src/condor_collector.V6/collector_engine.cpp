@@ -646,12 +646,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			retVal = 0;
 			break;
 		}
-		// CRUFT: Before 7.3.2, submitter ads had a MyType of
-		//   "Scheduler". The only way to tell the difference
-		//   was that submitter ads didn't have ATTR_NUM_USERS.
-		//   Coerce MyStype to "Submitter" for ads coming from
-		//   these older schedds.
-		clientAd->SetMyTypeName( SUBMITTER_ADTYPE );
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
 		hashString.Build( hk );
