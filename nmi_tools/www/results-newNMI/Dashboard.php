@@ -44,6 +44,26 @@ class Dashboard {
   function get_condor_user() {
     return CONDOR_USER;
   }
+
+
+  function condor_status() {
+    // Determine the list of machines currently in the pool
+    $output = `/usr/bin/condor_status -const 'slotid==1' -format '%s' nmi_platform -format ' %s\n' Machine`;
+    
+    $platforms = Array();
+    $lines = split("\n", $output);
+    foreach ($lines as $line) {
+      if(preg_match("/(\S+) (.+)$/", $line, $matches)) {
+	if(!array_key_exists($matches[1], $platforms)) {
+	  $platforms[$matches[1]] = Array();
+	}
+	array_push($platforms[$matches[1]], $matches[2]);
+      }
+    }
+    
+    return $platforms;
+  }
+
 }
 
 ?>

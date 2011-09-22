@@ -10,7 +10,7 @@ $dash = new Dashboard();
 $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
 
-$continuous_blacklist = Array();
+$continuous_blacklist = Array("Fedora", "x86_64_fedora_13");
 ?>
 
 <script type="text/javascript">
