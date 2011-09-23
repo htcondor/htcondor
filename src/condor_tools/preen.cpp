@@ -733,6 +733,8 @@ void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 
 void check_tmp_dir(){
 #if !defined(WIN32)
+	if (!RmFlag) return;
+
 	const char *tmpDir = NULL;
 	bool newLock = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (newLock) {
