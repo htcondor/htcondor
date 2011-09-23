@@ -109,6 +109,18 @@ caused crashes are not easy to describe.
 value contained ASCII character 255.
 \Ticket{2450}
 
+\item \Condor{preen} failed to honor -remove and would always remove
+  lock files.
+\Ticket{2497}
+
+\item \Condor{preen} expected old format for local lock file paths, it
+  now understands the proper cormat.
+\Ticket{2496}
+
+\item \Condor{preen} would EXCEPT when processing multiple subdirs for
+  local locks.
+\Ticket{2495}
+
 \end{itemize}
 
 \noindent Known Bugs:
