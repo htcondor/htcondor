@@ -920,7 +920,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 	// cmsghdr(s) to set it to the sum of CMSG_LEN() across all cmsghdrs.
 
 	struct msghdr msg;
-	unsigned char buf[CMSG_SPACE(sizeof(int))];
+	char *buf = (char *) malloc(CMSG_SPACE(sizeof(int)));
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
 	msg.msg_control = &buf;
@@ -954,18 +954,21 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to receive message containing forwarded socket: errno=%d: %s",
 				errno,strerror(errno));
+		free(buf);
 		return;
 	}
 	cmsg = CMSG_FIRSTHDR((&msg));
 	if( !cmsg ) {
 		dprintf(D_ALWAYS,
 				"SharedPortEndpoint: failed to get ancillary data when receiving file descriptor.\n");
+		free(buf);
 		return;
 	}
 	if( cmsg->cmsg_type != SCM_RIGHTS ) {
 		dprintf(D_ALWAYS,
 				"ERROR: SharedPortEndpoint: expected cmsg_type=%d but got %d\n",
 				SCM_RIGHTS,cmsg->cmsg_type);
+		free(buf);
 		return;
 	}
 
@@ -973,6 +976,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 
 	if( passed_fd == -1 ) {
 		dprintf(D_ALWAYS,"ERROR: SharedPortEndpoint: got passed fd -1.\n");
+		free(buf);
 		return;
 	}
 
@@ -998,6 +1002,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 	named_sock->timeout(5);
 	if( !named_sock->put(status) || !named_sock->end_of_message() ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to send final status (success) for SHARED_PORT_PASS_SOCK\n");
+		free(buf);
 		return;
 	}
 
@@ -1007,6 +1012,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 		daemonCoreSockAdapter.HandleReqAsync(remote_sock);
 		remote_sock = NULL; // daemonCore took ownership of remote_sock
 	}
+	free(buf);
 #else
 #error HAVE_SHARED_PORT is defined, but no method for passing fds is enabled.
 #endif
