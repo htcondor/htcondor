@@ -1005,7 +1005,31 @@ our %submit_info = (
 	},
 	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
 	'x86_64_opensuse_11.4'				=> 'x86_64_opensuse_11.3',
-	'x86_64_opensuse_11.4-updated'		=> 'x86_64_opensuse_11.4',
+
+	# This one is for old batlab with java and ruby test prereqs.
+	# Can go away when old batlab does
+	'x86_64_opensuse_11.4-updated'		=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
+								  '-DWITHOUT_AMAZON_TEST:BOOL' => 'ON',
+								  '-DWITH_CURL:BOOL' => 'ON',
+								  '-DWITH_LIBVIRT:BOOL' => 'ON',
+								  '-DWITH_LIBXML2:BOOL' => 'ON',
+			},
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => {
+				@default_test_configure_args
+				
+			},
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
 
 
 	##########################################################################
@@ -1052,11 +1076,33 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+	'x86_64_freebsd_8.2'				=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
+				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
+				'-DWITH_CURL:BOOL=OFF' => undef,
+				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
+				'-DWITH_LIBXML2:BOOL=ON' => undef,
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => {
+				@default_test_configure_args
+				
+			},
+			'prereqs'	=> [ ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
 	'x86_64_freebsd_7.4-updated'		=> 'x86_freebsd_7.4-updated',
 	'x86_freebsd_8.2-updated'			=> 'x86_freebsd_7.4-updated',
 	'x86_64_freebsd_8.2-updated'		=> 'x86_freebsd_7.4-updated',
 	'x86_64_freebsd_8.3'				=> 'x86_freebsd_7.4-updated',
-	'x86_64_freebsd_8.2'				=> 'x86_freebsd_7.4-updated',
 );
 
 while( 1 ) {

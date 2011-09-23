@@ -123,6 +123,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	r_cod_load_hack_tid = -1;
 	r_pre_cod_total_load = 0.0;
 	r_pre_cod_condor_load = 0.0;
+	m_bUserSuspended = false;
 
 #if HAVE_JOB_HOOKS
 	m_last_fetch_work_spawned = 0;
@@ -355,10 +356,11 @@ int Resource::suspend_claim()
 	switch( state() ) {
 	case claimed_state:
 		change_state( suspended_act );
+		m_bUserSuspended = true;
 		return TRUE;
 		break;
 	default:
-		dprintf( D_ALWAYS, "Can not suspend claim when\n", r_name );
+		dprintf( D_ALWAYS, "Can not suspend claim when\n");
 		break;
 	}
 	
@@ -367,17 +369,18 @@ int Resource::suspend_claim()
 
 int Resource::continue_claim()
 {
-	if ( suspended_act == r_state->activity() )
+	if ( suspended_act == r_state->activity() && m_bUserSuspended )
 	{
 		if (r_cur->resumeClaim())
 		{
 			change_state( busy_act );
+			m_bUserSuspended = false;
 			return TRUE;
 		}
 	}
 	else
 	{
-		dprintf( D_ALWAYS, "\n", r_name );
+		dprintf( D_ALWAYS, "Can not continue_claim\n" );
 	}
 	
 	return FALSE;
@@ -1552,8 +1555,7 @@ Resource::eval_suspend( void )
 int
 Resource::eval_continue( void )
 {
-		// fatal if undefined, check vanilla
-	return eval_expr( "CONTINUE", true, true );
+	return (m_bUserSuspended)?false:eval_expr( "CONTINUE", true, true );
 }
 
 

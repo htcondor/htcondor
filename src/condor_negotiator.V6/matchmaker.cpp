@@ -230,6 +230,8 @@ bool ResourcesInUseByUsersGroup_classad_func( const char * /*name*/,
 
 Matchmaker::
 Matchmaker ()
+   : strSlotConstraint(NULL)
+   , SlotPoolsizeConstraint(NULL)
 {
 	char buf[64];
 
@@ -270,7 +272,6 @@ Matchmaker ()
 	update_collector_tid = -1;
 
 	update_interval = 5*MINUTE; 
-    DynQuotaMachConstraint = NULL;
 
 	groupQuotasHash = NULL;
 
@@ -335,9 +336,10 @@ Matchmaker::
 
 	if (NegotiatorName) free (NegotiatorName);
 	if (publicAd) delete publicAd;
-    if (DynQuotaMachConstraint) delete DynQuotaMachConstraint;
+    if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
 	if (groupQuotasHash) delete groupQuotasHash;
 	if (stashedAds) delete stashedAds;
+    if (strSlotConstraint) free(strSlotConstraint), strSlotConstraint = NULL;
 
 	int i;
 	for(i=0;i<MAX_NEGOTIATION_CYCLE_STATS;i++) {
@@ -623,19 +625,42 @@ reinitialize ()
 	preemption_req_unstable = ! (param_boolean("PREEMPTION_REQUIREMENTS_STABLE",true)) ;
 	preemption_rank_unstable = ! (param_boolean("PREEMPTION_RANK_STABLE",true)) ;
 
-	if (DynQuotaMachConstraint) delete DynQuotaMachConstraint;
-	DynQuotaMachConstraint = NULL;
-	tmp = param("GROUP_DYNAMIC_MACH_CONSTRAINT");
+    // load the constraint for slots that will be available for matchmaking.
+    // used for sharding or as an alternative to GROUP_DYNAMIC_MACH_CONSTRAINT
+    // or NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT when you DONT ever want to negotiate on 
+    // slots that don't match the constraint.
+    if (strSlotConstraint) free(strSlotConstraint);
+    strSlotConstraint = param ("NEGOTIATOR_SLOT_CONSTRAINT");
+    if (strSlotConstraint) {
+       dprintf (D_FULLDEBUG, "%s = %s\n", "NEGOTIATOR_SLOT_CONSTRAINT", 
+                strSlotConstraint);
+       // do a test parse of the constraint before we try and use it.
+       ExprTree *SlotConstraint = NULL; 
+       if (ParseClassAdRvalExpr(strSlotConstraint, SlotConstraint)) {
+          EXCEPT("Error parsing NEGOTIATOR_SLOT_CONSTRAINT expresion: %s", 
+                  strSlotConstraint);
+       }
+       delete SlotConstraint;
+    }
+
+    // load the constraint for calculating the poolsize for matchmaking
+    // used to ignore some slots for calculating the poolsize, but not
+    // for matchmaking.
+    //
+	if (SlotPoolsizeConstraint) delete SlotPoolsizeConstraint;
+	SlotPoolsizeConstraint = NULL;
+    const char * attr = "NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT";
+	tmp = param(attr);
+    if ( ! tmp) {
+       attr = "GROUP_DYNAMIC_MACH_CONSTRAINT";
+       tmp = param(attr);
+       if (tmp) dprintf(D_ALWAYS, "%s is obsolete, use NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT instead\n", attr);
+    }
 	if( tmp ) {
-        dprintf(D_FULLDEBUG, "%s = %s\n", "GROUP_DYNAMIC_MACH_CONSTRAINT",
-                tmp);
-		if( ParseClassAdRvalExpr(tmp, DynQuotaMachConstraint) ) {
-			dprintf(
-                D_ALWAYS, 
-                "Error parsing GROUP_DYNAMIC_MACH_CONSTRAINT expression: %s",
-					tmp
-            );
-            DynQuotaMachConstraint = NULL;
+        dprintf(D_FULLDEBUG, "%s = %s\n", attr, tmp);
+		if( ParseClassAdRvalExpr(tmp, SlotPoolsizeConstraint) ) {
+			dprintf(D_ALWAYS, "Error parsing %s expression: %s\n", attr, tmp);
+            SlotPoolsizeConstraint = NULL;
 		}
         free (tmp);
 	}
@@ -1123,16 +1148,15 @@ negotiationTime ()
 		return;
 	}
 
+
 		// allocate stat object here, now that we know we are not going
 		// to abort the cycle
 	StartNewNegotiationCycleStat();
 	negotiation_cycle_stats[0]->start_time = start_time;
 
 	// Save this for future use.
-	// This _must_ come before trimming the startd ads.
-	int untrimmed_num_startds = startdAds.MyLength();
-	int numDynGroupSlots = untrimmed_num_startds;
-    negotiation_cycle_stats[0]->total_slots = untrimmed_num_startds;
+	int cTotalSlots = startdAds.MyLength();
+    negotiation_cycle_stats[0]->total_slots = cTotalSlots;
 
 	double minSlotWeight = 0;
 	double untrimmedSlotWeightTotal = sumSlotWeights(startdAds,&minSlotWeight,NULL);
@@ -1162,21 +1186,24 @@ negotiationTime ()
 		ASSERT(groupQuotasHash);
     }
 
-    // Restrict number of slots available for dynamic quotas.
-    double hgq_total_quota = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)numDynGroupSlots;
-    if ( numDynGroupSlots && DynQuotaMachConstraint ) {
-        bool remove = param_boolean("NEGOTIATOR_STARTD_CONSTRAINT_REMOVE", false);
-        int matchedSlots = startdAds.Count(DynQuotaMachConstraint, remove);
+    // Restrict number of slots available for determining quotas
+	int cPoolsize = cTotalSlots;
+    double hgq_total_quota = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)cPoolsize;
+    if ( cPoolsize && SlotPoolsizeConstraint ) {
+        int matchedSlots = startdAds.Count(SlotPoolsizeConstraint);
         if ( matchedSlots ) {
-            dprintf(D_ALWAYS,"GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine "
-                    "count from %d to %d\n", numDynGroupSlots, matchedSlots);
-            numDynGroupSlots = matchedSlots;
-            hgq_total_quota = (accountant.UsingWeightedSlots()) ? sumSlotWeights(startdAds, NULL, DynQuotaMachConstraint) : (double)matchedSlots;
+            dprintf(D_ALWAYS,"NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT constraint reduces slot "
+                    "count from %d to %d\n", cPoolsize, matchedSlots);
+            cPoolsize = matchedSlots;
+            hgq_total_quota = matchedSlots;
+            if (accountant.UsingWeightedSlots()) {
+               hgq_total_quota = sumSlotWeights(startdAds, NULL, SlotPoolsizeConstraint);
+            }
         } else {
-            dprintf(D_ALWAYS, "warning: 0 out of %d machines match "
-                    "GROUP_DYNAMIC_MACH_CONSTRAINT for dynamic quotas\n",
-                    numDynGroupSlots);
-            numDynGroupSlots = 0;
+            dprintf(D_ALWAYS, "warning: 0 out of %d slots match "
+                    "NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT for dynamic quotas\n",
+                    cPoolsize);
+            cPoolsize = 0;
             hgq_total_quota = 0;
         }
     }
@@ -1210,11 +1237,11 @@ negotiationTime ()
         // If there is only one group (the root group) we are in traditional non-HGQ mode.
         // It seems cleanest to take the traditional case separately for maximum backward-compatible behavior.
         // A possible future change would be to unify this into the HGQ code-path, as a "root-group-only" case. 
-        negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight, startdAds, claimIds, scheddAds);
+        negotiateWithGroup(cPoolsize, untrimmedSlotWeightTotal, minSlotWeight, startdAds, claimIds, scheddAds);
     } else {
         // Otherwise we are in HGQ mode, so begin HGQ computations
 
-        negotiation_cycle_stats[0]->candidate_slots = numDynGroupSlots;
+        negotiation_cycle_stats[0]->candidate_slots = cPoolsize;
 
         // Fill in latest usage/prio info for the groups.
         // While we're at it, reset fields prior to reloading from submitter ads.
@@ -1346,7 +1373,7 @@ negotiationTime ()
             }
 
             dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
-                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(numDynGroupSlots), requested_total+allocated_total, allocated_total, surplus_quota);
+                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(cPoolsize), requested_total+allocated_total, allocated_total, surplus_quota);
 
             // The loop below can add a lot of work (and log output) to the negotiation.  I'm going to
             // default its behavior to execute once, and just negotiate for everything at once.  If a
@@ -1408,7 +1435,7 @@ negotiationTime ()
                         slots = floor(slots);
                     }
 
-                    negotiateWithGroup(untrimmed_num_startds, untrimmedSlotWeightTotal, minSlotWeight,
+                    negotiateWithGroup(cTotalSlots, untrimmedSlotWeightTotal, minSlotWeight,
                                        startdAds, claimIds, *(group->submitterAds), 
                                        slots, group->name.c_str());
                 }
@@ -2558,11 +2585,25 @@ obtainAdsFromCollector (
 	MyString buffer;
 	CollectorList* collects = daemonCore->getCollectorList();
 
+    // build a query for Scheduler, Submitter and (constrained) machine ads
+    //
 	CondorQuery publicQuery(ANY_AD);
-	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
-	result = collects->query (publicQuery, allAds);
+    publicQuery.addORConstraint("(MyType == \"Scheduler\") || (MyType == \"Submitter\")");
+    if (strSlotConstraint && strSlotConstraint[0]) {
+        MyString machine;
+        machine.sprintf("((MyType == \"Machine\") && (%s))", strSlotConstraint);
+        publicQuery.addORConstraint(machine.Value());
+    } else {
+        publicQuery.addORConstraint("(MyType == \"Machine\")");
+    }
+
+    CondorError errstack;
+	dprintf(D_ALWAYS, "  Getting Scheduler, Submitter and Machine ads ...\n");
+	result = collects->query (publicQuery, allAds, &errstack);
 	if( result!=Q_OK ) {
-		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
+		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", 
+           errstack.code() ? errstack.getFullText(false) : getStrQueryResult(result)
+           );
 		return false;
 	}
 
@@ -2729,12 +2770,7 @@ obtainAdsFromCollector (
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
-		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ||
-				   ( !strcmp(ad->GetMyTypeName(),SCHEDD_ADTYPE) &&
-					 !ad->LookupExpr(ATTR_NUM_USERS) ) ) {
-				// CRUFT: Before 7.3.2, submitter ads had a MyType of
-				//   "Scheduler". The only way to tell the difference
-				//   was that submitter ads didn't have ATTR_NUM_USERS.
+		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ) {
 
             MyString subname;
             if (!ad->LookupString(ATTR_NAME, subname)) {

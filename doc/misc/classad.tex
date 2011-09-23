@@ -280,18 +280,29 @@ Optional parameters are given within square brackets.
   \Expr{eval(strcat("slot", SlotID+10,"\_State"))}.
   Function \Procedure{strcat} calls function \Procedure{string}
   on the second parameter, which evaluates the expression,
-  and then converts the integer result 15 to the string "15."
+  and then converts the integer result 15 to the string \AdStr{15}.
   The concatenated string returned by \Procedure{strcat} is
-  \verb@"slot15_State"@, and this string is then evaluated.
+  \AdStr{slot15\_State}, and this string is then evaluated.
 
   Note that referring to attributes of a job from within the string
-  passed to \Procedure{eval} in the \AdAttr{Requirements} or
-  \AdAttr{Rank} expressions could cause inaccuracies in Condor's
+  passed to \Procedure{eval} in the \Attr{Requirements} or
+  \Attr{Rank} expressions could cause inaccuracies in Condor's
   automatic auto-clustering of jobs into equivalent groups for
   matchmaking purposes.  This is because Condor needs to determine
   which ClassAd attributes are significant for matchmaking purposes,
   and indirect references from within the string passed to \Procedure{eval}
   will not be counted.
+
+  \index{ClassAd functions!unparse()}
+  \item[\Code{String unparse(Attribute attr)}]
+  This function looks up the value of the provided attribute and returns
+  the unparsed version as a string. The attribute's value is not evaluated.
+  If the attribute's value is \Expr{x + 3}, then the function would return
+  the string \AdStr{x + 3}.
+  If the provided attribute cannot be found, an empty string is returned.
+
+  This function returns \Expr{ERROR} if other than exactly 1 argument is
+  given or the argument is not an attribute reference.
 
   \index{ClassAd functions!ifThenElse()}
   \item[\Code{AnyType ifThenElse(AnyType IfExpr,AnyType ThenExpr, AnyType ElseExpr)}]
@@ -711,17 +722,6 @@ characters within the delimiter string.
     Same as \Code{stringListMember()}, but comparison is done
     with \Expr{stricmp()}, so letter case is not relevant.
 
-  \index{ClassAd functions!stringList\_regexpMember()}
-  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr) \Lbr, String options \Rbr}]
-    Returns \Expr{TRUE} if the string \Expr{pattern} is a regular expression
-    that matches an item in the string \Expr{list},
-    as delimited by the optional \Expr{delimiter} string.
-    String \Expr{options} modifies how the match is performed.
-    Returns \Expr{FALSE} if \Expr{pattern} does not match any entries in
-    \Expr{list}.
-    The return value is \Expr{ERROR}, if any of the arguments
-    are not strings, or if \Expr{pattern} is not a valid regular expression.
-
   \index{ClassAd functions!stringListsIntersect()}
   \item[\Code{Integer stringListsIntersect(String list1, String list2 \Lbr\ , String delimiter \Rbr)}]
     Returns \Expr{TRUE} if the lists contain any matching elements,
@@ -780,17 +780,16 @@ Inclusion of characters other than these as options are ignored.
     The return value is \Expr{ERROR}, if any of the arguments
     are not strings.
 
-  \index{ClassAd functions!stringListRegexpMember()}
-  \item[\Code{Boolean stringListRegexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr\ } ]
-  \item[\Code{\Lbr\ , String options \Rbr)}]
-    Returns \Expr{TRUE} if any of the strings within the
-    \Expr{list} is a regular expression as described by \Expr{pattern}.
-    Returns \Expr{FALSE} otherwise.
-    If any argument is not a string, or if \Expr{pattern} does not describe
-    a valid regular expression, returns \Expr{ERROR}.
-    To include the fourth (optional) argument \Expr{options}, a third argument
-    of \Expr{delimiter} is required.
-    A default value for a delimiter is " ,".
+  \index{ClassAd functions!stringList\_regexpMember()}
+  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr \Lbr, String options \Rbr})]
+    Returns \Expr{TRUE} if the string \Expr{pattern} is a regular expression
+    that matches an item in the string \Expr{list},
+    as delimited by the optional \Expr{delimiter} string.
+    String \Expr{options} modifies how the match is performed.
+    Returns \Expr{FALSE} if \Expr{pattern} does not match any entries in
+    \Expr{list}.
+    The return value is \Expr{ERROR}, if any of the arguments
+    are not strings, or if \Expr{pattern} is not a valid regular expression.
 
 \end{description}
 

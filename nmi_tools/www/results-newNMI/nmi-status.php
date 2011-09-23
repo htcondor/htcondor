@@ -5,9 +5,12 @@ include "Dashboard.php";
 $dash = new Dashboard();
 $dash->print_header("NMI Pool Status");
 
+// Get the current platforms in the pool
+$pool_platforms = $dash->condor_status();
+
 include "CondorQ.php";
-$condorq_build = new CondorQ("build");
-$condorq_test = new CondorQ("test");
+$condorq_build = new CondorQ("build", $pool_platforms);
+$condorq_test = new CondorQ("test", $pool_platforms);
 
 function make_cell($platform, $depth, $queue, $type) {
   $color = "";
@@ -31,7 +34,7 @@ function make_cell($platform, $depth, $queue, $type) {
 <html>
 <head>
 <title>NMI - Build queue depths for core platforms</title>
-<LINK REL="StyleSheet" HREF="condor.css" TYPE="text/css">
+<link rel="StyleSheet" href="condor.css" type="text/css">
 </head>
 <body>
 
@@ -45,9 +48,10 @@ $contents = fread($handle, filesize($roster_file));
 fclose($handle);
 
 $platforms = explode("\n", $contents);
+sort($platforms);
 
-echo "<table border='0' cellspacing='0'>\n";
-echo "<tr>\n";
+echo "<table style='border-width:0px; border-style:none;'>\n";
+echo "<tr style='border-width:0px'>\n";
 
 
 
@@ -66,6 +70,10 @@ $test_queues = $condorq_test->condor_q();
 
 $count = 0;
 foreach ($platforms AS $platform) {
+  if(!preg_match("/\S/", $platform)) {
+    continue;
+  }
+
   $count += 1;
 
   $platform = preg_replace("/nmi:/", "", $platform);
@@ -80,14 +88,20 @@ foreach ($platforms AS $platform) {
   $test_depth = $test_queues[$platform][0];
   $test_queue = $test_queues[$platform][1];
 
-  echo "<td><table><tr><td colspan=2>$platform</td></tr><tr>";
+  // We want to make it obvious if a platform is not in the pool
+  $style = "border-width:0px;border-style:none;align:center;";
+  if(!$pool_platforms[$platform]) {
+    $style .= "background-color:#B8002E";
+  }
+
+  echo "<td style=\"$style\"><table><tr><td colspan=2 style='text-align:center'>$platform</td></tr><tr>";
   echo make_cell($platform, $build_depth, $build_queue, "Builds");
   echo make_cell($platform, $test_depth, $test_queue, "Tests");
   echo "</tr></table></td>";
 
   if($count == 6) {
     $count = 0;
-    echo "</tr><tr style='height:6px;'><td colspan=6 style='height:6px;'></td></tr><tr>";
+    echo "</tr><tr style='height:6px;border-width:0px'><td colspan=6 style='height:6px;border-width:0px;border-style:none;'></td></tr><tr style='birder-width:0px'>";
   }
 }
 
@@ -98,10 +112,18 @@ echo "</table>\n";
 <p>Legend:
 <table>
 <tr>
-<td style="background-color:#00FFFF">Depth 0</td>
-<td style="background-color:#00FF00">Depth 1-2</td>
-<td style="background-color:#FFFF00">Depth 3-5</td>
-<td style="background-color:#FF0000">Depth 6+</td>
+  <td style="background-color:#00FFFF">Depth 0</td>
+  <td style="background-color:#00FF00">Depth 1-2</td>
+  <td style="background-color:#FFFF00">Depth 3-5</td>
+  <td style="background-color:#FF0000">Depth 6+</td>
+</tr>
+<tr>
+  <td colspan="4" style="height:4px;size=2px;">&nbsp;</td>
+</tr>
+<tr>
+  <td colspan="4" style="background-color:#B8002E">Platform missing from pool</td>
+</tr>
+</table>
 
 </body>
 </html>

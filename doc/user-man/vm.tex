@@ -115,6 +115,21 @@ setting values for these commands causes Condor to modify the
 For KVM and Xen virtual machines,
 Condor uses these values when it produces the description file.
 
+For Xen and KVM jobs, if any files need to be transferred from the submit machine
+to the machine where the \SubmitCmd{vm} universe job will execute, 
+Condor must be explicitly told to do so with the 
+standard file transfer attributes:
+\footnotesize
+\begin{verbatim}
+  should_transfer_files = YES
+  when_to_transfer_output = ON_EXIT
+  transfer_input_files = /myxen/diskfile.img,/myxen/swap.img
+\end{verbatim}
+\normalsize
+Any and all needed files on a system without a shared file
+system (between the submit machine and the machine where the
+job will execute) must be listed.
+
 Further commands specify information that is specific to the
 virtual machine type targeted.
 
@@ -188,19 +203,6 @@ to execute the Condor job.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{vm universe!submit commands specific to Xen}
 
-If any files need to be transferred from the submit machine
-to the machine where the \SubmitCmd{vm} universe job will execute, 
-Condor must be explicitly told to do so with the 
-\SubmitCmd{xen\_transfer\_files} command:
-\footnotesize
-\begin{verbatim}
-  xen_transfer_files = /myxen/diskfile.img,/myxen/swap.img
-\end{verbatim}
-\normalsize
-Any and all needed files on a system without a shared file
-system (between the submit machine and the machine where the
-job will execute) must be listed.
-
 % xen_kernel description
 A Xen \SubmitCmd{vm} universe job requires specification of the
 guest kernel. 
@@ -222,24 +224,6 @@ utilizing one of the following definitions.
   \Login{root}.
 
 \end{enumerate}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:vm-KVMsubmitfile}KVM-Specific Submit Commands}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{vm universe!submit commands specific to KVM}
-
-If any files need to be transferred from the submit machine
-to the machine where the \SubmitCmd{vm} universe job will execute,
-Condor must be explicitly told to do so with the
-\SubmitCmd{kvm\_transfer\_files} command:
-\footnotesize
-\begin{verbatim}
-  kvm_transfer_files = /var/lib/libvirt/images/swap.img
-\end{verbatim}
-\normalsize
-Any and all needed files on a system without a shared file
-system (between the submit machine and the machine where the
-job will execute) must be listed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:vm-checkpoints}Checkpoints}

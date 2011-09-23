@@ -562,6 +562,20 @@ condor_param_mystring( const char * name, const char * alt_name )
 	return ret;
 }
 
+void non_negative_int_fail(const char * Name, char * Value)
+{
+
+	int iTemp=0;
+	if (strstr(Value,".") || 
+		(sscanf(Value, "%d", &iTemp) > 0 && iTemp < 0))
+	{
+		fprintf( stderr, "\nERROR: '%s'='%s' is invalid, must eval to a non-negative integer.\n", Name, Value );
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
+	
+	// sigh lexical_cast<>
+}
 
 /** Given a universe in string form, return the number
 
@@ -3879,6 +3893,9 @@ SetJobDeferral() {
 	MyString buffer;
 	char *temp = condor_param( DeferralTime, ATTR_DEFERRAL_TIME );
 	if ( temp != NULL ) {
+		// make certain the input is valid
+		non_negative_int_fail(DeferralTime, temp);
+			
 		buffer.sprintf( "%s = %s", ATTR_DEFERRAL_TIME, temp );
 		InsertJobExpr (buffer);
 		free( temp );
@@ -3918,6 +3935,10 @@ SetJobDeferral() {
 			// If we have a parameter from the job file, use that value
 			//
 		if ( temp != NULL ){
+			
+			// make certain the input is valid
+			non_negative_int_fail(DeferralWindow, temp);
+			
 			buffer.sprintf(  "%s = %s", ATTR_DEFERRAL_WINDOW, temp );	
 			free( temp );
 			//
@@ -3953,6 +3974,9 @@ SetJobDeferral() {
 			// If we have a parameter from the job file, use that value
 			//
 		if ( temp != NULL ){
+			// make certain the input is valid
+			non_negative_int_fail(DeferralPrepTime, temp);
+			
 			buffer.sprintf(  "%s = %s", ATTR_DEFERRAL_PREP_TIME, temp );	
 			free( temp );
 			//

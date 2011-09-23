@@ -155,6 +155,8 @@ if ( ${OS_NAME} STREQUAL "LINUX" )
 		set( CONDOR_RPATH "/lib64:/usr/lib64:$ORIGIN/../lib:$ORIGIN/../lib/condor" )
 		set( EXTERNALS_RPATH "/lib64:/usr/lib64:$$ORIGIN/../lib:$$ORIGIN/../lib/condor:/usr/lib64/condor" )
 	endif()
+elseif( ${OS_NAME} STREQUAL "DARWIN" )
+	set( EXTERNALS_LIB "${C_LIB}/condor" )
 endif()
 
 #this needs to be evaluated in order due to WIN collision.
