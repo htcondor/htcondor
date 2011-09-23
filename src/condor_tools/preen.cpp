@@ -740,7 +740,7 @@ void check_tmp_dir(){
 		FileLock *lock = new FileLock(-1, NULL, NULL);
 		tmpDir = lock->GetTempPath();	
 		delete lock;
-		rec_lock_cleanup(tmpDir, 4);
+		rec_lock_cleanup(tmpDir, 3);
 		if (tmpDir != NULL)
 			delete []tmpDir;
 	}
