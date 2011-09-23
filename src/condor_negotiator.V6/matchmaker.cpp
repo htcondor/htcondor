@@ -2770,12 +2770,7 @@ obtainAdsFromCollector (
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
-		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ||
-				   ( !strcmp(ad->GetMyTypeName(),SCHEDD_ADTYPE) &&
-					 !ad->LookupExpr(ATTR_NUM_USERS) ) ) {
-				// CRUFT: Before 7.3.2, submitter ads had a MyType of
-				//   "Scheduler". The only way to tell the difference
-				//   was that submitter ads didn't have ATTR_NUM_USERS.
+		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ) {
 
             MyString subname;
             if (!ad->LookupString(ATTR_NAME, subname)) {
