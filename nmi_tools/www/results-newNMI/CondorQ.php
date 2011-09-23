@@ -91,7 +91,7 @@ class CondorQ {
 	  $num = $host_count[1];
 	  $output .= "<tr><td>$host</td><td align='center'>$num</td></tr>\n";
 	}
-	$output .= "</table><p>\n";
+	$output .= "</table><br />\n";
       }
       else {
 	$output .= "No slots available<br>\n";
