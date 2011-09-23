@@ -716,7 +716,7 @@ void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 			}
 			delete lock;
 		} else {
-			rec_lock_cleanup(dir->GetFullPath(), --depth, true);
+			rec_lock_cleanup(dir->GetFullPath(), depth-1, true);
 		}
 	}
 	// make sure, orphaned directories will be deleted as well.
