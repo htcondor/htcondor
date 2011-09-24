@@ -10,11 +10,15 @@ if($ENV{NMI_PLATFORM} =~ /(macos|freebsd)/i) {
     if(system("which gtar") == 0) {
         print "gtar was detected in PATH\n";
         $tar = "gtar";
-    }
-    else {
-        print "WARNING: gtar was not found in path, falling back to tar.  The version of tar might output in a different version than this script expects.  Tar version:\n";
-        print `tar --version 2>&1`;
-    }
+    } else {
+		if(system("which gnutar") == 0) {
+			print "gnutar was detected in PATH\n";
+			$tar = "gnutar";
+		} else {
+   	     print "WARNING: gtar was not found in path, falling back to tar.  The version of tar might output in a different version than this script expects.  Tar version:\n";
+   	     print `tar --version 2>&1`;
+    	}
+	}
 }
 
 # In bytes
