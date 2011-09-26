@@ -59,17 +59,21 @@ and was fixed in Condor version 7.6.2.
 
 \begin{itemize}
 
-\item Provided an informative error message when \Condor{userprio} cannot locate the \Condor{negotiator}.
+\item Provided an informative error message 
+when the \Condor{userprio} tool cannot locate the \Condor{negotiator} daemon.
 \Ticket{2478}
 
-\item Removed spurious boolean flag reset in \Condor{q} that resulted in order dependency between ``-long'' and ``-format''.
+\item Removed a spurious boolean flag reset in \Condor{q},
+which resulted in an order dependency between the command line arguments
+\Opt{-long} and \Opt{-format}.
 \Ticket{2498}
 
 \item Fixed starter cleanup of deferred jobs.
 \Ticket{2486}
 
-\item Corrected a check in the accountant that allowed submitter records
-to be deleted if the submitter's priority factor was explicitly set and
+\item Corrected a hierarchical group quota bug in which
+the accountant allowed submitter records to be deleted,
+if the submitter's priority factor was explicitly set and
 the value was equal to \MacroNI{DEFAULT\_PRIO\_FACTOR}.
 \Ticket{2442}
 
@@ -77,8 +81,9 @@ the value was equal to \MacroNI{DEFAULT\_PRIO\_FACTOR}.
 when there are more than 32 CPUs.
 \Ticket{2381}
 
-\item Fixed a memory leak in the \Condor{negotiator} caused by failure to
-free memory returned from some calls to param\_without\_default().
+\item Fixed a memory leak in the \Condor{negotiator},
+caused by failure to
+free memory returned from some calls to \Procedure{param\_without\_default}.
 \Ticket{2299}
 
 \item Jobs run via \Prog{glexec} always had their \Env{PATH} environment
@@ -93,7 +98,8 @@ This problem was introduced in Condor version 7.5.6.
 \Ticket{2413}
 
 \item Fixed a problem in \Condor{hdfs} that caused it to exit shortly
-after starting up if the configuration variables 
+after starting up,
+if the configuration variables 
 \MacroNI{HDFS\_DENY}, \MacroNI{HOSTDENY\_WRITE}, or \MacroNI{HOSTDENY\_READ} 
 were not defined.
 Previously, if \MacroNI{HDFS\_DENY} was
@@ -111,20 +117,20 @@ writing to some user logs with specific names.  The specific names that
 caused crashes are not easy to describe.
 \Ticket{2439}
 
-\item The \Condor{schedd} failed to start up when any job ClassAd
-value contained ASCII character 255.
+\item Fixed a bug in which the \Condor{schedd} failed to start up
+when any job ClassAd attribute value contained the ASCII character 255.
 \Ticket{2450}
 
-\item \Condor{preen} failed to honor -remove and would always remove
-  lock files.
+\item \Condor{preen} failed to honor the \Opt{-remove} option
+and would always remove lock files.
 \Ticket{2497}
 
-\item \Condor{preen} expected old format for local lock file paths, it
-  now understands the proper cormat.
+\item \Condor{preen} expected an old format for local lock file paths;
+it now understands the proper format.
 \Ticket{2496}
 
-\item \Condor{preen} would EXCEPT when processing multiple subdirs for
-  local locks.
+\item \Condor{preen} would EXCEPT when processing multiple 
+subdirectories for local locks.
 \Ticket{2495}
 
 \end{itemize}
