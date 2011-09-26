@@ -1188,23 +1188,23 @@ negotiationTime ()
 
     // Restrict number of slots available for determining quotas
 	int cPoolsize = cTotalSlots;
-    double hgq_total_quota = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)cPoolsize;
+    double weightedPoolsize = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)cPoolsize;
     if ( cPoolsize && SlotPoolsizeConstraint ) {
         int matchedSlots = startdAds.Count(SlotPoolsizeConstraint);
         if ( matchedSlots ) {
             dprintf(D_ALWAYS,"NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT constraint reduces slot "
                     "count from %d to %d\n", cPoolsize, matchedSlots);
             cPoolsize = matchedSlots;
-            hgq_total_quota = matchedSlots;
+            weightedPoolsize = matchedSlots;
             if (accountant.UsingWeightedSlots()) {
-               hgq_total_quota = sumSlotWeights(startdAds, NULL, SlotPoolsizeConstraint);
+               weightedPoolsize = sumSlotWeights(startdAds, NULL, SlotPoolsizeConstraint);
             }
         } else {
             dprintf(D_ALWAYS, "warning: 0 out of %d slots match "
-                    "NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT for dynamic quotas\n",
-                    cPoolsize);
+                    "NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT\n",
+                    cTotalSlots);
             cPoolsize = 0;
-            hgq_total_quota = 0;
+            weightedPoolsize = 0;
         }
     }
 
@@ -1237,7 +1237,7 @@ negotiationTime ()
         // If there is only one group (the root group) we are in traditional non-HGQ mode.
         // It seems cleanest to take the traditional case separately for maximum backward-compatible behavior.
         // A possible future change would be to unify this into the HGQ code-path, as a "root-group-only" case. 
-        negotiateWithGroup(cPoolsize, untrimmedSlotWeightTotal, minSlotWeight, startdAds, claimIds, scheddAds);
+        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, scheddAds);
     } else {
         // Otherwise we are in HGQ mode, so begin HGQ computations
 
@@ -1300,6 +1300,7 @@ negotiationTime ()
         }
 
         // assign slot quotas based on the config-quotas
+        double hgq_total_quota = weightedPoolsize;
         dprintf(D_ALWAYS, "group quotas: assigning group quotas from %g available%s slots\n",
                 hgq_total_quota, 
                 (accountant.UsingWeightedSlots()) ? " weighted" : "");
@@ -1435,7 +1436,7 @@ negotiationTime ()
                         slots = floor(slots);
                     }
 
-                    negotiateWithGroup(cTotalSlots, untrimmedSlotWeightTotal, minSlotWeight,
+                    negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight,
                                        startdAds, claimIds, *(group->submitterAds), 
                                        slots, group->name.c_str());
                 }
