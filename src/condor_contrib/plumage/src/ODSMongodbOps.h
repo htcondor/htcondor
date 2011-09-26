@@ -54,9 +54,12 @@ namespace etl {
         
         // raw record write
         bool createRecord(mongo::BSONObjBuilder& bob);
+        bool readRecord(mongo::BSONObjBuilder& bob);
+
+        // TODO: expose this for now as we work through encapsulation design
+        mongo::DBClientConnection* m_db_conn;
 
     protected:
-        mongo::DBClientConnection m_db_conn;
         std::string m_db_name;
 
 };

@@ -31,7 +31,7 @@ using namespace compat_classad;
 using namespace mongo;
 using namespace plumage::etl;
 
-#define  LAST_DB_ERROR()   string last_err = m_db_conn.getLastError(); \
+#define  LAST_DB_ERROR()   string last_err = m_db_conn->getLastError(); \
     if (!last_err.empty()) { \
         dprintf(D_ALWAYS,"mongodb getLastError: %s\n",last_err.c_str()); \
         return false; \
@@ -60,12 +60,13 @@ ODSMongodbOps::ODSMongodbOps(const string& db_name)
 
 ODSMongodbOps::~ODSMongodbOps()
 {
-    //
+    delete m_db_conn;
 }
 
 bool ODSMongodbOps::init(const string& db_location) {
     try {
-        m_db_conn.connect(db_location);
+        m_db_conn = new DBClientConnection();
+        m_db_conn->connect(db_location);
     }
     catch (DBException e) {
         dprintf(D_ALWAYS,"ODSMongodbOps::init couldn't connect to db '%s'\n",db_location.c_str());
@@ -120,7 +121,7 @@ ODSMongodbOps::updateAttr (BSONObjBuilder& key, const char* attr_name, const cha
     delete expr; expr = NULL;
     
     try {
-        m_db_conn.update(m_db_name, Query(key.obj()) ,BSON( "$set" << builder.obj()),FALSE, TRUE);
+        m_db_conn->update(m_db_name, Query(key.obj()) ,BSON( "$set" << builder.obj()),FALSE, TRUE);
     }
     catch(DBException& e) {
         dprintf(D_ALWAYS,"ODSMongodbOps::updateAttr caught DBException: %s\n", e.toString().c_str());
@@ -136,7 +137,7 @@ bool
 ODSMongodbOps::deleteAttr (BSONObjBuilder& key, const char* attr_name)
 {
     try {
-        m_db_conn.update(m_db_name, Query(key.obj()) ,BSON("$unset" << BSON(attr_name << 1)),FALSE,FALSE);
+        m_db_conn->update(m_db_name, Query(key.obj()) ,BSON("$unset" << BSON(attr_name << 1)),FALSE,FALSE);
     }
     catch(DBException& e) {
         dprintf(D_ALWAYS,"ODSMongodbOps::deleteAttr caught DBException: %s\n", e.toString().c_str());
@@ -152,7 +153,7 @@ bool
 ODSMongodbOps::createAd(BSONObjBuilder& key) {
     
     try {
-        m_db_conn.insert(m_db_name, key.obj());
+        m_db_conn->insert(m_db_name, key.obj());
     }
     catch(DBException& e) {
         dprintf(D_ALWAYS,"ODSMongodbOps::createAd caught DBException: %s\n", e.toString().c_str());
@@ -168,7 +169,7 @@ bool
 ODSMongodbOps::deleteAd(BSONObjBuilder& key) {
     
     try {
-        m_db_conn.remove(m_db_name, Query(key.obj()), TRUE);
+        m_db_conn->remove(m_db_name, Query(key.obj()), TRUE);
     }
     catch(DBException& e) {
         dprintf(D_ALWAYS,"ODSMongodbOps::deleteAd caught DBException: %s\n", e.toString().c_str());
@@ -218,9 +219,9 @@ ODSMongodbOps::updateAd(BSONObjBuilder& key, ClassAd* ad)
                 bob.append(name,trimQuotes(ExprTreeToString(expr)));
         }
     }
-    
+
     try {
-        m_db_conn.update(m_db_name, Query(key.obj()), bob.obj(), TRUE, FALSE);
+        m_db_conn->update(m_db_name, Query(key.obj()), bob.obj(), TRUE, FALSE);
     }
     catch(DBException& e) {
         dprintf(D_ALWAYS,"ODSMongodbOps::updateAd caught DBException: %s\n", e.toString().c_str());
@@ -236,7 +237,23 @@ bool
 ODSMongodbOps::createRecord(BSONObjBuilder& bob)
 {
     try {
-        m_db_conn.insert(m_db_name, bob.obj());
+        m_db_conn->insert(m_db_name, bob.obj());
+    }
+    catch(DBException& e) {
+        dprintf(D_ALWAYS,"ODSMongodbOps::createRecord caught DBException: %s\n", e.toString().c_str());
+        return false;
+    }
+
+    LAST_DB_ERROR();
+
+    return true;
+}
+
+bool
+ODSMongodbOps::readRecord(BSONObjBuilder& bob)
+{
+    try {
+        m_db_conn->query(m_db_name, bob.obj());
     }
     catch(DBException& e) {
         dprintf(D_ALWAYS,"ODSMongodbOps::createRecord caught DBException: %s\n", e.toString().c_str());
