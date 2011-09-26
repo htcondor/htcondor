@@ -2396,10 +2396,6 @@ LIBVIRT_XML_SCRIPT = $(LIBEXEC)/libvirt_simple_script.awk
 ##  a disk image
 #XEN_BOOTLOADER = /usr/bin/pygrub
 
-## The contents of this file will be added to the Xen virtual machine
-## description that Condor writes.
-#XEN_LOCAL_SETTINGS_FILE = /path/to/file
-
 ##
 ##--------------------------------------------------------------------
 ##  condor_lease_manager lease manager daemon

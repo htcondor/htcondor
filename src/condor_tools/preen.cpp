@@ -716,7 +716,7 @@ void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 			}
 			delete lock;
 		} else {
-			rec_lock_cleanup(dir->GetFullPath(), --depth, true);
+			rec_lock_cleanup(dir->GetFullPath(), depth-1, true);
 		}
 	}
 	// make sure, orphaned directories will be deleted as well.
@@ -733,6 +733,8 @@ void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 
 void check_tmp_dir(){
 #if !defined(WIN32)
+	if (!RmFlag) return;
+
 	const char *tmpDir = NULL;
 	bool newLock = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (newLock) {
@@ -740,7 +742,7 @@ void check_tmp_dir(){
 		FileLock *lock = new FileLock(-1, NULL, NULL);
 		tmpDir = lock->GetTempPath();	
 		delete lock;
-		rec_lock_cleanup(tmpDir, 4);
+		rec_lock_cleanup(tmpDir, 3);
 		if (tmpDir != NULL)
 			delete []tmpDir;
 	}

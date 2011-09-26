@@ -1166,7 +1166,6 @@ processCommandLineArguments (int argc, char *argv[])
 						 "format and attribute parameters\n" );
 				exit( 1 );
 			}
-			verbose = 0;
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();

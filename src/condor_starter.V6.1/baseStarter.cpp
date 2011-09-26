@@ -79,6 +79,7 @@ CStarter::CStarter()
 	m_job_environment_is_ready = false;
 	m_all_jobs_done = false;
 	remote_state_change = false;
+	m_deferred_job_update = false;
 }
 
 
@@ -1773,6 +1774,9 @@ CStarter::removeDeferredJobs() {
 	if ( this->deferral_tid == -1 ) {
 		return ( ret );
 	}
+	
+	m_deferred_job_update = true;
+	
 		//
 		// Attempt to cancel the the timer
 		//
@@ -2324,6 +2328,7 @@ bool
 CStarter::allJobsDone( void )
 {
 	m_all_jobs_done = true;
+	bool bRet=false;
 
 		// now that all user processes are complete, change the
 		// sandbox ownership back over to condor. if this is a VM
@@ -2339,11 +2344,15 @@ CStarter::allJobsDone( void )
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
 			// JIC::allJobsDone returned true: we're ready to move on.
-		return transferOutput();
+		bRet=transferOutput();
 	}
-		// JIC::allJobsDone() returned false: propagate that so we
+	
+	if (m_deferred_job_update){
+		jic->notifyJobExit( -1, JOB_SHOULD_REQUEUE, 0 );
+	}
+		// JIC::allJobsDonbRete() returned false: propagate that so we
 		// halt the cleanup process and wait for external events.
-	return false;
+	return bRet;
 }
 
 
@@ -2458,6 +2467,14 @@ CStarter::publishJobInfoAd(List<UserProc>* proc_list, ClassAd* ad)
 	if( pre_script && pre_script->PublishUpdateAd(ad) ) {
 		found_one = true;
 	}
+	
+	// Update the state.
+	if (m_deferred_job_update)
+	{
+		MyString buf;
+		buf.sprintf( "%s=\"Exited\"", ATTR_JOB_STATE );
+	}
+	
 	UserProc *job;
 	proc_list->Rewind();
 	while ((job = proc_list->Next()) != NULL) {
