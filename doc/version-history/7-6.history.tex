@@ -63,6 +63,9 @@ and was fixed in Condor version 7.6.2.
 when the \Condor{userprio} tool cannot locate the \Condor{negotiator} daemon.
 \Ticket{2478}
 
+\item Updated \Condor{userprio} callbacks to handle submitter names of arbitrary length.
+\Ticket{2445}
+
 \item Removed a spurious boolean flag reset in \Condor{q},
 which resulted in an order dependency between the command line arguments
 \Opt{-long} and \Opt{-format}.
