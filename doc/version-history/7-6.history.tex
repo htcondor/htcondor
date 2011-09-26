@@ -68,7 +68,13 @@ which resulted in an order dependency between the command line arguments
 \Opt{-long} and \Opt{-format}.
 \Ticket{2498}
 
-\item Fixed starter cleanup of deferred jobs.
+\item Fixed a bug in which a graceful shutdown of a \Condor{startd}
+did not correctly handle jobs using job deferral
+which have landed on an execute machine but have not yet
+reached their deferral time.
+These jobs would appear to be running, despite the lack of
+a \Condor{starter} daemon. 
+These jobs now correctly transition to the idle state.
 \Ticket{2486}
 
 \item Corrected a hierarchical group quota bug in which
