@@ -729,6 +729,7 @@ static int set_owner_egid();
 static int set_user_ruid();
 static int set_user_rgid();
 static int set_root_euid();
+static int set_root_egid();
 static int set_condor_ruid();
 static int set_condor_rgid();
 
@@ -1183,6 +1184,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		switch (s) {
 		case PRIV_ROOT:
 			set_root_euid();
+			set_root_egid();
 			break;
 		case PRIV_CONDOR:
 			set_root_euid();	/* must be root to switch */
@@ -1461,6 +1463,12 @@ int
 set_root_euid()
 {
 	return SET_EFFECTIVE_UID(ROOT);
+}
+
+int
+set_root_egid()
+{
+	return SET_EFFECTIVE_GID(ROOT);
 }
 
 
