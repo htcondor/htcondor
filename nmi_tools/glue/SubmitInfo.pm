@@ -1026,7 +1026,7 @@ our %submit_info = (
 				@default_test_configure_args
 				
 			},
-			'prereqs'	=> [ @default_prereqs ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},

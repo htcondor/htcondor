@@ -187,7 +187,7 @@ foreach ($platforms AS $platform) {
   # Get the queue depth for the platform if it is pending
   $queue_depth = "";
   if($platform_status[$platform] == PLATFORM_PENDING) {
-    $queue_depth = get_queue_for_nmi_platform($platform, $type);
+    $queue_depth = get_queue_for_nmi_platform($platform, $type, $dash);
   }
 
   $remote_host = "";

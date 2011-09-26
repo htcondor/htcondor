@@ -4300,7 +4300,7 @@ int get_job_prio(ClassAd *job)
 	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 	job->LookupInteger(ATTR_JOB_STATUS, job_status);
     if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
-        cur_hosts = ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) ? 1 : 0);
+        cur_hosts = ((job_status == SUSPENDED || job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) ? 1 : 0);
     }
     if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
         max_hosts = ((job_status == IDLE) ? 1 : 0);
@@ -4468,7 +4468,7 @@ int mark_idle(ClassAd *job)
 		scheduler.WriteAbortToUserLog( job_id );
 		DestroyProc( cluster, proc );
 	}
-	else if ( status == RUNNING || status == TRANSFERRING_OUTPUT || hosts > 0 ) {
+	else if ( status == SUSPENDED || status == RUNNING || status == TRANSFERRING_OUTPUT || hosts > 0 ) {
 		if( universeCanReconnect(universe) &&
 			jobLeaseIsValid(job, cluster, proc) )
 		{

@@ -6324,6 +6324,7 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 	switch( status ) {
 	case IDLE:
 	case RUNNING:
+	case SUSPENDED:
 	case TRANSFERRING_OUTPUT:
 			// these are the cases we expect.  if it's local
 			// universe, it'll still be IDLE.  if it's not local,

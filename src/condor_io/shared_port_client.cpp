@@ -306,10 +306,10 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	// cmsghdr(s) to set it to the sum of CMSG_LEN() across all cmsghdrs.
 
 	struct msghdr msg;
-	unsigned char buf[CMSG_SPACE(sizeof(int))];
+	char *buf = (char *) malloc(CMSG_SPACE(sizeof(int)));
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
-	msg.msg_control = &buf;
+	msg.msg_control = buf;
 	msg.msg_controllen = CMSG_SPACE(sizeof(int));
 	msg.msg_flags = 0;
 
@@ -340,6 +340,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 				sock_name.Value(),
 				requested_by,
 				strerror(errno));
+		free(buf);
 		return false;
 	}
 
@@ -367,12 +368,15 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 				sock_name.Value(),
 				requested_by,
 				strerror(errno));
+
+		free(buf);
 		return false;
 	}
 	if( status != 0 ) {
 		dprintf(D_ALWAYS,"SharedPortClient: received failure response for SHARED_PORT_PASS_FD to %s%s\n",
 				sock_name.Value(),
 				requested_by);
+		free(buf);
 		return false;
 	}
 
@@ -380,6 +384,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	dprintf(D_FULLDEBUG,"SharedPortClient: passed socket to %s%s\n",
 			sock_name.Value(),
 			requested_by);
+	free(buf);
 	return true;
 #else
 #error HAVE_SHARED_PORT is defined, but no method for passing fds is enabled.

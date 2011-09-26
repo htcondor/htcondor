@@ -1,14 +1,16 @@
 if (NOT WINDOWS)
     # BSD has both BSD tar, named "tar", and GNU tar, named "gtar" in ports...
     if (not BSD_UNIX)
-	set( TAR_COMMAND tar)
-    else()
-	# but old batlab has gnu tar named "tar" in the path first, and no gtar
-	FIND_PROGRAM(TAR_COMMAND "gtar")
-	if (NOT TAR_COMMAND)
-		# Could not find gtar, use "tar" and hope for the best
 		set( TAR_COMMAND tar)
-	endif()
+    else()
+		# Macos is _like_ bsd, but calls it "gnutuar"
+		FIND_PROGRAM(TAR_COMMAND NAMES "gtar" "gnutar")
+
+		# but old batlab has gnu tar named "tar" in the path first, and no gtar
+		if (NOT TAR_COMMAND)
+			# Could not find gtar, use "tar" and hope for the best
+			set( TAR_COMMAND tar)
+		endif()
     endif()
 
     add_custom_command(

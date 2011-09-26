@@ -48,16 +48,16 @@ class Dashboard {
 
   function condor_status() {
     // Determine the list of machines currently in the pool
-    $output = `/usr/bin/condor_status -const 'slotid==1' -format '%s' nmi_platform -format ' %s\n' Machine`;
+    $output = `/usr/bin/condor_status -format '%s' nmi_platform -format ' %s\n' Machine | sort | uniq -c`;
     
     $platforms = Array();
     $lines = split("\n", $output);
     foreach ($lines as $line) {
-      if(preg_match("/(\S+) (.+)$/", $line, $matches)) {
-	if(!array_key_exists($matches[1], $platforms)) {
-	  $platforms[$matches[1]] = Array();
+      if(preg_match("/\s*(\d+)\s+(\S+)\s+(.+)$/", $line, $matches)) {
+	if(!array_key_exists($matches[2], $platforms)) {
+	  $platforms[$matches[2]] = Array();
 	}
-	array_push($platforms[$matches[1]], $matches[2]);
+	array_push($platforms[$matches[2]], array($matches[3], $matches[1]));
       }
     }
     
