@@ -114,6 +114,7 @@ class Matchmaker : public Service
 		int SET_BEGINTIME_commandHandler(int, Stream*);
 		int SET_LASTTIME_commandHandler(int, Stream*);
 		int GET_PRIORITY_commandHandler(int, Stream*);
+		int GET_PRIORITY_ROLLUP_commandHandler(int, Stream*);
 		int GET_RESLIST_commandHandler(int, Stream*);
 
 		// timeout handler (for periodic negotiations)
