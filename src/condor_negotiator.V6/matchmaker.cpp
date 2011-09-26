@@ -1190,7 +1190,7 @@ negotiationTime ()
 	int cPoolsize = cTotalSlots;
     double weightedPoolsize = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)cPoolsize;
     if ( cPoolsize && SlotPoolsizeConstraint ) {
-        int matchedSlots = startdAds.Count(SlotPoolsizeConstraint);
+        int matchedSlots = startdAds.CountMatches(SlotPoolsizeConstraint);
         if ( matchedSlots ) {
             dprintf(D_ALWAYS,"NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT constraint reduces slot "
                     "count from %d to %d\n", cPoolsize, matchedSlots);
