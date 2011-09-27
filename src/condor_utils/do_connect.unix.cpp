@@ -40,21 +40,21 @@ char *param( const char *name );
 
 int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 						int timeout );
-int do_connect_with_timeout( const char* host, const char* service, 
+int do_connect_with_timeout( const char* host, 
 							 u_short port, int timeout );
 int set_fd_blocking(int fd);
 int set_fd_nonblocking(int fd);
 }
 
 int
-do_connect( const char* host, const char* service, u_short port )
+do_connect( const char* host, u_short port )
 {
-	return do_connect_with_timeout(host, service, port, 0);
+	return do_connect_with_timeout(host, port, 0);
 }
 
 
 int
-do_connect_with_timeout( const char* host, const char* service, 
+do_connect_with_timeout( const char* host, 
 						 u_short port, int timeout ) 
 {
 	struct sockaddr_in	sinful;
@@ -86,7 +86,6 @@ do_connect_with_timeout( const char* host, const char* service,
 			close(fd);
 			return( -1 );
 		}
-		port = find_port_num( service, port );
 		memset( (char *)&sinful,0,sizeof(sinful) );
 		memcpy( (char *)&sinful.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
 		sinful.sin_family = hostentp->h_addrtype;
