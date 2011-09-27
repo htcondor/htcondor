@@ -144,12 +144,7 @@ TTManager::config(bool reconfig)
 	
 		// read the polling period and if one is not specified use 
 		// default value of 10 seconds
-	char *pollingPeriod_str = param("QUILL_POLLING_PERIOD");
-	if(pollingPeriod_str) {
-		pollingPeriod = atoi(pollingPeriod_str);
-		free(pollingPeriod_str);
-	}
-	else pollingPeriod = 10;
+	pollingPeriod = param_integer("QUILL_POLLING_PERIOD", 10);
   
 	dprintf(D_ALWAYS, "Using Polling Period = %d\n", pollingPeriod);
 	dprintf(D_ALWAYS, "Using logs ");
