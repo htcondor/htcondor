@@ -22,8 +22,16 @@ set VC_BIN=%VS_DIR%\bin
 set DOTNET_PATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
 
 set PERL_PATH=c:\perl\site\bin;c:\perl\bin
-for /D %%I in ("c:\prereq\ActivePerl*") do set ACTIVE_PERL_DIR=%%~fI
+if "~%_NMI_PREREQ_ActivePerl_ROOT%"=="~" (
+   set ACTIVE_PERL_DIR=%_NMI_PREREQ_ActivePerl_ROOT%
+   goto got_active_perl
+)
+:: Look for active perl in the registry
+for /F "tokens=3" %%I in('reg query HKLM\Software\Perl /v BinDir') do set ACTIVE_PERL_DIR=%%~sdpI
+:got_active_perl
+if "~ACTIVE_PERL_DIR%:~-1%"=="~\" set ACTIVE_PERL_DIR=%ACTIVE_PERL_DIR:~0,-1%
 if NOT "~%ACTIVE_PERL_DIR%"=="~" set PERL_PATH=%ACTIVE_PERL_DIR%\site\bin;%ACTIVE_PERL_DIR%\bin;%PERL_PATH%
+:got_perl
 
 if "~%_NMI_PREREQ_7_Zip_ROOT%"=="~" (
   set ZIP_PATH=%ProgramFiles%\7-Zip
