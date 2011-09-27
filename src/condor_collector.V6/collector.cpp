@@ -336,6 +336,15 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	// Initial query handler
 	AdTypes whichAds = receive_query_public( command );
 
+	// CRUFT: Before 7.3.2, submitter ads had a MyType of
+	//   "Scheduler". The only way to tell the difference
+	//   was that submitter ads didn't have ATTR_NUM_USERS.
+	//   The correosponding query ads had a TargetType of
+	//   "Scheduler", which we now coerce to "Submitter".
+	if ( whichAds == SUBMITTOR_AD ) {
+		cad.SetTargetTypeName( SUBMITTER_ADTYPE );
+	}
+
 	// Perform the query
 	List<ClassAd> results;
 	ForkStatus	fork_status = FORK_FAILED;
@@ -1683,6 +1692,16 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 void
 computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringList &expanded_projection) {
     projectionList->Rewind();
+
+	// CRUFT: Before 7.3.2, submitter ads had a MyType of
+	//   "Scheduler". The only way to tell the difference
+	//   was that submitter ads didn't have ATTR_NUM_USERS.
+	//   If we don't include ATTR_NUM_USERS in our projection,
+	//   older clients will morph scheduler ads into
+	//   submitter ads, regardless of MyType.
+	if (strcmp("Scheduler", full_ad->GetMyTypeName()) == 0) {
+		expanded_projection.append(ATTR_NUM_USERS);
+	}
 
 		// For each expression in the list...
 	MyString attr;
