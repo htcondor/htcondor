@@ -144,8 +144,9 @@ hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr)
 		len = sizeof(in6_addr);
 	} else {
 		dprintf(D_ALWAYS, "condor_gethostbyaddr_ipv6 was passed an sa_family of %d. Only AF_INET (%d) and AF_INET6 (%d) can be handled.", type, int(AF_INET), int(AF_INET6));
-		h_errno = NO_RECOVERY;
-		return NULL;
+		sockaddr_in* sin4 = (sockaddr_in*)sa;
+		p_addr = (const char*)&sin4->sin_addr;
+		len = 0;
 	}
 
 	ret = gethostbyaddr(p_addr, len, type);
