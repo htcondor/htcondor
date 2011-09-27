@@ -1278,7 +1278,7 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		return -1;
     }
 
-    dc_stats.New("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
+    dc_stats.New("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 	// Semantics dictate that certain signals CANNOT be caught!
 	// In addition, allow SIGCHLD to be automatically replaced (for backwards
@@ -1456,9 +1456,9 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
 
-    dc_stats.New("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
-    if (iosock_descrip && iosock_descrip[0] && ! strcmp(handler_descrip, "DC Command Handler"))
-       dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
+    dc_stats.New("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+    //if (iosock_descrip && iosock_descrip[0] && ! strcmp(handler_descrip, "DC Command Handler"))
+    //   dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 
 	// Verify that this socket has not already been registered
@@ -1909,7 +1909,7 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
         }
 	}
 
-    dc_stats.New("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO);
+    dc_stats.New("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 	// Found a blank entry at index i. Now add in the new data.
 	(*pipeTable)[i].pentry = NULL;
@@ -2654,6 +2654,9 @@ DaemonCore::reconfig(void) {
 	// A few configuration parameters control its behavior.
 	ClassAd::Reconfig();
 
+    // publication and window size of daemon core stats are controlled by params
+    dc_stats.Reconfig();
+
 	m_dirty_sinful = true; // refresh our address in case config changes it
 
 	SecMan *secman = getSecMan();
@@ -3052,10 +3055,12 @@ void DaemonCore::Driver()
 		dprintf( D_ALWAYS, "Done with stdout & stderr tests\n" );
 	}
 
+	double runtime = UtcTime::getTimeDouble();
+	double group_runtime = runtime;
+    double pump_cycle_begin_time = runtime;
+
 	for(;;)
 	{
-        double runtime = UtcTime::getTimeDouble();
-        double group_runtime = runtime;
 
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
@@ -3122,7 +3127,7 @@ void DaemonCore::Driver()
 		//   starve commands...
 
         int num_timers_fired = 0;
-		timeout = t.Timeout(&num_timers_fired);
+		timeout = t.Timeout(&num_timers_fired, &runtime);
 
         dc_stats.TimersFired += num_timers_fired;
 
@@ -3134,7 +3139,7 @@ void DaemonCore::Driver()
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        runtime = UtcTime::getTimeDouble();
+        //runtime = UtcTime::getTimeDouble();
         dc_stats.TimerRuntime += (runtime - group_runtime);
         group_runtime = runtime;
 
@@ -3262,7 +3267,6 @@ void DaemonCore::Driver()
         // update statistics on time spent waiting in select.
         runtime = UtcTime::getTimeDouble();
         dc_stats.SelectWaittime += (runtime - group_runtime);
-        group_runtime = runtime;
         //dc_stats.StatsLifetime = now - dc_stats.InitTime;
 
 		tmpErrno = errno;
@@ -3607,7 +3611,11 @@ void DaemonCore::Driver()
             dc_stats.SocketRuntime += (runtime - group_runtime);
             group_runtime = runtime;
 
+
 		}	// if rv > 0
+
+        dc_stats.PumpCycle += (runtime - pump_cycle_begin_time);
+        pump_cycle_begin_time = runtime;
 
 	}	// end of infinite for loop
 }

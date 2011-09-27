@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Running strip with no arguments messes up dynamic libraries and
+# executables that use non-system dynamic libraries. '-x' is a safe
+# strip level for both types of files.
+# There doesn't appear to be a way to tell CMake to use arguments with the
+# strip command, so we have it run this shell script instead.
+#
+# '-u -r' will remove more symbols safely for executables.
+# If we want to get fancy, we could use file to determine what type of
+# file we're stripping and change the arguments to strip accordingly.
+
+exec strip -x "$@"

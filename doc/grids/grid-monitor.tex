@@ -6,8 +6,8 @@
 \index{scalability!using the Grid Monitor}
 
 Condor's Grid Monitor is designed to improve the scalability of
-machines running Globus Toolkit 2 gatekeepers.
-Normally, this gatekeeper runs a jobmanager process for 
+machines running the Globus Toolkit's GRAM2 gatekeeper.
+Normally, this service runs a jobmanager process for 
 every job submitted to the gatekeeper.
 This includes both currently running jobs and jobs waiting in the queue.
 Each jobmanager runs a Perl script at
@@ -34,21 +34,6 @@ and instead relies on the Grid Monitor to report changes in status.
 The jobmanager started to add the job to the remote
 batch system queue is shut down.
 The jobmanager restarts when the job begins running.
-
-By default, standard output and standard error are streamed back
-to the submitting machine while the job is running.
-Streamed I/O requires the jobmanager.
-As a result, the Grid Monitor cannot
-replace the jobmanager for jobs that use streaming.
-If possible,
-disable streaming for all jobs;
-this is accomplished by placing the
-following lines in each job's submit description file:
-
-\begin{verbatim}
-stream_output = False
-stream_error  = False
-\end{verbatim}
 
 The Grid Monitor requires that the gatekeeper support the fork
 jobmanager with the name \Prog{jobmanager-fork}.

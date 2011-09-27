@@ -1134,7 +1134,6 @@ handle_fetch_log_history_purge(ReliSock *s) {
 }
 
 
-#ifdef WIN32
 int
 handle_nop( Service*, int, Stream* stream)
 {
@@ -1144,7 +1143,6 @@ handle_nop( Service*, int, Stream* stream)
 	}
 	return TRUE;
 }
-#endif
 
 
 int
@@ -1479,12 +1477,7 @@ handle_dc_sigterm( Service*, int )
 				 "Peaceful shutdown in effect.  No timeout enforced.\n");
 	}
 	else {
-		int timeout = 30 * MINUTE;
-		char* tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
-		if( tmp ) {
-			timeout = atoi( tmp );
-			free( tmp );
-		}
+		int timeout = param_integer("SHUTDOWN_GRACEFUL_TIMEOUT", 30 * MINUTE);
 		daemonCore->Register_Timer( timeout, 0, 
 									TimerHandler_main_shutdown_fast,
 									"main_shutdown_fast" );
@@ -2304,13 +2297,13 @@ int main( int argc, char** argv )
 								  (CommandHandler)handle_set_peaceful_shutdown,
 								  "handle_set_peaceful_shutdown()", 0, ADMINISTRATOR );
 
-#ifdef WIN32
 		// DC_NOP is for waking up select.  There is no need for
 		// security here, because anyone can wake up select anyway.
+		// This command is also used to gracefully close a socket
+		// that has been registered to read a command.
 	daemonCore->Register_Command( DC_NOP, "DC_NOP",
 								  (CommandHandler)handle_nop,
 								  "handle_nop()", 0, ALLOW );
-#endif
 
 	daemonCore->Register_Command( DC_FETCH_LOG, "DC_FETCH_LOG",
 								  (CommandHandler)handle_fetch_log,

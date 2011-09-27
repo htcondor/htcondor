@@ -699,11 +699,13 @@ File System Configuration File Entries''.
 \label{param:ScheddHost}
 \item[\Macro{SCHEDD\_HOST}]
   The host name of the machine where the \Condor{schedd} is running for
-  your pool.  This is the host that queues submitted jobs.  Note that,
-  in most condor installations, there is a \Condor{schedd} running on
+  your pool.  This is the host that queues submitted jobs.
+  If the host specifies \Macro{SCHEDD\_NAME} or \Macro{MASTER\_NAME}, that
+  name must be included in the form name\verb$@$hostname.
+  In most condor installations, there is a \Condor{schedd} running on
   each host from which jobs are submitted.  The default value of
-  \Macro{SCHEDD\_HOST} is the current host.  For most pools, this
-  macro is not defined.
+  \Macro{SCHEDD\_HOST} is the current host with the optional name included.  For most pools, this
+  macro is not defined, nor does it need to be defined..
 
 \label{param:ReleaseDir}
 \item[\Macro{RELEASE\_DIR}]
@@ -1358,6 +1360,14 @@ File System Configuration File Entries''.
 \item[\Macro{CLASSAD\_USER\_LIBS}]
   A comma separated list of paths to shared libraries that contain
   additional ClassAd functions to be used during ClassAd evaluation.
+  
+\label{param:CondorFsync}
+\item[\Macro{CONDOR\_FSYNC}]
+  A boolean value that controls whether Condor calls fsync when
+  writing the user job and transaction logs.  Setting this value to false
+  will disable calls to fsync, which can help performance for schedd
+  log writes at the cost of some durability of the log contents should
+  there be a power or hardware failure.  This value is true by default.
 
 \end{description}
 
@@ -5850,6 +5860,24 @@ These settings affect the \Condor{starter}.
   a batch script (with a file extension of \File{.bat} or \File{.cmd})
   or an executable (with a file extension of \File{.exe} or \File{.com}).
 
+  When a wrapper is in use, the executable of a job submission may be
+  kept relative and resolved by the user's path by setting:
+\begin{verbatim}
+        +PreserveRelativeExecutable = True
+\end{verbatim}
+  in the job submission file.  If this is set, then the executable does
+  not need to be fully qualified, for example
+\begin{verbatim}
+        # Let this exectuable be resolved by user's path in the wrapper
+        cmd = sleep
+\end{verbatim}
+  As opposed to
+\begin{verbatim}
+        # A typical fully-qualified executable path
+        cmd = /bin/sleep
+\end{verbatim}
+
+
 \label{param:UseVisibleDesktop} 
 \item[\Macro{USE\_VISIBLE\_DESKTOP}]
   This setting is only meaningful on Windows machines.  If True, Condor will
@@ -9118,12 +9146,6 @@ virtual machine software.
 \item[\Macro{XEN\_BOOTLOADER}]
   A required full path and executable for the Xen bootloader,
   if the kernel image includes a disk image.
-
-\label{param:XenLocalSettingsFile}
-\item[\Macro{XEN\_LOCAL\_SETTINGS\_FILE}]
-  A complete path and file name. The file's contents will be included in
-  the Xen configuration file that Condor writes to run the virtual machine.
-  This parameter is optional.
 
 \end{description}
 

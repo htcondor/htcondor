@@ -137,10 +137,10 @@ This is for the convenience of Windows users.
 %% environment
 %%%%%%%%%%%%%%%%%%%
 
+\label{man-condor-submit-environment}
 \index{submit commands!environment}
 \item[environment = $<$parameter\_list$>$] List of environment
 \index{environment variables!setting, for a job}
-\label{man-condor-submit-environment}
 variables.
 
 There are two different formats for specifying the environment
@@ -220,7 +220,7 @@ three="quotes have no 'special' meaning"
 
 If the environment is set with the \Opt{environment} command \emph{and}
 \Opt{getenv} is also set to true, values specified with
-\Opt{environment} override values in the submittor's environment
+\Opt{environment} override values in the submitter's environment
 (regardless of the order of the \Opt{environment} and \Opt{getenv}
 commands).
 
@@ -281,6 +281,7 @@ argument must be a compiled \File{.class} file.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!getenv}
+\label{man-condor-submit-getenv}
 \item[getenv = $<$True \Bar\ False$>$] If \SubmitCmd{getenv} is set to
 \index{environment variables!copying current environment}
 \Expr{True}, then \Condor{submit} will copy all of the user's current
@@ -295,7 +296,7 @@ variables that the user had at submit time. Defaults to \Expr{False}.
 
 If the environment is set with the \Opt{environment} command \emph{and}
 \Opt{getenv} is also set to true, values specified with
-\Opt{environment} override values in the submittor's environment
+\Opt{environment} override values in the submitter's environment
 (regardless of the order of the \Opt{environment} and \Opt{getenv}
 commands).
 
@@ -2182,15 +2183,6 @@ the value of \SubmitCmd{kill\_sig} is used.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
-%% kvm_transfer_files
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!kvm\_transfer\_files}
-\item[kvm\_transfer\_files = $<$list-of-files$>$]
-A comma separated list of all files that Condor is to transfer
-to the execute machine.
-
-%%%%%%%%%%%%%%%%%%%
 %% vm_disk
 %%%%%%%%%%%%%%%%%%%
 
@@ -2366,15 +2358,6 @@ to specify the root device. This string is required when
 \SubmitCmd{xen\_kernel} gives a path to a kernel.  Omission 
 for this required case results in an error message during 
 submission.
-
-%%%%%%%%%%%%%%%%%%%
-%% xen_transfer_files
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!xen\_transfer\_files}
-\item[xen\_transfer\_files = $<$list-of-files$>$]
-A comma separated list of all files that Condor is to transfer
-to the execute machine.
 
 \end{description} 
 
@@ -3087,7 +3070,7 @@ The syntax used is
 $ENV(variable)
 \end{verbatim}
 An example submit description file command that uses this functionality
-evaluates the submittor's home directory in order to set the
+evaluates the submitter's home directory in order to set the
 path and file name of a log file:
 \begin{verbatim} 
 log = $ENV(HOME)/jobs/logfile

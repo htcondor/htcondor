@@ -22,6 +22,7 @@
 #include "self_monitor.h"
 #include "condor_daemon_core.h"
 #include "classad_helpers.h" // for cleanStringForUseAsAttr
+#include "condor_config.h"   // for param
 #include "../condor_procapi/procapi.h"
 #undef min
 #undef max
@@ -30,7 +31,7 @@
 static void self_monitor()
 {
     daemonCore->monitor_data.CollectData();
-    daemonCore->dc_stats.Tick();
+    daemonCore->dc_stats.Tick(daemonCore->monitor_data.last_sample_time);
     daemonCore->dc_stats.DebugOuts += dprintf_getCount();
 }
 
@@ -134,9 +135,27 @@ bool SelfMonitorData::ExportData(ClassAd *ad)
 
 
 // the windowed schedd statistics are quantized to the nearest N seconds
-// WINDOWED_STAT_WIDTH/schedd_stats_window_quantum is the number of slots
+// STATISTICS_WINDOW_SECONDS/schedd_stats_window_quantum is the number of slots
 // in the window ring_buffer.
-const int dc_stats_window_quantum = 4*60; // 4min quantum
+const int dc_stats_window_quantum = 4*60; // == 240 4min quantum, same as SelfMonitor
+
+void DaemonCore::Stats::Reconfig()
+{
+    int window = param_integer("DCSTATISTICS_WINDOW_SECONDS", -1, -1, INT_MAX);
+    if (window < 0)
+       window = param_integer("STATISTICS_WINDOW_SECONDS", 1200, 1, INT_MAX);
+
+    int quantum = dc_stats_window_quantum;
+    this->RecentWindowMax = (window + quantum - 1) / quantum * quantum;
+
+    this->PublishFlags    = 0 | IF_RECENTPUB;
+    char * tmp = param("STATISTICS_TO_PUBLISH");
+    if (tmp) {
+       this->PublishFlags = generic_stats_ParseConfigString(tmp, "DC", "DAEMONCORE", this->PublishFlags);
+       free(tmp);
+    }
+    SetWindowSize(this->RecentWindowMax);
+}
 
 void DaemonCore::Stats::SetWindowSize(int window)
 {
@@ -154,40 +173,41 @@ void DaemonCore::Stats::Init()
 { 
    Clear();
    this->RecentWindowMax = dc_stats_window_quantum; 
+   this->PublishFlags    = -1;
 
    // insert static items into the stats pool so we can use the pool 
    // to Advance and Clear.  these items also publish the overall value
    // and the Recent value
    //
-   DC_STATS_ADD_RECENT(Pool, SelectWaittime,  0);
-   DC_STATS_ADD_RECENT(Pool, SignalRuntime,   0);
-   DC_STATS_ADD_RECENT(Pool, TimerRuntime,    0);
-   DC_STATS_ADD_RECENT(Pool, SocketRuntime,   0);
-   DC_STATS_ADD_RECENT(Pool, PipeRuntime,     0);
-   DC_STATS_ADD_RECENT(Pool, Signals,       0);
-   DC_STATS_ADD_RECENT(Pool, TimersFired,   0);
-   DC_STATS_ADD_RECENT(Pool, SockMessages,  0);
-   DC_STATS_ADD_RECENT(Pool, PipeMessages,  0);
-   //DC_STATS_ADD_RECENT(Pool, SockBytes,     0);
-   //DC_STATS_ADD_RECENT(Pool, PipeBytes,     0);
-   DC_STATS_ADD_RECENT(Pool, DebugOuts,     0);
+   DC_STATS_ADD_RECENT(Pool, SelectWaittime,  IF_BASICPUB);
+   DC_STATS_ADD_RECENT(Pool, SignalRuntime,   IF_BASICPUB);
+   DC_STATS_ADD_RECENT(Pool, TimerRuntime,    IF_BASICPUB);
+   DC_STATS_ADD_RECENT(Pool, SocketRuntime,   IF_BASICPUB);
+   DC_STATS_ADD_RECENT(Pool, PipeRuntime,     IF_BASICPUB);
+   DC_STATS_ADD_RECENT(Pool, Signals,       IF_BASICPUB);
+   DC_STATS_ADD_RECENT(Pool, TimersFired,   IF_BASICPUB);
+   DC_STATS_ADD_RECENT(Pool, SockMessages,  IF_BASICPUB);
+   DC_STATS_ADD_RECENT(Pool, PipeMessages,  IF_BASICPUB);
+   //DC_STATS_ADD_RECENT(Pool, SockBytes,     IF_BASICPUB);
+   //DC_STATS_ADD_RECENT(Pool, PipeBytes,     IF_BASICPUB);
+   DC_STATS_ADD_RECENT(Pool, DebugOuts,     IF_VERBOSEPUB);
+   DC_STATS_ADD_RECENT(Pool, PumpCycle,     IF_VERBOSEPUB);
 
    // Insert additional publish entries for the XXXDebug values
    //
-#if 1 //def DEBUG
-   DC_STATS_PUB_DEBUG(Pool, SelectWaittime,  0);
-   DC_STATS_PUB_DEBUG(Pool, SignalRuntime,   0);
-   DC_STATS_PUB_DEBUG(Pool, TimerRuntime,    0);
-   DC_STATS_PUB_DEBUG(Pool, SocketRuntime,   0);
-   DC_STATS_PUB_DEBUG(Pool, PipeRuntime,     0);
-   DC_STATS_PUB_DEBUG(Pool, Signals,       0);
-   DC_STATS_PUB_DEBUG(Pool, TimersFired,   0);
-   DC_STATS_PUB_DEBUG(Pool, SockMessages,  0);
-   DC_STATS_PUB_DEBUG(Pool, PipeMessages,  0);
-   //DC_STATS_PUB_DEBUG(Pool, SockBytes,     0);
-   //DC_STATS_PUB_DEBUG(Pool, PipeBytes,     0);
-   DC_STATS_PUB_DEBUG(Pool, DebugOuts,     0);
-#endif
+   DC_STATS_PUB_DEBUG(Pool, SelectWaittime,  IF_BASICPUB);
+   DC_STATS_PUB_DEBUG(Pool, SignalRuntime,   IF_BASICPUB);
+   DC_STATS_PUB_DEBUG(Pool, TimerRuntime,    IF_BASICPUB);
+   DC_STATS_PUB_DEBUG(Pool, SocketRuntime,   IF_BASICPUB);
+   DC_STATS_PUB_DEBUG(Pool, PipeRuntime,     IF_BASICPUB);
+   DC_STATS_PUB_DEBUG(Pool, Signals,       IF_BASICPUB);
+   DC_STATS_PUB_DEBUG(Pool, TimersFired,   IF_BASICPUB);
+   DC_STATS_PUB_DEBUG(Pool, SockMessages,  IF_BASICPUB);
+   DC_STATS_PUB_DEBUG(Pool, PipeMessages,  IF_BASICPUB);
+   //DC_STATS_PUB_DEBUG(Pool, SockBytes,     IF_BASICPUB);
+   //DC_STATS_PUB_DEBUG(Pool, PipeBytes,     IF_BASICPUB);
+   DC_STATS_PUB_DEBUG(Pool, DebugOuts,     IF_VERBOSEPUB);
+   DC_STATS_PUB_DEBUG(Pool, PumpCycle,     IF_VERBOSEPUB);
 }
 
 void DaemonCore::Stats::Clear()
@@ -202,12 +222,46 @@ void DaemonCore::Stats::Clear()
 
 void DaemonCore::Stats::Publish(ClassAd & ad) const
 {
-   ad.Assign("DCStatsLifetime", (int)StatsLifetime);
-   ad.Assign("DCStatsLastUpdateTime", (int)StatsLastUpdateTime);
-   ad.Assign("DCRecentStatsLifetime", (int)RecentStatsLifetime);
-   ad.Assign("DCRecentStatsTickTime", (int)RecentStatsTickTime);
-   ad.Assign("DCRecentWindowMax", (int)RecentWindowMax);
-   Pool.Publish(ad);
+   this->Publish(ad, this->PublishFlags);
+}
+
+void DaemonCore::Stats::Publish(ClassAd & ad, const char * config) const
+{
+   int flags = this->PublishFlags;
+   if (config && config[0]) {
+      flags = generic_stats_ParseConfigString(config, "DC", "DAEMONCORE", 0 | IF_RECENTPUB);
+   }
+   this->Publish(ad, flags);
+}
+
+void DaemonCore::Stats::Publish(ClassAd & ad, int flags) const
+{
+   if ((flags & IF_PUBLEVEL) > 0) {
+      ad.Assign("DCStatsLifetime", (int)StatsLifetime);
+      if (flags & IF_VERBOSEPUB)
+         ad.Assign("DCStatsLastUpdateTime", (int)StatsLastUpdateTime);
+
+      if (flags & IF_RECENTPUB) {
+         ad.Assign("DCRecentStatsLifetime", (int)RecentStatsLifetime);
+         if (flags & IF_VERBOSEPUB) {
+            ad.Assign("DCRecentStatsTickTime", (int)RecentStatsTickTime);
+            ad.Assign("DCRecentWindowMax", (int)RecentWindowMax);
+         }
+      }
+   }
+   double dDutyCycle = 0.0;
+   if (this->PumpCycle.value.Count) {
+      if (this->PumpCycle.value.Sum > 1e-9)
+         dDutyCycle = 1.0 - (this->SelectWaittime.value / this->PumpCycle.value.Sum);
+   }
+   ad.Assign("DaemonCoreDutyCycle", dDutyCycle);
+   dDutyCycle = 0.0;
+   if (this->PumpCycle.recent.Count) {
+      dDutyCycle = 1.0 - (this->SelectWaittime.recent / this->PumpCycle.recent.Sum);
+   }
+   ad.Assign("RecentDaemonCoreDutyCycle", dDutyCycle);
+
+   Pool.Publish(ad, flags);
 }
 
 void DaemonCore::Stats::Unpublish(ClassAd & ad) const
@@ -217,12 +271,17 @@ void DaemonCore::Stats::Unpublish(ClassAd & ad) const
    ad.Delete("DCRecentStatsLifetime");
    ad.Delete("DCRecentStatsTickTime");
    ad.Delete("DCRecentWindowMax");
+   ad.Delete("DaemonCoreDutyCycle");
+   ad.Delete("RecentDaemonCoreDutyCycle");
    Pool.Unpublish(ad);
 }
 
-void DaemonCore::Stats::Tick()
+time_t DaemonCore::Stats::Tick(time_t now)
 {
+   if ( ! now) now = time(NULL);
+
    int cAdvance = generic_stats_Tick(
+      now,
       this->RecentWindowMax,   // RecentMaxTime
       dc_stats_window_quantum, // RecentQuantum
       this->InitTime,
@@ -233,6 +292,8 @@ void DaemonCore::Stats::Tick()
 
    if (cAdvance)
       Pool.Advance(cAdvance);
+
+   return now;
 }
 
 
@@ -271,7 +332,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
       case AS_COUNT | IS_RECENT:
          {
          stats_entry_recent<int> * probe = 
-         Pool.NewProbe< stats_entry_recent<int> >(name,  attr.Value(), 0);
+         Pool.NewProbe< stats_entry_recent<int> >(name,  attr.Value(), as);
          probe->SetRecentMax(this->RecentWindowMax / dc_stats_window_quantum);
          ret = probe;
          }
@@ -281,7 +342,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
       case AS_RELTIME | IS_RECENT:
          {
          stats_entry_recent<time_t> * probe =
-         Pool.NewProbe< stats_entry_recent<time_t> >(name,  attr.Value(), 0);
+         Pool.NewProbe< stats_entry_recent<time_t> >(name,  attr.Value(), as);
          probe->SetRecentMax(this->RecentWindowMax / dc_stats_window_quantum);
          ret = probe;
          }
@@ -291,7 +352,7 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
       case AS_RELTIME | IS_RCT:
          {
          stats_recent_counter_timer * probe = 
-         Pool.NewProbe<stats_recent_counter_timer>(name, attr.Value());
+         Pool.NewProbe<stats_recent_counter_timer>(name, attr.Value(), as);
         #if 0 // def DEBUG
          attr += "Debug";
          Pool.AddPublish(attr.Value(), probe, NULL, 0, 

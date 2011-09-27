@@ -269,15 +269,7 @@ VMUniverseMgr::init( void )
 	vmgahppath = tmp;
 	free(tmp);
 
-	m_vm_max_num = 0;
-	tmp = param( "VM_MAX_NUMBER");
-	if( tmp ) {
-		int vmax = (int)strtol(tmp, (char **)NULL, 10);
-		if( vmax > 0 ) {
-			m_vm_max_num = vmax;
-		}
-		free(tmp);
-	}
+	m_vm_max_num = param_integer("VM_MAX_NUMBER", 0, 0);
 
 	// now, we've got a path to a vmgahp server.  
 	// try to test it with given vmtype 

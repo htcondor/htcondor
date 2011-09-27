@@ -16,8 +16,6 @@
  # 
  ############################################################### 
 
-set(BENCH_LINK_LIBS "${TOOL_LINK_LIBS}")
-
 file( GLOB SysApiRmvElements *_t.cpp *.t.* dhry21b* *_main.cpp )
 
 condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
@@ -27,5 +25,5 @@ condor_static_lib(sysapi "${SysapiHeaderFiles};${SysapiSourceFiles}")
 
 # there was a test target which was never used.
 # it makes the most sense to hook in a UT here instead of integ test
-condor_exe(condor_kflops "kflops_main.cpp" ${C_LIBEXEC} "sysapi;condorapi;${BENCH_LINK_LIBS}" OFF)
-condor_exe(condor_mips "mips_main.cpp" ${C_LIBEXEC} "sysapi;condorapi;${BENCH_LINK_LIBS}" OFF)
+condor_exe(condor_kflops "kflops_main.cpp" ${C_LIBEXEC} "sysapi;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}" OFF)
+condor_exe(condor_mips "mips_main.cpp" ${C_LIBEXEC} "sysapi;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}" OFF)

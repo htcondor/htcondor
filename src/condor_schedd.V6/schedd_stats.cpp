@@ -21,6 +21,20 @@
 #include "condor_common.h"
 #include "scheduler.h"
 #include "schedd_stats.h"
+#include "condor_config.h"
+
+void ScheddStatistics::Reconfig()
+{
+    this->RecentWindowMax = param_integer("STATISTICS_WINDOW_SECONDS", 1200, 
+                                          schedd_stats_window_quantum, INT_MAX);
+    this->PublishFlags    = IF_BASICPUB | IF_RECENTPUB;
+    char * tmp = param("STATISTICS_TO_PUBLISH");
+    if (tmp) {
+       this->PublishFlags = generic_stats_ParseConfigString(tmp, "SCHEDD", "SCHEDULER", this->PublishFlags);
+       free(tmp);
+    }
+    SetWindowSize(this->RecentWindowMax);
+}
 
 void ScheddStatistics::SetWindowSize(int window)
 {
@@ -32,46 +46,63 @@ void ScheddStatistics::SetWindowSize(int window)
 #define SCHEDD_STATS_ADD_RECENT(pool,name,as)  STATS_POOL_ADD_VAL_PUB_RECENT(pool, "", name, as) 
 #define SCHEDD_STATS_ADD_VAL(pool,name,as)     STATS_POOL_ADD_VAL(pool, "", name, as) 
 #define SCHEDD_STATS_PUB_PEAK(pool,name,as)    STATS_POOL_PUB_PEAK(pool, "", name, as) 
+#define SCHEDD_STATS_PUB_DEBUG(pool,name,as)   STATS_POOL_PUB_DEBUG(pool, "", name, as) 
 
 // 
 // 
 void ScheddStatistics::Init() 
 { 
+   static const int64_t sizes[] = {
+      (int64_t)0x10000 * 0x1,        (int64_t)0x10000 * 0x4,      // 64Kb, 256Kb
+      (int64_t)0x10000 * 0x10,       (int64_t)0x10000 * 0x40,     //  1Mb,   4Mb
+      (int64_t)0x10000 * 0x100,      (int64_t)0x10000 * 0x400,    // 16Mb,  64Mb
+      (int64_t)0x10000 * 0x1000,     (int64_t)0x10000 * 0x4000,   //256Mb,   1Gb  
+      (int64_t)0x10000 * 0x10000,    (int64_t)0x10000 * 0x40000,  //  4Gb,  16Gb
+      (int64_t)0x10000 * 0x100000,   (int64_t)0x10000 * 0x400000, // 64Gb, 256Gb
+      };
+   //JobSizes.value.set_levels(COUNTOF(sizes), sizes);
+   //JobSizes.recent.set_levels(COUNTOF(sizes), sizes);
+
    Clear();
    // default window size to 1 quantum, we may set it to something else later.
    this->RecentWindowMax = schedd_stats_window_quantum;
 
    // insert static items into the stats pool so we can use the pool 
    // to Advance and Clear.  these items also publish the overall value
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted, 0);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsStarted,          0);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsExited,           0);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsCompleted,        0);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, 0);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumRunningTime, 0);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsStarted,          IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsExited,           IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCompleted,        IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumRunningTime, IF_BASICPUB);
 
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedNormally,        0);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsKilled,                0);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitException,         0);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsExecFailed,            0);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsCheckpointed,          0 /*| IF_NONZERO*/);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsShadowNoMemory,        0 /*| IF_NONZERO*/);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldRequeue,         0 /*| IF_NONZERO*/);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsNotStarted,            0 /*| IF_NONZERO*/);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldHold,            0 /*| IF_NONZERO*/);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldRemove,          0 /*| IF_NONZERO*/);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsCoredumped,            0 /*| IF_NONZERO*/);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsMissedDeferralTime,    0 /*| IF_NONZERO*/);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedAndClaimClosing, 0 /*| IF_NONZERO*/);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsDebugLogError,         0 /*| IF_NONZERO*/);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedNormally,        IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsKilled,                IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitException,         IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsExecFailed,            IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCheckpointed,          IF_BASICPUB | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsShadowNoMemory,        IF_BASICPUB | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldRequeue,         IF_BASICPUB | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsNotStarted,            IF_BASICPUB | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldHold,            IF_BASICPUB | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldRemove,          IF_BASICPUB | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCoredumped,            IF_BASICPUB | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsMissedDeferralTime,    IF_BASICPUB | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedAndClaimClosing, IF_BASICPUB | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsDebugLogError,         IF_BASICPUB | IF_NONZERO);
 
-   SCHEDD_STATS_ADD_RECENT(Pool, ShadowsStarted,            0);
-   SCHEDD_STATS_ADD_RECENT(Pool, ShadowsRecycled,           0);
-   //SCHEDD_STATS_ADD_RECENT(Pool, ShadowExceptions,          0);
-   SCHEDD_STATS_ADD_RECENT(Pool, ShadowsReconnections,      0);
+   SCHEDD_STATS_ADD_RECENT(Pool, ShadowsStarted,            IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, ShadowsRecycled,           IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, ShadowsReconnections,      IF_VERBOSEPUB);
 
-   SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               0);
-   SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              0);
+   //SCHEDD_STATS_ADD_RECENT(Pool, JobSizes,                  IF_BASICPUB);
+
+   SCHEDD_STATS_ADD_VAL(Pool, ShadowsRunning,               IF_BASICPUB);
+   SCHEDD_STATS_PUB_PEAK(Pool, ShadowsRunning,              IF_BASICPUB);
+
+   SCHEDD_STATS_PUB_DEBUG(Pool, JobsSubmitted,  IF_BASICPUB);
+   SCHEDD_STATS_PUB_DEBUG(Pool, JobsStarted,  IF_BASICPUB);
+
 }
 
 void ScheddStatistics::Clear()
@@ -90,9 +121,12 @@ void ScheddStatistics::Clear()
 // buffers so that we throw away the oldest value and begin accumulating the latest
 // value in a new slot. 
 //
-void ScheddStatistics::Tick()
+time_t ScheddStatistics::Tick(time_t now)
 {
+   if ( ! now) now = time(NULL);
+
    int cAdvance = generic_stats_Tick(
+      now,
       this->RecentWindowMax,   // RecentMaxTime
       schedd_stats_window_quantum, // RecentQuantum
       this->InitTime,
@@ -103,16 +137,39 @@ void ScheddStatistics::Tick()
 
    if (cAdvance)
       Pool.Advance(cAdvance);
+
+   return now;
 }
 
 void ScheddStatistics::Publish(ClassAd & ad) const
 {
-   ad.Assign("StatsLifetime", (int)StatsLifetime);
-   ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
-   ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
-   ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
-   ad.Assign("RecentWindowMax", (int)RecentWindowMax);
-   Pool.Publish(ad);
+   this->Publish(ad, this->PublishFlags);
+}
+
+void ScheddStatistics::Publish(ClassAd & ad, const char * config) const
+{
+   int flags = this->PublishFlags;
+   if (config && config[0]) {
+      flags = generic_stats_ParseConfigString(config, "SCHEDD", "SCHEDULER", IF_BASICPUB | IF_RECENTPUB);
+   }
+   this->Publish(ad, flags);
+}
+
+void ScheddStatistics::Publish(ClassAd & ad, int flags) const
+{
+   if ((flags & IF_PUBLEVEL) > 0) {
+      ad.Assign("StatsLifetime", (int)StatsLifetime);
+      if (flags & IF_VERBOSEPUB)
+         ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
+      if (flags & IF_RECENTPUB) {
+         ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
+         if (flags & IF_VERBOSEPUB) {
+            ad.Assign("RecentWindowMax", (int)RecentWindowMax);
+            ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
+         }
+      }
+   }
+   Pool.Publish(ad, flags);
 }
 
 void ScheddStatistics::Unpublish(ClassAd & ad) const
@@ -125,18 +182,20 @@ void ScheddStatistics::Unpublish(ClassAd & ad) const
    Pool.Unpublish(ad);
 }
 
+//#define UNIT_TEST
 #ifdef UNIT_TEST
 void schedd_stats_unit_test (ClassAd * pad)
 {
    ScheddStatistics stats;
    stats.Init();
 
-   int stat_window = 300; //param_integer("WINDOWED_STAT_WIDTH", 300, 1, INT_MAX);
+   int stat_window = 300; //param_integer("STATISTICS_WINDOW_SECONDS", 1200, 1, INT_MAX);
    stats.SetWindowSize(stat_window);
 
    stats.Tick();
    stats.JobsStarted += 1;
    stats.JobsCompleted += 1;
+   stats.JobSizes += 99;
 
    stats.ShadowsRunning = 32;
 

@@ -39,13 +39,13 @@ function get_hosts($dash, $runids) {
   return $hosts;
 }
 
-function get_queue_for_nmi_platform($platform, $type) {
+function get_queue_for_nmi_platform($platform, $type, $dash) {
   // For the purposes of this script crosstype => type
   if($type == "crosstest") $type = "test";
 
   $platform_without_prefix = preg_replace("/nmi:/", "", $platform);
   
-  $condorq = new CondorQ($type);
+  $condorq = new CondorQ($type, $dash->condor_status());
   $condorq->add_platform($platform_without_prefix);
   $per_platform_queues = $condorq->condor_q();
   

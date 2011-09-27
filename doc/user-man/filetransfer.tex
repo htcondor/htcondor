@@ -831,7 +831,7 @@ the clause \verb@(HasFileTransfer)@.
 \verb@should_transfer_files = NO@ results in the addition of
   \verb@(TARGET.FileSystemDomain == MY.FileSystemDomain)@.
   In addition, Condor automatically adds the
-  \Attr{FileSystemDomain} attribute to the job ad, with whatever
+  \Attr{FileSystemDomain} attribute to the job ClassAd, with whatever
   string is defined for the \Condor{schedd} to which the job is
   submitted.
   If the job is not using the file transfer mechanism, Condor assumes
@@ -862,12 +862,12 @@ enough available disk space to hold all these files:
   && (Disk >= DiskUsage)
 \end{verbatim}
 
+\index{submit commands!rank}
 If \verb@should_transfer_files = IF_NEEDED@ and the job prefers
 to run on a machine in the local file system domain
 over transferring files,
-(but are still willing to allow the job to run remotely and transfer
-\index{submit commands!rank}
-files), the \Attr{rank} expression works well.  Use:
+but is still willing to allow the job to run remotely and transfer files,
+the \Attr{Rank} expression works well.  Use:
 
 \footnotesize
 \begin{verbatim}
@@ -875,26 +875,26 @@ rank = (TARGET.FileSystemDomain == MY.FileSystemDomain)
 \end{verbatim}
 \normalsize
 
-The \Attr{rank} expression is a floating point number, so if 
-other items are considered in ranking the possible machines this job
+The \Attr{Rank} expression is a floating point value,
+so if other items are considered in ranking the possible machines this job
 may run on, add the items:
 
 \footnotesize
 \begin{verbatim}
-rank = kflops + (TARGET.FileSystemDomain == MY.FileSystemDomain)
+Rank = kflops + (TARGET.FileSystemDomain == MY.FileSystemDomain)
 \end{verbatim}
 \normalsize
 
 The value of \Attr{kflops} can vary widely among machines,
-so this \Attr{rank} expression will likely not do as it intends.
-To place emphasis on the job running in the same file
-system domain,
-but still consider kflops among the machines in the file system domain,
-weight the part of the rank expression that is matching the file system domains.
+so this \Attr{Rank} expression will likely not do as it intends.
+To place emphasis on the job running in the same file system domain,
+but still consider floating point speed among the machines 
+in the file system domain,
+weight the part of the expression that is matching the file system domains.
 For example: 
 
 \footnotesize
 \begin{verbatim}
-rank = kflops + (10000 * (TARGET.FileSystemDomain == MY.FileSystemDomain))
+Rank = kflops + (10000 * (TARGET.FileSystemDomain == MY.FileSystemDomain))
 \end{verbatim}
 \normalsize

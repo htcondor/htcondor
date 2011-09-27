@@ -5,5 +5,4 @@ output       = job_dagman_splice-N-subdir2/b/$(job).out
 error        = job_dagman_splice-N-subdir2/b/$(job).err
 log          = job_dagman_splice-N-subdir2/b/b_submit.log
 Notification = NEVER
-should_transfer_files = NO
 queue

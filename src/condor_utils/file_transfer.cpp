@@ -45,6 +45,9 @@
 #include "my_popen.h"
 #include <list>
 
+const char * const StdoutRemapName = "_condor_stdout";
+const char * const StderrRemapName = "_condor_stderr";
+
 #define COMMIT_FILENAME ".ccommit.con"
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
@@ -448,12 +451,12 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	int streaming = 0;
 	JobStdoutFile = "";
 	if(Ad->LookupString(ATTR_JOB_OUTPUT, buf) == 1 ) {
+		JobStdoutFile = buf;
 		Ad->LookupBool( ATTR_STREAM_OUTPUT, streaming );
 		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
 				// not streaming it, add it to our list if we're not
 				// just going to transfer anything that was changed.
 				// only add to list if not NULL_FILE (i.e. /dev/null)
-			JobStdoutFile = buf;
 			if( OutputFiles ) {
 				if( !OutputFiles->file_contains(buf) ) {
 					OutputFiles->append( buf );
@@ -468,12 +471,12 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	streaming = 0;
 	JobStderrFile = "";
 	if( Ad->LookupString(ATTR_JOB_ERROR, buf) == 1 ) {
+		JobStderrFile = buf;
 		Ad->LookupBool( ATTR_STREAM_ERROR, streaming );
 		if( ! streaming && ! upload_changed_files && ! nullFile(buf) ) {
 				// not streaming it, add it to our list if we're not
 				// just going to transfer anything that was changed.
 				// only add to list if not NULL_FILE (i.e. /dev/null)
-			JobStderrFile = buf;
 			if( OutputFiles ) {
 				if( !OutputFiles->file_contains(buf) ) {
 					OutputFiles->append( buf );
@@ -596,28 +599,6 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 		remap_fname = NULL;
 	}
 
-	// NOTE: We only pay attention to _ORIG values here for backwards
-	// compatibility with jobs that were submitted by versions of
-	// Condor submit prior to ATTR_TRANSFER_OUTPUT_REMAPS (pre 6.7.14).
-
-	if (Ad->LookupString(ATTR_JOB_OUTPUT_ORIG,&remap_fname)) {
-		char *output_fname = NULL;
-		if (Ad->LookupString(ATTR_JOB_OUTPUT,&output_fname)) {
-			AddDownloadFilenameRemap(output_fname,remap_fname);
-			free(output_fname);
-		}
-		free(remap_fname);
-		remap_fname = NULL;
-	}
-	if (Ad->LookupString(ATTR_JOB_ERROR_ORIG,&remap_fname)) {
-		char *error_fname = NULL;
-		if (Ad->LookupString(ATTR_JOB_ERROR,&error_fname)) {
-			AddDownloadFilenameRemap(error_fname,remap_fname);
-			free(error_fname);
-		}
-		free(remap_fname);
-		remap_fname = NULL;
-	}
 	if(!download_filename_remaps.IsEmpty()) {
 		dprintf(D_FULLDEBUG, "FileTransfer: output file remaps: %s\n",download_filename_remaps.Value());
 	}

@@ -23,6 +23,7 @@
 #include "timed_queue.h"
 #include "generic_stats.h"
 #include "classad_helpers.h" // for canStringForUseAsAttr
+#include "string_list.h"     // for StringList
 
 // use these to help initialize static const arrays arrays of 
 //
@@ -114,6 +115,7 @@ void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, 
 // between calls to this function.  
 //
 int generic_stats_Tick(
+   time_t now, // now==0 means call time(NULL) yourself
    int    RecentMaxTime,
    int    RecentQuantum,
    time_t InitTime,
@@ -122,7 +124,7 @@ int generic_stats_Tick(
    time_t & Lifetime,
    time_t & RecentLifetime)
 {
-   time_t now = time(NULL);
+   if ( ! now) now = time(NULL);
 
    // when working from freshly initialized stats, the first Tick should not Advance.
    //
@@ -160,10 +162,128 @@ int generic_stats_Tick(
    return cTicks;
 }
 
+// parse a configuration string in the form "ALL:opt, CAT:opt, ALT:opt"
+// where opt can be one or more of 
+//   0-3   verbosity level, 0 is least and 3 is most. default is usually 1
+//   NONE  disable all 
+//   ALL   enable all
+//   R     enable Recent (default)
+//   !R    disable Recent
+//   D     enable Debug
+//   !D    disable Debug (default)
+//   Z     don't publish values markerd IF_NONZERO when their value is 0
+//   !Z    ignore IF_NONZERO publishing flag 
+// 
+// return value is the PublishFlags that should be passed in to StatisticsPool::Publish
+// for this category.
+//
+int generic_stats_ParseConfigString(
+   const char * config, // name of the string parameter to read from the config file
+   const char * pool_name, // name of the stats pool/category of stats to look for 
+   const char * pool_alt,  // alternate name of the category to look for
+   int          flags_def)  // default value for publish flags for this pool
+{
+    // special case, if there is no string, or the string is just "default", then
+    // return the default flags
+    if ( ! config || MATCH == strcasecmp(config,"DEFAULT"))
+       return flags_def;
+
+    // special case, if the string is empty, or the string is just "none", then
+    // return 0 (disable all)
+    if ( ! config[0] || MATCH == strcasecmp(config,"NONE"))
+       return 0;
+
+    // tokenize the list on , or space
+    StringList items;
+    items.initializeFromString(config);
+
+    // if the config string is non-trivial, then it must contain either our pool_name
+    // or pool_alt or "DEFAULT" or "ALL" or we do not publish this pool.
+    int PublishFlags = 0;
+
+    // walk the list, looking for items that match our pool name or the keyword DEFAULT or ALL
+    // 
+    items.rewind();
+    while (const char * p = items.next()) {
+
+       int flags = PublishFlags;
+       const char * psep = strchr(p,':');
+       if (psep) {
+          size_t cch = psep - p;
+          char sz[64];
+          if (cch > COUNTOF(sz)) 
+             continue;
+          strncpy(sz, p, cch);
+          sz[cch] = 0;
+          if (strcasecmp(sz,pool_name) && strcasecmp(sz,pool_alt) && strcasecmp(sz,"DEFAULT") && strcasecmp(sz,"ALL"))
+             continue;
+       } else {
+          if (strcasecmp(p,pool_name) && strcasecmp(p,pool_alt) && strcasecmp(p,"DEFAULT") && strcasecmp(p,"ALL"))
+             continue;
+       }
+
+       // if we get to here, we found our pool name or "DEFAULT" or "ALL"
+       // so we begin with our default flags
+       flags = flags_def;
+
+       // if there are any options, then parse them and modify the flags
+       if (psep) {
+          const char * popt = psep+1;
+          if (MATCH == strcasecmp(popt,"NONE")) {
+             flags = 0;
+          } else {
+             bool bang = false;
+             const char * parse_error = NULL;
+             while (popt[0]) {
+                char ch = popt[0];
+                if (ch >= '0' && ch <= '3') {
+                   int level = (atoi(popt) * IF_BASICPUB) & IF_PUBLEVEL;
+                   flags = (flags & ~IF_PUBLEVEL) | level;
+                } else if (ch == '!') {
+                   bang = true;
+                } else if (ch == 'd' || ch == 'D') {
+                   flags = bang ? (flags & ~IF_DEBUGPUB) : (flags | IF_DEBUGPUB);
+                } else if (ch == 'r' || ch == 'R') {
+                   flags = bang ? (flags & ~IF_RECENTPUB) : (flags | IF_RECENTPUB);
+                } else if (ch == 'z' || ch == 'Z') {
+                   flags = bang ? (flags & ~IF_NONZERO) : (flags | IF_NONZERO);
+                } else if (ch == 'l' || ch == 'L') {
+                   flags = bang ? (flags | IF_NOLIFETIME) : (flags & ~IF_NOLIFETIME);
+                } else {
+                   if ( ! parse_error) parse_error = popt;
+                }
+                ++popt;
+             }
+
+             if (parse_error) {
+                dprintf(D_ALWAYS, "Option '%s' invalid in '%s' when parsing statistics to publish. effect is %08X\n",
+                        parse_error, p, flags);
+             }
+          }
+       }
+
+       PublishFlags = flags;
+       dprintf(D_FULLDEBUG, "'%s' gives flags %08X for %s statistics\n", p, PublishFlags, pool_name);
+    }
+
+    return PublishFlags;
+}
+
 //----------------------------------------------------------------------------------------------
 //
 void stats_recent_counter_timer::Delete(stats_recent_counter_timer * probe) {
    delete probe;
+}
+
+void stats_recent_counter_timer::Unpublish(ClassAd & ad, const char * pattr) const
+{
+   ad.Delete(pattr);
+   MyString attr;
+   attr.sprintf("Recent%s",pattr);
+   ad.Delete(attr.Value());
+   attr.sprintf("Recent%sRuntime",pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6); // +6 to skip "Recent" prefix
 }
 
 void stats_recent_counter_timer::Publish(ClassAd & ad, const char * pattr, int flags) const
@@ -274,27 +394,163 @@ template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots) {
    recent = buf.Sum();
 }
 
-template <> int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe) {
+template <> void stats_entry_recent< stats_histogram<int64_t> >::AdvanceBy(int cSlots)
+{
+   if (cSlots <= 0) 
+      return;
+   while (cSlots > 0) { buf.Advance(); --cSlots; }
+   recent = buf.Sum();
+}
+
+template <> void stats_entry_recent< stats_histogram<double> >::AdvanceBy(int cSlots)
+{
+   if (cSlots <= 0) 
+      return;
+   while (cSlots > 0) { buf.Advance(); --cSlots; }
+   recent = buf.Sum();
+}
+
+template <> void stats_entry_recent< stats_histogram<int> >::AdvanceBy(int cSlots)
+{
+   if (cSlots <= 0) 
+      return;
+   while (cSlots > 0) { buf.Advance(); --cSlots; }
+   recent = buf.Sum();
+}
+
+template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd& ad, const char * pattr, int flags) const
+{
+   MyString str;
+   if (this->value.cItems <= 0) {
+      str += "";
+   } else {
+      str += this->value.data[0];
+      for (int ix = 1; ix < this->value.cItems+1; ++ix) {
+         str += ", ";
+         str += this->value.data[ix];
+      }
+   }
+
+   ad.Assign(pattr, str);
+
    MyString attr(pattr);
-   ad.Assign(pattr, probe.Count);
-   attr += "Runtime";
+   attr += "Set";
+   ad.Assign(attr.Value(), "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 1Gb, 4Gb, 16Gb, 64Gb, 256Gb");
+}
+
+void ProbeToStringDebug(MyString & str, const Probe& probe)
+{
+   str.sprintf("%d M:%g m:%g S:%g s2:%g", 
+               probe.Count, probe.Max, probe.Min, probe.Sum, probe.SumSq);
+}
+
+int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe) 
+{
+   MyString attr;
+   attr.sprintf("%sCount", pattr);
+   ad.Assign(attr.Value(), probe.Count);
+
+   attr.sprintf("%sSum", pattr);
    int ret = ad.Assign(attr.Value(), probe.Sum);
+
    if (probe.Count > 0)
       {
-      int pos = attr.Length();
-      attr += "Avg";
+      attr.sprintf("%sAvg", pattr);
       ad.Assign(attr.Value(), probe.Avg());
 
-      attr.replaceString("Avg","Min",pos);
+      attr.sprintf("%sMin", pattr);
       ad.Assign(attr.Value(), probe.Min);
 
-      attr.replaceString("Min","Max",pos);
+      attr.sprintf("%sMax", pattr);
       ad.Assign(attr.Value(), probe.Max);
 
-      attr.replaceString("Max","Std",pos);
+      attr.sprintf("%sStd", pattr);
       ad.Assign(attr.Value(), probe.Std());
       }
    return ret;
+}
+
+template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * pattr) const
+{
+   MyString attr;
+   ad.Delete(pattr);
+   attr.sprintf("Recent%s", pattr);
+   ad.Delete(attr.Value());
+
+   attr.sprintf("Recent%sCount", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+   attr.sprintf("Recent%sSum", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+   attr.sprintf("Recent%sAvg", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+   attr.sprintf("Recent%sMin", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+   attr.sprintf("Recent%sMax", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+   attr.sprintf("Recent%sStd", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+}
+
+template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pattr, int flags) const
+{
+   if ( ! flags) flags = PubDefault;
+   if ((flags & IF_NONZERO) && this->value.Count == 0) return;
+
+   if ((flags & IF_PUBLEVEL) <= IF_BASICPUB) {
+      if (flags & this->PubValue)
+         ClassAdAssign(ad, pattr, this->value.Avg());
+      if (flags & this->PubRecent) {
+         if (flags & this->PubDecorateAttr)
+            ClassAdAssign2(ad, "Recent", pattr, this->recent.Avg());
+         else
+            ClassAdAssign(ad, pattr, this->recent.Avg());
+      }
+      return;
+   }
+
+   if (flags & this->PubValue)
+      ClassAdAssign(ad, pattr, this->value); 
+
+   if (flags & this->PubRecent) {
+      MyString attr(pattr);
+      if (flags & this->PubDecorateAttr) {
+         attr.sprintf("Recent%s", pattr);
+      }
+      ClassAdAssign(ad, attr.Value(), recent); 
+   }
+}
+
+template <>
+void stats_entry_recent<Probe>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const
+{
+   MyString str;
+   MyString var1;
+   MyString var2;
+   ProbeToStringDebug(var1, this->value);
+   ProbeToStringDebug(var2, this->recent);
+
+   str.sprintf_cat("(%s) (%s)", var1.Value(), var2.Value());
+   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+                   this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
+   if (this->buf.pbuf) {
+      for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
+         ProbeToStringDebug(var1, this->buf.pbuf[ix]);
+         str.sprintf_cat(!ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
+         }
+      str += "]";
+      }
+
+   MyString attr(pattr);
+   if (flags & this->PubDecorateAttr)
+      attr += "Debug";
+
+   ad.Assign(pattr, str);
 }
 
 #include "utc_time.h"
@@ -394,12 +650,13 @@ void StatisticsPool::InsertProbe (
    const char * pattr,      // publish attribute name
    int          flags,      // flags to control publishing
    FN_STATS_ENTRY_PUBLISH fnpub, // publish method
+   FN_STATS_ENTRY_UNPUBLISH fnunp, // unpublish method
    FN_STATS_ENTRY_ADVANCE fnadv, // Advance method
    FN_STATS_ENTRY_CLEAR   fnclr,  // Clear method
    FN_STATS_ENTRY_SETRECENTMAX fnsrm,
    FN_STATS_ENTRY_DELETE  fndel) // Destructor
 {
-   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub };
+   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub, fnunp };
    pub.insert(name, item);
 
    poolitem pi = { unit, fOwned, fnadv, fnclr, fnsrm, fndel };
@@ -413,9 +670,10 @@ void StatisticsPool::InsertPublish (
    bool         fOwned,     // probe and pattr string are owned by the pool
    const char * pattr,      // publish attribute name
    int          flags,      // flags to control publishing
-   FN_STATS_ENTRY_PUBLISH fnpub) // publish method
+   FN_STATS_ENTRY_PUBLISH fnpub, // publish method
+   FN_STATS_ENTRY_UNPUBLISH fnunp) // unpublish method
 {
-   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub };
+   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub, fnunp };
    pub.insert(name, item);
 }
 
@@ -487,7 +745,7 @@ void StatisticsPool::SetRecentMax(int window, int quantum)
       }
 }
 
-void StatisticsPool::Publish(ClassAd & ad) const
+void StatisticsPool::Publish(ClassAd & ad, int flags) const
 {
    pubitem item;
    MyString name;
@@ -498,9 +756,18 @@ void StatisticsPool::Publish(ClassAd & ad) const
    pthis->pub.startIterations();
    while (pthis->pub.iterate(name,item)) 
       {
+      // check various publishing flags to decide whether to call the Publish method
+      if (!(flags & IF_DEBUGPUB) && (item.flags & IF_DEBUGPUB)) continue;
+      if (!(flags & IF_RECENTPUB) && (item.flags & IF_RECENTPUB)) continue;
+      if ((flags & IF_PUBKIND) && (item.flags & IF_PUBKIND) && !(flags & item.flags & IF_PUBKIND)) continue;
+      if ((item.flags & IF_PUBLEVEL) > (flags & IF_PUBLEVEL)) continue;
+
+      // don't pass the item's IF_NONZERO flag through unless IF_NONZERO is enabled
+      int item_flags = (flags & IF_NONZERO) ? item.flags : (item.flags & ~IF_NONZERO);
+
       if (item.Publish) {
          stats_entry_base * probe = (stats_entry_base *)item.pitem;
-         (probe->*(item.Publish))(ad, item.pattr ? item.pattr : name.Value(), item.flags);
+         (probe->*(item.Publish))(ad, item.pattr ? item.pattr : name.Value(), item_flags);
          }
       }
 }
@@ -516,7 +783,14 @@ void StatisticsPool::Unpublish(ClassAd & ad) const
    pthis->pub.startIterations();
    while (pthis->pub.iterate(name,item)) 
       {
-      ad.Delete(item.pattr ? item.pattr : name.Value());
+      const char * pattr = item.pattr ? item.pattr : name.Value();
+      if (item.Unpublish) 
+         {
+         stats_entry_base * probe = (stats_entry_base *)item.pitem;
+         (probe->*(item.Unpublish))(ad, pattr);
+         }
+      else
+         ad.Delete(pattr);
       }
 }
 
@@ -530,7 +804,11 @@ void generic_stats_force_refs()
    stats_entry_recent<long>* pl = NULL;
    stats_entry_recent<int64_t>* pt = NULL;
    stats_entry_recent<double>* pd = NULL;
+   stats_entry_recent<Probe>* pp = NULL;
+   stats_entry_recent< stats_histogram<int64_t> >* ph = new stats_entry_recent< stats_histogram<int64_t> >();
    stats_recent_counter_timer* pc = NULL;
+
+   ph->value.set_levels(0, NULL);
 
    StatisticsPool dummy;
    dummy.GetProbe<stats_entry_recent<int> >("");
@@ -553,7 +831,161 @@ void generic_stats_force_refs()
    dummy.AddProbe("",pt,NULL,0);
    dummy.AddProbe("",pc,NULL,0);
    dummy.AddProbe("",pd,NULL,0);
+   dummy.AddProbe("",pp,NULL,0);
+   dummy.AddProbe("",ph,NULL,0);
 };
+
+template <class T>
+stats_histogram<T>::~stats_histogram()
+{
+		delete [] data;
+		delete [] levels;
+}
+template<class T>
+stats_histogram<T>::stats_histogram(int num,const T* ilevels) 
+   : cItems(num), data(NULL), levels(NULL)
+{
+	if(ilevels){
+		data = new int[cItems+2];
+		levels = new T[cItems];
+		for(int i=0;i<cItems;++i){
+			levels[i] = ilevels[i];
+			data[i] = 0;
+		}
+        data[cItems] = 0;
+	}
+}
+
+template<class T>
+bool stats_histogram<T>::set_levels(int num, const T* ilevels)
+{
+   // early out if the levels being set it the same as what we currently use.
+   if (num == cItems && ilevels && levels) {
+      bool match = false;
+      for (int i=0;i<cItems;++i) {
+         if (levels[i] != ilevels[i]) {
+            match = false;
+            break;
+         }
+      }
+      if (match) return false;
+   }
+
+   delete [] data;
+   delete [] levels;
+   cItems = num;
+   if (num > 0) {
+      data = new int[cItems+1];
+      levels = new T[cItems];
+      for(int i=0;i<cItems;++i) {
+		levels[i] = ilevels[i];
+		data[i] = 0;
+      }
+      data[cItems] = 0;
+   }
+   return true;
+}
+
+template<class T>
+T stats_histogram<T>::get_level(int n) const
+{
+	if(0 <= n && n < cItems){
+		return levels[n];
+	}
+	if(n >= cItems) {
+		return std::numeric_limits<T>::max();
+	} else {
+		return std::numeric_limits<T>::min();
+	}
+}
+
+template<class T>
+bool stats_histogram<T>::set_level(int n, T val)
+{
+	bool ret = false;
+	if(0 < n && n < cItems - 1){
+		if(val > levels[n-1] && val < levels[n+1]) {
+			levels[n] = val;
+			Clear();
+			ret = true;
+		}
+	} else if(n == 0 && cItems >=2 ) {
+		if(val < levels[1]){
+			levels[0] = val;
+			Clear();
+			ret = true;
+		}
+	} else if(n == cItems - 1 && cItems >= 2) {
+		if(val > levels[n-1]) {
+			levels[n] = val;
+			Clear();
+			ret = true;
+		}
+	}
+	return ret;
+}	
+
+template<class T>
+void stats_histogram<T>::Clear()
+{
+	for(int i=0;i<cItems;++i){
+		data[i] = 0;
+	}
+	return true;
+}
+
+template<class T>
+T stats_histogram<T>::Add(T val)
+{
+	if(val < levels[0]){
+		++data[0];
+	} else if(val >= levels[cItems - 1]){
+		++data[cItems];
+	} else {
+		int count = cItems - 1;
+		for(int i=1;i<=count;++i){
+			if(val >= levels[i-1] && val < levels[i]){
+				++data[i];
+			}
+		}
+	}
+	return val;
+}
+
+template<class T>
+stats_histogram<T>& stats_histogram<T>::operator+=(const stats_histogram<T>& sh)
+{
+   // if the input histogram is null, there is nothing to do.
+   if (sh.cItems <= 0) {
+      return *this;
+   }
+
+   // if the current histogram is null, take on the size and levels of the input
+   if (this->cItems <= 0) {
+      this->set_levels(sh.cItems, sh.levels);
+   }
+
+   // to add histograms, they must both be the same size (and have the same
+   // limits array as well, should we check that?)
+   if (this->cItems != sh.cItems) {
+      EXCEPT("attempt to add histogram of %d items to histogram of %d items", 
+             sh.cItems, this->cItems);
+   }
+
+   for (int i = 0; i < cItems-1; ++i) {
+      this->data[i] += sh.data[i];
+   }
+
+   return *this;
+}
+
+/*
+template<class T>
+void stats_histogram<T>::Publish(ClassAd& ad, const char* pattr, int flags) const 
+{
+	
+}
+*/
 
 //
 // This is how you use the generic_stats functions.
@@ -614,7 +1046,9 @@ void TestStats::Clear()
 
 void TestStats::Tick()
 {
+   time_t now = time(NULL);
    int cAdvance = generic_stats_Tick(
+      now,
       this->RecentWindowMax,     // RecentMaxTime
       test_stats_window_quantum, // RecentQuantum
       this->InitTime,
@@ -628,7 +1062,7 @@ void TestStats::Tick()
 
 void TestStats::Unpublish(ClassAd & ad) const
 {
-   Pool.Publish(ad);
+   Pool.Publish(ad, 0);
 }
 
 

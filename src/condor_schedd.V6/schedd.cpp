@@ -36,7 +36,6 @@
 #include "condor_email.h"
 #include "condor_uid.h"
 #include "get_daemon_name.h"
-#include "renice_self.h"
 #include "write_user_log.h"
 #include "access.h"
 #include "internet.h"
@@ -430,38 +429,6 @@ Scheduler::Scheduler() :
 	SchedUniverseJobsRunning = 0;
 	LocalUniverseJobsIdle = 0;
 	LocalUniverseJobsRunning = 0;
-   #ifdef TICKET_2006
-    ShadowExceptionsCumulative = 0;
-    JobsCompletedCumulative = 0;
-    JobsExitedCumulative = 0;
-    JobsStartedCumulative = 0;
-    TimeToStartCumulative = 0;
-    RunningTimeCumulative = 0;
-    LastUpdateTime = time(NULL);
-    LastJobsQueued = 0;
-
-    // This defines the universe of recognized exit codes, and initializes
-    // lifetime cumulative counts.
-    // It is also used in Init() to set ExitCodes timed queues.
-    ExitCodesCumulative[JOB_EXITED] = 0;
-    ExitCodesCumulative[JOB_CKPTED] = 0;
-    ExitCodesCumulative[JOB_KILLED] = 0;
-    ExitCodesCumulative[JOB_COREDUMPED] = 0;
-    ExitCodesCumulative[JOB_EXCEPTION] = 0;
-    ExitCodesCumulative[JOB_NO_MEM] = 0;
-    ExitCodesCumulative[JOB_SHADOW_USAGE] = 0;
-    ExitCodesCumulative[JOB_NOT_CKPTED] = 0;
-    ExitCodesCumulative[JOB_NOT_STARTED] = 0;
-    ExitCodesCumulative[JOB_BAD_STATUS] = 0;
-    ExitCodesCumulative[JOB_EXEC_FAILED] = 0;
-    ExitCodesCumulative[JOB_NO_CKPT_FILE] = 0;
-    ExitCodesCumulative[JOB_SHOULD_HOLD] = 0;
-    ExitCodesCumulative[JOB_SHOULD_REMOVE] = 0;
-    ExitCodesCumulative[JOB_MISSED_DEFERRAL_TIME] = 0;
-    ExitCodesCumulative[JOB_EXITED_AND_CLAIM_CLOSING] = 0;
-   #else
-    stats.Init();
-   #endif
 	LocalUnivExecuteDir = NULL;
 	ReservedSwap = 0;
 	SwapSpace = 0;
@@ -469,7 +436,7 @@ Scheduler::Scheduler() :
 	m_need_reschedule = false;
 	m_send_reschedule_timer = -1;
 
-
+    stats.Init();
 
 		//
 		// ClassAd attribute for evaluating whether to start
@@ -996,72 +963,14 @@ Scheduler::count_jobs()
 	m_ad->Assign(ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME,upload_wait_time);
 	m_ad->Assign(ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME,download_wait_time);
 
-   #ifdef TICKET_2006
-    // one last check for any newly-queued jobs
-    // this count in cumulative within the qmgmt package
-    time_t curTime = time(NULL);
-    int updateInterval = max(int(curTime - LastUpdateTime), int(1));
-    LastUpdateTime = curTime;
-    m_ad->Assign(ATTR_UPDATE_INTERVAL, updateInterval);
-
-    int jobsQueued = GetJobQueuedCount();
-    update(JobsSubmittedTQ, jobsQueued - LastJobsQueued, curTime);
-    LastJobsQueued = jobsQueued;
-
-    // Update cumulative counts over schedd lifetime
-    m_ad->Assign(ATTR_JOBS_SUBMITTED_CUMULATIVE, jobsQueued);
-    m_ad->Assign(ATTR_JOBS_STARTED_CUMULATIVE, JobsStartedCumulative);
-    m_ad->Assign(ATTR_JOBS_EXITED_CUMULATIVE, JobsExitedCumulative);
-    m_ad->Assign(ATTR_JOBS_COMPLETED_CUMULATIVE, JobsCompletedCumulative);
-    m_ad->Assign(ATTR_SHADOW_EXCEPTIONS_CUMULATIVE, ShadowExceptionsCumulative);
-    m_ad->Assign(ATTR_MEAN_TIME_TO_START_CUMULATIVE, (JobsStartedCumulative > 0) ? double(TimeToStartCumulative)/double(JobsStartedCumulative) : 0.0);
-    m_ad->Assign(ATTR_SUM_TIME_TO_START_CUMULATIVE, TimeToStartCumulative);
-    m_ad->Assign(ATTR_MEAN_RUNNING_TIME_CUMULATIVE, (JobsCompletedCumulative > 0) ? double(RunningTimeCumulative)/double(JobsCompletedCumulative) : 0.0);
-    m_ad->Assign(ATTR_SUM_RUNNING_TIME_CUMULATIVE, RunningTimeCumulative);
-    for (map<int,int>::iterator jj(ExitCodesCumulative.begin());  jj != ExitCodesCumulative.end();  ++jj) {
-        string aname;
-        sprintf(aname, "%s%03d", ATTR_EXIT_CODE_CUMULATIVE, jj->first);
-        m_ad->Assign(aname.c_str(), jj->second);
-    }
-
-    // get the time-windowed stats
-    int jobsSubmitted = accumulate(JobsSubmittedTQ, curTime);
-    int jobsStarted = accumulate(JobsStartedTQ, curTime);
-    int jobsCompleted = accumulate(JobsCompletedTQ, curTime);
-    int jobsExited = accumulate(JobsExitedTQ, curTime);
-    int shadowExceptions = accumulate(ShadowExceptionsTQ, curTime);
-    double runningTimeSum = accumulate(RunningTimeTQ, curTime);
-    double timeToStartSum = accumulate(TimeToStartTQ, curTime);
-    double meanRunningTime = (jobsCompleted > 0) ? runningTimeSum / double(jobsCompleted) : 0.0;
-    double meanTimeToStart = (jobsStarted > 0) ? timeToStartSum / double(jobsStarted) : 0.0;
-    m_ad->Assign(ATTR_WINDOWED_STAT_WIDTH, (int)(JobsSubmittedTQ.max_time()));
-    m_ad->Assign(ATTR_JOBS_SUBMITTED, jobsSubmitted);
-    m_ad->Assign(ATTR_JOB_SUBMISSION_RATE, double(jobsSubmitted)/double(JobsSubmittedTQ.max_time()));
-    m_ad->Assign(ATTR_JOBS_STARTED, jobsStarted);
-    m_ad->Assign(ATTR_JOB_START_RATE, double(jobsStarted)/double(JobsStartedTQ.max_time()));
-    m_ad->Assign(ATTR_JOBS_COMPLETED, jobsCompleted);
-    m_ad->Assign(ATTR_JOB_COMPLETION_RATE, double(jobsCompleted)/double(JobsCompletedTQ.max_time()));
-    m_ad->Assign(ATTR_JOBS_EXITED, jobsExited);
-    m_ad->Assign(ATTR_SHADOW_EXCEPTIONS, shadowExceptions);
-    m_ad->Assign(ATTR_MEAN_TIME_TO_START, meanTimeToStart);
-    m_ad->Assign(ATTR_MEAN_RUNNING_TIME, meanRunningTime);
-    for (map<int,timed_queue<int> >::iterator jj(ExitCodesTQ.begin());  jj != ExitCodesTQ.end();  ++jj) {
-        string aname;
-        sprintf(aname, "%s%03d", ATTR_EXIT_CODE, jj->first);
-        int n = accumulate(jj->second, curTime);
-        m_ad->Assign(aname.c_str(), n);
-    }
-   #else // TICKET_2006
     // one last check for any newly-queued jobs
     // this count is cumulative within the qmgmt package
-    time_t curTime = time(NULL);
+    // TJ: get daemon-core message-time here and pass into stats.Tick()
     stats.Tick();
     stats.JobsSubmitted = GetJobQueuedCount();
 
-    // we don't need to do this unless we have timed_queue fields.
-    //stats.Accumulate(curTime);
+    // publish scheduler generic statistics
     stats.Publish(*m_ad);
-   #endif // TICKET_2006
 
     daemonCore->publish(m_ad);
     daemonCore->dc_stats.Publish(*m_ad);
@@ -1133,38 +1042,9 @@ Scheduler::count_jobs()
 	m_ad->Delete (ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
 	m_ad->Delete (ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
 
-   #ifdef TICKET_2006
-    m_ad->Delete(ATTR_JOBS_SUBMITTED_CUMULATIVE);
-    m_ad->Delete(ATTR_JOBS_STARTED_CUMULATIVE);
-    m_ad->Delete(ATTR_JOBS_COMPLETED_CUMULATIVE);
-    m_ad->Delete(ATTR_JOBS_EXITED_CUMULATIVE);
-    m_ad->Delete(ATTR_SHADOW_EXCEPTIONS_CUMULATIVE);
-    m_ad->Delete(ATTR_MEAN_TIME_TO_START_CUMULATIVE);
-    m_ad->Delete(ATTR_SUM_TIME_TO_START_CUMULATIVE);
-    m_ad->Delete(ATTR_MEAN_RUNNING_TIME_CUMULATIVE);
-    m_ad->Delete(ATTR_SUM_RUNNING_TIME_CUMULATIVE);
-    for (map<int,int>::iterator jj(ExitCodesCumulative.begin());  jj != ExitCodesCumulative.end();  ++jj) {
-        sprintf(tmp, "%s%03d", ATTR_EXIT_CODE_CUMULATIVE, jj->first);
-        m_ad->Delete(tmp);
-    }
-    m_ad->Delete(ATTR_UPDATE_INTERVAL);
-    m_ad->Delete(ATTR_JOBS_SUBMITTED);
-    m_ad->Delete(ATTR_JOB_SUBMISSION_RATE);
-    m_ad->Delete(ATTR_JOBS_STARTED);
-    m_ad->Delete(ATTR_JOB_START_RATE);
-    m_ad->Delete(ATTR_JOBS_COMPLETED);
-    m_ad->Delete(ATTR_JOB_COMPLETION_RATE);
-    m_ad->Delete(ATTR_JOBS_EXITED);
-    m_ad->Delete(ATTR_SHADOW_EXCEPTIONS);
-    m_ad->Delete(ATTR_MEAN_TIME_TO_START);
-    m_ad->Delete(ATTR_MEAN_RUNNING_TIME);
-    for (map<int, timed_queue<int> >::iterator jj(ExitCodesTQ.begin());  jj != ExitCodesTQ.end();  ++jj) {
-        sprintf(tmp, "%s%03d", ATTR_EXIT_CODE, jj->first);
-        m_ad->Delete(tmp);
-    }
-   #else  // TICKET_2006
+    daemonCore->dc_stats.Unpublish(*m_ad);
+
     stats.Unpublish(*m_ad);
-   #endif // TICKET_2006
 
 	sprintf(tmp, "%s = \"%s\"", ATTR_SCHEDD_NAME, Name);
 	m_ad->InsertOrUpdate(tmp);
@@ -1386,28 +1266,6 @@ Scheduler::count_jobs()
 	check_claim_request_timeouts();
 
 	return 0;
-}
-
-/* 
- * renice_shadow() will nice the shadow if specified in the
- * condor_config.  the value of SHADOW_RENICE_INCREMENT will be added
- * to the current process priority (the higher the priority number,
- * the less CPU will be allocated).  renice_shadow() is meant to be
- * called by the child process after a fork() and before an exec().
- * it returns the value added to the priority, or 0 if the priority
- * did not change.  renice_shadow() now just calls renice_self() from
- * the C++ util that actually does the work, since other parts of
- * Condor might need to be reniced (namely, the user job).  -Derek
- * Wright, <wright@cs.wisc.edu> 4/14/98
- */
-int
-renice_shadow()
-{
-#ifdef WIN32
-	return 0;
-#else 
-	return renice_self( "SHADOW_RENICE_INCREMENT" ); 
-#endif
 }
 
 
@@ -4054,7 +3912,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_CONTINUE_JOBS:
 			// Only continue jobs which are suspended
-			snprintf( buf, 256, "(%s=%d) && (", ATTR_JOB_STATUS, SUSPENDED );
+			snprintf( buf, 256, "(%s==%d) && (", ATTR_JOB_STATUS, SUSPENDED );
 			break;
 		default:
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
@@ -5362,6 +5220,9 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	description.sprintf( "%s %d.%d", mrec->description(),
 						 mrec->cluster, mrec->proc ); 
 
+	int cluster = mrec->cluster;
+	int proc = mrec->proc;
+
 		// We need an expanded job ad here so that the startd can see
 		// NegotiatorMatchExpr values.
 	ClassAd *jobAd;
@@ -5372,9 +5233,13 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		jobAd = GetJobAd( mrec->cluster, mrec->proc, true, false );
 	}
 	if( ! jobAd ) {
+			// The match rec may have been deleted by now if the job
+			// was put on hold in GetJobAd().
+		mrec = NULL;
+
 		char const *reason = "find/expand";
-		if( !mrec->is_dedicated ) {
-			if( GetJobAd( mrec->cluster, mrec->proc, false ) ) {
+		if( !args->isDedicated() ) {
+			if( GetJobAd( cluster, proc, false ) ) {
 				reason = "expand";
 			}
 			else {
@@ -5382,10 +5247,19 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 			}
 		}
 		dprintf( D_ALWAYS,
-				 "Failed to %s job %d.%d when starting to request claim %s\n",
-				 reason, mrec->cluster, mrec->proc,
-				 mrec->description() ); 
-		DelMrec( mrec );
+				 "Failed to %s job when requesting claim %s\n",
+				 reason, description.Value() );
+
+		if( args->isDedicated() ) {
+			mrec = dedicated_scheduler.FindMrecByClaimID(args->claimId());
+		}
+		else {
+			mrec = scheduler.FindMrecByClaimID(args->claimId());
+		}
+
+		if( mrec ) {
+			DelMrec( mrec );
+		}
 		return;
 	}
 
@@ -6450,6 +6324,7 @@ Scheduler::isStillRunnable( int cluster, int proc, int &status )
 	switch( status ) {
 	case IDLE:
 	case RUNNING:
+	case SUSPENDED:
 	case TRANSFERRING_OUTPUT:
 			// these are the cases we expect.  if it's local
 			// universe, it'll still be IDLE.  if it's not local,
@@ -6743,7 +6618,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 			 "(shadow pid = %d)\n", job_id->cluster, job_id->proc,
 			 mrec->description(), srec->pid );
 
-    time_t now = time(NULL);
+    //time_t now = time(NULL);
     stats.Tick();
     stats.ShadowsStarted += 1;
     stats.ShadowsRunning = numShadows;
@@ -7833,16 +7708,10 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
         
         int qdate = 0;
         GetAttributeInt(cluster, proc, ATTR_Q_DATE, &qdate);
-       #ifdef TICKET_2006
-        scheduler.JobsStartedCumulative += 1;
-        scheduler.TimeToStartCumulative += current_time - qdate;
-        update(scheduler.TimeToStartTQ, current_time - qdate, current_time);
-        update(scheduler.JobsStartedTQ, 1, current_time);
-       #else
+
         scheduler.stats.Tick();
         scheduler.stats.JobsStarted += 1;
         scheduler.stats.JobsAccumTimeToStart += (current_time - qdate);
-       #endif
 	}
 
 	// If we're reconnecting, the old ATTR_JOB_CURRENT_START_DATE is still
@@ -9322,30 +9191,10 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	}
 
     // update exit code statistics
-   #ifdef TICKET_2006
-    int start_date = 0;
-    GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_START_DATE, &start_date);
     time_t updateTime = time(NULL);
-    JobsExitedCumulative += 1;
-    update(JobsExitedTQ, 1, updateTime);
-    map<int,int>::iterator f(ExitCodesCumulative.find(exit_code));
-    if (f != ExitCodesCumulative.end()) {
-        f->second += 1;
-    }
-    map<int, timed_queue<int> >::iterator ff(ExitCodesTQ.find(exit_code));
-    if (ff != ExitCodesTQ.end()) {
-        update(ff->second, 1, updateTime);
-    }
-    // check up on submissions as long as we're updating stats
-    int jobsQueued = GetJobQueuedCount();
-    update(JobsSubmittedTQ, jobsQueued - LastJobsQueued, updateTime);
-    LastJobsQueued = jobsQueued;    
-   #else
-    time_t updateTime = time(NULL);
-    stats.Tick();
+    stats.Tick(updateTime);
     stats.JobsExited += 1;
     stats.JobsSubmitted = GetJobQueuedCount();
-   #endif
 
 		// We get the name of the daemon that had a problem for 
 		// nice log messages...
@@ -9437,12 +9286,6 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				// no break, fall through
 		case JOB_EXITED:
 			dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
-           #ifdef TICKET_2006
-            JobsCompletedCumulative += 1;
-            update(JobsCompletedTQ, 1, updateTime);
-            RunningTimeCumulative += updateTime - start_date;
-            update(RunningTimeTQ, updateTime - start_date, updateTime);
-           #else
             {
             stats.JobsExitedNormally += 1;
             stats.JobsCompleted += 1;
@@ -9450,7 +9293,6 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
             GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_START_DATE, &start_date);
             stats.JobsAccumRunningTime += (updateTime - start_date);
             }
-           #endif
 				// no break, fall through and do the action
 
 		case JOB_COREDUMPED:
@@ -9568,13 +9410,6 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// above, but we might need to do this in other cases in
 		// the future
 	if (reportException && srec != NULL) {
-       #ifdef TICKET_2006
-        ShadowExceptionsCumulative += 1;
-        update(ShadowExceptionsTQ, 1, updateTime);
-       #else
-        // this is the same as JobsExitException, so we don't need it.
-        //stats.ShadowExceptions += 1;
-       #endif
 			// Record the shadow exception in the job ad.
 		int num_excepts = 0;
 		GetAttributeInt(job_id.cluster, job_id.proc,
@@ -9936,6 +9771,8 @@ Scheduler::Init()
 		////////////////////////////////////////////////////////////////////
 		// Grab all the essential parameters we need from the config file.
 		////////////////////////////////////////////////////////////////////
+
+    stats.Reconfig();
 
 		// set defaults for rounding attributes for autoclustering
 		// only set these values if nothing is specified in condor_config.
@@ -10577,27 +10414,6 @@ Scheduler::Init()
 	m_job_machine_attrs.initializeFromString( job_machine_attrs_str.Value() );
 
 	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
-
-    // These are best done here in Init(), since the windows may change on reconfig, and
-    // it does not result in total loss of data, only some data if reconfiguring to smaller
-    // window, in which case it was because the user requested it.
-   #ifdef TICKET_2006
-    int event_stat_window = param_integer("WINDOWED_STAT_WIDTH", 300, 1, INT_MAX);
-    JobsSubmittedTQ.max_time(event_stat_window);
-    JobsStartedTQ.max_time(event_stat_window);
-    JobsCompletedTQ.max_time(event_stat_window);
-    JobsExitedTQ.max_time(event_stat_window);
-    ShadowExceptionsTQ.max_time(event_stat_window);
-    TimeToStartTQ.max_time(event_stat_window);
-    RunningTimeTQ.max_time(event_stat_window);
-    for (map<int,int>::iterator jj(ExitCodesCumulative.begin());  jj != ExitCodesCumulative.end();  ++jj) {
-        // Note, this also will create the entries, first time.
-        ExitCodesTQ[jj->first].max_time(event_stat_window);
-    }
-   #else
-    int event_stat_window = param_integer("WINDOWED_STAT_WIDTH", 300, 1, INT_MAX);
-    stats.SetWindowSize(event_stat_window);
-   #endif
 
 	first_time_in_init = false;
 }
@@ -13525,7 +13341,6 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 			"Shadow pid %d switching to job %d.%d.\n",
 			shadow_pid, new_job_id.cluster, new_job_id.proc );
 
-    time_t now = time(NULL);
     stats.Tick();
     stats.ShadowsRecycled += 1;
     stats.ShadowsRunning = numShadows;

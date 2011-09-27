@@ -1685,11 +1685,18 @@ activate_claim( Resource* rip, Stream* stream )
 		// now, try to satisfy the job.  while we're at it, we'll
 		// figure out what starter they want to use
 	Starter* tmp_starter;
+	bool no_starter = false;
 	tmp_starter = resmgr->starter_mgr.findStarter( req_classad,
 												   mach_classad,
+												   no_starter,
 												   starter );
 	if( ! tmp_starter ) {
-		rip->dprintf( D_ALWAYS, "Job Requirements check failed!\n" );
+		if( no_starter ) {
+			rip->dprintf( D_ALWAYS, "No valid starter found to run this job!  Is something wrong with your Condor installation?\n" );
+		}
+		else {
+			rip->dprintf( D_ALWAYS, "Job Requirements check failed!\n" );
+		}
 		refuse( stream );
 	    ABORT;
 	}

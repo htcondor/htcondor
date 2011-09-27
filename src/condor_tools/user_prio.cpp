@@ -33,6 +33,8 @@
 #include "daemon.h"
 #include "condor_distribution.h"
 #include "condor_attributes.h"
+// for std::sort
+#include <algorithm> 
 
 //-----------------------------------------------------------------
 
@@ -61,15 +63,38 @@ static void PrintResList(AttrList* ad);
 
 //-----------------------------------------------------------------
 
-extern "C" {
-int CompPrio(const void * a, const void * b);
-}
-
-
-//-----------------------------------------------------------------
-
 int DetailFlag=0;
+bool GroupOrder = false;
 time_t MinLastUsageTime;
+
+
+struct LineRecLT {
+    int detail_flag;
+    bool group_order;
+
+    LineRecLT() : detail_flag(0), group_order(false) {}
+    LineRecLT(int df, bool go) : detail_flag(df), group_order(go) {}
+
+    bool operator()(const LineRec& a, const LineRec& b) const {
+        if (group_order) {
+            // Acct groups come out of the acct classad ordered before the 
+            // individual submitters, and in breadth-first order of hierarchy.
+            // This preserves that ordering:
+            if (a.IsAcctGroup || b.IsAcctGroup) {
+                return &a < &b;
+            }
+        }
+
+        // Order submitters by accumulated usage or priority depending on CL flags
+        if (detail_flag == 2) {
+            return a.AccUsage < b.AccUsage;
+        } else {
+            return a.Priority < b.Priority;
+        }
+
+        return false;
+    }
+};
 
 
 int
@@ -86,7 +111,8 @@ main(int argc, char* argv[])
   int SetLast=0;
   bool ResetAll=false;
   int GetResList=0;
-  char* pool = NULL;
+  std::string pool;
+  bool GroupRollup = false;
 
   myDistro->Init( argc, argv );
   config();
@@ -135,6 +161,12 @@ main(int argc, char* argv[])
     else if (strcmp(argv[i],"-l")==0) {
       LongFlag=true;
     }
+    else if (strcmp(argv[i],"-grouprollup")==0) {
+      GroupRollup=true;
+    }
+    else if (strcmp(argv[i],"-grouporder")==0) {
+      GroupOrder=true;
+    }
     else if (strcmp(argv[i],"-all")==0) {
       DetailFlag=1;
     }
@@ -171,9 +203,10 @@ main(int argc, char* argv[])
   //----------------------------------------------------------
 
 	  // Get info on our negotiator
-  Daemon negotiator( DT_NEGOTIATOR, NULL, pool );
-  if( ! negotiator.locate() ) {
-	  fprintf( stderr, "%s: %s\n", argv[0], negotiator.error() );
+  Daemon negotiator(DT_NEGOTIATOR, NULL, (pool != "") ? pool.c_str() : NULL);
+  if (!negotiator.locate()) {
+	  fprintf(stderr, "%s: Can't locate negotiator in %s\n", 
+              argv[0], (pool != "") ? pool.c_str() : "local pool");
 	  exit(1);
   }
 
@@ -460,14 +493,11 @@ main(int argc, char* argv[])
   else {  // list priorities
 
     Sock* sock;
-    if( !(sock = negotiator.startCommand( GET_PRIORITY,
-										  Stream::reli_sock, 0)) ) {
-      fprintf( stderr, "failed to send GET_PRIORITY command to negotiator\n" );
-      exit(1);
+    if (!(sock = negotiator.startCommand((GroupRollup) ? GET_PRIORITY_ROLLUP : GET_PRIORITY, Stream::reli_sock, 0)) ||
+        !sock->end_of_message()) {
+        fprintf(stderr, "failed to send %s command to negotiator\n", (GroupRollup) ? "GET_PRIORITY_ROLLUP" : "GET_PRIORITY");
+        exit(1);
     }
-
-	// ship it out
-	sock->end_of_message();
 
     // get reply
     sock->decode();
@@ -499,7 +529,7 @@ static void ProcessInfo(AttrList* ad)
   }
   LineRec* LR=new LineRec[NumElem];
   CollectInfo(NumElem,ad,LR);
-  qsort(LR,NumElem,sizeof(LineRec),CompPrio);  
+  std::sort(LR, LR+NumElem, LineRecLT(DetailFlag, GroupOrder));
   PrintInfo(ad,LR,NumElem);
   delete[] LR;
 } 
@@ -517,21 +547,6 @@ static int CountElem(AttrList* ad)
 
 //-----------------------------------------------------------------
 
-extern "C" {
-int CompPrio(const void * ina, const void * inb) 
-{
-  LineRec* a = (LineRec *)ina;
-  LineRec* b = (LineRec *)inb;
-
-  if (DetailFlag==2) {
-    if (a->AccUsage>b->AccUsage) return 1;
-  }
-  else {
-    if (a->Priority>b->Priority) return 1;
-  }
-  return -1;
-}
-}
 
 //-----------------------------------------------------------------
 
@@ -659,7 +674,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
     if (DetailFlag==2)
       printf(Fmt1,LR[i].Name.Value(),LR[i].AccUsage/3600.0,format_date_year(LR[i].BeginUsage),LastUsageStr);
     else 
-      printf(Fmt1,LR[i].Name.Value(),LR[i].Priority,(LR[i].Priority/LR[i].Factor),LR[i].Factor,LR[i].wtRes,LR[i].AccUsage/3600.0,format_date_year(LR[i].BeginUsage),LastUsageStr);
+        printf(Fmt1,LR[i].Name.Value(),LR[i].Priority, (LR[i].Factor>0) ? (LR[i].Priority/LR[i].Factor) : 0, LR[i].Factor,LR[i].wtRes,LR[i].AccUsage/3600.0,format_date_year(LR[i].BeginUsage),LastUsageStr);
 
     if (!is_group) {
       Totals.wtRes+=LR[i].wtRes;
@@ -686,7 +701,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 static void usage(char* name) {
   fprintf( stderr, "usage: %s [ -pool hostname ] [ -all | -usage | { -setprio | -setfactor | -setaccum | -setbegin | -setlast }  user value | "
 			"-resetusage user | -resetall | -getreslist user | -delete user ] "
-			"[-allusers | -activefrom month day year] [-l]\n", name );
+			"[-allusers | -activefrom month day year] [-l] [-grouprollup] [-grouporder]\n", name );
   exit(1);
 }
 
@@ -700,7 +715,7 @@ static void PrintResList(AttrList* ad)
   char  name[128];
   int   StartTime;
 
-  char* Fmt="%-30s %12s %12s\n";
+  const char* Fmt="%-30s %12s %12s\n";
 
   printf(Fmt,"Resource Name"," Start Time"," Match Time");
   printf(Fmt,"-------------"," ----------"," ----------");

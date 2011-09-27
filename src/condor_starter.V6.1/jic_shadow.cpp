@@ -737,6 +737,7 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 		}
 	}
 
+	dprintf( D_FULLDEBUG, "Notifying exit status=%d reason=%d\n",exit_status,reason );
 	updateStartd(&ad, true);
 
 	if( !had_hold ) {
@@ -1287,14 +1288,9 @@ JICShadow::initFileTransfer( void )
 			return false;
 		}
 	} else { 
-			// new attribute is not defined, use the old method.  we
-			// just want to call the initWithFileTransfer() method,
-			// since it will check the ATTR_TRANSFER_FILES if it can't
-			// find ATTR_WHEN_TO_TRANSFER_OUTPUT...
-		dprintf( D_FULLDEBUG, "No %s specified, looking for deprecated %s "
-				 "attribute\n", ATTR_SHOULD_TRANSFER_FILES, 
-				 ATTR_TRANSFER_FILES );
-		return initWithFileTransfer();
+		dprintf( D_ALWAYS, "ERROR: No file transfer attributes in job "
+				 "ad, aborting\n" );
+		return false;
 	}
 
 	switch( should_transfer ) {
@@ -1372,33 +1368,37 @@ JICShadow::initWithFileTransfer()
 			transfer_at_vacate = true;
 		}
 	} else { 
-			// no new attribute, try the old...
-		char* tmp = NULL;
-		job_ad->LookupString( ATTR_TRANSFER_FILES, &tmp );
-		if ( tmp == NULL ) {
-			dprintf( D_ALWAYS, "ERROR: No file transfer attributes in job "
-					 "ad, aborting\n" );
-			return false;
-		}
-
-		char firstCharOfTF = tmp[0];
-		free(tmp);
-
-			// if set to "ALWAYS", then set transfer_at_vacate to true
-		switch ( firstCharOfTF ) {
-		case 'a':
-		case 'A':
-			transfer_at_vacate = true;
-			break;
-		case 'n':  /* for "Never" */
-		case 'N':
-			return initNoFileTransfer();
-			break;
-		}
+		dprintf( D_ALWAYS, "ERROR: %s attribute missing from job "
+				 "ad, aborting\n", ATTR_WHEN_TO_TRANSFER_OUTPUT );
+		return false;
 	}
 
 		// if we're here, it means we're transfering files, so we need
 		// to reset the job's iwd to the starter directory
+
+	// When using file transfer, always rename the stdout/err files to
+	// the special names StdoutRemapName and StderrRemapName.
+	// The shadow will remap these to the original names when transferring
+	// the output.
+	if ( shadow_version->built_since_version( 7, 7, 2 ) ) {
+		bool stream;
+		std::string stdout_name;
+		std::string stderr_name;
+		job_ad->LookupString( ATTR_JOB_OUTPUT, stdout_name );
+		job_ad->LookupString( ATTR_JOB_ERROR, stderr_name );
+		if ( job_ad->LookupBool( ATTR_STREAM_OUTPUT, stream ) && !stream &&
+			 !nullFile( stdout_name.c_str() ) ) {
+			job_ad->Assign( ATTR_JOB_OUTPUT, StdoutRemapName );
+		}
+		if ( job_ad->LookupBool( ATTR_STREAM_ERROR, stream ) && !stream &&
+			 !nullFile( stderr_name.c_str() ) ) {
+			if ( stdout_name == stderr_name ) {
+				job_ad->Assign( ATTR_JOB_ERROR, StdoutRemapName );
+			} else {
+				job_ad->Assign( ATTR_JOB_ERROR, StderrRemapName );
+			}
+		}
+	}
 
 	wants_file_transfer = true;
 	change_iwd = true;
@@ -1423,21 +1423,14 @@ JICShadow::initStdFiles( void )
 		// now that we know about file transfer and the real iwd we'll
 		// be using, we can initialize the std files... 
 	if( ! job_input_name ) {
-		job_input_name = getJobStdFile( ATTR_JOB_INPUT, NULL );
+		job_input_name = getJobStdFile( ATTR_JOB_INPUT );
 	}
-
-	// NOTE: We only need to look at _ORIG values for backwards
-	// compatibility with old submitters (pre 6.7.14).  Modern
-	// submitters do not mess with the filename when streaming
-	// is being used, so there will be no _ORIG attribute.
 
 	if( ! job_output_name ) {
-		job_output_name = getJobStdFile( ATTR_JOB_OUTPUT,
-										 ATTR_JOB_OUTPUT_ORIG );
+		job_output_name = getJobStdFile( ATTR_JOB_OUTPUT );
 	}
 	if( ! job_error_name ) {
-		job_error_name = getJobStdFile( ATTR_JOB_ERROR,
-										ATTR_JOB_ERROR_ORIG );
+		job_error_name = getJobStdFile( ATTR_JOB_ERROR );
 	}
 
 		// so long as all of the above are initialized, we were
@@ -1447,20 +1440,15 @@ JICShadow::initStdFiles( void )
 
 
 char* 
-JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
+JICShadow::getJobStdFile( const char* attr_name )
 {
 	char* tmp = NULL;
 	const char* base = NULL;
 	MyString filename;
 
 	if(streamStdFile(attr_name)) {
-		if(!tmp && alt_name) job_ad->LookupString(alt_name,&tmp);
 		if(!tmp && attr_name) job_ad->LookupString(attr_name,&tmp);
 		return tmp;
-	}
-
-	if( ! wants_file_transfer && alt_name ) {
-		job_ad->LookupString( alt_name, &tmp );
 	}
 
 	if( !tmp ) {

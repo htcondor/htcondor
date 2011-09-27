@@ -104,13 +104,29 @@ OsProc::StartJob(FamilyInfo* family_info)
 		// prepend the full path to this name so that we
 		// don't have to rely on the PATH inside the
 		// USER_JOB_WRAPPER or for exec().
-	if ( strcmp(CONDOR_EXEC,JobName.Value()) == 0 ) {
+
+    bool transfer_exe = false;
+    if (!JobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, transfer_exe)) {
+        transfer_exe = false;
+    }
+
+    bool preserve_rel = false;
+    if (!JobAd->LookupBool(ATTR_PRESERVE_RELATIVE_EXECUTABLE, preserve_rel)) {
+        preserve_rel = false;
+    }
+
+    bool relative_exe = is_relative_to_cwd(JobName.Value());
+
+    if (relative_exe && preserve_rel && !transfer_exe) {
+        dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.Value());
+    }
+	else if ( strcmp(CONDOR_EXEC,JobName.Value()) == 0 ) {
 		JobName.sprintf( "%s%c%s",
 		                 Starter->GetWorkingDir(),
 		                 DIR_DELIM_CHAR,
 		                 CONDOR_EXEC );
-        }
-	else if (is_relative_to_cwd(JobName.Value()) && job_iwd && *job_iwd) {
+    }
+	else if (relative_exe && job_iwd && *job_iwd) {
 		MyString full_name;
 		full_name.sprintf("%s%c%s",
 		                  job_iwd,

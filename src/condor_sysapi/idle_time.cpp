@@ -33,11 +33,14 @@
   platform, it seems that this is an easy work-around and this file
   still compiles.  Derek <wright@cs.wisc.edu> 2005-09-11.
 */
+#define dprintf dprintf_hide
+
 #include <mach/mach.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/hid/IOHIDLib.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <Carbon/Carbon.h>
+#undef dprintf
 #endif
 
 #include "condor_common.h"

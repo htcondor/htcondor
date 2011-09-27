@@ -25,24 +25,25 @@ import argparse
 from aviary.https import *
 
 wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
-url = 'http://localhost:9091/services/query/getSubmissionSummary'
 key = '/etc/pki/tls/certs/client.key'
 cert = '/etc/pki/tls/certs/client.crt'
-client = Client(wsdl);
 
 parser = argparse.ArgumentParser(description='Query submissions remotely via SOAP.')
 parser.add_argument('-v','--verbose', action="store_true",default=False, help='enable SOAP logging')
-parser.add_argument('-u','--url', action="store", nargs='?', dest='url', help='http or https URL prefix to be added to cmd')
+parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
+		    default='http://localhost:9091/services/query/getSubmissionSummary',
+		    help='http or https URL prefix to be added to cmd')
 parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
 parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
 parser.add_argument('name', action="store", nargs='?', help='submission name')
 args =  parser.parse_args()
 
-if args.url and "https://" in args.url:
-	url = args.url
+if "https://" in args.url:
 	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
+else:
+	client = Client(wsdl)
 
-client.set_options(location=url)
+client.set_options(location=args.url)
 
 # enable to see service schema
 if args.verbose:
@@ -61,7 +62,7 @@ else:
 try:
 	submissions = client.service.getSubmissionSummary(subId)
 except Exception, e:
-	print "invocation failed: ", url
+	print "invocation failed: ", args.url
 	print e
 	exit(1)
 

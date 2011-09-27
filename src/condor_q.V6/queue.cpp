@@ -1168,7 +1168,6 @@ processCommandLineArguments (int argc, char *argv[])
 						 "format and attribute parameters\n" );
 				exit( 1 );
 			}
-			verbose = 0;
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();
@@ -1947,9 +1946,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 	const char *scheddName;
 	const char *scheddMachine;
 
-	const char *quill_name;
-	const char *db_ipAddr;
-	const char *db_name;
+	const char *quill_name = 0;
+	const char *db_ipAddr = 0;
+	const char *db_name = 0;
 	const char *query_password;
 	int i;
 

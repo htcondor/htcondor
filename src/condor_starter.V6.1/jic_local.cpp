@@ -459,7 +459,7 @@ JICLocal::initJobId( void )
 
 
 char* 
-JICLocal::getJobStdFile( const char* attr_name, const char* alt_name )
+JICLocal::getJobStdFile( const char* attr_name )
 {
 	char* tmp = NULL;
 	MyString filename;
@@ -468,9 +468,6 @@ JICLocal::getJobStdFile( const char* attr_name, const char* alt_name )
 		// these, by prepending the job's iwd if the filename doesn't
 		// start with a '/'
 	job_ad->LookupString( attr_name, &tmp );
-	if( ! tmp && alt_name ) {
-		job_ad->LookupString( alt_name, &tmp );
-	}
 	if( ! tmp ) {
 		return NULL;
 	}

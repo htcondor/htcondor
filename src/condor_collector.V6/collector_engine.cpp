@@ -651,6 +651,8 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		//   was that submitter ads didn't have ATTR_NUM_USERS.
 		//   Coerce MyStype to "Submitter" for ads coming from
 		//   these older schedds.
+		//   Before 7.7.3, submitter ads for parallel universe
+		//   jobs had a MyType of "Scheduler".
 		clientAd->SetMyTypeName( SUBMITTER_ADTYPE );
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here

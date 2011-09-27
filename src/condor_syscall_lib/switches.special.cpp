@@ -249,6 +249,56 @@ extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count ) {
 	return getdents64(fd,dirp,count);
 }
 
+/* Now we define the getdirentries() switch, which calls the above
+	getdents(). In local mode, getdirentries() ends up calling
+	getdents(), for which we also have a switch. So, if
+	getdirentries() unmaps the fd in local mode and then calls
+	getdents(), getdents() will ALSO unmap the already unmapped fd
+	and get a wrong/undefined answer. However, in the remote i/o
+	case we need to unmap the fd and give it to the shadow, since
+	its call into getdents() in the shadow binary will do the right
+	thing (cause it is the straight glibc version of getdents()).
+	-psilord 09/16/2011
+*/
+#undef getdirentries
+#if defined(I386)
+extern "C" int REMOTE_CONDOR_getdirentries(int, char*, size_t, off_t*);
+extern int GETDIRENTRIES(int fd, char *buf, size_t nbytes, off_t *basep);
+int getdirentries( int fd, char *buf, size_t nbytes, off_t *basep )
+#else
+extern "C" ssize_t REMOTE_CONDOR_getdirentries(int, char*, size_t, off_t*);
+extern ssize_t GETDIRENTRIES(int fd, char *buf, size_t nbytes, off_t *basep);
+ssize_t getdirentries( int fd, char *buf, size_t nbytes, off_t *basep )
+#endif
+{
+    ssize_t   rval;
+    int do_local=0;
+
+    errno = 0;
+
+    sigset_t condor_omask = _condor_signals_disable();
+
+	if( MappingFileDescriptors() ) {
+		do_local = _condor_is_fd_local( fd );
+	}
+
+    if( LocalSysCalls() || do_local ) {
+		/* Don't unmap the fd and let the glibc extracted call pass the
+			virtual fd to the getdents() call which does the unmapping */
+        rval = (ssize_t  ) GETDIRENTRIES( fd , buf , nbytes , basep );
+    } else {
+		/* The shadow must see the real fd, so unmap it in a remote context */
+		if( MappingFileDescriptors() ) {
+			fd = _condor_get_unmapped_fd( fd );
+		}
+        rval =  REMOTE_CONDOR_getdirentries( fd , buf , nbytes , basep );
+    }
+
+    _condor_signals_enable( condor_omask );
+
+    return rval;
+}
+
 #endif /* LINUX */
 
 #undef ngetdents

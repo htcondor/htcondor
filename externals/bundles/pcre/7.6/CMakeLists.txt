@@ -30,8 +30,10 @@ if ( NOT PROPER AND NOT LINUX )
 						  cp libpcre.dll ${PCRE_INSTALL_LOC}/lib \r\n
 						  cp pcre.h ${PCRE_INSTALL_LOC}/include )
 	else()
-		set (PCRE_PATCH  patch --binary -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/longlong.patch &&
-						 patch --binary -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/unittests.patch )
+# I believe we only neede the longlong patch on HPUX, but not willing to turn it off and potentially
+# break other stuff just yet...
+		set (PCRE_PATCH  patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/longlong.patch &&
+						 patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/unittests.patch )
 		set (PCRE_CONFIGURE ./configure --prefix=${PCRE_INSTALL_LOC} --disable-cpp )
 		set (PCRE_MAKE make && make test )
 		set (PCRE_INSTALL make install )
@@ -58,6 +60,8 @@ if ( NOT PROPER AND NOT LINUX )
 	if (WINDOWS)
 		set(PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.lib")
 		install ( FILES ${PCRE_INSTALL_LOC}/lib/libpcre.dll DESTINATION ${C_LIB} )
+	elseif(DARWIN)
+		set(PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.dylib")
 	else()
 		set(PCRE_FOUND "${PCRE_INSTALL_LOC}/lib/libpcre.a")
 	endif()
@@ -65,6 +69,25 @@ if ( NOT PROPER AND NOT LINUX )
 	#################################################################
 
 	condor_post_external( pcre include OFF )
+
+	if ( DARWIN )
+		# Install the PCRE libraries manually.
+		# In order to use an install(FILES) command, we'd
+		# have to explicitly list evey file.
+		# We can't use a file(GLOB) because that's evaluated
+		# when cmake is run, which may be before the
+		# external is built.
+		install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+		install( CODE "execute_process(COMMAND find ${PCRE_INSTALL_LOC}/lib -maxdepth 1 -name *.dylib*
+			COMMAND xargs -I src cp -pPR src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+		if ( CONDOR_STRIP_PACKAGES )
+			# Strip the libraries manually.
+			# Since cmake didn't create the libraries
+			# itself, it doesn't know to strip them.
+			install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libpcre*.dylib*
+				COMMAND xargs strip -x)" )
+		endif()
+	endif()
 
 	set( HAVE_PCRE_H ON PARENT_SCOPE )
 

@@ -108,7 +108,11 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen,
 		return -1;
 	}
 
-	new_timer->handler = handler;
+    if (daemonCore) {
+       daemonCore->dc_stats.New("Timer", event_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+    }
+
+    new_timer->handler = handler;
 	new_timer->handlercpp = handlercpp;
 	new_timer->release = release;
 	new_timer->releasecpp = releasecpp;
@@ -322,7 +326,7 @@ void TimerManager::CancelAllTimers()
 // called while a handler is active (i.e. handler calls Timeout;
 // Timeout is not re-entrant).
 int
-TimerManager::Timeout(int * pNumFired /*= NULL*/)
+TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 {
 	int				result, timer_check_cntr;
 	time_t			now, time_sample;
@@ -440,7 +444,11 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/)
 			}
 		}
 
-		// Make sure we didn't leak our priv state
+		if (pruntime) {           
+			*pruntime = daemonCore->dc_stats.AddRuntime(in_timeout->event_descrip, *pruntime);
+		}
+
+        // Make sure we didn't leak our priv state
 		daemonCore->CheckPrivState();
 
 		// Clear curr_dataptr

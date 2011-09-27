@@ -24,7 +24,7 @@ int pseudo_register_job_info( ClassAd* ad );
 int pseudo_register_machine_info(char *uiddomain, char *fsdomain, 
 								 char *starterAddr, char *full_hostname);
 int pseudo_register_starter_info( ClassAd* ad );
-int pseudo_get_job_info(ClassAd *&ad);
+int pseudo_get_job_info(ClassAd *&ad, bool &delete_ad);
 int pseudo_get_user_info(ClassAd *&ad);
 int pseudo_job_exit(int status, int reason, ClassAd* ad);
 int pseudo_job_termination( ClassAd *ad );
