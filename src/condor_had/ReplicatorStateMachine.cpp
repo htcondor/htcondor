@@ -88,25 +88,9 @@ getConfigurationDefaultPositiveIntegerParameter( const char* parameter )
 static int
 getConfigurationPositiveIntegerParameter( const char* parameter )
 {
-	char* buffer         = param( parameter );
-	int   parameterValue = -1;
-
-    if( buffer ) {
-        bool result = false;
-
-        parameterValue = utilAtoi( buffer, &result ); //strtol( buffer, 0, 10 );
-        free( buffer );
-
-        if( ! result || parameterValue <= 0 ) {
-        	utilCrucialError( utilConfigurationError(parameter,
-                                             "REPLICATION").Value( ) );
-		}
-    } else {
-        dprintf( D_ALWAYS, "getConfigurationPositiveIntegerParameter "
-                 "finding default value for %s\n", parameter );
-        parameterValue = getConfigurationDefaultPositiveIntegerParameter( 
-																	parameter );
-    }
+	int parameterValue = param_integer(parameter,
+									   getConfigurationDefaultPositiveIntegerParameter(parameter),
+									   0); // min value, must be positive
     dprintf( D_FULLDEBUG, "getConfigurationPositiveIntegerParameter "
              "%s=%d\n", parameter, parameterValue );
 	return parameterValue;
