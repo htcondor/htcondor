@@ -33,8 +33,6 @@
  *
  */
 extern "C" {
-unsigned short find_port_num( const char *service_name, 
-							  unsigned short dflt_port );
 char *mk_config_name( const char *service_name );
 char *param( const char *name );
 
@@ -165,38 +163,6 @@ udp_connect( char* host, u_short port )
 	return sock;
 }
 
-
-unsigned short
-find_port_num( const char* service_name, unsigned short dflt_port )
-{
-	struct servent		*servp;
-	char				*config_name;
-	char				*pval;
-
-	if( service_name == NULL || service_name[0] == '\0' ) {
-		return dflt_port;
-	}
-
-		/* Try to look up port number in config file */
-	config_name = mk_config_name( service_name );
-	pval = param( config_name );
-	if( pval != NULL ) {
-		unsigned short rc = atoi( pval );
-		free( pval );
-		return rc;
-	}
-
-		/* Try to find in "/etc/services" */
-	if( service_name && service_name[0] ) {
-		servp = getservbyname(service_name, "tcp");
-		if( servp != NULL ) {
-			return servp->s_port;
-		}
-	}
-
-		/* Fall back on the default */
-	return dflt_port;
-}
 
 /*
   Convert a condor service name which looks like:
