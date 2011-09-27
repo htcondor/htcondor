@@ -2822,7 +2822,7 @@ id=144
 
 [HAD_UPDATE_INTERVAL]
 aliases=
-default=
+default=300
 version=0.0.0
 range=.*
 state=default
