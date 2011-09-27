@@ -265,24 +265,6 @@ HADStateMachine::softReconfigure(void)
     initializeClassAd( );
     m_updateCollectorInterval = param_integer ("HAD_UPDATE_INTERVAL",
                                              DEFAULT_HAD_UPDATE_INTERVAL );
-# if 0
-    buffer = param( "HAD_UPDATE_INTERVAL" );
-    if( buffer ) {
-        bool res = false;
-
-		m_updateCollectorInterval = utilAtoi(buffer, &res);
-
-		if( ! res || m_updateCollectorInterval <= 0 ) {
-            free( buffer );
-            utilCrucialError( utilConfigurationError(
-                                "HAD_UPDATE_INTERVAL", "HAD" ).Value( ) );
-        }
-        free( buffer );
-    } else {
-        utilCrucialError( utilNoParameterError(
-                            "HAD_UPDATE_INTERVAL", "HAD" ).Value( ) );
-    }
-# endif
 	printParamsInformation();
 
 	return TRUE;
