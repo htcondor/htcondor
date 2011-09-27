@@ -35,6 +35,17 @@ ResMgr::ResMgr()
 	up_tid = -1;
 	poll_tid = -1;
 
+	draining = false;
+	draining_is_graceful = false;
+	resume_on_completion_of_draining = false;
+	draining_id = 0;
+	expected_graceful_draining_completion = 0;
+	expected_quick_draining_completion = 0;
+	expected_graceful_draining_badput = 0;
+	expected_quick_draining_badput = 0;
+	total_draining_badput = 0;
+	total_draining_unclaimed = 0;
+
 	m_attr = new MachAttributes;
 
 #if HAVE_BACKFILL
@@ -1607,6 +1618,8 @@ ResMgr::compute( amask_t how_much )
 		// the kernel once and share the value...
 	cur_time = time( 0 );
 
+	compute_draining_attrs( how_much );
+
 	m_attr->compute( (how_much & ~(A_SUMMED)) | A_SHARED );
 	walk( &Resource::compute, (how_much & ~(A_SHARED)) );
 	m_attr->compute( (how_much & ~(A_SHARED)) | A_SUMMED );
@@ -2458,4 +2471,269 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 			}
 		}
 	}
+}
+
+bool
+ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,std::string &new_request_id,std::string &error_msg,int &error_code)
+{
+	if( draining ) {
+		new_request_id = "";
+		error_msg = "Draining already in progress.";
+		error_code = DRAINING_ALREADY_IN_PROGRESS;
+		return false;
+	}
+
+	if( check_expr ) {
+		for( int i = 0; i < nresources; i++ ) {
+			classad::Value v;
+			bool check_ok = false;
+			classad::EvalState eval_state;
+			eval_state.SetScopes( resources[i]->r_classad );
+			if( !check_expr->Evaluate( eval_state, v ) ) {
+				sprintf(error_msg,"Failed to evaluate draining check expression against %s.", resources[i]->r_name );
+				error_code = DRAINING_CHECK_EXPR_FAILED;
+				return false;
+			}
+			if( !v.IsBooleanValue(check_ok) ) {
+				sprintf(error_msg,"Draining check expression does not evaluate to a bool on %s.", resources[i]->r_name );
+				error_code = DRAINING_CHECK_EXPR_FAILED;
+				return false;
+			}
+			if( !check_ok ) {
+				sprintf(error_msg,"Draining check expression is false on %s.", resources[i]->r_name );
+				error_code = DRAINING_CHECK_EXPR_FAILED;
+				return false;
+			}
+		}
+	}
+
+	draining = true;
+	draining_id += 1;
+	sprintf(new_request_id,"%d",draining_id);
+	this->resume_on_completion_of_draining = resume_on_completion;
+
+	if( how_fast <= DRAIN_GRACEFUL ) {
+			// retirement time and vacate time are honored
+		draining_is_graceful = true;
+		int graceful_retirement = gracefulDrainingTimeRemaining();
+		dprintf(D_ALWAYS,"Initiating graceful draining.\n");
+		if( graceful_retirement > 0 ) {
+			dprintf(D_ALWAYS,
+					"Coordinating retirement of draining slots; retirement of all draining slots ends in %ds.\n",
+					graceful_retirement);
+		}
+
+			// we do not know yet if these jobs will be evicted or if
+			// they will finish within their retirement time, so do
+			// not call setBadputCausedByDraining() yet
+
+		walk(&Resource::releaseAllClaimsReversibly);
+	}
+	else if( how_fast <= DRAIN_QUICK ) {
+			// retirement time will not be honored, but vacate time will
+		dprintf(D_ALWAYS,"Initiating quick draining.\n");
+		draining_is_graceful = false;
+		walk(&Resource::setBadputCausedByDraining);
+		walk(&Resource::releaseAllClaims);
+	}
+	else if( how_fast > DRAIN_QUICK ) { // DRAIN_FAST
+			// neither retirement time nor vacate time will be honored
+		dprintf(D_ALWAYS,"Initiating fast draining.\n");
+		draining_is_graceful = false;
+		walk(&Resource::setBadputCausedByDraining);
+		walk(&Resource::killAllClaims);
+	}
+
+	update_all();
+	return true;
+}
+
+bool
+ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_code)
+{
+	if( !this->draining ) {
+		if( request_id.empty() ) {
+			return true;
+		}
+	}
+
+	if( !request_id.empty() && atoi(request_id.c_str()) != this->draining_id ) {
+		sprintf(error_msg,"No matching draining request id %s.",request_id.c_str());
+		error_code = DRAINING_NO_MATCHING_REQUEST_ID;
+		return false;
+	}
+
+	draining = false;
+
+	walk(&Resource::enable);
+	update_all();
+	return true;
+}
+
+bool
+ResMgr::isSlotDraining(Resource * /*rip*/)
+{
+	return draining;
+}
+
+int
+ResMgr::gracefulDrainingTimeRemaining()
+{
+	return gracefulDrainingTimeRemaining(NULL);
+}
+
+int
+ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
+{
+	if( !draining || !draining_is_graceful ) {
+		return 0;
+	}
+
+		// If we have 100s of slots, we may want to cache the
+		// result of the following computation to avoid
+		// poor scaling.  For now, we just compute it every
+		// time.
+
+	int longest_retirement_remaining = 0;
+	for( int i = 0; i < nresources; i++ ) {
+		int retirement_remaining = resources[i]->evalRetirementRemaining();
+		if( retirement_remaining > longest_retirement_remaining ) {
+			longest_retirement_remaining = retirement_remaining;
+		}
+	}
+	return longest_retirement_remaining;
+}
+
+bool
+ResMgr::drainingIsComplete(Resource * /*rip*/)
+{
+	if( !draining ) {
+		return false;
+	}
+
+	for( int i = 0; i < nresources; i++ ) {
+		if( resources[i]->state() != drained_state ) {
+			return false;
+		}
+	}
+	return true;
+}
+
+bool
+ResMgr::considerResumingAfterDraining()
+{
+	if( !draining || !resume_on_completion_of_draining ) {
+		return false;
+	}
+
+	for( int i = 0; i < nresources; i++ ) {
+		if( resources[i]->state() != drained_state ||
+			resources[i]->activity() != idle_act )
+		{
+			return false;
+		}
+	}
+
+	dprintf(D_ALWAYS,"As specified in draining request, resuming normal operation after completion of draining.\n");
+	std::string error_msg;
+	int error_code = 0;
+	if( !cancelDraining("",error_msg,error_code) ) {
+			// should never happen!
+		EXCEPT("failed to cancel draining: (code %d) %s",error_code,error_msg.c_str());
+	}
+	return true;
+}
+
+bool
+ResMgr::getDrainingRequestId( Resource * /*rip*/, std::string &request_id )
+{
+	if( !draining ) {
+		return false;
+	}
+	sprintf(request_id,"%d",draining_id);
+	return true;
+}
+
+void
+ResMgr::publish_draining_attrs( Resource *rip, ClassAd *cap, amask_t mask )
+{
+	if( !IS_PUBLIC(mask) ) {
+		return;
+	}
+
+	if( isSlotDraining(rip) ) {
+		cap->Assign( ATTR_DRAINING, true );
+
+		std::string request_id;
+		resmgr->getDrainingRequestId( rip, request_id );
+		cap->Assign( ATTR_DRAINING_REQUEST_ID, request_id );
+	}
+	else {
+		cap->Delete( ATTR_DRAINING );
+		cap->Delete( ATTR_DRAINING_REQUEST_ID );
+	}
+
+	cap->Assign( ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT, expected_graceful_draining_badput );
+	cap->Assign( ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT, expected_quick_draining_badput );
+	cap->Assign( ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION, expected_graceful_draining_completion );
+	cap->Assign( ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION, expected_quick_draining_completion );
+	if( total_draining_badput ) {
+		cap->Assign( ATTR_TOTAL_MACHINE_DRAINING_BADPUT, total_draining_badput );
+	}
+	if( total_draining_unclaimed ) {
+		cap->Assign( ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME, total_draining_unclaimed );
+	}
+}
+
+void
+ResMgr::compute_draining_attrs( int /*how_much*/ )
+{
+	expected_graceful_draining_completion = 0;
+	expected_quick_draining_completion = 0;
+	expected_graceful_draining_badput = 0;
+	expected_quick_draining_badput = 0;
+	total_draining_unclaimed = 0;
+
+	for( int i = 0; i < nresources; i++ ) {
+		Resource *rip = resources[i];
+		if( rip->r_cur ) {
+			int runtime = rip->r_cur->getJobTotalRunTime();
+			int retirement_remaining = rip->evalRetirementRemaining();
+			int max_vacate_time = rip->evalMaxVacateTime();
+			int cpus = rip->r_attr->num_cpus();
+
+			expected_quick_draining_badput += cpus*(runtime + max_vacate_time);
+			expected_graceful_draining_badput += cpus*runtime;
+
+			int graceful_time_remaining;
+			if( retirement_remaining < max_vacate_time ) {
+					// vacate would happen immediately
+				graceful_time_remaining = max_vacate_time;
+			}
+			else {
+					// vacate would be delayed to finish by end of retirement
+				graceful_time_remaining = retirement_remaining;
+			}
+
+			expected_graceful_draining_badput += cpus*graceful_time_remaining;
+			if( graceful_time_remaining > expected_graceful_draining_completion ) {
+				expected_graceful_draining_completion = graceful_time_remaining;
+			}
+			if( max_vacate_time > expected_quick_draining_completion ) {
+				expected_quick_draining_completion = max_vacate_time;
+			}
+
+			total_draining_unclaimed += rip->r_state->timeDrainingUnclaimed();
+		}
+	}
+
+		// convert time estimates from relative time to absolute time
+	expected_graceful_draining_completion += cur_time;
+	expected_quick_draining_completion += cur_time;
+}
+
+void
+ResMgr::addToDrainingBadput( int badput )
+{
+	total_draining_badput += badput;
 }

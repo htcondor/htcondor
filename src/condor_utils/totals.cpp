@@ -171,6 +171,7 @@ StartdNormalTotal()
 #if HAVE_BACKFILL
 	backfill = 0;
 #endif /* HAVE_BACKFILL */
+	drained = 0;
 }
 
 
@@ -190,6 +191,7 @@ update (ClassAd *ad)
 #if HAVE_BACKFILL
 		case backfill_state:	backfill++;		break;
 #endif
+		case drained_state:		drained++;	break;
 		default: return 0;
 	}
 	machines++;
@@ -351,6 +353,7 @@ StartdStateTotal()
 #if HAVE_BACKFILL
 	backfill = 0;
 #endif
+	drained = 0;
 }
 
 int StartdStateTotal::
@@ -372,6 +375,7 @@ update( ClassAd *ad )
 #if HAVE_BACKFILL
 		case backfill_state:	backfill++;		break;
 #endif
+		case drained_state:		drained++;	break;
 		default				:	return false;
 	}
 

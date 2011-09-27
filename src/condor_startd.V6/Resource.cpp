@@ -222,15 +222,18 @@ Resource::set_parent( Resource* rip )
 
 
 int
-Resource::retire_claim( void )
+Resource::retire_claim( bool reversible )
 {
 	switch( state() ) {
 	case claimed_state:
-		// Do not allow backing out of retirement (e.g. if a
-		// preempting claim goes away) because this function is called
-		// for irreversible events such as condor_vacate or PREEMPT.
 		if(r_cur) {
-			r_cur->disallowUnretire();
+			if( !reversible ) {
+					// Do not allow backing out of retirement (e.g. if
+					// a preempting claim goes away) because this is
+					// called for irreversible events such as
+					// condor_vacate or PREEMPT.
+				r_cur->disallowUnretire();
+			}
 			if(resmgr->isShuttingDown() && daemonCore->GetPeacefulShutdown()) {
 				// Admin is shutting things down but does not want any killing,
 				// regardless of MaxJobRetirementTime configuration.
@@ -446,6 +449,13 @@ Resource::removeClaim( Claim* c )
 	EXCEPT( "Resource::removeClaim() called, but can't find the Claim!" );
 }
 
+void
+Resource::setBadputCausedByDraining()
+{
+	if( r_cur ) {
+		r_cur->setBadputCausedByDraining();
+	}
+}
 
 void
 Resource::releaseAllClaims( void )
@@ -453,6 +463,11 @@ Resource::releaseAllClaims( void )
 	shutdownAllClaims( true );
 }
 
+void
+Resource::releaseAllClaimsReversibly( void )
+{
+	shutdownAllClaims( true, true );
+}
 
 void
 Resource::killAllClaims( void )
@@ -460,16 +475,15 @@ Resource::killAllClaims( void )
 	shutdownAllClaims( false );
 }
 
-
 void
-Resource::shutdownAllClaims( bool graceful )
+Resource::shutdownAllClaims( bool graceful, bool reversible )
 {
 		// shutdown the COD claims
 	r_cod_mgr->shutdownAllClaims( graceful );
 
 	if( Resource::DYNAMIC_SLOT == get_feature() ) {
 		if( graceful ) {
-			void_retire_claim();
+			void_retire_claim(reversible);
 		} else {
 			void_kill_claim();
 		}
@@ -477,7 +491,7 @@ Resource::shutdownAllClaims( bool graceful )
 		// We have deleted ourself and can't send any updates.
 	} else {
 		if( graceful ) {
-			void_retire_claim();
+			void_retire_claim(reversible);
 		} else {
 			void_kill_claim();
 		}
@@ -1347,7 +1361,7 @@ Resource::hasPreemptingClaim()
 int
 Resource::mayUnretire()
 {
-	if(r_cur && r_cur->mayUnretire()) {
+	if(!isDraining() && r_cur && r_cur->mayUnretire()) {
 		if(!hasPreemptingClaim()) {
 			// preempting claim has gone away
 			return 1;
@@ -1382,7 +1396,14 @@ Resource::curClaimIsClosing()
 		hasPreemptingClaim() ||
 		activity() == retiring_act ||
 		state() == preempting_state ||
-		claimWorklifeExpired();
+		claimWorklifeExpired() ||
+		isDraining();
+}
+
+bool
+Resource::isDraining()
+{
+	return resmgr->isSlotDraining(this);
 }
 
 bool
@@ -1416,9 +1437,6 @@ Resource::claimWorklifeExpired()
 int
 Resource::evalRetirementRemaining()
 {
-	//This function evaulates to true if the job has run longer than
-	//its maximum alloted graceful retirement time.
-
 	int MaxJobRetirementTime = 0;
 	int JobMaxJobRetirementTime = 0;
 	int JobAge = 0;
@@ -1465,7 +1483,20 @@ Resource::evalRetirementRemaining()
 bool
 Resource::retirementExpired()
 {
-	int retirement_remaining = evalRetirementRemaining();
+	//This function evaulates to true if the job has run longer than
+	//its maximum alloted graceful retirement time.
+
+	int retirement_remaining;
+
+		// if we are draining, coordinate the eviction of all the
+		// slots to try to reduce idle time
+	if( isDraining() ) {
+		retirement_remaining = resmgr->gracefulDrainingTimeRemaining(this);
+	}
+	else {
+		retirement_remaining = evalRetirementRemaining();
+	}
+
 	if ( retirement_remaining <= 0 ) {
 		return true;
 	}
@@ -1843,6 +1874,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 		// Put in ResMgr-specific attributes
 	resmgr->publish( cap, mask );
+
+	resmgr->publish_draining_attrs( this, cap, mask );
 
 		// If this is a public ad, publish anything we had to evaluate
 		// to "compute"

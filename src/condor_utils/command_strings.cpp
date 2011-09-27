@@ -179,6 +179,8 @@ const struct Translation DCTranslation[] = {
 	{ "RECYCLE_SHADOW", RECYCLE_SHADOW },
         { "CLEAR_DIRTY_JOB_ATTRS", CLEAR_DIRTY_JOB_ATTRS },
         { "UPDATE_JOBAD", UPDATE_JOBAD },
+	{ "DRAIN_JOBS", DRAIN_JOBS },
+	{ "CANCEL_DRAIN_JOBS", CANCEL_DRAIN_JOBS },
 	{ NULL, 0 }
 };
 

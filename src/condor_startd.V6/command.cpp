@@ -2328,3 +2328,95 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 	free( cmd_str );
 	return rval;
 }
+
+int
+command_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
+{
+	ClassAd ad;
+
+	s->decode();
+	if( !ad.initFromStream(*s) ) {
+		dprintf(D_ALWAYS,"command_drain_jobs: failed to read classad from %s\n",s->peer_description());
+		return FALSE;
+	}
+	if( !s->end_of_message() ) {
+		dprintf(D_ALWAYS,"command_drain_jobs: failed to read end of message from %s\n",s->peer_description());
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS,"Processing drain request from %s\n",s->peer_description());
+	ad.dPrint(D_ALWAYS);
+
+	int how_fast = DRAIN_GRACEFUL;
+	ad.LookupInteger(ATTR_HOW_FAST,how_fast);
+
+	bool resume_on_completion = false;
+	ad.LookupBool(ATTR_RESUME_ON_COMPLETION,resume_on_completion);
+
+	ExprTree *check_expr = ad.LookupExpr( ATTR_CHECK_EXPR );
+
+	std::string new_request_id;
+	std::string error_msg;
+	int error_code = 0;
+	bool ok = resmgr->startDraining(how_fast,resume_on_completion,check_expr,new_request_id,error_msg,error_code);
+	if( !ok ) {
+		dprintf(D_ALWAYS,"Failed to start draining, error code %d: %s\n",error_code,error_msg.c_str());
+	}
+
+	ClassAd response_ad;
+	response_ad.Assign(ATTR_RESULT,ok);
+	if( !ok ) {
+		response_ad.Assign(ATTR_ERROR_STRING,error_msg);
+		response_ad.Assign(ATTR_ERROR_CODE,error_code);
+	}
+	s->encode();
+	if( !response_ad.put(*s) || !s->end_of_message() ) {
+		dprintf(D_ALWAYS,"command_drain_jobs: failed to send response to %s\n",s->peer_description());
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+int
+command_cancel_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
+{
+	ClassAd ad;
+
+	s->decode();
+	if( !ad.initFromStream(*s) ) {
+		dprintf(D_ALWAYS,"command_cancel_drain_jobs: failed to read classad from %s\n",s->peer_description());
+		return FALSE;
+	}
+	if( !s->end_of_message() ) {
+		dprintf(D_ALWAYS,"command_cancel_drain_jobs: failed to read end of message from %s\n",s->peer_description());
+		return FALSE;
+	}
+
+	dprintf(D_ALWAYS,"Processing cancel drain request from %s\n",s->peer_description());
+	ad.dPrint(D_ALWAYS);
+
+	std::string request_id;
+	ad.LookupString(ATTR_REQUEST_ID,request_id);
+
+	std::string error_msg;
+	int error_code = 0;
+	bool ok = resmgr->cancelDraining(request_id,error_msg,error_code);
+	if( !ok ) {
+		dprintf(D_ALWAYS,"Failed to cancel draining, error code %d: %s\n",error_code,error_msg.c_str());
+	}
+
+	ClassAd response_ad;
+	response_ad.Assign(ATTR_RESULT,ok);
+	if( !ok ) {
+		response_ad.Assign(ATTR_ERROR_STRING,error_msg);
+		response_ad.Assign(ATTR_ERROR_CODE,error_code);
+	}
+	s->encode();
+	if( !response_ad.put(*s) || !s->end_of_message() ) {
+		dprintf(D_ALWAYS,"command_cancel_drain_jobs: failed to send response to %s\n",s->peer_description());
+		return FALSE;
+	}
+
+	return TRUE;
+}

@@ -175,7 +175,7 @@ Reqexp::restore()
 	} else {
 		rip->r_classad->Delete( ATTR_RUNNING_COD_JOB );
 	}
-	if( resmgr->isShuttingDown() ) {
+	if( resmgr->isShuttingDown() || rip->isDraining() ) {
 		if( rstate != UNAVAIL_REQ ) {
 			unavail();
 			return true;

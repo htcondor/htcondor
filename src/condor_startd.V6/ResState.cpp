@@ -43,6 +43,13 @@ ResState::ResState( Resource* res_ip )
 	m_time_claimed_retiring = 0;
 	m_time_preempting_vacating = 0;
 	m_time_preempting_killing = 0;
+	m_time_drained_retiring = 0;
+	m_time_drained_idle = 0;
+	m_time_draining_unclaimed = 0;
+	m_num_cpus_avg = 0;
+	m_draining_avg = 0;
+	m_activity_avg_last_timestamp = 0;
+	m_activity_avg_time_sum = 0;
 }
 
 
@@ -72,6 +79,8 @@ ResState::publish( ClassAd* cp, amask_t how_much )
 	publishHistoryInfo(cp, backfill_state, idle_act);
 	publishHistoryInfo(cp, backfill_state, busy_act);
 	publishHistoryInfo(cp, backfill_state, killing_act);
+	publishHistoryInfo(cp, drained_state, idle_act);
+	publishHistoryInfo(cp, drained_state, retiring_act);
 }
 
 
@@ -215,6 +224,8 @@ ResState::eval( void )
 		// attributes so that other slots can see those results.
 	rip->refreshSlotAttrs();
 
+	updateActivityAverages();
+
 	switch( r_state ) {
 
 	case claimed_state:
@@ -238,6 +249,9 @@ ResState::eval( void )
 					// matter.  Whatever activity we were in, the
 					// retirement time has expired, so it is time to
 					// change to the preempting state.
+				if( rip->isDraining() ) {
+					rip->setBadputCausedByDraining();
+				}
 				dprintf( D_ALWAYS, "State change: claim retirement ended/expired\n" );
 				// STATE TRANSITION #18
 				change( preempting_state );
@@ -328,6 +342,11 @@ ResState::eval( void )
 			change( preempting_state );
 			return TRUE; // XXX: change TRUE
 		}
+		if( (r_act == idle_act) && rip->isDraining() ) {
+			dprintf( D_ALWAYS, "State change: idle claim shutting down due to draining of this slot\n" );
+			change( preempting_state );
+			return TRUE;
+		}
 		if( (r_act == busy_act || r_act == retiring_act) && (rip->wants_pckpt()) ) {
 			rip->periodic_checkpoint();
 		}
@@ -371,6 +390,12 @@ ResState::eval( void )
 #endif
 			change( delete_state );
 			return TRUE; // XXX: change TRUE
+		}
+
+		if( rip->isDraining() ) {
+			dprintf( D_ALWAYS, "State change: entering Drained state\n" );
+			change( drained_state, retiring_act );
+			return TRUE;
 		}
 
 		// See if we should be owner or unclaimed
@@ -429,6 +454,12 @@ ResState::eval( void )
 #endif
 			change( delete_state );
 			return TRUE; // XXX: change TRUE
+		}
+
+		if( rip->isDraining() ) {
+			dprintf( D_ALWAYS, "State change: entering Drained state\n" );
+			change( drained_state, retiring_act );
+			return TRUE;
 		}
 
 		if( ! rip->eval_is_owner() ) {
@@ -508,6 +539,26 @@ ResState::eval( void )
 		break;
 #endif /* HAVE_BACKFILL */
 
+	case drained_state:
+		if( !rip->isDraining() ) {
+			dprintf(D_ALWAYS,"State change: slot is no longer draining.\n");
+			change( owner_state );
+			return TRUE;
+		}
+		if( r_act == retiring_act ) {
+			if( resmgr->drainingIsComplete( rip ) ) {
+				dprintf(D_ALWAYS,"State change: draining is complete.\n");
+				change( drained_state, idle_act );
+				return TRUE;
+			}
+		}
+		else if( r_act == idle_act ) {
+			if( resmgr->considerResumingAfterDraining() ) {
+				return TRUE;
+			}
+		}
+		break;
+
 	default:
 		EXCEPT( "eval_state: ERROR: unknown state (%d)",
 				(int)rip->state() );
@@ -563,6 +614,7 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 	case matched_state:
 	case owner_state:
 	case unclaimed_state:
+	case drained_state:
 		break;
 
 	case claimed_state:
@@ -810,6 +862,9 @@ ResState::enter_action( State s, Activity a,
 		return TRUE;
 		break;
 
+	case drained_state:
+		rip->r_reqexp->unavail();
+		break;
 	default: 
 		EXCEPT("Unknown state in ResState::enter_action");
 	}
@@ -1008,6 +1063,32 @@ ResState::starterExited( void )
 	return FALSE;
 }
 
+void
+ResState::resetActivityAverages()
+{
+	m_activity_avg_last_timestamp = time(NULL);
+	m_activity_avg_time_sum = 0;
+	m_num_cpus_avg = rip->r_attr->num_cpus();
+	m_draining_avg = rip->isDraining();
+}
+
+void
+ResState::updateActivityAverages()
+{
+	if ( m_activity_avg_last_timestamp == 0 ) {
+		resetActivityAverages();
+	}
+	else {
+		time_t now = time(NULL);
+		int delta = now - m_activity_avg_last_timestamp;
+		m_activity_avg_last_timestamp = now;
+		if( delta > 0 ) {
+			m_num_cpus_avg = (m_num_cpus_avg * m_activity_avg_time_sum + rip->r_attr->num_cpus() * delta)/(m_activity_avg_time_sum + delta);
+			m_draining_avg = (m_draining_avg * m_activity_avg_time_sum + rip->isDraining() * delta)/(m_activity_avg_time_sum + delta);
+			m_activity_avg_time_sum += delta;
+		}
+	}
+}
 
 void
 ResState::updateHistoryTotals( time_t now )
@@ -1016,8 +1097,30 @@ ResState::updateHistoryTotals( time_t now )
 		// increment the right counter variable.
 	time_t* history_ptr = getHistoryTotalPtr(r_state, r_act);
 	*history_ptr += (now - m_atime);
+
+	if( r_state == unclaimed_state || r_state == drained_state )
+	{
+			// unclaimed draining time is in cpu seconds
+		int delta = (int)((now - m_atime)*m_draining_avg*m_num_cpus_avg);
+		m_time_draining_unclaimed += delta;
+	}
+	resetActivityAverages();
 }
 
+int
+ResState::timeDrainingUnclaimed()
+{
+	int total = m_time_draining_unclaimed;
+
+		// Add in the time spent in the current state/activity
+	if( r_state == unclaimed_state || r_state == drained_state )
+	{
+		time_t now = time(NULL);
+			// unclaimed draining time is in cpu seconds
+		total += (int)((now - m_atime)*m_draining_avg*m_num_cpus_avg);
+	}
+	return total;
+}
 
 time_t*
 ResState::getHistoryTotalPtr( State _state, Activity _act ) {
@@ -1103,6 +1206,22 @@ ResState::getHistoryInfo( State _state, Activity _act ) {
 				   state_to_string(_state));
 		}
 		break;
+	case drained_state:
+		switch (_act) {
+		case idle_act:
+			var_ptr = &m_time_drained_idle;
+			attr_name = ATTR_TOTAL_TIME_DRAINED_IDLE;
+			break;
+		case retiring_act:
+			var_ptr = &m_time_drained_retiring;
+			attr_name = ATTR_TOTAL_TIME_DRAINED_RETIRING;
+			break;
+		default:
+			EXCEPT("Unexpected activity (%s: %d) in getHistoryInfo() for %s",
+				   activity_to_string(_act), (int)_act,
+				   state_to_string(_state));
+		}
+		break;
 	case backfill_state:
 		switch (_act) {
 		case idle_act:
@@ -1132,7 +1251,6 @@ ResState::getHistoryInfo( State _state, Activity _act ) {
 	info.attr_name = attr_name;
 	return info;
 }
-
 
 bool
 ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )

@@ -20,14 +20,15 @@
 #ifndef _CONDOR_STATE_H
 #define _CONDOR_STATE_H
 
-// Note: This should be kept in sync with view_server.h and view_server.C and
-// with ResConvStr of condor_tools/stats.C.
+// Note: This should be kept in sync with view_server.h and view_server.cpp and
+// with ResConvStr of condor_tools/stats.cpp.  Also with state strings in
+// condor_state.cpp.
 // Also note that if you add a state, you should update
 // _machine_max_state to match
 enum State { no_state=0, owner_state, unclaimed_state, matched_state, 
 			 claimed_state, preempting_state, shutdown_state,
-			 delete_state, backfill_state,
-			 _machine_max_state = backfill_state,
+			 delete_state, backfill_state, drained_state,
+			 _machine_max_state = drained_state,
 			 _state_threshold_, _error_state_ }; 
 
 enum Activity { no_act=0, idle_act, busy_act, retiring_act, vacating_act,

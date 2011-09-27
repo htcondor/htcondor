@@ -215,6 +215,35 @@ public:
 		// described by the given machine type.
 	CpuAttributes*	buildSlot( int slot_id, StringList* list, int type, bool except = false );
 
+		// returns true if specified slot is draining
+	bool isSlotDraining(Resource *rip);
+
+	bool getDrainingRequestId( Resource *rip, std::string &request_id );
+
+		// return number of seconds after which we want
+		// to transition to fast eviction of jobs
+	int gracefulDrainingTimeRemaining(Resource *rip);
+
+	int gracefulDrainingTimeRemaining();
+
+		// return true if all slots are in drained state
+	bool drainingIsComplete(Resource *rip);
+
+		// return true if draining was canceled by this function
+	bool considerResumingAfterDraining();
+
+		// how_fast: DRAIN_GRACEFUL, DRAIN_QUICK, DRAIN_FAST
+	bool startDraining(int how_fast,bool resume_on_completion,ExprTree *check_expr,std::string &new_request_id,std::string &error_msg,int &error_code);
+
+	bool cancelDraining(std::string request_id,std::string &error_msg,int &error_code);
+
+	void publish_draining_attrs( Resource *rip, ClassAd *cap, amask_t mask );
+
+	void compute_draining_attrs( int how_much );
+
+		// badput is in seconds
+	void addToDrainingBadput( int badput );
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -329,6 +358,16 @@ private:
 	void cancelHibernateTimer();
 #endif /* HAVE_HIBERNATION */
 
+	bool draining;
+	bool draining_is_graceful;
+	bool resume_on_completion_of_draining;
+	int draining_id;
+	int expected_graceful_draining_completion;
+	int expected_quick_draining_completion;
+	int expected_graceful_draining_badput;
+	int expected_quick_draining_badput;
+	int total_draining_badput;
+	int total_draining_unclaimed;
 };
 
 

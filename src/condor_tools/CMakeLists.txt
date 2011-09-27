@@ -20,6 +20,7 @@ set(TOOL_LINK_LIBS "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FO
 
 condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_preen "preen.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_drain "drain.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_advertise "advertise.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_fetchlog "fetch_log.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_config_val "config_val.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)

@@ -129,7 +129,7 @@ void ViewServer::Init()
 	DataFormat[SubmittorData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[SubmittorGroupsData]="%d\t%s\t:\t%.0f\t%.0f\n";
 	DataFormat[StartdData]="%d\t%s\t:\t%.0f\t%7.3f\t%.0f\n";
-	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
+	DataFormat[GroupsData]="%d\t%s\t:\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n";
 	DataFormat[CkptData]="%d\t%s\t:\t%.3f\t%.3f\t%.3f\t%.3f\n";
 	
 	return;
@@ -738,7 +738,7 @@ void ViewServer::WriteHistory()
 
 			DataSet[i][j].AccData->startIterations();
 			while(DataSet[i][j].AccData->iterate(Key,GenRec)) {
-				sprintf(OutLine,DataFormat[i].Value(),TimeStamp,Key.Value(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4],GenRec->Data[5],GenRec->Data[6], GenRec->Data[7]);
+				sprintf(OutLine,DataFormat[i].Value(),TimeStamp,Key.Value(),GenRec->Data[0],GenRec->Data[1],GenRec->Data[2],GenRec->Data[3],GenRec->Data[4],GenRec->Data[5],GenRec->Data[6], GenRec->Data[7], GenRec->Data[8]);
 				delete GenRec;
 				fputs(OutLine, DataFile);
 			}
@@ -922,6 +922,9 @@ int ViewServer::StartdScanFunc(ClassAd* cad)
 		break;
 	case backfill_state:
 		st=VIEW_STATE_BACKFILL;
+		break;
+	case drained_state:
+		st=VIEW_STATE_DRAINED;
 		break;
 	default:
 		dprintf( D_ALWAYS,

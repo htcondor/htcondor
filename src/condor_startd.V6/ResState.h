@@ -37,6 +37,7 @@ public:
 	int		starterExited( void );
 	State	destination( void ) { return r_destination; };
 	int     activityTimeElapsed();
+	int     timeDrainingUnclaimed();
 
 	void	dprintf( int, const char*, ... );
 private:
@@ -68,6 +69,14 @@ private:
 	time_t	m_time_backfill_idle;
 	time_t	m_time_backfill_busy;
 	time_t	m_time_backfill_killing;
+	time_t  m_time_drained_retiring;
+	time_t  m_time_drained_idle;
+	time_t  m_time_draining_unclaimed;
+
+	double m_num_cpus_avg;
+	double m_draining_avg;
+	time_t m_activity_avg_last_timestamp;
+	int m_activity_avg_time_sum;
 
 	struct HistoryInfo {
 		time_t*		time_ptr;
@@ -79,7 +88,8 @@ private:
 	const char*	getHistoryTotalAttr( State _state, Activity _act );
 	HistoryInfo	getHistoryInfo( State _state, Activity _act );
 	bool	publishHistoryInfo( ClassAd* cap, State _state, Activity _act );
-
+	void resetActivityAverages();
+	void updateActivityAverages();
 };
 
 #endif /* _RES_STATE_H */

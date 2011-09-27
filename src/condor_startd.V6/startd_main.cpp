@@ -374,6 +374,16 @@ main_init( int, char* argv[] )
 								"command_vm_universe", 0, DAEMON, 
 								D_FULLDEBUG );
 
+	daemonCore->Register_CommandWithPayload( DRAIN_JOBS,
+								  "DRAIN_JOBS",
+								  (CommandHandler)command_drain_jobs,
+								  "command_drain_jobs", 0, ADMINISTRATOR);
+	daemonCore->Register_CommandWithPayload( CANCEL_DRAIN_JOBS,
+								  "CANCEL_DRAIN_JOBS",
+								  (CommandHandler)command_cancel_drain_jobs,
+								  "command_cancel_drain_jobs", 0, ADMINISTRATOR);
+
+
 		//////////////////////////////////////////////////
 		// Reapers 
 		//////////////////////////////////////////////////

@@ -22,7 +22,7 @@
 
 static const char* condor_states [] = 
 { "None", "Owner", "Unclaimed", "Matched",  "Claimed", "Preempting",
-  "Shutdown", "Delete", "Backfill" };
+  "Shutdown", "Delete", "Backfill", "Drained" };
 
 static const char* condor_activities [] = 
 { "None", "Idle", "Busy", "Retiring", "Vacating", "Suspended", "Benchmarking",

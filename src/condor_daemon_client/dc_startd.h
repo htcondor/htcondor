@@ -164,6 +164,18 @@ public:
 
 	bool getAds( ClassAdList &adsList );
 
+		// request_id: set to the request id (can be used to cancel request)
+		// returns: true/false on success/failure
+		// call error() to get a descriptive error message
+		// how_fast: DRAIN_GRACEFUL, DRAIN_QUICK, DRAIN_FAST
+		// check_expr: optional expression that must be true for all slots to be drained or request fails
+	bool drainJobs(int how_fast,bool resume_on_completion,char const *check_expr,std::string &request_id);
+
+		// request_id: the draining request id
+		// returns: true/false on success/failure
+		// call error() to get a descriptive error message
+	bool cancelDrainJobs(char const *request_id);
+
  private:
 	char* claim_id;
 

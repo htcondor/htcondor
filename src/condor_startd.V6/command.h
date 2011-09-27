@@ -115,4 +115,10 @@ bool accept_request_claim( Resource* );
 // Activate a claim with a given starter
 int activate_claim( Resource*, Stream* ); 
 
+// Start draining jobs
+int command_drain_jobs( Service*, int dc_cmd, Stream* s );
+
+// Cancel prior request to drain jobs
+int command_cancel_drain_jobs( Service*, int dc_cmd, Stream* s );
+
 #endif /* _STARTD_COMMAND_H */

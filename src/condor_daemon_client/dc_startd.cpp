@@ -1011,3 +1011,108 @@ bool DCClaimIdMsg::readMsg( DCMessenger *, Sock *sock )
 
 	return true;
 }
+
+bool
+DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_expr,std::string &request_id)
+{
+	std::string error_msg;
+	ClassAd request_ad;
+	Sock *sock = startCommand( DRAIN_JOBS, Sock::reli_sock, 20 );
+	if( !sock ) {
+		sprintf(error_msg,"Failed to start DRAIN_JOBS command to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		return false;
+	}
+
+	request_ad.Assign(ATTR_HOW_FAST,how_fast);
+	request_ad.Assign(ATTR_RESUME_ON_COMPLETION,resume_on_completion);
+	if( check_expr ) {
+		request_ad.AssignExpr(ATTR_CHECK_EXPR,check_expr);
+	}
+
+	if( !request_ad.put(*sock) || !sock->end_of_message() ) {
+		sprintf(error_msg,"Failed to compose DRAIN_JOBS request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	sock->decode();
+	ClassAd response_ad;
+	if( !response_ad.initFromStream(*sock) || !sock->end_of_message() ) {
+		sprintf(error_msg,"Failed to get response to DRAIN_JOBS request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	response_ad.LookupString(ATTR_REQUEST_ID,request_id);
+
+	bool result = false;
+	int error_code = 0;
+	response_ad.LookupBool(ATTR_RESULT,result);
+	if( !result ) {
+		std::string remote_error_msg;
+		response_ad.LookupString(ATTR_ERROR_STRING,remote_error_msg);
+		response_ad.LookupInteger(ATTR_ERROR_CODE,error_code);
+		sprintf(error_msg,
+				"Received failure from %s in response to DRAIN_JOBS request: error code %d: %s",
+				name(),error_code,remote_error_msg.c_str());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	delete sock;
+	return true;
+}
+
+bool
+DCStartd::cancelDrainJobs(char const *request_id)
+{
+	std::string error_msg;
+	ClassAd request_ad;
+	Sock *sock = startCommand( CANCEL_DRAIN_JOBS, Sock::reli_sock, 20 );
+	if( !sock ) {
+		sprintf(error_msg,"Failed to start CANCEL_DRAIN_JOBS command to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		return false;
+	}
+
+	if( request_id ) {
+		request_ad.Assign(ATTR_REQUEST_ID,request_id);
+	}
+
+	if( !request_ad.put(*sock) || !sock->end_of_message() ) {
+		sprintf(error_msg,"Failed to compose CANCEL_DRAIN_JOBS request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		return false;
+	}
+
+	sock->decode();
+	ClassAd response_ad;
+	if( !response_ad.initFromStream(*sock) || !sock->end_of_message() ) {
+		sprintf(error_msg,"Failed to get response to CANCEL_DRAIN_JOBS request to %s",name());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	bool result = false;
+	int error_code = 0;
+	response_ad.LookupBool(ATTR_RESULT,result);
+	if( !result ) {
+		std::string remote_error_msg;
+		response_ad.LookupString(ATTR_ERROR_STRING,remote_error_msg);
+		response_ad.LookupInteger(ATTR_ERROR_CODE,error_code);
+		sprintf(error_msg,
+				"Received failure from %s in response to CANCEL_DRAIN_JOBS request: error code %d: %s",
+				name(),error_code,remote_error_msg.c_str());
+		newError(CA_FAILURE,error_msg.c_str());
+		delete sock;
+		return false;
+	}
+
+	delete sock;
+	return true;
+}

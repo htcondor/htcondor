@@ -300,6 +300,7 @@ public:
 	void dprintf( int, const char*, ... );
 	void show_totals( int );
 
+	int num_cpus() { return c_num_cpus; }
 	float get_disk() { return c_disk; }
 	float get_disk_fraction() { return c_disk_fraction; }
 	unsigned long get_total_disk() { return c_total_disk; }

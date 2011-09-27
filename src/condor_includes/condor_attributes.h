@@ -139,6 +139,7 @@ extern const char * const  ATTR_ENTERED_CURRENT_ACTIVITY;
 extern const char * const  ATTR_ENTERED_CURRENT_STATE;
 extern const char * const  ATTR_ENTERED_CURRENT_STATUS;
 extern const char * const  ATTR_ERROR_STRING;
+extern const char * const  ATTR_ERROR_CODE;
 extern const char * const  ATTR_EXCEPTION_HIERARCHY;
 extern const char * const  ATTR_EXCEPTION_NAME;
 extern const char * const  ATTR_EXCEPTION_TYPE;
@@ -581,6 +582,8 @@ extern const char * const  ATTR_TOTAL_TIME_PREEMPTING_KILLING;
 extern const char * const  ATTR_TOTAL_TIME_PREEMPTING_VACATING;
 extern const char * const  ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING;
 extern const char * const  ATTR_TOTAL_TIME_UNCLAIMED_IDLE;
+extern const char * const  ATTR_TOTAL_TIME_DRAINED_IDLE;
+extern const char * const  ATTR_TOTAL_TIME_DRAINED_RETIRING;
 //extern const char * const  ATTR_WINDOWED_STAT_WIDTH;
 
 // Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
@@ -896,6 +899,17 @@ extern const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME;
 extern const char * const ATTR_MACHINE_MAX_VACATE_TIME;
 extern const char * const ATTR_JOB_MAX_VACATE_TIME;
 extern const char * const ATTR_WANT_GRACEFUL_REMOVAL;
+extern const char * const ATTR_HOW_FAST;
+extern const char * const ATTR_RESUME_ON_COMPLETION;
+extern const char * const ATTR_DRAINING;
+extern const char * const ATTR_DRAINING_REQUEST_ID;
+extern const char * const ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION;
+extern const char * const ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION;
+extern const char * const ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT;
+extern const char * const ATTR_EXPECTED_MACHINE_QUICK_DRAINING_BADPUT;
+extern const char * const ATTR_TOTAL_MACHINE_DRAINING_BADPUT;
+extern const char * const ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME;
+extern const char * const ATTR_CHECK_EXPR;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum
