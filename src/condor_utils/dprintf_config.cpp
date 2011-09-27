@@ -296,13 +296,7 @@ dprintf_config( const char *subsys )
 					(void)sprintf(pname, "MAX_NUM_%s_%s_LOG", subsys,
 								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
-				pval = param(pname);
-				if (pval != NULL) {
-					MaxLogNum[debug_level] = atoi(pval);
-					free(pval);
-				} else {
-					MaxLogNum[debug_level] = 1;
-				}
+				MaxLogNum[debug_level] = param_integer(pname, 1);
 			}
 		}
 	} else {
