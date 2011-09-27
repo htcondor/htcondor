@@ -141,22 +141,22 @@ public:
 
         m_ads_conn = new ODSMongodbOps(DB_RAW_ADS);
         if (!m_ads_conn->init(dbhost.str())) {
-			EXCEPT("Failed to initialize DB connection");
+			EXCEPT("Failed to initialize DB connection for raw ads");
 		}
 
         m_stats_conn = new ODSMongodbOps(DB_STATS_SAMPLES);
         if (!m_stats_conn->init(dbhost.str())) {
-			EXCEPT("Failed to initialize DB connection");
+			EXCEPT("Failed to initialize DB connection for stats");
 		}
 
-        historyInterval = param_integer("POOL_HISTORY_SAMPLING_INTERVAL",20);
-        initialDelay=param_integer("UPDATE_INTERVAL",60);
+        historyInterval = param_integer("POOL_HISTORY_SAMPLING_INTERVAL",60);
+        initialDelay=param_integer("UPDATE_INTERVAL",300);
 
         // Register timer for writing stats to DB
         if (-1 == (historyTimer =
             daemonCore->Register_Timer(
-                0,
-                20,
+                initialDelay,
+                historyInterval,
                 (TimerHandlercpp)(&ODSCollectorPlugin::processStatsTimer),
                 "Timer for collecting ODS stats",
                 this

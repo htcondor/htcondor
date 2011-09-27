@@ -32,8 +32,8 @@ file( GLOB ETL_SERVER_SRCS ods_job_daemon_main.cpp
 ############################
 # daemon emitter plugins
 ############################
-src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
-src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
+#src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
+#src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
 file( GLOB CollectorSrcs ODSCollectorPlugin.cpp ${ETL_COMMON_SRCS})
 condor_plugin( ODSCollectorPlugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
@@ -53,4 +53,4 @@ condor_exe(ods_job_etl_tool "ods_history_tool_main.cpp" ${C_BIN} "${TOOL_LINK_LI
 ############################
 # install targets
 ############################
-#install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/62plumage.config DESTINATION "${C_ETC_EXAMPLES}")
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/62plumage.config DESTINATION "${C_ETC_EXAMPLES}")
