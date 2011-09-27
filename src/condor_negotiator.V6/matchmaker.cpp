@@ -2785,6 +2785,8 @@ obtainAdsFromCollector (
 				// CRUFT: Before 7.3.2, submitter ads had a MyType of
 				//   "Scheduler". The only way to tell the difference
 				//   was that submitter ads didn't have ATTR_NUM_USERS.
+				//   Before 7.7.3, submitter ads for parallel universe
+				//   jobs had a MyType of "Scheduler".
 
             MyString subname;
             if (!ad->LookupString(ATTR_NAME, subname)) {
