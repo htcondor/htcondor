@@ -1250,8 +1250,7 @@ The complete submit description file for this example:
   # Condor automatically adds the correct expressions to insure that the
   # checkpointed jobs will restart on the correct platform types.
   Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
-                 (Arch == "INTEL" && OpSys =="SOLARIS26") || \
-                 (Arch == "SUN4u" && OpSys == "SOLARIS28") )
+                 (Arch == "X86_64" && OpSys == "LINUX") )
 
   Arguments    = +W1024 +H768 +Iimage1.pov
   Queue 
