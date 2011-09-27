@@ -44,6 +44,7 @@ struct StoreCredOptions {
 };
 
 const char *MyName;
+param_functions	p_funcs;	// Global param system wrapper for daemons
 void usage(void);
 bool parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]);
 void badOption(const char* option);
@@ -452,7 +453,10 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 #endif
 				case 'd':
 					Termlog = 1;
-					dprintf_config ("TOOL");
+					p_funcs.set_param_func(&param);
+					p_funcs.set_param_bool_int_func(&param_boolean_int);
+					p_funcs.set_param_wo_default_func(&param_without_default);
+					dprintf_config ("TOOL", &p_funcs);
 					break;
 				case 'h':
 					opts->help = true;

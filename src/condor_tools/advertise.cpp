@@ -31,6 +31,9 @@
 #include "dc_collector.h"
 #include "my_hostname.h"
 
+//Global param system wrapper for daemons
+param_functions p_funcs;
+
 void
 usage( char *cmd )
 {
@@ -90,7 +93,7 @@ int main( int argc, char *argv[] )
 		} else if(!strcmp(argv[i],"-debug")) {
 				// dprintf to console
 			Termlog = 1;
-			dprintf_config ("TOOL" );
+			dprintf_config ("TOOL", &p_funcs);
 		} else if(argv[i][0]!='-' || !strcmp(argv[i],"-")) {
 			if(command==-1) {
 				command = getCollectorCommandNum(argv[i]);
@@ -112,6 +115,10 @@ int main( int argc, char *argv[] )
 			exit(1);
 		}
 	}
+
+	p_funcs.set_param_func(&param);
+	p_funcs.set_param_bool_int_func(&param_boolean_int);
+	p_funcs.set_param_wo_default_func(&param_without_default);
 
 	FILE *file;
 	ClassAdList ads;

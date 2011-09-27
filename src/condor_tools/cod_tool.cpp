@@ -64,6 +64,8 @@ int lease_time = -1;
 bool needs_id = true;
 VacateType vacate_type = VACATE_GRACEFUL;
 
+//Global param system wrapper for daemons
+param_functions p_funcs;
 
 // protoypes of interest
 void usage( const char* );
@@ -99,6 +101,10 @@ main( int argc, char *argv[] )
 	config();
 
 	cmd = getCommandFromArgv( argc, argv );
+
+	p_funcs.set_param_func(&param);
+	p_funcs.set_param_bool_int_func(&param_boolean_int);
+	p_funcs.set_param_wo_default_func(&param_without_default);
 	
 	parseArgv( argc, argv );
 
@@ -651,7 +657,7 @@ parseArgv( int argc, char* argv[] )
 				invalid( *tmp );
 			} 
 			Termlog = 1;
-			dprintf_config ("TOOL");
+			dprintf_config ("TOOL", &p_funcs);
 			break;
 
 		case 'a':

@@ -27,6 +27,7 @@
 #include "read_user_log.h"
 #include "HashTable.h"
 
+param_functions			p_funcs;				 // Global param system wrapper for daemons
 /*
 XXX XXX XXX WARNING WARNING WARNING
 The exit codes in this program are slightly different than
@@ -112,7 +113,10 @@ int main( int argc, char *argv[] )
 		} else if(!strcmp(argv[i],"-debug")) {
 			// dprintf to console
 			Termlog = 1;
-			dprintf_config ("TOOL" );
+			p_funcs.set_param_func(&param);
+			p_funcs.set_param_bool_int_func(&param_boolean_int);
+			p_funcs.set_param_wo_default_func(&param_without_default);
+			dprintf_config ("TOOL", &p_funcs);
 		} else if(!strcmp(argv[i],"-wait")) {
 			i++;
 			if(i>=argc) {

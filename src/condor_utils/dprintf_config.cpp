@@ -50,6 +50,8 @@ extern int		log_keep_open;
 extern void		_condor_set_debug_flags( const char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
 
+param_functions *dprintf_param_funcs;
+
 #if HAVE_EXT_GCB
 void	_condor_gcb_dprintf_va( int flags, char* fmt, va_list args );
 extern "C" void Generic_set_log_va(void(*app_log_va)(int level, char *fmt, va_list args));
@@ -94,7 +96,7 @@ dprintf_config_ContinueOnFailure ( int fContinue )
 }
 
 void
-dprintf_config( const char *subsys )
+dprintf_config( const char *subsys, param_functions *p_funcs )
 {
 	char pname[ BUFSIZ ];
 	char *pval;
@@ -108,6 +110,9 @@ dprintf_config( const char *subsys )
 	
 
 	DebugLogs = new std::vector<DebugFileInfo>();
+	dprintf_param_funcs = p_funcs;
+	if(!dprintf_param_funcs)
+		dprintf_param_funcs = new param_functions();
 
 	/*  
 	**  We want to initialize this here so if we reconfig and the
@@ -119,7 +124,7 @@ dprintf_config( const char *subsys )
 	/*
 	** First, add the debug flags that are shared by everyone.
 	*/
-	pval = param("ALL_DEBUG");
+	pval = dprintf_param_funcs->param("ALL_DEBUG");
 	if( pval ) {
 		_condor_set_debug_flags( pval );
 		free( pval );
@@ -130,7 +135,7 @@ dprintf_config( const char *subsys )
 	**  anything set, we just leave it as D_ALWAYS.
 	*/
 	(void)sprintf(pname, "%s_DEBUG", subsys);
-	pval = param(pname);
+	pval = dprintf_param_funcs->param(pname);
 	if( pval ) {
 		_condor_set_debug_flags( pval );
 		free( pval );
@@ -144,7 +149,7 @@ dprintf_config( const char *subsys )
 		 */
 	DebugShouldLockToAppend = 1;
 #else
-	DebugShouldLockToAppend = param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
+	DebugShouldLockToAppend = dprintf_param_funcs->param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
 #endif
 
 	/*
@@ -353,7 +358,7 @@ dprintf_config( const char *subsys )
 
 	if(!DebugLock) {
 		sprintf(pname, "%s_LOG_KEEP_OPEN", subsys);
-		log_keep_open = param_boolean_int(pname, log_open_default);
+		log_keep_open = dprintf_param_funcs->param_boolean_int(pname, log_open_default);
 	}
 
 	first_time = 0;
@@ -364,7 +369,7 @@ dprintf_config( const char *subsys )
 		  try to param() or call this function unless we're on a
 		  platform where we're using the GCB external
 		*/
-    if ( param_boolean_int("NET_REMAP_ENABLE", 0) ) {
+    if ( dprintf_param_funcs->param_boolean_int("NET_REMAP_ENABLE", 0) ) {
         Generic_set_log_va(_condor_gcb_dprintf_va);
     }
 #endif
@@ -373,7 +378,7 @@ dprintf_config( const char *subsys )
 		  If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
 		  instead of the standard date format in all the log messages
 		*/
-	DebugUseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
+	DebugUseTimestamps = dprintf_param_funcs->param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
 
 #if HAVE_BACKTRACE
 	install_backtrace_handler();

@@ -22,9 +22,13 @@
 #include "string_list.h"
 #include "read_multiple_logs.h"
 #include "check_events.h"
+#include "condor_config.h"
 
 MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
 CHECK_EVENTS_HASH_INSTANCE; // For the event checking code...
+
+//Global param system wrapper for daemons
+param_functions p_funcs;
 
 int main(int argc, char **argv)
 {
@@ -36,9 +40,13 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
+	p_funcs.set_param_func(&param);
+	p_funcs.set_param_bool_int_func(&param_boolean_int);
+	p_funcs.set_param_wo_default_func(&param_without_default);
+
 		// Set up dprintf.
 	Termlog = true;
-	dprintf_config("condor_check_userlogs");
+	dprintf_config("condor_check_userlogs", &p_funcs);
 	DebugFlags = D_ALWAYS;
 
 	StringList	logFiles;

@@ -61,6 +61,9 @@ StringList params;
 daemon_t dt = DT_MASTER;
 bool	mixedcase = false;
 
+//Global param system wrapper for daemons
+param_functions p_funcs;
+
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
 // messages.  To enable config_val.test to produce easily readable
@@ -295,8 +298,11 @@ main( int argc, char* argv[] )
 	}
 
 	if (debug) {
+		p_funcs.set_param_func(&param);
+		p_funcs.set_param_bool_int_func(&param_boolean_int);
+		p_funcs.set_param_wo_default_func(&param_without_default);
 		Termlog = 1;
-		dprintf_config( "TOOL" );
+		dprintf_config( "TOOL", &p_funcs );
 	}
 
 	/* XXX -dump only currently spits out variables found through the

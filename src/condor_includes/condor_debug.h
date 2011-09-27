@@ -86,7 +86,7 @@ extern "C" {
 extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int DebugShouldLockToAppend; /* Should we lock the file before each write? */
-
+#include "param_functions.h"
 
 /* DebugId is a function that may be registered to be called to insert text
  * into the header of a line that is about to be logged to the debug log file.
@@ -97,7 +97,7 @@ extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 
-void dprintf_config( const char *subsys );
+void dprintf_config( const char *subsys, param_functions * p_funcs = NULL );
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);

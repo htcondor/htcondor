@@ -45,6 +45,7 @@
 
 char	*MyName;
 DECL_SUBSYSTEM( "DAEMON-TOOL", SUBSYSTEM_TYPE_TOOL );
+param_functions	p_funcs;				 // Global param system wrapper for daemons
 
 void
 usage()
@@ -97,7 +98,10 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-debug" ) ) {
 				// dprintf to console
 			Termlog = 1;
-			dprintf_config( "DAEMON-TOOL" );
+			p_funcs.set_param_func(&param);
+			p_funcs.set_param_bool_int_func(&param_boolean_int);
+			p_funcs.set_param_wo_default_func(&param_without_default);
+			dprintf_config( "DAEMON-TOOL", &p_funcs );
 			DebugFlags |= D_FULLDEBUG|D_SECURITY;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();

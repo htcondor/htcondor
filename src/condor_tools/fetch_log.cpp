@@ -29,6 +29,9 @@
 #include "command_strings.h"
 #include "condor_distribution.h"
 
+//Global param system wrapper for daemons
+param_functions p_funcs;
+
 int handleHistoryDir(ReliSock *);
 
 void
@@ -84,6 +87,10 @@ int main( int argc, char *argv[] )
 	myDistro->Init( argc, argv );
 	config();
 
+	p_funcs.set_param_func(&param);
+	p_funcs.set_param_bool_int_func(&param_boolean_int);
+	p_funcs.set_param_wo_default_func(&param_without_default);
+
 	for( i=1; i<argc; i++ ) {
 		if(!strcmp(argv[i],"-help")) {
 			usage(argv[0]);
@@ -101,7 +108,7 @@ int main( int argc, char *argv[] )
 			exit(0);
 		} else if(!strcmp(argv[i],"-debug")) {
             Termlog = 1;
-            dprintf_config ("TOOL");
+            dprintf_config ("TOOL", &p_funcs);
 		} else if(argv[i][0]=='-') {
 			type = stringToDaemonType(&argv[i][1]);
 			if( type == DT_NONE || type == DT_DAGMAN) {

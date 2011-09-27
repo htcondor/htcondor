@@ -38,6 +38,7 @@
 #include "file_lock.h"
 #include "directory.h"
 #include "exit.h"
+#include "param_functions.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -99,6 +100,9 @@ time_t daemon_stop_time;
 extern FILESQL *FILEObj;
 /* FILEXML object */
 extern FILEXML *XMLObj;
+
+//Global param system wrapper for daemons
+param_functions p_funcs;
 
 #ifdef WIN32
 int line_where_service_stopped = 0;
@@ -1398,7 +1402,7 @@ dc_reconfig()
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(get_mySubSystem()->getName() );
+	dprintf_config(get_mySubSystem()->getName(), &p_funcs);
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
@@ -1618,6 +1622,10 @@ int main( int argc, char** argv )
 			myFullName = NULL;
 		}
 	}
+
+	p_funcs.set_param_func(&param);
+	p_funcs.set_param_bool_int_func(&param_boolean_int);
+	p_funcs.set_param_wo_default_func(&param_without_default);
 
 	myDistro->Init( argc, argv );
 	if ( EnvInit() < 0 ) {
@@ -1926,7 +1934,7 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName() );
+		dprintf_config(get_mySubSystem()->getName(), &p_funcs);
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -2042,7 +2050,7 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName() );
+		dprintf_config(get_mySubSystem()->getName(), &p_funcs);
 	}
 
 		// Now that we have the daemonCore object, we can finally

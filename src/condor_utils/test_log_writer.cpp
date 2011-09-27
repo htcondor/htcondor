@@ -48,6 +48,8 @@ using namespace std;
 static const char *	VERSION = "1.0.0";
 DECL_SUBSYSTEM( "TEST_LOG_WRITER", SUBSYSTEM_TYPE_TOOL );
 
+param_functions			p_funcs;				 // Global param system wrapper for daemons
+
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
 enum Verbosity {
@@ -369,7 +371,10 @@ main(int argc, const char **argv)
 
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("test_log_writer");
+	p_funcs.set_param_func(&param);
+	p_funcs.set_param_bool_int_func(&param_boolean_int);
+	p_funcs.set_param_wo_default_func(&param_without_default);
+	dprintf_config("test_log_writer", &p_funcs);
 	DebugFlags = D_ALWAYS;
 
 	bool			error = false;

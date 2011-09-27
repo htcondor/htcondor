@@ -72,6 +72,7 @@ BOOLEAN		MailFlag;			// true if we should send mail about problems
 BOOLEAN		VerboseFlag;		// true if we should produce verbose output
 BOOLEAN		RmFlag;				// true if we should remove extraneous files
 StringList	*BadFiles;			// list of files which don't belong
+param_functions			p_funcs;				 // Global param system wrapper for daemons
 
 // prototypes of local interest
 void usage();
@@ -154,7 +155,10 @@ main( int argc, char *argv[] )
 		}
 	}
 	
-	dprintf_config("TOOL");
+	p_funcs.set_param_func(&param);
+	p_funcs.set_param_bool_int_func(&param_boolean_int);
+	p_funcs.set_param_wo_default_func(&param_without_default);
+	dprintf_config("TOOL", &p_funcs);
 	if (VerboseFlag)
 	{
 		// always append D_FULLDEBUG locally when verbose.

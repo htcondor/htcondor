@@ -28,6 +28,7 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "basename.h"
+#include "condor_config.h"
 
 /**	Preprocessor definitions */
 
@@ -81,6 +82,7 @@ static int				port	= 9;	 /* port number to use */
 static bool				stdio	= false; /* if true, use stdin and stdout. */
 static ClassAd			*ad		= NULL;  /* machine class-ad */
 static WakerBase		*waker	= NULL;  /* waking mechanism */
+param_functions			p_funcs;		 /* Global param system wrapper for daemons */
 
 /**	Functions */
 
@@ -112,7 +114,10 @@ enable_debug( void )
 {
 
 	Termlog = 1;
-	dprintf_config ( "TOOL" );
+	p_funcs.set_param_func(&param);
+	p_funcs.set_param_bool_int_func(&param_boolean_int);
+	p_funcs.set_param_wo_default_func(&param_without_default);
+	dprintf_config ( "TOOL", &p_funcs );
 
 }
 

@@ -46,6 +46,8 @@
 
 #define NUM_PARAMETERS 3
 
+//Global param system wrapper for daemons
+param_functions p_funcs;
 
 DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
 
@@ -280,7 +282,10 @@ main(int argc, char* argv[])
     else if (strcmp(argv[i],"-debug")==0) {
           // dprintf to console
           Termlog = 1;
-          dprintf_config ("TOOL");
+		  p_funcs.set_param_func(&param);
+		  p_funcs.set_param_bool_int_func(&param_boolean_int);
+		  p_funcs.set_param_wo_default_func(&param_without_default);
+          dprintf_config ("TOOL", &p_funcs);
     }
     else {
 		if (constraint!="") {

@@ -74,6 +74,7 @@ static struct saved_dprintf* saved_list_tail = NULL;
 
 extern	DLL_IMPORT_MAGIC int		errno;
 extern  int		DebugFlags;
+extern param_functions *dprintf_param_funcs;
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -163,14 +164,6 @@ int InDBX = 0;
 
 #define FCLOSE_RETRY_MAX 10
 
-DebugFileInfo::DebugFileInfo()
-{
-	debugFlags = 0;
-	debugFP = NULL;
-	maxLog = 0;
-	maxLogNum = 0;
-}
-
 DebugFileInfo::DebugFileInfo(const DebugFileInfo &debugFileInfo)
 {
 	this->debugFlags = debugFileInfo.debugFlags;
@@ -196,7 +189,7 @@ static char *formatTimeHeader(struct tm *tm) {
 
 	if (firstTime) {
 		firstTime = 0;
-		timeFormat = param( "DEBUG_TIME_FORMAT" );
+		timeFormat = dprintf_param_funcs->param( "DEBUG_TIME_FORMAT" );
 		if (!timeFormat) {
 			timeFormat = strdup("%m/%d/%y %H:%M:%S ");
 		} else {
@@ -519,7 +512,11 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 		{
 			int debugFlags = (*it).debugFlags;
-			if((debugFlags != 0) && ((debugFlags & flags) != flags))
+			/*
+			 * Checks to make sure at least one of the levels in flags match
+			 * the levels associated with this output target.
+			 */
+			if((debugFlags != 0) && ((debugFlags & flags) != 0))
 				continue;
 			/* Open and lock the log file */
 			debug_file_ptr = debug_lock(debugFlags, NULL, 0);
@@ -661,7 +658,7 @@ debug_open_lock(void)
 	if ( use_kernel_mutex == -1 ) {
 #ifdef WIN32
 		// Use a mutex by default on Win32
-		use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+		use_kernel_mutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 #else
 		// Use file locking by default on Unix.  We should 
 		// call param_boolean_int here, but since locking via
@@ -749,7 +746,11 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & debug_level) != debug_level)
+		/*
+		 * Checks to make sure at least one of the levels in flags match
+		 * the levels associated with this output target.
+		 */
+		if(((*it).debugFlags & debug_level) != 0)
 			continue;
 		debug_file_ptr = (*it).debugFP;
 		level_exists = true;
@@ -897,7 +898,11 @@ void debug_close_file(int debug_level)
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & debug_level) != debug_level)
+		/*
+		 * Checks to make sure at least one of the levels in flags match
+		 * the levels associated with this output target.
+		 */
+		if(((*it).debugFlags & debug_level) != 0)
 			continue;
 		debug_file_ptr = (*it).debugFP;
 		level_exists = true;
@@ -952,7 +957,11 @@ debug_unlock(int debug_level)
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & debug_level) != debug_level)
+		/*
+		 * Checks to make sure at least one of the levels in flags match
+		 * the levels associated with this output target.
+		 */
+		if(((*it).debugFlags & debug_level) != 0)
 			continue;
 		debug_file_ptr = (*it).debugFP;
 		level_exists = true;
@@ -1004,7 +1013,11 @@ preserve_log_file(int debug_level)
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & debug_level) != debug_level)
+		/*
+		 * Checks to make sure at least one of the levels in flags match
+		 * the levels associated with this output target.
+		 */
+		if(((*it).debugFlags & debug_level) != 0)
 			continue;
 		debug_file_ptr = (*it).debugFP;
 		filePath = (*it).logPath;
@@ -1219,7 +1232,11 @@ open_debug_file(int debug_level, const char flags[])
 
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(((*it).debugFlags & debug_level) != debug_level)
+		/*
+		 * Checks to make sure at least one of the levels in flags match
+		 * the levels associated with this output target.
+		 */
+		if(((*it).debugFlags & debug_level) != 0)
 			continue;
 		filePath = (*it).logPath;
 		break;
@@ -1307,7 +1324,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		strcat( tail, buf );
 #endif
 
-		tmp = param( "LOG" );
+		tmp = dprintf_param_funcs->param( "LOG" );
 		if( tmp ) {
 			snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
 					  tmp, get_mySubSystemName() );

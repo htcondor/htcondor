@@ -29,6 +29,7 @@
 #include "basename.h"
 #include "hibernator.h"
 #include "simple_arg.h"
+#include "condor_config.h"
 
 #if defined ( WIN32 )
 #  include "hibernator.WINDOWS.h"
@@ -92,6 +93,7 @@ static const char		*state		= NULL;		 // hibernation state
 static const char		*method		= NULL;		 // Hibernation method
 static RunMode			run_mode	= MODE_NONE; // Run mode
 static HibernatorBase	*hibernator	= NULL; 	 // hibernation mechanism
+param_functions			p_funcs;				 // Global param system wrapper for daemons
 
 /**	Functions */
 
@@ -117,7 +119,10 @@ static void
 enable_debug( void )
 {
 	Termlog = true;
-	dprintf_config( "TOOL" );
+	p_funcs.set_param_func(&param);
+	p_funcs.set_param_bool_int_func(&param_boolean_int);
+	p_funcs.set_param_wo_default_func(&param_without_default);
+	dprintf_config( "TOOL", &p_funcs );
 	set_debug_flags( "D_FULLDEBUG" );
 }
 
