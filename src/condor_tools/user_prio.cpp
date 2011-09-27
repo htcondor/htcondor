@@ -33,6 +33,8 @@
 #include "daemon.h"
 #include "condor_distribution.h"
 #include "condor_attributes.h"
+// for std::sort
+#include <algorithm> 
 
 //-----------------------------------------------------------------
 
