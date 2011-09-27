@@ -2790,7 +2790,7 @@ id=142
 
 [HAD_CONNECTION_TIMEOUT]
 aliases=
-default=
+default=5
 version=0.0.0
 range=.*
 state=default
