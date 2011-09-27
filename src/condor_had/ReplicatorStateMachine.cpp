@@ -194,15 +194,22 @@ ReplicatorStateMachine::reinitialize()
     m_myVersion.initialize( m_stateFilePath, m_versionFilePath );
 
     m_replicationInterval =
-        getConfigurationPositiveIntegerParameter( "REPLICATION_INTERVAL" );
+		param_integer("REPLICATION_INTERVAL",
+					  getConfigurationDefaultPositiveIntegerParameter("REPLICATION_INTERVAL"),
+					  0); // min value, must be positive
     m_maxTransfererLifeTime =
-        getConfigurationPositiveIntegerParameter( "MAX_TRANSFER_LIFETIME" );
+		param_integer("MAX_TRANSFER_LIFETIME",
+					  getConfigurationDefaultPositiveIntegerParameter("MAX_TRANSFER_LIFETIME"),
+					  0); // min value, must be positive
     m_newlyJoinedWaitingVersionInterval =
-        getConfigurationPositiveIntegerParameter(
-                            "NEWLY_JOINED_WAITING_VERSION_INTERVAL" );
+		param_integer("NEWLY_JOINED_WAITING_VERSION_INTERVAL",
+					  getConfigurationDefaultPositiveIntegerParameter("NEWLY_JOINED_WAITING_VERSION_INTERVAL"),
+					  0); // min value, must be positive
     // deduce HAD alive tolerance
     int hadConnectionTimeout =
-        getConfigurationPositiveIntegerParameter( "HAD_CONNECTION_TIMEOUT" );
+		param_integer("HAD_CONNECTION_TIMEOUT",
+					  getConfigurationDefaultPositiveIntegerParameter("HAD_CONNECTION_TIMEOUT"),
+					  0); // min value, must be positive
 
     char* buffer = param( "HAD_LIST" );
 
