@@ -7271,6 +7271,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c-gahp,io_loop
 id=439
 
+[REPLICATION_INTERVAL]
+aliases=
+default=300
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Replication Interval
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=had,ReplicatorStateMachine
+id=440
+
 [NEGOTIATOR_INTERVAL]
 aliases=
 default=60
