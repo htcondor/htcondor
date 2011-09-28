@@ -28,10 +28,12 @@ echo nmi ACTIVE_PERL_DIR=%ACTIVE_PERL_DIR%
 if NOT "~%ACTIVE_PERL_DIR%"=="~" goto got_active_perl
 :: Look for active perl in the registry
 for /F "tokens=3" %%I in ('reg query HKLM\Software\Perl /v BinDir') do set ACTIVE_PERL_DIR=%%~sdpI
+if NOT "~%ACTIVE_PERL_DIR%"=="~" for %%I in (%ACTIVE_PERL_DIR%\..) do set ACTIVE_PERL_DIR=%%~sfI
 echo reg ACTIVE_PERL_DIR=%ACTIVE_PERL_DIR%
 if NOT "~%ACTIVE_PERL_DIR%"=="~" goto got_active_perl
 :: look for perl in the path. this is dangerous, because we can't use cygwin perl. builds require active perl
 for %%I in (perl.exe) do set ACTIVE_PERL_DIR=%%~sdp$PATH:I
+if NOT "~%ACTIVE_PERL_DIR%"=="~" for %%I in (%ACTIVE_PERL_DIR%\..) do set ACTIVE_PERL_DIR=%%~sfI
 echo path ACTIVE_PERL_DIR=%ACTIVE_PERL_DIR%
 if NOT "~%ACTIVE_PERL_DIR%"=="~" goto got_active_perl
 set PERL_PATH=c:\perl\site\bin;c:\perl\bin
