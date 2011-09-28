@@ -1413,8 +1413,7 @@ dc_reconfig()
 		// If requested to do so in the config file, do a segv now.
 		// This is to test our handling/writing of a core file.
 	char* ptmp;
-	if ( (ptmp=param("DROP_CORE_ON_RECONFIG")) && 
-		 (*ptmp=='T' || *ptmp=='t') ) {
+	if ( param_boolean_crufty("DROP_CORE_ON_RECONFIG", false) ) {
 			// on purpose, derefernce a null pointer.
 			ptmp = NULL;
 			char segfault;	
