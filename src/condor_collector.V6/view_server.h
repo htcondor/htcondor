@@ -132,7 +132,7 @@ private:
 	// misc variables
 
 	static int HistoryTimer;
-	static int KeepHistory;
+	static bool KeepHistory;
 
 	// Utility functions
 

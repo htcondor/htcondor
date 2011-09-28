@@ -41,7 +41,7 @@ int ViewServer::TimeStamp;
 int ViewServer::HistoryTimer;
 MyString ViewServer::DataFormat[DataSetCount];
 AccHash* ViewServer::GroupHash;
-int ViewServer::KeepHistory;
+bool ViewServer::KeepHistory;
 HashTable< MyString, int >* ViewServer::FileHash;
 ExtArray< ExtIntArray* >* ViewServer::TimesArray;
 ExtArray< ExtOffArray* >* ViewServer::OffsetsArray;
@@ -64,10 +64,10 @@ void ViewServer::Init()
 
 	// Check operation mode
 
-	KeepHistory=FALSE;
+	KeepHistory=false;
 	char* tmp=param("KEEP_POOL_HISTORY");
 	if( tmp ) {
-		if( *tmp == 'T' || *tmp == 't' ) KeepHistory=TRUE;
+		if( *tmp == 'T' || *tmp == 't' ) KeepHistory=true;
 		free( tmp );
 	}
 
