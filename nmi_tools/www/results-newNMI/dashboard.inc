@@ -49,7 +49,7 @@ function get_queue_for_nmi_platform($platform, $type, $dash) {
   $condorq->add_platform($platform_without_prefix);
   $per_platform_queues = $condorq->condor_q();
   
-  return $per_platform_queues[$platform_without_prefix][1];
+  return $per_platform_queues[$platform_without_prefix]["html-queue"];
 }
 
 

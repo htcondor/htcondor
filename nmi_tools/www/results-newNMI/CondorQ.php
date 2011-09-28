@@ -81,6 +81,7 @@ class CondorQ {
     $running_jobs = 0;
 
     $output = "";
+    $slots = 0;
     
     if($this->pool) {
       if($this->pool[$platform]) {
@@ -90,6 +91,7 @@ class CondorQ {
 	  $host = $host_count[0];
 	  $num = $host_count[1];
 	  $output .= "<tr><td>$host</td><td align='center'>$num</td></tr>\n";
+	  $slots += $num;
 	}
 	$output .= "</table><br />\n";
       }
@@ -134,8 +136,10 @@ class CondorQ {
 
 
     $ret = Array();
-    $ret[0] = $depth;
-    $ret[1] = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Depth: $depth ($running_jobs)<span>$output</span></a></span>";
+    $ret["depth"]      = $depth;
+    $ret["running"]    = $running_jobs;
+    $ret["slots"]      = $slots;
+    $ret["html-queue"] = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Depth: $depth ($running_jobs)<span>$output</span></a></span>";
     return $ret;
   }
 }
