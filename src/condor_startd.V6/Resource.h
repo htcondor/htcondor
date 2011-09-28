@@ -244,6 +244,7 @@ public:
 	char*			r_id_str;	// CPU id of this resource (string form)
 	AvailStats		r_avail_stats; // computes resource availability stats
 	int             prevLHF;
+	bool 			m_bUserSuspended;
 
 	int				type( void ) { return r_attr->type(); };
 

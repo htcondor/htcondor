@@ -16,6 +16,8 @@
 \oOpt{-allusers}
 \oOptArg{-activefrom}{month day year}
 \oOpt{-l}
+\oOpt{-grouporder}
+\oOpt{-grouprollup}
 
 \index{Condor commands!condor\_userprio}
 \index{condor\_userprio command}
@@ -133,6 +135,21 @@ the specified date.}
 
 \OptItem{\Opt{-l}}
 	{Show the class-ad which was received from the central-manager in long format.}
+
+\OptItem{\Opt{-grouporder}}
+        {Display submitter information with \Term{accounting group} entries sorted 
+to top of the list, and in breadth-first order of the group hierarchy tree.}
+
+\OptItem{\Opt{-grouprollup}}
+        {Report submitter statistics such that statistics for \Term{accounting group} 
+entries are rolled up by group hierarchy.  Accounting group statistics for 
+\Attr{ResourcesUsed<N>}, \Attr{WeightedResourcesUsed<N>}, \Attr{AccumulatedUsage<N>} 
+and \Attr{WeightedAccumulatedUsage<N>} are rolled up by sum: e.g. the 
+\Attr{ResourcesUsed<N>} attribute for a group will include the resources used by its 
+sub-groups.  \Attr{BeginUsageTime<N>} is rolled up by min (earliest). 
+\Attr{LastUsageTime<N>} is rolled up by max (most recent). \Attr{Priority<N>} and 
+\Attr{PriorityFactor<N>} are set to 0.0 when rollup is in effect.}
+
 
 \end{Options}
 

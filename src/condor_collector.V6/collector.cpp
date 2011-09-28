@@ -341,6 +341,8 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	//   was that submitter ads didn't have ATTR_NUM_USERS.
 	//   The correosponding query ads had a TargetType of
 	//   "Scheduler", which we now coerce to "Submitter".
+	//   Before 7.7.3, submitter ads for parallel universe
+	//   jobs had a MyType of "Scheduler".
 	if ( whichAds == SUBMITTOR_AD ) {
 		cad.SetTargetTypeName( SUBMITTER_ADTYPE );
 	}
@@ -1699,6 +1701,8 @@ computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringL
 	//   If we don't include ATTR_NUM_USERS in our projection,
 	//   older clients will morph scheduler ads into
 	//   submitter ads, regardless of MyType.
+	//   Before 7.7.3, submitter ads for parallel universe
+	//   jobs had a MyType of "Scheduler".
 	if (strcmp("Scheduler", full_ad->GetMyTypeName()) == 0) {
 		expanded_projection.append(ATTR_NUM_USERS);
 	}

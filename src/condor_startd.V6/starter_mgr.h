@@ -60,7 +60,8 @@ public:
 	void publish( ClassAd* ad, amask_t mask );
 
 	Starter* findStarter( ClassAd* job_ad, ClassAd* mach_ad, 
-						  int starter_num = -1 ); 
+						  bool &no_starter,
+						  int starter_num = -1); 
 
 	void printStarterInfo( int debug_level );
 

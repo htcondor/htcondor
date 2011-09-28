@@ -1473,6 +1473,8 @@ class DaemonCore : public Service
 	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
       #endif
 
+       stats_entry_recent<Probe> PumpCycle;   // count of pump cycles plus sum of cycle time with min/max/avg/std 
+
        StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
 
 	   time_t InitTime;            // last time we init'ed the structure
@@ -1486,9 +1488,11 @@ class DaemonCore : public Service
 	   void Init();
        void Reconfig();
 	   void Clear();
-	   void Tick(); // call this when time may have changed to update StatsLastUpdateTime, etc.
+	   time_t Tick(time_t now=0); // call this when time may have changed to update StatsLastUpdateTime, etc.
 	   void SetWindowSize(int window);
 	   void Publish(ClassAd & ad) const;
+	   void Publish(ClassAd & ad, int flags) const;
+       void Publish(ClassAd & ad, const char * config) const;
 	   void Unpublish(ClassAd & ad) const;
        void* New(const char * category, const char * name, int as);
        void AddToProbe(const char * name, int val);

@@ -256,8 +256,6 @@ class FileTransfer {
 	// filename_remap_find().
 	void AddDownloadFilenameRemaps(char const *remaps);
 
-	bool getStarterRenamesStdio() { return m_StarterRenamesStdio; }
-
   protected:
 
 	int Download(ReliSock *s, bool blocking);
@@ -284,7 +282,6 @@ class FileTransfer {
 	bool PeerDoesGoAhead;
 	bool PeerUnderstandsMkdir;
 	bool TransferUserLog;
-	bool m_StarterRenamesStdio;
 	char* Iwd;
 	StringList* ExceptionFiles;
 	StringList* OutputFiles;

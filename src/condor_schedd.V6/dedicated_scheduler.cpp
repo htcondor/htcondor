@@ -3315,7 +3315,7 @@ DedicatedScheduler::publishRequestAd( void )
 
 	dprintf( D_FULLDEBUG, "In DedicatedScheduler::publishRequestAd()\n" );
 
-	ad.SetMyTypeName(SCHEDD_ADTYPE);
+	ad.SetMyTypeName(SUBMITTER_ADTYPE);
 	ad.SetTargetTypeName(STARTD_ADTYPE);
 
         // Publish all DaemonCore-specific attributes, which also handles

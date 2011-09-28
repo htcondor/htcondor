@@ -1,5 +1,5 @@
 <?php
-define("NUM_SPARK_DAYS", 3);
+define("NUM_SPARK_DAYS", 2);
 
 $SPARK_DAYS = array_key_exists("days", $_REQUEST) ? $_REQUEST["days"] : NUM_SPARK_DAYS;
 
@@ -10,7 +10,7 @@ $dash = new Dashboard();
 $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
 
-$continuous_blacklist = Array();
+$continuous_blacklist = Array("Fedora", "x86_64_fedora_13");
 ?>
 
 <script type="text/javascript">
@@ -313,6 +313,7 @@ function create_build_sparkline_box($build) {
   $details .= "  </table>";
     
   $hour = preg_replace("/^.+(\d\d):\d\d:\d\d.*$/", "$1", $build["start"]);
+  $hour = "&nbsp&nbsp&nbsp";
 
   $detail_url = sprintf(DETAIL_URL, $build["runid"], "build", CONDOR_USER);
   $popup_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$hour<span>$details</span></a></span>";

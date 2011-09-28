@@ -36,6 +36,13 @@ MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 
 		condor_set_link_libs( ${LOCAL_${_CNDR_TARGET}} "${_LINK_LIBS}" )
 
+		if ( DARWIN )
+			add_custom_command( TARGET ${LOCAL_${_CNDR_TARGET}}
+				POST_BUILD
+				WORKING_DIRECTORY ${TEST_TARGET_DIR}
+				COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs ${LOCAL_${_CNDR_TARGET}} )
+		endif()
+
 		# will tack onto a global var which will be *all test targets.
 		if ( CONDOR_TESTS )
 			set ( CONDOR_TESTS "${CONDOR_TESTS};${_CNDR_TARGET}" )

@@ -136,7 +136,8 @@ pseudo_get_job_info(ClassAd *&ad, bool &delete_ad)
 	// may be used, we need to rename the stdout/err files to
 	// StdoutRemapName and StderrRemapName. Otherwise, they won't transfer
 	// back correctly if they contain any path information.
-	if ( !thisRemoteResource->filetrans.getStarterRenamesStdio() ) {
+	const CondorVersionInfo *vi = syscall_sock->get_peer_version();
+	if ( vi && !vi->built_since_version(7,7,2) ) {
 		std::string value;
 		ad->LookupString( ATTR_SHOULD_TRANSFER_FILES, value );
 		ShouldTransferFiles_t should_transfer = getShouldTransferFilesNum( value.c_str() );

@@ -16,9 +16,6 @@
  # 
  ############################################################### 
 
-
-set(BENCH_LINK_LIBS "${TOOL_LINK_LIBS}")
-
 file( GLOB SysApiRmvElements *.t.* dhry21b* *_main.cpp )
 
 condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )

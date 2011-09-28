@@ -37,7 +37,8 @@ fdpass_send(int uds_fd, int fd)
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 
-	char buf[CMSG_SPACE(sizeof(int))];
+	char *buf = (char *)malloc(CMSG_SPACE(sizeof(int)));
+
 	msg.msg_control = buf;
 	msg.msg_controllen = CMSG_LEN(sizeof(int));
 	struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
@@ -51,15 +52,18 @@ fdpass_send(int uds_fd, int fd)
 		dprintf(D_ALWAYS,
 		        "fdpass: sendmsg error: %s\n",
 		        strerror(errno));
+		free(buf);
 		return -1;
 	}
 	if (bytes != 1) {
 		dprintf(D_ALWAYS,
 		        "fdpass: unexpected return from sendmsg: %d\n",
 		        (int)bytes);
+		free(buf);
 		return -1;
 	}
 
+	free(buf);
 	return 0;
 }
 
@@ -79,7 +83,8 @@ fdpass_recv(int uds_fd)
 	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 
-	char buf[CMSG_SPACE(sizeof(int))];
+	char *buf = (char *)malloc(CMSG_SPACE(sizeof(int)));
+
 	msg.msg_control = buf;
 	msg.msg_controllen = CMSG_LEN(sizeof(int));
 
@@ -88,12 +93,14 @@ fdpass_recv(int uds_fd)
 		dprintf(D_ALWAYS,
 		        "fdpass: recvmsg error: %s\n",
 		        strerror(errno));
+		free(buf);
 		return -1;
 	}
 	if (bytes != 1) {
 		dprintf(D_ALWAYS,
 		        "fdpass: unexpected return from recvmsg: %d\n",
 		        (int)bytes);
+		free(buf);
 		return -1;
 	}
 
@@ -101,11 +108,13 @@ fdpass_recv(int uds_fd)
 		dprintf(D_ALWAYS,
 		        "fdpass: unexpected value received from recvmsg: %d\n",
 		        nil);
+		free(buf);
 		return -1;
 	}
 
 	struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
 	int fd = *(int*)CMSG_DATA(cmsg);
 
+	free(buf);
 	return fd;
 }

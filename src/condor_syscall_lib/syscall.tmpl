@@ -343,7 +343,7 @@ All of these calls manipulate the open file table.
 	ssize_t read( int fd, void *buf, size_t len )
 		: file_table
 	{
-		out code_bytes_bool( buf, rval );
+		out code_bytes_bool( buf, ret_val );
 		alloc( buf, len );
 	}
 	
@@ -613,28 +613,32 @@ version.
 	int lockf64( map(int fd), int op, off64_t where )
 		: remote_name(lockf);
 
-#	if defined(HPUX) || defined(LINUX)
-#	    if defined(LINUX)
-#			if defined(I386)
-		int getdirentries( map(int fd), char *buf, size_t nbytes, 
-								off_t *basep ) : no_sys_chk, extract 
-#			else
-		ssize_t getdirentries( map(int fd), char *buf, size_t nbytes, 
-								off_t *basep ) : no_sys_chk, extract 
-#			endif
-#	    else
-		int getdirentries( map(int fd), struct dirent *buf, size_t nbytes, 
-			off_t *basep ) 
-#	    endif
+/* This only happens for senders/receivers, there is a special switch for
+	this call which handles the odd unmapping of the passed in file descriptor.
+
+	For this call, we don't map() the fd since it will call into getdents which
+	also map()'s the fd causing it to fail. The special switch has more
+	detail about how to unmap the fd in certain circumstances.
+*/
+#if !defined(SWITCH)
+#	if defined(LINUX)
+#		if defined(I386)
+			int getdirentries( int fd, char *buf, size_t nbytes, 
+							off_t *basep ) : no_sys_chk, extract 
+#		else
+			ssize_t getdirentries( int fd, char *buf, size_t nbytes, 
+							off_t *basep ) : no_sys_chk, extract 
+#		endif
 
 		{
-			out code_bytes_bool( buf, rval );
+			out code_bytes_bool( buf, ret_val );
 			in code_bytes_bool( basep, EIGHT );
 			out code_bytes_bool( basep, EIGHT );
 			alloc( buf, nbytes );
 			alloc( basep, LONG_SIZE );
 		}
 #	endif
+#endif
 
 #	if defined(Solaris) || ( defined(LINUX) && !defined(SWITCH) )
 		int getdents( map(int fd), struct dirent *buf, size_t nbytes )

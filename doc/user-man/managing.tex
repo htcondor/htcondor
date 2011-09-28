@@ -75,18 +75,18 @@ queued jobs.
 \index{status!of queued jobs}
 \index{job!state}
 The \verb@ST@ column (for status) shows the status of
-current jobs in the queue. An \verb@R@ in the status column
-means the the job is currently running.
-An \verb@I@ stands for idle. 
-The job is not running right
-now, because it is waiting for a machine to become available. 
-The status
-\verb@H@ is the hold state. In the hold state,
+current jobs in the queue:
+\begin{description} 
+  \item{\verb@R@}:  The job is currently running.
+  \item{\verb@I@}:  The job is idle.  It is not running right
+now, because it is waiting for a machine to become available.
+  \item{\verb@H@}:  The job is the hold state. In the hold state,
 the job will not be scheduled to
-run until it is released (see the \Condor{hold}
-reference page located on page~\pageref{man-condor-hold}
+run until it is released. See the \Condor{hold}
+manual page located on page~\pageref{man-condor-hold}
 and the \Condor{release}
-reference page located on page~\pageref{man-condor-release}).
+manual page located on page~\pageref{man-condor-release}.
+\end{description} 
 The \verb@RUN_TIME@ time reported for a job is the time that has been
 committed to the job.
 
@@ -123,14 +123,14 @@ running jobs submitted by \Expr{breach@cs.wisc.edu}, type:
 
 Name       Arch     OpSys        State      Activity   LoadAv Mem  ActvtyTime
 
-alfred.cs. INTEL    SOLARIS251   Claimed    Busy       0.980  64    0+07:10:02
-biron.cs.w INTEL    SOLARIS251   Claimed    Busy       1.000  128   0+01:10:00
-cambridge. INTEL    SOLARIS251   Claimed    Busy       0.988  64    0+00:15:00
-falcons.cs INTEL    SOLARIS251   Claimed    Busy       0.996  32    0+02:05:03
-happy.cs.w INTEL    SOLARIS251   Claimed    Busy       0.988  128   0+03:05:00
-istat03.st INTEL    SOLARIS251   Claimed    Busy       0.883  64    0+06:45:01
-istat04.st INTEL    SOLARIS251   Claimed    Busy       0.988  64    0+00:10:00
-istat09.st INTEL    SOLARIS251   Claimed    Busy       0.301  64    0+03:45:00
+alfred.cs. INTEL    LINUX        Claimed    Busy       0.980  64    0+07:10:02
+biron.cs.w INTEL    LINUX        Claimed    Busy       1.000  128   0+01:10:00
+cambridge. INTEL    LINUX        Claimed    Busy       0.988  64    0+00:15:00
+falcons.cs INTEL    LINUX        Claimed    Busy       0.996  32    0+02:05:03
+happy.cs.w INTEL    LINUX        Claimed    Busy       0.988  128   0+03:05:00
+istat03.st INTEL    LINUX        Claimed    Busy       0.883  64    0+06:45:01
+istat04.st INTEL    LINUX        Claimed    Busy       0.988  64    0+00:10:00
+istat09.st INTEL    LINUX        Claimed    Busy       0.301  64    0+03:45:00
 ...
 \end{verbatim}
 \normalsize
@@ -141,16 +141,16 @@ To find all the machines that are running any job at all, type:
 
 Name       Arch     OpSys        LoadAv RemoteUser           ClientMachine  
 
-adriana.cs INTEL    SOLARIS251   0.980  hepcon@cs.wisc.edu   chevre.cs.wisc.
-alfred.cs. INTEL    SOLARIS251   0.980  breach@cs.wisc.edu   neufchatel.cs.w
-amul.cs.wi SUN4u    SOLARIS251   1.000  nice-user.condor@cs. chevre.cs.wisc.
-anfrom.cs. SUN4x    SOLARIS251   1.023  ashoks@jules.ncsa.ui jules.ncsa.uiuc
-anthrax.cs INTEL    SOLARIS251   0.285  hepcon@cs.wisc.edu   chevre.cs.wisc.
-astro.cs.w INTEL    SOLARIS251   1.000  nice-user.condor@cs. chevre.cs.wisc.
-aura.cs.wi SUN4u    SOLARIS251   0.996  nice-user.condor@cs. chevre.cs.wisc.
-balder.cs. INTEL    SOLARIS251   1.000  nice-user.condor@cs. chevre.cs.wisc.
-bamba.cs.w INTEL    SOLARIS251   1.574  dmarino@cs.wisc.edu  riola.cs.wisc.e
-bardolph.c INTEL    SOLARIS251   1.000  nice-user.condor@cs. chevre.cs.wisc.
+adriana.cs INTEL    LINUX        0.980  hepcon@cs.wisc.edu   chevre.cs.wisc.
+alfred.cs. INTEL    LINUX        0.980  breach@cs.wisc.edu   neufchatel.cs.w
+amul.cs.wi X86_64   LINUX        1.000  nice-user.condor@cs. chevre.cs.wisc.
+anfrom.cs. X86_64   LINUX        1.023  ashoks@jules.ncsa.ui jules.ncsa.uiuc
+anthrax.cs INTEL    LINUX        0.285  hepcon@cs.wisc.edu   chevre.cs.wisc.
+astro.cs.w INTEL    LINUX        1.000  nice-user.condor@cs. chevre.cs.wisc.
+aura.cs.wi X86_64   WINDOWS      0.996  nice-user.condor@cs. chevre.cs.wisc.
+balder.cs. INTEL    WINDOWS      1.000  nice-user.condor@cs. chevre.cs.wisc.
+bamba.cs.w INTEL    LINUX        1.574  dmarino@cs.wisc.edu  riola.cs.wisc.e
+bardolph.c INTEL    LINUX        1.000  nice-user.condor@cs. chevre.cs.wisc.
 ...
 \end{verbatim}
 \normalsize
@@ -433,12 +433,12 @@ and then send a \Condor{restart} to the submit machine.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-log-events}In the log file}
+\subsection{\label{sec:job-log-events}In the Log File}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{job!log events}
 \index{log files!event descriptions}
-In a job's log file are a log of events (a listing of events in
-chronological order) that occurred during the life of the job.
+In a job's log file are a listing of events in
+chronological order that occurred during the life of the job.
 The formatting of the events is always the same, 
 so that they may be machine readable.
 Four fields are always present,
@@ -451,8 +451,8 @@ The second field identifies the job which generated the event.
 Within parentheses are the ClassAd job attributes of
 \AdAttr{ClusterId} value, 
 \AdAttr{ProcId} value, 
-and the MPI-specific rank for MPI universe jobs or a set of zeros
-(for jobs run under universes other than MPI),
+and the node number  for parallel universe jobs or a set of zeros
+(for jobs run under all other universes),
 separated by periods.
 The third field is the date and time of the event logging.  
 The fourth field is a string that briefly describes the event.

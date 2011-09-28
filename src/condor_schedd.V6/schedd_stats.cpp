@@ -121,9 +121,12 @@ void ScheddStatistics::Clear()
 // buffers so that we throw away the oldest value and begin accumulating the latest
 // value in a new slot. 
 //
-void ScheddStatistics::Tick()
+time_t ScheddStatistics::Tick(time_t now)
 {
+   if ( ! now) now = time(NULL);
+
    int cAdvance = generic_stats_Tick(
+      now,
       this->RecentWindowMax,   // RecentMaxTime
       schedd_stats_window_quantum, // RecentQuantum
       this->InitTime,
@@ -134,23 +137,39 @@ void ScheddStatistics::Tick()
 
    if (cAdvance)
       Pool.Advance(cAdvance);
+
+   return now;
 }
 
 void ScheddStatistics::Publish(ClassAd & ad) const
 {
-   if ((this->PublishFlags & IF_PUBLEVEL) > 0) {
+   this->Publish(ad, this->PublishFlags);
+}
+
+void ScheddStatistics::Publish(ClassAd & ad, const char * config) const
+{
+   int flags = this->PublishFlags;
+   if (config && config[0]) {
+      flags = generic_stats_ParseConfigString(config, "SCHEDD", "SCHEDULER", IF_BASICPUB | IF_RECENTPUB);
+   }
+   this->Publish(ad, flags);
+}
+
+void ScheddStatistics::Publish(ClassAd & ad, int flags) const
+{
+   if ((flags & IF_PUBLEVEL) > 0) {
       ad.Assign("StatsLifetime", (int)StatsLifetime);
-      if (this->PublishFlags & IF_VERBOSEPUB)
+      if (flags & IF_VERBOSEPUB)
          ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
-      if (this->PublishFlags & IF_RECENTPUB) {
+      if (flags & IF_RECENTPUB) {
          ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
-         if (this->PublishFlags & IF_VERBOSEPUB) {
+         if (flags & IF_VERBOSEPUB) {
             ad.Assign("RecentWindowMax", (int)RecentWindowMax);
             ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
          }
       }
    }
-   Pool.Publish(ad, this->PublishFlags);
+   Pool.Publish(ad, flags);
 }
 
 void ScheddStatistics::Unpublish(ClassAd & ad) const
@@ -170,7 +189,7 @@ void schedd_stats_unit_test (ClassAd * pad)
    ScheddStatistics stats;
    stats.Init();
 
-   int stat_window = 300; //param_integer("WINDOWED_STAT_WIDTH", 300, 1, INT_MAX);
+   int stat_window = 300; //param_integer("STATISTICS_WINDOW_SECONDS", 1200, 1, INT_MAX);
    stats.SetWindowSize(stat_window);
 
    stats.Tick();
