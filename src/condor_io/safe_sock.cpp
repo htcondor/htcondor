@@ -908,3 +908,8 @@ SafeSock::sendTargetSharedPortID()
 		// do nothing; shared ports are not currently supported by UDP
 	return true;
 }
+
+bool
+SafeSock::msgReady() {
+	return _msgReady;
+}

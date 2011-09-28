@@ -338,8 +338,10 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 	ClassAd	*clientAd;
 	ClassAd	*rval;
 
-	// use a timeout
-	sock->timeout(clientTimeout);
+		// Avoid lengthy blocking on communication with our peer.
+		// This command-handler should not get called until data
+		// is ready to read.
+	sock->timeout(1);
 
 	clientAd = new ClassAd;
 	if (!clientAd) return 0;
@@ -353,9 +355,6 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 		sock->end_of_message();
 		return 0;
 	}
-	
-	// the above includes a timed communication with the client
-	sock->timeout(0);
 
 	// insert the authenticated user into the ad itself
 	const char* authn_user = sock->getFullyQualifiedUser();

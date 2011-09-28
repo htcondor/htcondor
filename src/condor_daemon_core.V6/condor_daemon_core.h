@@ -364,7 +364,36 @@ class DaemonCore : public Service
                           bool               force_authentication = false,
 						  int                wait_for_payload = 0);
 
-    
+	/** Register_CommandWithPayload is the same as Register_Command
+		but with a different default for wait_for_payload.  By
+		default, a non-blocking read will be performed before calling
+		the command-handler.  This reduces the threat of having the
+		command handler block while waiting for the client to send the
+		rest of the command input.  The command handler can therefore
+		set a small timeout when reading.
+	*/
+    int Register_CommandWithPayload (
+                          int             command,
+                          const char *    com_descrip,
+                          CommandHandler  handler, 
+                          const char *    handler_descrip,
+                          Service *       s                = NULL,
+                          DCpermission    perm             = ALLOW,
+                          int             dprintf_flag     = D_COMMAND,
+                          bool            force_authentication = false,
+						  int             wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT);
+    int Register_CommandWithPayload (
+                          int                command,
+                          const char *       com_descript,
+                          CommandHandlercpp  handlercpp, 
+                          const char *       handler_descrip,
+                          Service *          s,
+                          DCpermission       perm             = ALLOW,
+                          int                dprintf_flag     = D_COMMAND,
+                          bool               force_authentication = false,
+						  int                wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT);
+
+
     /** Not_Yet_Documented
         @param command Not_Yet_Documented
         @return Not_Yet_Documented
