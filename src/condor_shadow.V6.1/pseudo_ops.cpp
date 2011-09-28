@@ -45,7 +45,6 @@ static int use_local_access( const char *file );
 static int use_special_access( const char *file );
 static int access_via_afs( const char *file );
 static int access_via_nfs( const char *file );
-static int lookup_boolean_param( const char *name );
 
 int
 pseudo_register_machine_info(char *uiddomain, char *fsdomain, 
@@ -523,7 +522,7 @@ static int access_via_afs( const char * /* file */ )
 	my_fs_domain = param("FILESYSTEM_DOMAIN");
 	thisRemoteResource->getFilesystemDomain(remote_fs_domain);
 
-	if(!lookup_boolean_param("USE_AFS")) {
+	if(!param_boolean_crufty("USE_AFS", false)) {
 		dprintf( D_SYSCALLS, "\tnot configured to use AFS for file access\n" );
 		goto done;
 	}
@@ -574,7 +573,7 @@ static int access_via_nfs( const char * /* file */ )
 	thisRemoteResource->getUidDomain(remote_uid_domain);
 	thisRemoteResource->getFilesystemDomain(remote_fs_domain);
 
-	if( !lookup_boolean_param("USE_NFS") ) {
+	if( !param_boolean_crufty("USE_NFS", false) ) {
 		dprintf( D_SYSCALLS, "\tnot configured to use NFS for file access\n" );
 		goto done;
 	}
@@ -627,23 +626,6 @@ static int access_via_nfs( const char * /* file */ )
 	dprintf( D_SYSCALLS, "\taccess_via_NFS() returning %s\n", result ? "TRUE" : "FALSE" );
 	if (remote_fs_domain) free(remote_fs_domain);
 	if (remote_uid_domain) free(remote_uid_domain);
-	return result;
-}
-
-static int lookup_boolean_param( const char *name )
-{
-	int result;
-	char *s = param(name);
-	if(s) {
-		if(s[0] == 'T' || s[0] == 't') {
-			result = TRUE;
-		} else {
-			result = FALSE;
-		}
-		free(s);
-	} else {
-		result = FALSE;
-	}
 	return result;
 }
 
