@@ -173,6 +173,10 @@ as it is incompatible with the implementation of partial Rescue DAGs.
 
 \begin{itemize}
 
+\item Fixed a bug in the \Condor{startd} that was preventing dynamic slots
+from being properly instantiated from partitionable slots.
+\Ticket{2507}
+
 \item Fixed a bug introduced in Condor version 7.7.0, 
 in which the \Condor{startd} may erroneously report 
 \Expr{Can't find hostname of client machine.}
