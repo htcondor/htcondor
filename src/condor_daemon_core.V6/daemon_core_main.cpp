@@ -61,12 +61,12 @@ extern DLL_IMPORT_MAGIC char **environ;
 
 
 // External protos
-void (*dc_main_init)(int argc, char *argv[]);	// old main
-void (*dc_main_config)();
-void (*dc_main_shutdown_fast)();
-void (*dc_main_shutdown_graceful)();
-void (*dc_main_pre_dc_init)(int argc, char *argv[]);
-void (*dc_main_pre_command_sock_init)();
+void (*dc_main_init)(int argc, char *argv[]) = NULL;	// old main
+void (*dc_main_config)() = NULL;
+void (*dc_main_shutdown_fast)() = NULL;
+void (*dc_main_shutdown_graceful)() = NULL;
+void (*dc_main_pre_dc_init)(int argc, char *argv[]) = NULL;
+void (*dc_main_pre_command_sock_init)() = NULL;
 
 // Internal protos
 void dc_reconfig();
@@ -1679,7 +1679,9 @@ int dc_main( int argc, char** argv )
 		// call out to the handler for pre daemonCore initialization
 		// stuff so that our client side can do stuff before we start
 		// messing with argv[]
-	dc_main_pre_dc_init( argc, argv );
+	if ( dc_main_pre_dc_init ) {
+		dc_main_pre_dc_init( argc, argv );
+	}
 
 		// Make sure this is set, since DaemonCore needs it for all
 		// sorts of things, and it's better to clearly EXCEPT here
@@ -1695,6 +1697,18 @@ int dc_main( int argc, char** argv )
 				get_mySubSystem()->getTypeName() );
 	}
 
+	if ( !dc_main_init ) {
+		EXCEPT( "Programmer error: dc_main_init is NULL!" );
+	}
+	if ( !dc_main_config ) {
+		EXCEPT( "Programmer error: dc_main_config is NULL!" );
+	}
+	if ( !dc_main_shutdown_fast ) {
+		EXCEPT( "Programmer error: dc_main_shutdown_fast is NULL!" );
+	}
+	if ( !dc_main_shutdown_graceful ) {
+		EXCEPT( "Programmer error: dc_main_shutdown_graceful is NULL!" );
+	}
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
@@ -2204,7 +2218,9 @@ int dc_main( int argc, char** argv )
 	GCB_Recovery_failed_callback_set( gcb_recovery_failed_callback );
 #endif
 
-	dc_main_pre_command_sock_init();
+	if ( dc_main_pre_command_sock_init ) {
+		dc_main_pre_command_sock_init();
+	}
 
 		/* NOTE re main_pre_command_sock_init:
 		  *
