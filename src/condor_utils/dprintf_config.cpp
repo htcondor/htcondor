@@ -232,13 +232,7 @@ dprintf_config( const char *subsys )
 					(void)sprintf(pname, "TRUNC_%s_%s_LOG_ON_OPEN", subsys,
 								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
-				pval = param(pname);
-				if( pval ) {
-					if( *pval == 't' || *pval == 'T' ) {
-						want_truncate = 1;
-					} 
-					free(pval);
-				}
+				want_truncate = param_boolean_crufty(pname, false) ? 1 : 0;
 
 				if (debug_level == 0) {
 					(void)sprintf(pname, "%s_LOCK", subsys);
