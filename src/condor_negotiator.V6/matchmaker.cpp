@@ -1052,6 +1052,32 @@ struct starvation_order {
 };
 
 
+int count_effective_slots(ClassAdListDoesNotDeleteAds& startdAds, ExprTree* constraint) {
+	int sum = 0;
+
+	startdAds.Open();
+	while(ClassAd* ad = startdAds.Next()) {
+        // only count ads satisfying constraint, if given
+        if ((NULL != constraint) && !EvalBool(ad, constraint)) {
+            continue;
+        }
+
+        bool part = false;
+        if (!ad->LookupBool(ATTR_SLOT_PARTITIONABLE, part)) part = false;
+
+        int slots = 1;
+        if (part) {
+            // effective slots for a partitionable slot is number of cpus
+            ad->LookupInteger(ATTR_CPUS, slots);
+        }
+
+        sum += slots;
+	}
+
+	return sum;
+}
+
+
 void Matchmaker::
 negotiationTime ()
 {
@@ -1112,7 +1138,6 @@ negotiationTime ()
 	// Save this for future use.
 	// This _must_ come before trimming the startd ads.
 	int untrimmed_num_startds = startdAds.MyLength();
-	int numDynGroupSlots = untrimmed_num_startds;
     negotiation_cycle_stats[0]->total_slots = untrimmed_num_startds;
 
 	double minSlotWeight = 0;
@@ -1143,23 +1168,24 @@ negotiationTime ()
 		ASSERT(groupQuotasHash);
     }
 
-    // Restrict number of slots available for dynamic quotas.
-    double hgq_total_quota = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)numDynGroupSlots;
-    if ( numDynGroupSlots && DynQuotaMachConstraint ) {
+    int raw_slots = 0;
+    int effective_slots = 0;
+    double hgq_total_quota = 0;
+    if (DynQuotaMachConstraint && (untrimmed_num_startds > 0)) {
+        // Restrict number of slots available by constraint
         bool remove = param_boolean("NEGOTIATOR_STARTD_CONSTRAINT_REMOVE", false);
-        int matchedSlots = startdAds.Count(DynQuotaMachConstraint, remove);
-        if ( matchedSlots ) {
-            dprintf(D_ALWAYS,"GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine "
-                    "count from %d to %d\n", numDynGroupSlots, matchedSlots);
-            numDynGroupSlots = matchedSlots;
-            hgq_total_quota = (accountant.UsingWeightedSlots()) ? sumSlotWeights(startdAds, NULL, DynQuotaMachConstraint) : (double)matchedSlots;
+        raw_slots = startdAds.Count(DynQuotaMachConstraint, remove);
+        if (raw_slots > 0) {
+            dprintf(D_ALWAYS, "GROUP_DYNAMIC_MACH_CONSTRAINT constraint reduces machine count from %d to %d\n", untrimmed_num_startds, raw_slots);
+            effective_slots = count_effective_slots(startdAds, DynQuotaMachConstraint);
+            hgq_total_quota = (accountant.UsingWeightedSlots()) ? sumSlotWeights(startdAds, NULL, DynQuotaMachConstraint) : (double)effective_slots;
         } else {
-            dprintf(D_ALWAYS, "warning: 0 out of %d machines match "
-                    "GROUP_DYNAMIC_MACH_CONSTRAINT for dynamic quotas\n",
-                    numDynGroupSlots);
-            numDynGroupSlots = 0;
-            hgq_total_quota = 0;
+            dprintf(D_ALWAYS, "WARNING: 0 out of %d machines match GROUP_DYNAMIC_MACH_CONSTRAINT for dynamic quotas\n", untrimmed_num_startds);
         }
+    } else {
+        raw_slots = untrimmed_num_startds;
+        effective_slots = count_effective_slots(startdAds, NULL);
+        hgq_total_quota = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)effective_slots;
     }
 
 	// if don't care about preemption, we can trim out all non Unclaimed ads now.
@@ -1172,7 +1198,6 @@ negotiationTime ()
 			"Trimmed out %d startd ads not Unclaimed\n",num_trimmed);
 	}
     negotiation_cycle_stats[0]->trimmed_slots = startdAds.MyLength();
-    // candidate slots may be pruned further below
     negotiation_cycle_stats[0]->candidate_slots = startdAds.MyLength();
 
 		// We insert NegotiatorMatchExprXXX attributes into the
@@ -1195,7 +1220,7 @@ negotiationTime ()
     } else {
         // Otherwise we are in HGQ mode, so begin HGQ computations
 
-        negotiation_cycle_stats[0]->candidate_slots = numDynGroupSlots;
+        negotiation_cycle_stats[0]->candidate_slots = raw_slots;
 
         // Fill in latest usage/prio info for the groups.
         // While we're at it, reset fields prior to reloading from submitter ads.
@@ -1327,7 +1352,7 @@ negotiationTime ()
             }
 
             dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
-                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(numDynGroupSlots), requested_total+allocated_total, allocated_total, surplus_quota);
+                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(effective_slots), requested_total+allocated_total, allocated_total, surplus_quota);
 
             // The loop below can add a lot of work (and log output) to the negotiation.  I'm going to
             // default its behavior to execute once, and just negotiate for everything at once.  If a
