@@ -803,22 +803,16 @@ drop_core_in_log( void )
 void
 check_core_files()
 {
-	char* tmp;
-	int want_set_error_mode = TRUE;
+	int want_set_error_mode =
+		param_boolean_crufty("CREATE_CORE_FILES", true) ? TRUE : FALSE;
 
-	if( (tmp = param("CREATE_CORE_FILES")) ) {
 #ifndef WIN32	
-		if( *tmp == 't' || *tmp == 'T' ) {
+		if( want_set_error_mode ) {
 			limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT,"max core size" );
 		} else {
 			limit( RLIMIT_CORE, 0, CONDOR_SOFT_LIMIT,"max core size" );
 		}
 #endif
-		if( *tmp == 'f' || *tmp == 'F' ) {
-			want_set_error_mode = FALSE;
-		}
-		free( tmp );
-	}
 
 #ifdef WIN32
 		// Call SetErrorMode so that Win32 "critical errors" and such
