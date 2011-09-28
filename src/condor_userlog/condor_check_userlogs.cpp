@@ -27,12 +27,10 @@
 MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
 CHECK_EVENTS_HASH_INSTANCE; // For the event checking code...
 
-//Global param system wrapper for daemons
-param_functions p_funcs;
-
 int main(int argc, char **argv)
 {
 	int		result = 0;
+	param_functions *p_funcs = NULL;
 
 	if ( argc <= 1 || (argc >= 2 && !strcmp("-usage", argv[1])) ) {
 		printf("Usage: condor_check_userlogs <log file 1> "
@@ -40,13 +38,10 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	p_funcs.set_param_func(&param);
-	p_funcs.set_param_bool_int_func(&param_boolean_int);
-	p_funcs.set_param_wo_default_func(&param_without_default);
-
 		// Set up dprintf.
 	Termlog = true;
-	dprintf_config("condor_check_userlogs", &p_funcs);
+	p_funcs = get_param_functions();
+	dprintf_config("condor_check_userlogs", p_funcs);
 	DebugFlags = D_ALWAYS;
 
 	StringList	logFiles;

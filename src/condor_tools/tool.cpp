@@ -77,8 +77,6 @@ bool IgnoreMissingDaemon = false;
 
 bool all_good = true;
 
-param_functions			p_funcs;				 // Global param system wrapper for daemons
-
 HashTable<MyString, bool> addresses_sent( 100, MyStringHash );
 
 
@@ -326,6 +324,7 @@ main( int argc, char *argv[] )
 	char *cmd_str, **tmp;
 	int size;
 	int rc;
+	param_functions *p_funcs = NULL;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -508,10 +507,8 @@ main( int argc, char *argv[] )
 		case 'd':
 			if (!(*tmp)[2] || (*tmp)[2] == 'e') {
 				Termlog = 1;
-				p_funcs.set_param_func(&param);
-				p_funcs.set_param_bool_int_func(&param_boolean_int);
-				p_funcs.set_param_wo_default_func(&param_without_default);
-				dprintf_config ("TOOL", &p_funcs);
+				p_funcs = get_param_functions();
+				dprintf_config ("TOOL", p_funcs);
 			} else if ((*tmp)[2] == 'a')  {
 				subsys_check( MyName );
 					// We got a "-daemon", make sure we've got 

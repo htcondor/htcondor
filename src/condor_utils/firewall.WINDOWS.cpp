@@ -515,23 +515,18 @@ WindowsFirewallHelper::WindowsFirewallCleanup() {
 #ifdef _WFW_HELPER_TESTING
 
 /* some pretty lame, but useful test code */
-
-//Global param system wrapper for daemons
-param_functions p_funcs;
-
 int main(int argc, char **argv) {
 	WindowsFirewallHelper wfh;
 	int result;
 	bool isOn;
 	const char* app;
+	param_functions *p_funcs = NULL;
 
 	result = 0;
 
 	Termlog = 1;
-	p_funcs.set_param_func(&param);
-	p_funcs.set_param_bool_int_func(&param_boolean_int);
-	p_funcs.set_param_wo_default_func(&param_without_default);
-	dprintf_config ("TOOL", &p_funcs );
+	p_funcs = get_param_functions();
+	dprintf_config ("TOOL", p_funcs );
 
 	isOn = wfh.firewallIsOn();
 

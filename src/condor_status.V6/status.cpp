@@ -60,7 +60,6 @@ bool			vmMode = false;
 char 		*target = NULL;
 ClassAd		*targetAd = NULL;
 ArgList projList;		// Attributes that we want the server to send us
-param_functions			p_funcs;				 // Global param system wrapper for daemons
 
 // instantiate templates
 
@@ -515,6 +514,7 @@ usage ()
 void
 firstPass (int argc, char *argv[])
 {
+	param_functions *p_funcs;
 	int had_pool_error = 0;
 	int had_direct_error = 0;
 	// Process arguments:  there are dependencies between them
@@ -615,10 +615,8 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-debug", 3)) {
 			// dprintf to console
 			Termlog = 1;
-			p_funcs.set_param_func(&param);
-			p_funcs.set_param_bool_int_func(&param_boolean_int);
-			p_funcs.set_param_wo_default_func(&param_without_default);
-			dprintf_config ("TOOL", &p_funcs);
+			p_funcs = get_param_functions();
+			dprintf_config ("TOOL", p_funcs);
 		} else
 		if (matchPrefix (argv[i], "-help", 2)) {
 			usage ();

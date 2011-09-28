@@ -45,9 +45,6 @@ const char* dagman_exe = "condor_dagman";
 const char* valgrind_exe = "valgrind";
 #endif
 
-//Global param system wrapper for daemons
-param_functions p_funcs;
-
 int printUsage(); // NOTE: printUsage calls exit(1), so it doesn't return
 void parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts, int argc,
@@ -73,15 +70,14 @@ int submitDag( SubmitDagShallowOptions &shallowOpts );
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
+	param_functions *p_funcs = NULL;
 	printf("\n");
 
 		// Set up the dprintf stuff to write to stderr, so that Condor
 		// libraries which use it will write to the right place...
-	p_funcs.set_param_func(&param);
-	p_funcs.set_param_bool_int_func(&param_boolean_int);
-	p_funcs.set_param_wo_default_func(&param_without_default);
 	Termlog = true;
-	dprintf_config("condor_submit_dag", &p_funcs); 
+	p_funcs = get_param_functions();
+	dprintf_config("condor_submit_dag", p_funcs); 
 	DebugFlags = D_ALWAYS | D_NOHEADER;
 	config();
 

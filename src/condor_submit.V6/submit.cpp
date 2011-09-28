@@ -427,8 +427,6 @@ const char	*HoldKillSig		= "hold_kill_sig";
 const char	*KillSigTimeout		= "kill_sig_timeout";
 #endif
 
-param_functions	p_funcs;				 // Global param system wrapper for daemons
-
 void    SetJobDisableFileChecks();
 void    SetSimpleJobExprs();
 void	SetRemoteAttrs();
@@ -775,6 +773,7 @@ main( int argc, char *argv[] )
 	char	*cmd_file = NULL;
 	int i;
 	MyString method;
+	param_functions *p_funcs = NULL;
 
 	setbuf( stdout, NULL );
 
@@ -824,10 +823,8 @@ main( int argc, char *argv[] )
 			} else if ( match_prefix( ptr[0], "-debug" ) ) {
 				// dprintf to console
 				Termlog = 1;
-				p_funcs.set_param_func(&param);
-				p_funcs.set_param_bool_int_func(&param_boolean_int);
-				p_funcs.set_param_wo_default_func(&param_without_default);
-				dprintf_config( "TOOL", &p_funcs );
+				p_funcs = get_param_functions();
+				dprintf_config( "TOOL", p_funcs );
 			} else if ( match_prefix( ptr[0], "-spool" ) ) {
 				Remote++;
 				DisableFileChecks = 1;

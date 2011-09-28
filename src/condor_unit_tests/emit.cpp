@@ -27,9 +27,6 @@
 #include "MyString.h"
 #include "emit.h"
 
-//Global param system wrapper for daemons
-param_functions p_funcs;
-
 Emitter::Emitter() {
 	function_tests = 0;
 	object_tests = 0;
@@ -49,15 +46,14 @@ Emitter::~Emitter() {
 /* Initializes the Emitter object.
  */
 void Emitter::init(bool failures_printed, bool successes_printed) {
+	param_functions *p_funcs = NULL;
 	print_failures = failures_printed;
 	print_successes = successes_printed;
 	buf = new MyString();
 	test_buf = new MyString();
-	p_funcs.set_param_func(&param);
-	p_funcs.set_param_bool_int_func(&param_boolean_int);
-	p_funcs.set_param_wo_default_func(&param_without_default);
 	Termlog = 1;
-	dprintf_config("TOOL", &p_funcs);
+	p_funcs = get_param_functions();
+	dprintf_config("TOOL", p_funcs);
 	set_debug_flags("D_ALWAYS");
 	set_debug_flags("D_NOHEADER");
 	config();

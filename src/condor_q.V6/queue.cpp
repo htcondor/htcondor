@@ -235,8 +235,6 @@ StringList attrs(NULL, "\n");; // The list of attrs we want, "" for all
 
 bool g_stream_results = false;
 
-param_functions			p_funcs;				 // Global param system wrapper for daemons
-
 static void freeConnectionStrings() {
 	if(quillName) {
 		free(quillName);
@@ -863,6 +861,7 @@ processCommandLineArguments (int argc, char *argv[])
 {
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
+	param_functions *p_funcs = NULL;
 
 	bool custom_attributes = false;
 	attrs.initializeFromString("ClusterId\nProcID\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
@@ -1249,10 +1248,8 @@ processCommandLineArguments (int argc, char *argv[])
 		if( match_prefix( arg, "debug" ) ) {
 			// dprintf to console
 			Termlog = 1;
-			p_funcs.set_param_func(&param);
-			p_funcs.set_param_bool_int_func(&param_boolean_int);
-			p_funcs.set_param_wo_default_func(&param_without_default);
-			dprintf_config ("TOOL", &p_funcs);
+			p_funcs = get_param_functions();
+			dprintf_config ("TOOL", p_funcs);
 		}
 		else
 		if (match_prefix(arg,"io")) {

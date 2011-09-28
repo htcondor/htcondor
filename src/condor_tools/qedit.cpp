@@ -32,8 +32,6 @@
 #include "dc_schedd.h"
 #include "MyString.h"
 
-param_functions			p_funcs;				 // Global param system wrapper for daemons
-
 void
 usage(char name[])
 {
@@ -61,6 +59,7 @@ main(int argc, char *argv[])
 	bool UseConstraint = false;
 	MyString schedd_name;
 	MyString pool_name;
+	param_functions *p_funcs;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -77,10 +76,8 @@ main(int argc, char *argv[])
 	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'd') {
 		// output dprintf messages to stderror at TOOL_DEBUG level
 		Termlog = 1;
-		p_funcs.set_param_func(&param);
-		p_funcs.set_param_bool_int_func(&param_boolean_int);
-		p_funcs.set_param_wo_default_func(&param_without_default);
-		dprintf_config ("TOOL", &p_funcs);
+		p_funcs = get_param_functions();
+		dprintf_config ("TOOL", p_funcs);
 		nextarg++;
 	}
 

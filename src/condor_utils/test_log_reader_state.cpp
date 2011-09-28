@@ -31,7 +31,6 @@
 static const char *	VERSION = "0.1.0";
 
 DECL_SUBSYSTEM( "TEST_LOG_READER_STATE", SUBSYSTEM_TYPE_TOOL );
-param_functions	p_funcs;				 // Global param system wrapper for daemons
 
 enum Verbosity
 {
@@ -205,16 +204,15 @@ int
 main(int argc, const char **argv)
 {
 	DebugFlags = D_ALWAYS;
+	param_functions *p_funcs = NULL;
 
 		// initialize to read from config file
 	myDistro->Init( argc, argv );
 	config();
 
 		// Set up the dprintf stuff...
-	p_funcs.set_param_func(&param);
-	p_funcs.set_param_bool_int_func(&param_boolean_int);
-	p_funcs.set_param_wo_default_func(&param_without_default);
-	dprintf_config("TEST_LOG_READER_STATE", &p_funcs);
+	p_funcs = get_param_functions();
+	dprintf_config("TEST_LOG_READER_STATE", p_funcs);
 
 	Options	opts;
 	if ( CheckArgs( argc, argv, opts ) < 0 ) {

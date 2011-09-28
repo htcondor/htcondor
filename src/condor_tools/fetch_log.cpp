@@ -81,15 +81,12 @@ int main( int argc, char *argv[] )
 	char *log_name = 0;
 	char *pool=0;
 	int i;
+	param_functions *p_funcs = NULL;
 
 	daemon_t type = DT_MASTER;
 
 	myDistro->Init( argc, argv );
 	config();
-
-	p_funcs.set_param_func(&param);
-	p_funcs.set_param_bool_int_func(&param_boolean_int);
-	p_funcs.set_param_wo_default_func(&param_without_default);
 
 	for( i=1; i<argc; i++ ) {
 		if(!strcmp(argv[i],"-help")) {
@@ -108,7 +105,8 @@ int main( int argc, char *argv[] )
 			exit(0);
 		} else if(!strcmp(argv[i],"-debug")) {
             Termlog = 1;
-            dprintf_config ("TOOL", &p_funcs);
+			p_funcs = get_param_functions();
+            dprintf_config ("TOOL", p_funcs);
 		} else if(argv[i][0]=='-') {
 			type = stringToDaemonType(&argv[i][1]);
 			if( type == DT_NONE || type == DT_DAGMAN) {

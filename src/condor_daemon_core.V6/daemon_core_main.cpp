@@ -101,9 +101,6 @@ extern FILESQL *FILEObj;
 /* FILEXML object */
 extern FILEXML *XMLObj;
 
-//Global param system wrapper for daemons
-param_functions p_funcs;
-
 #ifdef WIN32
 int line_where_service_stopped = 0;
 #endif
@@ -1372,6 +1369,7 @@ unix_sigusr2(int)
 void
 dc_reconfig()
 {
+	param_functions *p_funcs = NULL;
 		// do this first in case anything else depends on DNS
 	daemonCore->refreshDNS();
 
@@ -1402,7 +1400,8 @@ dc_reconfig()
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(get_mySubSystem()->getName(), &p_funcs);
+	p_funcs = get_param_functions();
+	dprintf_config(get_mySubSystem()->getName(), p_funcs);
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
@@ -1562,6 +1561,7 @@ int main( int argc, char** argv )
 	char	*ptmp, *ptmp1;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
+	param_functions *p_funcs = NULL;
 
 	condor_main_argc = argc;
 	condor_main_argv = (char **)malloc((argc+1)*sizeof(char *));
@@ -1622,10 +1622,6 @@ int main( int argc, char** argv )
 			myFullName = NULL;
 		}
 	}
-
-	p_funcs.set_param_func(&param);
-	p_funcs.set_param_bool_int_func(&param_boolean_int);
-	p_funcs.set_param_wo_default_func(&param_without_default);
 
 	myDistro->Init( argc, argv );
 	if ( EnvInit() < 0 ) {
@@ -1934,7 +1930,8 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName(), &p_funcs);
+		p_funcs = get_param_functions();
+		dprintf_config(get_mySubSystem()->getName(), p_funcs);
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -2050,7 +2047,8 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName(), &p_funcs);
+		p_funcs = get_param_functions();
+		dprintf_config(get_mySubSystem()->getName(), p_funcs);
 	}
 
 		// Now that we have the daemonCore object, we can finally

@@ -2653,3 +2653,13 @@ bool param(std::string &buf,char const *param_name,char const *default_value)
 	free( param_value );
 	return found;
 }
+
+param_functions* get_param_functions()
+{
+	param_functions *p_funcs = new param_functions();
+	p_funcs->set_param_func(&param);
+	p_funcs->set_param_bool_int_func(&param_boolean_int);
+	p_funcs->set_param_wo_default_func(&param_without_default);
+
+	return p_funcs;
+}

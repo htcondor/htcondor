@@ -26,8 +26,6 @@
 #include "condor_distribution.h"
 #include "read_user_log.h"
 #include "HashTable.h"
-
-param_functions			p_funcs;				 // Global param system wrapper for daemons
 /*
 XXX XXX XXX WARNING WARNING WARNING
 The exit codes in this program are slightly different than
@@ -99,6 +97,7 @@ int main( int argc, char *argv[] )
 	char *job_name = 0;
 	time_t waittime=0, stoptime=0;
 	int minjobs = 0;
+	param_functions *p_funcs = NULL;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -113,10 +112,8 @@ int main( int argc, char *argv[] )
 		} else if(!strcmp(argv[i],"-debug")) {
 			// dprintf to console
 			Termlog = 1;
-			p_funcs.set_param_func(&param);
-			p_funcs.set_param_bool_int_func(&param_boolean_int);
-			p_funcs.set_param_wo_default_func(&param_without_default);
-			dprintf_config ("TOOL", &p_funcs);
+			p_funcs = get_param_functions();
+			dprintf_config ("TOOL", p_funcs);
 		} else if(!strcmp(argv[i],"-wait")) {
 			i++;
 			if(i>=argc) {

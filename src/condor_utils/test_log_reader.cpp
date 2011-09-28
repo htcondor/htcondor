@@ -37,8 +37,6 @@ static const char *	VERSION = "0.9.5";
 
 DECL_SUBSYSTEM( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
 
-param_functions	p_funcs;				 // Global param system wrapper for daemons
-
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
 enum Verbosity{ VERB_NONE = 0, VERB_ERROR, VERB_WARNING, VERB_INFO, VERB_ALL };
@@ -89,6 +87,7 @@ int
 main(int argc, const char **argv)
 {
 	DebugFlags = D_ALWAYS;
+	param_functions *p_funcs = NULL;
 
 		// initialize to read from config file
 	myDistro->Init( argc, argv );
@@ -96,10 +95,8 @@ main(int argc, const char **argv)
 
 		// Set up the dprintf stuff...
 	Termlog = true;
-	p_funcs.set_param_func(&param);
-	p_funcs.set_param_bool_int_func(&param_boolean_int);
-	p_funcs.set_param_wo_default_func(&param_without_default);
-	dprintf_config("TEST_LOG_READER", &p_funcs);
+	p_funcs = get_param_functions();
+	dprintf_config("TEST_LOG_READER", p_funcs);
 
 	int		result = 0;
 	int		events = 0;

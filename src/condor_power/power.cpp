@@ -82,7 +82,6 @@ static int				port	= 9;	 /* port number to use */
 static bool				stdio	= false; /* if true, use stdin and stdout. */
 static ClassAd			*ad		= NULL;  /* machine class-ad */
 static WakerBase		*waker	= NULL;  /* waking mechanism */
-param_functions			p_funcs;		 /* Global param system wrapper for daemons */
 
 /**	Functions */
 
@@ -112,13 +111,9 @@ usage( void )
 static void
 enable_debug( void )
 {
-
+	param_functions *p_funcs = get_param_functions();
 	Termlog = 1;
-	p_funcs.set_param_func(&param);
-	p_funcs.set_param_bool_int_func(&param_boolean_int);
-	p_funcs.set_param_wo_default_func(&param_without_default);
-	dprintf_config ( "TOOL", &p_funcs );
-
+	dprintf_config ( "TOOL", p_funcs );
 }
 
 static void

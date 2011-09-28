@@ -50,7 +50,7 @@ extern int		log_keep_open;
 extern void		_condor_set_debug_flags( const char *strflags );
 extern void		_condor_dprintf_saved_lines( void );
 
-param_functions *dprintf_param_funcs;
+param_functions *dprintf_param_funcs = NULL;
 
 #if HAVE_EXT_GCB
 void	_condor_gcb_dprintf_va( int flags, char* fmt, va_list args );
@@ -110,7 +110,18 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 	
 
 	DebugLogs = new std::vector<DebugFileInfo>();
-	dprintf_param_funcs = p_funcs;
+	if(!dprintf_param_funcs)
+		dprintf_param_funcs = new param_functions();
+
+	if(p_funcs)
+	{
+		dprintf_param_funcs->set_param_func(p_funcs->get_param_func());
+		dprintf_param_funcs->set_param_bool_int_func(p_funcs->get_param_bool_int_func());
+		dprintf_param_funcs->set_param_wo_default_func(p_funcs->get_param_wo_default_func());
+
+		delete p_funcs;
+	}
+	
 	if(!dprintf_param_funcs)
 		dprintf_param_funcs = new param_functions();
 
