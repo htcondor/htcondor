@@ -151,8 +151,6 @@ _condor_bind_all_interfaces( void )
 	switch( tmp[0] ) {
 	case 'T':
 	case 't':
-	case 'Y':
-	case 'y':
 		bind_all = TRUE;
 		break;
 	default:
