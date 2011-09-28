@@ -4025,12 +4025,8 @@ DaemonCore::CheckPrivState( void )
 				 old_priv );
 		dprintf( D_ALWAYS, "History of priv-state changes:\n" );
 		display_priv_log();
-		char* tmp = param( "EXCEPT_ON_ERROR" );
-		if( tmp ) {
-			if( tmp[0] == 'T' || tmp[0] == 't' ) {
-				EXCEPT( "Priv-state error found by DaemonCore" );
-			}
-			free( tmp );
+		if (param_boolean_crufty("EXCEPT_ON_ERROR", false)) {
+			EXCEPT( "Priv-state error found by DaemonCore" );
 		}
 	}
 }
