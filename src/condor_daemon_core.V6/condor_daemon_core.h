@@ -91,6 +91,16 @@ static const int DC_STD_FD_PIPE = -10;
 static const int DC_STD_FD_NOPIPE = -1;
 
 
+int dc_main( int argc, char **argv );
+
+// External protos
+extern void (*dc_main_init)(int argc, char *argv[]);	// old main
+extern void (*dc_main_config)();
+extern void (*dc_main_shutdown_fast)();
+extern void (*dc_main_shutdown_graceful)();
+extern void (*dc_main_pre_dc_init)(int argc, char *argv[]);
+extern void (*dc_main_pre_command_sock_init)();
+
 /** @name Typedefs for Callback Procedures
  */
 //@{
@@ -274,10 +284,9 @@ class DaemonCore : public Service
   friend class TimerManager; 
   friend class CreateProcessForkit;
 #ifdef WIN32
-  friend int dc_main( int argc, char** argv );
   friend unsigned pidWatcherThread(void*);
 #else
-  friend int main(int, char**);
+  friend int dc_main(int, char**);
 #endif
     
   public:

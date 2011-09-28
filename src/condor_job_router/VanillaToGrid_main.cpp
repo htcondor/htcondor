@@ -228,5 +228,3 @@ int main(int argc, char **argv)
 
 }
 
-
-#include "daemon_core_stubs.h"

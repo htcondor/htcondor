@@ -61,12 +61,12 @@ extern DLL_IMPORT_MAGIC char **environ;
 
 
 // External protos
-extern void main_init(int argc, char *argv[]);	// old main()
-extern void main_config();
-extern void main_shutdown_fast();
-extern void main_shutdown_graceful();
-extern void main_pre_dc_init(int argc, char *argv[]);
-extern void main_pre_command_sock_init();
+void (*dc_main_init)(int argc, char *argv[]);	// old main
+void (*dc_main_config)();
+void (*dc_main_shutdown_fast)();
+void (*dc_main_shutdown_graceful)();
+void (*dc_main_pre_dc_init)(int argc, char *argv[]);
+void (*dc_main_pre_command_sock_init)();
 
 // Internal protos
 void dc_reconfig();
@@ -1435,7 +1435,7 @@ dc_reconfig()
 	}
 
 	// call this daemon's specific main_config()
-	main_config();
+	dc_main_config();
 }
 
 int
@@ -1450,7 +1450,7 @@ handle_dc_sighup( Service*, int )
 void
 TimerHandler_main_shutdown_fast()
 {
-	main_shutdown_fast();
+	dc_main_shutdown_fast();
 }
 
 
@@ -1492,7 +1492,7 @@ handle_dc_sigterm( Service*, int )
 				 "Started timer to call main_shutdown_fast in %d seconds\n", 
 				 timeout );
 	}
-	main_shutdown_graceful();
+	dc_main_shutdown_graceful();
 	return TRUE;
 }
 
@@ -1515,7 +1515,7 @@ handle_dc_sigquit( Service*, int )
 	been_here = TRUE;
 
 	dprintf(D_ALWAYS, "Got SIGQUIT.  Performing fast shutdown.\n");
-	main_shutdown_fast();
+	dc_main_shutdown_fast();
 	return TRUE;
 }
 
@@ -1524,7 +1524,7 @@ handle_gcb_recovery_failed( )
 {
 	dprintf( D_ALWAYS, "GCB failed to recover from a failure with the "
 			 "Broker. Performing fast shutdown.\n" );
-	main_shutdown_fast();
+	dc_main_shutdown_fast();
 }
 
 #if HAVE_EXT_GCB
@@ -1544,11 +1544,7 @@ gcb_recovery_failed_callback()
 // have a different, smaller main which checks if "-f" is ommitted from
 // the command line args of the condor_master, in which case it registers as 
 // an NT service.
-#ifdef WIN32
 int dc_main( int argc, char** argv )
-#else
-int main( int argc, char** argv )
-#endif
 {
 	char**	ptr;
 	int		command_port = -1;
@@ -1558,6 +1554,62 @@ int main( int argc, char** argv )
 	char	*ptmp, *ptmp1;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
+	bool	done;
+
+#ifdef WIN32
+	// Scan our command line arguments for a "-f".  If we don't find a "-f",
+	// or a "-v", then we want to register as an NT Service.
+	i = 0;
+	done = false;
+	for( ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++)
+	{
+		if( ptr[0][0] != '-' ) {
+			break;
+		}
+		switch( ptr[0][1] ) {
+		case 'a':		// Append to the log file name.
+			ptr++;
+			break;
+		case 'b':		// run in Background (default)
+			break;
+		case 'c':		// specify directory where Config file lives
+			ptr++;
+			break;
+		case 'd':		// Dynamic local directories
+			break;
+		case 'f':		// run in Foreground
+			Foreground = 1;
+			break;
+		case 'l':		// specify Log directory
+			 ptr++;
+			 break;
+		case 'p':		// Use well-known Port for command socket.		
+			ptr++;		// Also used to specify a Pid file, but both
+			break;		// versions require a 2nd arg, so we're safe. 
+		case 'q':		// Quiet output
+			break;
+		case 'r':		// Run for <arg> minutes, then gracefully exit
+			ptr++;
+			break;
+		case 't':		// log to Terminal (stderr)
+			break;
+		case 'v':		// display Version info and exit
+			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
+			exit(0);
+			break;
+		default:
+			done = true;
+			break;	
+		}
+		if( done ) {
+			break;		// break out of for loop
+		}
+	}
+	if ( (Foreground != 1) && get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ) {
+		dc_main_init(-1,NULL);	// passing the master main_init a -1 will register as an NT service
+		return 1;
+	}
+#endif
 
 	condor_main_argc = argc;
 	condor_main_argv = (char **)malloc((argc+1)*sizeof(char *));
@@ -1627,7 +1679,7 @@ int main( int argc, char** argv )
 		// call out to the handler for pre daemonCore initialization
 		// stuff so that our client side can do stuff before we start
 		// messing with argv[]
-	main_pre_dc_init( argc, argv );
+	dc_main_pre_dc_init( argc, argv );
 
 		// Make sure this is set, since DaemonCore needs it for all
 		// sorts of things, and it's better to clearly EXCEPT here
@@ -1647,7 +1699,7 @@ int main( int argc, char** argv )
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
 	i = 0;
-	bool done = false;
+	done = false;
 
 	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		if(ptr[0][0] != '-') {
@@ -2152,7 +2204,7 @@ int main( int argc, char** argv )
 	GCB_Recovery_failed_callback_set( gcb_recovery_failed_callback );
 #endif
 
-	main_pre_command_sock_init();
+	dc_main_pre_command_sock_init();
 
 		/* NOTE re main_pre_command_sock_init:
 		  *
@@ -2366,7 +2418,7 @@ int main( int argc, char** argv )
     XMLObj = FILEXML::createInstanceXML();
 
 	// call the daemon's main_init()
-	main_init( argc, argv );
+	dc_main_init( argc, argv );
 
 	// now call the driver.  we never return from the driver (infinite loop).
 	daemonCore->Driver();
@@ -2375,68 +2427,3 @@ int main( int argc, char** argv )
 	EXCEPT("returned from Driver()");
 	return FALSE;
 }	
-
-#ifdef WIN32
-int 
-main( int argc, char** argv)
-{
-	char **ptr;
-	int i;
-
-	// Scan our command line arguments for a "-f".  If we don't find a "-f",
-	// or a "-v", then we want to register as an NT Service.
-	i = 0;
-	bool done = false;
-	for( ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++)
-	{
-		if( ptr[0][0] != '-' ) {
-			break;
-		}
-		switch( ptr[0][1] ) {
-		case 'a':		// Append to the log file name.
-			ptr++;
-			break;
-		case 'b':		// run in Background (default)
-			break;
-		case 'c':		// specify directory where Config file lives
-			ptr++;
-			break;
-		case 'd':		// Dynamic local directories
-			break;
-		case 'f':		// run in Foreground
-			Foreground = 1;
-			break;
-		case 'l':		// specify Log directory
-			 ptr++;
-			 break;
-		case 'p':		// Use well-known Port for command socket.		
-			ptr++;		// Also used to specify a Pid file, but both
-			break;		// versions require a 2nd arg, so we're safe. 
-		case 'q':		// Quiet output
-			break;
-		case 'r':		// Run for <arg> minutes, then gracefully exit
-			ptr++;
-			break;
-		case 't':		// log to Terminal (stderr)
-			break;
-		case 'v':		// display Version info and exit
-			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
-			exit(0);
-			break;
-		default:
-			done = true;
-			break;	
-		}
-		if( done ) {
-			break;		// break out of for loop
-		}
-	}
-	if ( (Foreground != 1) && get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ) {
-		main_init(-1,NULL);	// passing the master main_init a -1 will register as an NT service
-		return 1;
-	} else {
-		return(dc_main(argc,argv));
-	}
-}
-#endif // of ifdef WIN32
-

@@ -7970,6 +7970,3 @@ SetVMParams()
 	// So we need to add necessary VM attributes to Requirements
 	SetVMRequirements();
 }
-
-
-#include "daemon_core_stubs.h"

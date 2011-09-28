@@ -39,9 +39,6 @@ if (HAVE_EXT_GSOAP AND HAVE_EXT_OPENSSL AND HAVE_PTHREADS)
 	"${HeaderFiles};${SourceFiles};${AMAZON_SOAP_FILES};${WSSEAPI};${SMDEVP}" ${C_SBIN}
 	"${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GSOAP_FOUND};${ZLIB_FOUND}"
 	OFF)
-	# unfortunately libutils comes with undefined symbols introduced by
-	# libdaemon_core (even when linking libutils to it)
-	target_link_libraries(amazon_gahp -Wl,--allow-shlib-undefined)
 
 	add_dependencies(gen_amazon_soapfiles gsoap)
 	set_source_files_properties (${WSSEAPI} ${SMDEVP} PROPERTIES GENERATED TRUE)

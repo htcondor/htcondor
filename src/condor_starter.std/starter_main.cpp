@@ -28,7 +28,7 @@
 #include "proto.h"
 #include "name_tab.h"
 
-#include "state_machine_driver.unix.h"
+#include "state_machine_driver.h"
 
 #include "starter.h"
 #include "fileno.h"

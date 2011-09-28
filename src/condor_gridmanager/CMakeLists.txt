@@ -36,13 +36,7 @@ if(NOT WIN_EXEC_NODE_ONLY)
 	if (NOT WINDOWS)
         if (HAVE_EXT_GLOBUS)
             condor_exe( gt4_gahp "gt4_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
-            # unfortunately libutils comes with undefined symbols introduced by
-            # libdaemon_core (even when linking libutils to it)
-            target_link_libraries(gt4_gahp -Wl,--allow-shlib-undefined)
             condor_exe( gt42_gahp "gt42_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
-            # unfortunately libutils comes with undefined symbols introduced by
-            # libdaemon_core (even when linking libutils to it)
-            target_link_libraries(gt42_gahp -Wl,--allow-shlib-undefined)
 
             add_custom_command(
                 OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/grid_monitor.sh"
@@ -61,9 +55,6 @@ if(NOT WIN_EXEC_NODE_ONLY)
 
         if (HAVE_EXT_UNICOREGAHP)
             condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
-            # unfortunately libutils comes with undefined symbols introduced by
-            # libdaemon_core (even when linking libutils to it)
-            target_link_libraries(unicore_gahp -Wl,--allow-shlib-undefined)
         endif()
 
         if (HAVE_EXT_BLAHP)

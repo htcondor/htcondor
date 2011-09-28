@@ -311,5 +311,3 @@ void ProcArg(const char* arg)
 		fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
 	}
 }
-
-#include "daemon_core_stubs.h"

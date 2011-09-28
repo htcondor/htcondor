@@ -512,3 +512,14 @@ void main_init(int argc, char *argv[])
 	write_to_daemoncore_pipe("%s\n", vmgahp_version);
 }
 
+int
+main( int argc, char **argv )
+{
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	dc_main_pre_dc_init = main_pre_dc_init;
+	dc_main_pre_command_sock_init = main_pre_command_sock_init;
+	return dc_main( argc, argv );
+}
