@@ -242,15 +242,8 @@ JICShadow::config( void )
 		free( fs_domain );
 	}
 	fs_domain = param( "FILESYSTEM_DOMAIN" );  
-	
-	trust_uid_domain = false;
-	char* tmp = param( "TRUST_UID_DOMAIN" );
-	if( tmp ) {
-		if( tmp[0] == 't' || tmp[0] == 'T' ) { 
-			trust_uid_domain = true;
-		}			
-		free( tmp );
-	}
+
+	trust_uid_domain = param_boolean_crufty("TRUST_UID_DOMAIN", false);
 }
 
 
