@@ -803,15 +803,14 @@ drop_core_in_log( void )
 void
 check_core_files()
 {
-	int want_set_error_mode =
-		param_boolean_crufty("CREATE_CORE_FILES", true) ? TRUE : FALSE;
+	bool want_set_error_mode = param_boolean_crufty("CREATE_CORE_FILES", true);
 
-#ifndef WIN32	
-		if( want_set_error_mode ) {
-			limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT,"max core size" );
-		} else {
-			limit( RLIMIT_CORE, 0, CONDOR_SOFT_LIMIT,"max core size" );
-		}
+#ifndef WIN32
+	if( want_set_error_mode ) {
+		limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT,"max core size" );
+	} else {
+		limit( RLIMIT_CORE, 0, CONDOR_SOFT_LIMIT,"max core size" );
+	}
 #endif
 
 #ifdef WIN32
