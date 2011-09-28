@@ -268,19 +268,7 @@ daemon::runs_on_this_host()
 	// X_RUNS_HERE controls whether or not to run kbdd if it's presented in
 	// the config file
 	{
-		tmp = param("X_RUNS_HERE");
-		if(tmp)
-		{
-			if(*tmp == 'T' || *tmp == 't')
-			{
-				runs_here = TRUE;
-			}
-			else
-			{
-				runs_here = FALSE;
-			}
-		free(tmp);
-		}
+		runs_here = param_boolean_crufty("X_RUNS_HERE", false) ? TRUE : FALSE;
 	}
 	return runs_here;
 }
