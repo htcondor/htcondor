@@ -229,12 +229,8 @@ daemon::runs_on_this_host()
 
 	if ( flag_in_config_file != NULL ) {
 		if (strncmp(flag_in_config_file, "BOOL_", 5) == MATCH) {
-			tmp	= param( flag_in_config_file);
-			if ( tmp && (*tmp == 't' || *tmp == 'T')) {
-				runs_here = TRUE;
-			} else {
-				runs_here = FALSE;
-			}
+			runs_here =
+				param_boolean_crufty(flag_in_config_file, false) ? TRUE : FALSE;
 		} else {
 			if (!this_host_addr_cached) {
 				MyString local_hostname = get_local_hostname();
