@@ -107,25 +107,7 @@ int get_port_range(int is_outgoing, int *low_port, int *high_port)
 int
 _condor_bind_all_interfaces( void )
 {
-	int bind_all = FALSE;
-	char* tmp = param( "BIND_ALL_INTERFACES" );
-	if( ! tmp ) {
-			// not defined, defaualts to TRUE;
-		return TRUE;
-	}
-	switch( tmp[0] ) {
-	case 'T':
-	case 't':
-	case 'Y':
-	case 'y':
-		bind_all = TRUE;
-		break;
-	default:
-		bind_all = FALSE;
-		break;
-	}
-	free( tmp );
-	return bind_all;
+	return param_boolean_crufty("BIND_ALL_INTERFACES", true) ? TRUE : FALSE;
 }
 
 
