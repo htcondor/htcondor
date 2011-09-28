@@ -12,22 +12,24 @@ include "CondorQ.php";
 $condorq_build = new CondorQ("build", $pool_platforms);
 $condorq_test = new CondorQ("test", $pool_platforms);
 
-function make_cell($platform, $depth, $queue, $type) {
+function make_cell($platform, $info, $type) {
+  $queued = $info["depth"] - $info["running"];
+
   $color = "";
-  if($depth == 0) {
+  if($queued == 0) {
     $color = "#00FFFF";
   }
-  elseif($depth > 0 and $depth < 3) {
+  elseif($queued > 0 and $queued < 3) {
     $color = "#00FF00";
   }
-  elseif($depth >= 3 and $depth < 6) {
+  elseif($queued >= 3 and $queued < 6) {
     $color = "#FFFF00";
   }
-  elseif($depth >= 6) {
+  elseif($queued >= 6) {
     $color = "#FF0000";
   }
   
-  return "<td align=\"center\" style=\"background-color:$color\">$type $queue</td>\n";
+  return "<td align=\"center\" style=\"background-color:$color\">$type " . $info["html-queue"] . "</td>\n";
 }
 ?>
 
@@ -82,12 +84,6 @@ foreach ($platforms AS $platform) {
     continue;
   }
 
-  $build_depth = $build_queues[$platform][0];
-  $build_queue = $build_queues[$platform][1];
-
-  $test_depth = $test_queues[$platform][0];
-  $test_queue = $test_queues[$platform][1];
-
   // We want to make it obvious if a platform is not in the pool
   $style = "border-width:0px;border-style:none;align:center;";
   if(!$pool_platforms[$platform]) {
@@ -95,13 +91,13 @@ foreach ($platforms AS $platform) {
   }
 
   echo "<td style=\"$style\"><table><tr><td colspan=2 style='text-align:center'>$platform</td></tr><tr>";
-  echo make_cell($platform, $build_depth, $build_queue, "Builds");
-  echo make_cell($platform, $test_depth, $test_queue, "Tests");
+  echo make_cell($platform, $build_queues[$platform], "Builds");
+  echo make_cell($platform, $test_queues[$platform], "Tests");
   echo "</tr></table></td>";
 
   if($count == 6) {
     $count = 0;
-    echo "</tr><tr style='height:6px;border-width:0px'><td colspan=6 style='height:6px;border-width:0px;border-style:none;'></td></tr><tr style='birder-width:0px'>";
+    echo "</tr><tr style='height:6px;border-width:0px'><td colspan=6 style='height:6px;border-width:0px;border-style:none;'></td></tr><tr style='border-width:0px'>";
   }
 }
 
