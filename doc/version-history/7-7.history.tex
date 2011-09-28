@@ -36,6 +36,11 @@ hierarchy. The -grouprollup flag reports accounting statistics for groups rolled
 by group hierarchy.
 \Ticket{1926}
 
+\item \Condor{collector} now avoids performance problems that happened
+previously when clients initiated communication with the collector but
+then delayed sending input.
+\Ticket{2506}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
