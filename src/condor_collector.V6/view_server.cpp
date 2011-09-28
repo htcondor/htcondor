@@ -64,12 +64,7 @@ void ViewServer::Init()
 
 	// Check operation mode
 
-	KeepHistory=false;
-	char* tmp=param("KEEP_POOL_HISTORY");
-	if( tmp ) {
-		if( *tmp == 'T' || *tmp == 't' ) KeepHistory=true;
-		free( tmp );
-	}
+	KeepHistory = param_boolean_crufty("KEEP_POOL_HISTORY", false);
 
 	// We can't do this check at compile time, but we'll except if
 	// the startd states has changed and we haven't been updated
