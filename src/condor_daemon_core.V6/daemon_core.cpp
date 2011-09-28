@@ -8032,9 +8032,7 @@ int DaemonCore::Create_Process(
 			// Check USE_VISIBLE_DESKTOP in condor_config.  If set to TRUE,
 			// then run the job on the visible desktop, otherwise create
 			// a new non-visible desktop for the job.
-		char *use_visible = param("USE_VISIBLE_DESKTOP");
-
-		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
+		if (param_boolean_crufty("USE_VISIBLE_DESKTOP", false)) {
 				// user wants visible desktop.
 				// place the user_token into the proper access control lists.
 			if ( GrantDesktopAccess(user_token) == 0 ) {
@@ -8049,7 +8047,6 @@ int DaemonCore::Create_Process(
 					"Create_Process: Unable to use visible desktop\n");
 			}
 		}
-		if (use_visible) free(use_visible);
 
 			// we need to make certain to specify CREATE_NEW_CONSOLE, because
 			// our ACLs will not let us use the current console which is
