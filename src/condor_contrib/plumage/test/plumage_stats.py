@@ -22,46 +22,69 @@ from datetime import timedelta, datetime
 from sys import exit, argv
 import time, pwd, os
 import logging
-import argparse
+from optparse import OptionParser
 
-parser = argparse.ArgumentParser(description='Query Condor ODS for statistics')
-parser.add_argument('-v','--verbose', action="store_true",default=False, help='enable logging')
-parser.add_argument('-s','--server', action="store", nargs='?', dest='server',
-                    default='localhost',
-                    help='mongodb database server location: e.g., somehost, localhost:2011')
-parser.add_argument('-ul','--userlist', action="store_true",default=False, help='list all submitters')
-parser.add_argument('-ugl','--usergrouplist', action="store_true",default=False, help='list all submitter groups')
-parser.add_argument('-rl','--resourcelist', action="store_true",default=False, help='list all resource')
-parser.add_argument('-rgl','--resourcegrouplist', action="store_true",default=False, help='list all resources groups')
-args =  parser.parse_args()
+def print_user(user):
+	for item in db['samples.submitter'].find({"sn":{'$regex':'^'+user}} ):
+		print item['sn'],"\t",item['ts'], "\t",item['jr'],"\t",item['jh'],"\t",item['ji']
 
-try:
-	connection = pymongo.Connection(args.server)
-	db = connection.condor_stats
-except Exception, e:
-		print e
-		exit(1)
+def print_resource(resource):
+	for item in db['samples.machine'].find({"mn":{'$regex':resource}} ):
+		print item['mn'],"\t",item['ts'], "\t","%s/%s" % (item['ar'],item['os']),"\t",item['ki'],"\t",item['la']
 
-if args.userlist:
-	for user in db['samples.submitter'].distinct('sn'):
-		print user
-elif args.usergrouplist:
+def print_users():
+		for user in db['samples.submitter'].distinct('sn'):
+			print user
+
+def print_usergroups():
 	# TODO: revisit with mongodb group()
 	mnlist = db['samples.submitter'].distinct('mn')
 	for mn in mnlist:
 		snlist = db['samples.submitter'].find({'mn': mn}).distinct('sn')
 		for sn in snlist:
 			print '%s/%s' % (sn,mn)
-elif args.resourcelist:
+
+def print_resourcelist():
 	for item in db['samples.machine'].distinct('mn'):
 		print item
+
+def print_submitter():
+	for item in db['samples.submitter'].find().sort("sn", pymongo.ASCENDING):
+		print item['sn'],"\t",item['ts'], "\t",item['jr'],"\t",item['jh'],"\t",item['ji']
+
+def print_machine():
+	for item in db['samples.machine'].find().sort("mn", pymongo.ASCENDING):
+		print item['mn']," ",item['ts'], " ", "%s/%s" % (item['ar'],item['os'])
+
+parser = OptionParser(description='Query Condor ODS for statistics')
+parser.add_option('-v','--verbose', action="store_true",default=False, help='enable logging')
+parser.add_option('-s','--server', action="store", nargs='?', dest='server',
+                    default='localhost',
+                    help='mongodb database server location: e.g., somehost, localhost:2011')
+parser.add_option('--u','--user', dest="user", help='stats for a single submitter')
+parser.add_option('--r','--resource', dest="resource", help='stats for a single resource')
+parser.add_option('--ul','--userlist', action="store_true",dest="userlist", default=False, help='list all submitters')
+parser.add_option('--ugl','--usergrouplist', action="store_true",dest='usergrouplist',default=False, help='list all submitter groups')
+parser.add_option('--rl','--resourcelist', action="store_true",dest='resourcelist',default=False, help='list all resources')
+parser.add_option('--rgl','--resourcegrouplist', action="store_true",dest='resourcegrouplist',default=False, help='list all resource groups')
+(options, args) =  parser.parse_args()
+
+try:
+	connection = pymongo.Connection(options.server)
+	db = connection.condor_stats
+except Exception, e:
+		print e
+		exit(1)
+
+if options.user:
+	print_user(options.user)
+elif options.resource:
+	print_resource(options.resource)
+elif options.userlist:
+	print_users()
+elif options.usergrouplist:
+	print_usergroups()
+elif options.resourcelist:
+	print_resourcelist()
 else:
 	parser.print_help()
-
-#print "Submitter\t\tTimestamp\t\t\tRunning\tHeld\tIdle"
-#print "---------\t\t---------\t\t\t-------\t----\t----"
-#for item in db['samples.submitter'].find().sort("sn", pymongo.ASCENDING):
-	#print item['sn'],"\t",item['ts'], "\t",item['jr'],"\t",item['jh'],"\t",item['ji']
-
-##for item in db['samples.machine'].find().sort("mn", pymongo.ASCENDING):
-	##print item['mn']," ",item['ts'], " ", "%s/%s" % (item['ar'],item['os'])

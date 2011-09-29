@@ -56,20 +56,26 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
         auto_ptr<DBClientCursor> cursor = conn->query(DB_RAW_ADS, QUERY( ATTR_MY_TYPE << "Submitter" ) );
         while( cursor->more() ) {
             BSONObj p = cursor->next();
+            const char* name = p.getStringField(ATTR_NAME);
+            int r = p.getIntField(ATTR_RUNNING_JOBS);
+            // TODO: weird...HeldJobs isn't always there in the raw submitter ad
+            int h = p.getIntField(ATTR_HELD_JOBS); h = (h>0) ? h : 0;
+            int i = p.getIntField(ATTR_IDLE_JOBS);
             dprintf(D_FULLDEBUG, "Submitter %s:\t%s=%d\t%s=%d\t%s=%d\n",
-                    p.getStringField(ATTR_NAME),
-                    ATTR_RUNNING_JOBS,p.getIntField(ATTR_RUNNING_JOBS),
-                    ATTR_HELD_JOBS,p.getIntField(ATTR_HELD_JOBS),
-                    ATTR_IDLE_JOBS,p.getIntField(ATTR_IDLE_JOBS));
+                    name,
+                    ATTR_RUNNING_JOBS,r,
+                    ATTR_HELD_JOBS,h,
+                    ATTR_IDLE_JOBS,i
+                   );
 
             // write record to submitter samples
             BSONObjBuilder bob;
             bob << "ts" << mongo::DATENOW;
-            bob.append("sn",p.getStringField(ATTR_NAME));
+            bob.append("sn",name);
             bob.append("mn",p.getStringField(ATTR_MACHINE));
-            bob.append("jr",p.getIntField(ATTR_RUNNING_JOBS));
-            bob.append("jh",p.getIntField(ATTR_HELD_JOBS));
-            bob.append("ji",p.getIntField(ATTR_IDLE_JOBS));
+            bob.append("jr",r);
+            bob.append("jh",h);
+            bob.append("ji",i);
             conn->insert(DB_STATS_SAMPLES_SUB,bob.obj());
         }
     }
@@ -81,23 +87,29 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
         auto_ptr<DBClientCursor> cursor = conn->query(DB_RAW_ADS, QUERY( ATTR_MY_TYPE << "Machine" ) );
         while( cursor->more() ) {
             BSONObj p = cursor->next();
+            const char* name = p.getStringField(ATTR_NAME);
+            const char* arch = p.getStringField(ATTR_ARCH);
+            const char* opsys = p.getStringField(ATTR_OPSYS);
+            int ki = p.getIntField(ATTR_KEYBOARD_IDLE);
+            double la = p.getField(ATTR_LOAD_AVG).Double();
+            const char* state = p.getStringField(ATTR_STATE);
             dprintf(D_FULLDEBUG, "Machine %s:\t%s=%s\t%s=%s\t%s=%d\t%s=%f\t%s=%s\n",
-                    p.getStringField(ATTR_NAME),
-                    ATTR_ARCH,p.getStringField(ATTR_ARCH),
-                    ATTR_OPSYS,p.getStringField(ATTR_OPSYS),
-                    ATTR_KEYBOARD_IDLE,p.getIntField(ATTR_KEYBOARD_IDLE),
-                    ATTR_LOAD_AVG,p.getField(ATTR_LOAD_AVG).Double(),
-                    ATTR_STATE,p.getStringField(ATTR_STATE));
+                    name,
+                    ATTR_ARCH,arch,
+                    ATTR_OPSYS,opsys,
+                    ATTR_KEYBOARD_IDLE,ki,
+                    ATTR_LOAD_AVG,la,
+                    ATTR_STATE,state);
 
             // write record to machine samples
             BSONObjBuilder bob;
             bob << "ts" << mongo::DATENOW;
-            bob.append("mn",p.getStringField(ATTR_NAME));
-            bob.append("ar",p.getStringField(ATTR_ARCH));
-            bob.append("os",p.getStringField(ATTR_OPSYS));
-            bob.append("ki",p.getIntField(ATTR_KEYBOARD_IDLE));
-            bob.append("la",p.getField(ATTR_LOAD_AVG).Double());
-            bob.append("st",p.getStringField(ATTR_STATE));
+            bob.append("mn",name);
+            bob.append("ar",arch);
+            bob.append("os",opsys);
+            bob.append("ki",ki);
+            bob.append("la",la);
+            bob.append("st",state);
             conn->insert(DB_STATS_SAMPLES_MACH,bob.obj());
         }
     }

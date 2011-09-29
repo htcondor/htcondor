@@ -200,15 +200,19 @@ ODSMongodbOps::updateAd(BSONObjBuilder& key, ClassAd* ad)
         ad->EvaluateExpr(expr,value);
         switch (value.GetType()) {
             case classad::Value::INTEGER_VALUE:
-                int i;
+            {
+                int i = 0;
                 ad->LookupInteger(name,i);
                 bob.append(name,i);
                 break;
+            }
             case classad::Value::REAL_VALUE:
-                float f;
+            {
+                float f = 0.0;
                 ad->LookupFloat(name,f);
                 bob.append(name,f);
                 break;
+            }
             case classad::Value::BOOLEAN_VALUE:
                 bool b;
                 ad->LookupBool(name,b);
