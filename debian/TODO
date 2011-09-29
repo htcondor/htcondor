@@ -1,5 +1,4 @@
 * Do license checks
-* Current manpage conversion is rather crappy.
 * Support systems that have tmpfs on /var/run
   This is not the default on Debian (but Ubuntu may have it)
 
@@ -7,4 +6,11 @@
 * debconf templates should mention format things: comma-separated list, ...
 * Allow for configurable UID/GID
 * Security: ALLOW_ADVERTISE_SCHEDD
+* Incompatible with GSOAP 2.8.*
+* Check the install logs. There are some 'permission denied' messages. Some
+  files are not installed into proper locations.
+* Something is wrong with
+  BIND_ALL_INTERFACES = FALSE
+  NETWORK_INTERFACE =  127.0.0.1
+  The collector still listens on the external interface (only)
 

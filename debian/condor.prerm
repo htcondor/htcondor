@@ -6,14 +6,16 @@ set -e
 condor_remove_homedir() {
 	for dlabel in CRED_STORE_DIR LOCAL_UNIV_EXECUTE EXECUTE LOCK LOG RUN SPOOL; do
 		dname=$(condor_config_val $dlabel)
-		# should we rely on the configuration to be sane?
-		#rm -rf $dname
-		# better have some safety-net and only delete what belongs to condor
-		# if we have a condor user at all
-		id -u condor > /dev/null 2>&1 && find $dname -type f -user condor -group condor -delete
-		# try getting rid of the directory as well, but do not fail if there
-		# were left-overs
-		rmdir $dname || true
+		if [ $? -eq 0 ]; then
+			# should we rely on the configuration to be sane?
+			#rm -rf $dname
+			# better have some safety-net and only delete what belongs to condor
+			# if we have a condor user at all
+			id -u condor > /dev/null 2>&1 && find $dname -type f -user condor -group condor -delete
+			# try getting rid of the directory as well, but do not fail if there
+			# were left-overs
+			rmdir $dname || true
+		fi
 	done
 }
 

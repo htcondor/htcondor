@@ -17,16 +17,14 @@ gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V*' $$(git 
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
-		-DBUILD_SHARED_LIBS:BOOL=ON \
 		-DPROPER:BOOL=ON \
 		-DCLIPPED:BOOL=ON \
 		-DUW_BUILD:BOOL=OFF \
 		-D_DEBUG:BOOL=TRUE \
-		-DBUILDID:STRING="Debian [$(debver)]"\
-		-DWITH_GSOAP:BOOL=OFF \
-		-DCMAKE_SKIP_BUILD_RPATH:BOOL=ON \
+		-DBUILDID:STRING="Debian-$(debver)"\
+		-DFORCE_PRE_RELEASE:STRING="Debian-$(debver)"\
 		-DCMAKE_INSTALL_RPATH:STRING="/usr/lib/condor" \
-		-DHAVE_EXT_CLASSADS:BOOL=ON -DCLASSADS_FOUND=classad_ns \
+		-DHAVE_EXT_GSOAP:BOOL=OFF \
 		-DHAVE_EXT_CURL:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_BOOST:BOOL=ON \
@@ -36,6 +34,7 @@ override_dh_auto_configure:
 		-DHAVE_EXT_LIBXML2:BOOL=ON \
 		-DHAVE_EXT_OPENSSL:BOOL=ON \
 		-DHAVE_EXT_PCRE:BOOL=ON \
+		-DHAVE_EXT_CGROUP:BOOL=ON
 		-DHAVE_EXT_ZLIB:BOOL=ON
 		# upstream says: tests aren't reliablei enough yet
 		#-DBUILD_TESTS:BOOL=OFF \
@@ -50,29 +49,39 @@ override_dh_auto_build: doc/build
 	# post-fixing things that have to be done due to changes introduced by
 	# repackaging
 	# 1. rebuild java stuff
-	cd src/condor_starter.V6.1 && javac *.java
-	cp src/condor_chirp/*.java src/condor_chirp/chirp/java/client/
-	$(MAKE) -C src/condor_chirp/chirp/java/client/
-	cp src/condor_chirp/chirp/java/client/Chirp.jar src/condor_chirp/
+	#cd src/condor_starter.V6.1 && javac *.java
+	#cp src/condor_chirp/*.java src/condor_chirp/chirp/java/client/
+	#$(MAKE) -C src/condor_chirp/chirp/java/client/
+	#cp src/condor_chirp/chirp/java/client/Chirp.jar src/condor_chirp/
 
+override_dh_shlibdeps:
+	dh_shlibdeps -l$(CURDIR)/debian/tmp/usr/lib/
+
+override_dh_makeshlibs:
+	# no public libs
+	dh_makeshlibs --noscripts
 
 doc/build:
 	mkdir -p $@
-	$(MAKE) -C doc/doc release-pdf MANDIR=$(CURDIR)/$@/pdf \
+	$(MAKE) -C doc release-pdf MANDIR=$(CURDIR)/$@/pdf \
 		TARGETDIR=$(CURDIR)/$@/pdf
-	cd doc/doc && latex2html -address condor-admin@cs.wisc.edu -split 4 \
+	cd doc && latex2html -address condor-admin@cs.wisc.edu -split 4 \
 		-link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 \
 		-toc_depth 2 -local_icons ref.tex
-	cp -r doc/doc/ref $@/html
-	$(MAKE) -C doc/doc/makeman makeman
+	cp -r doc/ref $@/html
+	$(MAKE) -C doc/makeman makeman
 	for html in $@/html/condor_*.html; do \
-		doc/doc/makeman/makeman -v -i $$html -s 1; \
+		doc/makeman/makeman -v -i $$html -s 1; \
 	done
 	mkdir -p $@/man
 	# sanitize and copy
 	for man in $@/html/condor_*.1; do \
 		sed -r -e 's,$@/html/,,' -e "s/1 date$$/1 \"$$(date +'%B %Y')\"/" \
 			   -e '/\.SH Name/{ n; n; s/\W/ \\- /; }' -e 's/ (\.[A-Z])/\1/' \
+			   -e "s/($$(echo $$(basename $$man) | cut -d . -f1,1))/\1 /g" \
+			   -e '/\\$$/{ n; s/\.br//; }' -e 's,/SPAN>, ,g' \
+			   -e '/[ ]*\.P/{ n; s/^[ ]*\.P//; }' \
+			   -e 's/^[ ]*\././' \
 			   -e 's/^\s//' < $$man > $@/man/$$(basename $$man) ; \
 	done
 	rm $@/html/condor_*.1
@@ -137,10 +146,10 @@ override_dh_auto_clean:
 		src/condor_tests/batch_test.pl
 	-rm src/condor_utils/param_info.c
 	# docs
-	$(MAKE) -C doc/doc reallyclean
-	-rm -rf doc/doc/just-man-pages
+	$(MAKE) -C doc reallyclean
+	-rm -rf doc/just-man-pages
 	-rm -rf doc/build
-	-rm -f doc/doc/symbol.tex doc/doc/figuresizing.tex doc/doc/fontsize.tex
+	-rm -f doc/symbol.tex doc/figuresizing.tex doc/fontsize.tex
 
 
 override_dh_clean:

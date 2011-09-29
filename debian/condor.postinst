@@ -30,8 +30,12 @@ condor_add_user() {
 condor_make_homedir() {
     for dlabel in LOCAL_UNIV_EXECUTE CRED_STORE_DIR EXECUTE LOCK LOG SPOOL; do
         dname=$(condor_config_val $dlabel)
-        mkdir -p $dname
-        chown -R $condor_user:$condor_group $dname
+        if [ $? -eq 0 ]; then
+            mkdir -p $dname
+            chown -R $condor_user:$condor_group $dname
+        else
+            echo "Condor's configuration doesn't define $dlabel. This might be an indication of a problem."
+        fi
     done
     # why should this be world writable?
     #for dlabel in EXECUTE CRED_STORE_DIR; do
