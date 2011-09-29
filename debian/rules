@@ -180,6 +180,3 @@ get-orig-source: dfsg-source-tree
 	# orig tarball, turn directory into something nicer
 	git archive --format=tar --prefix=$(srcpkg)-$(gitver)/ HEAD | \
 		gzip -9 > $(srcpkg)_$(gitver).orig.tar.gz
-	git archive --format=tar --prefix=$(srcpkg)-doc-$(gitver)/ \
-				--remote=doc/ HEAD | \
-		gzip -9 > $(srcpkg)_$(gitver).orig-doc.tar.gz
