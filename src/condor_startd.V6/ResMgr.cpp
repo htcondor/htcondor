@@ -89,6 +89,41 @@ ResMgr::ResMgr()
 	m_startd_hook_shutdown_pending = false;
 }
 
+void ResMgr::Stats::Init()
+{
+   STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", Compute, IF_VERBOSEPUB);
+   STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkEvalState, IF_VERBOSEPUB);
+   STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkUpdate, IF_VERBOSEPUB);
+   STATS_POOL_ADD(daemonCore->dc_stats.Pool, "ResMgr", WalkOther, IF_VERBOSEPUB);
+}
+
+double ResMgr::Stats::BeginRuntime(stats_recent_counter_timer & probe)
+{
+   return UtcTime::getTimeDouble();
+}
+
+double ResMgr::Stats::EndRuntime(stats_recent_counter_timer & probe, double before)
+{
+   double now = UtcTime::getTimeDouble();
+   probe.Add(now - before);
+   return now;
+}
+
+double ResMgr::Stats::BeginWalk(VoidResourceMember memberfunc)
+{
+   return UtcTime::getTimeDouble();
+}
+
+double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
+{
+    stats_recent_counter_timer * probe = &WalkOther;
+    if (memberfunc == &Resource::update) 
+       probe = &WalkUpdate;
+    else if (memberfunc == &Resource::eval_state)
+       probe = &WalkEvalState;
+    return EndRuntime(*probe, before);
+}
+
 
 ResMgr::~ResMgr()
 {
@@ -381,6 +416,8 @@ ResMgr::init_resources( void )
 {
 	int i, num_res;
 	CpuAttributes** new_cpu_attrs;
+
+    stats.Init();
 
 		// These things can only be set once, at startup, so they
 		// don't need to be in build_cpu_attrs() at all.
@@ -1086,6 +1123,8 @@ ResMgr::walk( VoidResourceMember memberfunc )
 		return;
 	}
 
+    double now = stats.BeginWalk(memberfunc);
+
 		// Because the memberfunc might be an eval function, it can
 		// result in resources being deleted. This means a straight
 		// for loop on nresources will miss one resource for every one
@@ -1100,6 +1139,8 @@ ResMgr::walk( VoidResourceMember memberfunc )
 	}
 
 	delete [] cache;
+
+    stats.EndWalk(memberfunc, now);
 }
 
 
@@ -1559,6 +1600,8 @@ ResMgr::compute( amask_t how_much )
 		return;
 	}
 
+    double runtime = stats.BeginRuntime(stats.Compute);
+
 		// Since lots of things want to know this, just get it from
 		// the kernel once and share the value...
 	cur_time = time( 0 );
@@ -1614,6 +1657,8 @@ ResMgr::compute( amask_t how_much )
 
 		// Now that we're done, we can display all the values.
 	walk( &Resource::display, how_much );
+
+    stats.EndRuntime(stats.Compute, runtime);
 }
 
 
@@ -1949,7 +1994,7 @@ ResMgr::deleteResource( Resource* rip )
 
 
 void
-ResMgr::makeAdList( ClassAdList *list )
+ResMgr::makeAdList( ClassAdList *list, ClassAd * pqueryAd /*=NULL*/ )
 {
 	ClassAd* ad;
 	int i;

@@ -1772,6 +1772,7 @@ int Scheduler::make_ad_list(
 
    stats.Tick(now);
    stats.JobsSubmitted = GetJobQueuedCount();
+   stats.ShadowsRunning = numShadows;
 
    // publish scheduler generic statistics
    stats.Publish(*cad, stats_config.Value());
