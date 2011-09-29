@@ -52,7 +52,8 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
     void
     processSubmitterStats() {
         dprintf(D_FULLDEBUG, "ODSCollectorPlugin::processSubmitterStats called...\n");
-        mongo::DBClientConnection* conn =  m_ads_conn->m_db_conn;
+        DBClientConnection* conn =  m_ads_conn->m_db_conn;
+        conn->ensureIndex(DB_RAW_ADS, BSON( ATTR_MY_TYPE << 1 ));
         auto_ptr<DBClientCursor> cursor = conn->query(DB_RAW_ADS, QUERY( ATTR_MY_TYPE << "Submitter" ) );
         while( cursor->more() ) {
             BSONObj p = cursor->next();
@@ -69,8 +70,9 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
                    );
 
             // write record to submitter samples
+            conn->ensureIndex(DB_STATS_SAMPLES_SUB, BSON( "ts" << 1 << "sn" << 1 ));
             BSONObjBuilder bob;
-            bob << "ts" << mongo::DATENOW;
+            bob << "ts" << DATENOW;
             bob.append("sn",name);
             bob.append("mn",p.getStringField(ATTR_MACHINE));
             bob.append("jr",r);
@@ -83,7 +85,8 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
     void
     processMachineStats() {
         dprintf(D_FULLDEBUG, "ODSCollectorPlugin::processMachineStats() called...\n");
-        mongo::DBClientConnection* conn =  m_ads_conn->m_db_conn;
+        DBClientConnection* conn =  m_ads_conn->m_db_conn;
+        conn->ensureIndex(DB_RAW_ADS, BSON( ATTR_MY_TYPE << 1 ));
         auto_ptr<DBClientCursor> cursor = conn->query(DB_RAW_ADS, QUERY( ATTR_MY_TYPE << "Machine" ) );
         while( cursor->more() ) {
             BSONObj p = cursor->next();
@@ -102,8 +105,9 @@ class ODSCollectorPlugin : public Service, CollectorPlugin
                     ATTR_STATE,state);
 
             // write record to machine samples
+            conn->ensureIndex(DB_STATS_SAMPLES_MACH, BSON( "ts" << 1 << "mn" << 1 ));
             BSONObjBuilder bob;
-            bob << "ts" << mongo::DATENOW;
+            bob << "ts" << DATENOW;
             bob.append("mn",name);
             bob.append("ar",arch);
             bob.append("os",opsys);
@@ -196,9 +200,8 @@ public:
 		// TODO: const hack for make*HashKey and dPrint
 		ClassAd* _ad = const_cast<ClassAd *> (&ad);
 
-        // TODO: ret check this...
-        _ad->LookupString(ATTR_NAME,name);
-
+		// TODO: ret check this...
+		_ad->LookupString(ATTR_NAME,name);
 		BSONObjBuilder key;
 		key.append(ATTR_NAME,name);
 
@@ -305,10 +308,17 @@ public:
 	void
 	invalidate(int command, const ClassAd &ad)
 	{
+		MyString name,machine;
 		AdNameHashKey hashKey;
 
 		// TODO: const hack for make*HashKey
 		ClassAd* _ad = const_cast<ClassAd *> (&ad);
+
+		// TODO: ret check this...
+		_ad->LookupString(ATTR_NAME,name);
+
+		BSONObjBuilder key;
+		key.append(ATTR_NAME,name);
 
 		switch (command) {
 			case INVALIDATE_STARTD_ADS:
@@ -320,6 +330,23 @@ public:
 				else {
 					dprintf(D_FULLDEBUG, "'%s' startd key invalidated\n",HashString(hashKey).Value());
 				}
+				m_ads_conn->deleteAd(key);
+			break;
+			case INVALIDATE_SUBMITTOR_ADS:
+				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_SUBMITTOR_ADS\n");
+				if (!makeGenericAdHashKey(hashKey, _ad, NULL)) {
+					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
+					return;
+				}
+				else {
+					dprintf(D_FULLDEBUG, "'%s' startd key invalidated\n",HashString(hashKey).Value());
+				}
+
+				// TODO: ret check this...
+				_ad->LookupString(ATTR_MACHINE,machine);
+				key.append(ATTR_MACHINE, machine);
+
+				m_ads_conn->deleteAd(key);
 			break;
 			case INVALIDATE_NEGOTIATOR_ADS:
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_NEGOTIATOR_ADS\n");
@@ -330,6 +357,7 @@ public:
 				else {
 					dprintf(D_FULLDEBUG, "%s negotiator key invalidated\n",HashString(hashKey).Value());
 				}
+				m_ads_conn->deleteAd(key);
 			break;
 			case INVALIDATE_SCHEDD_ADS:
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_SCHEDD_ADS\n");
@@ -340,6 +368,7 @@ public:
 				else {
 					dprintf(D_FULLDEBUG, "%s scheduler key invalidated\n",HashString(hashKey).Value());
 				}
+				m_ads_conn->deleteAd(key);
 			break;
 			case INVALIDATE_GRID_ADS:
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_GRID_ADS\n");
@@ -350,9 +379,11 @@ public:
 				else {
 					dprintf(D_FULLDEBUG, "%s grid key invalidated\n",HashString(hashKey).Value());
 				}
+				m_ads_conn->deleteAd(key);
 			break;
 			case INVALIDATE_COLLECTOR_ADS:
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Received INVALIDATE_COLLECTOR_ADS\n");
+				m_ads_conn->deleteAd(key);
 			break;
 			default:
 				dprintf(D_FULLDEBUG, "ODSCollectorPlugin: Unsupported command: %s\n",
