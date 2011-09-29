@@ -354,8 +354,8 @@ sub FinalCheck( );
 my %settings =
 (
  use_pid			=> 0,
- verbose			=> 0,
- debug				=> 0,
+ verbose			=> 1,
+ debug				=> 1,
  reader_dump_state	=> 0,
  execute			=> 1,
  stop				=> 0,
