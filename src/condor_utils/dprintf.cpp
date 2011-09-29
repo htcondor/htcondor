@@ -809,7 +809,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			}
 		}
 
-        _condor_dfprintf(DebugFP, "MaxLog = %lld, length = %lld\n", (long long)MaxLog[debug_level], (long long)length);
+        _condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)MaxLog[debug_level], (long long)length);
         preserve_log_file(debug_level);
 		debug_file_ptr = DebugFPs[debug_level];
 	}
