@@ -1,0 +1,48 @@
+Description: Upstream changes introduced in version 7.7.1+git436-g81fc261-1
+ This patch has been created by dpkg-source during the package build.
+ Here's the last changelog entry, hopefully it gives details on why
+ those changes were made:
+ .
+ condor (7.7.1+git436-g81fc261-1) UNRELEASED; urgency=low
+ .
+   * New upstream code. Support for dynamic linking against system
+     libraries.
+ .
+ The person named in the Author field signed this changelog entry.
+Author: Michael Hanke <mih@debian.org>
+
+---
+The information above should follow the Patch Tagging Guidelines, please
+checkout http://dep.debian.net/deps/dep3/ to learn about the format. Here
+are templates for supplementary fields that you might want to add:
+
+Origin: <vendor|upstream|other>, <url of original patch>
+Bug: <url in upstream bugtracker>
+Bug-Debian: http://bugs.debian.org/<bugnumber>
+Bug-Ubuntu: https://launchpad.net/bugs/<bugnumber>
+Forwarded: <no|not-needed|url proving that it has been forwarded>
+Reviewed-By: <name and email of someone who approved the patch>
+Last-Update: <YYYY-MM-DD>
+
+--- condor-7.7.1+git436-g81fc261.orig/src/condor_chirp/CMakeLists.txt
++++ condor-7.7.1+git436-g81fc261/src/condor_chirp/CMakeLists.txt
+@@ -26,7 +26,7 @@ condor_exe( condor_chirp "condor_chirp.c
+ # libdaemon_core (even when linking libutils to it)
+ target_link_libraries(condor_chirp -Wl,--allow-shlib-undefined)
+ 
+-install ( FILES Chirp.jar DESTINATION ${C_LIB} )
++#install ( FILES Chirp.jar DESTINATION ${C_LIB} )
+ 
+ if (WANT_FULL_DEPLOYMENT)
+     install ( FILES chirp_client.h DESTINATION ${C_INCLUDE})
+--- condor-7.7.1+git436-g81fc261.orig/src/condor_starter.V6.1/CMakeLists.txt
++++ condor-7.7.1+git436-g81fc261/src/condor_starter.V6.1/CMakeLists.txt
+@@ -26,7 +26,7 @@ if (HAVE_EXT_GLOBUS)
+ endif()
+ 
+ # need to add all the other install targets for libexec.
+-install ( FILES CondorJavaWrapper.class CondorJavaInfo.class DESTINATION ${C_LIB} )
++#install ( FILES CondorJavaWrapper.class CondorJavaInfo.class DESTINATION ${C_LIB} )
+ 
+ if(LINUX AND WANT_GLEXEC)
+ 	install (FILES condor_glexec_setup condor_glexec_run condor_glexec_cleanup condor_glexec_kill condor_glexec_update_proxy DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
