@@ -1,6 +1,6 @@
 if (NOT WINDOWS)
     # BSD has both BSD tar, named "tar", and GNU tar, named "gtar" in ports...
-    if (not BSD_UNIX)
+    if (NOT BSD_UNIX)
 		set( TAR_COMMAND tar)
     else()
 		# Macos is _like_ bsd, but calls it "gnutuar"

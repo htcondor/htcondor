@@ -1100,3 +1100,8 @@ ReliSock::setTargetSharedPortID( char const *id )
 		m_target_shared_port_id = strdup( id );
 	}
 }
+
+bool
+ReliSock::msgReady() {
+	return rcv_msg.ready;
+}

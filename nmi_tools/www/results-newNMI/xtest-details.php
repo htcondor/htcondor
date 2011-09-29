@@ -210,7 +210,7 @@ foreach ($platforms AS $platform) {
   # Get the queue depth for the platform if it is pending
   $queue_depth = "";
   if($platform_status[$platform] == PLATFORM_PENDING) {
-    $queue_depth = get_queue_for_nmi_platform($platform, $type, $dash);
+    $queue_depth = get_queue_for_nmi_platform($platform, $dash);
   }
 
   $display = "<a href=\"$filepath/$gid/userdir/$platform/\" title=\"View Run Directory\">$display</a>";

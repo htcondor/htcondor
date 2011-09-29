@@ -1395,6 +1395,10 @@ Sock::readReady() {
 		return false;
 	}
 
+	if( msgReady() ) {
+		return true;
+	}
+
 	selector.add_fd( _sock, Selector::IO_READ );
 	selector.set_timeout( 0 );
 	selector.execute();

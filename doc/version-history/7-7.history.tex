@@ -36,6 +36,11 @@ hierarchy. The -grouprollup flag reports accounting statistics for groups rolled
 by group hierarchy.
 \Ticket{1926}
 
+\item \Condor{collector} now avoids performance problems that happened
+previously when clients initiated communication with the collector but
+then delayed sending input.
+\Ticket{2506}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -62,6 +67,11 @@ was made obsolete by \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} so it has been removed
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Added logic to the \Condor{negotiator} daemon's Accountant
+initialization to ensure that table entries are always created for
+accounting groups on startup and reconfig.
+\Ticket{2509}
 
 \item When \Condor{advertise} is used with the \Opt{-tcp} option, this
 used to cause the following log message to appear in the \Condor{collector}
@@ -254,6 +264,10 @@ as it is incompatible with the implementation of partial Rescue DAGs.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in the \Condor{startd} that was preventing dynamic slots
+from being properly instantiated from partitionable slots.
+\Ticket{2507}
 
 \item Fixed a bug introduced in Condor version 7.7.0, 
 in which the \Condor{startd} may erroneously report 

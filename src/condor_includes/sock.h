@@ -186,6 +186,10 @@ public:
 	*/
 	bool readReady();
 
+	/**	@return true if a complete message is ready to be read
+	*/
+	virtual bool msgReady() = 0;
+
         //------------------------------------------
         // Encryption support below
         //------------------------------------------

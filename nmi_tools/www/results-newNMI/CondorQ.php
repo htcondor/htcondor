@@ -3,14 +3,10 @@
 class CondorQ {
 
   var $platforms;
-  var $type;
   var $pool;
 
-  function CondorQ($run_type, $pool) {
+  function CondorQ($pool) {
     // In NMI, crosstests will be listed as 'test'
-    if($run_type == "crosstest") $type = "test";
-    $this->type = $run_type;
-
     if($pool) {
       $this->pool = $pool;
     }
@@ -41,10 +37,10 @@ class CondorQ {
       array_push($plats, "nmi_target_platform==\"$platform\"");
     }
     $platform_constraint = implode(" || ", $plats);
-    $constraint = "($platform_constraint) && nmi_run_type==\"$this->type\"";
+    $constraint = "($platform_constraint)";
 
     // Get the output - 1 line per job running
-    $output = `/usr/bin/condor_q -global -const '$constraint' -format '%-11s ' 'nmi_target_platform' -format '%-2s ' 'ifThenElse(JobStatus==0,"U",ifThenElse(JobStatus==1,"I",ifThenElse(JobStatus==2,"R",ifThenElse(JobStatus==3,"X",ifThenElse(JobStatus==4,"C",ifThenElse(JobStatus==5,"H",ifThenElse(JobStatus==6,"E",string(JobStatus))))))))' -format "%6d " ClusterId -format " %-14s " Owner -format '%-11s ' 'formatTime(QDate,"%0m/%d %H:%M")' -format '%-11s\n' 'formatTime(EnteredCurrentStatus,"%0m/%d %H:%M")' | sort`;
+    $output = `/usr/bin/condor_q -global -const '$constraint' -format '%-11s ' 'nmi_target_platform' -format '%-2s ' 'ifThenElse(JobStatus==0,"U",ifThenElse(JobStatus==1,"I",ifThenElse(JobStatus==2,"R",ifThenElse(JobStatus==3,"X",ifThenElse(JobStatus==4,"C",ifThenElse(JobStatus==5,"H",ifThenElse(JobStatus==6,"E",string(JobStatus))))))))' -format "%6d " ClusterId -format " %-14s " Owner -format '%s ' 'nmi_run_type' -format '%-11s ' 'formatTime(QDate,"%0m/%d %H:%M")' -format '%-11s\n' 'formatTime(EnteredCurrentStatus,"%0m/%d %H:%M")' | sort`;
 
     // Make a 2d array of the jobs on each platform
     $queue = Array();
@@ -81,6 +77,7 @@ class CondorQ {
     $running_jobs = 0;
 
     $output = "";
+    $slots = 0;
     
     if($this->pool) {
       if($this->pool[$platform]) {
@@ -90,6 +87,7 @@ class CondorQ {
 	  $host = $host_count[0];
 	  $num = $host_count[1];
 	  $output .= "<tr><td>$host</td><td align='center'>$num</td></tr>\n";
+	  $slots += $num;
 	}
 	$output .= "</table><br />\n";
       }
@@ -99,10 +97,10 @@ class CondorQ {
     }
 
     if($depth != 0) {
-      $output .= "<table><tr><th>State</th><th>ID</th><th>Owner</th><th>Submitted</th><th>Started</th></tr>\n";
+      $output .= "<table><tr><th>State</th><th>ID</th><th>Owner</th><th>Build</th><th>Test</th><th>Submitted</th><th>Started</th></tr>\n";
       foreach ($queue_contents as $line) {
         $items = preg_split("/\s+/", $line);
-        if(sizeof($items) == 7) {
+        if(sizeof($items) == 8) {
           $style = "background-color:#FFFFAA; text-decoration:none;";
           if($items[0] == "R") {
             $style = "background-color:#0097C5;";
@@ -111,13 +109,23 @@ class CondorQ {
           else {
             // If the job is not running we don't care about 'EnteredCurrentStatus',
             // a.k.a. "Start Time"
-            $items[5] = "";
             $items[6] = "";
+            $items[7] = "";
             if($items[0] == "H") {
               $style = "background-color:#A1A1A1;";
             }
           }
-          $output .= "<tr style=\"$style\"><td style=\"text-align:center\">$items[0]</td><td>$items[1]</td><td>$items[2]</td><td>$items[3]&nbsp;$items[4]</td><td>$items[5]&nbsp;$items[6]</tr>\n";
+
+	  $build = "&nbsp;";
+	  $test = "&nbsp;";
+	  if($items[3] == "build") {
+	    $build = "B";
+	  }
+	  elseif($items[3] == "test") {
+	    $test = "T";
+	  }
+	  
+          $output .= "<tr style=\"$style\"><td style=\"text-align:center\">$items[0]</td><td>$items[1]</td><td>$items[2]</td><td style=\"text-align:center\">$build</td><td style=\"text-align:center\">$test</td><td>$items[4]&nbsp;$items[5]</td><td>$items[6]&nbsp;$items[7]</tr>\n";
         }
       }
       $output .= "</table>\n";
@@ -134,8 +142,10 @@ class CondorQ {
 
 
     $ret = Array();
-    $ret[0] = $depth;
-    $ret[1] = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Depth: $depth ($running_jobs)<span>$output</span></a></span>";
+    $ret["depth"]      = $depth;
+    $ret["running"]    = $running_jobs;
+    $ret["slots"]      = $slots;
+    $ret["html-queue"] = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Jobs: $depth Running: $running_jobs<span>$output</span></a></span>";
     return $ret;
   }
 }
