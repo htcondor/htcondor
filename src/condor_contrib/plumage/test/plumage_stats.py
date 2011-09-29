@@ -32,7 +32,7 @@ def print_user(user,start,end):
 
 def print_resource(resource,start,end):
 	for item in db['samples.machine'].find({"mn":{'$regex':resource}, 'ts':{'$gte': parse(start), '$lt': parse(end)}}):
-		print item['mn'],"\t",item['ts'], "\t","%s/%s" % (item['ar'],item['os']),"\t",item['ki'],"\t",item['la']
+		print item['mn'],"\t",item['ts'], "\t","%s/%s" % (item['ar'],item['os']),"\t",item['ki'],"\t","%0.2f" % item['la'],"\t",item['st']
 
 def print_users():
 		for user in db['samples.submitter'].distinct('sn'):
