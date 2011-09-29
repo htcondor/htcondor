@@ -38,7 +38,7 @@
 #
 #     perl/lib/$(PERL_ARCHNAME)/ClassAd.so: $(LIB_OBJ) ClassAd.swg
 #   	swig -v -Wall -c++ -perl -proxy -o classad_wrap.cpp ClassAd.swg
-#     	g++ -fno-implicit-templates -g -DCLASSAD_DISTRIBUTION -I$(PERL_ARCHLIB)/CORE -c classad_wrap.cpp
+#     	g++ -fno-implicit-templates -g -I$(PERL_ARCHLIB)/CORE -c classad_wrap.cpp
 #     	g++ -shared $(LIB_OBJ) classad_wrap.o -o ClassAd.so
 #     	mkdir -p perl/lib/ClassAd
 #     	mv ClassAd.so ClassAd.pm perl/lib/

@@ -21,7 +21,7 @@
 # utils library
 file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* 
 soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_init.c
-state_machine_driver.unix.cpp)
+state_machine_driver.unix.cpp signames.cpp)
 # exclude state_machine_driver.unix.cpp because it pulls in undefined symbols
 # (e.g. TransFuncNames src/condor_starter.std/starter.h) that do not become
 # part of libutils.
@@ -37,27 +37,27 @@ add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c
 add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c)
 ############ end generate params
 
-condor_static_lib( utils "${HeaderFiles};${SourceFiles}" )
+condor_shared_lib( utils "${HeaderFiles};${SourceFiles};${SAFE_OPEN_SRC}" )
 add_dependencies(utils utils_genparams syscall_numbers )
 # this shouldn't be linked against libdaemon_core, because it introduces
 # undefined symbols that can only be resolved by actual daemons, but it needs
 # some part
 target_link_libraries(utils sysapi procapi privsep procd_client daemon_client daemon_core qmgmt cedar ${CLASSADS_FOUND} ${PCRE_FOUND} ${GLOBUS_FOUND} ${POSTGRESQL_FOUND})
-if (WANT_CONTRIB)
-    if (HAVE_EXT_POSTGRESQL)
-        target_link_libraries(utils tt)
-    endif (HAVE_EXT_POSTGRESQL)
-endif(WANT_CONTRIB)
+if(WINDOWS)
+	add_dependencies(utils utils_genparams syscall_numbers )
+else()
+	add_dependencies(utils utils_genparams syscall_numbers configure_safefile)
+endif()
 
 ##################################################
 # condorapi & tests
-condor_selective_glob("my_username.*;condor_event.*;file_sql.*;misc_utils.*;user_log_header.*;write_user_log*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf*;sig_install.*;basename.*;mkargv.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;setsyscalls.*;passwd_cache.*;uids.c*;chomp.*;subsystem_info.*;my_subsystem.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;seteuid.*;setegid.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;classad_oldnew.*;condor_snutils.*;stringSpace.*;string_list.*;MyString.*;condor_xml_classads.*;directory*" ApiSrcs)
+condor_selective_glob("my_username.*;condor_event.*;file_sql.*;misc_utils.*;user_log_header.*;write_user_log*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf*;sig_install.*;basename.*;mkargv.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;setsyscalls.*;passwd_cache.*;uids.c*;chomp.*;subsystem_info.*;my_subsystem.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;seteuid.*;setegid.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;classad_oldnew.*;condor_snutils.*;stringSpace.*;string_list.*;MyString.*;condor_xml_classads.*;directory*;${SAFE_OPEN_SRC}" ApiSrcs)
 if(WINDOWS)
     condor_selective_glob("directory.WINDOWS.*;directory_util.*;dynuser.WINDOWS.*;filename_tools.*;lock_file.WINDOWS.*;lsa_mgr.*;my_dynuser.*;ntsysinfo.WINDOWS.*;posix.WINDOWS.*;stat.WINDOWS.*;store_cred.*;token_cache.WINDOWS.*;truncate.WINDOWS.*" ApiSrcs)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
 endif()
 
-condor_really_static_lib( condorapi "${ApiSrcs}" )
+condor_static_lib( condorapi "${ApiSrcs}" )
 add_dependencies( condorapi utils )
 
 if (HAVE_LIBDL)

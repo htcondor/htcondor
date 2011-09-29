@@ -185,7 +185,7 @@ rescue :
 	HashTable<MyString,MyString> table(127,MyStringHash);
 	
 	if(log.initialize(log_file_name,false,false,true)) {
-		sec_fp = safe_fopen_wrapper(log_file_name, "r", 0644);
+		sec_fp = safe_fopen_wrapper_follow(log_file_name, "r", 0644);
 		fseek (sec_fp, 0, SEEK_END);
 		pos = ftell(sec_fp); 
 		nPos = pos;

@@ -132,6 +132,13 @@ print "SETTING UP PERSONAL CONDOR\n";
 if( not TestGlue::is_windows() ) {
     mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
     system("mv $BaseDir/$version $BaseDir/condor" );
+
+	if ( `uname` =~ "Linux" ) {
+		# On cross-platform testing, the binaries in condor_tests may need
+		# to find the extra system libraries we include. Let them find them
+		# when looking under $ORIGIN/../lib/condor.
+		system( "ln -s condor/lib lib" );
+	}
     
     # Remove leftovers from extracting built binaries.
     print "Removing $version tar file and extraction\n";

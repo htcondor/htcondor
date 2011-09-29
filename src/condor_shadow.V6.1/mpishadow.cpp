@@ -356,7 +356,7 @@ MPIShadow::startMaster()
     char pgfilename[128];
     sprintf( pgfilename, "%s/procgroup.%d.%d", getIwd(), getCluster(), 
 			 getProc() );
-    if( (pg=safe_fopen_wrapper( pgfilename, "w" )) == NULL ) {
+    if( (pg=safe_fopen_wrapper_follow( pgfilename, "w" )) == NULL ) {
         dprintf( D_ALWAYS, "Failure to open %s for writing, errno %d\n", 
                  pgfilename, errno );
         shutDown( JOB_NOT_STARTED );
@@ -495,7 +495,7 @@ MPIShadow::hackMasterAd( ClassAd *ad )
 		// include the procgroup file in the list of input files.
 		// This is only needed on the master.
 	char *transfer_files = NULL;
-	if( !ad->LookupString(ATTR_TRANSFER_FILES, &transfer_files) ) {
+	if( !ad->LookupString(ATTR_SHOULD_TRANSFER_FILES, &transfer_files) ) {
 			// Nothing, we're done.
 		return;
 	}
@@ -1215,7 +1215,7 @@ MPIShadow::resourceBeganExecution( RemoteResource* rr )
 			// All nodes in this computation are now running, so we 
 			// can finally log the execute event.
 		ExecuteEvent event;
-		strcpy( event.executeHost, "MPI_job" );
+		event.setExecuteHost( "MPI_job" );
 		if ( !uLog.writeEvent( &event, jobAd )) {
 			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
 		}

@@ -45,7 +45,6 @@
 
 package CondorPersonal;
 require 5.0;
-use Net::Domain qw(hostfqdn);
 use CondorUtils;
 use warnings;
 use strict;
@@ -748,7 +747,7 @@ sub InstallPersonalCondor
 sub TunePersonalCondor
 {
 	my %control = %personal_condor_params;
-	my $myhost = hostfqdn();
+	my $myhost = CondorTest::getFqdnHost();
 	my @domainparts = split /\./, $myhost;
 	my $condorhost = "";
 	my $collectorhost = "";
@@ -1497,13 +1496,19 @@ sub IsRunningYet
 		# if we have a collector
 		my $havestartd = "";
 		my $done = "no";
-		my $currenthost = hostfqdn();
+		my $currenthost = CondorTest::getFqdnHost();
 		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
 			print "Waiting for collector to see startd - ";
 			$loopcount = 0;
 			TRY: while( $done eq "no") {
 				$loopcount += 1;
 				my @cmd = `condor_status -startd -format \"%s\\n\" name`;
+
+				my $res = $?;
+				if ($res != 0) {
+					print "\ncondor_status returned error code $res The collector probably is not running after all, giving up\n";
+					return 0;
+				}
 
     			foreach my $line (@cmd)
     			{
@@ -1528,7 +1533,7 @@ sub IsRunningYet
 		# if we have a collector
 		my $haveschedd = "";
 		my $done = "no";
-		my $currenthost = hostfqdn();
+		my $currenthost = CondorTest::getFqdnHost();
 		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
 			print "Waiting for collector to see schedd - ";
 			$loopcount = 0;
@@ -1560,7 +1565,7 @@ sub IsRunningYet
 		# if we have a collector
 		my $havenegotiator = "";
 		my $done = "no";
-		my $currenthost = hostfqdn();
+		my $currenthost = CondorTest::getFqdnHost();
 		if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
 			print "Waiting for collector to see negotiator - ";
 			$loopcount = 0;

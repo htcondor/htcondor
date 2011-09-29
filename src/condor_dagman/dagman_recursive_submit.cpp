@@ -94,9 +94,6 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( deepOpts.strOutfileDir.Value() );
 	}
 
-	args.AppendArg( "-oldrescue" );
-	args.AppendArg( deepOpts.oldRescue );
-
 	args.AppendArg( "-autorescue" );
 	args.AppendArg( deepOpts.autoRescue );
 
@@ -119,6 +116,10 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 
 	if ( deepOpts.updateSubmit ) {
 		args.AppendArg( "-update_submit" );
+	}
+	if( deepOpts.priority != 0) {
+		args.AppendArg( "-Priority" );
+		args.AppendArg( deepOpts.priority );
 	}
 
 	args.AppendArg( dagFile );

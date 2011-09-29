@@ -1,0 +1,170 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Amazon}The amazon and ec2 Grid Types }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Amazon EC2 Soap API}
+\index{grid computing!submitting jobs using the EC2 Soap API}
+\index{grid computing!submitting jobs using the EC2 Query API}
+\index{grid type!amazon}
+\index{grid type!ec2}
+
+Condor jobs may be submitted to clouds supporting
+Amazon's Elastic Compute Cloud (EC2) interface.
+Amazon's EC2 is an on-line commercial service that allows 
+the rental of computers by the hour to run computational applications.
+It runs virtual machine images that have been uploaded to Amazon's
+online storage service (S3 or EBS).
+More information about Amazon's EC2 service is available at
+\URL{http://aws.amazon.com/ec2}.
+
+The \SubmitCmd{amazon} grid type uses the EC2 SOAP API;
+the \SubmitCmd{ec2} grid type uses the EC2 Query API,
+also called the EC2 REST API.
+More cloud software, and more cloud service providers, support the 
+EC2 Query API.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Amazon-submit}Amazon EC2 Job Submission}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor jobs are submitted to Amazon's EC2
+with the \SubmitCmd{grid} universe, and setting the
+\SubmitCmd{grid\_resource} command to either
+\SubmitCmd{amazon} or \SubmitCmd{ec2}, followed by the service's URL.
+For example,
+partial contents of the submit description file may be
+\begin{verbatim}
+grid_resource = amazon https://ec2.amazonaws.com/
+\end{verbatim}
+
+Since the job is a virtual machine image,
+most of the submit description file commands
+specifying input or output files are not applicable.
+The \SubmitCmd{executable} command is still required,
+but its value is ignored. 
+It can be used to identify different jobs in the output of \Condor{q}.
+
+The VM image for the job must already reside in one of Amazon's storage
+service (S3 or EBS) and be registered with EC2.
+In the submit description file,
+provide the identifier for the image using either
+\SubmitCmd{amazon\_ami\_id} or \SubmitCmd{ec2\_ami\_id},
+as appropriate.
+
+Both of these grid types require access to user authentication information,
+in the form of path names to files containing the appropriate keys.
+
+For the \SubmitCmd{amazon} grid type:
+\begin{verbatim}
+amazon_public_key = /path/to/x509/cert
+amazon_private_key = /path/to/private/key
+\end{verbatim}
+
+The \SubmitCmd{ec2} grid type has two different authentication methods.
+The first authentication method uses the EC2 API's built-in authentication.
+Specify the service with expected \Expr{http://} or \Expr{https://} URL,
+and set the EC2 access key and secret access key as follows:
+
+\begin{verbatim}
+ec2_access_key_id = /path/to/access.key
+ec2_secret_access_key = /path/to/secret.key
+\end{verbatim}
+
+While both pairs of files may be associated with the same account, 
+the credentials are not the same.
+
+The second authentication method for the EC2 grid type is X.509.
+Specify the service with an \Expr{x509://} URL, 
+even if the URL was given in another form.  
+Use \SubmitCmd{ec2\_access\_key\_id} to 
+specify the path to the X.509 public key (certificate),
+and \SubmitCmd{ec2\_secret\_access\_key} specifies the path to the X.509 
+private key as in the following example:
+
+\begin{verbatim}
+grid_resource = ec2 x509://service.example
+ec2_access_key_id = /path/to/x.509/public.key
+ec2_secret_access_key = /path/to/x.509/private.key
+\end{verbatim}
+
+If using an X.509 proxy, specify the proxy in both places.
+
+Condor can use the EC2 API to create an SSH key pair that allows
+secure log in to the virtual machine once it is running.
+If the command
+\SubmitCmd{amazon\_keypair\_file}
+or \SubmitCmd{ec2\_keypair\_file}
+is set in the submit description file,
+Condor will write an SSH private key into the indicated file.
+The key can be used to log into the virtual machine.
+Note that modification will also be needed of the firewall
+rules for the job to incoming SSH connections.
+
+An EC2 service uses a firewall to restrict network access to 
+the virtual machine instances it runs.
+Typically, no incoming connections are allowed.
+One can define sets of firewall rules and give them names.
+The EC2 API calls these security groups. 
+If utilized, tell Condor what set of security
+groups should be applied to each VM using the
+\SubmitCmd{amazon\_security\_groups} 
+or \SubmitCmd{ec2\_security\_groups} submit description file command.
+If not provided, Condor uses the security group \SubmitCmd{default}.
+
+The EC2 API allows the choice of different hardware configurations 
+for instances to run on.
+Select which configuration to use for the \SubmitCmd{amazon} grid type
+with the \SubmitCmd{amazon\_instance\_type} submit description file command.
+Condor will use a default value of
+\SubmitCmd{m1.small}, if not specified.
+% Other values: m1.large m1.xlarge c1.medium c1.xlarge
+The \SubmitCmd{ec2} grid type uses the \SubmitCmd{ec2\_instance\_type}, 
+but provides no default.
+
+Each virtual machine instance can be given up to 16Kbytes of unique data, 
+accessible by the instance by connecting to a well-known address.
+This makes it easy for many instances to share the same VM image,
+but perform different work.
+This data can be specified to Condor in one of two ways.
+First, the data can be provided directly in the submit description file 
+using the \SubmitCmd{amazon\_user\_data} 
+or the \SubmitCmd{ec2\_user\_data} command.
+Second, the data can be
+stored in a file, and the file name is specified with the
+\SubmitCmd{amazon\_user\_data\_file} 
+or the \SubmitCmd{ec2\_user\_data\_file} submit description file command.
+This second option allows the use of binary data.
+If both options are used, the two blocks of
+data are concatenated, with the data from \SubmitCmd{amazon\_user\_data}
+or \SubmitCmd{ec2\_user\_data} occurring first.
+Condor performs the base64 encoding that EC2 expects on the data.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Amazon-config}EC2 Configuration Variables}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \SubmitCmd{amazon} grid type requires these configuration variables 
+to be set in the Condor configuration file:
+
+\footnotesize
+\begin{verbatim}
+AMAZON_GAHP     = $(SBIN)/amazon_gahp
+AMAZON_GAHP_LOG = /tmp/AmazonGahpLog.$(USERNAME)
+\end{verbatim}
+\normalsize
+
+If an HTTP proxy is needed to reach EC2, tell Condor to use it
+via the \Macro{AMAZON\_HTTP\_PROXY} configuration variable.
+
+The \SubmitCmd{ec2} grid type requires two configuration variables to be
+set in the Condor configuration file:
+
+\footnotesize
+\begin{verbatim}
+EC2_GAHP     = $(SBIN)/ec2_gahp
+EC2_GAHP_LOG = /tmp/EC2GahpLog.$(USERNAME)
+\end{verbatim}
+\normalsize
+
+The \SubmitCmd{ec2} grid type does not presently permit the explicit use 
+of an HTTP proxy.
+

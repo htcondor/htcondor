@@ -27,6 +27,8 @@
 #include "fdpass.h"
 #include "my_popen.h"
 #include "globus_utils.h"
+#include "condor_holdcodes.h"
+#include "basename.h"
 
 GLExecPrivSepHelper::GLExecPrivSepHelper() :
 	 m_initialized(false),m_glexec(0),  m_sandbox(0), m_proxy(0),m_sandbox_owned_by_user(false)
@@ -70,7 +72,7 @@ GLExecPrivSepHelper::proxy_valid_right_now()
 
 
 int
-GLExecPrivSepHelper::run_script(ArgList& args)
+GLExecPrivSepHelper::run_script(ArgList& args,MyString &error_desc)
 {
 	if (!proxy_valid_right_now()) {
 		dprintf(D_ALWAYS, "GLExecPrivSepHelper::run_script: not invoking glexec since the proxy is not valid!\n");
@@ -89,12 +91,18 @@ GLExecPrivSepHelper::run_script(ArgList& args)
 	while (str.readLine(fp, true));
 	int ret = my_pclose(fp);
 	if (ret != 0) {
+		str.trim();
 		dprintf(D_ALWAYS,
 		        "GLExecPrivSepHelper::run_script: %s exited "
 		            "with status %d and following output:\n%s\n",
 		        args.GetArg(0),
 		        ret,
 		        str.Value());
+		error_desc.sprintf_cat("%s exited with status %d and the following output: %s",
+				       condor_basename(args.GetArg(0)),
+				       ret,
+				       str.Value());
+		error_desc.replaceString("\n","; ");
 	}
 	return ret;
 }
@@ -139,8 +147,8 @@ GLExecPrivSepHelper::initialize(const char* proxy, const char* sandbox)
 	m_initialized = true;
 }
 
-void
-GLExecPrivSepHelper::chown_sandbox_to_user()
+bool
+GLExecPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
 {
 	ASSERT(m_initialized);
 
@@ -148,7 +156,7 @@ GLExecPrivSepHelper::chown_sandbox_to_user()
 		dprintf(D_FULLDEBUG,
 		        "GLExecPrivSepHelper::chown_sandbox_to_user: "
 		            "sandbox already user-owned\n");
-		return;
+		return true;
 	}
 
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to the user\n");
@@ -158,15 +166,21 @@ GLExecPrivSepHelper::chown_sandbox_to_user()
 	args.AppendArg(m_glexec);
 	args.AppendArg(m_proxy);
 	args.AppendArg(m_sandbox);
-	if (run_script(args) != 0) {
-		EXCEPT("error changing sandbox ownership to the user");
+	MyString error_desc = "error changing sandbox ownership to the user: ";
+	int rc = run_script(args,error_desc);
+	if( rc != 0) {
+		err.setHoldInfo(
+						CONDOR_HOLD_CODE_GlexecChownSandboxToUser, rc,
+						error_desc.Value());
+		return false;
 	}
 
 	m_sandbox_owned_by_user = true;
+	return true;
 }
 
-void
-GLExecPrivSepHelper::chown_sandbox_to_condor()
+bool
+GLExecPrivSepHelper::chown_sandbox_to_condor(PrivSepError &err)
 {
 	ASSERT(m_initialized);
 
@@ -174,7 +188,7 @@ GLExecPrivSepHelper::chown_sandbox_to_condor()
 		dprintf(D_FULLDEBUG,
 		        "GLExecPrivSepHelper::chown_sandbox_to_condor: "
 		            "sandbox already condor-owned\n");
-		return;
+		return true;
 	}
 
 	dprintf(D_FULLDEBUG, "changing sandbox ownership to condor\n");
@@ -184,11 +198,17 @@ GLExecPrivSepHelper::chown_sandbox_to_condor()
 	args.AppendArg(m_glexec);
 	args.AppendArg(m_proxy);
 	args.AppendArg(m_sandbox);
-	if (run_script(args) != 0) {
-		EXCEPT("error changing sandbox ownership to condor");
+	MyString error_desc = "error changing sandbox ownership to condor: ";
+	int rc = run_script(args,error_desc);
+	if( rc != 0) {
+		err.setHoldInfo(
+			CONDOR_HOLD_CODE_GlexecChownSandboxToCondor, rc,
+			error_desc.Value());
+		return false;
 	}
 
 	m_sandbox_owned_by_user = false;
+	return true;
 }
 
 bool
@@ -208,7 +228,8 @@ GLExecPrivSepHelper::update_proxy(const char* new_proxy)
 	args.AppendArg(m_proxy);
 	args.AppendArg(m_sandbox);
 
-	return (run_script(args) == 0);
+	MyString error_desc;
+	return (run_script(args,error_desc) == 0);
 }
 
 int
@@ -285,12 +306,39 @@ GLExecPrivSepHelper::create_process(const char* path,
 	proxy_path.sprintf("%s.condor/%s", m_sandbox, m_proxy);
 	fi_ptr->glexec_proxy = proxy_path.Value();
 
+	Env glexec_env;
+	MyString user_proxy;
+	char const *condor_proxy;
+
+		// Set up the environment to be used when invoking glexec.  I
+		// do not know why we use the job's environment for this
+		// purpose, because we also pass the job's environment to
+		// condor's glexec job wrapper, which sets up the job
+		// environment as desired without relying on environment
+		// inherited from glexec.  (In fact, glexec clears the
+		// environment.)  
+
+	glexec_env.MergeFrom(env);
+
+	if( glexec_env.GetEnv("X509_USER_PROXY",user_proxy) &&
+	    (condor_proxy = getenv("X509_USER_PROXY")) )
+	{
+		// glexec versions >= 0.7.0 may use X509_USER_PROXY to
+		// authenticate to the mapping service.  We are expected to
+		// set this to the glidein (aka pilot) proxy rather than the
+		// end-user proxy when invoking glexec.  Since we are invoking
+		// glexec with the job environment (see comment above), we
+		// must treat X509_USER_PROXY specially.
+
+		glexec_env.SetEnv("X509_USER_PROXY",condor_proxy);
+	}
+
 	int pid = daemonCore->Create_Process(m_run_script.Value(),
 	                                     modified_args,
 	                                     PRIV_USER_FINAL,
 	                                     reaper_id,
 	                                     FALSE,
-	                                     &env,
+	                                     &glexec_env,
 	                                     iwd,
 	                                     fi_ptr,
 	                                     NULL,

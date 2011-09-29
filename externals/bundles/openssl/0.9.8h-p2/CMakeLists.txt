@@ -20,7 +20,9 @@ option(WITH_OPENSSL "Compiling with support for OPENSSL" ON)
 
 if (WITH_OPENSSL)
 
-	if ( NOT PROPER )
+	find_multiple( "ssl;crypto" OPENSSL_FOUND )
+
+	if ( NOT OPENSSL_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
 
 		condor_pre_external( OPENSSL openssl-0.9.8h "lib;include" "include/openssl/ssl.h")
 
@@ -89,11 +91,9 @@ if (WITH_OPENSSL)
 
 		condor_post_external( openssl include OFF )
 
-	else( NOT PROPER )
+		set(BUILDING_OPENSSL ON PARENT_SCOPE)
 
-		find_multiple( "ssl;crypto" OPENSSL_FOUND )
-
-	endif( NOT PROPER )
+	endif( )
 
 	if (OPENSSL_FOUND)
 		message (STATUS "external configured (OPENSSL_FOUND=${OPENSSL_FOUND})")

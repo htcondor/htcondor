@@ -1,0 +1,57 @@
+\begin{ManPage}{\label{man-condor-prio}\Condor{prio}}{1}
+{change priority of jobs in the condor queue} 
+\Synopsis \SynProg{\Condor{prio}}
+\oOptArg{-p}{priority}
+\oOptArg{+ \Bar -}{value}
+\oOptArg{-n}{schedd\_name}
+\oOptArg{-pool}{pool\_name}
+\Arg{cluster \Bar cluster.process \Bar username \Bar -a}
+
+\index{Condor commands!condor\_prio}
+\index{condor\_prio command}
+
+\Description
+
+\Condor{prio} changes the priority of one or more jobs in the condor
+queue.
+If a cluster\_id and a process\_id are both specified, \Condor{prio}
+attempts to change the priority of the specified process.
+If a cluster\_id is specified without a process\_id, \Condor{prio}
+attempts to change priority for all processes belonging to the
+specified cluster.
+If a username is specified, \Condor{prio} attempts to change priority
+of all jobs belonging to that user.
+If the -a flag is set, \Condor{prio} attempts to change priority of
+all jobs in the condor queue.
+The user must specify a priority adjustment or new priority. 
+If the -p option is specified, the priority of the job(s) are set to
+the next argument.
+The user can also adjust the priority by supplying a + or -
+immediately followed by a digit.
+The priority of a job can be any integer, with higher numbers
+corresponding to greater priority.
+Only the owner of a job or the super user can change the priority for
+it.
+
+The priority changed by \Condor{prio} is only compared to the priority
+of other jobs owned by the same user and submitted from the same
+machine.
+See the "Condor Users and Administrators Manual" for further details
+on Condor's priority scheme.
+
+\begin{Options}
+    \OptItem{\OptArg{-p}{priority}}{Set priority to the specified value}
+    \OptItem{\OptArg{+ \Bar -}{value}}{Change priority by the specified value}
+    \OptItem{\OptArg{-n}{schedd\_name}}{Change priority of jobs queued
+		at the specified schedd in the local pool}
+    \OptItem{\OptArg{-pool}{pool\_name}}{Change priority of jobs queued at 
+		the specified schedd in the specified pool} 
+    \OptItem{\Opt{-a}}{Change priority of all the jobs in the queue}
+\end{Options}
+
+\ExitStatus
+
+\Condor{prio} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

@@ -1,0 +1,16 @@
+--- gsoap-2.7.10/gsoap/stdsoap2.cpp	2008-01-27 15:02:36.000000000 -0600
++++ gsoap-2.7.10/gsoap/stdsoap2.cpp.new	2011-07-06 11:32:29.000000000 -0500
+@@ -4042,7 +4042,12 @@
+           { X509_EXTENSION *ext = X509_get_ext(peer, i);
+             const char *ext_str = OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(ext)));
+             if (ext_str && !strcmp(ext_str, "subjectAltName"))
+-            { X509V3_EXT_METHOD *meth = X509V3_EXT_get(ext);
++            { 
++#if (OPENSSL_VERSION_NUMBER < 0x10000000L)
++              X509V3_EXT_METHOD *meth = X509V3_EXT_get(ext);
++#else
++              const X509V3_EXT_METHOD *meth = X509V3_EXT_get(ext);
++#endif
+               void *ext_data;
+ #if (OPENSSL_VERSION_NUMBER >= 0x0090800fL)
+               const unsigned char *data;

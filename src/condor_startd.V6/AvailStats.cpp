@@ -235,7 +235,7 @@ AvailStats::checkpoint_filename( MyString filename )
 	ckpt_filename = filename;
 	tmp_ckpt_filename = ckpt_filename + "tmp";
 
-	FILE *fp = safe_fopen_wrapper(ckpt_filename.Value(), "r");
+	FILE *fp = safe_fopen_wrapper_follow(ckpt_filename.Value(), "r");
 	if( fp ) {
 		MyString state;
 		char buf[1025];
@@ -257,7 +257,7 @@ AvailStats::checkpoint()
 		// (under 1KB), so I don't think it's worth worrying too much
 		// about efficiency.
 	if( ckpt_filename.Length() ) {
-		FILE *fp = safe_fopen_wrapper(tmp_ckpt_filename.Value(), "w");
+		FILE *fp = safe_fopen_wrapper_follow(tmp_ckpt_filename.Value(), "w");
 		if( fp ) {
 			MyString state = serialize();
 			if( (int)fwrite(state.Value(), sizeof(char), state.Length(),

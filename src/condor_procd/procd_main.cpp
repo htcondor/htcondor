@@ -406,7 +406,7 @@ main(int argc, char* argv[])
 	
 	if (log_file_name != NULL) {
 		debug_fn = log_file_name;
-		debug_fp = safe_fopen_wrapper(log_file_name, "a");
+		debug_fp = safe_fopen_wrapper_follow(log_file_name, "a");
 		if (debug_fp == NULL) {
 			fprintf(stderr,
 			        "error: couldn't open file \"%s\" for logging: %s (%d)\n",

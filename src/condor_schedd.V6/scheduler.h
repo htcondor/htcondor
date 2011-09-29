@@ -57,6 +57,7 @@
 #include "condor_claimid_parser.h"
 #include "transfer_queue.h"
 #include "timed_queue.h"
+#include "schedd_stats.h"
 
 using std::map;
 
@@ -165,6 +166,9 @@ class match_rec: public ClaimIdParser
 	MyString*		auth_hole_id;
 
 	bool m_startd_sends_alives;
+
+	int keep_while_idle; // number of seconds to hold onto an idle claim
+	int idle_timer_deadline; // if the above is nonzero, abstime to hold claim
 
 		// Set the mrec status to the given value (also updates
 		// entered_current_status)
@@ -481,6 +485,7 @@ class Scheduler : public Service
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
+	bool            FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ=true);
 	
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
@@ -538,7 +543,10 @@ private:
 	int				SchedUniverseJobsRunning;
 	int				LocalUniverseJobsIdle;
 	int				LocalUniverseJobsRunning;
+
+   #ifdef TICKET_2006
     time_t          LastUpdateTime;
+    int             LastJobsQueued;
     int             JobsStartedCumulative;
     double          TimeToStartCumulative;
     double          RunningTimeCumulative;
@@ -546,7 +554,6 @@ private:
     int             JobsExitedCumulative;
     int             ShadowExceptionsCumulative;
     map<int,int>    ExitCodesCumulative;
-    int             LastJobsQueued;
     timed_queue<int>  JobsSubmittedTQ;
     timed_queue<int>  JobsStartedTQ;
     timed_queue<int>  JobsCompletedTQ;
@@ -555,6 +562,10 @@ private:
     map<int,timed_queue<int> >  ExitCodesTQ;
     timed_queue<double>  TimeToStartTQ;
     timed_queue<double>  RunningTimeTQ;
+   #else
+    ScheddStatistics stats;
+   #endif
+
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
@@ -685,6 +696,7 @@ private:
 	void claimedStartd( DCMsgCallback *cb );
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
+
 	shadow_rec*		start_std(match_rec*, PROC_ID*, int univ);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
 	shadow_rec*		start_local_universe_job(PROC_ID*);
@@ -758,7 +770,7 @@ private:
 
 
 // Other prototypes
-int		get_job_prio(ClassAd *ad, bool compute_autoclusters = false);
+int		get_job_prio(ClassAd *ad);
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec );
 extern bool claimStartdConnected( Sock *sock, match_rec* mrec, ClassAd *job_ad);

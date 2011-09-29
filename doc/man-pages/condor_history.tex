@@ -1,0 +1,107 @@
+\begin{ManPage}{\label{man-condor-history}\Condor{history}}{1}
+{View log of Condor jobs completed to date}
+\Synopsis
+\SynProg{\Condor{history}}
+\oOpt{-help} 
+
+\SynProg{\Condor{history}}
+\oOpt{-backwards}
+\oOptArg{-completedsince}{postgrestimestamp}
+\oOptArg{-constraint}{expr}
+\oOptArg{-f}{filename}
+\oOptArg{-format}{formatString AttributeName}
+\oOpt{-l \Bar -long \Bar -xml} 
+\oOptArg{-match}{number}
+\oOptArg{-name}{schedd-name}
+\oOpt{cluster \Bar cluster.process \Bar owner}
+
+\Description
+\Condor{history} displays a summary of all Condor jobs listed in the
+specified history files, or in the Quill database, when Quill is enabled.
+If no history files are specified (with the \Opt{-f} option) 
+and Quill is not enabled, the local
+history file as specified in Condor's configuration file
+(\File{\MacroUNI{SPOOL}/history} by default) is read.  
+The default listing summarizes (in chronological order)
+each job on a single line, and  contains the following items:
+
+\index{Condor commands!condor\_history}
+\index{condor\_history command}
+
+\begin{description}
+\item[ID] The cluster/process id of the job. 
+\item[OWNER] The owner of the job. 
+\item[SUBMITTED] The month, day, hour, and minute the job was submitted to the queue. 
+\item[RUN\_TIME] Remote wall clock time accumulated by the job to date in days, hours, minutes, and seconds.  See the definition of
+\AdAttr{RemoteWallClockTime} on page~\pageref{RemoteWallClockTime}.
+\item[ST] Completion status of the job (C = completed and X = removed).
+\item[COMPLETED] The time the job was completed.
+\item[CMD] The name of the executable. 
+\end{description}
+
+If a job ID (in the form of \Argnm{cluster\_id} or \Argnm{cluster\_id.proc\_id}) or an
+\Argnm{owner} is provided, output will be restricted to jobs with the
+specified IDs and/or submitted by the specified owner.  
+The \Argnm{-constraint} option can be used to display jobs that satisfy a
+specified boolean expression.
+
+The history file is kept in chronological order,
+implying that new entries are appended at the end of the
+file.
+As of Condor version 6.7.19,
+the format of the history file is altered to enable faster
+reading of the history file backwards (most recent job first).
+History files written with earlier versions of Condor,
+as well as those that have entries of both
+the older and newer format
+need to be converted to the new format.
+See the \Condor{convert\_history} manual page 
+on page~\pageref{man-condor-convert-history}
+for details on converting history files to the new format.
+
+\begin{Options}
+  \OptItem{\Opt{-help}}{Display usage information and exit.}
+  \OptItem{\Opt{-backwards}}{List jobs in reverse chronological
+    order. The job most recently added to the history file is first.}
+  \OptItem{\OptArg{-completedsince}{postgrestimestamp}}{When Quill
+    is enabled, display only job
+    ads that were in the Completed job state on or after the date and
+    time given by the \Arg{postgrestimestamp}. 
+    The \Arg{postgrestimestamp} follows the syntax as given for
+    \Prog{PostgreSQL} version 8.0. The behavior of this option
+    is undefined when Quill is \emph{not} enabled. }
+  \OptItem{\OptArg{-constraint}{expr}}{Display jobs that satisfy the
+    expression.}
+  \OptItem{\OptArg{-f}{filename}}{Use the specified file instead of the
+    default history file. When Quill is enabled, this option will force 
+    the query to read from the history file, and not the database.}
+  \OptItem{\OptArg{-format}{formatString}{AttributeName}}{Display jobs
+    with a custom format. See the \Condor{q} man page \Opt{-format} option
+    for details.}
+  \OptItem{\Opt{-l} or \Opt{-long}}{Display job ads in long format.}
+  \OptItem{\OptArg{-match}{number}}{Limit the number of jobs displayed
+    to \Arg{number}.}
+  \OptItem{\OptArg{-name}{schedd-name}}{When Quill is enabled,
+    query job ClassAds from the named \Condor{schedd} daemon,
+    not the default \Condor{schedd} daemon.}
+  \OptItem{\Opt{-xml}}{Display job ClassAds in xml format.
+      The xml format is fully defined at
+      \URL{http://www.cs.wisc.edu/condor/classad/refman/}.}
+\end{Options}
+
+\Examples
+
+To see all historical jobs since April 1, 2005 at 1pm,
+\footnotesize
+\begin{verbatim}
+%condor_history -completedsince '04/01/2005 13:00'
+\end{verbatim}
+\normalsize
+
+
+\ExitStatus
+
+\Condor{history} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

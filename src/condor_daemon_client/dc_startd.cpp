@@ -747,6 +747,119 @@ DCStartd::vacateClaim( const char* name_vacate )
 }
 
 bool 
+DCStartd::_suspendClaim( )
+{
+	setCmdStr( "suspendClaim" );
+	
+	if( ! checkClaimId() ) {
+		return false;
+	}
+	if( ! checkAddr() ) {
+		return false;
+	}
+
+	// if this claim is associated with a security session
+	ClaimIdParser cidp(claim_id);
+	char const *sec_session = cidp.secSessionId();
+	
+	bool  result;
+	ReliSock reli_sock;
+	reli_sock.timeout(20);   // years of research... :)
+	if( ! reli_sock.connect(_addr) ) {
+		MyString err = "DCStartd::_suspendClaim: ";
+		err += "Failed to connect to startd (";
+		err += _addr;
+		err += ')';
+		newError( CA_CONNECT_FAILED, err.Value() );
+		return false;
+	}
+
+	int cmd = SUSPEND_CLAIM;
+
+	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
+	if( ! result ) {
+		MyString err = "DCStartd::_suspendClaim: ";
+		err += "Failed to send command ";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+	
+	// Now, send the ClaimId
+	if( ! reli_sock.put_secret(claim_id) ) {
+		MyString err = "DCStartd::_suspendClaim: ";
+		err += "Failed to send ClaimId to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+
+	if( ! reli_sock.end_of_message() ) {
+		MyString err = "DCStartd::_suspendClaim: ";
+		err += "Failed to send EOM to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+	
+	return true;
+}
+
+bool 
+DCStartd::_continueClaim( )
+{
+	setCmdStr( "continueClaim" );
+
+	if( ! checkClaimId() ) {
+		return false;
+	}
+	if( ! checkAddr() ) {
+		return false;
+	}
+
+	// if this claim is associated with a security session
+	ClaimIdParser cidp(claim_id);
+	char const *sec_session = cidp.secSessionId();
+	
+	bool  result;
+	ReliSock reli_sock;
+	reli_sock.timeout(20);   // years of research... :)
+	if( ! reli_sock.connect(_addr) ) {
+		MyString err = "DCStartd::_continueClaim: ";
+		err += "Failed to connect to startd (";
+		err += _addr;
+		err += ')';
+		newError( CA_CONNECT_FAILED, err.Value() );
+		return false;
+	}
+
+	int cmd = CONTINUE_CLAIM;
+
+	result = startCommand( cmd, (Sock*)&reli_sock, 20, NULL, NULL, false, sec_session ); 
+	if( ! result ) {
+		MyString err = "DCStartd::_continueClaim: ";
+		err += "Failed to send command ";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+	
+	// Now, send the ClaimId
+	if( ! reli_sock.put_secret(claim_id) ) {
+		MyString err = "DCStartd::_suspendClaim: ";
+		err += "Failed to send ClaimId to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+
+	if( ! reli_sock.end_of_message() ) {
+		MyString err = "DCStartd::_continueClaim: ";
+		err += "Failed to send EOM to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		return false;
+	}
+		
+	return true;
+}
+
+
+bool 
 DCStartd::checkpointJob( const char* name_ckpt )
 {
 	dprintf( D_FULLDEBUG, "Entering DCStartd::checkpointJob(%s)\n",

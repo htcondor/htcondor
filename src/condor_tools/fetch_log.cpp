@@ -230,7 +230,7 @@ int handleHistoryDir(ReliSock *sock) {
 			int fd = -1;
 			filename = NULL;
 			sock->code(filename);
-			fd = safe_open_wrapper(filename, O_CREAT | O_WRONLY);
+			fd = safe_open_wrapper_follow(filename, O_CREAT | O_WRONLY);
 			if (fd < 0) {
 				printf("Can't open local file %s for writing\n", filename);
 				exit(1);

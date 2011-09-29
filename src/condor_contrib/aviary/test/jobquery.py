@@ -22,46 +22,55 @@ from suds import *
 from suds.client import Client
 from sys import exit, argv, stdin
 import time
-
-# enable these to see the SOAP messages
-#logging.basicConfig(level=logging.INFO)
-#logging.getLogger('suds.client').setLevel(logging.DEBUG)
+import argparse
+from aviary.https import *
 
 # change these for other default locations and ports
-job_wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
-
+wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
+key = '/etc/pki/tls/certs/client.key'
+cert = '/etc/pki/tls/certs/client.crt'
 cmds = ['getJobStatus', 'getJobSummary', 'getJobDetails']
 
-cmdarg = len(argv) > 1 and argv[1]
-cproc =  len(argv) > 2 and argv[2]
-job_url = len(argv) > 3 and argv[3] or "http://localhost:9091/services/query/"
+parser = argparse.ArgumentParser(description='Query jobs remotely via SOAP.')
+parser.add_argument('-v','--verbose', action="store_true",default=False, help='enable SOAP logging')
+parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
+		    default='http://localhost:9091/services/query/',
+		    help='http or https URL prefix to be added to cmd')
+parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
+parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
+parser.add_argument('cmd', action="store", choices=(cmds))
+parser.add_argument('cproc', action="store", help="a cluster.proc id like '1.0' or '5.3'")
+args =  parser.parse_args()
 
-if cmdarg not in cmds:
-	print "error unknown command: ", cmdarg
-	print "available commands are: ",cmds
-	exit(1)
+if "https://" in args.url:
+	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
+else:
+	client = Client(wsdl)
 
-client = Client(job_wsdl);
-job_url += cmdarg
-client.set_options(location=job_url)
+args.url += args.cmd
+client.set_options(location=args.url)
 
 # enable to see service schema
-#print client
+if args.verbose:
+	logging.basicConfig(level=logging.INFO)
+	logging.getLogger('suds.client').setLevel(logging.DEBUG)
+	print client
 
 # set up our JobID
-if cproc:
+if args.cproc:
 	jobId = client.factory.create("ns0:JobID")
-	jobId.job = cproc
+	jobId.job = args.cproc
 else:
 	# returns all jobs
 	jobId = None
 
 try:
-	func = getattr(client.service, cmdarg, None)
+	func = getattr(client.service, args.cmd, None)
 	if callable(func):
-	    result = func(jobId)
+		print 'invoking', args.url, 'for job', args.cproc
+		result = func(jobId)
 except Exception, e:
-	print "invocation failed: ", job_url
+	print "invocation failed: ", args.url
 	print e
 	exit(1)
 

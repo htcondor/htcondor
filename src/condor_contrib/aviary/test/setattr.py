@@ -17,38 +17,63 @@
 #
 
 # uses Suds - https://fedorahosted.org/suds/
+import logging
 from suds import *
 from suds.client import Client
 from sys import exit, argv, stdin
 import time
+import argparse
+from aviary.https import *
 
 # change these for other default locations and ports
-job_wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
+wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
+key = '/etc/pki/tls/certs/client.key'
+cert = '/etc/pki/tls/certs/client.crt'
+types = ['BOOLEAN','EXPRESSION','FLOAT','INTEGER','STRING']
 
-cproc =  len(argv) > 1 and argv[1]
-attr_name = len(argv) > 2 and argv[2]
-attr_value = len(argv) > 3 and argv[3]
-job_url = len(argv) > 4 and argv[4] or "http://localhost:9090/services/job/setJobAttribute"
+parser = argparse.ArgumentParser(description='Set job attributes remotely via SOAP.')
+parser.add_argument('-v','--verbose', action="store_true",default=False, help='enable SOAP logging')
+parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
+		    default="http://localhost:9090/services/job/setJobAttribute",
+		    help='http or https URL prefix to be added to cmd')
+parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
+parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
+parser.add_argument('name', action="store", help='attribute name')
+parser.add_argument('type', action="store", choices=(types), help='attribute type')
+parser.add_argument('value', action="store", help='attribute value')
+parser.add_argument('cproc', action="store", help="a cluster.proc id like '1.0' or '5.3'")
+args =  parser.parse_args()
 
-client = Client(job_wsdl);
-client.set_options(location=job_url)
+if "https://" in args.url:
+	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
+else:
+	client = Client(wsdl)
+
+client.set_options(location=args.url)
+
+# enable to see service schema
+if args.verbose:
+	logging.basicConfig(level=logging.INFO)
+	logging.getLogger('suds.client').setLevel(logging.DEBUG)
+	print client
 
 # set up our JobID
 jobId = client.factory.create('ns0:JobID')
-jobId.job = cproc
+jobId.job = args.cproc
 
 # set up the Attribute
 aviary_attr = client.factory.create('ns0:Attribute')
-aviary_attr.name = attr_name
-aviary_attr.type = "STRING";
-aviary_attr.value = '"'+attr_value+'"'
+aviary_attr.name = args.name
+aviary_attr.type = args.type
+aviary_attr.value = args.value
 
 try:
+	print 'invoking', args.url, 'for job', args.cproc
 	result = client.service.setJobAttribute(jobId, aviary_attr)
 except Exception, e:
-	print "unable to access scheduler at: ", job_url
+	print "unable to access scheduler at: ", args.url
 	print e
 	exit(1)
 
 if result.code != "OK":
-	print result.code,"; ", result.text
+	print result.code,":", result.text

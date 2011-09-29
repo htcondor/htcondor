@@ -24,7 +24,6 @@
 #define __BOOL_EXPR_H__
 
 #include "explain.h"
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 #include "boolValue.h"
 

@@ -1,0 +1,326 @@
+\begin{ManPage}{\label{man-condor-submit-dag}\Condor{submit\_dag}}{1}
+{Manage and queue jobs within a specified DAG for execution on remote machines}
+\Synopsis
+\SynProg{\Condor{submit\_dag}}
+\oOpt{-help | -version}
+
+\SynProg{\Condor{submit\_dag}}
+\oOpt{-no\_submit}
+\oOpt{-verbose}
+\oOpt{-force}
+\oOptArg{-maxidle}{NumberOfJobs}
+\oOptArg{-maxjobs}{NumberOfJobs}
+\oOptArg{-dagman}{DagmanExecutable}
+\oOptArg{-maxpre}{NumberOfPREscripts}
+\oOptArg{-maxpost}{NumberOfPOSTscripts}
+\oOptArg{-notification}{value}
+\oOpt{-noeventchecks}
+\oOpt{-allowlogerror}
+\oOptArg{-r}{schedd\_name}
+\oOptArg{-debug}{level}
+\oOpt{-usedagdir}
+\oOptArg{-outfile\_dir}{directory}
+\oOptArg{-config}{ConfigFileName}
+\oOptArg{-insert\_sub\_file}{FileName}
+\oOptArg{-append}{Command}
+\oOptArg{-autorescue}{0|1}
+\oOptArg{-dorescuefrom}{number}
+\oOpt{-allowversionmismatch}
+\oOpt{-no\_recurse}
+\oOpt{-do\_recurse}
+\oOpt{-update\_submit}
+\oOpt{-import\_env}
+\oOpt{-DumpRescue}
+\oOpt{-valgrind}
+\oOpt{-DontAlwaysRunPost}
+\Arg{DAGInputFile1}
+\oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
+\oOptArg{-schedd-daemon-ad-file}{FileName}
+\oOptArg{-schedd-address-file}{FileName}
+
+\index{Condor commands!condor\_submit\_dag}
+\index{condor\_submit\_dag command}
+
+\Description
+
+\Condor{submit\_dag} is the program for submitting a DAG (directed
+acyclic graph) of jobs for execution under Condor.
+The program enforces the job dependencies defined
+in one or more \Arg{DAGInputFile}s.
+Each \Arg{DAGInputFile} contains commands
+to direct the submission of jobs implied by the nodes
+of a DAG to Condor.
+See the Condor User Manual, section~\ref{sec:DAGMan} for a complete
+description.
+
+\begin{Options}
+  \OptItem{\Opt{-help}}{Display usage information.}
+  \OptItem{\Opt{-version}}{Display version information.}
+  \OptItem{\Opt{-no\_submit}}{Produce the Condor submit description file
+     for DAGMan, but do not submit DAGMan as a Condor job.}
+  \OptItem{\Opt{-verbose}}{Cause \Condor{submit\_dag}
+     to give verbose error messages.}
+  \OptItem{\Opt{-force}}{Require \Condor{submit\_dag} to overwrite
+     the files that it produces, if the files already exist.  Note that
+     \File{dagman.out} will be appended to, not overwritten.  If
+     new-style rescue DAG mode
+     is in effect, and any new-style rescue DAGs exist, the \Opt{-force} flag
+     will cause them to be renamed, and the original DAG will be run.
+     If old-style rescue DAG mode
+     is in effect, any existing old-style rescue DAGs will be deleted,
+     and the original DAG will be run. Section~\ref{sec:DAGMan-rescue}
+     details rescue DAGs.}
+  \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
+     jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
+     idle jobs start to run, \Condor{dagman} will resume submitting jobs.
+     \Arg{NumberOfJobs} is a positive integer. If the option is
+     omitted, the number of idle jobs is unlimited.   Note that for
+     this argument, each individual process within a cluster counts as a 
+     job, which is inconsistent with \OptArg{-maxjobs}.}
+  \OptItem{\OptArg{-maxjobs}{NumberOfJobs}}{Sets the maximum number of jobs
+     within the DAG that will be submitted to Condor at one time.
+     \Arg{NumberOfJobs} is a positive integer. If the option is
+     omitted, the default number of jobs is unlimited.  Note that for
+     this argument, each cluster counts as one job, no matter how many
+     individual processes are in the cluster.}
+  \OptItem{\OptArg{-dagman}{DagmanExecutable}}{Allows the specification of an 
+     alternate \Condor{dagman} executable to be used instead of the one found 
+     in the user's path. This must be a fully qualified path.}
+  \OptItem{\OptArg{-maxpre}{NumberOfPREscripts}}{Sets the maximum number of PRE
+     scripts within the DAG that may be running at one time.
+     \Arg{NumberOfPREScripts} is a positive integer. If this option is
+     omitted, the default number of PRE scripts is unlimited.}
+  \OptItem{\OptArg{-maxpost}{NumberOfPOSTscripts}}{Sets the maximum number of 
+     POST scripts within the DAG that may be running at one time.
+     \Arg{NumberOfPOSTScripts} is a positive integer. If this option is
+     omitted, the default number of POST scripts is unlimited.}
+  \OptItem{\OptArg{-notification}{value}}{Sets the e-mail notification
+     for DAGMan itself. This information will be used within the Condor
+     submit description file for DAGMan. This file is produced by
+     \Condor{submit\_dag}. See \Opt{notification}
+     within the section of submit description file commands in the
+     \Condor{submit} manual page on page~\pageref{man-condor-submit}
+     for specification of \Arg{value}.
+     }
+  \OptItem{\Opt{-noeventchecks}}{This argument is no longer used; it
+     is now ignored.  Its functionality is now implemented by
+     the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration macro
+     (see section~\ref{param:DAGManAllowEvents}).}
+  \OptItem{\Opt{-allowlogerror}}{This optional argument has
+     \Condor{dagman} try to run the specified DAG, even in the case
+     of detected errors in the user log specification.
+     As of version 7.3.2, this argument has an effect only on
+     DAGs containing Stork job nodes.}
+  \OptItem{\OptArg{-r}{schedd\_name}}{
+     Submit \Condor{dagman} to a remote machine, specifically the
+     \Condor{schedd} daemon on that machine.
+     The \Condor{dagman} job will not run on the local \Condor{schedd}
+     (the submit machine), but on the specified one.
+     This is implemented using the \Opt{-remote} option to \Condor{submit}.
+     Note that this option does not currently specify input files
+     for \Condor{dagman}, nor the individual nodes to be taken along!
+     It is assumed that any necessary files will be present on 
+     the remote computer,
+     possibly via a shared file system between the local computer and 
+     the remote computer. 
+     It is also necessary that the user has appropriate permissions 
+     to submit a job to the remote machine;
+     the permissions are the same as those required to use \Condor{submit}'s
+     \Opt{-remote} option.
+     If other options are desired,
+     including transfer of other input files,
+     consider using the \Opt{-no\_submit} option,
+     modifying the resulting submit file for specific needs,
+     and then using \Condor{submit} on that.  }
+  \OptItem{\OptArg{-debug}{level}}{
+     Passes the the \Arg{level} of debugging output desired to
+     \Condor{dagman}.  \Arg{level} is an integer, with values of
+     0-7 inclusive, where 7 is the most verbose output.
+     See the 
+     \Condor{dagman} manual page on page~\pageref{man-condor-dagman}
+     for detailed descriptions of these values.
+     If not specified, no \OptArg{-debug} value is passed to
+     \Condor{dagman}.
+     }
+  \OptItem{\Opt{-usedagdir}}{This optional argument causes
+     \Condor{dagman} to run each specified DAG as if \Condor{submit\_dag}
+     had been run in the directory containing that DAG file.  This option
+     is most useful when running multiple DAGs in a single \Condor{dagman}.
+     Note that the \Opt{-usedagdir} flag must not be used when running
+     an old-style rescue DAG (see section~\ref{sec:DAGMan-rescue}).
+     }
+  \OptItem{\OptArg{-outfile\_dir}{directory}}{
+     Specifies the directory in which the \File{.dagman.out} file will
+     be written.  The \Argnm{directory} may be specified relative to
+     the current working directory as \Condor{submit\_dag} is executed,
+     or specified with an absolute path.
+     Without this option, the \File{.dagman.out} file is placed in the
+     same directory as the first DAG input file listed on the command line.
+     }
+  \OptItem{\OptArg{-config}{ConfigFileName}}{
+     Specifies a configuration file to be used for this DAGMan run.
+     Note that the options specified in the configuration file apply to all
+     DAGs if multiple DAGs are specified.  Further note that it is a
+     fatal error if the configuration file specified by this option
+     conflicts with a configuration file specified in any of the DAG
+     files, if they specify one.  For more information about how
+     \Condor{dagman} configuration files work, see
+     section~\ref{sec:DAG-configuration}.
+     }
+  \OptItem{\OptArg{-insert\_sub\_file}{FileName}}{
+    Specifies a file to insert into the \File{.condor.sub} file created
+    by \Condor{submit\_dag}.  The specified file must contain only legal
+    submit file commands.  Only one file can be inserted.  (If both
+    the DAGMAN\_INSERT\_SUB\_FILE configuration variable and
+    \Opt{-insert\_sub\_file} are specified, \Opt{-insert\_sub\_file}
+    overrides DAGMAN\_INSERT\_SUB\_FILE.)  The specified file is inserted
+    into the \File{.condor.sub} file before the Queue command and before
+    any commands specified with the \Opt{-append} option.
+  }
+  \OptItem{\OptArg{-append}{Command}}{
+    Specifies a command to append to the \File{.condor.sub} file created
+    by \Condor{submit\_dag}.  The specified command is appended to the
+    \File{.condor.sub} file immediately before the Queue command.
+    Multiple commands are specified by using the \Opt{-append} option
+    multiple times. Each new command is given in a separate \Opt{-append}
+    option. Commands with spaces in them must be enclosed in double quotes. 
+    Commands specified with the \Opt{-append} option are appended to
+    the \File{.condor.sub} file \emph{after} commands inserted from a file
+    specified by the \Opt{-insert\_sub\_file} option or the
+    DAGMAN\_INSERT\_SUB\_FILE configuration variable, so the \Opt{-append}
+    command(s) will override commands from the inserted file if the commands
+    conflict.
+  }
+  \OptItem{\OptArg{-autorescue}{0|1}}{Whether to automatically run the
+    newest rescue DAG for the given DAG file, if one exists
+    (0 = \Expr{false}, 1 = \Expr{true}).
+  }
+  \OptItem{\OptArg{-dorescuefrom}{number}}{Forces \Condor{dagman} to
+    run the specified rescue DAG number for the given DAG.  A value
+    of 0 is the same as not specifying this option.  Specifying a
+    non-existent rescue DAG is a fatal error.
+  }
+  \OptItem{\Opt{-allowversionmismatch}}{This optional argument causes
+     \Condor{dagman} to allow a version mismatch between
+     \Condor{dagman} itself and the \File{.condor.sub} file produced
+     by \Condor{submit\_dag} (or, in other words, between
+     \Condor{submit\_dag} and \Condor{dagman}).  WARNING!  This option
+     should be used only if absolutely necessary.  Allowing version
+     mismatches can cause subtle problems when running DAGs.
+     (Note that, starting with version 7.4.0, \Condor{dagman} no longer
+     requires an exact version match between itself and the
+     \File{.condor.sub} file.  Instead, a "minimum compatible version"
+     is defined, and any \File{.condor.sub} file of that version or
+     newer is accepted.)
+  }
+  \OptItem{\Opt{-no\_recurse}}{This optional argument causes
+     \Condor{submit\_dag} to \emph{not} run itself recursively on
+     nested DAGs (this is now the default; this flag has been kept
+     mainly for backwards compatibility).
+  }
+  \OptItem{\Opt{-do\_recurse}}{This optional argument causes
+     \Condor{submit\_dag} to run itself recursively on nested DAGs
+     (the default is now that it does \emph{not} run itself recursively;
+     instead the \File{.condor.sub} files for nested DAGs are generated
+     "lazily" by \Condor{dagman} itself).  (DAG nodes specified with
+     the \MacroNI{SUBDAG EXTERNAL} keyword or with submit file names
+     ending in \File{.condor.sub} are considered nested DAGs.)
+     (See also the
+     \MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS} configuration
+     variable in section~\ref{param:DAGManGenerateSubDagSubmits} for
+     more information.)
+  }
+  \OptItem{\Opt{-update\_submit}}{This optional argument causes an existing
+     \File{.condor.sub} file to not be treated as an error; rather, the
+     \File{.condor.sub} file will be overwritten, but the existing values
+     of \Opt{-maxjobs}, \Opt{-maxidle}, \Opt{-maxpre}, and \Opt{-maxpost}
+     will be preserved.
+  }
+  \OptItem{\Opt{-import\_env}}{This optional argument causes
+     \Condor{submit\_dag} to import the current environment into the
+     \Opt {environment} command of the \File{.condor.sub} file it
+     generates.
+  }
+  \OptItem{\Opt{-DumpRescue}}{This optional argument tells \Condor{dagman}
+     to immediately dump a rescue DAG and then exit, as opposed to
+     actually running the DAG.  This feature is mainly intended for
+     testing.  The Rescue DAG file is produced whether or not
+       there are parse errors reading the original DAG input file.
+       The name of the file differs if there was a parse error.
+  }
+  \OptItem{\Opt{-valgrind}}{This optional argument causes the submit
+     description file generated for the submission of \Condor{dagman}
+     to be modified. 
+     The executable becomes \Prog{valgrind} run on \Condor{dagman},
+     with a specific set of arguments intended for testing \Condor{dagman}.
+     Note that this argument is intended for testing purposes only.
+     Using the \Opt{-valgrind} option without the necessary
+     \Prog{valgrind} software installed will cause the DAG to fail.
+     If the DAG does run, it will run much more slowly than usual.
+  }
+  \OptItem{\Opt{-DontAlwaysRunPost}}{This option causes the submit
+     description file generated for the submission of \Condor{dagman} to
+     be modified.  
+     It causes the \Opt{-DontAlwaysRunPost} option to be in the
+     arguments to \Condor{dagman} in the submit description file, 
+     which causes \Condor{dagman} to use the return value from a PRE script 
+     to determine whether or not a POST script will run.  
+     By default, \Condor{dagman} runs the
+     POST script regardless of the return value of the PRE script. 
+     Versions of \Condor{dagman} prior to 7.7.2 did not ignore the return
+     value and would not run the POST script if the PRE script failed.}
+  \OptItem{\OptArg{-schedd-daemon-ad-file}{FileName}}{
+    Specifies a full path to a daemon ad file dropped by a \Condor{schedd}.
+    Therefore this allows submission to a specific scheduler if several
+    are available without repeatedly querying the \Condor{collector}.
+    The value for this argument defaults to the configuration attribute
+    \MacroNI{SCHEDD\_DAEMON\_AD\_FILE}.
+  }
+   \OptItem{\OptArg{-schedd-address-file}{FileName}}{
+    Specifies a full path to an address file dropped by a \Condor{schedd}.
+    Therefore this allows submission to a specific scheduler if several
+    are available without repeatedly querying the \Condor{collector}.
+    The value for this argument defaults to the configuration attribute
+    \MacroNI{SCHEDD\_ADDRESS\_FILE}.
+  }
+  \end{Options}
+
+\SeeAlso
+Condor User Manual
+
+\ExitStatus
+
+\Condor{submit\_dag} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\Examples
+
+To run a single DAG:
+\begin{verbatim}
+% condor_submit_dag diamond.dag
+\end{verbatim}
+
+To run a DAG when it has already been run and the output files exist:
+\begin{verbatim}
+% condor_submit_dag -force diamond.dag
+\end{verbatim}
+
+To run a DAG, limiting the number of idle node jobs in the DAG to a
+maximum of five:
+\begin{verbatim}
+% condor_submit_dag -maxidle 5 diamond.dag
+\end{verbatim}
+
+To run a DAG, limiting the number of concurrent PRE scripts to 10
+and the number of concurrent POST scripts to five:
+\begin{verbatim}
+% condor_submit_dag -maxpre 10 -maxpost 5 diamond.dag
+\end{verbatim}
+
+To run two DAGs, each of which is set up to run in its own directory:
+\begin{verbatim}
+% condor_submit_dag -usedagdir dag1/diamond1.dag dag2/diamond2.dag
+\end{verbatim}
+
+\end{ManPage}
+

@@ -1,0 +1,392 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Stork}Stork Applications}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Stork|(}
+
+Today's scientific applications have huge data requirements,
+which continue to increase drastically every year.
+These data are generally accessed by many
+users from all across the the globe.
+This requires moving huge amounts of data
+around wide area networks to complete the computation cycle,
+which brings with
+it the problem of efficient and reliable data placement.
+
+Stork is a scheduler for data placement.
+With Stork, \Term{data placement jobs}
+have been elevated to the same level as Condor's computational jobs;
+data placements are queued, managed, queried and
+autonomously restarted upon error.
+Stork understands the semantics and protocols of data placement.
+
+The underlying data placement jobs are performed by Stork
+\Term{modules}, typically installed in the Condor \File{libexec}
+directory.  The module name is encoded from the data placement type
+and functions.  
+For example, the \File{stork.transfer.file-file} module transfers data
+from the \File{file:/} (local file system) to the \File{file:/}
+protocol.  The \File{stork.transfer.file-file} module is the only
+module bundled with Condor/Stork.  Additionally, contributed modules
+may be \htmladdnormallink{downloaded}
+{http://www.cs.wisc.edu/condor/stork/download.html}
+for these data transfer protocols:
+
+\begin{table}[hbt]
+\begin{tabular}{ l l }
+%file:/		& (Stork Server) local file system \\
+ftp://		& FTP File Transfer Protocol \\
+http://		& HTTP Hypertext Transfer Protocol \\
+gsiftp://	& Globus Grid FTP  \\ 
+nest://		& Condor NeST  network storage appliance (see
+\URL{http://www.cs.wisc.edu/condor/nest/}) \\
+srb://		& SDSC  Storage Resource Broker (SRB) (see
+\URL{http://www.sdsc.edu/srb/}) \\
+srm://		& Storage Resource Manager (SRM) (see
+\URL{http://sdm.lbl.gov/srm-wg/}) \\
+csrm://		& Castor Storage Resource Manager (Castor SRM) (see
+\URL{http://castor.web.cern.ch/castor/}) \\
+unitree://    & NCSA UniTree (see
+\URL{http://www.ncsa.uiuc.edu/Divisions/CC/HPDM/unitree/}) \\
+%		diskrouter:// -> UW DiskRouter Tool
+\end{tabular}
+\end{table}
+
+The Stork
+module API is simple and extensible, enabling users to create 
+and use their own modules.
+
+Stork includes high level features for managing data transfers.
+By configuration, the number of active jobs running
+from a Stork server may be limited.
+Stork includes built in fault tolerance,
+with capabilities for retrying failed jobs,
+together with the specification of alternate protocols.
+Stork users also have access to a higher level job manager, 
+Condor DAGMan (section \ref{sec:DAGMan}),
+which can manage both Stork data placement jobs
+and traditional Condor jobs at the same time.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Stork-Job-Submission}Submitting Stork Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Stork!submit description file}
+
+As with Condor jobs, Stork jobs are specified with a
+submit description file.
+It is important to note the syntax of the submit description file
+for a Stork job is different than that used by Condor jobs.
+Specifically,
+Stork submit description files are written in the
+\htmladdnormallink{ClassAd}{http://www.cs.wisc.edu/condor/classad}
+language.  
+See the ClassAd Language Reference Manual for complete details.
+Please note that while most of Condor uses ClassAds,
+Stork utilizes the most recent version of this language,
+which has evolved over time.
+Stork defines keywords.
+When present in the job submit file,
+keywords define the function of the job.
+
+Here is sample Stork job submit description file,
+showing file syntax and keywords.
+A job specifies a 1-to-1 mapping of a data source URL to
+destination URL.
+
+\footnotesize
+\begin{verbatim}
+// This is a comment line.
+[
+    dap_type = transfer;
+    src_url = "file:/etc/termcap";
+    dest_url = "file:/tmp/stork/file-termcap";
+]
+\end{verbatim}
+\normalsize
+
+
+This example shows the ClassAd pairs that form the
+heart of a Stork job specification.
+The minimum keywords required to specify a Stork job are:
+
+\begin{description}
+  \item[dap\_type] Currently, the data type is constrained to 
+  \SubmitCmd{transfer}.
+
+  \item[src\_url]  Specify the data protocol and URL of the source.
+
+  \item[dest\_url]  Specify the data protocol and URL of the destination.
+\end{description}
+
+Additionally, the following keywords may be used in 
+a Stork submit description file:
+
+\begin{description}
+    \item[x509proxy] Specifies the location of the
+    X.509 proxy file for protocols
+    that use GSI authentication, such as \SubmitCmd{gsiftp://}.
+    The special value of \emph{"default"} (quotes are required) invokes
+    GSI libraries to search for the user credential in the standard locations.
+
+    \item[alt\_protocols] A comma separated list of
+    alternative protocol pairs (for source and destination protocols),
+    used in a round robin fashion
+    when transfers fail.
+    See section \ref{sec:Stork-Fault-Protection} for a further discussion
+    and examples.
+
+
+\end{description}
+
+Stork places no restriction on the submit file name or extension, and will
+accept any valid file name for a Stork submit description file.
+
+Submit data placement jobs to Stork using the
+\Stork{submit} tool.
+For example, after creating the submit description file
+\File{sample.stork} with an
+editor, submit the data transfer job with the command:
+
+\begin{verbatim}
+stork_submit sample.stork
+\end{verbatim}
+
+Stork then returns the associated job id, which is used by other Stork
+job control tools.
+
+Only the first ClassAd (a record expression within brackets) within 
+a Stork submit description file becomes a data placement job
+upon submission.
+Other ClassAds within the file are ignored.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Stork-Job-Management}Managing Stork Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Stork provides a set of command-line user tools for job management, including
+submitting, querying, and removing data placement jobs.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:stork-query}Querying Stork Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Use \Stork{status} to check the status of any active
+or completed Stork job.
+\Stork{status} takes a single argument: the job id.
+For example, to check the status of the Stork job with job id 3:
+
+\begin{verbatim}
+stork_status 3
+\end{verbatim}
+
+Use \Stork{q} to query all active Stork jobs.
+\Stork{q} does not report on completed Stork jobs.
+
+For example, to check the status all active Stork jobs:
+
+\begin{verbatim}
+stork_q
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:stork-rm}Removing Stork Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Active jobs may be removed from the job queue with the 
+\Stork{rm} tool.  
+\Stork{rm} takes a single argument: the job id of the job to remove.
+All jobs may
+be removed, provided they have not completed.
+
+For example, to remove the queued job with job id 4:
+
+\begin{verbatim}
+stork_rm 4
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Stork-Fault-Protection}Fault Tolerance}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In an ideal world, all data transfers succeed on the first attempt.
+However, data transfers do fail for various reasons.
+Stork is designed with data transfer fault tolerance.
+Based on configuration, Stork retries failed data transfer jobs
+using specified protocols.
+
+If a  transfer fails, Stork attempts the transfer again,
+until the number of attempts reaches the limit,
+as defined by the 
+configuration variable
+\Macro{STORK\_MAX\_RETRY} 
+(section \ref{param:StorkMaxRetry}).  
+
+For each attempt at transfer,
+the transfer protocols to be used at both source and destination are defined.
+These transfer protocols may vary,
+when defined by an \SubmitCmd{alt\_protocols} entry in the
+submit description file.
+The location of the data at the source and destination
+is unchanged by the \SubmitCmd{alt\_protocols} entry.
+\SubmitCmd{alt\_protocols} defines an ordered list of alternative
+translation protocols to be used.
+Each entry in the list is a pair.
+The first of the pair defines the protocol to be used at the source 
+of the transfer.
+The second of the pair defines the protocol to be used at the destination 
+of the transfer.
+
+The syntax is a comma-separated list of pairs.
+A dash character separated the pairs.
+The protocol name is given in all lower case letters,
+without colons or slash characters.
+Stork uses these strings to identify the protocol translation
+and transfer module to be used. 
+
+The initial translation protocol
+(specified in the \SubmitCmd{src\_url} and \SubmitCmd{dest\_url} entries)
+together with the list defined by  
+an \SubmitCmd{alt\_protocols} entry form the ordered list
+of protocols to be utilized in a round robin fashion.
+
+For example, if \MacroNI{STORK\_MAX\_RETRY} has the value 4,
+and the Stork job submit description file contains
+\footnotesize
+\begin{verbatim}
+[
+    dap_type = transfer;
+    src_url = "gsiftp://serverA/dirA/fileA";
+    dest_url = "http://serverB/dirB/fileB";
+]
+\end{verbatim}
+\normalsize
+
+then Stork will attempt up to 4 transfers,
+with each using the same translation protocol.
+\SubmitCmd{gsiftp://} is used at the source,
+and \SubmitCmd{http://} is used at the destination.
+The Stork job fails if it has not been completed after
+4 attempts.
+
+A second example shows the transfer protocols used for
+each attempted transfer, 
+when \SubmitCmd{alt\_protocols} is used.
+For this example, assume that 
+\MacroNI{STORK\_MAX\_RETRY} has the value 7.
+\footnotesize
+\begin{verbatim}
+[
+    dap_type = transfer;
+    src_url = "gsiftp://no-such-server/dir/file";
+    dest_url = "file:/dir/file";
+    alt_protocols = "ftp-file, http-file";
+]
+\end{verbatim}
+\normalsize
+
+Stork attempts the following transfers, in the given order,
+stopping when the transfer succeeds.
+\begin{enumerate}
+    \item from 
+			\File{gsiftp://no-such-server/dir/file}
+            to
+			\File{file:/dir/file}
+    \item from 
+			\File{ftp://no-such-server/dir/file}
+            to
+			\File{file:/dir/file}
+    \item from 
+			\File{http://no-such-server/dir/file}
+            to
+			\File{file:/dir/file}
+    \item from 
+			\File{gsiftp://no-such-server/dir/file}
+            to
+			\File{file:/dir/file}
+    \item from 
+			\File{ftp://no-such-server/dir/file}
+            to
+			\File{file:/dir/file}
+    \item from 
+			\File{http://no-such-server/dir/file}
+            to
+			\File{file:/dir/file}
+    \item from 
+			\File{gsiftp://no-such-server/dir/file}
+            to
+			\File{file:/dir/file}
+ \end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Stork-Advanced}Running Stork Jobs Under DAGMan}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Stork!jobs under DAGMan}
+
+Condor DAGMan (section \ref{sec:DAGMan}) provides high level management
+of both traditional CPU jobs and Stork data placement jobs. 
+Using DAGMan, users can specify data placement
+using the \Arg{DATA} keyword.
+DAGMan can mix Stork data transfer jobs 
+and Condor jobs.
+This capability lends itself well to grid computing,
+as data is often staged in (transferred)
+before processing the data.
+After processing, output is often staged out (transferred).
+
+Here is a sample DAGMan input file
+that stages in input files using Stork transfers,
+processes the data as a Condor job,
+and stages out the result using a Stork transfer.
+
+\footnotesize
+\begin{verbatim}
+# Transfer input files using Stork
+DATA INPUT1 transfer_input_data1.stork
+DATA INPUT1 transfer_input_data2.stork
+
+DATA INPUT2 transfer_data
+#
+# Process the data using Condor
+JOB PROCESS process.condor
+#
+# Transfer output file using Stork
+DATA RESULT transfer_result_data.stork
+#
+# Specify job dependencies
+PARENT INPUT1 INPUT2 CHILD PROCESS
+PARENT PROCESS CHILD RESULT
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Stork-Lease-Manager}The Lease Manager}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Stork!condor\_lease\_manager@\Condor{lease\_manager}}
+\index{Condor daemon!condor\_lease\_manager@\Condor{lease\_manager}}
+\index{daemon!condor\_lease\_manager@\Condor{lease\_manager}}
+\index{condor\_lease\_manager daemon}
+
+The Lease Manager provides a mechanism for managing leases to resources, 
+as described by Condor's ClassAd mechanism.  
+The resources and leases are persistent,
+so that state may be restored after a shutdown or crash.
+
+Resources are advertised to the Lease Manager by publishing a Condor ClassAd 
+with a \Condor{collector}.
+These leases describe the number of resources available (the number of leases),
+and they can also specify a requirements expression 
+using Condor's ClassAd mechanism.
+The resource may also specify the maximum 
+duration of the leases it will allow.
+
+Similarly, leases are requested by through the Condor ClassAd mechanism;
+a Condor daemon client API provides an interface through which to 
+request a lease.  
+This request ClassAd may specify the number of and the duration of 
+the resource leases that are being requested.
+It may also specify a requirements expression.
+
+With both the resource and request able to specify requirements expressions, 
+the Lease Manager performs 2-way match making, providing a great deal 
+of flexibility.
+
+\index{Stork|)}

@@ -50,7 +50,7 @@ public:
 	virtual int	is_writeable();
 	virtual int	is_seekable();
 
-	virtual int	get_size();
+	virtual off_t get_size();
 	virtual char const	*get_url();
 
 	virtual int	get_unmapped_fd();
@@ -61,7 +61,7 @@ protected:
 
 	int	readable;	// can this file be read?
 	int	writeable;	// can this file be written?
-	int	size;		// number of bytes in the file
+	off_t	size;		// number of bytes in the file
 	int	syscall_mode;	// mode to perform syscalls in
 };
 

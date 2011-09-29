@@ -1,3 +1,5 @@
+# Based on CMake 2.8.3, modified for use building Condor
+#
 # - The builtin (binary) CPack Deb generator (Unix only)
 # CPackDeb may be used to create Deb package using CPack.
 # CPackDeb is a CPack generator thus it uses the CPACK_XXX variables
@@ -121,9 +123,11 @@
 
 
 MESSAGE("Using patched version of CPackDeb.cmake-2.8.3 located in build/cmake")
-# --ignore-missing-info option is removed when calling dpkg-shlibdeps. 
-# This option is not supported in Debian 4 and it is not used when we build 
-# pacakge on machine with proper dependecy 
+# For non-proper builds, set LD_LIBRARY_PATH to usr/lib:usr/lib/condor
+# under the package assembly directory. Otherwise, dpkg-shlibdeps can't
+# find the libraries stored there. These directories will become /usr/lib
+# and /usr/lib/condor upon installation, and the Condor binaries will find
+# them via the standard search path (/usr/lib) or rpath (/usr/lib/condor).
 
 IF(CMAKE_BINARY_DIR)
   MESSAGE(FATAL_ERROR "CPackDeb.cmake may only be used by CPack internally.")
@@ -186,12 +190,19 @@ IF(CPACK_DEBIAN_PACKAGE_SHLIBDEPS)
     # Execute dpkg-shlibdeps
     # --ignore-missing-info : allow dpkg-shlibdeps to run even if some libs do not belong to a package
     # -O : print to STDOUT
-    EXECUTE_PROCESS(COMMAND ${SHLIBDEPS_EXECUTABLE} -O ${CPACK_DEB_BINARY_FILES}
+    if ( NOT PROPER )
+      set( ENV{LD_LIBRARY_PATH} "${CPACK_TEMPORARY_DIRECTORY}/usr/lib:${CPACK_TEMPORARY_DIRECTORY}/usr/lib/condor")
+      EXECUTE_PROCESS(COMMAND env )
+    endif()
+    EXECUTE_PROCESS(COMMAND ${SHLIBDEPS_EXECUTABLE} --ignore-missing-info -O ${CPACK_DEB_BINARY_FILES}
       WORKING_DIRECTORY "${CPACK_TEMPORARY_DIRECTORY}"
       OUTPUT_VARIABLE SHLIBDEPS_OUTPUT
       RESULT_VARIABLE SHLIBDEPS_RESULT
       ERROR_VARIABLE SHLIBDEPS_ERROR
       OUTPUT_STRIP_TRAILING_WHITESPACE )
+    if ( NOT PROPER )
+      set( ENV{LD_LIBRARY_PATH} "")
+    endif()
     IF(CPACK_DEBIAN_PACKAGE_DEBUG)
       # dpkg-shlibdeps will throw some warnings if some input files are not binary
       MESSAGE( "CPackDeb Debug: dpkg-shlibdeps warnings \n${SHLIBDEPS_ERROR}")

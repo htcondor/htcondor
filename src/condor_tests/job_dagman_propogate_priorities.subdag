@@ -1,0 +1,3 @@
+JOB nodeD job_dagman_propogate_priorities-D.cmd
+VARS nodeD jobname="job_dagman_propogate_priorities-D"
+PRIORITY nodeD 10

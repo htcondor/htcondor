@@ -401,12 +401,11 @@ CronJob::Reaper( int exitPid, int exitStatus )
 				 GetName(), StateString() );
 		break;							// Do nothing
 
-		// Waiting for it to die...
+		// died either directly by term sig or kill sig, or other means while in sig code path.
 	case CRON_TERM_SENT:
 	case CRON_KILL_SENT:
-		break;							// Do nothing at all
-
-		// We've sent the process a signal, waiting for it to die
+		m_in_shutdown = false;
+		
 	default:
 		SetState( CRON_IDLE );			// Note that it's dead
 
@@ -426,11 +425,6 @@ CronJob::Reaper( int exitPid, int exitStatus )
 		}
 		break;
 
-	}
-
-	// Note that we're dead
-	if ( IsInShutdown() ) {
-		SetState( CRON_DEAD );
 	}
 
 	// Process the output
@@ -584,7 +578,7 @@ CronJob::TodoWrite( void )
 			  "todo.%s.%06d.%02d", name, getpid(), TodoWriteNum++ );
 	dprintf( D_ALWAYS, "%s: Writing input log '%s'\n", GetName(), fname );
 
-	if ( ( fp = safe_fopen_wrapper( fname, "w" ) ) != NULL ) {
+	if ( ( fp = safe_fopen_wrapper_follow( fname, "w" ) ) != NULL ) {
 		if ( TodoBufWrap ) {
 			fwrite( TodoBuffer + TodoBufOffset,
 					TodoBufSize - TodoBufOffset,

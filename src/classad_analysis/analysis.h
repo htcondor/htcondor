@@ -23,7 +23,6 @@
 
 //#define EXPERIMENTAL
 
-#define WANT_CLASSAD_NAMESPACE
 #include <iostream>
 #include "classad/classad_distribution.h"
 #include "condor_classad.h"

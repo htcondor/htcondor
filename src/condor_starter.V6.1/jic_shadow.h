@@ -76,12 +76,10 @@ public:
 			attribute (see comment for initStdFiles() for more
 			details). 
 			@param attr_name The ClassAd attribute name to lookup
-			@param alt_name The alternate attribute name we might need
 			@return a strdup() allocated string for the filename we 
 			        care about, or NULL if it's not in the job ad.
 		*/
-	char* getJobStdFile( const char* attr_name,
-						 const char* alt_name = NULL );
+	char* getJobStdFile( const char* attr_name );
 
 		// // // // // // // // // // // //
 		// Job Actions
@@ -337,17 +335,14 @@ private:
 			duplication.  
 
 			initFileTransfer() is responsible for looking up
-			ATTR_SHOULD_TRANSFER_FILES, the better way to specify the
-			file transfer behavior.  If that's there, it decide what
+			ATTR_SHOULD_TRANSFER_FILES, which specifies the
+			file transfer behavior.  It decides what
 			to do based on what it says, and call the appropriate
 			helper method, either initNoFileTransfer() or
 			initWithFileTransfer().  If it's defined to "IF_NEEDED",
 			we compare the FileSystemDomain of the job with our local
 			value, using the sameFSDomain() helper, and if there's a
-			match, we don't setup file transfer.  If the new attribute
-			isn't defined, we call the initWithFileTransfer() helper,
-			since that knows what to do with the old
-			ATTR_TRANSFER_FILES attribute.
+			match, we don't setup file transfer.
 
 			@return true on success, false if there are fatal errors
 		*/
@@ -364,14 +359,10 @@ private:
 	bool initNoFileTransfer( void );
 
 		/** If we think we want file transfer, we call this method.
-			It tries to find the new ATTR_WHEN_TO_TRANSFER_OUTPUT
+			It tries to find the ATTR_WHEN_TO_TRANSFER_OUTPUT
 			attribute and uses that to figure out if we should send
 			back output files when we're evicted, or only if the job
-			exits on its own.  If that attribute is not defined, we
-			search for the deprecated ATTR_TRANSFER_FILES attribute
-			and use that to figure out the same thing (or, if
-			TransferFiles is set to "NEVER", we just call
-			initNoFileTransfer(), instead).  Once we know that we're
+			exits on its own. Once we know that we're
 			doing a file transfer, we initialize the job's IWD to the
 			starter's temporary execute directory, and can then call
 			the initStdFiles() method to initalize STDIN, STDOUT, and

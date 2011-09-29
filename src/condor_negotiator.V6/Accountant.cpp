@@ -104,7 +104,6 @@ void Accountant::Initialize(GroupEntry* root_group)
   NiceUserPriorityFactor=10000000;
   RemoteUserPriorityFactor=10000;
   DefaultPriorityFactor=1;
-  HalfLifePeriod=86400;
 
   // Set up HGQ accounting-group related information
   hgq_root_group = root_group;
@@ -121,14 +120,7 @@ void Accountant::Initialize(GroupEntry* root_group)
       }
   }
   
- 
- // get half life period
-  
-  tmp = param("PRIORITY_HALFLIFE");
-  if(tmp) {
-	  HalfLifePeriod=(float)atof(tmp);
-	  free(tmp);
-  }
+  HalfLifePeriod = param_double("PRIORITY_HALFLIFE");
 
   // get nice users priority factor
 
@@ -660,7 +652,7 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
     free(str);
   }    
 
-  AcctLog->CommitTransaction();
+  AcctLog->CommitNondurableTransaction();
 
   dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Added match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
 }
@@ -750,7 +742,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
   SetAttributeFloat(CustomerRecord+GroupName.c_str(),WeightedUnchargedTimeAttr,WeightedGroupUnchargedTime);
 
   DeleteClassAd(ResourceRecord+ResourceName);
-  AcctLog->CommitTransaction();
+  AcctLog->CommitNondurableTransaction();
 
   dprintf(D_ACCOUNTANT, "(ACCOUNTANT) Removed match between customer %s and resource %s\n",
           CustomerName.Value(),ResourceName.Value());
@@ -832,6 +824,11 @@ void Accountant::UpdatePriorities()
   float WeightedResourcesUsed;
   int BeginUsageTime;
 
+	  // Each iteration of the loop should be atomic for consistency,
+	  // but instead of doing one transaction per iteration, wrap the
+	  // whole loop in one transaction for efficiency.
+  AcctLog->BeginTransaction();
+
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
     MyString keybuf;
@@ -844,8 +841,12 @@ void Accountant::UpdatePriorities()
 	if (Priority<MinPriority) Priority=MinPriority;
     OldPrio=Priority;
 
+    // set_prio_factor indicates whether a priority factor has been explicitly set,
+    // in which case the record should be kept to preserve the setting
+    bool set_prio_factor = true;
     if (ad->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) {
 	   	PriorityFactor = DefaultPriorityFactor;
+        set_prio_factor = false;
 	}
 
     if (ad->LookupInteger(UnchargedTimeAttr,UnchargedTime)==0) UnchargedTime=0;
@@ -862,7 +863,6 @@ void Accountant::UpdatePriorities()
     AccumulatedUsage+=ResourcesUsed*TimePassed+UnchargedTime;
     WeightedAccumulatedUsage+=WeightedResourcesUsed*TimePassed+WeightedUnchargedTime;
 
-	AcctLog->BeginTransaction();
     SetAttributeFloat(key,PriorityAttr,Priority);
     SetAttributeFloat(key,AccumulatedUsageAttr,AccumulatedUsage);
     SetAttributeFloat(key,WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage);
@@ -871,17 +871,16 @@ void Accountant::UpdatePriorities()
     SetAttributeInt(key,UnchargedTimeAttr,0);
     SetAttributeFloat(key,WeightedUnchargedTimeAttr,0.0);
 
-    if (Priority<MinPriority && ResourcesUsed==0 &&
-		   	AccumulatedUsage==0 && PriorityFactor==DefaultPriorityFactor ) {
+    if (Priority<MinPriority && ResourcesUsed==0 && AccumulatedUsage==0 && !set_prio_factor) {
 		DeleteClassAd(key);
 	}
 
-	AcctLog->CommitTransaction();
-	
     dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d , WeightedResourcesUsed=%f\n",key,OldPrio,Priority,ResourcesUsed,WeightedResourcesUsed);
     dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f (unweighted %8.3f), UnchargedTime=%8.3f (unweighted %d), AccumulatedUsage=%5.3f (unweighted %5.3f), BeginUsageTime=%d\n",WeightedRecentUsage,RecentUsage,WeightedUnchargedTime,UnchargedTime,WeightedAccumulatedUsage,AccumulatedUsage,BeginUsageTime);
 
   }
+
+  AcctLog->CommitTransaction();
 
   // Check if the log needs to be truncated
   struct stat statbuf;

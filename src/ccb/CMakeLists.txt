@@ -17,4 +17,4 @@
  ############################################################### 
 
 condor_glob(ccbHdrs ccbSrcs "")
-condor_static_lib( ccb "${ccbHdrs};${ccbSrcs}" )
+condor_shared_lib( ccb "${ccbHdrs};${ccbSrcs}" )

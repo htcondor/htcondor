@@ -25,7 +25,6 @@
 #include "classad_newold.h"
 #include "condor_attributes.h"
 #include "basename.h"
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 
 #include <libgen.h>
@@ -40,7 +39,7 @@ void die(const char * s) {
 }
 
 MyString slurp_file(const char * filename) {
-	int fd = safe_open_wrapper(filename, O_RDONLY);
+	int fd = safe_open_wrapper_follow(filename, O_RDONLY);
 	if(fd == -1) {
 		die("failed to open input");
 	}

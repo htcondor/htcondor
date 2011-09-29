@@ -45,8 +45,13 @@ foreach $name (@logfiles) {
 	}
 }
 
-# Set up a symlink for one of the log files.
+# Set up a symlink for one of the log files (create the file it points
+# to so we don't fail because of trying to create a file via a symlink).
 my $reallog = "job_dagman_log_path.log";
+if (-e $reallog) {
+	runcmd("rm -f $reallog");
+}
+runcmd("touch $reallog");
 my $loglink = "job_dagman_log_pathC.log";
 if (-e $loglink) {
 	runcmd("rm -f $loglink");
@@ -97,7 +102,7 @@ $success = sub
 		while(<OUT>) {
 			chomp();
 			$line = $_;
-			if( $line =~ /^*.EXITING WITH STATUS 0*.$/ ) {
+			if( $line =~ /^.*EXITING WITH STATUS 0.*$/ ) {
 				$passed = 1;
 				CondorTest::debug("$name: $line\n",1);
 			}

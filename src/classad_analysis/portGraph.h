@@ -21,7 +21,6 @@
 #ifndef __PORTGRAPH_H__
 #define __PORTGRAPH_H__
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 
 // globals (for now)

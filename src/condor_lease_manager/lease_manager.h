@@ -30,9 +30,6 @@ using namespace std;
 
 #include "lease_manager_resources.h"
 
-#ifndef WANT_CLASSAD_NAMESPACE
-# define WANT_CLASSAD_NAMESPACE
-#endif
 #include "classad/classad_distribution.h"
 
 

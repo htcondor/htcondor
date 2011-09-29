@@ -45,4 +45,4 @@ if (LINUX AND WANT_FULL_DEPLOYMENT)
 	target_link_libraries(gidd_alloc -Wl,--allow-shlib-undefined)
 endif(LINUX AND WANT_FULL_DEPLOYMENT)
 
-condor_static_lib(procd_client "${ProcClientElements}")
+condor_shared_lib(procd_client "${ProcClientElements}")

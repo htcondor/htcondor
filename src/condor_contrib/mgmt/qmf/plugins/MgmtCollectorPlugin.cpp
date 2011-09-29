@@ -148,7 +148,6 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 
 		collector = new CollectorObject(agent, collName.c_str());
 
-/* disable for now
 		ReliSock *sock = new ReliSock;
 		if (!sock) {
 			EXCEPT("Failed to allocate Mgmt socket");
@@ -161,12 +160,11 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 				   daemonCore->Register_Socket((Stream *) sock,
 											   "Mgmt Method Socket",
 											   (SocketHandlercpp)
-											   &MgmtCollectorPlugin::HandleMgmtSocket,
+											   (&MgmtCollectorPlugin::HandleMgmtSocket),
 											   "Handler for Mgmt Methods.",
 											   this))) {
 			EXCEPT("Failed to register Mgmt socket");
 		}
-*/
 	}
 
 	void invalidate_all() {
@@ -218,7 +216,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 				break;
 			}
 
-			if (!makeStartdAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+			if (!makeStartdAdHashKey(hashKey, ((ClassAd *) &ad))) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
@@ -241,7 +239,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 				break;
 			}
 
-			if (!makeNegotiatorAdHashKey(hashKey, ((ClassAd *) &ad), NULL)) {
+			if (!makeNegotiatorAdHashKey(hashKey, ((ClassAd *) &ad))) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
@@ -270,7 +268,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 				break;
 			}
 
-			if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad), NULL)) {
+			if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad))) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
@@ -298,7 +296,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 		case UPDATE_GRID_AD:
 			dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received UPDATE_GRID_AD\n");
 
-			if (!makeGridAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+			if (!makeGridAdHashKey(hashKey, ((ClassAd *) &ad))) {
 				dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 			}
 
@@ -346,7 +344,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 		switch (command) {
 			case INVALIDATE_STARTD_ADS:
 				dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received INVALIDATE_STARTD_ADS\n");
-				if (!makeStartdAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+				if (!makeStartdAdHashKey(hashKey, ((ClassAd *) &ad))) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
@@ -360,7 +358,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 			break;
 			case INVALIDATE_NEGOTIATOR_ADS:
 				dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received INVALIDATE_NEGOTIATOR_ADS\n");
-				if (!makeNegotiatorAdHashKey(hashKey, ((ClassAd *) &ad), NULL)) {
+				if (!makeNegotiatorAdHashKey(hashKey, ((ClassAd *) &ad))) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
@@ -374,7 +372,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 			break;
 			case INVALIDATE_SCHEDD_ADS:
 				dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received INVALIDATE_SCHEDD_ADS\n");
-				if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad), NULL)) {
+				if (!makeScheddAdHashKey(hashKey, ((ClassAd *) &ad))) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
@@ -388,7 +386,7 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 			break;
 			case INVALIDATE_GRID_ADS:
 				dprintf(D_FULLDEBUG, "MgmtCollectorPlugin: Received INVALIDATE_GRID_ADS\n");
-				if (!makeGridAdHashKey(hashKey, ((ClassAd *) &ad), condor_sockaddr::null)) {
+				if (!makeGridAdHashKey(hashKey, ((ClassAd *) &ad))) {
 					dprintf(D_FULLDEBUG, "Could not make hashkey -- ignoring ad\n");
 					return;
 				}
@@ -409,15 +407,13 @@ struct MgmtCollectorPlugin : public Service, CollectorPlugin
 		}
 	}
 
-/* disable for now
 	int
-	HandleMgmtSocket(Service *, Stream *)
+	HandleMgmtSocket(/*Service *,*/ Stream *)
 	{
 		singleton->getInstance()->pollCallbacks();
 
 		return KEEP_STREAM;
 	}
-*/
 };
 
 static MgmtCollectorPlugin instance;

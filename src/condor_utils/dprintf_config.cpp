@@ -24,7 +24,7 @@
 **	Set up the various dprintf variables based on the configuration file.
 **
 ************************************************************************/
-
+#define _FILE_OFFSET_BITS 64
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_string.h" 

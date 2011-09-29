@@ -50,18 +50,18 @@ extern char **environ;
 /* the path the main configuration file */
 #define CONF_FILE			"/etc/condor/privsep_config"
 
-id_range_list conf_safe_uids;
-id_range_list conf_safe_gids;
+safe_id_range_list conf_safe_uids;
+safe_id_range_list conf_safe_gids;
 
 FILE *cmd_conf_stream = 0;
 const char *cmd_conf_stream_name = 0;
 
 typedef struct configuration {
-    id_range_list valid_caller_uids;
-    id_range_list valid_caller_gids;
+    safe_id_range_list valid_caller_uids;
+    safe_id_range_list valid_caller_gids;
 
-    id_range_list valid_target_uids;
-    id_range_list valid_target_gids;
+    safe_id_range_list valid_target_uids;
+    safe_id_range_list valid_target_gids;
 
     string_list valid_dirs;
 
@@ -75,11 +75,11 @@ typedef struct configuration {
 
 static void init_configuration(configuration *c)
 {
-    init_id_range_list(&c->valid_caller_uids);
-    init_id_range_list(&c->valid_caller_gids);
+    safe_init_id_range_list(&c->valid_caller_uids);
+    safe_init_id_range_list(&c->valid_caller_gids);
 
-    init_id_range_list(&c->valid_target_uids);
-    init_id_range_list(&c->valid_target_gids);
+    safe_init_id_range_list(&c->valid_target_uids);
+    safe_init_id_range_list(&c->valid_target_gids);
     init_string_list(&c->valid_dirs);
 
     c->transferd_executable = 0;
@@ -92,25 +92,25 @@ static void init_configuration(configuration *c)
 
 static void validate_configuration(configuration *c)
 {
-    if (is_id_list_empty(&c->valid_caller_uids)) {
+    if (safe_is_id_list_empty(&c->valid_caller_uids)) {
         fatal_error_exit(1,
                          "valid-caller-uids not set in configuration file %s",
                          CONF_FILE);
     }
 
-    if (is_id_list_empty(&c->valid_caller_gids)) {
+    if (safe_is_id_list_empty(&c->valid_caller_gids)) {
         fatal_error_exit(1,
                          "valid-caller-gids not set in configuration file %s",
                          CONF_FILE);
     }
 
-    if (is_id_list_empty(&c->valid_target_uids)) {
+    if (safe_is_id_list_empty(&c->valid_target_uids)) {
         fatal_error_exit(1,
                          "valid-target-uids not set in configuration file %s",
                          CONF_FILE);
     }
 
-    if (is_id_list_empty(&c->valid_target_gids)) {
+    if (safe_is_id_list_empty(&c->valid_target_gids)) {
         fatal_error_exit(1,
                          "valid-target-gids not set in configuration file %s",
                          CONF_FILE);
@@ -146,7 +146,7 @@ typedef struct exec_params {
     char *stderr_filename;
     int is_std_univ;
     gid_t tracking_group;
-    id_range_list keep_open_fds;
+    safe_id_range_list keep_open_fds;
 } exec_params;
 
 static void init_exec_params(exec_params *c)
@@ -166,7 +166,7 @@ static void init_exec_params(exec_params *c)
 
     c->tracking_group = 0;
 
-    init_id_range_list(&c->keep_open_fds);
+    safe_init_id_range_list(&c->keep_open_fds);
 }
 
 static void validate_exec_params(exec_params *c)
@@ -353,7 +353,7 @@ config_parse_uid(uid_t * uid, const char *key, const char *value,
 {
     const char *endptr;
 
-    *uid = parse_uid(value, &endptr);
+    *uid = safe_strto_uid(value, &endptr);
 
     check_id_error(key, value, cf, endptr, "uid");
 }
@@ -364,40 +364,40 @@ config_parse_gid(gid_t * gid, const char *key, const char *value,
 {
     const char *endptr;
 
-    *gid = parse_gid(value, &endptr);
+    *gid = safe_strto_gid(value, &endptr);
 
     check_id_error(key, value, cf, endptr, "gid");
 }
 
 static void
-config_parse_id_list(id_range_list *list, const char *key,
+config_parse_id_list(safe_id_range_list *list, const char *key,
                      const char *value, config_file *cf)
 {
     const char *endptr;
 
-    parse_id_list(list, value, &endptr);
+    safe_strto_id_list(list, value, &endptr);
 
     check_id_error(key, value, cf, endptr, "id");
 }
 
 static void
-config_parse_uid_list(id_range_list *list, const char *key,
+config_parse_uid_list(safe_id_range_list *list, const char *key,
                       const char *value, config_file *cf)
 {
     const char *endptr;
 
-    parse_uid_list(list, value, &endptr);
+    safe_strto_uid_list(list, value, &endptr);
 
     check_id_error(key, value, cf, endptr, "uid");
 }
 
 static void
-config_parse_gid_list(id_range_list *list, const char *key,
+config_parse_gid_list(safe_id_range_list *list, const char *key,
                       const char *value, config_file *cf)
 {
     const char *endptr;
 
-    parse_gid_list(list, value, &endptr);
+    safe_strto_gid_list(list, value, &endptr);
 
     check_id_error(key, value, cf, endptr, "gid");
 }
@@ -473,7 +473,7 @@ static int process_config_file(configuration *c, const char *filename)
         fatal_error_exit(1,
                          "error in checking safety of configuration file path (%s)",
                          filename);
-    } else if (r == PATH_UNTRUSTED) {
+    } else if (r == SAFE_PATH_UNTRUSTED) {
         fatal_error_exit(1,
                          "unsafe permissions in configuration file path (%s)",
                          filename);
@@ -712,17 +712,17 @@ static void init_safe_conf_uids(void)
     const char *endptr;
     (void) endptr;
 
-    init_id_range_list(&conf_safe_uids);
-    init_id_range_list(&conf_safe_gids);
+    safe_init_id_range_list(&conf_safe_uids);
+    safe_init_id_range_list(&conf_safe_gids);
 
 #ifdef CONF_SAFE_UIDS
-    parse_uid_list(&conf_safe_uids, CONF_SAFE_UIDS, &endptr);
+    safe_strto_uid_list(&conf_safe_uids, CONF_SAFE_UIDS, &endptr);
 
     safe_conf_check_id_error(CONF_SAFE_UIDS, endptr, "uid");
 #endif
 
 #ifdef CONF_SAFE_GIDS
-    parse_gid_list(&conf_safe_gids, CONF_SAFE_GIDS, &endptr);
+    safe_strto_gid_list(&conf_safe_gids, CONF_SAFE_GIDS, &endptr);
 
     safe_conf_check_id_error(CONF_SAFE_GIDS, endptr, "gid");
 #endif
@@ -733,12 +733,12 @@ static void validate_caller_ids(configuration *c)
     uid_t caller_uid = getuid();
     gid_t caller_gid = getgid();
 
-    if (!is_id_in_list(&c->valid_caller_uids, caller_uid)) {
+    if (!safe_is_id_in_list(&c->valid_caller_uids, caller_uid)) {
         fatal_error_exit(1, "invalid caller uid (%lu)",
                          (unsigned long) caller_uid);
     }
 
-    if (!is_id_in_list(&c->valid_caller_gids, caller_gid)) {
+    if (!safe_is_id_in_list(&c->valid_caller_gids, caller_gid)) {
         fatal_error_exit(1, "invalid caller gid (%lu)",
                          (unsigned long) caller_gid);
     }
@@ -783,7 +783,7 @@ static char *do_common_dir_cmd_tasks(configuration *c,
         fatal_error_exit(1,
                          "error in checking safety of directory parent (%s)",
                          dir_parent);
-    } else if (r == PATH_UNTRUSTED) {
+    } else if (r == SAFE_PATH_UNTRUSTED) {
         fatal_error_exit(1,
                          "unsafe permissions in directory parent (%s)",
                          dir_parent);
@@ -1022,13 +1022,13 @@ static void do_chown_dir(configuration *c)
 
 static void do_start_procd(configuration *c)
 {
-    id_range_list all_ids;
+    safe_id_range_list all_ids;
     exec_params procd_conf;
     char **procd_argv;
     int r;
 
-    init_id_range_list(&all_ids);
-    add_id_range_to_list(&all_ids, 0, UINT_MAX);
+    safe_init_id_range_list(&all_ids);
+    safe_add_id_range_to_list(&all_ids, 0, UINT_MAX);
 
     // read in the execution config (we'll only be looking
     // at the executable path and the argument list)
@@ -1052,7 +1052,7 @@ static void do_start_procd(configuration *c)
         fatal_error_exit(1,
                          "error in checking safety of procd file path (%s)",
                          procd_conf.exec_filename);
-    } else if (r == PATH_UNTRUSTED) {
+    } else if (r == SAFE_PATH_UNTRUSTED) {
         fatal_error_exit(1, "unsafe permissions procd file path (%s)",
                          procd_conf.exec_filename);
     }
@@ -1084,9 +1084,9 @@ static void do_start_transferd(configuration *c)
     int r;
     char *args[2];
     int error_fd;
-    id_range_list keep_open_fds;
+    safe_id_range_list keep_open_fds;
 
-    init_id_range_list(&keep_open_fds);
+    safe_init_id_range_list(&keep_open_fds);
 
     r = process_transferd_config(&td_conf);
     if (r != 0) {
@@ -1095,7 +1095,7 @@ static void do_start_transferd(configuration *c)
 
     error_fd = get_error_fd();
     if (error_fd != -1) {
-        add_id_to_list(&keep_open_fds, error_fd);
+        safe_add_id_to_list(&keep_open_fds, error_fd);
     }
 
     args[0] = c->transferd_executable;
@@ -1132,7 +1132,7 @@ static void do_exec_job(configuration *c)
 
     error_fd = get_error_fd();
     if (error_fd != -1) {
-        add_id_to_list(&exec_conf.keep_open_fds, error_fd);
+        safe_add_id_to_list(&exec_conf.keep_open_fds, error_fd);
     }
 
     r = safe_exec_as_user(exec_conf.user_uid,

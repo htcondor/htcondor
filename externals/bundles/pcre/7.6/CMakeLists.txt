@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-if ( NOT PROPER )
+if ( NOT PROPER AND NOT LINUX )
 
 	condor_pre_external( PCRE pcre-7.6 "lib;include" "include/pcre.h")
 
@@ -30,8 +30,10 @@ if ( NOT PROPER )
 						  cp libpcre.dll ${PCRE_INSTALL_LOC}/lib \r\n
 						  cp pcre.h ${PCRE_INSTALL_LOC}/include )
 	else()
-		set (PCRE_PATCH  patch --binary -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/longlong.patch &&
-						 patch --binary -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/unittests.patch )
+# I believe we only neede the longlong patch on HPUX, but not willing to turn it off and potentially
+# break other stuff just yet...
+		set (PCRE_PATCH  patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/longlong.patch &&
+						 patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/unittests.patch )
 		set (PCRE_CONFIGURE ./configure --prefix=${PCRE_INSTALL_LOC} --disable-cpp )
 		set (PCRE_MAKE make && make test )
 		set (PCRE_INSTALL make install )
@@ -66,11 +68,13 @@ if ( NOT PROPER )
 
 	condor_post_external( pcre include OFF )
 
-else( NOT PROPER )
+	set( HAVE_PCRE_H ON PARENT_SCOPE )
+
+else( NOT PROPER AND NOT LINUX )
 
 	find_multiple( "pcre" PCRE_FOUND )
 
-endif( NOT PROPER )
+endif( NOT PROPER AND NOT LINUX )
 
 ##################### 
 ## Hard failure if there is no PCRE
@@ -78,7 +82,6 @@ if (PCRE_FOUND)
 	message (STATUS "external configured (PCRE_FOUND=${PCRE_FOUND})")
 	set( PCRE_FOUND ${PCRE_FOUND} PARENT_SCOPE )
 	set( HAVE_EXT_PCRE ON PARENT_SCOPE )
-	set( HAVE_PCRE_H ON PARENT_SCOPE )
 else()
 	message (FATAL_ERROR "pcre not found and is required to build")
 endif(PCRE_FOUND)

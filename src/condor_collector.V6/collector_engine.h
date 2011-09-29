@@ -73,7 +73,7 @@ class CollectorEngine : public Service
 	bool setCollectorRequirements( char const *str, MyString &error_desc );
 
   private:
-	typedef bool (*HashFunc) (AdNameHashKey &, ClassAd *, const condor_sockaddr&);
+	typedef bool (*HashFunc) (AdNameHashKey &, ClassAd *);
 
 	bool LookupByAdType(AdTypes, CollectorHashTable *&, HashFunc &);
  

@@ -93,10 +93,10 @@ if($stable == 1) {
 		CondorTest::debug("-any: $line\n",$debuglevel);
 		if( $line =~ /^(\w+):(.*)$/ ) {
 			if( !(exists $discoveries{$1})) {
-				CondorTest::debug("Adding ($1/$2) to hash\n",$debuglevel);
+				print "Adding ($1/$2) to hash\n";
 				$discoveries{$1} = $2;
 			} else {
-				#print "($1) already found....\n";
+				print "($1) already found....\n";
 			}
 		}
 	}
@@ -106,10 +106,10 @@ if($stable == 1) {
 		if(! (exists $discoveries{$search})) {
 			print "bad\n";
 			$done = 0;
-			CondorTest::debug("Expected ad type \"$search\" not discovered(Failure of Test)\n",$debuglevel);
+			print "Expected ad type \"$search\" not discovered(Failure of Test)\n";
 			last;
 		} else {
-			CondorTest::debug("Expected Ad Type ($search) found!\n",$debuglevel);
+			print "Expected Ad Type ($search) found!\n";
 		}
 	}
 	if($done == 1) {

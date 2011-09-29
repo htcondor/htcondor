@@ -200,6 +200,15 @@ public:
 		// that was originally created with no expiration time.
 	bool SetSessionExpiration(char const *session_id,time_t expiration_time);
 
+		// This is used to mark a session as being in a state where it is
+		// just hanging around for a short period in case some pending
+		// communication is still in flight (not essential communication,
+		// but stuff that would be nice to handle without generating scary
+		// error messages).  It is understood that if this session has
+		// the same session id as a newly requested non-negotiated security
+		// session, the lingering session will simply be replaced.
+	bool SetSessionLingerFlag(char const *session_id);
+
  private:
     void                    remove_commands(KeyCacheEntry * keyEntry);
 

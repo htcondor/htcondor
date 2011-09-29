@@ -260,11 +260,17 @@ void debug_cache_set_size(int size)
 }
 
 /*--------------------------------------------------------------------------*/
-void check_warning_strictness( strict_level_t strictness )
+bool check_warning_strictness( strict_level_t strictness, bool quit_if_error )
 {
 	if ( Dagman::_strict >= strictness ) {
 		debug_printf( DEBUG_QUIET, "ERROR: Warning is fatal "
 					"error because of DAGMAN_USE_STRICT setting\n" );
-		main_shutdown_rescue( EXIT_ERROR );
+		if ( quit_if_error ) {
+			main_shutdown_rescue( EXIT_ERROR );
+		}
+
+		return true;
 	}
+
+	return false;
 }

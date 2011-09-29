@@ -349,6 +349,39 @@ Resource::periodic_checkpoint( void )
 	return TRUE;
 }
 
+int Resource::suspend_claim()
+{
+
+	switch( state() ) {
+	case claimed_state:
+		change_state( suspended_act );
+		return TRUE;
+		break;
+	default:
+		dprintf( D_ALWAYS, "Can not suspend claim when\n", r_name );
+		break;
+	}
+	
+	return FALSE;
+}
+
+int Resource::continue_claim()
+{
+	if ( suspended_act == r_state->activity() )
+	{
+		if (r_cur->resumeClaim())
+		{
+			change_state( busy_act );
+			return TRUE;
+		}
+	}
+	else
+	{
+		dprintf( D_ALWAYS, "\n", r_name );
+	}
+	
+	return FALSE;
+}
 
 int
 Resource::request_new_proc( void )
@@ -1781,6 +1814,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	resmgr->adlist_publish( r_id, cap, mask );
 
     // Publish the monitoring information
+    daemonCore->dc_stats.Publish(*cap);
     daemonCore->monitor_data.ExportData( cap );
 
 	if( IS_PUBLIC(mask) && IS_SHARED_SLOT(mask) ) {

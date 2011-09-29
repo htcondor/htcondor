@@ -378,7 +378,7 @@ pseudo_report_file_info_new( char *name, long long open_count, long long read_co
 }
 
 int
-pseudo_getwd( char *&path )
+pseudo_getwd_special( char *&path )
 {
 	path = strdup( CurrentWorkingDir.Value() );
 	return 1;
@@ -404,7 +404,7 @@ pseudo_send_a_file( const char *path, mode_t mode )
 	omask = umask( 022 );
 
 		/* Open the file for writing, send back status from the open */
-	if( (fd=safe_open_wrapper(path,O_WRONLY|O_CREAT|O_TRUNC,mode)) < 0 ) {
+	if( (fd=safe_open_wrapper_follow(path,O_WRONLY|O_CREAT|O_TRUNC,mode)) < 0 ) {
 		(void)umask(omask);
 		return -1;
 	}
@@ -459,14 +459,14 @@ pseudo_get_file( const char *name )
 
 		/* Open the remote file and return status from the open */
 	errno = 0;
-	fd = safe_open_wrapper( name, O_RDONLY, 0 );
+	fd = safe_open_wrapper_follow( name, O_RDONLY, 0 );
 	dprintf(D_SYSCALLS, "\topen(%s,O_RDONLY,0) = %d, errno = %d\n",
 														name, fd, errno );
 	if( fd < 0 ) {
 		return -1;
 	}
 
-		/* Send the status from safe_open_wrapper() so client knows we are going ahead */
+		/* Send the status from safe_open_wrapper_follow() so client knows we are going ahead */
 	syscall_sock->encode();
 	assert( syscall_sock->code(fd) );
 
@@ -767,7 +767,7 @@ pseudo_get_file_stream(
 		priv = set_condor_priv();
 	}
 
-	file_fd=safe_open_wrapper(file,O_RDONLY);
+	file_fd=safe_open_wrapper_follow(file,O_RDONLY);
 
 	if (CkptFile || ICkptFile) set_priv(priv); // restore user privileges
 
@@ -915,7 +915,7 @@ pseudo_put_file_stream(
 
 	int open_attempts=0;
 	for(open_attempts=0;open_attempts<100;open_attempts++) {
-		file_fd=safe_open_wrapper(file,O_WRONLY|O_CREAT|O_TRUNC,0664);
+		file_fd=safe_open_wrapper_follow(file,O_WRONLY|O_CREAT|O_TRUNC,0664);
 
 		if( file_fd < 0 && errno == ENOENT && (CkptFile || ICkptFile) ) {
 
@@ -1954,7 +1954,7 @@ simp_log( const char *msg )
 	omask = umask( 022 );
 
 	if( !fp ) {
-		if( (fd=safe_open_wrapper(name,O_WRONLY|O_CREAT,0666)) < 0 ) {
+		if( (fd=safe_open_wrapper_follow(name,O_WRONLY|O_CREAT,0666)) < 0 ) {
 			EXCEPT( "Can't create/open \"%s\"", name );
 		}
 		close( fd );
@@ -2062,7 +2062,11 @@ pseudo_subproc_status(int subproc, int *statp, struct rusage *rusagep)
 
 #endif /* PVM_RECEIVE */
 
-int
+/* XXX Hrm, there is a type size mismatch between the off_t and the ssize_t
+	from read's return type for this function. That is annoying. At
+	least they are both of the right signedness.
+*/
+off_t
 pseudo_lseekread(int fd, off_t offset, int whence, void *buf, size_t len)
 {
         int rval;
@@ -2075,7 +2079,11 @@ pseudo_lseekread(int fd, off_t offset, int whence, void *buf, size_t len)
         return rval;    
 }
 
-int
+/* XXX Hrm, there is a type size mismatch between the off_t and the ssize_t
+	from write's return type for this function. That is annoying. At
+	least they are both of the right signedness.
+*/
+off_t
 pseudo_lseekwrite(int fd, off_t offset, int whence, const void *buf, size_t len)
 {
 	int rval;

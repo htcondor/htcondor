@@ -653,7 +653,7 @@ SharedPortEndpoint::InitRemoteAddress()
 		EXCEPT("SHARED_PORT_DAEMON_AD_FILE must be defined");
 	}
 
-	FILE *fp = safe_fopen_wrapper(shared_port_server_ad_file.Value(),"r");
+	FILE *fp = safe_fopen_wrapper_follow(shared_port_server_ad_file.Value(),"r");
 	if( !fp ) {
 		dprintf(D_ALWAYS,"SharedPortEndpoint: failed to open %s: %s\n",
 				shared_port_server_ad_file.Value(), strerror(errno));

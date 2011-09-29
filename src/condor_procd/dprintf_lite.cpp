@@ -100,7 +100,7 @@ open_debug_file(const char flags[])
 	   since PRIV_CONDOR changes euid now. */
 
 	errno = 0;
-	if( (fp=safe_fopen_wrapper(debug_fn,flags,0644)) == NULL ) {
+	if( (fp=safe_fopen_wrapper_follow(debug_fn,flags,0644)) == NULL ) {
 		save_errno = errno;
 
 		if (debug_fp == 0) {

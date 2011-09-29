@@ -37,7 +37,7 @@ int ftruncate( int file_handle, long size ) {
 int truncate( const char *path, long size ) {
 	int fh, ret;
 	
-	if ( fh = safe_open_wrapper(path, O_RDWR | O_CREAT, S_IREAD | S_IWRITE) != -1 ) {
+	if ( fh = safe_open_wrapper_follow(path, O_RDWR | O_CREAT, S_IREAD | S_IWRITE) != -1 ) {
 		ret = ftruncate(fh, size);
 		close(fh);
 		return ret;

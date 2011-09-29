@@ -15,48 +15,33 @@
  # limitations under the License. 
  # 
  ############################################################### 
-if (NOT WINDOWS)
-    option(WITH_ZLIB "Compiling with support for ZLIB" ON)
-endif()
 
-if (WITH_ZLIB)
+if ( NOT CLIPPED )
 
-	if ( NOT PROPER )
+	condor_pre_external( ZLIB  zlib-1.2.3 "lib;include" "lib/libz.a")
 
-		condor_pre_external( ZLIB  zlib-1.2.3 "lib;include" "lib/libz.a")
+	ExternalProject_Add(zlib
+			    #-- Download Step ----------
+				DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${ZLIB_VER}.tar.gz ${CMD_TERM}
+			    DOWNLOAD_DIR ${ZLIB_STAGE}/dl
+			    URL http://parrot.cs.wisc.edu/externals/${ZLIB_VER}.tar.gz
+			    #--Configure step ----------
+			    CONFIGURE_COMMAND cd ${ZLIB_VER} && ./configure --prefix=${ZLIB_INSTALL_LOC}
+			    #--Build Step ----------
+			    BUILD_COMMAND cd ${ZLIB_VER} && make
+			    BUILD_IN_SOURCE 1
+			    #--install Step ----------
+			    INSTALL_DIR ${ZLIB_INSTALL_LOC}
+			    INSTALL_COMMAND cd ${ZLIB_VER} && make install )
 
-		ExternalProject_Add(zlib
-				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${ZLIB_VER}.tar.gz ${CMD_TERM}
-				    DOWNLOAD_DIR ${ZLIB_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/${ZLIB_VER}.tar.gz
-				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${ZLIB_VER} && ./configure --prefix=${ZLIB_INSTALL_LOC}
-				    #--Build Step ----------
-				    BUILD_COMMAND cd ${ZLIB_VER} && make
-				    BUILD_IN_SOURCE 1
-				    #--install Step ----------
-				    INSTALL_DIR ${ZLIB_INSTALL_LOC}
-				    INSTALL_COMMAND cd ${ZLIB_VER} && make install )
+	condor_post_external( zlib include OFF )
 
-		# Set the target dependencies which the rest of condor depends on.
-		set(ZLIB_FOUND "${ZLIB_INSTALL_LOC}/lib/libz.a")
-		condor_post_external( zlib include OFF )
+	install ( FILES "${ZLIB_INSTALL_LOC}/lib/libz.a" DESTINATION ${C_LIB} RENAME libcondor_z.a )
 
-		install ( FILES "${ZLIB_INSTALL_LOC}/lib/libz.a" DESTINATION ${C_LIB} RENAME libcondor_z.a)
+	message (STATUS "external configured (zlib)")
 
-	else( NOT PROPER )
-
-		find_multiple( "z" ZLIB_FOUND )
-
-	endif( NOT PROPER )
-
-	message (STATUS "external configured (ZLIB_FOUND=${ZLIB_FOUND})")
-	set( ZLIB_FOUND ${ZLIB_FOUND} PARENT_SCOPE )
-	set( HAVE_EXT_ZLIB ON PARENT_SCOPE )
-
-else(WITH_ZLIB)
+else( NOT CLIPPED )
 
 	message (STATUS "external skipped (zlib)")
 
-endif(WITH_ZLIB)
+endif( NOT CLIPPED )

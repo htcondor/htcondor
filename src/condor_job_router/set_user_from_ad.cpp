@@ -26,7 +26,6 @@
 #include "condor_classad.h"
 #include "classad_newold.h"
 #include "condor_uid.h"
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 
 void set_user_from_ad(classad::ClassAd const &ad)

@@ -30,11 +30,7 @@
  *
  *--------------------------------------------------------------------*/
 
-#if defined( CLASSAD_DISTRIBUTION )
 #include "classad/classad_distribution.h"
-#else
-#include "classad.h"
-#endif
 #include "classad/lexerSource.h"
 #include "classad/xmlSink.h"
 #include <fstream>

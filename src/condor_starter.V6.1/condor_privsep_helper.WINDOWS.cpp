@@ -55,22 +55,31 @@ CondorPrivSepHelper::initialize_user(const char* name)
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 }
 
+char const *
+CondorPrivSepHelper::get_user_name()
+{
+	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
+	return m_user_name;
+}
+
 void
 CondorPrivSepHelper::initialize_sandbox(const char* path)
 {
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
 }
 
-void
-CondorPrivSepHelper::chown_sandbox_to_user()
+bool
+CondorPrivSepHelper::chown_sandbox_to_user(PrivSepError &)
 {
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
+	return false;
 }
 
-void
-CondorPrivSepHelper::chown_sandbox_to_condor()
+bool
+CondorPrivSepHelper::chown_sandbox_to_condor(PrivSepError &)
 {
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
+	return false;
 }
 
 int

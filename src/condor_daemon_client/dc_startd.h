@@ -131,7 +131,7 @@ public:
 						int timeout = -1 );
 
 	bool suspendClaim( ClassAd* reply, int timeout = -1 );
-
+	
 	bool resumeClaim( ClassAd* reply, int timeout = -1 );
 
 	bool deactivateClaim( VacateType type, ClassAd* reply,
@@ -148,6 +148,16 @@ public:
 						ClassAd* reply, 
 						int timeout = -1 );
 
+	/**
+	 * Non-COD based suspendClaim
+	 */
+	bool _suspendClaim ();
+	
+	/**
+	 * Non-COD based continueClaim
+	 */
+	bool _continueClaim();
+	
 	bool vacateClaim( const char* name );
 
 	bool checkpointJob( const char* name );

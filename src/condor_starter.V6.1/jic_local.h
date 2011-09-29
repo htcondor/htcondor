@@ -84,13 +84,11 @@ public:
 			here is to make sure we've got full paths, and if they're
 			not already, we prepend the job's iwd.
 			@param attr_name ClassAd attribute name to lookup
-			@param alt_name Alternate ClassAd attribute name
 			@return a strdup() allocated string for the filename we 
 			        care about, or NULL if it's not in the job ad or
 					points to /dev/null (or equiv).
 		*/
-	char* getJobStdFile( const char* attr_name,
-						 const char* alt_name = NULL );
+	char* getJobStdFile( const char* attr_name );
 
 		// // // // // // // // // // // //
 		// Job Actions

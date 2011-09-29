@@ -114,8 +114,7 @@ public:
 		/** Return a string containing a copy of the full pathname of
 			the requested file.
 		*/
-	virtual char* getJobStdFile( const char* attr_name,
-								 const char* alt_name = NULL ) = 0;
+	virtual char* getJobStdFile( const char* attr_name ) = 0;
 
 	virtual bool streamInput();
 	virtual bool streamOutput();

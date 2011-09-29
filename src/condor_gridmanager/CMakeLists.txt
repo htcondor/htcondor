@@ -61,6 +61,9 @@ if(NOT WIN_EXEC_NODE_ONLY)
 
         if (HAVE_EXT_UNICOREGAHP)
             condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
+            # unfortunately libutils comes with undefined symbols introduced by
+            # libdaemon_core (even when linking libutils to it)
+            target_link_libraries(unicore_gahp -Wl,--allow-shlib-undefined)
         endif()
 
         if (HAVE_EXT_BLAHP)

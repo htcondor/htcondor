@@ -27,7 +27,6 @@
 #include "condor_classad.h"
 #include "conversion.h"
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 
 namespace classad_analysis {

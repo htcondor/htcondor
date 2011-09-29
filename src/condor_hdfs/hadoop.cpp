@@ -311,6 +311,10 @@ void Hadoop::writeConfigFile() {
                         free(hdfs_allow);
                 }
                 char *tmp_str = allow_list.print_to_delimed_string(",");
+                if( tmp_str == NULL ) {
+                    tmp_str = strdup("");
+                }
+                ASSERT(tmp_str != NULL);
                 writeXMLParam("dfs.net.allow", tmp_str, &xml);
                 free(tmp_str);
         }
@@ -321,7 +325,17 @@ void Hadoop::writeConfigFile() {
                 free(hdfs_deny);
         } else {
                 StringList deny_list;
+                hdfs_deny = param("DENY_READ");
+                if (hdfs_deny != NULL) {
+                        deny_list.append(hdfs_deny);
+                        free(hdfs_deny);
+                }
                 hdfs_deny = param("HOSTDENY_READ");
+                if (hdfs_deny != NULL) {
+                        deny_list.append(hdfs_deny);
+                        free(hdfs_deny);
+                }
+                hdfs_deny = param("DENY_WRITE");
                 if (hdfs_deny != NULL) {
                         deny_list.append(hdfs_deny);
                         free(hdfs_deny);
@@ -332,6 +346,10 @@ void Hadoop::writeConfigFile() {
                         free(hdfs_deny);
                 }
                 char *tmp_str = deny_list.print_to_delimed_string(",");
+                if( tmp_str == NULL ) {
+                    tmp_str = strdup("");
+                }
+                ASSERT(tmp_str != NULL);
                 writeXMLParam("dfs.net.deny", tmp_str, &xml);
                 free(tmp_str);
         }

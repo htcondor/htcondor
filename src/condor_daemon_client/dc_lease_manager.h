@@ -26,7 +26,6 @@
 #include "stream.h"
 #include "daemon.h"
 
-#define WANT_CLASSAD_NAMESPACE
 #include "classad/classad_distribution.h"
 
 #include "dc_lease_manager_lease.h"

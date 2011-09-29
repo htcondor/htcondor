@@ -4,18 +4,18 @@ CONFIG job_dagman_jobstate_log.config
 
 # This job queues two procs that fail, but the post script succeeds.
 Job NodeA job_dagman_jobstate_log-nodeA.cmd
-Script Pre NodeA job_dagman_jobstate_log-pre.pl $(JOB)
-Script Post NodeA job_dagman_jobstate_log-post.pl $(JOB)
+Script Pre NodeA job_dagman_jobstate_log-pre.pl $JOB
+Script Post NodeA job_dagman_jobstate_log-post.pl $JOB
 
 # The job queues two procs that succeed.
 Job NodeB job_dagman_jobstate_log-nodeB.cmd
-Script Pre NodeB job_dagman_jobstate_log-pre.pl $(JOB)
-Script Post NodeB job_dagman_jobstate_log-post.pl $(JOB)
+Script Pre NodeB job_dagman_jobstate_log-pre.pl $JOB
+Script Post NodeB job_dagman_jobstate_log-post.pl $JOB
 
 # This node's post script fails the first time, but then succeeds.
 Job NodeC job_dagman_jobstate_log-nodeC.cmd
-Script Pre NodeC job_dagman_jobstate_log-pre.pl $(JOB)
-Script Post NodeC job_dagman_jobstate_log-nodeC-post.pl $(JOB) $RETRY
+Script Pre NodeC job_dagman_jobstate_log-pre.pl $JOB
+Script Post NodeC job_dagman_jobstate_log-nodeC-post.pl $JOB $RETRY
 Retry NodeC 1
 
 # This node will hold and release the DAG.
@@ -24,7 +24,7 @@ Job NodeD job_dagman_jobstate_log-nodeD.cmd
 # This node's condor_submit attempts will fail; we have a POST script
 # so the node still succeeds.
 Job NodeE job_dagman_jobstate_log-nodeE.cmd
-Script Post NodeE job_dagman_jobstate_log-post.pl $(JOB)
+Script Post NodeE job_dagman_jobstate_log-post.pl $JOB
 
 Parent NodeA Child NodeB
 Parent NodeB Child NodeC

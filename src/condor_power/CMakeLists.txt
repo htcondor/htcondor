@@ -16,18 +16,23 @@
  # 
  ############################################################### 
 
+condor_exe( condor_power_state "power_state.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
+# unfortunately libutils comes with undefined symbols introduced by
+# libdaemon_core (even when linking libutils to it)
+target_link_libraries(condor_power_state -Wl,--allow-shlib-undefined)
+
+if (NOT WIN_EXEC_NODE_ONLY)
 
 	condor_exe( condor_power "power.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
 	# unfortunately libutils comes with undefined symbols introduced by
 	# libdaemon_core (even when linking libutils to it)
 	target_link_libraries(condor_power -Wl,--allow-shlib-undefined)
 
-	condor_exe( power_state "power_state.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
+	condor_selective_glob( "rooster*" ROOSTER )
+
+	condor_exe( condor_rooster "${ROOSTER}" ${C_LIBEXEC} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
 	# unfortunately libutils comes with undefined symbols introduced by
 	# libdaemon_core (even when linking libutils to it)
-	target_link_libraries(power_state -Wl,--allow-shlib-undefined)
+	target_link_libraries(condor_rooster -Wl,--allow-shlib-undefined)
 
-condor_selective_glob( "rooster*" ROOSTER )
-
-condor_exe( condor_rooster "${ROOSTER}" ${C_LIBEXEC} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
-
+endif()

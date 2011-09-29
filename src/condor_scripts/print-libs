@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Given an executable, print out the full paths of the shared libraries
+# it depends on, as determined by ldd. Libraries that can't be found
+# are omitted. A grep filter file can be provided to restrict the
+# results.
+
+if [ "$1" = "" ] ; then
+  echo "Usage:" `basename $0` "<executable> [<pattern file>]"
+  exit 1
+fi
+if [ ! -x $a ] ; then
+  echo "$a isn't an executable!"
+  exit 1
+fi
+executable=$1
+if [ "$2" != "" ] ; then
+  grep_args="-f $2"
+else
+  grep_args=.
+fi
+
+ldd $executable | grep '[^ ] => [^ n]' | sed 's/[^>]*> \([^ ]*\).*/\1/' | sort -u | grep $grep_args

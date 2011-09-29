@@ -74,18 +74,22 @@ main(int argc, char* argv[])
 		fatal_error();
 	}
 
-	// set up an Env object that we'll use for the job. we'll initialize
-	// it with the environment that Condor sends us then merge on top of
-	// that the environment that glexec prepared for us
-	//
+	// set up an Env object that we'll use for the job. We'll
+	// merge the environment that Condor sends us on top of that
+	// the environment that glexec prepared for us.  Therefore,
+	// settings from Condor win in case of conflict.  This is
+	// important for X509_USER_PROXY and for PATH.
+
 	Env env;
+
+	env.MergeFrom(environ); // glexec environment
+
 	char* env_buf = read_env();
 	MyString merge_err;
 	if (!env.MergeFromV2Raw(env_buf, &merge_err)) {
 		err.sprintf("Env::MergeFromV2Raw error: %s", merge_err.Value());
 		fatal_error();
 	}
-	env.MergeFrom(environ);
 	delete[] env_buf;
 
 	// now prepare the job's standard FDs
@@ -205,9 +209,9 @@ get_std_fd(int std_fd, char* name)
 		else {
 			flags = O_WRONLY | O_CREAT | O_TRUNC;
 		}
-		new_fd = safe_open_wrapper(name, flags, 0600);
+		new_fd = safe_open_wrapper_follow(name, flags, 0600);
 		if (new_fd == -1) {
-			err.sprintf("safe_open_wrapper error on %s: %s",
+			err.sprintf("safe_open_wrapper_follow error on %s: %s",
 			            name,
 			            strerror(errno));
 			fatal_error();

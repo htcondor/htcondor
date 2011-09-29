@@ -36,7 +36,7 @@ using namespace aviary::util;
 SubmissionObject::SubmissionObject (
                                      const char *_name,
                                      const char *_owner ) :
-        ownerSet ( false )
+        ownerSet ( false ), m_oldest_qdate(0)
 {
 	m_name = _name;
     if ( _owner )
@@ -218,4 +218,17 @@ SubmissionObject::getJobSummaries ( JobSummaryPairCollection &jobs)
 		jobs.push_back(makeJobPair(*i));
     }
 
+}
+
+// setter/getters for tracking oldest job in submission
+int
+SubmissionObject::getOldest() {
+	return m_oldest_qdate;
+}
+
+void
+SubmissionObject::setOldest(int qdate) {
+	if ((qdate < m_oldest_qdate) || (m_oldest_qdate <= 0)) {
+		m_oldest_qdate = qdate;
+	}
 }
