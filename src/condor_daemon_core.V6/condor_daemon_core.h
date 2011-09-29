@@ -285,9 +285,8 @@ class DaemonCore : public Service
   friend class CreateProcessForkit;
 #ifdef WIN32
   friend unsigned pidWatcherThread(void*);
-#else
-  friend int dc_main(int, char**);
 #endif
+  friend int dc_main(int, char**);
     
   public:
     

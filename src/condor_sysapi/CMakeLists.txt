@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-file( GLOB SysApiRmvElements *.t.* dhry21b* *_main.cpp )
+file( GLOB SysApiRmvElements *_t.* *.t.* dhry21b* *_main.cpp test.* )
 
 condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
 
