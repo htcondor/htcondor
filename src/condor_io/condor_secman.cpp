@@ -2842,7 +2842,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	ASSERT(sesid);
 
 	condor_sockaddr peer_addr;
-	if(peer_sinful && peer_addr.from_sinful(peer_sinful)) {
+	if(peer_sinful && !peer_addr.from_sinful(peer_sinful)) {
 		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because"
 				"string_to_sin(%s) failed\n",sesid,peer_sinful);
 		return false;
