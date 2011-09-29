@@ -68,6 +68,11 @@ was made obsolete by \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} so it has been removed
 
 \begin{itemize}
 
+\item Added logic to the \Condor{negotiator} daemon's Accountant
+initialization to ensure that table entries are always created for
+accounting groups on startup and reconfig.
+\Ticket{2509}
+
 \item When \Condor{advertise} is used with the \Opt{-tcp} option, this
 used to cause the following log message to appear in the \Condor{collector}
 log:

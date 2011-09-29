@@ -284,7 +284,19 @@ void Accountant::Initialize(GroupEntry* root_group)
 	  }
   }
 
-  // Update priorities
+  // Ensure that table entries for acct groups get created on startup and reconfig
+  // Do this after loading the accountant log, to give log data precedence
+  grpq.clear();
+  grpq.push_back(hgq_root_group);
+  while (!grpq.empty()) {
+      GroupEntry* group = grpq.front();
+      grpq.pop_front();
+      // This creates entries if they don't already exist:
+      GetPriority(group->name);
+      for (vector<GroupEntry*>::iterator j(group->children.begin());  j != group->children.end();  ++j) {
+          grpq.push_back(*j);
+      }
+  }
 
   UpdatePriorities();
 }
@@ -1150,7 +1162,8 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
     ClassAd* CustomerAd = NULL;
     MyString HK(CustomerRecord + CustomerName);
     if (AcctLog->table.lookup(HashKey(HK.Value()), CustomerAd) == -1) {
-        EXCEPT("Expected AcctLog entry \"%s\" to exist", HK.Value());
+        dprintf(D_ALWAYS, "WARNING: Expected AcctLog entry \"%s\" to exist", HK.Value());
+        return;
     } 
 
     bool isGroup=false;
@@ -1162,7 +1175,8 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
         cgname = (cgrp->parent != NULL) ? cgrp->parent->name : cgrp->name;
         gnum = gnmap[cgrp->name];
     } else {
-        EXCEPT("Expected \"%s\" to be a defined group in the accountant", CustomerName.Value());
+        dprintf(D_ALWAYS, "WARNING: Expected \"%s\" to be a defined group in the accountant", CustomerName.Value());
+        return;
     }
 
     string tmp;
