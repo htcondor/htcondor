@@ -106,28 +106,22 @@ CCBServer::RegisterHandlers()
 	}
 	m_registered_handlers = true;
 
-	int rc = daemonCore->Register_Command(
+	int rc = daemonCore->Register_CommandWithPayload(
 		CCB_REGISTER,
 		"CCB_REGISTER",
 		(CommandHandlercpp)&CCBServer::HandleRegistration,
 		"CCBServer::HandleRegistration",
 		this,
-		DAEMON,
-		D_COMMAND,
-		false,
-		STANDARD_COMMAND_PAYLOAD_TIMEOUT);
+		DAEMON);
 	ASSERT( rc >= 0 );
 
-	rc = daemonCore->Register_Command(
+	rc = daemonCore->Register_CommandWithPayload(
 		CCB_REQUEST,
 		"CCB_REQUEST",
 		(CommandHandlercpp)&CCBServer::HandleRequest,
 		"CCBServer::HandleRequest",
 		this,
-		READ,
-		D_COMMAND,
-		false,
-		STANDARD_COMMAND_PAYLOAD_TIMEOUT);
+		READ);
 	ASSERT( rc >= 0 );
 
 }

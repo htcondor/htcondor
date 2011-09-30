@@ -809,16 +809,9 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			}
 		}
 
-		// Casting length to int to get rid of compile warning.
-		// Probably format should be %ld, and we should cast to
-		// long int, but I'm afraid of changing the output format.
-		// wenger 2009-02-24.
-		_condor_dfprintf( debug_file_ptr, "MaxLog = %d, length = %d\n",
-			(int) MaxLog[debug_level], (int)length );
-		
-		preserve_log_file(debug_level);
+        _condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)MaxLog[debug_level], (long long)length);
+        preserve_log_file(debug_level);
 		debug_file_ptr = DebugFPs[debug_level];
-
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);

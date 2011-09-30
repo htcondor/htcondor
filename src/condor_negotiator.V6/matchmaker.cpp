@@ -1104,6 +1104,32 @@ struct starvation_order {
 };
 
 
+int count_effective_slots(ClassAdListDoesNotDeleteAds& startdAds, ExprTree* constraint) {
+	int sum = 0;
+
+	startdAds.Open();
+	while(ClassAd* ad = startdAds.Next()) {
+        // only count ads satisfying constraint, if given
+        if ((NULL != constraint) && !EvalBool(ad, constraint)) {
+            continue;
+        }
+
+        bool part = false;
+        if (!ad->LookupBool(ATTR_SLOT_PARTITIONABLE, part)) part = false;
+
+        int slots = 1;
+        if (part) {
+            // effective slots for a partitionable slot is number of cpus
+            ad->LookupInteger(ATTR_CPUS, slots);
+        }
+
+        sum += slots;
+	}
+
+	return sum;
+}
+
+
 void Matchmaker::
 negotiationTime ()
 {
@@ -1194,26 +1220,23 @@ negotiationTime ()
 		ASSERT(groupQuotasHash);
     }
 
+	int cPoolsize = 0;
+    double weightedPoolsize = 0;
+    int effectivePoolsize = 0;
     // Restrict number of slots available for determining quotas
-	int cPoolsize = cTotalSlots;
-    double weightedPoolsize = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)cPoolsize;
-    if ( cPoolsize && SlotPoolsizeConstraint ) {
-        int matchedSlots = startdAds.CountMatches(SlotPoolsizeConstraint);
-        if ( matchedSlots ) {
-            dprintf(D_ALWAYS,"NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT constraint reduces slot "
-                    "count from %d to %d\n", cPoolsize, matchedSlots);
-            cPoolsize = matchedSlots;
-            weightedPoolsize = matchedSlots;
-            if (accountant.UsingWeightedSlots()) {
-               weightedPoolsize = sumSlotWeights(startdAds, NULL, SlotPoolsizeConstraint);
-            }
+    if (SlotPoolsizeConstraint != NULL) {
+        cPoolsize = startdAds.CountMatches(SlotPoolsizeConstraint);
+        if (cPoolsize > 0) {
+            dprintf(D_ALWAYS,"NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT constraint reduces slot count from %d to %d\n", cTotalSlots, cPoolsize);
+            weightedPoolsize = (accountant.UsingWeightedSlots()) ? sumSlotWeights(startdAds, NULL, SlotPoolsizeConstraint) : cPoolsize;
+            effectivePoolsize = count_effective_slots(startdAds, SlotPoolsizeConstraint);
         } else {
-            dprintf(D_ALWAYS, "warning: 0 out of %d slots match "
-                    "NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT\n",
-                    cTotalSlots);
-            cPoolsize = 0;
-            weightedPoolsize = 0;
+            dprintf(D_ALWAYS, "WARNING: 0 out of %d slots match NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT\n", cTotalSlots);
         }
+    } else {
+        cPoolsize = cTotalSlots;
+        weightedPoolsize = (accountant.UsingWeightedSlots()) ? untrimmedSlotWeightTotal : (double)cTotalSlots;
+        effectivePoolsize = count_effective_slots(startdAds, NULL);
     }
 
 	// if don't care about preemption, we can trim out all non Unclaimed ads now.
@@ -1226,7 +1249,6 @@ negotiationTime ()
 			"Trimmed out %d startd ads not Unclaimed\n",num_trimmed);
 	}
     negotiation_cycle_stats[0]->trimmed_slots = startdAds.MyLength();
-    // candidate slots may be pruned further below
     negotiation_cycle_stats[0]->candidate_slots = startdAds.MyLength();
 
 		// We insert NegotiatorMatchExprXXX attributes into the
@@ -1308,7 +1330,7 @@ negotiationTime ()
         }
 
         // assign slot quotas based on the config-quotas
-        double hgq_total_quota = weightedPoolsize;
+        double hgq_total_quota = (accountant.UsingWeightedSlots()) ? weightedPoolsize : effectivePoolsize;
         dprintf(D_ALWAYS, "group quotas: assigning group quotas from %g available%s slots\n",
                 hgq_total_quota, 
                 (accountant.UsingWeightedSlots()) ? " weighted" : "");
@@ -1382,7 +1404,7 @@ negotiationTime ()
             }
 
             dprintf(D_ALWAYS, "group quotas: groups= %lu  requesting= %lu  served= %lu  unserved= %lu  slots= %g  requested= %g  allocated= %g  surplus= %g\n", 
-                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(cPoolsize), requested_total+allocated_total, allocated_total, surplus_quota);
+                    static_cast<long unsigned int>(hgq_groups.size()), served_groups+unserved_groups, served_groups, unserved_groups, double(effectivePoolsize), requested_total+allocated_total, allocated_total, surplus_quota);
 
             // The loop below can add a lot of work (and log output) to the negotiation.  I'm going to
             // default its behavior to execute once, and just negotiate for everything at once.  If a
@@ -2785,6 +2807,8 @@ obtainAdsFromCollector (
 				// CRUFT: Before 7.3.2, submitter ads had a MyType of
 				//   "Scheduler". The only way to tell the difference
 				//   was that submitter ads didn't have ATTR_NUM_USERS.
+				//   Before 7.7.3, submitter ads for parallel universe
+				//   jobs had a MyType of "Scheduler".
 
             MyString subname;
             if (!ad->LookupString(ATTR_NAME, subname)) {

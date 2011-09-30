@@ -1221,7 +1221,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
-		new_rip = new Resource( cpu_attrs, rip->r_id, rip );
+		new_rip = new Resource( cpu_attrs, rip->r_id, true, rip );
 		if( ! new_rip ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );

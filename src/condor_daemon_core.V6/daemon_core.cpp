@@ -661,6 +661,27 @@ int	DaemonCore::Register_Command(int command, const char *com_descrip,
 							 force_authentication, wait_for_payload) );
 }
 
+int	DaemonCore::Register_CommandWithPayload(int command, const char* com_descrip,
+				CommandHandler handler, const char* handler_descrip, Service* s,
+				DCpermission perm, int dprintf_flag, bool force_authentication,
+				int wait_for_payload)
+{
+	return( Register_Command(command, com_descrip, handler,
+							(CommandHandlercpp)NULL, handler_descrip, s,
+							 perm, dprintf_flag, FALSE, force_authentication,
+							 wait_for_payload) );
+}
+
+int	DaemonCore::Register_CommandWithPayload(int command, const char *com_descrip,
+				CommandHandlercpp handlercpp, const char* handler_descrip,
+				Service* s, DCpermission perm, int dprintf_flag,
+				bool force_authentication, int wait_for_payload)
+{
+	return( Register_Command(command, com_descrip, NULL, handlercpp,
+							 handler_descrip, s, perm, dprintf_flag, TRUE,
+							 force_authentication, wait_for_payload) );
+}
+
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 				SignalHandler handler, const char* handler_descrip,
 				Service* s)

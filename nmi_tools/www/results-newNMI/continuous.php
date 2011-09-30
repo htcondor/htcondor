@@ -233,6 +233,8 @@ function create_sparkline($dash, $branch, $num_spark_days) {
   // First get all the recent build runs.  We'll use the runids from the
   // build runs to determine which tests to match to them
 
+  $condor_user = CONDOR_USER;
+
   $sql = "SELECT runid, result, project_version, 
                  convert_tz(start, 'GMT', 'US/Central') as start
           FROM Run
@@ -240,7 +242,8 @@ function create_sparkline($dash, $branch, $num_spark_days) {
                 component='condor' AND
                 project='condor' AND
                 DATE_SUB(CURDATE(), INTERVAL $num_spark_days DAY) <= start AND
-                Description = '$branch'
+                Description = '$branch' AND
+                user = '$condor_user'
                 ORDER BY runid DESC";
 
 
