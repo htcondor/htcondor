@@ -92,3 +92,40 @@ Description: debugging symbols for Condor
  the user.
  .
  This package provides the debugging symbols for Condor.
+
+
+Package: libclassad-dev
+Replaces: libclassad0-dev
+Conflicts: libclassad0-dev
+Section: libdevel
+Architecture: any
+Depends: libclassad2 (= ${binary:Version}), ${misc:Depends}
+Description: library for Condor's classads expression language (development)
+ A classad (classified ad) is a mapping from attribute names to expressions. In
+ the simplest cases, the expressions are simple constants (integer, floating
+ point, or string), thus a form of property list. Attribute expressions
+ can also be more complicated. There is a protocol for evaluating an attribute
+ expression of a classad vis a vis another ad. Two classads match if each ad has
+ attribute requirements that evaluate to true in the context of the other ad.
+ Classad  matching is used by the Condor central manager to determine the
+ compatibility of jobs and workstations where they may be run.
+ .
+ This package provides the static library and header files.
+
+
+Package: libclassad2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: library for Condor's classads expression language
+ A classad (classified ad) is a mapping from attribute names to expressions. In
+ the simplest cases, the expressions are simple constants (integer, floating
+ point, or string), thus a form of property list. Attribute expressions
+ can also be more complicated. There is a protocol for evaluating an attribute
+ expression of a classad vis a vis another ad. Two classads match if each ad has
+ attribute requirements that evaluate to true in the context of the other ad.
+ Classad  matching is used by the Condor central manager to determine the
+ compatibility of jobs and workstations where they may be run.
+ .
+ This package provides the runtime library.
+
+

@@ -1,16 +1,14 @@
 * Do license checks
-* Support systems that have tmpfs on /var/run
-  This is not the default on Debian (but Ubuntu may have it)
-
 * debconf config doesn't work on first run when doing an install from scratch
 * debconf templates should mention format things: comma-separated list, ...
+* debconf: think about switching away from combinatorial setup to a few
+  hand-polished config scenarios
 * Allow for configurable UID/GID
 * Security: ALLOW_ADVERTISE_SCHEDD
 * Incompatible with GSOAP 2.8.*
-* Check the install logs. There are some 'permission denied' messages. Some
-  files are not installed into proper locations.
 * Something is wrong with
   BIND_ALL_INTERFACES = FALSE
   NETWORK_INTERFACE =  127.0.0.1
   The collector still listens on the external interface (only)
+  (emailed to condor-user on Sep 30 2011)
 

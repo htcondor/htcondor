@@ -17,6 +17,7 @@ gitver = $(shell [ -x /usr/bin/git ] && git describe --tags --match 'V*' $$(git 
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
+		-DCONDOR_PACKAGE_BUILD:BOOL=ON \
 		-DPROPER:BOOL=ON \
 		-DCLIPPED:BOOL=ON \
 		-DUW_BUILD:BOOL=OFF \
@@ -41,7 +42,7 @@ override_dh_auto_configure:
 		# upstream says: contrib is to unstable for initial packaging
 		#-DWANT_CONTRIB:BOOL=OFF \
 		#-DHAVE_EXT_POSTGRESQL:BOOL=OFF \
-		#-DEXTERNAL_INCLUDES:STRING="/usr/include/postgresql" \
+		#-DEXTERNAL_INCLUDES:STRING="/usr/include/postgresql"
 
 
 override_dh_auto_build: doc/build
@@ -54,12 +55,10 @@ override_dh_auto_build: doc/build
 	#$(MAKE) -C src/condor_chirp/chirp/java/client/
 	#cp src/condor_chirp/chirp/java/client/Chirp.jar src/condor_chirp/
 
+
 override_dh_shlibdeps:
 	dh_shlibdeps -l$(CURDIR)/debian/tmp/usr/lib/
 
-override_dh_makeshlibs:
-	# no public libs
-	dh_makeshlibs --noscripts
 
 doc/build:
 	mkdir -p $@
@@ -89,16 +88,25 @@ doc/build:
 
 override_dh_auto_install:
 	dh_auto_install
-	# fix various bits -- upstream should do that
-	chmod -x debian/tmp/usr/etc/sysconfig/condor
-	chmod -x debian/tmp/usr/lib/*.pm
 	# things we do not need in Debian
 	rm debian/tmp/usr/sbin/condor_install* \
 		debian/tmp/usr/sbin/condor_cleanup* \
 		debian/tmp/usr/sbin/install_release \
 		debian/tmp/usr/sbin/cleanup_release
-	# place condor config file with default Debian config
-	sed -e 's,^\(CONDOR_HOST\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
+
+
+override_dh_install:
+	dh_install
+	# fix permissions
+	chmod -x debian/condor/usr/lib/condor/*.pm
+	chmod -x debian/condor/etc/default/condor
+	# remove RPATH from public lib
+	chrpath -d debian/libclassad*/usr/lib/libclassad.so.*.*
+	# kill the default local config -- debconf will handle that
+	rm debian/condor/etc/condor/condor_config.local
+	# modify condor config file with default Debian config
+	sed -i \
+		-e 's,^\(CONDOR_HOST\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
 		-e 's,^\(RELEASE_DIR\s*=\).*,\1 /usr,' \
 		-e 's,^\(MAIL\s*=\).*,\1 /usr/bin/mail,' \
 		-e 's,^\(LOCAL_DIR\s*=\).*,\1 /var,' \
@@ -125,11 +133,7 @@ override_dh_auto_install:
 		-e 's,^\(SHARE\s*=\).*,\1 \$$(RELEASE_DIR)/share/condor,' \
 		-e '/^LOG\s*=/a\RUN\t\t= \$$(LOCAL_DIR)/run/condor' \
 		-e 's,^\(PROCD_ADDRESS\s*=\).*,\1 \$$(RUN)/procd_pipe,' \
-		< debian/tmp/usr/etc/examples/condor_config \
-		> debian/condor/etc/condor/condor_config
-	# and now Debian's init script
-	sed -e 's,/etc/sysconfig/condor,/etc/default/condor,g' \
-		< debian/tmp/usr/etc/init.d/condor > debian/condor/etc/init.d/condor
+		debian/condor/etc/condor/condor_config
 
 
 override_dh_auto_clean:

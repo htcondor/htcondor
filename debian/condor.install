@@ -1,7 +1,6 @@
+debian/tmp/etc/* etc/
+debian/tmp/usr/include/condor usr/include/
+debian/tmp/usr/lib/condor usr/lib/
 debian/tmp/usr/bin/* usr/bin/
-debian/tmp/usr/etc/sysconfig/* etc/default/
-debian/tmp/usr/include/* usr/include/condor/
-debian/tmp/usr/lib/* usr/lib/condor/
-debian/tmp/usr/libexec/* usr/lib/condor/libexec/
 debian/tmp/usr/sbin/* usr/sbin/
 debian/tmp/usr/src/* /usr/src/condor/

@@ -5,14 +5,15 @@ condor (7.7.1+git436-g81fc261-1) UNRELEASED; urgency=low
   * Fix build-deps on BOOST.
   * Bumped Standards-version to 3.9.2; no changes necessary.
   * Build using embedded classad library -- upstream will (or did) stop
-    releasing it separately.
+    releasing it separately. libclassad binary packages are now built from
+    the Condor source package.
   * Drop shared library, sysapi and postgres patches -- merged or obsolete.
   * Adjust rules for now included doc source code.
   * Add sanity checks into maintainer script to avoid creating bogus
     directories and installation errors. Thanks to Mats Rynge for reporting.
   * Add Python as runtime dependency.
 
- -- Michael Hanke <mih@debian.org>  Thu, 29 Sep 2011 21:19:50 +0200
+ -- Michael Hanke <mih@debian.org>  Fri, 30 Sep 2011 14:19:07 +0200
 
 condor (7.6.1-1) UNRELEASED; urgency=low
 

@@ -1,2 +1,4 @@
-debian/tmp/usr/examples/* usr/share/doc/condor-doc/examples/
-debian/tmp/usr/etc/examples/* usr/share/doc/condor-doc/examples/etc/
+debian/tmp/usr/share/doc/condor/etc/examples/* usr/share/doc/condor/examples/etc/
+debian/tmp/usr/share/doc/condor/examples/* usr/share/doc/condor/examples/
+doc/build/html usr/share/doc/condor/
+doc/build/pdf/* usr/share/doc/condor/

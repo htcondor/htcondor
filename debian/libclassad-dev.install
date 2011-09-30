@@ -1,0 +1,3 @@
+debian/tmp/usr/include/classad usr/include/
+debian/tmp/usr/lib/libclass*.a
+debian/tmp/usr/lib/libclass*.so
