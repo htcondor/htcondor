@@ -1,4 +1,11 @@
 @echo off
+if "~%1"=="~EXTERNALS" (
+   @echo TODO: separate EXTERNALS build target from ALL_BUILD
+   exit /B 0
+) else if NOT "~%1"=="~" (
+   @echo target=%1
+)
+
 @echo CD=%CD%
 @echo HOME=%HOME%
 @echo CONDOR_BLD_EXTERNAL_STAGE=%CONDOR_BLD_EXTERNAL_STAGE%
@@ -67,8 +74,52 @@ set INCLUDE=%BUILD_ROOT%\src\condor_utils
 set
 @echo ----  end build.win.bat ENVIRONMENT ----------------------------
 
+if not "~%1"=="~" goto %1
+:DEFAULT
 @echo devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
 devenv CONDOR.sln /Rebuild RelWithDebInfo /project PACKAGE
+goto finis
+
+:ALL_BUILD
+:BUILD
+@echo devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD
+devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD
+if ERRORLEVEL 1 goto finis
+:RELEASE
+@echo cmake.exe -DBUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=release_dir -P cmake_install.cmake
+cmake.exe -DBUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=release_dir -P cmake_install.cmake
+goto finis
+   
+:ZIP
+@echo zipping up release directory %BUILD_ROOT%\release_dir
+@echo on
+pushd %BUILD_ROOT%\release_dir
+izip -r ..\condor-%2winnt-x86.zip *
+dir .
+popd
+@echo off
+goto finis   
+   
+:MSI
+:MAKE_MSI
+:NATIVE
+@echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT\release_dir %BUILD_ROOT\condor-%2winnt-x86.msi
+@echo TODO: fix so that do_wix.bat can run in NMI.
+:: call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT\release_dir %BUILD_ROOT\condor-%2winnt-x86.msi
+goto finis
+
+:PACK
+@echo devenv CONDOR.sln /Build RelWithDebInfo /project PACKAGE
+devenv CONDOR.sln /Build RelWithDebInfo /project PACKAGE
+goto finis
+
+:EXTERNALS
+@echo devenv CONDOR_EXTERNALS.sln /Build RelWithDebInfo /project ALL_BUILD
+devenv CONDOR_EXTERNALS.sln /Build RelWithDebInfo /project ALL_BUILD
+goto finis
+
+REM common exit
+:finis
 REM if the build failed, we don't want to continue, just exit the cmd shell and return the error
 REM if we are in NMI, then we want to quit the command shell and not just the batch file.
 if NOT "~%NMI_PLATFORM_TYPE%"=="~nmi" exit /B %ERRORLEVEL%
