@@ -109,7 +109,7 @@ pmackinn@redhat.com 	2011-09-29 14:03:19.235000 	2 	0 	0
 pmackinn@redhat.com 	2011-09-29 14:04:19.469000 	0 	0 	0
 
 Print the stats for a resource name that contains 'milo' for the previous hour (default time lookback).
-$ ./plumage_stats.py --u pmackinn
+$ ./plumage_stats.py --r milo
 
 Print the stats for resource 'milo' over a given datetime range.
 $ ./plumage_stats.py --r milo --from '2011-09-29 14:02' --to '2011-09-29 14:05'
