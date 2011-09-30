@@ -24,7 +24,7 @@
 
 // condor includes
 #include "condor_attributes.h"
-#include "condor_exprtype.h"
+#include "compat_classad_util.h"
 #include "stl_string_utils.h"
 
 using namespace std;
