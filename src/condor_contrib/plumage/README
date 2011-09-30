@@ -45,7 +45,7 @@ COLLECTOR.CONDOR_VIEW_HOST = $(CONDOR_HOST):12345
 VIEW_SERVER.CONDOR_VIEW_HOST = 
 VIEW_SERVER.KEEP_POOL_HISTORY = True
 VIEW_SERVER.SAMPLING_INTERVAL=20
-VIEW_SERVER.PLUGINS = $(LIBEXEC)/ODSCollectorPlugin.so
+VIEW_SERVER.PLUGINS = $(LIBEXEC)/ODSCollectorPlugin-plugin.so
 CONDOR_VIEW_CLASSAD_TYPES = Machine, Submitter
 POOL_HISTORY_SAMPLING_INTERVAL = 60
 UPDATE_INTERVAL = 300
@@ -109,7 +109,7 @@ pmackinn@redhat.com 	2011-09-29 14:03:19.235000 	2 	0 	0
 pmackinn@redhat.com 	2011-09-29 14:04:19.469000 	0 	0 	0
 
 Print the stats for a resource name that contains 'milo' for the previous hour (default time lookback).
-$ ./plumage_stats.py --u pmackinn
+$ ./plumage_stats.py --r milo
 
 Print the stats for resource 'milo' over a given datetime range.
 $ ./plumage_stats.py --r milo --from '2011-09-29 14:02' --to '2011-09-29 14:05'

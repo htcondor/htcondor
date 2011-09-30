@@ -406,8 +406,9 @@ Scheduler::Scheduler() :
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 )
+   , m_adSchedd(NULL)
+   , m_adBase(NULL)
 {
-	m_ad = NULL;
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
 	shadowCommandssock = NULL;
@@ -522,7 +523,8 @@ Scheduler::Scheduler() :
 
 Scheduler::~Scheduler()
 {
-	delete m_ad;
+	delete m_adSchedd;
+    delete m_adBase;
 	if (MyShadowSockName)
 		free(MyShadowSockName);
 	if( LocalUnivExecuteDir ) {
@@ -751,6 +753,7 @@ Scheduler::check_claim_request_timeouts()
 	}
 }
 
+#if 0
 /*
 ** Examine the job queue to determine how many CONDOR jobs we currently have
 ** running, and how many individual users own them.
@@ -1264,8 +1267,660 @@ Scheduler::count_jobs()
 	}
 
 	check_claim_request_timeouts();
+	return 0;
+}
+#endif
+
+//
+// Examine the job queue to determine how many CONDOR jobs we currently have
+// running, and how many individual users own them.
+//
+int Scheduler::count_jobs()
+{
+    ClassAd * cad = m_adSchedd;
+	int		i, j;
+	int		prio_compar();
+
+	 // copy owner data to old-owners table
+	ExtArray<OwnerData> OldOwners(Owners);
+	int Old_N_Owners=N_Owners;
+
+	N_Owners = 0;
+	JobsRunning = 0;
+	JobsIdle = 0;
+	JobsHeld = 0;
+	JobsTotalAds = 0;
+	JobsFlocked = 0;
+	JobsRemoved = 0;
+	SchedUniverseJobsIdle = 0;
+	SchedUniverseJobsRunning = 0;
+	LocalUniverseJobsIdle = 0;
+	LocalUniverseJobsRunning = 0;
+
+	// clear owner table contents
+	time_t current_time = time(0);
+	for ( i = 0; i < Owners.getsize(); i++) {
+		Owners[i].Name = NULL;
+		Owners[i].Domain = NULL;
+		Owners[i].JobsRunning = 0;
+		Owners[i].JobsIdle = 0;
+		Owners[i].JobsHeld = 0;
+		Owners[i].JobsFlocked = 0;
+		Owners[i].FlockLevel = 0;
+		Owners[i].OldFlockLevel = 0;
+		Owners[i].NegotiationTimestamp = current_time;
+	}
+
+	GridJobOwners.clear();
+
+		// Clear out the DedicatedScheduler's list of idle dedicated
+		// job cluster ids, since we're about to re-create it.
+	dedicated_scheduler.clearDedicatedClusters();
+
+	WalkJobQueue((int(*)(ClassAd *)) count );
+
+	if( dedicated_scheduler.hasDedicatedClusters() ) {
+			// We found some dedicated clusters to service.  Wake up
+			// the DedicatedScheduler class when we return to deal
+			// with them.
+		dedicated_scheduler.handleDedicatedJobTimer( 0 );
+	}
+
+		// set JobsRunning/JobsFlocked for owners
+	matches->startIterations();
+	match_rec *rec;
+	while(matches->iterate(rec) == 1) {
+		char *at_sign = strchr(rec->user, '@');
+		if (at_sign) *at_sign = '\0';
+		int OwnerNum = insert_owner( rec->user );
+		if (at_sign) *at_sign = '@';
+		if (rec->shadowRec && !rec->pool) {
+			Owners[OwnerNum].JobsRunning++;
+		} else {				// in remote pool, so add to Flocked count
+			Owners[OwnerNum].JobsFlocked++;
+			JobsFlocked++;
+		}
+	}
+
+	// set FlockLevel for owners
+	if (MaxFlockLevel) {
+		for ( i=0; i < N_Owners; i++) {
+			for ( j=0; j < Old_N_Owners; j++) {
+				if (!strcmp(OldOwners[j].Name,Owners[i].Name)) {
+					Owners[i].FlockLevel = OldOwners[j].FlockLevel;
+					Owners[i].OldFlockLevel = OldOwners[j].OldFlockLevel;
+						// Remember our last negotiation time if we have
+						// idle jobs, so we can determine if the negotiator
+						// is ignoring us and we should flock.  If we don't
+						// have any idle jobs, we leave NegotiationTimestamp
+						// at its initial value (the current time), since
+						// we don't want any negotiations, and thus we don't
+						// want to timeout and increase our flock level.
+					if (Owners[i].JobsIdle) {
+						Owners[i].NegotiationTimestamp =
+							OldOwners[j].NegotiationTimestamp;
+					}
+				}
+			}
+			// if this owner hasn't received a negotiation in a long time,
+			// then we should flock -- we need this case if the negotiator
+			// is down or simply ignoring us because our priority is so low
+			if ((current_time - Owners[i].NegotiationTimestamp >
+				 SchedDInterval.getDefaultInterval()*2) && (Owners[i].FlockLevel < MaxFlockLevel)) {
+				Owners[i].FlockLevel++;
+				Owners[i].NegotiationTimestamp = current_time;
+				dprintf(D_ALWAYS,
+						"Increasing flock level for %s to %d due to lack of activity from negotiator at level %d.\n",
+						Owners[i].Name, Owners[i].FlockLevel, Owners[i].FlockLevel-1);
+			}
+			if (Owners[i].FlockLevel > FlockLevel) {
+				FlockLevel = Owners[i].FlockLevel;
+			}
+		}
+	}
+
+	dprintf( D_FULLDEBUG, "JobsRunning = %d\n", JobsRunning );
+	dprintf( D_FULLDEBUG, "JobsIdle = %d\n", JobsIdle );
+	dprintf( D_FULLDEBUG, "JobsHeld = %d\n", JobsHeld );
+	dprintf( D_FULLDEBUG, "JobsRemoved = %d\n", JobsRemoved );
+	dprintf( D_FULLDEBUG, "LocalUniverseJobsRunning = %d\n",
+			LocalUniverseJobsRunning );
+	dprintf( D_FULLDEBUG, "LocalUniverseJobsIdle = %d\n",
+			LocalUniverseJobsIdle );
+	dprintf( D_FULLDEBUG, "SchedUniverseJobsRunning = %d\n",
+			SchedUniverseJobsRunning );
+	dprintf( D_FULLDEBUG, "SchedUniverseJobsIdle = %d\n",
+			SchedUniverseJobsIdle );
+	dprintf( D_FULLDEBUG, "N_Owners = %d\n", N_Owners );
+	dprintf( D_FULLDEBUG, "MaxJobsRunning = %d\n", MaxJobsRunning );
+
+	// later when we compute job priorities, we will need PrioRec
+	// to have as many elements as there are jobs in the queue.  since
+	// we just counted the jobs, lets make certain that PrioRec is 
+	// large enough.  this keeps us from guessing to small and constantly
+	// growing PrioRec... Add 5 just to be sure... :^) -Todd 8/97
+	grow_prio_recs( JobsRunning + JobsIdle + 5 );
+	
+	cad->Assign(ATTR_NUM_USERS, N_Owners);
+    cad->Assign(ATTR_MAX_JOBS_RUNNING, MaxJobsRunning);
+
+    cad->AssignExpr(ATTR_START_LOCAL_UNIVERSE, this->StartLocalUniverse);
+    // m_adBase->AssignExpr(ATTR_START_LOCAL_UNIVERSE, this->StartLocalUniverse);
+    cad->AssignExpr(ATTR_START_SCHEDULER_UNIVERSE, this->StartSchedulerUniverse);
+    // m_adBase->AssignExpr(ATTR_START_SCHEDULER_UNIVERSE, this->StartSchedulerUniverse);
+	
+	cad->Assign(ATTR_NAME, Name);
+	cad->Assign(ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr() );
+	cad->Assign(ATTR_VIRTUAL_MEMORY, SwapSpace );
+	 
+	cad->Assign(ATTR_TOTAL_IDLE_JOBS, JobsIdle);
+	cad->Assign(ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
+	cad->Assign(ATTR_TOTAL_JOB_ADS, JobsTotalAds);
+	cad->Assign(ATTR_TOTAL_HELD_JOBS, JobsHeld);
+	cad->Assign(ATTR_TOTAL_FLOCKED_JOBS, JobsFlocked);
+	cad->Assign(ATTR_TOTAL_REMOVED_JOBS, JobsRemoved);
+
+	cad->Assign(ATTR_TOTAL_LOCAL_IDLE_JOBS, LocalUniverseJobsIdle);
+	cad->Assign(ATTR_TOTAL_LOCAL_RUNNING_JOBS, LocalUniverseJobsRunning);
+	
+	cad->Assign(ATTR_TOTAL_SCHEDULER_IDLE_JOBS, SchedUniverseJobsIdle);
+	cad->Assign(ATTR_TOTAL_SCHEDULER_RUNNING_JOBS, SchedUniverseJobsRunning);
+
+	cad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, (bool)SwapSpaceExhausted);
+
+	int num_uploading = m_xfer_queue_mgr.GetNumUploading();
+	int num_downloading = m_xfer_queue_mgr.GetNumDownloading();
+	int max_uploading = m_xfer_queue_mgr.GetMaxUploading();
+	int max_downloading = m_xfer_queue_mgr.GetMaxDownloading();
+	int num_waiting_to_upload = m_xfer_queue_mgr.GetNumWaitingToUpload();
+	int num_waiting_to_download = m_xfer_queue_mgr.GetNumWaitingToDownload();
+	int upload_wait_time = m_xfer_queue_mgr.GetUploadWaitTime();
+	int download_wait_time = m_xfer_queue_mgr.GetDownloadWaitTime();
+
+	dprintf(D_ALWAYS,"TransferQueueManager stats: active up=%d/%d down=%d/%d; waiting up=%d down=%d; wait time up=%ds down=%ds\n",
+			num_uploading,
+			max_uploading,
+			num_downloading,
+			max_downloading,
+			num_waiting_to_upload,
+			num_waiting_to_download,
+			upload_wait_time,
+			download_wait_time);
+
+	cad->Assign(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,num_uploading);
+	cad->Assign(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,num_downloading);
+	cad->Assign(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,max_uploading);
+	cad->Assign(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,max_downloading);
+	cad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,num_waiting_to_upload);
+	cad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD,num_waiting_to_download);
+	cad->Assign(ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME,upload_wait_time);
+	cad->Assign(ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME,download_wait_time);
+
+    // one last check for any newly-queued jobs
+    // this count is cumulative within the qmgmt package
+    // TJ: get daemon-core message-time here and pass into stats.Tick()
+    stats.Tick();
+    stats.JobsSubmitted = GetJobQueuedCount();
+
+    // publish scheduler generic statistics
+    stats.Publish(*cad);
+
+    daemonCore->publish(cad);
+    daemonCore->dc_stats.Publish(*cad);
+    daemonCore->monitor_data.ExportData(cad);
+	extra_ads.Publish( cad );
+    
+	if ( param_boolean("ENABLE_SOAP", false) ) {
+			// If we can support the SOAP API let's let the world know!
+		cad->Assign(ATTR_HAS_SOAP_API, true);
+	}
+
+    // can't do this at init time, the job_queue_log doesn't exist at that time.
+    int job_queue_birthdate = (int)GetOriginalJobQueueBirthdate();
+	cad->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);
+    m_adBase->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);
+
+    // we do these at Init time now
+#if 0
+        // Tell negotiator to send us the startd ad
+		// As of 7.1.3, the negotiator no longer pays attention to this
+		// attribute; it _always_ sends the resource request ad.
+		// For backward compatibility with older negotiators, we still set it.
+	cad->Assign(ATTR_WANT_RESOURCE_AD, true);
+#endif
+
+	daemonCore->UpdateLocalAd(cad);
+
+		// log classad into sql log so that it can be updated to DB
+#ifdef HAVE_EXT_POSTGRESQL
+	FILESQL::daemonAdInsert(cad, "ScheddAd", FILEObj, prevLHF);
+#endif
+
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
+	ScheddPluginManager::Update(UPDATE_SCHEDD_AD, cad);
+#endif
+#endif
+	
+		// Update collectors
+	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true);
+	dprintf( D_FULLDEBUG, 
+			 "Sent HEART BEAT ad to %d collectors. Number of submittors=%d\n",
+			 num_updates, N_Owners );   
+
+	// send the schedd ad to our flock collectors too, so we will
+	// appear in condor_q -global and condor_status -schedd
+	if( FlockCollectors ) {
+		FlockCollectors->rewind();
+		Daemon* d;
+		DCCollector* col;
+		FlockCollectors->next(d);
+		for( i=0; d && i < FlockLevel; i++ ) {
+			col = (DCCollector*)d;
+			col->sendUpdate( UPDATE_SCHEDD_AD, cad, NULL, true );
+			FlockCollectors->next( d );
+		}
+	}
+
+    // --------------------------------------------------------------------------------------
+    // begin publishing submitter ADs
+    //
+
+    // Set attributes common to all submitter Ads
+    // 
+    m_adBase->SetMyTypeName(SUBMITTER_ADTYPE);
+    m_adBase->Assign(ATTR_SCHEDD_NAME, Name);
+    daemonCore->publish(m_adBase);
+	extra_ads.Publish(m_adBase);
+
+    // Create a new add for the per-submitter attribs 
+    // and chain it to the base ad.
+
+    ClassAd * pAd = new ClassAd();
+    pAd->ChainToAd(m_adBase);
+    pAd->Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
+
+    MyString submitter_name;
+	for ( i=0; i<N_Owners; i++) {
+	  pAd->Assign(ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %d\n", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
+
+	  pAd->Assign(ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+
+	  pAd->Assign(ATTR_HELD_JOBS, Owners[i].JobsHeld);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %d\n", ATTR_HELD_JOBS, Owners[i].JobsHeld);
+
+	  pAd->Assign(ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %d\n", ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
+
+      submitter_name.sprintf("%s@%s", Owners[i].Name, UidDomain);
+	  pAd->Assign(ATTR_NAME, submitter_name.Value());
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %s@%s\n", ATTR_NAME, Owners[i].Name, UidDomain);
+
+
+	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
+			   Owners[i].Name, UidDomain );
+
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
+	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, pAd);
+#endif
+#endif
+		// Update collectors
+	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, pAd, NULL, true);
+	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
+			   num_updates, Owners[i].Name, UidDomain );
+	}
+
+	// update collector of the pools with which we are flocking, if
+	// any
+	Daemon* d;
+	Daemon* flock_neg;
+	DCCollector* flock_col;
+	if( FlockCollectors && FlockNegotiators ) {
+		FlockCollectors->rewind();
+		FlockNegotiators->rewind();
+		for( int flock_level = 1;
+			 flock_level <= MaxFlockLevel; flock_level++) {
+			FlockNegotiators->next( flock_neg );
+			FlockCollectors->next( d );
+			flock_col = (DCCollector*)d;
+			if( ! (flock_col && flock_neg) ) { 
+				continue;
+			}
+			for (i=0; i < N_Owners; i++) {
+				Owners[i].JobsRunning = 0;
+				Owners[i].JobsFlocked = 0;
+			}
+			matches->startIterations();
+			match_rec *mRec;
+			while(matches->iterate(mRec) == 1) {
+				char *at_sign = strchr(mRec->user, '@');
+				if (at_sign) *at_sign = '\0';
+				int OwnerNum = insert_owner( mRec->user );
+				if (at_sign) *at_sign = '@';
+				if (mRec->shadowRec && mRec->pool &&
+					!strcmp(mRec->pool, flock_neg->pool())) {
+					Owners[OwnerNum].JobsRunning++;
+				} else {
+						// This is a little weird.  We're sending an update
+						// to a pool we're flocking with.  We count jobs
+						// running in that pool as "RunningJobs" and jobs
+						// running in other pools (including the local pool)
+						// as "FlockedJobs".  It bends the terminology a bit,
+						// but it's the best I can think of for now.
+					Owners[OwnerNum].JobsFlocked++;
+				}
+			}
+			// update submitter ad in this pool for each owner
+			for (i=0; i < N_Owners; i++) {
+				if (Owners[i].FlockLevel >= flock_level) {
+					pAd->Assign(ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+				} else if (Owners[i].OldFlockLevel >= flock_level ||
+						   Owners[i].JobsRunning > 0) {
+					pAd->Assign(ATTR_IDLE_JOBS, (int)0);
+				} else {
+					// if we're no longer flocking with this pool and
+					// we're not running jobs in the pool, then don't send
+					// an update
+					continue;
+				}
+				pAd->Assign(ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
+				pAd->Assign(ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
+
+                submitter_name.sprintf("%s@%s", Owners[i].Name, UidDomain);
+				pAd->Assign(ATTR_NAME, submitter_name.Value());
+
+					// we will use this "tag" later to identify which
+					// CM we are negotiating with when we negotiate
+				pAd->Assign(ATTR_SUBMITTER_TAG,flock_col->name());
+
+				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, pAd, NULL, true );
+			}
+		}
+	}
+
+	pAd->Delete(ATTR_SUBMITTER_TAG);
+
+	for (i=0; i < N_Owners; i++) {
+		Owners[i].OldFlockLevel = Owners[i].FlockLevel;
+	}
+
+	 // Tell our GridUniverseLogic class what we've seen in terms
+	 // of Globus Jobs per owner.
+	GridJobOwners.startIterations();
+	UserIdentity userident;
+	GridJobCounts gridcounts;
+	while( GridJobOwners.iterate(userident, gridcounts) ) {
+		if(gridcounts.GridJobs > 0) {
+			GridUniverseLogic::JobCountUpdate(
+					userident.username().Value(),
+					userident.domain().Value(),
+					userident.auxid().Value(),m_unparsed_gridman_selection_expr, 0, 0, 
+					gridcounts.GridJobs,
+					gridcounts.UnmanagedGridJobs);
+		}
+	}
+
+
+	 // send info about deleted owners
+	 // put 0 for idle & running jobs
+
+	pAd->Assign(ATTR_RUNNING_JOBS, 0);
+	pAd->Assign(ATTR_IDLE_JOBS, 0);
+
+ 	// send ads for owner that don't have jobs idle
+	// This is done by looking at the old owners list and searching for owners
+	// that are not in the current list (the current list has only owners w/ idle jobs)
+	for ( i=0; i<Old_N_Owners; i++) {
+
+		// check that the old name is not in the new list
+		int k;
+		for(k=0; k<N_Owners;k++) {
+		  if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
+		}
+		// Now that we've finished using OldOwners[i].Name, we can
+		// free it.
+		if ( OldOwners[i].Name ) {
+			free(OldOwners[i].Name);
+			OldOwners[i].Name = NULL;
+		}
+
+		  // If k < N_Owners, we found this OldOwner in the current
+		  // Owners table, therefore, we don't want to send the
+		  // submittor ad with 0 jobs, so we continue to the next
+		  // entry in the OldOwner table.
+		if (k<N_Owners) continue;
+
+      submitter_name.sprintf("%s@%s", OldOwners[i].Name, UidDomain);
+      pAd->Assign(ATTR_NAME, submitter_name.Value());
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %s@%s\n", OldOwners[i].Name, UidDomain);
+
+#if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
+#if defined(HAVE_DLOPEN)
+	// update plugins
+	dprintf(D_FULLDEBUG,"Sent owner (0 jobs) ad to schedd plugins\n");
+	ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, pAd);
+#endif
+#endif
+
+		// Update collectors
+	  int num_udates = 
+		  daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, pAd, NULL, true);
+	  dprintf(D_ALWAYS, "Sent owner (0 jobs) ad to %d collectors\n",
+			  num_udates);
+
+	  // also update all of the flock hosts
+	  Daemon *da;
+	  if( FlockCollectors ) {
+		  int flock_level;
+		  for( flock_level=1, FlockCollectors->rewind();
+			   flock_level <= OldOwners[i].OldFlockLevel &&
+				   FlockCollectors->next(da); flock_level++ ) {
+			  ((DCCollector*)da)->sendUpdate( UPDATE_SUBMITTOR_AD, pAd, NULL, true );
+		  }
+	  }
+	}
+
+	// pAd->SetMyTypeName( SCHEDD_ADTYPE );
+
+	// If JobsIdle > 0, then we are asking the negotiator to contact us. 
+	// Record the earliest time we asked the negotiator to talk to us.
+	if ( JobsIdle >  0 ) {
+		// We have idle jobs, we want the negotiator to talk to us.
+		// But don't clobber NegotiationRequestTime if already set,
+		// since we want the _earliest_ request time.
+		if ( NegotiationRequestTime == 0 ) {
+			NegotiationRequestTime = time(NULL);
+		}
+	} else {
+		// We don't care of the negotiator talks to us.
+		NegotiationRequestTime = 0;
+	}
+
+	check_claim_request_timeouts();
 
 	return 0;
+}
+
+// create a list of ads similar to what we publish to the collector
+// however, if the input pQueryAd contains a STATISTICS_TO_PUBLISH attribute
+// use that attibute rather than the default statistics publising flags.
+//
+// Note: it is ok to return ads that don't match the query the caller is responsible 
+// for filtering.   In the future we might improve the code by returing only ads 
+// that match the query, but for now we don't.
+//
+int Scheduler::make_ad_list(
+   ClassAdList & ads, 
+   ClassAd * pQueryAd /*=NULL*/) // if non-null use this to get ExtraAttributes for building the list
+{
+   time_t now = time(NULL);
+
+   // we need to copy the schedd Ad because
+   // we will be putting it in a list that deletes Ads 
+   // when the list is destroyed.
+   ClassAd * cad = new ClassAd(*m_adSchedd);
+
+   MyString stats_config;
+   if (pQueryAd) {
+      pQueryAd->LookupString("STATISTICS_TO_PUBLISH",stats_config);
+   }
+
+   // should we call count_jobs() to update the job counts?
+
+   stats.Tick(now);
+   stats.JobsSubmitted = GetJobQueuedCount();
+   stats.ShadowsRunning = numShadows;
+
+   // publish scheduler generic statistics
+   stats.Publish(*cad, stats_config.Value());
+
+   // publish daemon core stats
+   daemonCore->publish(cad);
+   daemonCore->dc_stats.Publish(*cad, stats_config.Value());
+   daemonCore->monitor_data.ExportData(cad);
+
+   // We want to insert ATTR_LAST_HEARD_FROM into each ad.  The
+   // collector normally does this, so if we're servicing a
+   // QUERY_SCHEDD_ADS commannd, we need to do this ourselves or
+   // some timing stuff won't work.
+   cad->Assign(ATTR_LAST_HEARD_FROM, (int)now);
+   //cad->Assign( ATTR_AUTHENTICATED_IDENTITY, ??? );
+
+   // add the Scheduler Ad to the list
+   ads.Insert(cad);
+
+   // now add the submitter ads, each one based on the base 
+   // submitter ad, note that chained ad's dont delete the 
+   // chain parent when they are deleted, so it's safe to 
+   // put these ads into the list. 
+#if 1
+   MyString submitter_name;
+   for (int ii = 0; ii < N_Owners; ++ii) {
+      cad = new ClassAd();
+      cad->ChainToAd(m_adBase);
+      submitter_name.sprintf("%s@%s", Owners[ii].Name, UidDomain);
+      cad->Assign(ATTR_NAME, submitter_name.Value());
+      cad->Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
+
+      cad->Assign(ATTR_RUNNING_JOBS, Owners[ii].JobsRunning);
+      cad->Assign(ATTR_IDLE_JOBS, Owners[ii].JobsIdle);
+      cad->Assign(ATTR_HELD_JOBS, Owners[ii].JobsHeld);
+      cad->Assign(ATTR_FLOCKED_JOBS, Owners[ii].JobsFlocked);
+      ads.Insert(cad);
+   }
+#else
+   ClassAd * pAdGeneric = new ClassAd(*m_adBase);
+   pAdGeneric->Delete (ATTR_NUM_USERS);
+   pAdGeneric->Delete (ATTR_TOTAL_RUNNING_JOBS);
+   pAdGeneric->Delete (ATTR_TOTAL_IDLE_JOBS);
+   pAdGeneric->Delete (ATTR_TOTAL_JOB_ADS);
+   pAdGeneric->Delete (ATTR_TOTAL_HELD_JOBS);
+   pAdGeneric->Delete (ATTR_TOTAL_FLOCKED_JOBS);
+   pAdGeneric->Delete (ATTR_TOTAL_REMOVED_JOBS);
+   pAdGeneric->Delete (ATTR_TOTAL_LOCAL_IDLE_JOBS);
+   pAdGeneric->Delete (ATTR_TOTAL_LOCAL_RUNNING_JOBS);
+   pAdGeneric->Delete (ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
+   pAdGeneric->Delete (ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
+
+   daemonCore->dc_stats.Unpublish(*pAdGeneric);
+   stats.Unpublish(*pAdGeneric);
+
+   pAdGeneric->Assign(ATTR_SCHEDD_NAME, Name);
+   pAdGeneric->Assign (ATTR_MY_TYPE, SUBMITTER_ADTYPE);
+
+   MyString submitter_name;
+   for (int ii = 0; ii < N_Owners; ++ii) {
+      pAd = new ClassAd(*pAdGeneric);
+      submitter_name.sprintf("%s@%s", Owners[ii].Name, UidDomain);
+      pAd->Assign(ATTR_NAME, submitter_name.Value());
+      pAd->Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
+
+      pAd->Assign(ATTR_RUNNING_JOBS, Owners[ii].JobsRunning);
+      pAd->Assign(ATTR_IDLE_JOBS, Owners[ii].JobsIdle);
+      pAd->Assign(ATTR_HELD_JOBS, Owners[ii].JobsHeld);
+      pAd->Assign(ATTR_FLOCKED_JOBS, Owners[ii].JobsFlocked);
+      ads.Insert(pAd);
+   }
+   delete pAdGeneric;
+#endif
+
+   return ads.Length();
+}
+
+// in support of condor_status -direct.  allow the query for SCHEDULER and SUBMITTER ads
+//
+int Scheduler::command_query_ads(int, Stream* stream) 
+{
+	ClassAd queryAd;
+	ClassAd *ad;
+	ClassAdList ads;
+	int more = 1, num_ads = 0;
+   
+	dprintf( D_FULLDEBUG, "In command_query_ads\n" );
+
+	stream->decode();
+    stream->timeout(15);
+	if( !queryAd.initFromStream(*stream) || !stream->end_of_message()) {
+        dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
+		return FALSE;
+	}
+
+#if !defined(WANT_OLD_CLASSADS)
+	queryAd.AddExplicitTargetRefs();
+#endif
+
+		// Construct a list of all our ClassAds. we pass queryAd 
+		// through so that if there is a STATISTICS_TO_PUBLISH attribute
+		// it can be used to control the verbosity of statistics
+    this->make_ad_list(ads, &queryAd);
+	
+		// Now, find the ClassAds that match.
+	stream->encode();
+	ads.Open();
+	while( (ad = ads.Next()) ) {
+		if( IsAHalfMatch( &queryAd, ad ) ) {
+			if( !stream->code(more) || !ad->put(*stream) ) {
+				dprintf (D_ALWAYS, 
+						 "Error sending query result to client -- aborting\n");
+				return FALSE;
+			}
+			num_ads++;
+        }
+	}
+
+		// Finally, close up shop.  We have to send NO_MORE.
+	more = 0;
+	if( !stream->code(more) || !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Error sending EndOfResponse (0) to client\n" );
+		return FALSE;
+	}
+    dprintf( D_FULLDEBUG, "Sent %d ads in response to query\n", num_ads ); 
+	return TRUE;
+}
+
+/* 
+ * renice_shadow() will nice the shadow if specified in the
+ * condor_config.  the value of SHADOW_RENICE_INCREMENT will be added
+ * to the current process priority (the higher the priority number,
+ * the less CPU will be allocated).  renice_shadow() is meant to be
+ * called by the child process after a fork() and before an exec().
+ * it returns the value added to the priority, or 0 if the priority
+ * did not change.  renice_shadow() now just calls renice_self() from
+ * the C++ util that actually does the work, since other parts of
+ * Condor might need to be reniced (namely, the user job).  -Derek
+ * Wright, <wright@cs.wisc.edu> 4/14/98
+ */
+int
+renice_shadow()
+{
+#ifdef WIN32
+	return 0;
+#else 
+	return renice_self( "SHADOW_RENICE_INCREMENT" ); 
+#endif
 }
 
 
@@ -10284,45 +10939,59 @@ Scheduler::Init()
 		//////////////////////////////////////////////////////////////
 		// Initialize our classad
 		//////////////////////////////////////////////////////////////
-	if( m_ad ) delete m_ad;
-	m_ad = new ClassAd();
+	if( m_adBase ) delete m_adBase;
+	if( m_adSchedd ) delete m_adSchedd;
+	m_adBase = new ClassAd();
 
-	m_ad->SetMyTypeName(SCHEDD_ADTYPE);
-	m_ad->SetTargetTypeName("");
+    // first put attributes into the Base ad that we want to
+    // share between the Scheduler AD and the Submitter Ad
+    //
+	m_adBase->SetTargetTypeName("");
+    m_adBase->Assign(ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr());
+        // Tell negotiator to send us the startd ad
+		// As of 7.1.3, the negotiator no longer pays attention to this
+		// attribute; it _always_ sends the resource request ad.
+		// For backward compatibility with older negotiators, we still set it.
+    m_adBase->Assign(ATTR_WANT_RESOURCE_AD, true);
 
-    daemonCore->publish(m_ad);
+       // add the basic daemon core attribs
+    daemonCore->publish(m_adBase);
 
-		// Throw name and machine into the classad.
-	m_ad->Assign( ATTR_NAME, Name );
+    // make a base add for use with chained submitter ads as a copy of the schedd ad
+    // and fill in some standard attribs that will change only on reconfig. 
+    // the rest are added in count_jobs()
+    m_adSchedd = new ClassAd(*m_adBase);
+	m_adSchedd->SetMyTypeName(SCHEDD_ADTYPE);
+	m_adSchedd->Assign(ATTR_NAME, Name);
 
 	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
 	// (see condor_classad/classad.C
 	// Since we don't know how many there are yet, just say 0, it will get
 	// fixed in count_job() -Erik 12/18/2006
-	m_ad->Assign(ATTR_NUM_USERS, 0);
+	m_adSchedd->Assign(ATTR_NUM_USERS, 0);
 
 #ifdef HAVE_EXT_POSTGRESQL
 	// Put the quill stuff into the add as well
 	if (quill_enabled == TRUE) {
-		m_ad->Assign( ATTR_QUILL_ENABLED, true ); 
+		m_adSchedd->Assign( ATTR_QUILL_ENABLED, true ); 
 
-		m_ad->Assign( ATTR_QUILL_NAME, quill_name ); 
+		m_adSchedd->Assign( ATTR_QUILL_NAME, quill_name ); 
 
-		m_ad->Assign( ATTR_QUILL_DB_NAME, quill_db_name ); 
+		m_adSchedd->Assign( ATTR_QUILL_DB_NAME, quill_db_name ); 
 
 		MyString expr;
 		expr.sprintf( "%s = \"<%s>\"", ATTR_QUILL_DB_IP_ADDR,
 					  quill_db_ip_addr ); 
-		m_ad->Insert( expr.Value() );
+		m_adSchedd->Insert( expr.Value() );
 
-		m_ad->Assign( ATTR_QUILL_DB_QUERY_PASSWORD, quill_db_query_password); 
+		m_adSchedd->Assign( ATTR_QUILL_DB_QUERY_PASSWORD, quill_db_query_password); 
 
-		m_ad->Assign( ATTR_QUILL_IS_REMOTELY_QUERYABLE, 
+		m_adSchedd->Assign( ATTR_QUILL_IS_REMOTELY_QUERYABLE, 
 					  quill_is_remotely_queryable == TRUE ? true : false );
 
 	} else {
 
-		m_ad->Assign( ATTR_QUILL_ENABLED, false );
+		m_adSchedd->Assign( ATTR_QUILL_ENABLED, false );
 	}
 #endif
 
@@ -10507,6 +11176,14 @@ Scheduler::Register()
 								D_FULLDEBUG );
 #endif
 
+    // command handler in support of condor_status -direct query of our ads
+    //
+	daemonCore->Register_Command(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
+                                (CommandHandlercpp)&Scheduler::command_query_ads,
+                                 "command_query_ads", this, READ);
+	daemonCore->Register_Command(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
+                                (CommandHandlercpp)&Scheduler::command_query_ads,
+                                 "command_query_ads", this, READ);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
@@ -10776,7 +11453,7 @@ void Scheduler::reconfig() {
 void
 Scheduler::update_local_ad_file() 
 {
-	daemonCore->UpdateLocalAd(m_ad);
+	daemonCore->UpdateLocalAd(m_adSchedd);
 	return;
 }
 
@@ -10920,47 +11597,46 @@ Scheduler::invalidate_ads()
 	MyString line;
 
 		// The ClassAd we need to use is totally different from the
-		// regular one, so just delete it and start over again.
-	delete m_ad;
-	m_ad = new ClassAd;
-    m_ad->SetMyTypeName( QUERY_ADTYPE );
-    m_ad->SetTargetTypeName( SCHEDD_ADTYPE );
+		// regular one, so just create a temporary one
+	ClassAd * cad = new ClassAd;
+    cad->SetMyTypeName( QUERY_ADTYPE );
+    cad->SetTargetTypeName( SCHEDD_ADTYPE );
 
         // Invalidate the schedd ad
     line.sprintf( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );
-    m_ad->Insert( line.Value() );
-	m_ad->Assign( ATTR_NAME, Name );
-	m_ad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
+    cad->Insert( line.Value() );
+	cad->Assign( ATTR_NAME, Name );
+	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
 
 		// Update collectors
-	daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, m_ad, NULL, false);
+	daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, cad, NULL, false);
 
 	if (N_Owners == 0) return;	// no submitter ads to invalidate
 
 		// Invalidate all our submittor ads.
 
-	m_ad->Assign( ATTR_SCHEDD_NAME, Name );
-	m_ad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
+	cad->Assign( ATTR_SCHEDD_NAME, Name );
+	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
 	for( i=0; i<N_Owners; i++ ) {
-		daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false);
+		daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, cad, NULL, false);
 		MyString owner;
 		owner.sprintf("%s@%s", Owners[i].Name, UidDomain);
-		m_ad->Assign( ATTR_NAME, owner.Value() );
+		cad->Assign( ATTR_NAME, owner.Value() );
 
 		line.sprintf( "%s = TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
 					  ATTR_REQUIREMENTS,
 					  ATTR_SCHEDD_NAME, Name,
 					  ATTR_NAME, owner.Value() );
-		m_ad->InsertOrUpdate( line.Value() );
+		cad->InsertOrUpdate( line.Value() );
 
 		Daemon* d;
 		if( FlockCollectors && FlockLevel > 0 ) {
 			int level;
 			for( level=1, FlockCollectors->rewind();
 				 level <= FlockLevel && FlockCollectors->next(d); level++ ) {
-				((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, m_ad, NULL, false );
+				((DCCollector*)d)->sendUpdate( INVALIDATE_SUBMITTOR_ADS, cad, NULL, false );
 			}
 		}
 	}
@@ -12846,7 +13522,7 @@ Scheduler::claimLocalStartd()
 void
 Scheduler::addCronTabClassAd( ClassAd *jobAd )
 {
-	if ( m_ad == NULL ) return;
+	if ( NULL == m_adSchedd ) return;
 	CronTab *cronTab = NULL;
 	PROC_ID id;
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, id.cluster );
