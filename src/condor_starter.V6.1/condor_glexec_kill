@@ -13,6 +13,19 @@ PROXY="$2"
 PID="$3"
 SIGNAL="$4"
 
+# in case glexec creates a target proxy, we will control
+# where it puts it, and we will make sure it gets cleaned up
+if [ -d /tmp ]; then
+  GLEXEC_TARGET_PROXY=/tmp/condor_glexec_kill_proxy.$$
+  if [ -f "$GLEXEC_TARGET_PROXY" ]; then
+    # a file by this name already exists, so do not mess with it
+    unset GLEXEC_TARGET_PROXY
+  else
+    export GLEXEC_TARGET_PROXY
+  fi
+fi
+
 # use glexec to kill the given PID with the given signal
 #
-GLEXEC_CLIENT_CERT="$PROXY" "$GLEXEC" /bin/kill -$SIGNAL $PID
+SH=`readlink -f /bin/sh`
+GLEXEC_CLIENT_CERT="$PROXY" "$GLEXEC" "$SH" -c "if [ -f '$GLEXEC_TARGET_PROXY' ]; then rm '$GLEXEC_TARGET_PROXY'; fi; /bin/kill -$SIGNAL $PID"

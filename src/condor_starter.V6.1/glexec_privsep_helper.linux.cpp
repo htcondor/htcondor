@@ -353,16 +353,6 @@ GLExecPrivSepHelper::create_process(const char* path,
 
 			glexec_env.SetEnv("X509_USER_PROXY",condor_proxy);
 		}
-		// We set the target proxy environment variable to point at
-                // the user proxy.  Without it, newer versions of glexec will
-                // create a proxy in /tmp and not clean it up.  When the glexec
-                // exec's to the target process, there will be a fresh copy
-                // of the proxy (not delegation).
-                // Note Condor will copy the proxy into the user's sandbox,
-                // and this will get clobbered when the job actually launches.
-                // When Condor runs proxy-update, the proxy will get overwritten
-                // twice - first by glexec, then by Condor.
-		glexec_env.SetEnv("GLEXEC_TARGET_PROXY", user_proxy);
 	}
 
 	int pid = daemonCore->Create_Process(m_run_script.Value(),
