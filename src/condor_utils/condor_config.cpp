@@ -811,6 +811,12 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		// parameter at this point, if it's set.
 	init_ipaddr( TRUE );
 
+		// The IPv6 code currently caches some results that depend
+		// on configuration settings such as NETWORK_INTERFACE.
+		// Therefore, force the cache to be reset, now that the
+		// configuration has been loaded.
+	init_local_hostname();
+
 		// Re-insert the special macros.  We don't want the user to
 		// override them, since it's not going to work.
 	reinsert_specials( host );
