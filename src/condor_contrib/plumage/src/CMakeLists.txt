@@ -37,7 +37,7 @@ file( GLOB ETL_SERVER_SRCS ods_job_daemon_main.cpp
 #src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
 file( GLOB CollectorSrcs ODSCollectorPlugin.cpp ${ETL_COMMON_SRCS})
-condor_plugin( ODSCollectorPlugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
+condor_plugin( ODSCollectorPlugin-plugin "${CollectorSrcs}" "${C_LIBEXEC}" "${MONGODB_FOUND}" ON)
 
 ############################
 # job etl daemon
