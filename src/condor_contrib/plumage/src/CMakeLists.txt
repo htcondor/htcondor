@@ -16,7 +16,8 @@
  # 
  ###############################################################
 
-set (MONGODB_FOUND "-lmongoclient -lboost_system -lboost_filesystem")
+find_multiple( "mongoclient;boost_system" MONGODB_FOUND )
+append_var (MONGODB_INCLUDES "/usr/include/mongo")
 
 ############################
 # file target references.
