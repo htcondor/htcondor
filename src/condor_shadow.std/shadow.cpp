@@ -417,13 +417,8 @@ main(int argc, char *argv[] )
 			UseCkptServer = TRUE;
 		}
 
-		StarterChoosesCkptServer = TRUE; // True by default
-		if( (tmp = param("STARTER_CHOOSES_CKPT_SERVER")) ) {
-			if( tmp[0] == 'F' || tmp[0] == 'f' ) {
-				StarterChoosesCkptServer = FALSE;
-			}
-			free(tmp);
-		}
+		StarterChoosesCkptServer =
+			param_boolean_crufty("STARTER_CHOOSES_CKPT_SERVER", true) ? TRUE : FALSE;
 	}
 
 		// Initialize location of our checkpoint file.  If we stored it
