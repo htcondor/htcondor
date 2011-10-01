@@ -668,15 +668,10 @@ init_params()
 
 		
 	StartDaemons = TRUE;
-	tmp = param("START_DAEMONS");
-	if( tmp ) {
-		if( *tmp == 'f' || *tmp == 'F' ) {
+	if (!param_boolean_crufty("START_DAEMONS", true)) {
 			dprintf( D_ALWAYS, 
-					 "START_DAEMONS flag was set to %s.  Not starting daemons.\n",
-					 tmp );
+					 "START_DAEMONS flag was set to FALSE.  Not starting daemons.\n" );
 			StartDaemons = FALSE;
-		}
-		free( tmp );
 	} 
 		// If we were sent the daemons_off command, don't forget that
 		// here. 
