@@ -314,8 +314,6 @@ close_unused_file_descriptors()
 void
 init_params()
 {
-	char	*tmp;
-
 	if( (Execute=param("EXECUTE")) == NULL ) {
 		EXCEPT( "Execute directory not specified in config file" );
 	}
@@ -333,15 +331,7 @@ init_params()
 		UidDomain[0] = '\0';
 	}
 
-	TrustUidDomain = false;
-	tmp = param( "TRUST_UID_DOMAIN" );
-	if( tmp ) {
-		if( tmp[0] == 't' || tmp[0] == 'T' ) { 
-			TrustUidDomain = true;
-		}			
-		free( tmp );
-	}
-
+	TrustUidDomain = param_boolean_crufty("TRUST_UID_DOMAIN", false);
 
 	// We can configure how many times the starter wishes to attempt to
 	// pull over the initial checkpoint
