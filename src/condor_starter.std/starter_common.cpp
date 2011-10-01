@@ -164,18 +164,9 @@ initial_bookeeping( int /* argc */, char *argv[] )
 void
 init_logging()
 {
-	int		is_local = TRUE;
 	char	*pval;
-	
-	pval = param( "STARTER_LOCAL_LOGGING" );
-	if( pval ) {
-		if( pval[0] == 'f' || pval[0] == 'F' ) {
-			is_local=FALSE;
-		}
-		free( pval );
-	}
 
-	if( is_local ) {
+	if( param_boolean_crufty( "STARTER_LOCAL_LOGGING", true ) ) {
 			// Use regular, local logging.
 		dprintf_config( get_mySubSystem()->getName() );// Log file on local machine 
 	} else {
