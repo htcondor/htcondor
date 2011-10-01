@@ -6824,14 +6824,9 @@ init_params()
 		string_to_stm( method, STMethod );
 	}
 
-	tmp = param( "WARN_ON_UNUSED_SUBMIT_FILE_MACROS" );
-	if ( NULL != tmp ) {
-		if( (*tmp == 'f' || *tmp == 'F') ) {
-			WarnOnUnusedMacros = 0;
-		}
-		free( tmp );
-	}
-
+	WarnOnUnusedMacros =
+		param_boolean_crufty("WARN_ON_UNUSED_SUBMIT_FILE_MACROS",
+							 WarnOnUnusedMacros ? true : false) ? 1 : 0;
 }
 
 int
