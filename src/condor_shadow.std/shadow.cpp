@@ -412,13 +412,8 @@ main(int argc, char *argv[] )
             free(CkptServerHost);
         }
 		CkptServerHost = param( "CKPT_SERVER_HOST" );
-		if( !CkptServerHost ||
-			!param_boolean_crufty( "USE_CKPT_SERVER", true ) ) {
-				// We don't have a ckpt server defined, or the user
-				// explicitly configures USE_CKPT_SERVER = False.
-			UseCkptServer = FALSE;
-		} else {
-				// We've got a checkpoint server, so let's use it.
+		UseCkptServer = FALSE;
+		if( CkptServerHost && param_boolean_crufty( "USE_CKPT_SERVER", true ) ) {
 			UseCkptServer = TRUE;
 		}
 
