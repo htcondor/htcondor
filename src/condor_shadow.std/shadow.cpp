@@ -259,7 +259,7 @@ main(int argc, char *argv[] )
 	char	*tmp = NULL;
 	int		reserved_swap, free_swap;
 	char	*host = NULL, *cluster = NULL, *proc = NULL;
-	char	*use_afs = NULL, *use_nfs = NULL;
+	char	*use_nfs = NULL;
 	char	*use_ckpt_server = NULL;
 	char	*bogus_capability;
 	int		i;
@@ -395,13 +395,7 @@ main(int argc, char *argv[] )
 	My_UID_Domain = param( "UID_DOMAIN" ); 
 	dprintf( D_ALWAYS, "My_UID_Domain = \"%s\"\n", My_UID_Domain );
 
-	use_afs = param( "USE_AFS" );
-	if( use_afs && (use_afs[0] == 'T' || use_afs[0] == 't') ) {
-		UseAFS = TRUE;
-	} else {
-		UseAFS = FALSE;
-	}
-    if (use_afs)    free( use_afs );
+	UseAFS = param_boolean_crufty( "USE_AFS", false ) ? TRUE : FALSE;
 
 	use_nfs = param( "USE_NFS" );
 	if( use_nfs && (use_nfs[0] == 'T' || use_nfs[0] == 't') ) {
