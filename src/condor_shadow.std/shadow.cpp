@@ -259,7 +259,6 @@ main(int argc, char *argv[] )
 	char	*tmp = NULL;
 	int		reserved_swap, free_swap;
 	char	*host = NULL, *cluster = NULL, *proc = NULL;
-	char	*use_nfs = NULL;
 	char	*use_ckpt_server = NULL;
 	char	*bogus_capability;
 	int		i;
@@ -397,13 +396,7 @@ main(int argc, char *argv[] )
 
 	UseAFS = param_boolean_crufty( "USE_AFS", false ) ? TRUE : FALSE;
 
-	use_nfs = param( "USE_NFS" );
-	if( use_nfs && (use_nfs[0] == 'T' || use_nfs[0] == 't') ) {
-		UseNFS = TRUE;
-	} else {
-		UseNFS = FALSE;
-	}
-    if (use_nfs)    free( use_nfs );
+	UseNFS = param_boolean_crufty( "USE_NFS", false ) ? TRUE : FALSE;
 
 	// if job specifies a checkpoint server host, this overrides
 	// the config file parameters
