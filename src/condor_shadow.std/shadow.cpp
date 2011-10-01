@@ -259,7 +259,6 @@ main(int argc, char *argv[] )
 	char	*tmp = NULL;
 	int		reserved_swap, free_swap;
 	char	*host = NULL, *cluster = NULL, *proc = NULL;
-	char	*use_ckpt_server = NULL;
 	char	*bogus_capability;
 	int		i;
 
@@ -409,14 +408,12 @@ main(int argc, char *argv[] )
 		free(tmp);
 	} else {
 		free(tmp);
-		use_ckpt_server = param( "USE_CKPT_SERVER" );
 		if (CkptServerHost) {
             free(CkptServerHost);
         }
 		CkptServerHost = param( "CKPT_SERVER_HOST" );
 		if( !CkptServerHost ||
-			(use_ckpt_server && (use_ckpt_server[0] == 'F' ||
-								 use_ckpt_server[0] == 'f')) ) {
+			!param_boolean_crufty( "USE_CKPT_SERVER", true ) ) {
 				// We don't have a ckpt server defined, or the user
 				// explicitly configures USE_CKPT_SERVER = False.
 			UseCkptServer = FALSE;
@@ -424,9 +421,6 @@ main(int argc, char *argv[] )
 				// We've got a checkpoint server, so let's use it.
 			UseCkptServer = TRUE;
 		}
-		if (use_ckpt_server) {
-            free(use_ckpt_server);
-        }
 
 		StarterChoosesCkptServer = TRUE; // True by default
 		if( (tmp = param("STARTER_CHOOSES_CKPT_SERVER")) ) {
