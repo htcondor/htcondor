@@ -964,18 +964,10 @@ process_directory( char* dirlist, char* host )
 	Directory *files;
 	const char *file, *dirpath;
 	char **paths;
-	char *tmp;
 	int local_required;
 	Regex excludeFilesRegex;
 	
-	local_required = true;	
-	tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
-	if( tmp ) {
-		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
-			local_required = false;
-		}
-		free( tmp );
-	}
+	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
 
 	if(!dirlist) { return; }
 	locals.initializeFromString( dirlist );
