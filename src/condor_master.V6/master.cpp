@@ -679,14 +679,7 @@ init_params()
 		StartDaemons = FALSE;
 	}
 
-	PublishObituaries = TRUE;
-	tmp = param("PUBLISH_OBITUARIES");
-	if( tmp ) {
-		if( (*tmp == 'f' || *tmp == 'F') ) {
-			PublishObituaries = FALSE;
-		}
-		free( tmp );
-	}
+	PublishObituaries = param_boolean_crufty("PUBLISH_OBITUARIES", true) ? TRUE : FALSE;
 
 	Lines = param_integer("OBITUARY_LOG_LENGTH",20);
 
