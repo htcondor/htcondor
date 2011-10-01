@@ -1461,7 +1461,6 @@ bufferJobShort( ClassAd *ad ) {
 
 	char encoded_status;
 	int last_susp_time;
-	char *tmp = NULL;
 
 	float utime  = 0.0;
 	char owner[64];
@@ -1498,9 +1497,7 @@ bufferJobShort( ClassAd *ad ) {
 		status that can exist as a job status ad and is instead
 		inferred, so therefore the processing and display of
 		said suspension is also second class. */
-	tmp = param( "REAL_TIME_JOB_SUSPEND_UPDATES" );
-	if( tmp != NULL ) {
-		if ( strcasecmp(tmp, "true") == MATCH ) {	
+	if (param_boolean("REAL_TIME_JOB_SUSPEND_UPDATES", false)) {
 			if (!ad->EvalInteger(ATTR_LAST_SUSPENSION_TIME,NULL,last_susp_time))
 			{
 				last_susp_time = 0;
@@ -1513,9 +1510,6 @@ bufferJobShort( ClassAd *ad ) {
 			{
 				encoded_status = 'S';
 			}
-		}
-		free(tmp);
-		tmp = NULL;
 	}
 
 	sprintf( return_buff,
