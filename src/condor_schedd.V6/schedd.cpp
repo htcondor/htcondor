@@ -10686,13 +10686,7 @@ Scheduler::Init()
 
 	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
 	
-	tmp = param( "NEGOTIATE_ALL_JOBS_IN_CLUSTER" );
-	if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
-		NegotiateAllJobsInCluster = false;
-	} else {
-		NegotiateAllJobsInCluster = true;
-	}
-	if( tmp ) free( tmp );
+	NegotiateAllJobsInCluster = param_boolean_crufty("NEGOTIATE_ALL_JOBS_IN_CLUSTER", false);
 
 	STARTD_CONTACT_TIMEOUT = param_integer("STARTD_CONTACT_TIMEOUT",45);
 
