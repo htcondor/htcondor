@@ -800,15 +800,11 @@ spawn_all()
 int
 test_connection()
 {
-	char    *pval;
-
 	if ( write(CLIENT_LOG,"\0\n",2) == -1 ) {
 		
-        pval = param( "STARTER_LOCAL_LOGGING" );
-        if( pval && (pval[0] == 't' || pval[0] == 'T') ) {
+		if( param_boolean_crufty( "STARTER_LOCAL_LOGGING", false ) ) {
 			dprintf( D_ALWAYS, "Lost our connection to the shadow! Exiting.\n" );
 		}
-		free( pval );
 
 			// Send a SIGKILL to our whole process group
 		set_root_priv();
