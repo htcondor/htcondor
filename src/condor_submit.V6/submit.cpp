@@ -969,12 +969,8 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	char *dis_check = param("SUBMIT_SKIP_FILECHECKS");
-	if ( dis_check ) {
-		if (dis_check[0]=='T' || dis_check[0]=='t') {
-			DisableFileChecks = 1;
-		}
-		free(dis_check);
+	if (!DisableFileChecks) {
+		DisableFileChecks = param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", false) ? 1 : 0;
 	}
 
 	// if we are dumping to a file, we never want to check file permissions
