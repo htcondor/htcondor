@@ -2114,14 +2114,11 @@ int
 pseudo_register_ckpt_server(const char *host)
 {
 	if (StarterChoosesCkptServer) {
-		char *use_ckpt_server = param( "USE_CKPT_SERVER" );
-		if (!use_ckpt_server ||
-			(use_ckpt_server[0] != 'F' && use_ckpt_server[0] != 'f')) {
+		if (param_boolean_crufty("USE_CKPT_SERVER", true)) {
 			if (CkptServerHost) free(CkptServerHost);
 			CkptServerHost = strdup(host);
 			UseCkptServer = TRUE;
 		}
-		if (use_ckpt_server) free(use_ckpt_server);
 	}
 
 	return 0;
