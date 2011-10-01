@@ -660,14 +660,10 @@ init_params()
 		dprintf( D_FULLDEBUG, "Using name: %s\n", MasterName );
 	}
 			
-	tmp = param( "START_MASTER" );
-	if( tmp ) {
-		if( *tmp == 'F' || *tmp == 'f' ) {
-			dprintf( D_ALWAYS, "START_MASTER was set to %s, shutting down.\n", tmp );
+	if (!param_boolean_crufty("START_MASTER", true)) {
+			dprintf( D_ALWAYS, "START_MASTER was set to FALSE, shutting down.\n" );
 			StartDaemons = FALSE;
 			main_shutdown_graceful();
-		}
-		free( tmp );
 	}
 
 		
