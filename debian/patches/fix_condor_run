@@ -1,0 +1,22 @@
+From: Jaime Frey <jfrey@cs.wisc.edu>
+Subject: condor_run file transfer problem fix
+
+The problem is that condor_run assumes you have a shared filesystem and it's
+being run in a directory on that shared filesystem. It doesn't set
+should_transfer_files, so the assumption is that Condor on the execute machine
+can chdir to the same directory and access the job's files there, with no file
+transfer required. When I tried running condor_run in /tmp, I saw the same
+behavior as you. When I logged into the execute machine afterwards, I saw
+.condor_out.## and .condor_err.## in /tmp. The stderr file contained an error
+message about not being able to find the executable.
+--- a/src/condor_scripts/condor_run	2011-08-18 01:56:23.000000000 -0500
++++ b/src/condor_scripts/condor_run	2011-09-30 10:17:54.000000000 -0500
+@@ -150,6 +151,8 @@
+ print JDF "output = .condor_out.$$\n";
+ print JDF "error = .condor_error.$$\n";
+ print JDF "getenv = True\n";
++print JDF "should_transfer_files = YES\n";
++print JDF "when_to_transfer_output = ON_EXIT\n";
+ print JDF "requirements = ", $requirements, "\n" if (defined($requirements));
+ foreach my $append (@appends) {
+     print JDF $append . "\n";

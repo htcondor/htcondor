@@ -12,8 +12,10 @@ condor (7.7.1+git436-g81fc261-1) UNRELEASED; urgency=low
   * Add sanity checks into maintainer script to avoid creating bogus
     directories and installation errors. Thanks to Mats Rynge for reporting.
   * Add Python as runtime dependency.
+  * Add patch to make condor_run work with Condor's new file transfer
+    behavior. Courtesy of Jaime Frey.
 
- -- Michael Hanke <mih@debian.org>  Fri, 30 Sep 2011 14:19:07 +0200
+ -- Michael Hanke <mih@debian.org>  Sun, 02 Oct 2011 17:58:36 +0200
 
 condor (7.6.1-1) UNRELEASED; urgency=low
 

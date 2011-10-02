@@ -11,3 +11,4 @@ debian_dynamic_run
 #build_shared_libs
 #use_included_classad
 no_java_for_now
+fix_condor_run
