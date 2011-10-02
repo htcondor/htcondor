@@ -14,6 +14,8 @@ condor (7.7.1+git436-g81fc261-1) UNRELEASED; urgency=low
   * Add Python as runtime dependency.
   * Add patch to make condor_run work with Condor's new file transfer
     behavior. Courtesy of Jaime Frey.
+  * Stop building a PDF version of the manual (takes long, and segfaults
+    ghostscript at the moment). Keep HTML version.
 
  -- Michael Hanke <mih@debian.org>  Sun, 02 Oct 2011 17:58:36 +0200
 

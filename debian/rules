@@ -62,12 +62,10 @@ override_dh_shlibdeps:
 
 doc/build:
 	mkdir -p $@
-	$(MAKE) -C doc release-pdf MANDIR=$(CURDIR)/$@/pdf \
-		TARGETDIR=$(CURDIR)/$@/pdf
-	cd doc && latex2html -address condor-admin@cs.wisc.edu -split 4 \
-		-link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 \
-		-toc_depth 2 -local_icons ref.tex
-	cp -r doc/ref $@/html
+	$(MAKE) -C doc release-html MANDIR=$(CURDIR)/$@/html
+		TARGETDIR=$(CURDIR)/$@/html
+	# remove archives
+	rm $@/html/*.Z $@/html/*.gz
 	$(MAKE) -C doc/makeman makeman
 	for html in $@/html/condor_*.html; do \
 		doc/makeman/makeman -v -i $$html -s 1; \
@@ -106,33 +104,16 @@ override_dh_install:
 	rm debian/condor/etc/condor/condor_config.local
 	# modify condor config file with default Debian config
 	sed -i \
-		-e 's,^\(CONDOR_HOST\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
-		-e 's,^\(RELEASE_DIR\s*=\).*,\1 /usr,' \
-		-e 's,^\(MAIL\s*=\).*,\1 /usr/bin/mail,' \
-		-e 's,^\(LOCAL_DIR\s*=\).*,\1 /var,' \
-		-e 's,^\(LOCAL_CONFIG_FILE\s*=\).*,\1 /etc/condor/condor_config.local,' \
-		-e 's,^\(LOCAL_CONFIG_DIR\s*=\).*,\1 /etc/condor/config.d,' \
 		-e 's,^[#]*\(REQUIRE_LOCAL_CONFIG_FILE\s*=\).*,\1 FALSE,'  \
+		-e 's,^\(CONDOR_ADMIN\s*=\).*,\1 root@localhost,' \
+		-e 's,^\(MAIL\s*=\).*,\1 /usr/bin/mail,' \
+		-e 's,^\(COLLECTOR_NAME\s*=\).*,\1 Debian Condor Pool - $$(CONDOR_HOST),' \
+		-e 's,^\(SPOOL\s*=\).*,\1 \$$(LOCAL_DIR)/spool/condor,' \
+		-e '/^EXECUTE\s*=/a\LOCAL_UNIV_EXECUTE\t\t= \$$(LOCAL_DIR)/spool/condor/local_univ_execute' \
+		-e 's/^\(DAEMON_LIST\s*=\).*/\1 MASTER, STARTD, SCHEDD, COLLECTOR, NEGOTIATOR/' \
 		-e 's,^[#]*\(CONDOR_DEVELOPERS\s*=\).*,\1 NONE,'  \
 		-e 's,^[#]*\(CONDOR_DEVELOPERS_COLLECTOR\s*=\).*,\1 NONE,'  \
-		-e 's,^\(CONDOR_ADMIN\s*=\).*,\1 root@localhost,' \
-		-e 's,^\(UID_DOMAIN\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
-		-e 's,^\(FILESYSTEM_DOMAIN\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
-		-e 's,^\(COLLECTOR_NAME\s*=\).*,\1 Debian Condor Pool,' \
-		-e 's,^\(ALLOW_WRITE\s*=\).*,\1 \$$(FULL_HOSTNAME),' \
-		-e 's/^\(DAEMON_LIST\s*=\).*/\1 MASTER, STARTD, SCHEDD, COLLECTOR, NEGOTIATOR/' \
-		-e 's,^\(LOCK\s*=\).*,\1 \$$(LOCAL_DIR)/lock/condor,' \
-		-e 's,^\(LOG\s*=\).*,\1 \$$(LOCAL_DIR)/log/condor,' \
-		-e 's,^\(SPOOL\s*=\).*,\1 \$$(LOCAL_DIR)/spool/condor,' \
-		-e 's,^\(EXECUTE\s*=\).*,\1 \$$(LOCAL_DIR)/lib/condor/execute,' \
-		-e '/^EXECUTE\s*=/a\LOCAL_UNIV_EXECUTE\t\t= \$$(LOCAL_DIR)/spool/condor/local_univ_execute' \
 		-e 's,^\(CRED_STORE_DIR\s*=\).*,\1 \$$(LOCAL_DIR)/lib/condor/cred_dir,' \
-		-e 's,^\(LIB\s*=\).*,\1 \$$(RELEASE_DIR)/lib/condor,' \
-		-e 's,^\(INCLUDE\s*=\).*,\1 \$$(RELEASE_DIR)/include/condor,' \
-		-e 's,^\(LIBEXEC\s*=\).*,\1 \$$(RELEASE_DIR)/lib/condor/libexec,' \
-		-e 's,^\(SHARE\s*=\).*,\1 \$$(RELEASE_DIR)/share/condor,' \
-		-e '/^LOG\s*=/a\RUN\t\t= \$$(LOCAL_DIR)/run/condor' \
-		-e 's,^\(PROCD_ADDRESS\s*=\).*,\1 \$$(RUN)/procd_pipe,' \
 		debian/condor/etc/condor/condor_config
 
 
