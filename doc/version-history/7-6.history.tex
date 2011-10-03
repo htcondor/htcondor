@@ -59,7 +59,9 @@ and was fixed in Condor version 7.6.2.
 
 \begin{itemize}
 
-\item Properly support \Attr{MAX\_<subsys>\_LOG} values >= 2GB.
+%\item Properly support \Attr{MAX\_<subsys>\_LOG} values >= 2GB.
+\item Implemented proper support of values greater than or equal to  2 GBytes
+set for the configuration variable \Macro{MAX\_<SUBSYS>\_LOG}.
 \Ticket{2471}
 
 \item Updated the \Condor{negotiator} daemon's assessment of pool size to properly
