@@ -118,10 +118,10 @@ use constant { RECONSTITUTE_TEMPLATE_FUNC =>
 
 use constant { RECONSTITUTE_TEMPLATE => 
 'static const param_info_%typequal% param_def_info_%parameter_var% = {
-	%parameter_name%, %default%, %version%, 
+	{%parameter_name%, %default%, %version%, 
 	%friendly_name%, %usage%,
 	%url%, %tags%,
-	%type%, %state%, %customization%, %reconfig%, %is_macro%, %def_valid%, %range_valid%,
+	%type%, %state%, %customization%, %reconfig%, %is_macro%, %def_valid%, %range_valid%},
 	%cooked_values%
 	};
 '
