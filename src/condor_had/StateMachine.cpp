@@ -146,7 +146,6 @@ HADStateMachine::isHardConfigurationNeeded(void)
 {
 	char		*tmp      = NULL;
 	char		 controllee[128];
-	bool    	 usePrimary  = false;
 	int     	 selfId = -1;
 	StringList	 allHadIps;
 
@@ -162,14 +161,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 		return true;
 	}
 
-	tmp = param( "HAD_USE_PRIMARY" );
-	if( tmp ) {
-        if( strncasecmp( tmp, "true", strlen("true") ) == 0 ) {
-			usePrimary = true;
-        }
-        free( tmp );
-    }
-	if ( usePrimary != m_usePrimary ) {
+	if ( param_boolean("HAD_USE_PRIMARY", false) != m_usePrimary ) {
 		return true;
 	}
 
@@ -178,7 +170,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 		StringList	otherHadIps;
        	// we do not care for the return value here, so there is no importance
 		// whether we use the 'usePrimaryCopy' or 'm_usePrimary'
-		getHadList( tmp, usePrimary, otherHadIps, allHadIps, selfId );
+		getHadList( tmp, m_usePrimary, otherHadIps, allHadIps, selfId );
         free( tmp );
     } else {
 		utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).Value() );
