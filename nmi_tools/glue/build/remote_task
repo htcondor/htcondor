@@ -114,6 +114,9 @@ elsif ($taskname eq $NATIVE_TASK) {
         print "Detected OS is OpenSuSE.  Creating RPM package.\n";
         $execstr = create_rpm();
     }
+    elsif ($ENV{NMI_PLATFORM} =~ /winnt/) {
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE 7.7.3-pre-";
+    }
     else {
         print "We do not generate a native package for this platform.\n";
         exit 0;
