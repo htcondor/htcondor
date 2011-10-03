@@ -15,6 +15,8 @@ if "~%1"=="~EXTERNALS" (
 
 REM use FOR to convert from linux path separators to windows path seps
 for %%I in ("%BASE_DIR%") do set BUILD_ROOT=%%~dpfI
+if "~%BUILD_ROOT%"=="~" set BUILD_ROOT=%CD%
+@echo BUILD_ROOT=%BUILD_ROOT%
 
 md %BUILD_ROOT%\Temp
 REM pcre blows up if the temp path has spaces in it, so make sure that it's a short path.
@@ -82,6 +84,9 @@ goto finis
 
 :ALL_BUILD
 :BUILD
+@echo cmake.exe . -G "Visual Studio 9 2008"
+cmake.exe . -G "Visual Studio 9 2008"
+if ERRORLEVEL 1 goto finis
 @echo devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD
 devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD
 if ERRORLEVEL 1 goto finis
@@ -104,7 +109,11 @@ goto finis
 :MAKE_MSI
 :NATIVE
 @echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT\release_dir %BUILD_ROOT\condor-%2winnt-x86.msi
-@echo TODO: fix so that do_wix.bat can run in NMI.
+@echo TODO: fix so that do_wix.bat can run in NMI. %ERRORLEVEL%
+@echo on
+dir %BUILD_ROOT%
+dir %BUILD_ROOT%\release_dir
+@echo off
 :: call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT\release_dir %BUILD_ROOT\condor-%2winnt-x86.msi
 goto finis
 
