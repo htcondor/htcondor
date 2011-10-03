@@ -14,6 +14,20 @@ a:link { color: #1C3F75; }
    background-color: #aaaaaa;
 }
 
+.build {
+    border-left-width: 5px;
+    border-left-color: black;
+    width: 25px;
+    text-align: center;
+}
+
+.test {
+    border-right-width: 5px;
+    border-right-color: black;
+    width: 25px;
+    text-align: center;
+}
+
 .details {
    font-size: 10px;
 }
