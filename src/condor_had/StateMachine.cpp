@@ -39,8 +39,6 @@
 #include "Utils.h"
 
 
-//#undef IS_REPLICATION_USED
-#define IS_REPLICATION_USED          (1)
 #define MESSAGES_PER_INTERVAL_FACTOR (2)
 #define DEFAULT_HAD_UPDATE_INTERVAL  (5 * MINUTE)
 
@@ -241,11 +239,10 @@ HADStateMachine::softReconfigure(void)
 
 	m_hadInterval = (time_to_send_all + safetyFactor)*
                   (MESSAGES_PER_INTERVAL_FACTOR);
-#if IS_REPLICATION_USED
+
     // setting the replication usage permissions
 	m_useReplication = param_boolean("HAD_USE_REPLICATION", m_useReplication);
     setReplicationDaemonSinfulString( );
-#endif
 
 	dprintf(D_ALWAYS,
 			"HADStateMachine::softReconfigure classad information\n");
