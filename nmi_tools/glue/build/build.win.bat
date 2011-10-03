@@ -109,6 +109,14 @@ goto finis
 
 :ALL_BUILD
 :BUILD
+@echo the time is:
+time /t
+@echo experimental touching...
+dir CMakeLists.txt
+dir CMakeFiles\generate.stamp*
+for /F %%I in ('dir /b/s CMakeLists.*') do touch %%I
+dir CMakeLists.txt
+dir CMakeFiles\generate.stamp*
 @echo cmake.exe . -G "Visual Studio 9 2008"
 cmake.exe . -G "Visual Studio 9 2008"
 if ERRORLEVEL 1 goto finis
