@@ -28,7 +28,6 @@
 #include "basename.h"
 #include "qmgmt.h"
 #include "condor_qmgr.h"
-#include "log_transaction.h"
 #include "log.h"
 #include "classad_collection.h"
 #include "prio_rec.h"
