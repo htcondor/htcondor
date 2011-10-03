@@ -7662,7 +7662,6 @@ SetVMParams()
 
 		// Read the parameter of xen_transfer_files 
 		char *transfer_files = NULL;
-		const char *transf_attr_name;
 
         transfer_files = condor_param("transfer_input_files");
         if (transfer_files)

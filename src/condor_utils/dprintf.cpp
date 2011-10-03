@@ -867,7 +867,6 @@ void
 debug_unlock(int debug_level)
 {
 	priv_state priv;
-	int flock_errno = 0;
 	int result = 0;
 
 	FILE *debug_file_ptr;

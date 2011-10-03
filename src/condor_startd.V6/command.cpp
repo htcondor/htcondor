@@ -1476,7 +1476,7 @@ bool
 accept_request_claim( Resource* rip )
 {
 	int interval = -1;
-	char *client_addr = NULL, *tmp;
+	char *client_addr = NULL;
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
 

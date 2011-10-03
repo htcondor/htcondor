@@ -220,10 +220,8 @@ int
 daemon::runs_on_this_host()
 {
 	char	*tmp;
-	char	hostname[512];
 	static bool this_host_addr_cached = false;
 	static std::vector<condor_sockaddr> this_host_addr;
-	struct hostent	*hp;
 	int		i, j;
 
 

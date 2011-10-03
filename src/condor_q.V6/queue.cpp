@@ -306,7 +306,6 @@ int main (int argc, char **argv)
 	ClassAd		*ad;
 	bool		first;
 	char		*scheddName=NULL;
-	char		daemonAdName[128];
 	char		scheddMachine[64];
 	MyString    scheddVersion;
 	char		*tmp;
@@ -647,6 +646,7 @@ int main (int argc, char **argv)
 		}
 
 #ifdef HAVE_EXT_POSTGRESQL
+		char		daemonAdName[128];
 			// get the address of the database
 		if (ad->LookupString(ATTR_QUILL_DB_IP_ADDR, &dbIpAddr) &&
 			ad->LookupString(ATTR_QUILL_NAME, &quillName) &&
@@ -1569,7 +1569,6 @@ format_remote_host (char *, AttrList *ad)
 {
 	static char host_result[MAXHOSTNAMELEN];
 	static char unknownHost [] = "[????????????????]";
-	char* tmp;
 	condor_sockaddr addr;
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
@@ -3012,7 +3011,6 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 	request->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	bool uses_matchmaking = false;
-	unsigned int i;
 	MyString resource;
 	switch(universe) {
 			// Known valid
