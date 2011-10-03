@@ -479,7 +479,7 @@ QmgmtPeer::endpoint_ip_str() const
 	}
 }
 
-const condor_sockaddr&
+const condor_sockaddr
 QmgmtPeer::endpoint() const
 {
 	if ( sock ) {
