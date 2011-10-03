@@ -243,12 +243,7 @@ HADStateMachine::softReconfigure(void)
                   (MESSAGES_PER_INTERVAL_FACTOR);
 #if IS_REPLICATION_USED
     // setting the replication usage permissions
-    buffer = param( "HAD_USE_REPLICATION" );
-
-	if ( buffer && ! strncasecmp( buffer, "true", strlen("true") ) ) {
-        m_useReplication = true;
-        free( buffer );
-    }
+	m_useReplication = param_boolean("HAD_USE_REPLICATION", m_useReplication);
     setReplicationDaemonSinfulString( );
 #endif
 
