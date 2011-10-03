@@ -18,7 +18,7 @@
 
 
 
-condor_shared_lib( chirp_client "chirp_client.h;chirp_client.c" )
+condor_static_lib( chirp_client "chirp_client.h;chirp_client.c" )
 
 condor_exe( condor_chirp "condor_chirp.cpp" ${C_LIBEXEC}
 "chirp_client;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GCB_FOUND};${GLOBUS_FOUND}" OFF )
