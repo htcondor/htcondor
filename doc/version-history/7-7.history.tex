@@ -41,6 +41,11 @@ previously when clients initiated communication with the collector but
 then delayed sending input.
 \Ticket{2506}
 
+\item When using versions of glexec that create a copy of the proxy for use
+by the job, Condor now ensures that this copy of the proxy is cleaned up
+when the job is done.
+\Ticket{2501}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
