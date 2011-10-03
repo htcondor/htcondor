@@ -26,9 +26,6 @@
 #include "prio_rec.h"
 #include "condor_sockaddr.h"
 
-#define NEW_BORN	1
-#define DEATHS_DOOR	2
-
 
 void PrintQ();
 class Service;
