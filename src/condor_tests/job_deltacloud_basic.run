@@ -59,6 +59,25 @@ my $submit_file = $corename . ".cmd";
 CondorTest::debug("Master PID is $mypid\n",$debuglevel);
 CondorTest::debug("Master PID submit file is $submit_file\n",$debuglevel);
 
+# Download and build Ruby.  In new Batlab we won't have it pre-installed
+# as a prereq (because prereqs don't exist).  Instead of having NMI install
+# it on every platform we are going to build it ourselves.
+mkdir("ruby");
+chdir("ruby");
+chomp(my $ruby_wd = `pwd`);
+system("wget http://parrot.cs.wisc.edu/externals/ruby-1.9.2-p290.tar.gz");
+system("tar zxf ruby-1.9.2-p290.tar.gz");
+chdir("ruby-1.9.2-p290");
+system("./configure --prefix=$ruby_wd && make && make install");
+$ENV{PATH} = "$ruby_wd/bin:$ENV{PATH}";
+chdir($cwd);
+
+print "Output of 'ruby -v': ";
+system("ruby -v");
+
+print "Output of 'gem -v': ";
+system("gem -v");
+
 # TODO Installing these gems requires pull data from a remote server and
 #   takes 5 minutes. We should find a way to cache the installation.
 print "Install ruby gems\n";
