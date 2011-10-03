@@ -227,9 +227,9 @@ produce_output()
 		fprintf( mailer, szTmp.Value());
 	}
 
-	szTmp.sprintf("  %s\n", str);
-	dprintf(D_ALWAYS, szTmp.Value() );
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
+		szTmp.sprintf("  %s\n", str);
+		dprintf(D_ALWAYS, szTmp.Value() );
 		fprintf( mailer, szTmp.Value() );
 	}
 

@@ -15,12 +15,16 @@ if "~%1"=="~EXTERNALS" (
 
 REM use FOR to convert from linux path separators to windows path seps
 for %%I in ("%BASE_DIR%") do set BUILD_ROOT=%%~dpfI
+if "~%BUILD_ROOT%"=="~" set BUILD_ROOT=%CD%
+@echo BUILD_ROOT=%BUILD_ROOT%
 
 md %BUILD_ROOT%\Temp
 REM pcre blows up if the temp path has spaces in it, so make sure that it's a short path.
 set TEMP=%BUILD_ROOT%\Temp
 set TMP=%BUILD_ROOT%\Temp
 
+:: pick up compiler path from VS90COMNTOOLS environment variable
+::
 for /D %%I in ("%VS90COMNTOOLS%..") do set VS90ROOT=%%~sdpI
 set VS_DIR=%VS90ROOT:~0,-1%
 set VC_DIR=%VS_DIR%\VC
@@ -28,6 +32,8 @@ set VC_BIN=%VS_DIR%\bin
 
 set DOTNET_PATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727
 
+:: figure out path to active state perl.  It's different between old batlab and new batlab
+::
 set PERL_PATH=
 :: Is active perl passed as prereqs?
 set ACTIVE_PERL_DIR=%_NMI_PREREQ_ActivePerl_ROOT%
@@ -51,18 +57,39 @@ if NOT "~%ACTIVE_PERL_DIR%"=="~" set PERL_PATH=%ACTIVE_PERL_DIR%\site\bin;%ACTIV
 echo PERL_PATH=%PERL_PATH%
 :got_perl
 
-if "~%_NMI_PREREQ_7_Zip_ROOT%"=="~" (
-  set ZIP_PATH=%ProgramFiles%\7-Zip
+:: figure out the path to 7-Zip
+::
+for %%I in (7z.exe) do set ZIP_PATH=%%~sdp$PATH:I
+echo path ZIP_PATH=%ZIP_PATH%
+if NOT "~%_NMI_PREREQ_7_Zip_ROOT%"=="~" (
+   set ZIP_PATH=%_NMI_PREREQ_7_Zip_ROOT%
 ) else (
-  set ZIP_PATH=%_NMI_PREREQ_7_Zip_ROOT%
+   if "~%ZIP_PATH%"=="~" (
+      set ZIP_PATH=%ProgramFiles%\7-Zip
+      echo guess ZIP_PATH=%ZIP_PATH%
+   )
 )
+:: strip trailing \ from zip dir
+if "~%ZIP_PATH:~-1%"=="~\" set ZIP_PATH=%ZIP_PATH:~0,-1%
+
+:: figure out where the cmake bin directory is.
+::
+for %%I in (cmake.exe) do set CMAKE_BIN_DIR=%%~sdp$PATH:I
+echo path CMAKE_BIN_DIR=%CMAKE_BIN_DIR%
+if NOT "~%_NMI_PREREQ_cmake_ROOT%"=="~" (
+   set CMAKE_BIN_DIR=%_NMI_PREREQ_cmake_ROOT%\bin
+   echo nmi CMAKE_BIN_DIR=%CMAKE_BIN_DIR%
+) else (
+   if "~%CMAKE_BIN_DIR%"=="~" (
+      set CMAKE_BIN_DIR=C:\Program Files\CMake 2.8\bin
+      echo guess CMAKE_BIN_DIR=%CMAKE_BIN_DIR%
+   )
+)
+:: strip trailing \ from cmake bin dir
+if "~%CMAKE_BIN_DIR:~-1%"=="~\" set CMAKE_BIN_DIR=%CMAKE_BIN_DIR:~0,-1%
+
 set WIX_PATH=%WIX%
 set MSCONFIG_TOOLS_DIR=%BUILD_ROOT%\msconfig
-if "~%_NMI_PREREQ_cmake_ROOT%"=="~" (
-   set CMAKE_BIN_DIR=%ProgramFiles%\CMake 2.8\bin
-) else (
-   set CMAKE_BIN_DIR=%_NMI_PREREQ_cmake_ROOT%\bin
-)
 
 set PATH=%SystemRoot%\system32;%SystemRoot%;%PERL_PATH%;%MSCONFIG_TOOLS_DIR%;%VS_DIR%\Common7\IDE;%VC_BIN%;%CMAKE_BIN_DIR%;%ZIP_PATH%;%WIX_PATH%
 @echo PATH=%PATH%
@@ -82,6 +109,9 @@ goto finis
 
 :ALL_BUILD
 :BUILD
+@echo cmake.exe . -G "Visual Studio 9 2008"
+cmake.exe . -G "Visual Studio 9 2008"
+if ERRORLEVEL 1 goto finis
 @echo devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD
 devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD
 if ERRORLEVEL 1 goto finis
@@ -104,8 +134,15 @@ goto finis
 :MAKE_MSI
 :NATIVE
 @echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT\release_dir %BUILD_ROOT\condor-%2winnt-x86.msi
-@echo TODO: fix so that do_wix.bat can run in NMI.
+@echo TODO: fix so that do_wix.bat can run in NMI. %ERRORLEVEL%
+@echo on
+dir %BUILD_ROOT%\release_dir
+dir %BUILD_ROOT%
+@echo off
+:: reset set errorlevel to 0
+verify >NUL
 :: call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT\release_dir %BUILD_ROOT\condor-%2winnt-x86.msi
+@echo ERRORLEVEL=%ERRORLEVEL%
 goto finis
 
 :PACK
