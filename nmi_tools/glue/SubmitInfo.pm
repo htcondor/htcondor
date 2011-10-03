@@ -218,8 +218,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_winnt_6.1'		=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef,
-			                      '-D_VERBOSE:BOOL'	 => 'OFF', 
+			'configure_args' => { 
+			 # '-G \"Visual Studio 9 2008\"' => undef,
+			  '-D_VERBOSE:BOOL'	 => 'OFF', 
             },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
