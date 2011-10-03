@@ -2,6 +2,8 @@
 define("NUM_RUNS", 25);
 $NUM_RUNS = array_key_exists("runs", $_REQUEST) ? $_REQUEST["runs"] : NUM_RUNS;
 
+define("MAX_TASKS_TO_DISPLAY_IN_POPUP", 10);
+
 include "dashboard.inc";
 
 include "Dashboard.php";
@@ -45,7 +47,7 @@ FROM
   Task
 WHERE
   runid in ($runids) AND
-  name in (\"platform_job\", \"remote_pre\")
+  (name in (\"platform_job\", \"remote_pre\") OR result != 0)
 ";
 
 $results = $dash->db_query($query);
@@ -71,6 +73,8 @@ foreach ($results as $row) {
     $runs[$row["runid"]]["platforms"][$platform] = Array();
     $runs[$row["runid"]]["platforms"][$platform]["build"] = Array();
     $runs[$row["runid"]]["platforms"][$platform]["test"] = Array();
+    $runs[$row["runid"]]["platforms"][$platform]["build"]["bad-tasks"] = Array();
+    $runs[$row["runid"]]["platforms"][$platform]["test"]["bad-tasks"] = Array();
   }
 
   if($row["name"] == "platform_job") {
@@ -83,6 +87,9 @@ foreach ($results as $row) {
   elseif($row["name"] == "remote_pre") {
     // For the remote_pre step, we determine the execution host
     $runs[$row["runid"]]["platforms"][$platform]["build"]["host"] = $row["host"];
+  }
+  else {
+    array_push($runs[$row["runid"]]["platforms"][$platform]["build"]["bad-tasks"], $row["name"]);
   }
 }
 
@@ -124,7 +131,7 @@ FROM
   Task
 WHERE
   runid in ($test_runids) AND
-  name in (\"platform_job\", \"remote_pre\")
+  (name in (\"platform_job\", \"remote_pre\") or result != 0)
 ";
 
 $results = $dash->db_query($query);
@@ -154,7 +161,10 @@ foreach ($results as $row) {
   elseif($row["name"] == "remote_pre") {
     // For the remote_pre step, we determine the execution host
     $runs[$build_runid]["platforms"][$platform]["test"]["host"] = $row["host"];
-  }  
+  }
+  else {
+    array_push($runs[$build_runid]["platforms"][$platform]["test"]["bad-tasks"], $row["name"]);
+  }
 }
 
 /////////////////////////////////////////////
@@ -180,15 +190,16 @@ print "  <th>SHA1</th>\n";
 foreach (array_keys($seen_platforms) as $platform) {
   // Update this if NMI has any other architecture prefixes (such as ia64) 
   if(preg_match("/^x86_64_/", $platform)) {
-    $display = preg_replace("/x86_64_/", "x86_64 ", $platform);
+    $display = preg_replace("/x86_64_/", "x86_64<br>", $platform);
   }
   elseif(preg_match("/ia64_/", $platform)) {
-    $display = preg_replace("/ia64_/", "x86 ", $platform);
+    $display = preg_replace("/ia64_/", "x86<br>", $platform);
   }
   else {
-    $display = preg_replace("/x86_/", "x86 ", $platform);
+    $display = preg_replace("/x86_/", "x86<br>", $platform);
   }
-  print "  <th colspan>$display</th>\n";
+
+  print "  <th colspan=2><font size='-3'>$display</font></th>\n";
 }
 print "</tr>\n";
 
@@ -206,19 +217,17 @@ foreach ($runs as $run) {
   foreach (array_keys($seen_platforms) as $platform) {
     // There is no guarantee that each platform is in each run.  So check it here
     if(array_key_exists($platform, $run["platforms"])) {
-      print "  <td style=\"text-align:center\"><nobr>\n";
       print make_cell($run, $platform, "build");
 
       if($run["platforms"][$platform]["build"]["result"] != NULL and $run["platforms"][$platform]["build"]["result"] == 0) {
 	print make_cell($run, $platform, "test");
       }
       else {
-	print " <img src=\"no-run.png\" border=\"0px\">";	
+	print " <td class=\"noresults test\">&nbsp;&nbsp;&nbsp;</td>";
       }
-      print "  </nobr></td>\n";
     }    
     else {
-      print "  <td>&nbsp;</td>\n";
+      print "  <td class='build'>&nbsp;</td><td class='test'>&nbsp;</td>\n";
     }
   }
 
@@ -312,19 +321,37 @@ function make_cell($run, $platform, $run_type) {
 
   $details = "  <table>";
   $details .= "    <tr><td>Status</td><td class=\"$color\">$color</td></tr>";
-  $details .= "    <tr><td>NMI RunID</td><td>" . $run["platforms"][$platform][$run_type]["runid"] . "</td></tr>";
+  $details .= "    <tr><td><nobr>NMI RunID</nobr></td><td>" . $run["platforms"][$platform][$run_type]["runid"] . "</td></tr>";
   $details .= "    <tr><td>Submitted</td><td><nobr>" . $run["start"] . "</nobr></td></tr>";
   $details .= "    <tr><td>Duration</td><td><nobr>" . $run["platforms"][$platform][$run_type]["duration"] . "</nobr></td></tr>";
   $details .= "    <tr><td>Host</td><td>" . $run["platforms"][$platform][$run_type]["host"] . "</td></tr>";
+
+  if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
+    $failed_tasks = "<None>";
+  }
+  elseif(count($run["platforms"][$platform][$run_type]["bad-tasks"]) <= MAX_TASKS_TO_DISPLAY_IN_POPUP) {
+    $failed_tasks = implode("<br>", $run["platforms"][$platform][$run_type]["bad-tasks"]);
+  }
+  else {
+    $failed_tasks = implode("<br>", array_slice($run["platforms"][$platform][$run_type]["bad-tasks"], 0, MAX_TASKS_TO_DISPLAY_IN_POPUP-1));
+    $hidden = count($run["platforms"][$platform][$run_type]["bad-tasks"]) - MAX_TASKS_TO_DISPLAY_IN_POPUP;
+    $failed_tasks .= "<br><i>$hidden more...</i>";
+  }
+  $details .= "    <tr><td><nobr>Failed tasks</nobr></td><td>$failed_tasks</td></tr>";
   //$details .= "    <tr><td>Submission Host</td><td>" . $run["host"] . "</td></tr>";
+
   $details .= "  </table>";
 
   $detail_url = sprintf(DETAIL_URL, $run["runid"], $run_type, CONDOR_USER);
 
-  //  $div = "<div class=\"$color\" style=\"height:20px;width:20px; float:left\">&nbsp;</div>";
-  $div = "<img src=\"$color.png\" border=\"0px\">";
+  if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
+    $div = "&nbsp;&nbsp;&nbsp;";
+  }
+  else {
+    $div = count($run["platforms"][$platform][$run_type]["bad-tasks"]);
+  }
 
-  $popup_html = "  <span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$div<span>$details</span></a></span>";
+  $popup_html = "  <td class=\"$color $run_type\" ><span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$div<span>$details</span></a></span></td>";
 
   return $popup_html;
 }

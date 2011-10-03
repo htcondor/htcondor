@@ -213,10 +213,31 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Microsoft Windows 6.0/2000/xp/whatever on x86_64
+	# Microsoft Windows 6.1/2000/xp/whatever on x86_64
 	# This probably doesn't work--glue scripts do funky things with it.
 	##########################################################################
-	'x86_winnt_6.0'		=> {
+	'x86_64_winnt_6.1'		=> {
+		'build' => {
+			'configure_args' => { 
+			 # '-G \"Visual Studio 9 2008\"' => undef,
+			  '-D_VERBOSE:BOOL'	 => 'OFF', 
+            },
+			'prereqs'	=> undef,
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> undef,
+			'testclass' => [ @default_testclass ],
+		},
+	},
+	
+	##########################################################################
+	# Microsoft Windows 6.1/2000/xp/whatever on x86	
+	# This probably doesn't work--glue scripts do funky things with it.
+	##########################################################################
+	'x86_winnt_6.1'		=> {
 		'build' => {
 			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
 			'prereqs'	=> undef,
