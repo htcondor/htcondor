@@ -315,7 +315,6 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
 {
   vmprintf(D_FULLDEBUG, "In VirshType::CreateVirshConfigFile\n");
   //  std::string name;
-  char * name, line[1024];
   char * tmp = param("LIBVIRT_XML_SCRIPT");
   if(tmp == NULL)
     {
@@ -739,7 +738,6 @@ void virshIOError(const char * filename, FILE * fp)
 bool KVMType::CreateVirshConfigFile(const char * filename)
 {
 	MyString disk_string;
-	char* config_value = NULL;
 
 	if(!filename) return false;
 
@@ -802,7 +800,6 @@ bool
 XenType::CreateVirshConfigFile(const char* filename)
 {
 	MyString disk_string;
-	char* config_value = NULL;
 
 	if( !filename ) return false;
 
@@ -1188,7 +1185,6 @@ VirshType::createCkptFiles(void)
 
 bool KVMType::checkXenParams(VMGahpConfig * config)
 {
-  char *config_value = NULL;
   MyString fixedvalue;
   if( !config ) {
     return false;
@@ -1642,7 +1638,6 @@ KVMType::KVMType(const char * workingpath, ClassAd * ad)
 bool
 KVMType::CreateConfigFile()
 {
-	char *config_value = NULL;
 	priv_state priv;
 
 	vmprintf(D_FULLDEBUG, "In KVMType::CreateConfigFile()\n");
