@@ -149,6 +149,12 @@ it now understands the proper format.
 subdirectories for local locks.
 \Ticket{2495}
 
+\item VM universe jobs using Xen or KVM would fail to start if the disk
+image files were transferred from the submit machine and the default
+\Macro{LIBVIRT\_XML\_SCRIPT} script was used.
+The script didn't provide absolute pathnames for the files.
+\Ticket{2511}
+
 \end{itemize}
 
 \noindent Known Bugs:
