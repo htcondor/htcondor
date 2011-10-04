@@ -1,0 +1,121 @@
+Plumage - NoSQL Operational Data Store for Condor
+.................................................
+
+Overview
+========
+This contrib provides components for an ODS capability in Condor using the 
+NoSQL database mongodb. The Quill contrib is a similar effort but based on a 
+RDBMS model. The essential design of Plumage is to capture the data traffic 
+emitted from the various Condor daemons and convert them from the ClassAd form
+into a document instance in a mongodb collection. Once converted, these ClassAd
+records can be queried simply and directly based on any attribute.
+
+The initial focus of this contrib is to embed a Plumage ODS plugin inside a 
+view collector to capture the raw ClassAds for the Machine and Submitter types.
+The plugin operates on a timer to take snapshots of essential attributes at
+a configurable interval, and then write those values also to a different 
+mongodb collection.
+
+Installation
+============
+You will need to install mongodb and the C++ driver (1.6.4 minimum) as well as
+dependencies:
+- js
+- boost
+- pymongo
+
+Plumage can be included in a Condor source build using the following variables 
+when cmake is invoked:
+
+	-DWANT_CONTRIB:BOOL=TRUE -DWITH_MANAGEMENT:BOOL=TRUE -DWITH_PLUMAGE:BOOL=TRUE
+
+Configuration
+=============
+This initial release is as a plugin to the existing view collector so much of the
+Condor configuration relates to that of a standard view collector.
+
+################
+# View Server
+################
+VIEW_SERVER = $(COLLECTOR)
+VIEW_SERVER_ARGS = -f -p 12345 -local-name VIEW_SERVER
+VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog"
+COLLECTOR.CONDOR_VIEW_HOST = $(CONDOR_HOST):12345
+# make sure the view server doesn't point at itself
+VIEW_SERVER.CONDOR_VIEW_HOST = 
+VIEW_SERVER.KEEP_POOL_HISTORY = True
+VIEW_SERVER.SAMPLING_INTERVAL=20
+VIEW_SERVER.PLUGINS = $(LIBEXEC)/ODSCollectorPlugin-plugin.so
+CONDOR_VIEW_CLASSAD_TYPES = Machine, Submitter
+POOL_HISTORY_SAMPLING_INTERVAL = 60
+UPDATE_INTERVAL = 300
+# the following are defaults in code also
+ODS_DB_HOST = localhost
+ODS_DB_PORT =
+
+plumage_stats.py
+================
+
+Plumage has a client tool with *similar* capabilities to the condor_stats tool.
+It provides listings of submitters, resources and records over time spans. The 
+submitter records include point-in-time snapshots of running, held and idle jobs.
+The resource records show arch, OS, keyboard idle time, load average and state.
+
+Usage: plumage_stats.py [options]
+
+Query Condor ODS for statistics
+
+Options:
+  -h, --help            show this help message and exit
+  -v, --verbose         enable logging
+  -s SERVER, --server=SERVER
+                        mongodb database server location: e.g., somehost,
+                        localhost:2011
+  --u=USER, --user=USER
+                        stats for a single submitter
+  --r=RESOURCE, --resource=RESOURCE
+                        stats for a single resource
+  --f=START, --from=START
+                        records from datetime
+  --t=END, --to=END     records to datetime
+  --ul, --userlist      list all submitters
+  --ugl, --usergrouplist
+                        list all submitter groups
+  --rl, --resourcelist  list all resources
+
+Use Cases
+---------
+
+Find the names of all submitters.
+$ ./plumage_stats.py --ul
+pmackinn@redhat.com
+
+Find the names of all user groups (i.e., users plus submitter machine).
+$ ./plumage_stats.py --ugl
+pmackinn@redhat.com/milo.usersys.redhat.com
+
+Find the names of all resources (aka startds, slots).
+$ ./plumage_stats.py --rl
+slot1@milo.usersys.redhat.com
+slot2@milo.usersys.redhat.com
+
+Print the stats for any username that starts with 'pmackinn' for the previous hour (default time lookback).
+$ ./plumage_stats.py --u pmackinn
+
+Print the stats for user 'pmackinn' over a given datetime range.
+$ ./plumage_stats.py --u pmackinn --from '2011-09-29 14:02' --to '2011-09-29 14:05'
+pmackinn@redhat.com 	2011-09-29 14:02:19.239000 	2 	0 	0
+pmackinn@redhat.com 	2011-09-29 14:03:19.235000 	2 	0 	0
+pmackinn@redhat.com 	2011-09-29 14:04:19.469000 	0 	0 	0
+
+Print the stats for a resource name that contains 'milo' for the previous hour (default time lookback).
+$ ./plumage_stats.py --r milo
+
+Print the stats for resource 'milo' over a given datetime range.
+$ ./plumage_stats.py --r milo --from '2011-09-29 14:02' --to '2011-09-29 14:05'
+slot1@milo.usersys.redhat.com 	2011-09-29 14:02:19.240000 	INTEL/LINUX 	205 	0.24 	Claimed
+slot2@milo.usersys.redhat.com 	2011-09-29 14:02:19.240000 	INTEL/LINUX 	533 	0.00 	Claimed
+slot1@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	12 		0.33 	Claimed
+slot2@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	603 	0.00 	Claimed
+slot2@milo.usersys.redhat.com 	2011-09-29 14:04:19.470000 	INTEL/LINUX 	653 	0.00 	Unclaimed
+slot1@milo.usersys.redhat.com 	2011-09-29 14:04:19.471000 	INTEL/LINUX 	30 		0.28 	Unclaimed
