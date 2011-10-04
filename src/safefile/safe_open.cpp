@@ -22,13 +22,13 @@
 #include <fcntl.h>
 #ifndef WIN32
 #include <unistd.h>
+#include <Windows.h>
 #else
 #include <io.h>
 #endif
 #include <errno.h>
 #include <stdio.h>
 #include "safe_open.h"
-#include <Windows.h>
 
 /*
  * Replacement functions for open.  These functions differ in the following
