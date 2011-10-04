@@ -28,7 +28,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include "safe_open.h"
-#include <Windows.h>
 
 
 /*
