@@ -74,7 +74,10 @@ partitionable slots on SMP machines.
 when the \Condor{userprio} tool cannot locate the \Condor{negotiator} daemon.
 \Ticket{2478}
 
-\item Updated \Condor{userprio} callbacks to handle submitter names of arbitrary length.
+\item \Condor{userprio} and the \Condor{negotiator} daemon 
+did not correctly handle the names of submitters, 
+when these names exceeded 63 characters in length.
+The fix handles submitter names of arbitrary length.
 \Ticket{2445}
 
 \item Removed a spurious boolean flag reset in \Condor{q},
@@ -141,8 +144,8 @@ caused crashes are not easy to describe.
 when any job ClassAd attribute value contained the ASCII character 255.
 \Ticket{2450}
 
-\item \Condor{preen} failed to honor the \Opt{-remove} option
-and would always remove lock files.
+\item Fixed a bug in which \Condor{preen} failed to honor the 
+\Opt{-remove} option, and would always remove lock files.
 \Ticket{2497}
 
 \item \Condor{preen} expected an old format for local lock file paths;
@@ -153,10 +156,10 @@ it now understands the proper format.
 subdirectories for local locks.
 \Ticket{2495}
 
-\item VM universe jobs using Xen or KVM would fail to start if the disk
-image files were transferred from the submit machine and the default
-\Macro{LIBVIRT\_XML\_SCRIPT} script was used.
-The script didn't provide absolute pathnames for the files.
+\item \SubmitCmd{vm} universe jobs using Xen or KVM would fail to start,
+if the disk image files were transferred from the submit machine
+and the default value defined for \Macro{LIBVIRT\_XML\_SCRIPT} was used.
+The script did not provide absolute path names for the files.
 \Ticket{2511}
 
 \end{itemize}
