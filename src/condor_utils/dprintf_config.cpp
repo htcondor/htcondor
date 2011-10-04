@@ -249,9 +249,9 @@ dprintf_config( const char *subsys )
 				}
 
 				if( first_time && want_truncate ) {
-					debug_file_fp = debug_lock(debug_level, "w", 0);
+					debug_file_fp = debug_lock(debug_level, "wN", 0);
 				} else {
-					debug_file_fp = debug_lock(debug_level, "a", 0);
+					debug_file_fp = debug_lock(debug_level, "aN", 0);
 				}
 
 				if( debug_file_fp == NULL && debug_level == 0 ) {
