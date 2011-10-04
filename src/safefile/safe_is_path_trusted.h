@@ -23,7 +23,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 extern "C"  {
 #endif
 
@@ -60,7 +60,7 @@ int safe_is_path_trusted_r(
 	);
 
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 
