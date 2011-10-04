@@ -30,7 +30,6 @@
 #include "safe_open.h"
 #include <Windows.h>
 
-
 /*
  * Replacement functions for open.  These functions differ in the following
  * ways:
