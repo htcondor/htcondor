@@ -1,0 +1,68 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my $MAX_SUBMITS = 10;
+my $GIT_DIR = "/home/condorauto/condor.git.test";
+my $TAG = "continuous-build-placeholder-tag";
+
+my @PLATFORMS = qw/
+x86_64_deb_6.0
+x86_64_fedora_14
+x86_64_freebsd_8.2
+x86_64_macos_10.7
+x86_64_opensuse_11.3
+x86_64_opensuse_11.4
+x86_64_rhap_5.7
+x86_64_rhap_6.1
+x86_64_sl_6.0
+x86_64_ubuntu_10.04.3
+x86_64_winnt_6.1
+/;
+
+
+chdir("/home/condorauto/per-commit");
+system("git --git-dir=$GIT_DIR fetch");
+
+my @output = `git --git-dir=$GIT_DIR log --first-parent --pretty=oneline $TAG..HEAD`;
+
+my $ret = $? >> 8;
+if($ret != 0) {
+    error("git log failed");
+}
+else {
+    if(@output > $MAX_SUBMITS) {
+	print "WARNING: there are more than $MAX_SUBMITS commits.  Only submitting the most recent $MAX_SUBMITS.\n";
+	print "Here is the full list:\n@output\n";
+
+	@output = @output[0..($MAX_SUBMITS-1)];
+    }
+
+    foreach my $line (reverse @output) {
+	chomp($line);
+	if($line =~ /^(\S+) (.+)/) {
+	    # Extract the SHA1
+	    my $sha1 = $1;
+	    my $desc = $2;
+
+	    system("rm -fr nmi_tools");
+	    system("git --git-dir=$GIT_DIR archive $sha1 nmi_tools | tar xf - nmi_tools");
+
+	    my $platforms = join(", ", @PLATFORMS);
+	    system("GIT_DIR=$GIT_DIR NMI_BIN=/usr/local/nmi/bin CONDOR_BIN=/usr/bin ./nmi_tools/condor_nmi_submit --notify=kronenfe\@cs.wisc.edu --build --git --tag=$sha1 --module=FOO --desc=\"Continuous Build\" --platforms=\"$platforms\" --notify-fail-only --sha1=$sha1 > condor_nmi_submit.out");
+	    
+	    # Update the tag so that next time we run 
+	    system("git --git-dir=$GIT_DIR tag $TAG --force $sha1 2>&1");
+	}
+	else {
+	    print "WARNING: Line is in an unrecognized format:\n$line\n";
+	}
+    }
+}
+
+
+sub error {
+    # This script will run out of cron, so do something with the error messages
+    # that will be noticed, such as email or a well known log file.
+}
