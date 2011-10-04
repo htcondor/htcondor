@@ -157,10 +157,10 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
         my $cmake_args = get_cmake_args();
         print "Windows CHECK_TAR (ZIP) task\n";
         print "   cmake_args = $cmake_args\n";
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP 7.7.3-pre-";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP";
     } elsif ($taskname eq $NATIVE_TASK) {
         print "Windows NATIVE (MSI) task\n";
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE 7.7.3-pre-";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE";
     }
 }
 else {

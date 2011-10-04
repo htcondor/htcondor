@@ -219,8 +219,9 @@ our %submit_info = (
 	'x86_64_winnt_6.1'		=> {
 		'build' => {
 			'configure_args' => { 
+			 # TJ 10/4/2011 new batlab can't handle quoted strings as args at the moment.
 			 # '-G \"Visual Studio 9 2008\"' => undef,
-			  '-D_VERBOSE:BOOL'	 => 'OFF', 
+			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
             },
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
@@ -239,7 +240,11 @@ our %submit_info = (
 	##########################################################################
 	'x86_winnt_6.1'		=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
+			'configure_args' => { 
+			 # TJ 10/4/2011 new batlab can't handle quoted strings as args at the moment.
+			 # '-G \"Visual Studio 9 2008\"' => undef,
+			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
+			},
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
