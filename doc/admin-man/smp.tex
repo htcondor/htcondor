@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Configuring-SMP}
-Configuring The Startd for SMP Machines}
+Configuring The \Condor{startd} for SMP Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{SMP machines!configuration|(}
@@ -30,6 +30,7 @@ multiple machines, named slot1@vulture.cs.wisc.edu,
 slot2@vulture.cs.wisc.edu,
 slot3@vulture.cs.wisc.edu, and so on.
 
+\index{partitioning SMP machines}
 The way that the \Condor{startd} breaks up the
 shared system resources into the different slots
 is configurable.
@@ -60,6 +61,7 @@ divide the resources on an SMP machine into separate slots.
 \subsubsection{\label{sec:SMP-Divide}
 Dividing System Resources in SMP Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{partitioning SMP machines}
 
 This section describes the settings that allow you to define your own
 slot types and to control how many slots of each
