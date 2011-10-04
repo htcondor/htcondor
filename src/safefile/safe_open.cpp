@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include "safe_open.h"
-
+#include <Windows.h>
 
 
 /*
@@ -113,7 +113,7 @@ int safe_open_no_create(const char *fn, int flags)
      * first and succeeds, the device and inode pair cannot be reused before
      * the lstat.  If they are done the other way around an attacker can stop
      * or slow the process and wait for the lstat'd file to be deleted, then a
-     * file with the same deveice and inode is created by the attacker or a
+     * file with the same device and inode is created by the attacker or a
      * victim and a symbolic at the filename can point to the new file and it
      * will appear to match and not be a symbolic link.
      */
@@ -143,7 +143,7 @@ int safe_open_no_create(const char *fn, int flags)
     }
 
     /* Check if lstat fn is a symbolic link.  This is an error no matter what
-     * the result of the open was.  return an error of EEXIST.
+     * the result of the open was.  Return an error of EEXIST.
      */
     if (S_ISLNK(lstat_buf.st_mode))  {
 	if (f != -1)  {
@@ -162,7 +162,7 @@ int safe_open_no_create(const char *fn, int flags)
 	    /* Since this is not a symbolic link, the only way this could have
 	     * happened is if during the open the entry was a dangling symbolic
 	     * link or didn't exist, and during the lstat it exists and is not
-	     * a symbolic link.  try again to get a consistent open/lstat.
+	     * a symbolic link.  Try again to get a consistent open/lstat.
 	     */
 
 	    goto TRY_AGAIN;
@@ -194,7 +194,7 @@ int safe_open_no_create(const char *fn, int flags)
     }
 	
     /* Check if the immutable properties (device, inode and type) of the file
-     * system object opened match (fstat_buf) those of the dirctory entry
+     * system object opened match (fstat_buf) those of the directory entry
      * (lstat_buf).
      */
     if (    lstat_buf.st_dev != fstat_buf.st_dev
@@ -215,13 +215,13 @@ int safe_open_no_create(const char *fn, int flags)
      */
 
     /* Check if we still need to truncate the file.  POSIX says to ignore the
-     * truncate flage if the file type is a fifo or it is a tty.  Otherwise if
+     * truncate flag if the file type is a fifo or it is a tty.  Otherwise if
      * it is not * a regular file, POSIX says the behavior is implementation
-     * definded.
+     * defined.
      *
-     * Do not do the trunccate if the file is already 0 in size.  This also
+     * Do not do the truncate if the file is already 0 in size.  This also
      * prevents some unspecified behavior in truncate file types which are not
-     * regular, fifo's or tty's, such as device files like /dev/null.  on some
+     * regular, fifo's or tty's, such as device files like /dev/null.  On some
      * platforms O_CREAT|O_WRONLY|O_TRUNC works properly on /dev/null, but
      * O_WRONLY|O_TRUNC fails.
      */
@@ -283,7 +283,7 @@ int safe_create_keep_if_exists(const char *fn, int flags, mode_t mode)
 
     /* Loop alternating between creating the file (and failing if it exists)
      * and opening an existing file.  Return an error if any error occurs other
-     * than an indication that the other function should work.
+     * than an indication that the other open method should work.
      */
     while (f == -1)  {
 	/* If this is the second or subsequent attempt, then someone is
@@ -325,7 +325,7 @@ int safe_create_keep_if_exists(const char *fn, int flags, mode_t mode)
 	}
     }
 
-    /* no error, restore errno incase we had recoverable failures */
+    /* no error, restore errno in case we had recoverable failures */
     errno = saved_errno;
 
     return f;
@@ -389,7 +389,7 @@ int safe_create_replace_if_exists(const char *fn, int flags, mode_t mode)
 	 */
     }
 
-    /* no error, restore errno incase we had recoverable failures */
+    /* no error, restore errno in case we had recoverable failures */
     errno = saved_errno;
 
     return f;
@@ -436,11 +436,11 @@ int safe_open_no_create_follow(const char *fn, int flags)
 	}
 	
 	/* Check if we still need to truncate the file.  POSIX says to ignore
-	 * the truncate flage if the file type is a fifo or it is a tty.
+	 * the truncate flag if the file type is a fifo or it is a tty.
 	 * Otherwise if it is not * a regular file, POSIX says the behavior is
-	 * implementation definded.
+	 * implementation defined.
 	 *
-	 * Do not do the trunccate if the file is already 0 in size.  This also
+	 * Do not do the truncate if the file is already 0 in size.  This also
 	 * prevents some unspecified behavior in truncate file types which are
 	 * not regular, fifo's or tty's, such as device files like /dev/null.
 	 * on some platforms O_CREAT|O_WRONLY|O_TRUNC works properly on
@@ -486,7 +486,7 @@ int safe_create_keep_if_exists_follow(const char *fn, int flags, mode_t mode)
      */
     flags &= ~O_CREAT & ~O_EXCL;
 
-    /* Loop atternating between creating the file (and failing if it exists)
+    /* Loop alternating between creating the file (and failing if it exists)
      * and opening an existing file.  Return an error if any error occurs other
      * than an indication that the other function should work.
      */
@@ -530,7 +530,7 @@ int safe_create_keep_if_exists_follow(const char *fn, int flags, mode_t mode)
 		/* At this point, creating the file returned EEXIST and opening
 		 * the file returned ENOENT.  Either the file did exist during
 		 * the attempt to create the file and was removed before the
-		 * open, or the file was dangling symoblic link.  If it is a
+		 * open, or the file was dangling symbolic link.  If it is a
 		 * dangling symbolic link we want to return ENOENT and if not
 		 * we should retry.
 		 */
@@ -540,7 +540,7 @@ int safe_create_keep_if_exists_follow(const char *fn, int flags, mode_t mode)
 		    return -1;
 		}
 
-		/* lstat succeeded check if directory entry is a symobolic
+		/* lstat succeeded check if directory entry is a symbolic
 		 * link.
 		 */
 		if (S_ISLNK(lstat_buf.st_mode))  {
@@ -556,7 +556,7 @@ int safe_create_keep_if_exists_follow(const char *fn, int flags, mode_t mode)
 	}
     }
 
-    /* no error, restore errno incase we had recoverable failures */
+    /* no error, restore errno in case we had recoverable failures */
     errno = saved_errno;
 
     return f;

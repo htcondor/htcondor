@@ -560,7 +560,7 @@ id_t safe_strto_id(const char *value, const char **endptr)
  * 	<id> is of the form parsed by strto_id.  If the option '-' and second
  * 	<id> is not present, the first <id> is returned for both the minimum
  * 	and maximum value.  Since an <id> in a non-numeric form may contain a
- * 	'-', a space must preceed the '-' if the first <id> is in a non-numeric
+ * 	'-', a space must precede the '-' if the first <id> is in a non-numeric
  * 	form.  The value '*' as the second value specifies the maximum allowed
  * 	id (assumes id_t is an unsigned type, if it is unsigned the code will
  * 	work correctly, but '*' will not work.
@@ -623,7 +623,7 @@ static void strto_id_range(id_t *min_id, id_t *max_id, const char *value, const 
 
 /*
  * strto_id_list
- * 	Adds the rnages in the value to the list.  Ranges are as specified in
+ * 	Adds the ranges in the value to the list.  Ranges are as specified in
  * 	strto_id_range, and there may be multiple ranges in value that are
  * 	separated by whitespace and a colon of the form:
  * 		<ID_RANGE> [ <SP>* ':' <SP>* <ID_RANGE> ]*
