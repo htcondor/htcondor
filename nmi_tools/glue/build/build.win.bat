@@ -136,11 +136,9 @@ cmake.exe -DBUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=release_dir -P cmak
 goto finis
    
 :ZIP
-@echo ZIPPING up build products
+@echo ZIPPING up build logs
 :: zip build products before zip the release directory so we don't include condor zip file build_products
-dir
-izip -r build_products.zip bld_external src doc build CMakeFiles
-izip build_products.zip *
+izip -r build_products.zip * -i *.cmake -i *.txt -i *.htm -i *.map -i *.vcproj -i *.sln -i *.log -i *.stamp* -i param_info* 
 @echo ZIPPING up release directory %BUILD_ROOT%\release_dir
 pushd %BUILD_ROOT%\release_dir
 izip -r ..\condor-%BUILD_VERSION%-winnt-x86.zip *
@@ -148,6 +146,21 @@ dir .
 popd
 goto finis   
    
+:ZIP_ALL
+@echo ZIPPING up ALL build products
+:: zip build products before zip the release directory so we don't include condor zip file build_products
+dir
+izip -r -q build_products.zip  bld_external build CMakeFiles doc externals nmi_tools soar src -x condor*.zip
+izip -D -q build_products.zip *
+goto finis   
+
+:ZIP_EXTERNALS
+@echo ZIPPING up externals from bld_external and externals directories
+:: zip build products before zip the release directory so we don't include condor zip file build_products
+dir bld_external
+izip -r build_externals.zip  bld_external externals
+goto finis   
+
 :MSI
 :MAKE_MSI
 :NATIVE
