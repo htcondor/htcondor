@@ -567,7 +567,4 @@
 /* Define to 1 if the system has proportional set size (PSS).*/
 #cmakedefine HAVE_PSS 1
 
-/* Define to 1 if the system has a working tr1/unordered_map */
-#cmakedefine HAVE_TR1_UNORDERED_MAP 1
-
 #endif
