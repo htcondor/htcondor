@@ -16,15 +16,28 @@
 # limitations under the License.
 #
 
+# This utility script is designed to query the mongodb database
+# for sampled records of Condor machine slots and submitter job
+# totals.
+
 # uses pymongo - http://pypi.python.org/pypi/pymongo/
 import pymongo
 from datetime import timedelta, datetime
 from sys import exit, argv
 import time, pwd, os
-import logging
 from optparse import OptionParser
 from dateutil import *
 from dateutil.parser import *
+
+# NOTE: the 1.9 pymongo driver does implicit localtime conversion when
+# dates are used in a query so we must compensate, eventhough the dates
+# ARE already stored in localtime in 1.6.4 mongodb
+# mongodb 1.7+ uses ISODate to address this
+UTC_DIFF = datetime.utcnow() - datetime.now()
+DEFAULT_START_DT = str(datetime.utcnow()-UTC_DIFF-timedelta(hours=1))
+DEFAULT_END_DT = str(datetime.utcnow()-UTC_DIFF)
+
+verbose = False
 
 def print_user(user,start,end):
 	for item in db['samples.submitter'].find({"sn":{'$regex':'^'+user}, 'ts':{'$gte': parse(start), '$lt': parse(end)}}):
@@ -32,7 +45,7 @@ def print_user(user,start,end):
 
 def print_resource(resource,start,end):
 	for item in db['samples.machine'].find({"mn":{'$regex':resource}, 'ts':{'$gte': parse(start), '$lt': parse(end)}}):
-		print item['mn'],"\t",item['ts'], "\t","%s/%s" % (item['ar'],item['os']),"\t",item['ki'],"\t","%0.2f" % item['la'],"\t",item['st']
+		print item['mn'],"\t",item['ts'], "\t","%s/%s" % (item['ar'],item['os']),"\t",item['ki'],"\t",str(item['la'])[:5],"\t",item['st']
 
 def print_users():
 		for user in db['samples.submitter'].distinct('sn'):
@@ -55,14 +68,16 @@ parser.add_option('-v','--verbose', action="store_true",default=False, help='ena
 parser.add_option('-s','--server', action="store", nargs='?', dest='server',
                     default='localhost',
                     help='mongodb database server location: e.g., somehost, localhost:2011')
-parser.add_option('--u','--user', dest="user", help='stats for a single submitter')
-parser.add_option('--r','--resource', dest="resource", help='stats for a single resource')
-parser.add_option('--f','--from', dest="start", help='records from datetime', default=str(datetime.now()-timedelta(hours=1)))
-parser.add_option('--t','--to', dest="end", help='records to datetime',default=str(datetime.now()))
+parser.add_option('--u','--user', dest="user", help='stats for a single submitter: user,timestamp,running,held,idle')
+parser.add_option('--r','--resource', dest="resource", help='stats for a single resource: slot,timestamp,keyboard idle,load average,status')
+parser.add_option('--f','--from', dest="start", help='records from datetime in ISO8601 format e.g., \'2011-09-29 12:03\'', default=DEFAULT_START_DT)
+parser.add_option('--t','--to', dest="end", help='records to datetime in ISO8601 format e.g., \'2011-09-30T17:16\'',default=DEFAULT_END_DT)
 parser.add_option('--ul','--userlist', action="store_true",dest="userlist", default=False, help='list all submitters')
 parser.add_option('--ugl','--usergrouplist', action="store_true",dest='usergrouplist',default=False, help='list all submitter groups')
 parser.add_option('--rl','--resourcelist', action="store_true",dest='resourcelist',default=False, help='list all resources')
 (options, args) =  parser.parse_args()
+
+verbose = options.verbose
 
 try:
 	connection = pymongo.Connection(options.server)
@@ -70,6 +85,10 @@ try:
 except Exception, e:
 	print e
 	exit(1)
+
+if verbose:
+	print 'from:\t', options.start
+	print 'to:\t', options.end
 
 if options.user:
 	print_user(options.user,options.start,options.end)
