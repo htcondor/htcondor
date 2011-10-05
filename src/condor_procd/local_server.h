@@ -78,6 +78,10 @@ public:
 	//
 	void touch();
 
+	// Determine if the named pipe on disk is the one that we've actually
+	// opened. Return true if ok.
+	bool consistent(void);
+
 private:
 
 	// set once we're successfully initialized

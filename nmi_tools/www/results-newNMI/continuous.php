@@ -1,6 +1,6 @@
 <?php
-define("NUM_RUNS", 25);
-$NUM_RUNS = array_key_exists("runs", $_REQUEST) ? $_REQUEST["runs"] : NUM_RUNS;
+$NUM_RUNS = array_key_exists("runs", $_REQUEST) ? $_REQUEST["runs"] : 25;
+define("NUM_RUNS", $NUM_RUNS);
 
 define("MAX_TASKS_TO_DISPLAY_IN_POPUP", 10);
 
@@ -131,6 +131,7 @@ FROM
   Task
 WHERE
   runid in ($test_runids) AND
+  platform != 'local' AND
   (name in (\"platform_job\", \"remote_pre\") or result != 0)
 ";
 
@@ -183,6 +184,14 @@ $commit_info = get_git_log($hash1, $hash2);
 
 print "<div id='main'>\n";
 
+print "<form method='get' action='" . $_SERVER{PHP_SELF} . "'>\n";
+print "<p>Commits:&nbsp;<select name='runs'>\n";
+print "<option selected='selected'>25</option>\n";
+print "<option>50</option>\n";
+print "<option>100</option>\n";
+print "<option>200</option>\n";
+print "</select><input type='submit' value='Show'></form><br>\n";
+
 // Create the table header
 print "<table>\n";
 print "<tr>\n";
@@ -200,26 +209,68 @@ foreach (array_keys($seen_platforms) as $platform) {
   }
 
   print "  <th colspan=2><font size='-3'>$display</font></th>\n";
+  print "  <th></th>\n";
 }
+print "  <th colspan=2><font size='-3'>Summary</font></th>\n";
 print "</tr>\n";
 
 // Create the table body.  One row for each SHA1
-$last_start_time = "";
+$last_date = "";
 foreach ($runs as $run) {
-  print "<tr>\n";
+  $date = preg_replace("/^\d\d\d\d-(\d\d-\d\d).*/", "$1", $run["start"]);
+  if($date != $last_date && $last_date != "") {
+    $style = "border-top-width:10px; border-top-color: black;";
+  }
+  $last_date = $date;
+
+  print "<tr style=\"$style\">\n";
   print "  <td>\n";
 
   $tmp = substr($run["sha1"], 0, 15) . "<br><font size=\"-2\">" . $run["start"] . "$diff</font>\n";
   print "    <span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
   print "  </td>\n";
 
+  // Keep track of a summary of the platforms
+  $summary = Array();
+  $summary["build"] = Array();
+  $summary["build"]["passed"] = 0;
+  $summary["build"]["pending"] = 0;
+  $summary["build"]["failed"] = 0;
+  $summary["test"] = Array();
+  $summary["test"]["passed"] = 0;
+  $summary["test"]["pending"] = 0;
+  $summary["test"]["failed"] = 0;
+
   // Now print the results for each platform
   foreach (array_keys($seen_platforms) as $platform) {
     // There is no guarantee that each platform is in each run.  So check it here
     if(array_key_exists($platform, $run["platforms"])) {
+
+      if($run["platforms"][$platform]["build"]["result"] == NULL) {
+	$summary["build"]["pending"] += 1;
+      }
+      elseif($run["platforms"][$platform]["build"]["result"] == 0) {
+	$summary["build"]["passed"] += 1;
+      }
+      else {
+	$summary["build"]["failed"] += 1;
+      }
+
+      if($run["platforms"][$platform]["test"]["result"] == NULL) {
+	$summary["test"]["pending"] += 1;
+      }
+      elseif($run["platforms"][$platform]["test"]["result"] == 0) {
+	$summary["test"]["passed"] += 1;
+      }
+      else {
+	$summary["test"]["failed"] += 1;
+      }
+
+
       print make_cell($run, $platform, "build");
 
-      if($run["platforms"][$platform]["build"]["result"] != NULL and $run["platforms"][$platform]["build"]["result"] == 0) {
+      if($run["platforms"][$platform]["build"]["result"] != NULL and 
+	 $run["platforms"][$platform]["build"]["result"] == 0) {
 	print make_cell($run, $platform, "test");
       }
       else {
@@ -229,7 +280,20 @@ foreach ($runs as $run) {
     else {
       print "  <td class='build'>&nbsp;</td><td class='test'>&nbsp;</td>\n";
     }
+
+    print "<td style='width:10px; font-size:5px;'>&nbsp;</td>\n";
   }
+
+  // Print the summary
+  $txt = "<font style='color:#55ff55'>" . $summary["build"]["passed"] . "</font> ";
+  $txt .= "<font style='color:#FFE34D'>" . $summary["build"]["pending"]  . "</font> ";
+  $txt .= "<font style='color:#ff5555'>" . $summary["build"]["failed"] . "</font>";
+  print "<td>$txt</td>\n";
+
+  $txt = "<font style='color:#55ff55'>" . $summary["test"]["passed"] . "</font> ";
+  $txt .= "<font style='color:#FFE34D'>" . $summary["test"]["pending"] . "</font> ";
+  $txt .= "<font style='color:#ff5555'>" . $summary["test"]["failed"] . "</font>";
+  print "<td>$txt</td>\n";
 
   print "</tr>\n";
 }
@@ -327,7 +391,7 @@ function make_cell($run, $platform, $run_type) {
   $details .= "    <tr><td>Host</td><td>" . $run["platforms"][$platform][$run_type]["host"] . "</td></tr>";
 
   if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
-    $failed_tasks = "<None>";
+    $failed_tasks = "&lt;None&gt;";
   }
   elseif(count($run["platforms"][$platform][$run_type]["bad-tasks"]) <= MAX_TASKS_TO_DISPLAY_IN_POPUP) {
     $failed_tasks = implode("<br>", $run["platforms"][$platform][$run_type]["bad-tasks"]);

@@ -150,7 +150,14 @@ END {
             }
         }
 
-        print "<source file='" disk_string[1] "'/>" ;
+        if ( index( disk_string[1], "/" ) == 1 )
+        {
+            print "<source file='" disk_string[1] "'/>" ;
+        }
+        else
+        {
+            print "<source file='" attrs["VM_WORKING_DIR"] "/" disk_string[1] "'/>" ;
+        }
         print "<target dev='" disk_string[2] "'/>" ;
         
         if ( disk_string[3] == "r" )

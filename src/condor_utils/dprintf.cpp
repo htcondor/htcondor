@@ -246,7 +246,7 @@ _condor_dfprintf_va( int flags, int mask_flags, time_t clock_now, struct tm *tm,
 		if ( (mask_flags|flags) & D_FDS ) {
 			//Regardless of whether we're keeping the log file open our not, we open
 			//the NULL file for the FD number.
-			if( (local_fp=safe_fopen_wrapper_follow(NULL_FILE,"r",0644)) == NULL )
+			if( (local_fp=safe_fopen_wrapper_follow(NULL_FILE,"rN",0644)) == NULL )
 			{
 				local_fp = fp;
 				fopen_rc = 0;
@@ -717,7 +717,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 	debug_file_ptr = DebugFPs[debug_level];
 
 	if ( mode == NULL ) {
-		mode = "a";
+		mode = "aN";
 	}
 
 	if(DebugFile[debug_level] == NULL)
@@ -937,7 +937,7 @@ preserve_log_file(int debug_level)
 #if defined(WIN32)
 	if (result < 0) { // MoveFileEx and Copy failed
 		failed_to_rotate = TRUE;
-		debug_file_ptr = open_debug_file(debug_level, "w");
+		debug_file_ptr = open_debug_file(debug_level, "wN");
 		if ( debug_file_ptr ==  NULL ) {
 			still_in_old_file = TRUE;
 		}
@@ -990,7 +990,7 @@ preserve_log_file(int debug_level)
 #endif
 
 	if (debug_file_ptr == NULL) {
-		debug_file_ptr = open_debug_file(debug_level, "a");
+		debug_file_ptr = open_debug_file(debug_level, "aN");
 	}
 
 	if( debug_file_ptr == NULL ) {
@@ -1056,7 +1056,7 @@ _condor_fd_panic( int line, const char* file )
 		(void)close( i );
 	}
 	if( DebugFile[0] ) {
-		DebugFPs[0] = safe_fopen_wrapper_follow(DebugFile[0], "a", 0644);
+		DebugFPs[0] = safe_fopen_wrapper_follow(DebugFile[0], "aN", 0644);
 	}
 
 	if( DebugFPs[0] == NULL ) {
@@ -1202,7 +1202,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		if( tmp ) {
 			snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
 					  tmp, get_mySubSystemName() );
-			fail_fp = safe_fopen_wrapper_follow( buf, "w",0644 );
+			fail_fp = safe_fopen_wrapper_follow( buf, "wN",0644 );
 			if( fail_fp ) {
 				fprintf( fail_fp, "%s", header );
 				fprintf( fail_fp, "%s", msg );

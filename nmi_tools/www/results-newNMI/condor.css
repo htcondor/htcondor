@@ -15,14 +15,14 @@ a:link { color: #1C3F75; }
 }
 
 .build {
-    border-left-width: 5px;
+    border-left-width: 1px;
     border-left-color: black;
     width: 25px;
     text-align: center;
 }
 
 .test {
-    border-right-width: 5px;
+    border-right-width: 1px;
     border-right-color: black;
     width: 25px;
     text-align: center;

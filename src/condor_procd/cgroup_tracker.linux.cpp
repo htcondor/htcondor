@@ -85,8 +85,9 @@ CGroupTracker::check_process(procInfo* pi)
 	FILE* fp = safe_fopen_wrapper(path, "r");
 	if (fp == NULL) {
 		dprintf(D_ALWAYS,
-			"GroupTracker (pid = %u): fopen error: %s (%d)\n",
+			"GroupTracker (pid = %u): fopen error: Failed to open file '%s'. Error %s (%d)\n",
 			pi->pid,
+			path,
 			strerror(errno),
 			errno);
 		return false;

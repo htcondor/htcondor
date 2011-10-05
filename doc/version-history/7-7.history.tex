@@ -77,6 +77,12 @@ was made obsolete by \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} so it has been removed
 
 \begin{itemize}
 
+% gittrac 2500
+\item When the \Condor{procd}'s named command pipe is removed, or whose
+inode has been changed while the daemon is running, the \Condor{procd}
+will exit instead of previously continuing to execute in a useless mode
+of operation.
+
 \item Added logic to the \Condor{negotiator} daemon's Accountant
 initialization to ensure that table entries are always created for
 accounting groups on startup and reconfig.
@@ -280,6 +286,10 @@ as it is incompatible with the implementation of partial Rescue DAGs.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% gittrac #2467
+\item Fixed a bug introduced in 7.7.1 in the standard universe where
+the \Syscall{getdirentries} call failed during remote I/O situations.
 
 \item Fixed a bug in the \Condor{startd} that was preventing dynamic slots
 from being properly instantiated from partitionable slots.

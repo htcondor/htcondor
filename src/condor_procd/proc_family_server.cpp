@@ -383,6 +383,19 @@ ProcFamilyServer::wait_loop()
 			//
 			m_server->touch();
 
+			// Now after we touch it, let's confirm that everything is still
+			// consistent. This means that the touched named pipe must be the
+			// named pipe that we originally opened.
+			//
+			// NOTE: This is not a security measure of any kind. This is simply
+			// here to allow the procd to die in case some high level
+			// controller software for it cleans up the pipes but fails to
+			// clean up the procd process itself. This exact situation happened
+			// in the OSG use case for the proc.
+			if (m_server->consistent() == false) {
+				EXCEPT("ProcFamilyServer: Namedpipe reader isn't consistent\n");
+			}
+
 			// take our periodic snapshot
 			//
 			m_monitor.snapshot();

@@ -49,7 +49,7 @@ class QmgmtPeer {
 		ReliSock *getReliSock() const { return sock; };
 
 		const char *endpoint_ip_str() const;
-		const condor_sockaddr& endpoint() const;
+		const condor_sockaddr endpoint() const;
 		const char* getOwner() const;
 		const char* getRealOwner() const;
 		const char* getFullyQualifiedUser() const;
