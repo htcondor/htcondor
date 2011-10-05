@@ -1,6 +1,8 @@
 <?php
-define("NUM_RUNS", 25);
-$NUM_RUNS = array_key_exists("runs", $_REQUEST) ? $_REQUEST["runs"] : NUM_RUNS;
+$NUM_RUNS = array_key_exists("runs", $_REQUEST) ? $_REQUEST["runs"] : 25;
+define("NUM_RUNS", $NUM_RUNS);
+
+define("MAX_TASKS_TO_DISPLAY_IN_POPUP", 10);
 
 include "dashboard.inc";
 
@@ -45,7 +47,7 @@ FROM
   Task
 WHERE
   runid in ($runids) AND
-  name in (\"platform_job\", \"remote_pre\")
+  (name in (\"platform_job\", \"remote_pre\") OR result != 0)
 ";
 
 $results = $dash->db_query($query);
@@ -71,6 +73,8 @@ foreach ($results as $row) {
     $runs[$row["runid"]]["platforms"][$platform] = Array();
     $runs[$row["runid"]]["platforms"][$platform]["build"] = Array();
     $runs[$row["runid"]]["platforms"][$platform]["test"] = Array();
+    $runs[$row["runid"]]["platforms"][$platform]["build"]["bad-tasks"] = Array();
+    $runs[$row["runid"]]["platforms"][$platform]["test"]["bad-tasks"] = Array();
   }
 
   if($row["name"] == "platform_job") {
@@ -83,6 +87,9 @@ foreach ($results as $row) {
   elseif($row["name"] == "remote_pre") {
     // For the remote_pre step, we determine the execution host
     $runs[$row["runid"]]["platforms"][$platform]["build"]["host"] = $row["host"];
+  }
+  else {
+    array_push($runs[$row["runid"]]["platforms"][$platform]["build"]["bad-tasks"], $row["name"]);
   }
 }
 
@@ -124,7 +131,8 @@ FROM
   Task
 WHERE
   runid in ($test_runids) AND
-  name in (\"platform_job\", \"remote_pre\")
+  platform != 'local' AND
+  (name in (\"platform_job\", \"remote_pre\") or result != 0)
 ";
 
 $results = $dash->db_query($query);
@@ -154,7 +162,10 @@ foreach ($results as $row) {
   elseif($row["name"] == "remote_pre") {
     // For the remote_pre step, we determine the execution host
     $runs[$build_runid]["platforms"][$platform]["test"]["host"] = $row["host"];
-  }  
+  }
+  else {
+    array_push($runs[$build_runid]["platforms"][$platform]["test"]["bad-tasks"], $row["name"]);
+  }
 }
 
 /////////////////////////////////////////////
@@ -173,54 +184,142 @@ $commit_info = get_git_log($hash1, $hash2);
 
 print "<div id='main'>\n";
 
+print "<form method='get' action='" . $_SERVER{PHP_SELF} . "'>\n";
+print "<p>Commits:&nbsp;<select name='runs'>\n";
+print "<option selected='selected'>25</option>\n";
+print "<option>50</option>\n";
+print "<option>100</option>\n";
+print "<option>200</option>\n";
+print "</select><input type='submit' value='Show'></form><br>\n";
+
 // Create the table header
 print "<table>\n";
 print "<tr>\n";
+print "  <th>D</td>\n";
 print "  <th>SHA1</th>\n";
 foreach (array_keys($seen_platforms) as $platform) {
   // Update this if NMI has any other architecture prefixes (such as ia64) 
   if(preg_match("/^x86_64_/", $platform)) {
-    $display = preg_replace("/x86_64_/", "x86_64 ", $platform);
+    $display = preg_replace("/x86_64_/", "x86_64<br>", $platform);
   }
   elseif(preg_match("/ia64_/", $platform)) {
-    $display = preg_replace("/ia64_/", "x86 ", $platform);
+    $display = preg_replace("/ia64_/", "x86<br>", $platform);
   }
   else {
-    $display = preg_replace("/x86_/", "x86 ", $platform);
+    $display = preg_replace("/x86_/", "x86<br>", $platform);
   }
-  print "  <th colspan>$display</th>\n";
+
+  print "  <th colspan=2><font size='-3'>$display</font></th>\n";
+  print "  <th></th>\n";
 }
+print "  <th colspan=2><font size='-3'>Summary</font></th>\n";
 print "</tr>\n";
 
+// Determine the heights of the days-of-the-week that display on the left
+$day_heights = Array();
+$last_date = "";
+$count = 0;
+foreach (array_keys($runs) as $run) {
+  print $day_of_week;
+  $date = preg_replace("/^\d\d\d\d-(\d\d-\d\d).*/", "$1", $runs[$run]["start"]);
+  if($last_date == "") {
+    // Always mark the first day
+    $runs[$run]["day-break"] = 1;
+  }
+  elseif($date != $last_date) {
+    $runs[$run]["day-break"] = 1;
+    array_push($day_heights, $count);
+    $count = 0;
+  }
+  $count++;
+  $last_date = $date;
+}
+array_push($day_heights, $count);
+
 // Create the table body.  One row for each SHA1
-$last_start_time = "";
 foreach ($runs as $run) {
   print "<tr>\n";
-  print "  <td>\n";
+
+  if(array_key_exists("day-break", $run)) {
+    $td_style = "border-top-width:3px; border-top-color: black;";
+    $rowspan = array_shift($day_heights);
+    $dayofweek = implode("<br>", str_split($run["dayofweek"], 1));
+    print "  <td style=\"$td_style\" rowspan=$rowspan>$dayofweek</td>\n";
+  }
+  else {
+    $td_style = "";
+  }
+
+  print "  <td style=\"$td_style\">\n";
 
   $tmp = substr($run["sha1"], 0, 15) . "<br><font size=\"-2\">" . $run["start"] . "$diff</font>\n";
   print "    <span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
   print "  </td>\n";
 
+  // Keep track of a summary of the platforms
+  $summary = Array();
+  $summary["build"] = Array();
+  $summary["build"]["passed"] = 0;
+  $summary["build"]["pending"] = 0;
+  $summary["build"]["failed"] = 0;
+  $summary["test"] = Array();
+  $summary["test"]["passed"] = 0;
+  $summary["test"]["pending"] = 0;
+  $summary["test"]["failed"] = 0;
+
   // Now print the results for each platform
   foreach (array_keys($seen_platforms) as $platform) {
     // There is no guarantee that each platform is in each run.  So check it here
     if(array_key_exists($platform, $run["platforms"])) {
-      print "  <td style=\"text-align:center\"><nobr>\n";
-      print make_cell($run, $platform, "build");
 
-      if($run["platforms"][$platform]["build"]["result"] != NULL and $run["platforms"][$platform]["build"]["result"] == 0) {
-	print make_cell($run, $platform, "test");
+      if($run["platforms"][$platform]["build"]["result"] == NULL) {
+	$summary["build"]["pending"] += 1;
+      }
+      elseif($run["platforms"][$platform]["build"]["result"] == 0) {
+	$summary["build"]["passed"] += 1;
       }
       else {
-	print " <img src=\"no-run.png\" border=\"0px\">";	
+	$summary["build"]["failed"] += 1;
       }
-      print "  </nobr></td>\n";
+
+      if($run["platforms"][$platform]["test"]["result"] == NULL) {
+	$summary["test"]["pending"] += 1;
+      }
+      elseif($run["platforms"][$platform]["test"]["result"] == 0) {
+	$summary["test"]["passed"] += 1;
+      }
+      else {
+	$summary["test"]["failed"] += 1;
+      }
+
+
+      print make_cell($run, $platform, "build", $td_style);
+
+      if($run["platforms"][$platform]["build"]["result"] != NULL and 
+	 $run["platforms"][$platform]["build"]["result"] == 0) {
+	print make_cell($run, $platform, "test", $td_style);
+      }
+      else {
+	print " <td class=\"noresults test\" style=\"$td_style\">&nbsp;&nbsp;&nbsp;</td>";
+      }
     }    
     else {
-      print "  <td>&nbsp;</td>\n";
+      print "  <td class='build' style=\"$td_style\">&nbsp;</td><td class='test' style=\"$td_style\">&nbsp;</td>\n";
     }
+
+    print "  <td style=\"width:10px; font-size:5px; $td_style\">&nbsp;</td>\n";
   }
+
+  // Print the summary
+  $txt = "<font style='color:#55ff55'>" . $summary["build"]["passed"] . "</font> ";
+  $txt .= "<font style='color:#FFE34D'>" . $summary["build"]["pending"]  . "</font> ";
+  $txt .= "<font style='color:#ff5555'>" . $summary["build"]["failed"] . "</font>";
+  print "<td style=\"$td_style\">$txt</td>\n";
+
+  $txt = "<font style='color:#55ff55'>" . $summary["test"]["passed"] . "</font> ";
+  $txt .= "<font style='color:#FFE34D'>" . $summary["test"]["pending"] . "</font> ";
+  $txt .= "<font style='color:#ff5555'>" . $summary["test"]["failed"] . "</font>";
+  print "<td style=\"$td_style\">$txt</td>\n";
 
   print "</tr>\n";
 }
@@ -230,7 +329,7 @@ print "</table>\n";
 print "<p style='font-size:-1'>The following platforms are excluded from displaying here: " . implode(", ", $blacklist) . "</p>";
 
 function get_git_log($hash1, $hash2) {
-  $output = `git --git-dir=/home/condorauto/condor.git.test log --pretty=format:'%H | %an | %s' $hash1..$hash2 2>&1`;
+  $output = `git --git-dir=/home/condorauto/condor.git log --pretty=format:'%H | %an | %s' $hash1..$hash2 2>&1`;
   $commits = explode("\n", $output);
 
   $commit_info = Array();
@@ -260,7 +359,8 @@ SELECT
   project_version as sha1,
   host,
   result,
-  convert_tz(start, 'GMT', 'US/Central') AS start
+  CONVERT_TZ(start, 'GMT', 'US/Central') AS start,
+  DAYOFWEEK(CONVERT_TZ(start, 'GMT', 'US/Central')) as dayofweek
 FROM 
   Run 
 WHERE 
@@ -287,6 +387,7 @@ LIMIT " . NUM_RUNS;
     $runs[$id]["sha1"]      = $row["sha1"];
     $runs[$id]["host"]      = $row["host"];
     $runs[$id]["result"]    = $row["result"];
+    $runs[$id]["dayofweek"] = day_of_week($row["dayofweek"]);
     $runs[$id]["platforms"] = Array();
   }
 
@@ -300,7 +401,7 @@ LIMIT " . NUM_RUNS;
 }
 
 
-function make_cell($run, $platform, $run_type) {
+function make_cell($run, $platform, $run_type, $td_style) {
 
   $color = "passed";
   if($run["platforms"][$platform][$run_type]["result"] == NULL) {
@@ -312,19 +413,37 @@ function make_cell($run, $platform, $run_type) {
 
   $details = "  <table>";
   $details .= "    <tr><td>Status</td><td class=\"$color\">$color</td></tr>";
-  $details .= "    <tr><td>NMI RunID</td><td>" . $run["platforms"][$platform][$run_type]["runid"] . "</td></tr>";
+  $details .= "    <tr><td><nobr>NMI RunID</nobr></td><td>" . $run["platforms"][$platform][$run_type]["runid"] . "</td></tr>";
   $details .= "    <tr><td>Submitted</td><td><nobr>" . $run["start"] . "</nobr></td></tr>";
   $details .= "    <tr><td>Duration</td><td><nobr>" . $run["platforms"][$platform][$run_type]["duration"] . "</nobr></td></tr>";
   $details .= "    <tr><td>Host</td><td>" . $run["platforms"][$platform][$run_type]["host"] . "</td></tr>";
+
+  if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
+    $failed_tasks = "&lt;None&gt;";
+  }
+  elseif(count($run["platforms"][$platform][$run_type]["bad-tasks"]) <= MAX_TASKS_TO_DISPLAY_IN_POPUP) {
+    $failed_tasks = implode("<br>", $run["platforms"][$platform][$run_type]["bad-tasks"]);
+  }
+  else {
+    $failed_tasks = implode("<br>", array_slice($run["platforms"][$platform][$run_type]["bad-tasks"], 0, MAX_TASKS_TO_DISPLAY_IN_POPUP-1));
+    $hidden = count($run["platforms"][$platform][$run_type]["bad-tasks"]) - MAX_TASKS_TO_DISPLAY_IN_POPUP;
+    $failed_tasks .= "<br><i>$hidden more...</i>";
+  }
+  $details .= "    <tr><td><nobr>Failed tasks</nobr></td><td>$failed_tasks</td></tr>";
   //$details .= "    <tr><td>Submission Host</td><td>" . $run["host"] . "</td></tr>";
+
   $details .= "  </table>";
 
   $detail_url = sprintf(DETAIL_URL, $run["runid"], $run_type, CONDOR_USER);
 
-  //  $div = "<div class=\"$color\" style=\"height:20px;width:20px; float:left\">&nbsp;</div>";
-  $div = "<img src=\"$color.png\" border=\"0px\">";
+  if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
+    $div = "&nbsp;&nbsp;&nbsp;";
+  }
+  else {
+    $div = count($run["platforms"][$platform][$run_type]["bad-tasks"]);
+  }
 
-  $popup_html = "  <span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$div<span>$details</span></a></span>";
+  $popup_html = "  <td class=\"$color $run_type\" style=\"$td_style\"><span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$div<span>$details</span></a></span></td>";
 
   return $popup_html;
 }

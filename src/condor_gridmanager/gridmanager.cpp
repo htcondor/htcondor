@@ -43,7 +43,6 @@
 #include "infnbatchjob.h"
 #include "condor_version.h"
 
-#include "amazonjob.h"
 #include "ec2job.h"
 
 #if !defined(WIN32)
@@ -350,14 +349,6 @@ Init()
 	new_type->ReconfigFunc = NordugridJobReconfig;
 	new_type->AdMatchFunc = NordugridJobAdMatch;
 	new_type->CreateFunc = NordugridJobCreate;
-	jobTypes.Append( new_type );
-	
-	new_type = new JobType;
-	new_type->Name = strdup( "Amazon" );
-	new_type->InitFunc = AmazonJobInit;
-	new_type->ReconfigFunc = AmazonJobReconfig;
-	new_type->AdMatchFunc = AmazonJobAdMatch;
-	new_type->CreateFunc = AmazonJobCreate;
 	jobTypes.Append( new_type );
 	
 #if defined( LINUX )

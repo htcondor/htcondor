@@ -253,3 +253,14 @@ LocalServer::touch()
 		        strerror(errno));
 	}
 }
+
+bool LocalServer::consistent(void)
+{
+	ASSERT(m_reader != NULL);
+
+	return m_reader->consistent();
+}
+
+
+
+

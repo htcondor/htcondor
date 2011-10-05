@@ -371,18 +371,6 @@ const char    *VM_Networking = "vm_networking";
 const char    *VM_Networking_Type = "vm_networking_type";
 
 //
-// Amazon EC2 SOAP Parameters
-//
-const char* AmazonPublicKey = "amazon_public_key";
-const char* AmazonPrivateKey = "amazon_private_key";
-const char* AmazonAmiID = "amazon_ami_id";
-const char* AmazonUserData = "amazon_user_data";
-const char* AmazonUserDataFile = "amazon_user_data_file";
-const char* AmazonSecurityGroups = "amazon_security_groups";
-const char* AmazonKeyPairFile = "amazon_keypair_file";
-const char* AmazonInstanceType = "amazon_instance_type";
-
-//
 // EC2 Query Parameters
 //
 const char* EC2AccessKeyId = "ec2_access_key_id";
@@ -1512,9 +1500,8 @@ SetExecutable()
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
-		   ( strcasecmp( JobGridType, "amazon" ) == MATCH ||
-			 strcasecmp( JobGridType, "ec2" ) == MATCH ||
-			 strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
+		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
+		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
 
@@ -1795,7 +1782,7 @@ SetUniverse()
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
 			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
-			//    amazon, unicore, cream, deltacloud, ec2
+			//    unicore, cream, deltacloud, ec2
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 			//   system names should be used (pbs, lsf). Glite are the only
@@ -1812,7 +1799,6 @@ SetUniverse()
 				(strcasecmp (JobGridType, "naregi") == MATCH) ||
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
-				(strcasecmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
 				(strcasecmp (JobGridType, "ec2") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
@@ -1827,7 +1813,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
-						 "nqs, condor, nordugrid, unicore, amazon, ec2, deltacloud, or cream\n" );
+						 "nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -4875,17 +4861,13 @@ SetGridParams()
 			InsertJobExpr (buffer);
 		}
 
-		if ( strcasecmp( tmp, "amazon" ) == 0 ||
-			 strcasecmp( tmp, "ec2" ) == 0 ) {
-			fprintf(stderr, "\nERROR: Amazon EC2 grid jobs require a "
+		if ( strcasecmp( tmp, "ec2" ) == 0 ) {
+			fprintf(stderr, "\nERROR: EC2 grid jobs require a "
 					"service URL\n");
 			DoCleanup( 0, 0, NULL );
 			exit( 1 );
 		}
 		
-		// TODO: TSTCLAIR remove in 7.9 series.
-		if ( strcasecmp( tmp, "amazon" ) == 0 ) 
-			fprintf(stderr, "\nWARNING: Amazon grid jobs are no longer supported, please use EC2\n");
 
 		free( tmp );
 
@@ -5001,104 +4983,6 @@ SetGridParams()
 		exit( 1 );
 	}
 	
-	//
-	// Amazon grid-type submit attributes
-	//
-	if ( (tmp = condor_param( AmazonPublicKey, ATTR_AMAZON_PUBLIC_KEY )) ) {
-		// check public key file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
-							 full_path(tmp), strerror(errno));
-				exit(1);
-			}
-			fclose(fp);
-		}
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PUBLIC_KEY, full_path(tmp) );
-		InsertJobExpr( buffer.Value() );
-		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "amazon" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonPublicKey );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
-	}
-	
-	if ( (tmp = condor_param( AmazonPrivateKey, ATTR_AMAZON_PRIVATE_KEY )) ) {
-		// check private key file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
-							 full_path(tmp), strerror(errno));
-				exit(1);
-			}
-			fclose(fp);
-		}
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PRIVATE_KEY, full_path(tmp) );
-		InsertJobExpr( buffer.Value() );
-		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "amazon" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonPrivateKey );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
-	}
-	
-	// AmazonKeyPairFile is not a necessary parameter
-	if( (tmp = condor_param( AmazonKeyPairFile, ATTR_AMAZON_KEY_PAIR_FILE )) ) {
-		// for the relative path, the keypair output file will be written to the IWD
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_KEY_PAIR_FILE, full_path(tmp) );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-	
-	// AmazonGroupName is not a necessary parameter
-	if( (tmp = condor_param( AmazonSecurityGroups, ATTR_AMAZON_SECURITY_GROUPS )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_SECURITY_GROUPS, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-	
-	if ( (tmp = condor_param( AmazonAmiID, ATTR_AMAZON_AMI_ID )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_AMI_ID, tmp );
-		InsertJobExpr( buffer.Value() );
-		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "amazon" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonAmiID );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
-	}
-	
-	// AmazonInstanceType is not a necessary parameter
-	if( (tmp = condor_param( AmazonInstanceType, ATTR_AMAZON_INSTANCE_TYPE )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_INSTANCE_TYPE, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-	
-	// AmazonUserData is not a necessary parameter
-	if( (tmp = condor_param( AmazonUserData, ATTR_AMAZON_USER_DATA )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA, tmp);
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}	
-
-	// AmazonUserDataFile is not a necessary parameter
-	if( (tmp = condor_param( AmazonUserDataFile, ATTR_AMAZON_USER_DATA_FILE )) ) {
-		// check user data file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
-								 full_path(tmp), strerror(errno));
-				exit(1);
-			}
-			fclose(fp);
-		}
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA_FILE, 
-				full_path(tmp) );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-
-
 	//
 	// EC2 grid-type submit attributes
 	//

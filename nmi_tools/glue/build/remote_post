@@ -79,11 +79,10 @@ if( ! -d $pub_dir ) {
 
 # copy in the package targets
 if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
-	# system("mv *.msi *.zip *.tar.gz $pub_dir");
 	system("nmi_tools\\glue\\build\\munge.bat $pub_dir cleanup");
 	system("mv *.zip $pub_dir");
 	system("mv *.msi $pub_dir");
-	system("mv condor-*.tar.gz $pub_dir");
+	system("mv release_dir $pub_dir");
 	system("mv msconfig $pub_dir");
 }
 else {

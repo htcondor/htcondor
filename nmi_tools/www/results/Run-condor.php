@@ -155,7 +155,7 @@ if(!$one_offs) {
 
   foreach ($branches as $branch) {
     $info = $continuous_buf[$branch];
-    $branch_url = sprintf(BRANCH_URL, $branch, $info["user"]);
+    $branch_url = sprintf(BRANCH_URL, urlencode($branch), $info["user"]);
     $branch_display = preg_replace("/^Continuous Build - /", "", $branch);
     $out = "<tr>\n";
     $out .= "  <td rowspan='2'><a href='$branch_url'>$branch_display</a></td>\n";
@@ -244,7 +244,7 @@ if(!$one_offs) {
 
   foreach ($branches as $branch) {
     $info = $cndrauto_buf[$branch];
-    $branch_url = sprintf(BRANCH_URL, $branch, $info["user"]);
+    $branch_url = sprintf(BRANCH_URL, urlencode($branch), $info["user"]);
 
     // Print a "warning" if this branch has not been submitted for >1 day.  This makes it easier to spot old
     // builds from the dashboard.
@@ -284,7 +284,7 @@ if($one_offs) {
   
   foreach (array_keys($oneoff_buf) as $key) {
     $info = $oneoff_buf[$key];
-    $branch_url = sprintf(BRANCH_URL, $info["branch"], $info["user"]);
+    $branch_url = sprintf(BRANCH_URL, urlencode($info["branch"]), $info["user"]);
     echo "<tr>\n";
     echo "  <td><a href='$branch_url'>" . $info["branch"] . "</a><br><font size='-2'>" . $info["pin"] . "</font></td>\n";
     echo "  <td align='center'>" . $info["runid"] . "</td>\n";

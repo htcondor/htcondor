@@ -4,7 +4,7 @@
 /*
  * safefile package    http://www.cs.wisc.edu/~kupsch/safefile
  *
- * Copyright 2007-2008 James A. Kupsch
+ * Copyright 2007-2008, 2011 James A. Kupsch
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,11 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C"  {
 #endif
+
 struct safe_id_range_list;
 
 #ifndef SAFE_IS_PATH_TRUSTED_RETRY_MAX
@@ -57,7 +59,9 @@ int safe_is_path_trusted_r(
 	    struct safe_id_range_list	*trusted_gids
 	);
 
+
 #ifdef __cplusplus
 }
 #endif
+
 #endif

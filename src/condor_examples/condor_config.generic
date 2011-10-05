@@ -1981,23 +1981,6 @@ CREAM_GAHP = $(SBIN)/cream_gahp
 DELTACLOUD_GAHP = $(SBIN)/deltacloud_gahp
 
 ##
-## EC2 (SOAP): Universe = Grid, Grid_Resource = Amazon
-##
-
-## The location of the amazon_gahp program, required
-AMAZON_GAHP = $(SBIN)/amazon_gahp
-
-## Location of log files, useful for debugging, must be in
-## a directory writable by any user, such as /tmp
-#AMAZON_GAHP_DEBUG = D_FULLDEBUG
-AMAZON_GAHP_LOG = /tmp/AmazonGahpLog.$(USERNAME)
-
-## As of this writing Amazon EC2 has a hard limit of 20 concurrently
-## running instances, so a limit of 20 is imposed so the GridManager
-## does not waste its time sending requests that will be rejected.
-GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_AMAZON = 20
-
-##
 ## EC2 (REST): Universe = Grid, Grid_Resource = ec2
 ##
 

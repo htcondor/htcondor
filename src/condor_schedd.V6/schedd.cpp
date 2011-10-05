@@ -402,12 +402,12 @@ ContactStartdArgs::~ContactStartdArgs()
 static const int USER_HASH_SIZE = 100;
 
 Scheduler::Scheduler() :
+    m_adSchedd(NULL),
+    m_adBase(NULL),
 	GridJobOwners(USER_HASH_SIZE, UserIdentity::HashFcn, updateDuplicateKeys),
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 )
-   , m_adSchedd(NULL)
-   , m_adBase(NULL)
 {
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
@@ -1695,7 +1695,7 @@ int Scheduler::count_jobs()
 
       submitter_name.sprintf("%s@%s", OldOwners[i].Name, UidDomain);
       pAd->Assign(ATTR_NAME, submitter_name.Value());
-	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %s@%s\n", OldOwners[i].Name, UidDomain);
+	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %s@%s\n", ATTR_NAME, OldOwners[i].Name, UidDomain);
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
@@ -8599,7 +8599,6 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			condor_sockaddr addr;
 			if( mrec->peer && mrec->peer[0] && addr.from_sinful(mrec->peer) ) {
 					// make local copy of static hostname buffer
-				char *tmp;
 				MyString hostname = get_hostname(addr);
 				if (hostname.Length() > 0) {
 					SetAttributeString( cluster, proc, ATTR_REMOTE_HOST,
