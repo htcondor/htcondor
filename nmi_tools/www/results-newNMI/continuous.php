@@ -195,6 +195,7 @@ print "</select><input type='submit' value='Show'></form><br>\n";
 // Create the table header
 print "<table>\n";
 print "<tr>\n";
+print "  <th>D</td>\n";
 print "  <th>SHA1</th>\n";
 foreach (array_keys($seen_platforms) as $platform) {
   // Update this if NMI has any other architecture prefixes (such as ia64) 
@@ -214,17 +215,42 @@ foreach (array_keys($seen_platforms) as $platform) {
 print "  <th colspan=2><font size='-3'>Summary</font></th>\n";
 print "</tr>\n";
 
-// Create the table body.  One row for each SHA1
+// Determine the heights of the days-of-the-week that display on the left
+$day_heights = Array();
 $last_date = "";
-foreach ($runs as $run) {
-  $date = preg_replace("/^\d\d\d\d-(\d\d-\d\d).*/", "$1", $run["start"]);
-  if($date != $last_date && $last_date != "") {
-    $style = "border-top-width:10px; border-top-color: black;";
+$count = 0;
+foreach (array_keys($runs) as $run) {
+  print $day_of_week;
+  $date = preg_replace("/^\d\d\d\d-(\d\d-\d\d).*/", "$1", $runs[$run]["start"]);
+  if($last_date == "") {
+    // Always mark the first day
+    $runs[$run]["day-break"] = 1;
   }
+  elseif($date != $last_date) {
+    $runs[$run]["day-break"] = 1;
+    array_push($day_heights, $count);
+    $count = 0;
+  }
+  $count++;
   $last_date = $date;
+}
+array_push($day_heights, $count);
 
-  print "<tr style=\"$style\">\n";
-  print "  <td>\n";
+// Create the table body.  One row for each SHA1
+foreach ($runs as $run) {
+  print "<tr>\n";
+
+  if(array_key_exists("day-break", $run)) {
+    $td_style = "border-top-width:3px; border-top-color: black;";
+    $rowspan = array_shift($day_heights);
+    $dayofweek = implode("<br>", str_split($run["dayofweek"], 1));
+    print "  <td style=\"$td_style\" rowspan=$rowspan>$dayofweek</td>\n";
+  }
+  else {
+    $td_style = "";
+  }
+
+  print "  <td style=\"$td_style\">\n";
 
   $tmp = substr($run["sha1"], 0, 15) . "<br><font size=\"-2\">" . $run["start"] . "$diff</font>\n";
   print "    <span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
@@ -267,33 +293,33 @@ foreach ($runs as $run) {
       }
 
 
-      print make_cell($run, $platform, "build");
+      print make_cell($run, $platform, "build", $td_style);
 
       if($run["platforms"][$platform]["build"]["result"] != NULL and 
 	 $run["platforms"][$platform]["build"]["result"] == 0) {
-	print make_cell($run, $platform, "test");
+	print make_cell($run, $platform, "test", $td_style);
       }
       else {
-	print " <td class=\"noresults test\">&nbsp;&nbsp;&nbsp;</td>";
+	print " <td class=\"noresults test\" style=\"$td_style\">&nbsp;&nbsp;&nbsp;</td>";
       }
     }    
     else {
-      print "  <td class='build'>&nbsp;</td><td class='test'>&nbsp;</td>\n";
+      print "  <td class='build' style=\"$td_style\">&nbsp;</td><td class='test' style=\"$td_style\">&nbsp;</td>\n";
     }
 
-    print "<td style='width:10px; font-size:5px;'>&nbsp;</td>\n";
+    print "  <td style=\"width:10px; font-size:5px; $td_style\">&nbsp;</td>\n";
   }
 
   // Print the summary
   $txt = "<font style='color:#55ff55'>" . $summary["build"]["passed"] . "</font> ";
   $txt .= "<font style='color:#FFE34D'>" . $summary["build"]["pending"]  . "</font> ";
   $txt .= "<font style='color:#ff5555'>" . $summary["build"]["failed"] . "</font>";
-  print "<td>$txt</td>\n";
+  print "<td style=\"$td_style\">$txt</td>\n";
 
   $txt = "<font style='color:#55ff55'>" . $summary["test"]["passed"] . "</font> ";
   $txt .= "<font style='color:#FFE34D'>" . $summary["test"]["pending"] . "</font> ";
   $txt .= "<font style='color:#ff5555'>" . $summary["test"]["failed"] . "</font>";
-  print "<td>$txt</td>\n";
+  print "<td style=\"$td_style\">$txt</td>\n";
 
   print "</tr>\n";
 }
@@ -303,7 +329,7 @@ print "</table>\n";
 print "<p style='font-size:-1'>The following platforms are excluded from displaying here: " . implode(", ", $blacklist) . "</p>";
 
 function get_git_log($hash1, $hash2) {
-  $output = `git --git-dir=/home/condorauto/condor.git.test log --pretty=format:'%H | %an | %s' $hash1..$hash2 2>&1`;
+  $output = `git --git-dir=/home/condorauto/condor.git log --pretty=format:'%H | %an | %s' $hash1..$hash2 2>&1`;
   $commits = explode("\n", $output);
 
   $commit_info = Array();
@@ -333,7 +359,8 @@ SELECT
   project_version as sha1,
   host,
   result,
-  convert_tz(start, 'GMT', 'US/Central') AS start
+  CONVERT_TZ(start, 'GMT', 'US/Central') AS start,
+  DAYOFWEEK(CONVERT_TZ(start, 'GMT', 'US/Central')) as dayofweek
 FROM 
   Run 
 WHERE 
@@ -360,6 +387,7 @@ LIMIT " . NUM_RUNS;
     $runs[$id]["sha1"]      = $row["sha1"];
     $runs[$id]["host"]      = $row["host"];
     $runs[$id]["result"]    = $row["result"];
+    $runs[$id]["dayofweek"] = day_of_week($row["dayofweek"]);
     $runs[$id]["platforms"] = Array();
   }
 
@@ -373,7 +401,7 @@ LIMIT " . NUM_RUNS;
 }
 
 
-function make_cell($run, $platform, $run_type) {
+function make_cell($run, $platform, $run_type, $td_style) {
 
   $color = "passed";
   if($run["platforms"][$platform][$run_type]["result"] == NULL) {
@@ -415,7 +443,7 @@ function make_cell($run, $platform, $run_type) {
     $div = count($run["platforms"][$platform][$run_type]["bad-tasks"]);
   }
 
-  $popup_html = "  <td class=\"$color $run_type\" ><span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$div<span>$details</span></a></span></td>";
+  $popup_html = "  <td class=\"$color $run_type\" style=\"$td_style\"><span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$div<span>$details</span></a></span></td>";
 
   return $popup_html;
 }
