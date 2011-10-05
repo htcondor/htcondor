@@ -36,8 +36,6 @@
 
 //-------------------------------------------------------------
 
-// about self
-DECL_SUBSYSTEM("LeaseManager", SUBSYSTEM_TYPE_DAEMON);	// used by Daemon Core
 LeaseManager	*lease_manager;
 
 //-------------------------------------------------------------
@@ -81,6 +79,8 @@ main_shutdown_graceful(void)
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem("LeaseManager", SUBSYSTEM_TYPE_DAEMON);	// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

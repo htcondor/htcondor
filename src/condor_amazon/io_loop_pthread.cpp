@@ -41,8 +41,6 @@ int REQUEST_INBOX = 0; // stdin
 
 const char * version = "$GahpVersion " AMAZON_GAHP_VERSION " Feb 15 2008 Condor\\ AMAZONGAHP $";
 
-DECL_SUBSYSTEM("AMAZON_GAHP", SUBSYSTEM_TYPE_GAHP);
-
 static IOProcess *ioprocess = NULL;
 
 // forwarding declaration
@@ -193,6 +191,8 @@ quit_on_signal(int sig)
 int
 main( int argc, char ** const argv )
 {
+	set_mySubSystem("AMAZON_GAHP", SUBSYSTEM_TYPE_GAHP);
+
 	// All log should be printed to stderr
 	set_gahp_log_file(NULL);
 

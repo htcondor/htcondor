@@ -22,7 +22,6 @@
 #include "subsystem_info.h"
 
 extern "C" int SetSyscalls(int val){return val;}
-DECL_SUBSYSTEM( "COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
 
 class Foo : public Service
 {
@@ -193,6 +192,8 @@ main_init(int argc, char ** /*argv*/)
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

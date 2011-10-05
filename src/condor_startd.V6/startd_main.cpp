@@ -94,8 +94,6 @@ char* Name = NULL;
 int		pid_snapshot_interval = DEFAULT_PID_SNAPSHOT_INTERVAL;
     // How often do we take snapshots of the pid families? 
 
-DECL_SUBSYSTEM( "STARTD", SUBSYSTEM_TYPE_STARTD );
-
 int main_reaper = 0;
 
 // Cron stuff
@@ -800,6 +798,8 @@ startd_check_free()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "STARTD", SUBSYSTEM_TYPE_STARTD );
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

@@ -100,9 +100,6 @@ void condor_base64_decode(const char *input,unsigned char **output, int *output_
 
 //-------------------------------------------------------------
 
-// about self
-DECL_SUBSYSTEM("SOAPSHELL", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
-
 /* Helper function: encode file filename into the resultAd as attribute attrname */
 bool
 stash_output_file(ClassAd* resultAd, const char* filename, const char* attrname)
@@ -570,6 +567,8 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem("SOAPSHELL", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

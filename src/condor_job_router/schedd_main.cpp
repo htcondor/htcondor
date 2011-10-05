@@ -27,9 +27,6 @@
 #include "Scheduler.h"
 #include "JobRouter.h"
 
-// about self
-DECL_SUBSYSTEM("JOB_ROUTER", SUBSYSTEM_TYPE_SCHEDD );	// used by Daemon Core
-
 
 Scheduler *schedd;
 JobRouter *job_router;
@@ -94,6 +91,8 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem("JOB_ROUTER", SUBSYSTEM_TYPE_SCHEDD );	// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

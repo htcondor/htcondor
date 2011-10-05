@@ -145,9 +145,6 @@ char	default_dc_daemon_list[] =
 // create an object of class daemons.
 class Daemons daemons;
 
-// for daemonCore
-DECL_SUBSYSTEM( "MASTER", SUBSYSTEM_TYPE_MASTER );
-
 // called at exit to deallocate stuff so that memory checking tools are
 // happy and don't think we leaked any of this...
 static void
@@ -1332,6 +1329,8 @@ main( int argc, char **argv )
 		// as our parent or previous incarnation. If there's a list of
 		// brokers, we want to choose from the whole list.
 	UnsetEnv( "NET_REMAP_ENABLE" );
+
+	set_mySubSystem( "MASTER", SUBSYSTEM_TYPE_MASTER );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

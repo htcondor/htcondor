@@ -22,9 +22,6 @@
 
 #include "Triggerd.h"
 
-// about self
-DECL_SUBSYSTEM("TRIGGERD", SUBSYSTEM_TYPE_DAEMON);
-
 com::redhat::grid::Triggerd* agent;
 
 //-------------------------------------------------------------
@@ -81,6 +78,8 @@ int main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem("TRIGGERD", SUBSYSTEM_TYPE_DAEMON);
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

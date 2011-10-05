@@ -35,8 +35,6 @@
 
 //-------------------------------------------------------------
 
-// about self
-DECL_SUBSYSTEM( "EVENTD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 AdminEvent	*admin_event;
 
 //-------------------------------------------------------------
@@ -82,6 +80,8 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "EVENTD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

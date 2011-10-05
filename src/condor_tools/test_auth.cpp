@@ -44,7 +44,6 @@
 #include "subsystem_info.h"
 
 char	*MyName;
-DECL_SUBSYSTEM( "DAEMON-TOOL", SUBSYSTEM_TYPE_TOOL );
 
 void
 usage()
@@ -81,6 +80,8 @@ main( int argc, char* argv[] )
 {
 	int		i;
 	
+	set_mySubSystem( "DAEMON-TOOL", SUBSYSTEM_TYPE_TOOL );
+
 	MyName = argv[0];
 	myDistro->Init( argc, argv );
 

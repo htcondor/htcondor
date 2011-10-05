@@ -23,11 +23,6 @@
 
 #include "ReplicatorStateMachine.h"
 
-/* daemon core needs this variable to associate its entries
- * inside $CONDOR_CONFIG file
- */
-DECL_SUBSYSTEM( "Replication", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
-
 // replication daemon single object
 ReplicatorStateMachine* stateMachine = NULL;
 
@@ -75,6 +70,8 @@ main_config()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "Replication", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

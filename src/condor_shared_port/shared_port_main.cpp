@@ -27,11 +27,6 @@ SharedPortServer *shared_port_server = NULL;
 
 //-------------------------------------------------------------
 
-// about self
-DECL_SUBSYSTEM("SHARED_PORT", SUBSYSTEM_TYPE_SHARED_PORT );	// used by Daemon Core
-
-//-------------------------------------------------------------
-
 static void CleanUp()
 {
 	delete shared_port_server;
@@ -79,6 +74,8 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem("SHARED_PORT", SUBSYSTEM_TYPE_SHARED_PORT );	// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

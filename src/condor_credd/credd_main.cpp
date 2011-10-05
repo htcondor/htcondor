@@ -29,8 +29,6 @@
 void Init();
 void Register();
 
-DECL_SUBSYSTEM( "CREDD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
-
 char * myUserName = NULL;
 
 // this appears at the bottom of this file
@@ -144,6 +142,8 @@ main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "CREDD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

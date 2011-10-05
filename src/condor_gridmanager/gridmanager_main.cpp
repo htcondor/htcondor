@@ -29,8 +29,6 @@
 
 #include "gridmanager.h"
 
-DECL_SUBSYSTEM( "GRIDMANAGER", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
-
 char *myUserName = NULL;
 
 // this appears at the bottom of this file
@@ -171,6 +169,8 @@ main_pre_dc_init( int argc, char* argv[] )
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "GRIDMANAGER", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

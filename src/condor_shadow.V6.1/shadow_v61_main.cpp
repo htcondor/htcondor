@@ -66,10 +66,6 @@ ExceptCleanup(int, int, const char *buf)
 }
 }
 
-/* DaemonCore interface implementation */
-
-DECL_SUBSYSTEM( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
-
 int
 dummy_reaper(Service *,int pid,int)
 {
@@ -464,6 +460,8 @@ main( int argc, char **argv )
 		printClassAd();
 		exit(0);
 	}
+
+	set_mySubSystem( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

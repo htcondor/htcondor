@@ -30,8 +30,6 @@
 
 //-------------------------------------------------------------
 
-DECL_SUBSYSTEM( "CREDD", SUBSYSTEM_TYPE_DAEMON );
-
 CredDaemon *credd;
 
 CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
@@ -315,6 +313,8 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "CREDD", SUBSYSTEM_TYPE_DAEMON );
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

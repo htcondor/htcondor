@@ -30,8 +30,6 @@
 #include "io_loop.h"
 #include "PipeBuffer.h"
 
-DECL_SUBSYSTEM( "C_GAHP_WORKER_THREAD", SUBSYSTEM_TYPE_GAHP );
-
 char * myUserName = NULL;
 
 extern char * ScheddAddr;
@@ -62,6 +60,7 @@ void init_pipes();
 void
 main_init( int argc, char ** const argv )
 {
+	set_mySubSystem( "C_GAHP_WORKER_THREAD", SUBSYSTEM_TYPE_GAHP );
 
 	dprintf(D_FULLDEBUG, "Welcome to the C-GAHP\n");
 

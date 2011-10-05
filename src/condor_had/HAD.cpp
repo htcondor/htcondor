@@ -45,8 +45,6 @@ using namespace std;
 extern "C" int SetSyscalls(int val){return val;}
 extern char* myName;
 
-DECL_SUBSYSTEM( "HAD", SUBSYSTEM_TYPE_DAEMON );		// used by Daemon Core
-
 HADStateMachine* stateMachine = NULL;
 
 void
@@ -107,6 +105,8 @@ main_config()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "HAD", SUBSYSTEM_TYPE_DAEMON );		// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

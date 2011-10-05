@@ -35,9 +35,6 @@
 
 //-------------------------------------------------------------
 
-// about self
-DECL_SUBSYSTEM( "DBMSD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
-
 DBMSManager dbmsd;
 
 //-------------------------------------------------------------
@@ -81,6 +78,8 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "DBMSD", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

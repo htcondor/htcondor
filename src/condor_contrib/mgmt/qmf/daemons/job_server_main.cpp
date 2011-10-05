@@ -56,9 +56,6 @@ using namespace qmf::com::redhat;
 using namespace qmf::com::redhat::grid;
 using namespace com::redhat::grid;
 
-// about self
-DECL_SUBSYSTEM("JOB_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
-
 JobLogMirror *mirror;
 JobServerJobLogConsumer *consumer;
 JobServerObject *job_server;
@@ -325,6 +322,8 @@ int main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem("JOB_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

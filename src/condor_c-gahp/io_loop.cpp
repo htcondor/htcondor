@@ -33,8 +33,6 @@
 const char * version = "$GahpVersion 2.0.1 Jun 27 2005 Condor\\ GAHP $";
 
 
-DECL_SUBSYSTEM("C_GAHP", SUBSYSTEM_TYPE_GAHP);
-
 int async_mode = 0;
 int new_results_signaled = 0;
 
@@ -119,7 +117,7 @@ usage()
 void
 main_init( int argc, char ** const argv )
 {
-
+	set_mySubSystem("C_GAHP", SUBSYSTEM_TYPE_GAHP);
 
 	dprintf(D_FULLDEBUG, "C-GAHP IO thread\n");
 

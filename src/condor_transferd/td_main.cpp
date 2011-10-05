@@ -26,8 +26,6 @@
 // The transferd object which does the work requested by the parent
 TransferD g_td;
 
-DECL_SUBSYSTEM( "TRANSFERD", SUBSYSTEM_TYPE_DAEMON );
-
 void main_init(int argc, char *argv[])
 {
 	// parse the command line attributes
@@ -77,6 +75,8 @@ void main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "TRANSFERD", SUBSYSTEM_TYPE_DAEMON );
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

@@ -54,9 +54,6 @@ void display_startup_info( const STARTUP_INFO *s, int flags );
 #include "sdpro.h"
 #endif
 
-/* For daemonCore, etc. */
-DECL_SUBSYSTEM( "STARTER", SUBSYSTEM_TYPE_STARTER );
-
 #undef ASSERT
 #define ASSERT(cond) \
 	if( !(cond) ) { \
@@ -120,6 +117,8 @@ printClassAd( void )
 int
 main( int argc, char *argv[] )
 {
+	set_mySubSystem( "STARTER", SUBSYSTEM_TYPE_STARTER );
+
 	myDistro->Init( argc, argv );
 	if( argc == 2 && strncasecmp(argv[1], "-cl", 3) == MATCH ) {
 		printClassAd();

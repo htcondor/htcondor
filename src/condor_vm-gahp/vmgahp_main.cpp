@@ -34,8 +34,6 @@
 
 const char *vmgahp_version = "$VMGahpVersion " CONDOR_VMGAHP_VERSION " May 1 2007 Condor\\ VMGAHP $";
 
-DECL_SUBSYSTEM( "VM_GAHP", SUBSYSTEM_TYPE_GAHP );
-
 VMGahp *vmgahp = NULL;
 int vmgahp_stdout_pipe = -1;
 int vmgahp_stderr_pipe = -1;
@@ -510,6 +508,8 @@ void main_init(int argc, char *argv[])
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem( "VM_GAHP", SUBSYSTEM_TYPE_GAHP );
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;

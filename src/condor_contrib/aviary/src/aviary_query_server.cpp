@@ -35,9 +35,6 @@
 #include "HistoryProcessingUtils.h"
 #include "Globals.h"
 
-// about self
-DECL_SUBSYSTEM("QUERY_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
-
 using namespace std;
 using namespace aviary::transport;
 using namespace aviary::query;
@@ -213,6 +210,8 @@ int main_shutdown_graceful()
 int
 main( int argc, char **argv )
 {
+	set_mySubSystem("QUERY_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
+
 	dc_main_init = main_init;
 	dc_main_config = main_config;
 	dc_main_shutdown_fast = main_shutdown_fast;
