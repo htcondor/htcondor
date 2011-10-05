@@ -27,8 +27,7 @@
 #include "env.h"
 #include "../condor_privsep/condor_privsep.h"
 #include "../condor_privsep/privsep_fork_exec.h"
-
-DLL_IMPORT_MAGIC extern char** environ;
+#include "setenv.h"
 
 #ifdef WIN32
 typedef HANDLE child_handle_t;
@@ -418,7 +417,7 @@ my_popenv_impl( const char *const args[],
 		}
 		privsep_exec_set_args(fp, al);
 		Env env;
-		env.MergeFrom(environ);
+		env.MergeFrom(GetEnviron());
 		privsep_exec_set_env(fp, env);
 		privsep_exec_set_iwd(fp, ".");
 		if (parent_reads) {

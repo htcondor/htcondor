@@ -25,8 +25,7 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "condor_privsep.h"
-
-extern char** environ;
+#include "setenv.h"
 
 static int
 privsep_create_process(const char* cmd,
@@ -118,7 +117,7 @@ privsep_create_process(const char* cmd,
 	privsep_exec_set_args(in_fp, args);
 	Env tmp_env;
 	if (HAS_DCJOBOPT_ENV_INHERIT(dc_job_opts)) {
-		tmp_env.MergeFrom(environ);
+		tmp_env.MergeFrom(GetEnviron());
 		if (env != NULL) {
 			tmp_env.MergeFrom(*env);
 		}

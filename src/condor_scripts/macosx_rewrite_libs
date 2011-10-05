@@ -18,7 +18,7 @@ for filename in "$@" ; do
     for lib in $libraries ; do
       echo $lib
       baselib=`basename $lib`
-      if echo $baselib | grep -q 'classad' ; then
+      if echo $baselib | grep -q -e 'classad' -e 'condor' ; then
         install_name_tool -change "$lib" "@executable_path/../lib/$baselib" $filename
       else
         install_name_tool -change "$lib" "@executable_path/../lib/condor/$baselib" $filename
