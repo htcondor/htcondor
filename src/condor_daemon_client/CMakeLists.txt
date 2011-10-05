@@ -20,5 +20,4 @@
 file( GLOB DCRmvElements *.t* )
 condor_glob(DCHeaderFiles DCSourceFiles "${DCRmvElements}")
 
-#create the library
-condor_shared_lib(daemon_client "${DCHeaderFiles};${DCSourceFiles}" )
+set ( DAEMON_CLIENT_UTIL_SRCS "${DCHeaderFiles};${DCSourceFiles}" PARENT_SCOPE)

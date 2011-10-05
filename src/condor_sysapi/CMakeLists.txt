@@ -20,8 +20,7 @@ file( GLOB SysApiRmvElements *_t.* *.t.* dhry21b* *_main.cpp test.* )
 
 condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
 
-#create the library
-condor_shared_lib(sysapi "${SysapiHeaderFiles};${SysapiSourceFiles}")
+set( SYSAPI_UTIL_SRCS "${SysapiHeaderFiles};${SysapiSourceFiles}" PARENT_SCOPE )
 
 # there was a test target which was never used.
 # it makes the most sense to hook in a UT here instead of integ test

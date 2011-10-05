@@ -21,8 +21,8 @@ file( GLOB PrivsepRmvSrcs switchboard* parse_config* safe* )
 
 condor_glob(PrivsepHdrs PrivsepSrcs "${PrivsepRmvSrcs}")
 
-condor_shared_lib( privsep "${PrivsepHdrs};${PrivsepSrcs}" )
+set( PRIVSEP_UTIL_SRCS "${PrivsepHdrs};${PrivsepSrcs}" PARENT_SCOPE )
 
 if (NOT WINDOWS)
-	condor_exe( condor_root_switchboard "${PrivsepRmvSrcs}" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
+	condor_exe( condor_root_switchboard "${PrivsepRmvSrcs};${SAFE_OPEN_SRC}" ${C_SBIN} "" OFF )
 endif()

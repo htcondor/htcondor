@@ -40,4 +40,4 @@ if (LINUX AND WANT_FULL_DEPLOYMENT)
 	condor_exe( gidd_alloc "gidd_alloc.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF)
 endif(LINUX AND WANT_FULL_DEPLOYMENT)
 
-condor_shared_lib(procd_client "${ProcClientElements}")
+set( PROCD_CLIENT_UTIL_SRCS "${ProcClientElements}" PARENT_SCOPE )

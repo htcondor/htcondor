@@ -19,7 +19,7 @@
 
 
 condor_selective_glob( "procapi.h;procapi.cpp;processid.*;procapi_killfamily.cpp" ProcAPISrcs)
-condor_shared_lib ( procapi "${ProcAPISrcs}" )
+set( PROCAPI_UTIL_SRCS "${ProcAPISrcs}" PARENT_SCOPE )
 
 # there was a test target which was never used.
 # it makes the most sense to hook in a UT here instead of integ test

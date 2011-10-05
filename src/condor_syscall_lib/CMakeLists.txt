@@ -77,9 +77,8 @@ if( STD_UNIVERSE )
 	# is concentrated evil.
 	##################################################
 	src_target_ref( ckpt "^.*$" CKPT_REFS)
-	src_target_ref( utils
-			"flock;dprintf_common;except;update_rusage;internet;mkargv;filename_tools;strupr;mark_thread;condor_version;condor_ver_info;stat_wrapper;stat_wrapper_internal;condor_open;selector;MyString;subsystem_info;HashTable;get_random_num;condor_sockaddr" UTIL_REFS)
-	src_target_ref( cedar "stream;sig_num;open_flags;fcntl_cmd;errno_num;condor_rw" IO_REFS)
+	src_target_ref( condor_utils
+			"flock;dprintf_common;except;update_rusage;internet;mkargv;filename_tools;strupr;mark_thread;condor_version;condor_ver_info;stat_wrapper;stat_wrapper_internal;condor_open;selector;MyString;subsystem_info;HashTable;get_random_num;condor_sockaddr;stream;sig_num;open_flags;fcntl_cmd;errno_num;condor_rw" UTIL_REFS)
 	src_target_ref( stdunivio "std_univ_sock;std_univ_buffers" STDIO_REF )
 
 	# local references used by condor_shadow.std & condor_starter.std
@@ -104,7 +103,7 @@ if( STD_UNIVERSE )
 	##################################################
 	# now create the glorious syscall lib from various refs.
 	# behold the birth of frankenstein.
-	condor_static_lib( condorsyscall "senders.cpp;switches.cpp;${SyscallHdrs};${SyscallSrcs};${STDU_OBJS};${CKPT_REFS};${UTIL_REFS};${IO_REFS};${STDIO_REF};${SAFE_OPEN_SRC}")
+	condor_static_lib( condorsyscall "senders.cpp;switches.cpp;${SyscallHdrs};${SyscallSrcs};${STDU_OBJS};${CKPT_REFS};${UTIL_REFS};${STDIO_REF};${SAFE_OPEN_SRC}")
 	if (DOES_COMPRESS_CKPT)
 		# For condorzsyscall, pull in all the same objects as
 		# condorsyscall except use ZCKPT_REFS in place of
