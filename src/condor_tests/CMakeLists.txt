@@ -137,9 +137,6 @@ if (BUILD_TESTS)
 	##########################################################
 	# platform specific tests
 	if(LINUX)
-		if ( NOT WITHOUT_AMAZON_TEST AND HAVE_EXT_GSOAP )
-			condor_pl_test(job_amazon_basic "Amazon EC2 test" "quick;full;quicknolink")
-		endif()
 
 		# Openssl on rhel3 doesn't have EVP_sha256(),
 		# which the ec2_gahp uses.
