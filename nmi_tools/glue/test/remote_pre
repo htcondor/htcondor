@@ -185,7 +185,8 @@ else {
 	print $perlver;
 	if (!($perlver =~ /cygwin/i)) {
 		print "adding cygwin to the front of the path\n";
-		$ENV{PATH} = "c:\\cygwin\bin;$ENV{PATH}";
+		$ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
+		print "PATH=$ENV{PATH}\n";
 		$perlver = `perl -version`;
 		print $perlver;
 		if (!($perlver =~ /cygwin/i)) {
