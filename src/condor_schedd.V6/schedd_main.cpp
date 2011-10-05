@@ -138,10 +138,7 @@ main_init(int argc, char* argv[])
 	job_queue_name.sprintf( "%s/job_queue.log", Spool);
 
 		// Make a backup of the job queue?
-	char	*tmp;
-	tmp = param( "SCHEDD_BACKUP_SPOOL" );
-	if ( tmp ) {
-		if ( (*tmp == 't') || (*tmp == 'T') ) {
+	if ( param_boolean_crufty("SCHEDD_BACKUP_SPOOL", false) ) {
 			MyString hostname;
 			hostname = get_local_hostname();
 			MyString		job_queue_backup;
@@ -154,8 +151,6 @@ main_init(int argc, char* argv[])
 				dprintf( D_FULLDEBUG, "Spool backed up to '%s'\n",
 						 job_queue_backup.Value() );
 			}
-		}
-		free( tmp );
 	}
 
 	int max_historical_logs = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );

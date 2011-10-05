@@ -2790,7 +2790,7 @@ id=142
 
 [HAD_CONNECTION_TIMEOUT]
 aliases=
-default=
+default=5
 version=0.0.0
 range=.*
 state=default
@@ -2822,7 +2822,7 @@ id=144
 
 [HAD_UPDATE_INTERVAL]
 aliases=
-default=
+default=300
 version=0.0.0
 range=.*
 state=default
@@ -7270,6 +7270,22 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c-gahp,io_loop
 id=439
+
+[REPLICATION_INTERVAL]
+aliases=
+default=300
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Replication Interval
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=had,ReplicatorStateMachine
+id=440
 
 [NEGOTIATOR_INTERVAL]
 aliases=

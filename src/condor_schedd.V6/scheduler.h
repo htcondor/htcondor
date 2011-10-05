@@ -501,7 +501,8 @@ class Scheduler : public Service
 private:
 	
 	// information about this scheduler
-	ClassAd*		m_ad;
+	ClassAd*		m_adSchedd;
+    ClassAd*        m_adBase;
 	Scheduler*		myself;
 
 	// information about the command port which Shadows use
@@ -623,6 +624,8 @@ private:
 
 	// utility functions
 	int				count_jobs();
+    int             make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
+    int             command_query_ads(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char const*);
 	void			child_exit(int, int);

@@ -41,6 +41,11 @@ previously when clients initiated communication with the collector but
 then delayed sending input.
 \Ticket{2506}
 
+\item When using versions of glexec that create a copy of the proxy for use
+by the job, Condor now ensures that this copy of the proxy is cleaned up
+when the job is done.
+\Ticket{2501}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -62,6 +67,10 @@ to determine quotas for both dynamic groups and when there are no groups.
 was made obsolete by \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} so it has been removed.
 \Ticket{2277}
 
+\item The configuration variables \Macro{IGNORE\_NFS\_LOCK\_ERRORS}
+  and \Macro{BIND\_ALL\_INTERFACES} no longer support, undocumented,
+  'Y' or 'y' to mean True.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -80,6 +89,13 @@ log:
 DaemonCore: Can't receive command request from IP (perhaps a timeout?)
 \end{verbatim}
 \Ticket{2483}
+
+\item \MacroNI{NETWORK\_INTERFACE} did not have any effect.  This bug
+was introduced in 7.7.0.
+\Ticket{2513}
+
+\item Glexec now also works when condor is running as root.
+\Ticket{2503}
 
 \end{itemize}
 

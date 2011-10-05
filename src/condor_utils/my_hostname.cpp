@@ -99,6 +99,12 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		if( network_interface_ips ) {
 			network_interface_ips->insert( ip );
 		}
+
+		dprintf(D_HOSTNAME,"%s=%s, so choosing IP %s\n",
+				interface_param_name,
+				interface_pattern,
+				ip.c_str());
+
 		return true;
 	}
 

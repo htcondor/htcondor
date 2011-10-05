@@ -75,8 +75,12 @@ if( TestGlue::is_windows() ) {
     # We are explicitly calling unzip from C:\tools so that we do not use Cygwin's
     # version of unzip.  When Cygwin unzips a tarball it removes the execute bits 
     # and we have to restore them.  We want to avoid this so use non-Cygwin unzip
-    print "Unzipping $release_zipfile ...\n";
-    system("C:\\tools\\unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile: $!\n";
+    my $zip_exe_path = "C:\\tools\\unzip.exe";
+    if (!(-f $zip_exe_path)) {
+	   $zip_exe_path = "msconfig\\unzip.exe";
+    }
+    print "Unzipping $release_zipfile using $zip_exe_path\n";
+    system("$zip_exe_path $release_zipfile -d condor") && die "Can't unzip $release_zipfile: $!\n";
     print "Unzipped $release_zipfile.\n";
     
     (my $tmp_dir = basename($release_zipfile)) =~ s/\.zip$//;

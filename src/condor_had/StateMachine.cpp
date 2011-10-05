@@ -232,24 +232,10 @@ HADStateMachine::softReconfigure(void)
         free( buffer );
     }
 
-	buffer = param( "HAD_CONNECTION_TIMEOUT" );
+	m_connectionTimeout = param_integer("HAD_CONNECTION_TIMEOUT",
+										DEFAULT_SEND_COMMAND_TIMEOUT,
+										0); // min value
 
-	if( buffer ) {
-        bool res = false;
-
-		m_connectionTimeout = utilAtoi(buffer, &res);
-
-		if( ! res || m_connectionTimeout <= 0 ) {
-            free( buffer );
-            utilCrucialError( utilConfigurationError(
-								"HAD_CONNECTION_TIMEOUT", "HAD" ).Value( ) );
-        }
-
-        free( buffer );
-    } else {
-        dprintf( D_ALWAYS, "No HAD_CONNECTION_TIMEOUT in config file,"
-                		   " use default value\n" );
-    }
     // calculate m_hadInterval
     int safetyFactor = 1;
 
@@ -279,24 +265,6 @@ HADStateMachine::softReconfigure(void)
     initializeClassAd( );
     m_updateCollectorInterval = param_integer ("HAD_UPDATE_INTERVAL",
                                              DEFAULT_HAD_UPDATE_INTERVAL );
-# if 0
-    buffer = param( "HAD_UPDATE_INTERVAL" );
-    if( buffer ) {
-        bool res = false;
-
-		m_updateCollectorInterval = utilAtoi(buffer, &res);
-
-		if( ! res || m_updateCollectorInterval <= 0 ) {
-            free( buffer );
-            utilCrucialError( utilConfigurationError(
-                                "HAD_UPDATE_INTERVAL", "HAD" ).Value( ) );
-        }
-        free( buffer );
-    } else {
-        utilCrucialError( utilNoParameterError(
-                            "HAD_UPDATE_INTERVAL", "HAD" ).Value( ) );
-    }
-# endif
 	printParamsInformation();
 
 	return TRUE;

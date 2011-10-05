@@ -46,15 +46,7 @@
 static int
 nodns_enabled( void )
 {
-	int rc = 0;
-	char *value = param( "NO_DNS" );
-	if ( value && ( value[0] == 'T' || value[0] == 't' || value[0] == '1' ) ) {
-		rc = 1;
-	}
-	if ( value ) {
-		free( value );
-	}
-	return rc;
+	return param_boolean_crufty("NO_DNS", false) ? 1 : 0;
 }
 
 /* WARNING: None of these functions properly set h_error, or errno */

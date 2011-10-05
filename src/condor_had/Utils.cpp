@@ -181,30 +181,6 @@ utilToSinful( char* address )
     return strdup( sinfulString.Value( ) );
 }
 
-int
-utilAtoi(const char* string, bool* result)
-{
-    if ( *string == '\0' ){
-        *result = false;
-
-        return -1;
-    } else {
-        char* endptr;
-        int   returnValue = (int) strtol( string, &endptr, 10 );
-
-        if ( endptr != NULL && *endptr != '\0' || errno == ERANGE ){
-            // any warning is considered as an error
-            // and the entire string is considered invalid
-            *result = false;
-
-            return -1;
-        }
-        *result = true;
-
-        return returnValue;
-    }
-}
-
 void
 utilClearList( StringList& list )
 {
