@@ -184,7 +184,7 @@ $commit_info = get_git_log($hash1, $hash2);
 
 print "<div id='main'>\n";
 
-print "<form method='get' action='" . $_SERVER{PHP_SELF} . "'>\n";
+print "<form method='get' action='" . $_SERVER["PHP_SELF"] . "'>\n";
 print "<p>Commits:&nbsp;<select name='runs'>\n";
 print "<option selected='selected'>25</option>\n";
 print "<option>50</option>\n";
@@ -197,6 +197,14 @@ print "<table>\n";
 print "<tr>\n";
 print "  <th>D</td>\n";
 print "  <th>SHA1</th>\n";
+
+// Get the queue lengths
+$condorq = new CondorQ($pool_platforms);
+foreach (array_keys($seen_platforms) AS $platform) {
+  $condorq->add_platform($platform);
+}
+$queues = $condorq->condor_q();
+
 foreach (array_keys($seen_platforms) as $platform) {
   // Update this if NMI has any other architecture prefixes (such as ia64) 
   if(preg_match("/^x86_64_/", $platform)) {
@@ -209,7 +217,7 @@ foreach (array_keys($seen_platforms) as $platform) {
     $display = preg_replace("/x86_/", "x86<br>", $platform);
   }
 
-  print "  <th colspan=2><font size='-3'>$display</font></th>\n";
+  print "  <th colspan=2><font size='-3'>$display" . $queues[$platform]["html-queue"] . "</font></th>\n";
   print "  <th></th>\n";
 }
 print "  <th colspan=2><font size='-3'>Summary</font></th>\n";
@@ -220,7 +228,6 @@ $day_heights = Array();
 $last_date = "";
 $count = 0;
 foreach (array_keys($runs) as $run) {
-  print $day_of_week;
   $date = preg_replace("/^\d\d\d\d-(\d\d-\d\d).*/", "$1", $runs[$run]["start"]);
   if($last_date == "") {
     // Always mark the first day
@@ -243,8 +250,13 @@ foreach ($runs as $run) {
   if(array_key_exists("day-break", $run)) {
     $td_style = "border-top-width:3px; border-top-color: black;";
     $rowspan = array_shift($day_heights);
-    $dayofweek = implode("<br>", str_split($run["dayofweek"], 1));
-    print "  <td style=\"$td_style\" rowspan=$rowspan>$dayofweek</td>\n";
+
+    $dayofweek = $run["dayofweek"];
+    if($rowspan < 4) {
+      $dayofweek = substr($dayofweek, 0, 3);
+    }
+    $dayofweek = implode("<br>", str_split($dayofweek, 1));
+    print "  <td style=\"text-align:center; $td_style\" rowspan=$rowspan>$dayofweek</td>\n";
   }
   else {
     $td_style = "";
@@ -252,8 +264,8 @@ foreach ($runs as $run) {
 
   print "  <td style=\"$td_style\">\n";
 
-  $tmp = substr($run["sha1"], 0, 15) . "<br><font size=\"-2\">" . $run["start"] . "$diff</font>\n";
-  print "    <span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
+  $tmp = substr($run["sha1"], 0, 15) . "<br><font size=\"-2\">" . $run["start"] . "</font>\n";
+  print "    <span class=\"link\"><a href=\"\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
   print "  </td>\n";
 
   // Keep track of a summary of the platforms
@@ -275,21 +287,20 @@ foreach ($runs as $run) {
       if($run["platforms"][$platform]["build"]["result"] == NULL) {
 	$summary["build"]["pending"] += 1;
       }
-      elseif($run["platforms"][$platform]["build"]["result"] == 0) {
-	$summary["build"]["passed"] += 1;
-      }
-      else {
+      elseif($run["platforms"][$platform]["build"]["result"] != 0) {
 	$summary["build"]["failed"] += 1;
       }
-
-      if($run["platforms"][$platform]["test"]["result"] == NULL) {
-	$summary["test"]["pending"] += 1;
-      }
-      elseif($run["platforms"][$platform]["test"]["result"] == 0) {
-	$summary["test"]["passed"] += 1;
-      }
       else {
-	$summary["test"]["failed"] += 1;
+	$summary["build"]["passed"] += 1;
+	if($run["platforms"][$platform]["test"]["result"] == NULL) {
+	  $summary["test"]["pending"] += 1;
+	}
+	elseif($run["platforms"][$platform]["test"]["result"] == 0) {
+	  $summary["test"]["passed"] += 1;
+	}
+	else {
+	  $summary["test"]["failed"] += 1;
+	}
       }
 
 
@@ -367,7 +378,7 @@ WHERE
   component='condor' AND 
   project='condor' AND
   run_type='build' AND
-  description LIKE 'Continuous%' AND 
+  description LIKE 'Continuous Build' AND 
   user = '$condor_user'
 ORDER BY 
   runid desc
@@ -415,8 +426,11 @@ function make_cell($run, $platform, $run_type, $td_style) {
   $details .= "    <tr><td>Status</td><td class=\"$color\">$color</td></tr>";
   $details .= "    <tr><td><nobr>NMI RunID</nobr></td><td>" . $run["platforms"][$platform][$run_type]["runid"] . "</td></tr>";
   $details .= "    <tr><td>Submitted</td><td><nobr>" . $run["start"] . "</nobr></td></tr>";
-  $details .= "    <tr><td>Duration</td><td><nobr>" . $run["platforms"][$platform][$run_type]["duration"] . "</nobr></td></tr>";
   $details .= "    <tr><td>Host</td><td>" . $run["platforms"][$platform][$run_type]["host"] . "</td></tr>";
+
+  if($color != "pending") {
+    $details .= "    <tr><td>Duration</td><td><nobr>" . $run["platforms"][$platform][$run_type]["duration"] . "</nobr></td></tr>";
+  }
 
   if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
     $failed_tasks = "&lt;None&gt;";
