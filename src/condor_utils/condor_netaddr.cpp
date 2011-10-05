@@ -11,35 +11,39 @@ condor_netaddr::condor_netaddr(const condor_sockaddr& base,
 }
 
 bool condor_netaddr::match(const condor_sockaddr& target) const {
-	if (maskbit_ == (unsigned int)-1)
+	if (maskbit_ == (unsigned int)-1) {
 		return false; // uninitialized
+	}
 
 	// check if address type is same
 	//
 	// what is correct policy for matching between IPv4 address and
 	// IPv4-mapped-IPv6 address?
-	if (base_.get_aftype() != target.get_aftype())
+	if (base_.get_aftype() != target.get_aftype()) {
 		return false;
+	}
 
 	const uint32_t* baseaddr = base_.get_address();
 	const uint32_t* targetaddr = target.get_address();
 
-	if (!baseaddr || !targetaddr)
+	if (!baseaddr || !targetaddr) {
 		return false;
+	}
 	int addr_len = base_.get_address_len();
 
 	int curmaskbit = maskbit_;
 	for (int i = 0; i < addr_len; ++i) {
-		if (curmaskbit <= 0)
-			break;
+		if (curmaskbit <= 0) { break; }
 		uint32_t mask;
-		if (curmaskbit > 32)
+		if (curmaskbit > 32) {
 			mask = 0xffffffff;
-		else
-			mask = ~((1 << (32 - curmaskbit)) - 1);
+		} else {
+			mask = htonl(~(0xffffffff >> curmaskbit));
+		}
 
-		if ((*baseaddr & mask) != (*targetaddr & mask))
+		if ((*baseaddr & mask) != (*targetaddr & mask)) {
 			return false;
+		}
 
 		curmaskbit -= 32;
 		baseaddr++;
