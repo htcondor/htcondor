@@ -80,7 +80,7 @@ template<typename T>
 bool lex_cast(const std::string& s, T& v) {
     std::stringstream ss(s);
     ss >> v;
-    return (unsigned long)(ss.tellg()) == (unsigned long)(s.size());
+    return ss.eof() && (s.size() > 0);
 }
 
 #endif // _stl_string_utils_h_
