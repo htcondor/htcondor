@@ -23,11 +23,9 @@ Note that all cached values in my_hostname.cpp are cleared and re-initialized
 by the config system after the configuration has been loaded. Something similar
 needs to be done for the new IPv6 code, or it just needs to avoid caching.
 
-diff --git a/src/condor_utils/condor_config.cpp b/src/condor_utils/condor_config.cpp
-index 0e89ebe..92a8f6a 100644
 --- a/src/condor_utils/condor_config.cpp
 +++ b/src/condor_utils/condor_config.cpp
-@@ -811,6 +811,12 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
+@@ -812,6 +812,12 @@
  		// parameter at this point, if it's set.
  	init_ipaddr( TRUE );
  
@@ -40,11 +38,9 @@ index 0e89ebe..92a8f6a 100644
  		// Re-insert the special macros.  We don't want the user to
  		// override them, since it's not going to work.
  	reinsert_specials( host );
-diff --git a/src/condor_utils/my_hostname.cpp b/src/condor_utils/my_hostname.cpp
-index 9b29a75..72a2747 100644
 --- a/src/condor_utils/my_hostname.cpp
 +++ b/src/condor_utils/my_hostname.cpp
-@@ -145,6 +145,12 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
+@@ -145,6 +145,12 @@
  		if( network_interface_ips ) {
  			network_interface_ips->insert( ip );
  		}
