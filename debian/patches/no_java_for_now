@@ -24,20 +24,20 @@ Forwarded: <no|not-needed|url proving that it has been forwarded>
 Reviewed-By: <name and email of someone who approved the patch>
 Last-Update: <YYYY-MM-DD>
 
---- condor-7.7.1+git436-g81fc261.orig/src/condor_chirp/CMakeLists.txt
-+++ condor-7.7.1+git436-g81fc261/src/condor_chirp/CMakeLists.txt
-@@ -26,7 +26,7 @@ condor_exe( condor_chirp "condor_chirp.c
- # libdaemon_core (even when linking libutils to it)
- target_link_libraries(condor_chirp -Wl,--allow-shlib-undefined)
+--- a/src/condor_chirp/CMakeLists.txt
++++ b/src/condor_chirp/CMakeLists.txt
+@@ -27,7 +27,7 @@
+ condor_exe( condor_chirp "condor_chirp.cpp" ${C_LIBEXEC}
+ "chirp_client;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GCB_FOUND};${GLOBUS_FOUND}" OFF )
  
 -install ( FILES Chirp.jar DESTINATION ${C_LIB} )
 +#install ( FILES Chirp.jar DESTINATION ${C_LIB} )
  
  if (WANT_FULL_DEPLOYMENT)
      install ( FILES chirp_client.h DESTINATION ${C_INCLUDE})
---- condor-7.7.1+git436-g81fc261.orig/src/condor_starter.V6.1/CMakeLists.txt
-+++ condor-7.7.1+git436-g81fc261/src/condor_starter.V6.1/CMakeLists.txt
-@@ -26,7 +26,7 @@ if (HAVE_EXT_GLOBUS)
+--- a/src/condor_starter.V6.1/CMakeLists.txt
++++ b/src/condor_starter.V6.1/CMakeLists.txt
+@@ -26,7 +26,7 @@
  endif()
  
  # need to add all the other install targets for libexec.

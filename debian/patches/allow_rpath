@@ -4,7 +4,7 @@ Subject: Internal libs need RPATH setup
 Disable the unconditional disabling on Debian.
 --- a/build/cmake/CondorConfigure.cmake
 +++ b/build/cmake/CondorConfigure.cmake
-@@ -123,7 +123,7 @@ if( NOT WINDOWS)
+@@ -123,7 +123,7 @@
  	set( CMAKE_SUPPRESS_REGENERATION FALSE )
  
  	# when we want to distro dynamic libraries only with localized rpaths.
