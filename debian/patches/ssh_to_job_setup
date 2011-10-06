@@ -1,0 +1,13 @@
+From: Michael Hanke <mih@debian.org>
+Subject: Proper path to sftp-server on Debian
+--- a/src/condor_starter.V6.1/condor_ssh_to_job_sshd_config_template
++++ b/src/condor_starter.V6.1/condor_ssh_to_job_sshd_config_template
+@@ -11,7 +11,7 @@
+ # since sshd is running as the job uid, there isn't really a security concern
+ AcceptEnv *
+ 
+-Subsystem       sftp    /usr/libexec/openssh/sftp-server
++Subsystem       sftp    /usr/lib/sftp-server
+ 
+ # prevent sshd from freaking out about reading files from inside
+ # a tmp-like directory
