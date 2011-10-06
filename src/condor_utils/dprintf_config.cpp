@@ -232,13 +232,7 @@ dprintf_config( const char *subsys )
 					(void)sprintf(pname, "TRUNC_%s_%s_LOG_ON_OPEN", subsys,
 								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
-				pval = param(pname);
-				if( pval ) {
-					if( *pval == 't' || *pval == 'T' ) {
-						want_truncate = 1;
-					} 
-					free(pval);
-				}
+				want_truncate = param_boolean_crufty(pname, false) ? 1 : 0;
 
 				if (debug_level == 0) {
 					(void)sprintf(pname, "%s_LOCK", subsys);
@@ -249,9 +243,9 @@ dprintf_config( const char *subsys )
 				}
 
 				if( first_time && want_truncate ) {
-					debug_file_fp = debug_lock(debug_level, "w", 0);
+					debug_file_fp = debug_lock(debug_level, "wN", 0);
 				} else {
-					debug_file_fp = debug_lock(debug_level, "a", 0);
+					debug_file_fp = debug_lock(debug_level, "aN", 0);
 				}
 
 				if( debug_file_fp == NULL && debug_level == 0 ) {
@@ -288,9 +282,16 @@ dprintf_config( const char *subsys )
 					(void)sprintf(pname, "MAX_%s_%s_LOG", subsys,
 								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
+                
+                off_t maxlog = 0;
 				pval = param(pname);
-				if( pval != NULL ) {
-					MaxLog[debug_level] = atoi( pval );
+				if (pval != NULL) {
+                    // because there is nothing like param_long_long() or param_off_t()
+                    bool r = lex_cast(pval, maxlog);
+                    if (!r || (maxlog < 0)) {
+                        EXCEPT("Invalid config: %s = %s", pname, pval);
+                    }
+                    MaxLog[debug_level] = maxlog;
 					free(pval);
 				} else {
 					MaxLog[debug_level] = 1024*1024;
@@ -302,13 +303,7 @@ dprintf_config( const char *subsys )
 					(void)sprintf(pname, "MAX_NUM_%s_%s_LOG", subsys,
 								  _condor_DebugFlagNames[debug_level-1]+2);
 				}
-				pval = param(pname);
-				if (pval != NULL) {
-					MaxLogNum[debug_level] = atoi(pval);
-					free(pval);
-				} else {
-					MaxLogNum[debug_level] = 1;
-				}
+                MaxLogNum[debug_level] = param_integer(pname, 1, 0);
 			}
 		}
 	} else {

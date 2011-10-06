@@ -188,3 +188,59 @@ NamedPipeReader::poll(int timeout, bool& ready)
 
 	return true;
 }
+
+
+/* Ensure that the m_addr file has the same inode as the opened m_pipe.
+	If not, it means the named pipe had been deleted (or possibly recreated).
+	Either way, it isn't consistent and upper layers who call this will
+	probably start shutting things down.
+*/
+bool
+NamedPipeReader::consistent(void)
+{
+	struct stat fbuf;
+	struct stat lbuf;
+
+	ASSERT(m_initialized);
+
+	/* We already have the named pipe open, so get its information */
+	if (fstat(m_pipe, &fbuf) < 0) {
+		dprintf(D_FULLDEBUG,
+			"NamedPipeReader::consistent(): "
+			"Failed to lstat() supposedly open named pipe! Named pipe is "
+			"inconsistent! %s (%d)\n",
+			strerror(errno),
+			errno);
+		return false;
+	}
+
+	/* We're going to compare it to the named pipe path on disk. */
+	if (lstat(m_addr, &lbuf) < 0) {
+		dprintf(D_FULLDEBUG,
+			"NamedPipeReader::consistent(): "
+			"Failed to stat() supposedly present named pipe! Named pipe "
+			"is inconsistent! %s (%d)\n",
+			strerror(errno),
+			errno);
+		return false;
+	}
+
+	/* They better match, or something sneaky happened */
+	if (fbuf.st_dev != lbuf.st_dev || 
+		fbuf.st_ino != lbuf.st_ino)
+	{
+		dprintf(D_ALWAYS, 
+			"NamedPipeReader::consistent(): "
+			"The named pipe at m_addr: '%s' is inconsistent with the "
+			"originally opened m_addr when the procd was started.\n",
+			m_addr);
+		return false;
+	}
+
+	return true;
+}
+
+
+
+
+

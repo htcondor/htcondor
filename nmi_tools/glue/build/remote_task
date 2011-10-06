@@ -114,6 +114,9 @@ elsif ($taskname eq $NATIVE_TASK) {
         print "Detected OS is OpenSuSE.  Creating RPM package.\n";
         $execstr = create_rpm();
     }
+    elsif ($ENV{NMI_PLATFORM} =~ /winnt/) {
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE 7.7.3-pre-";
+    }
     else {
         print "We do not generate a native package for this platform.\n";
         exit 0;
@@ -143,9 +146,22 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
 
 
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+    # change exestr for Windows tasks.
     # build.win.bat uses BASE_DIR to setup some things.
     $ENV{BASE_DIR} = "$BaseDir";
-    $execstr= "nmi_tools\\glue\\build\\build.win.bat";
+    if ($taskname eq $TAR_TASK) {
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD";
+    } elsif ($taskname eq $EXTERNALS_TASK) {
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS";
+    } elsif ($taskname eq $CHECK_TAR_TASK) {
+        my $cmake_args = get_cmake_args();
+        print "Windows CHECK_TAR (ZIP) task\n";
+        print "   cmake_args = $cmake_args\n";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP";
+    } elsif ($taskname eq $NATIVE_TASK) {
+        print "Windows NATIVE (MSI) task\n";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE";
+    }
 }
 else {
     $ENV{PATH} ="$ENV{PATH}:/opt/local/bin:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/opt/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";

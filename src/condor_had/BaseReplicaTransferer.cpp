@@ -58,25 +58,10 @@ int
 BaseReplicaTransferer::reinitialize( )
 {
     dprintf( D_ALWAYS, "BaseReplicaTransferer::reinitialize started\n" );
-    
-    char* buffer = param( "HAD_CONNECTION_TIMEOUT" );
-    
-    if( buffer ) {
-        bool result = false;
 
-		m_connectionTimeout = utilAtoi( buffer, &result ); 
-		//strtol( buffer, 0, 10 );
-        
-        if( ! result || m_connectionTimeout <= 0 ) {
-            utilCrucialError(
-				utilConfigurationError("HAD_CONNECTION_TIMEOUT", 
-									   "HAD").Value( ) );
-        }
-        free( buffer );
-    } else {
-		utilCrucialError(
-       		utilNoParameterError("HAD_CONNECTION_TIMEOUT", "HAD").Value( ) );
-    }
+	m_connectionTimeout = param_integer("HAD_CONNECTION_TIMEOUT",
+										DEFAULT_SEND_COMMAND_TIMEOUT,
+										0); // min value
 
 	m_maxTransferLifetime = param_integer( "MAX_TRANSFER_LIFETIME",
 											DEFAULT_MAX_TRANSFER_LIFETIME );

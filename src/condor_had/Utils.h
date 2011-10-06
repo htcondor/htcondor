@@ -93,17 +93,6 @@ utilToString( int command );
  */
 char* 
 utilToSinful( char* address );
-/* Function    :  utilAtoi
- * Arguments   :  string - string to convert
- *				  result - boolean indicator whether the conversion succeded
- * Return value:  int - the value of conversion upon success and 
- *						0 upon failure
- * Description : converts the specified string to integer
- * Note        : the returned value is valid only if 'result' is equal to true
- *				 after the function is called
- */
-int 
-utilAtoi(const char* string, bool* result);
 /* Function   : utilClearList
  * Arguments  : list - string list to be cleared
  * Description: clears list of strings

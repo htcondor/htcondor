@@ -165,16 +165,7 @@ lock_file( int fd, LOCK_TYPE type, int do_block )
 	   if we should report this as an error.   -zmiller  07/15/02
 	   */
 	if ( rc == -1 && saved_errno == ENOLCK ) {
-		char* p = param("IGNORE_NFS_LOCK_ERRORS");
-		char  val = 'N';
-
-		if (p) {
-			val = p[0];
-			free (p);
-		}
-
-		if (val == 'Y' || val == 'y' || val == 'T' || val == 't') {
-				// pretend there was no error.
+		if (param_boolean_crufty("IGNORE_NFS_LOCK_ERRORS", false)) {
 			dprintf ( D_FULLDEBUG, "Ignoring error ENOLCK on fd %i\n", fd );
 			return 0;
 		}

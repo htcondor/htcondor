@@ -187,7 +187,7 @@ foreach ($platforms AS $platform) {
   # Get the queue depth for the platform if it is pending
   $queue_depth = "";
   if($platform_status[$platform] == PLATFORM_PENDING) {
-    $queue_depth = get_queue_for_nmi_platform($platform, $type, $dash);
+    $queue_depth = get_queue_for_nmi_platform($platform, $dash);
   }
 
   $remote_host = "";
@@ -221,7 +221,7 @@ foreach ($platforms AS $platform) {
 
 foreach ($data AS $task => $arr) {
   if ($type == 'test') {
-    $history_url = sprintf(HISTORY_URL,$branch,rawurlencode($task));
+    $history_url = sprintf(HISTORY_URL, urlencode($branch), rawurlencode($task));
     $history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
     echo "<tr>\n".
       "<td ".($task_status[$task] != PLATFORM_PASSED ? 

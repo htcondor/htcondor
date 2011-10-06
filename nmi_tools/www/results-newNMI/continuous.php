@@ -1,7 +1,8 @@
 <?php
-define("NUM_SPARK_DAYS", 2);
+$NUM_RUNS = array_key_exists("runs", $_REQUEST) ? $_REQUEST["runs"] : 25;
+define("NUM_RUNS", $NUM_RUNS);
 
-$SPARK_DAYS = array_key_exists("days", $_REQUEST) ? $_REQUEST["days"] : NUM_SPARK_DAYS;
+define("MAX_TASKS_TO_DISPLAY_IN_POPUP", 10);
 
 include "dashboard.inc";
 
@@ -10,253 +11,447 @@ $dash = new Dashboard();
 $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
 
-$continuous_blacklist = Array("Fedora", "x86_64_fedora_13");
+$blacklist = Array("Fedora", "x86_64_fedora_13");
 ?>
-
-<script type="text/javascript">
-$(document).ready(function(){
-  $("#help_link").click(function(){
-    $("#help_box").slideToggle("slow");
-  });
-
-  $("#help_box").click(function(){
-    $("#help_box").slideToggle("slow");
-  });
-});
-</script>
-
 
 </head>
 <body>
 
 <?php
 
-$condor_user = $dash->get_condor_user();
-define("CONDOR_USER", $condor_user);
+
+$seen_platforms = Array();
+
+/////////////////////////////////////////////
+// Get list of runs
+/////////////////////////////////////////////
+
+$runs = get_runs($dash);
+
+/////////////////////////////////////////////
+// Get build info
+/////////////////////////////////////////////
+
+// Now we run a second query.  This time we will get the result per platform for each run.
+// Additionally, we will gather info on where the jobs ran, etc.
+$runids = implode(", ", array_keys($runs));
+$query = "
+SELECT 
+  runid,
+  platform,
+  result,
+  host,
+  TIMEDIFF(finish,start) as duration,
+  name 
+FROM 
+  Task
+WHERE
+  runid in ($runids) AND
+  (name in (\"platform_job\", \"remote_pre\") OR result != 0)
+";
+
+$results = $dash->db_query($query);
+
+foreach ($results as $row) {
+  // Keep track of every platform that we see, and if it is in the blacklist we
+  // will skip it here.
+  $platform = preg_replace("/nmi:/", "", $row["platform"]);
+  if(in_array($platform, $blacklist)) {
+    continue;
+  }
+  
+  // Keep track of what platform we have seen and the total records for each.
+  if(array_key_exists($platform, $seen_platforms)) {
+    $seen_platforms[$platform] += 1;
+  }
+  else {
+    $seen_platforms[$platform] = 1;
+  }
+
+  // PHP does not have autovivification so we need to make the array for each platform
+  if(!array_key_exists($platform, $runs[$row["runid"]]["platforms"])) {
+    $runs[$row["runid"]]["platforms"][$platform] = Array();
+    $runs[$row["runid"]]["platforms"][$platform]["build"] = Array();
+    $runs[$row["runid"]]["platforms"][$platform]["test"] = Array();
+    $runs[$row["runid"]]["platforms"][$platform]["build"]["bad-tasks"] = Array();
+    $runs[$row["runid"]]["platforms"][$platform]["test"]["bad-tasks"] = Array();
+  }
+
+  if($row["name"] == "platform_job") {
+    // The platform_job task will contain the final result, as well as the length of
+    // execution for the entire job.
+    $runs[$row["runid"]]["platforms"][$platform]["build"]["result"] = $row["result"];
+    $runs[$row["runid"]]["platforms"][$platform]["build"]["duration"] = $row["duration"];
+    $runs[$row["runid"]]["platforms"][$platform]["build"]["runid"] = $row["runid"];
+  }
+  elseif($row["name"] == "remote_pre") {
+    // For the remote_pre step, we determine the execution host
+    $runs[$row["runid"]]["platforms"][$platform]["build"]["host"] = $row["host"];
+  }
+  else {
+    array_push($runs[$row["runid"]]["platforms"][$platform]["build"]["bad-tasks"], $row["name"]);
+  }
+}
+
+/////////////////////////////////////////////
+// Get test info
+/////////////////////////////////////////////
+
+// First, get the list of test run IDs.  For FW builds each platform gets its
+// own test ID even if all the platforms are built in one run ID.
+$query = "
+SELECT
+  gjl_input_from_nmi.run_id AS build_runid, 
+  gjl_input.run_id as test_runid
+FROM 
+  gjl_input 
+LEFT OUTER JOIN 
+  gjl_input_from_nmi ON gjl_input.id = input_id 
+WHERE 
+  gjl_input_from_nmi.run_id IN ($runids)";
+
+$results = $dash->db_query($query);
+
+$test_mapping = Array();
+foreach ($results as $row) {
+  $test_mapping[$row["test_runid"]] = $row["build_runid"];
+}
+
+$test_runids = implode(",", array_keys($test_mapping));
 
 $query = "
 SELECT 
-  LEFT(description,
-       (IF(LOCATE('branch-',description),
-         LOCATE('branch-',description)+5,
-         (IF(LOCATE('trunk-',description),
-            LOCATE('trunk-',description)+4,
-            CHAR_LENGTH(description)))))) AS branch,
-  MAX(convert_tz(start, 'GMT', 'US/Central')) AS start,
-  unix_timestamp(MAX(convert_tz(start, 'GMT', 'US/Central'))) AS start_epoch,
-  run_type, 
-  max(runid) as runid,
-  archive_results_until,
-  result
+  runid,
+  platform,
+  result,
+  host,
+  TIMEDIFF(finish,start) as duration,
+  name 
+FROM 
+  Task
+WHERE
+  runid in ($test_runids) AND
+  platform != 'local' AND
+  (name in (\"platform_job\", \"remote_pre\") or result != 0)
+";
+
+$results = $dash->db_query($query);
+
+foreach ($results as $row) {
+  // Keep track of every platform that we see, and if it is in the blacklist we
+  // will skip it here.
+  $platform = preg_replace("/nmi:/", "", $row["platform"]);
+
+  $build_runid = $test_mapping[$row["runid"]];
+  
+  // PHP does not have autovivification so we need to make the array for each platform
+  if(!array_key_exists($platform, $runs[$build_runid]["platforms"])) {
+    print "WARNING: tests exist for a run that builds do not exist for.<br>\n";
+    print " Test run ID = " . $row["runid"] . "<br>\n";
+    print " Build run = $build_runid<br>\n";
+    print " Platform = $platform <br>\n";
+  }
+
+  if($row["name"] == "platform_job") {
+    // The platform_job task will contain the final result, as well as the length of
+    // execution for the entire job.
+    $runs[$build_runid]["platforms"][$platform]["test"]["result"] = $row["result"];
+    $runs[$build_runid]["platforms"][$platform]["test"]["duration"] = $row["duration"];
+    $runs[$build_runid]["platforms"][$platform]["test"]["runid"] = $row["runid"];
+  }
+  elseif($row["name"] == "remote_pre") {
+    // For the remote_pre step, we determine the execution host
+    $runs[$build_runid]["platforms"][$platform]["test"]["host"] = $row["host"];
+  }
+  else {
+    array_push($runs[$build_runid]["platforms"][$platform]["test"]["bad-tasks"], $row["name"]);
+  }
+}
+
+/////////////////////////////////////////////
+// Get Git log info
+/////////////////////////////////////////////
+$last_run = end($runs);
+$hash1 = $last_run["sha1"];
+$first_run = reset($runs);
+$hash2 = $first_run["sha1"];
+$commit_info = get_git_log($hash1, $hash2);
+
+
+/////////////////////////////////////////////
+// Display the info
+/////////////////////////////////////////////
+
+print "<div id='main'>\n";
+
+print "<form method='get' action='" . $_SERVER{PHP_SELF} . "'>\n";
+print "<p>Commits:&nbsp;<select name='runs'>\n";
+print "<option selected='selected'>25</option>\n";
+print "<option>50</option>\n";
+print "<option>100</option>\n";
+print "<option>200</option>\n";
+print "</select><input type='submit' value='Show'></form><br>\n";
+
+// Create the table header
+print "<table>\n";
+print "<tr>\n";
+print "  <th>D</td>\n";
+print "  <th>SHA1</th>\n";
+foreach (array_keys($seen_platforms) as $platform) {
+  // Update this if NMI has any other architecture prefixes (such as ia64) 
+  if(preg_match("/^x86_64_/", $platform)) {
+    $display = preg_replace("/x86_64_/", "x86_64<br>", $platform);
+  }
+  elseif(preg_match("/ia64_/", $platform)) {
+    $display = preg_replace("/ia64_/", "x86<br>", $platform);
+  }
+  else {
+    $display = preg_replace("/x86_/", "x86<br>", $platform);
+  }
+
+  print "  <th colspan=2><font size='-3'>$display</font></th>\n";
+  print "  <th></th>\n";
+}
+print "  <th colspan=2><font size='-3'>Summary</font></th>\n";
+print "</tr>\n";
+
+// Determine the heights of the days-of-the-week that display on the left
+$day_heights = Array();
+$last_date = "";
+$count = 0;
+foreach (array_keys($runs) as $run) {
+  print $day_of_week;
+  $date = preg_replace("/^\d\d\d\d-(\d\d-\d\d).*/", "$1", $runs[$run]["start"]);
+  if($last_date == "") {
+    // Always mark the first day
+    $runs[$run]["day-break"] = 1;
+  }
+  elseif($date != $last_date) {
+    $runs[$run]["day-break"] = 1;
+    array_push($day_heights, $count);
+    $count = 0;
+  }
+  $count++;
+  $last_date = $date;
+}
+array_push($day_heights, $count);
+
+// Create the table body.  One row for each SHA1
+foreach ($runs as $run) {
+  print "<tr>\n";
+
+  if(array_key_exists("day-break", $run)) {
+    $td_style = "border-top-width:3px; border-top-color: black;";
+    $rowspan = array_shift($day_heights);
+    $dayofweek = implode("<br>", str_split($run["dayofweek"], 1));
+    print "  <td style=\"$td_style\" rowspan=$rowspan>$dayofweek</td>\n";
+  }
+  else {
+    $td_style = "";
+  }
+
+  print "  <td style=\"$td_style\">\n";
+
+  $tmp = substr($run["sha1"], 0, 15) . "<br><font size=\"-2\">" . $run["start"] . "$diff</font>\n";
+  print "    <span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
+  print "  </td>\n";
+
+  // Keep track of a summary of the platforms
+  $summary = Array();
+  $summary["build"] = Array();
+  $summary["build"]["passed"] = 0;
+  $summary["build"]["pending"] = 0;
+  $summary["build"]["failed"] = 0;
+  $summary["test"] = Array();
+  $summary["test"]["passed"] = 0;
+  $summary["test"]["pending"] = 0;
+  $summary["test"]["failed"] = 0;
+
+  // Now print the results for each platform
+  foreach (array_keys($seen_platforms) as $platform) {
+    // There is no guarantee that each platform is in each run.  So check it here
+    if(array_key_exists($platform, $run["platforms"])) {
+
+      if($run["platforms"][$platform]["build"]["result"] == NULL) {
+	$summary["build"]["pending"] += 1;
+      }
+      elseif($run["platforms"][$platform]["build"]["result"] == 0) {
+	$summary["build"]["passed"] += 1;
+      }
+      else {
+	$summary["build"]["failed"] += 1;
+      }
+
+      if($run["platforms"][$platform]["test"]["result"] == NULL) {
+	$summary["test"]["pending"] += 1;
+      }
+      elseif($run["platforms"][$platform]["test"]["result"] == 0) {
+	$summary["test"]["passed"] += 1;
+      }
+      else {
+	$summary["test"]["failed"] += 1;
+      }
+
+
+      print make_cell($run, $platform, "build", $td_style);
+
+      if($run["platforms"][$platform]["build"]["result"] != NULL and 
+	 $run["platforms"][$platform]["build"]["result"] == 0) {
+	print make_cell($run, $platform, "test", $td_style);
+      }
+      else {
+	print " <td class=\"noresults test\" style=\"$td_style\">&nbsp;&nbsp;&nbsp;</td>";
+      }
+    }    
+    else {
+      print "  <td class='build' style=\"$td_style\">&nbsp;</td><td class='test' style=\"$td_style\">&nbsp;</td>\n";
+    }
+
+    print "  <td style=\"width:10px; font-size:5px; $td_style\">&nbsp;</td>\n";
+  }
+
+  // Print the summary
+  $txt = "<font style='color:#55ff55'>" . $summary["build"]["passed"] . "</font> ";
+  $txt .= "<font style='color:#FFE34D'>" . $summary["build"]["pending"]  . "</font> ";
+  $txt .= "<font style='color:#ff5555'>" . $summary["build"]["failed"] . "</font>";
+  print "<td style=\"$td_style\">$txt</td>\n";
+
+  $txt = "<font style='color:#55ff55'>" . $summary["test"]["passed"] . "</font> ";
+  $txt .= "<font style='color:#FFE34D'>" . $summary["test"]["pending"] . "</font> ";
+  $txt .= "<font style='color:#ff5555'>" . $summary["test"]["failed"] . "</font>";
+  print "<td style=\"$td_style\">$txt</td>\n";
+
+  print "</tr>\n";
+}
+
+print "</table>\n";
+
+print "<p style='font-size:-1'>The following platforms are excluded from displaying here: " . implode(", ", $blacklist) . "</p>";
+
+function get_git_log($hash1, $hash2) {
+  $output = `git --git-dir=/home/condorauto/condor.git log --pretty=format:'%H | %an | %s' $hash1..$hash2 2>&1`;
+  $commits = explode("\n", $output);
+
+  $commit_info = Array();
+  foreach ($commits as $commit) {
+    $array = explode(" | ", $commit);
+    $commit_info[$array[0]] = "$array[1]<br>$array[2]\n";
+  }
+
+  return $commit_info;
+}
+
+print "</div>\n";
+print "<div id='footer'>&nbsp;</div>\n";
+print "</div>\n";
+
+print "</body>\n";
+print "</html>\n";
+
+
+function get_runs($dash) {
+  // Each result from this query is one column in the sparklines.
+  // We will use this query to get the Run IDs and the order to display the SHAs
+  $condor_user = $dash->get_condor_user();
+  $query = "
+SELECT 
+  runid,
+  project_version as sha1,
+  host,
+  result,
+  CONVERT_TZ(start, 'GMT', 'US/Central') AS start,
+  DAYOFWEEK(CONVERT_TZ(start, 'GMT', 'US/Central')) as dayofweek
 FROM 
   Run 
 WHERE 
   component='condor' AND 
   project='condor' AND
   run_type='build' AND
-  description != '' AND 
-  DATE_SUB(CURDATE(), INTERVAL 10 DAY) <= start AND
+  description LIKE 'Continuous%' AND 
   user = '$condor_user'
-GROUP BY 
-  branch,
-  user,
-  run_type 
 ORDER BY 
   runid desc
-";
+LIMIT " . NUM_RUNS;
 
-$results = $dash->db_query($query);
-$continuous_buf = Array();
-foreach ($results as $row) {
-  $runid      = $row["runid"];
-  $branch     = $row["branch"];
-  $run_result = $row["result"];
 
-  if(preg_match("/Continuous/", $branch)) {
-    $skip = 0;
-    foreach ($continuous_blacklist as $blacklisted_platform) {
-      if(preg_match("/ $blacklisted_platform$/", $branch)) {
-        $skip = 1;
-        break;
-      }
-    }
-    if($skip == 1) {
-      continue;
-    }
-
-    $continuous_buf[$branch] = Array();
-    $continuous_buf[$branch]["results"] = create_sparkline($dash, $branch, $SPARK_DAYS);
-  }
-}
-
-// Now create the HTML tables.
-echo "<div id='main'>\n";
-
-//
-// 1) Continuous builds
-//
-
-/*
-echo "<form method='get' action='" . $_SERVER{"SCRIPT_NAME"} . "'>\n";
-echo "<p>Days:&nbsp;<select name='days'>\n";
-echo "<option selected='selected'>2</option>\n";
-echo "<option>3</option>\n";
-echo "<option>4</option>\n";
-echo "<option>5</option>\n";
-echo "</select><input type='submit' value='Show'></form><br>\n";
-*/
-
-$help_text = "<ul>\n";
-$help_text .= "  <li>The last $SPARK_DAYS days of results are shown for each platform.</li>\n";
-$help_text .= "  <li>The newest results are at the left.</li>\n";
-$help_text .= "  <li>Thick black bars designate commits to the repository between runs.</li>\n";
-$help_text .= "  <li>The number shown in the build line is the hour in which the test ran.</li>\n";
-$help_text .= "  <li>If a number is shown in the test line it is the number of tests that failed.</li>\n";
-$help_text .= "</ul>";
-echo "<div id='help_link' class='help_link'>Click here to have the sparklines explained</div>";
-echo "<div id='help_box' class='help_box'>$help_text</div>";
-
-echo "<table>\n";
-
-$branches = array_keys($continuous_buf);
-sort($branches);
-
-$runs = Array();
-foreach ($branches as $branch) {
-  $info = $continuous_buf[$branch];
-  foreach (array_keys($info["results"]["build"]) as $key) {
-    $runs[$key] = $info["results"]["build"][$key]["sha1"];
-  }
-}
-krsort($runs);
-
-$table = Array();
-
-foreach ($branches as $branch) {
-  $info = $continuous_buf[$branch];
-  $branch_url = sprintf(BRANCH_URL, $branch, CONDOR_USER);
-  $branch_display = preg_replace("/^Continuous Build - /", "", $branch);
-  $out = "<tr>\n";
-  $out .= "  <td rowspan='2'><a href='$branch_url'>$branch_display</a></td>\n";
-  $out .= "  <td class='sparkheader'>Build</td>\n";
-  
-  $counter = 0;
-  $commits = Array();
-  $last_sha1 = "";
-  foreach (array_keys($runs) as $key) {
-    $counter += 1;
-    $style = "";
-    if($runs[$key] != $last_sha1 && $last_sha1 != "") {
-      $style .= "border-left-width:4px; border-left-color:black; ";
-      array_push($commits, $counter);
-      $counter = 0;
-    }
-    $last_sha1 = $runs[$key];
-
-    if(array_key_exists($key, $info["results"]["build"])) {
-      $run = $info["results"]["build"][$key];
-      $out .= "  <td class='" . $run["color"] . "' style='$style'>";
-      $out .= $run["html"] . "</td>\n";
-    }
-    else {
-      $out .= "  <td style='$style'>&nbsp;&nbsp;&nbsp;</td>\n";
-    }
-  }
+  $results = $dash->db_query($query);
+  $runs = Array();
+  foreach ($results as $row) {
+    // The unique ID for each column will be the NMI Run ID.
+    // This will let us sort the runs by time.
+    $id = $row["runid"];
     
-  $out .= "</tr>\n";
-  $out .="<tr>\n";
-  $out .= "  <td class='sparkheader'>Test</td>\n";
-
-  $last_sha1 = "";
-  foreach (array_keys($runs) as $key) {
-    $style = "text-align:center; ";
-    if($runs[$key] != $last_sha1 && $last_sha1 != "") {
-      $style .= "border-left-width:4px; border-left-color:black; ";
-    }
-    $last_sha1 = $runs[$key];
-
-    if(array_key_exists($key, $info["results"]["test"])) {
-      $run = $info["results"]["test"][$key];
-      $out .= "  <td class='" . $run["color"] . "' style='$style'>";
-      $out .= $run["html"] . "</td>\n";
-    }
-    else {
-      $out .= "  <td style='$style'>&nbsp;&nbsp;&nbsp;</td>\n";
-    }
+    $runs[$id] = Array();
+    $runs[$id]["runid"]     = $row["runid"];  // Duplicate info, but it will be useful later
+    $runs[$id]["start"]     = $row["start"];
+    $runs[$id]["sha1"]      = $row["sha1"];
+    $runs[$id]["host"]      = $row["host"];
+    $runs[$id]["result"]    = $row["result"];
+    $runs[$id]["dayofweek"] = day_of_week($row["dayofweek"]);
+    $runs[$id]["platforms"] = Array();
   }
 
-  $out .= "</tr>\n";
-  array_push($table, $out);
+  // Bail out in case there are no matching runs
+  if(count($runs) == 0) {
+    print "<p>No runs found.\n";
+    exit;
+  }
+
+  return $runs;
 }
 
-// We want to have a little spacing between the sparklines.  If we stack them one on top of
-// the other they look crowded.  But we want the spacing to be minimal, so we'll make it only
-// a few pixels high.  Also, it looks really nice to have the black commit lines continue
-// through the spacing.  It's a little bit more code to generate this "separator" row correctly.
-$sep = "<tr><td style='height:6px'></td>";
-$sum = 1;
-foreach ($commits as $len) {
-  $sep .= "<td style='height:6px; border-right-width:4px; border-right-color:black;' colspan='$len'></td>";
-  $sum += $len;
+
+function make_cell($run, $platform, $run_type, $td_style) {
+
+  $color = "passed";
+  if($run["platforms"][$platform][$run_type]["result"] == NULL) {
+    $color = "pending";
+  }
+  elseif($run["platforms"][$platform][$run_type]["result"] != 0) {
+    $color = "failed";
+  }
+
+  $details = "  <table>";
+  $details .= "    <tr><td>Status</td><td class=\"$color\">$color</td></tr>";
+  $details .= "    <tr><td><nobr>NMI RunID</nobr></td><td>" . $run["platforms"][$platform][$run_type]["runid"] . "</td></tr>";
+  $details .= "    <tr><td>Submitted</td><td><nobr>" . $run["start"] . "</nobr></td></tr>";
+  $details .= "    <tr><td>Duration</td><td><nobr>" . $run["platforms"][$platform][$run_type]["duration"] . "</nobr></td></tr>";
+  $details .= "    <tr><td>Host</td><td>" . $run["platforms"][$platform][$run_type]["host"] . "</td></tr>";
+
+  if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
+    $failed_tasks = "&lt;None&gt;";
+  }
+  elseif(count($run["platforms"][$platform][$run_type]["bad-tasks"]) <= MAX_TASKS_TO_DISPLAY_IN_POPUP) {
+    $failed_tasks = implode("<br>", $run["platforms"][$platform][$run_type]["bad-tasks"]);
+  }
+  else {
+    $failed_tasks = implode("<br>", array_slice($run["platforms"][$platform][$run_type]["bad-tasks"], 0, MAX_TASKS_TO_DISPLAY_IN_POPUP-1));
+    $hidden = count($run["platforms"][$platform][$run_type]["bad-tasks"]) - MAX_TASKS_TO_DISPLAY_IN_POPUP;
+    $failed_tasks .= "<br><i>$hidden more...</i>";
+  }
+  $details .= "    <tr><td><nobr>Failed tasks</nobr></td><td>$failed_tasks</td></tr>";
+  //$details .= "    <tr><td>Submission Host</td><td>" . $run["host"] . "</td></tr>";
+
+  $details .= "  </table>";
+
+  $detail_url = sprintf(DETAIL_URL, $run["runid"], $run_type, CONDOR_USER);
+
+  if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
+    $div = "&nbsp;&nbsp;&nbsp;";
+  }
+  else {
+    $div = count($run["platforms"][$platform][$run_type]["bad-tasks"]);
+  }
+
+  $popup_html = "  <td class=\"$color $run_type\" style=\"$td_style\"><span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$div<span>$details</span></a></span></td>";
+
+  return $popup_html;
 }
-$final_cell = sizeof($runs) + 2 - $sum;
-$sep .= "<td style='height:6px;' colspan='$final_cell'></td>";
-$sep .= "</tr>\n";
-
-echo implode($sep, $table);
-echo "</table>\n";
-
-echo "<p style='font-size:-1'>The following platforms are excluded from displaying here: " . implode(", ", $continuous_blacklist) . "</p>";
-
-
-
-
-
-echo "</div>\n";
-echo "<div id='footer'>&nbsp;</div>\n";
-echo "</div>\n";
-
-
-
-
 
 
 // We are going to build "sparklines" for the Continuous builds to make
 // it easier to visualize their performance over time
 function create_sparkline($dash, $branch, $num_spark_days) {
-  // $output is a buffer for the information/HTML this function creates
-  $output = Array();
-
-  // Unfortunately, the only way we know the NMI platform is by looking at the branch name
-  $platform = preg_replace("/Continuous Build - /", "", $branch);
-
-  // First get all the recent build runs.  We'll use the runids from the
-  // build runs to determine which tests to match to them
-
-  $sql = "SELECT runid, result, project_version, 
-                 convert_tz(start, 'GMT', 'US/Central') as start
-          FROM Run
-          WHERE run_type='build' AND
-                component='condor' AND
-                project='condor' AND
-                DATE_SUB(CURDATE(), INTERVAL $num_spark_days DAY) <= start AND
-                Description = '$branch'
-                ORDER BY runid DESC";
-
-
-  $results = $dash->db_query($sql);
-
-  $builds = Array();
-  $runids = Array();
-  foreach ($results as $build) {
-    array_push($runids, $build["runid"]);
-    array_push($builds, create_build_sparkline_box($build));
-  }
-
-  // Figure out the hostname for each execute node
-  $hosts = get_hosts($dash, $runids);
-  $output["build"] = create_build_output($builds, $hosts, $platform);
-
 
   ///////////////////////////////////////////////////////////
   // Now find the matching tests
@@ -264,13 +459,6 @@ function create_sparkline($dash, $branch, $num_spark_days) {
 
   // Query the DB for all tests that used the above builds as an input
   if($runids) {
-    $runids_list = implode(", ", $runids);
-    $sql = "SELECT
-                   gjl_input_from_nmi.run_id AS build_run_id, 
-                   gjl_input.run_id as test_run_id
-            FROM gjl_input 
-            LEFT OUTER JOIN gjl_input_from_nmi ON gjl_input.id = input_id 
-            WHERE gjl_input_from_nmi.run_id IN ($runids_list)";
 
     $results = $dash->db_query($sql);
   }
@@ -294,164 +482,4 @@ function create_sparkline($dash, $branch, $num_spark_days) {
   return $output;
 }
 
-function create_build_sparkline_box($build) {
-
-  $color = "passed";
-  if($build["result"] == NULL) {
-    $color = "pending";
-  }
-  elseif($build["result"] != 0) {
-    $color = "failed";
-  }
-    
-  $details = "  <table>";
-  $details .= "    <tr><td>Status</td><td class=\"$color\">$color</td></tr>";
-  $details .= "    <tr><td>NMI RunID</td><td>" . $build["runid"] . "</td></tr>";
-  $details .= "    <tr><td>Submitted</td><td><nobr>" . $build["start"] . "</nobr></td></tr>";
-  $details .= "    <tr><td>SHA1</td><td>" . substr($build["project_version"], 0, 15) . "</td></tr>";
-  $details .= "    <tr><td>Host</td><td>__PUT_HOST_HERE__</td></tr>";
-  $details .= "  </table>";
-    
-  $hour = preg_replace("/^.+(\d\d):\d\d:\d\d.*$/", "$1", $build["start"]);
-  $hour = "&nbsp&nbsp&nbsp";
-
-  $detail_url = sprintf(DETAIL_URL, $build["runid"], "build", CONDOR_USER);
-  $popup_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$hour<span>$details</span></a></span>";
-    
-  $tmp = Array();
-  $tmp["runid"] = $build["runid"];
-  $tmp["sha1"]  = substr($build["project_version"], 0, 15);
-  $tmp["html"]  = $popup_html; 
-  $tmp["color"] = $color;
-  $tmp["hour"]  = $hour;
-  $tmp["start"] = $build["start"];
-
-  // The key is currently formed by using a combination of the date and the SHA1.  Since we run
-  // builds every hour but the SHA1 might remain the same we need to use the date to provide
-  // uniqueness.  We use the year/month/day and the hour, but we strip off the minute and second
-  // because we want to be able to correlate runs across platforms (which will be submitted each
-  // hour but at different minutes).  Eventually when we do per-commit builds this should
-  // probably just become the SHA1 without the date.
-  $tmp["key"] = preg_replace("/:.+$/", "", $build["start"]) . $tmp["sha1"];
-
-  return $tmp;
-}
-
-function create_build_output($builds, $hosts, $platform) {
-
-  $buffer = Array();
-  for ($i=0; $i < count($builds); $i++) {
-    $key = $builds[$i]["key"];
-    $buffer[$key] = Array();
-    $buffer[$key]["sha1"]  = $builds[$i]["sha1"];
-    $buffer[$key]["color"] = $builds[$i]["color"];
-
-    $tmp = preg_replace("/__PUT_HOST_HERE__/", $hosts[$builds[$i]["runid"]][$platform], $builds[$i]["html"]);
-    $buffer[$key]["html"] = $tmp;
-  }
-
-  return $buffer;
-}
-
-
-function create_test_sparkline_box($dash, $test_runid, $build_runid) {
-
-  $sql = "SELECT
-                result, start_date
-          FROM 
-                gjl_run
-          WHERE
-                id=$test_runid";
-  $results=$dash->db_query($sql);
-
-  $result = $results[0]["result"];
-  $start = $results[0]["start_date"];
-
-  $color = "passed";
-  $hour = "&nbsp;&nbsp;&nbsp;";
-  $failed_tests = "";
-  if($result == NULL) {
-    $color = "pending";
-  }
-  elseif($result != 0) {
-    $color = "failed";
-      
-    $sql = "SELECT name
-            FROM   Task
-            WHERE  runid=$test_runid AND Result!=0";
-      
-    $results = $dash->db_query($sql);
-
-    $hour = 0;
-    $LIMIT = 5; // Cap the number of entries we show in the pop-up box
-    $failed_parents = "";
-    foreach ($results as $task) {
-      if($task["name"] == "platform_job" || $task["name"] == "remote_task") {
-	$failed_parents .= "<nobr>" . $task["name"] . "</nobr><br>";
-      }
-      else {
-	$hour += 1;
-	if($hour <= $LIMIT) {
-	  $failed_tests .= "<nobr>" . $task["name"] . "</nobr><br>";
-	}
-      }
-    }
-    
-    // Add a max number of failures we'll show
-    if($hour > $LIMIT) {
-      $failed_tests .= ($hour - $LIMIT) . " more...";
-    }
-    elseif($hour == 0) {
-      // We only want to display the failed parents if there were no failed tests to display.
-      $failed_tests = $failed_parents;
-    }
-  }
-    
-  $details = "<table>";
-  $details .= "<tr><td>Status</td><td class=\"$color\">$color</td></tr>";
-  $details .= "<tr><td>Start</td><td><nobr>$start</nobr></td></tr>";
-  $details .= "<tr><td>SHA1</td><td>__PUT_SHA_HERE__</td></tr>";
-  $details .= "<tr><td>Host</td><td>__PUT_HOST_HERE__</td></tr>";
-  $details .= "<tr><td>Failed tests</td><td>$failed_tests</td></td></tr>";
-  $details .= "</table>";
-    
-  $detail_url = sprintf(DETAIL_URL, $build_runid, "test", CONDOR_USER);
-  $popup_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$hour<span>$details</span></a></span>";
-
-  $tmp = Array();
-  $tmp["color"] = $color;
-  $tmp["html"]  = $popup_html;
-  $tmp["runid"] = $runid;
-
-  return $tmp;
-}
-
-function create_test_output($tests, $builds, $hosts, $platform) {
-
-  $buffer = Array();
-
-  for ($i=0; $i < count($builds); $i++) {
-    $build = $builds[$i];
-    
-    $key = $builds[$i]["key"];
-    $buffer[$key] = Array();
-
-    if(array_key_exists($build["runid"], $tests)) {
-      $test = $tests[$build["runid"]];
-      $tmp = preg_replace("/__PUT_SHA_HERE__/", $build["sha1"], $test["html"]);
-      $tmp = preg_replace("/__PUT_HOST_HERE__/", $hosts[$test["runid"]][$platform], $tmp);
-      $buffer[$key]["color"] = $test["color"];
-      $buffer[$key]["html"]  = $tmp;
-    }
-    else {
-      $buffer[$key]["color"] = "noresults";
-      $buffer[$key]["html"]  = "&nbsp;";
-    }
-  }
-
-  return $buffer;
-}
-
 ?>
-</body>
-</html>

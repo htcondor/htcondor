@@ -676,10 +676,8 @@ OsProc::JobExit( void )
     
     // Check USE_VISIBLE_DESKTOP in condor_config.  If set to TRUE,
     // then removed our users priveleges from the visible desktop.
-    char *use_visible = param("USE_VISIBLE_DESKTOP");    
-	if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {        
-        /* at this point we can revoke the user's access to
-        the visible desktop */
+	if (param_boolean_crufty("USE_VISIBLE_DESKTOP", false)) {
+        /* at this point we can revoke the user's access to the visible desktop */
         RevokeDesktopAccess ( user_token );
     }
 

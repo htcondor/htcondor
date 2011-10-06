@@ -661,6 +661,27 @@ int	DaemonCore::Register_Command(int command, const char *com_descrip,
 							 force_authentication, wait_for_payload) );
 }
 
+int	DaemonCore::Register_CommandWithPayload(int command, const char* com_descrip,
+				CommandHandler handler, const char* handler_descrip, Service* s,
+				DCpermission perm, int dprintf_flag, bool force_authentication,
+				int wait_for_payload)
+{
+	return( Register_Command(command, com_descrip, handler,
+							(CommandHandlercpp)NULL, handler_descrip, s,
+							 perm, dprintf_flag, FALSE, force_authentication,
+							 wait_for_payload) );
+}
+
+int	DaemonCore::Register_CommandWithPayload(int command, const char *com_descrip,
+				CommandHandlercpp handlercpp, const char* handler_descrip,
+				Service* s, DCpermission perm, int dprintf_flag,
+				bool force_authentication, int wait_for_payload)
+{
+	return( Register_Command(command, com_descrip, NULL, handlercpp,
+							 handler_descrip, s, perm, dprintf_flag, TRUE,
+							 force_authentication, wait_for_payload) );
+}
+
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 				SignalHandler handler, const char* handler_descrip,
 				Service* s)
@@ -4023,12 +4044,8 @@ DaemonCore::CheckPrivState( void )
 				 old_priv );
 		dprintf( D_ALWAYS, "History of priv-state changes:\n" );
 		display_priv_log();
-		char* tmp = param( "EXCEPT_ON_ERROR" );
-		if( tmp ) {
-			if( tmp[0] == 'T' || tmp[0] == 't' ) {
-				EXCEPT( "Priv-state error found by DaemonCore" );
-			}
-			free( tmp );
+		if (param_boolean_crufty("EXCEPT_ON_ERROR", false)) {
+			EXCEPT( "Priv-state error found by DaemonCore" );
 		}
 	}
 }
@@ -8032,9 +8049,7 @@ int DaemonCore::Create_Process(
 			// Check USE_VISIBLE_DESKTOP in condor_config.  If set to TRUE,
 			// then run the job on the visible desktop, otherwise create
 			// a new non-visible desktop for the job.
-		char *use_visible = param("USE_VISIBLE_DESKTOP");
-
-		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
+		if (param_boolean_crufty("USE_VISIBLE_DESKTOP", false)) {
 				// user wants visible desktop.
 				// place the user_token into the proper access control lists.
 			if ( GrantDesktopAccess(user_token) == 0 ) {
@@ -8049,7 +8064,6 @@ int DaemonCore::Create_Process(
 					"Create_Process: Unable to use visible desktop\n");
 			}
 		}
-		if (use_visible) free(use_visible);
 
 			// we need to make certain to specify CREATE_NEW_CONSOLE, because
 			// our ACLs will not let us use the current console which is

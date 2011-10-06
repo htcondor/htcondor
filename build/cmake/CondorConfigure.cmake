@@ -250,6 +250,14 @@ if( NOT WINDOWS)
 		set(HAVE_SCHED_SETAFFINITY ON)
 	endif()
 
+	# Some early 4.0 g++'s have unordered maps, but their iterators don't work
+	check_cxx_source_compiles("
+		#include <tr1/unordered_map>
+		int main() {
+			std::tr1::unordered_map<int, int>::const_iterator ci;
+			return 0;
+		}
+		" HAVE_TR1_UNORDERED_MAP )
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
     		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion

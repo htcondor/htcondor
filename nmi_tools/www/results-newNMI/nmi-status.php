@@ -9,10 +9,9 @@ $dash->print_header("NMI Pool Status");
 $pool_platforms = $dash->condor_status();
 
 include "CondorQ.php";
-$condorq_build = new CondorQ("build", $pool_platforms);
-$condorq_test = new CondorQ("test", $pool_platforms);
+$condorq = new CondorQ($pool_platforms);
 
-function make_cell($platform, $info, $type) {
+function make_cell($platform, $info) {
   $queued = $info["depth"] - $info["running"];
 
   $color = "";
@@ -29,7 +28,7 @@ function make_cell($platform, $info, $type) {
     $color = "#FF0000";
   }
   
-  return "<td align=\"center\" style=\"background-color:$color\">$type " . $info["html-queue"] . "</td>\n";
+  return "<td align=\"center\" style=\"background-color:$color\">$platform<br>" . $info["html-queue"] . "</td>\n";
 }
 ?>
 
@@ -49,7 +48,13 @@ $handle = fopen($roster_file, "r");
 $contents = fread($handle, filesize($roster_file));
 fclose($handle);
 
-$platforms = explode("\n", $contents);
+$platforms = array_filter(explode("\n", $contents));
+
+// Strip nmi: from the front of each platform name
+$func = function($platform) {
+  return preg_replace("/nmi:/", "", $platform);
+};
+$platforms = array_map($func, $platforms);
 sort($platforms);
 
 echo "<table style='border-width:0px; border-style:none;'>\n";
@@ -60,15 +65,9 @@ echo "<tr style='border-width:0px'>\n";
 // Get the queue depths.  We do this ahead of time so we can do this in 
 // a single condor_q command
 foreach ($platforms AS $platform) {
-  if(!preg_match("/\S/", $platform)) {
-    continue;
-  }
-
-  $condorq_build->add_platform($platform);
-  $condorq_test->add_platform($platform);
+  $condorq->add_platform($platform);
 }
-$build_queues = $condorq_build->condor_q();
-$test_queues = $condorq_test->condor_q();
+$queues = $condorq->condor_q();
 
 $count = 0;
 foreach ($platforms AS $platform) {
@@ -78,8 +77,6 @@ foreach ($platforms AS $platform) {
 
   $count += 1;
 
-  $platform = preg_replace("/nmi:/", "", $platform);
-  
   if(!preg_match("/\S/", $platform)) {
     continue;
   }
@@ -89,11 +86,8 @@ foreach ($platforms AS $platform) {
   if(!$pool_platforms[$platform]) {
     $style .= "background-color:#B8002E";
   }
-
-  echo "<td style=\"$style\"><table><tr><td colspan=2 style='text-align:center'>$platform</td></tr><tr>";
-  echo make_cell($platform, $build_queues[$platform], "Builds");
-  echo make_cell($platform, $test_queues[$platform], "Tests");
-  echo "</tr></table></td>";
+  
+  echo make_cell($platform, $queues[$platform], "Builds");
 
   if($count == 6) {
     $count = 0;
@@ -121,5 +115,30 @@ echo "</table>\n";
 </tr>
 </table>
 
+<p>
+<h2>Slots</h2>
+<table style="text-align:center">
+<tr>
+  <th>Platform</th><th>Total</th><th>Avail.</th>
+</tr>
+
+<?php
+
+// Display the number of available slots on each NMI platform
+
+$free_slots = Array();
+$total_slots = Array();
+foreach ($platforms AS $platform) {
+  $free_slots[$platform] = $queues[$platform]["slots"] - $queues[$platform]["running"];
+  $total_slots[$platform] = $queues[$platform]["slots"];
+}
+
+arsort($free_slots, SORT_NUMERIC);
+foreach (array_keys($free_slots) as $platform) {
+  print "<tr><td style=\"text-align:left\">$platform</td><td>$total_slots[$platform]</td><td>$free_slots[$platform]</td></tr>\n";
+}
+?>
+
+</table>
 </body>
 </html>

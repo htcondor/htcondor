@@ -27,7 +27,6 @@
 
 int get_port_range(int is_outgoing, int *low_port, int *high_port)
 {
-	char *low = NULL, *high = NULL;
 	int  t_low = 0, t_high = 0;
 
 	// (is_outgoing != 0) means client mode, outgoing connection
@@ -35,14 +34,8 @@ int get_port_range(int is_outgoing, int *low_port, int *high_port)
 
 	if (is_outgoing) {
 		// first check for the existence of OUT_LOWPORT and OUT_HIGHPORT
-		low = param("OUT_LOWPORT");
-		if (low) {
-			t_low = atoi(low);
-			free (low);
-			high = param ("OUT_HIGHPORT");
-			if (high) {
-				t_high = atoi(high);
-				free (high);
+		if (param_integer("OUT_LOWPORT", t_low, false, 0)) {
+			if (param_integer("OUT_HIGHPORT", t_high, false, 0)) {
 				dprintf (D_NETWORK, "get_port_range - (OUT_LOWPORT,OUT_HIGHPORT) is (%i,%i).\n", t_low, t_high);
 			} else {
 				dprintf (D_ALWAYS, "get_port_range - ERROR: OUT_LOWPORT defined but no OUT_HIGHPORT.\n");
@@ -51,14 +44,8 @@ int get_port_range(int is_outgoing, int *low_port, int *high_port)
 		}
 	} else {
 		// first check for the existence of IN_LOWPORT and IN_HIGHPORT
-		low = param("IN_LOWPORT");
-		if (low) {
-			t_low = atoi(low);
-			free (low);
-			high = param ("IN_HIGHPORT");
-			if (high) {
-				t_high = atoi(high);
-				free (high);
+		if (param_integer("IN_LOWPORT", t_low, false, 0)) {
+			if (param_integer("IN_HIGHPORT", t_high, false, 0)) {
 				dprintf (D_NETWORK, "get_port_range - (IN_LOWPORT,IN_HIGHPORT) is (%i,%i).\n", t_low, t_high);
 			} else {
 				dprintf (D_ALWAYS, "get_port_range - ERROR: IN_LOWPORT defined but no IN_HIGHPORT.\n");
@@ -70,14 +57,8 @@ int get_port_range(int is_outgoing, int *low_port, int *high_port)
 	// check if the above settings existed
 	if ((t_low == 0) && (t_high == 0)) {
 		// fallback to the old LOWPORT and HIGHPORT
-		low = param ("LOWPORT");
-		if (low) {
-			t_low = atoi(low);
-			free (low);
-			high = param ("HIGHPORT");
-			if (high) {
-				t_high = atoi(high);
-				free (high);
+		if (param_integer("LOWPORT", t_low, false, 0)) {
+			if (param_integer("HIGHPORT", t_high, false, 0)) {
 				dprintf (D_NETWORK, "get_port_range - (LOWPORT,HIGHPORT) is (%i,%i).\n", t_low, t_high);
 			} else {
 				dprintf (D_ALWAYS, "get_port_range - ERROR: LOWPORT defined but no HIGHPORT.\n");
@@ -126,25 +107,7 @@ int get_port_range(int is_outgoing, int *low_port, int *high_port)
 int
 _condor_bind_all_interfaces( void )
 {
-	int bind_all = FALSE;
-	char* tmp = param( "BIND_ALL_INTERFACES" );
-	if( ! tmp ) {
-			// not defined, defaualts to TRUE;
-		return TRUE;
-	}
-	switch( tmp[0] ) {
-	case 'T':
-	case 't':
-	case 'Y':
-	case 'y':
-		bind_all = TRUE;
-		break;
-	default:
-		bind_all = FALSE;
-		break;
-	}
-	free( tmp );
-	return bind_all;
+	return param_boolean_crufty("BIND_ALL_INTERFACES", true) ? TRUE : FALSE;
 }
 
 

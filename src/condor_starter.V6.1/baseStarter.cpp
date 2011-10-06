@@ -1417,12 +1417,8 @@ CStarter::createTempExecuteDir( void )
 	// if the user wants the execute directory encrypted, 
 	// go ahead and set that up now too
 	
-	char* eed = param("ENCRYPT_EXECUTE_DIRECTORY");
-	
-	if ( eed ) {
+	if ( param_boolean_crufty("ENCRYPT_EXECUTE_DIRECTORY", false) ) {
 		
-		if (eed[0] == 'T' || eed[0] == 't') { // user wants encryption
-			
 			// dynamically load our encryption functions to preserve 
 			// compatability with NT4 :(
 			
@@ -1467,12 +1463,7 @@ CStarter::createTempExecuteDir( void )
 						"but the Encryption" " functions are unavailable!");
 			}
 
-		} // ENCRYPT_EXECUTE_DIRECTORY is True
-		
-		free(eed);
-		eed = NULL;
-
-	} // ENCRYPT_EXECUTE_DIRECTORY has a value
+	} // ENCRYPT_EXECUTE_DIRECTORY is True
 	
 
 #endif /* WIN32 */

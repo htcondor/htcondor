@@ -131,14 +131,7 @@ void Hadoop::initialize() {
 
         m_coreSiteFile = "core-site.xml";
 
-        char *adPubInt = param("HDFS_AD_PUBLISH_INTERVAL");
-        if (adPubInt != NULL) {
-                int intv =  atoi(adPubInt);
-                if (intv != 0)
-                        m_adPubInterval = intv;
-
-                free(adPubInt);
-        }
+		m_adPubInterval = param_integer("HDFS_AD_PUBLISH_INTERVAL", 5);
 
         //notify us when our process is down.
         m_reaper = daemonCore->Register_Reaper(
