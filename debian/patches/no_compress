@@ -1,0 +1,26 @@
+From: Michael Hanke <michael.hanke@gmail.com>
+Subject: Disable unnecessary 'compress' calls to shrink build-deps.
+--- a/doc/Makefile
++++ b/doc/Makefile
+@@ -65,7 +65,7 @@
+ release-ps: ref.ps $(TARGETDIR)
+ 	cp ref.ps $(TARGETDIR)/ref.ps
+ 	cp $(TARGETDIR)/ref.ps $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+-	compress $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
++	#compress $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+ 	cp $(TARGETDIR)/ref.ps $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+ 	gzip $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+ 	mv $(TARGETDIR)/ref.ps $(TARGETDIR)/condor-$(SUBVER)-Manual.ps
+@@ -92,10 +92,10 @@
+ 	tar cvf condor-$(SUBVER)-Manual.tar condor-$(SUBVER)-Manual
+ 
+ 	gzip -c condor-$(SUBVER)-Manual.tar > condor-$(SUBVER)-Manual.tar.gz
+-	compress condor-$(SUBVER)-Manual.tar
++	#compress condor-$(SUBVER)-Manual.tar
+ 
+ 	mv condor-$(SUBVER)-Manual.tar.gz condor-$(SUBVER)-Manual
+-	mv condor-$(SUBVER)-Manual.tar.Z condor-$(SUBVER)-Manual
++	#mv condor-$(SUBVER)-Manual.tar.Z condor-$(SUBVER)-Manual
+ 
+ 	mv condor-$(SUBVER)-Manual ref.new
+ 
