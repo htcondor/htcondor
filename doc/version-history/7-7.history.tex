@@ -50,6 +50,10 @@ by the job, Condor now ensures that this copy of the proxy is cleaned up
 when the job is done.
 \Ticket{2501}
 
+\item The \Condor{startd} now logs a clear message if it rejects a job
+because no valid starters were detected.
+\Ticket{2470}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -222,10 +226,6 @@ when there are machines with many slots.
 in its job transaction log, the error message in the log file now reports
 the offset within the file at which the error occurred.
 \Ticket{2450}
-
-\item The \Condor{startd} now logs a clear message if it rejects a job
-because no valid starters were detected.
-\Ticket{2470}
 
 \end{itemize}
 
