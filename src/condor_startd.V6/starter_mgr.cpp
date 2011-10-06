@@ -113,6 +113,10 @@ StarterMgr::init( void )
 		checked_starter_list.append( starter_path );
 		free( starter_path );
 	}
+
+	if( starters.IsEmpty() ) {
+		dprintf(D_ALWAYS,"WARNING WARNING WARNING: No valid starters were found!  Is something wrong with your Condor installation?  This startd will not be able to run jobs.\n");
+	}
 }
 
 
@@ -155,10 +159,12 @@ StarterMgr::publish( ClassAd* ad, amask_t mask )
 
 
 Starter*
-StarterMgr::findStarter( ClassAd* job_ad, ClassAd* mach_ad, 
+StarterMgr::findStarter( ClassAd* job_ad, ClassAd* mach_ad, bool &no_starter,
 						 int starter_num ) 
 {
 	Starter *new_starter, *tmp_starter;
+
+	no_starter = true;
 
 	starters.Rewind();
 	while( starters.Next(tmp_starter) ) {
@@ -198,6 +204,9 @@ StarterMgr::findStarter( ClassAd* job_ad, ClassAd* mach_ad,
 			return NULL;
 			break;
 		}
+
+		no_starter = false;
+
 		if( tmp_starter->satisfies(job_ad, mach_ad) ) {
 			new_starter = new Starter( *tmp_starter );
 			return new_starter;

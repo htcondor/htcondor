@@ -27,22 +27,17 @@ else(WINDOWS)
     condor_selective_glob( "proc_family_client*;proc_family_io*;local_client.*;named_pipe_reader*;named_pipe_writer*;named_pipe_util*;named_pipe_watchdog*" ProcClientElements )
 endif(WINDOWS)
 
-condor_daemon(procd "${ProcdRmvElements}" "procapi;utils;${PROCD_WIN_LINK_LIBS};${LIBCGROUP_FOUND}" "${C_SBIN}" OFF)
-
-# unfortunately libutils comes with undefined symbols introduced by
-# libdaemon_core (even when linking libutils to it)
-target_link_libraries(condor_procd -Wl,--allow-shlib-undefined)
+set( ProcdUtilsSrcs "${SAFE_OPEN_SRC};../condor_utils/condor_pidenvid.cpp;../condor_utils/condor_full_io.cpp;../condor_utils/condor_blkng_full_disk_io.cpp;../condor_procapi/procapi.cpp;../condor_procapi/processid.cpp;../condor_procapi/procapi_killfamily.cpp" )
+if (WINDOWS)
+	set( ProcdUtilsSrcs "${ProcdUtilsSrcs};../condor_utils/process_control.WINDOWS.cpp;../condor_utils/ntsysinfo.WINDOWS.cpp" )
+endif(WINDOWS)
+condor_static_lib( procdutils "${ProcdUtilsSrcs}" )
+condor_daemon(procd "${ProcdRmvElements}" "procdutils;${PROCD_WIN_LINK_LIBS};${LIBCGROUP_FOUND}" "${C_SBIN}" OFF)
 
 if (LINUX AND WANT_FULL_DEPLOYMENT)
 	condor_exe( procd_ctl "procd_ctl.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF)
-	# unfortunately libutils comes with undefined symbols introduced by
-	# libdaemon_core (even when linking libutils to it)
-	target_link_libraries(procd_ctl -Wl,--allow-shlib-undefined)
 
 	condor_exe( gidd_alloc "gidd_alloc.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}" OFF)
-	# unfortunately libutils comes with undefined symbols introduced by
-	# libdaemon_core (even when linking libutils to it)
-	target_link_libraries(gidd_alloc -Wl,--allow-shlib-undefined)
 endif(LINUX AND WANT_FULL_DEPLOYMENT)
 
-condor_shared_lib(procd_client "${ProcClientElements}")
+set( PROCD_CLIENT_UTIL_SRCS "${ProcClientElements}" PARENT_SCOPE )

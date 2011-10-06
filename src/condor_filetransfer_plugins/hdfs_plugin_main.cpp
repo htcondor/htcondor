@@ -28,8 +28,6 @@
 
 #include "hdfs_plugin.h"
 
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
-
 #define PLUGIN_TYPE "FileTransfer"
 #define PLUGIN_METHOD "hdfs"
 

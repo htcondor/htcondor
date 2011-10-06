@@ -544,27 +544,8 @@ private:
 	int				LocalUniverseJobsIdle;
 	int				LocalUniverseJobsRunning;
 
-   #ifdef TICKET_2006
-    time_t          LastUpdateTime;
-    int             LastJobsQueued;
-    int             JobsStartedCumulative;
-    double          TimeToStartCumulative;
-    double          RunningTimeCumulative;
-    int             JobsCompletedCumulative;
-    int             JobsExitedCumulative;
-    int             ShadowExceptionsCumulative;
-    map<int,int>    ExitCodesCumulative;
-    timed_queue<int>  JobsSubmittedTQ;
-    timed_queue<int>  JobsStartedTQ;
-    timed_queue<int>  JobsCompletedTQ;
-    timed_queue<int>  JobsExitedTQ;
-    timed_queue<int>  ShadowExceptionsTQ;
-    map<int,timed_queue<int> >  ExitCodesTQ;
-    timed_queue<double>  TimeToStartTQ;
-    timed_queue<double>  RunningTimeTQ;
-   #else
+    // generic statistics pool for scheduler, in schedd_stats.h
     ScheddStatistics stats;
-   #endif
 
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;

@@ -7479,8 +7479,8 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=452
 
-[GROUP_DYNAMIC_MACH_CONSTRAINT]
-aliases=
+[NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT]
+aliases=GROUP_DYNAMIC_MACH_CONSTRAINT
 default=
 version=0.0.0
 range=.*
@@ -7494,6 +7494,22 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=453
+
+[NEGOTIATOR_SLOT_CONSTRAINT]
+aliases=GROUP_DYNAMIC_MACH_CONSTRAINT
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Constrain Negotiator Query for Startd Ads
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=454
 
 [GROUP_AUTOREGROUP]
 aliases=
@@ -10137,9 +10153,9 @@ url=
 tags=
 id=601
 
-[WINDOWED_STAT_WIDTH]
+[STATISTICS_WINDOW_SECONDS]
 aliases=
-default=300
+default=1200
 version=0.0.0
 range=1,1000000000
 state=default
@@ -10147,7 +10163,23 @@ type=int
 is_macro=false
 reconfig=true
 customization=seldom
-friendly_name=Windowed Statistic Width
+friendly_name=Size of Recent Statistics Window
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=scheduler
+id=602
+
+[DCSTATISTICS_WINDOW_SECONDS]
+aliases=
+default=1200
+version=0.0.0
+range=1,1000000000
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Size of Recent Statistics Window for DaemonCore Stats
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=scheduler

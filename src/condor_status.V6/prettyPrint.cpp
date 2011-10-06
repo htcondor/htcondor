@@ -81,6 +81,8 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				//   Coerce MyStype to "Submitter" for ads coming from
 				//   these older schedds. This used to be done inside
 				//   the ClassAd library.
+				//   Before 7.7.3, submitter ads for parallel universe
+				//   jobs had a MyType of "Scheduler".
 			if ( !strcmp( ad->GetMyTypeName(), SCHEDD_ADTYPE ) &&
 				 !ad->LookupExpr( ATTR_NUM_USERS ) ) {
 				ad->SetMyTypeName( SUBMITTER_ADTYPE );

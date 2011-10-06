@@ -60,9 +60,6 @@
 
 int	UsePipes;
 
-/* For daemonCore, etc. */
-DECL_SUBSYSTEM( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
-
 extern FILESQL *FILEObj;
 
 extern "C" {
@@ -263,6 +260,8 @@ main(int argc, char *argv[] )
 	char	*use_ckpt_server = NULL;
 	char	*bogus_capability;
 	int		i;
+
+	set_mySubSystem( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
 
 	myDistro->Init( argc, argv );
 	if( argc == 2 && strncasecmp(argv[1], "-cl", 3) == MATCH ) {

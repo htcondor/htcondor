@@ -1360,7 +1360,7 @@ static bool test_expr_tree_to_string_big() {
 	make_big_string(25000, &expectString, NULL);
 	expression = (char *) malloc(50000);
 	sprintf(expression, "%s = \"%s\"", attribute_name, expectString);
-	char* expect = (char *) malloc(25000 + 2);
+	char* expect = (char *) malloc(25000 + 2 + 1);
 	sprintf(expect, "\"%s\"", expectString);
 	compat_classad::ClassAd classad;
 	classad.Insert(expression);

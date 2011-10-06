@@ -56,8 +56,6 @@ ExprTree *rankCondPrioPreempt;// prio preemption (Rank >= CurrentRank)
 ExprTree *PreemptionReq;	// only preempt if true
 ExprTree *PreemptionRank; 	// rank preemption candidates
 
-DECL_SUBSYSTEM("TOOL", SUBSYSTEM_TYPE_TOOL);
-
 bool
 obtainAdsFromCollector (ClassAdList &startdAds, const char *constraint)
 {

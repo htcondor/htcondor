@@ -18,13 +18,14 @@
 
 
 
-condor_shared_lib( chirp_client "chirp_client.h;chirp_client.c" )
+condor_static_lib( chirp_client "chirp_client.h;chirp_client.c" )
+if ( CONDOR_BUILD_SHARED_LIBS )
+	condor_shared_lib( chirp_client_shared "chirp_client.h;chirp_client.c" )
+	set_target_properties( chirp_client_shared PROPERTIES OUTPUT_NAME chirp_client )
+endif()
 
 condor_exe( condor_chirp "condor_chirp.cpp" ${C_LIBEXEC}
 "chirp_client;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${GCB_FOUND};${GLOBUS_FOUND}" OFF )
-# unfortunately libutils comes with undefined symbols introduced by
-# libdaemon_core (even when linking libutils to it)
-target_link_libraries(condor_chirp -Wl,--allow-shlib-undefined)
 
 install ( FILES Chirp.jar DESTINATION ${C_LIB} )
 

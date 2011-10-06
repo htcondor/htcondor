@@ -18,10 +18,21 @@
  ***************************************************************/
 
 
- 
+/* getdirentries is a horrible call.
 
-/*
-** This program makes sure getdirentries works
+Let's inspect the prototype of this call:
+
+ssize_t getdirentries(int fd, char *buf, size_t nbytes , off_t *basep);
+
+What this call does is fill in the buf array with dirent structures until
+it reaches nbytes. Then it returns the total number of bytes written into
+the buf array. When -1 is returned, an error happened, when 0 is returned,
+there are no more directory entries. basep is an off_t that represents how
+far into the file representing the directory we have read.
+
+Each time getdirentries is called, the new entries are written at the
+beginning of the buf array. 
+
 */
 
 #include <stdio.h>
@@ -31,6 +42,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 
 #if defined(HPUX)
 #include <ndir.h>
@@ -40,128 +52,173 @@
 
 #define MATCH (0)
 
-#ifdef LINUX
-
 // This appears to be the structure of a dent on Linux. Note that the
 // wtf variable seems to not be documented.
 // This works on Linux 2.2.19...
 // Erik 9/2001
 typedef struct kernel_dirent
-  {
-    long int d_ino;
-    long d_off;
-    unsigned short d_reclen;
+{
+	long int d_ino;
+	long d_off;
+	unsigned short d_reclen;
 	char wtf;
-    char d_name[255];
-  } DENT;
+	char d_name[255];
+} DENT;
 
-#elif defined(HPUX)
-	typedef struct direct DENT;
-#else
-	typedef struct dirent DENT;
-#endif
-
-int main() {
-/* HPUX should work, but it doesn't currently with the given code */
-#if !defined(Solaris) && !defined( HPUX )
-	int results;
-	off_t basep;
+/* create the testing directory, the files in it, and return an open fd
+	to the test directory */
+int create_test_files(void)
+{
+	int ret;
 	int fd;
-	char buf[8192];
-	DENT *window;
-	unsigned long voidstar;
-	int numfiles, expectednumfiles, totalfiles;
 
-	results = mkdir("testdir", 0777);	
-	if(results == -1) {
+	ret = mkdir("testdir", 0777);	
+	if(ret == -1 && errno != EEXIST) {
 		perror("mkdir");
 		return -1;
 	}
 
     // now let's create some files...
-	fd = open("testdir/first", O_CREAT | O_TRUNC, O_RDWR);	
-	if(fd < 0) { perror("Open First"); return -1; }
+	fd = open("testdir/first", O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR);
+	if(fd < 0) { 
+		perror("Open First"); 
+		return -1; 
+	}
 	close(fd);
 
-	fd = open("testdir/second", O_CREAT | O_TRUNC, O_RDWR);	
-	if(fd < 0) { perror("Open Second"); return -1; }
+	fd = open("testdir/second", O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR);
+	if(fd < 0) { 
+		perror("Open Second"); 
+		return -1; 
+	}
 	close(fd);
 
-	fd = open("testdir/third", O_CREAT | O_TRUNC, O_RDWR);	
-	if(fd < 0) { perror("Open Third"); return -1; }
+	fd = open("testdir/third", O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR);
+	if(fd < 0) { 
+		perror("Open Third"); 
+		return -1; 
+	}
 	close(fd);
 
 	fd = open("testdir", O_RDONLY);	
 	if(fd < 0) { perror("Open Directory"); return -1; }
 
-	basep = 0;
-#if defined(HPUX)
-	results = getdirentries(fd, (DENT*)buf, 8192, &basep);
-#else
-	results = getdirentries(fd, buf, 8192, &basep);
-#endif
-	if(results < 0) {perror("getdirentries: "); return -1;}
+	return fd;
+}
 
+int cleanup_test_files(void)
+{
+	int ret;
+
+	ret = unlink("testdir/first");
+	if(ret == -1) {
+		perror("unlink testdir/first");
+		return -1;
+	}
+	ret = unlink("testdir/second");
+	if(ret == -1) {
+		perror("unlink testdir/second");
+		return -1;
+	}
+	ret = unlink("testdir/third");
+	if(ret == -1) {
+		perror("unlink testdir/third");
+		return -1;
+	}
+	ret = rmdir("testdir");
+	if(ret == -1) {
+		perror("unlink testdir");
+		return -1;
+	}
+
+	return 0;
+}
+
+int main(void) 
+{
+	off_t basep = 0;
+	int fd;
+	char buf[8192];
+	DENT *window;
+	unsigned long voidstar;
+	int numfiles, expectednumfiles, totalfiles;
+	ssize_t max_bytes, bytes_processed;
+
+	/* Statistics about what we find and how to keep track of it */
 	numfiles = 0;
 	expectednumfiles = 5; /* '.', '..', 'first', 'second', 'third' */
 	totalfiles = 0;
 
-	voidstar = (unsigned long int)buf;
+	if ((fd = create_test_files()) <= 0) {
+		printf("FAILURE\n");
+		exit(EXIT_FAILURE);
+	}
+
+	max_bytes = getdirentries(fd, buf, 8192, &basep);
+	if(max_bytes < 0) {
+		perror("getdirentries: "); return -1;
+	}
+	bytes_processed = 0;
+
 	// Walk the list we got back from dirents	
+	voidstar = (unsigned long int)buf;
 	window = (DENT *)voidstar;
-	while(window->d_reclen > 0) {
 
-		/* commented out but left present so you can see how to access the 
-			name of the file out of the structure */
-/*		printf("ENTRY: %s\n", window->d_name);	*/
+	// While there are sets of dir entries to process...
+	while(max_bytes > 0) {
 
-		/* check to make sure I found what I wanted */
-		if (strcmp(window->d_name, ".") == MATCH) {
-			numfiles++;
+		/* process the array of DENTs */
+		while(bytes_processed != max_bytes) {
+
+			/* 
+			printf("DIR ENTRY: '%s' [max_bytes = %d]\n", 
+				window->d_name==NULL?"(null)":window->d_name, 
+				max_bytes);	
+			*/
+
+			if (window->d_reclen == 0) {
+				printf("Aborting. How can window->d_reclen be zero?\n");
+				fflush(NULL);
+				exit(EXIT_FAILURE);
+			}
+	
+			/* check to make sure I found what I wanted */
+			if (strcmp(window->d_name, ".") == MATCH ||
+				strcmp(window->d_name, "..") == MATCH ||
+				strcmp(window->d_name, "first") == MATCH ||
+				strcmp(window->d_name, "second") == MATCH ||
+				strcmp(window->d_name, "third") == MATCH)
+			{
+				numfiles++;
+			}
+	
+			totalfiles++;
+
+	
+			/* go to the next DENT structure. They are stretchy, which is
+				why we do it like this. */
+			bytes_processed += window->d_reclen;
+
+			voidstar = voidstar + window->d_reclen;
+			window = (DENT *)voidstar;
 		}
-
-		if (strcmp(window->d_name, "..") == MATCH) {
-			numfiles++;
+	
+		/* get the next round of entries to process */
+		max_bytes = getdirentries(fd, buf, 8192, &basep);
+		if(max_bytes < 0) {
+			perror("getdirentries: "); return -1;
 		}
+		bytes_processed = 0;
 
-		if (strcmp(window->d_name, "first") == MATCH) {
-			numfiles++;
-		}
-
-		if (strcmp(window->d_name, "second") == MATCH) {
-			numfiles++;
-		}
-
-		if (strcmp(window->d_name, "third") == MATCH) {
-			numfiles++;
-		}
-
-		totalfiles++;
-
-		voidstar = voidstar + window->d_reclen;
+		// Walk the list we got back from dirents	
+		voidstar = (unsigned long int)buf;
 		window = (DENT *)voidstar;
 	}
 	close(fd);
 
-	results = unlink("testdir/first");
-	if(results == -1) {
-		perror("unlink testdir/first");
-		return -1;
-	}
-	results = unlink("testdir/second");
-	if(results == -1) {
-		perror("unlink testdir/second");
-		return -1;
-	}
-	results = unlink("testdir/third");
-	if(results == -1) {
-		perror("unlink testdir/third");
-		return -1;
-	}
-	results = rmdir("testdir");
-	if(results == -1) {
-		perror("unlink testdir");
-		return -1;
+	if (cleanup_test_files() < 0) {
+		printf("FAILURE\n");
+		exit(EXIT_FAILURE);
 	}
 	
 	/* this is not a transitive boolean, because it implies I found
@@ -174,6 +231,5 @@ int main() {
 		fprintf(stdout, "numfiles = %d\n", numfiles);
 		fprintf(stdout, "failed\n");
 	}
-#endif
 	return 0;
 }

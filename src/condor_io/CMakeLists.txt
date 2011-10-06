@@ -20,6 +20,4 @@
 file( GLOB CeadarRmvSrcs *.t* test.h )
 condor_glob( CedarHdrs CedarSrcs "${CeadarRmvSrcs}" )
 
-#create the library
-condor_shared_lib(cedar "${CedarHdrs};${CedarSrcs}")
-target_link_libraries(cedar ${KRB5_FOUND} ${OPENSSL_FOUND})
+set( CEDAR_UTIL_SRCS "${CedarHdrs};${CedarSrcs}" PARENT_SCOPE )

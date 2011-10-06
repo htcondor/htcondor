@@ -16,7 +16,4 @@
  # 
  ############################################################### 
 
-condor_exe(condor_q "queue.cpp" ${C_BIN} "conversion;analysis;qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND}" OFF)
-# unfortunately libutils comes with undefined symbols introduced by
-# libdaemon_core (even when linking libutils to it)
-target_link_libraries(condor_q -Wl,--allow-shlib-undefined)
+condor_exe(condor_q "queue.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND}" OFF)

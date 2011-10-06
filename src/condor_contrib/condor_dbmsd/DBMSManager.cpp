@@ -109,12 +109,7 @@ DBMSManager::config() {
 
 	InitPublicAd();
 
-	int update_interval = 60; // default of 60 seconds
-	char *update_interval_str = param("UPDATE_INTERVAL");
-	if(update_interval_str) {
-		update_interval = atoi(update_interval_str);
-		free(update_interval_str);
-	}
+	int update_interval = param_integer("UPDATE_INTERVAL", 60);
 	if(m_public_ad_update_interval != update_interval) {
 		m_public_ad_update_interval = update_interval;
 
@@ -133,12 +128,7 @@ DBMSManager::config() {
 	}
 
 		/* register the database purging callback */
-	int purge_interval = 86400; // default of 24 hours
-	char *purge_interval_str = param("DATABASE_PURGE_INTERVAL");
-	if(purge_interval_str) {
-		purge_interval = atoi(purge_interval_str);
-		free(purge_interval_str);
-	}
+	int purge_interval = param_integer("DATABASE_PURGE_INTERVAL", 86400); // 24 hours
 
 	if(m_database_purge_interval != purge_interval) {
 		m_database_purge_interval = purge_interval;
@@ -158,12 +148,7 @@ DBMSManager::config() {
 	}
 
 		/* register the database reindexing callback */
-	int reindex_interval = 86400; // default of 24 hours
-	char *reindex_interval_str = param("DATABASE_REINDEX_INTERVAL");
-	if(reindex_interval_str) {
-		reindex_interval = atoi(reindex_interval_str);
-		free(reindex_interval_str);
-	}
+	int reindex_interval = param_integer("DATABASE_REINDEX_INTERVAL", 86400); // 24 hours
 
 	if(m_database_reindex_interval != reindex_interval) {
 		m_database_reindex_interval = reindex_interval;

@@ -86,7 +86,7 @@ public:
   double GetLimitMax(const MyString& limit);
   void ReportLimits(AttrList *attrList);
 
-  AttrList* ReportState();
+  ClassAd* ReportState(bool rollup = false);
   AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL, float * NumResourcesRW = NULL);
                                                 
   void DisplayLog();
@@ -185,6 +185,8 @@ private:
   bool GetAttributeString(const MyString& Key, const MyString& AttrName, MyString& AttrValue);
 
   bool LoadState(const MyString& OldLogFileName);
+
+  void ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<string, int>& gnmap);
 };
 
 

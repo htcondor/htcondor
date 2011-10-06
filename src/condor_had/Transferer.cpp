@@ -28,8 +28,6 @@
 #include "Utils.h"
 
 extern char* myName;
-// for daemon core
-DECL_SUBSYSTEM( "TRANSFERER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
 // single 'condor_transferer' object
 BaseReplicaTransferer* replicaTransferer = NULL; 
@@ -216,12 +214,14 @@ main_config()
 {
 }
 
-void
-main_pre_dc_init( int  /*argc*/ , char* /*argv*/ [] )
+int
+main( int argc, char **argv )
 {
-}
+	set_mySubSystem( "TRANSFERER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
-void
-main_pre_command_sock_init( )
-{
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }

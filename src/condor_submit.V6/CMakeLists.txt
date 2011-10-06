@@ -17,7 +17,4 @@
  ############################################################### 
 
 
-condor_exe( condor_submit "submit.cpp" ${C_BIN} "qmgmt;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
-# unfortunately libutils comes with undefined symbols introduced by
-# libdaemon_core (even when linking libutils to it)
-target_link_libraries(condor_submit -Wl,--allow-shlib-undefined)
+condor_exe( condor_submit "submit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )

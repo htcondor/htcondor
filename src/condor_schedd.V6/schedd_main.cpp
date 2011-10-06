@@ -59,9 +59,6 @@ extern "C"
 extern	void	mark_jobs_idle();
 extern  int     clear_autocluster_id( ClassAd *job );
 
-/* For daemonCore, etc. */
-DECL_SUBSYSTEM( "SCHEDD", SUBSYSTEM_TYPE_SCHEDD );
-
 char*          Spool = NULL;
 char*          Name = NULL;
 char*          X509Directory = NULL;
@@ -220,14 +217,14 @@ main_shutdown_graceful()
 }
 
 
-void
-main_pre_dc_init( int /*argc*/, char* /*argv*/[] )
+int
+main( int argc, char **argv )
 {
+	set_mySubSystem( "SCHEDD", SUBSYSTEM_TYPE_SCHEDD );
+
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }
-
-
-void
-main_pre_command_sock_init( )
-{
-}
-

@@ -129,8 +129,6 @@ static  bool directDBquery = false;
 	failover semantics */
 static unsigned int direct = DIRECT_ALL;
 
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
-
 static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
 static  bool expert = false;
@@ -1168,7 +1166,6 @@ processCommandLineArguments (int argc, char *argv[])
 						 "format and attribute parameters\n" );
 				exit( 1 );
 			}
-			verbose = 0;
 			if( !custom_attributes ) {
 				custom_attributes = true;
 				attrs.clearAll();

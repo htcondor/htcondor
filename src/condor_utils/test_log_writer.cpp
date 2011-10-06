@@ -46,7 +46,6 @@
 using namespace std;
 
 static const char *	VERSION = "1.0.0";
-DECL_SUBSYSTEM( "TEST_LOG_WRITER", SUBSYSTEM_TYPE_TOOL );
 
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
@@ -362,6 +361,7 @@ void handle_sig(int sig)
 int
 main(int argc, const char **argv)
 {
+	set_mySubSystem( "TEST_LOG_WRITER", SUBSYSTEM_TYPE_TOOL );
 
 		// initialize to read from config file
 	myDistro->Init( argc, argv );

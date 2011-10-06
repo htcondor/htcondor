@@ -896,7 +896,7 @@ int is_void(struct node *n )
 }
 
 /* This returns a string that either casts something to void if the return
-	value is actually void, or stores it in a variable called rval after
+	value is actually void, or stores it in a variable called ret_val after
 	casting it (the later code that comes after this string) to the
 	correct type.
 */
@@ -924,12 +924,12 @@ char* consider_return_value_named_with_typecast( struct node *n, int emit_type,
 
 char* consider_return_value( struct node *n )
 {
-	return consider_return_value_named_with_typecast( n, TRUE, "rval" );
+	return consider_return_value_named_with_typecast( n, TRUE, "ret_val" );
 }
 
 char* consider_return_value_no_typecast( struct node *n )
 {
-	return consider_return_value_named_with_typecast( n, FALSE, "rval" );
+	return consider_return_value_named_with_typecast( n, FALSE, "ret_val" );
 }
 
 
@@ -1134,10 +1134,10 @@ output_tabled_call( struct node *n, struct node *list )
 {
 	printf( "\t\t_condor_file_table_init();\n");
 
-	printf("\t\t/* The FileTab prototypes must match the type of the rval! */\n");
+	printf("\t\t/* The FileTab prototypes must match the type of the ret_val! */\n");
 
 	printf( "\t\t%s FileTab -> %s ( ",
-		consider_return_value_named_with_typecast(n, FALSE, "rval"),
+		consider_return_value_named_with_typecast(n, FALSE, "ret_val"),
 		n->table_name );
 
 	output_param_list( list, 1, 0 );
@@ -1175,7 +1175,7 @@ output_dl_extracted_call( struct node *n, char *rtn_type, int is_ptr,
 	printf( ");\n" );
 
 	printf( "\t\tif ((handle = dlopen(\"/usr/lib/libc.so\", RTLD_LAZY)) == NULL) {\n");
-	printf( "\t\t\trval = -1;\n");
+	printf( "\t\t\tret_val = -1;\n");
 	printf( "\t\t}");
 	printf( "\t\tif ((fptr = (%s (*)(", node_type(n));
 	for( p=list->next; p != list; p = p->next ) {
@@ -1185,9 +1185,9 @@ output_dl_extracted_call( struct node *n, char *rtn_type, int is_ptr,
 		}
 	}
 	printf( "))dlsym(handle, \"%s\")) == NULL) {\n", n->id );
-	printf( "\t\t\trval = -1;\n");
+	printf( "\t\t\tret_val = -1;\n");
 	printf( "\t\t}\n\n" );
-	printf( "\t\trval = (%s) (*fptr)(",node_type(n));
+	printf( "\t\tret_val = (%s) (*fptr)(",node_type(n));
 	output_param_list( list, 0, 1 );
 
 	printf( ");\n" );
@@ -1304,8 +1304,8 @@ output_mapping( char *func_type_name, int is_ptr,  struct node *list )
 
 /*
 	Return an expression that is true for failure of a returned value from
-	a syscall. In the UNIX API, an rval < 0 of int-like return values usually
-	means failure. For functions that return pointers, rval == NULL usually
+	a syscall. In the UNIX API, an ret_val < 0 of int-like return values usually
+	means failure. For functions that return pointers, ret_val == NULL usually
 	means failure.
 */
 char* syscall_validity_check_named( struct node *n, char *varname )
@@ -1323,7 +1323,7 @@ char* syscall_validity_check_named( struct node *n, char *varname )
 
 char* syscall_validity_check( struct node *n )
 {
-	return syscall_validity_check_named(n, "rval");
+	return syscall_validity_check_named(n, "ret_val");
 }
 
 /*
@@ -1603,7 +1603,7 @@ output_receiver( struct node *n )
 		printf( "int\n" );
 		printf( "do_REMOTE_syscall%d(int condor_sysnum)\n",clump_number);
 		printf( "{\n" );
-		printf( "\tint rval;\n\n" );
+		printf( "\tint ret_val;\n\n" );
 		printf( "\tswitch(condor_sysnum) {\n\n" );
 	}
 }
@@ -1650,7 +1650,7 @@ output_sender( struct node *n )
 
 	if (!is_void(n)) {
 		/* void functions don't need this */
-		printf( "\t%s   rval;\n", node_type(n));
+		printf( "\t%s   ret_val;\n", node_type(n));
 		printf( "\tcondor_errno_t   terrno;\n");
 	}
 
@@ -1712,15 +1712,16 @@ output_sender( struct node *n )
 	}
 
 	if (!is_void(n)) {
-		/* only read the rval from the other side if the function isn't void */
-		printf( "\tassert( syscall_sock->code(rval) );\n" );
+		/* only read the ret_val from the other side if the function isn't 
+			void */
+		printf( "\tassert( syscall_sock->code(ret_val) );\n" );
 		printf( "\tif( %s ) {\n", syscall_validity_check(n) );
 		printf( "\t\tassert( syscall_sock->code(terrno) );\n" );
 		printf( "\t\tassert( syscall_sock->end_of_message() );\n" );
 		printf( "\t\t_condor_signals_enable( omask );\n");
 		printf( "\t\tSetSyscalls( scm );\n");
 		printf( "\t\terrno = (int)terrno;\n" );
-		printf( "\t\treturn rval;\n" );
+		printf( "\t\treturn ret_val;\n" );
 		printf( "\t}\n" );
 	}
 
@@ -1754,7 +1755,7 @@ output_sender( struct node *n )
 	printf( "\tSetSyscalls( scm );\n");
 
 	if (!is_void(n)) {
-		printf( "\treturn rval;\n" );
+		printf( "\treturn ret_val;\n" );
 	}
 
 	/* end of function */
@@ -1810,7 +1811,7 @@ output_switch( struct node *n )
 
 	/* The return value of the system/remote call, if any. */
 	if (!is_void(n)) {
-		printf("\t%s rval;\n", node_type(n));
+		printf("\t%s ret_val;\n", node_type(n));
 	}
 
 	printf("\tint do_local=0;\n\n");
@@ -1889,7 +1890,7 @@ output_switch( struct node *n )
 	}
 
 	if( Ignored ) {
-		printf("\t\t\trval = 0;\n");
+		printf("\t\t\tret_val = 0;\n");
 	} else {
 		output_remote_call(  n, n->param_list );
 	}
@@ -1915,7 +1916,7 @@ output_switch( struct node *n )
 	printf( "\t_condor_signals_enable( condor_omask );\n");
 
 	if (!is_void(n)) {
-		printf("\n\treturn rval;\n");
+		printf("\n\treturn ret_val;\n");
 	}
 
 	printf( "}\n\n" );
@@ -1981,7 +1982,7 @@ output_send_stub( struct node *n )
 	printf( "%s", n->id );
 	output_switch_decl( n->param_list );
 	printf( "{\n" );
-	printf( "	int	rval;\n\n" );
+	printf( "	int	ret_val;\n\n" );
 
 		/* Set up system call number */
 	printf( "\t\tCurrentSysCall = CONDOR_%s;\n\n", n->remote_name  );
@@ -2027,12 +2028,12 @@ output_send_stub( struct node *n )
 	/* XXX bug? Shouldn't this only do it is the function is non void? */
 
 	printf( "\t\t/* XXX possible bug! Also this code isn't generated! */\n" );
-	printf( "\t\tassert( syscall_sock->code(rval) );\n" );
+	printf( "\t\tassert( syscall_sock->code(ret_val) );\n" );
 	printf( "\t\tif( %s ) {\n", syscall_validity_check(n) );
 	printf( "\t\t\tassert( syscall_sock->code(terrno) );\n" );
 	printf( "\t\t\tassert( syscall_sock->end_of_message() );\n" );
 	printf( "\t\t\terrno = (int)terrno;\n" );
-	printf( "\t\t\treturn rval;\n" );
+	printf( "\t\t\treturn ret_val;\n" );
 	printf( "\t\t}\n" );
 
 		/*
@@ -2060,11 +2061,11 @@ output_send_stub( struct node *n )
 	if( strcmp(n->type_name,"void") != 0 ) {
 		printf( "\n" );
 		if( strcmp(n->type_name,"int") == 0 ) {
-			printf( "	return rval;\n" );
+			printf( "	return ret_val;\n" );
 		} else if(n->is_ptr) {
-			printf( "	return (%s *)rval;\n", n->type_name );
+			printf( "	return (%s *)ret_val;\n", n->type_name );
 		} else {
-			printf( "	return (%s)rval;\n", n->type_name );
+			printf( "	return (%s)ret_val;\n", n->type_name );
 		}
 	}
 	printf( "}\n\n" );

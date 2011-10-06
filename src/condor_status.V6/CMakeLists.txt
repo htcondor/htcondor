@@ -20,6 +20,3 @@ condor_glob(statusHdrs statusSrcs "")
 
 condor_exe( condor_status "${statusHdrs};${statusSrcs}" ${C_BIN}
 "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
-# libdaemoncore comes with a set of undefined symbols that are provided by
-# actual daemons, but no by condor_status -- need to ignore this one here
-target_link_libraries(condor_status -Wl,--allow-shlib-undefined)

@@ -1,0 +1,27 @@
+universe = local
+
+BASE=/home/cndrauto/continuous/PLATFORM
+
+executable = $(BASE)/SubmitContinuous.sh
+
+output = $(BASE)/output
+error  = $(BASE)/error
+log    = $(BASE)/log
+
+# This isn't necessary to work properly, it is just in place to make
+# the condor_q command easily show which job is for which platform.
+Args = PLATFORM
+
+CronHour    = 1,4,7,9,10,11,12,13,14,15,16,17,18,19
+CronMinute  = 30
+CronDayOfMonth  = *
+CronMonth       = *
+CronDayOfWeek   = *
+
+notification = never
+getenv = true
+
+CronPrepTime = 6
+deferral_window = 300
+on_exit_remove = false
+queue

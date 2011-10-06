@@ -19,6 +19,6 @@
 
 condor_selective_glob( "analysis.*;boolExpr.*;condition.*;multiProfile.*;profile.*;resourceGroup.*;boolValue.*;explain.*;interval.*;result.*" AnalSrcs )
 
-condor_shared_lib( analysis "${AnalSrcs}" )
-condor_shared_lib( conversion "conversion.cpp;conversion.h" )
+set( ANALYSIS_UTIL_SRCS "${AnalSrcs};${CMAKE_CURRENT_SOURCE_DIR}/conversion.cpp;${CMAKE_CURRENT_SOURCE_DIR}/conversion.h" PARENT_SCOPE)
+
 # # condor_shared_lib( gangmatch "portGraph.cpp;gmr.cpp;gangster.cpp")

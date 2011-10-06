@@ -29,9 +29,6 @@ if( HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS AND N
     	"${HeaderFiles};${SourceFiles}"	${C_SBIN}
 	    "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CURL_FOUND};${ZLIB_FOUND}"
     	OFF )
-	# unfortunately libutils comes with undefined symbols introduced by
-	# libdaemon_core (even when linking libutils to it)
-	target_link_libraries(ec2_gahp -Wl,--allow-shlib-undefined)
 
     # Build an executable needed by the tests.
 	condor_exe_test( queryAPI-sim

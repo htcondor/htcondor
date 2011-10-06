@@ -56,16 +56,8 @@ BaseUserPolicy::init( ClassAd* job_ad_ptr )
 {
 	this->job_ad = job_ad_ptr;
 	this->user_policy.Init( this->job_ad );
-	
-		//
-		// Grab the evaluation interval from the config
-		//
-	char *tmp = param( "PERIODIC_EXPR_INTERVAL" );
-	if ( tmp ) {
-		this->interval = atoi(tmp);
-		free( tmp );
-		tmp = NULL;
-	}
+	this->interval = param_integer("PERIODIC_EXPR_INTERVAL",
+								   DEFAULT_PERIODIC_EXPR_INTERVAL);
 }
 
 /**

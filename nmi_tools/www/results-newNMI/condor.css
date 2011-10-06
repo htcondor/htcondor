@@ -7,7 +7,8 @@ a:link { color: #1C3F75; }
    background-color: #ff5555;
 }
 .pending {
-   background-color: #ffff55;
+//   background-color: #ffff55;
+  background-color: #FFE34D;
 }
 .noresults {
    background-color: #aaaaaa;

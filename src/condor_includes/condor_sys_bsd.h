@@ -39,7 +39,14 @@
 #include <unistd.h>
 /* Want stdarg.h before stdio.h so we get GNU's va_list defined */
 #include <stdarg.h>
+
+/* BSD also declares a dprintf, wonder of wonders */
+#   define dprintf _hide_dprintf
+#   define getline _hide_getline
 #include <stdio.h>
+#   undef dprintf
+#   undef getline
+
 
 /* There is no <sys/select.h> on HPUX, select() and friends are 
    defined in <sys/time.h> */
