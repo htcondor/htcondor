@@ -7637,11 +7637,9 @@ int DaemonCore::Create_Process(
 	// sets inherit option... actually inherit option comes from 
 	// CreateProcess, we should be enumerating all open handles... 
 	// see sysinternals handles app for insights).
-	/*
 	for (i = 0; i < 100; i++) {
 		SetFDInheritFlag(i,FALSE);
 	}
-	*/
 
 	// handle re-mapping of stdout,in,err if desired.  note we just
 	// set all our file handles to non-inheritable, so for any files
