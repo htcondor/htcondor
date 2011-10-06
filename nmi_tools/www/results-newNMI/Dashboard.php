@@ -18,9 +18,8 @@ class Dashboard {
     print "<html>\n";
     print "<head>\n";
     print "<title>$title</title>\n";
-    print "<script type='text/javascript' src='jquery-1.6.2.js'></script>\n";
     print "<link rel='stylesheet' href='dashboard.css' type='text/css'>\n";
-    print "<link rel='stylesheet' href='condor.css' type='text/css'>\n";
+    flush();
   }
 
   function connect_to_db() {

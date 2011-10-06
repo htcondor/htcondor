@@ -11,7 +11,7 @@ $dash = new Dashboard();
 $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
 
-$blacklist = Array("Fedora", "x86_64_fedora_13");
+$blacklist = Array("x86_64_fedora_13");
 ?>
 
 </head>
@@ -32,26 +32,8 @@ $runs = get_runs($dash);
 // Get build info
 /////////////////////////////////////////////
 
-// Now we run a second query.  This time we will get the result per platform for each run.
-// Additionally, we will gather info on where the jobs ran, etc.
-$runids = implode(", ", array_keys($runs));
-$query = "
-SELECT 
-  runid,
-  platform,
-  result,
-  host,
-  TIMEDIFF(finish,start) as duration,
-  name 
-FROM 
-  Task
-WHERE
-  runid in ($runids) AND
-  (name in (\"platform_job\", \"remote_pre\") OR result != 0)
-";
-
-$results = $dash->db_query($query);
-
+$results = get_run_info(array_keys($runs), $dash, "build");
+  
 foreach ($results as $row) {
   // Keep track of every platform that we see, and if it is in the blacklist we
   // will skip it here.
@@ -99,6 +81,7 @@ foreach ($results as $row) {
 
 // First, get the list of test run IDs.  For FW builds each platform gets its
 // own test ID even if all the platforms are built in one run ID.
+$runids = implode(", ", array_keys($runs));
 $query = "
 SELECT
   gjl_input_from_nmi.run_id AS build_runid, 
@@ -117,26 +100,7 @@ foreach ($results as $row) {
   $test_mapping[$row["test_runid"]] = $row["build_runid"];
 }
 
-$test_runids = implode(",", array_keys($test_mapping));
-
-$query = "
-SELECT 
-  runid,
-  platform,
-  result,
-  host,
-  TIMEDIFF(finish,start) as duration,
-  name 
-FROM 
-  Task
-WHERE
-  runid in ($test_runids) AND
-  platform != 'local' AND
-  (name in (\"platform_job\", \"remote_pre\") or result != 0)
-";
-
-$results = $dash->db_query($query);
-
+$results = get_run_info(array_keys($test_mapping), $dash, "test");
 foreach ($results as $row) {
   // Keep track of every platform that we see, and if it is in the blacklist we
   // will skip it here.
@@ -190,7 +154,9 @@ print "<option selected='selected'>25</option>\n";
 print "<option>50</option>\n";
 print "<option>100</option>\n";
 print "<option>200</option>\n";
-print "</select><input type='submit' value='Show'></form><br>\n";
+print "</select><input type='submit' value='Show'></form>\n";
+
+print "<p style='font-size:-1'>The following platforms are excluded from displaying here: " . implode(", ", $blacklist) . "</p>\n";
 
 // Create the table header
 print "<table>\n";
@@ -337,8 +303,6 @@ foreach ($runs as $run) {
 
 print "</table>\n";
 
-print "<p style='font-size:-1'>The following platforms are excluded from displaying here: " . implode(", ", $blacklist) . "</p>";
-
 function get_git_log($hash1, $hash2) {
   $output = `git --git-dir=/home/condorauto/condor.git log --pretty=format:'%H | %an | %s' $hash1..$hash2 2>&1`;
   $commits = explode("\n", $output);
@@ -409,6 +373,34 @@ LIMIT " . NUM_RUNS;
   }
 
   return $runs;
+}
+
+
+function get_run_info($run_ids, $dash, $type) {
+  $extra_conditional = "";
+  if($type == "test") {
+    $extra_conditional = "platform != 'local' AND";
+  }
+  // Now we run a second query.  This time we will get the result per platform for each run.
+  // Additionally, we will gather info on where the jobs ran, etc.
+  $runids = implode(", ", $run_ids);
+  $query = "
+SELECT 
+  runid,
+  platform,
+  result,
+  host,
+  TIMEDIFF(finish,start) as duration,
+  name 
+FROM 
+  Task
+WHERE
+  runid in ($runids) AND
+  $extra_conditional
+  (name in (\"platform_job\", \"remote_pre\") OR result != 0)
+";
+
+  return $dash->db_query($query);
 }
 
 
