@@ -35,7 +35,7 @@ bool condor_netaddr::match(const condor_sockaddr& target) const {
 	for (int i = 0; i < addr_len; ++i) {
 		if (curmaskbit <= 0) { break; }
 		uint32_t mask;
-		if (curmaskbit > 32) {
+		if (curmaskbit >= 32) {
 			mask = 0xffffffff;
 		} else {
 			mask = htonl(~(0xffffffff >> curmaskbit));
