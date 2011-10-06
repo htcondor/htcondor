@@ -2457,8 +2457,7 @@ SetTransferFiles()
 
 	if (should_transfer == STF_NO &&
 		(in_files_specified || out_files_specified)) { // (F)
-		MyString err_msg;
-		err_msg += "\nERROR: you specified files you want Condor to "
+		err_msg = "\nERROR: you specified files you want Condor to "
 			"transfer via \"";
 		if( in_files_specified ) {
 			err_msg += "transfer_input_files";
@@ -2736,7 +2735,6 @@ SetTransferFiles()
 			//but they did not turn on transfer_files, so they are
 			//going to be confused when the executable is _not_
 			//transfered!  Better bail out.
-			MyString err_msg;
 			err_msg = "\nERROR: You explicitly requested that the "
 				"executable be transfered, but for this to work, you must "
 				"enable Condor's file transfer functionality.  You need "
