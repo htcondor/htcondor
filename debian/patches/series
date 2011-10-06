@@ -2,13 +2,10 @@
 lsb_compliance
 use_symlinks_for_install_clones
 allow_rpath
-#postgres_fixes
-#fix_sysapi_undefined_syms
-rename_duplicate_symbol
 no_scimark
 disable_java_gt4X
 debian_dynamic_run
-#build_shared_libs
-#use_included_classad
 no_java_for_now
+ssh_to_job_setup
 fix_condor_run
+fix_localhost_bind
