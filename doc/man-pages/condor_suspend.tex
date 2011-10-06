@@ -6,13 +6,8 @@
 \SynProg{\Condor{suspend}}
 \ToolDebugOption
 \ToolLocate
-\ToolJobs
-$|$ \OptArg{-constraint}{expression} \Dots
-
-\SynProg{\Condor{suspend}}
-\ToolDebugOption
-\ToolLocate
-\ToolAll
+\Argnm{ cluster $|$ cluster.process $|$ user
+$|$ \OptArg{-constraint}{expression} $|$ -all }
 
 \index{Condor commands!condor\_suspend}
 \index{condor\_suspend command}
@@ -23,7 +18,7 @@ $|$ \OptArg{-constraint}{expression} \Dots
 If the \Opt{-name} option is specified, the named \Condor{schedd} is targeted
 for processing.  
 Otherwise, the local \Condor{schedd} is targeted.
-The jobs to be suspended are identified by one or more job identifiers, as
+The job(s) to be suspended are identified by one of the job identifiers, as
 described below.
 For any given job, only the owner of the job or one of the queue super users
 (defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can suspend the job.
@@ -37,7 +32,7 @@ For any given job, only the owner of the job or one of the queue super users
 	\OptItem{\Arg{user}}{Suspend jobs belonging to specified user}
 	\OptItem{\OptArg{-constraint}{expression}} {Suspend all jobs which match
 	                the job ClassAd expression constraint}
-    \OptItem{\Opt{-all}}{Suspend all the jobs in the queue}
+	\OptItem{\Arg{-all}}{Suspend all the jobs in the queue}
 \end{Options}
 
 \ExitStatus
