@@ -193,6 +193,14 @@ or by setting the new configuration variable
 as defined at~\ref{param:DAGmanAlwaysRunPost}.
 \Ticket{2057}
 
+\item DAGMan will now copy PRIORITY values from the DAG input file to 
+the \Attr{JobPrio} attribute in the job ClassAd.  
+Furthermore, the PRIORITY values are propagated to child nodes and SUBDAGs, 
+so that child nodes always have priority at least that
+of the maximum of the priorities of its parents.  
+This has been a cause of confusion for DAGMan users.
+\Ticket{2167}
+
 % moved to 7.7.2 
 % gittrac #659 
 %\item Filip Krikava supplied a patch that limits the number of 
@@ -210,15 +218,6 @@ when there are machines with many slots.
 in its job transaction log, the error message in the log file now reports
 the offset within the file at which the error occurred.
 \Ticket{2450}
-
-% gittrac #2167
-\item DAGMan will now copy PRIORITY values from the DAG input file to 
-the \Attr{JobPrio} attribute in the job ClassAd.  
-Furthermore, the PRIORITY values are propagated to child nodes and SUBDAGs, 
-so that child nodes always have priority at least that
-of the maximum of the priorities of its parents.  
-This has been a cause of confusion for DAGMan users.
-\Ticket{2167}
 
 \item The \Condor{startd} now logs a clear message if it rejects a job
 because no valid starters were detected.
