@@ -1,7 +1,8 @@
-condor (7.7.1+git436-g81fc261-1) UNRELEASED; urgency=low
+condor (7.7.1+git614-g25a6591-1) UNRELEASED; urgency=low
 
   * New upstream code. Support for dynamic linking against system
-    libraries.
+    libraries. Condor's internal libs have been merged into a single
+    library.
   * Fix build-deps on BOOST.
   * Bumped Standards-version to 3.9.2; no changes necessary.
   * Build using embedded classad library -- upstream will (or did) stop
@@ -16,8 +17,15 @@ condor (7.7.1+git436-g81fc261-1) UNRELEASED; urgency=low
     behavior. Courtesy of Jaime Frey.
   * Stop building a PDF version of the manual (takes long, and segfaults
     ghostscript at the moment). Keep HTML version.
+  * Add patch to provide a sane default configuration for ssh_to_job and
+    install condor_ssh_to_job_sshd_config_template as a conffile in
+    /etc/condor/.
+  * Added patch to fix a problem with the NETWORK_INTERFACES configuration
+    macro being ignored. Courtesy of Dan Bradley.
+  * Added condor-dev package, containing headers files and static versions of
+    Condor libraries.
 
- -- Michael Hanke <mih@debian.org>  Sun, 02 Oct 2011 17:58:36 +0200
+ -- Michael Hanke <mih@debian.org>  Thu, 06 Oct 2011 10:59:28 +0200
 
 condor (7.6.1-1) UNRELEASED; urgency=low
 

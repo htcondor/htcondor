@@ -7,9 +7,3 @@
 * Allow for configurable UID/GID
 * Security: ALLOW_ADVERTISE_SCHEDD
 * Incompatible with GSOAP 2.8.*
-* Something is wrong with
-  BIND_ALL_INTERFACES = FALSE
-  NETWORK_INTERFACE =  127.0.0.1
-  The collector still listens on the external interface (only)
-  (emailed to condor-user on Sep 30 2011)
-
