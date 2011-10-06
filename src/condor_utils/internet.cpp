@@ -660,12 +660,14 @@ is_valid_sinful( const char *sinful )
 		}
 		acc = tmp + 1;
 	} else {
-		tmp = strchr(acc, ':');
-		if (!tmp)
+		MyString ipaddr = acc;
+		int colon_pos = ipaddr.FindChar(':');
+		if(colon_pos == -1) { return false; }
+		ipaddr.setChar(colon_pos, 0);
+		if( ! is_ipv4_addr_implementation(ipaddr.Value(),NULL,NULL,false) ) {
 			return FALSE;
-		// we do not validate here
-		// because, it could be either hostname or IPv4 address.
-		acc = tmp;
+		}
+		acc = acc + colon_pos;
 	}
 	if (*acc != ':') {
 		dprintf(D_HOSTNAME, "no colon found\n");
