@@ -6,13 +6,9 @@
 \SynProg{\Condor{continue}}
 \ToolDebugOption
 \ToolLocate
-\ToolJobs
-$|$ \OptArg{-constraint}{expression} \Dots
+\Argnm{ cluster $|$ cluster.process $|$ user
+$|$ \OptArg{-constraint}{expression} $|$ -all }
 
-\SynProg{\Condor{continue}}
-\ToolDebugOption
-\ToolLocate
-\ToolAll
 
 \index{Condor commands!condor\_continue}
 \index{condor\_continue command}
@@ -23,8 +19,8 @@ $|$ \OptArg{-constraint}{expression} \Dots
 If the \Opt{-name} option is specified, the named \Condor{schedd} is targeted
 for processing.  
 Otherwise, the local \Condor{schedd} is targeted.
-The jobs to be continued are identified by one or more job identifiers, as
-described below.
+The job(s) to be continued are identified by one of the job identifiers,
+as described below.
 For any given job, only the owner of the job or one of the queue super users
 (defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can continue the job.
 
@@ -37,7 +33,7 @@ For any given job, only the owner of the job or one of the queue super users
 	\OptItem{\Arg{user}}{Continue jobs belonging to specified user}
 	\OptItem{\OptArg{-constraint}{expression}} {Continue all jobs which match
 	                the job ClassAd expression constraint}
-    \OptItem{\Opt{-all}}{Continue all the jobs in the queue}
+	\OptItem{\Arg{-all}}{Continue all the jobs in the queue}
 \end{Options}
 
 \ExitStatus

@@ -66,4 +66,16 @@ class Dashboard {
 
 }
 
+function day_of_week($num) {
+  
+  if($num == 1) { return "Sunday"; }
+  elseif($num == 2) { return "Monday"; }
+  elseif($num == 3) { return "Tuesday"; }
+  elseif($num == 4) { return "Wednesday"; }
+  elseif($num == 5) { return "Thursday"; }
+  elseif($num == 6) { return "Friday"; } 
+  elseif($num == 7) { return "Saturday"; }
+  else { return "Unknown"; }
+}
+
 ?>

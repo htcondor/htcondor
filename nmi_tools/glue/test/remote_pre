@@ -58,39 +58,60 @@ if( -z "tasklist.nmi" ) {
 my $release_tarball;
 my $version;
 if( TestGlue::is_windows() ) {
-    # on Windows, condor is in a zip file, not a tarball
-    print "Finding release zip file\n";
-    my ($release_zipfile) = glob("condor-*.zip");
+    # if there is a release_dir, assume that the condor binaries are there
+    # In that case, no unzipping is needed. just rename release_dir to condor
+    if (-d "release_dir" && ! -d "condor") {
+       print "Renaming release_dir/ to condor/\n";
+       rename("release_dir","condor");
+       TestGlue::dir_listing("condor");
+       
+       my ($release_zipfile) = glob("condor-*.zip");
+       if ($release_zipfile) {
+          $version = substr($release_zipfile, 0, -4);
+	      print "VERSION string is $version from $release_zipfile\n";
+	   }
+    } 
     
-    print "Release zip file is '$release_zipfile'\n";
+    # if there is no release_dir, then look for a zip file
+    # containing the condor binaries and unzip it.
+    if (!(-d "condor")) {
+       print "Finding release zip file\n";
+       my ($release_zipfile) = glob("condor-*.zip");
     
-    if( ! $release_zipfile ) {
-        die "Could not find a condor release zip file!\n";
-    }
+       print "Release zip file is '$release_zipfile'\n";
     
-    if ( ! mkdir("condor") ) {
-        die "Could not make the condor folder\n";
-    }
+       if( ! $release_zipfile ) {
+           die "Could not find a condor release zip file!\n";
+       }
+    
+       if ( ! mkdir("condor") ) {
+           die "Could not make the condor folder\n";
+       }
 
-    # We are explicitly calling unzip from C:\tools so that we do not use Cygwin's
-    # version of unzip.  When Cygwin unzips a tarball it removes the execute bits 
-    # and we have to restore them.  We want to avoid this so use non-Cygwin unzip
-    print "Unzipping $release_zipfile ...\n";
-    system("C:\\tools\\unzip $release_zipfile -d condor") && die "Can't unzip $release_zipfile: $!\n";
-    print "Unzipped $release_zipfile.\n";
-    
-    (my $tmp_dir = basename($release_zipfile)) =~ s/\.zip$//;
-    print "\$tmp_dir = '$tmp_dir'\n";
-    TestGlue::dir_listing("condor");
-    my $tmp_dir_path = File::Spec->catdir("condor", $tmp_dir);
-    if( -d $tmp_dir_path ) {
-        print "$tmp_dir_path exists.  Trying to move...\n";
-        system("move $tmp_dir_path\\* condor\\");
-    }
-    TestGlue::dir_listing("condor");
+		# We are explicitly calling unzip from C:\tools so that we do not use Cygwin's
+		# version of unzip.  When Cygwin unzips a tarball it removes the execute bits 
+		# and we have to restore them.  We want to avoid this so use non-Cygwin unzip
+		my $zip_exe_path = "C:\\tools\\unzip.exe";
+		if (!(-f $zip_exe_path)) {
+		   $zip_exe_path = "msconfig\\unzip.exe";
+		}
+		print "Unzipping $release_zipfile using $zip_exe_path\n";
+		system("$zip_exe_path $release_zipfile -d condor") && die "Can't unzip $release_zipfile: $!\n";
+		print "Unzipped $release_zipfile.\n";
+	    
+		(my $tmp_dir = basename($release_zipfile)) =~ s/\.zip$//;
+		print "\$tmp_dir = '$tmp_dir'\n";
+		TestGlue::dir_listing("condor");
+		my $tmp_dir_path = File::Spec->catdir("condor", $tmp_dir);
+		if( -d $tmp_dir_path ) {
+			print "$tmp_dir_path exists.  Trying to move...\n";
+			system("move $tmp_dir_path\\* condor\\");
+		}
+		TestGlue::dir_listing("condor");
 
-    $version = substr($release_zipfile, 0, -4);
-    print "VERSION string is $version from $release_zipfile\n";
+		$version = substr($release_zipfile, 0, -4);
+		print "VERSION string is $version from $release_zipfile\n";
+    }
 }
 else {
     print "Finding release tarball\n";
@@ -128,6 +149,8 @@ print "Condor version: $version\n";
 
 print "SETTING UP PERSONAL CONDOR\n";
 
+my $perl_exe = "perl";
+
 # I'm not 100% certain wtf this actually does. 
 if( not TestGlue::is_windows() ) {
     mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
@@ -152,12 +175,29 @@ else {
     mkdir( "local/log", 0777 ) || die "Can't mkdir $BaseDir/local/log: $!\n";
     
     # Remove leftovers from extracting built binaries.
-    print "Removing $version.zip file\n";
-    unlink("$version.zip");
+    print "Removing *.zip files\n";
+    unlink(<*.zip>);
 
     my $Win32BaseDir = $ENV{WIN32_BASE_DIR} || die "WIN32_BASE_DIR not in environment!\n";
     
     TestGlue::which("condor_master.exe");
+    
+	# must use cygwin perl on Windows for batch_test.pl
+	my $perlver = `$perl_exe -version`;
+	print $perlver;
+	if (!($perlver =~ /cygwin/i)) {
+		#print "adding cygwin to the front of the path\n";
+		#$ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
+		#print "PATH=$ENV{PATH}\n";
+
+		$perl_exe = "c:\\cygwin\\bin\\perl";
+		print "Invoking cygwin perl by explicit path ($perl_exe)\n";
+		$perlver = `$perl_exe -version`;
+		print $perlver;
+		if (!($perlver =~ /cygwin/i)) {
+			die "cygwin perl not found!\n";
+		}
+	}
 }
 
 
@@ -168,8 +208,8 @@ chdir($test_dir) || die "Can't chdir($test_dir for personal condor setup): $!\n"
 # -p means just set up the personal condor for the test run
 my $batch_test = File::Spec->catfile($test_dir, "batch_test.pl");
 my $command_line = "$batch_test --debug -p";
-print "About to run '$command_line'\n";
-system("perl $command_line");
+print "About to run '$perl_exe $command_line'\n";
+system("$perl_exe $command_line");
 
 if( $? != 0 ) {
     exit 2;

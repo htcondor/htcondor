@@ -71,6 +71,10 @@ public:
 
 	virtual bool peek_end_of_message();
 
+	/**	@return true if a complete message is ready to be read
+	*/
+	virtual bool msgReady();
+
     /** Connect to a host on a port
         @param s can be a hostname or sinful string
         @param port the port to connect to, ignorred if s contains port

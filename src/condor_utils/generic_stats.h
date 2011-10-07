@@ -808,6 +808,14 @@ public:
    void SetRecentMax(int cMax)    { count.SetRecentMax(cMax); runtime.SetRecentMax(cMax); }
    double operator+=(double val)    { return Add(val); }
 
+   static const int PubValue = 1;     // publish overall count and runtime
+   static const int PubRecent = 2;    // publish recnet count and runtime
+   static const int PubDebug = 4;
+   static const int PubCount = 0x10;  // modify PubValue & PubRecent to mean publish count only
+   static const int PubRuntime = 0x20; // modify PubValue & PubRecent to meanpublish runtime only
+   static const int PubDecorateAttr = 0x100;
+   static const int PubValueAndRecent = PubValue | PubRecent | PubDecorateAttr;
+   static const int PubDefault = PubValueAndRecent;
    void Publish(ClassAd & ad, const char * pattr, int flags) const;
    void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
    void Unpublish(ClassAd & ad, const char * pattr) const;

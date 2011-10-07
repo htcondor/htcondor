@@ -4,7 +4,7 @@
 /*
  * safefile package    http://www.cs.wisc.edu/~kupsch/safefile
  *
- * Copyright 2007-2008 James A. Kupsch
+ * Copyright 2007-2008, 2011 James A. Kupsch
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
 #include <sys/types.h>
 
 
-/* needed for FILE declaration, it is a typedef so an imcomplete struct will
+/* needed for FILE declaration, it is a typedef so an incomplete struct will
  * not work :(
  */
 #include <stdio.h>
@@ -48,12 +48,18 @@ typedef unsigned short mode_t;
  * Replacement functions for fopen.  These functions differ in the following
  * ways:
  *
- * 1) file creation is always done safely and the semantics are determined by
- *    which of the 6 functions is used.
+ * 1) file creation is always done safely with file creation semantics determined
+ *    by the choice of the 4 available functions, allowing semantics not possible
+ *    using fopen
  * 2) the default file permission is 0644 instead of 0666.  umask still applies.
- * 3) an optional permissions argument is allowed in C++ (required in C)
- * 4) in the case of "a", the file is opened with O_APPEND
+ * 3) a file permissions argument exists for file creation (optional in C++)
+ * 4) in the case of flags containing "a", the file is opened with O_APPEND
+ * 5) EINVAL is returned if the filename or flags are a NULL pointer, or the
+ *    first character of the flag is not a valid standard fopen flag value:  rwa
+ * 6) EEXISTS is returned if the final component is a symbolic link in both
+ *    the case of creating and of opening an existing file
  */
+
 
 /* create file, error if it exists, don't follow symbolic links */
 FILE* safe_fcreate_fail_if_exists(const char *fn, const char* flags,
@@ -77,7 +83,7 @@ FILE* safe_fopen_no_create_follow(const char* fn, const char* flags);
  * Wrapper functions for open/fopen replacements.  A simple replacement of the
  * existing function with these will result in symbolic links not being
  * followed and for a valid initial mode (file permissions) to always be
- * present.  In C the initial mode will have to be added where absent.
+ * present.  In C the initial mode will have to be added.
  */
 
 /* safe wrapper to fopen, do not follow final sym link */

@@ -44,7 +44,7 @@
 extern "C" {
 #endif
 
-int do_connect ( const char *host, const char *service, u_short port );
+int do_connect ( const char *host, u_short port );
 int tcp_accept_timeout( int ConnectionSock, struct sockaddr *sinful, 
 						int *len, int timeout );
 

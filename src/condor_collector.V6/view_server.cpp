@@ -41,7 +41,7 @@ int ViewServer::TimeStamp;
 int ViewServer::HistoryTimer;
 MyString ViewServer::DataFormat[DataSetCount];
 AccHash* ViewServer::GroupHash;
-int ViewServer::KeepHistory;
+bool ViewServer::KeepHistory;
 HashTable< MyString, int >* ViewServer::FileHash;
 ExtArray< ExtIntArray* >* ViewServer::TimesArray;
 ExtArray< ExtOffArray* >* ViewServer::OffsetsArray;
@@ -64,12 +64,7 @@ void ViewServer::Init()
 
 	// Check operation mode
 
-	KeepHistory=FALSE;
-	char* tmp=param("KEEP_POOL_HISTORY");
-	if( tmp ) {
-		if( *tmp == 'T' || *tmp == 't' ) KeepHistory=TRUE;
-		free( tmp );
-	}
+	KeepHistory = param_boolean_crufty("KEEP_POOL_HISTORY", false);
 
 	// We can't do this check at compile time, but we'll except if
 	// the startd states has changed and we haven't been updated

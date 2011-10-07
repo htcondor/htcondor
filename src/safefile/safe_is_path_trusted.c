@@ -51,6 +51,7 @@
  * 	safe_gids
  * 		list of safe group ids
  * returns
+ *     -1   SAFE_PATH_ERROR
  *	0   SAFE_PATH_UNTRUSTED
  *	1   SAFE_PATH_TRUSTED_STICKY_DIR
  *	2   SAFE_PATH_TRUSTED
@@ -61,38 +62,51 @@ static int is_mode_trusted(struct stat *stat_buf, safe_id_range_list *trusted_ui
     mode_t	mode			= stat_buf->st_mode;
     uid_t	uid			= stat_buf->st_uid;
     gid_t	gid			= stat_buf->st_gid;
-    int		is_untrusted_uid	= (uid != 0 && !safe_is_id_in_list(trusted_uids, uid));
-    int		is_dir			= S_ISDIR(mode);
-    int		is_untrusted_group	= !safe_is_id_in_list(trusted_gids, gid);
-    int		is_untrusted_group_writable
-					= is_untrusted_group && (mode & S_IWGRP);
-    mode_t	is_other_writable	= (mode & S_IWOTH);
-    
-    int is_trusted = SAFE_PATH_UNTRUSTED;
-    
-    if (!(is_untrusted_uid || is_untrusted_group_writable || is_other_writable))  {
-	mode_t other_read_mask		= (mode_t)(is_dir ? S_IXOTH : S_IROTH);
-	mode_t is_other_readable	= (mode & other_read_mask);
+    int		uid_in_list		= safe_is_id_in_list(trusted_uids, uid);
+    int		gid_in_list		= safe_is_id_in_list(trusted_gids, gid);
 
-	mode_t group_read_mask		= (mode_t)(is_dir ? S_IXGRP : S_IRGRP);
-	int is_untrusted_group_readable	= is_untrusted_group && (mode & group_read_mask);
+    if (uid_in_list == -1 || gid_in_list == -1)  {
+	return SAFE_PATH_ERROR;
+    }  else  {
+	int	is_trusted_uid		= uid == 0 || uid_in_list;
+	int	is_dir			= S_ISDIR(mode);
+	int	is_untrusted_gid	= !gid_in_list;
+	int	is_untrusted_gid_writable
+					= is_untrusted_gid && (mode & S_IWGRP);
+	mode_t	is_other_writable	= (mode & S_IWOTH);
+	
+	int is_trusted = SAFE_PATH_UNTRUSTED;
+	
+	if (is_trusted_uid && !is_untrusted_gid_writable && !is_other_writable)  {
+	    /* Path is trusted, now determine if it is confidential.
+	     * Do not allow viewing of directory entries or access to any of the
+	     * entries of a directory.  For other types do not allow read access.
+	     */
+	    mode_t gid_read_mask		= (mode_t)(is_dir ? (S_IXGRP | S_IRGRP) : S_IRGRP);
+	    int    is_untrusted_gid_readable	= is_untrusted_gid && (mode & gid_read_mask);
 
-	if (is_other_readable || is_untrusted_group_readable)  {
+	    mode_t other_read_mask		= (mode_t)(is_dir ? (S_IXOTH | S_IROTH) : S_IROTH);
+	    mode_t is_other_readable		= (mode & other_read_mask);
+
+	    if (is_other_readable || is_untrusted_gid_readable)  {
+		is_trusted = SAFE_PATH_TRUSTED;
+	    }  else  {
+		is_trusted = SAFE_PATH_TRUSTED_CONFIDENTIAL;
+	    }
+	}  else if (S_ISLNK(mode))  {
+	    /* Symbolic links are trusted since they are immutable */
 	    is_trusted = SAFE_PATH_TRUSTED;
-	}  else  {
-	    is_trusted = SAFE_PATH_TRUSTED_CONFIDENTIAL;
-	}
-    }  else if (S_ISLNK(mode))  {
-	is_trusted = SAFE_PATH_TRUSTED;
-    }  else {
-	int	is_sticky_dir	= is_dir && (mode & S_ISVTX);
+	}  else {
+	    /* Directory with sticky bit set and trusted owner is trusted */
+	    int	is_sticky_dir	= is_dir && (mode & S_ISVTX);
 
-	if (is_sticky_dir && !is_untrusted_uid)  {
-	    is_trusted = SAFE_PATH_TRUSTED_STICKY_DIR;
+	    if (is_sticky_dir && is_trusted_uid)  {
+		is_trusted = SAFE_PATH_TRUSTED_STICKY_DIR;
+	    }
 	}
+	
+	return is_trusted;
     }
-    
-    return is_trusted;
 }
 
 
@@ -106,23 +120,23 @@ enum  {	PATH_U = SAFE_PATH_UNTRUSTED,
 
 /* trust composition table, given the trust of the parent directory and the child
  * this is only valid for directories.  is_component_in_dir_trusted() modifies it
- * slightly for other file system types
+ * slightly for other file system object types
  */
 static int trust_matrix[][4] = {
-	/*	parent\child | 	PATH_U	PATH_U	PATH_U	PATH_U	*/
+	/*	parent\child | 	PATH_U	PATH_S	PATH_T	PATH_C	*/
 	/*      ------          ------------------------------  */
 	/*	PATH_U  */  {	PATH_U,	PATH_U,	PATH_U,	PATH_U	},
 	/*	PATH_S  */  {	PATH_U,	PATH_S,	PATH_T,	PATH_C	},
 	/*	PATH_T  */  {	PATH_U,	PATH_S,	PATH_T,	PATH_C	},
 	/*	PATH_C  */  {	PATH_U,	PATH_S,	PATH_T,	PATH_C	}
-		       };
+};
 
 
 /*
  * is_component_in_dir_trusted
  * 	Returns trustedness of mode.  See trust_matrix above, plus if the
- * 	parent directory is a stick bit directory everything that can be
- * 	hard linked (everyting except directories) is SAFE_PATH_UNTRUSTED.
+ * 	parent directory is a stick bit directory every file system object
+ * 	that can be hard linked (all except directories) is SAFE_PATH_UNTRUSTED.
  * parameters
  * 	parent_dir_trust
  * 		trust level of parent directory
@@ -133,6 +147,7 @@ static int trust_matrix[][4] = {
  * 	safe_gids
  * 		list of safe group ids
  * returns
+ *     -1   SAFE_PATH_ERROR
  *	0   SAFE_PATH_UNTRUSTED
  *	1   SAFE_PATH_TRUSTED_STICKY_DIR
  *	2   SAFE_PATH_TRUSTED
@@ -147,15 +162,25 @@ static int is_component_in_dir_trusted(
 {
     int child_trust = is_mode_trusted(child_stat_buf, trusted_uids, trusted_gids);
 
-    int status = trust_matrix[parent_dir_trust][child_trust];
+    if (child_trust == SAFE_PATH_ERROR)  {
+	return child_trust;
+    }  else  {
+	int status = trust_matrix[parent_dir_trust][child_trust];
 
-    int is_dir = S_ISDIR(child_stat_buf->st_mode);
-    if (parent_dir_trust == SAFE_PATH_TRUSTED_STICKY_DIR && !is_dir)  {
-	/* anything in a sticky bit directory is untrusted, except a directory */
-	status = SAFE_PATH_UNTRUSTED;
+	/* Fix trust of objects in a sticky bit directory.  Everything in them
+	 * should be considered untrusted except directories.  Any user can
+	 * create a hard link to any file system object except a directory.
+	 * Although the contents of the object may be trusted based on the
+	 * permissions, the directory entry itself could have been made by an
+	 * untrusted user.
+	 */
+	int is_dir = S_ISDIR(child_stat_buf->st_mode);
+	if (parent_dir_trust == SAFE_PATH_TRUSTED_STICKY_DIR && !is_dir)  {
+	    status = SAFE_PATH_UNTRUSTED;
+	}
+
+	return status;
     }
-
-    return status;
 }
 
 
@@ -165,16 +190,15 @@ static int is_component_in_dir_trusted(
  * 	directory from here to the root is untrusted the path is untrusted,
  * 	otherwise it returns the trustedness of the current working directory.
  *
- * 	This function is not thread safe if other threads depend on the value
- * 	of the current working directory as it changes the current working
- * 	directory while checking the path and restores it on exit.
+ * 	This function is not thread safe.  The current working directory is
+ * 	changed while checking the path, and restores it on exit.
  * parameters
  * 	safe_uids
  * 		list of safe user ids
  * 	safe_gids
  * 		list of safe group ids
  * returns
- *	<0  on error
+ *     -1   SAFE_PATH_ERROR
  *	0   SAFE_PATH_UNTRUSTED
  *	1   SAFE_PATH_TRUSTED_STICKY_DIR
  *	2   SAFE_PATH_TRUSTED
@@ -206,7 +230,7 @@ static int is_current_working_directory_trusted(safe_id_range_list *trusted_uids
     }
 
 
-    /* Walk the directory tree, from the directory given to the root.
+    /* Walk the directory tree, from the current working directory to the root.
      *
      * If there is a directory that is_trusted_mode returns SAFE_PATH_UNTRUSTED
      * exit immediately with that value
@@ -215,17 +239,19 @@ static int is_current_working_directory_trusted(safe_id_range_list *trusted_uids
      */
     do  {
 	cur_status = is_mode_trusted(&cur_stat, trusted_uids, trusted_gids);
-	if (status == SAFE_PATH_UNTRUSTED)  {
-	    /* this is true only the first time through the loop (the cwd).
-	     * The return result is the value of the cwd.
-	     */
+	if (cur_status <= SAFE_PATH_UNTRUSTED)  {
+	    /* untrusted directory permissions or an error occurred */
 	    status = cur_status;
+	    goto restore_dir_and_exit;
 	}
 
-	if (cur_status == SAFE_PATH_UNTRUSTED)  {
-	    /* untrusted directory persmissions */
-	    status = SAFE_PATH_UNTRUSTED;
-	    goto restore_dir_and_exit;
+	if (status == SAFE_PATH_UNTRUSTED)  {
+	    /* This is true only the first time through the loop.  The
+	     * directory is the current work directory (cwd).  If the rest of
+	     * the path to the root is trusted, the trust of the cwd is the
+	     * value returned by this function.
+	     */
+	    status = cur_status;
 	}
 
 	prev_stat = cur_stat;
@@ -244,7 +270,7 @@ static int is_current_working_directory_trusted(safe_id_range_list *trusted_uids
 	    goto restore_dir_and_exit;
 	}
 
-	/* check if we are at the root directory */
+	/* check if we are at the root directory (parent of root is root) */
 	not_at_root = cur_stat.st_dev != prev_stat.st_dev || cur_stat.st_ino != prev_stat.st_ino;
 
 	if (not_at_root)  {
@@ -268,10 +294,8 @@ static int is_current_working_directory_trusted(safe_id_range_list *trusted_uids
 
 
   restore_dir_and_exit:
-    /* restore the old working directory & close open file descriptors if needed
-     * and return value 
-     */
 
+    /* restore cwd, close open file descriptors, return value */
     if (saved_dir != -1)  {
 	r = fchdir(saved_dir);
 	if (r == -1)  {
@@ -305,7 +329,7 @@ static int is_current_working_directory_trusted(safe_id_range_list *trusted_uids
  * 	safe_gids
  * 		list of safe group ids
  * returns
- *	<0  on error
+ *     -1   SAFE_PATH_ERROR
  *	0   SAFE_PATH_UNTRUSTED
  *	1   SAFE_PATH_TRUSTED_STICKY_DIR
  *	2   SAFE_PATH_TRUSTED
@@ -320,7 +344,7 @@ static int is_current_working_directory_trusted_r(safe_id_range_list *trusted_ui
     struct stat prev_stat;
     int not_at_root;
     char path[PATH_MAX] = ".";
-    char *path_end = &path[0];
+    char *path_end = &path[0];		/* points to null char, except on 1st pass */
 
     
     r = lstat(path, &cur_stat);
@@ -328,32 +352,35 @@ static int is_current_working_directory_trusted_r(safe_id_range_list *trusted_ui
 	return SAFE_PATH_ERROR;
     }
 
-    /* Walk the directory tree, from the directory given to the root.
+    /* Walk the directory tree, from the current working directory to the root.
      *
      * If there is a directory that is_trusted_mode returns SAFE_PATH_UNTRUSTED
-     * exit immediately with that value
+     * or SAFE_PATH_ERROR, exit immediately with that value
      *
      * Assumes no hard links to directories.
      */
     do  {
 	cur_status = is_mode_trusted(&cur_stat, trusted_uids, trusted_gids);
-	if (status == SAFE_PATH_UNTRUSTED)  {
-	    /* this is true only the first time through the loop (the cwd).
-	     * The return result is the value of the cwd.
-	     */
-	    status = cur_status;
+	if (cur_status <= SAFE_PATH_UNTRUSTED)  {
+	    /* untrusted directory permissions or an error occurred */
+	    return cur_status;
 	}
 
-	if (cur_status == SAFE_PATH_UNTRUSTED)  {
-	    /* untrusted directory persmissions */
-	    return SAFE_PATH_UNTRUSTED;
+	if (status == SAFE_PATH_UNTRUSTED)  {
+	    /* This is true only the first time through the loop.  The
+	     * directory is the current work directory (cwd).  If the rest of
+	     * the path to the root is trusted, the trust of the cwd is the
+	     * value returned by this function.
+	     */
+	    status = cur_status;
 	}
 
 	prev_stat = cur_stat;
 
 	if (path_end != path)  {
 	    /* if not the first time through, append a directory separator */
-	    if ((size_t)(path_end - path + 1) > sizeof(path))  {
+	    if ((size_t)(path_end - path + 1) >= sizeof(path))  {
+		/* couldn't add 1 character */
 		errno = ENAMETOOLONG;
 		return SAFE_PATH_ERROR;
 	    }
@@ -362,8 +389,9 @@ static int is_current_working_directory_trusted_r(safe_id_range_list *trusted_ui
 	    *path_end   = '\0';
 	}
 
-	/* append a parent directory, .. */
-	if ((size_t)(path_end - path + 1) > sizeof(path))  {
+	/* append a parent directory, "..", or on the first pass set to ".."  */
+	if ((size_t)(path_end - path + 2) >= sizeof(path))  {
+	    /* couldn't add 2 characters */
 	    errno = ENAMETOOLONG;
 	    return SAFE_PATH_ERROR;
 	}
@@ -378,7 +406,7 @@ static int is_current_working_directory_trusted_r(safe_id_range_list *trusted_ui
 	    return SAFE_PATH_ERROR;
 	}
 
-	/* check if we are at the root directory */
+	/* check if we are at the root directory (parent of root is root) */
 	not_at_root = cur_stat.st_dev != prev_stat.st_dev || cur_stat.st_ino != prev_stat.st_ino;
     }  while (not_at_root);
 
@@ -395,11 +423,11 @@ static int is_current_working_directory_trusted_r(safe_id_range_list *trusted_ui
 
 typedef struct dir_stack  {
     struct dir_path  {
-	char *original_ptr;
-	char *cur_position;
+	char *original_ptr;	/* points to beginning of malloc'd buffer */
+	char *cur_position;	/* points to next component in path */
     }  stack[MAX_SYMLINK_DEPTH];
 
-    int  count;
+    int  count;			/* number of items on stack */
 }  dir_stack;
 
 
@@ -421,7 +449,7 @@ static void init_dir_stack(dir_stack* stack)
 
 /*
  * destroy_dir_stack
- * 	Destroy a dir_stack data structure, free's unfreed paths that have
+ * 	Destroy a dir_stack data structure by freeing paths that have
  * 	been pushed onto the stack
  * parameters
  * 	stack
@@ -446,7 +474,7 @@ static void destroy_dir_stack(dir_stack* stack)
  *	path
  *		path to push on the stack.  A copy is made.
  * returns
- *	0  on sucess
+ *	0  on success
  *	<0 on error (if the stack if contains MAX_SYMLINK_DEPTH directories
  *		errno = ELOOP for detecting symbolic link loops
  */
@@ -490,14 +518,14 @@ static int push_path_on_stack(dir_stack* stack, const char* path)
  *	path
  *		pointer to a pointer to store the next component
  * returns
- *	0  on sucess
+ *	0  on success
  *	<0 on stack empty
  */
 static int get_next_component(dir_stack* stack, const char **path)
 {
     while (stack->count > 0)  {
 	if (!*stack->stack[stack->count - 1].cur_position)  {
-	    /* current top is now empty, delete it, and try again */
+	    /* current top path is now empty, pop it, and try again */
 	    --stack->count;
 	    free(stack->stack[stack->count].original_ptr);
 	}  else  {
@@ -547,7 +575,7 @@ static int is_stack_empty(dir_stack* stack)
 {
     /* since the empty items are not removed until the next call to
      * get_next_component(), we need to check all the items on the stack
-     * and if any of them are not empty, return false, otherwise it truely
+     * and if any of them are not empty, return false, otherwise it truly
      * is empty.
      */
     int cur_head = stack->count - 1;
@@ -571,17 +599,17 @@ static int is_stack_empty(dir_stack* stack)
  * 	is_current_working_directory_trusted().
  *
  * 	This checks directory entry by directory entry for trustedness,
- * 	following symbolic links as discovered.  Non-directory entries in a
- * 	sticky bit directory are not trusted as untrusted users could have
- * 	hard linked an old file at that name.
+ * 	following the paths in symbolic links as discovered.  Non-directory
+ * 	entries in a sticky bit directory are not trusted as untrusted users
+ * 	could have hard linked an old file at that name.
  *
  * 	SAFE_PATH_UNTRUSTED is returned if the path is not trusted somewhere.
  * 	SAFE_PATH_TRUSTED_STICKY_DIR is returned if the path is trusted but ends
  * 		in a stick bit directory.  This path should only be used to
- * 		make a true temporaray file (opened using mkstemp(), and
+ * 		make a true temporary file (opened using mkstemp(), and
  * 		the pathname returned never used again except to remove the
  * 		file in the same process), or to create a directory.
- * 	SAFE_PATH_TRUSTED is returned only if the path given always referes to
+ * 	SAFE_PATH_TRUSTED is returned only if the path given always refers to
  * 		the same object and the object referred can not be modified.
  * 	SAFE_PATH_TRUSTED_CONFIDENTIAL is returned if the path is
  * 		SAFE_PATH_TRUSTED and the object referred to can not be read by
@@ -592,9 +620,8 @@ static int is_stack_empty(dir_stack* stack)
  * 		weak permissions in a confidential directory is not
  * 		confidential).
  *
- * 	This function is not thread safe if other threads depend on the value
- * 	of the current working directory as it changes the current working
- * 	directory while checking the path and restores it on exit.
+ * 	This function is not thread safe.  This function changes the current
+ * 	working directory while checking the path, and restores it on exit.
  * parameters
  * 	pathname
  * 		name of path to check
@@ -603,7 +630,7 @@ static int is_stack_empty(dir_stack* stack)
  * 	safe_gids
  * 		list of safe group ids
  * returns
- *	<0  on error
+ *     -1   SAFE_PATH_ERROR
  *	0   SAFE_PATH_UNTRUSTED
  *	1   SAFE_PATH_TRUSTED_STICKY_DIR
  *	2   SAFE_PATH_TRUSTED
@@ -613,7 +640,6 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
 {
     int			r;
     int			status = SAFE_PATH_UNTRUSTED;
-    int			previous_status;
     int			num_tries;
     int			saved_dir;
     dir_stack		paths;
@@ -631,8 +657,7 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
 	goto restore_dir_and_exit;
     }
 
-    /*
-     * If the path is relative, check that the current working directory is a
+    /* If the path is relative, check that the current working directory is a
      * trusted file system object.  If it is not then the path is not trusted
      */
     if (*pathname != '/')  {
@@ -645,7 +670,7 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
     }
 
     /* start the stack with the pathname given */
-    if (push_path_on_stack(&paths, pathname))  {
+    if (push_path_on_stack(&paths, pathname) < 0)  {
 	status = SAFE_PATH_ERROR;
 	goto restore_dir_and_exit;
     }
@@ -666,8 +691,7 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
 
 	prev_status = status;
 
-	/*
-	 * At this point if the directory component is '..', then the status
+	/* At this point if the directory component is '..', then the status
 	 * should be set to be that of the grandparent directory, '../..',
 	 * for the code below to work, which would require either recomputing
 	 * the value, or keeping a cache of the value (which could then be used
@@ -679,12 +703,11 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
 	 *   3) the current trust level (status) is not SAFE_PATH_UNTRUSTED
 	 *   4) the trust matrix rows are the same, when the parent is not
 	 *      SAFE_PATH_UNTRUSTED
-	 * So not chnaging status will still result in the correct value
+	 * So not changing status will still result in the correct value
 	 *
 	 * WARNING: If any of these assumptions change, this will need to change.
 	 */
 
-	previous_status = status;
 	num_tries = 0;
 
       try_lstat_again:
@@ -725,8 +748,8 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
 	    }
 
 	    /* Get the link's referent.  readlink does not null terminate.
-	     * Let it read one more than the size it is supposed to be to
-	     * detect truncation.
+	     * Set buffer size to one more than the size from lstat to detect
+	     * truncation.
 	     */
 	    readlink_len = readlink(path, link_path, link_path_len + 1);
 	    if (readlink_len == -1)  {
@@ -738,7 +761,7 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
 	    /* check for truncation of value */
 	    if ((size_t)readlink_len > link_path_len)  {
 		free(link_path);
-		status = previous_status;
+		status = prev_status;
 		goto try_lstat_again;
 	    }
 
@@ -746,7 +769,7 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
 	    link_path[readlink_len] = '\0';
 
 	    /* add the path of the referent to the stack */
-	    if (push_path_on_stack(&paths, link_path))  {
+	    if (push_path_on_stack(&paths, link_path) < 0)  {
 		free(link_path);
 		status = SAFE_PATH_ERROR;
 		goto restore_dir_and_exit;
@@ -759,8 +782,9 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
 
 	    continue;
 	}  else if (!is_stack_empty(&paths))  {
-	    /* more components remaining, change directory
-	     * it is not a sym link, so it must be a directory, or an error
+	    /* More components remain, so change current working directory.
+	     * path is not a symbolic link, if it is not a directory, chdir
+	     * will fail and set errno to the proper value we want.
 	     */
 	    r = chdir(path);
 	    if (r == -1)  {
@@ -773,8 +797,7 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
 
   restore_dir_and_exit:
 
-    /* restore original directory if needed and return value */
-
+    /* free memory, restore cwd, and return value */
     destroy_dir_stack(&paths);
 
     if (saved_dir != -1)  {
@@ -788,7 +811,6 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
 	}
     }
 
-
     return status;
 }
 
@@ -799,33 +821,33 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
  *
  * 	Returns the trustedness of the path.
  *
- * 	This functino is thread/signal handler safe in that it does not change
- * 	the current working directory.  It does fork the process to return do
- * 	the check, which changes the new process's current working directory as
- * 	it does the checks by calling safe_is_path_trusted().
+ * 	This function is thread/signal handler safe in that it does not change
+ * 	the current working directory.  It forks a process to do the check, the
+ * 	new process changes itscurrent working directory as it does the checks
+ * 	by calling safe_is_path_trusted().
  *
  * 	If the path is relative the path from the current working directory to
  * 	the root must be trusted as defined in
  * 	is_current_working_directory_trusted().
  *
  * 	This checks directory entry by directory entry for trustedness,
- * 	following symbolic links as discovered.  Non-directory entries in a
- * 	sticky bit directory are not trusted as untrusted users could have
- * 	hard linked an old file at that name.
+ * 	following the paths in symbolic links as discovered.  Non-directory
+ * 	entries in a sticky bit directory are not trusted as untrusted users
+ * 	could have hard linked an old file at that name.
  *
  * 	SAFE_PATH_UNTRUSTED is returned if the path is not trusted somewhere.
  * 	SAFE_PATH_TRUSTED_STICKY_DIR is returned if the path is trusted but ends
  * 		in a stick bit directory.  This path should only be used to
- * 		make a true temporaray file (opened using mkstemp(), and
+ * 		make a true temporary file (opened using mkstemp(), and
  * 		the pathname returned never used again except to remove the
  * 		file in the same process), or to create a directory.
- * 	SAFE_PATH_TRUSTED is returned only if the path given always referes to
+ * 	SAFE_PATH_TRUSTED is returned only if the path given always refers to
  * 		the same object and the object referred can not be modified.
  * 	SAFE_PATH_TRUSTED_CONFIDENTIAL is returned if the path is
  * 		SAFE_PATH_TRUSTED and the object referred to can not be read by
  * 		untrusted users.  This assumes the permissions on the object
  * 		were always strong enough to return this during the life of the
- * 		object.  This confidentiality is only based on the the actual
+ * 		object.  This confidentiality is only based on the actual
  * 		object, not the containing directories (for example a file with
  * 		weak permissions in a confidential directory is not
  * 		confidential).
@@ -838,7 +860,7 @@ int safe_is_path_trusted(const char *pathname, safe_id_range_list *trusted_uids,
  * 	safe_gids
  * 		list of safe group ids
  * returns
- *	<0  on error
+ *     -1   SAFE_PATH_ERROR
  *	0   SAFE_PATH_UNTRUSTED
  *	1   SAFE_PATH_TRUSTED_STICKY_DIR
  *	2   SAFE_PATH_TRUSTED
@@ -1012,7 +1034,7 @@ int safe_is_path_trusted_fork(const char *pathname, safe_id_range_list *trusted_
 /*
  * append_dir_entry_to_path
  *
- * 	Creates a new path that starts in "path" and moves to "name".  Path are
+ * 	Creates a new path that starts in "path" and moves to "name".  Path and
  * 	name are both assumed to contain no symbolic links.
  *
  * 	If name is "/", path is set to "/".  If name is "" or ".", path is
@@ -1116,23 +1138,23 @@ static int append_dir_entry_to_path(char *path, char **path_end, char *buf_end, 
  * 	is_current_working_directory_trusted().
  *
  * 	This checks directory entry by directory entry for trustedness,
- * 	following symbolic links as discovered.  Non-directory entries in a
- * 	sticky bit directory are not trusted as untrusted users could have
- * 	hard linked an old file at that name.
+ * 	following the paths in symbolic links as discovered.  Non-directory
+ * 	entries in a sticky bit directory are not trusted as untrusted users
+ * 	could have hard linked an old file at that name.
  *
  * 	SAFE_PATH_UNTRUSTED is returned if the path is not trusted somewhere.
  * 	SAFE_PATH_TRUSTED_STICKY_DIR is returned if the path is trusted but ends
  * 		in a stick bit directory.  This path should only be used to
- * 		make a true temporaray file (opened using mkstemp(), and
+ * 		make a true temporary file (opened using mkstemp(), and
  * 		the pathname returned never used again except to remove the
  * 		file in the same process), or to create a directory.
- * 	SAFE_PATH_TRUSTED is returned only if the path given always referes to
+ * 	SAFE_PATH_TRUSTED is returned only if the path given always refers to
  * 		the same object and the object referred can not be modified.
  * 	SAFE_PATH_TRUSTED_CONFIDENTIAL is returned if the path is
  * 		SAFE_PATH_TRUSTED and the object referred to can not be read by
  * 		untrusted users.  This assumes the permissions on the object
  * 		were always strong enough to return this during the life of the
- * 		object.  This confidentiality is only based on the the actual
+ * 		object.  This confidentiality is only based on the actual
  * 		object, not the containing directories (for example a file with
  * 		weak permissions in a confidential directory is not
  * 		confidential).
@@ -1144,7 +1166,7 @@ static int append_dir_entry_to_path(char *path, char **path_end, char *buf_end, 
  * 	safe_gids
  * 		list of safe group ids
  * returns
- *	<0  on error
+ *     -1   SAFE_PATH_ERROR
  *	0   SAFE_PATH_UNTRUSTED
  *	1   SAFE_PATH_TRUSTED_STICKY_DIR
  *	2   SAFE_PATH_TRUSTED
@@ -1154,7 +1176,6 @@ int safe_is_path_trusted_r(const char *pathname, safe_id_range_list *trusted_uid
 {
     int			r;
     int			status = SAFE_PATH_UNTRUSTED;
-    int			previous_status;
     int			num_tries;
     dir_stack		paths;
     const char		*comp_name;
@@ -1179,7 +1200,7 @@ int safe_is_path_trusted_r(const char *pathname, safe_id_range_list *trusted_uid
     }
 
     /* start the stack with the pathname given */
-    if (push_path_on_stack(&paths, pathname))  {
+    if (push_path_on_stack(&paths, pathname) < 0)  {
 	status = SAFE_PATH_ERROR;
 	goto cleanup_and_exit;
     }
@@ -1207,8 +1228,7 @@ int safe_is_path_trusted_r(const char *pathname, safe_id_range_list *trusted_uid
 	    goto cleanup_and_exit;
 	}
 
-	/*
-	 * At this point if the directory component is '..', then the status
+	/* At this point if the directory component is '..', then the status
 	 * should be set to be that of the grandparent directory, '../..',
 	 * for the code below to work, which would require either recomputing
 	 * the value, or keeping a cache of the value (which could then be used
@@ -1220,12 +1240,11 @@ int safe_is_path_trusted_r(const char *pathname, safe_id_range_list *trusted_uid
 	 *   3) the current trust level (status) is not SAFE_PATH_UNTRUSTED
 	 *   4) the trust matrix rows are the same, when the parent is not
 	 *      SAFE_PATH_UNTRUSTED
-	 * So not chnaging status will still result in the correct value
+	 * So not changing status will still result in the correct value
 	 *
 	 * WARNING: If any of these assumptions change, this will need to change.
 	 */
 
-	previous_status = status;
 	num_tries = 0;
 
       try_lstat_again:
@@ -1265,8 +1284,8 @@ int safe_is_path_trusted_r(const char *pathname, safe_id_range_list *trusted_uid
 	    }
 
 	    /* Get the link's referent.  readlink does not null terminate.
-	     * Let it read on emore that the size it is supposed to be to
-	     * detect truncation.
+	     * Set buffer size to one more than the size from lstat to detect
+	     * truncation.
 	     */
 	    readlink_len = readlink(path, link_path, link_path_len + 1);
 	    if (readlink_len == -1)  {
@@ -1277,7 +1296,7 @@ int safe_is_path_trusted_r(const char *pathname, safe_id_range_list *trusted_uid
 
 	    if ((size_t)readlink_len > link_path_len)  {
 		free(link_path);
-		status = previous_status;
+		status = prev_status;
 		goto try_lstat_again;
 	    }
 
@@ -1285,7 +1304,7 @@ int safe_is_path_trusted_r(const char *pathname, safe_id_range_list *trusted_uid
 	    link_path[readlink_len] = '\0';
 
 	    /* add path to the stack */
-	    if (push_path_on_stack(&paths, link_path))  {
+	    if (push_path_on_stack(&paths, link_path) < 0)  {
 		free(link_path);
 		status = SAFE_PATH_ERROR;
 		goto cleanup_and_exit;
@@ -1309,7 +1328,7 @@ int safe_is_path_trusted_r(const char *pathname, safe_id_range_list *trusted_uid
 
   cleanup_and_exit:
 
-    /* restore original directory if needed and return value */
+    /* free memory, restore cwd, and return value */
     destroy_dir_stack(&paths);
 
     /* if this algorithm failed because the pathname was too long,

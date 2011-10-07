@@ -803,22 +803,15 @@ drop_core_in_log( void )
 void
 check_core_files()
 {
-	char* tmp;
-	int want_set_error_mode = TRUE;
+	bool want_set_error_mode = param_boolean_crufty("CREATE_CORE_FILES", true);
 
-	if( (tmp = param("CREATE_CORE_FILES")) ) {
-#ifndef WIN32	
-		if( *tmp == 't' || *tmp == 'T' ) {
-			limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT,"max core size" );
-		} else {
-			limit( RLIMIT_CORE, 0, CONDOR_SOFT_LIMIT,"max core size" );
-		}
-#endif
-		if( *tmp == 'f' || *tmp == 'F' ) {
-			want_set_error_mode = FALSE;
-		}
-		free( tmp );
+#ifndef WIN32
+	if( want_set_error_mode ) {
+		limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT,"max core size" );
+	} else {
+		limit( RLIMIT_CORE, 0, CONDOR_SOFT_LIMIT,"max core size" );
 	}
+#endif
 
 #ifdef WIN32
 		// Call SetErrorMode so that Win32 "critical errors" and such
@@ -1420,8 +1413,7 @@ dc_reconfig()
 		// If requested to do so in the config file, do a segv now.
 		// This is to test our handling/writing of a core file.
 	char* ptmp;
-	if ( (ptmp=param("DROP_CORE_ON_RECONFIG")) && 
-		 (*ptmp=='T' || *ptmp=='t') ) {
+	if ( param_boolean_crufty("DROP_CORE_ON_RECONFIG", false) ) {
 			// on purpose, derefernce a null pointer.
 			ptmp = NULL;
 			char segfault;	

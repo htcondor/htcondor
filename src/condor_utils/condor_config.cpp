@@ -812,6 +812,12 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		// parameter at this point, if it's set.
 	init_ipaddr( TRUE );
 
+		// The IPv6 code currently caches some results that depend
+		// on configuration settings such as NETWORK_INTERFACE.
+		// Therefore, force the cache to be reset, now that the
+		// configuration has been loaded.
+	init_local_hostname();
+
 		// Re-insert the special macros.  We don't want the user to
 		// override them, since it's not going to work.
 	reinsert_specials( host );
@@ -1878,6 +1884,31 @@ param_double( const char *name, double default_value,
 	free( string );
 	return result;
 }
+
+/*
+ * Like param_boolean, but allow for 'T' or 'F' (no quotes, case
+ * insensitive) to mean True/False, respectively.
+ */
+bool
+param_boolean_crufty( const char *name, bool default_value )
+{
+	char *tmp = param(name);
+	if (tmp) {
+		char c = *tmp;
+		free(tmp);
+
+		if ('t' == c || 'T' == c) {
+			return true;
+		} else if ('f' == c || 'F' == c) {
+			return false;
+		} else {
+			return param_boolean(name, default_value);
+		}
+	} else {
+		return param_boolean(name, default_value);
+	}
+}
+
 
 /*
 ** Return the boolean value associated with the named paramter.

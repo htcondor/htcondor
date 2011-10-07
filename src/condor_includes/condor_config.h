@@ -120,6 +120,8 @@ class ParamValue {
                         ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
+	bool param_boolean_crufty( const char *name, bool default_value );
+
 	bool param_boolean( const char *name, bool default_value,
                         bool do_log = true,
 						ClassAd *me=NULL, ClassAd *target=NULL,

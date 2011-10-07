@@ -1,6 +1,6 @@
 universe = grid
 grid_resource = deltacloud http://localhost:xxxxxx/api
-executable = job_deltacluod_basic
+executable = job_deltacloud_basic
 deltacloud_username = mockuser
 deltacloud_password_file = job_deltacloud_basic.priv
 deltacloud_image_id = img1

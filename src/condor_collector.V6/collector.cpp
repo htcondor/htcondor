@@ -150,132 +150,132 @@ void CollectorDaemon::Init()
 	schedule_event( -1, 23, 0, 0, 0, reportToDevelopers );
 
 	// install command handlers for queries
-	daemonCore->Register_Command(QUERY_STARTD_ADS,"QUERY_STARTD_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_STARTD_ADS,"QUERY_STARTD_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,NEGOTIATOR);
 #ifdef HAVE_EXT_POSTGRESQL
-	daemonCore->Register_Command(QUERY_QUILL_ADS,"QUERY_QUILL_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_QUILL_ADS,"QUERY_QUILL_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 #endif /* HAVE_EXT_POSTGRESQL */
 
-	daemonCore->Register_Command(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_MASTER_ADS,"QUERY_MASTER_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_MASTER_ADS,"QUERY_MASTER_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_CKPT_SRVR_ADS,"QUERY_CKPT_SRVR_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_CKPT_SRVR_ADS,"QUERY_CKPT_SRVR_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_LICENSE_ADS,"QUERY_LICENSE_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_LICENSE_ADS,"QUERY_LICENSE_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,ADMINISTRATOR);
-	daemonCore->Register_Command(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_NEGOTIATOR_ADS,"QUERY_NEGOTIATOR_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_NEGOTIATOR_ADS,"QUERY_NEGOTIATOR_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_HAD_ADS,"QUERY_HAD_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_HAD_ADS,"QUERY_HAD_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_XFER_SERVICE_ADS,"QUERY_XFER_SERVICE_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_XFER_SERVICE_ADS,"QUERY_XFER_SERVICE_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_LEASE_MANAGER_ADS,"QUERY_LEASE_MANAGER_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_LEASE_MANAGER_ADS,"QUERY_LEASE_MANAGER_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_ANY_ADS,"QUERY_ANY_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-    daemonCore->Register_Command(QUERY_GRID_ADS,"QUERY_GRID_ADS",
+    daemonCore->Register_CommandWithPayload(QUERY_GRID_ADS,"QUERY_GRID_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_Command(QUERY_GENERIC_ADS,"QUERY_GENERIC_ADS",
+	daemonCore->Register_CommandWithPayload(QUERY_GENERIC_ADS,"QUERY_GENERIC_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	
 	// install command handlers for invalidations
-	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
+	daemonCore->Register_CommandWithPayload(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_STARTD_PERM);
 
 #ifdef HAVE_EXT_POSTGRESQL
-	daemonCore->Register_Command(INVALIDATE_QUILL_ADS,"INVALIDATE_QUILL_ADS",
+	daemonCore->Register_CommandWithPayload(INVALIDATE_QUILL_ADS,"INVALIDATE_QUILL_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
 #endif /* HAVE_EXT_POSTGRESQL */
 
-	daemonCore->Register_Command(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
+	daemonCore->Register_CommandWithPayload(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_SCHEDD_PERM);
-	daemonCore->Register_Command(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
+	daemonCore->Register_CommandWithPayload(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,ADVERTISE_MASTER_PERM);
-	daemonCore->Register_Command(INVALIDATE_CKPT_SRVR_ADS,
+	daemonCore->Register_CommandWithPayload(INVALIDATE_CKPT_SRVR_ADS,
 		"INVALIDATE_CKPT_SRVR_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_Command(INVALIDATE_SUBMITTOR_ADS,
+	daemonCore->Register_CommandWithPayload(INVALIDATE_SUBMITTOR_ADS,
 		"INVALIDATE_SUBMITTOR_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,ADVERTISE_SCHEDD_PERM);
-	daemonCore->Register_Command(INVALIDATE_LICENSE_ADS,
+	daemonCore->Register_CommandWithPayload(INVALIDATE_LICENSE_ADS,
 		"INVALIDATE_LICENSE_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_Command(INVALIDATE_COLLECTOR_ADS,
+	daemonCore->Register_CommandWithPayload(INVALIDATE_COLLECTOR_ADS,
 		"INVALIDATE_COLLECTOR_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_Command(INVALIDATE_STORAGE_ADS,
+	daemonCore->Register_CommandWithPayload(INVALIDATE_STORAGE_ADS,
 		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_Command(INVALIDATE_NEGOTIATOR_ADS,
+	daemonCore->Register_CommandWithPayload(INVALIDATE_NEGOTIATOR_ADS,
 		"INVALIDATE_NEGOTIATOR_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,NEGOTIATOR);
-	daemonCore->Register_Command(INVALIDATE_HAD_ADS,
+	daemonCore->Register_CommandWithPayload(INVALIDATE_HAD_ADS,
 		"INVALIDATE_HAD_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_Command(INVALIDATE_ADS_GENERIC,
+	daemonCore->Register_CommandWithPayload(INVALIDATE_ADS_GENERIC,
 		"INVALIDATE_ADS_GENERIC", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_Command(INVALIDATE_XFER_SERVICE_ADS,
+	daemonCore->Register_CommandWithPayload(INVALIDATE_XFER_SERVICE_ADS,
 		"INVALIDATE_XFER_ENDPOINT_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
-	daemonCore->Register_Command(INVALIDATE_LEASE_MANAGER_ADS,
+	daemonCore->Register_CommandWithPayload(INVALIDATE_LEASE_MANAGER_ADS,
 		"INVALIDATE_LEASE_MANAGER_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
-    daemonCore->Register_Command(INVALIDATE_GRID_ADS,
+    daemonCore->Register_CommandWithPayload(INVALIDATE_GRID_ADS,
         "INVALIDATE_GRID_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
 
 	// install command handlers for updates
 
 #ifdef HAVE_EXT_POSTGRESQL
-	daemonCore->Register_Command(UPDATE_QUILL_AD,"UPDATE_QUILL_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_QUILL_AD,"UPDATE_QUILL_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 #endif /* HAVE_EXT_POSTGRESQL */
 
-	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_STARTD_PERM);
-	daemonCore->Register_Command(MERGE_STARTD_AD,"MERGE_STARTD_AD",
+	daemonCore->Register_CommandWithPayload(MERGE_STARTD_AD,"MERGE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
-	daemonCore->Register_Command(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_SCHEDD_PERM);
-	daemonCore->Register_Command(UPDATE_SUBMITTOR_AD,"UPDATE_SUBMITTOR_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_SUBMITTOR_AD,"UPDATE_SUBMITTOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_SCHEDD_PERM);
-	daemonCore->Register_Command(UPDATE_LICENSE_AD,"UPDATE_LICENSE_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_LICENSE_AD,"UPDATE_LICENSE_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-	daemonCore->Register_Command(UPDATE_MASTER_AD,"UPDATE_MASTER_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_MASTER_AD,"UPDATE_MASTER_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ADVERTISE_MASTER_PERM);
-	daemonCore->Register_Command(UPDATE_CKPT_SRVR_AD,"UPDATE_CKPT_SRVR_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_CKPT_SRVR_AD,"UPDATE_CKPT_SRVR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-	daemonCore->Register_Command(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
-	daemonCore->Register_Command(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-	daemonCore->Register_Command(UPDATE_NEGOTIATOR_AD,"UPDATE_NEGOTIATOR_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_NEGOTIATOR_AD,"UPDATE_NEGOTIATOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,NEGOTIATOR);
-	daemonCore->Register_Command(UPDATE_HAD_AD,"UPDATE_HAD_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_HAD_AD,"UPDATE_HAD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-	daemonCore->Register_Command(UPDATE_XFER_SERVICE_AD,"UPDATE_XFER_SERVICE_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_XFER_SERVICE_AD,"UPDATE_XFER_SERVICE_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-	daemonCore->Register_Command(UPDATE_LEASE_MANAGER_AD,"UPDATE_LEASE_MANAGER_AD",
+	daemonCore->Register_CommandWithPayload(UPDATE_LEASE_MANAGER_AD,"UPDATE_LEASE_MANAGER_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
-	daemonCore->Register_Command(UPDATE_AD_GENERIC, "UPDATE_AD_GENERIC",
+	daemonCore->Register_CommandWithPayload(UPDATE_AD_GENERIC, "UPDATE_AD_GENERIC",
 		(CommandHandler)receive_update,"receive_update", NULL, DAEMON);
-    daemonCore->Register_Command(UPDATE_GRID_AD,"UPDATE_GRID_AD",
+    daemonCore->Register_CommandWithPayload(UPDATE_GRID_AD,"UPDATE_GRID_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 
     // install command handlers for updates with acknowledgement
 
-    daemonCore->Register_Command(
+    daemonCore->Register_CommandWithPayload(
 		UPDATE_STARTD_AD_WITH_ACK,
 		"UPDATE_STARTD_AD_WITH_ACK",
 		(CommandHandler)receive_update_expect_ack,
@@ -320,7 +320,12 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	ClassAd cad;
 
 	sock->decode();
-	sock->timeout(ClientTimeout);
+
+		// Avoid lengthy blocking on communication with our peer.
+		// This command-handler should not get called until data
+		// is ready to read.
+	sock->timeout(1);
+
 	bool ep = CondorThreads::enable_parallel(true);
 	bool res = !cad.initFromStream(*sock) || !sock->end_of_message();
 	CondorThreads::enable_parallel(ep);
@@ -529,7 +534,12 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 	ClassAd cad;
 
 	sock->decode();
-	sock->timeout(ClientTimeout);
+
+		// Avoid lengthy blocking on communication with our peer.
+		// This command-handler should not get called until data
+		// is ready to read.
+	sock->timeout(1);
+
     if( !cad.initFromStream(*sock) || !sock->end_of_message() )
     {
         dprintf( D_ALWAYS,
@@ -747,8 +757,12 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
     int         ok      = 1;
     
     socket->decode ();
-    socket->timeout ( timeout );
-    
+
+		// Avoid lengthy blocking on communication with our peer.
+		// This command-handler should not get called until data
+		// is ready to read.
+	socket->timeout(1);
+
     if ( !updateAd->initFromStream ( *socket ) ) {
 
         dprintf ( 

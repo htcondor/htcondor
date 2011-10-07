@@ -790,19 +790,6 @@ extern const char * const ATTR_VM_GUEST_MEM;
 extern const char * const ATTR_VM_CKPT_MAC;
 extern const char * const ATTR_VM_CKPT_IP;
 
-
-//************* Added for Amazon Jobs ***************************//
-extern const char * const ATTR_AMAZON_PUBLIC_KEY;
-extern const char * const ATTR_AMAZON_PRIVATE_KEY;
-extern const char * const ATTR_AMAZON_AMI_ID;
-extern const char * const ATTR_AMAZON_KEY_PAIR_FILE;
-extern const char * const ATTR_AMAZON_SECURITY_GROUPS;
-extern const char * const ATTR_AMAZON_USER_DATA;
-extern const char * const ATTR_AMAZON_USER_DATA_FILE;
-extern const char * const ATTR_AMAZON_REMOTE_VM_NAME;
-extern const char * const ATTR_AMAZON_INSTANCE_TYPE;
-//************* End of changes for Amamzon Jobs *****************//
-
 //************* Added for EC2 Jobs ***************************//
 extern const char * const ATTR_EC2_ACCESS_KEY_ID;
 extern const char * const ATTR_EC2_SECRET_ACCESS_KEY;
@@ -820,7 +807,6 @@ extern const char * const ATTR_EC2_EBS_VOLUMES;
 extern const char * const ATTR_EC2_VPC_SUBNET;
 extern const char * const ATTR_EC2_VPC_IP;
 //************* End of changes for EC2 Jobs *****************//
-
 
 extern const char * const ATTR_REQUEST_CPUS;
 extern const char * const ATTR_REQUEST_MEMORY;

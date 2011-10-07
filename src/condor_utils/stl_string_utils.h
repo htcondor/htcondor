@@ -22,6 +22,7 @@
 
 #include <string>
 #include <vector>
+#include <sstream>
 #include "condor_header_features.h"
 #include "MyString.h"
 
@@ -71,5 +72,15 @@ void Tokenize(const char *str);
 const char *GetNextToken(const char *delim, bool skipBlankTokens);
 
 void join(std::vector< std::string > &v, char const *delim, std::string &result);
+
+// Returns true iff (s) casts to <T>, and all of (s) is consumed,
+// i.e. if (s) is an exact representation of a value of <T>, no more and
+// no less.
+template<typename T>
+bool lex_cast(const std::string& s, T& v) {
+    std::stringstream ss(s);
+    ss >> v;
+    return ss.eof() && (s.size() > 0);
+}
 
 #endif // _stl_string_utils_h_

@@ -901,13 +901,13 @@ part_send_job(
 
   snprintf(sinfulstring, SINFUL_STRING_BUF_SIZE, "<%s:%d>", sock->peer_ip_str(), ports.port1);
 
-  if( (sd1 = do_connect(sinfulstring, (char *)0, (u_short)ports.port1)) < 0 ) {
+  if( (sd1 = do_connect(sinfulstring, (u_short)ports.port1)) < 0 ) {
     dprintf( D_ALWAYS, "failed to connect to scheduler on %s\n", sinfulstring );
 	goto returnfailure;
   }
  
   snprintf(sinfulstring, SINFUL_STRING_BUF_SIZE, "<%s:%d>", sock->peer_ip_str(), ports.port2);
-  if( (sd2 = do_connect(sinfulstring, (char *)0, (u_short)ports.port2)) < 0 ) {
+  if( (sd2 = do_connect(sinfulstring, (u_short)ports.port2)) < 0 ) {
     dprintf( D_ALWAYS, "failed to connect to scheduler on %s\n", sinfulstring );
 	close(sd1);
 	goto returnfailure;

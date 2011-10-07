@@ -269,6 +269,7 @@ my_system(const char *cmd)
 // UNIX versions of my_popen(v) & my_pclose 
 //////////////////////////////////////////////////////////////////////////
 
+#include <fcntl.h> // for O_CLOEXEC
 #include <grp.h> // for setgroups
 
 static int	READ_END = 0;
@@ -281,7 +282,7 @@ my_popenv_impl( const char *const args[],
                 uid_t privsep_uid,
 				Env *env_ptr = 0)
 {
-	int	pipe_d[2];
+	int	pipe_d[2], pipe_d2[2];
 	int	parent_reads;
 	uid_t	euid;
 	gid_t	egid;
@@ -311,6 +312,32 @@ my_popenv_impl( const char *const args[],
 		}
 	}
 
+		/* Create a pipe to detect execv failures */
+	if ( pipe(pipe_d2) < 0) {
+		dprintf(D_ALWAYS, "my_popenv: Failed to create the pre-exec pipe, "
+				"errno=%d (%s)\n", errno, strerror(errno));
+		close(pipe_d[0]);
+		close(pipe_d[1]);
+		return NULL;
+	}
+	int fd_flags;
+	if ((fd_flags = fcntl(pipe_d2[1], F_GETFD, NULL)) == -1) {
+		dprintf(D_ALWAYS, "my_popenv: Failed to get fd flags: errno=%d (%s)\n", errno, strerror(errno));
+		close( pipe_d[0] );
+		close( pipe_d[1] );
+		close( pipe_d2[0] );
+		close( pipe_d2[1] );
+		return NULL;
+	}
+	if (fcntl(pipe_d2[1], F_SETFD, fd_flags | FD_CLOEXEC) == -1) {
+		dprintf(D_ALWAYS, "my_popenv: Failed to set new fd flags: errno=%d (%s)\n", errno, strerror(errno));
+		close( pipe_d[0] );
+		close( pipe_d[1] );
+		close( pipe_d2[0] );
+		close( pipe_d2[1] );
+		return NULL;
+	}
+
 		/* Create a new process */
 	if( (pid=fork()) < 0 ) {
 		dprintf(D_ALWAYS, "my_popenv: Failed to fork child, errno=%d (%s)\n",
@@ -318,11 +345,14 @@ my_popenv_impl( const char *const args[],
 			/* Clean up file descriptors */
 		close( pipe_d[0] );
 		close( pipe_d[1] );
+		close( pipe_d2[0] );
+		close( pipe_d2[1] );
 		return NULL;
 	}
 
 		/* The child */
 	if( pid == 0 ) {
+		close(pipe_d2[0]);
 
 		if( parent_reads ) {
 				/* Close stdin, dup pipe to stdout */
@@ -393,10 +423,36 @@ my_popenv_impl( const char *const args[],
 			execvp(cmd.Value(), const_cast<char *const*>(args) );
 		}
 
-		_exit( ENOEXEC );		/* This isn't safe ... */
+			/* If we get here, inform the parent of our errno */
+		char result_buf[10];
+		int len = snprintf(result_buf, 10, "%d", errno);
+		write(pipe_d2[1], result_buf, len);
+
+		_exit( errno );
 	}
 
 		/* The parent */
+		/* First, wait until the exec is called - determine status */
+	close(pipe_d2[1]);
+	int exit_code;
+	FILE *fh;
+	if ((fh = fdopen(pipe_d2[0], "r")) == NULL) {
+		dprintf(D_ALWAYS, "my_popenv: Failed to reopen file descriptor as file handle: errno=%d (%s)", errno, strerror(errno));
+		close(pipe_d2[0]);
+		close(pipe_d[0]);
+		close(pipe_d[1]);
+		return NULL;
+	}
+		/* Handle case where exec fails */
+	if (fscanf(fh, "%d", &exit_code) == 1) {
+		fclose(fh);
+		close(pipe_d[0]);
+		close(pipe_d[1]);
+		errno = exit_code;
+		return NULL;
+	}
+	fclose(fh);
+
 	if( parent_reads ) {
 		close( pipe_d[WRITE_END] );
 		retp = fdopen(pipe_d[READ_END],mode);

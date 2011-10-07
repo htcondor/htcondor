@@ -320,35 +320,6 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		}
 	}
 
-		// CRUFT
-		// Starting in 7.5.4, the GridResource attribute for the amazon
-		// grid-type contains the URL of the service to be submitted
-		// to. Prior to that, only one service could be submitted to,
-		// which was controlled by the config param AMAZON_EC2_URL.
-	if ( universe == CONDOR_UNIVERSE_GRID ) {
-		std::string attr_value;
-		job_ad->LookupString( ATTR_GRID_RESOURCE, attr_value );
-		if ( attr_value == "amazon" ) {
-			char *url = param( "AMAZON_EC2_URL" );
-			if ( url == NULL ) {
-				url = strdup( "https://ec2.amazonaws.com/" );
-			}
-
-			attr_value = "amazon ";
-			attr_value += url;
-			job_ad->Assign( ATTR_GRID_RESOURCE, attr_value );
-
-			if ( job_ad->LookupString( ATTR_GRID_JOB_ID, attr_value ) ) {
-				std::string insert = " ";
-				insert += url;
-				attr_value.insert( 6, insert );
-				job_ad->Assign( ATTR_GRID_JOB_ID, attr_value );
-			}
-
-			free( url );
-		}
-	}
-
 		// CRUST
 		// Convert expressions to have properl TARGET scoping when
 		// referring to machine attributes. The switch from old to new
@@ -479,7 +450,7 @@ QmgmtPeer::endpoint_ip_str() const
 	}
 }
 
-const condor_sockaddr&
+const condor_sockaddr
 QmgmtPeer::endpoint() const
 {
 	if ( sock ) {
