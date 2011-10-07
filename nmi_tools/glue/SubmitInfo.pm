@@ -1007,7 +1007,6 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
-								  '-DWITHOUT_AMAZON_TEST:BOOL' => 'ON',
 								  '-DWITH_CURL:BOOL' => 'ON',
 								  '-DWITH_LIBVIRT:BOOL' => 'ON',
 								  '-DWITH_LIBXML2:BOOL' => 'ON',
@@ -1034,7 +1033,6 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
-								  '-DWITHOUT_AMAZON_TEST:BOOL' => 'ON',
 								  '-DWITH_CURL:BOOL' => 'ON',
 								  '-DWITH_LIBVIRT:BOOL' => 'ON',
 								  '-DWITH_LIBXML2:BOOL' => 'ON',
@@ -1061,7 +1059,6 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
 				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
 				'-DWITH_CURL:BOOL=OFF' => undef,
 				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
@@ -1102,7 +1099,6 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
 				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
 				'-DWITH_CURL:BOOL=OFF' => undef,
 				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
