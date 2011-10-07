@@ -60,6 +60,7 @@ use File::Copy;
 use POSIX qw/sys_wait_h strftime/;
 use Cwd;
 use CondorTest;
+use CondorUtils;
 
 #################################################################
 #
@@ -401,47 +402,40 @@ foreach my $name (@compilers) {
 
 # now we find the tests we care about.
 if( @testlist ) {
-
-	debug("working on testlist\n",2);
-	foreach my $name (@testlist) {
-		if($hush == 0) { 
-			debug("Testlist:$name\n",2);;
-		}
-	}
-
+    debug("Test list contents:\n", 2);
+    
     # we were explicitly given a # list on the command-line
     foreach my $test (@testlist) {
-		if( ! ($test =~ /(.*)\.run$/) ) {
-	    	$test = "$test.run";
-		}
-		foreach my $compiler (@compilers)
-		{
-	    	push(@{$test_suite{"$compiler"}}, $test);
-		}
+        debug("    $test\n", 2);
+        if($test !~ /.*\.run$/) {
+            $test = "$test.run";
+        }
+
+        foreach my $compiler (@compilers) {
+            push(@{$test_suite{$compiler}}, $test);
+        }
     }
-} elsif( $testfile ) {
-	debug("working on testfile\n",2);
-    # if we were given a file, let's read it in and use it.
-    #print "found a runfile: $testfile\n";
-    open(TESTFILE, $testfile) || die "Can't open $testfile\n";
+}
+elsif( $testfile ) {
+    debug("Using test file '$testfile'\n", 2);
+    open(TESTFILE, '<', $testfile) || die "Can't open $testfile\n";
     while( <TESTFILE> ) {
-		CondorTest::fullchomp($_);
-		my $test = $_;
-		if($test =~ /^#.*$/) {
-			#print "skip comment\n";
-			next;
-		}
-		#//($compiler, $test) = split('\/');
-		if( ! ($test =~ /(.*)\.run$/) ) {
-	    	$test = "$test.run";
-		}
-		foreach my $compiler (@compilers)
-		{
-	    	push(@{$test_suite{"$compiler"}}, $test);
-		}
+        next if(/^\s*#/);  # Skip comment lines
+
+        CondorTest::fullchomp($_);
+        
+        my $test = $_;
+        if($test !~ /.*\.run$/) {
+            $test = "$test.run";
+        }
+
+        foreach my $compiler (@compilers) {
+            push(@{$test_suite{$compiler}}, $test);
+        }
     }
     close(TESTFILE);
-} else {
+}
+else {
     # we weren't given any specific tests or a test list, so we need to 
     # find all test programs (all files ending in .run) for each compiler
 	my $gotdot = 0;
