@@ -220,8 +220,10 @@ public:
 	bool	evaluateHibernate( MyString &state ) const;
 #endif /* HAVE_HIBERNATION */
 
+	int     evalMaxVacateTime();
 	bool    claimWorklifeExpired();
-	int		retirementExpired( void );
+	bool    retirementExpired();
+	int     evalRetirementRemaining();
 	int		mayUnretire( void );
 	bool    inRetirement( void );
 	int		hasPreemptingClaim( void );

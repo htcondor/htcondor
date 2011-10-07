@@ -67,11 +67,6 @@ public:
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
 	bool finishShutdownFast();
-#if !defined(WIN32)
-	bool startEscalationTimer();
-	void cancelEscalationTimer();
-	bool EscalateSignal();
-#endif
 
 private:
 		/// Final usage stats for this proc and all its children.

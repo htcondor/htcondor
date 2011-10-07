@@ -78,7 +78,6 @@ CStarter::CStarter()
 	m_configured = false;
 	m_job_environment_is_ready = false;
 	m_all_jobs_done = false;
-	remote_state_change = false;
 	m_deferred_job_update = false;
 }
 
@@ -169,9 +168,6 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 		this);
 	daemonCore->Register_Signal(SIGUSR1, "SIGUSR1",
 		(SignalHandlercpp)&CStarter::RemoteRemove, "RemoteRemove",
-		this);
-	daemonCore->Register_Signal(DC_SIGSTATECHANGE, "DC_SIGSTATECHANGE",
-		(SignalHandlercpp)&CStarter::RemoteStateChange, "RemoteStateChange",
 		this);
 	daemonCore->Register_Signal(DC_SIGHOLD, "DC_SIGHOLD",
 		(SignalHandlercpp)&CStarter::RemoteHold, "RemoteHold",
@@ -476,19 +472,6 @@ CStarter::RemoteRemove( int )
 		return ( true );
 	}	
 	return ( false );
-}
-
-void
-CStarter::RemoteStateChange( int )
-{
-dprintf(D_FULLDEBUG, "Notified of remote state change\n");
-	remote_state_change = true;
-}
-
-void
-CStarter::resetStateChanged( void )
-{
-	remote_state_change = false;
 }
 
 /**
