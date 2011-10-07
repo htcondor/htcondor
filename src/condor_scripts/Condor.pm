@@ -37,7 +37,7 @@ require 5.0;
 use Carp;
 use Cwd;
 use FileHandle;
-use POSIX "sys_wait_h";
+use POSIX qw/sys_wait_h strftime/;
 use strict;
 use warnings;
 
@@ -1064,30 +1064,27 @@ sub CheckTimedCallback
 #
 ################################################################################
 
-sub debug
-{
-    my $string = shift;
-	my $level = shift;
-	if(!(defined $level)) {
-    	print( "", timestamp(), ": $string" ) if $DEBUG;
-	} elsif($level <= $DEBUGLEVEL) {
-    	print( "", timestamp(), ": $string" ) if $DEBUG;
-	}
+sub debug {
+    return unless $DEBUG;
+    my ($msg, $level) = @_;
+    
+    if(!(defined $level)) {
+    	print timestamp() . ": $msg";
+    }
+    elsif($level <= $DEBUGLEVEL) {
+    	print timestamp() . ": $msg";
+    }
 }
 
-sub DebugLevel
-{
-	my $newlevel = shift;
-	$DEBUGLEVEL = $newlevel;
+sub DebugLevel {
+    $DEBUGLEVEL = shift;
 }
 
-sub DebugOn
-{
+sub DebugOn {
     $DEBUG = 1;
 }
 
-sub DebugOff
-{
+sub DebugOff {
     $DEBUG = 0;
 }
 
@@ -1159,7 +1156,7 @@ sub ParseSubmitFile
 }
 
 sub timestamp {
-    return scalar localtime();
+    return strftime("%y/%m/%d %H:%M:%S", localtime);
 }
 
 sub safe_WIFEXITED {

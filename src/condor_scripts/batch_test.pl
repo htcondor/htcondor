@@ -1334,13 +1334,9 @@ sub DoChild
 }
 
 # Call down to Condor Perl Module for now
-
-sub debug
-{
-    my $string = shift;
-	my $level = shift;
-	my $newstring = "BT:$string";
-	Condor::debug($newstring,$level);
+sub debug {
+    my ($msg, $level) = @_;
+    Condor::debug("batch_test - $msg", $level);
 }
 
 sub DebugOn
