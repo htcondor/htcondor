@@ -63,6 +63,16 @@ JobServerJobLogConsumer::Reset()
 		     g_jobs.erase(i);
 	}
 
+	for (OwnerlessClusterType::iterator i = g_ownerless_clusters.begin();
+		       g_ownerless_clusters.end() != i; i++) {
+			  g_ownerless_clusters.erase(i);
+	}
+
+	for (OwnerlessSubmissionType::iterator i = g_ownerless_submissions.begin();
+		       g_ownerless_submissions.end() != i; i++) {
+			  g_ownerless_submissions.erase(i);
+	}
+
 	for (SubmissionCollectionType::iterator i = g_submissions.begin();
 		       g_submissions.end() != i; i++) {
 			  delete (*i).second;

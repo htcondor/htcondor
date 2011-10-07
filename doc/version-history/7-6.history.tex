@@ -162,6 +162,9 @@ and the default value defined for \Macro{LIBVIRT\_XML\_SCRIPT} was used.
 The script did not provide absolute path names for the files.
 \Ticket{2511}
 
+\item In 32-bit Condor, \MacroNI{ImageSize} of processes larger than 4GB
+was reported as 4GB.  This limit has been raised to 4095GB.
+
 \end{itemize}
 
 \noindent Known Bugs:
