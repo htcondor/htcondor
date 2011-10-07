@@ -375,7 +375,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		  background processes (such as condor_master) that fork and
 		  exit from the parent branch.
 		*/
-	pi->imgsize = procRaw.imgsize / 1024;  //bytes to k
+	pi->imgsize = procRaw.imgsize;  //already in k
 	pi->rssize = procRaw.rssize * pagesize;  // pages to k
 	if ((procRaw.proc_flags & 64) && procRaw.ppid != 1) { //64 == PF_FORKNOEXEC
 		//zero out memory usage
@@ -460,7 +460,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 }
 
 /* Fills in procInfoRaw with the following units:
-   imgsize		: bytes
+   imgsize		: kbytes
    rssize		: pages
    minfault		: total minor faults
    majfault		: total major faults
@@ -485,6 +485,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	int number_of_attempts;
 	long i;
 	unsigned long u;
+	unsigned long long imgsize_bytes;
 	char c;
 	char s[256];
 	int num_attempts = 5;
@@ -535,13 +536,13 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 			"%ld %ld %ld %ld "
 			"%lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %ld %ld "
-			"%lu %lu %llu %lu %lu %lu %lu %lu %lu %lu %lu "
+			"%lu %lu %llu %llu %lu %lu %lu %lu %lu %lu %lu "
 			"%ld %ld %ld %ld %lu",
 			&procRaw.pid, s, &c, &procRaw.ppid, 
 			&i, &i, &i, &i, 
 			&procRaw.proc_flags, &procRaw.minfault, &u, &procRaw.majfault, &u, 
 			&procRaw.user_time_1, &procRaw.sys_time_1, &i, &i, &i, &i, 
-			&u, &u, &procRaw.creation_time, &procRaw.imgsize, &procRaw.rssize, &u, &u, &u, 
+			&u, &u, &procRaw.creation_time, &imgsize_bytes, &procRaw.rssize, &u, &u, &u, 
 			&u, &u, &u, &i, &i, &i, &i, &u ) != 35 )
 		{
 			// couldn't read the right number of entries.
@@ -556,6 +557,14 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
 			// try again
 			continue;
+		}
+
+			// covert imgsize_bytes to k
+		if( imgsize_bytes/1024 > ULONG_MAX ) {
+			procRaw.imgsize = ULONG_MAX;
+		}
+		else {
+			procRaw.imgsize = imgsize_bytes/1024;
 		}
 
 		// do a small verification of the read in data...
