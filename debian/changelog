@@ -24,8 +24,9 @@ condor (7.7.1+git614-g25a6591-1) UNRELEASED; urgency=low
     macro being ignored. Courtesy of Dan Bradley.
   * Added condor-dev package, containing headers files and static versions of
     Condor libraries.
+  * Add build-dep on libldap-dev to ensure nordugrid_gahp being built.
 
- -- Michael Hanke <mih@debian.org>  Thu, 06 Oct 2011 10:59:28 +0200
+ -- Michael Hanke <mih@debian.org>  Fri, 07 Oct 2011 08:26:21 +0200
 
 condor (7.6.1-1) UNRELEASED; urgency=low
 
