@@ -34,19 +34,23 @@ Configuration
 This initial release is as a plugin to the existing view collector so much of the
 Condor configuration relates to that of a standard view collector.
 
+# "real" Collector config ...
+######################
+COLLECTOR.CONDOR_VIEW_HOST = $(CONDOR_HOST):12345
+# list the ClassAds of interest to be forwarded
+CONDOR_VIEW_CLASSAD_TYPES = Machine, Submitter
+
 ################
 # View Server
 ################
 VIEW_SERVER = $(COLLECTOR)
 VIEW_SERVER_ARGS = -f -p 12345 -local-name VIEW_SERVER
 VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog"
-COLLECTOR.CONDOR_VIEW_HOST = $(CONDOR_HOST):12345
 # make sure the view server doesn't point at itself
-VIEW_SERVER.CONDOR_VIEW_HOST = 
+VIEW_SERVER.CONDOR_VIEW_HOST =
 VIEW_SERVER.KEEP_POOL_HISTORY = True
 VIEW_SERVER.SAMPLING_INTERVAL=20
-VIEW_SERVER.PLUGINS = $(LIBEXEC)/ODSCollectorPlugin-plugin.so
-CONDOR_VIEW_CLASSAD_TYPES = Machine, Submitter
+VIEW_SERVER.PLUGINS = $(LIBEXEC)/ODSCollectorPlugin.so
 POOL_HISTORY_SAMPLING_INTERVAL = 60
 UPDATE_INTERVAL = 300
 # the following are defaults in code also
@@ -72,12 +76,16 @@ Options:
                         mongodb database server location: e.g., somehost,
                         localhost:2011
   --u=USER, --user=USER
-                        stats for a single submitter
+                        stats for a single submitter:
+                        user,timestamp,running,held,idle
   --r=RESOURCE, --resource=RESOURCE
-                        stats for a single resource
+                        stats for a single resource: slot,timestamp,keyboard
+                        idle,load average,status
   --f=START, --from=START
-                        records from datetime
-  --t=END, --to=END     records to datetime
+                        records from datetime in ISO8601 format e.g.,
+                        '2011-09-29 12:03'
+  --t=END, --to=END     records to datetime in ISO8601 format e.g.,
+                        '2011-09-30T17:16'
   --ul, --userlist      list all submitters
   --ugl, --usergrouplist
                         list all submitter groups
@@ -119,3 +127,28 @@ slot1@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	12 		0.3
 slot2@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	603 	0.00 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:04:19.470000 	INTEL/LINUX 	653 	0.00 	Unclaimed
 slot1@milo.usersys.redhat.com 	2011-09-29 14:04:19.471000 	INTEL/LINUX 	30 		0.28 	Unclaimed
+
+Database Layout
+---------------
+The Plumage plugin emits machine and submitter classads to the db.collection 'condor_raw.ads'. It can be
+queryed in the mongo shell like so:
+
+$ mongo
+MongoDB shell version: 1.6.4
+connecting to: test
+> use condor_raw
+switched to db condor_raw
+> db.ads.find({"MyType" : "Machine"})
+<output not shown>
+> db.ads.find({"MyType" : "Submitter"})
+<output not shown>
+
+The stats records are in the db.collections 'condor_stats.samples.machine' and 'condor_stats.samples.submitter'
+respectively:
+
+> use condor_stats
+> db.samples.machine.find()
+<output not shown>
+
+> db.samples.submitter.find()
+<output not shown>
