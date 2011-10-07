@@ -1774,51 +1774,17 @@ sub IsThisWindows
     return(0);
 }
 
-# Sometimes `which ...` is just plain broken due to stupid fringe vendor
-# not quite bourne shells. So, we have our own implementation that simply
-# looks in $ENV{"PATH"} for the program and return the "usual" response found
-# across unicies. As for windows, well, for now it just sucks.
 
-#sub Which
-#{
-#	my $exe = shift(@_);
+# Cygwin's chomp does not return the \r
+sub fullchomp {
+    # Preserve the behavior of chomp, e.g. chomp $_ if no argument is specified.
+    push (@_,$_) if( scalar(@_) == 0);
 
-#	if(!( defined  $exe)) {
-#		return "CP::Which called with no args\n";
-#	}
-#	my @paths;
-#	my $path;
+    foreach my $arg (@_) {
+        $arg =~ s/[\012\015]+$//;
+    }
 
-#	if( exists $ENV{PATH}) {
-#		@paths = split /:/, $ENV{PATH};
-#		foreach my $path (@paths) {
-#			chomp $path;
-#			if (-x "$path/$exe") {
-#				return "$path/$exe";
-#			}
-#		}
-#	} else {
-#		#print "Who is calling CondorPersonal::Which($exe)\n";
-#	}
-
-#	return "$exe: command not found";
-#}
-
-#
-# Cygwin's perl chomp does not remove cntrl-m but this one will
-# and linux and windows can share the same code. The real chomp
-# totals the number or changes but I currently return the modified
-# array. bt 10/06
-#
-
-sub fullchomp
-{
-	push (@_,$_) if( scalar(@_) == 0);
-	foreach my $arg (@_) {
-		$arg =~ s/\012+$//;
-		$arg =~ s/\015+$//;
-	}
-	return(0);
+    return;
 }
 
 #################################################################
