@@ -65,7 +65,7 @@ doc/build:
 	$(MAKE) -C doc release-html MANDIR=$(CURDIR)/$@/html
 		TARGETDIR=$(CURDIR)/$@/html
 	# remove archives
-	rm $@/html/*.Z $@/html/*.gz
+	-rm $@/html/*.Z $@/html/*.gz
 	$(MAKE) -C doc/makeman makeman
 	for html in $@/html/condor_*.html; do \
 		doc/makeman/makeman -v -i $$html -s 1; \
