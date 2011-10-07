@@ -21,7 +21,6 @@
 #define _CONDOR_ENVIRON_H
 
 #include "condor_common.h"
-#include "condor_auth_x509.h"
 
 // ---------------------------------------------------------------
 // Ok.  Here's how you add a new environment variable:

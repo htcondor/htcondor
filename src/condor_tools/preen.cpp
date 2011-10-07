@@ -53,7 +53,6 @@
 
 State get_machine_state();
 
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL);
 extern void		_condor_set_debug_flags( const char *strflags );
 
 // Define this to check for memory leaks

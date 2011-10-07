@@ -66,10 +66,6 @@ ExceptCleanup(int, int, const char *buf)
 }
 }
 
-/* DaemonCore interface implementation */
-
-DECL_SUBSYSTEM( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
-
 int
 dummy_reaper(Service *,int pid,int)
 {
@@ -348,7 +344,6 @@ int handleSignals(Service*,int sig)
 
 
 
-
 void
 main_init(int argc, char *argv[])
 {
@@ -458,19 +453,21 @@ printClassAd( void )
 }
 
 
-void
-main_pre_dc_init( int argc, char* argv[] )
+int
+main( int argc, char **argv )
 {
 	if( argc == 2 && strncasecmp(argv[1],"-cl",3) == MATCH ) {
 		printClassAd();
 		exit(0);
 	}
-}
 
+	set_mySubSystem( "SHADOW", SUBSYSTEM_TYPE_SHADOW );
 
-void
-main_pre_command_sock_init( )
-{
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }
 
 bool

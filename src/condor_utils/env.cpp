@@ -25,6 +25,7 @@
 
 #include "env.h"
 #include "HashTable.h"
+#include "setenv.h"
 
 // Since ';' is the PATH delimiter in Windows, we use a different
 // delimiter for V1 environment entries.
@@ -36,9 +37,6 @@ static const char env_delimiter = ';';
 #else
 static const char env_delimiter = '|';
 #endif
-
-// Public symbol from libc
-extern DLL_IMPORT_MAGIC char **environ;
 
 Env::Env()
 {
@@ -769,8 +767,9 @@ Env::GetEnv(MyString const &var,MyString &val) const
 bool
 Env::Import( void )
 {
-	for (int i=0; environ[i]; i++) {
-		const char	*p = environ[i];
+	char **my_environ = GetEnviron();
+	for (int i=0; my_environ[i]; i++) {
+		const char	*p = my_environ[i];
 
 		// don't override submit file environment settings
 		// check if environment variable is set in submit file

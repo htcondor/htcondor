@@ -19,7 +19,7 @@
 
 condor_selective_glob("server_interface.*" ServerAPISrcs )
 
-condor_static_lib( ckpt_server_api "network2.cpp;network2.h;${ServerAPISrcs}" )
+set( CKPT_SERVER_UTIL_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/network2.cpp;${CMAKE_CURRENT_SOURCE_DIR}/network2.h;${ServerAPISrcs}" PARENT_SCOPE )
 
 
 if(STD_UNIVERSE)

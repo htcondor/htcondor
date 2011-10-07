@@ -102,9 +102,6 @@ ClassAd *ClusterAd = NULL;
 
 // Explicit template instantiation
 
-/* For daemonCore, etc. */
-DECL_SUBSYSTEM( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
-
 ClassAd  *job = NULL;
 
 char	*OperatingSystem;
@@ -774,6 +771,8 @@ main( int argc, char *argv[] )
 	MyString method;
 
 	setbuf( stdout, NULL );
+
+	set_mySubSystem( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
 
 #if !defined(WIN32)
 		// Make sure root isn't trying to submit.
@@ -7878,6 +7877,3 @@ SetVMParams()
 	// So we need to add necessary VM attributes to Requirements
 	SetVMRequirements();
 }
-
-
-#include "daemon_core_stubs.h"

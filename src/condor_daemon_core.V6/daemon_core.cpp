@@ -1250,8 +1250,6 @@ DaemonCore::privateNetworkName(void) {
 PidEnvID*
 DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 {
-	extern char **environ;
-
 	if (penvid == NULL) {
 		return NULL;
 	}
@@ -1262,7 +1260,7 @@ DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 	/* handle the base case of my own pid */
 	if ( pid == -1 ) {
 
-		if (pidenvid_filter_and_insert(penvid, environ) == 
+		if (pidenvid_filter_and_insert(penvid, GetEnviron()) == 
 			PIDENVID_OVERSIZED)
 		{
 			EXCEPT( "DaemonCore::InfoEnvironmentID: Programmer error. "
@@ -6706,7 +6704,6 @@ int CreateProcessForkit::clone_fn( void *arg ) {
 }
 
 void CreateProcessForkit::exec() {
-	extern char **environ;
 
 		// Keep in mind that there are two cases:
 		//   1. We got here by forking, (cannot modify parent's memory)
@@ -6781,7 +6778,7 @@ void CreateProcessForkit::exec() {
 
 		// We may determine to seed the child's environment with the parent's.
 	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
-		m_envobject.MergeFrom(environ);
+		m_envobject.MergeFrom(GetEnviron());
 	}
 
 		// Put the caller's env requests into the job's environment, potentially
@@ -6850,7 +6847,7 @@ void CreateProcessForkit::exec() {
 			// The parent process could not have been exec'ed if there were 
 			// too many ancestor markers in its environment, so this check
 			// is more of an assertion.
-		if (pidenvid_filter_and_insert(&penvid, environ) ==
+		if (pidenvid_filter_and_insert(&penvid, GetEnviron()) ==
 			PIDENVID_OVERSIZED)
 			{
 				dprintf ( D_ALWAYS, "Create_Process: Failed to filter ancestor "
@@ -7297,7 +7294,6 @@ int DaemonCore::Create_Process(
 	char *ptmp;
 	int inheritFds[MAX_INHERIT_FDS];
 	int numInheritFds = 0;
-	extern char **environ;
 	MyString executable_buf;
 	priv_state current_priv = PRIV_UNKNOWN;
 
@@ -8558,7 +8554,7 @@ int DaemonCore::Create_Process(
 
 	/* remember the family history of the new pid */
 	pidenvid_init(&pidtmp->penvid);
-	if (pidenvid_filter_and_insert(&pidtmp->penvid, environ) !=
+	if (pidenvid_filter_and_insert(&pidtmp->penvid, GetEnviron()) !=
 		PIDENVID_OK)
 	{
 		EXCEPT( "Create_Process: More ancestor environment IDs found than "

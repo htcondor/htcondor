@@ -94,8 +94,6 @@ char* Name = NULL;
 int		pid_snapshot_interval = DEFAULT_PID_SNAPSHOT_INTERVAL;
     // How often do we take snapshots of the pid families? 
 
-DECL_SUBSYSTEM( "STARTD", SUBSYSTEM_TYPE_STARTD );
-
 int main_reaper = 0;
 
 // Cron stuff
@@ -128,7 +126,6 @@ usage( char* MyName)
 			 "     [-skip-benchmarks]\t(don't run initial benchmarks)\n" );
 	DC_Exit( 1 );
 }
-
 
 void
 main_init( int, char* argv[] )
@@ -798,15 +795,16 @@ startd_check_free()
 }
 
 
-void
-main_pre_dc_init( int /* argc */, char*[] /* argv */ )
+int
+main( int argc, char **argv )
 {
-}
+	set_mySubSystem( "STARTD", SUBSYSTEM_TYPE_STARTD );
 
-
-void
-main_pre_command_sock_init( )
-{
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }
 
 

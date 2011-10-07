@@ -62,6 +62,8 @@ const char *GetEnv( const char *env_var );
 	not be deallocated.  It is merely a pointer to result.Value().
 */
 const char *GetEnv( const char *env_var, MyString &result );
+
+char **GetEnviron();
 //@}
 
 #endif  // _SETENV_H
