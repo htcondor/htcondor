@@ -29,8 +29,14 @@
 #include "emit.h"
 #include "unit_test_utils.h"
 
+
+// IPV6_REMOVED - IPv6 changes obsoleted these interfaces.  However, 
+// these tests probably should be updated to the new interfaces,
+// so they are being kept here for nwo.
+#ifdef IPV6_REMOVED
 static bool test_normal_case(void);
 static bool test_alpha_input(void);
+#endif
 
 bool FTEST_string_to_sin(void) {
 		// beginning junk for getPortFromAddr(() {
@@ -41,15 +47,17 @@ bool FTEST_string_to_sin(void) {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
+#ifdef IPV6_REMOVED
 	driver.register_function(test_normal_case);
 	driver.register_function(test_alpha_input);
+#endif
 	
 		// run the tests
 	return driver.do_all_functions();
 }
 
+#ifdef IPV6_REMOVED
 static bool test_normal_case() {
-	/*
 	emit_test("Is normal input converted correctly?");
 	struct sockaddr_in sa_in;
 	char* input = strdup("<192.168.0.2:80?param1=value1&param2=value2>");
@@ -70,12 +78,10 @@ static bool test_normal_case() {
 	if(result != 1 || port != 80 || !utest_sock_eq_octet(&(sa_in.sin_addr), 192, 168, 0, 2) ) {
 		FAIL;
 	}
-	*/
 	PASS;
 }
 
 static bool test_alpha_input() {
-	/*
 	emit_test("Does an error occur on alpha-only input?");
 	struct sockaddr_in sa_in;
 	char* input = strdup("Iamafish");
@@ -90,6 +96,6 @@ static bool test_alpha_input() {
 	if(result != 0) {
 		FAIL;
 	}
-	*/
 	PASS;
 }
+#endif
