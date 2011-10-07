@@ -1409,21 +1409,16 @@ sub GetQueue
 	}
 }
 
-#
-# Cygwin's perl chomp does not remove cntrl-m but this one will
-# and linux and windows can share the same code. The real chomp
-# totals the number or changes but I currently return the modified
-# array. bt 10/06
-#
+# Cygwin's chomp does not return the \r
+sub fullchomp {
+    # Preserve the behavior of chomp, e.g. chomp $_ if no argument is specified.
+    push (@_,$_) if( scalar(@_) == 0);
 
-sub fullchomp
-{
-	push (@_,$_) if( scalar(@_) == 0);
-	foreach my $arg (@_) {
-		$arg =~ s/\012+$//;
-		$arg =~ s/\015+$//;
-	}
-	return(0);
+    foreach my $arg (@_) {
+        $arg =~ s/[\012\015]+$//;
+    }
+
+    return;
 }
 
 sub changeDaemonState
