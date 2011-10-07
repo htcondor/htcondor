@@ -991,10 +991,22 @@ tcp_connect( const char *host, int port )
 	struct addrinfo* result = 0;
 	int success;
 	SOCKET fd;
+	union {
+		struct sockaddr_in6 v6;
+		struct sockaddr_in v4;
+		struct sockaddr_storage storage;
+	} sa;
 
 	if(!initialize_sockets())
 		return INVALID_SOCKET;
 		success = getaddrinfo(host, NULL, NULL, &result);
+
+	memcpy(&sa.storage, result->ai_addr, result->ai_addrlen );
+	switch(result->ai_family) {
+		case AF_INET: sa.v4.sin_port = htons(port); break;
+		case AF_INET6: sa.v6.sin6_port = htons(port); break;
+		default: return INVALID_SOCKET;
+	}
 
 	if (success != 0)
 		return INVALID_SOCKET;
@@ -1011,7 +1023,7 @@ tcp_connect( const char *host, int port )
 #endif
 	if(fd == INVALID_SOCKET) return INVALID_SOCKET;
 
-	success = connect( fd, result->ai_addr, result->ai_addrlen );
+	success = connect( fd, (struct sockaddr*)&sa.storage, result->ai_addrlen );
 	freeaddrinfo(result);
 	if(success == SOCKET_ERROR) {
 		closesocket(fd);
