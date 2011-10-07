@@ -432,7 +432,6 @@ the changed value.
   \index{macro!subsystem names}
   \begin{itemize}
   \label{list:subsystem names}
-  \item \verb@AMAZON_GAHP@
   \item \verb@C_GAHP@
   \item \verb@CKPT_SERVER@
   \item \verb@COLLECTOR@
@@ -7405,36 +7404,11 @@ These macros affect the \Condor{gridmanager}.
   The necessary Glite software is included with Condor,
   and is required for pbs and lsf jobs.
 
-\label{param:AmazonEC2URL}
-\item[\Macro{AMAZON\_EC2\_URL}]
-  The URL Condor should use when contacting the Amazon EC2 (SOAP) service.
-  This URL may include a user name and password as in the implied
-  syntax example:
-\footnotesize
-\begin{verbatim}
-  protocol://username:password@domain:port/path/to/resource
-\end{verbatim}
-\normalsize
-  The default value is \MacroNI{https://ec2.amazonaws.com/}.
-  This parameter is only used for queued jobs when upgrading to Condor
-  7.5.4 or beyond.
-
-\label{param:AmazonHttpProxy}
-\item[\Macro{AMAZON\_HTTP\_PROXY}]
-  The http proxy that Condor should use when contacting the Amazon EC2 (SOAP)
-  service. The default is to not use a proxy.
-
 \label{param:CondorGAHP}
 \item[\Macro{CONDOR\_GAHP}]
   The complete path and file name of the Condor GAHP executable.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{SBIN}/condor\_c-gahp}.
-
-\label{param:AmazonGAHP}
-\item[\Macro{AMAZON\_GAHP}]
-  The complete path and file name of the Amazon GAHP executable.
-  There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{SBIN}/amazon\_gahp}.
 
 \label{param:EC2GAHP}
 \item[\Macro{EC2\_GAHP}]
@@ -9867,8 +9841,6 @@ Configuration File Macros Affecting APIs}
   CA will be authenticated.
   When SOAP over SSL is enabled, this variable or the variable
   \Macro{SOAP\_SSL\_CA\_FILE} must be defined.
-  This variable is also used when communicating with an Amazon EC2 (SOAP) server
-  (possibly through a proxy), although it is not required in that case.
   There is no default value.
 
 \label{param:SoapSSLDhFile}

@@ -1992,7 +1992,7 @@ EC2_GAHP = $(SBIN)/ec2_gahp
 #EC2_GAHP_DEBUG = D_FULLDEBUG
 EC2_GAHP_LOG = /tmp/EC2GahpLog.$(USERNAME)
 
-## As of this writing Amazon EC2 has a hard limit of 20 concurrently
+## As of this writing EC2 has a hard limit of 20 concurrently
 ## running instances, so a limit of 20 is imposed so the GridManager
 ## does not waste its time sending requests that will be rejected.
 GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2 = 20
