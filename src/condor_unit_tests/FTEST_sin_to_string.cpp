@@ -31,7 +31,12 @@
 
 #include "condor_sockaddr.h"
 
+// IPV6_REMOVED - IPv6 changes obsoleted these interfaces.  However, 
+// these tests probably should be updated to the new interfaces,
+// so they are being kept here for nwo.
+#ifdef IPV6_REMOVED
 static bool test_normal_case(void);
+#endif
 
 bool FTEST_sin_to_string(void) {
 	const char* h = "<[fe80::862b:2bff:fe98:65f2]:9618>";
@@ -46,14 +51,16 @@ bool FTEST_sin_to_string(void) {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
+#ifdef IPV6_REMOVED
 	driver.register_function(test_normal_case);
+#endif
 	
 		// run the tests
 	return driver.do_all_functions();
 }
 
+#ifdef IPV6_REMOVED
 static bool test_normal_case() {
-	/*
 	emit_test("Is normal input converted correctly?");
 #ifdef WIN32
 	unsigned long address = inet_addr("192.168.0.2");
@@ -88,6 +95,6 @@ static bool test_normal_case() {
 		FAIL;
 	}
 	free(expected);
-	*/
 	PASS;
 }
+#endif
