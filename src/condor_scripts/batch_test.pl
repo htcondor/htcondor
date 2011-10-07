@@ -53,16 +53,13 @@
 #	directory.
 #
 
-#require 5.0;
-use File::Copy;
-use FileHandle;
-use POSIX qw/sys_wait_h strftime/;
-use Cwd;
-use CondorUtils;
-use CondorTest;
-use Time::Local;
 use strict;
 use warnings;
+
+use File::Copy;
+use POSIX qw/sys_wait_h strftime/;
+use Cwd;
+use CondorTest;
 
 #################################################################
 #
