@@ -20,8 +20,6 @@ condor (7.7.1+git614-g25a6591-1) UNRELEASED; urgency=low
   * Add patch to provide a sane default configuration for ssh_to_job and
     install condor_ssh_to_job_sshd_config_template as a conffile in
     /etc/condor/.
-  * Added patch to fix a problem with the NETWORK_INTERFACES configuration
-    macro being ignored. Courtesy of Dan Bradley.
   * Added condor-dev package, containing headers files and static versions of
     Condor libraries.
   * Add build-dep on libldap-dev to ensure nordugrid_gahp being built.

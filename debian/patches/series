@@ -9,4 +9,3 @@ no_java_for_now
 no_compress
 ssh_to_job_setup
 fix_condor_run
-fix_localhost_bind
