@@ -145,9 +145,6 @@ char	default_dc_daemon_list[] =
 // create an object of class daemons.
 class Daemons daemons;
 
-// for daemonCore
-DECL_SUBSYSTEM( "MASTER", SUBSYSTEM_TYPE_MASTER );
-
 // called at exit to deallocate stuff so that memory checking tools are
 // happy and don't think we leaked any of this...
 static void
@@ -1225,16 +1222,6 @@ gcbRecoveryFailedCallback()
 #endif
 
 void
-main_pre_dc_init( int /* argc */, char*[] /* argv */ )
-{
-		// If we don't clear this, then we'll use the same GCB broker
-		// as our parent or previous incarnation. If there's a list of
-		// brokers, we want to choose from the whole list.
-	UnsetEnv( "NET_REMAP_ENABLE" );
-}
-
-
-void
 main_pre_command_sock_init()
 {
 	/* Make sure we are the only copy of condor_master running */
@@ -1317,6 +1304,24 @@ main_pre_command_sock_init()
 			SharedPortServer::RemoveDeadAddressFile();
 		}
 	}
+}
+
+int
+main( int argc, char **argv )
+{
+		// If we don't clear this, then we'll use the same GCB broker
+		// as our parent or previous incarnation. If there's a list of
+		// brokers, we want to choose from the whole list.
+	UnsetEnv( "NET_REMAP_ENABLE" );
+
+	set_mySubSystem( "MASTER", SUBSYSTEM_TYPE_MASTER );
+
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	dc_main_pre_command_sock_init = main_pre_command_sock_init;
+	return dc_main( argc, argv );
 }
 
 

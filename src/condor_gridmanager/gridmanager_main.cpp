@@ -29,8 +29,6 @@
 
 #include "gridmanager.h"
 
-DECL_SUBSYSTEM( "GRIDMANAGER", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
-
 char *myUserName = NULL;
 
 // this appears at the bottom of this file
@@ -168,9 +166,17 @@ main_pre_dc_init( int argc, char* argv[] )
 	}
 }
 
-void
-main_pre_command_sock_init( )
+int
+main( int argc, char **argv )
 {
+	set_mySubSystem( "GRIDMANAGER", SUBSYSTEM_TYPE_DAEMON );// used by Daemon Core
+
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	dc_main_pre_dc_init = main_pre_dc_init;
+	return dc_main( argc, argv );
 }
 
 // This function is called by dprintf - always display our pid in our

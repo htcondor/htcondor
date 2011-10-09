@@ -1317,78 +1317,6 @@ sub runCondorTool
 	return(0);
 }
 
-# Sometimes `which ...` is just plain broken due to stupid fringe vendor
-# not quite bourne shells. So, we have our own implementation that simply
-# looks in $ENV{"PATH"} for the program and return the "usual" response found
-# across unixies. As for windows, well, for now it just sucks, but it appears
-# to at least work.
-
-#BEGIN {
-## A variable specific to the BEGIN block which retains its value across calls
-## to Which. I use this to memoize the mapping between unix and windows paths
-## via cygpath.
-#my %memo;
-#sub Which
-#{
-#	my $exe = shift(@_);
-#	my $pexe;
-#	my $origpath;
-
-#	if(!( defined  $exe)) {
-#		return "CT::Which called with no args\n";
-#	}
-#	my @paths;
-
-#	# On unix, this does the right thing, mostly, on windows we are using
-#	# cygwin, so it also mostly does the right thing initially.
-#	@paths = split /:/, $ENV{PATH};
-
-#	foreach my $path (@paths) {
-#		fullchomp($path);
-#		$origpath = $path;
-
-#		# Here we convert each path to a windows path 
-#		# before we use it with cygwin.
-#		if ($iswindows) {
-#			if (!exists($memo{$path})) {
-#				# XXX Stupid slow code.  The right solution is to abstract the
-#				# $ENV{PATH} variable and its cygpath converted counterpart and
-#				# deal with said abstraction everywhere in the codebase.  A
-#				# less right solution is to memoize the arguments to this
-#				# function call. Guess which one I chose.
-#				my $cygconvert = `cygpath -m -p "$path"`;
-#				fullchomp($cygconvert);
-#				$memo{$path} = $cygconvert; # memoize it
-#				$path = $cygconvert;
-#			} else {
-#				# grab the memoized copy.
-#				$path = $memo{$path};
-#			}
-
-#			# XXX Why just for this and not for all names with spaces in them?
-#			if($path =~ /^(.*)Program Files(.*)$/){
-#				$path = $1 . "progra~1" . $2;
-#			} else {
-#				CondorTest::debug("Path DOES NOT contain Program Files\n",3);
-#			}
-#		}
-
-#		$pexe = "$path/$exe";
-
-#		if ($iswindows) {
-#			# Stupid windows, do this to ensure the -x works.
-#			$pexe =~ s#/#\\#g;
-#		}
-
-#		if (-x "$pexe") {
-#			# stupid caller code expects the result in unix format".
-#			return "$origpath/$exe";
-#		}
-#	}
-
-#	return "$exe: command not found";
-#}
-#}
 
 # Lets be able to drop some extra information if runCondorTool
 # can not do what it is supposed to do....... short and full
@@ -1409,21 +1337,16 @@ sub GetQueue
 	}
 }
 
-#
-# Cygwin's perl chomp does not remove cntrl-m but this one will
-# and linux and windows can share the same code. The real chomp
-# totals the number or changes but I currently return the modified
-# array. bt 10/06
-#
+# Cygwin's chomp does not return the \r
+sub fullchomp {
+    # Preserve the behavior of chomp, e.g. chomp $_ if no argument is specified.
+    push (@_,$_) if( scalar(@_) == 0);
 
-sub fullchomp
-{
-	push (@_,$_) if( scalar(@_) == 0);
-	foreach my $arg (@_) {
-		$arg =~ s/\012+$//;
-		$arg =~ s/\015+$//;
-	}
-	return(0);
+    foreach my $arg (@_) {
+        $arg =~ s/[\012\015]+$//;
+    }
+
+    return;
 }
 
 sub changeDaemonState

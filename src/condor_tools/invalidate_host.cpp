@@ -44,7 +44,6 @@
 #include "subsystem_info.h"
 
 char	*MyName;
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
 
 void
 usage( void )

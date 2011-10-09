@@ -34,11 +34,13 @@ sub usage
 	print<<EOF;
 Usage: $0 --jobid <CLUSTER.PROC> [ OPTIONS ]
 --jobid      The jobid
+--scratch    Scratch directory used by the program, defaults to /tmp/cbd-<PID>
+
+*** The options below are not fully implemented. ***
 --sdate      A Unix date corresponding to the start of the search time
 --edate      A Unix date corresponding to the end of the search time
 --pool       The pool to query (local pool if not defined)
 --schedd     The schedd to query (local schedd if not defined)
---scratch    Scratch directory used by the program, defaults to /tmp/cbd-<PID>
 EOF
 
 	exit(1);

@@ -809,6 +809,3 @@ printNewMessages( ClassAd* result_ad, StringList* ids )
 		free( msg );
 	}
 }
-
-
-#include "daemon_core_stubs.h"

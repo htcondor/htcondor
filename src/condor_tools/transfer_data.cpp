@@ -440,5 +440,3 @@ main(int argc, char *argv[])
 	return 0;
 }
 
-#include "daemon_core_stubs.h"
-

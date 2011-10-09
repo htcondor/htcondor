@@ -124,9 +124,6 @@ static struct alternate_memory_heap amh = { NULL, NULL, NULL, NULL, -1 };
 /* these are the remote system calls we use in this file */
 extern "C" int REMOTE_CONDOR_send_rusage(struct rusage *use_p);
 
-// set SubSystem for Condor components which expect it
-DECL_SUBSYSTEM("JOB", SUBSYSTEM_TYPE_TOOL );
-
 static int
 net_read(int fd, void *buf, int size)
 {

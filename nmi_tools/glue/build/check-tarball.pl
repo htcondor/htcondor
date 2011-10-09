@@ -22,7 +22,7 @@ if($ENV{NMI_PLATFORM} =~ /(macos|freebsd)/i) {
 }
 
 # In bytes
-my $FILESIZE_LOWER_BOUND = 25_000_000;
+my $FILESIZE_LOWER_BOUND = 5_000_000;
 my $UNSTRIPPED_FILESIZE_UPPER_BOUND = 600_000_000;
 my $STRIPPED_FILESIZE_UPPER_BOUND   = 350_000_000;
 
@@ -67,7 +67,7 @@ sub validate_tarball {
     my $size = (stat($file))[7];
 
     if($size < $FILESIZE_LOWER_BOUND) {
-	print "ERROR: tarball '$file' is too small (< $FILESIZE_LOWER_BOUND bytes)\n";
+	print "ERROR: tarball '$file' is too small ($size < $FILESIZE_LOWER_BOUND bytes)\n";
 	print "If this size threshold is not appropriate modify it in $0\n";
 	return 1;
     }
@@ -79,7 +79,7 @@ sub validate_tarball {
                                                          $STRIPPED_FILESIZE_UPPER_BOUND;
 
     if($size > $FILESIZE_UPPER_BOUND) {
-	print "ERROR: tarball '$file' is too large (> $FILESIZE_UPPER_BOUND bytes).\n";
+	print "ERROR: tarball '$file' is too large ($size > $FILESIZE_UPPER_BOUND bytes).\n";
 	print "If this size threshold is not appropriate modify it in $0\n";
 	return 1;
     }

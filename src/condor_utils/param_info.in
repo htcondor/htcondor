@@ -4036,22 +4036,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=219
 
-[AMAZON_HTTP_PROXY]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Amazon Http Proxy
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,gahp-client
-id=220
-
 [NORDUGRID_GAHP]
 aliases=
 default=$(SBIN)/nordugrid_gahp
@@ -4243,22 +4227,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gt4resource
 id=235
-
-[AMAZON_GAHP]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Amazon Gahp
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,amazonresource
-id=236
 
 [ENABLE_GRID_MONITOR]
 aliases=
@@ -4452,70 +4420,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,deltacloudjob
 id=247
 
-[AMAZON_GAHP_LOG]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Amazon Gahp Log
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,amazonjob
-id=248
-
-[AMAZON_GAHP_WORKER_MIN_NUM]
-aliases=
-default=1
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Amazon Gahp Worker Min Num
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,amazonjob
-id=249
-
-[AMAZON_GAHP_WORKER_MAX_NUM]
-aliases=
-default=5
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Amazon Gahp Worker Max Num
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,amazonjob
-id=250
-
-[AMAZON_GAHP_DEBUG]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Amazon Gahp Debug
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,amazonjob
-id=251
-
 [COLLECTOR_HOST]
 aliases=
 default=$(CONDOR_HOST)
@@ -4529,7 +4433,7 @@ customization=seldom
 friendly_name=Collector Host
 usage=COLLECTOR_HOST = $(CONDOR_HOST):1234
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,amazonjob
+tags=gridmanager
 id=252
 
 [UNICORE_GAHP]

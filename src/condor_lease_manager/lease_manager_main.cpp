@@ -36,8 +36,6 @@
 
 //-------------------------------------------------------------
 
-// about self
-DECL_SUBSYSTEM("LeaseManager", SUBSYSTEM_TYPE_DAEMON);	// used by Daemon Core
 LeaseManager	*lease_manager;
 
 //-------------------------------------------------------------
@@ -78,15 +76,14 @@ main_shutdown_graceful(void)
 	DC_Exit(0);
 }
 
-//-------------------------------------------------------------
-void
-main_pre_dc_init( int /*argc*/, char* /*argv*/[] )
+int
+main( int argc, char **argv )
 {
-	// dprintf isn't safe yet...
-}
+	set_mySubSystem("LeaseManager", SUBSYSTEM_TYPE_DAEMON);	// used by Daemon Core
 
-//-------------------------------------------------------------
-void
-main_pre_command_sock_init( void )
-{
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }

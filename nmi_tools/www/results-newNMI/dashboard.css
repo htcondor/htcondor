@@ -1,4 +1,31 @@
-body { font-family: Sans-Serif; }
+body { font-family: Sans-Serif; font-size: 11px; }
+a:link { color: #1C3F75; }
+
+.passed {
+   background-color: #55ff55;
+}
+.failed {
+   background-color: #ff5555;
+}
+.pending {
+  background-color: #FFE34D;
+}
+.noresults {
+   background-color: #aaaaaa;
+}
+
+.build {
+    border-left-width: 1px;
+    border-left-color: black;
+    width: 25px;
+    text-align: center;
+}
+.test {
+    border-right-width: 1px;
+    border-right-color: black;
+    width: 25px;
+    text-align: center;
+}
 
 div.top {
     width:100%;
@@ -111,4 +138,24 @@ span.link a:hover span {
     width:100%;
     height:100%; 
     z-index: 100;
+}
+
+/* Page layout */
+#wrap {
+    margin: 0 auto;
+}
+
+#nav {
+    padding: 10px;
+    width:125px;
+    float:left;
+}
+
+#main {
+    float:left;
+}
+
+#footer {
+    clear:both;
+    background: #ffffff;
 }

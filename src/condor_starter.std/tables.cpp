@@ -28,7 +28,7 @@
 #include "condor_constants.h"
 #include "name_tab.h"
 #include <signal.h>
-#include "state_machine_driver.unix.h"
+#include "state_machine_driver.h"
 #define INSERT_TABLES
 #include "starter.h"
 #include "startup.h"

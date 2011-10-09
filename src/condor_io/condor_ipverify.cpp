@@ -1133,7 +1133,6 @@ IpVerify::PermTypeEntry::~PermTypeEntry() {
 
 
 #ifdef WANT_STANDALONE_TESTING
-DECL_SUBSYSTEM( "COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
 #include "condor_io.h"
 #ifdef WIN32
 #	include <crtdbg.h>
@@ -1147,6 +1146,8 @@ main()
 	struct sockaddr_in sin;
 	SafeSock ssock;
 	IpVerify* userverify;
+
+	set_mySubSystem( "COLLECTOR", SUBSYSTEM_TYPE_COLLECTOR );
 
 	config();
 

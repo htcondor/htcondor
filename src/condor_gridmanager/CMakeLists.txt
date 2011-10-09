@@ -28,9 +28,9 @@ if(NOT WIN_EXEC_NODE_ONLY)
 	condor_glob( GMHDRS GMSRCS "${RmvSrcs}" )
 
 	if ( LINUX )
-		condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "qmgmt;daemon_core;${GM_LINK_LIBS};${LIBUUID_FOUND}" OFF )
+		condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "${GM_LINK_LIBS};${LIBUUID_FOUND}" OFF )
 	else()
-		condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "qmgmt;daemon_core;${GM_LINK_LIBS}" OFF )
+		condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
 	endif()
 
 	if (NOT WINDOWS)

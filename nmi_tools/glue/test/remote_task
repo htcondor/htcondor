@@ -64,13 +64,18 @@ if( ! $fulltestname ) {
 }
 
 # must use cygwin perl on Windows for batch_test.pl
+my $perl_exe = "perl";
 if ($ENV{NMI_PLATFORM} =~ /winnt/) {
-    my $perlver = `perl -version`;
+    my $perlver = `$perl_exe -version`;
     print $perlver;
     if (!($perlver =~ /cygwin/i)) {
-        print "adding cygwin to the front of the path\n";
-        $ENV{PATH} = "c:\\cygwin\bin;$ENV{PATH}";
-        $perlver = `perl -version`;
+        #print "adding cygwin to the front of the path\n";
+        #$ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
+		#print "PATH=$ENV{PATH}\n";
+
+		$perl_exe = "c:\\cygwin\\bin\\perl";
+		print "Invoking cygwin perl by explicit path ($perl_exe)\n";
+        $perlver = `$perl_exe -version`;
         print $perlver;
         if (!($perlver =~ /cygwin/i)) {
             die "cygwin perl not found!\n";
@@ -105,9 +110,6 @@ if( ! $testname ) {
     c_die("Invalid input for testname\n");
 }
 
-#track time.....
-print scalar(localtime);
-
 out("Testname: '$testname'");
 if( not TestGlue::is_windows() ) {
     if( $compiler ) {
@@ -137,7 +139,7 @@ chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
 # personal condor configured from release generic config files.
 out("About to run batch_test.pl");
 
-system("perl batch_test.pl --no-error -d $compiler -t $testname -b");
+system("$perl_exe batch_test.pl -d $compiler -t $testname -b");
 my $batchteststatus = $?;
 
 # figure out here if the test passed or failed.  

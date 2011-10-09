@@ -27,9 +27,6 @@
 #endif
 #endif
 
-// for daemon core
-DECL_SUBSYSTEM( "NEGOTIATOR", SUBSYSTEM_TYPE_NEGOTIATOR );
-
 // the matchmaker object
 Matchmaker matchMaker;
 
@@ -69,14 +66,14 @@ main_config()
 }
 
 
-void
-main_pre_dc_init( int /* argc */, char*[] /* argv */ )
+int
+main( int argc, char **argv )
 {
+	set_mySubSystem( "NEGOTIATOR", SUBSYSTEM_TYPE_NEGOTIATOR );
+
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }
-
-
-void
-main_pre_command_sock_init( )
-{
-}
-

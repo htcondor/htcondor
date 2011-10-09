@@ -24,7 +24,11 @@
 
 #include "setenv.h"
 
+#if defined(DARWIN)
+#include <crt_externs.h>
+#else
 extern DLL_IMPORT_MAGIC char **environ;
+#endif
 
 // Under unix, we maintain a hash-table of all environment variables that
 // have been inserted using SetEnv() below. If they are overwritten by
@@ -40,6 +44,15 @@ extern DLL_IMPORT_MAGIC char **environ;
 HashTable <HashKey, char *> EnvVars( HASH_TABLE_SIZE, hashFunction );
 
 #endif
+
+char **GetEnviron()
+{
+#if defined(DARWIN)
+	return *_NSGetEnviron();
+#else
+	return environ;
+#endif
+}
 
 int SetEnv( const char *key, const char *value)
 {
@@ -135,11 +148,12 @@ int UnsetEnv( const char *env_var )
 		return FALSE;
 	}
 #else
+	char **my_environ = GetEnviron();
 
-	for ( int i = 0 ; environ[i] != NULL; i++ ) {
-		if ( strncmp( environ[i], env_var, strlen(env_var) ) == 0 ) {
-            for ( ; environ[i] != NULL; i++ ) {
-                environ[i] = environ[i+1];
+	for ( int i = 0 ; my_environ[i] != NULL; i++ ) {
+		if ( strncmp( my_environ[i], env_var, strlen(env_var) ) == 0 ) {
+            for ( ; my_environ[i] != NULL; i++ ) {
+                my_environ[i] = my_environ[i+1];
 			}
 		    break;
 		}

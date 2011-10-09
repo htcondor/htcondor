@@ -145,7 +145,7 @@ class CondorQ {
     $ret["depth"]      = $depth;
     $ret["running"]    = $running_jobs;
     $ret["slots"]      = $slots;
-    $ret["html-queue"] = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Jobs: $depth Running: $running_jobs<span>$output</span></a></span>";
+    $ret["html-queue"] = "<br /><span class=\"link\"><a href=\"javascript: void(0)\" style=\"text-decoration:none;\">Jobs: $depth<br>Running: $running_jobs<span>$output</span></a></span>";
     return $ret;
   }
 }

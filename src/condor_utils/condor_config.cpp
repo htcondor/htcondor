@@ -72,6 +72,7 @@
 #include "directory.h"			// for StatInfo
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "condor_auth_x509.h"
 #include "setenv.h"
 #include "HashTable.h"
 #include "extra_param_info.h"
@@ -118,7 +119,6 @@ extern int	ConfigLineNo;
 BUCKET	*ConfigTab[TABLESIZE];
 static ExtraParamTable *extra_info = NULL;
 static char* tilde = NULL;
-extern DLL_IMPORT_MAGIC char **environ;
 static bool have_config_source = true;
 extern bool condor_fsync_on;
 
@@ -743,7 +743,8 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
     }
 			
 		// Now, insert any macros defined in the environment.
-	for( int i = 0; environ[i]; i++ ) {
+	char **my_environ = GetEnviron();
+	for( int i = 0; my_environ[i]; i++ ) {
 		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
 		strcpy( magic_prefix, "_" );
 		strcat( magic_prefix, myDistro->Get() );
@@ -751,11 +752,11 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		int prefix_len = strlen( magic_prefix );
 
 		// proceed only if we see the magic prefix
-		if( strncasecmp( environ[i], magic_prefix, prefix_len ) != 0 ) {
+		if( strncasecmp( my_environ[i], magic_prefix, prefix_len ) != 0 ) {
 			continue;
 		}
 
-		char *varname = strdup( environ[i] );
+		char *varname = strdup( my_environ[i] );
 		if( !varname ) {
 			EXCEPT( "Out of memory in %s:%d\n", __FILE__, __LINE__ );
 		}
