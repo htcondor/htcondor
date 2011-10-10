@@ -21,9 +21,6 @@
 #ifndef __CLASSAD_CLASSAD_STL_H__
 #define __CLASSAD_CLASSAD_STL_H__
 
-/* Is std::tr1::unordered_map available */
-#cmakedefine HAVE_TR1_UNORDERED_MAP
-
 #include <map>
 #include <list>
 
