@@ -166,10 +166,11 @@ as are currently documented (section~\ref{sec:New-7-6-4}) in this manual.
 
 \begin{itemize}
 
-% gittrac 2337
-\item Condor's Standard Universe now supports reading from and writing to
-files that are larger than 2 GB when the standard universe application and
-the \Condor{shadow} are both 64-bit executables.
+\item Condor's standard universe now supports reading from and writing to
+files that are larger than 2 GBytes,
+when the standard universe application and
+the \Condor{shadow} daemon are both 64-bit executables.
+\Ticket{2337}
 
 \item There is command line support to both suspend and continue jobs. 
 The new tools \Condor{suspend} and \Condor{continue} will 
