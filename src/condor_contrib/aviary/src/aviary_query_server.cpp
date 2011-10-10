@@ -56,7 +56,7 @@ void ProcessHistoryTimer(Service*);
 
 //-------------------------------------------------------------
 
-int main_init(int /* argc */, char * /* argv */ [])
+void main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
@@ -130,7 +130,6 @@ int main_init(int /* argc */, char * /* argv */ [])
 		EXCEPT("Failed to register Reset signal");
 	}
 
-	return TRUE;
 }
 
 void
@@ -160,12 +159,10 @@ init_classad()
 
 //-------------------------------------------------------------
 
-int 
+void
 main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
@@ -183,26 +180,24 @@ void Stop()
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 
 	Stop();
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 
 	Stop();
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------

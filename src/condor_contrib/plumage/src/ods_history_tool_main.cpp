@@ -44,8 +44,6 @@
 
 #define NUM_PARAMETERS 3
 
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
-
 using namespace mongo;
 
 static void print_usage(char* name) 
@@ -81,6 +79,8 @@ main(int argc, char* argv[])
     
     // get our condor vars
     config();
+
+	set_mySubSystem( "TOOL", SUBSYSTEM_TYPE_TOOL);
     
     for(i=1; i<argc; i++) {
         if (strcmp(argv[i],"-h")==0) {
