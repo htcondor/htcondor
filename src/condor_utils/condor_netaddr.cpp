@@ -56,6 +56,8 @@ bool condor_netaddr::match(const condor_sockaddr& target) const {
 static int convert_maskaddr_to_maskbit(uint32_t mask_value) {
 	int maskbit = 0;
 
+	mask_value = ntohl(mask_value);
+
 	// get rid of 0's from the right-most side
 	while (mask_value > 0 && (mask_value & 1) == 0)
 		mask_value >>= 1;
