@@ -30,31 +30,39 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Deprecated Amazon SOAP interface in favor of EC2 REST interface.
+\item The Amazon SOAP interface is no longer present or supported in Condor.
+The EC2 REST interface is favored and supported in Condor
+using a \SubmitCmd{grid\_resource} of \SubmitCmd{ec2}.
 \Ticket{2523}
 
-\item Added a new tool called \Condor{gather\_info} which collects data about
-a Condor installation and, if desired, a specific job. This information
-is useful to Condor developers to help debug a problem in a pool or with a job.
+\item The new \Condor{gather\_info} tool introduced in 
+Condor version 7.5.6 has been updated and enhanced.
+It collects data about a Condor installation, and, if desired, 
+about a specific job. 
+This information is useful to Condor developers to help 
+debug problems in a pool or with a job.
 
-\item \Condor{userprio} supports new flags: The -grouporder flag displays submitter 
-entries for accounting groups at top of list and in breadth-first order by group 
-hierarchy. The -grouprollup flag reports accounting statistics for groups rolled up
-by group hierarchy.
+\item The \Condor{userprio} tool supports two new command line options.
+The \Opt{-grouporder} flag displays submitter entries 
+for accounting groups at top of the list,
+ in breadth-first order by group hierarchy.
+The \Opt{-grouprollup} flag reports accounting statistics for groups 
+as summed at a level within the group hierarchy.
 \Ticket{1926}
 
-\item \Condor{collector} now avoids performance problems that happened
-previously when clients initiated communication with the collector but
-then delayed sending input.
+\item The \Condor{collector} now avoids the performance problems caused
+previously when clients initiated communication with the \Condor{collector},
+but then delayed sending input.
 \Ticket{2506}
 
-\item When using versions of glexec that create a copy of the proxy for use
-by the job, Condor now ensures that this copy of the proxy is cleaned up
+\item When using versions of \Prog{glexec} that create a copy of the proxy 
+for use by the job, 
+Condor now ensures that this copy of the proxy is cleaned up
 when the job is done.
 \Ticket{2501}
 
 \item The \Condor{startd} now logs a clear message if it rejects a job
-because no valid starters were detected.
+because no valid \Condor{starter} daemons were detected.
 \Ticket{2470}
 
 \end{itemize}
@@ -64,23 +72,28 @@ because no valid starters were detected.
 \begin{itemize}
 
 \item A new configuration variable \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} 
-can contain an expression which is passed from the Negotiator to the 
-Collector when it fetches ClassAds for the negotiation cycle. 
+can contain an expression which is passed from the \Condor{negotiator}
+to the \Condor{collector},
+ when it fetches ClassAds for the negotiation cycle. 
 \Ticket{2277}
 
-\item A new configuration variable \Macro{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} 
-replaces \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}, which has been retained as a
-alternate name.  The poolsize resulting from applying this constraint is used
-to determine quotas for both dynamic groups and when there are no groups.
+\item The new configuration variable 
+\Macro{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} 
+replaces \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT},
+which has been retained as a alternate name.  
+The pool size resulting from applying this constraint is used
+to determine quotas for both dynamic quotas in hierarchical groups,
+and when there are no groups.
 \Ticket{2277}
 
 \item The configuration variable \Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE} 
-was made obsolete by \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} so it has been removed.
+was made obsolete by \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT},
+so \MacroNI{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE}  has been removed.
 \Ticket{2277}
 
 \item The configuration variables \Macro{IGNORE\_NFS\_LOCK\_ERRORS}
-  and \Macro{BIND\_ALL\_INTERFACES} no longer support, undocumented,
-  'Y' or 'y' to mean True.
+and \Macro{BIND\_ALL\_INTERFACES} no longer support the undocumented use of
+'Y' or 'y' to mean \Expr{True}.
 
 \end{itemize}
 
@@ -91,11 +104,11 @@ was made obsolete by \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} so it has been removed
 \item Added a regression test for partitionable slot functionality.
 \Ticket{2514}
 
-% gittrac 2500
 \item When the \Condor{procd}'s named command pipe is removed, or whose
 inode has been changed while the daemon is running, the \Condor{procd}
 will exit instead of previously continuing to execute in a useless mode
 of operation.
+\Ticket{2500}
 
 \item Added logic to the \Condor{negotiator} daemon's Accountant
 initialization to ensure that table entries are always created for
@@ -114,7 +127,7 @@ DaemonCore: Can't receive command request from IP (perhaps a timeout?)
 was introduced in 7.7.0.
 \Ticket{2513}
 
-\item Glexec now also works when condor is running as root.
+\item \Prog{glexec} now also works when Condor is running as root.
 \Ticket{2503}
 
 \end{itemize}
