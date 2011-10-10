@@ -119,8 +119,8 @@ the offset within the file at which the error occurred.
 \begin{itemize}
 
 \item The new job ClassAd attribute \Attr{PreserveRelativeExecutable}, 
-when set to \Expr{True}, will prevent the \Condor{starter} from 
-prepending \Attr{Iwd} to the command executable \Attr{Cmd}, when
+when \Expr{True} prevents the \Condor{starter} from 
+prepending \Attr{Iwd} to the command executable \Attr{Cmd},
 when \Attr{Cmd} is a relative path name and \Attr{TransferExecutable} 
 is \Expr{False}.
 \Ticket{2460}
