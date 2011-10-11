@@ -30,6 +30,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item With Condor 7.7.2, if you had multiple Condor installations, it was 
+possible for some installations to use the wrong version of the ClassAds 
+library. This should no longer be an issue. Addtionally, the binaries 
+now use RUNPATH instead of RPATH, allowing you to use the
+LD\_LIBRARY\_PATH environment variable to set where they look for their
+shared libraries.
+\Ticket{2539}
+
 \item The Amazon SOAP interface is no longer present or supported in Condor.
 The EC2 REST interface is favored and supported in Condor
 using a \SubmitCmd{grid\_resource} of \SubmitCmd{ec2}.
