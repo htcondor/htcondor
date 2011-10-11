@@ -231,7 +231,8 @@ foreach ($runs as $run) {
   print "  <td class=\"$td_class\">\n";
 
   $tmp = substr($run["sha1"], 0, 15) . "<br><font size=\"-2\">" . $run["start"] . "</font>\n";
-  print "    <span class=\"link\"><a href=\"\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
+  $link = sprintf(GITSHA1, $run["sha1"]);  
+  print "    <span class=\"link\"><a href=\"$link\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
   print "  </td>\n";
 
   // Keep track of a summary of the platforms
