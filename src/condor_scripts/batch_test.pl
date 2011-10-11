@@ -130,7 +130,7 @@ my $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 my $wintestpersonalcondorlocation = "";
 if($iswindows == 1) {
 	my $tmp = `cygpath -m $testpersonalcondorlocation`;
-	CondorTest::fullchomp($tmp);
+	CondorUtils::fullchomp($tmp);
 	$wintestpersonalcondorlocation = $tmp;
 }
 
@@ -336,7 +336,7 @@ if(!($wantcurrentdaemons)) {
 
 	if($iswindows == 1) {
 		my $tmp = `cygpath -m $targetconfig`;
-		CondorTest::fullchomp($tmp);
+		CondorUtils::fullchomp($tmp);
 		$ENV{CONDOR_CONFIG} = $tmp;
 		$res = CondorPersonal::IsRunningYet($tmp);
 	} else {
@@ -422,7 +422,7 @@ elsif( $testfile ) {
     while( <TESTFILE> ) {
         next if(/^\s*#/);  # Skip comment lines
 
-        CondorTest::fullchomp($_);
+        CondorUtils::fullchomp($_);
         
         my $test = $_;
         if($test !~ /.*\.run$/) {
@@ -469,7 +469,7 @@ else {
 	}
 
 	while(<QUICK>) {
-		CondorTest::fullchomp($_);
+		CondorUtils::fullchomp($_);
 		my $tmp = $_;
 		if( $tmp =~ /^#.*$/ ) {
 			# comment so skip
@@ -494,7 +494,7 @@ if( $ignorefile ) {
     debug("found a skipfile: $ignorefile \n",1);
     open(SKIPFILE, $ignorefile) || die "Can't open $ignorefile\n";
     while(<SKIPFILE>) {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	my $test = $_;
 	foreach my $compiler (@compilers) {
 	    # $skip_hash{"$compiler"}->{"$test"} = 1;
@@ -805,7 +805,7 @@ sub WhereIsInstallDir
 		my $top = getcwd();
 		debug( "getcwd says \"$top\"\n",2);
 		my $crunched = `cygpath -m $top`;
-		CondorTest::fullchomp($crunched);
+		CondorUtils::fullchomp($crunched);
 		debug( "cygpath changed it to: \"$crunched\"\n",2);
 		my $ppwwdd = `pwd`;
 		debug( "pwd says: $ppwwdd\n",2);
@@ -816,7 +816,7 @@ sub WhereIsInstallDir
 		print STDERR "Unable to find a condor_master in your \$PATH!\n";
 		exit(1);
 	}
-	CondorTest::fullchomp($tmp);
+	CondorUtils::fullchomp($tmp);
 	debug( "Install Directory \"$tmp\"\n",2);
 	if($iswindows == 0) {
 	    $tmp =~ s|//|/|g;
@@ -832,7 +832,7 @@ sub WhereIsInstallDir
 		if($tmp =~ /^(.*)\/bin\/condor_master\s*$/) {
 			$installdir = $1;
 			$tmp = `cygpath -m $1`;
-    		CondorTest::fullchomp($tmp);
+    		CondorUtils::fullchomp($tmp);
 			$wininstalldir = $tmp;
 			$wininstalldir =~ s/\\/\//;
 			print "Testing This Install Directory: \"$wininstalldir\"\n";
@@ -870,7 +870,7 @@ sub CreateConfig
 	# file is to set the release-dir and local-dir. (non-windows)
 	# change RELEASE_DIR and LOCAL_DIR    
 	my $currenthost = CondorTest::getFqdnHost();
-	CondorTest::fullchomp($currenthost);
+	CondorUtils::fullchomp($currenthost);
 
 	debug( "Set RELEASE_DIR and LOCAL_DIR\n",2);
 
@@ -900,7 +900,7 @@ sub CreateConfig
 	open( NEWFIG, ">$targetconfig" ) 
 		|| die "Can't open new config file: $!\n";    
 	while( <OLDFIG> ) {        
-		CondorTest::fullchomp($_);        
+		CondorUtils::fullchomp($_);        
 		$line = $_;        
 		if($line =~ /^RELEASE_DIR\s*=.*/) {            
 			debug( "Matching <<$line>>\n",2);
@@ -1044,10 +1044,10 @@ sub CreateLocalConfig
 
 		$javabinary = "java.exe";
 		my $whichtest = `which $javabinary`;
-	    CondorTest::fullchomp ($whichtest);
+	    CondorUtils::fullchomp($whichtest);
 		$whichtest =~ s/Program Files/progra~1/g;
 		$jvm = `cygpath -m $whichtest`;
-		CondorTest::fullchomp($jvm);
+		CondorUtils::fullchomp($jvm);
 		CondorTest::debug("which java said<<$jvm>>\n",2);
 
 	    $java_libdir = "$wininstalldir/lib";
@@ -1062,7 +1062,7 @@ sub CreateLocalConfig
 
 		$javabinary = "java";
 	    unless (system ("which java >> /dev/null 2>&1")) {
-	    	CondorTest::fullchomp (my $which_java = CondorTest::Which("$javabinary"));
+	    	CondorUtils::fullchomp(my $which_java = CondorTest::Which("$javabinary"));
 			CondorTest::debug("CT::Which for $javabinary said $which_java\n",2);
 	    	@default_jvm_locations = ($which_java, @default_jvm_locations) unless ($?);
 	    }
@@ -1211,7 +1211,7 @@ sub CompleteTestOutput
 	} else {
 		$failure = `grep 'FAILURE' $test{$child}.out`;
 		$failure =~ s/^.*FAILURE[: ]//;
-		CondorTest::fullchomp($failure);
+		CondorUtils::fullchomp($failure);
 		$failure = "failed" if $failure =~ /^\s*$/;
 	
 		if ($isXML){
