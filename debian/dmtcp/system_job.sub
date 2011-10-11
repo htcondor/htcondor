@@ -1,0 +1,64 @@
+# analog to job.sub, but this one assumes a cluster-wide installed dmtcp
+# and submits a python script, hence snapshotting the python intepreter
+universe = vanilla
+executable = shim_dmtcp
+coresize=-1
+
+###############################################################################
+# Testing Various Requirements Expressions
+# DMTCP sometimes does odd behaviors on slightly different installations
+# of Linux. This allows me to select different types of machines to narrow
+# down problems.
+###############################################################################
+
+# Keep it on the same checkpoint platform and kernel revision. Change to
+# whatever you need this to be to limit the run of DMTCP jobs to a specific
+# set of platforms if you discover problems.
+
+#Requirements = (CheckpointPlatform == "LINUX INTEL 2.6.x normal 0x40000000" && OSKernelRelease == "2.6.18-128.el5")
+
+###############################################################################
+# Argument	Meaning
+#------------------
+# --log		log file name for actions in shim_dmtcp script, if n/a use /dev/null
+# --stdin	stdin file, if n/a use /dev/null
+# --stdout	stdout file, if n/a use /dev/null
+# --stderr	stderr file, if n/a use /dev/null
+# --ckptint	checkpointing interval in seconds
+# 1			the executable name you should have transferred in
+# 2+		arguments to the executable
+###############################################################################
+arguments = --log shim_dmtcp.$(CLUSTER).$(PROCESS).log --stdin foo.c --stdout job.$(CLUSTER).$(PROCESS).out --stderr job.$(CLUSTER).$(PROCESS).err --ckptint 1800 ./foo.py 7200 output_file.$(CLUSTER).$(PROCESS).out
+
+###############################################################################
+# Enable file transfer. Here is where you 'mixin' the user's input and
+# output fles along with what is needed for DMTCP. Don't forget to transfer
+# the actual executable along.
+###############################################################################
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT_OR_EVICT
+transfer_input_files = foo.py,foo.c
+
+###############################################################################
+# Set up various environment variables. If you need to specify more, mix them
+# in here.
+###############################################################################
+environment=DMTCP_TMPDIR=./;JALIB_STDERR_PATH=/dev/null;DMTCP_PREFIX_ID=$(CLUSTER)_$(PROCESS)
+
+###############################################################################
+# SIGINT is our soft checkpointing signal
+###############################################################################
+kill_sig = 2
+
+###############################################################################
+# Output andl og files for the shim process which performs the work.
+###############################################################################
+output = shim.$(CLUSTER).$(PROCESS).out
+error = shim.$(CLUSTER).$(PROCESS).err
+log = shim.log
+
+Notification = Never
+
+queue 1
+
+

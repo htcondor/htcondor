@@ -1,0 +1,10 @@
+#! /bin/sh
+
+LOG=$1
+
+if [ -z $LOG ] ; then
+	echo "Please specify a shim_dmtcp logfile!"
+	exit 1;
+fi
+
+egrep -e '(Initial|Resumption|Hostname|Checkpoint platform|Linux Flavor|Kernel|GCC revision|\*|Application)' $LOG
