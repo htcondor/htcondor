@@ -935,14 +935,15 @@ behavior changes:
 %%% ClassAd attribute: PreserveRelativeExecutable
 \index{ClassAd job attribute!PreserveRelativeExecutable}
 \index{PreserveRelativeExecutable!job ClassAd attribute}
-\item[\AdAttr{PreserveRelativeExecutable}:]  If this attribute is set
-to \Expr{True} then the \Condor{starter} will not prepend \AdAttr{Iwd}
-to \AdAttr{Cmd}, when \AdAttr{Cmd} is a relative pathname
-and \AdAttr{TransferExecutable} is \Expr{False}.  The default value
-for \AdAttr{PreserveRelativeExecutable} is \Expr{False}.  This
-attribute is of primary interest for users of \Macro{USER\_JOB\_WRAPPER}
-for the purpose of allowing an executable to be resolved by the user's
-path in the job wrapper.
+\item[\AdAttr{PreserveRelativeExecutable}:]  When \Expr{True}, 
+the \Condor{starter} will not prepend \Attr{Iwd}
+to \Attr{Cmd}, when \Attr{Cmd} is a relative path name
+and \Attr{TransferExecutable} is \Expr{False}.  
+The default value is \Expr{False}.
+This attribute is primarily of interest for users of 
+\MacroNI{USER\_JOB\_WRAPPER}
+for the purpose of allowing an executable's location to be resolved 
+by the user's path in the job wrapper.
 
 %%% ClassAd attribute: ProcId
 \index{ClassAd job attribute!ProcId}
