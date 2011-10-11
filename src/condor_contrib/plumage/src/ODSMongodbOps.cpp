@@ -22,7 +22,7 @@
 // local includes
 #include "ODSMongodbOps.h"
 #include "condor_debug.h"
-#include "condor_exprtype.h"
+#include "compat_classad_util.h"
 #include "classad/literals.h"
 #include "stl_string_utils.h"
 
