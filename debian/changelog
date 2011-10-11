@@ -23,8 +23,9 @@ condor (7.7.1+git837-g37b7fa3-1) UNRELEASED; urgency=low
   * Added condor-dev package, containing headers files and static versions of
     Condor libraries.
   * Add build-dep on libldap-dev to ensure nordugrid_gahp being built.
+  * Added DMTCP integrationg for snapshotting of vanilla universe jobs.
 
- -- Michael Hanke <mih@debian.org>  Fri, 07 Oct 2011 08:26:21 +0200
+ -- Michael Hanke <mih@debian.org>  Tue, 11 Oct 2011 08:42:35 +0200
 
 condor (7.6.1-1) UNRELEASED; urgency=low
 

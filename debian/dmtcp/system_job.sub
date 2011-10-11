@@ -1,7 +1,7 @@
 # analog to job.sub, but this one assumes a cluster-wide installed dmtcp
 # and submits a python script, hence snapshotting the python intepreter
 universe = vanilla
-executable = shim_dmtcp
+executable = /usr/lib/condor/shim_dmtcp
 coresize=-1
 
 ###############################################################################

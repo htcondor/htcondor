@@ -1,3 +1,4 @@
 debian/tmp/usr/share/doc/condor/etc/examples/* usr/share/doc/condor/examples/etc/
 debian/tmp/usr/share/doc/condor/examples/* usr/share/doc/condor/examples/
+debian/dmtcp usr/share/doc/condor/examples/
 doc/build/html usr/share/doc/condor/

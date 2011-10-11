@@ -5,4 +5,5 @@ debian/tmp/usr/lib/condor/*.so usr/lib/condor/
 debian/tmp/usr/lib/condor/*.pm usr/lib/condor/
 debian/tmp/usr/bin/* usr/bin/
 debian/tmp/usr/sbin/* usr/sbin/
-debian/tmp/usr/src/* /usr/src/condor/
+debian/tmp/usr/src/* usr/src/condor/
+debian/dmtcp/shim_dmtcp usr/lib/condor/

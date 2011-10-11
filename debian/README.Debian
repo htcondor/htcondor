@@ -22,4 +22,31 @@ Condor pool. Please see this page for more information on graceful shutdowns:
 
   https://condor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToShutDownCondor
 
- -- Michael Hanke <michael.hanke@gmail.com>  Thu, 6 Jan 2011 17:14:19 -0500
+
+Snapshotting of vanilla universe jobs
+-------------------------------------
+
+The Debian package comes with built-in support for snapshotting of vanilla
+universe jobs with DMTCP. This is useful for migrating running jobs between
+machines of a condor pool without having to relink the respective binaries with
+Condor's standard universe LIBC wrapper.  The main advantage of DMTCP over
+Condor's native mechanism is that it also works for script (interpreter
+sessions like Python), and closed-source systems (e.g. Matlab). The necessary
+shim script (a wrapper around the actual job executable) is available at
+/usr/lib/condor/shim_dmtcp. The condor-doc package comes with example
+submit files for self-compiled executables and system-wide installed software.
+A minimal submit configuration for a job with snapshotting every five minutes
+on a Debian cluster could look like this:
+
+  universe = vanilla
+  executable = /usr/lib/condor/shim_dmtcp
+  coresize=-1
+  arguments = --ckptint 300 some_command some_arg1 some_arg2
+  should_transfer_files = YES
+  when_to_transfer_output = ON_EXIT_OR_EVICT
+  environment=DMTCP_TMPDIR=./;DMTCP_PREFIX_ID=$(CLUSTER)_$(PROCESS)
+  kill_sig = 2
+  Notification = Never
+  queue 1
+
+ -- Michael Hanke <michael.hanke@gmail.com>  Tue, 11 Oct 2011 8:38:05 +0200
