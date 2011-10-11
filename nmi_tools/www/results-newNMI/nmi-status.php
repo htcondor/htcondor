@@ -114,7 +114,7 @@ echo "</table>\n";
 
 <p>
 <h2>Slots</h2>
-<table style="text-align:center">
+<table>
 <tr>
   <th>Platform</th><th>Total</th><th>Avail.</th>
 </tr>

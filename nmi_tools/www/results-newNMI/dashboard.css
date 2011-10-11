@@ -14,17 +14,28 @@ a:link { color: #1C3F75; }
    background-color: #aaaaaa;
 }
 
+td {
+    text-align:center;
+}
+
+td.left {
+    text-align:left;
+}
+
 .build {
     border-left-width: 1px;
     border-left-color: black;
     width: 25px;
-    text-align: center;
 }
 .test {
     border-right-width: 1px;
     border-right-color: black;
     width: 25px;
-    text-align: center;
+}
+
+.daybreak {
+    border-top-color: black;
+    border-top-width: 3px;
 }
 
 div.top {
@@ -45,23 +56,6 @@ div.menu {
 
 div.menu:hover {
     background-color: #AAAAAA;
-}
-
-/* For show/hide help text */
-div.help_link {
-    width: 500px;
-    background-color: #DDDDDD;
-    border:solid 1px #c3c3c3;
-}
-div.help_link:hover {
-    background-color: #AAAAAA;
-}
-
-div.help_box {
-    width: 500px;
-    display: none;
-    background-color: #DDDDDD;
-    border:solid 1px #c3c3c3;
 }
 
 
@@ -143,12 +137,6 @@ span.link a:hover span {
 /* Page layout */
 #wrap {
     margin: 0 auto;
-}
-
-#nav {
-    padding: 10px;
-    width:125px;
-    float:left;
 }
 
 #main {
