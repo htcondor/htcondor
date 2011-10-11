@@ -19,6 +19,8 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
+
 use Digest::MD5;
 #use strict;
 use warnings;
@@ -41,7 +43,7 @@ my $submitted = sub {
 	my $cluster = $info{"cluster"};
 	my $program = $info{"executable"};
 	my $spool = `condor_config_val SPOOL`;
-	CondorTest::fullchomp($spool);
+	CondorUtils::fullchomp($spool);
 
 	CondorTest::debug("Checking spool dir --$spool--\n",$debuglevel);
 	CondorTest::debug("Executable is $program\n",$debuglevel);

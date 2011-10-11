@@ -35,7 +35,7 @@ my $currenthost = CondorTest::getFqdnHost();
 chomp($currenthost);
 my @adarray;
 
-CondorTest::fullchomp($currenthost);
+CondorUtils::fullchomp($currenthost);
 
 print scalar localtime() . "\n";
 
@@ -57,7 +57,7 @@ CondorTest::debug("Master PID is $mypid\n",$debuglevel);
 CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
 
 my $outsource = CondorCmdStatusWorker::SetUp("cmd_status_shows-schedd");
-CondorTest::fullchomp($outsource);
+CondorUtils::fullchomp($outsource);
 
 if($outsource eq "") {
 	# assume all cleanup of personals which did start occurred in worker

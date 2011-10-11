@@ -19,12 +19,13 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 #BEGIN {$^W=1}  #warnings enabled
 
 while( <> )
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	print "$_\n";
 }
 

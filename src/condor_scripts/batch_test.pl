@@ -112,7 +112,7 @@ Condor::DebugLevel(5);
 my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
 print "$time: batch_test.pl starting up\n";
 
-my $iswindows = CondorTest::IsThisWindows();
+my $iswindows = CondorUtils::is_windows();
 
 # configuration options
 my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes

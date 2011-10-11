@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 my $cmd = 'job_ckpt_io-async_std.cmd';
 my $testdesc =  'Io Test';
@@ -36,7 +37,7 @@ sub OutputTest
 	@lines = `cat $info{'output'}`;
 
 	# get rid of newlines & collapse contiguous whitespace into a single space
-	map {CondorTest::fullchomp $_; s/\s+/ /g; } @lines;
+	map {CondorUtils::fullchomp $_; s/\s+/ /g; } @lines;
 
 	# there should be two lines in the output, a string of numbers and
 	# a normal end of job line after it.

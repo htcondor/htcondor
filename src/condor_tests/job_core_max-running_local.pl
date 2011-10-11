@@ -27,6 +27,7 @@
 ##
 #########################################################
 use CondorTest;
+use CondorUtils;
 
 $testdesc =  'Max Running Local Universe Jobs';
 $testname = "job_core_max-running_local";
@@ -71,7 +72,7 @@ $successCallback = sub {
 	my @output = <FILE>;
 	close(FILE);
 	my $reportTime = "@output";
-	CondorTest::fullchomp($reportTime);
+	CondorUtils::fullchomp($reportTime);
 	
 	CondorTest::debug("JOB:         $cluster.$job\n".
 		  "OUTFILE:     $outfile\n".

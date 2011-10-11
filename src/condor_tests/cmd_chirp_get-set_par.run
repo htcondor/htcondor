@@ -29,7 +29,6 @@ $corename = "cmd_chirp_get-set_par";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
-CondorTest::fullchomp($currenthost);
 
 print scalar localtime() . "\n";
 
@@ -81,7 +80,7 @@ open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
 open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
 while(<TPLATE>)
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*log\s*= .*$/)
 	{

@@ -40,7 +40,7 @@ chomp($currenthost);
 my $primarycollector = $currenthost;
 my @adarray;
 
-CondorTest::fullchomp($currenthost);
+CondorUtils::fullchomp($currenthost);
 
 print scalar localtime() . "\n";
 

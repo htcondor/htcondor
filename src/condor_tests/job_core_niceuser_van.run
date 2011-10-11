@@ -31,10 +31,8 @@ my $debuglevel = 2;
 
 # where am I running
 my $currenthost = CondorTest::getFqdnHost();
-chomp($currenthost);
-my $primarycollector = $currenthost;
 
-CondorTest::fullchomp($currenthost);
+my $primarycollector = $currenthost;
 
 print scalar localtime() . "\n";
 
