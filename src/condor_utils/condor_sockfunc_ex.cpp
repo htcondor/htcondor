@@ -1,7 +1,7 @@
 #include "condor_common.h"
 #include "condor_sockfunc.h"
 
-// condor_sockfunc_ex is used by syscall_lib that hash minimal
+// condor_sockfunc_ex is used by syscall_lib that has minimal
 // dependency on condor libs.
 //
 // make sure that any function included here should not call to
