@@ -38,7 +38,6 @@ my $startpostmasterport = 5432;
 my $postmasterinc = int(rand(100) + 13);
 $currenthost = CondorTest::getFqdnHost();
 $domain = `dnsdomainname`;
-CondorUtils::fullchomp($currenthost);
 CondorUtils::fullchomp($domain);
 
 # for quill this must be the fully qualified name which

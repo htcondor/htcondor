@@ -35,12 +35,9 @@ my $corename = "fetch_work-basic";
 my $debuglevel = 2;
 
 # where am I running
-my $currenthost = `hostname`;
-chomp($currenthost);
+my $currenthost = CondorTest::getFqdnHost();
 my $primarycollector = $currenthost;
 my @adarray;
-
-CondorUtils::fullchomp($currenthost);
 
 print scalar localtime() . "\n";
 

@@ -40,12 +40,8 @@ chomp( $cwd );
 my $gem_home = "$cwd/deltacloud_gems";
 
 # where am I running
-my $currenthost = `hostname`;
-chomp($currenthost);
-my $primarycollector = $currenthost;
+my $currenthost = CondorTest::getFqdnHost();
 my @adarray;
-
-CondorUtils::fullchomp($currenthost);
 
 print scalar localtime() . "\n";
 

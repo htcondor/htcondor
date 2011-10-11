@@ -33,7 +33,6 @@ my $debuglevel = 2;
 
 # where am I running
 my $currenthost = CondorTest::getFqdnHost();
-CondorUtils::fullchomp($currenthost);
 
 print scalar localtime() . "\n";
 
