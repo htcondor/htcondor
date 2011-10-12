@@ -1680,6 +1680,11 @@ int Scheduler::count_jobs()
 		for(k=0; k<N_Owners;k++) {
 		  if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
 		}
+
+        // In case we want to update this ad, we have to build the submitter
+        // name string that we will be assigning with before we free the owner name.
+        submitter_name.sprintf("%s@%s", OldOwners[i].Name, UidDomain);
+
 		// Now that we've finished using OldOwners[i].Name, we can
 		// free it.
 		if ( OldOwners[i].Name ) {
@@ -1693,9 +1698,8 @@ int Scheduler::count_jobs()
 		  // entry in the OldOwner table.
 		if (k<N_Owners) continue;
 
-      submitter_name.sprintf("%s@%s", OldOwners[i].Name, UidDomain);
-      pAd->Assign(ATTR_NAME, submitter_name.Value());
-	  dprintf (D_FULLDEBUG, "Changed attribute: %s = %s@%s\n", ATTR_NAME, OldOwners[i].Name, UidDomain);
+        pAd->Assign(ATTR_NAME, submitter_name.Value());
+	    dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
