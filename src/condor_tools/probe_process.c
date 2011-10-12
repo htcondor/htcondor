@@ -66,7 +66,7 @@ int main(int argc, char *argv[], char *envp[])
 	char my_exec[PATH_MAX];
 
 	Termlog = 1;
-	dprintf_config("TOOL");
+	dprintf_config("TOOL", get_param_functions());
 	set_debug_flags("D_ALWAYS");
 	set_debug_flags("D_NOHEADER");
 

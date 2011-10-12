@@ -121,9 +121,6 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 
 		delete p_funcs;
 	}
-	
-	if(!dprintf_param_funcs)
-		dprintf_param_funcs = new param_functions();
 
 	/*  
 	**  We want to initialize this here so if we reconfig and the

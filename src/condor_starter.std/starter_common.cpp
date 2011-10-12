@@ -177,7 +177,7 @@ init_logging()
 
 	if( is_local ) {
 			// Use regular, local logging.
-		dprintf_config( get_mySubSystem()->getName() );// Log file on local machine 
+		dprintf_config( get_mySubSystem()->getName(), get_param_functions() );// Log file on local machine 
 	} else {
 			// Set up to do logging through the shadow
 		close( fileno(stderr) );

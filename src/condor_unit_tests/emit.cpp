@@ -46,14 +46,12 @@ Emitter::~Emitter() {
 /* Initializes the Emitter object.
  */
 void Emitter::init(bool failures_printed, bool successes_printed) {
-	param_functions *p_funcs = NULL;
 	print_failures = failures_printed;
 	print_successes = successes_printed;
 	buf = new MyString();
 	test_buf = new MyString();
 	Termlog = 1;
-	p_funcs = get_param_functions();
-	dprintf_config("TOOL", p_funcs);
+	dprintf_config("TOOL", get_param_functions());
 	set_debug_flags("D_ALWAYS");
 	set_debug_flags("D_NOHEADER");
 	config();
