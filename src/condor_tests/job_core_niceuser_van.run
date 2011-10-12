@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorUtils;
 use strict;
 use warnings;
 
