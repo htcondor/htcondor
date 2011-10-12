@@ -41,6 +41,8 @@ StarterHookMgr::StarterHookMgr()
 	m_hook_update_job_info = NULL;
 	m_hook_job_exit = NULL;
 
+	m_hook_job_exit_timeout = 0;
+
 	dprintf( D_FULLDEBUG, "Instantiating a StarterHookMgr\n" );
 }
 
@@ -110,6 +112,8 @@ StarterHookMgr::reconfig()
     if (!getHookPath(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info)) return false;
     if (!getHookPath(HOOK_JOB_EXIT, m_hook_job_exit)) return false;
 
+	m_hook_job_exit_timeout = getHookTimeout(HOOK_JOB_EXIT, 30);
+
 	return true;
 }
 
@@ -121,6 +125,15 @@ bool StarterHookMgr::getHookPath(HookType hook_type, char*& hpath)
 	MyString _param;
 	_param.sprintf("%s_HOOK_%s", m_hook_keyword, getHookTypeString(hook_type));
 	return validateHookPath(_param.Value(), hpath);
+}
+
+
+int StarterHookMgr::getHookTimeout(HookType hook_type, int def_value)
+{
+	if (!m_hook_keyword) return 0;
+	MyString _param;
+	_param.sprintf("%s_HOOK_%s_TIMEOUT", m_hook_keyword, getHookTypeString(hook_type));
+	return param_integer(_param.Value(), def_value);
 }
 
 
