@@ -647,7 +647,13 @@ VirshType::Status()
 				case (VIR_ERR_NO_DOMAIN):
 					// The VM isn't there anymore, so signal shutdown
 					vmprintf(D_FULLDEBUG, "Couldn't find domain %s, assuming it was shutdown\n", m_vm_name.Value());
-					m_self_shutdown = true;
+					if(getVMStatus() == VM_RUNNING) {
+						m_self_shutdown = true;
+					}
+					if(getVMStatus() != VM_STOPPED) {
+						setVMStatus(VM_STOPPED);
+						m_stop_time.getTime();
+					}
 					m_result_msg += "Stopped";
 					return true;
 				break;
@@ -657,7 +663,13 @@ VirshType::Status()
 					if ( NULL == ( dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value() ) ) )
 					{
 						vmprintf(D_ALWAYS, "could not reconnect to libvirt... marking vm as stopped (should exit)\n");
-						m_self_shutdown = true;
+						if(getVMStatus() == VM_RUNNING) {
+							m_self_shutdown = true;
+						}
+						if(getVMStatus() != VM_STOPPED) {
+							setVMStatus(VM_STOPPED);
+							m_stop_time.getTime();
+						}
 						m_result_msg += "Stopped";
 						return true;
 					}

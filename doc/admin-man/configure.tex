@@ -9066,6 +9066,27 @@ They specify items related to the \Condor{vm-gahp}.
   For Xen and KVM only, a required string if bridge networking is to be
   enabled.  It specifies the networking interface that vm universe jobs
   will use.
+
+\label{param:LibvirtXmlScript}
+\item[\Macro{LIBVIRT\_XML\_SCRIPT}]
+  For Xen and KVM only, a path and executable specifying a program.
+  When the \Condor{vm-gahp} is ready to start a Xen or KVM 
+  \SubmitCmd{vm} universe job, 
+  it will invoke this program to generate the XML description of 
+  the virtual machine,
+  which it then provides to the virtualization software.
+  The job ClassAd will be provided to this program via standard input. 
+  This program should print the XML to standard output.
+  If this configuration variable is not set,
+  the \Condor{vm-gahp} will generate the XML itself. 
+  The provided script in \File{\MacroUNI{LIBEXEC}/libvirt\_simple\_script.awk} 
+  will generate the same XML that the \Condor{vm-gahp} would.
+
+\label{param:LibvirtXmlScriptArgs}
+\item[\Macro{LIBVIRT\_XML\_SCRIPT\_ARGS}]
+  For Xen and KVM only, the command-line arguments to be given to 
+  the program specified by  \MacroNI{LIBVIRT\_XML\_SCRIPT}. 
+
 \end{description}
 
 The following configuration variables are specific to the VMware

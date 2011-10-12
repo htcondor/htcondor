@@ -165,6 +165,10 @@ The script did not provide absolute path names for the files.
 \item In 32-bit Condor, \MacroNI{ImageSize} of processes larger than 4GB
 was reported as 4GB.  This limit has been raised to 4095GB.
 
+\item Fixed a bug where a completed Xen or KVM VM universe job's modified
+disk image files wouldn't be transferred back to the submit machine.
+\Ticket{2530}
+
 \end{itemize}
 
 \noindent Known Bugs:
