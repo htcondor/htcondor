@@ -29,6 +29,7 @@ import argparse
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
 key = '/etc/pki/tls/certs/client.key'
 cert = '/etc/pki/tls/certs/client.crt'
+root = '/etc/pki/tls/certs/server.crt'
 client = Client(wsdl);
 
 cmds = ['holdJob', 'releaseJob', 'removeJob']
@@ -40,12 +41,14 @@ parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
 		    help='http or https URL prefix to be added to cmd')
 parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
 parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
+parser.add_argument('-r','--root', action="store", nargs='?', dest='root', help='server SSL certificate file')
+parser.add_argument('-s','--server', action="store_true", default=False, dest='verify', help='enable server certificate verification')
 parser.add_argument('cmd', action="store", choices=(cmds))
 parser.add_argument('cproc', action="store", help="a cluster.proc id like '1.0' or '5.3'")
 args =  parser.parse_args()
 
 if "https://" in args.url:
-	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
+	client = Client(wsdl,transport = HTTPSFullCertTransport(key,cert,root,args.verify))
 else:
 	client = Client(wsdl)
 
