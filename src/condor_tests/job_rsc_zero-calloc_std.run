@@ -20,7 +20,6 @@
 
 
 use CondorTest;
-use CondorUtils;
 
 $cmd = 'job_rsc_zero-calloc_std.cmd';
 $testdesc =  'calloc test';
@@ -36,7 +35,7 @@ sub OutputTest
     while( <OUTPUT> )
     {
 	$line = $_;
-	CondorUtils::fullchomp($line);
+	CondorTest::fullchomp $line;
     }
     close OUTPUT;
 

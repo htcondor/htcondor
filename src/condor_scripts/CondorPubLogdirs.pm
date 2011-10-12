@@ -21,15 +21,20 @@ package CondorPubLogdirs;
 
 use strict;
 use warnings;
-
 use Cwd;
 
-use CondorUtils;
 
 my $DEBUG = 1;
 my $DEBUGLEVEL = 1;
 my $publishedlogdirs = "LogDirs";
 my %published;
+
+BEGIN
+{
+	$DEBUG = 1;
+	$DEBUGLEVEL = 1;
+	$publishedlogdirs = "LogDirs";
+}
 
 sub reset
 {
@@ -81,7 +86,7 @@ sub CheckLogServer
 		open(HAN,"<LogServerHandle") or die "Can not read LogServerHandle:$!\n";
 		@handle = <HAN>;
 		$servername = $handle[0];
-		CondorUtils::fullchomp($servername);
+		fullchomp($servername);
 	} else {
 		debug( "Starting LogServer\n",1);
 		$servername = StartLogServer();
@@ -213,5 +218,21 @@ sub DropPublished
 	}
 }
 
+#
+# Cygwin's perl chomp does not remove cntrl-m but this one will
+# and linux and windows can share the same code. The real chomp
+# totals the number or changes but I currently return the modified
+# array. bt 10/06
+#
+
+sub fullchomp
+{
+	push (@_,$_) if( scalar(@_) == 0);
+	foreach my $arg (@_) {
+		$arg =~ s/\012+$//;
+		$arg =~ s/\015+$//;
+	}
+	return(0);
+}
 
 1;

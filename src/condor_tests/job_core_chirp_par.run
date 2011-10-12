@@ -18,11 +18,10 @@
 ##
 ##**************************************************************
 
-use strict;
-use warnings;
-
 use CondorTest;
 use CondorUtils;
+use strict;
+use warnings;
 
 
 my $cmd_template = "job_core_chirp_par.template";
@@ -34,6 +33,7 @@ my $debuglevel = 2;
 
 # where am I running
 my $currenthost = CondorTest::getFqdnHost();
+CondorTest::fullchomp($currenthost);
 
 print scalar localtime() . "\n";
 
@@ -79,7 +79,7 @@ open(CSUB,">$mysubmitnm") || die "Can't open new submit file $mysubmitnm: $!\n";
 open(TPLATE,"<$cmd_template") || die "Can't open submit file template $cmd_template: $!\n";
 while(<TPLATE>)
 {
-	CondorUtils::fullchomp($_);
+	CondorTest::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*log\s*= .*$/)
 	{

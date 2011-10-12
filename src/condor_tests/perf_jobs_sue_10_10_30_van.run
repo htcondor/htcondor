@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorUtils;
 
 my $testdesc =  'Condor autogen scalability test';
 my $testname = "perf_jobs_sue_10_10_30_van";
@@ -65,7 +64,7 @@ if($nostatus != 0)
 	CondorTest::debug("scaling test failed at $currenttestcount\n",1);
 }
 
-CondorTest::debug("perf_jobs_sue_10_10_30_van SUCCESS\n",1);
+CondorTest::debug(""perf_jobs_sue_10_10_30_van SUCCESS\n",1);
 exit(0);
 
 sub ReadLastStats
@@ -79,7 +78,7 @@ sub ReadLastStats
 	open(DATAOUT,"<$datafile") || die "Can not open existing data file: $!\n";
 	while(<DATAOUT>)
 	{
-		CondorUtils::fullchomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /^\s*Scaling\((\d+)\)\s+Duration\((\d+)\)\s+UnitTime\((\d*\.*\d*)\).*/ )
 		{

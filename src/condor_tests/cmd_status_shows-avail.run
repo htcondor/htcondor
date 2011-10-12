@@ -57,7 +57,7 @@ CondorTest::debug("Master PID is $mypid\n",$debuglevel);
 CondorTest::debug("Master PID submit file is $mysubmitnm\n",$debuglevel);
 
 my $outsource = CondorCmdStatusWorker::SetUp("cmd_status_shows-avail");
-CondorUtils::fullchomp($outsource);
+CondorTest::fullchomp($outsource);
 
 if($outsource eq "") {
     # assume all cleanup of personals which did start occurred in worker

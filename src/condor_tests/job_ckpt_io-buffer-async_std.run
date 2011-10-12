@@ -18,8 +18,8 @@
 ##
 ##**************************************************************
 
+
 use CondorTest;
-use CondorUtils;
 
 $cmd = 'job_ckpt_io-buffer-async_std.cmd';
 $testdesc =  'job_ckpt_io-buffer-async_std test';
@@ -35,7 +35,7 @@ sub OutputTest
     while( <OUTPUT> )
     {
 	$line = $_;
-	CondorUtils::fullchomp $line;
+	CondorTest::fullchomp $line;
     }
     close OUTPUT;
 

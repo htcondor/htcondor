@@ -22,9 +22,8 @@ use File::Copy;
 use File::Path;
 use Getopt::Long;
 use Digest::MD5;
-
 use CondorTest;
-use CondorUtils;
+
 
 GetOptions (
 		'help' => \$help,
@@ -49,8 +48,8 @@ my $oldmd5;
 open(ORIGMD5,"<$oldmd5file") || die "Can't open md5 checksum file $!\n";
 while(<ORIGMD5>)
 {
-    CondorUtils::fullchomp($_);
-    $oldmd5 = $_;
+	CondorTest::fullchomp($_);
+	$oldmd5 = $_;
 }
 close(ORIGMD5);
 CondorTest::debug("Old MD5 = $oldmd5\n",1);

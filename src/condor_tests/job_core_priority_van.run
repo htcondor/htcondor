@@ -19,8 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorUtils;
-
 use Cwd;
 
 $flowlog = "job_core_priority_van.data";
@@ -61,7 +59,7 @@ foreach $name (@filestoedit)
 	my $line = "";
 	while(<FF>)
 	{
-		CondorUtils::fullchomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /(^\s*.*)$socketname(.*$)/)
 		{
@@ -143,7 +141,7 @@ $success = sub
 		while(<FLOW>)
 		{
 			my $ret;
-			CondorUtils::fullchomp($_);
+			CondorTest::fullchomp($_);
 			$ret = $_;
 			push @results, $ret;
 			CondorTest::debug("processing result $ret\n",1);

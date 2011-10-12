@@ -44,17 +44,10 @@
 
 
 package CondorPersonal;
-
-use strict;
-use warnings;
-
-use Carp;
-use Cwd;
-use POSIX "sys_wait_h";
-use Socket;
-use Sys::Hostname;
-
+require 5.0;
 use CondorUtils;
+use warnings;
+use strict;
 
 #################################################################
 #
@@ -139,6 +132,13 @@ my %daemon_logs =
 	"schedd" => "SchedLog",
 );
 
+require 5.0;
+use Carp;
+use Cwd;
+use FileHandle;
+use POSIX "sys_wait_h";
+use Socket;
+use Sys::Hostname;
 
 my $topleveldir = getcwd();
 my $home = $topleveldir;
@@ -152,6 +152,7 @@ my $DEBUGLEVEL = 2; # nothing higher shows up
 my $debuglevel = 3; # take all the ones we don't want to see
 					# and allowed easy changing and remove hard
 					# coded value
+my $iswindows = IsThisWindows();
 my $isnightly = IsThisNightly($topleveldir);
 my $wrap_test;
 
@@ -193,6 +194,28 @@ my $collector_port = "0";
 my $personal_config_file = "";
 my $condordomain = "";
 my $procdaddress = "";
+
+BEGIN
+{
+    my %personal_condor_params;
+    my %personal_config_changes;
+	my $personal_config = "condor_config";
+	my $personal_template = "condor_config_template";
+	my $personal_daemons = "";
+	my $personal_local = "condor_config.local";
+	my $personal_local_src = "";
+	my $personal_local_post_src = "";
+	my $personal_sec_prepost_src = "";
+	my $personal_universe = "";
+	my $personal_startup_wait = "true";
+	my $portchanges = "dynamic";
+	my $DEBUG = 1;
+	my $DEBUGLEVEL = 2;
+	my $collector_port = "0";
+	my $personal_config_file = "";
+	my $condordomain = "";
+	my $procdaddress = "";
+}
 
 #################################################################
 #
@@ -290,9 +313,9 @@ sub StartCondorWithParams
 		return("Failed to do needed Condor Install\n");
 	}
 
-	if( CondorUtils::is_windows() == 1 ){
+	if( $iswindows == 1 ){
 		$winpath = `cygpath -m $localdir`;
-		CondorUtils::fullchomp($winpath);
+		fullchomp($winpath);
 		$condorlocaldir = $winpath;
 		CondorPersonal::TunePersonalCondor($condorlocaldir, $mpid);
 	} else {
@@ -303,9 +326,9 @@ sub StartCondorWithParams
 
 	debug( "collector port is $collector_port\n",$debuglevel);
 
-	if( CondorUtils::is_windows() == 1 ){
+	if( $iswindows == 1 ){
 		$winpath = `cygpath -m $personal_config_file`;
-		CondorUtils::fullchomp($winpath);
+		fullchomp($winpath);
 		print "Windows conversion of personal config file to $winpath!!\n";
 		$config_and_port = $winpath . "+" . $collector_port ;
 	} else {
@@ -401,7 +424,7 @@ sub ParsePersonalCondorParams
 
     while( <SUBMIT_FILE> )
     {
-		CondorUtils::fullchomp($_);
+		fullchomp($_);
 		$line++;
 
 		# skip comments & blank lines
@@ -424,7 +447,7 @@ sub ParsePersonalCondorParams
 
 	    	# compress whitespace and remove trailing newline for readability
 	    	$value =~ s/\s+/ /g;
-			CondorUtils::fullchomp($value);
+			fullchomp($value);
 		
 			# Do proper environment substitution
 	    	if( $value =~ /(.*)\$ENV\((.*)\)(.*)/ ) {
@@ -466,7 +489,7 @@ sub WhichCondorConfig
 	open(CONFIG, "condor_config_val -config -master 2>&1 |") || die "condor_config_val: $!\n";
 	while(<CONFIG>)
 	{
-		CondorUtils::fullchomp($_);
+		fullchomp($_);
 		$line = $_;
 		debug ("--$line--\n",$debuglevel);
 
@@ -565,7 +588,7 @@ sub InstallPersonalCondor
 		open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
 		while(<CONFIG>)
 		{
-			CondorUtils::fullchomp($_);
+			fullchomp($_);
 			$configline = $_;
 			push @configfiles, $configline;
 		}
@@ -628,7 +651,7 @@ sub InstallPersonalCondor
 		open(CONFIG,"condor_config_val -config | ") || die "Can not find config file: $!\n";
 		while(<CONFIG>)
 		{
-			CondorUtils::fullchomp($_);
+			fullchomp($_);
 			$configline = $_;
 			debug( "$_\n" ,$debuglevel);
 			push @configfiles, $configline;
@@ -843,9 +866,9 @@ sub TunePersonalCondor
 	#filter fig file storing entries we set so we can test
 	#for completeness when we are done
 	my $mytoppath = "";
-	if( CondorUtils::is_windows() == 1 ){
+	if( $iswindows == 1 ){
 		$mytoppath = `cygpath -m $topleveldir`;
-		CondorUtils::fullchomp($mytoppath);
+		fullchomp($mytoppath);
 	} else {
 		$mytoppath =  $topleveldir;
 	}
@@ -859,7 +882,7 @@ sub TunePersonalCondor
 	print NEW "# Editing requested config<$personal_template>\n";
 	while(<TEMPLATE>)
 	{
-		CondorUtils::fullchomp($_);
+		fullchomp($_);
 		$line = $_;
 		if( $line =~ /^RELEASE_DIR\s*=.*/ )
 		{
@@ -908,7 +931,7 @@ sub TunePersonalCondor
 		open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
 		while(<LOCSRC>)
 		{
-			CondorUtils::fullchomp($_);
+			fullchomp($_);
 			$line = $_;
 			print NEW "$line\n";
 		}
@@ -1022,7 +1045,7 @@ sub TunePersonalCondor
 	}
 
 	#print NEW "PROCD_LOG = \$(LOG)/ProcLog\n";
-	if( CondorUtils::is_windows() == 1 ){
+	if( $iswindows == 1 ){
 		print NEW "# Adding procd pipe for windows\n";
 		print NEW "PROCD_ADDRESS = \\\\.\\pipe\\$procdaddress\n";
 	}
@@ -1123,9 +1146,9 @@ sub StartPersonalCondor
 
 	debug( "Want $configfile for config file\n",$debuglevel);
 
-	if( CondorUtils::is_windows() == 1 ){
+	if( $iswindows == 1 ){
 		$figpath = `cygpath -m $fullconfig`;
-		CondorUtils::fullchomp($figpath);
+		fullchomp($figpath);
 		$fullconfig = $figpath;
 		# note: on windows all binaaries in bin!
 		$personalmaster = $localdir . "bin/condor_master -f &";
@@ -1203,8 +1226,8 @@ sub IsPersonalRunning
     my $badness = "";
     my $matchedconfig = "";
 
-    CondorUtils::fullchomp($pathtoconfig);
-    #if(CondorUtils::is_windows() == 1) {
+    fullchomp($pathtoconfig);
+    #if($iswindows == 1) {
         #$pathtoconfig =~ s/\\/\\\\/g;
     #}
 
@@ -1213,7 +1236,7 @@ sub IsPersonalRunning
 !\n";
 	debug("parse - condor_config_val -config -master log \n",$debuglevel);
     while(<CONFIG>) {
-        CondorUtils::fullchomp($_);
+        fullchomp($_);
         $line = $_;
         debug ("--$line--\n",$debuglevel);
 
@@ -1242,7 +1265,7 @@ sub IsPersonalRunning
     open(MADDR,"condor_config_val MASTER_ADDRESS_FILE 2>&1 |") || die "condor_config_val: $
     !\n";
     while(<MADDR>) {
-        CondorUtils::fullchomp($_);
+        fullchomp($_);
         $line = $_;
         if($line =~ /^(.*master_address)$/) {
             if(-f $1) {
@@ -1278,7 +1301,7 @@ sub IsPersonalRunning
 sub IsRunningYet
 {
 	my $daemonlist = `condor_config_val daemon_list`;
-	CondorUtils::fullchomp($daemonlist);
+	fullchomp($daemonlist);
 	my $collector = 0;
 	my $schedd = 0;
 	my $startd = 0;
@@ -1663,7 +1686,7 @@ sub KillDaemonPids
 		$thispid = $_;
 		if($thispid =~ /^(\d+)\s+MASTER.*$/) {
 			$masterpid = $1;
-			if(CondorUtils::is_windows() == 1) {
+			if($iswindows == 1) {
 				$cmd = "/usr/bin/kill -f -s 3 $masterpid";
 				runcmd($cmd);
 			} else {
@@ -1679,7 +1702,7 @@ sub KillDaemonPids
 	# did it work.... is process still around?
 	$cnt = kill 0, $masterpid;
 	# try a kill again on master and see if no such process
-	if(CondorUtils::is_windows() == 1) {
+	if($iswindows == 1) {
 		$cnt = 1;
 		open(KL,"/usr/bin/kill -f -s 15 $masterpid 2>&1 |") 
 			or die "can not grab kill output\n";
@@ -1704,7 +1727,7 @@ sub KillDaemonPids
 			if($thispid =~ /^(\d+)\s+MASTER.*$/) {
 				$thispid = $1;
 				debug("Kill MASTER PID <$thispid:$1>\n",$debuglevel);
-				if(CondorUtils::is_windows() == 1) {
+				if($iswindows == 1) {
 					$cmd = "/usr/bin/kill -f -s 15 $thispid";
 					runcmd($cmd);
 				} else {
@@ -1712,7 +1735,7 @@ sub KillDaemonPids
 				}
 			} else {
 				debug("Kill non-MASTER PID <$thispid>\n",$debuglevel);
-				if(CondorUtils::is_windows() == 1) {
+				if($iswindows == 1) {
 					$cmd = "kill -f -s 15 $thispid";
 					runcmd($cmd,{expect_result=>\&ANY});
 				} else {
@@ -1735,6 +1758,37 @@ sub KillDaemonPids
 
 #################################################################
 #
+# IsThisWindows
+#
+#################################################################
+
+sub IsThisWindows
+{
+    my $path = Which("cygpath");
+    #print "Path return from which cygpath: $path\n";
+    if($path =~ /^.*\/bin\/cygpath.*$/ ) {
+        #print "This IS windows\n";
+        return(1);
+    }
+    #print "This is NOT windows\n";
+    return(0);
+}
+
+
+# Cygwin's chomp does not return the \r
+sub fullchomp {
+    # Preserve the behavior of chomp, e.g. chomp $_ if no argument is specified.
+    push (@_,$_) if( scalar(@_) == 0);
+
+    foreach my $arg (@_) {
+        $arg =~ s/[\012\015]+$//;
+    }
+
+    return;
+}
+
+#################################################################
+#
 # FindCollectorPort
 #
 # 	Looks for collector_address_file via condor_config_val and tries
@@ -1745,7 +1799,7 @@ sub FindCollectorPort
 {
 	my $collector_address_file = `condor_config_val collector_address_file`;
 	my $line;
-	CondorUtils::fullchomp($collector_address_file);
+	fullchomp($collector_address_file);
 
 	debug( "Looking for collector port in file ---$collector_address_file---\n",$debuglevel);
 
@@ -1761,7 +1815,7 @@ sub FindCollectorPort
 
 	open(COLLECTORADDR,"<$collector_address_file")  || die "Can not open collector address file: $!\n";
 	while(<COLLECTORADDR>) {
-		CondorUtils::fullchomp($_);
+		fullchomp($_);
 		$line = $_;
 		if( $line =~ /^\s*<(\d+\.\d+\.\d+\.\d+):(\d+)>\s*$/ ) {
 			debug( "Looks like ip $1 and port $2!\n",$debuglevel);

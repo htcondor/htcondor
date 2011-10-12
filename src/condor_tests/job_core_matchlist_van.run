@@ -91,7 +91,7 @@ $execute = sub
 	foreach $line (@adarray)
 	{
 		my $line = "";
-		CondorUtils::fullchomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /^RemoteHost.*/ )
 		{

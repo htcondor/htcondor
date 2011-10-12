@@ -19,8 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorUtils;
-
 use Expect;
 use Socket;
 use Sys::Hostname;
@@ -38,7 +36,8 @@ my $startpostmasterport = 5432;
 my $postmasterinc = int(rand(100) + 13);
 $currenthost = CondorTest::getFqdnHost();
 $domain = `dnsdomainname`;
-CondorUtils::fullchomp($domain);
+CondorTest::fullchomp($currenthost);
+CondorTest::fullchomp($domain);
 
 # for quill this must be the fully qualified name which
 # is what quill uses to builds its search string for the

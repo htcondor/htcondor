@@ -19,8 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorUtils;
-
 use Cwd;
 use Sys::Hostname;
 
@@ -41,7 +39,7 @@ sub load_up_lines
 	open(IN,"<job_core_macros-dollardollar_van.out") || die "Can not open job_core_macros-dollardollar_van.out: $!\n";
 	while(<IN>)
 	{
-		CondorUtils::fullchomp($_);
+		CondorTest::fullchomp($_);
 		push @lines, $_;
 	}
 };

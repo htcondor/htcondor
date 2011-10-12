@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorUtils;
 
 $cmd = 'job_core_shadow-lessthan-memlimit_van.cmd';
 $testdesc =  'Make sure shadow process memory stays bellow a limit - vanilla U';
@@ -51,7 +50,7 @@ $executed = sub
 	# find the shadow id from the shadow log
 	while(<SHADOWLOG>)
 	{
-		CondorUtils::fullchomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 
 		# grab the pid from the line that has the cluster id <date time (cluster.0) (pid) message>

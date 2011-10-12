@@ -18,8 +18,6 @@
 ##
 ##**************************************************************
 
-use CondorUtils;
-
 my $arg = $ARGV[0];
 my $basefile = $ARGV[1];
 
@@ -30,8 +28,8 @@ open(OLDOUT, "<$old");
 open(NEWOUT, ">$new");
 while(<OLDOUT>)
 {
-    CondorUtils::fullchomp($_);
-    print NEWOUT "$_\n";
+	fullchomp($_);
+	print NEWOUT "$_\n";
 }
 print NEWOUT "$arg\n";
 
@@ -40,3 +38,15 @@ close(NEWOUT);
 system("mv $new $old");
 print "Job $arg done\n";
 exit(0);
+
+
+sub fullchomp
+{
+	push (@_,$_) if( scalar(@_) == 0);
+	foreach my $arg (@_) {
+		$arg =~ s/\012+$//;
+		$arg =~ s/\015+$//;
+	}
+	return(0);
+}
+

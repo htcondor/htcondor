@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorUtils;
 
 $cmd      = 'job_filexfer_input-onegone_van.cmd';
 $template = 'job_filexfer_input-onegone_van.template';
@@ -106,7 +105,7 @@ open(CMD,"<$template") || die "Can not open command file: $!\n";
 open(NEWCMD,">$cmd") || die "Can not open command file: $!\n";
 while(<CMD>)
 {
-	CondorUtils::fullchomp($_);
+	CondorTest::fullchomp($_);
 	CondorTest::debug("$_\n",1);
 	$line = $_;
 	if( $line =~ /^\s*input\s*=\s*job_\d+_dir\/([a-zA-Z_]+)\d*\.txt\s*$/)

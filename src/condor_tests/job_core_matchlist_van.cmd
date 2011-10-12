@@ -8,7 +8,7 @@ match_list_length = 5
 rank = ((TARGET.Name != LastMatchName0) * 100) 
 on_exit_remove = (time() - QDate) > 10000
 should_transfer_files = ALWAYS
-transfer_input_files = CondorTest.pm, CondorUtils.pm
+transfer_input_files = CondorTest.pm
 when_to_transfer_output = ON_EXIT_OR_EVICT
 environment = MYNAME = $$(name)
 input = job_core_matchlist.data

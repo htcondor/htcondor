@@ -18,11 +18,9 @@
 ##
 ##**************************************************************
 
+use CondorTest;
 use strict;
 use warnings;
-
-use CondorTest;
-use CondorUtils;
 
 my $cmd = 'job_core_args_sched.cmd';
 my $testdesc =  'Arguments are preserved - scheduler U';
@@ -86,7 +84,7 @@ my $ExitSuccess = sub {
 	if(!defined($args)) {
 		die "Can't pull arguments from submit file";
 	}
-	CondorUtils::fullchomp($args);
+	CondorTest::fullchomp($args);
 	print "Get the original arguments to the job\n";
 	my(@args_reqd) = split / /, $args;
 

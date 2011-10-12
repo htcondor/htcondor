@@ -95,7 +95,7 @@ $failure = sub
 		open( RESCUE, "<$rescuedag");
 		while(<RESCUE>)
 		{
-			CondorUtils::fullchomp($_);
+			CondorTest::fullchomp($_);
 			$line = $_;
 			if( $line =~ /^#\s+(\d+)\s+of\s+(\d+)/ )
 			{

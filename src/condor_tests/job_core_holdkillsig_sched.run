@@ -19,7 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorUtils;
 
 $cmd = 'job_core_holdkillsig_sched.cmd';
 $testdesc =  'Condor allows change of hold kill signal - scheduler U';
@@ -55,7 +54,7 @@ $aborted = sub {
 	open( FILE, "<$outfile" ) || die "error opening $file: $!\n";
 	while(<FILE>)
 	{
-		CondorUtils::fullchomp($_);
+		CondorTest::fullchomp($_);
 		CondorTest::debug("Found $_\n",1);
 		if($_ eq $killsig)
 		{

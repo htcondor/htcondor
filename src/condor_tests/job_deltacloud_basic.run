@@ -19,8 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorUtils;
-
 use strict;
 use warnings;
 
@@ -40,8 +38,12 @@ chomp( $cwd );
 my $gem_home = "$cwd/deltacloud_gems";
 
 # where am I running
-my $currenthost = CondorTest::getFqdnHost();
+my $currenthost = `hostname`;
+chomp($currenthost);
+my $primarycollector = $currenthost;
 my @adarray;
+
+CondorTest::fullchomp($currenthost);
 
 print scalar localtime() . "\n";
 

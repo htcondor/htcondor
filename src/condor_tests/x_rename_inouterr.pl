@@ -18,10 +18,9 @@
 ##
 ##**************************************************************
 
-use strict;
-
 use CondorTest;
-use CondorUtils;
+
+use strict;
 
 #open(LOG,">run_test_log");
 my $start = localtime;
@@ -29,7 +28,7 @@ print LOG "Started at $start\n";
 open(TESTS,"ls *.cmd | ");
 while(<TESTS>)
 {
-	CondorUtils::fullchomp($_);
+	CondorTest::fullchomp($_);
 	my $now = localtime;
 	my $filebase = "";
 	my $currentfile = $_;
@@ -51,7 +50,7 @@ while(<TESTS>)
 	my $line = "";
 	while(<FIXIT>)
 	{
-		CondorUtils::fullchomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 		CondorTest::debug("Current line: ----$line----\n",1);
 		if( $line =~ /^\s*error\s*=\s*.*$/ )

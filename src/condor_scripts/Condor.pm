@@ -40,8 +40,6 @@ use Carp;
 use File::Spec;
 use POSIX qw/sys_wait_h strftime/;
 
-use CondorUtils;
-
 my $CONDOR_SUBMIT = 'condor_submit';
 my $CONDOR_SUBMIT_DAG = 'condor_submit_dag';
 my $CONDOR_VACATE = 'condor_vacate';
@@ -649,7 +647,7 @@ sub Monitor
 		}
 		$line = <SUBMIT_LOG>;
 	}
-	CondorUtils::fullchomp($line);
+	fullchomp($line);
 	$linenum++;
 
       PARSE:
@@ -690,7 +688,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    CondorUtils::fullchomp($line);
+	    fullchomp($line);
 	    $linenum++;
 
 	    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
@@ -752,7 +750,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    CondorUtils::fullchomp($line);
+	    fullchomp($line);
 	    $linenum++;
 
 	    # terminated successfully
@@ -791,7 +789,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    CondorUtils::fullchomp($line);
+	    fullchomp($line);
 		$linenum++;
 
 		if( $line =~ /^\s+\(1\) Corefile in: (.*)/ )
@@ -852,7 +850,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    CondorUtils::fullchomp($line);
+	    fullchomp($line);
 	    $linenum++;
 
 		$info{'shadowerror'} = $line;
@@ -944,7 +942,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    CondorUtils::fullchomp($line);
+	    fullchomp($line);
 	    $linenum++;
 
 		$info{'holdreason'} = $line;
@@ -1061,7 +1059,7 @@ sub ParseSubmitFile
     debug( "reading submit file...\n" ,5);
     while( <SUBMIT_FILE> )
     {
-	CondorUtils::fullchomp($_);	# do a windows strip, fine for linux
+	fullchomp($_);	# do a windows strip, fine for linux
 	$line++;
 
 	# skip comments & blank lines
@@ -1087,7 +1085,7 @@ sub ParseSubmitFile
 	    # compress whitespace and remove trailing newline for readability
 		# Don't change white space. Some environment tests expect tabs to stay tabs.
 	    # $value =~ s/\s+/ /g;
-	    CondorUtils::fullchomp($value);
+	    fullchomp($value);
 
 	
 		# Do proper environment substitution
@@ -1146,5 +1144,21 @@ sub safe_WEXITSTATUS {
 	}
 }
 
+#
+# Cygwin's perl chomp does not remove cntrl-m but this one will
+# and linux and windows can share the same code. The real chomp
+# totals the number or changes but I currently return the modified
+# array. bt 10/06
+#
+
+sub fullchomp
+{
+	push (@_,$_) if( scalar(@_) == 0);
+	foreach my $arg (@_) {
+		$arg =~ s/\012+$//;
+		$arg =~ s/\015+$//;
+	}
+	return(0);
+}
 
 1;

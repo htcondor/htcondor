@@ -64,7 +64,7 @@ my $checkin = "job_dagman_maxprescripts-checkin.pl";
 	my $line = "";
 	while(<FF>)
 	{
-		CondorUtils::fullchomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /(^\s*.*)$socketname(.*$)/)
 		{
@@ -134,7 +134,7 @@ $success = sub
 	while(<FLOW>)
 	{
 		my $ret;
-		CondorUtils::fullchomp($_);
+		CondorTest::fullchomp($_);
 		$ret = $_;
 		CondorTest::debug("$ret\n",1);
 		if( $ret ne "0" )

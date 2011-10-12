@@ -49,7 +49,7 @@ foreach $name (@filestoedit)
 	my $line = "";
 	while(<FF>)
 	{
-		CondorUtils::fullchomp($_);
+		CondorTest::fullchomp($_);
 		$line = $_;
 		if( $line =~ /(^\s*.*)$socketname(.*$)/)
 		{
@@ -80,7 +80,7 @@ open(QUEUECMD,"<$cmd") || die "Can't open cmd file $!\n";
 open(NEWCMD,">$cmd.new") || die "Can not open new command file: $!\n";
 while(<QUEUECMD>)
 {
-	CondorUtils::fullchomp($_);
+	CondorTest::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*queue\s*.*$/ )
 	{
@@ -119,7 +119,7 @@ $success = sub
 		while(<FLOW>)
 		{
 			my $ret;
-			CondorUtils::fullchomp($_);
+			CondorTest::fullchomp($_);
 			$ret = $_;
 			CondorTest::debug("$ret\n",1);
 			if( $ret ne "0" )

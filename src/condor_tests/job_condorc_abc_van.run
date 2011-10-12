@@ -19,8 +19,6 @@
 ##**************************************************************
 
 use CondorTest;
-use CondorUtils;
-
 use Check::SimpleJob;
 
 # This is the "remote" pool where the job will run.
@@ -33,7 +31,7 @@ my $poolC_collector = $poolC->GetCollectorAddress();
 my $poolC_schedd_name =
     `condor_status -pool $poolC_collector -schedd -format "%s\n" Name`
     || die "Failed to query schedd name.";
-CondorUtils::fullchomp $poolC_schedd_name;
+CondorTest::fullchomp $poolC_schedd_name;
 
 
 my $append_condor_config = '
@@ -52,7 +50,7 @@ my $poolB_collector = $poolB->GetCollectorAddress();
 my $poolB_schedd_name =
     `condor_status -pool $poolB_collector -schedd -format "%s\n" Name`
     || die "Failed to query schedd name.";
-CondorUtils::fullchomp $poolB_schedd_name;
+CondorTest::fullchomp $poolB_schedd_name;
 
 
 # This is the "local" pool where the job is submitted.
