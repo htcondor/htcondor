@@ -176,6 +176,14 @@ exiting.  The \Condor{starter} will wait
 the shutdown if the job exit hook has not completed.
 \Ticket{2543}
 
+\item In Condor 7.5.4, an improvement was made to avoid reliance on
+  \MacroNI{NEGOTIATOR\_HOST} matching a reverse DNS lookup of the
+  negotiator.  However, this improvement was not made to the dedicated
+  scheduler, so matchmaking of parallel jobs was still subject to the
+  problems associated with the old algorithm.  Now, the dedicated
+  scheduler benefits from the same improved algorithm as the
+  non-dedicated scheduler.  \Ticket{2540}
+
 \end{itemize}
 
 \noindent Known Bugs:
