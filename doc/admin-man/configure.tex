@@ -10348,6 +10348,14 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
   between sets of hooks.
 
+\label{param:HookJobExitTimeout}
+\item[\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT}]
+  For the fetch work hooks,
+  the number of seconds the \Condor{starter} will wait for the JOB\_EXIT
+  hook to exit before continuing with job cleanup.  Defaults to 30 seconds.
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+
 \label{param:FetchWorkDelay}
 \item[\Macro{FetchWorkDelay}]
   An expression that defines the number of seconds that the
