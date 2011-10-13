@@ -199,6 +199,9 @@ else {
 		if (!($perlver =~ /cygwin/i)) {
 			die "cygwin perl not found!\n";
 		}
+	} else {
+	   print "cygwin perl is the first perl, clearing perl_exe\n";
+	   $perl_exe = "";
 	}
 }
 
