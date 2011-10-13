@@ -5530,6 +5530,12 @@ Scheduler::negotiate(int command, Stream* s)
 
 	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
 
+	// SubmitterAds with different attributes can elicit a
+	// change of the command int for each submitter ad conversation, so
+	// we explicit print it out to help us debug.
+	dprintf(D_ALWAYS, "Using negotiation protocol: %s\n", 
+		getCommandString(command));
+
 		// reset this flag so the next time we bump into a limit
 		// we issue a log message
 	RecentlyWarnedMaxJobsRunning = false;
