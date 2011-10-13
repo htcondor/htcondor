@@ -60,17 +60,19 @@ my $version;
 if( TestGlue::is_windows() ) {
     # if there is a release_dir, assume that the condor binaries are there
     # In that case, no unzipping is needed. just rename release_dir to condor
-    if (-d "release_dir" && ! -d "condor") {
-       print "Renaming release_dir/ to condor/\n";
-       rename("release_dir","condor");
-       TestGlue::dir_listing("condor");
-       
-       my ($release_zipfile) = glob("condor-*.zip");
-       if ($release_zipfile) {
-          $version = substr($release_zipfile, 0, -4);
-	      print "VERSION string is $version from $release_zipfile\n";
-	   }
-    } 
+    if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
+		if (-d "release_dir" && ! -d "condor") {
+		   print "Renaming release_dir/ to condor/\n";
+		   rename("release_dir","condor");
+		   TestGlue::dir_listing("condor");
+	       
+		   my ($release_zipfile) = glob("condor-*.zip");
+		   if ($release_zipfile) {
+			  $version = substr($release_zipfile, 0, -4);
+			  print "VERSION string is $version from $release_zipfile\n";
+		   }
+		} 
+    }
     
     # if there is no release_dir, then look for a zip file
     # containing the condor binaries and unzip it.
