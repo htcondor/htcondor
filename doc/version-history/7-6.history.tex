@@ -169,6 +169,13 @@ was reported as 4GB.  This limit has been raised to 4095GB.
 disk image files wouldn't be transferred back to the submit machine.
 \Ticket{2530}
 
+\item Fixed a bug where a \Condor{starter} configured to use job hooks 
+could fail to run a job but not wait for the job exit hook to complete before
+exiting.  The \Condor{starter} will wait
+\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT} seconds before continuing with
+the shutdown if the job exit hook has not completed.
+\Ticket{2543}
+
 \end{itemize}
 
 \noindent Known Bugs:
