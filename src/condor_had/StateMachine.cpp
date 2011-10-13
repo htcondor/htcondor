@@ -39,8 +39,6 @@
 #include "Utils.h"
 
 
-//#undef IS_REPLICATION_USED
-#define IS_REPLICATION_USED          (1)
 #define MESSAGES_PER_INTERVAL_FACTOR (2)
 #define DEFAULT_HAD_UPDATE_INTERVAL  (5 * MINUTE)
 
@@ -146,7 +144,6 @@ HADStateMachine::isHardConfigurationNeeded(void)
 {
 	char		*tmp      = NULL;
 	char		 controllee[128];
-	bool    	 usePrimary  = false;
 	int     	 selfId = -1;
 	StringList	 allHadIps;
 
@@ -162,14 +159,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 		return true;
 	}
 
-	tmp = param( "HAD_USE_PRIMARY" );
-	if( tmp ) {
-        if( strncasecmp( tmp, "true", strlen("true") ) == 0 ) {
-			usePrimary = true;
-        }
-        free( tmp );
-    }
-	if ( usePrimary != m_usePrimary ) {
+	if ( param_boolean("HAD_USE_PRIMARY", false) != m_usePrimary ) {
 		return true;
 	}
 
@@ -178,7 +168,7 @@ HADStateMachine::isHardConfigurationNeeded(void)
 		StringList	otherHadIps;
        	// we do not care for the return value here, so there is no importance
 		// whether we use the 'usePrimaryCopy' or 'm_usePrimary'
-		getHadList( tmp, usePrimary, otherHadIps, allHadIps, selfId );
+		getHadList( tmp, m_usePrimary, otherHadIps, allHadIps, selfId );
         free( tmp );
     } else {
 		utilCrucialError( utilNoParameterError( "HAD_LIST", "HAD" ).Value() );
@@ -232,24 +222,10 @@ HADStateMachine::softReconfigure(void)
         free( buffer );
     }
 
-	buffer = param( "HAD_CONNECTION_TIMEOUT" );
+	m_connectionTimeout = param_integer("HAD_CONNECTION_TIMEOUT",
+										DEFAULT_SEND_COMMAND_TIMEOUT,
+										0); // min value
 
-	if( buffer ) {
-        bool res = false;
-
-		m_connectionTimeout = utilAtoi(buffer, &res);
-
-		if( ! res || m_connectionTimeout <= 0 ) {
-            free( buffer );
-            utilCrucialError( utilConfigurationError(
-								"HAD_CONNECTION_TIMEOUT", "HAD" ).Value( ) );
-        }
-
-        free( buffer );
-    } else {
-        dprintf( D_ALWAYS, "No HAD_CONNECTION_TIMEOUT in config file,"
-                		   " use default value\n" );
-    }
     // calculate m_hadInterval
     int safetyFactor = 1;
 
@@ -263,40 +239,16 @@ HADStateMachine::softReconfigure(void)
 
 	m_hadInterval = (time_to_send_all + safetyFactor)*
                   (MESSAGES_PER_INTERVAL_FACTOR);
-#if IS_REPLICATION_USED
-    // setting the replication usage permissions
-    buffer = param( "HAD_USE_REPLICATION" );
 
-	if ( buffer && ! strncasecmp( buffer, "true", strlen("true") ) ) {
-        m_useReplication = true;
-        free( buffer );
-    }
+    // setting the replication usage permissions
+	m_useReplication = param_boolean("HAD_USE_REPLICATION", m_useReplication);
     setReplicationDaemonSinfulString( );
-#endif
 
 	dprintf(D_ALWAYS,
 			"HADStateMachine::softReconfigure classad information\n");
     initializeClassAd( );
     m_updateCollectorInterval = param_integer ("HAD_UPDATE_INTERVAL",
                                              DEFAULT_HAD_UPDATE_INTERVAL );
-# if 0
-    buffer = param( "HAD_UPDATE_INTERVAL" );
-    if( buffer ) {
-        bool res = false;
-
-		m_updateCollectorInterval = utilAtoi(buffer, &res);
-
-		if( ! res || m_updateCollectorInterval <= 0 ) {
-            free( buffer );
-            utilCrucialError( utilConfigurationError(
-                                "HAD_UPDATE_INTERVAL", "HAD" ).Value( ) );
-        }
-        free( buffer );
-    } else {
-        utilCrucialError( utilNoParameterError(
-                            "HAD_UPDATE_INTERVAL", "HAD" ).Value( ) );
-    }
-# endif
 	printParamsInformation();
 
 	return TRUE;
@@ -399,13 +351,7 @@ HADStateMachine::reinitialize(void)
 
 	// reconfiguring data members, on which the negotiator location inside the
 	// pool depends
-    tmp = param( "HAD_USE_PRIMARY" );
-    if( tmp ) {
-        if(strncasecmp(tmp,"true",strlen("true")) == 0) {
-          m_usePrimary = true;
-        }
-        free( tmp );
-    }
+	m_usePrimary = param_boolean("HAD_USE_PRIMARY", m_usePrimary);
 
     tmp = param( "HAD_LIST" );
     if ( tmp ) {

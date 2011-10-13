@@ -190,6 +190,11 @@ int param_integer(const char *, int default_value, int, int, bool)
 	return default_value;
 }
 
+bool param_boolean_crufty(const char *, bool default_value)
+{
+	return default_value;
+}
+
 bool param_boolean( const char *, bool default_value, bool, 
 	ClassAd *, ClassAd *, bool)
 {

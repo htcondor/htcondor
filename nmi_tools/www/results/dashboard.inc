@@ -2,7 +2,7 @@
 
 define("AUTO_URL", "./Run-condor.php?oneoffs=0");
 define("ONEOFFS_URL", "./Run-condor.php?oneoffs=1");
-define("QUEUE_DEPTH_URL", "./Queue-depth.php");
+define("QUEUE_DEPTH_URL", "./Queue-depth-nmi.php");
 
 define("CONDOR_USER", "cndrauto");
 define("BRANCH_URL", "./Run-condor-branch.php?branch=%s&user=%s");
@@ -99,7 +99,6 @@ function make_sidebar() {
   echo "<p><a href='" . AUTO_URL . "'>Auto builds</a>\n";
   echo "<p><a href='" . ONEOFFS_URL . "'>One-off builds</a>\n";
   echo "<p><a href='" . QUEUE_DEPTH_URL . "'>NMI platform queue</a>\n";
-  echo "<p><a href='../results-old/Run-condor.php'>Old dashboard</a>\n";
   echo "<p><a href='../results-devel/'>Development area</a>\n";
 
   echo "</div>\n";

@@ -41,8 +41,6 @@ int REQUEST_INBOX = 0; // stdin
 
 const char * version = "$GahpVersion " AMAZON_GAHP_VERSION " Feb 15 2008 Condor\\ AMAZONGAHP $";
 
-DECL_SUBSYSTEM("AMAZON_GAHP", SUBSYSTEM_TYPE_GAHP);
-
 static IOProcess *ioprocess = NULL;
 
 // forwarding declaration
@@ -218,6 +216,8 @@ main( int argc, char ** const argv )
 	/* Unblock signals in our set */
 	sigprocmask( SIG_UNBLOCK, &sigSet, NULL );
 #endif
+
+	set_mySubSystem("AMAZON_GAHP", SUBSYSTEM_TYPE_GAHP);
 
     config();
     dprintf_config( "EC2_GAHP", get_param_functions() );

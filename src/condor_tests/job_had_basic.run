@@ -19,6 +19,8 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
+
 use Cwd;
 use x_hadutilities;
 
@@ -51,7 +53,7 @@ CondorTest::debug("Working directory is $topDirectory\n",1);
 
 # Operating system environment variables of the test
 my $currentHost = CondorTest::getFqdnHost();
-CondorTest::fullchomp($currentHost);
+CondorUtils::fullchomp($currentHost);
 
 my $currentIp   = &GetMyIpAddress();
 my $pId         = $$;
@@ -253,7 +255,7 @@ $controlString = '';
 # Condor configuration parameters
 my $hadConnectionTimeout = &CondorConfigVal("$currentIp:$collectorPorts[1]", 
 											'HAD_CONNECTION_TIMEOUT'); 
-CondorTest::fullchomp($hadConnectionTimeout);
+CondorUtils::fullchomp($hadConnectionTimeout);
 my $hadCycleInterval     = 2 * (2 * $hadConnectionTimeout * $hadsNumber + 1);
 my $negotiatorTime       = $hadCycleInterval * 3 + 1;
 my $hadUsePrimary        = &CondorConfigVal("$currentIp:$collectorPorts[1]",
@@ -636,7 +638,7 @@ sub TestingSystemConsistency
     my $classAdLifeTime = &CondorConfigVal(
 		"$currentIp:$collectorPorts[$nonFailingHads[0]]", 
 		'CLASSAD_LIFETIME');
-    CondorTest::fullchomp($classAdLifeTime);
+    CondorUtils::fullchomp($classAdLifeTime);
 
     $message .= $checker . $checkerName . "\n";
 
@@ -886,7 +888,7 @@ sub CorrectAccountantFormat
 		my @accountantContents = <ACCOUNTANT>;
 		close(ACCOUNTANT);
 
-		CondorTest::fullchomp(@accountantContents);
+		CondorUtils::fullchomp(@accountantContents);
 
 		foreach my $accountantLine (@accountantContents)
 		{
@@ -947,7 +949,7 @@ sub CorrectAccountantFormat
 		my @accountantVersionContents = <ACCOUNTANT_VERSION>;
 		close(ACCOUNTANT_VERSION);
 
-		CondorTest::fullchomp(@accountantVersionContents);
+		CondorUtils::fullchomp(@accountantVersionContents);
 
 		# The accountant version includes 2 components, each one appearing 
 		# on a separate line

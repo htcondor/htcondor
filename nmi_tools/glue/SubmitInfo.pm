@@ -213,12 +213,38 @@ our %submit_info = (
 	},
 
 	##########################################################################
-	# Microsoft Windows 6.0/2000/xp/whatever on x86_64
+	# Microsoft Windows 6.1/2000/xp/whatever on x86_64
 	# This probably doesn't work--glue scripts do funky things with it.
 	##########################################################################
-	'x86_winnt_6.0'		=> {
+	'x86_64_winnt_6.1'		=> {
 		'build' => {
-			'configure_args' => { '-G \"Visual Studio 9 2008\"' => undef },
+			'configure_args' => { 
+			 # TJ 10/4/2011 new batlab can't handle quoted strings as args at the moment.
+			 # '-G \"Visual Studio 9 2008\"' => undef,
+			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
+            },
+			'prereqs'	=> undef,
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> undef,
+			'testclass' => [ @default_testclass ],
+		},
+	},
+	
+	##########################################################################
+	# Microsoft Windows 6.1/2000/xp/whatever on x86	
+	# This probably doesn't work--glue scripts do funky things with it.
+	##########################################################################
+	'x86_winnt_6.1'		=> {
+		'build' => {
+			'configure_args' => { 
+			 # TJ 10/4/2011 new batlab can't handle quoted strings as args at the moment.
+			 # '-G \"Visual Studio 9 2008\"' => undef,
+			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
+			},
 			'prereqs'	=> undef,
 			'xtests'	=> undef,
 		},
@@ -302,7 +328,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ 'java-1.4.2_05' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -323,7 +349,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ 'java-1.4.2_05' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -388,19 +414,12 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
 
-	##########################################################################
-	# Platform RHEL 6 on x86_64. Unmanaged.
-	##########################################################################
 	'x86_64_rhap_6.0-updated'	=> 'x86_64_rhap_6.0',
-
-	#################################################################
-	# Platform RHEL 6.1 on x86_64. This one is updated by the batlab.
-	#################################################################
 	'x86_64_rhap_6.1-updated'	=> 'x86_64_rhap_6.0',
 
 	# This is the new batlab one
@@ -419,6 +438,9 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+
+    'x86_64_sl_6.0' => 'x86_64_rhap_6.1',
+
 	##########################################################################
 	# Platform RHEL 5 on x86_64
 	##########################################################################
@@ -440,7 +462,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -481,7 +503,7 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5',
-							 'VMware-server-1.0.7', 'ruby-1.9.2-p180' ],
+							 'VMware-server-1.0.7' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -500,7 +522,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'		=> [ 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'prereqs'		=> [ 'java-1.4.2_05' ],
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
@@ -585,7 +607,6 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_macos_10.6-updated' => 'x86_64_macos_10.6',
 
-
 	##########################################################################
 	# Platform RHEL 5 on x86
 	##########################################################################
@@ -605,7 +626,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -633,7 +654,7 @@ our %submit_info = (
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
 			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.5',
-							 'VMware-server-1.0.7', 'ruby-1.9.2-p180' ],
+							 'VMware-server-1.0.7' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -659,7 +680,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -676,7 +697,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -712,7 +733,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -788,7 +809,7 @@ our %submit_info = (
 		
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -807,7 +828,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -826,7 +847,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -845,7 +866,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -864,7 +885,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -882,7 +903,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -901,7 +922,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.9', 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.5.0_08', 'perl-5.8.9' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -939,7 +960,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -956,7 +977,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -973,7 +994,7 @@ our %submit_info = (
 
 		'test' => {
 			'configure_args' => { @default_test_configure_args },
-			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5','ruby-1.9.2-p180' ],
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05', 'perl-5.8.5' ],
 			'testclass' => [ @default_testclass ],
 		},
 	},
@@ -985,7 +1006,6 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
-								  '-DWITHOUT_AMAZON_TEST:BOOL' => 'ON',
 								  '-DWITH_CURL:BOOL' => 'ON',
 								  '-DWITH_LIBVIRT:BOOL' => 'ON',
 								  '-DWITH_LIBXML2:BOOL' => 'ON',
@@ -1005,7 +1025,30 @@ our %submit_info = (
 	},
 	'x86_64_opensuse_11.3-updated'		=> 'x86_64_opensuse_11.3',
 	'x86_64_opensuse_11.4'				=> 'x86_64_opensuse_11.3',
-	'x86_64_opensuse_11.4-updated'		=> 'x86_64_opensuse_11.4',
+
+	# This one is for old batlab with java and ruby test prereqs.
+	# Can go away when old batlab does
+	'x86_64_opensuse_11.4-updated'		=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+								  '-DWITHOUT_SOAP_TEST:BOOL' => 'ON',
+								  '-DWITH_CURL:BOOL' => 'ON',
+								  '-DWITH_LIBVIRT:BOOL' => 'ON',
+								  '-DWITH_LIBXML2:BOOL' => 'ON',
+			},
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => {
+				@default_test_configure_args
+				
+			},
+			'prereqs'	=> [ @default_prereqs, 'java-1.4.2_05' ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
 
 
 	##########################################################################
@@ -1015,7 +1058,6 @@ our %submit_info = (
 		'build' => {
 			'configure_args' => { @minimal_build_configure_args,
 				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
-				'-DWITHOUT_AMAZON_TEST:BOOL=ON' => undef,
 				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
 				'-DWITH_CURL:BOOL=OFF' => undef,
 				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
@@ -1052,9 +1094,32 @@ our %submit_info = (
 			'testclass'	=> [ @default_testclass ],
 		},
 	},
+	'x86_64_freebsd_8.2'				=> {
+		'build' => {
+			'configure_args' => { @minimal_build_configure_args,
+				'-DWITHOUT_SOAP_TEST:BOOL=ON' => undef,
+				'-DENABLE_JAVA_TESTS:BOOL=OFF' => undef,
+				'-DWITH_CURL:BOOL=OFF' => undef,
+				'-DWITH_LIBVIRT:BOOL=OFF' => undef,
+				'-DWITH_LIBXML2:BOOL=ON' => undef,
+			},
+			'prereqs'	=> [ ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => {
+				@default_test_configure_args
+				
+			},
+			'prereqs'	=> [ ],
+			'testclass'	=> [ @default_testclass ],
+		},
+	},
 	'x86_64_freebsd_7.4-updated'		=> 'x86_freebsd_7.4-updated',
 	'x86_freebsd_8.2-updated'			=> 'x86_freebsd_7.4-updated',
 	'x86_64_freebsd_8.2-updated'		=> 'x86_freebsd_7.4-updated',
+	'x86_64_freebsd_8.3'				=> 'x86_freebsd_7.4-updated',
 );
 
 while( 1 ) {

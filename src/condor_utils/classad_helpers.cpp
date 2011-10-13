@@ -349,7 +349,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 
 	job_ad->Assign( ATTR_SHOULD_TRANSFER_FILES,
 					getShouldTransferFilesString( STF_YES ) );
-	job_ad->Assign( ATTR_TRANSFER_FILES, "ONEXIT" );
 	job_ad->Assign( ATTR_WHEN_TO_TRANSFER_OUTPUT,
 					getFileTransferOutputString( FTO_ON_EXIT ) );
 

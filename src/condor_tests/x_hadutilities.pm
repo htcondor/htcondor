@@ -23,6 +23,8 @@ use strict;
 use Socket;
 use POSIX     qw(strftime);
 
+use CondorUtils;
+
 use constant MAX_INT       => 999999999999;
 use constant POSTPONE      => 9999999;
 use constant SUSPENDED     => -1;
@@ -41,7 +43,6 @@ use constant NEGOTIATOR_STARTING_PORT  => 53100;
 use constant COLLECTOR_STARTING_PORT   => 54100;
 use constant STARTD_STARTING_PORT      => 55100;
 
-
 sub LoadTable
 {
     (my $tableFile, my %table) = @_;
@@ -49,7 +50,7 @@ sub LoadTable
 
     foreach my $line (<TABLE>)
     {
-        fullchomp($line);
+        CondorUtils::fullchomp($line);
     	$line =~ s/\s//g;
         my ($key, $value) = split(/=/, $line) if $line;
         $table{$key} = $value;
@@ -106,7 +107,7 @@ sub GetLogicalClock
 	my @accountantVersionContents = <ACCOUNTANT_VERSION>;
 	close(ACCOUNTANT_VERSION);
 
-	fullchomp(@accountantVersionContents);
+	CondorUtils::fullchomp(@accountantVersionContents);
 
 	return $accountantVersionContents[1];	
 }
@@ -118,7 +119,7 @@ sub CondorConfigVal
 			    "$parameter";
 	my $parameterValue = `$commandString`;
 
-	fullchomp($parameterValue);
+	CondorUtils::fullchomp($parameterValue);
 
 	return $parameterValue;
 }
@@ -165,7 +166,7 @@ sub GetAddress
 
 	open(ADDRESS_FILE, "< $filePath");
 	my $sinfulString = <ADDRESS_FILE>;
-	fullchomp($sinfulString);
+	CondorUtils::fullchomp($sinfulString);
 	close(ADDRESS_FILE);
 
 	return $sinfulString;
@@ -178,7 +179,7 @@ sub IsDaemonAlive
 	
 	$isAlive = `ps -ef | grep \"$daemonName.*-p $port\" | grep -v grep`;
 
-    fullchomp($isAlive);
+    CondorUtils::fullchomp($isAlive);
 
 	return YES if $isAlive ne "";
 	return NO;
@@ -191,7 +192,7 @@ sub GetCondorLocalConfigurationFile
 	my @configurationFiles = <CONFIGURATION_FILE>;
 	
 	close(CONFIGURATION_FILE);
-	fullchomp(@configurationFiles);
+	CondorUtils::fullchomp(@configurationFiles);
 	$_ = $configurationFiles[1];
 	tr/\t\ //d;
 	$configurationFiles[1] = $_;
@@ -241,23 +242,6 @@ sub ImplantLine
         print LOCAL_CONFIG_FILE "$startingPhrase=$substitution\n";
         close(LOCAL_CONFIG_FILE);
     }
-}
-
-#
-# Cygwin's perl chomp does not remove cntrl-m but this one will
-# and linux and windows can share the same code. The real chomp
-# totals the number or changes but I currently return the modified
-# array. bt 10/06
-#
-
-sub fullchomp
-{
-	push (@_,$_) if( scalar(@_) == 0);
-	foreach my $arg (@_) {
-		$arg =~ s/\012+$//;
-		$arg =~ s/\015+$//;
-	}
-	return(0);
 }
 
 1;

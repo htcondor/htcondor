@@ -210,7 +210,7 @@ foreach ($platforms AS $platform) {
   # Get the queue depth for the platform if it is pending
   $queue_depth = "";
   if($platform_status[$platform] == PLATFORM_PENDING) {
-    $queue_depth = get_queue_for_nmi_platform($platform, $type);
+    $queue_depth = get_queue_for_nmi_platform($platform, $dash);
   }
 
   $display = "<a href=\"$filepath/$gid/userdir/$platform/\" title=\"View Run Directory\">$display</a>";
@@ -219,7 +219,7 @@ foreach ($platforms AS $platform) {
 
 foreach ($data AS $task => $arr) {
   // need $branch still
-  $history_url = sprintf(HISTORY_URL,$branch,rawurlencode($task));
+  $history_url = sprintf(HISTORY_URL, urlencode($branch), rawurlencode($task));
   $history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
   echo "<tr>\n".
     "<td ".($task_status[$task] != PLATFORM_PASSED ?

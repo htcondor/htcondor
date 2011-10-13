@@ -22,33 +22,26 @@
 
 #include "Triggerd.h"
 
-// about self
-DECL_SUBSYSTEM("TRIGGERD", SUBSYSTEM_TYPE_DAEMON);
-
 com::redhat::grid::Triggerd* agent;
 
 //-------------------------------------------------------------
 
-int main_init(int argc, char* argv[])
+void main_init(int argc, char* argv[])
 {
    dprintf(D_ALWAYS, "main_init() called\n");
 
    agent = new com::redhat::grid::Triggerd();
    agent->init();
-
-   return TRUE;
 }
 
 //-------------------------------------------------------------
 
-int
+void
 main_config( /*bool is_full*/ )
 {
    dprintf(D_ALWAYS, "main_config() called\n");
 
    agent->config();
-
-   return TRUE;
 }
 
 static void Stop()
@@ -60,31 +53,30 @@ static void Stop()
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
         dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
         Stop();
-        return TRUE;    // to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
         dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
         Stop();
-        return TRUE;    // to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-void
-main_pre_dc_init( int argc, char* argv[] )
+int
+main( int argc, char **argv )
 {
-   // dprintf isn't safe yet...
-}
+	set_mySubSystem("TRIGGERD", SUBSYSTEM_TYPE_DAEMON);
 
-void
-main_pre_command_sock_init( )
-{
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }

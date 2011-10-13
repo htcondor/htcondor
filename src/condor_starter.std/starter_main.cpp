@@ -28,7 +28,7 @@
 #include "proto.h"
 #include "name_tab.h"
 
-#include "state_machine_driver.unix.h"
+#include "state_machine_driver.h"
 
 #include "starter.h"
 #include "fileno.h"
@@ -53,9 +53,6 @@ void display_startup_info( const STARTUP_INFO *s, int flags );
 #include "pvm3.h"
 #include "sdpro.h"
 #endif
-
-/* For daemonCore, etc. */
-DECL_SUBSYSTEM( "STARTER", SUBSYSTEM_TYPE_STARTER );
 
 #undef ASSERT
 #define ASSERT(cond) \
@@ -120,6 +117,8 @@ printClassAd( void )
 int
 main( int argc, char *argv[] )
 {
+	set_mySubSystem( "STARTER", SUBSYSTEM_TYPE_STARTER );
+
 	myDistro->Init( argc, argv );
 	if( argc == 2 && strncasecmp(argv[1], "-cl", 3) == MATCH ) {
 		printClassAd();
@@ -304,8 +303,6 @@ close_unused_file_descriptors()
 void
 init_params()
 {
-	char	*tmp;
-
 	if( (Execute=param("EXECUTE")) == NULL ) {
 		EXCEPT( "Execute directory not specified in config file" );
 	}
@@ -323,15 +320,7 @@ init_params()
 		UidDomain[0] = '\0';
 	}
 
-	TrustUidDomain = false;
-	tmp = param( "TRUST_UID_DOMAIN" );
-	if( tmp ) {
-		if( tmp[0] == 't' || tmp[0] == 'T' ) { 
-			TrustUidDomain = true;
-		}			
-		free( tmp );
-	}
-
+	TrustUidDomain = param_boolean_crufty("TRUST_UID_DOMAIN", false);
 
 	// We can configure how many times the starter wishes to attempt to
 	// pull over the initial checkpoint
@@ -800,15 +789,11 @@ spawn_all()
 int
 test_connection()
 {
-	char    *pval;
-
 	if ( write(CLIENT_LOG,"\0\n",2) == -1 ) {
 		
-        pval = param( "STARTER_LOCAL_LOGGING" );
-        if( pval && (pval[0] == 't' || pval[0] == 'T') ) {
+		if( param_boolean_crufty( "STARTER_LOCAL_LOGGING", false ) ) {
 			dprintf( D_ALWAYS, "Lost our connection to the shadow! Exiting.\n" );
 		}
-		free( pval );
 
 			// Send a SIGKILL to our whole process group
 		set_root_priv();

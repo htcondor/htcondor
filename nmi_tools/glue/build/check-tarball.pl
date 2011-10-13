@@ -2,8 +2,27 @@
 use strict;
 use warnings;
 
+my $tar = "tar";
+
+# On BSD and Mac the tar we want is gtar
+if($ENV{NMI_PLATFORM} =~ /(macos|freebsd)/i) {
+    print "Detected we are on Mac or FreeBSD.  Trying to use gtar...\n";
+    if(system("which gtar") == 0) {
+        print "gtar was detected in PATH\n";
+        $tar = "gtar";
+    } else {
+		if(system("which gnutar") == 0) {
+			print "gnutar was detected in PATH\n";
+			$tar = "gnutar";
+		} else {
+   	     print "WARNING: gtar was not found in path, falling back to tar.  The version of tar might output in a different version than this script expects.  Tar version:\n";
+   	     print `tar --version 2>&1`;
+    	}
+	}
+}
+
 # In bytes
-my $FILESIZE_LOWER_BOUND = 25_000_000;
+my $FILESIZE_LOWER_BOUND = 5_000_000;
 my $UNSTRIPPED_FILESIZE_UPPER_BOUND = 600_000_000;
 my $STRIPPED_FILESIZE_UPPER_BOUND   = 350_000_000;
 
@@ -48,7 +67,7 @@ sub validate_tarball {
     my $size = (stat($file))[7];
 
     if($size < $FILESIZE_LOWER_BOUND) {
-	print "ERROR: tarball '$file' is too small (< $FILESIZE_LOWER_BOUND bytes)\n";
+	print "ERROR: tarball '$file' is too small ($size < $FILESIZE_LOWER_BOUND bytes)\n";
 	print "If this size threshold is not appropriate modify it in $0\n";
 	return 1;
     }
@@ -60,7 +79,7 @@ sub validate_tarball {
                                                          $STRIPPED_FILESIZE_UPPER_BOUND;
 
     if($size > $FILESIZE_UPPER_BOUND) {
-	print "ERROR: tarball '$file' is too large (> $FILESIZE_UPPER_BOUND bytes).\n";
+	print "ERROR: tarball '$file' is too large ($size > $FILESIZE_UPPER_BOUND bytes).\n";
 	print "If this size threshold is not appropriate modify it in $0\n";
 	return 1;
     }
@@ -73,7 +92,7 @@ sub validate_tarball {
     # Do various checks on the contents of the tarball
     #
 
-    my @tarfiles = `tar ztvf $file`;
+    my @tarfiles = `$tar ztvf $file`;
 
     # At this point in the script we want to try to identify all the errors that have
     # occurred and not error out after the first one.  This will be more useful when

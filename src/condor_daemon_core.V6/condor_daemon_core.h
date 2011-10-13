@@ -91,6 +91,16 @@ static const int DC_STD_FD_PIPE = -10;
 static const int DC_STD_FD_NOPIPE = -1;
 
 
+int dc_main( int argc, char **argv );
+
+// External protos
+extern void (*dc_main_init)(int argc, char *argv[]);	// old main
+extern void (*dc_main_config)();
+extern void (*dc_main_shutdown_fast)();
+extern void (*dc_main_shutdown_graceful)();
+extern void (*dc_main_pre_dc_init)(int argc, char *argv[]);
+extern void (*dc_main_pre_command_sock_init)();
+
 /** @name Typedefs for Callback Procedures
  */
 //@{
@@ -274,11 +284,9 @@ class DaemonCore : public Service
   friend class TimerManager; 
   friend class CreateProcessForkit;
 #ifdef WIN32
-  friend int dc_main( int argc, char** argv );
   friend unsigned pidWatcherThread(void*);
-#else
-  friend int main(int, char**);
 #endif
+  friend int dc_main(int, char**);
     
   public:
     
@@ -364,7 +372,36 @@ class DaemonCore : public Service
                           bool               force_authentication = false,
 						  int                wait_for_payload = 0);
 
-    
+	/** Register_CommandWithPayload is the same as Register_Command
+		but with a different default for wait_for_payload.  By
+		default, a non-blocking read will be performed before calling
+		the command-handler.  This reduces the threat of having the
+		command handler block while waiting for the client to send the
+		rest of the command input.  The command handler can therefore
+		set a small timeout when reading.
+	*/
+    int Register_CommandWithPayload (
+                          int             command,
+                          const char *    com_descrip,
+                          CommandHandler  handler, 
+                          const char *    handler_descrip,
+                          Service *       s                = NULL,
+                          DCpermission    perm             = ALLOW,
+                          int             dprintf_flag     = D_COMMAND,
+                          bool            force_authentication = false,
+						  int             wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT);
+    int Register_CommandWithPayload (
+                          int                command,
+                          const char *       com_descript,
+                          CommandHandlercpp  handlercpp, 
+                          const char *       handler_descrip,
+                          Service *          s,
+                          DCpermission       perm             = ALLOW,
+                          int                dprintf_flag     = D_COMMAND,
+                          bool               force_authentication = false,
+						  int                wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT);
+
+
     /** Not_Yet_Documented
         @param command Not_Yet_Documented
         @return Not_Yet_Documented
@@ -1464,6 +1501,8 @@ class DaemonCore : public Service
 	   stats_entry_recent<int> AsyncPipe;      //  number of times async_pipe was signalled
       #endif
 
+       stats_entry_recent<Probe> PumpCycle;   // count of pump cycles plus sum of cycle time with min/max/avg/std 
+
        StatisticsPool          Pool;          // pool of statistics probes and Publish attrib names
 
 	   time_t InitTime;            // last time we init'ed the structure
@@ -1477,9 +1516,11 @@ class DaemonCore : public Service
 	   void Init();
        void Reconfig();
 	   void Clear();
-	   void Tick(); // call this when time may have changed to update StatsLastUpdateTime, etc.
+	   time_t Tick(time_t now=0); // call this when time may have changed to update StatsLastUpdateTime, etc.
 	   void SetWindowSize(int window);
 	   void Publish(ClassAd & ad) const;
+	   void Publish(ClassAd & ad, int flags) const;
+       void Publish(ClassAd & ad, const char * config) const;
 	   void Unpublish(ClassAd & ad) const;
        void* New(const char * category, const char * name, int as);
        void AddToProbe(const char * name, int val);

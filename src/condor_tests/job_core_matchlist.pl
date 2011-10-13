@@ -19,7 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
-
+use CondorUtils;
 
 my $arg = $ARGV[0];
 my $basefile = $ARGV[1];
@@ -32,7 +32,7 @@ open(OLDOUT, "<$old");
 open(NEWOUT, ">$new");
 while(<OLDOUT>)
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	print NEWOUT "$_\n";
 }
 print NEWOUT "$ENV{MYNAME}/$name\n";

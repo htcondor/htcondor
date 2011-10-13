@@ -114,6 +114,7 @@ class Matchmaker : public Service
 		int SET_BEGINTIME_commandHandler(int, Stream*);
 		int SET_LASTTIME_commandHandler(int, Stream*);
 		int GET_PRIORITY_commandHandler(int, Stream*);
+		int GET_PRIORITY_ROLLUP_commandHandler(int, Stream*);
 		int GET_RESLIST_commandHandler(int, Stream*);
 
 		// timeout handler (for periodic negotiations)
@@ -299,9 +300,10 @@ class Matchmaker : public Service
 		bool want_inform_startd;	
 		/// Should the negotiator use non-blocking connect to contact startds?
 		bool want_nonblocking_startd_contact;
-        ExprTree *DynQuotaMachConstraint;   // Filter machineAds by this
-                                            // constraint before calculating
-                                            // dynamic quotas.  Added for CDF.
+        char * strSlotConstraint; // query collector for machineAds with this constraint
+        ExprTree *SlotPoolsizeConstraint;   // Filter machineAds by this
+                                         // constraint before calculating quotas
+                                         // formerly DynQuotaMachConstraint Added for CDF.
 
 		StringList NegotiatorMatchExprNames;
 		StringList NegotiatorMatchExprValues;

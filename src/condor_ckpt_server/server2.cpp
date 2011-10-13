@@ -53,9 +53,6 @@ XferSummary	xfer_summary;
 Server server;
 Alarm  rt_alarm;
 
-/* For daemonCore, etc. */
-DECL_SUBSYSTEM( "CKPT_SERVER", SUBSYSTEM_TYPE_DAEMON );
-
 char* myName = NULL;
 
 extern "C" {
@@ -2496,6 +2493,9 @@ void UnblockSignals()
 
 int main( int argc, char **argv )
 {
+	/* For daemonCore, etc. */
+	set_mySubSystem( "CKPT_SERVER", SUBSYSTEM_TYPE_DAEMON );
+
 	myName = argv[0];
 	server.Init();
 	server.Execute();

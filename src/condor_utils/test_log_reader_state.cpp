@@ -30,8 +30,6 @@
 
 static const char *	VERSION = "0.1.0";
 
-DECL_SUBSYSTEM( "TEST_LOG_READER_STATE", SUBSYSTEM_TYPE_TOOL );
-
 enum Verbosity
 {
 	VERB_NONE = 0,
@@ -205,6 +203,8 @@ main(int argc, const char **argv)
 {
 	DebugFlags = D_ALWAYS;
 	param_functions *p_funcs = NULL;
+
+	set_mySubSystem( "TEST_LOG_READER_STATE", SUBSYSTEM_TYPE_TOOL );
 
 		// initialize to read from config file
 	myDistro->Init( argc, argv );

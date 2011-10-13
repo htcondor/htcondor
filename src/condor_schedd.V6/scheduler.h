@@ -71,6 +71,8 @@ const	int			JOB_DEFERRAL_WINDOW_DEFAULT = 0; // seconds
 
 extern	DLL_IMPORT_MAGIC char**		environ;
 
+extern char const * const HOME_POOL_SUBMITTER_TAG;
+
 //
 // Given a ClassAd from the job queue, we check to see if it
 // has the ATTR_SCHEDD_INTERVAL attribute defined. If it does, then
@@ -497,7 +499,8 @@ class Scheduler : public Service
 private:
 	
 	// information about this scheduler
-	ClassAd*		m_ad;
+	ClassAd*		m_adSchedd;
+    ClassAd*        m_adBase;
 	Scheduler*		myself;
 
 	// information about the command port which Shadows use
@@ -544,27 +547,8 @@ private:
 	int				LocalUniverseJobsIdle;
 	int				LocalUniverseJobsRunning;
 
-   #ifdef TICKET_2006
-    time_t          LastUpdateTime;
-    int             LastJobsQueued;
-    int             JobsStartedCumulative;
-    double          TimeToStartCumulative;
-    double          RunningTimeCumulative;
-    int             JobsCompletedCumulative;
-    int             JobsExitedCumulative;
-    int             ShadowExceptionsCumulative;
-    map<int,int>    ExitCodesCumulative;
-    timed_queue<int>  JobsSubmittedTQ;
-    timed_queue<int>  JobsStartedTQ;
-    timed_queue<int>  JobsCompletedTQ;
-    timed_queue<int>  JobsExitedTQ;
-    timed_queue<int>  ShadowExceptionsTQ;
-    map<int,timed_queue<int> >  ExitCodesTQ;
-    timed_queue<double>  TimeToStartTQ;
-    timed_queue<double>  RunningTimeTQ;
-   #else
+    // generic statistics pool for scheduler, in schedd_stats.h
     ScheddStatistics stats;
-   #endif
 
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
@@ -638,6 +622,8 @@ private:
 
 	// utility functions
 	int				count_jobs();
+    int             make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
+    int             command_query_ads(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char const*);
 	void			child_exit(int, int);

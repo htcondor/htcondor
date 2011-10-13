@@ -54,6 +54,10 @@ public:
 	virtual int end_of_message();
 	virtual bool peek_end_of_message();
 
+	/**	@return true if a complete message is ready to be read
+	*/
+	virtual bool msgReady();
+
 	virtual stream_type type() { return Stream::safe_sock; }
 
 	/** Connect to a host on a port

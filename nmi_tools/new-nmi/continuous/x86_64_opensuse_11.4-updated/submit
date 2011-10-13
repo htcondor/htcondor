@@ -1,0 +1,25 @@
+universe = local
+
+BASE=/home/cndrauto/continuous/x86_64_opensuse_11.4-updated
+
+executable = $(BASE)/run.sh
+
+output = $(BASE)/output
+error  = $(BASE)/error
+log    = $(BASE)/log
+
+Args = x86_64_opensuse_11.4-updated
+
+CronHour    = 1,9,11,13,14,15,16,17,18,19
+CronMinute  = 20
+CronDayOfMonth  = *
+CronMonth       = *
+CronDayOfWeek   = *
+
+notification = never
+getenv = true
+
+CronPrepTime = 6
+deferral_window = 300
+on_exit_remove = false
+queue

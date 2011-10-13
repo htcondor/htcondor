@@ -16,6 +16,30 @@
  # 
  ############################################################### 
 
+MACRO (CONDOR_SHARED_LIB _CNDR_TARGET)
+
+SET(_SRCS ${ARGN})
+
+# ADD_PRECOMPILED_HEADER macro expects to operate on a global _SRCS
+ADD_PRECOMPILED_HEADER()
+
+if ( CONDOR_BUILD_SHARED_LIBS )
+	add_library(${_CNDR_TARGET} SHARED ${_SRCS})
+	install(TARGETS ${_CNDR_TARGET} DESTINATION ${C_LIB})
+else()
+	add_library(${_CNDR_TARGET} STATIC ${_SRCS})
+endif()
+
+if (CONDOR_EXTERNALS)
+	add_dependencies ( ${_CNDR_TARGET} ${CONDOR_EXTERNALS} )
+endif()
+
+if ( WINDOWS )
+	set_property( TARGET ${_CNDR_TARGET} PROPERTY FOLDER "libraries" )
+endif ( WINDOWS )
+
+ENDMACRO(CONDOR_SHARED_LIB)
+
 MACRO (CONDOR_STATIC_LIB _CNDR_TARGET)
 
 SET(_SRCS ${ARGN})

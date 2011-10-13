@@ -47,6 +47,7 @@ bool        expert = false;
 Mode		mode	= MODE_NOTSET;
 int			diagnose = 0;
 char*		direct = NULL;
+char*       statistics = NULL;
 char*		genericType = NULL;
 CondorQuery *query;
 char		buffer[1024];
@@ -495,6 +496,8 @@ usage ()
 		"\t-any\t\t\tDisplay any resources\n"
 		"\t-state\t\t\tDisplay state of resources\n"
 		"\t-submitters\t\tDisplay information about request submitters\n"
+//      "\t-statistics <set>:<n>\tDisplay statistics for <set> at level <n>\n"
+//      "\t\t\t\tsee STATISTICS_TO_PUBLISH for valid <set> and level values\n"
 //		"\t-world\t\t\tDisplay all pools reporting to UW collector\n"
 		"    and [display-opt] is one of\n"
 		"\t-long\t\t\tDisplay entire classads\n"
@@ -517,6 +520,7 @@ firstPass (int argc, char *argv[])
 	param_functions *p_funcs;
 	int had_pool_error = 0;
 	int had_direct_error = 0;
+    int had_statistics_error = 0;
 	// Process arguments:  there are dependencies between them
 	// o -l/v and -serv are mutually exclusive
 	// o -sub, -avail and -run are mutually exclusive
@@ -648,6 +652,20 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-state", 5)) {
 			setPPstyle (PP_STARTD_STATE, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-statistics", 6)) {
+			if( statistics ) {
+				free( statistics );
+				had_statistics_error = 1;
+			}
+			i++;
+			if( ! argv[i] ) {
+				fprintf( stderr, "%s: -statistics requires another argument\n",
+						 myName );
+				fprintf( stderr, "Use \"%s -help\" for details\n", myName );
+				exit( 1 );
+			}
+			statistics = strdup( argv[i] );
 		} else
 		if (matchPrefix (argv[i], "-startd", 5)) {
 			setMode (MODE_STARTD_NORMAL,i, argv[i]);
@@ -788,6 +806,11 @@ firstPass (int argc, char *argv[])
 				 "Warning:  Multiple -direct arguments given, using \"%s\"\n",
 				 direct );
 	}
+	if( had_statistics_error ) {
+		fprintf( stderr,
+				 "Warning:  Multiple -statistics arguments given, using \"%s\"\n",
+				 statistics );
+	}
 }
 
 
@@ -826,6 +849,16 @@ secondPass (int argc, char *argv[])
 			continue;
 		}
 		
+		if (matchPrefix (argv[i], "-statistics", 6)) {
+			i += 2;
+            sprintf(buffer,"STATISTICS_TO_PUBLISH = \"%s\"", statistics);
+            if (diagnose) {
+               printf ("[%s]\n", buffer);
+               }
+            query->addExtraAttribute(buffer);
+            continue;
+        }
+
 		if (matchPrefix (argv[i], "-attributes", 3) ) {
 			// parse attributes to be selected and split them along ","
 			StringList more_attrs(argv[i+1],",");

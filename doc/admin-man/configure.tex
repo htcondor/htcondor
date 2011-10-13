@@ -432,7 +432,6 @@ the changed value.
   \index{macro!subsystem names}
   \begin{itemize}
   \label{list:subsystem names}
-  \item \verb@AMAZON_GAHP@
   \item \verb@C_GAHP@
   \item \verb@CKPT_SERVER@
   \item \verb@COLLECTOR@
@@ -699,11 +698,13 @@ File System Configuration File Entries''.
 \label{param:ScheddHost}
 \item[\Macro{SCHEDD\_HOST}]
   The host name of the machine where the \Condor{schedd} is running for
-  your pool.  This is the host that queues submitted jobs.  Note that,
-  in most condor installations, there is a \Condor{schedd} running on
+  your pool.  This is the host that queues submitted jobs.
+  If the host specifies \Macro{SCHEDD\_NAME} or \Macro{MASTER\_NAME}, that
+  name must be included in the form name\verb$@$hostname.
+  In most condor installations, there is a \Condor{schedd} running on
   each host from which jobs are submitted.  The default value of
-  \Macro{SCHEDD\_HOST} is the current host.  For most pools, this
-  macro is not defined.
+  \Macro{SCHEDD\_HOST} is the current host with the optional name included.  For most pools, this
+  macro is not defined, nor does it need to be defined..
 
 \label{param:ReleaseDir}
 \item[\Macro{RELEASE\_DIR}]
@@ -1358,6 +1359,14 @@ File System Configuration File Entries''.
 \item[\Macro{CLASSAD\_USER\_LIBS}]
   A comma separated list of paths to shared libraries that contain
   additional ClassAd functions to be used during ClassAd evaluation.
+  
+\label{param:CondorFsync}
+\item[\Macro{CONDOR\_FSYNC}]
+  A boolean value that controls whether Condor calls fsync when
+  writing the user job and transaction logs.  Setting this value to false
+  will disable calls to fsync, which can help performance for schedd
+  log writes at the cost of some durability of the log contents should
+  there be a power or hardware failure.  This value is true by default.
 
 \end{description}
 
@@ -5858,7 +5867,7 @@ These settings affect the \Condor{starter}.
   in the job submission file.  If this is set, then the executable does
   not need to be fully qualified, for example
 \begin{verbatim}
-        # Let this exectuable be resolved by user's path in the wrapper
+        # Let this executable be resolved by user's path in the wrapper
         cmd = sleep
 \end{verbatim}
   As opposed to
@@ -6709,24 +6718,30 @@ These macros affect the \Condor{negotiator}.
   If utilized attributes will change during the 
   negotiation period time interval, then set this variable to \Expr{False}.
 
+\label{param:NegotiatorSlotConstraint}
+\item[\Macro{NEGOTIATOR\_SLOT\_CONSTRAINT}]
+  An expression which constrains which machine ClassAds are fetched from the
+  \Condor{collector} by the \Condor{negotiator} during a negotiation
+  cycle.
+
+\label{param:NegotiatorSlotPoolsizeConstraint}
 \label{param:GroupDynamicMachConstraint}
-\item[\Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}]
+\item[\Macro{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} or
+  \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}]
   This optional expression specifies which machine ClassAds should be counted
-  when computing the size of the pool,
-  for purposes of group quota allocation.
+  when computing the size of the pool.
+  It applies both for group quota allocation and when there are no groups.
   The default is to count all machine ClassAds.
   When extra slots exist for special purposes,
   as, for example, suspension slots or file transfer slots,
   this expression can be used to inform the \Condor{negotiator} that 
   only normal slots should be counted when computing how big each group's 
   share of the pool should be.
-
-\label{param:NegotiatorStartdConstraintRemove}
-\item[\Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE}]
-  A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, any ClassAds not satisfying the expression 
-  in \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} are removed from the
-  list of \Condor{startd} ClassAds considered for negotiation.
+ 
+  The name \MacroNI{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} replaces
+  \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} as of Condor version 7.7.3.
+  Using the older name causes a warning to be logged, although the
+  behavior is unchanged.
 
 \label{param:NegotiatorDebug}
 \item[\Macro{NEGOTIATOR\_DEBUG}]
@@ -7395,36 +7410,11 @@ These macros affect the \Condor{gridmanager}.
   The necessary Glite software is included with Condor,
   and is required for pbs and lsf jobs.
 
-\label{param:AmazonEC2URL}
-\item[\Macro{AMAZON\_EC2\_URL}]
-  The URL Condor should use when contacting the Amazon EC2 (SOAP) service.
-  This URL may include a user name and password as in the implied
-  syntax example:
-\footnotesize
-\begin{verbatim}
-  protocol://username:password@domain:port/path/to/resource
-\end{verbatim}
-\normalsize
-  The default value is \MacroNI{https://ec2.amazonaws.com/}.
-  This parameter is only used for queued jobs when upgrading to Condor
-  7.5.4 or beyond.
-
-\label{param:AmazonHttpProxy}
-\item[\Macro{AMAZON\_HTTP\_PROXY}]
-  The http proxy that Condor should use when contacting the Amazon EC2 (SOAP)
-  service. The default is to not use a proxy.
-
 \label{param:CondorGAHP}
 \item[\Macro{CONDOR\_GAHP}]
   The complete path and file name of the Condor GAHP executable.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{SBIN}/condor\_c-gahp}.
-
-\label{param:AmazonGAHP}
-\item[\Macro{AMAZON\_GAHP}]
-  The complete path and file name of the Amazon GAHP executable.
-  There is no default value. The expected location as given
-  in the example configuration is \File{\MacroUNI{SBIN}/amazon\_gahp}.
 
 \label{param:EC2GAHP}
 \item[\Macro{EC2\_GAHP}]
@@ -9082,6 +9072,27 @@ They specify items related to the \Condor{vm-gahp}.
   For Xen and KVM only, a required string if bridge networking is to be
   enabled.  It specifies the networking interface that vm universe jobs
   will use.
+
+\label{param:LibvirtXmlScript}
+\item[\Macro{LIBVIRT\_XML\_SCRIPT}]
+  For Xen and KVM only, a path and executable specifying a program.
+  When the \Condor{vm-gahp} is ready to start a Xen or KVM 
+  \SubmitCmd{vm} universe job, 
+  it will invoke this program to generate the XML description of 
+  the virtual machine,
+  which it then provides to the virtualization software.
+  The job ClassAd will be provided to this program via standard input. 
+  This program should print the XML to standard output.
+  If this configuration variable is not set,
+  the \Condor{vm-gahp} will generate the XML itself. 
+  The provided script in \File{\MacroUNI{LIBEXEC}/libvirt\_simple\_script.awk} 
+  will generate the same XML that the \Condor{vm-gahp} would.
+
+\label{param:LibvirtXmlScriptArgs}
+\item[\Macro{LIBVIRT\_XML\_SCRIPT\_ARGS}]
+  For Xen and KVM only, the command-line arguments to be given to 
+  the program specified by  \MacroNI{LIBVIRT\_XML\_SCRIPT}. 
+
 \end{description}
 
 The following configuration variables are specific to the VMware
@@ -9136,12 +9147,6 @@ virtual machine software.
 \item[\Macro{XEN\_BOOTLOADER}]
   A required full path and executable for the Xen bootloader,
   if the kernel image includes a disk image.
-
-\label{param:XenLocalSettingsFile}
-\item[\Macro{XEN\_LOCAL\_SETTINGS\_FILE}]
-  A complete path and file name. The file's contents will be included in
-  the Xen configuration file that Condor writes to run the virtual machine.
-  This parameter is optional.
 
 \end{description}
 
@@ -9433,7 +9438,6 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   Sets how often the \Condor{replication} daemon initiates its tasks of
   replicating the \MacroUNI{STATE\_FILE}.
   It is defined in seconds and defaults to 300 (5 minutes).
-  This is the same as the default \MacroNI{NEGOTIATOR\_INTERVAL}.
 
 \label{param:MaxTransferLifetime}
 \item[\Macro{MAX\_TRANSFERER\_LIFETIME}]
@@ -9864,8 +9868,6 @@ Configuration File Macros Affecting APIs}
   CA will be authenticated.
   When SOAP over SSL is enabled, this variable or the variable
   \Macro{SOAP\_SSL\_CA\_FILE} must be defined.
-  This variable is also used when communicating with an Amazon EC2 (SOAP) server
-  (possibly through a proxy), although it is not required in that case.
   There is no default value.
 
 \label{param:SoapSSLDhFile}
@@ -10343,6 +10345,14 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   the full path to the program invoked by the \Condor{starter}
   whenever a job exits,
   either on its own or when being evicted from an execution slot. 
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+
+\label{param:HookJobExitTimeout}
+\item[\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT}]
+  For the fetch work hooks,
+  the number of seconds the \Condor{starter} will wait for the JOB\_EXIT
+  hook to exit before continuing with job cleanup.  Defaults to 30 seconds.
   \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
   between sets of hooks.
 

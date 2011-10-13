@@ -258,7 +258,6 @@ extern const char * const  ATTR_JOB_ENVIRONMENT1;
 extern const char * const  ATTR_JOB_ENVIRONMENT1_DELIM;
 extern const char * const  ATTR_JOB_ENVIRONMENT2;
 extern const char * const  ATTR_JOB_ERROR;
-extern const char * const  ATTR_JOB_ERROR_ORIG;
 extern const char * const  ATTR_JOB_ERROR_SIZE;
 extern const char * const  ATTR_JOB_KEEP_CLAIM_IDLE;
 extern const char * const  ATTR_JOB_KEYWORD;
@@ -291,7 +290,6 @@ extern const char * const  ATTR_JOB_NOOP_EXIT_SIGNAL;
 extern const char * const  ATTR_JOB_NOOP_EXIT_CODE;
 extern const char * const  ATTR_JOB_NOTIFICATION;
 extern const char * const  ATTR_JOB_OUTPUT;
-extern const char * const  ATTR_JOB_OUTPUT_ORIG;
 extern const char * const  ATTR_JOB_OUTPUT_SIZE;
 extern const char * const  ATTR_JOB_PID;
 extern const char * const  ATTR_PRE_JOB_PRIO1;
@@ -583,7 +581,7 @@ extern const char * const  ATTR_TOTAL_TIME_PREEMPTING_KILLING;
 extern const char * const  ATTR_TOTAL_TIME_PREEMPTING_VACATING;
 extern const char * const  ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING;
 extern const char * const  ATTR_TOTAL_TIME_UNCLAIMED_IDLE;
-extern const char * const  ATTR_WINDOWED_STAT_WIDTH;
+//extern const char * const  ATTR_WINDOWED_STAT_WIDTH;
 
 // Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
 extern const char * const  ATTR_TOTAL_VIRTUAL_MACHINES;
@@ -637,7 +635,6 @@ extern const char * const  ATTR_VIRTUAL_MACHINE_ID;
 extern const char * const  ATTR_SHOULD_TRANSFER_FILES;
 extern const char * const  ATTR_WHEN_TO_TRANSFER_OUTPUT;
 extern const char * const  ATTR_TRANSFER_TYPE;
-extern const char * const  ATTR_TRANSFER_FILES;
 extern const char * const  ATTR_TRANSFER_KEY;
 extern const char * const  ATTR_TRANSFER_EXECUTABLE;
 extern const char * const  ATTR_TRANSFER_INPUT;
@@ -793,19 +790,6 @@ extern const char * const ATTR_VM_GUEST_MEM;
 extern const char * const ATTR_VM_CKPT_MAC;
 extern const char * const ATTR_VM_CKPT_IP;
 
-
-//************* Added for Amazon Jobs ***************************//
-extern const char * const ATTR_AMAZON_PUBLIC_KEY;
-extern const char * const ATTR_AMAZON_PRIVATE_KEY;
-extern const char * const ATTR_AMAZON_AMI_ID;
-extern const char * const ATTR_AMAZON_KEY_PAIR_FILE;
-extern const char * const ATTR_AMAZON_SECURITY_GROUPS;
-extern const char * const ATTR_AMAZON_USER_DATA;
-extern const char * const ATTR_AMAZON_USER_DATA_FILE;
-extern const char * const ATTR_AMAZON_REMOTE_VM_NAME;
-extern const char * const ATTR_AMAZON_INSTANCE_TYPE;
-//************* End of changes for Amamzon Jobs *****************//
-
 //************* Added for EC2 Jobs ***************************//
 extern const char * const ATTR_EC2_ACCESS_KEY_ID;
 extern const char * const ATTR_EC2_SECRET_ACCESS_KEY;
@@ -823,7 +807,6 @@ extern const char * const ATTR_EC2_EBS_VOLUMES;
 extern const char * const ATTR_EC2_VPC_SUBNET;
 extern const char * const ATTR_EC2_VPC_IP;
 //************* End of changes for EC2 Jobs *****************//
-
 
 extern const char * const ATTR_REQUEST_CPUS;
 extern const char * const ATTR_REQUEST_MEMORY;

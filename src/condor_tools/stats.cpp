@@ -73,7 +73,7 @@ int ResConvStr(char* InpStr, char* OutStr)
 {
   float T,LoadAvg;
   int KbdIdle;
-  int State;
+  unsigned int State;
   if (sscanf(InpStr," %f %d %f %d",&T,&KbdIdle,&LoadAvg,&State)!=4) return -1;
   const char *stateStr;
   // Note: This should be kept in sync with condor_state.h, and with

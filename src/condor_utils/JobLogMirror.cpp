@@ -53,12 +53,7 @@ JobLogMirror::config() {
 
 		// read the polling period and if one is not specified use 
 		// default value of 10 seconds
-	char *polling_period_str = param("POLLING_PERIOD");
-	log_reader_polling_period = 10;
-	if(polling_period_str) {
-		log_reader_polling_period = atoi(polling_period_str);
-		free(polling_period_str);
-	}
+	log_reader_polling_period = param_integer("POLLING_PERIOD", 10);
 
 		// clear previous timers
 	if (log_reader_polling_timer >= 0) {

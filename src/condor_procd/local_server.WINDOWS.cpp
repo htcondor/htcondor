@@ -223,3 +223,14 @@ LocalServer::touch()
 	// we don't have to worry about our named pipe being cleaned up
 	// by things like tmpwatch on Windows
 }
+
+
+bool LocalServer::consistent(void)
+{
+	// AFAIK, opened named pipes can't be deleted on windows.
+	// -psilord, 2011/09/28
+
+	return true;
+}
+
+

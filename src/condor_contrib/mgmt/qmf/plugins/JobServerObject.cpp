@@ -105,8 +105,6 @@ JobServerObject::GetJobAd ( std::string key,
                           Variant::Map &_map,
                           std::string &text)
 {
-    ClassAd *ad = NULL;
-
 	dprintf(D_FULLDEBUG, "Calling GetJobAd for '%s'\n", key.c_str());
 
     PROC_ID id = getProcByString(key.c_str());
@@ -122,16 +120,6 @@ JobServerObject::GetJobAd ( std::string key,
 		text = "Unable to return data";
 		return STATUS_UNKNOWN_OBJECT;
     }
-
-    // debug
-//    if (DebugFlags & D_FULLDEBUG) {
-//		if (ad) {
-//			ad->dPrint(D_FULLDEBUG|D_NOHEADER);
-//			std::ostringstream oss;
-//			oss << _map;
-//			dprintf(D_FULLDEBUG|D_NOHEADER, "%s\n",oss.str().c_str());
-//		}
-//    }
 
     return STATUS_OK;
 }

@@ -66,6 +66,13 @@ public:
 	//
 	bool poll(int, bool&);
 
+	// Determine if the named pipe on the disk is the actual named pipe that
+	// was initially opened. In practice it means that the dev and inode fields
+	// of a stat() on the named pipe filename must equal to the fstat
+	// equivalents of the fd
+	//
+	bool consistent(void);
+
 private:
 
 	// set true once we're properly initialized

@@ -59,8 +59,44 @@ and was fixed in Condor version 7.6.2.
 
 \begin{itemize}
 
-\item Corrected a check in the accountant that allowed submitter records
-to be deleted if the submitter's priority factor was explicitly set and
+%\item Properly support \Attr{MAX\_<subsys>\_LOG} values >= 2GB.
+\item Implemented proper support of values greater than or equal to  2 GBytes
+set for the configuration variable \Macro{MAX\_<SUBSYS>\_LOG}.
+\Ticket{2471}
+
+\item Updated the \Condor{negotiator} daemon's assessment of pool size 
+to properly take partitionable slots into account.
+See section ~\ref{sec:Configuring-SMP} for an explanation of 
+partitionable slots on SMP machines.
+\Ticket{2440}
+
+\item Provided an informative error message 
+when the \Condor{userprio} tool cannot locate the \Condor{negotiator} daemon.
+\Ticket{2478}
+
+\item \Condor{userprio} and the \Condor{negotiator} daemon 
+did not correctly handle the names of submitters, 
+when these names exceeded 63 characters in length.
+The fix handles submitter names of arbitrary length.
+\Ticket{2445}
+
+\item Removed a spurious boolean flag reset in \Condor{q},
+which resulted in an order dependency between the command line arguments
+\Opt{-long} and \Opt{-format}.
+\Ticket{2498}
+
+\item Fixed a bug in which a graceful shutdown of a \Condor{startd}
+did not correctly handle jobs using job deferral
+which have landed on an execute machine but have not yet
+reached their deferral time.
+These jobs would appear to be running, despite the lack of
+a \Condor{starter} daemon. 
+These jobs now correctly transition to the idle state.
+\Ticket{2486}
+
+\item Corrected a hierarchical group quota bug in which
+the accountant allowed submitter records to be deleted,
+if the submitter's priority factor was explicitly set and
 the value was equal to \MacroNI{DEFAULT\_PRIO\_FACTOR}.
 \Ticket{2442}
 
@@ -68,8 +104,9 @@ the value was equal to \MacroNI{DEFAULT\_PRIO\_FACTOR}.
 when there are more than 32 CPUs.
 \Ticket{2381}
 
-\item Fixed a memory leak in the \Condor{negotiator} caused by failure to
-free memory returned from some calls to param\_without\_default().
+\item Fixed a memory leak in the \Condor{negotiator},
+caused by failure to
+free memory returned from some calls to \Procedure{param\_without\_default}.
 \Ticket{2299}
 
 \item Jobs run via \Prog{glexec} always had their \Env{PATH} environment
@@ -84,7 +121,8 @@ This problem was introduced in Condor version 7.5.6.
 \Ticket{2413}
 
 \item Fixed a problem in \Condor{hdfs} that caused it to exit shortly
-after starting up if the configuration variables 
+after starting up,
+if the configuration variables 
 \MacroNI{HDFS\_DENY}, \MacroNI{HOSTDENY\_WRITE}, or \MacroNI{HOSTDENY\_READ} 
 were not defined.
 Previously, if \MacroNI{HDFS\_DENY} was
@@ -102,9 +140,49 @@ writing to some user logs with specific names.  The specific names that
 caused crashes are not easy to describe.
 \Ticket{2439}
 
-\item The \Condor{schedd} failed to start up when any job ClassAd
-value contained ASCII character 255.
+\item Fixed a bug in which the \Condor{schedd} failed to start up
+when any job ClassAd attribute value contained the ASCII character 255.
 \Ticket{2450}
+
+\item Fixed a bug in which \Condor{preen} failed to honor the 
+\Opt{-remove} option, and would always remove lock files.
+\Ticket{2497}
+
+\item \Condor{preen} expected an old format for local lock file paths;
+it now understands the proper format.
+\Ticket{2496}
+
+\item \Condor{preen} would EXCEPT when processing multiple 
+subdirectories for local locks.
+\Ticket{2495}
+
+\item \SubmitCmd{vm} universe jobs using Xen or KVM would fail to start,
+if the disk image files were transferred from the submit machine
+and the default value defined for \Macro{LIBVIRT\_XML\_SCRIPT} was used.
+The script did not provide absolute path names for the files.
+\Ticket{2511}
+
+\item In 32-bit Condor, \MacroNI{ImageSize} of processes larger than 4GB
+was reported as 4GB.  This limit has been raised to 4095GB.
+
+\item Fixed a bug where a completed Xen or KVM VM universe job's modified
+disk image files wouldn't be transferred back to the submit machine.
+\Ticket{2530}
+
+\item Fixed a bug where a \Condor{starter} configured to use job hooks 
+could fail to run a job but not wait for the job exit hook to complete before
+exiting.  The \Condor{starter} will wait
+\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT} seconds before continuing with
+the shutdown if the job exit hook has not completed.
+\Ticket{2543}
+
+\item In Condor 7.5.4, an improvement was made to avoid reliance on
+  \MacroNI{NEGOTIATOR\_HOST} matching a reverse DNS lookup of the
+  negotiator.  However, this improvement was not made to the dedicated
+  scheduler, so matchmaking of parallel jobs was still subject to the
+  problems associated with the old algorithm.  Now, the dedicated
+  scheduler benefits from the same improved algorithm as the
+  non-dedicated scheduler.  \Ticket{2540}
 
 \end{itemize}
 

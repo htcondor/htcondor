@@ -17,4 +17,4 @@
  ############################################################### 
 
 condor_glob(ccbHdrs ccbSrcs "")
-condor_static_lib( ccb "${ccbHdrs};${ccbSrcs}" )
+set( CCB_UTIL_SRCS "${ccbHdrs};${ccbSrcs}" PARENT_SCOPE )

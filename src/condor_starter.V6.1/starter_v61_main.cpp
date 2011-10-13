@@ -152,9 +152,6 @@ printClassAd( void )
 
 static char* orig_cwd = NULL;
 
-/* For daemonCore, etc. */
-DECL_SUBSYSTEM( NULL, SUBSYSTEM_TYPE_STARTER );
-
 void
 main_pre_dc_init( int argc, char* argv[] )
 {	
@@ -727,9 +724,17 @@ int exception_cleanup(int,int,const char*errmsg)
 	return 0;
 }
 
-void
-main_pre_command_sock_init( )
+int
+main( int argc, char **argv )
 {
+	set_mySubSystem( NULL, SUBSYSTEM_TYPE_STARTER );
+
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	dc_main_pre_dc_init = main_pre_dc_init;
+	return dc_main( argc, argv );
 }
 
 

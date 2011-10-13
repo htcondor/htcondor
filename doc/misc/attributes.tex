@@ -54,6 +54,13 @@ that type.
   the unnumbered subsection labeled Negotiator ClassAd Attributes
   on page~\pageref{sec:Negotiator-ClassAd-Attributes}.
 
+  \item[\AdAttr{Submitter}]
+   Each submitter is described by a ClassAd.
+  ClassAd attributes that appear in a Submitter ClassAd 
+  are listed and described in
+  the unnumbered subsection labeled Submitter ClassAd Attributes
+  on page~\pageref{sec:Submitter-ClassAd-Attributes}.
+
   \item[\AdAttr{Collector}]
    Each \Condor{collector} daemon describes its state.
   ClassAd attributes that appear in a Collector ClassAd 
@@ -66,6 +73,11 @@ that type.
   % Prose here about a \Attr{Query} value.
 
 \end{description}
+
+In addition, statistics are published for each DaemonCore daemon.
+These attributes are listed and described in
+the unnumbered subsection labeled DaemonCore Statistics Attributes
+on page~\pageref{sec:DaemonCore-Statistics-Attributes}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:Job-ClassAd-Attributes}Job ClassAd Attributes}
@@ -91,6 +103,11 @@ that type.
 \subsection*{\label{sec:Negotiator-ClassAd-Attributes}Negotiator ClassAd Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{misc/negotiatorad.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:Submitter-ClassAd-Attributes}Submitter ClassAd Attributes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{misc/submitterad.tex}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:Collector-ClassAd-Attributes}Collector ClassAd Attributes}
@@ -146,4 +163,10 @@ that type.
   This attribute is added if \MacroNI{COLLECTOR\_DAEMON\_STATS} is \Expr{True}.
 
 \end{description}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:DaemonCore-Statistics-Attributes}DaemonCore Statistics Attributes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{misc/statsattributes.tex}
 

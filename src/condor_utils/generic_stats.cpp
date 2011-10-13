@@ -115,6 +115,7 @@ void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, 
 // between calls to this function.  
 //
 int generic_stats_Tick(
+   time_t now, // now==0 means call time(NULL) yourself
    int    RecentMaxTime,
    int    RecentQuantum,
    time_t InitTime,
@@ -123,7 +124,7 @@ int generic_stats_Tick(
    time_t & Lifetime,
    time_t & RecentLifetime)
 {
-   time_t now = time(NULL);
+   if ( ! now) now = time(NULL);
 
    // when working from freshly initialized stats, the first Tick should not Advance.
    //
@@ -247,7 +248,7 @@ int generic_stats_ParseConfigString(
                 } else if (ch == 'z' || ch == 'Z') {
                    flags = bang ? (flags & ~IF_NONZERO) : (flags | IF_NONZERO);
                 } else if (ch == 'l' || ch == 'L') {
-                   flags = bang ? (flags | IF_NOLIFETIME) : (flags &= ~IF_NOLIFETIME);
+                   flags = bang ? (flags | IF_NOLIFETIME) : (flags & ~IF_NOLIFETIME);
                 } else {
                    if ( ! parse_error) parse_error = popt;
                 }
@@ -272,6 +273,17 @@ int generic_stats_ParseConfigString(
 //
 void stats_recent_counter_timer::Delete(stats_recent_counter_timer * probe) {
    delete probe;
+}
+
+void stats_recent_counter_timer::Unpublish(ClassAd & ad, const char * pattr) const
+{
+   ad.Delete(pattr);
+   MyString attr;
+   attr.sprintf("Recent%s",pattr);
+   ad.Delete(attr.Value());
+   attr.sprintf("Recent%sRuntime",pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6); // +6 to skip "Recent" prefix
 }
 
 void stats_recent_counter_timer::Publish(ClassAd & ad, const char * pattr, int flags) const
@@ -426,28 +438,119 @@ template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd
    ad.Assign(attr.Value(), "64Kb, 256Kb, 1Mb, 4Mb, 16Mb, 64Mb, 256Mb, 1Gb, 4Gb, 16Gb, 64Gb, 256Gb");
 }
 
+void ProbeToStringDebug(MyString & str, const Probe& probe)
+{
+   str.sprintf("%d M:%g m:%g S:%g s2:%g", 
+               probe.Count, probe.Max, probe.Min, probe.Sum, probe.SumSq);
+}
 
-template <> int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe) {
-   MyString attr(pattr);
-   ad.Assign(pattr, probe.Count);
-   attr += "Runtime";
+int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe) 
+{
+   MyString attr;
+   attr.sprintf("%sCount", pattr);
+   ad.Assign(attr.Value(), probe.Count);
+
+   attr.sprintf("%sSum", pattr);
    int ret = ad.Assign(attr.Value(), probe.Sum);
+
    if (probe.Count > 0)
       {
-      int pos = attr.Length();
-      attr += "Avg";
+      attr.sprintf("%sAvg", pattr);
       ad.Assign(attr.Value(), probe.Avg());
 
-      attr.replaceString("Avg","Min",pos);
+      attr.sprintf("%sMin", pattr);
       ad.Assign(attr.Value(), probe.Min);
 
-      attr.replaceString("Min","Max",pos);
+      attr.sprintf("%sMax", pattr);
       ad.Assign(attr.Value(), probe.Max);
 
-      attr.replaceString("Max","Std",pos);
+      attr.sprintf("%sStd", pattr);
       ad.Assign(attr.Value(), probe.Std());
       }
    return ret;
+}
+
+template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * pattr) const
+{
+   MyString attr;
+   ad.Delete(pattr);
+   attr.sprintf("Recent%s", pattr);
+   ad.Delete(attr.Value());
+
+   attr.sprintf("Recent%sCount", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+   attr.sprintf("Recent%sSum", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+   attr.sprintf("Recent%sAvg", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+   attr.sprintf("Recent%sMin", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+   attr.sprintf("Recent%sMax", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+   attr.sprintf("Recent%sStd", pattr);
+   ad.Delete(attr.Value());
+   ad.Delete(attr.Value()+6);
+}
+
+template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pattr, int flags) const
+{
+   if ( ! flags) flags = PubDefault;
+   if ((flags & IF_NONZERO) && this->value.Count == 0) return;
+
+   if ((flags & IF_PUBLEVEL) <= IF_BASICPUB) {
+      if (flags & this->PubValue)
+         ClassAdAssign(ad, pattr, this->value.Avg());
+      if (flags & this->PubRecent) {
+         if (flags & this->PubDecorateAttr)
+            ClassAdAssign2(ad, "Recent", pattr, this->recent.Avg());
+         else
+            ClassAdAssign(ad, pattr, this->recent.Avg());
+      }
+      return;
+   }
+
+   if (flags & this->PubValue)
+      ClassAdAssign(ad, pattr, this->value); 
+
+   if (flags & this->PubRecent) {
+      MyString attr(pattr);
+      if (flags & this->PubDecorateAttr) {
+         attr.sprintf("Recent%s", pattr);
+      }
+      ClassAdAssign(ad, attr.Value(), recent); 
+   }
+}
+
+template <>
+void stats_entry_recent<Probe>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const
+{
+   MyString str;
+   MyString var1;
+   MyString var2;
+   ProbeToStringDebug(var1, this->value);
+   ProbeToStringDebug(var2, this->recent);
+
+   str.sprintf_cat("(%s) (%s)", var1.Value(), var2.Value());
+   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+                   this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
+   if (this->buf.pbuf) {
+      for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
+         ProbeToStringDebug(var1, this->buf.pbuf[ix]);
+         str.sprintf_cat(!ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
+         }
+      str += "]";
+      }
+
+   MyString attr(pattr);
+   if (flags & this->PubDecorateAttr)
+      attr += "Debug";
+
+   ad.Assign(pattr, str);
 }
 
 #include "utc_time.h"
@@ -547,12 +650,13 @@ void StatisticsPool::InsertProbe (
    const char * pattr,      // publish attribute name
    int          flags,      // flags to control publishing
    FN_STATS_ENTRY_PUBLISH fnpub, // publish method
+   FN_STATS_ENTRY_UNPUBLISH fnunp, // unpublish method
    FN_STATS_ENTRY_ADVANCE fnadv, // Advance method
    FN_STATS_ENTRY_CLEAR   fnclr,  // Clear method
    FN_STATS_ENTRY_SETRECENTMAX fnsrm,
    FN_STATS_ENTRY_DELETE  fndel) // Destructor
 {
-   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub };
+   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub, fnunp };
    pub.insert(name, item);
 
    poolitem pi = { unit, fOwned, fnadv, fnclr, fnsrm, fndel };
@@ -566,9 +670,10 @@ void StatisticsPool::InsertPublish (
    bool         fOwned,     // probe and pattr string are owned by the pool
    const char * pattr,      // publish attribute name
    int          flags,      // flags to control publishing
-   FN_STATS_ENTRY_PUBLISH fnpub) // publish method
+   FN_STATS_ENTRY_PUBLISH fnpub, // publish method
+   FN_STATS_ENTRY_UNPUBLISH fnunp) // unpublish method
 {
-   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub };
+   pubitem item = { unit, flags, fOwned, probe, pattr, fnpub, fnunp };
    pub.insert(name, item);
 }
 
@@ -678,7 +783,14 @@ void StatisticsPool::Unpublish(ClassAd & ad) const
    pthis->pub.startIterations();
    while (pthis->pub.iterate(name,item)) 
       {
-      ad.Delete(item.pattr ? item.pattr : name.Value());
+      const char * pattr = item.pattr ? item.pattr : name.Value();
+      if (item.Unpublish) 
+         {
+         stats_entry_base * probe = (stats_entry_base *)item.pitem;
+         (probe->*(item.Unpublish))(ad, pattr);
+         }
+      else
+         ad.Delete(pattr);
       }
 }
 
@@ -692,6 +804,7 @@ void generic_stats_force_refs()
    stats_entry_recent<long>* pl = NULL;
    stats_entry_recent<int64_t>* pt = NULL;
    stats_entry_recent<double>* pd = NULL;
+   stats_entry_recent<Probe>* pp = NULL;
    stats_entry_recent< stats_histogram<int64_t> >* ph = new stats_entry_recent< stats_histogram<int64_t> >();
    stats_recent_counter_timer* pc = NULL;
 
@@ -718,6 +831,7 @@ void generic_stats_force_refs()
    dummy.AddProbe("",pt,NULL,0);
    dummy.AddProbe("",pc,NULL,0);
    dummy.AddProbe("",pd,NULL,0);
+   dummy.AddProbe("",pp,NULL,0);
    dummy.AddProbe("",ph,NULL,0);
 };
 
@@ -932,7 +1046,9 @@ void TestStats::Clear()
 
 void TestStats::Tick()
 {
+   time_t now = time(NULL);
    int cAdvance = generic_stats_Tick(
+      now,
       this->RecentWindowMax,     // RecentMaxTime
       test_stats_window_quantum, // RecentQuantum
       this->InitTime,

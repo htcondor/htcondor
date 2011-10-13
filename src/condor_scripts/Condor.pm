@@ -33,13 +33,14 @@
 
 package Condor;
 
-require 5.0;
-use Carp;
-use Cwd;
-use FileHandle;
-use POSIX "sys_wait_h";
 use strict;
 use warnings;
+
+use Carp;
+use File::Spec;
+use POSIX qw/sys_wait_h strftime/;
+
+use CondorUtils;
 
 my $CONDOR_SUBMIT = 'condor_submit';
 my $CONDOR_SUBMIT_DAG = 'condor_submit_dag';
@@ -77,26 +78,6 @@ my $JobErrCallback;
 my $TimedCallback;
 my $WantErrorCallback;
 
-BEGIN
-{
-    $CONDOR_SUBMIT = 'condor_submit';
-    $CONDOR_SUBMIT_DAG = 'condor_submit_dag';
-    $CONDOR_VACATE = 'condor_vacate';
-    $CONDOR_VACATE_JOB = 'condor_vacate_job';
-    $CONDOR_RESCHD = 'condor_reschedule';
-    $CONDOR_RM = 'condor_rm';
-
-    $DEBUG = 0;
-	$DEBUGLEVEL = 1; # turn on lowest level output
-    $cluster = 0;
-    $num_active_jobs = 0;
-    $saw_submit = 0;
-
-	$submit_time = 0;
-	$timer_time = 0;
-	$TimedCallbackWait = 0;
-
-}
 
 sub Reset
 {
@@ -565,33 +546,9 @@ sub Wait
     return $?;
 }
 
-sub IsAbsolutePath
-{
-	my $testpath = shift;
-	my $os = "$^O";
-	fullchomp($os);
-
-	#print "---$os---\n";
-
-	# 3 cases to consider
-	# / window or unix slash
-	# \ windows slash
-	# a: drive letter windows
-	if($os eq "MSWin32") # XP, WIN2k & server 2003 return this
-	{
-		if( $testpath =~ /^([a-zA-Z]:)?[\\\/].*/ )
-		{
-			return(1);
-		}
-	}
-	else # some Unix
-	{
-		if( $testpath =~ /^\\.*/ )
-		{
-			return(1);
-		}
-	}
-	return(0); #false
+sub IsAbsolutePath {
+    my ($path) = @_;
+    return File::Spec->file_name_is_absolute($path);
 }
 
 # spawn process to monitor the submit log file and execute callbacks
@@ -692,7 +649,7 @@ sub Monitor
 		}
 		$line = <SUBMIT_LOG>;
 	}
-	fullchomp($line);
+	CondorUtils::fullchomp($line);
 	$linenum++;
 
       PARSE:
@@ -733,7 +690,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    fullchomp($line);
+	    CondorUtils::fullchomp($line);
 	    $linenum++;
 
 	    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
@@ -795,7 +752,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    fullchomp($line);
+	    CondorUtils::fullchomp($line);
 	    $linenum++;
 
 	    # terminated successfully
@@ -834,7 +791,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    fullchomp($line);
+	    CondorUtils::fullchomp($line);
 		$linenum++;
 
 		if( $line =~ /^\s+\(1\) Corefile in: (.*)/ )
@@ -895,7 +852,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    fullchomp($line);
+	    CondorUtils::fullchomp($line);
 	    $linenum++;
 
 		$info{'shadowerror'} = $line;
@@ -987,7 +944,7 @@ sub Monitor
 			}
 			$line = <SUBMIT_LOG>;
 		}
-	    fullchomp($line);
+	    CondorUtils::fullchomp($line);
 	    $linenum++;
 
 		$info{'holdreason'} = $line;
@@ -1064,30 +1021,27 @@ sub CheckTimedCallback
 #
 ################################################################################
 
-sub debug
-{
-    my $string = shift;
-	my $level = shift;
-	if(!(defined $level)) {
-    	print( "", timestamp(), ": $string" ) if $DEBUG;
-	} elsif($level <= $DEBUGLEVEL) {
-    	print( "", timestamp(), ": $string" ) if $DEBUG;
-	}
+sub debug {
+    return unless $DEBUG;
+    my ($msg, $level) = @_;
+    
+    if(!(defined $level)) {
+    	print timestamp() . ": $msg";
+    }
+    elsif($level <= $DEBUGLEVEL) {
+    	print timestamp() . ": $msg";
+    }
 }
 
-sub DebugLevel
-{
-	my $newlevel = shift;
-	$DEBUGLEVEL = $newlevel;
+sub DebugLevel {
+    $DEBUGLEVEL = shift;
 }
 
-sub DebugOn
-{
+sub DebugOn {
     $DEBUG = 1;
 }
 
-sub DebugOff
-{
+sub DebugOff {
     $DEBUG = 0;
 }
 
@@ -1107,7 +1061,7 @@ sub ParseSubmitFile
     debug( "reading submit file...\n" ,5);
     while( <SUBMIT_FILE> )
     {
-	fullchomp($_);	# do a windows strip, fine for linux
+	CondorUtils::fullchomp($_);	# do a windows strip, fine for linux
 	$line++;
 
 	# skip comments & blank lines
@@ -1133,7 +1087,7 @@ sub ParseSubmitFile
 	    # compress whitespace and remove trailing newline for readability
 		# Don't change white space. Some environment tests expect tabs to stay tabs.
 	    # $value =~ s/\s+/ /g;
-	    fullchomp($value);
+	    CondorUtils::fullchomp($value);
 
 	
 		# Do proper environment substitution
@@ -1159,7 +1113,7 @@ sub ParseSubmitFile
 }
 
 sub timestamp {
-    return scalar localtime();
+    return strftime("%y/%m/%d %H:%M:%S", localtime);
 }
 
 sub safe_WIFEXITED {
@@ -1192,21 +1146,5 @@ sub safe_WEXITSTATUS {
 	}
 }
 
-#
-# Cygwin's perl chomp does not remove cntrl-m but this one will
-# and linux and windows can share the same code. The real chomp
-# totals the number or changes but I currently return the modified
-# array. bt 10/06
-#
-
-sub fullchomp
-{
-	push (@_,$_) if( scalar(@_) == 0);
-	foreach my $arg (@_) {
-		$arg =~ s/\012+$//;
-		$arg =~ s/\015+$//;
-	}
-	return(0);
-}
 
 1;

@@ -5,37 +5,38 @@ include "Dashboard.php";
 $dash = new Dashboard();
 $dash->print_header("NMI Pool Status");
 
-include "CondorQ.php";
-$condorq_build = new CondorQ("build");
-$condorq_test = new CondorQ("test");
-
-function make_cell($platform, $depth, $queue, $type) {
-  $color = "";
-  if($depth == 0) {
-    $color = "#00FFFF";
-  }
-  elseif($depth > 0 and $depth < 3) {
-    $color = "#00FF00";
-  }
-  elseif($depth >= 3 and $depth < 6) {
-    $color = "#FFFF00";
-  }
-  elseif($depth >= 6) {
-    $color = "#FF0000";
-  }
-  
-  return "<td align=\"center\" style=\"background-color:$color\">$type $queue</td>\n";
-}
 ?>
 
-<html>
-<head>
-<title>NMI - Build queue depths for core platforms</title>
-<LINK REL="StyleSheet" HREF="condor.css" TYPE="text/css">
 </head>
 <body>
 
 <?php
+
+// Get the current platforms in the pool
+$pool_platforms = $dash->condor_status();
+
+include "CondorQ.php";
+$condorq = new CondorQ($pool_platforms);
+
+function make_cell($platform, $info) {
+  $queued = $info["depth"] - $info["running"];
+
+  $color = "";
+  if($queued == 0) {
+    $color = "#00FFFF";
+  }
+  elseif($queued > 0 and $queued < 3) {
+    $color = "#00FF00";
+  }
+  elseif($queued >= 3 and $queued < 6) {
+    $color = "#FFFF00";
+  }
+  elseif($queued >= 6) {
+    $color = "#FF0000";
+  }
+  
+  return "<td align=\"center\" style=\"background-color:$color\">$platform<br>" . $info["html-queue"] . "</td>\n";
+}
 
 echo "<h2>NMI queue depths:</h2>\n";
 
@@ -44,50 +45,50 @@ $handle = fopen($roster_file, "r");
 $contents = fread($handle, filesize($roster_file));
 fclose($handle);
 
-$platforms = explode("\n", $contents);
+$platforms = array_filter(explode("\n", $contents));
 
-echo "<table border='0' cellspacing='0'>\n";
-echo "<tr>\n";
+// Strip nmi: from the front of each platform name
+$func = function($platform) {
+  return preg_replace("/nmi:/", "", $platform);
+};
+$platforms = array_map($func, $platforms);
+sort($platforms);
+
+echo "<table style='border-width:0px; border-style:none;'>\n";
+echo "<tr style='border-width:0px'>\n";
 
 
 
 // Get the queue depths.  We do this ahead of time so we can do this in 
 // a single condor_q command
 foreach ($platforms AS $platform) {
-  if(!preg_match("/\S/", $platform)) {
-    continue;
-  }
-
-  $condorq_build->add_platform($platform);
-  $condorq_test->add_platform($platform);
+  $condorq->add_platform($platform);
 }
-$build_queues = $condorq_build->condor_q();
-$test_queues = $condorq_test->condor_q();
+$queues = $condorq->condor_q();
 
 $count = 0;
 foreach ($platforms AS $platform) {
-  $count += 1;
-
-  $platform = preg_replace("/nmi:/", "", $platform);
-  
   if(!preg_match("/\S/", $platform)) {
     continue;
   }
 
-  $build_depth = $build_queues[$platform][0];
-  $build_queue = $build_queues[$platform][1];
+  $count += 1;
 
-  $test_depth = $test_queues[$platform][0];
-  $test_queue = $test_queues[$platform][1];
+  if(!preg_match("/\S/", $platform)) {
+    continue;
+  }
 
-  echo "<td><table><tr><td colspan=2>$platform</td></tr><tr>";
-  echo make_cell($platform, $build_depth, $build_queue, "Builds");
-  echo make_cell($platform, $test_depth, $test_queue, "Tests");
-  echo "</tr></table></td>";
+  // We want to make it obvious if a platform is not in the pool
+  $style = "border-width:0px;border-style:none;align:center;";
+  if(!$pool_platforms[$platform]) {
+    $style .= "background-color:#B8002E";
+  }
+  
+  echo make_cell($platform, $queues[$platform], "Builds");
 
   if($count == 6) {
     $count = 0;
-    echo "</tr><tr style='height:6px;'><td colspan=6 style='height:6px;'></td></tr><tr>";
+    echo "</tr><tr style='height:6px;border-width:0px'><td colspan=6 style='height:6px;border-width:0px;border-style:none;'></td></tr><tr style='border-width:0px'>";
   }
 }
 
@@ -98,10 +99,43 @@ echo "</table>\n";
 <p>Legend:
 <table>
 <tr>
-<td style="background-color:#00FFFF">Depth 0</td>
-<td style="background-color:#00FF00">Depth 1-2</td>
-<td style="background-color:#FFFF00">Depth 3-5</td>
-<td style="background-color:#FF0000">Depth 6+</td>
+  <td style="background-color:#00FFFF">Depth 0</td>
+  <td style="background-color:#00FF00">Depth 1-2</td>
+  <td style="background-color:#FFFF00">Depth 3-5</td>
+  <td style="background-color:#FF0000">Depth 6+</td>
+</tr>
+<tr>
+  <td colspan="4" style="height:4px;size=2px;">&nbsp;</td>
+</tr>
+<tr>
+  <td colspan="4" style="background-color:#B8002E">Platform missing from pool</td>
+</tr>
+</table>
 
+<p>
+<h2>Slots</h2>
+<table>
+<tr>
+  <th>Platform</th><th>Total</th><th>Avail.</th>
+</tr>
+
+<?php
+
+// Display the number of available slots on each NMI platform
+
+$free_slots = Array();
+$total_slots = Array();
+foreach ($platforms AS $platform) {
+  $free_slots[$platform] = $queues[$platform]["slots"] - $queues[$platform]["running"];
+  $total_slots[$platform] = $queues[$platform]["slots"];
+}
+
+arsort($free_slots, SORT_NUMERIC);
+foreach (array_keys($free_slots) as $platform) {
+  print "<tr><td style=\"text-align:left\">$platform</td><td>$total_slots[$platform]</td><td>$free_slots[$platform]</td></tr>\n";
+}
+?>
+
+</table>
 </body>
 </html>

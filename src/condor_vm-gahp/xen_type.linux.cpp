@@ -43,9 +43,6 @@
 #define XEN_MEM_SAVED_FILE "xen.mem.ckpt"
 #define XEN_CKPT_TIMESTAMP_FILE XEN_MEM_SAVED_FILE XEN_CKPT_TIMESTAMP_FILE_SUFFIX
 
-#define XEN_LOCAL_SETTINGS_PARAM "XEN_LOCAL_SETTINGS_FILE"
-#define XEN_LOCAL_VT_SETTINGS_PARAM "XEN_LOCAL_VT_SETTINGS_FILE"
-
 extern VMGahp *vmgahp;
 
 VirshType::VirshType(const char* workingpath,ClassAd* ad) : VMType("", "none", workingpath, ad)
@@ -318,7 +315,6 @@ bool VirshType::CreateVirshConfigFile(const char* filename)
 {
   vmprintf(D_FULLDEBUG, "In VirshType::CreateVirshConfigFile\n");
   //  std::string name;
-  char * name, line[1024];
   char * tmp = param("LIBVIRT_XML_SCRIPT");
   if(tmp == NULL)
     {
@@ -651,7 +647,13 @@ VirshType::Status()
 				case (VIR_ERR_NO_DOMAIN):
 					// The VM isn't there anymore, so signal shutdown
 					vmprintf(D_FULLDEBUG, "Couldn't find domain %s, assuming it was shutdown\n", m_vm_name.Value());
-					m_self_shutdown = true;
+					if(getVMStatus() == VM_RUNNING) {
+						m_self_shutdown = true;
+					}
+					if(getVMStatus() != VM_STOPPED) {
+						setVMStatus(VM_STOPPED);
+						m_stop_time.getTime();
+					}
 					m_result_msg += "Stopped";
 					return true;
 				break;
@@ -661,7 +663,13 @@ VirshType::Status()
 					if ( NULL == ( dom = virDomainLookupByName(m_libvirt_connection, m_vm_name.Value() ) ) )
 					{
 						vmprintf(D_ALWAYS, "could not reconnect to libvirt... marking vm as stopped (should exit)\n");
-						m_self_shutdown = true;
+						if(getVMStatus() == VM_RUNNING) {
+							m_self_shutdown = true;
+						}
+						if(getVMStatus() != VM_STOPPED) {
+							setVMStatus(VM_STOPPED);
+							m_stop_time.getTime();
+						}
 						m_result_msg += "Stopped";
 						return true;
 					}
@@ -742,7 +750,6 @@ void virshIOError(const char * filename, FILE * fp)
 bool KVMType::CreateVirshConfigFile(const char * filename)
 {
 	MyString disk_string;
-	char* config_value = NULL;
 
 	if(!filename) return false;
 
@@ -805,7 +812,6 @@ bool
 XenType::CreateVirshConfigFile(const char* filename)
 {
 	MyString disk_string;
-	char* config_value = NULL;
 
 	if( !filename ) return false;
 
@@ -1191,7 +1197,6 @@ VirshType::createCkptFiles(void)
 
 bool KVMType::checkXenParams(VMGahpConfig * config)
 {
-  char *config_value = NULL;
   MyString fixedvalue;
   if( !config ) {
     return false;
@@ -1645,7 +1650,6 @@ KVMType::KVMType(const char * workingpath, ClassAd * ad)
 bool
 KVMType::CreateConfigFile()
 {
-	char *config_value = NULL;
 	priv_state priv;
 
 	vmprintf(D_FULLDEBUG, "In KVMType::CreateConfigFile()\n");

@@ -3315,7 +3315,7 @@ DedicatedScheduler::publishRequestAd( void )
 
 	dprintf( D_FULLDEBUG, "In DedicatedScheduler::publishRequestAd()\n" );
 
-	ad.SetMyTypeName(SCHEDD_ADTYPE);
+	ad.SetMyTypeName(SUBMITTER_ADTYPE);
 	ad.SetTargetTypeName(STARTD_ADTYPE);
 
         // Publish all DaemonCore-specific attributes, which also handles
@@ -3329,6 +3329,8 @@ DedicatedScheduler::publishRequestAd( void )
 		// attribute; it _always_ sends the resource request ad.
 		// For backward compatibility with older negotiators, we still set it.
 	ad.Assign( ATTR_WANT_RESOURCE_AD, true );
+
+	ad.Assign( ATTR_SUBMITTER_TAG, HOME_POOL_SUBMITTER_TAG );
 
 	ad.Assign( ATTR_SCHEDD_NAME, Name );
 

@@ -128,7 +128,6 @@ FileTransfer::FileTransfer()
 	PeerDoesGoAhead = false;
 	PeerUnderstandsMkdir = false;
 	TransferUserLog = false;
-	m_StarterRenamesStdio = false;
 	Iwd = NULL;
 	ExceptionFiles = NULL;
 	InputFiles = NULL;
@@ -600,28 +599,6 @@ FileTransfer::InitDownloadFilenameRemaps(ClassAd *Ad) {
 		remap_fname = NULL;
 	}
 
-	// NOTE: We only pay attention to _ORIG values here for backwards
-	// compatibility with jobs that were submitted by versions of
-	// Condor submit prior to ATTR_TRANSFER_OUTPUT_REMAPS (pre 6.7.14).
-
-	if (Ad->LookupString(ATTR_JOB_OUTPUT_ORIG,&remap_fname)) {
-		char *output_fname = NULL;
-		if (Ad->LookupString(ATTR_JOB_OUTPUT,&output_fname)) {
-			AddDownloadFilenameRemap(output_fname,remap_fname);
-			free(output_fname);
-		}
-		free(remap_fname);
-		remap_fname = NULL;
-	}
-	if (Ad->LookupString(ATTR_JOB_ERROR_ORIG,&remap_fname)) {
-		char *error_fname = NULL;
-		if (Ad->LookupString(ATTR_JOB_ERROR,&error_fname)) {
-			AddDownloadFilenameRemap(error_fname,remap_fname);
-			free(error_fname);
-		}
-		free(remap_fname);
-		remap_fname = NULL;
-	}
 	if(!download_filename_remaps.IsEmpty()) {
 		dprintf(D_FULLDEBUG, "FileTransfer: output file remaps: %s\n",download_filename_remaps.Value());
 	}
@@ -3533,15 +3510,6 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 		TransferUserLog = false;
 	} else {
 		TransferUserLog = true;
-	}
-
-	// Since 7.7.2, the starter renames stdout/err to _condor_stdout/err
-	// when using file transfer. These names get remapped to the original
-	// filenames by the shadow.
-	if ( peer_version.built_since_version(7,7,2) ) {
-		m_StarterRenamesStdio = true;
-	} else {
-		m_StarterRenamesStdio = false;
 	}
 }
 

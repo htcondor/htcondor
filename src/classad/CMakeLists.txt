@@ -63,14 +63,20 @@ if (NOT WINDOWS)
   add_library( classads STATIC ${ClassadSrcs} )    # the one which all of condor depends upon
   set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 
-  if (LINUX)  
+  if (LINUX OR DARWIN)  
   	add_library( classad SHARED ${ClassadSrcs} )   # for distribution at this point may swap to depend at a future date.
 	set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 2 )
 	condor_set_link_libs( classad "${PCRE_FOUND};${DL_FOUND}" )
 	install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
   endif()
+  if ( DARWIN )
+	add_custom_command( TARGET classad
+		POST_BUILD
+		WORKING_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
+		COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs libclassad.${PACKAGE_VERSION}.dylib )
+  endif()
 
-  if ( LINUX )
+  if ( LINUX OR DARWIN )
 	# set external reference to the shared library for linux
 	set (CLASSADS_FOUND classad)
   else()
@@ -117,23 +123,11 @@ if (NOT PROPER)
 		LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
 		RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
 		OUTPUT_NAME classad)
-	if ( LINUX )
+	if ( LINUX OR DARWIN )
 		set_target_properties( classad
 			PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib 
 			LIBRARY_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib
 			RUNTIME_OUTPUT_DIRECTORY ${CLASSADS_INSTALL_LOC}/lib)
-	endif()
-
-	if (PCRE_REF)
-		add_custom_command (OUTPUT ${CLASSADS_INSTALL_LOC}/lib/libpcre.a
-                    COMMAND cp
-                    ARGS -f ${PCRE_FOUND} ${CLASSADS_INSTALL_LOC}/lib)
-
-		add_custom_target( pcre_coinstall ALL DEPENDS ${CLASSADS_INSTALL_LOC}/lib/libpcre.a )
-
-		add_dependencies( pcre_coinstall ${PCRE_REF} )
-
-		add_dependencies( ${CLASSADS_FOUND} pcre_coinstall )
 	endif()
 
   endif()

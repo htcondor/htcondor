@@ -71,7 +71,7 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.0.1-p5 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.0.1-p6 "lib;include" "done")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
@@ -126,13 +126,14 @@ if (WITH_GLOBUS)
 
 			set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF})
 		else()
-			set (GLOBUS_FLAGS true)
 			set (GLOBUS_DEPENDS ${GT4_REF} ${GT42_REF})
 
 			if (LINUX)
+				set (GLOBUS_FLAGS LDFLAGS='-Wl,--enable-new-dtags' && export LDFLAGS)
 				set (MODIFY_LIBTOOL sed -i 's/^hardcode_libdir_flag_spec=.*/hardcode_libdir_flag_spec=/' ${GLOBUS_INSTALL_LOC}/sbin/libtool-*)
 				set (MAKE_GRIDFTP LD_RUN_PATH='${EXTERNALS_RPATH}' ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -verbose -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
 			else()
+				set (GLOBUS_FLAGS true)
 				set (MODIFY_LIBTOOL true)
 				set (MAKE_GRIDFTP ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -verbose -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
 			endif()
@@ -169,6 +170,8 @@ if (WITH_GLOBUS)
 			## Set all the config information
 			if ( LINUX )
 				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_common_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libltdl_${GLOBUS_FLAVOR}.so")
+			elseif( DARWIN )
+				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_common_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libltdl_${GLOBUS_FLAVOR}.dylib")
 			else()
 				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libltdl_${GLOBUS_FLAVOR}.a")
 			endif()
@@ -182,6 +185,9 @@ if (WITH_GLOBUS)
 			if ( LINUX )
 				set (GLOBUS_GRID_UNIVERSE_COMMON
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_io_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl_${GLOBUS_FLAVOR}.so")
+			elseif ( DARWIN )
+				set (GLOBUS_GRID_UNIVERSE_COMMON
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_io_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl_${GLOBUS_FLAVOR}.dylib")
 			else()
 				set (GLOBUS_GRID_UNIVERSE_COMMON
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_io_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl_${GLOBUS_FLAVOR}.a")
@@ -190,6 +196,9 @@ if (WITH_GLOBUS)
 			if ( LINUX )
 				set (GLOBUS_GRID_UNIVERSE_GT2
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client_${GLOBUS_FLAVOR}.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol_${GLOBUS_FLAVOR}.so")
+			elseif ( DARWIN )
+				set (GLOBUS_GRID_UNIVERSE_GT2
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client_${GLOBUS_FLAVOR}.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol_${GLOBUS_FLAVOR}.dylib")
 			else()
 				set (GLOBUS_GRID_UNIVERSE_GT2
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gass_transfer_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_client_${GLOBUS_FLAVOR}.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gram_protocol_${GLOBUS_FLAVOR}.a")
@@ -198,6 +207,9 @@ if (WITH_GLOBUS)
 			if ( LINUX )
 				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control_${GLOBUS_FLAVOR}.so")
+			elseif ( DARWIN )
+				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
+				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control_${GLOBUS_FLAVOR}.dylib")
 			else()
 				set (GLOBUS_GRID_UNIVERSE_NORDUGRID
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control_${GLOBUS_FLAVOR}.a")
@@ -209,11 +221,16 @@ if (WITH_GLOBUS)
 			condor_post_external( globus "include/${GLOBUS_FLAVOR}" OFF )
 
 			install ( PROGRAMS "${GLOBUS_INSTALL_LOC}/sbin/globus-gridftp-server" DESTINATION ${C_LIBEXEC} )
-			if ( CONDOR_STRIP_PACKAGES AND NOT CONDOR_PACKAGE_BUILD )
-				install( CODE "execute_process(COMMAND strip ${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/globus-gridftp-server)" )
+			if ( CONDOR_STRIP_PACKAGES )
+				if ( DARWIN )
+					install( CODE "execute_process(COMMAND strip -x \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/globus-gridftp-server)" )
+				else()
+					install( CODE "execute_process(COMMAND strip \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/globus-gridftp-server)" )
+				endif()
 			endif()
+
 			if ( LINUX )
-				# Install the VOMS libraries manually.
+				# Install the Globus libraries manually.
 				# In order to use an install(FILES) command,
 				# we'd have to explicitly list evey file.
 				# We can't use a file(GLOB) because that's
@@ -230,6 +247,34 @@ if (WITH_GLOBUS)
 						COMMAND xargs strip)" )
 					install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libltdl*.so*
                                                 COMMAND xargs strip)" )
+				endif()
+			endif()
+			if ( DARWIN )
+				# Install the Globus libraries manually.
+				# In order to use an install(FILES) command,
+				# we'd have to explicitly list evey file.
+				# We can't use a file(GLOB) because that's
+				# evaluated when cmake is run, which may be
+				# before the external is built.
+				install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+				install( CODE "execute_process(COMMAND find ${GLOBUS_INSTALL_LOC}/lib -maxdepth 1 -name *.dylib*
+					COMMAND xargs -I src cp -pPR src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
+
+				# Fix up the share library dependencies
+				install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/globus-gridftp-server)" )
+				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libglobus*.dylib*
+					 COMMAND xargs ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs)" )
+				install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libltdl*.dylib*
+					 COMMAND xargs ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs)" )
+
+				if ( CONDOR_STRIP_PACKAGES )
+					# Strip the libraries manually.
+					# Since cmake didn't create the libraries
+					# itself, it doesn't know to strip them.
+					install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libglobus*.dylib*
+						COMMAND xargs strip -x)" )
+					install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libltdl*.dylib*
+                                                COMMAND xargs strip -x)" )
 				endif()
 			endif()
 

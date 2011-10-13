@@ -23,8 +23,6 @@
 #include "HistoryProcessingUtils.h"
 #include "qpid/agent/ManagementAgent.h"
 
-DECL_SUBSYSTEM("TOOL", SUBSYSTEM_TYPE_TOOL);
-
 using namespace qpid::management;
 
 extern MyString m_path;

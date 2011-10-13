@@ -30,8 +30,6 @@
 #include "io_loop.h"
 #include "PipeBuffer.h"
 
-DECL_SUBSYSTEM( "C_GAHP_WORKER_THREAD", SUBSYSTEM_TYPE_GAHP );
-
 char * myUserName = NULL;
 
 extern char * ScheddAddr;
@@ -62,6 +60,7 @@ void init_pipes();
 void
 main_init( int argc, char ** const argv )
 {
+	set_mySubSystem( "C_GAHP_WORKER_THREAD", SUBSYSTEM_TYPE_GAHP );
 
 	dprintf(D_FULLDEBUG, "Welcome to the C-GAHP\n");
 
@@ -204,14 +203,14 @@ main_shutdown_graceful()
 	DC_Exit(0);
 }
 
-void
-main_pre_dc_init( int, char*[] )
+int
+main( int argc, char **argv )
 {
-}
-
-void
-main_pre_command_sock_init( )
-{
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }
 
 // This function is called by dprintf - always display our pid in our

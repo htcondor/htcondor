@@ -54,9 +54,6 @@
 
 char	*MyName;
 
-/* For daemonCore, etc. */
-DECL_SUBSYSTEM( NULL, SUBSYSTEM_TYPE_TOOL );
-
 StringList params;
 daemon_t dt = DT_MASTER;
 bool	mixedcase = false;

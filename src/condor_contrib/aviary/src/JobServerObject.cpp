@@ -271,7 +271,9 @@ JobServerObject::fetchJobData(const char* key,
 			dprintf(D_ALWAYS,"%s\n", _status.text.c_str());
 			return false;
 	}
-	
+
+	prev_priv_state = set_user_priv_from_ad(ad);
+
 	StatInfo the_file(fname.c_str());
 	if (the_file.Error()) {
 		sprintf (_status.text, "Error opening requested file '%s', error %d",fname.c_str(),the_file.Errno());
@@ -322,8 +324,6 @@ JobServerObject::fetchJobData(const char* key,
 
 	// TODO: Sanity check that length isn't too big?
 	buffer = new char[length + 1];
-
-	prev_priv_state = set_user_priv_from_ad(ad);
 
 	if (-1 != (fd = safe_open_wrapper(fname.c_str(),
 									  O_RDONLY | _O_BINARY,

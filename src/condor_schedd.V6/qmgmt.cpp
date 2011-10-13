@@ -28,7 +28,6 @@
 #include "basename.h"
 #include "qmgmt.h"
 #include "condor_qmgr.h"
-#include "log_transaction.h"
 #include "log.h"
 #include "classad_collection.h"
 #include "prio_rec.h"
@@ -320,35 +319,6 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		}
 	}
 
-		// CRUFT
-		// Starting in 7.5.4, the GridResource attribute for the amazon
-		// grid-type contains the URL of the service to be submitted
-		// to. Prior to that, only one service could be submitted to,
-		// which was controlled by the config param AMAZON_EC2_URL.
-	if ( universe == CONDOR_UNIVERSE_GRID ) {
-		std::string attr_value;
-		job_ad->LookupString( ATTR_GRID_RESOURCE, attr_value );
-		if ( attr_value == "amazon" ) {
-			char *url = param( "AMAZON_EC2_URL" );
-			if ( url == NULL ) {
-				url = strdup( "https://ec2.amazonaws.com/" );
-			}
-
-			attr_value = "amazon ";
-			attr_value += url;
-			job_ad->Assign( ATTR_GRID_RESOURCE, attr_value );
-
-			if ( job_ad->LookupString( ATTR_GRID_JOB_ID, attr_value ) ) {
-				std::string insert = " ";
-				insert += url;
-				attr_value.insert( 6, insert );
-				job_ad->Assign( ATTR_GRID_JOB_ID, attr_value );
-			}
-
-			free( url );
-		}
-	}
-
 		// CRUST
 		// Convert expressions to have properl TARGET scoping when
 		// referring to machine attributes. The switch from old to new
@@ -479,7 +449,7 @@ QmgmtPeer::endpoint_ip_str() const
 	}
 }
 
-const condor_sockaddr&
+const condor_sockaddr
 QmgmtPeer::endpoint() const
 {
 	if ( sock ) {
@@ -4300,7 +4270,7 @@ int get_job_prio(ClassAd *job)
 	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 	job->LookupInteger(ATTR_JOB_STATUS, job_status);
     if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
-        cur_hosts = ((job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) ? 1 : 0);
+        cur_hosts = ((job_status == SUSPENDED || job_status == RUNNING || job_status == TRANSFERRING_OUTPUT) ? 1 : 0);
     }
     if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
         max_hosts = ((job_status == IDLE) ? 1 : 0);
@@ -4468,7 +4438,7 @@ int mark_idle(ClassAd *job)
 		scheduler.WriteAbortToUserLog( job_id );
 		DestroyProc( cluster, proc );
 	}
-	else if ( status == RUNNING || status == TRANSFERRING_OUTPUT || hosts > 0 ) {
+	else if ( status == SUSPENDED || status == RUNNING || status == TRANSFERRING_OUTPUT || hosts > 0 ) {
 		if( universeCanReconnect(universe) &&
 			jobLeaseIsValid(job, cluster, proc) )
 		{

@@ -23,6 +23,23 @@
 #include "strcasestr.h"
 #include <stdio.h>
 
+static SubsystemInfo *mySubSystem = NULL;
+
+SubsystemInfo* get_mySubSystem()
+{
+	if ( mySubSystem == NULL ) {
+		mySubSystem = new SubsystemInfo( "TOOL", SUBSYSTEM_TYPE_TOOL );
+	}
+	return mySubSystem;
+}
+
+void set_mySubSystem( const char *subsystem_name,
+					  SubsystemType _type )
+{
+	delete mySubSystem;
+	mySubSystem = new SubsystemInfo( subsystem_name, _type );
+}
+
 //
 // Simple class to manage a single lookup item
 //

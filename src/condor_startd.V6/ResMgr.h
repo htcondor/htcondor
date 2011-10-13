@@ -163,8 +163,8 @@ public:
 
 	void		deleteResource( Resource* );
 
-	void		makeAdList( ClassAdList* );   // Make a list of the
-		// ClassAds from each slot we represent.
+		//Make a list of the ClassAds from each slot we represent.
+	void		makeAdList( ClassAdList*, ClassAd * pqueryAd=NULL );
 
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() { return is_shutting_down; };
@@ -191,6 +191,21 @@ public:
 #endif /* HAVE_HIBERNATION */
 
 	time_t	now( void ) { return cur_time; };
+
+    class Stats {
+	public:
+       stats_recent_counter_timer Compute;
+       stats_recent_counter_timer WalkEvalState;
+       stats_recent_counter_timer WalkUpdate;
+       stats_recent_counter_timer WalkOther;
+
+       // TJ: for now these stats will be registered in the DC pool.
+       void Init(void);
+       double BeginRuntime(stats_recent_counter_timer & Probe);
+       double EndRuntime(stats_recent_counter_timer & Probe, double timeBegin);
+       double BeginWalk(VoidResourceMember memberfunc);
+       double EndWalk(VoidResourceMember memberfunc, double timeBegin);
+    } stats;
 
 	void FillExecuteDirsList( class StringList *list );
 

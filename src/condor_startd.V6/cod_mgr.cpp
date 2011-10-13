@@ -298,7 +298,8 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 
 		// first, we have to find a Starter that matches the request
 	Starter* tmp_starter;
-	tmp_starter = resmgr->starter_mgr.findStarter( req, mach_classad );
+	bool no_starter = false;
+	tmp_starter = resmgr->starter_mgr.findStarter( req, mach_classad, no_starter );
 	if( ! tmp_starter ) {
 		ExprTree *tree;
 		tree = req->LookupExpr( ATTR_REQUIREMENTS );
@@ -312,6 +313,9 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 		err_msg = "Cannot find starter that satisfies requirements '";
 		err_msg += ExprTreeToString( tree );
 		err_msg += "'";
+		if( no_starter ) {
+			err_msg += " because no valid starter is installed";
+		}
 		return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
 							   CA_INVALID_REQUEST, err_msg.Value() );
 	}

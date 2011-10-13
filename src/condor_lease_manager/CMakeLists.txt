@@ -25,9 +25,7 @@ if (NOT WINDOWS)
 		condor_glob(LMHdrs LMSrcs "${rmvLMFiles}*")
 
 		condor_exe( condor_lease_manager "${LMHdrs};${LMSrcs}" ${C_SBIN}
-		"conversion;${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
-
-		add_dependencies( condor_lease_manager conversion)
+		"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
 
 		condor_exe_test(condor_lease_manager_test "lease_manager_test.cpp" "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}")
 		condor_exe_test(condor_lease_manager_tester "lease_manager_tester.cpp" "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}")

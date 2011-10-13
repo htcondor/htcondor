@@ -532,6 +532,7 @@ produces four dependencies:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!submit description file with}
+\index{DAGMan!usage of log files}
 Each node in a DAG may use a unique submit description file.
 One key limitation is that
 each Condor submit description file must submit jobs
@@ -553,9 +554,9 @@ Unfortunately,
 each Stork job currently requires a separate log file.
 
 \index{DAGMan!lazy log file evaluation}
-As of Condor version 7.3.2, DAGMan's handling of log files has
+As of Condor version 7.3.2, DAGMan's handling of log files
 significantly changed to improve resource usage and efficiency.  
-Prior to version 7.3.2, 
+Prior to Condor version 7.3.2, 
 DAGMan assembled a list of all relevant log files at start up, 
 by looking at all of the submit description files for all of the nodes.
 It kept the log files open for the duration of the DAG.
@@ -591,7 +592,8 @@ We hope to have this problem fixed soon.
 \end{itemize}
 
 \index{DAGMan!default log file specification}
-Another new feature in version 7.3.2 is the use of default node job user logs.
+Another new feature in Condor version 7.3.2 was the use of 
+default node job user logs.
 Previously, it was a fatal error if the submit description
 file for a node job did not specify a log file.
 Starting with Condor version 7.3.2,
@@ -602,6 +604,13 @@ The file used as the default node log is controlled by the
 A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
 Nodes specifying a log file and other nodes using the default log
 file can be mixed in a single DAG.
+
+Log files for node jobs should not be placed on NFS. 
+NFS file locking is not reliable,
+occasionally resulting in simultaneous acquisition of locks on a single
+log file by both the \Condor{schedd} daemon and the \Condor{dagman} job. 
+Partially written events by the \Condor{schedd} cause errors
+for \Condor{dagman}.
 
 An additional restriction applies to the submit description file
 command \SubmitCmd{Log} specific to a Condor job within
@@ -671,7 +680,7 @@ the submit description file command
 \begin{verbatim}
 arguments = $$([DAGParentNodeNames])
 \end{verbatim}
-will pass the string ``B,C'' as the command line argument when invoking
+will pass the string \AdStr{B,C} as the command line argument when invoking
 the job.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1187,13 +1196,15 @@ DAG
 \end{verbatim}
 \normalsize
 
-This will cause node C to be submitted before node B (normally, node B
-would be submitted first).
+This will cause node C to be submitted before node B.
+Without this priority setting for node C, node B would be submitted first.
 
-Priorities are propogated to children, to SUBDAGs, and to the Condor job itself,
-via the \Attr{JobPrio} attribute in the job's ClassAd. The priority is defined to
-be the maximum of the DAG PRIORITY directive for the job itself and the PRIORITYs
-of all its parents. Here is an example to clarify:
+Priorities are propagated to children, to SUBDAGs, 
+and to the Condor job itself,
+via the \Attr{JobPrio} attribute in the job's ClassAd. 
+The priority is defined to be the maximum of the DAG PRIORITY directive 
+for the job itself and the PRIORITYs of all its parents. 
+Here is an example to clarify:
 
 \footnotesize
 \begin{verbatim}
@@ -1212,18 +1223,28 @@ PRIORITY D 100
 \end{verbatim}
 \normalsize
 
-In this example, node B is a child of nodes A and C. \textit{a priori}, the
-priority of node B is 0, but gets assigned priority 60 because that is the
-maximum of the priorities of its parents. Node D is a child of node C only:
-since the declared priority of node D is at least as big as that of node C,
-node D is assigned a priority of 100; all nodes in the D subdag will have
-priority at least 100.  This priority is assigned by DAGman; there is not a way
-to change the priority in the condor submit file for a job, as DAGman will
-override any such \AdAttr{priority} directives in the submit file. This means
-that for DAGs with a large number of edges (representing dependencies), the
-priorities of child nodes far from the root nodes will tend to be homogeneous.
-The priorities of a tree, or DAGs with a relatively small number of
-dependencies, will tend to have varying priorities.
+In this example, node B is a child of nodes A and C. 
+Node B's priority is initially set to 0,
+but its priority becomes 60,
+because that is the maximum of its initial priority of 0,
+and the priorities of its parents
+A with priority 60 and C with priority 5.
+Node D has only parent node C.
+Since the priority of node D will become at least as big as that of 
+its parent node C,
+node D is assigned a priority of 100.
+And, all nodes in the D SUBDAG will have priority at least 100.
+This priority is assigned by DAGMan.
+There is no way to change the priority in the submit description file for a job,
+as DAGMan will override any \SubmitCmd{priority} command placed
+in a submit description file.
+The implication of this priority propagation is
+that for DAGs with a large number of edges (representing dependencies), 
+the priorities of child nodes far from the root nodes 
+will tend to be the same.
+The priorities of the leaf nodes of a tree-shaped DAG,
+or of DAGs with a relatively small number of dependencies,
+will \emph{not} tend to be the same.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DAG-node-category}Limiting the Number of Submitted Job Clusters within a DAG}

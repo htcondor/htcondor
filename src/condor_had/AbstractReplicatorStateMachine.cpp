@@ -135,20 +135,10 @@ AbstractReplicatorStateMachine::reinitialize()
         utilCrucialError( utilNoParameterError("REPLICATION_LIST", 
 		  								       "REPLICATION").Value( ) );
     }
-    buffer = param( "HAD_CONNECTION_TIMEOUT" );
 
-    if( buffer ) {
-        m_connectionTimeout = strtol( buffer, 0, 10 );
-
-        if( errno == ERANGE || m_connectionTimeout <= 0 ) {
-        	utilCrucialError( utilConfigurationError( "HAD_CONNECTION_TIMEOUT",
-													  "HAD" ).Value( ) );
-        }
-        free( buffer );
-    } else {
-        utilCrucialError( utilNoParameterError("HAD_CONNECTION_TIMEOUT",
-										       "HAD").Value( ) );
-    }
+	m_connectionTimeout = param_integer("HAD_CONNECTION_TIMEOUT",
+										DEFAULT_SEND_COMMAND_TIMEOUT,
+										0); // min value
 
 	buffer = param( "TRANSFERER" );
 	if (!buffer) {

@@ -72,6 +72,7 @@
 #include "directory.h"			// for StatInfo
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "condor_auth_x509.h"
 #include "setenv.h"
 #include "HashTable.h"
 #include "extra_param_info.h"
@@ -118,7 +119,6 @@ extern int	ConfigLineNo;
 BUCKET	*ConfigTab[TABLESIZE];
 static ExtraParamTable *extra_info = NULL;
 static char* tilde = NULL;
-extern DLL_IMPORT_MAGIC char **environ;
 static bool have_config_source = true;
 extern bool condor_fsync_on;
 
@@ -743,7 +743,8 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
     }
 			
 		// Now, insert any macros defined in the environment.
-	for( int i = 0; environ[i]; i++ ) {
+	char **my_environ = GetEnviron();
+	for( int i = 0; my_environ[i]; i++ ) {
 		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
 		strcpy( magic_prefix, "_" );
 		strcat( magic_prefix, myDistro->Get() );
@@ -751,11 +752,11 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		int prefix_len = strlen( magic_prefix );
 
 		// proceed only if we see the magic prefix
-		if( strncasecmp( environ[i], magic_prefix, prefix_len ) != 0 ) {
+		if( strncasecmp( my_environ[i], magic_prefix, prefix_len ) != 0 ) {
 			continue;
 		}
 
-		char *varname = strdup( environ[i] );
+		char *varname = strdup( my_environ[i] );
 		if( !varname ) {
 			EXCEPT( "Out of memory in %s:%d\n", __FILE__, __LINE__ );
 		}
@@ -810,6 +811,12 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		// Also, we should be safe to process the NETWORK_INTERFACE
 		// parameter at this point, if it's set.
 	init_ipaddr( TRUE );
+
+		// The IPv6 code currently caches some results that depend
+		// on configuration settings such as NETWORK_INTERFACE.
+		// Therefore, force the cache to be reset, now that the
+		// configuration has been loaded.
+	init_local_hostname();
 
 		// Re-insert the special macros.  We don't want the user to
 		// override them, since it's not going to work.
@@ -876,17 +883,9 @@ process_locals( const char* param_name, const char* host )
 {
 	StringList sources_to_process, sources_done;
 	char *source, *sources_value;
-	char *tmp;
 	int local_required;
-	
-	local_required = true;	
-    tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
-    if( tmp ) {
-		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
-			local_required = false;
-		}
-		free( tmp );
-    }
+
+	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
 
 	sources_value = param( param_name );
 	if( sources_value ) {
@@ -966,18 +965,10 @@ process_directory( char* dirlist, char* host )
 	Directory *files;
 	const char *file, *dirpath;
 	char **paths;
-	char *tmp;
 	int local_required;
 	Regex excludeFilesRegex;
 	
-	local_required = true;	
-	tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
-	if( tmp ) {
-		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
-			local_required = false;
-		}
-		free( tmp );
-	}
+	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
 
 	if(!dirlist) { return; }
 	locals.initializeFromString( dirlist );
@@ -1877,6 +1868,31 @@ param_double( const char *name, double default_value,
 	free( string );
 	return result;
 }
+
+/*
+ * Like param_boolean, but allow for 'T' or 'F' (no quotes, case
+ * insensitive) to mean True/False, respectively.
+ */
+bool
+param_boolean_crufty( const char *name, bool default_value )
+{
+	char *tmp = param(name);
+	if (tmp) {
+		char c = *tmp;
+		free(tmp);
+
+		if ('t' == c || 'T' == c) {
+			return true;
+		} else if ('f' == c || 'F' == c) {
+			return false;
+		} else {
+			return param_boolean(name, default_value);
+		}
+	} else {
+		return param_boolean(name, default_value);
+	}
+}
+
 
 /*
 ** Return the boolean value associated with the named paramter.

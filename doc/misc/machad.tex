@@ -561,26 +561,31 @@ not be defined.
 
 \end{description}
 
+\index{offline ClassAd}
 There are a few attributes that are applicable to machines that
 are offline, that is, hibernating.
 
 \begin{description}
 
 \index{ClassAd machine attribute (when offline)!MachineLastMatchTime}
-\item[\AdAttr{MachineLastMatchTime}:] The Unix epoch time when this offline ad
-would have been matched to a job if the machine were online.  In addition,
-the slot1 ad of a multi-slot machine will have \AdAttr{slot<X>\_MachineLastMatchTime}
-where \MacroNI{X} is replaced by the slot id of each of the slots
+\item[\AdAttr{MachineLastMatchTime}:] The Unix epoch time when this offline 
+ClassAd
+would have been matched to a job, if the machine were online.  
+In addition,
+the slot1 ClassAd of a multi-slot machine will have 
+\AdAttr{slot<X>\_MachineLastMatchTime} defined,
+where \Expr{<X>} is replaced by the slot id of each of the slots
 with \AdAttr{MachineLastMatchTime} defined.
 
 \index{ClassAd machine attribute (when offline)!Offline}
-\item[\AdAttr{Offline}:] true for ads that are in an offline state
-in the collector.  Such ads are stored persistently so that they will
-still be there after the collector restarts.
+\item[\AdAttr{Offline}:] A boolean value, that when \Expr{True},
+indicates this machine is in an offline state in the \Condor{collector}.
+Such ClassAds are stored persistently, 
+such that they will continue to exist after the \Condor{collector} restarts.
 
 \index{ClassAd machine attribute (when offline)!Unhibernate}
-\item[\AdAttr{Unhibernate}:] a boolean expression that specifies when
-a hibernating machine should be woken up (e.g. by \Condor{rooster}).
+\item[\AdAttr{Unhibernate}:] A boolean expression that specifies when
+a hibernating machine should be woken up, for example, by \Condor{rooster}.
 
 \end{description}
 

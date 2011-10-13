@@ -318,7 +318,6 @@ const char * const ATTR_JOB_ENVIRONMENT1		 = "Env";
 const char * const ATTR_JOB_ENVIRONMENT1_DELIM	 = "EnvDelim";
 const char * const ATTR_JOB_ENVIRONMENT2		 = "Environment";
 const char * const ATTR_JOB_ERROR				 = "Err";
-const char * const ATTR_JOB_ERROR_ORIG			 = "ErrOrig";
 const char * const ATTR_JOB_ERROR_SIZE			 = "ErrSize";
 const char * const ATTR_JOB_KEEP_CLAIM_IDLE      = "KeepClaimIdle";
 const char * const ATTR_JOB_KEYWORD              = "JobKeyword";
@@ -351,7 +350,6 @@ const char * const ATTR_JOB_NOOP_EXIT_SIGNAL	 = "NoopJobExitSignal";
 const char * const ATTR_JOB_NOOP_EXIT_CODE		 = "NoopJobExitCode";
 const char * const ATTR_JOB_NOTIFICATION		 = "JobNotification";
 const char * const ATTR_JOB_OUTPUT				 = "Out";
-const char * const ATTR_JOB_OUTPUT_ORIG			 = "OutOrig";
 const char * const ATTR_JOB_OUTPUT_SIZE			 = "OutSize";
 const char * const ATTR_JOB_PID                  = "JobPid";
 const char * const ATTR_PRE_JOB_PRIO1            = "PreJobPrio1";
@@ -608,29 +606,6 @@ const char * const ATTR_TOTAL_LOCAL_RUNNING_JOBS = "TotalLocalJobsRunning";
 const char * const ATTR_TOTAL_LOCAL_IDLE_JOBS	 = "TotalLocalJobsIdle";
 const char * const ATTR_TOTAL_SCHEDULER_RUNNING_JOBS = "TotalSchedulerJobsRunning";
 const char * const ATTR_TOTAL_SCHEDULER_IDLE_JOBS	 = "TotalSchedulerJobsIdle";
-#ifdef TICKET_2006
-const char * const ATTR_JOBS_SUBMITTED_CUMULATIVE = "JobsSubmittedCumulative";
-const char * const ATTR_JOBS_STARTED_CUMULATIVE = "JobsStartedCumulative";
-const char * const ATTR_JOBS_EXITED_CUMULATIVE = "JobsExitedCumulative";
-const char * const ATTR_JOBS_COMPLETED_CUMULATIVE = "JobsCompletedCumulative";
-const char * const ATTR_SHADOW_EXCEPTIONS_CUMULATIVE = "ShadowExceptionsCumulative";
-const char * const ATTR_MEAN_TIME_TO_START_CUMULATIVE = "MeanTimeToStartCumulative";
-const char * const ATTR_SUM_TIME_TO_START_CUMULATIVE = "SumTimeToStartCumulative";
-const char * const ATTR_MEAN_RUNNING_TIME_CUMULATIVE = "MeanRunningTimeCumulative";
-const char * const ATTR_SUM_RUNNING_TIME_CUMULATIVE = "SumRunningTimeCumulative";
-const char * const ATTR_EXIT_CODE_CUMULATIVE = "ExitCodeCumulative";
-const char * const ATTR_JOBS_SUBMITTED = "JobsSubmitted";
-const char * const ATTR_JOB_SUBMISSION_RATE = "JobSubmissionRate";
-const char * const ATTR_JOBS_STARTED = "JobsStarted";
-const char * const ATTR_JOB_START_RATE = "JobStartRate";
-const char * const ATTR_JOBS_COMPLETED = "JobsCompleted";
-const char * const ATTR_JOB_COMPLETION_RATE = "JobCompletionRate";
-const char * const ATTR_JOBS_EXITED = "JobsExited";
-const char * const ATTR_SHADOW_EXCEPTIONS = "ShadowExceptions";
-const char * const ATTR_MEAN_TIME_TO_START = "MeanTimeToStart";
-const char * const ATTR_MEAN_RUNNING_TIME = "MeanRunningTime";
-const char * const ATTR_EXIT_CODE = "ExitCode";
-#endif
 const char * const ATTR_TOTAL_SLOTS			 = "TotalSlots";
 const char * const ATTR_TOTAL_TIME_IN_CYCLE		   = "TotalTimeInCycle";	
 const char * const ATTR_TOTAL_TIME_BACKFILL_BUSY      = "TotalTimeBackfillBusy";
@@ -646,7 +621,7 @@ const char * const ATTR_TOTAL_TIME_PREEMPTING_KILLING = "TotalTimePreemptingKill
 const char * const ATTR_TOTAL_TIME_PREEMPTING_VACATING = "TotalTimePreemptingVacating";
 const char * const ATTR_TOTAL_TIME_UNCLAIMED_BENCHMARKING = "TotalTimeUnclaimedBenchmarking";
 const char * const ATTR_TOTAL_TIME_UNCLAIMED_IDLE     = "TotalTimeUnclaimedIdle";
-const char * const ATTR_WINDOWED_STAT_WIDTH = "WindowedStatWidth";
+//const char * const ATTR_WINDOWED_STAT_WIDTH = "WindowedStatWidth";
 
 // Deprecated (cruft) -- use: ATTR_TOTAL_SLOTS;
 const char * const ATTR_TOTAL_VIRTUAL_MACHINES	 = "TotalVirtualMachines";
@@ -700,7 +675,6 @@ const char * const ATTR_VIRTUAL_MACHINE_ID		 = "VirtualMachineID";
 const char * const ATTR_SHOULD_TRANSFER_FILES    = "ShouldTransferFiles";
 const char * const ATTR_WHEN_TO_TRANSFER_OUTPUT  = "WhenToTransferOutput";
 const char * const ATTR_TRANSFER_TYPE			 = "TransferType";
-const char * const ATTR_TRANSFER_FILES			 = "TransferFiles";
 const char * const ATTR_TRANSFER_KEY			 = "TransferKey";
 const char * const ATTR_TRANSFER_EXECUTABLE		 = "TransferExecutable";
 const char * const ATTR_TRANSFER_INPUT			 = "TransferIn";
@@ -899,19 +873,6 @@ const char * const ATTR_RETRY = "Retry";
 const char * const ATTR_SSH_KEYGEN_ARGS = "SSHKeyGenArgs";
 const char * const ATTR_SOCK = "sock";
 const char * const ATTR_JOB_AD_INFORMATION_ATTRS = "JobAdInformationAttrs";
-
-
-//************* Added for Amazon Jobs ***************************//
-const char * const ATTR_AMAZON_PUBLIC_KEY = "AmazonPublicKey";
-const char * const ATTR_AMAZON_PRIVATE_KEY = "AmazonPrivateKey";
-const char * const ATTR_AMAZON_AMI_ID = "AmazonAmiID";
-const char * const ATTR_AMAZON_SECURITY_GROUPS = "AmazonSecurityGroups";
-const char * const ATTR_AMAZON_KEY_PAIR_FILE = "AmazonKeyPairFile";
-const char * const ATTR_AMAZON_USER_DATA = "AmazonUserData";
-const char * const ATTR_AMAZON_USER_DATA_FILE = "AmazonUserDataFile";
-const char * const ATTR_AMAZON_REMOTE_VM_NAME = "AmazonRemoteVirtualMachineName";
-const char * const ATTR_AMAZON_INSTANCE_TYPE = "AmazonInstanceType";
-//************* End of changes for Amamzon Jobs *****************//
 
 //************* Added for EC2 Jobs ***************************//
 const char * const ATTR_EC2_ACCESS_KEY_ID = "EC2AccessKeyId";

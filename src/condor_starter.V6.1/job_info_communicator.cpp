@@ -54,6 +54,8 @@ JobInfoCommunicator::JobInfoCommunicator()
 	job_output_ad_file = NULL;
 	job_output_ad_is_stdout = false;
 	requested_exit = false;
+	fast_exit = false;
+	graceful_exit = false;
 	had_remove = false;
 	had_hold = false;
 	change_iwd = false;
@@ -61,6 +63,7 @@ JobInfoCommunicator::JobInfoCommunicator()
 	m_dedicated_execute_account = NULL;
 #if HAVE_JOB_HOOKS
     m_hook_mgr = NULL;
+	m_exit_hook_timer_tid = -1;
 #endif
 	m_periodic_job_update_tid = -1;
 	m_allJobsDone_finished = false;
@@ -104,6 +107,10 @@ JobInfoCommunicator::~JobInfoCommunicator()
     if (m_hook_mgr) {
         delete m_hook_mgr;
     }
+	if (m_exit_hook_timer_tid != -1) {
+		daemonCore->Cancel_Timer(m_exit_hook_timer_tid);
+		m_exit_hook_timer_tid = -1;
+	}
 #endif
 	cancelUpdateTimer();
 }
@@ -300,6 +307,11 @@ JobInfoCommunicator::allJobsDone( void )
 		case 1:    // Spawned the hook.
 				// We need to bail now, and let the handler call
 				// finishAllJobsDone() when the hook returns.
+			// Create a timer to exit is the hook takes too long
+			m_exit_hook_timer_tid = daemonCore->Register_Timer(m_hook_mgr->getExitHookTimeout(),
+							(TimerHandlercpp)&JobInfoCommunicator::hookTimeout,
+							"finishAllJobsDone",
+							this);
 			return false;
 			break;
 		}
@@ -315,8 +327,21 @@ JobInfoCommunicator::allJobsDone( void )
 
 #if HAVE_JOB_HOOKS
 void
+JobInfoCommunicator::hookTimeout( void )
+{
+	dprintf(D_FULLDEBUG, "Timed out waiting for hook to exit\n");
+	finishAllJobsDone();
+}
+
+
+void
 JobInfoCommunicator::finishAllJobsDone( void )
 {
+	if (m_exit_hook_timer_tid != -1) {
+		daemonCore->Cancel_Timer(m_exit_hook_timer_tid);
+		m_exit_hook_timer_tid = -1;
+	}
+
 		// Record the fact the hook finished.
 	m_allJobsDone_finished = true;
 		// Tell the starter to try job cleanup again so it can move on.
@@ -330,6 +355,7 @@ JobInfoCommunicator::gotShutdownFast( void )
 {
 		// Set our flag so we know we were asked to vacate.
 	requested_exit = true;
+	fast_exit = true;
 }
 
 
@@ -338,6 +364,7 @@ JobInfoCommunicator::gotShutdownGraceful( void )
 {
 		// Set our flag so we know we were asked to vacate.
 	requested_exit = true;
+	graceful_exit = true;
 }
 
 

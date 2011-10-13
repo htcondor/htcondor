@@ -371,6 +371,7 @@ inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2
 //
 class stats_entry_base;
 typedef void (stats_entry_base::*FN_STATS_ENTRY_PUBLISH)(ClassAd & ad, const char * pattr, int flags) const;
+typedef void (stats_entry_base::*FN_STATS_ENTRY_UNPUBLISH)(ClassAd & ad, const char * pattr) const;
 typedef void (stats_entry_base::*FN_STATS_ENTRY_ADVANCE)(int cAdvance);
 typedef void (stats_entry_base::*FN_STATS_ENTRY_SETRECENTMAX)(int cRecent);
 typedef void (stats_entry_base::*FN_STATS_ENTRY_CLEAR)(void);
@@ -386,6 +387,7 @@ public:
    // the callback table in the StatisticsPool::poolitems
    static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return NULL; };
    static FN_STATS_ENTRY_SETRECENTMAX GetFnSetRecentMax() { return NULL; };
+   static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return NULL; }
 };
 
 
@@ -399,7 +401,9 @@ public:
    void Publish(ClassAd & ad, const char * pattr, int flags) const { 
       ClassAdAssign(ad, pattr, value); 
       };
-
+   void Unpublish(ClassAd & ad, const char * pattr) const {
+      ad.Delete(pattr);
+      };
    static const int unit = IS_CLS_COUNT | stats_entry_type<T>::id;
    static void Delete(stats_entry_count<T> * probe) { delete probe; }
 };
@@ -427,6 +431,12 @@ public:
             ClassAdAssign(ad, pattr, largest); 
       }
    }
+   void Unpublish(ClassAd & ad, const char * pattr) const {
+      ad.Delete(pattr);
+      MyString attr(pattr);
+      attr += "Peak";
+      ad.Delete(attr.Value());
+      };
 
    void Clear() {
       this->value = 0;
@@ -449,6 +459,7 @@ public:
    // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_CLS_ABS | stats_entry_type<T>::id;
    static void Delete(stats_entry_abs<T> * probe) { delete probe; }
+   static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_abs<T>::Unpublish; };
 };
 
 // use stats_entry_recent for values that are constantly increasing, such 
@@ -483,6 +494,12 @@ public:
          PublishDebug(ad, pattr, flags);
       }
    }
+   void Unpublish(ClassAd & ad, const char * pattr) const {
+      ad.Delete(pattr);
+      MyString attr;
+      attr.sprintf("Recent%s", pattr);
+      ad.Delete(attr.Value());
+      };
 
    void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
 
@@ -553,6 +570,7 @@ public:
    static const int unit = IS_RECENT | stats_entry_type<T>::id;
    static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return (FN_STATS_ENTRY_ADVANCE)&stats_entry_recent<T>::AdvanceBy; };
    static FN_STATS_ENTRY_SETRECENTMAX GetFnSetRecentMax() { return (FN_STATS_ENTRY_SETRECENTMAX)&stats_entry_recent<T>::SetRecentMax; };
+   static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_recent<T>::Unpublish; };
    static void Delete(stats_entry_recent<T> * probe) { delete probe; }
 };
 
@@ -585,6 +603,12 @@ public:
             ClassAdAssign(ad, pattr, recent); 
       }
    }
+   void Unpublish(ClassAd & ad, const char * pattr) const {
+      ad.Delete(pattr);
+      MyString attr;
+      attr.sprintf("Recent%s", pattr);
+      ad.Delete(attr.Value());
+      };
 
    void Clear() {
       this->value = 0;
@@ -627,6 +651,7 @@ public:
 
    // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_RECENTTQ | stats_entry_type<T>::id;
+   static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_tq<T>::Unpublish; };
    static void Delete(stats_entry_tq<T> * probe) { delete probe; }
 };
 
@@ -663,6 +688,7 @@ protected:
 
 public:
    void Publish(ClassAd & ad, const char * pattr, int flags) const;
+   void Unpublish(ClassAd & ad, const char * pattr) const;
 
    void Clear() {
       this->value = 0; // value is use to store the count of samples.
@@ -713,6 +739,7 @@ public:
 
    // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_CLS_PROBE | stats_entry_type<T>::id;
+   static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_probe<T>::Unpublish; };
    static void Delete(stats_entry_probe<T> * probe) { delete probe; }
 };
 
@@ -753,7 +780,9 @@ public:
 };
 
 template <> void stats_entry_recent<Probe>::AdvanceBy(int cSlots);
-template <> int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe);
+template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pattr, int flags) const;
+template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * pattr) const;
+int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe);
 
 // A statistics probe designed to keep track of accumulated running time
 // of a data set.  keeps a count of times that time was added and
@@ -779,13 +808,23 @@ public:
    void SetRecentMax(int cMax)    { count.SetRecentMax(cMax); runtime.SetRecentMax(cMax); }
    double operator+=(double val)    { return Add(val); }
 
+   static const int PubValue = 1;     // publish overall count and runtime
+   static const int PubRecent = 2;    // publish recnet count and runtime
+   static const int PubDebug = 4;
+   static const int PubCount = 0x10;  // modify PubValue & PubRecent to mean publish count only
+   static const int PubRuntime = 0x20; // modify PubValue & PubRecent to meanpublish runtime only
+   static const int PubDecorateAttr = 0x100;
+   static const int PubValueAndRecent = PubValue | PubRecent | PubDecorateAttr;
+   static const int PubDefault = PubValueAndRecent;
    void Publish(ClassAd & ad, const char * pattr, int flags) const;
    void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
+   void Unpublish(ClassAd & ad, const char * pattr) const;
 
    // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_RCT | stats_entry_type<int>::id;
    static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return (FN_STATS_ENTRY_ADVANCE)&stats_recent_counter_timer::AdvanceBy; };
    static FN_STATS_ENTRY_SETRECENTMAX GetFnSetRecentMax() { return (FN_STATS_ENTRY_SETRECENTMAX)&stats_recent_counter_timer::SetRecentMax; };
+   static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_recent_counter_timer::Unpublish; };
    static void Delete(stats_recent_counter_timer * pthis);
 };
 
@@ -820,6 +859,7 @@ template <> void stats_entry_recent< stats_histogram<int64_t> >::Publish(ClassAd
 // the counters).
 //
 int generic_stats_Tick(
+   time_t now,              // In, if 0 time(NULL) is called inside generic_stats_Tick
    int    RecentMaxTime,
    int    RecentQuantum,
    time_t InitTime,
@@ -887,6 +927,7 @@ public:
                   pattr ? strdup(pattr) : NULL, 
                   flags,
                   (FN_STATS_ENTRY_PUBLISH)&T::Publish,
+                  (FN_STATS_ENTRY_UNPUBLISH)&T::Unpublish,
                   T::GetFnAdvance(), //(FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
                   (FN_STATS_ENTRY_CLEAR)&T::Clear,
                   T::GetFnSetRecentMax(), //(FN_STATS_ENTRY_SETRECENTMAX)&T::SetRecentMax,
@@ -912,7 +953,8 @@ public:
       T*           probe,      // the probe, usually a member of a class/struct
       const char * pattr=NULL, // publish attribute name
       int          flags=0,    // flags to control publishing
-      FN_STATS_ENTRY_PUBLISH fnpub=NULL) // publish method
+      FN_STATS_ENTRY_PUBLISH fnpub=NULL,  // publish method
+      FN_STATS_ENTRY_UNPUBLISH fnunp=NULL)
    {
       T* probeExist = GetProbe<T>(name);
       if (probeExist)
@@ -924,6 +966,7 @@ public:
                   pattr, 
                   flags,
                   fnpub ? fnpub : (FN_STATS_ENTRY_PUBLISH)&T::Publish,
+                  fnunp ? fnunp : (FN_STATS_ENTRY_UNPUBLISH)&T::Unpublish,
                   T::GetFnAdvance(), //(FN_STATS_ENTRY_ADVANCE)&T::AdvanceBy, 
                   (FN_STATS_ENTRY_CLEAR)&T::Clear,
                   T::GetFnSetRecentMax(), //(FN_STATS_ENTRY_SETRECENTMAX)&T::SetRecentMax,
@@ -938,7 +981,8 @@ public:
       T*           probe,      // the probe, usually a member of a class/struct
       const char * pattr,      // unique attr, must not be the same as a probe name.
       int          flags=0,    // flags to control publishing
-      FN_STATS_ENTRY_PUBLISH fnpub=NULL) // publish method
+      FN_STATS_ENTRY_PUBLISH fnpub=NULL, // publish method
+      FN_STATS_ENTRY_UNPUBLISH fnunp=NULL) // unpublish method
    {
       T* probeExist = GetProbe<T>(name);
       if (probeExist)
@@ -949,7 +993,8 @@ public:
                     fOwnedByPool,
                     pattr, 
                     flags,
-                    fnpub ? fnpub : (FN_STATS_ENTRY_PUBLISH)&T::Publish);
+                    fnpub ? fnpub : (FN_STATS_ENTRY_PUBLISH)&T::Publish,
+                    fnunp ? fnunp : (FN_STATS_ENTRY_UNPUBLISH)&T::Unpublish);
       return probe;
    }
 
@@ -974,6 +1019,7 @@ private:
       void * pitem;    // pointer to stats_entry_base derived class instance class/struct
       const char * pattr; // if non-null passed to Publish, if null name is passed.
       FN_STATS_ENTRY_PUBLISH Publish;
+      FN_STATS_ENTRY_UNPUBLISH Unpublish;
    };
    struct poolitem {
       int units;
@@ -997,6 +1043,7 @@ private:
       const char * pattr,      // publish attribute name
       int          flags,      // flags to control publishing
       FN_STATS_ENTRY_PUBLISH fnpub, // publish method
+      FN_STATS_ENTRY_UNPUBLISH fnunp, // Unpublish method
       FN_STATS_ENTRY_ADVANCE fnadv, // Advance method
       FN_STATS_ENTRY_CLEAR   fnclr, // Clear method
       FN_STATS_ENTRY_SETRECENTMAX fnsrm,
@@ -1009,7 +1056,8 @@ private:
       bool         fOwned,     // probe and pattr string are owned by the pool
       const char * pattr,      // publish attribute name
       int          flags,      // flags to control publishing
-      FN_STATS_ENTRY_PUBLISH fnpub); // publish method
+      FN_STATS_ENTRY_PUBLISH fnpub, // publish method
+      FN_STATS_ENTRY_UNPUBLISH fnunp); // Unpublish method
 
 };
 

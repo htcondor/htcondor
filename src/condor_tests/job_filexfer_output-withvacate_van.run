@@ -52,7 +52,7 @@ my $args = "--job=$job --forever ";
 my $alreadydone=0;
 
 my $spool = "";
-CondorTest::fullchomp($spool);
+CondorUtils::fullchomp($spool);
 CondorTest::debug("Spool is in --$spool--\n",1);
 
 my $job = $$;
@@ -72,7 +72,7 @@ $execute = sub {
 	my $cluster = $args{"cluster"};
 
 	$spool = `condor_config_val SPOOL`;
-	CondorTest::fullchomp($spool);
+	CondorUtils::fullchomp($spool);
 	CondorTest::debug("Spool is in --$spool--\n",1);
 	if($haveseenrun == 0) {
 		$haveseenrun = 1;
@@ -234,7 +234,7 @@ open(CMD,"<$cmd") || die "Can not open command file: $!\n";
 open(NEWCMD,">$cmd.new") || die "Can not open command file: $!\n";
 while(<CMD>)
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	CondorTest::debug("$_\n",1);
 	$line = $_;
 	if( $line =~ /^\s*input\s*=\s*job_\d+_dir\/([a-zA-Z_]+)\d*\.txt\s*$/)

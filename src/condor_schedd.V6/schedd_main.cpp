@@ -59,9 +59,6 @@ extern "C"
 extern	void	mark_jobs_idle();
 extern  int     clear_autocluster_id( ClassAd *job );
 
-/* For daemonCore, etc. */
-DECL_SUBSYSTEM( "SCHEDD", SUBSYSTEM_TYPE_SCHEDD );
-
 char*          Spool = NULL;
 char*          Name = NULL;
 char*          X509Directory = NULL;
@@ -138,10 +135,7 @@ main_init(int argc, char* argv[])
 	job_queue_name.sprintf( "%s/job_queue.log", Spool);
 
 		// Make a backup of the job queue?
-	char	*tmp;
-	tmp = param( "SCHEDD_BACKUP_SPOOL" );
-	if ( tmp ) {
-		if ( (*tmp == 't') || (*tmp == 'T') ) {
+	if ( param_boolean_crufty("SCHEDD_BACKUP_SPOOL", false) ) {
 			MyString hostname;
 			hostname = get_local_hostname();
 			MyString		job_queue_backup;
@@ -154,8 +148,6 @@ main_init(int argc, char* argv[])
 				dprintf( D_FULLDEBUG, "Spool backed up to '%s'\n",
 						 job_queue_backup.Value() );
 			}
-		}
-		free( tmp );
 	}
 
 	int max_historical_logs = param_integer( "MAX_JOB_QUEUE_LOG_ROTATIONS", DEFAULT_MAX_JOB_QUEUE_LOG_ROTATIONS );
@@ -220,14 +212,14 @@ main_shutdown_graceful()
 }
 
 
-void
-main_pre_dc_init( int /*argc*/, char* /*argv*/[] )
+int
+main( int argc, char **argv )
 {
+	set_mySubSystem( "SCHEDD", SUBSYSTEM_TYPE_SCHEDD );
+
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }
-
-
-void
-main_pre_command_sock_init( )
-{
-}
-

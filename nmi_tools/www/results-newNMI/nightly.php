@@ -81,7 +81,7 @@ usort($branches, "condorauto_sort");
 
 foreach ($branches as $branch) {
   $info = $condorauto_buf[$branch];
-  $branch_url = sprintf(BRANCH_URL, $branch, $info["user"]);
+  $branch_url = sprintf(BRANCH_URL, urlencode($branch), $info["user"]);
   
   // Print a "warning" if this branch has not been submitted for >1 day.  This makes it easier to spot old
   // builds from the dashboard.

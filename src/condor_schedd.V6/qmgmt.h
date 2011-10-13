@@ -26,9 +26,6 @@
 #include "prio_rec.h"
 #include "condor_sockaddr.h"
 
-#define NEW_BORN	1
-#define DEATHS_DOOR	2
-
 
 void PrintQ();
 class Service;
@@ -52,7 +49,7 @@ class QmgmtPeer {
 		ReliSock *getReliSock() const { return sock; };
 
 		const char *endpoint_ip_str() const;
-		const condor_sockaddr& endpoint() const;
+		const condor_sockaddr endpoint() const;
 		const char* getOwner() const;
 		const char* getRealOwner() const;
 		const char* getFullyQualifiedUser() const;

@@ -661,6 +661,27 @@ int	DaemonCore::Register_Command(int command, const char *com_descrip,
 							 force_authentication, wait_for_payload) );
 }
 
+int	DaemonCore::Register_CommandWithPayload(int command, const char* com_descrip,
+				CommandHandler handler, const char* handler_descrip, Service* s,
+				DCpermission perm, int dprintf_flag, bool force_authentication,
+				int wait_for_payload)
+{
+	return( Register_Command(command, com_descrip, handler,
+							(CommandHandlercpp)NULL, handler_descrip, s,
+							 perm, dprintf_flag, FALSE, force_authentication,
+							 wait_for_payload) );
+}
+
+int	DaemonCore::Register_CommandWithPayload(int command, const char *com_descrip,
+				CommandHandlercpp handlercpp, const char* handler_descrip,
+				Service* s, DCpermission perm, int dprintf_flag,
+				bool force_authentication, int wait_for_payload)
+{
+	return( Register_Command(command, com_descrip, NULL, handlercpp,
+							 handler_descrip, s, perm, dprintf_flag, TRUE,
+							 force_authentication, wait_for_payload) );
+}
+
 int	DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 				SignalHandler handler, const char* handler_descrip,
 				Service* s)
@@ -1229,8 +1250,6 @@ DaemonCore::privateNetworkName(void) {
 PidEnvID*
 DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 {
-	extern char **environ;
-
 	if (penvid == NULL) {
 		return NULL;
 	}
@@ -1241,7 +1260,7 @@ DaemonCore::InfoEnvironmentID(PidEnvID *penvid, int pid)
 	/* handle the base case of my own pid */
 	if ( pid == -1 ) {
 
-		if (pidenvid_filter_and_insert(penvid, environ) == 
+		if (pidenvid_filter_and_insert(penvid, GetEnviron()) == 
 			PIDENVID_OVERSIZED)
 		{
 			EXCEPT( "DaemonCore::InfoEnvironmentID: Programmer error. "
@@ -3054,10 +3073,12 @@ void DaemonCore::Driver()
 		dprintf( D_ALWAYS, "Done with stdout & stderr tests\n" );
 	}
 
+	double runtime = UtcTime::getTimeDouble();
+	double group_runtime = runtime;
+    double pump_cycle_begin_time = runtime;
+
 	for(;;)
 	{
-        double runtime = UtcTime::getTimeDouble();
-        double group_runtime = runtime;
 
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
@@ -3124,7 +3145,7 @@ void DaemonCore::Driver()
 		//   starve commands...
 
         int num_timers_fired = 0;
-		timeout = t.Timeout(&num_timers_fired);
+		timeout = t.Timeout(&num_timers_fired, &runtime);
 
         dc_stats.TimersFired += num_timers_fired;
 
@@ -3136,7 +3157,7 @@ void DaemonCore::Driver()
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime
-        runtime = UtcTime::getTimeDouble();
+        //runtime = UtcTime::getTimeDouble();
         dc_stats.TimerRuntime += (runtime - group_runtime);
         group_runtime = runtime;
 
@@ -3264,7 +3285,6 @@ void DaemonCore::Driver()
         // update statistics on time spent waiting in select.
         runtime = UtcTime::getTimeDouble();
         dc_stats.SelectWaittime += (runtime - group_runtime);
-        group_runtime = runtime;
         //dc_stats.StatsLifetime = now - dc_stats.InitTime;
 
 		tmpErrno = errno;
@@ -3609,7 +3629,11 @@ void DaemonCore::Driver()
             dc_stats.SocketRuntime += (runtime - group_runtime);
             group_runtime = runtime;
 
+
 		}	// if rv > 0
+
+        dc_stats.PumpCycle += (runtime - pump_cycle_begin_time);
+        pump_cycle_begin_time = runtime;
 
 	}	// end of infinite for loop
 }
@@ -4020,12 +4044,8 @@ DaemonCore::CheckPrivState( void )
 				 old_priv );
 		dprintf( D_ALWAYS, "History of priv-state changes:\n" );
 		display_priv_log();
-		char* tmp = param( "EXCEPT_ON_ERROR" );
-		if( tmp ) {
-			if( tmp[0] == 'T' || tmp[0] == 't' ) {
-				EXCEPT( "Priv-state error found by DaemonCore" );
-			}
-			free( tmp );
+		if (param_boolean_crufty("EXCEPT_ON_ERROR", false)) {
+			EXCEPT( "Priv-state error found by DaemonCore" );
 		}
 	}
 }
@@ -6684,7 +6704,6 @@ int CreateProcessForkit::clone_fn( void *arg ) {
 }
 
 void CreateProcessForkit::exec() {
-	extern char **environ;
 
 		// Keep in mind that there are two cases:
 		//   1. We got here by forking, (cannot modify parent's memory)
@@ -6759,7 +6778,7 @@ void CreateProcessForkit::exec() {
 
 		// We may determine to seed the child's environment with the parent's.
 	if( HAS_DCJOBOPT_ENV_INHERIT(m_job_opt_mask) ) {
-		m_envobject.MergeFrom(environ);
+		m_envobject.MergeFrom(GetEnviron());
 	}
 
 		// Put the caller's env requests into the job's environment, potentially
@@ -6828,7 +6847,7 @@ void CreateProcessForkit::exec() {
 			// The parent process could not have been exec'ed if there were 
 			// too many ancestor markers in its environment, so this check
 			// is more of an assertion.
-		if (pidenvid_filter_and_insert(&penvid, environ) ==
+		if (pidenvid_filter_and_insert(&penvid, GetEnviron()) ==
 			PIDENVID_OVERSIZED)
 			{
 				dprintf ( D_ALWAYS, "Create_Process: Failed to filter ancestor "
@@ -7275,7 +7294,6 @@ int DaemonCore::Create_Process(
 	char *ptmp;
 	int inheritFds[MAX_INHERIT_FDS];
 	int numInheritFds = 0;
-	extern char **environ;
 	MyString executable_buf;
 	priv_state current_priv = PRIV_UNKNOWN;
 
@@ -7615,11 +7633,9 @@ int DaemonCore::Create_Process(
 	// sets inherit option... actually inherit option comes from 
 	// CreateProcess, we should be enumerating all open handles... 
 	// see sysinternals handles app for insights).
-	/*
 	for (i = 0; i < 100; i++) {
 		SetFDInheritFlag(i,FALSE);
 	}
-	*/
 
 	// handle re-mapping of stdout,in,err if desired.  note we just
 	// set all our file handles to non-inheritable, so for any files
@@ -8031,9 +8047,7 @@ int DaemonCore::Create_Process(
 			// Check USE_VISIBLE_DESKTOP in condor_config.  If set to TRUE,
 			// then run the job on the visible desktop, otherwise create
 			// a new non-visible desktop for the job.
-		char *use_visible = param("USE_VISIBLE_DESKTOP");
-
-		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
+		if (param_boolean_crufty("USE_VISIBLE_DESKTOP", false)) {
 				// user wants visible desktop.
 				// place the user_token into the proper access control lists.
 			if ( GrantDesktopAccess(user_token) == 0 ) {
@@ -8048,7 +8062,6 @@ int DaemonCore::Create_Process(
 					"Create_Process: Unable to use visible desktop\n");
 			}
 		}
-		if (use_visible) free(use_visible);
 
 			// we need to make certain to specify CREATE_NEW_CONSOLE, because
 			// our ACLs will not let us use the current console which is
@@ -8541,7 +8554,7 @@ int DaemonCore::Create_Process(
 
 	/* remember the family history of the new pid */
 	pidenvid_init(&pidtmp->penvid);
-	if (pidenvid_filter_and_insert(&pidtmp->penvid, environ) !=
+	if (pidenvid_filter_and_insert(&pidtmp->penvid, GetEnviron()) !=
 		PIDENVID_OK)
 	{
 		EXCEPT( "Create_Process: More ancestor environment IDs found than "

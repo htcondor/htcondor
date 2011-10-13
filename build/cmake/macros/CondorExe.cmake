@@ -46,4 +46,9 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
 
 	endif( WINDOWS )
 
+	if ( DARWIN )
+		add_custom_command( TARGET ${_CNDR_TARGET} POST_BUILD
+			COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs ${_CNDR_TARGET} )
+	endif ( DARWIN )
+
 ENDMACRO (CONDOR_EXE)

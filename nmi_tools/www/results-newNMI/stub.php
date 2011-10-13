@@ -113,7 +113,7 @@ if(!$one_offs) {
 
   foreach ($branches as $branch) {
     $info = $continuous_buf[$branch];
-    $branch_url = sprintf(BRANCH_URL, $branch, $info["user"]);
+    $branch_url = sprintf(BRANCH_URL, urlencode($branch), $info["user"]);
     $branch_display = preg_replace("/^Continuous Build - /", "", $branch);
     $out = "<tr style='height:8px;width:8px'>\n";
 

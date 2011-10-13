@@ -338,8 +338,10 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 	ClassAd	*clientAd;
 	ClassAd	*rval;
 
-	// use a timeout
-	sock->timeout(clientTimeout);
+		// Avoid lengthy blocking on communication with our peer.
+		// This command-handler should not get called until data
+		// is ready to read.
+	sock->timeout(1);
 
 	clientAd = new ClassAd;
 	if (!clientAd) return 0;
@@ -353,9 +355,6 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 		sock->end_of_message();
 		return 0;
 	}
-	
-	// the above includes a timed communication with the client
-	sock->timeout(0);
 
 	// insert the authenticated user into the ad itself
 	const char* authn_user = sock->getFullyQualifiedUser();
@@ -651,6 +650,8 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		//   was that submitter ads didn't have ATTR_NUM_USERS.
 		//   Coerce MyStype to "Submitter" for ads coming from
 		//   these older schedds.
+		//   Before 7.7.3, submitter ads for parallel universe
+		//   jobs had a MyType of "Scheduler".
 		clientAd->SetMyTypeName( SUBMITTER_ADTYPE );
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here

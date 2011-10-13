@@ -90,7 +90,7 @@ param_info_hash_dump_value(const param_info_t* param_value, void* /*unused*/ ) {
     else
 	switch (param_value->type) {
 		case PARAM_TYPE_STRING:
-			printf("%s", reinterpret_cast<const param_info_PARAM_TYPE_STRING*>(param_value)->str_val);
+			printf("%s", reinterpret_cast<const param_info_PARAM_TYPE_STRING*>(param_value)->hdr.str_val);
 			break;
 		case PARAM_TYPE_DOUBLE:
 			printf("%f", reinterpret_cast<const param_info_PARAM_TYPE_DOUBLE*>(param_value)->dbl_val);

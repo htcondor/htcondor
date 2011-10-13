@@ -1,0 +1,106 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+
+
+my $testname = "job_partitionable_basic_van";
+my $test_passed = 0;
+
+
+sub timed_callback {
+    my $stat = `condor_status -format "%s" 'ifThenElse(PartitionableSlot =?= TRUE, "P", ifThenElse(DynamicSlot =?= TRUE, "D", "S"))' -format " %s" State -format " %s" Activity -format " %s\n" Cpus`;
+
+    my $expected_pslots = 0;
+    my $expected_dslots = 0;
+    my $unexpected = 0;
+
+    my @slines = split /\n/, $stat;
+    foreach my $line (@slines) {
+        my @f = split ' ', $line;
+        if ($f[0]=="P"  &&  $f[1]=="Unclaimed"  &&  $f[2]=="Idle"  &&  $f[3]=="2") {
+            $expected_pslots += 1;
+        } elsif ($f[0]=="D"  &&  $f[1]=="Claimed"  &&  $f[2]=="Busy"  &&  $f[3]=="1") {
+            $expected_dslots += 1;
+        } else {
+            $unexpected += 1;
+        }
+    }
+
+    # I'm looking for this slot pattern to show up if things are working correctly:
+    # 5 partitionable slots unclaimed/idle with 2 slots left
+    # 10 dynamic slots claimed/busy with 1 slot
+    # and there should be no other slots
+    if ($expected_pslots==5  &&  $expected_dslots==10  &&  $unexpected==0) {
+        $test_passed = 1;
+    }
+}
+
+
+sub exit_success_callback {
+    # by this time we had better have seen the slot pattern we were looking for
+    unless ($test_passed) {
+        die "Failed to find expected pattern of partitionable and dynamic slots";
+    }
+}
+
+# personal condor, with 5 partitionable slots, 4 cpus each (total 20 cpus)
+# set the negotiator interval down to so test runs faster
+my $append_condor_config = "
+DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+NEGOTIATOR_INTERVAL = 20
+NUM_CPUS = 20
+SLOT_TYPE_1 = cpus=4
+SLOT_TYPE_1_PARTITIONABLE = TRUE
+NUM_SLOTS_TYPE_1 = 5
+";
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+
+# submit 10 jobs
+my $submit_body = "
+universe = vanilla
+executable = x_sleep.pl
+log = $testname.log
+output = $testname.out
+error = $testname.err
+notification = never
+arguments = 60
+queue 10
+";
+
+my $submit_filename = CondorTest::TempFileName("$testname.submit");
+open(SUBMIT, ">$submit_filename") || die "Failed to open $submit_filename\n";
+print SUBMIT $submit_body;
+close(SUBMIT);
+
+
+CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+CondorTest::RegisterExitedSuccess($testname, \&exit_success_callback);
+
+if (CondorTest::RunTest($testname, $submit_filename, 0)) {
+    CondorTest::debug("$testname: SUCCESS\n",1);
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}

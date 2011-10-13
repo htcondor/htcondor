@@ -62,12 +62,12 @@ extern DLL_IMPORT_MAGIC char **environ;
 
 
 // External protos
-extern void main_init(int argc, char *argv[]);	// old main()
-extern void main_config();
-extern void main_shutdown_fast();
-extern void main_shutdown_graceful();
-extern void main_pre_dc_init(int argc, char *argv[]);
-extern void main_pre_command_sock_init();
+void (*dc_main_init)(int argc, char *argv[]) = NULL;	// old main
+void (*dc_main_config)() = NULL;
+void (*dc_main_shutdown_fast)() = NULL;
+void (*dc_main_shutdown_graceful)() = NULL;
+void (*dc_main_pre_dc_init)(int argc, char *argv[]) = NULL;
+void (*dc_main_pre_command_sock_init)() = NULL;
 
 // Internal protos
 void dc_reconfig();
@@ -804,22 +804,15 @@ drop_core_in_log( void )
 void
 check_core_files()
 {
-	char* tmp;
-	int want_set_error_mode = TRUE;
+	bool want_set_error_mode = param_boolean_crufty("CREATE_CORE_FILES", true);
 
-	if( (tmp = param("CREATE_CORE_FILES")) ) {
-#ifndef WIN32	
-		if( *tmp == 't' || *tmp == 'T' ) {
-			limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT,"max core size" );
-		} else {
-			limit( RLIMIT_CORE, 0, CONDOR_SOFT_LIMIT,"max core size" );
-		}
-#endif
-		if( *tmp == 'f' || *tmp == 'F' ) {
-			want_set_error_mode = FALSE;
-		}
-		free( tmp );
+#ifndef WIN32
+	if( want_set_error_mode ) {
+		limit( RLIMIT_CORE, RLIM_INFINITY, CONDOR_SOFT_LIMIT,"max core size" );
+	} else {
+		limit( RLIMIT_CORE, 0, CONDOR_SOFT_LIMIT,"max core size" );
 	}
+#endif
 
 #ifdef WIN32
 		// Call SetErrorMode so that Win32 "critical errors" and such
@@ -1135,7 +1128,6 @@ handle_fetch_log_history_purge(ReliSock *s) {
 }
 
 
-#ifdef WIN32
 int
 handle_nop( Service*, int, Stream* stream)
 {
@@ -1145,7 +1137,6 @@ handle_nop( Service*, int, Stream* stream)
 	}
 	return TRUE;
 }
-#endif
 
 
 int
@@ -1425,8 +1416,7 @@ dc_reconfig()
 		// If requested to do so in the config file, do a segv now.
 		// This is to test our handling/writing of a core file.
 	char* ptmp;
-	if ( (ptmp=param("DROP_CORE_ON_RECONFIG")) && 
-		 (*ptmp=='T' || *ptmp=='t') ) {
+	if ( param_boolean_crufty("DROP_CORE_ON_RECONFIG", false) ) {
 			// on purpose, derefernce a null pointer.
 			ptmp = NULL;
 			char segfault;	
@@ -1438,7 +1428,7 @@ dc_reconfig()
 	}
 
 	// call this daemon's specific main_config()
-	main_config();
+	dc_main_config();
 }
 
 int
@@ -1453,7 +1443,7 @@ handle_dc_sighup( Service*, int )
 void
 TimerHandler_main_shutdown_fast()
 {
-	main_shutdown_fast();
+	dc_main_shutdown_fast();
 }
 
 
@@ -1482,12 +1472,7 @@ handle_dc_sigterm( Service*, int )
 				 "Peaceful shutdown in effect.  No timeout enforced.\n");
 	}
 	else {
-		int timeout = 30 * MINUTE;
-		char* tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
-		if( tmp ) {
-			timeout = atoi( tmp );
-			free( tmp );
-		}
+		int timeout = param_integer("SHUTDOWN_GRACEFUL_TIMEOUT", 30 * MINUTE);
 		daemonCore->Register_Timer( timeout, 0, 
 									TimerHandler_main_shutdown_fast,
 									"main_shutdown_fast" );
@@ -1495,7 +1480,7 @@ handle_dc_sigterm( Service*, int )
 				 "Started timer to call main_shutdown_fast in %d seconds\n", 
 				 timeout );
 	}
-	main_shutdown_graceful();
+	dc_main_shutdown_graceful();
 	return TRUE;
 }
 
@@ -1518,7 +1503,7 @@ handle_dc_sigquit( Service*, int )
 	been_here = TRUE;
 
 	dprintf(D_ALWAYS, "Got SIGQUIT.  Performing fast shutdown.\n");
-	main_shutdown_fast();
+	dc_main_shutdown_fast();
 	return TRUE;
 }
 
@@ -1527,7 +1512,7 @@ handle_gcb_recovery_failed( )
 {
 	dprintf( D_ALWAYS, "GCB failed to recover from a failure with the "
 			 "Broker. Performing fast shutdown.\n" );
-	main_shutdown_fast();
+	dc_main_shutdown_fast();
 }
 
 #if HAVE_EXT_GCB
@@ -1547,11 +1532,7 @@ gcb_recovery_failed_callback()
 // have a different, smaller main which checks if "-f" is ommitted from
 // the command line args of the condor_master, in which case it registers as 
 // an NT service.
-#ifdef WIN32
 int dc_main( int argc, char** argv )
-#else
-int main( int argc, char** argv )
-#endif
 {
 	char**	ptr;
 	int		command_port = -1;
@@ -1561,7 +1542,62 @@ int main( int argc, char** argv )
 	char	*ptmp, *ptmp1;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
-	param_functions *p_funcs = NULL;
+	bool	done;
+
+#ifdef WIN32
+	// Scan our command line arguments for a "-f".  If we don't find a "-f",
+	// or a "-v", then we want to register as an NT Service.
+	i = 0;
+	done = false;
+	for( ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++)
+	{
+		if( ptr[0][0] != '-' ) {
+			break;
+		}
+		switch( ptr[0][1] ) {
+		case 'a':		// Append to the log file name.
+			ptr++;
+			break;
+		case 'b':		// run in Background (default)
+			break;
+		case 'c':		// specify directory where Config file lives
+			ptr++;
+			break;
+		case 'd':		// Dynamic local directories
+			break;
+		case 'f':		// run in Foreground
+			Foreground = 1;
+			break;
+		case 'l':		// specify Log directory
+			 ptr++;
+			 break;
+		case 'p':		// Use well-known Port for command socket.		
+			ptr++;		// Also used to specify a Pid file, but both
+			break;		// versions require a 2nd arg, so we're safe. 
+		case 'q':		// Quiet output
+			break;
+		case 'r':		// Run for <arg> minutes, then gracefully exit
+			ptr++;
+			break;
+		case 't':		// log to Terminal (stderr)
+			break;
+		case 'v':		// display Version info and exit
+			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
+			exit(0);
+			break;
+		default:
+			done = true;
+			break;	
+		}
+		if( done ) {
+			break;		// break out of for loop
+		}
+	}
+	if ( (Foreground != 1) && get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ) {
+		dc_main_init(-1,NULL);	// passing the master main_init a -1 will register as an NT service
+		return 1;
+	}
+#endif
 
 	condor_main_argc = argc;
 	condor_main_argv = (char **)malloc((argc+1)*sizeof(char *));
@@ -1631,7 +1667,9 @@ int main( int argc, char** argv )
 		// call out to the handler for pre daemonCore initialization
 		// stuff so that our client side can do stuff before we start
 		// messing with argv[]
-	main_pre_dc_init( argc, argv );
+	if ( dc_main_pre_dc_init ) {
+		dc_main_pre_dc_init( argc, argv );
+	}
 
 		// Make sure this is set, since DaemonCore needs it for all
 		// sorts of things, and it's better to clearly EXCEPT here
@@ -1647,11 +1685,23 @@ int main( int argc, char** argv )
 				get_mySubSystem()->getTypeName() );
 	}
 
+	if ( !dc_main_init ) {
+		EXCEPT( "Programmer error: dc_main_init is NULL!" );
+	}
+	if ( !dc_main_config ) {
+		EXCEPT( "Programmer error: dc_main_config is NULL!" );
+	}
+	if ( !dc_main_shutdown_fast ) {
+		EXCEPT( "Programmer error: dc_main_shutdown_fast is NULL!" );
+	}
+	if ( !dc_main_shutdown_graceful ) {
+		EXCEPT( "Programmer error: dc_main_shutdown_graceful is NULL!" );
+	}
 
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
 	i = 0;
-	bool done = false;
+	done = false;
 
 	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		if(ptr[0][0] != '-') {
@@ -1930,8 +1980,7 @@ int main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		p_funcs = get_param_functions();
-		dprintf_config(get_mySubSystem()->getName(), p_funcs);
+		dprintf_config(get_mySubSystem()->getName(), get_param_functions());
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -2158,7 +2207,9 @@ int main( int argc, char** argv )
 	GCB_Recovery_failed_callback_set( gcb_recovery_failed_callback );
 #endif
 
-	main_pre_command_sock_init();
+	if ( dc_main_pre_command_sock_init ) {
+		dc_main_pre_command_sock_init();
+	}
 
 		/* NOTE re main_pre_command_sock_init:
 		  *
@@ -2310,13 +2361,13 @@ int main( int argc, char** argv )
 								  (CommandHandler)handle_set_peaceful_shutdown,
 								  "handle_set_peaceful_shutdown()", 0, ADMINISTRATOR );
 
-#ifdef WIN32
 		// DC_NOP is for waking up select.  There is no need for
 		// security here, because anyone can wake up select anyway.
+		// This command is also used to gracefully close a socket
+		// that has been registered to read a command.
 	daemonCore->Register_Command( DC_NOP, "DC_NOP",
 								  (CommandHandler)handle_nop,
 								  "handle_nop()", 0, ALLOW );
-#endif
 
 	daemonCore->Register_Command( DC_FETCH_LOG, "DC_FETCH_LOG",
 								  (CommandHandler)handle_fetch_log,
@@ -2372,7 +2423,7 @@ int main( int argc, char** argv )
     XMLObj = FILEXML::createInstanceXML();
 
 	// call the daemon's main_init()
-	main_init( argc, argv );
+	dc_main_init( argc, argv );
 
 	// now call the driver.  we never return from the driver (infinite loop).
 	daemonCore->Driver();
@@ -2381,68 +2432,3 @@ int main( int argc, char** argv )
 	EXCEPT("returned from Driver()");
 	return FALSE;
 }	
-
-#ifdef WIN32
-int 
-main( int argc, char** argv)
-{
-	char **ptr;
-	int i;
-
-	// Scan our command line arguments for a "-f".  If we don't find a "-f",
-	// or a "-v", then we want to register as an NT Service.
-	i = 0;
-	bool done = false;
-	for( ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++)
-	{
-		if( ptr[0][0] != '-' ) {
-			break;
-		}
-		switch( ptr[0][1] ) {
-		case 'a':		// Append to the log file name.
-			ptr++;
-			break;
-		case 'b':		// run in Background (default)
-			break;
-		case 'c':		// specify directory where Config file lives
-			ptr++;
-			break;
-		case 'd':		// Dynamic local directories
-			break;
-		case 'f':		// run in Foreground
-			Foreground = 1;
-			break;
-		case 'l':		// specify Log directory
-			 ptr++;
-			 break;
-		case 'p':		// Use well-known Port for command socket.		
-			ptr++;		// Also used to specify a Pid file, but both
-			break;		// versions require a 2nd arg, so we're safe. 
-		case 'q':		// Quiet output
-			break;
-		case 'r':		// Run for <arg> minutes, then gracefully exit
-			ptr++;
-			break;
-		case 't':		// log to Terminal (stderr)
-			break;
-		case 'v':		// display Version info and exit
-			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
-			exit(0);
-			break;
-		default:
-			done = true;
-			break;	
-		}
-		if( done ) {
-			break;		// break out of for loop
-		}
-	}
-	if ( (Foreground != 1) && get_mySubSystem()->isType(SUBSYSTEM_TYPE_MASTER) ) {
-		main_init(-1,NULL);	// passing the master main_init a -1 will register as an NT service
-		return 1;
-	} else {
-		return(dc_main(argc,argv));
-	}
-}
-#endif // of ifdef WIN32
-

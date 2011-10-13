@@ -75,7 +75,7 @@ if (CONDOR_PLATFORM)
     add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
 elseif(PLATFORM)
     add_definitions(-DPLATFORM="${PLATFORM}")
-elseif(LINUX_NAME)
+elseif(LINUX_NAME AND NOT ${LINUX_NAME} STREQUAL "Unknown")
     add_definitions(-DPLATFORM="${SYS_ARCH}-${LINUX_NAME}_${LINUX_VER}")
 else()
     add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
@@ -99,7 +99,9 @@ set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
 # set to true to enable printing of make actions
 set( CMAKE_VERBOSE_MAKEFILE FALSE )
-set( BUILD_SHARED_LIBS FALSE )
+
+# set to true if we should build and use shared libraries where appropriate
+set( CONDOR_BUILD_SHARED_LIBS FALSE )
 
 # Windows is so different perform the check 1st and start setting the vars.
 if( NOT WINDOWS)
@@ -140,7 +142,7 @@ if( NOT WINDOWS)
     if( NOT "${LIBRESOLV_PATH}" MATCHES "-NOTFOUND" )
       set(HAVE_LIBRESOLV ON)
     endif()
-	find_library( LIBDL_PATH resolv )
+	find_library( LIBDL_PATH dl )
     if( NOT "${LIBDL_PATH}" MATCHES "-NOTFOUND" )
       set(HAVE_LIBDL ON)
     endif()
@@ -248,6 +250,14 @@ if( NOT WINDOWS)
 		set(HAVE_SCHED_SETAFFINITY ON)
 	endif()
 
+	# Some early 4.0 g++'s have unordered maps, but their iterators don't work
+	check_cxx_source_compiles("
+		#include <tr1/unordered_map>
+		int main() {
+			std::tr1::unordered_map<int, int>::const_iterator ci;
+			return 0;
+		}
+		" HAVE_TR1_UNORDERED_MAP )
 	# note the following is fairly gcc specific, but *we* only check gcc version in std:u which it requires.
 	exec_program (${CMAKE_CXX_COMPILER}
     		ARGS ${CMAKE_CXX_COMPILER_ARG1} -dumpversion
@@ -318,6 +328,8 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 		include_directories(/usr/kerberos/include)
 	endif()
 
+	set( CONDOR_BUILD_SHARED_LIBS TRUE )
+
 	set(DOES_SAVE_SIGSTATE ON)
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)
@@ -349,7 +361,11 @@ elseif(${OS_NAME} STREQUAL "AIX")
 elseif(${OS_NAME} STREQUAL "DARWIN")
 	add_definitions(-DDarwin)
 	set(DARWIN ON)
+	set( CONDOR_BUILD_SHARED_LIBS TRUE )
 	check_struct_has_member("struct statfs" f_fstypename "sys/param.h;sys/mount.h" HAVE_STRUCT_STATFS_F_FSTYPENAME)
+	find_library( IOKIT_FOUND IOKit )
+	find_library( COREFOUNDATION_FOUND CoreFoundation )
+	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
 elseif(${OS_NAME} STREQUAL "HPUX")
 	set(HPUX ON)
 	set(DOES_SAVE_SIGSTATE ON)
@@ -623,8 +639,8 @@ endif()
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-set (CONDOR_LIBS "procd_client;daemon_core;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
-set (CONDOR_TOOL_LIBS "procd_client;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
+set (CONDOR_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}")
+set (CONDOR_TOOL_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 message(STATUS "----- Begin compiler options/flags check -----")

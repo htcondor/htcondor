@@ -688,9 +688,23 @@ command_query_ads( Service*, int, Stream* stream)
 	queryAd.AddExplicitTargetRefs();
 #endif
 
+   MyString stats_config;
+   int      dc_publish_flags = daemonCore->dc_stats.PublishFlags;
+   queryAd.LookupString("STATISTICS_TO_PUBLISH",stats_config);
+   if ( ! stats_config.IsEmpty()) {
+      daemonCore->dc_stats.PublishFlags = 
+         generic_stats_ParseConfigString(stats_config.Value(), 
+                                         "DC", "DAEMONCORE", 
+                                         dc_publish_flags);
+   }
+
 		// Construct a list of all our ClassAds:
-	resmgr->makeAdList( &ads );
+	resmgr->makeAdList( &ads, &queryAd );
 	
+    if ( ! stats_config.IsEmpty()) {
+       daemonCore->dc_stats.PublishFlags = dc_publish_flags;
+    }
+
 		// Now, find the ClassAds that match.
 	stream->encode();
 	ads.Open();
@@ -1221,7 +1235,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			ABORT;
 		}
 
-		new_rip = new Resource( cpu_attrs, rip->r_id, rip );
+		new_rip = new Resource( cpu_attrs, rip->r_id, true, rip );
 		if( ! new_rip ) {
 			rip->dprintf( D_ALWAYS,
 						  "Failed to build new resource for request, aborting\n" );
@@ -1462,7 +1476,7 @@ bool
 accept_request_claim( Resource* rip )
 {
 	int interval = -1;
-	char *client_addr = NULL, *tmp;
+	char *client_addr = NULL;
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
 
@@ -1684,11 +1698,18 @@ activate_claim( Resource* rip, Stream* stream )
 		// now, try to satisfy the job.  while we're at it, we'll
 		// figure out what starter they want to use
 	Starter* tmp_starter;
+	bool no_starter = false;
 	tmp_starter = resmgr->starter_mgr.findStarter( req_classad,
 												   mach_classad,
+												   no_starter,
 												   starter );
 	if( ! tmp_starter ) {
-		rip->dprintf( D_ALWAYS, "Job Requirements check failed!\n" );
+		if( no_starter ) {
+			rip->dprintf( D_ALWAYS, "No valid starter found to run this job!  Is something wrong with your Condor installation?\n" );
+		}
+		else {
+			rip->dprintf( D_ALWAYS, "Job Requirements check failed!\n" );
+		}
 		refuse( stream );
 	    ABORT;
 	}

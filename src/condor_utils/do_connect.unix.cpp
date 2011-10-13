@@ -33,28 +33,26 @@
  *
  */
 extern "C" {
-unsigned short find_port_num( const char *service_name, 
-							  unsigned short dflt_port );
 char *mk_config_name( const char *service_name );
 char *param( const char *name );
 
 int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 						int timeout );
-int do_connect_with_timeout( const char* host, const char* service, 
+int do_connect_with_timeout( const char* host, 
 							 u_short port, int timeout );
 int set_fd_blocking(int fd);
 int set_fd_nonblocking(int fd);
 }
 
 int
-do_connect( const char* host, const char* service, u_short port )
+do_connect( const char* host, u_short port )
 {
-	return do_connect_with_timeout(host, service, port, 0);
+	return do_connect_with_timeout(host, port, 0);
 }
 
 
 int
-do_connect_with_timeout( const char* host, const char* service, 
+do_connect_with_timeout( const char* host, 
 						 u_short port, int timeout ) 
 {
 	struct sockaddr_in	sinful;
@@ -86,7 +84,6 @@ do_connect_with_timeout( const char* host, const char* service,
 			close(fd);
 			return( -1 );
 		}
-		port = find_port_num( service, port );
 		memset( (char *)&sinful,0,sizeof(sinful) );
 		memcpy( (char *)&sinful.sin_addr, hostentp->h_addr, (unsigned)hostentp->h_length );
 		sinful.sin_family = hostentp->h_addrtype;
@@ -166,38 +163,6 @@ udp_connect( char* host, u_short port )
 	return sock;
 }
 
-
-unsigned short
-find_port_num( const char* service_name, unsigned short dflt_port )
-{
-	struct servent		*servp;
-	char				*config_name;
-	char				*pval;
-
-	if( service_name == NULL || service_name[0] == '\0' ) {
-		return dflt_port;
-	}
-
-		/* Try to look up port number in config file */
-	config_name = mk_config_name( service_name );
-	pval = param( config_name );
-	if( pval != NULL ) {
-		unsigned short rc = atoi( pval );
-		free( pval );
-		return rc;
-	}
-
-		/* Try to find in "/etc/services" */
-	if( service_name && service_name[0] ) {
-		servp = getservbyname(service_name, "tcp");
-		if( servp != NULL ) {
-			return servp->s_port;
-		}
-	}
-
-		/* Fall back on the default */
-	return dflt_port;
-}
 
 /*
   Convert a condor service name which looks like:

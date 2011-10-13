@@ -53,7 +53,6 @@
 
 State get_machine_state();
 
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL);
 extern void		_condor_set_debug_flags( const char *strflags );
 
 // Define this to check for memory leaks
@@ -229,9 +228,9 @@ produce_output()
 		fprintf( mailer, szTmp.Value());
 	}
 
-	szTmp.sprintf("  %s\n", str);
-	dprintf(D_ALWAYS, szTmp.Value() );
 	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
+		szTmp.sprintf("  %s\n", str);
+		dprintf(D_ALWAYS, szTmp.Value() );
 		fprintf( mailer, szTmp.Value() );
 	}
 
@@ -747,7 +746,7 @@ void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 			}
 			delete lock;
 		} else {
-			rec_lock_cleanup(dir->GetFullPath(), --depth, true);
+			rec_lock_cleanup(dir->GetFullPath(), depth-1, true);
 		}
 	}
 	// make sure, orphaned directories will be deleted as well.
@@ -764,6 +763,8 @@ void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 
 void check_tmp_dir(){
 #if !defined(WIN32)
+	if (!RmFlag) return;
+
 	const char *tmpDir = NULL;
 	bool newLock = param_boolean("CREATE_LOCKS_ON_LOCAL_DISK", true);
 	if (newLock) {
@@ -771,7 +772,7 @@ void check_tmp_dir(){
 		FileLock *lock = new FileLock(-1, NULL, NULL);
 		tmpDir = lock->GetTempPath();	
 		delete lock;
-		rec_lock_cleanup(tmpDir, 4);
+		rec_lock_cleanup(tmpDir, 3);
 		if (tmpDir != NULL)
 			delete []tmpDir;
 	}

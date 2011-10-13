@@ -77,41 +77,17 @@ ManagedDatabase::ManagedDatabase() {
 		break;
 	}		
 
-	tmp = param("QUILL_RESOURCE_HISTORY_DURATION");
-	if (tmp) {
-		resourceHistoryDuration= atoi(tmp);
-		free(tmp);
-	} else {
 			/* default to a week of resource history info */
-		resourceHistoryDuration = 7;
-	}
+	resourceHistoryDuration = param_integer("QUILL_RESOURCE_HISTORY_DURATION", 7);
 
-	tmp = param("QUILL_RUN_HISTORY_DURATION");
-	if (tmp) {
-		runHistoryDuration= atoi(tmp);
-		free(tmp);
-	} else {
 			/* default to a week of job run information */
-		runHistoryDuration = 7;
-	}
+	runHistoryDuration = param_integer("QUILL_RUN_HISTORY_DURATION", 7);
 
-	tmp = param("QUILL_JOB_HISTORY_DURATION");	
-	if (tmp) {
-		jobHistoryDuration= atoi(tmp);
-		free(tmp);
-	} else {
 			/* default to 10 years of job history */
-		jobHistoryDuration = 3650;
-	}
+	jobHistoryDuration = param_integer("QUILL_JOB_HISTORY_DURATION", 3650);
 
-	tmp = param("QUILL_DBSIZE_LIMIT");	
-	if (tmp) {
-		dbSizeLimit= atoi(tmp);
-		free(tmp);
-	} else {
 			/* default to 20 GB */
-		dbSizeLimit = 20;
-	}
+	dbSizeLimit = param_integer("QUILL_DBSIZE_LIMIT", 20);	
 		
 		/* check if schema version is ok */
 	ret_st = DBObj->connectDB();

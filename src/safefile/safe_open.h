@@ -4,7 +4,7 @@
 /*
  * safefile package    http://www.cs.wisc.edu/~kupsch/safefile
  *
- * Copyright 2007-2008 James A. Kupsch
+ * Copyright 2007-2008, 2011 James A. Kupsch
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +27,7 @@
 typedef unsigned short mode_t;
 #endif
 
-/* needed for FILE declaration, it is a typedef so an imcomplete struct will
- * not work :(
- */
+
 #ifdef __cplusplus
 extern "C"  {
 #ifndef SAFE_OPEN_DEFAULT_MODE_VALUE
@@ -103,7 +101,7 @@ int safe_open_wrapper_follow(const char *fn, int flags,
  *
  * If any of the open/create functions detect the file system object has
  * changed (removed, added or replaced) during their operation, the callback
- * function will be called with the file name
+ * function will be called with the file name.
  */
 
 /* type of the callback function */

@@ -1195,7 +1195,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 bool
 RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 {
-	char *rt = NULL;
 	bool rval = true;
 		// First, grab the number of pids that were suspended out of
 		// the update ad.
@@ -1245,7 +1244,6 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 bool
 RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 {
-	char *rt = NULL;
 	bool rval = true;
 
 		// First, log this to the UserLog

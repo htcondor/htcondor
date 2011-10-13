@@ -19,7 +19,7 @@
 
 ##################################################
 # utils library
-file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs*
+file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* 
 soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_init.c )
 
 condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
@@ -33,23 +33,42 @@ add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c
 add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c)
 ############ end generate params
 
-condor_static_lib( utils "${HeaderFiles};${SourceFiles};${SAFE_OPEN_SRC}" )
+# These are source files that reside in other directories that we want to
+# include in libcondor_utils. They used to be in separate libraries.
+set( EXTRA_SRCS "${SAFE_OPEN_SRC};${ANALYSIS_UTIL_SRCS};${CCB_UTIL_SRCS};${CEDAR_UTIL_SRCS};${CKPT_SERVER_UTIL_SRCS};${DAEMON_CLIENT_UTIL_SRCS};${DAEMON_CORE_UTIL_SRCS};${PRIVSEP_UTIL_SRCS};${PROCAPI_UTIL_SRCS};${PROCD_CLIENT_UTIL_SRCS};${QMGMT_UTIL_SRCS};${SYSAPI_UTIL_SRCS}" )
+
+#On windows we add the cpp file into the build 
+if (GSOAP_SRC)
+	set_source_files_properties(${GSOAP_SRC} PROPERTIES GENERATED TRUE)
+	list(APPEND EXTRA_SRCS ${GSOAP_SRC} )
+endif()
+
+condor_shared_lib( condor_utils "${HeaderFiles};${SourceFiles};${EXTRA_SRCS}" )
+add_dependencies(condor_utils utils_genparams syscall_numbers )
+target_link_libraries(condor_utils ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${POSTGRESQL_FOUND})
+if ( DARWIN )
+	target_link_libraries( condor_utils ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )
+	add_custom_command( TARGET condor_utils
+		POST_BUILD
+		COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs libcondor_utils.dylib )
+endif()
 if(WINDOWS)
-	add_dependencies(utils utils_genparams syscall_numbers )
+	add_dependencies(condor_utils utils_genparams syscall_numbers )
 else()
-	add_dependencies(utils utils_genparams syscall_numbers configure_safefile)
+	add_dependencies(condor_utils utils_genparams syscall_numbers configure_safefile)
 endif()
 
 ##################################################
 # condorapi & tests
 condor_selective_glob("my_username.*;condor_event.*;file_sql.*;misc_utils.*;user_log_header.*;write_user_log*;read_user_log*;iso_dates.*;file_lock.*;format_time.*;utc_time.*;stat_wrapper*;log_rotate.*;dprintf*;sig_install.*;basename.*;mkargv.*;except.*;strupr.*;lock_file.*;rotate_file.*;strcasestr.*;strnewp.*;condor_environ.*;setsyscalls.*;passwd_cache.*;uids.c*;chomp.*;subsystem_info.*;my_subsystem.*;distribution.*;my_distribution.*;get_random_num.*;libcondorapi_stubs.*;seteuid.*;setegid.*;condor_open.*;classad_merge.*;condor_attributes.*;simple_arg.*;compat_classad.*;compat_classad_util.*;classad_oldnew.*;condor_snutils.*;stringSpace.*;string_list.*;stl_string_utils.*;MyString.*;condor_xml_classads.*;directory*;param_functions.*;${SAFE_OPEN_SRC}" ApiSrcs)
+
 if(WINDOWS)
     condor_selective_glob("directory.WINDOWS.*;directory_util.*;dynuser.WINDOWS.*;filename_tools.*;lock_file.WINDOWS.*;lsa_mgr.*;my_dynuser.*;ntsysinfo.WINDOWS.*;posix.WINDOWS.*;stat.WINDOWS.*;store_cred.*;token_cache.WINDOWS.*;truncate.WINDOWS.*" ApiSrcs)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
 endif()
 
 condor_static_lib( condorapi "${ApiSrcs}" )
-add_dependencies( condorapi utils )
+add_dependencies( condorapi condor_utils )
 
 if (HAVE_LIBDL)
 	set(APILIBDEP dl)

@@ -54,20 +54,31 @@ GLExecPrivSepHelper::~GLExecPrivSepHelper()
 int
 GLExecPrivSepHelper::proxy_valid_right_now()
 {
+
+	int result = TRUE;
+		/* Note that set_user_priv is a no-op if condor is running as
+		   non-root (the "usual" mode for invoking glexec) */
+	priv_state priv_saved = set_user_priv();
 	if (!m_proxy) {
 		dprintf(D_FULLDEBUG, "GLExecPrivSepHelper::proxy_valid_right_now: no proxy defined\n");
-		return FALSE;
+		result = FALSE;
 	} else {
+
 		time_t expiration_time = x509_proxy_expiration_time(m_proxy);
 		time_t now = time(NULL);
 
-		if (expiration_time < now) {
-			dprintf(D_FULLDEBUG, "GLExecPrivSepHelper::proxy_valid_right_now: proxy %s already expired!\n", m_proxy);
-			return FALSE;
+		if (expiration_time == -1) {
+			dprintf(D_FULLDEBUG, "GLExecPrivSepHelper::proxy_valid_right_now: Globus error when getting proxy %s expiration: %s.\n", m_proxy, x509_error_string());
+			result = FALSE;
+		} else if (expiration_time < now) {
+			dprintf(D_FULLDEBUG, "GLExecPrivSepHelper::proxy_valid_right_now: proxy %s expired %ld seconds ago!\n", m_proxy, now - expiration_time);
+			result = FALSE;
 		}
 	}
 
-	return TRUE;
+	set_priv(priv_saved);
+
+	return result;
 }
 
 
@@ -79,17 +90,27 @@ GLExecPrivSepHelper::run_script(ArgList& args,MyString &error_desc)
 		return -1;
 	}
 
+		/* Note that set_user_priv is a no-op if condor is running as
+		   non-root (the "usual" mode for invoking glexec) */
+	priv_state priv_saved = set_user_priv();
 	FILE* fp = my_popen(args, "r", TRUE);
+	set_priv(priv_saved);
 	if (fp == NULL) {
 		dprintf(D_ALWAYS,
 		        "GLExecPrivSepHelper::run_script: "
-		            "my_popen failure on %s\n",
-		        args.GetArg(0));
+		            "my_popen failure on %s: errno=%d (%s)\n",
+		        args.GetArg(0),
+			errno,
+			strerror(errno));
 		return -1;
 	}
 	MyString str;
 	while (str.readLine(fp, true));
+
+	priv_saved = set_user_priv();
 	int ret = my_pclose(fp);
+	set_priv(priv_saved);
+
 	if (ret != 0) {
 		str.trim();
 		dprintf(D_ALWAYS,
@@ -320,17 +341,18 @@ GLExecPrivSepHelper::create_process(const char* path,
 
 	glexec_env.MergeFrom(env);
 
-	if( glexec_env.GetEnv("X509_USER_PROXY",user_proxy) &&
-	    (condor_proxy = getenv("X509_USER_PROXY")) )
+	if( glexec_env.GetEnv("X509_USER_PROXY",user_proxy))
 	{
-		// glexec versions >= 0.7.0 may use X509_USER_PROXY to
-		// authenticate to the mapping service.  We are expected to
-		// set this to the glidein (aka pilot) proxy rather than the
-		// end-user proxy when invoking glexec.  Since we are invoking
-		// glexec with the job environment (see comment above), we
-		// must treat X509_USER_PROXY specially.
+		if ((condor_proxy = getenv("X509_USER_PROXY"))) {
+			// glexec versions >= 0.7.0 may use X509_USER_PROXY to
+			// authenticate to the mapping service.  We are expected to
+			// set this to the glidein (aka pilot) proxy rather than the
+			// end-user proxy when invoking glexec.  Since we are invoking
+			// glexec with the job environment (see comment above), we
+			// must treat X509_USER_PROXY specially.
 
-		glexec_env.SetEnv("X509_USER_PROXY",condor_proxy);
+			glexec_env.SetEnv("X509_USER_PROXY",condor_proxy);
+		}
 	}
 
 	int pid = daemonCore->Create_Process(m_run_script.Value(),

@@ -26,15 +26,17 @@
 
 #ifdef WIN32
 #include <hash_map>
-#else
-#include <ext/hash_map>
-#endif
-
-#ifdef WIN32
 #define classad_hash_map stdext::hash_map
 #else
+#ifdef HAVE_TR1_UNORDERED_MAP
+#include <tr1/unordered_map>
+#define classad_hash_map std::tr1::unordered_map
+#else
+#include <ext/hash_map>
 #define classad_hash_map __gnu_cxx::hash_map
 #endif
+#endif
+
 #define classad_map   std::map 
 #define classad_slist std::list
 

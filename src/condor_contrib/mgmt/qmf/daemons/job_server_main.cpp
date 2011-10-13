@@ -56,9 +56,6 @@ using namespace qmf::com::redhat;
 using namespace qmf::com::redhat::grid;
 using namespace com::redhat::grid;
 
-// about self
-DECL_SUBSYSTEM("JOB_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
-
 JobLogMirror *mirror;
 JobServerJobLogConsumer *consumer;
 JobServerObject *job_server;
@@ -77,7 +74,7 @@ void ProcessHistoryTimer(Service*);
 
 //-------------------------------------------------------------
 
-int main_init(int /* argc */, char * /* argv */ [])
+void main_init(int /* argc */, char * /* argv */ [])
 {
 	dprintf(D_ALWAYS, "main_init() called\n");
 
@@ -201,8 +198,6 @@ int main_init(int /* argc */, char * /* argv */ [])
 				    "Handler for Reset signals"))) {
 		EXCEPT("Failed to register Reset signal");
 	}
-
-	return TRUE;
 }
 
 // synthetically create a QMF ObjectId that should point to the
@@ -264,14 +259,12 @@ init_classad()
 
 //-------------------------------------------------------------
 
-int 
+void 
 main_config()
 {
 	dprintf(D_ALWAYS, "main_config() called\n");
 
 	mirror->config();
-
-	return TRUE;
 }
 
 //-------------------------------------------------------------
@@ -298,40 +291,38 @@ void Stop()
 
 //-------------------------------------------------------------
 
-int main_shutdown_fast()
+void main_shutdown_fast()
 {
 	dprintf(D_ALWAYS, "main_shutdown_fast() called\n");
 
 	Stop();
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-int main_shutdown_graceful()
+void main_shutdown_graceful()
 {
 	dprintf(D_ALWAYS, "main_shutdown_graceful() called\n");
 
 	Stop();
 
 	DC_Exit(0);
-	return TRUE;	// to satisfy c++
 }
 
 //-------------------------------------------------------------
 
-void
-main_pre_dc_init( int /* argc */, char* /* argv */ [] )
+int
+main( int argc, char **argv )
 {
-		// dprintf isn't safe yet...
-}
+	set_mySubSystem("JOB_SERVER", SUBSYSTEM_TYPE_DAEMON );	// used by Daemon Core
 
-
-void
-main_pre_command_sock_init( )
-{
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	return dc_main( argc, argv );
 }
 
 

@@ -137,10 +137,10 @@ This is for the convenience of Windows users.
 %% environment
 %%%%%%%%%%%%%%%%%%%
 
+\label{man-condor-submit-environment}
 \index{submit commands!environment}
 \item[environment = $<$parameter\_list$>$] List of environment
 \index{environment variables!setting, for a job}
-\label{man-condor-submit-environment}
 variables.
 
 There are two different formats for specifying the environment
@@ -220,7 +220,7 @@ three="quotes have no 'special' meaning"
 
 If the environment is set with the \Opt{environment} command \emph{and}
 \Opt{getenv} is also set to true, values specified with
-\Opt{environment} override values in the submittor's environment
+\Opt{environment} override values in the submitter's environment
 (regardless of the order of the \Opt{environment} and \Opt{getenv}
 commands).
 
@@ -281,6 +281,7 @@ argument must be a compiled \File{.class} file.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!getenv}
+\label{man-condor-submit-getenv}
 \item[getenv = $<$True \Bar\ False$>$] If \SubmitCmd{getenv} is set to
 \index{environment variables!copying current environment}
 \Expr{True}, then \Condor{submit} will copy all of the user's current
@@ -295,7 +296,7 @@ variables that the user had at submit time. Defaults to \Expr{False}.
 
 If the environment is set with the \Opt{environment} command \emph{and}
 \Opt{getenv} is also set to true, values specified with
-\Opt{environment} override values in the submittor's environment
+\Opt{environment} override values in the submitter's environment
 (regardless of the order of the \Opt{environment} and \Opt{getenv}
 commands).
 
@@ -1440,91 +1441,6 @@ conditions that were present when the job checkpointed.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
-%% amazon_ami_id
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!amazon\_ami\_id}
-\item[amazon\_ami\_id = $<$Amazon EC2 AMI ID$>$]
-AMI identifier of the VM image to run for \SubmitCmd{amazon} jobs.
-
-%%%%%%%%%%%%%%%%%%%
-%% amazon_instance_type
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!amazon\_instance\_type}
-\item[amazon\_instance\_type = $<$VM Type$>$]
-An identifier for the type of VM desired for an \SubmitCmd{amazon} job.
-The default value is \Expr{m1.small}.
-Other values are \Expr{m1.large}, \Expr{m1.xlarge},
-\Expr{c1.medium}, and \Expr{c1.xlarge}.
-
-%%%%%%%%%%%%%%%%%%%
-%% amazon_keypair_file
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!amazon\_keypair\_file}
-\item[amazon\_keypair\_file = $<$pathname$>$]
-The complete path and filename of a file into which Condor will write an
-ssh key for use with \SubmitCmd{amazon} jobs. The key can be used to
-ssh into the virtual machine once it is running.
-
-%%%%%%%%%%%%%%%%%%%
-%% amazon_private_key
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!amazon\_private\_key}
-\item[amazon\_private\_key = $<$pathname$>$]
-Used for \SubmitCmd{amazon} jobs. Path and filename of a file containing
-the private key to be used to authenticate with Amazon's EC2 service
-via SOAP.
-
-%%%%%%%%%%%%%%%%%%%
-%% amazon_public_key
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!amazon\_public\_key}
-\item[amazon\_public\_key = $<$pathname$>$]
-Used for \SubmitCmd{amazon} jobs. Path and filename of a file containing
-the public X509 certificate to be used to authenticate with Amazon's EC2
-service via SOAP.
-
-%%%%%%%%%%%%%%%%%%%
-%% amazon_security_groups
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!amazon\_security\_groups}
-\item[amazon\_security\_groups = group1, group2, ...]
-Used for \SubmitCmd{amazon} jobs. A list of Amazon EC2 security group
-names, which should be associated with the job.
-
-%%%%%%%%%%%%%%%%%%%
-%% amazon_user_data
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!amazon\_user\_data}
-\item[amazon\_user\_data = $<$data$>$]
-Used for \SubmitCmd{amazon} jobs. A block of data that can be accessed
-by the virtual machine job inside Amazon EC2.
-If both \SubmitCmd{amazon\_user\_data} and
-\SubmitCmd{amazon\_user\_data\_file} are provided, the two blocks of
-data are concatenated, with the data from \SubmitCmd{amazon\_user\_data}
-occurring first.
-
-%%%%%%%%%%%%%%%%%%%
-%% amazon_user_data_file
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!amazon\_user\_data\_file}
-\item[amazon\_user\_data\_file = $<$pathname$>$]
-Used for \SubmitCmd{amazon} jobs.
-A file containing data that can be accessed
-by the virtual machine job inside Amazon EC2.
-If both \SubmitCmd{amazon\_user\_data} and
-\SubmitCmd{amazon\_user\_data\_file} are provided, the two blocks of
-data are concatenated, with the data from \SubmitCmd{amazon\_user\_data}
-occurring first.
-
-%%%%%%%%%%%%%%%%%%%
 %% cream_attributes
 %%%%%%%%%%%%%%%%%%%
 
@@ -1663,8 +1579,6 @@ The user name to be used to authenticate with a Deltacloud service.
 \item[ec2\_access\_key\_id = $<$pathname$>$]
 For grid type \SubmitCmd{ec2} jobs,
 identifies the file containing the access key.  
-Note that this EC2 Query API's access key is not the same as
-an \SubmitCmd{amazon} grid type job's EC2 SOAP API's public key.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_ami_id
@@ -1714,9 +1628,6 @@ used to access the image, once it is running.
 \item[ec2\_secret\_access\_key = $<$pathname$>$]
 For grid type \SubmitCmd{ec2} jobs,
 specifies the path and file name containing the secret access key.
-Note that this EC2 Query API's secret access key 
-is not same as a grid type \SubmitCmd{amazon} job's 
-EC2 SOAP API's private key.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_security_groups
@@ -1839,17 +1750,13 @@ there are further type-specific values that must specified.
 This submit description file command allows each to
 be given in a space-separated list.
 Allowable \SubmitCmd{grid-type-string} values are
-\SubmitCmd{amazon}, \SubmitCmd{condor}, \SubmitCmd{cream}, 
+\SubmitCmd{ec2}, \SubmitCmd{condor}, \SubmitCmd{cream}, 
 \SubmitCmd{deltacloud}, 
 \SubmitCmd{gt2}, \SubmitCmd{gt4}, \SubmitCmd{gt5},
 \SubmitCmd{lsf}, \SubmitCmd{nordugrid}, \SubmitCmd{pbs},
 and \SubmitCmd{unicore}.
 See section~\ref{sec:GridUniverse} for details on the variety of 
 grid types.
-
-For a \SubmitCmd{grid-type-string} of \SubmitCmd{amazon},
-one additional parameter specifies the EC2 URL.
-See section~\ref{sec:Amazon} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{condor},
 the first parameter is the name of the remote \Condor{schedd}
@@ -2182,15 +2089,6 @@ the value of \SubmitCmd{kill\_sig} is used.
 \begin{description} 
 
 %%%%%%%%%%%%%%%%%%%
-%% kvm_transfer_files
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!kvm\_transfer\_files}
-\item[kvm\_transfer\_files = $<$list-of-files$>$]
-A comma separated list of all files that Condor is to transfer
-to the execute machine.
-
-%%%%%%%%%%%%%%%%%%%
 %% vm_disk
 %%%%%%%%%%%%%%%%%%%
 
@@ -2366,15 +2264,6 @@ to specify the root device. This string is required when
 \SubmitCmd{xen\_kernel} gives a path to a kernel.  Omission 
 for this required case results in an error message during 
 submission.
-
-%%%%%%%%%%%%%%%%%%%
-%% xen_transfer_files
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!xen\_transfer\_files}
-\item[xen\_transfer\_files = $<$list-of-files$>$]
-A comma separated list of all files that Condor is to transfer
-to the execute machine.
 
 \end{description} 
 
@@ -3087,7 +2976,7 @@ The syntax used is
 $ENV(variable)
 \end{verbatim}
 An example submit description file command that uses this functionality
-evaluates the submittor's home directory in order to set the
+evaluates the submitter's home directory in order to set the
 path and file name of a log file:
 \begin{verbatim} 
 log = $ENV(HOME)/jobs/logfile

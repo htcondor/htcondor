@@ -13,15 +13,21 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-7-2}Version 7.7.2}
+\subsection*{\label{sec:New-7-7-3}Version 7.7.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Condor version 7.7.2 not yet released.
-%\item Condor version 7.7.2 released on Month Date, 2011.
+\item Condor version 7.7.3 not yet released.
+%\item Condor version 7.7.3 released on Month Date, 2011.
+
+\item
+\emph{Condor now dynamically links with the ClassAds, Globus and VOMS
+libraries on Mac OS X.}
+A copy of these libraries is included with Condor.
+\Ticket{2482}
 
 \end{itemize}
 
@@ -30,50 +36,208 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item New attribute on the job classad \Attr{PreserveRelativeExecutable}, 
-which when set to \Expr{True} will prevent the \Condor{starter} from 
-prepending \Attr{Iwd} to the command executable \Attr{Cmd}, when
-when \AdAttr{Cmd} is a relative pathname and \AdAttr{TransferExecutable} 
-is \Expr{False}.
-\Ticket{2460}
+\item With Condor 7.7.2, if you had multiple Condor installations, it was 
+possible for some installations to use the wrong version of the ClassAds 
+library. This should no longer be an issue. Addtionally, the binaries 
+now use RUNPATH instead of RPATH, allowing you to use the
+LD\_LIBRARY\_PATH environment variable to set where they look for their
+shared libraries.
+\Ticket{2539}
+
+\item The Amazon SOAP interface is no longer present or supported in Condor.
+The EC2 REST interface is favored and supported in Condor
+using a \SubmitCmd{grid\_resource} of \SubmitCmd{ec2}.
+\Ticket{2523}
+
+\item The new \Condor{gather\_info} tool introduced in 
+Condor version 7.5.6 has been updated and enhanced.
+It collects data about a Condor installation, and, if desired, 
+about a specific job. 
+This information is useful to Condor developers to help 
+debug problems in a pool or with a job.
+
+\item The \Condor{userprio} tool supports two new command line options.
+The \Opt{-grouporder} flag displays submitter entries 
+for accounting groups at top of the list,
+ in breadth-first order by group hierarchy.
+The \Opt{-grouprollup} flag reports accounting statistics for groups 
+as summed at a level within the group hierarchy.
+\Ticket{1926}
+
+\item The \Condor{collector} now avoids the performance problems caused
+previously when clients initiated communication with the \Condor{collector},
+but then delayed sending input.
+\Ticket{2506}
+
+\item When using versions of \Prog{glexec} that create a copy of the proxy 
+for use by the job, 
+Condor now ensures that this copy of the proxy is cleaned up
+when the job is done.
+\Ticket{2501}
+
+\item The \Condor{startd} now logs a clear message if it rejects a job
+because no valid \Condor{starter} daemons were detected.
+\Ticket{2470}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item A new configuration variable \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} 
+defines an expression which constrains which ClassAds are fetched
+by the \Condor{negotiator} from the \Condor{collector}
+for the negotiation cycle. 
+\Ticket{2277}
+
+\item The new configuration variable 
+\Macro{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} 
+replaces \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}.
+\MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} may still be used,
+but a warning is written to the log,
+identifying that the configuration needs to be updated to use the new name.
+The pool size resulting from applying this constraint is used
+to determine quotas for both dynamic quotas in hierarchical groups,
+and when there are no groups.
+\Ticket{2277}
+
+\item The configuration variable \Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE} 
+was introduced in Condor version 7.7.1.
+It has now been removed, as its functionality 
+was made obsolete by \MacroNI{NEGOTIATOR\_SLOT\_CONSTRAINT}.
+\Ticket{2277}
+
+\item The configuration variables \Macro{IGNORE\_NFS\_LOCK\_ERRORS}
+and \Macro{BIND\_ALL\_INTERFACES} no longer support the undocumented use of
+'Y' or 'y' to mean \Expr{True}.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item When the \Condor{procd}'s named command pipe is removed, or whose
+inode has been changed while the daemon is running, the \Condor{procd}
+will exit instead of previously continuing to execute in a useless mode
+of operation.
+\Ticket{2500}
+
+\item Added logic to the \Condor{negotiator} daemon's Accountant
+initialization to ensure that table entries are always created for
+accounting groups on startup and reconfig.
+\Ticket{2509}
+
+\item When \Condor{advertise} is used with the \Opt{-tcp} option, this
+used to cause the following log message to appear in the \Condor{collector}
+log:
+\begin{verbatim}
+DaemonCore: Can't receive command request from IP (perhaps a timeout?)
+\end{verbatim}
+\Ticket{2483}
+
+\item \MacroNI{NETWORK\_INTERFACE} did not have any effect.  This bug
+was introduced in 7.7.0.
+\Ticket{2513}
+
+\item \Prog{glexec} now also works when Condor is running as root.
+\Ticket{2503}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-7-2}Version 7.7.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.7.2 released on October 11, 2011.
+This release contains all features and bug fixes from Condor version 7.6.4
+as are currently documented (section~\ref{sec:New-7-6-4}) in this manual. 
+
+\item
+\emph{Condor now dynamically links with the ClassAds, Globus and VOMS libraries on
+linux.}
+A copy of these libraries is included with Condor, under
+\File{lib/condor/} in the tarball releases and under
+\File{/usr/lib/condor/} or \File{/urs/lib64/condor/} in the native package
+releases.
+\Ticket{2389}
+\Ticket{2390}
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Condor's standard universe now supports reading from and writing to
+files that are larger than 2 GBytes,
+when the standard universe application and
+the \Condor{shadow} daemon are both 64-bit executables.
+\Ticket{2337}
+
+\item There is command line support to both suspend and continue jobs. 
+The new tools \Condor{suspend} and \Condor{continue} will 
+suspend and continue running jobs.
+\Ticket{2368}
 
 \item The EC2 GAHP now supports X.509 for connecting to and authenticating
 with EC2 services.  See section~\ref{sec:Amazon-submit} for details
 on using the X.509 protocol.
 \Ticket{2084}
 
-\item The dedicated scheduler used to attempt to change the
+\item Previously, the dedicated scheduler attempted to change the
 \Attr{Scheduler} attribute on all parallel job processes in a durable fashion,
 resulting in an \Procedure{fsync} for each process.
 This has been changed to be not durable, 
-improving scalability by reducing the 
+thereby improving the scalability by reducing the 
 number of \Procedure{fsync} calls without impacting correctness. 
 \Ticket{2367}
 
-\item In privsep mode, when an error is encountered when trying to
+\item In PrivSep mode, when an error is encountered when trying to
 switch to the user account chosen for running the job, 
 the error message has been improved to make debugging easier.  
 Now, the error message distinguishes between safety check failures 
 for the UID, tracking group ID, primary group ID, and supplementary group IDs.
 \Ticket{2364}
 
-\item When using \Prog{glexec}, if there is a conflict between
-environment specified for the job and environment inherited from
-glexec, the former always takes precedence when running the job.
-Previously, the environment inherited from glexec took
-precedence.
-\Ticket{2096}
+\item The name of the user used to execute the job is now logged in
+the \Condor{starter} log, except when using \Prog{glexec}.
+\Ticket{2268}
 
-\item \Condor{dagman} now defaults to writing a partial DAG file, as
-opposed to a full DAG file, for a Rescue DAG.  The Rescue DAG file is
-parsed in combination with the original DAG file, meaning that any
+\item \Condor{dagman} now defaults to writing a partial DAG file
+for a Rescue DAG,
+as opposed to a full DAG file.
+The Rescue DAG file is parsed in combination with the original DAG file, 
+meaning that any
 changes to the original DAG input file take effect when running a Rescue DAG.
 \Ticket{2165}
 
 \item The behavior of DAGMan is changed, such that, by default, 
 POST scripts will be run regardless of the return value from 
-the PRE script of the same node
-as described in section~\ref{dagman:SCRIPT}.  
+the PRE script of the same node as described in section~\ref{dagman:SCRIPT}.  
 The previous behavior of not running the POST script can be restored by
 either adding the \Opt{-AlwaysRunPost} option to the \Condor{submit\_dag}
 command line, 
@@ -81,6 +245,14 @@ or by setting the new configuration variable
 \Macro{DAGMAN\_ALWAYS\_RUN\_POST} to \Expr{False}, 
 as defined at~\ref{param:DAGmanAlwaysRunPost}.
 \Ticket{2057}
+
+\item DAGMan will now copy PRIORITY values from the DAG input file to 
+the \Attr{JobPrio} attribute in the job ClassAd.  
+Furthermore, the PRIORITY values are propagated to child nodes and SUBDAGs, 
+so that child nodes always have priority at least that
+of the maximum of the priorities of its parents.  
+This has been a cause of confusion for DAGMan users.
+\Ticket{2167}
 
 % moved to 7.7.2 
 % gittrac #659 
@@ -90,26 +262,15 @@ as defined at~\ref{param:DAGmanAlwaysRunPost}.
 %DAGman tends to fail on wide DAGs, where many jobs are independent,
 %rather than being linear, where jobs have many dependencies.
 
-\item A matchmaking optimization has significantly improved speed of matching
+\item A matchmaking optimization has significantly improved the speed 
+of matching,
 when there are machines with many slots.
 \Ticket{2403}
 
-\item The name of the user used to execute the job is now logged in
-the starter log, except when using glexec.
-\Ticket{2268}
-
 \item When the \Condor{schedd} is starting up and it encounters corruption
 in its job transaction log, the error message in the log file now reports
-the offset into the file where the problem was encountered.
+the offset within the file at which the error occurred.
 \Ticket{2450}
-
-% gittrac #2167
-\item DAGman will now copy PRIORITY values from the DAG file to the JobPrio
-attribute in the JobAd.  Furthermore, the PRIORITY values are propogated to
-child nodes and subDAGs, so that child nodes always have priority at least that
-of the maximum of the priorities of its parents.  This has been a cause of
-confusion for DAGman users.
-\Ticket{2167}
 
 \end{itemize}
 
@@ -117,16 +278,21 @@ confusion for DAGman users.
 
 \begin{itemize}
 
-% gittrac #2354
-\item Attributes have been added to all daemons to publish statistics about
-the the number of timers, signals, socket and pipe messages that have been handled
-and the amount of time spent handling them.	Statistics attributes for daemon core
-have names that begin with \Attr{DC} or \Attr{RecentDC}.
+\item The new job ClassAd attribute \Attr{PreserveRelativeExecutable}, 
+when \Expr{True} prevents the \Condor{starter} from 
+prepending \Attr{Iwd} to the command executable \Attr{Cmd},
+when \Attr{Cmd} is a relative path name and \Attr{TransferExecutable} 
+is \Expr{False}.
+\Ticket{2460}
+
+\item Attributes have been added to all daemons to publish statistics 
+about the the number of timers, signals, socket, and pipe messages 
+that have been handled, as well as the amount of time spent handling them.	Statistics attributes for DaemonCore
+have names that begin with \Expr{DC} or \Expr{RecentDC}.
 \Ticket{2354}
 
-% gittrac #2366
 \item The default value of \Attr{OpSys} on Windows machines has been changed
- to \AdStr{WINDOWS}, and a new attribute \Attr{OpSysVer} has been added 
+to \AdStr{WINDOWS}, and a new attribute \Attr{OpSysVer} has been added 
 that contains the version number of the operating system.  
 This behavior is controlled by a new configuration variable
 \Macro{ENABLE\_VERSIONED\_OPSYS} which defaults to \Expr{False} on Windows 
@@ -149,9 +315,13 @@ In other environments, it should have no visible impact.
 \Ticket{2375}
 
 % gittrac #2197
-\item Attributes have been added to the \Condor{schedd} to publish aggregate statistics
+\item Attributes have been added to the \Condor{schedd} 
+to publish aggregate statistics
 about jobs that are running and have completed, as well as counts of various
-failures. See section ??? for details.
+failures. 
+% Next sentence is made into a comment, as there is no documentation
+%     to look at.
+% See section ??? for details.
 \Ticket{2197}
 
 \item The new configuration variable \Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE}
@@ -169,39 +339,55 @@ as it is incompatible with the implementation of partial Rescue DAGs.
 
 \begin{itemize}
 
-\item Fixed a bug introduced in 7.7.0, in which the \Condor{startd} may
-erroneously report ``Can't find hostname of client machine.'' In
-cases where Condor was unable to identify the host name, the ClientMachine
-attribute in the Machine ClassAd would have gone unset.
+\item Fixed a bug introduced in Condor version 7.7.1, 
+in the standard universe,
+where the \Syscall{getdirentries} call failed during remote I/O situations.
+\Ticket{2467}
+
+\item Fixed a bug in the \Condor{startd} that was preventing dynamic slots
+from being properly instantiated from partitionable slots.
+\Ticket{2507}
+
+\item Fixed a bug introduced in Condor version 7.7.0, 
+in which the \Condor{startd} may erroneously report 
+\Expr{Can't find hostname of client machine.}
+In cases where Condor was unable to identify the host name, 
+the \Attr{ClientMachine}
+attribute in the machine ClassAd would have gone unset.
 \Ticket{2382}
 
-\item Add command line support to suspend and continue jobs. 
-\Ticket{2368}
-
 \item Fixed a bug existing since April 2001,
-in which on \Condor{schedd} startup, with parallel universe jobs, 
+in which on start up of the \Condor{schedd}, with parallel universe jobs, 
 the job queue sanity checking code would change the \Attr{Scheduler}
 attribute on jobs,
 only to have the attribute changed later by the dedicated scheduler.
 \Ticket{2367}
 
-\item Offline ads with no \Attr{MyType} or no \Attr{TargetType} caused
+\item Machine ClassAds with the \Attr{Offline} attribute set to \Expr{True},
+and  with neither \Attr{MyType} nor \Attr{TargetType} 
+attributes defined caused
 the \Condor{collector} to fail to start when it was next restarted.
 \Ticket{2417}
 
-\item Fixed a file descriptor leak in the ec2\_gahp which would cause
-grid-type ec2 jobs to become held. The \Attr{HoldReason} for most such 
-jobs would be ``Unable to read from accesskey file''.
+\item Fixed a file descriptor leak in the EC2 GAHP,
+which would cause grid-type ec2 jobs to become held. 
+The \Attr{HoldReason} for most such jobs would be 
+\Expr{Unable to read from accesskey file.}
 \Ticket{2447}
 
 \item Fixed a bug that could cause a job's standard output and error to
-be written to the wrong location when \Attr{should\_transfer\_files} is
-set to
-\Arg{IF\_NEEDED} and the job runs on the machine where file transfer isn't
-needed. If the standard output or error filenames contained any
-path information, the output would be written to \File{\_condor\_stdout} or
+be written to the wrong location when \SubmitCmd{should\_transfer\_files} was
+set to \Expr{IF\_NEEDED},
+and the job runs on the machine where file transfer is not needed.
+If the standard output or error file names contained any path information,
+the output would be written to \File{\_condor\_stdout} or
 \File{\_condor\_stderr} in the job's initial working directory.
 \Ticket{1811}
+
+\item Fixed a bug introduced in Condor version 7.7.1
+that could cause the \Condor{schedd} daemon to crash after
+failing to expand a \verb@$$@ macro in the job ClassAd.
+\Ticket{2491}
 
 \end{itemize}
 
@@ -209,7 +395,15 @@ path information, the output would be written to \File{\_condor\_stdout} or
 
 \begin{itemize}
 
-\item None.
+\item In Condor version 7.7.2, 
+the Condor daemons on Linux platforms rely on shared libraries.  
+A bug in Condor version 7.7.1 and all previous versions of Condor
+prevents a 7.7.1 \Condor{master} from starting 7.7.2 or later daemons.
+This also means that a 7.7.1 \Condor{master} cannot upgrade itself to 
+version 7.7.2.  
+If a 7.7.1 \Condor{master} binary is replaced with 
+a 7.7.2 \Condor{master} binary, 
+Condor will shut off, and need to be restarted by hand.
 
 \end{itemize}
 
@@ -231,8 +425,8 @@ path information, the output would be written to \File{\_condor\_stdout} or
 \begin{itemize}
 
 %\item Condor version 7.7.1 not yet released.
-\item Condor version 7.7.1 released on Sep 12, 2011.
-This developer release contains all bug fixes from Condor version 7.6.3
+\item Condor version 7.7.1 released on September 12, 2011.
+This developer release contains all bug fixes from Condor version 7.6.3.
 
 \end{itemize}
 
@@ -241,15 +435,10 @@ This developer release contains all bug fixes from Condor version 7.6.3
 
 \begin{itemize}
 
-\item 
-The Classad language now has an unparse function.  This converts an expression
-into a string, which is handy with the new eval function.
-\Ticket{1613}
-
 \item
-Condor now dynamically links with the OpenSSL and Kerberos security
+\emph{Condor now dynamically links with the OpenSSL and Kerberos security
 libraries, and Condor will use the operating system's version of these
-libraries,  when they are available. 
+libraries,  when they are available.} 
 The tarball release of Condor on Linux platforms includes 
 a copy of these libraries.  
 If the operating system's version is incompatible with Condor, 
@@ -257,6 +446,12 @@ Condor will use its own copy instead.
 Condor's copy of these libraries is located under \File{lib/condor/}.
 To prevent Condor from considering using them, delete these libraries.
 \Ticket{1874}
+
+\item 
+The ClassAd language now has an \Procedure{unparse} function.  
+It converts an expression into a string, 
+which is handy with the new \Procedure{eval} function.
+\Ticket{1613}
 
 \item
 The new job ClassAd attribute \Attr{KeepClaimIdle} is defined with an integer
@@ -307,10 +502,13 @@ in \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} are removed from the
 list of \Condor{startd} ClassAds considered for negotiation.
 \Ticket{2232}
 
-\item The new configuration parameter \Macro{NEGOTIATOR\_UPDATE\_AFTER\_CYCLE}
-which defaults to false has been added.  When true, this forces the negotiator
-to update the negotiator ad in the collector at the end of every negotiation 
-cycle.  This is handy for monitoring and debugging activities.
+\item The new configuration variable
+\Macro{NEGOTIATOR\_UPDATE\_AFTER\_CYCLE} defaults to \Expr{False}.
+When \Expr{True}, it forces the \Condor{negotiator} daemon
+to update the negotiator ClassAd in the \Condor{collector} daemon
+at the end of every negotiation cycle.  
+This is handy for monitoring and debugging activities.
+\Ticket{2373}
 
 \end{itemize}
 

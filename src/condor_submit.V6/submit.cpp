@@ -102,9 +102,6 @@ ClassAd *ClusterAd = NULL;
 
 // Explicit template instantiation
 
-/* For daemonCore, etc. */
-DECL_SUBSYSTEM( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
-
 ClassAd  *job = NULL;
 
 char	*OperatingSystem;
@@ -147,7 +144,7 @@ bool	NewExecutable = false;
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool    UseXMLInLog = false;
-ShouldTransferFiles_t should_transfer = STF_NO;
+ShouldTransferFiles_t should_transfer;
 bool stream_stdout_toggle = false;
 bool stream_stderr_toggle = false;
 bool    NeedsPerFileEncryption = false;
@@ -281,7 +278,6 @@ const char	*SuspendJobAtExec = "suspend_job_at_exec";
 const char	*TransferInputFiles = "transfer_input_files";
 const char	*TransferOutputFiles = "transfer_output_files";
 const char    *TransferOutputRemaps = "transfer_output_remaps";
-const char	*TransferFiles = "transfer_files";
 const char	*TransferExecutable = "transfer_executable";
 const char	*TransferInput = "transfer_input";
 const char	*TransferOutput = "transfer_output";
@@ -372,18 +368,6 @@ const char    *VM_Networking = "vm_networking";
 const char    *VM_Networking_Type = "vm_networking_type";
 
 //
-// Amazon EC2 SOAP Parameters
-//
-const char* AmazonPublicKey = "amazon_public_key";
-const char* AmazonPrivateKey = "amazon_private_key";
-const char* AmazonAmiID = "amazon_ami_id";
-const char* AmazonUserData = "amazon_user_data";
-const char* AmazonUserDataFile = "amazon_user_data_file";
-const char* AmazonSecurityGroups = "amazon_security_groups";
-const char* AmazonKeyPairFile = "amazon_keypair_file";
-const char* AmazonInstanceType = "amazon_instance_type";
-
-//
 // EC2 Query Parameters
 //
 const char* EC2AccessKeyId = "ec2_access_key_id";
@@ -459,8 +443,6 @@ void 	SetRequirements();
 void 	SetTransferFiles();
 void    process_input_file_list(StringList * input_list, char *input_files, bool * files_specified);
 void 	SetPerFileEncryption();
-bool 	SetNewTransferFiles( void );
-void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
 void 	SetTDP();
 void	SetRunAsOwner();
@@ -565,6 +547,20 @@ condor_param_mystring( const char * name, const char * alt_name )
 	return ret;
 }
 
+void non_negative_int_fail(const char * Name, char * Value)
+{
+
+	int iTemp=0;
+	if (strstr(Value,".") || 
+		(sscanf(Value, "%d", &iTemp) > 0 && iTemp < 0))
+	{
+		fprintf( stderr, "\nERROR: '%s'='%s' is invalid, must eval to a non-negative integer.\n", Name, Value );
+		DoCleanup(0,0,NULL);
+		exit(1);
+	}
+	
+	// sigh lexical_cast<>
+}
 
 /** Given a universe in string form, return the number
 
@@ -777,6 +773,8 @@ main( int argc, char *argv[] )
 
 	setbuf( stdout, NULL );
 
+	set_mySubSystem( "SUBMIT", SUBSYSTEM_TYPE_SUBMIT );
+
 #if !defined(WIN32)
 		// Make sure root isn't trying to submit.
 	if( getuid() == 0 || getgid() == 0 ) {
@@ -960,12 +958,8 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	char *dis_check = param("SUBMIT_SKIP_FILECHECKS");
-	if ( dis_check ) {
-		if (dis_check[0]=='T' || dis_check[0]=='t') {
-			DisableFileChecks = 1;
-		}
-		free(dis_check);
+	if (!DisableFileChecks) {
+		DisableFileChecks = param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", false) ? 1 : 0;
 	}
 
 	// if we are dumping to a file, we never want to check file permissions
@@ -1503,9 +1497,8 @@ SetExecutable()
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
-		   ( strcasecmp( JobGridType, "amazon" ) == MATCH ||
-			 strcasecmp( JobGridType, "ec2" ) == MATCH ||
-			 strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
+		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
+		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
 
@@ -1786,7 +1779,7 @@ SetUniverse()
 			// Validate
 			// Valid values are (as of 7.5.1): nordugrid, globus,
 			//    gt2, gt5, gt4, infn, blah, pbs, lsf, nqs, naregi, condor,
-			//    amazon, unicore, cream, deltacloud, ec2
+			//    unicore, cream, deltacloud, ec2
 
 			// CRUFT: grid-type 'blah' is deprecated. Now, the specific batch
 			//   system names should be used (pbs, lsf). Glite are the only
@@ -1803,7 +1796,6 @@ SetUniverse()
 				(strcasecmp (JobGridType, "naregi") == MATCH) ||
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
-				(strcasecmp (JobGridType, "amazon") == MATCH) ||	// added for amazon job
 				(strcasecmp (JobGridType, "ec2") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
@@ -1818,7 +1810,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt4, gt5, pbs, lsf, "
-						 "nqs, condor, nordugrid, unicore, amazon, ec2, deltacloud, or cream\n" );
+						 "nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -2332,8 +2324,6 @@ SetTransferFiles()
 	StringList output_file_list(NULL,",");
 	MyString output_remaps;
 
-	should_transfer = STF_YES;
-
 	macro_value = condor_param( TransferInputFiles, "TransferInputFiles" ) ;
 	TransferInputSize = 0;
 	if( macro_value ) {
@@ -2403,17 +2393,161 @@ SetTransferFiles()
 		free(macro_value);
 	}
 
+	//
+	// START FILE TRANSFER VALIDATION
+	//
 		// now that we've gathered up all the possible info on files
 		// the user explicitly wants to transfer, see if they set the
 		// right attributes controlling if and when to do the
 		// transfers.  if they didn't tell us what to do, in some
 		// cases, we can give reasonable defaults, but in others, it's
-		// a fatal error.  first we check for the new attribute names
-		// ("ShouldTransferFiles" and "WheToTransferOutput").  If
-		// those aren't defined, we look for the old "TransferFiles". 
-	if( ! SetNewTransferFiles() ) {
-		SetOldTransferFiles( in_files_specified, out_files_specified );
+		// a fatal error.
+		//
+		// SHOULD_TRANSFER_FILES (STF) defaults to IF_NEEDED (STF_IF_NEEDED)
+		// WHEN_TO_TRANSFER_OUTPUT (WTTO) defaults to ON_EXIT (FTO_ON_EXIT)
+		// 
+		// Error if:
+		//  (A) bad user input - getShouldTransferFilesNum fails
+		//  (B) bas user input - getFileTransferOutputNum fails
+		//  (C) STF is STF_NO and WTTO is not FTO_NONE
+		//  (D) STF is not STF_NO and WTTO is FTO_NONE
+		//  (E) STF is STF_IF_NEEDED and WTTO is FTO_ON_EXIT_OR_EVICT
+		//  (F) STF is STF_NO and transfer_input_files or transfer_output_files specified
+	char *should = "INTERNAL ERROR";
+	char *when = "INTERNAL ERROR";
+	bool default_should;
+	bool default_when;
+	FileTransferOutput_t when_output;
+	MyString err_msg;
+	
+	should = condor_param(ATTR_SHOULD_TRANSFER_FILES, 
+						  "should_transfer_files");
+	if (!should) {
+		should = "IF_NEEDED";
+		should_transfer = STF_IF_NEEDED;
+		default_should = true;
+	} else {
+		should_transfer = getShouldTransferFilesNum(should);
+		if (should_transfer < 0) { // (A)
+			err_msg = "\nERROR: invalid value (\"";
+			err_msg += should;
+			err_msg += "\") for ";
+			err_msg += ATTR_SHOULD_TRANSFER_FILES;
+			err_msg += ".  Please either specify \"YES\", \"NO\", or ";
+			err_msg += "\"IF_NEEDED\" and try again.";
+			print_wrapped_text(err_msg.Value(), stderr);
+			DoCleanup(0, 0, NULL);
+			exit(1);
+		}
+		default_should = false;
 	}
+
+	if (should_transfer == STF_NO &&
+		(in_files_specified || out_files_specified)) { // (F)
+		err_msg = "\nERROR: you specified files you want Condor to "
+			"transfer via \"";
+		if( in_files_specified ) {
+			err_msg += "transfer_input_files";
+			if( out_files_specified ) {
+				err_msg += "\" and \"transfer_output_files\",";
+			} else {
+				err_msg += "\",";
+			}
+		} else {
+			ASSERT( out_files_specified );
+			err_msg += "transfer_output_files\",";
+		}
+		err_msg += " but you disabled should_transfer_files.";
+		print_wrapped_text(err_msg.Value(), stderr);
+		DoCleanup(0, 0, NULL);
+		exit(1);
+	}
+
+	when = condor_param(ATTR_WHEN_TO_TRANSFER_OUTPUT, 
+						"when_to_transfer_output");
+	if (!when) {
+		when = "ON_EXIT";
+		when_output = FTO_ON_EXIT;
+		default_when = true;
+	} else {
+		when_output = getFileTransferOutputNum(when);
+		if (when_output < 0) { // (B)
+			err_msg = "\nERROR: invalid value (\"";
+			err_msg += when;
+			err_msg += "\") for ";
+			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+			err_msg += ".  Please either specify \"ON_EXIT\", or ";
+			err_msg += "\"ON_EXIT_OR_EVICT\" and try again.";
+			print_wrapped_text(err_msg.Value(), stderr);
+			DoCleanup(0, 0, NULL);
+			exit(1);
+		}
+		default_when = false;
+	}
+
+		// for backward compatibility and user convenience -
+		// if the user specifies should_transfer_files = NO and has
+		// not specified when_to_transfer_output, we'll change
+		// when_to_transfer_output to NEVER and avoid an unhelpful
+		// error message later.
+	if (!default_should && default_when &&
+		should_transfer == STF_NO) {
+		when = "NEVER";
+		when_output = FTO_NONE;
+	}
+
+	if ((should_transfer == STF_NO && when_output != FTO_NONE) || // (C)
+		(should_transfer != STF_NO && when_output == FTO_NONE)) { // (D)
+		err_msg = "\nERROR: ";
+		err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
+		err_msg += " specified as \"";
+		err_msg += when;
+		err_msg += "\"";
+		err_msg += " yet ";
+		err_msg += ATTR_SHOULD_TRANSFER_FILES;
+		err_msg += " defined as \"";
+		err_msg += should;
+		err_msg += "\".  Please remove this contradiction from ";
+		err_msg += "your submit file and try again.";
+		print_wrapped_text(err_msg.Value(), stderr);
+		DoCleanup(0, 0, NULL);
+		exit(1);
+	}
+
+		// for backward compatibility and user convenience -
+		// if the user specifies only when_to_transfer_output =
+		// ON_EXIT_OR_EVICT, which is incompatible with the default
+		// should_transfer_files of IF_NEEDED, we'll change
+		// should_transfer_files to YES for them.
+	if (default_should &&
+		when_output == FTO_ON_EXIT_OR_EVICT &&
+		should_transfer == STF_IF_NEEDED) {
+		should = "YES";
+		should_transfer = STF_YES;
+	}
+
+	if (when_output == FTO_ON_EXIT_OR_EVICT && 
+		should_transfer == STF_IF_NEEDED) { // (E)
+			// error, these are incompatible!
+		err_msg = "\nERROR: \"when_to_transfer_output = ON_EXIT_OR_EVICT\" "
+			"and \"should_transfer_files = IF_NEEDED\" are incompatible.  "
+			"The behavior of these two settings together would produce "
+			"incorrect file access in some cases.  Please decide which "
+			"one of those two settings you're more interested in. "
+			"If you really want \"IF_NEEDED\", set "
+			"\"when_to_transfer_output = ON_EXIT\".  If you really want "
+			"\"ON_EXIT_OR_EVICT\", please set \"should_transfer_files = "
+			"YES\".  After you have corrected this incompatibility, "
+			"please try running condor_submit again.\n";
+		print_wrapped_text(err_msg.Value(), stderr);
+		DoCleanup(0, 0, NULL);
+		exit(1);
+	}
+
+	InsertFileTransAttrs(when_output);
+	//
+	// END FILE TRANSFER VALIDATION
+	//
 
 		/*
 		  If we're dealing w/ TDP and we might be transfering files,
@@ -2588,7 +2722,6 @@ SetTransferFiles()
 			//but they did not turn on transfer_files, so they are
 			//going to be confused when the executable is _not_
 			//transfered!  Better bail out.
-			MyString err_msg;
 			err_msg = "\nERROR: You explicitly requested that the "
 				"executable be transfered, but for this to work, you must "
 				"enable Condor's file transfer functionality.  You need "
@@ -2699,219 +2832,6 @@ void SetPerFileEncryption( void )
 	}
 }
 
-bool
-SetNewTransferFiles( void )
-{
-	bool found_it = false;
-	char *should, *when;
-	FileTransferOutput_t when_output = FTO_NONE;
-	MyString err_msg;
-	
-	should = condor_param( ATTR_SHOULD_TRANSFER_FILES, 
-						   "should_transfer_files" );
-	if( should ) {
-		should_transfer = getShouldTransferFilesNum( should );
-		if( should_transfer < 0 ) {
-			err_msg = "\nERROR: invalid value (\"";
-			err_msg += should;
-			err_msg += "\") for ";
-			err_msg += ATTR_SHOULD_TRANSFER_FILES;
-			err_msg += ".  Please either specify \"YES\", \"NO\", or ";
-			err_msg += "\"IF_NEEDED\" and try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		found_it = true;
-	}
-	
-	when = condor_param( ATTR_WHEN_TO_TRANSFER_OUTPUT, 
-						 "when_to_transfer_output" );
-	if( when ) {
-		when_output = getFileTransferOutputNum( when );
-		if( when_output < 0 ) {
-			err_msg = "\nERROR: invalid value (\"";
-			err_msg += when;
-			err_msg += "\") for ";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += ".  Please either specify \"ON_EXIT\", or ";
-			err_msg += "\"ON_EXIT_OR_EVICT\" and try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-			// if they gave us WhenToTransferOutput, but they didn't
-			// specify ShouldTransferFiles yet, give them a default of
-			// "YES", since that's the safest option.
-		if( ! found_it ) {
-			should_transfer = STF_YES;
-		}
-		if( should_transfer == STF_NO ) {
-			err_msg = "\nERROR: you specified ";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " yet you defined ";
-			err_msg += ATTR_SHOULD_TRANSFER_FILES;
-			err_msg += " to be \"";
-			err_msg += should;
-			err_msg += "\".  Please remove this contradiction from ";
-			err_msg += "your submit file and try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		found_it = true;
-	} else {
-		if( found_it && should_transfer != STF_NO ) {
-			err_msg = "\nERROR: you specified ";
-			err_msg += ATTR_SHOULD_TRANSFER_FILES;
-			err_msg += " to be \"";
-			err_msg += should;
-			err_msg += "\" but you did not specify *when* you want Condor "
-				"to transfer the output back.  Please put either \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT\" or \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
-				"try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-	}
-	
-	if( found_it && when_output == FTO_ON_EXIT_OR_EVICT && 
-		            should_transfer == STF_IF_NEEDED ) {
-			// error, these are incompatible!
-		err_msg = "\nERROR: \"when_to_transfer_output = ON_EXIT_OR_EVICT\" "
-			"and \"should_transfer_files = IF_NEEDED\" are incompatible.  "
-			"The behavior of these two settings together would produce "
-			"incorrect file access in some cases.  Please decide which "
-			"one of those two settings you're more interested in. "
-			"If you really want \"IF_NEEDED\", set "
-			"\"when_to_transfer_output = ON_EXIT\".  If you really want "
-			"\"ON_EXIT_OR_EVICT\", please set \"should_transfer_files = "
-			"YES\".  After you have corrected this incompatibility, "
-			"please try running condor_submit again.\n";
-		print_wrapped_text( err_msg.Value(), stderr );
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
-
-		// if we found the new syntax, we're done, and we should now
-		// add the appropriate ClassAd attributes to the job.
-	if( found_it ) {
-		InsertFileTransAttrs( when_output );
-	}
-	return found_it;
-}
-
-
-void
-SetOldTransferFiles( bool in_files_specified, bool out_files_specified )
-{
-	char *macro_value;
-	FileTransferOutput_t when_output = FTO_NONE;
-		// this variable is never used (even once we pass it to
-		// InsertFileTransAttrs()) unless should_transfer is set
-		// appropriately.  however, just to be safe, we initialize it
-		// here to avoid passing around uninitialized variables.
-
-	macro_value = condor_param( TransferFiles, ATTR_TRANSFER_FILES );
-	if( macro_value ) {
-		// User explicitly specified TransferFiles; do what user says
-		switch ( macro_value[0] ) {
-				// Handle "Never"
-			case 'n':
-			case 'N':
-				// Handle "Never"
-				if( in_files_specified || out_files_specified ) {
-					MyString err_msg;
-					err_msg += "\nERROR: you specified \"";
-					err_msg += TransferFiles;
-					err_msg += " = Never\" but listed files you want "
-						"transfered via \"";
-					if( in_files_specified ) {
-						err_msg += "transfer_input_files";
-						if( out_files_specified ) {
-							err_msg += "\" and \"transfer_output_files\".";
-						} else {
-							err_msg += "\".";
-						}
-					} else {
-						ASSERT( out_files_specified );
-						err_msg += "transfer_output_files\".";
-					}
-					err_msg += "  Please remove this contradiction from "
-						"your submit file and try again.";
-					print_wrapped_text( err_msg.Value(), stderr );
-					DoCleanup(0,0,NULL);
-					exit( 1 );
-				}
-				should_transfer = STF_NO;
-				break;
-			case 'o':
-			case 'O':
-				// Handle "OnExit"
-				should_transfer = STF_YES;
-				when_output = FTO_ON_EXIT;
-				break;
-			case 'a':
-			case 'A':
-				// Handle "Always"
-				should_transfer = STF_YES;
-				when_output = FTO_ON_EXIT_OR_EVICT;
-				break;
-			default:
-				// Unrecognized
-				fprintf( stderr, "\nERROR: Unrecognized argument for "
-						 "parameter \"%s\"\n", TransferFiles );
-				DoCleanup(0,0,NULL);
-				exit( 1 );
-				break;
-		}	// end of switch
-
-		free(macro_value);		// condor_param() calls malloc; free it!
-	} else {
-		// User did not explicitly specify TransferFiles; choose a default
-#ifdef WIN32
-		should_transfer = STF_YES;
-		when_output = FTO_ON_EXIT;
-#else
-		if( in_files_specified || out_files_specified ) {
-			MyString err_msg;
-			err_msg += "\nERROR: you specified files you want Condor to "
-				"transfer via \"";
-			if( in_files_specified ) {
-				err_msg += "transfer_input_files";
-				if( out_files_specified ) {
-					err_msg += "\" and \"transfer_output_files\",";
-				} else {
-					err_msg += "\",";
-				}
-			} else {
-				ASSERT( out_files_specified );
-				err_msg += "transfer_output_files\",";
-			}
-			err_msg += " but you did not specify *when* you want Condor to "
-				"transfer the files.  Please put either \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT\" or \"";
-			err_msg += ATTR_WHEN_TO_TRANSFER_OUTPUT;
-			err_msg += " = ON_EXIT_OR_EVICT\" in your submit file and "
-				"try again.";
-			print_wrapped_text( err_msg.Value(), stderr );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
-		should_transfer = STF_NO;
-#endif
-	}
-		// now that we know what we want, call a shared method to
-		// actually insert the right classad attributes for it (since
-		// this stuff is shared, regardless of the old or new syntax).
-	InsertFileTransAttrs( when_output );
-}
-
 
 void
 InsertFileTransAttrs( FileTransferOutput_t when_output )
@@ -2920,8 +2840,6 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 	should += " = \"";
 	MyString when = ATTR_WHEN_TO_TRANSFER_OUTPUT;
 	when += " = \"";
-	MyString ft = ATTR_TRANSFER_FILES;
-	ft += " = \"";
 	
 	should += getShouldTransferFilesString( should_transfer );
 	should += '"';
@@ -2932,19 +2850,11 @@ InsertFileTransAttrs( FileTransferOutput_t when_output )
 		}
 		when += getFileTransferOutputString( when_output );
 		when += '"';
-		if( when_output == FTO_ON_EXIT ) {
-			ft += "ONEXIT\"";
-		} else {
-			ft += "ALWAYS\"";
-		}
-	} else {
-		ft += "NEVER\"";
 	}
 	InsertJobExpr( should.Value() );
 	if( should_transfer != STF_NO ) {
 		InsertJobExpr( when.Value() );
 	}
-	InsertJobExpr( ft.Value() );
 }
 
 
@@ -3964,6 +3874,9 @@ SetJobDeferral() {
 	MyString buffer;
 	char *temp = condor_param( DeferralTime, ATTR_DEFERRAL_TIME );
 	if ( temp != NULL ) {
+		// make certain the input is valid
+		non_negative_int_fail(DeferralTime, temp);
+			
 		buffer.sprintf( "%s = %s", ATTR_DEFERRAL_TIME, temp );
 		InsertJobExpr (buffer);
 		free( temp );
@@ -4003,6 +3916,10 @@ SetJobDeferral() {
 			// If we have a parameter from the job file, use that value
 			//
 		if ( temp != NULL ){
+			
+			// make certain the input is valid
+			non_negative_int_fail(DeferralWindow, temp);
+			
 			buffer.sprintf(  "%s = %s", ATTR_DEFERRAL_WINDOW, temp );	
 			free( temp );
 			//
@@ -4038,6 +3955,9 @@ SetJobDeferral() {
 			// If we have a parameter from the job file, use that value
 			//
 		if ( temp != NULL ){
+			// make certain the input is valid
+			non_negative_int_fail(DeferralPrepTime, temp);
+			
 			buffer.sprintf(  "%s = %s", ATTR_DEFERRAL_PREP_TIME, temp );	
 			free( temp );
 			//
@@ -4936,17 +4856,13 @@ SetGridParams()
 			InsertJobExpr (buffer);
 		}
 
-		if ( strcasecmp( tmp, "amazon" ) == 0 ||
-			 strcasecmp( tmp, "ec2" ) == 0 ) {
-			fprintf(stderr, "\nERROR: Amazon EC2 grid jobs require a "
+		if ( strcasecmp( tmp, "ec2" ) == 0 ) {
+			fprintf(stderr, "\nERROR: EC2 grid jobs require a "
 					"service URL\n");
 			DoCleanup( 0, 0, NULL );
 			exit( 1 );
 		}
 		
-		// TODO: TSTCLAIR remove in 7.9 series.
-		if ( strcasecmp( tmp, "amazon" ) == 0 ) 
-			fprintf(stderr, "\nWARNING: Amazon grid jobs are no longer supported, please use EC2\n");
 
 		free( tmp );
 
@@ -5062,104 +4978,6 @@ SetGridParams()
 		exit( 1 );
 	}
 	
-	//
-	// Amazon grid-type submit attributes
-	//
-	if ( (tmp = condor_param( AmazonPublicKey, ATTR_AMAZON_PUBLIC_KEY )) ) {
-		// check public key file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open public key file %s (%s)\n", 
-							 full_path(tmp), strerror(errno));
-				exit(1);
-			}
-			fclose(fp);
-		}
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PUBLIC_KEY, full_path(tmp) );
-		InsertJobExpr( buffer.Value() );
-		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "amazon" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonPublicKey );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
-	}
-	
-	if ( (tmp = condor_param( AmazonPrivateKey, ATTR_AMAZON_PRIVATE_KEY )) ) {
-		// check private key file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open private key file %s (%s)\n", 
-							 full_path(tmp), strerror(errno));
-				exit(1);
-			}
-			fclose(fp);
-		}
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_PRIVATE_KEY, full_path(tmp) );
-		InsertJobExpr( buffer.Value() );
-		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "amazon" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonPrivateKey );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
-	}
-	
-	// AmazonKeyPairFile is not a necessary parameter
-	if( (tmp = condor_param( AmazonKeyPairFile, ATTR_AMAZON_KEY_PAIR_FILE )) ) {
-		// for the relative path, the keypair output file will be written to the IWD
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_KEY_PAIR_FILE, full_path(tmp) );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-	
-	// AmazonGroupName is not a necessary parameter
-	if( (tmp = condor_param( AmazonSecurityGroups, ATTR_AMAZON_SECURITY_GROUPS )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_SECURITY_GROUPS, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-	
-	if ( (tmp = condor_param( AmazonAmiID, ATTR_AMAZON_AMI_ID )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_AMI_ID, tmp );
-		InsertJobExpr( buffer.Value() );
-		free( tmp );
-	} else if ( JobGridType && strcasecmp( JobGridType, "amazon" ) == 0 ) {
-		fprintf(stderr, "\nERROR: Amazon jobs require a \"%s\" parameter\n", AmazonAmiID );
-		DoCleanup( 0, 0, NULL );
-		exit( 1 );
-	}
-	
-	// AmazonInstanceType is not a necessary parameter
-	if( (tmp = condor_param( AmazonInstanceType, ATTR_AMAZON_INSTANCE_TYPE )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_INSTANCE_TYPE, tmp );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-	
-	// AmazonUserData is not a necessary parameter
-	if( (tmp = condor_param( AmazonUserData, ATTR_AMAZON_USER_DATA )) ) {
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA, tmp);
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}	
-
-	// AmazonUserDataFile is not a necessary parameter
-	if( (tmp = condor_param( AmazonUserDataFile, ATTR_AMAZON_USER_DATA_FILE )) ) {
-		// check user data file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				fprintf( stderr, "\nERROR: Failed to open user data file %s (%s)\n", 
-								 full_path(tmp), strerror(errno));
-				exit(1);
-			}
-			fclose(fp);
-		}
-		buffer.sprintf( "%s = \"%s\"", ATTR_AMAZON_USER_DATA_FILE, 
-				full_path(tmp) );
-		free( tmp );
-		InsertJobExpr( buffer.Value() );
-	}
-
-
 	//
 	// EC2 grid-type submit attributes
 	//
@@ -6885,14 +6703,9 @@ init_params()
 		string_to_stm( method, STMethod );
 	}
 
-	tmp = param( "WARN_ON_UNUSED_SUBMIT_FILE_MACROS" );
-	if ( NULL != tmp ) {
-		if( (*tmp == 'f' || *tmp == 'F') ) {
-			WarnOnUnusedMacros = 0;
-		}
-		free( tmp );
-	}
-
+	WarnOnUnusedMacros =
+		param_boolean_crufty("WARN_ON_UNUSED_SUBMIT_FILE_MACROS",
+							 WarnOnUnusedMacros ? true : false) ? 1 : 0;
 }
 
 int
@@ -7732,7 +7545,6 @@ SetVMParams()
 
 		// Read the parameter of xen_transfer_files 
 		char *transfer_files = NULL;
-		const char *transf_attr_name;
 
         transfer_files = condor_param("transfer_input_files");
         if (transfer_files)
@@ -8055,6 +7867,3 @@ SetVMParams()
 	// So we need to add necessary VM attributes to Requirements
 	SetVMRequirements();
 }
-
-
-#include "daemon_core_stubs.h"

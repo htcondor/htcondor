@@ -40,78 +40,6 @@
 // and functions instantiation
 template void utilCopyList<Version>( List<Version>&, List<Version>& );
 
-// forward declaration of the function to resolve the recursion between it
-// and 'getConfigurationDefaultPositiveIntegerParameter' 
-static int
-getConfigurationPositiveIntegerParameter( const char* parameter );
-/* Function    : getConfigurationDefaultPositiveIntegerParameter
- * Arguments   : parameter - the parameter name
- * Return value: int - default value for the specified parameter
- * Description : returns default value of the specified configuration parameter
- * Note        : the function may halt the program execution, in case when the
- *				 calculation of the default value of a parameter depends on a
- *               value of another parameter, like with 
- *               'NEWLY_JOINED_WAITING_VERSION_INTERVAL'
- */
-static int
-getConfigurationDefaultPositiveIntegerParameter( const char* parameter )
-{
-	if(      ! strcmp( parameter, "REPLICATION_INTERVAL" ) ) {
-		return 5 * MINUTE;
-	}
-	else if( ! strcmp( parameter, "HAD_CONNECTION_TIMEOUT" ) ) {
-		return DEFAULT_SEND_COMMAND_TIMEOUT;
-	}
-	else if( ! strcmp( parameter, "MAX_TRANSFERER_LIFETIME" ) ) {
-    	return 5 * MINUTE;
-	}
-	else if( ! strcmp( parameter, "NEWLY_JOINED_WAITING_VERSION_INTERVAL" ) ) {
-    	int hadConnectionTimeout = 
-			getConfigurationPositiveIntegerParameter("HAD_CONNECTION_TIMEOUT");
-		return NEWLY_JOINED_TOLERANCE_FACTOR * (hadConnectionTimeout + 1);
-	}
-	return -1;
-}
-/* Function    : getConfigurationPositiveIntegerParameter
- * Arguments   : parameter  - the parameter name
- * Return value: int - value of the specified parameter, either from the 
- *					   configuration file or, when not specified explicitly in
- *					   the configuration file, the default one
- * Description : returns a value of the specified configuration parameter from
- *				 the configuration file; if the value is not specified, takes
- *				 the default value
- * Note        : the function may halt the program execution, in case when the
- *               value of a parameter is not properly specified in the 
- *		 		 configuration file - this is the difference between the 
- *		 		 function and 'param_integer' in condor_utils/condor_config.C
- */
-static int
-getConfigurationPositiveIntegerParameter( const char* parameter )
-{
-	char* buffer         = param( parameter );
-	int   parameterValue = -1;
-
-    if( buffer ) {
-        bool result = false;
-
-        parameterValue = utilAtoi( buffer, &result ); //strtol( buffer, 0, 10 );
-        free( buffer );
-
-        if( ! result || parameterValue <= 0 ) {
-        	utilCrucialError( utilConfigurationError(parameter,
-                                             "REPLICATION").Value( ) );
-		}
-    } else {
-        dprintf( D_ALWAYS, "getConfigurationPositiveIntegerParameter "
-                 "finding default value for %s\n", parameter );
-        parameterValue = getConfigurationDefaultPositiveIntegerParameter( 
-																	parameter );
-    }
-    dprintf( D_FULLDEBUG, "getConfigurationPositiveIntegerParameter "
-             "%s=%d\n", parameter, parameterValue );
-	return parameterValue;
-}
-
 ReplicatorStateMachine::ReplicatorStateMachine()
 {
 	dprintf( D_ALWAYS, "ReplicatorStateMachine ctor started\n" );
@@ -210,15 +138,22 @@ ReplicatorStateMachine::reinitialize()
     m_myVersion.initialize( m_stateFilePath, m_versionFilePath );
 
     m_replicationInterval =
-        getConfigurationPositiveIntegerParameter( "REPLICATION_INTERVAL" );
-    m_maxTransfererLifeTime =
-        getConfigurationPositiveIntegerParameter( "MAX_TRANSFER_LIFETIME" );
-    m_newlyJoinedWaitingVersionInterval =
-        getConfigurationPositiveIntegerParameter(
-                            "NEWLY_JOINED_WAITING_VERSION_INTERVAL" );
+		param_integer("REPLICATION_INTERVAL",
+					  5 * MINUTE,
+					  0); // min value, must be positive
     // deduce HAD alive tolerance
     int hadConnectionTimeout =
-        getConfigurationPositiveIntegerParameter( "HAD_CONNECTION_TIMEOUT" );
+		param_integer("HAD_CONNECTION_TIMEOUT",
+					  DEFAULT_SEND_COMMAND_TIMEOUT,
+					  0); // min value, must be positive
+    m_maxTransfererLifeTime =
+		param_integer("MAX_TRANSFER_LIFETIME",
+					  5 * MINUTE,
+					  0); // min value, must be positive
+    m_newlyJoinedWaitingVersionInterval =
+		param_integer("NEWLY_JOINED_WAITING_VERSION_INTERVAL",
+					  NEWLY_JOINED_TOLERANCE_FACTOR * (hadConnectionTimeout + 1),
+					  0); // min value, must be positive
 
     char* buffer = param( "HAD_LIST" );
 

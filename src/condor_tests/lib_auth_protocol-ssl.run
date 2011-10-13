@@ -28,7 +28,7 @@ $ENV{PATH}="$ENV{PATH}:/usr/ucb";
 
 my $topleveldir = getcwd();
 my $name4test = `whoami`;
-CondorTest::fullchomp($name4test);
+CondorUtils::fullchomp($name4test);
 CondorTest::debug("Adjusting mapfile for <$name4test>\n",1);
 
 $param_template = "x_param.protocol-ssl.template";
@@ -48,7 +48,6 @@ $mykeyfile = "ssl_keys/user.key";
 
 # where am I running
 $currenthost = CondorTest::getFqdnHost();
-CondorTest::fullchomp($currenthost);
 
 print scalar localtime() . "\n";
 
@@ -116,7 +115,7 @@ open(CSUB,">$myparamname") || die "Can't open new submit file $myparamname: $!\n
 open(TPLATE,"<$param_template") || die "Can't open param template $param_template: $!\n";
 while(<TPLATE>)
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*secprepostsrc\s*=\s*.*$/ )
 	{
@@ -139,7 +138,7 @@ open(CONFIGTPLATE,"<$configtemplate") || die "Can't open postconfig template $co
 while(<CONFIGTPLATE>)
 {
 	$tmp = "";
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	$line = $_;
 	if($line =~ /^AUTH_SSL_SERVER_CAFILE\s*=\s*XXXXX(\/.*)$/) {
 		$tmp = $pidleveldir . $1;

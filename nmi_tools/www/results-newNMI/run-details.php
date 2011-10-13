@@ -187,13 +187,23 @@ foreach ($platforms AS $platform) {
   # Get the queue depth for the platform if it is pending
   $queue_depth = "";
   if($platform_status[$platform] == PLATFORM_PENDING) {
-    $queue_depth = get_queue_for_nmi_platform($platform, $type);
+    $queue_depth = get_queue_for_nmi_platform($platform, $dash);
   }
 
   $remote_host = "";
   $true_runid = $platform_runids[$platform];
   if(array_key_exists($display, $hosts[$true_runid])) {
     $remote_host = "<br><font style='font-size:75%'>" . $hosts[$true_runid][$display] . "</font>";
+  }
+
+  if(preg_match("/^x86_64_/", $display)) {
+    $display = preg_replace("/x86_64_/", "x86_64<br>", $display);
+  }
+  elseif(preg_match("/ia64_/", $display)) {
+    $display = preg_replace("/ia64_/", "x86<br>", $display);
+  }
+  else {
+    $display = preg_replace("/x86_/", "x86<br>", $display);
   }
 
   $display = "<a href='$filepath/$mygid/userdir/$platform/' title='View Run Directory'>$display</a>";
@@ -221,12 +231,12 @@ foreach ($platforms AS $platform) {
 
 foreach ($data AS $task => $arr) {
   if ($type == 'test') {
-    $history_url = sprintf(HISTORY_URL,$branch,rawurlencode($task));
+    $history_url = sprintf(HISTORY_URL, urlencode($branch), rawurlencode($task));
     $history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
-    echo "<tr>\n".
-      "<td ".($task_status[$task] != PLATFORM_PASSED ? 
-              "class=\"".$task_status[$task]."\"" : "").">".
-      "<span title=\"$task\">$history_disp</span></td>\n";
+    print "<tr>\n";
+    $color = ($task_status[$task] != PLATFORM_PASSED) ? $task_status[$task] : "";
+    print "<td class=\"left $color\">";
+    print "<span title=\"$task\">$history_disp</span></td>\n";
   }
   else {
     echo "<tr>\n".
@@ -270,7 +280,7 @@ foreach ($data AS $task => $arr) {
           $display .= ")";
         }
 
-        echo "<td class='".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."' style='text-align:center;$height'>$display</td>\n";
+        echo "<td class='".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."' style='$height'>$display</td>\n";
       }
     }
   }

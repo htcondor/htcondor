@@ -1,4 +1,42 @@
-body { font-family: Sans-Serif; }
+body { font-family: Sans-Serif; font-size: 11px; }
+a:link { color: #1C3F75; }
+
+.passed {
+   background-color: #55ff55;
+}
+.failed {
+   background-color: #ff5555;
+}
+.pending {
+  background-color: #FFE34D;
+}
+.noresults {
+   background-color: #aaaaaa;
+}
+
+td {
+    text-align:center;
+}
+
+td.left {
+    text-align:left;
+}
+
+.build {
+    border-left-width: 1px;
+    border-left-color: black;
+    width: 25px;
+}
+.test {
+    border-right-width: 1px;
+    border-right-color: black;
+    width: 25px;
+}
+
+.daybreak {
+    border-top-color: black;
+    border-top-width: 3px;
+}
 
 div.top {
     width:100%;
@@ -18,23 +56,6 @@ div.menu {
 
 div.menu:hover {
     background-color: #AAAAAA;
-}
-
-/* For show/hide help text */
-div.help_link {
-    width: 500px;
-    background-color: #DDDDDD;
-    border:solid 1px #c3c3c3;
-}
-div.help_link:hover {
-    background-color: #AAAAAA;
-}
-
-div.help_box {
-    width: 500px;
-    display: none;
-    background-color: #DDDDDD;
-    border:solid 1px #c3c3c3;
 }
 
 
@@ -111,4 +132,18 @@ span.link a:hover span {
     width:100%;
     height:100%; 
     z-index: 100;
+}
+
+/* Page layout */
+#wrap {
+    margin: 0 auto;
+}
+
+#main {
+    float:left;
+}
+
+#footer {
+    clear:both;
+    background: #ffffff;
 }

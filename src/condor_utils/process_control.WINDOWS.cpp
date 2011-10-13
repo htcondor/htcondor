@@ -298,7 +298,12 @@ windows_continue(DWORD pid)
 	//
 	SuspendedProcess* sp;
 	int ret = suspended_processes.lookup(pid, sp);
-	ASSERT(ret != -1);
+
+	// NOTE: In testing windows continuation the 
+	// procd can at times pass invalid pid's to this function 
+	// as a result, exit gracefully vs. assert.
+	if (ret == -1)
+	   return false;
 
 	SuspendedThread* st;
 	sp->startIterations();
