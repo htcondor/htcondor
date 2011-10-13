@@ -71,7 +71,7 @@
 #define D_UNUSED4       (1<<30)
 #define D_NOHEADER      (1<<31)
 #define D_ALL           (~(0) & (~(D_NOHEADER)))
-#if defined(__cplusplus)
+#ifdef _cplusplus
 #include <string>
 #include <map>
 #include "param_functions.h"
@@ -96,7 +96,7 @@ extern int DebugShouldLockToAppend; /* Should we lock the file before each write
 extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
-#ifdef(__cplusplus)
+#ifdef __cplusplus
 void dprintf_config( const char *subsys, param_functions * p_funcs = NULL );
 #endif
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
