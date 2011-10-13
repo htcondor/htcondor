@@ -1159,7 +1159,7 @@ _condor_fd_panic( int line, const char* file )
 	for ( i=0 ; i<50 ; i++ ) {
 		(void)close( i );
 	}
-<<<<<<< HEAD
+
 	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
 		if(((*it).debugFlags & D_ALWAYS) != D_ALWAYS)
@@ -1169,11 +1169,7 @@ _condor_fd_panic( int line, const char* file )
 		break;
 	}
 	if( fileExists ) {
-		debug_file_ptr = safe_fopen_wrapper_follow(filePath.c_str(), "a", 0644);
-=======
-	if( DebugFile[0] ) {
-		DebugFPs[0] = safe_fopen_wrapper_follow(DebugFile[0], "aN", 0644);
->>>>>>> master
+		debug_file_ptr = safe_fopen_wrapper_follow(filePath.c_str(), "aN", 0644);
 	}
 
 	if( !debug_file_ptr ) {

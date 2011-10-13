@@ -71,7 +71,7 @@
 #define D_UNUSED4       (1<<30)
 #define D_NOHEADER      (1<<31)
 #define D_ALL           (~(0) & (~(D_NOHEADER)))
-#ifdef _cplusplus
+#ifdef __cplusplus
 #include <string>
 #include <map>
 #include "param_functions.h"
