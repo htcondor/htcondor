@@ -86,23 +86,26 @@ because no valid \Condor{starter} daemons were detected.
 \begin{itemize}
 
 \item A new configuration variable \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} 
-can contain an expression which is passed from the \Condor{negotiator}
-to the \Condor{collector},
- when it fetches ClassAds for the negotiation cycle. 
+defines an expression which constrains which ClassAds are fetched
+by the \Condor{negotiator} from the \Condor{collector}
+for the negotiation cycle. 
 \Ticket{2277}
 
 \item The new configuration variable 
 \Macro{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} 
-replaces \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT},
-which has been retained as a alternate name.  
+replaces \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}.
+\MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} may still be used,
+but a warning is written to the log,
+identifying that the configuration needs to be updated to use the new name.
 The pool size resulting from applying this constraint is used
 to determine quotas for both dynamic quotas in hierarchical groups,
 and when there are no groups.
 \Ticket{2277}
 
 \item The configuration variable \Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE} 
-was made obsolete by \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT},
-so \MacroNI{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE}  has been removed.
+was introduced in Condor version 7.7.1.
+It has now been removed, as its functionality 
+was made obsolete by \MacroNI{NEGOTIATOR\_SLOT\_CONSTRAINT}.
 \Ticket{2277}
 
 \item The configuration variables \Macro{IGNORE\_NFS\_LOCK\_ERRORS}

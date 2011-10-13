@@ -5867,7 +5867,7 @@ These settings affect the \Condor{starter}.
   in the job submission file.  If this is set, then the executable does
   not need to be fully qualified, for example
 \begin{verbatim}
-        # Let this exectuable be resolved by user's path in the wrapper
+        # Let this executable be resolved by user's path in the wrapper
         cmd = sleep
 \end{verbatim}
   As opposed to
@@ -6718,24 +6718,30 @@ These macros affect the \Condor{negotiator}.
   If utilized attributes will change during the 
   negotiation period time interval, then set this variable to \Expr{False}.
 
+\label{param:NegotiatorSlotConstraint}
+\item[\Macro{NEGOTIATOR\_SLOT\_CONSTRAINT}]
+  An expression which constrains which machine ClassAds are fetched from the
+  \Condor{collector} by the \Condor{negotiator} during a negotiation
+  cycle.
+
+\label{param:NegotiatorSlotPoolsizeConstraint}
 \label{param:GroupDynamicMachConstraint}
-\item[\Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}]
+\item[\Macro{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} or
+  \Macro{GROUP\_DYNAMIC\_MACH\_CONSTRAINT}]
   This optional expression specifies which machine ClassAds should be counted
-  when computing the size of the pool,
-  for purposes of group quota allocation.
+  when computing the size of the pool.
+  It applies both for group quota allocation and when there are no groups.
   The default is to count all machine ClassAds.
   When extra slots exist for special purposes,
   as, for example, suspension slots or file transfer slots,
   this expression can be used to inform the \Condor{negotiator} that 
   only normal slots should be counted when computing how big each group's 
   share of the pool should be.
-
-\label{param:NegotiatorStartdConstraintRemove}
-\item[\Macro{NEGOTIATOR\_STARTD\_CONSTRAINT\_REMOVE}]
-  A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, any ClassAds not satisfying the expression 
-  in \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} are removed from the
-  list of \Condor{startd} ClassAds considered for negotiation.
+ 
+  The name \MacroNI{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} replaces
+  \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} as of Condor version 7.7.3.
+  Using the older name causes a warning to be logged, although the
+  behavior is unchanged.
 
 \label{param:NegotiatorDebug}
 \item[\Macro{NEGOTIATOR\_DEBUG}]
@@ -10339,6 +10345,14 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   the full path to the program invoked by the \Condor{starter}
   whenever a job exits,
   either on its own or when being evicted from an execution slot. 
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+
+\label{param:HookJobExitTimeout}
+\item[\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT}]
+  For the fetch work hooks,
+  the number of seconds the \Condor{starter} will wait for the JOB\_EXIT
+  hook to exit before continuing with job cleanup.  Defaults to 30 seconds.
   \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
   between sets of hooks.
 

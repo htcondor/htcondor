@@ -161,7 +161,11 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     # build.win.bat uses BASE_DIR to setup some things.
     $ENV{BASE_DIR} = "$BaseDir";
     if ($taskname eq $TAR_TASK) {
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD";
+        if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
+           $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD";
+        } else {
+           $execstr= "nmi_tools\\glue\\build\\build.win.bat DEFAULT";
+        }
     } elsif ($taskname eq $EXTERNALS_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS";
     } elsif ($taskname eq $CHECK_TAR_TASK) {
