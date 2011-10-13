@@ -316,12 +316,20 @@ CStarter::Config()
 int
 CStarter::RemoteShutdownGraceful( int )
 {
+	bool graceful_in_progress = false;
+
 		// tell our JobInfoCommunicator about this so it can take any
 		// necessary actions
 	if ( jic ) {
+		graceful_in_progress = jic->isGracefulShutdown();
 		jic->gotShutdownGraceful();
 	}
-	return ( this->ShutdownGraceful( ) );
+	if ( graceful_in_progress == false ) {
+		return ( this->ShutdownGraceful( ) );
+	}
+	else {
+		return ( false );
+	}
 }
 
 /**
@@ -380,13 +388,21 @@ CStarter::ShutdownGraceful( void )
 int
 CStarter::RemoteShutdownFast(int)
 {
+	bool fast_in_progress = false;
+
 		// tell our JobInfoCommunicator about this so it can take any
 		// necessary actions (for example, disabiling file transfer if
 		// we're talking to a shadow)
 	if( jic ) {
+		fast_in_progress = jic->isFastShutdown();
 		jic->gotShutdownFast();
 	}
-	return ( this->ShutdownFast( ) );
+	if( fast_in_progress == false ) {
+		return ( this->ShutdownFast( ) );
+	}
+	else {
+		return ( false );
+	}
 }
 
 /**
@@ -428,8 +444,7 @@ CStarter::ShutdownFast( void )
 	if (!jobRunning) {
 		dprintf(D_FULLDEBUG, 
 				"Got ShutdownFast when no jobs running.\n");
-		this->allJobsDone();
-		return ( true );
+		return ( this->allJobsDone() );
 	}	
 	return ( false );
 }
