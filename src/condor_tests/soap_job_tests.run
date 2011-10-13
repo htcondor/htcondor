@@ -18,8 +18,10 @@
 ##
 ##**************************************************************
 
-use CondorTest;
 use Condor;
+use CondorTest;
+use CondorUtils;
+
 use Cwd;
 
 
@@ -50,7 +52,7 @@ $wherenow = getcwd();
 CondorTest::debug("CURRENTLY in <<<$wherenow>>>\n",1);
 
 my $pathcmd = `echo $topdir\/soaptests\/lib\/*.jar | tr ' ' ':'`;
-CondorTest::fullchomp($pathcmd);
+CondorUtils::fullchomp($pathcmd);
 CondorTest::debug("pathcmd so far: $pathcmd\n",1);
 my $cpath = $ENV{CLASSPATH} = "$topdir/soaptests:$topdir/soaptests/condor:.:$topdir/soaptests/birdbath:$pathcmd";
 CondorTest::debug("CLASSPATH=$cpath\n",1);

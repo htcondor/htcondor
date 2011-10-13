@@ -18,8 +18,8 @@
 ##
 ##**************************************************************
 
-
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_ckpt_signals_std.cmd';
 $testdesc =  'Signals Test';
@@ -35,7 +35,7 @@ sub OutputTest
     while( <OUTPUT> )
     {
 	$line = $_;
-	CondorTest::fullchomp $line;
+	CondorUtils::fullchomp $line;
     }
     close OUTPUT;
 

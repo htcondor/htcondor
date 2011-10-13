@@ -20,9 +20,11 @@
 
 #BEGIN {$^W=1}  #warnings enabled
 use CondorTest;
+use CondorUtils;
+
 while( <> )
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	print "$_\n";
 }
 

@@ -66,7 +66,7 @@ $ExitSuccess = sub
 	open(PIN, "<$datafile") or die "Could not open data file '$datafile': $?";
 	while(<PIN>)
 	{
-		CondorTest::fullchomp();
+		CondorUtils::fullchomp();
 		$line = $_;
 		if( $line =~ /\s*Relationship:\s*(\d+)\s*created\s*(\d+).*$/ )
 		{
@@ -80,7 +80,7 @@ $ExitSuccess = sub
 		die "Could not open data file '$kiddatafile': $?";
 	while(<PIN>)
 	{
-		CondorTest::fullchomp();
+		CondorUtils::fullchomp();
 		$line = $_;
 		if( $line =~ /\s*Relationship:\s*(\d+)\s*child\s+created\s*(\d+).*$/ )
 		{
@@ -91,7 +91,7 @@ $ExitSuccess = sub
 	}
 	close(PIN);
 	my $ps = `which ps`;
-	CondorTest::fullchomp( $ps );
+	CondorUtils::fullchomp( $ps );
 	my $psflags = "-ef";
 	open( PULL, "$ps $psflags | wc -l 2>&1 |" )
 		or die "'$ps $psflags' pid failed: $!\n";
@@ -113,7 +113,7 @@ $ExitSuccess = sub
 	while(<PULL>)
 	{
 		my $thispid;
-		CondorTest::fullchomp();
+		CondorUtils::fullchomp();
 		$pidline = $_;
 		if( $psflags eq "ax") # with pid first
 		{
@@ -198,7 +198,7 @@ $ExitSuccess = sub
 		#open(PULL, "condor_config_val opsys 2>&1 |") || die "condor_config_val opsys failed: $!\n";
 		#while(<PULL>)
 		#{
-			#CondorTest::fullchomp();
+			#CondorUtils::fullchomp();
 			#my $line = $_;
 			#if(exists $broken{"$line"})
 			#{
