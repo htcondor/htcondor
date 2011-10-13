@@ -162,9 +162,9 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     $ENV{BASE_DIR} = "$BaseDir";
     if ($taskname eq $TAR_TASK) {
         if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
-           $execstr= "nmi_tools\\glue\\build\\build.win.bat DEFAULT";
-        } else {
            $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD";
+        } else {
+           $execstr= "nmi_tools\\glue\\build\\build.win.bat DEFAULT";
         }
     } elsif ($taskname eq $EXTERNALS_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS";
