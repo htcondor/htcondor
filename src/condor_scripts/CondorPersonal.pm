@@ -1290,7 +1290,7 @@ sub IsRunningYet {
     my %daemons;
     foreach my $daemon (split(/\s*,\s*/, $daemonlist)) {
         debug("Looking for MASTER_XXXXXX_CONTROLLER for $daemon\n",$debuglevel);
-        my $output = `condor_config_val MASTER_${daemon}_CONTROLLER`;
+        my $output = `condor_config_val MASTER_${daemon}_CONTROLLER 2>&1`;
         if($output =~ /Not defined/) {
             debug("Add $daemon to daemon list\n", $debuglevel);
             $daemons{$daemon} = 1;
@@ -1381,7 +1381,15 @@ sub CollectDaemonPids {
     open(PID, '>', $pidfile) or die "Cannot write file '$pidfile': $!\n";
     
     my $master_log = "$logdir/MasterLog";
-    open(TA, '<', $master_log) or die "Can not read '$master_log': $!\n";
+
+    if(!open(TA, '<', $master_log)) {
+        print STDERR "Can not read '$master_log': $!\n";
+        print STDERR "Contents of log directory ($logdir):\n";
+        print STDERR `ls $logdir`;
+        exit 1;
+    }
+
+
     while(<TA>) {
         if(/^.*PID\s+=\s+(\d+)/) {
             # At kill time we will suggest with signal 3 that the master and
