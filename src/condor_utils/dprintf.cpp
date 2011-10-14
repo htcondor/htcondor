@@ -854,7 +854,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 		// Probably format should be %ld, and we should cast to
 		// long int, but I'm afraid of changing the output format.
 		// wenger 2009-02-24.
-		_condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)MaxLog[debug_level], (long long)length);
+		_condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)it->maxLog, (long long)length);
 		
 		debug_file_ptr = preserve_log_file(debug_level);
 	}

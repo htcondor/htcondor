@@ -1360,7 +1360,6 @@ unix_sigusr2(int)
 void
 dc_reconfig()
 {
-	param_functions *p_funcs = NULL;
 		// do this first in case anything else depends on DNS
 	daemonCore->refreshDNS();
 
@@ -1391,8 +1390,7 @@ dc_reconfig()
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
-	p_funcs = get_param_functions();
-	dprintf_config(get_mySubSystem()->getName(), p_funcs);
+	dprintf_config(get_mySubSystem()->getName(), get_param_functions());
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
@@ -2096,8 +2094,7 @@ int dc_main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		p_funcs = get_param_functions();
-		dprintf_config(get_mySubSystem()->getName(), p_funcs);
+		dprintf_config(get_mySubSystem()->getName(), get_param_functions());
 	}
 
 		// Now that we have the daemonCore object, we can finally
