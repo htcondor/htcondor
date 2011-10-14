@@ -556,14 +556,8 @@ OsProc::StartJob(FamilyInfo* family_info)
 			}
 		}
 
-		if( !ThisProcRunsAlongsideMainProc() ) {
-			EXCEPT("Create_Process(%s,%s, ...) failed: %s",
-				JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
-		}
-		else {
-			dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s",
-				JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
-		}
+		dprintf(D_ALWAYS,"Create_Process(%s,%s, ...) failed: %s\n",
+			JobName.Value(), args_string.Value(), (create_process_error ? create_process_error : ""));
 		return 0;
 	}
 

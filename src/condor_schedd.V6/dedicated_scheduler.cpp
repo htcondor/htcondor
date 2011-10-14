@@ -3330,6 +3330,8 @@ DedicatedScheduler::publishRequestAd( void )
 		// For backward compatibility with older negotiators, we still set it.
 	ad.Assign( ATTR_WANT_RESOURCE_AD, true );
 
+	ad.Assign( ATTR_SUBMITTER_TAG, HOME_POOL_SUBMITTER_TAG );
+
 	ad.Assign( ATTR_SCHEDD_NAME, Name );
 
 	ad.Assign( ATTR_NAME, name() );

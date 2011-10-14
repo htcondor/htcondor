@@ -7047,6 +7047,16 @@ These macros affect the \Condor{credd}.
   secure password store.
   Subsequent uses of that password do not require
   communication with the \Condor{credd} daemon.
+  
+\label{param:SkipWindowsLogonNetwork}
+\item[\Macro{SKIP\_WINDOWS\_LOGON\_NETWORK}]
+  A boolean value that defaults to \Expr{False}
+  When \Expr{True}, Windows authentication is longer
+  made with method \MacroNI{LOGON\_NETWORK} first, but
+  only with method \MacroNI{LOGON\_INTERACTIVE}. This
+  can be useful if many authentication failures are 
+  noticed, potentially leading to users getting locked
+  out.
 
 \end{description}
 
@@ -10219,6 +10229,14 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   the full path to the program invoked by the \Condor{starter}
   whenever a job exits,
   either on its own or when being evicted from an execution slot. 
+  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  between sets of hooks.
+
+\label{param:HookJobExitTimeout}
+\item[\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT}]
+  For the fetch work hooks,
+  the number of seconds the \Condor{starter} will wait for the JOB\_EXIT
+  hook to exit before continuing with job cleanup.  Defaults to 30 seconds.
   \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
   between sets of hooks.
 

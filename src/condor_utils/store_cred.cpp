@@ -503,21 +503,24 @@ isValidCredential( const char *input_user, const char* input_pw ) {
 	}
 
 	char * pw = strdup(input_pw);
-
-	retval = LogonUser(
+	bool wantSkipNetworkLogon = param_boolean("SKIP_WINDOWS_LOGON_NETWORK", false);
+	if (!wantSkipNetworkLogon) {
+	  retval = LogonUser(
 		user,						// user name
 		dom,						// domain or server - local for now
 		pw,							// password
 		LOGON32_LOGON_NETWORK,		// NETWORK is fastest. 
 		LOGON32_PROVIDER_DEFAULT,	// logon provider
 		&usrHnd						// receive tokens handle
-	);
-	LogonUserError = GetLastError();
-
+	  );
+	  LogonUserError = GetLastError();
+	}
 	if ( 0 == retval ) {
-		
-		dprintf(D_FULLDEBUG, "NETWORK logon failed. Attempting INTERACTIVE\n");
-
+		if (!wantSkipNetworkLogon) {
+		  dprintf(D_FULLDEBUG, "NETWORK logon failed. Attempting INTERACTIVE\n");
+		} else {
+		  dprintf(D_FULLDEBUG, "NETWORK logon disabled. Trying INTERACTIVE only!\n");
+		}
 		retval = LogonUser(
 			user,						// user name
 			dom,						// domain or server - local for now
