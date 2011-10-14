@@ -1,0 +1,11 @@
+executable = /bin/sleep
+arguments = 20
+iwd	     = /tmp
+output       = /tmp/diamond.out.$(cluster)
+error        = /tmp/diamond.err.$(cluster)
+log          = /tmp/diamond.log
+should_transfer_files = if_needed
+when_to_transfer_output = on_exit
+universe     = vanilla
+notification = NEVER
+queue

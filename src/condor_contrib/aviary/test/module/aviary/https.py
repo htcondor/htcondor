@@ -178,4 +178,8 @@ class VerifiedHTTPSConnection(httpslib.HTTPSConnection):
             if self.my_timeout is not None:
                 self.sock.settimeout(self.my_timeout)
         except SSL.Checker.WrongHost, e:
-			raise SSLVerificationError("Server certificate doesn't match domain")
+			msg = "Server certificate CN doesn't match domain"
+			if self.server_verify:
+				raise SSLVerificationError("ERROR: "+msg)
+			else:
+				print "Warning:",msg
