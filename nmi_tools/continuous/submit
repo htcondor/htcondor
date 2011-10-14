@@ -1,8 +1,8 @@
 Arguments = 
 DeferralPrepTime = 180
-DeferralTime = (CurrentTime + 120)
+DeferralTime = (CurrentTime + 300)
 DeferralWindow = 99999999
-Environment =
+Environment = PATH=/usr/bin:/bin
 Executable = /home/condorauto/per-commit/submit-per-commit-builds
 Error = /home/condorauto/per-commit/submit-per-commit-builds.err
 Output = /home/condorauto/per-commit/submit-per-commit-builds.out
