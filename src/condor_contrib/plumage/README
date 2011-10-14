@@ -161,3 +161,6 @@ respectively:
 
 > db.samples.submitter.find()
 <output not shown>
+
+NOTE: After the plumage collector plugin has been activated, it can take a default of 5 minutes for statistics 
+to become available to the tool.

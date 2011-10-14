@@ -61,7 +61,8 @@ if (MONGODB_FOUND AND BOOSTDEP_FOUND)
 	# install targets
 	############################
 	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/62plumage.config DESTINATION "${C_ETC_EXAMPLES}")
-	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_stats.py DESTINATION ${C_LIB} PERMISSIONS ${CONDOR_SCRIPT_PERMS})
+	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../test/plumage_stats.py DESTINATION ${C_LIB}/plumage PERMISSIONS ${CONDOR_SCRIPT_PERMS})
+	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../README DESTINATION ${C_LIB}/plumage)
 else()
 	message (STATUS "plumage deps *not found*")
 endif()

@@ -211,6 +211,13 @@ instead proceeding straight to the \Expr{LOGON\_INTERACTIVE} authentication.
 This bug only affected users using the \Condor{credd}. 
 \Ticket{2549}  
 
+\item Condor now correctly groups CREAM jobs based on how CREAM servers 
+authorize and map them, this is, based on X509 proxy subject name and 
+first VOMS attribute. Previously, all VOMS attributes were considered.
+This could cause unexpected behavior due to aliasing of CREAM leases
+and proxy delegations.
+\Ticket{2271}
+
 \end{itemize}
 
 \noindent Known Bugs:
