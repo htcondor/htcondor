@@ -151,8 +151,6 @@ print "Condor version: $version\n";
 
 print "SETTING UP PERSONAL CONDOR\n";
 
-my $perl_exe = "perl";
-
 # I'm not 100% certain wtf this actually does. 
 if( not TestGlue::is_windows() ) {
     mkdir( "$BaseDir/local", 0777 ) || die "Can't mkdir $BaseDir/local: $!\n";
@@ -185,23 +183,22 @@ else {
     TestGlue::which("condor_master.exe");
     
 	# must use cygwin perl on Windows for batch_test.pl
-	my $perlver = `$perl_exe -version`;
+	my $perlver = `perl -version`;
 	print $perlver;
 	if (!($perlver =~ /cygwin/i)) {
-		#print "adding cygwin to the front of the path\n";
-		#$ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
-		#print "PATH=$ENV{PATH}\n";
+		print "adding cygwin to the front of the path\n";
+		$ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
+		print "PATH=$ENV{PATH}\n";
 
-		$perl_exe = "c:\\cygwin\\bin\\perl";
-		print "Invoking cygwin perl by explicit path ($perl_exe)\n";
-		$perlver = `$perl_exe -version`;
+		#$perl_exe = "c:\\cygwin\\bin\\perl";
+		#print "Invoking cygwin perl by explicit path ($perl_exe)\n";
+		$perlver = `perl -version`;
 		print $perlver;
 		if (!($perlver =~ /cygwin/i)) {
 			die "cygwin perl not found!\n";
 		}
 	} else {
-	   print "cygwin perl is the first perl, clearing perl_exe\n";
-	   $perl_exe = "";
+	   print "cygwin perl is the first perl\n";
 	}
 }
 
@@ -213,8 +210,8 @@ chdir($test_dir) || die "Can't chdir($test_dir for personal condor setup): $!\n"
 # -p means just set up the personal condor for the test run
 my $batch_test = File::Spec->catfile($test_dir, "batch_test.pl");
 my $command_line = "$batch_test --debug -p";
-print "About to run '$perl_exe $command_line'\n";
-system("$perl_exe $command_line");
+print "About to run '$command_line'\n";
+system("perl $command_line");
 
 if( $? != 0 ) {
     exit 2;
