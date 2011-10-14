@@ -183,6 +183,14 @@ the shutdown if the job exit hook has not completed.
   problems associated with the old algorithm.  Now, the dedicated
   scheduler benefits from the same improved algorithm as the
   non-dedicated scheduler.  \Ticket{2540}
+  
+\item Occasionally there have been problem with Windows 
+  \MacroNI{LOGON\_NETWORK} authentication leading to users 
+  being locked out from their account.
+  A new configuration variable, \MacroNI{SKIP\_WINDOWS\_LOGON\_NETWORK}, 
+  was introduced which - if set to true - allows to skip this logon
+  mechanism entirely. This only affects users using \Condor{credd}. 
+  \Ticket{2549}  
 
 \end{itemize}
 
