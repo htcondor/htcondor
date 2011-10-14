@@ -85,6 +85,16 @@ because no valid \Condor{starter} daemons were detected.
 
 \begin{itemize}
 
+\item A new configuration variable \MacroNI{MachineMaxVacateTime} is
+now used to express the maximum time in seconds that the machine is
+willing to wait for a job to gracefully shut down.  The default is
+600 seconds (10 minutes).  The boolean \MacroNI{KILL} expression was
+previously used to terminate the graceful shutdown of jobs.  It
+should normally be set to \Expr{False} now.  If desired, it may be
+used to abort the graceful shutdown of the job earlier than
+\MacroNI{MachineMaxVacateTime}.
+\Ticket{2536}
+
 \item A new configuration variable \Macro{NEGOTIATOR\_SLOT\_CONSTRAINT} 
 defines an expression which constrains which ClassAds are fetched
 by the \Condor{negotiator} from the \Condor{collector}

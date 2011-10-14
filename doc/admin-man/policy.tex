@@ -1210,6 +1210,10 @@ If the machine is in the Vacating activity, it keeps evaluating the
 \MacroNI{KILL} expression.
 As soon as this expression evaluates to TRUE,
 the machine enters the Killing activity (transition \Bold{21}).
+If the Vacating activity lasts for as long as the maximum
+vacating time, then the machine also enters the Killing activity.
+The maximum vacating time is determined by \Macro{MachineMaxVacateTime}.
+This may be adjusted by \Macro{JobMaxVacateTime}.
 
 When the starter exits, or if there was no starter running when the
 machine enters the Preempting state (transition \Bold{10}),
@@ -1394,10 +1398,24 @@ as an infinite claim worklife, so claims may be held indefinitely (as
 long as they are not preempted and the schedd does not relinquish
 them, of course).
 
+\item[\Macro{MachineMaxVacateTime}] When the machine enters the
+Preempting/Vacating state, this expression specifies the maximum
+time (in seconds) that the \Condor{startd} will wait for the job to
+finish.  The job may adjust the wait time by setting
+\AdAttr{JobMaxVacateTime}.  If the job's setting is less than the
+machine's, the job's is used.  If the job's setting is larger than
+the machine's, the result depends on whether the job has any excess
+retirement time.  If the job has more retirement time left than the
+machine's max vacate time setting, then retirement time will be
+converted into vacating time, up to the amount of
+\MacroNI{JobMaxVacateTime}.  Once the vacating time expires, the
+job is hard-killed.  The \Macro{KILL} expression may be used
+to abort the graceful shutdown of the job at any time.
+
 \item[\Macro{MAXJOBRETIREMENTTIME}] If the machine is in the
 Claimed/Retiring state, this expression specifies the maximum time (in
-seconds) that the \Condor{startd} will wait for the job to finish naturally
-(without any kill signals from the \Condor{startd}).  The clock starts when the
+seconds) that the \Condor{startd} will wait for the job to finish.
+The clock starts when the
 job is started and is paused during any suspension.  The job may
 provide its own expression for \Attr{MaxJobRetirementTime}, but this
 can only be used to take \emph{less} than the time granted by the
@@ -1406,8 +1424,13 @@ nice\_user jobs are submitted with a default retirement time of 0, so
 they will never wait in retirement unless the user overrides the
 default.
 
-Once the job finishes or if the retirement time expires, the machine
-enters the Preempting state.
+The machine enters the Preempting state with the goal of finishing
+shutting down the job by the end of the retirement time.  If the job
+vacating policy grants the job X seconds of vacating time, the
+transition to the Preempting state will happen X seconds before the
+end of the retirement time so that hard-killing of the job will not
+happen until the end of the retirement time if the job does not finish
+shutting down before then.
 
 This expression is evaluated in the context of the job ClassAd, so it
 may refer to attributes of the current job as well as machine
@@ -1522,9 +1545,6 @@ clearly.
 \item[\MacroNI{MaxSuspendTime}] Amount of time a job may be
   suspended before more drastic measures are taken.
 
-\item[\MacroNI{MaxVacateTime}] Amount of time a job may be
-  checkpointing before we give up and kill it outright.
-
 \item[\MacroNI{KeyboardBusy}] A boolean expression that evaluates to TRUE
     when the keyboard is being used.
 
@@ -1560,7 +1580,6 @@ HighLoad                = 0.5
 StartIdleTime           = 15 * $(MINUTE)
 ContinueIdleTime        = 5 * $(MINUTE)
 MaxSuspendTime          = 10 * $(MINUTE)
-MaxVacateTime           = 10 * $(MINUTE)
 
 KeyboardBusy            = KeyboardIdle < $(MINUTE)
 ConsoleBusy             = (ConsoleIdle  < $(MINUTE))
@@ -1636,7 +1655,11 @@ MAXJOBRETIREMENTTIME = 0
 
 Kill jobs that take too long leaving gracefully.
 \begin{verbatim}
-KILL            = $(ActivityTimer) > $(MaxVacateTime)
+MachineMaxVacateTime = 10 * $(MINUTE)
+\end{verbatim}
+
+\begin{verbatim}
+KILL            = False
 \end{verbatim}
 
 Finally, specify periodic checkpointing.  
@@ -1674,7 +1697,6 @@ HighLoad                = 0.5
 StartIdleTime           = 15 * $(MINUTE)
 ContinueIdleTime        = 5 * $(MINUTE)
 MaxSuspendTime          = 10 * $(MINUTE)
-MaxVacateTime           = 10 * $(MINUTE)
 
 KeyboardBusy            = KeyboardIdle < $(MINUTE)
 ConsoleBusy             = (ConsoleIdle  < $(MINUTE))
@@ -1699,7 +1721,8 @@ PREEMPT	        = ( ((Activity == "Suspended") && \
                     ($(ActivityTimer) > $(MaxSuspendTime))) \
                     || (SUSPEND && (WANT_SUSPEND == False)) )
 MAXJOBRETIREMENTTIME = 0
-KILL            = $(ActivityTimer) > $(MaxVacateTime)
+MachineMaxVacateTime = 10 * $(MINUTE)
+KILL                 = False
 PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
                             ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
                           ( $(LastCkpt) > (12 * $(HOUR)) )
@@ -1885,7 +1908,8 @@ PREEMPT = ( ((Activity == "Suspended") && \
 MAXJOBRETIREMENTTIME = (IsDesktop =!= True) * 0
 
 # Kill jobs if they have taken too long to vacate gracefully
-KILL = $(ActivityTimer) > $(MaxVacateTime) 
+MachineMaxVacateTime = 10 * $(MINUTE)
+KILL = False
 
 \end{verbatim}
 

@@ -577,6 +577,13 @@ on a remote resource,
 despite its submitting machine's lack of response.
 See section~\ref{sec:Job-Lease} for details on job leases.
 
+%%% ClassAd attribute: JobMaxVacateTime
+\index{ClassAd job attribute!JobMaxVacateTime}
+\index{JobMaxVacateTime!job ClassAd attribute}
+\item[\AdAttr{JobMaxVacateTime}:] An integer expression that specifies
+the time in seconds requested by the job for being allowed to
+gracefully shut down.
+
 %%% ClassAd attribute: JobPrio
 \index{ClassAd job attribute!JobPrio}
 \index{JobPrio!job ClassAd attribute}
@@ -676,6 +683,8 @@ after sending the signal defined as \Attr{KillSig} and before forcibly
 removing the job.
 The actual amount of time will be the minimum of this value
 and the execute machine's configuration variable \Macro{KILLING\_TIMEOUT}.
+This attribute is deprecated since 7.7.3.  \AdAttr{JobMaxVacateTime}
+is used instead.
 
 %%% ClassAd attribute: LastCheckpointPlatform
 \index{ClassAd job attribute!LastCheckpointPlatform}
