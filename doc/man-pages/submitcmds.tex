@@ -2552,6 +2552,16 @@ evaluation results in an \Expr{Undefined} or \Expr{Error} result, the value
 recorded in the job ad will be \Expr{Undefined} or \Expr{Error}, respectively.
 
 %%%%%%%%%%%%%%%%%%%
+%% want_graceful_removal
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!want\_graceful\_removal}
+\item[want\_graceful\_removal = $<$boolean expression$>$]
+When \Expr{True}, this causes a graceful shutdown of the job when the
+job is removed or put on hold, giving it time to clean up or save state.
+Otherwise, the job is abruptly killed.  The default is \Expr{false}.
+
+%%%%%%%%%%%%%%%%%%%
 %% kill_sig
 %%%%%%%%%%%%%%%%%%%
 

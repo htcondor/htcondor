@@ -79,6 +79,24 @@ when the job is done.
 because no valid \Condor{starter} daemons were detected.
 \Ticket{2470}
 
+\item A new submit file command \SubmitCmd{want\_graceful\_removal}
+may be used to specify that a job being removed or put on hold should
+be shut down gracefully rather than being immediately hard-killed.
+This allows the job to perform some final actions such as cleaning
+up or saving state.  The usual policies governing the Preempting/Vacating
+state apply in this case.  This new submit file command replaces a
+different mechanism that was added in 7.5.2 to achieve some of the
+same effects.  Starting in 7.5.2, for vanilla jobs under Linux, if the
+job set \SubmitCmd{remove\_kill\_sig} or \SubmitCmd{kill\_sig}, the
+hard-kill signal that Condor would normally send to end the job was
+replaced with the signal specified by the user.  This is no longer the
+case.  The soft-kill signal may still be customized using
+\SubmitCmd{kill\_sig}, so a similar effect can be achieved by setting
+\Expr{want\_graceful\_removal=True} and setting \SubmitCmd{kill\_sig}
+to an alternative signal, if desired.  The new mechanism works on all
+platforms and works for all universes in which the job is managed by
+the \Condor{startd} (i.e. not grid, local, or scheduler universe).
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:

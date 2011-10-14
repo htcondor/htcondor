@@ -1189,6 +1189,11 @@ If \Expr{False}, no transfer takes place (remote to submit machine),
 and the name of the file is the file referred to
 by job attribute \Attr{Out}.
 
+\index{ClassAd job attribute!WantGracefulRemoval}
+\item[\AdAttr{WantGracefulRemoval}:] A boolean expression that,
+when \Expr{True}, specifies that a graceful shutdown of the job
+should be done when the job is removed or put on hold.
+
 \index{ClassAd job attribute!WindowsBuildNumber}
 \item[\AdAttr{WindowsBuildNumber}:] An integer, extracted from the
 platform type of the machine upon which this job is submitted,
