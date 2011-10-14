@@ -441,7 +441,7 @@ sub fullchomp {
 
 
 sub is_windows {
-    if($^O =~ /win/i) {
+    if($^O =~ /Win/) {
         return 1;
     }
     return 0;
