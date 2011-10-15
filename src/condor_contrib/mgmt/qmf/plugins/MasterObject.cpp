@@ -80,6 +80,8 @@ MasterObject::GetManagementObject(void) const
 Manageable::status_t
 MasterObject::ManagementMethod(uint32_t methodId, Args &args, string &text)
 {
+	if (!param_boolean("QMF_MANAGEMENT_METHODS", false)) return STATUS_NOT_IMPLEMENTED;
+
 	switch (methodId) {
 	case qmf::com::redhat::grid::Master::METHOD_ECHO:
             return STATUS_OK;
