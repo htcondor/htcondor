@@ -47,7 +47,9 @@ public:
 
 	status_t ManagementMethod(uint32_t methodId, Args &args, std::string &text);
 
+	bool AuthorizeMethod(uint32_t methodId, Args& args, const std::string& userId);
 
+		
 private:
 
 	qmf::com::redhat::grid::Negotiator *mgmtObject;

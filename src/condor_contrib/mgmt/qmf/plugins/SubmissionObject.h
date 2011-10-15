@@ -68,6 +68,8 @@ public:
 							  Args &args,
 							  string &text);
 
+	bool AuthorizeMethod(uint32_t methodId, Args& args, const std::string& userId);
+
     typedef set<PROC_ID, cmpprocid> ProcIDSet;
     ProcIDSet active_procs;
 
