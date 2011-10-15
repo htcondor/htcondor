@@ -1081,7 +1081,7 @@ sub CreateLocalConfig
 	}
     # if nothing is found, explain that, otherwise see if they just want to
     # accept what I found.
-	debug ("Setting JAVA=$jvm\n",2);
+	debug ("Setting JAVA=$jvm",2);
     # Now that we have an executable JVM, see if it is a Sun jvm because that
     # JVM it supports the -Xmx argument then, which is used to specify the
     # maximum size to which the heap can grow.
