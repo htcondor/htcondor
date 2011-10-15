@@ -402,6 +402,8 @@ SchedulerObject::ManagementMethod(uint32_t methodId,
 
 	switch (methodId) {
 	case qmf::com::redhat::grid::Scheduler::METHOD_ECHO:
+		if (!param_boolean("QMF_MANAGEMENT_METHOD_ECHO", false)) return STATUS_NOT_IMPLEMENTED;
+
 		break;
 	case qmf::com::redhat::grid::Scheduler::METHOD_SUBMITJOB:
 		result = Submit(((ArgsSchedulerSubmitJob &) args).i_Ad,

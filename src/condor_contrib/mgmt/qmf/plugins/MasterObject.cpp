@@ -84,6 +84,7 @@ MasterObject::ManagementMethod(uint32_t methodId, Args &args, string &text)
 
 	switch (methodId) {
 	case qmf::com::redhat::grid::Master::METHOD_ECHO:
+		if (!param_boolean("QMF_MANAGEMENT_METHOD_ECHO", false)) return STATUS_NOT_IMPLEMENTED;
             return STATUS_OK;
 	case Master::METHOD_STOP:
 		return Stop(((ArgsMasterStop &) args).i_Subsystem, text);
