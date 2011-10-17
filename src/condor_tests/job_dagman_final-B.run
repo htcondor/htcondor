@@ -23,6 +23,8 @@
 #TEMP -- PRE script of final node not run
 #TEMP -- POST script of final node not run
 #TEMP -- DAGman doesn't wait for final node to finish
+#TEMP -- add check that 'FINAL' gets properly put into rescue DAG
+#TEMP -- test should make sure final node is run *last*
 
 use CondorTest;
 use CondorUtils;

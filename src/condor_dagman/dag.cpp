@@ -182,6 +182,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_recovery = false;
 	_abortOnScarySubmit = true;
 	_configFile = NULL;
+	_runningFinalNode = false;
 		
 		// Don't print any waiting node reports until we're done with
 		// recovery mode.
@@ -1367,6 +1368,21 @@ Dag::StartNode( Job *node, bool isRetry )
 }
 
 //-------------------------------------------------------------------------
+//TEMPTEMP -- document
+void
+Dag::StartFinalNode()
+{
+	if ( FinishedRunning() ) {
+		//TEMPTEMP -- make sure this works right
+		if ( _final_job && !_runningFinalNode ) {
+			_runningFinalNode = true;
+			_final_job->_Status = Job::STATUS_READY;
+			StartNode( _final_job, false/*TEMPTEMP?*/ );
+		}
+	}
+}
+
+//-------------------------------------------------------------------------
 // returns number of jobs submitted
 int
 Dag::SubmitReadyJobs(const Dagman &dm)
@@ -1501,44 +1517,6 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		_readyQ->Prepend( job, -job->_nodePriority );
 	}
 
-	return numSubmitsThisCycle;
-}
-
-//TEMPTEMP -- we need a wrapper function that runs the final node PRE script if there is one, submits the job, waits for it to finish, and runs the POST script if there is one...
-//-------------------------------------------------------------------------
-// Returns 0 if a job failed to submit, and 1 otherwise
-//TEMPTEMP -- do we need to distinguish between a failed submit and not having a final job?
-int
-Dag::SubmitFinalJob(const Dagman &dm)
-{
-	if(!_final_job) {
-		return 0;
-	}
-	debug_printf( DEBUG_DEBUG_1, "Dag::SubmitFinalJob()\n" );
-
-	// Jobs deferred by category throttles.
-	int numSubmitsThisCycle = 0;
-	// At this point, we are exiting or all other jobs have finished.
-	// Let's submit the job and quit
-	Job* job=_final_job;
-	ASSERT( job != NULL );
-	debug_printf( DEBUG_DEBUG_1, "Got node %s from the ready queue\n",
-				job->GetJobName() );
-	// Check for throttling by node category.
-	CondorID condorID(0,0,0);
-	submit_result_t submit_result = SubmitNodeJob( dm, job, condorID );
-	// Note: if instead of switch here so we can use break
-	// to break out of while loop.
-	if ( submit_result == SUBMIT_RESULT_OK ) {
-		// Is there any processing to be done here?
-		// Dagman is finishing, and we are firing off
-		// a final job. Is Dagman going to wait around for it
-		// to finish?
-		ProcessSuccessfulSubmit( job, condorID );
-		numSubmitsThisCycle=1;
-	} else if ( submit_result == SUBMIT_RESULT_FAILED ) {
-		ProcessFailedSubmit( job, dm.max_submit_attempts );
-	}
 	return numSubmitsThisCycle;
 }
 
@@ -1893,8 +1871,7 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
 				tm->tm_sec );
 
     fprintf(fp, "#\n");
-    fprintf(fp, "# Total number of Nodes: %d%s\n", NumNodes(),
-	   _final_job ? " not including final node" : "");
+    fprintf(fp, "# Total number of Nodes: %d\n", NumNodes());
     fprintf(fp, "# Nodes premarked DONE: %d\n", _numNodesDone);
     fprintf(fp, "# Nodes that failed: %d\n", _numNodesFailed);
 
@@ -1948,10 +1925,6 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
     while (it.Next(job)) {
 		WriteNodeToRescue( fp, job, reset_retries_upon_rescue );
     }
-
-	if(_final_job){
-		WriteNodeToRescue( fp, _final_job, reset_retries_upon_rescue );
-	}
 
     //
     // Print Dependency Section
@@ -3018,11 +2991,16 @@ bool Dag::Add( Job& job )
 		// Final node is not added to the "normal" node list here, so
 		// it won't get run via the ready queue.
 	if ( job.GetFinal() ) {
+		if ( _final_job ) {
+        	debug_printf( DEBUG_QUIET, "Error: DAG already has a final "
+						"node %s; attempting to add final node %s\n",
+						_final_job->GetJobName(), job.GetJobName() );
+			return false;
+		}
+		job._Status = Job::STATUS_NOT_READY;
 		_final_job = &job;
-		return true;
-	} else {
-		return _jobs.Append(&job);
 	}
+	return _jobs.Append(&job);
 }
 
 //---------------------------------------------------------------------------

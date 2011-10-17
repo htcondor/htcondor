@@ -22,6 +22,7 @@
 
 #TEMP -- final node post script isn't run -- need to check for that
 #TEMP -- DAGman doesn't wait for final node to finish
+#TEMP -- test should make sure final node is run *last*
 
 use CondorTest;
 use CondorUtils;

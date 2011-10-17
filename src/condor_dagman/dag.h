@@ -160,7 +160,6 @@ class Dag {
 
     /// Add a job to the collection of jobs managed by this Dag.
     bool Add( Job& job );
-    int SubmitFinalJob(const Dagman& dm);
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
         @param parent The parent job
@@ -414,6 +413,9 @@ class Dag {
 			@return number of jobs successfully submitted
 		*/
     int SubmitReadyJobs(const Dagman &dm);
+
+		//TEMPTEMP -- document -- only if other stuff is finished??
+	void StartFinalNode();
 
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -841,9 +843,13 @@ class Dag {
 
 	int StorkLogFileCount() { return _storkLogRdr.totalLogFileCount(); }
 
+	bool _runningFinalNode;
+
     /// List of Job objects
     List<Job>     _jobs;
-        Job* _final_job;
+	//TEMPTEMP -- change here???
+	//TEMPTEMP -- hmm -- maybe we want the final node to be in the _jobs list *and* have a separate pointer to it...
+	Job* _final_job;
 	HashTable<MyString, Job *>		_nodeNameHash;
 
 	HashTable<JobID_t, Job *>		_nodeIDHash;

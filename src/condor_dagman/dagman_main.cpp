@@ -1,3 +1,7 @@
+//TEMPTEMP -- final node doesn't show up in status reports in dagman.out file
+//TEMPTEMP -- probably need to add some kind of flag saying whether we're running the final node...  and a flag for whether we *have* a final node
+//TEMPTEMP -- ah, hell -- what do we do if a splice and the splicing DAG both define a final node?
+//TEMPTEMP -- how does final node show up in jobstate.log file???
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -465,7 +469,7 @@ void main_shutdown_rescue( int exitVal ) {
 	}
 	dagman.dag->DumpNodeStatus( false, true );
 	//TEMPTEMP -- should we submit the final node before or after dumping node status?
-	dagman.dag->SubmitFinalJob(dagman);
+	dagman.dag->StartFinalNode();
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	unlink( lockFileName ); 
     dagman.CleanUp();
@@ -482,7 +486,6 @@ int main_shutdown_remove(Service *, int) {
 }
 
 void ExitSuccess() {
-	dagman.dag->SubmitFinalJob(dagman);
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	unlink( lockFileName ); 
@@ -1066,6 +1069,7 @@ void main_init (int argc, char ** const argv) {
 					"because of -DumpRescue flag\n" );
 		dagman.dag->Rescue( dagman.primaryDagFile.Value(),
 					dagman.multiDags, dagman.maxRescueDagNum );
+		//TEMPTEMP -- hmm -- I don't think we want to run the final node in this case...
 		ExitSuccess();
 		return;
 	}
@@ -1248,6 +1252,9 @@ void condor_event_timer () {
 		ExitSuccess();
 		return;
     }
+
+		//TEMPTEMP?
+	dagman.dag->StartFinalNode();
 
     //
     // If no jobs are submitted and no scripts are running, but the
