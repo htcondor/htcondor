@@ -304,6 +304,13 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( var.Value() );
 	}
 
+		// Set the special DAG_SUCCESS variable (mainly for use by
+		// "final" nodes).
+	args.AppendArg( "-a" );
+	MyString var = "DAG_SUCCESS = ";
+	var += (dm.dag->NumNodesFailed() == 0);
+	args.AppendArg( var.Value() );
+
 		// how big is the command line so far
 	MyString display;
 	args.GetArgsStringForDisplay( &display );

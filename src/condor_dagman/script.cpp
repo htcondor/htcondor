@@ -58,7 +58,7 @@ const char *Script::GetNodeName()
 
 //-----------------------------------------------------------------------------
 int
-Script::BackgroundRun( int reaperId )
+Script::BackgroundRun( int reaperId, bool dagSuccess )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -110,6 +110,9 @@ Script::BackgroundRun( int reaperId )
 							"not be used as a PRE script argument!" );
 			}
 			arg += _retValJob;
+
+		} else if (!strcasecmp(token, "$DAG_SUCCESS")) {
+			arg += dagSuccess;
 
 		} else if (token[0] == '$') {
 			// This should probably be a fatal error when -strict is

@@ -1,5 +1,4 @@
-//TEMPTEMP -- final node doesn't show up in status reports in dagman.out file
-//TEMPTEMP -- probably need to add some kind of flag saying whether we're running the final node...  and a flag for whether we *have* a final node
+//TEMPTEMP -- maybe make something like $DAG_SUCCESS that can get passed to nodes and PRE/POST scripts...
 //TEMPTEMP -- ah, hell -- what do we do if a splice and the splicing DAG both define a final node?
 //TEMPTEMP -- how does final node show up in jobstate.log file???
 /***************************************************************
