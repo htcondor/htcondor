@@ -144,6 +144,11 @@ was introduced in 7.7.0.
 \item \Prog{glexec} now also works when Condor is running as root.
 \Ticket{2503}
 
+\item \Condor{master} now successfully advertises itself in a personal
+condor installation when the collector is configured to use port 0
+and to operate through a shared port.
+\Ticket{2555}
+
 \end{itemize}
 
 \noindent Known Bugs:
