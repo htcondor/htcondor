@@ -51,8 +51,19 @@ and was fixed in Condor version 7.6.2.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT}
+defines the number of seconds that the \Condor{starter} will wait
+before continuing with a shut down,
+if a hook defined by \MacroNI{<Keyword>\_HOOK\_JOB\_EXIT} has not completed.
+The addition of this configuration variable fixes the bug described below.
+\Ticket{2543}
 
+\item The new configuration variable \Macro{SKIP\_WINDOWS\_LOGON\_NETWORK} 
+is a boolean value which specifies whether the Windows
+\Expr{LOGON\_NETWORK} authentication is skipped or not.
+If skipped, Condor tries \Expr{LOGON\_INTERACTIVE} authentication first.
+The addition of this configuration variable fixes the bug described below.
+\Ticket{2549}  
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -100,12 +111,12 @@ if the submitter's priority factor was explicitly set and
 the value was equal to \MacroNI{DEFAULT\_PRIO\_FACTOR}.
 \Ticket{2442}
 
-\item Fixed CPU detection on Windows so that the correct number is detected
-when there are more than 32 CPUs.
+\item Fixed CPU detection on Windows, such that the correct number of CPUs
+is detected when there are more than 32 CPUs.
 \Ticket{2381}
 
 \item Fixed a memory leak in the \Condor{negotiator},
-caused by failure to
+caused by the failure to
 free memory returned from some calls to \Procedure{param\_without\_default}.
 \Ticket{2299}
 
@@ -162,35 +173,50 @@ and the default value defined for \Macro{LIBVIRT\_XML\_SCRIPT} was used.
 The script did not provide absolute path names for the files.
 \Ticket{2511}
 
-\item In 32-bit Condor, \MacroNI{ImageSize} of processes larger than 4GB
-was reported as 4GB.  This limit has been raised to 4095GB.
+\item On 32-bit platforms, the \Attr{ImageSize} of processes larger than 
+4 GBytes was reported as 4 GBytes.  This limit has been raised to 4095 GBytes.
 
-\item Fixed a bug where a completed Xen or KVM VM universe job's modified
-disk image files wouldn't be transferred back to the submit machine.
+\item Fixed a bug in which a completed Xen or KVM \SubmitCmd{vm} universe 
+job's modified disk image files would not be transferred back 
+to the submit machine.
 \Ticket{2530}
 
-\item Fixed a bug where a \Condor{starter} configured to use job hooks 
-could fail to run a job but not wait for the job exit hook to complete before
-exiting.  The \Condor{starter} will wait
-\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT} seconds before continuing with
-the shutdown if the job exit hook has not completed.
+\item Fixed a bug in which a \Condor{starter} configured to use job hooks 
+could fail to run a job, 
+but not wait for the job exit hook to complete before exiting.  
+The bug fix introduces the new configuration variable
+\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT},
+which defines the number of seconds the \Condor{starter} will wait
+before continuing with a shut down,
+if the job exit hook has not completed.
 \Ticket{2543}
 
-\item In Condor 7.5.4, an improvement was made to avoid reliance on
-  \MacroNI{NEGOTIATOR\_HOST} matching a reverse DNS lookup of the
-  negotiator.  However, this improvement was not made to the dedicated
-  scheduler, so matchmaking of parallel jobs was still subject to the
-  problems associated with the old algorithm.  Now, the dedicated
-  scheduler benefits from the same improved algorithm as the
-  non-dedicated scheduler.  \Ticket{2540}
+\item In Condor version 7.5.4, an improvement was made to avoid reliance on
+the machine specified by \MacroNI{NEGOTIATOR\_HOST} 
+matching a reverse DNS look up of the \Condor{negotiator}.
+However, this improvement was not made to the dedicated scheduler,
+so matchmaking of parallel jobs was still subject to the
+problems associated with the old algorithm.  
+Now, the dedicated scheduler benefits from the same improved algorithm as the
+non-dedicated scheduler.
+\Ticket{2540}
   
-\item Occasionally there have been problem with Windows 
-  \MacroNI{LOGON\_NETWORK} authentication leading to users 
-  being locked out from their account.
-  A new configuration variable, \MacroNI{SKIP\_WINDOWS\_LOGON\_NETWORK}, 
-  was introduced which - if set to true - allows to skip this logon
-  mechanism entirely. This only affects users using \Condor{credd}. 
-  \Ticket{2549}  
+\item Occasionally there have been problems with Windows 
+\Expr{LOGON\_NETWORK} authentication,
+leading to users being locked out from their account.
+The new configuration variable \MacroNI{SKIP\_WINDOWS\_LOGON\_NETWORK},
+when set to \Expr{True},
+fixes the problem by allowing this mechanism to be skipped entirely,
+instead proceeding straight to the \Expr{LOGON\_INTERACTIVE} authentication. 
+This bug only affected users using the \Condor{credd}. 
+\Ticket{2549}  
+
+\item Condor now correctly groups CREAM jobs based on how CREAM servers 
+authorize and map them, this is, based on X509 proxy subject name and 
+first VOMS attribute. Previously, all VOMS attributes were considered.
+This could cause unexpected behavior due to aliasing of CREAM leases
+and proxy delegations.
+\Ticket{2271}
 
 \end{itemize}
 
