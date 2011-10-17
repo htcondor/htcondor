@@ -7384,7 +7384,11 @@ int DaemonCore::Create_Process(
 		//  GCB's trickery if present.  As this address is
 		//  intended for my own children on the same machine,
 		//  this should be safe.
-	inheritbuf += InfoCommandSinfulStringMyself(true);
+	{
+		MyString mysin = InfoCommandSinfulStringMyself(true);
+		ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
+		inheritbuf += mysin;
+	}
 
 	if ( sock_inherit_list ) {
 		inherit_handles = TRUE;
