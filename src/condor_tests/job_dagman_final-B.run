@@ -18,15 +18,22 @@
 ##
 ##**************************************************************
 
+# This test tests the final DAG node when the DAG fails.
+
+#TEMP -- PRE script of final node not run
+#TEMP -- POST script of final node not run
+#TEMP -- DAGman doesn't wait for final node to finish
+
 use CondorTest;
 use CondorUtils;
 
 $cmd = 'job_dagman_final-B.dag';
-$testdesc =  'Condor submit dag - basic final node test - scheduler U';
+$testdesc =  'Condor submit dag - basic final node test B - scheduler U';
 $testname = "job_dagman_final-B";
 $dagman_args = "-verbose";
 
-@outfiles = ("A_A", "A_B");
+@outfiles = ("job_dagman_final-B-nodeA", "job_dagman_final-B-nodeB",
+	"job_dagman_final-B-nodeC");
 
 my $killedchosen = 0;
 
@@ -35,9 +42,16 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+# Get rid of any existing output files.
+foreach $name (@outfiles) {
+	$fname = $name . ".out";
+	if (-e $fname) {
+		runcmd("rm -f $fname");
+	}
+}
+
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
@@ -65,44 +79,18 @@ $submitted = sub
 
 $success = sub
 {
-	CondorTest::debug("executed successfully\n",1);
-	CondorTest::debug("Verifying output\n",1);
-	$diditpass = 1;
-	foreach $name (@outfiles) {
-		$line = "";
-		$passed = 0;
-		$canopen = open(OUT,"<$name.out");
-		if( ! (defined $canopen)) {
-			CondorTest::debug("Can not open outfile<$name.out>:$!\n",1);
-			$diditpass = 0;
-		}
-		while(<OUT>) {
-			chomp();
-			$line = $_;
-			if( $line =~ /^OK.*$/ ) {
-				$passed = 1;
-				CondorTest::debug("$name.out: $line\n",1);
-			}
-		}
-		close(OUT);
-		if($passed == 1 ) {
-			;
-		} else {
-			CondorTest::debug("failed $name.out: $line\n",1);
-			$diditpass = 0;
-		}
-	}
-	# clean out old output files
-	foreach $name (@outfiles) {
-		runcmd("rm -f $name.out $name.err");
-	}
-	if($diditpass == 0) {
-		die "All expected files and correct output failed\n";
-	}
+	die "Error: DAG should fail!\n";
 };
 
-CondorTest::RegisterExitedSuccess( $testname, $success);
-CondorTest::RegisterExecute($testname, $executed);
+$failure = sub
+{
+	CondorTest::debug("executed with failure\n",1);
+	#TEMP -- need to check output files, etc.
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success );
+CondorTest::RegisterExitedFailure( $testname, $failure );
+CondorTest::RegisterExecute($testname, $executed );
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );

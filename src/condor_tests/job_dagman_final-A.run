@@ -18,15 +18,21 @@
 ##
 ##**************************************************************
 
+# This test tests the final DAG node when the DAG succeeds.
+
+#TEMP -- final node post script isn't run -- need to check for that
+#TEMP -- DAGman doesn't wait for final node to finish
+
 use CondorTest;
 use CondorUtils;
 
 $cmd = 'job_dagman_final-A.dag';
-$testdesc =  'Condor submit dag - basic final node test - scheduler U';
+$testdesc =  'Condor submit dag - basic final node test A - scheduler U';
 $testname = "job_dagman_final-A";
 $dagman_args = "-verbose";
 
-@outfiles = ("A_A", "A_B");
+@outfiles = ("job_dagman_final-A-nodeA", "job_dagman_final-A-nodeB",
+	"job_dagman_final-A-nodeC");
 
 my $killedchosen = 0;
 
@@ -35,9 +41,16 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+# Get rid of any existing output files.
+foreach $name (@outfiles) {
+	$fname = $name . ".out";
+	if (-e $fname) {
+		runcmd("rm -f $fname");
+	}
+}
+
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
@@ -92,17 +105,13 @@ $success = sub
 			$diditpass = 0;
 		}
 	}
-	# clean out old output files
-	foreach $name (@outfiles) {
-		runcmd("rm -f $name.out $name.err");
-	}
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}
 };
 
-CondorTest::RegisterExitedSuccess( $testname, $success);
-CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedSuccess( $testname, $success );
+CondorTest::RegisterExecute($testname, $executed );
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
