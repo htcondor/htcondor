@@ -1368,16 +1368,16 @@ Dag::StartNode( Job *node, bool isRetry )
 }
 
 //-------------------------------------------------------------------------
-//TEMPTEMP -- document
 void
 Dag::StartFinalNode()
 {
-	if ( FinishedRunning() ) {
-		//TEMPTEMP -- make sure this works right
+	if ( NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
+				ScriptRunNodeCount() == 0 ) {
+			// Finished except for final node.
 		if ( _final_job && !_runningFinalNode ) {
-			_runningFinalNode = true;
 			_final_job->_Status = Job::STATUS_READY;
-			StartNode( _final_job, false/*TEMPTEMP?*/ );
+			StartNode( _final_job, false );
+			_runningFinalNode = true;
 		}
 	}
 }
@@ -1706,6 +1706,48 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 		}
 		dprintf( D_ALWAYS | D_NOHEADER, "\n" );
 	}
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::FinishedRunning() const
+{
+	if ( _final_job && !_runningFinalNode ) {
+			// Make sure we don't incorrectly return true if we get called
+			// just before a final node is started...
+		return false;
+	}
+
+	return ( NumJobsSubmitted() == 0 && NumNodesReady() == 0 &&
+				ScriptRunNodeCount() == 0 );
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::DoneSuccess() const
+{
+	if ( NumNodesDone() == NumNodes() ) {
+		return true;
+	} else if ( _final_job && _final_job->_Status == Job::STATUS_DONE ) {
+			// Final node can override the overall DAG status.
+		return true;
+	}
+
+	return false;
+}
+
+//---------------------------------------------------------------------------
+bool
+Dag::DoneFailed() const
+{
+	if ( !FinishedRunning() ) {
+		return false;
+	} else if ( _final_job && _final_job->_Status == Job::STATUS_DONE ) {
+		//TEMPTEMP -- check this logic...
+		return false;
+	}
+
+	return NumNodesFailed() > 0;
 }
 
 //---------------------------------------------------------------------------

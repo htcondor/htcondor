@@ -1,6 +1,8 @@
-//TEMPTEMP -- maybe make something like $DAG_SUCCESS that can get passed to nodes and PRE/POST scripts...
+//TEMPTEMP -- make final node define success of dag
 //TEMPTEMP -- ah, hell -- what do we do if a splice and the splicing DAG both define a final node?
-//TEMPTEMP -- how does final node show up in jobstate.log file???
+//TEMPTEMP -- how does final node show up in jobstate.log file???  and node status file...
+//TEMPTEMP -- need config to tell whether to run final node when condor_rm'ing DAG; if that's true, and you remove the DAG again (while the final node is running) the final node should be aborted
+//TEMPTEMP -- disallow retries on final nodes
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,

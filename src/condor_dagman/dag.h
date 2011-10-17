@@ -362,12 +362,14 @@ class Dag {
 	/** @return the number of nodes currently in the status
 	 *          Job::STATUS_PRERUN.
 	 */
+	//TEMPTEMP -- is this different than NumPreScriptsRunning()?
 	inline int PreRunNodeCount() const
 		{ return _preRunNodeCount; }
 
 	/** @return the number of nodes currently in the status
 	 *          Job::STATUS_POSTRUN.
 	 */
+	//TEMPTEMP -- is this different than NumPostScriptsRunning()?
 	inline int PostRunNodeCount() const
 		{ return _postRunNodeCount; }
 
@@ -384,26 +386,25 @@ class Dag {
 			exists.)
 			@return true iff the DAG is finished
 		*/
-	inline bool FinishedRunning() const { return NumJobsSubmitted() == 0 &&
-				NumNodesReady() == 0 && ScriptRunNodeCount() == 0; }
+	inline bool FinishedRunning() const;
 
 		/** Determine whether the DAG is successfully completed.
 			@return true iff the DAG is successfully completed
 		*/
-	inline bool DoneSuccess() const { return NumNodesDone() == NumNodes(); }
+	inline bool DoneSuccess() const;
 
 		/** Determine whether the DAG is finished, but failed (because
 			of a node job failure, etc.).
 			@return true iff the DAG is finished but failed
 		*/
-	inline bool DoneFailed() const { return FinishedRunning() &&
-				NumNodesFailed() > 0; }
+	inline bool DoneFailed() const;
 
 		/** Determine whether the DAG is finished because of a cycle in
 			the DAG.  (Note that this method sometimes incorrectly returns
 			true for errors other than cycles in the DAG.  wenger 2010-07-30.)
 			@return true iff the DAG is finished but there is a cycle
 		*/
+	//TEMPTEMP -- this doesn't seem right to me...
 	inline bool DoneCycle() { return FinishedRunning() &&
 				NumNodesFailed() == 0; }
 
@@ -847,9 +848,11 @@ class Dag {
 
     /// List of Job objects
     List<Job>     _jobs;
-	//TEMPTEMP -- change here???
-	//TEMPTEMP -- hmm -- maybe we want the final node to be in the _jobs list *and* have a separate pointer to it...
+
+		// Note: the final node is in the _jobs list; this pointer is just
+		// for convenience.
 	Job* _final_job;
+
 	HashTable<MyString, Job *>		_nodeNameHash;
 
 	HashTable<JobID_t, Job *>		_nodeIDHash;

@@ -131,10 +131,8 @@ class Job {
         If you update this enum, you *must* also update status_t_names
 		and the IsActive() method, etc.
     */
-    //TEMPTEMP -- shouldn't there be a STATUS_NOTREADY?  what is this set to when a Job is created?
-    //TEMPTEMP -- maybe add a STATUS_FINAL here...
     enum status_t {
-	/** TEMPTEMP -- for fina */        STATUS_NOT_READY,
+		/** Job is not ready (for final) */ STATUS_NOT_READY,
         /** Job is ready for submission */ STATUS_READY,
         /** Job waiting for PRE script */  STATUS_PRERUN,
         /** Job has been submitted */      STATUS_SUBMITTED,

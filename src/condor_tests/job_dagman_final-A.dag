@@ -1,7 +1,7 @@
 JOB A_A job_dagman_final-A-nodeA.cmd
 JOB A_B job_dagman_final-A-nodeB.cmd
 FINAL A_C job_dagman_final-A-nodeC.cmd
-SCRIPT PRE A_C job_dagman_final-A-script.pl A_C Pre $DAG_SUCCESS
-SCRIPT POST A_C job_dagman_final-A-script.pl A_C Post $DAG_SUCCESS
+SCRIPT PRE A_C job_dagman_final-A-script.pl A_C Pre $DAG_SUCCESS 0
+SCRIPT POST A_C job_dagman_final-A-script.pl A_C Post $DAG_SUCCESS $RETURN
 VARS A_C msg="OK done with C"
 PARENT A_A CHILD A_B
