@@ -214,5 +214,7 @@ print "About to run '$command_line'\n";
 system("perl $command_line");
 
 if( $? != 0 ) {
+    print "--- the last 50 lines of TestingPersonalCondor/local/log/MasterLog\n";
+    system("tail -50 $test_dir/TestingPersonalCondor/local/log/MasterLog");
     exit 2;
 }
