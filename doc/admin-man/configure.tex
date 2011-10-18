@@ -7050,13 +7050,12 @@ These macros affect the \Condor{credd}.
   
 \label{param:SkipWindowsLogonNetwork}
 \item[\Macro{SKIP\_WINDOWS\_LOGON\_NETWORK}]
-  A boolean value that defaults to \Expr{False}
-  When \Expr{True}, Windows authentication is longer
-  made with method \MacroNI{LOGON\_NETWORK} first, but
-  only with method \MacroNI{LOGON\_INTERACTIVE}. This
-  can be useful if many authentication failures are 
-  noticed, potentially leading to users getting locked
-  out.
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, Windows authentication skips trying authentication
+  with the \Expr{LOGON\_NETWORK} method first, 
+  and attempts authentication  with \Expr{LOGON\_INTERACTIVE} method. 
+  This can be useful if many authentication failures are noticed, 
+  potentially leading to users getting locked out.
 
 \end{description}
 
