@@ -106,9 +106,10 @@ These jobs now correctly transition to the idle state.
 \Ticket{2486}
 
 \item Corrected a hierarchical group quota bug in which
-the accountant allowed submitter records to be deleted,
+the user accounting mechanism in the \Condor{negotiator} daemon allowed 
+submitter records to be deleted,
 if the submitter's priority factor was explicitly set and
-the value was equal to \MacroNI{DEFAULT\_PRIO\_FACTOR}.
+the value was equal to that defined by \MacroNI{DEFAULT\_PRIO\_FACTOR}.
 \Ticket{2442}
 
 \item Fixed CPU detection on Windows, such that the correct number of CPUs
