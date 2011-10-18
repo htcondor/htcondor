@@ -88,7 +88,7 @@ over HTTP using the ?wsdl URL syntax.
 
 Python sample scripts are provided for job submission, control and queries. There 
 are some supporting python scripts which need to be added to the system Python 
-search path to make use of HTTPS an argument parsing. For example, from within 
+search path to make use of HTTPS and argument parsing. For example, from within 
 the aviary/test directory:
 
 	export PYTHONPATH=`pwd`/module:$PYTHONPATH
