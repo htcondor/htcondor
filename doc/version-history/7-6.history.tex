@@ -168,14 +168,14 @@ it now understands the proper format.
 subdirectories for local locks.
 \Ticket{2495}
 
+\item On 32-bit platforms, the \Attr{ImageSize} of processes larger than 
+4 GBytes was reported as 4 GBytes.  This limit has been raised to 4095 GBytes.
+
 \item \SubmitCmd{vm} universe jobs using Xen or KVM would fail to start,
 if the disk image files were transferred from the submit machine
 and the default value defined for \Macro{LIBVIRT\_XML\_SCRIPT} was used.
 The script did not provide absolute path names for the files.
 \Ticket{2511}
-
-\item On 32-bit platforms, the \Attr{ImageSize} of processes larger than 
-4 GBytes was reported as 4 GBytes.  This limit has been raised to 4095 GBytes.
 
 \item Fixed a bug in which a completed Xen or KVM \SubmitCmd{vm} universe 
 job's modified disk image files would not be transferred back 
