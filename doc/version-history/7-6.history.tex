@@ -213,9 +213,11 @@ This bug only affected users using the \Condor{credd}.
 \Ticket{2549}  
 
 \item Condor now correctly groups CREAM jobs based on how CREAM servers 
-authorize and map them, this is, based on X509 proxy subject name and 
-first VOMS attribute. Previously, all VOMS attributes were considered.
-This could cause unexpected behavior due to aliasing of CREAM leases
+authorize and map them.
+The servers map them based on X.509 proxy subject name 
+and first VOMS attribute. 
+Previously, all VOMS attributes were considered.
+This could cause unexpected behavior due to the aliasing of CREAM leases
 and proxy delegations.
 \Ticket{2271}
 
