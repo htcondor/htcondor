@@ -2729,6 +2729,12 @@ DaemonCore::reconfig(void) {
 		m_use_clone_to_create_processes = false;
 	}
 
+		// If we are NOT the schedd, then do not use clone, as only
+		// the schedd benefits from clone, and clone is more susceptable
+		// to failures/bugs than fork.
+	if ( !(get_mySubSystem()->isType(SUBSYSTEM_TYPE_SCHEDD)) ) {
+		m_use_clone_to_create_processes = false;
+	}
 #endif /* HAVE CLONE */
 
 	m_invalidate_sessions_via_tcp = param_boolean("SEC_INVALIDATE_SESSIONS_VIA_TCP", true);
