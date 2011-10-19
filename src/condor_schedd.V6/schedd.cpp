@@ -12038,8 +12038,8 @@ Scheduler::receive_startd_alive(int cmd, Stream *s)
 
 	s->decode();
 	s->timeout(1);	// its a short message so data should be ready for us
-	s->get_secret(claim_id);	// must free this; CEDAR will malloc cuz claimid=NULL
-	if ( !s->end_of_message() ) {
+
+	if ( !s->get_secret(claim_id) || !s->end_of_message() ) {
 		if (claim_id) free(claim_id);
 		return FALSE;
 	}
