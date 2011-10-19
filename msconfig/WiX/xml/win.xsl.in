@@ -299,7 +299,7 @@
               configTxt = Replace(configTxt, "CONDOR_ADMIN		= root@$(FULL_HOSTNAME)", "CONDOR_ADMIN=" & Session.Property("CONDOREMAIL") )
               configTxt = Replace(configTxt, "SMTP_SERVER =", "SMTP_SERVER=" & Session.Property("SMTPSERVER") )
               configTxt = Replace(configTxt, "ALLOW_READ = * ", "ALLOW_READ=" & Session.Property("HOSTALLOWREAD") )
-              configTxt = Replace(configTxt, "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE", Session.Property("HOSTALLOWWRITE") )
+              configTxt = Replace(configTxt, "$$(FULL_HOSTNAME), $$(IP_ADDRESS)", Session.Property("HOSTALLOWWRITE") )
               configTxt = Replace(configTxt, "ALLOW_ADMINISTRATOR = $$(CONDOR_HOST)", "ALLOW_ADMINISTRATOR=" & Session.Property("HOSTALLOWADMINISTRATOR") )
               jvmLoc = Session.Property("JVMLOCATION")
               if fso.FileExists(jvmLoc) then
