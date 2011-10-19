@@ -5254,7 +5254,17 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		result = TRUE;
 
 		sock->decode();
-		sock->allow_one_empty_message();
+		if( comTable[cmd_index].wait_for_payload == 0 ) {
+
+				// This command _might_ be one with no further data.
+				// Because of the way DC_AUTHENTICATE was implemented,
+				// command handlers that call end_of_message() when
+				// nothing more was sent by the peer will get an
+				// error, because we have already consumed the end of
+				// message.  Therefore, we set a flag on the socket:
+
+			sock->allow_one_empty_message();
+		}
 
 		// fill in the command info
 		reqFound = TRUE;
