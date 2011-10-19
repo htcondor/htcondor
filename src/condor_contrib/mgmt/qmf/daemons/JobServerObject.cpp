@@ -277,6 +277,8 @@ JobServerObject::ManagementMethod ( uint32_t methodId,
     switch ( methodId )
     {
         case qmf::com::redhat::grid::JobServer::METHOD_ECHO:
+			if (!param_boolean("QMF_MANAGEMENT_METHOD_ECHO", false)) return STATUS_NOT_IMPLEMENTED;
+
             return STATUS_OK;
         case qmf::com::redhat::grid::JobServer::METHOD_GETJOBAD:
             return GetJobAd ( ( ( ArgsJobServerGetJobAd & ) args ).i_Id,
@@ -292,4 +294,13 @@ JobServerObject::ManagementMethod ( uint32_t methodId,
     }
 
     return STATUS_NOT_IMPLEMENTED;
+}
+
+bool
+JobServerObject::AuthorizeMethod(uint32_t methodId, Args& args, const std::string& userId) {
+	dprintf(D_FULLDEBUG, "AuthorizeMethod: checking '%s'\n", userId.c_str());
+	if (0 == userId.compare("cumin")) {
+		return true;
+	}
+	return false;
 }

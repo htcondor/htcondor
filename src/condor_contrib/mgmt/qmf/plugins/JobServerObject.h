@@ -55,6 +55,8 @@ public:
 							  Args &args,
 							  string &text);
 
+	bool AuthorizeMethod(uint32_t methodId, Args& args, const std::string& userId);
+
 private:
 
 	JobServer *mgmtObject;
