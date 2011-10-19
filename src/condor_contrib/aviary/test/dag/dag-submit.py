@@ -27,6 +27,7 @@ from aviary.util import *
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
 
 exe_file = Popen('which condor_dagman', shell=True, stdout=PIPE).stdout.readline().rstrip('\n')
+iwd = Popen('pwd', shell=True, stdout=PIPE).stdout.readline().rstrip('\n')
 UNIVERSE = {"VANILLA": 5, "SCHEDULER": 7, "GRID": 9, "JAVA": 10, "PARALLEL": 11, "LOCAL": 12, "VM": 13}
 
 parser = build_basic_parser('Submit a DAG job remotely via SOAP.','http://localhost:9090/services/job/submitJob')
@@ -83,7 +84,12 @@ vars.append('_CONDOR_MAX_DAGMAN_LOG=0')
 vars.append('_CONDOR_DAGMAN_LOG=%s.dagman.out' % (dag,))
 extras.append(string_attr('Environment', " ".join(vars)))
 
+# separate dag file from path for submit
+(dir_name, file_name) = os.path.split(dag)
+
 if verbose:
+	print 'IWD=',dir_name
+	print 'Dag file=',file_name
 	print vars
 	print extras
 	logging.basicConfig(level=logging.INFO)
@@ -95,8 +101,8 @@ try:
     exe_file,
     exe_args,
     uid,
-    dag[:dag.rindex('/')],
-    dag[dag.rindex('/')+1:],
+    dir_name or iwd,
+    file_name,
     [],
     extras
     )
