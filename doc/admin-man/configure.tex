@@ -6873,6 +6873,13 @@ These macros affect the \Condor{negotiator}.
   if the stashed ClassAd's sequence number is older than its potential
   replacement.
 
+\label{param:NegotiatorUpdateAfterCycle}
+\item[\Macro{NEGOTIATOR\_UPDATE\_AFTER\_CYCLE}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, it will force the \Condor{negotiator} daemon to publish 
+  an update to the \Condor{collector} at the end of every negotiation cycle.
+  This is useful if monitoring statistics for the previous negotiation cycle. 
+
 \end{description}
 
 The following configuration macros affect negotiation for group users.
