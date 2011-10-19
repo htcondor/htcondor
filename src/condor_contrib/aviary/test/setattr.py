@@ -39,11 +39,21 @@ parser.add_option('--cproc', action="store", dest='cproc', help="a cluster.proc 
 
 # the joy that is optparse...
 if opts.name is None:
-	print 'One of these commands must be supplied', cmds
+	print 'You must provide an attribute name'
 	parser.print_help()
 	exit(1)
 
 if opts.type is None:
+	print 'You must provide an attribute type'
+	parser.print_help()
+	exit(1)
+
+if opts.value is None:
+	print 'You must provide an attribute value'
+	parser.print_help()
+	exit(1)
+
+if opts.cproc is None:
 	print 'You must provide a cluster.proc job id'
 	parser.print_help()
 	exit(1)

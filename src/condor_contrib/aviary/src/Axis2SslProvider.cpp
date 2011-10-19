@@ -62,6 +62,7 @@ Axis2SslProvider::init(int _port, int _read_timeout, std::string& _error) {
 
     char* tmp = NULL;
     axis2_char_t *server_cert, *server_key, *ca_file, *ca_dir;
+	server_cert = server_key = ca_file = ca_dir = NULL;
 
     // init our parent
     if (!Axis2SoapProvider::init(_port,_read_timeout,_error)) {

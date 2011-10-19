@@ -16,6 +16,61 @@ New features will be added in the 7.7.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-5}Version 7.6.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.6.5 not yet released.
+%\item Condor version 7.6.5 released on Month Date, 2011.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-6-4}Version 7.6.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -106,9 +161,10 @@ These jobs now correctly transition to the idle state.
 \Ticket{2486}
 
 \item Corrected a hierarchical group quota bug in which
-the accountant allowed submitter records to be deleted,
+the user accounting mechanism in the \Condor{negotiator} daemon allowed 
+submitter records to be deleted,
 if the submitter's priority factor was explicitly set and
-the value was equal to \MacroNI{DEFAULT\_PRIO\_FACTOR}.
+the value was equal to that defined by \MacroNI{DEFAULT\_PRIO\_FACTOR}.
 \Ticket{2442}
 
 \item Fixed CPU detection on Windows, such that the correct number of CPUs
@@ -167,14 +223,14 @@ it now understands the proper format.
 subdirectories for local locks.
 \Ticket{2495}
 
+\item On 32-bit platforms, the \Attr{ImageSize} of processes larger than 
+4 GBytes was reported as 4 GBytes.  This limit has been raised to 4095 GBytes.
+
 \item \SubmitCmd{vm} universe jobs using Xen or KVM would fail to start,
 if the disk image files were transferred from the submit machine
 and the default value defined for \Macro{LIBVIRT\_XML\_SCRIPT} was used.
 The script did not provide absolute path names for the files.
 \Ticket{2511}
-
-\item On 32-bit platforms, the \Attr{ImageSize} of processes larger than 
-4 GBytes was reported as 4 GBytes.  This limit has been raised to 4095 GBytes.
 
 \item Fixed a bug in which a completed Xen or KVM \SubmitCmd{vm} universe 
 job's modified disk image files would not be transferred back 
@@ -212,11 +268,18 @@ This bug only affected users using the \Condor{credd}.
 \Ticket{2549}  
 
 \item Condor now correctly groups CREAM jobs based on how CREAM servers 
-authorize and map them, this is, based on X509 proxy subject name and 
-first VOMS attribute. Previously, all VOMS attributes were considered.
-This could cause unexpected behavior due to aliasing of CREAM leases
+authorize and map them.
+The servers map them based on X.509 proxy subject name 
+and first VOMS attribute. 
+Previously, all VOMS attributes were considered.
+This could cause unexpected behavior due to the aliasing of CREAM leases
 and proxy delegations.
 \Ticket{2271}
+
+\item Communication errors in the job lease renewal protocol were
+sometimes not correctly handled.  This resulted in the job being
+killed.
+\Ticket{2563}
 
 \end{itemize}
 

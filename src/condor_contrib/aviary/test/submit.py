@@ -22,7 +22,6 @@ from suds.client import Client
 from sys import exit, argv
 import time, pwd, os
 import logging
-import argparse
 from aviary.https import *
 from aviary.util import *
 
