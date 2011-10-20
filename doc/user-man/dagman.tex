@@ -572,7 +572,7 @@ for \Condor{dagman}.
 An additional restriction applies to the submit description file
 command \SubmitCmd{Log} specific to a Condor job within
 a DAG node.
-This command may not be defined in such a way that it uses macros.
+\emph{This command may not be defined in such a way that it uses macros.}
 Using a macro would violate the restriction that there be exactly
 one log file specified for the potentially multiple jobs 
 within a single cluster.
@@ -2681,7 +2681,7 @@ This submit description file might appear as
   # file common.submit
   universe = vanilla
   executable = /path/to/executable
-  log = job$(runnumber).log
+  log = wholeDAG.log
   input = job$(runnumber).in
   output = job$(runnumber).out
   notification = Never
@@ -2689,9 +2689,13 @@ This submit description file might appear as
   queue
 \end{verbatim}
 The job with \Expr{runnumber="8"} expects to find its input file \File{job8.in} 
-in the single, common directory, and it logs job events in \File{job8.log}
-and sends its output to \File{job8.out}.
-The executable is invoked with
+in the single, common directory, and it 
+sends its output to \File{job8.out}.
+The single log for all job events of the entire DAG is \File{wholeDAG.log}.
+Using one file for the entire DAG meets the limitation that no macro
+substitution may be specified for the job log file, 
+and it is likely more efficient as well. 
+This node's executable is invoked with
 \begin{verbatim}
   /path/to/executable -8
 \end{verbatim}
