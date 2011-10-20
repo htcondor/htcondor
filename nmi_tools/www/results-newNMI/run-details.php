@@ -18,7 +18,6 @@ $type     = $_REQUEST["type"];
 $runid    = (int)$_REQUEST["runid"];
 $user     = $_REQUEST["user"];
 $timed    = array_key_exists("timed", $_REQUEST) ? $_REQUEST["timed"] : "";
-$build_id = $runid;
 $branch   = "unknown";
 
 define('PLATFORM_PENDING', 'pending');
@@ -52,17 +51,24 @@ $results = $dash->db_query($query_branch);
 $branch = $results[0]["branch"];
 
 
-$sql = "SELECT host, gid, UNIX_TIMESTAMP(start) AS start
+$sql = "SELECT UNIX_TIMESTAMP(start) AS start
         FROM Run
-        WHERE Run.runid = $build_id
+        WHERE Run.runid = $runid
           AND Run.user = '$user'";
 
 $results = $dash->db_query($sql);
-$host  = $results[0]["host"];
-$gid   = $results[0]["gid"];
 $start = $results[0]["start"];
 
 echo "<h2>" . ucfirst($type) . "s for Build ID $runid $branch (" . date("m/d/Y", $start) . ")</h2>\n";
+
+if($type == "build") {
+  $url = preg_replace("/build/", "test", "http://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
+  print "<p><a href='$url'>Show tests for this run</a>\n";
+}
+else {
+  $url = preg_replace("/test/", "build", "http://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
+  print "<p><a href='$url'>Show builds for this run</a>\n";
+}
 
 if(!$timed) {
   echo "<p><a href='http://" . $_SERVER['HTTP_HOST']  . $_SERVER['REQUEST_URI'] . "&timed=1'>Show this page with test times</a>\n";

@@ -49,7 +49,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a performance problem in Windows that caused claim activations to
+fail when more than about 8 jobs were already running on that machine.
+\Ticket{2441}
 
 \end{itemize}
 
@@ -119,8 +121,18 @@ is a boolean value which specifies whether the Windows
 If skipped, Condor tries \Expr{LOGON\_INTERACTIVE} authentication first.
 The addition of this configuration variable fixes the bug described below.
 \Ticket{2549}  
-\end{itemize}
 
+% This actually should have gone into 7.6.1, where it was committed.
+% It appears here in the 7.6.4 history by wrangler's order, without
+% owning up to the improper appearance in this version.
+\item The new configuration variable \Macro{SHADOW\_RUN\_UNKNOWN\_USER\_JOBS} 
+defaults to \Expr{False}.
+When \Expr{True}, 
+it allows the \Condor{shadow} daemon to run jobs remotely submitted from 
+users not in the local password file.
+\Ticket{2004}
+
+\end{itemize}
 \noindent Bugs Fixed:
 
 \begin{itemize}

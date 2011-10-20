@@ -719,13 +719,6 @@ to publish an update ClassAd to the \Condor{collector} at the end of
 every negotiation cycle. 
 This is useful if monitoring cycle-based statistics.
 
-% gittrac #1960
-% gittrac #2004
-\item The new configuration variable \Macro{SHADOW\_RUN\_UNKNOWN\_USER\_JOBS}
-defaults to \Expr{False}.
-When \Expr{True}, it allows the \Condor{shadow} daemon to run jobs remotely 
-submitted from users not in the local password file.
-
 \item The configuration variables for security 
 \Macro{DENY\_CLIENT} and \Macro{HOSTDENY\_CLIENT}
 now also look for the prefixes \Expr{TOOL} and \Expr{SUBMIT}.

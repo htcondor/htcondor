@@ -26,6 +26,7 @@
 class CSysinfo
 {
 	// some typdefs for function pointers into NTDLL.DLL
+	typedef DWORD (WINAPI *FPNtQueryInformationProcess)(HANDLE, DWORD, PVOID, DWORD, DWORD* );
 	typedef DWORD (__stdcall *FPNtQuerySystemInformation)(DWORD, DWORD*, DWORD, DWORD);
 	typedef DWORD (__stdcall *FPNtOpenThread)(void*, DWORD, void*, void*);
 	typedef DWORD (__stdcall *FPNtClose)(HANDLE);
@@ -69,6 +70,7 @@ class CSysinfo
 
 	static HINSTANCE hNtDll;
 	static HINSTANCE hKernel32Dll;
+    static FPNtQueryInformationProcess NtQueryInformationProcess;
 	static FPNtQuerySystemInformation NtQuerySystemInformation;
 	static FPNtOpenThread NtOpenThread;
 	static FPNtClose NtClose;
