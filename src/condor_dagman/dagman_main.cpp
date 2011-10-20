@@ -3,6 +3,7 @@
 //TEMPTEMP -- how does final node show up in jobstate.log file???  and node status file...
 //TEMPTEMP -- need config to tell whether to run final node when condor_rm'ing DAG; if that's true, and you remove the DAG again (while the final node is running) the final node should be aborted
 //TEMPTEMP -- disallow retries on final nodes
+//TEMPTEMP -- if you condor_rm a DAG, the DAG_SUCCESS variable needs to be set to false when passed to the final node!
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
