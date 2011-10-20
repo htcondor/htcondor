@@ -76,4 +76,4 @@ except Exception, e:
 if result.code != "OK":
 	print result.code,":", result.text
 else:
-	print cmd, 'succeeded'
+	print opts.cmd, 'succeeded'

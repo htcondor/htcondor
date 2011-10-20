@@ -276,6 +276,11 @@ This could cause unexpected behavior due to the aliasing of CREAM leases
 and proxy delegations.
 \Ticket{2271}
 
+\item Communication errors in the job lease renewal protocol were
+sometimes not correctly handled.  This resulted in the job being
+killed.
+\Ticket{2563}
+
 \end{itemize}
 
 \noindent Known Bugs:

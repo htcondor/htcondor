@@ -434,6 +434,10 @@ ReliSock::handle_incoming_packet()
 		return TRUE;
 	}
 
+		// since we are trying to read from the socket, we can assume
+		// that it is no longer ok for there to be no message at all.
+	allow_empty_message_flag = FALSE;
+
 	/* do not queue up more than one message at a time on reliable sockets */
 	/* but return 1, because old message can still be read.						*/
 	if (rcv_msg.ready) {
@@ -479,17 +483,18 @@ ReliSock::end_of_message()
 				if ( rcv_msg.buf.consumed() ) {
 					ret_val = TRUE;
 				}
-				else if( !allow_empty_message_flag ) {
+				else {
 					char const *ip = get_sinful_peer();
 					dprintf(D_FULLDEBUG,"Failed to read end of message from %s.\n",ip ? ip : "(null)");
 				}
 				rcv_msg.ready = FALSE;
 				rcv_msg.buf.reset();
 			}
-			if ( allow_empty_message_flag ) {
+			else if ( allow_empty_message_flag ) {
 				allow_empty_message_flag = FALSE;
 				return TRUE;
 			}
+			allow_empty_message_flag = FALSE;
 			break;
 
 		default:
