@@ -5635,6 +5635,12 @@ These settings affect the \Condor{shadow}.
   proxy updates could happen very frequently, 
   potentially creating a lot of load on the submit machine.
 
+\label{param:ShadowRunUnknownUserJobs}
+\item[\Macro{SHADOW\_RUN\_UNKNOWN\_USER\_JOBS}]
+  A boolean that defaults to \Expr{False}.
+  When \Expr{True}, it allows the \Condor{shadow} daemon to run jobs 
+  as user \Login{nobody} when remotely submitted and from
+  users not in the local password file.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
