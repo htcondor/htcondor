@@ -2532,8 +2532,7 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 		free( tmp );
 		if ( !strncmp( SpoolDir.c_str(), logfilename.Value(), SpoolDir.length() ) &&
 			 ULog->initialize( logfilename.Value(), job_id.cluster, job_id.proc, 0, gjid.Value() ) ) {
-				return ULog;
-			}
+			return ULog;
 		}
 		dprintf ( D_ALWAYS,
 				"WARNING: Invalid user log file specified: %s\n", logfilename.Value());
