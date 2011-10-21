@@ -53,6 +53,11 @@ The details of each version are described below.
 fail when more than about 8 jobs were already running on that machine.
 \Ticket{2441}
 
+\item Fixed a bug where the submit event would not be written to the user
+job log if the job was submitted with the -remote or -spool option to
+\Condor{submit}.
+\Ticket{2569}
+
 \end{itemize}
 
 \noindent Known Bugs:
