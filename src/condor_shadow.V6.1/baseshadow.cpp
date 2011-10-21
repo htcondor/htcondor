@@ -331,7 +331,7 @@ int BaseShadow::cdToIwd() {
 		hold_reason.sprintf("Cannot access initial working directory %s: %s",
 		                    iwd.Value(), strerror(chdir_errno));
 		dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-		holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
+		holdJob(hold_reason.Value(),CONDOR_HOLD_CODE_IwdError,chdir_errno);
 		iRet = -1;
 	}
 	
@@ -401,7 +401,7 @@ BaseShadow::reconnectFailed( const char* reason )
 
 
 void
-BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
+BaseShadow::holdJobPre( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
 	dprintf( D_ALWAYS, "Job %d.%d going into Hold state (code %d,%d): %s\n", 
 			 getCluster(), getProc(), hold_reason_code, hold_reason_subcode,reason );
@@ -431,10 +431,10 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 }
 
 void
-BaseShadow::holdJobAndExit( const char* reason, int hold_reason_code, int hold_reason_subcode )
+BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
-	holdJob(reason,hold_reason_code,hold_reason_subcode);
-
+	this->holdJobPre(reason, hold_reason_code, hold_reason_subcode);
+	
 	// finally, exit and tell the schedd what to do
 	DC_Exit( JOB_SHOULD_HOLD );
 }
@@ -850,8 +850,8 @@ void BaseShadow::initUserLog()
 			hold_reason.sprintf(
 				"Failed to initialize user log to %s", logfilename.Value());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
-			// holdJobAndExit() should not return, but just in case it does EXCEPT
+			holdJob(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+			// holdJob() should not return, but just in case it does EXCEPT
 			EXCEPT("Failed to initialize user log to %s",logfilename.Value());
 		}
 		if (jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)

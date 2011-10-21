@@ -708,8 +708,8 @@ pseudo_ulog( ClassAd *ad )
 		if(!hold_reason) {
 			hold_reason = "Job put on hold by remote host.";
 		}
-		Shadow->holdJobAndExit(hold_reason,hold_reason_code,hold_reason_sub_code);
-		//should never get here, because holdJobAndExit() exits.
+		Shadow->holdJob(hold_reason,hold_reason_code,hold_reason_sub_code);
+		//should never get here, because holdJob() exits.
 	}
 
 	if( critical_error ) {
