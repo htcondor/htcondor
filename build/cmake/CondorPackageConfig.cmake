@@ -187,7 +187,14 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	set (CPACK_PACKAGE_ICON ${CONDOR_WIX_LOC}/Bitmaps/dlgbmp.bmp)
 	set (CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/msconfig/license.rtf")
 
+	# this GUID needs to change every time VERSION changes
 	set (CPACK_WIX_PRODUCT_GUID "61F15EF4-0C24-4240-8706-3EB2EA0AF62C")
+	
+	# set the product GUID using product_guid using the output of uuidgen
+	# even better would be to set it from a MD5 hash of CONDOR_NAMESPACE_GUID & CONDOR_PACKAGE_NAME
+	#execute_process(COMMAND uuidgen OUTPUT_VARIABLE CPACK_WIX_PRODUCT_GUID) 
+	#string(REGEX REPLACE "[ \t\n]+" "" CPACK_WIX_PRODUCT_GUID "${CPACK_WIX_PRODUCT_GUID}")
+
 	set (CPACK_WIX_UPGRADE_GUID "ef96d7c4-29df-403c-8fab-662386a089a4")
     
 	set (CPACK_WIX_WXS_FILES ${CONDOR_WIX_LOC}/xml/CondorCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPoolCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorExecCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorDomainCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorEmailCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorJavaCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorPermCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorVMCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorHDFSCfgDlg.wxs;${CONDOR_WIX_LOC}/xml/CondorUpHostDlg.wxs)
