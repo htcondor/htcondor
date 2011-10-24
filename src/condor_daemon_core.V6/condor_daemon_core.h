@@ -71,6 +71,7 @@ class ProcFamilyInterface;
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
 template <class Key, class Value> class HashTable; // forward declaration
+class Probe;
 
 static const int KEEP_STREAM = 100;
 static const int CLOSE_STREAM = 101;
@@ -1527,7 +1528,9 @@ class DaemonCore : public Service
        void* New(const char * category, const char * name, int as);
        void AddToProbe(const char * name, int val);
        void AddToProbe(const char * name, int64_t val);
+       stats_entry_recent<Probe> * AddSample(const char * name, int as, double val);
        double AddRuntime(const char * name, double before); // returns current time.
+       double AddRuntimeSample(const char * name, int as, double before);
 
 	} dc_stats;
 
@@ -1976,6 +1979,18 @@ class DaemonCore : public Service
 	void InitSharedPort(bool in_init_dc_command_socket=false);
 };
 
+// helper class that uses C++ constructor/destructor to automatically
+// time a function call. 
+class dc_stats_auto_runtime_probe
+{
+public:
+    dc_stats_auto_runtime_probe(const char * name, int as);
+    ~dc_stats_auto_runtime_probe();
+    stats_entry_recent<Probe> * probe;
+    double                    begin;
+};
+
+#define DC_AUTO_FUNCTION_RUNTIME(a) dc_stats_auto_runtime_probe a("DCFunc_" __FUNCTION__, IF_VERBOSEPUB)
 
 
 #ifndef _NO_EXTERN_DAEMON_CORE
