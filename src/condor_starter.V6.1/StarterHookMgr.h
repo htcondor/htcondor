@@ -77,6 +77,7 @@ public:
 		 */
 	int tryHookJobExit(ClassAd* job_info, const char* exit_reason);
 
+	int getExitHookTimeout() { return m_hook_job_exit_timeout; };
 
 private:
 
@@ -90,6 +91,8 @@ private:
 		/// The path to HOOK_JOB_EXIT, if defined.
 	char* m_hook_job_exit;
 
+	int m_hook_job_exit_timeout;
+
 		/**
 		   If the job we're running defines a hook keyword, find the
 		   validate path to the given hook.
@@ -101,6 +104,8 @@ private:
 
 		/// Clears out all the hook paths we've validated and saved.
 	void clearHookPaths( void );
+
+	int getHookTimeout(HookType hook_type, int def_value = 0);
 };
 
 

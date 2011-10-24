@@ -427,4 +427,24 @@ sub Which {
     return "";
 }
 
+# Cygwin's chomp does not remove the \r
+sub fullchomp {
+    # Preserve the behavior of chomp, e.g. chomp $_ if no argument is specified.
+    push (@_,$_) if( scalar(@_) == 0);
+
+    foreach my $arg (@_) {
+        $arg =~ s/[\012\015]+$//;
+    }
+
+    return;
+}
+
+
+sub is_windows {
+    if (($^O =~ /MSWin32/) || ($^O =~ /cygwin/)) {
+        return 1;
+    }
+    return 0;
+}
+
 1;

@@ -214,7 +214,7 @@ foreach ($runs as $run) {
   print "<tr>\n";
 
   if(array_key_exists("day-break", $run)) {
-    $td_style = "border-top-width:3px; border-top-color: black;";
+    $td_class = "daybreak";
     $rowspan = array_shift($day_heights);
 
     $dayofweek = $run["dayofweek"];
@@ -222,16 +222,17 @@ foreach ($runs as $run) {
       $dayofweek = substr($dayofweek, 0, 3);
     }
     $dayofweek = implode("<br>", str_split($dayofweek, 1));
-    print "  <td style=\"text-align:center; $td_style\" rowspan=$rowspan>$dayofweek</td>\n";
+    print "  <td class=\"$td_class\" rowspan=$rowspan>$dayofweek</td>\n";
   }
   else {
-    $td_style = "";
+    $td_class = "";
   }
 
-  print "  <td style=\"$td_style\">\n";
+  print "  <td class=\"$td_class\">\n";
 
   $tmp = substr($run["sha1"], 0, 15) . "<br><font size=\"-2\">" . $run["start"] . "</font>\n";
-  print "    <span class=\"link\"><a href=\"\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
+  $link = sprintf(GITSHA1, $run["sha1"]);  
+  print "    <span class=\"link\"><a href=\"$link\" style=\"text-decoration:none;\">$tmp<span style=\"width:300px\">" . $commit_info[$run["sha1"]] . "</span></a></span>";
   print "  </td>\n";
 
   // Keep track of a summary of the platforms
@@ -270,33 +271,33 @@ foreach ($runs as $run) {
       }
 
 
-      print make_cell($run, $platform, "build", $td_style);
+      print make_cell($run, $platform, "build", $td_class);
 
       if($run["platforms"][$platform]["build"]["result"] != NULL and 
 	 $run["platforms"][$platform]["build"]["result"] == 0) {
-	print make_cell($run, $platform, "test", $td_style);
+	print make_cell($run, $platform, "test", $td_class);
       }
       else {
-	print " <td class=\"noresults test\" style=\"$td_style\">&nbsp;&nbsp;&nbsp;</td>";
+	print " <td class=\"noresults test $td_class\">&nbsp;&nbsp;&nbsp;</td>";
       }
     }    
     else {
-      print "  <td class='build' style=\"$td_style\">&nbsp;</td><td class='test' style=\"$td_style\">&nbsp;</td>\n";
+      print "  <td class='build $td_class'>&nbsp;</td><td class='test $td_class'>&nbsp;</td>\n";
     }
 
-    print "  <td style=\"width:10px; font-size:5px; $td_style\">&nbsp;</td>\n";
+    print "  <td class='$td_class' style=\"width:10px; font-size:5px;\">&nbsp;</td>\n";
   }
 
   // Print the summary
   $txt = "<font style='color:#55ff55'>" . $summary["build"]["passed"] . "</font> ";
   $txt .= "<font style='color:#FFE34D'>" . $summary["build"]["pending"]  . "</font> ";
   $txt .= "<font style='color:#ff5555'>" . $summary["build"]["failed"] . "</font>";
-  print "<td style=\"$td_style\">$txt</td>\n";
+  print "<td class='$td_class'>$txt</td>\n";
 
   $txt = "<font style='color:#55ff55'>" . $summary["test"]["passed"] . "</font> ";
   $txt .= "<font style='color:#FFE34D'>" . $summary["test"]["pending"] . "</font> ";
   $txt .= "<font style='color:#ff5555'>" . $summary["test"]["failed"] . "</font>";
-  print "<td style=\"$td_style\">$txt</td>\n";
+  print "<td class='$td_class'>$txt</td>\n";
 
   print "</tr>\n";
 }
@@ -404,7 +405,7 @@ WHERE
 }
 
 
-function make_cell($run, $platform, $run_type, $td_style) {
+function make_cell($run, $platform, $run_type, $td_class) {
 
   $color = "passed";
   if($run["platforms"][$platform][$run_type]["result"] == NULL) {
@@ -415,27 +416,27 @@ function make_cell($run, $platform, $run_type, $td_style) {
   }
 
   $details = "  <table>";
-  $details .= "    <tr><td>Status</td><td class=\"$color\">$color</td></tr>";
-  $details .= "    <tr><td><nobr>NMI RunID</nobr></td><td>" . $run["platforms"][$platform][$run_type]["runid"] . "</td></tr>";
-  $details .= "    <tr><td>Submitted</td><td><nobr>" . $run["start"] . "</nobr></td></tr>";
-  $details .= "    <tr><td>Host</td><td>" . $run["platforms"][$platform][$run_type]["host"] . "</td></tr>";
+  $details .= "    <tr><td class='left'>Status</td><td class=\"$color left\">$color</td></tr>";
+  $details .= "    <tr><td class='left'><nobr>NMI RunID</nobr></td><td class='left'>" . $run["platforms"][$platform][$run_type]["runid"] . "</td></tr>";
+  $details .= "    <tr><td class='left'>Submitted</td><td class='left'><nobr>" . $run["start"] . "</nobr></td></tr>";
+  $details .= "    <tr><td class='left'>Host</td><td class='left'>" . $run["platforms"][$platform][$run_type]["host"] . "</td></tr>";
 
   if($color != "pending") {
-    $details .= "    <tr><td>Duration</td><td><nobr>" . $run["platforms"][$platform][$run_type]["duration"] . "</nobr></td></tr>";
+    $details .= "    <tr><td class='left'>Duration</td><td class='left'><nobr>" . $run["platforms"][$platform][$run_type]["duration"] . "</nobr></td></tr>";
   }
 
   if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
     $failed_tasks = "&lt;None&gt;";
   }
   elseif(count($run["platforms"][$platform][$run_type]["bad-tasks"]) <= MAX_TASKS_TO_DISPLAY_IN_POPUP) {
-    $failed_tasks = implode("<br>", $run["platforms"][$platform][$run_type]["bad-tasks"]);
+    $failed_tasks = "<nobr>" . implode("</nobr><br><nobr>", $run["platforms"][$platform][$run_type]["bad-tasks"]) . "</nobr>";
   }
   else {
-    $failed_tasks = implode("<br>", array_slice($run["platforms"][$platform][$run_type]["bad-tasks"], 0, MAX_TASKS_TO_DISPLAY_IN_POPUP-1));
+    $failed_tasks = "<nobr>" . implode("<nobr><br></nobr>", array_slice($run["platforms"][$platform][$run_type]["bad-tasks"], 0, MAX_TASKS_TO_DISPLAY_IN_POPUP-1)) . "</nobr>";
     $hidden = count($run["platforms"][$platform][$run_type]["bad-tasks"]) - MAX_TASKS_TO_DISPLAY_IN_POPUP;
     $failed_tasks .= "<br><i>$hidden more...</i>";
   }
-  $details .= "    <tr><td><nobr>Failed tasks</nobr></td><td>$failed_tasks</td></tr>";
+  $details .= "    <tr><td class='left'><nobr>Failed tasks</nobr></td><td class='left'>$failed_tasks</td></tr>";
   //$details .= "    <tr><td>Submission Host</td><td>" . $run["host"] . "</td></tr>";
 
   $details .= "  </table>";
@@ -449,7 +450,7 @@ function make_cell($run, $platform, $run_type, $td_style) {
     $div = count($run["platforms"][$platform][$run_type]["bad-tasks"]);
   }
 
-  $popup_html = "  <td class=\"$color $run_type\" style=\"$td_style\"><span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$div<span>$details</span></a></span></td>";
+  $popup_html = "  <td class=\"$color $run_type $td_class\"><span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none\">$div<span>$details</span></a></span></td>";
 
   return $popup_html;
 }

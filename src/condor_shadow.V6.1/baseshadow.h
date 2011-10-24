@@ -292,6 +292,8 @@ class BaseShadow : public Service
     char const *getIwd() { return iwd.Value(); }
         /// Returns the owner of the job - found in the job ad
     char const *getOwner() { return owner.Value(); }
+		/// Returns true if job requests graceful removal
+	bool jobWantsGracefulRemoval();
 
 		/// Called by EXCEPT handler to log to user log
 	static void log_except(const char *msg);

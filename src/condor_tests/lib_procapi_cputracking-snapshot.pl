@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 #$cmd = 'lib_procapi_cputracking-snapshot.cmd';
 $cmd = $ARGV[0];
@@ -50,7 +51,7 @@ $ExitSuccess = sub {
 	open(PIN, "<$datafile") or die "Could not open data file '$datafile': $?";
 	while(<PIN>)
 	{
-		CondorTest::fullchomp();
+		CondorUtils::fullchomp();
 		$line = $_;
 		if( $line =~ /^\s*done\s+<(\d+\.?\d*)>\s*$/ )
 		{

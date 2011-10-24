@@ -393,7 +393,6 @@ void record_suspension_hack(unsigned int action)
 	int total_suspensions;
 	int last_suspension_time;
 	int cumulative_suspension_time;
-	char *rt = NULL;
 	extern char *schedd;
 
 	if (!JobAd)
@@ -459,11 +458,8 @@ void record_suspension_hack(unsigned int action)
 	
 	/* If we've been asked to perform real time updates of the suspension
 		information, then connect to the queue and do it here. */
-	rt = param("REAL_TIME_JOB_SUSPEND_UPDATES");
-	if (rt != NULL)
+	if (param_boolean("REAL_TIME_JOB_SUSPEND_UPDATES", false))
 	{
-		if (strcasecmp(rt, "true") == MATCH)
-		{
 			dprintf( D_ALWAYS, "Updating suspension info to schedd.\n" );
 			if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT)) {
 				/* Since these attributes aren't updated periodically, if
@@ -475,8 +471,6 @@ void record_suspension_hack(unsigned int action)
 					bad connect here for this shadow. */
 				dprintf( D_ALWAYS, 
 					"Timeout connecting to schedd. Suspension update lost.\n");
-				free(rt);
-				rt = NULL;
 				return;
 			}
 
@@ -488,9 +482,5 @@ void record_suspension_hack(unsigned int action)
 	            ATTR_LAST_SUSPENSION_TIME, last_suspension_time);
 
 			DisconnectQ(NULL);
-		}
-
-		free(rt);
-		rt = NULL;
 	}
 }

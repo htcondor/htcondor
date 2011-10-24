@@ -808,8 +808,13 @@ UWCS_MaxJobRetirementTime = 0
 ##  CLAIM_WORKLIFE undefined (infinite).
 #UWCS_CLAIM_WORKLIFE = 1200
 
-# Kill jobs if they have taken too long to vacate gracefully
-UWCS_KILL = $(ActivityTimer) > $(MaxVacateTime) 
+# How long to allow a job to vacate gracefully.  After this time,
+# the job is killed.
+MachineMaxVacateTime = $(MaxVacateTime) 
+
+# Abort graceful eviction of a job, even though it has not
+# yet used all the time allotted by MachineMaxVacateTime.
+UWCS_KILL = false
 
 ##  Only define vanilla versions of these if you want to make them
 ##  different from the above settings.
@@ -820,7 +825,7 @@ UWCS_KILL = $(ActivityTimer) > $(MaxVacateTime)
 #PREEMPT_VANILLA  = ( ((Activity == "Suspended") && \
 #                     ($(ActivityTimer) > $(MaxSuspendTime))) \
 #                     || (SUSPEND_VANILLA && (WANT_SUSPEND == False)) )
-#KILL_VANILLA    = $(ActivityTimer) > $(MaxVacateTime)
+#KILL_VANILLA    = false
 
 ##  Checkpoint every 3 hours on average, with a +-30 minute random
 ##  factor to avoid having many jobs hit the checkpoint server at

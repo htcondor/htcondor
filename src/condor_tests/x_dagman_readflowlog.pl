@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 my $log = $ARGV[0];
 my $option = $ARGV[1];
@@ -32,7 +33,7 @@ my $line;
 open(OLDOUT, "<$log");
 while(<OLDOUT>)
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	$line = $_;
 	#print "--$line--\n";
 	if( $line =~ /^\s*(open)\s*$/ )

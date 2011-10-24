@@ -657,27 +657,18 @@ init_params()
 		dprintf( D_FULLDEBUG, "Using name: %s\n", MasterName );
 	}
 			
-	tmp = param( "START_MASTER" );
-	if( tmp ) {
-		if( *tmp == 'F' || *tmp == 'f' ) {
-			dprintf( D_ALWAYS, "START_MASTER was set to %s, shutting down.\n", tmp );
+	if (!param_boolean_crufty("START_MASTER", true)) {
+			dprintf( D_ALWAYS, "START_MASTER was set to FALSE, shutting down.\n" );
 			StartDaemons = FALSE;
 			main_shutdown_graceful();
-		}
-		free( tmp );
 	}
 
 		
 	StartDaemons = TRUE;
-	tmp = param("START_DAEMONS");
-	if( tmp ) {
-		if( *tmp == 'f' || *tmp == 'F' ) {
+	if (!param_boolean_crufty("START_DAEMONS", true)) {
 			dprintf( D_ALWAYS, 
-					 "START_DAEMONS flag was set to %s.  Not starting daemons.\n",
-					 tmp );
+					 "START_DAEMONS flag was set to FALSE.  Not starting daemons.\n" );
 			StartDaemons = FALSE;
-		}
-		free( tmp );
 	} 
 		// If we were sent the daemons_off command, don't forget that
 		// here. 
@@ -685,14 +676,7 @@ init_params()
 		StartDaemons = FALSE;
 	}
 
-	PublishObituaries = TRUE;
-	tmp = param("PUBLISH_OBITUARIES");
-	if( tmp ) {
-		if( (*tmp == 'f' || *tmp == 'F') ) {
-			PublishObituaries = FALSE;
-		}
-		free( tmp );
-	}
+	PublishObituaries = param_boolean_crufty("PUBLISH_OBITUARIES", true) ? TRUE : FALSE;
 
 	Lines = param_integer("OBITUARY_LOG_LENGTH",20);
 

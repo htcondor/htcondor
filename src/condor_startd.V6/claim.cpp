@@ -88,7 +88,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	c_schedd_closed_claim = false;
 
 	c_last_state = CLAIM_UNCLAIMED;
-	dprintf(D_ALWAYS, "*** CW CREATE CLAIM: %s \n", id());
+	c_pledged_machine_max_vacate_time = 0;
 }
 
 
@@ -740,6 +740,20 @@ Claim::beginActivation( time_t now )
 	c_activation_count += 1;
 
 	c_job_start = (int)now;
+
+	c_pledged_machine_max_vacate_time = 0;
+	if(c_rip->r_classad->LookupExpr(ATTR_MACHINE_MAX_VACATE_TIME)) {
+		if( !c_rip->r_classad->EvalInteger(
+			ATTR_MACHINE_MAX_VACATE_TIME,
+			c_ad,
+			c_pledged_machine_max_vacate_time))
+		{
+			dprintf(D_ALWAYS,"Failed to evaluate %s as an integer.\n",ATTR_MACHINE_MAX_VACATE_TIME);
+			c_pledged_machine_max_vacate_time = 0;
+		}
+	}
+	dprintf(D_FULLDEBUG,"pledged MachineMaxVacateTime = %d\n",c_pledged_machine_max_vacate_time);
+
 
 		// Everything else is only going to be valid if we're not a
 		// COD job.  So, if we *are* cod, just return now, since we've

@@ -1150,3 +1150,9 @@ ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
 	}
 	return false;
 }
+
+int
+ResState::activityTimeElapsed()
+{
+	return time(NULL) - m_atime;
+}

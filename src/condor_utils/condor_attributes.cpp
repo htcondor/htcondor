@@ -944,4 +944,6 @@ const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD = "TransferQueueNum
 const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD = "TransferQueueNumWaitingToDownload";
 const char * const ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME = "TransferQueueUploadWaitTime";
 const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME = "TransferQueueDownloadWaitTime";
-
+const char * const ATTR_MACHINE_MAX_VACATE_TIME = "MachineMaxVacateTime";
+const char * const ATTR_JOB_MAX_VACATE_TIME = "JobMaxVacateTime";
+const char * const ATTR_WANT_GRACEFUL_REMOVAL = "WantGracefulRemoval";

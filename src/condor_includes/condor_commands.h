@@ -330,7 +330,6 @@ const int SHARED_PORT_PASS_SOCK = 76;
 #define DC_SIGPCKPT		104	// periodic checkpoint
 #define DC_SIGREMOVE	105
 #define DC_SIGHOLD		106
-#define DC_SIGSTATECHANGE	107
 
 /*
 *** Daemon Core Commands and Signals

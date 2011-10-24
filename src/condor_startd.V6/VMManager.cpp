@@ -216,7 +216,6 @@ vmapi_create_vmmanager(char *list)
 		return;
 
 	char *vm_name;
-	struct hostent *he1;
 
 	StringList *vm_list;
 	vm_list = new StringList();

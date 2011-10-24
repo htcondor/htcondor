@@ -22,8 +22,8 @@ from suds.client import Client
 from sys import exit, argv
 import time, pwd, os
 import logging
-import argparse
 from aviary.https import *
+from aviary.util import *
 
 # NOTE: Suds has had little support for adding attributes
 # to the request body until 0.4.1
@@ -42,30 +42,22 @@ if not uid:
 
 # change these for other default locations and ports
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
-key = '/etc/pki/tls/certs/client.key'
-cert = '/etc/pki/tls/certs/client.crt'
 
-parser = argparse.ArgumentParser(description='Submit a job remotely via SOAP.')
-parser.add_argument('-v','--verbose', action="store_true",default=False, help='enable SOAP logging')
-parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
-                    default='http://localhost:9090/services/job/submitJob',
-                    help='http or https URL prefix to be added to cmd')
-parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
-parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
-args =  parser.parse_args()
+parser = build_basic_parser('Submit a sample job remotely via SOAP.','http://localhost:9090/services/job/submitJob')
+(opts,args) =  parser.parse_args()
 
-if "https://" in args.url:
-	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
+if "https://" in opts.url:
+	client = Client(wsdl,transport = HTTPSFullCertTransport(opts.key,opts.cert,opts.root,opts.verify))
 else:
 	client = Client(wsdl)
 
 # NOTE: the following form to enable attribute additions
 # is only supported with suds >= 0.4.1
-#client = Client(job_wsdl,plugins=[OverridesPlugin()]);
-client.set_options(location=args.url)
+#client = Client(wsdl,plugins=[OverridesPlugin()]);
+client.set_options(location=opts.url)
 
 # enable to see service schema
-if args.verbose:
+if opts.verbose:
 	logging.basicConfig(level=logging.INFO)
 	logging.getLogger('suds.client').setLevel(logging.DEBUG)
 	print client
@@ -101,7 +93,7 @@ try:
 		extras
 	)
 except Exception, e:
-	print "invocation failed at: ", args.url
+	print "invocation failed at: ", opts.url
 	print e
 	exit(1)	
 
@@ -109,7 +101,4 @@ if result.status.code != "OK":
 	print result.status.code,"; ", result.status.text
 	exit(1)
 
-if args.verbose:
-	print result
-else:
-	print result.id.job;
+print opts.verbose and result or result.id.job

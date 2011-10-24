@@ -18,9 +18,11 @@
 ##
 ##**************************************************************
 
-use CondorTest;
-
 use strict;
+use warnings;
+
+use CondorTest;
+use CondorUtils;
 
 # use like this: x_renamebypattern.pl \*trigger\*
 
@@ -32,7 +34,7 @@ print LOG "Started at $start\n";
 open(TESTS,"ls $pattern | ");
 while(<TESTS>)
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	my $now = localtime;
 	my $filebase = "";
 	my $currentfile = $_;

@@ -36,6 +36,7 @@ public:
 	void	set_destination( State );
 	int		starterExited( void );
 	State	destination( void ) { return r_destination; };
+	int     activityTimeElapsed();
 
 	void	dprintf( int, const char*, ... );
 private:

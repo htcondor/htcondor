@@ -1420,7 +1420,7 @@ Resource::claimWorklifeExpired()
 }
 
 int
-Resource::retirementExpired()
+Resource::evalRetirementRemaining()
 {
 	//This function evaulates to true if the job has run longer than
 	//its maximum alloted graceful retirement time.
@@ -1465,9 +1465,92 @@ Resource::retirementExpired()
 		MaxJobRetirementTime = 0;
 	}
 
-	return (JobAge >= MaxJobRetirementTime);
+	return MaxJobRetirementTime - JobAge;
 }
 
+bool
+Resource::retirementExpired()
+{
+	int retirement_remaining = evalRetirementRemaining();
+	if ( retirement_remaining <= 0 ) {
+		return true;
+	}
+	int max_vacate_time = evalMaxVacateTime();
+	if( max_vacate_time >= retirement_remaining ) {
+			// the goal is to begin evicting the job before the end of
+			// retirement so that if the job uses the full eviction
+			// time, it will finish by the end of retirement
+
+		dprintf(D_ALWAYS,"Evicting job with %ds of retirement time "
+				"remaining in order to accommodate this job's "
+				"max vacate time of %ds.\n",
+				retirement_remaining,max_vacate_time);
+		return true;
+	}
+	return false;
+}
+
+int
+Resource::evalMaxVacateTime()
+{
+	int MaxVacateTime = 0;
+
+	if (r_cur && r_cur->isActive() && r_cur->ad()) {
+		// Look up the maximum vacate time specified by the startd.
+		// This was evaluated at claim activation time.
+		int MachineMaxVacateTime = r_cur->getPledgedMachineMaxVacateTime();
+
+		MaxVacateTime = MachineMaxVacateTime;
+		int JobMaxVacateTime = MaxVacateTime;
+
+		//look up the maximum vacate time specified by the job
+		if(r_cur->ad()->LookupExpr(ATTR_JOB_MAX_VACATE_TIME)) {
+			if( !r_cur->ad()->EvalInteger(
+					ATTR_JOB_MAX_VACATE_TIME,
+					r_classad,
+					JobMaxVacateTime) )
+			{
+				JobMaxVacateTime = 0;
+			}
+		}
+		else if( r_cur->ad()->LookupExpr(ATTR_KILL_SIG_TIMEOUT) ) {
+				// the old way of doing things prior to JobMaxVacateTime
+			if( !r_cur->ad()->EvalInteger(
+					ATTR_KILL_SIG_TIMEOUT,
+					r_classad,
+					JobMaxVacateTime) )
+			{
+				JobMaxVacateTime = 0;
+			}
+		}
+		if(JobMaxVacateTime <= MaxVacateTime) {
+				//The job wants _less_ time than the startd offers,
+				//so let it have its way.
+			MaxVacateTime = JobMaxVacateTime;
+		}
+		else {
+				// The job wants more vacate time than the startd offers.
+				// See if the job can use some of its remaining retirement
+				// time as vacate time.
+
+			int retirement_remaining = evalRetirementRemaining();
+			if( retirement_remaining >= JobMaxVacateTime ) {
+					// there is enough retirement time left to
+					// give the job the vacate time it wants
+				MaxVacateTime = JobMaxVacateTime;
+			}
+			else if( retirement_remaining > MaxVacateTime ) {
+					// There is not enough retirement time left to
+					// give the job all the vacate time it wants,
+					// but there is enough to give it more than
+					// what the machine would normally offer.
+				MaxVacateTime = retirement_remaining;
+			}
+		}
+	}
+
+	return MaxVacateTime;
+}
 
 // returns -1 on undefined, 0 on false, 1 on true
 int
@@ -1790,6 +1873,16 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		ptr = NULL;
 	}
 	cap->AssignExpr( ATTR_MAX_JOB_RETIREMENT_TIME, ptr ? ptr : "0" );
+
+	free(ptr);
+
+		// Put in max vacate time expression
+	ptr = param(ATTR_MACHINE_MAX_VACATE_TIME);
+	if( ptr && !*ptr ) {
+		free(ptr);
+		ptr = NULL;
+	}
+	cap->AssignExpr( ATTR_MACHINE_MAX_VACATE_TIME, ptr ? ptr : "0" );
 
 	free(ptr);
 

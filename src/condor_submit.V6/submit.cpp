@@ -401,6 +401,8 @@ const char* DeltacloudUserData = "deltacloud_user_data";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
+char const *want_graceful_removal = "want_graceful_removal";
+char const *job_max_vacate_time = "job_max_vacate_time";
 
 const char * REMOTE_PREFIX="Remote_";
 
@@ -956,12 +958,8 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	char *dis_check = param("SUBMIT_SKIP_FILECHECKS");
-	if ( dis_check ) {
-		if (dis_check[0]=='T' || dis_check[0]=='t') {
-			DisableFileChecks = 1;
-		}
-		free(dis_check);
+	if (!DisableFileChecks) {
+		DisableFileChecks = param_boolean_crufty("SUBMIT_SKIP_FILECHECKS", false) ? 1 : 0;
 	}
 
 	// if we are dumping to a file, we never want to check file permissions
@@ -2446,8 +2444,7 @@ SetTransferFiles()
 
 	if (should_transfer == STF_NO &&
 		(in_files_specified || out_files_specified)) { // (F)
-		MyString err_msg;
-		err_msg += "\nERROR: you specified files you want Condor to "
+		err_msg = "\nERROR: you specified files you want Condor to "
 			"transfer via \"";
 		if( in_files_specified ) {
 			err_msg += "transfer_input_files";
@@ -2725,7 +2722,6 @@ SetTransferFiles()
 			//but they did not turn on transfer_files, so they are
 			//going to be confused when the executable is _not_
 			//transfered!  Better bail out.
-			MyString err_msg;
 			err_msg = "\nERROR: You explicitly requested that the "
 				"executable be transfered, but for this to work, you must "
 				"enable Condor's file transfer functionality.  You need "
@@ -3589,6 +3585,32 @@ SetNotifyUser()
 		buffer.sprintf( "%s = \"%s\"", ATTR_NOTIFY_USER, who);
 		InsertJobExpr (buffer);
 		free(who);
+	}
+}
+
+void
+SetWantGracefulRemoval()
+{
+	char *how = condor_param( want_graceful_removal, ATTR_WANT_GRACEFUL_REMOVAL );
+	MyString buffer;
+
+	if( how ) {
+		buffer.sprintf( "%s = %s", ATTR_WANT_GRACEFUL_REMOVAL, how );
+		InsertJobExpr (buffer);
+		free( how );
+	}
+}
+
+void
+SetJobMaxVacateTime()
+{
+	char *expr = condor_param( job_max_vacate_time, ATTR_JOB_MAX_VACATE_TIME );
+	MyString buffer;
+
+	if( expr ) {
+		buffer.sprintf( "%s = %s", ATTR_JOB_MAX_VACATE_TIME, expr );
+		InsertJobExpr (buffer);
+		free( expr );
 	}
 }
 
@@ -5944,6 +5966,8 @@ queue(int num)
 		SetRemoteInitialDir();
 		SetExitRequirements();
 		SetOutputDestination();
+		SetWantGracefulRemoval();
+		SetJobMaxVacateTime();
 
         // really a command, needs to happen before any calls to check_open
 		SetJobDisableFileChecks();
@@ -6707,14 +6731,9 @@ init_params()
 		string_to_stm( method, STMethod );
 	}
 
-	tmp = param( "WARN_ON_UNUSED_SUBMIT_FILE_MACROS" );
-	if ( NULL != tmp ) {
-		if( (*tmp == 'f' || *tmp == 'F') ) {
-			WarnOnUnusedMacros = 0;
-		}
-		free( tmp );
-	}
-
+	WarnOnUnusedMacros =
+		param_boolean_crufty("WARN_ON_UNUSED_SUBMIT_FILE_MACROS",
+							 WarnOnUnusedMacros ? true : false) ? 1 : 0;
 }
 
 int
@@ -7554,7 +7573,6 @@ SetVMParams()
 
 		// Read the parameter of xen_transfer_files 
 		char *transfer_files = NULL;
-		const char *transf_attr_name;
 
         transfer_files = condor_param("transfer_input_files");
         if (transfer_files)

@@ -38,6 +38,7 @@
 int CSysinfo::reference_count = 0;
 HINSTANCE CSysinfo::hNtDll = NULL;
 HINSTANCE CSysinfo::hKernel32Dll = NULL;
+CSysinfo::FPNtQueryInformationProcess CSysinfo::NtQueryInformationProcess = NULL;
 CSysinfo::FPNtQuerySystemInformation CSysinfo::NtQuerySystemInformation = NULL;
 CSysinfo::FPNtOpenThread CSysinfo::NtOpenThread = NULL;
 CSysinfo::FPNtClose CSysinfo::NtClose = NULL;
@@ -58,6 +59,11 @@ CSysinfo::CSysinfo()
 			EXCEPT("cannot load ntdll.dll library");
 		}
 
+		NtQueryInformationProcess = (FPNtQueryInformationProcess) 
+			GetProcAddress(hNtDll,"NtQueryInformationProcess");
+		if ( !NtQueryInformationProcess ) {
+			EXCEPT("cannot get address for NtQueryInformationProcess");
+		}
 		NtQuerySystemInformation = (FPNtQuerySystemInformation) 
 			GetProcAddress(hNtDll,"NtQuerySystemInformation");
 		if ( !NtQuerySystemInformation ) {
@@ -237,6 +243,47 @@ DWORD CSysinfo::GetHandleCount (pid_t pid)
 	return block[19];
 }
 
+// substitute HEX values into output messages and print the resulting string via OutputDebugString.  
+// pmsg must be of the form "blah blah 00000000 blah blah 00000000\n" with one section
+// of zeros for each HEX. 
+//
+// This is strictly Windows-specific debugging code. and I didn't want to create any
+// external dependancies for it.
+//
+static void Debug_Subst_Hex_ODS(const TCHAR * pmsg, const DWORD * pHex, int cHex)
+{
+   TCHAR sz[200];
+   UINT  cch = lstrlen(pmsg)+1;
+   CopyMemory(sz, pmsg, cch*sizeof(TCHAR));
+
+   TCHAR * psz = sz + cch;
+
+   for (int ix = cHex-1; ix >= 0; --ix)
+      {
+      while (psz > sz && *psz != '0') 
+         --psz; 
+      for (DWORD dw = pHex[ix]; dw && psz >= sz; dw = dw >> 4) 
+         { 
+         TCHAR ch = (dw & 0xF); 
+         *psz = (TCHAR)((ch < 10) ? (ch + '0') : (ch -10 + 'A')); 
+         --psz;
+         }
+      while (psz > sz && *psz != ' ') 
+         --psz; 
+      }
+   OutputDebugString(sz);
+}
+
+// for NtQueryInformationProcess
+typedef struct _PROCESS_BASIC_INFORMATION {
+	ULONG_PTR ExitStatus;
+	PVOID     PebBaseAddress;
+	ULONG_PTR AffinityMask;
+	ULONG_PTR BasePriority;
+	ULONG_PTR UniqueProcessId;
+	ULONG_PTR InheritedFromUniqueProcessId;
+} PROCESS_BASIC_INFORMATION;
+
 DWORD CSysinfo::GetParentPID (pid_t pid)
 {
 #if 0
@@ -249,14 +296,57 @@ DWORD CSysinfo::GetParentPID (pid_t pid)
 	if (!block)
 		return 0;
 	return block[18];
-#endif
-	PROCESSENTRY32 pe32;
+#else
+    if (pid == 0 || pid == 4) // Can't open pid=0 (Idle) or pid=4 (System) processes
+       return 0;
 
-	if ( GetProcessEntry(pid, pe32) ) {
-		return pe32.th32ParentProcessID;
+	if (NtQueryInformationProcess) {
+		PROCESS_BASIC_INFORMATION pbi;
+        const DWORD ProcessBasicInformation = 0;
+
+        DWORD status = 1; // assume failure (success == 0)
+        DWORD cbNeeded = 0;
+        if (pid != GetCurrentProcessId()) {
+
+			HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, pid);
+			if (hProcess) {
+				status = NtQueryInformationProcess(
+					hProcess, 
+					ProcessBasicInformation,
+					&pbi, sizeof(pbi), &cbNeeded);
+
+				CloseHandle (hProcess);
+            } else {
+               Debug_Subst_Hex_ODS("ntsysinfo.WINDOWS can't open PID 00000000\n", &pid, 1);
+            }
+
+        } else {
+		    status = NtQueryInformationProcess(
+               GetCurrentProcess(), 
+               ProcessBasicInformation,
+               &pbi, sizeof(pbi), &cbNeeded);
+        }
+        if (NOERROR == status) {
+            static bool fLogit = false;
+            if (fLogit) {
+               DWORD pids[] = {pbi.InheritedFromUniqueProcessId, pid};
+               Debug_Subst_Hex_ODS("Parent PID is 00000000 for PID 00000000\n", pids, 2);
+            }
+            return pbi.InheritedFromUniqueProcessId;
+        } else {
+            Debug_Subst_Hex_ODS("ntsysinfo.WINDOWS can't Query PPID for PID 00000000\n", &pid, 1);
+        }
+        return 0;
+
 	} else {
-		return 0;
+    	/* this is really slow, about 25ms on a quad core Amd64 */
+		PROCESSENTRY32 pe;
+		if (GetProcessEntry(pid, pe)) {
+			return pe.th32ParentProcessID;
+		}
+		return (0);
 	}
+#endif
 }
 
 int

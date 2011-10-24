@@ -73,6 +73,10 @@ public:
 		// Send SIGKILL to starter + process group (called by our kill
 		// timer if we've been hardkilling too long).
 	void	sigkillStarter( void );
+
+		// Escalate to a fast shutdown of the job.
+		// Called by our softkill timer
+	void softkillTimeout( void );
 	
 	void	publish( ClassAd* ad, amask_t mask, StringList* list );
 
@@ -130,6 +134,7 @@ private:
 
 	int	startKillTimer( void );		// Timer for how long we're willing
 	void	cancelKillTimer( void );	// to "hardkill" before we SIGKILL
+	int startSoftkillTimeout( void );
 		// choose EXECUTE directory for starter
 	void    finalizeExecuteDir( void );
 
@@ -146,6 +151,7 @@ private:
 	ProcFamilyUsage s_usage;
 	time_t          s_birthdate;
 	int             s_kill_tid;		// DC timer id for hard killing
+	int             s_softkill_tid;
 	int             s_port1;
 	int             s_port2;
 #if HAVE_BOINC

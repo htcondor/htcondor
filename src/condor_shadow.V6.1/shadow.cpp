@@ -128,7 +128,6 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 						  "UniShadow::updateFromStarter", this, DAEMON );
 }
 
-
 void
 UniShadow::spawn( void )
 {
@@ -283,6 +282,15 @@ void UniShadow::removeJob( const char* reason )
 	}
 }
 
+void
+UniShadow::requestJobRemoval() {
+	remRes->setExitReason( JOB_KILLED );
+	bool job_wants_graceful_removal = jobWantsGracefulRemoval();
+	dprintf(D_ALWAYS,"Requesting %s removal of job.\n",
+			job_wants_graceful_removal ? "graceful" : "fast");
+	remRes->killStarter( job_wants_graceful_removal );
+}
+
 int UniShadow::handleJobRemoval(int sig) {
     dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
 	remove_requested = true;
@@ -291,8 +299,7 @@ int UniShadow::handleJobRemoval(int sig) {
 		// reconnecting, we'll do the right thing once a connection is
 		// established now that the remove_requested flag is set... 
 	if( remRes->getResourceState() != RR_RECONNECT ) {
-		remRes->setExitReason( JOB_KILLED );
-		remRes->killStarter();
+		requestJobRemoval();
 	}
 		// more?
 	return 0;
@@ -424,8 +431,7 @@ UniShadow::resourceReconnected( RemoteResource* rr )
 		// reestablished, we can kill the starter, evict the job, and
 		// handle any output/update messages from the starter.
 	if( remove_requested ) {
-		remRes->setExitReason( JOB_KILLED );
-		remRes->killStarter();
+		requestJobRemoval();
 	}
 
 		// Start the timer for the periodic user job policy  

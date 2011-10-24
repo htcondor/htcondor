@@ -105,8 +105,6 @@ JobServerObject::GetJobAd ( std::string key,
                           Variant::Map &_map,
                           std::string &text)
 {
-    ClassAd *ad = NULL;
-
 	dprintf(D_FULLDEBUG, "Calling GetJobAd for '%s'\n", key.c_str());
 
     PROC_ID id = getProcByString(key.c_str());
@@ -122,16 +120,6 @@ JobServerObject::GetJobAd ( std::string key,
 		text = "Unable to return data";
 		return STATUS_UNKNOWN_OBJECT;
     }
-
-    // debug
-//    if (DebugFlags & D_FULLDEBUG) {
-//		if (ad) {
-//			ad->dPrint(D_FULLDEBUG|D_NOHEADER);
-//			std::ostringstream oss;
-//			oss << _map;
-//			dprintf(D_FULLDEBUG|D_NOHEADER, "%s\n",oss.str().c_str());
-//		}
-//    }
 
     return STATUS_OK;
 }
@@ -261,6 +249,8 @@ JobServerObject::ManagementMethod ( uint32_t methodId,
     switch ( methodId )
     {
         case qmf::com::redhat::grid::JobServer::METHOD_ECHO:
+			if (!param_boolean("QMF_MANAGEMENT_METHOD_ECHO", false)) return STATUS_NOT_IMPLEMENTED;
+
             return STATUS_OK;
         case qmf::com::redhat::grid::JobServer::METHOD_GETJOBAD:
             return GetJobAd ( ( ( ArgsJobServerGetJobAd & ) args ).i_Id,
@@ -276,4 +266,13 @@ JobServerObject::ManagementMethod ( uint32_t methodId,
     }
 
     return STATUS_NOT_IMPLEMENTED;
+}
+
+bool
+JobServerObject::AuthorizeMethod(uint32_t methodId, Args& args, const std::string& userId) {
+	dprintf(D_FULLDEBUG, "AuthorizeMethod: checking '%s'\n", userId.c_str());
+	if (0 == userId.compare("cumin")) {
+		return true;
+	}
+	return false;
 }

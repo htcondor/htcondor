@@ -1,5 +1,9 @@
-To add a new platform for a continuous run edit run.sh and submit and replace "PLATFORM" with 
-the platform you wish to add (use the NMI platform string, e.g. x86_64_rhap_5).
+To run a build on each commit, do the following:
 
-Currently these are put in /home/cndrauto/continuous on nmi-s006.
-They are submitted to Condor (as Condor-Cron jobs)
+1) In /home/condorauto, checkout a Git mirror clone using the command:
+   git clone --mirror PATH-TO-CONDOR-REPO
+2) In /home/condorauto, create a 'per-commit' directory
+3) Copy submit and submit-per-commit-builds into that directory
+4) condor_submit submit
+
+Voila

@@ -125,7 +125,7 @@ class CondorQ {
 	    $test = "T";
 	  }
 	  
-          $output .= "<tr style=\"$style\"><td style=\"text-align:center\">$items[0]</td><td>$items[1]</td><td>$items[2]</td><td style=\"text-align:center\">$build</td><td style=\"text-align:center\">$test</td><td>$items[4]&nbsp;$items[5]</td><td>$items[6]&nbsp;$items[7]</tr>\n";
+          $output .= "<tr style=\"$style\"><td>$items[0]</td><td>$items[1]</td><td>$items[2]</td><td>$build</td><td>$test</td><td>$items[4]&nbsp;$items[5]</td><td>$items[6]&nbsp;$items[7]</tr>\n";
         }
       }
       $output .= "</table>\n";

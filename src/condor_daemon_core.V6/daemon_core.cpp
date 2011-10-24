@@ -2729,6 +2729,12 @@ DaemonCore::reconfig(void) {
 		m_use_clone_to_create_processes = false;
 	}
 
+		// If we are NOT the schedd, then do not use clone, as only
+		// the schedd benefits from clone, and clone is more susceptable
+		// to failures/bugs than fork.
+	if ( !(get_mySubSystem()->isType(SUBSYSTEM_TYPE_SCHEDD)) ) {
+		m_use_clone_to_create_processes = false;
+	}
 #endif /* HAVE CLONE */
 
 	m_invalidate_sessions_via_tcp = param_boolean("SEC_INVALIDATE_SESSIONS_VIA_TCP", true);
@@ -5248,7 +5254,17 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		result = TRUE;
 
 		sock->decode();
-		sock->allow_one_empty_message();
+		if( comTable[cmd_index].wait_for_payload == 0 ) {
+
+				// This command _might_ be one with no further data.
+				// Because of the way DC_AUTHENTICATE was implemented,
+				// command handlers that call end_of_message() when
+				// nothing more was sent by the peer will get an
+				// error, because we have already consumed the end of
+				// message.  Therefore, we set a flag on the socket:
+
+			sock->allow_one_empty_message();
+		}
 
 		// fill in the command info
 		reqFound = TRUE;
@@ -7633,9 +7649,12 @@ int DaemonCore::Create_Process(
 	// sets inherit option... actually inherit option comes from 
 	// CreateProcess, we should be enumerating all open handles... 
 	// see sysinternals handles app for insights).
+
+    /* TJ: 2011-10-17 this causes the c-runtime to throw an exception!
 	for (i = 0; i < 100; i++) {
 		SetFDInheritFlag(i,FALSE);
 	}
+    */
 
 	// handle re-mapping of stdout,in,err if desired.  note we just
 	// set all our file handles to non-inheritable, so for any files

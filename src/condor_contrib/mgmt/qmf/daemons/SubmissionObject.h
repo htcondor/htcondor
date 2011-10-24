@@ -76,6 +76,8 @@ public:
                               Args &args,
                               string &text);
 
+	bool AuthorizeMethod(uint32_t methodId, Args& args, const std::string& userId);
+
 protected:
 	void Increment(const Job *job);
 	void Decrement(const Job *job);
