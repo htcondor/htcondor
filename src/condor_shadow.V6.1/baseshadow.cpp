@@ -74,6 +74,7 @@ BaseShadow::BaseShadow() {
 	m_cleanup_retry_tid = -1;
 	m_cleanup_retry_delay = 30;
 	m_RunAsNobody = false;
+	job_held = false;
 }
 
 BaseShadow::~BaseShadow() {
@@ -362,6 +363,11 @@ BaseShadow::shutDown( int reason )
 		// evaluate the user job policy...
 	if( reason == JOB_EXITED || reason == JOB_COREDUMPED ) {
 		shadow_user_policy.checkAtExit();
+			// if we get here, and the job was put on hold by the user
+			// policy, exit with the correct reason
+		if( job_held ) {
+			DC_Exit( JOB_SHOULD_HOLD );
+		}
 	}
 	else {
 		// if we aren't trying to evaluate the user's policy, we just
@@ -405,6 +411,8 @@ BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_s
 {
 	dprintf( D_ALWAYS, "Job %d.%d going into Hold state (code %d,%d): %s\n", 
 			 getCluster(), getProc(), hold_reason_code, hold_reason_subcode,reason );
+
+	job_held = true;
 
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!" );

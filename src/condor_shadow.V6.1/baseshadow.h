@@ -465,6 +465,7 @@ class BaseShadow : public Service
 	char *scheddAddr;
 	char *core_file_name;
 	MyString m_xfer_queue_contact_info;
+	bool job_held;
 
 		/// Timer id for the job cleanup retry handler.
 	int m_cleanup_retry_tid;
