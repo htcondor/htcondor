@@ -3182,6 +3182,17 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	if (ULog->initialize(owner.Value(), domain.Value(), logfilename.Value(), job_id.cluster, job_id.proc, 0, gjid.Value())) {
 		return ULog;
 	} else {
+			// If the user log is in the spool directory, try writing to
+			// it as user condor. The spool directory spends some of its
+			// time owned by condor.
+		char *tmp = gen_ckpt_name( Spool, job_id.cluster, job_id.proc, 0 );
+		std::string SpoolDir;
+		sprintf( SpoolDir, "%s%c", tmp, DIR_DELIM_CHAR );
+		free( tmp );
+		if ( !strncmp( SpoolDir.c_str(), logfilename.Value(), SpoolDir.length() ) &&
+			 ULog->initialize( logfilename.Value(), job_id.cluster, job_id.proc, 0, gjid.Value() ) ) {
+			return ULog;
+		}
 		dprintf ( D_ALWAYS,
 				"WARNING: Invalid user log file specified: %s\n", logfilename.Value());
 		delete ULog;
