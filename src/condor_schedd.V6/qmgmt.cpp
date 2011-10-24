@@ -3938,6 +3938,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 			free(new_value);
 		}
 	}
+	free(SpoolSpace);
 	return true;
 }
 
