@@ -138,13 +138,23 @@ class BaseShadow : public Service
 	virtual bool getMachineName( MyString &machineName );
 
 		/** Put this job on hold, if requested, notify the user about
-			it, and exit with the appropriate status so that the
-			schedd actually puts the job on hold.<p>
+			it.  This function does _not_ exit.  Use holdJobAndExit()
+			instead to exit with appropriate status so that the
+			schedd actually puts the job on hold.
 			This uses the virtual cleanUp() method to take care of any
 			universe-specific code before we exit.
 			@param reason String describing why the job is held
 		*/
 	virtual void holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode );
+
+		/** Put this job on hold, if requested, notify the user about
+			it and exit with the appropriate status so that the
+			schedd actually puts the job on hold.
+			This uses the virtual cleanUp() method to take care of any
+			universe-specific code before we exit.
+			@param reason String describing why the job is held
+		*/
+	void holdJobAndExit( const char* reason, int hold_reason_code, int hold_reason_subcode );
 
 		/** Remove the job from the queue, if requested, notify the
 			user about it, and exit with the appropriate status so
@@ -412,7 +422,6 @@ class BaseShadow : public Service
 	void logRequeueEvent( const char* reason );
 	
 	void removeJobPre( const char* reason ); 
-	void holdJobPre ( const char* reason, int hold_reason_code, int hold_reason_subcode );
 	
 		// virtual void emailRequeueEvent( const char* reason );
 
@@ -456,6 +465,7 @@ class BaseShadow : public Service
 	char *scheddAddr;
 	char *core_file_name;
 	MyString m_xfer_queue_contact_info;
+	bool job_held;
 
 		/// Timer id for the job cleanup retry handler.
 	int m_cleanup_retry_tid;
