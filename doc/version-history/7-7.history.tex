@@ -36,12 +36,13 @@ A copy of these libraries is included with Condor.
 
 \begin{itemize}
 
-\item With Condor 7.7.2, if you had multiple Condor installations, it was 
-possible for some installations to use the wrong version of the ClassAds 
-library. This should no longer be an issue. Addtionally, the binaries 
-now use RUNPATH instead of RPATH, allowing you to use the
-LD\_LIBRARY\_PATH environment variable to set where they look for their
-shared libraries.
+\item In Condor version 7.7.2, multiple Condor installations led to the
+possibility for some installations to use the wrong version of the ClassAds 
+library.
+This should no longer be an issue, 
+as the binaries now use \Env{RUNPATH} instead of \Env{RPATH}, 
+allowing use of the \Env{LD\_LIBRARY\_PATH} environment variable 
+to set where to look for the shared libraries.
 \Ticket{2539}
 
 \item The Amazon SOAP interface is no longer present or supported in Condor.
@@ -217,7 +218,7 @@ as are currently documented (section~\ref{sec:New-7-6-4}) in this manual.
 linux.}
 A copy of these libraries is included with Condor, under
 \File{lib/condor/} in the tarball releases and under
-\File{/usr/lib/condor/} or \File{/urs/lib64/condor/} in the native package
+\File{/usr/lib/condor/} or \File{/yrs/lib64/condor/} in the native package
 releases.
 \Ticket{2389}
 \Ticket{2390}
