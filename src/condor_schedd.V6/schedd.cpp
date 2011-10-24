@@ -206,11 +206,28 @@ struct job_data_transfer_t {
 	ExtArray<PROC_ID> *jobs;
 };
 
+match_rec::match_rec( match_rec *m, char const *claim_id )  : ClaimIdParser(claim_id)
+{
+	PROC_ID p;
+	p.proc = m->proc;
+	p.cluster = m->cluster;
+	this->init( m->peer, &p, m->my_match_ad, m->user, m->pool, m->is_dedicated);
+}
+
 match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id, 
 					  const ClassAd *match, char const *the_user, char const *my_pool,
 					  bool is_dedicated_arg ):
 	ClaimIdParser(claim_id)
 {
+	this->init( p,  job_id, match, the_user, my_pool, is_dedicated_arg);
+}
+
+void
+match_rec::init( char const* p, PROC_ID* job_id, 
+					  const ClassAd *match, char const *the_user, char const *my_pool,
+					  bool is_dedicated_arg )
+{
+	parent_claim_id = NULL;
 	peer = strdup( p );
 	origcluster = cluster = job_id->cluster;
 	proc = job_id->proc;
@@ -301,7 +318,8 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 	}
 
 	keep_while_idle = 0;
-	idle_timer_deadline = 0;
+	idle_timer_deadline = 0;	
+	
 }
 
 void
@@ -328,6 +346,11 @@ match_rec::makeDescription() {
 
 match_rec::~match_rec()
 {
+	if (parent_claim_id) {
+		free(parent_claim_id);
+		parent_claim_id = NULL;
+		
+	}
 	if( peer ) {
 		free( peer );
 	}
@@ -5829,7 +5852,7 @@ Scheduler::release_claim(int, Stream *sock)
 }
 
 void
-Scheduler::contactStartd( ContactStartdArgs* args ) 
+Scheduler::contactStartd( ContactStartdArgs* args, bool wantSubClaim ) 
 {
 	dprintf( D_FULLDEBUG, "In Scheduler::contactStartd()\n" );
 
@@ -5918,8 +5941,8 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 			// This results in a slightly more friendly log message.
 		deadline_timeout = RequestClaimTimeout + 60;
 	}
-
-	startd->asyncRequestOpportunisticClaim(
+	if (wantSubClaim) {
+		startd->asyncRequestOpportunisticSubClaim(
 		jobAd,
 		description.Value(),
 		daemonCore->publicNetworkIpAddr(),
@@ -5927,7 +5950,17 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
 		deadline_timeout,       // overall timeout on completing claim request
 		cb );
-
+		
+	} else {
+		startd->asyncRequestOpportunisticClaim(
+		jobAd,
+		description.Value(),
+		daemonCore->publicNetworkIpAddr(),
+		scheduler.aliveInterval(),
+		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
+		deadline_timeout,       // overall timeout on completing claim request
+		cb );
+	}
 	delete jobAd;
 
 		// Now wait for callback...
@@ -5956,8 +5989,17 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		scheduler.DelMrec(match);
 		return;
 	}
-
-	match->setStatus( M_CLAIMED );
+	match->parent_claim_id = strdup(match->claimId());
+	match->needs_release_claim = false;
+	match->setClaimId(msg->claim_id());
+	match_rec *new_match = scheduler.AddMrec(match);
+	new_match->needs_release_claim = true;
+	new_match->setStatus( M_CLAIMED );
+	match->setClaimId(match->parent_claim_id);
+	new_match->parent_claim_id = strdup(match->parent_claim_id);
+	scheduler.DelMrec(match);
+	match = new_match;
+	
 
 	// now that we've completed authentication (if enabled),
 	// authorize this startd for READ operations
@@ -6658,6 +6700,8 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
 	}
 	if( new_job_id.proc == -1 ) {
 			// no more jobs to run
+	  if (mrec->cluster != -1 && mrec->proc != -1) {
+		 	
 		if (mrec->idle_timer_deadline < time(0))  {
 			dprintf(D_ALWAYS,
 				"match (%s) out of jobs; relinquishing\n",
@@ -6668,6 +6712,7 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec,bool accept_std_univ)
 			dprintf(D_FULLDEBUG, "Job requested to keep this claim idle for next job for %d seconds\n", mrec->keep_while_idle);
 		}
 		return false;
+	  }
 	}
 
 	dprintf(D_ALWAYS,
@@ -9760,7 +9805,7 @@ Scheduler::child_exit(int pid, int status)
 		// If we're not trying to shutdown, now that either an agent
 		// or a shadow (or both) have exited, we should try to
 		// start another job.
-	if( ! ExitWhenDone && StartJobsFlag ) {
+	/*if( ! ExitWhenDone && StartJobsFlag ) {
 		if( !claim_id.IsEmpty() ) {
 				// Try finding a new job for this claim.
 			match_rec *mrec = scheduler.FindMrecByClaimID( claim_id.Value() );
@@ -9771,8 +9816,8 @@ Scheduler::child_exit(int pid, int status)
 		else {
 			this->ExpediteStartJobs();
 		}
-	}
-	else if( !keep_claim ) {
+	}*/
+	/*else*/ if( !keep_claim ) {
 		if( !claim_id.IsEmpty() ) {
 			DelMrec( claim_id.Value() );
 		}
@@ -11123,6 +11168,13 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::RecycleShadow,
 			"RecycleShadow", this, DAEMON, D_COMMAND,
 			true /*force authentication*/);
+			
+	 daemonCore->Register_Command(REQUEST_SUB_CLAIM,
+			"REQUEST_SUB_CLAIM",
+			(CommandHandlercpp)&Scheduler::RequestSubClaim,
+			"RequestSubClaim", this, DAEMON, D_COMMAND,
+			true /*force authentication*/);
+			
 
 		 // Commands used by the startd are registered at READ
 		 // level rather than something like DAEMON or WRITE in order
@@ -11729,6 +11781,15 @@ Scheduler::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 	}
 }
 
+match_rec* 
+Scheduler::AddMrec(match_rec *rec)
+{
+	PROC_ID p;
+	p.proc = rec->proc;
+	p.cluster = rec->cluster;
+	return scheduler.AddMrec(rec->claimId(), rec->peer, &p, rec->my_match_ad, rec->user, rec->pool);
+}
+
 
 match_rec*
 Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
@@ -11749,8 +11810,8 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
 		char const *pubid = tempRec->publicClaimId();
 		dprintf( D_ALWAYS,
-				 "attempt to add pre-existing match \"%s\" ignored\n",
-				 pubid ? pubid : "(null)" );
+				 "attempt to add pre-existing match \"%s\" ( \" %s \" ) ignored\n",
+				 pubid ? pubid : "(null)", id );
 		if( pre_existing ) {
 			*pre_existing = tempRec;
 		}
@@ -11770,7 +11831,9 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 		delete rec;
 		return NULL;
 	}
-	ASSERT( matchesByJobID->insert( *jobId, rec ) == 0 );
+	
+	//ASSERT( matchesByJobID->insert( *jobId, rec ) == 0 );
+	matchesByJobID->insert( *jobId, rec );
 	numMatches++;
 
 		// Update CurrentRank in the startd ad.  Why?  Because when we
@@ -14016,6 +14079,71 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 
 	callAboutToSpawnJobHandler(new_job_id.cluster, new_job_id.proc, srec);
 	return KEEP_STREAM;
+}
+
+int 
+Scheduler::RequestSubClaim(int /*cmd*/, Stream *stream) 
+{
+			// This is called by the shadow when it wants to get a new job.
+			// Two things are going on here: getting the exit reason for
+			// the existing job and getting a new job.
+		int shadow_pid = 0;
+		shadow_rec *srec = NULL;
+		match_rec *mrec = NULL;
+		PROC_ID prev_job_id;
+		PROC_ID new_job_id;
+		Sock *sock = (Sock *)stream;
+
+			// force authentication
+		sock->decode();
+		if( !sock->triedAuthentication() ) {
+			CondorError errstack;
+			if( ! SecMan::authenticate_sock(sock, WRITE, &errstack) ||
+				! sock->getFullyQualifiedUser() )
+			{
+				dprintf( D_ALWAYS,
+						 "RequestSubClaim(): authentication failed: %s\n", 
+						 errstack.getFullText() );
+				return FALSE;
+			}
+		}
+
+		stream->decode();
+		if( !stream->get( shadow_pid ) ||
+			!stream->end_of_message() )
+		{
+			dprintf(D_ALWAYS,
+				"requestSubClaim() failed to receive shadow ID \n");
+			return FALSE;
+		}
+		srec = scheduler.FindSrecByPid(shadow_pid);
+		ASSERT(srec != NULL);
+		mrec = srec->match;
+		ASSERT(mrec != NULL);
+		if (mrec->parent_claim_id) {
+
+			match_rec *rec = NULL;
+			match_rec *subMatch = new match_rec(mrec, mrec->parent_claim_id);
+			subMatch->proc = -1;
+			subMatch->cluster = -1;
+			rec = scheduler.FindMrecByClaimID( mrec->parent_claim_id );
+			scheduler.AddMrec(subMatch);
+			rec = scheduler.FindMrecByClaimID( mrec->parent_claim_id );
+			if (  rec && FindRunnableJobForClaim(rec) && rec->cluster > 0 ){
+				ContactStartdArgs *args = new ContactStartdArgs(rec->claimId(), rec->peer, rec->is_dedicated);
+				scheduler.contactStartd(args, true);
+			} else {
+				if (rec)
+					scheduler.DelMrec(rec);
+				ClaimIdParser idp(mrec->parent_claim_id);
+				dprintf(D_FULLDEBUG, "No match found for claim Id %s \n", idp.publicClaimId());
+			}
+			delete subMatch;
+		}
+		stream->encode();
+		stream->put((int)1);
+		return TRUE;
+
 }
 
 void

@@ -519,3 +519,17 @@ recycleShadow(int previous_job_exit_reason)
 	startShadow( new_job_ad );
 	return true;
 }
+
+bool 
+informScheddTransfer(char *claimId)
+{
+	ASSERT( schedd_addr );
+	MyString error_msg;
+	DCSchedd schedd(schedd_addr);
+	if (!schedd.requestSubClaim(claimId, error_msg)) {
+		dprintf(D_FULLDEBUG, "Tried to inform schedd of initiated output file transfer \nReason: %s", error_msg.Value());
+		return false;
+	}
+	return true;
+	
+}

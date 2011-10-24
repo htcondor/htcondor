@@ -1825,3 +1825,49 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 
 	return true;
 }
+
+bool 
+DCSchedd::requestSubClaim( char * claim_id,  MyString &error_msg ) 
+{
+	int timeout = 60;
+	CondorError errstack;
+
+	ReliSock sock;
+	if( !connectSock(&sock,timeout,&errstack) ) {
+		error_msg.sprintf("Failed to connect to schedd: %s",
+						  errstack.getFullText());
+		return false;
+	}
+
+	if( !startCommand(REQUEST_SUB_CLAIM, &sock, timeout, &errstack) ) {
+		error_msg.sprintf("Failed to send REQUEST_SUB_CLAIM to schedd: %s",
+						  errstack.getFullText());
+		return false;
+	}
+
+	if( !forceAuthentication(&sock, &errstack) ) {
+		error_msg.sprintf("Failed to authenticate: %s",
+						  errstack.getFullText());
+		return false;
+	}
+
+	sock.encode();
+	int mypid = getpid();
+	if( !sock.put( mypid ) ||
+		!sock.end_of_message() )
+	{
+		error_msg = "Failed to send mypid";
+		return false;
+	}
+
+	sock.decode();	
+	
+	int found_new_job = 0;
+	sock.get( found_new_job );
+
+	if( !sock.end_of_message() ) {
+		error_msg = "Failed to receive end of message";
+		return false;
+	}
+	return true;
+}

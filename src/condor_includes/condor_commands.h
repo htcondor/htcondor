@@ -168,6 +168,8 @@
 
 #define GET_PRIORITY_ROLLUP (SCHED_VERS+112) // negotiator
 
+#define REQUEST_SUB_CLAIM 		(SCHED_VERS+113)
+
 
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
@@ -206,6 +208,7 @@
 #define CA_SUSPEND_CLAIM        (CA_AUTH_CMD_BASE+5)
 #define CA_RESUME_CLAIM         (CA_AUTH_CMD_BASE+6)
 #define CA_RENEW_LEASE_FOR_CLAIM (CA_AUTH_CMD_BASE+7)
+#define CA_REQUEST_SUB_CLAIM        (CA_AUTH_CMD_BASE+8)
 // other commands that use the ClassAd-only protocol 
 // CA_LOCATE_STARTER used to be (CA_AUTH_CMD_BASE+7), but no more 
 // CA_RECONNECT_JOB used to be  (CA_AUTH_CMD_BASE+8), but no more 

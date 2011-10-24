@@ -518,6 +518,7 @@ private:
 
 };
 
+extern bool informScheddTransfer(char *claimId);
 
 #endif
 

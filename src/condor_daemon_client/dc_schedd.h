@@ -381,6 +381,8 @@ public:
 		// Returns false on error (see error_msg)
 		// If no new job found, returns true with *new_job_ad=NULL
 	bool recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, MyString &error_msg );
+	
+	bool requestSubClaim( char * claim_id, MyString &error_msg);
 
 private:
 		/** This method actually does all the brains for all versions

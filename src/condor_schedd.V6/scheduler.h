@@ -129,8 +129,11 @@ class match_rec: public ClaimIdParser
 {
  public:
     match_rec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const* pool,bool is_dedicated);
+	match_rec(match_rec*, char const*);
+	void init(char const*, PROC_ID*, const ClassAd*, char const*, char const* pool,bool is_dedicated);
 	~match_rec();
 
+	char*			parent_claim_id;
     char*   		peer; //sinful address of startd
 	MyString        m_description;
 
@@ -324,6 +327,7 @@ class Scheduler : public Service
 	void			addCronTabClusterId( int );
 	int				RecycleShadow(int cmd, Stream *stream);
 	void			finishRecycleShadow(shadow_rec *srec);
+	int				RequestSubClaim(int cmd, Stream *stream);
 
 	int				requestSandboxLocation(int mode, Stream* s);
 	int			FindGManagerPid(PROC_ID job_id);
@@ -332,6 +336,7 @@ class Scheduler : public Service
 	int 			publish( ClassAd *ad );
 	void			OptimizeMachineAdForMatchmaking(ClassAd *ad);
     match_rec*      AddMrec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const*, match_rec **pre_existing=NULL);
+	match_rec* 			AddMrec(match_rec*);
 	// All deletions of match records _MUST_ go through DelMrec() to ensure
 	// proper cleanup.
     int         	DelMrec(char const*);
@@ -676,7 +681,7 @@ private:
 			@param args An object that holds all the info we care about 
 			@return false on failure and true on success
 		 */
-	void	contactStartd( ContactStartdArgs* args );
+	void	contactStartd( ContactStartdArgs* args, bool wantSubClaim = false );
 	void claimedStartd( DCMsgCallback *cb );
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
@@ -702,6 +707,7 @@ private:
 	void			expand_mpi_procs(StringList *, StringList *);
 
 	HashTable <HashKey, match_rec *> *matches;
+	//HashTable <HashKey, std::vector<match_rec *> > parentClaims;
 	HashTable <PROC_ID, match_rec *> *matchesByJobID;
 	HashTable <int, shadow_rec *> *shadowsByPid;
 	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;
