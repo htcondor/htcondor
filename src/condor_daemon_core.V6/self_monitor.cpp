@@ -320,6 +320,34 @@ double DaemonCore::Stats::AddRuntime(const char * name, double before)
    return now;
 }
 
+stats_entry_recent<Probe> * DaemonCore::Stats::AddSample(const char * name, int as, double val)
+{
+   stats_entry_recent<Probe> * probe = Pool.GetProbe< stats_entry_recent<Probe> >(name);
+   if ( ! probe) {
+       MyString attr;
+       attr.sprintf("Recent%s",name);
+       cleanStringForUseAsAttr(attr);
+       int as_pub = as | stats_entry_recent<Probe>::PubValueAndRecent;
+       probe = Pool.NewProbe< stats_entry_recent<Probe> >(name, attr.Value()+6, as_pub);
+       if (probe) {
+          //int as_recent = as | stats_entry_recent<Probe>::PubRecent | IF_RECENTPUB;
+          //Pool.AddPublish(attr.Value(), probe, strdup(attr.Value()), as_recent);
+          probe->SetRecentMax(this->RecentWindowMax / dc_stats_window_quantum);
+       }
+   }
+
+   if (probe) 
+      probe->Add(val);
+   return probe;
+}
+
+double DaemonCore::Stats::AddRuntimeSample(const char * name, int as, double before) // returns current time.
+{
+   double now = UtcTime::getTimeDouble();
+   this->AddSample(name, as, now - before);
+   return now;
+}
+
 void* DaemonCore::Stats::New(const char * category, const char * name, int as)
 {
    MyString attr;
@@ -369,5 +397,30 @@ void* DaemonCore::Stats::New(const char * category, const char * name, int as)
       }
 
    return ret;
+}
+
+dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int as)
+{
+   StatisticsPool * pool = &daemonCore->dc_stats.Pool;
+   this->probe = pool->GetProbe< stats_entry_recent<Probe> >(name);
+   if ( ! this->probe) {
+       MyString attr(name);
+       cleanStringForUseAsAttr(attr);
+       int as_pub = as | stats_entry_recent<Probe>::PubValueAndRecent;
+       this->probe = pool->NewProbe< stats_entry_recent<Probe> >(name, attr.Value(), as_pub);
+       if (this->probe) {
+          this->probe->SetRecentMax(daemonCore->dc_stats.RecentWindowMax / dc_stats_window_quantum);
+       }
+   }
+   if (this->probe)
+       this->begin = UtcTime::getTimeDouble();
+}
+
+dc_stats_auto_runtime_probe::~dc_stats_auto_runtime_probe()
+{
+   if (this->probe) {
+      double now = UtcTime::getTimeDouble();
+      this->probe->Add(now - this->begin);
+   }
 }
 

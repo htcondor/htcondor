@@ -174,6 +174,17 @@ extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2)
 }
 #endif
 
+class _condor_auto_save_runtime
+{
+public:
+    _condor_auto_save_runtime(double & store); // save result here
+    ~_condor_auto_save_runtime();
+    double   current_runtime();
+    double & runtime;
+    double   begin;
+};
+
+
 #ifndef CONDOR_ASSERT
 #define CONDOR_ASSERT(cond) \
 	if( !(cond) ) { EXCEPT("Assertion ERROR on (%s)",#cond); }
