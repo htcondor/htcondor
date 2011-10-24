@@ -40,6 +40,8 @@
 
 Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 {
+	c_isSubClaim = false;
+	parent = NULL;
 	c_client = new Client;
 	c_id = new ClaimId( claim_type, res_ip->r_id_str );
 	if( claim_type == CLAIM_OPPORTUNISTIC ) {
@@ -86,11 +88,17 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	c_schedd_closed_claim = false;
 
 	c_last_state = CLAIM_UNCLAIMED;
+	dprintf(D_ALWAYS, "*** CW CREATE CLAIM: %s \n", id());
 }
 
 
 Claim::~Claim()
 {	
+	dprintf(D_ALWAYS, "*** CW ** DELETE CLAIM: %s \n", id());	
+	
+	for (unsigned int i = 0; i < subClaims.size(); i++){
+		delete subClaims[i];
+	}
 	if( c_type == CLAIM_COD ) {
 		dprintf( D_FULLDEBUG, "Deleted claim %s (owner '%s')\n", 
 				 c_id->id(), 
@@ -124,6 +132,8 @@ Claim::~Claim()
 	if( c_cod_keyword ) {
 		free( c_cod_keyword );
 	}
+	parent = NULL;
+	c_isSubClaim = false;
 }	
 
 void
@@ -138,6 +148,9 @@ void
 Claim::vacate() 
 {
 	ASSERT( c_id );
+	for (unsigned int i = 0; i < subClaims.size(); i++){
+		subClaims[i]->vacate();
+	}
 		// warn the client of this claim that it's being vacated
 	if( c_client && c_client->addr() && !c_schedd_closed_claim ) {
 		c_client->vacate( c_id->id() );
@@ -646,6 +659,8 @@ Claim::beginClaim( void )
 {
 	ASSERT( c_state == CLAIM_UNCLAIMED );
 	changeState( CLAIM_IDLE );
+	if (parent)
+		parent->changeState(CLAIM_IDLE);
 
 	startLeaseTimer();
 }
@@ -872,6 +887,9 @@ Claim::startLeaseTimer()
 
 	dprintf( D_FULLDEBUG, "Started ClaimLease timer (%d) w/ %d second "
 			 "lease duration\n", c_lease_tid, c_lease_duration );
+	for (unsigned  int i = 0; i < subClaims.size(); i++){
+		subClaims[i]->startLeaseTimer();
+	}
 }
 
 
@@ -896,6 +914,9 @@ Claim::cancelLeaseTimer()
 	if ( c_sendalive_tid != -1 ) {
 		daemonCore->Cancel_Timer(c_sendalive_tid);
 		c_sendalive_tid = -1;
+	}
+	for (unsigned int i = 0; i < subClaims.size(); i++){
+		subClaims[i]->cancelLeaseTimer();
 	}
 
 }
@@ -1281,7 +1302,9 @@ bool
 Claim::idMatches( const char* req_id )
 {
 	if( c_id ) {
-		return c_id->matches( req_id );
+		if (c_id->matches(req_id))
+			return true;
+		return hasSubClaim((char*)req_id);
 	}
 	return false;
 }
@@ -1360,6 +1383,7 @@ Claim::spawnStarter( Stream* s )
 void
 Claim::setStarter( Starter* s )
 {
+	dprintf(D_ALWAYS, "*** CW *** CLAIM ID %s  setting starter \n", id());
 	if( s && c_starter ) {
 		EXCEPT( "Claim::setStarter() called with existing starter!" );
 	}
@@ -1467,6 +1491,9 @@ Claim::deactivateClaim( bool graceful )
 bool
 Claim::removeClaim( bool graceful )
 {
+	for (unsigned int i = 0; i < subClaims.size(); i++){
+		subClaims[i]->removeClaim(graceful);
+	}
 	if( isActive() ) {
 		c_wants_remove = true;
 		if( graceful ) {
@@ -1487,6 +1514,9 @@ Claim::removeClaim( bool graceful )
 bool
 Claim::suspendClaim( void )
 {
+	for (unsigned int i = 0; i < subClaims.size(); i++){
+		subClaims[i]->suspendClaim();
+	}
 	changeState( CLAIM_SUSPENDED );
 
 	if( c_starter ) {
@@ -1501,6 +1531,9 @@ Claim::suspendClaim( void )
 bool
 Claim::resumeClaim( void )
 {
+	for (unsigned int i = 0; i < subClaims.size(); i++){
+		subClaims[i]->resumeClaim();
+	}
 	if( c_starter ) {
 		changeState( CLAIM_RUNNING );
 		return (bool)c_starter->resume();
@@ -1510,6 +1543,57 @@ Claim::resumeClaim( void )
 	changeState( CLAIM_IDLE );
 
 	return true;
+}
+
+bool 
+Claim::addSubClaim( Claim *subClaim ) 
+{
+	subClaim->addParentClaim(this);
+	this->subClaims.push_back(subClaim);
+	// todo: only add if not there yet
+	return true;
+
+}
+
+bool 
+Claim::addParentClaim( Claim *subClaim ) 
+{
+	this->parentClaims.push_back(subClaim);
+	return true;
+}
+
+bool 
+Claim::hasSubClaim(char *aid){
+	for (int i = 0 ; i < subClaims.size() ; i++){
+		if (subClaims[i]->idMatches(aid))
+			return true;
+	}
+	return false;
+}
+
+Claim *
+Claim::getSubClaim(char *aid) {
+	
+	for (int i = 0 ; i < subClaims.size() ; i++){
+		if (subClaims[i]->idMatches(aid))
+			return subClaims[i];
+	}
+	if (this->idMatches(aid))
+		return this;
+	return NULL;
+}
+
+bool
+Claim::removeSubClaim( Claim *subClaim ) {
+	for (int i = 0 ; i < subClaims.size() ; i++) {
+		if (subClaims[i]->idMatches(subClaim->id())) {
+			subClaims.erase(subClaims.begin()+i);
+			return true;
+
+		}
+
+	}
+	return false;
 }
 
 
@@ -1866,6 +1950,9 @@ Claim::finishDeactivateCmd( void )
 void
 Claim::resetClaim( void )
 {
+	for (unsigned int i = 0; i < subClaims.size(); i++){
+		subClaims[i]->resetClaim();
+	}
 	if( c_starter ) {
 		delete( c_starter );
 		c_starter = NULL;

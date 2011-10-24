@@ -284,6 +284,9 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( REQUEST_CLAIM, "REQUEST_CLAIM", 
 								  (CommandHandler)command_request_claim,
 								  "command_request_claim", 0, DAEMON );
+	daemonCore->Register_Command( REQUEST_SUB_CLAIM, "REQUEST_SUB_CLAIM", 
+								  (CommandHandler)command_request_sub_claim,
+								  "command_request_claim", 0, DAEMON );
 	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
 								  (CommandHandler)command_release_claim,
 								  "command_release_claim", 0, DAEMON );

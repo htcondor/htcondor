@@ -203,6 +203,7 @@ public:
 	int			proc()			{return c_proc;};
 	Stream*		requestStream()	{return c_request_stream;};
 	int			getaliveint()	{return c_aliveint;};
+	int		    getLeaseDuration() {return c_lease_duration; };
 	ClaimState	state()			{return c_state;};
 	float		percentCpuUsage( void );
 	unsigned long	imageSize( void );
@@ -239,6 +240,11 @@ public:
 	bool deactivateClaim( bool graceful );
 	bool suspendClaim( void );
 	bool resumeClaim( void );
+	bool addSubClaim( Claim *subClaim );
+	bool removeSubClaim( Claim *subClaim );
+	bool hasSubClaim(char *id);
+	Claim *getSubClaim(char *id);
+	bool addParentClaim( Claim *parentClaim );
 	bool starterKill( int sig );
 	bool starterKillPg( int sig );
 	bool starterKillSoft( bool state_change = false );
@@ -284,7 +290,8 @@ public:
 	int requestClaimSockClosed(Stream *s);
 
 	void setResource( Resource* _rip ) { c_rip = _rip; };
-
+	Claim *parent;
+	bool c_isSubClaim;
 private:
 	Resource	*c_rip;
 	Client 		*c_client;
@@ -336,6 +343,9 @@ private:
 	bool        c_retire_peacefully;
 	bool        c_preempt_was_true; //was PREEMPT ever true for this claim?
 	bool        c_schedd_closed_claim;
+	
+	std::vector<Claim*> subClaims;
+	std::vector<Claim*> parentClaims;
 
 
 		// Helper methods

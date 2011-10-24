@@ -84,6 +84,9 @@ public:
 		*/
 	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
 
+void asyncRequestOpportunisticSubClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
+	
+
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
 			@param claim_is_closing startd indicates if not accepting more jobs
@@ -125,6 +128,9 @@ public:
 		// Generic ClassAd-only protocol for managing claims
 
 	bool requestClaim( ClaimType type, const ClassAd* req_ad,
+					   ClassAd* reply, int timeout = -1 );
+					   
+	bool requestSubClaim( ClaimType type, const ClassAd* req_ad,
 					   ClassAd* reply, int timeout = -1 );
 
 	bool activateClaim( const ClassAd* job_ad, ClassAd* reply,
@@ -179,7 +185,7 @@ public:
 
 class ClaimStartdMsg: public DCMsg {
 public:
-	ClaimStartdMsg( char const *claim_id, ClassAd const *job_ad, char const *description, char const *scheduler_addr, int alive_interval );
+	ClaimStartdMsg( char const *claim_id, ClassAd const *job_ad, char const *description, char const *scheduler_addr, int alive_interval, int cmd = REQUEST_CLAIM );
 
 		// Functions that override DCMsg
 	bool writeMsg( DCMessenger *messenger, Sock *sock );

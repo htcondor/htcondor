@@ -33,6 +33,7 @@
 #endif
 
 extern "C" int tcp_accept_timeout( int, struct sockaddr*, int*, int );
+char *shared_claim_id;
 
 static int deactivate_claim(Stream *stream, Resource *rip, bool graceful);
 
@@ -137,7 +138,7 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 		reply( stream, NOT_OK );
 		return FALSE;
 	}
-	free( id );
+	
 
 	if ( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
@@ -177,14 +178,15 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 		// If we got this far and we're not in claimed/idle, there
 		// really is a problem activating the claim.
 	if( a != idle_act ) {
+		return activate_claim( rip, id, stream );
 		rip->log_ignore( ACTIVATE_CLAIM, s, a );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
 		return FALSE;
 	}
 
-		// If we got to here, everything's cool.  Do the work. 
-	return activate_claim( rip, stream );
+		// If we got to here, everything's cool.  Do the work. id needs to be free'd
+	return activate_claim( rip, id,  stream );
 }
 
 
@@ -276,8 +278,9 @@ command_give_totals_classad( Service*, int, Stream* stream )
 
 
 int
-command_request_claim( Service*, int cmd, Stream* stream ) 
+command_request_claim( Service *svc, int cmd, Stream* stream ) 
 {
+	
 	char* id = NULL;
 	Resource* rip;
 	int rval;
@@ -338,8 +341,102 @@ command_request_claim( Service*, int cmd, Stream* stream )
 		refuse( stream );
 		return FALSE;
 	}
+	shared_claim_id = id;
+	//rval = request_claim( rip, claim, id, stream );
+	rval = command_request_sub_claim( svc, REQUEST_SUB_CLAIM, stream, id);
+	shared_claim_id = NULL;
+	free( id );
+	return rval;
+}
 
+int
+command_request_sub_claim( Service*, int cmd, Stream* stream, char *claimID ) 
+{
+	char* id = NULL;
+	Resource* rip;
+	int rval;
+	if (shared_claim_id == NULL) {
+	if( ! stream->get_secret(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		if( id ) { 
+			free( id );
+		}
+		refuse( stream );
+		return FALSE;
+	}
+	} else {
+		id = strdup(shared_claim_id);
+		
+	}
+	
+
+	rip = resmgr->get_by_any_id( id );
+	if( !rip ) {
+		ClaimIdParser idp( id );
+		dprintf( D_ALWAYS, 
+				 "Error: can't find resource with ClaimId (%s) for %d (%s)\n", idp.publicClaimId(), cmd, getCommandString(cmd) );
+		
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+
+	if( resmgr->isShuttingDown() ) {
+		rip->log_shutdown_ignore( cmd );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+
+	State s = rip->state();
+	if( s == preempting_state ) {
+		rip->log_ignore( REQUEST_SUB_CLAIM, s );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+
+	Claim *claim = new Claim(rip);
+	Claim *parent = NULL;
+	/*if( rip->state() == claimed_state ) {
+		if( rip->r_pre_pre ) {
+			claim = rip->r_pre_pre;
+			parent->addSubClaim(claim);
+			rip->r_pre_pre = parent;
+
+		}
+		else {
+			claim = rip->r_pre;
+			parent->addSubClaim(claim);
+			rip->r_pre = parent;
+
+		}
+	} else {*/
+		//claim = rip->r_cur;
+		parent = rip->r_cur;
+		parent->addSubClaim(claim);
+		
+		//rip->r_cur = parent;
+	//}
+
+	ASSERT( parent );
+	claim->setRequestStream(parent->requestStream());
+	if( !parent->idMatches(id) ) {
+			// This request doesn't match the right claim ID.  It must
+			// match one of the other claim IDs associated with this
+			// resource (e.g. because the negotiator matched the job
+			// against a stale machine ClassAd).
+		rip->log_ignore( REQUEST_SUB_CLAIM, s );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+
+	claim->parent = parent;	
+	if (shared_claim_id == NULL)
+		claim->c_isSubClaim = true;
 	rval = request_claim( rip, claim, id, stream );
+	
 	free( id );
 	return rval;
 }
@@ -1122,6 +1219,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		   -Derek Wright 3/11/99 
 		*/
 	claim->cancel_match_timer();
+	if (claim->parent)
+		claim->parent->cancel_match_timer();
 
 		// Get the classad of the request.
 	if( !req_classad->initFromStream(*stream) ) {
@@ -1149,6 +1248,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			// Now, store them into r_cur or r_pre, as appropiate
 		claim->setaliveint( interval );
 		claim->client()->setaddr( client_addr );
+		if (claim->parent != NULL) {
+			claim->parent->setaliveint(interval);
+			claim->parent->client()->setaddr( client_addr) ;
+		}
 		free( client_addr );
 		client_addr = NULL;
 	} else {
@@ -1293,7 +1396,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rank = rip->compute_rank(req_classad);
 	rip->dprintf( D_FULLDEBUG, "Rank of this claim is: %f\n", rank );
 
-	if( rip->state() == claimed_state ) {
+	if( rip->state() == claimed_state && !claim->c_isSubClaim  ) {
 			// We're currently claimed.  We might want to preempt the
 			// current claim to make way for this new one...
 		if( !rip->r_pre ) {
@@ -1304,11 +1407,15 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		}
 		if( rip->r_pre_pre ) {
 			if(!rip->r_pre_pre->idMatches(id)) {
+				if (!rip->r_pre_pre->hasSubClaim(id)) {
 				rip->dprintf( D_ALWAYS,
 							  "ClaimId from schedd (%s) doesn't match (%s)\n",
 							  idp.publicClaimId(), rip->r_pre_pre->publicClaimId() );
 				refuse( stream );
 				ABORT;
+				} else {
+					rip->dprintf(D_ALWAYS, "Preempting Claim has matching subclaim \n");
+				}
 			}
 			rip->dprintf(
 					 D_ALWAYS,
@@ -1393,7 +1500,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		}
 	} else {
 			// We're not claimed
-		if( rip->r_cur->idMatches(id) ) {
+		if( rip->r_cur->idMatches(id) || rip->r_cur->hasSubClaim(id)) {
 			rip->dprintf( D_ALWAYS, "Request accepted.\n" );
 			cmd = OK;
 		} else {
@@ -1434,7 +1541,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
 		// process.
-	accept_request_claim( rip );
+	accept_request_claim( rip, claim );
 
 		// We always need to return KEEP_STREAM so that daemon core
 		// doesn't try to delete the stream we've already deleted.
@@ -1473,16 +1580,16 @@ abort_accept_claim( Resource* rip, Stream* stream )
 
 
 bool
-accept_request_claim( Resource* rip )
+accept_request_claim( Resource* rip, Claim *actualClaim )
 {
 	int interval = -1;
-	char *client_addr = NULL, *tmp;
+	char *client_addr = NULL;
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
 
 		// There should not be a pre claim object now.
-	ASSERT( rip->r_pre == NULL );
-
+	ASSERT( rip->r_pre == NULL || actualClaim->c_isSubClaim );
+	
 	Stream* stream = rip->r_cur->requestStream();
 	ASSERT( stream );
 	Sock* sock = (Sock*)stream;
@@ -1492,6 +1599,11 @@ accept_request_claim( Resource* rip )
 		rip->dprintf( D_ALWAYS, "Can't to send cmd to schedd.\n" );
 		abort_accept_claim( rip, stream );
 		return false;
+	}
+	if (actualClaim) {
+		if (!stream->put_secret(actualClaim->id())) {
+			rip->dprintf( D_ALWAYS, "Can't put claim id into stream.\n" );
+		}
 	}
 	if( !stream->end_of_message() ) {
 		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
@@ -1530,6 +1642,7 @@ accept_request_claim( Resource* rip )
 		free( client_addr );
 		client_addr = NULL;
 	}
+	
 
 		// Figure out the hostname of our client.
 	MyString hostname = get_full_hostname(sock->peer_addr());
@@ -1574,9 +1687,12 @@ accept_request_claim( Resource* rip )
 
 		// Since we're done talking to this schedd, delete the stream.
 	rip->r_cur->setRequestStream( NULL );
+	//if (actualClaim->c_isSubClaim)
+	//	rip->r_cur = actualClaim;
 
 	rip->dprintf( D_FAILURE|D_ALWAYS, "State change: claiming protocol successful\n" );
 	rip->change_state( claimed_state );
+	
 	return true;
 }
 
@@ -1589,8 +1705,9 @@ free( shadow_addr );					\
 return FALSE
 
 int
-activate_claim( Resource* rip, Stream* stream ) 
+activate_claim( Resource* rip, char *id, Stream* stream ) 
 {
+	dprintf(D_ALWAYS, "*** CW *** Activate claim with id %s \n", id);
 		// Formerly known as "startjob"
 	int mach_requirements = 1;
 	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
@@ -1804,18 +1921,21 @@ activate_claim( Resource* rip, Stream* stream )
 		// to spawn the starter.  set it in our Claim object.  Once
 		// it's there, we no longer control this memory so we should
 		// clear out our pointer to avoid confusion/problems.
+	Claim *actual = rip->r_cur->getSubClaim(id);
+	free(id);
 	rip->r_cur->setStarter( tmp_starter );
 	// this variable will be used to know the IP of Starter later.
 	Starter* vm_starter = tmp_starter;
-	tmp_starter = NULL;
+	
 
 		// update the current rank on this claim
 	float rank = rip->compute_rank( req_classad ); 
 	rip->r_cur->setrank( rank );
-
+	actual->setrank( rank );
 		// Grab the job ID, so we've got it.  Once we give the
 		// req_classad to the Claim object, we no longer control it. 
 	rip->r_cur->saveJobInfo( req_classad );
+	actual->saveJobInfo(req_classad) ;
 	req_classad = NULL;
 
 		// Actually spawn the starter
@@ -1844,7 +1964,9 @@ activate_claim( Resource* rip, Stream* stream )
 	rip->dprintf( D_FAILURE|D_ALWAYS, 
 				  "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
-
+	actual->setStarter(tmp_starter);
+	rip->r_cur->setStarter(NULL);
+	tmp_starter = NULL;
 	free( shadow_addr );
 	return TRUE;
 }

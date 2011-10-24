@@ -22,6 +22,8 @@
 
 class Service;
 
+
+
 /*
   command_handler reads a ClaimId off the socket, tries to find
   the resource that the ClaimId belongs to, does a switch on the
@@ -72,6 +74,9 @@ int command_request_claim( Service*, int, Stream* );
 int command_match_info( Service*, int, Stream* );
 int command_release_claim( Service*, int, Stream* );
 
+// should never be for a preempting match
+int command_request_sub_claim( Service*, int cmd, Stream* stream, char *claimId = NULL );
+
 /* 
    These commands all act startd-wide, and therefore, should be handled
    seperately. 
@@ -110,9 +115,9 @@ int match_info( Resource*, char* );
 int request_claim( Resource*, Claim *, char*, Stream* ); 
 
 // Accept claim from schedd agent
-bool accept_request_claim( Resource* ); 
+bool accept_request_claim( Resource* , Claim* c=NULL); 
 
 // Activate a claim with a given starter
-int activate_claim( Resource*, Stream* ); 
+int activate_claim( Resource*, char*, Stream* ); 
 
 #endif /* _STARTD_COMMAND_H */

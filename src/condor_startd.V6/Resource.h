@@ -231,6 +231,7 @@ public:
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity
 	ClassAd*		r_classad;	// Resource classad (contains everything in config file)
+	Claim*			r_parent;   // Info about the parent claim
 	Claim*			r_cur;		// Info about the current claim
 	Claim*			r_pre;		// Info about the possibly preempting claim
 	Claim*			r_pre_pre;	// Info about the preempting preempting claim

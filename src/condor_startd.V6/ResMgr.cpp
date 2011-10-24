@@ -1375,7 +1375,7 @@ ResMgr::get_by_cur_id( char* id )
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_cur->idMatches(id) ) {
+		if( resources[i]->r_cur->idMatches(id) || resources[i]->r_cur->hasSubClaim(id)) {
 			return resources[i];
 		}
 	}
@@ -1391,7 +1391,7 @@ ResMgr::get_by_any_id( char* id )
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_cur->idMatches(id) ) {
+		if( resources[i]->r_cur->idMatches(id) || resources[i]->r_cur->hasSubClaim(id)) {
 			return resources[i];
 		}
 		if( resources[i]->r_pre &&

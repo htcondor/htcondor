@@ -81,6 +81,7 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 	r_classad = NULL;
 	r_state = new ResState( this );
 	r_cur = new Claim( this );
+	r_parent = NULL;
 	r_pre = NULL;
 	r_pre_pre = NULL;
 	r_cod_mgr = new CODMgr( this );
@@ -196,6 +197,11 @@ Resource::~Resource()
 	}
 	if( r_pre_pre ) {
 		delete r_pre_pre; r_pre_pre = NULL;
+	}
+	if (r_parent) {
+		delete r_parent;
+		r_parent = NULL;
+		
 	}
 	delete r_cod_mgr; r_cod_mgr = NULL;
 	delete r_reqexp; r_reqexp = NULL;

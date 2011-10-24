@@ -75,8 +75,8 @@ DCStartd::setClaimId( const char* id )
 }
 
 
-ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, ClassAd const *job_ad, char const *the_description, char const *scheduler_addr, int alive_interval ):
- DCMsg(REQUEST_CLAIM)
+ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, ClassAd const *job_ad, char const *the_description, char const *scheduler_addr, int alive_interval, int cmd ):
+ DCMsg(cmd)
 {
 
 	m_claim_id = the_claim_id;
@@ -137,6 +137,18 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		sockFailed( sock );
 		return false;
 	}
+	
+	char *str = NULL;
+	if( sock->get_secret( str ) ){
+		m_claim_id = str;
+		dprintf(D_ALWAYS, "*** CW *** Claim id was given from stream: %s \n", m_claim_id.Value());
+		ClaimIdParser cid(m_claim_id.Value());
+		this->setSecSessionId(cid.secSessionId());
+		free(str);
+	} else {
+		dprintf(D_ALWAYS, "*** CW *** no claim ID in stream ... \n");
+	}
+	
 
 	if( m_reply == OK ) {
 			// no need to log success, because DCMsg::reportSuccess() will
@@ -176,6 +188,30 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	sendMsg(msg.get());
 }
 
+void
+DCStartd::asyncRequestOpportunisticSubClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
+{
+	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting subclaim %s\n",description);
+	dprintf(D_ALWAYS, "*** CW *** SUBCLAIM REQUEST... %s (timeout: %i) \n",claim_id, timeout);
+	setCmdStr( "requestClaim" );
+	ASSERT( checkClaimId() );
+	ASSERT( checkAddr() );
+
+	classy_counted_ptr<ClaimStartdMsg> msg = new ClaimStartdMsg( claim_id, req_ad, description, scheduler_addr, alive_interval, REQUEST_SUB_CLAIM );
+
+	ASSERT( msg.get() );
+	msg->setCallback(cb);
+
+	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);
+
+		// if this claim is associated with a security session
+	ClaimIdParser cid(claim_id);
+	msg->setSecSessionId(cid.secSessionId());
+
+	msg->setTimeout(timeout);
+	msg->setDeadlineTimeout(deadline_timeout);
+	sendMsg(msg.get());
+}
 
 bool 
 DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
@@ -362,7 +398,7 @@ DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad,
 						ClassAd* reply, int timeout )
 {
 	setCmdStr( "requestClaim" );
-
+	// type ought to be CLAIM_SUPER here
 	MyString err_msg;
 	switch( cType ) {
 	case CLAIM_COD:
@@ -388,6 +424,40 @@ DCStartd::requestClaim( ClaimType cType, const ClassAd* req_ad,
 	req.Insert( buf );
 
 	return sendCACmd( &req, reply, true, timeout );
+}
+
+bool
+DCStartd::requestSubClaim( ClaimType cType, const ClassAd* req_ad, 
+						ClassAd* reply, int timeout ) {
+						
+	setCmdStr( "requestSubClaim" );
+
+	MyString err_msg;
+	switch( cType ) {
+	case CLAIM_COD:
+	case CLAIM_OPPORTUNISTIC:
+		break;
+	default:
+		err_msg = "Invalid ClaimType (";
+		err_msg += (int)cType;
+		err_msg += ')';
+		newError( CA_INVALID_REQUEST, err_msg.Value() );
+		return false;
+	}
+
+	ClassAd req( *req_ad );
+	char buf[1024]; 
+
+		// Add our own attributes to the request ad we're sending
+	sprintf( buf, "%s = \"%s\"", ATTR_COMMAND,
+			 getCommandString(CA_REQUEST_SUB_CLAIM) );
+	req.Insert( buf );
+
+	sprintf( buf, "%s = \"%s\"", ATTR_CLAIM_TYPE, getClaimTypeString(cType) );
+	req.Insert( buf );
+
+	return sendCACmd( &req, reply, true, timeout );
+						
 }
 
 
