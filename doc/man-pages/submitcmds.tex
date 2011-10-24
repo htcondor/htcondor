@@ -1750,8 +1750,9 @@ there are further type-specific values that must specified.
 This submit description file command allows each to
 be given in a space-separated list.
 Allowable \SubmitCmd{grid-type-string} values are
-\SubmitCmd{ec2}, \SubmitCmd{condor}, \SubmitCmd{cream}, 
+\SubmitCmd{condor}, \SubmitCmd{cream}, 
 \SubmitCmd{deltacloud}, 
+\SubmitCmd{ec2},
 \SubmitCmd{gt2}, \SubmitCmd{gt4}, \SubmitCmd{gt5},
 \SubmitCmd{lsf}, \SubmitCmd{nordugrid}, \SubmitCmd{pbs},
 and \SubmitCmd{unicore}.
@@ -1777,6 +1778,10 @@ See section~\ref{sec:CREAM} for details.
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{deltacloud},
 the single parameter is the URL of the deltacloud service requested.
 See section~\ref{sec:Deltacloud} for details.
+
+For a \SubmitCmd{grid-type-string} of \SubmitCmd{ec2},
+one additional parameter specifies the EC2 URL. 
+See section~\ref{sec:Amazon}  for details. 
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt2},
 the single parameter is the name of the pre-WS GRAM resource to be used.
