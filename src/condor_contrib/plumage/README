@@ -23,11 +23,17 @@ dependencies:
 - js
 - boost
 - pymongo
+- python-dateutil
 
 Plumage can be included in a Condor source build using the following variables 
 when cmake is invoked:
 
 	-DWANT_CONTRIB:BOOL=TRUE -DWITH_MANAGEMENT:BOOL=TRUE -DWITH_PLUMAGE:BOOL=TRUE
+
+As part of a standard view collector setup, you may need to manually create a 
+directory where the view collector can write its standard stats files:
+
+     sudo mkdir -p /var/lib/condor/ViewHist
 
 Configuration
 =============
@@ -50,12 +56,15 @@ VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog"
 VIEW_SERVER.CONDOR_VIEW_HOST =
 VIEW_SERVER.KEEP_POOL_HISTORY = True
 VIEW_SERVER.SAMPLING_INTERVAL=20
-VIEW_SERVER.PLUGINS = $(LIBEXEC)/ODSCollectorPlugin.so
+VIEW_SERVER.PLUGINS = $(LIB)/plugins/ODSCollectorPlugin.so
+# or if not from an rpm...
+#VIEW_SERVER.PLUGINS = $(VIEW_SERVER.PLUGINS) $(LIBEXEC)/ODSCollectorPlugin-plugin.so
 POOL_HISTORY_SAMPLING_INTERVAL = 60
 UPDATE_INTERVAL = 300
 # the following are defaults in code also
 ODS_DB_HOST = localhost
 ODS_DB_PORT =
+DAEMON_LIST = $(DAEMON_LIST), VIEW_SERVER
 
 plumage_stats.py
 ================
@@ -152,3 +161,6 @@ respectively:
 
 > db.samples.submitter.find()
 <output not shown>
+
+NOTE: After the plumage collector plugin has been activated, it can take a default of 5 minutes for statistics 
+to become available to the tool.

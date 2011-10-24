@@ -401,6 +401,8 @@ const char* DeltacloudUserData = "deltacloud_user_data";
 
 char const *next_job_start_delay = "next_job_start_delay";
 char const *next_job_start_delay2 = "NextJobStartDelay";
+char const *want_graceful_removal = "want_graceful_removal";
+char const *job_max_vacate_time = "job_max_vacate_time";
 
 const char * REMOTE_PREFIX="Remote_";
 
@@ -3589,6 +3591,32 @@ SetNotifyUser()
 }
 
 void
+SetWantGracefulRemoval()
+{
+	char *how = condor_param( want_graceful_removal, ATTR_WANT_GRACEFUL_REMOVAL );
+	MyString buffer;
+
+	if( how ) {
+		buffer.sprintf( "%s = %s", ATTR_WANT_GRACEFUL_REMOVAL, how );
+		InsertJobExpr (buffer);
+		free( how );
+	}
+}
+
+void
+SetJobMaxVacateTime()
+{
+	char *expr = condor_param( job_max_vacate_time, ATTR_JOB_MAX_VACATE_TIME );
+	MyString buffer;
+
+	if( expr ) {
+		buffer.sprintf( "%s = %s", ATTR_JOB_MAX_VACATE_TIME, expr );
+		InsertJobExpr (buffer);
+		free( expr );
+	}
+}
+
+void
 SetEmailAttributes()
 {
 	char *attrs = condor_param( EmailAttributes, ATTR_EMAIL_ATTRIBUTES );
@@ -5940,6 +5968,8 @@ queue(int num)
 		SetRemoteInitialDir();
 		SetExitRequirements();
 		SetOutputDestination();
+		SetWantGracefulRemoval();
+		SetJobMaxVacateTime();
 
         // really a command, needs to happen before any calls to check_open
 		SetJobDisableFileChecks();

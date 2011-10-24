@@ -3692,9 +3692,12 @@ WANT_HOLD_REASON = \
 \item[\Macro{KILL}]
   A boolean expression that, when \Expr{True},
   causes Condor to immediately stop the
-  execution of a currently running job, without delay, and
-  without taking the time to produce a checkpoint (for a standard
-  universe job).
+  execution of a vacating job, without delay.
+  The job is hard-killed, so any attempt by the job to checkpoint or
+  clean up will be aborted.  This expression should normally be
+  \Expr{False}.  When desired, it may be used to abort the graceful
+  shutdown of a job earlier than the limit imposed by
+  \Macro{MachineMaxVacateTime}.
 
 \label{param:PeriodicCheckpoint}
 \item[\Macro{PERIODIC\_CHECKPOINT}]
@@ -3747,7 +3750,10 @@ WANT_HOLD_REASON = \
 \label{param:WantVacate}
 \item[\Macro{WANT\_VACATE}]
   A boolean expression that, when \Expr{True}, defines that a preempted
-  Condor job is to be vacated, instead of killed.
+  Condor job is to be vacated, instead of killed.  This means the
+  job will be soft-killed and given time to checkpoint or clean up.
+  The amount of time given depends on \Macro{MachineMaxVacateTime}
+  and \Macro{KILL}.
 
 \label{param:EnableVersionedOpsys}
 \item[\Macro{ENABLE\_VERSIONED\_OPSYS}]
@@ -3849,12 +3855,34 @@ WANT_HOLD_REASON = \
   with all further updates occurring at fixed 300
   second intervals following the initial update.
 
+\label{param:MachineMaxVacateTime}
+\item[\Macro{MachineMaxVacateTime}] An integer expression representing
+  the number of seconds the machine is willing to wait for a job that
+  has been soft-killed to gracefully shut down.  The default value is
+  600 seconds (10 minutes).  This expression is evaluated when the job
+  starts running.  The job may adjust the wait time by setting
+  \AdAttr{JobMaxVacateTime}.  If the job's setting is less than the
+  machine's, the job's is used.  If the job's setting is larger than
+  the machine's, the result depends on whether the job has any excess
+  retirement time.  If the job has more retirement time left than the
+  machine's max vacate time setting, then retirement time will be
+  converted into vacating time, up to the amount of
+  \MacroNI{JobMaxVacateTime}.  The \Macro{KILL} expression may be used
+  to abort the graceful shutdown of the job at any time.  At the time
+  when the job is preempted, the \Macro{WANT\_VACATE} expression may
+  be used to skip the graceful shutdown of the job.
+
 \label{param:MaxJobRetirementTime}
 \item[\Macro{MAXJOBRETIREMENTTIME}]
   An integer value representing the number of seconds a preempted job
   will be allowed to run before being evicted. The default value of 0
   (when the configuration variable is not present) means that the job
-  gets no retirement time.  Note that in peaceful shutdown mode of the
+  gets no retirement time.  If the job vacating policy grants the job
+  X seconds of vacating time, a preempted job will be soft-killed X seconds
+  before the end of its retirement time so that hard-killing of the job
+  will not happen until the end of the retirement time if the job does
+  not finish shutting down before then.
+  Note that in peaceful shutdown mode of the
   \Condor{startd}, retirement time is treated as though infinite.
   In graceful shutdown mode, the job will not be preempted until the
   configured retirement time expires or \Macro{SHUTDOWN\_GRACEFUL\_TIMEOUT}
@@ -5730,6 +5758,12 @@ These settings affect the \Condor{shadow}.
   proxy updates could happen very frequently, 
   potentially creating a lot of load on the submit machine.
 
+\label{param:ShadowRunUnknownUserJobs}
+\item[\Macro{SHADOW\_RUN\_UNKNOWN\_USER\_JOBS}]
+  A boolean that defaults to \Expr{False}.
+  When \Expr{True}, it allows the \Condor{shadow} daemon to run jobs 
+  as user \Login{nobody} when remotely submitted and from
+  users not in the local password file.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6845,6 +6879,13 @@ These macros affect the \Condor{negotiator}.
   if the stashed ClassAd's sequence number is older than its potential
   replacement.
 
+\label{param:NegotiatorUpdateAfterCycle}
+\item[\Macro{NEGOTIATOR\_UPDATE\_AFTER\_CYCLE}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, it will force the \Condor{negotiator} daemon to publish 
+  an update to the \Condor{collector} at the end of every negotiation cycle.
+  This is useful if monitoring statistics for the previous negotiation cycle. 
+
 \end{description}
 
 The following configuration macros affect negotiation for group users.
@@ -7173,6 +7214,15 @@ These macros affect the \Condor{credd}.
   secure password store.
   Subsequent uses of that password do not require
   communication with the \Condor{credd} daemon.
+  
+\label{param:SkipWindowsLogonNetwork}
+\item[\Macro{SKIP\_WINDOWS\_LOGON\_NETWORK}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, Windows authentication skips trying authentication
+  with the \Expr{LOGON\_NETWORK} method first, 
+  and attempts authentication  with \Expr{LOGON\_INTERACTIVE} method. 
+  This can be useful if many authentication failures are noticed, 
+  potentially leading to users getting locked out.
 
 \end{description}
 
@@ -10275,7 +10325,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   For the fetch work hooks,
   the full path to the program to invoke whenever the \Condor{startd}
   wants to fetch work.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
   There is no default.
 
@@ -10285,7 +10335,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   the full path to the program to invoke when the hook defined by
   \MacroNI{<Keyword>\_HOOK\_FETCH\_WORK}  returns data and the the \Condor{startd}
   decides if it is going to accept the fetched job or not.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
 
 \label{param:HookReplyClaim}
@@ -10293,7 +10343,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   For the fetch work hooks,
   the full path to the program to invoke whenever the \Condor{startd}
   finishes fetching a job and decides what to do with it.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
 
   between sets of hooks.
   There is no default.
@@ -10303,7 +10353,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   For the fetch work hooks,
   the full path to the program invoked by the \Condor{starter} before it
   runs the job.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
 
 \label{param:HookUpdateJobInfo}
@@ -10327,7 +10377,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   As a Job Router hook,
   the full path to the program invoked when the Job Router polls the status
   of routed jobs at intervals set by \MacroNI{JOB\_ROUTER\_POLLING\_PERIOD}.
-  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{<Keyword>} is the hook keyword defined by
   \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
 
 \label{param:HookEvictClaim}
@@ -10335,7 +10385,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   For the fetch work hooks,
   the full path to the program to invoke whenever the \Condor{startd}
   needs to evict a fetched claim.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
   There is no default.
 
@@ -10345,15 +10395,16 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   the full path to the program invoked by the \Condor{starter}
   whenever a job exits,
   either on its own or when being evicted from an execution slot. 
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
 
 \label{param:HookJobExitTimeout}
 \item[\Macro{<Keyword>\_HOOK\_JOB\_EXIT\_TIMEOUT}]
   For the fetch work hooks,
-  the number of seconds the \Condor{starter} will wait for the JOB\_EXIT
-  hook to exit before continuing with job cleanup.  Defaults to 30 seconds.
-  \MacroNI{<Keyword>} is is the hook keyword defined to distinguish
+  the number of seconds the \Condor{starter} will wait for the hook
+  defined by \MacroNI{<Keyword>\_HOOK\_JOB\_EXIT} hook to exit,
+  before continuing with job clean up.  Defaults to 30 seconds.
+  \MacroNI{<Keyword>} is the hook keyword defined to distinguish
   between sets of hooks.
 
 \label{param:FetchWorkDelay}
@@ -10386,7 +10437,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   the full path to the program invoked when the Job Router has determined
   that a job meets the definition for a route.  
   This hook is responsible for doing the transformation of the job.
-  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{<Keyword>} is the hook keyword defined by
   \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
 
 \label{param:HookJobFinalize}
@@ -10394,7 +10445,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   A Job Router hook,
   the full path to the program invoked when the Job Router has determined
   that the job completed.
-  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{<Keyword>} is the hook keyword defined by
   \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
 
 \label{param:HookJobCleanup}
@@ -10402,7 +10453,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
   A Job Router hook,
   the full path to the program invoked when the Job Router finishes 
   managing the job.
-  \MacroNI{<Keyword>} is is the hook keyword defined by
+  \MacroNI{<Keyword>} is the hook keyword defined by
   \MacroNI{JOB\_ROUTER\_HOOK\_KEYWORD} to identify the hooks.
 
 \end{description}

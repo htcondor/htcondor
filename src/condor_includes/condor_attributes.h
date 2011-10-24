@@ -893,6 +893,9 @@ extern const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD;
 extern const char * const ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD;
 extern const char * const ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME;
 extern const char * const ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME;
+extern const char * const ATTR_MACHINE_MAX_VACATE_TIME;
+extern const char * const ATTR_JOB_MAX_VACATE_TIME;
+extern const char * const ATTR_WANT_GRACEFUL_REMOVAL;
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

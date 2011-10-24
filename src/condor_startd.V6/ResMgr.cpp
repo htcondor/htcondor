@@ -199,6 +199,7 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "WANT_HOLD_SUBCODE", false );
 	configInsert( config_classad, "CLAIM_WORKLIFE", false );
 	configInsert( config_classad, ATTR_MAX_JOB_RETIREMENT_TIME, false );
+	configInsert( config_classad, ATTR_MACHINE_MAX_VACATE_TIME, true );
 
 		// Now, bring in things that we might need
 	configInsert( config_classad, "PERIODIC_CHECKPOINT", false );

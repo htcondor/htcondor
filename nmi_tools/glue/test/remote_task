@@ -69,12 +69,12 @@ if ($ENV{NMI_PLATFORM} =~ /winnt/) {
     my $perlver = `$perl_exe -version`;
     print $perlver;
     if (!($perlver =~ /cygwin/i)) {
-        #print "adding cygwin to the front of the path\n";
-        #$ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
-		#print "PATH=$ENV{PATH}\n";
+        print "adding cygwin to the front of the path\n";
+        $ENV{PATH} = "c:\\cygwin\\bin;$ENV{PATH}";
+		print "PATH=$ENV{PATH}\n";
 
-		$perl_exe = "c:\\cygwin\\bin\\perl";
-		print "Invoking cygwin perl by explicit path ($perl_exe)\n";
+		#$perl_exe = "c:\\cygwin\\bin\\perl";
+		#print "Invoking cygwin perl by explicit path ($perl_exe)\n";
         $perlver = `$perl_exe -version`;
         print $perlver;
         if (!($perlver =~ /cygwin/i)) {

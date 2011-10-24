@@ -90,6 +90,7 @@ Starter::initRunData( void )
 	s_pid = 0;		// pid_t can be unsigned, so use 0, not -1
 	s_birthdate = 0;
 	s_kill_tid = -1;
+	s_softkill_tid = -1;
 	s_port1 = -1;
 	s_port2 = -1;
 	s_reaper_id = -1;
@@ -1213,18 +1214,29 @@ Starter::killHard( void )
 
 
 bool
-Starter::killSoft( bool state_change )
+Starter::killSoft( bool /*state_change*/ )
 {
 	if( ! active() ) {
 		return true;
-	}
-	if( state_change ) {
-		daemonCore->Send_Signal( s_pid, DC_SIGSTATECHANGE );
 	}
 	if( ! kill(DC_SIGSOFTKILL) ) {
 		killpg( SIGKILL );
 		return false;
 	}
+
+		// If this soft-kill was triggered by entering the preempting
+		// state, state_change will be true.  We _could_ take the
+		// stance that a different timeout should apply in that case
+		// vs. other cases, such as condor_vacate_job.  However, for
+		// simplicity, we currently treat all cases with the same max
+		// vacate timeout.  Not having a timeout at all for some cases
+		// would require some care.  For example, it was observed in
+		// the past when there was no timeout that a job which ignored
+		// the soft-kill signal from condor_vacate_job was then
+		// immune to preemption.
+
+	startSoftkillTimeout();
+
 	return true;
 }
 
@@ -1288,6 +1300,31 @@ Starter::startKillTimer( void )
 }
 
 
+int
+Starter::startSoftkillTimeout( void )
+{
+	if( s_softkill_tid >= 0 ) {
+			// Timer already started.
+		return TRUE;
+	}
+
+	int softkill_timeout = s_claim ? s_claim->rip()->evalMaxVacateTime() : 0;
+	if( softkill_timeout < 0 ) {
+		softkill_timeout = 0;
+	}
+
+	s_softkill_tid = 
+		daemonCore->Register_Timer( softkill_timeout,
+						(TimerHandlercpp)&Starter::softkillTimeout,
+						"softkillTimeout", this );
+	if( s_softkill_tid < 0 ) {
+		EXCEPT( "Can't register softkillTimeout timer" );
+	}
+	dprintf(D_FULLDEBUG,"Using max vacate time of %ds for this job.\n",softkill_timeout);
+	return TRUE;
+}
+
+
 void
 Starter::cancelKillTimer( void )
 {
@@ -1303,6 +1340,18 @@ Starter::cancelKillTimer( void )
 					 s_kill_tid );
 		}
 		s_kill_tid = -1;
+	}
+	if( s_softkill_tid != -1 ) {
+		rval = daemonCore->Cancel_Timer( s_softkill_tid );
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, 
+					 "Failed to cancel softkill-starter timer (%d): "
+					 "daemonCore error\n", s_softkill_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Canceled softkill-starter timer (%d)\n",
+					 s_softkill_tid );
+		}
+		s_softkill_tid = -1;
 	}
 }
 
@@ -1324,6 +1373,16 @@ Starter::sigkillStarter( void )
 
 			// Kill the starter's entire process group.
 		killpg( SIGKILL );
+	}
+}
+
+void
+Starter::softkillTimeout( void )
+{
+	s_softkill_tid = -1;
+	if( active() ) {
+		dprintf( D_ALWAYS, "max vacate time expired.  Escalating to a fast shutdown of the job.\n" );
+		killHard();
 	}
 }
 

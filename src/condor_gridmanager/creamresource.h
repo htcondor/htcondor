@@ -60,7 +60,8 @@ class CreamResource : public BaseResource
 
 	static const char *CanonicalName( const char *name );
 	static const char *HashName( const char *resource_name,
-								 const char *proxy_subject );
+								 const char *proxy_subject,
+								 const char *proxy_first_fqan );
 
 	static CreamResource *FindOrCreateResource( const char *resource_name,
 												const Proxy *proxy );
@@ -82,6 +83,7 @@ class CreamResource : public BaseResource
 
 	char *proxySubject;
 	char *proxyFQAN;
+	char *proxyFirstFQAN;
 	int delegationTimerId;
 	CreamProxyDelegation *activeDelegationCmd;
 	char *serviceUri;
