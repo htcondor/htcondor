@@ -6405,6 +6405,9 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			    const char* cgroup,
                             const char* glexec_proxy)
 {
+    double begintime = UtcTime::getTimeDouble();
+   	double runtime = begintime;
+
 	bool success = false;
 	bool family_registered = false;
 	if (!m_proc_family->register_subfamily(child_pid,
@@ -6417,6 +6420,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		goto REGISTER_FAMILY_DONE;
 	}
 	family_registered = true;
+    runtime = dc_stats.AddRuntimeSample("DCRregister_subfamily", IF_VERBOSEPUB, runtime);
 	if (penvid != NULL) {
 		if (!m_proc_family->track_family_via_environment(child_pid, *penvid)) {
 			dprintf(D_ALWAYS,
@@ -6425,6 +6429,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 					child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
+       runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_env", IF_VERBOSEPUB, runtime);
 	}
 	if (login != NULL) {
 		if (!m_proc_family->track_family_via_login(child_pid, login)) {
@@ -6435,6 +6440,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        login);
 			goto REGISTER_FAMILY_DONE;
 		}
+       runtime = dc_stats.AddRuntimeSample("DCRtrack_family_via_login", IF_VERBOSEPUB, runtime);
 	}
 	if (group != NULL) {
 #if defined(LINUX)
@@ -6477,6 +6483,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
 			        child_pid);
 			goto REGISTER_FAMILY_DONE;
 		}
+       runtime = dc_stats.AddRuntimeSample("DCRuse_glexec_for_family", IF_VERBOSEPUB, runtime);
 	}
 	success = true;
 REGISTER_FAMILY_DONE:
@@ -6487,7 +6494,11 @@ REGISTER_FAMILY_DONE:
 			            "with root %u\n",
 			        child_pid);
 		}
+        runtime = dc_stats.AddRuntimeSample("DCRunregister_family", IF_VERBOSEPUB, runtime);
 	}
+
+    runtime = dc_stats.AddRuntimeSample("DCRegister_Family", IF_VERBOSEPUB, begintime);
+
 	return success;
 }
 
@@ -7371,7 +7382,9 @@ int DaemonCore::Create_Process(
 
 	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
 
-
+	double runtime = UtcTime::getTimeDouble();
+    double create_process_begin_time = runtime;
+    double delta_runtime = 0;
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
 
 	// First do whatever error checking we can that is not platform specific
@@ -8038,6 +8051,8 @@ int DaemonCore::Create_Process(
 	//
 	if ( priv == PRIV_USER_FINAL ) {
 		create_process_flags |= CREATE_NEW_CONSOLE;
+		si.dwFlags |= STARTF_USESHOWWINDOW;
+        si.wShowWindow = SW_SHOWNOACTIVATE;
 	}
 
 	const char *cwdBackup;
@@ -8047,10 +8062,14 @@ int DaemonCore::Create_Process(
 		cwdBackup = cwd;
 	}
 		
+    runtime = dc_stats.AddRuntimeSample("DCCreate_Process000", IF_VERBOSEPUB, runtime);
 
    	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
 		cp_result = ::CreateProcess(bIs16Bit ? NULL : executable,(char*)strArgs.Value(),NULL,
 			NULL,inherit_handles, create_process_flags,newenv,cwdBackup,&si,&piProcess);
+
+        runtime = dc_stats.AddRuntimeSample("DCCreateProcessW32", IF_VERBOSEPUB, runtime);
+
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
 
@@ -8098,6 +8117,8 @@ int DaemonCore::Create_Process(
 		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : executable,
 			(char *)strArgs.Value(),NULL,NULL, inherit_handles,
 			create_process_flags, newenv,cwdBackup,&si,&piProcess);
+
+        runtime = dc_stats.AddRuntimeSample("DCCreateProcessAsUser", IF_VERBOSEPUB, runtime);
 
 		set_priv(s);
 	}
@@ -8610,9 +8631,13 @@ int DaemonCore::Create_Process(
 	}
 #endif
 
+    runtime = UtcTime::getTimeDouble();
+    delta_runtime = (runtime - create_process_begin_time);
 	dprintf(D_DAEMONCORE,
-		"Child Process: pid %lu at %s\n",
-		(unsigned long)newpid,pidtmp->sinful_string.Value());
+		"Child Process: pid %lu at %s (%.2f sec)\n",
+		(unsigned long)newpid, 
+        pidtmp->sinful_string.Value(), 
+        delta_runtime);
 #ifdef WIN32
 	WatchPid(pidtmp);
 #endif
@@ -8643,6 +8668,15 @@ int DaemonCore::Create_Process(
 			}
 		}
 	}
+
+    runtime = dc_stats.AddRuntimeSample("DCCreate_Process001", IF_VERBOSEPUB, runtime);
+    runtime = dc_stats.AddRuntimeSample("DCCreate_ProcessTot", IF_VERBOSEPUB, create_process_begin_time);
+    if ((runtime - create_process_begin_time) > delta_runtime + 0.5) {
+	   dprintf(D_DAEMONCORE,
+           "Warning: cleanup from Create_Process took %.3f sec, Create_Process took %.3f sec overall\n",
+           (runtime - create_process_begin_time) - delta_runtime,
+           (runtime - create_process_begin_time));
+    }
 
 	errno = return_errno;
 	return newpid;
