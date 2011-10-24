@@ -1169,7 +1169,7 @@ _condor_fd_panic( int line, const char* file )
 		break;
 	}
 	if( fileExists ) {
-		debug_file_ptr = safe_fopen_wrapper_follow(filePath.c_str(), "aN", 0644);
+		debug_file_ptr = safe_fopen_wrapper_follow(filePath.c_str(), "a", 0644);
 	}
 
 	if( !debug_file_ptr ) {

@@ -113,13 +113,16 @@ dprintf_config( const char *subsys, param_functions *p_funcs )
 	if(!dprintf_param_funcs)
 		dprintf_param_funcs = new param_functions();
 
+	/*
+	 * The duplication of the param_function instance is to ensure no one else can change
+	 * the data structure out from under dprintf.  It is also to prevent transfer of ownership/
+	 * responsibility for the block of memory used to store the function pointers.
+	 */
 	if(p_funcs)
 	{
 		dprintf_param_funcs->set_param_func(p_funcs->get_param_func());
 		dprintf_param_funcs->set_param_bool_int_func(p_funcs->get_param_bool_int_func());
 		dprintf_param_funcs->set_param_wo_default_func(p_funcs->get_param_wo_default_func());
-
-		delete p_funcs;
 	}
 
 	/*  

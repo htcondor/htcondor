@@ -125,6 +125,8 @@ extern bool condor_fsync_on;
 MyString global_config_source;
 StringList local_config_sources;
 
+param_functions config_p_funcs;
+
 static int ParamValueNameAscendingSort(const void *l, const void *r);
 
 
@@ -2672,10 +2674,9 @@ bool param(std::string &buf,char const *param_name,char const *default_value)
 
 param_functions* get_param_functions()
 {
-	param_functions *p_funcs = new param_functions();
-	p_funcs->set_param_func(&param);
-	p_funcs->set_param_bool_int_func(&param_boolean_int);
-	p_funcs->set_param_wo_default_func(&param_without_default);
+	config_p_funcs.set_param_func(&param);
+	config_p_funcs.set_param_bool_int_func(&param_boolean_int);
+	config_p_funcs.set_param_wo_default_func(&param_without_default);
 
-	return p_funcs;
+	return &config_p_funcs;
 }
