@@ -98,6 +98,15 @@ to an alternative signal, if desired.  The new mechanism works on all
 platforms and works for all universes in which the job is managed by
 the \Condor{startd} (i.e. not grid, local, or scheduler universe).
 
+\item The \Condor{master} now logs a more informative error message
+when it fails to start a daemon.
+\Ticket{2580}
+
+\item \Condor{schedd} now logs a more informative error message
+when it rejects job ad updates from \Condor{shadow} due to
+authorization problems.
+\Ticket{2581}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -182,6 +191,12 @@ and to operate through a shared port.
 \item Since 7.7.1, \MacroNI{WANT\_HOLD} did not work unless
 \MacroNI{WANT\_HOLD\_SUBCODE} was set to something non-zero.
 \Ticket{2565}
+
+\item Since 7.7.2, there was a rare condition that could cause
+a job to be removed from the queue if it was put on hold while
+it was running.  In such cases, there was also a spurious
+unsuspend event logged in the job's user log.
+\Ticket{2577}
 
 \end{itemize}
 
