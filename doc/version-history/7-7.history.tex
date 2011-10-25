@@ -147,10 +147,11 @@ and \Macro{BIND\_ALL\_INTERFACES} no longer support the undocumented use of
 
 \begin{itemize}
 
-\item When the \Condor{procd}'s named command pipe is removed, or whose
-inode has been changed while the daemon is running, the \Condor{procd}
-will exit instead of previously continuing to execute in a useless mode
-of operation.
+\item When the \Condor{procd}'s named command pipe is removed, 
+or when the inode of the pipe has been changed while the daemon is running, 
+the \Condor{procd} will now exit.
+Its previous behavior had the \Condor{procd} continue to execute 
+in a useless mode of operation, unable to receive any communication.
 \Ticket{2500}
 
 \item Added logic to the \Condor{negotiator} daemon's Accountant
