@@ -122,6 +122,7 @@ sysapi_load_avg_raw(void)
 	switch(major) {
 		case 1:
 		case 2:
+		case 3:
     		fscanf(proc, "%f %f %f", &short_avg, &medium_avg, &long_avg);
 			break;
 
