@@ -29,6 +29,7 @@
 #include "basename.h"
 #include "hibernator.h"
 #include "simple_arg.h"
+#include "condor_config.h"
 
 #if defined ( WIN32 )
 #  include "hibernator.WINDOWS.h"
@@ -116,8 +117,9 @@ usage( bool error = true )
 static void
 enable_debug( void )
 {
+	param_functions *p_funcs = get_param_functions();
 	Termlog = true;
-	dprintf_config( "TOOL" );
+	dprintf_config( "TOOL", p_funcs );
 	set_debug_flags( "D_FULLDEBUG" );
 }
 

@@ -77,7 +77,7 @@ main(int argc, char* argv[])
 
 	config();
 	Termlog = 1;
-	dprintf_config("TOOL");
+	dprintf_config("TOOL", get_param_functions());
 
 	int cmd_argc = argc - 1;
 	char** cmd_argv = argv + 1;

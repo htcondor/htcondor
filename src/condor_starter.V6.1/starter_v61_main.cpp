@@ -155,6 +155,7 @@ static char* orig_cwd = NULL;
 void
 main_pre_dc_init( int argc, char* argv[] )
 {	
+	param_functions *p_funcs = NULL;
 		// figure out what get_mySubSystem() should be based on argv[0], or
 		// if we see "-gridshell" anywhere on the command-line
 	const char* base = condor_basename(argv[0]);
@@ -203,7 +204,8 @@ main_pre_dc_init( int argc, char* argv[] )
 
 		//Termlog = 1;
 
-		dprintf_config(get_mySubSystem()->getName() );
+		p_funcs = get_param_functions();
+		dprintf_config(get_mySubSystem()->getName(), p_funcs);
 
 		printClassAd();
 		exit(0);

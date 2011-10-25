@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 
 					// dprintf to console
 				Termlog = 1;
-				dprintf_config ("TOOL");
+				dprintf_config ("TOOL", get_param_functions());
 
 				break;
 			case 'S':

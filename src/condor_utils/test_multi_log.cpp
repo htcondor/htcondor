@@ -53,7 +53,7 @@ int main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("test_multi_log");
+	dprintf_config("test_multi_log", get_param_functions());
 	DebugFlags = D_ALWAYS;
 
 	int		result = 0;

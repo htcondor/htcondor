@@ -28,6 +28,7 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "basename.h"
+#include "condor_config.h"
 
 /**	Preprocessor definitions */
 
@@ -110,10 +111,9 @@ usage( void )
 static void
 enable_debug( void )
 {
-
+	param_functions *p_funcs = get_param_functions();
 	Termlog = 1;
-	dprintf_config ( "TOOL" );
-
+	dprintf_config ( "TOOL", p_funcs );
 }
 
 static void

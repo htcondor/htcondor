@@ -60,10 +60,12 @@ int main( int argc, char *argv[] )
 	bool use_tcp = false;
 	bool with_ack = false;
 	bool allow_multiple = false;
+	param_functions *p_funcs = NULL;
 
 
 	myDistro->Init( argc, argv );
 	config();
+	p_funcs = get_param_functions();
 
 	for( i=1; i<argc; i++ ) {
 		if(!strcmp(argv[i],"-help")) {
@@ -90,7 +92,8 @@ int main( int argc, char *argv[] )
 		} else if(!strcmp(argv[i],"-debug")) {
 				// dprintf to console
 			Termlog = 1;
-			dprintf_config ("TOOL" );
+			p_funcs = get_param_functions();
+			dprintf_config ("TOOL", p_funcs);
 		} else if(argv[i][0]!='-' || !strcmp(argv[i],"-")) {
 			if(command==-1) {
 				command = getCollectorCommandNum(argv[i]);

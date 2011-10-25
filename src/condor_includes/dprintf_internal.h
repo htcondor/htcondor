@@ -17,25 +17,19 @@
  *
  ***************************************************************/
 
+#define _FILE_OFFSET_BITS 64
 
-#include "condor_common.h"
-#include "condor_config.h"
-#include "condor_debug.h"
-#include "sysapi.h"
-#include "sysapi_externs.h"
-
-int
-main(int argc, char** argv)
+#include <string>
+#include <map>
+struct DebugFileInfo
 {
-	int retval = 0;
-	Termlog = 1;
-	dprintf_config("TOOL", get_param_functions());
+	FILE *debugFP;
+	int debugFlags;
+	std::string logPath;
+	off_t maxLog;
+	int maxLogNum;
 
-	set_debug_flags("D_ALWAYS");
-	config();
-	retval = sysapi_test_dump_all(argc, argv);
-	printf("Failed tests = %d\n",retval);
-	return (retval);
-}
-
-
+	DebugFileInfo() : debugFlags(0), debugFP(0), maxLog(0), maxLogNum(0) {}
+	DebugFileInfo(const DebugFileInfo &debugFileInfo);
+	~DebugFileInfo();
+};

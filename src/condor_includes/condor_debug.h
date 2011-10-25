@@ -71,8 +71,10 @@
 #define D_UNUSED4       (1<<30)
 #define D_NOHEADER      (1<<31)
 #define D_ALL           (~(0) & (~(D_NOHEADER)))
-
-#if defined(__cplusplus)
+#ifdef __cplusplus
+#include <string>
+#include <map>
+#include "param_functions.h"
 extern "C" {
 #endif
 
@@ -86,7 +88,6 @@ extern int DebugFlags;	/* Bits to look for in dprintf */
 extern int Termlog;		/* Are we logging to a terminal? */
 extern int DebugShouldLockToAppend; /* Should we lock the file before each write? */
 
-
 /* DebugId is a function that may be registered to be called to insert text
  * into the header of a line that is about to be logged to the debug log file.
  * It should treat its arguments similarly to how sprintf_realloc() does.
@@ -95,8 +96,9 @@ extern int DebugShouldLockToAppend; /* Should we lock the file before each write
 extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
-
-void dprintf_config( const char *subsys );
+#ifdef __cplusplus
+void dprintf_config( const char *subsys, param_functions * p_funcs = NULL );
+#endif
 void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
@@ -142,8 +144,6 @@ int dprintf_getCount(void);
  */
 int fclose_wrapper( FILE *stream, int maxRetries );
 
-int debug_open_fds(int *open_fds);
-
 /*
 **	Definition of exception macro
 */
@@ -172,6 +172,9 @@ extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2)
 
 #if defined(__cplusplus)
 }
+#endif
+#if defined(__cplusplus)
+bool debug_open_fds(std::map<int,bool> &open_fds);
 #endif
 
 #ifndef CONDOR_ASSERT

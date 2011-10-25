@@ -515,17 +515,18 @@ WindowsFirewallHelper::WindowsFirewallCleanup() {
 #ifdef _WFW_HELPER_TESTING
 
 /* some pretty lame, but useful test code */
-
 int main(int argc, char **argv) {
 	WindowsFirewallHelper wfh;
 	int result;
 	bool isOn;
 	const char* app;
+	param_functions *p_funcs = NULL;
 
 	result = 0;
 
 	Termlog = 1;
-	dprintf_config ("TOOL" );
+	p_funcs = get_param_functions();
+	dprintf_config ("TOOL", p_funcs );
 
 	isOn = wfh.firewallIsOn();
 

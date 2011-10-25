@@ -324,6 +324,7 @@ main( int argc, char *argv[] )
 	char *cmd_str, **tmp;
 	int size;
 	int rc;
+	param_functions *p_funcs = NULL;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -506,7 +507,8 @@ main( int argc, char *argv[] )
 		case 'd':
 			if (!(*tmp)[2] || (*tmp)[2] == 'e') {
 				Termlog = 1;
-				dprintf_config ("TOOL");
+				p_funcs = get_param_functions();
+				dprintf_config ("TOOL", p_funcs);
 			} else if ((*tmp)[2] == 'a')  {
 				subsys_check( MyName );
 					// We got a "-daemon", make sure we've got 

@@ -64,7 +64,6 @@ int lease_time = -1;
 bool needs_id = true;
 VacateType vacate_type = VACATE_GRACEFUL;
 
-
 // protoypes of interest
 void usage( const char* );
 void version( void );
@@ -620,6 +619,7 @@ void
 parseArgv( int argc, char* argv[] )
 {
 	char** tmp = argv;
+	param_functions *p_funcs = NULL;
 
 	for( tmp++; *tmp; tmp++ ) {
 		if( (*tmp)[0] != '-' ) {
@@ -651,7 +651,8 @@ parseArgv( int argc, char* argv[] )
 				invalid( *tmp );
 			} 
 			Termlog = 1;
-			dprintf_config ("TOOL");
+			p_funcs = get_param_functions();
+			dprintf_config ("TOOL", p_funcs);
 			break;
 
 		case 'a':

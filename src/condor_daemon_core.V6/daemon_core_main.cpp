@@ -38,6 +38,7 @@
 #include "file_lock.h"
 #include "directory.h"
 #include "exit.h"
+#include "param_functions.h"
 
 #if HAVE_EXT_GCB
 #include "GCB.h"
@@ -1389,7 +1390,7 @@ dc_reconfig()
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
-	dprintf_config(get_mySubSystem()->getName() );
+	dprintf_config(get_mySubSystem()->getName(), get_param_functions());
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
@@ -1977,7 +1978,7 @@ int dc_main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName() );
+		dprintf_config(get_mySubSystem()->getName(), get_param_functions());
 	}
 
 		// run as condor 99.9% of the time, so studies tell us.
@@ -2093,7 +2094,7 @@ int dc_main( int argc, char** argv )
 		}
 		
 			// Actually set up logging.
-		dprintf_config(get_mySubSystem()->getName() );
+		dprintf_config(get_mySubSystem()->getName(), get_param_functions());
 	}
 
 		// Now that we have the daemonCore object, we can finally

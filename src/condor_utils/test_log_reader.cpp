@@ -85,6 +85,7 @@ int
 main(int argc, const char **argv)
 {
 	DebugFlags = D_ALWAYS;
+	param_functions *p_funcs = NULL;
 
 	set_mySubSystem( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
 
@@ -94,7 +95,8 @@ main(int argc, const char **argv)
 
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("TEST_LOG_READER");
+	p_funcs = get_param_functions();
+	dprintf_config("TEST_LOG_READER", p_funcs);
 
 	int		result = 0;
 	int		events = 0;

@@ -859,6 +859,7 @@ processCommandLineArguments (int argc, char *argv[])
 {
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
+	param_functions *p_funcs = NULL;
 
 	bool custom_attributes = false;
 	attrs.initializeFromString("ClusterId\nProcID\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
@@ -1244,7 +1245,8 @@ processCommandLineArguments (int argc, char *argv[])
 		if( match_prefix( arg, "debug" ) ) {
 			// dprintf to console
 			Termlog = 1;
-			dprintf_config ("TOOL" );
+			p_funcs = get_param_functions();
+			dprintf_config ("TOOL", p_funcs);
 		}
 		else
 		if (match_prefix(arg,"io")) {
