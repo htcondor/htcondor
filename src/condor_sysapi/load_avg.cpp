@@ -126,7 +126,7 @@ sysapi_load_avg_raw(void)
 			break;
 
 		default:
-			dprintf(D_ALWAYS, "/proc format unknown for kernel version %d.%d.%d",
+			dprintf(D_ALWAYS, "/proc format unknown for kernel version %d.%d.%d\n",
 				major, minor, patch);
     		fclose(proc);
 			return -1;
