@@ -51,7 +51,7 @@ AviaryScheddPlugin::earlyInitialize()
 	if (skip) return; skip = true;
 
     string log_name;
-    sprintf(log_name,"aviary_job.%d",daemonCore->getpid());
+    sprintf(log_name,"aviary_job.log");
     provider = AviaryProviderFactory::create(log_name);
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");

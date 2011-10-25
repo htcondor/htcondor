@@ -30,10 +30,9 @@ using namespace aviary::transport;
 using namespace aviary::soap;
 
 AviaryProvider* 
-AviaryProviderFactory::create(const string& name)
+AviaryProviderFactory::create(const string& log_file)
 {
     AviaryProvider* provider = NULL;
-    string log_file = name+".axis2.log";
     string repo_path;
     int port;
     string axis_error;
