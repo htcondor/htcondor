@@ -182,6 +182,11 @@ and to operate through a shared port.
 \MacroNI{WANT\_HOLD\_SUBCODE} was set to something non-zero.
 \Ticket{2565}
 
+\item Since 7.7.2, there was a rare condition that could cause
+a job to be removed from the queue if it was put on hold while
+it was running.  In such cases, there was also a spurious
+unsuspend event logged in the job's user log.
+
 \end{itemize}
 
 \noindent Known Bugs:
