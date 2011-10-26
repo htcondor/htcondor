@@ -301,7 +301,9 @@
               configTxt = Replace(configTxt, "ALLOW_READ = * ", "ALLOW_READ=" & Session.Property("HOSTALLOWREAD") )
               configTxt = Replace(configTxt, "$$(FULL_HOSTNAME), $$(IP_ADDRESS)", Session.Property("HOSTALLOWWRITE") )
               configTxt = Replace(configTxt, "ALLOW_ADMINISTRATOR = $$(CONDOR_HOST)", "ALLOW_ADMINISTRATOR=" & Session.Property("HOSTALLOWADMINISTRATOR") )
-              jvmLoc = Session.Property("JVMLOCATION")
+			  configTxt = Replace(configTxt, "JAVA_CLASSPATH_SEPARATOR = :", "JAVA_CLASSPATH_SEPARATOR = ;")
+  
+			jvmLoc = Session.Property("JVMLOCATION")
               if fso.FileExists(jvmLoc) then
                 Set jvmPath = fso.GetFile(jvmLoc)
                 jvmLoc = jvmPath.ShortPath
