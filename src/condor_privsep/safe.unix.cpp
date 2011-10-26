@@ -132,7 +132,7 @@ void setup_err_stream(int fd)
 
     flags |= FD_CLOEXEC;
     r = fcntl(new_fd, F_SETFD, flags);
-    if (flags == -1) {
+    if (r == -1) {
         fatal_error_exit(1, "fcntl F_SETFD failed on fd=%d: %s", new_fd,
                          strerror(errno));
     }
