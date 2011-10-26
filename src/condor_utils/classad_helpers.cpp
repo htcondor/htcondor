@@ -57,7 +57,7 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace/*=0*/, bool compact/*=
    str.trim();
    for (int ii = 0; ii < str.Length(); ++ii) {
       char ch = str[ii];
-      if (ch == '_' || ch >= '0' && ch <= '9' || ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z')
+      if (ch == '_' || (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'))
          continue;
       str.setChar(ii,chReplace);
       }
@@ -84,7 +84,7 @@ bool canStringBeUsedAsAttr(const char * pattr)
    for (const char * psz = pattr; *psz; ++psz)
       {
       char ch = *psz;
-      if (ch == '_' || ch >= '0' && ch <= '9' || ch >= 'A' && ch <= 'Z' || ch >= 'a' && ch <= 'z')
+      if (ch == '_' || (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'))
          continue;
       return false;
       }

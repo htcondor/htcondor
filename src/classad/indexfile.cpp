@@ -47,8 +47,8 @@ TruncateStorageFile()
 {
 	int cur_set;
 	int new_filed;
-	char* filename="temp_file";
-	char* logfilename="storagefile";
+	const char* filename="temp_file";
+	const char* logfilename="storagefile";
 
 	cur_set = 0;
 

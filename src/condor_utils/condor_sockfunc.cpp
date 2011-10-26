@@ -168,6 +168,10 @@ hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr)
 		sockaddr_in6* sin6 = (sockaddr_in6*)sa;
 		p_addr = (const char*)&sin6->sin6_addr;
 		len = sizeof(in6_addr);
+	} else {
+		// Taking a guess at the error code.
+		h_errno = NO_ADDRESS;
+		return NULL;
 	}
 
 	ret = gethostbyaddr(p_addr, len, type);

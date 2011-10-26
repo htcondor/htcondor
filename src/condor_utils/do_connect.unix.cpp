@@ -222,7 +222,6 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 	fd_set			writefds;
 	int				nfound;
 	int				nfds;
-	int				tmp_errno;
 	socklen_t		sz;
 	int				val = 0;
 	int				save_errno;
@@ -245,7 +244,6 @@ int tcp_connect_timeout( int sockfd, struct sockaddr *sinful, int len,
 
 	/* try the connect, which will return immediately */
 	if( connect(sockfd, sinful,len) < 0 ) {
-		tmp_errno = errno;
 		switch( errno ) {
 			case EAGAIN:
 			case EINPROGRESS:
