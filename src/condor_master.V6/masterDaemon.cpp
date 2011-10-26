@@ -575,7 +575,7 @@ int daemon::RealStart( )
 	shortname = condor_basename( process_name );
 
 	if( access(process_name,X_OK) != 0 ) {
-		dprintf(D_ALWAYS, "%s: Cannot execute\n", process_name );
+		dprintf(D_ALWAYS, "%s: Cannot execute (errno=%d, %s)\n", process_name, errno, strerror(errno) );
 		pid = 0; 
 		// Schedule to try and restart it a little later
 		Restart();

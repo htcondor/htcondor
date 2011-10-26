@@ -76,7 +76,7 @@ Condor now ensures that this copy of the proxy is cleaned up
 when the job is done.
 \Ticket{2501}
 
-\item The \Condor{startd} now logs a clear message if it rejects a job
+\item The \Condor{startd} now logs a clear message, if it rejects a job
 because no valid \Condor{starter} daemons were detected.
 \Ticket{2470}
 
@@ -97,6 +97,15 @@ case.  The soft-kill signal may still be customized using
 to an alternative signal, if desired.  The new mechanism works on all
 platforms and works for all universes in which the job is managed by
 the \Condor{startd} (i.e. not grid, local, or scheduler universe).
+
+\item The \Condor{master} now logs a more informative error message
+when it fails to start a daemon.
+\Ticket{2580}
+
+\item The \Condor{schedd} daemon now logs a more informative error message
+when it rejects job ClassAd updates from the \Condor{shadow} due to
+authorization problems.
+\Ticket{2581}
 
 \end{itemize}
 
@@ -147,10 +156,11 @@ and \Macro{BIND\_ALL\_INTERFACES} no longer support the undocumented use of
 
 \begin{itemize}
 
-\item When the \Condor{procd}'s named command pipe is removed, or whose
-inode has been changed while the daemon is running, the \Condor{procd}
-will exit instead of previously continuing to execute in a useless mode
-of operation.
+\item When the \Condor{procd}'s named command pipe is removed, 
+or when the inode of the pipe has been changed while the daemon is running, 
+the \Condor{procd} will now exit.
+Its previous behavior had the \Condor{procd} continue to execute 
+in a useless mode of operation, unable to receive any communication.
 \Ticket{2500}
 
 \item Added logic to the \Condor{negotiator} daemon's Accountant
@@ -181,6 +191,13 @@ and to operate through a shared port.
 \item Since 7.7.1, \MacroNI{WANT\_HOLD} did not work unless
 \MacroNI{WANT\_HOLD\_SUBCODE} was set to something non-zero.
 \Ticket{2565}
+
+\item Since Condor version 7.7.2, there was a rare condition that could cause
+a job to be removed from the queue,
+if the job was put on hold while it was running.
+In such cases, there was also a spurious
+unsuspend event logged in the job's user log.
+\Ticket{2577}
 
 \end{itemize}
 

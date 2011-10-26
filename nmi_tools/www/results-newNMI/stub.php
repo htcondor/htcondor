@@ -238,7 +238,7 @@ function create_sparkline($branch, $user, $num_spark_days) {
     
     $hour = preg_replace("/^.+(\d\d):\d\d:\d\d.*$/", "$1", $build["start"]);
     
-    $detail_url = sprintf(DETAIL_URL, $build["runid"], "build", $user);
+    $detail_url = sprintf(DETAIL_URL, $build["runid"]);
     //$popup_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none;size:2px;\">&nbsp;&nbsp;&nbsp;<span>$details</span></a></span>";
     $popup_html = "<span class=\"link\"><a href=\"$detail_url\" style=\"text-decoration:none;size:2px;\"><span>$details</span></a></span>";
     

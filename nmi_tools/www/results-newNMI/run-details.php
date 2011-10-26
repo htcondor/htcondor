@@ -1,12 +1,6 @@
 <?php   
-//
-// Configuration
-//
-define("HISTORY_URL", "./Test-history.php?branch=%s&test=%s");
 
-$result_types = Array( "passed", "pending", "failed" );
-
-include "dashboard.inc";
+define("TASK_URL", "task-details.php?platform=%s&task=%s&runid=%s");
 
 include "Dashboard.php";
 $dash = new Dashboard();
@@ -14,194 +8,148 @@ $dash->print_header("Condor Build and Test Dashboard");
 $dash->connect_to_db();
 
 # get args
-$type     = $_REQUEST["type"];
-$runid    = (int)$_REQUEST["runid"];
-$user     = $_REQUEST["user"];
-$timed    = array_key_exists("timed", $_REQUEST) ? $_REQUEST["timed"] : "";
-$branch   = "unknown";
+$runid = (int)$_REQUEST["runid"];
+$sha1 = $_REQUEST["sha1"];
 
-define('PLATFORM_PENDING', 'pending');
-define('PLATFORM_FAILED',  'failed');
-define('PLATFORM_PASSED',  'passed');
+// If we get a SHA1 and not a run id, look up the run id
+if(!$runid and $sha1) {
+  $sql = "SELECT runid FROM Run WHERE project_version='$sha1'";
+  $result = $dash->db_query($sql);
+  $runid = $result[0]["runid"];
+}
+
 ?>
+
+<script type='text/javascript' src='jquery-1.6.2.min.js'></script>
+
+<script type="text/javascript">
+  var toggle = 1;
+
+  $(document).ready(function(){
+      $("#toggle").click(function(){
+	  if(toggle == 1) {
+	    $(".time").show();
+	    $(".status").hide();
+	    $("#toggle").text("Show task status");
+	    toggle = 0;
+	  }
+	  else {
+	    $(".time").hide();
+	    $(".status").show();
+	    $("#toggle").text("Show task times");
+	    toggle = 1;	    
+	  }
+	});
+  });
+</script>
+
+<style type="text/css">
+<!--
+div.status {
+  
+}
+div.time {
+  display:none;
+}
+p.toggle {
+  cursor: pointer;
+}
+-->
+</style>
 
 </head>
 <body>
 
+
 <?php
 
-// 
-// need to have the branch if we get a request for a test history
-// Test-history.php?branch=xxxxx&test=yyyyyy
+echo "<h2>Results for build ID $runid</h2>\n";
+
+
 //
+// Get the platforms, and prepare some data structures
+//
+$platforms = $dash->get_platform_list_for_runid($runid);
 
-$query_branch="SELECT 
-                        LEFT(description,
-                             (IF(LOCATE('branch-',description),
-                                 LOCATE('branch-',description)+5,
-                                 (IF(LOCATE('trunk-',description),
-                                     LOCATE('trunk-',description)+4,
-                                     CHAR_LENGTH(description)))))) AS branch
-                FROM 
-                        Run 
-                WHERE 
-                        runid=$runid";
+$build_headers = Array();
+$test_headers = Array();
+foreach ($platforms as $platform) {
+  $build_headers[$platform] = Array("passed" => 0, "pending" => 0, "failed" => 0);
+  $test_headers[$platform] = Array("passed" => 0, "pending" => 0, "failed" => 0);
+}
 
-$results = $dash->db_query($query_branch);
-$branch = $results[0]["branch"];
-
-
-$sql = "SELECT UNIX_TIMESTAMP(start) AS start
-        FROM Run
-        WHERE Run.runid = $runid
-          AND Run.user = '$user'";
+//
+// Get build task info   
+//
+$sql = "SELECT
+          platform,
+          name,
+          result,
+          host,
+          TIME_TO_SEC(TIMEDIFF(Finish, Start)) as length
+       FROM
+          Task
+       WHERE 
+          runid = $runid 
+       ORDER BY
+          start ASC";
 
 $results = $dash->db_query($sql);
-$start = $results[0]["start"];
 
-echo "<h2>" . ucfirst($type) . "s for Build ID $runid $branch (" . date("m/d/Y", $start) . ")</h2>\n";
-
-if($type == "build") {
-  $url = preg_replace("/build/", "test", "http://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
-  print "<p><a href='$url'>Show tests for this run</a>\n";
-}
-else {
-  $url = preg_replace("/test/", "build", "http://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
-  print "<p><a href='$url'>Show builds for this run</a>\n";
-}
-
-if(!$timed) {
-  echo "<p><a href='http://" . $_SERVER['HTTP_HOST']  . $_SERVER['REQUEST_URI'] . "&timed=1'>Show this page with test times</a>\n";
-}
-
-//
-// Platforms
-//
-// Original platforms we actually built on
-$sql = "SELECT DISTINCT(platform) AS platform
-        FROM Run, Task
-        WHERE Task.runid = $runid
-          AND Task.runid = Run.runid
-          AND Run.user = '$user' ";
-//"   AND Task.platform != 'local' ".
-//" ORDER BY (IF (platform='local', 'zzz', platform))";
-$results = $dash->db_query($sql);
-$platforms = Array();
 foreach ($results as $row) {
-  $tmpp = $platforms[] = $row["platform"];
-  //echo "<H3>$tmpp</H3>";
-}
-   
-$runids = Array();
-if ($type == 'build') {
-  $sql = "SELECT DISTINCT(Task.name) AS name ".
-    "  FROM Task ".
-    " WHERE Task.runid = $runid ".
-    " ORDER BY Task.start ASC";
-  $runids[] = $runid;
-}
-elseif ($type == 'test') {
-  $sql = "SELECT DISTINCT(Task.name) AS name ".
-    "  FROM Task, Method_nmi ".
-    " WHERE Task.runid = Method_nmi.runid ".
-    "   AND Method_nmi.input_runid = $runid ".
-    " ORDER BY Task.start ASC";
-             
-  //
-  // We also need runids
-  //
-  $runid_sql = "SELECT DISTINCT Method_nmi.runid ".
-    "  FROM Method_nmi, Run ".
-    " WHERE Method_nmi.input_runid = $runid ".
-    "   AND Run.runid = Method_nmi.runid ".
-    "   AND (component_version = project_version or ( component_version = 'native'))".
-    "   AND Run.user = '$user' ";
-  $results = $dash->db_query($runid_sql);
-  foreach ($results as $row) {
-    $tmp = $runids[] = $row["runid"];
-    //echo "<H3>$tmp</H3>";
-    //echo "<H3>$tmp, $row["component_version"], $row["platform"]</H3>";
+  if(!array_key_exists($row["name"], $build_tasks)) {
+    $build_tasks[$row["name"]] = Array();
   }
+  $build_tasks[$row["name"]][$row["platform"]] = Array($row["result"], $row["length"], $row["host"]);
+
+  $result = map_result($row["result"]);
+  $build_headers[$row["platform"]][$result] += 1;
 }
-else {
-  // Type is unknown
-  die("Unsupported parameter type=$type");
-}
+
+
+//
+// Get test task info
+//
+$test_runids = $dash->get_test_runids_for_build($runid);
+
+$sql = "SELECT 
+          platform,
+          Task.name,
+          result,
+          host,
+          TIME_TO_SEC(TIMEDIFF(Finish, Start)) as length
+        FROM
+          Task,
+          Method_nmi
+        WHERE
+          Task.runid = Method_nmi.runid AND
+          Method_nmi.input_runid = $runid
+        ORDER BY
+          Task.start ASC";
 
 $results = $dash->db_query($sql);
+
 foreach ($results as $row) {
-  $task_name = $row["name"];
-  
-  //
-  // Now for each task, get the status from the platforms
-  //
-  $sql = "SELECT platform, result, runid, TIME_TO_SEC(TIMEDIFF(Finish, Start)) as length ".
-    "  FROM Task ".
-    " WHERE Task.runid IN (".implode(",", $runids).") ".
-    "   AND Task.name = '$task_name'";
-  $task_results = $dash->db_query($sql);
-  foreach ($task_results as $task_row) {
-    $platform = $task_row["platform"];
-    $platform_runids[$platform] = $task_row["runid"];
-    $result_value = $task_row["result"];
-    $length = $task_row["length"];
-    
-    if (is_null($result_value)) {
-      $result_value = PLATFORM_PENDING;
-      $platform_status[$platform] = PLATFORM_PENDING;
-      $task_status[$task_name] = PLATFORM_PENDING;
-    }
-    elseif ($result_value) {
-      $platform_status[$platform] = PLATFORM_FAILED;
-      $task_status[$task_name] = PLATFORM_FAILED;
-    }
-    elseif(!array_key_exists($platform, $platform_status)) {
-      $platform_status[$platform] = PLATFORM_PASSED;
-    }
-
-    if(!array_key_exists($task_name, $task_status)) {
-      $task_status[$task_name] = PLATFORM_PASSED;
-    }
-    $data[$row["name"]][$task_row["platform"]] = Array($result_value, $length);
+  if(!array_key_exists($row["name"], $test_tasks)) {
+    $test_tasks[$row["name"]] = Array();
   }
+
+  $test_tasks[$row["name"]][$row["platform"]] = Array($row["result"], $row["length"], $row["host"]);
+
+  $result = map_result($row["result"]);
+  $test_headers[$row["platform"]][$result] += 1;
 }
 
-echo "<table border='0' cellspacing='0'>\n";
-echo "<tr>\n";
-echo "   <td>Name</td>\n";
+print "<p><a id='toggle'>Show task times</a>\n";
 
-if($type == "build") {
-  $hosts = get_hosts(Array($runid));
-}
-elseif($type == "test") {
-  $hosts = get_hosts(array_values($platform_runids));
-}
+print "<table border='0' cellspacing='0'>\n";
+print "<tr>\n";
+print "   <th>Build Tasks</th>\n";
 
-// show link to run directory for each platform
+
 foreach ($platforms AS $platform) {
   $display = preg_replace("/nmi:/", "", $platform);
    
-  // have to lookup the file location now
-  $filepath = "";
-  $loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
-  $loc_query_results = $dash->db_query($loc_query);
-  foreach ($loc_query_results as $loc_row) {
-    $filepath = $loc_row["filepath"];
-    $mygid = $loc_row["gid"];
-  }
-  
-  # Get the queue depth for the platform if it is pending
-  $queue_depth = "";
-  if($platform_status[$platform] == PLATFORM_PENDING) {
-    $queue_depth = get_queue_for_nmi_platform($platform, $dash);
-  }
-
-  $remote_host = "";
-  $true_runid = $platform_runids[$platform];
-  if(array_key_exists($display, $hosts[$true_runid])) {
-    $remote_host = "<br><font style='font-size:75%'>" . $hosts[$true_runid][$display] . "</font>";
-  }
-
   if(preg_match("/^x86_64_/", $display)) {
     $display = preg_replace("/x86_64_/", "x86_64<br>", $display);
   }
@@ -212,87 +160,166 @@ foreach ($platforms AS $platform) {
     $display = preg_replace("/x86_/", "x86<br>", $display);
   }
 
-  $display = "<a href='$filepath/$mygid/userdir/$platform/' title='View Run Directory'>$display</a>";
-  echo "<td align='center' class='".$platform_status[$platform]."'>$display $remote_host $queue_depth</td>\n";
+  $display = "<font style='font-size:75%'>$display</font>";
+
+  print "<td align='center'>$display</td>\n";
 }
 
-?>
-<tr>
-   <td>Results</td>
-<?php
-// show link to results for each platform
-foreach ($platforms AS $platform) {
-  // have to lookup the file location now
-  $filepath = "";
-  $loc_query = "SELECT * FROM Run WHERE runid='$platform_runids[$platform]'";
+
+//
+// Print build hosts
+//
+print "<tr>\n";
+print "  <td>Hosts</td>\n";
+foreach ($platforms as $platform) {
+  // Lookup the file location now
+  $loc_query = "SELECT filepath,gid FROM Run WHERE runid='$runid'";
   $loc_query_results = $dash->db_query($loc_query);
   foreach ($loc_query_results as $loc_row) {
     $filepath = $loc_row["filepath"];
     $mygid = $loc_row["gid"];
   }
 
-  $display = "<a href='$filepath/$mygid/userdir/$platform/results.tar.gz' title='View Run Directory'>click</a>";
-  echo "<td align='center' class='".$platform_status[$platform]."'>$display</td>\n";
-}
+  $class = "";
+  if($build_headers[$platform]["failed"] > 0) {
+    $class = "failed";
+  }
+  elseif($build_headers[$platform]["pending"] > 0) {
+    $class = "pending";
+  }
+  elseif($build_headers[$platform]["passed"] > 0) {
+    $class = "passed";
+  }
 
-foreach ($data AS $task => $arr) {
-  if ($type == 'test') {
-    $history_url = sprintf(HISTORY_URL, urlencode($branch), rawurlencode($task));
-    $history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
-    print "<tr>\n";
-    $color = ($task_status[$task] != PLATFORM_PASSED) ? $task_status[$task] : "";
-    print "<td class=\"left $color\">";
-    print "<span title=\"$task\">$history_disp</span></td>\n";
-  }
-  else {
-    echo "<tr>\n".
-      "<td ".($task_status[$task] != PLATFORM_PASSED ? 
-              "class=\"".$task_status[$task]."\"" : "").">".
-      "<span title=\"$task\">".limitSize($task, 30)."</span></td>\n";
-  }
-  foreach ($platforms AS $platform) {
-    if(!array_key_exists($platform, $arr)) {
-      echo "<td align='center'>&nbsp;</td>\n";
+  if(array_key_exists("remote_task", $build_tasks)) {
+    if(array_key_exists($platform, $build_tasks["remote_task"])) {
+      $host = preg_replace("/\.batlab\.org/", "", $build_tasks["remote_task"][$platform][2]);
+
+      $summary = "<table>\n";
+      $summary .= "<tr><td class='left passed'>Passed:</td><td class='passed'>" . $build_headers[$platform]["passed"] . "</td></tr>";
+      $summary .= "<tr><td class='left pending'>Pending:</td><td class='pending'>" . $build_headers[$platform]["pending"] . "</td></tr>";
+      $summary .= "<tr><td class='left failed'>Failed:</td><td class='failed'>" . $build_headers[$platform]["failed"] . "</td></tr>";
+      $summary .= "</table>\n";
+
+      print "<td class='$class'><span class='link'><a href='$filepath/$mygid/userdir/$platform/'>$host<span>$summary</span></a></span></td>";
       continue;
     }
+  }
+  print "<td class='$class'>&nbsp;</td>";
+}
 
-    $result = $arr[$platform][0];
-    $length = $arr[$platform][1];
-    if ($result == PLATFORM_PENDING) {
-      echo "<td align='center' class='$result'>-</td>\n";
+// 
+// Show build results
+//
+foreach ($build_tasks as $task_name => $results) {
+  $totals = Array("passed" => 0, "pending" => 0, "failed" => 0);
+  $output = "";  
+  foreach ($platforms as $platform) {
+    if(array_key_exists($platform, $results)) {
+      $class = map_result($results[$platform][0]);
+      $totals[$class] += 1;
+      $link = sprintf(TASK_URL, $platform, urlencode($task_name), $runid);
+
+      $contents = "<div class='status'>" . $results[$platform][0] . "</div>";
+      $contents .= "<div class='time'>" . sec_to_min($results[$platform][1]) . "</div>";
+      $output .= "  <td class=\"$class\"><a href='$link'>$contents</a></td>\n";
     }
     else {
-      if ($result == '') {
-        echo "<td align='center'>&nbsp;</td>\n";
-      }
-      else {
-        $height = "";
-        if($timed) {
-          if($task != "platform_job" and $task != "remote_task") {
-            # Keep the font from getting too small or too large
-            $size = ($length < 50) ? 50 : (($length > 1000) ? 1000 : $length);
-            $height = "font-size:$size%;";
-          }
-        }
-
-        $display = "";
-        if($timed) {
-          $display .= sec_to_min($length) . " (";
-        }
-
-        $display .= "<a href=\"task-details.php?platform=$platform&task=".urlencode($task)."&type=".$type."&runid=".$platform_runids[$platform]. "\">$result</a>";
-
-        if($timed) {
-          $display .= ")";
-        }
-
-        echo "<td class='".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."' style='$height'>$display</td>\n";
-      }
+      $output .= "<td>&nbsp;</td>\n";
     }
   }
-  echo "</td>\n";
-} // FOREACH
-echo "</table>";
+
+  $class = "";
+  if($totals["failed"] > 0) { $class = "failed"; }
+  elseif($totals["pending"] > 0) { $class = "pending"; }
+
+  print "<tr>\n";
+  print "  <td class=\"left $class\">" . limitSize($task_name,30) . "</td>\n";
+  print $output;
+  print "</tr>\n";
+}
+
+
+//
+// Show test results
+//
+$num_platforms = count($platforms);
+print "<tr><td style='border-bottom-width:0px' colspan=" . ($num_platforms+1) . ">&nbsp;</td></tr>\n";
+print "<tr><th>Test Tasks</th><th colspan=$num_platform>&nbsp</th></tr>\n";
+
+
+//
+// Print test hosts
+//
+print "<tr>\n";
+print "  <td>Hosts</td>\n";
+foreach ($platforms as $platform) {
+  // Lookup the file location now
+  $test_runid = $test_runids[$platform];
+  $loc_query = "SELECT filepath,gid FROM Run WHERE runid='$test_runid'";
+  $loc_query_results = $dash->db_query($loc_query);
+  foreach ($loc_query_results as $loc_row) {
+    $filepath = $loc_row["filepath"];
+    $mygid = $loc_row["gid"];
+  }
+
+  $class = "";
+  if($test_headers[$platform]["failed"] > 0) {
+    $class = "failed";
+  }
+  elseif($test_headers[$platform]["pending"] > 0) {
+    $class = "pending";
+  }
+  elseif($test_headers[$platform]["passed"] > 0) {
+    $class = "passed";
+  }
+
+  if(array_key_exists("remote_task", $test_tasks)) {
+    if(array_key_exists($platform, $test_tasks["remote_task"])) {
+      $host = preg_replace("/\.batlab\.org/", "", $test_tasks["remote_task"][$platform][2]);
+
+      $summary = "<table>\n";
+      $summary .= "<tr><td class='left passed'>Passed:</td><td class='passed'>" . $test_headers[$platform]["passed"] . "</td></tr>";
+      $summary .= "<tr><td class='left pending'>Pending:</td><td class='pending'>" . $test_headers[$platform]["pending"] . "</td></tr>";
+      $summary .= "<tr><td class='left failed'>Failed:</td><td class='failed'>" . $test_headers[$platform]["failed"] . "</td></tr>";
+      $summary .= "</table>\n";
+
+      print "<td class='$class'><span class='link'><a href='$filepath/$mygid/userdir/$platform/'>$host<span>$summary</span></a></span></td>";
+      continue;
+    }
+  }
+  print "<td class='$class'>&nbsp;</td>";
+}
+
+foreach ($test_tasks as $task_name => $results) {  
+  $totals = Array("passed" => 0, "pending" => 0, "failed" => 0);
+  $output = "";
+  foreach ($platforms as $platform) {
+    if(array_key_exists($platform, $results)) {
+      $class = map_result($results[$platform][0]);
+      $totals[$class] += 1;
+      $link = sprintf(TASK_URL, $platform, urlencode($task_name), $test_runids[$platform]);
+
+      $contents = "<div class='status'>" . $results[$platform][0] . "</div>";
+      $contents .= "<div class='time'>" . sec_to_min($results[$platform][1]) . "</div>";
+      $output .= "  <td class=\"$class\"><a href='$link'>$contents</a></td>\n";
+    }
+    else {
+      $output .= "<td>&nbsp;</td>\n";
+    }
+  }
+
+  $class = "";
+  if($totals["failed"] > 0) { $class = "failed"; }
+  elseif($totals["pending"] > 0) { $class = "pending"; }
+
+  print "<tr>\n";
+  print "  <td class=\"left $class\">" . limitSize($task_name,30) . "</td>\n";
+  print $output;
+  print "</tr>\n";
+}
+
+print "</table>";
 
 function limitSize($str, $cnt) {
   if (strlen($str) > $cnt) {
@@ -309,6 +336,19 @@ function sec_to_min($sec) {
   }
   return "$min:$sec";
 }
+
+function map_result($result) {
+  if(is_null($result)) {
+    return "pending";
+  }
+  elseif($result == 0) {
+    return "passed";
+  }
+  else {
+    return "failed";
+  }
+}
+
 
 ?>
 </body>

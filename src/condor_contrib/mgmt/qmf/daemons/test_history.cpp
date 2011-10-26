@@ -32,7 +32,7 @@ int
 main(int /*argc*/, char **argv)
 {
 	Termlog = 1;
-	dprintf_config("TOOL");
+	dprintf_config("TOOL", get_param_functions());
 
 	singleton = new ManagementAgent::Singleton();
 
@@ -60,7 +60,7 @@ int
 main2(int argc, char **argv)
 {
 	Termlog = 1;
-	dprintf_config("TOOL");
+	dprintf_config("TOOL", get_param_functions());
 
 	const char *file = NULL;
 	const MyString path(argv[1]);
