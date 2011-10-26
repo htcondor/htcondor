@@ -92,6 +92,10 @@ class Dashboard {
       $runids[] = $row["runid"];
     }
 
+    if(!$runids) {
+      return Array();
+    }
+
     $test_runids = implode(",", $runids);
     $platform_sql = "
       SELECT 

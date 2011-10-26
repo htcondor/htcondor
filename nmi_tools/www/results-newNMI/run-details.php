@@ -18,8 +18,50 @@ if(!$runid and $sha1) {
   $runid = $result[0]["runid"];
 }
 
-print "</head>\n";
-print "<body>\n";
+?>
+
+<script type='text/javascript' src='jquery-1.6.2.min.js'></script>
+
+<script type="text/javascript">
+  var toggle = 1;
+
+  $(document).ready(function(){
+      $("#toggle").click(function(){
+	  if(toggle == 1) {
+	    $(".time").show();
+	    $(".status").hide();
+	    $("#toggle").text("Show task status");
+	    toggle = 0;
+	  }
+	  else {
+	    $(".time").hide();
+	    $(".status").show();
+	    $("#toggle").text("Show task times");
+	    toggle = 1;	    
+	  }
+	});
+  });
+</script>
+
+<style type="text/css">
+<!--
+div.status {
+  
+}
+div.time {
+  display:none;
+}
+p.toggle {
+  cursor: pointer;
+}
+-->
+</style>
+
+</head>
+<body>
+
+
+<?php
 
 echo "<h2>Results for build ID $runid</h2>\n";
 
@@ -108,27 +150,16 @@ foreach ($results as $row) {
   }
 }
 
+print "<p><a id='toggle'>Show task times</a>\n";
 
-echo "<table border='0' cellspacing='0'>\n";
-echo "<tr>\n";
-echo "   <th>Build Tasks</th>\n";
+print "<table border='0' cellspacing='0'>\n";
+print "<tr>\n";
+print "   <th>Build Tasks</th>\n";
 
 
-// show link to run directory for each platform
 foreach ($platforms AS $platform) {
   $display = preg_replace("/nmi:/", "", $platform);
    
-  /*  
-  # Get the queue depth for the platform if it is pending
-  $queue_depth = "";
-  if($platform_status[$platform] == PLATFORM_PENDING) {
-    $queue_depth = get_queue_for_nmi_platform($platform, $dash);
-  }
-
-  */  
-
-  $queue_depth = "";
-
   if(preg_match("/^x86_64_/", $display)) {
     $display = preg_replace("/x86_64_/", "x86_64<br>", $display);
   }
@@ -141,7 +172,7 @@ foreach ($platforms AS $platform) {
 
   $display = "<font style='font-size:75%'>$display</font>";
 
-  echo "<td align='center' class='".$platform_status[$platform]."'>$display $queue_depth</td>\n";
+  print "<td align='center'>$display</td>\n";
 }
 
 
@@ -182,7 +213,10 @@ foreach ($build_tasks as $task_name => $results) {
       $class = map_result($results[$platform][0]);
       $totals[$class] += 1;
       $link = sprintf(TASK_URL, $platform, urlencode($task_name), $runid);
-      $output .= "  <td class=\"$class\"><a href='$link'>" . $results[$platform][0] . "</a></td>\n";
+
+      $contents = "<div class='status'>" . $results[$platform][0] . "</div>";
+      $contents .= "<div class='time'>" . sec_to_min($results[$platform][1]) . "</div>";
+      $output .= "  <td class=\"$class\"><a href='$link'>$contents</a></td>\n";
     }
     else {
       $output .= "<td>&nbsp;</td>\n";
@@ -243,7 +277,10 @@ foreach ($test_tasks as $task_name => $results) {
       $class = map_result($results[$platform][0]);
       $totals[$class] += 1;
       $link = sprintf(TASK_URL, $platform, urlencode($task_name), $test_runids[$platform]);
-      $output .= "  <td class=\"$class\"><a href='$link'>" . $results[$platform][0] . "</a></td>\n";
+
+      $contents = "<div class='status'>" . $results[$platform][0] . "</div>";
+      $contents .= "<div class='time'>" . sec_to_min($results[$platform][1]) . "</div>";
+      $output .= "  <td class=\"$class\"><a href='$link'>$contents</a></td>\n";
     }
     else {
       $output .= "<td>&nbsp;</td>\n";
@@ -260,7 +297,7 @@ foreach ($test_tasks as $task_name => $results) {
   print "</tr>\n";
 }
 
-echo "</table>";
+print "</table>";
 
 function limitSize($str, $cnt) {
   if (strlen($str) > $cnt) {
