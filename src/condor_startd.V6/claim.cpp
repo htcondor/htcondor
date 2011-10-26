@@ -1232,7 +1232,7 @@ Claim::setad(ClassAd *cad)
 	if( c_ad ) {
 		delete( c_ad );
 	}
-	c_ad = cad;
+	c_ad = new ClassAd(*cad);
 }
 
 

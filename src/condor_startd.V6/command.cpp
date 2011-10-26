@@ -369,7 +369,6 @@ command_request_sub_claim( Service*, int cmd, Stream* stream, char *claimID )
 		
 	}
 	
-
 	rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
 		ClaimIdParser idp( id );
@@ -380,6 +379,8 @@ command_request_sub_claim( Service*, int cmd, Stream* stream, char *claimID )
 		refuse( stream );
 		return FALSE;
 	}
+	if (rip->r_cur->parent)
+		rip->r_cur = rip->r_cur->parent;
 
 	if( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
@@ -413,6 +414,7 @@ command_request_sub_claim( Service*, int cmd, Stream* stream, char *claimID )
 		}
 	} else {*/
 		//claim = rip->r_cur;
+		
 		parent = rip->r_cur;
 		parent->addSubClaim(claim);
 		
@@ -435,6 +437,7 @@ command_request_sub_claim( Service*, int cmd, Stream* stream, char *claimID )
 	claim->parent = parent;	
 	if (shared_claim_id == NULL)
 		claim->c_isSubClaim = true;
+	rip->r_cur = claim;
 	rval = request_claim( rip, claim, id, stream );
 	
 	free( id );
@@ -1218,9 +1221,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		   state anymore (and it's the current claim at that point).
 		   -Derek Wright 3/11/99 
 		*/
-	claim->cancel_match_timer();
-	if (claim->parent)
-		claim->parent->cancel_match_timer();
+	rip->r_cur->cancel_match_timer();
+	if (rip->r_cur->parent)
+		rip->r_cur->parent->cancel_match_timer();
 
 		// Get the classad of the request.
 	if( !req_classad->initFromStream(*stream) ) {
@@ -1248,8 +1251,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			// Now, store them into r_cur or r_pre, as appropiate
 		claim->setaliveint( interval );
 		claim->client()->setaddr( client_addr );
+		// ** CW ** longer interval should be kept in the parent
 		if (claim->parent != NULL) {
 			claim->parent->setaliveint(interval);
+			// ** CW **  only set once - or assert if client_addr is different than the one already set
 			claim->parent->client()->setaddr( client_addr) ;
 		}
 		free( client_addr );
@@ -1500,7 +1505,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		}
 	} else {
 			// We're not claimed
-		if( rip->r_cur->idMatches(id) || rip->r_cur->hasSubClaim(id)) {
+		if( rip->r_cur->idMatches(id) || ( rip->r_cur->parent && rip->r_cur->parent->idMatches(id) ) ) {
 			rip->dprintf( D_ALWAYS, "Request accepted.\n" );
 			cmd = OK;
 		} else {
@@ -1519,8 +1524,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// We decided to accept the request, save the schedd's
 		// stream, the rank and the classad of this request.
 	rip->r_cur->setRequestStream( stream );
+	
+	
 	rip->r_cur->setad( req_classad );
+	delete req_classad;
+	
 	rip->r_cur->setrank( rank );
+	
 	rip->r_cur->setoldrank( oldrank );
 
 #if HAVE_BACKFILL
@@ -1534,7 +1544,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		return KEEP_STREAM;
 	}
 #endif /* HAVE_BACKFILL */
-
+	
 		// If we're still here, we're ready to accpet the claim now.
 		// Call this other function to actually reply to the schedd
 		// and perform the last half of the protocol.  We use the same
@@ -1589,7 +1599,7 @@ accept_request_claim( Resource* rip, Claim *actualClaim )
 
 		// There should not be a pre claim object now.
 	ASSERT( rip->r_pre == NULL || actualClaim->c_isSubClaim );
-	
+	//rip->r_cur = actualClaim;
 	Stream* stream = rip->r_cur->requestStream();
 	ASSERT( stream );
 	Sock* sock = (Sock*)stream;
@@ -1965,7 +1975,7 @@ activate_claim( Resource* rip, char *id, Stream* stream )
 				  "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
 	actual->setStarter(tmp_starter);
-	rip->r_cur->setStarter(NULL);
+	rip->r_cur = actual;
 	tmp_starter = NULL;
 	free( shadow_addr );
 	return TRUE;
@@ -1982,7 +1992,7 @@ match_info( Resource* rip, char* id )
 
 	switch( rip->state() ) {
 	case claimed_state:
-		if( rip->r_cur->idMatches(id) ) {
+		if( rip->r_cur->idMatches(id) || ( rip->r_cur->parent && rip->r_cur->parent->idMatches(id) ) ) {
 				// The ClaimId we got matches the one for the
 				// current claim, and we're already claimed.  There's
 				// nothing to do here.

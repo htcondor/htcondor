@@ -1145,7 +1145,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			update_ad->LookupBool( ATTR_JOB_NORMAL_EXIT , normalExit) ;
 			if (normalExit)  {
 				jobAd->Assign(ATTR_JOB_STATUS, TRANSFERRING_OUTPUT);
-				bool informT = informScheddTransfer("");
+				bool informTransferOutput = informScheddTransfer("");
 			}
 		} else { 
 				// For our purposes in here, we don't care about any

@@ -1375,10 +1375,13 @@ ResMgr::get_by_cur_id( char* id )
 		return NULL;
 	}
 	int i;
-	for( i = 0; i < nresources; i++ ) {
+	for( i = 0; i < nresources; i++ ) {		
 		if( resources[i]->r_cur->idMatches(id) || resources[i]->r_cur->hasSubClaim(id)) {
 			return resources[i];
 		}
+		if (resources[i]->r_cur->parent)
+			if (resources[i]->r_cur->parent->idMatches(id))
+				return resources[i];
 	}
 	return NULL;
 }
@@ -1392,7 +1395,7 @@ ResMgr::get_by_any_id( char* id )
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_cur->idMatches(id) || resources[i]->r_cur->hasSubClaim(id)) {
+		if( resources[i]->r_cur->idMatches(id) || resources[i]->r_cur->hasSubClaim(id) || (resources[i]->r_cur->parent && resources[i]->r_cur->parent->idMatches(id)) ) {
 			return resources[i];
 		}
 		if( resources[i]->r_pre &&

@@ -14141,7 +14141,6 @@ Scheduler::RequestSubClaim(int /*cmd*/, Stream *stream)
 			match_rec *subMatch = new match_rec(mrec, mrec->parent_claim_id);
 			subMatch->proc = -1;
 			subMatch->cluster = -1;
-			rec = scheduler.FindMrecByClaimID( mrec->parent_claim_id );
 			scheduler.AddMrec(subMatch);
 			rec = scheduler.FindMrecByClaimID( mrec->parent_claim_id );
 			if (  rec && FindRunnableJobForClaim(rec) && rec->cluster > 0 ){
