@@ -233,7 +233,7 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 	install ( DIRECTORY ${CPACK_WIX_BITMAP_FOLDER}
 			DESTINATION ${C_ETC}/WiX)
 			
-	install ( FILES ${CONDOR_SOURCE_DIR}/msconfig/license.rtf ${CONDOR_SOURCE_DIR}/msconfig/do_wix.bat
+	install ( FILES ${CONDOR_SOURCE_DIR}/msconfig/license.rtf ${CONDOR_SOURCE_DIR}/msconfig/do_wix.bat ${CONDOR_SOURCE_DIR}/msconfig/WiX/config.vbs
 			  DESTINATION ${C_ETC}/WiX )
 
 	# the following will dump a header used to insert file info into bin's
