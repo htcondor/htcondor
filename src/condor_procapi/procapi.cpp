@@ -575,6 +575,12 @@ ProcAPI::getPSSInfo( pid_t pid, procInfoRaw& procRaw, int &status )
 		fclose( fp );
 		fp = NULL;
 	}
+
+	if (status == PROCAPI_OK) {
+		return PROCAPI_SUCCESS;
+	} else {
+		return PROCAPI_FAILURE;
+	}
 }
 #endif
 
