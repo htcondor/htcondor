@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_core_args_java.cmd';
 $testdesc =  'Arguments are preserved - java U';
@@ -33,7 +34,7 @@ $ExitSuccess = sub {
 	if(!defined($args)) {
 		die "Can't pull arguments from submit file";
 	}
-	CondorTest::fullchomp($args);
+	CondorUtils::fullchomp($args);
 	my(@args_reqd) = split / /, $args;
 
 	$output = $info{"output"};

@@ -44,7 +44,6 @@
 #include "subsystem_info.h"
 
 char	*MyName;
-DECL_SUBSYSTEM( "DAEMON-TOOL", SUBSYSTEM_TYPE_TOOL );
 
 void
 usage()
@@ -80,7 +79,10 @@ int
 main( int argc, char* argv[] )
 {
 	int		i;
+	param_functions *p_funcs = NULL;
 	
+	set_mySubSystem( "DAEMON-TOOL", SUBSYSTEM_TYPE_TOOL );
+
 	MyName = argv[0];
 	myDistro->Init( argc, argv );
 
@@ -97,7 +99,8 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-debug" ) ) {
 				// dprintf to console
 			Termlog = 1;
-			dprintf_config( "DAEMON-TOOL" );
+			p_funcs = get_param_functions();
+			dprintf_config( "DAEMON-TOOL", p_funcs );
 			DebugFlags |= D_FULLDEBUG|D_SECURITY;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();

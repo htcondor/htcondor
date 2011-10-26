@@ -28,7 +28,6 @@
 #include "basename.h"
 #include "qmgmt.h"
 #include "condor_qmgr.h"
-#include "log_transaction.h"
 #include "log.h"
 #include "classad_collection.h"
 #include "prio_rec.h"
@@ -3888,6 +3887,7 @@ rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 			free(new_value);
 		}
 	}
+	free(SpoolSpace);
 	return true;
 }
 

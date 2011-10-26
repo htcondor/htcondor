@@ -118,10 +118,10 @@ use constant { RECONSTITUTE_TEMPLATE_FUNC =>
 
 use constant { RECONSTITUTE_TEMPLATE => 
 'static const param_info_%typequal% param_def_info_%parameter_var% = {
-	%parameter_name%, %default%, %version%, 
+	{%parameter_name%, %default%, %version%, 
 	%friendly_name%, %usage%,
 	%url%, %tags%,
-	%type%, %state%, %customization%, %reconfig%, %is_macro%, %def_valid%, %range_valid%,
+	%type%, %state%, %customization%, %reconfig%, %is_macro%, %def_valid%, %range_valid%},
 	%cooked_values%
 	};
 '
@@ -129,7 +129,7 @@ use constant { RECONSTITUTE_TEMPLATE =>
 
 use constant { RECONSTITUTE_TEMPLATE_WIN => 
 'static const param_info_%typequal% param_def_info_%parameter_var% = {
-	%parameter_name%, 
+	{%parameter_name%, 
 #ifdef WIN32
 	%win32_default%,
 #else	
@@ -140,10 +140,10 @@ use constant { RECONSTITUTE_TEMPLATE_WIN =>
 	%url%, %tags%,
 	%type%, %state%, %customization%, %reconfig%, %is_macro%, 
 #ifdef WIN32
-	%win_valid%, %range_valid%,
+	%win_valid%, %range_valid%},
 	%win_cooked_values%
 #else	
-	%def_valid%, %range_valid%,
+	%def_valid%, %range_valid%},
 	%cooked_values%, 
 #endif
 	};

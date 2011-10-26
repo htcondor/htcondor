@@ -74,9 +74,10 @@ axis2_ssl_utils_initialize_ctx(
     char* cipherlist = "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH";
     local_log = env->log;
 
-    if (!ca_dir)
+	// need one or the other
+    if (!ca_dir && !ca_file)
     {
-        AXIS2_LOG_INFO(env->log, "[ssl] CA certificate not specified");
+        AXIS2_LOG_INFO(env->log, "[ssl] neither CA certificate file nor directory specified");
         AXIS2_HANDLE_ERROR(env, AXIS2_ERROR_SSL_NO_CA_FILE, AXIS2_FAILURE);
         return NULL;
     }
@@ -134,10 +135,10 @@ axis2_ssl_utils_initialize_ctx(
     }
 
     /* Load the CAs we trust */
-    if (!(SSL_CTX_load_verify_locations(ctx, NULL, ca_dir)))
+    if (!(SSL_CTX_load_verify_locations(ctx, ca_file, ca_dir)))
     {
         AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI,
-            "[ssl] Loading CA certificate failed, ca_file is %s", ca_dir);
+            "[ssl] Loading CA certificate failed, ca_file is '%s', ca_dir is '%s'", ca_file, ca_dir);
         SSL_CTX_free(ctx);
         return NULL;
     }

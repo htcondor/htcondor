@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("test_check_events");
+	dprintf_config("test_check_events", get_param_functions());
 	DebugFlags = D_ALWAYS;
 
 	bool			result = true;

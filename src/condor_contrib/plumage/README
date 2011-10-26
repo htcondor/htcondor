@@ -23,16 +23,28 @@ dependencies:
 - js
 - boost
 - pymongo
+- python-dateutil
 
 Plumage can be included in a Condor source build using the following variables 
 when cmake is invoked:
 
 	-DWANT_CONTRIB:BOOL=TRUE -DWITH_MANAGEMENT:BOOL=TRUE -DWITH_PLUMAGE:BOOL=TRUE
 
+As part of a standard view collector setup, you may need to manually create a 
+directory where the view collector can write its standard stats files:
+
+     sudo mkdir -p /var/lib/condor/ViewHist
+
 Configuration
 =============
 This initial release is as a plugin to the existing view collector so much of the
 Condor configuration relates to that of a standard view collector.
+
+# "real" Collector config ...
+######################
+COLLECTOR.CONDOR_VIEW_HOST = $(CONDOR_HOST):12345
+# list the ClassAds of interest to be forwarded
+CONDOR_VIEW_CLASSAD_TYPES = Machine, Submitter
 
 ################
 # View Server
@@ -40,28 +52,29 @@ Condor configuration relates to that of a standard view collector.
 VIEW_SERVER = $(COLLECTOR)
 VIEW_SERVER_ARGS = -f -p 12345 -local-name VIEW_SERVER
 VIEW_SERVER_ENVIRONMENT = "_CONDOR_COLLECTOR_LOG=$(LOG)/ViewServerLog"
-COLLECTOR.CONDOR_VIEW_HOST = $(CONDOR_HOST):12345
 # make sure the view server doesn't point at itself
-VIEW_SERVER.CONDOR_VIEW_HOST = 
+VIEW_SERVER.CONDOR_VIEW_HOST =
 VIEW_SERVER.KEEP_POOL_HISTORY = True
 VIEW_SERVER.SAMPLING_INTERVAL=20
-VIEW_SERVER.PLUGINS = $(LIBEXEC)/ODSCollectorPlugin-plugin.so
-CONDOR_VIEW_CLASSAD_TYPES = Machine, Submitter
+VIEW_SERVER.PLUGINS = $(LIB)/plugins/ODSCollectorPlugin.so
+# or if not from an rpm...
+#VIEW_SERVER.PLUGINS = $(VIEW_SERVER.PLUGINS) $(LIBEXEC)/ODSCollectorPlugin-plugin.so
 POOL_HISTORY_SAMPLING_INTERVAL = 60
 UPDATE_INTERVAL = 300
 # the following are defaults in code also
 ODS_DB_HOST = localhost
 ODS_DB_PORT =
+DAEMON_LIST = $(DAEMON_LIST), VIEW_SERVER
 
-plumage_stats.py
-================
+plumage_stats
+=============
 
 Plumage has a client tool with *similar* capabilities to the condor_stats tool.
 It provides listings of submitters, resources and records over time spans. The 
 submitter records include point-in-time snapshots of running, held and idle jobs.
 The resource records show arch, OS, keyboard idle time, load average and state.
 
-Usage: plumage_stats.py [options]
+Usage: plumage_stats [options]
 
 Query Condor ODS for statistics
 
@@ -72,12 +85,16 @@ Options:
                         mongodb database server location: e.g., somehost,
                         localhost:2011
   --u=USER, --user=USER
-                        stats for a single submitter
+                        stats for a single submitter:
+                        user,timestamp,running,held,idle
   --r=RESOURCE, --resource=RESOURCE
-                        stats for a single resource
+                        stats for a single resource: slot,timestamp,keyboard
+                        idle,load average,status
   --f=START, --from=START
-                        records from datetime
-  --t=END, --to=END     records to datetime
+                        records from datetime in ISO8601 format e.g.,
+                        '2011-09-29 12:03'
+  --t=END, --to=END     records to datetime in ISO8601 format e.g.,
+                        '2011-09-30T17:16'
   --ul, --userlist      list all submitters
   --ugl, --usergrouplist
                         list all submitter groups
@@ -87,35 +104,63 @@ Use Cases
 ---------
 
 Find the names of all submitters.
-$ ./plumage_stats.py --ul
+$ ./plumage_stats --ul
 pmackinn@redhat.com
 
 Find the names of all user groups (i.e., users plus submitter machine).
-$ ./plumage_stats.py --ugl
+$ ./plumage_stats --ugl
 pmackinn@redhat.com/milo.usersys.redhat.com
 
 Find the names of all resources (aka startds, slots).
-$ ./plumage_stats.py --rl
+$ ./plumage_stats --rl
 slot1@milo.usersys.redhat.com
 slot2@milo.usersys.redhat.com
 
 Print the stats for any username that starts with 'pmackinn' for the previous hour (default time lookback).
-$ ./plumage_stats.py --u pmackinn
+$ ./plumage_stats --u pmackinn
 
 Print the stats for user 'pmackinn' over a given datetime range.
-$ ./plumage_stats.py --u pmackinn --from '2011-09-29 14:02' --to '2011-09-29 14:05'
+$ ./plumage_stats --u pmackinn --from '2011-09-29 14:02' --to '2011-09-29 14:05'
 pmackinn@redhat.com 	2011-09-29 14:02:19.239000 	2 	0 	0
 pmackinn@redhat.com 	2011-09-29 14:03:19.235000 	2 	0 	0
 pmackinn@redhat.com 	2011-09-29 14:04:19.469000 	0 	0 	0
 
 Print the stats for a resource name that contains 'milo' for the previous hour (default time lookback).
-$ ./plumage_stats.py --r milo
+$ ./plumage_stats --r milo
 
 Print the stats for resource 'milo' over a given datetime range.
-$ ./plumage_stats.py --r milo --from '2011-09-29 14:02' --to '2011-09-29 14:05'
+$ ./plumage_stats --r milo --from '2011-09-29 14:02' --to '2011-09-29 14:05'
 slot1@milo.usersys.redhat.com 	2011-09-29 14:02:19.240000 	INTEL/LINUX 	205 	0.24 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:02:19.240000 	INTEL/LINUX 	533 	0.00 	Claimed
 slot1@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	12 		0.33 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	603 	0.00 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:04:19.470000 	INTEL/LINUX 	653 	0.00 	Unclaimed
 slot1@milo.usersys.redhat.com 	2011-09-29 14:04:19.471000 	INTEL/LINUX 	30 		0.28 	Unclaimed
+
+Database Layout
+---------------
+The Plumage plugin emits machine and submitter classads to the db.collection 'condor_raw.ads'. It can be
+queryed in the mongo shell like so:
+
+$ mongo
+MongoDB shell version: 1.6.4
+connecting to: test
+> use condor_raw
+switched to db condor_raw
+> db.ads.find({"MyType" : "Machine"})
+<output not shown>
+> db.ads.find({"MyType" : "Submitter"})
+<output not shown>
+
+The stats records are in the db.collections 'condor_stats.samples.machine' and 'condor_stats.samples.submitter'
+respectively:
+
+> use condor_stats
+> db.samples.machine.find()
+<output not shown>
+
+> db.samples.submitter.find()
+<output not shown>
+
+NOTE: After the plumage collector plugin has been activated, it can take a default of 5 minutes for statistics 
+to become available to the tool.

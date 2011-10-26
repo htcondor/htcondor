@@ -18,7 +18,6 @@ $type     = $_REQUEST["type"];
 $runid    = (int)$_REQUEST["runid"];
 $user     = $_REQUEST["user"];
 $timed    = array_key_exists("timed", $_REQUEST) ? $_REQUEST["timed"] : "";
-$build_id = $runid;
 $branch   = "unknown";
 
 define('PLATFORM_PENDING', 'pending');
@@ -52,17 +51,24 @@ $results = $dash->db_query($query_branch);
 $branch = $results[0]["branch"];
 
 
-$sql = "SELECT host, gid, UNIX_TIMESTAMP(start) AS start
+$sql = "SELECT UNIX_TIMESTAMP(start) AS start
         FROM Run
-        WHERE Run.runid = $build_id
+        WHERE Run.runid = $runid
           AND Run.user = '$user'";
 
 $results = $dash->db_query($sql);
-$host  = $results[0]["host"];
-$gid   = $results[0]["gid"];
 $start = $results[0]["start"];
 
 echo "<h2>" . ucfirst($type) . "s for Build ID $runid $branch (" . date("m/d/Y", $start) . ")</h2>\n";
+
+if($type == "build") {
+  $url = preg_replace("/build/", "test", "http://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
+  print "<p><a href='$url'>Show tests for this run</a>\n";
+}
+else {
+  $url = preg_replace("/test/", "build", "http://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']);
+  print "<p><a href='$url'>Show builds for this run</a>\n";
+}
 
 if(!$timed) {
   echo "<p><a href='http://" . $_SERVER['HTTP_HOST']  . $_SERVER['REQUEST_URI'] . "&timed=1'>Show this page with test times</a>\n";
@@ -196,6 +202,16 @@ foreach ($platforms AS $platform) {
     $remote_host = "<br><font style='font-size:75%'>" . $hosts[$true_runid][$display] . "</font>";
   }
 
+  if(preg_match("/^x86_64_/", $display)) {
+    $display = preg_replace("/x86_64_/", "x86_64<br>", $display);
+  }
+  elseif(preg_match("/ia64_/", $display)) {
+    $display = preg_replace("/ia64_/", "x86<br>", $display);
+  }
+  else {
+    $display = preg_replace("/x86_/", "x86<br>", $display);
+  }
+
   $display = "<a href='$filepath/$mygid/userdir/$platform/' title='View Run Directory'>$display</a>";
   echo "<td align='center' class='".$platform_status[$platform]."'>$display $remote_host $queue_depth</td>\n";
 }
@@ -223,10 +239,10 @@ foreach ($data AS $task => $arr) {
   if ($type == 'test') {
     $history_url = sprintf(HISTORY_URL, urlencode($branch), rawurlencode($task));
     $history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
-    echo "<tr>\n".
-      "<td ".($task_status[$task] != PLATFORM_PASSED ? 
-              "class=\"".$task_status[$task]."\"" : "").">".
-      "<span title=\"$task\">$history_disp</span></td>\n";
+    print "<tr>\n";
+    $color = ($task_status[$task] != PLATFORM_PASSED) ? $task_status[$task] : "";
+    print "<td class=\"left $color\">";
+    print "<span title=\"$task\">$history_disp</span></td>\n";
   }
   else {
     echo "<tr>\n".
@@ -270,7 +286,7 @@ foreach ($data AS $task => $arr) {
           $display .= ")";
         }
 
-        echo "<td class='".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."' style='text-align:center;$height'>$display</td>\n";
+        echo "<td class='".($result == 0 ? PLATFORM_PASSED : PLATFORM_FAILED)."' style='$height'>$display</td>\n";
       }
     }
   }

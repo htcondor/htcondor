@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 my $thisrunjobs = $ARGV[0];
 my $increasejobs = $ARGV[1];
@@ -47,7 +48,7 @@ open(DATAOUT,"<$datafile") || print "Can not open existing data file: $!\n";
 open(NEWDATAOUT,">$datafile.new") || die "Can not open new data file: $!\n";
 while(<DATAOUT>)
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	print NEWDATAOUT "$_\n";
 }
 close(DATAOUT);
@@ -60,7 +61,7 @@ open(QUEUECMD,"<$cmd") || die "Can't open cmd file $!\n";
 open(NEWCMD,">$cmd.new") || die "Can not open new command file: $!\n";
 while(<QUEUECMD>)
 {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	$line = $_;
 	if( $line =~ /^\s*queue\s*.*$/ )
 	{

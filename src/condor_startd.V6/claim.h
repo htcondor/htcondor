@@ -216,6 +216,7 @@ public:
 	bool        mayUnretire()   {return c_may_unretire;}
 	bool        getRetirePeacefully() {return c_retire_peacefully;}
 	bool        preemptWasTrue() const {return c_preempt_was_true;}
+	int         getPledgedMachineMaxVacateTime() {return c_pledged_machine_max_vacate_time;}
 
 		// Functions that set the values of data
 	void setrank(float therank)	{c_rank=therank;};
@@ -336,6 +337,7 @@ private:
 	bool        c_retire_peacefully;
 	bool        c_preempt_was_true; //was PREEMPT ever true for this claim?
 	bool        c_schedd_closed_claim;
+	int         c_pledged_machine_max_vacate_time; // evaluated at activation time
 
 
 		// Helper methods

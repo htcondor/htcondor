@@ -331,6 +331,8 @@ NegotiatorObject::ManagementMethod(uint32_t methodId,
 #ifndef READ_ONLY_NEGOTIATOR_OBJECT
 	switch (methodId) {
 	case qmf::com::redhat::grid::Negotiator::METHOD_ECHO:
+		if (!param_boolean("QMF_MANAGEMENT_METHOD_ECHO", false)) return STATUS_NOT_IMPLEMENTED;
+
 		return STATUS_OK;
 	case Negotiator::METHOD_GETLIMITS:
 		return GetLimits(((ArgsNegotiatorGetLimits &) args).o_Limits, text);
@@ -368,4 +370,13 @@ NegotiatorObject::ManagementMethod(uint32_t methodId,
 #endif
 
 	return STATUS_NOT_IMPLEMENTED;
+}
+
+bool
+NegotiatorObject::AuthorizeMethod(uint32_t methodId, Args& args, const std::string& userId) {
+	dprintf(D_FULLDEBUG, "AuthorizeMethod: checking '%s'\n", userId.c_str());
+	if (0 == userId.compare("cumin")) {
+		return true;
+	}
+	return false;
 }

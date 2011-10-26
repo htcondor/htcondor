@@ -29,7 +29,7 @@ main(int argc, char** argv)
 {
 	int retval = 0;
 	Termlog = 1;
-	dprintf_config("TOOL");
+	dprintf_config("TOOL", get_param_functions());
 
 	set_debug_flags("D_ALWAYS");
 	config();

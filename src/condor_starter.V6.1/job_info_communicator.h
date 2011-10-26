@@ -240,6 +240,10 @@ public:
 
 	bool hadRemove( void ) { return had_remove; };
 	bool hadHold( void ) { return had_hold; };
+	bool isExiting( void ) { return requested_exit; };
+	bool isGracefulShutdown( void ) { return graceful_exit; };
+	bool isFastShutdown( void ) { return fast_exit; };
+
 
 		/** Someone is attempting to reconnect to this job.
 		 */
@@ -480,6 +484,8 @@ protected:
 
 		/// if true, we were asked to shutdown
 	bool requested_exit;
+	bool graceful_exit;
+	bool fast_exit;
 	bool had_remove;
 	bool had_hold;
 
@@ -506,6 +512,8 @@ private:
 		/// Cancel our timer for the periodic job updates
 	void cancelUpdateTimer( void );
 
+	void hookTimeout( void );
+
 		/// timer id for periodically sending info on job to Shadow
 	int m_periodic_job_update_tid;
 
@@ -517,6 +525,8 @@ private:
 		     "remove", or "evict" (PREEMPT, condor_vacate, condor_off).
 		*/
 	const char* getExitReasonString( void );
+
+	int m_exit_hook_timer_tid;
 };
 
 

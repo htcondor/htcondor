@@ -39,10 +39,10 @@ MACRO (CONDOR_STD_EXE_TEST _CNDR_TARGET _COMPILER _SRCS _LINK_FLAGS )
 		add_dependencies( arx_${_CNDR_TARGET} ${_CNDR_TARGET} ${_SRCS})
 
 		# call condor compile, you will need to verify that make install has passed.
-		command_target( cc_${_CNDR_TARGET} ${CONDOR_COMPILE} "-condor_lib;${STDU_LIB_LOC};-condor_ld_dir;${STDU_LIB_LOC};${_COMPILER};-o;${CMAKE_CURRENT_SOURCE_DIR}/${_CNDR_TARGET}.cndr.exe;${objs_${_CNDR_TARGET}};${_LINK_FLAGS}" "${CMAKE_CURRENT_SOURCE_DIR}/${_CNDR_TARGET}.cndr.exe" )
+		command_target( cc_${_CNDR_TARGET} ${CONDOR_COMPILE} "-condor_lib;${STDU_LIB_LOC};-condor_ld_dir;${STDU_LIB_LOC};${_COMPILER};-o;${CMAKE_CURRENT_BINARY_DIR}/${_CNDR_TARGET}.cndr.exe;${objs_${_CNDR_TARGET}};${_LINK_FLAGS}" "${CMAKE_CURRENT_BINARY_DIR}/${_CNDR_TARGET}.cndr.exe" )
 		add_dependencies( cc_${_CNDR_TARGET} arx_${_CNDR_TARGET} ${_SRCS})
 
-		command_target( ca_${_CNDR_TARGET} ${CONDOR_ARCH_LINK} "${_CNDR_TARGET}.cndr.exe" "${CMAKE_CURRENT_SOURCE_DIR}/${_CNDR_TARGET}.cndr.exe.LINUX.INTEL")
+		command_target( ca_${_CNDR_TARGET} ${CONDOR_ARCH_LINK} "${_CNDR_TARGET}.cndr.exe" "${CMAKE_CURRENT_BINARY_DIR}/${_CNDR_TARGET}.cndr.exe.LINUX.INTEL")
 		add_dependencies( ca_${_CNDR_TARGET} cc_${_CNDR_TARGET} ${_SRCS})
 
 		append_var(CONDOR_TESTS ca_${_CNDR_TARGET})

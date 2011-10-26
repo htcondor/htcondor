@@ -28,3 +28,9 @@ main( int /*argc*/, const char * /*argv*/[] )
 	exit( 0 );
 	return 0;
 }
+
+extern "C"
+{
+	void sysapi_internal_reconfig()
+	{}
+}

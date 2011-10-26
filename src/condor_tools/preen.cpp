@@ -53,7 +53,6 @@
 
 State get_machine_state();
 
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL);
 extern void		_condor_set_debug_flags( const char *strflags );
 
 // Define this to check for memory leaks
@@ -125,6 +124,7 @@ main( int argc, char *argv[] )
 	config();
 	init_params();
 	BadFiles = new StringList;
+	param_functions *p_funcs = NULL;
 
 		// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
@@ -154,7 +154,8 @@ main( int argc, char *argv[] )
 		}
 	}
 	
-	dprintf_config("TOOL");
+	p_funcs = get_param_functions();
+	dprintf_config("TOOL", p_funcs);
 	if (VerboseFlag)
 	{
 		// always append D_FULLDEBUG locally when verbose.

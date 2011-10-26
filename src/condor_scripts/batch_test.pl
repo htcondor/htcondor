@@ -53,16 +53,14 @@
 #	directory.
 #
 
-#require 5.0;
-use File::Copy;
-use FileHandle;
-use POSIX qw/sys_wait_h strftime/;
-use Cwd;
-use CondorUtils;
-use CondorTest;
-use Time::Local;
 use strict;
 use warnings;
+
+use File::Copy;
+use POSIX qw/sys_wait_h strftime/;
+use Cwd;
+use CondorTest;
+use CondorUtils;
 
 #################################################################
 #
@@ -114,7 +112,7 @@ Condor::DebugLevel(5);
 my $time = strftime("%y/%m/%d %H:%M:%S", localtime);
 print "$time: batch_test.pl starting up\n";
 
-my $iswindows = CondorTest::IsThisWindows();
+my $iswindows = CondorUtils::is_windows();
 
 # configuration options
 my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
@@ -132,7 +130,7 @@ my $testpersonalcondorlocation = "$BaseDir/TestingPersonalCondor";
 my $wintestpersonalcondorlocation = "";
 if($iswindows == 1) {
 	my $tmp = `cygpath -m $testpersonalcondorlocation`;
-	CondorTest::fullchomp($tmp);
+	CondorUtils::fullchomp($tmp);
 	$wintestpersonalcondorlocation = $tmp;
 }
 
@@ -338,7 +336,7 @@ if(!($wantcurrentdaemons)) {
 
 	if($iswindows == 1) {
 		my $tmp = `cygpath -m $targetconfig`;
-		CondorTest::fullchomp($tmp);
+		CondorUtils::fullchomp($tmp);
 		$ENV{CONDOR_CONFIG} = $tmp;
 		$res = CondorPersonal::IsRunningYet($tmp);
 	} else {
@@ -404,47 +402,40 @@ foreach my $name (@compilers) {
 
 # now we find the tests we care about.
 if( @testlist ) {
-
-	debug("working on testlist\n",2);
-	foreach my $name (@testlist) {
-		if($hush == 0) { 
-			debug("Testlist:$name\n",2);;
-		}
-	}
-
+    debug("Test list contents:\n", 2);
+    
     # we were explicitly given a # list on the command-line
     foreach my $test (@testlist) {
-		if( ! ($test =~ /(.*)\.run$/) ) {
-	    	$test = "$test.run";
-		}
-		foreach my $compiler (@compilers)
-		{
-	    	push(@{$test_suite{"$compiler"}}, $test);
-		}
+        debug("    $test\n", 2);
+        if($test !~ /.*\.run$/) {
+            $test = "$test.run";
+        }
+
+        foreach my $compiler (@compilers) {
+            push(@{$test_suite{$compiler}}, $test);
+        }
     }
-} elsif( $testfile ) {
-	debug("working on testfile\n",2);
-    # if we were given a file, let's read it in and use it.
-    #print "found a runfile: $testfile\n";
-    open(TESTFILE, $testfile) || die "Can't open $testfile\n";
+}
+elsif( $testfile ) {
+    debug("Using test file '$testfile'\n", 2);
+    open(TESTFILE, '<', $testfile) || die "Can't open $testfile\n";
     while( <TESTFILE> ) {
-		CondorTest::fullchomp($_);
-		my $test = $_;
-		if($test =~ /^#.*$/) {
-			#print "skip comment\n";
-			next;
-		}
-		#//($compiler, $test) = split('\/');
-		if( ! ($test =~ /(.*)\.run$/) ) {
-	    	$test = "$test.run";
-		}
-		foreach my $compiler (@compilers)
-		{
-	    	push(@{$test_suite{"$compiler"}}, $test);
-		}
+        next if(/^\s*#/);  # Skip comment lines
+
+        CondorUtils::fullchomp($_);
+        
+        my $test = $_;
+        if($test !~ /.*\.run$/) {
+            $test = "$test.run";
+        }
+
+        foreach my $compiler (@compilers) {
+            push(@{$test_suite{$compiler}}, $test);
+        }
     }
     close(TESTFILE);
-} else {
+}
+else {
     # we weren't given any specific tests or a test list, so we need to 
     # find all test programs (all files ending in .run) for each compiler
 	my $gotdot = 0;
@@ -478,7 +469,7 @@ if( @testlist ) {
 	}
 
 	while(<QUICK>) {
-		CondorTest::fullchomp($_);
+		CondorUtils::fullchomp($_);
 		my $tmp = $_;
 		if( $tmp =~ /^#.*$/ ) {
 			# comment so skip
@@ -503,7 +494,7 @@ if( $ignorefile ) {
     debug("found a skipfile: $ignorefile \n",1);
     open(SKIPFILE, $ignorefile) || die "Can't open $ignorefile\n";
     while(<SKIPFILE>) {
-	CondorTest::fullchomp($_);
+	CondorUtils::fullchomp($_);
 	my $test = $_;
 	foreach my $compiler (@compilers) {
 	    # $skip_hash{"$compiler"}->{"$test"} = 1;
@@ -814,7 +805,7 @@ sub WhereIsInstallDir
 		my $top = getcwd();
 		debug( "getcwd says \"$top\"\n",2);
 		my $crunched = `cygpath -m $top`;
-		CondorTest::fullchomp($crunched);
+		CondorUtils::fullchomp($crunched);
 		debug( "cygpath changed it to: \"$crunched\"\n",2);
 		my $ppwwdd = `pwd`;
 		debug( "pwd says: $ppwwdd\n",2);
@@ -825,7 +816,7 @@ sub WhereIsInstallDir
 		print STDERR "Unable to find a condor_master in your \$PATH!\n";
 		exit(1);
 	}
-	CondorTest::fullchomp($tmp);
+	CondorUtils::fullchomp($tmp);
 	debug( "Install Directory \"$tmp\"\n",2);
 	if($iswindows == 0) {
 	    $tmp =~ s|//|/|g;
@@ -841,7 +832,7 @@ sub WhereIsInstallDir
 		if($tmp =~ /^(.*)\/bin\/condor_master\s*$/) {
 			$installdir = $1;
 			$tmp = `cygpath -m $1`;
-    		CondorTest::fullchomp($tmp);
+    		CondorUtils::fullchomp($tmp);
 			$wininstalldir = $tmp;
 			$wininstalldir =~ s/\\/\//;
 			print "Testing This Install Directory: \"$wininstalldir\"\n";
@@ -879,7 +870,7 @@ sub CreateConfig
 	# file is to set the release-dir and local-dir. (non-windows)
 	# change RELEASE_DIR and LOCAL_DIR    
 	my $currenthost = CondorTest::getFqdnHost();
-	CondorTest::fullchomp($currenthost);
+	CondorUtils::fullchomp($currenthost);
 
 	debug( "Set RELEASE_DIR and LOCAL_DIR\n",2);
 
@@ -909,7 +900,7 @@ sub CreateConfig
 	open( NEWFIG, ">$targetconfig" ) 
 		|| die "Can't open new config file: $!\n";    
 	while( <OLDFIG> ) {        
-		CondorTest::fullchomp($_);        
+		CondorUtils::fullchomp($_);        
 		$line = $_;        
 		if($line =~ /^RELEASE_DIR\s*=.*/) {            
 			debug( "Matching <<$line>>\n",2);
@@ -1053,10 +1044,10 @@ sub CreateLocalConfig
 
 		$javabinary = "java.exe";
 		my $whichtest = `which $javabinary`;
-	    CondorTest::fullchomp ($whichtest);
+	    CondorUtils::fullchomp($whichtest);
 		$whichtest =~ s/Program Files/progra~1/g;
 		$jvm = `cygpath -m $whichtest`;
-		CondorTest::fullchomp($jvm);
+		CondorUtils::fullchomp($jvm);
 		CondorTest::debug("which java said<<$jvm>>\n",2);
 
 	    $java_libdir = "$wininstalldir/lib";
@@ -1071,7 +1062,7 @@ sub CreateLocalConfig
 
 		$javabinary = "java";
 	    unless (system ("which java >> /dev/null 2>&1")) {
-	    	CondorTest::fullchomp (my $which_java = CondorTest::Which("$javabinary"));
+	    	CondorUtils::fullchomp(my $which_java = CondorTest::Which("$javabinary"));
 			CondorTest::debug("CT::Which for $javabinary said $which_java\n",2);
 	    	@default_jvm_locations = ($which_java, @default_jvm_locations) unless ($?);
 	    }
@@ -1220,7 +1211,7 @@ sub CompleteTestOutput
 	} else {
 		$failure = `grep 'FAILURE' $test{$child}.out`;
 		$failure =~ s/^.*FAILURE[: ]//;
-		CondorTest::fullchomp($failure);
+		CondorUtils::fullchomp($failure);
 		$failure = "failed" if $failure =~ /^\s*$/;
 	
 		if ($isXML){
@@ -1334,13 +1325,9 @@ sub DoChild
 }
 
 # Call down to Condor Perl Module for now
-
-sub debug
-{
-    my $string = shift;
-	my $level = shift;
-	my $newstring = "BT:$string";
-	Condor::debug($newstring,$level);
+sub debug {
+    my ($msg, $level) = @_;
+    Condor::debug("batch_test - $msg", $level);
 }
 
 sub DebugOn

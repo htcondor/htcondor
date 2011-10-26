@@ -16,14 +16,14 @@
  # 
  ############################################################### 
 
-file( GLOB SysApiRmvElements *_t.cpp *.t.* dhry21b* *_main.cpp )
+file( GLOB SysApiRmvElements *_t.* *.t.* dhry21b* *_main.cpp test.* )
 
 condor_glob(SysapiHeaderFiles SysapiSourceFiles "${SysApiRmvElements}" )
 
-#create the library
-condor_static_lib(sysapi "${SysapiHeaderFiles};${SysapiSourceFiles}")
+set( SYSAPI_UTIL_SRCS "${SysapiHeaderFiles};${SysapiSourceFiles}" PARENT_SCOPE )
 
 # there was a test target which was never used.
 # it makes the most sense to hook in a UT here instead of integ test
-condor_exe(condor_kflops "kflops_main.cpp" ${C_LIBEXEC} "sysapi;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}" OFF)
-condor_exe(condor_mips "mips_main.cpp" ${C_LIBEXEC} "sysapi;${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}" OFF)
+condor_exe(condor_kflops "kflops_main.cpp;clinpack.cpp;../condor_utils/utc_time.cpp" ${C_LIBEXEC} "" OFF)
+
+condor_exe(condor_mips "mips_main.cpp;dhry21a.cpp;../condor_utils/utc_time.cpp" ${C_LIBEXEC} "" OFF)

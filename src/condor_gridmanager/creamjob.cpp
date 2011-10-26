@@ -265,8 +265,8 @@ CreamJob::CreamJob( ClassAd *classad )
 		error_string = "CREAM_GAHP not defined";
 		goto error_exit;
 	}
-	snprintf( buff, sizeof(buff), "CREAM/%s",
-			  jobProxy->subject->fqan );
+	snprintf( buff, sizeof(buff), "CREAM/%s/%s",
+			  jobProxy->subject->subject_name, jobProxy->subject->first_fqan );
 
 	gahp = new GahpClient( buff, gahp_path );
 	free( gahp_path );

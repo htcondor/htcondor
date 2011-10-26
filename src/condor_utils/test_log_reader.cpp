@@ -35,8 +35,6 @@
 
 static const char *	VERSION = "0.9.5";
 
-DECL_SUBSYSTEM( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
-
 enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 
 enum Verbosity{ VERB_NONE = 0, VERB_ERROR, VERB_WARNING, VERB_INFO, VERB_ALL };
@@ -87,6 +85,9 @@ int
 main(int argc, const char **argv)
 {
 	DebugFlags = D_ALWAYS;
+	param_functions *p_funcs = NULL;
+
+	set_mySubSystem( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
 
 		// initialize to read from config file
 	myDistro->Init( argc, argv );
@@ -94,7 +95,8 @@ main(int argc, const char **argv)
 
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("TEST_LOG_READER");
+	p_funcs = get_param_functions();
+	dprintf_config("TEST_LOG_READER", p_funcs);
 
 	int		result = 0;
 	int		events = 0;

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # Copyright 2009-2011 Red Hat, Inc.
@@ -40,12 +40,12 @@ DEFAULT_END_DT = str(datetime.utcnow()-UTC_DIFF)
 verbose = False
 
 def print_user(user,start,end):
-	for item in db['samples.submitter'].find({"sn":{'$regex':'^'+user}, 'ts':{'$gte': parse(start), '$lt': parse(end)}}):
-		print item['sn'],"\t",item['ts'], "\t",item['jr'],"\t",item['jh'],"\t",item['ji']
+	for item in db['samples.submitter'].find({"sn":{'$regex':'^'+user}, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}):
+		print item['sn'],"\t",item['ts']-UTC_DIFF, "\t",item['jr'],"\t",item['jh'],"\t",item['ji']
 
 def print_resource(resource,start,end):
-	for item in db['samples.machine'].find({"mn":{'$regex':resource}, 'ts':{'$gte': parse(start), '$lt': parse(end)}}):
-		print item['mn'],"\t",item['ts'], "\t","%s/%s" % (item['ar'],item['os']),"\t",item['ki'],"\t",str(item['la'])[:5],"\t",item['st']
+	for item in db['samples.machine'].find({"mn":{'$regex':resource}, 'ts':{'$gte': parse(start)+UTC_DIFF, '$lt': parse(end)+UTC_DIFF}}):
+		print item['mn'],"\t",item['ts']-UTC_DIFF, "\t","%s/%s" % (item['ar'],item['os']),"\t",item['ki'],"\t",str(item['la'])[:5],"\t",item['st']
 
 def print_users():
 		for user in db['samples.submitter'].distinct('sn'):

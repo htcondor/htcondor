@@ -110,7 +110,13 @@ message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
 if (NOT PROPER)
   
   if(PCRE_REF)
-	add_dependencies( ${CLASSADS_FOUND} ${PCRE_REF} )
+	add_dependencies( classads ${PCRE_REF} )
+  endif()
+
+  # On Mac, we build our own pcre, unlike linux, so need to 
+  # have a dependency here so we build pcre before classads
+  if ( DARWIN AND PCRE_REF)
+	add_dependencies( classad ${PCRE_REF} )
   endif()
 
   if (NOT WINDOWS)

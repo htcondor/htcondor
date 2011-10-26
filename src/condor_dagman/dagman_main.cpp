@@ -48,9 +48,6 @@ extern "C" void process_config_source( char* file, char* name,
 			char* host, int required );
 extern "C" bool is_piped_command(const char* filename);
 
-//---------------------------------------------------------------------------
-DECL_SUBSYSTEM( "DAGMAN", SUBSYSTEM_TYPE_DAGMAN );
-
 static char* lockFileName = NULL;
 
 static Dagman dagman;
@@ -1356,8 +1353,16 @@ main_pre_dc_init( int, char*[] )
 }
 
 
-void
-main_pre_command_sock_init( )
+int
+main( int argc, char **argv )
 {
+	set_mySubSystem( "DAGMAN", SUBSYSTEM_TYPE_DAGMAN );
+
+	dc_main_init = main_init;
+	dc_main_config = main_config;
+	dc_main_shutdown_fast = main_shutdown_fast;
+	dc_main_shutdown_graceful = main_shutdown_graceful;
+	dc_main_pre_dc_init = main_pre_dc_init;
+	return dc_main( argc, argv );
 }
 

@@ -22,6 +22,7 @@
 #include "string_list.h"
 #include "read_multiple_logs.h"
 #include "check_events.h"
+#include "condor_config.h"
 
 MULTI_LOG_HASH_INSTANCE; // For the multi-log-file code...
 CHECK_EVENTS_HASH_INSTANCE; // For the event checking code...
@@ -29,6 +30,7 @@ CHECK_EVENTS_HASH_INSTANCE; // For the event checking code...
 int main(int argc, char **argv)
 {
 	int		result = 0;
+	param_functions *p_funcs = NULL;
 
 	if ( argc <= 1 || (argc >= 2 && !strcmp("-usage", argv[1])) ) {
 		printf("Usage: condor_check_userlogs <log file 1> "
@@ -38,7 +40,8 @@ int main(int argc, char **argv)
 
 		// Set up dprintf.
 	Termlog = true;
-	dprintf_config("condor_check_userlogs");
+	p_funcs = get_param_functions();
+	dprintf_config("condor_check_userlogs", p_funcs);
 	DebugFlags = D_ALWAYS;
 
 	StringList	logFiles;

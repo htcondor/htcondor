@@ -5,6 +5,13 @@ include "Dashboard.php";
 $dash = new Dashboard();
 $dash->print_header("NMI Pool Status");
 
+?>
+
+</head>
+<body>
+
+<?php
+
 // Get the current platforms in the pool
 $pool_platforms = $dash->condor_status();
 
@@ -30,16 +37,6 @@ function make_cell($platform, $info) {
   
   return "<td align=\"center\" style=\"background-color:$color\">$platform<br>" . $info["html-queue"] . "</td>\n";
 }
-?>
-
-<html>
-<head>
-<title>NMI - Build queue depths for core platforms</title>
-<link rel="StyleSheet" href="condor.css" type="text/css">
-</head>
-<body>
-
-<?php
 
 echo "<h2>NMI queue depths:</h2>\n";
 
@@ -117,7 +114,7 @@ echo "</table>\n";
 
 <p>
 <h2>Slots</h2>
-<table style="text-align:center">
+<table>
 <tr>
   <th>Platform</th><th>Total</th><th>Avail.</th>
 </tr>

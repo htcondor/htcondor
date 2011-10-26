@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_core_killsignal_van.cmd';
 $testdesc =  'Condor allows change of kill signal - vanilla U';
@@ -53,7 +54,7 @@ $aborted = sub {
 	open( FILE, "<$outfile" ) || die "error opening $file: $!\n";
 	while(<FILE>)
 	{
-		CondorTest::fullchomp($_);
+		CondorUtils::fullchomp($_);
 		CondorTest::debug("Found $_\n",1);
 		if($_ eq $killsig)
 		{

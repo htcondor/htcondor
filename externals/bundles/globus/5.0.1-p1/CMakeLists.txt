@@ -71,7 +71,7 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.0.1-p5 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.0.1-p6 "lib;include" "done")
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/rfc_proxy.patch -p0 &&
@@ -126,13 +126,14 @@ if (WITH_GLOBUS)
 
 			set (GLOBUS_DEPENDS ${OPENSSL_REF} ${GT4_REF} ${GT42_REF})
 		else()
-			set (GLOBUS_FLAGS true)
 			set (GLOBUS_DEPENDS ${GT4_REF} ${GT42_REF})
 
 			if (LINUX)
+				set (GLOBUS_FLAGS LDFLAGS='-Wl,--enable-new-dtags' && export LDFLAGS)
 				set (MODIFY_LIBTOOL sed -i 's/^hardcode_libdir_flag_spec=.*/hardcode_libdir_flag_spec=/' ${GLOBUS_INSTALL_LOC}/sbin/libtool-*)
 				set (MAKE_GRIDFTP LD_RUN_PATH='${EXTERNALS_RPATH}' ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -verbose -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
 			else()
+				set (GLOBUS_FLAGS true)
 				set (MODIFY_LIBTOOL true)
 				set (MAKE_GRIDFTP ${GLOBUS_INSTALL_LOC}/sbin/gpt-build -force -static -verbose -srcdir=source-trees/gridftp/server/src ${GLOBUS_FLAVOR})
 			endif()

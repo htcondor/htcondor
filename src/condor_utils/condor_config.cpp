@@ -72,6 +72,7 @@
 #include "directory.h"			// for StatInfo
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "condor_auth_x509.h"
 #include "setenv.h"
 #include "HashTable.h"
 #include "extra_param_info.h"
@@ -118,12 +119,13 @@ extern int	ConfigLineNo;
 BUCKET	*ConfigTab[TABLESIZE];
 static ExtraParamTable *extra_info = NULL;
 static char* tilde = NULL;
-extern DLL_IMPORT_MAGIC char **environ;
 static bool have_config_source = true;
 extern bool condor_fsync_on;
 
 MyString global_config_source;
 StringList local_config_sources;
+
+param_functions config_p_funcs;
 
 static int ParamValueNameAscendingSort(const void *l, const void *r);
 
@@ -743,7 +745,8 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
     }
 			
 		// Now, insert any macros defined in the environment.
-	for( int i = 0; environ[i]; i++ ) {
+	char **my_environ = GetEnviron();
+	for( int i = 0; my_environ[i]; i++ ) {
 		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
 		strcpy( magic_prefix, "_" );
 		strcat( magic_prefix, myDistro->Get() );
@@ -751,11 +754,11 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 		int prefix_len = strlen( magic_prefix );
 
 		// proceed only if we see the magic prefix
-		if( strncasecmp( environ[i], magic_prefix, prefix_len ) != 0 ) {
+		if( strncasecmp( my_environ[i], magic_prefix, prefix_len ) != 0 ) {
 			continue;
 		}
 
-		char *varname = strdup( environ[i] );
+		char *varname = strdup( my_environ[i] );
 		if( !varname ) {
 			EXCEPT( "Out of memory in %s:%d\n", __FILE__, __LINE__ );
 		}
@@ -886,17 +889,9 @@ process_locals( const char* param_name, const char* host )
 {
 	StringList sources_to_process, sources_done;
 	char *source, *sources_value;
-	char *tmp;
 	int local_required;
-	
-	local_required = true;	
-    tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
-    if( tmp ) {
-		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
-			local_required = false;
-		}
-		free( tmp );
-    }
+
+	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
 
 	sources_value = param( param_name );
 	if( sources_value ) {
@@ -976,18 +971,10 @@ process_directory( char* dirlist, char* host )
 	Directory *files;
 	const char *file, *dirpath;
 	char **paths;
-	char *tmp;
 	int local_required;
 	Regex excludeFilesRegex;
 	
-	local_required = true;	
-	tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
-	if( tmp ) {
-		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
-			local_required = false;
-		}
-		free( tmp );
-	}
+	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
 
 	if(!dirlist) { return; }
 	locals.initializeFromString( dirlist );
@@ -2687,4 +2674,13 @@ bool param(std::string &buf,char const *param_name,char const *default_value)
 	}
 	free( param_value );
 	return found;
+}
+
+param_functions* get_param_functions()
+{
+	config_p_funcs.set_param_func(&param);
+	config_p_funcs.set_param_bool_int_func(&param_boolean_int);
+	config_p_funcs.set_param_wo_default_func(&param_without_default);
+
+	return &config_p_funcs;
 }

@@ -16,17 +16,16 @@
  # 
  ############################################################### 
 
-
 set(TOOL_LINK_LIBS "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}")
 
 condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
-condor_exe(condor_preen "preen.cpp" ${C_SBIN} "qmgmt;${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_preen "preen.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_advertise "advertise.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_fetchlog "fetch_log.cpp" ${C_SBIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_config_val "config_val.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_userprio "user_prio.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
 condor_exe(condor_findhost "give_interactive.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
-condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "qmgmt;${TOOL_LINK_LIBS}" OFF)
+condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
 
 if (HAVE_SSH_TO_JOB)
 	condor_exe(condor_ssh_to_job "ssh_to_job.cpp" ${C_BIN} "${TOOL_LINK_LIBS}" OFF)
@@ -57,7 +56,7 @@ if (NOT WINDOWS)
 	if (STD_UNIVERSE)
 		clone_install(condor "${C_BIN}" "condor_checkpoint" "${C_BIN}")
 		src_target_ref( ckpt "maps" CKPT_REFS)
-		condor_exe(condor_ckpt_probe "probe_process.c;${CKPT_REFS}" "${C_LIBEXEC}" "${TOOL_LINK_LIBS}" OFF)
+		condor_exe(condor_ckpt_probe "probe_process.cpp;${CKPT_REFS}" "${C_LIBEXEC}" "${TOOL_LINK_LIBS}" OFF)
 	endif(STD_UNIVERSE)
 else(NOT WINDOWS)
 	clone_install(condor_cod "${C_BIN}" "condor_cod_request" "${C_BIN}")
@@ -79,7 +78,6 @@ condor_exe(condor_test_match "condor_test_match.cpp" ${C_BIN} "${TOOL_LINK_LIBS}
 if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
 	set( SRC_DIR ${CMAKE_SOURCE_DIR} )
 	set( BIN_DIR ${CMAKE_BINARY_DIR} )
-	install( CODE "execute_process(COMMAND echo JEF ${SRC_DIR} ${BIN_DIR} ${CMAKE_INSTALL_PREFIX} OUTPUT_FILE /tmp/cmake.out)" )
 	install( CODE "execute_process(COMMAND mkdir -p ${CMAKE_INSTALL_PREFIX}/lib/condor)" )
 	install( CODE "execute_process(COMMAND ${SRC_DIR}/src/condor_scripts/print-libs ${BIN_DIR}/src/condor_tools/condor_version ${SRC_DIR}/src/condor_scripts/syslib-patterns
 		 COMMAND xargs -isrc cp src ${CMAKE_INSTALL_PREFIX}/lib/condor

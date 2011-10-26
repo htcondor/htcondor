@@ -175,6 +175,7 @@ main( int argc, char *argv[] )
 	DCCollector* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
+	param_functions *p_funcs = NULL;
 
 		// Initialize our global variables
 	has_constraint = false;
@@ -246,7 +247,8 @@ main( int argc, char *argv[] )
             if (match_prefix(arg, "-debug")) {
 				// dprintf to console
 				Termlog = 1;
-				dprintf_config ("TOOL");
+				p_funcs = get_param_functions();
+				dprintf_config ("TOOL", p_funcs);
             } else if (match_prefix(arg, "-constraint")) {
 				args[nArgs] = arg;
 				nArgs++;
@@ -809,6 +811,3 @@ printNewMessages( ClassAd* result_ad, StringList* ids )
 		free( msg );
 	}
 }
-
-
-#include "daemon_core_stubs.h"

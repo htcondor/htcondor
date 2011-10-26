@@ -36,8 +36,6 @@ using namespace std;
 
 static const char *	VERSION = "0.1.0";
 
-DECL_SUBSYSTEM( "TEST_LEASE_MANAGER", SUBSYSTEM_TYPE_TOOL );
-
 enum Verbosity
 {
 	VERB_NONE = 0,
@@ -456,13 +454,15 @@ main(int argc, const char **argv)
 {
 	DebugFlags = D_ALWAYS;
 
+	set_mySubSystem( "TEST_LEASE_MANAGER", SUBSYSTEM_TYPE_TOOL );
+
 		// initialize to read from config file
 	myDistro->Init( argc, argv );
 	config();
 
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("TEST_LEASE_MANAGER");
+	dprintf_config("TEST_LEASE_MANAGER", get_param_functions());
 
 	int		status;
 	status = tests.CmdLine( argc, argv );

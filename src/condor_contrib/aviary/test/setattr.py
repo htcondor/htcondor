@@ -22,56 +22,70 @@ from suds import *
 from suds.client import Client
 from sys import exit, argv, stdin
 import time
-import argparse
+from optparse import OptionParser
 from aviary.https import *
+from aviary.util import *
 
 # change these for other default locations and ports
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
-key = '/etc/pki/tls/certs/client.key'
-cert = '/etc/pki/tls/certs/client.crt'
 types = ['BOOLEAN','EXPRESSION','FLOAT','INTEGER','STRING']
 
-parser = argparse.ArgumentParser(description='Set job attributes remotely via SOAP.')
-parser.add_argument('-v','--verbose', action="store_true",default=False, help='enable SOAP logging')
-parser.add_argument('-u','--url', action="store", nargs='?', dest='url',
-		    default="http://localhost:9090/services/job/setJobAttribute",
-		    help='http or https URL prefix to be added to cmd')
-parser.add_argument('-k','--key', action="store", nargs='?', dest='key', help='client SSL key file')
-parser.add_argument('-c','--cert', action="store", nargs='?', dest='cert', help='client SSL certificate file')
-parser.add_argument('name', action="store", help='attribute name')
-parser.add_argument('type', action="store", choices=(types), help='attribute type')
-parser.add_argument('value', action="store", help='attribute value')
-parser.add_argument('cproc', action="store", help="a cluster.proc id like '1.0' or '5.3'")
-args =  parser.parse_args()
+parser = build_basic_parser('Set job attributes remotely via SOAP.','http://localhost:9090/services/job/setJobAttribute')
+parser.add_option('--name', action="store", dest='name', help='attribute name')
+parser.add_option('--type', action="store", choices=(types), dest='type', help=str(types))
+parser.add_option('--value', action="store", dest='value', help='attribute value')
+parser.add_option('--cproc', action="store", dest='cproc', help="a cluster.proc id like '1.0' or '5.3'")
+(opts,args) =  parser.parse_args()
 
-if "https://" in args.url:
-	client = Client(wsdl,transport = HTTPSClientCertTransport(key,cert))
+# the joy that is optparse...
+if opts.name is None:
+	print 'You must provide an attribute name'
+	parser.print_help()
+	exit(1)
+
+if opts.type is None:
+	print 'You must provide an attribute type'
+	parser.print_help()
+	exit(1)
+
+if opts.value is None:
+	print 'You must provide an attribute value'
+	parser.print_help()
+	exit(1)
+
+if opts.cproc is None:
+	print 'You must provide a cluster.proc job id'
+	parser.print_help()
+	exit(1)
+
+if "https://" in opts.url:
+	client = Client(wsdl,transport = HTTPSFullCertTransport(opts.key,opts.cert,opts.root,opts.verify))
 else:
 	client = Client(wsdl)
 
-client.set_options(location=args.url)
+client.set_options(location=opts.url)
 
 # enable to see service schema
-if args.verbose:
+if opts.verbose:
 	logging.basicConfig(level=logging.INFO)
 	logging.getLogger('suds.client').setLevel(logging.DEBUG)
 	print client
 
 # set up our JobID
 jobId = client.factory.create('ns0:JobID')
-jobId.job = args.cproc
+jobId.job = opts.cproc
 
 # set up the Attribute
 aviary_attr = client.factory.create('ns0:Attribute')
-aviary_attr.name = args.name
-aviary_attr.type = args.type
-aviary_attr.value = args.value
+aviary_attr.name = opts.name
+aviary_attr.type = opts.type
+aviary_attr.value = opts.value
 
 try:
-	print 'invoking', args.url, 'for job', args.cproc
+	print 'invoking', opts.url, 'for job', opts.cproc
 	result = client.service.setJobAttribute(jobId, aviary_attr)
 except Exception, e:
-	print "unable to access scheduler at: ", args.url
+	print "unable to access scheduler at: ", opts.url
 	print e
 	exit(1)
 

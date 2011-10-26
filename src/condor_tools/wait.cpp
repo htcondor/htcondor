@@ -26,7 +26,6 @@
 #include "condor_distribution.h"
 #include "read_user_log.h"
 #include "HashTable.h"
-
 /*
 XXX XXX XXX WARNING WARNING WARNING
 The exit codes in this program are slightly different than
@@ -98,6 +97,7 @@ int main( int argc, char *argv[] )
 	char *job_name = 0;
 	time_t waittime=0, stoptime=0;
 	int minjobs = 0;
+	param_functions *p_funcs = NULL;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -112,7 +112,8 @@ int main( int argc, char *argv[] )
 		} else if(!strcmp(argv[i],"-debug")) {
 			// dprintf to console
 			Termlog = 1;
-			dprintf_config ("TOOL" );
+			p_funcs = get_param_functions();
+			dprintf_config ("TOOL", p_funcs);
 		} else if(!strcmp(argv[i],"-wait")) {
 			i++;
 			if(i>=argc) {

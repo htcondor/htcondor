@@ -99,7 +99,9 @@ set( CONDOR_EXTERNAL_DIR ${CONDOR_SOURCE_DIR}/externals )
 
 # set to true to enable printing of make actions
 set( CMAKE_VERBOSE_MAKEFILE FALSE )
-set( BUILD_SHARED_LIBS FALSE )
+
+# set to true if we should build and use shared libraries where appropriate
+set( CONDOR_BUILD_SHARED_LIBS FALSE )
 
 # Windows is so different perform the check 1st and start setting the vars.
 if( NOT WINDOWS)
@@ -120,12 +122,6 @@ if( NOT WINDOWS)
 
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
 
-	# when we want to distro dynamic libraries only with localized rpaths.
-	set (CMAKE_SKIP_RPATH TRUE)
-	# set (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-	# set (CMAKE_INSTALL_RPATH YOUR_LOC)
-	# set (CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
 	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
@@ -140,7 +136,7 @@ if( NOT WINDOWS)
     if( NOT "${LIBRESOLV_PATH}" MATCHES "-NOTFOUND" )
       set(HAVE_LIBRESOLV ON)
     endif()
-	find_library( LIBDL_PATH resolv )
+	find_library( LIBDL_PATH dl )
     if( NOT "${LIBDL_PATH}" MATCHES "-NOTFOUND" )
       set(HAVE_LIBDL ON)
     endif()
@@ -326,15 +322,17 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 		include_directories(/usr/kerberos/include)
 	endif()
 
+	set( CONDOR_BUILD_SHARED_LIBS TRUE )
+
 	set(DOES_SAVE_SIGSTATE ON)
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)
-	check_include_files("linux/ethtool.h" HAVE_LINUX_ETHTOOL_H)
+	check_include_files("linux/types.h" HAVE_LINUX_TYPES_H)
+	check_include_files("linux/types.h;linux/ethtool.h" HAVE_LINUX_ETHTOOL_H)
 	check_include_files("linux/magic.h" HAVE_LINUX_MAGIC_H)
 	check_include_files("linux/nfsd/const.h" HAVE_LINUX_NFSD_CONST_H)
 	check_include_files("linux/personality.h" HAVE_LINUX_PERSONALITY_H)
 	check_include_files("linux/sockios.h" HAVE_LINUX_SOCKIOS_H)
-	check_include_files("linux/types.h" HAVE_LINUX_TYPES_H)
 
 	find_library(HAVE_X11 X11)
 	dprint("Threaded functionality only enable in Linux and Windows")
@@ -357,7 +355,10 @@ elseif(${OS_NAME} STREQUAL "AIX")
 elseif(${OS_NAME} STREQUAL "DARWIN")
 	add_definitions(-DDarwin)
 	set(DARWIN ON)
+	set( CONDOR_BUILD_SHARED_LIBS TRUE )
 	check_struct_has_member("struct statfs" f_fstypename "sys/param.h;sys/mount.h" HAVE_STRUCT_STATFS_F_FSTYPENAME)
+	find_library( IOKIT_FOUND IOKit )
+	find_library( COREFOUNDATION_FOUND CoreFoundation )
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
 elseif(${OS_NAME} STREQUAL "HPUX")
 	set(HPUX ON)
@@ -386,6 +387,8 @@ option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 
+#####################################
+# PROPER option
 if (UW_BUILD OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
 
@@ -403,6 +406,25 @@ else()
   option(CLIPPED "disable the standard universe" ON)
 endif()
 
+if (NOT CLIPPED AND NOT LINUX)
+	message (FATAL_ERROR "standard universe is *only* supported on Linux")
+endif()
+
+#####################################
+# RPATH option
+if (LINUX)
+	option(CMAKE_SKIP_RPATH "Skip RPATH on executables" OFF)
+else()
+	option(CMAKE_SKIP_RPATH "Skip RPATH on executables" ON)
+endif()
+
+if ( NOT CMAKE_SKIP_RPATH )
+	set( CMAKE_INSTALL_RPATH ${CONDOR_RPATH} )
+	set( CMAKE_BUILD_WITH_INSTALL_RPATH TRUE )
+endif()
+
+#####################################
+# KBDD option
 if (NOT WINDOWS)
     if (HAVE_X11)
         if (NOT (${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND"))
@@ -413,10 +435,8 @@ else()
     option(HAVE_KBDD "Support for condor_kbdd" ON)
 endif()
 
-if (NOT CLIPPED AND NOT LINUX)
-	message (FATAL_ERROR "standard universe is *only* supported on Linux")
-endif()
-
+#####################################
+# KBDD option
 if (NOT HPUX)
 	option(HAVE_SHARED_PORT "Support for condor_shared_port" ON)
 	if (NOT WINDOWS)
@@ -424,6 +444,8 @@ if (NOT HPUX)
 	endif()
 endif(NOT HPUX)
 
+#####################################
+# ssh_to_job option
 if (NOT WINDOWS) 
     option(HAVE_SSH_TO_JOB "Support for condor_ssh_to_job" ON)
 endif()
@@ -437,8 +459,7 @@ endif(BUILD_TESTS)
 # setup for the externals, the variables defined here
 # are used in the construction of externals within
 # the condor build.  The point of main interest is
-# how "cacheing" is performed by performing the build
-# external to the tree itself.
+# how "cacheing" is performed.
 if (PROPER)
 	message(STATUS "********* Configuring externals using [local env] a.k.a. PROPER *********")
 	option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
@@ -446,12 +467,6 @@ else()
 	cmake_minimum_required(VERSION 2.8)
 	message(STATUS "********* Configuring externals using [uw-externals] a.k.a NONPROPER *********")
 	option(CACHED_EXTERNALS "enable/disable cached externals" ON)
-
-	if (LINUX)
-		set(CMAKE_SKIP_RPATH FALSE)
-		set(CMAKE_INSTALL_RPATH ${CONDOR_RPATH})
-		set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-	endif()
 endif(PROPER)
 
 if (WINDOWS)
@@ -632,8 +647,8 @@ endif()
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-set (CONDOR_LIBS "procd_client;daemon_core;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
-set (CONDOR_TOOL_LIBS "procd_client;daemon_client;procapi;cedar;privsep;${CLASSADS_FOUND};sysapi;ccb;utils;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND}")
+set (CONDOR_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}")
+set (CONDOR_TOOL_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 message(STATUS "----- Begin compiler options/flags check -----")
@@ -930,6 +945,8 @@ dprint ( "CMAKE_SKIP_INSTALL_ALL_DEPENDENCY: ${CMAKE_SKIP_INSTALL_ALL_DEPENDENCY
 
 # If set, runtime paths are not added when using shared libraries. Default it is set to OFF
 dprint ( "CMAKE_SKIP_RPATH: ${CMAKE_SKIP_RPATH}" )
+dprint ( "CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
+dprint ( "CMAKE_BUILD_WITH_INSTALL_RPATH: ${CMAKE_BUILD_WITH_INSTALL_RPATH}")
 
 # set this to true if you are using makefiles and want to see the full compile and link
 # commands instead of only the shortened ones

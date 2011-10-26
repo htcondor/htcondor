@@ -17,12 +17,19 @@
  *
  ***************************************************************/
 
+#define _FILE_OFFSET_BITS 64
 
-/* Dummy definition of ZZZ_dc_sinful to be included in Condor
-   libraries where needed. */
-#include "condor_common.h"
+#include <string>
+#include <map>
+struct DebugFileInfo
+{
+	FILE *debugFP;
+	int debugFlags;
+	std::string logPath;
+	off_t maxLog;
+	int maxLogNum;
 
-char const* global_dc_sinful() { return 0; }
-bool global_dc_set_cookie(int, unsigned char*) { return false; }
-bool global_dc_get_cookie(int &, unsigned char* &) { return false; }
-
+	DebugFileInfo() : debugFlags(0), debugFP(0), maxLog(0), maxLogNum(0) {}
+	DebugFileInfo(const DebugFileInfo &debugFileInfo);
+	~DebugFileInfo();
+};

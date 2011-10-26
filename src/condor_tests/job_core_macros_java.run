@@ -19,6 +19,8 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
+
 use Cwd;
 use Sys::Hostname;
 
@@ -51,7 +53,7 @@ sub load_up_lines
 	open(IN,"<submit_macros_java.out") || die "Can not open submit_macros_java.out: $!\n";
 	while(<IN>)
 	{
-		CondorTest::fullchomp($_);
+		CondorUtils::fullchomp($_);
 		push @lines, $_;
 	}
 };

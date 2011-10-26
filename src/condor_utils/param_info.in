@@ -4433,7 +4433,7 @@ customization=seldom
 friendly_name=Collector Host
 usage=COLLECTOR_HOST = $(CONDOR_HOST):1234
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=gridmanager,amazonjob
+tags=gridmanager
 id=252
 
 [UNICORE_GAHP]
@@ -10168,4 +10168,20 @@ friendly_name=Append OS version to the value of OPSYS
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd
+id=602
+
+[MachineMaxVacateTime]
+aliases=
+default=600
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
 id=602

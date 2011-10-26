@@ -36,7 +36,6 @@
 **
 ************************************************************************/
 
-#define _FILE_OFFSET_BITS 64
 #include "condor_common.h"
 #include "condor_sys_types.h"
 #include "condor_debug.h"
@@ -52,13 +51,15 @@
 #include "util_lib_proto.h"		// for mkargv() proto
 #include "condor_threads.h"
 #include "log_rotate.h"
+#include "dprintf_internal.h"
 
 FILE *debug_lock(int debug_level, const char *mode, int force_lock);
 FILE *open_debug_file( int debug_level, const char flags[] );
 void debug_unlock(int debug_level);
 void debug_close_file(int debug_level);
+void debug_close_all_files();
 void debug_close_lock();
-void preserve_log_file(int debug_level);
+FILE *preserve_log_file(int debug_level);
 void _condor_dprintf_exit( int error_code, const char* msg );
 void _condor_set_debug_flags( const char *strflags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
@@ -73,6 +74,7 @@ static struct saved_dprintf* saved_list_tail = NULL;
 
 extern	DLL_IMPORT_MAGIC int		errno;
 extern  int		DebugFlags;
+extern param_functions *dprintf_param_funcs;
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -95,8 +97,7 @@ static time_t DebugLockDelayPeriodStarted = 0;
  * limit to FDs.  Windows can open as many as you want short of running
  * out of physical resources like memory.
  */
-FILE	*DebugFPs[D_NUMLEVELS+1] = { NULL };
-
+std::vector<DebugFileInfo> * DebugLogs = NULL;
 /*
  * This is last modification time of the main debug file as returned
  * by stat() before the current process has written anything to the
@@ -126,10 +127,6 @@ int      DebugContinueOnOpenFailure = 0;
 ** debug file for each level plus an additional catch-all debug file
 ** at index 0.
 */
-
-off_t	 MaxLog[D_NUMLEVELS+1] = { 0 };
-int		 MaxLogNum[D_NUMLEVELS+1] = { 0 };
-char	*DebugFile[D_NUMLEVELS+1] = { NULL };
 char	*DebugLock = NULL;
 
 int		(*DebugId)(char **buf,int *bufpos,int *buflen);
@@ -167,6 +164,23 @@ int InDBX = 0;
 
 #define FCLOSE_RETRY_MAX 10
 
+DebugFileInfo::DebugFileInfo(const DebugFileInfo &debugFileInfo)
+{
+	this->debugFlags = debugFileInfo.debugFlags;
+	this->logPath = std::string(debugFileInfo.logPath);
+	this->maxLog = debugFileInfo.maxLog;
+	this->maxLogNum = debugFileInfo.maxLogNum;
+	this->debugFP = NULL;
+}
+
+DebugFileInfo::~DebugFileInfo()
+{
+	if(debugFP)
+	{
+		fclose(debugFP);
+		debugFP = NULL;
+	}
+}
 
 static char *formatTimeHeader(struct tm *tm) {
 	static char timebuf[80];
@@ -175,7 +189,7 @@ static char *formatTimeHeader(struct tm *tm) {
 
 	if (firstTime) {
 		firstTime = 0;
-		timeFormat = param( "DEBUG_TIME_FORMAT" );
+		timeFormat = dprintf_param_funcs->param( "DEBUG_TIME_FORMAT" );
 		if (!timeFormat) {
 			timeFormat = strdup("%m/%d/%y %H:%M:%S ");
 		} else {
@@ -371,6 +385,7 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	priv_state	priv;
 	int debug_level;
 	FILE *debug_file_ptr = NULL;
+	std::vector<DebugFileInfo>::iterator it;
 
 		/* DebugFP should be static initialized to stderr,
 	 	   but stderr is not a constant on all systems. */
@@ -482,28 +497,41 @@ _condor_dprintf_va( int flags, const char* fmt, va_list args )
 	
 			/* print debug message to catch-all debug file plus files */
 			/* registered for other debug levels */
-		for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
-			if ((debug_level == 0) ||
-				(DebugFile[debug_level] && (flags&(1<<(debug_level-1))))) {
-
-					/* Open and lock the log file */
-				debug_file_ptr = debug_lock(debug_level, NULL, 0);
-
-				if (debug_file_ptr) {
+		if(!DebugLogs->size())
+		{
+			debug_file_ptr = stderr;
 #ifdef va_copy
-					va_list copyargs;
-					va_copy(copyargs, args);
-					_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,copyargs);
-					va_end(copyargs);
+			va_list copyargs;
+			va_copy(copyargs, args);
+			_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,copyargs);
+			va_end(copyargs);
 #else
-					_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,args);
+			_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,args);
 #endif
-				}
-
-					/* Close and unlock the log file */
-				debug_unlock(debug_level);
-
+		}
+		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+		{
+			int debugFlags = (*it).debugFlags;
+			/*
+			 * Checks to make sure at least one of the levels in flags match
+			 * the levels associated with this output target.
+			 */
+			if((debugFlags != 0) && ((debugFlags & flags) != 0))
+				continue;
+			/* Open and lock the log file */
+			debug_file_ptr = debug_lock(debugFlags, NULL, 0);
+			if (debug_file_ptr) {
+#ifdef va_copy
+				va_list copyargs;
+				va_copy(copyargs, args);
+				_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,copyargs);
+				va_end(copyargs);
+#else
+				_condor_dfprintf_va(flags,DebugFlags,clock_now,tm,debug_file_ptr,fmt,args);
+#endif
 			}
+
+			debug_unlock(debugFlags);
 		}
 
 			/* restore privileges */
@@ -630,7 +658,7 @@ debug_open_lock(void)
 	if ( use_kernel_mutex == -1 ) {
 #ifdef WIN32
 		// Use a mutex by default on Win32
-		use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+		use_kernel_mutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 #else
 		// Use file locking by default on Unix.  We should 
 		// call param_boolean_int here, but since locking via
@@ -712,15 +740,28 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
 	int locked = 0;
-	FILE *debug_file_ptr;
+	FILE *debug_file_ptr = NULL;
+	std::vector<DebugFileInfo>::iterator it;
+	bool level_exists = false;
 
-	debug_file_ptr = DebugFPs[debug_level];
+	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	{
+		/*
+		 * Checks to make sure at least one of the levels in flags match
+		 * the levels associated with this output target.
+		 */
+		if(((*it).debugFlags & debug_level) != 0)
+			continue;
+		debug_file_ptr = (*it).debugFP;
+		level_exists = true;
+		break;
+	}
 
 	if ( mode == NULL ) {
 		mode = "aN";
 	}
 
-	if(DebugFile[debug_level] == NULL)
+	if(!level_exists)
 		return stderr;
 
 	errno = 0;
@@ -762,7 +803,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			}
 #endif
 			snprintf( msg_buf, sizeof(msg_buf), "Could not open DebugFile \"%s\"\n", 
-					 DebugFile[debug_level] );
+				it->logPath.c_str() );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
@@ -779,7 +820,7 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 
-	if( MaxLog[debug_level] && length > MaxLog[debug_level] ) {
+	if( it->maxLog && length > it->maxLog ) {
 		if( !locked ) {
 			/*
 			 * We only need to redo everything if there is a lock defined
@@ -809,9 +850,13 @@ debug_lock(int debug_level, const char *mode, int force_lock )
 			}
 		}
 
-        _condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)MaxLog[debug_level], (long long)length);
-        preserve_log_file(debug_level);
-		debug_file_ptr = DebugFPs[debug_level];
+		// Casting length to int to get rid of compile warning.
+		// Probably format should be %ld, and we should cast to
+		// long int, but I'm afraid of changing the output format.
+		// wenger 2009-02-24.
+		_condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)it->maxLog, (long long)length);
+		
+		debug_file_ptr = preserve_log_file(debug_level);
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
@@ -846,20 +891,52 @@ void debug_close_lock()
 
 void debug_close_file(int debug_level)
 {
-	FILE *debug_file_ptr;
+	FILE *debug_file_ptr = NULL;
+	std::vector<DebugFileInfo>::iterator it;
+	bool level_exists = false;
 
-	debug_file_ptr = DebugFPs[debug_level];
+	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	{
+		/*
+		 * Checks to make sure at least one of the levels in flags match
+		 * the levels associated with this output target.
+		 */
+		if(((*it).debugFlags & debug_level) != 0)
+			continue;
+		debug_file_ptr = (*it).debugFP;
+		level_exists = true;
+		break;
+	}
 
-
-	if( DebugFile[debug_level] ) {
+	if( debug_file_ptr ) {
 		if (debug_file_ptr) {
 			int close_result = fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
 			if (close_result < 0) {
 				DebugUnlockBroken = 1;
 				_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
 			}
-			DebugFPs[debug_level] = NULL;
+			(*it).debugFP = NULL;
 		}
+	}
+}
+
+void debug_close_all_files()
+{
+	FILE *debug_file_ptr = NULL;
+	std::vector<DebugFileInfo>::iterator it;
+	bool level_exists = false;
+
+	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	{
+		debug_file_ptr = (*it).debugFP;
+		if(!debug_file_ptr)
+			continue;
+		int close_result = fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
+		if (close_result < 0) {
+			DebugUnlockBroken = 1;
+			_condor_dprintf_exit(errno, "Can't fclose debug log file\n");
+		}
+		(*it).debugFP = NULL;
 	}
 }
 
@@ -867,15 +944,26 @@ void
 debug_unlock(int debug_level)
 {
 	priv_state priv;
-	int flock_errno = 0;
 	int result = 0;
 
-	FILE *debug_file_ptr;
+	FILE *debug_file_ptr = NULL;
+	bool level_exists = false;
+	std::vector<DebugFileInfo>::iterator it;
 
 	if(log_keep_open)
 		return;
 
-	debug_file_ptr = DebugFPs[debug_level];
+	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	{
+		/*
+		 * Checks to make sure at least one of the levels in flags match
+		 * the levels associated with this output target.
+		 */
+		if(((*it).debugFlags & debug_level) != 0)
+			continue;
+		debug_file_ptr = (*it).debugFP;
+		level_exists = true;
+	}
 
 	if( DebugUnlockBroken ) {
 		return;
@@ -889,10 +977,10 @@ debug_unlock(int debug_level)
 				DebugUnlockBroken = 1;
 				_condor_dprintf_exit(errno, "Can't fflush debug log file\n");
 		}
-	}
 
-	debug_close_lock();
-	debug_close_file(debug_level);
+		debug_close_lock();
+		debug_close_file(debug_level);
+	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 }
@@ -901,7 +989,7 @@ debug_unlock(int debug_level)
 /*
 ** Copy the log file to a backup, then truncate the current one.
 */
-void
+FILE *
 preserve_log_file(int debug_level)
 {
 	char		old[MAXPATHLEN + 4];
@@ -913,27 +1001,39 @@ preserve_log_file(int debug_level)
 	const char *timestamp;
 	int			result;
 	int			file_there = 0;
-	FILE		*debug_file_ptr;
+	FILE		*debug_file_ptr = NULL;
+	std::string		filePath;
+	std::vector<DebugFileInfo>::iterator it;
 #ifndef WIN32
 	struct stat buf;
 #endif
 	char msg_buf[DPRINTF_ERR_MAX];
 
-	debug_file_ptr = DebugFPs[debug_level];
+	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	{
+		/*
+		 * Checks to make sure at least one of the levels in flags match
+		 * the levels associated with this output target.
+		 */
+		if(((*it).debugFlags & debug_level) != 0)
+			continue;
+		debug_file_ptr = (*it).debugFP;
+		filePath = (*it).logPath;
+		break;
+	}
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
-	(void)setBaseName(DebugFile[debug_level]);
-	timestamp = createRotateFilename(NULL, MaxLogNum[debug_level]);
-	(void)sprintf( old, "%s.%s", DebugFile[debug_level] , timestamp);
+	(void)setBaseName(filePath.c_str());
+	timestamp = createRotateFilename(NULL, it->maxLogNum);
+	(void)sprintf( old, "%s.%s", filePath.c_str() , timestamp);
 	_condor_dfprintf( debug_file_ptr, "Saving log file to \"%s\"\n", old );
 	(void)fflush( debug_file_ptr );
 
 	fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
 	debug_file_ptr = NULL;
-	DebugFPs[debug_level] = debug_file_ptr;
+	(*it).debugFP = debug_file_ptr;
 
-
-	result = rotateTimestamp(timestamp, MaxLogNum[debug_level]);
+	result = rotateTimestamp(timestamp, it->maxLogNum);
 
 #if defined(WIN32)
 	if (result < 0) { // MoveFileEx and Copy failed
@@ -961,7 +1061,7 @@ preserve_log_file(int debug_level)
 		}
 		else {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n",
-					  DebugFile[debug_level], old );
+					  filePath.c_str(), old );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
@@ -974,12 +1074,12 @@ preserve_log_file(int debug_level)
 
 	if( DebugLock && DebugShouldLockToAppend ) {
 		errno = 0;
-		if (stat (DebugFile[debug_level], &buf) >= 0)
+		if (stat (filePath.c_str(), &buf) >= 0)
 		{
 			file_there = 1;
 			save_errno = errno;
 			snprintf( msg_buf, sizeof(msg_buf), "rename(%s) succeeded but file still exists!\n", 
-					 DebugFile[debug_level] );
+					 filePath.c_str() );
 			/* We should not exit here - file did rotate but something else created it newly. We
 			 therefore won't grow without bounds, we "just" lost control over creating the file.
 			 We should happily continue anyway and just put a log message into the system telling
@@ -1002,13 +1102,9 @@ preserve_log_file(int debug_level)
 				 debug_level ); 
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
-	else
-	{
-		DebugFPs[debug_level] = debug_file_ptr;
-	}
 
 	if ( !still_in_old_file ) {
-		_condor_dfprintf (debug_file_ptr, "Now in new log file %s\n", DebugFile[debug_level]);
+		_condor_dfprintf (debug_file_ptr, "Now in new log file %s\n", it->logPath.c_str());
 	}
 
 	// We may have a message left over from the succeeded rename after which the file
@@ -1028,7 +1124,10 @@ preserve_log_file(int debug_level)
 	}
 	
 	_set_priv(priv, __FILE__, __LINE__, 0);
-	cleanUp(MaxLogNum[debug_level]);
+	cleanUp(it->maxLogNum);
+	(*it).debugFP = debug_file_ptr;
+
+	return debug_file_ptr;
 }
 
 
@@ -1045,6 +1144,10 @@ _condor_fd_panic( int line, const char* file )
 	char msg_buf[DPRINTF_ERR_MAX];
 	char panic_msg[DPRINTF_ERR_MAX];
 	int save_errno;
+	std::vector<DebugFileInfo>::iterator it;
+	std::string filePath;
+	bool fileExists = false;
+	FILE* debug_file_ptr;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -1056,20 +1159,29 @@ _condor_fd_panic( int line, const char* file )
 	for ( i=0 ; i<50 ; i++ ) {
 		(void)close( i );
 	}
-	if( DebugFile[0] ) {
-		DebugFPs[0] = safe_fopen_wrapper_follow(DebugFile[0], "aN", 0644);
+
+	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	{
+		if(((*it).debugFlags & D_ALWAYS) != D_ALWAYS)
+			continue;
+		filePath = (*it).logPath;
+		fileExists = true;
+		break;
+	}
+	if( fileExists ) {
+		debug_file_ptr = safe_fopen_wrapper_follow(filePath.c_str(), "a", 0644);
 	}
 
-	if( DebugFPs[0] == NULL ) {
+	if( !debug_file_ptr ) {
 		save_errno = errno;
-		snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", DebugFile[0],
+		snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", filePath.c_str(),
 				 panic_msg ); 
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
-	(void)lseek( fileno(DebugFPs[0]), 0, SEEK_END );
-	fprintf( DebugFPs[0], "%s\n", panic_msg );
-	(void)fflush( DebugFPs[0] );
+	(void)lseek( fileno(debug_file_ptr), 0, SEEK_END );
+	fprintf( debug_file_ptr, "%s\n", panic_msg );
+	(void)fflush( debug_file_ptr );
 
 	_condor_dprintf_exit( 0, panic_msg );
 }
@@ -1114,9 +1226,20 @@ open_debug_file(int debug_level, const char flags[])
 	priv_state	priv;
 	char msg_buf[DPRINTF_ERR_MAX];
 	int save_errno;
+	std::string filePath;
+	std::vector<DebugFileInfo>::iterator it;
 
-	FILE* debug_file_fp;
-	debug_file_fp = DebugFPs[debug_level];
+	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
+	{
+		/*
+		 * Checks to make sure at least one of the levels in flags match
+		 * the levels associated with this output target.
+		 */
+		if(((*it).debugFlags & debug_level) != 0)
+			continue;
+		filePath = (*it).logPath;
+		break;
+	}
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -1124,20 +1247,20 @@ open_debug_file(int debug_level, const char flags[])
 	   since PRIV_CONDOR changes euid now. */
 
 	errno = 0;
-	if( (fp=safe_fopen_wrapper_follow(DebugFile[debug_level],flags,0644)) == NULL ) {
+	if( (fp=safe_fopen_wrapper_follow(filePath.c_str(),flags,0644)) == NULL ) {
 		save_errno = errno;
 #if !defined(WIN32)
 		if( errno == EMFILE ) {
 			_condor_fd_panic( __LINE__, __FILE__ );
 		}
 #endif
-		if (debug_file_fp == NULL) {
-			debug_file_fp = stderr;
+		if (fp == NULL) {
+			fp = stderr;
 		}
-		_condor_dfprintf( debug_file_fp, "Can't open \"%s\"\n", DebugFile[debug_level] );
+		_condor_dfprintf( fp, "Can't open \"%s\"\n", filePath.c_str() );
 		if( debug_level == 0 ) {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
-					 DebugFile[debug_level] );
+					 filePath.c_str() );
 
 			if ( ! DebugContinueOnOpenFailure) {
 			    _condor_dprintf_exit( save_errno, msg_buf );
@@ -1147,7 +1270,7 @@ open_debug_file(int debug_level, const char flags[])
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
-	DebugFPs[debug_level] = fp;
+	it->debugFP = fp;
 
 	return fp;
 }
@@ -1164,6 +1287,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	int wrote_warning = FALSE;
 	struct tm *tm;
 	time_t clock_now;
+	std::vector<DebugFileInfo>::iterator it;
 
 		/* We might land here with DprintfBroken true if our call to
 		   dprintf_unlock() down below hits an error.  Since the
@@ -1199,7 +1323,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		strcat( tail, buf );
 #endif
 
-		tmp = param( "LOG" );
+		tmp = dprintf_param_funcs->param( "LOG" );
 		if( tmp ) {
 			snprintf( buf, sizeof(buf), "%s/dprintf_failure.%s",
 					  tmp, get_mySubSystemName() );
@@ -1228,14 +1352,8 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		DprintfBroken = 1;
 
 			/* Don't forget to unlock the log file, if possible! */
-		for (int debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++)
-		{
-			if(DebugFPs[debug_level])
-			{
-				debug_close_lock();
-				debug_close_file(debug_level);
-			}
-		}
+		debug_close_lock();
+		debug_close_all_files();
 	}
 
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
@@ -1273,16 +1391,18 @@ dprintf_last_modification()
 void
 dprintf_touch_log()
 {
+	std::vector<DebugFileInfo>::iterator it;
 	if ( _condor_dprintf_works ) {
-		if (DebugFile[0]) {
+		if (!DebugLogs->empty()) {
+			it = DebugLogs->begin();
 #ifdef WIN32
-			utime( DebugFile[0], NULL );
+			utime( it->logPath.c_str(), NULL );
 #else
 		/* The following updates the ctime without touching 
 			the mtime of the file.  This way, we can differentiate
 			a "heartbeat" touch from a append touch
 		*/
-			chmod( DebugFile[0], 0644);
+			chmod( it->logPath.c_str(), 0644);
 #endif
 		}
 	}
@@ -1592,7 +1712,7 @@ dprintf_dump_stack(void) {
 		   could be fatal, since the heap may be trashed.  Therefore,
 		   we dispense with some of the formalities... */
 
-	if (DprintfBroken || !_condor_dprintf_works || !DebugFile[0]) {
+	if (DprintfBroken || !_condor_dprintf_works || DebugLogs->empty()) {
 			// Note that although this would appear to enable
 			// backtrace printing to stderr before dprintf is
 			// configured, the backtrace sighandler is only installed
@@ -1617,7 +1737,7 @@ dprintf_dump_stack(void) {
 			seteuid(getuid());
 		}
 
-		fd = safe_open_wrapper_follow(DebugFile[0],O_APPEND|O_WRONLY|O_CREAT,0644);
+		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|O_CREAT,0644);
 
 		if( orig_priv_state != PRIV_CONDOR ) {
 			setegid(orig_egid);
@@ -1648,25 +1768,20 @@ dprintf_dump_stack(void) {
 
 #endif
 
-int debug_open_fds(int *open_fds)
+bool debug_open_fds(std::map<int,bool> &open_fds)
 {
-	int counter = 0;
+	bool found = false;
+	std::vector<DebugFileInfo>::iterator it;
 
-	if(open_fds == NULL)
-		return 0;
-
-	for(int index = 0; index <= D_NUMLEVELS; index++)
+	for(it = DebugLogs->begin(); it < DebugLogs->end(); it++)
 	{
-		if(DebugFPs[index] != NULL)
-		{
-			open_fds[index] = fileno(DebugFPs[index]);
-			++counter;
-		}
-		else
-			open_fds[index] = -1;
+		if(!it->debugFP)
+			continue;
+		open_fds.insert(std::pair<int,bool>(fileno(it->debugFP),true));
+		found = true;
 	}
 
-	return counter;
+	return found;
 }
 
 #if !defined(HAVE_BACKTRACE)

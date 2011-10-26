@@ -46,9 +46,6 @@
 
 #define NUM_PARAMETERS 3
 
-
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
-
 static void Usage(char* name) 
 {
 	printf ("Usage: %s [options]\n\twhere [options] are\n"
@@ -118,6 +115,7 @@ main(int argc, char* argv[])
 
   char* JobHistoryFileName=NULL;
   char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
+  param_functions *p_funcs = NULL;
 
 
   std::string constraint;
@@ -280,7 +278,8 @@ main(int argc, char* argv[])
     else if (strcmp(argv[i],"-debug")==0) {
           // dprintf to console
           Termlog = 1;
-          dprintf_config ("TOOL");
+		  p_funcs = get_param_functions();
+          dprintf_config ("TOOL", p_funcs);
     }
     else {
 		if (constraint!="") {

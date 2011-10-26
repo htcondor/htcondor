@@ -47,8 +47,6 @@
 
 #define NUM_PARAMETERS 3
 
-DECL_SUBSYSTEM( "TOOL", SUBSYSTEM_TYPE_TOOL );
-
 static void Usage(char* name) 
 {
   printf("Usage: %s -f history-filename [-name schedd-name jobqueue-birthdate]\n", name);
@@ -94,7 +92,7 @@ main(int argc, char* argv[])
 
   config();
   Termlog = 1;
-  dprintf_config("TOOL");
+  dprintf_config("TOOL", get_param_functions());
 
   for(i=1; i<argc; i++) {
 

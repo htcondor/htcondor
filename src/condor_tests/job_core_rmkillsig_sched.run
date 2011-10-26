@@ -19,6 +19,7 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_core_rmkillsig_sched.cmd';
 $testdesc =  'Condor allows change of remove kill signal - scheduler U';
@@ -43,7 +44,7 @@ $aborted = sub {
 	open( FILE, "<$outfile" ) || die "error opening $file: $!\n";
 	while(<FILE>)
 	{
-		CondorTest::fullchomp($_);
+		CondorUtils::fullchomp($_);
 		CondorTest::debug("Found <<$_>>\n",1);
 		if($_ eq $killsig)
 		{

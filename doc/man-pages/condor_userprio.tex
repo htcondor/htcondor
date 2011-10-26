@@ -137,19 +137,23 @@ the specified date.}
 	{Show the class-ad which was received from the central-manager in long format.}
 
 \OptItem{\Opt{-grouporder}}
-        {Display submitter information with \Term{accounting group} entries sorted 
-to top of the list, and in breadth-first order of the group hierarchy tree.}
+	{Display submitter information with \Term{accounting group} entries 
+	at the top of the list, and in breadth-first order within 
+	the group hierarchy tree.}
 
 \OptItem{\Opt{-grouprollup}}
-        {Report submitter statistics such that statistics for \Term{accounting group} 
-entries are rolled up by group hierarchy.  Accounting group statistics for 
-\Attr{ResourcesUsed<N>}, \Attr{WeightedResourcesUsed<N>}, \Attr{AccumulatedUsage<N>} 
-and \Attr{WeightedAccumulatedUsage<N>} are rolled up by sum: e.g. the 
-\Attr{ResourcesUsed<N>} attribute for a group will include the resources used by its 
-sub-groups.  \Attr{BeginUsageTime<N>} is rolled up by min (earliest). 
-\Attr{LastUsageTime<N>} is rolled up by max (most recent). \Attr{Priority<N>} and 
-\Attr{PriorityFactor<N>} are set to 0.0 when rollup is in effect.}
-
+	{Report submitter statistics such that statistics for 
+	\Term{accounting group} entries are accumulated by group hierarchy.
+	Accounting group statistics for \Attr{ResourcesUsed<N>}, 
+	\Attr{WeightedResourcesUsed<N>}, \Attr{AccumulatedUsage<N>}, 
+	and \Attr{WeightedAccumulatedUsage<N>} include summed amounts from
+	all subgroups. 
+	For example, the \Attr{ResourcesUsed<N>} attribute for a group will 
+	include the resources used by itself and all its subgroups.
+	\Attr{BeginUsageTime<N>} uses the earliest minute,
+	while \Attr{LastUsageTime<N>} uses the most recent.
+	\Attr{Priority<N>} and \Attr{PriorityFactor<N>} are set to 0.0 
+	when this option is in effect.}
 
 \end{Options}
 

@@ -43,10 +43,10 @@ static FILE *safe_fdopen(int fd, const char *flags);
 #include <io.h>
 static char *fix_stdio_fdopen_mode_on_windows(const char *flags);
 
-const char *ccsStr = "ccs=";
-const char *unicodeStr = "UNICODE";
-const char *utf8Str = "UTF-8";
-const char *utf16Str = "UTF-16LE";
+const char ccsStr[] = "ccs=";
+const char unicodeStr[] = "UNICODE";
+const char utf8Str[] = "UTF-8";
+const char utf16Str[] = "UTF-16LE";
 
 const size_t ccsStrLen = sizeof(ccsStr) - 1;
 const size_t unicodeStrLen = sizeof(unicodeStr) - 1;
@@ -258,11 +258,13 @@ int stdio_mode_to_open_flag(const char *flags, int *mode, int create_file)
 		/* Ignore. Handled above. */
 		break;
 
-#ifdef _O_BINARY
 	    case 'b':
+#ifdef _O_BINARY
 		*mode |= _O_BINARY;
-		break;
+#else
+		/* b mode is always valid, even if _O_BINARY is not defined */
 #endif
+		break;
 
 #ifdef _O_TEXT
 	    case 't':
@@ -300,9 +302,18 @@ int stdio_mode_to_open_flag(const char *flags, int *mode, int create_file)
 		break;
 #endif
 
-#if defined(_O_WTEXT) || defined(_O_UTF8) || defined(_O_UTF16)
+	    case 'n':
+		/* found plain 'n', no impact on mode */
+		break;
+
 	    case 'c':
-		if (strncmp(f, ccsStr, ccsStrLen) == 0)  {
+#if defined(_O_WTEXT) || defined(_O_UTF8) || defined(_O_UTF16)
+		if (strncmp(f, ccsStr, ccsStrLen) != 0)  {
+#endif
+		    /* found plain 'c', no impact on mode */
+		    break;
+#if defined(_O_WTEXT) || defined(_O_UTF8) || defined(_O_UTF16)
+		}  else  {
 		    /* found ccs= sequence */
 		    f += ccsStrLen;
 #ifdef _O_WTEXT
@@ -329,6 +340,9 @@ int stdio_mode_to_open_flag(const char *flags, int *mode, int create_file)
 			break;
 		    }
 #endif
+		    /* no valid ccs sequence found */
+		    errno = EINVAL;
+		    return -1;
 		}
 		/* no valid ccs sequence found */
 		errno = EINVAL;
@@ -358,7 +372,7 @@ int stdio_mode_to_open_flag(const char *flags, int *mode, int create_file)
  * fdopen on windows does not accept the N flag in the mode string.
  * Create a new mode string without the N flag
  */
-char * fix_stdio_fdopen_mode_on_windows(const char *flags)
+char *fix_stdio_fdopen_mode_on_windows(const char *flags)
 {
     const char *from;
     char *new_flags;
@@ -384,9 +398,15 @@ char * fix_stdio_fdopen_mode_on_windows(const char *flags)
 	    ++from;
 	    break;
 
-#if defined(_O_WTEXT) || defined(_O_UTF8) || defined(_O_UTF16)
 	case 'c':
-	    if (strncmp(from, ccsStr, ccsStrLen) == 0)  {
+#if defined(_O_WTEXT) || defined(_O_UTF8) || defined(_O_UTF16)
+	    if (strncmp(from, ccsStr, ccsStrLen) != 0)  {
+#endif
+		/* found 'c' not part of ccs, copy it */
+		*to++ = *from++;
+		break;
+#if defined(_O_WTEXT) || defined(_O_UTF8) || defined(_O_UTF16)
+	    }  else  {
 		/* found ccs= sequence */
 		memcpy(to, ccsStr, ccsStrLen);
 		from += ccsStrLen;
@@ -417,13 +437,14 @@ char * fix_stdio_fdopen_mode_on_windows(const char *flags)
 		    break;
 		}
 #endif
+		/* no valid ccs sequence found */
+		errno = EINVAL;
+		free(new_flags);
+		return NULL;
 	    }
-	    /* no valid ccs sequence found */
-	    errno = EINVAL;
-	    free(new_flags);
-	    return NULL;
 #endif
 	default:
+	    /* handle: + b t n S R T D , */
 	    *to++ = *from++;
 	    break;
 	}
@@ -455,7 +476,7 @@ FILE *safe_fdopen(int fd, const char *flags)
 #ifdef WIN32
     new_flags = fix_stdio_fdopen_mode_on_windows(flags);
     if (new_flags == NULL)  {
-	close(fd);
+	(void)close(fd);
 	errno = EINVAL;
 	return NULL;
     }

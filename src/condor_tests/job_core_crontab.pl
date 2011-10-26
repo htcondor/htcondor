@@ -33,6 +33,8 @@
 ## then something went wrong and the test fails
 #########################################################
 use CondorTest;
+use CondorUtils;
+
 use POSIX;
 use strict;
 use warnings;
@@ -273,7 +275,7 @@ my $success = sub {
 	while ($try-- > 0 && $h_runcount == -1) {
 		my @result;
 		my $historyfile = `condor_config_val history`;
-		CondorTest::fullchomp($historyfile);
+		CondorUtils::fullchomp($historyfile);
 		print "WARNING: workaround for bug condor wiki #683 \n";
 		# There should never be a job finished and out of the queue
 		# and not already in the EXISTING history file.

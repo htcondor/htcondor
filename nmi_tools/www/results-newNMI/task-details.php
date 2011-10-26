@@ -35,6 +35,7 @@ pre {
 
 td {
    border: 0px;
+  text-align: left;
 }  
 
 -->

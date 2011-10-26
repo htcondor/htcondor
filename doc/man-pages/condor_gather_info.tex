@@ -1,0 +1,83 @@
+\begin{ManPage}{\label{man-condor-gather-info}\Condor{gather\_info}}{1}
+{Gather information about a Condor installation and/or a queued job}
+\Synopsis
+
+\SynProg{\Condor{gather\_info}}
+\oOptnm{OPTION}...
+
+% \index{Condor commands!condor\_gather\_info}
+% \index{condor\_gather\_info command}
+
+\Description
+\Condor{gather\_info} will collect information about the machine it is run
+upon, the condor installation local to the machine, and optionally a specified
+jobid. If the jobid is not specified, then only the machine information is
+written to a file called \File{condor-profile.txt} in the current working
+directory. If the jobid is specified a tarball containing information about
+the machine, the Condor installation, and as much job information as can be 
+ascertained will be written into the current working directory.
+
+The information gathered by this tool is most often used as a debugging aid
+for the developers of Condor.
+
+\begin{Options}
+    \OptItem{\OptArg{--jobid}{CLUSTER.PROC}}{Datamine information about this job id from the local Condor installation and condor\_schedd.}
+    \OptItem{\OptArg{--scratch}{path}}{A path to temporary space needed when building the output tarball. Defaults to /tmp/cbd-<PID>.}
+\end{Options}
+
+\GenRem
+
+The information gathered by this tool is:
+
+\begin{enumerate}
+	\item Identity
+	\begin{itemize}
+          \item User name who generated the report
+          \item Script location and Machine Name
+          \item Date of Report Creation
+          \item \Shell{uname -a}
+          \item Contents of \File{/etc/issue}
+          \item Contents of \File{/etc/redhat-release}
+          \item Contents of \File{/etc/debian\_version}
+          \item \Shell{ps -auxww --forest}
+          \item \Shell{df -h}
+          \item \Shell{iptables -L}
+          \item \Shell{ls `condor\_config\_val LOG`}
+          \item \Shell{ldd `condor\_config\_val SBIN`/condor\_schedd}
+          \item Contents of \File{/etc/hosts}
+          \item Contents of \File{/etc/nsswitch.conf}
+          \item \Shell{ulimit -a}
+          \item Network Interface Configuration (\Shell{ifconfig})
+          \item Condor Version
+          \item Location of Condor Config Files
+          \item Condor Config Variables
+		  \begin{itemize}
+                \item All variables and values
+                \item Definition locations for each config variable 
+		  \end{itemize}
+	\end{itemize}
+	\item Job Information
+	\begin{itemize}
+    	\item \Shell{condor\_q jobid}
+    	\item \Shell{condor\_q -l jobid}
+    	\item \Shell{condor\_q -better-analyze jobid}
+    	\item Job User log, if exists...
+		\begin{itemize}
+          	\item Only events pertaining to jobid 
+		\end{itemize}
+	\end{itemize}
+\end{enumerate}
+
+\Files
+
+\begin{description}
+	\item{\File{condor-profile.txt}} Just the identity portion of the information gathered when \Condor{gather\_info} is run without arguments.
+	\item{\File{cgi-<username>-jid<cluster>.<proc>-<year>-<month>-<day>-<hour>\_<minute>\_<second>-<TZ>.tar.gz}} The output file which contains all of the information produced by this tool.
+\end{description}
+
+\ExitStatus
+
+\Condor{gather\_info} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}

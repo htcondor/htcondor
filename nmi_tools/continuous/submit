@@ -1,27 +1,14 @@
-universe = local
-
-BASE=/home/cndrauto/continuous/PLATFORM
-
-executable = $(BASE)/run.sh
-
-output = $(BASE)/output
-error  = $(BASE)/error
-log    = $(BASE)/log
-
-# This isn't necessary to work properly, it is just in place to make
-# the condor_q command easily show which job is for which platform.
-Args = PLATFORM
-
-CronHour    = 1,4,7,9,10,11,12,13,14,15,16,17,18,19
-CronMinute  = 30
-CronDayOfMonth  = *
-CronMonth       = *
-CronDayOfWeek   = *
-
-notification = never
-getenv = true
-
-CronPrepTime = 6
-deferral_window = 300
-on_exit_remove = false
-queue
+Arguments = 
+DeferralPrepTime = 180
+DeferralTime = (CurrentTime + 300)
+DeferralWindow = 99999999
+Environment = PATH=/usr/bin:/bin
+Executable = /home/condorauto/per-commit/submit-per-commit-builds
+Error = /home/condorauto/per-commit/submit-per-commit-builds.err
+Output = /home/condorauto/per-commit/submit-per-commit-builds.out
+Log = /home/condorauto/per-commit/submit-per-commit-builds.log
+Universe = local
+Notification = never
+OnExitRemove = false
+PeriodicRelease = (HoldReasonCode =!= 1) && ((CurrentTime - EnteredCurrentStatus) > 60)
+Queue
