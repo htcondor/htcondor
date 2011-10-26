@@ -74,8 +74,8 @@ $platforms = $dash->get_platform_list_for_runid($runid);
 $build_headers = Array();
 $test_headers = Array();
 foreach ($platforms as $platform) {
-  $build_headers[$platform] = "passed";
-  $test_headers[$platform] = "passed";
+  $build_headers[$platform] = Array("passed" => 0, "pending" => 0, "failed" => 0);
+  $test_headers[$platform] = Array("passed" => 0, "pending" => 0, "failed" => 0);
 }
 
 //
@@ -103,12 +103,7 @@ foreach ($results as $row) {
   $build_tasks[$row["name"]][$row["platform"]] = Array($row["result"], $row["length"], $row["host"]);
 
   $result = map_result($row["result"]);
-  if($result == "failed") { 
-    $build_headers[$row["platform"]] = "failed";
-  }
-  elseif($result == "pending" and $build_headers[$row["platform"]] != "failed") {
-    $build_headers[$row["platform"]] = "pending";    
-  }
+  $build_headers[$row["platform"]][$result] += 1;
 }
 
 
@@ -142,12 +137,7 @@ foreach ($results as $row) {
   $test_tasks[$row["name"]][$row["platform"]] = Array($row["result"], $row["length"], $row["host"]);
 
   $result = map_result($row["result"]);
-  if($result == "failed") { 
-    $test_headers[$row["platform"]] = "failed";
-  }
-  elseif($result == "pending" and $test_headers[$row["platform"]] != "failed") {
-    $test_headers[$row["platform"]] = "pending";    
-  }
+  $test_headers[$row["platform"]][$result] += 1;
 }
 
 print "<p><a id='toggle'>Show task times</a>\n";
@@ -190,12 +180,28 @@ foreach ($platforms as $platform) {
     $mygid = $loc_row["gid"];
   }
 
-  $class = $build_headers[$platform];
-  $remote_host = "";
+  $class = "";
+  if($build_headers[$platform]["failed"] > 0) {
+    $class = "failed";
+  }
+  elseif($build_headers[$platform]["pending"] > 0) {
+    $class = "pending";
+  }
+  elseif($build_headers[$platform]["passed"] > 0) {
+    $class = "passed";
+  }
+
   if(array_key_exists("remote_task", $build_tasks)) {
     if(array_key_exists($platform, $build_tasks["remote_task"])) {
       $host = preg_replace("/\.batlab\.org/", "", $build_tasks["remote_task"][$platform][2]);
-      print "<td class='$class'><font style='font-size:75%'><a href='$filepath/$mygid/userdir/$platform/'>$host</a></font></td>";
+
+      $summary = "<table>\n";
+      $summary .= "<tr><td class='left passed'>Passed:</td><td class='passed'>" . $build_headers[$platform]["passed"] . "</td></tr>";
+      $summary .= "<tr><td class='left pending'>Pending:</td><td class='pending'>" . $build_headers[$platform]["pending"] . "</td></tr>";
+      $summary .= "<tr><td class='left failed'>Failed:</td><td class='failed'>" . $build_headers[$platform]["failed"] . "</td></tr>";
+      $summary .= "</table>\n";
+
+      print "<td class='$class'><span class='link'><a href='$filepath/$mygid/userdir/$platform/'>$host<span>$summary</span></a></span></td>";
       continue;
     }
   }
@@ -257,16 +263,32 @@ foreach ($platforms as $platform) {
     $mygid = $loc_row["gid"];
   }
 
-  $remote_host = "";
+  $class = "";
+  if($test_headers[$platform]["failed"] > 0) {
+    $class = "failed";
+  }
+  elseif($test_headers[$platform]["pending"] > 0) {
+    $class = "pending";
+  }
+  elseif($test_headers[$platform]["passed"] > 0) {
+    $class = "passed";
+  }
+
   if(array_key_exists("remote_task", $test_tasks)) {
     if(array_key_exists($platform, $test_tasks["remote_task"])) {
       $host = preg_replace("/\.batlab\.org/", "", $test_tasks["remote_task"][$platform][2]);
-      $class = $test_headers[$platform];
-      print "<td class='$class'><font style='font-size:75%'><a href='$filepath/$mygid/userdir/$platform/'>$host</a></font></td>";
+
+      $summary = "<table>\n";
+      $summary .= "<tr><td class='left passed'>Passed:</td><td class='passed'>" . $test_headers[$platform]["passed"] . "</td></tr>";
+      $summary .= "<tr><td class='left pending'>Pending:</td><td class='pending'>" . $test_headers[$platform]["pending"] . "</td></tr>";
+      $summary .= "<tr><td class='left failed'>Failed:</td><td class='failed'>" . $test_headers[$platform]["failed"] . "</td></tr>";
+      $summary .= "</table>\n";
+
+      print "<td class='$class'><span class='link'><a href='$filepath/$mygid/userdir/$platform/'>$host<span>$summary</span></a></span></td>";
       continue;
     }
   }
-  print "<td>&nbsp;</td>";
+  print "<td class='$class'>&nbsp;</td>";
 }
 
 foreach ($test_tasks as $task_name => $results) {  
