@@ -11,7 +11,7 @@ use strict;
 use warnings;
 use File::Basename;
 my $dir=dirname($0);
-require "$dir\\UUIDTiny.pm";
+require "$dir/UUIDTiny.pm";
 my $guid_v3 = 3; # MD5
 my $guid_v5 = 5; # SHA1 (perl support may not be available)
 
