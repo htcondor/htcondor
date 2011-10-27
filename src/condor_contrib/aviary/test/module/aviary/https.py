@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import socket
 import httplib
 import urllib2 as u2
 from M2Crypto import httpslib, SSL
