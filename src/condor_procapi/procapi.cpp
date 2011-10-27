@@ -1262,6 +1262,14 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 
         return PROCAPI_FAILURE;
     }
+	if ( bufSize == 0 ) {
+		status = PROCAPI_NOPID;
+		dprintf( D_FULLDEBUG, 
+			"ProcAPI: sysctl() (pass 2) on pid %d returned no data\n",
+			pid );
+		free(kp);
+		return PROCAPI_FAILURE;
+	}
 
 	// figure out the image,rss size and the sys/usr time for the process.
 
