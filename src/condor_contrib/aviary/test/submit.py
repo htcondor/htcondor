@@ -20,11 +20,10 @@
 from suds import *
 from suds.client import Client
 from sys import exit, argv
-import time, pwd, os
-import logging
-from aviary.https import *
+import time, pwd, os, logging
 from aviary.util import *
 
+plugins = []
 # NOTE: Suds has had little support for adding attributes
 # to the request body until 0.4.1
 # uncomment the following to enable the allowOverrides attribute
@@ -35,6 +34,7 @@ from aviary.util import *
     #def marshalled(self, context):
         #sj_body = context.envelope.getChild('Body')[0]
         #sj_body.attributes.append(Attribute("allowOverrides", "true"))
+#plugins=[OverridesPlugin()]
 
 uid = pwd.getpwuid(os.getuid())[0]
 if not uid:
@@ -46,21 +46,8 @@ wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
 parser = build_basic_parser('Submit a sample job remotely via SOAP.','http://localhost:9090/services/job/submitJob')
 (opts,args) =  parser.parse_args()
 
-if "https://" in opts.url:
-	client = Client(wsdl,transport = HTTPSFullCertTransport(opts.key,opts.cert,opts.root,opts.verify))
-else:
-	client = Client(wsdl)
-
-# NOTE: the following form to enable attribute additions
-# is only supported with suds >= 0.4.1
-#client = Client(wsdl,plugins=[OverridesPlugin()]);
+client = create_suds_client(opts,wsdl,plugins)
 client.set_options(location=opts.url)
-
-# enable to see service schema
-if opts.verbose:
-	logging.basicConfig(level=logging.INFO)
-	logging.getLogger('suds.client').setLevel(logging.DEBUG)
-	print client
 
 # add specific requirements here
 req1 = client.factory.create("ns0:ResourceConstraint")
