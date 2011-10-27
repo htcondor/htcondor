@@ -52,7 +52,7 @@ main(int argc, const char **argv)
 
 		// Set up the dprintf stuff...
 	Termlog = true;
-	dprintf_config("TEST_HIBERNATION");
+	dprintf_config("TEST_HIBERNATION", get_param_functions());
 
 	const char	*tmp;
 	int			 result = 0;

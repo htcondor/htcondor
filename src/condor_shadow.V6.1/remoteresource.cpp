@@ -1169,7 +1169,9 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				recordSuspendEvent( update_ad );
 				break;
 			case RR_EXECUTING:
-				recordResumeEvent( update_ad );
+				if( state == RR_SUSPENDED ) {
+					recordResumeEvent( update_ad );
+				}
 				break;
 			case RR_CHECKPOINTED:
 				recordCheckpointEvent( update_ad );

@@ -1242,6 +1242,9 @@ QmgmtSetEffectiveOwner(char const *o)
 		if( !isQueueSuperUser(real_owner) ||
 			!SuperUserAllowedToSetOwnerTo( o ) )
 		{
+			dprintf(D_ALWAYS, "SetEffectiveOwner security violation: "
+					"setting owner to %s when active owner is \"%s\"\n",
+					o, real_owner ? real_owner : "(null)" );
 			errno = EACCES;
 			return -1;
 		}

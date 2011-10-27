@@ -256,15 +256,7 @@ void UniShadow::holdJob( const char* reason, int hold_reason_code, int hold_reas
 	int iPrevExitReason=remRes->getExitReason();
 	
 	remRes->setExitReason( JOB_SHOULD_HOLD );
-	this->holdJobPre(reason, hold_reason_code, hold_reason_subcode);
-
-	// exit immediately if the remote side is failing out or has already exited.
-        if ( hold_reason_subcode != 0 ||
-	   ( iPrevExitReason != JOB_SHOULD_HOLD && iPrevExitReason != -1 ))
-	{
-		// don't wait for final update b/c there isn't one.
-		DC_Exit( JOB_SHOULD_HOLD );
-	}
+	BaseShadow::holdJob(reason, hold_reason_code, hold_reason_subcode);
 }
 
 void UniShadow::removeJob( const char* reason )

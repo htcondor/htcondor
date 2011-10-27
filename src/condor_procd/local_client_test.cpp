@@ -33,7 +33,7 @@ int
 main()
 {
 	Termlog = 1;
-	dprintf_config("TOOL");
+	dprintf_config("TOOL", get_param_functions());
 
 	LocalClient* client = new LocalClient;
 	ASSERT(client != NULL);

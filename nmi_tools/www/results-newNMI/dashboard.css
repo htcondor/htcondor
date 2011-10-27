@@ -22,6 +22,10 @@ td.left {
     text-align:left;
 }
 
+td.taskname {
+    font-size: 75%;
+}
+
 .build {
     border-left-width: 1px;
     border-left-color: black;

@@ -33,7 +33,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added support for detecting loadavg from the v3 Linux kernel.
+\Ticket{2579}
 
 \end{itemize}
 
@@ -242,7 +243,7 @@ it now understands the proper format.
 subdirectories for local locks.
 \Ticket{2495}
 
-\item On 32-bit platforms, the \Attr{ImageSize} of processes larger than 
+\item In 32-bit Condor binaries, the \Attr{ImageSize} of processes larger than 
 4 GBytes was reported as 4 GBytes.  This limit has been raised to 4095 GBytes.
 
 \item \SubmitCmd{vm} universe jobs using Xen or KVM would fail to start,

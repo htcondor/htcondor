@@ -12,7 +12,6 @@ $runid     = (int)$_REQUEST["runid"];
 $user      = $_REQUEST["user"];
 $type      = $_REQUEST["type"];
 $build_id = $runid;
-$branch = "unknown";
 
 define('PLATFORM_PENDING', 'pending');
 define('PLATFORM_FAILED',  'failed');
@@ -24,36 +23,12 @@ define('PLATFORM_PASSED',  'passed');
 
 <?php
 
-
-// 
-// need to have the branch if we get a request for a test history
-// Test-history.php?branch=xxxxx&test=yyyyyy
-//
-
-$query = "
-        
-        SELECT 
-            LEFT(description,
-            (IF(LOCATE('branch-',description),
-            LOCATE('branch-',description)+5,
-            (IF(LOCATE('trunk-',description),
-            LOCATE('trunk-',description)+4,
-            CHAR_LENGTH(description)))))) AS branch
-        FROM 
-            Run 
-        WHERE 
-            runid=$runid";
-    
-$results = $dash->db_query($query);
-$branch = $results[0]["branch"];
-
-$sql = "SELECT host, gid, UNIX_TIMESTAMP(start) AS start ".
+$sql = "SELECT gid, UNIX_TIMESTAMP(start) AS start ".
        "  FROM Run ".
        " WHERE Run.runid = $build_id".
        "   AND Run.user = '$user'";
 
 $results = $dash->db_query($sql);
-$host  = $results[0]["host"];
 $gid   = $results[0]["gid"];
 $start = $results[0]["start"];
 
@@ -219,7 +194,7 @@ foreach ($platforms AS $platform) {
 
 foreach ($data AS $task => $arr) {
   // need $branch still
-  $history_url = sprintf(HISTORY_URL, urlencode($branch), rawurlencode($task));
+  $history_url = sprintf(HISTORY_URL, $runid, rawurlencode($task));
   $history_disp = "<a href=\"$history_url\">".limitSize($task, 30)."</a>";
   echo "<tr>\n".
     "<td ".($task_status[$task] != PLATFORM_PASSED ?

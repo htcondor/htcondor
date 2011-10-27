@@ -181,6 +181,7 @@ main(int argc, char *argv[])
 	char* scheddAddr = NULL;
 	MyString method;
 	char *tmp;
+	param_functions *p_funcs = NULL;
 
 	myDistro->Init( argc, argv );
 	MyName = condor_basename(argv[0]);
@@ -210,7 +211,8 @@ main(int argc, char *argv[])
 			case 'd':
 				// dprintf to console
 				Termlog = 1;
-				dprintf_config ("TOOL");
+				p_funcs = get_param_functions();
+				dprintf_config ("TOOL", p_funcs);
 				break;
 			case 'c':
 				args[nArgs] = arg;

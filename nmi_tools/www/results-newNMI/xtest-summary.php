@@ -115,7 +115,7 @@ foreach ($platforms as $source) {
       $detail_url = sprintf(CROSS_DETAIL_URL, $runid, $source, $type, $user);
     }
     else {
-      $detail_url = sprintf(DETAIL_URL, $runid, $type, $user);
+      $detail_url = sprintf(DETAIL_URL, $runid);
     }
     
     //

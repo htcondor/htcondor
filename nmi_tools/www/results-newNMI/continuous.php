@@ -441,7 +441,7 @@ function make_cell($run, $platform, $run_type, $td_class) {
 
   $details .= "  </table>";
 
-  $detail_url = sprintf(DETAIL_URL, $run["runid"], $run_type, CONDOR_USER);
+  $detail_url = sprintf(DETAIL_URL, $run["runid"]);
 
   if(count($run["platforms"][$platform][$run_type]["bad-tasks"]) == 0) {
     $div = "&nbsp;&nbsp;&nbsp;";

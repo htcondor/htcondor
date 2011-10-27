@@ -66,15 +66,15 @@ ODS_DB_HOST = localhost
 ODS_DB_PORT =
 DAEMON_LIST = $(DAEMON_LIST), VIEW_SERVER
 
-plumage_stats.py
-================
+plumage_stats
+=============
 
 Plumage has a client tool with *similar* capabilities to the condor_stats tool.
 It provides listings of submitters, resources and records over time spans. The 
 submitter records include point-in-time snapshots of running, held and idle jobs.
 The resource records show arch, OS, keyboard idle time, load average and state.
 
-Usage: plumage_stats.py [options]
+Usage: plumage_stats [options]
 
 Query Condor ODS for statistics
 
@@ -104,32 +104,32 @@ Use Cases
 ---------
 
 Find the names of all submitters.
-$ ./plumage_stats.py --ul
+$ ./plumage_stats --ul
 pmackinn@redhat.com
 
 Find the names of all user groups (i.e., users plus submitter machine).
-$ ./plumage_stats.py --ugl
+$ ./plumage_stats --ugl
 pmackinn@redhat.com/milo.usersys.redhat.com
 
 Find the names of all resources (aka startds, slots).
-$ ./plumage_stats.py --rl
+$ ./plumage_stats --rl
 slot1@milo.usersys.redhat.com
 slot2@milo.usersys.redhat.com
 
 Print the stats for any username that starts with 'pmackinn' for the previous hour (default time lookback).
-$ ./plumage_stats.py --u pmackinn
+$ ./plumage_stats --u pmackinn
 
 Print the stats for user 'pmackinn' over a given datetime range.
-$ ./plumage_stats.py --u pmackinn --from '2011-09-29 14:02' --to '2011-09-29 14:05'
+$ ./plumage_stats --u pmackinn --from '2011-09-29 14:02' --to '2011-09-29 14:05'
 pmackinn@redhat.com 	2011-09-29 14:02:19.239000 	2 	0 	0
 pmackinn@redhat.com 	2011-09-29 14:03:19.235000 	2 	0 	0
 pmackinn@redhat.com 	2011-09-29 14:04:19.469000 	0 	0 	0
 
 Print the stats for a resource name that contains 'milo' for the previous hour (default time lookback).
-$ ./plumage_stats.py --r milo
+$ ./plumage_stats --r milo
 
 Print the stats for resource 'milo' over a given datetime range.
-$ ./plumage_stats.py --r milo --from '2011-09-29 14:02' --to '2011-09-29 14:05'
+$ ./plumage_stats --r milo --from '2011-09-29 14:02' --to '2011-09-29 14:05'
 slot1@milo.usersys.redhat.com 	2011-09-29 14:02:19.240000 	INTEL/LINUX 	205 	0.24 	Claimed
 slot2@milo.usersys.redhat.com 	2011-09-29 14:02:19.240000 	INTEL/LINUX 	533 	0.00 	Claimed
 slot1@milo.usersys.redhat.com 	2011-09-29 14:03:19.236000 	INTEL/LINUX 	12 		0.33 	Claimed
