@@ -129,7 +129,7 @@ print "<p><a id='toggle'>Show task times</a>\n";
 
 print "<table border='0' cellspacing='0'>\n";
 print "<tr>\n";
-print "   <th>Build Tasks</th>\n";
+print "   <th>Run IDs</th>\n";
 
 
 foreach ($platforms AS $platform) {

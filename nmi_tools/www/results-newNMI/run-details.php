@@ -29,6 +29,7 @@ if(!$runid and $sha1) {
 
 <script type="text/javascript">
   var toggle = 1;
+  var toggle2 = 1;
 
   $(document).ready(function(){
       $("#toggle").click(function(){
@@ -45,6 +46,19 @@ if(!$runid and $sha1) {
 	    toggle = 1;	    
 	  }
 	});
+
+      $("#toggle2").click(function(){
+	  if(toggle2 == 1) {
+	    $(".hide").hide();
+	    $("#toggle2").text("Show successful");
+	    toggle2 = 0;
+	  }
+	  else {
+	    $(".hide").show();
+	    $("#toggle2").text("Show only failed rows");
+	    toggle2 = 1;
+	  }
+	});
   });
 </script>
 
@@ -55,9 +69,6 @@ div.status {
 }
 div.time {
   display:none;
-}
-p.toggle {
-  cursor: pointer;
 }
 -->
 </style>
@@ -91,6 +102,7 @@ $sql = "SELECT
           name,
           result,
           host,
+          start,
           TIME_TO_SEC(TIMEDIFF(Finish, Start)) as length
        FROM
           Task
@@ -101,13 +113,15 @@ $sql = "SELECT
 
 $results = $dash->db_query($sql);
 
+$build_tasks = Array();
 foreach ($results as $row) {
   if(!array_key_exists($row["name"], $build_tasks)) {
     $build_tasks[$row["name"]] = Array();
   }
   $build_tasks[$row["name"]][$row["platform"]] = Array("result" => $row["result"],
 						       "length" => $row["length"],
-						       "host"   => $row["host"]);
+						       "host"   => $row["host"],
+						       "start"  => $row["start"]);
 
   $result = map_result($row["result"]);
   $build_headers[$row["platform"]][$result] += 1;
@@ -124,6 +138,7 @@ $sql = "SELECT
           Task.name,
           result,
           host,
+          start,
           TIME_TO_SEC(TIMEDIFF(Finish, Start)) as length
         FROM
           Task,
@@ -136,6 +151,7 @@ $sql = "SELECT
 
 $results = $dash->db_query($sql);
 
+$test_tasks = Array();
 foreach ($results as $row) {
   if(!array_key_exists($row["name"], $test_tasks)) {
     $test_tasks[$row["name"]] = Array();
@@ -143,13 +159,17 @@ foreach ($results as $row) {
 
   $test_tasks[$row["name"]][$row["platform"]] = Array("result" => $row["result"],
 						      "length" => $row["length"],
-						      "host"   => $row["host"]);
+						      "host"   => $row["host"],
+						      "start"  => $row["start"]);
 
   $result = map_result($row["result"]);
   $test_headers[$row["platform"]][$result] += 1;
 }
 
-print "<p><a id='toggle'>Show task times</a>\n";
+print "<p>Filters:<br>\n";
+print "<input type='checkbox' id='toggle' />Show task times &nbsp; &nbsp;\n";
+print "<input type='checkbox' id='toggle2' />Show only failures<br>\n";
+
 
 print "<table border='0' cellspacing='0'>\n";
 print "<tr>\n";
@@ -242,7 +262,7 @@ foreach ($build_tasks as $task_name => $results) {
   if($totals["failed"] > 0) { $class = "failed"; }
   elseif($totals["pending"] > 0) { $class = "pending"; }
 
-  print "<tr>\n";
+  print "<tr class=\"hide$class\">\n";
   print "  <td class=\"left taskname $class\">" . limitSize($task_name,30) . "</td>\n";
   print $output;
   print "</tr>\n";
@@ -254,7 +274,7 @@ foreach ($build_tasks as $task_name => $results) {
 //
 $num_platforms = count($platforms);
 print "<tr><td style='border-bottom-width:0px' colspan=" . ($num_platforms+1) . ">&nbsp;</td></tr>\n";
-print "<tr><th>Test Tasks</th><th colspan=$num_platform>&nbsp</th></tr>\n";
+print "<tr><th>Test Tasks</th><th colspan=$num_platforms>&nbsp</th></tr>\n";
 
 
 //
@@ -324,7 +344,7 @@ foreach ($test_tasks as $task_name => $results) {
 
   $link = sprintf(HISTORY_URL, $runid, urlencode($task_name));
 
-  print "<tr>\n";
+  print "<tr class=\"hide$class\">\n";
   print "  <td class=\"left taskname $class\"><a href='$link'>" . limitSize($task_name,30) . "</a></td>\n";
   print $output;
   print "</tr>\n";
