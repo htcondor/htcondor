@@ -131,6 +131,7 @@ class Job {
         If you update this enum, you *must* also update status_t_names
 		and the IsActive() method, etc.
     */
+	// WARNING!  status_t and status_t_names must be kept in sync!!
     enum status_t {
 		/** Job is not ready (for final) */ STATUS_NOT_READY,
         /** Job is ready for submission */ STATUS_READY,
@@ -144,6 +145,7 @@ class Job {
     /** The string names for the status_t enumeration.  Use this the same
         way you would use the queue_t_names array.
     */
+	// WARNING!  status_t and status_t_names must be kept in sync!!
     static const char * status_t_names[];
 
 	// explanation text for errors

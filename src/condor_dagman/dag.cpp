@@ -1741,9 +1741,10 @@ bool
 Dag::DoneFailed() const
 {
 	if ( !FinishedRunning() ) {
+			// Note: if final node is running we should get to here...
 		return false;
 	} else if ( _final_job && _final_job->_Status == Job::STATUS_DONE ) {
-		//TEMPTEMP -- check this logic...
+			// Success of final node overrides failure of any other node.
 		return false;
 	}
 
@@ -2504,7 +2505,6 @@ Dag::SetNodeStatusFileName( const char *statusFileName,
 	@param whether the DAG has just been held
 	@param whether the DAG has just been removed
 */
-//TEMPTEMP -- should the final node be included here?
 void
 Dag::DumpNodeStatus( bool held, bool removed )
 {

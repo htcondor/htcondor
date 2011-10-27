@@ -20,11 +20,10 @@
 
 # This test tests the final DAG node when the DAG fails.
 
-#TEMP -- PRE script of final node not run
-#TEMP -- POST script of final node not run
-#TEMP -- DAGman doesn't wait for final node to finish
 #TEMP -- add check that 'FINAL' gets properly put into rescue DAG
 #TEMP -- test should make sure final node is run *last*
+#TEMP -- check node status file
+#TEMP -- check DAG_SUCCESS value in output
 
 use CondorTest;
 use CondorUtils;
@@ -34,8 +33,13 @@ $testdesc =  'Condor submit dag - basic final node test B - scheduler U';
 $testname = "job_dagman_final-B";
 $dagman_args = "-verbose";
 
-@outfiles = ("job_dagman_final-B-nodeA", "job_dagman_final-B-nodeB",
-	"job_dagman_final-B-nodeC");
+@outfiles = ("job_dagman_final-B-nodeA.out", "job_dagman_final-B-nodeB.out",
+	"job_dagman_final-B-nodeC.out");
+$scriptfile = "job_dagman_final-B-scripts.out";
+
+# Note: we must find these lines *in the specified order*.
+@scriptlines = ("DAG_SUCCESS=0", "Node B_C Pre", "DAG_SUCCESS=0",
+    "Node B_C Post");
 
 my $killedchosen = 0;
 
@@ -46,11 +50,14 @@ sub RUNNING{2};
 
 # Get rid of any existing output files.
 foreach $name (@outfiles) {
-	$fname = $name . ".out";
-	if (-e $fname) {
-		runcmd("rm -f $fname");
+	if (-e $name) {
+		runcmd("rm -f $name");
 	}
 }
+if (-e $scriptfile) {
+	runcmd("rm -f $scriptfile");
+}
+
 
 $abnormal = sub 
 {
@@ -87,7 +94,46 @@ $success = sub
 $failure = sub
 {
 	CondorTest::debug("executed with failure\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
 	#TEMP -- need to check output files, etc.
+
+	$lineindex = 0;
+	$line = "";
+	$passed = 0;
+	$canopen = open(OUT,"<$scriptfile");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Can not open outfile<$scriptfile>:$!\n",1);
+		$diditpass = 0;
+	}
+	while(<OUT>) {
+		chomp();
+		$line = $_;
+		$target = $scriptlines[$lineindex];
+		if( $line =~ /$target/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			$lineindex++;
+			if ($lineindex > $#scriptlines) {
+				$passed = 1;
+				break;
+			}
+		} else {
+			CondorTest::debug("failed: \"extra\" output line $line\n");
+			$diditpass = 0;
+		}
+	}
+	close(OUT);
+	if($passed == 1 ) {
+		;
+	} else {
+		CondorTest::debug("failed: missing output line $target\n",1);
+		$diditpass = 0;
+	}
+
+    if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success );

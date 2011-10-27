@@ -1,4 +1,7 @@
+NODE_STATUS_FILE job_dagman_final-B.status
+
 JOB B_A job_dagman_final-B-nodeA.cmd
+# Node B_B will fail.
 JOB B_B job_dagman_final-B-nodeB.cmd
 FINAL B_C job_dagman_final-B-nodeC.cmd
 SCRIPT PRE B_C job_dagman_final-B-script.pl B_C Pre $DAG_SUCCESS 0

@@ -47,6 +47,7 @@ const char *Job::queue_t_names[] = {
 //---------------------------------------------------------------------------
 // NOTE: this must be kept in sync with the status_t enum
 const char * Job::status_t_names[] = {
+    "STATUS_NOT_READY",
     "STATUS_READY    ",
     "STATUS_PRERUN   ",
     "STATUS_SUBMITTED",
