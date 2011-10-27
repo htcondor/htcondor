@@ -37,7 +37,7 @@ parser.add_option('--d','--dag', action='store', dest='dag', help='full path to 
 if opts.dag is None:
 	print "Path of dag submit file must be supplied\n"
 	parser.print_help()
-	exit(1)
+	sys.exit(1)
 
 dag = opts.dag
 url = opts.url
