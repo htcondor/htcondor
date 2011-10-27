@@ -2587,14 +2587,16 @@ is \verb@SIGTERM@, which is the standard way to terminate a program in Unix.
 %%%%%%%%%%%%%%%%%%%
 
 \index{submit commands!kill\_sig\_timeout}
-\item[kill\_sig\_timeout = $<$seconds$>$] The number of seconds that Condor
+\item[kill\_sig\_timeout = $<$seconds$>$] This submit command should
+no longer be used as of Condor version 7.7.3;
+use \SubmitCmd{job\_max\_vacate\_time} instead.
+If \SubmitCmd{job\_max\_vacate\_time} is not defined,
+this defines the number of seconds that Condor
 should wait following the sending of the kill signal defined by
 \SubmitCmd{kill\_sig} and forcibly killing the job.
 The actual amount of time between sending the signal and forcibly killing
 the job is the smallest of this value and the configuration variable
 \Macro{KILLING\_TIMEOUT}, as defined on the execute machine.
-This command is deprecated since 7.7.3.
-Use \SubmitCmd{job\_max\_vacate\_time} instead.
 
 %%%%%%%%%%%%%%%%%%%
 %% load_profile

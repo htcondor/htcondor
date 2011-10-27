@@ -3861,13 +3861,14 @@ WANT_HOLD_REASON = \
   has been soft-killed to gracefully shut down.  The default value is
   600 seconds (10 minutes).  This expression is evaluated when the job
   starts running.  The job may adjust the wait time by setting
-  \AdAttr{JobMaxVacateTime}.  If the job's setting is less than the
-  machine's, the job's is used.  If the job's setting is larger than
-  the machine's, the result depends on whether the job has any excess
+  \Attr{JobMaxVacateTime}.  If the job's setting is less than the
+  machine's, the job's specification is used.  
+  If the job's setting is larger than the machine's,
+  the result depends on whether the job has any excess
   retirement time.  If the job has more retirement time left than the
-  machine's max vacate time setting, then retirement time will be
+  machine's maximum vacate time setting, then retirement time will be
   converted into vacating time, up to the amount of
-  \MacroNI{JobMaxVacateTime}.  The \Macro{KILL} expression may be used
+  \Attr{JobMaxVacateTime}.  The \Macro{KILL} expression may be used
   to abort the graceful shutdown of the job at any time.  At the time
   when the job is preempted, the \Macro{WANT\_VACATE} expression may
   be used to skip the graceful shutdown of the job.
@@ -3879,7 +3880,7 @@ WANT_HOLD_REASON = \
   (when the configuration variable is not present) means that the job
   gets no retirement time.  If the job vacating policy grants the job
   X seconds of vacating time, a preempted job will be soft-killed X seconds
-  before the end of its retirement time so that hard-killing of the job
+  before the end of its retirement time, so that hard-killing of the job
   will not happen until the end of the retirement time if the job does
   not finish shutting down before then.
   Note that in peaceful shutdown mode of the

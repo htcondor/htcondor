@@ -677,14 +677,14 @@ It is relevant only for jobs running on Unix machines.
 %%% ClassAd attribute: KillSigTimeout
 \index{ClassAd job attribute!KillSigTimeout}
 \index{KillSigTimeout!job ClassAd attribute}
-\item[\AdAttr{KillSigTimeout}:]  The number of seconds that the job
+\item[\AdAttr{KillSigTimeout}:]  This attribute is replaced by the
+functionality in \AdAttr{JobMaxVacateTime} as of Condor version 7.7.3.
+The number of seconds that the job
 (other than the standard universe) requests the \Condor{starter} wait
 after sending the signal defined as \Attr{KillSig} and before forcibly
 removing the job.
 The actual amount of time will be the minimum of this value
 and the execute machine's configuration variable \Macro{KILLING\_TIMEOUT}.
-This attribute is deprecated since 7.7.3.  \AdAttr{JobMaxVacateTime}
-is used instead.
 
 %%% ClassAd attribute: LastCheckpointPlatform
 \index{ClassAd job attribute!LastCheckpointPlatform}
