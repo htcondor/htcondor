@@ -1,5 +1,6 @@
 <?php   
 
+define("HISTORY_URL", "test-history.php?runid=%s&test=%s");
 define("TASK_URL", "task-details.php?platform=%s&task=%s&runid=%s");
 
 include "Dashboard.php";
@@ -17,6 +18,10 @@ if(!$runid and $sha1) {
   $result = $dash->db_query($sql);
   $runid = $result[0]["runid"];
 }
+
+# TODO: 
+# If we were given a runid for a test, we should convert it into the appropriate build.
+# This isn't critical, it just shows output kinda funny for the test though.
 
 ?>
 
@@ -100,7 +105,9 @@ foreach ($results as $row) {
   if(!array_key_exists($row["name"], $build_tasks)) {
     $build_tasks[$row["name"]] = Array();
   }
-  $build_tasks[$row["name"]][$row["platform"]] = Array($row["result"], $row["length"], $row["host"]);
+  $build_tasks[$row["name"]][$row["platform"]] = Array("result" => $row["result"],
+						       "length" => $row["length"],
+						       "host"   => $row["host"]);
 
   $result = map_result($row["result"]);
   $build_headers[$row["platform"]][$result] += 1;
@@ -134,7 +141,9 @@ foreach ($results as $row) {
     $test_tasks[$row["name"]] = Array();
   }
 
-  $test_tasks[$row["name"]][$row["platform"]] = Array($row["result"], $row["length"], $row["host"]);
+  $test_tasks[$row["name"]][$row["platform"]] = Array("result" => $row["result"],
+						      "length" => $row["length"],
+						      "host"   => $row["host"]);
 
   $result = map_result($row["result"]);
   $test_headers[$row["platform"]][$result] += 1;
@@ -193,7 +202,7 @@ foreach ($platforms as $platform) {
 
   if(array_key_exists("remote_task", $build_tasks)) {
     if(array_key_exists($platform, $build_tasks["remote_task"])) {
-      $host = preg_replace("/\.batlab\.org/", "", $build_tasks["remote_task"][$platform][2]);
+      $host = preg_replace("/\.batlab\.org/", "", $build_tasks["remote_task"][$platform]["host"]);
 
       $summary = "<table>\n";
       $summary .= "<tr><td class='left passed'>Passed:</td><td class='passed'>" . $build_headers[$platform]["passed"] . "</td></tr>";
@@ -216,12 +225,12 @@ foreach ($build_tasks as $task_name => $results) {
   $output = "";  
   foreach ($platforms as $platform) {
     if(array_key_exists($platform, $results)) {
-      $class = map_result($results[$platform][0]);
+      $class = map_result($results[$platform]["result"]);
       $totals[$class] += 1;
       $link = sprintf(TASK_URL, $platform, urlencode($task_name), $runid);
 
-      $contents = "<div class='status'>" . $results[$platform][0] . "</div>";
-      $contents .= "<div class='time'>" . sec_to_min($results[$platform][1]) . "</div>";
+      $contents = "<div class='status'>" . $results[$platform]["result"] . "</div>";
+      $contents .= "<div class='time'>" . sec_to_min($results[$platform]["length"]) . "</div>";
       $output .= "  <td class=\"$class\"><a href='$link'>$contents</a></td>\n";
     }
     else {
@@ -234,7 +243,7 @@ foreach ($build_tasks as $task_name => $results) {
   elseif($totals["pending"] > 0) { $class = "pending"; }
 
   print "<tr>\n";
-  print "  <td class=\"left $class\">" . limitSize($task_name,30) . "</td>\n";
+  print "  <td class=\"left taskname $class\">" . limitSize($task_name,30) . "</td>\n";
   print $output;
   print "</tr>\n";
 }
@@ -276,7 +285,7 @@ foreach ($platforms as $platform) {
 
   if(array_key_exists("remote_task", $test_tasks)) {
     if(array_key_exists($platform, $test_tasks["remote_task"])) {
-      $host = preg_replace("/\.batlab\.org/", "", $test_tasks["remote_task"][$platform][2]);
+      $host = preg_replace("/\.batlab\.org/", "", $test_tasks["remote_task"][$platform]["host"]);
 
       $summary = "<table>\n";
       $summary .= "<tr><td class='left passed'>Passed:</td><td class='passed'>" . $test_headers[$platform]["passed"] . "</td></tr>";
@@ -296,12 +305,12 @@ foreach ($test_tasks as $task_name => $results) {
   $output = "";
   foreach ($platforms as $platform) {
     if(array_key_exists($platform, $results)) {
-      $class = map_result($results[$platform][0]);
+      $class = map_result($results[$platform]["result"]);
       $totals[$class] += 1;
       $link = sprintf(TASK_URL, $platform, urlencode($task_name), $test_runids[$platform]);
 
-      $contents = "<div class='status'>" . $results[$platform][0] . "</div>";
-      $contents .= "<div class='time'>" . sec_to_min($results[$platform][1]) . "</div>";
+      $contents = "<div class='status'>" . $results[$platform]["result"] . "</div>";
+      $contents .= "<div class='time'>" . sec_to_min($results[$platform]["length"]) . "</div>";
       $output .= "  <td class=\"$class\"><a href='$link'>$contents</a></td>\n";
     }
     else {
@@ -313,8 +322,10 @@ foreach ($test_tasks as $task_name => $results) {
   if($totals["failed"] > 0) { $class = "failed"; }
   elseif($totals["pending"] > 0) { $class = "pending"; }
 
+  $link = sprintf(HISTORY_URL, $runid, urlencode($task_name));
+
   print "<tr>\n";
-  print "  <td class=\"left $class\">" . limitSize($task_name,30) . "</td>\n";
+  print "  <td class=\"left taskname $class\"><a href='$link'>" . limitSize($task_name,30) . "</a></td>\n";
   print $output;
   print "</tr>\n";
 }
