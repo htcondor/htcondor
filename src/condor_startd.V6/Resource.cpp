@@ -832,8 +832,10 @@ Resource::leave_preempting_state( void )
 	int tmp;
 
 	r_cur->vacate();	// Send a vacate to the client of the claim
+	Claim *parent = r_cur->parent;
+	
 	delete r_cur;
-	r_cur = NULL;
+	r_cur = parent;
 
 	// NOTE: all exit paths from this function should call remove_pre()
 	// in order to ensure proper cleanup of pre, pre_pre, etc.

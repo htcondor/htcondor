@@ -498,11 +498,14 @@ command_release_claim( Service*, int cmd, Stream* stream )
 		rip->removeClaim(rip->r_pre_pre);
 		free(id);
 		return TRUE;
-	}
-	else if( rip->r_cur && rip->r_cur->idMatches(id) ) {
+	} else if ( rip->r_cur && rip->r_cur->parent ) {
+					rip->r_cur = rip->r_cur->parent;	
+	} 
+	if( rip->r_cur && rip->r_cur->idMatches(id) ) {
 		if( (s == claimed_state) || (s == matched_state) ) {
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received RELEASE_CLAIM command\n" );
+			rip->r_cur = rip->r_cur->getSubClaim(id);
 			free(id);
 			rip->r_cur->scheddClosedClaim();
 			return rip->release_claim();
@@ -1974,8 +1977,8 @@ activate_claim( Resource* rip, char *id, Stream* stream )
 	rip->dprintf( D_FAILURE|D_ALWAYS, 
 				  "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
-	actual->setStarter(tmp_starter);
-	rip->r_cur = actual;
+	//actual->setStarter(tmp_starter);
+	//rip->r_cur = actual;
 	tmp_starter = NULL;
 	free( shadow_addr );
 	return TRUE;

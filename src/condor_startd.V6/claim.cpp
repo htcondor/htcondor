@@ -95,10 +95,15 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 Claim::~Claim()
 {	
 	dprintf(D_ALWAYS, "*** CW ** DELETE CLAIM: %s \n", id());	
-	
+	if (parent) {
+		parent->removeSubClaim(this);
+		parent = NULL;
+	}
 	for (unsigned int i = 0; i < subClaims.size(); i++){
 		delete subClaims[i];
 	}
+	subClaims.clear();
+	
 	if( c_type == CLAIM_COD ) {
 		dprintf( D_FULLDEBUG, "Deleted claim %s (owner '%s')\n", 
 				 c_id->id(), 
@@ -132,6 +137,7 @@ Claim::~Claim()
 	if( c_cod_keyword ) {
 		free( c_cod_keyword );
 	}
+	
 	parent = NULL;
 	c_isSubClaim = false;
 }	
