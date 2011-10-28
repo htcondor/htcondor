@@ -210,7 +210,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 
 
 int
-condor_write( char const *peer_description, SOCKET fd, char *buf, int sz, int timeout, int flags )
+condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, int timeout, int flags )
 {
 	Selector selector;
 	int nw = 0, nwo = 0;

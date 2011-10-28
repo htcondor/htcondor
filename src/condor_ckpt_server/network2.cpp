@@ -67,7 +67,7 @@
 /* P R O T O T Y P E S */
 char *param(void);
 
-char* GetIPName(struct in_addr machine_IP)
+const char* GetIPName(struct in_addr machine_IP)
 {
   char* temp_name;
 

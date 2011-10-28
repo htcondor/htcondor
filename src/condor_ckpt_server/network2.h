@@ -65,7 +65,7 @@
 
 /* Function Prototypes*/
 extern "C" {
-char* GetIPName(struct in_addr machine_IP); 
+const char* GetIPName(struct in_addr machine_IP); 
 
 int I_bind(int socket_desc,
 		   struct sockaddr_in* addr, int is_well_known);

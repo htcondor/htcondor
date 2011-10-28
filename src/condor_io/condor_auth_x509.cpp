@@ -274,14 +274,17 @@ int Condor_Auth_X509 :: isValid() const
 void Condor_Auth_X509 :: print_log(OM_uint32 major_status,
                                    OM_uint32 minor_status,
                                    int       token_stat, 
-                                   char *    comment)
+                                   const char *    comment)
 {
     char* buffer;
+    char *tmp = (char *)malloc(strlen(comment)+1);
+    strcpy(tmp, comment);
     globus_gss_assist_display_status_str(&buffer,
-                                         comment,
+                                         tmp,
                                          major_status,
                                          minor_status,
                                          token_stat);
+    free(tmp);
     if (buffer){
         dprintf(D_ALWAYS,"%s\n",buffer);
         free(buffer);
@@ -450,9 +453,10 @@ int Condor_Auth_X509::nameGssToLocal(const char * GSSClientname)
 #else
 // Switched the unix map function to _map_and_authorize, which allows access
 // to the Globus callout infrastructure.
+        char condor_str[] = "condor";
 	major_status = globus_gss_assist_map_and_authorize(
             context_handle,
-            "condor", // Requested service name
+            condor_str, // Requested service name
             NULL, // Requested user name; NULL for non-specified
             local_user,
             USER_NAME_MAX-1); // Leave one space at end of buffer, just-in-case
@@ -600,7 +604,7 @@ int Condor_Auth_X509::authenticate_self_gss(CondorError* errstack)
     //this method will prompt for password if private key is encrypted!
     int time = mySock_->timeout(60 * 5);  //allow user 5 min to type passwd
     
-    priv_state priv;
+    priv_state priv = PRIV_UNKNOWN;
     
     //if ((!mySock_->isClient() && {
     if (isDaemon()) {
@@ -656,16 +660,17 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
     OM_uint32	minor_status = 0;
     int         status = 0;
 
-    priv_state priv;
+    priv_state priv = PRIV_UNKNOWN;
     
     if (isDaemon()) {
         priv = set_root_priv();
     }
     
+    char target_str[] = "GSI-NO-TARGET";
     major_status = globus_gss_assist_init_sec_context(&minor_status,
                                                       credential_handle,
                                                       &context_handle,
-                                                      "GSI-NO-TARGET",
+                                                      target_str,
                                                       GSS_C_MUTUAL_FLAG,
                                                       &ret_flags, 
                                                       &token_status,

@@ -1540,14 +1540,14 @@ Daemon::initHostname( void )
 	dprintf( D_HOSTNAME, "Address \"%s\" specified but no name, "
 			 "looking up host info\n", _addr );
 
-	condor_sockaddr addr;
-	addr.from_sinful(_addr);
-	MyString fqdn = get_full_hostname(addr);
+	condor_sockaddr my_addr;
+	my_addr.from_sinful(_addr);
+	MyString fqdn = get_full_hostname(my_addr);
 	if (fqdn.IsEmpty()) {
 		New_hostname( NULL );
 		New_full_hostname( NULL );
 		dprintf(D_HOSTNAME, "get_full_hostname() failed for address %s",
-				addr.to_ip_string().Value());
+				my_addr.to_ip_string().Value());
 		MyString err_msg = "can't find host info for ";
 		err_msg += _addr;
 		newError( CA_LOCATE_FAILED, err_msg.Value() );

@@ -1962,7 +1962,6 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	currentABV = NULL;
 	hrs = NULL;
 	currHR = NULL;
-	AnnotatedBoolVector *bestABV = NULL;
 	HyperRect *bestHR = NULL;
 	IndexSet hasContext;
 	IndexSet hasMachine;
@@ -1980,7 +1979,6 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 			hasMachine.GetCardinality( currNumContexts );
 			if( currNumContexts > maxNumContexts ) {
 				maxNumContexts = currNumContexts;
-				bestABV = currentABV;
 				bestHR = currHR;
 			}
 		}

@@ -29,7 +29,7 @@ struct DebugFileInfo
 	off_t maxLog;
 	int maxLogNum;
 
-	DebugFileInfo() : debugFlags(0), debugFP(0), maxLog(0), maxLogNum(0) {}
+	DebugFileInfo() : debugFP(0), debugFlags(0), maxLog(0), maxLogNum(0) {}
 	DebugFileInfo(const DebugFileInfo &debugFileInfo);
 	~DebugFileInfo();
 };

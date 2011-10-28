@@ -60,7 +60,7 @@ param_info_init()
     // creating a hashtable from int and using the hash to do the lookup.  but in the
     // interest in having minimal changes in this patch, we'll keep the hash table for now.
     //
-    for (int ii = 0; ii < sizeof(g_param_info_init_table)/sizeof(g_param_info_init_table[0]); ++ii)
+    for (int ii = 0; ii < (int)(sizeof(g_param_info_init_table)/sizeof(g_param_info_init_table[0])); ++ii)
        {
        param_info_hash_insert(param_info, g_param_info_init_table[ii]);
        }

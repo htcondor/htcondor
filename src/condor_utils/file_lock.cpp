@@ -513,7 +513,7 @@ FileLock::obtain( LOCK_TYPE t )
 // their current position.  The lesson here is don't use fseeks and lseeks
 // interchangeably...
 	int		status = -1;
-	int saved_errno;
+	int saved_errno = -1;
 
 	if ( m_use_kernel_mutex == -1 ) {
 		m_use_kernel_mutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);

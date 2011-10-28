@@ -133,7 +133,7 @@ public:
     ///
 	int get_line_raw( char *buffer, int max_length );
     ///
-	int put_bytes_raw( char *buffer, int length );
+	int put_bytes_raw( const char *buffer, int length );
     ///
 	int get_bytes_raw( char *buffer, int length );
     ///

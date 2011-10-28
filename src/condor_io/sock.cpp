@@ -378,7 +378,7 @@ int Sock::move_descriptor_up()
 
 int Sock::assign(SOCKET sockd)
 {
-	int		my_type;
+	int		my_type = SOCK_DGRAM;
 
 	if (_state != sock_virgin) return FALSE;
 
@@ -1940,7 +1940,7 @@ condor_sockaddr
 Sock::my_addr() 
 {
 	condor_sockaddr addr;
-	int ret = condor_getsockname_ex(_sock, addr);
+	condor_getsockname_ex(_sock, addr);
 	return addr;
 }
 
@@ -2248,6 +2248,8 @@ Sock::_bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loop
 		rval = condor_bind(fd, addr);
 	}
 #else
+	if (outbound) {} // To remove unused variable warning
+	if (loopback) {} // To remove unused variable warning
 		//rval = ::bind(fd, (SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE)addr, len);
 	rval = condor_bind(fd, addr);
 #endif /* HAVE_EXT_GCB */

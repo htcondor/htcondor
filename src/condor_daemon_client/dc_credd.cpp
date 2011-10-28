@@ -183,7 +183,7 @@ DCCredd::listCredentials (SimpleList <Credential*> & result,
 	Credential * cred = NULL;
 	classad::ClassAdParser parser;
 	classad::ClassAd * ad = NULL;
-	char * request = "_";
+	unsigned char request[] = "_";
 
 	rsock = (ReliSock *)startCommand(
 			CREDD_QUERY_CRED, Stream::reli_sock, 20, &condor_error);

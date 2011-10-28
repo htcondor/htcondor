@@ -814,7 +814,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			hostnames = get_hostname_with_alias(addr);
 		}
 
-		for (int i = 0; i < hostnames.size(); ++i) {
+		for (unsigned int i = 0; i < hostnames.size(); ++i) {
 			thehost = hostnames[i].Value();
 			peer_description.append_to_list(thehost);
 
@@ -892,7 +892,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 						deny_reason->sprintf(
 							"%s authorization policy contains no matching "
 							"ALLOW entry for this request"
-							"; identifiers used for this host: %s, hostname size = %d, "
+							"; identifiers used for this host: %s, hostname size = %lu, "
 							"original ip address = %s",
 							PermString(perm),
 							peer_description.Value(),

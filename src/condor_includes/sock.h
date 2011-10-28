@@ -506,7 +506,7 @@ private:
         //------------------------------------------
 
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
-	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);
+	int _condor_write(SOCKET fd, const char *buf, int sz, int timeout);
 	int bindWithin(const int low, const int high, bool outbound);
 	///
 	// Buffer to hold the string version of our peer's IP address. 
