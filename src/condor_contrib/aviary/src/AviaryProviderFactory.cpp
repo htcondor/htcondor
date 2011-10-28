@@ -61,6 +61,7 @@ AviaryProviderFactory::create(const string& log_file)
         Axis2SoapProvider* http = new Axis2SoapProvider(level,log_file.c_str(),repo_path.c_str());
         if (!http->init(port,read_timeout,axis_error)) {
             dprintf(D_ALWAYS,"Axis2 HTTP configuration failed\n");
+            delete http;
             return NULL;
         }
         dprintf(D_ALWAYS,"UNSECURE Axis2 HTTP listener activated on port %d\n",port);
@@ -72,6 +73,7 @@ AviaryProviderFactory::create(const string& log_file)
         Axis2SslProvider* https = new Axis2SslProvider(level,log_file.c_str(),repo_path.c_str());
         if (!https->init(port,read_timeout,axis_error)) {
             dprintf(D_ALWAYS,"SSL/TLS requested but configuration failed\n");
+            delete https;
             return NULL;
         }
         dprintf(D_ALWAYS,"Axis2 HTTPS listener activated on port %d\n",port);
