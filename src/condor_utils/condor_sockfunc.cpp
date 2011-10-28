@@ -170,7 +170,8 @@ hostent* condor_gethostbyaddr_ipv6(const condor_sockaddr& addr)
 		len = sizeof(in6_addr);
 	} else {
 		// Taking a guess at the error code.
-		h_errno = NO_ADDRESS;
+		// h_errno is not a lvalue on windows
+		//h_errno = NO_ADDRESS;
 		return NULL;
 	}
 
