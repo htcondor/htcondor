@@ -265,6 +265,7 @@ Axis2SoapProvider::invokeWorker(
     if(!request)
     {
         AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI, "Could not create request");
+        axis2_simple_http_svr_conn_free(svr_conn, thread_env);
         return NULL;
     }
 
