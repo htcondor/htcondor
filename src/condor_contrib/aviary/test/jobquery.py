@@ -17,13 +17,10 @@
 #
 
 # uses Suds - https://fedorahosted.org/suds/
-import logging
 from suds import *
 from suds.client import Client
-from sys import exit, argv, stdin
-import time
+from sys import exit
 from optparse import OptionParser
-from aviary.https import *
 from aviary.util import *
 
 # change these for other default locations and ports
@@ -40,19 +37,10 @@ if opts.cmd is None:
 	parser.print_help()
 	exit(1)
 
-if "https://" in opts.url:
-	client = Client(wsdl,transport = HTTPSFullCertTransport(opts.key,opts.cert,opts.root,opts.verify))
-else:
-	client = Client(wsdl)
+client = create_suds_client(opts,wsdl,None)
 
 opts.url += opts.cmd
 client.set_options(location=opts.url)
-
-# enable to see service schema
-if opts.verbose:
-	logging.basicConfig(level=logging.INFO)
-	logging.getLogger('suds.client').setLevel(logging.DEBUG)
-	print client
 
 # set up our JobID
 if opts.cproc:
