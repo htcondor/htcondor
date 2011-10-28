@@ -1,4 +1,6 @@
-#pragma once
+#ifndef PARAM_FUNCTIONS_H
+#define PARAM_FUNCTIONS_H
+
 typedef char* (*PARAM_FUNC)(const char*);
 typedef int (*PARAM_BOOL_INT_FUNC)(const char *, int);
 typedef char* (*PARAM_WO_DEFAULT_FUNC)(const char*);
@@ -26,3 +28,5 @@ private:
 	PARAM_BOOL_INT_FUNC m_param_bool_int_func;
 	PARAM_WO_DEFAULT_FUNC m_param_wo_default_func;
 };
+
+#endif
