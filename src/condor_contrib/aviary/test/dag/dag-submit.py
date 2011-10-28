@@ -24,6 +24,8 @@ from subprocess import Popen, PIPE
 from aviary.https import *
 from aviary.util import *
 
+#NOTE: ensure this DAG script directory is writable by the user
+
 plugins = []
 # NOTE: Suds has had little support for adding attributes
 # to the request body until 0.4.1

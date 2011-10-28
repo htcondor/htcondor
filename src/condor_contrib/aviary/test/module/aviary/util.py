@@ -37,7 +37,7 @@ def build_basic_parser(desc, default_url):
 def create_suds_client(opts,wsdl,plugin_list):
 	if "https://" in opts.url:
 		client = Client(wsdl, plugins=plugin_list, timeout=opts.timeout, 
-			transport = HTTPSFullCertTransport(opts.key,opts.cert,opts.root,opts.verify))
+			transport = HTTPSFullCertTransport(opts.key,opts.cert,opts.root,opts.verify,timeout=opts.timeout))
 	else:
 		client = Client(wsdl, plugins=plugin_list, timeout=opts.timeout)
 	# debug info
