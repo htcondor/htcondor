@@ -93,6 +93,10 @@ the aviary/test directory:
 
 	export PYTHONPATH=`pwd`/module:$PYTHONPATH
 
+A sample DAG submission script has also been provided. The user must ensure
+the contents of that directory is writable for the condor_dagman log files to
+be generated.
+
 Source
 ------
 Aviary can be included in a Condor source build using the following variables 

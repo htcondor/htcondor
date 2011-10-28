@@ -1,4 +1,5 @@
-#
+# Copyright 2011 David Norton, Jr.
+# Copyright 2011 Joseph Turner
 # Copyright 2009-2011 Red Hat, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +15,7 @@
 # limitations under the License.
 #
 
+import socket
 import httplib
 import urllib2 as u2
 from M2Crypto import httpslib, SSL

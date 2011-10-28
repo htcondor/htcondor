@@ -17,12 +17,10 @@
 #
 
 # uses Suds - https://fedorahosted.org/suds/
-import logging
 from suds import *
 from suds.client import Client
-from sys import exit, argv
+from sys import exit
 from optparse import OptionParser
-from aviary.https import *
 from aviary.util import *
 
 wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
@@ -31,18 +29,8 @@ parser = build_basic_parser('Query submissions remotely via SOAP.','http://local
 parser.add_option('--name', action="store", dest='name', help='submission name')
 (opts,args) =  parser.parse_args()
 
-if "https://" in opts.url:
-	client = Client(wsdl,transport = HTTPSFullCertTransport(opts.key,opts.cert,opts.root,opts.verify))
-else:
-	client = Client(wsdl)
-
+client = create_suds_client(opts,wsdl,None)
 client.set_options(location=opts.url)
-
-# enable to see service schema
-if opts.verbose:
-	logging.basicConfig(level=logging.INFO)
-	logging.getLogger('suds.client').setLevel(logging.DEBUG)
-	print client
 
 # set up our ID
 if opts.name:
