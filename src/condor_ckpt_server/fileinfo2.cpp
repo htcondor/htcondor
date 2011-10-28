@@ -91,7 +91,7 @@ file_info_node* FileInformation::AddFileInfo(struct in_addr machine_IP,
 					     time_t*        last_modified_ptr)
 {
   file_info_node* n;
-  char*           temp_name;
+  const char*           temp_name;
 
   n = new file_info_node;
   if (n == NULL)
