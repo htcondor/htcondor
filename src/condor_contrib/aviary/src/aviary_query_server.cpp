@@ -68,7 +68,7 @@ void main_init(int /* argc */, char * /* argv */ [])
 	init_classad();
 
     string log_name;
-    sprintf(log_name,"aviary_query.%d",daemonCore->getpid());
+    sprintf(log_name,"aviary_query.log");
     provider = AviaryProviderFactory::create(log_name);
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");
