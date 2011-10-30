@@ -1205,6 +1205,7 @@ processCommandLineArguments (int argc, char *argv[])
 			run = true;
 			attrs.append( ATTR_REMOTE_HOST );
 			attrs.append( ATTR_JOB_UNIVERSE );
+			attrs.append( ATTR_EC2_REMOTE_VM_NAME ); // for displaying HOST(s) in EC2
 		}
 		else
 		if (match_prefix( arg, "hold") || match_prefix( arg, "held")) {
@@ -1584,6 +1585,8 @@ format_remote_host (char *, AttrList *ad)
 		}
 	} else if (universe == CONDOR_UNIVERSE_GRID) {
 		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result) == 1 )
+			return host_result;
+		else if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,host_result) == 1)
 			return host_result;
 		else
 			return unknownHost;
