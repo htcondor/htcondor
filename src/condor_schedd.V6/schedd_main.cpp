@@ -47,11 +47,6 @@
 #endif
 #endif
 
-#if defined(BSD43) || defined(DYNIX)
-#	define WEXITSTATUS(x) ((x).w_retcode)
-#	define WTERMSIG(x) ((x).w_termsig)
-#endif
-
 extern "C"
 {
 	int		ReadLog(char*);
