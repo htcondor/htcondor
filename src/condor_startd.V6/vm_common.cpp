@@ -74,7 +74,7 @@ vmapi_is_allowed_vm_addr(char *addr)
 			}
 		}
 
-		dprintf( D_FULLDEBUG, "IP(%s) is not an allowed virtual machine\n", ip);
+		dprintf( D_FULLDEBUG, "IP(%s) is not an allowed virtual machine\n", ip.Value());
 	}
 
 	return FALSE;
