@@ -202,20 +202,22 @@ DaemonCore: Can't receive command request from IP (perhaps a timeout?)
 \end{verbatim}
 \Ticket{2483}
 
-\item \MacroNI{NETWORK\_INTERFACE} did not have any effect.  This bug
-was introduced in 7.7.0.
+\item Fixed a bug introduced in Condor version 7.7.0,
+in which the setting of \MacroNI{NETWORK\_INTERFACE} did not have any effect.
 \Ticket{2513}
 
 \item \Prog{glexec} now also works when Condor is running as root.
 \Ticket{2503}
 
-\item \Condor{master} now successfully advertises itself in a personal
-condor installation when the collector is configured to use port 0
+\item The \Condor{master} daemon now successfully advertises itself in 
+a Personal Condor installation,
+when the \Condor{collector} is configured to use port 0
 and to operate through a shared port.
 \Ticket{2555}
 
-\item Since 7.7.1, \MacroNI{WANT\_HOLD} did not work unless
-\MacroNI{WANT\_HOLD\_SUBCODE} was set to something non-zero.
+\item Since Condor version 7.7.1, 
+the configuration variable \Macro{WANT\_HOLD} did not work,
+unless \Macro{WANT\_HOLD\_SUBCODE} was set to a non-zero value.
 \Ticket{2565}
 
 \item Since Condor version 7.7.2, there was a rare condition that could cause
